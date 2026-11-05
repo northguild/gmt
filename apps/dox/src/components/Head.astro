@@ -1,6 +1,7 @@
 ---
 import Default from '@astrojs/starlight/components/Head.astro';
 import { industrySidebarCss } from '~/lib/industry-tags';
+import { VIEW_TRANSITION_OPT_IN, arrivalInlineSource } from '~/lib/arrival';
 
 // Cloudflare Web Analytics. The site is registered in the NorthGuild Cloudflare account
 // under its hostname, and this token only names that site entry: it is public by design
@@ -10,6 +11,12 @@ const CF_BEACON = JSON.stringify({ token: '94af68f89d8c4c8eac46ce6c17609d5f' });
 ---
 
 <Default />
+
+{/* Before the first paint: holds the landing page's entrance pieces and notes a view-transition arrival. See src/lib/arrival.ts. */}
+<script is:inline set:html={arrivalInlineSource(import.meta.env.BASE_URL)} />
+
+{/* The opt-in to cross-document view transitions; a rule in a linked sheet is missed on the landing. See src/lib/arrival.ts. */}
+<style is:inline set:html={VIEW_TRANSITION_OPT_IN}></style>
 
 {/* The sidebar icon of each industry group: one custom property per layer, read by the rule in gmt-shell.css. */}
 <style is:inline set:html={industrySidebarCss()}></style>

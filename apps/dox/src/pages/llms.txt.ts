@@ -7,7 +7,7 @@ import {
   type LlmsLink,
   type LlmsSection,
 } from "~/lib/llms";
-import { stripFrontmatter, stripMdx } from "~/lib/page-markdown";
+import { HOME_HEADING, stripFrontmatter, stripMdx } from "~/lib/page-markdown";
 import {
   docsRelativePath,
   industryPages,
@@ -35,10 +35,7 @@ function linkTo(base: string, slug: string, source: string): LlmsLink {
   const md = stripMdx(body, { gmtVersion: "", values });
   const description = data.description ?? md.split("\n")[0] ?? "";
   return {
-    title:
-      data["hero.title"] && slug === "index"
-        ? data["hero.title"]
-        : (data.title ?? slug),
+    title: slug === "index" ? HOME_HEADING : (data.title ?? slug),
     url: `${base}/${slug}.md`,
     description: String(description).replace(/\s+/g, " ").trim(),
   };

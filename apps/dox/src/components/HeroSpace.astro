@@ -1,0 +1,36 @@
+---
+/**
+ * The landing hero's night sky: the Milky Way, the real stars and a rare meteor, on three
+ * canvases that fill the hero behind the Earth. Only HeroGlobe renders it, as its first child.
+ *
+ * The page reads nothing here (`aria-hidden`), so the sky adds no stop to the tab order or the
+ * reading order. `lib/hero-space.ts` fetches the packed star list and draws; the preload below
+ * starts that fetch with the page, and it sits on `/` alone because only the landing renders
+ * this component.
+ */
+import skyList from "../assets/hero-sky.bin?url";
+---
+
+<link rel="preload" as="fetch" href={skyList} crossorigin="anonymous" />
+<div class="gmt-sky" aria-hidden="true" data-hero-sky data-src={skyList}>
+	<div class="gmt-sky-band" data-sky-layer="band"><canvas data-sky-canvas="band"></canvas></div>
+	<canvas data-sky-layer="stars" data-sky-canvas="stars"></canvas>
+	<canvas data-sky-layer="meteor" data-sky-canvas="meteor"></canvas>
+</div>
+
+<script>
+	import { initHomeCarousel } from "../lib/home-carousel";
+	import { heroOf, startHeroEntrance, startHeroSky } from "../lib/hero-space";
+
+	for (const sky of document.querySelectorAll<HTMLElement>("[data-hero-sky]")) {
+		startHeroSky(sky);
+		// The sky is registered, so the entrance can wait on it; the globe is handed over when it mounts.
+		const hero = heroOf(sky);
+		if (hero) {
+			const signal = new AbortController().signal;
+			// The carousel is wired first, so the entrance starts on the final layout.
+			initHomeCarousel(hero, signal);
+			startHeroEntrance(hero, signal);
+		}
+	}
+</script>

@@ -1,0 +1,9 @@
+---
+// Puts the page's native layers (popovers, dialogs, a focused `<details>`) into the site's one
+// Escape order. Renders nothing; the script runs on every page that has the header.
+---
+
+<script>
+  import { watchNativeEscLayers } from "~/lib/esc-native";
+  watchNativeEscLayers(document, new AbortController().signal);
+</script>

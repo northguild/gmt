@@ -227,39 +227,53 @@ footer {
 }
 
 header {
-  /* background handled by gmt-glass.css (translucent + backdrop-filter) */
-  border-block-end: 1px solid var(--gmt-hairline);
+  /* background and the one bottom border: gmt-glass.css */
+  border: 0;
 }
 
+/* The pixel under the row is the hairline's, so the row sits where northguild.dev's does and the
+   mark, the wordmark and the GitHub and Discord buttons land on the same pixels. */
+.page > .header {
+  padding-block-end: calc(var(--sl-nav-pad-y) + 1px);
+}
+
+/* "NorthGuild / gmt v1.21.0": the app name is set in the wordmark's type and
+   gmt's theme colour, so it reads as one line with the NorthGuild link. */
 .site-title {
+  /* Half a `0` in the wordmark's type, the same space as before the slash. */
+  gap: 0.5ch;
   font-family: var(--gmt-font-display);
-  letter-spacing: var(--gmt-tracking-tight);
-  font-size: 1.25rem;
+  font-size: var(--gmt-wordmark-size);
+  letter-spacing: var(--gmt-wordmark-tracking);
+  line-height: var(--gmt-wordmark-leading);
+  color: var(--gmt-cyan);
 }
 
-/* The header says "Give Me Temporal" where it fits and "GMT" below that
-   (#424). `display: none` takes the hidden form out of the accessibility tree,
-   so the link's name is the visible text (WCAG 2.2 SC 2.5.3). */
-.gmt-title-long {
-  display: none;
+/* Name and version share one baseline, like the other NorthGuild apps' headers. */
+.gmt-app-title {
+  display: inline-flex;
+  align-items: baseline;
+  min-inline-size: 0;
 }
 
-@media (width >= 50rem) {
-  .gmt-title-long {
-    display: inline;
-  }
-
-  .gmt-title-short {
-    display: none;
-  }
+/* The version is a quiet label beside the name: mono at 0.7 of the wordmark and never under the 12px floor, dim, one `0` of
+   its own type after the name, as in every NorthGuild app's header.
+   `line-height: 1` keeps it from making the row taller than the name. */
+.gmt-app-version {
+  flex: none;
+  margin-inline-start: 1ch;
+  line-height: 1;
+  font-family: var(--gmt-font-mono);
+  font-size: max(0.75rem, calc(0.7 * var(--gmt-wordmark-size)));
+  letter-spacing: 0;
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
 }
 
-@media print {
-  .gmt-title-long {
-    display: inline;
-  }
-
-  .gmt-title-short {
+/* A phone has the search and menu buttons beside the title: the version gives way so
+   "NorthGuild / gmt" stays on one line. */
+@media (width < 30rem) {
+  .gmt-app-version {
     display: none;
   }
 }
@@ -271,4 +285,58 @@ header {
 nav[aria-labelledby="starlight__on-this-page"],
 mobile-starlight-toc nav {
   --sl-color-gray-3: var(--gmt-ice-dim);
+}
+
+/* The lead that opens the About panel: the release line and the paragraph on the standards.
+   It is Markdown from the page. A hairline closes it off from the first section, and the
+   release name takes the brighter text tier. The same rules read in the panel and where the
+   panels stack into a page. */
+.gmt-home-lead {
+  padding-block-end: 1.4rem;
+  border-block-end: 1px solid var(--gmt-hairline);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-home-lead > * {
+  margin: 0;
+}
+
+.gmt-home-lead > * + * {
+  margin-block-start: var(--gmt-space-2);
+}
+
+.gmt-home-lead strong {
+  color: var(--gmt-ice);
+}
+
+/* The licence line under a page and at the foot of the chat: one quiet closed line that opens
+   to the full note. xs size and the muted text tier, which hold 7:1 on the page surface. The
+   summary is a native control, so Enter and Space open it and the ring shows on focus. */
+.gmt-licence {
+  margin-block-start: 1.5rem;
+  font-size: var(--gmt-text-xs);
+  line-height: 1.4;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-licence > summary {
+  display: inline-block;
+  min-block-size: 1.5rem;
+  line-height: 1.5rem;
+  cursor: pointer;
+}
+
+.gmt-licence > summary:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+.gmt-licence > p {
+  margin: var(--gmt-space-1) 0 0;
+}
+
+.gmt-licence a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }

@@ -55,7 +55,9 @@ const defId = (tagId: string) => `industry-tag-def-${tagId}`;
 <script>
   /* A tap or an Enter on a tag opens its definition; a tap elsewhere or Escape
      closes it. Hover and focus are handled in CSS, so this is only the touch and
-     keyboard "stay open" path. */
+     keyboard "stay open" path. Escape goes through the site's order (esc-layers.ts). */
+  import { registerEscLayer } from "~/lib/esc-layers";
+
   const items = () =>
     document.querySelectorAll<HTMLElement>(".gmt-industry-tag-item");
 
@@ -71,8 +73,13 @@ const defId = (tagId: string) => `industry-tag-def-${tagId}`;
     }
   });
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    for (const item of items()) item.removeAttribute("data-open");
-  });
+  /* One layer per press: the tag opened last, or the one holding focus. */
+  for (const item of items()) {
+    registerEscLayer({
+      el: item,
+      isOpen: () => item.hasAttribute("data-open"),
+      close: () => item.removeAttribute("data-open"),
+      opener: () => item.querySelector<HTMLElement>("button, a, [tabindex]"),
+    });
+  }
 </script>

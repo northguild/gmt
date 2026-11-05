@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
@@ -84,5 +86,23 @@ describe("disclosure", () => {
       }),
     );
     expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
+  });
+});
+
+describe("disclosure panel width", () => {
+  /* jsdom has no layout, so the rule that keeps the panel inside a clipping drawer is read from
+     the stylesheet; the browser run measures the rectangle. */
+  const css = readFileSync(
+    path.resolve(import.meta.dirname, "disclosure.module.css"),
+    "utf8",
+  ).replace(/\/\*[\s\S]*?\*\//g, "");
+  const panel = css.match(/\.panel\s*\{([^}]*)\}/)![1]!;
+
+  it("is capped to its container, which is the room left of a button at the container's edge", () => {
+    expect(panel).toMatch(/max-inline-size:\s*min\(22rem,\s*100cqi\)/);
+  });
+
+  it("does not measure against the viewport, which a drawer is narrower than", () => {
+    expect(panel).not.toContain("100vw");
   });
 });

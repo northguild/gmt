@@ -1,0 +1,97 @@
+/* edgeControl: a tall, narrow glass button with a chevron. The chevron moves two pixels along
+   its direction on hover and focus; the button itself never changes size. */
+
+.root {
+  --nudge: 0;
+
+  appearance: none;
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 5rem;
+  padding: 0;
+  border: 1px solid color-mix(in oklab, var(--gmt-ice-bright) 16%, transparent);
+  border-radius: 5px;
+  corner-shape: bevel;
+  background: linear-gradient(
+    color-mix(in oklab, var(--gmt-ice-bright) 7%, transparent),
+    color-mix(in oklab, var(--gmt-ice-bright) 2%, transparent)
+  );
+  box-shadow: inset 0 1px 0
+    color-mix(in oklab, var(--gmt-ice-bright) 8%, transparent);
+  color: var(--gmt-ice-bright);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--gmt-duration-fast),
+    background var(--gmt-duration-fast),
+    color var(--gmt-duration-fast);
+
+  &[data-step="1"] {
+    --nudge: 2px;
+  }
+
+  &[data-step="-1"] {
+    --nudge: -2px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: color-mix(in oklab, var(--gmt-frost) 45%, transparent);
+    background: linear-gradient(
+      color-mix(in oklab, var(--gmt-ice-bright) 10%, transparent),
+      color-mix(in oklab, var(--gmt-cyan) 5%, transparent)
+    );
+    color: var(--gmt-cyan-bright);
+  }
+
+  &:focus-visible {
+    outline: 1px solid color-mix(in oklab, var(--gmt-cyan) 70%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+.chevron {
+  inline-size: 0.8rem;
+  block-size: 2rem;
+  overflow: visible;
+  transition: translate var(--gmt-duration-quick);
+
+  .root:hover &,
+  .root:focus-visible & {
+    translate: var(--nudge) 0;
+  }
+}
+
+.caption {
+  font-size: 0.875rem;
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .root:hover,
+  .root:focus-visible {
+    border-color: Highlight;
+    color: Highlight;
+  }
+
+  .root:focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root {
+    border-color: var(--gmt-ice-bright);
+  }
+
+  .root:focus-visible {
+    outline: 3px solid var(--gmt-cyan-bright);
+  }
+}

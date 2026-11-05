@@ -100,6 +100,7 @@ export function cell(
     ${isWeekend ? html`data-weekend` : ""}
     ${o.today === key ? html`data-today` : ""}
     ${extras.outside === true ? html`data-outside` : ""}
+    ${extras.withMonth === true ? html`data-month-label` : ""}
     ${mark?.pick === undefined ? "" : html`data-series="${String(mark.pick)}"`}
   >
     <span class="${styles.day}">${extras.withMonth === true ? `${date.day} ${MONTH_SHORT[date.month - 1]}` : String(date.day)}</span>${

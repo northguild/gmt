@@ -73,6 +73,45 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   count or "current era"; a preset's dates carry their year, and the eras to draw come from the
   library at the reader's today.
 
+### Landing carousel
+
+- **Mode.** `arrival.ts` marks the root `data-home-carousel="wait"` before first paint on the
+  landing, on every screen; `initHomeCarousel` (`src/lib/home-carousel.ts`) turns it `on`, or
+  removes it when the hero lacks a part. Every paged rule in `gmt-home-carousel.css` is keyed on
+  that attribute; without it the pages read in order. On a landscape screen at least 64rem wide
+  (`HOME_LOCKED_QUERY`) the landing never scrolls and a page taller than its place scrolls inside
+  it; a narrower or portrait screen stacks the copy over the Earth and the page scrolls (see "The
+  stacked hero" under the globe hero).
+- **Pages.** The copy column holds the intro (eyebrow, title, tagline) and the pages
+  `index.mdx` marks `data-page="<name>"`: About gmt (the lead, `.gmt-home-lead`), then one
+  `GridSection` per topic. One page shows at a time, wired by the kit's `wireCarousel`
+  (`widgets/builders/carousel.ts`): a region of tab panels, a live region that names the page that
+  opens, Left and Right in the column, and the wheel on the locked screen. A hash that names a
+  place on a page opens that page; leaving it clears the hash.
+- **Licence note.** It is out of the page body. On `/` it is the last row of the Earth's
+  data-credits popover (`LICENCE_CREDIT`, label "Licence", the full sentence from `lib/licence.ts`),
+  and `Footer.astro` adds nothing there. Every other page's footer, and the `/dox` shell's
+  (`LicenceDisclosure`), is a closed `<details class="gmt-licence">` whose summary reads
+  "© 2026 NorthGuild · Licences" and which opens to the full sentence and the link to
+  `apps/LICENSE`.
+- **Buttons and pager.** Under the pages sit the hero's buttons (`HeroActions.astro`), a block that
+  never moves, and under them the pager (`.gmt-hero-pager` in `HeroGlobe.astro`): the previous
+  arrow, a dot per page and the next arrow, on one centre line. The arrows are bare chevrons on
+  the dots' 24px target; one with no page that way carries `data-off`, fades out and keeps its
+  place. If it had focus, the carousel hands focus to the other arrow with `data-quiet-focus`, so
+  that arrow shows its ring without the sonar ping. The cards (`HomeCards.astro`) are condensed
+  tiles. While a page moves its backdrop blur is off (`[data-motion]`), because a blur behind a
+  moving mask drops frames; it returns when the page settles.
+- **Content moved to the pages that own it.** Lint packages, DST options, the calendar list and
+  the freight offset are in `guides/concepts/standards`; the oracle and upstream text, CI counts,
+  safeguards and the nanoseconds text are in `guides/concepts/correct-at-the-edges`; the full
+  fault table is on `/why-gmt/` and the library table on `/compare/`.
+- **The dark island** (`.gmt-theme-dark`) carries its own dark `--sl-color-*` hues, because
+  Starlight re-derives them in light and the hero must match in both. The token block lists
+  `.gmt-theme-dark` last in its selector list; `zone-map.fixture.ts` finds it by that literal.
+- **Gate.** The contrast gate hides the sky star layer (its glyph-hiding pass drops the text
+  halo).
+
 ---
 
 ## Tiers 0–1 · Site, generator, AI surface, brand, guides
@@ -151,8 +190,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   with no rewrite.
   - **The NorthGuild mark** (#424) is the header's way back to the landing page: a same-tab
     `<a>` to `LANDING_URL` (`https://northguild.dev/`, in `site.ts`) before the site title,
-    named "NorthGuild home", on every page. The shield is inlined from
-    `src/assets/northguild-logo.svg`, so the page theme reaches its paths. The dist guard
+    named "NorthGuild home", on every page. The mark is inlined from
+    `src/assets/northguild-mark.svg` (see Tier 3, "The header"). The dist guard
     allows exactly that URL in an `<a href>` (`LANDING` in `dist-base.ts`) and nowhere else;
     `judgeUrl` is unchanged.
 - **Web Analytics.** Every HTML page loads Cloudflare's beacon
@@ -234,11 +273,39 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     already in a `.gmt-ref-table` box or inside MDX JSX; `codeSpans` in `migrate-view.ts` and the
     `set:html` cells of BehaviourMatrix, BundleSize and MigrationMap use the same helper, so a
     component's table wraps the same way.
-  - **Entries layout.** `.gmt-ref-table[data-layout="entries"]` takes the Options entry for its rows
-    (a block table, hidden header row, a wrapping flex row with a bottom hairline and a hover wash):
-    the first cell is the entry's title, every other cell is a fact labelled with its column header
-    (`data-col`), and an empty cell is hidden. It is for a table whose cells hold long code or that has
-    too many columns for the article column. A table opts in where it is built: a component sets
+  - **Content and reference tables look like the kit `table`.** `gmt-content-tables.css` draws the
+    `.gmt-ref-table` box as the tool panel: `--gmt-surface-widget`, a full `--gmt-hairline` border and
+    a bevelled `--gmt-radius-md` corner, with no left-edge accent. The header is an opaque
+    `--gmt-surface` strip (the glass `thead` of `gmt-glass.css` does not reach it) with a
+    `--gmt-border-strong` rule under it and `th` in `--gmt-ice-dim`, Michroma, `--gmt-text-xs`.
+    Cells are `.625rem .875rem` with a hairline under each (a card's cells drop to `.5rem` of side
+    padding in a box 20rem wide or narrower, so a cell that cannot break reaches no further past
+    the box at 320px than a bare entry did), tabular figures, and the first column is
+    `--gmt-ice` at weight 600. Even body rows take `--gmt-fill-subtle` (the sheet's two
+    `nth-child(even)` selectors, one in `@container gmt-ref (width > 34rem)`, both inside the one
+    described `stylelint-disable`), and the hover and focus wash sits on the cells above it. A widget's table, which sits in no box, keeps its own sheet.
+  - **Row groups.** `rehype-table-scroll.ts` marks each body row whose first cell reads the same as
+    the row above (trimmed, whitespace collapsed, not empty): `data-group="start"` on the first row
+    of a run of two or more, `"continue"` on the rest, nothing on a row alone, nothing in `thead`. It
+    runs on every table that passes through it, the generator's and Markdown's, and it does not wrap
+    the generator's own raw `div.gmt-ref-table` a second time (one box per table). Every selector in
+    the row-table section runs from the box by child combinators (box, table, section, row), so it
+    binds to the nearest box. A start row gets a `--gmt-border-strong` rule on top in place of the
+    hairline; a continue row's first cell is weight 400 in `--gmt-ice-dim`, chips included (colour,
+    never opacity: chips dim with opacity too, and a dimmed chip measured 6.2:1 to 6.4:1). The text
+    stays in the DOM, so a screen reader reads it on every row. Forced colours return it to weight
+    600 in `CanvasText`. An Options table, a `data-layout="entries"` table and a Members or
+    Parameters table at 34rem or narrower are entry cards: no groups, no stripe, and the card keeps
+    its opaque `--gmt-surface-widget`.
+  - **Entries layout.** `.gmt-ref-table[data-layout="entries"]` and the Options table take the entry
+    card for their rows: the box gives up its panel, `tbody` is a flex column with an 8px gap, and
+    each row is a `--gmt-surface-widget` card with a full hairline border and a bevelled corner. The
+    first cell is the card's title strip (`--gmt-surface`, a `--gmt-border-strong` rule under it,
+    weight 600); every other cell is a fact with its column header (`data-col`) on its own line
+    above the value in `--gmt-ice-dim` Michroma caps, and an empty cell is hidden. Members and
+    Parameters take the same card inside the 34rem container query. The header row stays for
+    screen readers. It is for a table whose cells hold long code or that has too many columns for the
+    article column. A table opts in where it is built: a component sets
     `data-layout` and `data-col` (BehaviourMatrix; UpstreamTracker through `UPSTREAM_COLUMNS`;
     LibraryCompare for the ids in `ENTRY_TABLES`; MigrationMap through `layout="entries"`), and a
     Markdown table takes an MDX comment that reads `table: entries` on the line directly above it.
@@ -621,9 +688,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `src/data/migration-maps.ts`, one row per call, with GMT names checked against the corpus by
   `gmtFunction` in `src/lib/migrate-view.ts`), a short "What changes" list and the cases where
   that library differs from Temporal (`BehaviourDiffs`). The pages draw data and compute
-  nothing; each has a Markdown twin in `src/lib/mdx-jsx.ts`. The Luxon page's call table
-  (`rows`) uses the entries layout (`layout="entries"`), and so do the Day.js, Moment.js and
-  Internationalized Date pages. Tables that keep the plain layout have a `40rem` minimum and a
+  nothing; each has a Markdown twin in `src/lib/mdx-jsx.ts`. The call table (`rows`) of the
+  date-fns, Luxon, Day.js, Moment.js and Internationalized Date pages uses the entries layout
+  (`layout="entries"`). Tables that keep the plain layout have a `40rem` minimum and a
   `16rem` note column.
   - **Matrix data.** `src/data/behaviour-matrix.json` is the output of
     `scripts/behaviour-matrix/run.mjs`, read through `src/data/behaviour-matrix.ts`. A page
@@ -656,7 +723,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 `mount`. The kit is nine custom elements and a set of builders. The builders sit in
 `src/widgets/builders`, re-exported from `builders/index.ts`: the layout set (`widget`, `card`,
 `section`, `fieldGrid`, `field`, `hint`), `aside`, `badge`, `button`, `buttonRow`, `chartKey`,
-`codeFrame`, `dataCredits`, `disclosure`, `hero`, `hold`, `instant`, `loading`, `plates`, `select`,
+`codeFrame`, `dataCredits`, `disclosure`, `drawer`, `edgeControl`, `hero`, `hold`, `instant`, `loading`, `plates`, `select`,
 `selectOptions`, `srOnly`, `switchField`, `swatch`, `table`, `textInput`, `toolLinks`, `verdict`, `zonedValue` and
 the timeline pieces (`axis`, `lane`, `mark`, `tick`). `table` takes `roles` to write an explicit
 ARIA role on every part, for a sheet that changes a part's `display`. `hint` takes a string or
@@ -671,8 +738,8 @@ label does not compile. Family pieces, shared by the tools of one family, live i
 
 **Line breaks in `.astro` text.** Astro 7 defaults to `compressHTML: "jsx"`: whitespace that holds a
 line break is deleted where it meets an element or an `{expression}`, so `marked⏎<strong>Theirs</strong>`
-builds as `marked<strong>Theirs</strong>` (and `{LICENCE_LEAD}⏎<a>` lost the space on every page's
-footer). A space on the same line survives. Keep the space on the element's line (break the line
+builds as `marked<strong>Theirs</strong>` (and `{LICENCE_LEAD}⏎<a>` lost the space in every page's
+licence note). A space on the same line survives. Keep the space on the element's line (break the line
 elsewhere), or write `{" "}`; a break before `.` or `,` is fine. `scripts/lib/inline-whitespace.mjs`
 reads the compiler's parse tree and finds the rest; `scripts/inline-whitespace.test.ts` fails on any
 `.astro` file under `src/`. Run `node scripts/lib/inline-whitespace.mjs` to list them. Markdown,
@@ -720,6 +787,31 @@ typed in CSS. The reveal stagger is `--gmt-reveal-i`, set by `scroll-reveal.ts`.
   can select it and copy it by hand (`src/widgets/primitives/copy/copy.ts`).
 - **Combobox.** `combobox()` takes `placement: "above" | "below"` (default `below`). `above` is
   for a box in the lower half of a fixed-height column, where the list has no room below it.
+  Its popup list takes the shared `listboxRootClass` (exported by `primitives/listbox`) on the
+  `gmt-listbox` root, and the Zone Planner's "Add a zone" box gets it too: opaque, scrolling,
+  at most 16rem. **Trap:** a caller that sets a class on the popup composes the root class with
+  its own, since the list's look hangs on it. `field` takes `labelHidden` for a control whose
+  label is `gmt-sr-only` (the label stays in the accessibility tree, a 1 x 1 box).
+- **Drawer and edge control.** `drawer` (`builders/drawer.ts`, APG Disclosure with a detached
+  region) renders a close and a `role="region"` panel that is `inert` and `visibility: hidden`
+  while shut; its wrapper has no box (`display: contents`), so the caller's module places both.
+  `wireDrawer(el, { signal, toggle })` keeps `aria-expanded` and `aria-controls` on the toggle,
+  closes on the close button and on Escape (a layer in the site's Escape order, see
+  [Escape](#escape-one-order-for-the-whole-site)), and returns focus to the toggle only if focus
+  was inside; `handle.close(false)` shuts it without moving focus, for a press outside.
+  `inertWhenOpen` names an element that is `inert` while the drawer is open
+  (the hero's zoom stack). `closeClassName` places the close from the caller's module. `edgeControl`
+  (`builders/edge-control.ts`, APG Button) is the drawer's close: a
+  1.5 x 5 rem bevelled tab with a `direction`. Both share `--drawer-glass` (void at .45, so a
+  bright body behind still shows). In the hero the close is a pull tab on the pane: that glass,
+  no border or bevel on its joining side, lapping the pane by 1px where a `mask` opens the pane's
+  border for 5rem; the chevron, not the tab, is dimmed at rest (`--drawer-close-rest: 1`, ice at 88%), with a dark `drop-shadow` for 3:1 over a bright body. The drawer's text carries `--gmt-shadow-halo`. The
+  clock list there adds no fill and its cards carry void .55, which holds AA over white. On opening, the region slides in and then one
+  band of ice light crosses it from the inline-end edge, on a `::after` layer over the content
+  with no pointer events (`contain: layout` gives the layer its box); the border never changes.
+  No sheen under reduced motion, `forced-colors` or `prefers-contrast: more`. Neither holds an
+  animation the reader cannot stop; the 0.3 s opacity fade (`--gmt-duration-fade`) stays under
+  reduced motion.
 - **Registration.** `defineElements()` runs on the first line of each `mountX()`, never at module
   top level, because SSR and node tests have no `customElements`. Each element extends a base
   that falls back to an empty class when `globalThis.HTMLElement` is missing. Each connection
@@ -763,6 +855,11 @@ splits them into two projects.
   the split once, at start, so in watch mode restart Vitest after adding a `vi.mock`.
   `src/test/isolation.test.ts` asks Vitest for the real project of every file and checks it
   against the scan.
+- **Browser tests.** A test that launches a real browser is named `*.browser.test.ts` and stays out
+  of both projects (`BROWSER_TEST_GLOB` in `isolation.ts`): the Tests job installs no browser.
+  `vitest.browser.config.ts` runs them, in the `dox-tables` check, after Chromium is installed.
+  `scripts/lib/cell-overflow.browser.test.ts` is one: the cell check needs real layout, which jsdom
+  has none of.
 - **What the shared setup resets.** `src/test/setup-dom.ts` runs after every test, in node and
   jsdom files alike: it restores spies (`vi.restoreAllMocks`), fake timers, `vi.stubGlobal` and
   `vi.stubEnv`. In a jsdom file it also destroys the widgets `renderWidget` mounted and calls
@@ -773,6 +870,10 @@ splits them into two projects.
   first file each worker loads, so later files would keep their components mounted. The setup
   never imports the package itself: its async wrapper waits on a `setTimeout(0)` that fake
   timers never fire, which hangs a `user-event` file that renders no React.
+- **Event time.** `installJsdomShims` (`src/test/jsdom-shims.ts`) puts `Event.timeStamp` on the
+  `performance.now()` clock, as browsers do; jsdom stamps the epoch. Code that sets a timer from
+  `event.timeStamp - performance.now()` (the globe engine's wake timer) would otherwise ask Node
+  for a delay of about 1.8e12 ms and print a `TimeoutOverflowWarning`. A full run prints none.
 - **What a test must undo.** Anything else it creates: a `<style>` or `<meta>` in `head`, a
   `window` or `document` listener, a custom element, a module-level singleton. A direct
   assignment to a global (`globalThis.x = …`, `Intl.X = …`, `process.env.X = …`) is undone in a
@@ -823,9 +924,15 @@ number it did not measure.
     headless Linux browser draws the fallback at the same advance. `src/styles/display-fallback.test.ts` pins the list.
   - The Michroma face is in the site stylesheet as a data URI: `gmt-tokens.css` names the
     vendored `public/fonts/michroma-latin-400-normal.woff2?inline` and Vite writes its bytes into
-    the face, so the font is there at first layout and no heading swaps faces. Any external font
-    file, even a preloaded one, arrives after first layout in Firefox and moves the page. The face is
-    `font-display: optional`, and no page preloads the file (a preload of a file nothing uses
+    the face. Any external font
+    file, even a preloaded one, arrives after first layout in Firefox and moves the page. Chromium
+    and WebKit fetch even a data-URI face only once layout asks for it, so the first frame would be
+    laid out in the fallback (with `optional`, for the page's life). `Footer.astro` runs
+    `displayFaceInlineSource()` (`src/lib/display-face.ts`) just before `#gmt-page-end`, which
+    holds the first paint: it finds the face's data URI in the loaded sheets, builds a `FontFace`
+    from the bytes (loaded the moment it is made, in every engine) and adds it to `document.fonts`,
+    where it wins over the sheet's copy. No heading swaps faces. The face stays `font-display:
+    block`, so a page without scripts still draws Michroma once the sheet's face loads. No page preloads the file (a preload of a file nothing uses
     logs a warning). `public/fonts/` is the one copy of the bytes; `deploy-smoke.mjs` and the
     Worker test still request it by URL. `display-fallback.test.ts` pins the face and
     `scripts/display-font-built.test.ts` pins the built bytes against the vendored file and the
@@ -868,7 +975,11 @@ list of their own. A widget root is `data-widget="<tool slug>"` (`widget()` in
 | `globe-stage`                                               | The globe's drawing stage                                                                                        | `globe-smoke`, `data-credits-check`, `visual-snapshot`            |
 | `globe-zoom`                                                | The globe's zoom button group                                                                                    | `data-credits-check`                                              |
 | `globe-tooltip`                                             | The globe's tooltip                                                                                              | `globe-smoke`                                                     |
-| `hero-stage`                                                | The home page's hero globe stage                                                                                 | `globe-smoke`                                                     |
+| `hero-stage`                                                | The home page's hero                                                                                              | `globe-smoke`, `hero-space`                                       |
+| `hero-copy`                                                 | The hero's copy block: headline, tagline and buttons                                                             | `hero-space`                                                      |
+| `globe-layer`                                               | The hero's full-bleed layer that holds the Earth's canvas and the card                                           | `globe-smoke`, `visual-snapshot` (canvas masked), `hero-space`    |
+| `globe-hit`                                                 | The hero's disc-sized hit area: the one tab stop and the pointer target                                          | `globe-smoke`, `hero-space`                                       |
+| `globe-drawer`                                              | The zone drawer's wrapper (its close and its region)                                                             | `hero-space`                                                      |
 | `credited-frame`                                            | The `/why-gmt/` map frame that carries the data credit                                                           | `data-credits-check`                                              |
 | `keypoints`, `keypoints-card`                               | The key-points section of a clock-change page, and each card in it                                               | `canada-layout-check`, `canada-stored-still` (cards)              |
 | `browser`, `probe-table`                                    | The browser-probe card, and its table of probe results                                                           | `canada-layout-check`, `canada-stored-still` (`browser`)          |
@@ -965,6 +1076,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     container (`tt-pane`, inside the `tt-section` container), so each breakpoint under the band is written once
     against the pane and holds stacked and split alike. Under the band the layout is the
     stacked one.
+  - **The table holds its columns while a handle moves.** Each time cell and the note cell is a
+    hold whose hidden sizer alone sets the column's width (the live layer is `contain: inline-size`),
+    so no value moves a column edge. Under 38rem of pane the table is labelled blocks, one per row,
+    each cell naming its column from `data-col`. The row cards hold the Offset select, which needs
+    about 15.5rem, so the rowset is two columns from 31rem of pane and four from 63.5rem.
   - **One local-day track, a handle per row.** The track is the local calendar day of the
     first row that holds a valid time, 00:00 to 24:00 on the "Printed in" clock. Each row
     has its own lane and its own handle, a `gmt-handle`
@@ -2084,8 +2200,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **A disabled input or select has one shared style**
     (the `textInput` and `select` CSS Modules): dimmer text, a dashed border, no fill and a not-allowed
     cursor, with no opacity (both modules set `opacity: 1`, so a browser's own dimming of a disabled control never lowers the text or border contrast). Forced colours restate it as `GrayText` (`gmt-a11y.css`). A
-    widget sets `disabled` and styles nothing itself, so the state looks the same in every
-    tool. The tools that disable such a control are:
+    widget sets `disabled` and styles nothing itself, and a select is always the `select`
+    builder's, never a bare `<select>`, so the state looks the same in every tool. The tools that disable such a control are:
     - the Punctuality Board: the early and second late tolerance inputs while each one is
       switched off;
     - the DTM Decoder: the format code while a pasted segment supplies it, the strip's zone
@@ -2314,12 +2430,18 @@ Shared hooks come first, then the globe, then the clock-change pages.
     table with no scroll box is measured two ways and fails on either: against the content box of the
     nearest block that holds it and against `main`'s (a table with automatic layout grows with its
     content), and by its own `scrollWidth` against its `clientWidth` (a `table-layout: fixed` table
-    keeps its width and its content spills out of its cells). A table
+    keeps its width and its content spills out of its cells). Each page is settled first
+    (`settle` in `scripts/lib/a11y-sweep.mjs`), so a table a widget fills in after `load` is
+    measured with its rows; WebKit's classic 20 px scrollbar makes it the tighter engine at 1440. A table
     not drawn at that width is skipped, and a run that measures no table at all fails. A
     finding names the page, the first three headers, the overflow and the widest unbreakable piece
-    (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`). Rule `table-scrolls`. The same check runs
+    (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`). Rule `table-scrolls`. A second check,
+    `measureCells` in `scripts/lib/cell-overflow.mjs`, runs at 1440 and at 390 px: it fails a cell whose
+    content is larger than the cell, or whose text or element reaches more than 1.5 px past the cell's
+    edges, scrolling table or not (a header kept visually hidden by a stacked layout is skipped). Rule
+    `cell-overflows`; the last line counts `<n> scroll, <n> spill`. The same check runs
     in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in
-    Chromium, whenever a Dox file or page changes.
+    Chromium, whenever a Dox file or page changes; the browser tests (Test isolation) run there first.
   - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
@@ -2381,25 +2503,140 @@ Shared hooks come first, then the globe, then the clock-change pages.
     in the decoder, the checker's model and date fields), so mounting hides nothing and the form
     keeps its height from the first paint.
 
+### Escape: one order for the whole site
+
+- **One helper, one listener.** `lib/esc-layers.ts` (`registerEscLayer`) holds every layer a
+  reader can open: a layer registers `{ el, isOpen, close, opener }` and never listens for
+  Escape itself. One `keydown` listener per document, in the bubble phase (a control that
+  handled the press and called `preventDefault` keeps it), closes exactly one layer per press,
+  consumes the press (`preventDefault`, `stopImmediatePropagation`) so a native popover or
+  dialog does not close with it, and does nothing when nothing is open. It exists only while a
+  layer is registered. The tests are `esc-layers.test.ts` and `esc-native.test.ts`; the gate is
+  `esc-cascade.mjs`.
+- **Which layer goes first** (`pickLayer`): a `focusOnly` layer (a `<details>` the reader is
+  reading) counts only while focus is in it; a layer holding another open layer gives way to
+  the inner one; a layer named as another's `over` gives way to it; the layers that hold focus
+  go next; then the one opened last. Opening order is read
+  from `open`, `hidden`, `inert`, `aria-expanded` and `data-open` changes and from popover
+  `toggle` events; a layer whose state lives in a closure or React calls `changed()`.
+- **Focus goes to the opener** (APG), never `<body>`. If the opener is `inert` or gone, focus
+  stays where it was. A layer that puts focus back itself (`returnsFocus`: the chat rail
+  widget) is left to do it.
+- **Native layers join without asking** (`lib/esc-native.ts`, rendered by `EscLayers.astro`
+  from the header): every `[popover]` except `manual`, every `<dialog>` (the search, opener
+  `site-search [data-open-modal]`) and every `<details>` outside a `nav` or `[data-esc-skip]`.
+  The sidebar's groups are navigation state, not layers. A late-arriving element is picked up.
+- **React and Radix.** `useEscLayer` (`components/ask/use-esc-layer.ts`) registers a layer
+  from page state. A Radix popover or menu is controlled by that state and ignores its own
+  Escape (`onEscapeKeyDown` prevents it), so the helper alone decides the order.
+- **The landing's carousel is not a layer.** The APG carousel pattern gives Escape no part, so
+  the cascade closes the popovers, the Settings panel and the drawer, keeps the zone card (the
+  drawer's selection) and leaves the page the reader turned to (`esc-cascade.mjs` checks it on
+  `/`).
+- **The zone card on a framed globe** (no drawer, `/tools/zoned-earth/`) is a layer only once
+  the reader has chosen a zone; the zone the globe starts on is shown, not opened, and Escape
+  passes it by (`globe-mount.ts`).
+- **Trap.** A new layer that listens for Escape on its own breaks the cascade: register it.
+
 ## Tier 3 · HUD chrome
 
 `DOX-D1`, `D2`
 
+- **`carousel` builder** (`builders/carousel.ts`, `carousel.module.css`): the APG tabbed carousel the landing uses. The pages are tab panels in the tab order; the page passes its previous and next buttons, an empty element the dots (one `tab` per page) are rendered into, and a polite live region. A button with no page that way carries `data-off`; one that loses its page while focused hands focus to the other with `data-quiet-focus` (no sonar ping).
 - **Glass:** `blur(24px) saturate(1.4) brightness(var(--gmt-brightness))` — `0.72` dark,
   `0.97` light, measured 11–16:1 for body text. A tinted fill, a hairline gradient border
   and a 1px inset highlight. There is no grain.
+- **The header** matches the northguild.dev bar (design-system.md § `/dox` and the header).
+  - It is 55 px at every width (`calc(3.375rem + 1px)`: 0.75rem above and below a 30 px row,
+    and the hairline), with 4 px of blur, and a dark island (`gmt-theme-dark`) on
+    every page, so the glass reads the fixed `--gmt-header-*` values and not the themed fills.
+    The outer `<header>` is Starlight's, so `gmt-glass.css` paints it; the island class is on
+    the inner `.header` that `Header.astro` renders.
+  - From 50rem the bar is a three-column grid (title, slack, icons) and the search box sits at
+    the right of the middle column, just before the icons, at Starlight's 22rem cap, on every
+    page, as on northguild.dev. It shrinks first when the bar runs short. Below 50rem Starlight's
+    search icon stays where Starlight puts it.
+  - The right-hand group reads Dox, the theme toggle, then GitHub and Discord, with no divider,
+    so Discord ends 1rem minus the buttons' 4 px margin from the edge. The NorthGuild link and
+    GitHub and Discord land on northguild.dev's pixels (mark at 16, 13; buttons 38 px at y 8,
+    Discord's right edge 12 px in), so the step between the sites changes only what lies between
+    them. The theme toggle's `starlight-theme-select` wrapper is a flex box, or the inline element
+    sets the button on the text baseline, 2 px high.
+  - On the landing the bar is glass over the hero: `.gmt-herostage` starts at the top of the
+    page (`margin-block-start: -nav height`, padding back by the same), so the sky and the globe
+    layer fill the space under the bar while the copy, the Earth's frame and the drawer start
+    below it. There the backing drops from .92 to .55, and the bar's text and icons carry
+    `--gmt-shadow-halo` for their contrast over a bright Earth. The halo is the fixed ink, dark in both themes. Other pages keep .92.
+  - `NorthGuildMark.astro` inlines `northguild-mark.svg` through `lib/ng-mark.ts`, which
+    suffixes both gradient ids per page. The six paths are the northguild.dev mark's, so the
+    two sites draw the same shape. Never edit them on one side only. The wordmark follows the
+    mark after `--gmt-space-3` (12 px); in forced colours every line is `CanvasText` at full
+    opacity.
+  - `.gmt-ng-wordmark` and `.site-title` read `--gmt-wordmark-size`, `-tracking` and
+    `-leading`. `SiteTitle.astro` renders "/ gmt" in `--gmt-cyan` and `v‹gmtVersion›` (from
+    `src/generated/versions.ts`) in dim mono after it, as the other NorthGuild apps do; no
+    divider sits between the NorthGuild link and the title. The spacing is every NorthGuild
+    app's: `0.5ch` of the wordmark between "NorthGuild", the slash and "gmt", `1ch` of the
+    version's own type before it; the version (mono, 0.7 of the wordmark and never under the 12px floor: `max(0.75rem, …)`) hides below 30rem
+    and the wordmark never does. The bar's `--sl-nav-height` and `--sl-nav-pad-x` are set in `gmt-theme.css`.
+  - The hairline is an inset shadow (a border in forced colours) in the bar's last pixel, where
+    northguild.dev draws its border; `header.header` takes 1 px more padding below
+    (`gmt-shell.css`), so the row is 30 px centred at 27, as there.
+  - **The entrance on the landing** (`gmt-entrance-freeze.css`). The NorthGuild link is on
+    screen from the first paint and never animates. "/ gmt v‹version›" freezes in at t0, then
+    search (0.15 s), Dox (0.23 s) and the theme toggle (0.31 s); GitHub and Discord never hide.
+    Dox and the theme toggle freeze in 1.35 s, not 1.6 s, so each has locked before its shine.
+    The four chips shine left to right, 0.16 s apart from 1.75 s: Dox, the theme toggle, GitHub,
+    Discord. `ng-shine` brightens the icon to the frost
+    colour and shows the chip's edge while a glint crosses it. Reduced motion fades the four pieces that
+    freeze and leaves GitHub and Discord still; forced colours sweeps them. A view-transition
+    arrival (`data-arrival="transition"`) keeps the whole bar still.
+  - **The cross-site transition.** northguild.dev and Dox are one origin, so a click between them
+    runs a cross-document view transition once both opt in (`@view-transition`, and
+    `rel="expect"` on the bar). Three names are shared with northguild.dev's header and are
+    unique on each page: `ng-header` on the page's own bar (`.page > .header`), `ng-mark` on the
+    mark's `svg` and `ng-wordmark` on `.gmt-ng-wordmark` from 31.25rem (500 px); below that the
+    wordmark eases smaller than northguild.dev's fixed 1rem, so it is not named and fades with
+    the bar. In-site, all three show only their new snapshot with no motion. The inline head
+    script (`arrival.ts`) adds the `from-landing` type to a transition whose previous page is a
+    same-origin page outside the base (`navigation.activation.from`, else `document.referrer`).
+    Under that type the mark and wordmark stay still, the bar's two snapshots dissolve over
+    240 ms `ease-out`, and the root's over 600 ms `cubic-bezier(.25, .6, .2, 1)`, so the hero's
+    freeze plays in the new view; the header freeze does not play (`data-arrival="transition"`).
+    The opt-in (`@view-transition { navigation: auto }`, `none` under reduced motion) is an inline
+    `<style>` in the head (`VIEW_TRANSITION_OPT_IN`, `Head.astro`), not a rule in a linked sheet:
+    Chromium missed a linked rule on the landing and aborted the transition with "invalid state".
+    The gate's arrival step clicks through to the landing. The companion contract for northguild.dev: the
+    same three names on `.site-header` (with `id="site-header"` for the `rel="expect"` link),
+    `.ng-mark` and an `.ng-wordmark` span around the wordmark text, a bar of
+    `block-size: calc(3.375rem + 1px)` with `box-sizing: border-box` (the 55 px the live bar
+    measures), and the matching old/new rules. `scripts/fixtures/ng-landing.html`
+    stands in for that page; `hero-space` clicks through from it and checks the type, the
+    durations and that the mark's and wordmark's boxes match within 0.5 px.
+  - The search dialog is inside the island, so `gmt-tokens.css` gives `[data-theme="light"]
+    .gmt-theme-dark dialog` the light tokens back.
+  - Below `md` the right-hand group is hidden, so `MobileMenuFooter.astro` (registered in
+    `components`, rendered by our `Sidebar.astro` through the virtual import) carries the Dox
+    link with the header button's label and `aria-current`, before the social icons and theme
+    select. The site has one language, so there is no language select.
+  - `MobileMenuToggle.astro` overrides Starlight 0.41's menu button with the same markup and
+    behaviour (`lib/menu-button.ts`) and one fix: `aria-expanded` is on the `<button>`, where
+    Starlight sets it on the `<starlight-menu-button>` element, so the button announces its state.
+    Starlight 0.42 replaces the component with a native `popovertarget` button;
+    `MobileMenuToggle.test.ts` fails once the installed version is 0.42 or newer, and then the
+    override, `menu-button.ts`, the test and the `components` entry are deleted.
 - **Corner brackets:** two L-shaped corners, top left and bottom right, on a few frames only
   (when one is right: [visual-design.md § Panels](reference/visual-design.md#panels)).
-  `.gmt-brackets` (`gmt-primitives.css`, cyan) is on the home page's hero stage and on each
-  `GridSection.astro` panel of the home page and `/why-gmt`. The transport tools draw the same
+  `.gmt-brackets` (`gmt-primitives.css`, cyan) is on each `GridSection.astro` panel of the home page and `/why-gmt`. The hero has no frame. The transport tools draw the same
   frame in the frame's own colour (`--leg-color`, else `--series`) from
   `families/transport/leg-fieldset.module.css` (the Delivery Scheduler's legs and the Timetable
   Reader's rows).
 - **Focus:** a 2px cyan ring plus `gmt-focus-sonar`, one outward ping on focus
   (`.gmt-sonar-loop` is the unused looping form). The rotating conic border was removed —
   its rings read unevenly on wide, short controls.
-- **Corners:** `corner-shape: bevel` with no `clip-path` fallback. Browsers without it get
-  plain radius, and the `box-shadow` focus ring is never clipped.
+- **Corners:** `corner-shape: bevel`. Browsers without it get plain radius, and the
+  `box-shadow` focus ring is never clipped. Only the carousel's panel, tiles, rows and diamonds
+  may fall back to a `clip-path` octagon, and an outline sits on a plain radius.
 - **Scrollbars** keep the chunky `::-webkit-scrollbar` styling. `scrollbar-color` would
   override it wholesale in Chromium.
 - **Motion:** the focus and tab sonar pings, the globe, cross-document view transitions (header
@@ -2421,10 +2658,230 @@ Shared hooks come first, then the globe, then the clock-change pages.
   the `/dox` rail all mount it unchanged.
   - **The control stack.** `renderGlobeTemplate` (`src/lib/globe-mount.ts`, shared by
     `Globe.astro` and the rail) draws one `role="group"` named "Globe controls" in the stage's
-    bottom-right corner: `+`, `−`, `⊙` and the data-credits info button, in that tab order, all
+    bottom-right corner: `+`, `−`, `⊙`, the zone finder's magnifier (space mode only) and the data-credits info button, in that tab order, all
     native `<button>`s of one size and one look (`tools/globe.module.css`; `data-gate="globe-zoom"`). Every globe draws the
     boundaries and the imagery, so every globe carries the button; there is no option to drop it.
     Its popover id is `<idPrefix>-data-credits`, unique per mount. See *Data credits* below.
+  - **Space mode (the landing hero).** `<Globe space />` and `renderGlobeTemplate({ space: true })`
+    draw the Earth with no frame: the engine paints into `.globeLayer`, which fills the hero, and
+    `.layout` holds only the invisible stage (the zoom stack's box and the Earth's framing) and the
+    zone drawer. `createGlobe` takes `framing(width, height)` (the disc's centre and radius at
+    zoom 1, from `frameSpace` in `globe-mount.ts`), `hitArea` (the element that takes the pointer
+    and is the one tab stop, so the canvas never does), `maxDpr` (1.5 in the hero, 2 elsewhere),
+    `pauseWhenHidden` (an `IntersectionObserver` stops the loop off screen) and `onInteract(kind)`
+    (`drag`, `pinch`, `wheel`, `tap` or `key`; it opens the drawer without moving focus, except a tap that picks a zone). All
+    are opt-in: unset, a globe behaves as before. A wheel or touch off the hit area belongs to
+    the page, so the copy scrolls and never zooms. At maximum zoom (5x) the Earth covers the
+    whole hero; the night side is the theme's own translucent wash, so the sky shows faintly
+    through it.
+  - **The zoom stack's place.** Side by side (`(width >= 64rem) and (orientation: landscape)`)
+    the stage is the Earth's square, at the start of the frame, so the stack is placed from the
+    frame (a size container) and not the stage: its right and bottom edges are `--gmt-space-4`
+    inside the hero's. Stacked, the stage spans the hero's width, so the stack sits
+    `--gmt-space-4` in from the screen's right edge and the stage's bottom. At rest zoom it never touches the disc: `frameSpace` shrinks the radius only
+    as far as it must (`STACK_CLEARANCE`, 8 px), reading the stack's laid-out box, and the
+    engine measures again when the stage, the stack, the hero or the copy changes size
+    (`framingWatch`). Side by side the disc's centre-x is the page's centre
+    (`documentElement.clientWidth / 2`) or, where the live copy rect (the union of its
+    descendants' boxes) reaches too far, `copyEnd + 16 + 1.06 R`, never left of the page's centre;
+    the radius and the centre settle together because the stack's reach depends on the centre.
+    The gate's `position` step proves it at 390, 768, 1280, 1440, 1920, 2560 and 3008. The
+    standalone sizing block in `globe.module.css` (`.root:not([data-space])`) never reaches the
+    hero; reaching it collapsed the stage between 56rem and 80rem.
+  - **The stacked hero** (`(width < 64rem) or (orientation: portrait)`: phones, and tablets held
+    upright). The hero's grid rows are the copy, then the Earth's area (`auto 1fr`), and the hero
+    is at least `100dvh` plus the drawer's bay (`--gmt-hero-bay`, 30rem) tall. The globe's
+    `.layout` is a stretched flex column that fills the area and pads its end by the bay; the
+    frame takes the rest, and the stage fills the frame: the full width and the rest of the first
+    screen, never shorter than `min(100vw, 44rem, 70dvh)` (the old square, which is what a phone
+    gets). `frameSpace` takes the radius from the stage's shorter side and centres the disc in
+    the stage. The hero's pull-up under the header (`margin-block-start: -nav height`) is in
+    `@layer gmt.shell`, because Starlight's markdown spacing gives every block after the first a
+    top margin in a later layer than its core; the side-by-side layout's `margin: 0`
+    (`gmt-home-carousel.css`, same layer, later) still wins there. The copy's page area keeps
+    the tallest page's height on every page, so the row and the Earth never move as the pages
+    change; the intro has empty sky above it.
+  - **No layout shift.** Michroma is inlined in the site stylesheet and loaded from its bytes before
+    the first paint (`src/lib/display-face.ts`), so the copy is drawn in it from the first paint and never reflows (no monospace fallback is as
+    wide as Michroma for every string). `hero-space` asserts a layout-shift total of exactly 0 over the first 5 s on a cold cache at
+    1440, 1920 and 390; that the title and the wordmark are drawn in Michroma, not the fallback; that the title keeps one font size
+    and the copy column one box in every frame from the first paint; and that the copy, the stack
+    and the Earth's box stand still after load. The copy's CSS lives in `HeroCopy.astro`'s own
+    unlayered `<style>` (it ships in the page head, so Astro's dev server has it before the first
+    paint too); no global sheet or CSS Module sets any size the copy uses.
+  - **Nothing invisible covers the Earth.** Every copy wrapper (the grid cell, the column, the
+    stack, the actions row) hugs its content and has `pointer-events: none`; the eyebrow, the
+    title, the lede and the three buttons have `pointer-events: auto`. `hero-space` samples
+    points across the hero beside the text at 1440, 1920, 1334 and 390: none may land on a copy
+    box, and a drag that starts on the Earth beside the text opens the zone list.
+  - **The zone drawer.** Off on load (`inert`, hidden, out of the accessibility tree). The first
+    globe interaction opens it with focus where it was; the magnifier in the zoom stack opens it
+    and focuses the search; its close, Escape and a pointer press outside the Earth shut it, and
+    then only the magnifier, or a tap on a zone of the Earth, opens it again (a drag, a spin or
+    a wheel zoom does not reopen a drawer the reader closed). A click or tap on a zone of the
+    Earth does what its list button does: it centres the globe on the zone and selects it (card,
+    readout, list mark, live region) through `chooseZone` (`lib/zone-action.ts`), the one path
+    the list, the search and the Earth share; it opens the drawer when shut, scrolls the zone's
+    row into view in the virtual list (the clock list's `select`) and puts focus on the list, whose
+    active row is that zone. An outside
+    press is judged by the Earth's disc (`getCentre()`
+    in the surface's pixels), not the canvas box; the drawer, the zoom stack, the card, a
+    popover, dialog, listbox, menu or Settings drawn over it, and the globe's own controls do not
+    count as outside, and focus stays where the press put it. Escape closes the Settings panel
+    first, then the drawer; the zone card is the drawer's selection and is not a layer of its
+    own where a drawer exists. The Earth never moves for it: side by side it is a slide-over at the hero's inline
+    end with the close on its start edge; below that it is a
+    bottom sheet in a 30rem bay under the Earth (`.layout` pads its block end by the bay,
+    `--gmt-hero-bay`) with
+    the close on its top edge, turned to point down. The location card keeps clear of the
+    close (`tooltipLimit`) or hides (`data-occluded`) when its pin is behind the drawer. The
+    card is a manual popover shown once at mount and hidden with `hidden`, so it is drawn in the
+    top layer above the header and its search box (which sit outside the page's stacking
+    context), placed in page pixels from the frame it hangs over, so it scrolls with the page
+    without being moved by script (no layout shift), and follows a resize or an inner scroll; a
+    popover or dialog opened later draws over it. Inside inert content (`[inert] .tooltip`) the card
+    hides, since the top layer would draw it over whatever made the page inert: Starlight 0.41's
+    mobile menu is a fixed pane, not a popover, and inerts `.main-frame` while it is open. A click on a region of the Earth selects and
+    centres the globe on the zone, as a list row does. The close sits one layer above the region, since its joining edge laps the region by 1px.
+    The tab order on `/` is copy, globe, `+`, `−`, `⊙`, the magnifier, the info button, then the
+    close and the drawer's contents when it is open. The drawer's region sits 16 px in from the
+    hero's top and bottom side by side, and the sheet 16 px above the hero's bottom and in
+    from both sides (the hero's column starts at the hero's top: the widget wrapper's block
+    margin is 0). While it is open the zoom stack is `inert` and `visibility: hidden` at every
+    width, the bottom sheet included (the fade is a token, so none under reduced motion); it
+    returns on close with focus on the magnifier. The copy never moves or goes under the Earth
+    or the drawer meanwhile. The magnifier opens it with the search focused and its suggestions shut
+    (`focusInput()` on `gmt-combobox`, which selects the text); while the suggestions are open
+    the zone list is hidden, so a popup never covers a row. Escape follows APG Combobox then
+    Disclosure through the site's order: with the suggestions open it closes them only, then
+    the Settings panel, then the drawer with focus on the magnifier, whether or not the search holds text.
+    **Reachability:** the Settings gear and Data credits sit in the drawer or the zoom stack,
+    which are `inert` while the drawer is shut (and the zoom stack while it is open), so
+    `focus()` is a no-op there. Keyboard order is magnifier, then Settings. The `hero-space` gate checks all of this in
+    a real browser (frame, centring, drawer placement and Escape, close, search popups, the zoom stack's corner,
+    clearance and hiding, layout shift, zoom fill,
+    scroll, frame rate, interaction, the phone menu, the card beside the sheet, forced colours,
+    more contrast, reduced motion, touch, and the zone list's rows and keys);
+    `data-credits-check` expects the info button fifth on `/`.
+  - **The night sky (landing hero only).** `HeroSpace.astro` is the hero's first child: three
+    `aria-hidden`, `pointer-events: none` canvases (`contain: strict`, `gmt-space.css`), bottom to
+    top the Milky Way (inside a wrapper that carries the nebula wash: cyan 5% at the top left, teal
+    6% at the bottom right), the stars and the meteor. They sit under the globe layer, the copy
+    scrim, the hit area and the copy. The star list is preloaded on `/` alone.
+    - **Source and licence.** The stars are the real HYG v4.4 catalogue (astronexus, pinned to
+      commit `53e3df3`, hash checked), magnitude 5.5 and brighter: 2865 stars in
+      `src/assets/hero-sky.bin`, 6 bytes each (17,190 bytes; the budget is 24 KB). The generator
+      is `scripts/prepare-hero-sky.mjs`; the catalogue itself is never committed. The list is an
+      adaptation under CC BY-SA 4.0, kept as a share-alike sidecar (`hero-sky.json`, the
+      boundary-data precedent) that says the repository's MIT licence does not cover it. The
+      globe's data-credits popup lists it ("Stars", HYG v4.4, CC BY-SA 4.0) on `/` only.
+    - **It is the real sky.** The stars are where they are for the clock and the camera, with
+      nothing art-directed. `lib/sky-math.ts` holds the galactic constants, a stereographic
+      projection and the sidereal time (Greenwich mean sidereal time, Meeus eq. 12.4, checked
+      against examples 12.a and 12.b). The view's centre is the point behind the Earth:
+      right ascension = sidereal time + 180 degrees minus the camera's longitude turn, and
+      declination = the camera's latitude turn (held to 89 degrees). So a drag to the right
+      moves the stars left, at the Earth's own speed; the ambient spin moves them too; and
+      with the globe at rest they turn once a day. The Earth's screen centre
+      (`GlobeHost.getCentre()`) is the view's centre, so the stars sit where they would behind
+      the disc. Nothing is clipped in the box: the cut-off is 120 degrees from the centre.
+      `SKY_ANCHOR` (0.4, 0.6) is the fallback centre when the globe has not mounted.
+    - **It has no loop of its own.** `lib/sky.ts` (`mountSky`) draws nothing on mount: the hero
+      opens as plain void, and the first `view` makes the first draw, then sets `data-sky="ready"`
+      on the hero and resolves `ready`. After that it draws once per resize,
+      and when `view(rotation, centre, instant)` (called from `GlobeHost.onFrame`) finds the
+      view's centre moved by 0.01 degree or the Earth's centre by half a pixel (the clock alone
+      does not count, since the globe calls once a second at rest); a check once a minute, stopped while the tab is hidden, catches the sidereal drift at rest. Stars are one
+      path per colour and brightness step (32 fills at most) on a canvas at a pixel ratio of
+      1.5 at most; the Milky Way is on a canvas a quarter the hero's size. A layer that is not
+      visible is not drawn. `lib/hero-space.ts` fetches the list; `followGlobe` makes the first
+      draw from the mounted globe's rotation, centre and the clock (no wait for a frame, no guessed
+      view), then follows the globe and starts the meteor. If the globe fails to mount,
+      `skyWithoutGlobe` draws once at the start rotation and `SKY_ANCHOR`. The band wrapper (wash
+      included) and the stars canvas are `opacity: 0` in `gmt-space.css` and fade in once
+      `[data-sky="ready"]` is set, on the entrance's clock (`gmt-entrance-freeze.css`, below). The stars canvas carries `data-sky-view`
+      (right ascension, declination, instant), `data-sky-draws`, `data-sky-ms` and
+      `data-sky-bodies` for the gate. The sky (`sky.ts` with `sky-math.ts`) is at most 5 KB and
+      the meteor 4 KB, minified and gzipped (`scripts/sky-size.test.ts`).
+    - **The entrance.** `lib/arrival.ts` is the inline head script (`arrivalInlineSource`): on the
+      landing it writes `data-entrance="wait"` on `<html>` before first paint and `static` after
+      `ARRIVAL_FAILSAFE_MS` (2.5 s); on every page it writes `data-arrival` on `pagereveal`: `transition` when the event
+      carries a view transition, `load` otherwise (a value already set stands). An arrival from outside the base also gets the `from-landing` transition type (Tier 3). `HeroSpace.astro`'s script calls
+      `startHeroEntrance` (`hero-space.ts`), which runs `runHeroEntrance` (`hero-entrance.ts`):
+      `t0` is when the sky has drawn and the globe's `dawnReady` has settled (a failed sky or globe
+      counts as ready), or 800 ms after navigation start; where the browser fires `pagereveal`, it
+      holds until `data-arrival` is set. At `t0` it writes `run` (never over
+      `static`), marks `gmt-entrance-t0`, calls the globe's `startDawn`, and after `ENTRANCE_MS`
+      (3 s) writes `done`. `globe-mount.ts` passes `entrance: "dawn"` and hands the host over with
+      `offerGlobe` (a failed mount offers `null`). The meteor starts 2.9 s after `followGlobe`.
+      - **The dawn.** With `entrance: "dawn"` the engine draws no frame until `startDawn`. Exposure
+        (`globe/dawn.ts`, a uniform in the shader) is 0 until `t0` + .35 s, then rises on
+        `cubic-bezier(.3,0,.2,1)` to 1 at `t0` + 2.4 s; the spin starts then (held still if the
+        reader worked the globe first). The canvas-2D fallback fades its canvas over 0.8 s. Reduced
+        motion lights the Earth at once. `data-dawn="done"` lands on the host and the zoom stack gets
+        `data-ready` in the same step. The canvas has no CSS animation. Until then the stack is
+        hidden, except that it shows while it holds focus or an open credits panel
+        (`.zoom:is(:focus-within, :has(:popover-open))`): a reader who tabs to it, or opens the
+        credits, before the dawn ends never meets an invisible control or a panel inside a hidden
+        ancestor.
+      - **CSS** (`gmt-entrance-freeze.css`, in `gmt.controls`): holds the buttons, the pager and
+        the sky under `wait`; the freeze keyframes, the sky fades (keyed on `run` and
+        `data-sky="ready"`), the card pop and the reduced-motion and forced-colours variants. The
+        copy (the eyebrow, the title and the tagline) is never held: it paints at the first paint
+        at full opacity, the page's largest paint, and its freeze (`ng-freeze-text`, keyed on
+        `wait` or `run`, so the change to `run` does not restart it) sweeps over text already
+        there: frost colour under a mask with a 50 % floor, locking to ice as the front crosses.
+        The eyebrow and title start at once, the tagline 0.12 s later; reduced motion shows the copy
+        still. Everything else starts at `run`. `HeroCopy.astro` writes `--ng-i` on each button.
+        The globe's control stack and the first location card take the hero buttons' frost and
+        glint: the stack's buttons from the moment `data-ready` arms them, top to bottom, 0.06 s
+        apart; the card with its pop, its glint crossing as the pop settles. Both are keyed on
+        `run`, so a zone picked after the entrance shows its card with no sheen. The pager (the
+        arrows and the dots) fades in after the buttons; the arrows carry `gmt-sonar-focus`.
+      - **Gates:** `hero-space` › entrance; `globe-smoke` waits for `data-dawn="done"` on the landing.
+    - **The Sun and the Moon** are drawn on the stars canvas after the stars, from their
+      positions at the instant. The Sun is the subsolar point that already shades the Earth
+      (`globe/sun.ts`), turned into right ascension by the sidereal time. The Moon uses the
+      Astronomical Almanac's low-precision lunar formulae (Section D, the 1990s editions,
+      as transcribed in the MOONPOS routine of the IDL Astronomy Library: Greason 1988, Steele
+      1994), good to about 0.3 degree; the ecliptic position is turned to the equator with the
+      mean obliquity (23.439 degrees minus 0.013 degree a century). Their sizes are the real
+      angular radii (the Moon's from its parallax with k = 0.2725076), never under 2.5 px. The
+      Moon shows its phase: the lit fraction is (1 - cos of the angular distance between them) / 2, and the lit side faces
+      the Sun along the great circle (Meeus 48.5), drawn as a half disc and a terminator
+      ellipse over a dark disc of earthshine (alpha .08 x (1 - lit), skipped when it rounds to 0). The Sun is a near-white core with a 90 px glare (alpha .35); it is not
+      drawn when it lies more than 90 px inside the Earth's disc (the Earth would hide it),
+      so the glare spills past the rim when it sits just behind it. Both are tested against
+      Meeus examples 47.a, 25.a and 48.a.
+    - **The meteor** (`lib/space-fx.ts`) is the sky's one moving thing: a faint streak, about one
+      a minute (a wait of 20 to 120 s, mean 45), a third to a half of a second long, and never over
+      the copy, an open zone drawer or the Earth. It needs no frame between meteors, and none falls
+      while the tab is hidden, the hero is off screen or the reader asked for reduced motion.
+    - **Media.** `forced-colors: active` hides the whole layer. `prefers-contrast: more` and
+      `prefers-reduced-transparency: reduce` hide the Milky Way and the Sun's glare, and keep the
+      stars, the Sun's core and the Moon. Under reduced motion there is no meteor and no ambient
+      spin; the stars still follow the reader's own drag.
+    - **Gates.** `hero-space` checks the credit text; that the layers are at opacity 0 with no draw until
+      ready, then exactly one draw at the globe's start view with the fade not begun (also with the
+      globe's script blocked); that the view shows the page's clock to
+      5 s; that the sky is not redrawn in 4 s at rest; that a 60 px drag lowers the view's
+      right ascension by the longitude the globe turned and moves the stars left, at a median
+      draw of 2 ms and a median frame of 17.5 ms; that the ambient spin draws the sky at most
+      once a frame; that reduced motion leaves no animation, no frame request and no meteor
+      over 10 s; and, with Playwright's clock and time zone pinned to instants found with
+      `sky-math`, that a half Moon is half lit on the Sun's side, that the Sun just behind the
+      Earth spills its glare past the rim on its side only, and that the Sun in the clear is
+      near-white.
+  - **The hero copy column.** `HeroCopy` takes an optional `eyebrow` (`HeroGlobe` passes
+    `@northguild/gmt`; Starlight's hero schema has no such field, so it is not in the front
+    matter). With it the column is left-aligned at every width, the eyebrow and title are set in
+    the wordmark's type (`--gmt-font-display`; the lede and the buttons too, 1rem at 1.6), and the
+    three actions (`Get started`, `Ask Dox`,
+    `Prompt`, each icon after its text) share one row and one recipe in `HeroCopy.astro`
+    (`.gmt-hero-actions`, a full border; the first is the primary). Without it, `Hero.astro`'s
+    other splash pages render as before. The `Prompt` button is named `Copy prompt`
+    (`aria-label` from the front matter); the name follows the visible `Copied!` or `Copy failed`
+    while it shows.
   - **The split.** `globe/` knows nothing about time: it draws a planet, takes markers,
     regions and arcs, and asks the caller for the instant to light it by. That line is what
     lets the same engine carry route arcs or a coloured region set without a fork.
@@ -2469,7 +2926,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - Features: drag with inertia, pinch and wheel zoom over `[1, 5]`, zoom buttons,
     `land-110m`, a day/night terminator from the current instant, and an arrow-key
     `listbox` for zone selection. The ambient spin eases in from rest over 2 s every time
-    it starts — on mount and after any interruption — and never begins at full speed. The
+    it starts — on mount and after any interruption — and never begins at full speed. While the spin
+    alone moves the globe the engine draws at most every 30 ms (the Earth fills the landing hero, and a
+    draw at every vsync saturated a machine without GPU raster); any other motion draws every frame. The
     wheel is only swallowed while the zoom can still change, so a reader who scrolls onto
     the hero is not trapped on it.
   - Shading (`src/lib/globe/shading.ts`): day light, twilight and night are shaded per
@@ -2521,6 +2980,22 @@ Shared hooks come first, then the globe, then the clock-change pages.
       screen-space derivatives of a wrapping longitude would pick the smallest mip and draw a
       seam. The sampler repeats in longitude, clamps in latitude, and is 16× anisotropic,
       which holds the poles sharp to within a few degrees, where the image is uniform ice.
+    - **Natural Earth.** Blue is the default. A "Natural Earth" switch in the globe's settings
+      panel shows the photograph in its own colours: `data-earth="natural"` on `<html>`, which
+      `gmt-tokens.css` turns into `--gmt-globe-imagery-duotone: 0` and
+      `--gmt-globe-vector-overlay: 0`. The rule names the hero island (`.gmt-theme-dark`) too,
+      because the island re-declares both tokens on itself and an inherited override would
+      never reach the hero's globe. Every globe watches `data-earth` beside `data-theme`
+      (`THEME_ATTRIBUTES` in `globe.ts`) and re-reads its theme, so one switch moves them all.
+      The choice is one `localStorage` key (`dox:earth`, `src/lib/earth-look.ts`; every access
+      guarded, the page correct without it), and `ThemeProvider.astro` applies it beside
+      Starlight's theme before first paint. The switch is offered only where it does something
+      (`earthSwitchOffered`): the WebGPU renderer with imagery above 0. It is hidden, not
+      disabled, on the canvas-2D fallback, on the light theme's flat globes and under raised
+      contrast and forced colours, and `globe.ts` re-checks it on every theme change, preference
+      change and frame, so a renderer swap after a device loss hides it. The overlay inks sit on
+      their casing, so markers and labels hold their contrast over the plain photograph, and the
+      NASA credit shows wherever the photograph is drawn.
     - **Shading.** The imagery is a photograph of a lit planet, so it takes the sun as a
       brightness — `imageryLight` in `shading.ts`, `dayFactor`'s falloff above a 0.18
       ambient floor — and stands in for the day wash, which fades out as it fades in. The
@@ -2548,14 +3023,16 @@ Shared hooks come first, then the globe, then the clock-change pages.
       the vector look. Every imagery term in every shader is scaled by one weight, so at
       weight 0 the output is the flat globe exactly: at 5× it matches its own flat rendering
       pixel for pixel.
+    - **The grid follows the flat globe.** The latitude and longitude lines are a map device,
+      so they are scaled by `1 − weight`: none over the photograph at rest, fading in as the
+      zoom fades the photo out. Where no imagery is drawn (the light theme, raised contrast,
+      forced colours, the canvas-2D fallback) the grid is unchanged.
     - **Dark theme, and the landing hero.** The light theme sets `--gmt-globe-imagery-alpha`
       to 0 and keeps its own flat globe. The Blue Marble is a dark photograph: on the dark
-      page it reads as the planet in space, but floating on the pale page it read as a hole,
-      its glow as a smudge, and labels near the limb carried dark halos out onto white. A
-      dark panel boxed round the globe was tried and rejected. What stayed is a full-width
-      dark band behind the landing hero (`HeroGlobe.astro`), painted with a `border-image`
-      outset so it spans the window from inside the content column without widening the
-      page. A light-theme reader who never opens the front page never downloads the image.
+      page it reads as the planet in space, but floating on a pale page it read as a hole.
+      The hero paints its own void across the full width of the window (`.gmt-herostage` takes
+      the content panel's gutters back), so no pale page shows round the Earth. A light-theme
+      reader who never opens the front page never downloads the image.
     - **The hero is a dark island.** `.gmt-herostage` carries `.gmt-theme-dark`, which the
       dark blocks of `gmt-tokens.css` and of `gmt-theme.css` (Starlight's colours, mapped
       from ours) name beside `:root`. The island re-declares them on itself, so everything
@@ -2657,8 +3134,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     Hinnant's days-from-civil. The offset range spans UTC−12 to UTC+14, 26 hours, so two
     zones can sit *two* calendar days apart — a ±1 check falls through to "same day" for
     exactly the pair that differs most.
-- **Zone filters (`src/lib/zone-filter.ts`, `zone-filter-ui.ts`)** — a settings gear to the
-  right of the zone search opens a popup of six switches over the same two axes the rows
+- **Zone filters (`src/lib/zone-filter.ts`, `zone-filter-ui.ts`)** — a settings gear (named
+  "Settings", since it holds the Earth's look as well as the filters) to the
+  right of the zone search opens a popup of nine filter switches over the three axes the rows
   show: local day
   (Yesterday / Today / Tomorrow), DST state (In DST / Standard time / No DST) and local
   sky (Daylight / Twilight / Night). They narrow
@@ -2666,6 +3144,14 @@ Shared hooks come first, then the globe, then the clock-change pages.
   list is not showing cannot be selected by tapping its territory either. The selected zone
   keeps its marker regardless — its tooltip and outlined region would otherwise point at bare
   ocean.
+  - **The popup fits the room beside its gear.** It is right-aligned to the gear and as wide as
+    its switches (at most 22rem), and a drawer or bottom sheet clips whatever overflows it. The
+    gear sits at the clip's inline-end edge, so the panel is capped to `100cqi`, the container's
+    own width (`disclosure.module.css`). A cap measured against the viewport would make the
+    panel wider than the drawer's content and cut off its left edge, from 320 to 3008 px.
+  - **A fieldset of its own holds "Natural Earth"**, after the zone count. It is shown or hidden
+    by `setEarthAvailable`, which `globe.ts` calls with whether this globe draws the photograph;
+    it is not a filter, so it never reaches the zone list. See the Earth imagery section.
   - **It is a popup, not an accordion**: it floats over the clock list instead of pushing it
     down, and light-dismisses on a press outside or on Escape, which returns focus to the
     gear. `<details>` supplies the disclosure and the keyboard toggle; the dismissal is ours,
@@ -3035,9 +3521,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
   licence footer (`.gmt-hive-licence`) are `display: none`, and an info button
   (`.gmt-hive-info`, named "About Dox's answers and licences") at the start of the composer's
   control bar opens both in one native `popover="auto"` panel, anchored above the button. Send
-  stays at the end of the bar. Above 60rem the button is hidden and both notes show inline. CSS
+  stays at the end of the bar. Above 60rem the button is hidden, the accuracy note shows inline and
+  the licence footer is the closed `LicenceDisclosure` line. CSS
   picks the form, so the server render is already right. `AccuracyNote` and `LicenceNote` are
-  the single source for both forms.
+  the single source for the popup, `LicenceDisclosure` for the footer.
 - **Retrieval trace** (`RetrievalTrace.tsx`): chunk count and titles, zero for an
   out-of-corpus question, plus the brain that actually answered.
   - **Timings.** The Worker times each stage (`worker/timing.ts`): ledger, corpus, search,

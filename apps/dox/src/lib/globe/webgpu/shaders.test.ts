@@ -213,6 +213,16 @@ describe("imagery", () => {
     expect(code).not.toMatch(/dayFactor\(elevation\) \* vectorW/);
   });
 
+  it("draws the grid only where the photograph gives way to the flat globe", () => {
+    /* The grid is a map device. Over the photograph of the Earth it reads as
+       a wireframe, so it fades out with the imagery and comes back as the
+       zoom fades the photo to the vector map. With no imagery (canvas 2D,
+       the light theme, raised contrast) it is drawn as before. */
+    expect(code).toContain(
+      "g.grid.a * gridCoverage * quietFactor * (1.0 - imageryW)",
+    );
+  });
+
   it("lights the vector overlay like the photograph under it", () => {
     /* Drawn after the night wash, an unlit overlay keeps the night side's land
        as bright as the day side's and blurs the terminator. Scaled by
@@ -484,6 +494,92 @@ describe("the uniform block", () => {
     expect(Array.from(target.slice(start, start + 8))).toEqual([
       0, 0, 0, 0, 0, 0, 0, 0,
     ]);
+  });
+});
+
+describe("the entrance exposure", () => {
+  const input = (exposure?: number) => {
+    const target = new Float32Array(UNIFORM_BYTES / 4);
+    const zero = [0, 0, 0, 0] as [number, number, number, number];
+    writeUniforms(target, {
+      widthDev: 1,
+      heightDev: 1,
+      radiusDev: 1,
+      centreXDev: 0,
+      centreYDev: 0,
+      dpr: 1,
+      zoom: 1,
+      quiet: false,
+      sun: [0, 0, 1],
+      cameraTrig: [1, 0, 1, 0],
+      rotationLngDeg: 0,
+      subsolar: [1, 0, 0],
+      theme: {
+        ocean: zero,
+        limb: zero,
+        grid: zero,
+        land: zero,
+        landStroke: zero,
+        day: zero,
+        night: zero,
+        atmosphere: zero,
+        haze: zero,
+        label: zero,
+        casing: zero,
+        imagery: 0,
+        vectorOverlay: 0,
+        imageryDuotone: 0,
+      },
+      gridWidthCss: 0.5,
+      limbWidthCss: 1,
+      atmosphereReach: 1.06,
+      imagery: 0,
+      casingWidthCss: 1,
+      ...(exposure === undefined ? {} : { exposure }),
+    });
+    const start = slotOffset("entrance") / 4;
+    return Array.from(target.slice(start, start + 4));
+  };
+
+  it("is written to its own slot, and is 1 unless a host asks for less", () => {
+    expect(UNIFORM_SLOTS.at(-1)).toBe("entrance");
+    expect(input()).toEqual([1, 0, 0, 0]);
+    expect(input(0.25)).toEqual([0.25, 0, 0, 0]);
+  });
+
+  it("dims every overlay and the rim in the surface pass", () => {
+    const source = stripComments(surfaceShader());
+    for (const layer of [
+      "g.grid.a",
+      "g.land.a",
+      "g.landStroke.a",
+      "g.regionFill.a",
+      "g.casing.a",
+      "g.regionStroke.a",
+      "g.limb.a",
+    ]) {
+      const use = source
+        .split("\n")
+        .filter((line) => line.includes(layer) && line.includes("*"));
+      expect(
+        use.some((line) => line.includes("exposure")),
+        layer,
+      ).toBe(true);
+    }
+    expect(source).toContain("ring.a * exposure");
+  });
+
+  it("lights the disc from the night colour, and leaves it alone at full exposure", () => {
+    const source = stripComments(surfaceShader());
+    expect(source).toMatch(
+      /if \(exposure\(\) < 1\.0\) \{[^}]*mixStraight\(vec4<f32>\(g\.night\.rgb, 1\.0\), colour, exposure\(\)\)/,
+    );
+  });
+
+  it("dims the region overlay, markers and labels", () => {
+    for (const shader of [regionOverlayShader, markerShader, labelShader]) {
+      expect(stripComments(shader())).toContain("exposure()");
+    }
   });
 });
 

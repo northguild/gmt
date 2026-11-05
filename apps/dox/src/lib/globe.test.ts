@@ -14,6 +14,7 @@ import {
   resolveGlobeZones,
   rotationForZone,
 } from "./globe-zones";
+import { placeTooltip } from "./globe";
 import { TZ_COORDINATES } from "./tz-coordinates";
 
 // ---------------------------------------------------------------------------
@@ -83,5 +84,30 @@ describe("rotationForZone", () => {
     expect(rotationForZone({ id: "x", lat: 35, lng: 139 })).toEqual([
       -139, -35,
     ]);
+  });
+});
+
+describe("placeTooltip", () => {
+  const base = { width: 600, cardWidth: 120, pad: 8 };
+
+  it("without a limit is the plain clamp inside the host", () => {
+    expect(placeTooltip({ ...base, x: 300, limit: null })).toEqual({
+      x: 300,
+      occluded: false,
+    });
+    expect(placeTooltip({ ...base, x: 10, limit: null }).x).toBe(68);
+    expect(placeTooltip({ ...base, x: 590, limit: null }).x).toBe(532);
+  });
+
+  it("keeps the card's right edge at or short of the limit", () => {
+    const placed = placeTooltip({ ...base, x: 430, limit: 450 });
+    expect(placed.x + base.cardWidth / 2).toBeLessThanOrEqual(450);
+    expect(placed.occluded).toBe(false);
+  });
+
+  it("hides the card when the pin is at or past the limit", () => {
+    expect(placeTooltip({ ...base, x: 450, limit: 450 }).occluded).toBe(true);
+    expect(placeTooltip({ ...base, x: 500, limit: 450 }).occluded).toBe(true);
+    expect(placeTooltip({ ...base, x: 449, limit: 450 }).occluded).toBe(false);
   });
 });

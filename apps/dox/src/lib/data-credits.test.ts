@@ -2,14 +2,19 @@
 import { screen } from "@testing-library/dom";
 import { raw } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
+import sky from "../assets/hero-sky.json";
 import {
   COASTLINES,
   EARTH_IMAGERY,
+  HYG_COMMIT,
+  LICENCE_CREDIT,
   NE_TAG,
+  NIGHT_SKY,
   renderDataCreditsHtml,
   TBB_TAG,
   TZ_BOUNDARIES,
 } from "./data-credits";
+import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from "./licence";
 
 function show(
   credits: Parameters<typeof renderDataCreditsHtml>[0],
@@ -50,6 +55,44 @@ describe("the coastline credit", () => {
       `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
     );
     expect(NE_TAG).toBe("v5.1.2");
+  });
+});
+
+describe("the night sky credit", () => {
+  it("is labelled Stars and links the pinned catalogue commit and the licence", () => {
+    show([NIGHT_SKY], { id: "c", placement: "stack" });
+    expect(text("Stars")).toHaveTextContent(
+      "HYG v4.4 by astronexus, from Hipparcos, Yale Bright Star and Gliese, adapted to the stars of magnitude 5.5 and brighter (CC BY-SA 4.0).",
+    );
+    // The cut it names is the one the star list was made with.
+    expect(text("Stars")).toHaveTextContent(
+      `magnitude ${sky.magnitudeLimit} and brighter`,
+    );
+    expect(
+      screen.getByRole("link", { name: "HYG v4.4", hidden: true }),
+    ).toHaveAttribute(
+      "href",
+      `https://codeberg.org/astronexus/hyg/src/commit/${HYG_COMMIT}`,
+    );
+    expect(
+      screen.getByRole("link", { name: "CC BY-SA 4.0", hidden: true }),
+    ).toHaveAttribute(
+      "href",
+      "https://creativecommons.org/licenses/by-sa/4.0/",
+    );
+    expect(HYG_COMMIT).toBe("53e3df311869e813ace5f1ad2ec4ce909f13256c");
+  });
+});
+
+describe("the licence credit", () => {
+  it("is labelled Licence and reads as the site's licence note, linked to the terms", () => {
+    show([LICENCE_CREDIT], { id: "c", placement: "stack" });
+    expect(text("Licence")).toHaveTextContent(
+      `${LICENCE_LEAD} ${LICENCE_LINK_TEXT}.`,
+    );
+    expect(
+      screen.getByRole("link", { name: LICENCE_LINK_TEXT, hidden: true }),
+    ).toHaveAttribute("href", LICENCE_URL);
   });
 });
 

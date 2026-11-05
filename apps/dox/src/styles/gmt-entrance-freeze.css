@@ -1,0 +1,753 @@
+/*
+ * The landing page's entrance: the copy and the header freeze into place out of the dark, the
+ * sky fades in, and the location card pops last. The sequencer (lib/hero-entrance.ts) sets
+ * `data-entrance` on <html>:
+ *
+ *   absent   no script ran; nothing is held, nothing animates.
+ *   wait     the sky is drawing. The copy's freeze has started (below); the other pieces are held
+ *            out of sight.
+ *   run      t0 has come; every other animation below starts in the same style recalculation.
+ *   static   the failsafe showed the page; nothing animates, the sky fades in once drawn.
+ *   done     the entrance has ended; no rule below matches, so a card shown later does not pop.
+ *
+ * The copy (the eyebrow, the title and the tagline) is the page's largest text, so it is on screen
+ * from the first paint and does not wait for the sky or the globe. Its freeze starts with the page
+ * and never starts from invisible: the text shows in frost, faint, and the front locks it solid as
+ * it crosses. The sky, the globe, the buttons, the pager and the header join at t0.
+ *
+ * The header continues northguild.dev's bar. The NorthGuild link and the GitHub and Discord
+ * buttons sit on the same pixels there, so they are on screen from the first paint: the
+ * "/ gmt" title freezes in beside the link, then search, Dox and the theme toggle, left to right.
+ * Then the four chips (Dox, the theme toggle, GitHub, Discord) shine one after another.
+ *
+ * `data-arrival="transition"` marks a page reached through a view transition: the header is
+ * already on screen, so nothing in it moves.
+ *
+ * The freeze animates only opacity, mask-position, colour and, on the buttons, border-colour. The
+ * frost and the glint on a button are pseudo-elements that animate opacity and translate. Nothing
+ * blurs and nothing animates a shadow. Every piece has one animation per target, and none keeps
+ * its end state (fill `backwards`), so hover and focus styles take over the moment it ends.
+ */
+
+/* The entrance's timings, in one place. They are not the site's motion tokens: the entrance is
+   one composed sequence, and every part of it stays under a second and a half except the freeze. */
+:root {
+  --ng-sweep-ease: cubic-bezier(0.25, 0.6, 0.2, 1);
+  --ng-settle-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ng-mask: linear-gradient(
+    100deg,
+    var(--gmt-ice) 40%,
+    color(from var(--gmt-ice) srgb r g b / 55%) 50%,
+    transparent 62%
+  );
+  --ng-mask-text: linear-gradient(
+    100deg,
+    var(--gmt-ice) 40%,
+    color(from var(--gmt-ice) srgb r g b / 75%) 50%,
+    color(from var(--gmt-ice) srgb r g b / 50%) 62%
+  );
+  --ng-freeze-dur: 1.6s;
+  --ng-glint-after: 1.4s;
+  --ng-glint-dur: 0.24s;
+  --ng-shine-dur: 0.5s;
+  --ng-shine-lead: 0.15s;
+  --ng-stars-dur: 1.4s;
+  --ng-band-dur: 1.8s;
+  --ng-band-delay: 0.3s;
+  --ng-fade-dur: 0.6s;
+  --ng-pop-dur: 0.65s;
+  --ng-card-fade-dur: 0.4s;
+  --ng-card-delay: 2s;
+  --ng-panel-in-dur: 0.7s;
+  --ng-panel-out-dur: 0.2s;
+  --ng-panel-load-delay: 0.15s;
+  --ng-ease: cubic-bezier(0.3, 0, 0.2, 1);
+  --ng-pop-ease: cubic-bezier(0.16, 1.22, 0.3, 1);
+  --ng-linear: linear;
+}
+
+/* The frost colour is mixed where the theme's ice is set: the hero and the bar are dark islands, so
+   a value mixed on <html> alone would carry the light theme's dark ice into them. */
+:root,
+.gmt-theme-dark {
+  --ng-frost: color-mix(in oklab, var(--gmt-ice) 70%, var(--gmt-cyan));
+}
+
+/* The delay (seconds) of each piece that freezes: the copy's from the first paint, every other
+   piece's from t0. `--ng-i` is a button's place in the row. */
+.gmt-hero-eyebrow,
+.gmt-hero-lead h1[data-page-title] {
+  --ng-delay: 0s;
+}
+
+.gmt-hero-lead .gmt-hero-tagline {
+  --ng-delay: 0.12s;
+}
+
+.gmt-hero-actions .sl-link-button {
+  --ng-delay: calc(0.75s + var(--ng-i, 0) * 0.08s);
+}
+
+/* The pager (the arrows and the dots) fades in after the buttons. */
+.gmt-hero-pager {
+  --ng-delay: 1.15s;
+}
+
+/* The globe's control stack runs from the moment the globe arms it, top to bottom. The location card
+   runs with its pop, and its glint crosses as the pop settles. */
+.gmt-herostage [data-gate="globe-zoom"] {
+  --ng-delay: 0s;
+  --ng-glint-after: 1.1s;
+}
+
+.gmt-herostage [data-globe-zoom="out"] {
+  --ng-delay: 0.06s;
+}
+
+.gmt-herostage [data-globe-zoom="reset"] {
+  --ng-delay: 0.12s;
+}
+
+.gmt-herostage [data-globe-search] {
+  --ng-delay: 0.18s;
+}
+
+.gmt-herostage [data-gate="globe-zoom"] > [popovertarget] {
+  --ng-delay: 0.24s;
+}
+
+.gmt-herostage [data-gate="globe-tooltip"] {
+  --ng-delay: var(--ng-card-delay);
+  --ng-glint-after: 0.4s;
+}
+
+/* The header, left to right. The title and the controls freeze in; GitHub and Discord are already
+   there. Once the theme toggle, the last to freeze, has locked (0.31 s + 88% of the freeze), the
+   bar's four chips shine one after another: Dox, the theme toggle, GitHub, Discord. */
+.header .gmt-app-title {
+  --ng-delay: 0s;
+}
+
+.header site-search button[data-open-modal] {
+  --ng-delay: 0.15s;
+}
+
+.header .gmt-ask-dox-link {
+  --ng-delay: 0.23s;
+  --ng-chip: 0;
+}
+
+.header .theme-toggle {
+  --ng-delay: 0.31s;
+  --ng-chip: 1;
+}
+
+.header .social-icons > a[rel~="me"] {
+  --ng-chip: 2;
+}
+
+.header .social-icons > a[rel~="me"] ~ :where(a[rel~="me"]) {
+  --ng-chip: 3;
+}
+
+.header :is(.gmt-ask-dox-link, .theme-toggle, .social-icons > a[rel~="me"]) {
+  --ng-shine-at: calc(1.75s + var(--ng-chip) * 0.16s);
+}
+
+/* Dox and the theme toggle lock a little faster than the rest, so each freeze ends before its
+   shine starts (1.6 s and 1.76 s): one animation at a time drives a chip's colour. */
+.header :is(.gmt-ask-dox-link, .theme-toggle) {
+  --ng-freeze-dur: 1.35s;
+}
+
+/* ---- Held while the sky draws (the copy is not: it shows from the first paint) ---- */
+:root[data-entrance="wait"]
+  :is(.gmt-hero-actions .sl-link-button, .gmt-hero-pager) {
+  opacity: 0;
+}
+
+:root[data-entrance="wait"]:where(:not([data-arrival="transition"]))
+  :where(
+    .header .gmt-app-title,
+    .header site-search button[data-open-modal],
+    .header .gmt-ask-dox-link,
+    .header .theme-toggle
+  ) {
+  opacity: 0;
+}
+
+/* Hidden, not transparent: the globe writes the card's opacity inline. */
+:root[data-entrance="wait"] .gmt-herostage [data-gate="globe-tooltip"] {
+  visibility: hidden;
+}
+
+/* ---- The freeze ----
+   A front of frost sweeps the element from the left; it clears and locks with one bright beat
+   (82% to 88%), then settles to the element's own colour. The mask exists only in the keyframes. */
+@keyframes ng-freeze {
+  0% {
+    opacity: 0;
+    color: var(--ng-frost);
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-clip: no-clip;
+    mask-position: 100% 0;
+    animation-timing-function: var(--ng-sweep-ease);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  82% {
+    color: var(--ng-frost);
+    mask-position: 0 0;
+  }
+
+  88% {
+    color: var(--gmt-ice);
+    animation-timing-function: var(--ng-settle-ease);
+  }
+
+  100% {
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-clip: no-clip;
+    mask-position: 0 0;
+  }
+}
+
+/* A button is a pane: the same animation, with its border locking on the same beat. */
+@keyframes ng-freeze-pane {
+  0% {
+    opacity: 0;
+    color: var(--ng-frost);
+    border-color: color(from var(--ng-frost) srgb r g b / 25%);
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-clip: no-clip;
+    mask-position: 100% 0;
+    animation-timing-function: var(--ng-sweep-ease);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  80% {
+    border-color: color(from var(--ng-frost) srgb r g b / 25%);
+  }
+
+  82% {
+    color: var(--ng-frost);
+    mask-position: 0 0;
+  }
+
+  88% {
+    color: var(--gmt-ice);
+    border-color: color(from var(--gmt-ice) srgb r g b / 90%);
+    animation-timing-function: var(--ng-settle-ease);
+  }
+
+  100% {
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-clip: no-clip;
+    mask-position: 0 0;
+  }
+}
+
+/* The copy's freeze. The same front and the same lock, but the text is never hidden: ahead of the
+   front it shows at half strength, so the first paint already has the whole line to read. */
+@keyframes ng-freeze-text {
+  0% {
+    color: var(--ng-frost);
+    mask-image: var(--ng-mask-text);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-clip: no-clip;
+    mask-position: 100% 0;
+    animation-timing-function: var(--ng-sweep-ease);
+  }
+
+  82% {
+    color: var(--ng-frost);
+    mask-position: 0 0;
+  }
+
+  88% {
+    color: var(--gmt-ice);
+    animation-timing-function: var(--ng-settle-ease);
+  }
+
+  100% {
+    mask-image: var(--ng-mask-text);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-clip: no-clip;
+    mask-position: 0 0;
+  }
+}
+
+@keyframes ng-frost {
+  0% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 0.35;
+  }
+
+  82% {
+    opacity: 0.12;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* A header chip's shine: the icon brightens to the frost colour and the chip's edge shows while the
+   glint crosses it (the glint starts at 30%). With no first or last frame it starts from, and goes
+   back to, whatever the chip shows, so it rides on the end of a freeze without a jump. */
+@keyframes ng-shine {
+  30% {
+    color: var(--ng-frost);
+    border-color: color(from var(--ng-frost) srgb r g b / 35%);
+  }
+
+  50% {
+    color: var(--gmt-ice);
+    border-color: color(from var(--gmt-ice) srgb r g b / 70%);
+    animation-timing-function: var(--ng-settle-ease);
+  }
+}
+
+@keyframes ng-glint {
+  0% {
+    opacity: 1;
+    translate: 100% 0;
+  }
+
+  100% {
+    opacity: 1;
+    translate: -100% 0;
+  }
+}
+
+@keyframes ng-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* A forced palette has no frost colour to show: the sweep alone. The copy's never hides the text. */
+@keyframes ng-sweep-text {
+  from {
+    mask-image: var(--ng-mask-text);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 100% 0;
+  }
+
+  to {
+    mask-image: var(--ng-mask-text);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 0 0;
+  }
+}
+
+@keyframes ng-sweep {
+  from {
+    opacity: 0;
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 100% 0;
+  }
+
+  to {
+    opacity: 1;
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 0 0;
+  }
+}
+
+/* The copy starts at the first paint and keeps running through `run`: the same animation under
+   both values, so the change to `run` does not restart it. */
+:root:is([data-entrance="wait"], [data-entrance="run"])
+  :is(
+    .gmt-hero-eyebrow,
+    .gmt-hero-lead h1[data-page-title],
+    .gmt-hero-lead .gmt-hero-tagline
+  ) {
+  animation: ng-freeze-text var(--ng-freeze-dur) ease var(--ng-delay) backwards;
+}
+
+:root[data-entrance="run"] .gmt-hero-pager {
+  animation: ng-fade var(--ng-fade-dur) var(--ng-linear) var(--ng-delay)
+    backwards;
+}
+
+:root[data-entrance="run"] .gmt-hero-actions .sl-link-button {
+  animation: ng-freeze-pane var(--ng-freeze-dur) ease var(--ng-delay) backwards;
+}
+
+:root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+  :where(
+    .header .gmt-app-title,
+    .header site-search button[data-open-modal],
+    .header .gmt-ask-dox-link,
+    .header .theme-toggle
+  ) {
+  animation: ng-freeze var(--ng-freeze-dur) ease var(--ng-delay) backwards;
+}
+
+/* ---- Frost and glint on the buttons: two pseudo-elements, each its own animation ----
+   The clip keeps the glint inside the pane; its margin leaves room for a focus ring. */
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  /* The four chips' shine. GitHub and Discord have only this; Dox and the theme toggle run it after
+     their freeze, which animates neither the border nor anything past its own end. */
+  :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+    :where(.header)
+    :is(.gmt-ask-dox-link, .theme-toggle, .social-icons > a[rel~="me"]) {
+    position: relative;
+    clip-path: inset(-6px);
+  }
+
+  :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+    :where(.header .social-icons)
+    > a[rel~="me"] {
+    animation: ng-shine var(--ng-shine-dur) var(--ng-linear)
+      calc(var(--ng-shine-at) - var(--ng-shine-lead));
+  }
+
+  :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+    :where(.header)
+    :is(.gmt-ask-dox-link, .theme-toggle) {
+    animation:
+      ng-freeze var(--ng-freeze-dur) ease var(--ng-delay) backwards,
+      ng-shine var(--ng-shine-dur) var(--ng-linear)
+        calc(var(--ng-shine-at) - var(--ng-shine-lead));
+  }
+
+  :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+    :where(.header)
+    :is(.gmt-ask-dox-link, .theme-toggle, .social-icons > [rel~="me"])::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background-image: linear-gradient(
+      115deg,
+      transparent 40%,
+      color(from white srgb r g b / 55%) 50%,
+      transparent 60%
+    );
+    animation: ng-glint var(--ng-glint-dur) var(--ng-settle-ease)
+      var(--ng-shine-at) backwards;
+  }
+
+  :root[data-entrance="run"] .gmt-hero-actions .sl-link-button {
+    position: relative;
+    clip-path: inset(-6px);
+  }
+
+  :root[data-entrance="run"] .gmt-hero-actions .sl-link-button::before,
+  :root[data-entrance="run"] .gmt-hero-actions .sl-link-button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  :root[data-entrance="run"] .gmt-hero-actions .sl-link-button::after {
+    mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .95 0 0 0 0 1 0 0 0 1.2 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+    animation: ng-frost var(--ng-freeze-dur) ease var(--ng-delay) backwards;
+  }
+
+  :root[data-entrance="run"] .gmt-hero-actions .sl-link-button::before {
+    background-image: linear-gradient(
+      115deg,
+      transparent 40%,
+      color(from white srgb r g b / 55%) 50%,
+      transparent 60%
+    );
+    animation: ng-glint var(--ng-glint-dur) var(--ng-settle-ease)
+      calc(var(--ng-delay) + var(--ng-glint-after)) backwards;
+  }
+
+  /* The globe's controls and its first location card take the same frost and glint (their delays are
+     with the others, above). Only the entrance's card has it: a zone picked later just shows. */
+  :root[data-entrance="run"] [data-gate="globe-zoom"][data-ready] > button {
+    position: relative;
+    overflow: clip;
+  }
+
+  :root[data-entrance="run"] .gmt-herostage [data-gate="globe-tooltip"] {
+    overflow: clip;
+  }
+
+  :root[data-entrance="run"]
+    :is(
+      :where([data-gate="globe-zoom"])[data-ready] > button,
+      [data-gate="globe-tooltip"]
+    )::before,
+  :root[data-entrance="run"]
+    :is(
+      :where([data-gate="globe-zoom"])[data-ready] > button,
+      [data-gate="globe-tooltip"]
+    )::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  :root[data-entrance="run"]
+    :is(
+      :where([data-gate="globe-zoom"])[data-ready] > button,
+      [data-gate="globe-tooltip"]
+    )::after {
+    mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .95 0 0 0 0 1 0 0 0 1.2 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+    animation: ng-frost calc(var(--ng-glint-after) + var(--ng-glint-dur)) ease
+      var(--ng-delay) backwards;
+  }
+
+  :root[data-entrance="run"]
+    :is(
+      :where([data-gate="globe-zoom"])[data-ready] > button,
+      [data-gate="globe-tooltip"]
+    )::before {
+    background-image: linear-gradient(
+      115deg,
+      transparent 40%,
+      color(from white srgb r g b / 55%) 50%,
+      transparent 60%
+    );
+    animation: ng-glint var(--ng-glint-dur) var(--ng-settle-ease)
+      calc(var(--ng-delay) + var(--ng-glint-after)) backwards;
+  }
+}
+
+/* ---- The sky ---- */
+
+/* The layers rest at opacity 0 (gmt-space.css); they come in once the sky is drawn. */
+:root[data-entrance="run"]
+  [data-sky="ready"]
+  :where(.gmt-sky [data-sky-layer="stars"]) {
+  animation: ng-fade var(--ng-stars-dur) var(--ng-ease) both;
+}
+
+:root[data-entrance="run"] [data-sky="ready"] :where(.gmt-sky-band) {
+  animation: ng-fade var(--ng-band-dur) var(--ng-ease) var(--ng-band-delay) both;
+}
+
+/* The failsafe showed the page, or no script ran the sequencer: a sky drawn late fades in once. */
+:root:where(
+    :not([data-entrance="wait"], [data-entrance="run"], [data-entrance="done"])
+  )
+  [data-sky="ready"]
+  :where(.gmt-sky-band, .gmt-sky [data-sky-layer="stars"]) {
+  animation: ng-fade var(--ng-fade-dur) var(--gmt-easing) both;
+}
+
+/* The entrance is over. A sky that was drawn stays as the animation left it, with no second fade;
+   one drawn after this point eases in. */
+:root[data-entrance="done"]
+  [data-sky="ready"]
+  :where(.gmt-sky-band, .gmt-sky [data-sky-layer="stars"]) {
+  opacity: 1;
+  transition: opacity var(--ng-fade-dur) var(--gmt-easing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-entrance="done"]
+    [data-sky="ready"]
+    :where(.gmt-sky-band, .gmt-sky [data-sky-layer="stars"]) {
+    transition: none;
+  }
+}
+
+/* ---- The location card ----
+   The globe shows the card when it has picked a zone, a moment after t0. Until then it stays laid
+   out, though unseen, so its pop runs on the entrance's clock and not from when it appears. */
+:root:where([data-entrance="wait"], [data-entrance="run"])
+  .gmt-herostage
+  [data-gate="globe-tooltip"][hidden] {
+  display: block;
+  visibility: hidden;
+}
+
+/* The pop. The globe places the card with `transform`, so this animates the separate `scale` property
+   from the card's own origin, which is the pin. */
+@keyframes ng-pop {
+  0% {
+    opacity: 0;
+    scale: 0.3;
+  }
+
+  55% {
+    opacity: 1;
+  }
+}
+
+:root[data-entrance="run"] .gmt-herostage [data-gate="globe-tooltip"] {
+  transform-origin: 0 0;
+  animation: ng-pop var(--ng-pop-dur) var(--ng-pop-ease) var(--ng-card-delay)
+    backwards;
+}
+
+/* ---- Reduced motion: fades only, same order; the copy just shows ---- */
+@media (prefers-reduced-motion: reduce) {
+  :root:is([data-entrance="wait"], [data-entrance="run"])
+    :is(
+      .gmt-hero-eyebrow,
+      .gmt-hero-lead h1[data-page-title],
+      .gmt-hero-lead .gmt-hero-tagline
+    ) {
+    animation: none;
+  }
+
+  :root[data-entrance="run"] .gmt-hero-actions .sl-link-button {
+    animation: ng-fade var(--ng-fade-dur) var(--ng-linear) var(--ng-delay)
+      backwards;
+  }
+
+  :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+    :where(
+      .header .gmt-app-title,
+      .header site-search button[data-open-modal],
+      .header .gmt-ask-dox-link,
+      .header .theme-toggle
+    ) {
+    animation: ng-fade var(--ng-fade-dur) var(--ng-linear) var(--ng-delay)
+      backwards;
+  }
+
+  :root[data-entrance="run"]
+    [data-sky="ready"]
+    :where(.gmt-sky [data-sky-layer="stars"]),
+  :root[data-entrance="run"] [data-sky="ready"] :where(.gmt-sky-band) {
+    animation: ng-fade var(--ng-fade-dur) var(--ng-linear) both;
+  }
+
+  :root[data-entrance="run"] .gmt-herostage [data-gate="globe-tooltip"] {
+    animation: ng-fade var(--ng-card-fade-dur) var(--ng-linear)
+      var(--ng-card-delay) backwards;
+  }
+}
+
+/* ---- Forced colours: the mask sweep only, no frost colour ---- */
+@media (forced-colors: active) {
+  :root:is([data-entrance="wait"], [data-entrance="run"])
+    :is(
+      .gmt-hero-eyebrow,
+      .gmt-hero-lead h1[data-page-title],
+      .gmt-hero-lead .gmt-hero-tagline
+    ) {
+    animation: ng-sweep-text var(--ng-freeze-dur) var(--ng-ease) var(--ng-delay)
+      backwards;
+  }
+
+  :root[data-entrance="run"] .gmt-hero-actions .sl-link-button {
+    animation: ng-sweep var(--ng-freeze-dur) var(--ng-ease) var(--ng-delay)
+      backwards;
+  }
+
+  :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+    :where(
+      .header .gmt-app-title,
+      .header site-search button[data-open-modal],
+      .header .gmt-ask-dox-link,
+      .header .theme-toggle
+    ) {
+    animation: ng-sweep var(--ng-freeze-dur) var(--ng-ease) var(--ng-delay)
+      backwards;
+  }
+}
+
+/* ---- The landing's carousel: one animation per panel ----
+   `lib/home-carousel.ts` sets `data-motion` on the panel that arrives (`in`) or leaves (`out`), and
+   `load` on About when a link opens it with the page. The arriving panel flies in from the left
+   behind the same frost sweep; the leaving one fades and is then hidden. A change in the middle of
+   another cancels it. A deep link to About holds it out of sight until the entrance runs, then
+   freezes it in after the first beat; the script drops `load` once that has played. */
+@keyframes ng-freeze-fly-left {
+  0% {
+    opacity: 0;
+    translate: -1.25rem 0;
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 100% 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    translate: 0 0;
+    mask-image: var(--ng-mask);
+    mask-size: 300% 100%;
+    mask-repeat: no-repeat;
+    mask-position: 0 0;
+  }
+}
+
+@keyframes ng-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+:root[data-home-carousel] [data-page][data-motion="in"] {
+  animation: ng-freeze-fly-left var(--ng-panel-in-dur) var(--ng-sweep-ease)
+    backwards;
+}
+
+:root[data-home-carousel] [data-page][data-motion="out"] {
+  animation: ng-fade-out var(--ng-panel-out-dur) var(--ng-linear) forwards;
+}
+
+[data-home-carousel][data-entrance="wait"] [data-page][data-motion="load"] {
+  opacity: 0;
+}
+
+[data-home-carousel][data-entrance="run"] [data-page][data-motion="load"] {
+  animation: ng-freeze-fly-left var(--ng-panel-in-dur) var(--ng-sweep-ease)
+    var(--ng-panel-load-delay) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-home-carousel] [data-page][data-motion="in"] {
+    animation: ng-fade var(--ng-panel-out-dur) var(--ng-linear) backwards;
+  }
+
+  [data-home-carousel][data-entrance="run"] [data-page][data-motion="load"] {
+    animation: ng-fade var(--ng-panel-out-dur) var(--ng-linear)
+      var(--ng-panel-load-delay) backwards;
+  }
+}

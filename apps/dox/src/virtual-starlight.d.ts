@@ -21,6 +21,10 @@ declare module "virtual:starlight/components/LanguageSelect" {
   const LanguageSelect: typeof import("@astrojs/starlight/components/LanguageSelect.astro").default;
   export default LanguageSelect;
 }
+declare module "virtual:starlight/components/MobileMenuFooter" {
+  const MobileMenuFooter: typeof import("@astrojs/starlight/components/MobileMenuFooter.astro").default;
+  export default MobileMenuFooter;
+}
 declare module "virtual:starlight/components/Search" {
   const Search: typeof import("@astrojs/starlight/components/Search.astro").default;
   export default Search;

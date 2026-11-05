@@ -24,10 +24,10 @@
     --gmt-glass-blur-half: none;
     --gmt-glass-blur-heavy: none;
     --gmt-glass-blur-dim: none;
+    --gmt-header-blur: none;
   }
 
   .gmt-glass,
-  header,
   .sidebar-pane,
   mobile-starlight-toc nav,
   .sl-markdown-content pre,
@@ -48,10 +48,15 @@
   .sl-link-button.cta,
   .gmt-hive-composer [data-slot="input-group"],
   [data-widget] table,
-  [role="tab"],
+  [role="tab"]:not([data-dot]),
   .sl-markdown-content .tab > [role="tab"][aria-selected="true"],
   [data-theme="light"] site-search button[data-open-modal] {
     background-color: var(--gmt-surface);
+  }
+
+  /* The bar is a dark island: its near-opaque fill is the void, not the page's surface. */
+  header {
+    background: var(--gmt-header-backdrop);
   }
 
   /* Signal-lost asides keep their amber identity, just opaque. */
@@ -94,6 +99,9 @@
     --gmt-globe-atmosphere-alpha: 0;
     --gmt-globe-haze-alpha: 0;
 
+    /* The dark halo round hero and header text is decoration, so it goes. */
+    --gmt-shadow-halo: none;
+
     /* The Earth imagery is a busy photograph behind every marker and label.
        Raised contrast gets the flat globe, which is also the one that never
        downloads the image. */
@@ -128,11 +136,24 @@
  * CanvasText blocks.
  * ======================================================================= */
 @media (forced-colors: active) {
-  /* NorthGuild mark (#424): the shield, its peaks and `</>` stay visible in
-     every system palette, so the SVG opts out of forced colour adjustment and
-     paints with system colours itself. */
+  /* Shadows are dropped here, so the bar's hairline becomes a border. */
+  header {
+    border-block-end: 1px solid CanvasText;
+  }
+
+  /* The NorthGuild mark stays visible in every system palette: the SVG opts out of forced
+     colour adjustment and paints its strokes with system colours itself. */
   .gmt-ng-mark {
     forced-color-adjust: none;
+  }
+
+  .gmt-ng-mark :is(.ng-mark-pane, .ng-mark-sheen) {
+    fill: none;
+  }
+
+  .gmt-ng-mark :is(.ng-mark-edge, .ng-mark-ridge, .ng-mark-glyph) {
+    stroke: CanvasText;
+    stroke-opacity: 1;
   }
 
   /* The industry icon in the sidebar is a mask over a background colour, which

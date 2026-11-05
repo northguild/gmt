@@ -58,6 +58,11 @@
     border-color: var(--gmt-ice-dim);
     color: var(--gmt-ice-dim);
     cursor: not-allowed;
+
+    /* The chevron takes the dimmed ink with the text. */
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--gmt-ice-dim) 50%),
+      linear-gradient(135deg, var(--gmt-ice-dim) 50%, transparent 50%);
   }
 }
 
@@ -72,6 +77,14 @@
 
     &:focus-visible {
       outline-color: Highlight;
+    }
+
+    &:disabled {
+      border-color: GrayText;
+      background-image:
+        linear-gradient(45deg, transparent 50%, GrayText 50%),
+        linear-gradient(135deg, GrayText 50%, transparent 50%);
+      color: GrayText;
     }
   }
 }

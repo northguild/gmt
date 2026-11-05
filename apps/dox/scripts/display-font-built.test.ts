@@ -49,7 +49,7 @@ describe("the display font in the built site", () => {
     expect(uri, "the face's src is a data:font/woff2 URI").toBeDefined();
     const bytes = Buffer.from((uri ?? "").split(",")[1], "base64");
     expect(bytes.equals(vendored)).toBe(true);
-    expect(faces[0]).toMatch(/font-display:\s*optional/);
+    expect(faces[0]).toMatch(/font-display:\s*block/);
   });
 
   it("is preloaded by no page: the file is in the stylesheet", () => {

@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { DISPLAY_FAMILY } from "~/lib/display-face";
 
 // The token sheet is found by its suffix: the house-class rule bans a `gmt-` string, and this
 // is a file name, so it is matched without writing the prefix.
@@ -30,14 +31,18 @@ describe("the display font's fallback face", () => {
   });
 });
 
+// The inline script in `display-face.ts` finds this face by its family and its woff2 data URI, so
+// the face is matched by the script's own name: a rename here fails these tests, not the page.
 describe("the display font's face", () => {
-  const face = /@font-face\s*{\s*font-family:\s*Michroma;[^}]*}/.exec(
-    tokens,
-  )?.[0];
+  const face = new RegExp(
+    `@font-face\\s*{\\s*font-family:\\s*${DISPLAY_FAMILY};[^}]*}`,
+  ).exec(tokens)?.[0];
 
-  it("is used only if it is ready for the first paint, so no heading ever swaps", () => {
+  // The script loads the face before the held first paint. Without scripts, `block` waits for the
+  // sheet's face rather than drawing the fallback; `optional` would keep the fallback in Chromium.
+  it("blocks until it is decoded, so the heading is drawn in it from the start", () => {
     expect(face).toBeDefined();
-    expect(face).toMatch(/font-display:\s*optional\s*;/);
+    expect(face).toMatch(/font-display:\s*block\s*;/);
   });
 
   // The build inlines the file named here as a data URI (the `?inline` query), so the font is in the stylesheet at first layout. The name is a relative

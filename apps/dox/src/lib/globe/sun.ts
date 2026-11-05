@@ -14,11 +14,11 @@
 const RAD = Math.PI / 180;
 
 /** Milliseconds per day. */
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 /** Julian date of the Unix epoch (1970-01-01T00:00:00Z). */
-const UNIX_EPOCH_JD = 2_440_587.5;
+export const UNIX_EPOCH_JD = 2_440_587.5;
 /** Julian date of J2000.0. */
-const J2000_JD = 2_451_545.0;
+export const J2000_JD = 2_451_545.0;
 
 interface LatLng {
   lat: number;

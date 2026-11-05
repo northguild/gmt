@@ -50,6 +50,20 @@ describe("layout builders", () => {
     ).toHaveAccessibleDescription("Local wall time");
   });
 
+  it("field with a hidden label keeps the control's name", () => {
+    renderHtml(
+      field({
+        id: "t",
+        label: "Find a zone",
+        labelHidden: true,
+        control: ({ id }) => html`<input id="${id}" type="text" />`,
+      }),
+    );
+    expect(
+      screen.getByRole("textbox", { name: "Find a zone" }),
+    ).toBeInTheDocument();
+  });
+
   it("hint takes markup and does not escape it", () => {
     renderHtml(
       field({

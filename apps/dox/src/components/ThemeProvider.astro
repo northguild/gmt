@@ -11,6 +11,12 @@
           ? 'light'
           : 'dark';
     document.documentElement.dataset.theme = theme;
+    /* The Earth's look (src/lib/earth-look.ts): the same key, applied here so the first frame is right. */
+    try {
+      if (localStorage.getItem('dox:earth') === 'natural') {
+        document.documentElement.dataset.earth = 'natural';
+      }
+    } catch (_) {}
     return {
       updatePickers() {
         document.querySelectorAll('starlight-theme-select').forEach((picker) => {

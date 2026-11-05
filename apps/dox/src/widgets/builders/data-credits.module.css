@@ -99,7 +99,13 @@
     &[data-placement="stack"] {
       inset-inline-end: anchor(left);
       margin-inline-end: var(--gmt-space-2);
-      inset-block-end: anchor(bottom);
+
+      /* With a long list on a phone the popup is taller than the room above the button. The
+         near inset caps it there: it ends at the button, and the list scrolls inside it. */
+      inset-block: 12px anchor(bottom);
+      align-self: end;
+      max-block-size: 100%;
+      overflow-y: auto;
     }
 
     &[data-placement="corner"] {

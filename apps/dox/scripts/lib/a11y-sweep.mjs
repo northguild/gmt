@@ -161,12 +161,28 @@ export async function settleTransitions(page, limit = 600) {
 
 /**
  * `/dox/` with the widget rail open: click the first example card, which mounts its widget in the
- * rail without waiting on the model. Returns a reason when the rail did not open, else null.
+ * rail without waiting on the model, once the chat island has hydrated. Returns a reason when the rail did not open, else null.
  */
 export async function openRail(page) {
   const card = page.locator("[data-starter]").first();
   if ((await card.count()) === 0)
     return "no example card (a [data-starter] button) on the page";
+  /* The card is server-rendered before its island hydrates, and a click that lands first does
+     nothing. Astro drops the island's `ssr` attribute when it has hydrated. */
+  try {
+    await page.waitForFunction(
+      () => {
+        const island = document
+          .querySelector("[data-starter]")
+          ?.closest("astro-island");
+        return island != null && !island.hasAttribute("ssr");
+      },
+      null,
+      { timeout: 30000 },
+    );
+  } catch {
+    return "the /dox/ chat island did not hydrate, so the example card is inert";
+  }
   await card.click();
   try {
     await page

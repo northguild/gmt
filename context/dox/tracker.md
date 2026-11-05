@@ -1,7 +1,7 @@
 ## GitHub Issues
 
-28 sub-stories on 19 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
-(`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`) and #430 (`DOX-G1`). **Every story is done.** What each one shipped is in
+29 sub-stories on 20 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
+(`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`), #430 (`DOX-G1`) and #447 (`DOX-G2`). What each done story shipped is in
 [built.md](built.md).
 
 A row here is a `DOX-*` story with its own GitHub issue. Add one, then run `pnpm deps:sync`,
@@ -36,6 +36,7 @@ the Canada 2026 clock-change checker, is a Core story in that tracker (`CORE-86`
 | 17    | DOX-E1d                                     | —          | #293         | Done⁴  |
 | 18    | DOX-A6                                      | —          | #288         | Done⁵  |
 | 19    | DOX-G1                                      | —          | #430         | Done   |
+| 20    | DOX-G2                                      | —          | #447         | Todo   |
 
 ¹ Owed verification, not work: a keyboard-only pass, `prefers-reduced-*` emulation, and a
 real Firefox/Safari check.

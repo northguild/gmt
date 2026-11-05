@@ -10,6 +10,7 @@
  * The time-zone shapes are timezone-boundary-builder's, derived from OpenStreetMap, offered under the
  * ODbL 1.0 (§4.2–4.3: notice; §4.4: share-alike). The wording follows its README § Licenses at the pinned release.
  */
+import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from "./licence";
 import {
   dataCredits,
   type DataCredit,
@@ -23,6 +24,9 @@ export const TBB_TAG = "2026e";
 
 /** The Natural Earth release the coastlines come from (see `built.md` § Boundary data). */
 export const NE_TAG = "v5.1.2";
+
+/** The HYG v4.4 commit the star list comes from (see `built.md` § Boundary data). */
+export const HYG_COMMIT = "53e3df311869e813ace5f1ad2ec4ce909f13256c";
 
 export const TZ_BOUNDARIES: DataCredit = {
   label: "Time zone boundaries",
@@ -62,6 +66,36 @@ export const COASTLINES: DataCredit = {
 export const EARTH_IMAGERY: DataCredit = {
   label: "Earth imagery",
   parts: ["NASA Earth Observatory (Blue Marble Next Generation)."],
+};
+
+/**
+ * The star catalogue behind the landing's night sky. CC BY-SA 4.0 asks for the creator and a note
+ * that the material was changed (§3(a)(1)); the cut is `hero-sky.json`'s `magnitudeLimit`.
+ */
+export const NIGHT_SKY: DataCredit = {
+  label: "Stars",
+  parts: [
+    {
+      text: "HYG v4.4",
+      href: `https://codeberg.org/astronexus/hyg/src/commit/${HYG_COMMIT}`,
+    },
+    " by astronexus, from Hipparcos, Yale Bright Star and Gliese, adapted to the stars of magnitude 5.5 and brighter (",
+    {
+      text: "CC BY-SA 4.0",
+      href: "https://creativecommons.org/licenses/by-sa/4.0/",
+    },
+    ").",
+  ],
+};
+
+/** The site's licence note, as the landing popover's last row (everywhere else it is the footer line). */
+export const LICENCE_CREDIT: DataCredit = {
+  label: "Licence",
+  parts: [
+    `${LICENCE_LEAD} `,
+    { text: LICENCE_LINK_TEXT, href: LICENCE_URL },
+    ".",
+  ],
 };
 
 /**

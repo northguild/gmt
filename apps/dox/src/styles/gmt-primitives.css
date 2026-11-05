@@ -223,51 +223,81 @@
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
 }
 
-/* ---- NorthGuild mark (#424) ----
- * Fills for the inlined shield (`NorthGuildMark.astro`). They live here because
- * a scoped style does not reach the paths inside an imported SVG component. */
+/* ---- NorthGuild mark and wordmark ----
+ * The mark is inlined by `NorthGuildMark.astro` (`assets/northguild-mark.svg`), so the paint
+ * lives here: a scoped style does not reach the paths of an inlined SVG. The two gradient
+ * fills are attributes, because their ids carry a suffix per copy. The shape and the paint are the northguild.dev header's, so the left of the bar looks the same on both sites. */
 .gmt-ng-mark {
   display: block;
-  block-size: 2rem;
+  flex: none;
+  block-size: 1.75rem;
   inline-size: auto;
+  overflow: visible;
+}
+
+.gmt-ng-mark :is(.ng-mark-pt, .ng-mark-pb, .ng-mark-st, .ng-mark-sb) {
+  stop-color: var(--gmt-ice);
+}
+
+.gmt-ng-mark .ng-mark-pt {
+  stop-opacity: 0.07;
+}
+
+.gmt-ng-mark .ng-mark-pb {
+  stop-opacity: 0;
+}
+
+.gmt-ng-mark .ng-mark-st {
+  stop-opacity: 0.05;
+}
+
+.gmt-ng-mark .ng-mark-sb {
+  stop-opacity: 0;
+}
+
+.gmt-ng-mark :is(.ng-mark-edge, .ng-mark-ridge, .ng-mark-glyph) {
+  fill: none;
+  stroke: var(--gmt-ice);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gmt-ng-mark :is(.ng-mark-edge, .ng-mark-ridge) {
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.gmt-ng-mark .ng-mark-edge {
+  stroke-opacity: 0.5;
+}
+
+.gmt-ng-mark .ng-mark-ridge {
+  stroke-opacity: 0.35;
+}
+
+.gmt-ng-mark .ng-mark-glyph {
+  stroke-width: 36;
+  stroke-opacity: 0.75;
 }
 
 .gmt-ng-link {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+
+  /* Keeps the name close to the shield, so the two read as one mark. */
+  gap: var(--gmt-space-3);
   flex: 0 0 auto;
-  min-inline-size: 1.75rem; /* 28px: the box stays at or above 24x24 (WCAG 2.2 SC 2.5.8) */
-  min-block-size: 2rem;
   border-radius: var(--gmt-radius-sm);
   text-decoration: none;
 }
 
-/* A full-height hairline between two items, the same token as `.social-icons::after`. */
-.gmt-ng-divider {
-  flex: 0 0 auto;
-  block-size: 1.5rem;
-  border-inline-end: 1px solid var(--sl-color-gray-5);
-}
-
-.gmt-ng-body {
-  fill: var(--gmt-logo-body);
-}
-
-.gmt-ng-body-lit {
-  fill: var(--gmt-logo-body-lit);
-}
-
-.gmt-ng-field {
-  fill: var(--gmt-logo-field);
-}
-
-.gmt-ng-field-lit {
-  fill: var(--gmt-logo-field-lit);
-}
-
-.gmt-ng-glyph {
-  fill: var(--gmt-logo-glyph);
+.gmt-ng-wordmark {
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-wordmark-size);
+  line-height: var(--gmt-wordmark-leading);
+  letter-spacing: var(--gmt-wordmark-tracking);
+  color: var(--gmt-ice);
+  white-space: nowrap;
 }
 
 /* ---- The Dox mark ----
@@ -420,6 +450,12 @@
     0 0 0 5px color(from var(--gmt-cyan) srgb r g b / 25%);
   animation: gmt-focus-sonar var(--gmt-motion-sonar-duration) var(--gmt-easing)
     1;
+}
+
+/* Focus moved by script, not by the reader (a carousel arrow that went away hands its focus to
+   the other): the ring shows, the ping does not. */
+.gmt-sonar-focus[data-quiet-focus]:focus {
+  animation: none;
 }
 
 .gmt-popover {

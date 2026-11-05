@@ -68,3 +68,27 @@ describe("labels drawn into table cells", () => {
     }
   });
 });
+
+describe("grouped rows", () => {
+  const sheet = readdirSync(STYLES).find((f) =>
+    f.endsWith("content-tables.css"),
+  );
+  const css = readFileSync(path.join(STYLES, sheet ?? ""), "utf8").replace(
+    /\/\*[\s\S]*?\*\//g,
+    "",
+  );
+
+  it("dim a repeated first cell by colour, never by opacity or by removing its text", () => {
+    const dimmed = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) =>
+      m[1]!.includes('data-group="continue"'),
+    );
+    expect(dimmed.length).toBeGreaterThan(0);
+    for (const [, , body] of dimmed) {
+      expect(body).not.toMatch(/(^|[;\s])opacity\s*:\s*(?!1\b)/);
+      expect(body).not.toMatch(/content\s*:/);
+      expect(body).not.toMatch(/display\s*:\s*none/);
+      expect(body).not.toMatch(/visibility\s*:\s*hidden/);
+      expect(body).not.toMatch(/font-size\s*:\s*0/);
+    }
+  });
+});

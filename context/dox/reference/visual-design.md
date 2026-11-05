@@ -41,10 +41,9 @@ Cool blue→green on a blue-tinted near-black. Everything is a token.
   in colour alone: a double edge is a repeated hour and a dashed edge a skipped one. A new
   chart follows the pair. The Crossing Clock uses the edges but purple for both, and the two
   ledgers flag a short or long day in gold (built.md § Tier 2, "The DST colours").
-- **The NorthGuild mark** (#424): the field and the `</>` glyphs are fixed (Cyan and white) and
-  the shield body follows the theme (Teal in dark, the light `--gmt-cyan-ink` in light). The
-  `--gmt-logo-*` tokens hold every value, each at 3:1 or more against every header surface
-  (WCAG 2.2 SC 1.4.11), with the glyphs at 4.5:1 or more on the body.
+- **The NorthGuild mark** is the northguild.dev ice-frost mark: a pane and a sheen at 7 % and
+  5 % ice fading to nothing, a 1 px edge and ridge and a `</>` glyph, all from `--gmt-ice`. The
+  header it sits in is dark in both themes, so it never follows the page theme.
 - **Role colours in the transcript** resolve from one `--gmt-hive-role` per turn, so recolouring
   a role is one declaration.
 - **The Dox mark** — the faceted crystal — is one geometry module (`src/lib/dox-mark.ts`) shared
@@ -144,11 +143,48 @@ Only these things move. Anything not listed stays still.
   `/dox` crystal and the numbered cards of every tool widget. It plays once, when the content is
   ready, and never on a value change. See design-system.md § Entrance.
 - **Cross-document view transitions** (`gmt-view-transitions.css`). The header and sidebar swap
-  in place; only the content cross-fades.
+  in place; only the content cross-fades. From northguild.dev the NorthGuild mark and wordmark
+  stay perfectly still, the rest of the bar dissolves over 240 ms and the page over 600 ms while the
+  landing's freeze plays in it. Reduced motion has no transition.
 - **The homepage scroll reveal** (`gmt-reveal.css`, `lib/scroll-reveal.ts`). Content is visible
   by default. The hidden state exists only under `html.gmt-reveal-ready`, which the script adds
   when it is about to observe, so a stalled or missing script never hides anything. It reveals
   elements, never characters.
+- **The meteor** on the landing's night sky (`lib/space-fx.ts`): a faint streak about once a
+  minute, never over the copy, an open drawer or the Earth. Under reduced motion none falls.
+- **The landing entrance** (`lib/hero-entrance.ts`, `gmt-entrance-freeze.css`): the hero opens as
+  plain void with the copy on it, and one sequence brings the rest of the page in. It starts (`t0`)
+  when the sky is drawn at its true place and the globe is ready, or 800 ms after navigation at the
+  latest.
+  - **The copy freezes over text already there.** The eyebrow, the title and the tagline are on
+    screen at full opacity from the first paint, so the page's largest text never waits for the sky.
+    Their freeze starts with the page (the tagline 0.12 s after the title) and takes 1.6 s: the
+    letters show in a pale frost colour at half strength, a sweep brings them to full strength left
+    to right, then a short lock beat turns them to their own.
+  - **The buttons and the header freeze into place.** The three buttons (0.75 s after `t0`, 0.08 s
+    apart) take the same 1.6 s, but sweep in from out of sight. The header's
+    NorthGuild link and site title freeze at `t0` on a direct load; a page reached through a view
+    transition leaves the header still. Each button also carries a grain of frost that fades over
+    its freeze and a glint that crosses it once, 1.4 s into its freeze (two pseudo-elements, each
+    with its own animation).
+  - **The sky** fades in once drawn: the stars over 1.4 s from `t0`, the Milky Way over 1.8 s from
+    0.3 s. If the failsafe showed the page first, the sky fades in over 0.6 s when drawn.
+  - **The Earth dawns.** Its light rises from black, starting 0.35 s after `t0` and reaching full
+    at 2.4 s (a 2.05 s ramp); the spin starts when the light is full, and the zoom stack arms with it.
+  - **The location card pops last,** from 30% scale to full over 0.65 s, starting 2 s after `t0`,
+    on a spring curve that overshoots a little. It grows out of its pin.
+  - Only opacity, a mask sweep, colour, border colour, the card's scale and the glint's translate
+    animate: no blur, filter or shadow. Each element runs one animation per property, and none
+    holds its end state.
+  - **Reduced motion** shows the copy still and fades the rest (0.6 s, the same order; the card fades
+    over 0.4 s); the Earth is lit at once. **Forced colours** keep the sweep and drop the frost
+    colour.
+- **The stars follow the camera** (`lib/sky.ts`): they are the real sky behind the Earth for the
+  clock and the camera, so a drag moves them the other way at the Earth's speed, the ambient spin
+  carries them, and at rest they turn once a day. They are drawn only when the view moves. A drag
+  is the reader's own motion, so reduced motion keeps it; a fly-to snaps. The Sun and the Moon
+  are on the same sky: the Moon with its phase, the Sun a near-white core with a glare that the
+  contrast and transparency settings drop.
 - **Height easing through `.gmt-grow`** in tool result regions. Height only: never opacity or
   transform on a value, and never a value the reader is reading.
 

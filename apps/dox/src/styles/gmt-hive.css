@@ -46,11 +46,9 @@
   /* What covers the bottom of a scroller, one token per cover. The cover sizes
      itself from the token and each scroller reads it for `scroll-padding-block`,
      so a focused control is scrolled clear of the cover (SC 2.4.11) and the two
-     cannot drift apart. The licence line is one line of text, its padding and
-     its border; `0` where the line is hidden (below). */
-  --gmt-hive-cover-licence: calc(
-    2 * var(--gmt-space-2) + 1px + 1.4 * var(--gmt-text-xs)
-  );
+     cannot drift apart. The licence line is the closed summary (one 1.5rem row), its padding
+     and its border; `0` where the line is hidden (below). */
+  --gmt-hive-cover-licence: calc(2 * var(--gmt-space-2) + 1px + 1.5rem);
 }
 
 @media (width <= 60rem) {
@@ -194,7 +192,7 @@
   color: var(--gmt-ice);
 }
 
-.gmt-hive-licence p {
+.gmt-hive-licence .gmt-licence {
   margin: 0;
 }
 

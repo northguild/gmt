@@ -24,8 +24,8 @@ html:not([data-has-sidebar]) .sl-container {
  * fixed-height box actually starts 24px lower than the formula assumes and
  * overflows the same 24px past the bottom of the viewport (confirmed via
  * getBoundingClientRect at 1366×768: the hero's own box was exactly 704px,
- * matching the calc, but its top sat at 88px instead of 64px — pushing its
- * bottom, and the `::after` corner bracket on it, off-screen). `.gmt-herostage`
+ * matching the calc, but its top sat at 88px instead of the nav height — pushing its
+ * bottom, and the zoom stack on it, off-screen). `.gmt-herostage`
  * already owns its own internal breathing room via `padding-block: clamp(1rem,
  * 4vh, 3rem)`, so Starlight's padding here is pure double-counting for this
  * one page — zero it instead of trying to thread it through the calc.
@@ -33,6 +33,12 @@ html:not([data-has-sidebar]) .sl-container {
  * `gmt.shell` wins on its own. */
 .content-panel:has(.gmt-herostage) {
   padding-block: 0;
+}
+
+/* The hero's layers are grid cells and absolute layers, not prose: the markdown column's 1rem
+   sibling spacing would push each one after the first below the hero's top. */
+.gmt-herostage > * {
+  margin-block: 0;
 }
 
 /* /tools/* full-width content pane — DOX-E1 part 2. Unlike the sidebar-less
@@ -222,6 +228,11 @@ html:not([data-has-sidebar]) .sl-container {
   gap: var(--gmt-space-8, 3rem);
 }
 
+/* The card text is Markdown from the page, so its paragraphs are reset here. */
+.gmt-home-grid [data-card-body] > p {
+  margin: 0;
+}
+
 .gmt-why-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -281,7 +292,7 @@ html:not([data-has-sidebar]) .sl-container {
   font-size: var(--sl-text-sm);
   color: var(--sl-color-gray-2);
   margin-block-start: var(--gmt-space-2, 0.5rem);
-  scroll-margin-block-start: calc(var(--sl-nav-height, 4rem) + 1rem);
+  scroll-margin-block-start: calc(var(--sl-nav-height) + 1rem);
 }
 
 /* Named container so content nested inside a GridSection (Starlight's own

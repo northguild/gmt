@@ -11,9 +11,11 @@ import {
   growRegionOf,
   heldSamples,
   renderWidget,
+  scrolled,
   setRange,
   sharesStyling,
   skeletonRows,
+  wheelOn,
 } from "./render-widget";
 
 const fixture: LoadedWidget<never> = {
@@ -164,6 +166,44 @@ describe("cellsInColumn", () => {
     await renderWidget(grid);
     const table = screen.getByRole("table", { name: "Counters" });
     expect(() => cellsInColumn(table, "Era")).toThrow(/no column header "?Era/);
+  });
+});
+
+describe("wheelOn and scrolled", () => {
+  const probe: LoadedWidget<never> = {
+    renderTemplate: () =>
+      html`<div role="region" aria-label="Pane" id="pane"></div>`,
+    mount: async () => onceDestroy(() => {}),
+  };
+
+  it("reports whether the page cancelled the wheel", async () => {
+    const w = await renderWidget(probe);
+    const pane = screen.getByRole("region", { name: "Pane" });
+    expect(wheelOn(pane, { deltaY: 10 })).toBe(false);
+    const stop = (e: Event) => e.preventDefault();
+    pane.addEventListener("wheel", stop);
+    expect(wheelOn(pane, { deltaY: 10 })).toBe(true);
+    pane.removeEventListener("wheel", stop);
+    w.destroy();
+  });
+
+  it("delivers the wheel's delta, mode and Ctrl key, and a scroll", async () => {
+    const w = await renderWidget(probe);
+    const pane = screen.getByRole("region", { name: "Pane" });
+    const seen: string[] = [];
+    const note = (e: Event) => {
+      if (e instanceof WheelEvent)
+        seen.push(`${e.type}:${e.deltaY}:${e.deltaMode}:${e.ctrlKey}`);
+      else seen.push(e.type);
+    };
+    for (const type of ["wheel", "scroll"]) pane.addEventListener(type, note);
+    wheelOn(pane, { deltaY: 3, deltaMode: 1 });
+    wheelOn(pane, { deltaY: -2, ctrlKey: true });
+    scrolled(pane);
+    for (const type of ["wheel", "scroll"])
+      pane.removeEventListener(type, note);
+    expect(seen).toEqual(["wheel:3:1:false", "wheel:-2:0:true", "scroll"]);
+    w.destroy();
   });
 });
 

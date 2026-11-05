@@ -15,8 +15,10 @@
    restates a token for `:root`, and a light-only component rule that can reach
    inside one (gmt-light.css, gmt-controls.css) excludes it. The landing hero is
    the one island today: a dark band in the light theme, so the Earth imagery
-   can show there (HeroGlobe.astro). */
+   can show there (HeroGlobe.astro). In the landing's carousel mode the licence line is pinned
+   over the Earth, so it is named too and reads in the dark theme. */
 :root,
+:root[data-home-carousel] .gmt-licence-note,
 .gmt-theme-dark {
   /* ---- Color-scheme ---- */
   color-scheme: light dark;
@@ -40,14 +42,27 @@
   --gmt-surface: #061018; /* elevated bg / nav / sidebar (was --mg-void-2) */
   --gmt-surface-2: #0a1a24; /* inline-code bg / hover (was --mg-void-3) */
 
-  /* ---- NorthGuild mark (#424) ----
-     Dark: body 3.30:1 or more and lit body 3.77:1 or more against the header
-     surfaces (WCAG 2.2 SC 1.4.11); the glyph reaches 4.70:1 on the body parts. */
-  --gmt-logo-body: #0e7490; /* Teal */
-  --gmt-logo-body-lit: #107e99; /* Teal mixed with 10% Cyan, in srgb */
-  --gmt-logo-field: #22d3ee; /* Cyan */
-  --gmt-logo-field-lit: #67e8f9; /* Cyan bright */
-  --gmt-logo-glyph: #ffffff;
+  /* ---- The bar (the dark island in `Header.astro`) ----
+     The bar is dark in both themes, like the northguild.dev header, so these are plain values
+     that no light block restates. The wash is teal at 10 % over a void backing at 92 %, so page
+     text scrolling under it never lowers the bar's contrast. */
+  --gmt-header-backdrop: #03080c;
+  --gmt-header-backing: color-mix(
+    in srgb,
+    var(--gmt-header-backdrop) 92%,
+    transparent
+  );
+  --gmt-header-wash: color-mix(in oklab, #0e7490 10%, transparent);
+  --gmt-header-edge: rgb(34 211 238 / 18%);
+  --gmt-header-blur: blur(4px);
+
+  /* ---- Wordmark ----
+     The size, tracking and leading of the "NorthGuild" wordmark. The site title beside it is
+     set the same way, so the two read as one line. The size is 1rem from 500px up and eases
+     to 0.8rem on a phone, so "NorthGuild / gmt" stays whole, as in every NorthGuild app. */
+  --gmt-wordmark-size: clamp(0.8rem, 0.5rem + 1.6vw, 1rem);
+  --gmt-wordmark-tracking: 0.04em;
+  --gmt-wordmark-leading: 1.6;
   --gmt-cyan-bright: #67e8f9; /* h3 / hover accent (was --mg-cyan-glow) */
 
   /* Muted text. Overwhelmingly a TEXT colour: captions, hints, table headers,
@@ -92,6 +107,15 @@
   --gmt-caret: var(--gmt-cyan);
   --gmt-motion-sonar-duration: 1.2s;
   --gmt-motion-sonar-loop-duration: 2s;
+
+  /* ---- Ice and the sweep ----
+   * The pale top of the ice scale, the cyan-tinted frost between it and the cyan, and the
+   * one easing curve for a sweep (a panel or tab gliding into place). Used by the edge
+   * control and the zone drawer.
+   */
+  --gmt-ice-bright: #e6f6ff;
+  --gmt-frost: color-mix(in oklab, var(--gmt-ice-bright) 70%, var(--gmt-cyan));
+  --gmt-ease-sweep: cubic-bezier(0.25, 0.6, 0.2, 1);
 
   /* ---- Glass blur (DOX-D1) ----
    * Every `backdrop-filter` reads one of these, so reduced transparency is a
@@ -246,6 +270,18 @@
   --gmt-duration-quick: 150ms;
   --gmt-duration-med: 240ms;
   --gmt-duration-slow: 450ms;
+  --gmt-duration-sweep: 0.9s;
+
+  /* The night sky fading in once it is drawn (lib/hero-space.ts). */
+  --gmt-duration-reveal: 0.6s;
+
+  /* The page dissolving under an arrival from northguild.dev (gmt-view-transitions.css). */
+  --gmt-duration-handoff: 0.6s;
+  --gmt-easing-handoff: cubic-bezier(0.25, 0.6, 0.2, 1);
+
+  /* An opacity-only fade. It stays under reduced motion: a fade is the replacement for the
+     slide, not motion to remove. */
+  --gmt-duration-fade: 0.3s;
   --gmt-easing: cubic-bezier(0.4, 0, 0.2, 1);
   --gmt-motion-spin-duration: 0.8s;
   --gmt-motion-scan-duration: 1.6s;
@@ -307,6 +343,12 @@
   --gmt-radius-md: 8px;
   --gmt-radius-lg: 16px;
 
+  /* The ice-chunk corner: a bevelled box takes its size from these. Used with
+     `corner-shape: bevel`, or a same-size clip-path octagon where that is not supported. */
+  --gmt-bevel-lg: 14px;
+  --gmt-bevel-md: 10px;
+  --gmt-bevel-sm: 6px;
+
   /* ---- Control dimensions ----
    * The width of a drag handle. Not a colour, so it does not change per theme. */
   --gmt-handle-w: 14px;
@@ -335,6 +377,17 @@
    * literal box-shadow values already in use, named. */
   --gmt-shadow-sm: 0 4px 16px rgb(0 0 0 / 45%);
   --gmt-shadow-md: 0 8px 24px rgb(0 0 0 / 50%);
+
+  /* A tight dark halo round each letter, for text set over imagery with no panel behind it (the
+     landing hero's copy, HeroCopy.astro; the glass header, gmt-glass.css). It uses the fixed ink,
+     not the theme-flipping void, so it stays dark in the light theme. The five sharp layers stack
+     so a letter's edge pixels hold 7:1 over the Sun's glare; over open space it is invisible. */
+  --gmt-shadow-halo:
+    0 0 1px var(--gmt-ink-fixed), 0 0 1px var(--gmt-ink-fixed),
+    0 0 2px var(--gmt-ink-fixed), 0 0 2px var(--gmt-ink-fixed),
+    0 0 3px var(--gmt-ink-fixed),
+    0 0 6px rgb(from var(--gmt-ink-fixed) r g b / 90%),
+    0 0 14px rgb(from var(--gmt-ink-fixed) r g b / 70%);
 
   /* ---- Syntax highlight (call lines, gmt-widget-reset.css) ----
    * Sampled from this site's actual Shiki output for exact-match highlighting
@@ -506,6 +559,18 @@
      keep the bright token; only `color:` moved. */
 }
 
+/* The Earth's natural look: the photograph in its own colours, with no vector land on top.
+   `data-earth` is set on <html> by the "Natural Earth" switch (src/lib/earth-look.ts) and by
+   ThemeProvider.astro before first paint. The island is named too, because it re-declares both
+   tokens on itself above, and an inherited override would never reach the hero's globe. Where
+   no photograph is drawn (the light theme, raised contrast, forced colours, canvas 2D) these
+   two change nothing, and the switch is not offered. */
+:root[data-earth="natural"],
+:root[data-earth="natural"] .gmt-theme-dark {
+  --gmt-globe-imagery-duotone: 0;
+  --gmt-globe-vector-overlay: 0;
+}
+
 /* Motion tokens collapse under reduced motion. A top-level rule, not nested in the block
    above, so the token sheet stays one flat list of declarations. */
 @media (prefers-reduced-motion: reduce) {
@@ -518,6 +583,9 @@
     --gmt-duration-quick: 0s;
     --gmt-duration-med: 0s;
     --gmt-duration-slow: 0s;
+    --gmt-duration-sweep: 0s;
+    --gmt-duration-reveal: 0s;
+    --gmt-duration-handoff: 0s;
     --gmt-motion-sonar-duration: 0s;
     --gmt-motion-sonar-loop-duration: 0s;
     --gmt-motion-spin-duration: 0s;
@@ -544,10 +612,15 @@
  * package (v5.3.0, `files/michroma-latin-400-normal.woff2`). The package itself is not a
  * dependency: one committed file needs no install step, and re-vendoring is a deliberate act.
  * The face names that file by a relative path and the build inlines it as a data URI
- * (the `?inline` query on its url), so the font is in the stylesheet the
- * page waits for and is ready at first layout. A separate file would arrive after the first
- * layout and move the headings when it landed. The face is `font-display: optional`, so a
- * page never redraws a shown heading in another face.
+ * (the `?inline` query on its url), so the bytes are in the stylesheet the page waits for. A
+ * separate file would arrive after the first layout in Firefox and move the headings when it
+ * landed. Chromium and WebKit still load a data-URI face only once layout asks for it, so the
+ * inline script in `Footer.astro` (`src/lib/display-face.ts`) finds this face in the loaded sheet
+ * and adds a `FontFace` built from its bytes before the held first paint. That script looks for
+ * the family `Michroma` with a `data:font/woff2;base64` source: keep the name, the woff2 file and
+ * `?inline`, or it finds nothing (`display-fallback.test.ts` fails first). The face is
+ * `font-display: block`, so a page without scripts waits for the face rather than drawing the
+ * fallback; `optional` would keep the fallback for the page's life in Chromium.
  */
 
 /* Fallback face for the pages where Michroma is not ready for the first paint. Measured in Chromium at 100px against the vendored Michroma
@@ -566,20 +639,18 @@
   font-family: Michroma;
   font-style: normal;
   font-weight: 400;
-  font-display: optional;
+  font-display: block;
 
   /* Relative to this sheet, and `?inline` makes Vite write the file here as a data URI. */
   src: url("../../public/fonts/michroma-latin-400-normal.woff2?inline")
     format("woff2");
 }
 
-/* ---- Light mode overrides ---- */
+/* ---- Light mode overrides ----
+   The search dialog is a child of the dark header, so in the light theme it takes these tokens
+   back; the bar itself stays dark. */
+[data-theme="light"] .gmt-theme-dark dialog,
 [data-theme="light"] {
-  /* NorthGuild mark (#424). Light: body 7.37:1 or more and lit body 4.54:1 or
-     more against the header surfaces; the glyph reaches 5.36:1 on the body parts. */
-  --gmt-logo-body: #045268; /* light --gmt-cyan-ink */
-  --gmt-logo-body-lit: #0e7490;
-
   /* ---- Color palette (inverted for light background) ---- */
   --gmt-void: #ffffff;
   --gmt-surface: #f5f5f5;

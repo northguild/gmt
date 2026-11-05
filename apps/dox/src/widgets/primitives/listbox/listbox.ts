@@ -21,6 +21,13 @@ import { html, type SafeHtml } from "../../builders/html";
 import { KitElement, type KitDetail } from "../base";
 import styles from "./listbox.module.css";
 
+/**
+ * The root's class: background, border, radius and `overflow-y: auto`. A host
+ * that renders its own `<gmt-listbox>` (the combobox's popup) composes it,
+ * since the element has no styling of its own.
+ */
+export const listboxRootClass: string = styles.root;
+
 interface ListboxItem {
   value: string;
   label: string;

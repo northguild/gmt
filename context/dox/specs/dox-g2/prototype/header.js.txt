@@ -1,0 +1,20 @@
+// PROTOTYPE, throwaway. DOX-G2 slice 1: the northguild.dev mark and wordmark in the Dox header,
+// copied from the live site's NorthGuildMark (same six paths, same paint).
+const link = document.querySelector('header .gmt-ng-link');
+if (link) {
+  const P = 'M500 0 L0 179.1 L0 709.1 C0 1018.6 373.1 1206.2 500 1317 C626.9 1206.2 1000 1018.6 1000 709.1 L1000 179.1 Z';
+  link.innerHTML = `<svg class="p-ng-mark" viewBox="0 0 1000 1317" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="p-ng-pane" x1="0" y1="0" x2="0" y2="1"><stop class="pt" offset="0"/><stop class="pb" offset="1"/></linearGradient>
+      <linearGradient id="p-ng-sheen" x1="0" y1="0" x2="1" y2="1"><stop class="st" offset="0"/><stop class="sb" offset=".7"/></linearGradient>
+    </defs>
+    <path class="pane" d="${P}"/>
+    <path class="sheen" d="M500 0 L0 179.1 L0 709.1 C0 1018.6 373.1 1206.2 500 1317 Z"/>
+    <path class="pane" d="M93.3 243.9 L500 99 L906.7 243.9 L906.7 686.5 L709.3 390.2 L654.9 470.3 L500 239.5 L345.1 470.3 L290.7 390.2 L93.3 686.5 Z"/>
+    <path class="edge" d="${P}"/>
+    <path class="ridge" d="M93.3 686.5 L290.7 390.2 L345.1 470.3 L500 239.5 L654.9 470.3 L709.3 390.2 L906.7 686.5"/>
+    <path class="glyph" d="M366 640 L212 736.5 L366 833 M634 640 L788 736.5 L634 833 M560 560 L443 910"/>
+  </svg><span class="p-ng-wordmark">NorthGuild</span>`;
+  link.removeAttribute('title');
+  link.setAttribute('aria-label', 'NorthGuild home');
+}

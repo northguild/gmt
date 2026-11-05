@@ -1,0 +1,84 @@
+---
+// Override of Starlight's mobile menu toggle. Same markup, styles and behaviour; the one change
+// is that `aria-expanded` is set on the `<button>`, not on the custom element (src/lib/menu-button.ts).
+import { Icon } from "@astrojs/starlight/components";
+---
+
+<starlight-menu-button class="print:hidden">
+  <button
+    aria-expanded="false"
+    aria-label={Astro.locals.t("menuButton.accessibleLabel")}
+    aria-controls="starlight__sidebar"
+    class="sl-flex md:sl-hidden"
+  >
+    <Icon name="bars" class="open-menu" />
+    <Icon name="close" class="close-menu" />
+  </button>
+</starlight-menu-button>
+
+<script>
+  import { defineMenuButton } from "~/lib/menu-button";
+  defineMenuButton();
+</script>
+
+<style>
+  @layer starlight.core {
+    button {
+      position: fixed;
+      inset-block-start: calc((var(--sl-nav-height) - var(--sl-menu-button-size)) / 2);
+      inset-inline-end: var(--sl-nav-pad-x);
+      z-index: var(--sl-z-index-navbar);
+      border: 0;
+      border-radius: 50%;
+      inline-size: var(--sl-menu-button-size);
+      block-size: var(--sl-menu-button-size);
+      padding: 0.5rem;
+      background-color: var(--sl-color-white);
+      color: var(--sl-color-black);
+      box-shadow: var(--sl-shadow-md);
+      cursor: pointer;
+    }
+
+    button[aria-expanded="true"] {
+      background-color: var(--sl-color-gray-2);
+      box-shadow: none;
+    }
+
+    button[aria-expanded="true"] .open-menu {
+      display: none;
+    }
+
+    button:not([aria-expanded="true"]) .close-menu {
+      display: none;
+    }
+  }
+</style>
+
+<style is:global>
+  @layer starlight.core {
+    [data-mobile-menu-expanded] {
+      overflow: hidden;
+    }
+
+    /* Starlight shows the pane from `[aria-expanded="true"] ~ .sidebar-pane`, which keys on the
+       custom element; `aria-expanded` now lives on the inner button, so key on the body flag. */
+    [data-mobile-menu-expanded] .sidebar-pane {
+      --sl-sidebar-visibility: visible;
+    }
+
+    @media (width >= 50rem) {
+      [data-mobile-menu-expanded] {
+        overflow: auto;
+      }
+    }
+
+    [data-theme="light"] starlight-menu-button button {
+      background-color: var(--sl-color-black);
+      color: var(--sl-color-white);
+    }
+
+    [data-theme="light"] starlight-menu-button button[aria-expanded="true"] {
+      background-color: var(--sl-color-gray-5);
+    }
+  }
+</style>

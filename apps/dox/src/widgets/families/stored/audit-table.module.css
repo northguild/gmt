@@ -66,8 +66,11 @@
   font-style: italic;
 }
 
+/* The content sheet keeps a table's code on one line, which leaves a `<wbr>` no break in WebKit.
+   Each piece is its own nowrap segment (`.seg`), so the value breaks only between pieces. */
 .stored {
   padding: 0;
+  white-space: normal;
   background: none;
   color: var(--gmt-ice);
   font-family: var(--gmt-font-mono);

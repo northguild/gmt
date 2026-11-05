@@ -1,0 +1,273 @@
+// PROTOTYPE, throwaway. DOX-G2 round 3 over the live Dox dev server.
+// One sequencer: the sky, the copy freeze and the globe dawn all start from one t0 (html.p-go),
+// after the sky is drawn and the globe has a canvas, so no layer starts on its own timer.
+const hero = document.querySelector('.gmt-herostage');
+if (!hero) {
+  document.querySelector('link[href="/__proto/proto.css"]')?.remove();
+} else {
+  const root = document.documentElement;
+  root.classList.remove('p-play');
+  const q = new URLSearchParams(location.search);
+  const SKIES = {
+    orion: { ra: 90, dec: 5, label: 'Orion' },
+    crux: { ra: 185, dec: -55, label: 'Southern Cross' },
+    cygnus: { ra: 295, dec: 25, label: 'Cygnus' },
+  };
+  const skyKey = SKIES[q.get('sky')] ? q.get('sky') : 'orion';
+  const sky = SKIES[skyKey];
+  const rad = Math.PI / 180;
+
+  const space = document.createElement('div');
+  space.id = 'p-space';
+  space.setAttribute('aria-hidden', 'true');
+  const wash = document.createElement('div'); wash.id = 'p-wash';
+  const cvMw = document.createElement('canvas'); cvMw.id = 'p-mw';
+  const cvSt = document.createElement('canvas'); cvSt.id = 'p-stars';
+  space.append(wash, cvMw, cvSt);
+  document.body.prepend(space);
+
+  const starsP = fetch('/__proto/stars.6.json').then((r) => r.json());
+
+  // Stereographic, centred on the chosen sky, east to the left as seen from Earth.
+  const l0 = sky.ra * rad, p0 = sky.dec * rad;
+  const sp0 = Math.sin(p0), cp0 = Math.cos(p0);
+  function project(lonDeg, latDeg, S, cx, cy) {
+    const l = lonDeg * rad, p = latDeg * rad;
+    const cosc = sp0 * Math.sin(p) + cp0 * Math.cos(p) * Math.cos(l - l0);
+    if (cosc < -0.2) return null;
+    const k = 2 / (1 + cosc);
+    const x = k * Math.cos(p) * Math.sin(l - l0);
+    const y = k * (cp0 * Math.sin(p) - sp0 * Math.cos(p) * Math.cos(l - l0));
+    return [cx - x * S, cy - y * S];
+  }
+  function unproject(X, Y, S, cx, cy) {
+    const x = -(X - cx) / S, y = -(Y - cy) / S;
+    const rho = Math.hypot(x, y);
+    if (rho < 1e-9) return [l0, p0];
+    const c = 2 * Math.atan(rho / 2), sc = Math.sin(c), cc = Math.cos(c);
+    const p = Math.asin(cc * sp0 + (y * sc * cp0) / rho);
+    const l = l0 + Math.atan2(x * sc, rho * cp0 * cc - y * sp0 * sc);
+    return [l, p];
+  }
+  // J2000 equatorial to galactic.
+  const aG = 192.85948 * rad, dG = 27.12825 * rad, lN = 122.93192 * rad;
+  function galactic(a, d) {
+    const sb = Math.sin(d) * Math.sin(dG) + Math.cos(d) * Math.cos(dG) * Math.cos(a - aG);
+    const b = Math.asin(sb);
+    const l = lN - Math.atan2(Math.cos(d) * Math.sin(a - aG), Math.sin(d) * Math.cos(dG) - Math.cos(d) * Math.sin(dG) * Math.cos(a - aG));
+    return [l, b];
+  }
+  // Small deterministic value noise for the band's clumps.
+  function hash(i, j) { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); }
+  function noise(x, y) {
+    const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j;
+    const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = hash(i, j), b = hash(i + 1, j), c = hash(i, j + 1), d = hash(i + 1, j + 1);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  function fbm(x, y) { let s = 0, w = .5; for (let o = 0; o < 4; o++) { s += w * noise(x, y); x *= 2.03; y *= 2.03; w *= .5; } return s; }
+
+  function bvColour(bv) {
+    if (bv < 0) return [175, 195, 255];
+    if (bv < .3) return [205, 218, 255];
+    if (bv < .6) return [245, 246, 255];
+    if (bv < .8) return [255, 243, 230];
+    if (bv < 1.4) return [255, 220, 180];
+    return [255, 205, 150];
+  }
+
+  function sized(cv, w, h) {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = w * dpr; cv.height = h * dpr;
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    return ctx;
+  }
+
+  async function draw() {
+    const top = hero.getBoundingClientRect().bottom + scrollY;
+    space.style.blockSize = `${Math.ceil(top)}px`;
+    const w = space.clientWidth, h = Math.ceil(top);
+    const S = (w / 2) / (2 * Math.tan(60 * rad / 2)), cx = w / 2, cy = h / 2;
+
+    // Milky Way (its own layer, so it fades in after the stars).
+    let ctx = sized(cvMw, w, h);
+    const sc = 6, mw = Math.ceil(w / sc), mh = Math.ceil(h / sc);
+    const off = new OffscreenCanvas(mw, mh), octx = off.getContext('2d');
+    const img = octx.createImageData(mw, mh);
+    for (let j = 0; j < mh; j++) for (let i = 0; i < mw; i++) {
+      const [a, d] = unproject(i * sc, j * sc, S, cx, cy);
+      const [l, b] = galactic(a, d);
+      const bd = b / rad;
+      const dl = ((l / rad + 540) % 360) - 180;
+      const core = .3 + .7 * Math.exp(-((dl / 70) ** 2));
+      const width = 7 + 5 * Math.exp(-((dl / 40) ** 2));
+      const n = fbm(l / rad / 6, bd / 4);
+      let I = Math.exp(-((bd / width) ** 2)) * core * (.45 + 1.1 * n);
+      if (dl > 10 && dl < 80) I *= 1 - .55 * Math.exp(-(((bd - 2) / 2.2) ** 2));
+      const k = (j * mw + i) * 4;
+      img.data[k] = 200; img.data[k + 1] = 222; img.data[k + 2] = 255;
+      img.data[k + 3] = Math.min(255, I * 255 * .26);
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.filter = 'blur(10px)';
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(off, 0, 0, w, h);
+
+    // Stars.
+    ctx = sized(cvSt, w, h);
+    for (const f of (await starsP).features) {
+      const [lon, lat] = f.geometry.coordinates;
+      const pt = project(lon, lat, S, cx, cy);
+      if (!pt || pt[0] < -4 || pt[0] > w + 4 || pt[1] < -4 || pt[1] > h + 4) continue;
+      const m = f.properties.mag;
+      const r = .45 + Math.max(0, 6 - m) * .3;
+      const alpha = Math.min(1, .3 + (6 - m) * .13);
+      const [R, G, B] = bvColour(parseFloat(f.properties.bv) || .6);
+      if (m < 1.6) {
+        const g = ctx.createRadialGradient(pt[0], pt[1], 0, pt[0], pt[1], r * 5);
+        g.addColorStop(0, `rgb(${R} ${G} ${B} / .22)`); g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(pt[0], pt[1], r * 5, 0, 7); ctx.fill();
+      }
+      ctx.fillStyle = `rgb(${R} ${G} ${B} / ${alpha})`;
+      ctx.beginPath(); ctx.arc(pt[0], pt[1], r, 0, 7); ctx.fill();
+    }
+  }
+
+  // ---- Wide layout: stage over the whole hero, disc centred on the right side ----
+  const wide = matchMedia('(width >= 80rem)');
+  const stage = hero.querySelector('.gmt-globe__stage');
+  const shell = hero.querySelector('.gmt-globe__shell');
+  const zoom = hero.querySelector('#globe-zoom');
+  const side = hero.querySelector('.gmt-globe__side');
+  const scrim = document.createElement('div'); scrim.id = 'p-scrim';
+  const night = document.createElement('div'); night.id = 'p-night';
+  stage.append(night);
+  function layout() {
+    if (!wide.matches) {
+      scrim.remove();
+      for (const p of ['left', 'width', 'height']) stage.style.removeProperty(p);
+      zoom.style.removeProperty('right'); zoom.style.removeProperty('bottom');
+      return;
+    }
+    hero.prepend(scrim);
+    const h = hero.getBoundingClientRect(), s = shell.getBoundingClientRect();
+    const cxView = (s.left + h.right) / 2;
+    const width = 2 * cxView, height = h.height;
+    stage.style.left = `${-h.left}px`;
+    stage.style.width = `${width}px`;
+    stage.style.height = `${height}px`;
+    zoom.style.right = `${width - h.right + 16}px`;
+    zoom.style.bottom = '24px';
+    night.style.setProperty('--r', `${(Math.min(width, height) / 2) * .94}px`);
+  }
+  layout();
+  wide.addEventListener('change', layout);
+
+  // ---- "Find a zone" drawer ----
+  side.id = 'p-drawer';
+  side.setAttribute('role', 'region');
+  side.setAttribute('aria-label', 'Find a zone');
+  const close = document.createElement('button');
+  close.type = 'button'; close.id = 'p-close';
+  close.className = 'p-edge';
+  close.innerHTML = '<svg viewBox="0 0 16 40" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,2 13,20 3,38"/></svg>';
+  close.setAttribute('aria-label', 'Close zone list');
+  close.setAttribute('aria-controls', 'p-drawer');
+  side.before(close); // beside the drawer, so it never scrolls with the list
+  // The visible label goes; its words move into the placeholder. The label stays for screen readers.
+  side.querySelector('label[for="globe-zone-search"]')?.classList.add('gmt-sr-only');
+  const zoneInput = side.querySelector('#globe-zone-search');
+  if (zoneInput) zoneInput.placeholder = 'Find zone, e.g. Asia/Tokyo';
+  // Stand-in for the combobox fix: its suggestion list gets the listbox's base class (panel,
+  // border, scroll). proto.css makes it open downward in the drawer.
+  for (const l of document.querySelectorAll('.gmt-combobox__list')) l.classList.add('gmt-listbox__root');
+  const find = document.createElement('button');
+  find.type = 'button';
+  find.setAttribute('aria-label', 'Find a zone');
+  find.setAttribute('aria-controls', 'p-drawer');
+  find.setAttribute('aria-expanded', 'false');
+  find.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></svg>';
+  zoom.prepend(find);
+
+  let open = false, userClosed = false, opener = null;
+  const drawerOn = () => wide.matches;
+  function setOpen(next, from, focusSearch) {
+    if (!drawerOn() || next === open) return;
+    open = next;
+    side.classList.toggle('p-open', open);
+    side.inert = !open;
+    find.setAttribute('aria-expanded', String(open));
+    if (open) { opener = from; if (focusSearch) side.querySelector('#globe-zone-search')?.focus({ preventScroll: true }); }
+    else { (opener || find).focus?.({ preventScroll: true }); }
+  }
+  function syncMode() { side.inert = drawerOn() && !open; if (!drawerOn()) side.classList.remove('p-open'); }
+  syncMode(); wide.addEventListener('change', syncMode);
+  const touched = (el) => () => { if (!userClosed) setOpen(true, el, false); };
+  function bindCanvas() {
+    const cv = stage.querySelector(':scope > canvas');
+    if (!cv || cv.dataset.pBound) return;
+    cv.dataset.pBound = '1';
+    cv.addEventListener('pointerdown', touched(cv));
+    cv.addEventListener('wheel', touched(cv), { passive: true });
+    cv.addEventListener('keydown', (e) => { if (/^Arrow|^[+-]$/.test(e.key)) touched(cv)(); });
+  }
+  new MutationObserver(bindCanvas).observe(stage, { childList: true });
+  bindCanvas();
+  for (const b of zoom.querySelectorAll('[data-globe-zoom="in"], [data-globe-zoom="out"]')) b.addEventListener('click', touched(b));
+  find.addEventListener('click', () => setOpen(!open, find, true));
+  close.addEventListener('click', () => { userClosed = true; setOpen(false); });
+  addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !open) return;
+    if (side.querySelector('[aria-expanded="true"]')) return; // the combobox closes its own list first
+    userClosed = true; setOpen(false);
+  });
+
+  // ---- The sequencer: one t0 for everything ----
+  const raf = () => new Promise((r) => requestAnimationFrame(r));
+  async function canvasReady() {
+    const until = performance.now() + 4000;
+    while (!stage.querySelector(':scope > canvas') && performance.now() < until) await raf();
+  }
+  async function start() {
+    await Promise.all([draw(), canvasReady(), document.fonts.ready]);
+    await raf(); await raf();
+    root.classList.add('p-go');
+  }
+  start();
+  let t; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { layout(); draw(); }, 150); });
+
+  // Rare meteor, after the entrance.
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  let inView = true;
+  new IntersectionObserver(([e]) => { inView = e.isIntersecting; }).observe(hero);
+  function meteor() {
+    if (!reduce.matches && !document.hidden && inView && root.classList.contains('p-go')) {
+      const m = document.createElement('div');
+      m.className = 'p-meteor';
+      const x = space.clientWidth * (.2 + Math.random() * .7), y = space.clientHeight * (.05 + Math.random() * .4);
+      const ang = (150 + Math.random() * 40) * rad, len = 260 + Math.random() * 200;
+      m.style.left = `${x - 140}px`; m.style.top = `${y}px`; m.style.rotate = `${ang}rad`;
+      m.style.setProperty('--dx', `${Math.cos(ang) * len}px`);
+      m.style.setProperty('--dy', `${Math.sin(ang) * len}px`);
+      space.append(m);
+      m.addEventListener('animationend', () => m.remove());
+    }
+    setTimeout(meteor, (q.has('meteors') ? 3 : 20 + Math.random() * 25) * 1000);
+  }
+  setTimeout(meteor, q.has('meteors') ? 4000 : 9000);
+
+  const badge = document.createElement('div');
+  badge.id = 'p-badge';
+  const links = Object.entries(SKIES).map(([k, v]) => k === skyKey ? `<b>${v.label}</b>` : `<a href="?sky=${k}" style="color:inherit">${v.label}</a>`).join(' · ');
+  badge.innerHTML = `<span>PROTOTYPE</span><span>${links}</span><button type="button" id="p-replay">Replay entrance</button>`;
+  document.body.append(badge);
+  badge.querySelector('#p-replay').addEventListener('click', () => {
+    userClosed = false; setOpen(false);
+    root.classList.remove('p-go'); void root.offsetWidth;
+    requestAnimationFrame(() => root.classList.add('p-go'));
+  });
+}
+
+if (document.querySelector('.gmt-herostage')) import('/__proto/deck.js');

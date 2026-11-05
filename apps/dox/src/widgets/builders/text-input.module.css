@@ -53,6 +53,11 @@
     &:focus-visible {
       outline-color: Highlight;
     }
+
+    &:disabled {
+      border-color: GrayText;
+      color: GrayText;
+    }
   }
 }
 

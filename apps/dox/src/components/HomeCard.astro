@@ -1,11 +1,11 @@
 ---
 /**
- * A home-page card: a heading line with an icon, then the card's text.
+ * A home-page tile: a diamond icon, a title and one line of text.
  *
  * Starlight's `Card` colours itself by its position in the grid (by counting its siblings), so a card that
  * moves, or a grid that gains one, changes colour. This one is told its `tone`, so the page says
- * what each card looks like and the style needs no counting. `span="full"` stretches a card across
- * a two-column grid, for the closing pointer card.
+ * what each tile looks like and the style needs no counting. Tiles sit in `HomeCards`, which is the
+ * list that holds them.
  */
 import { Icon } from "@astrojs/starlight/components";
 import type { ComponentProps } from "astro/types";
@@ -18,16 +18,17 @@ interface Props {
   title: string;
   icon: ComponentProps<typeof Icon>["name"];
   tone: Tone;
-  span?: "full";
 }
 
-const { title, icon, tone, span } = Astro.props;
+const { title, icon, tone } = Astro.props;
 ---
 
-<article class={styles.root} data-tone={tone} data-span={span}>
-  <p class={styles.title}>
-    <Icon name={icon} class={styles.icon} size="1.333em" />
-    <span set:html={title} />
-  </p>
-  <div class={styles.body}><slot /></div>
-</article>
+<li class={styles.root} data-tone={tone}>
+  <span class={styles.diamond} aria-hidden="true">
+    <Icon name={icon} class={styles.icon} size="1rem" />
+  </span>
+  <div class={styles.text}>
+    <p class={styles.title} set:html={title} />
+    <div class={styles.body} data-card-body><slot /></div>
+  </div>
+</li>

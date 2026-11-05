@@ -81,8 +81,9 @@ const filingsFor = (defects: readonly string[]) =>
   font-size: var(--sl-text-xs);
 }
 
+/* The state column is a share of a fixed table, and "✓ Yes, on Firefox" is wider than its
+   content box at the table's 34rem minimum, so the badge wraps between words in its cell. */
 .gmt-defects-badge {
-  white-space: nowrap;
   font-weight: 600;
 }
 
@@ -136,12 +137,12 @@ const filingsFor = (defects: readonly string[]) =>
  * bullet. Both go here: a reference like `polyfill #369` is already close to the width of its
  * column, and the indent alone was enough to clip it. `padding-inline-start` is named as well as
  * `padding-left`, because the site sets the logical property and the physical one does not
- * override it on its own.
+ * override it on its own. A reference may wrap at its space: at 390 px `fullcalendar #126` is
+ * wider than the column.
  */
 .sl-markdown-content .gmt-defects-refs li {
   margin: 0 0 0.15rem;
   padding-inline-start: 0;
-  white-space: nowrap;
 }
 
 .sl-markdown-content .gmt-defects-refs li::before {

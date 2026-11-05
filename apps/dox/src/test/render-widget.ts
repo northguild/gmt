@@ -186,10 +186,11 @@ export async function renderWidget(
     untrack();
     controller.abort();
     handle.destroy();
+    /* Out of the page before the count: a custom element's own listeners end when it disconnects. */
+    root.remove();
     const leaked = session.records.filter((r) => !r.signal?.aborted);
     sessions.delete(session);
     if (sessions.size === 0) restorePatch?.();
-    root.remove();
     if (check && leaked.length > 0) {
       throw new Error(
         `Widget left ${leaked.length} listener(s) running after destroy(): ` +
@@ -239,6 +240,36 @@ export function setRange(slider: HTMLElement, value: number | string): void {
   setter?.call(slider, String(value));
   slider.dispatchEvent(new Event("input", { bubbles: true }));
   slider.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+/**
+ * One wheel event, which `userEvent` cannot send. Returns whether the page was told to leave it
+ * alone (`preventDefault`), which is what a wheel handler answers with.
+ */
+export function wheelOn(
+  target: Element,
+  delta: {
+    deltaY?: number;
+    deltaX?: number;
+    deltaMode?: 0 | 1 | 2;
+    ctrlKey?: boolean;
+  },
+): boolean {
+  const event = new WheelEvent("wheel", {
+    bubbles: true,
+    cancelable: true,
+    deltaY: delta.deltaY ?? 0,
+    deltaX: delta.deltaX ?? 0,
+    deltaMode: delta.deltaMode ?? 0,
+    ctrlKey: delta.ctrlKey ?? false,
+  });
+  target.dispatchEvent(event);
+  return event.defaultPrevented;
+}
+
+/** A native scroll event on an element, which a script cannot cause by setting `scrollTop`. */
+export function scrolled(target: Element): void {
+  target.dispatchEvent(new Event("scroll"));
 }
 
 /**

@@ -40,6 +40,7 @@
  * these", which is what this control does. That primitive being Radix-backed is
  * the exact reason `DOX-C0` adopted the shadcn registry in the first place.
  */
+import { useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +53,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { findResetFormat } from "~/lib/reset-formats";
 import type { BrainsInfo } from "./use-brains";
+import { useEscLayer } from "./use-esc-layer";
 import type { ResetClockState } from "./use-reset-clock";
 
 /* Radix's RadioGroup addresses items by string value, and "no explicit pick"
@@ -76,6 +78,19 @@ export function BrainSelector({
   /** The reader's zone and locale, for each provider's reset. */
   clock: ResetClockState;
 }) {
+  const [open, setOpen] = useState(false);
+  const badgeRef = useRef<HTMLButtonElement>(null);
+  // Escape shuts the menu in its turn among the page's layers; the menu is portalled.
+  useEscLayer({
+    open,
+    close: () => setOpen(false),
+    opener: () => badgeRef.current,
+    contains: (node) =>
+      (node instanceof Element ? node : node.parentElement)?.closest(
+        ".gmt-hive-brain-list",
+      ) != null,
+  });
+
   // No data (endpoint missing, Worker restarting, offline) → no badge. The
   // chat stays fully usable; this is ornament plus an escape hatch, not a gate.
   if (!info) return null;
@@ -92,9 +107,10 @@ export function BrainSelector({
 
   return (
     <div className="gmt-hive-brains">
-      <DropdownMenu>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <button
+            ref={badgeRef}
             type="button"
             className="gmt-hive-brain-badge gmt-sonar-focus"
           >
@@ -122,6 +138,7 @@ export function BrainSelector({
             content already caps its height to the space Radix measures and
             scrolls past it, so a long brain list never runs off the top. */}
         <DropdownMenuContent
+          onEscapeKeyDown={(event) => event.preventDefault()}
           side="top"
           align="start"
           className="gmt-hive-brain-list"

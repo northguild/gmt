@@ -1,7 +1,6 @@
 ---
-import { libraryStack, type Layer } from "../data/library-stack";
+import { alternativesStack as stack } from "../data/date-alternatives";
 import SectionHeading from "./SectionHeading.astro";
-import { competitorComparisons } from "../data/library-comparison";
 
 /**
  * Homepage grid section: why the popular Date alternatives either inherit
@@ -13,40 +12,34 @@ import { competitorComparisons } from "../data/library-comparison";
  * `--gmt-*` token. No `backdrop-filter`, so no transparency/contrast gate is
  * needed beyond what the tokens already carry.
  *
- * Temporal, @northguild/gmt, and Date are structural anchors (the standard,
- * the layer built on it, and the root cause) rather than comparison data, so
- * they stay fixed here. Every actual competitor row comes from the shared
- * apps/dox/src/data/library-comparison.ts module — the same data that drives
- * the why-gmt CI-execution chart — so a new banned library only needs an
- * entry there, not a second edit in this file.
+ * The rows come from apps/dox/src/data/date-alternatives.ts, which the text
+ * surfaces read too.
  */
 
+interface Props {
+  /** `home`: one line per library, name then foundation. `full`: with each library's detail. */
+  variant: "home" | "full";
+}
 
-const competitorStack: Layer[] = competitorComparisons
-  .filter((lib) => lib.kind && lib.detail && lib.foundation)
-  .map((lib) => ({
-    name: lib.displayName,
-    detail: lib.bannedCompanions?.length
-      ? `${lib.detail} Our gmt lint packages also ban the companion ${lib.bannedCompanions.join(", ")} package${lib.bannedCompanions.length > 1 ? "s" : ""}.`
-      : lib.detail!,
-    foundation: lib.foundation!,
-    kind: lib.kind!,
-  }));
-
-// "wraps" rows read as branching off Date (see the margin-left rule in the
-// <style> below), so they must follow it; "nonstandard" rows (currently just
-// @internationalized/date) are their own case and read best last.
-const stack: Layer[] = [
-  libraryStack[0],
-  libraryStack[1],
-  libraryStack[2],
-  ...competitorStack.filter((l) => l.kind === "wraps"),
-  ...competitorStack.filter((l) => l.kind === "nonstandard"),
-];
+const { variant } = Astro.props;
 ---
 
-<section class="why-date-block" aria-labelledby="why-date-stack-h">
-  <SectionHeading>The alternatives inherit it, or deviate from the standard</SectionHeading>
+{
+  variant === "home" ? (
+    <ul class="why-date-rows">
+      {stack.map((l) => (
+        <li class:list={["why-date-row", `why-date-row--${l.kind}`]}>
+          <code class="why-date-layer-name">{l.name}</code>
+          <span class="why-date-arrow" aria-hidden="true">
+            →
+          </span>
+          <span class="why-date-layer-foundation">{l.foundation}</span>
+        </li>
+      ))}
+    </ul>
+  ) : (
+<section class="why-date-block">
+  <SectionHeading id="the-alternatives-inherit-it">The alternatives inherit it, or deviate from the standard</SectionHeading>
   <p class="why-date-lede">
     The popular libraries do not replace <code>Date</code>; they decorate it,
     so the faults come along — our gmt lint packages ban the Date wrappers
@@ -67,6 +60,8 @@ const stack: Layer[] = [
     }
   </ol>
 </section>
+  )
+}
 
 <style>
   .why-date-block {
@@ -84,7 +79,8 @@ const stack: Layer[] = [
     line-height: 1.6;
   }
 
-  .why-date-block code {
+  .why-date-block code,
+  .why-date-rows code {
     font-family: var(--gmt-font-mono);
     font-size: max(0.85em, var(--gmt-text-xs));
     background: var(--gmt-code-bg);
@@ -113,6 +109,94 @@ const stack: Layer[] = [
     border: 1px solid var(--gmt-hairline);
     border-radius: var(--gmt-radius-lg);
     corner-shape: bevel;
+  }
+
+  /* The landing page's short list. The kind sets the colour of the whole row's border and of
+     the foundation, in the same three colours as the full list. */
+  .why-date-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .why-date-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) auto minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: center;
+    margin: 0;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-bevel-sm);
+    corner-shape: bevel;
+    background: var(--gmt-fill-subtle);
+    font-size: 0.7813rem;
+  }
+
+  .why-date-rows li::before {
+    display: none;
+  }
+
+  /* A landing pane wide enough for two short rows side by side shows the list in two columns,
+     so the page fits without scrolling. A name keeps its full width; an odd last row spans both.
+     The pane is the `gmt-grid-section` container (dox.css). */
+  @container gmt-grid-section (inline-size >= 34rem) {
+    .why-date-rows {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .why-date-row {
+      grid-template-columns: auto auto minmax(0, 1fr);
+      gap: 0.4rem;
+      padding-inline: 0.6rem;
+    }
+
+    /* stylelint-disable-next-line selector-pseudo-class-disallowed-list -- an odd row out is a position; the markup carries no state to select it by */
+    .why-date-row:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .why-date-row > .why-date-layer-name {
+    justify-self: start;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gmt-ice);
+    font-weight: 500;
+  }
+
+  .why-date-row > .why-date-layer-foundation {
+    justify-self: start;
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: normal;
+    color: var(--gmt-signal-ink);
+  }
+
+  .why-date-arrow {
+    color: var(--gmt-ice-dim);
+  }
+
+  .why-date-row--date,
+  .why-date-row--wraps,
+  .why-date-row--nonstandard {
+    border-color: var(--gmt-signal-border);
+  }
+
+  .why-date-row--standard,
+  .why-date-row--gmt {
+    border-color: color(from var(--gmt-spring) srgb r g b / 35%);
+  }
+
+  .why-date-row--standard > .why-date-layer-foundation,
+  .why-date-row--gmt > .why-date-layer-foundation {
+    color: var(--gmt-spring-ink);
   }
 
   .why-date-layer-name {

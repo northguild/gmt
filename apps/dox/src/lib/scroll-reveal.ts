@@ -26,7 +26,12 @@ export function initScrollReveal(root: ParentNode = document): void {
     "(prefers-reduced-motion: reduce)",
   ).matches;
 
-  if (reduceMotion || !("IntersectionObserver" in window)) {
+  // In the landing's carousel mode the groups sit in a panel that is closed at first, which no
+  // observer can see into: everything shows at once, and the panel's own motion does the rest.
+  const carousel =
+    document.documentElement.dataset["homeCarousel"] !== undefined;
+
+  if (reduceMotion || carousel || !("IntersectionObserver" in window)) {
     for (const group of groups) group.classList.add("gmt-reveal-in");
     return;
   }

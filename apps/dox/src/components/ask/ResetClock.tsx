@@ -29,7 +29,7 @@
  * *menu* was ruled out too: its typeahead swallows the keystrokes a zone search
  * needs.
  */
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import {
   Command,
   CommandEmpty,
@@ -45,6 +45,7 @@ import {
 import { listResets, nextReset } from "~/lib/quota-resets";
 import { RESET_FORMATS, findResetFormat } from "~/lib/reset-formats";
 import type { BrainsInfo } from "./use-brains";
+import { useEscLayer } from "./use-esc-layer";
 import type { ResetClockState } from "./use-reset-clock";
 import { withBase } from "~/lib/site";
 
@@ -61,6 +62,17 @@ export function ResetClock({
 }) {
   const [open, setOpen] = useState(false);
   const formatName = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // Escape shuts the panel in its turn among the page's layers; the content is portalled.
+  useEscLayer({
+    open,
+    close: () => setOpen(false),
+    opener: () => triggerRef.current,
+    contains: (node) =>
+      node instanceof Element
+        ? node.closest(".gmt-hive-clock-panel") !== null
+        : node.parentElement?.closest(".gmt-hive-clock-panel") != null,
+  });
 
   // Nothing to show before the budget has loaded or the reader's zone is known
   // (see use-reset-clock.ts on hydration).
@@ -82,6 +94,7 @@ export function ResetClock({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
+          ref={triggerRef}
           type="button"
           className="gmt-hive-clock gmt-sonar-focus"
           aria-label={`${reset.label} reset ${readout}. Change the zone or format.`}
@@ -94,6 +107,7 @@ export function ResetClock({
       </PopoverTrigger>
 
       <PopoverContent
+        onEscapeKeyDown={(event) => event.preventDefault()}
         side="top"
         align="start"
         className="gmt-hive-clock-panel"

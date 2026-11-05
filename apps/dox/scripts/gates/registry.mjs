@@ -93,6 +93,15 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "esc-cascade",
+    script: "esc-cascade.mjs",
+    tier: "pr",
+    browsers: ["chromium", "webkit"],
+    fullBrowsers: null,
+    themes: false,
+    needs: null,
+  },
+  {
     id: "canada-layout-check",
     script: "canada-layout-check.mjs",
     tier: "pr",
@@ -156,6 +165,16 @@ export const GATES = [
     fullBrowsers: null,
     themes: false,
     needs: null,
+  },
+  {
+    id: "hero-space",
+    script: "hero-space-check.mjs",
+    tier: "local",
+    browsers: ["chromium"],
+    fullBrowsers: null,
+    themes: false,
+    needs: "gpu",
+    browserArg: false,
   },
   {
     id: "globe-smoke",

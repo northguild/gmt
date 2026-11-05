@@ -35,7 +35,7 @@ import { clampLat, shortestAngle, wrapLng } from "./camera";
 const DRAG_DEG_PER_RADIUS = 90;
 
 /** How long the globe must be left alone before it starts spinning. */
-const IDLE_MS = 2500;
+export const IDLE_MS = 2500;
 
 /** Ambient spin rate — a full turn in 90 seconds. */
 const AMBIENT_DEG_PER_MS = 0.004;
@@ -77,6 +77,9 @@ interface ControllerOptions {
   reducedMotion?: () => boolean;
 }
 
+/** What a gesture turned out to be, reported once when it commits. */
+export type GestureKind = "drag" | "pinch";
+
 /** What `pointerUp` decided the gesture was. */
 interface PointerUpResult {
   /** A tap the caller should hit-test. False after a drag or a pinch. */
@@ -110,14 +113,19 @@ export interface Controller {
   /** Advance to `now`. Safe to call repeatedly. */
   step(now: number): void;
   pointerDown(id: number, x: number, y: number, now: number): void;
-  /** `radiusPx` is the sphere's on-screen radius, which sets the drag gain. */
+  /**
+   * `radiusPx` is the sphere's on-screen radius, which sets the drag gain.
+   * Returns the gesture's kind on the one move that commits it — past the tap
+   * slop, or with a second finger down — and null for every other move, so a
+   * tap or a jitter never reads as the reader working the globe.
+   */
   pointerMove(
     id: number,
     x: number,
     y: number,
     now: number,
     radiusPx: number,
-  ): void;
+  ): GestureKind | null;
   pointerUp(id: number, x: number, y: number, now: number): PointerUpResult;
   pointerCancel(id: number): void;
   /** Returns true when the zoom changed, so the caller knows to consume the
@@ -141,6 +149,8 @@ export interface Controller {
    * timestamp would look like a jump.
    */
   markInteraction(now: number): void;
+  /** True while the ambient spin is the only thing moving the globe: no drag, coast, fly-to or zoom ease. */
+  isAmbientOnly(): boolean;
   /** True while dragging or coasting — the cue for dimming grid lines and
    *  hiding labels, which is how the canvas-2D globe reads too. */
   isQuiet(): boolean;
@@ -162,6 +172,8 @@ export function createController(options: ControllerOptions): Controller {
   const pointers = new Map<number, ActivePointer>();
   /** Set once a gesture involved two pointers, so releasing one is not a tap. */
   let gestureWasPinch = false;
+  /** Set once the current gesture has been reported as committed. */
+  let gestureCommitted = false;
   /** Pinch reference: pointer separation and zoom when the second finger landed. */
   let pinchStartDistance = 0;
   let pinchStartZoom = 1;
@@ -348,9 +360,9 @@ export function createController(options: ControllerOptions): Controller {
       markInteraction(now);
     },
 
-    pointerMove(id, x, y, now, radiusPx): void {
+    pointerMove(id, x, y, now, radiusPx): GestureKind | null {
       const pointer = pointers.get(id);
-      if (!pointer) return;
+      if (!pointer) return null;
 
       const previous = pinchGeometry();
       pointer.x = x;
@@ -380,6 +392,16 @@ export function createController(options: ControllerOptions): Controller {
       }
 
       markInteraction(now);
+
+      if (gestureCommitted) return null;
+      const kind: GestureKind | null =
+        pointers.size >= 2
+          ? "pinch"
+          : Math.hypot(x - pointer.startX, y - pointer.startY) >= TAP_SLOP_PX
+            ? "drag"
+            : null;
+      if (kind) gestureCommitted = true;
+      return kind;
     },
 
     pointerUp(id, x, y, now): PointerUpResult {
@@ -407,6 +429,7 @@ export function createController(options: ControllerOptions): Controller {
         }
         const tap = !gestureWasPinch && moved < TAP_SLOP_PX;
         gestureWasPinch = false;
+        gestureCommitted = false;
         markInteraction(now);
         return { tap, x, y };
       }
@@ -419,6 +442,7 @@ export function createController(options: ControllerOptions): Controller {
       pointers.delete(id);
       if (pointers.size === 0) {
         gestureWasPinch = false;
+        gestureCommitted = false;
         omega[0] = 0;
         omega[1] = 0;
       }
@@ -493,6 +517,16 @@ export function createController(options: ControllerOptions): Controller {
 
     isQuiet(): boolean {
       return isDragging() || inertiaActive;
+    },
+
+    isAmbientOnly(): boolean {
+      return (
+        ambientActive &&
+        !isDragging() &&
+        !inertiaActive &&
+        focusGoal === null &&
+        Math.abs(targetZoom - zoom) <= 0.001
+      );
     },
 
     halt(): void {

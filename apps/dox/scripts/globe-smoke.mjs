@@ -72,7 +72,10 @@ const GATE = "globe-smoke";
    hooks the mount puts on them. Never a class. */
 const GLOBE = widgetRoot("globe");
 const STAGE = gate("globe-stage");
-const CANVAS = `${GLOBE} ${STAGE} canvas`;
+/* The canvas sits in the stage, or, in the landing hero's space mode, in the layer behind it. */
+const LAYER = gate("globe-layer");
+const HIT = gate("globe-hit");
+const CANVAS = `${GLOBE} ${STAGE} canvas, ${GLOBE} ${LAYER} > canvas`;
 const CLOCKS = '[role="listbox"][aria-label^="Pinned zones"]';
 const TOOLTIP = gate("globe-tooltip");
 const HERO_STAGE = gate("hero-stage");
@@ -354,8 +357,35 @@ async function open(
        and fades the imagery in once it lands, so give it a beat before
        reading pixels. */
     await page.waitForTimeout(2500);
+    /* The landing's globe opens with a dawn; pixels are read at full light, once it is over. */
+    await page
+      .waitForFunction(
+        () =>
+          !document.querySelector("[data-gate='hero-stage']") ||
+          document.querySelector("[data-dawn='done']"),
+        null,
+        { timeout: 20_000 },
+      )
+      .catch(() => {
+        problems.push("the landing globe's dawn did not finish within 20 s");
+      });
   }
   return { page, stage, problems, imagery, requests };
+}
+
+/**
+ * A capture of the globe: the disc's box where the hero has a hit area (its stage is the whole
+ * hero column, copy and zoom stack included), the stage elsewhere.
+ */
+async function snap(page, stage, options) {
+  /* boundingBox waits for the element to attach, 30 s by default, so a page without the hit area
+     is asked only after a count. */
+  const hit = page.locator(HIT).first();
+  const box = (await page.locator(HIT).count())
+    ? await hit.boundingBox({ timeout: 2000 }).catch(() => null)
+    : null;
+  if (box && box.width > 0) return page.screenshot({ ...options, clip: box });
+  return stage.screenshot(options);
 }
 
 /** Press zoom-in `presses` times and let the ease settle. */
@@ -538,9 +568,9 @@ async function main() {
         await zoomIn(page, zoom);
 
         const file = path.join(OUT, `${target.name}-z${zoom}-${renderer}.png`);
-        await stage.screenshot({ path: file });
+        await snap(page, stage, { path: file });
         shots[renderer] = PNG.sync.read(
-          await stage.screenshot({ type: "png" }),
+          await snap(page, stage, { type: "png" }),
         );
         check(
           !isBlank(shots[renderer]),
@@ -602,12 +632,12 @@ async function main() {
             imagery.statuses.includes(200),
             `${label}: the image did not arrive (${imagery.statuses.join(", ") || "no response"})`,
           );
-          await stage.screenshot({
+          await snap(page, stage, {
             path: path.join(OUT, `${target.name}-imagery-${theme}.png`),
           });
         }
         captures[withholdImagery ? "flat" : "shown"] = PNG.sync.read(
-          await stage.screenshot({ type: "png" }),
+          await snap(page, stage, { type: "png" }),
         );
         await page.close();
       }
@@ -685,7 +715,7 @@ async function main() {
       }
       await zoomIn(page, TOP_ZOOM_PRESSES);
       still[withholdImagery ? "flat" : "shown"] = PNG.sync.read(
-        await stage.screenshot({
+        await snap(page, stage, {
           type: "png",
           mask: [page.locator(TOOLTIP)],
         }),
@@ -904,7 +934,7 @@ async function main() {
       }, CANVAS);
 
     // Drag: the globe must move, and the page must not scroll under it.
-    const before = await stage.screenshot({ type: "png" });
+    const before = await snap(page, stage, { type: "png" });
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, {
@@ -912,7 +942,7 @@ async function main() {
     });
     await page.mouse.up();
     await page.waitForTimeout(1200);
-    const afterDrag = await stage.screenshot({ type: "png" });
+    const afterDrag = await snap(page, stage, { type: "png" });
     check(
       Buffer.compare(before, afterDrag) !== 0,
       "interaction: dragging did not change the globe",
@@ -920,10 +950,10 @@ async function main() {
 
     // Keyboard: the canvas is focusable and the arrow keys rotate it.
     await page.locator(CANVAS).first().focus();
-    const beforeKey = await stage.screenshot({ type: "png" });
+    const beforeKey = await snap(page, stage, { type: "png" });
     for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowLeft");
     await page.waitForTimeout(900);
-    const afterKey = await stage.screenshot({ type: "png" });
+    const afterKey = await snap(page, stage, { type: "png" });
     check(
       Buffer.compare(beforeKey, afterKey) !== 0,
       "interaction: the arrow keys did not rotate the globe",
@@ -932,10 +962,10 @@ async function main() {
     // Zoom buttons. The cluster is ambient chrome, hidden and inert until the
     // stage is hovered or focused, so hover it first as a reader would.
     await stage.hover();
-    const beforeZoom = await stage.screenshot({ type: "png" });
+    const beforeZoom = await snap(page, stage, { type: "png" });
     await page.locator("[data-globe-zoom='in']").first().click();
     await page.waitForTimeout(900);
-    const afterZoom = await stage.screenshot({ type: "png" });
+    const afterZoom = await snap(page, stage, { type: "png" });
     check(
       Buffer.compare(beforeZoom, afterZoom) !== 0,
       "interaction: the zoom-in button did nothing",

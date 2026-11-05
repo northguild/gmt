@@ -37,7 +37,13 @@ import {
   unproject as unprojectPoint,
   wrapLng,
 } from "./camera";
-import { createController, type Controller } from "./controller";
+import { createController, IDLE_MS, type Controller } from "./controller";
+import {
+  DAWN_END_MS,
+  dawnExposure,
+  FALLBACK_FADE_MS,
+  fallbackOpacity,
+} from "./dawn";
 import type {
   CreateRenderer,
   FrameState,
@@ -50,6 +56,7 @@ import type {
   GlobeArc,
   GlobeEngine,
   GlobeMarker,
+  GlobeInteraction,
   GlobeOptions,
   GlobeRegion,
   GlobeTheme,
@@ -57,9 +64,16 @@ import type {
   RendererKind,
 } from "./types";
 
-/** Device pixel ratio is capped here: past 2 the cost doubles for no visible
- *  gain on a globe made of washes and thin strokes. */
+/** Device pixel ratio is capped here unless the host asks for less: past 2 the
+ *  cost doubles for no visible gain on a globe made of washes and thin strokes. */
 const MAX_DPR = 2;
+
+/** While only the ambient spin moves the globe (4 degrees a second, under a pixel a frame at
+ *  60 Hz), it is drawn at most this often, in milliseconds. The Earth now fills the landing hero,
+ *  so a draw at every vsync saturates the main thread of a machine without a GPU raster and drops
+ *  frames across the whole page; at 30 Hz the spin steps by under 1.5 px. Any other motion draws
+ *  at every frame. */
+const AMBIENT_FRAME_MS = 30;
 
 /** The sphere leaves this much of the stage clear, so the glow ring fits. */
 const BASE_SCALE_FACTOR = 0.94;
@@ -95,16 +109,37 @@ export async function createGlobeEngine(
   let height = 1;
   let dpr = 1;
   let baseScale = 1;
+  let centreX = 0.5;
+  let centreY = 0.5;
+  let framed = false;
 
   let frameHandle = 0;
+  /** The `requestAnimationFrame` time of the last loop draw. */
+  let lastLoopDraw = -Infinity;
   /** A one-off redraw asked for from outside the animation loop. */
   let drawHandle = 0;
   let wakeTimer: ReturnType<typeof setTimeout> | undefined;
 
   let tapCallback: Parameters<GlobeEngine["onTap"]>[0] | null = null;
   let frameCallback: (() => void) | null = null;
+  let interactCallback: ((kind: GlobeInteraction) => void) | null = null;
+  /** Whether the frame loop is held off because the host scrolled out of view. */
+  let offscreen = false;
+  const maxDpr = options.maxDpr ?? MAX_DPR;
+  const hitArea = options.hitArea;
 
   const sun: [number, number, number] = [0, 0, 1];
+
+  // --- the dawn entrance ---------------------------------------------------
+
+  const dawnMode = options.entrance === "dawn";
+  /** When `startDawn()` was called, on the engine's clock. */
+  let dawnStart: number | null = null;
+  let dawnOver = !dawnMode;
+  let dawnDone: Promise<void> | null = null;
+  let finishDawnPromise: () => void = () => {};
+  /** Whether the reader worked the globe during the dawn, which then owns the spin's start. */
+  let touched = false;
 
   // --- backend selection ---------------------------------------------------
 
@@ -127,6 +162,7 @@ export async function createGlobeEngine(
       ariaLabel: options.ariaLabel,
       imageryUrl: options.imageryUrl,
       invalidate: () => requestDraw(),
+      entrance: options.entrance ?? "fade",
       reducedMotion,
     };
     const create: CreateRenderer =
@@ -145,8 +181,13 @@ export async function createGlobeEngine(
        has a fresh canvas that nothing will ever reveal, and the stylesheet keeps
        a canvas without `data-entered` at opacity 0 — so it is marked entered
        here, and the globe comes back instead of staying blank. */
-    if (adoptedBefore) next.canvas.setAttribute("data-entered", "");
+    if (adoptedBefore || dawnMode) next.canvas.setAttribute("data-entered", "");
     adoptedBefore = true;
+    /* The fallback has no exposure: until the dawn starts its canvas is clear, and `draw` fades
+       it in. */
+    if (!dawnOver && dawnStart === null && next.kind === "canvas2d") {
+      next.canvas.style.opacity = "0";
+    }
     renderer = next;
     host.setAttribute(RENDERER_ATTRIBUTE, next.kind);
     next.setTheme(theme);
@@ -154,7 +195,18 @@ export async function createGlobeEngine(
     next.setMarkers(markers);
     next.setArcs(arcs);
     next.onFailure(handleRendererFailure);
-    bindInput(next.canvas);
+    if (hitArea) {
+      /* The hit area is the interactive, focusable, named stand-in for the canvas, which sits
+         under it for show only: one tab stop, one name, not two. */
+      next.canvas.tabIndex = -1;
+      next.canvas.removeAttribute("role");
+      next.canvas.removeAttribute("aria-label");
+      next.canvas.setAttribute("aria-hidden", "true");
+      hitArea.tabIndex = 0;
+      hitArea.setAttribute("role", "img");
+      hitArea.setAttribute("aria-label", options.ariaLabel);
+    }
+    bindInput(inputTarget(next));
     measure();
   }
 
@@ -163,7 +215,7 @@ export async function createGlobeEngine(
     console.warn(`globe: WebGPU renderer failed (${reason})`);
     const previous = renderer;
     renderer = null;
-    unbindInput(previous.canvas);
+    unbindInput(inputTarget(previous));
     previous.destroy();
 
     /* One retry, and only once the tab is visible: a device lost while hidden is
@@ -245,14 +297,26 @@ export async function createGlobeEngine(
     if (!renderer) return;
     width = Math.max(1, host.clientWidth);
     height = Math.max(1, host.clientHeight);
-    dpr = Math.min(globalThis.devicePixelRatio || 1, MAX_DPR);
-    baseScale = (Math.min(width, height) / 2) * BASE_SCALE_FACTOR;
+    dpr = Math.min(globalThis.devicePixelRatio || 1, maxDpr);
+    if (options.framing) {
+      const frame = options.framing(width, height);
+      centreX = frame.cx;
+      centreY = frame.cy;
+      baseScale = frame.radius;
+    } else {
+      centreX = width / 2;
+      centreY = height / 2;
+      baseScale = (Math.min(width, height) / 2) * BASE_SCALE_FACTOR;
+    }
+    framed = true;
     renderer.resize(width, height, dpr);
     draw();
   }
 
   const resizeObserver = new ResizeObserver(() => measure());
   resizeObserver.observe(host);
+  for (const watched of options.framingWatch ?? [])
+    resizeObserver.observe(watched);
 
   /**
    * Dragging a window between displays changes `devicePixelRatio` without
@@ -275,13 +339,20 @@ export async function createGlobeEngine(
 
   // --- the frame -----------------------------------------------------------
 
-  function buildFrame(): FrameState {
+  /** Whether the dawn is running: started and not yet over. */
+  const dawning = (): boolean => dawnStart !== null && !dawnOver;
+
+  /** When this backend's dawn ends: the GPU ramp, or the fallback's shorter fade. */
+  const dawnEnd = (): number =>
+    renderer?.kind === "canvas2d" ? FALLBACK_FADE_MS : DAWN_END_MS;
+
+  function buildFrame(now: number): FrameState {
     camera.rotation[0] = controller.rotation[0];
     camera.rotation[1] = controller.rotation[1];
     syncCamera(camera);
     camera.radius = baseScale * controller.zoom;
-    camera.centreX = width / 2;
-    camera.centreY = height / 2;
+    camera.centreX = centreX;
+    camera.centreY = centreY;
 
     /* One instant for the whole frame. Reading the clock per call site could put
        a marker on the wrong side of the same frame's own terminator. */
@@ -295,13 +366,58 @@ export async function createGlobeEngine(
       zoom: controller.zoom,
       quiet: controller.isQuiet(),
       moving: controller.needsFrame(),
+      exposure:
+        dawning() && renderer?.kind !== "canvas2d"
+          ? dawnExposure(now - (dawnStart as number))
+          : 1,
     };
+  }
+
+  let placedRadius = NaN;
+  let placedX = NaN;
+  let placedY = NaN;
+
+  /** Lay the hit area over the disc, only when the disc has moved or resized. */
+  function placeHitArea(): void {
+    if (!hitArea || !framed) return;
+    const r = camera.radius;
+    if (r === placedRadius && centreX === placedX && centreY === placedY) {
+      return;
+    }
+    placedRadius = r;
+    placedX = centreX;
+    placedY = centreY;
+    const size = `${2 * r}px`;
+    hitArea.style.transform = `translate(${centreX - r}px, ${centreY - r}px)`;
+    hitArea.style.width = size;
+    hitArea.style.height = size;
   }
 
   function draw(): void {
     if (destroyed || !renderer) return;
-    renderer.render(buildFrame());
+    /* A dawn entrance paints nothing until it is asked to. */
+    if (dawnMode && dawnStart === null) return;
+    const now = performanceNow();
+    renderer.render(buildFrame(now));
+    placeHitArea();
+    if (dawning()) {
+      const elapsed = now - (dawnStart as number);
+      if (renderer.kind === "canvas2d") {
+        renderer.canvas.style.opacity = String(fallbackOpacity(elapsed));
+      }
+      if (elapsed >= dawnEnd()) finishDawn(now);
+    }
     frameCallback?.();
+  }
+
+  /** The Earth is fully lit: show the end state, and let the spin ease in from here. */
+  function finishDawn(now: number): void {
+    dawnOver = true;
+    renderer?.canvas.style.removeProperty("opacity");
+    host.setAttribute("data-dawn", "done");
+    if (!touched) controller.markInteraction(now - IDLE_MS);
+    finishDawnPromise();
+    schedule();
   }
 
   /**
@@ -314,7 +430,15 @@ export async function createGlobeEngine(
    * loop already has a frame pending it will draw anyway, so this does nothing.
    */
   function requestDraw(): void {
-    if (destroyed || document.hidden || frameHandle || drawHandle) return;
+    if (
+      destroyed ||
+      document.hidden ||
+      offscreen ||
+      frameHandle ||
+      drawHandle
+    ) {
+      return;
+    }
     drawHandle = requestAnimationFrame(() => {
       drawHandle = 0;
       draw();
@@ -329,16 +453,29 @@ export async function createGlobeEngine(
        pending and adds nothing. The other way round it queued a second draw
        for the same vsync. */
     schedule();
+    if (
+      controller.isAmbientOnly() &&
+      !dawning() &&
+      now - lastLoopDraw < AMBIENT_FRAME_MS
+    ) {
+      return;
+    }
+    lastLoopDraw = now;
     draw();
   }
 
   /** Ask for the next frame, or set the one timer that wakes the ambient spin. */
   function schedule(): void {
-    if (destroyed || document.hidden) return;
-    if (controller.needsFrame()) {
+    if (destroyed || document.hidden || offscreen) return;
+    /* A dawn entrance has no loop, and the spin no wake timer, until it starts. */
+    if (dawnMode && dawnStart === null) return;
+    if (controller.needsFrame() || dawning()) {
       if (!frameHandle) frameHandle = requestAnimationFrame(step);
       return;
     }
+    /* A frame already pending schedules whatever follows it. A wake timer set beside it would
+       fire `step`, which forgets that frame and leaves it running past a `destroy`. */
+    if (frameHandle) return;
     if (wakeTimer) clearTimeout(wakeTimer);
     const wakeAt = controller.nextWakeAt();
     if (wakeAt === null) return;
@@ -367,6 +504,7 @@ export async function createGlobeEngine(
   // --- input ---------------------------------------------------------------
 
   function onPointerDown(event: PointerEvent): void {
+    touched = true;
     controller.pointerDown(
       event.pointerId,
       event.clientX,
@@ -374,7 +512,7 @@ export async function createGlobeEngine(
       event.timeStamp,
     );
     try {
-      renderer?.canvas.setPointerCapture(event.pointerId);
+      inputElement().setPointerCapture(event.pointerId);
     } catch {
       // Some input stacks, and any synthesised pointer event, have no live
       // pointer to capture. Drag and tap both work without it.
@@ -383,13 +521,14 @@ export async function createGlobeEngine(
   }
 
   function onPointerMove(event: PointerEvent): void {
-    controller.pointerMove(
+    const kind = controller.pointerMove(
       event.pointerId,
       event.clientX,
       event.clientY,
       event.timeStamp,
       camera.radius,
     );
+    if (kind) interactCallback?.(kind);
     schedule();
   }
 
@@ -401,11 +540,14 @@ export async function createGlobeEngine(
       event.timeStamp,
     );
     try {
-      renderer?.canvas.releasePointerCapture?.(event.pointerId);
+      inputElement().releasePointerCapture?.(event.pointerId);
     } catch {
       // Capture may already be gone; releasing it is best-effort.
     }
-    if (result.tap) hitTest(result.x, result.y);
+    if (result.tap) {
+      hitTest(result.x, result.y);
+      interactCallback?.("tap");
+    }
     schedule();
   }
 
@@ -415,16 +557,22 @@ export async function createGlobeEngine(
   }
 
   function onWheel(event: WheelEvent): void {
+    touched = true;
     /* Only swallow the event when the globe actually zoomed. At a zoom limit the
        wheel belongs to the page, so a reader who scrolls down onto the hero
        globe is not trapped there. */
-    if (controller.wheel(event.deltaY, event.timeStamp)) event.preventDefault();
+    if (controller.wheel(event.deltaY, event.timeStamp)) {
+      event.preventDefault();
+      interactCallback?.("wheel");
+    }
     schedule();
   }
 
   function onKeyDown(event: KeyboardEvent): void {
+    touched = true;
     if (!controller.key(event.key, event.timeStamp)) return;
     event.preventDefault();
+    interactCallback?.("key");
     schedule();
   }
 
@@ -437,7 +585,16 @@ export async function createGlobeEngine(
     schedule();
   }
 
-  function bindInput(canvas: HTMLCanvasElement): void {
+  /** What takes input: the host's hit area when it gave one, else the canvas. */
+  function inputTarget(live: GlobeRenderer): HTMLElement {
+    return hitArea ?? live.canvas;
+  }
+
+  function inputElement(): HTMLElement {
+    return hitArea ?? (renderer as GlobeRenderer).canvas;
+  }
+
+  function bindInput(canvas: HTMLElement): void {
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerup", onPointerUp);
@@ -448,7 +605,7 @@ export async function createGlobeEngine(
     canvas.addEventListener("pointerleave", onPointerLeave);
   }
 
-  function unbindInput(canvas: HTMLCanvasElement): void {
+  function unbindInput(canvas: HTMLElement): void {
     canvas.removeEventListener("pointerdown", onPointerDown);
     canvas.removeEventListener("pointermove", onPointerMove);
     canvas.removeEventListener("pointerup", onPointerUp);
@@ -518,6 +675,30 @@ export async function createGlobeEngine(
   }
   document.addEventListener("visibilitychange", onVisibility);
 
+  /* Out of view the loop stops entirely: no frame, no wake timer. Coming back
+     is treated like a returning tab, so a spin does not resume from a stale
+     timestamp. */
+  let viewObserver: IntersectionObserver | undefined;
+  if (options.pauseWhenHidden && typeof IntersectionObserver === "function") {
+    viewObserver = new IntersectionObserver((entries) => {
+      const visible = entries[entries.length - 1]?.isIntersecting ?? true;
+      if (visible === !offscreen) return;
+      offscreen = !visible;
+      if (offscreen) {
+        if (frameHandle) cancelAnimationFrame(frameHandle);
+        if (drawHandle) cancelAnimationFrame(drawHandle);
+        if (wakeTimer) clearTimeout(wakeTimer);
+        frameHandle = 0;
+        drawHandle = 0;
+        return;
+      }
+      controller.markInteraction(performanceNow());
+      requestDraw();
+      schedule();
+    });
+    viewObserver.observe(options.pauseWhenHidden);
+  }
+
   // --- start ---------------------------------------------------------------
 
   adoptRenderer(started);
@@ -532,6 +713,27 @@ export async function createGlobeEngine(
   } = {
     get renderer() {
       return renderer?.kind ?? started.kind;
+    },
+    dawnReady: started.ready ?? Promise.resolve(),
+    startDawn() {
+      if (dawnDone) return dawnDone;
+      dawnDone = new Promise<void>((resolve) => (finishDawnPromise = resolve));
+      if (!dawnMode || destroyed) {
+        finishDawnPromise();
+        return dawnDone;
+      }
+      dawnStart = performanceNow();
+      // The spin has waited for the dawn: its idle time counts from here.
+      controller.markInteraction(dawnStart);
+      if (reducedMotion()) {
+        // Exposure 1 at once: a frame at full light, and the dawn is over.
+        finishDawn(dawnStart);
+        draw();
+        return dawnDone;
+      }
+      draw();
+      schedule();
+      return dawnDone;
     },
     setTheme(next: GlobeTheme) {
       theme = next;
@@ -579,6 +781,9 @@ export async function createGlobeEngine(
     onTap(callback) {
       tapCallback = callback;
     },
+    onInteract(callback) {
+      interactCallback = callback;
+    },
     onFrame(callback) {
       frameCallback = callback;
     },
@@ -596,15 +801,18 @@ export async function createGlobeEngine(
       if (drawHandle) cancelAnimationFrame(drawHandle);
       if (wakeTimer) clearTimeout(wakeTimer);
       resizeObserver.disconnect();
+      viewObserver?.disconnect();
       dprQuery?.removeEventListener("change", onDprChange);
       document.removeEventListener("visibilitychange", onVisibility);
       if (renderer) {
-        unbindInput(renderer.canvas);
+        unbindInput(inputTarget(renderer));
         renderer.destroy();
       }
       host.removeAttribute(RENDERER_ATTRIBUTE);
+      host.removeAttribute("data-dawn");
       tapCallback = null;
       frameCallback = null;
+      interactCallback = null;
     },
   };
 

@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { configDefaults, defineConfig, type Plugin } from "vitest/config";
-import { splitTestFiles, TEST_GLOBS } from "./src/test/isolation.ts";
+import {
+  BROWSER_TEST_GLOB,
+  splitTestFiles,
+  TEST_GLOBS,
+} from "./src/test/isolation.ts";
 
 /**
  * Mirrors `wrangler.jsonc`'s `{ "type": "Text", "globs": ["**\/*.md"] }` rule.
@@ -83,7 +87,7 @@ export default defineConfig({
         test: {
           name: "shared",
           include: TEST_GLOBS,
-          exclude: [...configDefaults.exclude, ...isolated],
+          exclude: [...configDefaults.exclude, ...isolated, BROWSER_TEST_GLOB],
           isolate: false,
         },
       },

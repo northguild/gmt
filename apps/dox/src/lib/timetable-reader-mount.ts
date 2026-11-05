@@ -161,9 +161,9 @@ function offsetOptions(
 const sizer = (text: string, extra = ""): SafeHtml =>
   html`<span class="${styles.sizer} ${extra}" aria-hidden="true" data-t="${text}"></span>`;
 
-/** A cell that holds the size of the tallest thing it can contain. */
-const hold = (sizerPart: SafeHtml, live: SafeHtml): SafeHtml =>
-  html`<span class="${styles.hold}">${sizerPart}<span class="${styles.live}" data-gate="drawn">${live}</span></span>`;
+/** A table cell that holds the size of the tallest thing it can contain. */
+const hold = (sizerPart: SafeHtml, live: SafeHtml, extra = ""): SafeHtml =>
+  html`<span class="${styles.hold} ${styles.cellHold} ${extra}">${sizerPart}<span class="${styles.live}" data-gate="drawn">${live}</span></span>`;
 
 const lost = (): SafeHtml =>
   html`<span class="${styles.lost}">${NO_SIGNAL}</span>`;
@@ -172,12 +172,17 @@ const lost = (): SafeHtml =>
 function timeCell(iso: string): SafeHtml {
   const m = /T(\d{2}:\d{2})(?::\d{2})?([+-]\d{2}:\d{2}|Z)/.exec(iso);
   const short = m ? `${m[1]}${m[2] === "Z" ? " Z" : ` ${m[2]}`}` : iso;
-  return html`<span class="${styles.time}">${short}</span><span class="${styles.timeFull}">${iso}</span>`;
+  const zone = iso.indexOf("[");
+  const full =
+    zone < 0
+      ? html`${iso}`
+      : html`${iso.slice(0, zone)}<wbr />${iso.slice(zone)}`;
+  return html`<span class="${styles.time}">${short}</span><span class="${styles.timeFull}">${full}</span>`;
 }
 
 function timeSizer(zone: string): SafeHtml {
   const { short } = shapeOf.time(zone);
-  return html`<span class="${styles.sizerBox}" aria-hidden="true"><span class="${styles.time} ${styles.sizer}" data-t="${short}"></span><span class="${styles.timeFull} ${styles.sizer}" data-t="${`0000-00-00T00:00:00+00:00[${zone}]`}"></span></span>`;
+  return html`<span class="${styles.sizerBox}" aria-hidden="true"><span class="${styles.time} ${styles.sizer}" data-t="${short}"></span><span class="${styles.timeFull} ${styles.sizer}" data-t="${`0000-00-00T00:00:00+00:00\u200b[${zone}]`}"></span></span>`;
 }
 
 function startState(args: TimetableReaderArgs): TimetableState {
@@ -320,7 +325,7 @@ export function renderTimetableReaderTemplate(
           ></div>`)}
       </div>
       <div class="${styles.pane}">
-        ${grow(html`<div id="${id("rows-slot")}">${rowsTable([], s.timeZone, s.startTimeZone)}</div>`)}
+        ${grow(html`<div class="${styles.rowsSlot}" id="${id("rows-slot")}">${rowsTable([], s.timeZone, s.startTimeZone)}</div>`)}
         <p class="${styles.note}">For the general rule behind a repeated or skipped hour, see the <a href="${withBase("/tools/dst-inspector/")}">DST Inspector</a>.</p>
       </div>
     </div></div>`,
@@ -397,6 +402,7 @@ function rowsTable(
       },
     ],
     rowHeader: "printed",
+    labelCells: true,
     rows: rows.map((r) => ({
       printed: html`<span class="${styles.printed}" data-series="${r.n}">${swatch({ series: r.n as SwatchSeries })}<span class="${styles.rownum}">${r.n}</span><span class="${styles.printedText}">${r.departure + r.offset}</span></span>`,
       leaves: cell(r.leaves, startZone),
@@ -411,6 +417,7 @@ function rowsTable(
                 ? "purple"
                 : "neutral",
             }),
+        styles.noteCell,
       ),
       arrival: cell(r.local, zone),
     })),

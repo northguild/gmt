@@ -16,7 +16,7 @@ import { MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
 import { serversMarkdown } from "./canada-clock-change";
 import { serversMarkdown as moroccoServersMarkdown } from "./morocco-clock-change";
 import { dateFaults } from "../data/date-faults";
-import { libraryStack } from "../data/library-stack";
+import { alternativesStack } from "../data/date-alternatives";
 import {
   compatGroups,
   groupLabel,
@@ -224,12 +224,31 @@ function renderScenario(props: Record<string, string>): string {
   return `\n${parts.join("\n\n")}\n`;
 }
 
-/** `<WhyDateBug />` as a Markdown table — the home page's case against `Date`. */
-function renderWhyDateBug(): string {
+/** The `variant` prop of `<WhyDateBug>` and `<WhyDateAlternatives>`; anything but `home` is the full one. */
+const isHome = (props: Record<string, string>): boolean =>
+  props.variant === "home";
+
+/**
+ * `<WhyDateBug variant="…" />` as a Markdown table, as its page shows it: the landing page's short
+ * list of input and output, or every fault with its reason under the component's own heading.
+ */
+function renderWhyDateBug(props: Record<string, string>): string {
+  if (isHome(props)) {
+    const rows = dateFaults
+      .filter((f) => f.home)
+      .map((f) => `| \`${f.input}\` | ${f.output} |`);
+    return ["", "| You write | You get |", "| --- | --- |", ...rows, ""].join(
+      "\n",
+    );
+  }
   const rows = dateFaults.map(
     (f) => `| \`${f.input}\` | ${f.output} | ${f.why} |`,
   );
   return [
+    "",
+    "## The bug is the `Date` object",
+    "",
+    "Almost every date/time bug in a JavaScript codebase traces back to one type. `Date` conflates an instant with a wall-clock reading, parses two ways depending on the string, and mutates in place.",
     "",
     "| You write | You get | Why |",
     "| --- | --- | --- |",
@@ -238,12 +257,27 @@ function renderWhyDateBug(): string {
   ].join("\n");
 }
 
-/** `<WhyDateAlternatives />` as a Markdown table — what each layer is built on. */
-function renderWhyDateAlternatives(): string {
-  const rows = libraryStack.map(
+/**
+ * `<WhyDateAlternatives variant="…" />` as a Markdown table: the landing page's name and
+ * foundation per library, or the full list with what each one is.
+ */
+function renderWhyDateAlternatives(props: Record<string, string>): string {
+  if (isHome(props)) {
+    const rows = alternativesStack.map(
+      (l) => `| **${l.name}** | ${l.foundation} |`,
+    );
+    return ["", "| Layer | Built on |", "| --- | --- |", ...rows, ""].join(
+      "\n",
+    );
+  }
+  const rows = alternativesStack.map(
     (l) => `| **${l.name}** | ${l.foundation} | ${l.detail} |`,
   );
   return [
+    "",
+    "## The alternatives inherit it, or deviate from the standard",
+    "",
+    "The popular libraries do not replace `Date`; they decorate it, so the faults come along — our gmt lint packages ban the Date wrappers below outright. The one library that fixes the model does it with a non-standard API you will migrate off. GMT is Temporal — the standard — with the ergonomics added on top.",
     "",
     "| Layer | Built on | What it is |",
     "| --- | --- | --- |",
@@ -445,11 +479,13 @@ export function renderMdxComponents(body: string): string {
   );
 
   for (const wrapper of [
+    "HeroGlobe",
     "GridSection",
     "ChartContainer",
     "Fragment",
     "CardGrid",
     "Card",
+    "HomeCards",
     "HomeCard",
   ]) {
     out = replaceElements(out, wrapper, (props, children) => {
@@ -507,7 +543,6 @@ export function renderMdxComponents(body: string): string {
   for (const dropped of [
     "TimezoneMap",
     "PlaygroundForm",
-    "HeroGlobe",
     "ScrollReveal",
     "CanadaProbeScript",
     "MoroccoProbeScript",

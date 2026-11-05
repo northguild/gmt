@@ -68,3 +68,14 @@ export function resolveGlobeZones(
 export function rotationForZone(zone: ZoneCoordinate): [number, number] {
   return [-zone.lng, -zone.lat];
 }
+
+/** The rotation a globe starts at when the viewer's own zone cannot be placed. */
+const FALLBACK_ROTATION: readonly [number, number] = [-10, -15];
+
+/** The rotation a globe starts at: over the viewer's zone if it has coordinates, else a fixed view. */
+export function startRotation(zoneId: string | null): [number, number] {
+  const coordinate = zoneId ? COORDINATES_BY_ID.get(zoneId) : undefined;
+  return coordinate
+    ? rotationForZone(coordinate)
+    : [FALLBACK_ROTATION[0], FALLBACK_ROTATION[1]];
+}

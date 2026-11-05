@@ -1,0 +1,112 @@
+/* carousel: the dots. One tab per page, a 24px target around an 8px dot. A dot is an octagon,
+   the site's ice-chunk shape: a ring in the text colour, and the shown page's filled in cyan and
+   a little wider, so the state does not rest on colour alone. The shape is a clip path with the
+   even-odd rule (an outer outline and an inner one make the ring), so it draws the same in every
+   browser and at any width. The page places and styles the previous and next buttons, and the
+   one that carries `data-off`. */
+
+.dot {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gmt-ice);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.dot::before {
+  /* The corner cut, the ring's width, and the inner outline's cut (the outer cut less the
+     ring's width times tan 22.5deg, so the ring is as wide on the cuts as on the sides). */
+  --bevel: 2.5px;
+  --ring: 1.5px;
+  --inner: calc(var(--bevel) - var(--ring) * 0.4142);
+
+  content: "";
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  background-color: currentcolor;
+  clip-path: polygon(
+    evenodd,
+    var(--bevel) 0,
+    calc(100% - var(--bevel)) 0,
+    100% var(--bevel),
+    100% calc(100% - var(--bevel)),
+    calc(100% - var(--bevel)) 100%,
+    var(--bevel) 100%,
+    0 calc(100% - var(--bevel)),
+    0 var(--bevel),
+    var(--bevel) 0,
+    calc(var(--ring) + var(--inner)) var(--ring),
+    calc(100% - var(--ring) - var(--inner)) var(--ring),
+    calc(100% - var(--ring)) calc(var(--ring) + var(--inner)),
+    calc(100% - var(--ring)) calc(100% - var(--ring) - var(--inner)),
+    calc(100% - var(--ring) - var(--inner)) calc(100% - var(--ring)),
+    calc(var(--ring) + var(--inner)) calc(100% - var(--ring)),
+    var(--ring) calc(100% - var(--ring) - var(--inner)),
+    var(--ring) calc(var(--ring) + var(--inner)),
+    calc(var(--ring) + var(--inner)) var(--ring)
+  );
+  opacity: 0.75;
+  transition:
+    inline-size var(--gmt-duration-fast),
+    opacity var(--gmt-duration-fast);
+}
+
+.dot:is(:hover, :focus-visible)::before {
+  opacity: 1;
+}
+
+.dot[aria-selected="true"] {
+  color: var(--gmt-cyan);
+}
+
+/* Filled: the outer outline alone. */
+.dot[aria-selected="true"]::before {
+  inline-size: 1.25rem;
+  clip-path: polygon(
+    var(--bevel) 0,
+    calc(100% - var(--bevel)) 0,
+    100% var(--bevel),
+    100% calc(100% - var(--bevel)),
+    calc(100% - var(--bevel)) 100%,
+    var(--bevel) 100%,
+    0 calc(100% - var(--bevel)),
+    0 var(--bevel)
+  );
+  opacity: 1;
+}
+
+.dot:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: -2px;
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot::before {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .dot,
+  .dot[aria-selected="true"] {
+    color: ButtonText;
+  }
+
+  /* The dot is drawn with a background, which a forced palette would paint over. */
+  .dot::before {
+    forced-color-adjust: none;
+    background-color: ButtonText;
+  }
+
+  .dot[aria-selected="true"]::before {
+    background-color: Highlight;
+  }
+}

@@ -10,6 +10,12 @@ import { withBase } from "./site";
  * directly.
  */
 
+/**
+ * The home page's heading in its Markdown twin and in `llms.txt`: the package name, so an agent
+ * reading either knows what to install. The hero's own words are for people.
+ */
+export const HOME_HEADING = "@northguild/gmt";
+
 // ---------------------------------------------------------------------------
 // Frontmatter stripping
 // ---------------------------------------------------------------------------
@@ -19,7 +25,7 @@ import { withBase } from "./site";
  *
  * Returns the frontmatter's top-level fields as text and the body that follows the closing `---`.
  * The block is read as YAML, so a folded `>` or literal `|` value is one string, as Astro reads it.
- * A list is written `[a, b]`; a nested map is left out, except that `hero.title` is kept under that name.
+ * A list is written `[a, b]`; a nested map is left out.
  */
 export function stripFrontmatter(raw: string): {
   data: Record<string, string>;
@@ -37,9 +43,6 @@ export function stripFrontmatter(raw: string): {
         data[key] = String(value);
       } else if (Array.isArray(value)) {
         data[key] = `[${value.map(String).join(", ")}]`;
-      } else if (key === "hero" && value && typeof value === "object") {
-        const title = (value as { title?: unknown }).title;
-        if (typeof title === "string") data["hero.title"] = title.trim();
       }
     }
   }

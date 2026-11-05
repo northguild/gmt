@@ -54,6 +54,28 @@ export function installJsdomShims(): void {
     Element.prototype.scrollIntoView = function () {};
   }
 
+  /* Browsers stamp an event on the `performance.now()` clock. jsdom stamps it with the epoch, so
+     code that subtracts `performance.now()` from `event.timeStamp` sets a timer of about 1.8e12 ms,
+     which Node clamps to 1 ms with a `TimeoutOverflowWarning`. Move the stamp onto the browser clock. */
+  const stamp = Object.getOwnPropertyDescriptor(Event.prototype, "timeStamp");
+  if (
+    stamp?.get &&
+    !(stamp.get as { onBrowserClock?: boolean }).onBrowserClock
+  ) {
+    const read = stamp.get;
+    const onBrowserClock = function (this: Event): number {
+      const value = read.call(this) as number;
+      return value > performance.timeOrigin
+        ? value - performance.timeOrigin
+        : value;
+    };
+    (onBrowserClock as { onBrowserClock?: boolean }).onBrowserClock = true;
+    Object.defineProperty(Event.prototype, "timeStamp", {
+      ...stamp,
+      get: onBrowserClock,
+    });
+  }
+
   if (!globalThis.requestAnimationFrame) {
     globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) =>
       setTimeout(

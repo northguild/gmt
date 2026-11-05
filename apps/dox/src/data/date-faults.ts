@@ -12,6 +12,8 @@ export interface Fault {
   input: string;
   output: string;
   why: string;
+  /** Shown in the home page's short list. */
+  home?: true;
 }
 
 export const dateFaults: Fault[] = [
@@ -19,16 +21,19 @@ export const dateFaults: Fault[] = [
     input: 'new Date("2025-01-15")',
     output: "Tue Jan 14 2025 19:00 GMT−5",
     why: "A bare date string is UTC midnight. West of Greenwich that is still the previous evening. Add a time and the rule silently flips to local.",
+    home: true,
   },
   {
     input: 'new Date("2025-03-30T01:30")',
     output: "02:30 — no error",
     why: "01:30 never happened in London that night — the clocks jumped 01:00 → 02:00. Date invents a nearby valid instant instead of telling you.",
+    home: true,
   },
   {
     input: "new Date(2025, 3, 1)",
     output: "April 1, not March 1",
     why: "Months are 0-indexed. Days are 1-indexed. In the same constructor call.",
+    home: true,
   },
   {
     input: "Date.UTC(2025, 0, 15, 9, 30)",
@@ -39,6 +44,7 @@ export const dateFaults: Fault[] = [
     input: "d.setDate(d.getDate() + 1)",
     output: "mutates d in place",
     why: "A Date handed to a function can be changed underneath you. There is no read-only Date.",
+    home: true,
   },
   {
     input: '"09:00 every Tuesday, Tokyo"',
@@ -49,6 +55,7 @@ export const dateFaults: Fault[] = [
     input: "same code, two machines",
     output: "two different answers",
     why: "Parsing and formatting use the host timezone. A laptop in Denver and a CI runner in UTC disagree.",
+    home: true,
   },
   {
     input: "wrapper.now() / wrapper(dateString)",

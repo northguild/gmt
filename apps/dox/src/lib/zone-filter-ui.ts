@@ -1,7 +1,7 @@
 /**
- * The globe's filter panel: nine switches over three axes (day, DST, sky), behind a settings
- * gear that is shut until asked for. The markup is `zoneFilters` in the zones family; this
- * file is the mount.
+ * The globe's settings panel: nine filter switches over three axes (day, DST, sky) and the
+ * Earth's look, behind a settings gear that is shut until asked for. The markup is
+ * `zoneFilters` in the zones family; this file is the mount.
  *
  * Shut by default on purpose: the filters answer a question most readers never ask. It is
  * also what keeps them free: `globe.ts` only scans all ~420 zones while this is open or a
@@ -15,6 +15,7 @@
 import { setHtml, setSwitchDetail, wireDisclosure } from "~/widgets/builders";
 import { zoneFilters } from "~/widgets/families/zones/zone-filters";
 import type { GmtReadout } from "~/widgets/primitives/readout/readout";
+import { currentEarth, setEarth } from "./earth-look";
 import type { SkyState } from "./zone-sky";
 import {
   DAY_SHIFTS,
@@ -35,6 +36,12 @@ export interface ZoneFilterUi {
    * `shown`/`total` are zone counts after and before filtering.
    */
   update(counts: BucketCounts, shown: number, total: number): void;
+  /**
+   * Show or hide the "Natural Earth" switch and set it to the page's current look. The switch
+   * is offered only where this globe draws the photograph, since anywhere else it would do
+   * nothing. The mount calls this whenever its theme or renderer may have changed.
+   */
+  setEarthAvailable(available: boolean): void;
   /** Whether the panel is open; `globe.ts` uses it to decide whether the bucket scan is worth running. */
   isOpen(): boolean;
   destroy(): void;
@@ -67,6 +74,8 @@ export function mountZoneFilters(
     return found;
   };
   const status = root.querySelector<GmtReadout>("gmt-readout");
+  const earth = input("earth", "natural");
+  const earthGroup = earth.closest("fieldset");
 
   root.addEventListener(
     "change",
@@ -74,6 +83,10 @@ export function mountZoneFilters(
       const box = event.target;
       if (!(box instanceof HTMLInputElement)) return;
       const { name: axis, value: key } = box;
+      if (axis === "earth") {
+        setEarth(box.checked ? "natural" : "blue");
+        return;
+      }
       if (axis === "day") filter.days[key as DayShift] = box.checked;
       else if (axis === "dst") filter.dst[key as DstState] = box.checked;
       else if (axis === "sky") filter.sky[key as SkyState] = box.checked;
@@ -107,6 +120,15 @@ export function mountZoneFilters(
   return {
     get,
     isOpen: () => disclosure.open,
+    setEarthAvailable(available) {
+      earth.checked = currentEarth() === "natural";
+      if (!earthGroup || earthGroup.hidden === !available) return;
+      /* The same rule as a filter switch: hiding the control under the reader's focus
+         would drop it to <body>. */
+      if (!available && earthGroup.contains(document.activeElement))
+        gear?.focus();
+      earthGroup.hidden = !available;
+    },
     update(counts, shown, total) {
       for (const day of DAY_SHIFTS)
         paint(input("day", day), counts.days[day], filter.days[day]);

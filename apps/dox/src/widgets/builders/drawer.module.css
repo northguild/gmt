@@ -1,0 +1,183 @@
+/* drawer: the close and the region. The caller's module places both (the wrapper has no box of
+   its own), so opening or closing moves nothing else on the page. */
+
+.root {
+  /* The glass both parts share: a placer that attaches the close to the region gives it this
+     fill, so the two read as one pane. Thin enough that a bright body behind it (the Sun)
+     still shows through the blur. */
+  --drawer-glass: color-mix(in oklab, var(--gmt-void) 45%, transparent);
+
+  display: contents;
+}
+
+.region {
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-border);
+  padding: var(--gmt-space-4);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+
+  --drawer-sheen: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in oklab, var(--gmt-ice-bright) 10%, transparent) 45%,
+    color-mix(in oklab, var(--gmt-ice-bright) 24%, transparent) 50%,
+    color-mix(in oklab, var(--gmt-ice-bright) 10%, transparent) 55%,
+    transparent 62%
+  );
+
+  background: var(--drawer-glass);
+  backdrop-filter: var(--gmt-header-blur);
+  color: var(--gmt-ice);
+
+  /* The glass is thin, so a bright body behind it (the Sun) would drop the text below 7:1; the
+     dark halo holds it. The native inputs reset their own text-shadow, so they get it below. */
+  text-shadow: var(--gmt-shadow-halo);
+  container-type: size;
+  contain: layout;
+  overflow: hidden auto;
+  visibility: hidden;
+  opacity: 0;
+  translate: 2rem 0;
+  transition:
+    opacity var(--gmt-duration-med),
+    translate var(--gmt-duration-med),
+    visibility 0s var(--gmt-duration-med);
+
+  .root[data-open="true"] > & {
+    visibility: visible;
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity var(--gmt-duration-med),
+      translate var(--gmt-duration-med) var(--gmt-ease-sweep);
+  }
+
+  /* The sheen's layer: over the content, so the band crosses the cards as light on the glass. */
+  &::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    corner-shape: inherit;
+    content: "";
+    pointer-events: none;
+  }
+
+  :where(input, select, textarea, button) {
+    text-shadow: inherit;
+  }
+
+  :where(.root[data-open="true"]) > &::after {
+    animation: sheen var(--gmt-duration-sweep) ease-in-out
+      var(--gmt-duration-med);
+  }
+}
+
+/* Where the close rests open and where it waits closed are the placer's: beside the region's
+   edge by default, and a place that turns it sets both. At rest it is dimmed to sit quietly
+   beside the glass; a placer that attaches it to the region sets --drawer-close-rest to 1. */
+.close {
+  visibility: hidden;
+  opacity: 0;
+  translate: var(--drawer-close-away, 1rem -50%);
+  transition:
+    opacity var(--gmt-duration-med),
+    translate var(--gmt-duration-med),
+    visibility 0s var(--gmt-duration-med);
+
+  :where(.root[data-open="true"]) > & {
+    visibility: visible;
+    opacity: var(--drawer-close-rest, 0.55);
+    translate: var(--drawer-close-home, 0 -50%);
+    transition:
+      opacity var(--gmt-duration-slow) var(--gmt-duration-med),
+      translate var(--gmt-duration-slow) var(--gmt-duration-med)
+        var(--gmt-ease-sweep);
+
+    &:hover,
+    &:focus-visible {
+      opacity: 0.95;
+    }
+  }
+}
+
+/* Once the region has slid in, one band of ice light crosses the glass from its inline-end
+   edge, like light glancing off a pane. Only the layer moves; the border stays still. The band starts and ends past the edges, so
+   dropping the layer when the animation ends shows no jump. */
+@keyframes sheen {
+  from {
+    background-image: var(--drawer-sheen);
+    background-position: -10% 0;
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+  }
+
+  to {
+    background-image: var(--drawer-sheen);
+    background-position: 110% 0;
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .region {
+    translate: 0 0;
+    transition:
+      opacity var(--gmt-duration-fade),
+      visibility 0s var(--gmt-duration-fade);
+
+    .root[data-open="true"] > & {
+      transition: opacity var(--gmt-duration-fade);
+    }
+
+    :where(.root[data-open="true"]) > &::after {
+      animation: none;
+    }
+  }
+
+  .close {
+    translate: var(--drawer-close-home, 0 -50%);
+    transition: opacity var(--gmt-duration-fade);
+
+    :where(.root[data-open="true"]) > & {
+      transition: opacity var(--gmt-duration-fade);
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .region {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    backdrop-filter: none;
+  }
+
+  .region::after {
+    animation: none;
+  }
+
+  /* The resting close is dimmed to sit quietly beside the glass; a system colour or a request
+     for more contrast gets it at full strength. */
+  .root[data-open="true"] > .close {
+    opacity: 1;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .region {
+    border-color: var(--gmt-ice);
+    background: var(--gmt-void);
+    backdrop-filter: none;
+  }
+
+  .region::after {
+    animation: none;
+  }
+
+  /* Full strength, as under a system colour scheme. */
+  .root[data-open="true"] > .close {
+    opacity: 1;
+  }
+}

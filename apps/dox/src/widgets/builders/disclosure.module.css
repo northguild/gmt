@@ -1,5 +1,11 @@
 /* disclosure: a button and the panel it shows. The panel floats under the button, so opening it
-   moves nothing around it. */
+   moves nothing around it.
+
+   The panel is right-aligned to the button and can grow to 22rem, so a button near a clipping
+   edge needs the panel capped to the room there. `cqi` is the inline size of the nearest
+   container: a drawer or sheet is one and clips what overflows it (the panel's left edge was
+   cut off), and the button sits at its inline-end edge, so the container's width is exactly the
+   room to its left. Where there is no container it is the viewport's width. */
 
 .root {
   position: relative;
@@ -47,7 +53,7 @@
   inset-inline-end: 0;
   z-index: var(--gmt-z-menu);
   inline-size: max-content;
-  max-inline-size: min(22rem, 100vw - 2rem);
+  max-inline-size: min(22rem, 100cqi);
   margin-block-start: var(--gmt-space-1);
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);

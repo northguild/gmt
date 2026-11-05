@@ -1,0 +1,232 @@
+<!doctype html>
+<!--
+  A stand-in for the northguild.dev landing, for the `hero-space` gate. It carries the companion
+  the real site adds to its own header: the same view-transition names and animation rules, a
+  3.5rem bar with the mark and the wordmark (an element of its own) in the same box as the Dox
+  header, and the render-blocking expectation for the bar. The gate serves it at the preview
+  origin's `/` and clicks through to the build.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NorthGuild</title>
+    <link
+      rel="preload"
+      href="/gmt/fonts/michroma-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="expect" href="#site-header" blocking="render" />
+    <style>
+      @font-face {
+        font-family: Michroma;
+        font-weight: 400;
+        src: url("/gmt/fonts/michroma-latin-400-normal.woff2") format("woff2");
+      }
+      @view-transition {
+        navigation: auto;
+      }
+      .site-header {
+        view-transition-name: ng-header;
+        block-size: calc(3.375rem + 1px);
+        box-sizing: border-box;
+      }
+      .site-header .ng-mark {
+        view-transition-name: ng-mark;
+      }
+      .site-header .ng-wordmark {
+        view-transition-name: ng-wordmark;
+      } /* the "NorthGuild" text */
+
+      /* Arriving back from /gmt: the bar holds, the page cross-fades. */
+      ::view-transition-group(ng-mark),
+      ::view-transition-group(ng-wordmark),
+      ::view-transition-new(ng-mark),
+      ::view-transition-new(ng-wordmark) {
+        animation: none;
+      }
+      ::view-transition-old(ng-mark),
+      ::view-transition-old(ng-wordmark) {
+        display: none;
+      }
+      ::view-transition-old(ng-header),
+      ::view-transition-new(ng-header) {
+        animation-duration: 240ms;
+        animation-timing-function: ease-out;
+      }
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 600ms;
+        animation-timing-function: cubic-bezier(0.25, 0.6, 0.2, 1);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        @view-transition {
+          navigation: none;
+        }
+      }
+
+      html {
+        background: #02070d;
+        color: #cfeaf2;
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        min-block-size: 100vh;
+        font:
+          1rem/1.5 system-ui,
+          sans-serif;
+      }
+      .site-header {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 1rem calc(0.75rem + 1px);
+        background:
+          linear-gradient(rgb(14 116 144 / 0.1), rgb(14 116 144 / 0.1)),
+          rgb(2 7 13 / 0.55);
+        backdrop-filter: blur(4px);
+        box-shadow: inset 0 -1px rgb(34 211 238 / 0.18);
+      }
+      .ng-home {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        color: inherit;
+      }
+      .ng-mark {
+        display: block;
+        flex: none;
+        block-size: 1.75rem;
+        inline-size: auto;
+        overflow: visible;
+      }
+      .ng-mark :is(.ng-mark-pt, .ng-mark-pb, .ng-mark-st, .ng-mark-sb) {
+        stop-color: #cfeaf2;
+      }
+      .ng-mark .ng-mark-pt {
+        stop-opacity: 0.07;
+      }
+      .ng-mark .ng-mark-pb {
+        stop-opacity: 0;
+      }
+      .ng-mark .ng-mark-st {
+        stop-opacity: 0.05;
+      }
+      .ng-mark .ng-mark-sb {
+        stop-opacity: 0;
+      }
+      .ng-mark :is(.ng-mark-edge, .ng-mark-ridge, .ng-mark-glyph) {
+        fill: none;
+        stroke: #cfeaf2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .ng-mark :is(.ng-mark-edge, .ng-mark-ridge) {
+        stroke-width: 1px;
+        vector-effect: non-scaling-stroke;
+      }
+      .ng-mark .ng-mark-edge {
+        stroke-opacity: 0.5;
+      }
+      .ng-mark .ng-mark-ridge {
+        stroke-opacity: 0.35;
+      }
+      .ng-mark .ng-mark-glyph {
+        stroke-width: 36;
+        stroke-opacity: 0.75;
+      }
+      .ng-wordmark {
+        font:
+          400 1rem/1.6 Michroma,
+          ui-monospace,
+          monospace;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+      .ng-links {
+        display: flex;
+        gap: 1rem;
+      }
+      .ng-links a {
+        color: #cfeaf2;
+      }
+      main {
+        padding: 4rem 1rem;
+        max-inline-size: 40rem;
+        margin-inline: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header" id="site-header">
+      <a
+        class="ng-home"
+        href="/gmt/"
+        aria-label="GMT, the NorthGuild time library"
+      >
+        <svg
+          class="ng-mark"
+          viewBox="0 0 1000 1317"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <defs>
+            <linearGradient id="fx-pane" x1="0" y1="0" x2="0" y2="1">
+              <stop class="ng-mark-pt" offset="0" />
+              <stop class="ng-mark-pb" offset="1" />
+            </linearGradient>
+            <linearGradient id="fx-sheen" x1="0" y1="0" x2="1" y2="1">
+              <stop class="ng-mark-st" offset="0" />
+              <stop class="ng-mark-sb" offset=".7" />
+            </linearGradient>
+          </defs>
+          <path
+            class="ng-mark-pane"
+            fill="url(#fx-pane)"
+            d="M500 0 L0 179.1 L0 709.1 C0 1018.6 373.1 1206.2 500 1317 C626.9 1206.2 1000 1018.6 1000 709.1 L1000 179.1 Z"
+          />
+          <path
+            class="ng-mark-sheen"
+            fill="url(#fx-sheen)"
+            d="M500 0 L0 179.1 L0 709.1 C0 1018.6 373.1 1206.2 500 1317 Z"
+          />
+          <path
+            class="ng-mark-pane"
+            fill="url(#fx-pane)"
+            d="M93.3 243.9 L500 99 L906.7 243.9 L906.7 686.5 L709.3 390.2 L654.9 470.3 L500 239.5 L345.1 470.3 L290.7 390.2 L93.3 686.5 Z"
+          />
+          <path
+            class="ng-mark-edge"
+            d="M500 0 L0 179.1 L0 709.1 C0 1018.6 373.1 1206.2 500 1317 C626.9 1206.2 1000 1018.6 1000 709.1 L1000 179.1 Z"
+          />
+          <path
+            class="ng-mark-ridge"
+            d="M93.3 686.5 L290.7 390.2 L345.1 470.3 L500 239.5 L654.9 470.3 L709.3 390.2 L906.7 686.5"
+          />
+          <path
+            class="ng-mark-glyph"
+            d="M366 640 L212 736.5 L366 833 M634 640 L788 736.5 L634 833 M560 560 L443 910"
+          />
+        </svg>
+        <span class="ng-wordmark">NorthGuild</span>
+      </a>
+      <nav class="ng-links" aria-label="Community">
+        <a href="https://github.com/northguild">GitHub</a>
+        <a href="https://discord.gg/northguild">Discord</a>
+      </nav>
+    </header>
+    <main>
+      <h1>NorthGuild</h1>
+      <p>Tools for time.</p>
+    </main>
+  </body>
+</html>

@@ -10,6 +10,7 @@ industries: [core]
 ---
 
 import { formatCount, gmtStats } from "../../../../data/gmt-stats";
+import { combinedCompetitorExecutions } from "../../../../data/library-comparison";
 
 This is the detailed evidence behind the summary on
 [Why GMT?](/why-gmt/#correct-at-the-edges). Date bugs hide at the extremes: the
@@ -132,6 +133,34 @@ Tests: [intervalsOverlap](https://github.com/northguild/gmt/blob/main/packages/g
 [subtractIntervals](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/subtractIntervals.test.ts) ·
 [interval algebra round trip](https://github.com/northguild/gmt/blob/main/packages/gmt/src/interval/calculate/intervalAlgebra.test.ts) ·
 [positional UTC against interval/](https://github.com/northguild/gmt/blob/main/packages/gmt/src/utc/interval/intervalAlgebraUtc.test.ts)
+
+## Where the expected answers come from
+
+GMT's expected answers come from the standards themselves: Temporal, the RFCs and the official
+test262 suite. They also come from the Temporal built into Chrome. They never come from the
+polyfill GMT runs on, and never from another date library. That is how GMT catches the
+polyfill's own bugs: [see the fixes we've sent upstream](/upstream/).
+
+## How many times each test runs
+
+{formatCount(gmtStats.tests)} tests run across {gmtStats.timezones} timezones and
+{gmtStats.nodes.length} Node versions, which makes {formatCount(gmtStats.executions)} executions.
+Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date` run
+{formatCount(combinedCompetitorExecutions())} between them. [The comparison](/compare/) shows how
+each figure was measured.
+
+## Invalid input never throws
+
+Temporal throws `RangeError` and `TypeError` on invalid data. GMT validates and normalizes its
+input first and returns the sentinel for what cannot be read, so a bad value does not crash the
+application.
+
+## Nanoseconds stay exact
+
+Temporal counts time in nanoseconds. GMT keeps them exact as `bigint`, with a JSON-safe string
+form, and has exact converters for .NET ticks, Windows FILETIME, NTP and Postgres microseconds.
+Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date` all stop at the
+millisecond. See [`toNanoseconds`](/reference/precision/convert/toNanoseconds).
 
 ## Zero known bugs
 

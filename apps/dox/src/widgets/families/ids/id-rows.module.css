@@ -68,6 +68,7 @@
   background: none;
   color: inherit;
   font: inherit;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 
@@ -82,6 +83,9 @@
   background: none;
   color: inherit;
   font: inherit;
+
+  /* The content sheet keeps a table's code on one line; a call here wraps, as the cell does. */
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 

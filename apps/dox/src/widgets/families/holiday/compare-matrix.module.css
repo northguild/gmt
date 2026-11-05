@@ -67,12 +67,14 @@
   clip-path: inset(50%);
 }
 
+/* The year column holds "policies disagree" on one line, and each of up to four policy columns
+   holds "moved from Sat" on one line. */
 .corner {
-  inline-size: 8.5rem;
+  inline-size: 11rem;
 }
 
 .year {
-  inline-size: 8.5rem;
+  inline-size: 11rem;
   border-block-end: 1px solid var(--gmt-hairline-faint);
   font-size: var(--gmt-text-sm);
 }
@@ -185,8 +187,9 @@
   font-size: var(--gmt-text-xs);
 }
 
-/* Narrow: each year becomes a labelled card, so no column is squeezed. */
-@container (max-width: 34rem) {
+/* Narrow: each year becomes a labelled card, so no column is squeezed. 42rem is the room the
+   year column and four policy columns need, plus the padding around the table. */
+@container (max-width: 42rem) {
   .table,
   .table tbody,
   .table tr,

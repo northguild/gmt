@@ -609,24 +609,34 @@ export async function createWebgpuRenderer(
       (handle) => {
         if (destroyed || failed) {
           handle.release();
+          imageryDone();
           return;
         }
         imagery = handle;
         rebuildSurfaceGroup();
         init.invalidate();
+        imageryDone();
       },
       (error: unknown) => {
         // The flat globe is the whole of the fallback; nothing else changes.
         console.info(`globe: imagery unavailable (${String(error)})`);
+        imageryDone();
       },
     );
   }
+
+  /* `ready`: the imagery is on the GPU, or will never be (no imagery asked for, or it failed).
+     The label atlas is built synchronously when the markers are set, so it is never behind. */
+  let imageryDone: () => void = () => {};
+  const ready = new Promise<void>((resolve) => (imageryDone = resolve));
 
   /** The imagery weight before the zoom fade: theme opacity times the reveal. */
   function imageryWeight(): number {
     if (!imagery || theme.imagery <= 0) return 0;
     const now = performance.now();
     imageryShownAt ??= now;
+    /* A dawn entrance reveals the Earth through exposure, so the photograph is simply there. */
+    if (init.entrance === "dawn") return theme.imagery;
     return (
       theme.imagery * imageryReveal(now - imageryShownAt, init.reducedMotion())
     );
@@ -864,6 +874,7 @@ export async function createWebgpuRenderer(
       casingWidthCss: CASING_CSS,
       regionFill: group?.fill ?? TRANSPARENT,
       regionStroke: group?.stroke ?? TRANSPARENT,
+      exposure: frame.exposure,
     });
     device.queue.writeBuffer(uniformBuffer, 0, uniformData);
   }
@@ -1117,10 +1128,12 @@ export async function createWebgpuRenderer(
   }
 
   maybeLoadImagery();
+  if (!imageryRequested) imageryDone();
 
   return {
     kind: "webgpu",
     canvas,
+    ready,
     resize,
     setTheme(next: GlobeTheme) {
       theme = next;
@@ -1136,6 +1149,7 @@ export async function createWebgpuRenderer(
     },
     destroy() {
       destroyed = true;
+      imageryDone();
       imagery?.release();
       imagery = null;
       imageryPlaceholder.destroy();

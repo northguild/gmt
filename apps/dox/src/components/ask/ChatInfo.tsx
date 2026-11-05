@@ -1,8 +1,8 @@
 /**
  * The `/dox` fine print: the note that AI writes the answers, and the site's licence note.
  *
- * On a wide screen both show inline: `AccuracyNote` under the composer and the licence in the
- * shell's footer (`DoxPage`). On a phone they took about 170px of a 600px screen, so there both
+ * On a wide screen both show inline: `AccuracyNote` under the composer and the licence line in
+ * the shell's footer (`DoxPage`), closed until the reader opens it. On a phone they took about 170px of a 600px screen, so there both
  * are hidden and `ChatInfo`, an info button at the start of the composer's control bar, opens
  * them together in a popup. CSS picks the form (gmt-hive.css, "Fine print"), so the
  * server-rendered page is already right. Native `popover` gives Escape, outside click and focus
@@ -11,7 +11,12 @@
 import { useId } from "react";
 import { InfoIcon } from "lucide-react";
 import { gmtStats } from "~/data/gmt-stats";
-import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from "~/lib/licence";
+import {
+  LICENCE_LEAD,
+  LICENCE_LINK_TEXT,
+  LICENCE_SUMMARY,
+  LICENCE_URL,
+} from "~/lib/licence";
 
 /** A fixed locale, so the server render and the browser agree on the digits. */
 const GMT_TEST_COUNT = new Intl.NumberFormat("en-US").format(gmtStats.tests);
@@ -32,6 +37,18 @@ export function LicenceNote({ className }: { className?: string }) {
     <p className={className}>
       {LICENCE_LEAD} <a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
     </p>
+  );
+}
+
+/** The footer form: one closed line that opens to the note. The phone popup shows the note itself. */
+export function LicenceDisclosure({ className }: { className?: string }) {
+  return (
+    <details className={`gmt-licence${className ? ` ${className}` : ""}`}>
+      <summary>{LICENCE_SUMMARY}</summary>
+      <p>
+        {LICENCE_LEAD} <a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
+      </p>
+    </details>
   );
 }
 

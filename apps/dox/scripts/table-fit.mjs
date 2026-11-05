@@ -13,6 +13,10 @@
  * item that holds it can grow with it). With `table-layout: fixed` its box stays in the column and
  * the content spills out of its cells: its own `scrollWidth` is measured against its `clientWidth`.
  * A table that is not drawn (`display: none` at this width) is not measured.
+ * A second check, `lib/cell-overflow.mjs`, runs at `--width` and at 390 px: no cell's content reaches
+ * outside its cell (a spill into the next cell, or a clip), whether or not the table scrolls.
+ * Each page is settled first (`settle`: fonts, frames, and every widget's eased regions at rest), so a
+ * table a widget fills in after `load` is measured with its rows.
  * A failure names the widest piece that cannot break (an element that holds its words together
  * with `white-space: nowrap` or `pre`, or a code element that does not wrap at its spaces), which is
  * what to give a break point or move to the entries layout.
@@ -23,7 +27,7 @@
  *
  * Without `--base` it serves `dist` itself on a free port. The runner's contract: `--list-pages`
  * prints the table pages and exits; with `GATE_REPORT` set every scrolling table is a finding.
- * Last line `table-fit: <pages> pages, <tables> tables, <n> scroll`. Exit 0 pass, 1 any finding
+ * Last line `table-fit: <pages> pages, <tables> tables, <n> scroll, <n> spill`. Exit 0 pass, 1 any finding
  * or no table measured at all, 2 usage or a missing build.
  */
 import { launchBrowser } from "./lib/browser-launch.mjs";
@@ -33,11 +37,14 @@ import { fileURLToPath } from "node:url";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { settle } from "./lib/a11y-sweep.mjs";
 import { serveStatic } from "./lib/static-server.mjs";
+import { measureCells } from "./lib/cell-overflow.mjs";
 import { listTablePages } from "./lib/table-pages.mjs";
 
 const GATE = "table-fit";
 const HEIGHT = 900;
+const PHONE = 390;
 const AT_A_TIME = 8;
 const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
 const DIST = path.join(
@@ -196,8 +203,41 @@ function measureTables() {
   });
 }
 
+/** Fails each cell of this page whose content reaches outside it, at one viewport width. */
+async function checkCells(browser, browserName, pagePath, cellWidth) {
+  const context = await browser.newContext({
+    viewport: { width: cellWidth, height: HEIGHT },
+  });
+  try {
+    await blockOffSite(context, base);
+    const page = await context.newPage();
+    await page.goto(base + pagePath, { waitUntil: "load" });
+    await settle(page);
+    const cells = await page.evaluate(measureCells);
+    for (const c of cells) {
+      spilling += 1;
+      const message = `cell "${c.cell}" in table "${c.headers.join(" | ")}": ${c.reasons.join("; ")}`;
+      console.log(
+        `FAIL ${browserName} ${cellWidth}px ${pagePath}\n       ${message}`,
+      );
+      recordFinding({
+        gate: GATE,
+        rule: "cell-overflows",
+        page: pagePath,
+        target: `cell "${c.cell}"`,
+        browser: browserName,
+        width: cellWidth,
+        message,
+      });
+    }
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
 let tables = 0;
 let scrolling = 0;
+let spilling = 0;
 let measuredPages = 0;
 
 for (const browserName of browsers) {
@@ -218,13 +258,12 @@ for (const browserName of browsers) {
             `the page answered HTTP ${res ? res.status() : "none"}, not 200`,
           );
         }
-        await page.evaluate(async () => {
-          await document.fonts.ready;
-          await new Promise((r) =>
-            requestAnimationFrame(() => requestAnimationFrame(r)),
-          );
-        });
+        await settle(page);
         const found = await page.evaluate(measureTables);
+        await checkCells(browser, browserName, pagePath, width);
+        if (width !== PHONE) {
+          await checkCells(browser, browserName, pagePath, PHONE);
+        }
         measuredPages += 1;
         tables += found.length;
         for (const t of found.filter((f) => f.scrolls)) {
@@ -275,9 +314,11 @@ for (const browserName of browsers) {
 server?.close();
 recordMeasured(GATE, measuredPages);
 console.log(
-  `${GATE}: ${pages.length} pages, ${tables} tables, ${scrolling} scroll`,
+  `${GATE}: ${pages.length} pages, ${tables} tables, ${scrolling} scroll, ${spilling} spill`,
 );
 if (tables === 0) {
   console.log(`FAIL no table measured: \`main table\` matched nothing`);
 }
-process.exit(scrolling > 0 || measuredPages === 0 || tables === 0 ? 1 : 0);
+process.exit(
+  scrolling > 0 || spilling > 0 || measuredPages === 0 || tables === 0 ? 1 : 0,
+);

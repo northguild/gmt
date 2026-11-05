@@ -1,146 +1,221 @@
 ---
 /**
- * Homepage-only merged hero: @northguild/gmt title/tagline/CTAs on the left,
- * the interactive globe on the right, both filling one full-viewport-height
- * section. Replaces the separate auto-injected Hero + standalone <Globe />
- * that used to stack on this page — see Hero.astro's isHome guard, which
- * skips Starlight's own Hero render on the route this component covers.
+ * Homepage-only merged hero: @northguild/gmt title/tagline/CTAs on the left and the
+ * interactive Earth, frameless, in the sky beside them. Replaces the separate auto-injected
+ * Hero + standalone <Globe /> that used to stack on this page — see Hero.astro's isHome
+ * guard, which skips Starlight's own Hero render on the route this component covers.
  *
- * The section is a dark island (`gmt-theme-dark`, see gmt-tokens.css): it keeps
- * the dark theme in both, and in the light theme sits on a full-width dark band.
- * That is what lets the light theme show the Earth imagery here — a dark
- * photograph straight on the pale page read as a hole — while every other page
- * keeps the light theme's flat globe.
+ * The section is a full-bleed dark island (`gmt-theme-dark`, see gmt-tokens.css): it keeps
+ * the dark theme in both, which is what lets the light theme show the Earth imagery here
+ * while every other page keeps the light theme's flat globe. The Earth is drawn by a layer
+ * that covers the whole section (see lib/globe-mount.ts and widgets/tools/globe.module.css),
+ * so the copy sits over it with no panel; a void halo on the letters keeps them readable.
+ *
+ * The copy column holds the pages of the landing's carousel: the intro (the title and the
+ * tagline) and the pages the landing passes as children, each marked `data-page="<name>"`. Under
+ * them are the hero's buttons, and under the buttons the pager: the previous arrow, a dot per
+ * page (lib/home-carousel.ts fills them) and the next arrow. Without the script the pager is not
+ * shown and every page reads in order (gmt-home-carousel.css).
  */
 import Globe from './Globe.astro';
+import HeroActions from './HeroActions.astro';
 import HeroCopy from './HeroCopy.astro';
+import HeroSpace from './HeroSpace.astro';
 
 const { data } = Astro.locals.starlightRoute.entry;
 const { title = data.title, tagline, actions = [] } = data.hero || {};
 ---
 
-<div class="gmt-herostage gmt-brackets gmt-theme-dark" data-gate="hero-stage">
-	<div class="gmt-herostage-copy">
-		<HeroCopy data={{ title, tagline, actions }} />
+<div class="gmt-herostage gmt-theme-dark" data-gate="hero-stage">
+	<HeroSpace />
+	<div class="gmt-herostage-copy" data-gate="hero-copy">
+		<div class="gmt-herostage-intro" data-page="Intro">
+			<HeroCopy eyebrow="@northguild/gmt" data={{ title, tagline }} />
+		</div>
+		<slot />
+		<div class="gmt-hero-nav" data-hero-nav>
+			<HeroActions {actions} />
+			<div class="gmt-hero-pager">
+				<button type="button" class="gmt-hero-step gmt-sonar-focus" data-hero-step="-1" aria-label="Previous page">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"
+						><path d="M12.5 4 6.5 10l6 6" fill="none" stroke="currentColor" stroke-width="2"
+							stroke-linecap="round" stroke-linejoin="round"/></svg
+					>
+				</button>
+				<div class="gmt-hero-dots" data-hero-dots></div>
+				<button type="button" class="gmt-hero-step gmt-sonar-focus" data-hero-step="1" aria-label="Next page">
+					<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"
+						><path d="m7.5 4 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"
+							stroke-linecap="round" stroke-linejoin="round"/></svg
+					>
+				</button>
+			</div>
+			<p class="gmt-hero-live" data-hero-live aria-live="polite" aria-atomic="true"></p>
+		</div>
 	</div>
-	<Globe embedded />
+	<Globe space />
 </div>
 
 <style>
 	@layer starlight.core {
 		.gmt-herostage {
+			/* The stacking context for the layers inside: the globe layer, the scrim, the hit
+			   area, the copy and the drawer. Full-bleed: the content panel's gutters are
+			   given back, and the void is painted here so nothing pale shows at the edges. */
+			position: relative;
+			isolation: isolate;
 			display: grid;
 			grid-template-columns: 100%;
-			gap: 2rem;
+			margin-inline: calc(-1 * var(--sl-content-pad-x));
 
-			/* Named so the bracket spacing below can add to it. */
-			--gmt-herostage-pad: 1rem;
+			/* The stage starts at the top of the page, under the fixed header (the margin is
+			   below, in a later layer), so the sky and the Earth show through the header's glass. The
+			   padding gives the header's height back to the copy, the Earth's frame and the
+			   drawer; the sky and the globe layer fill the padding box. */
+			padding-block-start: var(--sl-nav-height);
+			overflow: clip;
+			background-color: var(--gmt-void);
 
-			padding-block: var(--gmt-herostage-pad);
+			/* The room the zone drawer takes under the Earth while the hero stacks
+			   (globe.module.css). */
+			--gmt-hero-bay: 30rem;
 		}
 
-		.gmt-herostage-copy {
-			display: flex;
-			align-items: center;
-			padding-inline-start: 1rem;
-		}
-
-		@media (width >= 80rem) {
+		/* Stacked: the copy, then the Earth's area, which takes the rest of the first screen
+		   and the drawer's bay under it. */
+		@media (width < 64rem) or (orientation: portrait) {
 			.gmt-herostage {
-				grid-template-columns: minmax(0, auto) minmax(40rem, 1fr);
+				grid-template-rows: auto 1fr;
+				min-block-size: calc(100dvh + var(--gmt-hero-bay));
+			}
+		}
+
+		/* No panel behind the copy: the Earth, the stars, the Moon and the Sun show through it.
+		   The letters carry their own tight void halo instead (HeroCopy.astro). A reader who
+		   asks for more contrast gets a void wash behind the column, anchored at the top while
+		   the copy is above the Earth and at the left edge beside it. */
+		.gmt-herostage::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			z-index: var(--gmt-z-raised);
+			pointer-events: none;
+		}
+
+		/* The intro: the hero copy. It takes no pointer, as the
+		   cell does; the text takes its own back. */
+		.gmt-herostage-intro {
+			display: flex;
+			flex-direction: column;
+			gap: var(--gmt-space-4);
+			min-inline-size: 0;
+		}
+
+		@media (prefers-contrast: more) {
+			.gmt-herostage::before {
+				background: linear-gradient(
+					to bottom,
+					rgb(from var(--gmt-void) r g b / 88%) 0,
+					rgb(from var(--gmt-void) r g b / 70%) 14rem,
+					transparent 26rem
+				);
+			}
+		}
+
+		@media (prefers-contrast: more) and (width >= 64rem) and (orientation: landscape) {
+			.gmt-herostage::before {
+				background: radial-gradient(
+					ellipse 60% 90% at 0% 50%,
+					rgb(from var(--gmt-void) r g b / 88%) 0,
+					rgb(from var(--gmt-void) r g b / 70%) 45%,
+					transparent 100%
+				);
+			}
+		}
+
+		/* The pages, then the row of buttons, one under the other in the middle of the cell. */
+		.gmt-herostage-copy {
+			position: relative;
+			z-index: var(--gmt-z-float);
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: flex-start;
+			gap: var(--gmt-space-6);
+			padding: var(--gmt-space-4) var(--sl-content-pad-x) 0 clamp(1rem, 5vw, 5rem);
+
+			/* The cell is only a place to put the copy: it takes no pointer, so a drag that
+			   starts on the Earth beside the text reaches the Earth. The text and the buttons
+			   take theirs back (HeroCopy.astro). */
+			pointer-events: none;
+		}
+
+		@media (width >= 64rem) and (orientation: landscape) {
+			.gmt-herostage {
+				grid-template-columns: minmax(0, auto) minmax(24rem, 1fr);
 				align-items: stretch;
-				gap: 3rem;
 
-				/* Fixed height (not min-height): the plan calls for the first
-				   section to cap at one screen, not grow past it. */
-				block-size: calc(100dvh - var(--sl-nav-height));
-
-				--gmt-herostage-pad: clamp(1rem, 4vh, 3rem);
+				/* Fixed height (not min-height): the first section is one screen, the part
+				   under the header included. */
+				block-size: 100dvh;
 			}
 
-			/* min-height: 0 overrides the grid-item default of min-height:
-			   auto, which would otherwise let either column grow past the
-			   fixed row height above to fit its content (the zone list in
-			   particular). */
+			/* min-height: 0 overrides the grid-item default of min-height: auto, which would
+			   let either column grow past the fixed row height to fit its content. */
 			.gmt-herostage > * {
 				min-block-size: 0;
 			}
 
-			/* The copy scrolls down on a short screen, never sideways. The
-			   column is sized to its content, and the tagline's first line is
-			   exactly 50 characters, its own 50ch cap, so the text sits flush
-			   with the edge. `overflow-y: auto` alone makes `overflow-x` auto
-			   too, and a browser that measures the line a fraction of a pixel
-			   wider then shows a horizontal scrollbar. The stable gutter keeps
-			   room for an always-visible vertical scrollbar in that size, so
-			   the bar never covers the text when it appears. */
+			/* The copy scrolls down on a short screen, never sideways. The column is sized to
+			   its content, and the tagline's first line is exactly its own 50ch cap, so the
+			   text sits flush with the edge. `overflow-y: auto` alone makes `overflow-x` auto
+			   too, and a browser that measures the line a fraction of a pixel wider then shows
+			   a horizontal scrollbar. The stable gutter keeps room for an always-visible
+			   vertical scrollbar, so the bar never covers the text when it appears. */
 			.gmt-herostage-copy {
 				block-size: 100%;
+
+				/* Equal padding above and below: the block sits in the middle of the stage. */
+				padding-block: var(--gmt-space-6);
+				padding-inline-end: var(--gmt-space-6);
 				overflow: hidden auto;
 				scrollbar-gutter: stable;
 			}
 		}
 	}
 
-	/* The corner brackets (.gmt-brackets) sit inside the hero's edges rather
-	   than on them, in both themes: the top-left one away from the top, the
-	   bottom-right one away from the bottom — in the light theme, the band's
-	   edges. Outside the layer above on purpose: the bracket recipe in
-	   gmt-primitives.css is unlayered, and an unlayered rule beats any
-	   layered one whatever its specificity. */
-	.gmt-herostage::before {
-		inset-block-start: var(--gmt-space-6);
-	}
-
-	.gmt-herostage::after {
-		inset-block-end: var(--gmt-space-6);
-	}
-
-	/* The bottom-right bracket now stands that far above the hero's bottom
-	   edge, so the hero grows by the inset plus the bracket's own 12px
-	   (gmt-primitives.css), and the zone list ends clear of it. The top one
-	   needs no room of its own: it sits beside the copy, never over it. */
-	.gmt-herostage {
-		padding-block-end: calc(var(--gmt-herostage-pad) + var(--gmt-space-6) + 12px);
-	}
-
-	/* On a wide screen the hero is one screen tall, so growing it would only
-	   take height from the zone list. Each bracket sits in the middle of the
-	   hero's own padding instead: clear of the edge and of the content alike. */
-	@media (width >= 80rem) {
+	/* Pulled up under the header. In the site's shell layer, because Starlight's markdown
+	   spacing (a later layer than its core) gives every block after the first a top margin,
+	   which left a strip of page between the header and the stage. The landing's one-screen
+	   layout sets its own (gmt-home-carousel.css). */
+	@layer gmt.shell {
 		.gmt-herostage {
-			padding-block-end: var(--gmt-herostage-pad);
-		}
-
-		.gmt-herostage::before {
-			inset-block-start: calc((var(--gmt-herostage-pad) - 12px) / 2);
-		}
-
-		.gmt-herostage::after {
-			inset-block-end: calc((var(--gmt-herostage-pad) - 12px) / 2);
+			margin-block-start: calc(-1 * var(--sl-nav-height));
 		}
 	}
 </style>
 
 <style is:global>
-	/* Global because it keys on the page's theme attribute, outside this component. */
-	@layer starlight.core {
-		/* The band. Painted with a border-image outset 100vmax to either side,
-		   so it runs the full width of the window from inside the content column
-		   without adding to the page's scrollable width. The tokens resolve on
-		   this element, which is the island, so they are the dark values. In the
-		   dark theme the page is already dark and no band is needed. */
-		[data-theme='light'] .gmt-herostage {
-			/* The same dark, under the gradient: a border-image is invisible to a contrast
-			   checker, which read the page's white behind the light text (axe `color-contrast`,
-			   114 findings). The gradient paints over this, so the band looks as it did. */
-			background-color: var(--gmt-void);
-			border-image: linear-gradient(
-					180deg,
-					var(--gmt-void),
-					color-mix(in srgb, var(--gmt-cyan) 6%, var(--gmt-void))
-				)
-				fill 0 / / 0 100vmax;
+	/* The buttons' sizes on a narrower landscape screen, beside the Earth. Unlayered, as the shared
+	   button rules in HeroActions.astro are, and more specific, so these win. */
+	.gmt-hero-nav .gmt-hero-actions {
+		margin: 0;
+	}
+
+	@media (64rem <= width < 80rem) and (orientation: landscape) {
+		.gmt-hero-nav .gmt-hero-actions {
+			gap: 0.5rem;
+		}
+
+		.gmt-hero-nav .gmt-hero-actions .sl-link-button {
+			gap: 0.4rem;
+			padding: 0.6rem 0.8rem;
+			font-size: 0.875rem;
+		}
+
+		.gmt-hero-nav .gmt-hero-actions .sl-link-button svg {
+			inline-size: 1.125rem;
+			block-size: 1.125rem;
 		}
 	}
 </style>

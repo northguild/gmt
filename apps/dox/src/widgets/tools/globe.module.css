@@ -5,11 +5,15 @@
  * The list rows are in clock-row.module.css and the filter panel in zone-filters.module.css.
  *
  * Container queries read the nearest container: `.root` for the layout, `.frame` (a size
- * container, in the framed layouts) for the squared stage. `data-embedded` on `.root` is the
- * hero variant; its breakpoints are the viewport's, because the hero is a fixed-height column.
+ * container, in the framed layouts) for the squared stage. `data-space` on `.shell` and `.root`
+ * is the hero variant: the Earth is drawn by the engine into `.globeLayer`, which covers the
+ * whole hero, and `.layout` only holds the invisible stage (the zoom stack's box and the Earth's
+ * framing) and the zone drawer. Its breakpoints are the viewport's, because the hero is a
+ * fixed-height column.
  *
  * Reserved sizes, so nothing moves when script arrives or a value changes (cause 9 of #429):
- *   stage     aspect-ratio 1, or min(100cqw, 100cqh) in the framed layouts
+ *   stage     aspect-ratio 1, or min(100cqw, 100cqh) in the framed layouts; in the stacked
+ *             hero, the rest of the first screen, never less than its old square
  *   clocks    block-size 24rem (30rem from 40rem of width), or flex in the framed layouts
  *   zoom      a fixed 2rem-per-button column, absolutely placed
  *   search    the filter gear's box is reserved before the gear is drawn
@@ -20,18 +24,19 @@
   min-inline-size: 0;
 }
 
-.shell[data-embedded] {
-  display: flex;
-  flex-direction: column;
-  block-size: 100%;
-  min-block-size: 0;
+/* Space mode: no box of its own. The layers inside position against the hero, so nothing
+   here is a containing block (no position, no container, no transform). */
+.shell[data-space] {
   margin: 0;
+  min-block-size: 0;
+  block-size: 100%;
 
   & > [data-widget] {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
     min-block-size: 0;
+    block-size: 100%;
+
+    /* Starlight spaces a block after its sibling; the hero's column starts at the hero's top. */
+    margin-block: 0;
   }
 }
 
@@ -39,10 +44,10 @@
   container-type: inline-size;
   min-inline-size: 0;
 
-  &[data-embedded] {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
+  /* Not a container: a container is a containing block for its absolute descendants, and the
+     layers must resolve against the hero. */
+  &[data-space] {
+    container-type: normal;
     block-size: 100%;
     min-block-size: 0;
   }
@@ -179,6 +184,14 @@
   pointer-events: auto;
 }
 
+/* A control the reader has reached, or the credits panel they opened, is never left hidden by an
+   entrance that has not finished: the focus ring and the panel's button stay in view. */
+.zoom:is(:focus-within, :has(:popover-open)) {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
 /* Touch never hovers and a tap pans rather than focuses, so there the cluster is always on. */
 @media (hover: none) {
   .zoom[data-ready] {
@@ -212,6 +225,17 @@
 
   &[data-below] {
     transform: translate(-50%, 0.6rem);
+  }
+
+  /* In the top layer (globe.ts) the card is placed in page pixels, and the popover's own box
+     (centred, framed, scrolling, the system colours) gives way to the card's. It clips rather than
+     scrolls: nothing in it overflows, and the entrance's glint must stay inside its edges. */
+  &:popover-open {
+    position: absolute;
+    inset: auto;
+    margin: 0;
+    overflow: clip;
+    color: inherit;
   }
 }
 
@@ -270,9 +294,9 @@
    against its frame with min(100cqw, 100cqh), because aspect-ratio has no auto dimension left
    once both are definite, and the list flexes to the same height. --gmt-globe-chrome is a sum
    of other boxes' heights, so it errs large; the floor keeps a short window from squeezing
-   the globe, and past it the page scrolls. Never when embedded. */
+   the globe, and past it the page scrolls. Never in the hero. */
 @container (min-width: 56rem) {
-  .root:not([data-embedded]) {
+  .root:not([data-space]) {
     --gmt-globe-chrome: 25.5rem;
 
     & .layout {
@@ -309,102 +333,308 @@
   }
 }
 
-/* Embedded, in the hero ------------------------------------------------- */
+/* Space mode, in the hero -----------------------------------------------
+   Layers, bottom to top, all in the hero's stacking context: the sky (not here), .globeLayer
+   (the canvas), the copy scrim, .hit, then the copy, the stage's zoom stack and the card, and
+   last the drawer and its close. Only .hit, the zoom stack and the drawer take pointer events;
+   everything else lets the page through. */
 
-@media (width <= 99.9375rem) {
-  /* A flex column: the side flexes into whatever height the square stage leaves in the
-     hero's column. */
-  .root[data-embedded] .layout {
-    display: flex;
-    flex-direction: column;
-    block-size: 100%;
-    min-block-size: 0;
-  }
+.globeLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 
-  .root[data-embedded] .stage {
-    flex: 0 0 auto;
-  }
-
-  /* A hard height cap: below the hero's 80rem breakpoint it has no explicit height, and the
-     list's virtualizer sizer (all ~300 zones tall) would otherwise set this box's height. */
-  .root[data-embedded] .side {
-    flex: 1 1 100%;
-    min-block-size: 0;
+  & > canvas {
+    position: absolute;
+    inset: 0;
+    z-index: var(--gmt-z-base);
+    display: block;
     inline-size: 100%;
-    max-block-size: 30rem;
-  }
-
-  .root[data-embedded] .clocks {
-    flex: 1 1 auto;
-    block-size: auto;
-    min-block-size: 0;
-  }
-}
-
-@media (width <= 79.9375rem) {
-  /* A definite height: with none, WebKit counts the scrolling list as 0px and the side came
-     out search-box tall. */
-  .root[data-embedded] .side {
-    flex: none;
-    block-size: 30rem;
-  }
-}
-
-@media (width >= 80rem) and (width <= 99.9375rem) {
-  /* From 80rem the hero is a fixed-height row, so the side may fill what the stage leaves. */
-  .root[data-embedded] .side {
-    max-block-size: none;
-  }
-
-  /* One screen tall here: capped so the list keeps 11rem (the column is 100dvh less the nav
-     and the hero's padding; the search row is 5rem with its gap and the layout gap 1rem). */
-  .root[data-embedded] .stage {
-    max-inline-size: min(
-      44rem,
-      70vh,
-      calc(100dvh - var(--sl-nav-height, 4rem) - 21rem)
-    );
-  }
-}
-
-@media (width >= 100rem) {
-  .root[data-embedded] .layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(13rem, 20rem);
-    flex: 1 1 auto;
     block-size: 100%;
-    min-block-size: 0;
-    align-items: stretch;
+
+    &:not([data-entered]) {
+      opacity: 0;
+    }
   }
 
-  /* A sized, contained frame lets the stage take min(cqw, cqh): the largest square that fits,
-     with a real derived height where plain percentages would leave aspect-ratio nothing to do. */
-  .root[data-embedded] .frame {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  & .tooltip {
+    z-index: var(--gmt-z-float);
+  }
+}
+
+/* The engine sizes and places it over the disc, so touch and wheel off the Earth reach the
+   page. Its focus ring is the globe's own. */
+.hit {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: var(--gmt-z-over);
+  inline-size: 0;
+  block-size: 0;
+  border-radius: 50%;
+  touch-action: none;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* When the hero stacks the area fills the hero's second row (HeroGlobe.astro): the frame takes
+   what the bay under it leaves. */
+.root[data-space] .layout {
+  position: relative;
+  z-index: var(--gmt-z-float);
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+  align-items: stretch;
+  padding-block-end: var(--bay);
+  pointer-events: none;
+
+  /* One width for the slide-over, and the room the sheet takes below the Earth. */
+  --drawer-size: clamp(18rem, 24vw, 22rem);
+  --bay: var(--gmt-hero-bay, 30rem);
+}
+
+.root[data-space] .frame {
+  display: grid;
+  flex: 1 1 auto;
+}
+
+/* The stage is the Earth's box, never drawn: the zoom stack's corner and the framing's source.
+   When the hero stacks (narrower than 64rem, or portrait) it spans the hero's width and the
+   rest of the first screen, so the Earth is as large as that leaves room for and the zoom
+   stack sits at the screen's right edge. It is never shorter than the square it used to be. */
+.root[data-space] .stage {
+  inline-size: auto;
+  min-block-size: min(100vw, 44rem, 70dvh);
+  max-inline-size: none;
+  margin: 0;
+  aspect-ratio: auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  pointer-events: none;
+}
+
+/* Reached by pointer and keyboard at rest; the stage is not hovered in this layout. */
+:where(.root[data-space]) .zoom[data-ready] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  translate: 0 0;
+  transition:
+    opacity var(--gmt-duration-med) ease,
+    translate var(--gmt-duration-med) var(--gmt-ease-sweep);
+}
+
+/* In the hero the stack is the hero's own corner control: inset a step from the right and the
+   bottom, and clear of the Earth. While the drawer is open it is hidden and `inert` (set by
+   the drawer's wiring), so it leaves the tab order and the accessibility tree; the fade is a
+   token, which is 0 under reduced motion. */
+:where(.root[data-space]) .zoom {
+  inset-inline-end: var(--gmt-space-4);
+  inset-block-end: var(--gmt-space-4);
+}
+
+:where(.root[data-space]) .zoom[inert] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--gmt-duration-med) ease,
+    visibility 0s linear var(--gmt-duration-med);
+}
+
+.drawer {
+  position: absolute;
+  z-index: var(--gmt-z-menu);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+.root[data-space] .side {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  block-size: 100%;
+}
+
+.root[data-space] .clocks {
+  flex: 1 1 auto;
+  block-size: auto;
+  min-block-size: 0;
+
+  /* The list is part of the glass, so it adds no fill of its own; each card carries just
+     enough dark to hold its text at AA over the brightest thing behind the pane, white. */
+  --gmt-fill-subtle: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--gmt-teal) 10%, var(--gmt-void)) 55%,
+    transparent
+  );
+  --gmt-fill: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--gmt-teal) 14%, var(--gmt-void)) 62%,
+    transparent
+  );
+
+  background: transparent;
+}
+
+/* While the suggestions are open they have the drawer's list area to themselves: the zone rows
+   are hidden (not removed, so the list keeps its measured size), and no row lies under the popup. */
+.drawer:where(:has(input[role="combobox"][aria-expanded="true"])) .clocks {
+  visibility: hidden;
+}
+
+/* The suggestions open downward and stop inside the drawer, which is the size container the
+   unit resolves against. */
+.drawer {
+  --gmt-popup-max: min(16rem, 60cqb);
+}
+
+/* When the hero stacks the drawer is a bottom sheet in the bay under the Earth. Its border opens for
+   the close's 5rem at the centre of its top edge, where the tab joins the pane. */
+.root[data-space] .drawer {
+  inset-inline: var(--gmt-space-4);
+  inset-block-end: var(--gmt-space-4);
+  block-size: calc(var(--bay) - 2 * var(--gmt-space-4));
+  mask:
+    linear-gradient(var(--gmt-void) 0 0) 0 1px / 100% calc(100% - 1px) no-repeat,
+    linear-gradient(
+        to right,
+        var(--gmt-void) calc(50% - 2.5rem),
+        transparent 0 calc(50% + 2.5rem),
+        var(--gmt-void) 0
+      )
+      0 0 / 100% 1px no-repeat;
+}
+
+/* The close is a tab on the pane: the same glass, no border on the side that meets the pane,
+   square corners there, and laid 1px over the pane's edge, where the pane's border is open.
+   On the sheet it sits on the top edge at the centre, turned to point down. */
+.root[data-space] .drawerClose {
+  --drawer-close-rest: 1;
+
+  position: absolute;
+
+  /* One above the region, which shares the menu layer and comes later: the tab's joining
+     edge lies over it. */
+  z-index: calc(var(--gmt-z-menu) + 1);
+  pointer-events: auto;
+  inset-inline-start: 50%;
+
+  /* The tab is 1.5rem by 5rem before the turn, so its box's centre sits .75rem above the
+     sheet, less the 1px it laps over the edge. */
+  inset-block-end: calc(
+    var(--bay) - var(--gmt-space-4) - 2.5rem + 0.75rem - 1px
+  );
+  rotate: 90deg;
+  border-inline-end-width: 0;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  background:
+    linear-gradient(color-mix(in oklab, var(--gmt-void) 70%, transparent) 0 0),
+    var(--drawer-glass);
+  backdrop-filter: var(--gmt-header-blur);
+
+  --drawer-close-home: -50% 0;
+  --drawer-close-away: -50% 1rem;
+}
+
+/* The chevron is a thin line, and a tab of the pane's thin glass would pass a bright body's light
+   through to it. The tab carries a denser void wash under that glass, and the chevron the same
+   dark halo the hero's copy does, so the chevron holds the 3:1 non-text floor with margin over
+   the brightest thing behind it. At rest it is a little dimmer than on hover and focus. */
+:where(.root[data-space]) .drawerClose svg {
+  filter: drop-shadow(0 0 1px var(--gmt-ink-fixed))
+    drop-shadow(0 0 2px var(--gmt-ink-fixed))
+    drop-shadow(0 0 3px var(--gmt-ink-fixed));
+}
+
+@media (forced-colors: none) and (prefers-contrast: no-preference) {
+  :where(.root[data-space]) .drawerClose:not(:hover, :focus-visible) {
+    color: color-mix(in oklab, var(--gmt-ice-bright) 88%, transparent);
+  }
+}
+
+@media (width >= 64rem) and (orientation: landscape) {
+  /* The area fills the hero's second column; the Earth is framed in it. */
+  .root[data-space] .layout {
+    block-size: 100%;
+    padding-block-end: 0;
+  }
+
+  .root[data-space] .frame {
+    position: absolute;
+    inset: 0;
+
+    /* A size container, so the zoom stack can find the hero's corner: the stage is squared
+       inside the frame and sits at its start, which leaves the frame wider than the stage. */
     container-type: size;
-    block-size: 100%;
-    min-block-size: 0;
   }
 
-  .root[data-embedded] .stage {
+  /* The Earth's square: the frame's shorter side, at the frame's inline start and in the
+     middle of its height (a frame taller than wide leaves room above and below). Written out,
+     because a positioned box with both insets and an aspect ratio would take the longer side. */
+  .root[data-space] .stage {
+    position: absolute;
+    inset: 0;
     inline-size: min(100cqw, 100cqh);
     block-size: min(100cqw, 100cqh);
-    max-inline-size: none;
-    flex: none;
-  }
-
-  .root[data-embedded] .side {
-    block-size: 100%;
+    margin: auto 0;
     min-block-size: 0;
   }
 
-  .root[data-embedded] .clocks {
-    flex: 1 1 auto;
+  /* The stack's right and bottom edges are a step inside the frame's, which is the hero's,
+     not the square stage's: the stage's own size (100%) cancels, and the frame's (100cqw,
+     100cqh) takes its place. The stage is in the middle of the frame's height, so half the
+     difference lies below it. */
+  :where(.root[data-space]) .zoom {
+    inset-inline-end: calc(var(--gmt-space-4) + 100% - 100cqw);
+    inset-block-end: calc(var(--gmt-space-4) + (100% - 100cqh) / 2);
+  }
+
+  /* The pane's border opens for the close's 5rem at the middle of its inline-start edge. */
+  .root[data-space] .drawer {
+    inset-block: var(--gmt-space-4);
+    inset-inline: auto 0;
+    inline-size: var(--drawer-size);
     block-size: auto;
-    min-block-size: 0;
+    mask:
+      linear-gradient(var(--gmt-void) 0 0) 1px 0 / calc(100% - 1px) 100%
+        no-repeat,
+      linear-gradient(
+          var(--gmt-void) calc(50% - 2.5rem),
+          transparent 0 calc(50% + 2.5rem),
+          var(--gmt-void) 0
+        )
+        0 0 / 1px 100% no-repeat;
   }
+
+  /* The tab's joining edge laps the pane's by 1px, where the pane's border is open. */
+  .root[data-space] .drawerClose {
+    inset-block: 50% auto;
+    inset-inline: auto calc(var(--drawer-size) - 1px);
+    rotate: 0deg;
+
+    --drawer-close-home: 0 -50%;
+    --drawer-close-away: 1rem -50%;
+  }
+}
+
+/* A pin behind the drawer has nothing to point at. Inside inert content the card is out of reach,
+   but the top layer would still draw it over whatever made the page inert (the mobile menu is not
+   in the top layer), so it hides too. */
+.tooltip[data-occluded],
+[inert] .tooltip {
+  visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -421,6 +651,12 @@
 @media (forced-colors: active) {
   .stage {
     border-color: CanvasText;
+  }
+
+  .root[data-space] .drawerClose {
+    border-inline-end-width: 1px;
+    background: ButtonFace;
+    backdrop-filter: none;
   }
 
   .zoom {
@@ -458,6 +694,17 @@
 @media (prefers-contrast: more) {
   .stage > canvas:focus-visible {
     outline-width: 3px;
+  }
+
+  /* The pane is solid here, so its tab is too. */
+  .root[data-space] .drawerClose {
+    background: var(--gmt-void);
+    backdrop-filter: none;
+  }
+
+  .root[data-space] .clocks {
+    --gmt-fill-subtle: var(--gmt-void);
+    --gmt-fill: var(--gmt-surface-2);
   }
 
   .zoom button {
