@@ -6,6 +6,14 @@ export { aside, type AsideOptions } from "./aside";
 export { badge, type BadgeOptions, type BadgeTone } from "./badge";
 export { button, buttonRow, type ButtonOptions } from "./button";
 export {
+  carouselDots,
+  wireCarousel,
+  type CarouselBy,
+  type CarouselHandle,
+  type CarouselPage,
+  type CarouselWire,
+} from "./carousel";
+export {
   chartKey,
   chartSummary,
   type ChartKeyItem,
@@ -25,6 +33,14 @@ export {
   type DisclosureOptions,
   type DisclosureWire,
 } from "./disclosure";
+export {
+  drawer,
+  wireDrawer,
+  type DrawerHandle,
+  type DrawerOptions,
+  type DrawerWire,
+} from "./drawer";
+export { edgeControl, type EdgeControlOptions } from "./edge-control";
 export { gateAttr, type GateOption } from "./gate";
 export { hero, type HeroOptions } from "./hero";
 export {

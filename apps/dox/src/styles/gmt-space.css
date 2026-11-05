@@ -1,0 +1,86 @@
+/*
+ * The landing hero's night sky: three canvases behind the Earth, bottom to top the Milky Way
+ * (inside a wrapper that carries the faint nebula wash), the stars and the meteor. The layer is
+ * decoration only: the page never reads it and it takes no pointer. It is first in the hero, so
+ * the globe layer, the copy scrim, the hit area and the copy all stack over it (HeroGlobe.astro).
+ *
+ * The band wrapper and the stars canvas are separate layers so the entrance can fade them on
+ * their own. Colour is tokens only; the wash is two radial gradients at 5 and 6 percent.
+ */
+
+/* Each layer sits flush at the hero's top. The sky is inside the markdown column, whose
+   sibling spacing would push every layer after the first down by 1rem. */
+.gmt-sky,
+.gmt-sky-band,
+.gmt-sky canvas {
+  margin: 0;
+}
+
+.gmt-sky {
+  position: absolute;
+  inset: 0;
+  z-index: var(--gmt-z-base);
+  overflow: clip;
+  pointer-events: none;
+  contain: strict;
+
+  & canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+/* Drawn eight times brighter (BAND_GAIN in sky.ts); this brings it back without 8-bit banding. */
+.gmt-sky-band canvas {
+  opacity: 0.125;
+}
+
+.gmt-sky-band {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 70% 80% at 0% 0%,
+      rgb(from var(--gmt-cyan) r g b / 5%),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 70% 80% at 100% 100%,
+      rgb(from var(--gmt-teal) r g b / 6%),
+      transparent 70%
+    );
+}
+
+/* The hero opens as plain void. The band (its wash included) and the stars show only once the sky
+   is drawn at its true place: lib/sky.ts sets data-sky="ready" on the hero after the first draw. */
+.gmt-sky-band,
+.gmt-sky [data-sky-layer="stars"] {
+  opacity: 0;
+}
+
+/* Once drawn they come in with the entrance (gmt-entrance-freeze.css), or fade in on their own
+   where no entrance runs; a page with no script keeps them out. */
+
+/* A forced palette has no place for faint light on dark: the whole layer goes. */
+@media (forced-colors: active) {
+  .gmt-sky {
+    display: none;
+  }
+}
+
+/* Faint, translucent haze is what these two settings ask to lose; the stars are crisp and stay. */
+@media (prefers-contrast: more) {
+  .gmt-sky-band {
+    display: none;
+  }
+}
+
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the faint haze, which is the status quo */
+@media (prefers-reduced-transparency: reduce) {
+  .gmt-sky-band {
+    display: none;
+  }
+}

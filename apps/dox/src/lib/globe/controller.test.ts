@@ -579,6 +579,21 @@ describe("isQuiet", () => {
   });
 });
 
+describe("isAmbientOnly", () => {
+  it("is true only while the ambient spin alone moves the globe", () => {
+    const c = make();
+    c.key("ArrowLeft", 0); // arms the countdown, like any other input
+    expect(c.isAmbientOnly()).toBe(false); // before the spin is due
+    let now = animate(c, 2600, 3000);
+    expect(c.isAmbientOnly()).toBe(true);
+    c.zoomBy(1.5, now);
+    expect(c.isAmbientOnly()).toBe(false); // a zoom ease is running
+    now = animate(c, now, 4000);
+    c.flyTo([90, 45], now);
+    expect(c.isAmbientOnly()).toBe(false); // a fly-to is running
+  });
+});
+
 describe("halt", () => {
   it("drops inertia and any fly-to without moving the globe", () => {
     const c = make();
@@ -601,5 +616,45 @@ describe("pointerCancel", () => {
     const settled = c.rotation[0];
     animate(c, 16, 300);
     expect(c.rotation[0]).toBeCloseTo(settled, 6);
+  });
+});
+
+describe("gesture commit", () => {
+  it("reports a drag once, on the first move past the tap slop", () => {
+    const c = make();
+    c.pointerDown(1, 100, 100, 0);
+    expect(c.pointerMove(1, 102, 100, 8, RADIUS)).toBeNull();
+    expect(c.pointerMove(1, 120, 100, 16, RADIUS)).toBe("drag");
+    expect(c.pointerMove(1, 160, 100, 24, RADIUS)).toBeNull();
+  });
+
+  it("reports a pinch once, when the second finger moves", () => {
+    const c = make();
+    c.pointerDown(1, 100, 100, 0);
+    c.pointerDown(2, 200, 100, 0);
+    expect(c.pointerMove(2, 250, 100, 16, RADIUS)).toBe("pinch");
+    expect(c.pointerMove(2, 300, 100, 32, RADIUS)).toBeNull();
+  });
+
+  it("reports again on the next gesture", () => {
+    const c = make();
+    c.pointerDown(1, 100, 100, 0);
+    c.pointerMove(1, 150, 100, 16, RADIUS);
+    c.pointerUp(1, 150, 100, 20);
+    c.pointerDown(1, 100, 100, 100);
+    expect(c.pointerMove(1, 150, 100, 116, RADIUS)).toBe("drag");
+  });
+
+  it("reports again after a cancelled gesture", () => {
+    const c = make();
+    c.pointerDown(1, 100, 100, 0);
+    c.pointerMove(1, 150, 100, 16, RADIUS);
+    c.pointerCancel(1);
+    c.pointerDown(1, 100, 100, 100);
+    expect(c.pointerMove(1, 150, 100, 116, RADIUS)).toBe("drag");
+  });
+
+  it("returns null for a pointer it never saw", () => {
+    expect(make().pointerMove(9, 5, 5, 16, RADIUS)).toBeNull();
   });
 });

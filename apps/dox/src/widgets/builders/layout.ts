@@ -96,6 +96,11 @@ export interface FieldOptions {
   id: string;
   /** The visible label and the control's name. Required. */
   label: string;
+  /**
+   * Keep the `<label>` for the control's name but show it to assistive
+   * technology only, for a field whose placeholder or neighbours say it.
+   */
+  labelHidden?: true;
   hint?: Hint;
   control: (ids: FieldControlIds) => SafeHtml;
 }
@@ -103,6 +108,6 @@ export interface FieldOptions {
 export function field(o: FieldOptions): SafeHtml {
   const control = o.control({ id: o.id, describedBy: o.hint?.id });
   return html`<div class="${styles.field}"
-    ><label class="${styles.label}" for="${o.id}">${o.label}</label>${control}${o.hint?.html ?? ""}</div
+    ><label class="${o.labelHidden ? "gmt-sr-only" : styles.label}" for="${o.id}">${o.label}</label>${control}${o.hint?.html ?? ""}</div
   >`;
 }

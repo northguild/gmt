@@ -29,7 +29,9 @@ import {
   type PreparedPolygon,
 } from "./globe/geometry";
 import type {
+  GlobeInteraction,
   GlobeMarker,
+  GlobeOptions,
   GlobeRegion,
   GlobeTheme,
   LngLat,
@@ -41,6 +43,7 @@ import {
   COORDINATES_BY_ID,
   resolveGlobeZones,
   rotationForZone,
+  startRotation,
   type GlobeZone,
 } from "./globe-zones";
 import { readViewerStamp, readZoneNow, type ZoneReading } from "./zone-clock";
@@ -53,6 +56,7 @@ import {
   isFilterEngaged,
   matchesFilter,
 } from "./zone-filter";
+import { EARTH_ATTRIBUTE } from "./earth-look";
 import { type ZoneFilterUi, mountZoneFilters } from "./zone-filter-ui";
 import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "./globe-inks";
 import { setHtml } from "~/widgets/builders";
@@ -62,6 +66,7 @@ import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
 import { enter, holdEntrance } from "./enter";
 import { withBase } from "./site";
+import { chooseZone } from "./zone-action";
 
 export interface GlobeHost {
   /** Rotate the globe to bring a zone to centre and select it. */
@@ -81,6 +86,29 @@ export interface GlobeHost {
   onSelect: (callback: (reading: ZoneReading | null) => void) => void;
   /** Which backend is drawing — read by the smoke script and useful in the console. */
   getRenderer: () => "webgpu" | "canvas2d";
+  /**
+   * Called when the reader works the globe (see `GlobeEngine.onInteract`).
+   * Replaces any earlier callback.
+   */
+  onInteract: (callback: (kind: GlobeInteraction) => void) => void;
+  /** `[λ, φ]` in degrees as the camera has it: it looks at longitude −λ, latitude −φ. */
+  getRotation: () => readonly [number, number];
+  /** Where the Earth's centre sits now, in CSS pixels within the globe's host. */
+  getCentre: () => { x: number; y: number; radius: number };
+  /** Called after every frame the globe draws. Adds to any earlier callback; `destroy` drops them all. */
+  onFrame: (callback: () => void) => void;
+  /** Redraw once, so a host whose chrome changed (a drawer opened) re-places the tooltip. */
+  requestRender: () => void;
+  /**
+   * `entrance: "dawn"` only: resolves once the renderer has what the first lit frame needs, so
+   * the host can start the dawn and nothing decodes or uploads while it ramps.
+   */
+  dawnReady: Promise<void>;
+  /**
+   * `entrance: "dawn"` only: begins the dawn and resolves when it is over, which also arms the
+   * zoom stack. The same promise however often it is called.
+   */
+  startDawn: () => Promise<void>;
   destroy: () => void;
 }
 
@@ -115,6 +143,74 @@ export interface GlobeParts {
   tooltip: HTMLElement;
   /** The zoom cluster, armed once the globe has entered; absent when the host has none. */
   zoom: HTMLElement | null;
+  /**
+   * The right-most x, in host pixels, the tooltip card may reach, or null for
+   * no limit. Read on every frame; a pin at or beyond it is hidden.
+   */
+  tooltipLimit?: () => number | null;
+  /** The opt-in engine options a host that frames its own globe passes through. */
+  engine?: Pick<
+    GlobeOptions,
+    | "framing"
+    | "framingWatch"
+    | "hitArea"
+    | "maxDpr"
+    | "pauseWhenHidden"
+    | "entrance"
+  >;
+}
+
+/** Where the hover card goes, and whether its pin is out of sight behind chrome. */
+export interface TooltipPlacement {
+  /** The card's centre, in host pixels. */
+  x: number;
+  /** True when the pin is at or past `limit`, so the card has nothing to point at. */
+  occluded: boolean;
+}
+
+/**
+ * Centre the hover card on its pin, kept inside the host and short of `limit`.
+ *
+ * Pure so the clamp is tested without a globe. Without a `limit` this is the
+ * plain clamp: the card's edges stay `pad` inside the host. With one, the
+ * card's right edge also stays at or short of it, and a pin at or past it is
+ * `occluded`.
+ */
+export function placeTooltip({
+  x,
+  width,
+  cardWidth,
+  pad,
+  limit,
+}: {
+  x: number;
+  width: number;
+  cardWidth: number;
+  pad: number;
+  limit: number | null;
+}): TooltipPlacement {
+  const upper = Math.min(width - pad, limit ?? Infinity) - cardWidth / 2;
+  const lower = cardWidth / 2 + pad;
+  return {
+    x: Math.min(Math.max(x, lower), upper),
+    occluded: limit !== null && x >= limit,
+  };
+}
+
+/**
+ * The attributes on `<html>` that change a token the theme reads: the colour scheme and the
+ * Earth's look. A change to either re-reads the theme on every globe.
+ */
+export const THEME_ATTRIBUTES = ["data-theme", EARTH_ATTRIBUTE] as const;
+
+/**
+ * Whether the "Natural Earth" switch is offered: only where the photograph is drawn, which is
+ * the WebGPU renderer with imagery above 0. The canvas-2D fallback never draws it, and the
+ * light theme (outside the hero), raised contrast and forced colours set imagery to 0, so on
+ * those globes the switch would do nothing.
+ */
+export function earthSwitchOffered(imagery: number, renderer: string): boolean {
+  return renderer === "webgpu" && imagery > 0;
 }
 
 export async function initGlobe(
@@ -136,13 +232,12 @@ export async function initGlobe(
     systemZone && zones.some((zone) => zone.id === systemZone)
       ? systemZone
       : null;
-  const defaultRotation = defaultZone
-    ? rotationForZone(COORDINATES_BY_ID.get(defaultZone)!)
-    : ([-10, -15] as [number, number]);
+  const defaultRotation = startRotation(defaultZone);
 
   let theme = readTheme(host);
 
   const { tooltip, zoom: zoomControls } = parts;
+  const tooltipLimit = parts.tooltipLimit ?? (() => null);
   tooltip.hidden = true;
   /* The template owns the card, so a teardown empties and hides it rather than removing it. */
   function clearTooltip(): void {
@@ -178,6 +273,7 @@ export async function initGlobe(
       zoomRange: [MIN_ZOOM, MAX_ZOOM],
       reducedMotion,
       imageryUrl: IMAGERY_URL,
+      ...parts.engine,
     })) as GlobeEngineWithHitTest;
   } catch (error) {
     clearTooltip();
@@ -329,11 +425,25 @@ export async function initGlobe(
     selectCallback?.(selectedReading);
   }
 
+  /* The one action behind a zone choice: a list row, the search box and a tap on the Earth all
+     select the same way, and all three centre the globe on the place. A tap on no place clears
+     the choice and leaves the globe where it is. */
+  function chooseOnGlobe(id: string | null): void {
+    chooseZone(
+      {
+        rotationFor: (zone) => {
+          const coordinate = COORDINATES_BY_ID.get(zone);
+          return coordinate ? rotationForZone(coordinate) : null;
+        },
+        flyTo: (rotation) => engine.flyTo(rotation),
+        select: setSelected,
+      },
+      id,
+    );
+  }
+
   function focusZone(id: string): void {
-    const coordinate = COORDINATES_BY_ID.get(id);
-    if (!coordinate) return;
-    engine.flyTo(rotationForZone(coordinate));
-    setSelected(id);
+    if (COORDINATES_BY_ID.has(id)) chooseOnGlobe(id);
   }
 
   // --- markers and regions -------------------------------------------------
@@ -477,7 +587,7 @@ export async function initGlobe(
   });
 
   engine.onTap(({ markerId, regionId }) => {
-    setSelected(markerId ?? regionId ?? null);
+    chooseOnGlobe(markerId ?? regionId ?? null);
   });
 
   // --- tooltip -------------------------------------------------------------
@@ -506,19 +616,26 @@ export async function initGlobe(
     }
     tooltip.style.opacity = "1";
     // Clamp inside the stage, and flip below the point near the top edge.
-    const pad = 8;
-    const width = host.clientWidth;
-    const x = Math.min(
-      Math.max(at.x, tooltip.offsetWidth / 2 + pad),
-      width - tooltip.offsetWidth / 2 - pad,
-    );
+    const { x, occluded } = placeTooltip({
+      x: at.x,
+      width: host.clientWidth,
+      // The box's own width, not `offsetWidth`, which rounds: a card clear to the pixel stays clear.
+      cardWidth: tooltip.getBoundingClientRect().width,
+      pad: 8,
+      limit: tooltipLimit(),
+    });
+    tooltip.toggleAttribute("data-occluded", occluded);
     const flip = at.y - tooltip.offsetHeight - 16 < 0;
     tooltip.toggleAttribute("data-below", flip);
     tooltip.style.left = `${x}px`;
     tooltip.style.top = `${at.y + (flip ? 12 : 0)}px`;
   }
 
-  engine.onFrame(positionTooltip);
+  const frameListeners: (() => void)[] = [];
+  engine.onFrame(() => {
+    positionTooltip();
+    for (const listener of frameListeners) listener();
+  });
 
   if (filterPanel) {
     filterUi = mountZoneFilters(
@@ -570,12 +687,23 @@ export async function initGlobe(
     engine.setTheme(theme);
     engine.setMarkers(buildMarkers());
     engine.setRegions(buildRegions());
+    syncEarthSwitch();
   }
+
+  /* "Natural Earth" only does something where the photograph is drawn: the WebGPU renderer, with
+     imagery above 0. A renderer swap (device loss) changes that without a theme change, so the
+     frame loop checks too; the call is a no-op when nothing moved. */
+  function syncEarthSwitch(): void {
+    filterUi?.setEarthAvailable(
+      earthSwitchOffered(theme.imagery, engine.renderer),
+    );
+  }
+  frameListeners.push(syncEarthSwitch);
 
   const themeObserver = new MutationObserver(refreshTheme);
   themeObserver.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["data-theme"],
+    attributeFilter: [...THEME_ATTRIBUTES],
   });
 
   /* `gmt-a11y.css` zeroes the atmosphere, haze and imagery tokens under these
@@ -590,8 +718,11 @@ export async function initGlobe(
   }
 
   // --- start ---------------------------------------------------------------
+  syncEarthSwitch();
   engine.setMarkers(buildMarkers());
-  revealCanvas(host, zoomControls);
+  /* A dawn is the canvas's only entrance: `enter()` would layer a second animation on it. The
+     dawn arms the zoom stack when it ends. */
+  if (parts.engine?.entrance !== "dawn") revealCanvas(host, zoomControls);
   releaseClocks({ delayMs: 80 });
   void loadBoundaries();
   if (defaultZone) setSelected(defaultZone);
@@ -608,7 +739,35 @@ export async function initGlobe(
       selectCallback = callback;
     },
     getRenderer: () => engine.renderer,
+    onInteract: (callback) => engine.onInteract(callback),
+    getRotation: () => engine.getRotation(),
+    getCentre: () => {
+      const [lambda, phi] = engine.getRotation();
+      const { x, y } = engine.project([-lambda, -phi]);
+      /* The rim: the point 89.9 degrees from the centre toward north, over the pole if need be. */
+      const lat = (-phi * Math.PI) / 180;
+      const reach = (89.9 * Math.PI) / 180;
+      const north =
+        Math.sin(lat) * Math.cos(reach) + Math.cos(lat) * Math.sin(reach);
+      const over = Math.cos(reach) - Math.sin(lat) * north < 0;
+      const rim = engine.project([
+        -lambda + (over ? 180 : 0),
+        (Math.asin(north) * 180) / Math.PI,
+      ]);
+      return { x, y, radius: Math.hypot(rim.x - x, rim.y - y) };
+    },
+    onFrame: (callback) => {
+      frameListeners.push(callback);
+    },
+    requestRender: () => engine.requestRender(),
+    dawnReady: engine.dawnReady,
+    startDawn() {
+      const done = engine.startDawn();
+      void done.then(() => zoomControls?.setAttribute("data-ready", ""));
+      return done;
+    },
     destroy() {
+      frameListeners.length = 0;
       clearInterval(clockTimer);
       document.removeEventListener("visibilitychange", onVisibility);
       themeObserver.disconnect();

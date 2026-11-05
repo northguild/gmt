@@ -23,7 +23,10 @@
     border-color: var(--gmt-cyan);
   }
 
-  &:focus-visible {
+  /* WebKit puts a datetime field's focus on an inner part, so the host never matches
+     :focus-visible; :focus-within is true there and in the other engines. */
+  &:focus-visible,
+  &:focus-within {
     outline: 2px solid var(--gmt-cyan);
     outline-offset: 2px;
   }
@@ -47,7 +50,8 @@
     background-color: Field;
     color: FieldText;
 
-    &:focus-visible {
+    &:focus-visible,
+    &:focus-within {
       outline-color: Highlight;
     }
 
@@ -61,7 +65,8 @@
   .root {
     border-color: var(--gmt-ice);
 
-    &:focus-visible {
+    &:focus-visible,
+    &:focus-within {
       outline-width: 3px;
     }
   }

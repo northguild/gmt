@@ -35,6 +35,7 @@ describe("the gate registry", () => {
       "grow-measure",
       "readout-still",
       "data-credits-check",
+      "esc-cascade",
       "canada-layout-check",
       "a11y-axe",
       "a11y-tab-walk",

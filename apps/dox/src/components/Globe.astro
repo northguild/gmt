@@ -19,9 +19,10 @@ import { renderGlobeTemplate } from "../lib/globe-mount";
 interface Props {
   heading?: string;
   caption?: string;
-  /** Omits the internal heading and caption when embedded in HeroGlobe, whose
-   *  own title and tagline already carry that role. */
-  embedded?: boolean;
+  /** The landing hero's frameless layout: the Earth fills the hero behind its copy and the
+   *  zone list is a drawer. Omits the internal heading and caption, which HeroGlobe's own
+   *  title and tagline replace. Only HeroGlobe sets it. */
+  space?: boolean;
   /**
    * Namespaces this instance's element ids.
    *
@@ -36,12 +37,12 @@ interface Props {
    frontmatter once per component instance while building a page, so the counter
    distinguishes two globes in one document. */
 let renderCount = 0;
-const { heading, caption, embedded = false, idPrefix } = Astro.props;
+const { heading, caption, space = false, idPrefix } = Astro.props;
 renderCount += 1;
 const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`);
 ---
 
-<Fragment set:html={renderGlobeTemplate({ heading, caption, embedded, idPrefix: prefix }).value} />
+<Fragment set:html={renderGlobeTemplate({ heading, caption, space, idPrefix: prefix }).value} />
 
 <script>
   import { findWidget } from "../widgets/builders";

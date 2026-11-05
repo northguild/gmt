@@ -48,7 +48,7 @@ const ZONES = [
 const mounted: Array<{ destroy(): void }> = [];
 let counter = 0;
 
-function mount(ids: readonly string[] = ZONES, sized = true) {
+function mount(ids: readonly string[] = ZONES, sized = true, height = 400) {
   counter += 1;
   const r = renderHtml(
     listbox({
@@ -63,9 +63,9 @@ function mount(ids: readonly string[] = ZONES, sized = true) {
   if (sized)
     for (const [property, value] of [
       ["offsetWidth", 300],
-      ["offsetHeight", 400],
+      ["offsetHeight", height],
       ["clientWidth", 300],
-      ["clientHeight", 400],
+      ["clientHeight", height],
     ] as const)
       Object.defineProperty(panel, property, { value, configurable: true });
   const picked: string[] = [];
@@ -312,5 +312,21 @@ describe("mountZoneClockList", () => {
     list.select(many[0] as string);
     expect(screen.queryAllByRole("option")).toHaveLength(0);
     expect(panel).not.toHaveAttribute("aria-activedescendant");
+  });
+
+  it("mounts a bounded number of rows without recursing, in a panel taller than any screen", () => {
+    /* A panel that lost its height bound reports a viewport as tall as its whole list. Every
+       row measures a different height from the estimate, so each one reports a change. */
+    const many = Array.from({ length: 3000 }, (_, i) => `Etc/Fake${i}`);
+    const rowHeight = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(61);
+    try {
+      mount(many, true, 200_000);
+      expect(screen.queryAllByRole("option").length).toBeGreaterThan(0);
+      expect(screen.queryAllByRole("option").length).toBeLessThanOrEqual(80);
+    } finally {
+      rowHeight.mockRestore();
+    }
   });
 });

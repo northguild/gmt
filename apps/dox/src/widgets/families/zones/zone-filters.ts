@@ -1,10 +1,12 @@
 /**
- * zoneFilters: the globe's filter panel. A gear button that opens a panel of nine switches
- * in three fieldsets (local day, daylight saving, local sky) and a count of what is showing.
+ * zoneFilters: the globe's settings panel. A gear button that opens a panel of nine filter
+ * switches in three fieldsets (local day, daylight saving, local sky), a count of what is
+ * showing, and the Earth's look: one "Natural Earth" switch in a fieldset of its own.
  *
  * The switches are built once; `zone-filter-ui.ts` only shows, hides and relabels them, so a
- * keyboard user's place and the checked state survive a refresh. Each switch is named by its
- * axis (`name`) and bucket (`value`), which is how the mount finds it again.
+ * keyboard user's place and the checked state survive a refresh. Each filter switch is named
+ * by its axis (`name`) and bucket (`value`), which is how the mount finds it again. The Earth
+ * fieldset starts hidden: only the mount knows whether this globe draws the photograph.
  */
 import {
   disclosure,
@@ -52,8 +54,8 @@ function toggle(axis: FilterAxis, key: string, label: string): SafeHtml {
   });
 }
 
-function group(legend: string, switches: SafeHtml[]): SafeHtml {
-  return html`<fieldset class="${styles.group}">
+function group(legend: string, switches: SafeHtml[], hidden = false): SafeHtml {
+  return html`<fieldset class="${styles.group}" ${hidden ? html`hidden` : ""}>
     <legend class="${styles.legend}">${legend}</legend>
     ${switches}
   </fieldset>`;
@@ -62,7 +64,7 @@ function group(legend: string, switches: SafeHtml[]): SafeHtml {
 export function zoneFilters(o: { id: string }): SafeHtml {
   return disclosure({
     id: o.id,
-    label: "Filters",
+    label: "Settings",
     icon: svg(FILTER_SETTINGS_ICON),
     className: styles.root ?? "",
     buttonClassName: styles.gear ?? "",
@@ -84,6 +86,18 @@ export function zoneFilters(o: { id: string }): SafeHtml {
         value: "Showing all zones",
         samples: ["Showing 999 of 999 zones"],
       })}
+      ${group(
+        "Earth",
+        [
+          switchField({
+            label: "Natural Earth",
+            name: "earth",
+            value: "natural",
+            checked: false,
+          }),
+        ],
+        true,
+      )}
     </div>`,
   });
 }

@@ -178,7 +178,51 @@ export interface GlobeOptions {
    * every frame, so a preference change takes effect without a remount.
    */
   reducedMotion?: () => boolean;
+  /**
+   * Where to put the sphere inside the host. Called with the host's CSS box on
+   * every measure; `cx`/`cy` are the centre and `radius` the radius at zoom 1,
+   * all in CSS pixels. The disc may grow past the host's edges as it zooms.
+   * Unset keeps the sphere centred, filling the shorter side.
+   */
+  framing?: (width: number, height: number) => GlobeFraming;
+  /**
+   * Elements `framing` reads besides the host. The engine measures again when one
+   * of them changes size, so a frame that follows a sibling box stays true.
+   */
+  framingWatch?: readonly Element[];
+  /**
+   * An element that takes the pointer, wheel and key input in place of the
+   * canvas, kept across a renderer swap. The engine sizes it to the disc on
+   * every frame (a circle: `transform` to the disc's top-left, `2R` square),
+   * so a touch or a wheel beside the Earth reaches the page. Unset binds to
+   * the canvas.
+   */
+  hitArea?: HTMLElement;
+  /** Ceiling for the device pixel ratio. Defaults to 2. */
+  maxDpr?: number;
+  /**
+   * Stop the frame loop while this element is out of view. The engine watches
+   * it with an `IntersectionObserver` and disconnects it on `destroy()`.
+   */
+  pauseWhenHidden?: Element;
+  /**
+   * How the Earth arrives. `"fade"` (default) draws at once and the host fades the canvas in.
+   * `"dawn"` draws nothing until `startDawn()`, then lights the Earth from a dark disc over
+   * about 2.4 s; the host runs no entrance animation of its own on the canvas.
+   */
+  entrance?: "fade" | "dawn";
 }
+
+/** The sphere's place in the host, in CSS pixels. */
+export interface GlobeFraming {
+  cx: number;
+  cy: number;
+  /** Radius at zoom 1. */
+  radius: number;
+}
+
+/** What committed an interaction, for `GlobeEngine.onInteract`. */
+export type GlobeInteraction = "drag" | "pinch" | "wheel" | "tap" | "key";
 
 /** What the engine hands back to its host. */
 export interface GlobeEngine {
@@ -206,6 +250,24 @@ export interface GlobeEngine {
       point: LngLat | null;
     }) => void,
   ): void;
+  /**
+   * The reader worked the globe: a drag or pinch that has moved past a tap, a
+   * tap, a wheel that changed the zoom, or a key the globe handles. Fires once
+   * per gesture. Hovering, a sub-threshold move and a wheel at a zoom limit do
+   * not count.
+   */
+  onInteract(callback: (kind: GlobeInteraction) => void): void;
+  /**
+   * `"dawn"` only: resolves once the renderer has its imagery and label atlas on the GPU, so the
+   * dawn can run without decoding or uploading. Resolved at once for any other entrance.
+   */
+  readonly dawnReady: Promise<void>;
+  /**
+   * `"dawn"` only: begins the dawn. Resolves when it is over (the host then has `data-dawn="done"`
+   * and the ambient spin eases in). Calling it again returns the same promise; it does nothing
+   * for any other entrance.
+   */
+  startDawn(): Promise<void>;
   /** After every frame — where a host repositions DOM chrome such as a tooltip. */
   onFrame(callback: () => void): void;
   /** Redraw once, for a change the engine cannot observe (a new theme token). */

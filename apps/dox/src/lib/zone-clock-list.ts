@@ -52,6 +52,13 @@ import {
 // (and thus scrollbar/scrollToIndex math) isn't wildly off before that.
 const ROW_HEIGHT_ESTIMATE = 54;
 const OVERSCAN = 8;
+// Most rows ever mounted at once. A panel taller than any screen (a missing
+// stylesheet, a layout that lost its bound) would otherwise make every zone
+// "visible" and mount thousands of rows.
+const MAX_MOUNTED_ROWS = 80;
+// Re-render passes one change may trigger: measuring a row can move the rows
+// after it, and one follow-up pass settles that.
+const MAX_SETTLE_PASSES = 3;
 // Mirrors --gmt-space-1 (gmt-tokens.css) — the virtualizer's `gap` is a plain
 // number, it can't read a CSS custom property.
 const ROW_GAP = 4;
@@ -110,6 +117,8 @@ export function mountZoneClockList(
 
   /* Pending follow-up render after a filter change — see `setIds`. */
   let settleFrame: number | null = null;
+  let rendering = false;
+  let renderAgain = false;
   const panelId = panel.id || "gmt-globe-clocks";
 
   /* Kept whole because `setOptions` merges what it is given over the library's
@@ -232,9 +241,30 @@ export function mountZoneClockList(
      listbox re-marks the selected and the active option and points
      `aria-activedescendant` only at a row that is in the DOM. */
   function renderRows(instance: Virtualizer<GmtListbox, HTMLElement>): void {
+    /* `measureElement` reports a changed size through `onChange`, which lands
+       back here. Nested, that cost one full render per row. Instead the change
+       is noted and the loop below runs again once the current pass ends. */
+    if (rendering) {
+      renderAgain = true;
+      return;
+    }
+    rendering = true;
+    try {
+      for (let pass = 0; pass < MAX_SETTLE_PASSES; pass++) {
+        renderAgain = false;
+        renderPass(instance);
+        if (!renderAgain) break;
+      }
+    } finally {
+      rendering = false;
+    }
+    panel.sync();
+  }
+
+  function renderPass(instance: Virtualizer<GmtListbox, HTMLElement>): void {
     const viewerDate = readViewerDate();
     sizer.style.height = `${instance.getTotalSize()}px`;
-    const items = instance.getVirtualItems();
+    const items = instance.getVirtualItems().slice(0, MAX_MOUNTED_ROWS);
     const visible = new Set(items.map((item) => item.index));
     for (const [index, row] of rows) {
       if (!visible.has(index)) {
@@ -253,7 +283,6 @@ export function mountZoneClockList(
       writeReading(row, ids[item.index] as string, viewerDate);
       instance.measureElement(row);
     }
-    panel.sync();
   }
 
   // The listbox moved its active option: bring that row in view and draw it.
