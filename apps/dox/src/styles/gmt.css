@@ -15,7 +15,10 @@
 @import "./gmt-widget-reset.css" layer(gmt.base); /* zero-specificity `not-content` restore inside a widget */
 @import "./gmt-glass.css" layer(gmt.shell); /* glass treatment on Starlight elements */
 @import "./gmt-shell.css" layer(gmt.shell); /* typography + layout frame */
+@import "./gmt-space.css" layer(gmt.shell); /* the landing hero's night sky */
+@import "./gmt-home-carousel.css" layer(gmt.shell); /* the landing's carousel: one screen at desktop size */
 @import "./gmt-content.css" layer(gmt.content); /* .sl-markdown-content + EC + search */
+@import "./gmt-entrance-freeze.css" layer(gmt.controls); /* the landing page entrance: freeze, sky fade, card pop */
 @import "./gmt-controls.css" layer(gmt.controls); /* buttons, focus, selection, scrollbar */
 @import "./gmt-content-tables.css" layer(gmt.tools); /* the content table recipe, first in the tools layer */
 @import "./gmt-charts.css" layer(gmt.thirdparty); /* chart theme variables + container styles */

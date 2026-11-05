@@ -2,25 +2,22 @@
 /**
  * Title / tagline / CTA-actions block shared by the normal splash-page Hero
  * and the homepage's merged HeroGlobe. Extracted from Hero.astro so both
- * render identical copy/actions markup, a11y wiring (data-page-title), and
- * clipboard-copy behavior without duplicating the LinkButton mapping logic.
+ * render identical copy markup and a11y wiring (data-page-title). The buttons
+ * are HeroActions.astro; the landing passes none here and renders them in its
+ * own row.
  */
-import DoxMark from './DoxMark.astro';
-import LinkButton from './LinkButton.astro';
-import { withBase } from '~/lib/site';
+import HeroActions, { type Action } from './HeroActions.astro';
 
 // Mirrors Starlight's internal PAGE_TITLE_ID — not exported publicly.
 const PAGE_TITLE_ID = '_top';
 
-interface Action {
-	attrs?: { class?: string; [key: string]: unknown };
-	icon?: { name?: string; html?: string };
-	link: string;
-	text: string;
-	variant?: 'primary' | 'secondary' | 'minimal';
-}
-
 interface Props {
+	/**
+	 * A small line above the title. Starlight's hero schema has no such field, so the one page
+	 * that wants it (the homepage hero) passes it here; its presence also selects that hero's
+	 * left-aligned type and button recipe. Splash pages that do not pass it render as before.
+	 */
+	eyebrow?: string;
 	data: {
 		title: string;
 		tagline?: string;
@@ -29,114 +26,19 @@ interface Props {
 }
 
 const {
+	eyebrow,
 	data: { title, tagline, actions = [] },
 } = Astro.props;
-
-function isExternal(href: string) {
-	return href.startsWith('http://') || href.startsWith('https://');
-}
-
-// Hero links are written base-less in the front matter; only a root-absolute
-// path gets the base (a `#` hash or an absolute URL stays as written).
-function withSiteBase(href: string) {
-	return href.startsWith('/') && !href.startsWith('//') ? withBase(href) : href;
-}
 ---
 
-<div class="sl-flex stack">
+<div class:list={['sl-flex stack', { 'gmt-hero-lead': eyebrow }]}>
 	<div class="sl-flex copy">
+		{eyebrow && <p class="gmt-hero-eyebrow">{eyebrow}</p>}
 		<h1 id={PAGE_TITLE_ID} data-page-title set:html={title} />
-		{tagline && <div class="tagline" set:html={tagline} />}
+		{tagline && <div class="tagline gmt-hero-tagline" set:html={tagline} />}
 	</div>
-	{
-		actions.length > 0 && (
-			<div class="sl-flex actions">
-				{actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link, text, variant }) => {
-					const href = withSiteBase(link);
-					const external = isExternal(href);
-					// The Dox CTA carries the crystal itself rather than a Starlight
-					// icon name — same mark as the header button and the chat, so the
-					// three entry points to Dox are recognisably one thing.
-					if (attrs['data-dox-cta']) {
-						const { 'data-dox-cta': _doxCta, ...rest } = attrs;
-						return (
-							<LinkButton
-								{href}
-								variant="ghost"
-								class:list={['gmt-dox-cta', className]}
-								{...rest}
-							>
-								{text}
-								<DoxMark id="cta" />
-							</LinkButton>
-						);
-					}
-					if (attrs['data-copy-prompt']) {
-						return (
-							<LinkButton
-								as="button"
-								type="button"
-								variant="ghost"
-								icon="copy"
-								class:list={[className]}
-								{...attrs}
-							>
-								<span data-copy-label data-copy-idle={text}>
-									{text}
-								</span>
-							</LinkButton>
-						);
-					}
-					return (
-						<LinkButton
-							{href}
-							{variant}
-							icon={icon?.name}
-							class:list={[className]}
-							{...attrs}
-							target={external ? '_blank' : undefined}
-							rel={external ? 'noopener noreferrer' : undefined}
-						>
-							{text}
-							{icon?.html && <Fragment set:html={icon.html} />}
-						</LinkButton>
-					);
-				})}
-			</div>
-		)
-	}
+	{actions.length > 0 && <HeroActions {actions} />}
 </div>
-
-<script>
-	import { AGENT_PROMPT } from '~/lib/agent-prompt';
-
-	const RESET_MS = 2000;
-
-	function wire() {
-		const buttons = document.querySelectorAll<HTMLElement>('[data-copy-prompt]');
-		for (const btn of buttons) {
-			if (btn.dataset.copyBound === 'true') continue;
-			btn.dataset.copyBound = 'true';
-			btn.addEventListener('click', async () => {
-				const label = btn.querySelector<HTMLElement>('[data-copy-label]');
-				try {
-					await navigator.clipboard.writeText(AGENT_PROMPT);
-					if (label) label.textContent = 'Copied!';
-					btn.classList.add('is-copied');
-				} catch {
-					if (label) label.textContent = 'Copy failed';
-				}
-				window.setTimeout(() => {
-					if (label) label.textContent = label.dataset.copyIdle ?? 'Copy prompt';
-					btn.classList.remove('is-copied');
-				}, RESET_MS);
-			});
-		}
-	}
-
-	wire();
-	document.addEventListener('astro:page-load', wire);
-</script>
 
 <style>
 	@layer starlight.core {
@@ -156,33 +58,9 @@ function withSiteBase(href: string) {
 			max-inline-size: 50ch;
 		}
 
-		h1 {
-			/* This rule is dead weight in practice: HeroGlobe places the hero
-			   inside the page's .sl-markdown-content wrapper (it's rendered as
-			   ordinary MDX body content, not through Starlight's hero-image
-			   slot), so markdown.css's `.sl-markdown-content h1` rule — in the
-			   later-declared `starlight.content` layer — always wins over this
-			   `starlight.core`-layered one regardless of specificity. The real,
-			   effective override lives in gmt-shell.css (unlayered, so it
-			   actually wins), matching the pattern already used there for the
-			   generic `h1` 32px rule. Left here so this component stays
-			   self-consistent with Starlight's own Hero.astro; do not rely on
-			   it actually applying. */
-			font-size: clamp(var(--sl-text-3xl), calc(0.25rem + 5vw), var(--sl-text-6xl));
-			line-height: var(--sl-line-height-headings);
-			font-weight: 600;
-			color: var(--sl-color-white);
-		}
-
 		.tagline {
 			font-size: clamp(var(--sl-text-base), calc(0.0625rem + 2vw), var(--sl-text-xl));
 			color: var(--sl-color-gray-2);
-		}
-
-		.actions {
-			gap: 1rem 2rem;
-			flex-wrap: wrap;
-			justify-content: center;
 		}
 
 		@media (width >= 50rem) {
@@ -193,10 +71,73 @@ function withSiteBase(href: string) {
 			.copy {
 				align-items: flex-start;
 			}
-
-			.actions {
-				justify-content: flex-start;
-			}
 		}
+	}
+</style>
+
+<style>
+	/* The homepage hero's copy column (the eyebrow variant). Unlayered, so it beats Starlight's
+	   `.sl-markdown-content h1` (a layered rule) at any width; and it ships in this page's own
+	   head, so the first paint already has the final sizes and nothing re-flows when a global
+	   sheet arrives. Every size, gap and font the copy uses is set here and nowhere else; the
+	   buttons' look is HeroActions.astro's. Every box here hugs its text and takes no pointer; only
+	   the words do, so the Earth behind the gaps stays draggable. The 2rem gap is the space above
+	   the buttons, so a hero that renders them elsewhere has none. */
+	.gmt-hero-lead {
+		align-items: flex-start;
+		gap: 2rem;
+		inline-size: fit-content;
+		max-inline-size: 36rem;
+		text-align: start;
+		pointer-events: none;
+	}
+
+	.gmt-hero-lead .copy {
+		align-items: flex-start;
+		gap: 0;
+		pointer-events: none;
+	}
+
+	.gmt-hero-lead :is(.gmt-hero-eyebrow, h1[data-page-title], .gmt-hero-tagline) {
+		pointer-events: auto;
+	}
+
+	/* The copy has no panel behind it (HeroGlobe.astro), so each letter carries a tight dark
+	   halo: readable over the Earth's day side or the Sun's glare, invisible over open space. */
+	.gmt-hero-lead :is(.gmt-hero-eyebrow, h1[data-page-title], .gmt-hero-tagline) {
+		text-shadow: var(--gmt-shadow-halo);
+	}
+
+	.gmt-hero-eyebrow {
+		margin: 0 0 0.9rem;
+		font-family: var(--gmt-font-display);
+		font-size: 0.75rem;
+		font-weight: 400;
+		line-height: 1;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--gmt-cyan);
+	}
+
+	.gmt-hero-lead h1[data-page-title] {
+		/* Narrower than the column, so the title breaks after "Give Me" at every width. */
+		max-inline-size: 9em;
+		margin: 0 0 0.9rem;
+		font-family: var(--gmt-font-display);
+		font-size: clamp(1.75rem, 2.8vw, 2.5rem);
+		font-weight: 400;
+		line-height: 1.15;
+		letter-spacing: 0.02em;
+		color: var(--gmt-ice);
+	}
+
+	.gmt-hero-lead .gmt-hero-tagline {
+		max-inline-size: 32rem;
+		margin: 0;
+		font-family: var(--gmt-font-display);
+		font-size: 1rem;
+		font-weight: 400;
+		line-height: 1.6;
+		color: var(--gmt-ice);
 	}
 </style>

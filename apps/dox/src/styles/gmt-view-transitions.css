@@ -11,21 +11,44 @@
  * names and no animation: they swap in place and never visibly move. Only the
  * rest of the page (the content column and "On this page") cross-fades.
  *
+ * northguild.dev and this site are one origin, so the same transition also runs
+ * between them. Three names are shared with that site's header: `ng-header`,
+ * `ng-mark` and `ng-wordmark`. A name must be unique on a page, and the bar,
+ * the mark and the wordmark each occur once. An arrival from outside this site
+ * carries the `from-landing` type (src/lib/arrival.ts): the mark and wordmark
+ * stay where they are, the bar cross-fades, and the page behind it cross-fades
+ * more slowly while the landing's entrance plays in the new view.
+ *
  * This depends on the new page's first render being complete. The
  * `rel="expect"` render-block in astro.config.mjs (marker in Footer.astro) and
  * the inline Expressive Code styles guarantee that; without them the browser
  * would animate into a half-painted page.
  *
- * Names must be unique on a page. On /dox the header is `display: none`, so it
- * is not captured and that route simply cross-fades.
+ * On /dox the header is `display: none`, so it is not captured and that route
+ * simply cross-fades.
  */
 
-@view-transition {
-  navigation: auto;
+/* The opt-in itself (`@view-transition`, off under reduced motion) is inline in the head: Head.astro,
+   VIEW_TRANSITION_OPT_IN in src/lib/arrival.ts. In this sheet the landing's reveal missed it. */
+
+/* The page's own bar, a direct child of the page. A bare `.header` also matches the override's inner `div.header` and
+   every code frame's `figcaption.header`; a second element with the name makes the browser skip
+   the whole transition. */
+.page > .header {
+  view-transition-name: ng-header;
 }
 
-.header {
-  view-transition-name: gmt-header;
+/* The mark and the wordmark sit in the same box as northguild.dev's, so holding them still
+   while the rest of the bar changes is invisible. Below 500px the wordmark eases smaller than
+   northguild.dev's fixed 1rem, so there it is not named and fades with the bar instead. */
+.page > .header .gmt-ng-link svg {
+  view-transition-name: ng-mark;
+}
+
+@media (width >= 31.25rem) {
+  .page > .header .gmt-ng-wordmark {
+    view-transition-name: ng-wordmark;
+  }
 }
 
 /* The pane, not `nav.sidebar`: that wrapper is a zero-height static box and
@@ -40,14 +63,20 @@
    them with `mix-blend-mode: plus-lighter`, so for the whole transition the
    old page's sidebar highlight showed through and the header came out
    brighter. */
-::view-transition-group(gmt-header),
-::view-transition-new(gmt-header),
+::view-transition-group(ng-header),
+::view-transition-new(ng-header),
+::view-transition-group(ng-mark),
+::view-transition-new(ng-mark),
+::view-transition-group(ng-wordmark),
+::view-transition-new(ng-wordmark),
 ::view-transition-group(gmt-sidebar),
 ::view-transition-new(gmt-sidebar) {
   animation: none;
 }
 
-::view-transition-old(gmt-header),
+::view-transition-old(ng-header),
+::view-transition-old(ng-mark),
+::view-transition-old(ng-wordmark),
 ::view-transition-old(gmt-sidebar) {
   display: none;
 }
@@ -58,8 +87,41 @@
   animation-timing-function: var(--gmt-easing);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  @view-transition {
-    navigation: none;
+/* Arriving from northguild.dev. The mark and wordmark keep the rules above. The bar shows both
+   snapshots and dissolves between them: GitHub and Discord stay where they were at the far right,
+   and search, Dox and the theme toggle appear before them. The page behind it dissolves more
+   slowly, so the hero's freeze plays in the new view as it appears. */
+@keyframes gmt-bar-out {
+  to {
+    opacity: 0;
   }
 }
+
+@keyframes gmt-bar-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* stylelint-disable plugin/use-baseline -- :active-view-transition-type() is not Baseline 2024; a browser without it keeps the in-site rules above, which is the plain navigation */
+:root:active-view-transition-type(
+    from-landing
+  )::view-transition-old(ng-header) {
+  display: block;
+  animation: gmt-bar-out var(--gmt-duration-med) ease-out both;
+  mix-blend-mode: plus-lighter;
+}
+
+:root:active-view-transition-type(
+    from-landing
+  )::view-transition-new(ng-header) {
+  animation: gmt-bar-in var(--gmt-duration-med) ease-out both;
+  mix-blend-mode: plus-lighter;
+}
+
+:root:active-view-transition-type(from-landing)::view-transition-old(root),
+:root:active-view-transition-type(from-landing)::view-transition-new(root) {
+  animation-duration: var(--gmt-duration-handoff);
+  animation-timing-function: var(--gmt-easing-handoff);
+}
+/* stylelint-enable plugin/use-baseline */

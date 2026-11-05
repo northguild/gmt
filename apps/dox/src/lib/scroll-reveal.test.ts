@@ -84,6 +84,17 @@ describe("initScrollReveal", () => {
     expect(created).toBe(0);
   });
 
+  it("watches nothing in the landing's carousel mode, whose groups sit in a closed panel", () => {
+    addGroups(2);
+    document.documentElement.dataset["homeCarousel"] = "on";
+    try {
+      initScrollReveal();
+      expect(created).toBe(0);
+    } finally {
+      delete document.documentElement.dataset["homeCarousel"];
+    }
+  });
+
   it("watches nothing without IntersectionObserver", () => {
     addGroups(2);
     vi.stubGlobal("IntersectionObserver", undefined);
