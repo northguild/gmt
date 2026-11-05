@@ -28,9 +28,10 @@ import {
 import { starterWidgetCall, type CHAT_STARTERS } from "~/lib/chat-constants";
 import { DoxChat, type DoxChatHandle } from "./DoxChat";
 import { ExamplesBar } from "./ExamplesBar";
-import { LicenceNote } from "./ChatInfo";
+import { LicenceDisclosure } from "./ChatInfo";
 import { HeaderClock } from "./HeaderClock";
 import { useBrains } from "./use-brains";
+import { useEscLayer } from "./use-esc-layer";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { RailResizer } from "./RailResizer";
 import { WidgetRail, type RailWidget } from "./WidgetRail";
@@ -134,6 +135,24 @@ export default function DoxPage() {
     },
     [showWidget],
   );
+
+  /* Escape closes what the reader opened in the rail, in its turn among the page's layers
+     (`lib/esc-layers.ts`): the phone's examples sheet back to its bar, or the open widget back to
+     its card (the effect below puts focus there). */
+  const railEl = useCallback(() => document.getElementById(railId), [railId]);
+  useEscLayer({
+    /* The sheet is a phone's: widened past it, the bar is gone and the state is not a layer. */
+    open: () => examplesOpen && barRef.current?.checkVisibility?.() !== false,
+    close: () => setExamplesOpen(false),
+    opener: () => barRef.current,
+    el: railEl,
+  });
+  useEscLayer({
+    open: railWidget !== null,
+    close: closeWidget,
+    returnsFocus: true,
+    el: railEl,
+  });
 
   /* Closing a widget returns focus: to its card when the examples panel is
      visible, otherwise (phone, conversation started, sheet folded) to the bar.
@@ -254,7 +273,7 @@ export default function DoxPage() {
           `Footer.astro`), so the note sits here, in view and in the tab order. On a phone it is
           hidden and the composer's info button opens it (ChatInfo.tsx). */}
       <footer className="gmt-hive-licence">
-        <LicenceNote />
+        <LicenceDisclosure />
       </footer>
     </div>
   );

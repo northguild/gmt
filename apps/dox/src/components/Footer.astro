@@ -1,36 +1,40 @@
 ---
-// Override of Starlight's Footer that appends the site's licence note and an empty end-of-page
-// marker. The licence note matches apps/LICENSE. The
+// Override of Starlight's Footer that appends the site's licence line and an empty end-of-page
+// marker. The line is a closed disclosure that opens to the note in apps/LICENSE. The
 // `<link rel="expect" href="#gmt-page-end" blocking="render">` in astro.config
 // holds the first paint of each page until the parser reaches this element.
 // Without it, Chrome paints a reference page (~200 KB, most of it sidebar) in
 // pieces as it streams in — header first, then sidebar, then content — which
 // reads as the sidebar and content flashing on every route change.
 import Default from '@astrojs/starlight/components/Footer.astro';
-import { LICENCE_LEAD, LICENCE_LINK_TEXT, LICENCE_URL } from '~/lib/licence';
+import {
+	LICENCE_LEAD,
+	LICENCE_LINK_TEXT,
+	LICENCE_SUMMARY,
+	LICENCE_URL,
+} from '~/lib/licence';
 
 // /dox/ is one fixed viewport of chat, so a note placed after the page would sit behind it,
 // reachable by Tab and invisible. That page renders the note inside its own shell instead
-// (DoxPage.tsx), from the same text.
+// (DoxPage.tsx), from the same text. The landing carries the note in its Earth's credits
+// popover, so nothing is added under it.
 const inChatShell = /\/dox\/?$/.test(Astro.url.pathname);
+const onLanding = Astro.locals.starlightRoute.id === '';
 ---
 
 <Default />
-{!inChatShell && (
-	<p class="gmt-licence-note">
-		{LICENCE_LEAD}{" "}
-		<a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
-	</p>
+{!inChatShell && !onLanding && (
+	<details class="gmt-licence">
+		<summary>{LICENCE_SUMMARY}</summary>
+		<p>
+			{LICENCE_LEAD}{" "}
+			<a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
+		</p>
+	</details>
 )}
 <div id="gmt-page-end" hidden></div>
 
 <style>
-	.gmt-licence-note {
-		margin-block-start: 1.5rem;
-		font-size: var(--sl-text-xs);
-		color: var(--gmt-ice);
-	}
-
 	/* Starlight's last-updated date, above the previous/next links. */
 	:global(footer .meta) {
 		gap: var(--gmt-space-2) var(--gmt-space-4);
@@ -38,10 +42,5 @@ const inChatShell = /\/dox\/?$/.test(Astro.url.pathname);
 		color: var(--gmt-ice-dim);
 		padding-block-end: var(--gmt-space-3);
 		border-block-end: 1px solid var(--gmt-hairline);
-	}
-
-	.gmt-licence-note a {
-		color: inherit;
-		text-decoration: underline;
 	}
 </style>

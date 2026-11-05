@@ -7,10 +7,16 @@
  * the native popover and assistive technology rely on.
  */
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { gmtStats } from "~/data/gmt-stats";
-import { LICENCE_LINK_TEXT, LICENCE_URL } from "~/lib/licence";
+import {
+  LICENCE_LEAD,
+  LICENCE_LINK_TEXT,
+  LICENCE_SUMMARY,
+  LICENCE_URL,
+} from "~/lib/licence";
 import { expectNoAxeViolations } from "~/test/render-widget";
-import { ChatInfo } from "./ChatInfo";
+import { ChatInfo, LicenceDisclosure } from "./ChatInfo";
 
 // The panel is `display: none` until opened, so its name is empty to the tree.
 const BUTTON = "About Dox's answers and licences";
@@ -58,6 +64,28 @@ describe("the composer's info button", () => {
     buttons.forEach((b, i) => {
       expect(b).toHaveAttribute("popovertarget", panels[i]!.id);
     });
+    await expectNoAxeViolations(container);
+  });
+});
+
+describe("the footer's licence line", () => {
+  it("is one closed line that opens, from the keyboard, to the full note", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<LicenceDisclosure />);
+    const summary = screen.getByText(LICENCE_SUMMARY);
+    expect(summary).toBeVisible();
+    expect(screen.getByRole("group")).not.toHaveAttribute("open");
+    expect(
+      screen.queryByText(LICENCE_LEAD, { exact: false }),
+    ).not.toBeVisible();
+    await user.tab();
+    expect(summary).toHaveFocus();
+    // A browser opens a focused summary on Enter and Space; jsdom has no such key handling.
+    await user.click(summary);
+    expect(screen.getByRole("group")).toHaveAttribute("open");
+    expect(
+      screen.getByRole("link", { name: LICENCE_LINK_TEXT }),
+    ).toHaveAttribute("href", LICENCE_URL);
     await expectNoAxeViolations(container);
   });
 });
