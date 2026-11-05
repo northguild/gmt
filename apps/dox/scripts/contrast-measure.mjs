@@ -11,7 +11,8 @@
  * For each page and theme it:
  *
  *   1. finds every text node (HTML or SVG) and every input, select and
- *      textarea whose computed colour is `--gmt-ice-dim` in that theme,
+ *      textarea whose computed colour is `--gmt-ice-dim` in that theme (or, inside a
+ *      dark island, the dark theme's value),
  *      with its glyph rects, clipped to every scroll container around it;
  *   2. screenshots the page twice, as it is and with every glyph transparent
  *      (`-webkit-text-fill-color`, which leaves borders, icons and every
@@ -194,9 +195,22 @@ function collect() {
   const ice = rgba(getComputedStyle(iceProbe).color);
   probe.remove();
   iceProbe.remove();
+  // A dark island (the header, the landing hero) keeps the dark theme's muted ink under the light
+  // theme. Its text is measured too, against the island's own token, so a page whose only muted
+  // text is in an island is not read as having none.
+  const island = document.querySelector(".gmt-theme-dark");
+  let islandToken = null;
+  if (island) {
+    const islandProbe = document.createElement("span");
+    islandProbe.style.color = "var(--gmt-ice-dim)";
+    island.append(islandProbe);
+    islandToken = rgba(getComputedStyle(islandProbe).color);
+    islandProbe.remove();
+  }
+  const match = (x, t) => x[0] === t[0] && x[1] === t[1] && x[2] === t[2];
   const same = (c) => {
     const x = rgba(c);
-    return x[0] === token[0] && x[1] === token[1] && x[2] === token[2];
+    return match(x, token) || (islandToken !== null && match(x, islandToken));
   };
 
   const hiddenChain = (e) => {
@@ -558,6 +572,13 @@ async function measureState(page, rows, ctx) {
   // element's box is the same. One throwaway screenshot first, so the rects are read in the
   // state every later screenshot sees.
   await page.screenshot({ fullPage: true });
+  // The sky's stars are single dim points that the copy's void halo covers on the real page. The
+  // glyph-hiding pass drops that halo, so a star under a long block of small text would score as
+  // a 1 px patch of low contrast; they are hidden in both passes. The Sun's glare and the Earth,
+  // which are what the halo is for, stay.
+  await page.addStyleTag({
+    content: '[data-sky-layer="stars"] { visibility: hidden !important; }',
+  });
   const data = await page.evaluate(collect);
   const vp = page.viewportSize();
   await page.evaluate(() => {

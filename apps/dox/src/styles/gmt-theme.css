@@ -16,7 +16,8 @@
    these map Starlight's colours from the `--gmt-*` tokens, and a mapping is
    resolved where it is declared, so the island needs its own copy. */
 :root,
-.gmt-theme-dark {
+.gmt-theme-dark,
+[data-theme="light"] .gmt-theme-dark dialog {
   --sl-color-white: var(--gmt-ice);
   --sl-color-gray-1: var(--gmt-ice);
   --sl-color-gray-2: var(--gmt-ice-dim);
@@ -61,10 +62,22 @@
   --sl-font-mono: var(--gmt-font-mono);
 }
 
-/* The bar is 3.5rem at every width, with 1rem at its sides, as on northguild.dev. Everything
-   that reads these (the hero, the sidebar, the scroll padding) follows. */
+/* Starlight re-derives its five hues for the light theme, and a custom property is resolved where
+   it is declared, so the island carries the dark theme's own. The landing's tiles take their
+   tone from them. */
+.gmt-theme-dark {
+  --sl-color-orange: hsl(var(--sl-hue-orange) 82% 63%);
+  --sl-color-green: hsl(var(--sl-hue-green) 82% 63%);
+  --sl-color-blue: hsl(var(--sl-hue-blue) 100% 60%);
+  --sl-color-purple: hsl(var(--sl-hue-purple) 82% 63%);
+  --sl-color-red: hsl(var(--sl-hue-red) 82% 63%);
+}
+
+/* The bar is northguild.dev's at every width: 0.75rem above and below a 30 px row, and a 1 px
+   hairline, with 1rem at its sides. Everything that reads these (the hero, the sidebar, the
+   scroll padding) follows. */
 :root {
-  --sl-nav-height: 3.5rem;
+  --sl-nav-height: calc(3.375rem + 1px);
   --sl-nav-pad-x: 1rem;
 }
 
@@ -75,7 +88,8 @@
  * track light mode on their own — only the non-derived literals need an
  * override here.
  */
-[data-theme="light"] {
+[data-theme="light"],
+[data-theme="light"] .gmt-theme-dark dialog {
   --sl-color-gray-3: #999999;
   --sl-color-gray-4: #cccccc;
   --sl-color-hairline-shade: rgb(8 145 178 / 8%);

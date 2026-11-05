@@ -35,6 +35,17 @@ const TOKENS_FILE = path.join(DOX, "src/styles/gmt-tokens.css");
 const FLOOR_PX = 12;
 const ROOT_PX = 16; // html { font-size } is never overridden — verified alongside the scan below.
 
+/** Every custom property the token sheet defines, by name, so a `var(--x)` size can be followed. */
+const TOKEN_VALUES = new Map<string, string>(
+  [
+    ...readFileSync(TOKENS_FILE, "utf8").matchAll(
+      /(--[\w-]+)\s*:\s*([^;{}]+);/g,
+    ),
+  ]
+    .map(([, name, value]) => [name, value.trim()] as const)
+    .filter(([name]) => !name.startsWith("--sl-")),
+);
+
 const SCANNED_EXTENSIONS = new Set([".css", ".astro", ".ts", ".tsx"]);
 
 const ROOTS = [path.join(DOX, "src"), path.join(DOX, "scripts")];
@@ -78,21 +89,47 @@ type Resolved =
 /**
  * Resolves a font-size value to the smallest literal `rem`/`em`/`px` it can
  * reach, unwrapping `clamp(min, preferred, max)` to its first (minimum)
- * argument and `var(--x, fallback)` to its literal fallback. A `var()` with
- * no fallback, or any other function (`calc()`, a bare keyword), has no
- * literal to check here — that is what the token check and the runtime scan
- * are for — so it resolves to `"var"`/`"unparsable"` and is not a violation
- * on its own.
+ * argument, `var(--x, fallback)` to its literal fallback, a `var(--x)` to
+ * the token's own value, `max()` to its largest argument and
+ * `calc(<number> * <size>)` to the product. Any other function or a bare
+ * keyword has no literal to check here — that is what the runtime scan is for
+ * — so it resolves to `"var"`/`"unparsable"` and is not a violation on its
+ * own. The result is the smallest size the value can compute to.
  */
-function resolveLiteral(raw: string): Resolved {
+function resolveLiteral(raw: string, depth = 0): Resolved {
   const value = raw.trim();
+  if (depth > 8) return "unparsable";
+  if (value.startsWith("max(") && value.endsWith(")")) {
+    const sizes = splitTopLevel(value.slice("max(".length, -1))
+      .map((arg) => resolveLiteral(arg, depth + 1))
+      .filter((r): r is Exclude<Resolved, string> => typeof r === "object");
+    if (sizes.length === 0) return "unparsable";
+    return sizes.reduce((a, b) => (b.px > a.px ? b : a));
+  }
+  if (value.startsWith("calc(") && value.endsWith(")")) {
+    const parts = value
+      .slice("calc(".length, -1)
+      .split("*")
+      .map((x) => x.trim());
+    if (parts.length !== 2) return "unparsable";
+    const [num, size] = /^[0-9]*\.?[0-9]+$/.test(parts[0])
+      ? parts
+      : [parts[1], parts[0]];
+    if (!/^[0-9]*\.?[0-9]+$/.test(num)) return "unparsable";
+    const inner = resolveLiteral(size, depth + 1);
+    return typeof inner === "object"
+      ? { px: inner.px * Number.parseFloat(num), unit: inner.unit }
+      : inner;
+  }
   if (value.startsWith("clamp(") && value.endsWith(")")) {
     const [min] = splitTopLevel(value.slice("clamp(".length, -1));
-    return resolveLiteral(min);
+    return resolveLiteral(min, depth + 1);
   }
   if (value.startsWith("var(") && value.endsWith(")")) {
     const args = splitTopLevel(value.slice("var(".length, -1));
-    return args.length > 1 ? resolveLiteral(args[1]) : "var";
+    if (args.length > 1) return resolveLiteral(args[1], depth + 1);
+    const token = TOKEN_VALUES.get(args[0]);
+    return token === undefined ? "var" : resolveLiteral(token, depth + 1);
   }
   const match = /^([0-9]*\.?[0-9]+)(rem|em|px)$/.exec(value);
   if (!match) return "unparsable";
@@ -208,6 +245,17 @@ describe("Font floor (12px / 0.75rem)", () => {
     expect(findDeclarations(`ctx.font = "monospace";`)).toEqual([]);
     expect(violation(small)).toMatch(/under the 12px floor/);
     expect(violation("12px")).toBeNull();
+  });
+
+  it("follows calc(), max() and token sizes to the smallest computed size", () => {
+    /* The miss this guards: the header's version label was `calc(0.7 * var(--gmt-wordmark-size))`,
+       which computes to 8.96px to 11.2px, and the scan passed it because it did not follow `calc()`
+       or a token. */
+    const label = "calc(0.7 * var(--gmt-wordmark-size))";
+    expect(violation(label)).toMatch(/under the 12px floor/);
+    expect(violation(`max(0.75rem, ${label})`)).toBeNull();
+    expect(violation("calc(0.5 * 1rem)")).toMatch(/under the 12px floor/);
+    expect(violation("var(--gmt-text-xs)")).toBeNull();
   });
 
   it("flags a font-size in em under 1em that has no floor", () => {

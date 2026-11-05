@@ -321,6 +321,8 @@ export default defineConfig({
       components: {
         Head: "./src/components/Head.astro",
         Header: "./src/components/Header.astro",
+        MobileMenuFooter: "./src/components/MobileMenuFooter.astro",
+        MobileMenuToggle: "./src/components/MobileMenuToggle.astro",
         Footer: "./src/components/Footer.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",

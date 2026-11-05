@@ -1,14 +1,19 @@
 ---
 // Override of Starlight's Header. It adds two things to Starlight's own layout:
-// the NorthGuild link (the mark and wordmark, then a divider) before the site title, which
-// leads back to northguild.dev in the same tab (#424); and a "Chat with Dox"
-// link in the right-hand group, next to the social icons, so the /dox chat is
-// reachable from every page. Both are plain links with no JavaScript: no page
-// but /dox hydrates React.
+// the NorthGuild link (the mark and wordmark) before the "/ gmt" site title, which
+// leads back to northguild.dev in the same tab; and a "Chat with Dox"
+// link in the right-hand group, so the /dox chat is reachable from every page.
+// Both are plain links with no JavaScript: no page but /dox hydrates React.
 //
-// Structure copied from @astrojs/starlight/components/Header.astro so the
-// existing search/social/theme layout is preserved byte-for-byte; only the
-// NorthGuild link and the `<ButtonLink>` in `right-group` are new.
+// The bar is northguild.dev's: the NorthGuild link at the left and GitHub and
+// Discord at the far right sit on the same pixels on both sites, so going from
+// one to the other changes only what lies between them. The right-hand group
+// reads Dox, the theme, then GitHub and Discord.
+//
+// Structure copied from @astrojs/starlight/components/Header.astro. The
+// NorthGuild link, the `<ButtonLink>` in `right-group`, the order of the
+// group and the search box's place at the right are ours; the social and
+// theme controls are Starlight's.
 import config from "virtual:starlight/user-config";
 
 import LanguageSelect from "virtual:starlight/components/LanguageSelect";
@@ -18,6 +23,7 @@ import SocialIcons from "virtual:starlight/components/SocialIcons";
 import ThemeSelect from "virtual:starlight/components/ThemeSelect";
 import ButtonLink from "./ButtonLink.astro";
 import DoxMark from "./DoxMark.astro";
+import EscLayers from "./EscLayers.astro";
 import NorthGuildMark from "./NorthGuildMark.astro";
 import { LANDING_URL, stripBase, withBase } from "~/lib/site";
 
@@ -32,16 +38,14 @@ const shouldRenderSearch =
   <div class="title-wrapper sl-flex">
     {/* Same site, one level up, so a plain same-tab link, not `ButtonLink`
         (which opens an absolute URL in a new tab and draws a chip). */}
-    {/* The name starts with the visible text (WCAG 2.2 SC 2.5.3) and still names the link
-        when the wordmark is hidden on a narrow screen. */}
+    {/* The name starts with the visible text (WCAG 2.2 SC 2.5.3). */}
     <a href={LANDING_URL} class="gmt-ng-link gmt-sonar-focus" aria-label="NorthGuild home">
       <NorthGuildMark />
       <span class="gmt-ng-wordmark">NorthGuild</span>
     </a>
-    <span class="gmt-ng-divider" aria-hidden="true"></span>
     <SiteTitle />
   </div>
-  <div class="sl-flex print:hidden">
+  <div class="sl-flex print:hidden search-slot">
     {shouldRenderSearch && <Search />}
   </div>
   <div class="sl-hidden md:sl-flex print:hidden right-group">
@@ -61,12 +65,13 @@ const shouldRenderSearch =
       >
         <DoxMark id="header" />
       </ButtonLink>
-      <SocialIcons />
       <ThemeSelect />
       <LanguageSelect />
+      <SocialIcons />
     </div>
   </div>
 </div>
+<EscLayers />
 
 <style>
   @layer starlight.core {
@@ -78,9 +83,13 @@ const shouldRenderSearch =
       block-size: 100%;
     }
 
+    /* The wordmark's type is set here only so `ch` reads in it: "NorthGuild", the slash and
+       the app name sit half a `0` apart, as in every NorthGuild app's header. */
     .title-wrapper {
       align-items: center;
-      gap: var(--gmt-space-3);
+      gap: 0.5ch;
+      font-family: var(--gmt-font-display);
+      font-size: var(--gmt-wordmark-size);
       overflow: clip;
       padding: 0.25rem;
       margin: -0.25rem;
@@ -93,89 +102,25 @@ const shouldRenderSearch =
       align-items: center;
     }
 
-    .social-icons::after {
-      content: "";
-      block-size: 2rem;
-      border-inline-end: 1px solid var(--sl-color-gray-5);
+    /* The theme toggle's wrapper is an inline element, which set the button on the text
+       baseline, 2 px above the row's centre. As a flex box it centres like its neighbours. */
+    .social-icons > :global(starlight-theme-select) {
+      display: flex;
     }
 
+    /* On every page the search box sits at the right, just before the icons, at Starlight's
+       22rem cap, as on northguild.dev. The middle column takes the slack, and the box gives
+       way first when the bar runs short. */
     @media (width >= 50rem) {
-      :global(:root[data-has-sidebar]) {
-        --__sidebar-pad: calc(2 * var(--sl-nav-pad-x));
-      }
-
-      :global(:root:not([data-has-toc])) {
-        --__toc-width: 0rem;
-      }
-
       .header {
-        --__sidebar-width: max(
-          0rem,
-          var(--sl-content-inline-start, 0rem) - var(--sl-nav-pad-x)
-        );
-        --__main-column-fr: calc(
-          (
-              100% + var(--__sidebar-pad, 0rem) -
-                var(--__toc-width, var(--sl-sidebar-width)) -
-                (2 * var(--__toc-width, var(--sl-nav-pad-x))) -
-                var(--sl-content-inline-start, 0rem) - var(--sl-content-width)
-            ) / 2
-        );
-
         display: grid;
-        grid-template-columns:
-          minmax(
-            calc(
-              var(--__sidebar-width) +
-                max(0rem, var(--__main-column-fr) - var(--sl-nav-gap))
-            ),
-            auto
-          )
-          1fr
-          auto;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         align-content: center;
       }
-    }
 
-    /* Wide screens with a sidebar: the search box sits exactly over the
-       content column and is exactly as wide (react.dev's layout). Mirrors the
-       column rules in gmt-shell.css — the content is centred in the pane
-       between the sidebar and the fixed-width TOC, and shrinks to that pane
-       minus its padding when the pane is narrower than --sl-content-width.
-       `100%` here is this grid's content box: the viewport minus
-       --sl-nav-pad-x on each side. */
-    @media (width >= 72rem) {
-      :global(:root[data-has-sidebar]) .header {
-        --__toc: var(--sl-sidebar-width);
-        --__column: min(
-          var(--sl-content-width),
-          100% + 2 * var(--sl-nav-pad-x) - var(--sl-sidebar-width) -
-            var(--__toc) - 2 * var(--sl-content-pad-x)
-        );
-
-        grid-template-columns:
-          minmax(
-            calc(
-              (100% + var(--sl-sidebar-width) - var(--__toc) - var(--__column)) /
-                2 - var(--sl-nav-gap)
-            ),
-            auto
-          )
-          minmax(0, var(--__column))
-          1fr;
-      }
-
-      :global(:root[data-has-sidebar]:not([data-has-toc])) .header {
-        --__toc: 0rem;
-      }
-
-      :global(:root[data-has-sidebar]) .right-group {
-        justify-self: end;
-      }
-
-      /* Starlight caps the button at 22rem; here the column sets the width. */
-      :global(:root[data-has-sidebar]) .header :global(button[data-open-modal]) {
-        max-inline-size: none;
+      .search-slot {
+        justify-content: end;
+        min-inline-size: 0;
       }
     }
   }
