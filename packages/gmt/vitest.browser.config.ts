@@ -81,6 +81,15 @@ const alias = native
     ? [{ find: /^@js-temporal\/polyfill$/, replacement: SWAP_ENTRY }]
     : [];
 
+// These test the Node-only harness (child processes, `process`, the file system). A browser has
+// no such harness, so they cannot load or run there. Like `testInclude`, each is listed from the
+// package and from the repository root, where scripts/native-suite.mjs starts Vitest.
+const NODE_ONLY_TESTS = [
+  "src/test/boundedChild.test.ts",
+  "src/test/isolationGroups.test.ts",
+  "src/test/sharedState.test.ts",
+].flatMap((file) => [file, `packages/gmt/${file}`]);
+
 export default mergeConfig(
   base,
   defineConfig({
@@ -94,14 +103,7 @@ export default mergeConfig(
     optimizeDeps: swap ? {} : { exclude: [SWAP_ENTRY] },
     test: {
       include: testInclude,
-      // These test the Node-only harness (child processes, `process`, the file system). A browser
-      // has no such harness, so they cannot load or run there.
-      exclude: [
-        ...configDefaults.exclude,
-        "src/test/boundedChild.test.ts",
-        "src/test/isolationGroups.test.ts",
-        "src/test/sharedState.test.ts",
-      ],
+      exclude: [...configDefaults.exclude, ...NODE_ONLY_TESTS],
       // The swap pass tells `src/test/swapEntry.test.ts` to run. A browser has no bounded child
       // process, so the entry itself is not read from this variable here.
       env: native
