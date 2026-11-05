@@ -93,7 +93,8 @@ describe(
     });
 
     // A browser has no child process, `process` or file system, so these Node-only harness
-    // tests cannot load there (#441).
+    // tests cannot load there (#441). Each is excluded by its package path and by its path from
+    // the repository root, where scripts/native-suite.mjs starts Vitest (#462).
     it.each`
       label                  | mode
       ${"native"}            | ${undefined}
@@ -108,6 +109,9 @@ describe(
             "src/test/boundedChild.test.ts",
             "src/test/isolationGroups.test.ts",
             "src/test/sharedState.test.ts",
+            "packages/gmt/src/test/boundedChild.test.ts",
+            "packages/gmt/src/test/isolationGroups.test.ts",
+            "packages/gmt/src/test/sharedState.test.ts",
           ]),
         );
         expect(config.test?.exclude).toContain("**/node_modules/**");
