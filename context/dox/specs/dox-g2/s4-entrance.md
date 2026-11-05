@@ -41,29 +41,41 @@ export function runHeroEntrance(options: HeroEntranceOptions): void;
 - **`t0`** is the moment the sky's first draw is done (`sky.ready`) and `globe.ready` has
   resolved, but no later than `deadline` ms after navigation start (at once if already past).
 - At `t0` it sets `data-entrance="run"` on `<html>`, marks `performance.mark("gmt-entrance-t0")`
-  and calls `globe.startDawn()`. Every CSS
-  entrance animation is keyed on `:root[data-entrance="run"]` with its delay from the table below,
-  so the sky, the copy and the header start in the same style recalc. If the globe was not ready
-  at `t0`, the engine begins its dawn when it is; nothing else waits.
+  and calls `globe.startDawn()`. The CSS entrance animations of the header, the buttons, the
+  pager, the sky and the location card are keyed on `:root[data-entrance="run"]` with their delays
+  from the table below, so they start in the same style recalc. If the globe was not ready at
+  `t0`, the engine begins its dawn when it is; nothing else waits.
+- **The copy does not wait for `t0`.** The eyebrow, the `h1` and the tagline are the page's
+  largest text, so they paint at the first paint at full opacity. Their freeze is keyed on
+  `:root:is([data-entrance="wait"], [data-entrance="run"])`, with the same animation under both
+  values, so it starts with the page and runs on through `run` without restarting. It never
+  matches `static` or `done`, so returning to the intro page does not replay it.
 - **Before `t0`.** The inline head script in `src/lib/arrival.ts` sets `data-entrance="wait"` on
-  `<html>` on the landing (path from `import.meta.env.BASE_URL`); freeze targets and sky layers
-  hold at opacity 0. It sets `"static"` after 2.5 s if still `wait`, so a module that never loads
-  cannot hide the copy; a `<noscript>` style shows everything. `HeroGlobe.astro` calls it after
+  `<html>` on the landing (path from `import.meta.env.BASE_URL`); the buttons, the pager and the
+  sky layers hold at opacity 0. It sets `"static"` after 2.5 s if still `wait`, so a module that
+  never loads cannot hide them; a `<noscript>` style shows everything. `HeroGlobe.astro` calls it after
   the globe mounts, with the globe's signal.
 
 ## Freeze (CSS)
 
 `src/styles/gmt-entrance-freeze.css`, imported by `HeroGlobe.astro` only.
 
-| Element | Direction | Delay from `t0` |
+| Element | Direction | Delay |
 | --- | --- | --- |
-| Header link and site title (direct load only, below) | left | 0 s |
-| Eyebrow and `h1` (one freeze each) | left | .15 s |
-| Tagline | left | .45 s |
-| Actions (each button +.08 s) | left | .75 s |
-| Location card (`.gmt-globe__tooltip`), below | scales out of its pin | 2.0 s |
+| Eyebrow and `h1` (one freeze each) | left | 0 s from the first paint |
+| Tagline | left | .12 s from the first paint |
+| Header link and site title (direct load only, below) | left | 0 s from `t0` |
+| Actions (each button +.08 s) | left | .75 s from `t0` |
+| Location card (`.gmt-globe__tooltip`), below | scales out of its pin | 2.0 s from `t0` |
 
-Each freeze lasts 1.6 s and ends by 2.6 s; the location card, last of all, lands at 2.65 s.
+Each freeze lasts 1.6 s. The copy's ends by 1.72 s after the first paint, the rest by 2.6 s after
+`t0`; the location card, last of all, lands at `t0` + 2.65 s.
+
+**The copy is never hidden.** The copy's freeze (`ng-freeze-text`) keeps opacity 1 throughout. It
+starts in the frost colour under a mask whose floor is 50 % alpha, so the whole line reads at
+half strength ahead of the front, which sweeps left to right and locks the colour to ice on the
+same beat as the other freezes. No near-zero opacity: the text is there to read, and the largest
+paint is the first paint. The buttons and the pager keep their fade in from opacity 0.
 
 **Cheap by design.** The freeze animates only `opacity`, `mask-position`, `color` (to frost and
 back) and, on panes, `border-color`. No `filter`, blur, `text-shadow` or `box-shadow`, so no text
@@ -87,8 +99,10 @@ animation, `ng-card-pop`: .65 s, `cubic-bezier(.16, 1.22, .3, 1)` (≈ 1 % overs
 `transform: translate(-50%, …)` and flips it above or below the pin, and `scale` applies outside
 that, so the card grows out of its pin on either side.
 
-**Reduced motion:** each freeze is `ng-fade` (opacity, .6 s, same delays); the location card a
-.4 s fade at 2.0 s, no scale; each drawer open a .3 s fade, no sheen. **Forced colours:** mask sweep only; no drawer sheen.
+**Reduced motion:** the copy shows still, with no animation; each other freeze is `ng-fade`
+(opacity, .6 s, same delays); the location card a .4 s fade at 2.0 s, no scale; each drawer open a
+.3 s fade, no sheen. **Forced colours:** mask sweep only, the copy's with the same 50 % floor;
+no drawer sheen.
 
 ## Sky from black
 
@@ -141,6 +155,8 @@ In the shader, a new `exposure` uniform (default 1, so other hosts are unchanged
 - **One animation each.** At 1440×900, from navigation until `t0 + 2.7 s`, poll
   `document.getAnimations()` every frame. Group running animations by `effect.target` plus
   `pseudoElement`: no group ever holds more than one, and the hero canvas never appears.
+- **Copy first.** The `h1` and the tagline are at opacity 1 on every frame from the first, and
+  the largest contentful paint comes before `run` is set.
 - **Smooth.** From `t0` to `t0 + 2.7 s`: median frame ≤ 17.5 ms, none over 34 ms. **No blur:**
   `getComputedStyle(h1).filter` is `none` at every poll.
 - **Card last.** Sampled every 100 ms from load (`t0` from the mark): hidden or opacity 0 at every

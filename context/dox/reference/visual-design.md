@@ -153,11 +153,16 @@ Only these things move. Anything not listed stays still.
 - **The meteor** on the landing's night sky (`lib/space-fx.ts`): a faint streak about once a
   minute, never over the copy, an open drawer or the Earth. Under reduced motion none falls.
 - **The landing entrance** (`lib/hero-entrance.ts`, `gmt-entrance-freeze.css`): the hero opens as
-  plain void, and one sequence brings the page in. It starts (`t0`) when the sky is drawn at its
-  true place and the globe is ready, or 800 ms after navigation at the latest.
-  - **The copy and the header freeze into place.** The eyebrow and title (0.15 s after `t0`), the
-    tagline (0.45 s) and the three buttons (0.75 s, 0.08 s apart) each take 1.6 s: a sweep reveals
-    the letters in a pale frost colour, then a short lock beat turns them to their own. The header's
+  plain void with the copy on it, and one sequence brings the rest of the page in. It starts (`t0`)
+  when the sky is drawn at its true place and the globe is ready, or 800 ms after navigation at the
+  latest.
+  - **The copy freezes over text already there.** The eyebrow, the title and the tagline are on
+    screen at full opacity from the first paint, so the page's largest text never waits for the sky.
+    Their freeze starts with the page (the tagline 0.12 s after the title) and takes 1.6 s: the
+    letters show in a pale frost colour at half strength, a sweep brings them to full strength left
+    to right, then a short lock beat turns them to their own.
+  - **The buttons and the header freeze into place.** The three buttons (0.75 s after `t0`, 0.08 s
+    apart) take the same 1.6 s, but sweep in from out of sight. The header's
     NorthGuild link and site title freeze at `t0` on a direct load; a page reached through a view
     transition leaves the header still. Each button also carries a grain of frost that fades over
     its freeze and a glint that crosses it once, 1.4 s into its freeze (two pseudo-elements, each
@@ -171,8 +176,9 @@ Only these things move. Anything not listed stays still.
   - Only opacity, a mask sweep, colour, border colour, the card's scale and the glint's translate
     animate: no blur, filter or shadow. Each element runs one animation per property, and none
     holds its end state.
-  - **Reduced motion** shows fades only (0.6 s, the same order; the card fades over 0.4 s) and the
-    Earth is lit at once. **Forced colours** keep the sweep and drop the frost colour.
+  - **Reduced motion** shows the copy still and fades the rest (0.6 s, the same order; the card fades
+    over 0.4 s); the Earth is lit at once. **Forced colours** keep the sweep and drop the frost
+    colour.
 - **The stars follow the camera** (`lib/sky.ts`): they are the real sky behind the Earth for the
   clock and the camera, so a drag moves them the other way at the Earth's speed, the ambient spin
   carries them, and at rest they turn once a day. They are drawn only when the view moves. A drag

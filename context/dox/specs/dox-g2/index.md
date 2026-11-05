@@ -23,7 +23,7 @@ One PR. Each phase is a slice that `dox-builder` lands and `dox-tester` verifies
 | 2 | [Frameless hero and zone drawer](./s2-hero-space.md) | Copy and a centred Earth with no box; the zone panel slides in on first use; zoomed in, the Earth fills the hero |
 | 3 | [Real sky](./s3-sky.md) | The real sky behind the Earth for this moment, turning with the camera; a faint wash, a rare meteor |
 | 3b | [Sun and Moon](./s3b-bodies.md) | The true Moon with its phase, and the Sun's glow when it sits behind the Earth |
-| 4 | [Ice-freeze entrance](./s4-entrance.md) | From one start: sky fades in, copy freezes, Earth wakes at dawn; the drawer sweeps in on each open |
+| 4 | [Ice-freeze entrance](./s4-entrance.md) | The copy freezes from the first paint; from one start the sky fades in and the Earth wakes at dawn; the drawer sweeps in on each open |
 | 5 | [Cross-site transition](./s5-transition.md) | northguild.dev → /gmt keeps the mark still and cross-fades the rest |
 | 6 | [Guide tables](./s6-tables.md) | Content and reference tables read like the tools' tables |
 | 7 | [Landing carousel](./s7-carousel.md) | On a desktop the page never scrolls; the intro and an "About gmt" panel share the column beside the Earth |

@@ -319,21 +319,24 @@ globe has a dawn instead. The rules in `visual-design.md` § Motion say what mov
   `<html>` on the landing before the first paint, and `static` after 2.5 s if nothing has taken it
   further, so a script that never loads cannot hide the copy. `runHeroEntrance` sets `run` at `t0`,
   marks `gmt-entrance-t0`, starts the globe's dawn, and sets `done` once the last animation has ended.
-  Every animation is keyed on `run`, so they all start in one style recalculation, and none matches
-  after `done`, so a card shown later does not pop again.
+  Every animation but the copy's is keyed on `run`, so they all start in one style recalculation,
+  and none matches after `done`, so a card shown later does not pop again. The copy's freeze is
+  keyed on `wait` or `run` with the same value under both, so it starts at the first paint and the
+  change to `run` does not restart it: the page's largest text never waits for the sky.
 - **The same script** listens for `pagereveal` and sets `data-arrival` to `transition` for an
   arrival through a view transition, which keeps the header from freezing again, and to `load` for
   any other. A value set earlier stands. An arrival from a same-origin page outside the site also adds
   the `from-landing` type to the transition (see built.md Tier 3). Where the browser reports the reveal, `runHeroEntrance`
   waits for it before it writes `run`, so the header's state is known when the animations start.
-- **Held, not hidden for good.** Pieces sit at opacity 0 only under `wait`; a page with no script has
-  no `data-entrance`, so nothing is held.
+- **Held, not hidden for good.** The buttons, the pager and the sky sit at opacity 0 only under
+  `wait`; the copy is never held. A page with no script has no `data-entrance`, so nothing is held.
 - **Each piece animates one way.** The freeze keyframes move opacity, a mask sweep, colour and
-  (buttons) border colour; the animation uses fill `backwards`, so hover and focus styles apply when
+  (buttons) border colour; the copy's never moves opacity, and its mask keeps a 50 % floor; the animation uses fill `backwards`, so hover and focus styles apply when
   it ends. A button's stagger comes from the `--ng-i` custom property in its markup, not from
   `nth-*`. The card animates the individual `scale` property; the globe canvas has no CSS animation.
 - **Gate:** `hero-space` › entrance checks the order, one animation per element, the properties
-  animated, that the card is last, the resting state and the header on a transition arrival.
+  animated, that the copy is at full opacity from the first frame and the largest paint comes before
+  `run`, that the card is last, the resting state and the header on a transition arrival.
 
 ## Drawn charts
 

@@ -797,7 +797,7 @@ typed in CSS. The reveal stagger is `--gmt-reveal-i`, set by `scroll-reveal.ts`.
   was inside; `handle.close(false)` shuts it without moving focus, for a press outside.
   `inertWhenOpen` names an element that is `inert` while the drawer is open
   (the hero's zoom stack). `closeClassName` places the close from the caller's module. `edgeControl`
-  (`builders/edge-control.ts`, APG Button) is the drawer's close and the carousel's chevron: a
+  (`builders/edge-control.ts`, APG Button) is the drawer's close: a
   1.5 x 5 rem bevelled tab with a `direction`. Both share `--drawer-glass` (void at .45, so a
   bright body behind still shows). In the hero the close is a pull tab on the pane: that glass,
   no border or bevel on its joining side, lapping the pane by 1px where a `mask` opens the pane's
@@ -2455,13 +2455,13 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `esc-cascade.mjs`.
 - **Which layer goes first** (`pickLayer`): a `focusOnly` layer (a `<details>` the reader is
   reading) counts only while focus is in it; a layer holding another open layer gives way to
-  the inner one; a layer named as another's `over` gives way to it; `base` layers (the landing's second panel) close only when nothing else is
-  open; the layers that hold focus go next; then the one opened last. Opening order is read
+  the inner one; a layer named as another's `over` gives way to it; the layers that hold focus
+  go next; then the one opened last. Opening order is read
   from `open`, `hidden`, `inert`, `aria-expanded` and `data-open` changes and from popover
   `toggle` events; a layer whose state lives in a closure or React calls `changed()`.
 - **Focus goes to the opener** (APG), never `<body>`. If the opener is `inert` or gone, focus
-  stays where it was. A layer that puts focus back itself (`returnsFocus`: the carousel, the
-  chat rail widget) is left to do it.
+  stays where it was. A layer that puts focus back itself (`returnsFocus`: the chat rail
+  widget) is left to do it.
 - **Native layers join without asking** (`lib/esc-native.ts`, rendered by `EscLayers.astro`
   from the header): every `[popover]` except `manual`, every `<dialog>` (the search, opener
   `site-search [data-open-modal]`) and every `<details>` outside a `nav` or `[data-esc-skip]`.
@@ -2469,8 +2469,13 @@ Shared hooks come first, then the globe, then the clock-change pages.
 - **React and Radix.** `useEscLayer` (`components/ask/use-esc-layer.ts`) registers a layer
   from page state. A Radix popover or menu is controlled by that state and ignores its own
   Escape (`onEscapeKeyDown` prevents it), so the helper alone decides the order.
-- **The landing's second panel is the lowest layer.** Escape returns to panel 1 with focus on
-  its heading (else its first control) and the carousel's announcement.
+- **The landing's carousel is not a layer.** The APG carousel pattern gives Escape no part, so
+  the cascade closes the popovers, the Settings panel and the drawer, keeps the zone card (the
+  drawer's selection) and leaves the page the reader turned to (`esc-cascade.mjs` checks it on
+  `/`).
+- **The zone card on a framed globe** (no drawer, `/tools/zoned-earth/`) is a layer only once
+  the reader has chosen a zone; the zone the globe starts on is shown, not opened, and Escape
+  passes it by (`globe-mount.ts`).
 - **Trap.** A new layer that listens for Escape on its own breaks the cascade: register it.
 
 ## Tier 3 · HUD chrome
@@ -2519,9 +2524,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`gmt-shell.css`), so the row is 30 px centred at 27, as there.
   - **The entrance on the landing** (`gmt-entrance-freeze.css`). The NorthGuild link is on
     screen from the first paint and never animates. "/ gmt v‹version›" freezes in at t0, then
-    search (0.15 s), Dox (0.23 s) and the theme toggle (0.31 s). GitHub (0.39 s) and Discord
-    (0.47 s) never hide: `ng-light` brightens the icon to the frost colour and shows the chip's
-    edge on the lock beat, and a glint crosses them. Reduced motion fades the four pieces that
+    search (0.15 s), Dox (0.23 s) and the theme toggle (0.31 s); GitHub and Discord never hide.
+    Dox and the theme toggle freeze in 1.35 s, not 1.6 s, so each has locked before its shine.
+    The four chips shine left to right, 0.16 s apart from 1.75 s: Dox, the theme toggle, GitHub,
+    Discord. `ng-shine` brightens the icon to the frost
+    colour and shows the chip's edge while a glint crosses it. Reduced motion fades the four pieces that
     freeze and leaves GitHub and Discord still; forced colours sweeps them. A view-transition
     arrival (`data-arrival="transition"`) keeps the whole bar still.
   - **The cross-site transition.** northguild.dev and Dox are one origin, so a click between them
@@ -2669,7 +2676,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `--gmt-hero-bay`) with
     the close on its top edge, turned to point down. The location card keeps clear of the
     close (`tooltipLimit`) or hides (`data-occluded`) when its pin is behind the drawer. The
-    close sits one layer above the region, since its joining edge laps the region by 1px.
+    card is a manual popover shown once at mount and hidden with `hidden`, so it is drawn in the
+    top layer above the header and its search box (which sit outside the page's stacking
+    context), placed in page pixels from the frame it hangs over, so it scrolls with the page
+    without being moved by script (no layout shift), and follows a resize or an inner scroll; a
+    popover or dialog opened later draws over it. A click on a region of the Earth selects and
+    centres the globe on the zone, as a list row does. The close sits one layer above the region, since its joining edge laps the region by 1px.
     The tab order on `/` is copy, globe, `+`, `−`, `⊙`, the magnifier, the info button, then the
     close and the drawer's contents when it is open. The drawer's region sits 16 px in from the
     hero's top and bottom side by side, and the sheet 16 px above the hero's bottom and in
@@ -2751,9 +2763,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
         (`.zoom:is(:focus-within, :has(:popover-open))`): a reader who tabs to it, or opens the
         credits, before the dawn ends never meets an invisible control or a panel inside a hidden
         ancestor.
-      - **CSS** (`gmt-entrance-freeze.css`, in `gmt.controls`): holds under `wait`, the freeze
-        keyframes, the sky fades (keyed on `run` and `data-sky="ready"`), the card pop and the
-        reduced-motion and forced-colours variants. `HeroCopy.astro` writes `--ng-i` on each button.
+      - **CSS** (`gmt-entrance-freeze.css`, in `gmt.controls`): holds the buttons, the pager and
+        the sky under `wait`; the freeze keyframes, the sky fades (keyed on `run` and
+        `data-sky="ready"`), the card pop and the reduced-motion and forced-colours variants. The
+        copy (the eyebrow, the title and the tagline) is never held: it paints at the first paint
+        at full opacity, the page's largest paint, and its freeze (`ng-freeze-text`, keyed on
+        `wait` or `run`, so the change to `run` does not restart it) sweeps over text already
+        there: frost colour under a mask with a 50 % floor, locking to ice as the front crosses.
+        The eyebrow and title start at once, the tagline 0.12 s later; reduced motion shows the copy
+        still. Everything else starts at `run`. `HeroCopy.astro` writes `--ng-i` on each button.
         The globe's control stack and the first location card take the hero buttons' frost and
         glint: the stack's buttons from the moment `data-ready` arms them, top to bottom, 0.06 s
         apart; the card with its pop, its glint crossing as the pop settles. Both are keyed on
