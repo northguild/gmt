@@ -237,12 +237,14 @@ export function renderDurationParserBenchTemplate(
 
   const reads = section(
     { id: id("reads"), heading: "2. What it reads as", level: 4 },
-    html`<div class="${styles.parser}">
-        <div class="${styles.badgeSlot}" id="${id("parser")}">
-          ${parserBadge("idle")}
-        </div>
-        ${resultOutput({ id: id("result"), label: "Parsed duration", className: styles.result })}
-      </div>
+    html`${grow(
+      html`<div class="${styles.parser}">
+          <div class="${styles.badgeSlot}" id="${id("parser")}">
+            ${parserBadge("idle")}
+          </div>
+          ${resultOutput({ id: id("result"), label: "Parsed duration", className: styles.result })}
+        </div>`,
+    )}
       <p class="${styles.refusal}" id="${id("refusal")}"></p>
       <p class="${styles.chain}">
         A caller who takes either form writes
@@ -251,9 +253,11 @@ export function renderDurationParserBenchTemplate(
       <div class="${styles.slot}" id="${id("strip")}">
         ${stripOf(blankCells())}
       </div>
-      <div class="${styles.slot}" id="${id("facts")}">
-        ${factsOf(notCalled(), notCalled(), notCalled())}
-      </div>
+      ${grow(
+        html`<div class="${styles.slot}" id="${id("facts")}">
+          ${factsOf(notCalled(), notCalled(), notCalled())}
+        </div>`,
+      )}
       ${grow(html`<div id="${id("calls")}">${callFrame()}</div>`)}
       ${grow(
         html`<div id="${id("returned")}">

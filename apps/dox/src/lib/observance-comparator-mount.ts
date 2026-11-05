@@ -108,6 +108,7 @@ import {
   type HolidayCell,
   type ObservanceComparatorArgs,
   type YearRow,
+  yearSpan,
 } from "./observance-comparator";
 import { setToolLink } from "./widget-ui";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
@@ -283,6 +284,9 @@ function matrixOf(
     rows,
     bodyRows: MAX_YEARS,
     holidays: model?.holidays.length ?? state.holidays.length,
+    ...(model === null
+      ? { skeleton: yearSpan(state.from, state.to).years?.length ?? 0 }
+      : {}),
     selectedYear: model ? selectedYear(model, state) : null,
     selectedColumn: model ? selectedColumn(model, state) : 0,
   });

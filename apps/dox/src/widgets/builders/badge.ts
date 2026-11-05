@@ -6,7 +6,8 @@
  * `tone` is a typed union. Each tone's ink is a `--gmt-*-ink` token, which holds
  * 7:1 on `--gmt-surface-widget` in both themes; the tone colour paints only the
  * border. Amber is the sentinel's alone (invariant 8), so there is no amber tone.
- * `dim` is the quiet variant for a secondary label.
+ * `dim` is the quiet variant for a secondary label. `wrap` lets a badge that sits in a table cell
+ * break at its spaces, so the column is as wide as its longest word; it never breaks inside a word.
  */
 import { html, type SafeHtml } from "./html";
 import styles from "./badge.module.css";
@@ -18,10 +19,11 @@ export interface BadgeOptions {
   text: string;
   tone: BadgeTone;
   dim?: boolean;
+  wrap?: boolean;
 }
 
 export function badge(o: BadgeOptions): SafeHtml {
-  return html`<span class="${styles.root}" data-tone="${o.tone}" data-dim="${String(o.dim === true)}"
+  return html`<span class="${styles.root}" data-tone="${o.tone}" data-dim="${String(o.dim === true)}" data-wrap="${String(o.wrap === true)}"
     >${o.text}</span
   >`;
 }

@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/dom";
-import { expectNoAxeViolations } from "~/test/render-widget";
+import {
+  blankBlockCount,
+  expectNoAxeViolations,
+  skeletonRows,
+} from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { compareMatrix, type MatrixBlock } from "./compare-matrix";
 
@@ -100,5 +104,51 @@ describe("compareMatrix", () => {
   it("has no axe violations", async () => {
     const { host } = renderHtml(compareMatrix(options));
     await expectNoAxeViolations(host);
+  });
+
+  describe("before the library has answered", () => {
+    const skeleton = { ...options, rows: [], holidays: 3, skeleton: 2 };
+
+    it("says it is busy, in words and to assistive technology", () => {
+      renderHtml(compareMatrix(skeleton));
+      expect(screen.getByRole("table", { hidden: true })).toHaveAttribute(
+        "aria-busy",
+        "true",
+      );
+      expect(screen.getByRole("status")).toHaveTextContent(/^Loading /);
+    });
+
+    // A skeleton card and a padding row are aria-hidden table rows; roles still find them with
+    // `hidden`, and the rows below the header are the body.
+    const bodyRows = (): HTMLElement[] =>
+      within(screen.getByRole("table", { hidden: true }))
+        .getAllByRole("row", { hidden: true })
+        .slice(1);
+
+    it("lays out a card for each row the loaded table will have, one block per holiday", () => {
+      const { host } = renderHtml(compareMatrix(skeleton));
+      expect(skeletonRows(host)).toHaveLength(skeleton.skeleton);
+      for (const row of bodyRows()) {
+        const cells = within(row).getAllByRole("cell", { hidden: true });
+        expect(cells).toHaveLength(options.columns.length);
+        for (const c of cells) {
+          expect(blankBlockCount(c)).toBe(skeleton.holidays);
+        }
+      }
+    });
+
+    it("keeps the padding rows a loaded table has, and hides all of them from a reader", () => {
+      renderHtml(compareMatrix(skeleton));
+      const rows = bodyRows();
+      expect(rows).toHaveLength(options.bodyRows);
+      for (const row of rows)
+        expect(row).toHaveAttribute("aria-hidden", "true");
+    });
+
+    it("is not busy once rows are loaded", () => {
+      renderHtml(compareMatrix(options));
+      expect(screen.getByRole("table")).not.toHaveAttribute("aria-busy");
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
   });
 });

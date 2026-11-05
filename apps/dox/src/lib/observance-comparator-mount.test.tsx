@@ -16,6 +16,8 @@ import {
   expectNoAxeViolations,
   renderWidget,
   type RenderedWidget,
+  blankBlockCount,
+  skeletonRows,
 } from "~/test/render-widget";
 import { spyOnResizeObservers } from "~/test/resize-observer-spy";
 import { readArgs as readBuilderArgs } from "./holiday-rule-builder";
@@ -26,8 +28,13 @@ import {
   MAX_HOLIDAYS,
   MAX_YEARS,
   MIN_COLUMNS,
+  compare,
+  presetState,
   readArgs,
 } from "./observance-comparator";
+import { renderObservanceComparatorTemplate } from "./observance-comparator-mount";
+import { lib } from "~/test/holiday-lib";
+import { renderHtml } from "~/widgets/test-fixture";
 import { seedFromLocation } from "./widget-permalink";
 
 installJsdomShims();
@@ -450,5 +457,25 @@ describe("the permalink and the words", () => {
   it("names no place", async () => {
     const { root } = await mount();
     expect(unexpectedCapitalised(textLines(root))).toEqual([]);
+  });
+});
+
+describe("the server render", () => {
+  it("lays out the default's cards before the library answers, so the matrix does not grow", () => {
+    const model = compare(lib, presetState(COMPARATOR_PRESETS[0]!));
+    const { host } = renderHtml(renderObservanceComparatorTemplate("oc"));
+    expect(skeletonRows(host)).toHaveLength(model.rows.length);
+    // The rows are aria-hidden, so roles find them with `hidden`; the first is the header.
+    const cards = within(screen.getByRole("table", { hidden: true }))
+      .getAllByRole("row", { hidden: true })
+      .slice(1, 1 + model.rows.length);
+    expect(cards).toHaveLength(model.rows.length);
+    for (const card of cards) {
+      const cells = within(card).getAllByRole("cell", { hidden: true });
+      expect(cells).toHaveLength(model.columns.length);
+      for (const c of cells) {
+        expect(blankBlockCount(c)).toBe(model.holidays.length);
+      }
+    }
   });
 });

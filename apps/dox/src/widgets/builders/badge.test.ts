@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { screen } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
@@ -9,6 +11,22 @@ describe("badge", () => {
     renderHtml(badge({ text: "Cut-off 17:00", tone: "cyan" }));
     expect(screen.getByText("Cut-off 17:00")).toBeVisible();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("breaks at its spaces only when asked to", () => {
+    const css = readFileSync(
+      join(import.meta.dirname, "badge.module.css"),
+      "utf8",
+    );
+    expect(css).toMatch(/\[data-wrap="true"\]\s*\{[^}]*white-space:\s*normal/);
+    renderHtml(
+      badge({
+        text: "Occurs twice: the earlier instant",
+        tone: "purple",
+        wrap: true,
+      }),
+    );
+    expect(screen.getByText("Occurs twice: the earlier instant")).toBeVisible();
   });
 
   it("escapes its text", () => {

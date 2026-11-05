@@ -18,6 +18,9 @@ import styles from "./edi-table.module.css";
 
 type IdOf = (local: string) => string;
 
+/** What a strip cell holds before a value is written: a no-break space, so the cell keeps its line. */
+const NBSP = "\u00a0";
+
 interface MemberRowSpec {
   key: string;
   label: string;
@@ -89,7 +92,7 @@ function zoneOptions(selected: string): { value: string; label: string }[] {
 }
 
 function cell(id: string, width: number): SafeHtml {
-  return html`<span class="${styles.cell}" id="${id}" style="--w:${width}ch"></span>`;
+  return html`<span class="${styles.cell}" id="${id}" style="--w:${width}ch">${NBSP}</span>`;
 }
 
 /** The strip: row number, zone choice, the instant, its offset and the third column. */
@@ -123,7 +126,7 @@ export function zoneStrip(o: ZoneStripOptions): SafeHtml {
   });
 }
 
-/** Writes a strip cell: plain text, or the sentinel in words. */
+/** Writes a strip cell: plain text, or the sentinel in words. An empty text leaves the line held. */
 export function setStripCell(
   cellEl: HTMLElement,
   text: string,
@@ -133,5 +136,5 @@ export function setStripCell(
     setHtml(cellEl, html`<span class="${styles.lost}">${text}</span>`);
     return;
   }
-  cellEl.textContent = text;
+  cellEl.textContent = text === "" ? NBSP : text;
 }

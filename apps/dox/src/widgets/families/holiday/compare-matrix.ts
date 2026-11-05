@@ -14,8 +14,14 @@
  * Ids: `${id}-col-${j}`, `${id}-year-${year}` and `${id}-cell-${year}-${j}`.
  * A row that disagrees is marked by its word and by a hatch, never by colour alone. Under
  * 34rem of table width each year stacks into a labelled card.
+ *
+ * Before the library has answered there are no rows. `skeleton` is the number of rows the
+ * loaded table will have, and that many placeholders stay laid out as cards under 34rem (the
+ * rest, which only pad a short span, are hidden there), so the table does not grow when the
+ * rows arrive. The table is `aria-busy` and a status line says it is loading.
  */
 import { html, type SafeHtml } from "../../builders/html";
+import { loading } from "../../builders/loading";
 import styles from "./compare-matrix.module.css";
 
 /** What a block says when the library could not place it. */
@@ -59,6 +65,8 @@ interface CompareMatrixOptions {
   selectedColumn: number;
   /** The label of the column header's corner. */
   corner?: string;
+  /** No rows are loaded yet: how many rows the loaded table will have. */
+  skeleton?: number;
 }
 
 function block(b: MatrixBlock): SafeHtml {
@@ -95,7 +103,8 @@ function blankBlock(): SafeHtml {
 
 export function compareMatrix(o: CompareMatrixOptions): SafeHtml {
   const pad = Math.max(0, o.bodyRows - o.rows.length);
-  return html`<table class="${styles.table}"
+  const busy = o.skeleton !== undefined;
+  const table = html`<table class="${styles.table}" ${busy ? html`aria-busy="true"` : ""}
     ><caption class="${styles.caption}">${o.caption}</caption
     ><thead
       ><tr
@@ -145,8 +154,8 @@ export function compareMatrix(o: CompareMatrixOptions): SafeHtml {
         >`;
       })}${Array.from(
         { length: pad },
-        () =>
-          html`<tr data-placeholder aria-hidden="true" inert
+        (_, i) =>
+          html`<tr data-placeholder ${i < (o.skeleton ?? 0) ? html`data-skeleton` : ""} aria-hidden="true" inert
             ><th class="${styles.year}" scope="row"
               ><span class="${styles.yearButton}"> </span><span class="${styles.agree}"> </span></th
             >${o.columns.map(
@@ -161,4 +170,7 @@ export function compareMatrix(o: CompareMatrixOptions): SafeHtml {
       )}</tbody
     ></table
   >`;
+  return busy
+    ? html`<div class="${styles.frame}">${table}<div class="${styles.busy}">${loading({ title: "the matrix" })}</div></div>`
+    : table;
 }

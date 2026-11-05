@@ -36,6 +36,8 @@ import {
   raw,
   section,
   select,
+  selectOptions,
+  type SelectOption,
   setHtml,
   swatch,
   table,
@@ -144,15 +146,14 @@ const LEGEND = [
  *  row already holds. `current` is always an option, because a permalink may carry an offset
  *  for a row whose printed time has since changed, and a `<select>` drops a value it has no
  *  option for. */
-function offsetOptions(choices: OffsetChoice[], current: string): SafeHtml {
+function offsetOptions(
+  choices: OffsetChoice[],
+  current: string,
+): SelectOption[] {
   const list = choices.length === 0 ? [{ value: "", label: "None" }] : choices;
-  const all = list.some((c) => c.value === current)
+  return list.some((c) => c.value === current)
     ? list
     : [...list, { value: current, label: current }];
-  return html`${all.map(
-    (c) =>
-      html`<option value="${c.value}" ${c.value === current ? html`selected` : ""}>${c.label}</option>`,
-  )}`;
 }
 
 /** A hidden sizer: its text is a `data-t` attribute drawn by `::before`, so it is never in
@@ -236,9 +237,12 @@ export function renderTimetableReaderTemplate(
             id: id(`offset-${n}`),
             label: "Offset (optional)",
             control: ({ id: cid }) =>
-              html`<select class="${styles.offset}" id="${cid}" aria-describedby="${id(`why-${n}`)}"
-                >${offsetOptions([], row.offset)}</select
-              >`,
+              select({
+                id: cid,
+                options: offsetOptions([], row.offset),
+                value: row.offset,
+                describedBy: id(`why-${n}`),
+              }),
           },
         )}`,
       )}
@@ -402,6 +406,7 @@ function rowsTable(
           ? html``
           : badge({
               text: r.note,
+              wrap: true,
               tone: /twice|repeat|earlier|later/i.test(r.note)
                 ? "purple"
                 : "neutral",
@@ -849,7 +854,10 @@ function setupWidget(
       const offsetEl = offsetEls[i]!;
       const row = s.rows[i]!;
       const choices = offsetChoices(row.departure, s.startTimeZone, lib);
-      const markup = offsetOptions(choices, row.offset);
+      const markup = selectOptions(
+        offsetOptions(choices, row.offset),
+        row.offset,
+      );
       if (offsetEl.dataset["options"] !== markup.toString()) {
         offsetEl.dataset["options"] = markup.toString();
         setHtml(offsetEl, markup);

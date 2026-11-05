@@ -39,6 +39,10 @@
     --gmt-badge-ink: var(--gmt-danger-ink);
   }
 
+  &[data-wrap="true"] {
+    white-space: normal;
+  }
+
   &[data-dim="true"] {
     --gmt-badge-ink: var(--gmt-ice-dim);
 

@@ -18,7 +18,7 @@
  */
 import { html, type SafeHtml } from "../../builders/html";
 import { instant } from "../../builders/instant";
-import { hold } from "./hold";
+import { hold } from "../../builders/hold";
 import { NO_SIGNAL_PILL } from "./instant-hero";
 import styles from "./format-card.module.css";
 

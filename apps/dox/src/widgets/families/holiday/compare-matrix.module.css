@@ -4,6 +4,18 @@
  * an accent edge is never a single side.
  */
 
+/* The skeleton's frame: the status line sits over the hidden rows and takes no room. */
+.frame {
+  position: relative;
+}
+
+.busy {
+  position: absolute;
+  inset-block-start: 3rem;
+  inset-inline: 0;
+  pointer-events: none;
+}
+
 .table {
   container-type: inline-size;
   display: table;
@@ -223,7 +235,9 @@
     border-radius: var(--gmt-radius-sm);
     corner-shape: bevel;
 
-    &[data-placeholder] {
+    /* Padding rows vanish in a card layout; a skeleton row is laid out and unseen, so the
+       cards the loaded table draws have their room already. */
+    &[data-placeholder]:not([data-skeleton]) {
       display: none;
     }
   }

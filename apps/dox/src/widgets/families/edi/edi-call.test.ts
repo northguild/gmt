@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { screen } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
@@ -106,5 +108,22 @@ describe("outputHold", () => {
       }),
     ).not.toBeInTheDocument();
     await expectNoAxeViolations(host);
+  });
+});
+
+describe("the result pane's reserved box", () => {
+  it("keeps the same scroll track as the pane it stands in for", () => {
+    const read = (name: string) =>
+      readFileSync(join(import.meta.dirname, name), "utf8");
+    const track = (css: string, selector: RegExp) => css.match(selector)![1];
+    const ghost = track(
+      read("edi-call.module.css"),
+      /\.outputGhost \{[^}]*?overflow-x:\s*(\w+)/,
+    );
+    const pane = track(
+      read("../gnss/call-output.module.css"),
+      /\.output \{[\s\S]*?overflow-x:\s*(\w+)/,
+    );
+    expect(ghost).toBe(pane);
   });
 });

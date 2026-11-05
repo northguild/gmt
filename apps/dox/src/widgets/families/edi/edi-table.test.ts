@@ -97,6 +97,18 @@ describe("zoneStrip", () => {
     );
   });
 
+  it("holds a line in every cell before a value is written", () => {
+    renderHtml(strip("With offset"));
+    const table = screen.getByRole("table");
+    for (const column of ["Instant", "Offset", "With offset"]) {
+      for (const c of cellsInColumn(table, column)) {
+        // An empty inline-block has no line of its own, so the row would grow by one
+        // line when the first value lands.
+        expect(c).not.toBeEmptyDOMElement();
+      }
+    }
+  });
+
   it("writes a cell as text, and the sentinel in words", () => {
     renderHtml(strip("With offset"));
     const table = screen.getByRole("table");
@@ -105,5 +117,13 @@ describe("zoneStrip", () => {
     setStripCell(instants[1]!, "NO SIGNAL", true);
     expect(within(table).getByText("2024-06-15T12:30:00Z")).toBeInTheDocument();
     expect(within(table).getByText("NO SIGNAL")).toBeInTheDocument();
+  });
+
+  it("keeps the line when a strip cell is cleared", () => {
+    renderHtml(strip("With offset"));
+    const cell = cellsInColumn(screen.getByRole("table"), "Instant")[0]!;
+    setStripCell(cell, "2024-06-15T12:30:00Z");
+    setStripCell(cell, "");
+    expect(cell).not.toBeEmptyDOMElement();
   });
 });
