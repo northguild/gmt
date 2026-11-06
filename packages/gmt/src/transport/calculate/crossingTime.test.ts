@@ -13,7 +13,7 @@ const exit = "2024-06-16T01:00:00Z";
 
 describe("crossingTime", () => {
   // Expected values derived by hand (whole hours on one UTC day) and confirmed against plain
-  // @js-temporal/polyfill: Instant.until(largestUnit "hours") and toZonedDateTimeISO(targetZone).
+  // temporal-polyfill 1.0.8: Instant.until(largestUnit "hours") and toZonedDateTimeISO(targetZone).
   it.each`
     entry                                            | exit                                 | targetZone         | duration            | enter                                         | exitLocal
     ${"2024-06-15T08:00:00Z"}                        | ${"2024-06-15T17:30:00Z"}            | ${"Europe/Berlin"} | ${"PT9H30M"}        | ${"2024-06-15T10:00:00+02:00[Europe/Berlin]"} | ${"2024-06-15T19:30:00+02:00[Europe/Berlin]"}

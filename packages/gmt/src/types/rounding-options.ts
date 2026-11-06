@@ -1,11 +1,15 @@
-import type { Temporal } from "../internal/temporal";
+import type {
+  DateTimeUnit,
+  RoundingMode,
+  SmallestUnit,
+} from "../internal/temporalTypes";
 
 /**
  * How a difference is rounded, as the rounding options of Temporal's `until()` and `since()`
  * (`Temporal.PlainDate.prototype.until(other, options)`). `Unit` is the set of units the values
  * being compared have: date units for dates, time units for times.
  */
-export type RoundingOptions<Unit extends Temporal.DateTimeUnit> = {
+export type RoundingOptions<Unit extends DateTimeUnit> = {
   /**
    * The smallest unit kept in the difference; anything smaller is rounded into it. It may not be
    * larger than the largest unit asked for.
@@ -13,7 +17,7 @@ export type RoundingOptions<Unit extends Temporal.DateTimeUnit> = {
    * @defaultValue None. The difference is not rounded: Temporal uses the smallest unit the
    * values have, `"day"` for dates and `"nanosecond"` otherwise.
    */
-  smallestUnit?: Temporal.SmallestUnit<Unit>;
+  smallestUnit?: SmallestUnit<Unit>;
   /**
    * The step the smallest unit is rounded to, so `15` with `"minute"` rounds to a quarter of an
    * hour. For a time unit it must divide the next larger unit evenly and be smaller than it (`15`
@@ -30,5 +34,5 @@ export type RoundingOptions<Unit extends Temporal.DateTimeUnit> = {
    *
    * @defaultValue `"trunc"`, Temporal's default for a difference.
    */
-  roundingMode?: Temporal.RoundingMode;
+  roundingMode?: RoundingMode;
 };

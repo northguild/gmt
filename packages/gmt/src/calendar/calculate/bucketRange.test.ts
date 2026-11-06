@@ -10,7 +10,8 @@ const rangeStart = "2024-06-15T03:00:00Z";
 const rangeEnd = "2024-06-18T03:00:00Z";
 const units: readonly ZoneBucketUnit[] = ["hour", "day", "week", "month"];
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, recomputed directly on temporal-polyfill 1.0.8
+// (`startOfDay()` and wall-clock labels), not through GMT.
 const dayBucketsByZone = {
   UTC: [
     "2024-06-15T00:00:00Z",
@@ -272,7 +273,7 @@ describe("bucketRange", () => {
 
   // Havana fell back 01:00 -> 00:00 on 2024-11-03, repeating midnight on the same date. The date
   // label never changes, so that is one 25-hour day (matching Temporal's `hoursInDay`), not two
-  // buckets. Expected values are Temporal's `startOfDay()` per date on @js-temporal/polyfill@0.5.1.
+  // buckets. Expected values are Temporal's `startOfDay()` per date on temporal-polyfill 1.0.8.
   it.each`
     start                     | end                       | unit      | expected                                                                    | description
     ${"2024-11-03T03:00:00Z"} | ${"2024-11-04T06:00:00Z"} | ${"day"}  | ${["2024-11-02T04:00:00Z", "2024-11-03T04:00:00Z", "2024-11-04T05:00:00Z"]} | ${"the repeated midnight stays inside one day"}

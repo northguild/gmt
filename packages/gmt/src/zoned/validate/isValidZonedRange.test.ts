@@ -130,7 +130,7 @@ describe("isValidZonedRange", () => {
 });
 
 // The strict-shape rule (see coding-standards), applied to zoned strings: each endpoint must have GMT's strict ISO 8601
-// extended shape before its first `[`, as `isValidZonedDateTime` requires. Polyfill 0.5.1 reads
+// extended shape before its first `[`, as `isValidZonedDateTime` requires. `temporal-polyfill` 1.0.8 reads
 // every lenient spelling below as a valid ZonedDateTime earlier than `value2`.
 describe("isValidZonedRange requires GMT's strict extended shape", () => {
   it.each`

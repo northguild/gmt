@@ -92,7 +92,7 @@ describe("intervalLengthZoned", () => {
 
 // ---------------------------------------------------------------------------------------------
 // E7 (issue #152), D5-zoned. Every expected value produced by running
-// @js-temporal/polyfill@0.5.1 — see the R2 note below for why that matters more here than usual.
+// temporal-polyfill 1.0.8 — see the R2 note below for why that matters more here than usual.
 // ---------------------------------------------------------------------------------------------
 // Temporal DifferenceTemporalZonedDateTime: a largestUnit of day or larger across two zones that are
 // not TimeZoneEquals throws RangeError ("day lengths can vary between time zones"), so the calendar
@@ -203,17 +203,17 @@ describe("intervalLengthZoned at the maximum instant", () => {
   });
 });
 
-// CORE-6 S5/S7: the length in a calendar unit is `Duration#total` relative to the start, which
+// S5/S7: the length in a calendar unit is `Duration#total` relative to the start, which
 // follows TC39 DifferenceZonedDateTimeWithTotal in the start's calendar. Values: Chromium 153
 // native `start.until(end, { largestUnit }).total({ unit, relativeTo: start })`; null where
 // Chromium throws.
 describe("intervalLengthZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     start                                               | end                                                 | unit        | expected              | reason
-    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"months"} | ${1}                  | ${"D6: the 1-month window ends exactly on the end"}
+    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"months"} | ${1}                  | ${"month-end overshoot: the 1-month window ends exactly on the end"}
     ${"1000-01-31T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"1000-02-28T00:00:00+00:00[UTC][u-ca=buddhist]"}  | ${"months"} | ${1}                  | ${"proleptic buddhist: Jan 31 + 1 month is Feb 28 in ISO 1000"}
     ${"-100000-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"-100000-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"months"} | ${1.3666666666666667} | ${"hebrew year <= 0: 1 month and 11 of M07's 30 days"}
-    ${"+275760-07-06T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"months"} | ${null}               | ${"D1: the third month's window ends past the maximum"}
+    ${"+275760-07-06T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"} | ${"months"} | ${null}               | ${"range limit: the third month's window ends past the maximum"}
   `(
     "returns $expected $unit from $start to $end ($reason)",
     ({ start, end, unit, expected }) => {

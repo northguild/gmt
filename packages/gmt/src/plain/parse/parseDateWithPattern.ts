@@ -122,6 +122,7 @@ export function parseDateWithPattern(
       // the date is real: `overflow: "reject"` throws instead of silently
       // clamping Feb 31 to Feb 29, which is what the default "constrain"
       // would do.
+      if (fields.day === undefined) return "";
       return Temporal.PlainDate.from(
         { year: fields.year, month: fields.month, day: fields.day },
         { overflow: "reject" },

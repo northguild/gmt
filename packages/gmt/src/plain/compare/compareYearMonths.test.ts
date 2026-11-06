@@ -27,7 +27,7 @@ describe("compareYearMonths", () => {
     a                          | b               | expected | why
     ${"2026-10"}               | ${"2026-10"}    | ${0}     | ${"same value"}
     ${"+002026-10"}            | ${"2026-10"}    | ${0}     | ${"six-digit form"}
-    ${"2026-10[u-ca=ISO8601]"} | ${"2026-10"}    | ${0}     | ${"D20 upper-case calendar"}
+    ${"2026-10[u-ca=ISO8601]"} | ${"2026-10"}    | ${0}     | ${"upper-case calendar id"}
     ${"2026-10[Europe/Paris]"} | ${"2026-10"}    | ${0}     | ${"zone annotation ignored"}
     ${"2026-09"}               | ${"2026-10"}    | ${-1}    | ${"month"}
     ${"2026-10"}               | ${"2026-09"}    | ${1}     | ${"month, reversed"}

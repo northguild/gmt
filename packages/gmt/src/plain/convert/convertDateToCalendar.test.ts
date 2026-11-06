@@ -70,14 +70,13 @@ describe("convertDateToCalendar", () => {
   );
 
   // test262 intl402/Temporal/PlainDate/from/extreme-dates.js: both TC39 limits in every calendar.
-  // The string round-trips, and the date it names reads back the test262 fields. "ethiopic" and
-  // "coptic" compute in "ethioaa", so their row reads the ethioaa year of the same date.
+  // The string round-trips, and the date it names reads back the test262 fields.
   it.each`
     calendar              | minYear    | minMonthCode | minDay | maxYear   | maxMonthCode | maxDay
     ${"buddhist"}         | ${-271278} | ${"M04"}     | ${19}  | ${276303} | ${"M09"}     | ${13}
-    ${"coptic"}           | ${-266323} | ${"M03"}     | ${23}  | ${281247} | ${"M05"}     | ${22}
+    ${"coptic"}           | ${-272099} | ${"M03"}     | ${23}  | ${275471} | ${"M05"}     | ${22}
     ${"ethioaa"}          | ${-266323} | ${"M03"}     | ${23}  | ${281247} | ${"M05"}     | ${22}
-    ${"ethiopic"}         | ${-266323} | ${"M03"}     | ${23}  | ${281247} | ${"M05"}     | ${22}
+    ${"ethiopic"}         | ${-271823} | ${"M03"}     | ${23}  | ${275747} | ${"M05"}     | ${22}
     ${"gregory"}          | ${-271821} | ${"M04"}     | ${19}  | ${275760} | ${"M09"}     | ${13}
     ${"hebrew"}           | ${-268058} | ${"M11"}     | ${4}   | ${279517} | ${"M09"}     | ${11}
     ${"indian"}           | ${-271899} | ${"M01"}     | ${29}  | ${275682} | ${"M06"}     | ${22}
@@ -98,8 +97,6 @@ describe("convertDateToCalendar", () => {
       maxMonthCode,
       maxDay,
     }) => {
-      const readId =
-        calendar === "ethiopic" || calendar === "coptic" ? "ethioaa" : calendar;
       for (const [iso, year, monthCode, day] of [
         ["-271821-04-19", minYear, minMonthCode, minDay],
         ["+275760-09-13", maxYear, maxMonthCode, maxDay],
@@ -109,7 +106,7 @@ describe("convertDateToCalendar", () => {
         expect(convertDateToCalendar(converted, "iso8601")).toBe(iso);
         const fields = calendarFieldsOf(
           Temporal.PlainDate.from(converted.slice(0, iso.length)),
-          readId,
+          calendar,
         );
         expect([fields.year, fields.monthCode, fields.day]).toEqual([
           year,
@@ -121,31 +118,30 @@ describe("convertDateToCalendar", () => {
   );
 
   // tc39/proposal-temporal#3329: far-year month 13 (5 days in a common year) in the Coptic family.
-  // Expected fields: Chromium 153 native Temporal. GMT reads "coptic" and "ethiopic" in "ethioaa",
-  // whose year is the calendar's own plus 5776 (coptic) or 5500 (ethiopic), as at both limits.
+  // Expected fields: Chromium 153 native Temporal.
   it.each`
-    iso                | calendar      | year     | monthCode | day   | ethioaaYear
-    ${"+012704-11-25"} | ${"coptic"}   | ${12420} | ${"M12"}  | ${30} | ${18196}
-    ${"+012704-11-26"} | ${"coptic"}   | ${12420} | ${"M13"}  | ${1}  | ${18196}
-    ${"+012704-11-30"} | ${"coptic"}   | ${12420} | ${"M13"}  | ${5}  | ${18196}
-    ${"+012704-12-01"} | ${"coptic"}   | ${12421} | ${"M01"}  | ${1}  | ${18197}
-    ${"+012704-11-25"} | ${"ethiopic"} | ${12696} | ${"M12"}  | ${30} | ${18196}
-    ${"+012704-11-26"} | ${"ethiopic"} | ${12696} | ${"M13"}  | ${1}  | ${18196}
-    ${"+012704-11-30"} | ${"ethiopic"} | ${12696} | ${"M13"}  | ${5}  | ${18196}
-    ${"+012704-12-01"} | ${"ethiopic"} | ${12697} | ${"M01"}  | ${1}  | ${18197}
-    ${"+012704-11-25"} | ${"ethioaa"}  | ${18196} | ${"M12"}  | ${30} | ${18196}
-    ${"+012704-11-26"} | ${"ethioaa"}  | ${18196} | ${"M13"}  | ${1}  | ${18196}
-    ${"+012704-11-30"} | ${"ethioaa"}  | ${18196} | ${"M13"}  | ${5}  | ${18196}
-    ${"+012704-12-01"} | ${"ethioaa"}  | ${18197} | ${"M01"}  | ${1}  | ${18197}
+    iso                | calendar      | year     | monthCode | day
+    ${"+012704-11-25"} | ${"coptic"}   | ${12420} | ${"M12"}  | ${30}
+    ${"+012704-11-26"} | ${"coptic"}   | ${12420} | ${"M13"}  | ${1}
+    ${"+012704-11-30"} | ${"coptic"}   | ${12420} | ${"M13"}  | ${5}
+    ${"+012704-12-01"} | ${"coptic"}   | ${12421} | ${"M01"}  | ${1}
+    ${"+012704-11-25"} | ${"ethiopic"} | ${12696} | ${"M12"}  | ${30}
+    ${"+012704-11-26"} | ${"ethiopic"} | ${12696} | ${"M13"}  | ${1}
+    ${"+012704-11-30"} | ${"ethiopic"} | ${12696} | ${"M13"}  | ${5}
+    ${"+012704-12-01"} | ${"ethiopic"} | ${12697} | ${"M01"}  | ${1}
+    ${"+012704-11-25"} | ${"ethioaa"}  | ${18196} | ${"M12"}  | ${30}
+    ${"+012704-11-26"} | ${"ethioaa"}  | ${18196} | ${"M13"}  | ${1}
+    ${"+012704-11-30"} | ${"ethioaa"}  | ${18196} | ${"M13"}  | ${5}
+    ${"+012704-12-01"} | ${"ethioaa"}  | ${18197} | ${"M01"}  | ${1}
   `(
-    "round-trips far-year $iso in $calendar ($year-$monthCode-$day, ethioaa year $ethioaaYear)",
-    ({ iso, calendar, monthCode, day, ethioaaYear }) => {
+    "round-trips far-year $iso in $calendar ($year-$monthCode-$day)",
+    ({ iso, calendar, year, monthCode, day }) => {
       const converted = convertDateToCalendar(iso, calendar);
       expect(converted).toBe(`${iso}[u-ca=${calendar}]`);
       expect(convertDateToCalendar(converted, "iso8601")).toBe(iso);
-      const fields = calendarFieldsOf(Temporal.PlainDate.from(iso), "ethioaa");
+      const fields = calendarFieldsOf(Temporal.PlainDate.from(iso), calendar);
       expect([fields.year, fields.monthCode, fields.day]).toEqual([
-        ethioaaYear,
+        year,
         monthCode,
         day,
       ]);

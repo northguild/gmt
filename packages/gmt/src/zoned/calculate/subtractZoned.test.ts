@@ -400,8 +400,8 @@ describe("subtractZoned at the maximum instant", () => {
   );
 });
 
-// CORE-6 S5: a calendar-unit subtraction near the minimum instant. The polyfill's fields -> ISO
-// conversion probes outside the legacy Date range there (D1). Values: Chromium 153 native Temporal,
+// S5: a calendar-unit subtraction near the minimum instant. The polyfill's fields -> ISO
+// conversion probes outside the legacy Date range there (range limit). Values: Chromium 153 native Temporal,
 // ISO -271820-05-23T12:00 minus 1 islamic-civil year is -271821-06-03T12:00, read as -280803|M05|7
 // and -280804|M05|7.
 describe("subtractZoned in non-ISO calendars (CORE-6)", () => {

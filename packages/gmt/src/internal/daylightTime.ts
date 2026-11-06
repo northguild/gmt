@@ -149,7 +149,7 @@ function isUndoneFrom(
  *
  * Cost: one transition lookup forward, then one back, and more only outside the ordinary summer
  * case. A paired change is less than 365 days away, so every lookup is given that limit and reads
- * no further: with GMT's own search (temporalCompat D13) at most 74 offset samples and 51 reads to
+ * no further: with GMT's own search at most 74 offset samples and 51 reads to
  * pin a change, for any zone and any instant.
  *
  * @param zoned the instant, in the zone to read

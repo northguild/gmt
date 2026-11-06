@@ -1,5 +1,5 @@
+import { Temporal } from "../../internal/temporal";
 import { readLengthUnits } from "../../internal/lengthFromNow";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 import { subtractFromZoned } from "../../internal/zonedWallClockOperations";
 import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
@@ -48,7 +48,7 @@ export function getZonedAgo(
       return "";
     }
 
-    return subtractFromZoned(nowZonedDateTimeISO(timeZone), amounts, {
+    return subtractFromZoned(Temporal.Now.zonedDateTimeISO(timeZone), amounts, {
       overflow: "constrain",
     }).toString({ smallestUnit: "second", roundingMode: "floor" });
   } catch {

@@ -1,3 +1,11 @@
+import type {
+  DateTimeUnit,
+  DifferenceOptions,
+  DurationRoundTo,
+  LargestUnit,
+  RoundingMode,
+  SmallestUnit,
+} from "../temporalTypes";
 import { Temporal } from "../temporal";
 import type { DurationRelativeTo } from "../../types";
 import { TIME_ZONE_ANNOTATION } from "../isoStringBody";
@@ -23,13 +31,12 @@ import {
  * `ComputeNudgeWindow`, `RoundRelativeDuration`, `BubbleRelativeDuration`,
  * `DifferencePlainDateTimeWith{Rounding,Total}`, `DateDurationDays` and
  * `CombineDateAndTimeDuration`, each under its TC39 name, so a workaround in this folder can
- * compute the spec's answer where `@js-temporal/polyfill` 0.5.1 does not.
- *
- * Every module in this folder except `utcValidity.ts` imports this one. It goes with the last of them.
+ * compute the spec's answer where `temporal-polyfill` does not (D22, `./nudgeOrigin.ts`). It goes
+ * with that group.
  *
  * The throws in `differenceZonedDateTime`, `combineDateAndTimeDuration`, `nudgeToCalendarUnit`
  * and `nudgeToZonedTime` are this port's own Asserts. Their decision is in the header of
- * `./nudgeOrigin.ts` (defect 5).
+ * `./nudgeOrigin.ts` (D22).
  * ---------------------------------------------------------------------------------------------
  */
 
@@ -128,7 +135,7 @@ export interface RoundingSettings {
   largestUnit: Unit;
   smallestUnit: Unit;
   increment: number;
-  roundingMode: Temporal.RoundingMode;
+  roundingMode: RoundingMode;
 }
 
 type Sign = -1 | 1;
@@ -140,15 +147,14 @@ type UnsignedRoundingMode =
   | "half-even";
 
 /** Options accepted by `ZonedDateTime#until`. */
-export type ZonedDifferenceOptions =
-  Temporal.DifferenceOptions<Temporal.DateTimeUnit>;
+export type ZonedDifferenceOptions = DifferenceOptions<DateTimeUnit>;
 
 /** Options accepted by `Duration#round`, with GMT's `relativeTo` forms. */
 export interface DurationRoundOptions {
-  largestUnit?: Temporal.LargestUnit<Temporal.DateTimeUnit>;
-  smallestUnit?: Temporal.SmallestUnit<Temporal.DateTimeUnit>;
+  largestUnit?: LargestUnit<DateTimeUnit>;
+  smallestUnit?: SmallestUnit<DateTimeUnit>;
   roundingIncrement?: number;
-  roundingMode?: Temporal.RoundingMode;
+  roundingMode?: RoundingMode;
   relativeTo?: DurationRelativeTo;
 }
 
@@ -243,7 +249,7 @@ export function defaultLargestUnit(duration: Temporal.Duration): Unit {
 
 /** TC39 `GetUnsignedRoundingMode`, as [positive, negative]. */
 const UNSIGNED_ROUNDING_MODES: Record<
-  Temporal.RoundingMode,
+  RoundingMode,
   readonly [UnsignedRoundingMode, UnsignedRoundingMode]
 > = {
   ceil: ["infinity", "zero"],
@@ -258,7 +264,7 @@ const UNSIGNED_ROUNDING_MODES: Record<
 };
 
 function unsignedRoundingMode(
-  roundingMode: Temporal.RoundingMode,
+  roundingMode: RoundingMode,
   sign: -1 | 0 | 1,
 ): UnsignedRoundingMode {
   return UNSIGNED_ROUNDING_MODES[roundingMode][sign < 0 ? 1 : 0];
@@ -284,7 +290,7 @@ function applyUnsignedRoundingMode<T>(
 function roundTimeDurationToIncrement(
   duration: bigint,
   increment: bigint,
-  roundingMode: Temporal.RoundingMode,
+  roundingMode: RoundingMode,
 ): bigint {
   const quotient = bigintAbs(duration / increment);
   const remainder = duration % increment;
@@ -500,7 +506,7 @@ function differenceZonedDateTime(
  * TC39 `CombineDateAndTimeDuration`. Its Assert fails when the two signs disagree, which a repeated
  * hour spanning midnight causes: 15 minutes after `1944-10-01T00:00:59-06:00` in America/Phoenix
  * reads `1944-09-30T23:15:59-07:00`. The specification has no value there, so this throws and the
- * public function returns its sentinel (defect 5, tc39/proposal-temporal#3311).
+ * public function returns its sentinel (tc39/proposal-temporal#3311).
  */
 function combineDateAndTimeDuration(
   date: DateDuration,
@@ -658,7 +664,7 @@ function nudgeToCalendarUnit(
   context: RoundingContext,
   increment: number,
   unit: DateUnit,
-  roundingMode: Temporal.RoundingMode,
+  roundingMode: RoundingMode,
 ): { nudgeResult: NudgeResult; total: number } {
   let window = computeNudgeWindow(
     sign,
@@ -682,7 +688,7 @@ function nudgeToCalendarUnit(
     );
     // TC39 Asserts here. The shift only moves a month or a year, so a day or a week that missed the
     // first window misses this one, and the specification has no value: the public function returns
-    // its sentinel rather than extrapolate (defect 5, tc39/proposal-temporal#3336).
+    // its sentinel rather than extrapolate (tc39/proposal-temporal#3336).
     if (!windowContains(sign, window, destEpochNs)) {
       throw new RangeError("The target is outside the window");
     }
@@ -737,7 +743,7 @@ function nudgeToZonedTime(
   context: ZonedContext,
   increment: number,
   unit: TimeUnit,
-  roundingMode: Temporal.RoundingMode,
+  roundingMode: RoundingMode,
 ): NudgeResult {
   const start = calendarDateAdd(
     context.calendar,
@@ -754,8 +760,8 @@ function nudgeToZonedTime(
   );
   const daySpan = endEpochNs - startEpochNs;
   if (bigintSign(daySpan) !== sign) {
-    // A skipped day ends the span where it starts, and TC39 Asserts here: defect 5,
-    // tc39/proposal-temporal#3310. The public function returns its sentinel.
+    // A skipped day ends the span where it starts, and TC39 Asserts here
+    // (tc39/proposal-temporal#3310). The public function returns its sentinel.
     throw new RangeError("The time zone returned inconsistent instants");
   }
 
@@ -901,7 +907,7 @@ function differenceZonedDateTimeWithRounding(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Plain context (defect 3, see `./calendarArithmetic.ts`): no time zone, exact times are
+// Plain context: no time zone, exact times are
 // GetUTCEpochNanoseconds and are never checked against the instant range
 // ---------------------------------------------------------------------------------------------
 
@@ -968,7 +974,7 @@ function nudgeToDayOrTime(
   largestUnit: Unit,
   increment: number,
   smallestUnit: "day" | TimeUnit,
-  roundingMode: Temporal.RoundingMode,
+  roundingMode: RoundingMode,
 ): NudgeResult {
   const timeDuration =
     duration.time + BigInt(duration.date.days) * NANOSECONDS_PER_DAY;
@@ -1159,7 +1165,7 @@ export function dateDurationDays(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Whole operations by the spec: the range-limit fallbacks (defect 1) and the spec paths of defects 3–5.
+// Whole operations by the spec: the spec paths for the nudge window, the day-correction and the no-value cases.
 // Each `*AtLimit` returns the TC39 result, or null to re-throw the polyfill's error
 // ---------------------------------------------------------------------------------------------
 
@@ -1290,7 +1296,7 @@ export function roundingSettings(
   smallestUnitOption: unknown,
   defaultLargestUnitFor: (smallestUnit: Unit) => Unit,
   increment: number | undefined,
-  roundingMode: Temporal.RoundingMode,
+  roundingMode: RoundingMode,
 ): RoundingSettings | null {
   const smallestUnit =
     smallestUnitOption === undefined
@@ -1324,7 +1330,7 @@ function canRoundBySpec(
       ZERO_DURATION.round({
         ...roundTo,
         relativeTo: probe,
-      } as Temporal.DurationRoundTo),
+      } as DurationRoundTo),
     ) &&
     largerUnit(largestUnit, smallestUnit) === largestUnit &&
     !(increment > 1 && largestUnit !== smallestUnit && isDateUnit(smallestUnit))

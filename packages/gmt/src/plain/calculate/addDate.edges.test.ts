@@ -442,3 +442,21 @@ describe("addDate across the whole range (CORE-6 §4.4 strides)", () => {
     },
   );
 });
+
+// Islamic dates before the Hijra: year -126 plus 125 years is year -1, not a positive "Before Hijra"
+// year. Expected: native Temporal, Node 26.12.1 (V8), which agrees with temporal-polyfill 1.0.8.
+describe("addDate across the Hijra", () => {
+  it.each`
+    calendar              | expected
+    ${"islamic-civil"}    | ${"0621-04-13[u-ca=islamic-civil]"}
+    ${"islamic-tbla"}     | ${"0621-04-13[u-ca=islamic-tbla]"}
+    ${"islamic-umalqura"} | ${"0621-04-13[u-ca=islamic-umalqura]"}
+  `(
+    "returns $expected for 0500-01-01 plus 125 years ($calendar)",
+    ({ calendar, expected }) => {
+      expect(addDate(`0500-01-01[u-ca=${calendar}]`, { years: 125 })).toBe(
+        expected,
+      );
+    },
+  );
+});

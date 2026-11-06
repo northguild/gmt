@@ -1,3 +1,4 @@
+import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
@@ -39,7 +40,7 @@ export function roundUtc(
      * The unit to round to: `"hour"`, `"minute"`, `"second"`, `"millisecond"`, `"microsecond"` or
      * `"nanosecond"`, singular or plural as Temporal's GetTemporalUnitValuedOption accepts both.
      */
-    smallestUnit: Temporal.SmallestUnit<
+    smallestUnit: SmallestUnit<
       | "hour"
       | "minute"
       | "second"
@@ -61,7 +62,7 @@ export function roundUtc(
      *
      * @defaultValue `"halfExpand"`, Temporal's default.
      */
-    roundingMode?: Temporal.RoundingMode;
+    roundingMode?: RoundingMode;
     /**
      * The number of fractional-second digits the result is written with, `0` to `9`, or `"auto"` to
      * drop trailing zeros. It overrides the unit's own count, coarser or finer; an invalid value

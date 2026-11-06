@@ -13,7 +13,7 @@ declare module "*?raw" {
   export default text;
 }
 
-/** The CORE-92 swap entry, installed only in the swap job's checkout (never in a manifest). */
-declare module "temporal-polyfill/full/implementation" {
+/** The upgrade job installs the newest release under this npm alias; an ordinary checkout has no such package. No real package uses the name, so declaring it hides nothing. */
+declare module "temporal-polyfill-candidate/full/implementation" {
   export const Temporal: typeof import("../internal/temporal").Temporal;
 }

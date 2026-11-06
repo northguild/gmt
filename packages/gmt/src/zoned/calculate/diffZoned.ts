@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import type { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import {
   addToZoned,
   isCalendarDifferenceAcrossZones,
@@ -77,9 +77,9 @@ export function diffZoned(
   value2: string,
   units:
     | DateTimeDurationUnit
-    | Temporal.DateTimeUnit
-    | Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
-  options?: RoundingOptions<Temporal.DateTimeUnit>,
+    | DateTimeUnit
+    | Array<DateTimeDurationUnit | DateTimeUnit>,
+  options?: RoundingOptions<DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
   try {
     // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
@@ -128,7 +128,7 @@ export function diffZoned(
         add: (from, amount) => addToZoned(from, amount),
         until: (from, to, largest) =>
           zonedUntil(from, to, {
-            largestUnit: largest as Temporal.DateTimeUnit,
+            largestUnit: largest as DateTimeUnit,
           }),
       });
     } catch {

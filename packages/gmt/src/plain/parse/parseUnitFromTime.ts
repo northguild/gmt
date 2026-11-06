@@ -1,3 +1,4 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
@@ -27,7 +28,7 @@ import { isValidTime } from "../validate";
  */
 export function parseUnitFromTime(
   value: string,
-  unit: Temporal.SmallestUnit<
+  unit: SmallestUnit<
     "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
   >,
 ): string {

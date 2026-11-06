@@ -1,10 +1,7 @@
 import { Temporal } from "./temporal";
 import { plainDate } from "../regex/date";
 import { plainDateTime } from "../regex/date-time";
-import {
-  canonicalCalendarSystem,
-  computationCalendarId,
-} from "./calendarSystemIds";
+import { canonicalCalendarSystem } from "./calendarSystemIds";
 import { isoStringBody } from "./isoStringBody";
 
 /**
@@ -39,12 +36,9 @@ export const temporalStringLeapSecond =
  *   `ethiopic-amete-alem` → `ethioaa`).
  * - The calendar must be a `CalendarSystem`. Temporal also knows `chinese`, `dangi`, `islamic` and
  *   `islamic-rgsa`, which GMT does not support.
- * - The result computes in `computationCalendarId(calendar)`: `"ethiopic"` and `"coptic"` are read
- *   in `"ethioaa"`, so callers that write a string back take the calendar from
- *   `calendarSystemOfDateValue(value)`, not from `date.calendarId`.
  *
  * @param value an extended ISO date or date-time, optionally with RFC 9557 annotations
- * @returns the Temporal.PlainDate, in the computation calendar
+ * @returns the Temporal.PlainDate, in the canonical calendar
  */
 export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   // Temporal.PlainDate.from also takes objects and property bags; GMT reads strings only.
@@ -65,5 +59,5 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   if (!calendar) {
     throw new RangeError(`Unsupported calendar: ${date.calendarId}`);
   }
-  return date.withCalendar(computationCalendarId(calendar));
+  return date.withCalendar(calendar);
 }

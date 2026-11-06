@@ -5,7 +5,7 @@ import type { Temporal } from "../internal/temporal";
  * It names the unit an amount of time is given in or a time difference is measured in.
  */
 export type TimeDurationUnit = keyof Pick<
-  Temporal.DurationLike,
+  Temporal.DurationLikeObject,
   | "hours"
   | "minutes"
   | "seconds"

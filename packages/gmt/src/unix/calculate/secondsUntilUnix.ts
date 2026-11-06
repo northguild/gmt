@@ -1,5 +1,5 @@
+import { Temporal } from "../../internal/temporal";
 import { wholeSecondsUntil } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import {
   resolveUnixEpochUnitOptions,
   unixEpochToInstant,
@@ -74,7 +74,7 @@ export function secondsUntilUnix(
       return null;
     }
 
-    return wholeSecondsUntil(instant, nowInstant());
+    return wholeSecondsUntil(instant, Temporal.Now.instant());
   } catch {
     // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
     return null;

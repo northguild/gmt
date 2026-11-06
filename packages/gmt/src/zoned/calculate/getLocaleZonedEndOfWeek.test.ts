@@ -205,7 +205,7 @@ describe("getLocaleZonedEndOfWeek", () => {
 
   // America/Sao_Paulo repeated 23:00-23:59:59 on Saturday 2014-02-15, the last day of an en-US
   // week. The week ends on the second pass (-03:00), one nanosecond before Sunday's
-  // `startOfDay()`. Verified on @js-temporal/polyfill@0.5.1.
+  // `startOfDay()`. Verified on temporal-polyfill 1.0.8.
   it("returns the real week end across a repeated last hour", () => {
     expect(
       getLocaleZonedEndOfWeek(
@@ -245,9 +245,8 @@ describe("getLocaleZonedEndOfWeek", () => {
 });
 
 // The week is the real local bucket in the
-// value's own zone, so its end is never before the value. Expected values verified against the
-// `internal/zonedBucket.ts` walker, `bucketRange` for the Monday week, and Temporal's
-// `startOfDay()` for Santiago, on @js-temporal/polyfill@0.5.1.
+// value's own zone, so its end is never before the value. Expected values recomputed directly
+// on temporal-polyfill 1.0.8: week labels from wall-clock dates, and `startOfDay()` for Santiago.
 describe("getLocaleZonedEndOfWeek across zone transitions with default options", () => {
   it.each`
     value                                             | locale                  | expected                                                    | description

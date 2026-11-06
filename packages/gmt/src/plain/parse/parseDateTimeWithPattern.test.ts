@@ -26,6 +26,17 @@ describe("parseDateTimeWithPattern", () => {
       expect(parseDateTimeWithPattern("14:30:00", "HH:mm:ss")).toBe("");
     });
 
+    it.each`
+      value              | pattern
+      ${"2024-03 14:30"} | ${"yyyy-MM HH:mm"}
+      ${"2024 14:30"}    | ${"yyyy HH:mm"}
+    `(
+      "returns '' for $pattern, which names no day, so Temporal gets no day to read",
+      ({ value, pattern }) => {
+        expect(parseDateTimeWithPattern(value, pattern)).toBe("");
+      },
+    );
+
     it("parses hh (12h, zero-padded) combined with a individually", () => {
       expect(
         parseDateTimeWithPattern(

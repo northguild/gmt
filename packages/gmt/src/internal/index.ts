@@ -232,7 +232,6 @@ export {
   durationRound,
   durationTotal,
   isCalendarDifferenceAcrossZones,
-  plainUntilWithRounding,
   zonedUntil,
 } from "./zonedWallClockDifference";
 export {

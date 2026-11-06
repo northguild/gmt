@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import type { FractionalDigit } from "../../types";
@@ -13,7 +14,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * import { EndOfTimeUnit } from "@northguild/gmt/plain";
  * const unit: EndOfTimeUnit = "minutes";
  */
-export type EndOfTimeUnit = Temporal.SmallestUnit<"day" | Temporal.TimeUnit>;
+export type EndOfTimeUnit = SmallestUnit<"day" | Temporal.TimeUnit>;
 
 const supported: readonly string[] = [
   "day",

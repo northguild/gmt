@@ -131,9 +131,9 @@ function readStored(
 
   // Temporal's `prefer` and `reject` refuse a local date outside CheckISODaysRange (§6.5.1
   // step 7), so the stored offset cannot be checked and the string is not a valid stored time.
-  // `use` accepts that date. TC39's `ignore` accepts it too, but polyfill 0.5.1 throws there, so
-  // the `ignore` read in `classifyShaped` can throw first; `classifyStoredZoned` catches that and
-  // returns the same null.
+  // `use` accepts that date. TC39's `ignore` accepts it too, and so does `temporal-polyfill`
+  // 1.0.8 (0.5.1 threw there). `classifyStoredZoned` still catches a throwing `ignore` read in
+  // `classifyShaped` and returns the same null.
   return storedOffset === null || !isWithinIsoDaysRange(wall)
     ? null
     : { use, storedOffset, wall };

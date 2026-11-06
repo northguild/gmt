@@ -20,7 +20,7 @@ import { isValidCalendarDate } from "../validate";
  *   letter case is canonicalized (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`).
  * - **Only one of CLDR's four legacy calendar aliases works, and that is Temporal's rule, not
  *   GMT's.** `ethiopic-amete-alem` canonicalizes to `ethioaa`; `gregorian`, `islamic-tabular` and
- *   `taiwan` return `""`. Chromium 153 and `@js-temporal/polyfill` both throw `RangeError` for
+ *   `taiwan` return `""`. Chromium 153 and `temporal-polyfill` 1.0.8 both throw `RangeError` for
  *   those three: `gregorian` is nine letters, past the 8-character limit on a Unicode
  *   locale-extension `type` subtag, and the other two are absent from ECMA-402's
  *   `AvailableCanonicalCalendars`. Use `gregory`, `islamic-tbla` and `roc`.

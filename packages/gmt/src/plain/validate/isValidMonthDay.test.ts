@@ -14,10 +14,10 @@ describe("isValidMonthDay", () => {
     ${"--04-30"}                             | ${"last day of a 30-day month"}
     ${"--12-01"}                             | ${"first day"}
     ${"--12-25[u-ca=iso8601]"}               | ${"ISO calendar annotation"}
-    ${"--12-25[u-ca=ISO8601]"}               | ${"ParseISODateTime lowercases the calendar (D20)"}
-    ${"--12-25[!u-ca=Iso8601]"}              | ${"critical and mixed case (D20)"}
+    ${"--12-25[u-ca=ISO8601]"}               | ${"ParseISODateTime lowercases the calendar"}
+    ${"--12-25[!u-ca=Iso8601]"}              | ${"critical and mixed case"}
     ${"--12-25[u-ca=iso8601][u-ca=gregory]"} | ${"a second non-critical u-ca is ignored"}
-    ${"--12-25[u-ca=ISO8601][u-ca=GREGORY]"} | ${"first u-ca wins; the second is ignored in any case (D20)"}
+    ${"--12-25[u-ca=ISO8601][u-ca=GREGORY]"} | ${"first u-ca wins; the second is ignored in any case"}
     ${"--12-25[_foo=bar]"}                   | ${"elective annotation ignored"}
     ${"--12-25[Europe/Paris]"}               | ${"TimeZoneAnnotation in AnnotatedMonthDay"}
     ${"--12-25[+01:00]"}                     | ${"offset time zone annotation"}
@@ -54,8 +54,8 @@ describe("isValidMonthDay", () => {
     ${"--12-25[U-CA=iso8601]"}                | ${"AnnotationKey is lower case"}
     ${"--12-25[!foo=bar]"}                    | ${"unknown critical annotation"}
     ${"--12-25[!u-ca=iso8601][u-ca=gregory]"} | ${"second u-ca after a critical one"}
-    ${"--12-25[!u-ca=ISO8601][u-ca=gregory]"} | ${"second u-ca after a critical one, in any case (D20)"}
-    ${"--12-25[u-ca=GREGORY][u-ca=ISO8601]"}  | ${"first u-ca wins, and it is not iso8601 (D20)"}
+    ${"--12-25[!u-ca=ISO8601][u-ca=gregory]"} | ${"second u-ca after a critical one, in any case"}
+    ${"--12-25[u-ca=GREGORY][u-ca=ISO8601]"}  | ${"first u-ca wins, and it is not iso8601"}
     ${" --12-25"}                             | ${"leading space"}
     ${"--12-25 "}                             | ${"trailing space"}
     ${"−−12-25"}                              | ${"U+2212 minus signs"}

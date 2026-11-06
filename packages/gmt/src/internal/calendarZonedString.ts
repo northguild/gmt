@@ -1,10 +1,7 @@
 import type { Temporal } from "./temporal";
 import { hasSecond60 } from "../plain/validate/hasSecond60";
 import type { CalendarSystem, Disambiguation, Offset } from "../types";
-import {
-  canonicalCalendarSystem,
-  computationCalendarId,
-} from "./calendarSystemIds";
+import { canonicalCalendarSystem } from "./calendarSystemIds";
 import { hasZonedDateTimeShape } from "./isoStringBody";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 
@@ -28,16 +25,13 @@ import { zonedDateTimeFrom } from "./zonedWallClock";
  *   are not RFC 9557 and Temporal rejects them.
  * - The calendar id is Temporal's canonical one (`CanonicalizeCalendar`) and must be a
  *   `CalendarSystem`.
- * - The result computes in `computationCalendarId(calendar)` (`"ethioaa"` for `"ethiopic"` and
- *   `"coptic"`), so callers that write a string back take the calendar from
- *   `calendarSystemOfZonedValue(value)`.
  * - `hasSecond60` runs first: `Temporal.ZonedDateTime.from("2024-06-30T23:59:60+00:00[UTC]")`
  *   clamps to `:59` instead of throwing.
  *
  * @param value ISO zoned datetime string, optionally with RFC 9557 annotations after the zone
  * @param options optional Temporal `disambiguation`/`offset`, passed through to
  *   `Temporal.ZonedDateTime.from` so a caller's own DST/offset policy still applies
- * @returns Temporal.ZonedDateTime in the computation calendar (`iso8601` when unannotated)
+ * @returns Temporal.ZonedDateTime in the canonical calendar (`iso8601` when unannotated)
  */
 export function parseCalendarZonedValue(
   value: string,
@@ -60,7 +54,7 @@ export function parseCalendarZonedValue(
   if (!calendar) {
     throw new RangeError(`Unsupported calendar: ${zoned.calendarId}`);
   }
-  return zoned.withCalendar(computationCalendarId(calendar));
+  return zoned.withCalendar(calendar);
 }
 
 /**
@@ -69,9 +63,8 @@ export function parseCalendarZonedValue(
  * the offset, `[<timeZone>]`, then `[u-ca=<id>]` for every calendar but `"iso8601"`
  * (`FormatCalendarAnnotation` with `"auto"`).
  *
- * The calendar is passed in rather than read from `zdt.calendarId`: `"ethiopic"` and `"coptic"`
- * compute in `"ethioaa"`, and boundary points synthesized with
- * `Temporal.Instant.prototype.toZonedDateTimeISO` are `iso8601`. The instant, wall time and zone
+ * The calendar is passed in rather than read from `zdt.calendarId`: boundary points synthesized
+ * with `Temporal.Instant.prototype.toZonedDateTimeISO` are `iso8601`. The instant, wall time and zone
  * are written as they are; only the annotation names the calendar.
  *
  * @param zdt Temporal.ZonedDateTime to write, in any calendar

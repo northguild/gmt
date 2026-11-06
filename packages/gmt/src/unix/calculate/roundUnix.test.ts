@@ -355,12 +355,12 @@ describe("roundUnix with a plural smallestUnit", () => {
   });
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("roundUnix across the 1844 date-line crossings (zoned.E)", () => {
+describe("roundUnix across the 1844 date-line crossings", () => {
   it.each(dateLineCrossingTimeZones)(
     "rounds noon of 1844-12-30 in $timeZone to the crossing, $instant",
     (crossing) => {

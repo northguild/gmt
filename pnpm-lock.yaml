@@ -194,6 +194,9 @@ importers:
       fallow:
         specifier: ^3.35.0
         version: 3.35.0
+      gmt-js-temporal-release:
+        specifier: npm:@northguild/gmt@1.21.0
+        version: '@northguild/gmt@1.21.0'
       node:
         specifier: runtime:^26.12.1
         version: runtime:26.12.1
@@ -230,9 +233,6 @@ importers:
       '@astrojs/starlight':
         specifier: 0.41.11
         version: 0.41.11(astro@7.4.2(@types/node@22.19.17)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.1))(supports-color@10.2.2)(typescript@5.9.3)
-      '@js-temporal/polyfill':
-        specifier: ^0.5.1
-        version: 0.5.1
       '@northguild/gmt':
         specifier: workspace:*
         version: link:../../packages/gmt
@@ -453,9 +453,9 @@ importers:
 
   packages/gmt:
     dependencies:
-      '@js-temporal/polyfill':
-        specifier: ^0.5.1
-        version: 0.5.1
+      temporal-polyfill:
+        specifier: 1.0.8
+        version: 1.0.8
     devDependencies:
       '@northguild/gmt-oxlint':
         specifier: workspace:*
@@ -1929,6 +1929,10 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@northguild/gmt@1.21.0':
+    resolution: {integrity: sha512-9oO60y1BKDkKCqyegF+ie7LZJjLtW7jSVT28/HxWONit0M4tP+Nq2hCkDjrWD6taikeekeyv5erKVWXtjhCAvA==}
+    engines: {node: '>=22.16.0'}
 
   '@oslojs/encoding@1.1.0':
     resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
@@ -7288,6 +7292,15 @@ packages:
     resolution: {integrity: sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==}
     engines: {node: '>=6'}
 
+  temporal-polyfill@1.0.8:
+    resolution: {integrity: sha512-RCCGa0GddT099XG49ijdD0tDf86L8vfuZun1+JyJiO4Y2NP9PACQsG0OnvNPXwVLisdvhr/zqL2nhKQmXXx08A==}
+
+  temporal-spec@1.0.1:
+    resolution: {integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==}
+
+  temporal-utils@1.0.4:
+    resolution: {integrity: sha512-4mAcgbWlaxe+gn23gk8g0iHxCVGVOhKzSCfF5HM3lfvH8BdT+/pBmH/R/E4CrIse+koUgs8ThkPzCLnui6Fi8w==}
+
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
     engines: {node: '>=0.8'}
@@ -9457,6 +9470,10 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.3
+
+  '@northguild/gmt@1.21.0':
+    dependencies:
+      '@js-temporal/polyfill': 0.5.1
 
   '@oslojs/encoding@1.1.0': {}
 
@@ -15398,6 +15415,15 @@ snapshots:
   tailwindcss@4.3.3: {}
 
   tapable@2.3.3: {}
+
+  temporal-polyfill@1.0.8:
+    dependencies:
+      temporal-spec: 1.0.1
+      temporal-utils: 1.0.4
+
+  temporal-spec@1.0.1: {}
+
+  temporal-utils@1.0.4: {}
 
   thenify-all@1.6.0:
     dependencies:

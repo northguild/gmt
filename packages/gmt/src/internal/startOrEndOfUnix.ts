@@ -1,4 +1,4 @@
-import type { Temporal } from "./temporal";
+import type { DateTimeUnit } from "./temporalTypes";
 import { resolveWeekStartsOn } from "./resolveWeekStartsOn";
 import {
   resolveUnixEpochUnit,
@@ -31,7 +31,7 @@ import { frameInstant, frameZoned, normalizeZoneFrame } from "./zoneFrame";
  */
 export function startOrEndOfUnix(
   value: unknown,
-  unit: Temporal.DateTimeUnit | "quarter",
+  unit: DateTimeUnit | "quarter",
   options: {
     epochUnit?: unknown;
     timeZone?: string;

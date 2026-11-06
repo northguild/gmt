@@ -23,9 +23,9 @@ import {
  *   `{ calendar: "foo" }` gives `"10/2026"` in en-US and `""` in th-TH (Buddhist).
  * - **`dateStyle`.** The year and month widths are the locale's own `dateStyle` date pattern's, as
  *   ECMA-402 (AdjustDateTimeStyleFormat) and native `PlainYearMonth#toLocaleString` take them:
- *   en-US `short` is `10/26`, de-DE `medium` `10/2026` and zh-CN `long` `2026/10`. Polyfill 0.5.1
- *   maps each style to fixed widths instead, so its `toLocaleString` prints `Okt. 2026` for de-DE
- *   `medium`.
+ *   en-US `short` is `10/26`, de-DE `medium` `10/2026` and zh-CN `long` `2026/10`. `temporal-polyfill`
+ *   1.0.8 (like 0.5.1) maps each style to fixed widths instead, so its `toLocaleString` prints
+ *   `Okt. 2026` for de-DE `medium`.
  * - A `day`, `weekday`, time field or `timeZoneName` is dropped; only those fields with no `year`
  *   or `month` give `""`, except `timeZoneName`, which falls back to the defaults. An `era` is
  *   kept.

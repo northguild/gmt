@@ -89,6 +89,33 @@ describe("getYear with the clock outside years 0000 to 9999", () => {
   });
 });
 
+// 1960-01-01T00:00:00Z is -315619200000 ms; the year is read twice so a second reading after a clock
+// set before 1970 is the year the clock was set to (TC39 Temporal SystemUTCEpochMilliseconds floors the
+// system time; test262 built-ins/Temporal/Now/instant/return-value-value.js).
+describe("getYear after the clock was set before 1970", () => {
+  afterEach(() => {
+    vi.mocked(getSystemTimeZone).mockReset();
+    vi.useRealTimers();
+  });
+
+  it.each`
+    clock                     | expected
+    ${"1960-01-01T00:00:00Z"} | ${"1960"}
+    ${"2027-01-01T00:00:00Z"} | ${"2027"}
+  `(
+    "returns $expected for the second reading at $clock",
+    ({ clock, expected }) => {
+      vi.useFakeTimers();
+      vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+      vi.setSystemTime("1960-01-01T00:00:00Z");
+      getYear();
+      vi.setSystemTime(clock);
+      getYear();
+      expect(getYear()).toBe(expected);
+    },
+  );
+});
+
 // A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
 // restores only spies it created itself, so each file resets this one explicitly.
 describe("getSystemTimeZone after a mocked row", () => {

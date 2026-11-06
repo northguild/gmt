@@ -1,10 +1,10 @@
+import { Temporal } from "../../internal/temporal";
 import { imfFixdate } from "../../internal/englishCalendarNames";
 import {
   addLengthToStart,
   readLengthUnits,
   utcLengthFrame,
 } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
 
@@ -47,7 +47,7 @@ export function formatHttpDateFromNow(
 
     return imfFixdate(
       addLengthToStart(
-        nowInstant(),
+        Temporal.Now.instant(),
         amounts,
         utcLengthFrame(),
       ).toZonedDateTimeISO("UTC"),

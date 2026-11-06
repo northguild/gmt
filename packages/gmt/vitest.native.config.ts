@@ -9,7 +9,7 @@ export default mergeConfig(
     resolve: {
       alias: [
         {
-          find: /^@js-temporal\/polyfill$/,
+          find: /^temporal-polyfill\/full\/implementation$/,
           replacement: path.resolve(
             import.meta.dirname,
             "src/test/nativeTemporal.ts",

@@ -10,7 +10,7 @@ import { parseCalendarZonedValue } from "../../../internal";
  *   every non-ISO `[u-ca=...]` annotation (E7, issue #152). Only the calendar-aware `zoned/interval/*`
  *   functions gate on this one.
  * - **Mixed calendars are accepted** (E7's D4-zoned, matching E5's D4): ordering is
- *   calendar-independent. Verified against `@js-temporal/polyfill@0.5.1` —
+ *   calendar-independent. Verified against `temporal-polyfill` 1.0.8 —
  *   `Temporal.Instant` carries no calendar field at all, and `ZonedDateTime.compare` /
  *   `Instant.compare` both return `0` for the same instant expressed in hebrew, islamic-civil,
  *   japanese and iso8601. A Hebrew start with an Islamic end is a well-formed interval.

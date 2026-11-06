@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import type { Temporal } from "../../internal/temporal";
+import type { ZonedDateTimeFields } from "../../internal/temporalTypes";
 import {
   DATE_TIME_FIELDS,
   frameInstant,
@@ -66,10 +66,7 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  */
 export function setUnix(
   value: number | string,
-  fields: Omit<
-    Temporal.ZonedDateTimeLike,
-    "calendar" | "timeZone" | "offset" | "era" | "eraYear"
-  >,
+  fields: ZonedDateTimeFields,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or

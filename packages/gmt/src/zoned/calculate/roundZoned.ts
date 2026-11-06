@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
@@ -61,7 +62,7 @@ export function roundZoned(
      * or plural form, as Temporal's GetTemporalUnitValuedOption accepts both. It also sets how many
      * fractional-second digits the result is written with.
      */
-    smallestUnit: Temporal.SmallestUnit<
+    smallestUnit: SmallestUnit<
       | "day"
       | "hour"
       | "minute"
@@ -86,7 +87,7 @@ export function roundZoned(
      *
      * @defaultValue `"halfExpand"`, Temporal's default.
      */
-    roundingMode?: Temporal.RoundingMode;
+    roundingMode?: RoundingMode;
   },
 ): string {
   try {

@@ -29,7 +29,7 @@ import { hasDaylightSaving } from "../zoned/validate/hasDaylightSaving";
  *
  * Expected values: worked out from the rule above (whole-hour offsets; standard time is
  * Pacific -08:00, Mountain -07:00, Central -06:00, Eastern -05:00, and summer time one hour more),
- * then checked against plain `@js-temporal/polyfill` calls on Node 26.12.1 (tz 2026e). The `old`
+ * then checked against plain `temporal-polyfill` calls on Node 26.12.1 (tz 2026e). The `old`
  * column, where there is one, is what a runtime gives whose tz data predates that zone's release.
  */
 

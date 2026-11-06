@@ -636,7 +636,7 @@ describe("getFiscalPeriod yearLabel", () => {
 // Temporal's range is -271821-04-19 to +275760-09-13. The Gregorian calendar repeats every
 // 400 years (146,097 days, a whole number of weeks), so each expected value is the value for
 // the same rule a whole number of cycles inside the range, re-derived with plain
-// `@js-temporal/polyfill` date arithmetic and moved back by those cycles.
+// `temporal-polyfill` date arithmetic and moved back by those cycles.
 describe("getFiscalPeriod at Temporal's range limits", () => {
   it.each`
     value              | calendar         | expected                                  | fiscalYear

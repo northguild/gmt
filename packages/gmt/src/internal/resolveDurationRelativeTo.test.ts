@@ -44,14 +44,14 @@ describe("resolveDurationRelativeTo", () => {
   });
 
   // The GMT calendar grammars, as Temporal reads them: critical flag and letter case are part of
-  // RFC 9557 / CanonicalizeCalendar; "ethiopic" and "coptic" compute in "ethioaa".
+  // RFC 9557 / CanonicalizeCalendar.
   it.each`
     value                                                           | type                      | calendarId
     ${"2024-02-24[!u-ca=hebrew]"}                                   | ${Temporal.PlainDateTime} | ${"hebrew"}
     ${"2024-02-24[u-ca=HEBREW]"}                                    | ${Temporal.PlainDateTime} | ${"hebrew"}
-    ${"2024-02-24[u-ca=coptic]"}                                    | ${Temporal.PlainDateTime} | ${"ethioaa"}
+    ${"2024-02-24[u-ca=coptic]"}                                    | ${Temporal.PlainDateTime} | ${"coptic"}
     ${"2024-02-24T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${Temporal.ZonedDateTime} | ${"hebrew"}
-    ${"2024-02-24T00:00:00-05:00[America/New_York][u-ca=ethiopic]"} | ${Temporal.ZonedDateTime} | ${"ethioaa"}
+    ${"2024-02-24T00:00:00-05:00[America/New_York][u-ca=ethiopic]"} | ${Temporal.ZonedDateTime} | ${"ethiopic"}
     ${"2024-02-24[u-ca=hebrew][foo=bar]"}                           | ${Temporal.PlainDateTime} | ${"hebrew"}
     ${"2024-02-24T00:00:00[u-ca=hebrew]"}                           | ${Temporal.PlainDateTime} | ${"hebrew"}
     ${"2024-02-24T00:00:00+00:00[UTC][foo=bar][u-ca=hebrew]"}       | ${Temporal.ZonedDateTime} | ${"hebrew"}
@@ -103,7 +103,7 @@ describe("resolveDurationRelativeTo calendar PlainDate strings use GMT's strict 
 // The strict-shape rule (see coding-standards) for every string relativeTo: before the first `[`, a string with a time zone
 // annotation must have the strict extended zoned shape (`<date>T<time>`, then nothing, `Z` or
 // `±HH:MM[:SS[.fraction]]`), and any other string the strict extended date or date-time shape.
-// Temporal's `ParseTemporalRelativeToString` reads every row below (polyfill 0.5.1 totals P1D as
+// Temporal's `ParseTemporalRelativeToString` reads every row below (temporal-polyfill 1.0.8 totals P1D as
 // 24 hours relative to each); GMT rejects them.
 describe("resolveDurationRelativeTo requires GMT's strict extended shape for every string", () => {
   it.each`

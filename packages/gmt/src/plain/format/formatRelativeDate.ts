@@ -5,7 +5,6 @@ import type { RelativeDateUnit, RelativeTimeFormatOptions } from "../../types";
 import { isValidDate } from "../validate";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
 import { isObject } from "../../internal/isObject";
-import { nowPlainDateISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatRelativeDate`: the reference date, the display unit, the rounding and the
@@ -80,7 +79,7 @@ export function formatRelativeDate(
       const target = Temporal.PlainDate.from(value);
       const reference = referenceOption
         ? Temporal.PlainDate.from(referenceOption)
-        : nowPlainDateISO();
+        : Temporal.Now.plainDateISO();
 
       const diff = target.since(reference);
       const absDays = Math.abs(diff.total("day"));
@@ -92,7 +91,7 @@ export function formatRelativeDate(
 
       let total: number;
       try {
-        total = diff.total(unit);
+        total = diff.total({ unit });
       } catch {
         // month/year are calendrical and need a relativeTo anchor
         total = durationTotal(diff, unit, reference);

@@ -14,7 +14,7 @@ import { isValidCalendarZonedDateTime, isValidZonedDateTime } from "../zoned";
  *   `u-ca` when either `u-ca` is critical.
  *
  * `accepted` is what `Temporal.PlainDate.from` returns in Chromium 153.0.8010.12 — native V8, not
- * the polyfill and not GMT. `@js-temporal/polyfill` 0.5.1 agrees on every row.
+ * the polyfill and not GMT. `temporal-polyfill` 1.0.8 agrees on every row.
  *
  * The `u-ca` rows are the one place the validators legitimately differ: the calendar-aware ones
  * take a calendar annotation, and the strict-ISO ones reject any string that names a calendar.
@@ -27,7 +27,7 @@ interface Shape {
   /**
    * What Temporal itself does with the shape in Chromium 153.0.8010.12 — native V8, not the
    * polyfill and not GMT: `PlainDate.from` / `PlainDateTime.from` (plain), `Instant.from`
-   * (instant) and `ZonedDateTime.from` (zoned). `@js-temporal/polyfill` 0.5.1 agrees on every row.
+   * (instant) and `ZonedDateTime.from` (zoned). `temporal-polyfill` 1.0.8 agrees on every row.
    *
    * The three differ in only two places, and both are the spec being consistent rather than
    * fussy: an instant never reads the calendar, so a `u-ca` it cannot resolve is still ignored;

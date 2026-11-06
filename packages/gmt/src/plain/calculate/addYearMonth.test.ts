@@ -2,9 +2,10 @@ import { addYearMonth } from "./addYearMonth";
 import { subtractYearMonth } from "./subtractYearMonth";
 import { mockTemporalPlainYearMonthFromThrow } from "../../test/mocks";
 
-// Record Y (context/domination/js-temporal-polyfill-bugs.md): polyfill 0.5.1 `PlainYearMonth#add`
-// and `#subtract` predate tc39 41faca474a. Every expected value here is the specification's
-// AddDurationToYearMonth (day 1 of the month, CalendarDateAdd), not the polyfill's own result.
+// Every expected value here is the specification's AddDurationToYearMonth (day 1 of the month,
+// CalendarDateAdd), which temporal-polyfill 1.0.8's `PlainYearMonth#add` and `#subtract` follow.
+// Rows marked "record Y" (context/domination/js-temporal-polyfill-bugs.md) are where
+// `@js-temporal/polyfill` 0.5.1, which predated tc39 41faca474a, answered otherwise.
 describe("addYearMonth", () => {
   it.each`
     value                         | units                      | expected
@@ -28,8 +29,8 @@ describe("addYearMonth", () => {
     ${"-271821-04"} | ${{ months: 0 }}            | ${"lowest year-month, zero amount (day 1 out of range)"}
     ${"-271821-04"} | ${{ months: 1 }}            | ${"lowest year-month, one month"}
     ${"+275760-09"} | ${{ months: 1 }}            | ${"beyond the upper limit"}
-    ${"2026-10"}    | ${{ days: 1 }}              | ${"days (record Y: polyfill add gives 2026-10)"}
-    ${"2026-10"}    | ${{ weeks: 1 }}             | ${"weeks (record Y: polyfill add gives 2026-10)"}
+    ${"2026-10"}    | ${{ days: 1 }}              | ${"days (record Y: 0.5.1 add gave 2026-10)"}
+    ${"2026-10"}    | ${{ weeks: 1 }}             | ${"weeks (record Y: 0.5.1 add gave 2026-10)"}
     ${"2026-10"}    | ${{ hours: 1 }}             | ${"hours"}
     ${"2026-10"}    | ${{ months: 1, days: 0 }}   | ${"own zero days (readDurationUnits key guard)"}
     ${"2026-10"}    | ${{ month: 1 }}             | ${"misspelt key"}
@@ -86,14 +87,14 @@ describe("subtractYearMonth", () => {
   `(
     "returns '$expected' for subtractYearMonth('$value', $units)",
     ({ value, units, expected }) => {
-      // Record Y: polyfill subtract of +275760-09 throws; it starts from the last day of the month.
+      // Record Y: 0.5.1 threw subtracting from +275760-09 because it started from the last day of the month.
       expect(subtractYearMonth(value, units)).toBe(expected);
     },
   );
 
   it.each`
     value           | units              | label
-    ${"-271821-05"} | ${{ months: 1 }}   | ${"day 1 of -271821-04 out of range (record Y: polyfill subtract gives -271821-04)"}
+    ${"-271821-05"} | ${{ months: 1 }}   | ${"day 1 of -271821-04 out of range (record Y: 0.5.1 subtract gave -271821-04)"}
     ${"-271821-04"} | ${{ months: 0 }}   | ${"lowest year-month, zero amount"}
     ${"2026-10"}    | ${{ days: 1 }}     | ${"days"}
     ${"2026-10"}    | ${{ weeks: 1 }}    | ${"weeks"}

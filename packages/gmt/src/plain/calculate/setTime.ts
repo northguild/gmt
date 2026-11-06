@@ -1,3 +1,4 @@
+import type { PlainTimeFields } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { TIME_FIELDS, readSetFields, resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
@@ -42,7 +43,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function setTime(
   value: string,
-  fields: Temporal.PlainTimeLike,
+  fields: PlainTimeFields,
   options?: {
     /**
      * What to do when a field value is out of range. `"constrain"` clamps it to the nearest valid

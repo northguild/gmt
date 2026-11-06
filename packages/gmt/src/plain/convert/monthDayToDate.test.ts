@@ -9,7 +9,7 @@ describe("monthDayToDate", () => {
     monthDay                   | year        | expected           | why
     ${"--12-25"}               | ${2024}     | ${"2024-12-25"}    | ${"extended form"}
     ${"12-25"}                 | ${2024}     | ${"2024-12-25"}    | ${"input form"}
-    ${"--12-25[u-ca=ISO8601]"} | ${2024}     | ${"2024-12-25"}    | ${"D20 annotation"}
+    ${"--12-25[u-ca=ISO8601]"} | ${2024}     | ${"2024-12-25"}    | ${"upper-case calendar annotation"}
     ${"--02-29"}               | ${2024}     | ${"2024-02-29"}    | ${"leap year"}
     ${"--02-29"}               | ${2023}     | ${"2023-02-28"}    | ${"constrain: not a leap year"}
     ${"--02-29"}               | ${1900}     | ${"1900-02-28"}    | ${"century that is not a leap year"}

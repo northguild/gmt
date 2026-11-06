@@ -1,3 +1,4 @@
+import type { ToStringPrecisionOptions } from "../internal/temporalTypes";
 import { Temporal } from "../internal/temporal";
 import {
   classifyEdifactDtmFormat,
@@ -151,7 +152,7 @@ function timeDigits(value: string, code: string): string {
  */
 function elementTimeDigits(
   value: string,
-  precision: Temporal.ToStringPrecisionOptions,
+  precision: ToStringPrecisionOptions,
 ): string {
   return Temporal.PlainTime.from(value)
     .toString({ ...precision, roundingMode: "trunc" })
@@ -967,7 +968,7 @@ describe("EDI permutations: a call the types accept returns a value", () => {
       }: {
         form: X12TimeElementForm;
         digits: number;
-        precision: Temporal.ToStringPrecisionOptions;
+        precision: ToStringPrecisionOptions;
         cut: {
           smallestUnit: "minute" | "second" | "millisecond";
           roundingIncrement?: number;
@@ -1085,7 +1086,7 @@ describe("EDI permutations: a call the types accept returns a value", () => {
         cut,
       }: {
         form: X12TimeElementForm;
-        precision: Temporal.ToStringPrecisionOptions;
+        precision: ToStringPrecisionOptions;
         cut: {
           smallestUnit: "minute" | "second" | "millisecond";
           roundingIncrement?: number;

@@ -74,7 +74,7 @@ describe("endOfQuarterForZoned", () => {
 
 // The quarter ends one nanosecond before the next quarter's first local day starts, written at
 // nanosecond precision, so it is never before the input. Each expected value is `startOfDay()` of
-// the next quarter's first date minus 1 ns, checked on @js-temporal/polyfill@0.5.1.
+// the next quarter's first date minus 1 ns, checked on temporal-polyfill 1.0.8.
 describe("endOfQuarterForZoned with default options", () => {
   it.each`
     value                                          | expected                                                 | description

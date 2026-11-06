@@ -3,8 +3,8 @@ import { classifyWall } from "./earlierOccurrence";
 import { createLocalResolver, readOccurrenceWindow } from "./localResolution";
 import type { LocalMoment } from "./recurrenceExpansion";
 import { Temporal } from "./temporal";
-import { nextTransitionAfter } from "./zonedTransitionSearch";
 import { zoneFrame } from "./zoneFrame";
+import { nextTransitionAfter } from "./zonedWallClock";
 
 const SECONDS_PER_DAY = 86_400;
 

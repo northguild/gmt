@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
@@ -34,7 +35,7 @@ import { isoYearString } from "../../internal/isoYearString";
  * const u: UtcUnit = "month";
  */
 export type UtcUnit =
-  | Temporal.SmallestUnit<
+  | SmallestUnit<
       | "year"
       | "month"
       | "week"

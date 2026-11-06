@@ -155,7 +155,7 @@ describe("intervalContainsDate", () => {
   });
   // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; ordering is calendar-
   // independent so mixed calendars are accepted. Golden verified directly against
-  // @js-temporal/polyfill.
+  // temporal-polyfill 1.0.8.
   it("accepts mixed calendars since containment is an ordering check, not a value", () => {
     expect(
       intervalContainsDate(

@@ -13,7 +13,7 @@ import {
 } from "../validate";
 
 /** One of each time unit, for stepping to the next time-unit bucket. */
-const ONE_TIME_UNIT: Readonly<Record<string, Temporal.DurationLike>> = {
+const ONE_TIME_UNIT: Readonly<Record<string, Temporal.DurationLikeObject>> = {
   hour: { hours: 1 },
   minute: { minutes: 1 },
   second: { seconds: 1 },

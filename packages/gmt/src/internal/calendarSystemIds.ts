@@ -50,17 +50,3 @@ export function canonicalCalendarSystem(id: string): CalendarSystem | null {
     return null;
   }
 }
-
-/**
- * The Temporal calendar a `CalendarSystem` computes in. The Ethiopic family (`"ethiopic"`,
- * `"coptic"`) computes in `"ethioaa"`: polyfill 0.5.1 cannot read `"ethiopic"`/`"coptic"` fields
- * under ICU >= 78, and the three calendars share months, days and arithmetic, differing only by a
- * constant year offset (test262 `extreme-dates.js`: ethiopic = ethioaa − 5500, coptic = ethioaa −
- * 5776 at both limits). Strings still carry the
- * requested id; only the computation is routed.
- */
-export function computationCalendarId(calendar: CalendarSystem): string {
-  return calendar === "ethiopic" || calendar === "coptic"
-    ? "ethioaa"
-    : calendar;
-}

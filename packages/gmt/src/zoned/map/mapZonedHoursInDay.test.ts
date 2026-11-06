@@ -41,7 +41,7 @@ describe("mapZonedHoursInDay", () => {
   );
 
   // Santiago skipped local midnight on 2024-09-08: the window is the real 23-hour day,
-  // `startOfDay()` to the next day's `startOfDay()`. Verified on @js-temporal/polyfill@0.5.1
+  // `startOfDay()` to the next day's `startOfDay()`. Verified on temporal-polyfill 1.0.8
   // (`hoursInDay` is 23).
   it("returns 23 entries from 01:00 to 23:00 for Santiago's skipped midnight", () => {
     const result = mapZonedHoursInDay(
@@ -69,7 +69,7 @@ describe("mapZonedHoursInDay", () => {
   // Repeated local midnight: Havana 2024-11-03 is one 25-hour day (the label never changes);
   // Goose Bay fell back at 00:01 on 2010-11-07, so that date has two midnights and 25 hours
   // while 2010-11-06 keeps 24. Matches Temporal's `startOfDay()` and `hoursInDay` on
-  // @js-temporal/polyfill@0.5.1.
+  // temporal-polyfill 1.0.8.
   //
   // The last row pins a documented divergence (coding standards § Calendar & zone semantics,
   // rule 3): an anchor at 23:30-04:00 falls in the reopened stretch of 6 November, so
@@ -171,7 +171,7 @@ describe("mapZonedHoursInDay", () => {
   }
 
   // America/Sao_Paulo skipped local midnight on 2018-11-04, so that day is 23 hours long
-  // (`hoursInDay`). Verified on @js-temporal/polyfill@0.5.1.
+  // (`hoursInDay`). Verified on temporal-polyfill 1.0.8.
   it("returns 23 entries for an anchor whose midnight is skipped", () => {
     expect(
       mapZonedHoursInDay("2018-11-04T12:00:00-02:00[America/Sao_Paulo]"),
@@ -191,12 +191,12 @@ describe("mapZonedHoursInDay at the range limits", () => {
   });
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("mapZonedHoursInDay across the 1844 date-line crossings (zoned.E)", () => {
+describe("mapZonedHoursInDay across the 1844 date-line crossings", () => {
   it.each(dateLineCrossingTimeZones)(
     "lists the 24 hours of 1844-12-30 in $timeZone",
     (crossing) => {

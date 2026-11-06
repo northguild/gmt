@@ -1,3 +1,4 @@
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { isValidDateTimeDurationUnit } from "../../plain/validate";
 import type { DateTimeDurationUnit } from "../../types";
@@ -37,7 +38,7 @@ import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
  */
 export function getDurationUnit(
   value: string,
-  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
+  unit: DateTimeDurationUnit | DateTimeUnit,
 ): number | null {
   const resolvedUnit = resolveDurationUnit(unit);
 

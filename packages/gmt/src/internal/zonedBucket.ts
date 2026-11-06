@@ -1,13 +1,6 @@
 import { Temporal } from "./temporal";
 import type { DateTimeUnit } from "../types";
 import { DURATION_FIELD_BY_UNIT, getUnitSpan } from "./intervalCountHelpers";
-import {
-  calendarDateAdd,
-  calendarDateFromFields,
-  calendarDateUntil,
-  calendarFieldsOf,
-  isCalendarArithmeticCompatNeeded,
-} from "./temporalCompat";
 import { floorDivide } from "./floorDivide";
 import { NANOSECONDS_PER_DAY } from "./foreignEpochs";
 import { ISO_WEEKDAYS, isoFieldsOf, isoWeekdayOf } from "./epochDay";
@@ -30,7 +23,7 @@ export type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type WalkerUnit = DateTimeUnit | "quarter";
 
 /** The `Temporal.Duration` that advances a wall clock by one `unit`. */
-function oneUnit(unit: WalkerUnit): Temporal.DurationLike {
+function oneUnit(unit: WalkerUnit): Temporal.DurationLikeObject {
   return unit === "quarter"
     ? { months: 3 }
     : { [DURATION_FIELD_BY_UNIT[unit]]: 1 };
@@ -61,7 +54,7 @@ const FIELDS_RESET_BY_UNIT = {
   microsecond: { nanosecond: 0 },
 } as const satisfies Record<
   Exclude<DateTimeUnit, "week" | "nanosecond">,
-  Temporal.PlainDateTimeLike
+  Temporal.PartialTemporalLike<Temporal.DateTimeLikeObject>
 >;
 
 /**
@@ -81,73 +74,6 @@ const MAX_TRANSITION_WALKBACK = 8;
  * Hebrew one.
  */
 function truncateLocal(
-  local: Temporal.PlainDateTime,
-  unit: WalkerUnit,
-  weekStartsOn: WeekStartDay,
-): Temporal.PlainDateTime {
-  if (unit === "nanosecond") return local;
-  if (needsCalendarCompat(local)) {
-    return truncateLocalWithCompat(local, unit, weekStartsOn);
-  }
-  return truncateLocalInOwnCalendar(local, unit, weekStartsOn);
-}
-
-/**
- * CORE-6: true when `local`'s calendar arithmetic needs the Temporal compat layer in this runtime.
- * The polyfill's `with`, `add` and `until` are then wrong or throw on its wall clocks (D1–D7), so
- * the walker builds calendar periods from corrected reads and does everything else in ISO.
- */
-function needsCalendarCompat(local: Temporal.PlainDateTime): boolean {
-  return (
-    local.calendarId !== "iso8601" &&
-    isCalendarArithmeticCompatNeeded(local.calendarId)
-  );
-}
-
-function isCalendarPeriod(
-  unit: WalkerUnit,
-): unit is "year" | "quarter" | "month" {
-  return unit === "year" || unit === "quarter" || unit === "month";
-}
-
-/** `truncateLocal` for a calendar that needs the compat layer. */
-function truncateLocalWithCompat(
-  local: Temporal.PlainDateTime,
-  unit: WalkerUnit,
-  weekStartsOn: WeekStartDay,
-): Temporal.PlainDateTime {
-  if (isCalendarPeriod(unit)) {
-    const { year, month } = calendarFieldsOf(
-      local.toPlainDate(),
-      local.calendarId,
-    );
-    const startMonth =
-      unit === "year"
-        ? 1
-        : unit === "quarter"
-          ? quarterStartMonth(month)
-          : month;
-    return calendarDateFromFields(
-      local.calendarId,
-      { year, month: startMonth, day: 1 },
-      "reject",
-    ).toPlainDateTime();
-  }
-  // Weeks, days and time units do not depend on the calendar.
-  return truncateLocalInOwnCalendar(
-    local.withCalendar("iso8601"),
-    unit,
-    weekStartsOn,
-  ).withCalendar(local.calendarId);
-}
-
-/** The first month of the quarter holding ordinal `month` (1, 4, 7 or 10). */
-function quarterStartMonth(month: number): number {
-  return Math.floor((month - 1) / 3) * 3 + 1;
-}
-
-/** `truncateLocal` through `local`'s own calendar operations. */
-function truncateLocalInOwnCalendar(
   local: Temporal.PlainDateTime,
   unit: WalkerUnit,
   weekStartsOn: WeekStartDay,
@@ -203,52 +129,11 @@ function boundaryInOwnOffset(
   weekStartsOn: WeekStartDay,
 ): Temporal.ZonedDateTime {
   const local = zoned.toPlainDateTime();
-  const elapsed = wallClockUntil(
-    truncateLocal(local, unit, weekStartsOn),
-    local,
-    "hour",
-  );
+  const elapsed = truncateLocal(local, unit, weekStartsOn).until(local, {
+    largestUnit: "hour",
+  });
 
   return inZoneOf(zoned.toInstant().subtract(elapsed), zoned);
-}
-
-/**
- * `from.until(to, { largestUnit })` between two wall clocks in one calendar. Hours and smaller
- * never depend on the calendar, so a calendar that needs the compat layer measures them in ISO.
- */
-function wallClockUntil(
-  from: Temporal.PlainDateTime,
-  to: Temporal.PlainDateTime,
-  largestUnit: "hour",
-): Temporal.Duration {
-  return needsCalendarCompat(from)
-    ? from
-        .withCalendar("iso8601")
-        .until(to.withCalendar("iso8601"), { largestUnit })
-    : from.until(to, { largestUnit });
-}
-
-/**
- * `from.until(to, { largestUnit: unit })` between two wall clocks already truncated to `unit`. A
- * calendar that needs the compat layer counts years and months with `calendarDateUntil` between
- * the dates (both clocks sit at midnight on a period start) and every other unit in ISO.
- */
-function truncatedWallClockUntil(
-  from: Temporal.PlainDateTime,
-  to: Temporal.PlainDateTime,
-  unit: DateTimeUnit,
-): Temporal.Duration {
-  if (!needsCalendarCompat(from)) {
-    return from.until(to, { largestUnit: unit });
-  }
-  if (unit === "year" || unit === "month") {
-    return Temporal.Duration.from(
-      calendarDateUntil(from.toPlainDate(), to.toPlainDate(), unit),
-    );
-  }
-  return from
-    .withCalendar("iso8601")
-    .until(to.withCalendar("iso8601"), { largestUnit: unit });
 }
 
 /**
@@ -407,10 +292,9 @@ function nextBoundaryInOwnOffset(
   // Step first, then truncate: the current unit's start may lie before the representable range,
   // while the next unit's start does not. Both orders give the same boundary, because a one-unit
   // step clamps within the next unit (Jan 31 + 1 month = Feb 29, whose month starts on Feb 1).
-  const remaining = wallClockUntil(
-    local,
-    truncateLocal(addOneUnit(local, unit), unit, weekStartsOn),
-    "hour",
+  const remaining = local.until(
+    truncateLocal(local.add(oneUnit(unit)), unit, weekStartsOn),
+    { largestUnit: "hour" },
   );
 
   return inZoneOf(zoned.toInstant().add(remaining), zoned);
@@ -431,30 +315,6 @@ function nextBoundaryWithinRange(
     if (error instanceof RangeError) return null;
     throw error;
   }
-}
-
-/**
- * `local.add(oneUnit(unit))`. For a calendar that needs the compat layer, a calendar period steps
- * through `calendarDateAdd` (constrained, keeping the time of day) and every other unit in ISO.
- */
-function addOneUnit(
-  local: Temporal.PlainDateTime,
-  unit: WalkerUnit,
-): Temporal.PlainDateTime {
-  if (!needsCalendarCompat(local)) {
-    return local.add(oneUnit(unit));
-  }
-  if (isCalendarPeriod(unit)) {
-    return calendarDateAdd(
-      local.toPlainDate(),
-      unit === "year" ? { years: 1 } : { months: unit === "quarter" ? 3 : 1 },
-      "constrain",
-    ).toPlainDateTime(local.toPlainTime());
-  }
-  return local
-    .withCalendar("iso8601")
-    .add(oneUnit(unit))
-    .withCalendar(local.calendarId);
 }
 
 /**
@@ -649,7 +509,7 @@ function bucketWalker(
         startsNewBucketAt(zonedAt(transition), unit, weekStartsOn),
       unitsBetween: (fromNs, _fromOffset, toNs) =>
         getUnitSpan(
-          truncatedWallClockUntil(label(fromNs), label(toNs), unit),
+          label(fromNs).until(label(toNs), { largestUnit: unit }),
           unit,
         ),
     };

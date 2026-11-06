@@ -21,7 +21,7 @@ describe("formatMonthDay", () => {
   // pattern (ECMA-402 AdjustDateTimeStyleFormat), so medium and long are the locale's: de-DE medium
   // "25.12.", ja-JP long "12/25". Every dateStyle cell is what native
   // PlainMonthDay#toLocaleString prints with calendar gregory in Chromium 153 and WebKit 26.6; on
-  // Node the Temporal is polyfill 0.5.1, which maps the style to fixed widths instead. full gives
+  // Node the Temporal is temporal-polyfill 1.0.8, which maps the style to fixed widths instead. full gives
   // the long cell in all 17. monthLong is { month: "long", day: "numeric" }: zh and ja write the
   // month as a name there and as a number in every dateStyle. tr-TR short: "25/12" on ICU 78.3
   // (Node 24.22.1, Chromium 153), "25.12" on WebKit 26.6.
@@ -76,7 +76,7 @@ describe("formatMonthDay", () => {
     value                      | options                                                                                     | expected         | rule
     ${"--02-29"}               | ${{ month: "long", day: "numeric" }}                                                        | ${"February 29"} | ${"1972 reference year"}
     ${"12-25"}                 | ${undefined}                                                                                | ${"12/25"}       | ${"input form MM-DD"}
-    ${"--12-25[u-ca=ISO8601]"} | ${undefined}                                                                                | ${"12/25"}       | ${"D20 calendar annotation"}
+    ${"--12-25[u-ca=ISO8601]"} | ${undefined}                                                                                | ${"12/25"}       | ${"upper-case calendar annotation"}
     ${"--12-25"}               | ${{ month: "long" }}                                                                        | ${"December"}    | ${"month alone"}
     ${"--12-25"}               | ${{ day: "numeric" }}                                                                       | ${"25"}          | ${"day alone"}
     ${"--12-25"}               | ${{ year: "numeric", month: "long", day: "numeric" }}                                       | ${"December 25"} | ${"year dropped"}

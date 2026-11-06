@@ -1,3 +1,4 @@
+import type { ToStringPrecisionOptions } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -27,7 +28,7 @@ export function parseDuration(
      *
      * @defaultValue None. The precision comes from `fractionalSecondDigits`.
      */
-    smallestUnit?: Temporal.ToStringPrecisionOptions["smallestUnit"];
+    smallestUnit?: ToStringPrecisionOptions["smallestUnit"];
     /**
      * The number of fractional-second digits written: `0` to `9` writes exactly that many, and
      * `"auto"` writes as many as the duration needs, with no trailing zeros. It has no effect when
@@ -35,14 +36,14 @@ export function parseDuration(
      *
      * @defaultValue `"auto"`, Temporal's default.
      */
-    fractionalSecondDigits?: Temporal.ToStringPrecisionOptions["fractionalSecondDigits"];
+    fractionalSecondDigits?: ToStringPrecisionOptions["fractionalSecondDigits"];
     /**
      * How the duration is rounded when the precision asked for drops digits. `"trunc"` cuts them
      * off; `"halfExpand"` rounds to the nearest value, a half going away from zero.
      *
      * @defaultValue `"trunc"`, Temporal's default.
      */
-    roundingMode?: Temporal.ToStringPrecisionOptions["roundingMode"];
+    roundingMode?: ToStringPrecisionOptions["roundingMode"];
   },
 ): string {
   if (!isOptionsArgument(options)) {

@@ -1,13 +1,11 @@
+import { Temporal } from "../../internal/temporal";
 import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { setFakeSystemTime } from "../../test/setFakeSystemTime";
-import { nowInstant } from "../../internal/temporalCompat";
 import { getUnixIn } from "../../unix/get/getUnixIn";
 import { getUtcIn } from "../../utc/get/getUtcIn";
 import { formatHttpDateFromNow } from "../../utc/format/formatHttpDateFromNow";
 import { totalUnitsFromNow } from "./totalUnitsFromNow";
 import { ttlFromNow } from "./ttlFromNow";
-
-vi.mock("../../internal/temporalCompat", { spy: true });
 
 // The fake clock is 2027-06-15T12:00:00Z (Unix 1813060800) unless a row sets another. The polyfill
 // adds a nanosecond tail under it, so a fractional length shows the rounding of each field.
@@ -17,11 +15,12 @@ describe("ttlFromNow", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setFakeSystemTime(NOW);
+    vi.spyOn(Temporal.Now, "instant");
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.mocked(nowInstant).mockClear();
+    vi.mocked(Temporal.Now.instant).mockRestore();
   });
 
   // Weekdays checked against Date#toUTCString, an oracle outside GMT. 2028 is a leap year, so a
@@ -77,7 +76,7 @@ describe("ttlFromNow", () => {
 
   it("reads the clock once even when the result is null for a year past 9999", () => {
     expect(ttlFromNow({ years: 8000 })).toBeNull();
-    expect(nowInstant).toHaveBeenCalledTimes(1);
+    expect(Temporal.Now.instant).toHaveBeenCalledTimes(1);
   });
 
   it.each`
@@ -105,12 +104,12 @@ describe("ttlFromNow", () => {
 
   it("reads the clock once", () => {
     expect(ttlFromNow({ days: 1 })).not.toBeNull();
-    expect(nowInstant).toHaveBeenCalledTimes(1);
+    expect(Temporal.Now.instant).toHaveBeenCalledTimes(1);
   });
 
   it("reads the clock not at all for invalid units", () => {
     expect(ttlFromNow({ days: -1 })).toBeNull();
-    expect(nowInstant).not.toHaveBeenCalled();
+    expect(Temporal.Now.instant).not.toHaveBeenCalled();
   });
 
   // For a whole-second length, seconds is exactly the length and epochSeconds floors start + length,

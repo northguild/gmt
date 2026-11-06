@@ -274,7 +274,7 @@ describe("intervalCountZoned", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// E7 (issue #152) DoD-11. Same-calendar values produced by running @js-temporal/polyfill@0.5.1.
+// E7 (issue #152) DoD-11. Same-calendar values produced by running temporal-polyfill 1.0.8.
 // Different calendars return null (native Chromium 153 until: "Mismatched calendars.").
 // ---------------------------------------------------------------------------------------------
 describe("intervalCountZoned with GMT calendar-annotated values", () => {
@@ -322,7 +322,7 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
   // The walker keeps the pair's calendar through a DST transition. 2024-03-01..20 in New York
   // crosses the Hebrew Adar I -> Adar II boundary (Mar 11) and the Mar 10 spring-forward, so it
   // counts 2 Hebrew months where the same ISO span counts 1; the Hebrew-tagged spring-forward
-  // day still has 23 hour buckets. Verified on @js-temporal/polyfill@0.5.1.
+  // day still has 23 hour buckets. Verified on temporal-polyfill 1.0.8.
   it.each`
     start                                                         | end                                                           | unit       | expected
     ${"2024-03-01T12:00:00-05:00[America/New_York][u-ca=hebrew]"} | ${"2024-03-20T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${"month"} | ${2}
@@ -339,7 +339,7 @@ describe("intervalCountZoned with GMT calendar-annotated values", () => {
   // opens a second 01:00 hour; flooring inside it used to hand back an ISO transition, and mixing
   // it with a Hebrew bucket start made the count throw and return null. Each Hebrew row matches its
   // ISO twin (5785-02-01/02 in GMT digits is ISO 2024-11-02/03). Verified on
-  // @js-temporal/polyfill@0.5.1.
+  // temporal-polyfill 1.0.8.
   it.each`
     start                                                         | end                                                           | unit      | expected | calendar
     ${"2024-11-03T01:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"2024-11-03T01:45:00-05:00[America/New_York][u-ca=hebrew]"} | ${"hour"} | ${1}     | ${"hebrew"}
@@ -375,13 +375,13 @@ describe("intervalCountZoned transition cap", () => {
         "getTimeZoneTransition",
       ).mockImplementation(function (
         this: Temporal.ZonedDateTime,
-        direction: Parameters<
-          Temporal.ZonedDateTime["getTimeZoneTransition"]
-        >[0],
+        direction: Temporal.TransitionOptions | "next" | "previous",
       ) {
-        return direction === "next"
+        const wanted =
+          typeof direction === "string" ? direction : direction.direction;
+        return wanted === "next"
           ? this.add({ minutes: 1 })
-          : realGetTimeZoneTransition.call(this, direction);
+          : realGetTimeZoneTransition.call(this, { direction: wanted });
       });
 
       expect(intervalCountZoned(start, end, unit)).toBe(expected);
@@ -408,13 +408,13 @@ describe("intervalCountZoned at the transition cap", () => {
         "getTimeZoneTransition",
       ).mockImplementation(function (
         this: Temporal.ZonedDateTime,
-        direction: Parameters<
-          Temporal.ZonedDateTime["getTimeZoneTransition"]
-        >[0],
+        direction: Temporal.TransitionOptions | "next" | "previous",
       ) {
-        return direction === "next"
+        const wanted =
+          typeof direction === "string" ? direction : direction.direction;
+        return wanted === "next"
           ? this.add({ minutes: 1 })
-          : realGetTimeZoneTransition.call(this, direction);
+          : realGetTimeZoneTransition.call(this, { direction: wanted });
       });
 
       expect(
@@ -425,11 +425,12 @@ describe("intervalCountZoned at the transition cap", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// Transition zones. Counts are the number of local buckets the half-open interval touches, as
-// `bucketRange` walks them — a bucket may be shorter than its unit (Chatham's 15-minute 03:00
+// Transition zones. Counts are the number of local buckets the half-open interval touches. A
+// bucket may be shorter than its unit (Chatham's 15-minute 03:00
 // hour, Goose Bay's 60-second 00:00 hour) or missing entirely (Samoa deleted 2011-12-30), so
 // wall-clock truncation and a calendar-unit difference both get these wrong. Every expected
-// value verified against `bucketRange(...).length` on @js-temporal/polyfill@0.5.1.
+// value is the bucket count recomputed directly on temporal-polyfill 1.0.8 (label runs scanned per
+// second or minute), not through GMT.
 // ---------------------------------------------------------------------------------------------
 describe("intervalCountZoned across zone transitions", () => {
   it.each`
@@ -467,7 +468,7 @@ describe("intervalCountZoned across a transition near the maximum", () => {
   );
 });
 
-// CORE-6 S5: calendar-unit buckets are the calendar's own months. Each count is the bucket holding
+// S5: calendar-unit buckets are the calendar's own months. Each count is the bucket holding
 // the start plus every month start after it and at or before the end, from Chromium 153 native
 // `with({ day: 1 })` / `add({ months })` reads:
 // - hebrew 279517-08-05 (ISO +275760-07-10) to 279517-10-08 (+275760-09-10): months start at
@@ -478,8 +479,8 @@ describe("intervalCountZoned across a transition near the maximum", () => {
 describe("intervalCountZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     start                                                              | end                                                                | expected | reason
-    ${"+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${"+275760-09-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${3}     | ${"D1 near the maximum"}
-    ${"+275760-07-10T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${"+275760-09-10T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${3}     | ${"D1 near the maximum in a named zone"}
+    ${"+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${"+275760-09-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${3}     | ${"range limit near the maximum"}
+    ${"+275760-07-10T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${"+275760-09-10T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${3}     | ${"range limit near the maximum in a named zone"}
     ${"-100000-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${"-100000-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${3}     | ${"hebrew year <= 0"}
     ${"-100000-01-01T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}         | ${"-100000-02-10T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}         | ${3}     | ${"hebrew year <= 0 behind UTC"}
     ${"1000-01-15T00:00:00+00:00[UTC][u-ca=buddhist]"}                 | ${"1000-03-15T00:00:00+00:00[UTC][u-ca=buddhist]"}                 | ${3}     | ${"proleptic buddhist"}
@@ -513,12 +514,12 @@ describe("intervalCountZoned in non-ISO calendars (CORE-6)", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("intervalCountZoned across the 1844 date-line crossings (zoned.E)", () => {
+describe("intervalCountZoned across the 1844 date-line crossings", () => {
   // December 1844 has 31 dates less the skipped 12-31, January 31: 61 local days.
   it.each(dateLineCrossingTimeZones)(
     "counts 61 days from 1844-12-01 to 1845-02-01 in $timeZone",
@@ -558,7 +559,7 @@ describe("intervalCountZoned over thousands of years with no clock change", () =
 });
 
 // Spans long enough that every zone transition is crossed. Expected counts are read from the
-// calendar and verified on @js-temporal/polyfill@0.5.1: 100 years from 2024-01-01 hold
+// calendar and recomputed directly on temporal-polyfill 1.0.8: 100 years from 2024-01-01 hold
 // 100 * 365 + 24 leap days (2100 is not leap); each spring gap removes one hour bucket and each
 // fall-back adds one, so the hours are 24 per day.
 describe("intervalCountZoned over a century of transitions", () => {
@@ -591,7 +592,7 @@ describe("intervalCountZoned over a century of transitions", () => {
 });
 
 // The integer bucket rule. Every count was derived by hand from the zone's rule
-// and agrees with the pre-slice walk on @js-temporal/polyfill@0.5.1.
+// and recomputed directly on temporal-polyfill 1.0.8 by scanning wall-clock labels.
 describe("intervalCountZoned bucket rule across half-hour and sub-minute offset changes", () => {
   // Lord Howe falls back 02:00 +11:00 to 01:30 +10:30 on 2024-04-07 and springs forward 02:00
   // +10:30 to 02:30 +11:00 on 2024-10-06. A bucket opens where the wall clock lands on a unit
@@ -645,7 +646,7 @@ describe("intervalCountZoned month and year buckets across a deleted date", () =
 });
 
 // A zone with few or no transitions is searched once, not once per three years of the span.
-// Expected counts are verified on @js-temporal/polyfill@0.5.1; the spy bounds the searches.
+// Expected counts are recomputed directly on temporal-polyfill 1.0.8; the spy bounds the searches.
 describe("intervalCountZoned over a span with no transitions", () => {
   it.each`
     start                                        | end                                             | expected

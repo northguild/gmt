@@ -135,7 +135,7 @@ describe("intervalCountDate", () => {
   // E5 (issue #78): when start and end share a calendar tag, boundaries are counted in that
   // calendar -- a Hebrew leap year crosses 13 month boundaries and 1 year boundary, not 12/2.
   // Different calendars (a bare ISO string names iso8601) return null (TC39
-  // CalendarEquals). Goldens verified directly against @js-temporal/polyfill.
+  // CalendarEquals). Goldens verified directly against temporal-polyfill 1.0.8.
   it("counts 13 month boundaries across a Hebrew leap year (not 12, ISO's answer for the same span)", () => {
     expect(
       intervalCountDate(
@@ -158,7 +158,7 @@ describe("intervalCountDate", () => {
 
   // Indian National Calendar (Saka era) leap-year alignment follows the Gregorian rule rather
   // than an independent cycle, so its year boundary doesn't land on a fixed Gregorian
-  // day-of-year -- verified directly against @js-temporal/polyfill:
+  // day-of-year -- verified directly against temporal-polyfill 1.0.8:
   // convertDateToCalendar("2024-03-20", "indian") -> "2024-03-20[u-ca=indian]",
   // convertDateToCalendar("2024-03-21", "indian") -> "2024-03-21[u-ca=indian]".
   it("crosses an Indian-calendar year boundary that doesn't align to a fixed Gregorian date", () => {
@@ -171,14 +171,14 @@ describe("intervalCountDate", () => {
     ).toBe(1);
   });
 
-  // CORE-6 D1: the polyfill's calendar arithmetic throws within about a year of the maximum.
+  // range limit: calendar counts within about a year of the maximum, where 0.5.1's calendar arithmetic threw.
   // Hebrew 279517 is a leap year whose ordinal month 10 (Sivan) holds the maximum, day 11.
   it.each`
     start                           | end                             | unit       | expected | reason
     ${"+275760-07-06[u-ca=hebrew]"} | ${"+275760-09-13[u-ca=hebrew]"} | ${"month"} | ${3}     | ${"months 8, 9 and 10 up to the maximum"}
     ${"+275760-09-03[u-ca=hebrew]"} | ${"+275760-09-13[u-ca=hebrew]"} | ${"month"} | ${1}     | ${"the maximum's own month"}
     ${"+275758-12-23[u-ca=hebrew]"} | ${"+275760-09-13[u-ca=hebrew]"} | ${"year"}  | ${2}     | ${"years 279516 and 279517"}
-    ${"1000-01-15[u-ca=buddhist]"}  | ${"1000-03-10[u-ca=buddhist]"}  | ${"month"} | ${3}     | ${"D2: buddhist months are ISO months (ISO 1000-01-15 to 1000-03-10); polyfill 0.5.1's with({ day: 1 }) lands on ISO 1000-01-06"}
+    ${"1000-01-15[u-ca=buddhist]"}  | ${"1000-03-10[u-ca=buddhist]"}  | ${"month"} | ${3}     | ${"buddhist months are ISO months (ISO 1000-01-15 to 1000-03-10); 0.5.1's with({ day: 1 }) landed on ISO 1000-01-06 (1.0.8 lands on 1000-01-01)"}
   `(
     "counts $expected $unit boundaries from $start to $end ($reason)",
     ({ start, end, unit, expected }) => {

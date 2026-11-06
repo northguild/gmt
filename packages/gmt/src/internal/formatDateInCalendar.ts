@@ -8,9 +8,8 @@ import type { CalendarSystem } from "../types";
  * or a sign and six) followed by `FormatCalendarAnnotation`, which is empty for `"iso8601"` and
  * `[u-ca=<id>]` for every other calendar, `"gregory"` included.
  *
- * The calendar is passed in, not read from `date.calendarId`, because `"ethiopic"` and
- * `"coptic"` compute in `"ethioaa"` (`computationCalendarId`); the ISO date is the same whichever
- * calendar it was computed in.
+ * The calendar is passed in, not read from `date.calendarId`: the ISO date is the same whichever
+ * calendar it was computed in, and only the annotation names the calendar.
  *
  * @param date Temporal.PlainDate to write, in any calendar
  * @param calendar the CalendarSystem the string names

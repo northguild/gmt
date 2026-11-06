@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { differenceRecord } from "../../internal/differenceRecord";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
@@ -102,7 +103,7 @@ export function diffTime(
         {
           add: (from, amount) => from.add(amount),
           until: (from, to, largest) =>
-            from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
+            from.until(to, { largestUnit: largest as DateTimeUnit }),
         },
       ) as Record<TimeDurationUnit, number>;
     } catch {

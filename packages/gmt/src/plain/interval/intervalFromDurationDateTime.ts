@@ -4,6 +4,7 @@ import { resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
 import { isValidDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { assertMonthsInRange } from "../../internal/temporalCompat";
 
 /**
  * Construct a datetime interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -75,6 +76,7 @@ export function intervalFromDurationDateTime(
     const point = Temporal.PlainDateTime.from(value);
     const dur = Temporal.Duration.from(duration);
     const overflow = resolveOverflow(options?.overflow);
+    assertMonthsInRange(dur.months); // D9
 
     const other =
       anchor === "start"

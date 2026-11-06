@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
 import { wholeSecondsUntil } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import { parseHttpDate } from "../parse/parseHttpDate";
 
 /**
@@ -43,7 +42,10 @@ export function secondsUntilHttpDate(value: string): number | null {
       return null;
     }
 
-    return wholeSecondsUntil(Temporal.Instant.from(utc), nowInstant());
+    return wholeSecondsUntil(
+      Temporal.Instant.from(utc),
+      Temporal.Now.instant(),
+    );
   } catch {
     // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
     return null;

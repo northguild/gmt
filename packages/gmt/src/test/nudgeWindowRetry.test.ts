@@ -10,15 +10,14 @@ import { diffUtc } from "../utc";
  * `NudgeToCalendarUnit` then checks that the target actually falls inside it. When it does not, the
  * window is recomputed one unit further along (`additionalShift`), so `r1` becomes 1 rather than 0.
  *
- * `@js-temporal/polyfill` 0.5.1 computes the window once and never retries (its own
- * `assert(start ≤ dest ≤ end)` is compiled out of production builds), so the target sits outside the
- * window, `progress` exceeds 1, and the answer is taken over the wrong bounds. It is reachable only
+ * A polyfill that computes the window once and never retries (the `assert(start ≤ dest ≤ end)` of
+ * the reference code is compiled out of production builds) leaves the target outside the window,
+ * `progress` exceeds 1, and the answer is taken over the wrong bounds. It is reachable only
  * when the duration's own month count is one short of the truth, which is exactly when adding a month
  * constrains the day — a start on the 29th, 30th or 31st.
  *
- * Upstream: tc39/proposal-temporal#3168, fixed by #3172 (`5dd0b0d97ee1`, merged 2025-11-19), which
- * `@js-temporal/polyfill` has not ported on 0.5.1 or `main`. GMT carries the spec algorithm itself
- * (compat defect D11) until a release does.
+ * Upstream: tc39/proposal-temporal#3168, fixed by #3172 (`5dd0b0d97ee1`, merged 2025-11-19);
+ * `temporal-polyfill` 1.0.8 carries the fix, so GMT has no workaround here.
  *
  * Every expected value below is `Temporal` in Chromium 153.0.8010.12 — native V8, never the polyfill
  * and never GMT. The three directed rounding modes are the ones that diverge; `halfExpand` and
@@ -124,7 +123,7 @@ describe("the nudge window is retried when the target falls outside it", () => {
    * TC39 says so inside `ApplyUnsignedRoundingMode` ("if x is equal to r1, return r1"). GMT's form
    * takes a comparison rather than the value, so it could not see that case and `ceil` expanded an
    * exact boundary to the next whole unit. It was reachable through the non-ISO calendars before
-   * this change, and through every calendar once the D11 gate routed ISO here too.
+   * this change, and through every calendar once the nudge window routed ISO here too.
    *
    * Expected values are Chromium 153.0.8010.12.
    */

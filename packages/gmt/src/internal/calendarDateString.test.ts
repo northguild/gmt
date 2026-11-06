@@ -2,8 +2,7 @@ import { parseCalendarDateValue } from "./calendarDateString";
 
 describe("parseCalendarDateValue", () => {
   // RFC 9557: the digits are the ISO date whatever the annotation says, so every row names ISO
-  // 2024-10-03. The calendar is the annotation's, canonicalized; "ethiopic" and "coptic" compute
-  // in "ethioaa" (internal/calendarSystemIds.ts computationCalendarId).
+  // 2024-10-03. The calendar is the annotation's, canonicalized.
   it.each`
     value                                  | expectedIso        | calendarId
     ${"2024-10-03"}                        | ${"2024-10-03"}    | ${"iso8601"}
@@ -18,9 +17,9 @@ describe("parseCalendarDateValue", () => {
     ${"2024-10-03[u-ca=roc]"}              | ${"2024-10-03"}    | ${"roc"}
     ${"2024-10-03[u-ca=persian]"}          | ${"2024-10-03"}    | ${"persian"}
     ${"2024-10-03[u-ca=indian]"}           | ${"2024-10-03"}    | ${"indian"}
-    ${"2024-10-03[u-ca=ethiopic]"}         | ${"2024-10-03"}    | ${"ethioaa"}
+    ${"2024-10-03[u-ca=ethiopic]"}         | ${"2024-10-03"}    | ${"ethiopic"}
     ${"2024-10-03[u-ca=ethioaa]"}          | ${"2024-10-03"}    | ${"ethioaa"}
-    ${"2024-10-03[u-ca=coptic]"}           | ${"2024-10-03"}    | ${"ethioaa"}
+    ${"2024-10-03[u-ca=coptic]"}           | ${"2024-10-03"}    | ${"coptic"}
     ${"2024-10-03[!u-ca=hebrew]"}          | ${"2024-10-03"}    | ${"hebrew"}
     ${"2024-10-03[u-ca=HEBREW]"}           | ${"2024-10-03"}    | ${"hebrew"}
     ${"2024-10-03[u-ca=islamicc]"}         | ${"2024-10-03"}    | ${"islamic-civil"}
@@ -49,7 +48,7 @@ describe("parseCalendarDateValue", () => {
     ${"2024-10-03[x=y][u-ca=roc]"}             | ${"roc"}
     ${"2024-10-03[u-ca=hebrew][u-ca=roc]"}     | ${"hebrew"}
     ${"2024-10-03[u-ca=hebrew][u-ca=chinese]"} | ${"hebrew"}
-    ${"2024-10-03[u-ca=coptic][foo=bar]"}      | ${"ethioaa"}
+    ${"2024-10-03[u-ca=coptic][foo=bar]"}      | ${"coptic"}
     ${"2024-10-03[Asia/Tokyo]"}                | ${"iso8601"}
     ${"2024-10-03[foo=bar]"}                   | ${"iso8601"}
   `(
@@ -89,7 +88,7 @@ describe("parseCalendarDateValue", () => {
   });
 
   // A date-time is read as its date, as `Temporal.PlainDate.from` reads it (decided
-  // 2026-09-17). Expected `toString()` values from native Chromium 153 (polyfill 0.5.1 agrees).
+  // 2026-09-17). Expected `toString()` values from native Chromium 153 (temporal-polyfill 1.0.8 agrees).
   it.each`
     value                                                   | expected
     ${"2024-03-10T14:30:00"}                                | ${"2024-03-10"}
