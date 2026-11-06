@@ -171,6 +171,13 @@ export async function renderWidget(
   let handle: WidgetHandle;
   try {
     handle = await loading;
+  } catch (error) {
+    /* A load that fails ends the session here, or the recorder stays on `window` for every later file in the worker. */
+    controller.abort();
+    root.remove();
+    sessions.delete(session);
+    if (sessions.size === 0) restorePatch?.();
+    throw error;
   } finally {
     pending.delete(loading);
   }
