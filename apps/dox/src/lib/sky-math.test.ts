@@ -167,6 +167,15 @@ describe("coverFit", () => {
     expect(fit.originY).toBe(400);
   });
 
+  it("scales with the globe's own zoom, so the sky stays locked to the Earth it is drawn behind", () => {
+    const centre = { x: 700, y: 400 };
+    const rest = coverFit(1440, 900, centre);
+    const zoomed = coverFit(1440, 900, centre, 2.5);
+    expect(zoomed.scale).toBeCloseTo(rest.scale * 2.5, 9);
+    expect(zoomed.originX).toBe(rest.originX);
+    expect(zoomed.originY).toBe(rest.originY);
+  });
+
   it.each([390, 768, 1440, 2560])(
     "reaches every corner of a hero %i px wide within the cut-off, the Earth a fifth to four fifths across",
     (width) => {

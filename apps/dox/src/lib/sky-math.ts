@@ -273,14 +273,21 @@ export function inBox(
 /**
  * The box laid over a hero the way `object-fit: cover` lays an image, with the view's centre at
  * `centre` (the Earth's centre, in the hero's pixels): the scale, and where the box's centre lands.
+ *
+ * `zoom` is the globe's own zoom factor (1 at rest). The cover-fit alone only matches the sky to
+ * the hero's viewport, not to the Earth's size on screen — so zooming the globe grew its disc
+ * without the Sun, Moon or stars around it moving to match, and a Sun that sat just past the limb
+ * at rest could end up swallowed by a disc that had grown past it. Scaling by `zoom` keeps the sky
+ * locked to the Earth it is drawn behind, at any zoom.
  */
 export function coverFit(
   width: number,
   height: number,
   centre: { x: number; y: number },
+  zoom = 1,
 ): { scale: number; originX: number; originY: number } {
   return {
-    scale: Math.max(width / BOX.width, height / BOX.height),
+    scale: Math.max(width / BOX.width, height / BOX.height) * zoom,
     originX: centre.x,
     originY: centre.y,
   };
