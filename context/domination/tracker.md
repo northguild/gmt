@@ -65,8 +65,8 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | CORE-76 (#20)  | INT-15, CORE-78, INT-14, CORE-76           | Intermodal complete with its tools (#304), and hours of work: the engine every duty rule runs on                                                                                                                                                                                                                                   |
 | CORE-88 (#29)  | MAR-16 … CORE-88 (#21–#29)                 | GNSS time and leap seconds, then the second Core round: the site on its domain, the `Temporal` seam, the native suite, stored times, the Canada 2026 clock-change checker                                                                                                                                                          |
 | CORE-106 (#41) | CORE-89 … CORE-106 (#30–#41)               | The rest of the second Core round: the Morocco checker, identifiers, holiday rules, recurrence and cron, human durations, `Position`, month-day and year-month values, validators that take any value, lengths of time counted from now; then the Canada checker in the past tense, one file per workaround and the database audit |
-| CORE-108 (#44) | CORE-107, CORE-92, CORE-108 (#42–#44)      | Changelog pages, the weekly check for a `temporal-polyfill` release, and the move onto `temporal-polyfill`: a new runtime dependency and changed public types, with no new function beside them                                                                                                                                    |
-| SPA-52 (#49)   | CORE-109 … SPA-52 (#45–#49)                | The hero drawn from one camera, then the time-scale conversions: TAI64 text labels, TT and TCG, Julian Date, MJD and J2000, CCSDS ASCII time codes                                                                                                                                                                                 |
+| CORE-109 (#45) | CORE-107 … CORE-109 (#42–#45)              | Changelog pages, the weekly check for a `temporal-polyfill` release, and the move onto `temporal-polyfill`: a new runtime dependency and changed public types, with no new function beside them; then the hero's Earth, Sun and Moon drawn from one camera                                                                         |
+| SPA-52 (#49)   | SPA-46 … SPA-52 (#46–#49)                  | The time-scale conversions: TAI64 text labels, TT and TCG, Julian Date, MJD and J2000, CCSDS ASCII time codes                                                                                                                                                                                                                      |
 
 ---
 
@@ -179,9 +179,10 @@ after it, on shipped functions alone. `CORE-91`, `CORE-105` (one file per workar
 (the database audit) close the release. `CORE-106` builds on shipped functions alone, no story
 consumes it, and it settles the SQL and epoch readers before the industry timestamp formats lean on
 the same primitives. `CORE-107` (changelog pages), `CORE-92` (the weekly check for a
-`temporal-polyfill` release) and `CORE-108` (the move onto `temporal-polyfill`) are a release of
-their own. `CORE-108` changes the runtime dependency and some public types, so this release adds
-no function beside it, and npm matches the docs site before the time-scale conversions build on it.
+`temporal-polyfill` release), `CORE-108` (the move onto `temporal-polyfill`) and `CORE-109` (the
+Dox hero drawn from one camera) are a release of their own. `CORE-108` changes the runtime
+dependency and some public types, and `CORE-109` adds no function, so this release adds no function
+beside them, and npm matches the docs site before the time-scale conversions build on it.
 
 **Demurrage comes straight after `TRAN-8`.** `INT-12` is the first consumer of
 `dwellTime.calendarDays`, and `INT-58` adds the billing deadline chain, every window a caller
@@ -211,9 +212,9 @@ yet.
 
 ### Phase 1 — Core Foundation (required for everything)
 
-Core is thirty-five stories: the primitives several realms share, the tooling every story is held
+Core is thirty-six stories: the primitives several realms share, the tooling every story is held
 to, and one pass over the whole surface before anything is built on top. Phase 1 is the eight
-shipped stories; the later ones (`CORE-54` … `CORE-56`, `CORE-76` … `CORE-108`) are built inside
+shipped stories; the later ones (`CORE-54` … `CORE-56`, `CORE-76` … `CORE-109`) are built inside
 Phase 2, each just before its first consumer, in the first open slot, or in the second Core round.
 
 - **CORE-1, CORE-2, CORE-3** — precision, spans and foreign epoch bridges.
@@ -279,6 +280,8 @@ Highest commercial value and the thinnest coverage in the original plan.
   and validated.
 - **CORE-108** — GMT runs on `temporal-polyfill`: a smaller bundle and fewer workarounds, with the
   weekly check from `CORE-92` watching each new release.
+- **CORE-109** — the Dox hero draws the globe and the sky from one camera at geostationary
+  distance, with the Moon placed, sized and lit as seen from that camera.
 
 ### Phase 3 — Space / Celestial
 
