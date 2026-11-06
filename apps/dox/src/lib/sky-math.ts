@@ -230,6 +230,18 @@ export function projectUnit(
 }
 
 /**
+ * Whether a body lies in front of the camera: within 90 degrees of the view's centre, the point
+ * straight behind the Earth. The sky draws stars out to `MAX_ANGLE` so the hero's corners are never
+ * bare, but a Sun or Moon past 90 degrees is behind the reader — the Sun there lights the face of
+ * the Earth they are looking at, so drawing it beyond the Earth would put it below the horizon of
+ * every lit place on screen.
+ */
+export function inFront(basis: SkyBasis, [x, y, z]: Unit): boolean {
+  const { centre } = basis;
+  return x * centre[0] + y * centre[1] + z * centre[2] >= 0;
+}
+
+/**
  * The size in box units of an angular radius, degrees, at a point of the sky: the projection
  * stretches by `2 / (1 + cos)` of the angle from the view's centre, as it does a star's position.
  */

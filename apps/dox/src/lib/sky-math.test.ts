@@ -3,15 +3,18 @@ import {
   coverFit,
   fromGalactic,
   inBox,
+  inFront,
   moonPhase,
   moonRaDec,
   MAX_ANGLE,
   SCALE,
   project,
   siderealDeg,
+  skyBasis,
   skyCentre,
   sunRaDec,
   toGalactic,
+  toUnit,
 } from "./sky-math";
 
 /** Meeus, Astronomical Algorithms 2nd ed., examples 12.a and 12.b, as Unix milliseconds: 1987-04-10T00:00:00Z and 1987-04-10T19:21:00Z. */
@@ -73,6 +76,15 @@ describe("project", () => {
   it("keeps Betelgeuse, Rigel and Sirius inside the box when Orion is behind the Earth", () => {
     for (const star of [BETELGEUSE, RIGEL, SIRIUS])
       expect(inBox(project(star.ra, star.dec, ORION))).toBe(true);
+  });
+});
+
+describe("inFront", () => {
+  it("is true within 90 degrees of the view's centre and false beyond, inside MAX_ANGLE", () => {
+    const basis = skyBasis(ORION);
+    expect(inFront(basis, toUnit(90 + 89, 0))).toBe(true);
+    expect(inFront(basis, toUnit(90 + 91, 0))).toBe(false);
+    expect(project(90 + 91, 0, ORION)).not.toBeNull();
   });
 });
 

@@ -16,6 +16,7 @@ import {
   BOX,
   coverFit,
   fromGalactic,
+  inFront,
   moonPhase,
   moonRaDec,
   projectUnit,
@@ -350,7 +351,9 @@ export function mountSky(options: SkyOptions): Sky {
     const moon = moonRaDec(instantMs);
     const phase = moonPhase(sun, moon);
     const tint = iceColour();
-    const moonAt = at(moon, moon.radius);
+    const shown = (body: { ra: number; dec: number }, degrees: number) =>
+      inFront(basis, toUnit(body.ra, body.dec)) ? at(body, degrees) : null;
+    const moonAt = shown(moon, moon.radius);
     if (moonAt) {
       const { x, y, r } = moonAt;
       const shine = EARTHSHINE * (1 - phase.lit);
@@ -387,7 +390,7 @@ export function mountSky(options: SkyOptions): Sky {
       starsCtx.fill();
       starsCtx.restore();
     }
-    const sunAt = at(sun, SUN_RADIUS);
+    const sunAt = shown(sun, SUN_RADIUS);
     const hidden =
       sunAt !== null &&
       Math.hypot(sunAt.x - earth.x, sunAt.y - earth.y) <
