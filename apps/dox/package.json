@@ -43,7 +43,6 @@
     "@astrojs/react": "6.0.6",
     "@astrojs/sitemap": "3.7.3",
     "@astrojs/starlight": "0.41.11",
-    "@js-temporal/polyfill": "^0.5.1",
     "@northguild/gmt": "workspace:*",
     "@radix-ui/react-use-controllable-state": "^1.2.6",
     "@streamdown/cjk": "^1.0.3",

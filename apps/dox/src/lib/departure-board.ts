@@ -4,8 +4,8 @@
  * it takes to connect.
  *
  * Every departure shown comes from a real `PunctualityLib` call. The tool's one
- * naive value is the same call with no `minimumConnection`. `@js-temporal/
- * polyfill` is used only through `punctuality-widgets.ts` for drawing the rail
+ * naive value is the same call with no `minimumConnection`. `Temporal`
+ * (from `@northguild/gmt`) is used only through `punctuality-widgets.ts` for drawing the rail
  * (positions, tick instants, the connection bar's end) and for writing a
  * handle's position in the arrival's own notation.
  *

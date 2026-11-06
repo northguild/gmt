@@ -17,7 +17,7 @@
  * the site holds are the two constants in `timescale-widgets.ts`.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { runCall, type EdiCall } from "./edi-widgets";

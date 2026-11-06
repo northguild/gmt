@@ -17,7 +17,7 @@
  * moved"; a blank policy is left out of the rule, never filled in.
  */
 import type { HolidayRule, ObservancePolicy } from "@northguild/gmt";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   formatPolicyText,
   formatRuleLines,

@@ -24,7 +24,7 @@
  * drag handle: the controls are typed fields, selects and two ranges (the week
  * and the time of week), each tied two ways to its typed field.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { defineElements } from "~/widgets/define";
 import {
   aside,

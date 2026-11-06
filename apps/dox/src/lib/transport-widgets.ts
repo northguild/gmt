@@ -3,14 +3,14 @@
  * Delivery Scheduler, the Connection Checker, the Timetable Reader and the
  * Crossing Clock.
  *
- * No DOM and no gmt import, mirroring `dwell-ledger.ts`: every widget-facing
+ * No DOM and no gmt function import (only `Temporal`), mirroring `dwell-ledger.ts`: every widget-facing
  * function here takes a `TransportLib` — the real `scheduleDelivery`,
  * `transitTime`, `etaAtZone`, `crossingTime`, `isValidTimeZone`,
  * `isValidDateTime` and `resolveLocal` — as an argument, loaded by the mount
  * from the real package (`transport-lib.ts`). That keeps this module free of
  * gmt imports and lets the tests inject the real library by module path.
  *
- * `@js-temporal/polyfill` is imported for drawing only — axis positions, tick
+ * `Temporal` comes from `@northguild/gmt` and is used for drawing only — axis positions, tick
  * instants, DST-transition markers, and the naive offset-table reading these
  * widgets each show beside the real one — never to compute a scheduling
  * result. Every arrival, local arrival, ETA, ready instant, departure instant
@@ -22,7 +22,7 @@
  * only vocabulary for the dwell after a leg.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import { codeSpan, escapeAttr, escapeHtml } from "./widget-ui";
 

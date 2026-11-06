@@ -14,7 +14,7 @@
  * labels name the feast, which is the date's name in every calendar that uses
  * it.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { HolidayRule, WeekdayOrdinal } from "@northguild/gmt";
 import type { FeastsLib } from "./feasts-lib";
 import { MAX_RULES, formatRuleLines } from "./holiday-codec";

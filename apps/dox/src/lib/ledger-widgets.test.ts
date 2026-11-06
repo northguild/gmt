@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { dwellTime } from "@northguild/gmt/transport/calculate";
 import { diffUtcAsDuration } from "@northguild/gmt/utc/calculate";
 import { DWELL_PRESETS, toEpochMs } from "./dwell-ledger";

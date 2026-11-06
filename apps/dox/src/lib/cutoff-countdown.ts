@@ -4,15 +4,15 @@
  * with the half-open rule shown.
  *
  * Every verdict — on time, closed, late — and every time-left value comes
- * from `isPastCutoff` and `timeToCutoff` alone. `@js-temporal/polyfill` is
+ * from `isPastCutoff` and `timeToCutoff` alone. `Temporal` (from `@northguild/gmt`) is
  * used only to build the `now` string a slider position or a live clock
  * reading names (`nowFromSlider`) and to size the drawn axis (`axisWindow`)
  * — never to decide late or on time itself.
  *
- * No DOM and no gmt import: `CutoffLib` comes in from the mount.
+ * No DOM and no gmt function import (only `Temporal`): `CutoffLib` comes in from the mount.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   durationText,
   epochMs,

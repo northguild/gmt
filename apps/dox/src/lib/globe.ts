@@ -17,7 +17,7 @@
  * the `showGlobe` chat tool and the widget registry need no adjustment.
  *
  * Live times, offsets and DST come from `@northguild/gmt` through `./zone-clock`
- * — never `@js-temporal/polyfill` directly.
+ * — never the Temporal implementation directly.
  */
 
 import { getUnixNow } from "@northguild/gmt/unix/get";

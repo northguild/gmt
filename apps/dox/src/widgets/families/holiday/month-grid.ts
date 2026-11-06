@@ -11,7 +11,7 @@
  * A mark is a pattern and a word, never a colour alone: the state lives in `data-*`
  * attributes the builder sets and the module styles.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import {

@@ -7,7 +7,7 @@
  * the title itself, so every edit goes through the route data and not through `Head.astro`, where
  * it would repeat them.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 /** One entry of a page's `<head>`, in the shape Starlight's `head` config uses. */
 export type HeadEntry = {

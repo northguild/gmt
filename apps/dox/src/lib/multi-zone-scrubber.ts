@@ -9,7 +9,7 @@
  *
  * All time maths is `@northguild/gmt`: `convertZonedToZoned` + `getTimeZoneOffset`
  * for the per-zone readings (via `./zone-clock`), and `getDstTransitions` for
- * the "jump to a DST boundary" preset. The `@js-temporal/polyfill` rides along
+ * the "jump to a DST boundary" preset. The Temporal implementation rides along
  * in this lazy-loaded chunk, never on a page's critical path.
  *
  * Entry point: `initScrubber(root, options)`. `root` holds the markup

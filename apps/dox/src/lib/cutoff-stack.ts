@@ -7,13 +7,13 @@
  * Every position drawn — where a cut-off closes, where it would have closed
  * with no calendar, which days are closed — comes from `cutoffAt`,
  * `cutoffSchedule`, `timeToCutoff`, `isPastCutoff` and `rollDate` alone.
- * `@js-temporal/polyfill` is used only to enumerate the local dates a
+ * `Temporal` (from `@northguild/gmt`) is used only to enumerate the local dates a
  * timeline needs to draw, never to move a cut-off.
  *
- * No DOM and no gmt import: `CutoffLib` comes in from the mount.
+ * No DOM and no gmt function import (only `Temporal`): `CutoffLib` comes in from the mount.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   isZoneless,
   localParts,
