@@ -22,9 +22,10 @@ name: Temporal oracle
 # The polyfill-swap job (CORE-92) runs the same suite on the newest `temporal-polyfill` release,
 # through `temporal-polyfill/full/implementation`, beside a control pass on
 # `@js-temporal/polyfill` in the same runtime. The Node leg also compares every zone's offset with
-# `Intl.DateTimeFormat`, once a day from 1970 to ten years ahead. When every leg passes and no zone
-# differs, the report job opens one issue saying the swap is due. A failing swap leg never fails
-# the workflow.
+# `Intl.DateTimeFormat`, once a day from 1970 to ten years ahead, and every calendar's years from
+# ISO -3000 to 5000 with Node's built-in Temporal (CORE-110). When every leg passes and no zone or
+# calendar differs, the report job opens one issue saying the swap is due. A failing swap leg never
+# fails the workflow.
 
 on:
   workflow_dispatch:
