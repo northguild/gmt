@@ -1,5 +1,7 @@
 # Range-Edge Correctness Audit (CORE-6)
 
+This record dates from the `@js-temporal/polyfill` 0.5.1 era; GMT now runs on `temporal-polyfill` 1.0.8.
+
 **Research Date:** 2026-09-14  
 **Purpose:** Record every range-edge defect found while building CORE-6, its root cause, fix and covering tests, the call sites proven safe, the `@js-temporal/polyfill` defects found along the way, and the zero-known-bugs rule that came out of it.
 

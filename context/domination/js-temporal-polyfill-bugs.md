@@ -1,5 +1,7 @@
 # `@js-temporal/polyfill` — upstream issues and PRs GMT needs
 
+> **GMT no longer runs on `@js-temporal/polyfill`.** It runs on `temporal-polyfill` 1.0.8 (CORE-108). This file stays as the record of the 0.5.1 defects and of every filing; each item below describes the old package unless it says otherwise.
+
 Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, where noted,
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
 tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way. It also lists

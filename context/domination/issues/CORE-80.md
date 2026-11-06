@@ -13,7 +13,7 @@
 | `internal/dutyEngine.ts` (`dutyViolations`)              | 99 ms for a 6-month log, 390 ms for 1 year   | Quadratic in log length   |
 | `internal/operatingSchedule.ts` (`operatingTimeBetween`) | 44 ms for 1 year, 395 ms for 10 years        | Linear in days            |
 | `internal/freeTimeLedger.ts` (`chargeableDays`)          | 0.8 ms for 2 weeks, 36 ms for 2 years        | Linear in days            |
-| `internal/zonedTransitionSearch.ts`, `zoneBucketCap.ts`  | Up to ~370k zone reads for one pre-check     | Linear in span, uncached  |
+| `internal/zonedTransitionSearch.ts` (deleted in CORE-108), `zoneBucketCap.ts` | Up to ~370k zone reads for one pre-check     | Linear in span, uncached  |
 | `internal/businessCalendar.ts` and its callers           | Flat 1.6–3 ms per call with 480 holidays     | Linear in holidays        |
 
 `Intl.DateTimeFormat` is also built on every call, often twice.
@@ -31,7 +31,7 @@ In build order. Each part leaves `pnpm run validate` green on its own.
 5. **Zone transitions.** Pass `until` in `certainlyTouchesMoreBuckets`. Keep a per-zone memo of transitions found and of stretches verified to have none. Read the clock once per public call.
 6. **Epoch-day walks.** `walkSchedule` and `walkFreeTime` work in epoch days and epoch nanoseconds inside each stretch with no offset change. Counts use whole weeks times the weekly total, plus the leftover days, minus holidays found by binary search. Wall times resolve straight to epoch nanoseconds, with no string round-trip.
 7. **Calendar resolution and formatter caches.** Holidays parsed once, by integer arithmetic, into a sorted array of epoch days. Calendars, schedules and zones resolved once per public call and handed to an internal core. Formatters cached by locale and resolved options.
-8. **Polyfill strategy.** `@js-temporal/polyfill` stays the only engine in the published package. The seam from part 2 exists so CORE-82 can run the suite on native `Temporal`, not to switch engines. Host `Temporal` is reconsidered only when both hold: a stable Safari release ships `Temporal`, and CORE-82's weekly leg has passed on Node 26, Chromium, Firefox and WebKit for 12 consecutive weekly runs. Until then a host engine would change GMT's answers by browser, and the bundle saving would reach only some users.
+8. **Polyfill strategy.** One polyfill stays the only engine in the published package (`@js-temporal/polyfill` when this story closed; `temporal-polyfill` 1.0.8 since CORE-108). The seam from part 2 exists so CORE-82 can run the suite on native `Temporal`, not to switch engines. Host `Temporal` is reconsidered only when both hold: a stable Safari release ships `Temporal`, and CORE-82's weekly leg has passed on Node 26, Chromium, Firefox and WebKit for 12 consecutive weekly runs. Until then a host engine would change GMT's answers by browser, and the bundle saving would reach only some users.
 9. **Agent and rule changes.** A *Performance shape* section in `.agents/tdd-dev.md`, a *Cost* step in `.agents/gmt-reviewer.md`, three items in `context/code-review-checklist.md`, and a *Loop cost* paragraph in `context/coding-standards.md § Loop Style`. The text is in Part 3 of the audit.
 
 ## Tool

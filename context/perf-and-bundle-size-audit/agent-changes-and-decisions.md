@@ -74,7 +74,7 @@ state the target complexity in each spec that has a loop over a span.
 ## Owner decisions this audit raises
 
 1. **Polyfill strategy (S1):** keep `@js-temporal/polyfill`, go native-first with a polyfilled
-   fallback entry, or move to `temporal-polyfill`. Removing the root re-export is a
+   fallback entry, or move to `temporal-polyfill`. GMT moved to `temporal-polyfill` 1.0.8 (CORE-108). Removing the root re-export is a
    prerequisite for the last two.
 2. **Size budgets (S3):** the figures to fail `validate` on, for the root entry and for single
    functions.

@@ -62,10 +62,10 @@ try both.
    `parseDateTimeWithPattern` read `15 марта 2024`.
 8. **Polyfill defect D20.** `ParseTemporalMonthDayString` (0.5.1, `lib/ecmascript.ts`, :641, comparison at :648 (throws at :649)) compares
    the calendar id with `iso8601` before lower-casing it, so `--12-25[u-ca=ISO8601]` throws. A
-   `temporalCompat` workaround reads it the way the specification does, until a polyfill release
-   carries the fix. Bug record **V** in `js-temporal-polyfill-bugs.md`.
-9. **Polyfill defect, record W.** The polyfill accepts `--02-30` and `--04-31`, which the
-   IsValidMonthDay early error rejects. gmt's month-day regex encodes that check, so no workaround
+   `temporalCompat` workaround read it the way the specification does, until a polyfill release
+   carried the fix. `temporal-polyfill` 1.0.8 parses it, and CORE-108 deleted the workaround. Bug record **V** in `js-temporal-polyfill-bugs.md`.
+9. **Polyfill defect, record W.** `@js-temporal/polyfill` 0.5.1 accepted `--02-30` and `--04-31`, which the
+   IsValidMonthDay early error rejects; `temporal-polyfill` 1.0.8 rejects both (it throws "Cannot parse"). gmt's month-day regex encodes that check, so no workaround
    is needed; the record holds the repro for filing.
 10. **Polyfill defect, record X.** `toLocaleString` rebuilds its Temporal formats from
     `resolvedOptions()`, so in zh-CN, zh-TW and ja-JP a requested month width comes back numeric.
@@ -95,8 +95,8 @@ try both.
 19. **Polyfill defect, record Y.** `PlainYearMonth#add` and `#subtract` in 0.5.1 predate tc39
     `41faca474a`: they accept days and weeks, and a subtraction starts from the last day of the
     month (`+275760-09` minus one month throws; `-271821-05` minus one month gives `-271821-04`).
-    gmt runs the specification's steps on `PlainDate`, so no workaround is needed; the record holds
-    the repro.
+    `temporal-polyfill` follows the specification, so gmt calls `PlainYearMonth#add` and
+    `#subtract` directly; the record holds the 0.5.1 repro.
 
 ### The `Intl` format guard
 
@@ -145,7 +145,6 @@ Left to `dox-architect`.
   `internal/isoStringBody.ts`
 - `internal/readDurationUnits.ts`, `internal/resolveDurationUnit.ts`, `internal/isObject.ts` (`isOptionsArgument`)
   and `internal/yearWindowStart.ts`
-- `internal/temporalCompat/monthDayFrom.ts` (D20 for month-day; renamed and widened here)
 - `internal/temporalCompat/`: the workaround registry, probes and README
 - `src/test/localeMatrix.ts` (`MustTestLocales`) and `src/test/icuVariants.ts`
 

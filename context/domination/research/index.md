@@ -20,8 +20,8 @@ the quotes and sources, and what could not be verified.
   charge basis and clock events
 - [range-edge-correctness-audit.md](range-edge-correctness-audit.md) — every range-edge defect
   found while building CORE-6, with root cause, fix and tests
-- [temporal-polyfill-swap.md](temporal-polyfill-swap.md) — whether to replace
-  `@js-temporal/polyfill` with `temporal-polyfill`, what it costs, and the trigger to swap
+- [temporal-polyfill-swap.md](temporal-polyfill-swap.md) — why GMT moved from
+  `@js-temporal/polyfill` to `temporal-polyfill` (CORE-108), what it cost, and the trigger that led to it
 
 ## Realm verification (spike-2026-09)
 

@@ -6,42 +6,42 @@ Part of [the index](../perf-and-bundle-size-audit.md).
 
 ### Where the bytes are
 
-Root entry, every export, minified (esbuild, measured from `src/`; it matches bundlephobia's
-figure within 4%):
+Root entry, every export, minified (esbuild, measured from `src/`). The polyfill row and the
+total are current (`node scripts/bundle-size.mjs report`); the other area rows were measured on
+the 1.19.0 source and do not sum to the total:
 
 | Area                   | Minified | Note                                                 |
 | ---------------------- | -------: | ---------------------------------------------------- |
-| `@js-temporal/polyfill` + `jsbi` | 153 kB | 44 kB gzipped. Flagged side-effectful (`./tsc-out/calendar.js`) |
-| `internal/`            |   160 kB | Largest: `dutyEngine` 21.9, `zonedWallClockDifference` 14.8, `temporalCompat/repros` 12.0, `operatingSchedule` 6.7, `dutyRules` 6.6 |
+| `temporal-polyfill` 1.0.8 | 65.4 kB | 23.3 kB gzipped (65,445 B and 23,294 B) |
+| `internal/`            |   160 kB | Largest: `dutyEngine` 21.9, `zonedWallClockDifference` 14.8, `temporalCompat/repros` 12.0 (an older figure, measured before `repros` left the shipped path), `operatingSchedule` 6.7, `dutyRules` 6.6 |
 | `plain/`               |    63 kB |                                                      |
 | `zoned/`               |    26 kB |                                                      |
 | `utc/` + `unix/`       |    31 kB |                                                      |
 | All realm namespaces   |    30 kB | `intermodal`, `transport`, `calendar`, `workforce`, `gnss`, `timescale`, … |
-| **Total**              | **486 kB** | **126.5 kB gzipped**                               |
+| **Total**              | **438.9 kB** | **121.9 kB gzipped**                             |
 
 ### What a real user pays (tree-shaken, one function imported)
 
-| Import                 | Minified | Gzipped | Polyfill share | GMT code | Of which `repros.ts` |
-| ---------------------- | -------: | ------: | -------------: | -------: | -------------------: |
-| `isValidDate`          | 153.3 kB | 44.7 kB |       152.5 kB |   0.8 kB |                    — |
-| `formatDate`           | 155.4 kB | 45.4 kB |       152.5 kB |   2.8 kB |                    — |
-| `businessDaysBetween`  | 172.5 kB | 50.2 kB |       152.6 kB |  19.9 kB |              12.0 kB |
-| `addBusinessDays`      | 173.6 kB | 50.7 kB |       152.6 kB |  21.0 kB |              12.0 kB |
-| `chargeableDays`       | 197.3 kB | 58.0 kB |       152.6 kB |  44.7 kB |              12.0 kB |
-| `operatingTimeBetween` | 200.8 kB | 59.0 kB |       152.6 kB |  48.2 kB |              12.0 kB |
-| `dutyViolations`       | 226.7 kB | 67.3 kB |       152.6 kB |  74.1 kB |              12.0 kB |
+| Import                 | Minified | Gzipped | Over the polyfill floor (minified) |
+| ---------------------- | -------: | ------: | ----------------------: |
+| `isValidDate`          | 66,262 B | 23,656 B |                   817 B |
+| `formatDate`           | 69,759 B | 24,789 B |                 4,314 B |
+| `businessDaysBetween`  | 68,836 B | 24,669 B |                 3,391 B |
+| `addBusinessDays`      | 69,898 B | 25,092 B |                 4,453 B |
+| `chargeableDays`       | 81,847 B | 29,036 B |                16,402 B |
+| `operatingTimeBetween` | 85,512 B | 30,036 B |                20,067 B |
+| `dutyViolations`       | 109,704 B | 37,646 B |               44,259 B |
 
-For reference, bundlephobia's whole-package figures: `temporal-polyfill@0.3.0` 54.4 kB / 19.9 kB
-gzipped; `date-fns@4.1.0` 70.7 / 17.5; `luxon@3.7.2` 69.8 / 21.9. The npm tarball unpacks to
+For reference, bundlephobia's whole-package figures: `date-fns@4.1.0` 70.7 / 17.5; `luxon@3.7.2` 69.8 / 21.9. The npm tarball unpacks to
 4.66 MB in 1,837 files (JSDoc kept in `dist/*.js`, plus `skills/`).
 
 ### Findings
 
-**S1 — The polyfill is the floor under every import (44 kB gzipped).**
-`src/index.ts:1` re-exports the whole polyfill (`export * from "@js-temporal/polyfill"`), and
-698 source lines import it directly. The polyfill ships as one 129 kB ESM file that declares a
-side effect, so no bundler can trim it. This is the single biggest lever. Options, in order of
-effort:
+**S1 — The polyfill is the floor under every import (23.3 kB gzipped on `temporal-polyfill` 1.0.8; it was 44 kB on `@js-temporal/polyfill`).**
+The audit found that `src/index.ts:1` re-exported the whole polyfill and that 698 source lines
+imported it directly. `internal/temporal.ts` is now the one seam (option 1), and the polyfill behind
+it is `temporal-polyfill` (option 4). The polyfill still ships as one ESM file that no bundler can
+trim, so the floor stays under every import. Options, in order of effort:
 
 1. **One import seam.** Route every `Temporal` import through one internal module
    (`internal/temporal.ts`). No change in behaviour. Every option below depends on it.
@@ -60,13 +60,13 @@ effort:
    probes would gate its defects the same way. It needs the full zone, locale and calendar
    matrix plus `pnpm compat:oracle` before adopting.
 
-**S2 — Canary fixtures ship to production (12 kB minified).**
+**S2 — Canary fixtures shipped to production (12 kB minified).**
 `internal/temporalCompat/capabilities.ts:1` imports the whole `repros` table from
 `repros.ts`. That table holds every repro with its `expected` value, including the
-canary-only groups (`zoned.A`, `zoned.B`, `zoned.D`, `zoned.E`, `D9`) that no probe reads. So
-any function that reaches a calendar or zone workaround carries all of it. Fix: move the
-canary-only repros into their own module that only the canary script loads. Then key the
-probe repros so each probe imports only its own, which lets the bundler drop the rest.
+canary-only groups that no probe reads. So any function that reaches a calendar or zone
+workaround carried all of it. Fixed: the probe repros live in `probeRepros.ts`, which
+`capabilities.ts` imports, and `repros.ts` (with the canary-only `D9` group) is loaded only by the
+canary script.
 
 **S3 — No size budget or measurement.** No `size-limit`, no CI step, no script. Size has grown
 each release from 1.14.2 to 1.19.0 without anyone choosing it.

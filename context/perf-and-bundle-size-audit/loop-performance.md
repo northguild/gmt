@@ -83,11 +83,11 @@ The cost becomes O(transitions + holidays in range), not O(days).
 - Only `chargedDates` stays O(days), because it is output. It can be emitted from integers
   without Temporal.
 
-**P4 — Zone transition search has no cache. `internal/zonedTransitionSearch.ts:174, 196, 235`,
+**P4 — Zone transition search has no cache. `internal/zonedTransitionSearch.ts:174, 196, 235` (module deleted: `temporal-polyfill` 1.0.8 searches transitions itself),
 `internal/zoneBucketCap.ts:62`.**
 
-- The search samples every 5 days, building a `ZonedDateTime` each time. It is active on
-  polyfill 0.5.1 because the D13 probe fails.
+- The search sampled every 5 days, building a `ZonedDateTime` each time. It was active on
+  polyfill 0.5.1 because the D13 probe failed.
 - With no limit, a zone with no further changes scans to 3 years past `max(from, now)`. That is
   about 6,000 reads from 1950 in `Asia/Kolkata`.
 - `Temporal.Now.instant()` is read on every call.

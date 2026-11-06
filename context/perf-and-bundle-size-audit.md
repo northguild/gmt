@@ -1,14 +1,16 @@
 # Performance and bundle-size audit — `@northguild/gmt`
 
-Measured on the 1.19.0 source (branch `feature/197-…`), Node 24.21.0, esbuild 0.28.2.
-Timings are averages of a few runs on one laptop. Read them as orders of magnitude, not as
+Measured on the 1.19.0 source (branch `feature/197-…`), Node 24.21.0, esbuild 0.28.2, when GMT
+ran on `@js-temporal/polyfill`. GMT now runs on `temporal-polyfill` 1.0.8; the bundle figures in
+this file are re-read from `node scripts/bundle-size.mjs report`. Timings are averages of a few runs on one laptop. Read them as orders of magnitude, not as
 benchmarks.
 
 ## Summary
 
-- **Size.** Importing everything costs 467.6 kB minified, 119.6 kB gzipped (bundlephobia).
-  About a third of that, 44 kB gzipped, is `@js-temporal/polyfill`. **Every** GMT import pays
-  that 44 kB, even a 0.8 kB function such as `isValidDate`. Tree-shaking works for GMT's own
+- **Size.** Importing everything costs 438,923 B minified, 121,929 B gzipped (root entry,
+  `bundle-size.mjs report`). The polyfill, `temporal-polyfill` 1.0.8, is 65,445 B minified and
+  23,294 B gzipped of that. **Every** GMT import pays that floor, even a function as small as
+  `isValidDate` (66,262 B minified, 23,656 B gzipped). Tree-shaking works for GMT's own
   code. It cannot remove the polyfill.
 - **Speed.** Most of the 209 loops in the source are bounded by a small constant or by the
   size of the output. Five families grow with the input span or log size, and each has a
