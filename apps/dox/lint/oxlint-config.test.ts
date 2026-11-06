@@ -1,5 +1,9 @@
 import config from "../oxlint.config.mts";
 
+// The config spreads the plugin's recommended rules, which come from its build. The Tests job does
+// not build `@northguild/gmt-oxlint`, and this test reads only the import ban, so the rules are empty.
+vi.mock("@northguild/gmt-oxlint", () => ({ recommendedRules: {} }));
+
 type Override = { files: string[]; rules?: Record<string, unknown> };
 
 const RULE = "no-restricted-imports";
