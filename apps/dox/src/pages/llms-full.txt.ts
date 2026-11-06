@@ -12,6 +12,7 @@ import {
   migratePages,
   topLevelPages,
 } from "~/lib/top-level-pages";
+import { industriesByPath } from "~/lib/page-industries";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -22,6 +23,9 @@ const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   import: "default",
   eager: true,
 }) as Record<string, string>;
+
+/** The tags each page shows, by path under `content/docs/`, so a twin's `Industry:` line matches its page. */
+const TAGS = industriesByPath(RAW);
 
 export const GET: APIRoute = () => {
   const base = SITE_URL;
@@ -44,7 +48,7 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })
@@ -69,7 +73,7 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })
@@ -94,7 +98,7 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })
@@ -112,7 +116,7 @@ export const GET: APIRoute = () => {
       markdown: pageToMarkdown({
         title: data.title ?? slug,
         body: md,
-        industries: data.industries,
+        industries: TAGS.get(slug),
       }),
     };
   });
@@ -129,7 +133,7 @@ export const GET: APIRoute = () => {
       markdown: pageToMarkdown({
         title,
         body: md,
-        industries: data.industries,
+        industries: TAGS.get(slug),
       }),
     };
   });
@@ -145,7 +149,7 @@ export const GET: APIRoute = () => {
       markdown: pageToMarkdown({
         title,
         body: md,
-        industries: data.industries,
+        industries: TAGS.get(slug),
       }),
     };
   });
@@ -169,7 +173,7 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title: data.title ?? rel,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })

@@ -28,7 +28,10 @@ const defId = (tagId: string) => `industry-tag-def-${tagId}`;
   tags.length > 0 && (
     <ul class="gmt-industry-tags not-content" aria-label="Industry">
       {tags.map((tag) => (
-        <li class="gmt-industry-tag-item">
+        <li
+          class="gmt-industry-tag-item"
+          style={`--gmt-tag-anchor: --gmt-tag-${tag.id}`}
+        >
           <button
             type="button"
             class:list={[

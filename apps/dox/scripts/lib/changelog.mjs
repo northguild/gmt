@@ -315,11 +315,13 @@ export function renderPage({
   });
   checkSlugs(headings);
 
-  // Quoted: a plugin's title holds `: `, which a plain YAML scalar cannot.
+  // Quoted: a plugin's title holds `: `, which a plain YAML scalar cannot. Each page records the
+  // whole package, so its industry is Core.
   const frontmatter = `---
 title: ${JSON.stringify(title)}
 description: >
   ${description}
+industries: [core]
 ${lastUpdated ? `lastUpdated: ${lastUpdated}\n` : ""}---
 `;
   const lead = `Every release of \`${pkgName}\`, newest first, built from [\`${sourcePath}\`](${sourceUrl}).\n`;

@@ -279,6 +279,7 @@ describe("renderPage", () => {
 title: "Changelog"
 description: >
   A description.
+industries: [core]
 lastUpdated: 2026-11-03T09:00:00Z
 ---
 

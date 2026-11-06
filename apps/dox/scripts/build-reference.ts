@@ -36,7 +36,9 @@ import type {
 } from "../src/lib/playground-spec";
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
 import {
+  CORE_INDUSTRY,
   INDUSTRIES,
+  INDUSTRY_TAG_IDS,
   OWN_NAMESPACES,
   industryOwning,
 } from "../src/lib/industry-tags";
@@ -2920,35 +2922,39 @@ export function buildSidebar(
 }
 
 /**
- * Add `industries: [<id>]` to a page's frontmatter, which `PageTitle.astro` shows as the
- * industry tag under the title. No industry: the page is returned unchanged.
+ * Add `industries: [<ids>]` to a page's frontmatter, which `PageTitle.astro` shows as the
+ * industry tags under the title. Every reference page has at least one tag (a general page is
+ * `core`), so an empty list is a bug in the caller and throws.
  */
 export function withIndustry(
   mdx: string,
-  industry: string | undefined,
+  industries: readonly string[],
 ): string {
-  if (!industry) return mdx;
+  if (industries.length === 0) {
+    throw new Error("[reference] a page needs at least one industry tag.");
+  }
   const close = mdx.indexOf("\n---\n", 4);
   if (!mdx.startsWith("---\n") || close < 0) {
     throw new Error("[reference] a page has no frontmatter to tag.");
   }
-  return `${mdx.slice(0, close)}\nindustries: [${industry}]${mdx.slice(close)}`;
+  return `${mdx.slice(0, close)}\nindustries: [${industries.join(", ")}]${mdx.slice(close)}`;
 }
 
 /**
- * The industry a shared type's page is tagged with: the industry that owns the namespace every
- * public function that reaches the type belongs to, when that is one namespace and some industry
- * owns it. A type any general function reaches, or two industries share, is general and has no
- * tag. `ownerOf` says which industry owns a namespace.
+ * The tags a shared type's page carries: the union of the industries of the namespaces of every
+ * public function that reaches it, in `INDUSTRY_TAG_IDS` order. A namespace no industry owns
+ * counts as `core`. `ownerOf` says which industry owns a namespace. A type nothing reaches has no
+ * namespace to take a tag from, so it is `core`.
  */
-export function typeIndustry(
+export function typeIndustries(
   usedBy: readonly string[],
   ownerOf: (namespace: string) => string | undefined,
-): string | undefined {
-  const namespaces = new Set(usedBy.map((key) => key.split("/")[0]!));
-  if (namespaces.size !== 1) return undefined;
-  const [ns] = [...namespaces];
-  return ownerOf(ns!);
+): string[] {
+  const tags = new Set(
+    usedBy.map((key) => ownerOf(key.split("/")[0]!) ?? CORE_INDUSTRY),
+  );
+  if (tags.size === 0) tags.add(CORE_INDUSTRY);
+  return INDUSTRY_TAG_IDS.filter((id) => tags.has(id));
 }
 
 /** What the root page says about each declared industry, in declared order. */
@@ -3319,14 +3325,14 @@ function runGeneration(baseline: ReleasedBaseline) {
     if (doc.kind === "type") {
       // A single-use type has no page: its function's page documents it.
       if (usage.types.get(doc.name)?.placement.kind !== "page") continue;
-      // Tagged only when every function that reaches the type is in one industry namespace.
-      const typeTag = typeIndustry(
+      // Tagged with the industries of every function that reaches the type.
+      const typeTags = typeIndustries(
         usage.types.get(doc.name)?.usedBy ?? [],
         industryOwning,
       );
       pages.set(
         join(TYPES_SECTION, `${doc.name}.mdx`),
-        withIndustry(withNote(renderType(doc, page)), typeTag),
+        withIndustry(withNote(renderType(doc, page)), typeTags),
       );
       pageRoutes.push(typePageUrl(doc.name));
       sharedTypes.push({
@@ -3369,7 +3375,9 @@ function runGeneration(baseline: ReleasedBaseline) {
 
     pages.set(
       join(doc.namespace, doc.module, `${doc.name}.mdx`),
-      withIndustry(withNote(mdx), industryOwning(doc.namespace)),
+      withIndustry(withNote(mdx), [
+        industryOwning(doc.namespace) ?? CORE_INDUSTRY,
+      ]),
     );
     pageRoutes.push(pageUrl(doc.namespace, doc.module, doc.name));
 

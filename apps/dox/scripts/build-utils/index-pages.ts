@@ -9,6 +9,7 @@
 
 import { mdCodeSpan, mdText } from "./render-table";
 import { TYPES_SECTION } from "./reference-urls";
+import { CORE_INDUSTRY } from "../../src/lib/industry-tags";
 
 /** One function or regex page. */
 export interface IndexedPage {
@@ -128,7 +129,8 @@ function frontmatter(
     `title: ${JSON.stringify(title)}`,
     `description: ${JSON.stringify(description)}`,
     `slug: ${JSON.stringify(slug)}`,
-    // The tag under the title (`PageTitle.astro`). A general page has none.
+    // The tag under the title (`PageTitle.astro`). A directory index has none: it shows the
+    // union of the tags of the pages under it.
     ...(industry ? [`industries: [${industry}]`] : []),
     `sidebar:`,
     `  order: 0`,
@@ -273,7 +275,7 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
         ns,
         `The ${ns} namespace of @northguild/gmt, by module.`,
         `reference/${ns}`,
-        industry?.id,
+        industry?.id ?? CORE_INDUSTRY,
       );
       if (industry) lines.push(hubPointer(industry), "");
       for (const mod of modNames) {
@@ -290,7 +292,7 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
         `${ns}/${mod}`,
         `The ${mod} module of the ${ns} namespace of @northguild/gmt.`,
         `reference/${ns}/${mod}`,
-        industry?.id,
+        industry?.id ?? CORE_INDUSTRY,
       );
       for (const p of byName(mods.get(mod)!)) lines.push(listItem(p));
       lines.push("");

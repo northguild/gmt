@@ -432,6 +432,7 @@ site-search .pagefind-ui__result-tags {
  * --------------------------------------------------------------------------- */
 
 .gmt-industry-tags {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: var(--gmt-space-2);
@@ -473,19 +474,19 @@ site-search .pagefind-ui__result-tags {
   flex: none;
 }
 
-.gmt-industry-tag-item {
-  position: relative;
-}
+/* The definition of a tag. Shown on hover and when a tap or Enter has opened it
+   (`data-open`; Escape or a tap elsewhere closes it). Its text is also the button's
+   accessible description, which display: none does not hide from a screen reader.
 
-/* The definition under its tag. Shown on hover and when a tap or Enter has
-   opened it (`data-open`; Escape or a tap elsewhere closes it). Its text is also
-   the button's accessible description, which display: none does not hide from a
-   screen reader. */
+   Without anchor positioning it opens under the row, a little in from the row's start
+   edge (the row sits 12px from a narrow screen's edge, and the box keeps 16px): a tag
+   on a second row, or far along the first, would otherwise push it past the right
+   edge of a narrow screen. */
 .gmt-industry-tag-def {
   display: none;
   position: absolute;
   inset-block-start: calc(100% + var(--gmt-space-1));
-  inset-inline-start: 0;
+  inset-inline-start: var(--gmt-space-1);
   z-index: var(--gmt-z-menu);
   inline-size: max-content;
   max-inline-size: min(22rem, calc(100vw - 2rem));
@@ -495,6 +496,32 @@ site-search .pagefind-ui__result-tags {
   color: var(--gmt-ice);
   text-transform: none;
   letter-spacing: normal;
+}
+
+/* Where the engine can anchor a box to another, the definition sits under its own tag,
+   starting at the tag's start edge. The start edge is clamped so the box stays 1rem
+   inside both viewport edges: a tag near the end of a row shifts the box left until it
+   fits, and a narrow screen leaves it spanning the viewport between its margins.
+   `100%` is the viewport width here, since the box is fixed. */
+@supports (anchor-name: --gmt-tag) {
+  /* stylelint-disable plugin/use-baseline -- anchor() is not Baseline 2024; an engine without it keeps the row-anchored box above, which is the status quo */
+  .gmt-industry-tag-item {
+    anchor-name: var(--gmt-tag-anchor);
+  }
+
+  .gmt-industry-tag-def {
+    position: fixed;
+    position-anchor: var(--gmt-tag-anchor);
+    inline-size: min(22rem, calc(100% - 2 * var(--gmt-space-4)));
+    inset-block-start: calc(anchor(bottom) + var(--gmt-space-1));
+    inset-inline-start: clamp(
+      var(--gmt-space-4),
+      anchor(start),
+      calc(
+        100% - var(--gmt-space-4) - min(22rem, 100% - 2 * var(--gmt-space-4))
+      )
+    );
+  }
 }
 
 /* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- non-focusable list item; keyboard path is [data-open] set by the toggle */
