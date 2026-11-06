@@ -18,7 +18,8 @@
  * The header continues northguild.dev's bar. The NorthGuild link and the GitHub and Discord
  * buttons sit on the same pixels there, so they are on screen from the first paint: the
  * "/ gmt" title freezes in beside the link, then search, Dox and the theme toggle, left to right.
- * Then the four chips (Dox, the theme toggle, GitHub, Discord) shine one after another.
+ * Then the four chips (Dox, the theme toggle, GitHub, Discord) shine one after another. GitHub and
+ * Discord start in northguild.dev's muted grey and shine into this site's cyan.
  *
  * `data-arrival="transition"` marks a page reached through a view transition: the header is
  * already on screen, so nothing in it moves.
@@ -176,6 +177,26 @@
   opacity: 0;
 }
 
+/* GitHub and Discord show from the first paint in northguild.dev's colour for them, and keep it
+   until their shine (below) turns them cyan. Their colour transition is off through the entrance:
+   the base colour changes at t0, and a running transition would outrank the animation's held
+   first frame and flash cyan. */
+@media (forced-colors: none) {
+  :root:is([data-entrance="wait"], [data-entrance="run"]):where(
+      :not([data-arrival="transition"])
+    )
+    :where(.header .social-icons)
+    > a[rel~="me"] {
+    transition: none;
+  }
+
+  :root[data-entrance="wait"]:where(:not([data-arrival="transition"]))
+    :where(.header .social-icons)
+    > a[rel~="me"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
 /* Hidden, not transparent: the globe writes the card's opacity inline. */
 :root[data-entrance="wait"] .gmt-herostage [data-gate="globe-tooltip"] {
   visibility: hidden;
@@ -327,6 +348,32 @@
   }
 }
 
+/* GitHub and Discord's shine: the same beat, from northguild.dev's muted grey. The first frame is
+   held until the shine starts (fill `backwards`); with no last frame it ends on the chip's cyan. */
+@keyframes ng-shine-in {
+  0% {
+    color: var(--gmt-ice-dim);
+  }
+
+  30% {
+    color: var(--ng-frost);
+    border-color: color(from var(--ng-frost) srgb r g b / 35%);
+  }
+
+  50% {
+    color: var(--gmt-ice);
+    border-color: color(from var(--gmt-ice) srgb r g b / 70%);
+    animation-timing-function: var(--ng-settle-ease);
+  }
+}
+
+/* Reduced motion: no shine, the grey just fades to cyan at the same moment. */
+@keyframes ng-tint-in {
+  from {
+    color: var(--gmt-ice-dim);
+  }
+}
+
 @keyframes ng-glint {
   0% {
     opacity: 1;
@@ -429,8 +476,8 @@
   :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
     :where(.header .social-icons)
     > a[rel~="me"] {
-    animation: ng-shine var(--ng-shine-dur) var(--ng-linear)
-      calc(var(--ng-shine-at) - var(--ng-shine-lead));
+    animation: ng-shine-in var(--ng-shine-dur) var(--ng-linear)
+      calc(var(--ng-shine-at) - var(--ng-shine-lead)) backwards;
   }
 
   :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
@@ -644,6 +691,13 @@
     ) {
     animation: ng-fade var(--ng-fade-dur) var(--ng-linear) var(--ng-delay)
       backwards;
+  }
+
+  :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
+    :where(.header .social-icons)
+    > a[rel~="me"] {
+    animation: ng-tint-in var(--ng-fade-dur) var(--ng-linear)
+      calc(var(--ng-shine-at) - var(--ng-shine-lead)) backwards;
   }
 
   :root[data-entrance="run"]
