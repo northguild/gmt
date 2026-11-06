@@ -9,7 +9,9 @@
  *
  * The header and sidebar are the same on every page, so they get their own
  * names and no animation: they swap in place and never visibly move. Only the
- * rest of the page (the content column and "On this page") cross-fades.
+ * rest of the page (the content column and "On this page") cross-fades. The
+ * landing has no sidebar, so to and from it the sidebar slides out or in under
+ * the zone drawer's sheen.
  *
  * northguild.dev and this site are one origin, so the same transition also runs
  * between them. Three names are shared with that site's header: `ng-header`,
@@ -79,6 +81,66 @@
 ::view-transition-old(ng-wordmark),
 ::view-transition-old(gmt-sidebar) {
   display: none;
+}
+
+/* The group takes the pane's backdrop-filter from the capture, and it stays in the pane's place
+   for the whole transition. On the way to the landing that blurred the hero under where the sidebar
+   had been, a sidebar-shaped smear left behind after the sidebar had gone. The snapshots are drawn
+   without it. Behind the sidebar on every other page is only the page's background, so nothing
+   is lost there. https://drafts.csswg.org/css-view-transitions-1/#update-pseudo-element-styles */
+::view-transition-group(gmt-sidebar) {
+  backdrop-filter: none;
+}
+
+/* A page without a sidebar (the landing) on one side of the navigation. The snapshot is then alone
+   in its group, so the rules above would cut it away in one frame or pop it in. Instead it moves
+   like the home page's zone drawer, on the same duration and sweep curve: it slides off to the
+   left and fades as it leaves, and in from the left as it arrives. The drawer's sheen, one band
+   of ice light, crosses it from the content side as it moves. The band is the snapshot's own
+   background, behind the translucent glass, so it slides and fades with the sidebar. Under
+   reduced motion the duration is 0s, so the sidebar goes or comes in one frame. */
+::view-transition-old(gmt-sidebar):only-child {
+  display: block;
+  animation:
+    gmt-sidebar-out var(--gmt-duration-med) var(--gmt-ease-sweep) both,
+    gmt-sidebar-sheen var(--gmt-duration-med) ease-in-out both;
+}
+
+::view-transition-new(gmt-sidebar):only-child {
+  animation:
+    gmt-sidebar-in var(--gmt-duration-med) var(--gmt-ease-sweep) both,
+    gmt-sidebar-sheen var(--gmt-duration-med) ease-in-out both;
+}
+
+::view-transition-old(gmt-sidebar):only-child,
+::view-transition-new(gmt-sidebar):only-child {
+  background-image: var(--gmt-sheen);
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+}
+
+@keyframes gmt-sidebar-sheen {
+  from {
+    background-position: -10% 0;
+  }
+
+  to {
+    background-position: 110% 0;
+  }
+}
+
+@keyframes gmt-sidebar-out {
+  to {
+    opacity: 0;
+    translate: -100% 0;
+  }
+}
+
+@keyframes gmt-sidebar-in {
+  from {
+    opacity: 0;
+    translate: -100% 0;
+  }
 }
 
 ::view-transition-old(root),

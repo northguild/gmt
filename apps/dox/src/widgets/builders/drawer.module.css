@@ -16,16 +16,6 @@
   padding: var(--gmt-space-4);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
-
-  --drawer-sheen: linear-gradient(
-    105deg,
-    transparent 38%,
-    color-mix(in oklab, var(--gmt-ice-bright) 10%, transparent) 45%,
-    color-mix(in oklab, var(--gmt-ice-bright) 24%, transparent) 50%,
-    color-mix(in oklab, var(--gmt-ice-bright) 10%, transparent) 55%,
-    transparent 62%
-  );
-
   background: var(--drawer-glass);
   backdrop-filter: var(--gmt-header-blur);
   color: var(--gmt-ice);
@@ -106,14 +96,14 @@
    dropping the layer when the animation ends shows no jump. */
 @keyframes sheen {
   from {
-    background-image: var(--drawer-sheen);
+    background-image: var(--gmt-sheen);
     background-position: -10% 0;
     background-size: 250% 100%;
     background-repeat: no-repeat;
   }
 
   to {
-    background-image: var(--drawer-sheen);
+    background-image: var(--gmt-sheen);
     background-position: 110% 0;
     background-size: 250% 100%;
     background-repeat: no-repeat;
