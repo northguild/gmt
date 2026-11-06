@@ -254,15 +254,6 @@ export default defineConfig({
           ],
         },
         {
-          label: "Changelog",
-          items: [
-            { slug: "changelog", label: "@northguild/gmt" },
-            { slug: "changelog/gmt-eslint", label: "gmt-eslint" },
-            { slug: "changelog/gmt-oxlint", label: "gmt-oxlint" },
-            { slug: "changelog/gmt-biome", label: "gmt-biome" },
-          ],
-        },
-        {
           label: "Migrate",
           collapsed: true,
           items: [
@@ -302,6 +293,15 @@ export default defineConfig({
           label: "Checks",
           collapsed: false,
           items: [{ autogenerate: { directory: "check" } }],
+        },
+        {
+          label: "Changelog",
+          items: [
+            { slug: "changelog", label: "@northguild/gmt" },
+            { slug: "changelog/gmt-eslint", label: "gmt-eslint" },
+            { slug: "changelog/gmt-oxlint", label: "gmt-oxlint" },
+            { slug: "changelog/gmt-biome", label: "gmt-biome" },
+          ],
         },
       ],
       components: {
