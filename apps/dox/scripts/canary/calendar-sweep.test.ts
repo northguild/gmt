@@ -220,4 +220,24 @@ describe("sweepCalendars", () => {
       }),
     ).toThrow('Intl.supportedValuesOf("calendar") returned no calendars');
   });
+
+  it("throws when neither side accepts any listed calendar, so the leg records could-not-run", () => {
+    expect(() =>
+      sweepCalendars({
+        candidate: fake(same, ["iso"]),
+        reference: fake(same, ["iso"]),
+        calendars: ["iso", "gone"],
+      }),
+    ).toThrow("neither side accepts any of the 2 listed calendars");
+  });
+
+  it("still reports a difference when only the reference accepts the calendars", () => {
+    const result = sweepCalendars({
+      candidate: fake(same, ["iso"]),
+      reference: fake(same),
+      calendars: ["iso"],
+    });
+    expect(result.calendars).toBe(0);
+    expect(result.differingCalendars).toBe(1);
+  });
 });

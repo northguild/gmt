@@ -1130,6 +1130,9 @@ export function swapReady(verdicts) {
   if (sweep?.status !== "ran") {
     return { ready: false, reason: "offset sweep: did not run" };
   }
+  // A sweep that compared nothing proves nothing: the counts of what it read must be positive.
+  const noZones = notCounted("offset sweep", sweep.zones, "zone");
+  if (noZones) return { ready: false, reason: noZones };
   const n = sweep.differingZones;
   if (n !== 0) {
     return {
@@ -1144,6 +1147,10 @@ export function swapReady(verdicts) {
   if (calendars?.status !== "ran") {
     return { ready: false, reason: "calendar sweep: did not run" };
   }
+  const noCalendars =
+    notCounted("calendar sweep", calendars.calendars, "calendar") ??
+    notCounted("calendar sweep", calendars.years, "year");
+  if (noCalendars) return { ready: false, reason: noCalendars };
   const c = calendars.differingCalendars;
   if (c !== 0) {
     return {
@@ -1159,6 +1166,20 @@ export function swapReady(verdicts) {
     };
   }
   return { ready: true, version: /** @type {string} */ (versions[0]) };
+}
+
+/**
+ * Why a sweep's count of what it read blocks the swap, or `null` when it is a positive integer.
+ * @param {string} sweep  "offset sweep" or "calendar sweep"
+ * @param {unknown} count
+ * @param {string} noun  what was counted, singular
+ * @returns {string | null}
+ */
+function notCounted(sweep, count, noun) {
+  if (Number.isInteger(count) && /** @type {number} */ (count) > 0) return null;
+  return count === 0
+    ? `${sweep}: it compared no ${noun}`
+    : `${sweep}: the ${noun} count is missing`;
 }
 
 /**

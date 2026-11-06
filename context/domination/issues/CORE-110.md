@@ -2,8 +2,8 @@
 
 **Scope:** The Node leg of the weekly `temporal-polyfill` upgrade check ([CORE-92](CORE-92.md))
 gains a calendar sweep beside its offset sweep. It compares every calendar's years with Node's
-built-in Temporal. A difference blocks the upgrade. Adds no function and raises no pin. Tracked as
-#468.
+built-in Temporal. A difference blocks the upgrade. Adds no function and raises no pin. The issue
+is #468.
 
 ## Gap
 
@@ -64,7 +64,9 @@ Out of scope: any library function, raising any pin.
 3. **A year where one side throws and the other does not is a difference.** A year where both
    throw is skipped.
 4. **The sweep fails closed.** Missing, malformed or could-not-run results all block, so a verdict
-   that lost a field never reports ready.
+   that lost a field never reports ready. A sweep that compared nothing proves nothing: the
+   calendar sweep throws when neither side accepts any listed calendar, and readiness needs a
+   positive count of zones, calendars and years, so the offset sweep is held to the same rule.
 5. **Chinese and Dangi block too.** On 1.0.8 the polyfill reads both lunisolar calendars from
    `Intl.DateTimeFormat`, and Node 26's `Intl` (ICU 78.3) disagrees with its built-in Temporal
    (ICU4X). Chinese differs in 3,889 years and Dangi in 3,858. Six Chinese years fall within

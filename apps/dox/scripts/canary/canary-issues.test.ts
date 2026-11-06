@@ -2082,20 +2082,27 @@ describe("swapReady", () => {
   };
 
   it.each`
-    label                                      | verdicts                                                              | reason
-    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}                    | ${"temporal-polyfill-swap-chromium: the swap pass did not load temporal-polyfill"}
-    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}                    | ${"temporal-polyfill-swap-firefox: the swap pass did not load temporal-polyfill"}
-    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                       | ${"temporal-polyfill-swap-node: the swap pass did not load temporal-polyfill"}
-    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}           | ${"temporal-polyfill-swap-webkit: the swap pass did not load temporal-polyfill"}
-    ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}                   | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
-    ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                            | ${"temporal-polyfill-swap-node: the failed count is missing"}
-    ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}                | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
-    ${"firefox failed count is null"}          | ${changed("firefox", (v) => (v.counts.failed = null))}                | ${"temporal-polyfill-swap-firefox: the failed count is missing"}
-    ${"sweep differingZones is missing"}       | ${changed("node", (v) => delete v.sweep.differingZones)}              | ${"offset sweep: the differing zone count is missing"}
-    ${"sweep differingZones is undefined"}     | ${changed("node", (v) => (v.sweep.differingZones = undefined))}       | ${"offset sweep: the differing zone count is missing"}
-    ${"sweep differingZones is the string 0"}  | ${changed("node", (v) => (v.sweep.differingZones = "0"))}             | ${"offset sweep: the differing zone count is missing"}
-    ${"calendar count is missing"}             | ${changed("node", (v) => delete v.calendarSweep.differingCalendars)}  | ${"calendar sweep: the differing calendar count is missing"}
-    ${"calendar count is the string 0"}        | ${changed("node", (v) => (v.calendarSweep.differingCalendars = "0"))} | ${"calendar sweep: the differing calendar count is missing"}
+    label                                      | verdicts                                                                       | reason
+    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}                             | ${"temporal-polyfill-swap-chromium: the swap pass did not load temporal-polyfill"}
+    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}                             | ${"temporal-polyfill-swap-firefox: the swap pass did not load temporal-polyfill"}
+    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                                | ${"temporal-polyfill-swap-node: the swap pass did not load temporal-polyfill"}
+    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}                    | ${"temporal-polyfill-swap-webkit: the swap pass did not load temporal-polyfill"}
+    ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}                            | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
+    ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                                     | ${"temporal-polyfill-swap-node: the failed count is missing"}
+    ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}                         | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
+    ${"firefox failed count is null"}          | ${changed("firefox", (v) => (v.counts.failed = null))}                         | ${"temporal-polyfill-swap-firefox: the failed count is missing"}
+    ${"sweep differingZones is missing"}       | ${changed("node", (v) => delete v.sweep.differingZones)}                       | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is undefined"}     | ${changed("node", (v) => (v.sweep.differingZones = undefined))}                | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is the string 0"}  | ${changed("node", (v) => (v.sweep.differingZones = "0"))}                      | ${"offset sweep: the differing zone count is missing"}
+    ${"calendar count is missing"}             | ${changed("node", (v) => delete v.calendarSweep.differingCalendars)}           | ${"calendar sweep: the differing calendar count is missing"}
+    ${"calendar count is the string 0"}        | ${changed("node", (v) => (v.calendarSweep.differingCalendars = "0"))}          | ${"calendar sweep: the differing calendar count is missing"}
+    ${"the sweep compared no zone"}            | ${changed("node", (v) => (v.sweep.zones = 0))}                                 | ${"offset sweep: it compared no zone"}
+    ${"the sweep lost its zone count"}         | ${changed("node", (v) => delete v.sweep.zones)}                                | ${"offset sweep: the zone count is missing"}
+    ${"the sweep compared no calendar"}        | ${changed("node", (v) => (v.calendarSweep.calendars = 0))}                     | ${"calendar sweep: it compared no calendar"}
+    ${"the sweep lost its calendar count"}     | ${changed("node", (v) => delete v.calendarSweep.calendars)}                    | ${"calendar sweep: the calendar count is missing"}
+    ${"the sweep read no year"}                | ${changed("node", (v) => (v.calendarSweep.years = 0))}                         | ${"calendar sweep: it compared no year"}
+    ${"the sweep lost its year count"}         | ${changed("node", (v) => delete v.calendarSweep.years)}                        | ${"calendar sweep: the year count is missing"}
+    ${"no zone beats a differing zone count"}  | ${changed("node", (v) => ((v.sweep.zones = 0), (v.sweep.differingZones = 3)))} | ${"offset sweep: it compared no zone"}
   `("is not ready when $label", ({ verdicts, reason }) => {
     expect(swapReady(verdicts)).toEqual({ ready: false, reason });
   });

@@ -90,6 +90,7 @@ function accepts(temporal, calendar) {
  *
  * A year where one side throws and the other does not is a difference. A year where both throw is
  * skipped. A calendar only one side accepts is a difference too, with `years: 0` and no first year.
+ * It throws when it compared no calendar and found no difference, so the leg records could-not-run.
  *
  * @param {{ candidate: TemporalLike, reference: TemporalLike, calendars: string[] }} input
  * @returns {{ status: "ran", from: string, through: string, calendars: number, years: number,
@@ -151,6 +152,12 @@ export function sweepCalendars({ candidate, reference, calendars }) {
       }
     }
   }
+
+  // A sweep that compared nothing and found nothing proves nothing, so it must not read as a match.
+  if (compared === 0 && differingCalendars === 0)
+    throw new Error(
+      `neither side accepts any of the ${calendars.length} listed calendars`,
+    );
 
   return {
     status: "ran",
