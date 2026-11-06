@@ -276,12 +276,30 @@ const swapSweep = (differingZones = 0) => ({
   differingTruncated: differingZones > 50,
 });
 
+/** The calendar sweep: `differing` names calendars, each with its year count. */
+const calendarSweep = (differingCalendars = 0) => ({
+  status: "ran" as const,
+  from: "-003000-01-01",
+  through: "+005000-12-31",
+  calendars: 16,
+  years: 128762,
+  differingCalendars,
+  differing: Array.from({ length: differingCalendars }, (_, i) => ({
+    calendar: `cal${i + 1}`,
+    years: i + 1,
+    first: 1502,
+    example: "year 1502: candidate a; reference b",
+  })),
+  differingTruncated: false,
+});
+
 interface SwapOptions {
   version?: string;
   failed?: number;
   both?: number;
   fixed?: number;
   sweep?: unknown;
+  calendarSweep?: unknown;
   entryLoaded?: unknown;
 }
 
@@ -289,6 +307,8 @@ interface SwapOptions {
 const swapLeg = (leg: SwapLeg, options: SwapOptions = {}) => {
   const { version = "1.0.7", failed = 0, both = 0, fixed = 0 } = options;
   const sweep = "sweep" in options ? options.sweep : swapSweep();
+  const calendars =
+    "calendarSweep" in options ? options.calendarSweep : calendarSweep();
   return {
     source: `temporal-polyfill-swap-${leg}`,
     status: "ran" as const,
@@ -314,6 +334,7 @@ const swapLeg = (leg: SwapLeg, options: SwapOptions = {}) => {
     failing: [],
     failingTruncated: false,
     sweep: leg === "node" ? sweep : null,
+    calendarSweep: leg === "node" ? calendars : null,
   };
 };
 
@@ -2061,37 +2082,44 @@ describe("swapReady", () => {
   };
 
   it.each`
-    label                                      | verdicts                                                        | reason
-    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}              | ${"temporal-polyfill-swap-chromium: the swap pass did not load temporal-polyfill"}
-    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}              | ${"temporal-polyfill-swap-firefox: the swap pass did not load temporal-polyfill"}
-    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                 | ${"temporal-polyfill-swap-node: the swap pass did not load temporal-polyfill"}
-    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}     | ${"temporal-polyfill-swap-webkit: the swap pass did not load temporal-polyfill"}
-    ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}             | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
-    ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                      | ${"temporal-polyfill-swap-node: the failed count is missing"}
-    ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}          | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
-    ${"firefox failed count is null"}          | ${changed("firefox", (v) => (v.counts.failed = null))}          | ${"temporal-polyfill-swap-firefox: the failed count is missing"}
-    ${"sweep differingZones is missing"}       | ${changed("node", (v) => delete v.sweep.differingZones)}        | ${"offset sweep: the differing zone count is missing"}
-    ${"sweep differingZones is undefined"}     | ${changed("node", (v) => (v.sweep.differingZones = undefined))} | ${"offset sweep: the differing zone count is missing"}
-    ${"sweep differingZones is the string 0"}  | ${changed("node", (v) => (v.sweep.differingZones = "0"))}       | ${"offset sweep: the differing zone count is missing"}
+    label                                      | verdicts                                                              | reason
+    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}                    | ${"temporal-polyfill-swap-chromium: the swap pass did not load temporal-polyfill"}
+    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}                    | ${"temporal-polyfill-swap-firefox: the swap pass did not load temporal-polyfill"}
+    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                       | ${"temporal-polyfill-swap-node: the swap pass did not load temporal-polyfill"}
+    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}           | ${"temporal-polyfill-swap-webkit: the swap pass did not load temporal-polyfill"}
+    ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}                   | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
+    ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                            | ${"temporal-polyfill-swap-node: the failed count is missing"}
+    ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}                | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
+    ${"firefox failed count is null"}          | ${changed("firefox", (v) => (v.counts.failed = null))}                | ${"temporal-polyfill-swap-firefox: the failed count is missing"}
+    ${"sweep differingZones is missing"}       | ${changed("node", (v) => delete v.sweep.differingZones)}              | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is undefined"}     | ${changed("node", (v) => (v.sweep.differingZones = undefined))}       | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is the string 0"}  | ${changed("node", (v) => (v.sweep.differingZones = "0"))}             | ${"offset sweep: the differing zone count is missing"}
+    ${"calendar count is missing"}             | ${changed("node", (v) => delete v.calendarSweep.differingCalendars)}  | ${"calendar sweep: the differing calendar count is missing"}
+    ${"calendar count is the string 0"}        | ${changed("node", (v) => (v.calendarSweep.differingCalendars = "0"))} | ${"calendar sweep: the differing calendar count is missing"}
   `("is not ready when $label", ({ verdicts, reason }) => {
     expect(swapReady(verdicts)).toEqual({ ready: false, reason });
   });
 
   it.each`
-    label                                  | verdicts                                                                                                               | reason
-    ${"node verdict missing"}              | ${{ ...cleanSwap(), "temporal-polyfill-swap-node": null }}                                                             | ${"temporal-polyfill-swap-node: did not run"}
-    ${"chromium could not run"}            | ${{ ...cleanSwap(), "temporal-polyfill-swap-chromium": couldNotRun("temporal-polyfill-swap-chromium", "no browser") }} | ${"temporal-polyfill-swap-chromium: did not run"}
-    ${"webkit key absent"}                 | ${Object.fromEntries(Object.entries(cleanSwap()).filter(([k]) => !k.endsWith("webkit")))}                              | ${"temporal-polyfill-swap-webkit: did not run"}
-    ${"versions differ"}                   | ${cleanSwap({ firefox: { version: "1.0.8" } })}                                                                        | ${"legs ran different versions: 1.0.7, 1.0.8"}
-    ${"three tests fail on webkit"}        | ${cleanSwap({ webkit: { failed: 3 } })}                                                                                | ${"temporal-polyfill-swap-webkit: 3 tests fail on the swap"}
-    ${"one test fails on node"}            | ${cleanSwap({ node: { failed: 1 } })}                                                                                  | ${"temporal-polyfill-swap-node: 1 test fails on the swap"}
-    ${"sweep could not run"}               | ${cleanSwap({ node: { sweep: { status: "could-not-run", message: "no Intl" } } })}                                     | ${"offset sweep: did not run"}
-    ${"sweep is null on node"}             | ${cleanSwap({ node: { sweep: null } })}                                                                                | ${"offset sweep: did not run"}
-    ${"two zones differ"}                  | ${cleanSwap({ node: { sweep: swapSweep(2) } })}                                                                        | ${"offset sweep: 2 zones differ"}
-    ${"one zone differs"}                  | ${cleanSwap({ node: { sweep: swapSweep(1) } })}                                                                        | ${"offset sweep: 1 zone differs"}
-    ${"a missing leg beats a failing one"} | ${{ ...cleanSwap({ node: { failed: 4 } }), "temporal-polyfill-swap-webkit": null }}                                    | ${"temporal-polyfill-swap-webkit: did not run"}
-    ${"versions beat failures"}            | ${cleanSwap({ node: { failed: 4 }, webkit: { version: "1.0.9" } })}                                                    | ${"legs ran different versions: 1.0.7, 1.0.9"}
-    ${"failures beat the sweep"}           | ${cleanSwap({ chromium: { failed: 2 }, node: { sweep: swapSweep(5) } })}                                               | ${"temporal-polyfill-swap-chromium: 2 tests fail on the swap"}
+    label                                          | verdicts                                                                                                               | reason
+    ${"node verdict missing"}                      | ${{ ...cleanSwap(), "temporal-polyfill-swap-node": null }}                                                             | ${"temporal-polyfill-swap-node: did not run"}
+    ${"chromium could not run"}                    | ${{ ...cleanSwap(), "temporal-polyfill-swap-chromium": couldNotRun("temporal-polyfill-swap-chromium", "no browser") }} | ${"temporal-polyfill-swap-chromium: did not run"}
+    ${"webkit key absent"}                         | ${Object.fromEntries(Object.entries(cleanSwap()).filter(([k]) => !k.endsWith("webkit")))}                              | ${"temporal-polyfill-swap-webkit: did not run"}
+    ${"versions differ"}                           | ${cleanSwap({ firefox: { version: "1.0.8" } })}                                                                        | ${"legs ran different versions: 1.0.7, 1.0.8"}
+    ${"three tests fail on webkit"}                | ${cleanSwap({ webkit: { failed: 3 } })}                                                                                | ${"temporal-polyfill-swap-webkit: 3 tests fail on the swap"}
+    ${"one test fails on node"}                    | ${cleanSwap({ node: { failed: 1 } })}                                                                                  | ${"temporal-polyfill-swap-node: 1 test fails on the swap"}
+    ${"sweep could not run"}                       | ${cleanSwap({ node: { sweep: { status: "could-not-run", message: "no Intl" } } })}                                     | ${"offset sweep: did not run"}
+    ${"sweep is null on node"}                     | ${cleanSwap({ node: { sweep: null } })}                                                                                | ${"offset sweep: did not run"}
+    ${"calendar sweep could not run"}              | ${cleanSwap({ node: { calendarSweep: { status: "could-not-run", message: "no Temporal" } } })}                         | ${"calendar sweep: did not run"}
+    ${"calendar sweep is null on node"}            | ${cleanSwap({ node: { calendarSweep: null } })}                                                                        | ${"calendar sweep: did not run"}
+    ${"one calendar differs"}                      | ${cleanSwap({ node: { calendarSweep: calendarSweep(1) } })}                                                            | ${"calendar sweep: 1 calendar differs (cal1)"}
+    ${"two calendars differ"}                      | ${cleanSwap({ node: { calendarSweep: calendarSweep(2) } })}                                                            | ${"calendar sweep: 2 calendars differ (cal1, cal2)"}
+    ${"the offset sweep beats the calendar sweep"} | ${cleanSwap({ node: { sweep: swapSweep(1), calendarSweep: calendarSweep(1) } })}                                       | ${"offset sweep: 1 zone differs"}
+    ${"two zones differ"}                          | ${cleanSwap({ node: { sweep: swapSweep(2) } })}                                                                        | ${"offset sweep: 2 zones differ"}
+    ${"one zone differs"}                          | ${cleanSwap({ node: { sweep: swapSweep(1) } })}                                                                        | ${"offset sweep: 1 zone differs"}
+    ${"a missing leg beats a failing one"}         | ${{ ...cleanSwap({ node: { failed: 4 } }), "temporal-polyfill-swap-webkit": null }}                                    | ${"temporal-polyfill-swap-webkit: did not run"}
+    ${"versions beat failures"}                    | ${cleanSwap({ node: { failed: 4 }, webkit: { version: "1.0.9" } })}                                                    | ${"legs ran different versions: 1.0.7, 1.0.9"}
+    ${"failures beat the sweep"}                   | ${cleanSwap({ chromium: { failed: 2 }, node: { sweep: swapSweep(5) } })}                                               | ${"temporal-polyfill-swap-chromium: 2 tests fail on the swap"}
   `("is not ready when $label", ({ verdicts, reason }) => {
     expect(swapReady(verdicts)).toEqual({ ready: false, reason });
   });
@@ -2099,7 +2127,7 @@ describe("swapReady", () => {
 
 describe("swap findings", () => {
   const READY_TITLE =
-    "Swap to temporal-polyfill 1.0.7: it passes the GMT suite and the offset sweep";
+    "Swap to temporal-polyfill 1.0.7: it passes the GMT suite and both sweeps";
   const READY_MARKER = '<!-- gmt-canary key="temporal-polyfill-swap/ready" -->';
   const swapPlan = (swap: unknown, open: ReturnType<typeof issue>[] = []) =>
     plan(
@@ -2124,6 +2152,12 @@ describe("swap findings", () => {
 
   it("a run that ran but is not swap-ready files nothing", () => {
     expect(swapPlan(cleanSwap({ webkit: { failed: 2 } }))).toEqual([]);
+  });
+
+  it("a differing calendar sweep files nothing", () => {
+    expect(
+      swapPlan(cleanSwap({ node: { calendarSweep: calendarSweep(1) } })),
+    ).toEqual([]);
   });
 
   it("a differing sweep files nothing", () => {
@@ -2181,6 +2215,8 @@ describe("swap findings", () => {
         "| WebKit 26.6 | 71337 | 0 | 1 | 2 |",
         "",
         "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to 2036-11-04 (tz 2026e).",
+        "",
+        "Calendar sweep: every one of 16 calendars matches the built-in Temporal on the first day, months and days of each year from -003000-01-01 to +005000-12-31.",
         "",
         "What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md). Type errors are not checked here; § 5 lists them.",
         "",
@@ -2248,6 +2284,25 @@ describe("swap could not run", () => {
     expect(action.body).toContain(
       `- **temporal-oracle**: no Temporal\n` +
         `- **temporal-polyfill-swap-webkit**: ${MISSING}\n`,
+    );
+  });
+
+  it("a Node leg that ran but whose calendar sweep could not run lists the sweep, with no swap finding", () => {
+    const actions = plan({
+      ...base(),
+      ...cleanSwap({
+        node: {
+          calendarSweep: { status: "could-not-run", message: "no Temporal" },
+        },
+      }),
+    });
+    expect(actions.map((a) => a.key)).toEqual([
+      "temporal-oracle/could-not-run",
+    ]);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body).toContain(
+      "- **temporal-polyfill-swap-node**: calendar sweep: no Temporal\n",
     );
   });
 
@@ -2400,7 +2455,7 @@ describe("swap force", () => {
     const dry = actions[1];
     if (dry.kind !== "open") throw new Error("expected open");
     expect(dry.title).toBe(
-      "[dry run] Swap to temporal-polyfill 1.0.7: it passes the GMT suite and the offset sweep",
+      "[dry run] Swap to temporal-polyfill 1.0.7: it passes the GMT suite and both sweeps",
     );
     expect(dry.labels).toEqual(["canary", "canary-dry-run"]);
     expect(dry.body).toContain(
@@ -2427,6 +2482,18 @@ describe("swap force", () => {
       "Offset sweep: 2 of 418 zones differ from `Intl.DateTimeFormat` at 12:00 UTC on some day from 1970-01-01 to 2036-11-04 (tz 2026e).",
     );
     expect(dry.body).not.toContain("every one of 418 zones matches");
+  });
+
+  it("a forced run with differing calendars does not claim the calendar sweep matched", () => {
+    const actions = forcedPlan(
+      cleanSwap({ node: { calendarSweep: calendarSweep(2) } }),
+    );
+    const dry = actions.find((a) => a.key === DRY_KEY);
+    if (!dry || dry.kind !== "open") throw new Error("expected open");
+    expect(dry.body).toContain(
+      "Calendar sweep: 2 of 16 calendars differ from the built-in Temporal in some year from -003000-01-01 to +005000-12-31.",
+    );
+    expect(dry.body).not.toContain("every one of 16 calendars matches");
   });
 
   it("shows a leg that did not run as 'did not run' in the dry-run table", () => {

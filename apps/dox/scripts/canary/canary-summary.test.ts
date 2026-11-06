@@ -191,6 +191,22 @@ const swapSweep = (differingZones = 0) => ({
   differingTruncated: differingZones > 50,
 });
 
+const calendarSweep = (differingCalendars = 0) => ({
+  status: "ran",
+  from: "-003000-01-01",
+  through: "+005000-12-31",
+  calendars: 16,
+  years: 128762,
+  differingCalendars,
+  differing: Array.from({ length: differingCalendars }, (_, i) => ({
+    calendar: `cal${i + 1}`,
+    years: i + 1,
+    first: 1502,
+    example: "year 1502: candidate a;\nreference b",
+  })),
+  differingTruncated: false,
+});
+
 const swap = (leg: string, over: Record<string, unknown> = {}) => ({
   source: `temporal-polyfill-swap-${leg}`,
   status: "ran",
@@ -216,6 +232,7 @@ const swap = (leg: string, over: Record<string, unknown> = {}) => ({
   failing: [],
   failingTruncated: false,
   sweep: leg === "node" ? swapSweep() : null,
+  calendarSweep: leg === "node" ? calendarSweep() : null,
   ...over,
 });
 
@@ -247,6 +264,8 @@ const SWAP_BLOCK = [
   "| webkit | 71337 | 0 | 0 |",
   "",
   "Offset sweep: 0 zones differ (418 zones, 1970-01-01 to 2036-11-04, tz 2026e).",
+  "",
+  "Calendar sweep: 0 calendars differ (16 calendars, 128762 years, -003000-01-01 to +005000-12-31).",
 ];
 
 const CLEAN_SUMMARY = [
@@ -815,6 +834,61 @@ describe("summaryMarkdown: temporal polyfill swap", () => {
       "temporal-polyfill — Not ready: temporal-polyfill-swap-node: did not run",
     );
     expect(text).toContain("Offset sweep: did not run.");
+    expect(text).toContain("Calendar sweep: did not run.");
+  });
+
+  it("differing calendars are counted and listed with years, first year and an example", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", {
+        calendarSweep: calendarSweep(2),
+      }),
+    });
+    expect(text).toContain(
+      "Calendar sweep: 2 calendars differ (16 calendars, 128762 years, -003000-01-01 to +005000-12-31).\n- cal1: 1 year, first 1502, e.g. year 1502: candidate a; reference b\n- cal2: 2 years, first 1502, e.g. year 1502: candidate a; reference b",
+    );
+    expect(text).toContain(
+      "— Not ready: calendar sweep: 2 calendars differ (cal1, cal2)",
+    );
+  });
+
+  it("a calendar only one side accepts prints 'first none'", () => {
+    const sweep = calendarSweep(1);
+    sweep.differing = [
+      {
+        calendar: "x",
+        years: 0,
+        first: null as never,
+        example: "only the reference accepts this calendar",
+      },
+    ];
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", { calendarSweep: sweep }),
+    });
+    expect(text).toContain(
+      "- x: 0 years, first none, e.g. only the reference accepts this calendar",
+    );
+  });
+
+  it("a calendar sweep that could not run says so", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", {
+        calendarSweep: { status: "could-not-run", message: "no Temporal" },
+      }),
+    });
+    expect(text).toContain("Calendar sweep: could not run: no Temporal");
+  });
+
+  it("a node leg that could not run still prints the calendar sweep it carries", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": {
+        source: "temporal-polyfill-swap-node",
+        status: "could-not-run",
+        message: "timeout",
+        calendarSweep: calendarSweep(1),
+      },
+    });
+    expect(text).toContain("Calendar sweep: 1 calendars differ");
+    expect(text).not.toContain("Calendar sweep: did not run.");
   });
 
   it("a differing sweep counts the zones and lists the first ten", () => {

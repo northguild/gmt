@@ -561,6 +561,7 @@ describe("polyfillSwapVerdict", () => {
     },
     failing: [{ file: "a.test.ts", test: "t", message: "boom" }],
     sweep: null,
+    calendarSweep: null,
   };
 
   it("has the shape and key order the reporter reads", () => {
@@ -576,6 +577,7 @@ describe("polyfillSwapVerdict", () => {
       "failing",
       "failingTruncated",
       "sweep",
+      "calendarSweep",
     ]);
     expect(polyfillSwapVerdict(input)).toMatchObject({
       source: "temporal-polyfill-swap-node",
@@ -611,6 +613,13 @@ describe("polyfillSwapVerdict", () => {
     const a = formatJson(polyfillSwapVerdict({ ...input, sweep }));
     expect(formatJson(polyfillSwapVerdict({ ...input, sweep }))).toBe(a);
     expect(polyfillSwapVerdict({ ...input, sweep }).sweep).toEqual(sweep);
+    const calendarSweep = {
+      status: "could-not-run" as const,
+      message: "no Temporal",
+    };
+    expect(
+      polyfillSwapVerdict({ ...input, calendarSweep }).calendarSweep,
+    ).toEqual(calendarSweep);
   });
 });
 
