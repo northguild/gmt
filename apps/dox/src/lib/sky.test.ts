@@ -270,6 +270,31 @@ describe("the Sun and the Moon", () => {
     expect(bodies()[0]).not.toBe("none");
   });
 
+  it("scales the Sun's place from the Earth's centre with the globe's own zoom, so a reader zooming in does not swallow it behind a disc that outgrew it", () => {
+    const sky = mount();
+    /* A rotation 20 degrees off the Sun, so it projects but sits well clear of the centre. */
+    const sun = sunRaDec(T0);
+    const rotation: [number, number] = [
+      siderealDeg(T0) + 180 - sun.ra + 20,
+      sun.dec,
+    ];
+    sky.view(rotation, CENTRE, T0, 1);
+    const [sunX1, sunY1] = bodies().map(Number);
+    sky.view(rotation, CENTRE, T0, 3);
+    const [sunX2, sunY2] = bodies().map(Number);
+    /* The gate rounds each place to 0.1 px, so a threefold scale-up can be a few tenths off. */
+    expect(sunX2! - CENTRE.x).toBeCloseTo(3 * (sunX1! - CENTRE.x), 0);
+    expect(sunY2! - CENTRE.y).toBeCloseTo(3 * (sunY1! - CENTRE.y), 0);
+  });
+
+  it("redraws on a zoom alone, with no rotation, centre or clock change", () => {
+    const sky = mount();
+    sky.view([0, 0], CENTRE, T0, 1);
+    const before = draws();
+    sky.view([0, 0], CENTRE, T0, 1.5);
+    expect(draws()).toBe(before + 1);
+  });
+
   it("lose the Sun's glare, and keep its disc, when the reader asks for more contrast", () => {
     mount();
     const plain = starLog.gradients;
