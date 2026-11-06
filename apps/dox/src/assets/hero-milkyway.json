@@ -1,0 +1,30 @@
+{
+  "name": "Milky Way for the Dox landing hero",
+  "source": {
+    "title": "The Milky Way panorama",
+    "publisher": "ESO",
+    "page": "https://www.eso.org/public/images/eso0932a/",
+    "url": "https://cdn.eso.org/images/large/eso0932a.jpg",
+    "bytes": 8228817,
+    "sha256": "60400c92c54b7c1bd12299c69e83b16e5b6256e7dabacc478c021758ecd28179"
+  },
+  "credit": "ESO/S. Brunier",
+  "license": "CC-BY-4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "changes": "Stars removed, reduced to greyscale brightness, reprojected from galactic to equatorial coordinates and scaled to 1024 x 512.",
+  "generator": "apps/dox/scripts/prepare-hero-milkyway.mjs",
+  "stretch": {
+    "floorPercentile": 0.5,
+    "whitePercentile": 0.999,
+    "gamma": 0.7,
+    "floor": 0.0028760981554504187,
+    "white": 0.3331267296221365
+  },
+  "map": {
+    "file": "hero-milkyway.webp",
+    "width": 1024,
+    "height": 512,
+    "bytes": 6920,
+    "sha256": "26a7342bf08f2eee69f48bd7092d692d3a5c5837de6f002f5f578484d5d2dbdf"
+  }
+}

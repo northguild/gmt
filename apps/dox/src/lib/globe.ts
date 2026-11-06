@@ -786,21 +786,7 @@ export async function initGlobe(
     getRenderer: () => engine.renderer,
     onInteract: (callback) => engine.onInteract(callback),
     getRotation: () => engine.getRotation(),
-    getCentre: () => {
-      const [lambda, phi] = engine.getRotation();
-      const { x, y } = engine.project([-lambda, -phi]);
-      /* The rim: the point 89.9 degrees from the centre toward north, over the pole if need be. */
-      const lat = (-phi * Math.PI) / 180;
-      const reach = (89.9 * Math.PI) / 180;
-      const north =
-        Math.sin(lat) * Math.cos(reach) + Math.cos(lat) * Math.sin(reach);
-      const over = Math.cos(reach) - Math.sin(lat) * north < 0;
-      const rim = engine.project([
-        -lambda + (over ? 180 : 0),
-        (Math.asin(north) * 180) / Math.PI,
-      ]);
-      return { x, y, radius: Math.hypot(rim.x - x, rim.y - y) };
-    },
+    getCentre: () => engine.getCentre(),
     onFrame: (callback) => {
       frameListeners.push(callback);
     },

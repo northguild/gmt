@@ -37,8 +37,10 @@ const DRAG_DEG_PER_RADIUS = 90;
 /** How long the globe must be left alone before it starts spinning. */
 export const IDLE_MS = 2500;
 
-/** Ambient spin rate — a full turn in 90 seconds. */
-const AMBIENT_DEG_PER_MS = 0.004;
+/** Ambient spin rate: 2 degrees a second, a full turn in 3 minutes. The sky behind the Earth is
+ *  seen through the globe's own camera, so the stars move about 6.5 times as far as the Earth's
+ *  surface; faster, they jump visibly between the spin's 30 ms draws. */
+const AMBIENT_DEG_PER_MS = 0.002;
 
 /** How long the ambient spin takes to build from rest to its full rate. */
 const AMBIENT_RAMP_MS = 2000;

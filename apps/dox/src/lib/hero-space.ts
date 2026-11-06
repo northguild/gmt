@@ -2,7 +2,7 @@
  * Wires the landing hero's night sky (`HeroSpace.astro`) to the page and to the Earth.
  *
  * The hero opens as plain void: the sky draws nothing until it is true. `startHeroSky` runs with
- * the page and only fetches the star list. `followGlobe` runs when the globe has mounted and
+ * the page and only fetches the star list and the Milky Way map. `followGlobe` runs when the globe has mounted and
  * measured: it draws the sky once from the globe's rotation, the Earth's centre and the clock
  * (which marks the hero `data-sky="ready"` and so fades the layers in), then keeps it following
  * the globe's frames (`sky.view`, so the sky has no loop of its own) and starts the rare meteor.
@@ -12,7 +12,7 @@ import { getSystemTimeZone } from "@northguild/gmt/zoned/get";
 import { getUnixNow } from "@northguild/gmt/unix/get";
 import { startRotation } from "./globe-zones";
 import { runHeroEntrance } from "./hero-entrance";
-import { mountSky, type Sky } from "./sky";
+import { mountSky, type Sky, type SkyMap } from "./sky";
 import { mountSpaceFx } from "./space-fx";
 import type { GlobeHost } from "./globe";
 
@@ -88,7 +88,32 @@ const canvasOf = (root: HTMLElement, which: string): HTMLCanvasElement | null =>
 export const heroOf = (element: Element): HTMLElement | null =>
   element.closest<HTMLElement>('[data-gate="hero-stage"]');
 
-/** Fetches the star list; the first draw waits for the globe (or for `skyWithoutGlobe`). */
+/** The Milky Way map's pixels, or undefined when it cannot load: the sky then draws the stars alone. */
+async function loadMilkyWay(
+  src: string | undefined,
+): Promise<SkyMap | undefined> {
+  if (!src) return undefined;
+  try {
+    const response = await fetch(src);
+    if (!response.ok) return undefined;
+    /* The map's bytes are brightness, not colour, so no colour space may change them. */
+    const image = await createImageBitmap(await response.blob(), {
+      colorSpaceConversion: "none",
+    });
+    const { width, height } = image;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx?.drawImage(image, 0, 0);
+    image.close();
+    return ctx?.getImageData(0, 0, width, height);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Fetches the star list and the Milky Way; the first draw waits for the globe (or for `skyWithoutGlobe`). */
 export function startHeroSky(root: HTMLElement): void {
   if (skies.has(root)) return;
   const stars = canvasOf(root, "stars");
@@ -99,7 +124,10 @@ export function startHeroSky(root: HTMLElement): void {
 
   const sky = (async (): Promise<Sky | null> => {
     try {
-      const response = await fetch(src);
+      const [response, milkyWay] = await Promise.all([
+        fetch(src),
+        loadMilkyWay(root.dataset["milkyWay"]),
+      ]);
       if (!response.ok) return null;
       const data = await response.arrayBuffer();
       const sky = mountSky({
@@ -107,6 +135,7 @@ export function startHeroSky(root: HTMLElement): void {
         band,
         host,
         data,
+        milkyWay,
         signal: new AbortController().signal,
         rotation: startRotation(getSystemTimeZone()),
         now: getUnixNow,

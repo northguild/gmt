@@ -1,42 +1,34 @@
 /**
- * The camera replaces `d3.geoOrthographic()` on the GPU path, so d3 *is* the
- * oracle here: the canvas-2D fallback still projects with d3, and any drift
- * between the two would show as a tooltip or a hit test landing in a different
- * place depending on which renderer started.
- *
- * Tested against d3 rather than against hand-computed numbers on purpose. A
- * hand-rolled expectation would only prove the maths matches itself.
+ * The camera is a pinhole at geostationary distance (`pinhole.ts`). The oracle here is vector
+ * geometry for a camera at `(P, 0, 0)`: a pixel's distance from the centre is `f * tan(angle)`
+ * between the optical axis and the line of sight. The ray-sphere quadratic lives in
+ * `pinhole.test.ts`, which pins the pinhole itself; these rows pin how the camera uses it.
  */
 
-import { geoOrthographic } from "d3-geo";
 import {
   clampLat,
   createCamera,
   isVisible,
   project,
+  rotatePoint,
   shortestAngle,
   sunDirection,
   syncCamera,
   unproject,
   wrapLng,
 } from "./camera";
+import { P, RIM } from "./pinhole";
 
 const WIDTH = 640;
 const HEIGHT = 480;
 const RADIUS = 200;
 
-/** Our camera and a d3 projection configured identically. */
 function pair(rotation: [number, number]) {
   const camera = createCamera(rotation);
   camera.radius = RADIUS;
   camera.centreX = WIDTH / 2;
   camera.centreY = HEIGHT / 2;
-  const projection = geoOrthographic()
-    .rotate([rotation[0], rotation[1]])
-    .scale(RADIUS)
-    .translate([WIDTH / 2, HEIGHT / 2])
-    .clipAngle(90);
-  return { camera, projection };
+  return { camera };
 }
 
 const ROTATIONS: [number, number][] = [
@@ -64,28 +56,22 @@ const POINTS: [number, number][] = [
 ];
 
 describe("project", () => {
-  /* Note `clipAngle(90)` does not enter into this. d3's point-wise
-     `projection(p)` applies the raw forward transform and never clips — only
-     `projection.stream` and `geoPath` honour the clip angle — so a far-side
-     point comes back at its silhouette position rather than as null. The
-     existing `globe.ts` depends on exactly that to place the sun's screen
-     vector, and `project` reproduces it: `visible` reports the hemisphere while
-     `x`/`y` stay defined on both sides. */
-  it("agrees with d3.geoOrthographic on both hemispheres", () => {
+  it("agrees with the pinhole on both hemispheres", () => {
     for (const rotation of ROTATIONS) {
-      const { camera, projection } = pair(rotation);
+      const { camera } = pair(rotation);
       for (const [lng, lat] of POINTS) {
-        const expected = projection([lng, lat]);
-        const actual = project(camera, lng, lat);
-        expect(expected, `${rotation} / ${lng},${lat}`).not.toBeNull();
-        expect(actual.x, `${rotation} / ${lng},${lat} x`).toBeCloseTo(
-          expected![0],
-          9,
-        );
-        expect(actual.y, `${rotation} / ${lng},${lat} y`).toBeCloseTo(
-          expected![1],
-          9,
-        );
+        const v = rotatePoint(camera, lng, lat, [0, 0, 0]);
+        const at = project(camera, lng, lat);
+        const f = RADIUS * Math.sqrt(P * P - 1);
+        const sight = [v[0] - P, v[1], v[2]]; // camera to point
+        const angle = Math.acos(-sight[0]! / Math.hypot(...sight));
+        const dx = at.x - WIDTH / 2;
+        const dy = HEIGHT / 2 - at.y;
+        const label = `${rotation} / ${lng},${lat}`;
+        expect(Math.hypot(dx, dy), label).toBeCloseTo(f * Math.tan(angle), 7);
+        expect(dx * v[2]! - dy * v[1]!, label).toBeCloseTo(0, 6);
+        expect(dx * v[1]! + dy * v[2]!, label).toBeGreaterThanOrEqual(-1e-9);
+        expect(at.visible).toBe(v[0] > RIM);
       }
     }
   });
@@ -113,19 +99,16 @@ describe("project", () => {
 });
 
 describe("isVisible", () => {
-  /* A point *exactly* on the horizon has no stable answer and is not worth
-     pinning one to: the test is `rotated.x > 0`, and at a quarter turn that x is
-     `cos(π/2)`, which in doubles is 6e-17 rather than 0. Whether it lands
-     either side of zero depends on the rotation's own rounding. What has to
-     hold is that the boundary is in the right place to well under a pixel —
-     a marker half a degree off the limb must not flicker. */
-  it("switches at the horizon, to well under a pixel", () => {
+  /* The cap edge is where the camera-frame x equals `RIM`, 81.30 degrees from the centre. A point
+     0.01 degree either side must land on the right side, and the horizon at 90 degrees is hidden. */
+  it("switches at the cap edge, to well under a pixel", () => {
     const { camera } = pair([0, 0]);
-    expect(isVisible(camera, 89.99, 0)).toBe(true);
-    expect(isVisible(camera, 90.01, 0)).toBe(false);
-    expect(isVisible(camera, 0, 89.99)).toBe(true);
-    // A quarter turn away in both axes at once.
-    expect(isVisible(camera, 90.01, 45)).toBe(false);
+    const edge = Math.acos(RIM) / (Math.PI / 180);
+    expect(isVisible(camera, edge - 0.01, 0)).toBe(true);
+    expect(isVisible(camera, edge + 0.01, 0)).toBe(false);
+    expect(isVisible(camera, 0, edge - 0.01)).toBe(true);
+    expect(isVisible(camera, 0, edge + 0.01)).toBe(false);
+    expect(isVisible(camera, 89.99, 0)).toBe(false);
   });
 });
 
@@ -151,9 +134,9 @@ describe("unproject", () => {
     }
   });
 
-  it("agrees with d3's invert", () => {
+  it("agrees with the pinhole's ray through the pixel", () => {
     for (const rotation of ROTATIONS) {
-      const { camera, projection } = pair(rotation);
+      const { camera } = pair(rotation);
       for (const [dx, dy] of [
         [0, 0],
         [40, -30],
@@ -161,18 +144,16 @@ describe("unproject", () => {
         [150, 100],
         [-190, 0],
       ] as const) {
-        const sx = WIDTH / 2 + dx;
-        const sy = HEIGHT / 2 + dy;
-        const ours = unproject(camera, sx, sy);
-        const theirs = projection.invert!([sx, sy]);
+        const ours = unproject(camera, WIDTH / 2 + dx, HEIGHT / 2 + dy);
         if (ours === null) {
-          // Outside the disc; d3 either returns null or a point off the sphere.
           expect(Math.hypot(dx, dy)).toBeGreaterThan(RADIUS);
           continue;
         }
-        expect(theirs).not.toBeNull();
-        expect(wrapLng(ours[0] - theirs![0])).toBeCloseTo(0, 6);
-        expect(ours[1]).toBeCloseTo(theirs![1], 6);
+        /* Project the answer back: it must land on the pixel that was asked about. */
+        const again = project(camera, ours[0], ours[1]);
+        expect(again.x).toBeCloseTo(WIDTH / 2 + dx, 6);
+        expect(again.y).toBeCloseTo(HEIGHT / 2 + dy, 6);
+        expect(again.visible).toBe(true);
       }
     }
   });
