@@ -10,9 +10,15 @@ import { compareCells, compareColumns } from "../lib/bundle-size";
 const columns = compareColumns();
 const rows = compareCells();
 
-/** A header's backticked package names as `<code>`. */
+/**
+ * A header's backticked package names as `<code>`, with the same break points as the row
+ * headers, so `@js-temporal/polyfill` can wrap after its `/` and four columns fit.
+ */
 const headerHtml = (label: string): string =>
-  label.replace(/`([^`]+)`/g, "<code>$1</code>");
+  label.replace(/`([^`]+)`/g, (_, name: string) => {
+    const cls = codeBreakClass(name);
+    return `<code${cls ? ` class="${cls}"` : ""}>${codeBreakHtml(name)}</code>`;
+  });
 ---
 
 <div class="gmt-ref-table" data-kind="content" data-label="Gzipped size on each polyfill">
