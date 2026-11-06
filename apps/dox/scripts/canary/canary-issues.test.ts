@@ -2468,6 +2468,9 @@ describe("swap force", () => {
     expect(dry.body).toContain(
       "Forced for a dry run. Real result on this run: every check passed.",
     );
+    expect(dry.body).toContain(
+      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${RUN}`,
+    );
   });
 
   it("forced with webkit failing files only the dry run and states the real reason", () => {
@@ -2476,8 +2479,12 @@ describe("swap force", () => {
     const [dry] = actions;
     if (dry.kind !== "open") throw new Error("expected open");
     expect(dry.body).toContain(
-      "Forced for a dry run. Real result on this run: temporal-polyfill-swap-webkit: 2 tests fail on the swap.",
+      "Forced for a dry run. Real result on this run: not ready to swap. The first check that blocks it: temporal-polyfill-swap-webkit: 2 tests fail on the swap.",
     );
+    expect(dry.body).toContain(
+      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, was checked on this run: ${RUN}`,
+    );
+    expect(dry.body).not.toContain("passed every check");
     expect(dry.body).toContain("| WebKit 26.6 | 71337 | 2 | 0 | 0 |");
   });
 

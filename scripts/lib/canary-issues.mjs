@@ -1195,13 +1195,15 @@ function swapRuntimeName(leg, v) {
 }
 
 /**
- * The swap issue's paragraphs, built from whichever legs ran.
+ * The swap issue's paragraphs, built from whichever legs ran. `ready` is false only in a forced dry
+ * run, whose text must not claim a pass the run did not have.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @param {string} version
  * @param {string} runUrl
+ * @param {boolean} ready
  * @returns {string[]}
  */
-function swapParagraphs(verdicts, version, runUrl) {
+function swapParagraphs(verdicts, version, runUrl, ready) {
   const rows = NATIVE_LEGS.map((leg) => {
     const v = verdictOf(verdicts, SWAP(leg));
     if (v?.status !== "ran") {
@@ -1241,7 +1243,7 @@ function swapParagraphs(verdicts, version, runUrl) {
         : `Calendar sweep: ${calendarSweep.differingCalendars} of ${calendarSweep.calendars} calendars differ from the built-in Temporal in some year ${span}.`;
   }
   return [
-    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${runUrl}`,
+    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, ${ready ? "passed every check" : "was checked"} on this run: ${runUrl}`,
     table(
       [
         "Runtime",
@@ -1278,7 +1280,7 @@ function swapFindings(verdicts, runUrl) {
     )
   );
   const version = result.ready ? result.version : (firstRan?.version ?? "");
-  const paragraphs = swapParagraphs(verdicts, version, runUrl);
+  const paragraphs = swapParagraphs(verdicts, version, runUrl, result.ready);
   const comment = `temporal-polyfill ${version} also passes (run ${runUrl}).\n\n${paragraphs.join("\n\n")}`;
   /** @type {Finding} */
   const real = {
@@ -1291,7 +1293,9 @@ function swapFindings(verdicts, runUrl) {
   /** @type {Finding[]} */
   const out = result.ready ? [real] : [];
   if (forcedBy) {
-    const outcome = result.ready ? "every check passed" : result.reason;
+    const outcome = result.ready
+      ? "every check passed"
+      : `not ready to swap. The first check that blocks it: ${result.reason}`;
     out.push(
       dryRun(
         real,
