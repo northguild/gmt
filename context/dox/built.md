@@ -597,10 +597,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     printed `tru` / `e`. `table-fit` passes on all four pages at 1440 px; at 375 px the box scrolls
     as every table does. Astro caches rendered Markdown in `node_modules/.astro/data-store.json`
     keyed by the file, so delete it after changing a rehype plugin.
-  - **Sidebar.** A top-level "Changelog" group with four links: `@northguild/gmt`, `gmt-eslint`,
-    `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three plugin pages.
+  - **Sidebar.** The last top-level group, "Changelog", with four links: `@northguild/gmt`,
+    `gmt-eslint`, `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three
+    plugin pages.
   - **Text surfaces.** The HTML pages and Pagefind carry them; each page's `.md` twin exists as for
-    every page; `llms.txt` has a "Changelog" section with four links; `llms-full.txt` and the
+    every page; `llms.txt` ends with a "Changelog" section of four links; `llms-full.txt` and the
     retrieval chunks leave them out (`topLevelPages` takes only slugs without `/`, and
     `guide-sources.ts` globs `guides/` and the top level), asserted in `llms.test.ts` and
     `guide-sources.test.ts`. Old signatures would ground answers in removed APIs.
