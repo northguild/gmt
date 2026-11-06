@@ -9,7 +9,7 @@ import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { parseTimeZoneFromZoned } from "../parse";
 import { getZonedNow } from "./getZonedNow";
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, verified against temporal-polyfill 1.0.8.
 const zonedNowByZone = {
   UTC: "2024-02-29T00:00:00.000+00:00[UTC]",
   GMT: "2024-02-29T00:00:00.000+00:00[GMT]",
@@ -233,4 +233,31 @@ describe("getZonedNow", () => {
     const result = getZonedNow("America/New_York");
     expect(result).toBe("");
   });
+});
+
+// 1960-01-01T00:00:00Z is -315619200000 ms (TC39 Temporal SystemUTCEpochMilliseconds floors the
+// system time; test262 built-ins/Temporal/Now/instant/return-value-value.js).
+describe("getZonedNow after the clock was set before 1970", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each`
+    clock                     | expected
+    ${"1960-01-01T00:00:00Z"} | ${"1960-01-01T00:00:00.000+00:00[UTC]"}
+    ${"2027-01-01T00:00:00Z"} | ${"2027-01-01T00:00:00.000+00:00[UTC]"}
+  `(
+    "returns $expected for the second reading at $clock",
+    ({ clock, expected }) => {
+      vi.setSystemTime("1960-01-01T00:00:00Z");
+      getZonedNow("UTC");
+      vi.setSystemTime(clock);
+      getZonedNow("UTC");
+      expect(getZonedNow("UTC")).toBe(expected);
+    },
+  );
 });

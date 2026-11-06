@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { differenceRecord } from "../../internal/differenceRecord";
-import { plainUntilWithRounding } from "../../internal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
 import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
@@ -47,9 +47,9 @@ export function diffDateTime(
   dateTime2: string,
   units:
     | DateTimeDurationUnit
-    | Temporal.DateTimeUnit
-    | Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
-  options?: RoundingOptions<Temporal.DateTimeUnit>,
+    | DateTimeUnit
+    | Array<DateTimeDurationUnit | DateTimeUnit>,
+  options?: RoundingOptions<DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
   try {
     // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
@@ -82,7 +82,7 @@ export function diffDateTime(
       const dt1 = Temporal.PlainDateTime.from(dateTime1);
       const dt2 = Temporal.PlainDateTime.from(dateTime2);
 
-      const duration = plainUntilWithRounding(dt1, dt2, {
+      const duration = dt1.until(dt2, {
         largestUnit,
         smallestUnit: options?.smallestUnit,
         roundingIncrement: options?.roundingIncrement,
@@ -101,7 +101,7 @@ export function diffDateTime(
         {
           add: (from, amount) => from.add(amount),
           until: (from, to, largest) =>
-            from.until(to, { largestUnit: largest as Temporal.DateTimeUnit }),
+            from.until(to, { largestUnit: largest as DateTimeUnit }),
         },
       );
     } catch {

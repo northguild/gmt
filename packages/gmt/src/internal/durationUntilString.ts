@@ -1,3 +1,4 @@
+import type { DateTimeUnit, DifferenceOptions } from "./temporalTypes";
 import { Temporal } from "./temporal";
 import type { DurationStringOptions, RoundingOptions } from "../types";
 import { plainDateUntil } from "./plainDateUntil";
@@ -25,19 +26,19 @@ export function durationUntilString(
   start: Temporal.PlainDateTime,
   end: Temporal.PlainDateTime,
   largestUnit: string,
-  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
+  options?: RoundingOptions<DateTimeUnit> & DurationStringOptions,
 ): string;
 export function durationUntilString(
   start: Temporal.ZonedDateTime,
   end: Temporal.ZonedDateTime,
   largestUnit: string,
-  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
+  options?: RoundingOptions<DateTimeUnit> & DurationStringOptions,
 ): string;
 export function durationUntilString(
   start: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime,
   end: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime,
   largestUnit: string,
-  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
+  options?: RoundingOptions<DateTimeUnit> & DurationStringOptions,
 ): string {
   // Each option is read once (GetOption); the difference below works on these values.
   const roundingOptions = {
@@ -51,7 +52,7 @@ export function durationUntilString(
       ? zonedUntil(
           start,
           end as Temporal.ZonedDateTime,
-          untilOptions as Temporal.DifferenceOptions<Temporal.DateTimeUnit>,
+          untilOptions as DifferenceOptions<DateTimeUnit>,
         )
       : start instanceof Temporal.PlainDate
         ? plainDateUntil(

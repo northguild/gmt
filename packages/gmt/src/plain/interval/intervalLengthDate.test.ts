@@ -69,7 +69,7 @@ describe("intervalLengthDate", () => {
     expect(intervalLengthDate("2024-01-01", "2024-01-10", "day")).toBeNull();
   });
   // E5 (issue #78): same calendar rule as intervalCountDate. Golden verified directly against
-  // @js-temporal/polyfill.
+  // temporal-polyfill 1.0.8.
   it("measures length in the shared calendar when start and end carry the same tag", () => {
     expect(
       intervalLengthDate(
@@ -100,9 +100,9 @@ describe("intervalLengthDate", () => {
   // over the days from start + r1 to start + r1 + 1 (constrained).
   it.each`
     start                           | end                             | unit       | expected       | reason
-    ${"2023-08-31[u-ca=buddhist]"}  | ${"2023-09-30[u-ca=buddhist]"}  | ${"month"} | ${1}           | ${"D6: until is P30D, but start + 1 month constrains to Sep 30 = end, so progress is 30/30"}
-    ${"2024-02-11[u-ca=hebrew]"}    | ${"2025-03-01[u-ca=hebrew]"}    | ${"year"}  | ${384 / 385}   | ${"D7: 384 days of the 385 to Adar 2 5785 (Adar I constrains to Adar)"}
-    ${"+275760-06-07[u-ca=hebrew]"} | ${"+275760-08-19[u-ca=hebrew]"} | ${"month"} | ${2 + 14 / 29} | ${"D1: 2 months, then 14 of Iyar's 29 days, next to the maximum"}
+    ${"2023-08-31[u-ca=buddhist]"}  | ${"2023-09-30[u-ca=buddhist]"}  | ${"month"} | ${1}           | ${"month-end overshoot: until is P30D, but start + 1 month constrains to Sep 30 = end, so progress is 30/30"}
+    ${"2024-02-11[u-ca=hebrew]"}    | ${"2025-03-01[u-ca=hebrew]"}    | ${"year"}  | ${384 / 385}   | ${"Adar I overshoot: 384 days of the 385 to Adar 2 5785 (Adar I constrains to Adar)"}
+    ${"+275760-06-07[u-ca=hebrew]"} | ${"+275760-08-19[u-ca=hebrew]"} | ${"month"} | ${2 + 14 / 29} | ${"range limit: 2 months, then 14 of Iyar's 29 days, next to the maximum"}
   `(
     "returns $expected $unit for $start to $end ($reason)",
     ({ start, end, unit, expected }) => {

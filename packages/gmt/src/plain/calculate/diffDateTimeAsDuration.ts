@@ -1,3 +1,4 @@
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { durationUntilString } from "../../internal";
@@ -42,8 +43,8 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function diffDateTimeAsDuration(
   dateTime1: string,
   dateTime2: string,
-  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
-  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
+  unit: DateTimeDurationUnit | DateTimeUnit,
+  options?: RoundingOptions<DateTimeUnit> & DurationStringOptions,
 ): string {
   // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
   if (!isOptionsArgument(options)) {

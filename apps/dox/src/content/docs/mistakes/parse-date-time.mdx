@@ -128,8 +128,8 @@ parseYearMonthWithPattern("10/2026", "MM/yyyy"); // "2026-10"`}
 <Mistake
   severity="medium"
   title="Trusting Temporal.PlainMonthDay.from with a day that never exists"
-  description="Polyfill 0.5.1 accepts --02-30, which the grammar refuses, and keeps day 30. Placing it in a year then quietly gives 29 February. isValidMonthDay refuses it first."
-  wrongCode={`const md = Temporal.PlainMonthDay.from("--02-30"); // no error
+  description="The grammar refuses --02-30, and temporal-polyfill 1.0.8 throws on it, but @js-temporal/polyfill 0.5.1 accepted it and kept day 30, so placing it in a year quietly gave 29 February. isValidMonthDay refuses it first, whichever polyfill runs."
+  wrongCode={`const md = Temporal.PlainMonthDay.from("--02-30"); // no error in @js-temporal/polyfill 0.5.1
 md.toPlainDate({ year: 2024 }).toString(); // "2024-02-29" — a day nobody wrote`}
   rightCode={`import { isValidMonthDay } from "@northguild/gmt";
 

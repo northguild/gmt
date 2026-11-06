@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import {
   frameInstant,
   frameZoned,
@@ -62,7 +62,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  */
 export function floorToZone(
   value: string,
-  unit: Temporal.SmallestUnit<ZoneBucketUnit>,
+  unit: SmallestUnit<ZoneBucketUnit>,
   timeZone: string,
 ): string {
   // The singular name; the guard below rejects anything outside the four units.

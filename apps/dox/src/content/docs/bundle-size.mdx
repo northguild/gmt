@@ -3,15 +3,114 @@ title: Bundle size
 description: Minified and gzipped bytes of the whole package and of single functions, measured from the source on every build, with the budget each is held to.
 ---
 
+import { Aside } from "@astrojs/starlight/components";
 import BundleSize from "~/components/BundleSize.astro";
+import ChartContainer from "~/components/ChartContainer.astro";
+import PolyfillCompare from "~/components/PolyfillCompare.astro";
+import {
+  bundleSizeSvgs,
+  polyfillLegends,
+  polyfillSummaries,
+} from "../../../scripts/render-charts";
 import { gmtStats, formatCount } from "~/data/gmt-stats";
+import { nativeFailures } from "~/data/native-engine-failures";
+import { polyfillFigures } from "~/lib/bundle-size-figures";
 
-Every import of `@northguild/gmt` carries `@js-temporal/polyfill`, so the polyfill row is the floor under every other row: no import is smaller than it. The last four columns of the other rows show what is left once the floor is taken away.
+<Aside type="caution" title="Which release these figures are for">
+The figures on this page are for `@northguild/gmt` {polyfillFigures.firstShippedGmt} and later, the releases on `temporal-polyfill`. Releases up to {polyfillFigures.previousGmt} carry `@js-temporal/polyfill`: for those, read the `@js-temporal/polyfill` figures in the comparison below, where the whole package is {polyfillFigures.previousRootGzipped} gzipped.
+</Aside>
+
+<Aside type="note" title="Most of the size is the Temporal polyfill">
+GMT's own code is small: {polyfillFigures.smallestCodeGzipped} to {polyfillFigures.largestCodeGzipped} gzipped for each function measured. Most of every import is the `temporal-polyfill` polyfill, {polyfillFigures.floorGzipped} gzipped. `Temporal` is not in every JavaScript runtime, and where it is, support is not always complete, so GMT carries the polyfill to give the same results everywhere. [Why there is no build without the polyfill](#why-there-is-no-build-without-the-polyfill) gives the evidence, and the end of this page says when the polyfill goes.
+
+The package has no side effects, so your bundler keeps only the functions you import, and the polyfill is counted once however many you import.
+</Aside>
+
+Every import of `@northguild/gmt` carries the `temporal-polyfill` polyfill, {polyfillFigures.floorGzipped} gzipped ({polyfillFigures.floorMinified} minified). That is the polyfill row: no import is smaller than it. GMT's own code is what a row adds above that floor. <code>{polyfillFigures.smallestName}</code> adds {polyfillFigures.smallestCodeMinified} minified, {polyfillFigures.smallestCodeGzipped} gzipped. The two "over the polyfill" columns show that part for every row.
 
 The `@northguild/gmt` row is the whole package, all {formatCount(gmtStats.functions)} public functions, which is the figure a package-size service such as Bundlephobia reports. A single function from a module costs far less than that row.
 
 <BundleSize />
 
-Sizes come from bundling `packages/gmt/src` with esbuild, minified, as ES modules for a neutral platform. 1 kB is 1,000 bytes. The minified size of each row is gated: the repository's check fails when it passes the budget in the last column, and a budget changes only by a reviewed edit. Gzipped sizes are reported and never gated, because they vary with the version of zlib.
+Sizes come from bundling `packages/gmt/src` with esbuild, minified, as ES modules for a neutral platform. 1 kB is 1,000 bytes. The minified size of each row is gated: the repository's check fails when it passes the budget in the last column, and a budget changes only by a reviewed edit. Gzipped sizes are reported and never gated, because they vary with the version of zlib. The comparison below also bundles the last release on `@js-temporal/polyfill`, `@northguild/gmt` {polyfillFigures.previousGmt}, with the same esbuild settings.
+
+## Why GMT uses temporal-polyfill
+
+GMT reads and returns ISO 8601 strings and does its date arithmetic with `Temporal`. Every bundle includes a polyfill for it until a stable Safari ships `Temporal` (see the end of this page). The polyfill is the largest part of almost every import, so its size sets how large GMT is to install.
+
+`temporal-polyfill` {polyfillFigures.shippedVersion} is {polyfillFigures.floorGzipped} gzipped. `@js-temporal/polyfill` {polyfillFigures.previousVersion}, the polyfill of GMT releases up to {polyfillFigures.previousGmt}, is {polyfillFigures.previousFloorGzipped}: a difference of {polyfillFigures.floorDifferenceGzipped} on every import.
+
+<ChartContainer
+  title="Size of each polyfill on its own"
+  toggleLabel="Measure"
+  views={[
+    {
+      id: "gzipped",
+      label: "Gzipped",
+      chart: "polyfill-floor-gzipped",
+      svg: bundleSizeSvgs["polyfill-floor-gzipped"],
+      legend: polyfillLegends.floor,
+      summary: polyfillSummaries["floor-gzipped"],
+      caption: "Gzipped size of each polyfill on its own, the floor of every import.",
+    },
+    {
+      id: "minified",
+      label: "Minified",
+      chart: "polyfill-floor-minified",
+      svg: bundleSizeSvgs["polyfill-floor-minified"],
+      legend: polyfillLegends.floor,
+      summary: polyfillSummaries["floor-minified"],
+      caption: "Minified size of each polyfill on its own, the floor of every import.",
+    },
+  ]}
+/>
+
+Each pair of bars below is one import: the solid part is the polyfill, the hatched part is GMT's code. Across the functions measured, GMT's code is {polyfillFigures.smallestCodeGzipped} to {polyfillFigures.largestCodeGzipped} gzipped. The whole package is {polyfillFigures.rootGzipped} gzipped on `temporal-polyfill` and {polyfillFigures.previousRootGzipped} on `@js-temporal/polyfill`.
+
+<ChartContainer
+  title="Size of each single-function import"
+  toggleLabel="Measure"
+  views={[
+    {
+      id: "gzipped",
+      label: "Gzipped",
+      chart: "polyfill-split-gzipped",
+      svg: bundleSizeSvgs["polyfill-split-gzipped"],
+      legend: polyfillLegends.split,
+      summary: polyfillSummaries["split-gzipped"],
+      caption: "Gzipped size of each single-function import, split into the polyfill and GMT's code.",
+    },
+    {
+      id: "minified",
+      label: "Minified",
+      chart: "polyfill-split-minified",
+      svg: bundleSizeSvgs["polyfill-split-minified"],
+      legend: polyfillLegends.split,
+      summary: polyfillSummaries["split-minified"],
+      caption: "Minified size of each single-function import, split into the polyfill and GMT's code.",
+    },
+  ]}
+/>
+
+<PolyfillCompare />
+
+Size is one reason. The others, bounded month arithmetic and a maintained release line, are on [Helping fix Temporal](/upstream/#why-this-polyfill).
+
+## Why there is no build without the polyfill
+
+A build on the `Temporal` built into each runtime would leave out the polyfill and carry only GMT's code, {polyfillFigures.smallestCodeGzipped} to {polyfillFigures.largestCodeGzipped} gzipped for each function measured. GMT does not publish one, because the built-in engines give wrong answers, and different wrong answers from each other.
+
+Every week, GMT runs its whole test suite on the `Temporal` built into Node 26, Chromium, Firefox and WebKit, the engine in Safari. {nativeFailures.total} of GMT's tests get a wrong answer from at least one of them and the right answer from `temporal-polyfill` in the same runtime:
+
+| Built-in `Temporal` | GMT tests it fails |
+| --- | --- |
+| Node 26 | {nativeFailures.node} |
+| Chromium | {nativeFailures.chromium} |
+| Firefox | {nativeFailures.firefox} |
+| WebKit | {nativeFailures.webkit} |
+
+Each engine fails its own tests, for its own bugs: Node and Chromium share one engine, and Firefox and WebKit each have another. On a build without the polyfill, one call could give a different answer in each browser, and on a runtime that has no `Temporal` it would not run at all. The bugs behind them are listed under [Native engines](/upstream/#native-engines), with the report for each one filed so far.
+
+GMT does not ship code that it knows gives a wrong answer. A bug it finds is fixed before the release that would carry it, never shipped and written up as a known issue ([Zero known bugs](/guides/concepts/correct-at-the-edges/#zero-known-bugs)). A build without the polyfill would ship every one of these failures, so there is none. On `temporal-polyfill`, GMT gives the standard's answer in each case.
 
 The polyfill stays until a stable Safari ships `Temporal` and the weekly run against native `Temporal` passes on Node 26, Chromium, Firefox and WebKit for 12 weeks running ([#316](https://github.com/northguild/gmt/issues/316)).

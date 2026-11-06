@@ -15,7 +15,7 @@
  * once on the widget with its `signal`. The regions that change height sit in
  * `grow()`.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { defineElements } from "~/widgets/define";
 import {
   aside,

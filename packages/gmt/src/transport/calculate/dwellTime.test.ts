@@ -263,7 +263,7 @@ describe("dwellTime", () => {
 
 describe("dwellTime across America/Goose_Bay's repeated date", () => {
   // 6 November 2010 is re-entered at the 00:01 fall-back on the 7th and counted once. Verified on
-  // @js-temporal/polyfill@0.5.1.
+  // temporal-polyfill 1.0.8.
   it("counts the re-entered date once", () => {
     expect(
       dwellTime(

@@ -40,9 +40,9 @@ export function isExactDurationUnit(unit: string): boolean {
  * Temporal's representable range. An invalid duration (a fraction, an out-of-range amount) rethrows.
  */
 function stepWithinRange<T>(
-  add: (value: T, duration: Temporal.DurationLike) => T,
+  add: (value: T, duration: Temporal.DurationLikeObject) => T,
   value: T,
-  duration: Temporal.DurationLike,
+  duration: Temporal.DurationLikeObject,
 ): T | null {
   try {
     return add(value, duration);
@@ -103,7 +103,7 @@ function closedAtRangeLimit<T>(
  * @example tileByUnit(Temporal.PlainDate.from("2024-01-01"), Temporal.PlainDate.from("2024-01-04"), Temporal.PlainDate.compare, "hours", 1, 100) // null (PlainDate ignores hours, so no step advances)
  */
 export function tileByUnit<
-  T extends { add(duration: Temporal.DurationLike): T },
+  T extends { add(duration: Temporal.DurationLikeObject): T },
 >(
   start: T,
   end: T,
@@ -111,8 +111,10 @@ export function tileByUnit<
   unit: string,
   amount: number,
   maxSlices: number,
-  add: (value: T, duration: Temporal.DurationLike) => T = (value, duration) =>
-    value.add(duration),
+  add: (value: T, duration: Temporal.DurationLikeObject) => T = (
+    value,
+    duration,
+  ) => value.add(duration),
 ): Array<[T, T]> | null {
   // Exact units step from the previous boundary; calendar units stay anchored to `start`.
   const stepAfter: (current: T, step: number) => T | null = isExactDurationUnit(

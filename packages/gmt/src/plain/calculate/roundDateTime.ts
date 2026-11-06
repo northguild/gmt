@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
@@ -41,7 +42,7 @@ const TIME_UNITS: readonly string[] = [
   "nanosecond",
 ];
 
-type RoundableTimeUnit = Temporal.SmallestUnit<
+type RoundableTimeUnit = SmallestUnit<
   | "day"
   | "hour"
   | "minute"
@@ -56,7 +57,7 @@ function roundTimeUnit(
   source: Temporal.PlainDateTime,
   smallestUnit: RoundableTimeUnit,
   roundingIncrement: number | undefined,
-  roundingMode: Temporal.RoundingMode | undefined,
+  roundingMode: RoundingMode | undefined,
 ): string {
   const result = source.round({
     smallestUnit,
@@ -83,10 +84,7 @@ const upPastHalf = (_elapsedMs: number, fraction: () => number): boolean =>
  * `fraction` is the position within the unit, computed lazily because only the half modes need it.
  */
 const ROUNDS_UP_TO_NEXT_START: Readonly<
-  Record<
-    Temporal.RoundingMode,
-    (elapsedMs: number, fraction: () => number) => boolean
-  >
+  Record<RoundingMode, (elapsedMs: number, fraction: () => number) => boolean>
 > = {
   ceil: (elapsedMs) => elapsedMs > 0,
   expand: (elapsedMs) => elapsedMs > 0,
@@ -109,7 +107,7 @@ function roundDateUnit(
   source: Temporal.PlainDateTime,
   smallestUnit: DateTimeUnit,
   increment: number,
-  mode: Temporal.RoundingMode,
+  mode: RoundingMode,
 ): string {
   // Measured towards the next start, never from the current one: the first representable
   // PlainDateTime is -271821-04-19T00:00:00.000000001, so the week, month and year holding it
@@ -187,7 +185,7 @@ export function roundDateTime(
      * or plural, as Temporal's GetTemporalUnitValuedOption accepts both. It also sets how
      * many fractional-second digits the result is written with.
      */
-    smallestUnit: Temporal.SmallestUnit<DateTimeUnit>;
+    smallestUnit: SmallestUnit<DateTimeUnit>;
     /**
      * How many units make one rounding step. For `"day"` and the time units Temporal
      * requires it to divide the next larger unit evenly and be smaller than it (`15` minutes,
@@ -205,7 +203,7 @@ export function roundDateTime(
      *
      * @defaultValue `"halfExpand"`, Temporal's default.
      */
-    roundingMode?: Temporal.RoundingMode;
+    roundingMode?: RoundingMode;
   },
 ): string {
   try {

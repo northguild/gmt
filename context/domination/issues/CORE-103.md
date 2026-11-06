@@ -166,16 +166,10 @@ checklist say when a file is shared and how to undo global state.
 - **D20.** Tests that depended on another test's state are fixed, not skipped: `element-identity`
   disconnects its observer and drops its window state, and `dev-worker-proxy` waits on the proxied
   path with each probe bounded.
-- **D21.** The clock readers in `internal/temporalCompat/clock.ts` (`nowInstant`,
-  `nowZonedDateTimeISO`, `nowPlainDateTimeISO`, `nowPlainDateISO`, `nowPlainTimeISO`) work around
-  [tc39/proposal-temporal#3335](https://github.com/tc39/proposal-temporal/issues/3335). After a
-  clock reading before 1970, the polyfill's next `Temporal.Now` reading carries a negative
-  sub-millisecond tail and can land 1 ms before `Date.now()`. A reader takes `Date.now()` first,
-  then `Temporal.Now`, and adds 1 ms only when the reading falls exactly 1 ms short. It stays
-  dormant on a fixed polyfill or a native `Temporal`. Every clock-reading function goes through
-  these readers, and a guard test fails on a direct `Temporal.Now` call in library source.
-  `api-surface` treats the readers as clock reads. The removal steps are in the temporalCompat
-  README and the workaround registry.
+- **D21.** GMT reads `Temporal.Now` directly. The polyfill (`temporal-polyfill`) takes the exact
+  `Date.now()` for the reading, so [tc39/proposal-temporal#3335](https://github.com/tc39/proposal-temporal/issues/3335)
+  (a reading 1 ms early after a clock before 1970) does not reach GMT and no clock reader is
+  needed.
 - **D22.** The `pnpm audit` run ignores GHSA-g3hv-75wg-m249 (minimatch below 11.0.1). Only ESLint 9
   and typescript-eslint reach it, no published package depends on it, and an override to
   minimatch 11 removes functions those tools call. The entry is deleted once `pnpm why minimatch`

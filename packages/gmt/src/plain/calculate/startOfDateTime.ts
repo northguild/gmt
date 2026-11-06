@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import type { DateTimeUnit, SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { defaultFractionalDigits } from "../../internal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
@@ -24,7 +25,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function startOfDateTime(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   optionsArg?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

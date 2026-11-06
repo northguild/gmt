@@ -23,7 +23,7 @@ describe("formatYearMonth", () => {
   // pattern (ECMA-402 AdjustDateTimeStyleFormat), so each style is the locale's: en-US short
   // "10/26", de-DE medium "10/2026", zh-CN long "2026/10". Every dateStyle cell is what native
   // PlainYearMonth#toLocaleString prints with calendar gregory in Chromium 153 and WebKit 26.6; on
-  // Node the Temporal is polyfill 0.5.1, which maps the style to fixed widths instead. full gives
+  // Node the Temporal is temporal-polyfill 1.0.8, which maps the style to fixed widths instead. full gives
   // the long cell in all 17. yearMonthLong is { year: "numeric", month: "long" }: zh and ja write
   // the month as a name there and as a number in every dateStyle.
   // de-DE and tr-TR, no options: "10/2026" on ICU 78.3 (Node 24.22.1, Chromium 153), "10.2026" on
@@ -113,7 +113,7 @@ describe("formatYearMonth", () => {
     ${"2026-10"}               | ${{ calendar: "japanese" }}                                                   | ${""}                 | ${"calendar japanese"}
     ${"2026-10"}               | ${{ calendar: "gregorian" }}                                                  | ${""}                 | ${"calendar gregorian is a RangeError"}
     ${"2026-10"}               | ${{ numberingSystem: "arab" }}                                                | ${"١٠/٢٠٢٦"}          | ${"numberingSystem kept"}
-    ${"2026-10[u-ca=ISO8601]"} | ${undefined}                                                                  | ${"10/2026"}          | ${"D20 calendar annotation"}
+    ${"2026-10[u-ca=ISO8601]"} | ${undefined}                                                                  | ${"10/2026"}          | ${"upper-case calendar annotation"}
     ${"+002026-10"}            | ${undefined}                                                                  | ${"10/2026"}          | ${"six-digit year form"}
     ${"0000-10"}               | ${{ year: "numeric", month: "long" }}                                         | ${"October 1"}        | ${"year 0 prints era year 1, no era"}
     ${"-000001-10"}            | ${{ year: "numeric", month: "long" }}                                         | ${"October 2"}        | ${"year -1 prints era year 2"}

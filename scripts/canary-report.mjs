@@ -29,7 +29,7 @@ import {
   COMPAT_LABEL,
   DRY_RUN_LABEL,
   ISSUE_TYPE,
-  WORKFLOW_SOURCES,
+  expectedSources,
   applyForce,
   planIssueActions,
 } from "./lib/canary-issues.mjs";
@@ -41,7 +41,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const USAGE =
   "Usage: node scripts/canary-report.mjs <temporal-oracle|leap-seconds> " +
   "[--force-removable=<id>] [--force-mismatch] [--force-native-failure] " +
-  "[--force-swap-ready] [--force-leap-difference] [--print]";
+  "[--force-swap-ready] [--swap-skipped] [--force-leap-difference] [--print]";
 
 /** Flags each workflow accepts besides `--print`. */
 const FORCE_FLAGS = {
@@ -50,6 +50,7 @@ const FORCE_FLAGS = {
     "--force-mismatch",
     "--force-native-failure",
     "--force-swap-ready",
+    "--swap-skipped",
   ],
   "leap-seconds": ["--force-leap-difference"],
 };
@@ -81,7 +82,7 @@ const LABEL_SPECS = {
 
 /**
  * @param {string[]} argv  the arguments after `node scripts/canary-report.mjs`
- * @returns {{ ok: true, workflow: "temporal-oracle" | "leap-seconds", force: Force, print: boolean }
+ * @returns {{ ok: true, workflow: "temporal-oracle" | "leap-seconds", force: Force, print: boolean, swapSkipped?: true }
  *   | { ok: false, error: string }}
  */
 export function parseArgs(argv) {
@@ -101,6 +102,7 @@ export function parseArgs(argv) {
   /** @type {Force} */
   const force = {};
   let print = false;
+  let swapSkipped = false;
   for (const flag of flags) {
     if (flag === "--print") {
       print = true;
@@ -120,11 +122,19 @@ export function parseArgs(argv) {
       force.nativeFailure = true;
     } else if (flag === "--force-swap-ready") {
       force.swapReady = true;
+    } else if (flag === "--swap-skipped") {
+      swapSkipped = true;
     } else {
       force.leapDifference = true;
     }
   }
-  return { ok: true, workflow, force, print };
+  return {
+    ok: true,
+    workflow,
+    force,
+    print,
+    ...(swapSkipped && { swapSkipped }),
+  };
 }
 
 /**
@@ -251,11 +261,12 @@ export function realGh(args, input) {
  * a could-not-run verdict.
  * @param {string} root
  * @param {"temporal-oracle" | "leap-seconds"} workflow
+ * @param {boolean} swapSkipped  the swap legs were skipped on purpose: their files are not read
  */
-function readVerdicts(root, workflow) {
+function readVerdicts(root, workflow, swapSkipped) {
   /** @type {Record<string, any>} */
   const verdicts = {};
-  for (const source of WORKFLOW_SOURCES[workflow]) {
+  for (const source of expectedSources(workflow, swapSkipped)) {
     const unreadable = (/** @type {string} */ why) =>
       couldNotRunVerdict(source, `unreadable verdict: ${why}`);
     let text;
@@ -303,7 +314,8 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
     return 2;
   }
   const { workflow, force, print } = parsed;
-  const verdicts = readVerdicts(root, workflow);
+  const swapSkipped = parsed.swapSkipped === true;
+  const verdicts = readVerdicts(root, workflow, swapSkipped);
 
   /** @param {string} text */
   const emitSummary = (text) => {
@@ -323,7 +335,15 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
   } catch (error) {
     stderr(`canary-report: ${messageOf(error)}\n`);
     emitSummary(
-      summaryMarkdown(workflow, verdicts, force, null, messageOf(error)),
+      summaryMarkdown(
+        workflow,
+        verdicts,
+        force,
+        null,
+        messageOf(error),
+        [],
+        swapSkipped,
+      ),
     );
     return 2;
   }
@@ -339,11 +359,19 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
     GITHUB_SERVER_URL && GITHUB_REPOSITORY && GITHUB_RUN_ID
       ? `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
       : "(local run)";
-  const context = { workflow, runUrl };
+  const context = { workflow, runUrl, swapSkipped };
 
   if (print) {
     emitSummary(
-      summaryMarkdown(workflow, verdicts, force, null, undefined, skipped),
+      summaryMarkdown(
+        workflow,
+        verdicts,
+        force,
+        null,
+        undefined,
+        skipped,
+        swapSkipped,
+      ),
     );
     stdout(
       `${JSON.stringify(planIssueActions(forced, [], context), null, 2)}\n`,
@@ -400,6 +428,7 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
         results,
         notFiledReason,
         skipped,
+        swapSkipped,
       ),
     );
   }

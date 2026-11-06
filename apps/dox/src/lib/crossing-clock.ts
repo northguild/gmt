@@ -9,10 +9,10 @@
  * and every DST-transition read comes from the real `crossingTime` and the
  * polyfill's zoned rendering, never from arithmetic of its own.
  *
- * No DOM and no gmt import: `TransportLib` comes in from the mount.
+ * No DOM and no gmt function import (only `Temporal`): `TransportLib` comes in from the mount.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { formatDayLabel } from "./dwell-ledger";
 import {
   TRANSPORT_ZONES,

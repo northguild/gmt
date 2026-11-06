@@ -1,9 +1,9 @@
+import { Temporal } from "../../internal/temporal";
 import { cachedFormatter } from "../../internal/formatterCache";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { isValidTimeZone } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
-import { nowInstant } from "../../internal/temporalCompat";
 
 /**
  * Name style for `formatTimeZoneName`, mirroring
@@ -105,7 +105,9 @@ export function formatTimeZoneName(
         hour: "numeric",
       });
 
-      const parts = formatter.formatToParts(nowInstant().epochMilliseconds);
+      const parts = formatter.formatToParts(
+        Temporal.Now.instant().epochMilliseconds,
+      );
       return parts.find((part) => part.type === "timeZoneName")?.value ?? "";
     } catch {
       return "";

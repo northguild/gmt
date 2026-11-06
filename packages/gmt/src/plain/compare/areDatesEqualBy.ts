@@ -1,3 +1,4 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
@@ -51,7 +52,7 @@ const supported: readonly string[] = ["year", "month", "week", "day"];
 export function areDatesEqualBy(
   value1: string,
   value2: string,
-  unit: Temporal.SmallestUnit<Temporal.DateUnit>,
+  unit: SmallestUnit<Temporal.DateUnit>,
   optionsArg?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

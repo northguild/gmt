@@ -1,27 +1,28 @@
 /**
  * The compat check in a browser: the same probes `scripts/temporal-compat.mjs check` runs on Node,
- * run on each browser engine the native suite covers, against the `@js-temporal/polyfill` GMT
+ * run on each browser engine the native suite covers, against the `temporal-polyfill` GMT
  * ships. A workaround group with `engines` (D17, say) is a defect only that engine's `Intl` shows;
  * only that engine can show whether it is still needed, and Node cannot. The runner writes one
  * `temporal-compat-<leg>` verdict per browser leg; `canary-issues.mjs` reports a group removable
  * only when every engine in its scope says so.
  *
  * The page is served from a virtual origin through Playwright's request routing: no HTTP server,
- * no port, no file written. An import map points the polyfill's bare imports at that origin, and
- * the page loads GMT's compiled repros from `packages/gmt/dist` as the Node check does.
+ * no port, no file written. esbuild bundles the polyfill's `full/implementation` entry (which
+ * imports shared chunks) into one module in memory; an import map points the seam's specifier at
+ * it, and the page loads GMT's compiled repros from `packages/gmt/dist` as the Node check does.
  *
- * Node built-ins, `./workarounds.mjs`, `./workaround-state.mjs` and `./canary-verdict.mjs` only;
- * Playwright is passed in, so a test runs the pure parts without a browser.
+ * Node built-ins, esbuild, `./workarounds.mjs`, `./workaround-state.mjs` and `./canary-verdict.mjs`
+ * only; Playwright is passed in, so a test runs the pure parts without a browser.
  */
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, relative, resolve, isAbsolute } from "node:path";
+import { join, relative, resolve, isAbsolute } from "node:path";
 import { browserCompatVerdict } from "./canary-verdict.mjs";
 import { workaroundState } from "./workaround-state.mjs";
 import {
   ENGINE_IDS,
+  GMT_DIR,
   WORKAROUNDS,
-  polyfillEntry,
   polyfillVersion,
 } from "./workarounds.mjs";
 
@@ -34,9 +35,9 @@ export const BROWSER_LABELS = Object.freeze({
 
 /** The origin the compat page is served from; nothing listens there, routing answers it. */
 export const COMPAT_ORIGIN = "http://gmt.local";
-/** The page's path for the polyfill's ESM build and for its one dependency. */
+/** The specifier the seam imports, and the page path its in-memory bundle is served at. */
+const POLYFILL_SPECIFIER = "temporal-polyfill/full/implementation";
 const POLYFILL_PATH = "/polyfill.js";
-const JSBI_PATH = "/jsbi.js";
 /** The page's prefix for files under `packages/gmt/dist`. */
 const DIST_PREFIX = "/dist/";
 const REPROS = "internal/temporalCompat/repros.js";
@@ -50,17 +51,17 @@ const PAGE_LOCALE = "en-US";
 /**
  * @typedef {"chromium" | "firefox" | "webkit"} BrowserLeg
  * @typedef {{ defect: string, calendar: string, name: string, output: string, passes: boolean }} ProbeResult
- * @typedef {{ dist: string, polyfill: string, jsbi: string }} Paths
+ * @typedef {{ dist: string, polyfill: string }} Paths  `polyfill` is the bundled module's source
  */
 
 /**
- * The page: an import map for the polyfill's bare imports, then a module that runs every repro
+ * The page: an import map for the seam's one specifier, then a module that runs every repro
  * and leaves `window.__compat` as `{ results }` or `{ error }`.
  * @returns {string}
  */
 export function compatPage() {
   const importMap = JSON.stringify({
-    imports: { "@js-temporal/polyfill": POLYFILL_PATH, jsbi: JSBI_PATH },
+    imports: { [POLYFILL_SPECIFIER]: POLYFILL_PATH },
   });
   return `<!doctype html>
 <meta charset="utf-8">
@@ -94,14 +95,11 @@ try {
  * `packages/gmt/dist`, anything but a `.js` file there, or a name nothing in the page uses.
  * @param {string} pathname
  * @param {Paths} paths
- * @returns {{ path: string, contentType: string } | null}
+ * @returns {{ path: string, contentType: string } | { body: string, contentType: string } | null}
  */
 export function compatFile(pathname, paths) {
   if (pathname === POLYFILL_PATH) {
-    return { path: paths.polyfill, contentType: "text/javascript" };
-  }
-  if (pathname === JSBI_PATH) {
-    return { path: paths.jsbi, contentType: "text/javascript" };
+    return { body: paths.polyfill, contentType: "text/javascript" };
   }
   if (!pathname.startsWith(DIST_PREFIX) || !pathname.endsWith(".js")) {
     return null;
@@ -115,9 +113,9 @@ export function compatFile(pathname, paths) {
 }
 
 /**
- * Where the files the page serves live. The polyfill's ESM build sits beside the `require`
- * entry the package resolves to, and `jsbi` (its one import) resolves from there, so the browser
- * gets the very same install Node's check uses.
+ * Where the dist the page serves lives, and the polyfill bundled in memory. The bundle starts from
+ * the entry the seam imports, resolved from `packages/gmt` of this repository, so the browser gets the very same
+ * install Node's check uses.
  * @param {string} root
  * @returns {Paths}
  */
@@ -126,15 +124,19 @@ export function compatPaths(root) {
   if (!existsSync(join(dist, REPROS))) {
     throw new Error("packages/gmt/dist is missing: run pnpm build first");
   }
-  const entry = realpathSync(polyfillEntry());
-  const polyfill = join(dirname(entry), "index.esm.js");
-  const jsbi = join(dirname(createRequire(entry).resolve("jsbi")), "jsbi.mjs");
-  for (const file of [polyfill, jsbi]) {
-    if (!existsSync(file)) {
-      throw new Error(`the installed polyfill has no ESM build at ${file}`);
-    }
-  }
-  return { dist, polyfill, jsbi };
+  const { buildSync } = createRequire(import.meta.url)("esbuild");
+  const built = buildSync({
+    stdin: {
+      contents: `export * from ${JSON.stringify(POLYFILL_SPECIFIER)};`,
+      resolveDir: GMT_DIR,
+      loader: "js",
+    },
+    bundle: true,
+    format: "esm",
+    write: false,
+    logLevel: "silent",
+  });
+  return { dist, polyfill: built.outputFiles[0].text };
 }
 
 /**
@@ -142,10 +144,9 @@ export function compatPaths(root) {
  * `compatCheckVerdict` and `browserCompatVerdict` take. Throws on a repro whose defect no group
  * claims, as `temporal-compat.mjs` stops on one: the canary and the script have drifted apart.
  * @param {ProbeResult[]} results
- * @param {string} installed  the installed `@js-temporal/polyfill` version
  * @param {string} engineId  the engine the results came from (`ENGINE_IDS`)
  */
-export function groupResults(results, installed, engineId) {
+export function groupResults(results, engineId) {
   const covered = new Set(WORKAROUNDS.flatMap((w) => w.defects));
   const unknown = [
     ...new Set(
@@ -174,10 +175,8 @@ export function groupResults(results, installed, engineId) {
         {
           probes: own.length,
           failing: own.length - passing,
-          guard: workaround.guard,
           engines: workaround.engines,
         },
-        installed,
         engineId,
       ),
     };
@@ -229,7 +228,7 @@ export async function runBrowserCompat(leg, root, { playwright: load }) {
       return route.fulfill({
         status: 200,
         contentType: file.contentType,
-        body: readFileSync(file.path),
+        body: "body" in file ? file.body : readFileSync(file.path),
       });
     });
     const tab = await context.newPage();
@@ -255,7 +254,7 @@ export async function runBrowserCompat(leg, root, { playwright: load }) {
         node: process.version,
         playwright: playwrightVersion,
       },
-      groups: groupResults(outcome.results, polyfill, engineId),
+      groups: groupResults(outcome.results, engineId),
     });
   } finally {
     await browser.close();

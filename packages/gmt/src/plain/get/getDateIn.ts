@@ -1,7 +1,7 @@
+import { Temporal } from "../../internal/temporal";
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { plainDateAdd } from "../../internal/plainDateAdd";
 import { readLengthUnits } from "../../internal/lengthFromNow";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import type { DateDurationUnit } from "../../types";
 import { isValidDateDurationUnit } from "../validate/isValidDateDurationUnit";
@@ -46,7 +46,7 @@ export function getDateIn(
       return "";
     }
 
-    const today = nowZonedDateTimeISO(timeZone).toPlainDate();
+    const today = Temporal.Now.zonedDateTimeISO(timeZone).toPlainDate();
     return plainDateAdd(today, amounts, "constrain").toString();
   } catch {
     // Never throws (Core Rule 3): a hostile argument, or a result past Temporal's range, is

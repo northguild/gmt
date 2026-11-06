@@ -176,7 +176,7 @@ describe("isValidZonedDateTime at the range limits", () => {
 // ISO 8601 extended date-time (`date T time[.fraction]`), then nothing, `Z`, or an extended
 // `±HH:MM[:SS[.fraction]]` offset (RFC 3339 §5.6 `time-numoffset`). Temporal's grammar also reads
 // basic format, a space or lower-case `t` separator, a lower-case `z`, an hour-only offset or
-// time, and a date without a time — polyfill 0.5.1 resolves every rejected row below to
+// time, and a date without a time — `temporal-polyfill` 1.0.8 resolves every rejected row below to
 // 2024-10-03 in New York — and GMT rejects them.
 describe("isValidZonedDateTime requires GMT's strict extended shape", () => {
   it.each`

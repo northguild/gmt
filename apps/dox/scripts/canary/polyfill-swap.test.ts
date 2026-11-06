@@ -10,7 +10,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { Temporal as PolyfillTemporal } from "@js-temporal/polyfill";
+import { Temporal as PolyfillTemporal } from "@northguild/gmt";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -31,7 +31,7 @@ import { passSetup } from "../../../../scripts/native-suite.mjs";
 
 const FILE = "src/zoned/calculate/roundZoned.test.ts";
 const OTHER = "src/plain/format/formatDate.test.ts";
-const ENTRY = "temporal-polyfill/full/implementation";
+const ENTRY = "temporal-polyfill-candidate/full/implementation";
 const RUN_DATE = PolyfillTemporal.PlainDate.from("2026-11-04");
 
 type Status = "passed" | "failed";
@@ -84,11 +84,28 @@ afterEach(() => {
   for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
 });
 
-function setup(installed: string | null = "1.0.7") {
+/**
+ * A checkout with the candidate installed under its npm alias (`installed`; the package's own
+ * `name` stays `temporal-polyfill`) and the pin in `packages/gmt/package.json` (`pin`).
+ */
+function setup(
+  installed: string | null = "1.0.7",
+  pin: string | null = "1.0.6",
+) {
   const root = mkdtempSync(join(tmpdir(), "polyfill-swap-"));
   roots.push(root);
+  if (pin !== null) {
+    mkdirSync(join(root, "packages/gmt"), { recursive: true });
+    writeFileSync(
+      join(root, "packages/gmt/package.json"),
+      JSON.stringify({ dependencies: { "temporal-polyfill": pin } }),
+    );
+  }
   if (installed !== null) {
-    const dir = join(root, "packages/gmt/node_modules/temporal-polyfill");
+    const dir = join(
+      root,
+      "packages/gmt/node_modules/temporal-polyfill-candidate",
+    );
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       join(dir, "package.json"),
@@ -196,7 +213,7 @@ describe("polyfill-swap preflight", () => {
     expect(s.verdict("node")).toEqual({
       source: "temporal-polyfill-swap-node",
       status: "could-not-run",
-      message: "temporal-polyfill is not installed in packages/gmt",
+      message: "temporal-polyfill-candidate is not installed in packages/gmt",
     });
     expect(s.calls).toEqual([]);
   });
@@ -206,8 +223,21 @@ describe("polyfill-swap preflight", () => {
     const code = await main(["node", "--version=1.0.7"], s.io(null));
     expect(code).toBe(2);
     expect(s.verdict("node").message).toBe(
-      "installed temporal-polyfill is 1.0.6, expected 1.0.7",
+      "installed temporal-polyfill-candidate is 1.0.6, expected 1.0.7",
     );
+  });
+
+  it("no pin in packages/gmt/package.json: exit 2 and no pass runs", async () => {
+    const s = setup("1.0.7", null);
+    const code = await main(["node", "--version=1.0.7"], s.io(null));
+    expect(code).toBe(2);
+    expect(s.verdict("node")).toEqual({
+      source: "temporal-polyfill-swap-node",
+      status: "could-not-run",
+      message:
+        'packages/gmt/package.json has no dependencies["temporal-polyfill"] pin',
+    });
+    expect(s.calls).toEqual([]);
   });
 
   it("the entry returns the runtime's built-in Temporal: exit 2 and no pass runs", async () => {
@@ -221,7 +251,7 @@ describe("polyfill-swap preflight", () => {
     );
     expect(code).toBe(2);
     expect(s.verdict("node").message).toBe(
-      "temporal-polyfill/full/implementation returned the runtime's built-in Temporal",
+      "temporal-polyfill-candidate/full/implementation returned the runtime's built-in Temporal",
     );
     expect(s.calls).toEqual([]);
   });
@@ -241,7 +271,10 @@ describe("polyfill-swap preflight", () => {
       join(__dirname, "../../../../packages/gmt/vitest.swap.config.ts"),
       "utf8",
     );
-    expect(config).toContain(`SWAP_ENTRY = "${ENTRY}"`);
+    // The formatter may wrap the value onto its own line, so any whitespace counts as a space.
+    expect(config.replace(/\s+/g, " ")).toContain(
+      `CANDIDATE_ENTRY = "${ENTRY}"`,
+    );
   });
 });
 
@@ -263,6 +296,7 @@ describe("polyfill-swap judging", () => {
       status: "ran",
       leg: "node",
       version: "1.0.7",
+      pinned: "1.0.6",
       entry: ENTRY,
       runtime: {
         node: "26.12.1",
@@ -566,7 +600,7 @@ describe("polyfill-swap sweep and legs", () => {
     });
     expect(out).toBe(
       [
-        "### Temporal polyfill swap (node)",
+        "### Temporal polyfill upgrade check (node)",
         "",
         `could not run: ${limit}`,
         "Offset sweep: 0 zones differ from Intl, 1970-01-01 to 2036-11-04, 418 zones, tz 2026e.",
@@ -623,7 +657,9 @@ describe("polyfill-swap sweep and legs", () => {
     expect(out).toContain(
       "\nOffset sweep: 0 zones differ from Intl, 1970-01-01 to 2036-11-04, 418 zones, tz 2026e.\n",
     );
-    expect(out).toContain("temporal-polyfill 1.0.7: 0 tests fail on the swap");
+    expect(out).toContain(
+      "temporal-polyfill 1.0.7: 0 tests fail on the candidate and pass on the pinned version",
+    );
   });
 
   it("the sweep finds 11 zones on node: the line and the verdict carry the number", async () => {
@@ -720,7 +756,7 @@ describe("passSetup", () => {
     ${"node"}     | ${"swap"}    | ${"packages/gmt/vitest.swap.config.ts"}    | ${{}}
     ${"node"}     | ${"control"} | ${"packages/gmt/vitest.config.ts"}         | ${{}}
     ${"node"}     | ${"native"}  | ${"packages/gmt/vitest.native.config.ts"}  | ${{}}
-    ${"chromium"} | ${"swap"}    | ${"packages/gmt/vitest.browser.config.ts"} | ${{ GMT_TEMPORAL: "temporal-polyfill" }}
+    ${"chromium"} | ${"swap"}    | ${"packages/gmt/vitest.browser.config.ts"} | ${{ GMT_TEMPORAL: "candidate" }}
     ${"firefox"}  | ${"control"} | ${"packages/gmt/vitest.browser.config.ts"} | ${{ GMT_TEMPORAL: "polyfill" }}
     ${"webkit"}   | ${"native"}  | ${"packages/gmt/vitest.browser.config.ts"} | ${{}}
   `(

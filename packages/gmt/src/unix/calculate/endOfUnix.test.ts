@@ -95,7 +95,8 @@ describe("endOfUnix", () => {
 
 // The end is one millisecond-truncated
 // nanosecond before the next real zone bucket starts, never before the input. Every expected
-// value verified against `floorToZone`/`bucketRange` on @js-temporal/polyfill@0.5.1.
+// value recomputed directly on temporal-polyfill 1.0.8 (bucket boundaries from wall-clock labels), not
+// through GMT.
 // 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]
 // 1712412300000 is 2024-04-07T02:50:00+12:45[Pacific/Chatham]
 // 1601742600000 is 2020-10-04T03:30:00+11:00[Antarctica/Casey]
@@ -135,8 +136,8 @@ describe("endOfUnix across zone transitions with default options", () => {
 
   // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
   // ends at the second pass's 23:59:59.999 (-04:00). The removed `disambiguation` option used to
-  // end it on the first pass (1289098799999, -03:00), before the input. Verified
-  // against the `internal/zonedBucket.ts` walker (weekStartsOn 7) on @js-temporal/polyfill@0.5.1.
+  // end it on the first pass (1289098799999, -03:00), before the input. Recomputed
+  // directly on temporal-polyfill 1.0.8 as the end of the run of 'Sunday-first week' labels holding the input.
   it.each`
     options                                                      | expected
     ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday" }} | ${1289102399999}

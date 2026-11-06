@@ -15,7 +15,7 @@ import { getToday } from "./getToday";
 
 vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, verified against temporal-polyfill 1.0.8.
 const plainNowByZone = {
   UTC: "2024-02-29T00:00:00",
   GMT: "2024-02-29T00:00:00",

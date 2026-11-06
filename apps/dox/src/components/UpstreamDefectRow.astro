@@ -6,14 +6,12 @@
  * The "still needed" column is the canary's `state`, which `pnpm compat:snapshot` writes into
  * `temporal-compat.json` from the same probes `pnpm compat` runs. The row reads it and never works
  * it out again from the probe counts, so the column is a measurement rather than a sentence
- * anyone typed. A `guard` row passes its probes by design, so it says "Kept on purpose" and
- * prints the reason the snapshot recorded, with each GitHub reference as a short link.
+ * anyone typed.
  */
 import type { CompatGroup } from "../data/temporal-compat";
 import {
   groupLabel,
   groupWhatBreaks,
-  reasonParts,
   shortRef,
   stateLine,
 } from "../data/temporal-compat";
@@ -42,19 +40,11 @@ const { badge, count } = stateLine(group);
         "gmt-defects-badge",
         (group.state === "still-needed" || group.state === "out-of-scope") &&
           "gmt-defects-badge--ok",
-        group.state === "guard" && "gmt-defects-badge--guard",
       ]}
     >
       {badge}
     </span>
     <p>{count}</p>
-    {group.state === "guard" && group.guard && (
-      <p class="gmt-defects-reason">
-        {reasonParts(group.guard.reason).map((part) =>
-          "href" in part ? <a href={part.href}>{part.text}</a> : part.text,
-        )}
-      </p>
-    )}
   </td>
   <td class="gmt-defects-sent">
     {filings.length === 0 ? (

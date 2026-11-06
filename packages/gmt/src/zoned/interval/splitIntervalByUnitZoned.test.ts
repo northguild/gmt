@@ -342,7 +342,7 @@ describe("splitIntervalByUnitZoned", () => {
 
 // ---------------------------------------------------------------------------------------------
 // E7 (issue #152), D5-zoned. Every expected value produced by running
-// @js-temporal/polyfill@0.5.1.
+// temporal-polyfill 1.0.8.
 // ---------------------------------------------------------------------------------------------
 describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
   const Y = calendarZonedFixtures.hebrewLeapYearSpan;
@@ -410,10 +410,10 @@ describe("splitIntervalByUnitZoned with GMT calendar-annotated values", () => {
   });
 });
 
-// CORE-6 S5: calendar-unit boundaries are the calendar's own NonISODateAdd from the start (anchored).
+// S5: calendar-unit boundaries are the calendar's own NonISODateAdd from the start (anchored).
 // Values: Chromium 153 native Temporal `start.add({ months: k })`, read in the calendar.
 describe("splitIntervalByUnitZoned in non-ISO calendars (CORE-6)", () => {
-  it("splits +275760-07-10 to +275760-09-07 in hebrew by month near the maximum (D1)", () => {
+  it("splits +275760-07-10 to +275760-09-07 in hebrew by month near the maximum (range limit)", () => {
     expect(
       splitIntervalByUnitZoned(
         "+275760-07-10T00:00:00+00:00[UTC][u-ca=hebrew]",
@@ -433,7 +433,7 @@ describe("splitIntervalByUnitZoned in non-ISO calendars (CORE-6)", () => {
     ]);
   });
 
-  it("splits 1000-01-31 to 1000-04-30 in buddhist by month with proleptic month ends (D2)", () => {
+  it("splits 1000-01-31 to 1000-04-30 in buddhist by month with proleptic month ends", () => {
     expect(
       splitIntervalByUnitZoned(
         "1000-01-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]",
@@ -459,7 +459,7 @@ describe("splitIntervalByUnitZoned in non-ISO calendars (CORE-6)", () => {
 
   // The offset is written by FormatDateTimeUTCOffsetRounded, so local mean time -04:56:02 is
   // written -04:56 (native Chromium 153 agrees).
-  it("splits -100000-01-01 to -100000-02-29 in hebrew by month in a year <= 0 (D3)", () => {
+  it("splits -100000-01-01 to -100000-02-29 in hebrew by month in a year <= 0 (negative year)", () => {
     expect(
       splitIntervalByUnitZoned(
         "-100000-01-01T00:00:00-04:56:02[America/New_York][u-ca=hebrew]",

@@ -1,3 +1,4 @@
+import { Temporal } from "../../internal/temporal";
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import {
   resolveUnixEpochUnitOptions,
@@ -8,7 +9,6 @@ import {
   readLengthUnits,
   utcLengthFrame,
 } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
@@ -63,7 +63,11 @@ export function getUnixAgo(
     }
 
     return toUnixEpoch(
-      subtractLengthFromStart(nowInstant(), amounts, utcLengthFrame()),
+      subtractLengthFromStart(
+        Temporal.Now.instant(),
+        amounts,
+        utcLengthFrame(),
+      ),
       epochUnit,
     );
   } catch {

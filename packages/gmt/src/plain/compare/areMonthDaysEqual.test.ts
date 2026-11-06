@@ -7,7 +7,7 @@ describe("areMonthDaysEqual", () => {
     a                          | b                          | why
     ${"--12-25"}               | ${"--12-25"}               | ${"same value"}
     ${"12-25"}                 | ${"--12-25"}               | ${"input forms"}
-    ${"--12-25[u-ca=iso8601]"} | ${"--12-25[u-ca=ISO8601]"} | ${"D20 calendar case"}
+    ${"--12-25[u-ca=iso8601]"} | ${"--12-25[u-ca=ISO8601]"} | ${"calendar id in another case"}
     ${"--12-25[_foo=bar]"}     | ${"--12-25"}               | ${"elective annotation ignored"}
     ${"--02-29"}               | ${"--02-29"}               | ${"29 February equals itself"}
     ${"--12-25[Europe/Paris]"} | ${"12-25"}                 | ${"zone annotation ignored"}

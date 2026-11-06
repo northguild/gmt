@@ -1,3 +1,4 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import {
   frameInstant,
@@ -95,7 +96,7 @@ function nextBucketStartWithinRange(
 export function bucketRange(
   start: string,
   end: string,
-  unit: Temporal.SmallestUnit<ZoneBucketUnit>,
+  unit: SmallestUnit<ZoneBucketUnit>,
   timeZone: string,
 ): string[] {
   // The singular name; the guard below rejects anything outside the four units.

@@ -63,21 +63,8 @@ export function isDefectPresent(defect: DefectId, calendar: string): boolean {
 }
 
 /**
- * True when this runtime never retries the calendar nudge window (defect D11).
- *
- * TC39 bounds a duration between `relativeTo + r1 units` and `relativeTo + r2 units`, and recomputes
- * the window one unit further along when the target falls outside it. A runtime that computes the
- * window once answers `Duration#total`, `Duration#round` and `until`/`since` with a calendar
- * `smallestUnit` over the wrong bounds. Only a `relativeTo` on the 29th, 30th or 31st can reach it,
- * because only there does adding a month constrain the day. ISO-only: the non-ISO calendars already
- * take the spec path through `isCalendarArithmeticCompatNeeded`.
- */
-export function isNudgeWindowCompatNeeded(): boolean {
-  return isDefectPresent("D11", "iso8601");
-}
-
-/**
- * True when this runtime mismeasures from either pass of a repeated hour (defect D22).
+ * True when this runtime mismeasures from either pass of a repeated hour, or answers a length there
+ * that has no spec value (defect D22). `temporal-polyfill` 1.0.8 does only the second.
  *
  * TC39 `ComputeNudgeWindow` takes the window's start from the origin's own exact time when no unit
  * has been added, and `DifferenceZonedDateTime` subtracts the exact times when both fall on one local
@@ -90,59 +77,6 @@ export function isNudgeWindowCompatNeeded(): boolean {
  */
 export function isNudgeOriginCompatNeeded(): boolean {
   return isDefectPresent("D22", "iso8601");
-}
-
-/**
- * True when this runtime matches a zoned string's offset by minutes even when the offset is
- * written with seconds (defect D12).
- *
- * TC39 `ToTemporalZonedDateTime` matches by minutes only an offset with no seconds part; one
- * written with seconds must equal the zone's offset exactly. A runtime that always matches by
- * minutes accepts `-00:45:00[Africa/Monrovia]` for a zone at −00:44:30, and picks the wrong pass
- * of a second repeated by a sub-minute transition (Pacific/Niue, 1952).
- */
-export function isSecondsOffsetMatchCompatNeeded(): boolean {
-  return isDefectPresent("D12", "iso8601");
-}
-
-/**
- * True when this runtime's time zone transition search cannot be trusted (defect D13).
- *
- * TC39 `GetNamedTimeZoneNextTransition` returns the first offset change after an instant. A runtime
- * that samples the offset in steps longer than the gap between two changes skips a pair that
- * returns to the same offset, and can loop for ever on three different offsets in one step. The
- * skipped-pair repros come first and none of them can stall, so on such a runtime the probe
- * answers before a stalling repro is reached. Every repro has to pass for the workaround to go
- * dormant: a runtime that fixes the skipped pairs and still stalls on one zone keeps it.
- */
-export function isTransitionSearchCompatNeeded(): boolean {
-  return isDefectPresent("D13", "iso8601");
-}
-
-/**
- * True when this runtime rounds to the day wrongly where a date starts twice (defect D14).
- *
- * A fall-back across midnight re-enters a date after the next date has started, as
- * America/Goose_Bay did on 2010-11-06, and America/Sitka on 1867-10-18. TC39
- * `ZonedDateTime#round` clamps an instant in the second piece of that date to the end of the date
- * (tc39/ecma262#3966, commit 5f44331e0a11; test262 `same-date-starts-twice.js`). A runtime without
- * that change answers the next date for `floor` and `trunc`, and in some zones (Sitka 1867) for the
- * half modes, `ceil` and `expand` too, or throws.
- */
-export function isDayRoundClampCompatNeeded(): boolean {
-  return isDefectPresent("D14", "iso8601");
-}
-
-/**
- * True when this runtime applies `offset: "ignore"` to a `Z` string (defect D15).
- *
- * TC39 `ToTemporalZonedDateTime` reads a `Z` string as an exact instant under every `offset`
- * option; `InterpretISODateTimeOffset` applies `ignore` only to an offset written as an option. A
- * runtime that ignores the `Z` and reads the wall clock in the zone returns a different instant
- * whenever the zone's offset is not zero.
- */
-export function isZIgnoreExactCompatNeeded(): boolean {
-  return isDefectPresent("D15", "iso8601");
 }
 
 const rangeZoneNameCache = new Map<string, boolean>();
@@ -200,42 +134,4 @@ export function isRangeDayPeriodCompatNeeded(): boolean {
  */
 export function isTimeZoneEqualsCompatNeeded(): boolean {
   return isDefectPresent("D19", "iso8601");
-}
-
-/**
- * True when this runtime's `Temporal.PlainMonthDay.from` or `Temporal.PlainYearMonth.from` throws
- * for an upper-case `iso8601` calendar annotation (defect D20).
- *
- * Temporal ParseISODateTime, for the goals TemporalMonthDayString (no DateYear) and
- * TemporalYearMonthString (no DateDay), lower-cases the `u-ca` value before comparing it with
- * `"iso8601"`; polyfill 0.5.1 compares it as written in both parsers.
- */
-export function isIsoCalendarCaseCompatNeeded(): boolean {
-  return isDefectPresent("D20", "iso8601");
-}
-
-/** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
-const ARITHMETIC_DEFECTS: readonly DefectId[] = [
-  "D1",
-  "D2",
-  "D3",
-  "D4",
-  "D5",
-  "D6",
-  "D7",
-  "D10",
-  "D18",
-];
-
-/**
- * True when calendar arithmetic in `calendarId` needs the compat layer in this runtime: any of its
- * add, until or read probes fails. `iso8601` never does, and costs nothing.
- * Callers that own a spec path for a whole operation (zoned differences, `Duration` rounding,
- * totals and comparisons) take it when this is true.
- */
-export function isCalendarArithmeticCompatNeeded(calendarId: string): boolean {
-  return (
-    calendarId !== "iso8601" &&
-    ARITHMETIC_DEFECTS.some((defect) => isDefectPresent(defect, calendarId))
-  );
 }

@@ -1,3 +1,4 @@
+import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
 import type { Temporal } from "../../internal/temporal";
 import { isValidDateTimeUnit } from "../../plain";
 import {
@@ -74,7 +75,7 @@ export function roundUnix(
      * The unit to round to, from `"day"` down to `"nanosecond"`, singular or plural. A larger unit
      * returns `null`, as `Temporal.ZonedDateTime.prototype.round` accepts none above `"day"`.
      */
-    smallestUnit: Temporal.SmallestUnit<
+    smallestUnit: SmallestUnit<
       | "day"
       | "hour"
       | "minute"
@@ -98,7 +99,7 @@ export function roundUnix(
      *
      * @defaultValue `"halfExpand"`, Temporal's default.
      */
-    roundingMode?: Temporal.RoundingMode;
+    roundingMode?: RoundingMode;
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
      * plural. Any other value returns `null`. The result is in the same unit.

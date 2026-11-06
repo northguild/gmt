@@ -352,16 +352,16 @@ describe("diffZoned at the minimum instant", () => {
   );
 });
 
-// CORE-6 S5: whole calendar units in a zoned difference follow NonISODateUntil. Chromium 153 gives
+// S5: whole calendar units in a zoned difference follow NonISODateUntil. Chromium 153 gives
 // P30D for the buddhist month end and P12M29D for the Hebrew Adar I 2 -> Adar 1 span, so neither
 // reaches one whole unit.
 describe("diffZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     start                                                           | end                                                             | unit        | expected | reason
-    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"months"} | ${0}     | ${"D6: P30D is no whole month"}
-    ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"months"} | ${0}     | ${"D6 in a named zone"}
-    ${"2024-02-11T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"2025-03-01T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"years"}  | ${0}     | ${"D7: P12M29D is no whole year"}
-    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"2023-09-30T00:00:00+00:00[Etc/UTC][u-ca=buddhist]"}          | ${"months"} | ${0}     | ${"D6 across UTC and Etc/UTC, one time zone"}
+    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"months"} | ${0}     | ${"month-end overshoot: P30D is no whole month"}
+    ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"months"} | ${0}     | ${"month-end overshoot in a named zone"}
+    ${"2024-02-11T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"2025-03-01T00:00:00-05:00[America/New_York][u-ca=hebrew]"}   | ${"years"}  | ${0}     | ${"Adar I overshoot: P12M29D is no whole year"}
+    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"2023-09-30T00:00:00+00:00[Etc/UTC][u-ca=buddhist]"}          | ${"months"} | ${0}     | ${"month-end overshoot across UTC and Etc/UTC, one time zone"}
   `(
     "returns $expected $unit from $start to $end ($reason)",
     ({ start, end, unit, expected }) => {
@@ -449,7 +449,7 @@ describe("diffZoned with singular unit names", () => {
   });
 });
 
-// Defect 4 (D11): the calendar nudge window needs a spec path for a month `smallestUnit` from the
+// The calendar nudge window needs a spec path for a month `smallestUnit` from the
 // 31st. UTC and Etc/UTC are one time zone (TimeZoneEquals), so the pair takes it too. Native
 // Temporal gives ceil/expand 2 and floor/trunc 1 for 2024-01-31 to 2024-02-29T12:00.
 describe("diffZoned rounds by months across two identifiers of one time zone", () => {

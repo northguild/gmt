@@ -1,4 +1,4 @@
-import type { Temporal } from "./temporal";
+import type { SmallestUnit } from "./temporalTypes";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 import { zonedUnitEnd, zonedUnitStart } from "./zonedBucket";
@@ -27,7 +27,7 @@ import { optionOrDefault } from "./optionOrDefault";
  */
 export function startOrEndOfZoned(
   value: string,
-  unit: Temporal.SmallestUnit<DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   options: {
     weekStartsOn?: "monday" | "sunday";
     fractionalSecondDigits?: FractionalDigit;

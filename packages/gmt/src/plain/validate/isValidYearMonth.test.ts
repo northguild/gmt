@@ -14,14 +14,14 @@ describe("isValidYearMonth", () => {
     ${"-271821-04"}                          | ${"earliest year-month (ISOYearMonthWithinLimits)"}
     ${"+275760-09"}                          | ${"latest year-month (ISOYearMonthWithinLimits)"}
     ${"2026-10[u-ca=iso8601]"}               | ${"ISO calendar annotation"}
-    ${"2026-10[u-ca=ISO8601]"}               | ${"ParseISODateTime lowercases the calendar (D20)"}
-    ${"2026-10[!u-ca=Iso8601]"}              | ${"critical and mixed case (D20)"}
+    ${"2026-10[u-ca=ISO8601]"}               | ${"ParseISODateTime lowercases the calendar"}
+    ${"2026-10[!u-ca=Iso8601]"}              | ${"critical and mixed case"}
     ${"2026-10[Europe/Paris]"}               | ${"time zone annotation ignored"}
     ${"2026-10[!Europe/Paris]"}              | ${"critical time zone annotation (AnnotatedYearMonth)"}
     ${"2026-10[foo=bar]"}                    | ${"elective annotation ignored"}
     ${"2026-10[Europe/Paris][u-ca=ISO8601]"} | ${"time zone annotation then a case-insensitive calendar"}
-    ${"+275760-09[u-ca=ISO8601]"}            | ${"latest year-month with a case-insensitive calendar (D20)"}
-    ${"-271821-04[!u-ca=ISO8601]"}           | ${"earliest year-month with a critical calendar (D20)"}
+    ${"+275760-09[u-ca=ISO8601]"}            | ${"latest year-month with a case-insensitive calendar"}
+    ${"-271821-04[!u-ca=ISO8601]"}           | ${"earliest year-month with a critical calendar"}
     ${"2026-10[u-ca=ISO8601][u-ca=gregory]"} | ${"the first u-ca wins, and it is iso8601"}
     ${"2026-10[u-ca=iso8601][foo=bar]"}      | ${"elective annotation after the calendar"}
   `("returns true for '$value' ($why)", ({ value }: { value: string }) => {

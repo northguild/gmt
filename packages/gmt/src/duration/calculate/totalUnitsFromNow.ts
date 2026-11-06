@@ -1,4 +1,5 @@
-import type { Temporal } from "../../internal/temporal";
+import { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { isOptionsArgument } from "../../internal/isObject";
 import {
   readLengthUnits,
@@ -6,7 +7,6 @@ import {
 } from "../../internal/lengthFromNow";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { normalizeZoneFrame } from "../../internal/zoneFrame";
-import { nowInstant } from "../../internal/temporalCompat";
 import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
 
@@ -48,7 +48,7 @@ import type { DateTimeDurationUnit } from "../../types";
  */
 export function totalUnitsFromNow(
   units: Partial<Record<DateTimeDurationUnit, number>>,
-  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
+  unit: DateTimeDurationUnit | DateTimeUnit,
   options?: {
     /**
      * The time zone calendar units count in: an IANA name, a UTC offset, or `"local"` for the
@@ -79,7 +79,12 @@ export function totalUnitsFromNow(
       return null;
     }
 
-    return totalLengthFromStart(nowInstant(), amounts, resolvedUnit, frame);
+    return totalLengthFromStart(
+      Temporal.Now.instant(),
+      amounts,
+      resolvedUnit,
+      frame,
+    );
   } catch {
     // Never throws (Core Rule 3): a hostile argument, or a length Temporal cannot total, is
     // invalid input, not an exception.

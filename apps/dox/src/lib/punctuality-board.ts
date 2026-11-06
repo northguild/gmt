@@ -4,7 +4,7 @@
  * a tolerance the reader drags.
  *
  * Every deviation, class and rate comes from a real `PunctualityLib` call.
- * `@js-temporal/polyfill` is used only through `punctuality-widgets.ts` for
+ * `Temporal` (from `@northguild/gmt`) is used only through `punctuality-widgets.ts` for
  * drawing (axis lengths, the weekday of a written date). The tool's one naive
  * value is the wall-clock reading: each planned and actual time rewritten as UTC
  * (`wallAsUtc`) and handed to the same three library calls.

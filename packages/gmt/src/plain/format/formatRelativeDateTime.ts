@@ -8,7 +8,6 @@ import type {
 } from "../../types";
 import { isValidDateTime } from "../validate";
 import { isObject } from "../../internal/isObject";
-import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatRelativeDateTime`: the reference date-time, the display unit, the rounding
@@ -71,7 +70,7 @@ export function formatRelativeDateTime(
       const target = Temporal.PlainDateTime.from(value);
       const reference = referenceOption
         ? Temporal.PlainDateTime.from(referenceOption)
-        : nowPlainDateTimeISO();
+        : Temporal.Now.plainDateTimeISO();
 
       const diff = target.since(reference);
       // month/year are calendrical — relativeTo needs a PlainDate

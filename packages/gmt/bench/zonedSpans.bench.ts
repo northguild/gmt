@@ -1,6 +1,5 @@
 import { Temporal } from "../src/internal/temporal";
 import { describe } from "vitest";
-import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { dwellTime } from "../src/transport";
 import {
   intervalCountZoned,
@@ -89,10 +88,10 @@ describe("intervalSplitAtZoned", () => {
   }
 });
 
-// The transition memo is cleared before each run, so every transition is found by the search.
+// Every run asks the runtime for each transition again.
 describe("cold, 100 years", () => {
   const end = zoned("2124-01-01");
-  const options = { time: 500, setup: () => clearTransitionMemo() };
+  const options = { time: 500 };
 
   for (const unit of ["day", "hour", "month"]) {
     bench(

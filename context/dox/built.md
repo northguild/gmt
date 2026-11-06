@@ -106,6 +106,22 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   the freight offset are in `guides/concepts/standards`; the oracle and upstream text, CI counts,
   safeguards and the nanoseconds text are in `guides/concepts/correct-at-the-edges`; the full
   fault table is on `/why-gmt/` and the library table on `/compare/`.
+- **`/bundle-size`** shows the size of GMT on each of the two polyfills. The report is
+  `src/generated/bundle-size.json` (`scripts/bundle-size.mjs report`); its `polyfills[]` lists one
+  set per package, found by the `shipped` flag and never by index.
+  - `src/lib/bundle-size-figures.ts` holds every figure and imports only the JSON, so the chart
+    module in the client graph never reaches the corpus. The page states them as
+    `polyfillFigures.<key>` expressions; `page-expression-values.ts` has one entry per key.
+    No package name, version or entry name is typed in the module.
+  - Chart 1 is the floor of each polyfill alone. Chart 2 is each single-function import split
+    into the polyfill (solid) and GMT's code above it (hatched). `root` is in the table and not
+    in chart 2, because it is the whole package and would dwarf every function. A function the
+    previous release does not export has no bar and a "not in GMT {version}" cell.
+  - `PolyfillCompare.astro` is the table beside the charts and their text alternative. The charts
+    are `bundle-size-charts.ts`; `bar-charts.ts` joins them with `why-gmt-charts.ts` for
+    `ChartContainer`, through the shared `bar-chart-kit.ts`.
+  - A view's caption reaches the Markdown twin (`viewCaptions` in `mdx-jsx.ts`), and
+    `<code>{name}</code>` becomes a code span there (`stripMdx`).
 - **The dark island** (`.gmt-theme-dark`) carries its own dark `--sl-color-*` hues, because
   Starlight re-derives them in light and the hero must match in both. The token block lists
   `.gmt-theme-dark` last in its selector list; `zone-map.fixture.ts` finds it by that literal.
@@ -597,10 +613,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     printed `tru` / `e`. `table-fit` passes on all four pages at 1440 px; at 375 px the box scrolls
     as every table does. Astro caches rendered Markdown in `node_modules/.astro/data-store.json`
     keyed by the file, so delete it after changing a rehype plugin.
-  - **Sidebar.** A top-level "Changelog" group with four links: `@northguild/gmt`, `gmt-eslint`,
-    `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three plugin pages.
+  - **Sidebar.** The last top-level group, "Changelog", with four links: `@northguild/gmt`,
+    `gmt-eslint`, `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three
+    plugin pages.
   - **Text surfaces.** The HTML pages and Pagefind carry them; each page's `.md` twin exists as for
-    every page; `llms.txt` has a "Changelog" section with four links; `llms-full.txt` and the
+    every page; `llms.txt` ends with a "Changelog" section of four links; `llms-full.txt` and the
     retrieval chunks leave them out (`topLevelPages` takes only slugs without `/`, and
     `guide-sources.ts` globs `guides/` and the top level), asserted in `llms.test.ts` and
     `guide-sources.test.ts`. Old signatures would ground answers in removed APIs.
@@ -611,10 +628,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **`api-surface.mjs` skips `content/docs/changelog/`**: release notes record past APIs
     (`@northguild/gmt/duty`, `isLeapSecond` from `timescale`) that today's surface must not check.
     A `packages/*/CHANGELOG.md` change runs the Dox content checks (`affected.mjs`).
-- **`/compare/` is a top-level page**, in "Start here" after `why-gmt` (`astro.config.mjs`
-  for the sidebar, `START_ORDER` in `src/lib/top-level-pages.ts` for `llms.txt` and
-  `llms-full.txt`). `<LibraryCompare table="…">` renders each of its tables and the notes list
-  from the builders in `src/lib/library-compare-tables.ts`, and `src/lib/mdx-jsx.ts` renders
+- **`/why-gmt/` is a normal doc page**, with both sidebars like the rest of "Start here"; only
+  the landing uses the splash template. Its headings are plain `##` lines in `why-gmt.mdx`,
+  so each lists in "On this page" (`WhyDateBug variant="full"` draws no heading of its own).
+  The figure tiles under the intro are `WhyGmtFigures.astro`, from the list in
+  `src/lib/why-gmt-figures.ts` that `mdx-jsx.ts` also renders for the text surfaces.
+- **"Start here" puts first use first**: `install` (the landing's "Get started" target, ending
+  in a first call), `core-rules`, then the reasons (`why-gmt`, `compare`, `bundle-size`) and
+  `upstream` last. `astro.config.mjs` sets the sidebar, and so the prev/next links;
+  `START_ORDER` in `src/lib/top-level-pages.ts` sets the same order for `llms.txt` and
+  `llms-full.txt`. Change both together.
+- **`/compare/` is a top-level page** in "Start here". `<LibraryCompare table="…">` renders
+  each of its tables and the notes list from the builders in `src/lib/library-compare-tables.ts`, and `src/lib/mdx-jsx.ts` renders
   the same builders for the text surfaces (`.md`, `llms.txt`, the retrieval chunks), so the
   page and its text twin cannot state different figures. Its figures come only from
   `gmt-stats.json` and `library-measurements.json`; none is typed into `compare.mdx`.
@@ -2183,7 +2208,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   whose imports all reject.
   - **Trap: the notice covers a failed gmt import, not a failed page script.** The shell's
     `<script>` imports the mount statically, and most pure widget modules import
-    `@js-temporal/polyfill` statically for drawing (`transport-widgets.ts` and
+    `Temporal` from `@northguild/gmt` statically for drawing (`transport-widgets.ts` and
     `timetable-reader.ts` among them). If that import fails, the script never runs, so the
     mount is never called and nothing catches: the server-rendered markup stays, inert, with
     no notice. A dev server that answers `504 (Outdated Optimize Dep)` does exactly this
@@ -2627,7 +2652,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     override, `menu-button.ts`, the test and the `components` entry are deleted.
 - **Corner brackets:** two L-shaped corners, top left and bottom right, on a few frames only
   (when one is right: [visual-design.md § Panels](reference/visual-design.md#panels)).
-  `.gmt-brackets` (`gmt-primitives.css`, cyan) is on each `GridSection.astro` panel of the home page and `/why-gmt`. The hero has no frame. The transport tools draw the same
+  `.gmt-brackets` (`gmt-primitives.css`, cyan) is on each `GridSection.astro` panel of the home page. The hero has no frame. The transport tools draw the same
   frame in the frame's own colour (`--leg-color`, else `--series`) from
   `families/transport/leg-fieldset.module.css` (the Delivery Scheduler's legs and the Timetable
   Reader's rows).
@@ -3912,7 +3937,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `apps/dox/node_modules/.vite/deps`, and every Astro or Vite process in the checkout uses
     that folder unless `DOX_VITE_CACHE_DIR` names another (`cacheDir`, `astro.config.mjs`).
     A second process rewrites the folder under the running server, which then answers
-    `504 (Outdated Optimize Dep)` for its pre-bundled imports, `@js-temporal/polyfill` among
+    `504 (Outdated Optimize Dep)` for its pre-bundled imports, `temporal-polyfill` among
     them, on every page, until it is restarted. Reloading does not help.
     **Every Astro or Vite command an agent runs in `apps/dox` sets `DOX_VITE_CACHE_DIR` to a
     private folder**, such as one in the session scratchpad:

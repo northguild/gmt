@@ -8,14 +8,14 @@ import {
 } from "vitest/config";
 import { REPO_FILES, repoFile, sourceTree } from "./src/test/sourceTree.ts";
 import { baseConfig as base, testInclude } from "./vitest.config.ts";
-import { SWAP_ENTRY } from "./vitest.swap.config.ts";
+import { CANDIDATE_ENTRY } from "./vitest.swap.config.ts";
 
 // The same suite in Chromium, Firefox and WebKit. By default the polyfill's specifier resolves to the
 // native-Temporal shim, so each browser runs on its own engine. `GMT_TEMPORAL=polyfill` removes
-// that alias: the control pass of the native-suite runner, which shows which failures belong to
-// the browser (its locale data, its time zone data) and not to its Temporal.
-// `GMT_TEMPORAL=temporal-polyfill` aliases the specifier to `temporal-polyfill` instead: the swap
-// pass of the CORE-92 swap check.
+// that alias: the control pass of the native-suite runner, which runs the pinned `temporal-polyfill`
+// and shows which failures belong to the browser (its locale data, its time zone data) and not to
+// its Temporal. `GMT_TEMPORAL=candidate` aliases the specifier to the candidate release instead: the
+// swap pass of the upgrade check (`temporal-polyfill-candidate`, installed by the job alone).
 
 const here = import.meta.dirname;
 const testDir = path.resolve(here, "src/test");
@@ -61,24 +61,29 @@ function browserTwinsPlugin(): Plugin {
   };
 }
 
-const MODES = ["", "polyfill", "temporal-polyfill"];
+const MODES = ["", "polyfill", "candidate"];
 const mode = process.env.GMT_TEMPORAL ?? "";
 if (!MODES.includes(mode)) {
   throw new Error(
-    `GMT_TEMPORAL=${JSON.stringify(mode)} is not a mode: use unset (native), "polyfill" or "temporal-polyfill"`,
+    `GMT_TEMPORAL=${JSON.stringify(mode)} is not a mode: use unset (native), "polyfill" or "candidate"`,
   );
 }
 const native = mode === "";
-const swap = mode === "temporal-polyfill";
+const swap = mode === "candidate";
 const alias = native
   ? [
       {
-        find: /^@js-temporal\/polyfill$/,
+        find: /^temporal-polyfill\/full\/implementation$/,
         replacement: path.resolve(testDir, "nativeTemporal.ts"),
       },
     ]
   : swap
-    ? [{ find: /^@js-temporal\/polyfill$/, replacement: SWAP_ENTRY }]
+    ? [
+        {
+          find: /^temporal-polyfill\/full\/implementation$/,
+          replacement: CANDIDATE_ENTRY,
+        },
+      ]
     : [];
 
 // These test the Node-only harness (child processes, `process`, the file system). A browser has
@@ -97,10 +102,10 @@ export default mergeConfig(
     resolve: {
       alias,
     },
-    // `src/test/swapEntry.ts` imports `temporal-polyfill`, which only the swap job installs.
-    // Outside the swap pass the scan cannot resolve it, gives up pre-bundling, and Vite then
-    // optimizes `@js-temporal/polyfill` mid-run and reloads the page.
-    optimizeDeps: swap ? {} : { exclude: [SWAP_ENTRY] },
+    // `src/test/swapEntry.ts` imports `temporal-polyfill-candidate`, which only the swap job
+    // installs. Outside the swap pass the scan cannot resolve it, gives up pre-bundling, and Vite
+    // then optimizes the candidate mid-run and reloads the page.
+    optimizeDeps: swap ? {} : { exclude: [CANDIDATE_ENTRY] },
     test: {
       include: testInclude,
       exclude: [...configDefaults.exclude, ...NODE_ONLY_TESTS],
@@ -109,7 +114,7 @@ export default mergeConfig(
       env: native
         ? { GMT_NATIVE_TEMPORAL: "1" }
         : swap
-          ? { GMT_SWAP_ENTRY: SWAP_ENTRY }
+          ? { GMT_SWAP_ENTRY: CANDIDATE_ENTRY }
           : {},
       // A test that starts a bounded worker needs room for the worker's first, cold load of GMT
       // on top of its 10 s limit (`src/test/boundedChild.browser.ts`).

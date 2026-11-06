@@ -43,7 +43,7 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 - CORE-54 — `nthWeekdayEpochDay` (`internal/nthWeekday`), the ordinal-weekday formula. This story split it into `nthWeekdayInRange` and `nthWeekdayWithin`, and `nthWeekdayEpochDay` now delegates; the engine calls `nthWeekdayWithin` for `BYDAY` with an ordinal
 - `classifyWall` (`internal/earlierOccurrence`) — wall time to its readings under TC39 disambiguation; `internal/localResolution` falls back to it
 - `epochDayOf`, `isoFieldsOf`, `isoDateString` and `isoWeekdayOf` (`internal/epochDay`) — epoch-day and weekday arithmetic for `BYWEEKNO`, `BYDAY` and the cron day rule
-- `zoneFrame` (`internal/zoneFrame`) and `nextTransitionAfter` (`internal/zonedTransitionSearch`) — the zone and its offset changes
+- `zoneFrame` (`internal/zoneFrame`) and `nextTransitionAfter` (`internal/zonedWallClock`) — the zone and its offset changes
 - `Disambiguation` (`types/disambiguation.ts`)
 
 ## Verification

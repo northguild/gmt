@@ -1,3 +1,4 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 
 import { isValidDateTimeUnit } from "../../plain/validate";
@@ -52,7 +53,7 @@ import { timeZoneEquals } from "../../internal/temporalCompat";
 export function areZonedEqualBy(
   value1: string,
   value2: string,
-  unit: Temporal.SmallestUnit<DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   optionsArg?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

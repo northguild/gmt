@@ -10,8 +10,8 @@ const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
  * `date.add(duration, { overflow })` for a PlainDate in any calendar.
  *
  * - `iso8601` is the polyfill's own `add`, untouched.
- * - Other calendars go through the Temporal compat layer's `calendarDateAdd` (CORE-6: the polyfill's
- *   calendar add throws near the range limits and is wrong in the corrected calendar ranges). Time
+ * - Other calendars go through the Temporal compat layer's `calendarDateAdd`, which is the polyfill's
+ *   `add` behind one guard: a month amount past the date range throws first (D9). Time
  *   fields become whole days exactly as TC39 `ToDateDurationRecordWithoutTime` does: the time
  *   duration in nanoseconds, truncated toward zero to 24-hour days, added to `days`.
  * - The duration is validated by `Temporal.Duration.from`, as `add` itself does.
@@ -26,7 +26,7 @@ const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
  */
 export function plainDateAdd(
   date: Temporal.PlainDate,
-  duration: Temporal.Duration | Temporal.DurationLike,
+  duration: Temporal.Duration | Temporal.DurationLikeObject,
   overflow: "constrain" | "reject" = "constrain",
 ): Temporal.PlainDate {
   if (date.calendarId === "iso8601") {

@@ -3,14 +3,14 @@
  * Stack (`cutoffSchedule`), the Cut-off Ruler (`cutoffAt`) and the Cut-off
  * Countdown (`isPastCutoff` / `timeToCutoff`).
  *
- * No gmt import: every widget-facing function here takes a `CutoffLib` — the
+ * No gmt function import (only `Temporal`): every widget-facing function here takes a `CutoffLib` — the
  * real `cutoffAt`, `cutoffSchedule`, `isPastCutoff`, `timeToCutoff`,
  * `etaAtZone`, `rollDate`, `isValidTimeZone`, `isValidDateTime` and
  * `getUtcNow` — as an argument, loaded by the mount from the real package
  * (`cutoff-lib.ts`). That keeps this module free of gmt imports and lets the
  * tests inject the real library by module path.
  *
- * `@js-temporal/polyfill` is imported for drawing only — turning a zoned
+ * `Temporal` comes from `@northguild/gmt` and is used for drawing only — turning a zoned
  * string the library already returned into a weekday label or a month name,
  * axis positions, day-column bounds. Every cut-off instant, every rolled or
  * unrolled position, every "moved" flag, every closed day, every hours-before
@@ -22,7 +22,7 @@
  * as the library's JSDoc uses them.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { isZonelessDeparture } from "./transport-widgets";
 import { codeSpan } from "./widget-ui";
 

@@ -7,7 +7,7 @@ import {
 import { parseTimeZoneFromZoned } from "../parse";
 import { convertPlainDateTimeToZoned } from "./convertPlainDateTimeToZoned";
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, verified against temporal-polyfill 1.0.8.
 const attachedOffsetByZone = {
   UTC: "2024-02-29T14:30:45.000+00:00[UTC]",
   GMT: "2024-02-29T14:30:45.000+00:00[GMT]",

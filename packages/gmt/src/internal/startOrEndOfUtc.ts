@@ -1,3 +1,4 @@
+import type { DateTimeUnit, SmallestUnit } from "./temporalTypes";
 import { Temporal } from "./temporal";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
@@ -29,7 +30,7 @@ import { isValidUtc } from "../utc/validate/isValidUtc";
  */
 export function startOrEndOfUtc(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   options: {
     weekStartsOn?: "monday" | "sunday";
     fractionalSecondDigits?: FractionalDigit;

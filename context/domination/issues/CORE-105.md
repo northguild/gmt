@@ -95,7 +95,7 @@ Settled by the owner. They are the current rules for this code.
   `runAtRangeLimit`, marked `// defect 2`. The three-argument form measured `root` at 567917 and was
   not used.
 - **Line counts.** Facade 372 (was 2297), `operations.ts` 1383, `rangeLimit.ts` 121,
-  `utcValidity.ts` 28, `calendarArithmetic.ts` 227, `nudgeWindow.ts` 246, `nudgeOrigin.ts` 166.
+  `utcValidity.ts` 28, `calendarArithmetic.ts` 227, `nudgeWindow.ts` 246, `nudgeOrigin.ts` 166. Of these, only `operations.ts` and `nudgeOrigin.ts` exist today in `internal/zonedDifference/`; CORE-108 deleted the rest with their workarounds.
 - **Fallow.** `fallow audit --base main` reports no issues in 23 changed files.
 - **Removal text** is kept in three places that must agree: the module headers, the `steps` in
   `scripts/lib/workarounds.mjs`, and the README `## Removal steps`. Review added a sentence that the

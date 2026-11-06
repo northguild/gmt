@@ -4,6 +4,7 @@ import { readDurationUnits, resolveOverflow } from "../../internal";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { assertMonthsInRange } from "../../internal/temporalCompat";
 
 /**
  * Return a PlainDateTime ISO string with `units` subtracted from `value`.
@@ -47,6 +48,7 @@ export function subtractDateTime(
 
     try {
       const dateTime = Temporal.PlainDateTime.from(value);
+      assertMonthsInRange(amounts.months); // D9
       return dateTime
         .subtract(amounts, { overflow: resolveOverflow(options?.overflow) })
         .toString();

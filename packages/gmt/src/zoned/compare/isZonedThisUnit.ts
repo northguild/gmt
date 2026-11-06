@@ -1,3 +1,4 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { getLocaleStartOfWeek } from "../../plain/calculate/getLocaleStartOfWeek";
 import { areDatesEqualBy } from "../../plain/compare/areDatesEqualBy";
@@ -6,7 +7,6 @@ import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveLocale } from "../../internal/resolveLocale";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return true when `value`'s local calendar day falls in the same `unit` as
@@ -44,7 +44,7 @@ import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
  */
 export function isZonedThisUnit(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateUnit>,
+  unit: SmallestUnit<Temporal.DateUnit>,
   locale?: string | string[],
 ): boolean {
   try {
@@ -60,7 +60,7 @@ export function isZonedThisUnit(
 
     try {
       const zonedDateTime = zonedDateTimeFrom(value);
-      const today = nowZonedDateTimeISO(zonedDateTime.timeZoneId)
+      const today = Temporal.Now.zonedDateTimeISO(zonedDateTime.timeZoneId)
         .toPlainDate()
         .toString();
       const valueDate = zonedDateTime.toPlainDate().toString();

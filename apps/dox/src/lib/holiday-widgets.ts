@@ -24,7 +24,7 @@
  * a statute or an operator.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type {
   BusinessCalendar,
   BusinessCalendarSpec,

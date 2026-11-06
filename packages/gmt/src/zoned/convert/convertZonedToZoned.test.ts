@@ -6,7 +6,7 @@ import {
 import { parseTimeZoneFromZoned } from "../parse";
 import { convertZonedToZoned } from "./convertZonedToZoned";
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, verified against temporal-polyfill 1.0.8.
 const sameInstantByZone = {
   UTC: "2024-02-29T00:00:00+00:00[UTC]",
   GMT: "2024-02-29T00:00:00+00:00[GMT]",

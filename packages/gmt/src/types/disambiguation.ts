@@ -1,4 +1,4 @@
-import type { Temporal } from "../internal/temporal";
+import type { ToInstantOptions } from "../internal/temporalTypes";
 
 /**
  * How a local wall time that a time zone's clock shows twice or never is resolved to an instant,
@@ -8,4 +8,4 @@ import type { Temporal } from "../internal/temporal";
  * the length of the gap. `"earlier"` and `"later"` take that side in both cases, and `"reject"`
  * accepts neither.
  */
-export type Disambiguation = Temporal.ToInstantOptions["disambiguation"];
+export type Disambiguation = ToInstantOptions["disambiguation"];

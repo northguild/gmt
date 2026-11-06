@@ -25,7 +25,7 @@
  * Built on the component kit: `renderCutoffCountdownTemplate` writes the markup from builders
  * only, with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { defineElements } from "~/widgets/define";
 import {
   aside,

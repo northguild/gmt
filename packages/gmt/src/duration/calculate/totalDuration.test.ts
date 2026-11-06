@@ -100,7 +100,7 @@ describe("totalDuration", () => {
     ${"P1M"} | ${"days"}  | ${"2024-02-10[!u-ca=hebrew]"}                                 | ${30}    | ${"critical flag"}
     ${"P1M"} | ${"days"}  | ${"5784-06-01[u-ca=HEBREW]"}                                  | ${29}    | ${"upper-case calendar id; ISO year 5784"}
     ${"P1M"} | ${"days"}  | ${"0006-02-01[!u-ca=japanese]"}                               | ${28}    | ${"critical flag, era calendar; ISO year 6 is not leap"}
-    ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=coptic]"}                                  | ${30}    | ${"coptic computes in ethioaa"}
+    ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=coptic]"}                                  | ${30}    | ${"Amshir, a 30-day Coptic month"}
     ${"P1M"} | ${"days"}  | ${"2024-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"}              | ${30}    | ${"zoned, RFC 9557 order"}
     ${"P1D"} | ${"hours"} | ${"2024-03-10T00:00:00-05:00[America/New_York][u-ca=hebrew]"} | ${23}    | ${"zoned calendar string keeps the spring-forward day"}
     ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=hebrew][foo=bar]"}                         | ${30}    | ${"elective unknown annotation ignored"}
@@ -352,16 +352,16 @@ describe("totalDuration relative to the first days of the range", () => {
   );
 });
 
-// CORE-6 S7: a non-ISO calendar `relativeTo` follows TC39 Duration#total with a plain relativeTo.
+// S7: a non-ISO calendar `relativeTo` follows TC39 Duration#total with a plain relativeTo.
 // Values: Chromium 153 native `Duration.from(d).total({ unit, relativeTo: PlainDate })`; null
 // where Chromium throws.
 describe("totalDuration with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
     duration  | unit        | relativeTo                      | expected | reason
-    ${"P40D"} | ${"months"} | ${"+275760-07-20[u-ca=hebrew]"} | ${null}  | ${"D1: the 1-month window after the first month passes the maximum"}
-    ${"P1M"}  | ${"days"}   | ${"+275760-07-06[u-ca=hebrew]"} | ${30}    | ${"D1 control: M07 of 279517 has 30 days"}
-    ${"P30D"} | ${"months"} | ${"2023-08-31[u-ca=buddhist]"}  | ${1}     | ${"D6: the window Aug 31 to Sep 30 ends exactly on the target"}
-    ${"P30D"} | ${"months"} | ${"2023-08-31[u-ca=gregory]"}   | ${1}     | ${"D6 gregory (Chromium 153)"}
+    ${"P40D"} | ${"months"} | ${"+275760-07-20[u-ca=hebrew]"} | ${null}  | ${"range limit: the 1-month window after the first month passes the maximum"}
+    ${"P1M"}  | ${"days"}   | ${"+275760-07-06[u-ca=hebrew]"} | ${30}    | ${"range limit control: M07 of 279517 has 30 days"}
+    ${"P30D"} | ${"months"} | ${"2023-08-31[u-ca=buddhist]"}  | ${1}     | ${"month-end overshoot: the window Aug 31 to Sep 30 ends exactly on the target"}
+    ${"P30D"} | ${"months"} | ${"2023-08-31[u-ca=gregory]"}   | ${1}     | ${"month-end overshoot gregory (Chromium 153)"}
     ${"P1M"}  | ${"days"}   | ${"1000-02-01[u-ca=buddhist]"}  | ${28}    | ${"proleptic buddhist: ISO 1000 is not a leap year"}
     ${"P1Y"}  | ${"days"}   | ${"1000-03-01[u-ca=buddhist]"}  | ${365}   | ${"proleptic buddhist: no Feb 29 in ISO 1000"}
     ${"P1M"}  | ${"days"}   | ${"-100000-01-01[u-ca=hebrew]"} | ${29}    | ${"hebrew year <= 0: M06 has 29 days"}

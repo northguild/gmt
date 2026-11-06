@@ -271,7 +271,7 @@ export function plainDateTimeFormatOptions(options: Options): Options {
  * - **`dateStyle`** (AdjustDateTimeStyleFormat, « [[Month]], [[Day]] »). The month and day widths
  *   are the locale's own `dateStyle` pattern's, read by {@link dateStyleWidths}: de-DE `medium`
  *   is `25.12.`, ja-JP `long` `12/25` and en-US `medium` `Dec 25`, as native
- *   `PlainMonthDay#toLocaleString` prints them. Polyfill 0.5.1 maps the style to fixed widths
+ *   `PlainMonthDay#toLocaleString` prints them. `temporal-polyfill` 1.0.8 maps the style to fixed widths
  *   instead (`25. Dez.`, `12月25日`).
  * - **Fields** (GetDateTimeFormat, required and defaults ~month-day~, inherit ~relevant~): only
  *   `month` and `day` are copied. `era`, `year`, `weekday`, time fields and `timeZoneName` are
@@ -321,7 +321,7 @@ export function plainMonthDayFormatOptions(
  * - **`dateStyle`** (AdjustDateTimeStyleFormat, « [[Era]], [[Year]], [[Month]] »). The widths
  *   are the locale's own `dateStyle` pattern's, read by {@link dateStyleWidths}: de-DE `medium`
  *   is `10/2026`, zh-CN `full` `2026/10` and en-US `short` `10/26`, as native
- *   `PlainYearMonth#toLocaleString` prints them. Polyfill 0.5.1's `yearMonthAmend` maps the style
+ *   `PlainYearMonth#toLocaleString` prints them. `temporal-polyfill` 1.0.8 maps the style
  *   to fixed widths instead (`Okt. 2026`, `2026年10月`).
  * - **Fields** (GetDateTimeFormat, required and defaults ~year-month~, inherit ~relevant~): `year`,
  *   `month` and `era` are copied (`era` qualifies the year). `day`, `weekday`, `dayPeriod`, time

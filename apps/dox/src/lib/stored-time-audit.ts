@@ -16,7 +16,7 @@
  * A zone comes from the reader's own string; the site never guesses one.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   getTickerWindow,
   isGap,

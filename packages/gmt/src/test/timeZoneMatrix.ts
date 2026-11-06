@@ -323,8 +323,9 @@ export const localDstEdgeBattleCases = battleTestTimeZones.map((timeZone) => ({
  * date line by dropping Tuesday 31 December 1844, so local 1844-12-30T24:00 in the old LMT offset
  * is 1845-01-01T00:00 in the new one and the whole of 1844-12-31 never happened. Values are
  * Chromium 153 native Temporal (tzdata `asia` Zone Asia/Manila and `australasia` Pacific/Guam,
- * Kosrae, Palau; Saipan links to Guam) — never the polyfill, whose transition search starts at
- * 1847-01-01 and misses them (js-temporal/temporal-polyfill#372, tc39/proposal-temporal#3330).
+ * Kosrae, Palau; Saipan links to Guam) — never the polyfill: `@js-temporal/polyfill` 0.5.1's transition search started at
+ * 1847-01-01 and missed them (js-temporal/temporal-polyfill#372, tc39/proposal-temporal#3330);
+ * `temporal-polyfill` 1.0.8 finds them.
  *
  * Kept out of `MustTestDstTimeZones`: every fixture derived from that table is 2024-shaped.
  */

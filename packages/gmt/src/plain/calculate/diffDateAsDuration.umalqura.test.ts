@@ -7,10 +7,10 @@ import { diffDateAsDuration } from "./diffDateAsDuration";
 // [u-ca=islamic-umalqura], converted from the recorded read by the same Chromium. Never GMT output,
 // never the polyfill.
 
-// CORE-6 §4.4 modern grid for islamic-umalqura: from 2023-06-01 + i days, i in {0, 61, 91, 122, 245,
+// §4.4 modern grid for islamic-umalqura: from 2023-06-01 + i days, i in {0, 61, 91, 122, 245,
 // 274}, to k days later (and back, in years), k in {28, 29, 30, 31, 58, 59, 60, 61, 354, 355, 365,
-// 366, 383, 384, 385}. Month-end starts exercise D6 (NonISODateSurpasses).
-describe("diffDateAsDuration inside the Umm al-Qura table (CORE-6 §4.4 grid)", () => {
+// 366, 383, 384, 385}. Month-end starts exercise month-end overshoot (NonISODateSurpasses).
+describe("diffDateAsDuration inside the Umm al-Qura table (§4.4 grid)", () => {
   it.each`
     date1                                  | date2                                  | unit        | expected      | source
     ${"2023-06-01[u-ca=islamic-umalqura]"} | ${"2023-06-29[u-ca=islamic-umalqura]"} | ${"months"} | ${"P28D"}     | ${"grid islamic-umalqura i=0 +28 d"}
@@ -279,7 +279,7 @@ describe("diffDateAsDuration inside the Umm al-Qura table (CORE-6 §4.4 grid)", 
   );
 });
 
-describe("diffDateAsDuration inside the Umm al-Qura table (CORE-6 §4.4 stride k=1000)", () => {
+describe("diffDateAsDuration inside the Umm al-Qura table (§4.4 stride k=1000)", () => {
   it.each`
     date1                                  | date2                                  | unit       | expected      | source
     ${"1948-02-05[u-ca=islamic-umalqura]"} | ${"1949-03-11[u-ca=islamic-umalqura]"} | ${"years"} | ${"P1Y1M17D"} | ${"stride islamic-umalqura k=1000 (ISO 1948-02-05), +400 d"}

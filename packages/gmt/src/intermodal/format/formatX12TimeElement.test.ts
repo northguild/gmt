@@ -55,7 +55,7 @@ function cutTo(value: string, form: X12TimeElementForm): string {
  * Each form's precision as plain Temporal writes it: `HH:MM`, `HH:MM:SS`, and one or two digits
  * of the fraction of the second.
  */
-const WRITTEN: Record<X12TimeElementForm, Temporal.ToStringPrecisionOptions> = {
+const WRITTEN: Record<X12TimeElementForm, Temporal.PlainTimeToStringOptions> = {
   HHMM: { smallestUnit: "minute" },
   HHMMSS: { smallestUnit: "second" },
   HHMMSSD: { fractionalSecondDigits: 1 },

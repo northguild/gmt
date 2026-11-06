@@ -44,7 +44,7 @@ const rootDir = () => {
 describe("runPass", () => {
   it.each`
     leg           | pass         | variable
-    ${"chromium"} | ${"swap"}    | ${"temporal-polyfill"}
+    ${"chromium"} | ${"swap"}    | ${"candidate"}
     ${"firefox"}  | ${"control"} | ${"polyfill"}
   `(
     "starts the $leg $pass pass's Vitest with GMT_TEMPORAL=$variable",

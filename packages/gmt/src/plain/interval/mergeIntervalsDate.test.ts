@@ -121,7 +121,7 @@ describe("mergeIntervalsDate", () => {
     ).toEqual([]);
   });
   // E5 (issue #78): every start/end across the whole list must share the same calendar tag. Golden
-  // verified directly against @js-temporal/polyfill.
+  // verified directly against temporal-polyfill 1.0.8.
   it("merges in the shared calendar when every interval carries the same tag", () => {
     expect(
       mergeIntervalsDate([

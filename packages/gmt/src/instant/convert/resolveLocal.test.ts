@@ -338,12 +338,12 @@ describe("resolveLocal at the maximum instant", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("resolveLocal across the 1844 date-line crossings (zoned.E)", () => {
+describe("resolveLocal across the 1844 date-line crossings", () => {
   // 1844-12-31T12:00 never happened: "compatible" moves it forward by the 24-hour gap.
   it.each(dateLineCrossingTimeZones)(
     "resolves the skipped 1844-12-31T12:00 in $timeZone 12 hours after the crossing",

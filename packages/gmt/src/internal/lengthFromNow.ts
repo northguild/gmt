@@ -1,3 +1,4 @@
+import type { DateTimeUnit, TotalUnit } from "./temporalTypes";
 import { Temporal } from "./temporal";
 import type { DateTimeDurationUnit } from "../types";
 import { durationTotal } from "./zonedWallClockDifference";
@@ -83,7 +84,7 @@ export function totalLengthFromStart(
 ): number {
   return durationTotal(
     Temporal.Duration.from(amounts),
-    unit as Temporal.TotalUnit<Temporal.DateTimeUnit>,
+    unit as TotalUnit<DateTimeUnit>,
     frameZoned(start, frame),
   );
 }

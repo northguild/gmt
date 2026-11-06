@@ -4,7 +4,7 @@
  * or a body slipping into a preset or a label shows up here without this file
  * (or any test) spelling out which words are forbidden.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 const weekdayAndMonthNames = (): string[] => {
   const out: string[] = [];

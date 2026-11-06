@@ -1,9 +1,9 @@
+import { Temporal } from "../../internal/temporal";
 import {
   subtractLengthFromStart,
   readLengthUnits,
   utcLengthFrame,
 } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
 
@@ -45,7 +45,7 @@ export function getUtcAgo(
     }
 
     return subtractLengthFromStart(
-      nowInstant(),
+      Temporal.Now.instant(),
       amounts,
       utcLengthFrame(),
     ).toString({ smallestUnit: "second", roundingMode: "floor" });

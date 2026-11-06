@@ -27,7 +27,7 @@ describe("compareMonthDays", () => {
     a                          | b            | expected | why
     ${"--12-25"}               | ${"--12-25"} | ${0}     | ${"same value"}
     ${"12-25"}                 | ${"--12-25"} | ${0}     | ${"input forms"}
-    ${"--12-25[u-ca=ISO8601]"} | ${"--12-25"} | ${0}     | ${"D20 upper-case calendar"}
+    ${"--12-25[u-ca=ISO8601]"} | ${"--12-25"} | ${0}     | ${"upper-case calendar id"}
     ${"--12-25[Europe/Paris]"} | ${"--12-25"} | ${0}     | ${"zone annotation ignored"}
     ${"--01-01"}               | ${"--12-31"} | ${-1}    | ${"month first"}
     ${"--12-31"}               | ${"--01-01"} | ${1}     | ${"month first, reversed"}

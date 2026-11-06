@@ -102,6 +102,21 @@ describe("renderWidget", () => {
     expect(() => w.destroy()).toThrow(/left 1 listener/);
   });
 
+  it("takes its listener recorder off window when the load fails", async () => {
+    const add = window.addEventListener;
+    const remove = window.removeEventListener;
+    const failing: LoadedWidget<never> = {
+      renderTemplate: () => html`<p>x</p>`,
+      mount: async () => {
+        throw new Error("load failed");
+      },
+    };
+    await expect(renderWidget(failing)).rejects.toThrow("load failed");
+    expect(window.addEventListener).toBe(add);
+    expect(window.removeEventListener).toBe(remove);
+    expect(screen.queryByText("x")).not.toBeInTheDocument();
+  });
+
   it("flushWidget settles", async () => {
     await expect(flushWidget()).resolves.toBeUndefined();
   });

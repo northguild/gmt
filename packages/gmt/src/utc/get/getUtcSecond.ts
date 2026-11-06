@@ -1,9 +1,9 @@
-import { nowInstant } from "../../internal/temporalCompat";
+import { Temporal } from "../../internal/temporal";
 
 /**
  * Return the current second from UTC as a zero-padded string.
  *
- * - Uses nowInstant() converted to UTC zoned date time.
+ * - Uses Temporal.Now.instant() converted to UTC zoned date time.
  * - Returns zero-padded string to 2 digits.
  *
  * @returns current second string (zero-padded to 2 digits)
@@ -11,7 +11,7 @@ import { nowInstant } from "../../internal/temporalCompat";
  * @example getUtcSecond() // "45"
  */
 export function getUtcSecond(): string {
-  return nowInstant()
+  return Temporal.Now.instant()
     .toZonedDateTimeISO("UTC")
     .second.toString()
     .padStart(2, "0");

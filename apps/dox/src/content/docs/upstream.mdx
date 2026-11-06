@@ -11,11 +11,12 @@ import UpstreamDefects from "../../components/UpstreamDefects.astro";
 import UpstreamListings from "../../components/UpstreamListings.astro";
 import UpstreamTracker from "../../components/UpstreamTracker.astro";
 import { gmtVersion } from "../../generated/versions";
+import { polyfillFigures } from "../../lib/bundle-size-figures";
 
 GMT is built on [Temporal](https://tc39.es/proposal-temporal/), the new JavaScript date and
 time standard. Node and some browsers now have Temporal built in, but GMT runs on the community
-[`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill) everywhere, so it gives
-the same answer on every runtime. Every week, GMT's whole test suite also runs on the built-in
+[`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) {polyfillFigures.shippedVersion}
+everywhere, so it gives the same answer on every runtime. Every week, GMT's whole test suite also runs on the built-in
 engines.
 
 **If you use GMT, there is nothing on this page for you to do.** The polyfill has a handful of bugs
@@ -46,52 +47,22 @@ that bug yet. GMT keeps its fix until someone has checked a newer release.
 
 ## How a fix reaches you
 
-The polyfill is being brought back in line with the current version of the standard, one change at a
-time. It is a long job, and it decides where each fix has to go:
+`temporal-polyfill` publishes fixes in its regular patch releases. Every week, GMT's upgrade check
+(the polyfill-swap leg of the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml))
+runs the test for every bug in the table above, and GMT's whole test suite, against each new
+release. When every test for a bug passes, GMT marks that workaround as removable and takes it out in
+a GMT release. Until then, GMT's own code covers the bug.
 
-- **The standard first.** Its maintainers asked us to send fixes to the Temporal standard rather
-  than straight to the polyfill, so that the catching-up work stays manageable.
-- **The polyfill next.** Fixes arrive there as that work moves forward. This is why several of the
-  pull requests below were closed with thanks instead of merged. None was turned down; each was sent
-  where it would do more good.
-- **A release last.** The maintainers would rather publish one release once the polyfill has caught
-  up than a release for each fix.
-
-Until that release, GMT's own code covers every bug in the table above.
+The maintainers of `@js-temporal/polyfill`, which GMT ran on before, asked us to send fixes to the
+Temporal standard first, because they were bringing that polyfill back in line with the standard one
+change at a time. That is why several of the pull requests below were closed with thanks instead of
+merged. None was turned down; each was sent where it would do more good.
 
 ## Why this polyfill
 
-There are two Temporal polyfills: [`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill),
-which GMT uses, and [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) from
-FullCalendar, which is smaller and publishes releases more often. We ran GMT's whole test suite on
-`temporal-polyfill` to see whether GMT should switch.
+From {polyfillFigures.firstShippedGmt}, GMT runs on [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) {polyfillFigures.shippedVersion} from FullCalendar, imported from `temporal-polyfill/full/implementation`. GMT releases up to {polyfillFigures.previousGmt} ran on [`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill) {polyfillFigures.previousVersion}. There are three reasons. Month arithmetic takes bounded time on `temporal-polyfill` for any amount inside Temporal's range, where `@js-temporal/polyfill` steps through months in a loop that can run for a long time on a very large amount. `temporal-polyfill` has a maintained release line: it fixed every bug we reported to it, each in its next release. And it is smaller, {polyfillFigures.floorGzipped} gzipped against {polyfillFigures.previousFloorGzipped}, which is {polyfillFigures.floorDifferenceGzipped} less on every import. The [bundle size](/bundle-size/#why-gmt-uses-temporal-polyfill) page has the figures for each function.
 
-Release 1.0.8 fixes most of the bugs in the table above, and the five bugs we reported in
-`temporal-polyfill` 1.0.6 and 1.0.7. Its UTC offsets match `Intl.DateTimeFormat` in every time
-zone, on every day from 1970 to ten years ahead. On Node, GMT's whole test suite passes on it
-with no test failing that passes on `@js-temporal/polyfill`. Release 1.0.7 had two bugs that
-1.0.8 fixes:
-
-- **Looking back from far ahead.** Asked for the last clock change before a date more than about
-  three years from today, 1.0.7 returned an older one. Asked on 4 November 2026 about June 2030 in
-  `America/New_York`, it returned the change in November 2029, not the one in March 2030. Twelve of
-  GMT's tests failed on this. We reported it as #125.
-- **Before 1847.** 1.0.7 did not find clock changes before 1847, such as `Asia/Manila` on
-  31 December 1844. We reported it as #126. GMT works around the same bug in
-  `@js-temporal/polyfill`.
-
-One bug is left, and the maintainers closed its report as a known limitation:
-
-- **Zone names that are links.** It treats a link name such as `Asia/Calcutta` as a different
-  zone from `Asia/Kolkata`. FullCalendar's report of this, #118 (not ours), was closed as a known
-  limitation. GMT's own probe sees it in WebKit as `Etc/UTC` not equal to `UTC`.
-
-So for now GMT stays on `@js-temporal/polyfill`. Every week, GMT runs its whole test suite on the newest
-`temporal-polyfill` release in Node and three browsers, and checks every zone's offsets against
-`Intl.DateTimeFormat`. A release that passes both opens an issue in GMT's repository, and that
-issue starts the switch. See the
-[weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml). The full
-comparison is in GMT's repository:
+On Node, GMT's whole test suite passes on `temporal-polyfill` with no test failing that passes on `@js-temporal/polyfill`, and its UTC offsets match `Intl.DateTimeFormat` in every time zone, on every day from 1970 to ten years ahead. Three limits remain, and GMT works around each one. An amount of months outside Temporal's range still makes the polyfill do work that grows with the amount before it throws, so GMT refuses those amounts first. A length measured from a time in an hour that happens twice gets an answer in two cases where the standard has none, so GMT returns its empty value there. The third, which its maintainers closed as a known limitation (FullCalendar #118, not our report), is that it can treat a link name such as `Asia/Calcutta` as a different zone from `Asia/Kolkata`. GMT's own probe sees it in WebKit, as `Etc/UTC` not equal to `UTC`, and GMT corrects that comparison there. The full comparison is in GMT's repository:
 [`temporal-polyfill-swap.md`](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md).
 
 ## What we sent, and what happened to it
@@ -111,7 +82,7 @@ GMT also opens pull requests on other projects, when a list or comparison should
 ## What this means for you
 
 **You don't need to do anything.** Where the polyfill has one of these bugs, GMT uses its own
-correct code instead. It checks once, as it loads, whether the installed polyfill still has each
+correct code instead. The first time it needs a fix, it checks whether the installed polyfill still has that
 bug; where the bug is gone, GMT uses the polyfill directly. You get the same correct answer either
 way.
 
@@ -153,7 +124,7 @@ GMT gives the standard's answer in every case.
 
 ## What kind of bugs are these?
 
-They're rare edge cases. Most only show up:
+These are the bugs we found. They are rare edge cases. Most only show up:
 
 - near the very first or very last date Temporal can represent (around the year 275,000);
 - in non-Gregorian calendars, such as Hebrew, Persian, Islamic or Japanese;
@@ -164,10 +135,12 @@ Temporal is a large, carefully designed standard, and the polyfill is a big piec
 Finding bugs like these is normal. We found them because GMT tests the unusual corners that
 most code never reaches.
 
-We sent them to two places:
+We sent them to three places:
 
-- **The polyfill** ([`js-temporal/temporal-polyfill`](https://github.com/js-temporal/temporal-polyfill)),
-  the package GMT and many other projects install. Some of its fixes are already written but
+- **The runtime GMT is on** ([`fullcalendar/temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill)).
+  Every bug we reported there is fixed.
+- **The polyfill GMT ran on before** ([`js-temporal/temporal-polyfill`](https://github.com/js-temporal/temporal-polyfill)),
+  the package that many other projects install. Some of its fixes are already written but
   not yet in a published release, so we've asked for a new release. That would also fix two
   bugs other users had already reported.
 - **The Temporal proposal** ([`tc39/proposal-temporal`](https://github.com/tc39/proposal-temporal)),
@@ -185,7 +158,10 @@ We sent them to two places:
 - We also check that the fix doesn't change any answer that was already right.
 
 Every example and fix is written up in full in GMT's repository:
-[`js-temporal-polyfill-bugs.md`](https://github.com/northguild/gmt/blob/main/context/domination/js-temporal-polyfill-bugs.md).
+[`js-temporal-polyfill-bugs.md`](https://github.com/northguild/gmt/blob/main/context/domination/js-temporal-polyfill-bugs.md)
+for the `@js-temporal/polyfill` reports, and
+[`temporal-polyfill-swap.md`](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md)
+for the `temporal-polyfill` reports and the comparison.
 
 See also: [Why GMT?](/why-gmt/) · [Correct at the edges](/guides/concepts/correct-at-the-edges/) ·
 [Standards](/guides/concepts/standards/)

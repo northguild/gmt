@@ -6,7 +6,7 @@
  * functions — `getZonedNow`, `getTimeZoneOffset`, `convertZonedToZoned`,
  * `isInDaylightSaving`, `hasDaylightSaving` — imported at module-barrel
  * granularity so the bundler tree-shakes the rest of each barrel. The
- * `@js-temporal/polyfill` those functions depend on rides along in this
+ * Temporal implementation those functions depend on rides along in this
  * (lazy-loaded) chunk; it is never on a page's critical path.
  *
  * Nothing is cached. The library's rule for daylight time (a forward change of

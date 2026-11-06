@@ -92,7 +92,7 @@ describe("subtractDate", () => {
   );
 
   // E5 (issue #78): mirror of addDate's calendar-aware coverage — see its JSDoc/tests for
-  // the full rationale. Goldens verified directly against @js-temporal/polyfill.
+  // the full rationale. Goldens verified directly against temporal-polyfill 1.0.8.
   it.each`
     value                         | units            | expected                      | note
     ${"2024-03-25[u-ca=hebrew]"}  | ${{ months: 1 }} | ${"2024-02-24[u-ca=hebrew]"}  | ${"Adar -> Adar I (Hebrew leap month)"}
@@ -104,26 +104,26 @@ describe("subtractDate", () => {
     },
   );
 
-  // CORE-6 D1-A at the minimum: the polyfill throws `Invalid ISO date: -271821-01-01`. Expected
+  // range limit at the minimum, where 0.5.1 threw `Invalid ISO date: -271821-01-01`. Expected
   // values: Chromium 152 (q2-xscan-chromium152.json): edge["islamic-civil"].min[400] reads
   // -280803-M05-07 and subtracts a year to ISO -271821-06-03, which min[45] reads as -280804-M05-07.
   it.each`
     value                                  | units            | expected                               | reason
-    ${"-271820-05-23[u-ca=islamic-civil]"} | ${{ years: 1 }}  | ${"-271821-06-03[u-ca=islamic-civil]"} | ${"D1-A: 45 days after the minimum (xscan min[400])"}
-    ${"-271820-04-08[u-ca=islamic-civil]"} | ${{ years: 1 }}  | ${"-271821-04-19[u-ca=islamic-civil]"} | ${"D1-A: lands on the minimum (xscan min[355])"}
-    ${"-271821-06-26[u-ca=islamic-civil]"} | ${{ months: 1 }} | ${"-271821-05-27[u-ca=islamic-civil]"} | ${"D1-A isolated window (xscan min[68])"}
-    ${"-271820-05-09[u-ca=persian]"}       | ${{ months: 1 }} | ${"-271820-04-09[u-ca=persian]"}       | ${"D1-A persian (xscan min[386])"}
-    ${"-271820-05-09[u-ca=persian]"}       | ${{ years: 1 }}  | ${"-271821-05-10[u-ca=persian]"}       | ${"D1-A persian (xscan min[386])"}
+    ${"-271820-05-23[u-ca=islamic-civil]"} | ${{ years: 1 }}  | ${"-271821-06-03[u-ca=islamic-civil]"} | ${"range limit: 45 days after the minimum (xscan min[400])"}
+    ${"-271820-04-08[u-ca=islamic-civil]"} | ${{ years: 1 }}  | ${"-271821-04-19[u-ca=islamic-civil]"} | ${"range limit: lands on the minimum (xscan min[355])"}
+    ${"-271821-06-26[u-ca=islamic-civil]"} | ${{ months: 1 }} | ${"-271821-05-27[u-ca=islamic-civil]"} | ${"range limit isolated window (xscan min[68])"}
+    ${"-271820-05-09[u-ca=persian]"}       | ${{ months: 1 }} | ${"-271820-04-09[u-ca=persian]"}       | ${"range limit persian (xscan min[386])"}
+    ${"-271820-05-09[u-ca=persian]"}       | ${{ years: 1 }}  | ${"-271821-05-10[u-ca=persian]"}       | ${"range limit persian (xscan min[386])"}
     ${"-271821-04-28[u-ca=islamic-civil]"} | ${{ months: 1 }} | ${""}                                  | ${"before the minimum is a RangeError, not clamped (xscan min[9] ERR)"}
-    ${"-271820-05-23[u-ca=buddhist]"}      | ${{ months: 1 }} | ${"-271820-04-23[u-ca=buddhist]"}      | ${"D2 buddhist (xscan min[400])"}
-    ${"-271820-05-23[u-ca=buddhist]"}      | ${{ years: 1 }}  | ${"-271821-05-23[u-ca=buddhist]"}      | ${"D2 buddhist (xscan min[400])"}
-    ${"-271821-05-29[u-ca=buddhist]"}      | ${{ years: 1 }}  | ${""}                                  | ${"D2 buddhist before the minimum (xscan min[40] ERR)"}
-    ${"-271820-05-23[u-ca=hebrew]"}        | ${{ months: 1 }} | ${"-271820-04-24[u-ca=hebrew]"}        | ${"D3/D4 hebrew (xscan min[400])"}
-    ${"-271820-05-23[u-ca=hebrew]"}        | ${{ years: 1 }}  | ${"-271821-05-06[u-ca=hebrew]"}        | ${"D3/D4 hebrew: Adar of leap -268057 (ordinal 12) is ordinal 11 of common -268058 (xscan min[400])"}
+    ${"-271820-05-23[u-ca=buddhist]"}      | ${{ months: 1 }} | ${"-271820-04-23[u-ca=buddhist]"}      | ${"buddhist (xscan min[400])"}
+    ${"-271820-05-23[u-ca=buddhist]"}      | ${{ years: 1 }}  | ${"-271821-05-23[u-ca=buddhist]"}      | ${"buddhist (xscan min[400])"}
+    ${"-271821-05-29[u-ca=buddhist]"}      | ${{ years: 1 }}  | ${""}                                  | ${"buddhist before the minimum (xscan min[40] ERR)"}
+    ${"-271820-05-23[u-ca=hebrew]"}        | ${{ months: 1 }} | ${"-271820-04-24[u-ca=hebrew]"}        | ${"negative year hebrew (xscan min[400])"}
+    ${"-271820-05-23[u-ca=hebrew]"}        | ${{ years: 1 }}  | ${"-271821-05-06[u-ca=hebrew]"}        | ${"negative year hebrew: Adar of leap -268057 (ordinal 12) is ordinal 11 of common -268058 (xscan min[400])"}
     ${"-003759-09-09[u-ca=hebrew]"}        | ${{ years: 2 }}  | ${"-003761-09-01[u-ca=hebrew]"}        | ${"from year 2 into the corrected range (spec NonISODateAdd)"}
-    ${"-271820-05-23[u-ca=indian]"}        | ${{ months: 1 }} | ${"-271820-04-22[u-ca=indian]"}        | ${"D5 indian (xscan min[400])"}
-    ${"-271820-05-23[u-ca=indian]"}        | ${{ years: 1 }}  | ${"-271821-05-23[u-ca=indian]"}        | ${"D5 indian (xscan min[400])"}
-    ${"-271821-05-29[u-ca=indian]"}        | ${{ months: 1 }} | ${"-271821-04-28[u-ca=indian]"}        | ${"D5 indian (xscan min[40])"}
+    ${"-271820-05-23[u-ca=indian]"}        | ${{ months: 1 }} | ${"-271820-04-22[u-ca=indian]"}        | ${"pre-year-1 indian (xscan min[400])"}
+    ${"-271820-05-23[u-ca=indian]"}        | ${{ years: 1 }}  | ${"-271821-05-23[u-ca=indian]"}        | ${"pre-year-1 indian (xscan min[400])"}
+    ${"-271821-05-29[u-ca=indian]"}        | ${{ months: 1 }} | ${"-271821-04-28[u-ca=indian]"}        | ${"pre-year-1 indian (xscan min[40])"}
   `(
     "returns '$expected' for $value - $units ($reason)",
     ({ value, units, expected }) => {

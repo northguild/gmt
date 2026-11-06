@@ -5,7 +5,6 @@ import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import { parseWeekFromDate } from "../parse";
 import { isValidDateTimeUnit } from "../validate";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 export type { NowUnit };
 
@@ -17,7 +16,7 @@ function isValidPlainNowUnit(unit: string): unit is NowUnit {
  * Return the requested current unit value using the system timeZone.
  *
  * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond".
- * - Uses nowZonedDateTimeISO() to get current time in system timezone.
+ * - Uses Temporal.Now.zonedDateTimeISO() to get current time in system timezone.
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal
  *   does; `"dayOfWeek"` has no plural.
  * - Returns "" when unit is invalid or system timezone is unavailable.
@@ -54,7 +53,7 @@ export function getNowUnit(unit: NowUnit): string {
 
   let now: Temporal.ZonedDateTime;
   try {
-    now = nowZonedDateTimeISO(timeZone);
+    now = Temporal.Now.zonedDateTimeISO(timeZone);
   } catch {
     return "";
   }

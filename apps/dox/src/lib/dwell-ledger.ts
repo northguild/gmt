@@ -8,11 +8,11 @@
  * number itself: the mount calls the real function and prints what it returns.
  * The shading here is drawing, and a test asserts it agrees with the library.
  *
- * No DOM and no gmt import, mirroring `interval-visualizer.ts`: validators come
+ * No DOM and no gmt function import (only `Temporal`), mirroring `interval-visualizer.ts`: validators come
  * in from the mount, loaded from the real package.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import type { DayMark, PlateSpec, SeriesNumber } from "./ledger-widgets";
 

@@ -1,6 +1,6 @@
+import { Temporal } from "../../internal/temporal";
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { readLengthUnits } from "../../internal/lengthFromNow";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
 import type { DateTimeDurationUnit } from "../../types";
 import { isValidDateTimeDurationUnit } from "../validate/isValidDateTimeDurationUnit";
@@ -44,7 +44,7 @@ export function getDateTimeIn(
       return "";
     }
 
-    return nowZonedDateTimeISO(timeZone)
+    return Temporal.Now.zonedDateTimeISO(timeZone)
       .toPlainDateTime()
       .add(amounts, { overflow: "constrain" })
       .toString({ smallestUnit: "second", roundingMode: "floor" });

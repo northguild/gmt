@@ -21,6 +21,33 @@ describe("chartKey", () => {
     await expectNoAxeViolations(host);
   });
 
+  it("takes a hue for each item and still lists the words", async () => {
+    const { host } = renderHtml(
+      chartKey([
+        { kind: "own", hue: "polyfill-shipped", words: "shipped polyfill" },
+        { kind: "shared", hue: "polyfill-shipped", words: "shipped GMT code" },
+        { kind: "own", hue: "polyfill-previous", words: "previous polyfill" },
+        {
+          kind: "shared",
+          hue: "polyfill-previous",
+          words: "previous GMT code",
+        },
+      ]),
+    );
+    const key = screen.getByRole("list", { name: "Key" });
+    expect(
+      within(key)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "shipped polyfill",
+      "shipped GMT code",
+      "previous polyfill",
+      "previous GMT code",
+    ]);
+    await expectNoAxeViolations(host);
+  });
+
   it("escapes the words", () => {
     renderHtml(chartKey([{ kind: "own", words: "<b>x</b>" }]));
     expect(screen.getByText("<b>x</b>")).toBeInTheDocument();

@@ -7,7 +7,7 @@ describe("areYearMonthsEqual", () => {
     a                          | b                           | why
     ${"2026-10"}               | ${"2026-10"}                | ${"same value"}
     ${"+002026-10"}            | ${"2026-10"}                | ${"six-digit form"}
-    ${"2026-10[u-ca=iso8601]"} | ${"2026-10[!u-ca=Iso8601]"} | ${"D20 calendar case"}
+    ${"2026-10[u-ca=iso8601]"} | ${"2026-10[!u-ca=Iso8601]"} | ${"calendar id in another case"}
     ${"2026-10[_foo=bar]"}     | ${"2026-10"}                | ${"elective annotation ignored"}
   `("returns true for '$a' and '$b' ($why)", ({ a, b }) => {
     expect(areYearMonthsEqual(a, b)).toBe(true);

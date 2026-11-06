@@ -34,8 +34,8 @@ Part of [CORE-102](../CORE-102.md).
   with no calendar. Input is the extended form only: `202610` is refused, as for dates.
 - **No day is invented.** The ISO reference day 1 stays internal. There is no `overflow` option:
   day 1 exists in every month, so `constrain` and `reject` never differ.
-- **Arithmetic follows AddDurationToYearMonth as amended by tc39 `41faca474a`** (merged 2026-01-29), run on
-  `PlainDate` from day 1, so every engine gives the specification's result. A consequence: the
+- **Arithmetic follows AddDurationToYearMonth as amended by tc39 `41faca474a`** (merged 2026-01-29),
+  through `PlainYearMonth#add` and `#subtract`, which start from day 1 of the month. A consequence: the
   lowest year-month, `-271821-04`, cannot be moved or have its first day, because its day 1 is
   outside the PlainDate range; its `getDaysInYearMonth` is still `30`. Likewise `+275760-09` has no
   last day.

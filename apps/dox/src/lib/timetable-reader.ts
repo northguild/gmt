@@ -11,14 +11,14 @@
  * (`classifyLocal`, `getDstTransitions`, `etaAtZone`, `resolveLocal`,
  * `transitTime`, `scheduleDelivery`); this widget computes none of them.
  *
- * No DOM and no gmt import: `TimetableLib` comes in from the mount. The
+ * No DOM and no gmt function import (only `Temporal`): `TimetableLib` comes in from the mount. The
  * helpers after "What the tool draws" (positions, snapping, tick steps, the
  * chart window and the hidden sizers) are drawing, not results; they use
- * `@js-temporal/polyfill` only to read instants the library returned, as
+ * `Temporal` (from `@northguild/gmt`) only to read instants the library returned, as
  * `transport-widgets.ts` does.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   diagnose,
   formatSchedule,

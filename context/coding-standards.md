@@ -218,10 +218,6 @@ which records the native Temporal evidence for each rule below.
 - **No converter from the pre-1.16.0 calendar-native-digit strings.** No standard defines them, and
   most are also valid RFC 9557 strings, so the two readings cannot be told apart. Do not add
   heuristic detection; a stored old string is regenerated from its ISO date.
-- **`ethiopic` and `coptic` compute in `ethioaa`** (`computationCalendarId`): polyfill 0.5.1 cannot
-  read their fields under ICU ≥ 78, and the three share months, days and arithmetic, differing by a
-  constant year. A parsed value therefore carries `ethioaa`; code that writes a string back takes the
-  calendar from `calendarSystemOfDateValue` / `calendarSystemOfZonedValue`, never from `calendarId`.
 - **Where it is accepted.** `plain/`: `isValidCalendarDate` and the functions gated on it
   (`convertDateToCalendar`, `addDate`, `subtractDate`, `diffDate`, `diffDateAsDuration`, the
   `Date`-suffixed `plain/interval/*`), plus `duration/`'s `relativeTo` (`internal/resolveDurationRelativeTo.ts`,
@@ -260,7 +256,7 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 - **Formula first.** Before stepping day by day, use epoch-day arithmetic (`epochDayOf`, `isoFieldsOf`, `isoWeekdayOf` in `internal/epochDay.ts`), whole-week jumps, and binary search over sorted arrays (`lowerBound`, `countWithin`). Walk only the remainder, at most a week, and only the dates near a zone transition.
 - **Temporal at the edges.** Parse inputs once on the way in; format once on the way out. Build or parse no Temporal object per loop step or inside a sort comparator.
 - **Resolve once.** Validate and resolve a calendar, schedule, zone or rule set once per public call, and pass it in resolved form to an `internal/` core. A public function never calls another public function; both call the core.
-- **Remember only what is pure.** A module-level memo holds only facts that are a pure function of their key for the life of the process (zone transitions, parsed holiday strings, validated zone ids, `Intl` formatters built from explicit arguments). It is bounded and cleared on overflow, stores no answer that depends on the clock, on process defaults or on a global the caller can replace (the formatter cache drops a kind once `Intl[kind]` is no longer the constructor that built it), and does no work at import time. The existing memos are in `internal/zonedTransitionSearch.ts`, `internal/businessCalendar.ts`, `internal/formatterCache.ts` and `internal/validatedZones.ts`; reuse them before adding one. `internal/temporalCompat/` keeps its own probe caches for its workarounds.
+- **Remember only what is pure.** A module-level memo holds only facts that are a pure function of their key for the life of the process (zone transitions, parsed holiday strings, validated zone ids, `Intl` formatters built from explicit arguments). It is bounded and cleared on overflow, stores no answer that depends on the clock, on process defaults or on a global the caller can replace (the formatter cache drops a kind once `Intl[kind]` is no longer the constructor that built it), and does no work at import time. The existing memos are in `internal/businessCalendar.ts`, `internal/formatterCache.ts` and `internal/validatedZones.ts`; reuse them before adding one. `internal/temporalCompat/` keeps its own probe caches for its workarounds.
 - **No `new Intl.*Format` outside `internal/formatterCache.ts`**, except the default-locale read in `internal/resolveLocale.ts`.
 - **Nothing runs at import, and no fixtures ship.** No top-level Temporal or `Intl` call. Test data, repros and canary tables never live in a module that shipped code imports.
 - **Measure what you add.** A function with a span-dependent loop gets a `packages/gmt/bench/` row for a short, a 1-year and a 10-year input. The handoff gives the numbers and the size delta of each touched entry from `pnpm size --files <entry>`. Put no timing assertion in an `it` row: it is flaky across the CI matrix.
@@ -321,7 +317,7 @@ Never compute a zoned start-of-unit by truncating the wall clock and resolving i
 | `America/Havana`                                                                   | 2024-11-03 (midnight repeated on the same date)                                                                                                                                              |
 | `America/Goose_Bay`                                                                | 2010-11-07 (fall-back reopens the previous date)                                                                                                                                             |
 | `Pacific/Apia`                                                                     | 2011-12-30 (deleted day)                                                                                                                                                                     |
-| `Asia/Manila`, `Pacific/Guam`, `Pacific/Saipan`, `Pacific/Kosrae`, `Pacific/Palau` | 1844-12-31 (deleted day crossing the date line, before the polyfill's 1847-01-01 transition search floor; `dateLineCrossingTimeZones` in `src/test/timeZoneMatrix.ts`, workaround `zoned.E`) |
+| `Asia/Manila`, `Pacific/Guam`, `Pacific/Saipan`, `Pacific/Kosrae`, `Pacific/Palau` | 1844-12-31 (deleted day crossing the date line; `dateLineCrossingTimeZones` in `src/test/timeZoneMatrix.ts`) |
 
 - **When a transition opens a new bucket.** Hours: when the clock lands on an hour boundary or the label jumps — New York's repeated 01:00 is its own hour, so a fall-back day has 25 hour buckets. Day and larger: only when the local label changes — Havana's repeated midnight on 2024-11-03 stays one 25-hour day (matching `hoursInDay`), while Goose_Bay's fall-back into 6 November is its own 59-minute bucket because the date changed.
 
@@ -437,8 +433,7 @@ them back as instants, so every instant reader follows the zoned reading.
 - **Everything else keeps the written offset.** The complete list: a string without a bracket; a
   `Z` instant; an offset written with seconds (TC39 matches it exactly, so
   `-00:45:00[Africa/Monrovia]` is −00:45:00 to an instant reader and invalid as a zoned string;
-  polyfill 0.5.1 matches it by minutes, which `zonedDateTimeFrom` corrects as temporalCompat
-  D12); a bracket whose zone does not exist; and a bracket whose zone has no instant in range
+  `@js-temporal/polyfill` 0.5.1 matched it by minutes); a bracket whose zone does not exist; and a bracket whose zone has no instant in range
   with that wall time at the written offset or at one that rounds to it. An instant reader does
   not validate such a bracket; a function that keeps the zone (`transitTime`, `toOffsetInstant`,
   every `zoned/` function) rejects it. A string whose written reading is outside the instant

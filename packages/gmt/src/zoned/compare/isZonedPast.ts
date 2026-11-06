@@ -1,13 +1,12 @@
 import { Temporal } from "../../internal/temporal";
 import { isValidZonedDateTime } from "../validate";
 import { zonedDateTimeFrom } from "../../internal";
-import { nowInstant } from "../../internal/temporalCompat";
 
 /**
  * Return true when `value` represents an instant strictly before now.
  *
  * - Unlike the plain `isPast`, which compares calendar days, this compares
- *   the exact instant `value` represents against `nowInstant()` —
+ *   the exact instant `value` represents against `Temporal.Now.instant()` —
  *   `value` carries a full time-of-day, not just a date.
  * - `value === now` (to the precision available) returns false — "past"
  *   means strictly before, not on-or-before.
@@ -27,7 +26,7 @@ export function isZonedPast(value: string): boolean {
 
   try {
     const instant = zonedDateTimeFrom(value).toInstant();
-    return Temporal.Instant.compare(instant, nowInstant()) === -1;
+    return Temporal.Instant.compare(instant, Temporal.Now.instant()) === -1;
   } catch {
     return false;
   }

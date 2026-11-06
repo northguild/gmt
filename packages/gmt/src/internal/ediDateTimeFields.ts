@@ -33,6 +33,12 @@ interface EdiFieldBag {
   offset?: string;
 }
 
+/**
+ * The bag of a half that has a date. Every date and date-time layout in `ediGrammar.ts` carries
+ * `DD`, so its day is always a number, as Temporal's `DateLikeObject` requires.
+ */
+type EdiDatedBag = EdiFieldBag & { day: number };
+
 /** The members of the bag that hold a number. */
 type EdiNumberField = Exclude<keyof EdiFieldBag, "offset">;
 
@@ -233,20 +239,21 @@ function readHalves(entry: EdiCode | null, value: string): string[] | null {
   }
   const captures = match.slice(1);
   const { start, end } = entry.layout;
-  const bags =
-    end === undefined
-      ? [readBag(start, captures)]
-      : [
-          readBag(start, captures.slice(0, start.length)),
-          readBag(end, captures.slice(start.length)),
-        ];
   const halves: string[] = [];
-  for (const bag of bags) {
-    const half = HALF_READERS[entry.valueKind](bag);
-    if (half === null) {
+  const read = HALF_READERS[entry.valueKind];
+  const parts =
+    end === undefined
+      ? [{ parts: start, captures }]
+      : [
+          { parts: start, captures: captures.slice(0, start.length) },
+          { parts: end, captures: captures.slice(start.length) },
+        ];
+  for (const half of parts) {
+    const text = read(half.parts, half.captures);
+    if (text === null) {
       return null;
     }
-    halves.push(half);
+    halves.push(text);
   }
   return halves;
 }
@@ -266,6 +273,17 @@ function readBag(parts: readonly EdiPart[], captures: string[]): EdiFieldBag {
   });
   const offset = offsetOf(text);
   return offset === null ? bag : { ...bag, offset };
+}
+
+/** A half with a date: the field bag with its `DD` capture as the day. */
+function readDatedBag(
+  parts: readonly EdiPart[],
+  captures: string[],
+): EdiDatedBag {
+  return {
+    ...readBag(parts, captures),
+    day: Number(captures[parts.indexOf("DD")]),
+  };
 }
 
 /**
@@ -304,7 +322,7 @@ function timeOf(bag: EdiFieldBag): string {
 }
 
 /** The wall clock of a half that has a date and a time, built by Temporal from its fields. */
-function localDateTime(bag: EdiFieldBag): string {
+function localDateTime(bag: EdiDatedBag): string {
   return Temporal.PlainDateTime.from(
     {
       year: bag.year,
@@ -319,23 +337,30 @@ function localDateTime(bag: EdiFieldBag): string {
 }
 
 /**
- * Each kind's reader: one half's fields as the ISO 8601 string of that kind. Temporal throws for
- * a date or time that is not real; null is for an offset no instant can be read at.
+ * Each kind's reader: one half's parts and captured digits as the ISO 8601 string of that kind.
+ * Temporal throws for a date or time that is not real; null is for an offset no instant can be
+ * read at. The kinds with a date read a bag whose day is a number.
  */
 const HALF_READERS: Readonly<
-  Record<EdiValueKind, (bag: EdiFieldBag) => string | null>
+  Record<
+    EdiValueKind,
+    (parts: readonly EdiPart[], captures: string[]) => string | null
+  >
 > = {
-  date: (bag) =>
-    Temporal.PlainDate.from(
+  date: (parts, captures) => {
+    const bag = readDatedBag(parts, captures);
+    return Temporal.PlainDate.from(
       { year: bag.year, month: bag.month, day: bag.day },
       { overflow: "reject" },
-    ).toString(),
-  time: timeOf,
-  dateTime: localDateTime,
+    ).toString();
+  },
+  time: (parts, captures) => timeOf(readBag(parts, captures)),
+  dateTime: (parts, captures) => localDateTime(readDatedBag(parts, captures)),
   // The wall clock and its offset, read by `toOffsetInstant` and written back by
   // `fromOffsetInstant`: the pair's own string, so `-00:00` is `+00:00` and the result reads
   // back through the instant functions.
-  offsetDateTime: (bag) => {
+  offsetDateTime: (parts, captures) => {
+    const bag = readDatedBag(parts, captures);
     const pair = toOffsetInstant(`${localDateTime(bag)}${bag.offset ?? ""}`);
     const written = pair === null ? "" : fromOffsetInstant(pair);
     return written === "" ? null : written;

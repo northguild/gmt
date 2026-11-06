@@ -1089,7 +1089,7 @@ const BROWSER_ENGINES: Record<string, string> = {
   webkit: "WebKit 26.6",
 };
 const COMPAT_RUNTIME = {
-  polyfill: "0.5.1",
+  polyfill: "1.0.8",
   node: "v26.10.0",
   playwright: "1.63.0",
 };
@@ -1111,14 +1111,13 @@ function compatVerdict(leg: string) {
         results: [{}, {}],
         passing: 1,
         state: "still-needed",
-        guardLapsed: false,
       },
     ],
   });
 }
 /** What the runner prints for the stubbed compat check on `leg`. */
 const compatLine = (leg: string) =>
-  `1 workarounds on @js-temporal/polyfill 0.5.1 in ${BROWSER_ENGINES[leg]}: 1 still needed, 0 removable, 0 guard, 0 out of scope on ${ENGINE_IDS[leg as keyof typeof ENGINE_IDS]}\n`;
+  `1 workarounds on temporal-polyfill 1.0.8 in ${BROWSER_ENGINES[leg]}: 1 still needed, 0 removable, 0 out of scope on ${ENGINE_IDS[leg as keyof typeof ENGINE_IDS]}\n`;
 
 function setup() {
   const root = mkdtempSync(join(tmpdir(), "native-suite-"));
@@ -2281,7 +2280,7 @@ describe("native-suite summary", () => {
 
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const polyfill = createRequire(join(REPO_ROOT, "packages/gmt/package.json"))(
-  "@js-temporal/polyfill",
+  "temporal-polyfill/full/implementation",
 );
 
 /**

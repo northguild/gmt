@@ -239,12 +239,12 @@ describe("addZonedBusinessDays", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("addZonedBusinessDays across the 1844 date-line crossings (zoned.E)", () => {
+describe("addZonedBusinessDays across the 1844 date-line crossings", () => {
   // From Friday 1844-12-27 noon: 1 business day is Monday 12-30; 2 is Tuesday 12-31, a wall
   // clock the zone skipped, which "compatible" resolves 24 hours later, to 1845-01-01T12:00.
   it.each(dateLineCrossingTimeZones)(

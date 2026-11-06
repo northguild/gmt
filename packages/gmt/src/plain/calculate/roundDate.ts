@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import {
   addDateUnit,
@@ -52,7 +53,7 @@ export function roundDate(
      * Temporal's GetTemporalUnitValuedOption accepts both (§13.17). A time unit such as `"hour"`
      * returns `""`.
      */
-    smallestUnit: Temporal.SmallestUnit<DateUnit>;
+    smallestUnit: SmallestUnit<DateUnit>;
     /**
      * How many units make one rounding step, counted from the unit that holds `value`. Read as
      * Temporal reads it: a non-integer is truncated (`1.5` rounds by 1), and a value below 1 or not
@@ -68,7 +69,7 @@ export function roundDate(
      *
      * @defaultValue `"halfExpand"`, Temporal's default.
      */
-    roundingMode?: Temporal.RoundingMode;
+    roundingMode?: RoundingMode;
   },
 ): string {
   try {

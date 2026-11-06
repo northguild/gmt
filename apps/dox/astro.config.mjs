@@ -21,6 +21,7 @@ import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
+import { codeThemes } from "./src/lib/code-themes.ts";
 
 // `site` + `base` make every Starlight link, the canonical tag, the sitemap
 // and Pagefind resolve under /gmt/. One module holds both, for the Worker and
@@ -171,7 +172,17 @@ export default defineConfig({
       // stylesheet until it has loaded — so on each route change the page
       // painted with an empty gap below the first heading for a frame. An
       // inline <style> applies as it is parsed. Costs ~4 KB gzipped per page.
-      expressiveCode: { emitExternalStylesheet: false },
+      //
+      // The syntax colours are the site's palette: `code-themes.ts` builds a dark and a light
+      // theme from the `--gmt-syntax-*` tokens. Starlight still draws the frames, tabs and
+      // buttons from its own colours (`useStarlightUiThemeColors`), and every token is held to
+      // the 7:1 code-frame floor.
+      expressiveCode: {
+        emitExternalStylesheet: false,
+        themes: codeThemes(),
+        useStarlightUiThemeColors: true,
+        minSyntaxHighlightingColorContrast: 7,
+      },
       head: [
         // Hold the first paint until the end-of-page marker (src/components/
         // Footer.astro) is parsed. On a route change the browser keeps showing
@@ -245,35 +256,30 @@ export default defineConfig({
           label: "Start here",
           collapsed: true,
           items: [
-            { slug: "why-gmt" },
-            { slug: "compare" },
-            { slug: "upstream" },
-            { slug: "core-rules" },
             { slug: "install" },
+            { slug: "core-rules" },
+            { slug: "why-gmt" },
+            { slug: "compare", label: "GMT vs. the others" },
             { slug: "bundle-size" },
-          ],
-        },
-        {
-          label: "Changelog",
-          items: [
-            { slug: "changelog", label: "@northguild/gmt" },
-            { slug: "changelog/gmt-eslint", label: "gmt-eslint" },
-            { slug: "changelog/gmt-oxlint", label: "gmt-oxlint" },
-            { slug: "changelog/gmt-biome", label: "gmt-biome" },
+            { slug: "upstream" },
           ],
         },
         {
           label: "Migrate",
           collapsed: true,
           items: [
-            { slug: "migrate" },
-            { slug: "migrate/date-fns" },
-            { slug: "migrate/luxon" },
-            { slug: "migrate/dayjs" },
-            { slug: "migrate/moment" },
-            { slug: "migrate/internationalized-date" },
-            { slug: "migrate/temporal" },
-            { slug: "compare/behaviour" },
+            // Short labels: the group already says "Migrate". Page titles stay in full.
+            { slug: "migrate", label: "Overview" },
+            { slug: "migrate/date-fns", label: "From date-fns" },
+            { slug: "migrate/luxon", label: "From Luxon" },
+            { slug: "migrate/dayjs", label: "From Day.js" },
+            { slug: "migrate/moment", label: "From Moment.js" },
+            {
+              slug: "migrate/internationalized-date",
+              label: "From @internationalized/date",
+            },
+            { slug: "migrate/temporal", label: "From native Temporal" },
+            { slug: "compare/behaviour", label: "Behaviour compared" },
           ],
         },
         { label: "Industries", collapsed: true, items: industriesSidebar },
@@ -302,6 +308,15 @@ export default defineConfig({
           label: "Checks",
           collapsed: false,
           items: [{ autogenerate: { directory: "check" } }],
+        },
+        {
+          label: "Changelog",
+          items: [
+            { slug: "changelog", label: "@northguild/gmt" },
+            { slug: "changelog/gmt-eslint", label: "gmt-eslint" },
+            { slug: "changelog/gmt-oxlint", label: "gmt-oxlint" },
+            { slug: "changelog/gmt-biome", label: "gmt-biome" },
+          ],
         },
       ],
       components: {

@@ -114,7 +114,7 @@ describe("isValidCalendarDate", () => {
   );
 
   // A date-time is valid and names its date, as `Temporal.PlainDate.from` reads it (decided
-  // 2026-09-17). Each accepted by native Chromium 153 and polyfill 0.5.1.
+  // 2026-09-17). Each accepted by native Chromium 153 and temporal-polyfill 1.0.8.
   it.each`
     value                                                   | reason
     ${"2024-10-03T00:00[u-ca=hebrew]"}                      | ${"calendar-annotated date-time"}

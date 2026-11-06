@@ -1,3 +1,9 @@
+import type {
+  DateTimeUnit,
+  LargestUnit,
+  RoundingMode,
+  SmallestUnit,
+} from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { durationRound, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
@@ -58,13 +64,13 @@ export function normalizeDuration(
      *
      * @defaultValue `"auto"`
      */
-    largestUnit?: Temporal.LargestUnit<Temporal.DateTimeUnit>;
+    largestUnit?: LargestUnit<DateTimeUnit>;
     /**
      * The smallest unit the result may carry; anything smaller is rounded into it.
      *
      * @defaultValue `"nanosecond"`, Temporal's default.
      */
-    smallestUnit?: Temporal.SmallestUnit<Temporal.DateTimeUnit>;
+    smallestUnit?: SmallestUnit<DateTimeUnit>;
     /**
      * The step `smallestUnit` is rounded to. It must evenly divide, and be less than, 24 for
      * hour, 60 for minute and second, and 1000 for the sub-second units. For year, month, week
@@ -81,7 +87,7 @@ export function normalizeDuration(
      *
      * @defaultValue `"halfExpand"`, Temporal's default.
      */
-    roundingMode?: Temporal.RoundingMode;
+    roundingMode?: RoundingMode;
     /**
      * The date or zoned date-time the duration is measured from. It is required whenever a year,
      * month or week is involved, as `largestUnit` or `smallestUnit` or as a nonzero field of the

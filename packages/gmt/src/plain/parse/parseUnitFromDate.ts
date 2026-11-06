@@ -1,3 +1,4 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
@@ -37,7 +38,7 @@ import { isoYearString } from "../../internal/isoYearString";
  */
 export function parseUnitFromDate(
   value: string,
-  unit: Temporal.SmallestUnit<"year" | "month" | "day" | "week"> | "dayOfWeek",
+  unit: SmallestUnit<"year" | "month" | "day" | "week"> | "dayOfWeek",
   optionsArg?: {
     /**
      * The first day of the week, which sets how the `"week"` unit is numbered. `"monday"` gives the

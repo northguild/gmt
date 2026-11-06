@@ -1,7 +1,9 @@
 import { alternativesStack } from "../data/date-alternatives";
 import { dateFaults } from "../data/date-faults";
 import { competitorComparisons } from "../data/library-comparison";
+import { comparisonRows, polyfillSets } from "./bundle-size-figures";
 import { renderMdxComponents } from "./mdx-jsx";
+import { whyGmtFigures } from "./why-gmt-figures";
 
 const rowsOf = (md: string): string[] =>
   md.split("\n").filter((line) => line.startsWith("|"));
@@ -15,9 +17,9 @@ describe("the Date-bug table in the text surfaces", () => {
     for (const f of shown) expect(rows.join("\n")).toContain(f.output);
   });
 
-  it("shows every fault with its reason, under its heading, on the full variant", () => {
+  it("shows every fault with its reason on the full variant, leaving the heading to the page", () => {
     const md = renderMdxComponents('<WhyDateBug variant="full" />');
-    expect(md).toContain("## The bug is the `Date` object");
+    expect(md).not.toMatch(/^#/m);
     const rows = rowsOf(md);
     expect(rows[0]).toBe("| You write | You get | Why |");
     expect(rows).toHaveLength(2 + dateFaults.length);
@@ -29,6 +31,17 @@ describe("the Date-bug table in the text surfaces", () => {
       '<WhyDateBug variant="home" /><WhyDateAlternatives variant="full" />',
     );
     expect(md).not.toMatch(/<[A-Z]/);
+  });
+});
+
+describe("the /why-gmt headline figures in the text surfaces", () => {
+  it("lists every figure with its label", () => {
+    const md = renderMdxComponents("<WhyGmtFigures />");
+    expect(md).not.toMatch(/<[A-Z]/);
+    const items = md.split("\n").filter((line) => line.startsWith("- "));
+    expect(items).toHaveLength(whyGmtFigures.length);
+    for (const f of whyGmtFigures)
+      expect(md).toContain(`- **${f.value}** ${f.label}`);
   });
 });
 
@@ -65,5 +78,63 @@ describe("competitor data the library table leans on", () => {
   it("states every library's time resolution, so the table can say it", () => {
     for (const lib of competitorComparisons)
       expect(lib.timeResolution).toBe("millisecond");
+  });
+});
+
+describe("the polyfill comparison in the text surfaces", () => {
+  const md = renderMdxComponents("<PolyfillCompare />");
+  const rows = rowsOf(md);
+
+  it("names both packages in its header", () => {
+    const { shipped, previous } = polyfillSets();
+    expect(rows[0]).toContain(`\`${shipped.package}\` gzipped`);
+    expect(rows[0]).toContain(`\`${previous.package}\` gzipped`);
+  });
+
+  it("has a row for the floor and one for every compared entry", () => {
+    // header + separator + floor + rows
+    expect(rows).toHaveLength(2 + 1 + comparisonRows().length);
+  });
+
+  it("leaves no component tag behind", () => {
+    expect(md).not.toMatch(/<[A-Z]/);
+  });
+});
+
+describe("the captions of a chart's views in the text surfaces", () => {
+  const body = [
+    "<ChartContainer",
+    '  title="Sizes"',
+    "  views={[",
+    '    { id: "a", label: "A", svg: x, caption: `First view, ${one} items.` },',
+    '    { id: "b", label: "B", svg: y, caption: "Second view." },',
+    "  ]}",
+    "/>",
+  ].join("\n");
+
+  it("keeps each view's caption as a line of text, with its expressions as {…}", () => {
+    const out = renderMdxComponents(body);
+    expect(out).toContain("First view, {one} items.");
+    expect(out).toContain("Second view.");
+    expect(out).not.toContain("<ChartContainer");
+  });
+
+  it("leaves a chart with a single caption as it was", () => {
+    const out = renderMdxComponents(
+      '<ChartContainer title="T" caption="One." svg={x} />',
+    );
+    expect(out).toContain("**T — One.**");
+  });
+});
+
+describe("an aside in the text surfaces", () => {
+  it("keeps its title as a bold line above its text", () => {
+    const out = renderMdxComponents(
+      '<Aside type="caution" title="Never throws">\nInvalid input returns a fallback.\n</Aside>',
+    );
+    expect(out).toContain(
+      "**Never throws**\n\nInvalid input returns a fallback.",
+    );
+    expect(out).not.toContain("<Aside");
   });
 });

@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 /**
- * Runs the whole packages/gmt suite on `temporal-polyfill` and judges it against the same suite on
- * `@js-temporal/polyfill` (CORE-92).
+ * The upgrade check: runs the whole packages/gmt suite on the newest `temporal-polyfill` release
+ * (the candidate) and judges it against the same suite on the pinned version (CORE-92, CORE-108).
  *
  *   node scripts/polyfill-swap.mjs <node|chromium|firefox|webkit> --version=<x.y.z>
  *   node scripts/polyfill-swap.mjs summary <node|chromium|firefox|webkit>
  *
- * A leg runs the suite twice on one host: the control on `@js-temporal/polyfill` and the swap on
- * `temporal-polyfill/full/implementation`, behind the unchanged seam (an alias, see
- * packages/gmt/vitest.swap.config.ts). A test that fails on the swap and passes on the control
- * blocks the swap; one that fails on both is the host's and does not. No tag excuses anything.
- * Type errors do not decide. The Node leg also compares the swap's UTC offsets with Intl's on
- * every day from 1970 to ten years ahead (scripts/lib/offset-sweep.mjs).
+ * A leg runs the suite twice on one host: the control on the pinned `temporal-polyfill` and the
+ * swap on the candidate, `temporal-polyfill-candidate/full/implementation`, behind the unchanged
+ * seam (an alias, see packages/gmt/vitest.swap.config.ts). A test that fails on the swap and passes
+ * on the control blocks the upgrade; one that fails on both is the host's and does not. No tag
+ * excuses anything. Type errors do not decide. The Node leg also compares the candidate's UTC
+ * offsets with Intl's on every day from 1970 to ten years ahead (scripts/lib/offset-sweep.mjs).
  *
- * The package must already be installed in packages/gmt (the swap job does it; it is never in a
- * manifest or lockfile). Exit 0 when both passes ran, whether the swap passed or not; 2 when the
+ * The candidate must already be installed in packages/gmt under the npm alias
+ * `temporal-polyfill-candidate` (the swap job does it; the alias is never in a committed manifest
+ * or lockfile). Exit 0 when both passes ran, whether the swap passed or not; 2 when the
  * leg could not run or the arguments are wrong. It never exits 1: the verdict is the signal.
  * `summary <leg>` prints the verdict as Markdown for the job summary and always exits 0.
  *
@@ -40,17 +41,19 @@ import { sweepOffsets, sweepSpan } from "./lib/offset-sweep.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const LEGS = ["node", "chromium", "firefox", "webkit"];
+/** The package name the job installs the candidate under (`npm:temporal-polyfill@<version>`). */
+const CANDIDATE_PACKAGE = "temporal-polyfill-candidate";
 /** Never `/full`: that entry returns the runtime's built-in `Temporal` where one exists. */
-const SWAP_ENTRY = "temporal-polyfill/full/implementation";
+const CANDIDATE_ENTRY = `${CANDIDATE_PACKAGE}/full/implementation`;
 const BROWSER_SHARDS = 8;
 /**
- * The test in the swap pass that proves GMT ran on `temporal-polyfill`
- * (packages/gmt/src/test/swapEntry.test.ts): the seam's `Temporal` is the swap entry's own object.
+ * The test in the swap pass that proves GMT ran on the candidate
+ * (packages/gmt/src/test/swapEntry.test.ts): the seam's `Temporal` is the candidate's own object.
  * Only the swap pass runs it, on Node and in every browser.
  */
 export const ENTRY_CHECK = {
   file: "src/test/swapEntry.test.ts",
-  test: "the swap pass runs GMT on the swap entry's own Temporal object",
+  test: "the swap pass runs GMT on the candidate release's own Temporal object",
 };
 const USAGE =
   "Usage: node scripts/polyfill-swap.mjs <node|chromium|firefox|webkit> --version=<x.y.z>\n" +
@@ -74,15 +77,15 @@ const messageOf = (error) =>
  * }} Deps
  */
 
-/** The swap implementation, imported from where packages/gmt resolves it. */
+/** The candidate implementation, imported from where packages/gmt resolves it. */
 async function loadEntry(root) {
   const require = createRequire(join(root, "packages/gmt/package.json"));
-  return import(pathToFileURL(require.resolve(SWAP_ENTRY)).href);
+  return import(pathToFileURL(require.resolve(CANDIDATE_ENTRY)).href);
 }
 
 /**
  * Whether the swap pass's report shows `ENTRY_CHECK` passed: the seam's `Temporal` was the swap
- * entry's object, so the pass tested `temporal-polyfill` and not the polyfill it replaces. A report
+ * entry's object, so the pass tested the candidate and not the pinned version it replaces. A report
  * without the test, or with it skipped or failed, says no.
  * @param {{ testResults: any[] }} report
  * @returns {boolean}
@@ -178,6 +181,23 @@ const realDeps = {
 };
 
 /**
+ * The version `packages/gmt/package.json` pins `temporal-polyfill` to (the control pass runs it),
+ * or `null` when the manifest is unreadable or has no such entry.
+ * @param {string} root
+ * @returns {string | null}
+ */
+function pinnedVersion(root) {
+  try {
+    const pin = JSON.parse(
+      readFileSync(join(root, "packages/gmt/package.json"), "utf8"),
+    ).dependencies?.["temporal-polyfill"];
+    return typeof pin === "string" ? pin : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Why the swap cannot run on this checkout, or `null`.
  * @param {string} root
  * @param {string} version
@@ -187,16 +207,19 @@ function installProblem(root, version) {
   try {
     installed = JSON.parse(
       readFileSync(
-        join(root, "packages/gmt/node_modules/temporal-polyfill/package.json"),
+        join(
+          root,
+          `packages/gmt/node_modules/${CANDIDATE_PACKAGE}/package.json`,
+        ),
         "utf8",
       ),
     ).version;
   } catch {
-    return "temporal-polyfill is not installed in packages/gmt";
+    return "temporal-polyfill-candidate is not installed in packages/gmt";
   }
   return installed === version
     ? null
-    : `installed temporal-polyfill is ${installed}, expected ${version}`;
+    : `installed temporal-polyfill-candidate is ${installed}, expected ${version}`;
 }
 
 /** @param {string} root @param {Leg} leg */
@@ -216,14 +239,14 @@ function readVerdict(root, leg) {
 /** @param {string} root @param {Leg} leg @param {(text: string) => void} stdout */
 function summary(root, leg, stdout) {
   const v = readVerdict(root, leg);
-  const lines = [`### Temporal polyfill swap (${leg})`, ""];
+  const lines = [`### Temporal polyfill upgrade check (${leg})`, ""];
   if (v === null) lines.push("no verdict was written");
   else if (v.status !== "ran") lines.push(`could not run: ${v.message}`);
   else {
     const c = v.counts;
     lines.push(
-      `temporal-polyfill ${v.version}: ${c.failed} tests fail on the swap and pass on @js-temporal/polyfill (of ${c.tests}).`,
-      `${c.both} fail on both; ${c.fixed} fail only on @js-temporal/polyfill.`,
+      `temporal-polyfill ${v.version}: ${c.failed} tests fail on the candidate and pass on the pinned version (of ${c.tests}).`,
+      `${c.both} fail on both; ${c.fixed} fail only on the pinned version.`,
     );
   }
   // A Node leg that could not run after its sweep still carries the sweep.
@@ -283,14 +306,22 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
   let sweepResult = null;
   /** @type {ReturnType<typeof runBoth>} */
   let passes;
+  /** @type {string | null} */
+  let pinned = null;
   try {
     const problem = installProblem(root, version);
     if (problem) throw new Error(problem);
+    pinned = pinnedVersion(root);
+    if (pinned === null) {
+      throw new Error(
+        'packages/gmt/package.json has no dependencies["temporal-polyfill"] pin',
+      );
+    }
     if (leg === "node") {
       const entry = await d.loadEntry(root);
       if (!entry.Temporal || entry.Temporal === globalThis.Temporal) {
         throw new Error(
-          "temporal-polyfill/full/implementation returned the runtime's built-in Temporal",
+          "temporal-polyfill-candidate/full/implementation returned the runtime's built-in Temporal",
         );
       }
       // Before the passes, so a suite timeout cannot lose it: `couldNotRun` keeps it in the
@@ -306,7 +337,7 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
   } catch (error) {
     return couldNotRun(error);
   }
-  // A swap pass that ran on the wrong Temporal proves nothing about temporal-polyfill, so it
+  // A swap pass that ran on the wrong Temporal proves nothing about the candidate, so it
   // files like any other leg that could not run, never as a pass or a failure.
   if (!entryLoaded(passes.swap)) return couldNotRun("swap entry not loaded");
 
@@ -347,7 +378,8 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
     polyfillSwapVerdict({
       leg,
       version,
-      entry: SWAP_ENTRY,
+      pinned: /** @type {string} */ (pinned),
+      entry: CANDIDATE_ENTRY,
       entryLoaded: entryLoaded(passes.swap),
       runtime: host,
       counts,

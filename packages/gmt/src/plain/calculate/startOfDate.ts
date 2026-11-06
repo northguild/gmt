@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
@@ -26,7 +27,7 @@ const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
  */
 export function startOfDate(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateUnit>,
+  unit: SmallestUnit<Temporal.DateUnit>,
   optionsArg?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

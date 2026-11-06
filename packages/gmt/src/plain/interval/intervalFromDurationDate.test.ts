@@ -92,7 +92,7 @@ describe("intervalFromDurationDate", () => {
   // E5 (issue #78): accepts a GMT calendar-annotated PlainDate string; the computed endpoint
   // is resolved in value's own calendar and both endpoints are re-formatted in it, re-derived
   // from the actual result rather than copied from value's tag. Golden verified directly
-  // against @js-temporal/polyfill.
+  // against temporal-polyfill 1.0.8.
   it("constructs the span in value's calendar (Hebrew Adar I + 1 month -> Adar)", () => {
     expect(
       intervalFromDurationDate("2024-02-24[u-ca=hebrew]", "P1M", "start"),
@@ -102,15 +102,15 @@ describe("intervalFromDurationDate", () => {
     });
   });
 
-  // CORE-6: the other endpoint goes through the calendar-correct add. Polyfill 0.5.1 throws
-  // `Invalid ISO date` for both edge rows (D1) and "Missing month" for Hebrew year -41 (D3).
+  // CORE-6: the other endpoint goes through the calendar-correct add. Polyfill 0.5.1 threw
+  // `Invalid ISO date` for both edge rows (range limit) and "Missing month" for Hebrew year -41 (negative year).
   // Expected values: Chromium 152 (q2-xscan-chromium152.json); the Hebrew result through the
   // Dershowitz–Reingold oracle, which agrees with every Chromium read of Hebrew years <= 0.
   it.each`
     value                                  | duration   | anchor     | start                                  | end                                    | reason
-    ${"+275759-09-13[u-ca=buddhist]"}      | ${"P1Y"}   | ${"start"} | ${"+275759-09-13[u-ca=buddhist]"}      | ${"+275760-09-13[u-ca=buddhist]"}      | ${"D1 at the maximum (xscan max[366])"}
-    ${"-271820-05-23[u-ca=islamic-civil]"} | ${"P1Y"}   | ${"end"}   | ${"-271821-06-03[u-ca=islamic-civil]"} | ${"-271820-05-23[u-ca=islamic-civil]"} | ${"D1 near the minimum (xscan min[400])"}
-    ${"-003801-01-03[u-ca=hebrew]"}        | ${"P1M"}   | ${"start"} | ${"-003801-01-03[u-ca=hebrew]"}        | ${"-003801-02-02[u-ca=hebrew]"}        | ${"D3/D4 (xscan hebrew stride k=979)"}
+    ${"+275759-09-13[u-ca=buddhist]"}      | ${"P1Y"}   | ${"start"} | ${"+275759-09-13[u-ca=buddhist]"}      | ${"+275760-09-13[u-ca=buddhist]"}      | ${"range limit at the maximum (xscan max[366])"}
+    ${"-271820-05-23[u-ca=islamic-civil]"} | ${"P1Y"}   | ${"end"}   | ${"-271821-06-03[u-ca=islamic-civil]"} | ${"-271820-05-23[u-ca=islamic-civil]"} | ${"range limit near the minimum (xscan min[400])"}
+    ${"-003801-01-03[u-ca=hebrew]"}        | ${"P1M"}   | ${"start"} | ${"-003801-01-03[u-ca=hebrew]"}        | ${"-003801-02-02[u-ca=hebrew]"}        | ${"negative year (xscan hebrew stride k=979)"}
     ${"2024-02-11[u-ca=hebrew]"}           | ${"PT48H"} | ${"start"} | ${"2024-02-11[u-ca=hebrew]"}           | ${"2024-02-13[u-ca=hebrew]"}           | ${"48 hours are 2 whole days (TC39 ToDateDurationRecordWithoutTime)"}
   `(
     "returns $start to $end for $value with $duration anchored at $anchor ($reason)",

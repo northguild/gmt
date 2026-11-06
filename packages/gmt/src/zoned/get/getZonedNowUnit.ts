@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { zonedNowUnitValue } from "../../internal/zonedNowUnitValue";
 import { parseWeekFromDate } from "../../plain/parse";
 import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
@@ -29,7 +29,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  * const u: ZonedNowUnit = "hour";
  */
 export type ZonedNowUnit =
-  | Temporal.SmallestUnit<
+  | SmallestUnit<
       | "year"
       | "month"
       | "week"
@@ -62,7 +62,7 @@ function isValidZonedNowUnit(unit: string): unit is ZonedNowUnit {
 /**
  * Return the requested current unit value for the specified IANA timeZone.
  *
- * - Uses nowZonedDateTimeISO() to get the current time.
+ * - Uses Temporal.Now.zonedDateTimeISO() to get the current time.
  * - `week` is the ISO 8601 week number, from `parseWeekFromDate`.
  * - Validation is performed on timezone and unit.
  * - `unit` accepts the singular or plural name of a Temporal unit (`"hour"` or `"hours"`), as Temporal

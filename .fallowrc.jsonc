@@ -1,7 +1,7 @@
 {
   // `vitest bench` runs these; no plugin finds them. The browser twins and the worker are served
   // by name from vitest.browser.config.ts and loaded by URL, which no import graph shows. The
-  // native vitest configs load nativeTemporal.ts through an alias of `@js-temporal/polyfill`, and
+  // native vitest configs load nativeTemporal.ts through an alias of `temporal-polyfill/full/implementation`, and
   // vitest loads the native-suite reporter by path.
   "entry": [
     "packages/gmt/src/test/nativeTemporal.ts",
@@ -15,6 +15,9 @@
     "@tanstack/intent",
     "@northguild/gmt-oxlint",
     "@vitest/browser-playwright",
+    // The last published GMT release, bundled by scripts/bundle-size.mjs for the old figures; only
+    // esbuild input strings name it.
+    "gmt-js-temporal-release",
   ],
   // The behaviour-matrix runner has its own package.json and lockfile outside the workspace.
   "ignorePatterns": ["oxlint.config.js", "scripts/behaviour-matrix/**"],

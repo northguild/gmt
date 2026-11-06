@@ -60,6 +60,12 @@ redefine them.
   and 4's inks reach only 5.7–6.7:1 on any surface lighter than `--gmt-void`. So a series
   colour goes on marks, stems, edges and swatches, never on text, and the series' name in
   `--gmt-ice` carries its meaning.
+- **Polyfill tokens** (`--gmt-polyfill-shipped` green `#0f9a47`, `--gmt-polyfill-previous` slate grey
+  `#64748b`) colour the two polyfills on `/bundle-size`. Each has one value for both themes and no
+  light override, and each reaches 3:1 against void, surface, surface-2 and the glass composite in
+  both (`polyfill-tokens.test.ts`). They are not spring and signal, because spring is the site's
+  accent and signal (amber) is reserved for NO SIGNAL: a comparison between two packages must
+  not borrow either meaning. They go on marks and swatches only, never on text.
 - **Theme-role tokens** (`--gmt-code-surface`, `--gmt-sidebar-link`, …) resolve to a different
   token per theme, so the rule that uses one needs no light block.
 - **`-ink` tokens** (`--gmt-cyan-ink`, `--gmt-spring-ink`, `--gmt-purple-ink`, `--gmt-signal-ink`,
@@ -443,6 +449,15 @@ and leap-second tools list their roots in the same sheets. All of them read as o
     tallest thing it can show (hidden sizers, fixed slot counts, a NO SIGNAL slot that is only
     made visible), and the server HTML hides the fields the initial state hides (built.md §
     Gates).
+- **A comparison bar is a solid mark in the series token.** The `/bundle-size` bars are the
+  token itself (`var(--gmt-polyfill-shipped)`, `var(--gmt-polyfill-previous)`), not the gradient
+  the `/why-gmt` bars use, so the colour a reader sees is the colour the key names. In the
+  split chart the polyfill is the solid part and GMT's code the hatched part of the same hue
+  (`barHatch`, tint 0.12, outline 1.5 in the token). The shipped bar always sits above the
+  previous bar, found by the report's `shipped` flag, never by position. Under forced colours
+  the hatched edge goes dashed and the shipped bars take `CanvasText`. The key swatches
+  (`chartKey` with `hue`) and the hidden summary say the package names in words, so no
+  meaning rests on colour.
 - **The industry chart on `/why-gmt` never counts a function twice.** Each industry's bar is its
   own namespace as a solid spring segment, then each module it draws on as a hatched tint of the
   same series (`barHatchId("spring")`, `shaded`), so a shared layer reads as borrowed, not owned.

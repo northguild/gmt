@@ -1,4 +1,5 @@
 import { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit, PluralUnit } from "../../internal/temporalTypes";
 import {
   isoWeekOfYear,
   zonedNowUnitValue,
@@ -6,7 +7,6 @@ import {
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { isValidDateTimeUnit } from "../../plain/validate";
 import type { UnixNowUnit } from "../../types";
-import { nowInstant } from "../../internal/temporalCompat";
 
 export type { UnixNowUnit };
 
@@ -19,7 +19,7 @@ function isValidUnixNowUnit(unit: string): unit is UnixNowUnit {
  *
  * - Valid units: "year", "month", "week", "day", "dayOfWeek", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond". Temporal units may also be plural ("hours").
  * - `microsecond` and `nanosecond` are Temporal's 0–999 fields, zero-padded to 3 digits.
- * - Uses nowInstant() converted to UTC zoned date time.
+ * - Uses Temporal.Now.instant() converted to UTC zoned date time.
  * - Returns "" on invalid unit or failure.
  * - The `"year"` unit is written as Temporal writes a year: four digits (`"2024"`, `"0005"`), or a
  *   sign and six digits outside 0000–9999 (`"+010000"`, `"-000005"`).
@@ -33,14 +33,14 @@ function isValidUnixNowUnit(unit: string): unit is UnixNowUnit {
  * @example getUnixNowUnit("invalid") // ""
  */
 export function getUnixNowUnit(
-  unit: UnixNowUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>,
+  unit: UnixNowUnit | PluralUnit<DateTimeUnit>,
 ): string {
   const resolved = typeof unit === "string" ? resolveDateTimeUnit(unit) : "";
 
   if (!isValidUnixNowUnit(resolved)) return "";
 
   try {
-    const now = nowInstant().toZonedDateTimeISO("UTC");
+    const now = Temporal.Now.instant().toZonedDateTimeISO("UTC");
     return zonedNowUnitValue(now, resolved, isoWeekOfYear);
   } catch {
     return "";

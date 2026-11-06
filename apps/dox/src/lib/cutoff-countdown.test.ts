@@ -2,7 +2,7 @@
  * `cutoff-countdown.ts`'s pure helpers, against the real gmt modules. Every
  * expected literal is an appendix Z row (C1-C10).
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { isPastCutoff, timeToCutoff } from "@northguild/gmt/transport/compare";
 import { etaAtZone } from "@northguild/gmt/transport/convert";
 import { isValidTimeZone } from "@northguild/gmt/zoned/validate";

@@ -27,9 +27,12 @@ import {
   formatCount,
   formatNamespaceList,
   gmtStats,
+  industryFunctions,
   industryNamespaces,
   runsPerTest,
 } from "../data/gmt-stats";
+import { nativeFailures } from "../data/native-engine-failures";
+import { polyfillFigures } from "./bundle-size-figures";
 import { measurementDateRange } from "./library-compare-tables";
 import { familyCounts, formatFamilyCounts } from "./locale-families";
 import { formatOffset, zoneOffsetRange } from "./timezone-offset-range";
@@ -60,6 +63,19 @@ export function pageExpressionValues(): Record<string, string> {
 
   return {
     ...checkedLines,
+    // The /bundle-size figures: one entry per key, so a new key cannot be forgotten.
+    ...Object.fromEntries(
+      Object.entries(polyfillFigures).map(([key, value]) => [
+        `polyfillFigures.${key}`,
+        value,
+      ]),
+    ),
+    ...Object.fromEntries(
+      Object.entries(nativeFailures).map(([key, value]) => [
+        `nativeFailures.${key}`,
+        value,
+      ]),
+    ),
     "matrix.measuredOn": matrix.measuredOn,
     "matrix.runtime.node": matrix.runtime.node,
     'matrix.runtime.hostZones.join(", ")': matrix.runtime.hostZones.join(", "),
@@ -83,6 +99,7 @@ export function pageExpressionValues(): Record<string, string> {
     "industryNamespaces.length": String(industryNamespaces.length),
     coreNamespaceList: formatNamespaceList(coreNamespaces),
     industryNamespaceList: formatNamespaceList(industryNamespaces),
+    industryFunctions: String(industryFunctions),
     "formatCount(coreFunctions)": formatCount(coreFunctions),
     "formatCount(plainAndZoned)": formatCount(plainAndZoned),
     offsetWindowHours: String(offsetWindowHours),

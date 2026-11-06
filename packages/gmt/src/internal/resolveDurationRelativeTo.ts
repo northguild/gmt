@@ -51,9 +51,8 @@ function hasRelativeToShape(value: string): boolean {
  *   whose time Temporal drops, `parseCalendarDateValue`). Annotations follow Temporal's
  *   grammar: elective unknown ones are ignored, the first `u-ca` wins, and an unknown critical
  *   annotation, a critical duplicate calendar, a calendar before the zone and `;era=` throw. The
- *   calendar must be a `CalendarSystem`, and `"ethiopic"`/`"coptic"` compute in `"ethioaa"`,
- *   which polyfill 0.5.1 can read. The digits are ISO, so this is the date Temporal itself would
- *   read.
+ *   calendar must be a `CalendarSystem`. The digits are ISO, so this is the date Temporal itself
+ *   would read.
  * - A zoned string without a calendar annotation is read with `zonedDateTimeFrom`, so its offset
  *   is matched against the zone as TC39 `ToRelativeTemporalObject` matches it: an offset written
  *   to the minute may be the zone's sub-minute offset rounded, and one written with seconds must
@@ -87,9 +86,8 @@ export function resolveDurationRelativeTo(
     );
   }
   if (!anyCalendarAnnotation.test(relativeTo)) {
-    // A zoned string is read here, not handed on as text: `zonedDateTimeFrom` matches an offset
-    // written with seconds exactly, as TC39 `ToRelativeTemporalObject` requires and polyfill
-    // 0.5.1 does not (temporalCompat D12).
+    // Read once here, so every caller gets a ZonedDateTime and a bad offset throws in this
+    // function (TC39 `ToRelativeTemporalObject`), not later in the caller's Temporal call.
     return timeZoneAnnotation.test(relativeTo)
       ? zonedDateTimeFrom(relativeTo)
       : relativeTo;

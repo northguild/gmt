@@ -32,10 +32,10 @@ describe("topLevelPages", () => {
     };
     expect(topLevelPages(raw)).toEqual([
       { slug: "index", source: "x" },
+      { slug: "install", source: "i" },
+      { slug: "core-rules", source: "c" },
       { slug: "why-gmt", source: "w" },
       { slug: "upstream", source: "u" },
-      { slug: "core-rules", source: "c" },
-      { slug: "install", source: "i" },
       { slug: "alpha", source: "a" },
       { slug: "zebra", source: "z" },
     ]);

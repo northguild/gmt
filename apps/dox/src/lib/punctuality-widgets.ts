@@ -4,10 +4,10 @@
  * `punctualityRate`), the ETA Drift Chart (`bestAvailable`, `estimateDrift`)
  * and the Departure Board (`nextDeparture`).
  *
- * No gmt import: every widget-facing function takes a `PunctualityLib`,
+ * No gmt function import (only `Temporal`): every widget-facing function takes a `PunctualityLib`,
  * loaded by the mount from the real package (`punctuality-lib.ts`).
  *
- * `@js-temporal/polyfill` is imported for drawing only: turning a returned ISO
+ * `Temporal` comes from `@northguild/gmt` and is used for drawing only: turning a returned ISO
  * duration into a length on an axis (`isoToMinutes`), reading the weekday off a
  * date the caller wrote, and tick instants. Every deviation, class, rate,
  * best-available pick, drift and departure the widgets show comes from a real
@@ -21,7 +21,7 @@
  * and the GTFS `frequencies.txt` format may be named; nothing else is.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   durationText,
   localLabel,

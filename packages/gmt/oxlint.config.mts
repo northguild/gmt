@@ -34,6 +34,18 @@ export default defineConfig({
             paths: [
               {
                 name: "@js-temporal/polyfill",
+                message:
+                  "GMT runs on temporal-polyfill; import Temporal from internal/temporal",
+              },
+            ],
+            patterns: [
+              {
+                group: ["@js-temporal/polyfill/**"],
+                message:
+                  "GMT runs on temporal-polyfill; import Temporal from internal/temporal",
+              },
+              {
+                group: ["temporal-polyfill", "temporal-polyfill/**"],
                 message: "Import Temporal from internal/temporal",
               },
             ],

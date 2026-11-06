@@ -4,7 +4,6 @@ import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { isValidTime } from "../validate";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
 import { isObject } from "../../internal/isObject";
-import { nowPlainTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatRelativeTime`: the reference time, the display unit, the rounding and the
@@ -78,7 +77,7 @@ export function formatRelativeTime(
       const target = Temporal.PlainTime.from(value);
       const reference = referenceOption
         ? Temporal.PlainTime.from(referenceOption)
-        : nowPlainTimeISO();
+        : Temporal.Now.plainTimeISO();
 
       const diff = target.since(reference);
       const absSeconds = Math.abs(diff.total("second"));

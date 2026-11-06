@@ -8,28 +8,13 @@ export {
   calendarDateFromMonthCode,
   longestDayOfMonthCode,
 } from "./calendarDateFromMonthCode";
-export { calendarDateFromFields } from "./calendarDateFromFields";
 export {
-  isCalendarArithmeticCompatNeeded,
-  isDayRoundClampCompatNeeded,
-  isIsoCalendarCaseCompatNeeded,
   isNudgeOriginCompatNeeded,
-  isNudgeWindowCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
-  isSecondsOffsetMatchCompatNeeded,
   isTimeZoneEqualsCompatNeeded,
-  isTransitionSearchCompatNeeded,
-  isZIgnoreExactCompatNeeded,
 } from "./capabilities";
-export {
-  nowInstant,
-  nowPlainDateISO,
-  nowPlainDateTimeISO,
-  nowPlainTimeISO,
-  nowZonedDateTimeISO,
-} from "./clock";
-export { monthDayFrom, yearMonthFrom } from "./isoCalendarFrom";
+export { MAX_MONTHS_IN_RANGE, assertMonthsInRange } from "./monthRange";
 export { calendarFieldsOf } from "./calendarFields";
 export {
   type HostTemporal,

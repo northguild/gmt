@@ -1,3 +1,4 @@
+import { Temporal } from "../../internal/temporal";
 import { imfFixdate } from "../../internal/englishCalendarNames";
 import {
   addLengthToStart,
@@ -6,7 +7,6 @@ import {
   wholeMillisecondsUntil,
   wholeSecondsUntil,
 } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import { toUnixEpoch } from "../../internal/unixEpochValue";
 import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
@@ -70,7 +70,7 @@ export function ttlFromNow(
       return null;
     }
 
-    const start = nowInstant();
+    const start = Temporal.Now.instant();
     const end = addLengthToStart(start, amounts, utcLengthFrame());
     const httpDate = imfFixdate(end.toZonedDateTimeISO("UTC"));
     if (httpDate === "") {

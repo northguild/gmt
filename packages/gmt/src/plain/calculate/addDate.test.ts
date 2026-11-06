@@ -142,7 +142,7 @@ describe("addDate", () => {
   // E5 (issue #78): addDate accepts a GMT calendar-annotated PlainDate string, resolves
   // calendar-unit arithmetic in that calendar, and re-derives the output tag (never copies
   // it) since arithmetic can cross a leap-month or era boundary. All goldens verified
-  // directly against @js-temporal/polyfill during E5 research.
+  // directly against temporal-polyfill 1.0.8 during E5 research.
   it.each`
     value                                       | units            | options                      | expected                                | note
     ${hebrewLeapYear5784.adarI15}               | ${{ months: 1 }} | ${undefined}                 | ${hebrewLeapYear5784.adar15}            | ${"Adar I -> Adar (Hebrew leap month)"}
@@ -159,13 +159,13 @@ describe("addDate", () => {
     },
   );
 
-  // CORE-6 D1-A: the polyfill's calendar add probes outside the legacy Date range within about a
-  // year of a limit and throws. Expected values: Chromium 152 native Temporal
-  // (q2-xscan-chromium152.json edge rows `[n]`). A result past the maximum must stay "" (TC39
-  // ISODateWithinLimits): the workaround never clamps.
+  // range limit: calendar adds that land on, or one day past, the ISO date limit. Expected values:
+  // Chromium 152 native Temporal (q2-xscan-chromium152.json edge rows `[n]`); `temporal-polyfill`
+  // 1.0.8 gives the same. A result past the maximum must stay "" (TC39 ISODateWithinLimits): it
+  // is never clamped.
   it.each`
     value                             | units            | expected                          | reason
-    ${"+275759-09-13[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"+275760-09-13[u-ca=buddhist]"} | ${"D1-A: lands exactly on the maximum (xscan buddhist max[366])"}
+    ${"+275759-09-13[u-ca=buddhist]"} | ${{ years: 1 }}  | ${"+275760-09-13[u-ca=buddhist]"} | ${"range limit: lands exactly on the maximum (xscan buddhist max[366])"}
     ${"+275760-08-15[u-ca=hebrew]"}   | ${{ months: 1 }} | ${"+275760-09-13[u-ca=hebrew]"}   | ${"lands exactly on the maximum (xscan hebrew max[29])"}
     ${"+275760-08-16[u-ca=hebrew]"}   | ${{ months: 1 }} | ${""}                             | ${"one day past the maximum is a RangeError, not clamped (xscan hebrew max[28] ERR)"}
   `(
@@ -175,7 +175,7 @@ describe("addDate", () => {
     },
   );
 
-  // CORE-6 D1-A windows the polyfill throws in, away from the exact limit (read-model path).
+  // range limit: calendar adds within about a year of a limit but not on it (read-model path).
   // Chromium 152 edge rows: result ISO dates are read back from the same scan's rows.
   it.each`
     value                                     | units            | expected                                  | reason
@@ -194,8 +194,8 @@ describe("addDate", () => {
     },
   );
 
-  // CORE-6 corrected calendars, where polyfill 0.5.1 reads (and so adds) wrongly or throws:
-  // buddhist before 1582-10-15 (D2), Hebrew years <= 0 (D3 + D4), Indian before ISO year 1 (D5).
+  // corrected calendars, where polyfill 0.5.1 read (and so added) wrongly or threw:
+  // buddhist before 1582-10-15, Hebrew years <= 0, Indian before ISO year 1.
   // Expected values: Chromium 152 stride and edge rows (q2-xscan-chromium152.json). Result ISO
   // dates become calendar strings through independent oracles (buddhist ISO year + 543;
   // Dershowitz–Reingold Hebrew; the Saka rule), each agreeing with every Chromium read of the
@@ -251,7 +251,7 @@ describe("addDate", () => {
     },
   );
 
-  // CORE-6 modern grid subset: +1 month (constrain and reject), +1 year and -13 months
+  // modern grid subset: +1 month (constrain and reject), +1 year and -13 months
   // from the same starts as diffDateAsDuration.test.ts. Expected values: Chromium 152 native
   // Temporal (q2-grid-chromium152.json); "" where Chromium throws.
   it.each`

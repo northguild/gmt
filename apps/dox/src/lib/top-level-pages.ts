@@ -9,12 +9,12 @@ import { INDUSTRY_LAYER_IDS } from "./industry-tags";
 /** Top-level pages that lead, in this order; any other follows alphabetically. */
 const START_ORDER = [
   "index",
+  "install",
+  "core-rules",
   "why-gmt",
   "compare",
-  "upstream",
-  "core-rules",
-  "install",
   "bundle-size",
+  "upstream",
 ];
 
 /** A glob key's path relative to `content/docs/`, without its extension. */

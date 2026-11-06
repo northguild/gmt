@@ -103,7 +103,7 @@ describe("startOfUnix", () => {
 
   // Local midnight itself is a DST gap (America/Sao_Paulo jumped 00:00 -> 01:00 on 2018-11-04), so
   // the day starts at its first real instant (Temporal's `startOfDay()`, 1541300400000) whatever
-  // `disambiguation` says. Verified on @js-temporal/polyfill@0.5.1.
+  // `disambiguation` says. Verified on temporal-polyfill 1.0.8.
   it.each`
     disambiguation  | expected
     ${undefined}    | ${1541300400000}
@@ -124,8 +124,8 @@ describe("startOfUnix", () => {
 });
 
 // The start is the real zone boundary, never
-// after the input. Every expected value verified against `floorToZone` on
-// @js-temporal/polyfill@0.5.1.
+// after the input. Every expected value is the bucket start recomputed directly on
+// temporal-polyfill 1.0.8 (wall-clock labels read per instant), not through GMT.
 // 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]; 1727532000000 is its 03:45
 // 1712412300000 is 2024-04-07T02:50:00+12:45[Pacific/Chatham]; 1712412000000 is its 02:45
 // 1601742600000 is 2020-10-04T03:30:00+11:00[Antarctica/Casey]; 1601740860000 is its 03:01
@@ -163,8 +163,8 @@ describe("startOfUnix across zone transitions with default options", () => {
 
   // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
   // starts at 23:01 (-04:00). An explicit `disambiguation` used to return the previous Sunday's
-  // midnight (1288494000000), a week before the input; it is now ignored. Verified against the
-  // `internal/zonedBucket.ts` walker (weekStartsOn 7) on @js-temporal/polyfill@0.5.1.
+  // midnight (1288494000000), a week before the input; it is now ignored. Recomputed directly on
+  // temporal-polyfill 1.0.8 as the start of the run of 'Sunday-first week' labels holding the input.
   it.each`
     options                                                                                    | expected
     ${{ timeZone: "America/Goose_Bay", weekStartsOn: "sunday" }}                               | ${1289098860000}
@@ -251,12 +251,12 @@ describe("startOfUnix with an invalid weekStartsOn", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("startOfUnix across the 1844 date-line crossings (zoned.E)", () => {
+describe("startOfUnix across the 1844 date-line crossings", () => {
   it.each(dateLineCrossingTimeZones)(
     "starts the week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",
     (crossing) => {

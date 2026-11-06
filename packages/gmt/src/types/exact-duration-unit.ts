@@ -7,7 +7,7 @@ import type { Temporal } from "../internal/temporal";
  * weeks are left out: Temporal gives them no length without a date to measure from.
  */
 export type ExactDurationUnit = keyof Pick<
-  Temporal.DurationLike,
+  Temporal.DurationLikeObject,
   | "days"
   | "hours"
   | "minutes"

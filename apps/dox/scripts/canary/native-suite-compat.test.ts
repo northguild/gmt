@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,8 +24,7 @@ import {
 
 const PATHS = {
   dist: "/repo/packages/gmt/dist",
-  polyfill: "/repo/node_modules/@js-temporal/polyfill/dist/index.esm.js",
-  jsbi: "/repo/node_modules/jsbi/dist/jsbi.mjs",
+  polyfill: "export const Temporal = {};\n",
 };
 
 /** One passing probe per defect every workaround group names, on the given engine. */
@@ -56,11 +49,11 @@ const groupOf = (groups: ReturnType<typeof groupResults>, id: string) => {
 describe("compatPage", () => {
   const page = compatPage();
 
-  it("maps the polyfill's bare imports onto the page's own paths", () => {
+  it("maps the one specifier the compiled repros import onto the page's own bundle", () => {
     const map = /<script type="importmap">(.*?)<\/script>/s.exec(page);
     if (!map) throw new Error("no import map");
     expect(JSON.parse(map[1])).toEqual({
-      imports: { "@js-temporal/polyfill": "/polyfill.js", jsbi: "/jsbi.js" },
+      imports: { "temporal-polyfill/full/implementation": "/polyfill.js" },
     });
   });
 
@@ -78,15 +71,15 @@ describe("compatPage", () => {
 });
 
 describe("compatFile", () => {
-  it("serves the polyfill's ESM build and jsbi at their page paths", () => {
+  it("serves the in-memory polyfill bundle at its page path", () => {
     expect(compatFile("/polyfill.js", PATHS)).toEqual({
-      path: PATHS.polyfill,
+      body: PATHS.polyfill,
       contentType: "text/javascript",
     });
-    expect(compatFile("/jsbi.js", PATHS)).toEqual({
-      path: PATHS.jsbi,
-      contentType: "text/javascript",
-    });
+  });
+
+  it("serves nothing at the old jsbi path", () => {
+    expect(compatFile("/jsbi.js", PATHS)).toBeNull();
   });
 
   it("serves a .js file under dist", () => {
@@ -126,73 +119,57 @@ describe("compatPaths", () => {
     );
   });
 
-  it("finds dist, the installed polyfill's ESM build and jsbi beside it", () => {
+  it("finds dist and bundles the installed polyfill's full implementation into one file with no imports left", () => {
     const folder = join(root, "packages/gmt/dist/internal/temporalCompat");
     mkdirSync(folder, { recursive: true });
     writeFileSync(join(folder, "repros.js"), "export const repros = [];\n");
     const paths = compatPaths(root);
     expect(paths.dist).toBe(join(root, "packages/gmt/dist"));
-    expect(
-      paths.polyfill.endsWith("/@js-temporal/polyfill/dist/index.esm.js"),
-    ).toBe(true);
-    expect(paths.jsbi.endsWith("/jsbi/dist/jsbi.mjs")).toBe(true);
-    expect(existsSync(paths.polyfill)).toBe(true);
-    expect(existsSync(paths.jsbi)).toBe(true);
+    expect(paths.polyfill).toMatch(/\bexport\s*\{[^}]*\bTemporal\b/);
+    expect(paths.polyfill).not.toMatch(/^\s*import[\s"'{]/m);
+    expect(paths.polyfill).not.toMatch(/\bfrom\s*["']/);
   });
 });
 
 describe("groupResults", () => {
   it("gives one group per workaround in script order, with the repro and output of each probe", () => {
-    const groups = groupResults(everyProbe(), "0.5.1", "v8");
+    const groups = groupResults(everyProbe(), "v8");
     expect(groups.map((g) => g.workaround)).toEqual(WORKAROUNDS);
-    const d1 = groupOf(groups, "D1");
-    expect(d1.results).toEqual([
+    const d16 = groupOf(groups, "D16");
+    expect(d16.results).toEqual([
       {
-        repro: { defect: "D1", calendar: "iso8601", name: "D1 probe" },
+        repro: { defect: "D16", calendar: "iso8601", name: "D16 probe" },
         output: "spec value",
         passes: true,
       },
     ]);
-    expect(d1.passing).toBe(1);
+    expect(d16.passing).toBe(1);
   });
 
-  it("on V8, every passing group is removable except a guard inside its window and the one-engine groups", () => {
-    const groups = groupResults(everyProbe(), "0.5.1", "v8");
+  it("on V8, every passing group is removable except the one-engine groups", () => {
+    const groups = groupResults(everyProbe(), "v8");
     const states = Object.fromEntries(
       groups.map((g) => [g.workaround.defects.join("+"), g.state]),
     );
-    expect(states.D10).toBe("guard");
     expect(states.D17).toBe("out-of-scope");
-    expect(states.D18).toBe("out-of-scope");
     expect(states.D19).toBe("out-of-scope");
     expect(
       Object.entries(states)
-        .filter(
-          ([id]) =>
-            id !== "D10" && id !== "D17" && id !== "D18" && id !== "D19",
-        )
+        .filter(([id]) => id !== "D17" && id !== "D19")
         .every(([, state]) => state === "removable"),
     ).toBe(true);
-    expect(groupOf(groups, "D10").guardLapsed).toBe(false);
   });
 
   it("the same results on Firefox make the Firefox-only group removable", () => {
-    const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.firefox);
+    const groups = groupResults(everyProbe(), ENGINE_IDS.firefox);
     expect(groupOf(groups, "D17").state).toBe("removable");
-    expect(groupOf(groups, "D10").state).toBe("guard");
-  });
-
-  it("on WebKit the Firefox-only group is out of scope and the WebKit-only groups are removable", () => {
-    const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.webkit);
-    expect(groupOf(groups, "D17").state).toBe("out-of-scope");
-    expect(groupOf(groups, "D18").state).toBe("removable");
-    expect(groupOf(groups, "D19").state).toBe("removable");
-  });
-
-  it("on Firefox the WebKit-only groups are out of scope", () => {
-    const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.firefox);
-    expect(groupOf(groups, "D18").state).toBe("out-of-scope");
     expect(groupOf(groups, "D19").state).toBe("out-of-scope");
+  });
+
+  it("on WebKit the Firefox-only group is out of scope and the WebKit-only group is removable", () => {
+    const groups = groupResults(everyProbe(), ENGINE_IDS.webkit);
+    expect(groupOf(groups, "D17").state).toBe("out-of-scope");
+    expect(groupOf(groups, "D19").state).toBe("removable");
   });
 
   it("one failing probe makes its group still needed, on any engine", () => {
@@ -200,7 +177,7 @@ describe("groupResults", () => {
       const results = everyProbe().map((r) =>
         r.defect === "D17" ? { ...r, output: "wrong", passes: false } : r,
       );
-      const d17 = groupOf(groupResults(results, "0.5.1", engineId), "D17");
+      const d17 = groupOf(groupResults(results, engineId), "D17");
       expect(d17.state).toBe("still-needed");
       expect(d17.passing).toBe(0);
       expect(d17.results[0].output).toBe("wrong");
@@ -208,16 +185,10 @@ describe("groupResults", () => {
   });
 
   it("a group with no probe in the results is still needed: no evidence is not a pass", () => {
-    const results = everyProbe().filter((r) => r.defect !== "D1");
-    const d1 = groupOf(groupResults(results, "0.5.1", "v8"), "D1");
-    expect(d1.results).toEqual([]);
-    expect(d1.state).toBe("still-needed");
-  });
-
-  it("a guard past its window is removable and says the guard lapsed", () => {
-    const d10 = groupOf(groupResults(everyProbe(), "99.0.0", "v8"), "D10");
-    expect(d10.state).toBe("removable");
-    expect(d10.guardLapsed).toBe(true);
+    const results = everyProbe().filter((r) => r.defect !== "D16");
+    const d16 = groupOf(groupResults(results, "v8"), "D16");
+    expect(d16.results).toEqual([]);
+    expect(d16.state).toBe("still-needed");
   });
 
   it("throws on a repro whose defect no group claims, naming each once", () => {
@@ -230,7 +201,6 @@ describe("groupResults", () => {
           { ...stray, defect: "D99" },
           { ...stray, defect: "D42" },
         ],
-        "0.5.1",
         "v8",
       ),
     ).toThrow(
@@ -317,8 +287,7 @@ describe("runBrowserCompat with a fake browser", () => {
     expect(verdict.counts).toEqual({
       workarounds: WORKAROUNDS.length,
       stillNeeded: 0,
-      removable: WORKAROUNDS.length - 2,
-      guard: 1,
+      removable: WORKAROUNDS.length - 1,
       outOfScope: 1,
     });
     expect(verdict.workarounds.find((w) => w.id === "D17")).toMatchObject({

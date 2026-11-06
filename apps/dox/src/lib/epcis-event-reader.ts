@@ -10,7 +10,7 @@
  * result beside it, is a real `EpcisLib` call. The site-side code only builds
  * the event object, places the marks of the two day rails and words the verdicts.
  *
- * No DOM and no gmt import: the library comes in from the mount. The polyfill is
+ * No DOM and no gmt function import (only `Temporal`): the library comes in from the mount. The polyfill is
  * imported for drawing only (where the day rails put a midnight).
  *
  * Why `NO SIGNAL` is decided by the library, not by this file: whether a field
@@ -21,7 +21,7 @@
  * ISO/IEC 19987, the DCSA field `shippedOnBoardDate`) and nothing else: no law,
  * no rule-making body, no carrier. Nothing maps a place or an offset to a zone.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { PicField, PicHalf } from "./edi-picture";
 import { callArgs, formatValue, runCall, type EdiCall } from "./edi-widgets";
 import type { EpcisLib } from "./edi-lib";

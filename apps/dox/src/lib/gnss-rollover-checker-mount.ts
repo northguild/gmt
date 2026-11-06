@@ -24,7 +24,7 @@
  * widget with the mount's `signal`. The one drag handle is a native range, and the date
  * field is its typed equivalent.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { defineElements } from "~/widgets/define";
 import {
   aside,

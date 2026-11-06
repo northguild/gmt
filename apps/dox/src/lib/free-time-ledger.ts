@@ -10,11 +10,11 @@
  * prints what they return. The colouring here is drawing, and a test asserts
  * it agrees with the library for every preset.
  *
- * No DOM and no gmt import, mirroring `dwell-ledger.ts`: validators come in
+ * No DOM and no gmt function import (only `Temporal`), mirroring `dwell-ledger.ts`: validators come in
  * from the mount, loaded from the real package.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import { formatLocal, toEpochMs, type DayCell } from "./dwell-ledger";
 import type { DayMark, PlateSpec } from "./ledger-widgets";

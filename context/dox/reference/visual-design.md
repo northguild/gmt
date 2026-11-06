@@ -67,8 +67,7 @@ Cool blue→green on a blue-tinted near-black. Everything is a token.
 - **Corner brackets mark a frame. They do not decorate a panel.** A bracket frame carries two
   L-shaped corners, top left and bottom right. The site has them in two places:
   - **Landmark sections**, in cyan (`.gmt-brackets`): the home page's hero stage, where they sit
-    inside the hero's edges, and each `GridSection` cell of the section grids on the home page
-    and `/why-gmt`.
+    inside the hero's edges, and each `GridSection` cell of the home page's section grid.
   - **A framed group of controls that the reader repeats or compares**: each leg of the
     Delivery Scheduler and each row of the Timetable Reader. Every frame in the set holds the
     same fields for one numbered item, and its brackets take that item's series colour, so the

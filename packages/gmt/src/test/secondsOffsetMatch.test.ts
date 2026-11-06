@@ -9,7 +9,7 @@ import { classifyStoredZoned } from "../zoned/classify/classifyStoredZoned";
 import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
 
 /**
- * A zoned string whose offset is written with seconds is matched exactly (D12).
+ * A zoned string whose offset is written with seconds is matched exactly.
  *
  * TC39 `ToTemporalZonedDateTime` matches an offset against the zone by minutes only when the
  * offset string has no seconds part ("If offsetParseResult contains more than one MinuteSecond
@@ -22,7 +22,7 @@ import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
  *   happened twice, 20 seconds apart: −543069621 s at −11:19:40, −543069601 s at −11:20:00.
  *   `-11:20` (no seconds) matches the first pass by rounding; `-11:20:00` names the second.
  */
-describe("a zoned offset written with seconds matches exactly (D12)", () => {
+describe("a zoned offset written with seconds matches exactly", () => {
   it.each`
     value                                                        | epochNanoseconds        | why
     ${"1970-01-01T12:00:00-00:44:30[Africa/Monrovia]"}           | ${45870000000000n}      | ${"the exact offset"}

@@ -7,9 +7,9 @@
  * lanes. The widget never computes a deadline itself: the mount calls the real
  * function and this module only lays out what it returned.
  *
- * No DOM and no gmt import, mirroring `free-time-ledger.ts`: the real
+ * No DOM and no gmt function import (only `Temporal`), mirroring `free-time-ledger.ts`: the real
  * `billingTimeline` and its validators come in from the mount, loaded from the
- * real package. `@js-temporal/polyfill` is imported for drawing only — turning
+ * real package. `Temporal` comes from `@northguild/gmt` and is used for drawing only — turning
  * the library's own ISO dates into a day strip — never to compute a deadline.
  *
  * Nor does it order dates as strings. A typed date may carry an RFC 9557
@@ -25,7 +25,7 @@
  * date comparisons, not a liability finding.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { dateText, type PlateSpec } from "./ledger-widgets";
 import { codeSpan } from "./widget-ui";
 

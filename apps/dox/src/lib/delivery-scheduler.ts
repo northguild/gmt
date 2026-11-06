@@ -9,12 +9,12 @@
  * booked, applied to a later instant as a paper table would. That is what
  * makes the hour lost at a spring-forward handoff visible.
  *
- * No DOM and no gmt import: `TransportLib` comes in from the mount, loaded
- * from the real package. `@js-temporal/polyfill` is imported for drawing
+ * No DOM and no gmt function import (only `Temporal`): `TransportLib` comes in from the mount, loaded
+ * from the real package. `Temporal` comes from `@northguild/gmt` and is used for drawing
  * only — axis positions, tick instants and DST-transition markers.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { formatDayLabel } from "./dwell-ledger";
 import {
   ZERO_LEG,

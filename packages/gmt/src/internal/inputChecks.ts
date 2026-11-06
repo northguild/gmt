@@ -10,7 +10,6 @@ import {
   plainYearMonth,
   timeZoneLike,
 } from "../regex";
-import { monthDayFrom, yearMonthFrom } from "./temporalCompat";
 import type { RollConvention } from "../types";
 
 /** The cores of the `isValid*` functions, so a public function never calls another. */
@@ -130,7 +129,7 @@ export function plainDateTimeOf(value: string): Temporal.PlainDateTime | null {
  *
  * The part before the first annotation must match `plainMonthDay`, which refuses the basic form,
  * a year, a time, `Z`, an offset and a day no year has (`--02-30`) before Temporal is asked.
- * Temporal then reads the annotations (`monthDayFrom`, defect D20) and the calendar must be ISO.
+ * Temporal then reads the annotations, and the calendar must be ISO.
  *
  * @param value the candidate
  * @returns the `PlainMonthDay` when the string is a month-day in the ISO calendar, else `null`
@@ -144,7 +143,7 @@ export function plainMonthDayOf(value: unknown): Temporal.PlainMonthDay | null {
     return null;
   }
   try {
-    const monthDay = monthDayFrom(value);
+    const monthDay = Temporal.PlainMonthDay.from(value);
     return monthDay.calendarId === "iso8601" ? monthDay : null;
   } catch {
     return null;
@@ -157,7 +156,7 @@ export function plainMonthDayOf(value: unknown): Temporal.PlainMonthDay | null {
  *
  * The part before the first annotation must match `plainYearMonth`, which refuses the basic form,
  * a date, a time, `Z` and an offset before Temporal is asked. Temporal then enforces the range
- * (`-271821-04` to `+275760-09`) and reads the annotations (`yearMonthFrom`, defect D20), and the
+ * (`-271821-04` to `+275760-09`) and reads the annotations, and the
  * calendar must be ISO.
  *
  * @param value the candidate
@@ -174,7 +173,7 @@ export function plainYearMonthOf(
     return null;
   }
   try {
-    const yearMonth = yearMonthFrom(value);
+    const yearMonth = Temporal.PlainYearMonth.from(value);
     return yearMonth.calendarId === "iso8601" ? yearMonth : null;
   } catch {
     return null;

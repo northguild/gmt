@@ -166,15 +166,15 @@ describe("diffDate", () => {
     ).toBe(1);
   });
 
-  // CORE-6 D6/D7: see diffDateAsDuration.test.ts. Chromium 152 native Temporal
+  // Month-end and Adar I overshoot: see diffDateAsDuration.test.ts. Chromium 152 native Temporal
   // (q2-grid-chromium152.json): buddhist 2023-08-31 +30 d is P30D, hebrew 2024-02-11 +384 d is
   // P12M29D with largestUnit years.
   it.each`
     date1                          | date2                          | unit                   | expected                    | reason
-    ${"2023-08-31[u-ca=buddhist]"} | ${"2023-09-30[u-ca=buddhist]"} | ${"months"}            | ${0}                        | ${"D6: 30 days, not a month"}
-    ${"2023-08-31[u-ca=buddhist]"} | ${"2023-09-30[u-ca=buddhist]"} | ${["months", "days"]}  | ${{ months: 0, days: 30 }}  | ${"D6 record"}
-    ${"2024-02-11[u-ca=hebrew]"}   | ${"2025-03-01[u-ca=hebrew]"}   | ${"years"}             | ${0}                        | ${"D7: not null"}
-    ${"2024-02-11[u-ca=hebrew]"}   | ${"2025-03-01[u-ca=hebrew]"}   | ${["years", "months"]} | ${{ years: 0, months: 12 }} | ${"D7 record"}
+    ${"2023-08-31[u-ca=buddhist]"} | ${"2023-09-30[u-ca=buddhist]"} | ${"months"}            | ${0}                        | ${"month-end overshoot: 30 days, not a month"}
+    ${"2023-08-31[u-ca=buddhist]"} | ${"2023-09-30[u-ca=buddhist]"} | ${["months", "days"]}  | ${{ months: 0, days: 30 }}  | ${"month-end overshoot record"}
+    ${"2024-02-11[u-ca=hebrew]"}   | ${"2025-03-01[u-ca=hebrew]"}   | ${"years"}             | ${0}                        | ${"Adar I overshoot: not null"}
+    ${"2024-02-11[u-ca=hebrew]"}   | ${"2025-03-01[u-ca=hebrew]"}   | ${["years", "months"]} | ${{ years: 0, months: 12 }} | ${"Adar I overshoot record"}
   `(
     "returns $expected for $unit from $date1 to $date2 ($reason)",
     ({ date1, date2, unit, expected }) => {

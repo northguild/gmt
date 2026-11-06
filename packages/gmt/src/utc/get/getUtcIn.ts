@@ -1,9 +1,9 @@
+import { Temporal } from "../../internal/temporal";
 import {
   addLengthToStart,
   readLengthUnits,
   utcLengthFrame,
 } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
 
@@ -44,7 +44,11 @@ export function getUtcIn(
       return "";
     }
 
-    return addLengthToStart(nowInstant(), amounts, utcLengthFrame()).toString({
+    return addLengthToStart(
+      Temporal.Now.instant(),
+      amounts,
+      utcLengthFrame(),
+    ).toString({
       smallestUnit: "second",
       roundingMode: "floor",
     });

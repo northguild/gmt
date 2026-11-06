@@ -1,6 +1,6 @@
 # GMT Project Overview
 
-`@northguild/gmt` — **Give Me Temporal!** — is a Temporal-first date and time library for JavaScript and TypeScript. It wraps `@js-temporal/polyfill` behind a small, opinionated API with a strict contract: ISO 8601 strings in, ISO 8601 strings (or numbers, booleans, or arrays) out. No `Date` object anywhere.
+`@northguild/gmt` — **Give Me Temporal!** — is a Temporal-first date and time library for JavaScript and TypeScript. It wraps `temporal-polyfill` behind a small, opinionated API with a strict contract: ISO 8601 strings in, ISO 8601 strings (or numbers, booleans, or arrays) out. No `Date` object anywhere.
 
 ## Why This Exists
 
@@ -18,10 +18,10 @@ Temporal is the TC39 Stage 3 proposal that replaces `Date`. It introduces distin
 | Temporal spec (tc39.es)          | https://tc39.es/proposal-temporal/                                                        |
 | Temporal docs portal             | https://tc39.es/proposal-temporal/docs/                                                   |
 | MDN: Temporal                    | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal |
-| `@js-temporal/polyfill` (npm)    | https://www.npmjs.com/package/@js-temporal/polyfill                                       |
-| `@js-temporal/polyfill` (GitHub) | https://github.com/js-temporal/temporal-polyfill                                          |
+| `temporal-polyfill` (npm)        | https://www.npmjs.com/package/temporal-polyfill                                           |
+| `temporal-polyfill` (GitHub)     | https://github.com/fullcalendar/temporal-polyfill                                         |
 
-GMT uses `@js-temporal/polyfill` exclusively, and names it in one module, `packages/gmt/src/internal/temporal.ts`. Every other file imports `Temporal` from there, so moving to native Temporal changes that one file.
+GMT uses `temporal-polyfill` exclusively (its `/full/implementation` entry), and names it in one module, `packages/gmt/src/internal/temporal.ts`. Every other file imports `Temporal` from there, so moving to native Temporal changes that one file.
 
 Key Temporal types used in GMT:
 

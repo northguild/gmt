@@ -50,7 +50,7 @@ function sourceModules(expressions: readonly string[]): Record<string, string> {
  */
 export function resolveHook(): string {
   // Joined, not quoted whole: the seam scan counts any file that spells the specifier.
-  const polyfill = ["@js-temporal", "polyfill"].join("/");
+  const polyfill = ["temporal", "polyfill/full/implementation"].join("-");
   const swapEntry = process.env.GMT_SWAP_ENTRY || null;
   if (process.env.GMT_NATIVE_TEMPORAL === "1" && swapEntry !== null) {
     throw new Error(

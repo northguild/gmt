@@ -11,7 +11,7 @@
  * The maths is the globe's own, not a second implementation: `globe/sun.ts`
  * gives the point on Earth the sun is directly over, and a zone's solar
  * elevation is 90° minus the great-circle angle to it. Pure trigonometry, no
- * `@js-temporal/polyfill` and no clock of its own, so unlike the DST scan this
+ * `Temporal` and no clock of its own, so unlike the DST scan this
  * is cheap enough to run for every zone on every tick.
  *
  * **It answers for a point, not a territory.** `TZ_COORDINATES` holds one

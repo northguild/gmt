@@ -80,15 +80,19 @@ describe(
       expect(config.test?.env).toEqual({});
     });
 
-    it("aliases to the swap entry for GMT_TEMPORAL=temporal-polyfill", async () => {
-      const config = await loadBrowserConfig("temporal-polyfill");
+    it("aliases the seam's specifier to the candidate for GMT_TEMPORAL=candidate", async () => {
+      const config = await loadBrowserConfig("candidate");
       expect(config.resolve?.alias).toHaveLength(1);
-      expect(config.resolve?.alias?.[0]?.replacement).toBe(
-        "temporal-polyfill/full/implementation",
+      const [alias] = config.resolve?.alias ?? [];
+      expect(alias?.find.test("temporal-polyfill/full/implementation")).toBe(
+        true,
+      );
+      expect(alias?.replacement).toBe(
+        "temporal-polyfill-candidate/full/implementation",
       );
       // `src/test/swapEntry.test.ts` runs only when this is set.
       expect(config.test?.env).toEqual({
-        GMT_SWAP_ENTRY: "temporal-polyfill/full/implementation",
+        GMT_SWAP_ENTRY: "temporal-polyfill-candidate/full/implementation",
       });
     });
 
@@ -96,10 +100,10 @@ describe(
     // tests cannot load there (#441). Each is excluded by its package path and by its path from
     // the repository root, where scripts/native-suite.mjs starts Vitest (#462).
     it.each`
-      label                  | mode
-      ${"native"}            | ${undefined}
-      ${"polyfill"}          | ${"polyfill"}
-      ${"temporal-polyfill"} | ${"temporal-polyfill"}
+      label          | mode
+      ${"native"}    | ${undefined}
+      ${"polyfill"}  | ${"polyfill"}
+      ${"candidate"} | ${"candidate"}
     `(
       "leaves the Node-only harness tests out of the $label browser pass",
       async ({ mode }) => {
@@ -118,15 +122,15 @@ describe(
       },
     );
 
-    // Only the swap job installs `temporal-polyfill`. Elsewhere Vite's dependency scan cannot
-    // resolve it, gives up pre-bundling and reloads the page mid-run.
+    // Only the upgrade job installs `temporal-polyfill-candidate`. Elsewhere Vite's dependency scan
+    // cannot resolve it, gives up pre-bundling and reloads the page mid-run.
     it.each`
-      label                  | mode                   | excluded
-      ${"native"}            | ${undefined}           | ${["temporal-polyfill/full/implementation"]}
-      ${"polyfill"}          | ${"polyfill"}          | ${["temporal-polyfill/full/implementation"]}
-      ${"temporal-polyfill"} | ${"temporal-polyfill"} | ${undefined}
+      label          | mode           | excluded
+      ${"native"}    | ${undefined}   | ${["temporal-polyfill-candidate/full/implementation"]}
+      ${"polyfill"}  | ${"polyfill"}  | ${["temporal-polyfill-candidate/full/implementation"]}
+      ${"candidate"} | ${"candidate"} | ${undefined}
     `(
-      "keeps the swap entry out of the dependency scan in the $label pass: $excluded",
+      "keeps the candidate out of the dependency scan in the $label pass: $excluded",
       async ({ mode, excluded }) => {
         const config = await loadBrowserConfig(mode);
         expect(config.optimizeDeps?.exclude).toEqual(excluded);
@@ -135,27 +139,41 @@ describe(
 
     it("throws, naming the value and the accepted values, for GMT_TEMPORAL=bogus", async () => {
       await expect(loadBrowserConfig("bogus")).rejects.toThrow(
-        /"bogus".*"polyfill".*"temporal-polyfill"/,
+        /"bogus".*"polyfill".*"candidate"/,
+      );
+    });
+
+    it("throws the same mode error for the old name GMT_TEMPORAL=temporal-polyfill", async () => {
+      await expect(loadBrowserConfig("temporal-polyfill")).rejects.toThrow(
+        /"temporal-polyfill" is not a mode.*"polyfill".*"candidate"/,
       );
     });
   },
 );
 
 describe("vitest.swap.config", () => {
-  it("aliases the polyfill's specifier, and only that, to the swap entry", async () => {
+  it("aliases the seam's specifier, and only that, to the candidate", async () => {
     const config = (await import(SWAP_CONFIG)).default as Config;
     expect(config.resolve?.alias).toHaveLength(1);
     const [alias] = config.resolve?.alias ?? [];
-    expect(alias?.replacement).toBe("temporal-polyfill/full/implementation");
-    expect(alias?.find.test("@js-temporal/polyfill")).toBe(true);
-    expect(alias?.find.test("@js-temporal/polyfill/extra")).toBe(false);
-    expect(alias?.find.test("x@js-temporal/polyfill")).toBe(false);
+    expect(alias?.replacement).toBe(
+      "temporal-polyfill-candidate/full/implementation",
+    );
+    expect(alias?.find.test("temporal-polyfill/full/implementation")).toBe(
+      true,
+    );
+    expect(alias?.find.test("temporal-polyfill/full/implementation/x")).toBe(
+      false,
+    );
+    expect(alias?.find.test("x/temporal-polyfill/full/implementation")).toBe(
+      false,
+    );
   });
 
-  it("hands the swap entry to the bounded child process through GMT_SWAP_ENTRY", async () => {
+  it("hands the candidate to the bounded child process through GMT_SWAP_ENTRY", async () => {
     const config = (await import(SWAP_CONFIG)).default as Config;
     expect(config.test?.env).toEqual({
-      GMT_SWAP_ENTRY: "temporal-polyfill/full/implementation",
+      GMT_SWAP_ENTRY: "temporal-polyfill-candidate/full/implementation",
     });
   });
 });

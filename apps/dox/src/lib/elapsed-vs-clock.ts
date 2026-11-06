@@ -15,7 +15,7 @@
  * Naming rule: GMT tracks no law, and the text names no body.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { runCall, type EdiCall } from "./edi-widgets";
 import type { PlateSpec } from "./ledger-widgets";
 import type { ToolHandoff } from "./widget-permalink";

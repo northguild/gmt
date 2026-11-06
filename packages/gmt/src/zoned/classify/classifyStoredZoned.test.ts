@@ -284,7 +284,7 @@ const zAndZero: Row[] = [
   ),
 ];
 
-// Minute-rounded offsets (rule 9) and offsets written with seconds (D12).
+// Minute-rounded offsets (rule 9) and offsets written with seconds.
 const subMinute: Row[] = [
   valid(
     "1960-01-01T00:20:00-00:45[Africa/Monrovia]",
@@ -519,71 +519,19 @@ describe("classifyStoredZoned", () => {
       return byDisambiguation[disambiguation];
     }
 
-    // The polyfill's own answer, except in the two places 0.5.1 departs from the spec. There the
-    // answer is the spec's, built from polyfill parts the defect does not touch.
+    // Temporal's own answer, or `refused` where it throws.
     function temporalAnswer(
       input: string,
       offset: (typeof offsets)[number],
       disambiguation: (typeof disambiguations)[number],
     ): string | typeof refused {
       try {
-        if (offset === "ignore" && endsInZ.test(input)) {
-          return zIsExact(input);
-        }
-        const seconds = writtenWithSeconds.exec(input);
-        if (seconds !== null && (offset === "prefer" || offset === "reject")) {
-          return matchExactly(input, seconds, offset, disambiguation);
-        }
         return Temporal.ZonedDateTime.from(input, { offset, disambiguation })
           .toInstant()
           .toString();
       } catch {
         return refused;
       }
-    }
-
-    // D15: a `Z` body is exact whatever `offset` says (TC39 §6.5.1 steps 3–4).
-    const endsInZ = /[Zz]\[/;
-    function zIsExact(input: string): string {
-      return Temporal.Instant.from(
-        input.slice(0, input.indexOf("[")),
-      ).toString();
-    }
-
-    // D12: an offset written with seconds must match the zone exactly (TC39 §6.5.1 steps 7–12).
-    const writtenWithSeconds = /([+-])(\d{2}):(\d{2}):(\d{2})\[/;
-    function matchExactly(
-      input: string,
-      [, sign, hours, minutes, seconds]: RegExpExecArray,
-      offset: "prefer" | "reject",
-      disambiguation: (typeof disambiguations)[number],
-    ): string | typeof refused {
-      const offsetNanoseconds =
-        (sign === "-" ? -1 : 1) *
-        (Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds)) *
-        1e9;
-      const timeZone = input.slice(input.indexOf("[") + 1, input.indexOf("]"));
-      const wallClock = Temporal.PlainDateTime.from(input);
-      if (Temporal.PlainDate.compare(wallClock, "-271821-04-20") < 0) {
-        return refused;
-      }
-      // The possible instants are the two readings that keep the wall clock; a gap has none.
-      const candidates = (["earlier", "later"] as const)
-        .map((d) => wallClock.toZonedDateTime(timeZone, { disambiguation: d }))
-        .filter((candidate) => candidate.toPlainDateTime().equals(wallClock));
-      const match = candidates.find(
-        (candidate) => candidate.offsetNanoseconds === offsetNanoseconds,
-      );
-      if (match !== undefined) {
-        return match.toInstant().toString();
-      }
-      if (offset === "reject") {
-        return refused;
-      }
-      return wallClock
-        .toZonedDateTime(timeZone, { disambiguation })
-        .toInstant()
-        .toString();
     }
 
     for (const { input, expected } of allRows) {
