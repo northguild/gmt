@@ -256,12 +256,12 @@ export default defineConfig({
           label: "Start here",
           collapsed: true,
           items: [
+            { slug: "install" },
+            { slug: "core-rules" },
             { slug: "why-gmt" },
             { slug: "compare" },
-            { slug: "upstream" },
-            { slug: "core-rules" },
-            { slug: "install" },
             { slug: "bundle-size" },
+            { slug: "upstream" },
           ],
         },
         {
