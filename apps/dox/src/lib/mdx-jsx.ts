@@ -16,6 +16,7 @@ import { MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
 import { serversMarkdown } from "./canada-clock-change";
 import { serversMarkdown as moroccoServersMarkdown } from "./morocco-clock-change";
 import { dateFaults } from "../data/date-faults";
+import { whyGmtFigures } from "./why-gmt-figures";
 import { alternativesStack } from "../data/date-alternatives";
 import {
   compatGroups,
@@ -244,15 +245,23 @@ function renderWhyDateBug(props: Record<string, string>): string {
   const rows = dateFaults.map(
     (f) => `| \`${f.input}\` | ${f.output} | ${f.why} |`,
   );
+  // The heading is the page's own `##` line, so it is not repeated here.
   return [
-    "",
-    "## The bug is the `Date` object",
     "",
     "Almost every date/time bug in a JavaScript codebase traces back to one type. `Date` conflates an instant with a wall-clock reading, parses two ways depending on the string, and mutates in place.",
     "",
     "| You write | You get | Why |",
     "| --- | --- | --- |",
     ...rows,
+    "",
+  ].join("\n");
+}
+
+/** `<WhyGmtFigures />` as a Markdown list: each headline figure with what it counts. */
+function renderWhyGmtFigures(): string {
+  return [
+    "",
+    ...whyGmtFigures.map((f) => `- **${f.value}** ${f.label}`),
     "",
   ].join("\n");
 }
@@ -517,6 +526,8 @@ export function renderMdxComponents(body: string): string {
   // The home page's two argument cards hold real prose — the `Date` faults and the library
   // stack — so they render rather than drop. They were invisible to the old nine-name gate.
   out = replaceElements(out, "WhyDateBug", renderWhyDateBug);
+  // The headline figures under the /why-gmt intro, as a list.
+  out = replaceElements(out, "WhyGmtFigures", renderWhyGmtFigures);
   // Key points first, then the servers card and what the library does; the live parts have no text.
   out = replaceElements(
     out,

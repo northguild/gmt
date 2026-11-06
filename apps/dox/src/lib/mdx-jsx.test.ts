@@ -2,6 +2,7 @@ import { alternativesStack } from "../data/date-alternatives";
 import { dateFaults } from "../data/date-faults";
 import { competitorComparisons } from "../data/library-comparison";
 import { renderMdxComponents } from "./mdx-jsx";
+import { whyGmtFigures } from "./why-gmt-figures";
 
 const rowsOf = (md: string): string[] =>
   md.split("\n").filter((line) => line.startsWith("|"));
@@ -15,9 +16,9 @@ describe("the Date-bug table in the text surfaces", () => {
     for (const f of shown) expect(rows.join("\n")).toContain(f.output);
   });
 
-  it("shows every fault with its reason, under its heading, on the full variant", () => {
+  it("shows every fault with its reason on the full variant, leaving the heading to the page", () => {
     const md = renderMdxComponents('<WhyDateBug variant="full" />');
-    expect(md).toContain("## The bug is the `Date` object");
+    expect(md).not.toMatch(/^#/m);
     const rows = rowsOf(md);
     expect(rows[0]).toBe("| You write | You get | Why |");
     expect(rows).toHaveLength(2 + dateFaults.length);
@@ -29,6 +30,17 @@ describe("the Date-bug table in the text surfaces", () => {
       '<WhyDateBug variant="home" /><WhyDateAlternatives variant="full" />',
     );
     expect(md).not.toMatch(/<[A-Z]/);
+  });
+});
+
+describe("the /why-gmt headline figures in the text surfaces", () => {
+  it("lists every figure with its label", () => {
+    const md = renderMdxComponents("<WhyGmtFigures />");
+    expect(md).not.toMatch(/<[A-Z]/);
+    const items = md.split("\n").filter((line) => line.startsWith("- "));
+    expect(items).toHaveLength(whyGmtFigures.length);
+    for (const f of whyGmtFigures)
+      expect(md).toContain(`- **${f.value}** ${f.label}`);
   });
 });
 
