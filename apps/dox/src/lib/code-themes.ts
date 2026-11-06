@@ -9,7 +9,8 @@
  */
 import { readFileSync } from "node:fs";
 
-const TOKENS_CSS = new URL("../styles/gmt-tokens.css", import.meta.url);
+/** The token sheet the syntax roles are read from. */
+export const TOKENS_CSS = new URL("../styles/gmt-tokens.css", import.meta.url);
 
 /** The syntax roles `gmt-tokens.css` declares, without their `--gmt-syntax-` prefix. */
 const ROLES = [
@@ -150,10 +151,14 @@ function resolve(
   return resolve(vars, alias[1], seen);
 }
 
-/** Each role's hex value in the dark and the light theme. */
+/**
+ * Each role's hex value in the dark and the light theme. Line endings are read as LF first, so a
+ * checkout with `core.autocrlf` (CRLF) finds the same blocks.
+ */
 export function syntaxPalette(
-  css = readFileSync(TOKENS_CSS, "utf8"),
+  source = readFileSync(TOKENS_CSS, "utf8"),
 ): Record<"dark" | "light", Record<Role, string>> {
+  const css = source.replace(/\r\n?/g, "\n");
   const dark = declarations(blockAt(css, ":root,\n"));
   // The light block sits on the same element as `:root`, so it overrides and the rest inherits.
   const light = new Map([
