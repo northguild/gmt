@@ -9,15 +9,14 @@ import {
 } from "../data/gmt-stats";
 import { raw } from "~/widgets/builders/html";
 import { renderHtml } from "~/widgets/test-fixture";
+import { barGradientId, barHatchId } from "./bar-chart-kit";
 import { libraryComparisons } from "../data/library-comparison";
 import {
-  BAR_CHARTS,
+  WHY_GMT_CHARTS,
   CORE_FUNCTION_TOTAL,
   INDUSTRY_FUNCTION_TOTAL,
   NAMESPACE_COUNTS,
   OWN_SERIES,
-  barGradientId,
-  barHatchId,
   ciExecutionRows,
   ciExecutionTooltip,
   ciSuiteRows,
@@ -25,13 +24,12 @@ import {
   industrySegments,
   industrySummary,
   industryTooltip,
-  isBarChartId,
   namespaceTooltip,
-  type BarChartId,
+  type WhyGmtChartId,
 } from "../lib/why-gmt-charts";
 
-function renderStatic(id: BarChartId): string {
-  const chart = BAR_CHARTS[id];
+function renderStatic(id: WhyGmtChartId): string {
+  const chart = WHY_GMT_CHARTS[id];
   const runtime = createChartRuntime();
   const scene = runtime.render(chart.definition(), {
     width: chart.width,
@@ -58,7 +56,7 @@ function barRects(svg: string) {
 }
 
 /** The rects of a static render with their stacking position, for the stacked chart. */
-function renderStaticRects(id: BarChartId) {
+function renderStaticRects(id: WhyGmtChartId) {
   const attr = (rect: string, name: string) =>
     rect.match(new RegExp(` ${name}="([^"]*)"`))?.[1] ?? "";
   return [
@@ -471,10 +469,10 @@ describe("static bar chart render", () => {
   });
 
   it("only references gradients and patterns its container declares", () => {
-    for (const id of Object.keys(BAR_CHARTS) as BarChartId[]) {
+    for (const id of Object.keys(WHY_GMT_CHARTS) as WhyGmtChartId[]) {
       const declared = [
-        ...BAR_CHARTS[id].gradients.map((g) => g.id),
-        ...BAR_CHARTS[id].patterns.map((p) => p.id),
+        ...WHY_GMT_CHARTS[id].gradients.map((g) => g.id),
+        ...WHY_GMT_CHARTS[id].patterns.map((p) => p.id),
       ];
       for (const rect of barRects(renderStatic(id))) {
         expect(declared).toContain(rect.gradient);
@@ -483,16 +481,16 @@ describe("static bar chart render", () => {
   });
 
   it("declares a hatch for the industry chart and for no other", () => {
-    expect(BAR_CHARTS.industries.patterns.map((p) => p.id)).toEqual([
+    expect(WHY_GMT_CHARTS.industries.patterns.map((p) => p.id)).toEqual([
       barHatchId("spring"),
     ]);
-    for (const id of Object.keys(BAR_CHARTS) as BarChartId[]) {
-      if (id !== "industries") expect(BAR_CHARTS[id].patterns).toEqual([]);
+    for (const id of Object.keys(WHY_GMT_CHARTS) as WhyGmtChartId[]) {
+      if (id !== "industries") expect(WHY_GMT_CHARTS[id].patterns).toEqual([]);
     }
   });
 
   it("names the industry chart for what it shows, own and shared", () => {
-    expect(BAR_CHARTS.industries.ariaLabel).toBe(
+    expect(WHY_GMT_CHARTS.industries.ariaLabel).toBe(
       "Public functions by industry layer, own and shared",
     );
   });
@@ -507,7 +505,7 @@ describe("namespace chart labels", () => {
   ] as const)(
     "keeps every %s label at the page's real chart width",
     (id, expected) => {
-      const chart = BAR_CHARTS[id];
+      const chart = WHY_GMT_CHARTS[id];
       const width = 524;
       const runtime = createChartRuntime();
       const scene = runtime.render(chart.definition(), {
@@ -528,14 +526,4 @@ describe("namespace chart labels", () => {
       }
     },
   );
-});
-
-describe("isBarChartId", () => {
-  it("accepts registered charts and rejects everything else", () => {
-    expect(isBarChartId("namespaces")).toBe(true);
-    expect(isBarChartId("industries")).toBe(true);
-    expect(isBarChartId("ci-suite")).toBe(true);
-    expect(isBarChartId("locale-matrix")).toBe(false);
-    expect(isBarChartId(undefined)).toBe(false);
-  });
 });

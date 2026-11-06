@@ -72,8 +72,8 @@ const filingsFor = (defects: readonly string[]) =>
 
 /*
  * `--gmt-ice-dim` is the muted text tier that holds the 7:1 floor. `--sl-color-gray-3` measured
- * 4.39:1 on the dark page and 2.49:1 in the light cell, so every line here (the description, the
- * check count and a guard row's reason) used to sit under it.
+ * 4.39:1 on the dark page and 2.49:1 in the light cell, so every line here (the description and the
+ * check count) used to sit under it.
  */
 .sl-markdown-content .gmt-defects td p {
   margin-block-start: 0.25rem;
@@ -94,36 +94,6 @@ const filingsFor = (defects: readonly string[]) =>
  */
 .gmt-defects-badge--ok {
   color: var(--gmt-cyan-ink);
-}
-
-/*
- * "Kept on purpose": every check passes only because the installed polyfill cannot show the bug
- * yet, so the badge claims neither "needed" (green) nor "fixed". It is a full bevelled border on
- * all four sides with ice text, never a one-sided accent.
- *
- * The label is wider than the state cell's content box at the table's 34rem minimum, so it wraps
- * between words inside its own border. The column widths come from `table-layout: fixed` and the
- * percentages above, so a taller row never moves a column.
- *
- * Border: `--gmt-border-strong` measures 2.19:1 on the dark page and 1.54:1 on the light one,
- * short of the 3:1 non-text bar (WCAG 2.2 SC 1.4.11). `--gmt-ice-dim-fill` is the first token that
- * clears it in both themes (6.80:1 dark, 5.74:1 light).
- */
-.gmt-defects-badge--guard {
-  display: inline-block;
-  max-inline-size: 100%;
-  box-sizing: border-box;
-  padding: 0 var(--gmt-space-1);
-  border: 1px solid var(--gmt-ice-dim-fill);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  color: var(--gmt-ice);
-  white-space: normal;
-}
-
-/* A short reference such as `tc39 #3292` reads as one token, so it never splits at its space. */
-.gmt-defects-reason a {
-  white-space: nowrap;
 }
 
 .sl-markdown-content .gmt-defects-refs {

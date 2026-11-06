@@ -10,7 +10,6 @@
  * <defs> and the marks reference them with url(#id). The shaded segments of the
  * "By industry" chart use a hatch pattern declared the same way.
  */
-import type { ChartDefinition, ChartPoint } from "@tanstack/charts";
 import { barX, barY, defineChart, stack } from "@tanstack/charts";
 import { chartKey, chartSummary } from "~/widgets/builders";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -20,6 +19,15 @@ import type {
   ChartTooltipExtension,
   ChartTooltipRow,
 } from "@tanstack/charts/tooltip";
+import {
+  barGradient,
+  barGradientId,
+  barHatch,
+  barHatchId,
+  withTooltip,
+  type BarChart,
+  type BarHue,
+} from "./bar-chart-kit";
 import {
   coreFunctions,
   coreNamespaces,
@@ -32,85 +40,11 @@ import {
   libraryComparisons,
   type LibraryComparison,
 } from "../data/library-comparison";
-import { chartTooltipMotion } from "./chart-motion";
-
-type TooltipOption = Parameters<typeof defineChart>[0]["tooltip"];
 
 const shareFormat = new Intl.NumberFormat(undefined, {
   style: "percent",
   maximumFractionDigits: 1,
 });
-
-// ---------------------------------------------------------------------------
-// Gradients
-// ---------------------------------------------------------------------------
-
-type BarHue = "spring" | "signal" | "cyan";
-
-export interface BarGradient {
-  id: string;
-  hue: BarHue;
-  top: number;
-  bottom: number;
-}
-
-// Same recipe as the locale matrix tiles: the bottom stop sits 0.09 under the top.
-const BAR_OPACITY = { top: 0.32, bottom: 0.23 };
-
-export function barGradientId(hue: BarHue): string {
-  return `gmt-bar-${hue}`;
-}
-
-function barGradient(hue: BarHue): BarGradient {
-  return { id: barGradientId(hue), hue, ...BAR_OPACITY };
-}
-
-/**
- * A hatch: a tint of the hue with diagonal lines over it, declared once as a page-level SVG
- * pattern (`ChartContainer.astro`). The tint and the lines are both the hue's token at reduced
- * strength, so the difference from a solid bar never rests on colour alone.
- */
-export interface BarPattern {
-  id: string;
-  hue: BarHue;
-  /** The fill strength of the tint under the lines. */
-  tint: number;
-  /** The strength of the lines. */
-  line: number;
-  /** The side of the repeating tile, in user units. */
-  size: number;
-  lineWidth: number;
-}
-
-export function barHatchId(hue: BarHue): string {
-  return `gmt-bar-${hue}-hatch`;
-}
-
-function barHatch(hue: BarHue): BarPattern {
-  return {
-    id: barHatchId(hue),
-    hue,
-    tint: 0.12,
-    line: 0.6,
-    size: 7,
-    lineWidth: 2,
-  };
-}
-
-function withTooltip(
-  extension: ChartTooltipExtension | undefined,
-  content: (datum: unknown) => ChartTooltipContent,
-): { tooltip?: TooltipOption } {
-  if (!extension) return {};
-  return {
-    tooltip: {
-      use: extension,
-      ...chartTooltipMotion(),
-      content: (points: readonly ChartPoint<unknown>[]) =>
-        content(points[0]?.datum),
-    } as TooltipOption,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // CI executions per library
@@ -510,29 +444,17 @@ function industryDefinition(tooltip?: ChartTooltipExtension) {
 // Registry
 // ---------------------------------------------------------------------------
 
-export type BarChartId =
+export type WhyGmtChartId =
   | "ci-executions"
   | "ci-suite"
   | "namespaces"
   | "industries";
 
-interface BarChart {
-  ariaLabel: string;
-  idPrefix: string;
-  width: number;
-  height: number;
-  gradients: readonly BarGradient[];
-  /** Hatches the chart's shaded marks refer to, declared as page-level patterns. */
-  patterns: readonly BarPattern[];
-  /** Widened to the runtime's untyped definition so both charts share a caller. */
-  definition: (tooltip?: ChartTooltipExtension) => ChartDefinition;
-}
-
 /**
  * Both charts render at the locale matrix's natural width of 1200, so they
  * fill the content column the same way.
  */
-export const BAR_CHARTS: Record<BarChartId, BarChart> = {
+export const WHY_GMT_CHARTS: Record<WhyGmtChartId, BarChart> = {
   "ci-executions": {
     ariaLabel: "CI test execution volume comparison",
     idPrefix: "test-executions",
@@ -570,7 +492,3 @@ export const BAR_CHARTS: Record<BarChartId, BarChart> = {
     definition: industryDefinition as unknown as BarChart["definition"],
   },
 };
-
-export function isBarChartId(value: string | undefined): value is BarChartId {
-  return value !== undefined && value in BAR_CHARTS;
-}

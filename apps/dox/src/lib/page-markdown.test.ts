@@ -152,3 +152,37 @@ describe("stripMdx link prefixing", () => {
     expect(out).not.toMatch(/\]\(\/(?!gmt\/|not-a-link)/);
   });
 });
+
+describe("stripMdx code in prose", () => {
+  // MDX prints a backtick span as written, braces and all, so the text surfaces must too: a figure
+  // the page shows as `{name}` is the bug, and the twin has to show it rather than hide it.
+  it("leaves an expression inside a backtick span unresolved, as the page prints it", () => {
+    const md = stripMdx(
+      "Built on `gmt@{version}` and gmt {version}, GMT {gmtVersion}.",
+      {
+        gmtVersion: "1.0.0",
+        values: { version: "1.21.0" },
+      },
+    );
+    expect(md).toBe("Built on `gmt@{version}` and gmt 1.21.0, GMT 1.0.0.");
+  });
+
+  it("pairs backticks left to right, so text between two spans still resolves", () => {
+    const md = stripMdx("| `gmt` | {gmtVersion} | `2024` |", {
+      gmtVersion: "1.0.0",
+    });
+    expect(md).toBe("| `gmt` | 1.0.0 | `2024` |");
+  });
+
+  it("turns a <code> element holding a resolved value into a code span", () => {
+    const md = stripMdx("It adds <code>{name}</code> to the floor.", {
+      values: { name: "isValidDate" },
+    });
+    expect(md).toBe("It adds `isValidDate` to the floor.");
+  });
+
+  it("leaves a <code> element that holds a tag inside it", () => {
+    const md = stripMdx("A <code>a<b>c</b></code> here.", {});
+    expect(md).toContain("<code>");
+  });
+});

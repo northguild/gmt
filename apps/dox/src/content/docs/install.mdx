@@ -6,6 +6,7 @@ description: Add @northguild/gmt to your project, and what the package exports.
 import { TabItem, Tabs } from "@astrojs/starlight/components";
 
 import { gmtVersion } from "~/generated/versions";
+import { polyfillFigures } from "~/lib/bundle-size-figures";
 
 Latest release: **v{gmtVersion}**
 
@@ -65,8 +66,8 @@ Check for `""`, `null`, `false` or `[]` where you would otherwise catch an error
 ## What you get
 
 Every public function, type and regex is a flat named export of the package root, and
-`Temporal`, `Intl` and `toTemporalInstant` are re-exported from `@js-temporal/polyfill` beside
-them. There are no namespace objects to import — a namespace is a subpath:
+`Temporal`, `Intl` and `toTemporalInstant` are re-exported beside them, from `temporal-polyfill`
+in {polyfillFigures.firstShippedGmt} and later, and from `@js-temporal/polyfill` up to {polyfillFigures.previousGmt}. There are no namespace objects to import — a namespace is a subpath:
 
 ```typescript
 // Everything is available from the package root

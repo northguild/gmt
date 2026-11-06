@@ -9,7 +9,13 @@
  *
  * Kept free of Astro globals so vitest can import it directly.
  */
-import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "./bundle-size";
+import {
+  BUNDLE_COLUMNS,
+  bundleCells,
+  bundleRows,
+  compareCells,
+  compareColumns,
+} from "./bundle-size";
 import { KEY_POINTS } from "../data/canada-key-points";
 import { keyPointsMarkdown } from "../data/clock-change-text";
 import { MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
@@ -204,6 +210,21 @@ function dedent(text: string): string {
 const fence = (code: string): string =>
   code.trim() ? `\n\`\`\`js\n${code.trim()}\n\`\`\`\n` : "";
 
+/**
+ * The caption of each view of a `ChartContainer`, one line each. The views are a JS array in the
+ * tag, so the captions are read from the text: a string or a template literal after `caption:`.
+ * A template literal's `${expr}` becomes `{expr}`, which `stripMdx` replaces with the figure.
+ */
+function viewCaptions(views: string | undefined): string {
+  if (!views) return "";
+  const captions = [
+    ...views.matchAll(
+      /\bcaption:\s*(?:`((?:[^`\\]|\\.)*)`|"((?:[^"\\]|\\.)*)")/g,
+    ),
+  ].map((found) => (found[1] ?? found[2]).replace(/\$\{/g, "{"));
+  return captions.map((caption) => `\n${caption}\n`).join("");
+}
+
 /** `<Mistake>` → heading, description, and the wrong and right samples as code blocks. */
 function renderMistake(props: Record<string, string>): string {
   const parts = [`### ${props.title ?? "Mistake"}`];
@@ -332,13 +353,7 @@ function renderUpstreamDefects(): string {
       )
       .join(", ");
     const { badge, count } = stateLine(group);
-    // A guard row continues with why it is kept. The reason is free text, so it is escaped: a `|`
-    // would end the cell early and `_` or `[` would turn into Markdown the page never shows.
-    const reason =
-      group.state === "guard" && group.guard
-        ? `. ${escapeMarkdownInline(group.guard.reason)}`
-        : "";
-    const state = `${badge} — ${count}${reason}`;
+    const state = `${badge} — ${count}`;
     return `| **${escapeMarkdownInline(groupLabel(group))}** — ${escapeMarkdownInline(groupWhatBreaks(group))} | ${state} | ${sent || "—"} |`;
   });
 
@@ -361,6 +376,20 @@ function renderBundleSize(): string {
       const [importLine, ...figures] = bundleCells(row);
       return `| \`${importLine}\` | ${figures.join(" | ")} |`;
     }),
+    "",
+  ].join("\n");
+}
+
+/** `<PolyfillCompare />` as a Markdown table of the same figures. */
+function renderPolyfillCompare(): string {
+  const columns = compareColumns();
+  return [
+    "",
+    `| ${columns.join(" | ")} |`,
+    `| ${columns.map(() => "---").join(" | ")} |`,
+    ...compareCells().map(
+      (row) => `| \`${row.importLine}\` | ${row.cells.join(" | ")} |`,
+    ),
     "",
   ].join("\n");
 }
@@ -496,6 +525,8 @@ export function renderMdxComponents(body: string): string {
     "Card",
     "HomeCards",
     "HomeCard",
+    // An aside's title is its point ("Public helpers never throw"), so it stays as a line.
+    "Aside",
   ]) {
     out = replaceElements(out, wrapper, (props, children) => {
       // A template-literal title's `${expr}` becomes `{expr}`, which `stripMdx` replaces with the figure.
@@ -503,7 +534,7 @@ export function renderMdxComponents(body: string): string {
         .filter(Boolean)
         .join(" — ")
         .replace(/\$\{/g, "{");
-      return `${caption ? `\n**${caption}**\n` : ""}${dedent(children)}`;
+      return `${caption ? `\n**${caption}**\n` : ""}${viewCaptions(props.views)}${dedent(children)}`;
     });
   }
 
@@ -512,6 +543,7 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "UpstreamTracker", renderUpstreamTracker);
   out = replaceElements(out, "UpstreamListings", renderUpstreamListings);
   out = replaceElements(out, "BundleSize", renderBundleSize);
+  out = replaceElements(out, "PolyfillCompare", renderPolyfillCompare);
   out = replaceElements(out, "MigrationMap", renderMigrationMap);
   out = replaceElements(out, "BehaviourDiffs", renderBehaviourDiffs);
   out = replaceElements(out, "BehaviourMatrix", renderBehaviourMatrix);

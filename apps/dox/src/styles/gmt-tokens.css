@@ -565,6 +565,13 @@
   --gmt-series-4: var(--gmt-severity-high);
   --gmt-series-4-ink: var(--gmt-severity-high-ink);
 
+  /* Series pair for the polyfill comparison on /bundle-size: green is the shipped polyfill, a neutral
+     slate grey the previous one, so the old package recedes. Not --gmt-spring / --gmt-signal: light
+     spring is under 3:1 on the light glass, and amber is kept for NO SIGNAL. One value for both
+     themes; every chart surface measures ≥ 3:1. Marks only, never text. */
+  --gmt-polyfill-shipped: #0f9a47;
+  --gmt-polyfill-previous: #64748b;
+
   /* `--gmt-cyan` was the biggest of these: it is the site's link/accent
      colour, so every `color:` use of `--gmt-cyan` *and* `--gmt-cyan-bright`
      (the same problem — light-theme #0e7490 only reaches ~5:1) now reads

@@ -1,0 +1,65 @@
+---
+/**
+ * The same bundle-size figures on each polyfill, gzipped: the text alternative for both charts
+ * on /bundle-size. Every cell comes from `compareCells()`, which reads `bundle-size-figures.ts`;
+ * nothing here is typed in. A size is in kB, 1 kB being 1,000 bytes.
+ */
+import { codeBreakClass, codeBreakHtml } from "../lib/code-break";
+import { compareCells, compareColumns } from "../lib/bundle-size";
+
+const columns = compareColumns();
+const rows = compareCells();
+
+/** A header's backticked package names as `<code>`. */
+const headerHtml = (label: string): string =>
+  label.replace(/`([^`]+)`/g, "<code>$1</code>");
+---
+
+<div class="gmt-ref-table" data-kind="content" data-label="Gzipped size on each polyfill">
+  <table class="gmt-bundle">
+    <thead>
+      <tr>
+        {columns.map((label, i) => <th scope="col" class={i > 0 ? "num" : undefined} set:html={headerHtml(label)} />)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr>
+            <th scope="row"><code class={codeBreakClass(row.importLine)} set:html={codeBreakHtml(row.importLine)} /></th>
+            {row.cells.map((cell) => <td class="num">{cell}</td>)}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .gmt-bundle {
+    inline-size: 100%;
+    table-layout: auto;
+    border-collapse: collapse;
+    font-size: var(--sl-text-sm);
+  }
+
+  .gmt-bundle :is(th, td) {
+    padding: var(--gmt-space-2) var(--gmt-space-3);
+    border-block-end: 1px solid var(--gmt-hairline);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .gmt-bundle th[scope="row"] {
+    font-weight: normal;
+  }
+
+  .gmt-bundle .num {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gmt-bundle tbody .num {
+    white-space: nowrap;
+  }
+</style>

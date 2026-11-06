@@ -93,6 +93,18 @@
   stroke: var(--gmt-spring-ink);
 }
 
+/* The /bundle-size hatched segment: the GMT code above a polyfill. Its edge is the hue's own token,
+ * which clears 3:1 against the chart surface in both themes (polyfill-tokens.test.ts). */
+.gmt-chart .ts-chart__bar-x rect[fill$="polyfill-shipped-hatch)"] {
+  stroke: var(--gmt-polyfill-shipped);
+  stroke-width: 1.5;
+}
+
+.gmt-chart .ts-chart__bar-x rect[fill$="polyfill-previous-hatch)"] {
+  stroke: var(--gmt-polyfill-previous);
+  stroke-width: 1.5;
+}
+
 /* Cell tiles — locale matrix cards */
 .gmt-chart .ts-chart__cell rect {
   stroke: var(--gmt-border-strong);
@@ -149,8 +161,15 @@
 
 @media (forced-colors: active) {
   /* The hatch may not survive system colours, so a shaded segment keeps a dashed edge. */
-  .gmt-chart .ts-chart__bar-y rect[fill*="-hatch"] {
+  .gmt-chart .ts-chart__bar-y rect[fill*="-hatch"],
+  .gmt-chart .ts-chart__bar-x rect[fill*="-hatch"] {
     stroke-dasharray: 4 3;
+  }
+
+  /* System colours drop the two hues, so the shipped polyfill's bars keep a heavier edge. */
+  .gmt-chart .ts-chart__bar-x rect[fill$="polyfill-shipped)"] {
+    stroke: CanvasText;
+    stroke-width: 2;
   }
 
   .gmt-chart-toggle-button[aria-pressed="true"] {

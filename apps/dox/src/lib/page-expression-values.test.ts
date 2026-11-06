@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { polyfillFigures } from "./bundle-size-figures";
 import { pageExpressionValues } from "./page-expression-values";
 import { stripMdx } from "./page-markdown";
 
@@ -17,6 +18,8 @@ const PAGES = [
   "index.mdx",
   "why-gmt.mdx",
   "compare.mdx",
+  "bundle-size.mdx",
+  "upstream.mdx",
   "compare/behaviour.mdx",
   "migrate/index.mdx",
   "migrate/date-fns.mdx",
@@ -50,6 +53,13 @@ describe("page expression values", () => {
       expect({ page, left }).toEqual({ page, left: [] });
     });
   }
+
+  it("holds a value for every polyfill figure, so a new key cannot be forgotten", () => {
+    const values = pageExpressionValues();
+    for (const [key, value] of Object.entries(polyfillFigures)) {
+      expect(values[`polyfillFigures.${key}`], key).toBe(value);
+    }
+  });
 
   it("states no figure of its own: every value comes from the data modules", () => {
     const source = readFileSync(

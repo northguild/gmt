@@ -45,6 +45,38 @@
   }
 }
 
+/* The polyfill pair of /bundle-size: the same two fills in the hue of each package. The solid
+   swatch is the token at full strength; the hatched one keeps a full-strength border. */
+.swatch[data-hue^="polyfill-"] {
+  &[data-kind="own"] {
+    background-color: var(--gmt-swatch-hue);
+  }
+
+  &[data-kind="shared"] {
+    border-color: var(--gmt-swatch-hue);
+    background-color: color-mix(
+      in srgb,
+      var(--gmt-swatch-hue) 12%,
+      transparent
+    );
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--gmt-swatch-hue) 0,
+      var(--gmt-swatch-hue) 2px,
+      transparent 2px,
+      transparent 5px
+    );
+  }
+}
+
+.swatch[data-hue="polyfill-shipped"] {
+  --gmt-swatch-hue: var(--gmt-polyfill-shipped);
+}
+
+.swatch[data-hue="polyfill-previous"] {
+  --gmt-swatch-hue: var(--gmt-polyfill-previous);
+}
+
 /* Visually hidden, still read. */
 .summary {
   position: absolute;
@@ -59,7 +91,8 @@
 }
 
 @media (forced-colors: active) {
-  .swatch {
+  .swatch,
+  .swatch[data-hue^="polyfill-"] {
     border-color: CanvasText;
 
     &[data-kind="own"] {
@@ -67,6 +100,7 @@
     }
 
     &[data-kind="shared"] {
+      border-color: CanvasText;
       background-color: Canvas;
       background-image: repeating-linear-gradient(
         45deg,
@@ -84,7 +118,8 @@
     color: var(--gmt-ice);
   }
 
-  .swatch {
+  .swatch,
+  .swatch[data-hue^="polyfill-"][data-kind="shared"] {
     border-color: var(--gmt-ice);
   }
 }

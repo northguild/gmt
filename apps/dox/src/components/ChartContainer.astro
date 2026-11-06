@@ -4,7 +4,7 @@ import {
   type BarChartId,
   type BarGradient,
   type BarPattern,
-} from "../lib/why-gmt-charts";
+} from "../lib/bar-charts";
 
 /**
  * One selectable view of a chart, e.g. "One run" vs "CI executions". Prose that belongs to one
@@ -16,7 +16,7 @@ interface ChartView {
   svg: string;
   chart?: BarChartId;
   caption?: string;
-  /** The key under the chart, as HTML built by `why-gmt-charts.ts`. */
+  /** The key under the chart, as HTML built by the chart module. */
   legend?: string;
   /** Each bar's counts in words, as visually hidden HTML built by `why-gmt-charts.ts`. */
   summary?: string;
@@ -160,7 +160,7 @@ const gradients: BarGradient[] = [
 <script>
   import { mountChart } from "@tanstack/charts/dom";
   import { tooltip } from "@tanstack/charts/tooltip";
-  import { BAR_CHARTS, isBarChartId } from "../lib/why-gmt-charts";
+  import { BAR_CHARTS, isBarChartId } from "../lib/bar-charts";
 
   // mountChart appends to its container rather than replacing it, so the build-time SVG is
   // cleared first. A host inside a hidden view is left as its static SVG until the view is first

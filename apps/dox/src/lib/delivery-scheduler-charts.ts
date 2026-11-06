@@ -4,7 +4,7 @@
  * station spacing) and the To-scale view (a Gantt-style lane per leg on a
  * real time axis). Both are built from `ChartData` (`delivery-scheduler.ts`)
  * — nothing chart-library-specific lives there, mirroring how
- * `why-gmt-charts.ts` sits beside its own plain data module.
+ * the bar-chart modules (`why-gmt-charts.ts`, `bundle-size-charts.ts`) sit beside their own plain data modules.
  *
  * Colours are `var(--gmt-*)` strings passed straight into mark options —
  * the same pattern `why-gmt-charts.ts` already uses (`stroke: "var(--gmt-
@@ -18,7 +18,7 @@
  * contrast-checked "ink" text variants) the leg-card form and the itinerary
  * rail use, never amber, which stays the sentinel's alone.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { ChartDefinition, ChartMark, SceneNode } from "@tanstack/charts";
 import { defineChart, dot, link, ruleX, text } from "@tanstack/charts";
 import { barX } from "@tanstack/charts/bar";
