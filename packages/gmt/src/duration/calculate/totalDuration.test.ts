@@ -100,7 +100,7 @@ describe("totalDuration", () => {
     ${"P1M"} | ${"days"}  | ${"2024-02-10[!u-ca=hebrew]"}                                 | ${30}    | ${"critical flag"}
     ${"P1M"} | ${"days"}  | ${"5784-06-01[u-ca=HEBREW]"}                                  | ${29}    | ${"upper-case calendar id; ISO year 5784"}
     ${"P1M"} | ${"days"}  | ${"0006-02-01[!u-ca=japanese]"}                               | ${28}    | ${"critical flag, era calendar; ISO year 6 is not leap"}
-    ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=coptic]"}                                  | ${30}    | ${"coptic computes in ethioaa"}
+    ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=coptic]"}                                  | ${30}    | ${"Amshir, a 30-day Coptic month"}
     ${"P1M"} | ${"days"}  | ${"2024-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"}              | ${30}    | ${"zoned, RFC 9557 order"}
     ${"P1D"} | ${"hours"} | ${"2024-03-10T00:00:00-05:00[America/New_York][u-ca=hebrew]"} | ${23}    | ${"zoned calendar string keeps the spring-forward day"}
     ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=hebrew][foo=bar]"}                         | ${30}    | ${"elective unknown annotation ignored"}
