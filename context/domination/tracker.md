@@ -130,6 +130,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 55  | CORE-92  | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                                        | —          | #386  | —       | Done        |
 | 56  | CORE-105 | Core       | One file per workaround in<br>`zonedWallClockDifference.ts`                                              | —          | #437  | —       | Done        |
 | 57  | CORE-107 | Core       | A changelog page in Dox, and the<br>You-Dont-Need-Momentjs PR on `/upstream`                             | —          | #451  | —       | Done        |
+| 58  | CORE-110 | Core       | The weekly upgrade check compares<br>each calendar's years with native Temporal                          | —          | #468  | —       | Done        |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm

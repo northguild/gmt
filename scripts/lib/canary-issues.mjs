@@ -161,8 +161,9 @@ const FORCED_ROW = {
  *   forced?: { difference: true },
  * }} LeapSecondsVerdict
  * @typedef {{ source: string, status: "could-not-run", message: string,
- *   sweep?: SwapVerdict["sweep"] }} CouldNotRunVerdict  `sweep`: the offset sweep of a swap Node leg
- *   that stopped after it ran
+ *   sweep?: SwapVerdict["sweep"], calendarSweep?: SwapVerdict["calendarSweep"] }} CouldNotRunVerdict
+ *   `sweep` and `calendarSweep`: the offset and calendar sweeps of a swap Node leg that stopped
+ *   after they ran
  * @typedef {{ file: string, test: string, message: string }} NativeFailure
  * @typedef {{
  *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
@@ -189,6 +190,12 @@ const FORCED_ROW = {
  *   failing: NativeFailure[], failingTruncated: boolean,
  *   sweep: null | { status: "ran", tz: string, from: string, through: string, zones: number,
  *                   differingZones: number, [field: string]: unknown }
+ *        | { status: "could-not-run", message: string },
+ *   calendarSweep: null | { status: "ran", from: string, through: string, calendars: number,
+ *                           years: number, differingCalendars: number,
+ *                           differing: { calendar: string, years: number, first: number | null,
+ *                                        example: string }[],
+ *                           [field: string]: unknown }
  *        | { status: "could-not-run", message: string },
  *   forced?: { swapReady: true },
  * }} SwapVerdict
@@ -1068,10 +1075,11 @@ function leapSecondsFindings(verdicts, runUrl) {
 /**
  * CORE-92: whether the `temporal-polyfill` swap passed on every runtime. Ready only when all four
  * legs ran, name one version, have no test that fails on the swap and passes on the control, and
- * the Node leg's offset sweep ran and found no differing zone. Fail closed: each leg must say its
- * swap pass loaded `temporal-polyfill` (`entryLoaded: true`), and `counts.failed` and
- * `differingZones` must be the number 0, so a missing or malformed field blocks. Otherwise the
- * reason names the first condition that failed, in that order.
+ * the Node leg's offset sweep ran and found no differing zone, and its calendar sweep ran and found
+ * no differing calendar. Fail closed: each leg must say its swap pass loaded `temporal-polyfill`
+ * (`entryLoaded: true`), and `counts.failed`, `differingZones` and `differingCalendars` must be the
+ * number 0, so a missing or malformed field blocks. Otherwise the reason names the first condition
+ * that failed, in that order.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @returns {{ ready: true, version: string } | { ready: false, reason: string }}
  */
@@ -1122,6 +1130,9 @@ export function swapReady(verdicts) {
   if (sweep?.status !== "ran") {
     return { ready: false, reason: "offset sweep: did not run" };
   }
+  // A sweep that compared nothing proves nothing: the counts of what it read must be positive.
+  const noZones = notCounted("offset sweep", sweep.zones, "zone");
+  if (noZones) return { ready: false, reason: noZones };
   const n = sweep.differingZones;
   if (n !== 0) {
     return {
@@ -1132,7 +1143,43 @@ export function swapReady(verdicts) {
           : "offset sweep: the differing zone count is missing",
     };
   }
+  const calendars = ran[0]?.calendarSweep;
+  if (calendars?.status !== "ran") {
+    return { ready: false, reason: "calendar sweep: did not run" };
+  }
+  const noCalendars =
+    notCounted("calendar sweep", calendars.calendars, "calendar") ??
+    notCounted("calendar sweep", calendars.years, "year");
+  if (noCalendars) return { ready: false, reason: noCalendars };
+  const c = calendars.differingCalendars;
+  if (c !== 0) {
+    return {
+      ready: false,
+      reason:
+        Number.isInteger(c) && c > 0
+          ? `calendar sweep: ${c} ${c === 1 ? "calendar differs" : "calendars differ"} (${(
+              calendars.differing ?? []
+            )
+              .map((d) => d.calendar)
+              .join(", ")})`
+          : "calendar sweep: the differing calendar count is missing",
+    };
+  }
   return { ready: true, version: /** @type {string} */ (versions[0]) };
+}
+
+/**
+ * Why a sweep's count of what it read blocks the swap, or `null` when it is a positive integer.
+ * @param {string} sweep  "offset sweep" or "calendar sweep"
+ * @param {unknown} count
+ * @param {string} noun  what was counted, singular
+ * @returns {string | null}
+ */
+function notCounted(sweep, count, noun) {
+  if (Number.isInteger(count) && /** @type {number} */ (count) > 0) return null;
+  return count === 0
+    ? `${sweep}: it compared no ${noun}`
+    : `${sweep}: the ${noun} count is missing`;
 }
 
 /**
@@ -1148,13 +1195,15 @@ function swapRuntimeName(leg, v) {
 }
 
 /**
- * The swap issue's paragraphs, built from whichever legs ran.
+ * The swap issue's paragraphs, built from whichever legs ran. `ready` is false only in a forced dry
+ * run, whose text must not claim a pass the run did not have.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @param {string} version
  * @param {string} runUrl
+ * @param {boolean} ready
  * @returns {string[]}
  */
-function swapParagraphs(verdicts, version, runUrl) {
+function swapParagraphs(verdicts, version, runUrl, ready) {
   const rows = NATIVE_LEGS.map((leg) => {
     const v = verdictOf(verdicts, SWAP(leg));
     if (v?.status !== "ran") {
@@ -1181,8 +1230,20 @@ function swapParagraphs(verdicts, version, runUrl) {
         ? `Offset sweep: every one of ${sweep.zones} zones matches \`Intl.DateTimeFormat\` at 12:00 UTC each day ${span}.`
         : `Offset sweep: ${sweep.differingZones} of ${sweep.zones} zones differ from \`Intl.DateTimeFormat\` at 12:00 UTC on some day ${span}.`;
   }
+  const calendarSweep =
+    node?.status === "ran"
+      ? /** @type {SwapVerdict} */ (node).calendarSweep
+      : null;
+  let calendarLine = "Calendar sweep: did not run.";
+  if (calendarSweep?.status === "ran") {
+    const span = `from ${calendarSweep.from} to ${calendarSweep.through}`;
+    calendarLine =
+      calendarSweep.differingCalendars === 0
+        ? `Calendar sweep: every one of ${calendarSweep.calendars} calendars matches the built-in Temporal on the first day, months and days of each year ${span}.`
+        : `Calendar sweep: ${calendarSweep.differingCalendars} of ${calendarSweep.calendars} calendars differ from the built-in Temporal in some year ${span}.`;
+  }
   return [
-    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${runUrl}`,
+    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, ${ready ? "passed every check" : "was checked"} on this run: ${runUrl}`,
     table(
       [
         "Runtime",
@@ -1194,6 +1255,7 @@ function swapParagraphs(verdicts, version, runUrl) {
       rows,
     ),
     sweepLine,
+    calendarLine,
     `What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}). Type errors are not checked here; § 5 lists them.`,
     "A person makes the swap. CI opens issues, never pull requests.",
   ];
@@ -1218,12 +1280,12 @@ function swapFindings(verdicts, runUrl) {
     )
   );
   const version = result.ready ? result.version : (firstRan?.version ?? "");
-  const paragraphs = swapParagraphs(verdicts, version, runUrl);
+  const paragraphs = swapParagraphs(verdicts, version, runUrl, result.ready);
   const comment = `temporal-polyfill ${version} also passes (run ${runUrl}).\n\n${paragraphs.join("\n\n")}`;
   /** @type {Finding} */
   const real = {
     key: "temporal-polyfill-swap/ready",
-    title: `Swap to temporal-polyfill ${version}: it passes the GMT suite and the offset sweep`,
+    title: `Swap to temporal-polyfill ${version}: it passes the GMT suite and both sweeps`,
     labels: [CANARY_LABEL],
     body: paragraphs.join("\n\n"),
     comment,
@@ -1231,18 +1293,25 @@ function swapFindings(verdicts, runUrl) {
   /** @type {Finding[]} */
   const out = result.ready ? [real] : [];
   if (forcedBy) {
-    const outcome = result.ready ? "every check passed" : result.reason;
-    out.push(
-      dryRun(
-        real,
-        "--force-swap-ready",
-        [
-          `Forced for a dry run. Real result on this run: ${outcome}.`,
-          ...paragraphs,
-        ],
-        runUrl,
-      ),
-    );
+    // The dry run is built from the ready issue, so a run that is not ready takes its own title,
+    // and every comment on an open dry-run issue opens with the real result, as the body does.
+    const outcome = result.ready
+      ? "every check passed"
+      : `not ready to swap. The first check that blocks it: ${result.reason}`;
+    const dryParagraphs = [
+      `Forced for a dry run. Real result on this run: ${outcome}.`,
+      ...paragraphs,
+    ];
+    const twin = result.ready
+      ? real
+      : {
+          ...real,
+          title: `Swap to temporal-polyfill ${version}: not ready, forced to preview the ready issue`,
+        };
+    out.push({
+      ...dryRun(twin, "--force-swap-ready", dryParagraphs, runUrl),
+      comment: dryParagraphs.join("\n\n"),
+    });
   }
   return out;
 }
@@ -1250,7 +1319,7 @@ function swapFindings(verdicts, runUrl) {
 /**
  * A swap leg that ran but whose swap pass did not load `temporal-polyfill` (`entryLoaded` is not
  * `true`) tested the wrong Temporal, so it counts as a leg that could not run. The Node leg's
- * offset sweep that could not run is listed too: it is part of that leg's check.
+ * offset or calendar sweep that could not run is listed too: it is part of that leg's check.
  * @param {Record<string, Verdict | null>} verdicts
  * @returns {{ source: string, message: string }[]}
  */
@@ -1272,6 +1341,15 @@ function swapSweepFailures(verdicts) {
     out.push({
       source: SWAP_NODE,
       message: `offset sweep: ${/** @type {{ message: string }} */ (node.sweep).message}`,
+    });
+  }
+  if (
+    node?.status === "ran" &&
+    node.calendarSweep?.status === "could-not-run"
+  ) {
+    out.push({
+      source: SWAP_NODE,
+      message: `calendar sweep: ${/** @type {{ message: string }} */ (node.calendarSweep).message}`,
     });
   }
   return out;
