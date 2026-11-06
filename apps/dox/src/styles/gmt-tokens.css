@@ -109,13 +109,22 @@
   --gmt-motion-sonar-loop-duration: 2s;
 
   /* ---- Ice and the sweep ----
-   * The pale top of the ice scale, the cyan-tinted frost between it and the cyan, and the
-   * one easing curve for a sweep (a panel or tab gliding into place). Used by the edge
-   * control and the zone drawer.
+   * The pale top of the ice scale, the cyan-tinted frost between it and the cyan, the
+   * one easing curve for a sweep (a panel or tab gliding into place), and the sheen: one
+   * band of ice light at 105°, sized to cross a pane when drawn at 250% of its width. Used
+   * by the edge control, the zone drawer and the sidebar's view transition.
    */
   --gmt-ice-bright: #e6f6ff;
   --gmt-frost: color-mix(in oklab, var(--gmt-ice-bright) 70%, var(--gmt-cyan));
   --gmt-ease-sweep: cubic-bezier(0.25, 0.6, 0.2, 1);
+  --gmt-sheen: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in oklab, var(--gmt-ice-bright) 10%, transparent) 45%,
+    color-mix(in oklab, var(--gmt-ice-bright) 24%, transparent) 50%,
+    color-mix(in oklab, var(--gmt-ice-bright) 10%, transparent) 55%,
+    transparent 62%
+  );
 
   /* ---- Glass blur (DOX-D1) ----
    * Every `backdrop-filter` reads one of these, so reduced transparency is a
