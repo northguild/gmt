@@ -612,6 +612,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **`api-surface.mjs` skips `content/docs/changelog/`**: release notes record past APIs
     (`@northguild/gmt/duty`, `isLeapSecond` from `timescale`) that today's surface must not check.
     A `packages/*/CHANGELOG.md` change runs the Dox content checks (`affected.mjs`).
+- **`/why-gmt/` is a normal doc page**, with both sidebars like the rest of "Start here"; only
+  the landing uses the splash template. Its headings are plain `##` lines in `why-gmt.mdx`,
+  so each lists in "On this page" (`WhyDateBug variant="full"` draws no heading of its own).
+  The figure tiles under the intro are `WhyGmtFigures.astro`, from the list in
+  `src/lib/why-gmt-figures.ts` that `mdx-jsx.ts` also renders for the text surfaces.
 - **`/compare/` is a top-level page**, in "Start here" after `why-gmt` (`astro.config.mjs`
   for the sidebar, `START_ORDER` in `src/lib/top-level-pages.ts` for `llms.txt` and
   `llms-full.txt`). `<LibraryCompare table="…">` renders each of its tables and the notes list
@@ -2628,7 +2633,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     override, `menu-button.ts`, the test and the `components` entry are deleted.
 - **Corner brackets:** two L-shaped corners, top left and bottom right, on a few frames only
   (when one is right: [visual-design.md § Panels](reference/visual-design.md#panels)).
-  `.gmt-brackets` (`gmt-primitives.css`, cyan) is on each `GridSection.astro` panel of the home page and `/why-gmt`. The hero has no frame. The transport tools draw the same
+  `.gmt-brackets` (`gmt-primitives.css`, cyan) is on each `GridSection.astro` panel of the home page. The hero has no frame. The transport tools draw the same
   frame in the frame's own colour (`--leg-color`, else `--series`) from
   `families/transport/leg-fieldset.module.css` (the Delivery Scheduler's legs and the Timetable
   Reader's rows).
