@@ -7,7 +7,7 @@
 
 ## Overview
 
-`@northguild/gmt` expands with **58 stories across Core and 9 realms**, built in four phases.
+`@northguild/gmt` expands with **59 stories across Core and 9 realms**, built in four phases.
 
 Reading the table top to bottom is the build order, and the `#` column is that order. A story
 ID is a permanent name: it is what every cross-reference, spec filename and GitHub issue uses,
@@ -66,7 +66,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | CORE-88 (#29)  | MAR-16 … CORE-88 (#21–#29)                 | GNSS time and leap seconds, then the second Core round: the site on its domain, the `Temporal` seam, the native suite, stored times, the Canada 2026 clock-change checker                                                                                                                                                          |
 | CORE-106 (#41) | CORE-89 … CORE-106 (#30–#41)               | The rest of the second Core round: the Morocco checker, identifiers, holiday rules, recurrence and cron, human durations, `Position`, month-day and year-month values, validators that take any value, lengths of time counted from now; then the Canada checker in the past tense, one file per workaround and the database audit |
 | CORE-108 (#44) | CORE-107, CORE-92, CORE-108 (#42–#44)      | Changelog pages, the weekly check for a `temporal-polyfill` release, and the move onto `temporal-polyfill`: a new runtime dependency and changed public types, with no new function beside them                                                                                                                                    |
-| SPA-52 (#48)   | SPA-46 … SPA-52 (#45–#48)                  | The time-scale conversions: TAI64 text labels, TT and TCG, Julian Date, MJD and J2000, CCSDS ASCII time codes                                                                                                                                                                                                                      |
+| SPA-52 (#49)   | CORE-109 … SPA-52 (#45–#49)                | The hero drawn from one camera, then the time-scale conversions: TAI64 text labels, TT and TCG, Julian Date, MJD and J2000, CCSDS ASCII time codes                                                                                                                                                                                                                      |
 
 ---
 
@@ -117,21 +117,22 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 41  | CORE-106 | Core       | Database audit: SQL offset timestamps<br>read and validated, a guide matrix per database                 | —          | #438  | 1.21.0  | Done        |
 | 42  | CORE-107 | Core       | A changelog page in Dox, and the<br>You-Dont-Need-Momentjs PR on `/upstream`                             | —          | #451  | —       | Done        |
 | 43  | CORE-92  | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                                        | —          | #386  | —       | Done        |
-| 44  | CORE-108 | Core       | Move GMT onto `temporal-polyfill`<br>(smaller bundle, fewer workarounds)                                 | —          | #460  | Cut     | Not started |
-| 45  | SPA-46   | Space      | TAI64 / TAI64N / TAI64NA text labels                                                                     | —          | #227  | —       | Not started |
-| 46  | SPA-47   | Space      | `toTT` + `toTCG`                                                                                         | —          | #228  | —       | Not started |
-| 47  | SPA-49   | Space      | Two-part Julian Date + MJD + J2000                                                                       | SPA-47     | #230  | —       | Not started |
-| 48  | SPA-52   | Space      | CCSDS ASCII time codes A and B                                                                           | —          | #233  | Cut     | Not started |
-| 49  | HLTH-93  | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`, `isValidHL7`                                              | —          | #401  | —       | Not started |
-| 50  | HLTH-94  | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes                          | HLTH-93    | #402  | —       | Not started |
-| 51  | FIN-95   | Finance    | FIX UTC timestamps: parse, format and<br>`isValidFixUtcTimestamp`                                        | —          | #403  | —       | Not started |
-| 52  | FIN-96   | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`, `isValidSwiftDate`                                  | FIN-95     | #404  | —       | Not started |
-| 53  | AV-97    | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`, `isValidSsimDate`                                      | —          | #405  | —       | Not started |
-| 54  | AV-98    | Aviation   | METAR and NOTAM times: parse,<br>`isValidMetarTime`, `isValidNotamValidity`                              | AV-97      | #406  | —       | Not started |
-| 55  | RAI-99   | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`, `isValidGtfsTime`                               | —          | #407  | —       | Not started |
-| 56  | RAI-100  | Rail       | GTFS times to instants: `gtfsToInstant`                                                                  | RAI-99     | #408  | —       | Not started |
-| 57  | IOT-101  | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                                               | —          | #409  | —       | Not started |
-| 58  | CORE-90  | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law                                 | —          | #341  | —       | Waiting     |
+| 44  | CORE-108 | Core       | Move GMT onto `temporal-polyfill`<br>(smaller bundle, fewer workarounds)                                 | —          | #460  | Cut     | Done        |
+| 45  | CORE-109 | Core       | The Dox hero draws the Earth, Sun and<br>Moon from one camera                                            | —          | #467  | —       | In progress |
+| 46  | SPA-46   | Space      | TAI64 / TAI64N / TAI64NA text labels                                                                     | —          | #227  | —       | Not started |
+| 47  | SPA-47   | Space      | `toTT` + `toTCG`                                                                                         | —          | #228  | —       | Not started |
+| 48  | SPA-49   | Space      | Two-part Julian Date + MJD + J2000                                                                       | SPA-47     | #230  | —       | Not started |
+| 49  | SPA-52   | Space      | CCSDS ASCII time codes A and B                                                                           | —          | #233  | Cut     | Not started |
+| 50  | HLTH-93  | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`, `isValidHL7`                                              | —          | #401  | —       | Not started |
+| 51  | HLTH-94  | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes                          | HLTH-93    | #402  | —       | Not started |
+| 52  | FIN-95   | Finance    | FIX UTC timestamps: parse, format and<br>`isValidFixUtcTimestamp`                                        | —          | #403  | —       | Not started |
+| 53  | FIN-96   | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`, `isValidSwiftDate`                                  | FIN-95     | #404  | —       | Not started |
+| 54  | AV-97    | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`, `isValidSsimDate`                                      | —          | #405  | —       | Not started |
+| 55  | AV-98    | Aviation   | METAR and NOTAM times: parse,<br>`isValidMetarTime`, `isValidNotamValidity`                              | AV-97      | #406  | —       | Not started |
+| 56  | RAI-99   | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`, `isValidGtfsTime`                               | —          | #407  | —       | Not started |
+| 57  | RAI-100  | Rail       | GTFS times to instants: `gtfsToInstant`                                                                  | RAI-99     | #408  | —       | Not started |
+| 58  | IOT-101  | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                                               | —          | #409  | —       | Not started |
+| 59  | CORE-90  | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law                                 | —          | #341  | —       | Waiting     |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm

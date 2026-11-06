@@ -553,13 +553,13 @@ Body text here.`;
         "Tools",
         "Checks",
         "Start here",
-        "Changelog",
         "Migrate",
         "Guides",
         "Reference",
         "Industries",
         "Scenarios",
         "Mistakes",
+        "Changelog",
       ].map(at);
       expect(order).toEqual([...order].sort((a, b) => a - b));
       // Every namespace section sits between the reference index and the industries.
