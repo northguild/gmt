@@ -617,10 +617,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   so each lists in "On this page" (`WhyDateBug variant="full"` draws no heading of its own).
   The figure tiles under the intro are `WhyGmtFigures.astro`, from the list in
   `src/lib/why-gmt-figures.ts` that `mdx-jsx.ts` also renders for the text surfaces.
-- **`/compare/` is a top-level page**, in "Start here" after `why-gmt` (`astro.config.mjs`
-  for the sidebar, `START_ORDER` in `src/lib/top-level-pages.ts` for `llms.txt` and
-  `llms-full.txt`). `<LibraryCompare table="…">` renders each of its tables and the notes list
-  from the builders in `src/lib/library-compare-tables.ts`, and `src/lib/mdx-jsx.ts` renders
+- **"Start here" puts first use first**: `install` (the landing's "Get started" target, ending
+  in a first call), `core-rules`, then the reasons (`why-gmt`, `compare`, `bundle-size`) and
+  `upstream` last. `astro.config.mjs` sets the sidebar, and so the prev/next links;
+  `START_ORDER` in `src/lib/top-level-pages.ts` sets the same order for `llms.txt` and
+  `llms-full.txt`. Change both together.
+- **`/compare/` is a top-level page** in "Start here". `<LibraryCompare table="…">` renders
+  each of its tables and the notes list from the builders in `src/lib/library-compare-tables.ts`, and `src/lib/mdx-jsx.ts` renders
   the same builders for the text surfaces (`.md`, `llms.txt`, the retrieval chunks), so the
   page and its text twin cannot state different figures. Its figures come only from
   `gmt-stats.json` and `library-measurements.json`; none is typed into `compare.mdx`.
