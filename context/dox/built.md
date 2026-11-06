@@ -2794,7 +2794,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
       nothing art-directed. `lib/sky-math.ts` holds the gnomonic projection
       of the globe's own camera (one pinhole, the only lens under which a city's line to the Sun
       meets the Sun that is drawn) and the sidereal time (Greenwich mean sidereal time, Meeus eq. 12.4, checked
-      against examples 12.a and 12.b). The view's centre is the point behind the Earth:
+      against examples 12.a and 12.b). The stars and the Milky Way map are in J2000 axes and the
+      Sun, the Moon and the sidereal time in axes of date, about 0.38 degree apart in 2026, so the
+      stars and the band are drawn through `starViewMatrix`: IAU 1976 precession (Meeus eq. 21.2 to
+      21.4, first-order terms, under 2" off between 1900 and 2100) and then the view. It is pinned
+      to Meeus example 21.b and to a JPL Horizons row given in both axes. The view's centre is the point behind the Earth:
       right ascension = sidereal time + 180 degrees minus the camera's longitude turn, and
       declination = the camera's latitude turn (held to 89 degrees). So a drag to the right
       moves the stars left, at the Earth's own speed; the ambient spin moves them too; and
@@ -2889,7 +2893,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
       ill-conditioned near full (a phase angle of 2 degrees is 3 degrees off), so no pin sits
       closer than 10 degrees. The tests also assert that the parallax is applied (over 2.5 degrees
       from the geocentric place), that the size grows from the camera, and that the drawn limb points
-      at the drawn Sun to 1 degree at zoom 1 and 5.
+      at the drawn Sun to 1 degree at zoom 1 and 5. The geocentric Moon underneath (the Astronomical
+      Almanac's low-precision formulae) is off by 0.1 degree on average and at most 0.37 degree against
+      Horizons every 6 hours through 2026 and 2027.
     - **The meteor** (`lib/space-fx.ts`) is the sky's one moving thing: a faint streak, about one
       a minute (a wait of 20 to 120 s, mean 45), a third to a half of a second long, and never over
       the copy, an open zone drawer or the Earth. It needs no frame between meteors, and none falls
@@ -2937,8 +2943,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     vanishing point, drawable only when it lies in front of the camera. Under one pinhole a city's
     line to the Sun runs along the screen line from the city to the drawn Sun (Snyder, USGS PP 1395,
     section 22: a great circle is a line under the gnomonic projection), at the centre, near the edge
-    and at full zoom; `sky-math.test.ts` proves it through the shipped code and `sky-one-camera`
-    proves the sky and the globe receive the same centre, radius and rotation. The drag gain stays
+    and at full zoom; `sky-math.test.ts` proves it through the shipped code; `sky-one-camera`
+    proves the sky and the globe receive the same centre and radius, and `sky-from-black` and
+    `sky-follows-drag` the same rotation. The drag gain stays
     90 degrees per radius, a feel constant.
   - **Pure and shared:** `pinhole.ts` (the one camera: `P` from the geostationary altitude and the equatorial radius, and
     `f = radius * sqrt(P^2 - 1)`, so the silhouette lands at `radius`; the shaders, the fallback and the

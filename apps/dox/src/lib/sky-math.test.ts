@@ -11,11 +11,13 @@ import {
   skyCentre,
   skyLens,
   skyToScreen,
+  starViewMatrix,
   SUN_RADIUS,
   sunRaDec,
   toUnit,
   viewMatrix,
   type SkyLens,
+  type Unit,
 } from "./sky-math";
 import * as skyMath from "./sky-math";
 
@@ -93,6 +95,60 @@ describe("viewMatrix", () => {
           m[k * 3]! * x + m[k * 3 + 1]! * y + m[k * 3 + 2]! * z,
         ).toBeCloseTo(expected[k]!, 12);
     }
+  });
+});
+
+describe("starViewMatrix", () => {
+  /** A Julian date as Unix milliseconds. */
+  const jd = (day: number): number => (day - 2_440_587.5) * 86_400_000;
+  const turned = (m: Float64Array, [x, y, z]: Unit): Vec3 =>
+    [0, 1, 2].map(
+      (k) => m[k * 3]! * x + m[k * 3 + 1]! * y + m[k * 3 + 2]! * z,
+    ) as Vec3;
+  /** The angle between two unit vectors, arcseconds. */
+  const apart = (a: Vec3, b: Vec3): number =>
+    (Math.acos(Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])) / RAD) *
+    3600;
+  const cameras: [number, number][] = [
+    [0, 0],
+    [-73, 41],
+    [120, -55],
+  ];
+
+  it("is viewMatrix at J2000.0", () => {
+    for (const rotation of cameras) {
+      const a = starViewMatrix(rotation, jd(2_451_545));
+      const b = viewMatrix(rotation, jd(2_451_545));
+      for (let i = 0; i < 9; i++) expect(a[i]).toBeCloseTo(b[i]!, 12);
+    }
+  });
+
+  it("puts a J2000 star where the view puts its place of date: theta Persei, Meeus example 21.b, within 0.2 arcsecond", () => {
+    /* 2028 November 13.19 TD: from 41.054063, 49.227750 (proper motion applied) to 41.547214, 49.348483. */
+    const instant = jd(2_462_088.69);
+    for (const rotation of cameras)
+      expect(
+        apart(
+          turned(
+            starViewMatrix(rotation, instant),
+            toUnit(41.054_063, 49.227_75),
+          ),
+          turned(viewMatrix(rotation, instant), toUnit(41.547_214, 49.348_483)),
+        ),
+      ).toBeLessThan(0.2);
+  });
+
+  it("matches JPL Horizons' Moon of 2026-11-27 12:00 UT, 0.38 degree apart in the two axes, to 40 arcseconds of aberration and nutation", () => {
+    /* Geocentric: ICRF 107.007087638, 25.655002746; apparent of date 107.428268913, 25.611513975. */
+    /* 2026-11-27T12:00:00Z. */
+    const instant = 1_795_780_800_000;
+    const j2000 = toUnit(107.007_087_638, 25.655_002_746);
+    const ofDate = toUnit(107.428_268_913, 25.611_513_975);
+    const m = viewMatrix([0, 0], instant);
+    expect(apart(turned(m, j2000), turned(m, ofDate))).toBeGreaterThan(1300);
+    expect(
+      apart(turned(starViewMatrix([0, 0], instant), j2000), turned(m, ofDate)),
+    ).toBeLessThan(40);
   });
 });
 

@@ -10,7 +10,16 @@ import {
   siderealDeg,
   skyCentre,
   sunRaDec,
+  toUnit,
 } from "./sky-math";
+
+const RAD = Math.PI / 180;
+
+/** The angle, degrees, between star `i` of a decoded list and a unit vector. */
+const apart = (unit: Float64Array, i: number, [x, y, z]: number[]): number =>
+  Math.acos(
+    Math.min(1, unit[i * 3]! * x + unit[i * 3 + 1]! * y + unit[i * 3 + 2]! * z),
+  ) / RAD;
 
 /** 1992-04-12T00:00:00Z, Meeus examples 47.a and 48.a. */
 const APR_12 = 703_036_800_000;
@@ -257,7 +266,7 @@ describe("decodeStars", () => {
       let best = Infinity;
       for (let i = 0; i < list.count; i++) {
         if (Math.abs(list.mag[i]! - mag) > 0.2) continue;
-        best = Math.min(best, Math.hypot(list.ra[i]! - ra, list.dec[i]! - dec));
+        best = Math.min(best, apart(list.unit, i, toUnit(ra, dec)));
       }
       expect(best).toBeLessThan(0.01);
     },

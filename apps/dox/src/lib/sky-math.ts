@@ -34,18 +34,19 @@ export interface SkyCentre {
 
 const wrap360 = (degrees: number): number => ((degrees % 360) + 360) % 360;
 
+/** Julian centuries from J2000.0 at a Unix instant in milliseconds. */
+const centuries = (instantMs: number): number =>
+  (instantMs / DAY_MS + UNIX_EPOCH_JD - J2000_JD) / 36_525;
+
 /**
  * Greenwich mean sidereal time, degrees in [0, 360), at a Unix instant in milliseconds. Meeus,
- * Astronomical Algorithms, 2nd ed., eq. 12.4, with the instant taken as UT.
+ * Astronomical Algorithms, 2nd ed., eq. 12.4, with the instant taken as UT and without the cubic
+ * term, which adds under 0.001" between 1900 and 2100.
  */
 export function siderealDeg(instantMs: number): number {
-  const days = instantMs / DAY_MS + UNIX_EPOCH_JD - J2000_JD;
-  const t = days / 36_525;
+  const t = centuries(instantMs);
   return wrap360(
-    280.46061837 +
-      360.98564736629 * days +
-      0.000387933 * t * t -
-      (t * t * t) / 38_710_000,
+    280.46061837 + 13_185_000.770_053_742 * t + 0.000387933 * t * t,
   );
 }
 
@@ -94,12 +95,13 @@ export const MOON_K = 0.272_507_6;
  * The Moon's geocentric direction, a unit vector in equatorial axes of date, and its horizontal
  * parallax, degrees, from the Astronomical Almanac's low-precision lunar formulae (Section D). The coefficients are those of the Almanac's
  * 1990s editions as transcribed in the MOONPOS routine (Greason and Steele, IDL Astronomy
- * Library); they are good to about 0.3 degree of right ascension and 0.2 degree of declination
- * between 1900 and 2100. The ecliptic position is turned into the equatorial one by the mean
+ * Library). Against JPL Horizons, every 6 hours through 2026 and 2027, the direction is off by
+ * 0.1 degree on average and at most 0.37 degree, up to 0.39 degree of right ascension and 0.24
+ * degree of declination. The ecliptic position is turned into the equatorial one by the mean
  * obliquity.
  */
 function moonGeocentric(instantMs: number): [Unit, number] {
-  const t = (instantMs / DAY_MS + UNIX_EPOCH_JD - J2000_JD) / 36_525;
+  const t = centuries(instantMs);
   const sin = (a: number, b: number): number => Math.sin((a + b * t) * RAD);
   const cos = (a: number, b: number): number => Math.cos((a + b * t) * RAD);
   const longitude =
@@ -245,6 +247,34 @@ export function viewMatrix(
   instantMs: number,
 ): Float64Array {
   return rotationMatrix(turnOf(rotation, instantMs), rotation[1]);
+}
+
+/**
+ * `viewMatrix` for a J2000 direction (a star, the Milky Way map), whose axes drift from those of
+ * date that the Sun, the Moon and the sidereal time use: IAU 1976 precession (Meeus, Astronomical
+ * Algorithms, 2nd ed., eq. 21.2 to 21.4) first, then the view. Precession turns by zeta about the
+ * pole, by theta about the new y axis and by z about the pole again; the last turn joins the
+ * view's own turn about the pole. Only the angles' first-order terms are kept, zeta = z =
+ * 2306.2181" and theta = 2004.3109" a Julian century; the rest add under 2" between 1900 and
+ * 2100.
+ */
+export function starViewMatrix(
+  rotation: readonly [number, number],
+  instantMs: number,
+): Float64Array {
+  const t = centuries(instantMs);
+  const zeta = 0.640_616_14 * t;
+  const a = rotationMatrix(turnOf(rotation, instantMs) + zeta, rotation[1]);
+  const b = rotationMatrix(zeta, 0.556_753_03 * t);
+  return a.map((_, i) => {
+    const row = i - (i % 3);
+    const column = i % 3;
+    return (
+      a[row]! * b[column]! +
+      a[row + 1]! * b[column + 3]! +
+      a[row + 2]! * b[column + 6]!
+    );
+  });
 }
 
 /**

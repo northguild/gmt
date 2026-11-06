@@ -28,6 +28,7 @@ import {
   skyCentre,
   skyLens,
   skyToScreen,
+  starViewMatrix,
   SUN_RADIUS,
   sunRaDec,
   toUnit,
@@ -153,13 +154,10 @@ const clamp = (low: number, value: number, high: number): number =>
 
 export interface StarList {
   count: number;
-  /** Right ascension and declination, degrees. */
-  ra: Float64Array;
-  dec: Float64Array;
   mag: Float32Array;
   /** B-V class, 0 to 3. */
   cls: Uint8Array;
-  /** Unit vectors, three numbers per star. */
+  /** Unit vectors in J2000 axes, three numbers per star. */
   unit: Float64Array;
 }
 
@@ -169,8 +167,6 @@ export function decodeStars(data: ArrayBuffer): StarList {
   const view = new DataView(data);
   const list: StarList = {
     count,
-    ra: new Float64Array(count),
-    dec: new Float64Array(count),
     mag: new Float32Array(count),
     cls: new Uint8Array(count),
     unit: new Float64Array(count * 3),
@@ -179,8 +175,6 @@ export function decodeStars(data: ArrayBuffer): StarList {
     const at = i * RECORD;
     const ra = (view.getUint16(at, true) / 65536) * 360;
     const dec = (view.getInt16(at + 2, true) / 32767) * 90;
-    list.ra[i] = ra;
-    list.dec[i] = dec;
     list.mag[i] = view.getUint8(at + 4) / 20 - 2;
     list.cls[i] = view.getUint8(at + 5);
     const [x, y, z] = toUnit(ra, dec);
@@ -496,17 +490,19 @@ export function mountSky(options: SkyOptions): Sky {
     const view = skyCentre(latest.rotation, latest.instantMs);
     const lens = skyLens(width, height, latest.centre, latest.zoom);
     const m = viewMatrix(latest.rotation, latest.instantMs);
+    /* The stars and the Milky Way map are in J2000 axes, the Sun and the Moon in axes of date. */
+    const stars = starViewMatrix(latest.rotation, latest.instantMs);
     drawn = { ...latest, lens };
     moonDisc = null;
     if (visible(starsCanvas)) {
-      drawStars(lens, m);
+      drawStars(lens, stars);
       starsCanvas.dataset["skyBodies"] = drawBodies(lens, m);
       starsCtx?.restore();
       starsCanvas.dataset["skyDraws"] = String(
         Number(starsCanvas.dataset["skyDraws"] ?? 0) + 1,
       );
     }
-    if (visible(bandCanvas)) drawBand(lens, m);
+    if (visible(bandCanvas)) drawBand(lens, stars);
     /* What the gate reads: the view drawn, how many draws, and how long the last one took (ms). */
     starsCanvas.dataset["skyView"] =
       `${view.ra.toFixed(3)} ${view.dec.toFixed(3)} ${latest.instantMs}`;
