@@ -5,10 +5,14 @@
  * list inside a `.gmt-widget` is a legend, a row of verdicts or a key, so its
  * three rules (the `ul`, its `li` and the `li::before`) skip any list that sits
  * inside a widget. The browser pass checks the same thing on the built pages.
+ *
+ * A chart key is a list in page prose with no `.gmt-widget` around it, so it opts out the way
+ * Starlight's own widgets do: from a `.not-content` ancestor, the one the exclusion skips.
  */
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { chartKey } from "../src/widgets/builders/chart-key";
 
 const css = readFileSync(
   path.resolve(import.meta.dirname, "..", "src", "styles", "gmt-content.css"),
@@ -40,5 +44,17 @@ describe("the prose bullet rule", () => {
     for (const selector of selectors) {
       expect(selector, selector).toContain(EXCLUSION);
     }
+  });
+});
+
+describe("the chart key", () => {
+  it("sits inside a .not-content element, so no prose bullet sits beside a swatch", () => {
+    const markup = chartKey([
+      { kind: "own", words: "its own functions" },
+    ]).value;
+    expect(markup).toMatch(
+      /^<div class="not-content"><ul [^>]*aria-label="Key">/,
+    );
+    expect(markup.endsWith("</ul></div>")).toBe(true);
   });
 });

@@ -48,15 +48,6 @@ describe("chartKey", () => {
     await expectNoAxeViolations(host);
   });
 
-  // The key sits inside page prose, whose lists draw a dash before each item; the swatch is the
-  // item's mark, so the key opts out the way Starlight's own widgets do: from an ancestor, since
-  // the prose rule skips only what sits inside a `.not-content` element.
-  it("opts out of the prose list styling, so no bullet sits beside a swatch", () => {
-    renderHtml(chartKey([{ kind: "own", words: "its own functions" }]));
-    const key = screen.getByRole("list", { name: "Key" });
-    expect(key.parentElement).toHaveClass("not-content");
-  });
-
   it("escapes the words", () => {
     renderHtml(chartKey([{ kind: "own", words: "<b>x</b>" }]));
     expect(screen.getByText("<b>x</b>")).toBeInTheDocument();
