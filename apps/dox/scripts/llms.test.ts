@@ -549,18 +549,18 @@ Body text here.`;
         return found;
       };
       const order = [
-        "Install",
-        "Tools",
-        "Checks",
         "Start here",
-        "Changelog",
-        "Migrate",
         "Guides",
         "Reference",
         "Industries",
+        "Tools",
         "Scenarios",
         "Mistakes",
+        "Migrate",
+        "Checks",
+        "Changelog",
       ].map(at);
+      expect(headings).not.toContain("Install");
       expect(order).toEqual([...order].sort((a, b) => a - b));
       // Every namespace section sits between the reference index and the industries.
       for (const heading of headings.filter((h) =>
@@ -568,6 +568,56 @@ Body text here.`;
       )) {
         expect(at(heading)).toBeGreaterThan(at("Reference"));
         expect(at(heading)).toBeLessThan(at("Industries"));
+      }
+    });
+
+    it("llms.txt lists Install first under Start here, and compare, bundle-size and upstream under Migrate", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      const section = (heading: string): string[] => {
+        const start = llms.indexOf(`\n## ${heading}\n`);
+        expect(start, `${heading} is a section`).toBeGreaterThanOrEqual(0);
+        const rest = llms.slice(start + heading.length + 5);
+        const end = rest.search(/^## /m);
+        return (end < 0 ? rest : rest.slice(0, end))
+          .split("\n")
+          .filter((line) => line.startsWith("- ["));
+      };
+      const startHere = section("Start here");
+      expect(startHere[0]).toMatch(/\/install\.md\)/);
+      const migrate = section("Migrate");
+      for (const slug of ["compare", "bundle-size", "upstream"]) {
+        const link = new RegExp(`/${slug}\\.md\\)`);
+        expect(
+          migrate.some((line) => link.test(line)),
+          `${slug} is under Migrate`,
+        ).toBe(true);
+        expect(
+          startHere.some((line) => link.test(line)),
+          `${slug} is not under Start here`,
+        ).toBe(false);
+      }
+    });
+
+    it("llms-full.txt follows the sidebar: a guide after the start pages, the migrate pages last", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const full = readFileSync(resolve(distDir, "llms-full.txt"), "utf8");
+      const urls = [...full.matchAll(/^> source: (\S+)$/gm)].map((m) => m[1]!);
+      const path = (url: string) => url.replace(/^.*\/gmt\//, "");
+      expect(urls.length).toBeGreaterThan(0);
+      const lastStart = urls.findIndex((url) => path(url) === "why-gmt.md");
+      expect(lastStart).toBeGreaterThanOrEqual(0);
+      expect(path(urls[lastStart + 1]!)).toMatch(/^guides\//);
+      const firstMigrate = urls.findIndex((url) =>
+        /migrate\/index\.md$/.test(url),
+      );
+      expect(firstMigrate).toBeGreaterThan(lastStart);
+      for (const url of urls.slice(firstMigrate)) {
+        expect(path(url), url).toMatch(
+          /^(migrate\/|compare\/behaviour\.md$|compare\.md$|bundle-size\.md$|upstream\.md$)/,
+        );
       }
     });
 

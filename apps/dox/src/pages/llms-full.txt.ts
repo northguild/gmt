@@ -101,8 +101,8 @@ export const GET: APIRoute = () => {
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  // Start-here pages: every top-level page under content/docs/, in sidebar order
-  // (any top-level page not in START_ORDER follows, alphabetically).
+  // Start-here pages: the top-level pages the sidebar's Start here group shows, in its order
+  // (src/lib/section-order.ts); any other follows, alphabetically.
   const startPages = topLevelPages(RAW).map(({ slug, source }) => {
     const { data, body } = stripFrontmatter(source);
     const md = stripMdx(body, { gmtVersion, values });
@@ -117,7 +117,8 @@ export const GET: APIRoute = () => {
     };
   });
 
-  // Migrate pages: the index, one page per library, native Temporal, then the behaviour matrix.
+  // Migrate pages, in the sidebar's order: the overview, the comparison pages, one page per library,
+  // native Temporal, then the behaviour matrix.
   const migratePageList = migratePages(RAW).map(({ slug, source }) => {
     const { data, body } = stripFrontmatter(source);
     const md = stripMdx(body, { gmtVersion, values });
@@ -175,14 +176,15 @@ export const GET: APIRoute = () => {
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.url.localeCompare(b.url));
 
+  // The sidebar's order; Tools, Checks and the changelog are not in this file.
   const allPages = [
     ...startPages,
-    ...migratePageList,
-    ...industryPageList,
     ...guidePages,
+    ...refPages,
+    ...industryPageList,
     ...scenarioPages,
     ...mistakePages,
-    ...refPages,
+    ...migratePageList,
   ];
 
   return new Response(

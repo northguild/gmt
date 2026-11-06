@@ -22,6 +22,7 @@ import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
 import { codeThemes } from "./src/lib/code-themes.ts";
+import { MIGRATE, START_HERE } from "./src/lib/section-order.ts";
 
 // `site` + `base` make every Starlight link, the canonical tag, the sitemap
 // and Pagefind resolve under /gmt/. One module holds both, for the Worker and
@@ -246,64 +247,21 @@ export default defineConfig({
           })();`,
         },
       ],
-      /* Every group starts collapsed except Checks, the last group, which
-         lists the checks for recent tz rule changes. Starlight still opens any group that
+      /* The groups run in the order a reader needs them, first use first; the entries of Start
+         here and Migrate are set in src/lib/section-order.ts. Every group starts collapsed except
+         Checks, which lists the checks for recent tz rule changes. Starlight still opens any group that
          contains the current page (SidebarSublist: open when an entry is
          current or the group is not collapsed), so a page opens only its own
          ancestors. */
       sidebar: [
-        {
-          label: "Start here",
-          collapsed: true,
-          items: [
-            { slug: "install" },
-            { slug: "core-rules" },
-            { slug: "why-gmt" },
-            { slug: "compare", label: "GMT vs. the others" },
-            { slug: "bundle-size" },
-            { slug: "upstream" },
-          ],
-        },
-        {
-          label: "Migrate",
-          collapsed: true,
-          items: [
-            // Short labels: the group already says "Migrate". Page titles stay in full.
-            { slug: "migrate", label: "Overview" },
-            { slug: "migrate/date-fns", label: "From date-fns" },
-            { slug: "migrate/luxon", label: "From Luxon" },
-            { slug: "migrate/dayjs", label: "From Day.js" },
-            { slug: "migrate/moment", label: "From Moment.js" },
-            {
-              slug: "migrate/internationalized-date",
-              label: "From @internationalized/date",
-            },
-            { slug: "migrate/temporal", label: "From native Temporal" },
-            { slug: "compare/behaviour", label: "Behaviour compared" },
-          ],
-        },
-        { label: "Industries", collapsed: true, items: industriesSidebar },
+        { label: "Start here", collapsed: true, items: [...START_HERE] },
+        { label: "Guides", collapsed: true, items: guidesSidebar },
         { label: "API Reference", collapsed: true, items: referenceSidebar },
-        {
-          label: "Guides",
-          collapsed: true,
-          items: guidesSidebar,
-        },
-        {
-          label: "Tools",
-          collapsed: true,
-          items: toolsSidebar,
-        },
-        {
-          label: "Scenarios",
-          collapsed: true,
-          items: scenariosSidebar,
-        },
-        {
-          label: "Mistakes",
-          collapsed: true,
-          items: mistakesSidebar,
-        },
+        { label: "Industries", collapsed: true, items: industriesSidebar },
+        { label: "Tools", collapsed: true, items: toolsSidebar },
+        { label: "Scenarios", collapsed: true, items: scenariosSidebar },
+        { label: "Mistakes", collapsed: true, items: mistakesSidebar },
+        { label: "Migrate", collapsed: true, items: [...MIGRATE] },
         {
           label: "Checks",
           collapsed: false,

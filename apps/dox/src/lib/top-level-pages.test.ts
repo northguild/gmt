@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { INDUSTRY_LAYER_IDS } from "./industry-tags";
 import {
   docsRelativePath,
@@ -19,7 +20,7 @@ describe("docsRelativePath", () => {
 });
 
 describe("topLevelPages", () => {
-  it("keeps only top-level pages, START_ORDER first, then the rest alphabetically", () => {
+  it("keeps only top-level pages, the Start here pages first, then the rest alphabetically", () => {
     const raw = {
       "../content/docs/zebra.md": "z",
       "../content/docs/install.mdx": "i",
@@ -35,10 +36,21 @@ describe("topLevelPages", () => {
       { slug: "install", source: "i" },
       { slug: "core-rules", source: "c" },
       { slug: "why-gmt", source: "w" },
-      { slug: "upstream", source: "u" },
       { slug: "alpha", source: "a" },
       { slug: "zebra", source: "z" },
     ]);
+  });
+
+  it("never returns a page the Migrate group lists", () => {
+    const raw = {
+      "../content/docs/compare.mdx": "c",
+      "../content/docs/bundle-size.mdx": "b",
+      "../content/docs/upstream.mdx": "u",
+      "../content/docs/install.mdx": "i",
+    };
+    const slugs = topLevelPages(raw).map((p) => p.slug);
+    expect(slugs).toEqual(["install"]);
+    for (const slug of MIGRATE_ORDER) expect(slugs).not.toContain(slug);
   });
 
   it("returns nothing for a map with no top-level page", () => {
@@ -95,13 +107,44 @@ describe("migratePages", () => {
     expect(
       migratePages({
         [page("migrate/elsewhere")]: "x",
-        [page("compare")]: "c",
+        [page("why-gmt")]: "w",
         [page("migrate/index")]: "index",
       }),
     ).toEqual([{ slug: "migrate/index", source: "index" }]);
   });
 
-  it("names eight pages", () => {
-    expect(MIGRATE_ORDER).toHaveLength(8);
+  it("names eleven pages, the overview keyed as a folder index", () => {
+    expect(MIGRATE_ORDER).toHaveLength(11);
+    expect(MIGRATE_ORDER[0]).toBe("migrate/index");
+  });
+
+  it("lists compare, bundle-size and upstream after the overview", () => {
+    expect(MIGRATE_ORDER.slice(0, 4)).toEqual([
+      "migrate/index",
+      "compare",
+      "bundle-size",
+      "upstream",
+    ]);
+  });
+});
+
+describe("the sidebar config", () => {
+  const config = readFileSync(
+    new URL("../../astro.config.mjs", import.meta.url),
+    "utf8",
+  );
+
+  it("imports the Start here and Migrate entries and writes none of its own", () => {
+    expect(config).toContain("section-order");
+    for (const slug of [
+      ...MIGRATE_ORDER.map((key) => key.replace(/\/index$/, "")),
+      "install",
+      "core-rules",
+      "why-gmt",
+    ]) {
+      expect(config, `the config writes out ${slug}`).not.toContain(
+        `slug: "${slug}"`,
+      );
+    }
   });
 });
