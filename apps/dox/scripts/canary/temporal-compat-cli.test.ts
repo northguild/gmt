@@ -71,7 +71,9 @@ describe("temporal-compat.mjs check", () => {
     writeFileSync(join(root, "artifacts"), "not a folder");
     const result = run(root);
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe(writable.stdout);
+    // The D9 repro prints how long it took, so two runs differ in those figures alone.
+    const withoutTimings = (text: string) => text.replace(/\d+ ms/g, "N ms");
+    expect(withoutTimings(result.stdout)).toBe(withoutTimings(writable.stdout));
     expect(result.stderr).toContain(
       "temporal-compat-check: cannot write verdict: ",
     );

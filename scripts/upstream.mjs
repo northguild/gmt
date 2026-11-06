@@ -12,9 +12,10 @@
  * The tracker also covers `fullcalendar/temporal-polyfill`, where GMT reports defects found by
  * the swap check (CORE-92).
  *
- * GMT reports the `@js-temporal/polyfill` and `tc39/proposal-temporal` defects it works around
- * upstream (`context/domination/js-temporal-polyfill-bugs.md`), and the docs site's `/upstream/`
- * page tracks every filing's status live. This is `stats.mjs` applied to that tracker: a
+ * GMT runs on `temporal-polyfill`. It reports the `temporal-polyfill` and `tc39/proposal-temporal`
+ * defects it works around upstream, and the filings also keep the `@js-temporal/polyfill` defects
+ * found before the move (`context/domination/js-temporal-polyfill-bugs.md`). The docs site's `/upstream/`
+ * page tracks every filing's status live. This script is `stats.mjs` applied to that tracker: a
  * generator plus an offline check, so the published numbers can never drift from GitHub's own
  * or from the guard groups in `packages/gmt/src/internal/temporalCompat/{probeRepros,repros}.ts`.
  *

@@ -21,9 +21,9 @@ import {
 const RUN = "https://github.com/northguild/gmt/actions/runs/123";
 const ORACLE_CONTEXT = { workflow: "temporal-oracle", runUrl: RUN } as const;
 const LEAP_CONTEXT = { workflow: "leap-seconds", runUrl: RUN } as const;
-const RUNTIME = { polyfill: "0.5.1", node: "v24.11.0", icu: "77.1" };
+const RUNTIME = { polyfill: "1.0.8", node: "v24.11.0", icu: "77.1" };
 
-type State = "still-needed" | "removable" | "guard" | "out-of-scope";
+type State = "still-needed" | "removable" | "out-of-scope";
 
 const workaround = (
   id: string,
@@ -41,19 +41,12 @@ const workaround = (
   ...extra,
 });
 
-const GUARD = {
-  package: "@js-temporal/polyfill",
-  through: "0.5.1",
-  reason: "no probe can tell a pre-fix polyfill from a fixed one",
-};
-
 type Workaround = ReturnType<typeof workaround>;
 
 const countsOf = (workarounds: Workaround[]) => ({
   workarounds: workarounds.length,
   stillNeeded: workarounds.filter((w) => w.state === "still-needed").length,
   removable: workarounds.filter((w) => w.state === "removable").length,
-  guard: workarounds.filter((w) => w.state === "guard").length,
   outOfScope: workarounds.filter((w) => w.state === "out-of-scope").length,
 });
 
@@ -88,7 +81,7 @@ const browserCompat = (leg: BrowserLeg, workarounds: Workaround[]) => ({
   leg,
   engine: BROWSER_ENGINES[leg],
   engineId: BROWSER_ENGINE_IDS[leg],
-  runtime: { polyfill: "0.5.1", node: "v24.11.0", playwright: "1.63.0" },
+  runtime: { polyfill: "1.0.8", node: "v24.11.0", playwright: "1.63.0" },
   counts: countsOf(workarounds),
   workarounds,
 });
@@ -168,10 +161,7 @@ const couldNotRun = (source: string, message: string) => ({
 });
 
 const cleanCheck = () =>
-  check([
-    workaround("D1", "still-needed"),
-    workaround("D10", "guard", { guard: { ...GUARD, lapsed: false } }),
-  ]);
+  check([workaround("D1", "still-needed"), workaround("D17", "out-of-scope")]);
 
 const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"] as const;
 const ENGINES = {
@@ -278,6 +268,7 @@ const swapSweep = (differingZones = 0) => ({
 
 interface SwapOptions {
   version?: string;
+  pinned?: string;
   failed?: number;
   both?: number;
   fixed?: number;
@@ -294,7 +285,8 @@ const swapLeg = (leg: SwapLeg, options: SwapOptions = {}) => {
     status: "ran" as const,
     leg,
     version,
-    entry: "temporal-polyfill/full/implementation",
+    pinned: options.pinned ?? "1.0.6",
+    entry: "temporal-polyfill-candidate/full/implementation",
     entryLoaded: options.entryLoaded ?? true,
     runtime: {
       node: "26.12.1",
@@ -436,7 +428,7 @@ describe("constants and marker", () => {
 });
 
 describe("planIssueActions: open, comment, no-op", () => {
-  it("1: no-op when every group is still needed or guarded and the oracle is clean", () => {
+  it("1: no-op when every group is still needed or out of scope and the oracle is clean", () => {
     expect(
       plan({
         "temporal-compat-check": cleanCheck(),
@@ -520,7 +512,7 @@ describe("removable body", () => {
 
   it("states the polyfill, the engines in scope, the trigger and the scope", () => {
     expect(body()).toContain(
-      `Every probe for **D2** returns the spec value on @js-temporal/polyfill 0.5.1 on every engine in its scope (${EVERY_ENGINE}), so the workaround can go.`,
+      `Every probe for **D2** returns the spec value on temporal-polyfill 1.0.8 on every engine in its scope (${EVERY_ENGINE}), so the workaround can go.`,
     );
     expect(body()).toContain("**Trigger:** trigger for D2");
     expect(body()).toContain("**Scope:** every engine.");
@@ -538,47 +530,6 @@ describe("removable body", () => {
         "| temporal-compat-webkit | WebKit 26.6 | removable | 2 of 2 pass |\n\n" +
         "### Removal steps",
     );
-  });
-
-  it("14: a lapsed guard adds the Guard lapsed paragraph", () => {
-    const verdicts = {
-      "temporal-compat-check": check([
-        workaround("D10", "removable", {
-          guard: { ...GUARD, lapsed: true },
-        }),
-      ]),
-      "temporal-oracle": oracle(),
-    };
-    const [action] = plan(verdicts);
-    if (action.kind !== "open") throw new Error("expected open");
-    expect(action.body).toContain(
-      "**Guard lapsed:** it held through @js-temporal/polyfill 0.5.1 (no probe can tell a pre-fix polyfill from a fixed one). Before removing, confirm the installed release is the trigger; if it is not, raise guard.through to it and close this issue.",
-    );
-  });
-
-  it("14c: a guard reason that ends with a period loses it inside the parentheses", () => {
-    const verdicts = {
-      "temporal-compat-check": check([
-        workaround("D10", "removable", {
-          guard: {
-            ...GUARD,
-            reason: "no probe can tell a pre-fix polyfill from a fixed one.",
-            lapsed: true,
-          },
-        }),
-      ]),
-      "temporal-oracle": oracle(),
-    };
-    const [action] = plan(verdicts);
-    if (action.kind !== "open") throw new Error("expected open");
-    expect(action.body).toContain(
-      "(no probe can tell a pre-fix polyfill from a fixed one). Before removing",
-    );
-    expect(action.body).not.toContain(".). Before removing");
-  });
-
-  it("14b: no Guard lapsed paragraph for a group without a guard", () => {
-    expect(body()).not.toContain("Guard lapsed");
   });
 
   it("15: a stale snapshot says the snapshot is due now", () => {
@@ -599,9 +550,9 @@ describe("removable body", () => {
     );
   });
 
-  it("16: the numbered steps end with the polyfill floor bump", () => {
+  it("16: the numbered steps end with the polyfill pin bump", () => {
     expect(body()).toContain(
-      "### Removal steps\n\n1. Delete the D2 repros\n2. Drop the D2 compat module\n3. Raise the @js-temporal/polyfill floor in packages/gmt/package.json to the release that made this removable, so no install resolves one with the defect.",
+      "### Removal steps\n\n1. Delete the D2 repros\n2. Drop the D2 compat module\n3. Raise the temporal-polyfill pin in packages/gmt/package.json to the release that made this removable, so no install resolves one with the defect.",
     );
   });
 
@@ -617,7 +568,7 @@ describe("removable body", () => {
     const [action] = plan(removableD2(), [issue(41, `${D2_MARKER}\nbody`)]);
     expect(action.kind).toBe("comment");
     expect(action.body).toBe(
-      `Still removable on this run on every engine in its scope (${EVERY_ENGINE}; @js-temporal/polyfill 0.5.1).\n\n` +
+      `Still removable on this run on every engine in its scope (${EVERY_ENGINE}; temporal-polyfill 1.0.8).\n\n` +
         "pnpm compat:snapshot is due in the removal PR: once the group's repros are deleted, run it and commit apps/dox/src/data/temporal-compat.json; validate (snapshot --check) fails until you do.\n\n" +
         `Run: ${RUN}`,
     );
@@ -722,7 +673,7 @@ describe("removable on every engine in scope", () => {
     if (action.kind !== "open") throw new Error("expected open");
     expect(action.key).toBe("temporal-compat/removable/D17");
     expect(action.body).toContain(
-      "Every probe for **D17** returns the spec value on @js-temporal/polyfill 0.5.1 on every engine in its scope (Firefox 155.0), so the workaround can go.",
+      "Every probe for **D17** returns the spec value on temporal-polyfill 1.0.8 on every engine in its scope (Firefox 155.0), so the workaround can go.",
     );
     expect(action.body).toContain(
       "**Scope:** only firefox: only that engine's Intl shows the defect, so the other rows are out of scope and count for nothing.",
@@ -738,7 +689,7 @@ describe("removable on every engine in scope", () => {
       plan(verdicts, [issue(7, `${action.body.split("\n")[0]}\nbody`)])[0],
     ];
     expect(comment.body).toContain(
-      "Still removable on this run on every engine in its scope (Firefox 155.0; @js-temporal/polyfill 0.5.1).",
+      "Still removable on this run on every engine in its scope (Firefox 155.0; temporal-polyfill 1.0.8).",
     );
   });
 
@@ -816,8 +767,8 @@ describe("removable on every engine in scope", () => {
     };
     const states = compatStates(verdicts as never);
     expect(states.map((s) => [s.id, s.polyfill, s.everywhere])).toEqual([
-      ["D2", "0.5.1", false],
-      ["D8", "0.5.1", false],
+      ["D2", "1.0.8", false],
+      ["D8", "1.0.8", false],
     ]);
   });
 });
@@ -857,7 +808,7 @@ describe("untagged mismatch", () => {
       "3 of 410000 comparisons differ from Chromium 152.0.7444.0's native Temporal and no entry in TAGGED_MISMATCHES explains them. Each is a GMT bug unless test262 disagrees with Chromium; then tag it with its test262 file.",
     );
     expect(body).toContain(
-      "@js-temporal/polyfill 0.5.1 · Node v24.11.0 · ICU 77.1 · Chromium 152.0.7444.0",
+      "temporal-polyfill 1.0.8 · Node v24.11.0 · ICU 77.1 · Chromium 152.0.7444.0",
     );
     expect(body).toContain(
       "### Groups\n\n| Scan, calendar, op | Rows | Example |\n| --- | --- | --- |\n| grid hebrew addMonth | 3 | `{",
@@ -1175,19 +1126,17 @@ describe("applyForce and forced findings", () => {
     );
   });
 
-  it("17b: a forced guard group states guard as its real state", () => {
+  it("17b: a forced out-of-scope group states out of scope as its real state", () => {
     const { verdicts } = applyForce(
       {
-        "temporal-compat-check": check([
-          workaround("D10", "guard", { guard: { ...GUARD, lapsed: false } }),
-        ]),
+        "temporal-compat-check": check([workaround("D17", "out-of-scope")]),
         "temporal-oracle": oracle(),
       } as never,
-      { removable: "D10" },
+      { removable: "D17" },
     );
     const [action] = forcedOpen(verdicts);
     expect(action.body).toContain(
-      "Real state on this run: guard on Node v24.11.0; guard on Chromium 153.0.8010.12; guard on Firefox 155.0; guard on WebKit 26.6.",
+      "Real state on this run: out of scope on Node v24.11.0; out of scope on Chromium 153.0.8010.12; out of scope on Firefox 155.0; out of scope on WebKit 26.6.",
     );
   });
 
@@ -1542,12 +1491,12 @@ describe("findings", () => {
 
 /** The three fixed paragraphs, written out here word for word. */
 const TRIAGE =
-  "Each row failed on the native engine and passed on @js-temporal/polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
+  "Each row failed on the native engine and passed on temporal-polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
 const HOST =
-  "Each row failed on the native engine and on @js-temporal/polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
+  "Each row failed on the native engine and on temporal-polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
 
 const CONTROL =
-  "Each row failed on @js-temporal/polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
+  "Each row failed on temporal-polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
 
 const FAILURE_KEY = "native-suite/untagged-failure";
 const HOST_KEY = "native-suite/untagged-host-failure";
@@ -2062,10 +2011,10 @@ describe("swapReady", () => {
 
   it.each`
     label                                      | verdicts                                                        | reason
-    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}              | ${"temporal-polyfill-swap-chromium: the swap pass did not load temporal-polyfill"}
-    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}              | ${"temporal-polyfill-swap-firefox: the swap pass did not load temporal-polyfill"}
-    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                 | ${"temporal-polyfill-swap-node: the swap pass did not load temporal-polyfill"}
-    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}     | ${"temporal-polyfill-swap-webkit: the swap pass did not load temporal-polyfill"}
+    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}              | ${"temporal-polyfill-swap-chromium: the swap pass did not load the candidate"}
+    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}              | ${"temporal-polyfill-swap-firefox: the swap pass did not load the candidate"}
+    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                 | ${"temporal-polyfill-swap-node: the swap pass did not load the candidate"}
+    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}     | ${"temporal-polyfill-swap-webkit: the swap pass did not load the candidate"}
     ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}             | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
     ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                      | ${"temporal-polyfill-swap-node: the failed count is missing"}
     ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}          | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
@@ -2083,23 +2032,65 @@ describe("swapReady", () => {
     ${"chromium could not run"}            | ${{ ...cleanSwap(), "temporal-polyfill-swap-chromium": couldNotRun("temporal-polyfill-swap-chromium", "no browser") }} | ${"temporal-polyfill-swap-chromium: did not run"}
     ${"webkit key absent"}                 | ${Object.fromEntries(Object.entries(cleanSwap()).filter(([k]) => !k.endsWith("webkit")))}                              | ${"temporal-polyfill-swap-webkit: did not run"}
     ${"versions differ"}                   | ${cleanSwap({ firefox: { version: "1.0.8" } })}                                                                        | ${"legs ran different versions: 1.0.7, 1.0.8"}
-    ${"three tests fail on webkit"}        | ${cleanSwap({ webkit: { failed: 3 } })}                                                                                | ${"temporal-polyfill-swap-webkit: 3 tests fail on the swap"}
-    ${"one test fails on node"}            | ${cleanSwap({ node: { failed: 1 } })}                                                                                  | ${"temporal-polyfill-swap-node: 1 test fails on the swap"}
+    ${"three tests fail on webkit"}        | ${cleanSwap({ webkit: { failed: 3 } })}                                                                                | ${"temporal-polyfill-swap-webkit: 3 tests fail on the candidate"}
+    ${"one test fails on node"}            | ${cleanSwap({ node: { failed: 1 } })}                                                                                  | ${"temporal-polyfill-swap-node: 1 test fails on the candidate"}
     ${"sweep could not run"}               | ${cleanSwap({ node: { sweep: { status: "could-not-run", message: "no Intl" } } })}                                     | ${"offset sweep: did not run"}
     ${"sweep is null on node"}             | ${cleanSwap({ node: { sweep: null } })}                                                                                | ${"offset sweep: did not run"}
     ${"two zones differ"}                  | ${cleanSwap({ node: { sweep: swapSweep(2) } })}                                                                        | ${"offset sweep: 2 zones differ"}
     ${"one zone differs"}                  | ${cleanSwap({ node: { sweep: swapSweep(1) } })}                                                                        | ${"offset sweep: 1 zone differs"}
     ${"a missing leg beats a failing one"} | ${{ ...cleanSwap({ node: { failed: 4 } }), "temporal-polyfill-swap-webkit": null }}                                    | ${"temporal-polyfill-swap-webkit: did not run"}
     ${"versions beat failures"}            | ${cleanSwap({ node: { failed: 4 }, webkit: { version: "1.0.9" } })}                                                    | ${"legs ran different versions: 1.0.7, 1.0.9"}
-    ${"failures beat the sweep"}           | ${cleanSwap({ chromium: { failed: 2 }, node: { sweep: swapSweep(5) } })}                                               | ${"temporal-polyfill-swap-chromium: 2 tests fail on the swap"}
+    ${"failures beat the sweep"}           | ${cleanSwap({ chromium: { failed: 2 }, node: { sweep: swapSweep(5) } })}                                               | ${"temporal-polyfill-swap-chromium: 2 tests fail on the candidate"}
   `("is not ready when $label", ({ verdicts, reason }) => {
     expect(swapReady(verdicts)).toEqual({ ready: false, reason });
   });
 });
 
+describe("swap legs skipped on purpose", () => {
+  const SKIPPED = { ...ORACLE_CONTEXT, swapSkipped: true };
+  const withoutSwap = (verdicts: unknown) =>
+    Object.fromEntries(
+      Object.entries(withNative(verdicts) as Record<string, unknown>).filter(
+        ([source]) => !SWAP_SOURCES.includes(source),
+      ),
+    ) as never;
+  const base = {
+    "temporal-compat-check": cleanCheck(),
+    "temporal-oracle": oracle(),
+  };
+
+  it("no swap verdicts and the swap-skipped flag file no could-not-run issue", () => {
+    expect(
+      planIssueActions(withoutSwap(base), [], SKIPPED).map((a) => a.key),
+    ).toEqual([]);
+  });
+
+  it("no swap verdicts without the flag is a could-not-run issue naming the four swap sources", () => {
+    const keys = planIssueActions(withoutSwap(base), [], ORACLE_CONTEXT);
+    expect(keys.map((a) => a.key)).toEqual(["temporal-oracle/could-not-run"]);
+    const [action] = keys;
+    if (action.kind !== "open") throw new Error("expected open");
+    for (const source of SWAP_SOURCES) expect(action.body).toContain(source);
+  });
+
+  it("an empty verdict set with the flag still reports the other sources as could-not-run", () => {
+    const keys = findings({}, SKIPPED).map((f) => f.key);
+    expect(keys).toEqual(["temporal-oracle/could-not-run"]);
+    const [finding] = findings({}, SKIPPED);
+    expect(finding.body).toContain("temporal-oracle");
+    expect(finding.body).not.toContain("temporal-polyfill-swap");
+  });
+
+  it("an empty verdict set without the flag lists the swap sources too", () => {
+    expect(findings({}, ORACLE_CONTEXT)[0].body).toContain(
+      "temporal-polyfill-swap-node",
+    );
+  });
+});
+
 describe("swap findings", () => {
   const READY_TITLE =
-    "Swap to temporal-polyfill 1.0.7: it passes the GMT suite and the offset sweep";
+    "temporal-polyfill 1.0.7 passes on every runtime against the pinned 1.0.6: raise the pin";
   const READY_MARKER = '<!-- gmt-canary key="temporal-polyfill-swap/ready" -->';
   const swapPlan = (swap: unknown, open: ReturnType<typeof issue>[] = []) =>
     plan(
@@ -2120,6 +2111,27 @@ describe("swap findings", () => {
     expect(action.title).toBe(READY_TITLE);
     expect(action.labels).toEqual(["canary"]);
     expect(action.body.split("\n")[0]).toBe(READY_MARKER);
+  });
+
+  it("a candidate equal to the pin says the self-test passed and there is nothing to change", () => {
+    const [action] = swapPlan(
+      cleanSwap({
+        node: { pinned: "1.0.7" },
+        chromium: { pinned: "1.0.7" },
+        firefox: { pinned: "1.0.7" },
+        webkit: { pinned: "1.0.7" },
+      }),
+    );
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.title).toBe(
+      "temporal-polyfill 1.0.7 self-test passed: the pin is already 1.0.7, nothing to change",
+    );
+    expect(action.body).toContain(
+      "The pin in `packages/gmt/package.json` is already 1.0.7, so there is nothing to change.",
+    );
+    expect(action.body).not.toContain("raise the pin");
+    expect(action.body).not.toContain("To raise the pin");
+    expect(action.body).not.toContain("pnpm install");
   });
 
   it("a run that ran but is not swap-ready files nothing", () => {
@@ -2147,7 +2159,7 @@ describe("swap findings", () => {
     expect(action.key).toBe("temporal-polyfill-swap/ready");
     expect(
       action.body.startsWith(
-        `temporal-polyfill 1.0.8 also passes (run ${RUN}).\n\ntemporal-polyfill 1.0.8, imported from`,
+        `temporal-polyfill 1.0.8 also passes (run ${RUN}).\n\ntemporal-polyfill 1.0.8 passes the GMT suite`,
       ),
     ).toBe(true);
     expect(action.body).not.toContain("gmt-canary");
@@ -2171,9 +2183,9 @@ describe("swap findings", () => {
     expect(action.body).toBe(
       [
         READY_MARKER,
-        `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${RUN}`,
+        `temporal-polyfill 1.0.7 passes the GMT suite on every runtime against the pinned 1.0.6, and it passed every check on this run: ${RUN}`,
         "",
-        "| Runtime | Tests | Fail on swap only | Fail on both | Fail only on @js-temporal/polyfill |",
+        "| Runtime | Tests | Fail on 1.0.7 only | Fail on both | Fail on 1.0.6 only |",
         "| --- | --- | --- | --- | --- |",
         "| Node 26.12.1 | 71337 | 0 | 0 | 0 |",
         "| Chromium 153.0.8010.12 | 71337 | 0 | 9 | 0 |",
@@ -2182,9 +2194,15 @@ describe("swap findings", () => {
         "",
         "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to 2036-11-04 (tz 2026e).",
         "",
-        "What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md). Type errors are not checked here; § 5 lists them.",
+        "To raise the pin:",
         "",
-        "A person makes the swap. CI opens issues, never pull requests.",
+        '1. Set `dependencies["temporal-polyfill"]` in `packages/gmt/package.json` to `1.0.7`, then run `pnpm install`.',
+        "2. Run `pnpm compat`, then remove each workaround it reports as removable, following the steps it prints.",
+        "3. Run `pnpm size`, then change the bundle budgets only by a reviewed edit.",
+        "",
+        "Type errors are not checked here: run `pnpm typecheck` after step 1. The history of this check is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md).",
+        "",
+        "A person raises the pin. CI opens issues, never pull requests.",
       ].join("\n"),
     );
     expect(action.body.length).toBeLessThan(65_536);
@@ -2400,7 +2418,7 @@ describe("swap force", () => {
     const dry = actions[1];
     if (dry.kind !== "open") throw new Error("expected open");
     expect(dry.title).toBe(
-      "[dry run] Swap to temporal-polyfill 1.0.7: it passes the GMT suite and the offset sweep",
+      "[dry run] temporal-polyfill 1.0.7 passes on every runtime against the pinned 1.0.6: raise the pin",
     );
     expect(dry.labels).toEqual(["canary", "canary-dry-run"]);
     expect(dry.body).toContain(
@@ -2414,7 +2432,7 @@ describe("swap force", () => {
     const [dry] = actions;
     if (dry.kind !== "open") throw new Error("expected open");
     expect(dry.body).toContain(
-      "Forced for a dry run. Real result on this run: temporal-polyfill-swap-webkit: 2 tests fail on the swap.",
+      "Forced for a dry run. Real result on this run: temporal-polyfill-swap-webkit: 2 tests fail on the candidate.",
     );
     expect(dry.body).toContain("| WebKit 26.6 | 71337 | 2 | 0 | 0 |");
   });

@@ -23,30 +23,15 @@ import {
  */
 const runtime = { polyfill: "0.5.1", node: "v24.11.0", icu: "77.1" };
 
-const guard = {
-  package: "@js-temporal/polyfill",
-  through: "0.5.1",
-  reason: "reason text",
-};
-
 interface GroupInput {
   defects: string[];
-  state: "still-needed" | "removable" | "guard" | "out-of-scope";
-  guardLapsed?: boolean;
-  withGuard?: boolean;
+  state: "still-needed" | "removable" | "out-of-scope";
   probes?: number;
   failing?: number;
 }
 
 /** One group as `check` holds it after `withStates`. */
-function group({
-  defects,
-  state,
-  guardLapsed = false,
-  withGuard = false,
-  probes = 2,
-  failing = 0,
-}: GroupInput) {
+function group({ defects, state, probes = 2, failing = 0 }: GroupInput) {
   const id = defects.join("+");
   return {
     workaround: {
@@ -54,12 +39,10 @@ function group({
       title: `${id} — title`,
       trigger: `${id} trigger`,
       steps: [`${id} step one`, `${id} step two`],
-      ...(withGuard ? { guard } : {}),
     },
     results: Array.from({ length: probes }, () => ({})),
     passing: probes - failing,
     state,
-    guardLapsed,
   };
 }
 
@@ -67,7 +50,7 @@ describe("compatCheckVerdict", () => {
   const groups = [
     group({ defects: ["D1"], state: "still-needed", probes: 3, failing: 2 }),
     group({ defects: ["D3", "D4"], state: "removable" }),
-    group({ defects: ["D10"], state: "guard", withGuard: true }),
+    group({ defects: ["D9"], state: "out-of-scope" }),
   ];
   const verdict = compatCheckVerdict({
     runtime,
@@ -82,13 +65,12 @@ describe("compatCheckVerdict", () => {
     expect(verdict.runtime).toEqual(runtime);
   });
 
-  it("counts a still-needed, a removable and a guard group", () => {
+  it("counts a still-needed, a removable and an out-of-scope group", () => {
     expect(verdict.counts).toEqual({
       workarounds: 3,
       stillNeeded: 1,
       removable: 1,
-      guard: 1,
-      outOfScope: 0,
+      outOfScope: 1,
     });
   });
 
@@ -104,7 +86,6 @@ describe("compatCheckVerdict", () => {
       workarounds: 1,
       stillNeeded: 0,
       removable: 0,
-      guard: 0,
       outOfScope: 1,
     });
     expect(out.workarounds[0].state).toBe("out-of-scope");
@@ -115,7 +96,7 @@ describe("compatCheckVerdict", () => {
     expect(verdict.workarounds.map((w: { id: string }) => w.id)).toEqual([
       "D1",
       "D3+D4",
-      "D10",
+      "D9",
     ]);
     expect(verdict.workarounds[1].defects).toEqual(["D3", "D4"]);
   });
@@ -139,33 +120,6 @@ describe("compatCheckVerdict", () => {
     ).toEqual(groups.map((g) => g.workaround.steps));
   });
 
-  it("carries a guard that holds with lapsed false", () => {
-    expect(verdict.workarounds[2].state).toBe("guard");
-    expect(verdict.workarounds[2].guard).toEqual({ ...guard, lapsed: false });
-  });
-
-  it("carries a lapsed guard on a removable group", () => {
-    const lapsed = compatCheckVerdict({
-      runtime,
-      groups: [
-        group({
-          defects: ["D10"],
-          state: "removable",
-          guardLapsed: true,
-          withGuard: true,
-        }),
-      ],
-      snapshotCurrent: true,
-    });
-    expect(lapsed.workarounds[0].state).toBe("removable");
-    expect(lapsed.workarounds[0].guard?.lapsed).toBe(true);
-  });
-
-  it("has no guard property on a group without one", () => {
-    expect("guard" in verdict.workarounds[0]).toBe(false);
-    expect("guard" in verdict.workarounds[1]).toBe(false);
-  });
-
   it.each`
     snapshotCurrent
     ${true}
@@ -187,7 +141,7 @@ describe("browserCompatVerdict", () => {
   const groups = [
     group({ defects: ["D1"], state: "still-needed", probes: 3, failing: 2 }),
     group({ defects: ["D3", "D4"], state: "removable" }),
-    group({ defects: ["D10"], state: "guard", withGuard: true }),
+    group({ defects: ["D9"], state: "out-of-scope" }),
   ];
   const browserRuntime = {
     polyfill: "0.5.1",
@@ -542,7 +496,8 @@ describe("polyfillSwapVerdict", () => {
   const input = {
     leg: "node" as const,
     version: "1.0.7",
-    entry: "temporal-polyfill/full/implementation",
+    pinned: "1.0.6",
+    entry: "temporal-polyfill-candidate/full/implementation",
     entryLoaded: true,
     runtime: {
       node: "26.12.1",
@@ -569,6 +524,7 @@ describe("polyfillSwapVerdict", () => {
       "status",
       "leg",
       "version",
+      "pinned",
       "entry",
       "entryLoaded",
       "runtime",

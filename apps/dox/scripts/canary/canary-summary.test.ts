@@ -5,22 +5,16 @@ import { summaryMarkdown } from "../../../../scripts/lib/canary-summary.mjs";
  * module. Fixtures are hand-written verdicts in the verdict-file schemas.
  */
 
-const RUNTIME = { polyfill: "0.5.1", node: "v24.11.0", icu: "77.1" };
+const RUNTIME = { polyfill: "1.0.8", node: "v24.11.0", icu: "77.1" };
 
-const guardWorkaround = {
-  id: "D10",
-  defects: ["D10"],
-  title: "D10 — fields to ISO skip a month",
+const stillNeededWorkaround = {
+  id: "D16",
+  defects: ["D16"],
+  title: "D16 — range drops zone-name widths",
   trigger: "trigger",
-  state: "guard",
+  state: "still-needed",
   probes: 2,
-  failing: 0,
-  guard: {
-    package: "@js-temporal/polyfill",
-    through: "0.5.1",
-    reason: "no probe can tell",
-    lapsed: false,
-  },
+  failing: 1,
   steps: ["step"],
 };
 
@@ -50,7 +44,7 @@ const check = (
 });
 
 const cleanCheck = () =>
-  check([guardWorkaround], { stillNeeded: 15, removable: 0, guard: 1 });
+  check([stillNeededWorkaround], { stillNeeded: 15, removable: 0 });
 
 const BROWSER_ENGINE_IDS: Record<string, string> = {
   chromium: "v8",
@@ -69,7 +63,7 @@ const compat = (
   leg,
   engine: ENGINES[leg],
   engineId: BROWSER_ENGINE_IDS[leg],
-  runtime: { polyfill: "0.5.1", node: "v26.10.0", playwright: "1.63.0" },
+  runtime: { polyfill: "1.0.8", node: "v26.10.0", playwright: "1.63.0" },
   counts: { workarounds: 16, outOfScope: 0, ...counts },
   workarounds,
 });
@@ -78,10 +72,9 @@ const cleanCompat = () =>
   Object.fromEntries(
     ["chromium", "firefox", "webkit"].map((leg) => [
       `temporal-compat-${leg}`,
-      compat(leg, [guardWorkaround], {
+      compat(leg, [stillNeededWorkaround], {
         stillNeeded: 15,
         removable: 0,
-        guard: 1,
       }),
     ]),
   );
@@ -196,7 +189,8 @@ const swap = (leg: string, over: Record<string, unknown> = {}) => ({
   status: "ran",
   leg,
   version: "1.0.7",
-  entry: "temporal-polyfill/full/implementation",
+  pinned: "1.0.6",
+  entry: "temporal-polyfill-candidate/full/implementation",
   entryLoaded: true,
   runtime: {
     node: "26.12.1",
@@ -235,11 +229,11 @@ const clean = () => ({
 });
 
 const SWAP_BLOCK = [
-  "### Temporal polyfill swap",
+  "### Temporal polyfill upgrade check",
   "",
-  "temporal-polyfill 1.0.7 — Ready to swap",
+  "temporal-polyfill 1.0.7 — Ready to raise the pin",
   "",
-  "| Runtime | Tests | Fail on swap only | Fail on both |",
+  "| Runtime | Tests | Fail on candidate only | Fail on both |",
   "| --- | --- | --- | --- |",
   "| node | 71337 | 0 | 0 |",
   "| chromium | 71337 | 0 | 0 |",
@@ -252,20 +246,19 @@ const SWAP_BLOCK = [
 const CLEAN_SUMMARY = [
   "## Temporal oracle",
   "",
-  "@js-temporal/polyfill 0.5.1 · Node v24.11.0 · ICU 77.1 · Chromium 152.0.7444.0",
+  "temporal-polyfill 1.0.8 · Node v24.11.0 · ICU 77.1 · Chromium 152.0.7444.0",
   "",
   "| Workarounds | Count |",
   "| --- | --- |",
   "| Still needed | 15 |",
   "| Removable | 0 |",
-  "| Guard | 1 (D10, through @js-temporal/polyfill 0.5.1) |",
   "",
-  "| Compat source | Engine | Still needed | Removable | Guard | Out of scope |",
-  "| --- | --- | --- | --- | --- | --- |",
-  "| temporal-compat-check | Node v24.11.0 (v8) | 15 | 0 | 1 | 0 |",
-  "| temporal-compat-chromium | Chromium 153.0.8010.12 (v8) | 15 | 0 | 1 | 0 |",
-  "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 0 | 1 | 0 |",
-  "| temporal-compat-webkit | WebKit 26.6 (webkit) | 15 | 0 | 1 | 0 |",
+  "| Compat source | Engine | Still needed | Removable | Out of scope |",
+  "| --- | --- | --- | --- | --- |",
+  "| temporal-compat-check | Node v24.11.0 (v8) | 15 | 0 | 0 |",
+  "| temporal-compat-chromium | Chromium 153.0.8010.12 (v8) | 15 | 0 | 0 |",
+  "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 0 | 0 |",
+  "| temporal-compat-webkit | WebKit 26.6 (webkit) | 15 | 0 | 0 |",
   "",
   "| Oracle | Count |",
   "| --- | --- |",
@@ -292,7 +285,7 @@ const CLEAN_SUMMARY = [
 ].join("\n");
 
 describe("summaryMarkdown: temporal-oracle", () => {
-  it("clean oracle run with D10 guard: the whole layout", () => {
+  it("clean oracle run: the whole layout", () => {
     expect(oracleSummary(clean())).toBe(CLEAN_SUMMARY);
   });
 
@@ -384,11 +377,11 @@ describe("summaryMarkdown: temporal-oracle", () => {
       ...compatEverywhere(
         [
           removableWorkaround("D2"),
-          guardWorkaround,
+          stillNeededWorkaround,
           { ...removableWorkaround("D5"), state: "still-needed", failing: 2 },
           removableWorkaround("D8"),
         ],
-        { stillNeeded: 13, removable: 2, guard: 1 },
+        { stillNeeded: 13, removable: 2 },
       ),
       "temporal-oracle": oracle(),
     };
@@ -400,7 +393,7 @@ describe("summaryMarkdown: temporal-oracle", () => {
     expect(text).toContain("| Removable | 2 |");
     expect(text).toContain("| Still needed | 13 |");
     expect(text).toContain(
-      "| temporal-compat-webkit | WebKit 26.6 (webkit) | 13 | 2 | 1 | 0 |",
+      "| temporal-compat-webkit | WebKit 26.6 (webkit) | 13 | 2 | 0 |",
     );
   });
 
@@ -409,12 +402,11 @@ describe("summaryMarkdown: temporal-oracle", () => {
       "temporal-compat-check": check([removableWorkaround("D2")], {
         stillNeeded: 15,
         removable: 1,
-        guard: 0,
       }),
       "temporal-compat-chromium": compat(
         "chromium",
         [{ ...removableWorkaround("D2"), state: "still-needed", failing: 2 }],
-        { stillNeeded: 16, removable: 0, guard: 0 },
+        { stillNeeded: 16, removable: 0 },
       ),
       "temporal-compat-firefox": {
         source: "temporal-compat-firefox",
@@ -429,10 +421,10 @@ describe("summaryMarkdown: temporal-oracle", () => {
       "Removable on some engines only: D2 (Node v24.11.0: removable; Chromium 153.0.8010.12: still needed, 2 of 2 probes fail; temporal-compat-firefox: no verdict; temporal-compat-webkit: no verdict)",
     );
     expect(lines).toContain(
-      "| temporal-compat-firefox | could not run — the compat page failed in firefox: boom | — | — | — | — |",
+      "| temporal-compat-firefox | could not run — the compat page failed in firefox: boom | — | — | — |",
     );
     expect(lines).toContain(
-      "| temporal-compat-webkit | could not run — no verdict file: an earlier step or job failed | — | — | — | — |",
+      "| temporal-compat-webkit | could not run — no verdict file: an earlier step or job failed | — | — | — |",
     );
   });
 
@@ -443,24 +435,20 @@ describe("summaryMarkdown: temporal-oracle", () => {
       "temporal-compat-check": check([elsewhere], {
         stillNeeded: 15,
         removable: 0,
-        guard: 0,
         outOfScope: 1,
       }),
       "temporal-compat-chromium": compat("chromium", [elsewhere], {
         stillNeeded: 15,
         removable: 0,
-        guard: 0,
         outOfScope: 1,
       }),
       "temporal-compat-firefox": compat("firefox", [d17], {
         stillNeeded: 15,
         removable: 1,
-        guard: 0,
       }),
       "temporal-compat-webkit": compat("webkit", [elsewhere], {
         stillNeeded: 15,
         removable: 0,
-        guard: 0,
         outOfScope: 1,
       }),
       "temporal-oracle": oracle(),
@@ -468,10 +456,10 @@ describe("summaryMarkdown: temporal-oracle", () => {
     const lines = oracleSummary(verdicts).split("\n");
     expect(lines).toContain("Removable on every engine in scope: D17");
     expect(lines).toContain(
-      "| temporal-compat-check | Node v24.11.0 (v8) | 15 | 0 | 0 | 1 |",
+      "| temporal-compat-check | Node v24.11.0 (v8) | 15 | 0 | 1 |",
     );
     expect(lines).toContain(
-      "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 1 | 0 | 0 |",
+      "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 1 | 0 |",
     );
   });
 
@@ -483,24 +471,20 @@ describe("summaryMarkdown: temporal-oracle", () => {
       "temporal-compat-check": check([elsewhere], {
         stillNeeded: 15,
         removable: 0,
-        guard: 0,
         outOfScope: 1,
       }),
       "temporal-compat-chromium": compat("chromium", [elsewhere], {
         stillNeeded: 15,
         removable: 0,
-        guard: 0,
         outOfScope: 1,
       }),
       "temporal-compat-firefox": compat("firefox", [d17], {
         stillNeeded: 15,
         removable: 1,
-        guard: 0,
       }),
       "temporal-compat-webkit": compat("webkit", [failing], {
         stillNeeded: 16,
         removable: 0,
-        guard: 0,
       }),
       "temporal-oracle": oracle(),
     };
@@ -518,7 +502,6 @@ describe("summaryMarkdown: temporal-oracle", () => {
       "temporal-compat-check": check([elsewhere], {
         stillNeeded: 15,
         removable: 0,
-        guard: 0,
         outOfScope: 1,
       }),
       "temporal-oracle": oracle(),
@@ -526,46 +509,11 @@ describe("summaryMarkdown: temporal-oracle", () => {
     expect(text).not.toContain("Removable on");
   });
 
-  it("no guard: the Guard row is 0 with no parenthesis", () => {
-    const verdicts = {
-      "temporal-compat-check": check([], {
-        stillNeeded: 16,
-        removable: 0,
-        guard: 0,
-      }),
-      "temporal-oracle": oracle(),
-    };
-    expect(oracleSummary(verdicts).split("\n")).toContain("| Guard | 0 |");
-  });
-
-  it("two guards list each id with its through", () => {
-    const second = {
-      ...guardWorkaround,
-      id: "D12",
-      guard: {
-        ...guardWorkaround.guard,
-        package: "temporal-spec",
-        through: "1.2.3",
-      },
-    };
-    const verdicts = {
-      "temporal-compat-check": check([guardWorkaround, second], {
-        stillNeeded: 14,
-        removable: 0,
-        guard: 2,
-      }),
-      "temporal-oracle": oracle(),
-    };
-    expect(oracleSummary(verdicts).split("\n")).toContain(
-      "| Guard | 2 (D10, through @js-temporal/polyfill 0.5.1; D12, through temporal-spec 1.2.3) |",
-    );
-  });
-
   it("a stale snapshot says to run pnpm compat:snapshot", () => {
     const verdicts = {
       "temporal-compat-check": check(
-        [guardWorkaround],
-        { stillNeeded: 15, removable: 0, guard: 1 },
+        [stillNeededWorkaround],
+        { stillNeeded: 15, removable: 0 },
         false,
       ),
       "temporal-oracle": oracle(),
@@ -604,7 +552,7 @@ describe("summaryMarkdown: temporal-oracle", () => {
     expect(text).not.toContain("Snapshot:");
     expect(text).toContain("| Comparisons | 410000 |");
     expect(text).toContain(
-      "@js-temporal/polyfill 0.5.1 · Node v24.11.0 · ICU 77.1 · Chromium 152.0.7444.0",
+      "temporal-polyfill 1.0.8 · Node v24.11.0 · ICU 77.1 · Chromium 152.0.7444.0",
     );
   });
 
@@ -612,9 +560,6 @@ describe("summaryMarkdown: temporal-oracle", () => {
     const text = oracleSummary(clean(), { removable: "D2" });
     expect(text.split("\n")).toContain("**Dry run:** --force-removable=D2");
     expect(text).toContain("| Removable | 0 |");
-    expect(text).toContain(
-      "| Guard | 1 (D10, through @js-temporal/polyfill 0.5.1) |",
-    );
     expect(text).not.toContain("Removable: D2");
   });
 
@@ -750,15 +695,39 @@ describe("summaryMarkdown: temporal-oracle", () => {
 
 describe("summaryMarkdown: temporal polyfill swap", () => {
   const block = (text: string) => {
-    const start = text.indexOf("### Temporal polyfill swap");
+    const start = text.indexOf("### Temporal polyfill upgrade check");
     const end = text.indexOf("\n\n**", start);
     return text.slice(start, end === -1 ? undefined : end);
   };
   const swapOnly = (over: Record<string, unknown>) =>
     block(oracleSummary({ ...clean(), ...over }));
 
-  it("a ready run says Ready to swap, with the version, a row per leg and the sweep line", () => {
+  it("a ready run says Ready to raise the pin, with the version, a row per leg and the sweep line", () => {
     expect(block(oracleSummary(clean()))).toBe(SWAP_BLOCK.join("\n"));
+  });
+
+  it("swap legs skipped on purpose: the block says the pin is the newest release, with no Not ready line", () => {
+    const {
+      ["temporal-polyfill-swap-node"]: _n,
+      ["temporal-polyfill-swap-chromium"]: _c,
+      ["temporal-polyfill-swap-firefox"]: _f,
+      ["temporal-polyfill-swap-webkit"]: _w,
+      ...rest
+    } = clean();
+    const text = block(
+      summaryMarkdown(
+        "temporal-oracle",
+        rest as never,
+        {},
+        [],
+        undefined,
+        [],
+        true,
+      ),
+    );
+    expect(text).toBe(
+      "### Temporal polyfill upgrade check\n\nSkipped: the pinned temporal-polyfill is the newest release, so there is nothing to check.",
+    );
   });
 
   it("a failing leg is not ready, with the reason, and its counts print", () => {
@@ -776,7 +745,7 @@ describe("summaryMarkdown: temporal polyfill swap", () => {
       }),
     });
     expect(text).toContain(
-      "temporal-polyfill 1.0.7 — Not ready: temporal-polyfill-swap-webkit: 5 tests fail on the swap",
+      "temporal-polyfill 1.0.7 — Not ready: temporal-polyfill-swap-webkit: 5 tests fail on the candidate",
     );
     expect(text.split("\n")).toContain("| webkit | 71337 | 5 | 2 |");
   });

@@ -1,18 +1,15 @@
 /**
  * Temporal compat canary and native oracle (see the temporalCompat README, "Canary and native oracle").
  *
- * GMT works around `@js-temporal/polyfill` and runtime-ICU defects in
- * `packages/gmt/src/internal/temporalCompat/` (calendars) and `internal/zonedWallClock*` (zoned
- * range limits). Each workaround has upstream repros in `temporalCompat/repros.ts` whose expected
+ * GMT works around `temporal-polyfill` and runtime-ICU defects in
+ * `packages/gmt/src/internal/temporalCompat/` and `internal/zonedWallClock*`. Each workaround has upstream repros in `temporalCompat/repros.ts` whose expected
  * values come from test262 or Chromium's native Temporal — never from the polyfill or GMT.
  *
  * Usage:
  *   node scripts/temporal-compat.mjs check [--fail-on-removable]
  *     Runs every repro against the installed polyfill and prints, per workaround, which probes are
- *     STILL NEEDED, REMOVABLE or GUARD, with the removal trigger, and the removal steps once every
- *     probe of a workaround passes. GUARD is a group whose probes all pass only because the installed
- *     package predates the change that would make them fail (its `guard` entry): kept, no steps, and
- *     never counted removable until the package moves past `guard.through`. Exit 0 whenever it ran:
+ *     STILL NEEDED, REMOVABLE or OUT OF SCOPE, with the removal trigger, and the removal steps once
+ *     every probe of a workaround passes. Exit 0 whenever it ran:
  *     "upstream still broken" is never a failure. `--fail-on-removable` (manual release checklist
  *     only, never CI) exits 1 when any workaround is removable. Needs `pnpm build` (exit 2 without
  *     `packages/gmt/dist`).
@@ -36,11 +33,7 @@ import { readDates, scanBody } from "./temporal-compat/scan-body.js";
 import { formatJson } from "./lib/format-json.mjs";
 import { loadGmt } from "./lib/gmt.mjs";
 import { snapshotRow, workaroundState } from "./lib/workaround-state.mjs";
-import {
-  COMPAT_README,
-  WORKAROUNDS,
-  polyfillVersion,
-} from "./lib/workarounds.mjs";
+import { WORKAROUNDS, polyfillVersion } from "./lib/workarounds.mjs";
 import {
   compatCheckVerdict,
   couldNotRunVerdict,
@@ -61,8 +54,6 @@ const SNAPSHOT = "apps/dox/src/data/temporal-compat.json";
 // ---------------------------------------------------------------------------------------------
 // Workarounds: removal triggers and removal steps (temporalCompat README)
 // ---------------------------------------------------------------------------------------------
-
-const CALENDAR_DEFECTS = ["D1", "D2", "D3", "D4", "D5", "D6", "D7"];
 
 // ---------------------------------------------------------------------------------------------
 // Shared helpers
@@ -94,7 +85,7 @@ function requireDist() {
 }
 
 function runtimeLine() {
-  return `@js-temporal/polyfill ${polyfillVersion()} (Node ${process.version}, ICU ${process.versions.icu ?? "none"})`;
+  return `temporal-polyfill ${polyfillVersion()} (Node ${process.version}, ICU ${process.versions.icu ?? "none"})`;
 }
 
 /** The runtime as the verdict files record it. */
@@ -169,14 +160,12 @@ function reportedUnknownRepros(unknown) {
 
 /** A passing probe's label in a group whose state does not make it removable. */
 const PASSING_PROBE_LABEL = {
-  guard: "GUARD",
   "out-of-scope": "OUT OF SCOPE",
 };
 
 /**
  * One probe's line: what it is, and whether it still returns the wrong value. A passing probe in a
- * group whose state is `guard` says GUARD, because it passes by design rather than by a fix, and
- * one in an `out-of-scope` group says OUT OF SCOPE, because this engine never had the defect.
+ * group whose state is `out-of-scope` says OUT OF SCOPE, because this engine never had the defect.
  */
 function probeLine({ repro, output, passes }, state) {
   const calendar = repro.calendar === "iso8601" ? "" : ` ${repro.calendar}`;
@@ -186,21 +175,6 @@ function probeLine({ repro, output, passes }, state) {
     : `  ${label} STILL NEEDED (${truncate(output, 90)})`;
 }
 
-/**
- * `05ce7a3` fixes the max end of the zoned.A range and not the min end, so a run where every
- * `max.*` probe passes looks like progress and is not enough to retire the workaround. Saying so
- * here saves the next reader rediscovering it from the probe names.
- */
-function zonedAPartialFixNote(workaround, results) {
-  const isZonedA = workaround.defects.includes("zoned.A");
-  const onlyMinFails = results.every(
-    ({ repro, passes }) => passes || !repro.name.startsWith("max."),
-  );
-  return isZonedA && onlyMinFails
-    ? "     Every max.* probe passes but a min.* probe fails: 05ce7a3 alone does not retire this workaround."
-    : null;
-}
-
 /** The numbered removal steps of a group. */
 function printSteps(workaround) {
   workaround.steps.forEach((step, index) =>
@@ -208,29 +182,11 @@ function printSteps(workaround) {
   );
 }
 
-/** A guard's reason without its closing period, for placing it inside parentheses. */
-function guardReason(guard) {
-  return guard.reason.replace(/\.$/, "");
-}
-
 /**
- * The verdict under one group's probes: a guard that holds, removable with its steps (and a note
- * when a guard has lapsed), or how many probes still fail.
+ * The verdict under one group's probes: out of scope on this engine, removable with its steps, or
+ * how many probes still fail.
  */
-function printGroupVerdict({
-  workaround,
-  results,
-  passing,
-  state,
-  guardLapsed,
-}) {
-  const { guard } = workaround;
-  if (state === "guard") {
-    console.log(
-      `  => GUARD: all ${results.length} probes return the spec value by design (${guardReason(guard)}). Holds through ${guard.package} ${guard.through}; installed ${polyfillVersion()}. Keep the workaround; no removal steps.`,
-    );
-    return;
-  }
+function printGroupVerdict({ workaround, results, passing, state }) {
   if (state === "out-of-scope") {
     console.log(
       `  => OUT OF SCOPE: all ${results.length} probes return the spec value, but this defect is ${workaround.engines.join(" and ")} only and this run is on ${ENGINE}. Passing here does not make the workaround removable; the weekly run's compat check in ${workaround.engines.join(" and ")} (its temporal-compat-<leg> verdict) decides. Keep the workaround; no removal steps.`,
@@ -241,19 +197,12 @@ function printGroupVerdict({
     console.log(
       `  => REMOVABLE: all ${results.length} probes return the spec value. Steps:`,
     );
-    if (guardLapsed) {
-      console.log(
-        `     Guard lapsed: it held through ${guard.package} ${guard.through} (${guardReason(guard)}). Before removing, confirm the installed release is the trigger; if it is not, raise guard.through to it.`,
-      );
-    }
     printSteps(workaround);
     return;
   }
   console.log(
     `  => STILL NEEDED: ${results.length - passing} of ${results.length} probes fail`,
   );
-  const note = zonedAPartialFixNote(workaround, results);
-  if (note) console.log(note);
 }
 
 function printGroup(group) {
@@ -266,53 +215,37 @@ function printGroup(group) {
   console.log("");
 }
 
-/** Whether every workaround covering a calendar defect (D1–D7) is now removable. */
-const calendarWorkaroundsDone = (removable) =>
-  WORKAROUNDS.filter((w) =>
-    w.defects.some((defect) => CALENDAR_DEFECTS.includes(defect)),
-  ).every((w) => removable.includes(w));
-
-function printRemovalSummary(removable, guarded, stillNeeded, outOfScope = []) {
-  if (calendarWorkaroundsDone(removable)) {
-    console.log(
-      `D1–D7 are all removable: also delete nonIsoArithmetic.ts, readArithmeticModel.ts and the whole-operation seams (${COMPAT_README} § Removal steps 6).`,
-    );
-  }
+function printRemovalSummary(removable, stillNeeded, outOfScope = []) {
   if (removable.length === WORKAROUNDS.length) {
     console.log(
       "Every workaround is removable (temporalCompat README, Removal steps): inline or keep temporalCompat/index.ts as a facade, delete temporalCompat/ and these check groups, keep `oracle`, bump the dependency floor, and add a changeset note (drops workarounds; no behaviour change).",
     );
   }
   console.log(
-    `${removable.length} of ${WORKAROUNDS.length} workarounds removable on this runtime (${stillNeeded} still needed, ${guarded.length} guard${keptGroupsDetail(guarded, outOfScope)}).`,
+    `${removable.length} of ${WORKAROUNDS.length} workarounds removable on this runtime (${stillNeeded} still needed${keptGroupsDetail(outOfScope)}).`,
   );
 }
 
-/** The summary's guard ids, then how many groups are out of scope on this engine and which. */
-function keptGroupsDetail(guarded, outOfScope) {
-  const ids = (workarounds) =>
-    workarounds.map((workaround) => workaround.defects.join("+")).join(", ");
-  const guards = guarded.length > 0 ? `: ${ids(guarded)}` : "";
-  const scoped =
-    outOfScope.length > 0
-      ? `, ${outOfScope.length} out of scope on ${ENGINE}: ${ids(outOfScope)}`
-      : "";
-  return guards + scoped;
+/** How many groups are out of scope on this engine, and which. */
+function keptGroupsDetail(outOfScope) {
+  const ids = outOfScope
+    .map((workaround) => workaround.defects.join("+"))
+    .join(", ");
+  return outOfScope.length > 0
+    ? `, ${outOfScope.length} out of scope on ${ENGINE}: ${ids}`
+    : "";
 }
 
 /** Adds each group's state on the installed runtime; the one place `check` decides it. */
 function withStates(groups) {
-  const installed = polyfillVersion();
   return groups.map((group) => ({
     ...group,
     ...workaroundState(
       {
         probes: group.results.length,
         failing: group.results.length - group.passing,
-        guard: group.workaround.guard,
         engines: group.workaround.engines,
       },
-      installed,
       ENGINE,
     ),
   }));
@@ -328,13 +261,7 @@ async function check(args) {
 
   if (reportedUnknownRepros(unknown)) return;
 
-  let groups;
-  try {
-    groups = withStates(probed.groups);
-  } catch (error) {
-    fail(2, error.message);
-    return;
-  }
+  const groups = withStates(probed.groups);
 
   for (const group of groups) printGroup(group);
 
@@ -343,7 +270,6 @@ async function check(args) {
   const removable = inState("removable");
   printRemovalSummary(
     removable,
-    inState("guard"),
     inState("still-needed").length,
     inState("out-of-scope"),
   );
@@ -994,14 +920,12 @@ function committedSnapshot() {
  * about whether the committed copy is current.
  */
 function snapshotText(groups) {
-  const installed = polyfillVersion();
   return formatJson({
     groups: groups.map(({ workaround, results, passing }) =>
       snapshotRow(
         workaround,
         // `failing` is how many probes still return the wrong value on the installed polyfill.
         { probes: results.length, failing: results.length - passing },
-        installed,
         ENGINE,
       ),
     ),
@@ -1025,15 +949,7 @@ async function snapshot(args) {
   const { groups, unknown } = await runProbes();
   if (reportedUnknownRepros(unknown)) return;
 
-  // `snapshotRow` throws only for a guarded group whose probes all pass while the installed version
-  // cannot be compared with `guard.through`: a fault in the local install, so nothing is written.
-  let next;
-  try {
-    next = snapshotText(groups);
-  } catch (error) {
-    fail(2, `compat snapshot: ${error.message}`);
-    return;
-  }
+  const next = snapshotText(groups);
   const path = `${ROOT}${SNAPSHOT}`;
 
   if (args.includes("--check")) {
@@ -1055,13 +971,11 @@ async function snapshot(args) {
 function snapshotCountLine(rows) {
   const count = (state) => rows.filter((row) => row.state === state).length;
   const removable = count("removable");
-  const guard = count("guard");
   const outOfScope = count("out-of-scope");
   return [
     `compat snapshot: ${rows.length} group(s) recorded`,
     `${count("still-needed")} still needed`,
     ...(removable > 0 ? [`${removable} removable`] : []),
-    ...(guard > 0 ? [`${guard} guard`] : []),
     ...(outOfScope > 0 ? [`${outOfScope} out of scope`] : []),
   ].join(", ");
 }
