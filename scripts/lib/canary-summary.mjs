@@ -271,10 +271,12 @@ function nativeBlocks(verdicts) {
 
 /** How many differing zones the swap block names. */
 const SWAP_ZONES_LISTED = 10;
+/** How many differing calendars the swap block names. */
+const SWAP_CALENDARS_LISTED = 10;
 
 /**
- * The `temporal-polyfill` swap (CORE-92): the verdict line, one table row per leg and the offset
- * sweep. A leg that did not run keeps its row.
+ * The `temporal-polyfill` swap (CORE-92): the verdict line, one table row per leg, the offset
+ * sweep and the calendar sweep (CORE-110). A leg that did not run keeps its row.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @returns {string[]}
  */
@@ -328,6 +330,28 @@ function swapBlocks(verdicts) {
     sweepBlocks.push(`Offset sweep: could not run: ${oneLine(sweep.message)}`);
   } else {
     sweepBlocks.push("Offset sweep: did not run.");
+  }
+  const calendarSweep =
+    /** @type {import("./canary-issues.mjs").SwapVerdict | import("./canary-issues.mjs").CouldNotRunVerdict | null | undefined} */ (
+      /** @type {unknown} */ (verdicts["temporal-polyfill-swap-node"])
+    )?.calendarSweep ?? null;
+  if (calendarSweep?.status === "ran") {
+    const lines = [
+      `Calendar sweep: ${calendarSweep.differingCalendars} calendars differ (${calendarSweep.calendars} calendars, ${calendarSweep.years} years, ${calendarSweep.from} to ${calendarSweep.through}).`,
+      ...calendarSweep.differing
+        .slice(0, SWAP_CALENDARS_LISTED)
+        .map(
+          (d) =>
+            `- ${d.calendar}: ${d.years} ${d.years === 1 ? "year" : "years"}, first ${d.first ?? "none"}, e.g. ${oneLine(d.example)}`,
+        ),
+    ];
+    sweepBlocks.push(lines.join("\n"));
+  } else if (calendarSweep?.status === "could-not-run") {
+    sweepBlocks.push(
+      `Calendar sweep: could not run: ${oneLine(calendarSweep.message)}`,
+    );
+  } else {
+    sweepBlocks.push("Calendar sweep: did not run.");
   }
   return [
     "### Temporal polyfill swap",

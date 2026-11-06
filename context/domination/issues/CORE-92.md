@@ -74,7 +74,8 @@ to, and checking by hand on every release is the kind of watch nobody keeps. Web
   for host reasons (`KNOWN_HOST_FAILURES` in `scripts/lib/native-suite-tags.mjs`). A leg passes when
   no test fails on the swap that passes on the control in the same runtime.
 - **One verdict per leg**, `temporal-polyfill-swap-<leg>`, as for `native-suite-<leg>`. Four legs:
-  Node 26, Playwright Chromium, Firefox and WebKit. The Node leg also runs the offset sweep.
+  Node 26, Playwright Chromium, Firefox and WebKit. The Node leg also runs the offset sweep and the
+  calendar sweep ([CORE-110](CORE-110.md)).
 - **Import `temporal-polyfill/full/implementation`, never `/full`.** `/full` returns the runtime's
   built-in `Temporal` where one exists, so the swap would test the engine, not the polyfill.
 - **The sweep is brute force on purpose.** One instant a day at 12:00 UTC, from 1970-01-01 to ten
