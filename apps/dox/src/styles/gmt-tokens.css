@@ -398,13 +398,25 @@
     0 0 6px rgb(from var(--gmt-ink-fixed) r g b / 90%),
     0 0 14px rgb(from var(--gmt-ink-fixed) r g b / 70%);
 
-  /* ---- Syntax highlight (call lines, gmt-widget-reset.css) ----
-   * Sampled from this site's actual Shiki output for exact-match highlighting
-   * with real code fences. Theme-role tokens (a genuine dark/light hue swap, not
-   * a re-tint), so gmt-widget-reset.css needs no [data-theme="light"] block for them. */
-  --gmt-syntax-fn: #82aaff;
-  --gmt-syntax-str: #ecc48d;
-  --gmt-syntax-num: #f78c6c;
+  /* ---- Syntax highlight ----
+   * One role per kind of token, drawn from the palette. Two readers: the code
+   * blocks, whose Expressive Code themes `src/lib/code-themes.ts` builds from
+   * these values when the site builds, and the widget call lines
+   * (gmt-widget-reset.css). The pages around a code block are mostly cyan, so
+   * the roles a reader scans for (keywords, function names, values) take the
+   * tools' other series colours: purple, gold, green and rose. Cyan is left to
+   * types, which are rare in examples. Text roles take the `-ink` tokens, so
+   * the light values clear 7:1 through the light block's re-tint. Write each
+   * as a hex value or a `var()` of one: the theme builder resolves nothing
+   * else. */
+  --gmt-syntax-text: var(--gmt-ice);
+  --gmt-syntax-comment: var(--gmt-ice-dim);
+  --gmt-syntax-punct: var(--gmt-ice-dim);
+  --gmt-syntax-keyword: var(--gmt-dst-purple-ink);
+  --gmt-syntax-fn: var(--gmt-dst-gold-ink);
+  --gmt-syntax-str: var(--gmt-spring-ink);
+  --gmt-syntax-num: var(--gmt-danger-ink);
+  --gmt-syntax-type: var(--gmt-cyan-ink);
 
   /* ---- Globe (`widgets/tools/globe.module.css` and the zone families) ----
    * The day/night terminator needs a night tint that stays dark in every
@@ -701,18 +713,6 @@
   --gmt-code-border: var(--gmt-border);
   --gmt-sidebar-link: var(--gmt-ice);
   --gmt-pagination-title: var(--gmt-ice);
-
-  /* ---- Syntax highlight (light values) ---- */
-
-  /* --gmt-syntax-fn and --gmt-syntax-str measured 5.96:1 and
-     5.95:1 against white — below the 7:1 code-frame floor. Darkened, same
-     hue, to 7.71:1 and 7.84:1 (WCAG relative-luminance formula). Dark theme
-     already clears 7:1 and is untouched. --gmt-syntax-num was #aa0982, 6.56:1
-     against white; it now takes the same hue family as its dark value
-     (orange) through --gmt-signal-ink, 8.16:1 against white. */
-  --gmt-syntax-fn: #315192;
-  --gmt-syntax-str: #7d403f;
-  --gmt-syntax-num: var(--gmt-signal-ink);
   --gmt-surface-widget: var(
     --gmt-void
   ); /* the 0.5 white wash, over the white page */

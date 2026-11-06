@@ -21,6 +21,7 @@ import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
+import { codeThemes } from "./src/lib/code-themes.ts";
 
 // `site` + `base` make every Starlight link, the canonical tag, the sitemap
 // and Pagefind resolve under /gmt/. One module holds both, for the Worker and
@@ -171,7 +172,17 @@ export default defineConfig({
       // stylesheet until it has loaded — so on each route change the page
       // painted with an empty gap below the first heading for a frame. An
       // inline <style> applies as it is parsed. Costs ~4 KB gzipped per page.
-      expressiveCode: { emitExternalStylesheet: false },
+      //
+      // The syntax colours are the site's palette: `code-themes.ts` builds a dark and a light
+      // theme from the `--gmt-syntax-*` tokens. Starlight still draws the frames, tabs and
+      // buttons from its own colours (`useStarlightUiThemeColors`), and every token is held to
+      // the 7:1 code-frame floor.
+      expressiveCode: {
+        emitExternalStylesheet: false,
+        themes: codeThemes(),
+        useStarlightUiThemeColors: true,
+        minSyntaxHighlightingColorContrast: 7,
+      },
       head: [
         // Hold the first paint until the end-of-page marker (src/components/
         // Footer.astro) is parsed. On a route change the browser keeps showing
