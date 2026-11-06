@@ -351,7 +351,7 @@ export const RULES = [
     checks: ["api-surface", ...SCRIPT_TESTS],
   },
   {
-    test: /^scripts\/bundle-size\.(?:mjs|budgets\.json)$/,
+    test: /^scripts\/(?:bundle-size\.(?:mjs|budgets\.json)|lib\/bundle-size\.mjs)$/,
     // The Dox generate step runs `bundle-size.mjs report` for the bundle-size page.
     checks: [
       "bundle-size",
