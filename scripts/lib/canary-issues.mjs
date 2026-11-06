@@ -1293,20 +1293,25 @@ function swapFindings(verdicts, runUrl) {
   /** @type {Finding[]} */
   const out = result.ready ? [real] : [];
   if (forcedBy) {
+    // The dry run is built from the ready issue, so a run that is not ready takes its own title,
+    // and every comment on an open dry-run issue opens with the real result, as the body does.
     const outcome = result.ready
       ? "every check passed"
       : `not ready to swap. The first check that blocks it: ${result.reason}`;
-    out.push(
-      dryRun(
-        real,
-        "--force-swap-ready",
-        [
-          `Forced for a dry run. Real result on this run: ${outcome}.`,
-          ...paragraphs,
-        ],
-        runUrl,
-      ),
-    );
+    const dryParagraphs = [
+      `Forced for a dry run. Real result on this run: ${outcome}.`,
+      ...paragraphs,
+    ];
+    const twin = result.ready
+      ? real
+      : {
+          ...real,
+          title: `Swap to temporal-polyfill ${version}: not ready, forced to preview the ready issue`,
+        };
+    out.push({
+      ...dryRun(twin, "--force-swap-ready", dryParagraphs, runUrl),
+      comment: dryParagraphs.join("\n\n"),
+    });
   }
   return out;
 }

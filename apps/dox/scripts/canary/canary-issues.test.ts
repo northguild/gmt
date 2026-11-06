@@ -2406,13 +2406,15 @@ describe("swap force", () => {
     "temporal-compat-check": cleanCheck(),
     "temporal-oracle": oracle(),
   });
-  const forcedPlan = (swap: unknown) => {
+  const forcedPlan = (swap: unknown, open: unknown[] = []) => {
     const { verdicts } = applyForce(
       withNative({ ...base(), ...(swap as object) }),
       { swapReady: true },
     );
-    return planIssueActions(verdicts as never, [], ORACLE_CONTEXT);
+    return planIssueActions(verdicts as never, open as never, ORACLE_CONTEXT);
   };
+  const openDryRun = () =>
+    issue(52, `<!-- gmt-canary key="${DRY_KEY}" -->\nold`);
 
   it("marks the first swap leg that ran", () => {
     const { verdicts, skipped } = applyForce(
@@ -2486,6 +2488,36 @@ describe("swap force", () => {
     );
     expect(dry.body).not.toContain("passed every check");
     expect(dry.body).toContain("| WebKit 26.6 | 71337 | 2 | 0 | 0 |");
+    expect(dry.title).toBe(
+      "[dry run] Swap to temporal-polyfill 1.0.7: not ready, forced to preview the ready issue",
+    );
+  });
+
+  it("a forced run that is not ready comments on the open dry run with the real result", () => {
+    const actions = forcedPlan(cleanSwap({ webkit: { failed: 2 } }), [
+      openDryRun(),
+    ]);
+    expect(actions.map((a) => a.key)).toEqual([DRY_KEY]);
+    const [dry] = actions;
+    if (dry.kind !== "comment") throw new Error("expected comment");
+    expect(dry.issue).toBe(52);
+    expect(dry.body).toMatch(
+      /^Forced for a dry run\. Real result on this run: not ready to swap\. The first check that blocks it: temporal-polyfill-swap-webkit: 2 tests fail on the swap\.\n\n/,
+    );
+    expect(dry.body).toContain(
+      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, was checked on this run: ${RUN}`,
+    );
+    expect(dry.body).not.toContain("also passes");
+    expect(dry.body).not.toContain("passed every check");
+  });
+
+  it("a forced run that passes comments on the open dry run with the real result", () => {
+    const actions = forcedPlan(cleanSwap(), [openDryRun()]);
+    const dry = actions.find((a) => a.key === DRY_KEY);
+    if (!dry || dry.kind !== "comment") throw new Error("expected comment");
+    expect(dry.body).toMatch(
+      /^Forced for a dry run\. Real result on this run: every check passed\.\n\n/,
+    );
   });
 
   it("a forced run with differing zones does not claim the sweep matched", () => {
