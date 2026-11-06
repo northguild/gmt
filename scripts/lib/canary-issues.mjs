@@ -10,6 +10,7 @@
  *
  * Imports one constant (`ENGINE_IDS`) and nothing that reads or writes.
  */
+import { compareReleases } from "./release-order.mjs";
 import { ENGINE_IDS } from "./workarounds.mjs";
 
 /** Label every canary issue carries. */
@@ -1155,6 +1156,22 @@ function swapRuntimeName(leg, v) {
 }
 
 /**
+ * True when `version` is an older release than `pinned`, such as a version given by hand to test
+ * the check. Such a run never says to raise the pin, which would be a downgrade.
+ * @param {string} version
+ * @param {string} pinned  "" when no leg says
+ * @returns {boolean}
+ */
+function olderThanPin(version, pinned) {
+  const release = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+  return (
+    release.test(version) &&
+    release.test(pinned) &&
+    compareReleases(version, pinned) < 0
+  );
+}
+
+/**
  * The upgrade issue's paragraphs, built from whichever legs ran. `pinned` is the version the
  * control pass ran (`packages/gmt/package.json`), or "" when no leg says.
  * @param {Record<string, Verdict | null | undefined>} verdicts
@@ -1192,6 +1209,23 @@ function swapParagraphs(verdicts, version, pinned, runUrl) {
       sweep.differingZones === 0
         ? `Offset sweep: every one of ${sweep.zones} zones matches \`Intl.DateTimeFormat\` at 12:00 UTC each day ${span}.`
         : `Offset sweep: ${sweep.differingZones} of ${sweep.zones} zones differ from \`Intl.DateTimeFormat\` at 12:00 UTC on some day ${span}.`;
+  }
+  if (olderThanPin(version, pinned)) {
+    return [
+      `temporal-polyfill ${version} passes the GMT suite on every runtime against ${against}, and it passed every check on this run: ${runUrl}`,
+      table(
+        [
+          "Runtime",
+          "Tests",
+          `Fail on ${version} only`,
+          "Fail on both",
+          `Fail on ${pinnedName} only`,
+        ],
+        rows,
+      ),
+      sweepLine,
+      `${version} is older than the pin in \`packages/gmt/package.json\`, ${pinned}, so there is nothing to change. The history of this check is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}).`,
+    ];
   }
   if (selfTest) {
     return [
@@ -1258,8 +1292,9 @@ function swapFindings(verdicts, runUrl) {
   /** @type {Finding} */
   const real = {
     key: "temporal-polyfill-swap/ready",
-    title:
-      firstRan?.pinned && firstRan.pinned === version
+    title: olderThanPin(version, firstRan?.pinned ?? "")
+      ? `temporal-polyfill ${version} passes on every runtime, but it is older than the pinned ${firstRan?.pinned}: nothing to change`
+      : firstRan?.pinned && firstRan.pinned === version
         ? `temporal-polyfill ${version} self-test passed: the pin is already ${version}, nothing to change`
         : `temporal-polyfill ${version} passes on every runtime against ${firstRan?.pinned ? `the pinned ${firstRan.pinned}` : "the pinned version"}: raise the pin`,
     labels: [CANARY_LABEL],

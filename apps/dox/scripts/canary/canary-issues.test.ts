@@ -2134,6 +2134,26 @@ describe("swap findings", () => {
     expect(action.body).not.toContain("pnpm install");
   });
 
+  it("a candidate older than the pin says there is nothing to change, never to raise the pin", () => {
+    const [action] = swapPlan(
+      cleanSwap({
+        node: { pinned: "1.0.8" },
+        chromium: { pinned: "1.0.8" },
+        firefox: { pinned: "1.0.8" },
+        webkit: { pinned: "1.0.8" },
+      }),
+    );
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.title).toBe(
+      "temporal-polyfill 1.0.7 passes on every runtime, but it is older than the pinned 1.0.8: nothing to change",
+    );
+    expect(action.body).toContain(
+      "1.0.7 is older than the pin in `packages/gmt/package.json`, 1.0.8, so there is nothing to change.",
+    );
+    expect(action.body).not.toContain("raise the pin");
+    expect(action.body).not.toContain("pnpm install");
+  });
+
   it("a run that ran but is not swap-ready files nothing", () => {
     expect(swapPlan(cleanSwap({ webkit: { failed: 2 } }))).toEqual([]);
   });

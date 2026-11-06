@@ -12,6 +12,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { compareReleases } from "./lib/release-order.mjs";
 
 const SEMVER = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 
@@ -19,13 +20,19 @@ const SEMVER = /^[0-9]+\.[0-9]+\.[0-9]+$/;
  * @param {{ requested: string, newest: string, pinned: string | null }} input
  *   `requested` is the version given by hand ("" when none), `newest` the latest release
  * @returns {{ version: string, skip: boolean }}  `skip` is true only when no version was given
- *   by hand and the pin is already the newest release
+ *   by hand and the newest release is not newer than the pin. A version given by hand always
+ *   runs, older ones included; the issue then says there is nothing to change.
  * @throws {Error} when the chosen version is not x.y.z
  */
 export function pickSwapVersion({ requested, newest, pinned }) {
   const version = requested === "" ? newest : requested;
   if (!SEMVER.test(version)) throw new Error(`not a x.y.z version: ${version}`);
-  return { version, skip: requested === "" && version === pinned };
+  const skip =
+    requested === "" &&
+    pinned !== null &&
+    SEMVER.test(pinned) &&
+    compareReleases(version, pinned) <= 0;
+  return { version, skip };
 }
 
 /** @returns {number} the process exit code */
@@ -54,7 +61,9 @@ function main() {
     if (skip && process.env.GITHUB_STEP_SUMMARY) {
       appendFileSync(
         process.env.GITHUB_STEP_SUMMARY,
-        `The pinned temporal-polyfill ${version} is the newest release, so there is nothing to check.\n`,
+        version === pin
+          ? `The pinned temporal-polyfill ${version} is the newest release, so there is nothing to check.\n`
+          : `The newest temporal-polyfill release, ${version}, is older than the pinned ${pin}, so there is nothing to check.\n`,
       );
     }
     return 0;

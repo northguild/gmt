@@ -21,8 +21,8 @@ name: Temporal oracle
 #
 # The polyfill-swap job is the upgrade check. It runs the same suite on the newest
 # `temporal-polyfill` release (the candidate, installed as `temporal-polyfill-candidate`), beside a
-# control pass on the pinned version in the same runtime. When the pin is already the newest
-# release, the legs are skipped. The Node leg also compares every zone's offset with
+# control pass on the pinned version in the same runtime. When the newest release is not newer
+# than the pin, the legs are skipped. The Node leg also compares every zone's offset with
 # `Intl.DateTimeFormat`, once a day from 1970 to ten years ahead. When every leg passes and no zone
 # differs, the report job opens one issue saying the upgrade is ready. A failing leg never fails
 # the workflow.
@@ -198,7 +198,7 @@ jobs:
           if-no-files-found: ignore
 
   # Picks the candidate version once, so the four legs test the same release. `skip` is true when
-  # the pin is already the newest release, so the legs have nothing to check.
+  # the newest release is not newer than the pin, so the legs have nothing to check.
   swap-version:
     name: Temporal polyfill version
     runs-on: ubuntu-latest
@@ -228,7 +228,7 @@ jobs:
     name: Temporal polyfill swap (${{ matrix.leg }})
     needs: swap-version
     # A failed swap-version (continue-on-error) still counts as success, with an empty output.
-    # It also skips when the pin is already the newest release.
+    # It also skips when the newest release is not newer than the pin.
     if: ${{ needs.swap-version.outputs.version != '' && needs.swap-version.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -396,7 +396,7 @@ jobs:
           FORCE_MISMATCH: ${{ inputs.force_mismatch }}
           FORCE_NATIVE_FAILURE: ${{ inputs.force_native_failure }}
           FORCE_SWAP_READY: ${{ inputs.force_swap_ready }}
-          # True when the pin is the newest release: the four swap legs were skipped on purpose,
+          # True when the newest release is not newer than the pin: the four swap legs were skipped on purpose,
           # so no swap verdict is expected. A failed swap-version has no `skip`, so it stays a
           # could-not-run issue.
           SWAP_SKIPPED: ${{ needs.swap-version.outputs.skip }}
