@@ -230,18 +230,6 @@ export function projectUnit(
 }
 
 /**
- * Whether a body lies in front of the camera: within 90 degrees of the view's centre, the point
- * straight behind the Earth. The sky draws stars out to `MAX_ANGLE` so the hero's corners are never
- * bare, but a Sun or Moon past 90 degrees is behind the reader — the Sun there lights the face of
- * the Earth they are looking at, so drawing it beyond the Earth would put it below the horizon of
- * every lit place on screen.
- */
-export function inFront(basis: SkyBasis, [x, y, z]: Unit): boolean {
-  const { centre } = basis;
-  return x * centre[0] + y * centre[1] + z * centre[2] >= 0;
-}
-
-/**
  * The size in box units of an angular radius, degrees, at a point of the sky: the projection
  * stretches by `2 / (1 + cos)` of the angle from the view's centre, as it does a star's position.
  */
@@ -285,21 +273,14 @@ export function inBox(
 /**
  * The box laid over a hero the way `object-fit: cover` lays an image, with the view's centre at
  * `centre` (the Earth's centre, in the hero's pixels): the scale, and where the box's centre lands.
- *
- * `zoom` is the globe's own zoom factor (1 at rest). The cover-fit alone only matches the sky to
- * the hero's viewport, not to the Earth's size on screen — so zooming the globe grew its disc
- * without the Sun, Moon or stars around it moving to match, and a Sun that sat just past the limb
- * at rest could end up swallowed by a disc that had grown past it. Scaling by `zoom` keeps the sky
- * locked to the Earth it is drawn behind, at any zoom.
  */
 export function coverFit(
   width: number,
   height: number,
   centre: { x: number; y: number },
-  zoom = 1,
 ): { scale: number; originX: number; originY: number } {
   return {
-    scale: Math.max(width / BOX.width, height / BOX.height) * zoom,
+    scale: Math.max(width / BOX.width, height / BOX.height),
     originX: centre.x,
     originY: centre.y,
   };

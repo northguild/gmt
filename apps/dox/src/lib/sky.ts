@@ -16,7 +16,6 @@ import {
   BOX,
   coverFit,
   fromGalactic,
-  inFront,
   moonPhase,
   moonRaDec,
   projectUnit,
@@ -57,14 +56,12 @@ export interface Sky {
    * Earth's centre under half a pixel since the last draw, whatever the clock says: the sidereal
    * drift is drawn by the minute check, so a caller that ticks every second costs no draws. The
    * first call always draws, then sets `data-sky="ready"` on the host. A null `centre` draws at the
-   * anchor: for a globe that never mounted. `zoom` is the globe's own zoom factor (1 at rest),
-   * which scales the whole sky to match the Earth's current size on screen.
+   * anchor: for a globe that never mounted.
    */
   view(
     rotation: readonly [number, number],
     centre: SkyPoint | null,
     instantMs: number,
-    zoom?: number,
   ): void;
 }
 
@@ -81,8 +78,6 @@ const RECORD = 6;
 /** The view's movement, in degrees, and the Earth's, in CSS pixels, below which a draw is not worth it. */
 const MIN_VIEW = 0.01;
 const MIN_SHIFT = 0.5;
-/** The globe's zoom factor's movement below which a draw is not worth it. */
-const MIN_ZOOM = 0.002;
 
 /** How often the sidereal drift is checked at rest, milliseconds. */
 const MINUTE = 60_000;
@@ -243,15 +238,8 @@ export function mountSky(options: SkyOptions): Sky {
     rotation: readonly [number, number];
     centre: SkyPoint | null;
     instantMs: number;
-    zoom: number;
-  } = { rotation: options.rotation, centre: null, instantMs: now(), zoom: 1 };
-  let drawn: {
-    ra: number;
-    dec: number;
-    x: number;
-    y: number;
-    zoom: number;
-  } | null = null;
+  } = { rotation: options.rotation, centre: null, instantMs: now() };
+  let drawn: { ra: number; dec: number; x: number; y: number } | null = null;
   /** The instant of the last draw. */
   let drawnAt: number | null = null;
   let pending: number | undefined;
@@ -351,9 +339,7 @@ export function mountSky(options: SkyOptions): Sky {
     const moon = moonRaDec(instantMs);
     const phase = moonPhase(sun, moon);
     const tint = iceColour();
-    const shown = (body: { ra: number; dec: number }, degrees: number) =>
-      inFront(basis, toUnit(body.ra, body.dec)) ? at(body, degrees) : null;
-    const moonAt = shown(moon, moon.radius);
+    const moonAt = at(moon, moon.radius);
     if (moonAt) {
       const { x, y, r } = moonAt;
       const shine = EARTHSHINE * (1 - phase.lit);
@@ -390,7 +376,7 @@ export function mountSky(options: SkyOptions): Sky {
       starsCtx.fill();
       starsCtx.restore();
     }
-    const sunAt = shown(sun, SUN_RADIUS);
+    const sunAt = at(sun, SUN_RADIUS);
     const hidden =
       sunAt !== null &&
       Math.hypot(sunAt.x - earth.x, sunAt.y - earth.y) <
@@ -492,16 +478,10 @@ export function mountSky(options: SkyOptions): Sky {
     const started = performance.now();
     const view = skyCentre(latest.rotation, latest.instantMs);
     const centre = centreOf();
-    drawn = {
-      ra: view.ra,
-      dec: view.dec,
-      x: centre.x,
-      y: centre.y,
-      zoom: latest.zoom,
-    };
+    drawn = { ra: view.ra, dec: view.dec, x: centre.x, y: centre.y };
     drawnAt = latest.instantMs;
     const basis = skyBasis(view);
-    const fit = coverFit(width, height, centre, latest.zoom);
+    const fit = coverFit(width, height, centre);
     if (visible(starsCanvas)) {
       drawStars(basis, fit);
       starsCanvas.dataset["skyBodies"] = drawBodies(
@@ -564,7 +544,6 @@ export function mountSky(options: SkyOptions): Sky {
     rotation: readonly [number, number],
     centre: SkyPoint | null,
     instantMs: number,
-    zoom: number,
   ): boolean {
     const next = skyCentre(rotation, instantMs);
     const at = centre ?? centreOf();
@@ -573,30 +552,26 @@ export function mountSky(options: SkyOptions): Sky {
       Math.abs(((next.ra - drawn.ra + 540) % 360) - 180) >= MIN_VIEW ||
       Math.abs(next.dec - drawn.dec) >= MIN_VIEW ||
       Math.abs(at.x - drawn.x) >= MIN_SHIFT ||
-      Math.abs(at.y - drawn.y) >= MIN_SHIFT ||
-      Math.abs(zoom - drawn.zoom) >= MIN_ZOOM
+      Math.abs(at.y - drawn.y) >= MIN_SHIFT
     );
   }
 
   /**
    * The camera moved: the clock alone does not redraw here (the globe's own once-a-second tick
    * would), so the camera is judged at the instant last drawn; the minute check owns the clock.
-   * `zoom` defaults to the last one given, so a caller that only tracks rotation and centre (the
-   * pre-globe draws) keeps whatever scale is already in effect.
    */
   function view(
     rotation: readonly [number, number],
     centre: SkyPoint | null,
     instantMs: number,
-    zoom: number = latest.zoom,
   ): void {
     if (signal.aborted) return;
     if (!begun) {
       begun = true;
       size();
     }
-    const changed = moved(rotation, centre, drawnAt ?? instantMs, zoom);
-    latest = { rotation, centre, instantMs, zoom };
+    const changed = moved(rotation, centre, drawnAt ?? instantMs);
+    latest = { rotation, centre, instantMs };
     if (changed) draw();
   }
 
@@ -604,8 +579,7 @@ export function mountSky(options: SkyOptions): Sky {
   function refresh(): void {
     if (!begun) return;
     latest = { ...latest, instantMs: now() };
-    if (moved(latest.rotation, latest.centre, latest.instantMs, latest.zoom))
-      draw();
+    if (moved(latest.rotation, latest.centre, latest.instantMs)) draw();
   }
 
   /* At rest nothing calls `view`, but the sky turns: once a minute the clock is asked again. */

@@ -3386,8 +3386,6 @@ async function checkSkyCopy(browser) {
       const [x, y] = el.dataset.skyBodies.split(" ").map(Number);
       return { x: x + canvas.left, y: y + canvas.top };
     });
-    /* Early in the walk the Sun is behind the reader, so it is not drawn and has no glare to test. */
-    if (!Number.isFinite(sun.x)) continue;
     parts.forEach((part, n) => {
       const dx = Math.max(part.x - sun.x, 0, sun.x - (part.x + part.width));
       const dy = Math.max(part.y - sun.y, 0, sun.y - (part.y + part.height));

@@ -9,21 +9,12 @@ import {
 import type { GlobeHost } from "./globe";
 
 /* The sky itself is tested in sky.test.ts; here it is a recorder that marks the hero ready on its first view, as the real one does. */
-const views: {
-  rotation: readonly [number, number];
-  centre: unknown;
-  zoom: number | undefined;
-}[] = [];
+const views: { rotation: readonly [number, number]; centre: unknown }[] = [];
 vi.mock("./sky", () => ({
   mountSky: ({ host }: { host: HTMLElement }) => ({
     ready: Promise.resolve(),
-    view: (
-      rotation: readonly [number, number],
-      centre: unknown,
-      _instantMs: number,
-      zoom?: number,
-    ) => {
-      views.push({ rotation, centre, zoom });
+    view: (rotation: readonly [number, number], centre: unknown) => {
+      views.push({ rotation, centre });
       host.dataset["sky"] = "ready";
     },
   }),
@@ -43,7 +34,6 @@ const globe = (frames: (() => void)[]): GlobeHost =>
   ({
     getRotation: () => [10, 20],
     getCentre: () => ({ x: 100, y: 200, radius: 300 }),
-    getZoom: () => 2,
     onFrame: (callback: () => void) => frames.push(callback),
   }) as unknown as GlobeHost;
 
@@ -100,7 +90,6 @@ describe("the hero's sky", () => {
     expect(views).toHaveLength(1);
     expect(views[0]?.rotation).toEqual([10, 20]);
     expect(views[0]?.centre).toMatchObject({ radius: 300 });
-    expect(views[0]?.zoom).toBe(2);
     // oxlint-disable-next-line dox-test/no-implementation-assert -- the page fades the layers in from this attribute
     expect(hero.dataset["sky"]).toBe("ready");
     expect(meteors).toHaveLength(1);

@@ -159,7 +159,6 @@ export async function followGlobe(
           radius: centre.radius,
         },
         getUnixNow(),
-        globe.getZoom(),
       );
     };
     /* The first draw does not wait for a globe frame. */

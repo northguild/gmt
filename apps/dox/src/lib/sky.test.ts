@@ -200,10 +200,9 @@ describe("the Sun and the Moon", () => {
     const sky = mount();
     /* Turn the camera so the Moon of 1992-04-12 (RA 134.7, Dec 13.8) is the view's centre. */
     sky.view([siderealDeg(APR_12) + 180 - 134.69, 13.77], CENTRE, APR_12);
-    const [sun, , ...moon] = bodies();
-    const [moonX, moonY, lit] = moon.map(Number);
-    /* A Moon more than half lit is more than 90 degrees from the Sun: looking at it, the Sun is behind you. */
-    expect(sun).toBe("none");
+    const [sunX, sunY, moonX, moonY, lit] = bodies().map(Number);
+    for (const value of [sunX, sunY, moonX, moonY, lit])
+      expect(Number.isFinite(value)).toBe(true);
     expect(Math.abs(moonX! - CENTRE.x)).toBeLessThan(3);
     expect(Math.abs(moonY! - CENTRE.y)).toBeLessThan(3);
     /* Meeus 48.a: 0.679 of the disc is lit. */
@@ -269,50 +268,6 @@ describe("the Sun and the Moon", () => {
     expect(bodies().slice(0, 2)).toEqual(["none", "none"]);
     sky.view([0, 0], { x: CENTRE.x + 1, y: CENTRE.y, radius: 40 }, T0);
     expect(bodies()[0]).not.toBe("none");
-  });
-
-  it("scales the Sun's place from the Earth's centre with the globe's own zoom, so a reader zooming in does not swallow it behind a disc that outgrew it", () => {
-    const sky = mount();
-    /* A rotation 20 degrees off the Sun, so it projects but sits well clear of the centre. */
-    const sun = sunRaDec(T0);
-    const rotation: [number, number] = [
-      siderealDeg(T0) + 180 - sun.ra + 20,
-      sun.dec,
-    ];
-    sky.view(rotation, CENTRE, T0, 1);
-    const [sunX1, sunY1] = bodies().map(Number);
-    sky.view(rotation, CENTRE, T0, 3);
-    const [sunX2, sunY2] = bodies().map(Number);
-    /* The gate rounds each place to 0.1 px, so a threefold scale-up can be a few tenths off. */
-    expect(sunX2! - CENTRE.x).toBeCloseTo(3 * (sunX1! - CENTRE.x), 0);
-    expect(sunY2! - CENTRE.y).toBeCloseTo(3 * (sunY1! - CENTRE.y), 0);
-  });
-
-  it.each([
-    ["Sun", 0, sunRaDec(T0)],
-    ["Moon", 2, moonRaDec(T0)],
-  ] as const)(
-    "leave out a %s behind the reader, past 90 degrees from the point behind the Earth, though stars still reach 120",
-    (_, index, body) => {
-      const sky = mount();
-      /* At the body's own declination, 80 degrees of right ascension is 79 degrees of arc and 100 is 99. */
-      const turned = (by: number): [number, number] => [
-        siderealDeg(T0) + 180 - body.ra + by,
-        body.dec,
-      ];
-      sky.view(turned(80), CENTRE, T0);
-      expect(bodies()[index]).not.toBe("none");
-      sky.view(turned(100), CENTRE, T0);
-      expect(bodies()[index]).toBe("none");
-    },
-  );
-
-  it("redraws on a zoom alone, with no rotation, centre or clock change", () => {
-    const sky = mount();
-    sky.view([0, 0], CENTRE, T0, 1);
-    const before = draws();
-    sky.view([0, 0], CENTRE, T0, 1.5);
-    expect(draws()).toBe(before + 1);
   });
 
   it("lose the Sun's glare, and keep its disc, when the reader asks for more contrast", () => {
