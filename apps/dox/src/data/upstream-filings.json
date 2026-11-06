@@ -1,5 +1,5 @@
 {
-  "checked": "2026-11-04T17:46:15.22034635Z",
+  "checked": "2026-11-06T15:26:37.145Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -106,9 +106,13 @@
       "title": "Don't format dates past the range limit when counting months in until()",
       "url": "https://github.com/js-temporal/temporal-polyfill/pull/370",
       "summary": "Counting months between two dates in a non-ISO calendar fails when the later date falls in the first or last month of the supported range. The month-by-month loop builds a date beyond the range that it never actually needs.",
-      "pairsWith": ["tc39/proposal-temporal#3327"],
+      "pairsWith": [
+        "tc39/proposal-temporal#3327"
+      ],
       "closes": [],
-      "dependsOn": ["js-temporal/temporal-polyfill#369"],
+      "dependsOn": [
+        "js-temporal/temporal-polyfill#369"
+      ],
       "gmtGuard": null,
       "gmtNote": "GMT no longer runs on `@js-temporal/polyfill`, where this defect is, so it can't affect GMT.",
       "outcome": "Closed, not rejected: the maintainer will apply the fix to the Temporal standard first, and it reaches the polyfill from there.",
@@ -130,7 +134,9 @@
       "title": "Search the last partial window when looking for the next time zone transition",
       "url": "https://github.com/js-temporal/temporal-polyfill/pull/371",
       "summary": "Looking for the next time zone transition in roughly the last two months of the supported range can report that there is none, when there is one. startOfDay, hoursInDay and toZonedDateTime then fail instead of returning an answer.",
-      "pairsWith": ["tc39/proposal-temporal#3328"],
+      "pairsWith": [
+        "tc39/proposal-temporal#3328"
+      ],
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
@@ -154,7 +160,9 @@
       "title": "Start the time zone transition search before the first transition in 1844",
       "url": "https://github.com/js-temporal/temporal-polyfill/pull/372",
       "summary": "Time zone lookups before 1847 miss a real transition on 31 December 1844 in five zones: Asia/Manila and four Pacific zones. The search starts at 1847, which used to be the earliest transition anyone had recorded and no longer is.",
-      "pairsWith": ["tc39/proposal-temporal#3330"],
+      "pairsWith": [
+        "tc39/proposal-temporal#3330"
+      ],
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
@@ -204,7 +212,9 @@
       "title": "Polyfill: non-ISO until() by months gives wrong results since #3245, and throws near the range limits",
       "url": "https://github.com/tc39/proposal-temporal/issues/3327",
       "summary": "Counting months between two dates in a non-ISO calendar has given a wrong answer since a recent change, at ordinary dates as well as unusual ones. Adding the answer back to the first date no longer lands on the second, and near the ends of the range the count fails outright.",
-      "pairsWith": ["js-temporal/temporal-polyfill#370"],
+      "pairsWith": [
+        "js-temporal/temporal-polyfill#370"
+      ],
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
@@ -227,7 +237,9 @@
       "title": "Polyfill: GetNamedTimeZoneNextTransition misses a transition in the last search window before the max Instant",
       "url": "https://github.com/tc39/proposal-temporal/issues/3328",
       "summary": "Looking for the next time zone transition in the last stretch before the end of the supported range can report that there is none, when there is one. Code that relies on the answer then fails instead of getting one.",
-      "pairsWith": ["js-temporal/temporal-polyfill#371"],
+      "pairsWith": [
+        "js-temporal/temporal-polyfill#371"
+      ],
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
@@ -273,7 +285,9 @@
       "title": "Polyfill: time zone transitions before 1847 are not found (Asia/Manila and four Pacific zones on 1844-12-31)",
       "url": "https://github.com/tc39/proposal-temporal/issues/3330",
       "summary": "Time zone lookups before 1847 miss a real transition on 31 December 1844 in five zones: Asia/Manila and four Pacific zones. The search assumes no zone has a transition before 1847, which the time zone database contradicts.",
-      "pairsWith": ["js-temporal/temporal-polyfill#372"],
+      "pairsWith": [
+        "js-temporal/temporal-polyfill#372"
+      ],
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
@@ -446,10 +460,10 @@
       "state": "closed",
       "draft": false,
       "reviewDecision": null,
-      "comments": 1,
+      "comments": 2,
       "maintainerComments": 1,
       "createdAt": "2026-10-25",
-      "updatedAt": "2026-11-04",
+      "updatedAt": "2026-11-05",
       "closedAt": "2026-11-04",
       "mergedAt": null
     },
@@ -499,6 +513,29 @@
       "createdAt": "2026-11-04",
       "updatedAt": "2026-11-04",
       "closedAt": "2026-11-04",
+      "mergedAt": null
+    },
+    {
+      "repo": "fullcalendar/temporal-polyfill",
+      "number": 127,
+      "kind": "issue",
+      "work": "report",
+      "title": "Persian calendar: 78 years from 1502 to 2987 AP get the wrong leap year",
+      "url": "https://github.com/fullcalendar/temporal-polyfill/issues/127",
+      "summary": "The Persian calendar uses the plain 33-year leap rule, where ICU4X corrects 78 years from 1502 to 2987 AP. In the year after each one, every date reads one day early.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": null,
+      "gmtNote": "GMT moved to `temporal-polyfill` only with a release that fixes this, so no GMT release gives these Persian dates a day early. GMT tests the first day of each of these years against native Temporal.",
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-06",
+      "updatedAt": "2026-11-06",
+      "closedAt": null,
       "mergedAt": null
     }
   ],
