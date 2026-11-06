@@ -97,7 +97,7 @@ When you need the current value as a Temporal object for further manipulation
 (rather than a string), use `Temporal.Now` directly:
 
 ```typescript
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 Temporal.Now.instant(); // Temporal.Instant — absolute point in time
 Temporal.Now.plainDateISO(); // Temporal.PlainDate — system timezone
@@ -105,8 +105,8 @@ Temporal.Now.plainDateTimeISO(); // Temporal.PlainDateTime — system timezone
 Temporal.Now.zonedDateTimeISO("Australia/Sydney"); // Temporal.ZonedDateTime
 ```
 
-GMT re-exports `Temporal` from `@northguild/gmt` if you don't want to depend on the
-polyfill directly.
+These are the same `Temporal` objects GMT's functions read, so you can pass a value
+between them and a GMT function.
 
 ## See also
 

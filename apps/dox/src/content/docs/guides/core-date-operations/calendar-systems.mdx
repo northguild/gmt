@@ -105,20 +105,10 @@ addDate("2020-02-24[u-ca=islamic-umalqura]", { months: 1 }); // "2020-03-24[u-ca
 addDate("2020-02-24[u-ca=islamic-tbla]", { months: 1 }); // "2020-03-25[u-ca=islamic-tbla]"
 ```
 
-## The Ethiopic family computes in `ethioaa`
+## The Ethiopic family
 
 `ethiopic`, `ethioaa` and `coptic` share months, days and arithmetic, and differ only by a
-constant year offset. `@js-temporal/polyfill` cannot read `ethiopic` and `coptic` fields under
-ICU 78 or later (`Temporal.PlainDate.from("2024-10-03[u-ca=ethiopic]").year` throws there),
-so GMT computes all three in `ethioaa` and writes the id you asked for. GMT's results are
-the same either way, and only the written id differs.
-
-## Where the runtime computes a calendar wrongly
-
-Where the polyfill or the runtime's ICU computes a calendar wrongly (Buddhist before 1582,
-Hebrew years ≤ 0, Indian dates before ISO year 1, dates near either range limit), GMT's
-arithmetic computes the specified answer instead. Each correction probes the runtime once
-and stays inactive where the runtime is already right.
+constant year offset. GMT computes each one in the calendar you name.
 
 ## Calendar-aware arithmetic
 

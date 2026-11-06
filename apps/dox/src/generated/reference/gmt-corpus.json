@@ -1319,7 +1319,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "durationFromUnits(units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "durationFromUnits(units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Write an amount given as a unit object, such as `{ minutes: 15 }`, as an ISO 8601 duration string.",
     "sourcePath": "packages/gmt/src/duration/calculate/durationFromUnits.ts",
     "examples": [
@@ -1429,7 +1429,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "getDurationUnit(value: string, unit: keyof DurationLike | DateTimeUnit): number | null",
+    "signature": "getDurationUnit(value: string, unit: keyof DurationLikeObject | DateTimeUnit): number | null",
     "description": "Read a single component out of an ISO 8601 duration string.",
     "sourcePath": "packages/gmt/src/duration/calculate/getDurationUnit.ts",
     "examples": [
@@ -1540,7 +1540,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "totalDuration(value: string, unit: keyof DurationLike | DateTimeUnit, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "signature": "totalDuration(value: string, unit: keyof DurationLikeObject | DateTimeUnit, options?: { relativeTo?: DurationRelativeTo; }): number | null",
     "description": "Express an ISO 8601 duration as a single fractional total in one unit.",
     "sourcePath": "packages/gmt/src/duration/calculate/totalDuration.ts",
     "examples": [
@@ -1682,7 +1682,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "totalUnitsFromNow(units: Partial<Record<keyof DurationLike, number>>, unit: keyof DurationLike | DateTimeUnit, options?: { timeZone?: string; }): number | null",
+    "signature": "totalUnitsFromNow(units: Partial<Record<keyof DurationLikeObject, number>>, unit: keyof DurationLikeObject | DateTimeUnit, options?: { timeZone?: string; }): number | null",
     "description": "Express a length of time from now as one fractional total in one unit.",
     "sourcePath": "packages/gmt/src/duration/calculate/totalUnitsFromNow.ts",
     "examples": [
@@ -1754,7 +1754,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "ttlFromNow(units: Partial<Record<keyof DurationLike, number>>): Ttl | null",
+    "signature": "ttlFromNow(units: Partial<Record<keyof DurationLikeObject, number>>): Ttl | null",
     "description": "Express one length of time from now in every form a receiver wants: seconds, milliseconds, a Unix epoch, an HTTP date and a UTC string.",
     "sourcePath": "packages/gmt/src/duration/calculate/ttlFromNow.ts",
     "examples": [
@@ -2046,7 +2046,7 @@
     "namespace": "duration",
     "module": "parse",
     "kind": "function",
-    "signature": "parseDuration(value: string, options?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; fractionalSecondDigits?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | \"auto\" | 8 | 9 | undefined; roundingMode?: RoundingMode | undefined; }): string",
+    "signature": "parseDuration(value: string, options?: { smallestUnit?: PluralizeUnit<\"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; fractionalSecondDigits?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | \"auto\" | 8 | 9 | undefined; roundingMode?: \"ceil\" | \"floor\" | \"expand\" | \"trunc\" | \"halfCeil\" | \"halfFloor\" | \"halfExpand\" | \"halfTrunc\" | \"halfEven\" | undefined; }): string",
     "description": "Parse and re-normalize an ISO 8601 duration string.",
     "sourcePath": "packages/gmt/src/duration/parse/parseDuration.ts",
     "examples": [
@@ -6047,7 +6047,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "addDateTime(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "addDateTime(value: string, units: Partial<Record<keyof DurationLikeObject, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDateTime ISO string with `units` added to `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/addDateTime.ts",
     "examples": [
@@ -6405,7 +6405,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDateTime(dateTime1: string, dateTime2: string, units: keyof DurationLike | DateTimeUnit | (keyof DurationLike | DateTimeUnit)[], options?: RoundingOptions<DateTimeUnit>): number | Record<keyof DurationLike, number> | null",
+    "signature": "diffDateTime(dateTime1: string, dateTime2: string, units: keyof DurationLikeObject | DateTimeUnit | (keyof DurationLikeObject | DateTimeUnit)[], options?: RoundingOptions<DateTimeUnit>): number | Record<keyof DurationLikeObject, number> | null",
     "description": "Return the difference between two PlainDateTime values in the requested unit.",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDateTime.ts",
     "examples": [
@@ -6430,7 +6430,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffDateTimeAsDuration(dateTime1: string, dateTime2: string, unit: keyof DurationLike | DateTimeUnit, options?: (RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
+    "signature": "diffDateTimeAsDuration(dateTime1: string, dateTime2: string, unit: keyof DurationLikeObject | DateTimeUnit, options?: (RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
     "description": "Return the difference between two PlainDateTime values as an ISO 8601 duration string, bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).",
     "sourcePath": "packages/gmt/src/plain/calculate/diffDateTimeAsDuration.ts",
     "examples": [
@@ -6889,7 +6889,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "getLargestDateTimeDurationUnit(units: (keyof DurationLike | DateTimeUnit)[]): keyof DurationLike | \"\"",
+    "signature": "getLargestDateTimeDurationUnit(units: (keyof DurationLikeObject | DateTimeUnit)[]): \"\" | keyof DurationLikeObject",
     "description": "Return the largest DateTimeDurationUnit from the provided array.",
     "sourcePath": "packages/gmt/src/plain/calculate/getLargestDateTimeDurationUnit.ts",
     "examples": [
@@ -7758,7 +7758,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setDate(value: string, fields: Omit<PlainDateLike, \"calendar\" | \"era\" | \"eraYear\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "setDate(value: string, fields: PlainDateFields, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDate ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setDate.ts",
     "examples": [
@@ -7811,7 +7811,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setDateTime(value: string, fields: Omit<PlainDateTimeLike, \"calendar\" | \"era\" | \"eraYear\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "setDateTime(value: string, fields: PlainDateTimeFields, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDateTime ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setDateTime.ts",
     "examples": [
@@ -7848,7 +7848,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "setTime(value: string, fields: PlainTimeLike, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "setTime(value: string, fields: PlainTimeFields, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainTime ISO string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/setTime.ts",
     "examples": [
@@ -8213,7 +8213,7 @@
     "namespace": "plain",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractDateTime(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "subtractDateTime(value: string, units: Partial<Record<keyof DurationLikeObject, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a PlainDateTime ISO string with `units` subtracted from `value`.",
     "sourcePath": "packages/gmt/src/plain/calculate/subtractDateTime.ts",
     "examples": [
@@ -10108,7 +10108,7 @@
     "namespace": "plain",
     "module": "get",
     "kind": "function",
-    "signature": "getDateTimeAgo(units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "getDateTimeAgo(units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Return the PlainDateTime before now, as an ISO string, counted from the current time.",
     "sourcePath": "packages/gmt/src/plain/get/getDateTimeAgo.ts",
     "examples": [
@@ -10137,7 +10137,7 @@
     "namespace": "plain",
     "module": "get",
     "kind": "function",
-    "signature": "getDateTimeIn(units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "getDateTimeIn(units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Return the PlainDateTime after now, as an ISO string, counted from the current time.",
     "sourcePath": "packages/gmt/src/plain/get/getDateTimeIn.ts",
     "examples": [
@@ -14186,7 +14186,7 @@
     "namespace": "plain",
     "module": "validate",
     "kind": "function",
-    "signature": "isValidDateTimeDurationUnit(unit: unknown): unit is keyof DurationLike",
+    "signature": "isValidDateTimeDurationUnit(unit: unknown): unit is keyof DurationLikeObject",
     "description": "Return true when `unit` is a valid DateTimeDurationUnit.",
     "sourcePath": "packages/gmt/src/plain/validate/isValidDateTimeDurationUnit.ts",
     "examples": [
@@ -22089,7 +22089,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "addUnix(value: string | number, units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; }): number | null",
+    "signature": "addUnix(value: string | number, units: Partial<Record<keyof DurationLikeObject, number>>, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; }): number | null",
     "description": "Add a temporal amount to a Unix epoch value and return the resulting epoch.",
     "sourcePath": "packages/gmt/src/unix/calculate/addUnix.ts",
     "examples": [
@@ -22130,7 +22130,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUnix(value1: string | number, value2: string | number, units: keyof DurationLike | DateTimeUnit | (keyof DurationLike | DateTimeUnit)[], options?: ({ epochUnit?: UnixUnit; timeZone?: string; } & RoundingOptions<DateTimeUnit>)): number | Record<keyof DurationLike, number> | null",
+    "signature": "diffUnix(value1: string | number, value2: string | number, units: keyof DurationLikeObject | DateTimeUnit | (keyof DurationLikeObject | DateTimeUnit)[], options?: ({ epochUnit?: UnixUnit; timeZone?: string; } & RoundingOptions<DateTimeUnit>)): number | Record<keyof DurationLikeObject, number> | null",
     "description": "Return the difference between two Unix timestamps measured in the given unit.",
     "sourcePath": "packages/gmt/src/unix/calculate/diffUnix.ts",
     "examples": [
@@ -22167,7 +22167,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUnixAsDuration(value1: string | number, value2: string | number, unit: keyof DurationLike | DateTimeUnit, options?: ({ epochUnit?: UnixUnit; timeZone?: string; } & RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
+    "signature": "diffUnixAsDuration(value1: string | number, value2: string | number, unit: keyof DurationLikeObject | DateTimeUnit, options?: ({ epochUnit?: UnixUnit; timeZone?: string; } & RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
     "description": "Return the difference between two Unix timestamps as an ISO 8601 duration string, bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).",
     "sourcePath": "packages/gmt/src/unix/calculate/diffUnixAsDuration.ts",
     "examples": [
@@ -22451,7 +22451,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "setUnix(value: string | number, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"era\" | \"eraYear\" | \"offset\" | \"timeZone\">, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\" | undefined; }): number | null",
+    "signature": "setUnix(value: string | number, fields: ZonedDateTimeFields, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"ignore\" | \"prefer\" | undefined; }): number | null",
     "description": "Return a Unix epoch value with the given `fields` set on `value`, interpreted in `timeZone`.",
     "sourcePath": "packages/gmt/src/unix/calculate/setUnix.ts",
     "examples": [
@@ -22607,7 +22607,7 @@
     "namespace": "unix",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractUnix(value: string | number, units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; }): number | null",
+    "signature": "subtractUnix(value: string | number, units: Partial<Record<keyof DurationLikeObject, number>>, options?: { epochUnit?: UnixUnit; timeZone?: string; overflow?: \"reject\" | \"constrain\" | undefined; }): number | null",
     "description": "Subtract a temporal amount from a Unix epoch value and return the resulting epoch.",
     "sourcePath": "packages/gmt/src/unix/calculate/subtractUnix.ts",
     "examples": [
@@ -23237,7 +23237,7 @@
     "namespace": "unix",
     "module": "get",
     "kind": "function",
-    "signature": "getUnixAgo(units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: UnixUnit; }): number | null",
+    "signature": "getUnixAgo(units: Partial<Record<keyof DurationLikeObject, number>>, options?: { epochUnit?: UnixUnit; }): number | null",
     "description": "Return the Unix epoch before now, counted from the current time in UTC.",
     "sourcePath": "packages/gmt/src/unix/get/getUnixAgo.ts",
     "examples": [
@@ -23304,7 +23304,7 @@
     "namespace": "unix",
     "module": "get",
     "kind": "function",
-    "signature": "getUnixIn(units: Partial<Record<keyof DurationLike, number>>, options?: { epochUnit?: UnixUnit; }): number | null",
+    "signature": "getUnixIn(units: Partial<Record<keyof DurationLikeObject, number>>, options?: { epochUnit?: UnixUnit; }): number | null",
     "description": "Return the Unix epoch after now, counted from the current time in UTC.",
     "sourcePath": "packages/gmt/src/unix/get/getUnixIn.ts",
     "examples": [
@@ -23451,7 +23451,7 @@
     "namespace": "unix",
     "module": "get",
     "kind": "function",
-    "signature": "getUnixNowUnit(unit: PluralUnit<DateTimeUnit> | UnixNowUnit): string",
+    "signature": "getUnixNowUnit(unit: UnixNowUnit | PluralUnit<DateTimeUnit>): string",
     "description": "Return the requested unit value from the current Unix timestamp in UTC.",
     "sourcePath": "packages/gmt/src/unix/get/getUnixNowUnit.ts",
     "examples": [
@@ -24799,7 +24799,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "addUtc(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "addUtc(value: string, units: Partial<Record<keyof DurationLikeObject, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Add a temporal amount to a UTC datetime string and return a new UTC Instant string.",
     "sourcePath": "packages/gmt/src/utc/calculate/addUtc.ts",
     "examples": [
@@ -24824,7 +24824,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUtc(value1: string, value2: string, units: keyof DurationLike | DateTimeUnit | (keyof DurationLike | DateTimeUnit)[], options?: RoundingOptions<DateTimeUnit>): number | Record<keyof DurationLike, number> | null",
+    "signature": "diffUtc(value1: string, value2: string, units: keyof DurationLikeObject | DateTimeUnit | (keyof DurationLikeObject | DateTimeUnit)[], options?: RoundingOptions<DateTimeUnit>): number | Record<keyof DurationLikeObject, number> | null",
     "description": "Return the difference between two UTC datetimes measured in the given date-time unit.",
     "sourcePath": "packages/gmt/src/utc/calculate/diffUtc.ts",
     "examples": [
@@ -24853,7 +24853,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffUtcAsDuration(value1: string, value2: string, unit: keyof DurationLike | DateTimeUnit, options?: (RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
+    "signature": "diffUtcAsDuration(value1: string, value2: string, unit: keyof DurationLikeObject | DateTimeUnit, options?: (RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
     "description": "Return the difference between two UTC datetimes as an ISO 8601 duration string, bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).",
     "sourcePath": "packages/gmt/src/utc/calculate/diffUtcAsDuration.ts",
     "examples": [
@@ -25130,7 +25130,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "setUtc(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"era\" | \"eraYear\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "setUtc(value: string, fields: ZonedDateTimeFields, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Return a UTC Instant string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/utc/calculate/setUtc.ts",
     "examples": [
@@ -25250,7 +25250,7 @@
     "namespace": "utc",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractUtc(value: string, units: Partial<Record<keyof DurationLike, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "subtractUtc(value: string, units: Partial<Record<keyof DurationLikeObject, number>>, options?: { overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Subtract a temporal amount from a UTC datetime string and return a new UTC Instant string.",
     "sourcePath": "packages/gmt/src/utc/calculate/subtractUtc.ts",
     "examples": [
@@ -25658,7 +25658,7 @@
     "namespace": "utc",
     "module": "format",
     "kind": "function",
-    "signature": "formatHttpDateFromNow(units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "formatHttpDateFromNow(units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Return the RFC 9110 HTTP date (IMF-fixdate) after now, counted from the current time. It is the value for an `Expires` attribute or header.",
     "sourcePath": "packages/gmt/src/utc/format/formatHttpDateFromNow.ts",
     "examples": [
@@ -25851,7 +25851,7 @@
     "namespace": "utc",
     "module": "get",
     "kind": "function",
-    "signature": "getUtcAgo(units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "getUtcAgo(units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Return the UTC instant before now, as an ISO Instant string, counted from the current time.",
     "sourcePath": "packages/gmt/src/utc/get/getUtcAgo.ts",
     "examples": [
@@ -25914,7 +25914,7 @@
     "namespace": "utc",
     "module": "get",
     "kind": "function",
-    "signature": "getUtcIn(units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "getUtcIn(units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Return the UTC instant after now, as an ISO Instant string, counted from the current time.",
     "sourcePath": "packages/gmt/src/utc/get/getUtcIn.ts",
     "examples": [
@@ -27566,7 +27566,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "addZoned(value: string, units: Partial<Record<keyof DurationLike, number>>, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "addZoned(value: string, units: Partial<Record<keyof DurationLikeObject, number>>, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Add a temporal amount to a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.",
     "sourcePath": "packages/gmt/src/zoned/calculate/addZoned.ts",
     "examples": [
@@ -27726,7 +27726,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "cycleZoned(value: string, field: DateTimeCycleField, amount: number, options?: { round?: boolean; overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\" | undefined; }): string",
+    "signature": "cycleZoned(value: string, field: DateTimeCycleField, amount: number, options?: { round?: boolean; overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"ignore\" | \"prefer\" | undefined; }): string",
     "description": "Return a ZonedDateTime ISO string with `field` cycled by `amount`, wrapping at that field's own min/max instead of carrying into the next larger field.",
     "sourcePath": "packages/gmt/src/zoned/calculate/cycleZoned.ts",
     "examples": [
@@ -27771,7 +27771,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffZoned(value1: string, value2: string, units: keyof DurationLike | DateTimeUnit | (keyof DurationLike | DateTimeUnit)[], options?: RoundingOptions<DateTimeUnit>): number | Record<keyof DurationLike, number> | null",
+    "signature": "diffZoned(value1: string, value2: string, units: keyof DurationLikeObject | DateTimeUnit | (keyof DurationLikeObject | DateTimeUnit)[], options?: RoundingOptions<DateTimeUnit>): number | Record<keyof DurationLikeObject, number> | null",
     "description": "Return the difference between two zoned datetimes measured in the given date-time unit.",
     "sourcePath": "packages/gmt/src/zoned/calculate/diffZoned.ts",
     "examples": [
@@ -27828,7 +27828,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "diffZonedAsDuration(value1: string, value2: string, unit: keyof DurationLike | DateTimeUnit, options?: (RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
+    "signature": "diffZonedAsDuration(value1: string, value2: string, unit: keyof DurationLikeObject | DateTimeUnit, options?: (RoundingOptions<DateTimeUnit> & DurationStringOptions)): string",
     "description": "Return the difference between two zoned datetimes as an ISO 8601 duration string, bridging to the `duration` namespace (see `parseDuration`, `normalizeDuration`).",
     "sourcePath": "packages/gmt/src/zoned/calculate/diffZonedAsDuration.ts",
     "examples": [
@@ -28219,7 +28219,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "setZoned(value: string, fields: Omit<ZonedDateTimeLike, \"calendar\" | \"era\" | \"eraYear\" | \"offset\" | \"timeZone\">, options?: { overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"prefer\" | \"ignore\" | undefined; }): string",
+    "signature": "setZoned(value: string, fields: ZonedDateTimeFields, options?: { overflow?: \"reject\" | \"constrain\" | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; offset?: \"reject\" | \"use\" | \"ignore\" | \"prefer\" | undefined; }): string",
     "description": "Return a zoned ISO 8601 datetime string with the given `fields` set on `value`.",
     "sourcePath": "packages/gmt/src/zoned/calculate/setZoned.ts",
     "examples": [
@@ -28363,7 +28363,7 @@
     "namespace": "zoned",
     "module": "calculate",
     "kind": "function",
-    "signature": "subtractZoned(value: string, units: Partial<Record<keyof DurationLike, number>>, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; overflow?: \"reject\" | \"constrain\" | undefined; }): string",
+    "signature": "subtractZoned(value: string, units: Partial<Record<keyof DurationLikeObject, number>>, optionsArg?: { disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; overflow?: \"reject\" | \"constrain\" | undefined; }): string",
     "description": "Subtract a temporal amount from a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.",
     "sourcePath": "packages/gmt/src/zoned/calculate/subtractZoned.ts",
     "examples": [
@@ -28984,7 +28984,7 @@
     "namespace": "zoned",
     "module": "convert",
     "kind": "function",
-    "signature": "convertPlainDateTimeToZoned(value: string, timeZone: string, optionsArg?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): string",
+    "signature": "convertPlainDateTimeToZoned(value: string, timeZone: string, optionsArg?: { smallestUnit?: PluralizeUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; disambiguation?: \"compatible\" | \"earlier\" | \"later\" | \"reject\" | undefined; }): string",
     "description": "Attach the specified `timeZone` to a plain datetime string and return a zoned ISO 8601 datetime string.",
     "sourcePath": "packages/gmt/src/zoned/convert/convertPlainDateTimeToZoned.ts",
     "examples": [
@@ -29755,7 +29755,7 @@
     "namespace": "zoned",
     "module": "get",
     "kind": "function",
-    "signature": "getZonedAgo(timeZone: string, units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "getZonedAgo(timeZone: string, units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Return the zoned datetime before now in `timeZone`, counted from the current time.",
     "sourcePath": "packages/gmt/src/zoned/get/getZonedAgo.ts",
     "examples": [
@@ -29847,7 +29847,7 @@
     "namespace": "zoned",
     "module": "get",
     "kind": "function",
-    "signature": "getZonedIn(timeZone: string, units: Partial<Record<keyof DurationLike, number>>): string",
+    "signature": "getZonedIn(timeZone: string, units: Partial<Record<keyof DurationLikeObject, number>>): string",
     "description": "Return the zoned datetime after now in `timeZone`, counted from the current time.",
     "sourcePath": "packages/gmt/src/zoned/get/getZonedIn.ts",
     "examples": [
@@ -29981,7 +29981,7 @@
     "namespace": "zoned",
     "module": "get",
     "kind": "function",
-    "signature": "getZonedNow(ianaTimezone: string, optionsArg?: { smallestUnit?: SmallestUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; }): string",
+    "signature": "getZonedNow(ianaTimezone: string, optionsArg?: { smallestUnit?: PluralizeUnit<\"minute\" | \"second\" | \"millisecond\" | \"microsecond\" | \"nanosecond\"> | undefined; }): string",
     "description": "Return the current zoned datetime for the specified IANA timeZone.",
     "sourcePath": "packages/gmt/src/zoned/get/getZonedNow.ts",
     "examples": [
