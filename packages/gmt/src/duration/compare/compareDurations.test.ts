@@ -230,10 +230,13 @@ describe("compareDurations relative to the first days of the range", () => {
 // Values: Chromium 153 native `Duration.compare(a, b, { relativeTo: PlainDate })`.
 describe("compareDurations with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
-    one      | two       | relativeTo                      | expected | reason
-    ${"P1M"} | ${"P29D"} | ${"+275760-07-06[u-ca=hebrew]"} | ${1}     | ${"range limit: M07 of 279517 has 30 days"}
-    ${"P1M"} | ${"P30D"} | ${"2023-08-31[u-ca=buddhist]"}  | ${0}     | ${"month-end overshoot: Aug 31 + 1 month is Sep 30, 30 days"}
-    ${"P1M"} | ${"P29D"} | ${"-100000-01-01[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
+    one               | two               | relativeTo                      | expected | reason
+    ${"P1M"}          | ${"P29D"}         | ${"+275760-07-06[u-ca=hebrew]"} | ${1}     | ${"range limit: M07 of 279517 has 30 days"}
+    ${"P1M"}          | ${"P30D"}         | ${"2023-08-31[u-ca=buddhist]"}  | ${0}     | ${"month-end overshoot: Aug 31 + 1 month is Sep 30, 30 days"}
+    ${"P1M"}          | ${"P29D"}         | ${"-100000-01-01[u-ca=hebrew]"} | ${0}     | ${"hebrew year <= 0: M06 has 29 days"}
+    ${"P1M"}          | ${"P1M"}          | ${"+275760-09-13[u-ca=hebrew]"} | ${0}     | ${"same fields: 0 before any arithmetic, though + P1M passes the limit"}
+    ${"P4294967295M"} | ${"P4294967295M"} | ${"2024-01-15[u-ca=hebrew]"}    | ${0}     | ${"same fields: 0, though either sum passes the limit"}
+    ${"P4294967295M"} | ${"P4294967294M"} | ${"2024-01-15[u-ca=hebrew]"}    | ${null}  | ${"different fields: the sums pass the limit, so null"}
   `(
     "compares $one with $two relative to $relativeTo as $expected ($reason)",
     ({ one, two, relativeTo, expected }) => {
