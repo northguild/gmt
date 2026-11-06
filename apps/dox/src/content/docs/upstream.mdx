@@ -87,8 +87,9 @@ One bug is left, and the maintainers closed its report as a known limitation:
   limitation. GMT's own probe sees it in WebKit as `Etc/UTC` not equal to `UTC`.
 
 So for now GMT stays on `@js-temporal/polyfill`. Every week, GMT runs its whole test suite on the newest
-`temporal-polyfill` release in Node and three browsers, and checks every zone's offsets against
-`Intl.DateTimeFormat`. A release that passes both opens an issue in GMT's repository, and that
+`temporal-polyfill` release in Node and three browsers. It checks every zone's offsets against
+`Intl.DateTimeFormat` and every calendar's years against Node's built-in Temporal. A release that
+passes all three opens an issue in GMT's repository, and that
 issue starts the switch. See the
 [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml). The full
 comparison is in GMT's repository:

@@ -141,8 +141,18 @@ const filingsFor = (defects: readonly string[]) =>
  * wider than the column.
  */
 .sl-markdown-content .gmt-defects-refs li {
-  margin: 0 0 0.15rem;
+  margin: 0;
   padding-inline-start: 0;
+}
+
+/*
+ * Stacked references are separate targets, so each one is 24 px tall (WCAG 2.2 § 2.5.8 Target
+ * Size (Minimum)). A reference that wraps at its space is two lines of 24 px.
+ */
+.sl-markdown-content .gmt-defects-refs a {
+  display: inline-block;
+  min-block-size: 1.5rem;
+  line-height: 1.5rem;
 }
 
 .sl-markdown-content .gmt-defects-refs li::before {

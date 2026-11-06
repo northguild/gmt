@@ -497,6 +497,19 @@ describe("main", () => {
             differingTruncated: false,
           }
         : null,
+    calendarSweep:
+      leg === "node"
+        ? {
+            status: "ran",
+            from: "-003000-01-01",
+            through: "+005000-12-31",
+            calendars: 16,
+            years: 128762,
+            differingCalendars: 0,
+            differing: [],
+            differingTruncated: false,
+          }
+        : null,
     ...over,
   });
   /** The four swap files: every leg ran, one zone differs, so nothing is swap-ready. */
