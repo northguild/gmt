@@ -88,6 +88,26 @@ export const NIGHT_SKY: DataCredit = {
   ],
 };
 
+/**
+ * The all-sky photograph behind the landing's Milky Way. CC BY 4.0 asks for the credit as given
+ * and a note that the material was changed (§3(a)(1)); the changes are `hero-milkyway.json`'s.
+ */
+export const MILKY_WAY: DataCredit = {
+  label: "Milky Way",
+  parts: [
+    {
+      text: "The Milky Way panorama",
+      href: "https://www.eso.org/public/images/eso0932a/",
+    },
+    " by ESO/S. Brunier, adapted to a starless greyscale sky map (",
+    {
+      text: "CC BY 4.0",
+      href: "https://creativecommons.org/licenses/by/4.0/",
+    },
+    ").",
+  ],
+};
+
 /** The site's licence note, as the landing popover's last row (everywhere else it is the footer line). */
 export const LICENCE_CREDIT: DataCredit = {
   label: "Licence",

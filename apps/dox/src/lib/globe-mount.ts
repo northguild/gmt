@@ -31,6 +31,7 @@ import { followGlobe, heroOf, offerGlobe, skyWithoutGlobe } from "./hero-space";
 import {
   EARTH_IMAGERY,
   LICENCE_CREDIT,
+  MILKY_WAY,
   NIGHT_SKY,
   TZ_BOUNDARIES,
   watchDataCredits,
@@ -143,7 +144,7 @@ export function renderGlobeTemplate({
     }
     ${dataCredits({
       credits: space
-        ? [TZ_BOUNDARIES, EARTH_IMAGERY, NIGHT_SKY, LICENCE_CREDIT]
+        ? [TZ_BOUNDARIES, EARTH_IMAGERY, NIGHT_SKY, MILKY_WAY, LICENCE_CREDIT]
         : [TZ_BOUNDARIES, EARTH_IMAGERY],
       id: id("data-credits"),
       placement: "stack",

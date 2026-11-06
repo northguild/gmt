@@ -150,6 +150,29 @@ describe("framing", () => {
   });
 });
 
+describe("getCentre", () => {
+  it("reports the silhouette radius at zoom 1 and after zooming", async () => {
+    const host = hostWithBox(400, 300);
+    const engine = await start(host);
+    const base = made[0]!.frames.at(-1)!.camera.radius;
+    expect(engine.getCentre()).toEqual({ x: 200, y: 150, radius: base });
+    engine.setZoom(2);
+    /* The ease is asymptotic: the controller stops once the zoom is within 0.001 of its goal and
+       does not snap, so the radius settles within 0.001 * base (a seventh of a pixel here) of
+       base * 2. Wait for the frame loop to go quiet, then pin that tolerance and the exact hand-over. */
+    const lastRadius = () => made[0]!.frames.at(-1)!.camera.radius;
+    await vi.waitFor(() =>
+      expect(Math.abs(lastRadius() - base * 2)).toBeLessThanOrEqual(
+        0.001 * base,
+      ),
+    );
+    expect(engine.getCentre().radius).toBe(lastRadius());
+    expect(Math.abs(engine.getCentre().radius - base * 2)).toBeLessThanOrEqual(
+      0.001 * base,
+    );
+  });
+});
+
 describe("maxDpr", () => {
   it("caps the raster density at the host's ceiling", async () => {
     vi.stubGlobal("devicePixelRatio", 3);

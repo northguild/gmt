@@ -2,12 +2,14 @@
 import { screen } from "@testing-library/dom";
 import { raw } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
+import milkyWay from "../assets/hero-milkyway.json";
 import sky from "../assets/hero-sky.json";
 import {
   COASTLINES,
   EARTH_IMAGERY,
   HYG_COMMIT,
   LICENCE_CREDIT,
+  MILKY_WAY,
   NE_TAG,
   NIGHT_SKY,
   renderDataCreditsHtml,
@@ -81,6 +83,26 @@ describe("the night sky credit", () => {
       "https://creativecommons.org/licenses/by-sa/4.0/",
     );
     expect(HYG_COMMIT).toBe("53e3df311869e813ace5f1ad2ec4ce909f13256c");
+  });
+});
+
+describe("the Milky Way credit", () => {
+  it("is labelled Milky Way, credits ESO's photograph as ESO asks, and says it was changed", () => {
+    show([MILKY_WAY], { id: "c", placement: "stack" });
+    expect(text("Milky Way")).toHaveTextContent(
+      "The Milky Way panorama by ESO/S. Brunier, adapted to a starless greyscale sky map (CC BY 4.0).",
+    );
+    // The page it links is the one the map was made from, and the credit is ESO's own.
+    expect(
+      screen.getByRole("link", {
+        name: "The Milky Way panorama",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", milkyWay.source.page);
+    expect(text("Milky Way")).toHaveTextContent(milkyWay.credit);
+    expect(
+      screen.getByRole("link", { name: "CC BY 4.0", hidden: true }),
+    ).toHaveAttribute("href", milkyWay.licenseUrl);
   });
 });
 

@@ -68,10 +68,10 @@ import type {
  *  cost doubles for no visible gain on a globe made of washes and thin strokes. */
 const MAX_DPR = 2;
 
-/** While only the ambient spin moves the globe (4 degrees a second, under a pixel a frame at
+/** While only the ambient spin moves the globe (2 degrees a second, under a pixel a frame at
  *  60 Hz), it is drawn at most this often, in milliseconds. The Earth now fills the landing hero,
  *  so a draw at every vsync saturates the main thread of a machine without a GPU raster and drops
- *  frames across the whole page; at 30 Hz the spin steps by under 1.5 px. Any other motion draws
+ *  frames across the whole page; at 30 Hz the spin steps by under 0.75 px. Any other motion draws
  *  at every frame. */
 const AMBIENT_FRAME_MS = 30;
 
@@ -778,6 +778,11 @@ export async function createGlobeEngine(
     unproject(x, y) {
       return unprojectPoint(camera, x, y);
     },
+    getCentre: () => ({
+      x: camera.centreX,
+      y: camera.centreY,
+      radius: camera.radius,
+    }),
     onTap(callback) {
       tapCallback = callback;
     },

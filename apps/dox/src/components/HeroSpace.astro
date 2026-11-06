@@ -4,15 +4,23 @@
  * canvases that fill the hero behind the Earth. Only HeroGlobe renders it, as its first child.
  *
  * The page reads nothing here (`aria-hidden`), so the sky adds no stop to the tab order or the
- * reading order. `lib/hero-space.ts` fetches the packed star list and draws; the preload below
- * starts that fetch with the page, and it sits on `/` alone because only the landing renders
- * this component.
+ * reading order. `lib/hero-space.ts` fetches the packed star list and the Milky Way map and
+ * draws; the preloads below start those fetches with the page, and they sit on `/` alone because
+ * only the landing renders this component.
  */
 import skyList from "../assets/hero-sky.bin?url";
+import milkyWay from "../assets/hero-milkyway.webp?url";
 ---
 
 <link rel="preload" as="fetch" href={skyList} crossorigin="anonymous" />
-<div class="gmt-sky" aria-hidden="true" data-hero-sky data-src={skyList}>
+<link rel="preload" as="fetch" href={milkyWay} crossorigin="anonymous" />
+<div
+	class="gmt-sky"
+	aria-hidden="true"
+	data-hero-sky
+	data-src={skyList}
+	data-milky-way={milkyWay}
+>
 	<div class="gmt-sky-band" data-sky-layer="band"><canvas data-sky-canvas="band"></canvas></div>
 	<canvas data-sky-layer="stars" data-sky-canvas="stars"></canvas>
 	<canvas data-sky-layer="meteor" data-sky-canvas="meteor"></canvas>

@@ -83,7 +83,7 @@ MIN_PART_AREA_DEG2 = 0.02
 
 
 def clean_geometry(geom):
-    """Make a geometry safe for a d3-geo orthographic canvas fill.
+    """Make a geometry safe for a d3-geo canvas fill.
 
     Two fixes:
       * **Winding.** d3-geo's convention is the *opposite* of GeoJSON's — it

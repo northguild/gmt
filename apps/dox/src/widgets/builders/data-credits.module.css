@@ -73,15 +73,17 @@
   line-height: 1.5;
   color: var(--gmt-ice-dim);
 
+  /* One column: each credit's label on its own line, its text under it, a gap before the next. */
   & dl {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: var(--gmt-space-1) var(--gmt-space-3);
     margin: 0;
   }
 
   & dt {
     color: var(--gmt-ice);
+  }
+
+  & dd + dt {
+    margin-block-start: var(--gmt-space-3);
   }
 
   & dd {
@@ -129,12 +131,6 @@
     inset-inline: 12px;
     inset-block-end: calc(12px + env(safe-area-inset-bottom, 0px));
     margin-inline: auto;
-  }
-}
-
-@media (width <= 30rem) {
-  .panel dl {
-    grid-template-columns: 1fr;
   }
 }
 

@@ -423,8 +423,8 @@ describe("ambient spin", () => {
     c.markInteraction(0);
     const [first] = spinFrames(c, 2500, 16);
     expect(first).toBeGreaterThan(0);
-    // Full speed would turn 16 * 0.004 = 0.064° in the first frame.
-    expect(first).toBeLessThan(0.064 / 100);
+    // Full speed would turn 16 * 0.002 = 0.032° in the first frame.
+    expect(first).toBeLessThan(0.032 / 100);
   });
 
   it("builds speed without a jolt, then holds the full rate", () => {
@@ -434,11 +434,11 @@ describe("ambient spin", () => {
     for (let i = 1; i < frames.length; i++) {
       const gain = frames[i] - frames[i - 1];
       // Never slows on the way up, and no frame gains more than a sliver of
-      // the full 0.064° — a jump in speed is what reads as a jolt.
+      // the full 0.032° — a jump in speed is what reads as a jolt.
       expect(gain).toBeGreaterThanOrEqual(-1e-12);
-      expect(gain).toBeLessThan(0.064 / 50);
+      expect(gain).toBeLessThan(0.032 / 50);
     }
-    expect(frames.at(-1)).toBeCloseTo(0.064, 9);
+    expect(frames.at(-1)).toBeCloseTo(0.032, 9);
   });
 
   it("turns the same distance whatever the frame rate", () => {
@@ -551,7 +551,7 @@ describe("step", () => {
     slow.step(3016 + 60_000); // a minute in one step
     const jump = slow.rotation[0] - before;
     // At most the 48ms cap, not a minute's worth of spin.
-    expect(Math.abs(jump)).toBeLessThanOrEqual(48 * 0.004 + 1e-9);
+    expect(Math.abs(jump)).toBeLessThanOrEqual(48 * 0.002 + 1e-9);
     expect(oneFrame).toBeGreaterThan(0);
   });
 

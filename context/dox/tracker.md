@@ -1,17 +1,20 @@
 ## GitHub Issues
 
-29 sub-stories on 20 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
-(`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`), #430 (`DOX-G1`) and #447 (`DOX-G2`). What each done story shipped is in
-[built.md](built.md).
+33 sub-stories on 24 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
+(`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`), #430 (`DOX-G1`), #447 (`DOX-G2`), #467
+(`DOX-G3`), #458 (`DOX-G4`), #456 (`DOX-G5`) and #448 (`DOX-G6`). What each done story shipped
+is in [built.md](built.md).
 
 A row here is a `DOX-*` story with its own GitHub issue. Add one, then run `pnpm deps:sync`,
 which generates `Blocked by`, only for Dox work that belongs to no realm story. The Dox pages and
 tools of a realm story (`TRAN-*`, `INT-*`, `CORE-*` and the rest) add no row here: that story's
 row in [../domination/tracker.md](../domination/tracker.md) tracks them, and what they shipped is
-in [built.md](built.md). Work on the site after Tier 6, such as its domain, the shipped corpus and
-the Canada 2026 clock-change checker, is a Core story in that tracker (`CORE-86` … `CORE-88`), not a row here.
-`/plan-story` has it written as a library spec, by `dox-architect` for `apps/dox` work and by
-`architect` for the package, with no tool shortlist; `/pipeline` says who builds it.
+in [built.md](built.md). `CORE-*` is kept for core functionality shipped in `packages/gmt`, the
+functions that belong to no industry and fixes across the whole library. Site work that ships
+nothing in the package, such as the hero globe and its sky, is a `DOX-G*` row here. The earlier
+site stories in that tracker (`CORE-86` … `CORE-88`) stay where they are.
+`/plan-story` writes a `DOX-G*` story as a spec folder under [specs/](specs/), by `dox-architect`
+or `architect`, with no tool shortlist; `/pipeline` says who builds it.
 
 `apps/dox` is private, so no changesets unless a change also touches `packages/gmt`.
 
@@ -37,6 +40,10 @@ the Canada 2026 clock-change checker, is a Core story in that tracker (`CORE-86`
 | 18    | DOX-A6                                      | —          | #288         | Done⁵  |
 | 19    | DOX-G1                                      | —          | #430         | Done   |
 | 20    | DOX-G2                                      | —          | #447         | Todo   |
+| 21    | DOX-G3                                      | —          | #467         | Done   |
+| 22    | DOX-G4                                      | —          | #458         | Todo   |
+| 23    | DOX-G5                                      | —          | #456         | Todo   |
+| 24    | DOX-G6                                      | —          | #448         | Todo   |
 
 ¹ Owed verification, not work: a keyboard-only pass, `prefers-reduced-*` emulation, and a
 real Firefox/Safari check.

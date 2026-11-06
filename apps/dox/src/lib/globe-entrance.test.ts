@@ -12,6 +12,8 @@ installJsdomShims();
 const engineOptions: Array<Record<string, unknown>> = [];
 let finishDawn: () => void = () => {};
 let dawnStarts = 0;
+/* The silhouette the stub engine reports; the host must hand it on untouched. */
+const ENGINE_CENTRE = { x: 210, y: 140, radius: 123.456 };
 
 vi.mock("./globe/engine", () => ({
   createGlobeEngine: async (
@@ -33,6 +35,7 @@ vi.mock("./globe/engine", () => ({
         },
         getRotation: () => [0, 0],
         getZoom: () => 1,
+        getCentre: () => ENGINE_CENTRE,
         project: () => ({ x: 0, y: 0, visible: false }),
       } as Record<string, unknown>,
       {
@@ -95,5 +98,13 @@ describe("initGlobe entrance", () => {
   it("passes the engine's readiness through", async () => {
     const { globe } = await mount("dawn");
     await expect(globe.dawnReady).resolves.toBeUndefined();
+  });
+});
+
+describe("initGlobe getCentre", () => {
+  it("reports the engine's silhouette radius, not a figure of its own", async () => {
+    const { globe } = await mount();
+    expect(globe.getCentre().radius).toBe(ENGINE_CENTRE.radius);
+    expect(globe.getCentre()).toEqual(ENGINE_CENTRE);
   });
 });

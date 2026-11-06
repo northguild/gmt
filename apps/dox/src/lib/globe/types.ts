@@ -242,6 +242,8 @@ export interface GlobeEngine {
   project(point: LngLat): { x: number; y: number; visible: boolean };
   /** The point under a position in CSS pixels, or null if it missed the sphere. */
   unproject(x: number, y: number): LngLat | null;
+  /** The sphere's centre in CSS pixels and its silhouette radius, as the camera holds them. */
+  getCentre(): { x: number; y: number; radius: number };
   /** A tap that selected a marker, hit a region, or neither. */
   onTap(
     callback: (hit: {
