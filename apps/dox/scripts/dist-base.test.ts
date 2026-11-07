@@ -67,15 +67,52 @@ function built(): { root: string; pages: string } | null {
 }
 
 describe("the built site keeps the /gmt base", () => {
-  it("dist holds exactly gmt/ and _redirects", () => {
+  it("dist holds exactly gmt/, _headers and _redirects", () => {
     const b = built();
     if (b === null) return;
     const { root, pages } = b;
-    expect(readdirSync(root).sort()).toEqual(["_redirects", "gmt"]);
+    expect(readdirSync(root).sort()).toEqual(["_headers", "_redirects", "gmt"]);
     expect(existsSync(resolve(pages, "index.html"))).toBe(true);
     expect(existsSync(resolve(pages, "404.html"))).toBe(true);
     expect(existsSync(resolve(root, "_redirects"))).toBe(true);
     expect(existsSync(resolve(pages, "_redirects"))).toBe(false);
+    expect(existsSync(resolve(root, "_headers"))).toBe(true);
+    expect(existsSync(resolve(pages, "_headers"))).toBe(false);
+  });
+
+  it("every _headers rule sits under /gmt/", () => {
+    const b = built();
+    if (b === null) return;
+    // A rule path starts a line; its headers are indented, and a comment starts with `#`.
+    const paths = readFileSync(resolve(b.root, "_headers"), "utf8")
+      .split("\n")
+      .filter((line) => line !== "" && !/^\s/.test(line) && line[0] !== "#");
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.filter((path) => !path.startsWith("/gmt/"))).toEqual([]);
+  });
+
+  it("every file under _astro/ has a content hash in its name, so its immutable header is true", () => {
+    const b = built();
+    if (b === null) return;
+    const names = readdirSync(resolve(b.pages, "_astro"));
+    expect(names.length).toBeGreaterThan(0);
+    // `name.<hash>.ext`: Vite's hash is at least five characters of the URL-safe alphabet.
+    expect(
+      names.filter((name) => !/^.+\.[A-Za-z0-9_-]{5,}\.[a-z0-9]+$/.test(name)),
+    ).toEqual([]);
+  });
+
+  it("the only .txt files are the llms files, which the noindex rule covers", () => {
+    const b = built();
+    if (b === null) return;
+    const txt = walk(b.pages, (n) => n.endsWith(".txt"))
+      .map((file) => relative(b.pages, file).split(sep).join("/"))
+      .sort();
+    expect(
+      txt.filter((file) => !/(^|\/)llms(-full)?\.txt$/.test(file)),
+    ).toEqual([]);
+    expect(txt).toContain("llms.txt");
+    expect(txt).toContain("llms-full.txt");
   });
 
   it("no HTML page carries a URL without the base", () => {

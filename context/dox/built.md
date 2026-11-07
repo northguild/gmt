@@ -168,7 +168,22 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `astro:build:done` hook in `src/lib/copy-redirects.ts` copies it to `dist/_redirects`,
     because Cloudflare reads it only at the assets root and Astro copies `public/` into
     `dist/gmt/`.
-  - **Smoke.** `scripts/deploy-smoke.mjs` checks the redirect matrix after each deploy.
+  - **`_headers`.** `src/assets-root/_headers` is tracked and the same hook copies it to
+    `dist/_headers`, for the same root-only reason. Every rule sits under `/gmt/`.
+    `scripts/dist-base.test.ts` holds the file to that. Cloudflare serves assets before the Worker,
+    so these rules, not Worker code, set headers for pages and files:
+    - `/gmt/_astro/*` gets `Cache-Control: public, max-age=31536000, immutable`; the test fails on
+      any file there without a content hash in its name, which keeps `immutable` true.
+    - `/gmt/*.md` and `/gmt/*.txt` get `X-Robots-Tag: noindex`, because a twin or an `llms*.txt` file
+      has no `<meta>` and no canonical, so it would compete with its HTML page. The test fails on any
+      `.txt` under `dist/gmt` other than `llms.txt` and `llms-full.txt`.
+    - Under `wrangler dev` a `/gmt/_astro/*.js` response carries one `Cache-Control`, the `immutable`
+      value, with no default joined to it, so no `! Cache-Control` detach line is needed; the live
+      `deploy-smoke` run checks the same on Cloudflare.
+  - **Smoke.** `scripts/deploy-smoke.mjs` checks the redirect matrix and the crawl rows after each
+    deploy: `noindex` on `/gmt/install.md` and `/gmt/llms.txt`, none on `/gmt/`, one `immutable`
+    `Cache-Control` on the first `/gmt/_astro/*.js` the home page names, and a `noindex` 404 page.
+    `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl rows against a local `wrangler dev`.
   - **`robots.txt`** is served by the landing Worker; crawlers read only the host root.
   - **Zone and dashboard setup** (zone settings, tokens, `www`, Web Analytics, org links, Search
     Console, Bing Webmaster Tools, the AI Crawl Control report and Crawler Hints) is in
@@ -185,7 +200,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `href`/`src`/`srcset`/social `content`/`data-*` URL in the HTML, every `url()` in the CSS
   (the Michroma `@font-face` included), the `.md` twins and `llms*.txt`, the sitemap `<loc>`s,
   `dist/_redirects` and the `/api/` and public-file strings in the bundled JS. A root URL
-  without `/gmt` anywhere in `dist/` fails CI; `dist/` must hold only `gmt/` and `_redirects`.
+  without `/gmt` anywhere in `dist/` fails CI; `dist/` must hold only `gmt/`, `_headers` and `_redirects`.
   `CHUNKS_PATH` in `fetch-chunks.ts` is Worker-only code, not in `dist`, so
   `fetch-chunks.test.ts` guards it. The dev server serves `/gmt/` and proxies `/gmt/api`
   with no rewrite.
@@ -216,6 +231,19 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     pages and deletes only stale ones (`scripts/build-utils/generated-files.mjs`). Never go
     back to `rm -rf` + rewrite: every file event reaches `astro dev`, VS Code's watcher and
     its TypeScript server.
+  - **Page dates come from `scripts/build-utils/commit-dates.mjs`.** `newestCommit(paths)` returns the
+    newest commit time of a set of repo-relative paths as a UTC ISO string, or `undefined` when none
+    has a commit; one `git log --name-only` per set of unread paths fills a per-process cache. A
+    function or regex page uses its corpus `sourcePath`, a shared type page the file that declares
+    it, an index page the inputs of every page it lists, and an industry hub its text, its listed
+    pages' content files and the namespace sources. The tools and scenarios indexes use the content
+    files they list (`build-scenario-index.mjs` rewrites on every run, so the line is never stale).
+    The reference hash includes the commit dates, so a new commit to an input regenerates.
+    `build-guides.mjs` and `build-changelog.mjs` write their own `lastUpdated`.
+  - **Every workflow job that builds Dox uses `fetch-depth: 0`**, because a shallow clone gives every
+    page the one commit's date: `consistency` and `dox-gates` in `ci.yml`, `deploy` in
+    `deploy-dox.yml`, `sweep` in `dox-gates-weekly.yml` and `oracle` in `temporal-oracle.yml` (its
+    `pnpm build` builds every workspace package, Dox included).
   - **Where a type is documented is decided by use, not by source directory.**
     `scripts/build-utils/type-usage.ts` walks the type nodes of every public function's
     parameters and return type, and of every public type, and takes the closure. A type two
@@ -554,6 +582,21 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     in `llms.txt`, `llms-full.txt` and `_redirects` against `dist`.
   - No page carries an edit link: there is no Starlight `editLink` and no page sets `editUrl`.
     Starlight's `lastUpdated` is styled in `Footer.astro`.
+  - **Dates have one source, the footer.** The sitemap's `serialize` (`src/lib/sitemap-lastmod.ts`)
+    reads each built page's footer `<time datetime>` into `<lastmod>`, and leaves it out when the page
+    has none, so the footer and the sitemap cannot disagree (Google uses `lastmod` only when it is
+    verifiably accurate). `head-tags.test.ts` checks every `<lastmod>` against its page.
+  - **Generated pages state `lastUpdated` in their frontmatter**, from the newest commit of their
+    inputs (`commit-dates.mjs`, see Generator), or `lastUpdated: false` when no input has a commit.
+  - **Trap: an untracked page with no `lastUpdated` has no footer date.** Starlight reads the date
+    from `git log` of the page file (build: one inlined `git log` over `src/content/docs`; dev: one
+    per page); a file git does not track throws, Starlight catches it and shows nothing. Generated
+    MDX is ignored by git, so the frontmatter is the only source: keep it.
+  - **The 404 page** drops its canonical (`/gmt/404/` answers 307 to `/gmt/404`, which answers 200)
+    and gets `<meta name="robots" content="noindex">` in `route-data.ts`, through `removeHead` and
+    `upsertHead`. Starlight's other 404 tags stay.
+  - **`noindex` on the `.md` twins and `llms*.txt`** comes from `_headers` (see Deploy), not from the
+    page.
   - The sitemap leaves out `/dox/`. The gate is `scripts/head-tags.test.ts` over `dist/gmt`.
 - **Guides (`A4a`).** The guides under `src/content/docs/guides/` are the home of every
   feature's explanation and examples; the generated reference holds the signatures.
@@ -4233,6 +4276,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
   python3 -m http.server 48391 --bind 127.0.0.1 --directory "$SP/after/apps/dox/dist"
   # The site is under the base: open http://127.0.0.1:48391/gmt/
   ```
+
+  A scratch tree has no `.git`; it reads history for page dates through `GIT_DIR` and `GIT_WORK_TREE`
+  exported to the worktree's git directory, and never runs a git command that writes.
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.

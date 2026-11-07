@@ -60,6 +60,12 @@ import {
   writeIfChanged,
 } from "./build-utils/generated-files.mjs";
 import {
+  commitDatesKey,
+  loadCommitDates,
+  newestCommit,
+  withLastUpdated,
+} from "./build-utils/commit-dates.mjs";
+import {
   findGaps,
   formatGapReport,
   type GateInput,
@@ -3000,7 +3006,13 @@ export function generateReference() {
       `[reference] no published gmt tag (${baseline.none}); no Unreleased badges`,
     );
   }
-  const hash = `${hashFiles(referenceInputs())}|${baselineKey(baseline)}`;
+  // Each page states the commit date of its source, so the dates are an input too.
+  const sourceDates = commitDatesKey(
+    allSourceFiles(gmtSrc).map((file) =>
+      relative(repoRoot, file).split("\\").join("/"),
+    ),
+  );
+  const hash = `${hashFiles(referenceInputs())}|${baselineKey(baseline)}|${sourceDates}`;
   // The MDX tree is gitignored, so a fresh checkout (or a manual `rm -rf`) can
   // leave the generated modules in place while this directory is gone.
   const upToDate =
@@ -3031,6 +3043,7 @@ function referenceInputs(): string[] {
     resolve(gmtSrc, "..", "package.json"),
     fileURLToPath(import.meta.url),
     resolve(appRoot, "scripts", "build-utils", "build-utils.ts"),
+    resolve(appRoot, "scripts", "build-utils", "commit-dates.mjs"),
     resolve(appRoot, "scripts", "build-utils", "doc-gate.ts"),
     resolve(appRoot, "scripts", "build-utils", "index-pages.ts"),
     resolve(appRoot, "scripts", "build-utils", "null-is-empty.ts"),
@@ -3315,6 +3328,14 @@ function runGeneration(baseline: ReleasedBaseline) {
   const moduleSymbols = new Map<string, SymbolEntry[]>();
   const sharedTypes: SymbolEntry[] = [];
 
+  // A page states the commit date of the file it is made from (`build-utils/commit-dates.mjs`),
+  // read for every source in one `git log`.
+  const sourceOf = (doc: { sourcePath: string }) =>
+    `packages/gmt/src/${doc.sourcePath}`;
+  loadCommitDates(dedupedDocs.map(sourceOf));
+  const dated = (mdx: string, doc: { sourcePath: string }) =>
+    withLastUpdated(mdx, newestCommit([sourceOf(doc)]));
+
   for (const doc of dedupedDocs) {
     const unreleased = isUnreleased(baseline, doc.name);
     const withNote = (mdx: string) =>
@@ -3332,7 +3353,7 @@ function runGeneration(baseline: ReleasedBaseline) {
       );
       pages.set(
         join(TYPES_SECTION, `${doc.name}.mdx`),
-        withIndustry(withNote(renderType(doc, page)), typeTags),
+        dated(withIndustry(withNote(renderType(doc, page)), typeTags), doc),
       );
       pageRoutes.push(typePageUrl(doc.name));
       sharedTypes.push({
@@ -3375,9 +3396,12 @@ function runGeneration(baseline: ReleasedBaseline) {
 
     pages.set(
       join(doc.namespace, doc.module, `${doc.name}.mdx`),
-      withIndustry(withNote(mdx), [
-        industryOwning(doc.namespace) ?? CORE_INDUSTRY,
-      ]),
+      dated(
+        withIndustry(withNote(mdx), [
+          industryOwning(doc.namespace) ?? CORE_INDUSTRY,
+        ]),
+        doc,
+      ),
     );
     pageRoutes.push(pageUrl(doc.namespace, doc.module, doc.name));
 
@@ -3410,6 +3434,7 @@ function runGeneration(baseline: ReleasedBaseline) {
         name: d.name,
         url: pageUrl(d.namespace, d.module, d.name),
         description: d.description,
+        sourcePath: sourceOf(d),
       });
       continue;
     }
@@ -3418,6 +3443,7 @@ function runGeneration(baseline: ReleasedBaseline) {
       name: d.name,
       url: typeUrl(usage, d.name)!,
       description: d.description,
+      sourcePath: sourceOf(d),
     };
     if (placement.kind === "page") {
       indexed.sharedTypes.push(entry);
@@ -3429,7 +3455,10 @@ function runGeneration(baseline: ReleasedBaseline) {
   }
   const indexPages = renderIndexPages(indexed);
   for (const index of indexPages) {
-    pages.set(join(...index.file.split("/")), index.mdx);
+    pages.set(
+      join(...index.file.split("/")),
+      withLastUpdated(index.mdx, newestCommit(index.inputs)),
+    );
   }
   // An index route is every proper prefix of a page route, which is how
   // `scripts/api-surface.mjs` derives them too. Anything else is a page with no index above

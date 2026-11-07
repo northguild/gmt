@@ -18,6 +18,8 @@ export interface IndexedPage {
   name: string;
   url: string;
   description: string;
+  /** The file the page is made from, repo-relative. Dates the index pages that list it. */
+  sourcePath?: string;
 }
 
 /** One public type: where it is documented, and what it is. */
@@ -26,6 +28,8 @@ export interface IndexedType {
   /** Its own page, or its anchor on its function's page. */
   url: string;
   description: string;
+  /** The file that declares it, repo-relative. Dates the index pages that list it. */
+  sourcePath?: string;
 }
 
 /** A type documented on a function's page, with the module that page is in. */
@@ -73,6 +77,8 @@ export interface IndexPage {
   /** The route it serves, with no trailing slash: `/reference/plain/calculate`. */
   route: string;
   mdx: string;
+  /** The files of every page it lists, repo-relative: what its `lastUpdated` is dated from. */
+  inputs: string[];
 }
 
 /** Abbreviations whose full stop does not end a sentence. */
@@ -178,8 +184,23 @@ function hubPointer(industry: IndexedIndustry): string {
   return `The ${mdText(industry.label)} industry's own namespace. What it solves, and the guides and tools that show it, are on [${mdText(industry.label)}](/industries/${industry.id}/).`;
 }
 
-function page(file: string, slug: string, lines: string[]): IndexPage {
-  return { file, route: `/${slug}`, mdx: lines.join("\n") };
+/** The files the listed items are made from, once each. */
+function inputsOf(
+  ...lists: ReadonlyArray<ReadonlyArray<{ sourcePath?: string }>>
+): string[] {
+  const paths = lists.flatMap((list) => list.map((item) => item.sourcePath));
+  return [
+    ...new Set(paths.filter((path): path is string => path !== undefined)),
+  ].sort();
+}
+
+function page(
+  file: string,
+  slug: string,
+  lines: string[],
+  inputs: string[],
+): IndexPage {
+  return { file, route: `/${slug}`, mdx: lines.join("\n"), inputs };
 }
 
 /**
@@ -238,7 +259,14 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
       lines.push(`- [Types](/reference/${TYPES_SECTION})`);
       lines.push("");
     }
-    out.push(page("index.mdx", "reference", lines));
+    out.push(
+      page(
+        "index.mdx",
+        "reference",
+        lines,
+        inputsOf(input.pages, input.sharedTypes, input.inlineTypes),
+      ),
+    );
   }
 
   // /reference/types/
@@ -259,7 +287,12 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
       lines.push("");
     }
     out.push(
-      page(`${TYPES_SECTION}/index.mdx`, `reference/${TYPES_SECTION}`, lines),
+      page(
+        `${TYPES_SECTION}/index.mdx`,
+        `reference/${TYPES_SECTION}`,
+        lines,
+        inputsOf(input.sharedTypes, input.inlineTypes),
+      ),
     );
   }
 
@@ -283,7 +316,14 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
         for (const p of byName(mods.get(mod)!)) lines.push(listItem(p));
         lines.push("");
       }
-      out.push(page(`${ns}/index.mdx`, `reference/${ns}`, lines));
+      out.push(
+        page(
+          `${ns}/index.mdx`,
+          `reference/${ns}`,
+          lines,
+          inputsOf(modNames.flatMap((mod) => mods.get(mod)!)),
+        ),
+      );
     }
 
     // /reference/<ns>/<mod>/
@@ -304,7 +344,14 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
         for (const t of byName(held)) lines.push(listItem(t));
         lines.push("");
       }
-      out.push(page(`${ns}/${mod}/index.mdx`, `reference/${ns}/${mod}`, lines));
+      out.push(
+        page(
+          `${ns}/${mod}/index.mdx`,
+          `reference/${ns}/${mod}`,
+          lines,
+          inputsOf(mods.get(mod)!, held),
+        ),
+      );
     }
   }
 

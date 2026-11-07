@@ -15,12 +15,14 @@
  */
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { INDUSTRY_TAG_IDS, industryTag } from "../src/lib/industry-tags";
+import { lastUpdatedLine, newestCommit } from "./build-utils/commit-dates.mjs";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(appRoot, "..", "..");
 const toolsDir = resolve(appRoot, "src", "content", "docs", "tools");
 const checkDir = resolve(appRoot, "src", "content", "docs", "check");
 const indexPath = resolve(toolsDir, "index.mdx");
@@ -32,6 +34,8 @@ interface Tool {
   title: string;
   description: string;
   industries: string[];
+  /** The page's file, repo-relative: the index is dated from the files it lists. */
+  path: string;
 }
 
 const unquote = (value: string): string =>
@@ -57,6 +61,7 @@ function readTool(directory: string, dir: string, file: string): Tool {
     title: unquote(field("title")) || slug,
     description: unquote(field("description")),
     industries,
+    path: relative(repoRoot, resolve(dir, file)).split("\\").join("/"),
   };
 }
 
@@ -87,9 +92,14 @@ const sections = INDUSTRY_TAG_IDS.flatMap((id) => {
   ];
 });
 
+const lastUpdated = lastUpdatedLine(
+  newestCommit(tools.map((tool) => tool.path)),
+);
+
 const source = `---
 title: Tools
 description: Every interactive tool on the site, grouped by the industry it belongs to.
+${lastUpdated}
 sidebar:
   order: 0
   label: All tools

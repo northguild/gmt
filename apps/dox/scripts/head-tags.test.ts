@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
+import { footerDate } from "../src/lib/sitemap-lastmod";
 import { SITE_URL } from "../src/lib/site";
 import { TITLE_SUFFIX } from "../src/lib/head-tags";
 import { scanHead, type HeadScan } from "./build-utils/head-tags-scan";
@@ -293,6 +294,87 @@ describe("head tags of the built site", () => {
       }
     }
     expectNone(failures);
+  });
+
+  it("gives every sitemap URL the date in its page's footer, and none to a page without one", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const sitemap = readFileSync(resolve(dist, "sitemap-0.xml"), "utf8");
+    const entries = [...sitemap.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(
+      (m) => ({
+        loc: /<loc>([^<]+)<\/loc>/.exec(m[1])?.[1],
+        lastmod: /<lastmod>([^<]+)<\/lastmod>/.exec(m[1])?.[1],
+      }),
+    );
+    expect(entries.length).toBeGreaterThan(100);
+    const byUrl = new Map(
+      builtPages(dist).map((page) => [
+        `${SITE_URL}/${page.route}${page.route ? "/" : ""}`,
+        footerDate(page.html),
+      ]),
+    );
+    const failures: string[] = [];
+    let dated = 0;
+    for (const { loc, lastmod } of entries) {
+      if (loc === undefined || !byUrl.has(loc)) {
+        failures.push(`${loc}: no built page`);
+        continue;
+      }
+      const footer = byUrl.get(loc);
+      if (lastmod !== footer) {
+        failures.push(`${loc}: lastmod ${lastmod}, footer ${footer}`);
+      }
+      if (lastmod !== undefined) dated += 1;
+    }
+    expect(dated).toBeGreaterThan(100);
+    expectNone(failures);
+  });
+
+  it("dates a reference page from its source file's last commit", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const html = readFileSync(
+      resolve(dist, "reference/zoned/calculate/startOfZoned/index.html"),
+      "utf8",
+    );
+    // `%cd` with `format-local` follows TZ, so TZ=UTC gives the UTC instant in the page's format
+    // (`%cI` would keep the commit's stored offset).
+    const committed = execFileSync(
+      "git",
+      [
+        "log",
+        "-1",
+        "--date=format-local:%Y-%m-%dT%H:%M:%S.000Z",
+        "--format=%cd",
+        "--",
+        "packages/gmt/src/zoned/calculate/startOfZoned.ts",
+      ],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: { ...process.env, TZ: "UTC" },
+      },
+    ).trim();
+    expect(committed).toMatch(/Z$/);
+    expect(footerDate(html)).toBe(committed);
+    const sitemap = readFileSync(resolve(dist, "sitemap-0.xml"), "utf8");
+    const url = `${SITE_URL}/reference/zoned/calculate/startOfZoned/`;
+    const entry = new RegExp(
+      `<url><loc>${url}</loc>(?:<lastmod>([^<]+)</lastmod>)?`,
+    ).exec(sitemap);
+    expect(entry).not.toBeNull();
+    expect(entry![1]).toBe(committed);
+  });
+
+  it("asks that the 404 page not be indexed, and gives it no canonical link or sitemap entry", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const scan = scanHead(readFileSync(resolve(dist, "404.html"), "utf8"));
+    expect(scan.noindex).toBe(true);
+    expect(scan.canonical).toBeUndefined();
+    const sitemap = readFileSync(resolve(dist, "sitemap-0.xml"), "utf8");
+    const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    expect(locs.filter((loc) => loc.includes("404"))).toEqual([]);
   });
 
   it("gives no page an edit link", () => {

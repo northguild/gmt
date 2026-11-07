@@ -3,13 +3,14 @@
  *
  * Runs once per page, after Starlight has built the route's `head`, and applies the tags from
  * `src/lib/head-tags.ts` to it. It also gives a directory index the industry tags of the pages
- * under it (`src/lib/page-industries.ts`), which `PageTitle.astro` shows. The 404 page is left as
- * Starlight made it.
+ * under it (`src/lib/page-industries.ts`), which `PageTitle.astro` shows. The 404 page gets no
+ * share tags; it loses its canonical link and carries `noindex`: Starlight's canonical for it is
+ * `/gmt/404/`, which redirects to `/gmt/404`, and a page that answers 404 is not one to index.
  */
 import { defineRouteMiddleware } from "@astrojs/starlight/route-data";
 import { getCollection } from "astro:content";
 import { gmtVersion } from "~/generated/versions";
-import { headEntries, isHomeId, upsertHead } from "~/lib/head-tags";
+import { headEntries, isHomeId, removeHead, upsertHead } from "~/lib/head-tags";
 import { docsRelPath, markdownTwinSlugs } from "~/lib/md-twin";
 import { pageIndustries, type PageEntry } from "~/lib/page-industries";
 import { SITE_URL } from "~/lib/site";
@@ -61,7 +62,16 @@ const pageEntries = docsEntries.then((entries): PageEntry[] =>
 
 export const onRequest = defineRouteMiddleware(async (context) => {
   const route = context.locals.starlightRoute;
-  if (route.id === "404") return;
+  if (route.id === "404") {
+    route.head = upsertHead(
+      removeHead(route.head, "link", { rel: "canonical" }),
+      {
+        tag: "meta",
+        attrs: { name: "robots", content: "noindex" },
+      },
+    );
+    return;
+  }
 
   const docs = await docsById;
   const id = isHomeId(route.id) ? "" : route.id;

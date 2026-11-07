@@ -1,0 +1,14 @@
+# Cloudflare reads this file from the root of the assets directory (`dist/_headers`); `copyRedirects`
+# puts it there. Assets are served before the Worker, so the headers of every page and file come from here.
+
+# Hashed build output: the file name changes with its content, so a cached copy is never stale.
+/gmt/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The `.md` twin of a page repeats the page; the HTML page is the one to index.
+/gmt/*.md
+  X-Robots-Tag: noindex
+
+# `llms.txt`, `llms-full.txt` and the per-namespace `llms.txt` files repeat the pages; they are for agents, not for a results page.
+/gmt/*.txt
+  X-Robots-Tag: noindex

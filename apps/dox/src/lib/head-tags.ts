@@ -269,3 +269,22 @@ export function upsertHead(head: HeadEntry[], entry: HeadEntry): HeadEntry[] {
 function sameEntry(a: HeadEntry, b: HeadEntry): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
+
+/**
+ * `head` without the entries of `tag` whose attributes include every one in `attrs`:
+ * `removeHead(head, "link", { rel: "canonical" })` drops the canonical link and keeps the other
+ * links.
+ */
+export function removeHead(
+  head: HeadEntry[],
+  tag: HeadEntry["tag"],
+  attrs: Record<string, string>,
+): HeadEntry[] {
+  return head.filter(
+    (entry) =>
+      entry.tag !== tag ||
+      !Object.entries(attrs).every(
+        ([key, value]) => entry.attrs?.[key] === value,
+      ),
+  );
+}

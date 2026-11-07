@@ -17,6 +17,7 @@ import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
+import { sitemapLastmod } from "./src/lib/sitemap-lastmod.ts";
 import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
@@ -27,6 +28,9 @@ import { MIGRATE, START_HERE } from "./src/lib/section-order.ts";
 // `site` + `base` make every Starlight link, the canonical tag, the sitemap
 // and Pagefind resolve under /gmt/. One module holds both, for the Worker and
 // the scripts too.
+
+/* Where the build writes the pages (`outDir` below), for the sitemap to read. */
+const OUT_DIR = fileURLToPath(new URL("./dist/gmt", import.meta.url));
 
 const gmtPkg = fileURLToPath(
   new URL("../../packages/gmt/dist", import.meta.url),
@@ -299,9 +303,11 @@ export default defineConfig({
       ],
     }),
     // After starlight(): Starlight adds its own sitemap only when none is configured. /dox/ is
-    // the chat shell and has `noindex`, so it is not listed.
+    // the chat shell and has `noindex`, so it is not listed. `lastmod` is the date in the page's
+    // footer, read from the built HTML (`src/lib/sitemap-lastmod.ts`).
     sitemap({
       filter: (page) => new URL(page).pathname !== withBase("/dox/"),
+      serialize: (item) => sitemapLastmod(OUT_DIR, item),
     }),
   ],
 });

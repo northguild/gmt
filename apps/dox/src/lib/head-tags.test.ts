@@ -4,6 +4,7 @@ import {
   jsonLd,
   ogImageKey,
   pageTitle,
+  removeHead,
   TITLE_SUFFIX,
   upsertHead,
   type HeadEntry,
@@ -302,5 +303,37 @@ describe("isHomeId", () => {
     expect(isHomeId("")).toBe(true);
     expect(isHomeId("index")).toBe(true);
     expect(isHomeId("guides")).toBe(false);
+  });
+});
+
+describe("removeHead", () => {
+  const head: HeadEntry[] = [
+    { tag: "title", content: "Not found" },
+    { tag: "link", attrs: { rel: "canonical", href: "https://x/gmt/404/" } },
+    { tag: "link", attrs: { rel: "sitemap", href: "/gmt/sitemap-index.xml" } },
+    { tag: "meta", attrs: { name: "robots", content: "noindex" } },
+  ];
+
+  it("drops the entries of the tag that carry the attributes", () => {
+    expect(removeHead(head, "link", { rel: "canonical" })).toEqual([
+      head[0],
+      head[2],
+      head[3],
+    ]);
+  });
+
+  it("keeps entries of other tags and entries that differ in an attribute", () => {
+    expect(removeHead(head, "meta", { rel: "canonical" })).toEqual(head);
+    expect(removeHead(head, "link", { rel: "alternate" })).toEqual(head);
+  });
+
+  it("does not change the list it is given", () => {
+    const copy = structuredClone(head);
+    removeHead(head, "link", { rel: "canonical" });
+    expect(head).toEqual(copy);
+  });
+
+  it("leaves a head with no such entry as it is", () => {
+    expect(removeHead([], "link", { rel: "canonical" })).toEqual([]);
   });
 });
