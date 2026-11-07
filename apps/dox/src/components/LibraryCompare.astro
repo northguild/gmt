@@ -17,6 +17,10 @@ import {
  * (`data-kind="notes"`: natural column widths), which `src/lib/ref-table.ts` makes focusable
  * and fades at the edge that has more when the table is wider than the column. A table whose
  * first column is a sentence gets `gmt-compare--prose`, which lets that column wrap.
+ *
+ * The tables in `ENTRY_TABLES` hold a few short facts per library, so they print as cards
+ * instead: GMT's first and full width, then one per library in a grid, each fact as its label
+ * over its value. The `.md` twin keeps them as tables.
  */
 interface Props {
   table: CompareTableId | "notes";
@@ -30,8 +34,28 @@ const prose = table !== "notes" && PROSE_TABLES.includes(table);
 ---
 
 {
-  data && (
-    <div class="gmt-ref-table" data-kind="notes" data-layout={entries ? "entries" : undefined}>
+  data && entries && (
+    <ul class="gmt-compare-grid" data-table={table} aria-label={`${data.head[0]}: ${data.head.slice(1).join(", ")}`}>
+      {data.rows.map(([name, ...cells], index) => (
+        <li class="gmt-compare-card" data-featured={index === 0 ? "" : undefined}>
+          <p class="gmt-compare-name" set:html={cellHtml(name)} />
+          <dl>
+            {cells.map((cell, cellIndex) => (
+              <div data-lead={table === "overview" && cellIndex < 2 ? "" : undefined}>
+                <dt>{data.head[cellIndex + 1]}</dt>
+                <dd set:html={cellHtml(cell)} />
+              </div>
+            ))}
+          </dl>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+{
+  data && !entries && (
+    <div class="gmt-ref-table" data-kind="notes">
       <table class:list={["gmt-compare", prose && "gmt-compare--prose", prose && `gmt-compare--${table}`]}>
         <thead>
           <tr>
@@ -67,3 +91,87 @@ const prose = table !== "notes" && PROSE_TABLES.includes(table);
     </ul>
   )
 }
+
+<style is:global>
+/* ---- /compare cards ---- */
+
+/* Named `grid`, not `cards`: the site frames every element whose class holds `card`, and the list
+   is not a card. Each item is, so it keeps the site's card frame and only sets its padding. */
+.gmt-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: 1rem;
+  margin-block-start: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-compare-grid[data-table="measured"] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+}
+
+.gmt-compare-grid > .gmt-compare-card {
+  margin: 0;
+  padding: 1rem;
+}
+
+/* GMT's own card: full width, a cyan border all round, its facts in a row. */
+.gmt-compare-grid > .gmt-compare-card[data-featured] {
+  grid-column: 1 / -1;
+  border-color: var(--gmt-cyan);
+}
+
+.gmt-compare-card > * {
+  margin: 0;
+}
+
+.gmt-compare-name {
+  padding-block-end: 0.6rem;
+  border-block-end: 1px solid var(--gmt-hairline);
+  font-family: var(--gmt-font-mono);
+  font-weight: 600;
+  color: var(--gmt-ice);
+  overflow-wrap: break-word;
+}
+
+.gmt-compare-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin-block-start: 0.75rem;
+}
+
+.gmt-compare-grid[data-table="measured"] dl {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.gmt-compare-card[data-featured] dl {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9rem), 1fr));
+}
+
+/* Starlight's prose rules space every sibling and indent a `dd`; the card sets its own. */
+.gmt-compare-card dl > div,
+.gmt-compare-card dt,
+.gmt-compare-card dd {
+  margin: 0;
+  padding: 0;
+}
+
+.gmt-compare-card dt {
+  font-size: var(--gmt-text-xs);
+  font-weight: 600;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-compare-card dd {
+  overflow-wrap: break-word;
+  color: var(--gmt-ice);
+}
+
+/* The test counts lead the overview, so they are set larger. */
+.gmt-compare-card dl > [data-lead] dd {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--sl-text-xl);
+  font-weight: 600;
+}
+</style>
