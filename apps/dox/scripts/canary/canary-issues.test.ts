@@ -2248,7 +2248,7 @@ describe("swap findings", () => {
     expect(action.key).toBe("temporal-polyfill-swap/ready");
     expect(
       action.body.startsWith(
-        `temporal-polyfill 1.0.8 also passes (run ${RUN}).\n\ntemporal-polyfill 1.0.8, imported from`,
+        `temporal-polyfill 1.0.8 also passes.\n\ntemporal-polyfill 1.0.8, imported from`,
       ),
     ).toBe(true);
     expect(action.body).not.toContain("gmt-canary");
@@ -2272,7 +2272,7 @@ describe("swap findings", () => {
     expect(action.body).toBe(
       [
         READY_MARKER,
-        `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${RUN}`,
+        `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run.`,
         "",
         "| Runtime | Tests | Fail on swap only | Fail on both | Fail only on @js-temporal/polyfill |",
         "| --- | --- | --- | --- | --- |",
@@ -2281,13 +2281,15 @@ describe("swap findings", () => {
         "| Firefox 155.0 | 71337 | 0 | 0 | 0 |",
         "| WebKit 26.6 | 71337 | 0 | 1 | 2 |",
         "",
-        "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to 2036-11-04 (tz 2026e).",
+        "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to ten years past the run date (tz 2026e).",
         "",
         "Calendar sweep: every one of 16 calendars matches the built-in Temporal on the first day, months and days of each year from -003000-01-01 to +005000-12-31.",
         "",
         "What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md). Type errors are not checked here; § 5 lists them.",
         "",
         "A person makes the swap. CI opens issues, never pull requests.",
+        "",
+        `Run: ${RUN}`,
       ].join("\n"),
     );
     expect(action.body.length).toBeLessThan(65_536);
@@ -2531,7 +2533,7 @@ describe("swap force", () => {
       "Forced for a dry run. Real result on this run: every check passed.",
     );
     expect(dry.body).toContain(
-      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run: ${RUN}`,
+      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, passed every check on this run.`,
     );
   });
 
@@ -2544,7 +2546,7 @@ describe("swap force", () => {
       "Forced for a dry run. Real result on this run: not ready to swap. The first check that blocks it: temporal-polyfill-swap-webkit: 2 tests fail on the swap.",
     );
     expect(dry.body).toContain(
-      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, was checked on this run: ${RUN}`,
+      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, was checked on this run.`,
     );
     expect(dry.body).not.toContain("passed every check");
     expect(dry.body).toContain("| WebKit 26.6 | 71337 | 2 | 0 | 0 |");
@@ -2565,7 +2567,7 @@ describe("swap force", () => {
       /^Forced for a dry run\. Real result on this run: not ready to swap\. The first check that blocks it: temporal-polyfill-swap-webkit: 2 tests fail on the swap\.\n\n/,
     );
     expect(dry.body).toContain(
-      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, was checked on this run: ${RUN}`,
+      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, was checked on this run.`,
     );
     expect(dry.body).not.toContain("also passes");
     expect(dry.body).not.toContain("passed every check");
@@ -2585,7 +2587,7 @@ describe("swap force", () => {
     const dry = actions.find((a) => a.key === DRY_KEY);
     if (!dry || dry.kind !== "open") throw new Error("expected open");
     expect(dry.body).toContain(
-      "Offset sweep: 2 of 418 zones differ from `Intl.DateTimeFormat` at 12:00 UTC on some day from 1970-01-01 to 2036-11-04 (tz 2026e).",
+      "Offset sweep: 2 of 418 zones differ from `Intl.DateTimeFormat` at 12:00 UTC on some day from 1970-01-01 to ten years past the run date (tz 2026e).",
     );
     expect(dry.body).not.toContain("every one of 418 zones matches");
   });
@@ -2671,6 +2673,81 @@ describe("report markers", () => {
     expect(body(differs(), `${RUN}0`)).toBe(MARKER);
     expect(body(differs(), `${RUN}1`)).toBe(MARKER);
     expect(body(differs("row 30: another difference"), RUN)).not.toBe(MARKER);
+  });
+
+  /**
+   * Two runs a week apart that found the same things: another run link, and an offset sweep that
+   * ends a week later. Every finding kind, real and dry run, must keep its fingerprint, or its
+   * issue never gets the one-line repeat.
+   */
+  describe("every finding keeps its fingerprint across runs", () => {
+    const NEXT_RUN = "https://github.com/northguild/gmt/actions/runs/124";
+    const swapThrough = (through: string) =>
+      cleanSwap({ node: { sweep: { ...swapSweep(), through } } });
+    const oracleRun = (through: string) => ({
+      ...everywhere([workaround("D2", "removable")]),
+      "temporal-oracle": oracle(1),
+      "native-suite-node": native("node", {
+        untagged: 1,
+        hostUntagged: 1,
+        controlOnly: 1,
+        staleTags: [
+          { kind: "host", group: "old-group", reason: "Old reason." },
+        ],
+      }),
+      "native-suite-chromium": native("chromium", { untagged: 1 }),
+      "native-suite-firefox": null,
+      ...swapThrough(through),
+    });
+    const leapRun = () => ({ "leap-seconds": leap(["row 29: x"]) });
+    const reports = (
+      verdicts: unknown,
+      workflow: "temporal-oracle" | "leap-seconds",
+      runUrl: string,
+    ) =>
+      Object.fromEntries(
+        planIssueActions(verdicts as never, [], { workflow, runUrl }).map(
+          (a) => [a.key, a.body.split("\n")[1]],
+        ),
+      );
+    const forced = (verdicts: unknown) =>
+      applyForce(verdicts as never, {
+        removable: "D2",
+        mismatch: true,
+        nativeFailure: true,
+        leapDifference: true,
+        swapReady: true,
+      }).verdicts;
+
+    it.each`
+      name                     | workflow             | week1                              | week2
+      ${"oracle findings"}     | ${"temporal-oracle"} | ${oracleRun("2036-11-04")}         | ${oracleRun("2036-11-11")}
+      ${"oracle dry runs"}     | ${"temporal-oracle"} | ${forced(oracleRun("2036-11-04"))} | ${forced(oracleRun("2036-11-11"))}
+      ${"leap-second finding"} | ${"leap-seconds"}    | ${leapRun()}                       | ${leapRun()}
+      ${"leap-second dry run"} | ${"leap-seconds"}    | ${forced(leapRun())}               | ${forced(leapRun())}
+    `("$name", ({ workflow, week1, week2 }) => {
+      const first = reports(week1, workflow, RUN);
+      expect(Object.keys(first).length).toBeGreaterThan(0);
+      expect(reports(week2, workflow, NEXT_RUN)).toEqual(first);
+    });
+
+    it("covers the swap issue and every native-suite key", () => {
+      expect(
+        Object.keys(reports(oracleRun("2036-11-04"), "temporal-oracle", RUN)),
+      ).toEqual(
+        expect.arrayContaining([
+          D2_KEY,
+          "temporal-oracle/untagged-mismatch",
+          failureKey("node"),
+          failureKey("chromium"),
+          HOST_KEY,
+          CONTROL_KEY,
+          STALE_KEY,
+          "temporal-oracle/could-not-run",
+          "temporal-polyfill-swap/ready",
+        ]),
+      );
+    });
   });
 });
 

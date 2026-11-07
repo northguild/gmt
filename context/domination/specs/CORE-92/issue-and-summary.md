@@ -59,7 +59,9 @@ swap sources:
 
 `planIssueActions` already turns a finding into "comment on the open issue with that marker",
 or "open a new one". Use it unchanged. The comment body is the same text as the issue body,
-under a first line `` `temporal-polyfill ${version} also passes (run <runUrl>).` ``.
+under a first line `` `temporal-polyfill ${version} also passes.` ``. Body and comment name the
+run only in their trailing `Run: <runUrl>` line, and the sweep's end reads as a rule, not a date, so
+an unchanged report keeps its fingerprint and repeats as one line (CORE-81).
 
 ### Body
 
@@ -67,7 +69,7 @@ First line: `marker(key)`, as for every canary issue. Then:
 
 ```md
 temporal-polyfill <version>, imported from `temporal-polyfill/full/implementation`, passed every
-check on this run: <runUrl>
+check on this run.
 
 | Runtime | Tests | Fail on swap only | Fail on both | Fail only on @js-temporal/polyfill |
 | ------- | ----- | ----------------- | ------------ | ---------------------------------- |
@@ -77,12 +79,14 @@ check on this run: <runUrl>
 | WebKit <version> | … | 0 | … | … |
 
 Offset sweep: every one of <zones> zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from
-<from> to <through> (tz <tz>).
+<from> to ten years past the run date (tz <tz>).
 
 What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md).
 Type errors are not checked here; § 5 lists them.
 
 A person makes the swap. CI opens issues, never pull requests.
+
+Run: <runUrl>
 ```
 
 - Runtime names and versions come from each verdict's `runtime`.

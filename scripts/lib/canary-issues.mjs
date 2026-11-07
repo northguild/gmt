@@ -1204,11 +1204,10 @@ function swapRuntimeName(leg, v) {
  * run, whose text must not claim a pass the run did not have.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @param {string} version
- * @param {string} runUrl
  * @param {boolean} ready
  * @returns {string[]}
  */
-function swapParagraphs(verdicts, version, runUrl, ready) {
+function swapParagraphs(verdicts, version, ready) {
   const rows = NATIVE_LEGS.map((leg) => {
     const v = verdictOf(verdicts, SWAP(leg));
     if (v?.status !== "ran") {
@@ -1229,7 +1228,9 @@ function swapParagraphs(verdicts, version, runUrl, ready) {
     node?.status === "ran" ? /** @type {SwapVerdict} */ (node).sweep : null;
   let sweepLine = "Offset sweep: did not run.";
   if (sweep?.status === "ran") {
-    const span = `from ${sweep.from} to ${sweep.through} (tz ${sweep.tz})`;
+    // The end moves with the run date, so the text names the rule, not the day: a repeat report
+    // must read the same week to week (`reportDigest`).
+    const span = `from ${sweep.from} to ten years past the run date (tz ${sweep.tz})`;
     sweepLine =
       sweep.differingZones === 0
         ? `Offset sweep: every one of ${sweep.zones} zones matches \`Intl.DateTimeFormat\` at 12:00 UTC each day ${span}.`
@@ -1248,7 +1249,7 @@ function swapParagraphs(verdicts, version, runUrl, ready) {
         : `Calendar sweep: ${calendarSweep.differingCalendars} of ${calendarSweep.calendars} calendars differ from the built-in Temporal in some year ${span}.`;
   }
   return [
-    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, ${ready ? "passed every check" : "was checked"} on this run: ${runUrl}`,
+    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, ${ready ? "passed every check" : "was checked"} on this run.`,
     table(
       [
         "Runtime",
@@ -1285,14 +1286,17 @@ function swapFindings(verdicts, runUrl) {
     )
   );
   const version = result.ready ? result.version : (firstRan?.version ?? "");
-  const paragraphs = swapParagraphs(verdicts, version, runUrl, result.ready);
-  const comment = `temporal-polyfill ${version} also passes (run ${runUrl}).\n\n${paragraphs.join("\n\n")}`;
+  const paragraphs = swapParagraphs(verdicts, version, result.ready);
+  const comment = withRun(
+    `temporal-polyfill ${version} also passes.\n\n${paragraphs.join("\n\n")}`,
+    runUrl,
+  );
   /** @type {Finding} */
   const real = {
     key: "temporal-polyfill-swap/ready",
     title: `Swap to temporal-polyfill ${version}: it passes the GMT suite and both sweeps`,
     labels: [CANARY_LABEL],
-    body: paragraphs.join("\n\n"),
+    body: withRun(paragraphs.join("\n\n"), runUrl),
     comment,
   };
   /** @type {Finding[]} */
@@ -1315,7 +1319,7 @@ function swapFindings(verdicts, runUrl) {
         };
     out.push({
       ...dryRun(twin, "--force-swap-ready", dryParagraphs, runUrl),
-      comment: dryParagraphs.join("\n\n"),
+      comment: withRun(dryParagraphs.join("\n\n"), runUrl),
     });
   }
   return out;
@@ -1427,7 +1431,9 @@ function matches(issue, key) {
 
 /**
  * A report's fingerprint: the first 16 hex digits of the SHA-256 of a finding's comment without its
- * run line, line endings made LF. Two runs that found the same rows have the same fingerprint.
+ * run line, line endings made LF. Two runs that found the same rows have the same fingerprint, so
+ * every comment names its run only in that trailing `Run:` line and carries nothing else that
+ * changes from run to run with the result unchanged, such as a date counted from the run date.
  * @param {string} comment  a finding's `comment`
  */
 function reportDigest(comment) {
