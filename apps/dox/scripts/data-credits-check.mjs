@@ -59,7 +59,13 @@ const TARGETS = [
     order: [...ZOOM_STACK, "Find a zone", "Data credits"],
     // The landing alone carries the night sky, so alone it credits the star catalogue, and alone
     // it holds the licence note instead of the page footer.
-    labels: ["Time zone boundaries", "Earth imagery", "Stars", "Licence"],
+    labels: [
+      "Time zone boundaries",
+      "Earth imagery",
+      "Stars",
+      "Milky Way",
+      "Licence",
+    ],
   },
   { path: "/tools/zoned-earth/", slug: "zoned-earth", ...GLOBE },
   {

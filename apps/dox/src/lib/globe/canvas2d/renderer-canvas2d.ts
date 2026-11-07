@@ -15,23 +15,18 @@
  *
  * ## Deliberately not modernised
  *
- * It keeps d3's projection rather than `../camera.ts`, and d3's `geoPath`
- * rather than `../geometry.ts`. Both would work, and the drawn result would move
- * by a fraction of a pixel — which is exactly what a fallback must not do, since
- * this is the picture the WebGPU renderer is compared against for parity and the
- * one the site's visual gate has baselines for. The engine still uses the shared
- * camera for hit-testing and tooltip placement on both paths, so the parts a
- * reader can *interact* with agree regardless of which renderer is running.
+ * It keeps d3's `geoPath` rather than `../geometry.ts`: the drawn paths must not move by a
+ * fraction of a pixel against the WebGPU renderer, which this is compared against for
+ * parity and which the site's visual gate has baselines for. Its projection is the pinhole's
+ * raw form fed to d3 (`./pinhole-raw.ts`), so both renderers draw through `../pinhole.ts`.
+ * The engine uses the shared camera for hit-testing and tooltip placement on both paths.
  */
 
-import {
-  geoGraticule10,
-  geoOrthographic,
-  geoPath,
-  type GeoPermissibleObjects,
-} from "d3-geo";
+import { geoGraticule10, geoPath, type GeoPermissibleObjects } from "d3-geo";
 import { feature } from "topojson-client";
 import land110m from "world-atlas/land-110m.json";
+import { isVisible } from "../camera";
+import { createPinholeProjection, setProjectionCamera } from "./pinhole-raw";
 import {
   CASING_CSS,
   LABEL_HALO_CSS,
@@ -118,7 +113,7 @@ export async function createCanvas2dRenderer(
   }
   const ctx = context;
 
-  const projection = geoOrthographic().clipAngle(90).precision(0.4);
+  const projection = createPinholeProjection();
 
   let theme = init.theme;
   const labelFont = init.labelFont;
@@ -315,10 +310,7 @@ export async function createCanvas2dRenderer(
     if (destroyed) return;
     const { camera, sun, subsolar, quiet, moving } = frame;
 
-    projection
-      .rotate([camera.rotation[0], camera.rotation[1]])
-      .scale(camera.radius)
-      .translate([camera.centreX, camera.centreY]);
+    setProjectionCamera(projection, camera);
 
     ctx.save();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -412,15 +404,11 @@ export async function createCanvas2dRenderer(
   ): void {
     const point: [number, number] = [0, 0];
     const subsolarVec = unit(subsolar[0], subsolar[1]);
-    const centre: [number, number] = [
-      -frame.camera.rotation[0],
-      -frame.camera.rotation[1],
-    ];
-    const centreVec = unit(centre[0], centre[1]);
 
     for (const marker of markers) {
+      if (!isVisible(frame.camera, marker.position[0], marker.position[1]))
+        continue;
       const markerVec = unit(marker.position[0], marker.position[1]);
-      if (dot(markerVec, centreVec) < 0) continue;
       point[0] = marker.position[0];
       point[1] = marker.position[1];
       const at = projection(point);
@@ -508,7 +496,7 @@ export async function createCanvas2dRenderer(
   };
 }
 
-/** Local copies so this file needs nothing from `../camera.ts`. */
+/** Unit-vector helpers for the Sun-side tests. */
 function unit(lng: number, lat: number): [number, number, number] {
   const rad = Math.PI / 180;
   const cosLat = Math.cos(lat * rad);

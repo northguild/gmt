@@ -2675,7 +2675,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     draw the Earth with no frame: the engine paints into `.globeLayer`, which fills the hero, and
     `.layout` holds only the invisible stage (the zoom stack's box and the Earth's framing) and the
     zone drawer. `createGlobe` takes `framing(width, height)` (the disc's centre and radius at
-    zoom 1, from `frameSpace` in `globe-mount.ts`), `hitArea` (the element that takes the pointer
+    zoom 1, from `frameSpace` in `globe-mount.ts`; the radius is the silhouette of the visible 81.3 degree cap, and zoom is a lens zoom, so the radius grows while the camera stays put), `hitArea` (the element that takes the pointer
     and is the one tab stop, so the canvas never does), `maxDpr` (1.5 in the hero, 2 elsewhere),
     `pauseWhenHidden` (an `IntersectionObserver` stops the loop off screen) and `onInteract(kind)`
     (`drag`, `pinch`, `wheel`, `tap` or `key`; it opens the drawer without moving focus, except a tap that picks a zone). All
@@ -2784,33 +2784,59 @@ Shared hooks come first, then the globe, then the clock-change pages.
       adaptation under CC BY-SA 4.0, kept as a share-alike sidecar (`hero-sky.json`, the
       boundary-data precedent) that says the repository's MIT licence does not cover it. The
       globe's data-credits popup lists it ("Stars", HYG v4.4, CC BY-SA 4.0) on `/` only.
+    - **The Milky Way is a real all-sky photograph.** ESO's Milky Way panorama (eso0932a, credit
+      "ESO/S. Brunier", CC BY 4.0), reduced by `scripts/prepare-hero-milkyway.mjs` (run by hand;
+      it downloads the 6000 x 3000 JPEG, refuses any other hash, and writes the WebP with sharp from
+      Astro's install) to `src/assets/hero-milkyway.webp`: 1024 x 512 greyscale, equirectangular in
+      J2000 right ascension and declination, row 0 the north pole, 6,920 bytes (the budget is 40 KB).
+      The generator takes each 4 x 4 block's median linear luminance, removes the stars with a 5 x 5
+      median (wrapping in longitude), and reprojects from the panorama's galactic frame (Hipparcos
+      J2000 pole) to equatorial, bilinear. Brightness 0 is the map's median, 255 its 99.9th
+      percentile, with a 0.7 power between. `hero-milkyway.json` is the credit sidecar (source page,
+      file hash, credit, licence, the changes made, stretch, map hash): CC BY 4.0 asks for the credit
+      as given and a note that the work was changed. The hero preloads the map beside the star list;
+      `hero-space.ts` decodes it with `createImageBitmap` alongside the star fetch, and a failed
+      fetch or decode leaves the band out while the stars still draw. The popup lists it ("Milky
+      Way": "The Milky Way panorama by ESO/S. Brunier, adapted to a starless greyscale sky map (CC BY
+      4.0).", both links) on `/` after "Stars".
     - **It is the real sky.** The stars are where they are for the clock and the camera, with
-      nothing art-directed. `lib/sky-math.ts` holds the galactic constants, a stereographic
-      projection and the sidereal time (Greenwich mean sidereal time, Meeus eq. 12.4, checked
-      against examples 12.a and 12.b). The view's centre is the point behind the Earth:
+      nothing art-directed. `lib/sky-math.ts` holds the gnomonic projection
+      of the globe's own camera (one pinhole, the only lens under which a city's line to the Sun
+      meets the Sun that is drawn) and the sidereal time (Greenwich mean sidereal time, Meeus eq. 12.4, checked
+      against examples 12.a and 12.b). The stars and the Milky Way map are in J2000 axes and the
+      Sun, the Moon and the sidereal time in axes of date, about 0.38 degree apart in 2026, so the
+      stars and the band are drawn through `starViewMatrix`: IAU 1976 precession (Meeus eq. 21.2 to
+      21.4, first-order terms, under 2" off between 1900 and 2100) and then the view. It is pinned
+      to Meeus example 21.b and to a JPL Horizons row given in both axes. The view's centre is the point behind the Earth:
       right ascension = sidereal time + 180 degrees minus the camera's longitude turn, and
       declination = the camera's latitude turn (held to 89 degrees). So a drag to the right
       moves the stars left, at the Earth's own speed; the ambient spin moves them too; and
       with the globe at rest they turn once a day. The Earth's screen centre
       (`GlobeHost.getCentre()`) is the view's centre, so the stars sit where they would behind
-      the disc. Nothing is clipped in the box: the cut-off is 120 degrees from the centre.
+      the disc. A body is drawn only inside the camera's field of view (about 24 degrees around the
+      view's centre at the start), so a star behind the camera is never projected. Both sky canvases are
+      clipped to outside the solid Earth's disc, so nothing is drawn on the sky where the Earth is.
       `SKY_ANCHOR` (0.4, 0.6) is the fallback centre when the globe has not mounted.
     - **It has no loop of its own.** `lib/sky.ts` (`mountSky`) draws nothing on mount: the hero
       opens as plain void, and the first `view` makes the first draw, then sets `data-sky="ready"`
       on the hero and resolves `ready`. After that it draws once per resize,
-      and when `view(rotation, centre, instant)` (called from `GlobeHost.onFrame`) finds the
-      view's centre moved by 0.01 degree or the Earth's centre by half a pixel (the clock alone
-      does not count, since the globe calls once a second at rest); a check once a minute, stopped while the tab is hidden, catches the sidereal drift at rest. Stars are one
+      and when `view(rotation, centre, instant, zoom)` (called from `GlobeHost.onFrame`) finds the
+      view's centre moved by 0.01 degree, the Earth's centre or radius by half a pixel or the zoom
+      by 0.002. The view's centre includes the sidereal clock, which turns the sky 0.0042 degree a
+      second, so a globe calling once a second at rest redraws the sky about every 3 s; a check once a minute, stopped while the tab is hidden, catches the sidereal drift at rest. Stars are one
       path per colour and brightness step (32 fills at most) on a canvas at a pixel ratio of
-      1.5 at most; the Milky Way is on a canvas a quarter the hero's size. A layer that is not
+      1.5 at most. The Milky Way is on a canvas an eighth the hero's size: each of its pixels
+      turns back through the camera into a right ascension and declination and reads the map
+      there (bilinear, wrapping in right ascension), at an alpha of up to 0.09 x 8 under the
+      layer's 0.125 opacity, with no pixel inside the Earth's disc or the Moon's. A layer that is not
       visible is not drawn. `lib/hero-space.ts` fetches the list; `followGlobe` makes the first
       draw from the mounted globe's rotation, centre and the clock (no wait for a frame, no guessed
       view), then follows the globe and starts the meteor. If the globe fails to mount,
       `skyWithoutGlobe` draws once at the start rotation and `SKY_ANCHOR`. The band wrapper (wash
       included) and the stars canvas are `opacity: 0` in `gmt-space.css` and fade in once
       `[data-sky="ready"]` is set, on the entrance's clock (`gmt-entrance-freeze.css`, below). The stars canvas carries `data-sky-view`
-      (right ascension, declination, instant), `data-sky-draws`, `data-sky-ms` and
-      `data-sky-bodies` for the gate. The sky (`sky.ts` with `sky-math.ts`) is at most 5 KB and
+      (right ascension, declination, instant), `data-sky-camera` (the Earth's centre and radius the sky projects from), `data-sky-draws`, `data-sky-ms` and
+      `data-sky-bodies` for the gate. The sky (`sky.ts` with `sky-math.ts`) is at most 5,120 bytes and
       the meteor 4 KB, minified and gzipped (`scripts/sky-size.test.ts`).
     - **The entrance.** `lib/arrival.ts` is the inline head script (`arrivalInlineSource`): on the
       landing it writes `data-entrance="wait"` on `<html>` before first paint and `static` after
@@ -2850,18 +2876,35 @@ Shared hooks come first, then the globe, then the clock-change pages.
       - **Gates:** `hero-space` › entrance; `globe-smoke` waits for `data-dawn="done"` on the landing.
     - **The Sun and the Moon** are drawn on the stars canvas after the stars, from their
       positions at the instant. The Sun is the subsolar point that already shades the Earth
-      (`globe/sun.ts`), turned into right ascension by the sidereal time. The Moon uses the
-      Astronomical Almanac's low-precision lunar formulae (Section D, the 1990s editions,
-      as transcribed in the MOONPOS routine of the IDL Astronomy Library: Greason 1988, Steele
-      1994), good to about 0.3 degree; the ecliptic position is turned to the equator with the
-      mean obliquity (23.439 degrees minus 0.013 degree a century). Their sizes are the real
+      (`globe/sun.ts`), turned into right ascension by the sidereal time. The Moon is seen from the camera (`moonFromCamera`), not from the Earth's centre: the
+      Astronomical Almanac's low-precision lunar formulae (Section D, as transcribed in the MOONPOS
+      routine of the IDL Astronomy Library: Greason 1988, Steele 1994) give its place, the camera's
+      42,164 km offset gives its parallax, and the phase and the lit limb follow Meeus ch. 40 and 48. It
+      is pinned to JPL Horizons in `sky-math.test.ts`. A Moon off the field of view is not drawn. The Moon is solid: its disc is cleared of stars, the Sun and the Milky Way, and shows only the earthshine and the lit part. Their sizes are the real
       angular radii (the Moon's from its parallax with k = 0.2725076), never under 2.5 px. The
       Moon shows its phase: the lit fraction is (1 - cos of the angular distance between them) / 2, and the lit side faces
       the Sun along the great circle (Meeus 48.5), drawn as a half disc and a terminator
-      ellipse over a dark disc of earthshine (alpha .08 x (1 - lit), skipped when it rounds to 0). The Sun is a near-white core with a 90 px glare (alpha .35); it is not
-      drawn when it lies more than 90 px inside the Earth's disc (the Earth would hide it),
-      so the glare spills past the rim when it sits just behind it. Both are tested against
-      Meeus examples 47.a, 25.a and 48.a.
+      ellipse over a dark disc of earthshine (alpha .08 x (1 - lit), skipped when it rounds to 0). The Sun is a near-white core with a glare
+      (alpha .35) reaching two of its own radii past its disc, so the glare grows with the zoom as the disc does; it is
+      not drawn when the whole glare lies inside the drawn Earth's disc (the Earth would hide it; with no globe drawn
+      nothing hides it), so the glare spills past the rim when it sits just behind it, the clip hiding only what lies over the disc.
+    - **The Moon audit.** The Moon is 56 to 64 Earth radii away and the camera 6.61 out, so from
+      the camera it moves by up to about 6 degrees, grows by up to about 13 percent and shows a
+      different phase than from the Earth's centre. `moonFromCamera` takes the camera's position
+      (equatorial of date, in Earth radii), the Moon's from its parallax (distance = 1 / sin of the
+      horizontal parallax) and the Sun at 1 AU (IAU 2012 B2), and returns place, angular radius,
+      phase angle, lit fraction and bright limb; there is no geocentric phase function. It is pinned
+      in `sky-math.test.ts` to nine JPL Horizons observer rows (site `coord@399` at the camera:
+      apparent place of date, illuminated fraction, angular diameter, sub-Sun position angle, phase
+      angle; every phase, the largest Moon, the far side of the Earth and the Moon behind the Earth).
+      The tolerances sit well above the measured residuals: place 0.3 degree (worst 0.19), radius 0.5
+      percent (0.2), lit 0.002 (0.0003), phase 0.3 degree (0.15), limb 1 degree (0.71). The limb is
+      ill-conditioned near full (a phase angle of 2 degrees is 3 degrees off), so no pin sits
+      closer than 10 degrees. The tests also assert that the parallax is applied (over 2.5 degrees
+      from the geocentric place), that the size grows from the camera, and that the drawn limb points
+      at the drawn Sun to 1 degree at zoom 1 and 5. The geocentric Moon underneath (the Astronomical
+      Almanac's low-precision formulae) is off by 0.1 degree on average and at most 0.37 degree against
+      Horizons every 6 hours through 2026 and 2027.
     - **The meteor** (`lib/space-fx.ts`) is the sky's one moving thing: a faint streak, about one
       a minute (a wait of 20 to 120 s, mean 45), a third to a half of a second long, and never over
       the copy, an open zone drawer or the Earth. It needs no frame between meteors, and none falls
@@ -2873,14 +2916,19 @@ Shared hooks come first, then the globe, then the clock-change pages.
     - **Gates.** `hero-space` checks the credit text; that the layers are at opacity 0 with no draw until
       ready, then exactly one draw at the globe's start view with the fade not begun (also with the
       globe's script blocked); that the view shows the page's clock to
-      5 s; that the sky is not redrawn in 4 s at rest; that a 60 px drag lowers the view's
+      5 s; that the sky is not redrawn in 4 s at rest with the clock held; that a 20 px drag lowers the view's
       right ascension by the longitude the globe turned and moves the stars left, at a median
       draw of 2 ms and a median frame of 17.5 ms; that the ambient spin draws the sky at most
       once a frame; that reduced motion leaves no animation, no frame request and no meteor
       over 10 s; and, with Playwright's clock and time zone pinned to instants found with
-      `sky-math`, that a half Moon is half lit on the Sun's side, that the Sun just behind the
-      Earth spills its glare past the rim on its side only, and that the Sun in the clear is
-      near-white.
+      `sky-math` and set in Nairobi (from Helsinki or Berlin the start camera never sees the Sun or
+      the Moon, which is the true sky), that a half Moon is half lit on the Sun's side, that the Sun
+      just behind the Earth spills its glare past the rim on its side only, and that the Sun in the
+      clear is near-white; that the sky and the globe are one camera (`sky-one-camera`: the sky's
+      centre and radius match a circle fitted to the globe canvas's silhouette and the hit box,
+      at zoom 1 and one step in); and that the Sun's glare sits behind each part of the hero copy
+      (eyebrow, title, tagline, first button) at an instant pinned for that part, with the copy
+      keeping its contrast.
   - **The hero copy column.** `HeroCopy` takes an optional `eyebrow` (`HeroGlobe` passes
     `@northguild/gmt`; Starlight's hero schema has no such field, so it is not in the front
     matter). With it the column is left-aligned at every width, the eyebrow and title are set in
@@ -2894,8 +2942,24 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **The split.** `globe/` knows nothing about time: it draws a planet, takes markers,
     regions and arcs, and asks the caller for the instant to light it by. That line is what
     lets the same engine carry route arcs or a coloured region set without a fork.
-  - **Pure and shared:** `camera.ts` (the orthographic projection, checked against
-    `d3-geo`), `controller.ts` (rotation, inertia, ambient spin, pinch, fly-to — a state
+  - **One pinhole camera for every globe.** The hero, `/tools/zoned-earth/` and the `/dox` rail
+    share one gnomonic camera at geostationary distance, `P` = 6.61 Earth radii (altitude 35,786
+    km, from Kepler's third law with GM = 3.986004418 x 10^14 m^3 s^-2 and a sidereal day of
+    86,164.0905 s, IERS Conventions 2010; equatorial radius 6,378.137 km, the same table). The
+    Earth subtends 8.7 degrees and the visible cap is 81.3. No orthographic path and no camera
+    distance option exist, so one projection path is tested once, in the camera, the shaders and the
+    fallback. A point projects by `f * y / (P - x)`; a direction at infinity (a star, the Sun) by its
+    vanishing point, drawable only when it lies in front of the camera. Under one pinhole a city's
+    line to the Sun runs along the screen line from the city to the drawn Sun (Snyder, USGS PP 1395,
+    section 22: a great circle is a line under the gnomonic projection), at the centre, near the edge
+    and at full zoom; `sky-math.test.ts` proves it through the shipped code; `sky-one-camera`
+    proves the sky and the globe receive the same centre and radius, and `sky-from-black` and
+    `sky-follows-drag` the same rotation. The drag gain stays
+    90 degrees per radius, a feel constant.
+  - **Pure and shared:** `pinhole.ts` (the one camera: `P` from the geostationary altitude and the equatorial radius, and
+    `f = radius * sqrt(P^2 - 1)`, so the silhouette lands at `radius`; the shaders, the fallback and the
+    sky take their constants from it), `camera.ts` (projection and visibility, delegating to it and checked
+    from first principles), `controller.ts` (rotation, inertia, ambient spin, pinch, fly-to — a state
     machine that takes its timestamps as arguments, so both renderers feel identical and a
     fake clock drives it in tests), `geometry.ts`, `triangulate.ts`, `sun.ts`, `shading.ts`.
   - **Choosing a backend.** The engine asks for a device *before* touching a canvas, since
@@ -2934,7 +2998,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `import()` in `engine.ts`.
   - Features: drag with inertia, pinch and wheel zoom over `[1, 5]`, zoom buttons,
     `land-110m`, a day/night terminator from the current instant, and an arrow-key
-    `listbox` for zone selection. The ambient spin eases in from rest over 2 s every time
+    `listbox` for zone selection. The ambient spin, 2 degrees a second (a turn in 3 minutes: the stars move
+    about 6.5 times as far as the Earth's surface, so a faster spin makes them jump between draws), eases in from rest over 2 s every time
     it starts — on mount and after any interruption — and never begins at full speed. While the spin
     alone moves the globe the engine draws at most every 30 ms (the Earth fills the landing hero, and a
     draw at every vsync saturated a machine without GPU raster); any other motion draws every frame. The
@@ -3264,7 +3329,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     by hand (`uv run --with shapely python scripts/prepare-*-boundaries.py`), then
     `pnpm exec oxfmt --write` on the output.
 - **Data credits (`CORE-88`).** The credit sits on the drawing it credits: an info button that
-  opens a small popup, one row per source, label left, credit right. Nothing else on the page
+  opens a small popup, one source per entry: its label on one line, its credit under it. Nothing else on the page
   names the sources, and no page carries a footer button or frontmatter list.
   - **One renderer.** `renderDataCreditsHtml(credits, { id, placement })` in
     `src/lib/data-credits.ts` returns the native `<button popovertarget>` and its `popover`

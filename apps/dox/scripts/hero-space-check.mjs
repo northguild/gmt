@@ -19,8 +19,9 @@
  * - zoom: at maximum the globe fills the hero, edge to edge, outside the copy;
  * - no sideways scroll from 320 to 2560 px; a steady frame rate; no frames off screen;
  * - the night sky: the credit names the star catalogue and its licence; the stars are the real sky
- *   for the page's clock and the globe's camera (`data-sky-view`); at rest the sky is not
- *   redrawn; a 60 px drag lowers the view's right ascension by the longitude the globe turned and
+ *   for the page's clock and the globe's camera (`data-sky-view`); the sky and the globe draw from
+ *   one camera, the same centre and radius at two zooms (`data-sky-camera`); at rest, with the clock
+ *   held, the sky is not redrawn; a 20 px drag lowers the view's right ascension by the longitude the globe turned and
  *   moves the stars left; the ambient spin redraws it at most once a frame, at a median draw of
  *   2 ms and a median frame of 17.5 ms; under reduced motion nothing animates, no frame is
  *   requested and no meteor falls, though the reader's own drag still carries the stars; no
@@ -1998,7 +1999,7 @@ const skyReading = (page) =>
 /** The shortest signed difference between two angles, degrees, in (-180, 180]. */
 const angleGap = (a, b) => ((((a - b) % 360) + 540) % 360) - 180;
 
-/** The stars canvas's bright cores (alpha of 200 or more), as [x, y] pairs in canvas pixels. */
+/** The stars canvas's bright pixels (alpha of 70 or more: the cores and inner halos of all but the faintest stars, so the drag vote has dozens of stars to count), as [x, y] pairs in canvas pixels. */
 const brightCores = (page) =>
   page.evaluate((sel) => {
     const canvas = document.querySelector(sel);
@@ -2007,23 +2008,23 @@ const brightCores = (page) =>
     const cores = [];
     for (let y = 0; y < height; y++)
       for (let x = 0; x < width; x++)
-        if (data[(y * width + x) * 4 + 3] >= 200) cores.push([x, y]);
+        if (data[(y * width + x) * 4 + 3] >= 70) cores.push([x, y]);
     return { width, height, cores };
   }, SKY_STARS);
 
 /**
  * The shift (dx, dy) most of the stars made between two draws: every bright pixel of `before` votes
- * for its offset to every bright pixel of `after` (8 px bins, within a window), and the most
- * voted bin wins. The shift is not quite rigid (the projection bends it), so a bin, not a pixel.
+ * for its offset to every bright pixel of `after` (24 px bins, within a window), and the most
+ * voted bin wins. The shift is not rigid (a 20 px drag moves the stars at the edge of the 24 degree field some tens of pixels more than those at its centre), so a bin wide enough to hold them, not a pixel.
  */
 function bestShift(before, after, sign = 0) {
-  const BIN = 8;
+  const BIN = 24;
   const votes = new Map();
   for (const [x, y] of before.cores)
     for (const [u, v] of after.cores) {
       const dx = u - x;
       const dy = v - y;
-      /* A 60 px drag turns the sky about 12 degrees (about 110 px): a far offset is a coincidence among few bright stars, not a shift. */
+      /* A 20 px drag turns the sky about 4.8 degrees (about 200 px at the centre, a little more toward the edge): a far offset is a coincidence among few bright stars, not a shift. */
       if (Math.abs(dx) > 400 || Math.abs(dy) > 200) continue;
       if (sign !== 0 && Math.sign(dx) !== sign) continue;
       const key = `${Math.round(dx / BIN)},${Math.round(dy / BIN)}`;
@@ -2181,17 +2182,17 @@ async function checkSky(browser) {
   const heldAt = await skyReading(page);
   await startSkyRecorder(page);
   await page.mouse.down();
-  await page.mouse.move(c.x + 60, c.y, { steps: 30 });
+  await page.mouse.move(c.x + 20, c.y, { steps: 12 });
   await page.waitForTimeout(300);
   const dragged = await skyReading(page);
   const drag = await stopSkyRecorder(page);
-  const turn = (60 * 90) / disc;
+  const turn = (20 * 90) / disc;
   const lowered = angleGap(heldAt.ra, dragged.ra);
   check(
     Math.abs(lowered - turn) <= 0.5,
     "sky-follows-drag",
     t,
-    `a 60 px drag turned the globe ${r1(turn)} degrees and lowered the view's right ascension by ${r1(lowered)}`,
+    `a 20 px drag turned the globe ${r1(turn)} degrees and lowered the view's right ascension by ${r1(lowered)}`,
     WIDE,
   );
   const after = await brightCores(page);
@@ -2205,7 +2206,7 @@ async function checkSky(browser) {
       left.hits >= before.cores.length / 10,
     "sky-follows-drag",
     t,
-    `a 60 px drag right: best leftward shift ${left.dx} px with ${left.hits} votes, best rightward ${right.dx} px with ${right.hits}, from ${before.cores.length} bright pixels (they must move left)`,
+    `a 20 px drag right: best leftward shift ${left.dx} px with ${left.hits} votes, best rightward ${right.dx} px with ${right.hits}, from ${before.cores.length} bright pixels (they must move left)`,
     WIDE,
   );
   check(
@@ -2273,25 +2274,196 @@ async function checkSky(browser) {
   measured++;
 }
 
+/** The sky's camera (`data-sky-camera`) and the Earth's silhouette on the globe canvas, as the page draws them now. */
+function readCameras(page) {
+  return page.evaluate(
+    ([sky, layer, hit]) => {
+      const stars = document.querySelector(sky);
+      const [heroX, heroY, radius] = stars.dataset.skyCamera
+        .split(" ")
+        .map(Number);
+      const canvas = document.querySelector(`${layer} > canvas`);
+      const box = canvas.getBoundingClientRect();
+      /* The sky's camera is in the sky layer's pixels; everything below is in the globe canvas's. */
+      const skyBox = stars.getBoundingClientRect();
+      const cx = heroX + skyBox.left - box.left;
+      const cy = heroY + skyBox.top - box.top;
+      const k = canvas.width / box.width;
+      const data = canvas
+        .getContext("2d")
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      const target = document.querySelector(hit).getBoundingClientRect();
+      const from = {
+        x: target.left + target.width / 2 - box.left,
+        y: target.top + target.height / 2 - box.top,
+      };
+      const alphaAt = (x, y) => {
+        const px = Math.round(x * k);
+        const py = Math.round(y * k);
+        if (px < 0 || py < 0 || px >= canvas.width || py >= canvas.height)
+          return null;
+        return data[(py * canvas.width + px) * 4 + 3];
+      };
+      /* The atmosphere is translucent and the sphere is too, so no alpha level tells them apart. The silhouette is
+         where the alpha falls fastest along a ray, between 0.9 and 1.1 of the hit box's radius. */
+      const rim = [];
+      let outside = 0;
+      for (let ray = 0; ray < 16; ray++) {
+        const angle = (ray / 16) * 2 * Math.PI;
+        let steepest = { drop: 0, d: 0 };
+        let last = null;
+        let left = false;
+        for (let d = target.width * 0.45; d <= target.width * 0.55; d += 0.5) {
+          const a = alphaAt(
+            from.x + d * Math.cos(angle),
+            from.y + d * Math.sin(angle),
+          );
+          if (a === null) {
+            outside++;
+            left = true;
+            break;
+          }
+          if (last !== null && last - a > steepest.drop)
+            steepest = { drop: last - a, d };
+          last = a;
+        }
+        /* A ray that leaves the canvas before the window ends has not seen the whole edge, so it counts for nothing. */
+        if (!left && steepest.drop > 0)
+          rim.push({
+            x: from.x + (steepest.d - 0.25) * Math.cos(angle),
+            y: from.y + (steepest.d - 0.25) * Math.sin(angle),
+          });
+      }
+      /* Least-squares circle through the rim points (Kasa fit). */
+      const n = rim.length;
+      const mean = (f) => rim.reduce((sum, p) => sum + f(p), 0) / n;
+      const mx = mean((p) => p.x);
+      const my = mean((p) => p.y);
+      let suu = 0;
+      let suv = 0;
+      let svv = 0;
+      let suuu = 0;
+      let svvv = 0;
+      let suvv = 0;
+      let svuu = 0;
+      for (const p of rim) {
+        const u = p.x - mx;
+        const v = p.y - my;
+        suu += u * u;
+        suv += u * v;
+        svv += v * v;
+        suuu += u * u * u;
+        svvv += v * v * v;
+        suvv += u * v * v;
+        svuu += v * u * u;
+      }
+      const det = suu * svv - suv * suv;
+      const uc = (0.5 * (suuu + suvv) * svv - 0.5 * (svvv + svuu) * suv) / det;
+      const vc = (0.5 * (svvv + svuu) * suu - 0.5 * (suuu + suvv) * suv) / det;
+      /* How far each silhouette point lies from the sky's circle, in the canvas's own pixels. */
+      const offs = rim
+        .map((p) => Math.abs(Math.hypot(p.x - cx, p.y - cy) - radius))
+        .sort((a, b) => a - b);
+      /* The median, and the worst but one: one ray in sixteen can snap to a coastline. */
+      const residual = offs[Math.floor(offs.length / 2)];
+      const allButOne = offs[offs.length - 2] ?? Infinity;
+      return {
+        sky: { cx, cy, radius },
+        residual,
+        allButOne,
+        fit: {
+          cx: mx + uc,
+          cy: my + vc,
+          radius: Math.sqrt(uc * uc + vc * vc + (suu + svv) / n),
+          points: n,
+          outside,
+        },
+        box: { halfWidth: target.width / 2, halfHeight: target.height / 2 },
+      };
+    },
+    [SKY_STARS, `${LAYER}`, HIT],
+  );
+}
+
+/** The sky and the globe draw from one camera: the same centre and radius (so the same focal length), at two zooms. */
+async function checkSkyCamera(browser) {
+  const t = "hero › one camera";
+  const pin = SKY_PINS.half;
+  const { page, context, problems } = await open(browser, WIDE, {
+    query: "?globe=canvas2d",
+    reduce: true,
+    fixed: pin.at,
+    context: { timezoneId: pin.zone },
+  });
+  for (const problem of problems) fail("page-error", "page", problem, WIDE);
+  for (const zoom of ["1x", "one step in"]) {
+    if (zoom !== "1x") {
+      await page.locator(ZOOM_IN).click();
+      await page.waitForTimeout(SETTLE);
+    }
+    const { sky, fit, box, residual, allButOne } = await readCameras(page);
+    console.log(
+      `     ${zoom}: sky ${r1(sky.cx)}, ${r1(sky.cy)}, radius ${r1(sky.radius)}; globe ${r1(fit.cx)}, ${r1(fit.cy)}, radius ${r1(fit.radius)} from ${fit.points} points, a median of ${r1(residual)} px off the sky's circle and all but one within ${r1(allButOne)}; hit box half-width ${r1(box.halfWidth)}`,
+    );
+    check(
+      zoom === "1x" ? fit.points === 16 : fit.points >= 6,
+      "sky-one-camera",
+      t,
+      `at ${zoom} only ${fit.points} rays found the whole of the Earth's silhouette in the canvas (${fit.outside} left it)`,
+      WIDE,
+    );
+    /* In frame the silhouette is fitted freely and its points held to the sky's circle by their median. Zoomed in,
+       most of it is off the canvas and an arc cannot fix a centre, so every point but one must lie on the sky's circle. */
+    check(
+      zoom === "1x"
+        ? residual <= 1 &&
+            Math.abs(sky.cx - fit.cx) <= 1 &&
+            Math.abs(sky.cy - fit.cy) <= 1 &&
+            Math.abs(sky.radius - fit.radius) <= 1.5
+        : allButOne <= 1,
+      "sky-one-camera",
+      t,
+      `at ${zoom} the sky's camera is ${r1(sky.cx)}, ${r1(sky.cy)}, radius ${r1(sky.radius)}; the globe's silhouette is ${r1(fit.cx)}, ${r1(fit.cy)}, radius ${r1(fit.radius)} and its points lie a median of ${r1(residual)} px off the sky's circle, all but one within ${r1(allButOne)} px (limits 1 px for the centre, 1.5 px for the radius and 1 px for the median offset in frame, 1 px for all points but one zoomed in)`,
+      WIDE,
+    );
+    check(
+      Math.abs(box.halfWidth - sky.radius) <= 0.5,
+      "sky-one-camera",
+      t,
+      `at ${zoom} the hit box is ${r1(box.halfWidth)} px from its middle to its edge and the sky's radius is ${r1(sky.radius)} (limit 0.5)`,
+      WIDE,
+    );
+  }
+  await context.close();
+  measured++;
+}
+
 /**
- * Instants and zones for the Sun and Moon, found with `sky-math` for each zone's starting camera:
- * a half Moon on screen, clear of the Earth; the Sun 34 degrees from it,
- * just inside the Earth's rim, so its glare spills past the edge; the Sun 40 degrees out, in the
- * clear.
+ * Instants and zones for the Sun and Moon, found with `sky-math` for each zone's start camera under
+ * the one camera: a half Moon on screen, clear of the Earth; the Sun just inside the Earth's rim,
+ * so its glare spills past the edge; the Sun in the clear. The hero shows about 24 degrees of sky
+ * around the point behind the Earth, at declination minus the start latitude, so these use a
+ * low-latitude zone: from Europe the Sun never comes into view at the start camera.
  */
 const SKY_PINS = {
   half: {
-    zone: "Europe/Berlin",
-    at: 1_796_127_600_000,
+    zone: "Africa/Nairobi",
+    at: 1_796_136_600_000,
     /* The screen direction from the Moon toward the Sun along the great circle, unit length: a 0.005 step projected by sky-math. */
-    toSun: [-0.489, 0.872],
+    toSun: [-0.935, 0.355],
   },
-  /* The drag check: Berlin's start camera at a night hour, with many bright stars off the disc. */
-  drag: { zone: "Europe/Berlin", at: 1_794_000_000_000 },
-  rim: { zone: "Africa/Nairobi", at: 1_794_252_000_000 },
-  clear: { zone: "Europe/Berlin", at: 1_794_000_000_000 },
-  /* At a 1440 × 900 window, with the intro centred in the stage, the Sun's track crosses the eyebrow, title, tagline and first button; the copy check walks it along that track. */
-  glare: { zone: "Europe/Berlin", at: 1_804_098_000_000 },
+  /* The drag check: Nairobi's start camera at a night hour, with Orion's bright stars off the disc. */
+  drag: { zone: "Africa/Nairobi", at: 1_807_749_900_000 },
+  rim: { zone: "Africa/Nairobi", at: 1_804_024_200_000 },
+  clear: { zone: "Africa/Nairobi", at: 1_803_935_100_000 },
+  /* At a 1440 x 900 window, with the intro centred in the stage, one instant per copy part puts the Sun's centre on it (within the part's limit); the copy check measures each part at its own instant. */
+  glare: {
+    zone: "Africa/Nairobi",
+    eyebrow: 1_820_607_600_000,
+    title: 1_806_266_100_000,
+    tagline: 1_805_748_600_000,
+    button: 1_805_229_300_000,
+  },
 };
 
 /** The pixels of the stars canvas in a square of `half` pixels each way around a point, as [r, g, b, a] lists. */
@@ -2423,18 +2595,18 @@ async function checkSkyReveal(browser) {
     `at ready the sky had ${log.ready?.draws} draw(s) and opacity ${log.ready?.band}/${log.ready?.stars}, it must be exactly 1 draw with the fade not begun`,
     WIDE,
   );
-  // The view drawn is the globe's: at its start rotation (a Berlin visitor looks down on Berlin), for the pinned clock.
+  // The view drawn is the globe's: at its start rotation (a Nairobi visitor looks down on Nairobi, 1.2833 degrees south and 36.8167 east), for the pinned clock.
   const [ra, dec, instant] = (log.ready?.view ?? "0 0 0")
     .split(" ")
     .map(Number);
-  const expectRa = (siderealAt(pin.at) + 180 + 13.405 + 360) % 360;
+  const expectRa = (siderealAt(pin.at) + 180 + 36.8167 + 360) % 360;
   check(
     Math.abs(angleGap(ra, expectRa)) <= 0.05 &&
-      Math.abs(dec + 52.52) <= 0.05 &&
+      Math.abs(dec - 1.2833) <= 0.05 &&
       instant === pin.at,
     "sky-from-black",
     t,
-    `the first draw showed ${ra} ${dec} at ${instant}, the globe's own start view is ${r1(expectRa)} -52.52 at ${pin.at}`,
+    `the first draw showed ${ra} ${dec} at ${instant}, the globe's own start view is ${r1(expectRa)} 1.2833 at ${pin.at}`,
     WIDE,
   );
   const faded = await page.evaluate(() => ({
@@ -2848,6 +3020,18 @@ async function checkEntrance(browser) {
     `the location card grew off its pin: ${growing.map((s) => `${s.at} ms centre ${r1(s.centre)} pin ${r1(s.pin)}`).join("; ")}`,
     WIDE,
   );
+  /* The entrance ends 3 s after it runs, and it runs only once the sky and globe are ready: on a
+     busy machine that comes after the settle wait, so wait for it to end (a readiness condition;
+     one that never ends still fails below). */
+  await page
+    .waitForFunction(
+      () => document.documentElement.dataset.entrance !== "run",
+      null,
+      {
+        timeout: 15_000,
+      },
+    )
+    .catch(() => {});
   const resting = await page.evaluate(() => ({
     entrance: document.documentElement.dataset.entrance,
     running: document
@@ -3153,47 +3337,58 @@ async function checkSkyBodies(browser) {
     `the page clock was not pinned: the sky shows ${half.view}`,
     WIDE,
   );
-  const disc = await skyPixels(half.page, half.moon.x, half.moon.y, 6);
-  const lit = disc.filter(([r, g, b, a]) => a > 180 && r + g + b > 600);
-  const body = disc.filter(([, , , a]) => a > 5);
-  check(
-    Number.isFinite(half.moon.x) &&
-      lit.length >= body.length * 0.25 &&
-      lit.length <= body.length * 0.75,
-    "sky-bodies",
-    t,
-    `at a half Moon (${half.lit.toFixed(2)} lit) ${lit.length} of ${body.length} disc pixels are bright, limit a quarter to three quarters`,
-    WIDE,
-  );
-  // Where the lit pixels sit against the whole disc, so the rounding of the sample cancels.
-  const side = Math.sqrt(disc.length);
-  const centroid = (keep) => {
-    let n = 0;
-    let x = 0;
-    let y = 0;
-    disc.forEach((pixel, i) => {
-      if (!keep(pixel)) return;
-      n++;
-      x += i % side;
-      y += Math.floor(i / side);
-    });
-    return { x: n ? x / n : 0, y: n ? y / n : 0 };
-  };
-  const brightAt = centroid(([r, g, b, a]) => a > 180 && r + g + b > 600);
-  const bodyAt = centroid(([, , , a]) => a > 5);
-  const mx = brightAt.x - bodyAt.x;
-  const my = brightAt.y - bodyAt.y;
-  const [ux, uy] = SKY_PINS.half.toSun;
-  const along = (mx * ux + my * uy) / (Math.hypot(mx, my) || 1);
-  check(
-    along > 0.5,
-    "sky-bodies",
-    t,
-    `the lit side of the Moon points ${r1((Math.acos(Math.max(-1, Math.min(1, along))) * 180) / Math.PI)} degrees off the Sun's direction, limit 60`,
-    WIDE,
-  );
-  await half.context.close();
-  measured++;
+  if (!Number.isFinite(half.moon.x) || !Number.isFinite(half.moon.y)) {
+    fail(
+      "sky-bodies",
+      t,
+      `the pinned half Moon is not on screen (the sky reports ${half.moon.x}, ${half.moon.y}), so its lit side could not be read`,
+      WIDE,
+    );
+    await half.context.close();
+    measured++;
+  } else {
+    const disc = await skyPixels(half.page, half.moon.x, half.moon.y, 6);
+    const lit = disc.filter(([r, g, b, a]) => a > 180 && r + g + b > 600);
+    const body = disc.filter(([, , , a]) => a > 5);
+    check(
+      Number.isFinite(half.moon.x) &&
+        lit.length >= body.length * 0.25 &&
+        lit.length <= body.length * 0.75,
+      "sky-bodies",
+      t,
+      `at a half Moon (${half.lit.toFixed(2)} lit) ${lit.length} of ${body.length} disc pixels are bright, limit a quarter to three quarters`,
+      WIDE,
+    );
+    // Where the lit pixels sit against the whole disc, so the rounding of the sample cancels.
+    const side = Math.sqrt(disc.length);
+    const centroid = (keep) => {
+      let n = 0;
+      let x = 0;
+      let y = 0;
+      disc.forEach((pixel, i) => {
+        if (!keep(pixel)) return;
+        n++;
+        x += i % side;
+        y += Math.floor(i / side);
+      });
+      return { x: n ? x / n : 0, y: n ? y / n : 0 };
+    };
+    const brightAt = centroid(([r, g, b, a]) => a > 180 && r + g + b > 600);
+    const bodyAt = centroid(([, , , a]) => a > 5);
+    const mx = brightAt.x - bodyAt.x;
+    const my = brightAt.y - bodyAt.y;
+    const [ux, uy] = SKY_PINS.half.toSun;
+    const along = (mx * ux + my * uy) / (Math.hypot(mx, my) || 1);
+    check(
+      along > 0.5,
+      "sky-bodies",
+      t,
+      `the lit side of the Moon points ${r1((Math.acos(Math.max(-1, Math.min(1, along))) * 180) / Math.PI)} degrees off the Sun's direction, limit 60`,
+      WIDE,
+    );
+    await half.context.close();
+    measured++;
+  }
 
   // The Sun just behind the Earth: its glare spills past the rim on its own side only.
   const rim = await pinnedSky(browser, SKY_PINS.rim);
@@ -3205,52 +3400,63 @@ async function checkSkyBodies(browser) {
     `the pinned Sun is ${r1(away)} px from the Earth's centre, not inside its ${r1(rim.earth.radius)} px disc`,
     WIDE,
   );
-  const u = {
-    x: (rim.sun.x - rim.earth.x) / away,
-    y: (rim.sun.y - rim.earth.y) / away,
-  };
-  const reach = rim.earth.radius + 6;
-  const strongest = async (sign) =>
-    Math.max(
-      ...(
-        await skyPixels(
-          rim.page,
-          rim.earth.x + sign * u.x * reach,
-          rim.earth.y + sign * u.y * reach,
-          1.5,
-        )
-      ).map(([, , , a]) => a),
+  if (Number.isFinite(away)) {
+    const u = {
+      x: (rim.sun.x - rim.earth.x) / away,
+      y: (rim.sun.y - rim.earth.y) / away,
+    };
+    const reach = rim.earth.radius + 6;
+    const strongest = async (sign) =>
+      Math.max(
+        ...(
+          await skyPixels(
+            rim.page,
+            rim.earth.x + sign * u.x * reach,
+            rim.earth.y + sign * u.y * reach,
+            1.5,
+          )
+        ).map(([, , , a]) => a),
+      );
+    const near = await strongest(1);
+    const far = await strongest(-1);
+    check(
+      near >= 20 && near > far + 15,
+      "sky-bodies",
+      t,
+      `the glare is ${near}/255 past the rim on the Sun's side and ${far}/255 on the far side; it must show on the first and not the second`,
+      WIDE,
     );
-  const near = await strongest(1);
-  const far = await strongest(-1);
-  check(
-    near >= 20 && near > far + 15,
-    "sky-bodies",
-    t,
-    `the glare is ${near}/255 past the rim on the Sun's side and ${far}/255 on the far side; it must show on the first and not the second`,
-    WIDE,
-  );
+  }
   await rim.context.close();
   measured++;
 
   // The Sun in the clear is a near-white core.
   const clear = await pinnedSky(browser, SKY_PINS.clear);
-  const core = await skyPixels(clear.page, clear.sun.x, clear.sun.y, 1);
-  const brightest = core.reduce(
-    (a, b) => (b[0] + b[1] + b[2] > a[0] + a[1] + a[2] ? b : a),
-    [0, 0, 0, 0],
-  );
-  check(
-    Number.isFinite(clear.sun.x) &&
-      brightest[3] > 200 &&
-      brightest[0] > 235 &&
-      brightest[1] > 235 &&
-      brightest[2] > 215,
-    "sky-bodies",
-    t,
-    `the Sun's core is rgba(${brightest.join(", ")}) at ${r1(clear.sun.x)}, ${r1(clear.sun.y)}; it must be near-white`,
-    WIDE,
-  );
+  if (!Number.isFinite(clear.sun.x) || !Number.isFinite(clear.sun.y)) {
+    fail(
+      "sky-bodies",
+      t,
+      `the pinned Sun is not on screen (the sky reports ${clear.sun.x}, ${clear.sun.y}), so its core could not be read`,
+      WIDE,
+    );
+  } else {
+    const core = await skyPixels(clear.page, clear.sun.x, clear.sun.y, 1);
+    const brightest = core.reduce(
+      (a, b) => (b[0] + b[1] + b[2] > a[0] + a[1] + a[2] ? b : a),
+      [0, 0, 0, 0],
+    );
+    check(
+      Number.isFinite(clear.sun.x) &&
+        brightest[3] > 200 &&
+        brightest[0] > 235 &&
+        brightest[1] > 235 &&
+        brightest[2] > 215,
+      "sky-bodies",
+      t,
+      `the Sun's core is rgba(${brightest.join(", ")}) at ${r1(clear.sun.x)}, ${r1(clear.sun.y)}; it must be near-white`,
+      WIDE,
+    );
+  }
   await clear.context.close();
   measured++;
 }
@@ -3270,20 +3476,18 @@ const contrastOf = (a, b) => {
 };
 
 /**
- * The copy over the Sun's glare, at the default motion the reader gets. The Sun is walked across the
- * copy by moving the page's clock (the sky redraws on a visibility change) while the pointer holds
- * the ambient spin off, so the worst case is measured, not a pinned one: for every letter pixel the contrast against the same frame with the
- * text hidden (the halo stays), taking the lowest over the walk. The walk must carry the Sun's centre
- * over the title and the tagline, within a row of the eyebrow, and to within 60 px of the first button, or it measured
- * nothing.
+ * The copy over the Sun's glare, at the default motion the reader gets. Each part of the copy has an
+ * instant of its own (`SKY_PINS.glare`) at which the Sun's centre lies within the part's limit of
+ * it. The page's clock is moved to each in turn (the sky redraws on a visibility change) while the
+ * pointer holds the ambient spin off. At every instant, for every letter pixel, the contrast against
+ * the same frame with the text hidden (the halo stays) is taken, and the lowest over the four
+ * instants is the result. A part whose Sun is farther than its limit measured nothing.
  */
-const COPY_WALK = { from: -5, to: 5, step: 0.125 };
 const COPY_PARTS = [
-  /* A step of the walk moves the Sun about 10 px, so the 12 px eyebrow is reached within one row of it. */
   { name: "eyebrow", selector: ".gmt-hero-eyebrow", within: [12] },
   { name: "title", selector: "h1[data-page-title]", within: [0] },
   { name: "tagline", selector: ".gmt-hero-tagline", within: [0] },
-  /* Only the first button lies on the Sun's track; the others are checked wherever the glare falls. */
+  /* Only the first button has an instant of its own; the others are checked wherever the glare falls. */
   {
     name: "button",
     selector: ".gmt-hero-actions .sl-link-button",
@@ -3294,7 +3498,7 @@ const COPY_PARTS = [
 async function checkSkyCopy(browser) {
   const t = "hero › sun behind the copy";
   const opened = await open(browser, WIDE, {
-    fixed: SKY_PINS.glare.at,
+    fixed: SKY_PINS.glare.eyebrow,
     context: { timezoneId: SKY_PINS.glare.zone },
   });
   const { page, context } = opened;
@@ -3304,7 +3508,7 @@ async function checkSkyCopy(browser) {
         document.querySelector("[data-sky-canvas='stars']").dataset.skyDraws,
       ),
     );
-  /* Hovering the Earth holds the ambient spin off, so the camera stays where it is for the walk. */
+  /* Hovering the Earth holds the ambient spin off, so the camera stays where it is between the pinned instants. */
   const earth = await hitBox(page);
   await page.mouse.move(earth.x + earth.width / 2, earth.y + earth.height / 2);
   await page.waitForTimeout(600);
@@ -3313,6 +3517,7 @@ async function checkSkyCopy(browser) {
       [...document.querySelectorAll(selector)].map((el, n) => {
         const box = el.getBoundingClientRect();
         return {
+          base: name,
           name: `${name} ${n + 1}`,
           within: within[n] ?? Infinity,
           color: getComputedStyle(el).color,
@@ -3348,9 +3553,8 @@ async function checkSkyCopy(browser) {
   await hide.evaluate((el) => (el.disabled = true));
   const worst = parts.map(() => ({ ratio: Infinity, glyphs: 0 }));
   const nearest = parts.map(() => Infinity);
-  for (let k = COPY_WALK.from; k <= COPY_WALK.to + 1e-9; k += COPY_WALK.step) {
-    await context.clock.setFixedTime(SKY_PINS.glare.at + k * 3_600_000);
-    const before = await draws();
+  for (const base of COPY_PARTS.map((part) => part.name)) {
+    await context.clock.setFixedTime(SKY_PINS.glare[base]);
     await page.evaluate(() => {
       for (const hidden of [true, false]) {
         Object.defineProperty(document, "hidden", {
@@ -3360,12 +3564,15 @@ async function checkSkyCopy(browser) {
         document.dispatchEvent(new Event("visibilitychange"));
       }
     });
+    /* The sky has drawn this instant when its view shows it; the first instant is the one the page opened at, which needs no redraw. */
     await page.waitForFunction(
-      ([d]) =>
+      ([at]) =>
         Number(
-          document.querySelector("[data-sky-canvas='stars']").dataset.skyDraws,
-        ) > d,
-      [before],
+          document
+            .querySelector("[data-sky-canvas='stars']")
+            .dataset.skyView.split(" ")[2],
+        ) === at,
+      [SKY_PINS.glare[base]],
       { timeout: 5000 },
     );
     /* Both frames must come from one draw, or the stars' own motion would read as a letter. */
@@ -3386,10 +3593,12 @@ async function checkSkyCopy(browser) {
       const [x, y] = el.dataset.skyBodies.split(" ").map(Number);
       return { x: x + canvas.left, y: y + canvas.top };
     });
+    /* A pinned Sun that is not drawn has no glare to test: the part's distance stays infinite and fails below. */
+    if (!Number.isFinite(sun.x)) continue;
     parts.forEach((part, n) => {
       const dx = Math.max(part.x - sun.x, 0, sun.x - (part.x + part.width));
       const dy = Math.max(part.y - sun.y, 0, sun.y - (part.y + part.height));
-      nearest[n] = Math.min(nearest[n], Math.hypot(dx, dy));
+      if (part.base === base) nearest[n] = Math.hypot(dx, dy);
       const [r, g, b] = part.color.match(/\d+(\.\d+)?/g).map(Number);
       let low = Infinity;
       let glyphs = 0;
@@ -3421,7 +3630,7 @@ async function checkSkyCopy(browser) {
       nearest[n] <= part.within,
       "sky-copy",
       t,
-      `the Sun came ${r1(nearest[n])} px from the ${part.name}, so its glare was not behind it (limit ${part.within} px)`,
+      `the Sun was ${r1(nearest[n])} px from the ${part.name} at its pinned instant, so its glare was not behind it (limit ${part.within} px)`,
       WIDE,
     );
     check(
@@ -3438,7 +3647,11 @@ async function checkSkyCopy(browser) {
 
 async function checkSkyReduced(browser) {
   const t = "hero › night sky, reduced motion";
-  const { page, context } = await open(browser, WIDE, { reduce: true });
+  /* The clock is held: the sky redraws as the sidereal clock turns the view, about once in 2.4 s on a running clock, and that is not motion. What is checked is that nothing else draws. */
+  const { page, context } = await open(browser, WIDE, {
+    reduce: true,
+    fixed: SKY_PINS.half.at,
+  });
   const reading = await skyReading(page);
   await page.waitForTimeout(4000);
   check(
@@ -4812,6 +5025,7 @@ async function main() {
       ["touch", () => checkTouch(browser)],
       ["night sky sources", () => checkSkySources()],
       ["night sky", () => checkSky(browser)],
+      ["one camera", () => checkSkyCamera(browser)],
       ["sun and moon", () => checkSkyBodies(browser)],
       ["sun behind the copy", () => checkSkyCopy(browser)],
       ["sky from black", () => checkSkyReveal(browser)],

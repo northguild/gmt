@@ -46,6 +46,10 @@ const GATE = "table-fit";
 const HEIGHT = 900;
 const PHONE = 390;
 const AT_A_TIME = 8;
+/* A readiness condition, not a budget: with eight pages loading at once, a CI runner takes longer
+   than Playwright's default 30 s to load the largest page (the changelog, about 28,000 elements),
+   and the check measures the page, not how fast it loaded. */
+const LOAD_TIMEOUT = 120_000;
 const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
 const DIST = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -211,7 +215,10 @@ async function checkCells(browser, browserName, pagePath, cellWidth) {
   try {
     await blockOffSite(context, base);
     const page = await context.newPage();
-    await page.goto(base + pagePath, { waitUntil: "load" });
+    await page.goto(base + pagePath, {
+      waitUntil: "load",
+      timeout: LOAD_TIMEOUT,
+    });
     await settle(page);
     const cells = await page.evaluate(measureCells);
     for (const c of cells) {
@@ -252,7 +259,10 @@ for (const browserName of browsers) {
       try {
         await blockOffSite(context, base);
         const page = await context.newPage();
-        const res = await page.goto(base + pagePath, { waitUntil: "load" });
+        const res = await page.goto(base + pagePath, {
+          waitUntil: "load",
+          timeout: LOAD_TIMEOUT,
+        });
         if (!res || res.status() !== 200) {
           throw new Error(
             `the page answered HTTP ${res ? res.status() : "none"}, not 200`,

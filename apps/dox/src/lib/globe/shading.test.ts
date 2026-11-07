@@ -11,6 +11,7 @@ import {
   paintShading,
   type ShadingInput,
 } from "./shading";
+import { G, P } from "./pinhole";
 
 const TWILIGHT_END = Math.sin((18 * Math.PI) / 180);
 
@@ -244,5 +245,129 @@ describe("paintShading", () => {
       }
     }
     expect(Math.abs(sum / 16 - 0.26 * 255)).toBeLessThan(0.5);
+  });
+});
+
+describe("paintShading on the pinhole", () => {
+  const RADIUS = 400;
+  const SIZE_BIG = 2 * RADIUS + 1;
+  const TEN = (10 * Math.PI) / 180;
+
+  /**
+   * Offset in pixels from the centre where the elevation on the centre row crosses zero.
+   * With no day wash only the night wash paints: alpha is `smoothstep(0, -TWILIGHT_END, e)`, which
+   * is exactly 0 for e >= 0 but rounds to 0 a few pixels before that. So read the elevation back
+   * at two pixels away from the flat ends of the ramp: the first with alpha of at least 120 of 255,
+   * and the last beyond it with alpha still at least 30 (8-bit rounding costs under a quarter
+   * pixel there). Then extend the straight line through them to zero.
+   */
+  function terminatorOffset(sun: ShadingInput["sun"]): number {
+    const pixels = new Uint8ClampedArray(SIZE_BIG * SIZE_BIG * 4);
+    paintShading(pixels, {
+      width: SIZE_BIG,
+      height: SIZE_BIG,
+      cx: RADIUS + 0.5,
+      cy: RADIUS + 0.5,
+      radius: RADIUS,
+      sun,
+      day: [255, 0, 0],
+      night: [0, 0, 255],
+      dayAlpha: 0,
+      nightAlpha: 1,
+      hazeAlpha: 0,
+      dither: false,
+    });
+    const alphaAt = (x: number) => pixels[(RADIUS * SIZE_BIG + x) * 4 + 3];
+    /* Invert the smoothstep: t such that t²(3 − 2t) = a. */
+    const elevationAt = (x: number) => {
+      const a = alphaAt(x) / 255;
+      const t = 0.5 - Math.sin(Math.asin(1 - 2 * a) / 3);
+      return -t * TWILIGHT_END;
+    };
+    let near = RADIUS;
+    while (alphaAt(near) < 120) near++;
+    let far = near;
+    while (alphaAt(far + 1) >= 30) far++;
+    const slope = (elevationAt(far) - elevationAt(near)) / (far - near);
+    return far - elevationAt(far) / slope - RADIUS;
+  }
+
+  it("puts the terminator where the pinhole puts it", () => {
+    const sun: [number, number, number] = [Math.cos(TEN), 0, -Math.sin(TEN)];
+    const expectedU = (G * Math.sin(TEN)) / (P - Math.cos(TEN));
+    expect(expectedU).toBeCloseTo(0.2017, 3);
+    expect(
+      Math.abs(terminatorOffset(sun) - expectedU * RADIUS),
+    ).toBeLessThanOrEqual(1);
+  });
+
+  it("does not put it where an orthographic sphere would", () => {
+    const sun: [number, number, number] = [Math.cos(TEN), 0, -Math.sin(TEN)];
+    expect(
+      Math.abs(terminatorOffset(sun) - Math.sin(TEN) * RADIUS),
+    ).toBeGreaterThan(10);
+  });
+
+  it("shades a pixel past the limb as the rim pixel on the same ray", () => {
+    const width = 301;
+    const pixels = new Uint8ClampedArray(width * width * 4);
+    paintShading(pixels, {
+      width,
+      height: width,
+      cx: 150.5,
+      cy: 150.5,
+      radius: 100,
+      sun: [0.6, -0.48, 0.64],
+      day: [255, 0, 0],
+      night: [0, 0, 255],
+      dayAlpha: 1,
+      nightAlpha: 1,
+      hazeAlpha: 0,
+      dither: false,
+    });
+    const at = (x: number) => {
+      const i = (150 * width + x) * 4;
+      return Array.from(pixels.slice(i, i + 4));
+    };
+    // x = 250 sits on the rim (distance 1.0); x = 270 is at distance 1.2.
+    expect(at(270)).toEqual(at(250));
+  });
+});
+
+describe("paintShading past the limb", () => {
+  const DAY: [number, number, number] = [34, 211, 238];
+  const rgbAt = (pixels: Uint8ClampedArray, x: number, y: number) => {
+    const i = (y * SIZE + x) * 4;
+    return Array.from(pixels.slice(i, i + 3));
+  };
+
+  it("lights a pixel past the limb at 45 degrees when the Sun lights the rim there", () => {
+    // Sun toward the lower right, in the plane of the screen.
+    const sun: [number, number, number] = [Math.SQRT1_2, Math.SQRT1_2, 0];
+    const { pixels, at } = shade(sun, { radius: 10 });
+    expect(at(80, 80)[3]).toBeGreaterThan(0);
+    expect(rgbAt(pixels, 80, 80)).toEqual(DAY);
+  });
+
+  it("lights every edge pixel past the limb when the globe straddles the left edge", () => {
+    // The globe's centre is right of column 0, so column 0 is past the limb. The Sun is on the
+    // left, so the rim there is lit; the right end of the previous row is on the night side.
+    const sun: [number, number, number] = [-1, 0, 0];
+    const { pixels, at } = shade(sun, { cx: 60 });
+    for (let y = 25; y <= 75; y++) {
+      expect(at(0, y)[3]).toBeGreaterThan(0);
+      expect(rgbAt(pixels, 0, y)).toEqual(DAY);
+    }
+  });
+});
+
+describe("shading.ts source", () => {
+  it("holds no orthographic depth", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(
+      new URL("./shading.ts", import.meta.url),
+      "utf8",
+    );
+    expect(source).not.toContain("Math.sqrt(Math.max(0, 1 - u * u - v * v))");
   });
 });

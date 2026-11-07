@@ -1,35 +1,31 @@
 /**
- * Orthographic camera maths for the globe (#289).
+ * Camera maths for the globe (#289).
  *
- * Pure, no DOM, no d3 — unit-tested against `d3-geo` itself, which is the
- * reference this has to agree with: the canvas-2D fallback still projects with
- * `geoOrthographic`, so if these two disagree the two renderers disagree.
- *
- * Replacing d3's projection here is what lets the GPU path drop d3 entirely. It
- * is also a small amount of maths: an orthographic projection of a rotated
- * sphere is one rotation and a drop of the depth axis.
+ * Pure, no DOM, no d3. The projection is a pinhole at geostationary distance (`pinhole.ts`),
+ * checked from first principles in `camera.test.ts`. The canvas-2D fallback and the GPU path
+ * share it, so a tooltip or a hit test lands in the same place under either renderer.
  *
  * ## The frame
  *
- * A geographic point becomes a unit vector, is rotated by the camera, and the
- * result's three axes are read as: `y` right on screen, `z` up on screen, `x`
- * towards the viewer. So a point is on the near hemisphere exactly when its
- * rotated `x` is positive, which is the horizon test, and the screen position
- * needs no trigonometry beyond building the vector.
+ * A geographic point becomes a unit vector, is rotated by the camera, and the result's three axes
+ * are read as: `y` right on screen, `z` up on screen, `x` towards the viewer. So a point is on the
+ * visible cap exactly when its rotated `x` exceeds `RIM`, and the screen position is one divide by
+ * the distance to the camera.
  *
- * `rotation` is `[λ, φ]` in degrees and matches `d3.geoOrthographic().rotate()`:
- * both are *negated* — `[-lng, -lat]` brings `(lng, lat)` to the centre. There
- * is no third (roll) component, as the globe never rolls.
+ * `rotation` is `[λ, φ]` in degrees. Both are *negated*: `[-lng, -lat]` brings `(lng, lat)` to the
+ * centre. There is no third (roll) component, as the globe never rolls.
  */
+
+import { RIM, projectPoint, rayHit, toView, type Vec3 } from "./pinhole";
 
 const DEG = Math.PI / 180;
 
-/** A point's position on screen, and whether it faces the viewer. */
-export interface Projected {
+/** A point's position on screen, and whether it is on the visible cap. */
+interface Projected {
   x: number;
   y: number;
-  /** False on the far hemisphere, where `x`/`y` are still the point's
-   *  silhouette position — the caller decides whether to draw it. */
+  /** False beyond the visible cap (camera-frame x <= RIM). `x`/`y` are still where the point's
+   *  line of sight crosses the image (inside the disc); the caller decides whether to draw it. */
   visible: boolean;
 }
 
@@ -93,63 +89,45 @@ export function rotatePoint(
   camera: Camera,
   lng: number,
   lat: number,
-  out: [number, number, number],
-): [number, number, number] {
-  const lambda = lng * DEG;
-  const phi = lat * DEG;
-  const cosLat = Math.cos(phi);
-
-  /* Longitude rotation folded into the angle sum, so the point's own sin/cos
-     are combined with the camera's cached ones instead of adding the angles and
-     calling sin/cos again: cos(a+b) and sin(a+b) by the addition formulae. */
-  const cosSum =
-    Math.cos(lambda) * camera.cosLambda - Math.sin(lambda) * camera.sinLambda;
-  const sinSum =
-    Math.sin(lambda) * camera.cosLambda + Math.cos(lambda) * camera.sinLambda;
-
-  const x1 = cosLat * cosSum;
-  const y1 = cosLat * sinSum;
-  const z1 = Math.sin(phi);
-
-  // Latitude rotation, about the screen-right axis.
-  out[0] = x1 * camera.cosPhi - z1 * camera.sinPhi;
-  out[1] = y1;
-  out[2] = z1 * camera.cosPhi + x1 * camera.sinPhi;
-  return out;
+  out: Vec3,
+): Vec3 {
+  return toView(camera, lng, lat, out);
 }
 
-const SCRATCH: [number, number, number] = [0, 0, 0];
+const SCRATCH: Vec3 = [0, 0, 0];
+const SCRATCH_HIT: Vec3 = [0, 0, 0];
 
 /** Screen position of a geographic point, in CSS pixels within the host box. */
 export function project(camera: Camera, lng: number, lat: number): Projected {
-  const v = rotatePoint(camera, lng, lat, SCRATCH);
-  return {
-    x: camera.centreX + camera.radius * v[1],
-    // Screen y grows downwards; the camera's up axis does not.
-    y: camera.centreY - camera.radius * v[2],
-    visible: v[0] > 0,
-  };
+  const out = { x: 0, y: 0, visible: false };
+  out.visible = projectPoint(camera, toView(camera, lng, lat, SCRATCH), out);
+  return out;
 }
 
 /**
  * The geographic point under a screen position, or null outside the sphere.
  *
- * The inverse of `project` for the near hemisphere: recover the depth axis from
- * the unit-length constraint, then undo the two rotations.
+ * The inverse of `project` for the visible cap: intersect the pixel's ray with the
+ * sphere (`rayHit`), then undo the two rotations.
  */
 export function unproject(
   camera: Camera,
   screenX: number,
   screenY: number,
 ): [number, number] | null {
-  const u = (screenX - camera.centreX) / camera.radius;
-  const v = -(screenY - camera.centreY) / camera.radius;
-  const squared = u * u + v * v;
-  if (squared > 1) return null;
+  const hit = SCRATCH_HIT;
+  if (
+    !rayHit(
+      (screenX - camera.centreX) / camera.radius,
+      (camera.centreY - screenY) / camera.radius,
+      hit,
+    )
+  )
+    return null;
 
-  const y2 = u;
-  const z2 = v;
-  const x2 = Math.sqrt(1 - squared);
+  const y2 = hit[1];
+  const z2 = hit[2];
+  const x2 = hit[0];
 
   // Undo the latitude rotation (transpose of the rotation above).
   const x1 = x2 * camera.cosPhi + z2 * camera.sinPhi;
@@ -162,13 +140,13 @@ export function unproject(
 }
 
 /**
- * Whether a point faces the viewer.
+ * Whether a point faces the camera.
  *
  * `project(...).visible` answers the same question; this skips the screen
  * position for callers that only need the cull (the marker loop's early out).
  */
 export function isVisible(camera: Camera, lng: number, lat: number): boolean {
-  return rotatePoint(camera, lng, lat, SCRATCH)[0] > 0;
+  return toView(camera, lng, lat, SCRATCH)[0] > RIM;
 }
 
 /** Normalise a longitude into `[-180, 180)`. */
