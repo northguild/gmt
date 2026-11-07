@@ -176,13 +176,16 @@ export default defineConfig({
       //
       // The syntax colours are the site's palette: `code-themes.ts` builds a dark and a light
       // theme from the `--gmt-syntax-*` tokens. Starlight still draws the frames, tabs and
-      // buttons from its own colours (`useStarlightUiThemeColors`), and every token is held to
-      // the 7:1 code-frame floor.
+      // buttons from its own colours (`useStarlightUiThemeColors`).
+      //
+      // The contrast adjustment is off: Expressive Code would measure it against Starlight's
+      // `#23262f` slab, not our code surface, and lighten tokens that already pass there. Each
+      // role is held to 7:1 on the surface the reader sees in `code-themes.test.ts` instead.
       expressiveCode: {
         emitExternalStylesheet: false,
         themes: codeThemes(),
         useStarlightUiThemeColors: true,
-        minSyntaxHighlightingColorContrast: 7,
+        minSyntaxHighlightingColorContrast: 0,
       },
       head: [
         // Hold the first paint until the end-of-page marker (src/components/

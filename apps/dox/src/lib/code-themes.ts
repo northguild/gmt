@@ -158,18 +158,78 @@ function resolve(
 export function syntaxPalette(
   source = readFileSync(TOKENS_CSS, "utf8"),
 ): Record<"dark" | "light", Record<Role, string>> {
-  const css = source.replace(/\r\n?/g, "\n");
-  const dark = declarations(blockAt(css, ":root,\n"));
-  // The light block sits on the same element as `:root`, so it overrides and the rest inherits.
-  const light = new Map([
-    ...dark,
-    ...declarations(blockAt(css, '\n[data-theme="light"] {')),
-  ]);
+  const { dark, light } = modeVars(source);
   const pick = (vars: Map<string, string>) =>
     Object.fromEntries(
       ROLES.map((r) => [r, resolve(vars, `--gmt-syntax-${r}`)]),
     ) as Record<Role, string>;
   return { dark: pick(dark), light: pick(light) };
+}
+
+/** The two modes' declarations: light sits on the same element as `:root`, so it overrides the rest. */
+function modeVars(
+  source: string,
+): Record<"dark" | "light", Map<string, string>> {
+  const css = source.replace(/\r\n?/g, "\n");
+  const dark = declarations(blockAt(css, ":root,\n"));
+  const light = new Map([
+    ...dark,
+    ...declarations(blockAt(css, '\n[data-theme="light"] {')),
+  ]);
+  return { dark, light };
+}
+
+/** A hex colour as its red, green and blue channels. */
+function channels(hex: string): [number, number, number] {
+  const full =
+    hex.length === 4
+      ? `#${hex
+          .slice(1)
+          .split("")
+          .map((c) => c + c)
+          .join("")}`
+      : hex;
+  return [1, 3, 5].map((i) => parseInt(full.slice(i, i + 2), 16)) as [
+    number,
+    number,
+    number,
+  ];
+}
+
+/**
+ * `name` as an opaque hex value drawn on the page background (`--gmt-void`). The token is a hex
+ * value, a `var()` of one, or a see-through wash of one: `color(from var(--x) srgb r g b / N%)`.
+ */
+function painted(vars: Map<string, string>, name: string): string {
+  const value = vars.get(name);
+  const alias = value === undefined ? null : /^var\((--[\w-]+)\)$/.exec(value);
+  if (alias !== null) return painted(vars, alias[1]);
+  const wash =
+    value === undefined
+      ? null
+      : /^color\(from var\((--[\w-]+)\) srgb r g b \/ ([\d.]+)%\)$/.exec(value);
+  if (wash === null) return resolve(vars, name);
+  const alpha = Number(wash[2]) / 100;
+  const top = channels(resolve(vars, wash[1]));
+  const page = channels(resolve(vars, "--gmt-void"));
+  return `#${page
+    .map((p, i) => Math.round(p + (top[i] - p) * alpha))
+    .map((c) => c.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+/**
+ * The code block's background in each mode (`--gmt-code-surface` on the page). Every syntax role
+ * is held to the 7:1 code-frame floor against it, in `code-themes.test.ts`.
+ */
+export function codeSurface(
+  source = readFileSync(TOKENS_CSS, "utf8"),
+): Record<"dark" | "light", string> {
+  const { dark, light } = modeVars(source);
+  return {
+    dark: painted(dark, "--gmt-code-surface"),
+    light: painted(light, "--gmt-code-surface"),
+  };
 }
 
 /** A VS Code theme for one mode. Starlight replaces the frame colours with its own (`useStarlightUiThemeColors`). */
