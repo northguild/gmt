@@ -14,7 +14,12 @@ import styles from "./table.module.css";
 
 export interface Column<K extends string> {
   key: K;
-  header: string;
+  /**
+   * The column's name. A string is escaped; `SafeHtml` passes through, for a head of two lines (a
+   * label and a note). A column of a table with `labelCells` takes a string, because its cells
+   * write the name as an attribute.
+   */
+  header: string | SafeHtml;
   align: "start" | "end";
   numeric: boolean;
 }
@@ -72,8 +77,14 @@ export function table<K extends string>(o: TableOptions<K>): SafeHtml {
     : html``;
   const role = (name: string): SafeHtml =>
     o.roles === true ? html` role="${name}"` : html``;
-  const col = (c: Column<K>): SafeHtml =>
-    o.labelCells === true ? html` data-col="${c.header}"` : html``;
+  const col = (c: Column<K>): SafeHtml => {
+    if (o.labelCells !== true) return html``;
+    if (typeof c.header !== "string")
+      throw new TypeError(
+        `table: column "${c.key}" needs a string header to label its cells`,
+      );
+    return html` data-col="${c.header}"`;
+  };
   return html`<div class="${styles.wrap}" role="region" ${gateAttr(o.gate)} aria-label="${o.caption}" tabindex="0"
     ><table class="${fixed ? `${styles.table} ${styles.fixed}` : styles.table}"${role("table")}
       ><caption class="${styles.caption}">${o.caption}</caption

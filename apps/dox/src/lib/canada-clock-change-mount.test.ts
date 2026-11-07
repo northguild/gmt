@@ -135,7 +135,8 @@ describe("the template", () => {
     expect(
       within(table)
         .getAllByRole("columnheader")
-        .map((th) => th.textContent?.trim().replace(/\s*\(.*$/, "")),
+        // Each offset head is its label, a hidden comma, and its note.
+        .map((th) => th.textContent?.trim().replace(/,.*$/, "")),
     ).toEqual(["Place", "Correct", "Yours"]);
   });
 
