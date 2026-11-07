@@ -950,9 +950,10 @@ splits them into two projects.
   against the scan.
 - **Browser tests.** A test that launches a real browser is named `*.browser.test.ts` and stays out
   of both projects (`BROWSER_TEST_GLOB` in `isolation.ts`): the Tests job installs no browser.
-  `vitest.browser.config.ts` runs them, in the `dox-tables` check, after Chromium is installed.
-  `scripts/lib/cell-overflow.browser.test.ts` is one: the cell check needs real layout, which jsdom
-  has none of.
+  `vitest.browser.config.ts` runs them, in the `dox-tables` check, after Chromium and WebKit are
+  installed. `scripts/lib/cell-overflow.browser.test.ts` is one: the cell check needs real layout,
+  which jsdom has none of. `scripts/industry-tags-popover.browser.test.ts` runs in both engines,
+  because WebKit places the tag definition by its own rules.
 - **What the shared setup resets.** `src/test/setup-dom.ts` runs after every test, in node and
   jsdom files alike: it restores spies (`vi.restoreAllMocks`), fake timers, `vi.stubGlobal` and
   `vi.stubEnv`. In a jsdom file it also destroys the widgets `renderWidget` mounted and calls
