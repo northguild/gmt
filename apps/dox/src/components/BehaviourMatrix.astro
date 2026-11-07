@@ -1,24 +1,19 @@
 ---
 /**
- * The full behaviour matrix: one section per case, one table per section.
+ * The full behaviour matrix: one section per case. Each case opens with its facts (the input, the
+ * form results are compared in, Temporal's result and the clause), then lists GMT's result and
+ * each library's as a short code frame: the call, and what it gave as a comment.
  *
  * Every figure comes from `data/behaviour-matrix.json`, which `scripts/behaviour-matrix/run.mjs`
- * writes. Each library row carries the anchor `m1-date-fns` so the `/migrate/` pages can link to
- * it. The verdict is a word, never colour alone. The Markdown twin is `renderBehaviourMatrix` in
- * `src/lib/mdx-jsx.ts`. Styles are in its `<style>` block.
+ * writes. Each library entry carries the anchor `m1-date-fns` so the `/migrate/` pages can link to
+ * it. The verdict is a badge whose word names it; the icon and tone only repeat it. The Markdown
+ * twin is `renderBehaviourMatrix` in `src/lib/mdx-jsx.ts`.
  */
-import { codeBreakClass, codeBreakHtml } from "../lib/code-break";
-import "./migrate-table.css";
-import { codeSpans, matrixView } from "../lib/migrate-view";
+import { Code } from "@astrojs/starlight/components";
+import { VERDICT_BADGE, codeSpans, matrixView } from "../lib/migrate-view";
+import { badge } from "../widgets/builders/badge";
 
 const cases = matrixView();
-const columns = (reference: string): string[] => [
-  "Library",
-  "Call",
-  "Returns",
-  `Compared with ${reference}`,
-  "Upstream issue",
-];
 ---
 
 {
@@ -27,60 +22,50 @@ const columns = (reference: string): string[] => [
       <h2 id={c.anchor}>
         {c.id}. {c.title}
       </h2>
-      <p class="gmt-matrix-meta">
-        Input: {c.input}. Compared as: {c.compare}. Specification:{" "}
-        {c.clauses.map((clause, index) => (
-          <>
-            {index > 0 && ", "}
-            <a href={clause.url}>{clause.label}</a>
-          </>
+      <dl class="gmt-matrix-facts">
+        {c.facts.map((fact) => (
+          <div>
+            <dt>{fact.label}</dt>
+            <dd set:html={codeSpans(fact.text)} />
+          </div>
         ))}
-        .
-      </p>
-      {c.expectedNote && <p>{c.expectedNote}</p>}
-      {c.note && <p set:html={codeSpans(c.note)} />}
-      <div
-        class="gmt-ref-table"
-        data-kind="content"
-        data-layout="entries"
-        data-label={`${c.id} results`}
-      >
-        <table class="gmt-migrate-table gmt-matrix-table">
-          <thead>
-            <tr>
-              {columns(c.reference).map((label) => <th>{label}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {c.rows.map((row) => (
-              <tr id={row.anchor ?? undefined}>
-                <td data-col={columns(c.reference)[0]}>{row.who}</td>
-                <td data-col={columns(c.reference)[1]}>
-                  <code class={codeBreakClass(row.call)} set:html={codeBreakHtml(row.call)} />
-                </td>
-                <td data-col={columns(c.reference)[2]}>
-                  {row.returns.map((line) => (
-                    <span class="gmt-matrix-line">
-                      <code class={codeBreakClass(line)} set:html={codeBreakHtml(line)} />
-                    </span>
-                  ))}
-                </td>
-                <td data-col={columns(c.reference)[3]}>{row.verdict}</td>
-                <td data-col={columns(c.reference)[4]}>
-                  {row.issues.length === 0
-                    ? "none"
-                    : row.issues.map((issue, index) => (
-                        <>
-                          {index > 0 && ", "}
-                          <a href={issue.url}>{issue.text}</a>
-                        </>
-                      ))}
-                </td>
-              </tr>
+        <div>
+          <dt>Specification</dt>
+          <dd>
+            {c.clauses.map((clause, index) => (
+              <>
+                {index > 0 && ", "}
+                <a href={clause.url}>{clause.label}</a>
+              </>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </dd>
+        </div>
+      </dl>
+      {c.notes.map((note) => (
+        <p set:html={codeSpans(note)} />
+      ))}
+      <ul class="gmt-matrix-entries" aria-label={`${c.id} results`}>
+        {c.entries.map((entry) => (
+          <li class="gmt-matrix-entry" id={entry.anchor ?? undefined}>
+            <p class="gmt-matrix-head">
+              <span class="gmt-matrix-name">{entry.name}</span>
+              <span set:html={String(badge(VERDICT_BADGE[entry.verdict]))} />
+            </p>
+            <Code code={entry.code} lang="js" wrap />
+            {entry.issues.length > 0 && (
+              <p class="gmt-matrix-issues">
+                <span class="gmt-matrix-label">Upstream</span>{" "}
+                {entry.issues.map((issue, index) => (
+                  <>
+                    {index > 0 && ", "}
+                    <a href={issue.url}>{issue.text}</a>
+                  </>
+                ))}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   ))
 }
@@ -88,20 +73,93 @@ const columns = (reference: string): string[] => [
 <style is:global>
 /* ---- Behaviour matrix ---- */
 
-.gmt-matrix-meta {
+/* The facts sit in one bordered box; the code frames under it are frames of their own. */
+.gmt-matrix-facts {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm, 0.25rem);
+  font-size: var(--sl-text-sm);
+}
+
+/* Starlight's prose rules space every sibling and indent a `dd`; the box sets its own. */
+.gmt-matrix-facts > div {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.gmt-matrix-facts dt {
+  font-weight: 600;
   color: var(--gmt-ice);
 }
 
-/* A result that varies with the host zone shows one host per line. */
-.gmt-matrix-line {
-  display: block;
+.gmt-matrix-facts dd {
+  margin: 0;
+  padding: 0;
+  overflow-wrap: anywhere;
 }
 
-.gmt-matrix-line + .gmt-matrix-line {
-  margin-block-start: 0.25rem;
+.gmt-matrix-case {
+  container: gmt-matrix / inline-size;
 }
 
-.gmt-matrix-table tbody tr:target {
-  background: var(--gmt-fill-strong);
+.gmt-matrix-entries {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+  list-style: none;
+  padding: 0;
+}
+
+.gmt-matrix-entry {
+  margin: 0;
+  scroll-margin-block-start: calc(var(--sl-nav-height, 3.5rem) + 1rem);
+}
+
+.gmt-matrix-entry > * {
+  margin: 0;
+}
+
+/* A link from a /migrate/ page lands on one entry; a full outline shows which. */
+.gmt-matrix-entry:target {
+  border-radius: var(--gmt-radius-sm, 0.25rem);
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 0.4rem;
+}
+
+.gmt-matrix-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin-block-end: 0.4rem;
+  font-size: var(--sl-text-sm);
+}
+
+.gmt-matrix-issues {
+  margin-block-start: 0.4rem;
+  font-size: var(--sl-text-sm);
+}
+
+.gmt-matrix-name,
+.gmt-matrix-label {
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+@container gmt-matrix (width > 40rem) {
+  .gmt-matrix-entries {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 30rem) {
+  .gmt-matrix-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
 }
 </style>
