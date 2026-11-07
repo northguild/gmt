@@ -271,8 +271,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `gmt-codebreak` (`white-space: pre-wrap`). Code with one piece comes back unchanged and keeps the
     plain `nowrap` rule. `rehype-table-scroll.ts` splits every Markdown cell's code, including a table
     already in a `.gmt-ref-table` box or inside MDX JSX; `codeSpans` in `migrate-view.ts` and the
-    `set:html` cells of BehaviourMatrix, BundleSize and MigrationMap use the same helper, so a
-    component's table wraps the same way.
+    `set:html` cells of BehaviourMatrix, BundleSize and CodePairs use the same helper, so a
+    component's text wraps the same way.
   - **Content and reference tables look like the kit `table`.** `gmt-content-tables.css` draws the
     `.gmt-ref-table` box as the tool panel: `--gmt-surface-widget`, a full `--gmt-hairline` border and
     a bevelled `--gmt-radius-md` corner, with no left-edge accent. The header is an opaque
@@ -309,8 +309,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     - Not in this style, on purpose: the kit tables and the widget tables (they are the model), and
       the chat's Markdown tables (`chat.css`, the `/dox` island), because a chat reply is not a
       docs page and the island keeps its own sheet.
-    - A layout-only rule stays in its component's sheet (`migrate-table.css`: the function-and-module
-      stack, the case sections); weight, font and label rules do not.
+    - A layout-only rule stays in its component's `<style>` block; weight, font and label rules
+      do not.
   - **Row groups.** `rehype-table-scroll.ts` marks each body row whose first cell reads the same as
     the row above (trimmed, whitespace collapsed, not empty): `data-group="start"` on the first row
     of a run of two or more, `"continue"` on the rest, nothing on a row alone, nothing in `thead`. It
@@ -333,8 +333,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     Parameters take the same card inside the 34rem container query. The header row stays for
     screen readers. It is for a table whose cells hold long code or that has too many columns for the
     article column. A table opts in where it is built: a component sets
-    `data-layout` and `data-col` (BehaviourMatrix; UpstreamTracker through `UPSTREAM_COLUMNS`;
-    LibraryCompare for the ids in `ENTRY_TABLES`; MigrationMap through `layout="entries"`), and a
+    `data-layout` and `data-col` (UpstreamTracker through `UPSTREAM_COLUMNS`), and a
     Markdown table takes an MDX comment that reads `table: entries` on the line directly above it.
     That comment reaches rehype as an `mdxFlowExpression` beside the table; the plugin sets the
     layout and `data-col`, removes it, and a paragraph between the two cancels it. The `.md` twin
@@ -777,14 +776,30 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     that line's middle fails, and so does a page with no card heads.
 - **Migration pages.** `/migrate/` has an index, one page each for date-fns, Luxon, Day.js,
   Moment and `@internationalized/date`, and a Temporal page. `/compare/behaviour/` holds the
-  full behaviour matrix. Each library page is a call-by-call table (`MigrationMap`, data in
-  `src/data/migration-maps.ts`, one row per call, with GMT names checked against the corpus by
-  `gmtFunction` in `src/lib/migrate-view.ts`), a short "What changes" list and the cases where
-  that library differs from Temporal (`BehaviourDiffs`). The pages draw data and compute
-  nothing; each has a Markdown twin in `src/lib/mdx-jsx.ts`. The call table (`rows`) of the
-  date-fns, Luxon, Day.js, Moment.js and Internationalized Date pages uses the entries layout
-  (`layout="entries"`). Tables that keep the plain layout have a `40rem` minimum and a
-  `16rem` note column.
+  full behaviour matrix. Each library page lists its calls as code pairs (`MigrationMap`, data
+  in `src/data/migration-maps.ts`, one pair per call, with GMT names checked against the corpus
+  by `gmtFunction` in `src/lib/migrate-view.ts`), a short "What changes" list and the cases
+  where that library differs from Temporal (`BehaviourDiffs`, also code pairs). The Temporal
+  page does the same from `src/data/temporal-map.ts` (`TemporalMap`). The pages draw data and
+  compute nothing; each has a Markdown twin in `src/lib/mdx-jsx.ts`.
+  - **Code pairs.** `CodePairs.astro` renders every pair: an optional heading, a facts list, the
+    library's code beside GMT's (two Expressive Code frames titled with each name, the result
+    as a `// →` comment under each call), a note, then link groups (Reference, Specification,
+    Upstream, Full results). Items are split by a hairline, not boxed, since each frame is a
+    frame. The frames sit side by side (`2fr 3fr`) when the list's container is wider than
+    40rem and stack below it. The builders are `mapPairs`, `diffPairs` and `temporalPairs` in
+    `migrate-view.ts`; `renderCodePairs` writes the twin.
+  - **Behaviour matrix.** `BehaviourMatrix.astro` gives each case a heading, a bordered facts
+    box (input, compared as, Temporal's result, the clauses), any note, then one entry per
+    result: GMT first, then each library. An entry is the name, a verdict badge
+    (`VERDICT_BADGE`: a word always, an icon on a measured verdict) and a code frame with the
+    call and its result as comments; upstream issues sit under the frame. Entries run in two
+    columns when the case is wider than 40rem. Each library entry carries the `m1-date-fns`
+    anchor the `/migrate/` pages link to, and `:target` outlines it.
+  - **/compare/ cards.** `LibraryCompare` prints the tables in `ENTRY_TABLES` (overview,
+    measured) as a grid of cards, GMT's first, full width and cyan-bordered, each fact its label
+    over its value. The list is `gmt-compare-grid`, not `-cards`: the site frames every element
+    whose class holds `card`. The `.md` twin keeps them as tables.
   - **Matrix data.** `src/data/behaviour-matrix.json` is the output of
     `scripts/behaviour-matrix/run.mjs`, read through `src/data/behaviour-matrix.ts`. A page
     quotes a case by id (`checkedLine("<id>")`, `matrix.measuredOn`), never by retyping a
@@ -848,7 +863,7 @@ change and not the fix.
 `gmt.thirdparty` layer holds the sheets for DOM we do not render: `gmt-charts.css`, the map
 tooltip shell, and the Pagefind and Starlight overrides. Every element we render is styled by a CSS
 Module, a component `<style>` block, or a plain sheet in `src/components/` that the components
-sharing it import (`migrate-table.css`), never `gmt.css` or `customCss`.
+sharing it import, never `gmt.css` or `customCss`.
 Content tables carry `data-col` (written by
 `src/lib/rehype-table-scroll.ts`), so a stacked label reads `attr(data-col)` and no column name is
 typed in CSS. The reveal stagger is `--gmt-reveal-i`, set by `scroll-reveal.ts`.
@@ -1035,9 +1050,7 @@ number it did not measure.
     (Connection Checker) and the Duration Parser Bench's result and facts are in `<gmt-grow>`.
     An EDI zone-strip cell keeps a no-break space when empty, a figure with no parts draws no
     empty row, and the result pane's stand-in keeps the scroll track the pane has.
-  - A chip, plate or cell in a table (`timetable-reader`, `migrate-table.css`) wraps at its
-    spaces only; the migrate tables pad their cells and give the last column a 14rem floor, so a
-    table fits 770 px at 390 px wide without a break inside a word.
+  - A chip, plate or cell in a table (`timetable-reader`) wraps at its spaces only.
 - Every card and section sits on one opaque `--gmt-surface-widget`, so stacked tints cannot drop
   contrast below 7:1. The footer has its own opaque surface.
 - Local checks run Chromium on macOS. Firefox and WebKit run weekly in CI; the footer contrast
