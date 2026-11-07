@@ -23,6 +23,18 @@ sheets import in this order:
 
 Guide and reference tables (`gmt-content-tables.css`) are drawn in the kit `table` builder's look: the `--gmt-surface-widget` panel with a full hairline border, tight cells, a quiet `--gmt-surface` header strip and tabular figures, with zebra rows and row groups on top. Entry cards take the same surface and border; the rules are in `built.md` (Tier 1, reference tables).
 
+Every prose table (Markdown, `/compare/`, `/upstream/`, `/migrate/*`, `/bundle-size/`, the reference tables) takes that one style from that one sheet, modelled on the DST Inspector's and Stored Time Audit's tables:
+
+- Body cells are weight 400 in the body font, the first column included. Only `<code>` is monospace. A row header differs by ink (`--gmt-ice` against `--gmt-ice-dim`), not by weight.
+- Header labels are title case as written. A status word is a kit chip (`badge()`), never a table-only class; `fill` gives the solid state pill of an `/upstream/` card.
+- On a narrow box a row becomes an entry card. Its `data-col` label floats into the cell's start padding (`--gmt-card-label`, 7rem), in the body font at `--gmt-text-xs`, weight 600, `--gmt-ice-dim`, title case, so labels line up from card to card.
+- An `/upstream/` card head aligns its icon, `repo#number` and badge on the title's first baseline (`align-items: first baseline`), with the icon an inline-block so `vertical-align` applies.
+- The chat's Markdown tables keep the island's own sheet.
+
+A checker's browser card has two-line offset heads: the label, then its note under it in `--gmt-ice-dim` at weight 400 with no brackets, both `nowrap`. The note wraps at its spaces only in a card under 25rem (the `gmt-probe` container); the card needs at least 373 px for the longest note. The top row of a clock-change page splits Key points and the card only from a 73rem container.
+
+A code frame that opens a tab panel is square at its start-start corner, under the first tab, and keeps the bevel on the other three. A frame lower in the panel keeps all four.
+
 No shared widget sheet remains in the global cascade: the `not-content` restore, the syntax-token colours and the load-failure notice sit in `gmt-widget-reset.css`. A tool's own style is a CSS Module in
 `src/widgets/tools/`, and a family's in `src/widgets/families/`, so there is no per-tool global
 sheet; `dox.css` and `gmt-a11y.css` load after 8. The config has the full

@@ -193,6 +193,7 @@ const PAGES = [
      brain badge and the widget rail's collapsed-to-nothing layout are covered
      by nothing else. */
   { slug: "dox", path: "/dox/" },
+  { slug: "upstream", path: "/upstream/" },
 ];
 
 const PAGES_ARG = applyPageContract({

@@ -32,7 +32,7 @@
 }
 
 /* Syntax-token colours for the call lines the mounts build (codeSpan in lib/widget-ui.ts);
-   the values are the site's own Shiki output. */
+   the same `--gmt-syntax-*` roles the code blocks are themed from (lib/code-themes.ts). */
 .gmt-code-fn {
   color: var(--gmt-syntax-fn);
 }

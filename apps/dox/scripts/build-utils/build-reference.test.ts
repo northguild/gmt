@@ -1,6 +1,7 @@
 import ts from "typescript";
 import * as BR from "../build-reference";
 import type { FnDoc, PropertyDoc, TypeDoc, RegexDoc } from "../build-reference";
+import { INDUSTRY_TAG_IDS } from "../../src/lib/industry-tags";
 import { findGaps } from "./doc-gate";
 import { renderOptionsTable } from "./render-table";
 import {
@@ -3183,7 +3184,9 @@ describe("industry tag on a page", () => {
   `;
 
   it("writes `industries: [id]` into a function page's frontmatter, after the slug", () => {
-    const mdx = BR.withIndustry(placed(SOURCE).fnPage("charge"), "intermodal");
+    const mdx = BR.withIndustry(placed(SOURCE).fnPage("charge"), [
+      "intermodal",
+    ]);
     expect(mdx.split("\n").slice(0, 7)).toEqual([
       "---",
       'title: "charge"',
@@ -3201,39 +3204,85 @@ describe("industry tag on a page", () => {
 
   it("tags a shared type's page the same way", () => {
     const page = placed(SOURCE).typePage("ChargeOptions");
-    const tagged = BR.withIndustry(page, "transport");
+    const tagged = BR.withIndustry(page, ["transport"]);
     expect(tagged).toMatch(/^---\n[\s\S]*?\nindustries: \[transport\]\n---\n/);
   });
 
-  it("leaves a general page byte for byte as it was", () => {
+  it("tags a general page `[core]`", () => {
     const page = placed(SOURCE).fnPage("charge");
-    expect(BR.withIndustry(page, undefined)).toBe(page);
     expect(page).not.toContain("industries:");
+    expect(BR.withIndustry(page, ["core"])).toContain("\nindustries: [core]\n");
   });
 
-  it("tags a type only when every function that reaches it is in one industry's own namespace", () => {
-    const owner = (namespace: string) =>
-      ({ intermodal: "intermodal", transport: "transport" })[namespace];
+  it("writes several tags as a list, in the order given", () => {
+    const tagged = BR.withIndustry(placed(SOURCE).fnPage("charge"), [
+      "core",
+      "workforce",
+    ]);
+    expect(tagged).toContain("\nindustries: [core, workforce]\n---\n");
+  });
+
+  it("refuses a page with no tag: every reference page has one", () => {
+    expect(() => BR.withIndustry(placed(SOURCE).fnPage("charge"), [])).toThrow(
+      /at least one industry tag/,
+    );
+  });
+
+  const owner = (namespace: string) =>
+    ({
+      intermodal: "intermodal",
+      transport: "transport",
+      workforce: "workforce",
+    })[namespace];
+
+  it("tags a type that only general functions reach `core`", () => {
     expect(
-      BR.typeIndustry(["transport/calculate/a", "transport/compare/b"], owner),
-    ).toBe("transport");
+      BR.typeIndustries(["plain/calculate/a", "zoned/parse/b"], owner),
+    ).toEqual(["core"]);
+    expect(BR.typeIndustries([], owner)).toEqual(["core"]);
+  });
+
+  it("tags a type that only one industry's functions reach with that industry", () => {
     expect(
-      BR.typeIndustry(["transport/calculate/a", "plain/calculate/b"], owner),
-    ).toBeUndefined();
+      BR.typeIndustries(
+        ["transport/calculate/a", "transport/compare/b"],
+        owner,
+      ),
+    ).toEqual(["transport"]);
+  });
+
+  it("tags a type that general and industry functions reach with core and the industry", () => {
     expect(
-      BR.typeIndustry(["transport/calculate/a", "intermodal/parse/b"], owner),
-    ).toBeUndefined();
-    expect(BR.typeIndustry(["plain/calculate/a"], owner)).toBeUndefined();
-    expect(BR.typeIndustry([], owner)).toBeUndefined();
+      BR.typeIndustries(["transport/calculate/a", "plain/calculate/b"], owner),
+    ).toEqual(["core", "transport"]);
+  });
+
+  it("lists a type's tags in `INDUSTRY_TAG_IDS` order, once each, whatever order the functions come in", () => {
+    const forward = BR.typeIndustries(
+      ["workforce/a/x", "transport/b/y", "plain/c/z", "plain/d/w"],
+      owner,
+    );
+    const backward = BR.typeIndustries(
+      ["plain/d/w", "plain/c/z", "transport/b/y", "workforce/a/x"],
+      owner,
+    );
+    expect(forward).toEqual(backward);
+    expect(forward).toEqual(
+      INDUSTRY_TAG_IDS.filter((id) =>
+        ["core", "workforce", "transport"].includes(id),
+      ),
+    );
   });
 
   it("tags with the industry that owns the namespace, which a drawn-on namespace does not make", () => {
     // `timescale` is drawn on by industries and owned by none: a type only its functions reach is
-    // general. `gnss` is owned, so a type only its functions reach is tagged GNSS.
-    const owner = (namespace: string) =>
+    // Core. `gnss` is owned, so a type only its functions reach is tagged GNSS.
+    const gnssOwner = (namespace: string) =>
       namespace === "gnss" ? "gnss" : undefined;
-    expect(BR.typeIndustry(["gnss/convert/a"], owner)).toBe("gnss");
-    expect(BR.typeIndustry(["timescale/convert/a"], owner)).toBeUndefined();
+    expect(BR.typeIndustries(["gnss/convert/a"], gnssOwner)).toEqual(["gnss"]);
+    expect(BR.typeIndustries(["timescale/convert/a"], gnssOwner)).toEqual([
+      "core",
+    ]);
   });
 });
 

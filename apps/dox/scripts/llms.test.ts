@@ -36,6 +36,7 @@ function readCorpus(): CorpusEntry[] {
     readFileSync(resolve(outGen, "gmt-corpus.json"), "utf8"),
   ) as CorpusEntry[];
 }
+import { INDUSTRY_TAG_IDS, industryTag } from "../src/lib/industry-tags";
 import { stripFrontmatter, stripMdx } from "../src/lib/page-markdown";
 
 import { distDirOrSkip as distRootOrSkip } from "./dist-dir";
@@ -549,18 +550,18 @@ Body text here.`;
         return found;
       };
       const order = [
-        "Install",
-        "Tools",
-        "Checks",
         "Start here",
-        "Changelog",
-        "Migrate",
         "Guides",
         "Reference",
         "Industries",
+        "Tools",
         "Scenarios",
         "Mistakes",
+        "Migrate",
+        "Checks",
+        "Changelog",
       ].map(at);
+      expect(headings).not.toContain("Install");
       expect(order).toEqual([...order].sort((a, b) => a - b));
       // Every namespace section sits between the reference index and the industries.
       for (const heading of headings.filter((h) =>
@@ -568,6 +569,56 @@ Body text here.`;
       )) {
         expect(at(heading)).toBeGreaterThan(at("Reference"));
         expect(at(heading)).toBeLessThan(at("Industries"));
+      }
+    });
+
+    it("llms.txt lists Install first under Start here, and compare, bundle-size and upstream under Migrate", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      const section = (heading: string): string[] => {
+        const start = llms.indexOf(`\n## ${heading}\n`);
+        expect(start, `${heading} is a section`).toBeGreaterThanOrEqual(0);
+        const rest = llms.slice(start + heading.length + 5);
+        const end = rest.search(/^## /m);
+        return (end < 0 ? rest : rest.slice(0, end))
+          .split("\n")
+          .filter((line) => line.startsWith("- ["));
+      };
+      const startHere = section("Start here");
+      expect(startHere[0]).toMatch(/\/install\.md\)/);
+      const migrate = section("Migrate");
+      for (const slug of ["compare", "bundle-size", "upstream"]) {
+        const link = new RegExp(`/${slug}\\.md\\)`);
+        expect(
+          migrate.some((line) => link.test(line)),
+          `${slug} is under Migrate`,
+        ).toBe(true);
+        expect(
+          startHere.some((line) => link.test(line)),
+          `${slug} is not under Start here`,
+        ).toBe(false);
+      }
+    });
+
+    it("llms-full.txt follows the sidebar: a guide after the start pages, the migrate pages last", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const full = readFileSync(resolve(distDir, "llms-full.txt"), "utf8");
+      const urls = [...full.matchAll(/^> source: (\S+)$/gm)].map((m) => m[1]!);
+      const path = (url: string) => url.replace(/^.*\/gmt\//, "");
+      expect(urls.length).toBeGreaterThan(0);
+      const lastStart = urls.findIndex((url) => path(url) === "why-gmt.md");
+      expect(lastStart).toBeGreaterThanOrEqual(0);
+      expect(path(urls[lastStart + 1]!)).toMatch(/^guides\//);
+      const firstMigrate = urls.findIndex((url) =>
+        url.endsWith("migrate/index.md"),
+      );
+      expect(firstMigrate).toBeGreaterThan(lastStart);
+      for (const url of urls.slice(firstMigrate)) {
+        expect(path(url), url).toMatch(
+          /^(migrate\/|compare\/behaviour\.md$|compare\.md$|bundle-size\.md$|upstream\.md$)/,
+        );
       }
     });
 
@@ -623,6 +674,100 @@ Body text here.`;
         /\*\*In memoriam: @burglekitt\.\*\* .*\[install @northguild\/gmt\]\(\/gmt\/install\/\)/,
       );
       expect(twin).not.toContain("<div");
+    });
+
+    describe("the Industry line of a twin matches the tags its page shows", () => {
+      const docs = resolve(import.meta.dirname, "..", "src", "content", "docs");
+
+      /** The `industries` a generated page declares, as the labels its twin prints. */
+      const declared = (file: string): string[] =>
+        (/^industries: \[(.*)\]$/m.exec(readFileSync(file, "utf8"))?.[1] ?? "")
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+
+      /** The first line of a twin after its heading that starts `Industry:`, or undefined. */
+      const industryLine = (twin: string): string | undefined =>
+        twin.split("\n").find((line) => line.startsWith("Industry: "));
+
+      /** Every function page under one namespace, as `[file, twin path]`. */
+      const pagesOf = (namespace: string): [string, string][] => {
+        const root = resolve(docs, "reference", namespace);
+        return readdirSync(root, { recursive: true, withFileTypes: true })
+          .filter(
+            (f) =>
+              f.isFile() && f.name.endsWith(".mdx") && f.name !== "index.mdx",
+          )
+          .map((f): [string, string] => {
+            const file = resolve(f.parentPath, f.name);
+            const slug = /^slug: "(.*)"$/m.exec(
+              readFileSync(file, "utf8"),
+            )![1]!;
+            return [file, `${slug}.md`];
+          });
+      };
+
+      it("says Core on a general function and Workforce on a workforce one", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null || !mdxExists) return;
+        const [, plain] = pagesOf("plain")[0]!;
+        const [, workforce] = pagesOf("workforce")[0]!;
+        expect(
+          industryLine(readFileSync(resolve(distDir, plain), "utf8")),
+        ).toBe("Industry: Core");
+        expect(
+          industryLine(readFileSync(resolve(distDir, workforce), "utf8")),
+        ).toBe("Industry: Workforce");
+      });
+
+      it("says Core, Workforce on a shared type that general and workforce functions both reach", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null || !mdxExists) return;
+        const types = resolve(docs, "reference", "types");
+        const shared = readdirSync(types)
+          .filter((name) => name.endsWith(".mdx") && name !== "index.mdx")
+          .find((name) => {
+            const ids = declared(resolve(types, name));
+            return ids.includes("core") && ids.includes("workforce");
+          });
+        expect(
+          shared,
+          "a type that Core and workforce functions share",
+        ).toBeDefined();
+        const twin = readFileSync(
+          resolve(distDir, "reference", "types", `${shared!.slice(0, -4)}.md`),
+          "utf8",
+        );
+        expect(industryLine(twin)).toBe("Industry: Core, Workforce");
+      });
+
+      it("lists Core first on the tools index, then each industry a tool declares", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null) return;
+        const tools = resolve(docs, "tools");
+        const used = new Set(
+          readdirSync(tools)
+            .filter((name) => name.endsWith(".mdx") && name !== "index.mdx")
+            .flatMap((name) => declared(resolve(tools, name))),
+        );
+        const expected = INDUSTRY_TAG_IDS.filter((id) => used.has(id)).map(
+          (id) => industryTag(id)!.label,
+        );
+        expect(expected[0]).toBe("Core");
+        expect(
+          industryLine(
+            readFileSync(resolve(distDir, "tools", "index.md"), "utf8"),
+          ),
+        ).toBe(`Industry: ${expected.join(", ")}`);
+      });
+
+      it("gives the home page no Industry line", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null) return;
+        expect(
+          industryLine(readFileSync(resolve(distDir, "index.md"), "utf8")),
+        ).toBeUndefined();
+      });
     });
 
     it("no llms.txt line ends in a bare `>` or `: >`", () => {

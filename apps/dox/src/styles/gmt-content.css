@@ -266,26 +266,30 @@ site-search .pagefind-ui__result-tags {
 
 /* ---- Behavior bullets ---- */
 
-/* The dash is page prose. A list inside a widget (or anything else marked
-   `not-content`) is a legend, a row of verdicts or a key, so none of the three
-   rules reaches it: `:where()` adds no
-   specificity, and the exclusion on the `ul` carries to its items. */
-.sl-markdown-content ul:not(:where(.not-content *)) {
+/* The dash marks a list written in Markdown, which has no class. A list a
+   component builds carries its own class and draws its own items: cards, a
+   chart key, a row of verdicts. So does anything marked `not-content`. Both
+   tests sit in `:where()`, so the three rules add no specificity and a
+   component's own list rules still win where they meet. The exclusion on the
+   `ul` carries to its items. */
+.sl-markdown-content ul:where(:not([class], .not-content *)) {
   list-style: none;
   padding-inline-start: 0;
 }
 
-.sl-markdown-content ul:not(:where(.not-content *)) li {
+.sl-markdown-content ul:where(:not([class], .not-content *)) li {
   position: relative;
   padding-inline-start: var(--gmt-space-6);
   margin-block-end: var(--gmt-space-2);
 }
 
-.sl-markdown-content ul:not(:where(.not-content *)) li::before {
+/* Centred on the item's first line: half a line down (`lh`), less half the
+   1 px bar, whatever the list's font size or line height. */
+.sl-markdown-content ul:where(:not([class], .not-content *)) li::before {
   content: "";
   position: absolute;
   inset-inline-start: 0;
-  inset-block-start: 0.6em;
+  inset-block-start: calc(0.5lh - 0.5px);
   inline-size: 8px;
   block-size: 1px;
   background: var(--gmt-cyan);
@@ -408,10 +412,12 @@ site-search .pagefind-ui__result-tags {
   margin-block-start: 0;
 }
 
-.sl-markdown-content [role="tabpanel"] .frame pre {
+/* A code frame that opens a tab panel hangs from the tab row, so its top corner under the first
+   tab is square and meets the tab. The other three corners keep the bevel, and a frame further
+   down the panel, after some prose, keeps all four. The header-less terminal rule above gives that
+   corner its radius back at the same specificity (0,4,1), so this one stays below it in the file. */
+[role="tabpanel"] > .expressive-code:first-child .frame pre {
   border-start-start-radius: 0;
-  border-start-end-radius: var(--gmt-radius-lg);
-  border-end-start-radius: var(--gmt-radius-lg);
 }
 
 /* CardGrid wrapper — no border or background */
@@ -432,6 +438,7 @@ site-search .pagefind-ui__result-tags {
  * --------------------------------------------------------------------------- */
 
 .gmt-industry-tags {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: var(--gmt-space-2);
@@ -473,19 +480,19 @@ site-search .pagefind-ui__result-tags {
   flex: none;
 }
 
-.gmt-industry-tag-item {
-  position: relative;
-}
+/* The definition of a tag. Shown on hover and when a tap or Enter has opened it
+   (`data-open`; Escape or a tap elsewhere closes it). Its text is also the button's
+   accessible description, which display: none does not hide from a screen reader.
 
-/* The definition under its tag. Shown on hover and when a tap or Enter has
-   opened it (`data-open`; Escape or a tap elsewhere closes it). Its text is also
-   the button's accessible description, which display: none does not hide from a
-   screen reader. */
+   Without anchor positioning it opens under the row, a little in from the row's start
+   edge (the row sits 12px from a narrow screen's edge, and the box keeps 16px): a tag
+   on a second row, or far along the first, would otherwise push it past the right
+   edge of a narrow screen. */
 .gmt-industry-tag-def {
   display: none;
   position: absolute;
   inset-block-start: calc(100% + var(--gmt-space-1));
-  inset-inline-start: 0;
+  inset-inline-start: var(--gmt-space-1);
   z-index: var(--gmt-z-menu);
   inline-size: max-content;
   max-inline-size: min(22rem, calc(100vw - 2rem));
@@ -495,6 +502,32 @@ site-search .pagefind-ui__result-tags {
   color: var(--gmt-ice);
   text-transform: none;
   letter-spacing: normal;
+}
+
+/* Where the engine can anchor a box to another, the definition sits under its own tag,
+   starting at the tag's start edge. The start edge is clamped so the box stays 1rem
+   inside both viewport edges: a tag near the end of a row shifts the box left until it
+   fits, and a narrow screen leaves it spanning the viewport between its margins.
+   `100%` is the viewport width here, since the box is fixed. */
+@supports (anchor-name: --gmt-tag) {
+  /* stylelint-disable plugin/use-baseline -- anchor() is not Baseline 2024; an engine without it keeps the row-anchored box above, which is the status quo */
+  .gmt-industry-tag-item {
+    anchor-name: var(--gmt-tag-anchor);
+  }
+
+  .gmt-industry-tag-def {
+    position: fixed;
+    position-anchor: var(--gmt-tag-anchor);
+    inline-size: min(22rem, calc(100% - 2 * var(--gmt-space-4)));
+    inset-block-start: calc(anchor(bottom) + var(--gmt-space-1));
+    inset-inline-start: clamp(
+      var(--gmt-space-4),
+      anchor(start),
+      calc(
+        100% - var(--gmt-space-4) - min(22rem, 100% - 2 * var(--gmt-space-4))
+      )
+    );
+  }
 }
 
 /* stylelint-disable-next-line a11y/selector-pseudo-class-focus -- non-focusable list item; keyboard path is [data-open] set by the toggle */

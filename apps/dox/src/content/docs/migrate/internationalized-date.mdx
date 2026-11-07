@@ -1,6 +1,7 @@
 ---
 title: Migrate from @internationalized/date to Temporal with GMT
 description: Each @internationalized/date call, the GMT function that replaces it, and the cases where it returns a different result from Temporal.
+industries: [core]
 ---
 
 import BehaviourDiffs from "../../../components/BehaviourDiffs.astro";
@@ -13,7 +14,7 @@ import { checkedLine } from "../../../data/behaviour-matrix";
 
 ## Call by call
 
-<MigrationMap library="internationalized-date" layout="entries" />
+<MigrationMap library="internationalized-date" />
 
 ## What changes
 

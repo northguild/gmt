@@ -54,8 +54,10 @@ describe("labels drawn into table cells", () => {
       inCell(rule.selector) && contents(rule.body).some((v) => drawsText(v)),
   );
 
+  // One rule labels Options and entry cards at every width; one labels any other table's cards
+  // below the narrow step. A count under that means the search lost them.
   it("finds the labelled cells", () => {
-    expect(labelled.length).toBeGreaterThanOrEqual(3);
+    expect(labelled.length).toBeGreaterThanOrEqual(2);
   });
 
   it("gives every label an empty alternative after a plain fallback", () => {

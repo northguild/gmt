@@ -3,10 +3,11 @@
  * The industry tags under a page's title: an icon and a word each. They are
  * labels, not links: there is no page per industry for one to lead to.
  *
- * Each tag is a `<button>` that shows its one-line definition: on hover, on
- * keyboard focus, and on a tap, which a `title` on a plain span gave only a mouse
- * reader. The definition is also the button's accessible description, so a
- * screen reader hears it without opening anything.
+ * Each tag is a `<button>` that shows its one-line definition: on hover, and on a
+ * press (a click, a tap, or Enter or Space from the keyboard), which a `title` on a
+ * plain span gave only a mouse reader. Focus alone does not open it. The
+ * definition is also the button's accessible description, so a screen reader
+ * hears it without opening anything.
  *
  * One style for every industry. The word carries the meaning and the icon backs
  * it up; no industry has a colour of its own, because colour never says anything
@@ -28,7 +29,10 @@ const defId = (tagId: string) => `industry-tag-def-${tagId}`;
   tags.length > 0 && (
     <ul class="gmt-industry-tags not-content" aria-label="Industry">
       {tags.map((tag) => (
-        <li class="gmt-industry-tag-item">
+        <li
+          class="gmt-industry-tag-item"
+          style={`--gmt-tag-anchor: --gmt-tag-${tag.id}`}
+        >
           <button
             type="button"
             class:list={[

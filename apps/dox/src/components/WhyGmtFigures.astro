@@ -1,0 +1,89 @@
+---
+import { whyGmtFigures } from "../lib/why-gmt-figures";
+
+/**
+ * The row of headline figures under the /why-gmt intro. Each figure links to the section that
+ * explains it. A list, so screen readers and agents read it as one; static, no hydration.
+ * The text surfaces render the same list as Markdown (`mdx-jsx.ts`).
+ */
+---
+
+<ul class="gmt-why-figures" aria-label="GMT in figures">
+  {
+    whyGmtFigures.map((f) => (
+      <li>
+        <a href={f.href}>
+          <span class="gmt-why-figure-value">{f.value}</span>
+          <span class="gmt-why-figure-label">{f.label}</span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .gmt-why-figures {
+    list-style: none;
+    margin-block: var(--gmt-space-6, 2rem) 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+    gap: var(--gmt-space-3, 0.75rem);
+  }
+
+  /* Starlight's prose spacing and the glowing list tick (gmt-content.css) are for
+     bullets; these items are tiles. */
+  .gmt-why-figures li {
+    margin: 0;
+    padding: 0;
+  }
+
+  .gmt-why-figures a {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gmt-space-2, 0.5rem);
+    block-size: 100%;
+    padding: var(--gmt-space-4, 1rem);
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-bevel-md);
+    corner-shape: bevel;
+    background: var(--gmt-fill-subtle);
+    color: var(--gmt-ice-dim);
+    text-decoration: none;
+    transition: border-color var(--gmt-duration-quick) ease;
+  }
+
+  .gmt-why-figures a:hover {
+    border-color: var(--gmt-cyan-ink);
+  }
+
+  .gmt-why-figures a:focus-visible {
+    outline: 2px solid var(--gmt-cyan-ink);
+    outline-offset: 2px;
+  }
+
+  .gmt-why-figure-value {
+    font-family: var(--gmt-font-display);
+    font-size: 1.5rem;
+    line-height: 1.1;
+    color: var(--gmt-cyan-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gmt-why-figure-label {
+    font-size: var(--gmt-text-sm);
+    line-height: 1.4;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gmt-why-figures a {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .gmt-why-figures a {
+      border-color: LinkText;
+    }
+  }
+</style>

@@ -1,6 +1,7 @@
 ---
 title: Migrate from date-fns to Temporal with GMT
 description: Each date-fns call, the GMT function that replaces it, and the cases where date-fns returns a different result from Temporal.
+industries: [core]
 ---
 
 import BehaviourDiffs from "../../../components/BehaviourDiffs.astro";
@@ -13,7 +14,7 @@ import { checkedLine } from "../../../data/behaviour-matrix";
 
 ## Call by call
 
-<MigrationMap library="date-fns" layout="entries" />
+<MigrationMap library="date-fns" />
 
 ## What changes
 

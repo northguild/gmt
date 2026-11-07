@@ -1,0 +1,198 @@
+---
+/**
+ * A list of code pairs: another library's code beside the GMT code that replaces it, each with
+ * the result as a comment under the call, then a note and links.
+ *
+ * `MigrationMap`, `BehaviourDiffs` and `TemporalMap` build the pairs in `src/lib/migrate-view.ts`
+ * and pass them here; `renderCodePairs` in `src/lib/mdx-jsx.ts` writes the same pairs into the
+ * page's Markdown twin. Items are split by a hairline, not boxed: each code frame is already a
+ * frame. The two frames sit side by side when the column is wide and stack when it is narrow.
+ */
+import { Code } from "@astrojs/starlight/components";
+import { codeSpans, type CodePairView } from "../lib/migrate-view";
+import { withBase } from "../lib/site";
+
+interface Props {
+  pairs: CodePairView[];
+  /** What the list holds, for assistive technology, e.g. `Luxon calls and their GMT code`. */
+  label: string;
+}
+
+const { pairs, label } = Astro.props;
+const href = (url: string): string => (url.startsWith("/") ? withBase(url) : url);
+---
+
+<ul class="gmt-pairs" aria-label={label}>
+  {
+    pairs.map((pair) => {
+      const groups = pair.links.filter((group) => group.links.length > 0);
+      return (
+        <li class="gmt-pair">
+          {pair.heading && (
+            <h3 class="gmt-pair-title">
+              {pair.heading.tag && <span class="gmt-pair-tag">{pair.heading.tag}</span>}
+              <span set:html={codeSpans(pair.heading.text)} />
+            </h3>
+          )}
+          {pair.facts.length > 0 && (
+            <dl class="gmt-pair-facts">
+              {pair.facts.map((fact) => (
+                <div>
+                  <dt>{fact.label}</dt>
+                  <dd set:html={codeSpans(fact.text)} />
+                </div>
+              ))}
+            </dl>
+          )}
+          <div class="gmt-pair-code">
+            <Code code={pair.theirs.code} lang="js" title={pair.theirs.title} wrap />
+            <Code code={pair.gmt.code} lang="js" title={pair.gmt.title} wrap />
+          </div>
+          {pair.note && <p class="gmt-pair-note" set:html={codeSpans(pair.note)} />}
+          {groups.length > 0 && (
+            <p class="gmt-pair-links">
+              {groups.map((group) => (
+                <span class="gmt-pair-group">
+                  <span class="gmt-pair-label">{group.label}</span>{" "}
+                  {group.links.map((link, index) => (
+                    <>
+                      {index > 0 && ", "}
+                      <a href={href(link.href)}>{link.code ? <code>{link.text}</code> : link.text}</a>
+                    </>
+                  ))}
+                </span>
+              ))}
+            </p>
+          )}
+        </li>
+      );
+    })
+  }
+</ul>
+
+<style is:global>
+/* ---- Code pairs ---- */
+
+.gmt-pairs {
+  container: gmt-pairs / inline-size;
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+/* A hairline between items; no box, since each code frame is a frame of its own. */
+.gmt-pairs > .gmt-pair {
+  margin: 0;
+  padding-block: 1.5rem;
+  border-block-end: 1px solid var(--gmt-hairline);
+}
+
+.gmt-pairs > .gmt-pair:first-child {
+  padding-block-start: 0.5rem;
+}
+
+.gmt-pairs > .gmt-pair:last-child {
+  border-block-end: 0;
+}
+
+.gmt-pair > * {
+  margin: 0;
+}
+
+.gmt-pair > * + * {
+  margin-block-start: 0.75rem;
+}
+
+.gmt-pair-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  font-size: var(--sl-text-lg);
+}
+
+.gmt-pair-tag {
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm, 0.25rem);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--sl-text-sm);
+  color: var(--gmt-cyan-ink);
+}
+
+.gmt-pair-facts {
+  display: grid;
+  gap: 0.3rem;
+  font-size: var(--sl-text-sm);
+}
+
+/* Starlight's prose rules space every sibling and indent a `dd`; the list sets its own. */
+.gmt-pair-facts > div {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.gmt-pair-facts dt {
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.gmt-pair-facts dd {
+  margin: 0;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A long value breaks first at its `/`; its pieces are `nowrap`, so in a 320 px column the first
+   one would still overrun. */
+.gmt-pair-facts dd .gmt-cw {
+  white-space: normal;
+}
+
+/* Stacked in a narrow column; side by side, the library's shorter code taking the smaller share,
+   once both frames have room for a line of code. */
+.gmt-pair-code {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+@container gmt-pairs (width > 40rem) {
+  .gmt-pair-code {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+}
+
+.gmt-pair-code > * {
+  margin: 0;
+}
+
+/* A reference name such as `DisambiguatePossibleEpochNanoseconds (11.1.12)` has no space to wrap
+   at and is wider than a 320 px column, so it may break inside the word. */
+.gmt-pair-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  font-size: var(--sl-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.gmt-pair-group {
+  min-inline-size: 0;
+}
+
+.gmt-pair-label {
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+@container gmt-pairs (width <= 30rem) {
+  .gmt-pair-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
+</style>

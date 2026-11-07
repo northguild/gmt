@@ -57,10 +57,17 @@ const WRAPPED = Symbol.for("dox.leak-guard.wrapped");
  * Whether a package, not the test or the code under test, is adding the listener. User-event,
  * jsdom and React each register a few of their own once per document and never remove them, which
  * is not a leak of the test's. The stack is read only when a listener is added, which is rare.
+ *
+ * `renderWidget` puts its own recorder between the caller and this wrapper while a widget is
+ * live, so its frames are skipped too: the caller is whoever called the recorder.
  */
+const OWN_FRAMES = ["/leak-guard.ts", "/render-widget.ts"];
+
 function fromLibrary(): boolean {
   const frames = (new Error().stack ?? "").split("\n").slice(1);
-  const caller = frames.find((line) => !line.includes("/leak-guard.ts"));
+  const caller = frames.find(
+    (line) => !OWN_FRAMES.some((f) => line.includes(f)),
+  );
   return caller?.includes("/node_modules/") ?? false;
 }
 

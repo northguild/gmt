@@ -1,15 +1,27 @@
 ---
 /**
- * One row of the `/upstream/` tracker.
+ * One card of the `/upstream/` tracker, laid out like a row on GitHub: a state icon, the title and
+ * `repo#number` on top with the state badge at the end, then the summary, the chips, and a meta
+ * line of icons.
  *
- * Split out of `UpstreamTracker.astro` because a filing is the unit the table is made of: the
- * tracker now loops, and everything that varies per filing is decided here, next to the markup it
- * decides.
+ * Everything that varies per filing is decided in `lib/upstream-badges.ts` from the filing's own
+ * fields, so no status is typed by hand. The cells carry no `data-col`: the card is a header, a
+ * body and a meta line, not label/value pairs.
  */
+import { shortRef } from "../data/temporal-compat";
 import type { UpstreamFiling } from "../data/upstream-filings";
 import { inlineCodeHtml } from "../lib/inline-code-html";
-import { UPSTREAM_COLUMNS as COLUMNS, filingInGmt, filingStatus } from "../lib/upstream-status";
-import UpstreamFilingKind from "./UpstreamFilingKind.astro";
+import { octicon } from "../lib/octicons";
+import {
+  chip,
+  gmtBadge,
+  reviewBadge,
+  roleBadge,
+  stateBadge,
+  stateNote,
+  workBadge,
+} from "../lib/upstream-badges";
+import { countLabel, countNoun } from "../lib/upstream-status";
 import UpstreamFilingRefs from "./UpstreamFilingRefs.astro";
 
 interface Props {
@@ -20,39 +32,61 @@ interface Props {
 
 // Asserted rather than left to Astro's own `Props` inference: this app's `tsconfig.json` sets
 // `jsx: "react-jsx"` for its React islands, which turns that inference off, so `Astro.props` is
-// `Record<string, any>` in every `.astro` file here. Without this, `filing.kind` is `any` and
-// indexing a const map with it fails `astro check` under `strict`.
+// `Record<string, any>` in every `.astro` file here.
 const { filing, formatDate } = Astro.props as Props;
 
-const inGmt = filingInGmt(filing);
+const state = stateBadge(filing);
+const secondary = [reviewBadge(filing), workBadge(filing.work), roleBadge(filing)].filter(
+  (b) => b !== null,
+);
+const inGmt = gmtBadge(filing);
+const note = stateNote(filing);
 
 /** The `Polyfill: ` prefix is noise in a table whose rows are already grouped by repository. */
 const title = filing.title.replace(/^Polyfill: /, "");
 
 /** Shown only when no workaround covers the defect, so the two never contradict each other. */
-const note = filing.gmtGuard ? null : filing.gmtNote;
+const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
 ---
 
-<tr>
-  <td data-col={COLUMNS[0]}>
-    <a href={filing.url}>#{filing.number}</a>
+<tr data-tone={state.tone}>
+  <td class="gmt-upstream-head">
+    <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
+    <span class="gmt-sr-only">{filing.kind === "pr" ? "Pull request:" : "Issue:"}</span>
+    <strong class="gmt-upstream-title" set:html={inlineCodeHtml(title)} />
+    <a class="gmt-upstream-ref" href={filing.url}>{shortRef(filing.repo, filing.number)}</a>
+    <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
   </td>
-  <td data-col={COLUMNS[1]}>
-    <span class:list={["gmt-upstream-badge", inGmt.handled && "gmt-upstream-badge--ok"]}>
-      {inGmt.handled ? "✓ " : ""}{inGmt.label}
-    </span>
-  </td>
-  <td data-col={COLUMNS[2]}>
-    <strong set:html={inlineCodeHtml(title)} />
-    {filing.summary && <p set:html={inlineCodeHtml(filing.summary)} />}
-    {note && <p class="gmt-upstream-links" set:html={inlineCodeHtml(note)} />}
+  <td class="gmt-upstream-body">
+    {filing.summary && <p class="gmt-upstream-summary" set:html={inlineCodeHtml(filing.summary)} />}
+    {note && <p class="gmt-upstream-muted">{note}</p>}
+    {filing.outcome && <p class="gmt-upstream-muted">{filing.outcome}</p>}
+    <div class="gmt-upstream-chips">
+      {secondary.map((b) => <span set:html={chip(b)} />)}
+      <span class="gmt-upstream-ingmt">
+        <span class="gmt-upstream-muted">In GMT</span>
+        <span set:html={chip(inGmt)} />
+      </span>
+    </div>
+    {gmtNote && <p class="gmt-upstream-links" set:html={inlineCodeHtml(gmtNote)} />}
     <UpstreamFilingRefs filing={filing} />
   </td>
-  <UpstreamFilingKind filing={filing} column={COLUMNS[3]} />
-  <td data-col={COLUMNS[4]}>
-    {filingStatus(filing)}
-    {filing.outcome && <p class="gmt-upstream-muted">{filing.outcome}</p>}
+  <td class="gmt-upstream-meta">
+    <span class="gmt-upstream-fact">
+      <span set:html={octicon("comment")} />
+      <span class="gmt-sr-only">{countLabel(filing.maintainerComments, "maintainer reply", "maintainer replies")}</span>
+      <span aria-hidden="true">{filing.maintainerComments}<span class="gmt-upstream-long"> {countNoun(filing.maintainerComments, "maintainer reply", "maintainer replies")}</span></span>
+    </span>
+    <span class="gmt-upstream-fact">
+      <span set:html={octicon("clock")} />
+      <span class="gmt-sr-only">Last activity: </span>
+      <time datetime={filing.updatedAt}>{formatDate(filing.updatedAt)}</time>
+    </span>
+    {filing.role === "contributor" && (
+      <span class="gmt-upstream-fact">
+        <span set:html={octicon("link")} />
+        <a href={filing.contributionUrl ?? filing.url}>we added evidence</a>
+      </span>
+    )}
   </td>
-  <td data-col={COLUMNS[5]}>{filing.maintainerComments}</td>
-  <td data-col={COLUMNS[6]}>{formatDate(filing.updatedAt)}</td>
 </tr>

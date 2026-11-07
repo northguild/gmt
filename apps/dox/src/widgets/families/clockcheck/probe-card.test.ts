@@ -83,10 +83,29 @@ describe("probeCard", () => {
       within(table)
         .getAllByRole("columnheader")
         .map((h) => h.textContent?.trim()),
-    ).toEqual(["Place", "Correct (tzdb A)", "Yours (1 Jun)"]);
+    ).toEqual(["Place", "Correct, tzdb A", "Yours, 1 Jun"]);
     const places = cellsInColumn(table, "Place");
     expect(places[0]).toHaveTextContent("Casablanca");
     expect(places[1]).toHaveTextContent("El Aaiun");
+  });
+
+  it("names each offset column in full and draws its label and note on two lines, with no brackets", () => {
+    draw();
+    const table = screen.getByRole("table");
+    const correct = within(table).getByRole("columnheader", {
+      name: "Correct, tzdb A",
+    });
+    const yoursHead = within(table).getByRole("columnheader", {
+      name: "Yours, 1 Jun",
+    });
+    for (const [head, label, note] of [
+      [correct, "Correct", "tzdb A"],
+      [yoursHead, "Yours", "1 Jun"],
+    ] as const) {
+      expect(within(head).getByText(label)).toBeInTheDocument();
+      expect(within(head).getByText(note)).toBeInTheDocument();
+      expect(head).not.toHaveTextContent(/[()]/);
+    }
   });
 
   it("keeps its table semantics in explicit roles, the place cell a row header", () => {

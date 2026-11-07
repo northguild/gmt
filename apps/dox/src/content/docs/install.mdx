@@ -1,6 +1,7 @@
 ---
 title: Install
 description: Add @northguild/gmt to your project, and what the package exports.
+industries: [core]
 ---
 
 import { TabItem, Tabs } from "@astrojs/starlight/components";
@@ -39,6 +40,28 @@ bun add @northguild/gmt
 
   </TabItem>
 </Tabs>
+
+## Your first call
+
+ISO 8601 strings go in and come out. There is no `Date` object to create first.
+
+```typescript
+import { addDate, addZoned, diffDate, formatDate } from "@northguild/gmt";
+
+addDate("2024-01-31", { months: 1 }); // "2024-02-29"
+diffDate("2024-01-01", "2024-03-15", "days"); // 74
+formatDate("2024-03-15", "en-US", { dateStyle: "long" }); // "March 15, 2024"
+
+// A day is a calendar day, even across Berlin's clock change that night
+addZoned("2024-03-30T12:00:00+01:00[Europe/Berlin]", { days: 1 }); // "2024-03-31T12:00:00+02:00[Europe/Berlin]"
+
+// Bad input returns a value, never an exception
+addDate("2024-02-30", { days: 1 }); // ""
+diffDate("not a date", "2024-03-15", "days"); // null
+```
+
+Check for `""`, `null`, `false` or `[]` where you would otherwise catch an error. The
+[Core Rules](/core-rules/) list every fallback.
 
 ## What you get
 

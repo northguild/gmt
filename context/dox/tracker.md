@@ -41,7 +41,7 @@ or `architect`, with no tool shortlist; `/pipeline` says who builds it.
 | 19    | DOX-G1                                      | —          | #430         | Done   |
 | 20    | DOX-G2                                      | —          | #447         | Todo   |
 | 21    | DOX-G3                                      | —          | #467         | Done   |
-| 22    | DOX-G4                                      | —          | #458         | Todo   |
+| 22    | DOX-G4                                      | —          | #458         | Done   |
 | 23    | DOX-G5                                      | —          | #456         | Todo   |
 | 24    | DOX-G6                                      | —          | #448         | Todo   |
 

@@ -3,14 +3,18 @@
  * The /upstream/ "Beyond Temporal" table: pull requests GMT opened on projects outside Temporal.
  * They are not filings, so they have their own table and are in no tally. Built from `listings`
  * in `upstream-filings.ts` (live refresh when GitHub is reachable, the committed snapshot
- * otherwise); nothing is fetched in the browser. It reuses the tracker's entries layout, so a
- * phone gets one stacked entry per pull request. Table styles are `upstream-table.css`, shared with
- * the tracker.
+ * otherwise); nothing is fetched in the browser. Each pull request is a card in the same shape as
+ * the tracker's (state icon, title, `repo#number`, state badge), so a phone gets one stacked card
+ * per pull request. Styles are `gmt-content-tables.css`, shared with the tracker.
  */
-import "./upstream-table.css";
+import { shortRef } from "../data/temporal-compat";
 import { listings } from "../data/upstream-filings";
-import { LISTING_COLUMNS as COLUMNS, listingStatus } from "../lib/upstream-status";
+import { octicon } from "../lib/octicons";
+import { chip, reviewBadge, stateBadge } from "../lib/upstream-badges";
+import { countLabel, countNoun } from "../lib/upstream-status";
 import { asDate } from "../lib/upstream-summary";
+
+const COLUMNS = ["Pull request", "Details", "Activity"] as const;
 ---
 
 {
@@ -21,18 +25,41 @@ import { asDate } from "../lib/upstream-summary";
           <tr>{COLUMNS.map((column) => <th>{column}</th>)}</tr>
         </thead>
         <tbody>
-          {listings.map((l) => (
-            <tr>
-              <td data-col={COLUMNS[0]}>
-                <a href={l.url}>{l.repo}#{l.number}</a>
-                <p>{l.title}</p>
-              </td>
-              <td data-col={COLUMNS[1]}>{l.summary}</td>
-              <td data-col={COLUMNS[2]}>{listingStatus(l)}</td>
-              <td data-col={COLUMNS[3]}>{l.comments}</td>
-              <td data-col={COLUMNS[4]}>{asDate(l.updatedAt)}</td>
-            </tr>
-          ))}
+          {listings.map((l) => {
+            const state = stateBadge({ ...l, kind: "pr" });
+            const review = reviewBadge({ ...l, kind: "pr" });
+            return (
+              <tr data-tone={state.tone}>
+                <td class="gmt-upstream-head">
+                  <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
+                  <span class="gmt-sr-only">Pull request:</span>
+                  <strong class="gmt-upstream-title">{l.title}</strong>
+                  <a class="gmt-upstream-ref" href={l.url}>{shortRef(l.repo, l.number)}</a>
+                  <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
+                </td>
+                <td class="gmt-upstream-body">
+                  <p class="gmt-upstream-summary">{l.summary}</p>
+                  {review && (
+                    <div class="gmt-upstream-chips">
+                      <span set:html={chip(review)} />
+                    </div>
+                  )}
+                </td>
+                <td class="gmt-upstream-meta">
+                  <span class="gmt-upstream-fact">
+                    <span set:html={octicon("comment")} />
+                    <span class="gmt-sr-only">{countLabel(l.comments, "comment", "comments")}</span>
+                    <span aria-hidden="true">{l.comments}<span class="gmt-upstream-long"> {countNoun(l.comments, "comment", "comments")}</span></span>
+                  </span>
+                  <span class="gmt-upstream-fact">
+                    <span set:html={octicon("clock")} />
+                    <span class="gmt-sr-only">Last activity: </span>
+                    <time datetime={l.updatedAt}>{asDate(l.updatedAt)}</time>
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

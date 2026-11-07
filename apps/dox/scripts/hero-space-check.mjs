@@ -2954,10 +2954,10 @@ async function checkEntrance(browser) {
   const rest = log.runs.filter(
     (run) => (run.name ?? "").startsWith("ng-") && run.name !== "ng-pop",
   );
-  // The glint and a header chip's shine ride on a freeze, so the card starts after every freeze and
-  // ends after all.
+  // The glint and a header chip's shine (GitHub and Discord's `ng-shine-in` among them) ride on a
+  // freeze, so the card starts after every freeze and ends after all.
   const freezes = rest.filter(
-    (run) => run.name !== "ng-glint" && run.name !== "ng-shine",
+    (run) => run.name !== "ng-glint" && !run.name?.startsWith("ng-shine"),
   );
   check(
     card.length > 0 &&

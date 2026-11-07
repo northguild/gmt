@@ -16,6 +16,7 @@ import { MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
 import { serversMarkdown } from "./canada-clock-change";
 import { serversMarkdown as moroccoServersMarkdown } from "./morocco-clock-change";
 import { dateFaults } from "../data/date-faults";
+import { whyGmtFigures } from "./why-gmt-figures";
 import { alternativesStack } from "../data/date-alternatives";
 import {
   compatGroups,
@@ -40,7 +41,15 @@ import {
 } from "./library-compare-tables";
 import { LISTING_COLUMNS, listingStatus } from "./upstream-status";
 import { asDate, contributionClause, coverageClause } from "./upstream-summary";
-import { diffViews, libraryProp, mapView, matrixView } from "./migrate-view";
+import {
+  diffPairs,
+  libraryProp,
+  mapPairs,
+  matrixView,
+  temporalPairs,
+  type CodePairView,
+} from "./migrate-view";
+import { VERDICT_LABEL } from "../data/behaviour-matrix";
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
 interface JsxElement {
@@ -244,15 +253,23 @@ function renderWhyDateBug(props: Record<string, string>): string {
   const rows = dateFaults.map(
     (f) => `| \`${f.input}\` | ${f.output} | ${f.why} |`,
   );
+  // The heading is the page's own `##` line, so it is not repeated here.
   return [
-    "",
-    "## The bug is the `Date` object",
     "",
     "Almost every date/time bug in a JavaScript codebase traces back to one type. `Date` conflates an instant with a wall-clock reading, parses two ways depending on the string, and mutates in place.",
     "",
     "| You write | You get | Why |",
     "| --- | --- | --- |",
     ...rows,
+    "",
+  ].join("\n");
+}
+
+/** `<WhyGmtFigures />` as a Markdown list: each headline figure with what it counts. */
+function renderWhyGmtFigures(): string {
+  return [
+    "",
+    ...whyGmtFigures.map((f) => `- **${f.value}** ${f.label}`),
     "",
   ].join("\n");
 }
@@ -356,66 +373,83 @@ function renderBundleSize(): string {
   ].join("\n");
 }
 
-/** `<MigrationMap library="…" part="more" />` as a Markdown table: their call, the GMT functions, a note. */
+/** A titled fenced block: the title as a bold line, then the code. */
+const titledFence = (title: string, code: string): string =>
+  `**${escapeMarkdownInline(title)}**\n${fence(code)}`;
+
+/**
+ * A list of code pairs, as `CodePairs.astro` renders them: an optional heading, the facts, their
+ * code and the GMT code as fenced blocks, the note, then the links. Facts and notes are written by
+ * hand with backtick code spans, so they pass through as they are.
+ */
+function renderCodePairs(pairs: readonly CodePairView[]): string {
+  const out: string[] = [""];
+  for (const pair of pairs) {
+    if (pair.heading) {
+      const tag = pair.heading.tag ? `${pair.heading.tag}. ` : "";
+      out.push(`### ${tag}${pair.heading.text}`, "");
+    }
+    for (const fact of pair.facts) out.push(`- ${fact.label}: ${fact.text}`);
+    if (pair.facts.length > 0) out.push("");
+    out.push(titledFence(pair.theirs.title, pair.theirs.code));
+    out.push(titledFence(pair.gmt.title, pair.gmt.code));
+    if (pair.note) out.push(pair.note, "");
+    for (const group of pair.links) {
+      if (group.links.length === 0) continue;
+      const links = group.links.map((link) => {
+        const text = link.code
+          ? `\`${link.text}\``
+          : escapeMarkdownInline(link.text);
+        return `[${text}](${link.href})`;
+      });
+      out.push(`${group.label}: ${links.join(", ")}.`, "");
+    }
+  }
+  return out.join("\n");
+}
+
+/** `<MigrationMap library="…" part="more" />`: their call beside the GMT code, one pair per call. */
 function renderMigrationMap(props: Record<string, string>): string {
-  const view = mapView(
-    libraryProp(props.library, "MigrationMap"),
-    props.part === "more" ? "more" : "rows",
-  );
-  const rows = view.rows.map((row) => {
-    const gmt =
-      row.gmt.length === 0
-        ? "none"
-        : row.gmt.map((fn) => `[\`${fn.name}\`](${fn.url})`).join(", ");
-    // Notes are written by hand with backtick code spans, so they pass through as they are.
-    const note = row.note ?? "";
-    return `| ${row.theirs} | ${gmt} | ${note} |`;
-  });
-  return [
-    "",
-    `| ${view.heading} | GMT | Note |`,
-    "| --- | --- | --- |",
-    ...rows,
-    "",
-  ].join("\n");
+  const id = libraryProp(props.library, "MigrationMap");
+  return renderCodePairs(mapPairs(id, props.part === "more" ? "more" : "rows"));
 }
 
-/** `<BehaviourDiffs library="…" />` as a list: one item per case where the library differs from Temporal. */
+/** `<BehaviourDiffs library="…" />`: one pair per case where the library differs from Temporal. */
 function renderBehaviourDiffs(props: Record<string, string>): string {
-  const items = diffViews(libraryProp(props.library, "BehaviourDiffs")).map(
-    (diff) => {
-      const issues = diff.issues.length
-        ? ` Upstream: ${diff.issues.map((i) => `[${i.text}](${i.url})`).join(", ")}.`
-        : "";
-      return `- **${diff.id}. ${escapeMarkdownInline(diff.title)}** Input: ${escapeMarkdownInline(diff.input)}. The library returns ${escapeMarkdownInline(diff.libraryReturns)}; ${diff.referenceLabel === "Temporal returns" ? "Temporal returns" : "the stated result is"} ${escapeMarkdownInline(diff.temporalReturns)}. Specification: [${escapeMarkdownInline(diff.clause.label)}](${diff.clause.url}).${issues} [Matrix row](${diff.matrixHref}).`;
-    },
+  return renderCodePairs(
+    diffPairs(libraryProp(props.library, "BehaviourDiffs")),
   );
-  return ["", ...items, ""].join("\n");
 }
 
-/** `<BehaviourMatrix />` as one heading and one table per case. */
+/** `<TemporalMap />`: each Temporal call beside the matching GMT code. */
+function renderTemporalMap(): string {
+  return renderCodePairs(temporalPairs());
+}
+
+/**
+ * `<BehaviourMatrix />` as the page prints it: a heading per case, its facts, then GMT's result and
+ * each library's as a verdict line and a code block. Facts and notes are written by hand with
+ * backtick code spans, so they pass through as they are.
+ */
 function renderBehaviourMatrix(): string {
   const out: string[] = [""];
   for (const view of matrixView()) {
     out.push(`## ${view.id}. ${escapeMarkdownInline(view.title)}`, "");
+    for (const fact of view.facts) out.push(`- ${fact.label}: ${fact.text}`);
     out.push(
-      `Input: ${escapeMarkdownInline(view.input)}. Compared as: ${escapeMarkdownInline(view.compare)}. Specification: ${view.clauses.map((c) => `[${escapeMarkdownInline(c.label)}](${c.url})`).join(", ")}.`,
+      `- Specification: ${view.clauses.map((c) => `[${escapeMarkdownInline(c.label)}](${c.url})`).join(", ")}`,
       "",
     );
-    if (view.expectedNote) out.push(view.expectedNote, "");
-    // The note is written by hand with backtick code spans, so it passes through as it is.
-    if (view.note) out.push(view.note, "");
-    out.push(
-      `| Library | Call | Returns | Compared with ${view.reference} | Upstream issue |`,
-      "| --- | --- | --- | --- | --- |",
-    );
-    for (const row of view.rows) {
-      const issues = row.issues.map((i) => `[${i.text}](${i.url})`).join(", ");
+    for (const note of view.notes) out.push(note, "");
+    for (const entry of view.entries) {
+      const issues = entry.issues.length
+        ? ` Upstream: ${entry.issues.map((i) => `[${i.text}](${i.url})`).join(", ")}.`
+        : "";
       out.push(
-        `| ${escapeMarkdownInline(row.who)} | ${escapeMarkdownInline(row.call)} | ${escapeMarkdownInline(row.returns.join(", "))} | ${row.verdict} | ${issues || "none"} |`,
+        `**${escapeMarkdownInline(entry.name)}**: ${VERDICT_LABEL[entry.verdict]}.${issues}`,
+        fence(entry.code),
       );
     }
-    out.push("");
   }
   return out.join("\n");
 }
@@ -505,6 +539,7 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "BundleSize", renderBundleSize);
   out = replaceElements(out, "MigrationMap", renderMigrationMap);
   out = replaceElements(out, "BehaviourDiffs", renderBehaviourDiffs);
+  out = replaceElements(out, "TemporalMap", renderTemporalMap);
   out = replaceElements(out, "BehaviourMatrix", renderBehaviourMatrix);
 
   // `SectionHeading` is an `<h2>` around its children, so it becomes one.
@@ -517,6 +552,8 @@ export function renderMdxComponents(body: string): string {
   // The home page's two argument cards hold real prose — the `Date` faults and the library
   // stack — so they render rather than drop. They were invisible to the old nine-name gate.
   out = replaceElements(out, "WhyDateBug", renderWhyDateBug);
+  // The headline figures under the /why-gmt intro, as a list.
+  out = replaceElements(out, "WhyGmtFigures", renderWhyGmtFigures);
   // Key points first, then the servers card and what the library does; the live parts have no text.
   out = replaceElements(
     out,

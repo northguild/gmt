@@ -17,6 +17,10 @@
  *     wider than its own box, and no word of a visible cell or head breaks across two lines, as
  *     loaded and with the browser's verdict forced to ok, bad and unreadable (at 300 and 420 px,
  *     which is just above the 21rem stack threshold in WebKit),
+ *   - every head of a probe table is at most 3 lines tall; an offset head's label ("Correct",
+ *     "Yours") is one line, and its note is one line wherever the table's box is 25rem or wider,
+ *   - the "Yours" cells change from `+00:00` to `-03:30` and back without moving the table, a
+ *     column or the card by more than half a pixel (a reading that arrives moves nothing),
  *   - no visible element of a card passes the card's left or right edge by more than 1 px
  *     (the stored-times hint of the Morocco page did),
  *   - no two place labels overlap, none crosses the frame, and a label's real box is no wider than
@@ -30,7 +34,7 @@
  * nowrap`, and Chromium does. Run it with `--browsers chromium,webkit,firefox`.
  *
  * Usage:
- *   node scripts/canada-layout-check.mjs --base http://127.0.0.1:4351/gmt [--widths 1440,1024,420,375,300]
+ *   node scripts/canada-layout-check.mjs --base http://127.0.0.1:4351/gmt [--widths 1910,1440,1280,1024,420,375,300]
  *     [--pages <a,b>]   the checker pages; both by default (/check/canada-2026-clock-change/,
  *                       /check/morocco-2026-clock-change/)
  *     [--fixture <file>]  a Worker answer (.json) served for the page's GET, so results arrive
@@ -67,7 +71,9 @@ const arg = (name, fallback) => {
   return i === -1 ? fallback : (args[i + 1] ?? fallback);
 };
 const BASE = arg("base", "http://127.0.0.1:4351/gmt").replace(/\/$/, "");
-const WIDTHS = arg("widths", "1440,1024,420,375,300").split(",").map(Number);
+const WIDTHS = arg("widths", "1910,1440,1280,1024,420,375,300")
+  .split(",")
+  .map(Number);
 const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
 /* `--browsers a,b` runs every engine; `--engine x` is the older single form and still works. */
 const ENGINES = (arg("browsers", "") || arg("engine", "chromium")).split(",");
@@ -275,6 +281,14 @@ async function openPage(browser, { width, theme, state, offsets }) {
  * card by more than 1 px.
  */
 async function measureProbe(page, cards) {
+  /* Fonts loaded and two frames: the head's lines are those of the final face. */
+  await page.waitForFunction(() => document.fonts.status === "loaded");
+  await page.evaluate(
+    () =>
+      new Promise((done) =>
+        requestAnimationFrame(() => requestAnimationFrame(done)),
+      ),
+  );
   return page.evaluate(
     ({ table, cardSelectors }) => {
       /* A cell the stacked layout hides visually (clip-path) takes no part. */
@@ -311,7 +325,46 @@ async function measureProbe(page, cards) {
               }
             }
           }
+          const lineCount = (el) => {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            return new Set(
+              [...range.getClientRects()]
+                .filter((r) => r.width > 0)
+                .map((r) => Math.round(r.top)),
+            ).size;
+          };
+          /* The offset heads by their markup, shown or not: a selector that finds no label and
+             note would otherwise measure every head as one line and pass. */
+          const offsetHeads = [...t.querySelectorAll("thead th")].filter(
+            (th) =>
+              th.querySelector("[class*=label]") &&
+              th.querySelector("[class*=note]"),
+          ).length;
+          const heads = [...t.querySelectorAll("thead th")]
+            .filter((th) => !hidden(th))
+            .map((th) => {
+              const label = th.querySelector("[class*=label]");
+              const note = th.querySelector("[class*=note]");
+              return {
+                text: th.textContent.trim(),
+                /* Lines as drawn: the label and the note have their own line heights, and the hidden
+                   comma between them takes no line. */
+                lines:
+                  label && note
+                    ? lineCount(label) + lineCount(note)
+                    : lineCount(th),
+                labelLines: label && note ? lineCount(label) : null,
+                noteLines: label && note ? lineCount(note) : null,
+              };
+            });
           return {
+            heads,
+            offsetHeads,
+            remPx: parseFloat(
+              getComputedStyle(document.documentElement).fontSize,
+            ),
+            probeWidth: t.parentElement.getBoundingClientRect().width,
             card: card.dataset.gate ?? card.localName,
             left: b.left - (c.left + inset("borderLeftWidth", "paddingLeft")),
             right:
@@ -356,8 +409,35 @@ async function measureProbe(page, cards) {
   );
 }
 
+/* The note wraps only in a probe narrower than this (the `gmt-probe` container step). */
+const NOTE_WRAPS_UNDER_REM = 25;
+
+/* The "Correct" and "Yours" heads: each a label with a note under it. */
+const OFFSET_HEADS = 2;
+
 function probeProblems(tag, probe) {
+  if (probe.tables.length === 0) fail(`${tag}: no probe table to measure`);
   for (const t of probe.tables) {
+    if (t.offsetHeads !== OFFSET_HEADS)
+      fail(
+        `${tag}: the probe table has ${t.offsetHeads} heads with a label and a note (${OFFSET_HEADS} expected)`,
+      );
+    for (const head of t.heads) {
+      if (head.lines > 3)
+        fail(
+          `${tag}: the "${head.text}" head is ${head.lines} lines tall (at most 3)`,
+        );
+      if (head.labelLines !== null && head.labelLines > 1)
+        fail(`${tag}: the label of the "${head.text}" head wraps`);
+      if (
+        head.noteLines !== null &&
+        head.noteLines > 1 &&
+        t.probeWidth >= NOTE_WRAPS_UNDER_REM * t.remPx
+      )
+        fail(
+          `${tag}: the note of the "${head.text}" head wraps in a ${t.probeWidth.toFixed(0)} px table`,
+        );
+    }
     if (t.wide > 0)
       fail(`${tag}: ${t.wide} probe table cell(s) hold more than their box`);
     if (t.words.length > 0)
@@ -370,6 +450,48 @@ function probeProblems(tag, probe) {
       );
   }
   for (const line of probe.spill) fail(`${tag}: ${line} past its card`);
+}
+
+/**
+ * The "Yours" cells go from `+00:00` to `-03:30` and back; the card, the table, its columns and
+ * every head must keep their widths and heights, as they do when the clock ticks.
+ */
+async function readoutHoldsStill(page) {
+  return page.evaluate((table) => {
+    const wrap = document.querySelector(table);
+    if (!wrap) return ["no probe table to check"];
+    const card = wrap.closest("section");
+    const cells = [...wrap.querySelectorAll("tbody td:last-child span[id]")];
+    /* No readout cells would change nothing, and pass. */
+    if (cells.length === 0) return ["no readout cells to check"];
+    const sizes = () =>
+      [card, wrap, wrap.querySelector("table"), ...wrap.querySelectorAll("th")]
+        .filter((el) => el.offsetParent !== null)
+        .map((el) => {
+          const b = el.getBoundingClientRect();
+          return [b.width, b.height];
+        });
+    const saved = cells.map((cell) => cell.innerHTML);
+    for (const cell of cells) cell.textContent = "+00:00";
+    const before = sizes();
+    const moved = [];
+    for (const reading of ["-03:30", "+01:00", "+00:00"]) {
+      for (const cell of cells) cell.textContent = reading;
+      sizes().forEach(([w, h], i) => {
+        if (
+          Math.abs(w - before[i][0]) > 0.5 ||
+          Math.abs(h - before[i][1]) > 0.5
+        )
+          moved.push(
+            `box ${i} ${before[i].map(Math.round)} to ${[w, h].map(Math.round)} at ${reading}`,
+          );
+      });
+    }
+    cells.forEach((cell, i) => {
+      cell.innerHTML = saved[i];
+    });
+    return moved;
+  }, gate("probe-table"));
 }
 
 for (const engineName of ENGINES) {
@@ -572,6 +694,8 @@ for (const engineName of ENGINES) {
               }
             }
             probeProblems(tag, await measureProbe(page, CARDS));
+            for (const move of await readoutHoldsStill(page))
+              fail(`${tag}: a reading moved the probe card (${move})`);
             if (data.aspect) {
               const want = 800 / data.aspect.viewHeight;
               const got = data.aspect.width / data.aspect.height;

@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { screen, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
@@ -100,6 +102,27 @@ describe("zoneMap", () => {
         name: "Canada time zones, scrollable list",
       }),
     ).toHaveFocus();
+  });
+
+  // jsdom has no layout, so the order is read from the sheet. In the three-column row the list
+  // fills the card's height; the rule that lifts the stacked layout's height cap uses the same
+  // selector, so it only wins if it comes later in the file. Otherwise the cap holds, and at 1910px
+  // the card is left empty under the list.
+  it("lifts the list's height cap in the three-column row after setting it", () => {
+    const css = readFileSync(
+      join(import.meta.dirname, "zone-map.module.css"),
+      "utf8",
+    );
+    const cap = css.indexOf("max-block-size: min(60vh, 24rem)");
+    const lift = css.lastIndexOf("max-block-size: none");
+    expect(cap).toBeGreaterThanOrEqual(0);
+    expect(lift).toBeGreaterThan(cap);
+    // The lift sits in the three-column query, which opens after the cap.
+    const queries = [
+      ...css.matchAll(/@container [\w-]+ \(min-width: 62rem\)/g),
+    ].map((m) => m.index);
+    const query = Math.max(...queries.filter((i) => i < lift));
+    expect(query).toBeGreaterThan(cap);
   });
 
   it("has no accessibility violations", async () => {

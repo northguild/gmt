@@ -44,20 +44,26 @@
   }
 }
 
-/* The table is the kit's. Its columns: Place takes what the two short offset columns leave, and
-   the notes in the headers wrap in a narrow card. Under 21rem the cells tighten so the table fits
-   the card without a sideways scroll. */
+/* The table is the kit's. Its columns: Place takes what the two offset columns leave. An offset
+   head is a label with its note under it; both keep to one line, so a column is as wide as its
+   longest line and never as narrow as its longest word. Where three such columns no longer fit,
+   the note alone wraps at its spaces. Under 21rem the cells tighten so the table fits the card
+   without a sideways scroll. `.probe` is the container the steps are measured on. */
 .probe {
+  container: gmt-probe / inline-size;
   min-inline-size: 0;
 
   & table :is(th, td) {
     font-size: 0.8125rem;
   }
 
+  /* A head keeps its words whole: the kit's `overflow-wrap: anywhere` is lifted here. */
   & table thead th {
-    white-space: normal;
     vertical-align: bottom;
     color: var(--gmt-ice);
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
   }
 
   /* The zone id breaks only at the `<wbr>` after each "/". This rule has to beat the content
@@ -85,10 +91,53 @@
   }
 }
 
-/* The two offset columns take only what their figures need, so Place takes the rest. */
+.label,
+.note {
+  display: block;
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  letter-spacing: normal;
+  text-transform: none;
+  font-size: var(--gmt-text-xs);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* The comma that joins label and note in the head's name is not drawn. */
+.aside {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Place and two nowrap offset columns need 373 px (23.3rem) with the longest note; under 25rem the
+   note alone wraps at its spaces and the label stays whole. */
+@container gmt-probe (inline-size < 25rem) {
+  .note {
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+}
+
+/* The two offset columns take only what their lines need, so Place takes the rest. */
 @container (inline-size >= 21rem) {
   .probe table th:not(:first-child) {
     inline-size: 1%;
+  }
+}
+
+/* Where the note wraps, the offset columns each take a third, so a note breaks in two lines and
+   not in one word per line. */
+@container gmt-probe (21rem <= inline-size < 25rem) {
+  .probe table th:not(:first-child) {
+    inline-size: 32%;
   }
 }
 

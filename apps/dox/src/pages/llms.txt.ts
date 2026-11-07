@@ -66,13 +66,15 @@ function directoryLinks(
 export const GET: APIRoute = () => {
   const base = SITE_URL;
 
-  // Top-level pages in sidebar order: Install leads on its own, the rest are "Start here".
+  // Top-level pages in sidebar order, all under "Start here"; Install is first among them.
   const top = topLevelPages(RAW).map(({ slug, source }) => ({
     slug,
     link: linkTo(base, slug, source),
   }));
-  const install = top.filter(({ slug }) => slug === "install");
-  const startHere = top.filter(({ slug }) => slug !== "install");
+  const startHere = [
+    ...top.filter(({ slug }) => slug === "install"),
+    ...top.filter(({ slug }) => slug !== "install"),
+  ];
 
   const migrateLinks = migratePages(RAW).map(({ slug, source }) =>
     linkTo(base, slug, source),
@@ -88,22 +90,7 @@ export const GET: APIRoute = () => {
   );
 
   const sections: LlmsSection[] = [
-    { heading: "Install", links: install.map(({ link }) => link) },
-    {
-      heading: "Tools",
-      links: directoryLinks(base, "tools", { indexFirst: true }),
-    },
-    {
-      heading: "Checks",
-      links: directoryLinks(base, "check", { indexFirst: true }),
-    },
     { heading: "Start here", links: startHere.map(({ link }) => link) },
-    // The release record: linked here so an agent can fetch it, left out of llms-full.txt.
-    {
-      heading: "Changelog",
-      links: directoryLinks(base, "changelog", { indexFirst: true }),
-    },
-    { heading: "Migrate", links: migrateLinks },
     // The guides index is a list of the guides below it.
     {
       heading: "Guides",
@@ -113,12 +100,26 @@ export const GET: APIRoute = () => {
     ...referenceNamespaces,
     { heading: "Industries", links: industryLinks },
     {
+      heading: "Tools",
+      links: directoryLinks(base, "tools", { indexFirst: true }),
+    },
+    {
       heading: "Scenarios",
       links: directoryLinks(base, "scenarios", { indexFirst: false }),
     },
     {
       heading: "Mistakes",
       links: directoryLinks(base, "mistakes", { indexFirst: false }),
+    },
+    { heading: "Migrate", links: migrateLinks },
+    {
+      heading: "Checks",
+      links: directoryLinks(base, "check", { indexFirst: true }),
+    },
+    // The release record, last as in the sidebar: linked here so an agent can fetch it, left out of llms-full.txt.
+    {
+      heading: "Changelog",
+      links: directoryLinks(base, "changelog", { indexFirst: true }),
     },
   ];
 

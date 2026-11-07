@@ -7,6 +7,7 @@ import {
   stripMdx,
 } from "~/lib/page-markdown";
 import { docsRelPath, markdownTwinSlug } from "~/lib/md-twin";
+import { industriesByPath } from "~/lib/page-industries";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -17,6 +18,9 @@ const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   import: "default",
   eager: true,
 }) as Record<string, string>;
+
+/** The tags each page shows, resolved once so a directory index's twin matches its page. */
+const tags = industriesByPath(RAW);
 
 const pages = Object.entries(RAW).flatMap(([path, raw]) => {
   const rel = docsRelPath(path);
@@ -31,7 +35,7 @@ const pages = Object.entries(RAW).flatMap(([path, raw]) => {
         // The home page's `title` is the page's `<title>`; its heading is the package name.
         title: rel === "index" ? HOME_HEADING : (data.title ?? slug),
         body: md,
-        industries: data.industries,
+        industries: tags.get(rel),
       }),
     },
   ];

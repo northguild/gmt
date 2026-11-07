@@ -18,6 +18,7 @@ import {
   stateLine,
 } from "../data/temporal-compat";
 import type { UpstreamFiling } from "../data/upstream-filings";
+import { chip, defectBadge } from "../lib/upstream-badges";
 
 interface Props {
   group: CompatGroup;
@@ -28,7 +29,7 @@ interface Props {
 // See `UpstreamFilingRow.astro`: `Astro.props` is untyped in this app, so `Props` is applied here.
 const { group, filings } = Astro.props as Props;
 
-const { badge, count } = stateLine(group);
+const { count } = stateLine(group);
 ---
 
 <tr>
@@ -36,17 +37,8 @@ const { badge, count } = stateLine(group);
     <strong>{groupLabel(group)}</strong>
     <p>{groupWhatBreaks(group)}</p>
   </td>
-  <td class="gmt-defects-state">
-    <span
-      class:list={[
-        "gmt-defects-badge",
-        (group.state === "still-needed" || group.state === "out-of-scope") &&
-          "gmt-defects-badge--ok",
-        group.state === "guard" && "gmt-defects-badge--guard",
-      ]}
-    >
-      {badge}
-    </span>
+  <td class="gmt-defects-state" data-col="Still needed?">
+    <span set:html={chip(defectBadge(group), { wrap: true })} />
     <p>{count}</p>
     {group.state === "guard" && group.guard && (
       <p class="gmt-defects-reason">
@@ -56,7 +48,7 @@ const { badge, count } = stateLine(group);
       </p>
     )}
   </td>
-  <td class="gmt-defects-sent">
+  <td class="gmt-defects-sent" data-col="What we sent">
     {filings.length === 0 ? (
       <p class="gmt-defects-none">—</p>
     ) : (

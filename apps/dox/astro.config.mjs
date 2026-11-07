@@ -21,6 +21,8 @@ import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
+import { codeThemes } from "./src/lib/code-themes.ts";
+import { MIGRATE, START_HERE } from "./src/lib/section-order.ts";
 
 // `site` + `base` make every Starlight link, the canonical tag, the sitemap
 // and Pagefind resolve under /gmt/. One module holds both, for the Worker and
@@ -171,7 +173,20 @@ export default defineConfig({
       // stylesheet until it has loaded — so on each route change the page
       // painted with an empty gap below the first heading for a frame. An
       // inline <style> applies as it is parsed. Costs ~4 KB gzipped per page.
-      expressiveCode: { emitExternalStylesheet: false },
+      //
+      // The syntax colours are the site's palette: `code-themes.ts` builds a dark and a light
+      // theme from the `--gmt-syntax-*` tokens. Starlight still draws the frames, tabs and
+      // buttons from its own colours (`useStarlightUiThemeColors`).
+      //
+      // The contrast adjustment is off: Expressive Code would measure it against Starlight's
+      // `#23262f` slab, not our code surface, and lighten tokens that already pass there. Each
+      // role is held to 7:1 on the surface the reader sees in `code-themes.test.ts` instead.
+      expressiveCode: {
+        emitExternalStylesheet: false,
+        themes: codeThemes(),
+        useStarlightUiThemeColors: true,
+        minSyntaxHighlightingColorContrast: 0,
+      },
       head: [
         // Hold the first paint until the end-of-page marker (src/components/
         // Footer.astro) is parsed. On a route change the browser keeps showing
@@ -235,23 +250,25 @@ export default defineConfig({
           })();`,
         },
       ],
-      /* Every group starts collapsed except Checks, the last group, which
-         lists the checks for recent tz rule changes. Starlight still opens any group that
+      /* The groups run in the order a reader needs them, first use first; the entries of Start
+         here and Migrate are set in src/lib/section-order.ts. Every group starts collapsed except
+         Checks, which lists the checks for recent tz rule changes. Starlight still opens any group that
          contains the current page (SidebarSublist: open when an entry is
          current or the group is not collapsed), so a page opens only its own
          ancestors. */
       sidebar: [
+        { label: "Start here", collapsed: true, items: [...START_HERE] },
+        { label: "Guides", collapsed: true, items: guidesSidebar },
+        { label: "API Reference", collapsed: true, items: referenceSidebar },
+        { label: "Industries", collapsed: true, items: industriesSidebar },
+        { label: "Tools", collapsed: true, items: toolsSidebar },
+        { label: "Scenarios", collapsed: true, items: scenariosSidebar },
+        { label: "Mistakes", collapsed: true, items: mistakesSidebar },
+        { label: "Migrate", collapsed: true, items: [...MIGRATE] },
         {
-          label: "Start here",
-          collapsed: true,
-          items: [
-            { slug: "why-gmt" },
-            { slug: "compare" },
-            { slug: "upstream" },
-            { slug: "core-rules" },
-            { slug: "install" },
-            { slug: "bundle-size" },
-          ],
+          label: "Checks",
+          collapsed: false,
+          items: [{ autogenerate: { directory: "check" } }],
         },
         {
           label: "Changelog",
@@ -261,47 +278,6 @@ export default defineConfig({
             { slug: "changelog/gmt-oxlint", label: "gmt-oxlint" },
             { slug: "changelog/gmt-biome", label: "gmt-biome" },
           ],
-        },
-        {
-          label: "Migrate",
-          collapsed: true,
-          items: [
-            { slug: "migrate" },
-            { slug: "migrate/date-fns" },
-            { slug: "migrate/luxon" },
-            { slug: "migrate/dayjs" },
-            { slug: "migrate/moment" },
-            { slug: "migrate/internationalized-date" },
-            { slug: "migrate/temporal" },
-            { slug: "compare/behaviour" },
-          ],
-        },
-        { label: "Industries", collapsed: true, items: industriesSidebar },
-        { label: "API Reference", collapsed: true, items: referenceSidebar },
-        {
-          label: "Guides",
-          collapsed: true,
-          items: guidesSidebar,
-        },
-        {
-          label: "Tools",
-          collapsed: true,
-          items: toolsSidebar,
-        },
-        {
-          label: "Scenarios",
-          collapsed: true,
-          items: scenariosSidebar,
-        },
-        {
-          label: "Mistakes",
-          collapsed: true,
-          items: mistakesSidebar,
-        },
-        {
-          label: "Checks",
-          collapsed: false,
-          items: [{ autogenerate: { directory: "check" } }],
         },
       ],
       components: {

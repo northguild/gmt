@@ -1,7 +1,7 @@
 ---
 title: "Why GMT?"
 description: "Data-driven comparison of GMT against legacy date libraries — test volume, API surface, locale coverage, and testing rigor."
-template: splash
+industries: [core]
 ---
 
 import {
@@ -14,9 +14,9 @@ import {
   testExecutionSvg,
 } from "../../../scripts/render-charts";
 import ChartContainer from "../../components/ChartContainer.astro";
-import GridSection from "../../components/GridSection.astro";
 import TimezoneMap from "../../components/TimezoneMap.astro";
 import WhyDateBug from "../../components/WhyDateBug.astro";
+import WhyGmtFigures from "../../components/WhyGmtFigures.astro";
 import {
   coreFunctions,
   coreNamespaces,
@@ -64,11 +64,13 @@ export const plainAndZoned = coreNamespaces
 
 `@northguild/gmt` is not the latest entry in a crowded field — it is a
 fundamentally different bet about what a date/time library should guarantee.
-The pages below make that concrete with data drawn from the library itself.
+The sections below make that concrete with data drawn from the library itself.
 
-<div class="gmt-why-grid">
+<WhyGmtFigures />
 
-<GridSection>
+## The bug is the `Date` object
+
+<WhyDateBug variant="full" />
 
 ## CI test execution volume
 
@@ -103,10 +105,6 @@ The split matters. On suite size alone, GMT's {formatCount(gmtStats.tests)} test
 outnumber the largest alternative's ({largestSuite.displayName}, {formatCount(largestSuite.stats.tests)}). The matrix
 is what turns that into {formatCount(gmtStats.executions)} executions: about {executionRatio(executionRange.max)}× the most-executed
 alternative and about {formatCount(executionRatio(executionRange.min))}× the least, against a surface area that is itself larger.
-
-</GridSection>
-
-<GridSection>
 
 ## API surface
 
@@ -159,10 +157,6 @@ UN/EDIFACT `DTM`, ANSI X12 dates and time codes, and GS1 EPCIS 2.0 event times. 
 
 </ChartContainer>
 
-</GridSection>
-
-<GridSection>
-
 ## Timezone coverage
 
 GMT tests against {gmtStats.timezones} timezones chosen not for geographic spread but for offset coverage — from {formatOffset(zoneOffsets.min.minutes)} ({zoneOffsets.min.zoneId}) to {formatOffset(zoneOffsets.max.minutes)} ({zoneOffsets.max.zoneId}). That {offsetWindowHours}-hour window means that at any given moment, at least one zone is already living in tomorrow while another is still stuck in yesterday. Date-boundary bugs — off-by-one day, wrong month rollover, DST gaps — only surface when the suite runs across this full offset range. A test that passes at UTC can fail at UTC+14 simply because the calendar date is different.
@@ -171,10 +165,6 @@ GMT tests against {gmtStats.timezones} timezones chosen not for geographic sprea
   title="CI timezones under test"
   caption={`${gmtStats.timezones} timezones spanning ${formatOffset(zoneOffsets.min.minutes)} to ${formatOffset(zoneOffsets.max.minutes)}. Hover a dot for the current local time in ISO 8601. Times refresh every second via Temporal.`}
 />
-
-</GridSection>
-
-<GridSection>
 
 ## Locale matrix
 
@@ -185,10 +175,6 @@ GMT does not test every locale — there are hundreds, and most differ only in f
   title="Locale matrix by script family"
   caption={`${gmtStats.locales} locales across ${localeFamilyCounts.length} script families. ${formatFamilyCounts(localeFamilyCounts)}. Each cell shows the locale code and English name.`}
 />
-
-</GridSection>
-
-<GridSection>
 
 ## Correct at the edges
 
@@ -207,16 +193,6 @@ Most date bugs hide at the extremes, where ordinary tests never look. GMT tests 
 </div>
 
 [See the evidence behind each of these →](/guides/concepts/correct-at-the-edges/) · Where the Temporal polyfill gets one of these wrong, GMT returns the spec's answer and reports the defect upstream: [Helping fix Temporal →](/upstream/)
-
-</GridSection>
-
-<GridSection>
-
-<WhyDateBug variant="full" />
-
-</GridSection>
-
-<GridSection>
 
 ## What this means
 
@@ -256,7 +232,3 @@ That is what {formatCount(gmtStats.executions)} CI executions verify.
 
 The full table, how each figure was measured, and what each library covers are on
 [GMT and the other libraries](/compare/).
-
-</GridSection>
-
-</div>

@@ -12,6 +12,7 @@ import {
   migratePages,
   topLevelPages,
 } from "~/lib/top-level-pages";
+import { industriesByPath } from "~/lib/page-industries";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -22,6 +23,9 @@ const RAW = import.meta.glob("../content/docs/**/*.{md,mdx}", {
   import: "default",
   eager: true,
 }) as Record<string, string>;
+
+/** The tags each page shows, by path under `content/docs/`, so a twin's `Industry:` line matches its page. */
+const TAGS = industriesByPath(RAW);
 
 export const GET: APIRoute = () => {
   const base = SITE_URL;
@@ -44,7 +48,7 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })
@@ -69,7 +73,7 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })
@@ -94,15 +98,15 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  // Start-here pages: every top-level page under content/docs/, in sidebar order
-  // (any top-level page not in START_ORDER follows, alphabetically).
+  // Start-here pages: the top-level pages the sidebar's Start here group shows, in its order
+  // (src/lib/section-order.ts); any other follows, alphabetically.
   const startPages = topLevelPages(RAW).map(({ slug, source }) => {
     const { data, body } = stripFrontmatter(source);
     const md = stripMdx(body, { gmtVersion, values });
@@ -112,12 +116,13 @@ export const GET: APIRoute = () => {
       markdown: pageToMarkdown({
         title: data.title ?? slug,
         body: md,
-        industries: data.industries,
+        industries: TAGS.get(slug),
       }),
     };
   });
 
-  // Migrate pages: the index, one page per library, native Temporal, then the behaviour matrix.
+  // Migrate pages, in the sidebar's order: the overview, the comparison pages, one page per library,
+  // native Temporal, then the behaviour matrix.
   const migratePageList = migratePages(RAW).map(({ slug, source }) => {
     const { data, body } = stripFrontmatter(source);
     const md = stripMdx(body, { gmtVersion, values });
@@ -128,7 +133,7 @@ export const GET: APIRoute = () => {
       markdown: pageToMarkdown({
         title,
         body: md,
-        industries: data.industries,
+        industries: TAGS.get(slug),
       }),
     };
   });
@@ -144,7 +149,7 @@ export const GET: APIRoute = () => {
       markdown: pageToMarkdown({
         title,
         body: md,
-        industries: data.industries,
+        industries: TAGS.get(slug),
       }),
     };
   });
@@ -168,21 +173,22 @@ export const GET: APIRoute = () => {
         markdown: pageToMarkdown({
           title: data.title ?? rel,
           body: md,
-          industries: data.industries,
+          industries: TAGS.get(rel),
         }),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null)
     .sort((a, b) => a.url.localeCompare(b.url));
 
+  // The sidebar's order; Tools, Checks and the changelog are not in this file.
   const allPages = [
     ...startPages,
-    ...migratePageList,
-    ...industryPageList,
     ...guidePages,
+    ...refPages,
+    ...industryPageList,
     ...scenarioPages,
     ...mistakePages,
-    ...refPages,
+    ...migratePageList,
   ];
 
   return new Response(

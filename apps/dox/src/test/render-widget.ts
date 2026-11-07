@@ -159,23 +159,9 @@ export async function renderWidget(
   const controller = new AbortController();
   if (aborted) controller.abort();
 
-  const loading = (async () => {
-    const loaded = isEntry(entryOrMount)
-      ? await entryOrMount.load()
-      : entryOrMount;
-    const rendered = loaded.renderTemplate(idPrefix, args as never);
-    setHtml(root, typeof rendered === "string" ? raw(rendered) : rendered);
-    return loaded.mount(root, args as never, controller.signal);
-  })();
-  pending.add(loading);
-  let handle: WidgetHandle;
-  try {
-    handle = await loading;
-  } finally {
-    pending.delete(loading);
-  }
-
+  let handle: WidgetHandle | undefined;
   let destroyed = false;
+  // Tracked before the mount, so a mount that fails or outlives its test is still swept.
   const untrack = trackWidget(() => {
     if (!destroyed) finish(false);
   });
@@ -185,7 +171,7 @@ export async function renderWidget(
     destroyed = true;
     untrack();
     controller.abort();
-    handle.destroy();
+    handle?.destroy();
     /* Out of the page before the count: a custom element's own listeners end when it disconnects. */
     root.remove();
     const leaked = session.records.filter((r) => !r.signal?.aborted);
@@ -201,6 +187,26 @@ export async function renderWidget(
     }
   }
 
+  const loading = (async () => {
+    const loaded = isEntry(entryOrMount)
+      ? await entryOrMount.load()
+      : entryOrMount;
+    const rendered = loaded.renderTemplate(idPrefix, args as never);
+    setHtml(root, typeof rendered === "string" ? raw(rendered) : rendered);
+    return loaded.mount(root, args as never, controller.signal);
+  })();
+  pending.add(loading);
+  try {
+    handle = await loading;
+  } catch (error) {
+    if (!destroyed) finish(false);
+    throw error;
+  } finally {
+    pending.delete(loading);
+  }
+  // The test ended while the mount was still loading: the sweep ran without a handle.
+  if (destroyed) handle.destroy();
+
   return {
     user,
     root,
@@ -213,7 +219,7 @@ export async function renderWidget(
           "permalink() needs a registry entry: it carries the widget kind.",
         );
       }
-      const state = handle.getPermalinkState?.() ?? null;
+      const state = handle?.getPermalinkState?.() ?? null;
       return encodeWidgetPermalink(
         entryOrMount.kind,
         state ?? (args as Record<string, unknown>) ?? {},

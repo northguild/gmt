@@ -123,7 +123,7 @@ describe("searchChunks — guide retrieval", () => {
     // not the section is a worse answer, and a malformed one is a 404.
     const guides = chunks.filter((c) => c.kind === "guide");
     for (const chunk of guides) {
-      // A guide page, or a top-level "Start here" page such as /upstream/ or /.
+      // A guide page, or a top-level page such as /upstream/ or /.
       const [path] = chunk.url.split("#");
       expect(
         path.startsWith("/guides/") || /^\/(?:[a-z0-9-]+\/)?$/.test(path),

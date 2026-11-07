@@ -11,6 +11,7 @@ import corpus from "../generated/reference/gmt-corpus.json";
 import { INDUSTRY_OVERVIEWS, overviewFunctionNames } from "./industry-overview";
 import {
   INDUSTRY_LAYER_IDS,
+  INDUSTRY_TAG_IDS,
   OWN_NAMESPACES,
   drawsOn,
   industryOwning,
@@ -151,18 +152,38 @@ describe("generated reference pages", () => {
     }
   });
 
-  it("tags no page of a namespace no industry owns, `timescale` among them, and not the reference root", () => {
+  it("tags every page of a namespace no industry owns, `timescale` among them, `core`", () => {
     const general = pages.filter(
-      (p) => p.namespace !== "types" && !OWN_NAMESPACES.includes(p.namespace),
+      (p) =>
+        p.namespace !== "types" &&
+        p.namespace !== "index.mdx" &&
+        !OWN_NAMESPACES.includes(p.namespace),
     );
     expect(general.length).toBeGreaterThan(0);
-    expect(general.filter((p) => p.industries).map((p) => p.file)).toEqual([]);
+    expect(
+      general.filter((p) => p.industries !== "core").map((p) => p.file),
+    ).toEqual([]);
   });
 
-  it("tags a shared type only with an industry layer", () => {
-    const tagged = pages.filter((p) => p.namespace === "types" && p.industries);
+  it("leaves the reference root and the types index untagged: they show the tags of the pages under them", () => {
     expect(
-      tagged.filter((p) => !INDUSTRY_LAYER_IDS.includes(p.industries!)),
+      pages
+        .filter((p) => p.file === "index.mdx" || p.file === "types/index.mdx")
+        .filter((p) => p.industries)
+        .map((p) => p.file),
     ).toEqual([]);
+  });
+
+  it("tags a shared type with known tags, in display order, Core first when it has Core", () => {
+    const types = pages.filter(
+      (p) => p.namespace === "types" && p.file !== "types/index.mdx",
+    );
+    expect(types.length).toBeGreaterThan(0);
+    for (const type of types) {
+      const ids = (type.industries ?? "").split(",").map((id) => id.trim());
+      const known = INDUSTRY_TAG_IDS.filter((id) => ids.includes(id));
+      expect(ids.filter(Boolean), type.file).toEqual(known);
+      expect(ids.length, type.file).toBeGreaterThan(0);
+    }
   });
 });

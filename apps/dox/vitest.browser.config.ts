@@ -3,8 +3,8 @@ import { BROWSER_TEST_GLOB } from "./src/test/isolation.ts";
 
 /**
  * The tests that launch a real browser (`*.browser.test.ts`). The default run leaves them out: the
- * Tests job installs no browser. The `dox-tables` check runs them in Chromium, before
- * `table-fit.mjs`, which uses what they test.
+ * Tests job installs no browser. The `dox-tables` check runs them in Chromium and WebKit, against
+ * the built site, before `table-fit.mjs`, which uses what they test.
  */
 export default defineConfig({
   test: {

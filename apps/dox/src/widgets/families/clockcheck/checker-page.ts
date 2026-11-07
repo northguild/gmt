@@ -2,9 +2,13 @@
  * checkerPage: the page of a dated clock-change checker, shared by Canada and Morocco.
  *
  * The rows, top to bottom: the Key points beside the reader's own browser (the page has them, the
- * chat does not); the map, the zone list, the pin panel and the live clocks; the reader's servers
- * beside the minimum releases; the clock changes beside what the library does about them; an
- * optional full-width section; and the saved events. Each checker brings its words and its two
+ * chat does not); the map, the zone list, the pin panel and the live clocks; the reader's servers,
+ * across the full width; the minimum releases beside what the library does about them; the clock
+ * changes, across the full width; an optional full-width section; and the saved events.
+ *
+ * The servers card is a command and one line of output, a fraction of the release list's height,
+ * so it takes a row of its own rather than stretch beside the list. The help card is near the
+ * list's height at every width, so they pair. Each checker brings its words and its two
  * sections that differ (`changes`, `after`); nothing here knows which checker it serves.
  */
 import type { TenseView } from "~/lib/clock-change-tense";
@@ -53,10 +57,10 @@ interface CheckerPageOptions {
   map: CheckerMap;
   servers: SafeHtml;
   minimums: SafeHtml;
-  /** The section beside the help card: the clock changes, or the ones your data gets wrong. */
+  /** The full-width section under the help row: the clock changes, or the ones your data gets wrong. */
   changes: SafeHtml;
   help: SafeHtml;
-  /** A full-width section between the help row and the saved events. */
+  /** A full-width section between the clock changes and the saved events. */
   after?: SafeHtml;
   stored: SafeHtml;
 }
@@ -79,7 +83,7 @@ export function checkerPage(o: CheckerPageOptions): SafeHtml {
             notice: o.map.clocksNotice,
           }),
         },
-      )}${row(html`${o.servers}${o.minimums}`)}${row(html`${o.changes}${o.help}`)}${o.after ?? ""}${o.stored}`,
+      )}${o.servers}${row(html`${o.minimums}${o.help}`)}${o.changes}${o.after ?? ""}${o.stored}`,
     ),
   );
 }

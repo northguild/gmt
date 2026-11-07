@@ -149,7 +149,7 @@ describe("the template", () => {
     for (const link of local) expect(linkTarget(link)).not.toBeNull();
   });
 
-  it("puts the cards in reading order: servers, minimums, changes", () => {
+  it("puts the cards in reading order: servers, minimums beside help, changes", () => {
     const root = host();
     const headings = within(root)
       .getAllByRole("heading")
@@ -158,8 +158,10 @@ describe("the template", () => {
       "Key points",
       "Your browser",
       "Live clocks",
-      "Clock changes your data gets wrong",
+      "Test your own servers",
+      "Upgrade to at least",
       "How gmt helps",
+      "Clock changes your data gets wrong",
       "Clock changes in 2026 and 2027",
       "Did your saved events move?",
     ];
