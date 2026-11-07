@@ -186,24 +186,6 @@
     );
     margin-inline: 0;
   }
-
-  /* The zone card is a column of the row: the list takes whatever height the row leaves. The
-     scroll box is laid over its frame, so its content adds nothing to the row's height. */
-  .pick {
-    flex: 1 1 auto;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-  }
-
-  .zoneFrame {
-    position: relative;
-  }
-
-  .zoneScroll {
-    position: absolute;
-    inset: var(--gmt-space-1);
-    max-block-size: none;
-  }
 }
 
 /* Below 520px the map and its legend are not drawn; the list stays. */
@@ -534,6 +516,28 @@
   &:focus-visible {
     outline: 2px solid var(--gmt-cyan-bright);
     outline-offset: -2px;
+  }
+}
+
+/* In the three-column row the zone card is a column of the row: the list takes whatever height the
+   row leaves. The scroll box is laid over its frame, so its content adds nothing to the row's
+   height. This block has to come after the rules above: it lifts their height cap with the same
+   selectors, so it wins by order alone. */
+@container gmt-clockcheck (min-width: 62rem) {
+  .pick {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .zoneFrame {
+    position: relative;
+  }
+
+  .zoneScroll {
+    position: absolute;
+    inset: var(--gmt-space-1);
+    max-block-size: none;
   }
 }
 

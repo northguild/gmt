@@ -1878,8 +1878,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     Canada pair with `idPrefix: "morocco"`, and `lib/morocco-clock-change-mount.ts` is a config
     over them (its own layout is `tools/` CSS Modules and the shared `families/clockcheck/` modules). The rows
     are: Key points and the browser card; the map section (map, legend, pin panel, two clocks);
-    the servers card and the **Upgrade to at least** card; **Clock changes your data gets wrong**
-    and the help card; the 2026 and 2027 clock changes; saved events. A test fixes that order.
+    the servers card across the full width; the **Upgrade to at least** card beside the help card;
+    **Clock changes your data gets wrong**; the 2026 and 2027 clock changes; saved events. Canada
+    has the same rows without the second table. The servers card is a command and one line of
+    output, a quarter of the release list's height, so beside the list it was mostly empty; the
+    help card is near the list's height at every width, so they pair. A test fixes that order.
     - **Two instants, one verdict.** The browser card reads each zone at `MOROCCO_PROBE`'s
       `verdict` instant (2026-11-02, the Canada instant, where tzdb 2026c gives +00:00 and older
       data +01:00) and at its `blind` instant (2027-02-22, inside the 2026b data's Ramadan weeks,

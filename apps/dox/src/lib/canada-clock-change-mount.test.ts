@@ -157,7 +157,7 @@ describe("the template", () => {
     ).toBeInTheDocument();
   });
 
-  it("puts the cards in reading order", () => {
+  it("puts the cards in reading order: servers, minimums beside help, changes", () => {
     const root = host();
     const order = within(root)
       .getAllByRole("heading")
@@ -166,8 +166,10 @@ describe("the template", () => {
       "Key points",
       "Your browser",
       "Live clocks",
-      "Clock changes in 2026 and 2027",
+      "Test your own servers",
+      "Upgrade to at least",
       "How gmt helps",
+      "Clock changes in 2026 and 2027",
       "Did your saved events move?",
     ];
     const at = wanted.map((name) =>
