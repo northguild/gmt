@@ -764,7 +764,9 @@
     > :is(th, td):where([data-col]:not(:first-child))::before {
     position: static;
     display: block;
+    float: none;
     inline-size: auto;
+    margin-inline: 0;
   }
 
   /* A box 20rem wide or narrower (the 320px phone) takes less side padding, and a label sits above
@@ -793,7 +795,9 @@
     > :is(th, td):where([data-col]:not(:first-child))::before {
     position: static;
     display: block;
+    float: none;
     inline-size: auto;
+    margin-inline: 0;
   }
 }
 
