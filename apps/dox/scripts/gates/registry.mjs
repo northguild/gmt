@@ -111,6 +111,15 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "frame-check",
+    script: "frame-check.mjs",
+    tier: "pr",
+    browsers: ENGINES,
+    fullBrowsers: null,
+    themes: false,
+    needs: null,
+  },
+  {
     id: "a11y-axe",
     script: "a11y-axe.mjs",
     tier: "pr",

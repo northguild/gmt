@@ -681,7 +681,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   as the header-less terminal rule that gives the corner its radius, so it wins by sitting below
   it; no `!important`. Logical properties make it the top right in right-to-left text. `/install/`
   is the one page with `<Tabs>`, and the rule covers any later `<Tabs>` whose panel opens on a
-  code block. `visual:after` runs `tabFrameProblems`: in each tab panel the visible `pre` has a
+  code block. The `frame-check` gate clicks each tab: in each tab panel the visible `pre` has a
   `0px` start-start radius and a non-zero start-end radius.
 - **`/compare/` is a top-level page**, in "Migrate". `<LibraryCompare table="…">` renders
   each of its tables and the notes list from the builders in `src/lib/library-compare-tables.ts`, and `src/lib/mdx-jsx.ts` renders
@@ -772,9 +772,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - **The head aligns on the title's first baseline** (`align-items: first baseline`), as GitHub
     does, so a title that wraps does not pull the icon, number and badge to its middle. The icon
     wrapper is `display: inline-block` with an inline-block svg, because the sheet's reset makes
-    an svg a block and a block takes no `vertical-align`. `visual:after` runs
-    `upstreamHeadProblems` on `/upstream/`: an icon, or a badge sharing the title's first line,
-    more than 2 px off that line's middle fails, and so does a page with no card heads.
+    an svg a block and a block takes no `vertical-align`. The `frame-check` gate measures each
+    head on `/upstream/`: an icon, or a badge sharing the title's first line, more than 2 px off
+    that line's middle fails, and so does a page with no card heads.
 - **Migration pages.** `/migrate/` has an index, one page each for date-fns, Luxon, Day.js,
   Moment and `@internationalized/date`, and a Temporal page. `/compare/behaviour/` holds the
   full behaviour matrix. Each library page is a call-by-call table (`MigrationMap`, data in
@@ -2382,10 +2382,14 @@ Shared hooks come first, then the globe, then the clock-change pages.
   the grid.** The `fieldGrid` builder's grid is a container itself, so a width rule for a label
   or a control in it reads the grid's width, not the section's. Name the section and query
   it by name, as the Timetable Reader does (`tt-section`).
-- **The prose list dash stays out of widgets.** `gmt-content.css` gives a list item on a content
-  page a dash (`::before`), left padding and a bottom margin, and every one of those rules skips
-  a list inside a `.gmt-widget` (`ul:not(:where(.gmt-widget *))`). A widget's legend, verdict
-  row or key draws no dash and needs no reset. `content-list-rule.test.ts` guards it.
+- **The prose list dash is for Markdown lists only.** `gmt-content.css` gives a list item on a
+  content page a dash (`::before`), left padding and a bottom margin. Every one of those rules
+  skips a `ul` with a class and a list inside `not-content`
+  (`ul:where(:not([class], .not-content *))`). A Markdown list has no class; a component's list
+  (diff cards, a chart key, a legend, a verdict row) always has one, draws its own items and
+  needs no reset. The dash sits at `calc(0.5lh - 0.5px)`, so it is centred on the item's first
+  line at any font size, and the checklist tick likewise. `content-list-rule.test.ts` guards the
+  selectors; `frame-check` measures the dashes on the built pages.
 - **Trap: the live wrapper in a hold cell must stretch.** A cell that holds its size stacks
   a hidden sizer and a live wrapper in one grid cell (`builders/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`). The wrapper
   keeps the grid's default stretch, so its box is always the sizer's size. If it is aligned
@@ -2540,10 +2544,18 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `themes`, `needs`, plus `args`, `base`, `browserArg`, `pages`); `select.mjs` turns the changed
     files and the import graph (`graph.mjs`) into the pages to check; `screen.mjs` prints the result.
     Tiers nest: `pr` (contrast-measure, grow-measure, readout-still, data-credits-check,
-    canada-layout-check) is inside `weekly` (adds canada-clock-still, canada-stored-still and
+    esc-cascade, canada-layout-check, frame-check, a11y-axe, a11y-tab-walk, a11y-media) is inside `weekly` (adds canada-clock-still, canada-stored-still and
     table-fit), which
     is inside `local` (adds globe-smoke, html-diff and visual-diff, the three that need a GPU or a
     baseline).
+  - **`frame-check`** (`scripts/frame-check.mjs`, tier `pr`, all three engines) serves `dist`
+    itself and checks three shapes at 1440 and 390 px: the code frame under each `/install/` tab
+    has a square start-start corner and a round start-end one; each `/upstream/` card head
+    keeps its state icon, and a badge on the title's line, within 2 px of the middle of the
+    title's first line; and on `/why-gmt/` and `/migrate/luxon/` each Markdown list dash and
+    checklist tick sits within 2 px of the middle of its item's first line, while no component
+    list item has the dash. A page with nothing to measure fails. CI's `dox-tables` check runs
+    it in Chromium and WebKit after `table-fit`.
   - **`table-fit`** (`scripts/table-fit.mjs`, tier `weekly`, all three engines) opens every built page
     that holds a `<table` (`listTablePages` in `scripts/lib/table-pages.mjs`, read from `dist`, never a
     fixed count) at 1440 x 900 with every `<details>` open and every tab panel shown, and fails when a

@@ -311,14 +311,24 @@ jobs:
         run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium webkit
 
       # The tests that launch a browser (`*.browser.test.ts`, left out of the Tests job, which
-      # installs none): the cell check table-fit uses, and the industry tag definitions.
+      # installs none): the cell check table-fit uses, and the industry tag definitions. The built
+      # site is there, so a test that needs it fails rather than skips.
       - name: Browser tests, in Chromium and WebKit
         if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        env:
+          DOX_DIST_REQUIRED: "1"
         run: pnpm --filter dox exec vitest run --config vitest.browser.config.ts
 
       - name: Built site, tables fit at 1440 px
         if: contains(fromJSON(env.CHECKS), 'dox-tables')
         run: pnpm --filter dox exec node scripts/table-fit.mjs
+
+      # The code frame under each install tab has a square corner where it meets the tab, each
+      # /upstream/ card keeps its icon and badge on the title's first line, and each list dash
+      # sits on its item's first line.
+      - name: Built site, tab frames, filing card heads and list markers
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: pnpm --filter dox exec node scripts/frame-check.mjs --browsers chromium,webkit
 
       # A release PR (`changeset:version` already run) deletes the changesets it consumed
       # and bumps versions instead of adding a new one — that's the point of it, per

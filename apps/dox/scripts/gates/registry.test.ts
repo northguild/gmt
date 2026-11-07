@@ -37,6 +37,7 @@ describe("the gate registry", () => {
       "data-credits-check",
       "esc-cascade",
       "canada-layout-check",
+      "frame-check",
       "a11y-axe",
       "a11y-tab-walk",
       "a11y-media",

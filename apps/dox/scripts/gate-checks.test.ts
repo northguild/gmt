@@ -376,6 +376,7 @@ describe("every browser gate", () => {
       "contrast-measure.mjs",
       "data-credits-check.mjs",
       "esc-cascade.mjs",
+      "frame-check.mjs",
       "globe-smoke.mjs",
       "grow-measure.mjs",
       "hero-space-check.mjs",

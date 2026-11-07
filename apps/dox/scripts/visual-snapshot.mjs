@@ -196,10 +196,7 @@ const PAGES = [
      brain badge and the widget rail's collapsed-to-nothing layout are covered
      by nothing else. */
   { slug: "dox", path: "/dox/" },
-  /* The filing cards: each head is checked for an icon, number and badge on the title's
-     first line (`upstreamHeadProblems`). A page with no heads fails, so the check cannot pass
-     on an empty page. */
-  { slug: "upstream", path: "/upstream/", heads: true },
+  { slug: "upstream", path: "/upstream/" },
 ];
 
 const PAGES_ARG = applyPageContract({
@@ -559,84 +556,6 @@ async function shoot(page, outDir, fileName, clockMasks, options = {}) {
   console.log(`  captured ${fileName}`);
 }
 
-/**
- * A code frame that opens a tab panel hangs from the tab row: under each tab the visible `pre` has
- * a square start-start corner and keeps a radius on its start-end corner. Reads the computed
- * style of every tab panel of every tab row on the page, and returns what is wrong.
- */
-async function tabFrameProblems(page) {
-  const tabs = await page.locator("starlight-tabs [role=tab]").all();
-  const problems = [];
-  for (const [i, tab] of tabs.entries()) {
-    await tab.click();
-    await page.evaluate(
-      () =>
-        new Promise((done) =>
-          requestAnimationFrame(() => requestAnimationFrame(done)),
-        ),
-    );
-    const corners = await page.evaluate(() => {
-      const panel = [...document.querySelectorAll("[role=tabpanel]")].find(
-        (el) => !el.hidden,
-      );
-      const pre = panel?.querySelector("pre");
-      if (!pre) return null;
-      const cs = getComputedStyle(pre);
-      return { start: cs.borderStartStartRadius, end: cs.borderStartEndRadius };
-    });
-    if (corners === null) continue;
-    if (corners.start !== "0px")
-      problems.push(
-        `tab ${i}: borderStartStartRadius is ${corners.start}, not 0px`,
-      );
-    if (corners.end === "0px")
-      problems.push(`tab ${i}: borderStartEndRadius lost its radius`);
-  }
-  if (tabs.length > 0) await tabs[0].click();
-  return problems;
-}
-
-/**
- * A filing card's head on /upstream/ reads like a GitHub row: the state icon sits on the title's
- * first line, even when the title wraps, and so do the number and the badge when they share
- * that line. Measures each against the middle of the title's first line, within 2 px. With
- * `expected`, a page with no heads, or a head with no title, is a problem too.
- */
-async function upstreamHeadProblems(page, expected) {
-  return page.evaluate((expected) => {
-    const middle = (r) => r.top + r.height / 2;
-    const problems = [];
-    const heads = document.querySelectorAll(".gmt-upstream-head");
-    if (expected && heads.length === 0)
-      problems.push("no filing card heads to check");
-    for (const [i, head] of heads.entries()) {
-      const title = head.querySelector(".gmt-upstream-title");
-      const range = document.createRange();
-      if (title) range.selectNodeContents(title);
-      const first = title
-        ? [...range.getClientRects()].find((r) => r.width > 0)
-        : undefined;
-      if (!first) {
-        problems.push(`card ${i}: no title line to measure against`);
-        continue;
-      }
-      const line = middle(first);
-      const icon = head.querySelector(".gmt-upstream-state svg");
-      if (icon && Math.abs(middle(icon.getBoundingClientRect()) - line) > 2)
-        problems.push(
-          `card ${i}: the state icon is off the title's first line`,
-        );
-      const badge = head.querySelector(".gmt-upstream-status");
-      if (!badge) continue;
-      const b = badge.getBoundingClientRect();
-      // Wrapped below the title, the badge starts a line of its own; that is fine.
-      if (b.top < first.bottom && Math.abs(middle(b) - line) > 2)
-        problems.push(`card ${i}: the badge is off the title's first line`);
-    }
-    return problems;
-  }, expected);
-}
-
 /** Every page in `PAGES`, full height. */
 async function capturePages(page, outDir, clockMasks, theme, viewport) {
   for (const p of PAGES.filter(
@@ -652,16 +571,6 @@ async function capturePages(page, outDir, clockMasks, theme, viewport) {
     }
     // Let ambient globe rotation / any load-time animation settle to a consistent frame.
     await page.waitForTimeout(300);
-    if (label === "after") {
-      const problems = [
-        ...(await tabFrameProblems(page)),
-        ...(await upstreamHeadProblems(page, p.heads === true)),
-      ];
-      if (problems.length > 0)
-        throw new Error(
-          `${p.path} (${theme}, ${viewport.name}): ${problems.join("; ")}`,
-        );
-    }
     await shoot(
       page,
       outDir,
