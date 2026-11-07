@@ -72,12 +72,25 @@ Current rules for the canary reporting, with the reason for each.
 - **A finding that persists gets a comment on every run.** An open finding is pending work, and the
   weekly comment is its reminder. Deduplicating by content would also make a second dry run do
   nothing.
+- **A comment that repeats the latest full report is one line.** The body and every full comment
+  carry a hidden `<!-- gmt-canary report="<fingerprint>" -->` line: the first 16 hex digits of the
+  SHA-256 of the comment text without its run line. When a run's fingerprint equals the newest one
+  on the issue, the comment says nothing has changed and links to that report. A changed row, or an
+  issue with no fingerprint yet, gets the full tables. The reporter reads the comments with
+  `gh api --paginate`; if that fails, the comment goes out in full.
+- **Issues are filed only from `main`.** On any other `GITHUB_REF_NAME` the reporter calls no `gh`
+  and the job summary lists what it would have filed. A branch dispatch tests a branch, and its
+  results must not land on the issues the weekly runs comment on.
+- **An issue that waits on a fix in an engine or dependency carries `waiting: upstream`.** The
+  canary keeps commenting on it, one line while nothing changes. A native-suite failure with a
+  known engine cause is tagged in `scripts/lib/native-suite-tags.mjs` instead, and its issue
+  closed: the tag goes stale, with a finding, once the engine ships the fix.
 - **A canary that cannot run is a finding.** A missing verdict file or exit 2 files one
   could-not-run issue per workflow, listing every source that did not run. A silent failure to run
   hides findings as surely as a silent pass.
-- **Dry runs file real issues under `dry-run/` keys.** A forced finding is labelled
-  `canary-dry-run`, titled `[dry run]`, and never touches a real issue; a person closes it after
-  checking. Only a real issue proves the open-then-comment path end to end. Forcing a source that
+- **Dry runs dispatched from `main` file real issues under `dry-run/` keys.** A forced finding is
+  labelled `canary-dry-run`, titled `[dry run]`, and never touches a real issue; a person closes it
+  after checking. Only a real issue proves the open-then-comment path end to end. Forcing a source that
   did not run is dropped with a message, so a dry run never hides a real could-not-run finding.
 - **An oracle verdict carries at most 50 untagged rows.** That keeps an issue body far below any
   size limit while naming enough rows to start. The full list stays in the dated oracle report.
@@ -107,3 +120,5 @@ Current rules for the canary reporting, with the reason for each.
 | Hidden marker renders nothing; `\|` escaped in a table cell | GFM spec 0.29-gfm §4.6, §4.10 |
 | Leap-second difference and header line | IERS `Leap_Second.dat` and Bulletin C |
 | Marker match, oldest first, `dry-run/` keys, 50-row cap, weekly comment, could-not-run | **GMT rule** |
+| Report fingerprint, one-line repeat, filing only from `main`, `waiting: upstream` | **GMT rule** |
+| Reading every comment page with `gh api --paginate` | GitHub CLI manual, `gh api`; GitHub REST API, List issue comments |
