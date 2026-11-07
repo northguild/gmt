@@ -27,11 +27,12 @@ const COLUMNS = ["Pull request", "Details", "Activity"] as const;
         <tbody>
           {listings.map((l) => {
             const state = stateBadge({ ...l, kind: "pr" });
-            const review = reviewBadge(l);
+            const review = reviewBadge({ ...l, kind: "pr" });
             return (
               <tr data-tone={state.tone}>
                 <td class="gmt-upstream-head">
                   <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
+                  <span class="gmt-sr-only">Pull request:</span>
                   <strong class="gmt-upstream-title">{l.title}</strong>
                   <a class="gmt-upstream-ref" href={l.url}>{shortRef(l.repo, l.number)}</a>
                   <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />

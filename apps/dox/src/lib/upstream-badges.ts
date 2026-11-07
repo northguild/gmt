@@ -29,7 +29,10 @@ type StateFields = Pick<
   UpstreamFiling,
   "kind" | "state" | "draft" | "mergedAt"
 >;
-type ReviewFields = Pick<UpstreamFiling, "state" | "reviewDecision">;
+type ReviewFields = Pick<
+  UpstreamFiling,
+  "kind" | "state" | "draft" | "reviewDecision"
+>;
 type InGmtFields = Pick<
   UpstreamFiling,
   "gmtGuard" | "gmtNote" | "kind" | "pairsWith"
@@ -60,7 +63,11 @@ export function stateNote(f: Pick<UpstreamFiling, "mergedAt">): string | null {
   return f.mergedAt ? "Merged, not yet in a published release" : null;
 }
 
-/** The reviewer's verdict, when there is one that still applies. */
+/**
+ * The reviewer's verdict, when there is one that still applies. An open pull request with no
+ * verdict, ready for review, is awaiting one: most upstream repositories require no review, so
+ * GitHub leaves `reviewDecision` empty until somebody reviews.
+ */
 export function reviewBadge(f: ReviewFields): BadgeSpec | null {
   if (f.reviewDecision === "APPROVED") {
     return { text: "Approved", tone: "spring", icon: "check", dim: true };
@@ -72,6 +79,9 @@ export function reviewBadge(f: ReviewFields): BadgeSpec | null {
   }
   if (f.reviewDecision === "REVIEW_REQUIRED") {
     return { text: "Review required", tone: "neutral", dim: true };
+  }
+  if (f.kind === "pr" && !f.draft) {
+    return { text: "Awaiting review", tone: "neutral", dim: true };
   }
   return null;
 }

@@ -40,16 +40,24 @@ describe("stateNote", () => {
 
 describe("reviewBadge", () => {
   it.each`
-    state       | reviewDecision         | text
-    ${"open"}   | ${"APPROVED"}          | ${"Approved"}
-    ${"closed"} | ${"APPROVED"}          | ${"Approved"}
-    ${"open"}   | ${"CHANGES_REQUESTED"} | ${"Changes requested"}
-    ${"open"}   | ${"REVIEW_REQUIRED"}   | ${"Review required"}
-    ${"closed"} | ${"REVIEW_REQUIRED"}   | ${undefined}
-    ${"open"}   | ${null}                | ${undefined}
-  `("$state $reviewDecision shows $text", ({ state, reviewDecision, text }) => {
-    expect(reviewBadge({ state, reviewDecision })?.text).toBe(text);
-  });
+    kind       | state       | draft    | reviewDecision         | text
+    ${"pr"}    | ${"open"}   | ${false} | ${"APPROVED"}          | ${"Approved"}
+    ${"pr"}    | ${"closed"} | ${false} | ${"APPROVED"}          | ${"Approved"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"CHANGES_REQUESTED"} | ${"Changes requested"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"REVIEW_REQUIRED"}   | ${"Review required"}
+    ${"pr"}    | ${"closed"} | ${false} | ${"REVIEW_REQUIRED"}   | ${undefined}
+    ${"pr"}    | ${"open"}   | ${false} | ${null}                | ${"Awaiting review"}
+    ${"pr"}    | ${"open"}   | ${true}  | ${null}                | ${undefined}
+    ${"pr"}    | ${"closed"} | ${false} | ${null}                | ${undefined}
+    ${"issue"} | ${"open"}   | ${false} | ${null}                | ${undefined}
+  `(
+    "$kind $state draft=$draft $reviewDecision shows $text",
+    ({ kind, state, draft, reviewDecision, text }) => {
+      expect(reviewBadge({ kind, state, draft, reviewDecision })?.text).toBe(
+        text,
+      );
+    },
+  );
 });
 
 describe("workBadge and roleBadge", () => {

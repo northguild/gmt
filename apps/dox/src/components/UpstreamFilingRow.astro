@@ -52,6 +52,7 @@ const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
 <tr data-tone={state.tone}>
   <td class="gmt-upstream-head">
     <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
+    <span class="gmt-sr-only">{filing.kind === "pr" ? "Pull request:" : "Issue:"}</span>
     <strong class="gmt-upstream-title" set:html={inlineCodeHtml(title)} />
     <a class="gmt-upstream-ref" href={filing.url}>{shortRef(filing.repo, filing.number)}</a>
     <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
