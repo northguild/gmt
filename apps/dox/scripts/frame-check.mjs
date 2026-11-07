@@ -199,9 +199,28 @@ function markerProblems(page) {
       range.selectNodeContents(text);
       const first = [...range.getClientRects()].find((r) => r.width > 0);
       if (!first) continue;
+      // A pseudo-element has no box to read, so the paint position is worked out from its
+      // computed style. Anything that style cannot place fails instead of passing unmeasured.
+      const markTop = Number.parseFloat(mark.top);
+      const markHeight = Number.parseFloat(mark.height);
+      const shift = Number.parseFloat(mark.marginTop) || 0;
+      if (
+        mark.position !== "absolute" ||
+        !Number.isFinite(markTop) ||
+        !Number.isFinite(markHeight)
+      ) {
+        problems.push(`${where}: the marker has no position to measure`);
+        continue;
+      }
+      if (mark.transform !== "none" || (mark.translate ?? "none") !== "none") {
+        problems.push(
+          `${where}: the marker is moved by a transform this check cannot measure`,
+        );
+        continue;
+      }
       const box = li.getBoundingClientRect();
-      const top = box.top + li.clientTop + Number.parseFloat(mark.top);
-      const centre = top + Number.parseFloat(mark.height) / 2;
+      const top = box.top + li.clientTop + markTop + shift;
+      const centre = top + markHeight / 2;
       measured += 1;
       const off = centre - middle(first);
       if (Math.abs(off) > 2)

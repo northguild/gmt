@@ -28,9 +28,6 @@
  *   pnpm run visual:after                      # capture the comparison set
  *   pnpm run visual:diff                       # assert before ~= after (exit 1 over threshold)
  *
- * `visual:after` also reads the computed corners of the code frame under each Starlight tab
- * (square where it meets the tab row, bevelled elsewhere) and fails when they are wrong.
- *
  * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`), after the mode:
  *   --list-pages   print the page paths and exit;
  *   --pages a,b    capture only those paths (an unknown path exits 2), and clear the label's folder
