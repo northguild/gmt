@@ -15,6 +15,13 @@
  * summary, and the real findings are filed as usual before the exit 2. `--print` writes the
  * summary and the planned actions to stdout and calls no `gh`.
  *
+ * Issues are filed only from `main`. A run on another branch (`GITHUB_REF_NAME`) calls no `gh`
+ * either: the job summary lists what it would have filed, so a branch or a dry-run dispatch can
+ * be checked without touching the issues that the weekly runs comment on.
+ *
+ * A comment whose rows match the issue's latest full report is cut to one line linking to that
+ * report (`shortenRepeats`).
+ *
  * Node built-ins only and no `Date`: the workflows run it with no install and no build. `gh`
  * authenticates from `GH_TOKEN`. The job summary goes to `$GITHUB_STEP_SUMMARY`, or to stdout when
  * that is unset.
@@ -32,6 +39,7 @@ import {
   WORKFLOW_SOURCES,
   applyForce,
   planIssueActions,
+  shortenRepeats,
 } from "./lib/canary-issues.mjs";
 import { summaryMarkdown } from "./lib/canary-summary.mjs";
 
@@ -75,6 +83,7 @@ const LABEL_SPECS = {
 /**
  * @typedef {import("./lib/canary-issues.mjs").Force} Force
  * @typedef {import("./lib/canary-issues.mjs").Action} Action
+ * @typedef {import("./lib/canary-issues.mjs").IssueHistory} IssueHistory
  * @typedef {(args: string[], input?: string) => string} Gh  runs `gh` with args, returns stdout
  * @typedef {{ action: Action, ok: boolean, issue?: number, error?: string }} ActionResult
  */
@@ -155,7 +164,7 @@ export function ensureLabels(gh, needed) {
 
 /**
  * @param {Gh} gh
- * @returns {{ number: number, body: string, labels: { name: string }[] }[]}
+ * @returns {{ number: number, url: string, body: string, labels: { name: string }[] }[]}
  */
 export function listOpenCanaryIssues(gh) {
   return JSON.parse(
@@ -169,9 +178,44 @@ export function listOpenCanaryIssues(gh) {
       "--limit",
       "1000",
       "--json",
-      "number,body,labels",
+      "number,url,body,labels",
     ]),
   );
+}
+
+/**
+ * The comments of each issue that `actions` comments on, for `shortenRepeats`. An issue whose
+ * comments cannot be read is left out, so its comment goes out in full.
+ * @param {Gh} gh
+ * @param {Action[]} actions
+ * @param {{ number: number, url: string, body: string }[]} openIssues
+ * @returns {Map<number, IssueHistory>}
+ */
+export function issueHistories(gh, actions, openIssues) {
+  /** @type {Map<number, IssueHistory>} */
+  const out = new Map();
+  for (const action of actions) {
+    if (action.kind !== "comment" || out.has(action.issue)) continue;
+    const issue = openIssues.find((i) => i.number === action.issue);
+    if (!issue) continue;
+    try {
+      const lines = gh([
+        "api",
+        "--paginate",
+        `repos/{owner}/{repo}/issues/${action.issue}/comments`,
+        "--jq",
+        ".[] | {url: .html_url, body: .body}",
+      ]);
+      const comments = lines
+        .split("\n")
+        .filter((line) => line.trim() !== "")
+        .map((line) => JSON.parse(line));
+      out.set(action.issue, { url: issue.url, body: issue.body, comments });
+    } catch {
+      // No history: the comment goes out in full, which is always correct.
+    }
+  }
+  return out;
 }
 
 /**
@@ -341,6 +385,22 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
       : "(local run)";
   const context = { workflow, runUrl };
 
+  const branch = env.GITHUB_REF_NAME;
+  if (!print && branch !== undefined && branch !== "main") {
+    const planned = planIssueActions(forced, [], context);
+    const reason =
+      planned.length === 0
+        ? `this run is on ${branch}; issues are filed only from main, and there was nothing to file.`
+        : `this run is on ${branch}; issues are filed only from main. It would have filed: ${planned
+            .map((a) => (a.kind === "open" ? a.title : a.key))
+            .join("; ")}.`;
+    emitSummary(
+      summaryMarkdown(workflow, verdicts, force, null, reason, skipped),
+    );
+    stdout(`${JSON.stringify(planned, null, 2)}\n`);
+    return skippedCode;
+  }
+
   if (print) {
     emitSummary(
       summaryMarkdown(workflow, verdicts, force, null, undefined, skipped),
@@ -368,12 +428,16 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
       results = [];
     } else {
       ensureLabels(gh, [...labels]);
-      const actions = planIssueActions(
-        forced,
-        listOpenCanaryIssues(gh),
-        context,
+      const openIssues = listOpenCanaryIssues(gh);
+      const actions = planIssueActions(forced, openIssues, context);
+      results = runActions(
+        gh,
+        shortenRepeats(
+          actions,
+          issueHistories(gh, actions, openIssues),
+          runUrl,
+        ),
       );
-      results = runActions(gh, actions);
       for (const { action, ok, error } of results) {
         if (ok) continue;
         code = 1;
