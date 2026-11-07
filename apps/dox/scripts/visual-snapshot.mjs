@@ -28,6 +28,9 @@
  *   pnpm run visual:after                      # capture the comparison set
  *   pnpm run visual:diff                       # assert before ~= after (exit 1 over threshold)
  *
+ * `visual:after` also reads the computed corners of the code frame under each Starlight tab
+ * (square where it meets the tab row, bevelled elsewhere) and fails when they are wrong.
+ *
  * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`), after the mode:
  *   --list-pages   print the page paths and exit;
  *   --pages a,b    capture only those paths (an unknown path exits 2), and clear the label's folder
@@ -552,6 +555,43 @@ async function shoot(page, outDir, fileName, clockMasks, options = {}) {
   console.log(`  captured ${fileName}`);
 }
 
+/**
+ * A code frame that opens a tab panel hangs from the tab row: under each tab the visible `pre` has
+ * a square start-start corner and keeps a radius on its start-end corner. Reads the computed
+ * style of every tab panel of every tab row on the page, and returns what is wrong.
+ */
+async function tabFrameProblems(page) {
+  const tabs = await page.locator("starlight-tabs [role=tab]").all();
+  const problems = [];
+  for (const [i, tab] of tabs.entries()) {
+    await tab.click();
+    await page.evaluate(
+      () =>
+        new Promise((done) =>
+          requestAnimationFrame(() => requestAnimationFrame(done)),
+        ),
+    );
+    const corners = await page.evaluate(() => {
+      const panel = [...document.querySelectorAll("[role=tabpanel]")].find(
+        (el) => !el.hidden,
+      );
+      const pre = panel?.querySelector("pre");
+      if (!pre) return null;
+      const cs = getComputedStyle(pre);
+      return { start: cs.borderStartStartRadius, end: cs.borderStartEndRadius };
+    });
+    if (corners === null) continue;
+    if (corners.start !== "0px")
+      problems.push(
+        `tab ${i}: borderStartStartRadius is ${corners.start}, not 0px`,
+      );
+    if (corners.end === "0px")
+      problems.push(`tab ${i}: borderStartEndRadius lost its radius`);
+  }
+  if (tabs.length > 0) await tabs[0].click();
+  return problems;
+}
+
 /** Every page in `PAGES`, full height. */
 async function capturePages(page, outDir, clockMasks, theme, viewport) {
   for (const p of PAGES.filter(
@@ -567,6 +607,13 @@ async function capturePages(page, outDir, clockMasks, theme, viewport) {
     }
     // Let ambient globe rotation / any load-time animation settle to a consistent frame.
     await page.waitForTimeout(300);
+    if (label === "after") {
+      const problems = await tabFrameProblems(page);
+      if (problems.length > 0)
+        throw new Error(
+          `${p.path} (${theme}, ${viewport.name}): ${problems.join("; ")}`,
+        );
+    }
     await shoot(
       page,
       outDir,

@@ -408,10 +408,12 @@ site-search .pagefind-ui__result-tags {
   margin-block-start: 0;
 }
 
-.sl-markdown-content [role="tabpanel"] .frame pre {
+/* A code frame that opens a tab panel hangs from the tab row, so its top corner under the first
+   tab is square and meets the tab. The other three corners keep the bevel, and a frame further
+   down the panel, after some prose, keeps all four. The header-less terminal rule above gives that
+   corner its radius back at the same specificity (0,4,1), so this one stays below it in the file. */
+[role="tabpanel"] > .expressive-code:first-child .frame pre {
   border-start-start-radius: 0;
-  border-start-end-radius: var(--gmt-radius-lg);
-  border-end-start-radius: var(--gmt-radius-lg);
 }
 
 /* CardGrid wrapper — no border or background */
