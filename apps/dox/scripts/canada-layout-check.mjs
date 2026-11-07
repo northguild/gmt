@@ -334,6 +334,13 @@ async function measureProbe(page, cards) {
                 .map((r) => Math.round(r.top)),
             ).size;
           };
+          /* The offset heads by their markup, shown or not: a selector that finds no label and
+             note would otherwise measure every head as one line and pass. */
+          const offsetHeads = [...t.querySelectorAll("thead th")].filter(
+            (th) =>
+              th.querySelector("[class*=label]") &&
+              th.querySelector("[class*=note]"),
+          ).length;
           const heads = [...t.querySelectorAll("thead th")]
             .filter((th) => !hidden(th))
             .map((th) => {
@@ -347,12 +354,13 @@ async function measureProbe(page, cards) {
                   label && note
                     ? lineCount(label) + lineCount(note)
                     : lineCount(th),
-                labelLines: label ? lineCount(label) : 1,
-                noteLines: note ? lineCount(note) : 1,
+                labelLines: label && note ? lineCount(label) : null,
+                noteLines: label && note ? lineCount(note) : null,
               };
             });
           return {
             heads,
+            offsetHeads,
             remPx: parseFloat(
               getComputedStyle(document.documentElement).fontSize,
             ),
@@ -404,16 +412,28 @@ async function measureProbe(page, cards) {
 /* The note wraps only in a probe narrower than this (the `gmt-probe` container step). */
 const NOTE_WRAPS_UNDER_REM = 25;
 
+/* The "Correct" and "Yours" heads: each a label with a note under it. */
+const OFFSET_HEADS = 2;
+
 function probeProblems(tag, probe) {
+  if (probe.tables.length === 0) fail(`${tag}: no probe table to measure`);
   for (const t of probe.tables) {
+    if (t.offsetHeads !== OFFSET_HEADS)
+      fail(
+        `${tag}: the probe table has ${t.offsetHeads} heads with a label and a note (${OFFSET_HEADS} expected)`,
+      );
     for (const head of t.heads) {
       if (head.lines > 3)
         fail(
           `${tag}: the "${head.text}" head is ${head.lines} lines tall (at most 3)`,
         );
-      if (head.labelLines > 1)
+      if (head.labelLines !== null && head.labelLines > 1)
         fail(`${tag}: the label of the "${head.text}" head wraps`);
-      if (head.noteLines > 1 && t.probeWidth >= NOTE_WRAPS_UNDER_REM * t.remPx)
+      if (
+        head.noteLines !== null &&
+        head.noteLines > 1 &&
+        t.probeWidth >= NOTE_WRAPS_UNDER_REM * t.remPx
+      )
         fail(
           `${tag}: the note of the "${head.text}" head wraps in a ${t.probeWidth.toFixed(0)} px table`,
         );
@@ -439,8 +459,11 @@ function probeProblems(tag, probe) {
 async function readoutHoldsStill(page) {
   return page.evaluate((table) => {
     const wrap = document.querySelector(table);
+    if (!wrap) return ["no probe table to check"];
     const card = wrap.closest("section");
     const cells = [...wrap.querySelectorAll("tbody td:last-child span[id]")];
+    /* No readout cells would change nothing, and pass. */
+    if (cells.length === 0) return ["no readout cells to check"];
     const sizes = () =>
       [card, wrap, wrap.querySelector("table"), ...wrap.querySelectorAll("th")]
         .filter((el) => el.offsetParent !== null)
