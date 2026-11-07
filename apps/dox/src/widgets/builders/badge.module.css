@@ -39,6 +39,12 @@
     --gmt-badge-ink: var(--gmt-danger-ink);
   }
 
+  gap: 0.3125rem;
+
+  & > svg {
+    flex: none;
+  }
+
   &[data-wrap="true"] {
     white-space: normal;
   }
@@ -67,5 +73,30 @@
   .root[data-dim="true"] {
     border-color: var(--gmt-ice);
     color: var(--gmt-ice);
+  }
+}
+
+/* A solid state pill, as GitHub draws Open, Merged and Closed: the tone fills the whole badge and
+   the page's void colour is the ink, so the word and icon stay readable on it. The fill is the
+   tone's `-ink` token, which is dark enough on the light page and light enough on the dark one for
+   the void ink to hold 4.5:1 either way. It is larger than the outline chips around it. */
+.fill {
+  --gmt-badge-solid: var(--gmt-ice-dim);
+
+  padding: 0.25rem 0.75rem;
+  border-color: transparent;
+  border-radius: 999px;
+  corner-shape: round;
+  background: var(--gmt-badge-solid);
+  color: var(--gmt-void);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+
+  &[data-tone="spring"] {
+    --gmt-badge-solid: var(--gmt-spring-ink);
+  }
+
+  &[data-tone="purple"] {
+    --gmt-badge-solid: var(--gmt-purple-ink);
   }
 }

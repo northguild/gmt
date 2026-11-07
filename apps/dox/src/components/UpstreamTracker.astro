@@ -2,12 +2,11 @@
 /**
  * The /upstream/ tracker: one table per repository, built from `upstream-filings.ts` — the live
  * refresh when GitHub is reachable, the committed snapshot otherwise. Nothing is fetched in the
- * browser. Sentences come from `lib/upstream-summary.ts`, styles in `upstream-table.css`.
+ * browser. Sentences come from `lib/upstream-summary.ts`, styles in `gmt-content-tables.css`.
  */
 import { filingRepos, filingsForRepo } from "../data/upstream-filings";
 import { UPSTREAM_COLUMNS as COLUMNS } from "../lib/upstream-status";
 import { asDate } from "../lib/upstream-summary";
-import "./upstream-table.css";
 import UpstreamFilingRow from "./UpstreamFilingRow.astro";
 import UpstreamTrackerLegend from "./UpstreamTrackerLegend.astro";
 import UpstreamTrackerSummary from "./UpstreamTrackerSummary.astro";

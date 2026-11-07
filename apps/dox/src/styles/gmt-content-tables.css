@@ -113,7 +113,8 @@
 .sl-markdown-content .gmt-ref-table > table > tbody > tr > td {
   padding: 0.625rem 0.875rem;
   line-height: 1.5;
-  color: var(--gmt-ice);
+  font-weight: 400;
+  color: var(--gmt-ice-dim);
   border-block-end: 1px solid var(--gmt-hairline);
 }
 
@@ -121,11 +122,13 @@
   border-block-end: none;
 }
 
-/* The row label: a `th` in the body reads as a cell, not as a header. */
+/* The row label: a `th` in the body reads as a cell, not as a header. It is told apart by its
+   ink (`--gmt-ice` against the body's `--gmt-ice-dim`), never by weight. */
 .sl-markdown-content .gmt-ref-table > table > tbody > tr > th {
   color: var(--gmt-ice);
   font-family: inherit;
   font-size: inherit;
+  font-weight: 400;
   letter-spacing: normal;
   border-block-end: 1px solid var(--gmt-hairline);
 }
@@ -137,105 +140,90 @@
   > tr
   > :is(th, td):first-child {
   color: var(--gmt-ice);
-  font-weight: 600;
 }
 
-/* Zebra. The hover and focus wash is on the cells, so it lands on top of the stripe. Position is
-   the only thing that tells the even rows apart, so this is the one place the sheet counts. An
-   entry card has no stripe: a table laid out as entries, an Options table, and a Members or
-   Parameters table once its box is 34rem or narrower (the second rule, below, covers the wider
-   box). */
+/* Zebra and groups belong to the table form, so they sit in the wide half of the container query
+   (the card form below has neither). Position is the only thing that tells the even rows apart,
+   so the stripe is the one place the sheet counts. The hover and focus wash is on the cells, so
+   it lands on top of the stripe. An Options table and a table laid out as entries are always
+   cards, so `:where()` keeps their exclusion from adding specificity.
+
+   Groups. A run of rows that start with the same text: a strong rule opens it, and the repeated
+   label on the later rows moves to the quiet text tier (`--gmt-ice-dim`, which holds the 7:1
+   floor on the panel and on the stripe, chips included). Colour does the dimming, not opacity,
+   so the label never falls below the floor. The text stays in the row, so a screen reader reads
+   it on each one. The rule replaces the hairline of the row above it. */
 /* stylelint-disable selector-pseudo-class-disallowed-list -- a stripe is a row's position; the markup carries no state to select it by */
-.sl-markdown-content
-  .gmt-ref-table:not(
-    :where(
-      [data-kind="options"],
-      [data-kind="members"],
-      [data-kind="parameters"],
-      [data-layout="entries"]
-    )
-  )
-  > table
-  > tbody
-  > tr:nth-child(even) {
-  background: var(--gmt-fill-subtle);
-}
-
 @container gmt-ref (width > 34rem) {
   .sl-markdown-content
-    .gmt-ref-table:where([data-kind="members"], [data-kind="parameters"])
+    .gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
     > table
     > tbody
     > tr:nth-child(even) {
     background: var(--gmt-fill-subtle);
   }
+
+  .gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
+    > table
+    > tbody
+    > tr
+    + tr[data-group="start"]
+    > :is(th, td) {
+    border-block-start: 1px solid var(--gmt-border-strong);
+  }
+
+  .gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
+    > table
+    > tbody
+    > tr:has(+ tr[data-group="start"])
+    > :is(th, td) {
+    border-block-end: none;
+  }
+
+  .gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
+    > table
+    > tbody
+    > tr[data-group="continue"]
+    > :is(th, td):first-child {
+    color: var(--gmt-ice-dim);
+  }
+
+  .gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
+    > table
+    > tbody
+    > tr[data-group="continue"]
+    > :is(th, td):first-child
+    :is(code, a) {
+    color: inherit;
+  }
 }
 /* stylelint-enable selector-pseudo-class-disallowed-list */
 
-/* Groups. A run of rows that start with the same text: a strong rule opens it, and the repeated
-   label on the later rows moves to the quiet text tier (`--gmt-ice-dim`, which holds the 7:1
-   floor on the panel and on the stripe, chips included) and loses its weight. Colour does the
-   dimming, not opacity, so the label never falls below the floor. The text stays in the row, so
-   a screen reader reads it on each one. The rule replaces the hairline of the row above it. An
-   entry card shows its full title, so an Options table, a table laid out as entries and a
-   Members or Parameters table at 34rem or narrower have no groups (`:where()` keeps the
-   exclusion from adding specificity). */
-.gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
-  > table
-  > tbody
-  > tr
-  + tr[data-group="start"]
-  > :is(th, td) {
-  border-block-start: 1px solid var(--gmt-border-strong);
-}
-
-.gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
-  > table
-  > tbody
-  > tr:has(+ tr[data-group="start"])
-  > :is(th, td) {
-  border-block-end: none;
-}
-
-.gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
-  > table
-  > tbody
-  > tr[data-group="continue"]
-  > :is(th, td):first-child {
+/* Code in a body cell is a code font at the cell's weight, never bolder. */
+.sl-markdown-content .gmt-ref-table > table > tbody :is(th, td) code {
   font-weight: 400;
-  color: var(--gmt-ice-dim);
 }
 
-.gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
-  > table
-  > tbody
-  > tr[data-group="continue"]
-  > :is(th, td):first-child
-  :is(code, a) {
-  color: inherit;
-}
+/* ---- Prose tables ----
+   Every table in the article is in this box (`<div class="gmt-ref-table" data-kind="...">`). The
+   generator writes it for the reference tables (`options`, `members`, `parameters`, `notes`),
+   `src/lib/rehype-table-scroll.ts` for every Markdown table (`content`), and an Astro component
+   writes its own. It draws the panel, scrolls sideways when a cell is wider than the column, and
+   is the container the layout asks its width of. The table inside is bare.
+   `src/lib/ref-table.ts` makes the box focusable and named when it scrolls.
 
-/* ---- Generated reference tables (Options, Members, Parameters) ----
-   The generator wraps each one in `<div class="gmt-ref-table" data-kind="options|members|parameters">`.
-   The same box holds every Markdown table (`data-kind="content"`, src/lib/rehype-table-scroll.ts),
-   so a table fills its column; the rules keyed on the Options, Members and Parameters kinds leave
-   those tables alone.
-
-   The wrapper is the box: it draws the panel (the kit table's surface and border; a Members or Parameters table carries it on the table, see below), scrolls sideways when a cell is
-   wider than the column, and is the container the layout asks its width of. The table inside
-   is bare. `src/lib/ref-table.ts` makes the wrapper focusable and named when it scrolls.
-
-   Two layouts. The wrapper's own width chooses, not the viewport's: the article column is 530px
-   wide at a 1200px viewport and 770px at 1440px:
-   - Table. Name and Type take what they need; Description keeps a floor, so a sentence is never
-     set a word to a line.
-   - Entries. Each row is a small entry: name, then Type (and Default) with their labels on the
-     same line when they fit, then the Description under them at the full width. No row is wider
-     than the screen and nothing scrolls. The header row stays for assistive technology and is
-     hidden from sight.
-   An Options table has four columns, so it is always entries. Members and Parameters have three
-   columns of short cells and read better as a table down to 34rem. */
+   Two layouts, chosen by the box's own width, not the viewport's (the article column is 530px
+   wide at a 1200px viewport and 770px at 1440px):
+   - Table, above 34rem. Name and Type take what they need; Description keeps a floor, so a
+     sentence is never set a word to a line. The table carries the panel.
+   - Cards, at 34rem or narrower. Each row is a card: a title strip (the first cell), then one
+     line per cell with its column's name in a fixed column on the left. No row is wider than the
+     screen and nothing scrolls.
+   An Options table has four columns, so it is always cards. So is a table that opts into
+   `data-layout="entries"` (the /upstream/ tracker). */
 .gmt-ref-table {
+  --gmt-card-label: 7rem;
+
   container: gmt-ref / inline-size;
   position: relative;
   background: var(--gmt-surface-widget);
@@ -257,34 +245,55 @@
   backdrop-filter: none;
 }
 
-/* The Description, the last column, keeps a floor in table form. A table the author wrote in a
-   behaviour note (`data-kind="notes"`) has no Description column and keeps its natural widths. */
-.gmt-ref-table:is(
-    [data-kind="options"],
-    [data-kind="members"],
-    [data-kind="parameters"]
-  )
-  tr
-  > :last-child {
-  min-inline-size: 14rem;
+/* A container query cannot style its own container, so a table that is a table only above 34rem
+   carries its panel on the table, which the query reaches; the box keeps the corner clip and the
+   scroll. At 34rem or narrower the table is a list of cards and has no frame. */
+.gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"])) {
+  background: none;
+  border: 0;
 }
 
-/* A /compare table whose first column is a sentence, not a short name: the columns share the
-   width in fixed proportions. */
-.gmt-compare--prose :is(th, td):first-child {
-  inline-size: 14%;
-}
+@container gmt-ref (width > 34rem) {
+  .gmt-ref-table:not(:where([data-kind="options"], [data-layout="entries"]))
+    > table {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--gmt-surface-widget);
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-radius-md);
+    corner-shape: bevel;
+  }
 
-.gmt-compare--covers :is(th, td):first-child {
-  inline-size: 58%;
-}
+  /* The Description, the last column, keeps a floor in table form. A table the author wrote in a
+     behaviour note (`data-kind="notes"`) has no Description column and keeps its natural widths. */
+  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    tr
+    > :last-child {
+    min-inline-size: 14rem;
+  }
 
-.gmt-compare--covers :is(th, td)[data-col="GMT"] {
-  inline-size: 8%;
-}
+  /* A /compare table whose first column is a sentence, not a short name: the columns share the
+     width in fixed proportions. */
+  .gmt-compare--prose :is(th, td):first-child {
+    inline-size: 14%;
+  }
 
-.gmt-compare--prose :is(th, td) {
-  text-align: start;
+  .gmt-compare--covers :is(th, td):first-child {
+    inline-size: 58%;
+  }
+
+  .gmt-compare--covers :is(th, td)[data-col="GMT"] {
+    inline-size: 8%;
+  }
+
+  .gmt-compare--prose :is(th, td) {
+    text-align: start;
+  }
+
+  /* The "Where GMT differs" table: topic, GMT's side, the others' side. */
+  .gmt-compare--differs :is(th, td)[data-col="GMT"] {
+    inline-size: 30%;
+  }
 }
 
 /* A date in a compare table never breaks after its hyphen, not even to fit a narrow column. */
@@ -293,9 +302,32 @@
   overflow-wrap: normal;
 }
 
-/* The "Where GMT differs" table: topic, GMT's side, the others' side. */
-.gmt-compare--differs :is(th, td)[data-col="GMT"] {
-  inline-size: 30%;
+/* /bundle-size/ sets six columns of figures in the table's own smaller size, with a tighter side
+   padding, so all of them fit the content column at a 1280 px window. Below the card step each
+   cell takes the cards' own padding. */
+.gmt-ref-table > .gmt-bundle {
+  font-size: var(--sl-text-sm);
+}
+
+@container gmt-ref (width > 34rem) {
+  .sl-markdown-content
+    .gmt-ref-table
+    > .gmt-bundle
+    > :is(thead, tbody)
+    > tr
+    > :is(th, td) {
+    padding-inline: var(--gmt-space-2);
+  }
+}
+
+/* A figure column: right-aligned, and a figure never breaks. */
+.gmt-bundle .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-bundle tbody .num {
+  white-space: nowrap;
 }
 
 /* The sideways-scroll cue. `data-overflow` and `data-scroll` come from src/lib/ref-table.ts:
@@ -339,34 +371,30 @@
   margin-block-start: 0;
 }
 
-/* Entries. An Options table has four columns, and its Description needs about 450px to read well:
-   about 900px for the table, wider than the article column ever is (it tops out near 800px).
-   So an Options table is always a list of entries. Members and Parameters have three columns of
-   short cells and read better as a table; they become entries when the wrapper is 34rem or
-   narrower, which is the 390px phone and the 1200px viewport's 530px column. The declarations
-   are the same in both places because CSS cannot take a width from a variable.
+/* ---- Cards ----
+   Each card is the surface and full border of the panel, a title strip across the top (the first
+   cell), and the other cells as a label and a value. The box gives up its own panel, so the cards
+   sit on the page. Zebra and groups do not apply. The declarations are the same in both places
+   (an Options table or a table laid out as entries, which is always cards; and any other table
+   once its box is 34rem or narrower) because CSS cannot take a width from a variable. */
 
-   Each entry is a card like a tool's: the surface and full border of the panel, a title strip
-   across the top (the first cell), and the other cells as a label above a value. The wrapper
-   gives up its own panel, so the cards sit on the page. Zebra and groups do not apply. */
-.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) {
-  background: none;
-  border: 0;
-  border-radius: 0;
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) > table {
+  display: block;
+  min-inline-size: 0;
 }
 
 .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
-  :is(table, tbody) {
-  display: block;
-}
-
-.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) tbody {
+  > table
+  > tbody {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) thead {
+/* The header row stays for assistive technology and is hidden from sight. */
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  > table
+  > thead {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -376,10 +404,11 @@
   backdrop-filter: none;
 }
 
-.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]) tbody tr {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  > table
+  > tbody
+  > tr {
+  display: block;
   overflow: hidden;
   background: var(--gmt-surface-widget);
   border: 1px solid var(--gmt-hairline);
@@ -387,14 +416,16 @@
   corner-shape: bevel;
 }
 
-/* The wash goes on the entry, not on each cell, so the gap between cells is washed too. It is a
+/* The wash goes on the card, not on each cell, so the gap between cells is washed too. It is a
    layer over the card's surface, so the card stays opaque. */
 .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
-  tbody
-  tr:hover,
+  > table
+  > tbody
+  > tr:hover,
 .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
-  tbody
-  tr:has(:focus-visible) {
+  > table
+  > tbody
+  > tr:has(:focus-visible) {
   background-image: linear-gradient(
     var(--gmt-accent-wash),
     var(--gmt-accent-wash)
@@ -402,40 +433,34 @@
 }
 
 .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
-  tr:hover
-  :is(th, td),
+  > table
+  > tbody
+  > tr:hover
+  > :is(th, td),
 .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
-  tr:has(:focus-visible)
-  :is(th, td) {
+  > table
+  > tbody
+  > tr:has(:focus-visible)
+  > :is(th, td) {
   background: transparent;
 }
 
+/* A card clips what passes its edge, so a value too wide for it breaks inside it. Code and prose
+   break at their spaces and joining slashes as in a table; only when one piece is still wider
+   than the card does it break anywhere. Elsewhere a table scrolls, but a card does not. */
 .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
   > table
   > tbody
   > tr
   > :is(th, td) {
   display: block;
-  flex: 0 1 auto;
+  position: relative;
   min-inline-size: 0;
   inline-size: auto;
-  padding: 0.5rem 0.875rem;
+  padding: 0.375rem 0.875rem;
   border: 0;
-}
-
-.gmt-ref-table[data-kind="options"] td:last-child {
-  flex: 1 1 100%;
-  min-inline-size: 0;
-}
-
-/* A card clips what passes its edge, so a value too wide for it breaks inside it. Code and
-   prose break at their spaces and joining slashes as in a table; only when one piece is still
-   wider than the card does it break anywhere. Elsewhere a table scrolls, but a card does not. */
-.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
-  > table
-  > tbody
-  > tr
-  > :is(th, td) {
+  font-weight: 400;
+  text-align: start;
   overflow-wrap: anywhere;
 }
 
@@ -449,14 +474,17 @@
   overflow-wrap: anywhere;
 }
 
-/* The title strip: the first cell, across the top of the card. */
+/* The title strip: the first cell, across the top of the card. Like every body cell it is weight
+   400; the strip, the rule under it and the brighter ink set it apart. */
 .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
-  tbody
-  :is(th, td):first-child {
-  flex: 1 1 100%;
+  > table
+  > tbody
+  > tr
+  > :is(th, td):first-child {
+  padding-block: 0.5rem;
   font-family: inherit;
   font-size: inherit;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: normal;
   color: var(--gmt-ice);
   background: var(--gmt-surface);
@@ -464,89 +492,89 @@
 }
 
 /* A cell that is a label and a value: the label is the column's name, which the build writes on
-   the cell in `data-col` (src/lib/rehype-table-scroll.ts), on its own line above the value. The
-   first cell is the title and, in an Options table, the last is the description, so neither has
-   one. A table that opts in with `data-layout="entries"` labels every cell but the first. */
-.gmt-ref-table[data-kind="options"]
-  :where(td)[data-col]:not(:first-child, :last-child)::before {
+   the cell in `data-col`. Every card puts the label in the same column and the value beside it, so
+   Kind, Status and Last activity line up from one card to the next. The label is set apart by
+   the cell's side padding rather than by a grid, because a value is often several elements. The
+   label floats into that padding (its margin box is zero wide, so the value's lines keep their
+   full width) and the cell is a flow root, so a label that wraps to two lines makes the cell
+   taller instead of running into the next row. */
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  > table
+  > tbody
+  > tr
+  > :is(th, td):where([data-col]:not(:first-child)) {
+  display: flow-root;
+  padding-inline-start: calc(0.875rem + var(--gmt-card-label) + 0.5rem);
+}
+
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  > table
+  > tbody
+  > tr
+  > :is(th, td):where([data-col]:not(:first-child))::before {
   content: attr(data-col);
   content: attr(data-col) / "";
-  display: block;
-  font-family: var(--gmt-font-display);
+  float: inline-start;
+  inline-size: var(--gmt-card-label);
+  margin-inline: calc(-1 * (var(--gmt-card-label) + 0.5rem)) 0.5rem;
   font-size: var(--gmt-text-xs);
   font-weight: 600;
-  letter-spacing: var(--gmt-tracking-wide);
-  text-transform: uppercase;
+  line-height: 1.5;
   color: var(--gmt-ice-dim);
 }
 
-.gmt-ref-table[data-layout="entries"]
-  tbody
-  :is(th, td):not(:first-child)::before {
-  content: attr(data-col);
-  content: attr(data-col) / "";
-  display: block;
-  font-family: var(--gmt-font-display);
-  font-size: var(--gmt-text-xs);
-  font-weight: 600;
-  letter-spacing: var(--gmt-tracking-wide);
-  text-transform: uppercase;
-  color: var(--gmt-ice-dim);
+/* The last column of an Options, Members or Parameters table is the Description: it has no label
+   and runs the width of the card. */
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]):where(
+    [data-kind="options"],
+    [data-kind="members"],
+    [data-kind="parameters"]
+  )
+  > table
+  > tbody
+  > tr
+  > :is(th, td):where(:last-child:not(:first-child)) {
+  padding-inline-start: 0.875rem;
 }
 
-.gmt-ref-table[data-layout="entries"] tbody :is(th, td):empty {
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"]):where(
+    [data-kind="options"],
+    [data-kind="members"],
+    [data-kind="parameters"]
+  )
+  > table
+  > tbody
+  > tr
+  > :is(th, td):where(:last-child:not(:first-child))::before {
   display: none;
 }
 
-/* A Members or Parameters table is a framed table only while its box is wider than 34rem. A
-   container query cannot style its own container, so the frame is on the table, which the query
-   reaches; the box keeps the corner clip and the scroll. At 34rem or narrower the table is a list
-   of cards and has no frame. */
-.gmt-ref-table:where([data-kind="members"], [data-kind="parameters"]) {
-  background: none;
-  border: 0;
-}
-
-@container gmt-ref (width > 34rem) {
-  .gmt-ref-table:where([data-kind="members"], [data-kind="parameters"])
-    > table {
-    border-collapse: separate;
-    border-spacing: 0;
-    background: var(--gmt-surface-widget);
-    border: 1px solid var(--gmt-hairline);
-    border-radius: var(--gmt-radius-md);
-    corner-shape: bevel;
-  }
+.gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+  > table
+  > tbody
+  > tr
+  > :is(th, td):empty {
+  display: none;
 }
 
 @container gmt-ref (max-width: 34rem) {
-  /* A Members or Parameters table drawn as entries shows each card's full title, like an
-     Options table: no group rule and no dimmed label. */
-  .gmt-ref-table:where([data-kind="members"], [data-kind="parameters"])
-    > table
-    > tbody
-    > tr
-    + tr[data-group="start"]
-    > td {
-    border-block-start: 0;
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"]) > table {
+    display: block;
+    min-inline-size: 0;
   }
 
-  .gmt-ref-table:where([data-kind="members"], [data-kind="parameters"])
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
     > table
-    > tbody
-    > tr[data-group="continue"]
-    > td:first-child {
-    font-weight: 600;
-    color: var(--gmt-ice);
-  }
-
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"]) tbody {
+    > tbody {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"]) thead {
+  /* The header row stays for assistive technology and is hidden from sight. */
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > thead {
     position: absolute;
     inline-size: 1px;
     block-size: 1px;
@@ -556,10 +584,11 @@
     backdrop-filter: none;
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"]) tbody tr {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr {
+    display: block;
     overflow: hidden;
     background: var(--gmt-surface-widget);
     border: 1px solid var(--gmt-hairline);
@@ -567,103 +596,208 @@
     corner-shape: bevel;
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    tbody
-    tr:hover,
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    tbody
-    tr:has(:focus-visible) {
+  /* The wash goes on the card, not on each cell, so the gap between cells is washed too. It is a
+     layer over the card's surface, so the card stays opaque. */
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr:hover,
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr:has(:focus-visible) {
     background-image: linear-gradient(
       var(--gmt-accent-wash),
       var(--gmt-accent-wash)
     );
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    tr:hover
-    td,
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    tr:has(:focus-visible)
-    td {
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr:hover
+    > :is(th, td),
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr:has(:focus-visible)
+    > :is(th, td) {
     background: transparent;
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+  /* A card clips what passes its edge, so a value too wide for it breaks inside it. Code and prose
+     break at their spaces and joining slashes as in a table; only when one piece is still wider
+     than the card does it break anywhere. Elsewhere a table scrolls, but a card does not. */
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
     > table
     > tbody
     > tr
-    > td {
+    > :is(th, td) {
     display: block;
-    flex: 0 1 auto;
+    position: relative;
     min-inline-size: 0;
     inline-size: auto;
-    padding: 0.5rem 0.875rem;
+    padding: 0.375rem 0.875rem;
     border: 0;
-  }
-
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    > table
-    > tbody
-    > tr
-    > td {
+    font-weight: 400;
+    text-align: start;
     overflow-wrap: anywhere;
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
     > table
     > tbody
     > tr
-    > td
+    > :is(th, td)
     :is(code, .gmt-cw) {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    td:last-child {
-    flex: 1 1 100%;
-    min-inline-size: 0;
-  }
-
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    td:first-child {
-    flex: 1 1 100%;
+  /* The title strip: the first cell, across the top of the card. Like every body cell it is weight
+     400; the strip, the rule under it and the brighter ink set it apart. */
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td):first-child {
+    padding-block: 0.5rem;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 400;
+    letter-spacing: normal;
+    color: var(--gmt-ice);
     background: var(--gmt-surface);
     border-block-end: 1px solid var(--gmt-border-strong);
   }
 
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
-    :where(td)[data-col]:not(:first-child, :last-child)::before {
+  /* A cell that is a label and a value: the label is the column's name, which the build writes on
+     the cell in `data-col`. Every card puts the label in the same column and the value beside it, so
+     Kind, Status and Last activity line up from one card to the next. The label is set apart by
+     the cell's side padding rather than by a grid, because a value is often several elements. The
+     label floats into that padding and the cell is a flow root, so a label that wraps makes the
+     cell taller instead of running into the next row. */
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td):where([data-col]:not(:first-child)) {
+    display: flow-root;
+    padding-inline-start: calc(0.875rem + var(--gmt-card-label) + 0.5rem);
+  }
+
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td):where([data-col]:not(:first-child))::before {
     content: attr(data-col);
     content: attr(data-col) / "";
-    display: block;
-    font-family: var(--gmt-font-display);
+    float: inline-start;
+    inline-size: var(--gmt-card-label);
+    margin-inline: calc(-1 * (var(--gmt-card-label) + 0.5rem)) 0.5rem;
     font-size: var(--gmt-text-xs);
     font-weight: 600;
-    letter-spacing: var(--gmt-tracking-wide);
-    text-transform: uppercase;
+    line-height: 1.5;
     color: var(--gmt-ice-dim);
+  }
+
+  /* The last column of an Options, Members or Parameters table is the Description: it has no label
+     and runs the width of the card. */
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"]):where(
+      [data-kind="options"],
+      [data-kind="members"],
+      [data-kind="parameters"]
+    )
+    > table
+    > tbody
+    > tr
+    > :is(th, td):where(:last-child:not(:first-child)) {
+    padding-inline-start: 0.875rem;
+  }
+
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"]):where(
+      [data-kind="options"],
+      [data-kind="members"],
+      [data-kind="parameters"]
+    )
+    > table
+    > tbody
+    > tr
+    > :is(th, td):where(:last-child:not(:first-child))::before {
+    display: none;
+  }
+
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td):empty {
+    display: none;
   }
 }
 
-/* A box 20rem wide or narrower (the 320px phone) takes less side padding in a card, so a cell
-   that cannot break still reaches no further past the box than a bare entry did. */
 @container gmt-ref (max-width: 20rem) {
+  /* A box 20rem wide or narrower (the 320px phone) takes less side padding, and a label sits above
+     its value, so a cell that cannot break still reaches no further past the box than a bare entry
+     did. */
   .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
     > table
     > tbody
     > tr
-    > :is(th, td),
-  .gmt-ref-table:is([data-kind="members"], [data-kind="parameters"])
+    > :is(th, td) {
+    padding-inline: 0.5rem;
+  }
+
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
     > table
     > tbody
     > tr
-    > td {
+    > :is(th, td):where([data-col]:not(:first-child)) {
+    padding-inline-start: 0.5rem;
+  }
+
+  .gmt-ref-table:is([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td):where([data-col]:not(:first-child))::before {
+    position: static;
+    display: block;
+    inline-size: auto;
+  }
+
+  /* A box 20rem wide or narrower (the 320px phone) takes less side padding, and a label sits above
+     its value, so a cell that cannot break still reaches no further past the box than a bare entry
+     did. */
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td) {
     padding-inline: 0.5rem;
+  }
+
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td):where([data-col]:not(:first-child)) {
+    padding-inline-start: 0.5rem;
+  }
+
+  .gmt-ref-table:not([data-kind="options"], [data-layout="entries"])
+    > table
+    > tbody
+    > tr
+    > :is(th, td):where([data-col]:not(:first-child))::before {
+    position: static;
+    display: block;
+    inline-size: auto;
   }
 }
 
-/* Forced colours: the system draws the borders in its text colour, and a repeated label returns to full weight and text colour, so every label reads at full contrast. */
+/* Forced colours: the system draws the borders in its text colour. */
 @media (forced-colors: active) {
   .gmt-ref-table,
   .gmt-ref-table :is(tr, th, td) {
@@ -675,7 +809,202 @@
     > tbody
     > tr[data-group="continue"]
     > :is(th, td):first-child {
-    font-weight: 600;
     color: CanvasText;
   }
+}
+
+/* ---- /upstream/: a filing is a card laid out like a row on GitHub ---- */
+
+/* The state icon takes the badge's hue as text ink, never as the only signal: the badge beside
+   it spells the state. */
+.gmt-upstream-state {
+  display: inline-flex;
+  flex: none;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-upstream-table tr[data-tone="spring"] .gmt-upstream-state {
+  color: var(--gmt-spring-ink);
+}
+
+.gmt-upstream-table tr[data-tone="purple"] .gmt-upstream-state {
+  color: var(--gmt-purple-ink);
+}
+
+/* An open or merged filing carries a bottom accent in its badge's colour. It is an inset shadow on
+   the last cell, not a coloured bottom border: with the card's bevelled corners a border of another
+   colour is joined diagonally and shows as a stray line along the top edge. */
+.gmt-upstream-table tr[data-tone="spring"] > .gmt-upstream-meta {
+  box-shadow: inset 0 -2px 0 var(--gmt-spring);
+}
+
+.gmt-upstream-table tr[data-tone="purple"] > .gmt-upstream-meta {
+  box-shadow: inset 0 -2px 0 var(--gmt-dst-purple);
+}
+
+/* Header row: state icon, title, `repo #number`, and the state badge pushed to the end. */
+.gmt-ref-table[data-layout="entries"]
+  .gmt-upstream-table
+  tr
+  > .gmt-upstream-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.gmt-upstream-title {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+  font-weight: 600;
+}
+
+.gmt-upstream-ref {
+  font-size: var(--sl-text-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.gmt-upstream-status {
+  margin-inline-start: auto;
+}
+
+/* The summary reads as prose, not as a column of monospace. */
+.gmt-upstream-table .gmt-upstream-summary {
+  max-inline-size: 72ch;
+  margin: 0;
+  font-weight: 400;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-upstream-table .gmt-upstream-body > * + * {
+  margin-block-start: 0.5rem;
+}
+
+.gmt-upstream-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+}
+
+.gmt-upstream-ingmt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.gmt-upstream-links,
+.gmt-upstream-muted {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--sl-text-xs);
+  font-weight: 400;
+}
+
+/* Meta line: a comment count, the last activity, and the evidence link, each led by an icon. */
+.gmt-ref-table[data-layout="entries"]
+  .gmt-upstream-table
+  tr
+  > .gmt-upstream-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  color: var(--gmt-ice-dim);
+  font-size: var(--sl-text-xs);
+}
+
+.gmt-upstream-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* The noun after a count shows once the card is wide enough; the hidden text always carries it. */
+.gmt-upstream-long {
+  display: none;
+}
+
+@container gmt-ref (width > 34rem) {
+  .gmt-upstream-long {
+    display: inline;
+  }
+}
+
+.gmt-upstream-fact > svg,
+.gmt-upstream-fact > span:first-child {
+  flex: none;
+}
+
+/* ---- /upstream/: the defect table ---- */
+
+.gmt-defects :is(th, td) {
+  vertical-align: top;
+  text-align: start;
+  overflow-wrap: break-word;
+}
+
+/* The first column is prose rather than a short label, so the columns share the width in fixed
+   proportions instead of sizing to their content. */
+@container gmt-ref (width > 34rem) {
+  .sl-markdown-content .gmt-ref-table > .gmt-defects {
+    min-inline-size: 34rem;
+    table-layout: fixed;
+    font-size: var(--sl-text-sm);
+  }
+
+  .gmt-defects .gmt-defects-what {
+    inline-size: 50%;
+    white-space: normal;
+  }
+
+  .gmt-defects .gmt-defects-state {
+    inline-size: 24%;
+  }
+
+  .gmt-defects .gmt-defects-sent {
+    inline-size: 26%;
+  }
+}
+
+/* `--gmt-ice-dim` is the muted text tier that holds the 7:1 floor. */
+.sl-markdown-content .gmt-defects td p {
+  margin-block: 0.25rem 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--sl-text-xs);
+  font-weight: 400;
+}
+
+/* A short reference such as `tc39 #3292` reads as one token, so it never splits at its space. */
+.gmt-defects-reason a {
+  white-space: nowrap;
+}
+
+.sl-markdown-content .gmt-defects-refs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The content area gives every list item an indent and a small bar for a bullet. Both go here: a
+   reference like `polyfill #369` is already close to the width of its column. */
+.sl-markdown-content .gmt-defects-refs li {
+  margin: 0;
+  padding-inline-start: 0;
+}
+
+.sl-markdown-content .gmt-defects-refs li::before {
+  display: none;
+  content: none;
+}
+
+/* Stacked references are separate targets, so each one is 24 px tall (WCAG 2.2 SC 2.5.8). */
+.sl-markdown-content .gmt-defects-refs a {
+  display: inline-block;
+  min-block-size: 1.5rem;
+  line-height: 1.5rem;
+}
+
+.gmt-defects-none {
+  color: var(--gmt-ice-dim);
 }
