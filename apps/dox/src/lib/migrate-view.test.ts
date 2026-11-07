@@ -9,6 +9,7 @@ import {
 import { temporalMap } from "../data/temporal-map";
 import {
   VERDICT_BADGE,
+  callLines,
   diffPairs,
   mapPairs,
   matrixView,
@@ -53,6 +54,34 @@ describe("theirsCode", () => {
 
   it("treats a span with words before it as wording", () => {
     expect(theirsCode("Use `a()`")).toBe("// Use a()");
+  });
+});
+
+describe("callLines", () => {
+  it("puts a one-line result after an arrow", () => {
+    expect(callLines("f(1)", '"a"')).toBe('f(1);\n// → "a"');
+  });
+
+  it("keeps the arrow on the first line of a longer result and indents the rest", () => {
+    expect(callLines("f()", "[\n  1,\n]")).toBe(
+      "f();\n// → [\n//     1,\n//   ]",
+    );
+  });
+
+  it("does not double the comment marker of a result written as comments", () => {
+    expect(callLines("f()", "// [\n//   1,\n// ]")).toBe(
+      "f();\n// → [\n//     1,\n//   ]",
+    );
+  });
+
+  it("leaves no doubled marker in any GMT code on the migration pages", () => {
+    const codes = [
+      ...LIBRARY_IDS.flatMap((id) =>
+        (["rows", "more"] as const).flatMap((part) => mapPairs(id, part)),
+      ),
+      ...temporalPairs(),
+    ].map((pair) => pair.gmt.code);
+    for (const code of codes) expect(code).not.toMatch(/\/\/ → \/\//);
   });
 });
 
@@ -107,6 +136,13 @@ describe("temporalPairs", () => {
       );
       expect(pair.gmt.code).toMatch(/^import /);
     });
+  });
+
+  it("prints a row's note under its pair", () => {
+    temporalMap.forEach((row, index) => {
+      expect(pairs[index].note).toBe(row.note);
+    });
+    expect(temporalMap.filter((row) => row.note).length).toBeGreaterThan(0);
   });
 
   it("uses the written code for a call with no reference page", () => {

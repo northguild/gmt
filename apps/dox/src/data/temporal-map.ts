@@ -16,6 +16,8 @@ export interface TemporalRow {
   gmt: readonly string[];
   /** Code for the GMT side, when the function has no reference page to take an example from. */
   gmtCode?: string;
+  /** Text with `backtick` spans under the pair: how the GMT side differs from the Temporal call. */
+  note?: string;
   clauses: readonly Clause[];
 }
 
@@ -123,6 +125,7 @@ export const temporalMap: readonly TemporalRow[] = [
     task: "Next transition",
     temporal: 'zdt.getTimeZoneTransition("next")',
     gmt: ["getDstTransitions"],
+    note: "Temporal returns the one transition after `zdt`. `getDstTransitions` returns every offset change in a year, as an array, so take the first one after your instant, and look in the next year when none is left.",
     clauses: [
       spec(
         "6.3.46",
@@ -162,12 +165,14 @@ export const temporalMap: readonly TemporalRow[] = [
     task: "A year and a month",
     temporal: "PlainYearMonth.from(s).toString()",
     gmt: ["parseYearMonth", "isValidYearMonth"],
+    note: 'Temporal also reads a full date such as `2026-10-01` and keeps its year and month. `parseYearMonth` takes a year and month only and returns `""` for a full date.',
     clauses: [spec("9.2.2", "sec-temporal.plainyearmonth.from")],
   },
   {
     task: "A month and a day",
     temporal: "PlainMonthDay.from(s).toString()",
     gmt: ["parseMonthDay", "isValidMonthDay"],
+    note: '`parseMonthDay` writes the ISO 8601 form `--12-25`, where Temporal writes `12-25`. Temporal also reads a full date such as `2026-12-25` and keeps its month and day; `parseMonthDay` returns `""` for one.',
     clauses: [spec("10.2.2", "sec-temporal.plainmonthday.from")],
   },
   {

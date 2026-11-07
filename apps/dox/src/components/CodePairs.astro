@@ -164,11 +164,18 @@ const href = (url: string): string => (url.startsWith("/") ? withBase(url) : url
   margin: 0;
 }
 
+/* A reference name such as `DisambiguatePossibleEpochNanoseconds (11.1.12)` has no space to wrap
+   at and is wider than a 320 px column, so it may break inside the word. */
 .gmt-pair-links {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 1.5rem;
   font-size: var(--sl-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.gmt-pair-group {
+  min-inline-size: 0;
 }
 
 .gmt-pair-label {

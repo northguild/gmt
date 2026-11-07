@@ -185,9 +185,23 @@ const importLines = (fns: readonly GmtFunctionLink[]): string[] => {
   });
 };
 
-/** A call and what it returns: the call on one line, the result as a comment under it. */
-const callLines = (call: string, result: string): string =>
-  `${call};\n// → ${result}`;
+/**
+ * A call and what it returns: the call on one line, the result as a comment under it. A result
+ * over several lines keeps its arrow on the first and indents the rest under it; a result the
+ * reference already wrote as `//` comments loses those markers first, so none is doubled.
+ */
+export const callLines = (call: string, result: string): string => {
+  const lines = result.split("\n");
+  const commented = lines.every((line) => /^\s*\/\//.test(line));
+  const [first, ...rest] = commented
+    ? lines.map((line) => line.replace(/^\s*\/\/ ?/, ""))
+    : lines;
+  return [
+    `${call};`,
+    `// → ${first}`,
+    ...rest.map((line) => `//   ${line}`),
+  ].join("\n");
+};
 
 /** GMT code for some functions: their imports, then each one's first reference example. */
 export function gmtCode(fns: readonly GmtFunctionLink[]): string {
@@ -257,6 +271,7 @@ export function temporalPairs(): CodePairView[] {
       facts: [],
       theirs: { title: "Temporal", code: row.temporal },
       gmt: { title: "GMT", code: row.gmtCode ?? gmtCode(fns) },
+      note: row.note,
       links: [
         {
           label: "Specification",
