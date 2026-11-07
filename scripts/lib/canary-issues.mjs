@@ -10,6 +10,7 @@
  *
  * Imports one constant (`ENGINE_IDS`) and nothing that reads or writes.
  */
+import { createHash } from "node:crypto";
 import { ENGINE_IDS } from "./workarounds.mjs";
 
 /** Label every canary issue carries. */
@@ -777,28 +778,26 @@ function failureSections(legs, rowsOf, totalOf, fixedChars) {
 }
 
 /**
- * Tests that fail on the native engine and pass on the polyfill and have no tag. A forced run
- * shows one synthetic row on the forced leg instead of its real rows.
- * @param {NativeSuiteVerdict[]} ranLegs  the native legs that ran, in leg order
+ * Tests that fail on one native engine and pass on the polyfill and have no tag. Each engine gets
+ * its own issue, so a fix that lands in one engine closes only that engine's issue. A forced run
+ * shows one synthetic row instead of the leg's real rows.
+ * @param {NativeSuiteVerdict} v  a native leg that ran
  * @param {boolean} isForced
  * @param {string} runUrl
  * @returns {Finding}
  */
-function nativeFailureFinding(ranLegs, isForced, runUrl) {
-  const legs = isForced
-    ? ranLegs.filter((v) => v.forced).slice(0, 1)
-    : ranLegs.filter((v) => v.counts.untagged > 0);
+function nativeFailureFinding(v, isForced, runUrl) {
   const sections = failureSections(
-    legs,
-    (v) => (isForced ? [FORCED_NATIVE_ROW] : v.untagged),
-    (v) => (isForced ? 1 : v.counts.untagged),
+    [v],
+    () => (isForced ? [FORCED_NATIVE_ROW] : v.untagged),
+    () => (isForced ? 1 : v.counts.untagged),
     TRIAGE_PARAGRAPH.length,
   );
   const paragraphs = [...sections, TRIAGE_PARAGRAPH];
   /** @type {Finding} */
   const real = {
-    key: "native-suite/untagged-failure",
-    title: `Native Temporal: GMT tests fail on ${legs.map(legLabel).join(", ")}`,
+    key: `native-suite/untagged-failure/${v.leg}`,
+    title: `Native Temporal: GMT tests fail on ${legLabel(v)}`,
     labels: [CANARY_LABEL, COMPAT_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
     comment: withRun(sections.join("\n\n"), runUrl),
@@ -1030,15 +1029,21 @@ function nativeSuiteFindings(verdicts, runUrl) {
       (v) => v?.status === "ran",
     )
   );
+  const forcedLeg = ranLegs.find((v) => v.forced);
   /** @type {[boolean, () => Finding][]} */
   const candidates = [
+    ...ranLegs.map((v) => /** @type {[boolean, () => Finding]} */ ([
+      v.counts.untagged > 0,
+      () => nativeFailureFinding(v, false, runUrl),
+    ])),
     [
-      ranLegs.some((v) => v.counts.untagged > 0),
-      () => nativeFailureFinding(ranLegs, false, runUrl),
-    ],
-    [
-      ranLegs.some((v) => v.forced),
-      () => nativeFailureFinding(ranLegs, true, runUrl),
+      forcedLeg !== undefined,
+      () =>
+        nativeFailureFinding(
+          /** @type {NativeSuiteVerdict} */ (forcedLeg),
+          true,
+          runUrl,
+        ),
     ],
     [
       ranLegs.some((v) => v.counts.hostUntagged > 0),
@@ -1379,7 +1384,8 @@ function failedSources(verdicts, sources) {
 
 /**
  * Findings in order: removable on every engine in scope (script order), mismatch, native
- * (untagged failure, host failure, stale tag), leap, could-not-run. A forced finding
+ * (untagged failure, one per engine in leg order; host failure; control-only failure; stale tag),
+ * leap, could-not-run. A forced finding
  * follows the real one of its kind.
  * @param {Record<string, Verdict | null>} verdicts  after `applyForce`
  * @param {Context} context
@@ -1420,6 +1426,31 @@ function matches(issue, key) {
 }
 
 /**
+ * A report's fingerprint: the first 16 hex digits of the SHA-256 of a finding's comment without its
+ * run line, line endings made LF. Two runs that found the same rows have the same fingerprint.
+ * @param {string} comment  a finding's `comment`
+ */
+function reportDigest(comment) {
+  const text = comment.replace(/\r\n/g, "\n");
+  const run = text.lastIndexOf("\n\nRun: ");
+  return createHash("sha256")
+    .update(run >= 0 ? text.slice(0, run) : text)
+    .digest("hex")
+    .slice(0, 16);
+}
+
+/**
+ * The hidden line that a full canary report (an issue body or a full comment) carries, naming its
+ * fingerprint. Renders nothing, like `marker`.
+ * @param {string} digest
+ */
+export function reportMarker(digest) {
+  return `<!-- gmt-canary report="${digest}" -->`;
+}
+
+const REPORT_MARKER = /<!-- gmt-canary report="([0-9a-f]{16})" -->/;
+
+/**
  * @param {Record<string, Verdict | null>} verdicts  after `applyForce`
  * @param {{ number: number, body: string, labels: { name: string }[] }[]} openIssues
  * @param {Context} context
@@ -1427,6 +1458,7 @@ function matches(issue, key) {
  */
 export function planIssueActions(verdicts, openIssues, context) {
   return findings(verdicts, context).map((finding) => {
+    const report = reportMarker(reportDigest(finding.comment));
     const found = openIssues
       .filter((issue) => matches(issue, finding.key))
       .sort((a, b) => a.number - b.number)[0];
@@ -1435,7 +1467,7 @@ export function planIssueActions(verdicts, openIssues, context) {
         kind: /** @type {const} */ ("comment"),
         key: finding.key,
         issue: found.number,
-        body: finding.comment,
+        body: `${finding.comment}\n\n${report}`,
       };
     }
     return {
@@ -1443,7 +1475,50 @@ export function planIssueActions(verdicts, openIssues, context) {
       key: finding.key,
       title: finding.title,
       labels: finding.labels,
-      body: `${marker(finding.key)}\n${finding.body}`,
+      body: `${marker(finding.key)}\n${report}\n${finding.body}`,
+    };
+  });
+}
+
+/**
+ * What an open canary issue already says: its body and its comments, oldest first.
+ * @typedef {{ url: string, body: string, comments: { url: string, body: string }[] }} IssueHistory
+ */
+
+/**
+ * The latest full report on an issue: the newest comment with a report marker, else the body when
+ * it has one. A short repeat comment has no report marker, so it is never the latest report.
+ * @param {IssueHistory} history
+ * @returns {{ digest: string, url: string } | null}
+ */
+function latestReport(history) {
+  for (const c of [...history.comments].reverse()) {
+    const m = REPORT_MARKER.exec(c.body ?? "");
+    if (m) return { digest: /** @type {string} */ (m[1]), url: c.url };
+  }
+  const m = REPORT_MARKER.exec(history.body ?? "");
+  return m ? { digest: /** @type {string} */ (m[1]), url: history.url } : null;
+}
+
+/**
+ * Swaps each comment whose report matches the issue's latest full report for one line that links
+ * to that report, so a weekly run that finds nothing new does not repeat the same tables. A comment
+ * on an issue with no history, or whose latest report differs or has no marker, stays in full.
+ * @param {Action[]} actions  from `planIssueActions`
+ * @param {Map<number, IssueHistory>} histories  keyed by issue number
+ * @param {string} runUrl
+ * @returns {Action[]}
+ */
+export function shortenRepeats(actions, histories, runUrl) {
+  return actions.map((action) => {
+    if (action.kind !== "comment") return action;
+    const history = histories.get(action.issue);
+    const digest = REPORT_MARKER.exec(action.body)?.[1];
+    const last = history ? latestReport(history) : null;
+    if (!last || last.digest !== digest) return action;
+    return {
+      ...action,
+      body: `Same as the [last full report](${last.url}): nothing has changed.\n\nRun: ${runUrl}`,
     };
   });
 }

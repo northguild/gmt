@@ -11,6 +11,7 @@ import { join } from "node:path";
 
 import {
   ensureLabels,
+  issueHistories,
   listOpenCanaryIssues,
   main,
   parseArgs,
@@ -131,9 +132,73 @@ describe("listOpenCanaryIssues", () => {
         "--limit",
         "1000",
         "--json",
-        "number,body,labels",
+        "number,url,body,labels",
       ],
     ]);
+  });
+});
+
+describe("issueHistories", () => {
+  const comment = (issue: number) => ({
+    kind: "comment" as const,
+    key: "k",
+    issue,
+    body: "b",
+  });
+  const open = [
+    {
+      number: 12,
+      url: "https://github.com/northguild/gmt/issues/12",
+      body: "x",
+    },
+  ];
+
+  it("reads every page of an issue's comments, once per issue", () => {
+    const { gh, calls } = fakeGh(
+      () =>
+        '{"url":"https://github.com/northguild/gmt/issues/12#issuecomment-1","body":"one"}\n' +
+        '{"url":"https://github.com/northguild/gmt/issues/12#issuecomment-2","body":"two\\nlines"}\n',
+    );
+    const histories = issueHistories(gh, [comment(12), comment(12)], open);
+    expect(calls.map((c) => c.args)).toEqual([
+      [
+        "api",
+        "--paginate",
+        "repos/{owner}/{repo}/issues/12/comments",
+        "--jq",
+        ".[] | {url: .html_url, body: .body}",
+      ],
+    ]);
+    expect(histories.get(12)).toEqual({
+      url: "https://github.com/northguild/gmt/issues/12",
+      body: "x",
+      comments: [
+        {
+          url: "https://github.com/northguild/gmt/issues/12#issuecomment-1",
+          body: "one",
+        },
+        {
+          url: "https://github.com/northguild/gmt/issues/12#issuecomment-2",
+          body: "two\nlines",
+        },
+      ],
+    });
+  });
+
+  it("leaves out an issue whose comments cannot be read, and skips open actions", () => {
+    const { gh, calls } = fakeGh(() => {
+      throw new Error("HTTP 502");
+    });
+    const histories = issueHistories(
+      gh,
+      [
+        comment(12),
+        { kind: "open", key: "k", title: "t", labels: [], body: "b" },
+      ],
+      open,
+    );
+    expect(calls).toHaveLength(1);
+    expect(histories.size).toBe(0);
   });
 });
 
@@ -627,7 +692,7 @@ describe("main", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({
       kind: "open",
-      key: "dry-run/native-suite/untagged-failure",
+      key: "dry-run/native-suite/untagged-failure/node",
       labels: ["canary", "temporal-compat", "canary-dry-run"],
     });
   });
@@ -1028,6 +1093,90 @@ describe("main", () => {
       GITHUB_SERVER_URL: "https://github.com",
     });
     expect(out).toContain("Run: (local run)");
+  });
+
+  it("on a branch other than main: files nothing, calls no gh and lists what it would have filed", () => {
+    writeOracleFiles();
+    const { code, out, summary, gh } = run(
+      ["temporal-oracle", "--force-removable=D2"],
+      fakeGh(),
+      { GITHUB_REF_NAME: "core-108-move" },
+    );
+    expect(code).toBe(0);
+    expect(gh.calls).toEqual([]);
+    expect(summary).toContain(
+      "**Issues:** Not filed: this run is on core-108-move; issues are filed only from main. It would have filed: [dry run] Remove workaround D2:",
+    );
+    expect(JSON.parse(out)).toMatchObject([
+      { kind: "open", key: "dry-run/temporal-compat/removable/D2" },
+    ]);
+  });
+
+  it("on a branch with nothing to report: says so and calls no gh", () => {
+    writeOracleFiles();
+    const { code, summary, gh } = run(["temporal-oracle"], fakeGh(), {
+      GITHUB_REF_NAME: "core-108-move",
+    });
+    expect(code).toBe(0);
+    expect(gh.calls).toEqual([]);
+    expect(summary).toContain(
+      "**Issues:** Not filed: this run is on core-108-move; issues are filed only from main, and there was nothing to file.",
+    );
+  });
+
+  it("on main: files as usual", () => {
+    writeOracleFiles();
+    const gh = fakeGh((args) => {
+      if (args[0] === "label") return JSON.stringify([{ name: "canary" }]);
+      if (args[0] === "issue" && args[1] === "list") return "[]";
+      return "https://github.com/northguild/gmt/issues/90";
+    });
+    const { code } = run(["temporal-oracle", "--force-removable=D2"], gh, {
+      GITHUB_REF_NAME: "main",
+    });
+    expect(code).toBe(0);
+    expect(gh.calls.map((c) => c.args.slice(0, 2).join(" "))).toContain(
+      "issue create",
+    );
+  });
+
+  it("a weekly run with the same rows as the open issue posts one line linking to it", () => {
+    writeOracleFiles();
+    // The body the first run opened the issue with, read back from the plan a branch run prints.
+    const [first] = JSON.parse(
+      run(["temporal-oracle", "--force-removable=D2"], fakeGh(), {
+        GITHUB_REF_NAME: "branch",
+      }).out,
+    );
+    const ISSUE_URL = "https://github.com/northguild/gmt/issues/12";
+    const gh = fakeGh((args) => {
+      if (args[0] === "label") {
+        return JSON.stringify([{ name: "canary" }, { name: "canary-dry-run" }]);
+      }
+      if (args[0] === "issue" && args[1] === "list") {
+        return JSON.stringify([
+          {
+            number: 12,
+            url: ISSUE_URL,
+            body: first.body,
+            labels: [{ name: "canary" }, { name: "canary-dry-run" }],
+          },
+        ]);
+      }
+      if (args[0] === "api") {
+        return `${JSON.stringify({ url: `${ISSUE_URL}#issuecomment-1`, body: "A person's note." })}\n`;
+      }
+      return "";
+    });
+    const { code } = run(["temporal-oracle", "--force-removable=D2"], gh, {
+      GITHUB_REF_NAME: "main",
+    });
+    expect(code).toBe(0);
+    const last = gh.calls[gh.calls.length - 1];
+    expect(last.args).toEqual(["issue", "comment", "12", "--body-file", "-"]);
+    expect(last.input).toBe(
+      `Same as the [last full report](${ISSUE_URL}): nothing has changed.\n\nRun: (local run)`,
+    );
   });
 
   it("prints the summary to stdout when GITHUB_STEP_SUMMARY is unset", () => {

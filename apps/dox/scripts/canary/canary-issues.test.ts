@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   CANARY_LABEL,
   DRY_RUN_LABEL,
@@ -9,6 +11,8 @@ import {
   marker,
   planIssueActions,
   removableEverywhere,
+  reportMarker,
+  shortenRepeats,
   swapReady,
 } from "../../../../scripts/lib/canary-issues.mjs";
 
@@ -411,8 +415,16 @@ const removableD2 = () =>
     "temporal-oracle": oracle(),
   }) as never;
 
+/** An action's body without its report line, which the "report markers" tests check on their own. */
+const withoutReport = (body: string) =>
+  body.replace(/\n(\n)?<!-- gmt-canary report="[0-9a-f]{16}" -->/, "");
+
+/** `planIssueActions` with each body's report line removed. */
+const planWithoutReport = (...args: Parameters<typeof planIssueActions>) =>
+  planIssueActions(...args).map((a) => ({ ...a, body: withoutReport(a.body) }));
+
 const plan = (verdicts: unknown, open: ReturnType<typeof issue>[] = []) =>
-  planIssueActions(withNative(verdicts), open, ORACLE_CONTEXT);
+  planWithoutReport(withNative(verdicts), open, ORACLE_CONTEXT);
 
 const rowsSection = (body: string) => {
   const start = body.indexOf("### Rows");
@@ -941,7 +953,7 @@ describe("untagged mismatch", () => {
     expect(body.length).toBeLessThan(65536);
 
     const marked = `<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planIssueActions(
+    const [action] = planWithoutReport(
       withOracle(o) as never,
       [issue(9, marked)],
       ORACLE_CONTEXT,
@@ -966,7 +978,7 @@ describe("untagged mismatch", () => {
 
   it("the comment gives the count and the groups table", () => {
     const marked = `<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planIssueActions(
+    const [action] = planWithoutReport(
       withOracle(oracle(3)) as never,
       [issue(9, marked)],
       ORACLE_CONTEXT,
@@ -1027,7 +1039,7 @@ describe("could not run", () => {
 
   it("comments with the same list while the finding persists", () => {
     const key = "temporal-oracle/could-not-run";
-    const [action] = planIssueActions(
+    const [action] = planWithoutReport(
       withNative({
         "temporal-compat-check": cleanCheck(),
         "temporal-oracle": null,
@@ -1057,7 +1069,7 @@ describe("could not run", () => {
 
 describe("leap-second findings", () => {
   const leapPlan = (verdict: unknown, open: ReturnType<typeof issue>[] = []) =>
-    planIssueActions({ "leap-seconds": verdict } as never, open, LEAP_CONTEXT);
+    planWithoutReport({ "leap-seconds": verdict } as never, open, LEAP_CONTEXT);
   const KEY = "leap-seconds/table-difference";
   const DIFFERENCE = "row 29: fixture difference";
 
@@ -1411,7 +1423,7 @@ describe("applyForce and forced findings", () => {
       { mismatch: true },
     );
     const marked = `<!-- gmt-canary key="dry-run/temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planIssueActions(
+    const [action] = planWithoutReport(
       verdicts,
       [issue(60, marked, [CANARY_LABEL, DRY_RUN_LABEL])],
       ORACLE_CONTEXT,
@@ -1444,7 +1456,7 @@ describe("applyForce and forced findings", () => {
     const { verdicts } = applyForce({ "leap-seconds": leap() } as never, {
       leapDifference: true,
     });
-    const actions = planIssueActions(verdicts, [], LEAP_CONTEXT);
+    const actions = planWithoutReport(verdicts, [], LEAP_CONTEXT);
     expect(actions).toHaveLength(1);
     const [action] = actions;
     if (action.kind !== "open") throw new Error("expected open");
@@ -1466,7 +1478,7 @@ describe("applyForce and forced findings", () => {
       leapDifference: true,
     });
     const marked = `<!-- gmt-canary key="dry-run/leap-seconds/table-difference" -->\nbody`;
-    const [action] = planIssueActions(
+    const [action] = planWithoutReport(
       verdicts,
       [issue(61, marked, [CANARY_LABEL, DRY_RUN_LABEL])],
       LEAP_CONTEXT,
@@ -1494,7 +1506,7 @@ describe("applyForce and forced findings", () => {
       },
     ]);
     expect(verdicts).toEqual(input);
-    const actions = planIssueActions(verdicts as never, [], LEAP_CONTEXT);
+    const actions = planWithoutReport(verdicts as never, [], LEAP_CONTEXT);
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({
       kind: "open",
@@ -1544,7 +1556,7 @@ describe("findings", () => {
     ).toEqual([
       D2_KEY,
       "temporal-oracle/untagged-mismatch",
-      "native-suite/untagged-failure",
+      "native-suite/untagged-failure/node",
       "native-suite/untagged-host-failure",
       "native-suite/control-only-failure",
       "native-suite/stale-tag",
@@ -1570,7 +1582,9 @@ const HOST =
 const CONTROL =
   "Each row failed on @js-temporal/polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
 
-const FAILURE_KEY = "native-suite/untagged-failure";
+/** The untagged-failure key of one engine: each engine gets its own issue. */
+const failureKey = (leg: string) => `native-suite/untagged-failure/${leg}`;
+const FAILURE_KEY = failureKey("node");
 const HOST_KEY = "native-suite/untagged-host-failure";
 const CONTROL_KEY = "native-suite/control-only-failure";
 const STALE_KEY = "native-suite/stale-tag";
@@ -1610,13 +1624,13 @@ describe("native suite findings", () => {
     expect(actions).toHaveLength(1);
     const [action] = actions;
     if (action.kind !== "open") throw new Error("expected open");
-    expect(action.key).toBe(FAILURE_KEY);
+    expect(action.key).toBe(failureKey("chromium"));
     expect(action.title).toBe(
       "Native Temporal: GMT tests fail on Chromium 153",
     );
     expect(action.labels).toEqual(["canary", "temporal-compat"]);
     expect(action.body.split("\n")[0]).toBe(
-      `<!-- gmt-canary key="${FAILURE_KEY}" -->`,
+      `<!-- gmt-canary key="${failureKey("chromium")}" -->`,
     );
     expect(action.body.match(/^### /gm)).toHaveLength(1);
     expect(action.body).toContain(
@@ -1631,21 +1645,42 @@ describe("native suite findings", () => {
     expect(action.body).toContain(`\n\n${TRIAGE}\n\nRun: ${RUN}`);
   });
 
-  it("two legs untagged: both sections, titled in leg order, one finding", () => {
-    const [finding] = findings(
+  it("two legs untagged: one finding per engine, in leg order, each with its own section", () => {
+    const [node, chromium, ...rest] = findings(
       withLegs({
         chromium: native("chromium", { untagged: 1 }),
         node: native("node", { untagged: 1 }),
       }),
       ORACLE_CONTEXT,
     );
-    expect(finding.title).toBe(
-      "Native Temporal: GMT tests fail on Node 26, Chromium 153",
+    expect(rest).toEqual([]);
+    expect([node.key, chromium.key]).toEqual([
+      failureKey("node"),
+      failureKey("chromium"),
+    ]);
+    expect(node.title).toBe("Native Temporal: GMT tests fail on Node 26");
+    expect(chromium.title).toBe(
+      "Native Temporal: GMT tests fail on Chromium 153",
     );
-    expect(finding.body.match(/^### /gm)).toHaveLength(2);
-    expect(finding.body.indexOf(`### ${ENGINES.node}`)).toBeLessThan(
-      finding.body.indexOf(`### ${ENGINES.chromium}`),
+    expect(node.body.match(/^### /gm)).toEqual(["### "]);
+    expect(node.body).toContain(`### ${ENGINES.node}`);
+    expect(chromium.body.match(/^### /gm)).toEqual(["### "]);
+    expect(chromium.body).toContain(`### ${ENGINES.chromium}`);
+  });
+
+  it("an engine's open issue gets the comment; another engine's failures open their own issue", () => {
+    const actions = plan(
+      withLegs({
+        node: native("node", { untagged: 1 }),
+        chromium: native("chromium", { untagged: 1 }),
+      }),
+      [issue(70, `<!-- gmt-canary key="${failureKey("node")}" -->\nold`)],
     );
+    expect(actions.map((a) => [a.kind, a.key])).toEqual([
+      ["comment", failureKey("node")],
+      ["open", failureKey("chromium")],
+    ]);
+    expect(actions[0].body).not.toContain(ENGINES.chromium);
   });
 
   it("a truncated leg says first N of M", () => {
@@ -1755,7 +1790,7 @@ describe("native suite findings", () => {
       { nativeFailure: true },
     );
     expect(findings(verdicts, ORACLE_CONTEXT).map((f) => f.key)).toEqual([
-      FAILURE_KEY,
+      failureKey("chromium"),
       `dry-run/${FAILURE_KEY}`,
     ]);
   });
@@ -1923,7 +1958,6 @@ describe("native suite findings", () => {
 
   it.each`
     key
-    ${FAILURE_KEY}
     ${HOST_KEY}
     ${CONTROL_KEY}
   `(
@@ -1955,7 +1989,6 @@ describe("native suite findings", () => {
 
   it.each`
     key
-    ${FAILURE_KEY}
     ${HOST_KEY}
     ${CONTROL_KEY}
   `(
@@ -1998,6 +2031,33 @@ describe("native suite findings", () => {
       expect(finding.body).toMatch(/### WebKit 26.6 \(first \d+ of 60\)/);
     },
   );
+
+  it("body size: 4 legs of 60 rows with 365-character names give four untagged findings, each under 65,536 with one section", () => {
+    const longName = (leg: (typeof NATIVE_LEGS)[number]) => {
+      const v = native(leg, { untagged: 60, message: "m".repeat(300) });
+      return {
+        ...v,
+        untagged: v.untagged.map((r, i) => ({
+          ...r,
+          file: `src/${leg}/${"d".repeat(120)}${i}.test.ts`,
+          test: `${i} ${"t".repeat(365 - String(i).length - 1)}`,
+        })),
+      };
+    };
+    const verdicts = withLegs({
+      node: longName("node"),
+      chromium: longName("chromium"),
+      firefox: longName("firefox"),
+      webkit: longName("webkit"),
+    });
+    for (const leg of NATIVE_LEGS) {
+      const [finding] = only(verdicts, failureKey(leg));
+      expect(finding.body.length).toBeLessThan(65_536);
+      expect(finding.comment.length).toBeLessThan(65_536);
+      expect(finding.body.match(/^### /gm)).toEqual(["### "]);
+      expect(finding.body).toContain(`### ${ENGINES[leg]}`);
+    }
+  });
 
   it("body size: stale tags with 365-character names stay under 65,536 and say how many rows were left out", () => {
     const stale = (leg: (typeof NATIVE_LEGS)[number]) =>
@@ -2395,7 +2455,7 @@ describe("swap could not run", () => {
 
   it("the leap-seconds workflow does not read swap sources", () => {
     expect(
-      planIssueActions({ "leap-seconds": leap() } as never, [], LEAP_CONTEXT),
+      planWithoutReport({ "leap-seconds": leap() } as never, [], LEAP_CONTEXT),
     ).toEqual([]);
   });
 });
@@ -2411,7 +2471,7 @@ describe("swap force", () => {
       withNative({ ...base(), ...(swap as object) }),
       { swapReady: true },
     );
-    return planIssueActions(verdicts as never, open as never, ORACLE_CONTEXT);
+    return planWithoutReport(verdicts as never, open as never, ORACLE_CONTEXT);
   };
   const openDryRun = () =>
     issue(52, `<!-- gmt-canary key="${DRY_KEY}" -->\nold`);
@@ -2557,11 +2617,136 @@ describe("swap force", () => {
       withNative({ ...base(), ...cleanSwap({ webkit: { failed: 1 } }) }),
       { swapReady: true },
     );
-    const actions = planIssueActions(
+    const actions = planWithoutReport(
       verdicts as never,
       [issue(9, '<!-- gmt-canary key="temporal-polyfill-swap/ready" -->\nx')],
       ORACLE_CONTEXT,
     );
     expect(actions.map((a) => [a.kind, a.key])).toEqual([["open", DRY_KEY]]);
+  });
+});
+
+describe("report markers", () => {
+  const LEAP_COMMENT =
+    "Still differs on this run (Updated through IERS Bulletin C 72):\n\n- row 29: fixture difference";
+  /** The fingerprint written out from the comment text: SHA-256, first 16 hex digits. */
+  const DIGEST = createHash("sha256")
+    .update(LEAP_COMMENT)
+    .digest("hex")
+    .slice(0, 16);
+  const MARKER = `<!-- gmt-canary report="${DIGEST}" -->`;
+  const LEAP_KEY_MARKER =
+    '<!-- gmt-canary key="leap-seconds/table-difference" -->';
+  const differs = (row = "row 29: fixture difference") =>
+    ({ "leap-seconds": leap([row]) }) as never;
+  const atRun = (runUrl: string) =>
+    ({ workflow: "leap-seconds", runUrl }) as const;
+
+  it("reportMarker is one hidden line naming the fingerprint", () => {
+    expect(reportMarker("0123456789abcdef")).toBe(
+      '<!-- gmt-canary report="0123456789abcdef" -->',
+    );
+  });
+
+  it("a new issue's body has the key marker, then the report marker", () => {
+    const [action] = planIssueActions(differs(), [], LEAP_CONTEXT);
+    expect(action.body.split("\n").slice(0, 2)).toEqual([
+      LEAP_KEY_MARKER,
+      MARKER,
+    ]);
+  });
+
+  it("a comment ends with the report marker after the run line", () => {
+    const [action] = planIssueActions(
+      differs(),
+      [issue(77, `${LEAP_KEY_MARKER}\nold`)],
+      LEAP_CONTEXT,
+    );
+    expect(action.body).toBe(`${LEAP_COMMENT}\n\nRun: ${RUN}\n\n${MARKER}`);
+  });
+
+  it("the fingerprint ignores the run link and changes with the rows", () => {
+    const body = (verdicts: never, runUrl: string) =>
+      planIssueActions(verdicts, [], atRun(runUrl))[0].body.split("\n")[1];
+    expect(body(differs(), `${RUN}0`)).toBe(MARKER);
+    expect(body(differs(), `${RUN}1`)).toBe(MARKER);
+    expect(body(differs("row 30: another difference"), RUN)).not.toBe(MARKER);
+  });
+});
+
+describe("shortenRepeats", () => {
+  const ISSUE_URL = "https://github.com/northguild/gmt/issues/77";
+  const COMMENT_URL = `${ISSUE_URL}#issuecomment-5`;
+  const NEXT_RUN = "https://github.com/northguild/gmt/actions/runs/124";
+  const A = '<!-- gmt-canary report="aaaaaaaaaaaaaaaa" -->';
+  const B = '<!-- gmt-canary report="bbbbbbbbbbbbbbbb" -->';
+  const comment = (report: string) => ({
+    kind: "comment" as const,
+    key: "leap-seconds/table-difference",
+    issue: 77,
+    body: `tables\n\nRun: ${RUN}\n\n${report}`,
+  });
+  const history = (
+    body: string,
+    comments: { url: string; body: string }[] = [],
+  ) => new Map([[77, { url: ISSUE_URL, body, comments }]]);
+  const SHORT = (url: string) =>
+    `Same as the [last full report](${url}): nothing has changed.\n\nRun: ${NEXT_RUN}`;
+
+  it("the same report as the issue body: one line linking to the issue", () => {
+    const [action] = shortenRepeats(
+      [comment(A)],
+      history(`key\n${A}\nbody`),
+      NEXT_RUN,
+    );
+    expect(action.body).toBe(SHORT(ISSUE_URL));
+  });
+
+  it("the same report as the latest full comment: one line linking to that comment", () => {
+    const [action] = shortenRepeats(
+      [comment(B)],
+      history(`key\n${A}\nbody`, [
+        { url: COMMENT_URL, body: `tables\n\n${B}` },
+        { url: `${ISSUE_URL}#issuecomment-6`, body: "A person's note." },
+        {
+          url: `${ISSUE_URL}#issuecomment-7`,
+          body: `Same as the [last full report](${COMMENT_URL}): nothing has changed.`,
+        },
+      ]),
+      NEXT_RUN,
+    );
+    expect(action.body).toBe(SHORT(COMMENT_URL));
+  });
+
+  it("a report that differs from the latest full one stays in full, even if an older one matched", () => {
+    const action = comment(A);
+    expect(
+      shortenRepeats(
+        [action],
+        history(`key\n${A}\nbody`, [{ url: COMMENT_URL, body: `t\n\n${B}` }]),
+        NEXT_RUN,
+      ),
+    ).toEqual([action]);
+  });
+
+  it("an issue with no report marker or no history keeps the full comment", () => {
+    const action = comment(A);
+    expect(shortenRepeats([action], history("key\nold"), NEXT_RUN)).toEqual([
+      action,
+    ]);
+    expect(shortenRepeats([action], new Map(), NEXT_RUN)).toEqual([action]);
+  });
+
+  it("an open action is left as it is", () => {
+    const open = {
+      kind: "open" as const,
+      key: "leap-seconds/table-difference",
+      title: "t",
+      labels: ["canary"],
+      body: `key\n${A}\nbody`,
+    };
+    expect(shortenRepeats([open], history(`key\n${A}`), NEXT_RUN)).toEqual([
+      open,
+    ]);
   });
 });

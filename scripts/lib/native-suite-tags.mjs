@@ -35,6 +35,9 @@ const S_ANCHOR =
   "s-webkit-adds-a-year-to-the-30th-of-dhu-al-hijjah-before-the-hijra-as-13-months-webkit-only-engine";
 const T_ANCHOR =
   "t-webkit-throws-adding-a-year-to-the-last-day-of-chaitra-in-far-past-indian-years-webkit-only-engine";
+const AD_ANCHOR =
+  "ad-node-26s-v8-rounds-p7d-to-weeks-as-p1w1d-from-a-zoned-origin-node-only-engine";
+const BOA_723 = "https://github.com/boa-dev/temporal/pull/723";
 
 /**
  * One test that fails natively and passes on the polyfill, for a known defect. `file` is
@@ -46,7 +49,9 @@ const T_ANCHOR =
  * The 13 tests that fail on Node 26 and Chromium 153 (V8 on `temporal_rs`) and pass on the
  * polyfill. Ten are L (`ixdtf` rejects a one-character annotation key, fixed in unicode-org/icu4x#8623,
  * not yet in an `ixdtf` release or a V8 roll); three are M (`temporal_rs` reads `islamic` as a
- * calendar, boa-dev/temporal#529). The 12 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
+ * calendar, boa-dev/temporal#529). Two more fail on Node 26 alone and are AD: its V8 does not yet
+ * carry boa-dev/temporal#723, so it rounds `P7D` to weeks from a zoned origin as `P1W1D`; Chromium
+ * 153 has the fix. The 12 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
  * polyfill are P: SpiderMonkey accepts a zoned string whose local date is -271821-04-19, where the
  * spec refuses it (Bugzilla 1998020). The 7 tests that fail on WebKit 26.6 (JavaScriptCore) and pass on
  * the polyfill are S (six: JavaScriptCore adds a year to Dhu al-Hijjah 30 of a year before the Hijra as
@@ -281,6 +286,20 @@ export const KNOWN_NATIVE_FAILURES = [
     legs: ["webkit"],
     defect: S_ANCHOR,
     upstream: null,
+  },
+  {
+    file: "src/test/laterPassOrigin.test.ts",
+    test: "normalizeDuration from a repeated hour P7D with { largestUnit: 'week', …(1) } from 2024-11-01T00:00:00+00:00[UTC] is P1W",
+    legs: ["node"],
+    defect: AD_ANCHOR,
+    upstream: BOA_723,
+  },
+  {
+    file: "src/test/laterPassOrigin.test.ts",
+    test: "normalizeDuration from a repeated hour P7D with { largestUnit: 'week', …(1) } from 2024-06-01T12:00:00-04:00[America/New_Y… is P1W",
+    legs: ["node"],
+    defect: AD_ANCHOR,
+    upstream: BOA_723,
   },
 ];
 /**

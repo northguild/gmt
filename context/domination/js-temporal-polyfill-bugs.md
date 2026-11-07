@@ -13,7 +13,7 @@ GMT's five reports to `fullcalendar/temporal-polyfill`, found by the swap check
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 25 workarounds, 21 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest is § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags; § I (D12), fixed on `main` with nothing
+> 25 workarounds, 21 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest is § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags, and § AD, a Node 26 engine defect GMT only tags; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -2663,7 +2663,7 @@ From the earlier pass, `relativeTo` and the start are `2024-11-03T01:30:00-04:00
 
 ### Do not port `3c403686d39` alone
 
-`3c403686d39` tests _r1_ = 0, as `spec/duration.html` in tc39/proposal-temporal still does. tc39 #3319 (closes #3316, consensus 2026-05-19) and tc39/ecma262#3759 commit `1f4e6717ef23` replace that with "the start duration is empty", because _r1_ alone is wrong when `largestUnit` differs from `smallestUnit`. Native V8 follows #3319: `P7D` with `{ largestUnit: "week", smallestUnit: "day" }` is `P1W`, and `P1Y2D` with `{ largestUnit: "year", smallestUnit: "month" }` is `P1Y`. GMT's `computeNudgeWindow` tests the same way. A polyfill release with `3c403686d39` and without #3319 turns `P7D` into `P1W1D`, from any zoned origin: js-temporal `main` `3c403686d39` does so from the later pass, from UTC and from an ordinary noon in New York, while the three older D22 repros pass there. The fourth repro, `P7D` to `P1W`, keeps the D22 probe failing on such a release, and `packages/gmt/src/test/laterPassOrigin.test.ts` has the later-pass, UTC and ordinary rows, so the upgrade fails there before it ships.
+`3c403686d39` tests _r1_ = 0, as `spec/duration.html` in tc39/proposal-temporal still does. tc39 #3319 (closes #3316, consensus 2026-05-19) and tc39/ecma262#3759 commit `1f4e6717ef23` replace that with "the start duration is empty", because _r1_ alone is wrong when `largestUnit` differs from `smallestUnit`. Chromium 153's V8 follows #3319: `P7D` with `{ largestUnit: "week", smallestUnit: "day" }` is `P1W`, and `P1Y2D` with `{ largestUnit: "year", smallestUnit: "month" }` is `P1Y`. Node 26's V8 does not yet (§ AD). GMT's `computeNudgeWindow` tests the same way. A polyfill release with `3c403686d39` and without #3319 turns `P7D` into `P1W1D`, from any zoned origin: js-temporal `main` `3c403686d39` does so from the later pass, from UTC and from an ordinary noon in New York, while the three older D22 repros pass there. The fourth repro, `P7D` to `P1W`, keeps the D22 probe failing on such a release, and `packages/gmt/src/test/laterPassOrigin.test.ts` has the later-pass, UTC and ordinary rows, so the upgrade fails there before it ships.
 
 ### Effect on GMT
 
@@ -2707,3 +2707,36 @@ Three repros expect no value and sample the shapes above: `totalsWithNoValue`, `
 Chromium passes the other five D22 repros, so before `noDayCorrection` and `emptyDaySpan` were added it passed the set and would have turned the gate off. A repro tries one length, so these make an early retirement less likely and do not rule it out: a release could pass all of them and still answer a value on a length they do not try. Before removing D22, run `test/noSpecValue.test.ts` on that release. `totalOrNone` became `readOrNone`, which counts a throw as no value only from the read itself: the zone, offset and duration are parsed first, so a zone an engine lacks fails the repro, and a `TypeError` escapes. A `RangeError` from the read cannot be told from an unrelated one, because engines word them differently.
 
 If tc39 gives these lengths a value instead, in #3336, #3311 or #3310, the rows, the throws and the repros change together.
+
+## AD. Node 26's V8 rounds `P7D` to weeks as `P1W1D` from a zoned origin (Node only, engine)
+
+### Status
+
+Fixed upstream, waiting for Node. boa-dev/temporal#723 ("Fix ComputeNudgeWindow startEpochNs computation to check
+full startDateDuration sign", merged 2026-05-28 as `d47580805556`, for tc39/proposal-temporal#3316) carries tc39 #3319.
+The first `temporal_rs` release with it is 0.2.4. Chromium 153.0.8010.12 has it. Node 26.13.0 (V8 14.6.202.34-node.40)
+does not. **Not a polyfill defect**: `@js-temporal/polyfill` 0.5.1 gives `P1W`. Nothing to file. GMT makes no change:
+it already follows the spec text.
+
+### What goes wrong
+
+`ComputeNudgeWindow` starts the window at the origin's own exact time when the start duration is empty
+(tc39 #3319, tc39/ecma262#3759 commit `1f4e6717ef23`). Node 26's `temporal_rs` still tests _r1_ = 0, the rule #3319
+replaced, so it starts the window a week early when `largestUnit` is `week` and `smallestUnit` is `day`. Only a zoned
+`relativeTo` builds this window. A `PlainDate` `relativeTo` is right.
+
+### Repro (Node 26.12.1 and 26.13.0, V8 14.6.202.34-node.40; expected values Chromium 153.0.8010.12 native `Temporal`, which the polyfill also gives)
+
+| Call | Node 26 | Expected |
+| ---- | ------- | -------- |
+| `Temporal.Duration.from("P7D").round({ largestUnit: "week", smallestUnit: "day", relativeTo: "2024-11-01T00:00:00+00:00[UTC]" })` | `P1W1D` | `P1W` |
+| the same with `relativeTo: "2024-06-01T12:00:00-04:00[America/New_York]"` | `P1W1D` | `P1W` |
+| the same with `relativeTo: "2024-11-01"` | `P1W` | `P1W` |
+
+### Effect on GMT
+
+None in the library, which gives `P1W` on the polyfill. Only GMT run on Node 26's own `Temporal` sees it:
+`normalizeDuration` returns the engine's answer when the origin is not in a repeated hour. The later-pass and
+earlier-pass rows of the same table pass on Node 26. The native-suite runner tags the two rows of
+`packages/gmt/src/test/laterPassOrigin.test.ts` that pin it, the UTC and New York noon origins, to this section (Node
+leg only). When a Node release carries a `temporal_rs` with #723, the tags go stale and the runner reports it.
