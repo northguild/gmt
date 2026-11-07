@@ -266,26 +266,30 @@ site-search .pagefind-ui__result-tags {
 
 /* ---- Behavior bullets ---- */
 
-/* The dash is page prose. A list inside a widget (or anything else marked
-   `not-content`) is a legend, a row of verdicts or a key, so none of the three
-   rules reaches it: `:where()` adds no
-   specificity, and the exclusion on the `ul` carries to its items. */
-.sl-markdown-content ul:not(:where(.not-content *)) {
+/* The dash marks a list written in Markdown, which has no class. A list a
+   component builds carries its own class and draws its own items: cards, a
+   chart key, a row of verdicts. So does anything marked `not-content`. Both
+   tests sit in `:where()`, so the three rules add no specificity and a
+   component's own list rules still win where they meet. The exclusion on the
+   `ul` carries to its items. */
+.sl-markdown-content ul:where(:not([class], .not-content *)) {
   list-style: none;
   padding-inline-start: 0;
 }
 
-.sl-markdown-content ul:not(:where(.not-content *)) li {
+.sl-markdown-content ul:where(:not([class], .not-content *)) li {
   position: relative;
   padding-inline-start: var(--gmt-space-6);
   margin-block-end: var(--gmt-space-2);
 }
 
-.sl-markdown-content ul:not(:where(.not-content *)) li::before {
+/* Centred on the item's first line: half a line down (`lh`), less half the
+   1 px bar, whatever the list's font size or line height. */
+.sl-markdown-content ul:where(:not([class], .not-content *)) li::before {
   content: "";
   position: absolute;
   inset-inline-start: 0;
-  inset-block-start: 0.6em;
+  inset-block-start: calc(0.5lh - 0.5px);
   inline-size: 8px;
   block-size: 1px;
   background: var(--gmt-cyan);

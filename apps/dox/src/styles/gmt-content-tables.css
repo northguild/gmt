@@ -999,16 +999,9 @@
   list-style: none;
 }
 
-/* The content area gives every list item an indent and a small bar for a bullet. Both go here: a
-   reference like `polyfill #369` is already close to the width of its column. */
+/* No indent: a reference like `polyfill #369` is already close to the width of its column. */
 .sl-markdown-content .gmt-defects-refs li {
   margin: 0;
-  padding-inline-start: 0;
-}
-
-.sl-markdown-content .gmt-defects-refs li::before {
-  display: none;
-  content: none;
 }
 
 /* Stacked references are separate targets, so each one is 24 px tall (WCAG 2.2 SC 2.5.8). */

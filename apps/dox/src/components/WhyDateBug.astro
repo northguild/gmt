@@ -122,12 +122,6 @@ const shown = variant === "home" ? dateFaults.filter((f) => f.home) : dateFaults
     corner-shape: bevel;
   }
 
-  /* Suppress the prose-list glowing tick (gmt-content.css
-     `.sl-markdown-content ul li::before`) — these <li> are cards, not bullets. */
-  .why-date-grid li::before {
-    display: none;
-  }
-
   .why-date-tag {
     align-self: flex-start;
     font-family: var(--gmt-font-display);
@@ -183,10 +177,6 @@ const shown = variant === "home" ? dateFaults.filter((f) => f.home) : dateFaults
     corner-shape: bevel;
     background: var(--gmt-fill-subtle);
     font-size: 0.7813rem;
-  }
-
-  .why-date-rows li::before {
-    display: none;
   }
 
   .why-date-row > .why-date-in {

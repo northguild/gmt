@@ -1,10 +1,11 @@
 /**
- * The prose list marker never reaches a widget.
+ * The prose list marker reaches only a list written in Markdown.
  *
- * `gmt-content.css` draws a dash before every list item on a content page. A
- * list inside a `.gmt-widget` is a legend, a row of verdicts or a key, so its
- * three rules (the `ul`, its `li` and the `li::before`) skip any list that sits
- * inside a widget. The browser pass checks the same thing on the built pages.
+ * `gmt-content.css` draws a dash before each item of a list on a content page.
+ * A list a component builds carries a class (diff cards, a chart key, a row of
+ * verdicts) and a widget is marked `not-content`, so the three rules (the `ul`,
+ * its `li` and the `li::before`) skip both. The `frame-check` gate checks the
+ * same thing on the built pages, and that each dash sits on its first line.
  */
 
 import { readFileSync } from "node:fs";
@@ -15,7 +16,7 @@ const css = readFileSync(
   "utf8",
 ).replace(/\/\*[\s\S]*?\*\//g, "");
 
-const EXCLUSION = ":not(:where(.not-content *))";
+const EXCLUSION = ":where(:not([class], .not-content *))";
 
 /** Every selector that styles a prose bullet: `.sl-markdown-content ul…`. */
 function bulletSelectors(): string[] {
@@ -35,7 +36,7 @@ describe("the prose bullet rule", () => {
     );
   });
 
-  it("excludes a list inside a widget in every rule that styles a bullet", () => {
+  it("excludes a classed list and a list inside a widget in every rule that styles a bullet", () => {
     expect(selectors.length).toBeGreaterThanOrEqual(3);
     for (const selector of selectors) {
       expect(selector, selector).toContain(EXCLUSION);

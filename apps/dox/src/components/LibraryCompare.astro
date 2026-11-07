@@ -60,7 +60,7 @@ const prose = table !== "notes" && PROSE_TABLES.includes(table);
 
 {
   table === "notes" && (
-    <ul class="gmt-compare-notes">
+    <ul>
       {notes.map((html) => (
         <li set:html={html} />
       ))}
