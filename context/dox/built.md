@@ -170,8 +170,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `dist/gmt/`.
   - **Smoke.** `scripts/deploy-smoke.mjs` checks the redirect matrix after each deploy.
   - **`robots.txt`** is served by the landing Worker; crawlers read only the host root.
-  - **Zone and dashboard setup** (zone settings, tokens, `www`, Web Analytics, org links) is
-    in `context/domination/issues/CORE-86/runbook.md`.
+  - **Zone and dashboard setup** (zone settings, tokens, `www`, Web Analytics, org links, Search
+    Console, Bing Webmaster Tools, the AI Crawl Control report and Crawler Hints) is in
+    `context/domination/issues/CORE-86/runbook.md`.
 - **Base `/gmt`.** Routes are base-less inside the site (generators, route manifest, corpus
   `page` and `url`, sidebar slugs). `src/lib/site.ts` holds `SITE_ORIGIN`, `SITE_BASE`,
   `SITE_URL` and `LEGACY_ORIGIN`, with `withBase`, `stripBase` and `isUnderBase`. `/gmt` is
