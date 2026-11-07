@@ -68,9 +68,8 @@ const { variant } = Astro.props;
     display: flex;
     flex-direction: column;
     gap: var(--gmt-space-4);
+    container: why-date-block / inline-size;
   }
-
-
 
   .why-date-lede {
     margin: 0;
@@ -254,16 +253,12 @@ const { variant } = Astro.props;
     color: var(--gmt-spring-ink);
   }
 
-  /* Container query (not @media): this section can be squeezed into one of
-     several columns in the homepage's GridSection grid at any viewport
-     width, leaving the fixed minmax(8rem,12rem) name + auto foundation
-     columns almost nothing for the 1fr detail column — the text was
-     wrapping one word per line instead of flowing naturally. Stack to a
-     single column whenever the section itself is narrow, not just on a
-     narrow viewport. .gmt-grid-section (dox.css) is the named container;
-     45rem matches the threshold used for the fault grid's own 3-column
-     switch in WhyDateBug.astro. */
-  @container gmt-grid-section (max-width: 45rem) {
+  /* Container query (not @media): the section can sit in one of several columns of the
+     homepage's grid at any viewport width, or alone in a narrow page column, as on /compare/. The
+     fixed name and foundation columns then leave the detail column almost nothing, or push the
+     row past the page. Stack to one column whenever the section itself is narrow. 45rem matches
+     the fault grid's own switch in WhyDateBug.astro. */
+  @container why-date-block (max-width: 45rem) {
     .why-date-layer {
       grid-template-columns: 1fr;
       gap: var(--gmt-space-1);
