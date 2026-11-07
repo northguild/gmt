@@ -257,3 +257,18 @@ describe("the layout-filler helpers", () => {
     w.destroy();
   });
 });
+
+describe("renderWidget when the mount fails", () => {
+  const failing: LoadedWidget<never> = {
+    renderTemplate: () => html`<i></i>`,
+    mount: async () => {
+      throw new Error("mount failed");
+    },
+  };
+
+  it("rejects and leaves its listener recorder off the window", async () => {
+    const before = window.addEventListener;
+    await expect(renderWidget(failing)).rejects.toThrow("mount failed");
+    expect(window.addEventListener).toBe(before);
+  });
+});
