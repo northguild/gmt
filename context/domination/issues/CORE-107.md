@@ -71,8 +71,8 @@ Out of scope: editing any `CHANGELOG.md` beyond the one wrong name in the 1.14.1
     rule kept short tokens whole and kept the tables from scrolling.
 11. The changelog has its own heading scale, because the site's `h3` (1.05rem) is smaller than
     Starlight's `h4` and `h5`.
-12. Listings own no styles of their own. The tracker and the listings share
-    `src/components/upstream-table.css`.
+12. Listings own no styles of their own. The tracker and the listings share the prose-table sheet,
+    `src/styles/gmt-content-tables.css`.
 13. A defect that predates this story is fixed under Core Rule 12: Astro's default
     `compressHTML: "jsx"` drops line-break whitespace beside an element or `{expression}` in
     `.astro` templates. It ran words together ("markedTheirs", "Repliescounts" on `/upstream/`, and

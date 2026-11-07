@@ -277,13 +277,40 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `.gmt-ref-table` box as the tool panel: `--gmt-surface-widget`, a full `--gmt-hairline` border and
     a bevelled `--gmt-radius-md` corner, with no left-edge accent. The header is an opaque
     `--gmt-surface` strip (the glass `thead` of `gmt-glass.css` does not reach it) with a
-    `--gmt-border-strong` rule under it and `th` in `--gmt-ice-dim`, Michroma, `--gmt-text-xs`.
+    `--gmt-border-strong` rule under it and `th` in `--gmt-ice-dim`, Michroma, `--gmt-text-xs`, in the
+    title case the author wrote (no `text-transform`).
     Cells are `.625rem .875rem` with a hairline under each (a card's cells drop to `.5rem` of side
     padding in a box 20rem wide or narrower, so a cell that cannot break reaches no further past
-    the box at 320px than a bare entry did), tabular figures, and the first column is
-    `--gmt-ice` at weight 600. Even body rows take `--gmt-fill-subtle` (the sheet's two
+    the box at 320px than a bare entry did) and tabular figures. Every prose table takes this one
+    plain style (see the next entry). Even body rows take `--gmt-fill-subtle` (the sheet's two
     `nth-child(even)` selectors, one in `@container gmt-ref (width > 34rem)`, both inside the one
     described `stylelint-disable`), and the hover and focus wash sits on the cells above it. A widget's table, which sits in no box, keeps its own sheet.
+  - **One plain style for every prose table**, in `gmt-content-tables.css` and nowhere else.
+    The models are the kit tables (the DST Inspector's transitions, the Stored Time Audit).
+    - Every body cell, the first included, is weight 400 in the body font; `<code>` is the only
+      monospace. A row header (`tbody th`) is told apart by `--gmt-ice` against the body's
+      `--gmt-ice-dim`, never by weight. A `<strong>` an author wrote keeps its weight.
+    - Every status word is a kit chip: components call `badge()` and render its `SafeHtml` with
+      `set:html`, so the chip's look has one source. A settled state is `spring`, an open or
+      waiting one `neutral`, a guard `purple`; nothing in these tables is `danger`. The word names
+      the state, so colour never carries it alone, and the text twins print the word alone.
+      `wrap: true` goes on a chip in a narrow column.
+    - Below `@container gmt-ref (max-width: 34rem)` every prose table stacks into entry cards,
+      from the `data-col` that `rehype-table-scroll.ts` or the component writes. A table with
+      `data-layout="entries"` is cards at every width.
+    - **The card label floats into the cell's padding.** A cell is a flow root with a start padding
+      of the label column (`--gmt-card-label`, 7rem) plus a gap; its `::before` label floats into
+      that padding with a negative margin, so its margin box is zero wide and the value keeps the
+      full width. A label that wraps makes the cell taller and runs into nothing. Every card puts
+      its labels in one column and its values beside them, so Kind, Status and Last activity line
+      up from card to card. The label is title case, in the body font at `--gmt-text-xs`, weight
+      600, `--gmt-ice-dim`, not uppercase Michroma. A box 20rem wide or narrower puts the label
+      above the value. The card's title is its first cell.
+    - Not in this style, on purpose: the kit tables and the widget tables (they are the model), and
+      the chat's Markdown tables (`chat.css`, the `/dox` island), because a chat reply is not a
+      docs page and the island keeps its own sheet.
+    - A layout-only rule stays in its component's sheet (`migrate-table.css`: the function-and-module
+      stack, the case sections); weight, font and label rules do not.
   - **Row groups.** `rehype-table-scroll.ts` marks each body row whose first cell reads the same as
     the row above (trimmed, whitespace collapsed, not empty): `data-group="start"` on the first row
     of a run of two or more, `"continue"` on the rest, nothing on a row alone, nothing in `thead`. It
@@ -301,8 +328,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     card for their rows: the box gives up its panel, `tbody` is a flex column with an 8px gap, and
     each row is a `--gmt-surface-widget` card with a full hairline border and a bevelled corner. The
     first cell is the card's title strip (`--gmt-surface`, a `--gmt-border-strong` rule under it,
-    weight 600); every other cell is a fact with its column header (`data-col`) on its own line
-    above the value in `--gmt-ice-dim` Michroma caps, and an empty cell is hidden. Members and
+    weight 600); every other cell is a fact with its column header (`data-col`) as a floating label
+    beside the value (see the plain-style entry), and an empty cell is hidden. Members and
     Parameters take the same card inside the 34rem container query. The header row stays for
     screen readers. It is for a table whose cells hold long code or that has too many columns for the
     article column. A table opts in where it is built: a component sets
@@ -410,7 +437,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       own functions", "Functions it draws on" (a module another industry owns reads "Part of the
       [X](/industries/x/) industry layer.") and the Guides, Tools, Scenarios and Mistakes pages
       tagged with it, by title. It also writes `src/generated/industries-sidebar.ts`, the
-      collapsed Industries group before Guides: Overview, then one link per industry carrying
+      collapsed Industries group (fourth in the sidebar, after API Reference): Overview, then one link per industry carrying
       `data-gmt-industry-link`, which shows the icon without matching the group-icon rule.
       `industryPages()` in `top-level-pages.ts` lists the hubs in `llms.txt` and `llms-full.txt`.
     - **Hub text.** `src/lib/industry-overview.ts` (`INDUSTRY_OVERVIEWS`) is the one hand-kept
@@ -427,12 +454,31 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
       industry": each industry's icon (`Icon.astro`, imported by the generated MDX; `stripMdx`
       drops the import and the tag), its label linked to its hub, its definition, its namespace
       and what it draws on. An own namespace's index page points at its hub (`hubPointer`).
-    - **Page tag.** `withIndustry` writes `industries: [<id>]`, from `industryOwning`, into the
-      frontmatter of every function page, module index and overview of an own namespace, so
-      `PageTitle` shows the tag. A Core page has no tag, not even `core`, and `timescale` is
-      Core. A shared type's page is tagged only when every public function that reaches it
-      (`usedBy` in the usage graph) is in one own namespace (`typeIndustry`). The Markdown export
-      of a tagged page gains the `Industry:` line.
+    - **Page tag.** Every docs page shows Core or its industries under its title, from one of
+      four sources, in order; `industryOwning` in `src/lib/industry-tags.ts` is the only
+      namespace-to-industry map.
+      1. The page's own `industries` frontmatter (tools, scenarios, mistakes, guides, checks).
+      2. The reference generator: `withIndustry(mdx, industries)` writes `industries: [<ids>]` into
+         every function page, module index and overview, from `industryOwning(ns)`; a namespace no
+         industry owns is `core` (`timescale/`, `plain/`, `zoned/` and the rest). An empty list
+         throws. A shared type's page takes the ordered union of the tags of the namespaces of every
+         public function that reaches it (`typeIndustries`; `usedBy` in the usage graph), so a type
+         that `plain/` and `workforce/` functions reach reads `Core, Workforce`.
+      3. A directory index with no tags of its own (`guides/index` and its section indexes,
+         `scenarios`, `mistakes`, `tools`, `industries`, `reference`) shows the union of the tags of
+         the pages under it, at any depth, Core first (`pageIndustries` in
+         `src/lib/page-industries.ts`). `src/route-data.ts` computes it once per build from the
+         docs collection and writes it onto the route's entry data, which `PageTitle.astro`
+         reads. It is never written into frontmatter, so it cannot drift.
+      4. A hand-written library-wide page (`install`, `core-rules`, `why-gmt`, `compare`,
+         `compare/behaviour`, `bundle-size`, `upstream`, the `migrate/*` pages, the four changelog
+         pages) declares `industries: [core]`. A page with no tag fails
+         `page-industries-coverage.test.ts`; it never gets Core by default.
+
+      Tags show in `INDUSTRY_TAG_IDS` order. The splash page (`index.mdx`) shows no tag, because
+      its hero replaces the title row; the coverage test skips it by reading `template: splash`.
+      The Markdown export gains the `Industry:` line from the same function. A tag's popover opens
+      under its own tag, clamped inside the viewport where the engine anchors boxes.
     - **README and chart.** The README's "By industry:" line links `/industries/<id>/` for
       exactly the declared industries, in order, under their labels (`namespaceLinkProblems` rule
       2 in `scripts/stats.mjs`). `gmt-stats.json` `industryLayers` gives each industry its own
@@ -617,12 +663,27 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   so each lists in "On this page" (`WhyDateBug variant="full"` draws no heading of its own).
   The figure tiles under the intro are `WhyGmtFigures.astro`, from the list in
   `src/lib/why-gmt-figures.ts` that `mdx-jsx.ts` also renders for the text surfaces.
-- **"Start here" puts first use first**: `install` (the landing's "Get started" target, ending
-  in a first call), `core-rules`, then the reasons (`why-gmt`, `compare`, `bundle-size`) and
-  `upstream` last. `astro.config.mjs` sets the sidebar, and so the prev/next links;
-  `START_ORDER` in `src/lib/top-level-pages.ts` sets the same order for `llms.txt` and
-  `llms-full.txt`. Change both together.
-- **`/compare/` is a top-level page** in "Start here". `<LibraryCompare table="…">` renders
+- **The sidebar puts first use first, and `src/lib/section-order.ts` is the one place that sets
+  it.** A leaf module with no imports exports `START_HERE` (install, core-rules, why-gmt) and
+  `MIGRATE` (the overview, `compare`, `bundle-size`, `upstream`, one page per library, then
+  `compare/behaviour`, each with its short sidebar label). `astro.config.mjs`, and so Starlight's
+  prev/next links, `llms.txt`, `llms-full.txt` and `topLevelPages` all import it; a test fails if
+  the config writes the entries out again. The groups run Start here, Guides, API Reference,
+  Industries, Tools, Scenarios, Mistakes, Migrate, Checks, Changelog. The raw-glob key of the
+  Migrate overview is `migrate/index`, mapped in one place in `top-level-pages.ts`. `llms.txt`
+  has the same sections in the same order, Install first under Start here; `llms-full.txt` follows
+  the sidebar (start pages, guides, reference, industries, scenarios, mistakes, migrate) and still
+  leaves out Tools, Checks and the Changelog. The `.md` twins carry no sidebar group.
+- **A code frame that opens a tab panel has a square start-start corner.** It hangs from the tab
+  row, so the corner under the first tab meets the tab; the other three keep the bevel, and a
+  frame further down the panel keeps all four. The rule in `gmt-content.css`
+  (`[role="tabpanel"] > .expressive-code:first-child .frame pre`) has the same specificity (0,4,1)
+  as the header-less terminal rule that gives the corner its radius, so it wins by sitting below
+  it; no `!important`. Logical properties make it the top right in right-to-left text. `/install/`
+  is the one page with `<Tabs>`, and the rule covers any later `<Tabs>` whose panel opens on a
+  code block. `visual:after` runs `tabFrameProblems`: in each tab panel the visible `pre` has a
+  `0px` start-start radius and a non-zero start-end radius.
+- **`/compare/` is a top-level page**, in "Migrate". `<LibraryCompare table="…">` renders
   each of its tables and the notes list from the builders in `src/lib/library-compare-tables.ts`, and `src/lib/mdx-jsx.ts` renders
   the same builders for the text surfaces (`.md`, `llms.txt`, the retrieval chunks), so the
   page and its text twin cannot state different figures. Its figures come only from
@@ -663,9 +724,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     requested, Approved, Merged or Closed without merging. It does not reuse `filingStatus`, whose
     "Merged, not yet in a published release" is about the polyfill's releases. `UpstreamListings.astro`
     is one entries-layout table (`LISTING_COLUMNS`: Pull request, What it asks, Status, Replies, Last
-    activity) after the tracker; it and `UpstreamTracker.astro` each import
-    `src/components/upstream-table.css` (the table and badge rules, as `migrate-table.css` is shared
-    by two components), so neither depends on the other being on the page; the heading and one sentence stay in `upstream.mdx` so they are in
+    activity) after the tracker; its rules are in the shared `gmt-content-tables.css`, so neither it
+    nor `UpstreamTracker.astro` depends on the other being on the page; the heading and one sentence stay in `upstream.mdx` so they are in
     the table of contents. `renderUpstreamListings` in `mdx-jsx.ts` is its Markdown twin.
   - **Summary wording.** A summary names exactly what the PR changes (which table, which column or
     row, what is added to each how-to section) and carries no number of sections.
@@ -677,8 +737,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `guard` row shows "Kept on purpose", its check count and the snapshot's `guard.reason`, because
   the canary (`pnpm compat:snapshot`) owns state: the page never reads `failing`, `through` or a
   version to choose a badge, and `toCompatGroup` fails the build on an unknown state or an
-  incomplete guard. The badge has a full `--gmt-ice-dim-fill` border (`--gmt-border-strong`
-  measures under the 3:1 bar in both themes) and wraps inside it at the table's 34rem minimum.
+  incomplete guard. The state is a kit chip (`defectBadge` in `src/lib/upstream-badges.ts`: a
+  settled state `spring`, still needed `neutral`, a guard `purple`; a leading check in the word
+  becomes the check icon) that wraps at its spaces in the narrow column.
   The table sits in the site's table box (`.gmt-ref-table`, named by `data-label`), like every
   table on the site; `src/lib/ref-table.ts` makes the box a focusable, named region only while it
   overflows, so a desktop reader never lands on a box that cannot scroll. The Markdown
@@ -688,9 +749,32 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `gmtGuard` join of filings on the same page. A reason never says "probe" (a test rejects it), and
   `owner/repo#n` in a reason renders as a short link (`reasonParts`) only for a repository the
   site knows (`tc39/proposal-temporal`, `js-temporal/temporal-polyfill`), never inside a URL or
-  after a word character, so `and/or#1` and `…/issues/3292#3` stay text. Both "ok" badges
-  (`.gmt-defects-badge--ok`, `.gmt-upstream-badge--ok`) use `--gmt-cyan-ink`, not Starlight green
-  (1.69:1 in light).
+  after a word character, so `and/or#1` and `…/issues/3292#3` stay text. The component has no
+  `<style>` block; its rules are in `gmt-content-tables.css`.
+- **An /upstream/ filing card reads like a row on GitHub.** `src/lib/upstream-badges.ts` works
+  every badge out of the filing's own fields (`kind`, `state`, `draft`, `mergedAt`,
+  `reviewDecision`, `gmtGuard`, `gmtNote`), with no hand-kept status. The head is a state icon, the
+  title at weight 600, `repo#number` as a quiet link and a filled state pill (the kit badge's
+  `fill` option, `-ink` tone with the void colour as text, 4.5:1 in both themes). The pill follows
+  GitHub: an open issue or pull request is Open (`spring`), a closed issue Closed (`purple`), a
+  merged pull request Merged (`purple`), a draft Draft and a pull request closed unmerged Closed
+  (`neutral`), each with its Octicon. Outline chips follow in the meta line: Approved (check,
+  `spring`), Review required or Changes requested (`neutral`), the work kind, and an In GMT chip
+  (Guarded with the guard id and a shield in `purple`; Not affected with a check in `spring`;
+  Fix filed upstream or Reported upstream, `neutral`). The meta row is a comment icon with the reply
+  count, a clock icon with the last-activity date and the contribution link, each named by a word
+  hidden from sight. The summary is body text at weight 400, at most 72ch wide. The card keeps its
+  full border; a filing whose badge is green or purple adds a bottom accent in that hue. The text twins print
+  each badge as its word.
+  - **Icons.** `src/lib/octicons.ts` holds the 16px inline-SVG paths (Octicons, MIT, licence line
+    in the module header), `currentColor` and `aria-hidden`. No icon font, no CDN. The kit badge
+    takes `icon` and `fill`.
+  - **The head aligns on the title's first baseline** (`align-items: first baseline`), as GitHub
+    does, so a title that wraps does not pull the icon, number and badge to its middle. The icon
+    wrapper is `display: inline-block` with an inline-block svg, because the sheet's reset makes
+    an svg a block and a block takes no `vertical-align`. `visual:after` runs
+    `upstreamHeadProblems` on `/upstream/`: an icon, or a badge sharing the title's first line,
+    more than 2 px off that line's middle fails, and so does a page with no card heads.
 - **Migration pages.** `/migrate/` has an index, one page each for date-fns, Luxon, Day.js,
   Moment and `@internationalized/date`, and a Temporal page. `/compare/behaviour/` holds the
   full behaviour matrix. Each library page is a call-by-call table (`MigrationMap`, data in
@@ -764,7 +848,7 @@ change and not the fix.
 `gmt.thirdparty` layer holds the sheets for DOM we do not render: `gmt-charts.css`, the map
 tooltip shell, and the Pagefind and Starlight overrides. Every element we render is styled by a CSS
 Module, a component `<style>` block, or a plain sheet in `src/components/` that the components
-sharing it import (`migrate-table.css`, `upstream-table.css`), never `gmt.css` or `customCss`.
+sharing it import (`migrate-table.css`), never `gmt.css` or `customCss`.
 Content tables carry `data-col` (written by
 `src/lib/rehype-table-scroll.ts`), so a stacked label reads `attr(data-col)` and no column name is
 typed in CSS. The reveal stagger is `--gmt-reveal-i`, set by `scroll-reveal.ts`.
@@ -1728,7 +1812,31 @@ Shared hooks come first, then the globe, then the clock-change pages.
       head is visually hidden. Nothing scrolls sideways at 300 px. `display` on table parts drops
       the native semantics, so `probeCard` passes `roles: true` to the kit `table()`; do not remove
       it. The 1% width of the offset columns applies only at 21rem and wider, so the stacked
-      cells size themselves. The Morocco page's stored-times hint writes its example through `zonedValue`.
+      cells size themselves.
+    - **Offset heads read in two lines.** Each offset head is the label ("Correct", "Yours"), a
+      comma drawn off-screen for assistive technology, and the note (`correctNote`, `yoursNote`)
+      on its own line in `--gmt-ice-dim` at weight 400, with no brackets. The accessible name is
+      "Correct, tzdb 2026c or later". The kit `table()` takes `header: string | SafeHtml` for
+      this; a `labelCells` table writes the header into an attribute and throws a `TypeError` for
+      a non-string. Label and note are `nowrap`, so a column is as wide as its longest line, never
+      its longest word, and a head never splits a word. Place plus two nowrap columns need
+      373 px (23.3rem). In a `gmt-probe` container (measured on `.probe`) under 25rem the note
+      alone wraps at its spaces and the two offset columns take 32% each, from 21rem; the
+      stacked grid below 21rem is unchanged. The chat's reply uses the same card, so the container
+      query covers it too.
+    - **The top row splits only when the card is wide enough.** Key points sit beside the browser
+      card from a `gmt-clockcheck` container of 73rem (32rem for the card at 4/9 of the row, less
+      the 1rem gap: 32 x 9/4 + 1); narrower, Key points stacks above the card and the card takes the
+      full width. The lower rows keep their 48rem step. `stack.test.ts` reads the step from the sheet.
+    - **The checks.** `canada-layout-check` measures every head at 3 lines or fewer on both pages
+      at 1910, 1440, 1280 and 375, fails a split word, a note that wraps in a probe of 25rem or
+      more, and sideways scroll, and sets the "Yours" cells to `-03:30` and back to prove a new
+      reading moves the card, table, columns and heads by no more than half a pixel.
+    - **Page rows.** The servers card spans the full width (it is a command and a line of output,
+      a quarter of the release list's height); the Upgrade to at least card pairs with the help
+      card; the clock changes span the full width. In the map row, the zone-card block that lifts
+      the list's height cap (from 62rem) comes after the cap in `zone-map.module.css`, because it
+      wins by order alone. The Morocco page's stored-times hint writes its example through `zonedValue`.
       `canada-layout-check.mjs` covers this on both pages (see the gate entry).
     - **The live clocks in a narrow card.** The clocks card is 260 px wide at a 1366 px viewport
       (checker 1018 px, map column 466 px). Below 16rem (a container query in
@@ -2033,7 +2141,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     Maritime owns no namespace yet and draws on `gnss` and `timescale`; Intermodal draws on
     `transport`.
   - **Industry overview text lives on `/industries/<id>/`**, in a top-level "Industries" sidebar
-    group after "Start here", and each namespace index under `/reference/` keeps a one-line
+    group, fourth after API Reference, and each namespace index under `/reference/` keeps a one-line
     pointer. `space` is never an industry, area, kind or namespace name, because a planned spatial
     expansion takes the word.
 - **Cron in a Zone** (CORE-84, `/tools/cron-in-a-zone/`, `cronzone`): a Core tool that draws
