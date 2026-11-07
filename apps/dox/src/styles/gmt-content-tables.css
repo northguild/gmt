@@ -816,11 +816,18 @@
 /* ---- /upstream/: a filing is a card laid out like a row on GitHub ---- */
 
 /* The state icon takes the badge's hue as text ink, never as the only signal: the badge beside
-   it spells the state. */
+   it spells the state. It sits in a line of its own text, so it takes the title's baseline and
+   stays on the title's first line when the title wraps. The sheet's reset makes an svg a block,
+   and a block cannot take `vertical-align`. */
 .gmt-upstream-state {
-  display: inline-flex;
+  display: inline-block;
   flex: none;
   color: var(--gmt-ice-dim);
+
+  & > svg {
+    display: inline-block;
+    vertical-align: middle;
+  }
 }
 
 .gmt-upstream-table tr[data-tone="spring"] .gmt-upstream-state {
@@ -842,14 +849,16 @@
   box-shadow: inset 0 -2px 0 var(--gmt-dst-purple);
 }
 
-/* Header row: state icon, title, `repo #number`, and the state badge pushed to the end. */
+/* Header row: state icon, title, `repo #number`, and the state badge pushed to the end. They share
+   the title's first baseline, as on GitHub: centred, a wrapped title would pull the icon, the
+   number and the badge down to its middle. */
 .gmt-ref-table[data-layout="entries"]
   .gmt-upstream-table
   tr
   > .gmt-upstream-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: first baseline;
   gap: 0.25rem 0.5rem;
 }
 

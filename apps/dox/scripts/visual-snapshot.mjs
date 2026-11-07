@@ -196,6 +196,10 @@ const PAGES = [
      brain badge and the widget rail's collapsed-to-nothing layout are covered
      by nothing else. */
   { slug: "dox", path: "/dox/" },
+  /* The filing cards: each head is checked for an icon, number and badge on the title's
+     first line (`upstreamHeadProblems`). A page with no heads fails, so the check cannot pass
+     on an empty page. */
+  { slug: "upstream", path: "/upstream/", heads: true },
 ];
 
 const PAGES_ARG = applyPageContract({
@@ -592,6 +596,47 @@ async function tabFrameProblems(page) {
   return problems;
 }
 
+/**
+ * A filing card's head on /upstream/ reads like a GitHub row: the state icon sits on the title's
+ * first line, even when the title wraps, and so do the number and the badge when they share
+ * that line. Measures each against the middle of the title's first line, within 2 px. With
+ * `expected`, a page with no heads, or a head with no title, is a problem too.
+ */
+async function upstreamHeadProblems(page, expected) {
+  return page.evaluate((expected) => {
+    const middle = (r) => r.top + r.height / 2;
+    const problems = [];
+    const heads = document.querySelectorAll(".gmt-upstream-head");
+    if (expected && heads.length === 0)
+      problems.push("no filing card heads to check");
+    for (const [i, head] of heads.entries()) {
+      const title = head.querySelector(".gmt-upstream-title");
+      const range = document.createRange();
+      if (title) range.selectNodeContents(title);
+      const first = title
+        ? [...range.getClientRects()].find((r) => r.width > 0)
+        : undefined;
+      if (!first) {
+        problems.push(`card ${i}: no title line to measure against`);
+        continue;
+      }
+      const line = middle(first);
+      const icon = head.querySelector(".gmt-upstream-state svg");
+      if (icon && Math.abs(middle(icon.getBoundingClientRect()) - line) > 2)
+        problems.push(
+          `card ${i}: the state icon is off the title's first line`,
+        );
+      const badge = head.querySelector(".gmt-upstream-status");
+      if (!badge) continue;
+      const b = badge.getBoundingClientRect();
+      // Wrapped below the title, the badge starts a line of its own; that is fine.
+      if (b.top < first.bottom && Math.abs(middle(b) - line) > 2)
+        problems.push(`card ${i}: the badge is off the title's first line`);
+    }
+    return problems;
+  }, expected);
+}
+
 /** Every page in `PAGES`, full height. */
 async function capturePages(page, outDir, clockMasks, theme, viewport) {
   for (const p of PAGES.filter(
@@ -608,7 +653,10 @@ async function capturePages(page, outDir, clockMasks, theme, viewport) {
     // Let ambient globe rotation / any load-time animation settle to a consistent frame.
     await page.waitForTimeout(300);
     if (label === "after") {
-      const problems = await tabFrameProblems(page);
+      const problems = [
+        ...(await tabFrameProblems(page)),
+        ...(await upstreamHeadProblems(page, p.heads === true)),
+      ];
       if (problems.length > 0)
         throw new Error(
           `${p.path} (${theme}, ${viewport.name}): ${problems.join("; ")}`,
