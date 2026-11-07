@@ -102,6 +102,12 @@ const cases = matrixView();
   overflow-wrap: anywhere;
 }
 
+/* A long value such as `2024-10-06T02:45:00+11:00[Australia/Lord_Howe]` breaks first at its
+   `/`; its pieces are `nowrap`, so in a 320 px column the first one would still overrun. */
+.gmt-matrix-facts dd .gmt-cw {
+  white-space: normal;
+}
+
 .gmt-matrix-case {
   container: gmt-matrix / inline-size;
 }

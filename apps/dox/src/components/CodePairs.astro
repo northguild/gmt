@@ -145,6 +145,12 @@ const href = (url: string): string => (url.startsWith("/") ? withBase(url) : url
   overflow-wrap: anywhere;
 }
 
+/* A long value breaks first at its `/`; its pieces are `nowrap`, so in a 320 px column the first
+   one would still overrun. */
+.gmt-pair-facts dd .gmt-cw {
+  white-space: normal;
+}
+
 /* Stacked in a narrow column; side by side, the library's shorter code taking the smaller share,
    once both frames have room for a line of code. */
 .gmt-pair-code {
