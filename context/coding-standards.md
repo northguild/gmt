@@ -126,6 +126,16 @@ The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: TAI64 text labels in `timescale/convert` (SPA-46)
+
+The same three rules extend to `fromTai64n` (reader) and `toTai64n` (writer) in `packages/gmt/src/timescale/convert/`. A TAI64, TAI64N or TAI64NA label (`@400000002a2b2c2d00000000`) is hex text, not ISO 8601, and no `Temporal.*.from` reads it. Bernstein's [TAI64, TAI64N, and TAI64NA](https://cr.yp.to/libtai/tai64.html) defines the byte layouts (8, 12 and 16 bytes); daemontools [`tai64n`](https://cr.yp.to/daemontools/tai64n.html) defines only the TAI64N text, `@` and 24 lowercase hex digits. Reading 16 or 32 digits, an optional `@` and either hex case is GMT's own rule (precedent: `fromObjectId` reads either case). The grammar is fixed:
+
+1. One regex, `tai64LabelText` in `internal/tai64Label.ts`, matched against the whole input. A function slices a matched label only by the layout's fixed offsets (8, 4 and 4 bytes), never by searching the string.
+2. A decoded label goes through the leap-second table with `utcOfTai` only and is written by `formatUtcReading`, which reaches `Temporal.Instant.fromEpochNanoseconds`. The writer goes through `taiOfUtc` and builds the hex from bigint arithmetic: `formatTai64nLabel` makes no Temporal call.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+This prohibition stands for every other function in the library, `fromTAI` and `toTAI` included.
+
 ### Scoped exception: human duration strings (CORE-85)
 
 The same three rules extend to `parseHumanDuration` (`packages/gmt/src/duration/parse/`). A human duration string (`"2h 30m"`, `"3 days"`) is not ISO 8601, and no `Temporal.*.from` reads one. The grammar is GMT's own, fixed, and stated in full in the function's JSDoc:

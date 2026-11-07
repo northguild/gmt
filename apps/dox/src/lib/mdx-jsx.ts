@@ -613,6 +613,7 @@ export function renderMdxComponents(body: string): string {
     "LeapSecondTimeline",
     "ElapsedVsClock",
     "StoredTimeAudit",
+    "Tai64nLogReader",
     "HolidayRuleBuilder",
     "ObservanceComparator",
     "MovingFeasts",

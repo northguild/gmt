@@ -71,6 +71,7 @@ import {
   showLeapDayBirthdayInput,
   showExpiryCalculatorInput,
   showDatabaseTimestampReaderInput,
+  showTai64nLogReaderInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
@@ -626,6 +627,11 @@ export function buildWorkerTools(
             )
           : accept("database-timestamp-reader");
       },
+    }),
+    showTai64nLogReader: tool({
+      description: docFor("showTai64nLogReader"),
+      inputSchema: showTai64nLogReaderInput,
+      execute: () => accept("tai64n-log-reader"),
     }),
   };
 

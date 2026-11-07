@@ -36,7 +36,8 @@ Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in eve
 
 ## What gmt provides (do not re-implement)
 
-- `toNanoseconds` / `fromNanoseconds` from CORE-1 — precision conversion
+- `floorDivide` and `NANOSECONDS_PER_SECOND` from CORE-3 — split the TAI nanoseconds into seconds and a remainder
+- `hexValue` from CORE-56 — read a hex digit
 - The leap-second table from SPA-48 — TAI − UTC by date
 - `toTAI` / `fromTAI` and the time-scale string grammar from MAR-16 — the TAI hinge the labels are built on
 
@@ -46,3 +47,17 @@ Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in eve
 - `fromTai64n(toTai64n(iso))` round-trips to the nanosecond; a TAI64NA label round-trips to the nanosecond and drops attoseconds, documented
 - A label of a hex length other than 16, 24 or 32, a label with a non-hex character, or a label for an instant before 1972 returns the sentinel
 - `pnpm run validate` stays green
+
+## Decisions
+
+Settled by the owner. They are the current rules for this code.
+
+- The two public functions are `toTai64n` and `fromTai64n`, in `timescale/convert/`. Both take and return strings, take no options and no table argument, and return `""` on any refusal.
+- Labels decode as true TAI, as Bernstein's definition states. `fromTai64n` reads every TAI64 label as the TAI second `label − 2⁶²` after 1970 TAI, so it reads a label written on a UTC clock by daemontools 27 s early (daemontools adds only `2⁶² + 10` to the Unix time). s6 on a UTC clock writes true TAI. Both JSDocs state this in one bullet with the 27 s figure. GMT does not read "Unix + 10" labels, and there is no follow-up story.
+- The whole label is the input. A log line, or any text around the label, returns `""`.
+- `fromTai64n` reads 16 (TAI64), 24 (TAI64N) and 32 (TAI64NA) hex digits, with or without `@`, in either case. `toTai64n` writes `@` and 24 lowercase digits only; there is no TAI64 or TAI64NA writer and no validator. Attoseconds are checked and then truncated, never rounded.
+- Both functions go through the existing TAI hinge (`parseUtcReading` → `taiOfUtc`, `utcOfTai` → `formatUtcReading`, `LEAP_SECOND_STEPS`). The label is `2⁶² + floor(tai / 10⁹)` seconds and `tai mod 10⁹` nanoseconds. An inserted second has its own label and reads back as `…T23:59:60Z`.
+- An instant before 1972-01-01 UTC has no integer TAI − UTC, so it returns `""`, as `toTAI` and `fromTAI` do. Years are four digits in both directions (`LAST_FOUR_DIGIT_UTC_NANOSECONDS`), and labels of `2⁶³` and above are reserved and return `""`.
+- The shared grammar, reader and writer live in `internal/tai64Label.ts` (`TAI64_SECONDS_OFFSET`, `LAST_FOUR_DIGIT_UTC_NANOSECONDS`, `tai64LabelText`, `parseTai64Label`, `formatTai64nLabel`). `coding-standards.md` carries the scoped exception for TAI64 text labels in `timescale/convert`.
+- The root bundle budget in `scripts/bundle-size.budgets.json` rose from 568700 to 569400 B (+700 B). The measured size is 569313 B, which leaves 87 B. This is a reviewed raise, with CORE-106 and CORE-104 as precedents.
+- The Dox tool is the TAI64N Log Reader at `/tools/tai64n-log-reader/`; its rules are in `context/dox/built.md`.

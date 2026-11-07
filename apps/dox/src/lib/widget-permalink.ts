@@ -76,7 +76,8 @@ export type WidgetKind =
   | "cronzone"
   | "leapday"
   | "expiry"
-  | "dbstamp";
+  | "dbstamp"
+  | "tai64n";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -139,6 +140,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   leapday: "/tools/leap-day-birthday/",
   expiry: "/tools/expiry-calculator/",
   dbstamp: "/tools/database-timestamp-reader/",
+  tai64n: "/tools/tai64n-log-reader/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */

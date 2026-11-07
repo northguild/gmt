@@ -113,7 +113,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 38  | CORE-104 | Core       | Lengths of time counted from now:<br>seconds, epoch, HTTP date, seconds until                            | —          | #433  | Cut     | Done        |
 | 39  | CORE-91  | Core       | Past tense only on the Canada checker<br>after 1 November 2026                                           | —          | #353  | —       | Done        |
 | 40  | CORE-106 | Core       | Database audit: SQL offset timestamps<br>read and validated, a guide matrix per database                 | —          | #438  | —       | Done        |
-| 41  | SPA-46   | Space      | TAI64 / TAI64N / TAI64NA text labels                                                                     | —          | #227  | —       | Not started |
+| 41  | SPA-46   | Space      | TAI64 / TAI64N / TAI64NA text labels                                                                     | —          | #227  | —       | Done        |
 | 42  | SPA-47   | Space      | `toTT` + `toTCG`                                                                                         | —          | #228  | —       | Not started |
 | 43  | SPA-49   | Space      | Two-part Julian Date + MJD + J2000                                                                       | SPA-47     | #230  | —       | Not started |
 | 44  | SPA-52   | Space      | CCSDS ASCII time codes A and B                                                                           | —          | #233  | Cut     | Not started |

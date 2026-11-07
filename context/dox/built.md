@@ -1639,6 +1639,32 @@ Shared hooks come first, then the globe, then the clock-change pages.
       within 1 px (`box-moved`). The page-height limit alone let a 6 px jump through.
     - **The loader is `database-lib.ts`** (13 modules by `GMT_MODULES`), after `identifier-lib.ts`.
       The tool links to the guide and the guide links back.
+  - **TAI64N Log Reader** (`/tools/tai64n-log-reader/`, `tai64n`, core): the reader pastes up to
+    12 log lines (80 characters each, the Stored Time Audit's caps) that start with a TAI64N
+    label. A table gives each line the UTC instant `fromTai64n` reads, the TAI reading `toTAI`
+    gives and TAI − UTC from `taiMinusUtc`, with an "inside an inserted second" badge from
+    `isLeapSecond`; the selected line is drawn large with the exact calls made, and a second box
+    writes a label from an instant with `toTai64n`. Presets are in `tai64n-presets.ts`, because
+    the source-pattern test forbids a label literal in `tai64n-log-reader.ts`.
+    - **A line is cut at its first space or tab, and the token goes to `fromTai64n` whole.** The
+      site never tests a token for an `@`, a length or a hex digit, never trims and never folds
+      case: the library decides what a label is. A line with a leading space has an empty token
+      and reads as no label. A test holds both modules free of a hex-class pattern, `2n ** 62n`
+      and `4000000`.
+    - **No figure covers the log.** Each row shows the TAI − UTC of its own instant. Nothing sums,
+      averages or compares the rows, because a log can cross a leap second (`across-2016` reads
+      36, 36, 37).
+    - **`NO SIGNAL` is the library's `""`, per row.** An unread line shows the bracketed sentinel
+      in its three value cells and a "no label" badge in words; when no line is read the stage is
+      a sentinel hero. A blank writer box shows `NO SIGNAL` on both plates, because
+      `toTai64n("")` returns `""`.
+    - **The selected row is `aria-current` on the `<tr>`.** The mount moves it in place when the
+      radio changes, so the keyboard focus stays on the radio and only section 3 is redrawn.
+    - **daemontools on a UTC clock is prose, not a correction.** The tool reads every label as
+      true TAI and says so; the page's "27 s early" sentence is held by `tai64n-log-reader-prose
+      .test.ts`, which also fails when IERS schedules a new leap second.
+    - **Permalink `tai64n`** at `/tools/tai64n-log-reader/`: `values` (the lines as read, in
+      `LONG_STRING_KEYS`), `line` and `instant`. The loader is `tai64n-lib.ts`.
   - **Elapsed vs. Clock Difference** (`/tools/elapsed-vs-clock-difference/`): a sum of three
     plates (clock difference + leap seconds = seconds that passed) over two vernier rulers, one
     cell per second at equal widths. An inserted second is a stretched `:60` cell the clock tape
@@ -3869,7 +3895,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change
   checkers, Cron in a Zone, the Duration Parser Bench, the three holiday tools, the ID Timestamp
   Decoder, the Column Timestamp Bridge, the Leap-Day Birthday, the Expiry Calculator and the
-  Database Timestamp Reader are core.
+  Database Timestamp Reader and TAI64N Log Reader are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys
   (`widget-registry.test.ts`), and every enabled tool has a `CHAT_STARTERS` card
   (`chat-starters.test.ts`). A tool nobody can mount or discover cannot ship.

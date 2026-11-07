@@ -181,6 +181,13 @@ export {
   taiOfUtc,
   utcOfTai,
 } from "./leapSeconds";
+export {
+  formatTai64nLabel,
+  LAST_FOUR_DIGIT_UTC_NANOSECONDS,
+  parseTai64Label,
+  TAI64_SECONDS_OFFSET,
+  tai64LabelText,
+} from "./tai64Label";
 export { isValidDayOfWeek } from "./isValidDayOfWeek";
 export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";

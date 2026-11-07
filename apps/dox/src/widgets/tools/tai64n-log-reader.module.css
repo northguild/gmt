@@ -1,0 +1,86 @@
+/*
+ * TAI64N Log Reader: what only this tool needs. The sections, the preset, the field, the
+ * plates, the hero, the code frame, the output and the links are the kit's, and the table is
+ * the tai64n family's. This sheet frames the selected line, holds the hint's line and the
+ * sentence under the plates, and turns the writer's plates amber when the library refused.
+ *
+ * Text is the body ink on the solid widget surface. Amber is the sentinel's alone.
+ */
+
+.frame {
+  display: grid;
+
+  /* One definite column: an `auto` track is sized by the plates' reserved widths and pushes
+     the page wider than the screen. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  box-sizing: border-box;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+}
+
+/* The hint holds a line's height whether or not it says anything, so the table below never
+   moves when the text appears. */
+.hintSlot {
+  display: block;
+
+  & p:empty::before {
+    content: "\a0" / "";
+  }
+}
+
+.sentence {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+/* A refused reading: the plates' values are the bracketed sentinel, in amber. */
+.stage[data-lost="true"] dd,
+.writer[data-lost="true"] dd {
+  color: var(--gmt-signal-ink);
+}
+
+.stage,
+.writer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+/* The writer: a box and the two plates it feeds. */
+.writer {
+  padding-block-start: var(--gmt-space-3);
+  border-block-start: 1px solid var(--gmt-hairline);
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .stage[data-lost="true"] dd,
+  .writer[data-lost="true"] dd {
+    color: CanvasText;
+  }
+
+  .writer {
+    border-block-start-color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame {
+    border-color: var(--gmt-ice);
+  }
+
+  .writer {
+    border-block-start-color: var(--gmt-ice);
+  }
+}
