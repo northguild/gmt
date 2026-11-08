@@ -750,11 +750,26 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `packages/*/CHANGELOG.md` (sorted, `gmt` first; nothing typed, so a new package with a changelog
   gets a page and the sidebar test in `changelog.test.ts` then fails until the sidebar links it).
   It writes the gitignored `src/content/docs/changelog/index.md` (`@northguild/gmt`) and
-  `changelog/gmt-eslint.md`, `gmt-oxlint.md`, `gmt-biome.md` (titled `Changelog: gmt-eslint`, …)
-  after `build-guides.mjs`, in `generate` and in the `dox-pages` check. The generator never writes the
-  `CHANGELOG.md` files, which are the release record. `renderPage` takes the title, description,
-  source URL and install link as parameters; the retired-scope plate links `/install/` for `gmt`
-  and `/guides/integration/linting/` for a plugin.
+  `changelog/gmt-eslint/index.md`, `gmt-oxlint/index.md`, `gmt-biome/index.md` (titled
+  `Changelog: gmt-eslint`, …), plus a page per release line, after `build-guides.mjs`, in `generate`
+  and in the `dox-pages` check; any `.md` there that a run did not write is deleted. The generator
+  never writes the `CHANGELOG.md` files, which are the release record. `renderIndexPage` and
+  `renderLinePage` take the title, source URL, install link and the index route as parameters; the
+  retired-scope plate links `/install/` for `gmt` and `/guides/integration/linting/` for a plugin.
+  - **One page per release line, so no page nears 1 MB.** Apple's Messages preview reads a page's
+    main resource only up to 1 MB, and the single changelog page was 1,546,542 bytes. The index
+    (`/changelog/`, `/changelog/<pkg>/`) keeps the scope groups and the memorial plate and lists
+    each `major.minor` line newest first with its versions and `Released` dates, linking
+    `/changelog/1-21/` (`lineSlug` turns the dot into a hyphen because Starlight slugs drop dots;
+    the title keeps it: `Changelog 1.21`). It repeats no release note. A line page holds that
+    line's releases newest first with the demoted headings, a link back to the index and the plate
+    when the line belongs to a retired scope; a line that changed scope part way (1.14) has both
+    scope sections on one page. Its description names the package and versions, so no two pages
+    share one, and its `lastUpdated` is the newest tag date of the line (none while unreleased).
+    Line pages are not in the sidebar; the index links them. The largest built page is
+    `/changelog/1-16/` at 729,975 bytes; `dist-base.test.ts` fails when any built `.html` exceeds
+    1,048,576 bytes and names the largest. `llms.txt`'s Optional section links only the four index
+    pages (`indexPagesOnly` in `llms.txt.ts`).
   - **Scope and date come from the release tags**, read in one `git for-each-ref` call with
     `TZ=UTC`: a version's scope is its tag's scope (the current scope is the `name` scope in
     `package.json`, every other scope is retired), and its date is the tag's, printed as
@@ -804,8 +819,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     as every table does. Astro caches rendered Markdown in `node_modules/.astro/data-store.json`
     keyed by the file, so delete it after changing a rehype plugin.
   - **Sidebar.** The last top-level group, "Changelog", with four links: `@northguild/gmt`,
-    `gmt-eslint`, `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three
-    plugin pages.
+    `gmt-eslint`, `gmt-oxlint`, `gmt-biome`, each its index page. `guides/integration/linting.mdx`
+    links the three plugin index pages.
   - **Text surfaces.** The HTML pages and Pagefind carry them; each page's `.md` twin exists as for
     every page; `llms.txt` ends with an "Optional" section of four changelog links; `llms-full.txt` and the
     retrieval chunks leave them out (`topLevelPages` takes only slugs without `/`, and

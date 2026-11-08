@@ -43,15 +43,23 @@ function linkTo(base: string, slug: string, source: string): LlmsLink {
   };
 }
 
-/** The pages of one directory of `content/docs/`, index page first, the rest by title. */
+/**
+ * The pages of one directory of `content/docs/`, index page first, the rest by title.
+ * `indexPagesOnly` keeps only the pages named `index` at any depth: the changelog has a page per
+ * release line next to each package's index, and that index lists them.
+ */
 function directoryLinks(
   base: string,
   directory: string,
-  { indexFirst }: { indexFirst: boolean },
+  {
+    indexFirst,
+    indexPagesOnly = false,
+  }: { indexFirst: boolean; indexPagesOnly?: boolean },
 ): LlmsLink[] {
   const pages = Object.entries(RAW)
     .map(([path, source]) => ({ slug: docsRelativePath(path), source }))
-    .filter(({ slug }) => slug.startsWith(`${directory}/`));
+    .filter(({ slug }) => slug.startsWith(`${directory}/`))
+    .filter(({ slug }) => !indexPagesOnly || slug.endsWith("/index"));
   const index = pages.filter(({ slug }) => slug === `${directory}/index`);
   const rest = pages
     .filter(({ slug }) => slug !== `${directory}/index`)
@@ -124,7 +132,10 @@ export const GET: APIRoute = () => {
     // `Optional` is the llmstxt.org name for links a reader may skip when context is short.
     {
       heading: "Optional",
-      links: directoryLinks(base, "changelog", { indexFirst: true }),
+      links: directoryLinks(base, "changelog", {
+        indexFirst: true,
+        indexPagesOnly: true,
+      }),
     },
   ];
 

@@ -247,6 +247,12 @@ describe("llms.txt surface", () => {
     );
   });
 
+  it("words an industry's namespace differently from the industry's own definition", () => {
+    for (const id of ["workforce", "transport", "intermodal", "gnss"]) {
+      expect(namespaceSummary(id), id).not.toBe(industryTag(id)!.definition);
+    }
+  });
+
   it("fails for a namespace with no authored summary", () => {
     expect(() => namespaceSummary("no-such-namespace")).toThrow(/no summary/);
   });
@@ -772,26 +778,19 @@ Body text here.`;
       if (distDir === null) return;
       const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
       expect(llms).toMatch(/^## Optional$/m);
-      const pages = readdirSync(
-        resolve(
-          import.meta.dirname,
-          "..",
-          "src",
-          "content",
-          "docs",
-          "changelog",
-        ),
-      ).filter((file) => file.endsWith(".md"));
-      expect(pages.length).toBeGreaterThanOrEqual(4);
-      for (const page of pages) {
-        const route =
-          page === "index.md"
-            ? "changelog/index"
-            : `changelog/${page.slice(0, -3)}`;
+      // Each package's index page is linked; its release-line pages are not (the index lists them).
+      const routes = [
+        "changelog/index",
+        "changelog/gmt-eslint/index",
+        "changelog/gmt-oxlint/index",
+        "changelog/gmt-biome/index",
+      ];
+      for (const route of routes) {
         expect(llms, `llms.txt links ${route}`).toMatch(
           new RegExp(`^- \\[[^\\]]*\\]\\(https://[^)]*/${route}\\.md\\)`, "m"),
         );
       }
+      expect(llms).not.toMatch(/\/changelog\/(?:[\w-]+\/)?\d+-\d+\.md/);
       const full = readFileSync(resolve(distDir, "llms-full.txt"), "utf8");
       expect(full).not.toContain("## @burglekitt/");
       const chunksPath = resolve(distDir, "retrieval-chunks.json");

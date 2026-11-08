@@ -265,6 +265,21 @@ describe("the built site keeps the /gmt base", () => {
     expect(report(pages, failures)).toEqual([]);
   });
 
+  it("every built page is at most 1 MiB uncompressed, the most a Messages preview reads", () => {
+    const b = built();
+    if (b === null) return;
+    const { pages } = b;
+    const sizes = walk(pages, (n) => n.endsWith(".html"))
+      .map((file) => ({ file, bytes: statSync(file).size }))
+      .sort((a, c) => c.bytes - a.bytes);
+    expect(sizes.length).toBeGreaterThan(0);
+    const [largest] = sizes;
+    expect(
+      largest.bytes,
+      `${relative(pages, largest.file)} is the largest page`,
+    ).toBeLessThanOrEqual(1_048_576);
+  });
+
   it("no route begins with /gmt, so withBase leaves a /gmt/… path alone", () => {
     const routes = [...referenceRoutes].filter(
       (r) => r === "/gmt" || r.startsWith("/gmt/"),
