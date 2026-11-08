@@ -7,6 +7,46 @@
  * Text is the body ink on the solid widget surface. Amber is the sentinel's alone.
  */
 
+/* The two middle sections: the table and the selected line. One under the other where the
+   widget is narrow; side by side where it is wide, so picking a line shows its details beside
+   it and not a screen below. The widget root is the container. */
+.split,
+.pane {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.pane {
+  align-content: start;
+}
+
+@container (inline-size >= 48rem) {
+  .split {
+    grid-template-columns: minmax(0, 1fr) minmax(26rem, 1.1fr);
+    align-items: start;
+  }
+
+  /* One plate under another: the pane is too narrow for three side by side, and a value
+     squeezed into a third of it would be cut. */
+  .details .stage dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The details stay in view while a long log scrolls past. They stick only where the screen
+     is tall enough to show them whole, so a short window never hides their lower half. */
+  @media (height >= 50rem) {
+    .details {
+      position: sticky;
+      inset-block-start: calc(
+        var(--sl-nav-height, 3.5rem) + var(--gmt-space-3)
+      );
+    }
+  }
+}
+
+/* The selected line's parts, in one column inside the section's own card. */
 .frame {
   display: grid;
 
@@ -14,13 +54,15 @@
      the page wider than the screen. */
   grid-template-columns: minmax(0, 1fr);
   gap: var(--gmt-space-3);
-  box-sizing: border-box;
   min-inline-size: 0;
-  padding: var(--gmt-space-3) var(--gmt-space-4);
-  border: 1px solid var(--gmt-hairline);
-  border-radius: var(--gmt-radius-md);
-  corner-shape: bevel;
-  background: var(--gmt-surface-widget);
+}
+
+/* A readout is sized to fit its pane on one line, widest sample included: the kit's plate
+   value is larger and wraps anywhere once the pane is narrower than the sample. */
+.stage dd,
+.writer dd {
+  font-size: var(--gmt-text-lg);
+  overflow-wrap: normal;
 }
 
 /* The hint holds a line's height whether or not it says anything, so the table below never
@@ -53,34 +95,9 @@
   min-inline-size: 0;
 }
 
-/* The writer: a box and the two plates it feeds. */
-.writer {
-  padding-block-start: var(--gmt-space-3);
-  border-block-start: 1px solid var(--gmt-hairline);
-}
-
 @media (forced-colors: active) {
-  .frame {
-    border-color: CanvasText;
-    background: Canvas;
-  }
-
   .stage[data-lost="true"] dd,
   .writer[data-lost="true"] dd {
     color: CanvasText;
-  }
-
-  .writer {
-    border-block-start-color: CanvasText;
-  }
-}
-
-@media (prefers-contrast: more) {
-  .frame {
-    border-color: var(--gmt-ice);
-  }
-
-  .writer {
-    border-block-start-color: var(--gmt-ice);
   }
 }

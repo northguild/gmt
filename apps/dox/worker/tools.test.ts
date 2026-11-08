@@ -373,6 +373,31 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showTai64nLogReader", () => {
+    const schema = (
+      tools.showTai64nLogReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a log line with a label", async () => {
+      const input = { values: "@40000000659200a500000000 service started" };
+      expect(schema.safeParse(input).success).toBe(true);
+      expect(await run("showTai64nLogReader", input)).toMatchObject({
+        ok: true,
+        widget: "tai64n-log-reader",
+      });
+    });
+
+    it("refuses a whitespace-only list in the tool's own schema", () => {
+      for (const values of [" ", "\n", " \t\n "]) {
+        expect(schema.safeParse({ values }).success, values).toBe(false);
+      }
+    });
+  });
+
   describe("showIdTimestampDecoder refusals", () => {
     it("accepts a real id", async () => {
       expect(

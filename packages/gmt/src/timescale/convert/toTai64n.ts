@@ -20,8 +20,9 @@ import {
  *   A second 60 on any other day returns "".
  * - Every nanosecond Temporal holds is kept; the label never has attoseconds.
  * - Accepts any offset or bracketed zone `toTAI` accepts.
- * - daemontools assumes a clock at TAI − 10 s (`tai_unix` adds 2^62 + 10 to Unix seconds): on a POSIX
- *   UTC clock its label is (TAI − UTC) − 10 = 27 s below this one from 2017 on, and `fromTai64n` reads it 27 s early.
+ * - daemontools `tai64n` assumes the system clock counts TAI seconds since 1970-01-01 00:00:10 TAI
+ *   (https://cr.yp.to/daemontools/tai64n.html): on a POSIX UTC clock its label is
+ *   (TAI − UTC) − 10 = 27 s below this one from 2017 on, and `fromTai64n` reads it 27 s early.
  * - "" before 1972-01-01, after 9999-12-31T23:59:59.999999999Z, and on invalid input.
  *
  * @param isoString ISO 8601 instant string

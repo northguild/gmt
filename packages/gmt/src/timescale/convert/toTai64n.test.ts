@@ -25,26 +25,32 @@ describe("toTai64n", () => {
   // Label = 2^62 + TAI seconds since 1970 TAI, then nanoseconds, in hex (Bernstein, TAI64 § TAI64N;
   // daemontools tai64n § Timestamps). TAI = UTC + the Leap_Second.dat row in force.
   it.each`
-    isoString                                                   | expected                       | why
-    ${"1992-06-02T08:06:43Z"}                                   | ${"@400000002a2b2c2d00000000"} | ${"26 s, Bernstein's example"}
-    ${"1999-08-24T04:03:43.7874925Z"}                           | ${"@4000000037c219bf2ef02e94"} | ${"32 s, daemontools' example"}
-    ${"1999-08-23T21:03:43.7874925-07:00"}                      | ${"@4000000037c219bf2ef02e94"} | ${"the same instant at -07:00"}
-    ${"2026-01-01T00:00:00Z"}                                   | ${"@400000006955b92500000000"} | ${"37 s"}
-    ${"1972-01-01T00:00:00Z"}                                   | ${"@4000000003c2670a00000000"} | ${"10 s, the first table instant"}
-    ${"9999-12-31T23:59:59.999999999Z"}                         | ${"@4000003afff441a43b9ac9ff"} | ${"the last four-digit UTC instant"}
-    ${"2024-03-10T14:30:00.000000001Z"}                         | ${"@4000000065edc40d00000001"} | ${"1 ns survives"}
-    ${"2024-03-10T14:30:00.123456789Z"}                         | ${"@4000000065edc40d075bcd15"} | ${"all nine fraction digits survive"}
-    ${"2024-03-10T14:30:00.999999999Z"}                         | ${"@4000000065edc40d3b9ac9ff"} | ${"the largest nanosecond counter"}
-    ${"1972-01-01T00:00:00.000000001Z"}                         | ${"@4000000003c2670a00000001"} | ${"1 ns after the table starts"}
-    ${"1971-12-31T19:00:00-05:00"}                              | ${"@4000000003c2670a00000000"} | ${"the first table instant written at -05:00"}
-    ${"1999-08-23T21:03:43.7874925-07:00[America/Los_Angeles]"} | ${"@4000000037c219bf2ef02e94"} | ${"offset with a bracketed zone"}
-    ${"+010000-01-01T00:59:59.999999999+01:00"}                 | ${"@4000003afff441a43b9ac9ff"} | ${"the last four-digit instant written at +01:00"}
+    isoString                                   | expected                       | why
+    ${"1992-06-02T08:06:43Z"}                   | ${"@400000002a2b2c2d00000000"} | ${"26 s, Bernstein's example"}
+    ${"1999-08-24T04:03:43.7874925Z"}           | ${"@4000000037c219bf2ef02e94"} | ${"32 s, daemontools' example"}
+    ${"1999-08-23T21:03:43.7874925-07:00"}      | ${"@4000000037c219bf2ef02e94"} | ${"the same instant at -07:00"}
+    ${"2026-01-01T00:00:00Z"}                   | ${"@400000006955b92500000000"} | ${"37 s"}
+    ${"1972-01-01T00:00:00Z"}                   | ${"@4000000003c2670a00000000"} | ${"10 s, the first table instant"}
+    ${"9999-12-31T23:59:59.999999999Z"}         | ${"@4000003afff441a43b9ac9ff"} | ${"the last four-digit UTC instant"}
+    ${"2024-03-10T14:30:00.000000001Z"}         | ${"@4000000065edc40d00000001"} | ${"1 ns survives"}
+    ${"2024-03-10T14:30:00.123456789Z"}         | ${"@4000000065edc40d075bcd15"} | ${"all nine fraction digits survive"}
+    ${"2024-03-10T14:30:00.999999999Z"}         | ${"@4000000065edc40d3b9ac9ff"} | ${"the largest nanosecond counter"}
+    ${"1972-01-01T00:00:00.000000001Z"}         | ${"@4000000003c2670a00000001"} | ${"1 ns after the table starts"}
+    ${"1971-12-31T19:00:00-05:00"}              | ${"@4000000003c2670a00000000"} | ${"first table instant at -05:00"}
+    ${"+010000-01-01T00:59:59.999999999+01:00"} | ${"@4000003afff441a43b9ac9ff"} | ${"last instant at +01:00"}
   `(
     "returns '$expected' for '$isoString' ($why)",
     ({ isoString, expected }) => {
       expect(toTai64n(isoString)).toBe(expected);
     },
   );
+
+  // Out of the table: the input is longer than the 40 characters Vitest prints of a title value.
+  it("reads an offset with a bracketed zone", () => {
+    expect(
+      toTai64n("1999-08-23T21:03:43.7874925-07:00[America/Los_Angeles]"),
+    ).toBe("@4000000037c219bf2ef02e94");
+  });
 
   // An inserted second has its own label: the old offset + 1 s (TF.460-6 Annex 1 §2.2).
   it.each`
@@ -101,7 +107,7 @@ describe("toTai64n", () => {
   );
 
   it.each(insertedSecondBattleCases)(
-    "returns @40000000586846a400000000 for the 2016 inserted second written in $timeZone as $value",
+    "returns @40000000586846a400000000 for the 2016 inserted second written in $timeZone",
     ({ value }) => {
       expect(toTai64n(value)).toBe("@40000000586846a400000000");
     },
@@ -124,7 +130,7 @@ describe("toTai64n", () => {
     ${"+010000-01-01T00:00:00Z"}             | ${"year 10000"}
     ${"9999-12-31T23:59:60Z"}                | ${"second 60 with no insertion that day"}
     ${"2017-12-31T23:59:60Z"}                | ${"second 60 with no insertion that day"}
-    ${"9999-12-31T23:59:59.999999999-01:00"} | ${"the last four-digit instant plus 1 h, written at -01:00"}
+    ${"9999-12-31T23:59:59.999999999-01:00"} | ${"last instant + 1 h at -01:00"}
     ${"1972-01-01T00:59:59.999999999+01:00"} | ${"1 ns before the table, written at +01:00"}
     ${"1971-12-31T23:59:60Z"}                | ${"second 60 before the table"}
     ${"1973-06-30T23:59:60Z"}                | ${"second 60 on a June 30 with no insertion"}

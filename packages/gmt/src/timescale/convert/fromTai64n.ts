@@ -10,9 +10,9 @@ import {
  *
  * - Reads 16 (TAI64), 24 (TAI64N) or 32 (TAI64NA) hex digits, with or without the leading `@`
  *   daemontools writes, either case. The whole string must be the label: no log text, no spaces.
- * - The label is TAI: seconds `2^62 +` since 1970-01-01T00:00:00 TAI (Bernstein, TAI64 § TAI64
- *   labels), not Unix seconds. Reading it as Unix time is wrong by TAI − UTC: 26 s in 1992, 37 s
- *   today.
+ * - The label is TAI: 2^62 + the TAI seconds since 1970-01-01T00:00:00 TAI (Bernstein, TAI64 §
+ *   TAI64 labels), not Unix seconds. Reading it as Unix time is wrong by TAI − UTC: 26 s in
+ *   1992, 37 s today.
  * - UTC = TAI − (TAI − UTC), from the IERS leap-second table built into GMT (Leap_Second.dat
  *   through Bulletin C 72, 6 July 2026). The table is closed: after the last insertion
  *   (2016-12-31) TAI − UTC stays 37 s.
@@ -20,8 +20,9 @@ import {
  *   realm's functions read that string back; other GMT functions reject a second of 60.
  * - Nanoseconds are kept exactly. TAI64NA attoseconds are checked (0 to 999999999) and dropped:
  *   truncated, never rounded.
- * - daemontools assumes a clock at TAI − 10 s (`tai_unix` adds 2^62 + 10 to Unix seconds): on a POSIX
- *   UTC clock its label is (TAI − UTC) − 10 = 27 s below the true label from 2017 on, and `fromTai64n` reads it 27 s early.
+ * - daemontools `tai64n` assumes the system clock counts TAI seconds since 1970-01-01 00:00:10 TAI
+ *   (https://cr.yp.to/daemontools/tai64n.html): on a POSIX UTC clock its label is
+ *   (TAI − UTC) − 10 = 27 s below the true label from 2017 on, and `fromTai64n` reads it 27 s early.
  * - "" for a label before 1972-01-01T00:00:10 TAI, a result past year 9999, a reserved label
  *   (2^63 and up), a counter above 999999999, and on invalid input.
  *

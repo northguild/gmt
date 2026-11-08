@@ -14,8 +14,36 @@
     white-space: nowrap;
   }
 
+  /* No word is cut. The kit's cells break anywhere to keep a long identifier inside the box; a
+     log table lets a word that does not fit scroll the table's region instead. The label, the
+     instant and the offset stay on one line; the message wraps at its spaces. */
+  & :is(th, td) {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
   & td {
     color: var(--gmt-ice);
+    white-space: nowrap;
+  }
+
+  & td[data-col="Message"] {
+    white-space: normal;
+  }
+
+  /* The whole row picks its line, so the row says it can be picked. */
+  & tbody tr {
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    & tbody tr:is(:hover, :focus-within) td {
+      background: color-mix(
+        in srgb,
+        var(--gmt-series-1) 5%,
+        var(--gmt-surface-widget)
+      );
+    }
   }
 
   & tbody tr[aria-current="true"] td {
@@ -47,18 +75,15 @@
   font-style: italic;
 }
 
-/* The label: monospace chunks of eight that never break inside. */
+/* The label: monospace, on one line. */
 .token {
   padding: 0;
   background: none;
   color: var(--gmt-ice);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
-  white-space: normal;
-}
-
-.chunk {
   white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 /* A badge under the value it explains. */
@@ -146,11 +171,17 @@
       position: absolute;
       inline-size: 1px;
       block-size: 1px;
+      padding: 0;
       overflow: hidden;
       clip-path: inset(50%);
     }
 
+    /* A row is a small grid, not a column of five blocks: the line and its label share a
+       line, the instant takes one, and the offset and the message share the last. */
     & tr {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: var(--gmt-space-3);
       padding-block: var(--gmt-space-2);
 
       /* Every row has the same 1px frame; the selected one only recolours it. */
@@ -160,11 +191,14 @@
       corner-shape: bevel;
     }
 
+    & td[data-col="UTC instant"] {
+      grid-column: 1 / -1;
+    }
+
     & td {
       padding: var(--gmt-space-1) var(--gmt-space-2);
       border: 0;
       text-align: start;
-      white-space: normal;
 
       &::before {
         content: attr(data-col);
@@ -177,6 +211,20 @@
 
     & :is(th, td):first-child {
       inline-size: auto;
+    }
+
+    @media (hover: hover) {
+      & tbody tr:is(:hover, :focus-within) {
+        background: color-mix(
+          in srgb,
+          var(--gmt-series-1) 5%,
+          var(--gmt-surface-widget)
+        );
+      }
+
+      & tbody tr:is(:hover, :focus-within) td {
+        background: none;
+      }
     }
 
     & tbody tr[aria-current="true"] {

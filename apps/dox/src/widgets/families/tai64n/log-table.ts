@@ -1,14 +1,15 @@
 /**
  * logTable: one row for each pasted log line, with the instant its label names.
  *
- * Composes the kit's `table`: fixed layout, so a longer message or a different instant never
- * moves a column, with explicit table roles and a `data-col` on each cell so a narrow box can
- * stack each row into labelled blocks (`log-table.module.css`).
+ * Composes the kit's `table`: sized from its content, so no word is ever cut, and a box too
+ * narrow for the columns scrolls. It has explicit table roles and a `data-col` on each cell so a
+ * narrow box can stack each row into labelled blocks (`log-table.module.css`).
  *
  * Each row's first cell is a native radio named "Read line N", with its bare number as the
- * visible face. The label is written as nowrap chunks of eight characters with a `<wbr>`
- * between, so a long label breaks only at a chunk boundary. A line the library did not read
- * says so in words (a badge) and shows the bracketed NO SIGNAL sentinel in its value cells.
+ * visible face. The label, the instant and the offset never wrap. The whole row is the click
+ * target (the mount forwards a click on it to the radio; the radio stays the keyboard path). The
+ * TAI reading is not a column: the selected line's details show it. A line the library did not
+ * read says so in words (a badge) and shows the bracketed NO SIGNAL sentinel in its value cells.
  * The selected row is the table's current row (`aria-current`), which the mount moves in
  * place when the radio changes, so the keyboard focus stays on the radio.
  */
@@ -31,7 +32,6 @@ export interface LogRow {
   /** Whether the library read the token. */
   read: boolean;
   utc: string;
-  tai: string;
   /** TAI minus UTC, as printed ("37 s"). */
   offset: string;
   /** The instant is an inserted second. */
@@ -51,30 +51,15 @@ interface LogTableOptions {
   rows: readonly LogRow[];
 }
 
-type Key = "line" | "label" | "utc" | "tai" | "offset" | "message";
+type Key = "line" | "label" | "utc" | "offset" | "message";
 
 const COLUMNS: readonly Column<Key>[] = [
   { key: "line", header: "Line", align: "start", numeric: false },
   { key: "label", header: "Label", align: "start", numeric: false },
   { key: "utc", header: "UTC instant", align: "start", numeric: false },
-  { key: "tai", header: "TAI reading", align: "start", numeric: false },
   { key: "offset", header: "TAI − UTC", align: "end", numeric: true },
   { key: "message", header: "Message", align: "start", numeric: false },
 ];
-
-const CHUNK = 8;
-
-/** The token in nowrap chunks of eight characters, with a `<wbr>` between them. */
-function chunks(token: string): SafeHtml {
-  const parts: string[] = [];
-  for (let at = 0; at < token.length; at += CHUNK) {
-    parts.push(token.slice(at, at + CHUNK));
-  }
-  return html`${parts.map(
-    (part, i) =>
-      html`${i === 0 ? "" : html`<wbr />`}<span class="${styles.chunk}">${part}</span>`,
-  )}`;
-}
 
 function lost(): SafeHtml {
   return html`<span class="${styles.nosignal}">${LINE_NO_SIGNAL}</span>`;
@@ -104,7 +89,7 @@ export function logTable(o: LogTableOptions): SafeHtml {
       columns: COLUMNS,
       rows: o.rows.map((r) => ({
         line: radio(r, o.group),
-        label: html`<code class="${styles.token}">${chunks(r.token)}</code>${
+        label: html`<code class="${styles.token}">${r.token}</code>${
           r.read
             ? ""
             : html`<span class="${styles.tag}">${badge({ text: o.noLabelText, tone: "neutral", wrap: true })}</span>`
@@ -117,12 +102,9 @@ export function logTable(o: LogTableOptions): SafeHtml {
                   : ""
               }`
             : lost(),
-        tai: r.tai !== "" ? instant(r.tai) : lost(),
         offset: r.offset !== "" ? r.offset : lost(),
         message: r.message,
       })),
-      layout: "fixed",
-      widths: ["15%", "20%", "21%", "21%", "10%", null],
       ...(current === -1 ? {} : { currentRow: current }),
       labelCells: true,
       roles: true,

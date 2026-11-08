@@ -11,13 +11,13 @@ import ToolLayout from "../../../components/ToolLayout.astro";
 
 <Fragment slot="keypoint">
 
-A TAI64N label counts TAI seconds. Read it as Unix seconds and it is late by every leap second UTC has inserted.
+Log tools such as daemontools' multilog and s6-log can start each line with a TAI64N label, for example `@40000000659200a500000000`: a timestamp written in hex. It counts seconds of TAI (International Atomic Time), the steady atomic scale that UTC is set against, which has no leap seconds. Read a label as Unix seconds and it is off by every leap second UTC has added: 37 s today.
 
 </Fragment>
 
 <Fragment slot="intro">
 
-The `@4000…` at the start of a daemontools, multilog or s6 log line is a TAI64N label: 24 hex digits that count seconds and nanoseconds on the TAI scale. [`fromTai64n`](/reference/timescale/convert/fromTai64n/) reads a label as the UTC instant it names, and [`toTai64n`](/reference/timescale/convert/toTai64n/) writes one. [`toTAI`](/reference/timescale/convert/toTAI/) gives the same instant as a TAI reading, [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) gives the offset between the two scales at that moment, and [`isLeapSecond`](/reference/timescale/validate/isLeapSecond/) says whether it falls in an inserted second.
+The `@4000…` at the start of a daemontools, multilog or s6 log line is a TAI64N label: 24 hex digits that count seconds and nanoseconds on the [TAI scale](/guides/core-date-operations/leap-seconds-and-tai/). [`fromTai64n`](/reference/timescale/convert/fromTai64n/) reads a label as the UTC instant it names, and [`toTai64n`](/reference/timescale/convert/toTai64n/) writes one. [`toTAI`](/reference/timescale/convert/toTAI/) gives the same instant as a TAI reading, [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) gives the offset between the two scales at that moment, and [`isLeapSecond`](/reference/timescale/validate/isLeapSecond/) says whether it falls in an inserted second.
 
 Paste up to 12 log lines, or pick a preset. The label is the text before the first space or tab, with or without the `@`, in upper or lower case. Choose a line to see its instant, its TAI reading and the offset, with the exact calls under them. The last box writes a label from an instant.
 
@@ -29,7 +29,7 @@ Paste up to 12 log lines, or pick a preset. The label is the text before the fir
 
 **Labels are TAI.** Bernstein's [TAI64 and TAI64N pages](https://cr.yp.to/libtai/tai64.html) define a label as 2^62 plus the TAI seconds since 1970-01-01 00:00:00 TAI, then four bytes of nanoseconds, and optionally four of attoseconds. TAI has no leap seconds and UTC has had 27 inserted since 1972, so the offset grows: 36 s for the whole of 2016 and 37 s from 2017-01-01. Every row shows the figure for its own instant, and no single figure covers a log that crosses a change.
 
-**Inside an inserted second.** The last second of 2016 had 61 seconds, and UTC names the extra one `23:59:60`. The label `@40000000586846a400000000` is that second, and `fromTai64n` returns `2016-12-31T23:59:60Z` for it. The row is marked as inside an inserted second. The [IERS Bulletin C](https://hpiers.obspm.fr/iers/bul/bulc/bulletinc.dat) announces each one, and the BIPM keeps the [TAI − UTC table](https://webtai.bipm.org/ftp/pub/tai/other-products/utc-tai/utc-tai.pdf).
+**Inside an inserted second.** The last minute of 2016 had 61 seconds, and UTC names the extra one `23:59:60`. The label `@40000000586846a400000000` is that second, and `fromTai64n` returns `2016-12-31T23:59:60Z` for it. The row is marked as inside an inserted second. The [IERS Bulletin C](https://hpiers.obspm.fr/iers/bul/bulc/bulletinc.dat) announces each one, and the BIPM keeps the [TAI − UTC table](https://webtai.bipm.org/ftp/pub/tai/other-products/utc-tai/utc-tai.pdf).
 
 **Before 1972 there is no label to read.** UTC as we know it, with whole-second steps, starts on 1972-01-01. A label that names an earlier moment has no UTC instant to give, so the library returns an empty string and the row shows `NO SIGNAL`.
 

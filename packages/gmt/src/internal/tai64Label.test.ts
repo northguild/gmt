@@ -1,8 +1,6 @@
 import { hostileProxy, revokedProxy } from "../test/hostileValues";
-import { Temporal } from "./temporal";
 import {
   formatTai64nLabel,
-  LAST_FOUR_DIGIT_UTC_NANOSECONDS,
   parseTai64Label,
   TAI64_SECONDS_OFFSET,
   tai64LabelText,
@@ -11,12 +9,6 @@ import {
 describe("constants", () => {
   it("TAI64_SECONDS_OFFSET is 2^62", () => {
     expect(TAI64_SECONDS_OFFSET).toBe(2n ** 62n);
-  });
-
-  it("LAST_FOUR_DIGIT_UTC_NANOSECONDS is the last nanosecond of year 9999", () => {
-    expect(LAST_FOUR_DIGIT_UTC_NANOSECONDS).toBe(
-      Temporal.Instant.from("9999-12-31T23:59:59.999999999Z").epochNanoseconds,
-    );
   });
 });
 

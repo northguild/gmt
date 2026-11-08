@@ -6,7 +6,7 @@
  * (https://cr.yp.to/daemontools/tai64n.html) defines the text for TAI64N only: `@` and 24
  * lowercase hex digits. Reading 16 or 32 digits, an optional `@` and either hex case is GMT's
  * own rule (as `fromObjectId` reads either case).
- * Pure bigint arithmetic: every loop is absent, so each call is O(1).
+ * Pure bigint arithmetic. No loops: each call is O(1).
  *
  * Grammar exception: coding-standards § Scoped exception: TAI64 text labels in `timescale/convert`.
  */
@@ -16,9 +16,6 @@ import { hexValue } from "./identifierText";
 
 /** 2^62: the label of the TAI second that began 1970 TAI (Bernstein, TAI64 § labels). */
 export const TAI64_SECONDS_OFFSET = 4_611_686_018_427_387_904n;
-
-/** 9999-12-31T23:59:59.999999999Z in epoch nanoseconds: the last UTC instant this realm writes. */
-export const LAST_FOUR_DIGIT_UTC_NANOSECONDS = 253_402_300_799_999_999_999n;
 
 /** Bernstein: the nanosecond and attosecond counters are "between 0 and 999999999 inclusive". */
 const MAX_COUNTER = 999_999_999n;

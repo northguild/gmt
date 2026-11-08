@@ -141,7 +141,11 @@ export {
   parseUtcOffsetNanoseconds,
   writtenOffset,
 } from "./utcOffsetString";
-export { formatUtcReading, parseUtcReading } from "./utcReading";
+export {
+  formatUtcReading,
+  LAST_FOUR_DIGIT_UTC_NANOSECONDS,
+  parseUtcReading,
+} from "./utcReading";
 export {
   isGnssSystem,
   scaleLabelOfUtc,
@@ -183,7 +187,6 @@ export {
 } from "./leapSeconds";
 export {
   formatTai64nLabel,
-  LAST_FOUR_DIGIT_UTC_NANOSECONDS,
   parseTai64Label,
   TAI64_SECONDS_OFFSET,
   tai64LabelText,

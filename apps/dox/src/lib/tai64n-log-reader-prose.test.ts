@@ -36,7 +36,13 @@ describe("the code block", () => {
     expect(calls).toHaveLength(4);
   });
 
-  it.each([0, 1, 2, 3])("call %i returns what the comment says", (i) => {
+  it.each`
+    i
+    ${0}
+    ${1}
+    ${2}
+    ${3}
+  `("call $i returns what the comment says", ({ i }: { i: number }) => {
     const [, fn, arg, expected] = calls[i]!;
     expect(fns[fn!]!(arg!)).toBe(expected);
   });

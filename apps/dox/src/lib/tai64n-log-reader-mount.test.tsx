@@ -145,7 +145,77 @@ describe("a preset", () => {
   });
 });
 
+describe("the paste box", () => {
+  it("is as high as its lines, up to twelve", async () => {
+    const w = await open();
+    expect(box()).toHaveAttribute("rows", "3");
+    await paste(
+      w,
+      Array.from({ length: 20 }, () => "@40000000659200a500000000 x").join(
+        "\n",
+      ),
+    );
+    expect(box()).toHaveAttribute("rows", "12");
+    await paste(w, "@40000000659200a500000000 x");
+    expect(box()).toHaveAttribute("rows", "2");
+  });
+
+  it("keeps the picked line while the list still has it", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "across-2016");
+    await w.user.click(radio(3));
+    await w.user.click(box());
+    await w.user.keyboard("{Control>}{End}{/Control}!");
+    expect(selectedLine()).toBe(3);
+  });
+
+  it("falls back to the first line when the picked line is gone", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "across-2016");
+    await w.user.click(radio(3));
+    await paste(w, "@40000000659200a500000000 only line");
+    expect(selectedLine()).toBe(1);
+  });
+});
+
+describe("hostile text", () => {
+  it("is drawn as text in the table and the printed calls, and makes no element", async () => {
+    const token = "</code><img/src=x/onerror=alert(1)>";
+    const message = "</td><img src=x onerror=alert(2)>";
+    const w = await open();
+    await paste(w, `${token} ${message}`);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText(token)).toBeInTheDocument();
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Calls made" })).toHaveTextContent(
+      token,
+    );
+    await expectNoAxeViolations(w.root);
+  });
+});
+
 describe("selecting a line", () => {
+  it("says a line can be picked, above the table", async () => {
+    await open();
+    expect(screen.getByText("Pick a line to see its details.")).toBeVisible();
+  });
+
+  it("picks a line from a click anywhere on its row", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "across-2016");
+    await w.user.click(screen.getByText("first second of 2017"));
+    expect(selectedLine()).toBe(3);
+  });
+
+  it("picks a line from the keyboard, with the focus kept on the radio", async () => {
+    const w = await open();
+    await w.user.selectOptions(preset(), "across-2016");
+    radio(2).focus();
+    await w.user.keyboard(" ");
+    expect(selectedLine()).toBe(2);
+    expect(radio(2)).toHaveFocus();
+  });
+
   it("changes section 3 and keeps the hero plates' held sizers", async () => {
     const w = await open();
     await w.user.selectOptions(preset(), "across-2016");

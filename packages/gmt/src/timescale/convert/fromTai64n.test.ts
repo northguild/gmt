@@ -69,13 +69,13 @@ describe("fromTai64n", () => {
     ${"@8000000000000000"}                 | ${"reserved, 2^63"}
     ${"@ffffffffffffffff"}                 | ${"reserved, 2^64 - 1"}
     ${"@0000000000000000"}                 | ${"label 0, before 1970 TAI"}
-    ${"@4000000003c26709"}                 | ${"TAI64, 1 s before 1972-01-01T00:00:10 TAI"}
+    ${"@4000000003c26709"}                 | ${"TAI64, 1 s before the table"}
     ${"@4000003afff441a5"}                 | ${"TAI64, UTC 10000-01-01"}
-    ${"@4000000003c267093b9ac9ff3b9ac9ff"} | ${"TAI64NA, 1 ns before 1972-01-01T00:00:10 TAI"}
+    ${"@4000000003c267093b9ac9ff3b9ac9ff"} | ${"TAI64NA, 1 ns before the table"}
     ${"@4000003afff441a5000000003b9ac9ff"} | ${"TAI64NA, UTC 10000-01-01"}
     ${"@4000003afff441a500000001"}         | ${"1 ns past the last four-digit result"}
-    ${"@4000000003c2670a3b9aca00"}         | ${"nanoseconds 10^9 at the first table instant"}
-    ${"@40000000586846a43b9aca00"}         | ${"nanoseconds 10^9 in an inserted second, not the next second"}
+    ${"@4000000003c2670a3b9aca00"}         | ${"10^9 ns at the first table instant"}
+    ${"@40000000586846a43b9aca00"}         | ${"10^9 ns in 23:59:60, not a carry"}
     ${"@40000000586846a4000000003b9aca00"} | ${"attoseconds 10^9 in an inserted second"}
     ${"@4000000037c219bf2ef02e94ffffffff"} | ${"attoseconds 0xffffffff"}
     ${"@4000000037c219bf3b9aca00"}         | ${"nanoseconds 1000000000"}

@@ -11,7 +11,6 @@ const read: LogRow = {
   message: "the inserted second",
   read: true,
   utc: "2016-12-31T23:59:60Z",
-  tai: "2017-01-01T00:00:36 TAI",
   offset: "36 s",
   inserted: true,
 };
@@ -23,7 +22,6 @@ const refused: LogRow = {
   message: "@40000000659200a500000000 leading space",
   read: false,
   utc: "",
-  tai: "",
   offset: "",
   inserted: false,
 };
@@ -41,14 +39,13 @@ const draw = (rows: readonly LogRow[]) =>
   );
 
 describe("logTable", () => {
-  it("is a named table with six named columns", () => {
+  it("is a named table with five named columns, and no TAI reading column", () => {
     draw([read, refused]);
     const table = screen.getByRole("table", { name: "Each log line" });
     for (const name of [
       "Line",
       "Label",
       "UTC instant",
-      "TAI reading",
       "TAI − UTC",
       "Message",
     ]) {
@@ -56,6 +53,13 @@ describe("logTable", () => {
         within(table).getByRole("columnheader", { name }),
       ).toBeInTheDocument();
     }
+  });
+
+  it("has no TAI reading column", () => {
+    draw([read]);
+    expect(
+      screen.queryByRole("columnheader", { name: "TAI reading" }),
+    ).not.toBeInTheDocument();
   });
 
   it("gives each row a radio named for its line, checked on the selected one", () => {
@@ -82,13 +86,34 @@ describe("logTable", () => {
     const { host } = draw([read, refused]);
     expect(screen.getByText("no label")).toBeInTheDocument();
     const table = screen.getByRole("table");
-    for (const header of ["UTC instant", "TAI reading", "TAI − UTC"]) {
+    for (const header of ["UTC instant", "TAI − UTC"]) {
       expect(cellsInColumn(table, header)[1]).toHaveTextContent(LINE_NO_SIGNAL);
       expect(cellsInColumn(table, header)[0]).not.toHaveTextContent(
         "NO SIGNAL",
       );
     }
     expect(host).toBeTruthy();
+  });
+
+  it("writes a label whole, in one piece a search for it finds", () => {
+    draw([read]);
+    expect(screen.getByText("@40000000586846a400000000")).toBeInTheDocument();
+  });
+
+  it("writes hostile text as text, in the label and the message", () => {
+    const hostile: LogRow = {
+      ...read,
+      token: "</code><img/src=x/onerror=alert(1)>",
+      message: "</td><img src=x onerror=alert(2)> done",
+    };
+    draw([hostile]);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("</code><img/src=x/onerror=alert(1)>"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("</td><img src=x onerror=alert(2)> done"),
+    ).toBeInTheDocument();
   });
 
   it("says so when there are no lines", () => {

@@ -88,6 +88,9 @@ const TABLE_NAME =
 const CALLS_LABEL = "Calls made";
 const OUTPUT_LABEL = "What the calls returned";
 const LINKS_LABEL = "Open this line in another tool";
+const PICK_HINT = "Pick a line to see its details.";
+/** The paste box is at least this many rows high, and at most `LOG_MAX_LINES`. */
+const MIN_ROWS = 2;
 /** The widest label the writer shows, and how many lines the code frame holds. */
 const LABEL_SAMPLE = `@${"0".repeat(24)}`;
 const CALL_LINES = 4;
@@ -239,6 +242,12 @@ function tableOf(rows: readonly LogRow[], group: string): SafeHtml {
   });
 }
 
+/** The paste box is as high as its lines, up to the most the tool reads. */
+function rowsFor(text: string): number {
+  const lines = text.split("\n").length;
+  return Math.min(LOG_MAX_LINES, Math.max(MIN_ROWS, lines));
+}
+
 function rowOf(r: ReadLine, selected: boolean): LogRow {
   return {
     n: r.n,
@@ -247,7 +256,6 @@ function rowOf(r: ReadLine, selected: boolean): LogRow {
     message: r.message,
     read: r.read,
     utc: r.utc,
-    tai: r.tai,
     offset: secondsText(r.seconds),
     inserted: r.inserted,
   };
@@ -297,7 +305,7 @@ export function renderTai64nLogReaderTemplate(
         textArea({
           id: cid,
           value: state.values,
-          rows: LOG_MAX_LINES,
+          rows: rowsFor(state.values),
           describedBy,
         }),
     })}`,
@@ -305,7 +313,9 @@ export function renderTai64nLogReaderTemplate(
 
   const lines = section(
     { id: id("lines"), heading: "2. What each label says", level: 4 },
-    grow(html`<div id="${id("table")}">${tableOf([], id("group"))}</div>`),
+    html`${hint(id("pick-hint"), PICK_HINT).html}${grow(
+      html`<div id="${id("table")}">${tableOf([], id("group"))}</div>`,
+    )}`,
   );
 
   const selected = section(
@@ -315,27 +325,32 @@ export function renderTai64nLogReaderTemplate(
       ><div id="${id("calls-slot")}">${blank.frame}</div
       ><div id="${id("output-slot")}">${blank.output}</div
       ><div id="${id("links")}">${linksOf(null)}</div
-      >${field({
-        id: id("instant"),
-        label: "Write a label from an instant",
-        control: ({ id: cid, describedBy }) =>
-          textInput({
-            id: cid,
-            value: state.instant,
-            maxLength: INSTANT_MAX_CHARS,
-            spellcheck: false,
-            autocomplete: "off",
-            describedBy,
-          }),
-      })}<div id="${id("writer")}"
-        >${writerOf(null)}</div
-      ></div
-    >`,
+    ></div>`,
+  );
+
+  const writer = section(
+    { id: id("write"), heading: "4. Write a label", level: 4 },
+    html`${field({
+      id: id("instant"),
+      label: "Write a label from an instant",
+      control: ({ id: cid, describedBy }) =>
+        textInput({
+          id: cid,
+          value: state.instant,
+          maxLength: INSTANT_MAX_CHARS,
+          spellcheck: false,
+          autocomplete: "off",
+          describedBy,
+        }),
+    })}<div id="${id("writer")}">${writerOf(null)}</div>`,
   );
 
   return widget(
     { name: WIDGET_NAME, label: "TAI64N Log Reader", scope: idPrefix },
-    html`${log}${lines}${selected}`,
+    html`${log}<div class="${styles.split}"
+      ><div class="${styles.pane}">${lines}</div
+      ><div class="${styles.pane} ${styles.details}">${selected}</div
+    ></div>${writer}`,
   );
 }
 
@@ -408,6 +423,7 @@ function setupWidget(
 
   function apply(state: LogState): void {
     valuesEl.value = state.values;
+    valuesEl.rows = rowsFor(state.values);
     instantEl.value = state.instant;
     selected = state.line;
   }
@@ -416,8 +432,9 @@ function setupWidget(
     "input",
     (e) => {
       if (e.target === valuesEl) {
-        // New text is a new list: the old line number names nothing in it.
-        selected = null;
+        // The picked line stays picked while the list still has it; `render` falls back to
+        // the default line when the text no longer reaches that far.
+        valuesEl.rows = rowsFor(valuesEl.value);
         syncPreset();
         render();
       } else if (e.target === instantEl) {
@@ -435,6 +452,7 @@ function setupWidget(
         const chosen = TAI64N_PRESETS.find((p) => p.id === presetEl.value);
         if (!chosen) return;
         valuesEl.value = chosen.lines.join("\n");
+        valuesEl.rows = rowsFor(valuesEl.value);
         selected = chosen.selected;
         syncPreset();
         render();
@@ -455,6 +473,23 @@ function setupWidget(
         }
         drawSelected();
       }
+    },
+    { signal },
+  );
+
+  // The whole row picks its line: a click anywhere in it, outside the radio and its label,
+  // clicks the radio. The radio stays the keyboard path. Dragging across a row to copy its
+  // text is a selection, not a pick.
+  widgetEl.addEventListener(
+    "click",
+    (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("label, input, a, button")) return;
+      const tr = target.closest<HTMLElement>("tbody tr[role='row']");
+      if (!tr || !widgetEl.contains(tr)) return;
+      if (window.getSelection()?.toString()) return;
+      tr.querySelector<HTMLInputElement>("input[type='radio']")?.click();
     },
     { signal },
   );
