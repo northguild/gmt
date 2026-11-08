@@ -388,7 +388,8 @@ describe("one name per unit", () => {
       vi.useRealTimers();
     });
     const unixGet = await GMT_MODULES["unix/get"]?.();
-    expect(unixGet?.getUnixNowUnit("year")).not.toBe("");
+    const nowUnit = unixGet?.getUnixNowUnit as (unit: string) => string;
+    expect(nowUnit("year")).not.toBe("");
     const aliased = fieldsOf().filter(({ field }) => field.aliases);
     expect(aliased.length).toBeGreaterThan(0);
 
