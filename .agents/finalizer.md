@@ -30,7 +30,9 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
 1. **Bring in `main`, before you edit anything.** As [AGENTS.md § Git](../AGENTS.md#git--only-on-an-explicit-instruction)
    says: `git fetch origin main`, then `git merge origin/main` if the branch is behind. Resolve
    each conflict so both sides' changes survive, and commit the merge (the merge only, never the
-   story's work). It comes first because steps 4 and 7 edit the READMEs and the tracker, which
+   story's work). Do not run `validate` before this commit: the published figures are synced
+   only at step 4 (`pnpm stats:sync`), so on a story with new tests `stats check` fails here for
+   a reason the merge did not cause. Step 9's `validate` checks the merged tree. The merge comes first because steps 4 and 7 edit the READMEs and the tracker, which
    `main` changes most often; once those are edited, git refuses the merge. If git refuses here,
    the story's own uncommitted changes touch the incoming files: stop and name those files to
    the main session.

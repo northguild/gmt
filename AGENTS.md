@@ -66,7 +66,10 @@ ask in plain words.
   Commit the merge only, never the story's own work. Run `git fetch origin main`, then
   `git merge origin/main` when the branch is behind. Never rebase, because the branch is
   published. Resolve every conflict so both sides' changes survive, run
-  `node scripts/verdict.mjs validate`, and commit the merge. If uncommitted work touches the
+  `node scripts/verdict.mjs validate`, and commit the merge. At `finalizer`'s first step, commit
+  the resolved merge without `validate`: the story's published figures are synced only at its
+  step 4, so `validate` would fail for a reason the merge did not cause, and its step 9 runs
+  `validate` on the merged tree before hand-off. If uncommitted work touches the
   incoming files, git refuses the merge. Do not stash (the stash is shared): name the files to
   the owner and merge once the work is committed. Pushing the merge still needs the owner's word.
   On an open PR, `gh pr view --json mergeable` shows whether GitHub sees a conflict.
