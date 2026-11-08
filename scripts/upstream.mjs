@@ -50,8 +50,8 @@
  *   discovery found that the committed file lacks. A live file left over from an older commit
  *   therefore cannot hide a filing that commit added.
  *
- * Listings are the one other kind of record: a pull request GMT opened on a project outside
- * Temporal (a comparison list that should include GMT). A listing fixes no Temporal defect, so it
+ * Listings are the one other kind of record: a pull request or an issue GMT opened on a project
+ * outside Temporal (a comparison list that should include GMT). A listing fixes no Temporal defect, so it
  * is not a filing and is counted nowhere. Its only hand-written field is `summary`; `sync` and
  * `refresh` read the rest from GitHub for every committed listing. Nothing discovers listings:
  * a new one is added to the committed file by hand with `repo`, `number`, `kind` and `summary`,

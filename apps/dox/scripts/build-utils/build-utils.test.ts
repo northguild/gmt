@@ -2,6 +2,8 @@ import ts from "typescript";
 import {
   ALL_DT_UNITS,
   buildPlaygroundSpec,
+  canonicalChoice,
+  collapseUnitAliases,
   classifyReturnType,
   classifyReturnTypeFromString,
   classifyType,
@@ -1495,5 +1497,60 @@ describe("orderUnitChoices (select choices)", () => {
       type: "enum",
       options: ["hours", "day", "hour", "dayOfWeek"],
     });
+  });
+});
+
+describe("collapseUnitAliases (one option per unit)", () => {
+  it("keeps the singular and drops the plural when both are present", () => {
+    expect(collapseUnitAliases(["years", "months", "year", "month"])).toEqual({
+      choices: ["year", "month"],
+      aliases: { years: "year", months: "month" },
+    });
+  });
+  it("keeps a plural that has no singular in the list", () => {
+    expect(collapseUnitAliases(["days", "hours"])).toEqual({
+      choices: ["days", "hours"],
+      aliases: {},
+    });
+    expect(collapseUnitAliases(["days", "hours", "hour"]).choices).toEqual([
+      "days",
+      "hour",
+    ]);
+  });
+  it("keeps dayOfWeek and the empty string in their places", () => {
+    expect(
+      collapseUnitAliases(["days", "day", "dayOfWeek", "timeZone", ""]).choices,
+    ).toEqual(["day", "dayOfWeek", "timeZone", ""]);
+  });
+  it("preserves the order of what it keeps", () => {
+    const ordered = orderUnitChoices([
+      "nanosecond",
+      "years",
+      "dayOfWeek",
+      "year",
+      "seconds",
+      "second",
+      "nanoseconds",
+    ]);
+    expect(collapseUnitAliases(ordered).choices).toEqual([
+      "year",
+      "second",
+      "nanosecond",
+      "dayOfWeek",
+    ]);
+  });
+  it("is a no-op on a list with no unit names", () => {
+    expect(collapseUnitAliases(["203", "204", "s", "dayOfWeek"])).toEqual({
+      choices: ["203", "204", "s", "dayOfWeek"],
+      aliases: {},
+    });
+  });
+  it("maps a name through aliases with canonicalChoice", () => {
+    const { aliases } = collapseUnitAliases(["days", "day"]);
+    expect(canonicalChoice("days", aliases)).toBe("day");
+    expect(canonicalChoice("day", aliases)).toBe("day");
+    expect(canonicalChoice("hours", aliases)).toBe("hours");
+    expect(canonicalChoice("constructor", aliases)).toBe("constructor");
+    expect(canonicalChoice("days", undefined)).toBe("days");
   });
 });

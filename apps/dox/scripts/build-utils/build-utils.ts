@@ -427,6 +427,37 @@ export function orderUnitChoices(choices: readonly string[]): string[] {
   ];
 }
 
+/**
+ * A select's choices with each unit offered once, by its singular name. Temporal reads a plural
+ * unit name as an alias of the singular, which is canonical, so a select that holds both spellings
+ * of a unit lists one unit twice. A plural with no singular in the list stays, and so does every
+ * other choice, in its place. `aliases` maps each dropped plural to the singular kept. It runs
+ * after `orderUnitChoices`, so the order it keeps is that one.
+ */
+export function collapseUnitAliases(choices: readonly string[]): {
+  choices: string[];
+  aliases: Record<string, string>;
+} {
+  const aliases: Record<string, string> = {};
+  const kept = choices.filter((c) => {
+    const rank = UNIT_ORDER.get(c);
+    if (rank === undefined || rank >= ALL_DT_UNITS.length) return true;
+    const singular = c.slice(0, -1);
+    if (!choices.includes(singular)) return true;
+    aliases[c] = singular;
+    return false;
+  });
+  return { choices: kept, aliases };
+}
+
+/** `name` as the select offers it: the singular a dropped plural maps to, else `name`. */
+export function canonicalChoice(
+  name: string,
+  aliases: Readonly<Record<string, string>> | undefined,
+): string {
+  return aliases && Object.hasOwn(aliases, name) ? aliases[name] : name;
+}
+
 /** `info` with an enum's or a list's choices in `orderUnitChoices` order. */
 function withUnitOrder(info: ClassifiedType): ClassifiedType {
   return (info.type === "enum" || info.type === "array") && info.options

@@ -872,10 +872,14 @@
   font-weight: 600;
 }
 
+/* The ref moves to a line of its own before it breaks, and breaks only when it is wider than the
+   card: a long repo name (`you-dont-need/You-Dont-Need-Momentjs #159`) is wider than a 375 px
+   phone. */
 .gmt-upstream-ref {
+  min-inline-size: 0;
   font-size: var(--sl-text-xs);
   font-weight: 400;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .gmt-upstream-status {

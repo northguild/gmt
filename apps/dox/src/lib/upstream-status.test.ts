@@ -2,20 +2,22 @@ import { countLabel, countNoun, listingStatus } from "./upstream-status";
 
 describe("listingStatus", () => {
   it.each`
-    state       | draft    | reviewDecision         | mergedAt        | expected
-    ${"open"}   | ${true}  | ${"APPROVED"}          | ${null}         | ${"Draft"}
-    ${"open"}   | ${false} | ${null}                | ${null}         | ${"Open, awaiting review"}
-    ${"open"}   | ${false} | ${"REVIEW_REQUIRED"}   | ${null}         | ${"Open, awaiting review"}
-    ${"open"}   | ${false} | ${"CHANGES_REQUESTED"} | ${null}         | ${"Changes requested"}
-    ${"open"}   | ${false} | ${"APPROVED"}          | ${null}         | ${"Approved"}
-    ${"closed"} | ${false} | ${"APPROVED"}          | ${"2026-11-05"} | ${"Merged"}
-    ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed without merging"}
+    kind       | state       | draft    | reviewDecision         | mergedAt        | expected
+    ${"pr"}    | ${"open"}   | ${true}  | ${"APPROVED"}          | ${null}         | ${"Draft"}
+    ${"pr"}    | ${"open"}   | ${false} | ${null}                | ${null}         | ${"Open, awaiting review"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"REVIEW_REQUIRED"}   | ${null}         | ${"Open, awaiting review"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"CHANGES_REQUESTED"} | ${null}         | ${"Changes requested"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"APPROVED"}          | ${null}         | ${"Approved"}
+    ${"pr"}    | ${"closed"} | ${false} | ${"APPROVED"}          | ${"2026-11-05"} | ${"Merged"}
+    ${"pr"}    | ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed without merging"}
+    ${"issue"} | ${"open"}   | ${false} | ${null}                | ${null}         | ${"Open"}
+    ${"issue"} | ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed"}
   `(
-    "state=$state draft=$draft review=$reviewDecision merged=$mergedAt is '$expected'",
-    ({ state, draft, reviewDecision, mergedAt, expected }) => {
-      expect(listingStatus({ state, draft, reviewDecision, mergedAt })).toBe(
-        expected,
-      );
+    "$kind state=$state draft=$draft review=$reviewDecision merged=$mergedAt is '$expected'",
+    ({ kind, state, draft, reviewDecision, mergedAt, expected }) => {
+      expect(
+        listingStatus({ kind, state, draft, reviewDecision, mergedAt }),
+      ).toBe(expected);
     },
   );
 });

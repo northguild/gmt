@@ -88,15 +88,16 @@ export interface UpstreamFiling {
 }
 
 /**
- * A pull request GMT opened on a project outside Temporal, such as a comparison list that should
- * include GMT. It fixes no Temporal defect, so it is not a filing: it has no `work`, `gmtGuard` or
- * `gmtNote`, and it is counted nowhere. Only `summary` is hand-written; the rest is synced.
+ * A pull request or an issue GMT opened on a project outside Temporal, such as a comparison list
+ * that should include GMT. It fixes no Temporal defect, so it is not a filing: it has no `work`,
+ * `gmtGuard` or `gmtNote`, and it is counted nowhere. Only `summary` is hand-written; the rest is
+ * synced.
  */
 export interface UpstreamListing {
   repo: string;
   number: number;
-  kind: "pr";
-  /** One hand-written sentence: what the pull request asks for. */
+  kind: "pr" | "issue";
+  /** One hand-written sentence: what the pull request or issue asks for. */
   summary: string;
   title: string;
   url: string;
