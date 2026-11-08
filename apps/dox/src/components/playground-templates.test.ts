@@ -379,6 +379,12 @@ describe("one name per unit", () => {
   // Temporal reads a plural unit name as an alias of the singular, and gmt follows. A select that
   // drops the plural is right only while the two give one answer.
   it("gives a dropped plural the result of the singular it maps to", async () => {
+    // The `*NowUnit` functions read the clock: pin it, or two calls a nanosecond apart differ.
+    vi.useFakeTimers({ toFake: ["Date", "performance"] });
+    vi.setSystemTime("2026-10-15T12:34:56.789Z");
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const aliased = fieldsOf().filter(({ field }) => field.aliases);
     expect(aliased.length).toBeGreaterThan(0);
 
