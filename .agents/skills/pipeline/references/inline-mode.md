@@ -40,11 +40,13 @@ finding is open, return to Step 2 with the list.
 
 ## Step 4 — Story closure
 
-Adopt the [`finalizer`](../../../finalizer.md) role and follow its workflow: skills, changeset
+Adopt the [`finalizer`](../../../finalizer.md) role and follow its workflow: merge `origin/main`
+in first and commit that merge (a standing instruction in
+[AGENTS.md § Git](../../../../AGENTS.md#git--only-on-an-explicit-instruction)), then skills, changeset
 (per the [changeset rule](../../../../context/coding-standards.md#changesets)), READMEs, dox
 corpus and stats, tracker `Status` + `pnpm deps:sync`, `pnpm run validate`. Draft a commit
 message with `/commit-message` and a PR description with `/pr-desc` **for the owner to use** —
-never commit or open the PR.
+never commit the story's work or open the PR.
 
 ## Context files per role
 

@@ -100,7 +100,10 @@ disputed reading of a standard. Say so in the report. The agent files' defaults 
    refuses to close a story that carries one ([Core Rule 12](../../../AGENTS.md#core-rules-quick-reference)).
 4. **Escalate blockers** — an ambiguous spec, a design conflict, tests that cannot pass: stop
    and report to the user with full context. No step fails or is skipped silently.
-5. **Nothing is committed.** The pipeline ends with unstaged changes plus drafted commit and PR
+5. **Nothing is committed** but a merge from `main`. Bring `origin/main` in when the story starts
+   and again as `finalizer`'s first step ([AGENTS.md § Git](../../../AGENTS.md#git--only-on-an-explicit-instruction)
+   has the two standing instructions); `finalizer` labels an open PR with `scripts/pr-meta.mjs`.
+   The pipeline ends with unstaged changes plus drafted commit and PR
    text for the owner. Never run `changeset version`, `changeset publish`, `npm publish` or
    `gh release create` (see `PUBLISHING.md`).
 
