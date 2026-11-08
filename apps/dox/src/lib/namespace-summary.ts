@@ -2,17 +2,17 @@
  * The one-line summary of a reference namespace: the line in `llms.txt` and the `description` of
  * the namespace's reference index page.
  *
- * An industry's namespace takes the industry's definition (`src/data/industries.json`, as the API
- * reference root shows it). Every other namespace has a summary authored here, one sentence that
- * says what it is for and what kind of string it works on. A namespace with neither has no summary
- * and `namespaceSummary` throws, so the build stops; nothing stands in for it.
+ * Every namespace has a summary authored here, one sentence that says what its functions do and
+ * what kind of string they work on. An industry's namespace has its own line, worded differently
+ * from the industry's definition on its page (`src/data/industries.json`), because two pages that
+ * share a meta description look like duplicates to a search engine. A namespace without a line has
+ * no summary and `namespaceSummary` throws, so the build stops; nothing stands in for it.
  */
-import { industryOwning, industryTag } from "./industry-tags";
 
 /** The `description` of the types section's reference index page (`reference/types/index.mdx`). */
 export const TYPES_DESCRIPTION = "The public types of @northguild/gmt.";
 
-/** The authored summaries of the namespaces no industry owns. */
+/** The authored summary of every namespace. */
 export const NAMESPACE_SUMMARIES: Readonly<Record<string, string>> = {
   types: TYPES_DESCRIPTION,
   calendar:
@@ -38,18 +38,22 @@ export const NAMESPACE_SUMMARIES: Readonly<Record<string, string>> = {
   utc: "UTC date-times and HTTP dates as ISO 8601 strings: arithmetic, comparison, formatting, parsing and conversion.",
   zoned:
     "Date-times in an IANA time zone as ISO 8601 strings: daylight saving, offsets, arithmetic, comparison, formatting and parsing.",
+  workforce:
+    "Functions that check duty logs against hours-of-work limits: total duty, find rests and the longest run, and report violations.",
+  transport:
+    "Functions for legs and schedules: dwell and transit time, cut-off times, departures, punctuality and delivery estimates.",
+  intermodal:
+    "Functions for container free time, demurrage and billing, plus parsers and formatters for EDIFACT, X12 and EPCIS date-times.",
+  gnss: "Functions that convert between UTC and the satellite navigation system times, GNSS week numbers and RINEX weeks.",
 };
 
 /**
  * The one-line summary of a namespace.
  *
- * @throws When the namespace is neither owned by an industry nor authored in
- *   `NAMESPACE_SUMMARIES`.
+ * @throws When the namespace has no line in `NAMESPACE_SUMMARIES`.
  */
 export function namespaceSummary(namespace: string): string {
-  const owner = industryOwning(namespace);
-  const definition = owner ? industryTag(owner)?.definition : undefined;
-  const summary = definition ?? NAMESPACE_SUMMARIES[namespace];
+  const summary = NAMESPACE_SUMMARIES[namespace];
   if (summary === undefined) {
     throw new Error(
       `namespace "${namespace}" has no summary: add one to NAMESPACE_SUMMARIES in src/lib/namespace-summary.ts`,

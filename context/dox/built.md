@@ -587,9 +587,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     function, because llmstxt.org asks for a file small enough to fit in context and the 18
     reference sections were ~170 KB of the old 212 KB. Its `Reference` section holds `reference.md`
     and one line per namespace (`types` included); the line's text is `namespaceSummary` in
-    `src/lib/namespace-summary.ts`: the owning industry's definition, else the sentence authored
-    there. The same function is the `description` of the namespace's reference index page, so the
-    two never differ, and a namespace with neither throws (a test lists the corpus's). Every other section is unchanged and `Optional`, the spec's name
+    `src/lib/namespace-summary.ts`: the sentence authored there, for every namespace, the four
+    industry ones included (worded apart from the industry's definition, so the industry page and
+    its reference index do not share a meta description). The same function is the `description`
+    of the namespace's reference index page, so the two never differ, and a namespace without a
+    line throws (a test lists the corpus's). Every other section is unchanged and `Optional`, the spec's name
     for links a reader may skip, is last (it was `Changelog`).
   - **Namespace files** are `src/pages/reference/[namespace]/llms.txt.ts`, one for each namespace
     `namespaceEntries` returns, so no list is typed. Each file is `# @northguild/gmt/<ns>` (`# @northguild/gmt
@@ -615,7 +617,16 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `<title>` is unique per page and ends ` · GMT` (`TITLE_SUFFIX`); the home page's title is its
     frontmatter title with no suffix. A reference page's `headTitle` is written by
     `scripts/build-utils/reference-title.ts` (at most 70 characters with the suffix).
-  - Every page has a description of its own; only the home page uses the site's.
+  - Every page has a description of its own; only the home page uses the site's. **No two
+    indexable pages share one**, because Google builds a snippet from the meta description only when
+    it describes that page alone. A reference function's description is its TSDoc summary; where
+    siblings share one (`isBeforeUtc`, `isBeforeZoned`, `isBeforeUnix`), `build-utils/unique-descriptions.ts`
+    adds a qualifier to the frontmatter `description` (meta, `og:description` and JSON-LD; the lead
+    on the page is unchanged): the value kind the function name states (`, for UTC date-time
+    strings.`), else its namespace (`, in the zoned namespace.`). The first parameter is a bare
+    `string` in every signature, so the name is the one place the kind is written. A group neither
+    splits fails the build. `head-tags.test.ts` fails on a built site where two pages without
+    `noindex` share a description, and lists them.
   - `og:image` is `/og/<key>.png` from `src/pages/og/[...route].ts`: one per guide, tool and
     scenario, one per reference namespace, else `site`. Fonts for them sit in `src/assets/og-fonts/`
     under SIL OFL 1.1.

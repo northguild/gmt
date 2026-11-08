@@ -93,6 +93,10 @@ import {
 import { buildRedirects } from "./build-utils/redirects";
 import { SITE_BASE } from "../src/lib/site";
 import { plainText, referenceHeadTitle } from "./build-utils/reference-title";
+import {
+  uniqueDescriptions,
+  valueKind,
+} from "./build-utils/unique-descriptions";
 import { MOVED_PAGES } from "./build-utils/moved-pages";
 import { RENAMED_FUNCTIONS } from "./build-utils/renamed-functions";
 import {
@@ -2650,6 +2654,18 @@ function titleFields(doc: FnDoc | TypeDoc | RegexDoc): string[] {
   ];
 }
 
+/** The page with its frontmatter `description` replaced. The body keeps the original text. */
+function withDescription(mdx: string, description: string): string {
+  const replaced = mdx.replace(
+    /^description: .*$/m,
+    () => `description: ${JSON.stringify(description)}`,
+  );
+  if (replaced === mdx) {
+    throw new Error("[reference] a page has no frontmatter description line.");
+  }
+  return replaced;
+}
+
 /** The page of a shared type: one that two or more public functions reach. */
 export function renderType(doc: TypeDoc, page: PageContext): string {
   const { usage } = page;
@@ -3336,6 +3352,22 @@ function runGeneration(baseline: ReleasedBaseline) {
   const dated = (mdx: string, doc: { sourcePath: string }) =>
     withLastUpdated(mdx, newestCommit([sourceOf(doc)]));
 
+  // Pages that would share a meta description get a qualifier in it (`unique-descriptions.ts`).
+  const qualifiedDescriptions = uniqueDescriptions(
+    dedupedDocs.flatMap((d) =>
+      d.kind === "type"
+        ? []
+        : [
+            {
+              id: fnKey(d),
+              description: plainText(d.description),
+              namespace: d.namespace,
+              kind: valueKind(d.name),
+            },
+          ],
+    ),
+  );
+
   for (const doc of dedupedDocs) {
     const unreleased = isUnreleased(baseline, doc.name);
     const withNote = (mdx: string) =>
@@ -3392,6 +3424,10 @@ function runGeneration(baseline: ReleasedBaseline) {
       }
     } else {
       mdx = renderRegex(doc);
+    }
+    const qualifiedDescription = qualifiedDescriptions.get(fnKey(doc));
+    if (qualifiedDescription !== undefined) {
+      mdx = withDescription(mdx, qualifiedDescription);
     }
 
     pages.set(
