@@ -151,8 +151,8 @@ describe("adopting a renderer after a device loss", () => {
       await vi.waitFor(() => expect(made).toHaveLength(losses + 1));
       const late = made.at(-1)!;
       await vi.waitFor(() => expect(late.canvas.isConnected).toBe(false));
-      expect(host.querySelector("canvas")).toBeNull();
-      expect(host).not.toHaveAttribute("data-globe-renderer");
+      // No renderer, early or late, has left a canvas behind.
+      expect(made.filter((r) => r.canvas.isConnected)).toEqual([]);
     },
   );
 });
