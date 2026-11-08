@@ -74,6 +74,47 @@ describe("pageTitle", () => {
   });
 });
 
+describe("describedby", () => {
+  const target = (id: string): string | undefined =>
+    headEntries(input({ id })).find((e) => e.attrs?.rel === "describedby")
+      ?.attrs?.href as string | undefined;
+
+  it("points a reference page at its namespace's llms.txt", () => {
+    expect(target("reference/zoned/calculate/startOfZoned")).toBe(
+      `${SITE}/reference/zoned/llms.txt`,
+    );
+    expect(target("reference/zoned")).toBe(`${SITE}/reference/zoned/llms.txt`);
+    expect(target("reference/types/Interval")).toBe(
+      `${SITE}/reference/types/llms.txt`,
+    );
+  });
+
+  it("points the reference index and every other page at the root file", () => {
+    for (const id of ["reference", "guides/how-to/add-business-days", ""]) {
+      expect(target(id), id || "home").toBe(`${SITE}/llms.txt`);
+    }
+  });
+
+  it("writes it once, as text/plain, and no text/plain alternate", () => {
+    const entries = headEntries(input({ id: "install" }));
+    expect(entries.filter((e) => e.attrs?.rel === "describedby")).toEqual([
+      {
+        tag: "link",
+        attrs: {
+          rel: "describedby",
+          type: "text/plain",
+          href: `${SITE}/llms.txt`,
+        },
+      },
+    ]);
+    expect(
+      entries.filter(
+        (e) => e.attrs?.rel === "alternate" && e.attrs?.type === "text/plain",
+      ),
+    ).toEqual([]);
+  });
+});
+
 describe("headEntries", () => {
   it("writes one title entry, and names the home page a website", () => {
     const home = headEntries(

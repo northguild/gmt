@@ -278,6 +278,30 @@ describe("head tags of the built site", () => {
     expectNone(failures);
   });
 
+  it("gives every docs page one describedby link to an llms.txt that is built, and no page a text/plain alternate", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const failures: string[] = [];
+    for (const page of builtPages(dist)) {
+      if (page.scan.textAlternates.length > 0) {
+        failures.push(`${page.file}: carries a text/plain alternate link`);
+      }
+      if (!isDocsPage(page)) continue;
+      const { describedBy } = page.scan;
+      if (describedBy.length !== 1) {
+        failures.push(
+          `${page.file}: ${describedBy.length} describedby link(s)`,
+        );
+        continue;
+      }
+      const file = distFileOf(dist, describedBy[0]);
+      if (file === undefined || !existsSync(file)) {
+        failures.push(`${page.file}: ${describedBy[0]} is not in dist`);
+      }
+    }
+    expectNone(failures);
+  });
+
   it("lists no page that asks not to be indexed in the sitemap", () => {
     const dist = distDirOrSkip();
     if (dist === null) return;

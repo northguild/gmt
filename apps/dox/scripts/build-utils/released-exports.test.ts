@@ -64,6 +64,20 @@ describe("unreleasedNote", () => {
    against real git rather than a mock of it. */
 describe("releasedBaseline", () => {
   let repo = "";
+  /* No inherited GIT_* variable reaches git while this block runs. With GIT_DIR
+     set, `git init`, `commit` and `tag` would write to that repository instead of
+     the fixture, and `releasedBaseline` would read it. */
+  const inherited: Record<string, string> = {};
+  beforeAll(() => {
+    for (const [name, value] of Object.entries(process.env)) {
+      if (!name.startsWith("GIT_") || value === undefined) continue;
+      inherited[name] = value;
+      delete process.env[name];
+    }
+  });
+  afterAll(() => {
+    Object.assign(process.env, inherited);
+  });
   const git = (...args: string[]) =>
     execFileSync(
       "git",

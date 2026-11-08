@@ -2,7 +2,8 @@ import type { APIRoute } from "astro";
 import { SITE_URL } from "~/lib/site";
 import { corpus } from "~/generated/reference/corpus";
 import {
-  referenceSections,
+  namespaceEntries,
+  namespaceIndexLinks,
   renderLlmsTxt,
   type LlmsLink,
   type LlmsSection,
@@ -14,6 +15,7 @@ import {
   migratePages,
   topLevelPages,
 } from "~/lib/top-level-pages";
+import { namespaceSummary } from "~/lib/namespace-summary";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -84,11 +86,6 @@ export const GET: APIRoute = () => {
     linkTo(base, slug, source),
   );
 
-  const [referenceIndex, ...referenceNamespaces] = referenceSections(
-    corpus,
-    base,
-  );
-
   const sections: LlmsSection[] = [
     { heading: "Start here", links: startHere.map(({ link }) => link) },
     // The guides index is a list of the guides below it.
@@ -96,8 +93,15 @@ export const GET: APIRoute = () => {
       heading: "Guides",
       links: directoryLinks(base, "guides", { indexFirst: false }),
     },
-    referenceIndex,
-    ...referenceNamespaces,
+    // One file per namespace, so an agent reads only the namespace it needs.
+    {
+      heading: "Reference",
+      links: namespaceIndexLinks(
+        namespaceEntries(corpus),
+        base,
+        namespaceSummary,
+      ),
+    },
     { heading: "Industries", links: industryLinks },
     {
       heading: "Tools",
@@ -117,8 +121,9 @@ export const GET: APIRoute = () => {
       links: directoryLinks(base, "check", { indexFirst: true }),
     },
     // The release record, last as in the sidebar: linked here so an agent can fetch it, left out of llms-full.txt.
+    // `Optional` is the llmstxt.org name for links a reader may skip when context is short.
     {
-      heading: "Changelog",
+      heading: "Optional",
       links: directoryLinks(base, "changelog", { indexFirst: true }),
     },
   ];

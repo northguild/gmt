@@ -147,6 +147,32 @@ async function crawlRows() {
       steps: [{ status: 200, check: noindex }],
     },
     {
+      label: "noindex a namespace llms.txt",
+      url: `${ND}/gmt/reference/zoned/llms.txt`,
+      steps: [
+        {
+          status: 200,
+          check: (res) =>
+            (res.headers["content-type"] ?? "").startsWith("text/plain")
+              ? noindex(res)
+              : `content-type is ${res.headers["content-type"]}, not text/plain`,
+        },
+      ],
+    },
+    {
+      label: "root llms.txt fits in 64 KiB",
+      url: `${ND}/gmt/llms.txt`,
+      steps: [
+        {
+          status: 200,
+          check: ({ body }) =>
+            Buffer.byteLength(body) <= 65536
+              ? undefined
+              : `${Buffer.byteLength(body)} bytes, over 65536`,
+        },
+      ],
+    },
+    {
       label: "no noindex header on /gmt/",
       url: `${ND}/gmt/`,
       steps: [

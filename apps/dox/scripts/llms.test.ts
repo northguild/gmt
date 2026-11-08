@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { relative, resolve, sep } from "node:path";
 
 const outGen = resolve(
   import.meta.dirname,
@@ -21,12 +21,16 @@ const mdxExists = existsSync(refDir);
 // Import pure helpers (no Astro globals needed)
 import {
   isReferenceIndex,
-  referenceSections,
+  namespaceEntries,
+  namespaceIndexLinks,
+  namespaceSections,
+  namespaceTitle,
   withoutLinks,
   renderLlmsFull,
   renderLlmsTxt,
   type LlmsSection,
 } from "../src/lib/llms";
+import { namespaceSummary } from "../src/lib/namespace-summary";
 import type { CorpusEntry } from "../src/reference-types";
 
 const BASE = "https://northguild.dev/gmt";
@@ -133,7 +137,18 @@ describe("llms.txt surface", () => {
     const routes = mod.referenceRoutes as Set<string>;
 
     // The sections llms.txt.ts builds, from the function it builds them with.
-    const sections: LlmsSection[] = referenceSections(readCorpus(), BASE);
+    const namespaces = namespaceEntries(readCorpus());
+    // The namespace files' own URLs are not routes of the manifest; their entries are.
+    const sections: LlmsSection[] = [
+      {
+        heading: "Reference",
+        links: namespaceIndexLinks(namespaces, BASE, namespaceSummary).slice(
+          0,
+          1,
+        ),
+      },
+      ...namespaces.flatMap((ns) => namespaceSections(ns, BASE)),
+    ];
 
     // Build the same sections llms.txt.ts builds — derive guide links from
     // the same glob so the test validates the source's actual output.
@@ -216,23 +231,45 @@ describe("llms.txt surface", () => {
     }
   });
 
+  it("gives every corpus namespace its own one-sentence summary", () => {
+    const namespaces = namespaceEntries(readCorpus()).map((n) => n.namespace);
+    expect(namespaces.length).toBeGreaterThanOrEqual(18);
+    const boilerplate = /^The \S+ namespace of @northguild\/gmt, by module\.?$/;
+    for (const namespace of namespaces) {
+      const summary = namespaceSummary(namespace);
+      expect(summary, namespace).not.toMatch(boilerplate);
+      expect(summary.length, namespace).toBeGreaterThanOrEqual(30);
+      expect(summary.length, namespace).toBeLessThanOrEqual(160);
+      expect(summary.endsWith("."), namespace).toBe(true);
+    }
+    expect(new Set(namespaces.map(namespaceSummary)).size).toBe(
+      namespaces.length,
+    );
+  });
+
+  it("fails for a namespace with no authored summary", () => {
+    expect(() => namespaceSummary("no-such-namespace")).toThrow(/no summary/);
+  });
+
   it("llms.txt format: H1, > summary, ## sections", () => {
     const corpus = readCorpus();
-    const sections: LlmsSection[] = referenceSections(corpus, BASE);
-    const referenceSectionCount = sections.length;
-    sections.push({
-      heading: "Guides",
-      links: [
-        {
-          title: "Install",
-          url: "https://northguild.dev/gmt/install.md",
-        },
-        {
-          title: "Core Rules",
-          url: "https://northguild.dev/gmt/core-rules.md",
-        },
-      ],
-    });
+    const namespaces = namespaceEntries(corpus);
+    const sections: LlmsSection[] = [
+      {
+        heading: "Reference",
+        links: namespaceIndexLinks(namespaces, BASE, namespaceSummary),
+      },
+      {
+        heading: "Guides",
+        links: [
+          { title: "Install", url: "https://northguild.dev/gmt/install.md" },
+        ],
+      },
+      {
+        heading: "Optional",
+        links: [{ title: "Changelog", url: `${BASE}/c.md` }],
+      },
+    ];
 
     const output = renderLlmsTxt({
       title: "@northguild/gmt",
@@ -240,23 +277,25 @@ describe("llms.txt surface", () => {
       sections,
     });
 
-    // H1
+    // Exactly one H1, then the blockquote summary (line index 2).
+    expect(output.match(/^# /gm)).toHaveLength(1);
     expect(output.startsWith("# @northguild/gmt")).toBe(true);
-    // Blockquote summary (line index 2: H1, blank, then >)
     expect(output.split("\n")[2]?.startsWith("> ")).toBe(true);
-    // The index link, one ## per namespace that has a page of its own, + Guides. A
-    // namespace whose only entries are types documented on a function's page has nothing
-    // to list.
-    const sectionHeadings = output.match(/^## /gm);
-    expect(referenceSectionCount).toBe(
-      1 +
-        new Set(
-          corpus
-            .filter((e) => e.inlineOn === undefined)
-            .map((e) => e.namespace),
-        ).size,
-    );
-    expect(sectionHeadings?.length).toBe(referenceSectionCount + 1);
+    // No namespace section in the root file; Optional is last.
+    expect(output).not.toMatch(/^## Reference — /m);
+    const headings = [...output.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+    expect(headings).toEqual(["Reference", "Guides", "Optional"]);
+    expect(headings.at(-1)).toBe("Optional");
+    // The Reference section holds reference.md plus one link per namespace that has a page.
+    const links = sections[0].links.map((l) => l.url);
+    expect(links).toEqual([
+      `${BASE}/reference.md`,
+      ...new Set(
+        corpus
+          .filter((e) => e.inlineOn === undefined)
+          .map((e) => `${BASE}/reference/${e.namespace}/llms.txt`),
+      ),
+    ]);
   });
 
   it("links each reference entry to the .md twin of its page, and skips types with no page", () => {
@@ -264,9 +303,10 @@ describe("llms.txt surface", () => {
     const inline = corpus.filter((e) => e.inlineOn !== undefined);
     expect(inline.length).toBeGreaterThan(0);
 
-    const [index, ...namespaces] = referenceSections(corpus, BASE);
-    expect(index.links.map((l) => l.url)).toEqual([`${BASE}/reference.md`]);
-    const links = namespaces.flatMap((s) => s.links);
+    const namespaces = namespaceEntries(corpus);
+    const links = namespaces.flatMap((ns) =>
+      namespaceSections(ns, BASE).flatMap((s) => s.links),
+    );
     expect(links).toHaveLength(corpus.length - inline.length);
     const urls = links.map((l) => l.url);
     // No fragment, and no file listed twice.
@@ -277,7 +317,7 @@ describe("llms.txt surface", () => {
     }
   });
 
-  it("referenceSections skips an inline type and links a shared one by its page", () => {
+  it("namespaceEntries skips an inline type and groups a shared one under Types", () => {
     const entry = (over: Partial<CorpusEntry>): CorpusEntry => ({
       url: "",
       page: "",
@@ -291,33 +331,31 @@ describe("llms.txt surface", () => {
       examples: [],
       ...over,
     });
-    const sections = referenceSections(
-      [
-        entry({
-          name: "dwellTime",
-          kind: "function",
-          url: "/reference/transport/calculate/dwellTime",
-          page: "/reference/transport/calculate/dwellTime",
-          description: "Measure a dwell.",
-        }),
-        entry({
-          name: "Dwell",
-          url: "/reference/transport/calculate/dwellTime#dwell",
-          page: "/reference/transport/calculate/dwellTime",
-          inlineOn: "dwellTime",
-        }),
-        entry({
-          name: "Interval",
-          namespace: "types",
-          url: "/reference/types/Interval",
-          page: "/reference/types/Interval",
-        }),
-      ],
-      "https://x.test",
-    );
-    expect(sections.slice(1)).toEqual([
+    const namespaces = namespaceEntries([
+      entry({
+        name: "dwellTime",
+        kind: "function",
+        url: "/reference/transport/calculate/dwellTime",
+        page: "/reference/transport/calculate/dwellTime",
+        description: "Measure a dwell.",
+      }),
+      entry({
+        name: "Dwell",
+        url: "/reference/transport/calculate/dwellTime#dwell",
+        page: "/reference/transport/calculate/dwellTime",
+        inlineOn: "dwellTime",
+      }),
+      entry({
+        name: "Interval",
+        namespace: "types",
+        url: "/reference/types/Interval",
+        page: "/reference/types/Interval",
+      }),
+    ]);
+    expect(namespaces.map((n) => n.namespace)).toEqual(["transport", "types"]);
+    expect(namespaceSections(namespaces[0], "https://x.test")).toEqual([
       {
-        heading: "Reference — transport",
+        heading: "calculate",
         links: [
           {
             title: "dwellTime",
@@ -326,8 +364,10 @@ describe("llms.txt surface", () => {
           },
         ],
       },
+    ]);
+    expect(namespaceSections(namespaces[1], "https://x.test")).toEqual([
       {
-        heading: "Reference — types",
+        heading: "Types",
         links: [
           {
             title: "Interval",
@@ -337,6 +377,8 @@ describe("llms.txt surface", () => {
         ],
       },
     ]);
+    expect(namespaceTitle("types")).toBe("@northguild/gmt shared types");
+    expect(namespaceTitle("zoned")).toBe("@northguild/gmt/zoned");
   });
 
   it("isReferenceIndex names the generated index pages and nothing else", () => {
@@ -559,17 +601,120 @@ Body text here.`;
         "Mistakes",
         "Migrate",
         "Checks",
-        "Changelog",
+        "Optional",
       ].map(at);
       expect(headings).not.toContain("Install");
       expect(order).toEqual([...order].sort((a, b) => a - b));
-      // Every namespace section sits between the reference index and the industries.
-      for (const heading of headings.filter((h) =>
-        h.startsWith("Reference — "),
-      )) {
-        expect(at(heading)).toBeGreaterThan(at("Reference"));
-        expect(at(heading)).toBeLessThan(at("Industries"));
+      expect(headings.at(-1)).toBe("Optional");
+      expect(headings.filter((h) => h.startsWith("Reference — "))).toEqual([]);
+      expect(llms.match(/^# /gm)).toHaveLength(1);
+    });
+
+    /** The root file's size budget: the llmstxt.org rule that the file fits in context. Never raised; move detail into a subpath file instead. */
+    const ROOT_BUDGET = 64 * 1024;
+
+    /** The URLs a text file links, and the file in `dist/gmt` each names. */
+    const linkedFiles = (distDir: string, text: string) =>
+      [...text.matchAll(/\]\((https:\/\/[^)\s]+)\)/g)].map((m) => {
+        const url = m[1]!.replace(/#.*$/, "");
+        expect(url.startsWith(`${BASE}/`), url).toBe(true);
+        const path = url.slice(BASE.length + 1);
+        return {
+          url,
+          file: resolve(distDir, path === "" ? "index.html" : path),
+        };
+      });
+
+    const rootSize = (() => {
+      const distDir = distDirOrSkip();
+      const file = distDir && resolve(distDir, "llms.txt");
+      return file && existsSync(file) ? statSync(file).size : "not built";
+    })();
+
+    it(`llms.txt is at most 64 KiB (${rootSize} bytes now)`, () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      expect(statSync(resolve(distDir, "llms.txt")).size).toBeLessThanOrEqual(
+        ROOT_BUDGET,
+      );
+    });
+
+    it("every link in llms.txt and in each namespace llms.txt resolves to a file in dist/gmt", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const files = [
+        resolve(distDir, "llms.txt"),
+        ...namespaceEntries(readCorpus()).map(({ namespace }) =>
+          resolve(distDir, "reference", namespace, "llms.txt"),
+        ),
+      ];
+      const missing = files.flatMap((file) =>
+        linkedFiles(distDir, readFileSync(file, "utf8"))
+          .filter(({ file: target }) => !existsSync(target))
+          .map(({ url }) => `${relative(distDir, file)}: ${url}`),
+      );
+      expect(missing).toEqual([]);
+    });
+
+    it("each namespace llms.txt opens with an H1 and a blockquote that links the root file, and the root links every one", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const root = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      const section = root.slice(root.indexOf("\n## Reference\n"));
+      const rootLinks = new Set(
+        linkedFiles(
+          distDir,
+          section.slice(0, section.indexOf("\n## Industries")),
+        )
+          .map(({ url }) => url)
+          .filter((url) => url.endsWith("/llms.txt")),
+      );
+      const namespaces = namespaceEntries(readCorpus()).map((n) => n.namespace);
+      expect(namespaces.length).toBeGreaterThan(0);
+      // The directory holds exactly the corpus's namespaces, each linked once from the root.
+      expect(
+        readdirSync(resolve(distDir, "reference"), { withFileTypes: true })
+          .filter(
+            (d) =>
+              d.isDirectory() &&
+              existsSync(resolve(distDir, "reference", d.name, "llms.txt")),
+          )
+          .map((d) => d.name)
+          .sort(),
+      ).toEqual([...namespaces].sort());
+      expect([...rootLinks].sort()).toEqual(
+        namespaces.map((ns) => `${BASE}/reference/${ns}/llms.txt`).sort(),
+      );
+      for (const ns of namespaces) {
+        const lines = readFileSync(
+          resolve(distDir, "reference", ns, "llms.txt"),
+          "utf8",
+        ).split("\n");
+        expect(lines[0], ns).toBe(`# ${namespaceTitle(ns)}`);
+        expect(lines[2], ns).toMatch(/^> /);
+        expect(lines[2], ns).toContain(`(${BASE}/llms.txt)`);
       }
+    });
+
+    it("lists each non-inline entry's .md twin in exactly one namespace llms.txt", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const corpus = readCorpus();
+      const listed = new Map<string, number>();
+      for (const { namespace } of namespaceEntries(corpus)) {
+        const text = readFileSync(
+          resolve(distDir, "reference", namespace, "llms.txt"),
+          "utf8",
+        );
+        for (const { url } of linkedFiles(distDir, text)) {
+          if (url.endsWith(".md")) listed.set(url, (listed.get(url) ?? 0) + 1);
+        }
+      }
+      const wrong = corpus
+        .filter((e) => e.inlineOn === undefined)
+        .map((e) => `${BASE}${e.page}.md`)
+        .filter((url) => listed.get(url) !== 1);
+      expect(wrong).toEqual([]);
     });
 
     it("llms.txt lists Install first under Start here, and compare, bundle-size and upstream under Migrate", () => {
@@ -626,7 +771,7 @@ Body text here.`;
       const distDir = distDirOrSkip();
       if (distDir === null) return;
       const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
-      expect(llms).toMatch(/^## Changelog$/m);
+      expect(llms).toMatch(/^## Optional$/m);
       const pages = readdirSync(
         resolve(
           import.meta.dirname,

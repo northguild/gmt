@@ -560,6 +560,29 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **AI surface (`A3b`).** `llms.txt`, `llms-full.txt` and a raw `.md` route with "copy as
   markdown" for every page, emitted from the corpus rather than via a rendered-MDX plugin.
   Every URL is in the route manifest.
+  - **The root `llms.txt` links one `llms.txt` per reference namespace** instead of listing every
+    function, because llmstxt.org asks for a file small enough to fit in context and the 18
+    reference sections were ~170 KB of the old 212 KB. Its `Reference` section holds `reference.md`
+    and one line per namespace (`types` included); the line's text is `namespaceSummary` in
+    `src/lib/namespace-summary.ts`: the owning industry's definition, else the sentence authored
+    there. The same function is the `description` of the namespace's reference index page, so the
+    two never differ, and a namespace with neither throws (a test lists the corpus's). Every other section is unchanged and `Optional`, the spec's name
+    for links a reader may skip, is last (it was `Changelog`).
+  - **Namespace files** are `src/pages/reference/[namespace]/llms.txt.ts`, one for each namespace
+    `namespaceEntries` returns, so no list is typed. Each file is `# @northguild/gmt/<ns>` (`# @northguild/gmt
+    shared types` for `types`), a blockquote with the summary and a link to the root file, then one
+    `## <module>` per module (`## Types` for `types`) in the reference index's order, each entry
+    `- [name](<.md twin>): description`. An `inlineOn` type has no page and is not listed. Both
+    files render through `renderLlmsTxt`; `namespaceEntries`, `namespaceIndexLinks` and
+    `namespaceSections` in `src/lib/llms.ts` are the only grouping.
+  - **The root file stays at or under 64 KiB**, a byte count that needs no tokenizer and holds for any
+    model. `scripts/llms.test.ts` asserts it and prints the size in the test title. A failure is fixed by
+    moving a section's detail into its own subpath file the same way; the budget is not raised.
+    `llms.test.ts` also checks that every link in the root and namespace files resolves in `dist/gmt`,
+    that each non-inline twin is listed in exactly one namespace file, and that root and namespace
+    files link each other. `llms-full.txt` is unchanged: the one-file form of everything.
+  - `deploy-smoke.mjs` checks `/gmt/reference/zoned/llms.txt` (200, `text/plain`, `noindex` from the
+    `/gmt/*.txt` rule) and the root's 64 KiB.
 - **Brand (`A5`).** A token layer mapped onto Starlight's variables; the system monospace stack
   (`--gmt-font-mono`) for body and code; Michroma, a display face, for headings only; self-hosted fonts; body text ≥ 7:1; amber
   reserved for the sentinel. See [reference/visual-design.md](reference/visual-design.md)
@@ -597,6 +620,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `upsertHead`. Starlight's other 404 tags stay.
   - **`noindex` on the `.md` twins and `llms*.txt`** comes from `_headers` (see Deploy), not from the
     page.
+  - **`rel="describedby"` replaces the site-wide `alternate` `text/plain` link to `llms.txt`.**
+    `headEntries` adds one `<link rel="describedby" type="text/plain">` to every docs page, with an
+    absolute URL: a page under `reference/<ns>/` (the namespace index included) points at that
+    namespace's `llms.txt`; the reference index and every other page, the home page too, point at
+    the root file (`describedByPath`). The 404 page has none, because `route-data.ts` returns before
+    `headEntries`. `head-tags.test.ts` checks the targets and `scripts/head-tags.test.ts` checks that
+    each docs page has exactly one, that it exists in `dist/gmt` and that no page has a `text/plain`
+    alternate.
   - The sitemap leaves out `/dox/`. The gate is `scripts/head-tags.test.ts` over `dist/gmt`.
 - **Guides (`A4a`).** The guides under `src/content/docs/guides/` are the home of every
   feature's explanation and examples; the generated reference holds the signatures.
@@ -690,7 +721,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `gmt-eslint`, `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three
     plugin pages.
   - **Text surfaces.** The HTML pages and Pagefind carry them; each page's `.md` twin exists as for
-    every page; `llms.txt` ends with a "Changelog" section of four links; `llms-full.txt` and the
+    every page; `llms.txt` ends with an "Optional" section of four changelog links; `llms-full.txt` and the
     retrieval chunks leave them out (`topLevelPages` takes only slugs without `/`, and
     `guide-sources.ts` globs `guides/` and the top level), asserted in `llms.test.ts` and
     `guide-sources.test.ts`. Old signatures would ground answers in removed APIs.
@@ -4277,8 +4308,16 @@ Shared hooks come first, then the globe, then the clock-change pages.
   # The site is under the base: open http://127.0.0.1:48391/gmt/
   ```
 
-  A scratch tree has no `.git`; it reads history for page dates through `GIT_DIR` and `GIT_WORK_TREE`
-  exported to the worktree's git directory, and never runs a git command that writes.
+  A scratch tree has no `.git`; its site build reads history for page dates through `GIT_DIR` and
+  `GIT_WORK_TREE`, set to the worktree's git directory on the build command alone. Never export
+  them in the shell and never set them for a test run: `git init` under `GIT_DIR` writes
+  `core.worktree` into the shared `.git/config`, which moves every checkout's working tree, and a
+  fixture's `git commit` lands on the real branch. Tests that make a fixture repository drop every
+  inherited `GIT_*` variable (`released-exports.test.ts`, `commit-dates.test.ts`).
+
+  `scripts/head-tags.test.ts` runs `git ls-files` and `git log` (read-only) when it loads, so it
+  fails in a scratch tree. Run that one file alone with `GIT_DIR` and `GIT_WORK_TREE` inline on
+  its command, and never the whole suite under them.
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.

@@ -10,6 +10,10 @@
 import { mdCodeSpan, mdText } from "./render-table";
 import { TYPES_SECTION } from "./reference-urls";
 import { CORE_INDUSTRY } from "../../src/lib/industry-tags";
+import {
+  namespaceSummary,
+  TYPES_DESCRIPTION,
+} from "../../src/lib/namespace-summary";
 
 /** One function or regex page. */
 export interface IndexedPage {
@@ -273,7 +277,7 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
   if (hasTypes) {
     const lines = frontmatter(
       "Types",
-      "The public types of @northguild/gmt.",
+      TYPES_DESCRIPTION,
       `reference/${TYPES_SECTION}`,
     );
     if (input.sharedTypes.length) {
@@ -306,7 +310,7 @@ export function renderIndexPages(input: IndexInput): IndexPage[] {
     {
       const lines = frontmatter(
         ns,
-        `The ${ns} namespace of @northguild/gmt, by module.`,
+        namespaceSummary(ns),
         `reference/${ns}`,
         industry?.id ?? CORE_INDUSTRY,
       );

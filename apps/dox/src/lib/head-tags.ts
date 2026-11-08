@@ -1,6 +1,6 @@
 /**
  * The `<head>` tags a docs page adds to Starlight's own: the title with its suffix, the share
- * tags, the link to the page's Markdown twin and the JSON-LD blocks.
+ * tags, the link to the page's Markdown twin, the link to the `llms.txt` that describes it and the JSON-LD blocks.
  *
  * Pure and free of `astro:` imports, so Vitest reads it. `src/route-data.ts` is the only caller:
  * Starlight's default `<Head>` renders `starlightRoute.head` and writes `og:type`, `og:title` and
@@ -38,6 +38,18 @@ const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 
 /** The namespaces' reference pages get an image each; a function's page shares its namespace's. */
 const REFERENCE_NAMESPACE = /^(reference\/[^/]+)(?:\/|$)/;
+
+/** A page under `reference/<namespace>/`, the namespace index included. */
+const REFERENCE_NAMESPACE_FILE = /^reference\/([^/]+)(?:\/|$)/;
+
+/**
+ * The `llms.txt` file that describes a page: its namespace's for a page under `reference/<ns>/`,
+ * the root file for every other page, the reference index included.
+ */
+export function describedByPath(id: string): string {
+  const namespace = REFERENCE_NAMESPACE_FILE.exec(id);
+  return namespace ? `/reference/${namespace[1]}/llms.txt` : "/llms.txt";
+}
 
 /** The sections whose pages each have a share image of their own. */
 const OWN_IMAGE_SECTIONS = [
@@ -157,6 +169,15 @@ export function headEntries(input: HeadInput): HeadEntry[] {
       attrs: { name: "twitter:card", content: "summary_large_image" },
     },
   ];
+
+  entries.push({
+    tag: "link",
+    attrs: {
+      rel: "describedby",
+      type: "text/plain",
+      href: `${siteUrl}${describedByPath(id)}`,
+    },
+  });
 
   if (input.markdownSlug !== undefined) {
     entries.push({

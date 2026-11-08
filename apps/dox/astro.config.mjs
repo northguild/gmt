@@ -208,15 +208,6 @@ export default defineConfig({
             blocking: "render",
           },
         },
-        // DOX-A3b: discoverability — let LLMs find the llms.txt surface
-        {
-          tag: "link",
-          attrs: {
-            rel: "alternate",
-            type: "text/plain",
-            href: withBase("/llms.txt"),
-          },
-        },
         /* Raster fallbacks for the SVG favicon above, generated from it by
            `pnpm run favicons`. Starlight sorts its own `rel="shortcut icon"`
            entry *after* extra icon links precisely so the SVG wins wherever
