@@ -248,12 +248,18 @@ export async function createGlobeEngine(
     /* One retry, and only once the tab is visible: a device lost while hidden is
        usually the browser reclaiming the GPU, and re-requesting it immediately
        tends to lose it again. */
+    /* A load can finish after `destroy()`, which only tears down the renderer it can see. A late
+       one has already put its canvas (and maybe a worker) in place, so it is torn down here. */
+    const adoptUnlessDestroyed = (next: GlobeRenderer) => {
+      if (destroyed) next.destroy();
+      else adoptRenderer(next);
+    };
     const recover = async () => {
       if (destroyed) return;
       if (!workerFailed && !deviceLossRetried) {
         deviceLossRetried = true;
         try {
-          adoptRenderer(await loadRenderer("webgpu"));
+          adoptUnlessDestroyed(await loadRenderer("webgpu"));
           return;
         } catch {
           // Fall through to canvas-2D below.
@@ -261,7 +267,7 @@ export async function createGlobeEngine(
       }
       if (destroyed) return;
       try {
-        adoptRenderer(await loadRenderer("canvas2d", workerFailed));
+        adoptUnlessDestroyed(await loadRenderer("canvas2d", workerFailed));
       } catch (error) {
         console.error("globe: no renderer could start", error);
       }

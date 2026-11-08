@@ -699,8 +699,22 @@ async function buildRows() {
 }
 
 async function attempt() {
+  /* Building the rows sends requests of its own (the home page, for the names of its hashed
+     files). A dropped one is a failed attempt, retried like a failed row, not a crash. */
+  let rows;
+  try {
+    rows = LOCAL ? await crawlRows() : await buildRows();
+  } catch (error) {
+    return [
+      {
+        row: "building the rows",
+        url: `${ND}/gmt/`,
+        problem: `request failed: ${error.message}`,
+      },
+    ];
+  }
   const failures = [];
-  for (const row of LOCAL ? await crawlRows() : await buildRows()) {
+  for (const row of rows) {
     let problem;
     try {
       problem = await run(row);

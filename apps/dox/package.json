@@ -17,6 +17,7 @@
     "check": "pnpm run generate && astro sync && astro check",
     "typecheck": "pnpm run check",
     "test": "pnpm run generate && vitest run",
+    "test:dist": "node scripts/dist-tests.mjs",
     "lint": "oxlint && stylelint \"src/**/*.{css,astro}\"",
     "reference:export": "tsx ./scripts/export-reference.ts",
     "docs-check": "tsx ./scripts/check-reference-docs.ts",
