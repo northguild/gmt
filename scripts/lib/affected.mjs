@@ -77,7 +77,7 @@ export const CHECKS = [
   {
     id: "dox-dist",
     local: false,
-    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts",
+    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/share-preview.test.ts scripts/select-options.test.ts scripts/gates/registry.test.ts",
     needs: ["build:dox"],
   },
   {
