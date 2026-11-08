@@ -1,9 +1,9 @@
 ## GitHub Issues
 
-33 sub-stories on 24 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
+34 sub-stories on 25 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
 (`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`), #430 (`DOX-G1`), #447 (`DOX-G2`), #467
-(`DOX-G3`), #458 (`DOX-G4`), #456 (`DOX-G5`) and #448 (`DOX-G6`). What each done story shipped
-is in [built.md](built.md).
+(`DOX-G3`), #458 (`DOX-G4`), #456 (`DOX-G5`), #448 (`DOX-G6`) and #477 (`DOX-G7`,
+with #475). What each done story shipped is in [built.md](built.md).
 
 A row here is a `DOX-*` story with its own GitHub issue. Add one, then run `pnpm deps:sync`,
 which generates `Blocked by`, only for Dox work that belongs to no realm story. The Dox pages and
@@ -44,6 +44,7 @@ or `architect`, with no tool shortlist; `/pipeline` says who builds it.
 | 22    | DOX-G4                                      | —          | #458         | Done   |
 | 23    | DOX-G5                                      | —          | #456         | Todo   |
 | 24    | DOX-G6                                      | —          | #448         | Todo   |
+| 25    | DOX-G7                                      | —          | #477         | Done   |
 
 ¹ Owed verification, not work: a keyboard-only pass, `prefers-reduced-*` emulation, and a
 real Firefox/Safari check.
