@@ -192,8 +192,13 @@ describe("repeatable rows", () => {
   it("an enum list row is a list of choices", async () => {
     const { user } = open("getLargestDateDurationUnit");
     const first = screen.getByRole("combobox", { name: "units 1" });
-    expect(first).toHaveValue("months");
-    await user.selectOptions(first, "years");
+    expect(first).toHaveValue("month");
+    const values = within(first)
+      .getAllByRole("option")
+      .map((o) => (o as HTMLOptionElement).value);
+    expect(values).toContain("year");
+    expect(values).not.toContain("years");
+    await user.selectOptions(first, "year");
     await waitFor(() => expect(result()).toHaveTextContent("years"));
   });
 

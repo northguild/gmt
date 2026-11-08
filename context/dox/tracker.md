@@ -1,9 +1,9 @@
 ## GitHub Issues
 
-32 sub-stories on 23 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
+33 sub-stories on 24 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
 (`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`), #430 (`DOX-G1`), #447 (`DOX-G2`), #467
-(`DOX-G3`), #458 (`DOX-G4`) and #448 (`DOX-G6`). What each done story shipped
-is in [built.md](built.md).
+(`DOX-G3`), #458 (`DOX-G4`), #448 (`DOX-G6`) and #477 (`DOX-G7`,
+with #475). What each done story shipped is in [built.md](built.md).
 
 A row here is a `DOX-*` story with its own GitHub issue. Add one, then run `pnpm deps:sync`,
 which generates `Blocked by`, only for Dox work that belongs to no realm story. The Dox pages and
@@ -43,6 +43,7 @@ or `architect`, with no tool shortlist; `/pipeline` says who builds it.
 | 21    | DOX-G3                                      | —          | #467         | Done   |
 | 22    | DOX-G4                                      | —          | #458         | Done   |
 | 23    | DOX-G6                                      | —          | #448         | Done⁶  |
+| 24    | DOX-G7                                      | —          | #477         | Done   |
 
 ¹ Owed verification, not work: a keyboard-only pass, `prefers-reduced-*` emulation, and a
 real Firefox/Safari check.

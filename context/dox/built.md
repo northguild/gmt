@@ -388,7 +388,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     (`DateUnit`, `TimeUnit`, `DateTimeUnit`, `keyof DurationLike`). A shared type page shows its
     declaration as the source writes it, so its order is the source's.
     `classifyType` gives an enum select the same order (`orderUnitChoices`): unit names first,
-    largest first, then the other choices (`dayOfWeek`) in their original order, then `""`. The
+    largest first, then the other choices (`dayOfWeek`) in their original order, then `""`. A
+    select then offers each unit once, by its singular (§ Playground), while a printed union
+    keeps both spellings: the signature documents the type, the select picks a value. The
     unit control's constants are declared in it, so a page's signature and its playground agree.
     `reference-unit-order.test.ts` scans every generated page, code blocks and table cells, and
     fails on a union of unit names out of this order. A `@param` description that lists unit
@@ -894,14 +896,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   fenced prompt** in `README.md`, `packages/gmt/README.md` and `CONTRIBUTING.md`. The constant
   is the source; a change to it goes into all three files in the same edit.
 - **`/upstream/` has a "Beyond Temporal" section of listings, which are not filings.** A listing is
-  a pull request GMT opened on a project outside Temporal (You-Dont-Need-Momentjs #159 asks a
-  comparison list to include `@northguild/gmt`). A filing must carry exactly one of `gmtGuard` or
+  a pull request or an issue GMT opened on a project outside Temporal (You-Dont-Need-Momentjs #159
+  asks a comparison list to include `@northguild/gmt`; an issue stands in where only collaborators
+  may open a pull request, as on `sindresorhus/awesome-nodejs`). A filing must carry exactly one of `gmtGuard` or
   `gmtNote`, takes a `work`, and is counted in the tally "So far we have sent N reports and fixes";
   a listing fixes no Temporal defect, so it would need a fake value or inflate the tally. They live
   in the top-level `listings` array of `src/data/upstream-filings.json`, beside `filings`
   (`UpstreamListing`, exported `listings`). The only hand-written field is `summary`
-  (`LISTING_HAND_WRITTEN_FIELDS`, held equal to the script's by a test); a summary says what the PR
-  asks for and says nothing about another library. Nothing in the tally, `filedByUs` or the
+  (`LISTING_HAND_WRITTEN_FIELDS`, held equal to the script's by a test); a summary says what the
+  pull request or issue asks for and says nothing about another library. Nothing in the tally, `filedByUs` or the
   by-repo/kind/state sums reads `listings`.
   - **Sync.** Nothing discovers listings (`REPOS` and `AUTHORS` are unchanged). A new one is added
     by hand with `repo`, `number`, `kind` and `summary`; `pnpm upstream:sync` then fills the rest
@@ -915,10 +918,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `gmtGuard`, `gmtNote`, `work`, `outcome`, `role`, and a listing whose repo is one of `REPOS`
     (that belongs in `filings`). `UPSTREAM_FILE` points `check` at a fixture; the tests that prove
     it fails use it and never call GitHub.
-  - **Page.** `listingStatus` (`upstream-status.ts`) gives Draft, Open awaiting review, Changes
-    requested, Approved, Merged or Closed without merging. It does not reuse `filingStatus`, whose
+  - **Page.** `listingStatus` (`upstream-status.ts`) takes `kind`. A pull request is Draft, Open awaiting
+    review, Changes requested, Approved, Merged or Closed without merging; an issue is Open or Closed. It does not reuse `filingStatus`, whose
     "Merged, not yet in a published release" is about the polyfill's releases. `UpstreamListings.astro`
-    is one entries-layout table (`LISTING_COLUMNS`: Pull request, What it asks, Status, Replies, Last
+    is one entries-layout table (`LISTING_COLUMNS`: Submission, What it asks, Status, Replies, Last
     activity) after the tracker; its rules are in the shared `gmt-content-tables.css`, so neither it
     nor `UpstreamTracker.astro` depends on the other being on the page; the heading and one sentence stay in `upstream.mdx` so they are in
     the table of contents. `renderUpstreamListings` in `mdx-jsx.ts` is its Markdown twin.
@@ -1332,6 +1335,22 @@ Shared hooks come first, then the globe, then the clock-change pages.
   never overwritten, and a choice with no example only re-runs (`createSeedLoader` in
   `src/lib/playground-client.ts`). A function whose examples do not vary by choice has no
   `choiceSeeds`.
+  - **One name per unit.** Temporal treats a plural unit name as an alias of the singular,
+    which is canonical
+    ([`GetTemporalUnitValuedOption`](https://tc39.es/proposal-temporal/#sec-temporal-gettemporalunitvaluedoption)).
+    An enum select, or a list of enums, that would offer both spellings of a unit offers it
+    once, by the singular (`collapseUnitAliases` in `build-utils.ts`, after
+    `orderUnitChoices`). A plural with no singular in the same union stays (`"days"`,
+    `"hours"`), and other choices (`dayOfWeek`, `""`) keep their places. An example that writes
+    the plural seeds the singular (`canonicalChoice`): `fieldForParam` maps an enum's seed and
+    each list item, and `buildChoiceSeeds` keys each choice's example by the singular, so
+    `startOfZoned`'s `"milliseconds"` example loads under `millisecond`. The field carries
+    `aliases`, each dropped plural mapped to the singular kept, only when it dropped one; tests
+    read it, the client ignores it. Two gates hold the rule: `playground-templates.test.ts`
+    "one name per unit" checks every template (no repeated choice and no unit in both
+    spellings, every seed and `choiceSeeds` key a choice, and each alias giving the same
+    result as its singular), and `scripts/select-options.test.ts` fails on any `<select>` in
+    `dist/gmt` that repeats an option value or label, tool pages included.
   - **Trap: the first `@example` of a function that takes a unit object writes one key.** The
     playground seeds from it, and a two-key object seeds amount `1` in the first listed unit.
 - **Sentinel-aware output everywhere.** `""` / `null` / `false` / `[]` from invalid input
