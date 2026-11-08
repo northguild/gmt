@@ -6,6 +6,7 @@ import {
 } from "../test/mocks";
 import {
   formatUtcReading,
+  LAST_FOUR_DIGIT_UTC_NANOSECONDS,
   parseUtcReading,
   subsecondFraction,
 } from "./utcReading";
@@ -13,6 +14,14 @@ import {
 function utcNs(iso: string): bigint {
   return Temporal.Instant.from(iso).epochNanoseconds;
 }
+
+describe("LAST_FOUR_DIGIT_UTC_NANOSECONDS", () => {
+  it("is the last nanosecond of year 9999", () => {
+    expect(LAST_FOUR_DIGIT_UTC_NANOSECONDS).toBe(
+      utcNs("9999-12-31T23:59:59.999999999Z"),
+    );
+  });
+});
 
 describe("parseUtcReading", () => {
   it.each`

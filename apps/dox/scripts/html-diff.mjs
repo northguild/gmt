@@ -167,6 +167,10 @@ const PAGES = [
     widget: "stored-time-audit",
   },
   {
+    path: "tools/tai64n-log-reader",
+    widget: "tai64n-log-reader",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

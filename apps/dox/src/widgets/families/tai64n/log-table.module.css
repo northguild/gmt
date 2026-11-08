@@ -1,0 +1,299 @@
+/* logTable: the kit's fixed table, with a radio in its first column and the label in nowrap
+   chunks. The table builder's classes are its own, so this sheet reaches them from the box
+   that holds it. Text is the body ink on the solid widget surface; the selected row's tint is
+   mixed into that surface, never stacked on a translucent one. Amber is the sentinel's alone. */
+
+.box {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+
+  /* The content sheet gives a first cell `width: 1%`, which squeezes the Line column to its
+     padding in a fixed table; the Line column sets its own width. */
+  & :is(th, td):first-child {
+    inline-size: 4.5rem;
+    white-space: nowrap;
+  }
+
+  /* No word is cut. The kit's cells break anywhere to keep a long identifier inside the box; a
+     log table lets a word that does not fit scroll the table's region instead. The label, the
+     instant and the offset stay on one line; the message wraps at its spaces. */
+  & :is(th, td) {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  & td {
+    color: var(--gmt-ice);
+    white-space: nowrap;
+  }
+
+  & td[data-col="Message"] {
+    white-space: normal;
+  }
+
+  /* The whole row picks its line, so the row says it can be picked. */
+  & tbody tr {
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    & tbody tr:is(:hover, :focus-within) td {
+      background: color-mix(
+        in srgb,
+        var(--gmt-series-1) 5%,
+        var(--gmt-surface-widget)
+      );
+    }
+  }
+
+  & tbody tr[aria-current="true"] td {
+    background: color-mix(
+      in srgb,
+      var(--gmt-series-1) 10%,
+      var(--gmt-surface-widget)
+    );
+  }
+
+  /* A full frame round the selected row. An outline takes no room, so selecting a row moves
+     nothing, and it survives forced colours where a shadow does not. */
+  @container (inline-size >= 46rem) {
+    & tbody tr[aria-current="true"] {
+      outline: 1px solid var(--gmt-series-1);
+      outline-offset: -1px;
+    }
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-style: italic;
+}
+
+/* The label: monospace, on one line. */
+.token {
+  padding: 0;
+  background: none;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* A badge under the value it explains. */
+.tag {
+  display: block;
+  margin-block-start: var(--gmt-space-1);
+}
+
+/* The row's radio: the real input, with its bare number as the face. */
+.radio {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.input {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: 1.75rem;
+  min-block-size: 1.75rem;
+  padding-inline: var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.input:checked + .face {
+  border-color: var(--gmt-selected-fill);
+  background: var(--gmt-selected-fill);
+  color: var(--gmt-selected-ink);
+}
+
+.input:focus-visible + .face {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+/* The sentinel: a bracketed amber state, never a blank field. */
+.nosignal {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 2px var(--gmt-space-2);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* Narrow: each row becomes a labelled block, so no column is squeezed. The cells name their
+   columns from the `data-col` the table wrote, and the header row is read by the labels. */
+.box {
+  @container (inline-size < 46rem) {
+    & table,
+    & tbody,
+    & tr,
+    & td {
+      display: block;
+      inline-size: auto;
+    }
+
+    & thead,
+    & caption {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    /* A row is a small grid, not a column of five blocks: the line and its label share a
+       line, the instant takes one, and the offset and the message share the last. */
+    & tr {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: var(--gmt-space-3);
+      padding-block: var(--gmt-space-2);
+
+      /* Every row has the same 1px frame; the selected one only recolours it. */
+      border: 1px solid transparent;
+      border-block-end-color: var(--gmt-hairline);
+      border-radius: var(--gmt-radius-sm);
+      corner-shape: bevel;
+    }
+
+    & td[data-col="UTC instant"] {
+      grid-column: 1 / -1;
+    }
+
+    & td {
+      padding: var(--gmt-space-1) var(--gmt-space-2);
+      border: 0;
+      text-align: start;
+
+      &::before {
+        content: attr(data-col);
+        content: attr(data-col) / "";
+        display: block;
+        color: var(--gmt-ice-dim);
+        font-size: var(--gmt-text-xs);
+      }
+    }
+
+    & :is(th, td):first-child {
+      inline-size: auto;
+    }
+
+    @media (hover: hover) {
+      & tbody tr:is(:hover, :focus-within) {
+        background: color-mix(
+          in srgb,
+          var(--gmt-series-1) 5%,
+          var(--gmt-surface-widget)
+        );
+      }
+
+      & tbody tr:is(:hover, :focus-within) td {
+        background: none;
+      }
+    }
+
+    & tbody tr[aria-current="true"] {
+      border-color: var(--gmt-series-1);
+      background: color-mix(
+        in srgb,
+        var(--gmt-series-1) 10%,
+        var(--gmt-surface-widget)
+      );
+
+      & td {
+        /* The row carries the tint; the cell must not stack a second one. */
+        background: none;
+        box-shadow: none;
+      }
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .box tbody tr[aria-current="true"] td {
+    background: Canvas;
+  }
+
+  .box tbody tr[aria-current="true"] {
+    border-color: Highlight;
+  }
+
+  .box {
+    @container (inline-size >= 46rem) {
+      & tbody tr[aria-current="true"] {
+        outline: 3px solid Highlight;
+        outline-offset: -3px;
+      }
+    }
+  }
+
+  .face,
+  .nosignal {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .empty {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .input:checked + .face {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .input:focus-visible + .face {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .face,
+  .nosignal,
+  .empty {
+    border-color: var(--gmt-ice);
+  }
+
+  .input:focus-visible + .face {
+    outline-width: 3px;
+  }
+}

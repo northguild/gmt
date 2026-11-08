@@ -23,6 +23,9 @@ export interface UtcReading {
 /** The last year this realm writes: its strings carry four-digit years only (a GMT rule). */
 export const MAX_FOUR_DIGIT_YEAR = 9999;
 
+/** 9999-12-31T23:59:59.999999999Z in epoch nanoseconds: the last UTC instant this realm writes. */
+export const LAST_FOUR_DIGIT_UTC_NANOSECONDS = 253_402_300_799_999_999_999n;
+
 /** `plainDate` without its anchors: GMT's ISO 8601 extended calendar date. */
 const DATE = plainDate.source.slice(1, -1);
 

@@ -82,6 +82,7 @@ import type { DatabaseTimestampReaderArgs } from "~/lib/database-timestamp-reade
 import type { ExpiryArgs } from "~/lib/expiry-calculator-mount";
 import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
+import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -121,6 +122,7 @@ import {
   showLeapDayBirthdayInput,
   showExpiryCalculatorInput,
   showDatabaseTimestampReaderInput,
+  showTai64nLogReaderInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -886,6 +888,27 @@ const storedAuditEntry = defineWidget<StoredTimeAuditArgs>({
     })),
 });
 
+const tai64nEntry = defineWidget<Tai64nLogReaderArgs>({
+  title: "TAI64N log reader",
+  kind: "tai64n",
+  parse: (input) => {
+    const result = showTai64nLogReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* No `validate`: a line the library does not read is this widget's own NO SIGNAL row. */
+  load: () =>
+    import("~/lib/tai64n-log-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderTai64nLogReaderTemplate(idPrefix, args),
+      mount: m.mountTai64nLogReader,
+    })),
+});
+
 const holidayBuilderEntry = defineWidget<HolidayRuleBuilderArgs>({
   title: "Holiday rule builder",
   kind: "holidays",
@@ -1278,6 +1301,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showLeapDayBirthday: leapDayEntry,
   showExpiryCalculator: expiryEntry,
   showDatabaseTimestampReader: databaseReaderEntry,
+  showTai64nLogReader: tai64nEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

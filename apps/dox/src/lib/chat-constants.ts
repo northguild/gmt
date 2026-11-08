@@ -878,6 +878,12 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { form: "postgresql-timestamptz", value: "2024-03-15 14:30:00+00" },
   },
+  {
+    text: "What time is @4000000037c219bf2ef02e94?",
+    widget: "showTai64nLogReader",
+    area: "core",
+    args: { values: "@4000000037c219bf2ef02e94" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

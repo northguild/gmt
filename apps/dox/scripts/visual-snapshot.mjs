@@ -150,6 +150,7 @@ const PAGES = [
     path: "/tools/elapsed-vs-clock-difference/",
   },
   { slug: "tool-stored-time-audit", path: "/tools/stored-time-audit/" },
+  { slug: "tool-tai64n-log-reader", path: "/tools/tai64n-log-reader/" },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",

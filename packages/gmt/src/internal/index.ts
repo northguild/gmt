@@ -141,7 +141,11 @@ export {
   parseUtcOffsetNanoseconds,
   writtenOffset,
 } from "./utcOffsetString";
-export { formatUtcReading, parseUtcReading } from "./utcReading";
+export {
+  formatUtcReading,
+  LAST_FOUR_DIGIT_UTC_NANOSECONDS,
+  parseUtcReading,
+} from "./utcReading";
 export {
   isGnssSystem,
   scaleLabelOfUtc,
@@ -181,6 +185,12 @@ export {
   taiOfUtc,
   utcOfTai,
 } from "./leapSeconds";
+export {
+  formatTai64nLabel,
+  parseTai64Label,
+  TAI64_SECONDS_OFFSET,
+  tai64LabelText,
+} from "./tai64Label";
 export { isValidDayOfWeek } from "./isValidDayOfWeek";
 export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";
