@@ -112,11 +112,16 @@ describe("options of the built site", () => {
     const dist = distDirOrSkip();
     if (dist === null) return;
     const failures: string[] = [];
+    let selects = 0;
     for (const path of htmlFiles(dist)) {
-      for (const failure of repeatedOptions(readFileSync(path, "utf8"))) {
+      const html = readFileSync(path, "utf8");
+      selects += html.match(/<select\b/gi)?.length ?? 0;
+      for (const failure of repeatedOptions(html)) {
         failures.push(`${relative(dist, path)} ${failure}`);
       }
     }
+    // An empty or select-free build would otherwise pass with nothing checked.
+    expect(selects, "no <select> in the built site").toBeGreaterThan(0);
     const shown = failures.slice(0, 15).join("\n  ");
     const more =
       failures.length > 15 ? `\n  ... and ${failures.length - 15} more` : "";
