@@ -414,10 +414,10 @@ const listing = (
 ): UpstreamListing => ({
   repo: "example/comparison-list",
   number,
-  kind: "pr",
+  kind: "issue",
   summary: `Summary of ${number}`,
-  title: `Pull request ${number}`,
-  url: `https://github.com/example/comparison-list/pull/${number}`,
+  title: `Issue ${number}`,
+  url: `https://github.com/example/comparison-list/issues/${number}`,
   state: "open",
   draft: false,
   reviewDecision: null,

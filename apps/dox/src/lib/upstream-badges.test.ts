@@ -29,6 +29,25 @@ describe("stateBadge", () => {
   );
 });
 
+describe("a listing that is an issue", () => {
+  const issue = {
+    kind: "issue",
+    state: "open",
+    draft: false,
+    mergedAt: null,
+    reviewDecision: null,
+  } as const;
+
+  it("gets the issue state badge and no review chip", () => {
+    expect(stateBadge(issue)).toEqual({
+      text: "Open",
+      tone: "spring",
+      icon: "issue-opened",
+    });
+    expect(reviewBadge(issue)).toBeNull();
+  });
+});
+
 describe("stateNote", () => {
   it("keeps what 'Merged' alone loses", () => {
     expect(stateNote({ mergedAt: "2026-05-01" })).toBe(

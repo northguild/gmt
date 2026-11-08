@@ -11,7 +11,7 @@ export const UPSTREAM_COLUMNS = ["Filing", "Details", "Activity"] as const;
 
 /** The listings table's column headers in its Markdown twin. */
 export const LISTING_COLUMNS = [
-  "Pull request",
+  "Submission",
   "What it asks",
   "Status",
   "Replies",
@@ -19,12 +19,17 @@ export const LISTING_COLUMNS = [
 ] as const;
 
 /**
- * Where a listing's pull request stands, for the Markdown twin. "Merged" says nothing about a
- * release: a listing is a pull request to another project, not a Temporal polyfill fix.
+ * Where a listing stands, for the Markdown twin. "Merged" says nothing about a release: a listing
+ * is a pull request or an issue on another project, not a Temporal polyfill fix. An issue is only
+ * open or closed.
  */
 export function listingStatus(
-  l: Pick<UpstreamListing, "state" | "draft" | "reviewDecision" | "mergedAt">,
+  l: Pick<
+    UpstreamListing,
+    "kind" | "state" | "draft" | "reviewDecision" | "mergedAt"
+  >,
 ): string {
+  if (l.kind === "issue") return l.state === "closed" ? "Closed" : "Open";
   if (l.mergedAt) return "Merged";
   if (l.state === "closed") return "Closed without merging";
   if (l.draft) return "Draft";

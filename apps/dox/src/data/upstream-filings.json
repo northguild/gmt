@@ -1,5 +1,5 @@
 {
-  "checked": "2026-11-06T16:38:53.906110824Z",
+  "checked": "2026-11-08T12:19:17.436335629Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -549,6 +549,40 @@
     }
   ],
   "listings": [
+    {
+      "repo": "sindresorhus/awesome-nodejs",
+      "number": 1402,
+      "kind": "issue",
+      "summary": "Suggests @northguild/gmt for the Date section, as an issue because pull requests there are limited to collaborators.",
+      "title": "Add GMT to Date",
+      "url": "https://github.com/sindresorhus/awesome-nodejs/issues/1402",
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-07",
+      "updatedAt": "2026-11-07",
+      "closedAt": null,
+      "mergedAt": null
+    },
+    {
+      "repo": "sorrycc/awesome-javascript",
+      "number": 1209,
+      "kind": "pr",
+      "summary": "Adds @northguild/gmt to the Date section.",
+      "title": "Add GMT to Date",
+      "url": "https://github.com/sorrycc/awesome-javascript/pull/1209",
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-07",
+      "updatedAt": "2026-11-07",
+      "closedAt": null,
+      "mergedAt": null
+    },
     {
       "repo": "you-dont-need/You-Dont-Need-Momentjs",
       "number": 159,

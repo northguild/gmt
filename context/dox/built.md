@@ -698,14 +698,15 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   fenced prompt** in `README.md`, `packages/gmt/README.md` and `CONTRIBUTING.md`. The constant
   is the source; a change to it goes into all three files in the same edit.
 - **`/upstream/` has a "Beyond Temporal" section of listings, which are not filings.** A listing is
-  a pull request GMT opened on a project outside Temporal (You-Dont-Need-Momentjs #159 asks a
-  comparison list to include `@northguild/gmt`). A filing must carry exactly one of `gmtGuard` or
+  a pull request or an issue GMT opened on a project outside Temporal (You-Dont-Need-Momentjs #159
+  asks a comparison list to include `@northguild/gmt`; an issue stands in where only collaborators
+  may open a pull request, as on `sindresorhus/awesome-nodejs`). A filing must carry exactly one of `gmtGuard` or
   `gmtNote`, takes a `work`, and is counted in the tally "So far we have sent N reports and fixes";
   a listing fixes no Temporal defect, so it would need a fake value or inflate the tally. They live
   in the top-level `listings` array of `src/data/upstream-filings.json`, beside `filings`
   (`UpstreamListing`, exported `listings`). The only hand-written field is `summary`
-  (`LISTING_HAND_WRITTEN_FIELDS`, held equal to the script's by a test); a summary says what the PR
-  asks for and says nothing about another library. Nothing in the tally, `filedByUs` or the
+  (`LISTING_HAND_WRITTEN_FIELDS`, held equal to the script's by a test); a summary says what the
+  pull request or issue asks for and says nothing about another library. Nothing in the tally, `filedByUs` or the
   by-repo/kind/state sums reads `listings`.
   - **Sync.** Nothing discovers listings (`REPOS` and `AUTHORS` are unchanged). A new one is added
     by hand with `repo`, `number`, `kind` and `summary`; `pnpm upstream:sync` then fills the rest
@@ -719,10 +720,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `gmtGuard`, `gmtNote`, `work`, `outcome`, `role`, and a listing whose repo is one of `REPOS`
     (that belongs in `filings`). `UPSTREAM_FILE` points `check` at a fixture; the tests that prove
     it fails use it and never call GitHub.
-  - **Page.** `listingStatus` (`upstream-status.ts`) gives Draft, Open awaiting review, Changes
-    requested, Approved, Merged or Closed without merging. It does not reuse `filingStatus`, whose
+  - **Page.** `listingStatus` (`upstream-status.ts`) takes `kind`. A pull request is Draft, Open awaiting
+    review, Changes requested, Approved, Merged or Closed without merging; an issue is Open or Closed. It does not reuse `filingStatus`, whose
     "Merged, not yet in a published release" is about the polyfill's releases. `UpstreamListings.astro`
-    is one entries-layout table (`LISTING_COLUMNS`: Pull request, What it asks, Status, Replies, Last
+    is one entries-layout table (`LISTING_COLUMNS`: Submission, What it asks, Status, Replies, Last
     activity) after the tracker; its rules are in the shared `gmt-content-tables.css`, so neither it
     nor `UpstreamTracker.astro` depends on the other being on the page; the heading and one sentence stay in `upstream.mdx` so they are in
     the table of contents. `renderUpstreamListings` in `mdx-jsx.ts` is its Markdown twin.

@@ -1,11 +1,11 @@
 ---
 /**
- * The /upstream/ "Beyond Temporal" table: pull requests GMT opened on projects outside Temporal.
+ * The /upstream/ "Beyond Temporal" table: pull requests and issues GMT opened on projects outside Temporal.
  * They are not filings, so they have their own table and are in no tally. Built from `listings`
  * in `upstream-filings.ts` (live refresh when GitHub is reachable, the committed snapshot
- * otherwise); nothing is fetched in the browser. Each pull request is a card in the same shape as
+ * otherwise); nothing is fetched in the browser. Each submission is a card in the same shape as
  * the tracker's (state icon, title, `repo#number`, state badge), so a phone gets one stacked card
- * per pull request. Styles are `gmt-content-tables.css`, shared with the tracker.
+ * per submission. Styles are `gmt-content-tables.css`, shared with the tracker.
  */
 import { shortRef } from "../data/temporal-compat";
 import { listings } from "../data/upstream-filings";
@@ -14,25 +14,25 @@ import { chip, reviewBadge, stateBadge } from "../lib/upstream-badges";
 import { countLabel, countNoun } from "../lib/upstream-status";
 import { asDate } from "../lib/upstream-summary";
 
-const COLUMNS = ["Pull request", "Details", "Activity"] as const;
+const COLUMNS = ["Submission", "Details", "Activity"] as const;
 ---
 
 {
   listings.length > 0 && (
-    <div class="gmt-ref-table" data-kind="content" data-layout="entries" data-label="Pull requests to other projects">
+    <div class="gmt-ref-table" data-kind="content" data-layout="entries" data-label="Submissions to other projects">
       <table class="gmt-upstream-table">
         <thead>
           <tr>{COLUMNS.map((column) => <th>{column}</th>)}</tr>
         </thead>
         <tbody>
           {listings.map((l) => {
-            const state = stateBadge({ ...l, kind: "pr" });
-            const review = reviewBadge({ ...l, kind: "pr" });
+            const state = stateBadge(l);
+            const review = reviewBadge(l);
             return (
               <tr data-tone={state.tone}>
                 <td class="gmt-upstream-head">
                   <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
-                  <span class="gmt-sr-only">Pull request:</span>
+                  <span class="gmt-sr-only">{l.kind === "issue" ? "Issue" : "Pull request"}:</span>
                   <strong class="gmt-upstream-title">{l.title}</strong>
                   <a class="gmt-upstream-ref" href={l.url}>{shortRef(l.repo, l.number)}</a>
                   <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
