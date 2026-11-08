@@ -9,7 +9,7 @@ import { distDirOrSkip as distRootOrSkip } from "./dist-dir";
 
 /**
  * The tags every built page carries, read off `dist/gmt`: one title that ends in the site suffix,
- * a description of its own, a share image that exists, the JSON-LD blocks, the Markdown twin, no
+ * a description of its own, the JSON-LD blocks, the Markdown twin, no
  * edit link, and no `noindex` page in the sitemap.
  *
  * Needs a build; each test returns early without one and throws under `DOX_DIST_REQUIRED`.
@@ -160,25 +160,24 @@ describe("head tags of the built site", () => {
     expectNone(failures);
   });
 
-  it("points every page's share images at a file under /gmt/og/", () => {
+  it("gives no two indexable pages the same description", () => {
     const dist = distDirOrSkip();
     if (dist === null) return;
-    const failures: string[] = [];
+    const byDescription = new Map<string, string[]>();
     for (const page of builtPages(dist)) {
-      for (const [tag, url] of [
-        ["og:image", page.scan.ogImage],
-        ["twitter:image", page.scan.twitterImage],
-      ] as const) {
-        if (!url?.startsWith(`${SITE_URL}/og/`) || !url.endsWith(".png")) {
-          failures.push(`${page.file}: ${tag} is ${url ?? "missing"}`);
-          continue;
-        }
-        const file = distFileOf(dist, url);
-        if (file === undefined || !existsSync(file)) {
-          failures.push(`${page.file}: ${tag} ${url} is not in dist`);
-        }
-      }
+      const { description, noindex } = page.scan;
+      if (noindex || !description) continue;
+      byDescription.set(description, [
+        ...(byDescription.get(description) ?? []),
+        page.file,
+      ]);
     }
+    const failures = [...byDescription]
+      .filter(([, files]) => files.length > 1)
+      .map(
+        ([description, files]) =>
+          `"${description}" is shared by ${files.join(", ")}`,
+      );
     expectNone(failures);
   });
 

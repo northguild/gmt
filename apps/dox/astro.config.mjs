@@ -18,6 +18,7 @@ import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
 import { sitemapLastmod } from "./src/lib/sitemap-lastmod.ts";
+import { versionOgImages } from "./src/lib/og-image-version.ts";
 import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
@@ -143,6 +144,9 @@ export default defineConfig({
     copyRedirects(),
     // Build only: drops a widget's stylesheet link from the pages that do not show the widget.
     pruneWidgetCss(),
+    // Build only: puts ?v=<hash of the PNG> on og:image and twitter:image. It stays above starlight(),
+    // whose Pagefind step runs on the same hook, so Pagefind and the dist gates read the final HTML.
+    versionOgImages(),
     react(),
     starlight({
       title: "@northguild/gmt",

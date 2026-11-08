@@ -30,6 +30,7 @@ function input(over: Partial<HeadInput> & Pick<HeadInput, "id">): HeadInput {
       return title === undefined ? undefined : { title };
     },
     markdownSlug: over.id || "index",
+    shareAlt: 'Share card: "Page" over the Earth.',
     siteUrl: SITE,
     gmtVersion: "1.20.0",
     ...over,
@@ -160,6 +161,35 @@ describe("headEntries", () => {
     );
     expect(find(entries, "name", "twitter:card")?.attrs?.content).toBe(
       "summary_large_image",
+    );
+  });
+
+  it("writes en_US as og:locale and image/png as og:image:type", () => {
+    const entries = headEntries(input({ id: "install" }));
+    expect(find(entries, "property", "og:locale")?.attrs?.content).toBe(
+      "en_US",
+    );
+    expect(find(entries, "property", "og:image:type")?.attrs?.content).toBe(
+      "image/png",
+    );
+    // Starlight writes the page language; the entry replaces it and is not added beside it.
+    const head = [
+      { tag: "meta", attrs: { property: "og:locale", content: "en" } },
+    ] satisfies HeadEntry[];
+    const merged = entries.reduce(upsertHead, head);
+    expect(merged.filter((e) => e.attrs?.property === "og:locale")).toEqual([
+      { tag: "meta", attrs: { property: "og:locale", content: "en_US" } },
+    ]);
+  });
+
+  it("gives og:image:alt and twitter:image:alt the alt it is passed", () => {
+    const shareAlt = 'Share card: "Install" over the Earth.';
+    const entries = headEntries(input({ id: "install", shareAlt }));
+    expect(find(entries, "property", "og:image:alt")?.attrs?.content).toBe(
+      shareAlt,
+    );
+    expect(find(entries, "name", "twitter:image:alt")?.attrs?.content).toBe(
+      shareAlt,
     );
   });
 
@@ -333,6 +363,9 @@ describe("ogImageKey", () => {
     ["migrate/moment", "migrate/moment"],
     ["migrate", "migrate"],
     ["compare/behaviour", "compare/behaviour"],
+    ["changelog/1-21", "changelog/1-21"],
+    ["changelog/lint-plugin", "changelog/lint-plugin"],
+    ["changelog", "changelog"],
     ["guidesx/y", "site"],
   ])("%s -> %s", (id, key) => {
     expect(ogImageKey(id)).toBe(key);

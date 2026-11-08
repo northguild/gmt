@@ -15,9 +15,16 @@
 import { defineRouteMiddleware } from "@astrojs/starlight/route-data";
 import { getCollection } from "astro:content";
 import { gmtVersion } from "~/generated/versions";
-import { headEntries, isHomeId, removeHead, upsertHead } from "~/lib/head-tags";
+import {
+  headEntries,
+  isHomeId,
+  ogImageKey,
+  removeHead,
+  upsertHead,
+} from "~/lib/head-tags";
 import { leanSidebar, skipDividers } from "~/lib/lean-sidebar";
 import { docsRelPath, markdownTwinSlugs } from "~/lib/md-twin";
+import { ogCards, ogImageAlt } from "~/lib/og-cards";
 import { pageIndustries, type PageEntry } from "~/lib/page-industries";
 import { SITE_URL } from "~/lib/site";
 
@@ -57,6 +64,9 @@ const docsById = docsEntries.then(
     ),
 );
 
+/** The share cards, built from the same collection as the `/og/…` route, once per build. */
+const shareCards = docsEntries.then((entries) => ogCards(entries));
+
 /** Every entry as the industry tags read it, built once per build. */
 const pageEntries = docsEntries.then((entries): PageEntry[] =>
   entries.map((entry) => ({
@@ -91,6 +101,10 @@ export const onRequest = defineRouteMiddleware(async (context) => {
   const tags = pageIndustries(route.id, data.industries, await pageEntries);
   if (tags.length > 0) data.industries = tags;
 
+  const key = ogImageKey(id);
+  const card = (await shareCards)[key];
+  if (!card) throw new Error(`[route-data] no share card for "${key}"`);
+
   const added = headEntries({
     id,
     data: {
@@ -107,6 +121,7 @@ export const onRequest = defineRouteMiddleware(async (context) => {
     markdownSlug: entry?.filePath
       ? TWINS.get(docsRelPath(entry.filePath))
       : undefined,
+    shareAlt: ogImageAlt(card),
     siteUrl: SITE_URL,
     gmtVersion,
   });

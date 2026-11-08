@@ -33,6 +33,9 @@ const SITE_NAME = "GMT";
 /** Where the source of the package lives. */
 const CODE_REPOSITORY = "https://github.com/northguild/gmt";
 
+/** The value of `og:locale`. Open Graph writes it `language_TERRITORY`; Starlight writes the page language. */
+const OG_LOCALE = "en_US";
+
 /** The share image's size in pixels (`og:image:width`, `og:image:height`). */
 const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 
@@ -58,6 +61,7 @@ const OWN_IMAGE_SECTIONS = [
   "scenarios",
   "migrate",
   "compare",
+  "changelog",
 ] as const;
 
 /**
@@ -97,6 +101,8 @@ export type HeadInput = {
   hasEntry: (id: string) => EntryRef | undefined;
   /** The path of the page's Markdown twin without `.md`; undefined for a page that is not in the docs collection. */
   markdownSlug?: string;
+  /** What the page's share card shows (`ogImageAlt`), used as `og:image:alt` and `twitter:image:alt`. */
+  shareAlt: string;
   /** The site's address without a trailing slash. */
   siteUrl: string;
   /** The version of `@northguild/gmt`. */
@@ -147,7 +153,12 @@ export function headEntries(input: HeadInput): HeadEntry[] {
       tag: "meta",
       attrs: { property: "og:type", content: home ? "website" : "article" },
     },
+    { tag: "meta", attrs: { property: "og:locale", content: OG_LOCALE } },
     { tag: "meta", attrs: { property: "og:image", content: image } },
+    {
+      tag: "meta",
+      attrs: { property: "og:image:type", content: "image/png" },
+    },
     {
       tag: "meta",
       attrs: {
@@ -162,8 +173,15 @@ export function headEntries(input: HeadInput): HeadEntry[] {
         content: String(OG_IMAGE_SIZE.height),
       },
     },
-    { tag: "meta", attrs: { property: "og:image:alt", content: shareTitle } },
+    {
+      tag: "meta",
+      attrs: { property: "og:image:alt", content: input.shareAlt },
+    },
     { tag: "meta", attrs: { name: "twitter:image", content: image } },
+    {
+      tag: "meta",
+      attrs: { name: "twitter:image:alt", content: input.shareAlt },
+    },
     {
       tag: "meta",
       attrs: { name: "twitter:card", content: "summary_large_image" },

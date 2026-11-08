@@ -630,6 +630,58 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `og:image` is `/og/<key>.png` from `src/pages/og/[...route].ts`: one per guide, tool and
     scenario, one per reference namespace, else `site`. Fonts for them sit in `src/assets/og-fonts/`
     under SIL OFL 1.1.
+  - **Share tags** (`headEntries`, one `upsertHead` entry each, no `Head.astro` override):
+    - `og:locale` is `en_US`: Open Graph wants `language_TERRITORY`, and Starlight writes the page
+      language (`en`), which the entry replaces. `<html lang="en">` stays.
+    - `og:image:type` is `image/png`, beside the width and height, so a scraper need not fetch the file to learn it.
+    - `og:image:alt` and `twitter:image:alt` carry `ogImageAlt(card)` (`og-cards.ts`), built from the card
+      the page shows: `GMT share card: "<site line>" over the Earth seen from above the North Atlantic.`
+      for the site card, `Share card: "<card title>" over …` for every other. A function page therefore
+      names its namespace's card. An alt describes the image; a copy of the page title does not, and
+      names the wrong thing on a function page. `route-data.ts` looks the card up by `ogImageKey` and
+      passes the alt in, so `head-tags.ts` stays pure; a page with no card throws.
+    - `og:image` and `twitter:image` end in `?v=<first 12 hex of the SHA-256 of the PNG>`, because
+      Facebook caches an image by URL and a redrawn card must be a new URL. `versionOgImages`
+      (`src/lib/og-image-version.ts`) rewrites those two attributes in every built page on
+      `astro:build:done`, after the PNGs exist and not during page render, where their order is not
+      fixed. It throws for a PNG missing from `dist`. It is listed before `starlight()` in
+      `astro.config.mjs`: hooks run in list order, and Pagefind (Starlight's hook) and the dist
+      gates must read the final HTML. `_headers` caching of `/gmt/og/*` is unchanged.
+    - `scripts/share-preview.test.ts` (dist test, in CI beside `head-tags.test.ts`) checks every
+      indexable page for exactly one of each tag, the two URLs equal and absolute, the hash equal to the
+      PNG in `dist`, and an alt that quotes the card's own title.
+  - **The share card is drawn with CanvasKit, not `astro-og-canvas`.** `src/lib/og-art.ts` is the
+    one place the look lives; `og-cards.ts` builds the card list from the docs collection and
+    `og-canvaskit.ts` loads the wasm once. The text is centred in x 285-915, the square a link
+    preview app crops a 1200x630 card to, with a 28 px margin, so a crop never cuts a line, and
+    centred vertically in the sky above the limb. A card is one of two kinds: the `site` card is
+    `GMT` plus `SITE_CARD_LINE` (the first sentence of the home hero's tagline; a test fails if
+    `index.mdx` stops starting with it), broken evenly over two lines; every other card (guide,
+    tool, scenario, migration, comparison, reference namespace) is its title alone under the
+    `@NORTHGUILD/GMT` eyebrow, because platforms print `og:description` under the image anyway.
+    Nothing is ever shortened: a title takes the largest size from 46 px down to 20 px that fits two
+    lines, and `renderCard` throws when a title or the site line fits at none. `og-art.test.ts`
+    checks every real card stays in the square, in two lines at most, without an ellipsis, and the
+    contrast of the text against the brightest pixel behind it (at least 4.5:1). The PNG is a
+    palette PNG from `sharp` (pinned `0.35.5`), about 125 KB a card, under WhatsApp's 300 KB limit;
+    the build of all cards takes about 12 s.
+  - **Earth image credit: NASA Earth Observatory, Blue Marble Next Generation** (public domain, no
+    logo). The sky and the Earth behind every card is `src/assets/og-earth.webp`, a fixed frame of
+    that texture (`public/earth-blue-marble.webp`) seen from 6.61 Earth radii, as on the home page.
+    The middle of the visible Earth (x 600, halfway from the limb's crest to the card's bottom) is
+    the great-circle midpoint of Helsinki and Isafjordur (65.14 N, 3.51 E, in the Norwegian Sea),
+    north up, so Scandinavia, Iceland and the North Atlantic fill the cap; the script computes it
+    from the two cities. The Sun is fixed at the June solstice, 11:46 UTC (over 23.44 N, 3.5 E), so
+    the whole cap is lit. The colours are the site's: the photograph only says where land, snow and
+    sea are, and a tritone read from `src/styles/gmt-tokens.css` paints them (sea `--gmt-surface-2`
+    to `--gmt-teal`, land `--gmt-teal` to `--gmt-ice-dim`, snow `--gmt-ice`, air `--gmt-cyan`, sky
+    `--gmt-void`). Rebuild it by hand with `pnpm --filter dox exec tsx scripts/build-og-earth.ts`;
+    it is not part of `generate` or the build, and the result is deterministic, so a diff means the
+    script changed.
+  - **Upload-ready images** live in `apps/dox/assets/share/` (outside `src/` and `public/`, so never
+    served): the GitHub social preview (1280x640), the site card and the Earth artwork alone, with
+    a README. `pnpm --filter dox run social-preview` writes all three, deterministically; rerun it
+    after any change to `og-art.ts` or `og-earth.webp`.
   - JSON-LD: `SoftwareSourceCode` on the home page (version from `@northguild/gmt`),
     `BreadcrumbList` on every docs page, `TechArticle` on every guide with `dateModified`.
   - Every docs page links its Markdown twin (`<link rel="alternate" type="text/markdown">`); the
