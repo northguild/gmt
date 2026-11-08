@@ -102,6 +102,11 @@
     max-inline-size: none;
     inline-size: 100%;
     block-size: 100%;
+    /* Text on a canvas takes its smoothing from the element, and a worker's OffscreenCanvas has none,
+       so the page's `antialiased` would thicken only the main-thread labels. `auto` makes both alike. */
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+
     cursor: grab;
 
     /* Drawn while hidden, then brought in by the shared entrance once the first frame is measured. */
@@ -351,6 +356,11 @@
     display: block;
     inline-size: 100%;
     block-size: 100%;
+
+    /* Text on a canvas takes its smoothing from the element, and a worker's OffscreenCanvas has none,
+       so the page's `antialiased` would thicken only the main-thread labels. `auto` makes both alike. */
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
 
     &:not([data-entered]) {
       opacity: 0;

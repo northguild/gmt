@@ -26,6 +26,8 @@ let engineOptions:
       ) => { cx: number; cy: number; radius: number };
       framingWatch: Element[];
       entrance?: string;
+      pauseWhenHidden?: Element;
+      pauseWhile?: (hold: (held: boolean) => void) => () => void;
     }
   | undefined;
 
@@ -128,6 +130,30 @@ describe("mountGlobe", () => {
     expect(calls).toContain("focus Asia/Tokyo");
     handle.destroy();
     expect(calls).toContain("destroy");
+  });
+});
+
+describe("every globe pauses", () => {
+  it("watches the framed globe's own surface and the cover, as the hero does", async () => {
+    await mount();
+    expect(engineOptions?.pauseWhenHidden).toBeInstanceOf(HTMLElement);
+    const holds: boolean[] = [];
+    const stop = engineOptions?.pauseWhile?.((held) => holds.push(held));
+    const menu = document.body;
+    menu.setAttribute("data-mobile-menu-expanded", "");
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(holds).toEqual([true]);
+    menu.removeAttribute("data-mobile-menu-expanded");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(holds).toEqual([true, false]);
+    stop?.();
+  });
+
+  it("gives the hero the same hold, on its whole stage", async () => {
+    await mount({}, { space: true });
+    expect(engineOptions?.pauseWhenHidden).toBeInstanceOf(HTMLElement);
+    expect(engineOptions?.pauseWhile).toBeTypeOf("function");
   });
 });
 

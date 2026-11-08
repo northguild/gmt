@@ -396,6 +396,87 @@ describe("pauseWhenHidden", () => {
   });
 });
 
+describe("pauseWhile", () => {
+  it("hands the host a setter and calls the returned stop on destroy", async () => {
+    const stop = vi.fn();
+    const pauseWhile = vi.fn(() => stop);
+    const engine = await start(hostWithBox(), { pauseWhile });
+    expect(pauseWhile).toHaveBeenCalledTimes(1);
+    expect(stop).not.toHaveBeenCalled();
+    engine.destroy();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws nothing while held and carries on when released", async () => {
+    vi.useFakeTimers();
+    try {
+      let hold: (held: boolean) => void = () => {};
+      const engine = await start(hostWithBox(), {
+        pauseWhile: (set) => {
+          hold = set;
+          return () => {};
+        },
+      });
+      const fake = made[0]!;
+      hold(true);
+      const before = fake.frames.length;
+      engine.setZoom(3);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(fake.frames.length).toBe(before);
+      hold(false);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(fake.frames.length).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stays held until every reason has cleared", async () => {
+    vi.useFakeTimers();
+    let notify: IntersectionObserverCallback = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(cb: IntersectionObserverCallback) {
+          notify = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    try {
+      let hold: (held: boolean) => void = () => {};
+      const host = hostWithBox();
+      const engine = await start(host, {
+        pauseWhenHidden: host,
+        pauseWhile: (set) => {
+          hold = set;
+          return () => {};
+        },
+      });
+      const fake = made[0]!;
+      notify(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      hold(true);
+      hold(false);
+      const before = fake.frames.length;
+      engine.setZoom(3);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(fake.frames.length).toBe(before);
+      notify(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      await vi.advanceTimersByTimeAsync(100);
+      expect(fake.frames.length).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("the dawn entrance", () => {
   /** Frame times and exposures, read from `onFrame` against the faked clock. */
   function watch(engine: Awaited<ReturnType<typeof start>>, fake: Fake) {
