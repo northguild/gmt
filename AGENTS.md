@@ -58,6 +58,22 @@ does not authorise force-pushing it.
 If one of these seems genuinely necessary and nobody has asked for it, stop and
 ask in plain words.
 
+**Two standing instructions from the owner.** These need no new word each time:
+
+- **Keep the branch up to date with `main`.** Do this when work on a branch starts, before
+  `finalizer` runs `validate`, and before any push. Run `git fetch origin main`, then
+  `git merge origin/main` when the branch is behind. Never rebase, because the branch is
+  published. Resolve every conflict so both sides' changes survive, run
+  `node scripts/verdict.mjs validate`, and commit the merge. If uncommitted work touches the
+  incoming files, git refuses the merge. Do not stash (the stash is shared): name the files to
+  the owner and merge once the work is committed. Pushing the merge still needs the owner's word.
+  On an open PR, `gh pr view --json mergeable` shows whether GitHub sees a conflict.
+- **A PR gets its labels, milestone and reviewer.** Run `node scripts/pr-meta.mjs --apply` right
+  after a PR is opened, and when `finalizer` closes a story whose PR is already open. It only
+  adds: labels from the commit types and changed paths, the closed issue's milestone (else the
+  story's tracker), and the other collaborator as reviewer. A run without `--apply` changes
+  nothing and shows the plan.
+
 ## Core Rules (Quick Reference)
 
 These are the non-negotiables. Full detail is in the context files above.

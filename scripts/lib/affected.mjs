@@ -397,7 +397,7 @@ export const RULES = [
     checks: ["typecheck:dox", ...SCRIPT_TESTS],
   },
   {
-    test: /^scripts\/(?:verdict|lib\/(?:verdict-(?:format|parse)|pr-status-plan))\.mjs$/,
+    test: /^scripts\/(?:verdict|pr-meta|lib\/(?:verdict-(?:format|parse)|pr-status-plan|pr-meta-plan))\.mjs$/,
     checks: ["typecheck:dox", ...SCRIPT_TESTS],
   },
   {
