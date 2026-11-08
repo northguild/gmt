@@ -359,7 +359,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     (`DateUnit`, `TimeUnit`, `DateTimeUnit`, `keyof DurationLike`). A shared type page shows its
     declaration as the source writes it, so its order is the source's.
     `classifyType` gives an enum select the same order (`orderUnitChoices`): unit names first,
-    largest first, then the other choices (`dayOfWeek`) in their original order, then `""`. The
+    largest first, then the other choices (`dayOfWeek`) in their original order, then `""`. A
+    select then offers each unit once, by its singular (§ Playground), while a printed union
+    keeps both spellings: the signature documents the type, the select picks a value. The
     unit control's constants are declared in it, so a page's signature and its playground agree.
     `reference-unit-order.test.ts` scans every generated page, code blocks and table cells, and
     fails on a union of unit names out of this order. A `@param` description that lists unit
@@ -1137,6 +1139,22 @@ Shared hooks come first, then the globe, then the clock-change pages.
   never overwritten, and a choice with no example only re-runs (`createSeedLoader` in
   `src/lib/playground-client.ts`). A function whose examples do not vary by choice has no
   `choiceSeeds`.
+  - **One name per unit.** Temporal treats a plural unit name as an alias of the singular,
+    which is canonical
+    ([`GetTemporalUnitValuedOption`](https://tc39.es/proposal-temporal/#sec-temporal-gettemporalunitvaluedoption)).
+    An enum select, or a list of enums, that would offer both spellings of a unit offers it
+    once, by the singular (`collapseUnitAliases` in `build-utils.ts`, after
+    `orderUnitChoices`). A plural with no singular in the same union stays (`"days"`,
+    `"hours"`), and other choices (`dayOfWeek`, `""`) keep their places. An example that writes
+    the plural seeds the singular (`canonicalChoice`): `fieldForParam` maps an enum's seed and
+    each list item, and `buildChoiceSeeds` keys each choice's example by the singular, so
+    `startOfZoned`'s `"milliseconds"` example loads under `millisecond`. The field carries
+    `aliases`, each dropped plural mapped to the singular kept, only when it dropped one; tests
+    read it, the client ignores it. Two gates hold the rule: `playground-templates.test.ts`
+    "one name per unit" checks every template (no repeated choice and no unit in both
+    spellings, every seed and `choiceSeeds` key a choice, and each alias giving the same
+    result as its singular), and `scripts/select-options.test.ts` fails on any `<select>` in
+    `dist/gmt` that repeats an option value or label, tool pages included.
   - **Trap: the first `@example` of a function that takes a unit object writes one key.** The
     playground seeds from it, and a two-key object seeds amount `1` in the first listed unit.
 - **Sentinel-aware output everywhere.** `""` / `null` / `false` / `[]` from invalid input

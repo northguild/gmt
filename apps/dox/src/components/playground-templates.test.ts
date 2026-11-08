@@ -311,6 +311,104 @@ describe("unit name order in selects", () => {
     const choices = unit?.choices ?? [];
     expect(choices).toContain("dayOfWeek");
     expect(choices).toEqual(expected(choices));
-    expect(rank(choices[0])).toBe(0);
+    expect(choices[0]).toBe("year");
+  });
+});
+
+describe("one name per unit", () => {
+  const SINGULAR = [
+    "year",
+    "month",
+    "week",
+    "day",
+    "hour",
+    "minute",
+    "second",
+    "millisecond",
+    "microsecond",
+    "nanosecond",
+  ];
+  const choicesOf = (f: PlaygroundField) => f.choices ?? [];
+  const fieldsOf = () =>
+    templates.flatMap(([id, t]) =>
+      (t.fields ?? []).map((field) => ({ id, t, field })),
+    );
+
+  it("offers no choice twice, and no unit in both spellings", () => {
+    const wrong: string[] = [];
+    for (const { id, field } of fieldsOf()) {
+      const choices = choicesOf(field);
+      if (new Set(choices).size !== choices.length) {
+        wrong.push(`${id}.${field.name}: repeated choice`);
+      }
+      for (const unit of SINGULAR) {
+        if (choices.includes(unit) && choices.includes(`${unit}s`)) {
+          wrong.push(`${id}.${field.name}: ${unit} and ${unit}s`);
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it("seeds only choices the select offers", () => {
+    const wrong: string[] = [];
+    for (const { id, t, field } of fieldsOf()) {
+      const choices = choicesOf(field);
+      if (field.kind === "enum") {
+        const empty = field.seed === "" && field.optional;
+        if (!empty && !choices.includes(field.seed)) {
+          wrong.push(`${id}.${field.name}: seed ${field.seed}`);
+        }
+        for (const key of Object.keys(t.choiceSeeds?.[field.name] ?? {})) {
+          if (!choices.includes(key)) {
+            wrong.push(`${id}.${field.name}: choiceSeeds key ${key}`);
+          }
+        }
+      }
+      if (field.kind === "list" && field.element === "enum") {
+        for (const item of field.items ?? []) {
+          if (!choices.includes(item)) {
+            wrong.push(`${id}.${field.name}: item ${item}`);
+          }
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  // Temporal reads a plural unit name as an alias of the singular, and gmt follows. A select that
+  // drops the plural is right only while the two give one answer.
+  it("gives a dropped plural the result of the singular it maps to", async () => {
+    const aliased = fieldsOf().filter(({ field }) => field.aliases);
+    expect(aliased.length).toBeGreaterThan(0);
+
+    for (const { id, t, field } of aliased) {
+      const mod = await GMT_MODULES[t.module]?.();
+      const fn = mod?.[t.fn] as (...a: unknown[]) => unknown;
+      const run = (name: string) => {
+        const fields = (t.fields ?? []).map((f) => {
+          const state = seededField(f);
+          if (f !== field) return state;
+          return f.kind === "list"
+            ? { ...state, items: [name] }
+            : { ...state, value: name };
+        });
+        const call = buildCall(t.fn, fields, {
+          optionsSuffix: t.optionsSuffix,
+          objectArg: t.objectArg,
+        });
+        return fn(
+          ...parseCallArgs(call)
+            .map((a) => a.trim())
+            .map(evaluateArg),
+        );
+      };
+
+      for (const [dropped, kept] of Object.entries(field.aliases ?? {})) {
+        expect(await run(dropped), `${id}.${field.name}: ${dropped}`).toEqual(
+          await run(kept),
+        );
+      }
+    }
   });
 });

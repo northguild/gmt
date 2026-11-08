@@ -1681,6 +1681,110 @@ describe("buildChoiceSeeds", () => {
   });
 });
 
+describe("one option per unit in a select", () => {
+  const UNITS = [
+    "years",
+    "months",
+    "year",
+    "month",
+    "milliseconds",
+    "millisecond",
+  ];
+  const unitSpec = {
+    module: "zoned/calculate",
+    fn: "startOfZoned",
+    returnType: "string" as const,
+    params: [
+      {
+        name: "unit",
+        type: "enum" as const,
+        value: "year",
+        options: UNITS,
+      },
+    ],
+  };
+
+  it("seeds the singular when the example writes the plural", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        ...unitSpec,
+        params: [{ ...unitSpec.params[0], value: "milliseconds" }],
+      },
+      'startOfZoned("milliseconds")',
+    );
+    expect(res?.fields[0]).toMatchObject({
+      kind: "enum",
+      seed: "millisecond",
+      choices: ["year", "month", "millisecond"],
+      aliases: { years: "year", months: "month", milliseconds: "millisecond" },
+    });
+  });
+
+  it("leaves aliases off a select that offered no unit twice", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        ...unitSpec,
+        params: [
+          { ...unitSpec.params[0], value: "hours", options: ["days", "hours"] },
+        ],
+      },
+      'startOfZoned("hours")',
+    );
+    expect(res?.fields[0]).toMatchObject({
+      seed: "hours",
+      choices: ["days", "hours"],
+    });
+    expect(res?.fields[0]).not.toHaveProperty("aliases");
+  });
+
+  it("seeds a list with each element as the singular", () => {
+    const res = BR.buildPlaygroundFields(
+      {
+        module: "date/calculate",
+        fn: "pickUnits",
+        returnType: "string" as const,
+        params: [
+          {
+            name: "units",
+            type: "array" as const,
+            value: "",
+            arrayType: "string" as const,
+            options: UNITS,
+          },
+        ],
+      },
+      'pickUnits(["day", "months"])',
+    );
+    expect(res?.fields[0]).toMatchObject({
+      kind: "list",
+      element: "enum",
+      choices: ["year", "month", "millisecond"],
+      items: ["day", "month"],
+    });
+  });
+
+  it("keys a choice's example by the singular", () => {
+    const two = {
+      ...unitSpec,
+      params: [
+        unitSpec.params[0],
+        { name: "tag", type: "string" as const, value: "x" },
+      ],
+    };
+    const exs = [
+      { call: 'startOfZoned("milliseconds", "m")', result: '"a"' },
+      { call: 'startOfZoned("year", "y")', result: '"b"' },
+    ];
+    const base = BR.buildPlaygroundFields(two, exs[0].call)!.fields;
+    expect(BR.buildChoiceSeeds(two, exs, base)).toEqual({
+      unit: {
+        millisecond: { tag: { seed: "m" } },
+        year: { tag: { seed: "y" } },
+      },
+    });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // buildPlaygroundFields
 // ---------------------------------------------------------------------------

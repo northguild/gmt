@@ -1357,8 +1357,10 @@ function fieldForParam(
         ...opt,
       };
     }
-    const choices = p.options ?? [];
-    const items = raw ? BU.parseArrayArg(raw) : [];
+    const { choices, aliases } = BU.collapseUnitAliases(p.options ?? []);
+    const items = (raw ? BU.parseArrayArg(raw) : []).map((item) =>
+      BU.canonicalChoice(item, aliases),
+    );
     // `parseArrayArg` unquotes each element, so an array of object literals
     // comes back as source text. Quoting it again would pass the source as a
     // string — `mergeCalendars([{ weekend: … }])` is the case.
@@ -1375,6 +1377,7 @@ function fieldForParam(
             ? "number"
             : "string",
       ...(choices.length ? { choices } : {}),
+      ...(Object.keys(aliases).length ? { aliases } : {}),
       items,
       ...opt,
     };
@@ -1395,15 +1398,23 @@ function fieldForParam(
   }
 
   if (p.type === "enum") {
-    const choices = p.options ?? [];
+    const { choices, aliases } = BU.collapseUnitAliases(p.options ?? []);
     if (!choices.length) return null;
     if (raw !== undefined && !QUOTED_ARG.test(raw)) return null;
+    const value = p.value ? BU.canonicalChoice(p.value, aliases) : "";
     const seed = omitted
       ? ""
-      : p.value && choices.includes(p.value)
-        ? p.value
+      : value && choices.includes(value)
+        ? value
         : choices[0];
-    return { name: p.name, kind: "enum", seed, choices, ...opt };
+    return {
+      name: p.name,
+      kind: "enum",
+      seed,
+      choices,
+      ...(Object.keys(aliases).length ? { aliases } : {}),
+      ...opt,
+    };
   }
 
   if (p.type === "expr") {
@@ -1639,7 +1650,7 @@ export function buildChoiceSeeds(
         ? BU.parseObjectArgEntries(rawArgs[0]).find(([k]) => k === ef.name)?.[1]
         : rawArgs[idx];
       if (raw === undefined || !QUOTED_ARG.test(raw)) continue;
-      const choice = argToValue(raw);
+      const choice = BU.canonicalChoice(argToValue(raw), ef.aliases);
       if (!ef.choices!.includes(choice) || entries[choice]) continue;
 
       // The unit control holds one unit: an object with two keys, or a key the

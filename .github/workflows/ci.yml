@@ -283,13 +283,14 @@ jobs:
       # `dist-base.test.ts` reads the same build for the /gmt base: a root URL without `/gmt` in any
       # HTML, CSS, script, `.md`, `llms*.txt`, sitemap or `_redirects` fails here.
       # `head-tags.test.ts` checks each built page's title, description and share tags.
+      # `select-options.test.ts` checks no built select repeats an option value or label.
       # `gates/registry.test.ts` checks the gates' sample pages exist in it, and `a11y-tab-walk`'s
       # page contract, which lists a subset of the built pages.
-      - name: "Built site: text surfaces, the /gmt base, head tags and the gate pages"
+      - name: "Built site: text surfaces, the /gmt base, head tags, select options and the gate pages"
         if: contains(fromJSON(env.CHECKS), 'dox-dist')
         env:
           DOX_DIST_REQUIRED: "1"
-        run: pnpm --filter dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts
+        run: pnpm --filter dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/select-options.test.ts scripts/gates/registry.test.ts
 
       # No table on a built page scrolls sideways at 1440 px. The check opens every built page with a
       # table in Chromium, so it needs the browser the Dox gates job installs.
