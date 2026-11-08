@@ -26,13 +26,14 @@ Read these before working in the repo. Each is scoped — load only what you nee
 **The default is always: finish the work, leave it unstaged in the working tree,
 and say it is ready.** Do not stage, commit, branch, push or open a pull request
 on your own initiative — not as a checkpoint, not "so nothing is lost", not
-because the work looks finished.
+because the work looks finished. The only exceptions are the two standing
+instructions at the end of this section.
 
 **Do them when the user tells you to, in plain words, in the current session.**
 "Commit this", "push the branch", "open the PR" are instructions: carry them out
 and report what you did. An instruction covers the operation it names for the
 work in hand. It is not a standing licence — a later, separate write needs its
-own instruction. Typing a skill whose job is one of these operations is the
+own instruction, unless it is one of the two standing instructions below. Typing a skill whose job is one of these operations is the
 instruction for that run: `/release` commits, pushes and opens its release PR.
 
 **Never infer the permission.** It has to come from the user, about this
@@ -60,8 +61,9 @@ ask in plain words.
 
 **Two standing instructions from the owner.** These need no new word each time:
 
-- **Keep the branch up to date with `main`.** Do this when work on a branch starts, before
-  `finalizer` runs `validate`, and before any push. Run `git fetch origin main`, then
+- **Keep the branch up to date with `main`.** Do this when work on a branch starts, as
+  `finalizer`'s first step (before it edits the READMEs or the tracker), and before any push.
+  Commit the merge only, never the story's own work. Run `git fetch origin main`, then
   `git merge origin/main` when the branch is behind. Never rebase, because the branch is
   published. Resolve every conflict so both sides' changes survive, run
   `node scripts/verdict.mjs validate`, and commit the merge. If uncommitted work touches the

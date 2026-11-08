@@ -34,11 +34,23 @@ function fail(message) {
   process.exit(2);
 }
 
-/** @param {string} cmd @param {string[]} args @param {{ allowFail?: boolean }} [options] */
+/**
+ * `gh`'s own "does not exist" answers. Any other failure (a bad token, no network, a rate limit)
+ * stops the script with `gh`'s message, so it never reads as "no open PR" or "no milestone".
+ */
+const NO_PR =
+  /no pull requests found for branch|Could not resolve to a PullRequest/;
+const NO_ISSUE = /Could not resolve to an issue or pull request/;
+
+/**
+ * Runs a command and returns its trimmed stdout. A failure whose stderr matches `notFound`
+ * returns null; any other failure stops the script.
+ * @param {string} cmd @param {string[]} args @param {{ notFound?: RegExp }} [options]
+ */
 function run(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, { cwd: root, encoding: "utf8" });
   if (result.status !== 0) {
-    if (options.allowFail) return null;
+    if (options.notFound?.test(result.stderr)) return null;
     fail(`${cmd} ${args.join(" ")} failed:\n${result.stderr.trim()}`);
   }
   return result.stdout.trim();
@@ -70,7 +82,7 @@ const pr = JSON.parse(
       "--json",
       "number,state,headRefName,author,closingIssuesReferences,labels,milestone,reviewRequests,latestReviews",
     ],
-    { allowFail: true },
+    { notFound: NO_PR },
   ) ?? "null",
 );
 if (rest.length && pr?.state !== "OPEN") fail(`No open PR for ${rest[0]}.`);
@@ -112,7 +124,7 @@ const issueNumbers = open?.closingIssuesReferences?.length
 const closingIssues = issueNumbers.map((number) => {
   const issue = JSON.parse(
     run("gh", ["issue", "view", String(number), "--json", "milestone"], {
-      allowFail: true,
+      notFound: NO_ISSUE,
     }) ?? "{}",
   );
   return { number, milestone: issue.milestone?.title ?? null };

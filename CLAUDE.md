@@ -10,6 +10,10 @@ Copyright (c) 2026 NorthGuild. All rights reserved under [`.agents/LICENSE`](.ag
 initiative.** Finish the work, leave it **unstaged in the working tree**, and say
 it is ready.
 
+**Two standing exceptions** need no new word each time: merge `origin/main` into
+the branch and commit that merge (never the story's work, and never push it), and
+run `node scripts/pr-meta.mjs --apply` on an open PR. AGENTS.md § Git says when.
+
 **Do it when the user explicitly tells you to** — "commit this", "push it",
 "open the PR" — in plain words, in this session. Then do it and report back.
 

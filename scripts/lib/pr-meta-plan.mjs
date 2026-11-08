@@ -10,6 +10,9 @@
  * Path rules: a changed path adds every label whose test it matches. Status and workflow labels
  * (`parked`, `ready to build`, `waiting: *`, `canary`, `dox-gate`, `craig-review`) are a person's
  * call or a workflow's, so no rule adds them.
+ *
+ * Every tracked path matches at least one rule (`plan.test.ts` checks `git ls-files`), except a
+ * changeset entry (`.changeset/<name>.md`): it rides with the package change that labels the PR.
  * @type {ReadonlyArray<{ label: string, test: RegExp }>}
  */
 export const PATH_RULES = [
@@ -24,12 +27,13 @@ export const PATH_RULES = [
     test: /^(?:\.agents\/|\.claude\/|AGENTS\.md$|CLAUDE\.md$|context\/skills\.md$)/,
   },
   {
+    /* Every root file that is not a document or an agent file is tooling. */
     label: "gmt monorepo",
-    test: /^(?:scripts\/|apps\/dox\/scripts\/|package\.json$|pnpm-(?:lock|workspace)\.yaml$|\.worktree\.yml$|\.oxfmtrc\.json$|\.gitignore$|tsconfig[\w.]*\.json$|vitest[\w.]*\.[cm]?ts$|\.github\/renovate\.json5$)/,
+    test: /^(?:scripts\/|apps\/dox\/scripts\/|\.github\/(?!workflows\/)|\.vscode\/|\.changeset\/(?:config\.json|README\.md)$|(?!(?:AGENTS|CLAUDE|CONTRIBUTING|PUBLISHING|README|SECURITY)\.md$|LICENSE$)[^/]+$)/,
   },
   {
     label: "documentation",
-    test: /^(?:context\/(?!skills\.md$)|apps\/dox\/(?!scripts\/)|README\.md$|CONTRIBUTING\.md$|PUBLISHING\.md$|SECURITY\.md$|packages\/[\w-]+\/README\.md$)/,
+    test: /^(?:context\/(?!skills\.md$)|apps\/dox\/(?!scripts\/)|docs\/|README\.md$|CONTRIBUTING\.md$|PUBLISHING\.md$|SECURITY\.md$|(?:[^/]+\/)*LICENSE$|packages\/[\w-]+\/README\.md$)/,
   },
 ];
 

@@ -101,7 +101,7 @@ disputed reading of a standard. Say so in the report. The agent files' defaults 
 4. **Escalate blockers** — an ambiguous spec, a design conflict, tests that cannot pass: stop
    and report to the user with full context. No step fails or is skipped silently.
 5. **Nothing is committed** but a merge from `main`. Bring `origin/main` in when the story starts
-   and again before `finalizer` ([AGENTS.md § Git](../../../AGENTS.md#git--only-on-an-explicit-instruction)
+   and again as `finalizer`'s first step ([AGENTS.md § Git](../../../AGENTS.md#git--only-on-an-explicit-instruction)
    has the two standing instructions); `finalizer` labels an open PR with `scripts/pr-meta.mjs`.
    The pipeline ends with unstaged changes plus drafted commit and PR
    text for the owner. Never run `changeset version`, `changeset publish`, `npm publish` or

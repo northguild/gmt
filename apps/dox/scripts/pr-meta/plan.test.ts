@@ -1,6 +1,13 @@
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
-import { planMeta, storyIdOf } from "../../../../scripts/lib/pr-meta-plan.mjs";
+import {
+  PATH_RULES,
+  planMeta,
+  storyIdOf,
+} from "../../../../scripts/lib/pr-meta-plan.mjs";
 
 /** The pure planner behind `scripts/pr-meta.mjs`. Branches and paths are from merged northguild/gmt PRs. */
 
@@ -90,6 +97,47 @@ describe("planMeta labels", () => {
     expect(
       planMeta(facts({ paths: ["apps/dox/scripts/build-guides.mjs"] })).labels,
     ).toEqual(["gmt monorepo"]);
+  });
+
+  it.each([
+    ["oxlint.config.mts", "gmt monorepo"],
+    [".fallowrc.jsonc", "gmt monorepo"],
+    [".node-version", "gmt monorepo"],
+    ["pyproject.toml", "gmt monorepo"],
+    ["uv.lock", "gmt monorepo"],
+    ["skills-lock.json", "gmt monorepo"],
+    ["context7.json", "gmt monorepo"],
+    [".vscode/settings.json", "gmt monorepo"],
+    [".github/ISSUE_TEMPLATE/bug.yml", "gmt monorepo"],
+    [".github/PULL_REQUEST_TEMPLATE.md", "gmt monorepo"],
+    [".changeset/config.json", "gmt monorepo"],
+    ["docs/dst-disambiguation.md", "documentation"],
+    ["LICENSE", "documentation"],
+    ["apps/LICENSE", "documentation"],
+  ])("labels %s alone %s", (path, label) => {
+    expect(planMeta(facts({ paths: [path] })).labels).toEqual([label]);
+  });
+
+  it("gives every tracked path a label, except a changeset entry", () => {
+    const tracked = execFileSync("git", ["ls-files"], {
+      cwd: fileURLToPath(new URL("../../../..", import.meta.url)),
+      encoding: "utf8",
+    })
+      .split("\n")
+      .filter(Boolean);
+    const unlabelled = tracked.filter(
+      (path) =>
+        !PATH_RULES.some((rule) => rule.test.test(path)) &&
+        !/^\.changeset\/(?!config\.json$|README\.md$)[^/]+\.md$/.test(path),
+    );
+    expect(tracked.length).toBeGreaterThan(1000);
+    expect(unlabelled).toEqual([]);
+  });
+
+  it("gives a changeset entry no label of its own", () => {
+    expect(
+      planMeta(facts({ paths: [".changeset/tai64n-text-labels.md"] })).labels,
+    ).toEqual([]);
   });
 
   it("gives a fix bug, and a breaking feat! enhancement", () => {
