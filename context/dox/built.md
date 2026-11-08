@@ -440,9 +440,32 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         link, a `<details>` or a tab stop, and a screen reader hears the label before the list.
         Everything else is Starlight's markup, so current-page highlighting, a page opening
         only its ancestors, `sl-sidebar-state` and the mobile menu are unchanged. The divider is
-        also a link in Starlight's data, so the override recomputes the previous and next links
-        under a page without it. `SidebarSublist.astro` follows Starlight's file of the same
+        also a link in Starlight's data, so the previous and next links are moved off it in the
+        route middleware (below). `SidebarSublist.astro` follows Starlight's file of the same
         name: compare them on a Starlight upgrade.
+      - **The tree is lean.** `src/route-data.ts` runs `leanSidebar` (`src/lib/lean-sidebar.ts`):
+        a page keeps its own namespace's group whole (`reference/<ns>/…`, `types` included), and
+        every other namespace becomes a collapsed group holding only its Overview link, with its
+        `attrs`, so the industry icon rule still matches. The reference index and every page outside
+        `reference/` show all namespaces reduced. The reference group is found by its first link
+        (`/gmt/reference/`), never its label. Reason: the full tree was about 900 function links, over
+        half of every page's HTML and ahead of `<main>`; a crawler that cuts a long page, or an
+        HTML-to-text reader with a context limit, read navigation before content. Every namespace
+        stays one link away from every page. Starlight's 404 route uses the `splash` template and
+        renders no sidebar, so it is left alone.
+      - **Pagination is fixed on the full tree.** Starlight computes `pagination` before route
+        middleware runs, so trimming leaves prev/next right. `skipDividers` moves them off the
+        divider, and runs in the middleware before the trim; `Sidebar.astro` holds no pagination
+        code.
+      - **Saved sidebar state is per tree.** `SidebarPersister` keys `sl-sidebar-state` by a hash of
+        the rendered sidebar, so open groups carry between pages of one namespace, and between all
+        pages outside `reference/`, but not from a `zoned` page to a `plain` page.
+      - **The Tab walk follows the tree.** A reference page carries only its own namespace, so
+        `tabWalkPages` (`scripts/gate-checks.mjs`) returns every page outside `/reference/`, the
+        first function page of each namespace and the first type page.
+        `scripts/sidebar-reach.test.ts` (built site) holds the rules: every namespace index is
+        linked from every page, a reference page links no other namespace's deeper pages, the page is
+        current once, and the pages either side of the divider link each other.
       - **The icon.** An own namespace's `Overview` link carries `attrs: { "data-gmt-industry":
         <id> }`; `Head.astro` writes one `--gmt-industry-icon` rule per own namespace from
         `industrySidebarCss()` (the tag's glyph as a mask), and a `:has()` rule in

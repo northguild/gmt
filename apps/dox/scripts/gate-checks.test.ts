@@ -518,14 +518,18 @@ describe("tabWalkPages", () => {
     "/reference/calendar/business/",
     "/reference/calendar/business/nextBusinessDay/",
     "/reference/calendar/business/businessDaysBetween/",
+    "/reference/zoned/",
+    "/reference/zoned/calculate/startOfZoned/",
+    "/reference/zoned/calculate/endOfZoned/",
     "/tools/x/",
     "/",
   ];
-  it("keeps every page outside /reference/ and one function and one type page", () => {
+  it("keeps every page outside /reference/, one function page per namespace and one type page", () => {
     expect(tabWalkPages(all)).toEqual([
       "/",
       "/tools/x/",
       "/reference/calendar/business/businessDaysBetween/",
+      "/reference/zoned/calculate/endOfZoned/",
       "/reference/types/A/",
     ]);
   });

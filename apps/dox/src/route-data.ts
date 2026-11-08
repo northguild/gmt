@@ -6,11 +6,17 @@
  * under it (`src/lib/page-industries.ts`), which `PageTitle.astro` shows. The 404 page gets no
  * share tags; it loses its canonical link and carries `noindex`: Starlight's canonical for it is
  * `/gmt/404/`, which redirects to `/gmt/404`, and a page that answers 404 is not one to index.
+ * Starlight's 404 route uses the `splash` template, which renders no sidebar, so the 404 early
+ * return below skips the lean sidebar too.
+ *
+ * The sidebar is trimmed here (`src/lib/lean-sidebar.ts`): the divider pagination fix runs first, on
+ * the full tree, then every namespace but the page's own is cut to its Overview link.
  */
 import { defineRouteMiddleware } from "@astrojs/starlight/route-data";
 import { getCollection } from "astro:content";
 import { gmtVersion } from "~/generated/versions";
 import { headEntries, isHomeId, removeHead, upsertHead } from "~/lib/head-tags";
+import { leanSidebar, skipDividers } from "~/lib/lean-sidebar";
 import { docsRelPath, markdownTwinSlugs } from "~/lib/md-twin";
 import { pageIndustries, type PageEntry } from "~/lib/page-industries";
 import { SITE_URL } from "~/lib/site";
@@ -72,6 +78,9 @@ export const onRequest = defineRouteMiddleware(async (context) => {
     );
     return;
   }
+
+  route.pagination = skipDividers(route.sidebar, route.pagination);
+  route.sidebar = leanSidebar(route.sidebar, route.id);
 
   const docs = await docsById;
   const id = isHomeId(route.id) ? "" : route.id;
