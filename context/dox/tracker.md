@@ -42,7 +42,7 @@ or `architect`, with no tool shortlist; `/pipeline` says who builds it.
 | 20    | DOX-G2                                      | —          | #447         | Todo   |
 | 21    | DOX-G3                                      | —          | #467         | Done   |
 | 22    | DOX-G4                                      | —          | #458         | Done   |
-| 23    | DOX-G6                                      | —          | #448         | Todo   |
+| 23    | DOX-G6                                      | —          | #448         | Done⁶  |
 
 ¹ Owed verification, not work: a keyboard-only pass, `prefers-reduced-*` emulation, and a
 real Firefox/Safari check.
@@ -65,3 +65,7 @@ look, not the page.
 ⁵ Type pages by usage, property tables and the doc gate. Owed verification, not work: a real
 Firefox pass of the reference tables. Chromium was swept on every reference page at three
 widths and WebKit on five pages; Playwright's Firefox would not start.
+
+⁶ Search and answer engines. Owed verification, not work: the platform previews, the live
+`deploy-smoke` run and the live Core Web Vitals numbers can only run after a deploy. The list is in
+[built.md](built.md), under "Open checks after a deploy".

@@ -682,6 +682,26 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     served): the GitHub social preview (1280x640), the site card and the Earth artwork alone, with
     a README. `pnpm --filter dox run social-preview` writes all three, deterministically; rerun it
     after any change to `og-art.ts` or `og-earth.webp`.
+  - **The landing page `northguild.dev/` is a separate site with its own search tags.** It lives in
+    `northguild/northguild.dev` and carries its own sitemap, logo, `Organization` JSON-LD, a
+    `noindex` 404 page and a square-safe share card under 300 KB with a versioned image URL
+    (northguild/northguild.dev#21 and #22). Dox changes nothing there; the card follows the same
+    rules as the Dox cards.
+  - **Open checks after a deploy** (platforms scrape the live URL, so nothing here can run before
+    it; the owner runs them):
+    - Facebook Sharing Debugger ("Scrape Again"), LinkedIn Post Inspector, X (a draft post), Slack,
+      Discord and WhatsApp each show the card for `/gmt/`, a guide, a reference page and
+      `/gmt/changelog/`; WhatsApp also shows the whole title in a square crop.
+    - iMessage shows the rich preview for the same URLs, the changelog index and a line page included.
+    - The same platform checks pass for `https://northguild.dev/`.
+    - `node apps/dox/scripts/deploy-smoke.mjs` passes against `https://northguild.dev`.
+    - Google's Rich Results Test and validator.schema.org read the `Organization` data on
+      `https://northguild.dev/` with no errors.
+    - `node scripts/web-vitals.mjs --live https://northguild.dev` with `PSI_API_KEY` set records the
+      PageSpeed Insights and CrUX numbers for the home page, a guide and a reference page.
+    - Search Console and Bing Webmaster Tools: the sitemaps are submitted and Bing lists IndexNow
+      URLs within a week of switching Crawler Hints on (runbook §8). A failure is a new fix, not a
+      note here.
   - JSON-LD: `SoftwareSourceCode` on the home page (version from `@northguild/gmt`),
     `BreadcrumbList` on every docs page, `TechArticle` on every guide with `dateModified`.
   - Every docs page links its Markdown twin (`<link rel="alternate" type="text/markdown">`); the
@@ -3036,7 +3056,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     zone drawer. `createGlobe` takes `framing(width, height)` (the disc's centre and radius at
     zoom 1, from `frameSpace` in `globe-mount.ts`; the radius is the silhouette of the visible 81.3 degree cap, and zoom is a lens zoom, so the radius grows while the camera stays put), `hitArea` (the element that takes the pointer
     and is the one tab stop, so the canvas never does), `maxDpr` (1.5 in the hero, 2 elsewhere),
-    `pauseWhenHidden` (an `IntersectionObserver` stops the loop off screen) and `onInteract(kind)`
+    `pauseWhenHidden` (an `IntersectionObserver` stops the loop off screen; `globe-mount.ts` sets it, and `pauseWhile`, on every globe: the hero watches its stage, a framed globe its own surface), `pauseWhile(hold)` (the host calls `hold(true)` while something covers the globe; `globe-cover.ts` watches the search dialog and the mobile menu with one `MutationObserver`, no polling; the loop stops with no frame and no wake timer and resumes from the same rotation once off-screen and covered are both clear) and `onInteract(kind)`
     (`drag`, `pinch`, `wheel`, `tap` or `key`; it opens the drawer without moving focus, except a tap that picks a zone). All
     are opt-in: unset, a globe behaves as before. A wheel or touch off the hit area belongs to
     the page, so the copy scrolls and never zooms. At maximum zoom (5x) the Earth covers the
@@ -3327,6 +3347,32 @@ Shared hooks come first, then the globe, then the clock-change pages.
     rejected device, a shader that will not compile or a validation error on the first
     frame are all just "use canvas-2D". A lost device is retried once, while the tab is
     visible, then the fallback holds for the session. `?globe=webgpu|canvas2d` pins one.
+  - **Canvas 2D draws in a worker.** The canvas-2D renderer is a proxy: it transfers the canvas
+    to a module Web Worker (`canvas2d.worker.ts`) as an `OffscreenCanvas` and sends frame state;
+    `painter.ts` holds the drawing and has no DOM use, so the worker and the main-thread renderer
+    (`renderer-canvas2d.ts`) draw the same pixels. The protocol (`protocol.ts`) is `init`, `frame`,
+    `destroy` to the worker and `ready`, `drawn`, `failed` back. One frame is in flight; the newest
+    state goes out after `drawn`, so nothing queues. Nothing flows back to the engine because hit
+    testing and tooltips read the shared camera on the main thread. The renderer reports
+    `offThread: true`. `canDrawOffThread()` checks `Worker`, `OffscreenCanvas` and
+    `transferControlToOffscreen`; if it fails, or the worker errors, answers `failed`, sends an
+    unreadable message or is not ready within 8 s, the engine loads the main-thread renderer. A worker
+    that dies after start is replaced by the main-thread renderer, with no WebGPU retry.
+    `GlobeOptions.offThread: false` forces the main thread. The WebGPU path is unchanged.
+    The globe canvas (`.stage > canvas` and `.globeLayer > canvas` in `globe.module.css`) sets
+    `-webkit-font-smoothing: auto` and `-moz-osx-font-smoothing: auto`, overriding the page's
+    `antialiased`, which an `OffscreenCanvas` never inherits, so the worker and the main-thread
+    painter raster labels alike. Before it transfers the canvas, `text-parity.ts` draws one label
+    on a hidden DOM canvas with the same rule and on an `OffscreenCanvas` and compares the bytes;
+    any difference throws and the engine takes the main-thread renderer. The shading buffer is
+    filled onto the disc as a canvas pattern and the painter never calls `clip()`, because a page
+    canvas and an `OffscreenCanvas` anti-alias a clip edge differently and a fill the same.
+    `globe-canvas-smoothing.test.ts` pins the smoothing rules and the absence of `clip()`.
+  - **gmt loads by dynamic import beside the star list.** `hero-space.ts` runs before the first
+    paint and loads `getUnixNow` and `getSystemTimeZone` through one memoised `loadClock()` inside
+    the `Promise.all` that fetches the stars and the Milky Way, so the Temporal polyfill stays off
+    the first-paint path and the first sky draw waits on nothing new. A static import there moves
+    LCP by about a second.
   - **Error scopes never span an `await`.** A device's scopes are one stack, and every globe
     on the page shares the device, so a scope held open while its owner awaits catches the
     other globe's errors and the pops cross over. `withValidation` takes synchronous work
@@ -3373,6 +3419,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - `rAF` and the 1 s clock tick both stop on `visibilitychange`; reduced motion gives a
     static globe with selection still working.
   - Lazy-mounted by `IntersectionObserver`, every instance on the page, not just the first.
+  - **The landing hero starts when the page is idle.** After the observer fires, a globe with
+    `[data-space]` waits for `load` and then `requestIdleCallback` (2 s timeout; a 150 ms timer
+    where the browser has none) before it imports the mount (`whenIdle`, `yield-to-main.ts`).
+    `initGlobe` then yields to the main thread between its steps (`scheduler.yield`, else
+    `setTimeout 0`) and parses the boundary features in slices of about 8 ms (`createSlicer`), and
+    `zone-clock-list.ts` measures its rows in one pass after writing them, so no task runs
+    long. The reason: a long task (over 50 ms) delays the first input, which is what INP and TBT
+    measure (web.dev/articles/long-tasks-devtools, web.dev/articles/inp). The frame rate is
+    unchanged and there is no poster; reduced motion behaves as before.
     No globe JS reaches reference pages. A browser with WebGPU never downloads `d3-geo`; one
     without it never downloads the shaders or `earcut`.
   - Hosts: the landing hero, `/tools/zoned-earth/`, and the `/dox` rail via
@@ -4465,6 +4520,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `scripts/head-tags.test.ts` runs `git ls-files` and `git log` (read-only) when it loads, so it
   fails in a scratch tree. Run that one file alone with `GIT_DIR` and `GIT_WORK_TREE` inline on
   its command, and never the whole suite under them.
+
+  **Core Web Vitals** (`scripts/web-vitals.mjs`, by hand, never in CI): serve a built `dist` on a
+  free port with gzip (`npx serve@14.2.4 -l <port> apps/dox/dist`) and run
+  `node scripts/web-vitals.mjs --origin http://127.0.0.1:<port> [--live https://northguild.dev]`
+  from `apps/dox`. It prints Lighthouse mobile and desktop medians of three runs (LCP, CLS, TBT),
+  INP under 4x CPU throttling for the home page, a guide and a reference page, and, with `--live`,
+  the PageSpeed Insights lab numbers and CrUX field data. `PSI_API_KEY` in the environment raises
+  the PSI quota; it is never written to a file. Lighthouse and `web-vitals` are pinned inside the
+  script.
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.
