@@ -77,7 +77,8 @@ export const CHECKS = [
   {
     id: "dox-dist",
     local: false,
-    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts",
+    // Every Node test that imports apps/dox/scripts/dist-dir.ts, found by apps/dox/scripts/dist-tests.mjs.
+    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox run test:dist",
     needs: ["build:dox"],
   },
   {

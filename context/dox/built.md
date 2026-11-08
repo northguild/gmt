@@ -168,10 +168,26 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     `astro:build:done` hook in `src/lib/copy-redirects.ts` copies it to `dist/_redirects`,
     because Cloudflare reads it only at the assets root and Astro copies `public/` into
     `dist/gmt/`.
-  - **Smoke.** `scripts/deploy-smoke.mjs` checks the redirect matrix after each deploy.
+  - **`_headers`.** `src/assets-root/_headers` is tracked and the same hook copies it to
+    `dist/_headers`, for the same root-only reason. Every rule sits under `/gmt/`.
+    `scripts/dist-base.test.ts` holds the file to that. Cloudflare serves assets before the Worker,
+    so these rules, not Worker code, set headers for pages and files:
+    - `/gmt/_astro/*` gets `Cache-Control: public, max-age=31536000, immutable`; the test fails on
+      any file there without a content hash in its name, which keeps `immutable` true.
+    - `/gmt/*.md` and `/gmt/*.txt` get `X-Robots-Tag: noindex`, because a twin or an `llms*.txt` file
+      has no `<meta>` and no canonical, so it would compete with its HTML page. The test fails on any
+      `.txt` under `dist/gmt` other than `llms.txt` and `llms-full.txt`.
+    - Under `wrangler dev` a `/gmt/_astro/*.js` response carries one `Cache-Control`, the `immutable`
+      value, with no default joined to it, so no `! Cache-Control` detach line is needed; the live
+      `deploy-smoke` run checks the same on Cloudflare.
+  - **Smoke.** `scripts/deploy-smoke.mjs` checks the redirect matrix and the crawl rows after each
+    deploy: `noindex` on `/gmt/install.md` and `/gmt/llms.txt`, none on `/gmt/`, one `immutable`
+    `Cache-Control` on the first `/gmt/_astro/*.js` the home page names, and a `noindex` 404 page.
+    `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl rows against a local `wrangler dev`.
   - **`robots.txt`** is served by the landing Worker; crawlers read only the host root.
-  - **Zone and dashboard setup** (zone settings, tokens, `www`, Web Analytics, org links) is
-    in `context/domination/issues/CORE-86/runbook.md`.
+  - **Zone and dashboard setup** (zone settings, tokens, `www`, Web Analytics, org links, Search
+    Console, Bing Webmaster Tools, the AI Crawl Control report and Crawler Hints) is in
+    `context/domination/issues/CORE-86/runbook.md`.
 - **Base `/gmt`.** Routes are base-less inside the site (generators, route manifest, corpus
   `page` and `url`, sidebar slugs). `src/lib/site.ts` holds `SITE_ORIGIN`, `SITE_BASE`,
   `SITE_URL` and `LEGACY_ORIGIN`, with `withBase`, `stripBase` and `isUnderBase`. `/gmt` is
@@ -184,7 +200,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `href`/`src`/`srcset`/social `content`/`data-*` URL in the HTML, every `url()` in the CSS
   (the Michroma `@font-face` included), the `.md` twins and `llms*.txt`, the sitemap `<loc>`s,
   `dist/_redirects` and the `/api/` and public-file strings in the bundled JS. A root URL
-  without `/gmt` anywhere in `dist/` fails CI; `dist/` must hold only `gmt/` and `_redirects`.
+  without `/gmt` anywhere in `dist/` fails CI; `dist/` must hold only `gmt/`, `_headers` and `_redirects`.
   `CHUNKS_PATH` in `fetch-chunks.ts` is Worker-only code, not in `dist`, so
   `fetch-chunks.test.ts` guards it. The dev server serves `/gmt/` and proxies `/gmt/api`
   with no rewrite.
@@ -215,6 +231,19 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     pages and deletes only stale ones (`scripts/build-utils/generated-files.mjs`). Never go
     back to `rm -rf` + rewrite: every file event reaches `astro dev`, VS Code's watcher and
     its TypeScript server.
+  - **Page dates come from `scripts/build-utils/commit-dates.mjs`.** `newestCommit(paths)` returns the
+    newest commit time of a set of repo-relative paths as a UTC ISO string, or `undefined` when none
+    has a commit; one `git log --name-only` per set of unread paths fills a per-process cache. A
+    function or regex page uses its corpus `sourcePath`, a shared type page the file that declares
+    it, an index page the inputs of every page it lists, and an industry hub its text, its listed
+    pages' content files and the namespace sources. The tools and scenarios indexes use the content
+    files they list (`build-scenario-index.mjs` rewrites on every run, so the line is never stale).
+    The reference hash includes the commit dates, so a new commit to an input regenerates.
+    `build-guides.mjs` and `build-changelog.mjs` write their own `lastUpdated`.
+  - **Every workflow job that builds Dox uses `fetch-depth: 0`**, because a shallow clone gives every
+    page the one commit's date: `consistency` and `dox-gates` in `ci.yml`, `deploy` in
+    `deploy-dox.yml`, `sweep` in `dox-gates-weekly.yml` and `oracle` in `temporal-oracle.yml` (its
+    `pnpm build` builds every workspace package, Dox included).
   - **Where a type is documented is decided by use, not by source directory.**
     `scripts/build-utils/type-usage.ts` walks the type nodes of every public function's
     parameters and return type, and of every public type, and takes the closure. A type two
@@ -413,9 +442,32 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
         link, a `<details>` or a tab stop, and a screen reader hears the label before the list.
         Everything else is Starlight's markup, so current-page highlighting, a page opening
         only its ancestors, `sl-sidebar-state` and the mobile menu are unchanged. The divider is
-        also a link in Starlight's data, so the override recomputes the previous and next links
-        under a page without it. `SidebarSublist.astro` follows Starlight's file of the same
+        also a link in Starlight's data, so the previous and next links are moved off it in the
+        route middleware (below). `SidebarSublist.astro` follows Starlight's file of the same
         name: compare them on a Starlight upgrade.
+      - **The tree is lean.** `src/route-data.ts` runs `leanSidebar` (`src/lib/lean-sidebar.ts`):
+        a page keeps its own namespace's group whole (`reference/<ns>/…`, `types` included), and
+        every other namespace becomes a collapsed group holding only its Overview link, with its
+        `attrs`, so the industry icon rule still matches. The reference index and every page outside
+        `reference/` show all namespaces reduced. The reference group is found by its first link
+        (`/gmt/reference/`), never its label. Reason: the full tree was about 900 function links, over
+        half of every page's HTML and ahead of `<main>`; a crawler that cuts a long page, or an
+        HTML-to-text reader with a context limit, read navigation before content. Every namespace
+        stays one link away from every page. Starlight's 404 route uses the `splash` template and
+        renders no sidebar, so it is left alone.
+      - **Pagination is fixed on the full tree.** Starlight computes `pagination` before route
+        middleware runs, so trimming leaves prev/next right. `skipDividers` moves them off the
+        divider, and runs in the middleware before the trim; `Sidebar.astro` holds no pagination
+        code.
+      - **Saved sidebar state is per tree.** `SidebarPersister` keys `sl-sidebar-state` by a hash of
+        the rendered sidebar, so open groups carry between pages of one namespace, and between all
+        pages outside `reference/`, but not from a `zoned` page to a `plain` page.
+      - **The Tab walk follows the tree.** A reference page carries only its own namespace, so
+        `tabWalkPages` (`scripts/gate-checks.mjs`) returns every page outside `/reference/`, the
+        first function page of each namespace and the first type page.
+        `scripts/sidebar-reach.test.ts` (built site) holds the rules: every namespace index is
+        linked from every page, a reference page links no other namespace's deeper pages, the page is
+        current once, and the pages either side of the divider link each other.
       - **The icon.** An own namespace's `Overview` link carries `attrs: { "data-gmt-industry":
         <id> }`; `Head.astro` writes one `--gmt-industry-icon` rule per own namespace from
         `industrySidebarCss()` (the tag's glyph as a mask), and a `:has()` rule in
@@ -533,6 +585,31 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
 - **AI surface (`A3b`).** `llms.txt`, `llms-full.txt` and a raw `.md` route with "copy as
   markdown" for every page, emitted from the corpus rather than via a rendered-MDX plugin.
   Every URL is in the route manifest.
+  - **The root `llms.txt` links one `llms.txt` per reference namespace** instead of listing every
+    function, because llmstxt.org asks for a file small enough to fit in context and the 18
+    reference sections were ~170 KB of the old 212 KB. Its `Reference` section holds `reference.md`
+    and one line per namespace (`types` included); the line's text is `namespaceSummary` in
+    `src/lib/namespace-summary.ts`: the sentence authored there, for every namespace, the four
+    industry ones included (worded apart from the industry's definition, so the industry page and
+    its reference index do not share a meta description). The same function is the `description`
+    of the namespace's reference index page, so the two never differ, and a namespace without a
+    line throws (a test lists the corpus's). Every other section is unchanged and `Optional`, the spec's name
+    for links a reader may skip, is last (it was `Changelog`).
+  - **Namespace files** are `src/pages/reference/[namespace]/llms.txt.ts`, one for each namespace
+    `namespaceEntries` returns, so no list is typed. Each file is `# @northguild/gmt/<ns>` (`# @northguild/gmt
+    shared types` for `types`), a blockquote with the summary and a link to the root file, then one
+    `## <module>` per module (`## Types` for `types`) in the reference index's order, each entry
+    `- [name](<.md twin>): description`. An `inlineOn` type has no page and is not listed. Both
+    files render through `renderLlmsTxt`; `namespaceEntries`, `namespaceIndexLinks` and
+    `namespaceSections` in `src/lib/llms.ts` are the only grouping.
+  - **The root file stays at or under 64 KiB**, a byte count that needs no tokenizer and holds for any
+    model. `scripts/llms.test.ts` asserts it and prints the size in the test title. A failure is fixed by
+    moving a section's detail into its own subpath file the same way; the budget is not raised.
+    `llms.test.ts` also checks that every link in the root and namespace files resolves in `dist/gmt`,
+    that each non-inline twin is listed in exactly one namespace file, and that root and namespace
+    files link each other. `llms-full.txt` is unchanged: the one-file form of everything.
+  - `deploy-smoke.mjs` checks `/gmt/reference/zoned/llms.txt` (200, `text/plain`, `noindex` from the
+    `/gmt/*.txt` rule) and the root's 64 KiB.
 - **Brand (`A5`).** A token layer mapped onto Starlight's variables; the system monospace stack
   (`--gmt-font-mono`) for body and code; Michroma, a display face, for headings only; self-hosted fonts; body text ≥ 7:1; amber
   reserved for the sentinel. See [reference/visual-design.md](reference/visual-design.md)
@@ -542,10 +619,91 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   - `<title>` is unique per page and ends ` · GMT` (`TITLE_SUFFIX`); the home page's title is its
     frontmatter title with no suffix. A reference page's `headTitle` is written by
     `scripts/build-utils/reference-title.ts` (at most 70 characters with the suffix).
-  - Every page has a description of its own; only the home page uses the site's.
+  - Every page has a description of its own; only the home page uses the site's. **No two
+    indexable pages share one**, because Google builds a snippet from the meta description only when
+    it describes that page alone. A reference function's description is its TSDoc summary; where
+    siblings share one (`isBeforeUtc`, `isBeforeZoned`, `isBeforeUnix`), `build-utils/unique-descriptions.ts`
+    adds a qualifier to the frontmatter `description` (meta, `og:description` and JSON-LD; the lead
+    on the page is unchanged): the value kind the function name states (`, for UTC date-time
+    strings.`), else its namespace (`, in the zoned namespace.`). The first parameter is a bare
+    `string` in every signature, so the name is the one place the kind is written. A group neither
+    splits fails the build. `head-tags.test.ts` fails on a built site where two pages without
+    `noindex` share a description, and lists them.
   - `og:image` is `/og/<key>.png` from `src/pages/og/[...route].ts`: one per guide, tool and
     scenario, one per reference namespace, else `site`. Fonts for them sit in `src/assets/og-fonts/`
     under SIL OFL 1.1.
+  - **Share tags** (`headEntries`, one `upsertHead` entry each, no `Head.astro` override):
+    - `og:locale` is `en_US`: Open Graph wants `language_TERRITORY`, and Starlight writes the page
+      language (`en`), which the entry replaces. `<html lang="en">` stays.
+    - `og:image:type` is `image/png`, beside the width and height, so a scraper need not fetch the file to learn it.
+    - `og:image:alt` and `twitter:image:alt` carry `ogImageAlt(card)` (`og-cards.ts`), built from the card
+      the page shows: `GMT share card: "<site line>" over the Earth seen from above the North Atlantic.`
+      for the site card, `Share card: "<card title>" over …` for every other. A function page therefore
+      names its namespace's card. An alt describes the image; a copy of the page title does not, and
+      names the wrong thing on a function page. `route-data.ts` looks the card up by `ogImageKey` and
+      passes the alt in, so `head-tags.ts` stays pure; a page with no card throws.
+    - `og:image` and `twitter:image` end in `?v=<first 12 hex of the SHA-256 of the PNG>`, because
+      Facebook caches an image by URL and a redrawn card must be a new URL. `versionOgImages`
+      (`src/lib/og-image-version.ts`) rewrites those two attributes in every built page on
+      `astro:build:done`, after the PNGs exist and not during page render, where their order is not
+      fixed. It throws for a PNG missing from `dist`. It is listed before `starlight()` in
+      `astro.config.mjs`: hooks run in list order, and Pagefind (Starlight's hook) and the dist
+      gates must read the final HTML. `_headers` caching of `/gmt/og/*` is unchanged.
+    - `scripts/share-preview.test.ts` (dist test, in CI beside `head-tags.test.ts`) checks every
+      indexable page for exactly one of each tag, the two URLs equal and absolute, the hash equal to the
+      PNG in `dist`, and an alt that quotes the card's own title.
+  - **The share card is drawn with CanvasKit, not `astro-og-canvas`.** `src/lib/og-art.ts` is the
+    one place the look lives; `og-cards.ts` builds the card list from the docs collection and
+    `og-canvaskit.ts` loads the wasm once. The text is centred in x 285-915, the square a link
+    preview app crops a 1200x630 card to, with a 28 px margin, so a crop never cuts a line, and
+    centred vertically in the sky above the limb. A card is one of two kinds: the `site` card is
+    `GMT` plus `SITE_CARD_LINE` (the first sentence of the home hero's tagline; a test fails if
+    `index.mdx` stops starting with it), broken evenly over two lines; every other card (guide,
+    tool, scenario, migration, comparison, reference namespace) is its title alone under the
+    `@NORTHGUILD/GMT` eyebrow, because platforms print `og:description` under the image anyway.
+    Nothing is ever shortened: a title takes the largest size from 46 px down to 20 px that fits two
+    lines, and `renderCard` throws when a title or the site line fits at none. `og-art.test.ts`
+    checks every real card stays in the square, in two lines at most, without an ellipsis, and the
+    contrast of the text against the brightest pixel behind it (at least 4.5:1). The PNG is a
+    palette PNG from `sharp` (pinned `0.35.5`), about 125 KB a card, under WhatsApp's 300 KB limit;
+    the build of all cards takes about 12 s.
+  - **Earth image credit: NASA Earth Observatory, Blue Marble Next Generation** (public domain, no
+    logo). The sky and the Earth behind every card is `src/assets/og-earth.webp`, a fixed frame of
+    that texture (`public/earth-blue-marble.webp`) seen from 6.61 Earth radii, as on the home page.
+    The middle of the visible Earth (x 600, halfway from the limb's crest to the card's bottom) is
+    the great-circle midpoint of Helsinki and Isafjordur (65.14 N, 3.51 E, in the Norwegian Sea),
+    north up, so Scandinavia, Iceland and the North Atlantic fill the cap; the script computes it
+    from the two cities. The Sun is fixed at the June solstice, 11:46 UTC (over 23.44 N, 3.5 E), so
+    the whole cap is lit. The colours are the site's: the photograph only says where land, snow and
+    sea are, and a tritone read from `src/styles/gmt-tokens.css` paints them (sea `--gmt-surface-2`
+    to `--gmt-teal`, land `--gmt-teal` to `--gmt-ice-dim`, snow `--gmt-ice`, air `--gmt-cyan`, sky
+    `--gmt-void`). Rebuild it by hand with `pnpm --filter dox exec tsx scripts/build-og-earth.ts`;
+    it is not part of `generate` or the build, and the result is deterministic, so a diff means the
+    script changed.
+  - **Upload-ready images** live in `apps/dox/assets/share/` (outside `src/` and `public/`, so never
+    served): the GitHub social preview (1280x640), the site card and the Earth artwork alone, with
+    a README. `pnpm --filter dox run social-preview` writes all three, deterministically; rerun it
+    after any change to `og-art.ts` or `og-earth.webp`.
+  - **The landing page `northguild.dev/` is a separate site with its own search tags.** It lives in
+    `northguild/northguild.dev` and carries its own sitemap, logo, `Organization` JSON-LD, a
+    `noindex` 404 page and a square-safe share card under 300 KB with a versioned image URL
+    (northguild/northguild.dev#21 and #22). Dox changes nothing there; the card follows the same
+    rules as the Dox cards.
+  - **Open checks after a deploy** (platforms scrape the live URL, so nothing here can run before
+    it; the owner runs them):
+    - Facebook Sharing Debugger ("Scrape Again"), LinkedIn Post Inspector, X (a draft post), Slack,
+      Discord and WhatsApp each show the card for `/gmt/`, a guide, a reference page and
+      `/gmt/changelog/`; WhatsApp also shows the whole title in a square crop.
+    - iMessage shows the rich preview for the same URLs, the changelog index and a line page included.
+    - The same platform checks pass for `https://northguild.dev/`.
+    - `node apps/dox/scripts/deploy-smoke.mjs` passes against `https://northguild.dev`.
+    - Google's Rich Results Test and validator.schema.org read the `Organization` data on
+      `https://northguild.dev/` with no errors.
+    - `node scripts/web-vitals.mjs --live https://northguild.dev` with `PSI_API_KEY` set records the
+      PageSpeed Insights and CrUX numbers for the home page, a guide and a reference page.
+    - Search Console and Bing Webmaster Tools: the sitemaps are submitted and Bing lists IndexNow
+      URLs within a week of switching Crawler Hints on (runbook §8). A failure is a new fix, not a
+      note here.
   - JSON-LD: `SoftwareSourceCode` on the home page (version from `@northguild/gmt`),
     `BreadcrumbList` on every docs page, `TechArticle` on every guide with `dateModified`.
   - Every docs page links its Markdown twin (`<link rel="alternate" type="text/markdown">`); the
@@ -555,6 +713,29 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     in `llms.txt`, `llms-full.txt` and `_redirects` against `dist`.
   - No page carries an edit link: there is no Starlight `editLink` and no page sets `editUrl`.
     Starlight's `lastUpdated` is styled in `Footer.astro`.
+  - **Dates have one source, the footer.** The sitemap's `serialize` (`src/lib/sitemap-lastmod.ts`)
+    reads each built page's footer `<time datetime>` into `<lastmod>`, and leaves it out when the page
+    has none, so the footer and the sitemap cannot disagree (Google uses `lastmod` only when it is
+    verifiably accurate). `head-tags.test.ts` checks every `<lastmod>` against its page.
+  - **Generated pages state `lastUpdated` in their frontmatter**, from the newest commit of their
+    inputs (`commit-dates.mjs`, see Generator), or `lastUpdated: false` when no input has a commit.
+  - **Trap: an untracked page with no `lastUpdated` has no footer date.** Starlight reads the date
+    from `git log` of the page file (build: one inlined `git log` over `src/content/docs`; dev: one
+    per page); a file git does not track throws, Starlight catches it and shows nothing. Generated
+    MDX is ignored by git, so the frontmatter is the only source: keep it.
+  - **The 404 page** drops its canonical (`/gmt/404/` answers 307 to `/gmt/404`, which answers 200)
+    and gets `<meta name="robots" content="noindex">` in `route-data.ts`, through `removeHead` and
+    `upsertHead`. Starlight's other 404 tags stay.
+  - **`noindex` on the `.md` twins and `llms*.txt`** comes from `_headers` (see Deploy), not from the
+    page.
+  - **`rel="describedby"` replaces the site-wide `alternate` `text/plain` link to `llms.txt`.**
+    `headEntries` adds one `<link rel="describedby" type="text/plain">` to every docs page, with an
+    absolute URL: a page under `reference/<ns>/` (the namespace index included) points at that
+    namespace's `llms.txt`; the reference index and every other page, the home page too, point at
+    the root file (`describedByPath`). The 404 page has none, because `route-data.ts` returns before
+    `headEntries`. `head-tags.test.ts` checks the targets and `scripts/head-tags.test.ts` checks that
+    each docs page has exactly one, that it exists in `dist/gmt` and that no page has a `text/plain`
+    alternate.
   - The sitemap leaves out `/dox/`. The gate is `scripts/head-tags.test.ts` over `dist/gmt`.
 - **Guides (`A4a`).** The guides under `src/content/docs/guides/` are the home of every
   feature's explanation and examples; the generated reference holds the signatures.
@@ -591,11 +772,26 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `packages/*/CHANGELOG.md` (sorted, `gmt` first; nothing typed, so a new package with a changelog
   gets a page and the sidebar test in `changelog.test.ts` then fails until the sidebar links it).
   It writes the gitignored `src/content/docs/changelog/index.md` (`@northguild/gmt`) and
-  `changelog/gmt-eslint.md`, `gmt-oxlint.md`, `gmt-biome.md` (titled `Changelog: gmt-eslint`, …)
-  after `build-guides.mjs`, in `generate` and in the `dox-pages` check. The generator never writes the
-  `CHANGELOG.md` files, which are the release record. `renderPage` takes the title, description,
-  source URL and install link as parameters; the retired-scope plate links `/install/` for `gmt`
-  and `/guides/integration/linting/` for a plugin.
+  `changelog/gmt-eslint/index.md`, `gmt-oxlint/index.md`, `gmt-biome/index.md` (titled
+  `Changelog: gmt-eslint`, …), plus a page per release line, after `build-guides.mjs`, in `generate`
+  and in the `dox-pages` check; any `.md` there that a run did not write is deleted. The generator
+  never writes the `CHANGELOG.md` files, which are the release record. `renderIndexPage` and
+  `renderLinePage` take the title, source URL, install link and the index route as parameters; the
+  retired-scope plate links `/install/` for `gmt` and `/guides/integration/linting/` for a plugin.
+  - **One page per release line, so no page nears 1 MB.** Apple's Messages preview reads a page's
+    main resource only up to 1 MB, and the single changelog page was 1,546,542 bytes. The index
+    (`/changelog/`, `/changelog/<pkg>/`) keeps the scope groups and the memorial plate and lists
+    each `major.minor` line newest first with its versions and `Released` dates, linking
+    `/changelog/1-21/` (`lineSlug` turns the dot into a hyphen because Starlight slugs drop dots;
+    the title keeps it: `Changelog 1.21`). It repeats no release note. A line page holds that
+    line's releases newest first with the demoted headings, a link back to the index and the plate
+    when the line belongs to a retired scope; a line that changed scope part way (1.14) has both
+    scope sections on one page. Its description names the package and versions, so no two pages
+    share one, and its `lastUpdated` is the newest tag date of the line (none while unreleased).
+    Line pages are not in the sidebar; the index links them. The largest built page is
+    `/changelog/1-16/` at 729,975 bytes; `dist-base.test.ts` fails when any built `.html` exceeds
+    1,048,576 bytes and names the largest. `llms.txt`'s Optional section links only the four index
+    pages (`indexPagesOnly` in `llms.txt.ts`).
   - **Scope and date come from the release tags**, read in one `git for-each-ref` call with
     `TZ=UTC`: a version's scope is its tag's scope (the current scope is the `name` scope in
     `package.json`, every other scope is retired), and its date is the tag's, printed as
@@ -645,10 +841,10 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     as every table does. Astro caches rendered Markdown in `node_modules/.astro/data-store.json`
     keyed by the file, so delete it after changing a rehype plugin.
   - **Sidebar.** The last top-level group, "Changelog", with four links: `@northguild/gmt`,
-    `gmt-eslint`, `gmt-oxlint`, `gmt-biome`. `guides/integration/linting.mdx` links the three
-    plugin pages.
+    `gmt-eslint`, `gmt-oxlint`, `gmt-biome`, each its index page. `guides/integration/linting.mdx`
+    links the three plugin index pages.
   - **Text surfaces.** The HTML pages and Pagefind carry them; each page's `.md` twin exists as for
-    every page; `llms.txt` ends with a "Changelog" section of four links; `llms-full.txt` and the
+    every page; `llms.txt` ends with an "Optional" section of four changelog links; `llms-full.txt` and the
     retrieval chunks leave them out (`topLevelPages` takes only slugs without `/`, and
     `guide-sources.ts` globs `guides/` and the top level), asserted in `llms.test.ts` and
     `guide-sources.test.ts`. Old signatures would ground answers in removed APIs.
@@ -2879,7 +3075,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     zone drawer. `createGlobe` takes `framing(width, height)` (the disc's centre and radius at
     zoom 1, from `frameSpace` in `globe-mount.ts`; the radius is the silhouette of the visible 81.3 degree cap, and zoom is a lens zoom, so the radius grows while the camera stays put), `hitArea` (the element that takes the pointer
     and is the one tab stop, so the canvas never does), `maxDpr` (1.5 in the hero, 2 elsewhere),
-    `pauseWhenHidden` (an `IntersectionObserver` stops the loop off screen) and `onInteract(kind)`
+    `pauseWhenHidden` (an `IntersectionObserver` stops the loop off screen; `globe-mount.ts` sets it, and `pauseWhile`, on every globe: the hero watches its stage, a framed globe its own surface), `pauseWhile(hold)` (the host calls `hold(true)` while something covers the globe; `globe-cover.ts` watches the search dialog and the mobile menu with one `MutationObserver`, no polling; the loop stops with no frame and no wake timer and resumes from the same rotation once off-screen and covered are both clear) and `onInteract(kind)`
     (`drag`, `pinch`, `wheel`, `tap` or `key`; it opens the drawer without moving focus, except a tap that picks a zone). All
     are opt-in: unset, a globe behaves as before. A wheel or touch off the hit area belongs to
     the page, so the copy scrolls and never zooms. At maximum zoom (5x) the Earth covers the
@@ -3170,6 +3366,32 @@ Shared hooks come first, then the globe, then the clock-change pages.
     rejected device, a shader that will not compile or a validation error on the first
     frame are all just "use canvas-2D". A lost device is retried once, while the tab is
     visible, then the fallback holds for the session. `?globe=webgpu|canvas2d` pins one.
+  - **Canvas 2D draws in a worker.** The canvas-2D renderer is a proxy: it transfers the canvas
+    to a module Web Worker (`canvas2d.worker.ts`) as an `OffscreenCanvas` and sends frame state;
+    `painter.ts` holds the drawing and has no DOM use, so the worker and the main-thread renderer
+    (`renderer-canvas2d.ts`) draw the same pixels. The protocol (`protocol.ts`) is `init`, `frame`,
+    `destroy` to the worker and `ready`, `drawn`, `failed` back. One frame is in flight; the newest
+    state goes out after `drawn`, so nothing queues. Nothing flows back to the engine because hit
+    testing and tooltips read the shared camera on the main thread. The renderer reports
+    `offThread: true`. `canDrawOffThread()` checks `Worker`, `OffscreenCanvas` and
+    `transferControlToOffscreen`; if it fails, or the worker errors, answers `failed`, sends an
+    unreadable message or is not ready within 8 s, the engine loads the main-thread renderer. A worker
+    that dies after start is replaced by the main-thread renderer, with no WebGPU retry.
+    `GlobeOptions.offThread: false` forces the main thread. The WebGPU path is unchanged.
+    The globe canvas (`.stage > canvas` and `.globeLayer > canvas` in `globe.module.css`) sets
+    `-webkit-font-smoothing: auto` and `-moz-osx-font-smoothing: auto`, overriding the page's
+    `antialiased`, which an `OffscreenCanvas` never inherits, so the worker and the main-thread
+    painter raster labels alike. Before it transfers the canvas, `text-parity.ts` draws one label
+    on a hidden DOM canvas with the same rule and on an `OffscreenCanvas` and compares the bytes;
+    any difference throws and the engine takes the main-thread renderer. The shading buffer is
+    filled onto the disc as a canvas pattern and the painter never calls `clip()`, because a page
+    canvas and an `OffscreenCanvas` anti-alias a clip edge differently and a fill the same.
+    `globe-canvas-smoothing.test.ts` pins the smoothing rules and the absence of `clip()`.
+  - **gmt loads by dynamic import beside the star list.** `hero-space.ts` runs before the first
+    paint and loads `getUnixNow` and `getSystemTimeZone` through one memoised `loadClock()` inside
+    the `Promise.all` that fetches the stars and the Milky Way, so the Temporal polyfill stays off
+    the first-paint path and the first sky draw waits on nothing new. A static import there moves
+    LCP by about a second.
   - **Error scopes never span an `await`.** A device's scopes are one stack, and every globe
     on the page shares the device, so a scope held open while its owner awaits catches the
     other globe's errors and the pops cross over. `withValidation` takes synchronous work
@@ -3216,6 +3438,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - `rAF` and the 1 s clock tick both stop on `visibilitychange`; reduced motion gives a
     static globe with selection still working.
   - Lazy-mounted by `IntersectionObserver`, every instance on the page, not just the first.
+  - **The landing hero starts when the page is idle.** After the observer fires, a globe with
+    `[data-space]` waits for `load` and then `requestIdleCallback` (2 s timeout; a 150 ms timer
+    where the browser has none) before it imports the mount (`whenIdle`, `yield-to-main.ts`).
+    `initGlobe` then yields to the main thread between its steps (`scheduler.yield`, else
+    `setTimeout 0`) and parses the boundary features in slices of about 8 ms (`createSlicer`), and
+    `zone-clock-list.ts` measures its rows in one pass after writing them, so no task runs
+    long. The reason: a long task (over 50 ms) delays the first input, which is what INP and TBT
+    measure (web.dev/articles/long-tasks-devtools, web.dev/articles/inp). The frame rate is
+    unchanged and there is no poster; reduced motion behaves as before.
     No globe JS reaches reference pages. A browser with WebGPU never downloads `d3-geo`; one
     without it never downloads the shaders or `earcut`.
   - Hosts: the landing hero, `/tools/zoned-earth/`, and the `/dox` rail via
@@ -4297,6 +4528,26 @@ Shared hooks come first, then the globe, then the clock-change pages.
   python3 -m http.server 48391 --bind 127.0.0.1 --directory "$SP/after/apps/dox/dist"
   # The site is under the base: open http://127.0.0.1:48391/gmt/
   ```
+
+  A scratch tree has no `.git`; its site build reads history for page dates through `GIT_DIR` and
+  `GIT_WORK_TREE`, set to the worktree's git directory on the build command alone. Never export
+  them in the shell and never set them for a test run: `git init` under `GIT_DIR` writes
+  `core.worktree` into the shared `.git/config`, which moves every checkout's working tree, and a
+  fixture's `git commit` lands on the real branch. Tests that make a fixture repository drop every
+  inherited `GIT_*` variable (`released-exports.test.ts`, `commit-dates.test.ts`).
+
+  `scripts/head-tags.test.ts` runs `git ls-files` and `git log` (read-only) when it loads, so it
+  fails in a scratch tree. Run that one file alone with `GIT_DIR` and `GIT_WORK_TREE` inline on
+  its command, and never the whole suite under them.
+
+  **Core Web Vitals** (`scripts/web-vitals.mjs`, by hand, never in CI): serve a built `dist` on a
+  free port with gzip (`npx serve@14.2.4 -l <port> apps/dox/dist`) and run
+  `node scripts/web-vitals.mjs --origin http://127.0.0.1:<port> [--live https://northguild.dev]`
+  from `apps/dox`. It prints Lighthouse mobile and desktop medians of three runs (LCP, CLS, TBT),
+  INP under 4x CPU throttling for the home page, a guide and a reference page, and, with `--live`,
+  the PageSpeed Insights lab numbers and CrUX field data. `PSI_API_KEY` in the environment raises
+  the PSI quota; it is never written to a file. Lighthouse and `web-vitals` are pinned inside the
+  script.
 
   Re-run the `rsync` and the site build of `$SP/after` after any change. Firefox does not
   launch on the author's machine; record it as blocked and do not bypass the sandbox.

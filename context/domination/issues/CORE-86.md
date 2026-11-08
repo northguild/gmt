@@ -77,4 +77,4 @@ The docs site lives on a `workers.dev` hostname that no README, skill or package
 
 ## Runbook
 
-[Cloudflare and GitHub steps](CORE-86/runbook.md): the owner's zone, token, landing, deploy-order, Web Analytics, repo-link, Search Console and Sponsors steps, each with its check.
+[Cloudflare and GitHub steps](CORE-86/runbook.md): the owner's zone, token, landing, deploy-order, Web Analytics, repo-link, Search Console, Bing Webmaster Tools and Sponsors steps, each with its check.

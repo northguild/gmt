@@ -4,6 +4,7 @@ import {
   jsonLd,
   ogImageKey,
   pageTitle,
+  removeHead,
   TITLE_SUFFIX,
   upsertHead,
   type HeadEntry,
@@ -29,6 +30,7 @@ function input(over: Partial<HeadInput> & Pick<HeadInput, "id">): HeadInput {
       return title === undefined ? undefined : { title };
     },
     markdownSlug: over.id || "index",
+    shareAlt: 'Share card: "Page" over the Earth.',
     siteUrl: SITE,
     gmtVersion: "1.20.0",
     ...over,
@@ -70,6 +72,47 @@ describe("pageTitle", () => {
       "GMT: date and time library for JavaScript, built on Temporal";
     expect(pageTitle({ id: "", data: { title } })).toBe(title);
     expect(pageTitle({ id: "index", data: { title } })).toBe(title);
+  });
+});
+
+describe("describedby", () => {
+  const target = (id: string): string | undefined =>
+    headEntries(input({ id })).find((e) => e.attrs?.rel === "describedby")
+      ?.attrs?.href as string | undefined;
+
+  it("points a reference page at its namespace's llms.txt", () => {
+    expect(target("reference/zoned/calculate/startOfZoned")).toBe(
+      `${SITE}/reference/zoned/llms.txt`,
+    );
+    expect(target("reference/zoned")).toBe(`${SITE}/reference/zoned/llms.txt`);
+    expect(target("reference/types/Interval")).toBe(
+      `${SITE}/reference/types/llms.txt`,
+    );
+  });
+
+  it("points the reference index and every other page at the root file", () => {
+    for (const id of ["reference", "guides/how-to/add-business-days", ""]) {
+      expect(target(id), id || "home").toBe(`${SITE}/llms.txt`);
+    }
+  });
+
+  it("writes it once, as text/plain, and no text/plain alternate", () => {
+    const entries = headEntries(input({ id: "install" }));
+    expect(entries.filter((e) => e.attrs?.rel === "describedby")).toEqual([
+      {
+        tag: "link",
+        attrs: {
+          rel: "describedby",
+          type: "text/plain",
+          href: `${SITE}/llms.txt`,
+        },
+      },
+    ]);
+    expect(
+      entries.filter(
+        (e) => e.attrs?.rel === "alternate" && e.attrs?.type === "text/plain",
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -118,6 +161,35 @@ describe("headEntries", () => {
     );
     expect(find(entries, "name", "twitter:card")?.attrs?.content).toBe(
       "summary_large_image",
+    );
+  });
+
+  it("writes en_US as og:locale and image/png as og:image:type", () => {
+    const entries = headEntries(input({ id: "install" }));
+    expect(find(entries, "property", "og:locale")?.attrs?.content).toBe(
+      "en_US",
+    );
+    expect(find(entries, "property", "og:image:type")?.attrs?.content).toBe(
+      "image/png",
+    );
+    // Starlight writes the page language; the entry replaces it and is not added beside it.
+    const head = [
+      { tag: "meta", attrs: { property: "og:locale", content: "en" } },
+    ] satisfies HeadEntry[];
+    const merged = entries.reduce(upsertHead, head);
+    expect(merged.filter((e) => e.attrs?.property === "og:locale")).toEqual([
+      { tag: "meta", attrs: { property: "og:locale", content: "en_US" } },
+    ]);
+  });
+
+  it("gives og:image:alt and twitter:image:alt the alt it is passed", () => {
+    const shareAlt = 'Share card: "Install" over the Earth.';
+    const entries = headEntries(input({ id: "install", shareAlt }));
+    expect(find(entries, "property", "og:image:alt")?.attrs?.content).toBe(
+      shareAlt,
+    );
+    expect(find(entries, "name", "twitter:image:alt")?.attrs?.content).toBe(
+      shareAlt,
     );
   });
 
@@ -291,6 +363,9 @@ describe("ogImageKey", () => {
     ["migrate/moment", "migrate/moment"],
     ["migrate", "migrate"],
     ["compare/behaviour", "compare/behaviour"],
+    ["changelog/1-21", "changelog/1-21"],
+    ["changelog/lint-plugin", "changelog/lint-plugin"],
+    ["changelog", "changelog"],
     ["guidesx/y", "site"],
   ])("%s -> %s", (id, key) => {
     expect(ogImageKey(id)).toBe(key);
@@ -302,5 +377,37 @@ describe("isHomeId", () => {
     expect(isHomeId("")).toBe(true);
     expect(isHomeId("index")).toBe(true);
     expect(isHomeId("guides")).toBe(false);
+  });
+});
+
+describe("removeHead", () => {
+  const head: HeadEntry[] = [
+    { tag: "title", content: "Not found" },
+    { tag: "link", attrs: { rel: "canonical", href: "https://x/gmt/404/" } },
+    { tag: "link", attrs: { rel: "sitemap", href: "/gmt/sitemap-index.xml" } },
+    { tag: "meta", attrs: { name: "robots", content: "noindex" } },
+  ];
+
+  it("drops the entries of the tag that carry the attributes", () => {
+    expect(removeHead(head, "link", { rel: "canonical" })).toEqual([
+      head[0],
+      head[2],
+      head[3],
+    ]);
+  });
+
+  it("keeps entries of other tags and entries that differ in an attribute", () => {
+    expect(removeHead(head, "meta", { rel: "canonical" })).toEqual(head);
+    expect(removeHead(head, "link", { rel: "alternate" })).toEqual(head);
+  });
+
+  it("does not change the list it is given", () => {
+    const copy = structuredClone(head);
+    removeHead(head, "link", { rel: "canonical" });
+    expect(head).toEqual(copy);
+  });
+
+  it("leaves a head with no such entry as it is", () => {
+    expect(removeHead([], "link", { rel: "canonical" })).toEqual([]);
   });
 });

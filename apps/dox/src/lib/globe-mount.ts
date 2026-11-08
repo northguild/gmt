@@ -26,6 +26,7 @@ import {
 import { listbox, type GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import styles from "~/widgets/tools/globe.module.css";
 import { registerEscLayer } from "./esc-layers";
+import { watchCover } from "./globe-cover";
 import type { GlobeHost } from "./globe";
 import { followGlobe, heroOf, offerGlobe, skyWithoutGlobe } from "./hero-space";
 import {
@@ -240,6 +241,13 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
       ?.querySelector<HTMLElement>('[data-gate="hero-copy"]') ??
     root.querySelector<HTMLElement>('[data-gate="hero-copy"]');
 
+  /* Every globe stops drawing while it is off screen, the tab is hidden, or the search dialog or
+     the mobile menu covers it; the hero watches its whole stage, a framed globe its own. */
+  const pause = {
+    pauseWhenHidden: space ? stage : surface,
+    pauseWhile: (hold: (held: boolean) => void) => watchCover(document, hold),
+  };
+
   const host = await initGlobe(
     surface,
     clockPanel,
@@ -247,6 +255,7 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
     {
       tooltip,
       zoom,
+      engine: pause,
       ...(space
         ? {
             /* The card keeps clear of the slide-over's close, which straddles its edge. */
@@ -264,6 +273,7 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
               );
             },
             engine: {
+              ...pause,
               framing: (width: number, height: number) =>
                 frameSpace(
                   stage,
@@ -279,7 +289,6 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
               ),
               hitArea: globe.part<HTMLElement>("hit"),
               maxDpr: 1.5,
-              pauseWhenHidden: stage,
               entrance: "dawn",
             },
           }

@@ -1,0 +1,520 @@
+/**
+ * The canvas-2D drawing code (#289), free of any DOM so it runs on the main thread or in a
+ * Web Worker.
+ *
+ * It is the drawing the globe shipped with before it moved to WebGPU. `renderer-canvas2d.ts`
+ * drives it on the main thread; `canvas2d.worker.ts` drives it on an `OffscreenCanvas`, which
+ * keeps the 2D raster (about 100 ms a frame at 4x CPU throttle) off the thread that answers
+ * input. A painter touches no `document` or `window`: its scratch buffers come from
+ * `makeBuffer`, and its target is the `context` it is handed.
+ *
+ * ## Deliberately not modernised
+ *
+ * It keeps d3's `geoPath` rather than `../geometry.ts`: the drawn paths must not move by a
+ * fraction of a pixel against the WebGPU renderer, which this is compared against for
+ * parity and which the site's visual gate has baselines for. Its projection is the pinhole's
+ * raw form fed to d3 (`./pinhole-raw.ts`), so both renderers draw through `../pinhole.ts`.
+ * The engine uses the shared camera for hit-testing and tooltip placement on both paths.
+ */
+
+import { geoGraticule10, geoPath, type GeoPermissibleObjects } from "d3-geo";
+import { feature } from "topojson-client";
+import land110m from "world-atlas/land-110m.json";
+import { isVisible } from "../camera";
+import { createPinholeProjection, setProjectionCamera } from "./pinhole-raw";
+import {
+  CASING_CSS,
+  LABEL_HALO_CSS,
+  LABEL_OFFSET_X,
+  labelRingShift,
+} from "../casing";
+import {
+  cityLightsOn,
+  LABEL_MAX_ZOOM,
+  paintShading,
+  type Rgb,
+} from "../shading";
+import type { FrameState } from "../renderer";
+import type {
+  GlobeArc,
+  GlobeMarker,
+  GlobeRegion,
+  GlobeTheme,
+  Rgba,
+} from "../types";
+import { greatCirclePoints } from "../geometry";
+
+type TopologyLike = Parameters<typeof feature>[0];
+const topology = land110m as unknown as TopologyLike;
+const topologyObjects = (topology as { objects: Record<string, unknown> })
+  .objects;
+const landObject = topologyObjects.land as Parameters<typeof feature>[1];
+const land = feature(topology, landObject) as unknown as GeoPermissibleObjects;
+const graticule = geoGraticule10() as unknown as GeoPermissibleObjects;
+const sphere = { type: "Sphere" } as unknown as GeoPermissibleObjects;
+
+/** Grid lines dim to this fraction while dragging or coasting. */
+const GRID_QUIET_FACTOR = 0.56;
+
+/** How far the atmosphere glow reaches past the limb, as a multiple of R. */
+const ATMOSPHERE_REACH = 1.06;
+
+/** Share of the glow the night limb keeps, so the ring never vanishes. */
+const ATMOSPHERE_NIGHT_FLOOR = 0.15;
+
+/** How much brighter the ring gets with the sun straight behind the globe. */
+const ATMOSPHERE_BACKLIGHT = 0.8;
+
+/** The shading buffer's resolution per CSS pixel. */
+const SHADE_RESOLUTION = 0.5;
+
+/** `Rgba` (0..1 channels) to a canvas colour string. */
+function css(color: Rgba, alphaScale = 1): string {
+  const r = Math.round(color[0] * 255);
+  const g = Math.round(color[1] * 255);
+  const b = Math.round(color[2] * 255);
+  return `rgba(${r}, ${g}, ${b}, ${color[3] * alphaScale})`;
+}
+
+/** `Rgba` to the 0..255 triple `paintShading` takes. */
+function rgb(color: Rgba): Rgb {
+  return [
+    Math.round(color[0] * 255),
+    Math.round(color[1] * 255),
+    Math.round(color[2] * 255),
+  ];
+}
+
+/** A region's rings as something `geoPath` will draw. */
+function regionGeometry(region: GlobeRegion): GeoPermissibleObjects {
+  return {
+    type: "MultiPolygon",
+    coordinates: region.polygons.map((polygon) =>
+      polygon.map((ring) => ring.map((point) => [point[0], point[1]])),
+    ),
+  } as unknown as GeoPermissibleObjects;
+}
+
+/** A drawing surface: a page canvas or an `OffscreenCanvas`. */
+export type Surface = HTMLCanvasElement | OffscreenCanvas;
+export type Context2d =
+  | CanvasRenderingContext2D
+  | OffscreenCanvasRenderingContext2D;
+
+export interface PainterOptions {
+  /** Where frames are drawn. The painter sizes it in `resize`. */
+  surface: Surface;
+  context: Context2d;
+  /** A scratch canvas for the shading and atmosphere buffers. */
+  makeBuffer(): Surface;
+  theme: GlobeTheme;
+  /** CSS `font` shorthand for marker labels. */
+  labelFont: string;
+}
+
+export interface Painter {
+  resize(cssWidth: number, cssHeight: number, dpr: number): void;
+  setTheme(theme: GlobeTheme): void;
+  setRegions(regions: readonly GlobeRegion[]): void;
+  setMarkers(markers: readonly GlobeMarker[]): void;
+  setArcs(arcs: readonly GlobeArc[]): void;
+  render(frame: FrameState): void;
+  destroy(): void;
+}
+
+export function createPainter(options: PainterOptions): Painter {
+  const { surface, context: ctx, labelFont } = options;
+
+  const projection = createPinholeProjection();
+
+  let theme = options.theme;
+  let width = 1;
+  let height = 1;
+  let dpr = 1;
+  let regions: readonly GlobeRegion[] = [];
+  let markers: readonly GlobeMarker[] = [];
+  let arcs: readonly GlobeArc[] = [];
+  let destroyed = false;
+
+  // --- offscreen shading buffer -------------------------------------------
+  const shadeCanvas = options.makeBuffer();
+  const shadeCtx = shadeCanvas.getContext("2d");
+  let shadeImage: ImageData | null = null;
+  let shadeKey = "";
+
+  function drawShading(
+    path: ReturnType<typeof geoPath>,
+    cx: number,
+    cy: number,
+    radius: number,
+    sun: readonly [number, number, number],
+    moving: boolean,
+  ): void {
+    if (!shadeCtx) return;
+    const shadeWidth = Math.max(1, Math.ceil(width * SHADE_RESOLUTION));
+    const shadeHeight = Math.max(1, Math.ceil(height * SHADE_RESOLUTION));
+    if (
+      !shadeImage ||
+      shadeImage.width !== shadeWidth ||
+      shadeImage.height !== shadeHeight
+    ) {
+      shadeCanvas.width = shadeWidth;
+      shadeCanvas.height = shadeHeight;
+      shadeImage = shadeCtx.createImageData(shadeWidth, shadeHeight);
+    }
+    const scaleX = shadeWidth / width;
+    const scaleY = shadeHeight / height;
+    /* The sun drifts ~0.004° a second, so rounding its vector repaints the
+       buffer on roughly one clock tick in 14 while the globe is still. In motion
+       the screen vector moves every frame regardless, so the rounding widens and
+       most frames reuse the buffer. */
+    const precision = moving ? 2 : 3;
+    const key = [
+      shadeWidth,
+      shadeHeight,
+      cx,
+      cy,
+      radius,
+      ...sun.map((n) => n.toFixed(precision)),
+      ...theme.day,
+      ...theme.night,
+      theme.haze[3],
+    ].join("|");
+    if (key !== shadeKey) {
+      shadeKey = key;
+      paintShading(shadeImage.data, {
+        width: shadeWidth,
+        height: shadeHeight,
+        cx: cx * scaleX,
+        cy: cy * scaleY,
+        radius: radius * scaleX,
+        sun,
+        day: rgb(theme.day),
+        night: rgb(theme.night),
+        dayAlpha: theme.day[3],
+        nightAlpha: theme.night[3],
+        hazeAlpha: theme.haze[3],
+      });
+      shadeCtx.putImageData(shadeImage, 0, 0);
+    }
+
+    /* The disc is filled with the buffer as a pattern, not drawn through `clip()`: a page canvas
+       and an `OffscreenCanvas` anti-alias a clip edge differently, and a fill the same. */
+    const pattern = ctx.createPattern(shadeCanvas, "no-repeat");
+    if (!pattern) return;
+    pattern.setTransform(new DOMMatrix([1 / scaleX, 0, 0, 1 / scaleY, 0, 0]));
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.beginPath();
+    path(sphere);
+    ctx.fillStyle = pattern;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // --- offscreen atmosphere ring ------------------------------------------
+  const atmosphereCanvas = options.makeBuffer();
+  const atmosphereCtx = atmosphereCanvas.getContext("2d");
+  let atmosphereKey = "";
+
+  function drawAtmosphere(
+    cx: number,
+    cy: number,
+    radius: number,
+    sunX: number,
+    sunY: number,
+    sunZ: number,
+    moving: boolean,
+  ): void {
+    if (!atmosphereCtx) {
+      drawAtmosphereDirect(cx, cy, radius, sunZ);
+      return;
+    }
+    const outer = radius * ATMOSPHERE_REACH;
+    const size = Math.max(1, Math.ceil(outer * 2 * dpr));
+    const precision = moving ? 2 : 3;
+    const key = [
+      size,
+      sunX.toFixed(precision),
+      sunY.toFixed(precision),
+      sunZ.toFixed(precision),
+      ...theme.atmosphere,
+    ].join("|");
+
+    if (key !== atmosphereKey) {
+      atmosphereKey = key;
+      if (atmosphereCanvas.width !== size || atmosphereCanvas.height !== size) {
+        atmosphereCanvas.width = size;
+        atmosphereCanvas.height = size;
+      }
+      atmosphereCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      atmosphereCtx.clearRect(0, 0, outer * 2, outer * 2);
+
+      const bufferCx = outer;
+      const bufferCy = outer;
+      const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
+      const glow = atmosphereCtx.createRadialGradient(
+        bufferCx,
+        bufferCy,
+        radius,
+        bufferCx,
+        bufferCy,
+        outer,
+      );
+      glow.addColorStop(0, css(theme.atmosphere, Math.min(1, backlight)));
+      glow.addColorStop(1, css(theme.atmosphere, 0));
+      atmosphereCtx.beginPath();
+      atmosphereCtx.arc(bufferCx, bufferCy, outer, 0, Math.PI * 2);
+      atmosphereCtx.arc(bufferCx, bufferCy, radius, 0, Math.PI * 2, true);
+      atmosphereCtx.fillStyle = glow;
+      atmosphereCtx.fill("evenodd");
+
+      // Older engines without conic gradients keep an even ring.
+      if (typeof atmosphereCtx.createConicGradient === "function") {
+        const tilt = Math.min(Math.hypot(sunX, sunY), 1);
+        const mask = atmosphereCtx.createConicGradient(
+          Math.atan2(sunY, sunX),
+          bufferCx,
+          bufferCy,
+        );
+        const steps = 16;
+        for (let i = 0; i <= steps; i++) {
+          const lit = 0.5 + 0.5 * tilt * Math.cos((i / steps) * Math.PI * 2);
+          const strength =
+            ATMOSPHERE_NIGHT_FLOOR + (1 - ATMOSPHERE_NIGHT_FLOOR) * lit;
+          mask.addColorStop(i / steps, `rgba(0, 0, 0, ${strength})`);
+        }
+        atmosphereCtx.globalCompositeOperation = "destination-in";
+        atmosphereCtx.fillStyle = mask;
+        atmosphereCtx.fillRect(0, 0, outer * 2, outer * 2);
+        atmosphereCtx.globalCompositeOperation = "source-over";
+      }
+    }
+
+    ctx.drawImage(
+      atmosphereCanvas,
+      cx - outer,
+      cy - outer,
+      outer * 2,
+      outer * 2,
+    );
+  }
+
+  /** Plain radial glow straight onto the canvas, when no buffer is available. */
+  function drawAtmosphereDirect(
+    cx: number,
+    cy: number,
+    radius: number,
+    sunZ: number,
+  ): void {
+    const outer = radius * ATMOSPHERE_REACH;
+    const backlight = 1 + ATMOSPHERE_BACKLIGHT * Math.max(0, -sunZ);
+    const glow = ctx.createRadialGradient(cx, cy, radius, cx, cy, outer);
+    glow.addColorStop(0, css(theme.atmosphere, Math.min(1, backlight)));
+    glow.addColorStop(1, css(theme.atmosphere, 0));
+    ctx.beginPath();
+    ctx.arc(cx, cy, outer, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+    ctx.fillStyle = glow;
+    ctx.fill("evenodd");
+  }
+
+  function render(frame: FrameState): void {
+    if (destroyed) return;
+    const { camera, sun, subsolar, quiet, moving } = frame;
+
+    setProjectionCamera(projection, camera);
+
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const path = geoPath(projection, ctx);
+    const cx = camera.centreX;
+    const cy = camera.centreY;
+    const radius = camera.radius;
+
+    if (theme.atmosphere[3] > 0) {
+      drawAtmosphere(cx, cy, radius, sun[0], sun[1], sun[2], moving);
+    }
+
+    ctx.beginPath();
+    path(sphere);
+    ctx.fillStyle = css(theme.ocean);
+    ctx.fill();
+
+    /* Painted right after the sphere base and before grid, land and markers, so
+       the night side is a backdrop those draw *over* rather than a wash that
+       hides them. */
+    drawShading(path, cx, cy, radius, sun, moving);
+
+    ctx.beginPath();
+    path(sphere);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = css(theme.limb);
+    ctx.stroke();
+
+    ctx.beginPath();
+    path(graticule);
+    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = css(theme.grid, quiet ? GRID_QUIET_FACTOR : 1);
+    ctx.stroke();
+
+    ctx.beginPath();
+    path(land);
+    ctx.fillStyle = css(theme.land);
+    ctx.fill();
+    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = css(theme.landStroke);
+    ctx.stroke();
+
+    for (const region of regions) {
+      const geometry = regionGeometry(region);
+      ctx.beginPath();
+      path(geometry);
+      ctx.fillStyle = css(region.fill);
+      ctx.fill();
+      strokeCased(region.stroke, region.strokeWidth);
+    }
+
+    for (const arc of arcs) {
+      const points = greatCirclePoints(arc.from, arc.to);
+      ctx.beginPath();
+      path({
+        type: "LineString",
+        coordinates: Array.from({ length: points.length / 2 }, (_, i) => [
+          points[i * 2],
+          points[i * 2 + 1],
+        ]),
+      } as unknown as GeoPermissibleObjects);
+      strokeCased(arc.color, arc.width);
+    }
+
+    drawMarkers(frame, subsolar, quiet);
+
+    ctx.restore();
+  }
+
+  /**
+   * Stroke the current path over its casing (../casing.ts): the same path
+   * wider in the casing colour first, so the line reads over any backdrop.
+   */
+  function strokeCased(colour: Rgba, width: number): void {
+    ctx.lineJoin = "round";
+    ctx.lineWidth = width + CASING_CSS * 2;
+    ctx.strokeStyle = css(theme.casing);
+    ctx.stroke();
+    ctx.lineJoin = "miter";
+    ctx.lineWidth = width;
+    ctx.strokeStyle = css(colour);
+    ctx.stroke();
+  }
+
+  function drawMarkers(
+    frame: FrameState,
+    subsolar: readonly [number, number],
+    quiet: boolean,
+  ): void {
+    const point: [number, number] = [0, 0];
+    const subsolarVec = unit(subsolar[0], subsolar[1]);
+
+    for (const marker of markers) {
+      if (!isVisible(frame.camera, marker.position[0], marker.position[1]))
+        continue;
+      const markerVec = unit(marker.position[0], marker.position[1]);
+      point[0] = marker.position[0];
+      point[1] = marker.position[1];
+      const at = projection(point);
+      if (!at) continue;
+
+      /* Night colour from civil dusk, not the horizon: a dot in daylight is not
+         a "city light" at all, and the switch matches where the day wash in
+         `shading.ts` has finished fading out. */
+      const fill =
+        marker.nightColor && cityLightsOn(dot(markerVec, subsolarVec))
+          ? marker.nightColor
+          : marker.color;
+      // The dot over its casing (../casing.ts).
+      ctx.beginPath();
+      ctx.arc(at[0], at[1], marker.radius + CASING_CSS, 0, Math.PI * 2);
+      ctx.fillStyle = css(theme.casing);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(at[0], at[1], marker.radius, 0, Math.PI * 2);
+      ctx.fillStyle = css(fill);
+      ctx.fill();
+
+      if (marker.ring) {
+        ctx.beginPath();
+        ctx.arc(at[0], at[1], marker.ring.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = css(theme.casing);
+        ctx.lineWidth = marker.ring.width + CASING_CSS * 2;
+        ctx.stroke();
+        ctx.strokeStyle = css(marker.ring.color);
+        ctx.lineWidth = marker.ring.width;
+        ctx.stroke();
+      }
+
+      if (marker.label && !quiet && frame.zoom < LABEL_MAX_ZOOM) {
+        /* Over its halo, and clear of a selection ring the halo would hide. */
+        const x = at[0] + LABEL_OFFSET_X + labelRingShift(marker.ring);
+        ctx.font = labelFont;
+        ctx.lineJoin = "round";
+        ctx.lineWidth = LABEL_HALO_CSS * 2;
+        ctx.strokeStyle = css(theme.casing);
+        ctx.strokeText(marker.label, x, at[1] + 3);
+        ctx.lineJoin = "miter";
+        ctx.fillStyle = css(theme.label);
+        ctx.fillText(marker.label, x, at[1] + 3);
+      }
+    }
+  }
+
+  return {
+    resize(cssWidth, cssHeight, nextDpr) {
+      width = Math.max(1, cssWidth);
+      height = Math.max(1, cssHeight);
+      dpr = nextDpr;
+      surface.width = Math.round(width * dpr);
+      surface.height = Math.round(height * dpr);
+    },
+    setTheme(next) {
+      theme = next;
+      // Both buffers bake the palette in, so a theme change must repaint them.
+      shadeKey = "";
+      atmosphereKey = "";
+    },
+    setRegions(next) {
+      regions = next;
+    },
+    setMarkers(next) {
+      markers = next;
+    },
+    setArcs(next) {
+      arcs = next;
+    },
+    render,
+    destroy() {
+      destroyed = true;
+    },
+  };
+}
+
+/** Unit-vector helpers for the Sun-side tests. */
+function unit(lng: number, lat: number): [number, number, number] {
+  const rad = Math.PI / 180;
+  const cosLat = Math.cos(lat * rad);
+  return [
+    cosLat * Math.cos(lng * rad),
+    cosLat * Math.sin(lng * rad),
+    Math.sin(lat * rad),
+  ];
+}
+
+function dot(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}

@@ -8,13 +8,28 @@
  * the globe's frames (`sky.view`, so the sky has no loop of its own) and starts the rare meteor.
  * If the globe fails to mount, `skyWithoutGlobe` draws once at the start rotation and the anchor.
  */
-import { getSystemTimeZone } from "@northguild/gmt/zoned/get";
-import { getUnixNow } from "@northguild/gmt/unix/get";
 import { startRotation } from "./globe-zones";
 import { runHeroEntrance } from "./hero-entrance";
 import { mountSky, type Sky, type SkyMap } from "./sky";
 import { mountSpaceFx } from "./space-fx";
 import type { GlobeHost } from "./globe";
+
+type Clock = {
+  getUnixNow: typeof import("@northguild/gmt/unix/get").getUnixNow;
+  getSystemTimeZone: typeof import("@northguild/gmt/zoned/get").getSystemTimeZone;
+};
+
+let clock: Promise<Clock> | undefined;
+
+/* Dynamic, so the Temporal polyfill behind these two stays out of the static first-paint graph. */
+const loadClock = (): Promise<Clock> =>
+  (clock ??= Promise.all([
+    import("@northguild/gmt/unix/get"),
+    import("@northguild/gmt/zoned/get"),
+  ]).then(([unix, zoned]) => ({
+    getUnixNow: unix.getUnixNow,
+    getSystemTimeZone: zoned.getSystemTimeZone,
+  })));
 
 /** From the followGlobe call to a sky fully in: the entrance's latest start plus its fade. */
 const SKY_IN_MS = 2900;
@@ -124,9 +139,10 @@ export function startHeroSky(root: HTMLElement): void {
 
   const sky = (async (): Promise<Sky | null> => {
     try {
-      const [response, milkyWay] = await Promise.all([
+      const [response, milkyWay, time] = await Promise.all([
         fetch(src),
         loadMilkyWay(root.dataset["milkyWay"]),
+        loadClock(),
       ]);
       if (!response.ok) return null;
       const data = await response.arrayBuffer();
@@ -137,8 +153,8 @@ export function startHeroSky(root: HTMLElement): void {
         data,
         milkyWay,
         signal: new AbortController().signal,
-        rotation: startRotation(getSystemTimeZone()),
-        now: getUnixNow,
+        rotation: startRotation(time.getSystemTimeZone()),
+        now: time.getUnixNow,
       });
       return sky;
     } catch {
@@ -156,7 +172,8 @@ export async function skyWithoutGlobe(root: HTMLElement): Promise<void> {
     ? await skies.get(hero.querySelector("[data-hero-sky]")!)
     : null;
   if (!sky || hero?.dataset["sky"] === "ready") return;
-  sky.view(startRotation(getSystemTimeZone()), null, getUnixNow());
+  const time = await loadClock();
+  sky.view(startRotation(time.getSystemTimeZone()), null, time.getUnixNow());
 }
 
 /**
@@ -175,6 +192,8 @@ export async function followGlobe(
   const sky = await skies.get(root);
   if (signal.aborted) return;
   if (sky) {
+    const time = await loadClock();
+    if (signal.aborted) return;
     const follow = (): void => {
       /* The globe reports the Earth's centre in its surface's pixels; the sky wants the hero's. */
       const origin = hero.getBoundingClientRect();
@@ -187,7 +206,7 @@ export async function followGlobe(
           y: centre.y + box.top - origin.top,
           radius: centre.radius,
         },
-        getUnixNow(),
+        time.getUnixNow(),
         globe.getZoom(),
       );
     };

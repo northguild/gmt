@@ -22,6 +22,8 @@ type Fake = GlobeRenderer & {
 const made: Fake[] = [];
 /** A `ready` promise the next fake renderer reports, for the dawn tests. */
 let pendingReady: Promise<void> | undefined;
+/** While set, every renderer being made waits for it, to stand for a slow load. */
+let loadHeld: Promise<void> | undefined;
 
 function fakeRenderer(kind: RendererKind, host: HTMLElement): Fake {
   const canvas = document.createElement("canvas");
@@ -60,12 +62,16 @@ function fakeRenderer(kind: RendererKind, host: HTMLElement): Fake {
 }
 
 vi.mock("./webgpu/renderer-webgpu", () => ({
-  createWebgpuRenderer: async (init: { host: HTMLElement }) =>
-    fakeRenderer("webgpu", init.host),
+  createWebgpuRenderer: async (init: { host: HTMLElement }) => {
+    await loadHeld;
+    return fakeRenderer("webgpu", init.host);
+  },
 }));
 vi.mock("./canvas2d/renderer-canvas2d", () => ({
-  createCanvas2dRenderer: async (init: { host: HTMLElement }) =>
-    fakeRenderer("canvas2d", init.host),
+  createCanvas2dRenderer: async (init: { host: HTMLElement }) => {
+    await loadHeld;
+    return fakeRenderer("canvas2d", init.host);
+  },
 }));
 
 const options = (renderer: GlobeOptions["renderer"]): GlobeOptions => ({
@@ -83,6 +89,7 @@ afterEach(() => {
   for (const engine of engines.splice(0)) engine.destroy();
   made.length = 0;
   pendingReady = undefined;
+  loadHeld = undefined;
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
@@ -109,6 +116,45 @@ describe("adopting a renderer after a device loss", () => {
 
     engine.destroy();
   });
+
+  /** Hold the next renderer's load until the returned function is called. */
+  function holdLoad(): () => void {
+    let release = () => {};
+    loadHeld = new Promise<void>((resolve) => (release = resolve));
+    return () => {
+      loadHeld = undefined;
+      release();
+    };
+  }
+
+  it.each([
+    ["the WebGPU retry", 1],
+    ["the canvas-2D fallback", 2],
+  ])(
+    "destroys %s when it arrives after the globe is gone, and shows no canvas",
+    async (_label, losses) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      const host = document.createElement("div");
+      document.body.append(host);
+      const engine = await createGlobeEngine(host, options("webgpu"));
+      // Every loss before the last is recovered from at once.
+      for (let i = 1; i < losses; i++) {
+        made.at(-1)!.fail("device lost");
+        await vi.waitFor(() => expect(made).toHaveLength(i + 1));
+      }
+
+      const release = holdLoad();
+      made.at(-1)!.fail("device lost");
+      engine.destroy();
+      release();
+
+      await vi.waitFor(() => expect(made).toHaveLength(losses + 1));
+      const late = made.at(-1)!;
+      await vi.waitFor(() => expect(late.canvas.isConnected).toBe(false));
+      // No renderer, early or late, has left a canvas behind.
+      expect(made.filter((r) => r.canvas.isConnected)).toEqual([]);
+    },
+  );
 });
 
 function hostWithBox(width = 400, height = 300): HTMLElement {
@@ -380,6 +426,87 @@ describe("pauseWhenHidden", () => {
         [{ isIntersecting: false } as IntersectionObserverEntry],
         {} as IntersectionObserver,
       );
+      const before = fake.frames.length;
+      engine.setZoom(3);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(fake.frames.length).toBe(before);
+      notify(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      await vi.advanceTimersByTimeAsync(100);
+      expect(fake.frames.length).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("pauseWhile", () => {
+  it("hands the host a setter and calls the returned stop on destroy", async () => {
+    const stop = vi.fn();
+    const pauseWhile = vi.fn(() => stop);
+    const engine = await start(hostWithBox(), { pauseWhile });
+    expect(pauseWhile).toHaveBeenCalledTimes(1);
+    expect(stop).not.toHaveBeenCalled();
+    engine.destroy();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws nothing while held and carries on when released", async () => {
+    vi.useFakeTimers();
+    try {
+      let hold: (held: boolean) => void = () => {};
+      const engine = await start(hostWithBox(), {
+        pauseWhile: (set) => {
+          hold = set;
+          return () => {};
+        },
+      });
+      const fake = made[0]!;
+      hold(true);
+      const before = fake.frames.length;
+      engine.setZoom(3);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(fake.frames.length).toBe(before);
+      hold(false);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(fake.frames.length).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stays held until every reason has cleared", async () => {
+    vi.useFakeTimers();
+    let notify: IntersectionObserverCallback = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(cb: IntersectionObserverCallback) {
+          notify = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    try {
+      let hold: (held: boolean) => void = () => {};
+      const host = hostWithBox();
+      const engine = await start(host, {
+        pauseWhenHidden: host,
+        pauseWhile: (set) => {
+          hold = set;
+          return () => {};
+        },
+      });
+      const fake = made[0]!;
+      notify(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      hold(true);
+      hold(false);
       const before = fake.frames.length;
       engine.setZoom(3);
       await vi.advanceTimersByTimeAsync(500);

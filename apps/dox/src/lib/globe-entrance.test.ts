@@ -54,11 +54,14 @@ async function mount(entrance?: "dawn") {
   const tooltip = document.createElement("div");
   const zoom = document.createElement("div");
   document.body.append(host, tooltip, zoom);
-  const globe = await initGlobe(host, null, null, {
+  const starting = initGlobe(host, null, null, {
     tooltip,
     zoom,
     ...(entrance ? { engine: { entrance } } : {}),
   });
+  /* The startup yields to the main thread between its slices, and the clock is faked. */
+  await vi.advanceTimersByTimeAsync(50);
+  const globe = await starting;
   hosts.push(globe);
   return { globe };
 }

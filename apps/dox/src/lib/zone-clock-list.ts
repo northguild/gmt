@@ -49,8 +49,11 @@ import {
 
 // Corrected by real measurement (via measureElement) after each row's first
 // paint — only needs to be in the right ballpark so the initial totalSize
-// (and thus scrollbar/scrollToIndex math) isn't wildly off before that.
-const ROW_HEIGHT_ESTIMATE = 54;
+// (and thus scrollbar/scrollToIndex math) isn't wildly off before that. The row's rendered
+// height at the default text size: an estimate this close leaves the first measure nothing to
+// correct, so the jump to the reader's zone does not re-aim (each re-aim reads layout) before
+// it settles.
+const ROW_HEIGHT_ESTIMATE = 59.1875;
 const OVERSCAN = 8;
 // Most rows ever mounted at once. A panel taller than any screen (a missing
 // stylesheet, a layout that lost its bound) would otherwise make every zone
@@ -281,7 +284,12 @@ export function mountZoneClockList(
       }
       row.style.transform = `translateY(${item.start}px)`;
       writeReading(row, ids[item.index] as string, viewerDate);
-      instance.measureElement(row);
+    }
+    /* Measured after every row is written: a measure straight after each write forced a layout
+       per row (80 of them, up to three passes), the page's longest task on the landing. */
+    for (const item of items) {
+      const row = rows.get(item.index);
+      if (row) instance.measureElement(row);
     }
   }
 

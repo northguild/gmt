@@ -67,6 +67,7 @@ import { mountZoneClockList } from "./zone-clock-list";
 import { enter, holdEntrance } from "./enter";
 import { withBase } from "./site";
 import { chooseZone } from "./zone-action";
+import { createSlicer, yieldToMain } from "./yield-to-main";
 
 export interface GlobeHost {
   /** Rotate the globe to bring a zone to centre and select it. */
@@ -156,6 +157,7 @@ export interface GlobeParts {
     | "hitArea"
     | "maxDpr"
     | "pauseWhenHidden"
+    | "pauseWhile"
     | "entrance"
   >;
 }
@@ -224,7 +226,10 @@ export async function initGlobe(
   );
   const reducedMotion = () => reduceMotionQuery?.matches ?? false;
 
+  /* The startup is cut into slices, each yielding to the main thread, so a reader's first input
+     is never queued behind the whole of it (web.dev/articles/long-tasks-devtools). */
   const zones = resolveGlobeZones(getTimeZones());
+  await yieldToMain();
 
   // Default to the viewer's own zone when it can be placed.
   const systemZone = getSystemTimeZone();
@@ -277,6 +282,7 @@ export async function initGlobe(
      hold releases itself if the renderer never gets that far. */
   const releaseClocks = clockPanel ? holdEntrance(clockPanel) : () => {};
 
+  await yieldToMain();
   let engine: GlobeEngineWithHitTest;
   try {
     engine = (await createGlobeEngine(host, {
@@ -554,7 +560,9 @@ export async function initGlobe(
       };
       const prepared = new Map<string, PreparedPolygon[]>();
       const raw = new Map<string, PolygonRings[]>();
+      const slicer = createSlicer();
       for (const feature of data.features) {
+        await slicer.turn();
         const tzid = feature?.properties?.tzid;
         if (!tzid) continue;
         const polygons =

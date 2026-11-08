@@ -149,6 +149,12 @@ export interface GlobeOptions {
   /** Defaults to `auto`. */
   renderer?: RendererChoice;
   /**
+   * Whether the canvas-2D backend may draw in a Web Worker. Defaults to true; where the browser
+   * cannot (no `OffscreenCanvas`) or the worker does not start, it draws on the main thread
+   * either way. False forces the main thread.
+   */
+  offThread?: boolean;
+  /**
    * Epoch milliseconds for the sun's position, read once per frame.
    *
    * A function, not a number, and supplied by the caller rather than read here:
@@ -205,6 +211,12 @@ export interface GlobeOptions {
    * it with an `IntersectionObserver` and disconnects it on `destroy()`.
    */
   pauseWhenHidden?: Element;
+  /**
+   * Stop the frame loop while the host says something covers the globe. The engine calls this
+   * once with a setter (`true` holds the loop, `false` resumes it where it stopped) and keeps the
+   * function it returns, which it calls on `destroy()`.
+   */
+  pauseWhile?: (hold: (held: boolean) => void) => () => void;
   /**
    * How the Earth arrives. `"fade"` (default) draws at once and the host fades the canvas in.
    * `"dawn"` draws nothing until `startDawn()`, then lights the Earth from a dark disc over

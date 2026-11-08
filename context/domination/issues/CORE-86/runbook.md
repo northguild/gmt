@@ -162,14 +162,9 @@ gh api orgs/northguild -q .blog                                   # https://nort
 
 Today: `homepageUrl` is the `workers.dev` URL and the org website is empty.
 
-## 8. Search Console (optional)
+## 8. Search Console, Bing Webmaster Tools and crawler reports
 
-search.google.com/search-console → **Add property → Domain** → `northguild.dev`. Copy the
-`google-site-verification=…` value; Cloudflare DNS → Add record → `TXT`, name `@`, that value (the
-Search Console flow can also add it through Cloudflare). Verify. Then **Sitemaps** → submit
-`https://northguild.dev/gmt/sitemap-index.xml`.
-
-Check: `dig +short TXT northguild.dev` lists the SPF and the verification value.
+Steps O1–O5: [search-and-crawlers.md](./search-and-crawlers.md).
 
 ## 9. GitHub Sponsors (D11)
 
