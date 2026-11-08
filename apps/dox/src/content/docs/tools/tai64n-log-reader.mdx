@@ -1,0 +1,55 @@
+---
+title: TAI64N Log Reader
+description: Paste daemontools, multilog or s6 log lines and read each @4000… label as a UTC instant, a TAI reading and the TAI minus UTC offset it was made with.
+industries: [core]
+---
+
+import Tai64nLogReader from "../../../components/Tai64nLogReader.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="TAI64N log labels">
+
+<Fragment slot="keypoint">
+
+Log tools such as daemontools' multilog and s6-log can start each line with a TAI64N label, for example `@40000000659200a500000000`: a timestamp written in hex. It counts seconds of TAI (International Atomic Time), the steady atomic scale that UTC is set against, which has no leap seconds. Read a label as Unix seconds and it is off by every leap second UTC has added: 37 s today.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+The `@4000…` at the start of a daemontools, multilog or s6 log line is a TAI64N label: 24 hex digits that count seconds and nanoseconds on the [TAI scale](/guides/core-date-operations/leap-seconds-and-tai/). [`fromTai64n`](/reference/timescale/convert/fromTai64n/) reads a label as the UTC instant it names, and [`toTai64n`](/reference/timescale/convert/toTai64n/) writes one. [`toTAI`](/reference/timescale/convert/toTAI/) gives the same instant as a TAI reading, [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) gives the offset between the two scales at that moment, and [`isLeapSecond`](/reference/timescale/validate/isLeapSecond/) says whether it falls in an inserted second.
+
+Paste up to 12 log lines, or pick a preset. The label is the text before the first space or tab, with or without the `@`, in upper or lower case. Choose a line to see its instant, its TAI reading and the offset, with the exact calls under them. The last box writes a label from an instant.
+
+</Fragment>
+
+<Tai64nLogReader fullbleed />
+
+<Fragment slot="after">
+
+**Labels are TAI.** Bernstein's [TAI64 and TAI64N pages](https://cr.yp.to/libtai/tai64.html) define a label as 2^62 plus the TAI seconds since 1970-01-01 00:00:00 TAI, then four bytes of nanoseconds, and optionally four of attoseconds. TAI has no leap seconds and UTC has had 27 inserted since 1972, so the offset grows: 36 s for the whole of 2016 and 37 s from 2017-01-01. Every row shows the figure for its own instant, and no single figure covers a log that crosses a change.
+
+**Inside an inserted second.** The last minute of 2016 had 61 seconds, and UTC names the extra one `23:59:60`. The label `@40000000586846a400000000` is that second, and `fromTai64n` returns `2016-12-31T23:59:60Z` for it. The row is marked as inside an inserted second. The [IERS Bulletin C](https://hpiers.obspm.fr/iers/bul/bulc/bulletinc.dat) announces each one, and the BIPM keeps the [TAI − UTC table](https://webtai.bipm.org/ftp/pub/tai/other-products/utc-tai/utc-tai.pdf).
+
+**Before 1972 there is no label to read.** UTC as we know it, with whole-second steps, starts on 1972-01-01. A label that names an earlier moment has no UTC instant to give, so the library returns an empty string and the row shows `NO SIGNAL`.
+
+**What the library refuses.** A first token that is not a label (a plain timestamp, say), a label that is not 16, 24 or 32 hex digits and a label that names a moment before 1972 all come back empty, and the row says so. The reader does not trim a line, so a leading space makes an empty label. The attoseconds of a TAI64NA label are dropped, because the library keeps nanoseconds.
+
+**daemontools on a UTC clock.** daemontools' `tai64n` assumes the system clock counts TAI seconds from 1970-01-01 00:00:10 TAI, so on a host whose clock is set to UTC it writes 2^62 + 10 + the Unix seconds. This tool reads every label as true TAI, so such a label reads 27 s early for any time since 2017-01-01: TAI − UTC is 37 s, less the 10 s daemontools assumes. s6 on a UTC clock writes true TAI. The tool does not correct this, because a label does not say which clock wrote it. [See the preset for daemontools on a UTC clock](/tools/tai64n-log-reader/?w=tai64n&wa=%7B%22values%22%3A%22%40400000006592008a00000000%20daemontools%20on%20a%20UTC%20clock%20at%202024-01-01T00%3A00%3A00Z%22%7D). The [skarnet s6 documentation](https://skarnet.org/software/s6/s6-tai64n.html) describes the same labels.
+
+```ts
+fromTai64n("@40000000659200a500000000"); // "2024-01-01T00:00:00Z"
+toTai64n("2016-12-31T23:59:60Z"); // "@40000000586846a400000000"
+fromTai64n("@40000000586846a400000000"); // "2016-12-31T23:59:60Z"
+fromTai64n("@400000000000000000000000"); // ""
+```
+
+An empty string is the library's answer for a label it cannot read, and the tool shows `NO SIGNAL` with the reason. That is different from a line with a real answer.
+
+**Worth trying:** [Across the 2016 leap second](/tools/tai64n-log-reader/?w=tai64n&wa=%7B%22values%22%3A%22%4040000000586846a300000000%20last%20second%20of%202016%5Cn%4040000000586846a400000000%20the%20inserted%20second%5Cn%4040000000586846a500000000%20first%20second%20of%202017%22%2C%22line%22%3A%222%22%7D) — 36 s, 36 s and 37 s on three adjacent seconds.
+
+**Reference:** [`fromTai64n`](/reference/timescale/convert/fromTai64n/), [`toTai64n`](/reference/timescale/convert/toTai64n/), [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) and [`nextLeapSecond`](/reference/timescale/calculate/nextLeapSecond/).
+
+</Fragment>
+
+</ToolLayout>

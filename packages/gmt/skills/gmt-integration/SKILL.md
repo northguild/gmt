@@ -7,7 +7,7 @@ description: >
   timestamps inside UUID, ULID, ObjectId, Snowflake and KSUID identifiers,
   Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS
   leap-second table (taiMinusUtc, leapSecondsBetween, nextLeapSecond,
-  isLeapSecond, toTAI, fromTAI), and lint package selection (ESLint, Biome,
+  isLeapSecond, toTAI, fromTAI, toTai64n, fromTai64n), and lint package selection (ESLint, Biome,
   Oxlint). GNSS time is in gmt-gnss. Reads the docs site (llms.txt and each
   page's .md twin) and the installed package's JSDoc for API details, and the
   lint-package READMEs for lint setup; this skill is a routing pointer, not an
@@ -120,7 +120,14 @@ which lint package to install for Date-ban enforcement.
    isLeapSecond("2024-06-15T12:34:60Z"); // false (hasSecond60 is the shape test)
    toTAI("2026-01-01T00:00:00Z"); // "2026-01-01T00:00:37 TAI"
    fromTAI("2017-01-01T00:00:36 TAI"); // "2016-12-31T23:59:60Z"
+   toTai64n("1992-06-02T08:06:43Z"); // "@400000002a2b2c2d00000000"
+   fromTai64n("@400000002a2b2c2d00000000"); // "1992-06-02T08:06:43Z"
    ```
+   - `toTai64n` and `fromTai64n` read and write the TAI64N labels of qmail,
+     daemontools and s6 logs. A label counts TAI seconds, so reading one as Unix
+     seconds is 37 s out today. `fromTai64n` takes 16, 24 or 32 hex digits, with
+     or without `@`, and drops TAI64NA attoseconds. Labels daemontools writes on
+     a UTC clock read 27 s early: `fromTai64n` does not correct that.
    - Before 1972-01-01 TAI − UTC was fractional, so every function returns its
      sentinel there.
    - `timescale/` and `gnss/` accept a second 60 only on a listed insertion
@@ -180,13 +187,13 @@ the pattern.
   `precision/identifiers`, and bridge Parquet `INT96`, Arrow and protobuf values
   with the `precision/convert/` bridges.
 - **Atomic time at the boundary**: convert a TAI label to a UTC instant on the
-  way in (`fromTAI`), and back on the way out. GNSS time scales and weeks are in
+  way in (`fromTAI`, or `fromTai64n` for a log label), and back on the way out. GNSS time scales and weeks are in
   the `gmt-gnss` skill.
 
 ## Key functions
 
 - **Leap seconds and TAI** (`@northguild/gmt/timescale`): `taiMinusUtc`,
-  `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`
+  `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`, `toTai64n`, `fromTai64n`
 
 - **Identifiers** (`@northguild/gmt/precision/identifiers`): `fromUuidTimestamp`,
   `uuidV7TimestampPrefix`, `fromUlid`, `ulidTimestampPrefix`, `fromObjectId`,

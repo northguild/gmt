@@ -591,6 +591,25 @@ export const showStoredTimeAuditInput = z.object({
     .optional(),
 });
 
+/**
+ * TAI64N Log Reader: the reader's log lines, one per line, exactly as given
+ * (`line` picks the row to draw, `instant` fills the writer). The chat args are
+ * the permalink args.
+ */
+export const showTai64nLogReaderInput = z.object({
+  values: z
+    .string()
+    .min(1)
+    .max(1000)
+    // Not trimmed: a leading space is part of the line. A blank list is refused.
+    .refine((s) => s.trim() !== "", { message: "Send at least one line." }),
+  line: z
+    .string()
+    .regex(/^(?:[1-9]|1[0-2])$/)
+    .optional(),
+  instant: z.string().max(64).optional(),
+});
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1217,7 +1236,8 @@ export type DoxToolName =
   | "showCronInAZone"
   | "showLeapDayBirthday"
   | "showExpiryCalculator"
-  | "showDatabaseTimestampReader";
+  | "showDatabaseTimestampReader"
+  | "showTai64nLogReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1520,6 +1540,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader pastes a value from PostgreSQL, MySQL, SQL Server, Oracle, SQLite, MongoDB, DynamoDB, Redis, Couchbase, Cassandra, ScyllaDB or Neo4j and asks what it means or which gmt function reads it. Pass only a form the reader's database and type select; never infer the session time zone from a place, a server or a vendor default. For an id (UUID, ObjectId, timeuuid), use showIdTimestampDecoder instead.",
     args: "form: required, the id of the form the reader's database and type select; value, and value2 or value3 when the form has more fields: exactly as the reader gave them, never trimmed or corrected; zone: only for MySQL TIMESTAMP, and only when the reader named the session time zone.",
   },
+  {
+    name: "showTai64nLogReader",
+    purpose:
+      "Read TAI64, TAI64N and TAI64NA labels from daemontools, multilog or s6 logs as UTC instants, with the TAI reading and TAI minus UTC for each line.",
+    when: "Call when the reader pastes or asks about a TAI64 / TAI64N / TAI64NA label or a daemontools, multilog or s6 log line starting with `@4000…`, or asks why such a label reads 37 (or 27) seconds off, or what time a label such as @4000000037c219bf2ef02e94 is. Pass the lines exactly as given.",
+    args: "values: required, the log lines exactly as the reader gave them, one per line, at most 12 lines read; line: optional, the 1-based line to draw; instant: optional UTC instant, only when the reader named one to write as a label.",
+  },
 ];
 
 /**
@@ -1696,6 +1723,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[41].purpose,
     inputSchema: showDatabaseTimestampReaderInput,
   }),
+  showTai64nLogReader: tool({
+    description: DOX_TOOL_DOCS[42].purpose,
+    inputSchema: showTai64nLogReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1761,6 +1792,7 @@ export const ENABLED_TOOL_NAMES = [
   "showLeapDayBirthday",
   "showExpiryCalculator",
   "showDatabaseTimestampReader",
+  "showTai64nLogReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

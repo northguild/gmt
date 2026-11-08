@@ -6,7 +6,7 @@
 
 Space and GNSS systems store timestamps in TAI (continuous, no leap seconds). Converting TAI to UTC requires the leap-second table.
 
-Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in everyday infrastructure use: D. J. Bernstein's **TAI64** labels, which timestamp every line of qmail, daemontools and s6 logs. "A TAI64 label is an integer between 0 and 2^64 referring to a particular second of real time": label `s` in `[2⁶², 2⁶³)` is "the TAI second beginning exactly s − 2⁶² seconds after the beginning of 1970 TAI"; the external format is "eight 8-bit bytes in big-endian format", so `40 00 00 00 00 00 00 00` is the second that began 1970 TAI and `40 00 00 00 2a 2b 2c 2d` is "1992-06-02 08:07:09 TAI, also known as 1992-06-02 08:06:43 UTC". TAI64N appends four bytes of nanoseconds; TAI64NA four more of attoseconds. The `@4000000…` hex spelling seen in log files is daemontools' rendering of those bytes, not part of the definition. This story reads and writes that text form, the one found in log files. They are TAI, so reading them as Unix seconds is off by the leap-second count.
+Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in everyday infrastructure use: D. J. Bernstein's **TAI64** labels, which daemontools' multilog and s6-log write at the start of each log line when timestamping is on. "A TAI64 label is an integer between 0 and 2^64 referring to a particular second of real time": label `s` in `[2⁶², 2⁶³)` is "the TAI second beginning exactly s − 2⁶² seconds after the beginning of 1970 TAI"; the external format is "eight 8-bit bytes in big-endian format", so `40 00 00 00 00 00 00 00` is the second that began 1970 TAI and `40 00 00 00 2a 2b 2c 2d` is "1992-06-02 08:07:09 TAI, also known as 1992-06-02 08:06:43 UTC". TAI64N appends four bytes of nanoseconds; TAI64NA four more of attoseconds. The `@4000000…` hex spelling seen in log files is daemontools' rendering of those bytes, not part of the definition. This story reads and writes that text form, the one found in log files. They are TAI, so reading them as Unix seconds is off by the leap-second count.
 ([D. J. Bernstein, libtai, TAI64, TAI64N, and TAI64NA](https://cr.yp.to/libtai/tai64.html))
 
 ## Scope
@@ -26,7 +26,7 @@ Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in eve
 
 ## Tool
 
-**Extends Satellite Clock Converter** with TAI64N labels: give a label to see its instant, or give an instant to see its label, beside the other clocks. Calls `toTai64n`, `fromTai64n`.
+**TAI64N Log Reader** (`/tools/tai64n-log-reader/`), a standalone tool: paste up to 12 daemontools, multilog or s6 log lines and read each line's label as a UTC instant, a TAI reading and the TAI − UTC offset at that instant, with the inserted second marked; a last box writes a label from an instant. Calls `fromTai64n`, `toTai64n`, `toTAI`, `taiMinusUtc` and `isLeapSecond`. Its rules are in `context/dox/built.md`.
 
 ## Design notes
 
@@ -36,7 +36,8 @@ Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in eve
 
 ## What gmt provides (do not re-implement)
 
-- `toNanoseconds` / `fromNanoseconds` from CORE-1 — precision conversion
+- `floorDivide` and `NANOSECONDS_PER_SECOND` from CORE-3 — split the TAI nanoseconds into seconds and a remainder
+- `hexValue` from CORE-56 — read a hex digit
 - The leap-second table from SPA-48 — TAI − UTC by date
 - `toTAI` / `fromTAI` and the time-scale string grammar from MAR-16 — the TAI hinge the labels are built on
 
@@ -46,3 +47,17 @@ Beyond the TAI time-scale strings MAR-16 builds, one binary TAI format is in eve
 - `fromTai64n(toTai64n(iso))` round-trips to the nanosecond; a TAI64NA label round-trips to the nanosecond and drops attoseconds, documented
 - A label of a hex length other than 16, 24 or 32, a label with a non-hex character, or a label for an instant before 1972 returns the sentinel
 - `pnpm run validate` stays green
+
+## Decisions
+
+Settled by the owner. They are the current rules for this code.
+
+- The two public functions are `toTai64n` and `fromTai64n`, in `timescale/convert/`. Both take and return strings, take no options and no table argument, and return `""` on any refusal.
+- Labels decode as true TAI, as Bernstein's definition states. `fromTai64n` reads every TAI64 label as the TAI second `label − 2⁶²` after 1970 TAI, so it reads a label written on a UTC clock by daemontools 27 s early (daemontools adds only `2⁶² + 10` to the Unix time). s6 on a UTC clock writes true TAI. Both JSDocs state this in one bullet with the 27 s figure. GMT does not read "Unix + 10" labels, and there is no follow-up story.
+- The whole label is the input. A log line, or any text around the label, returns `""`.
+- `fromTai64n` reads 16 (TAI64), 24 (TAI64N) and 32 (TAI64NA) hex digits, with or without `@`, in either case. `toTai64n` writes `@` and 24 lowercase digits only; there is no TAI64 or TAI64NA writer and no validator. Attoseconds are checked and then truncated, never rounded.
+- Both functions go through the existing TAI hinge (`parseUtcReading` → `taiOfUtc`, `utcOfTai` → `formatUtcReading`, `LEAP_SECOND_STEPS`). The label is `2⁶² + floor(tai / 10⁹)` seconds and `tai mod 10⁹` nanoseconds. An inserted second has its own label and reads back as `…T23:59:60Z`.
+- An instant before 1972-01-01 UTC has no integer TAI − UTC, so it returns `""`, as `toTAI` and `fromTAI` do. Years are four digits in both directions (`LAST_FOUR_DIGIT_UTC_NANOSECONDS`), and labels of `2⁶³` and above are reserved and return `""`.
+- The shared grammar, reader and writer live in `internal/tai64Label.ts` (`TAI64_SECONDS_OFFSET`, `tai64LabelText`, `parseTai64Label`, `formatTai64nLabel`). `LAST_FOUR_DIGIT_UTC_NANOSECONDS` is a four-digit-year rule, not a TAI64 one, so it lives beside `MAX_FOUR_DIGIT_YEAR` in `internal/utcReading.ts`. `coding-standards.md` carries the scoped exception for TAI64 text labels in `timescale/convert`.
+- The root bundle budget in `scripts/bundle-size.budgets.json` rose from 568700 to 569400 B (+700 B). The measured size is 569313 B, which leaves 87 B. This is a reviewed raise, with CORE-106 and CORE-104 as precedents.
+- The Dox tool is the TAI64N Log Reader at `/tools/tai64n-log-reader/`; its rules are in `context/dox/built.md`.

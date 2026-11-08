@@ -10,7 +10,7 @@ library:
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-10-23'
+generated_at: '2026-11-07'
 
 skills:
   # Consumer-facing core skills
@@ -125,7 +125,7 @@ skills:
     domain: integration
     path: 'skills/gmt-integration/SKILL.md'
     package: 'packages/gmt'
-    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI), and lint package selection; GNSS time is in gmt-gnss
+    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI/toTai64n/fromTai64n), and lint package selection; GNSS time is in gmt-gnss
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'

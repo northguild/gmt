@@ -211,6 +211,20 @@ describe("widget permalinks", () => {
     expect(seeded).toEqual({ values, line: "5" });
   });
 
+  it("round-trips multi-line TAI64N log values, a line and an instant", () => {
+    const values = Array.from(
+      { length: 4 },
+      (_, i) => `@4000000065920${i}a500000000 message ${i}`,
+    ).join("\n");
+    expect(values.length).toBeGreaterThan(64);
+    const state = { values, line: "3", instant: "2024-01-01T00:00:00Z" };
+    const url = encodeWidgetPermalink("tai64n", state);
+    expect(url).toContain("/tools/tai64n-log-reader/");
+    expect(seedFromLocation("tai64n", url.slice(url.indexOf("?")))).toEqual(
+      state,
+    );
+  });
+
   it("registers the three holiday tools at their own pages", () => {
     expect(WIDGET_PAGE_PATHS.holidays).toBe("/tools/holiday-rule-builder/");
     expect(WIDGET_PAGE_PATHS.observance).toBe("/tools/observance-comparator/");
