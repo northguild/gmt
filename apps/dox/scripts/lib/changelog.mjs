@@ -267,8 +267,69 @@ export function memorialPlate({ scope, pkgName, groups, installLink }) {
 </div>`;
 }
 
+/** The `major.minor` release line of a version: `1.21.3` is line `1.21`. */
+export function lineOf(version) {
+  return version.split(".").slice(0, 2).join(".");
+}
+
 /**
- * The page's Markdown, frontmatter included.
+ * The path segment of a line's page. Starlight slugs drop dots, so `1.21` becomes `1-21`.
+ * @param {string} line
+ */
+export function lineSlug(line) {
+  return line.replace(".", "-");
+}
+
+/**
+ * Split each scope's releases by `major.minor`, newest first. A line that changed scope part way
+ * (the retired scope's last patches and the current scope's first) appears under both scopes.
+ * @param {ReturnType<typeof groupReleases>} groups
+ * @returns {{ scope: string, retired: boolean, lines: { line: string, releases: ReturnType<typeof groupReleases>[number]["releases"] }[] }[]}
+ */
+export function releaseLines(groups) {
+  return groups.map(({ scope, retired, releases }) => {
+    const lines = [];
+    for (const release of releases) {
+      const line = lineOf(release.version);
+      const last = lines.at(-1);
+      if (last && last.line === line) last.releases.push(release);
+      else lines.push({ line, releases: [release] });
+    }
+    return { scope, retired, lines };
+  });
+}
+
+/** `Released YYYY-MM-DD`, or `Not yet released` for a version without a tag. */
+function releaseDate(release, formatDate) {
+  return release.stamp === null
+    ? "Not yet released"
+    : `Released ${formatDate(release.stamp)}`;
+}
+
+/** `1.21.0`, or `1.21.0 to 1.21.3` when the line has patches (oldest first). */
+function versionRange(releases) {
+  const newest = releases[0].version;
+  const oldest = releases.at(-1).version;
+  return newest === oldest ? oldest : `${oldest} to ${newest}`;
+}
+
+/**
+ * The description of one line's page: the package and the versions it holds, unique per page.
+ * @param {string} pkgName
+ * @param {string} line
+ * @param {ReturnType<typeof groupReleases>} groups
+ */
+export function describeLinePage(pkgName, line, groups) {
+  const releases = groups
+    .flatMap((group) => group.releases)
+    .filter((release) => lineOf(release.version) === line);
+  return `Release notes of ${pkgName} ${versionRange(releases)}, with the date of each release.`;
+}
+
+/**
+ * The index page's Markdown: the scope groups (`##` per scope, the plate under a retired one),
+ * and under each scope its release lines newest first, with the versions and dates of each. It
+ * repeats no release note, so no text is shared with a line page.
  * @param {{
  *   pkgName: string,
  *   title: string,
@@ -278,11 +339,11 @@ export function memorialPlate({ scope, pkgName, groups, installLink }) {
  *   sourceUrl: string,
  *   sourcePath: string,
  *   installLink: string,
+ *   route: string,
  *   lastUpdated?: string,
- * }} input `pkgName` is the full name, `@northguild/gmt`; `installLink` is where the retired
- * scope's plate sends the reader to install it
+ * }} input `route` is the index page's path with both slashes, `/changelog/`
  */
-export function renderPage({
+export function renderIndexPage({
   pkgName,
   title,
   description,
@@ -291,41 +352,104 @@ export function renderPage({
   sourceUrl,
   sourcePath,
   installLink,
+  route,
   lastUpdated = "",
 }) {
   const pkg = pkgName.slice(pkgName.indexOf("/") + 1);
-
   const headings = [];
-  const sections = groups.map((group) => {
+  const sections = releaseLines(groups).map((group) => {
     const heading = `${group.scope}/${pkg}`;
     headings.push({ text: heading });
     const intro = group.retired
       ? `${memorialPlate({ scope: group.scope, pkgName, groups, installLink })}\n\n`
       : "";
-    const releases = group.releases.map((release) => {
-      headings.push({ text: release.version });
-      checkRawHtml(release.body);
-      const date =
-        release.stamp === null
-          ? "Not yet released"
-          : `Released ${formatDate(release.stamp)}`;
-      return `### ${release.version}\n\n${date}\n\n${demoteHeadings(release.body)}\n`;
+    const lines = group.lines.map(({ line, releases }) => {
+      const versions = releases.map(
+        (release) =>
+          `  - ${release.version}: ${releaseDate(release, formatDate)}`,
+      );
+      return `- [Release line ${line}](${route}${lineSlug(line)}/)\n${versions.join("\n")}`;
     });
-    return `## ${heading}\n\n${intro}${releases.join("\n")}`;
+    return `## ${heading}\n\n${intro}${lines.join("\n")}\n`;
   });
   checkSlugs(headings);
 
-  // Quoted: a plugin's title holds `: `, which a plain YAML scalar cannot. Each page records the
-  // whole package, so its industry is Core.
-  const frontmatter = `---
+  const lead = `Every release of \`${pkgName}\`, newest first, grouped by release line. Each line's page holds its release notes, built from [\`${sourcePath}\`](${sourceUrl}).\n`;
+  return `${frontmatter({ title, description, lastUpdated })}\n${lead}\n<div class="gmt-changelog">\n\n${sections.join("\n")}\n</div>\n`;
+}
+
+/**
+ * The frontmatter block. The title is quoted: a plugin's title holds `: `, which a plain YAML
+ * scalar cannot. Each page records the whole package, so its industry is Core.
+ */
+function frontmatter({ title, description, lastUpdated }) {
+  return `---
 title: ${JSON.stringify(title)}
 description: >
   ${description}
 industries: [core]
 ${lastUpdated ? `lastUpdated: ${lastUpdated}\n` : ""}---
 `;
-  const lead = `Every release of \`${pkgName}\`, newest first, built from [\`${sourcePath}\`](${sourceUrl}).\n`;
-  // The wrapper scopes the table CSS (gmt-content-tables.css); `stripMdx` drops the two lone
-  // `<div>` lines from the text twin.
-  return `${frontmatter}\n${lead}\n<div class="gmt-changelog">\n\n${sections.join("\n")}\n</div>\n`;
+}
+
+/**
+ * One release line's page: its releases newest first under each scope that published them, the
+ * plate under a retired scope's heading, and a link back to the index.
+ * @param {{
+ *   pkgName: string,
+ *   title: string,
+ *   indexTitle: string,
+ *   line: string,
+ *   groups: ReturnType<typeof groupReleases>,
+ *   formatDate: (stamp: string) => string,
+ *   sourceUrl: string,
+ *   sourcePath: string,
+ *   installLink: string,
+ *   route: string,
+ * }} input `groups` are all of the package's groups; the page keeps the releases of `line`.
+ * `route` is the index page's path with both slashes; `indexTitle` is that page's title
+ */
+export function renderLinePage({
+  pkgName,
+  title,
+  indexTitle,
+  line,
+  groups,
+  formatDate,
+  sourceUrl,
+  sourcePath,
+  installLink,
+  route,
+}) {
+  const pkg = pkgName.slice(pkgName.indexOf("/") + 1);
+  const headings = [];
+  const sections = [];
+  const held = [];
+  for (const group of releaseLines(groups)) {
+    const found = group.lines.find((entry) => entry.line === line);
+    if (!found) continue;
+    held.push(...found.releases);
+    const heading = `${group.scope}/${pkg}`;
+    headings.push({ text: heading });
+    const intro = group.retired
+      ? `${memorialPlate({ scope: group.scope, pkgName, groups, installLink })}\n\n`
+      : "";
+    const releases = found.releases.map((release) => {
+      headings.push({ text: release.version });
+      checkRawHtml(release.body);
+      return `### ${release.version}\n\n${releaseDate(release, formatDate)}\n\n${demoteHeadings(release.body)}\n`;
+    });
+    sections.push(`## ${heading}\n\n${intro}${releases.join("\n")}`);
+  }
+  if (held.length === 0) {
+    throw new Error(`changelog: ${pkgName} has no release in line ${line}`);
+  }
+  checkSlugs(headings);
+
+  // The newest release with a tag; none while the line holds only an unreleased version.
+  const stamps = held.map((release) => release.stamp).filter(Boolean);
+  const lastUpdated = stamps.sort().at(-1) ?? "";
+  const description = describeLinePage(pkgName, line, groups);
+  const lead = `Release notes of \`${pkgName}\` ${versionRange(held)}, newest first, built from [\`${sourcePath}\`](${sourceUrl}). Back to [${indexTitle}](${route}).\n`;
+  return `${frontmatter({ title, description, lastUpdated })}\n${lead}\n<div class="gmt-changelog">\n\n${sections.join("\n")}\n</div>\n`;
 }

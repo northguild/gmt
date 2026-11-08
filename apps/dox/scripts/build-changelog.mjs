@@ -2,10 +2,14 @@
 /**
  * Generate the changelog pages from each package's CHANGELOG.md and the release tags.
  *
- * Emits one page per package that has a CHANGELOG.md: src/content/docs/changelog/index.md for
- * `@northguild/gmt` and changelog/<dir>.md for each other package. The package list is read from
- * the directory, so a new package with a changelog gets a page with no change here (the sidebar
- * test then names the missing link). A version's scope (current or
+ * Emits, per package that has a CHANGELOG.md, an index page and one page per release line
+ * (`major.minor`): src/content/docs/changelog/index.md and changelog/<line>.md for
+ * `@northguild/gmt`, changelog/<dir>/index.md and changelog/<dir>/<line>.md for each other
+ * package. A line's page holds its release notes, so no page nears the 1 MB a Messages preview
+ * reads; the index lists the lines and repeats no note. The package list is read from the
+ * directory, so a new package with a changelog gets its pages with no change here (the sidebar
+ * test then names the missing link). Any .md in the output directory that a run did not write is
+ * deleted. A version's scope (current or
  * the retired `@burglekitt`) and its release date come from its git tag, read in one call; the
  * transform is in lib/changelog.mjs. This script never writes the CHANGELOG.md files; they are
  * the release record. The emitted page is gitignored.
@@ -25,18 +29,22 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadGmt } from "../../../scripts/lib/gmt.mjs";
 import {
   describePage,
   groupReleases,
+  lineSlug,
   parseChangelog,
   parseTags,
-  renderPage,
+  releaseLines,
+  renderIndexPage,
+  renderLinePage,
 } from "./lib/changelog.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -50,7 +58,12 @@ const PACKAGES = readdirSync(resolve(repoRoot, "packages"))
     existsSync(resolve(repoRoot, "packages", dir, "CHANGELOG.md")),
   )
   .sort((a, b) => (a === "gmt" ? -1 : b === "gmt" ? 1 : a.localeCompare(b)))
-  .map((dir) => ({ dir, out: dir === "gmt" ? "index.md" : `${dir}.md` }));
+  .map((dir) => ({
+    dir,
+    // The directory under changelog/ and the route of the package's index page.
+    folder: dir === "gmt" ? "" : dir,
+    route: dir === "gmt" ? "/changelog/" : `/changelog/${dir}/`,
+  }));
 
 /** Where a retired-scope plate sends the reader to install: the library, or a plugin's guide. */
 const installLinkFor = (dir) =>
@@ -79,7 +92,24 @@ try {
   );
 
   mkdirSync(outDir, { recursive: true });
-  for (const { dir, out } of PACKAGES) {
+  /** Absolute paths of every page this run keeps. */
+  const kept = new Set();
+  /** Idempotent write: don't bump mtime when nothing changed. Returns whether it wrote. */
+  const write = (path, source) => {
+    kept.add(path);
+    mkdirSync(dirname(path), { recursive: true });
+    let previous = "";
+    try {
+      previous = readFileSync(path, "utf8");
+    } catch {
+      previous = "";
+    }
+    if (previous === source) return false;
+    writeFileSync(path, source);
+    return true;
+  };
+
+  for (const { dir, folder, route } of PACKAGES) {
     const sourcePath = `packages/${dir}/CHANGELOG.md`;
     const pkgName = JSON.parse(
       readFileSync(resolve(repoRoot, "packages", dir, "package.json"), "utf8"),
@@ -106,35 +136,67 @@ try {
       lastUpdated = "";
     }
 
-    const source = renderPage({
+    const title = dir === "gmt" ? "Changelog" : `Changelog: ${dir}`;
+    const shared = {
       pkgName,
-      title: dir === "gmt" ? "Changelog" : `Changelog: ${dir}`,
-      description: describePage(pkgName, groups),
       groups,
       formatDate: (stamp) => gmt.parseDateFromUtc(stamp),
       sourceUrl: `${SOURCE_BASE}/${sourcePath}`,
       sourcePath,
       installLink: installLinkFor(dir),
-      lastUpdated,
-    });
+      route,
+    };
 
-    // Idempotent write: don't bump mtime when nothing changed.
-    const outPath = resolve(outDir, out);
-    let previous = "";
-    try {
-      previous = readFileSync(outPath, "utf8");
-    } catch {
-      previous = "";
+    let written = write(
+      resolve(outDir, folder, "index.md"),
+      renderIndexPage({
+        ...shared,
+        title,
+        description: describePage(pkgName, groups),
+        lastUpdated,
+      }),
+    );
+    const lines = new Set(
+      releaseLines(groups).flatMap((group) =>
+        group.lines.map(({ line }) => line),
+      ),
+    );
+    for (const line of lines) {
+      const changed = write(
+        resolve(outDir, folder, `${lineSlug(line)}.md`),
+        renderLinePage({
+          ...shared,
+          title: `${title} ${line}`,
+          indexTitle: title,
+          line,
+        }),
+      );
+      written ||= changed;
     }
-    if (previous !== source) writeFileSync(outPath, source);
 
     const untagged = groups
       .flatMap((group) => group.releases)
       .filter((release) => release.stamp === null).length;
     console.log(
-      `changelog: ${dir} ${versions.length} versions, ${groups.length} scopes, ${untagged} untagged (${previous === source ? "unchanged" : "written"})`,
+      `changelog: ${dir} ${versions.length} versions, ${groups.length} scopes, ${lines.size} line pages, ${untagged} untagged (${written ? "written" : "unchanged"})`,
     );
   }
+
+  // Delete what this run did not write: a page of a line that no longer exists, or the
+  // single-file layout of an earlier build.
+  const sweep = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) {
+        sweep(path);
+        if (readdirSync(path).length === 0) rmSync(path, { recursive: true });
+      } else if (entry.name.endsWith(".md") && !kept.has(path)) {
+        rmSync(path);
+        console.log(`changelog: removed stale ${relative(outDir, path)}`);
+      }
+    }
+  };
+  sweep(outDir);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

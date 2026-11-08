@@ -14,7 +14,7 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { INDUSTRY_OVERVIEWS } from "../src/lib/industry-overview";
@@ -26,11 +26,17 @@ import {
   type HubIndustry,
   type HubSectionPage,
 } from "./build-utils/industry-pages";
+import {
+  loadCommitDates,
+  newestCommit,
+  withLastUpdated,
+} from "./build-utils/commit-dates.mjs";
 import { syncTree, writeIfChanged } from "./build-utils/generated-files.mjs";
 import type { IndexedPage } from "./build-utils/index-pages";
 import { readSectionPage } from "./build-utils/industry-sidebar";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(appRoot, "..", "..");
 const docsDir = resolve(appRoot, "src", "content", "docs");
 const corpusFile = resolve(
   appRoot,
@@ -48,12 +54,13 @@ const pages: IndexedPage[] = (
   JSON.parse(readFileSync(corpusFile, "utf8")) as CorpusFunction[]
 )
   .filter((entry) => entry.kind === "function")
-  .map(({ namespace, module, name, url, description }) => ({
+  .map(({ namespace, module, name, url, description, sourcePath }) => ({
     namespace,
     module,
     name,
     url,
     description,
+    sourcePath,
   }));
 
 const industries: HubIndustry[] = INDUSTRIES.map((industry) => {
@@ -94,6 +101,7 @@ function sectionPages(section: string): HubSectionPage[] {
         title: page.title,
         description: page.description,
         industries: page.industries,
+        path: relative(repoRoot, resolve(dir, file)).split("\\").join("/"),
       };
     });
 }
@@ -104,9 +112,16 @@ const hubs = renderIndustryHubs({
   sectionPages: HUB_SECTIONS.flatMap(({ section }) => sectionPages(section)),
 });
 
+// Each hub is dated from the files it states (`build-utils/commit-dates.mjs`), read in one `git log`.
+loadCommitDates(hubs.flatMap((hub) => hub.inputs));
 const changes = syncTree(
   resolve(docsDir, "industries"),
-  new Map(hubs.map((hub) => [hub.file, hub.mdx])),
+  new Map(
+    hubs.map((hub) => [
+      hub.file,
+      withLastUpdated(hub.mdx, newestCommit(hub.inputs)),
+    ]),
+  ),
 );
 const sidebarWritten = writeIfChanged(
   resolve(appRoot, "src", "generated", "industries-sidebar.ts"),

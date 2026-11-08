@@ -54,6 +54,14 @@ describe("scanHead", () => {
     expect(scan.jsonLd).toEqual(['{"@type":"BreadcrumbList"}']);
   });
 
+  it("tells a describedby link from a text/plain alternate", () => {
+    const scan = scanHead(
+      `<head><link rel="describedby" type="text/plain" href="/gmt/llms.txt"><link href="/x.txt" type="text/plain" rel="alternate"></head>`,
+    );
+    expect(scan.describedBy).toEqual(["/gmt/llms.txt"]);
+    expect(scan.textAlternates).toEqual(["/x.txt"]);
+  });
+
   it("finds an edit link to any GitHub repository and no other anchor", () => {
     expect(scanHead(PAGE).editLinks).toEqual([
       "https://github.com/northguild/gmt/edit/main/packages/gmt/src/plain/calculate/addDate.ts",

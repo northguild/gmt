@@ -47,6 +47,7 @@ const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`
 <script>
   import { findWidget } from "../widgets/builders";
   import { showUnavailable } from "../lib/widget-mount";
+  import { whenIdle } from "../lib/yield-to-main";
 
   /* Neither the mount nor its stylesheet is imported here: both load with the
      `import()` in `start`, once the stage is near the viewport. */
@@ -84,7 +85,11 @@ const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`
         (entries) => {
           if (entries.some((entry) => entry.isIntersecting)) {
             observer.disconnect();
-            start();
+            /* The landing hero's Earth starts when the page is idle, so the work it brings
+               (the engine, the polyfill, ~400 zones) never competes with the first input
+               (web.dev/articles/inp). */
+            if (root.querySelector("[data-space]")) void whenIdle().then(start);
+            else start();
           }
         },
         { rootMargin: "200px" },

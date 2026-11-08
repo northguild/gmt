@@ -16,8 +16,8 @@
  *
  * At 390 the mobile menu is opened only when the walk reaches its toggle; the menu's links count as
  * candidates only once it is open. `/dox/` is walked as it opens and once more with a widget in the
- * rail. The pages are every page outside `/reference/`, plus the first function page and the first
- * type page: reference pages share one template and each carries the full sidebar.
+ * rail. The pages are every page outside `/reference/`, plus the first function page of each
+ * namespace and the first type page: a reference page carries only its own namespace's tree.
  *
  * Usage (a built site served, as `pnpm --filter dox gates --only a11y-tab-walk` does):
  *   node scripts/a11y-tab-walk.mjs [--base http://127.0.0.1:48291/gmt] [--browsers chromium,webkit]

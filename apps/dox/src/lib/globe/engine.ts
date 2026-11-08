@@ -50,6 +50,7 @@ import type {
   GlobeRenderer,
   RendererInit,
 } from "./renderer";
+import { canDrawOffThread } from "./off-thread-support";
 import { subsolarPoint } from "./sun";
 import { sunDirection } from "./camera";
 import type {
@@ -125,6 +126,9 @@ export async function createGlobeEngine(
   let interactCallback: ((kind: GlobeInteraction) => void) | null = null;
   /** Whether the frame loop is held off because the host scrolled out of view. */
   let offscreen = false;
+  /** Whether something drawn over the globe (the search dialog, the mobile menu) hides it. */
+  let covered = false;
+  const held = (): boolean => offscreen || covered;
   const maxDpr = options.maxDpr ?? MAX_DPR;
   const hitArea = options.hitArea;
 
@@ -154,7 +158,14 @@ export async function createGlobeEngine(
     return typeof navigator !== "undefined" && "gpu" in navigator;
   }
 
-  async function loadRenderer(kind: RendererKind): Promise<GlobeRenderer> {
+  /**
+   * `mainThread` skips the worker: used when a worker renderer has just failed, and by a caller
+   * that sets `GlobeOptions.offThread` to false.
+   */
+  async function loadRenderer(
+    kind: RendererKind,
+    mainThread = options.offThread === false,
+  ): Promise<GlobeRenderer> {
     const init: RendererInit = {
       host,
       theme,
@@ -165,6 +176,18 @@ export async function createGlobeEngine(
       entrance: options.entrance ?? "fade",
       reducedMotion,
     };
+    if (kind === "canvas2d" && !mainThread && canDrawOffThread()) {
+      /* The raster goes to a worker so a 100 ms frame cannot hold up input. Any refusal — a
+         module worker the browser will not start, a script that fails to load — falls through
+         to drawing on the main thread, so the globe is never blank. */
+      try {
+        return await (
+          await import("./canvas2d/renderer-canvas2d-worker")
+        ).createWorkerCanvas2dRenderer(init);
+      } catch (error) {
+        console.info(`globe: canvas 2D worker unavailable (${String(error)})`);
+      }
+    }
     const create: CreateRenderer =
       kind === "webgpu"
         ? (await import("./webgpu/renderer-webgpu")).createWebgpuRenderer
@@ -211,8 +234,12 @@ export async function createGlobeEngine(
   }
 
   function handleRendererFailure(reason: string): void {
-    if (destroyed || !renderer || renderer.kind !== "webgpu") return;
-    console.warn(`globe: WebGPU renderer failed (${reason})`);
+    if (destroyed || !renderer) return;
+    const workerFailed = renderer.offThread === true;
+    if (renderer.kind !== "webgpu" && !workerFailed) return;
+    console.warn(
+      `globe: ${workerFailed ? "canvas 2D worker" : "WebGPU renderer"} failed (${reason})`,
+    );
     const previous = renderer;
     renderer = null;
     unbindInput(inputTarget(previous));
@@ -221,12 +248,18 @@ export async function createGlobeEngine(
     /* One retry, and only once the tab is visible: a device lost while hidden is
        usually the browser reclaiming the GPU, and re-requesting it immediately
        tends to lose it again. */
+    /* A load can finish after `destroy()`, which only tears down the renderer it can see. A late
+       one has already put its canvas (and maybe a worker) in place, so it is torn down here. */
+    const adoptUnlessDestroyed = (next: GlobeRenderer) => {
+      if (destroyed) next.destroy();
+      else adoptRenderer(next);
+    };
     const recover = async () => {
       if (destroyed) return;
-      if (!deviceLossRetried) {
+      if (!workerFailed && !deviceLossRetried) {
         deviceLossRetried = true;
         try {
-          adoptRenderer(await loadRenderer("webgpu"));
+          adoptUnlessDestroyed(await loadRenderer("webgpu"));
           return;
         } catch {
           // Fall through to canvas-2D below.
@@ -234,7 +267,7 @@ export async function createGlobeEngine(
       }
       if (destroyed) return;
       try {
-        adoptRenderer(await loadRenderer("canvas2d"));
+        adoptUnlessDestroyed(await loadRenderer("canvas2d", workerFailed));
       } catch (error) {
         console.error("globe: no renderer could start", error);
       }
@@ -430,13 +463,7 @@ export async function createGlobeEngine(
    * loop already has a frame pending it will draw anyway, so this does nothing.
    */
   function requestDraw(): void {
-    if (
-      destroyed ||
-      document.hidden ||
-      offscreen ||
-      frameHandle ||
-      drawHandle
-    ) {
+    if (destroyed || document.hidden || held() || frameHandle || drawHandle) {
       return;
     }
     drawHandle = requestAnimationFrame(() => {
@@ -466,7 +493,7 @@ export async function createGlobeEngine(
 
   /** Ask for the next frame, or set the one timer that wakes the ambient spin. */
   function schedule(): void {
-    if (destroyed || document.hidden || offscreen) return;
+    if (destroyed || document.hidden || held()) return;
     /* A dawn entrance has no loop, and the spin no wake timer, until it starts. */
     if (dawnMode && dawnStart === null) return;
     if (controller.needsFrame() || dawning()) {
@@ -675,29 +702,40 @@ export async function createGlobeEngine(
   }
   document.addEventListener("visibilitychange", onVisibility);
 
-  /* Out of view the loop stops entirely: no frame, no wake timer. Coming back
-     is treated like a returning tab, so a spin does not resume from a stale
-     timestamp. */
+  /* Held (out of view, or covered) the loop stops entirely: no frame, no wake timer. Coming back
+     is treated like a returning tab, so a spin does not resume from a stale timestamp, and it
+     carries on from the rotation it stopped at. */
+  function applyHold(): void {
+    if (held()) {
+      if (frameHandle) cancelAnimationFrame(frameHandle);
+      if (drawHandle) cancelAnimationFrame(drawHandle);
+      if (wakeTimer) clearTimeout(wakeTimer);
+      frameHandle = 0;
+      drawHandle = 0;
+      return;
+    }
+    controller.markInteraction(performanceNow());
+    requestDraw();
+    schedule();
+  }
+
   let viewObserver: IntersectionObserver | undefined;
   if (options.pauseWhenHidden && typeof IntersectionObserver === "function") {
     viewObserver = new IntersectionObserver((entries) => {
       const visible = entries[entries.length - 1]?.isIntersecting ?? true;
       if (visible === !offscreen) return;
       offscreen = !visible;
-      if (offscreen) {
-        if (frameHandle) cancelAnimationFrame(frameHandle);
-        if (drawHandle) cancelAnimationFrame(drawHandle);
-        if (wakeTimer) clearTimeout(wakeTimer);
-        frameHandle = 0;
-        drawHandle = 0;
-        return;
-      }
-      controller.markInteraction(performanceNow());
-      requestDraw();
-      schedule();
+      applyHold();
     });
     viewObserver.observe(options.pauseWhenHidden);
   }
+
+  /* The host says when something covers the globe; the subscription is dropped on `destroy()`. */
+  const stopWatchingCover = options.pauseWhile?.((next) => {
+    if (next === covered || destroyed) return;
+    covered = next;
+    applyHold();
+  });
 
   // --- start ---------------------------------------------------------------
 
@@ -807,6 +845,7 @@ export async function createGlobeEngine(
       if (wakeTimer) clearTimeout(wakeTimer);
       resizeObserver.disconnect();
       viewObserver?.disconnect();
+      stopWatchingCover?.();
       dprQuery?.removeEventListener("change", onDprChange);
       document.removeEventListener("visibilitychange", onVisibility);
       if (renderer) {

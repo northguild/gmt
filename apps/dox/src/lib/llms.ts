@@ -29,48 +29,85 @@ export function withoutLinks(description: string): string {
   return description.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
 }
 
+/** The `types` namespace: its file is titled differently and holds one `Types` section. */
+const TYPES_NAMESPACE = "types";
+
+/** One namespace of the reference: the entries that have a page, sorted as the reference index sorts them. */
+export type NamespaceEntries = {
+  namespace: string;
+  /** Module names in the reference index's order; `types` has the one module `Types`. */
+  modules: { module: string; entries: CorpusEntry[] }[];
+};
+
 /**
- * The reference sections of `llms.txt`: a link to the reference index, then one section per
- * namespace, each entry linked to the `.md` twin of its page.
+ * The corpus grouped by namespace, then module, each entry list sorted by name: the one grouping
+ * the root file and the namespace files both read.
  *
  * A type documented on its function's page (`inlineOn`) has no page and so no twin; the
  * function's twin already holds it, and listing it would link the same file twice.
  */
-export function referenceSections(
+export function namespaceEntries(
   corpus: readonly CorpusEntry[],
-  base: string,
-): LlmsSection[] {
-  const byNs = new Map<string, CorpusEntry[]>();
+): NamespaceEntries[] {
+  const byNs = new Map<string, Map<string, CorpusEntry[]>>();
   for (const entry of corpus) {
     if (entry.inlineOn !== undefined) continue;
-    if (!byNs.has(entry.namespace)) byNs.set(entry.namespace, []);
-    byNs.get(entry.namespace)!.push(entry);
+    if (!byNs.has(entry.namespace)) byNs.set(entry.namespace, new Map());
+    const mods = byNs.get(entry.namespace)!;
+    const module = entry.namespace === TYPES_NAMESPACE ? "Types" : entry.module;
+    if (!mods.has(module)) mods.set(module, []);
+    mods.get(module)!.push(entry);
   }
-  const sections: LlmsSection[] = [
+  return [...byNs].map(([namespace, mods]) => ({
+    namespace,
+    modules: [...mods.keys()].sort().map((module) => ({
+      module,
+      entries: mods.get(module)!.sort((a, b) => a.name.localeCompare(b.name)),
+    })),
+  }));
+}
+
+/** The `Reference` section of the root file: the index, then one line per namespace file. */
+export function namespaceIndexLinks(
+  namespaces: readonly NamespaceEntries[],
+  base: string,
+  summary: (namespace: string) => string,
+): LlmsLink[] {
+  return [
     {
-      heading: "Reference",
-      links: [
-        {
-          title: "API reference",
-          url: `${base}/reference.md`,
-          description:
-            "Index of every namespace, with links to each module and to the shared types.",
-        },
-      ],
+      title: "API reference",
+      url: `${base}/reference.md`,
+      description:
+        "Index of every namespace, with links to each module and to the shared types.",
     },
+    ...namespaces.map(({ namespace }) => ({
+      title: namespace,
+      url: `${base}/reference/${namespace}/llms.txt`,
+      description: summary(namespace),
+    })),
   ];
-  for (const [ns, entries] of byNs) {
-    entries.sort((a, b) => a.name.localeCompare(b.name));
-    sections.push({
-      heading: `Reference — ${ns}`,
-      links: entries.map((e) => ({
-        title: e.name,
-        url: `${base}${e.page}.md`,
-        description: withoutLinks(e.description),
-      })),
-    });
-  }
-  return sections;
+}
+
+/** The `##` sections of one namespace's file: a module each, every entry linked to its `.md` twin. */
+export function namespaceSections(
+  ns: NamespaceEntries,
+  base: string,
+): LlmsSection[] {
+  return ns.modules.map(({ module, entries }) => ({
+    heading: module,
+    links: entries.map((e) => ({
+      title: e.name,
+      url: `${base}${e.page}.md`,
+      description: withoutLinks(e.description),
+    })),
+  }));
+}
+
+/** The H1 of a namespace's file. */
+export function namespaceTitle(namespace: string): string {
+  return namespace === TYPES_NAMESPACE
+    ? "@northguild/gmt shared types"
+    : `@northguild/gmt/${namespace}`;
 }
 
 /**
