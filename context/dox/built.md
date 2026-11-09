@@ -204,6 +204,14 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `CHUNKS_PATH` in `fetch-chunks.ts` is Worker-only code, not in `dist`, so
   `fetch-chunks.test.ts` guards it. The dev server serves `/gmt/` and proxies `/gmt/api`
   with no rewrite.
+  - **Page links end in `/`** (DOX-G8, #487). Cloudflare serves a page at its slash URL and
+    answers the bare path with a 307, so a bare link costs a redirect and search engines crawl
+    the page twice. `rehype-base-links` gives every Markdown and MDX page link its trailing slash
+    as it adds `/gmt`. A page link is an `href` whose last segment has no dot; a file link
+    (`.md`, `.txt`, `.png`) keeps its form, and `src` is never touched. A component that builds
+    an `href` from a site path uses `pageHref` from `site.ts` (`withBase`, then `withPageSlash`),
+    as `CodePairs.astro` does on the migrate pages. `pageLinksWithoutSlash` in `dist-base.ts`
+    fails `test:dist` on any `<a>` or `<area>` page link without the slash.
   - **The NorthGuild mark** (#424) is the header's way back to the landing page: a same-tab
     `<a>` to `LANDING_URL` (`https://northguild.dev/`, in `site.ts`) before the site title,
     named "NorthGuild home", on every page. The mark is inlined from

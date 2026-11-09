@@ -10,7 +10,7 @@
  */
 import { Code } from "@astrojs/starlight/components";
 import { codeSpans, type CodePairView } from "../lib/migrate-view";
-import { withBase } from "../lib/site";
+import { pageHref } from "../lib/site";
 
 interface Props {
   pairs: CodePairView[];
@@ -19,7 +19,7 @@ interface Props {
 }
 
 const { pairs, label } = Astro.props;
-const href = (url: string): string => (url.startsWith("/") ? withBase(url) : url);
+const href = (url: string): string => (url.startsWith("/") ? pageHref(url) : url);
 ---
 
 <ul class="gmt-pairs" aria-label={label}>

@@ -42,6 +42,29 @@ export function withBase(path: string): string {
 }
 
 /**
+ * A page path with the trailing slash the static host serves the page at:
+ * `/gmt/reference/x` gives `/gmt/reference/x/`. Search and hash are kept. A
+ * file path (a dot in the last segment, such as `/gmt/llms.txt`) and a path
+ * that already ends in `/` are returned unchanged. A bare page link costs a
+ * redirect, and search engines crawl the page under both URLs.
+ */
+export function withPageSlash(url: string): string {
+  const end = url.search(/[?#]/);
+  const pathname = end === -1 ? url : url.slice(0, end);
+  if (pathname.endsWith("/")) return url;
+  if (pathname.slice(pathname.lastIndexOf("/") + 1).includes(".")) return url;
+  return `${pathname}/${url.slice(pathname.length)}`;
+}
+
+/**
+ * A link to a site path: `withBase`, then `withPageSlash`. Use it for every
+ * `href` built from a root-absolute route.
+ */
+export function pageHref(path: string): string {
+  return withPageSlash(withBase(path));
+}
+
+/**
  * The inverse of `withBase`, for code that reads the current URL.
  * `/gmt` and `/gmt/` give `/`. A pathname not under the base is returned unchanged.
  */

@@ -10,6 +10,7 @@ import {
   badUrlsInHtml,
   baseHelperNames,
   LANDING,
+  pageLinksWithoutSlash,
 } from "./dist-base";
 
 const values = (found: Array<{ value: string }>) => found.map((f) => f.value);
@@ -135,6 +136,30 @@ describe("badUrlsInHtml", () => {
     expect(
       values(badUrlsInHtml('<a title="a > b" href="/install/">x</a>')),
     ).toEqual(["/install/"]);
+  });
+});
+
+describe("pageLinksWithoutSlash", () => {
+  it("passes page links with the slash, files, hashes and other hosts", () => {
+    const html = `<a href="/gmt/">home</a> <a href="/gmt/reference/x/#opts">x</a>
+      <a href="/gmt/tools/x/?w=1">t</a> <a href="/gmt/llms.txt">l</a>
+      <a href="/gmt/reference/x.md">md</a> <a href="#top">h</a>
+      <a href="https://northguild.dev/gmt/install/">abs</a> <a href="https://example.com/a">ext</a>
+      <a href="https://northguild.dev/">landing</a> <link rel="canonical" href="/gmt/x">`;
+    expect(pageLinksWithoutSlash(html)).toEqual([]);
+  });
+
+  it("finds a page link without the slash, root-absolute or absolute, with hash or query", () => {
+    const html = `<a class="c" href="/gmt/reference/types/Overflow">o</a>
+      <a href="/gmt/reference/x#opts">x</a> <area href='/gmt/tools/x?w=1'>
+      <a href="https://northguild.dev/gmt/install">abs</a> <a href="/gmt">bare</a>`;
+    expect(values(pageLinksWithoutSlash(html))).toEqual([
+      "/gmt/reference/types/Overflow",
+      "/gmt/reference/x#opts",
+      "/gmt/tools/x?w=1",
+      "https://northguild.dev/gmt/install",
+      "/gmt",
+    ]);
   });
 });
 

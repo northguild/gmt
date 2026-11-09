@@ -8,6 +8,7 @@ import {
   badSitemapLocs,
   badUrlsInCss,
   badUrlsInHtml,
+  pageLinksWithoutSlash,
   type BaseFailure,
 } from "./build-utils/dist-base";
 import { distDirOrSkip } from "./dist-dir";
@@ -122,6 +123,14 @@ describe("the built site keeps the /gmt base", () => {
     const html = walk(pages, (n) => n.endsWith(".html"));
     expect(html.length).toBeGreaterThan(100);
     expect(scan(pages, html, badUrlsInHtml)).toEqual([]);
+  });
+
+  it("every link to a page ends in the slash the host serves it at", () => {
+    const b = built();
+    if (b === null) return;
+    const { pages } = b;
+    const html = walk(pages, (n) => n.endsWith(".html"));
+    expect(scan(pages, html, pageLinksWithoutSlash)).toEqual([]);
   });
 
   it("no stylesheet carries a URL without the base, and the Michroma font is inline", () => {

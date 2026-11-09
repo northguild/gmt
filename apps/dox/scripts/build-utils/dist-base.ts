@@ -144,6 +144,38 @@ export function badUrlsInHtml(html: string): BaseFailure[] {
   return dedupe(out);
 }
 
+/**
+ * Every link (`<a>` or `<area>` href) to a Dox page that lacks the trailing slash the static host
+ * serves the page at. Such a link costs a redirect, and search engines crawl and report the page
+ * under both URLs. A file (a dot in the last path segment, such as `llms.txt` or a `.md` twin) and
+ * any URL outside `/gmt` pass.
+ */
+export function pageLinksWithoutSlash(html: string): BaseFailure[] {
+  const out: BaseFailure[] = [];
+  for (const tag of html.matchAll(
+    /<(a|area)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/gi,
+  )) {
+    const href = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i.exec(
+      tag[2],
+    );
+    if (href === null) continue;
+    const value = (href[1] ?? href[2] ?? href[3]).trim();
+    let pathname: string;
+    if (value.startsWith("/") && !value.startsWith("//"))
+      pathname = value.split(/[?#]/)[0];
+    else if (value.startsWith(`${ORIGIN}/`))
+      pathname = value.slice(ORIGIN.length).split(/[?#]/)[0];
+    else continue;
+    if (!underBase(pathname) || pathname.endsWith("/")) continue;
+    if (pathname.slice(pathname.lastIndexOf("/") + 1).includes(".")) continue;
+    out.push({
+      value,
+      where: `<${tag[1].toLowerCase()}> href (page link without trailing slash)`,
+    });
+  }
+  return dedupe(out);
+}
+
 export function badUrlsInCss(css: string): BaseFailure[] {
   const out: BaseFailure[] = [];
   check(cssUrls(css), "url()", out);
