@@ -2862,13 +2862,17 @@ Shared hooks come first, then the globe, then the clock-change pages.
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
     pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). Its
-    limit is 45 minutes: a typical run takes 20 to 27, and a diff that changes a gate script runs
-    every gate on the sample pages, which reached 30 and was cancelled with no output. The runner
-    appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
-    (`gates/step-summary.mjs`); a failed job uploads `apps/dox/.gates/` (without `vite-cache/`) as the
-    `dox-gates-<run id>` artifact. It is **advisory**: the owner makes it a required check after about
-    10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` or `pnpm-lock.yaml` skips it;
-    a lockfile change alone runs it, since it can bump Playwright or axe-core.
+    limit is 60 minutes, and the gate step's is 55. A typical run takes 20 to 27. A diff that changes a
+    gate script runs every gate on the sample pages. With the Timetable Reader selected too, that took
+    40 minutes locally without the build and more than 44 in CI (#480). `readout-still` took 24 of
+    them: 60 drags on the Reader (10 sliders at six widths) and 32 on the Dwell Ledger. The runner
+    prints its screen only when it ends and appends it to `$GITHUB_STEP_SUMMARY` in a fenced `text`
+    block (`gates/step-summary.mjs`). Each gate writes its log in `.gates/` as it runs, so the step's
+    own limit leaves time to upload them: a failed or cancelled job uploads `apps/dox/.gates/`
+    (without `vite-cache/`) as the `dox-gates-<run id>` artifact. It is **advisory**: the owner makes
+    it a required check after about 10 clean Dox PR runs. A PR that touches nothing under `apps/dox/`
+    or `pnpm-lock.yaml` skips it; a lockfile change alone runs it, since it can bump Playwright or
+    axe-core.
   - **The page contract.** Every gate script answers `--list-pages` (a JSON array of site paths,
     no `/gmt`, without a browser), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
     never an empty run) and, when it loads pages, `--base <url>`. With `GATE_REPORT` set, each

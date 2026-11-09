@@ -421,8 +421,10 @@ jobs:
     needs: determine-affected
     if: github.event_name == 'pull_request' && needs.determine-affected.outputs.dox_changed == 'true'
     # A typical run takes 20 to 27 minutes. A diff that changes a gate script runs every gate on the
-    # sample pages, which reached 30 (#480), and the runner prints nothing until it ends.
-    timeout-minutes: 45
+    # sample pages. With the Timetable Reader selected as well, that took 40 locally without the build
+    # and more than 44 here (#480), 24 of them in readout-still. The gate step stops at 55, so its
+    # logs are still uploaded.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
         with:
@@ -455,14 +457,16 @@ jobs:
       - name: Install Chromium
         run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
 
-      # The runner prints one screen to the log and appends it to the job summary.
+      # The runner prints one screen to the log, when it ends, and appends it to the job summary.
+      # A gate writes its log in .gates/ as it goes, so a run stopped at the limit still has them.
       - name: Gates on the changed pages
+        timeout-minutes: 55
         run: >
           pnpm --filter dox gates --tier pr --browsers chromium --themes dark,light
           --against "origin/${{ github.base_ref }}"
 
       - name: Upload the gate logs
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: dox-gates-${{ github.run_id }}
