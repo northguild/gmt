@@ -80,7 +80,7 @@ The changeset(s) in `.changeset/` and their bump level, per [coding-standards §
 
 ## Delivery
 
-Output the full description in a plain fenced code block (no language tag) so it can be copied. Do not write it to a file unless the user asks for one and names the path. Never create the PR yourself — the repository owner opens every PR.
+Output the full description in a plain fenced code block (no language tag) so it can be copied. Do not write it to a file unless the user asks for one and names the path. Never create the PR yourself — the repository owner opens every PR. End with the output of `node scripts/pr-meta.mjs` (labels, milestone, reviewer); once the PR exists, `node scripts/pr-meta.mjs --apply` sets them.
 
 ## Rules
 
