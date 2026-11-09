@@ -9,6 +9,7 @@ import {
   badUrlsInCss,
   badUrlsInHtml,
   pageLinksWithoutSlash,
+  pageLinksWithoutSlashInMarkdown,
   type BaseFailure,
 } from "./build-utils/dist-base";
 import { distDirOrSkip } from "./dist-dir";
@@ -170,6 +171,18 @@ describe("the built site keeps the /gmt base", () => {
       resolve(pages, "llms-full.txt"),
     ];
     expect(scan(pages, text, badLinksInMarkdown)).toEqual([]);
+  });
+
+  it("every page link in a .md twin, llms.txt or llms-full.txt ends in the slash", () => {
+    const b = built();
+    if (b === null) return;
+    const { pages } = b;
+    const text = [
+      ...walk(pages, (n) => n.endsWith(".md")),
+      ...walk(pages, (n) => /^llms(-full)?\.txt$/.test(n)),
+    ];
+    expect(text.length).toBeGreaterThan(100);
+    expect(scan(pages, text, pageLinksWithoutSlashInMarkdown)).toEqual([]);
   });
 
   it("every page carries one same-tab NorthGuild link with the inlined mark", () => {
