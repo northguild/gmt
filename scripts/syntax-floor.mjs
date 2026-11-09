@@ -23,43 +23,42 @@ import { build } from "esbuild";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GMT_DIR = path.join(ROOT, "packages", "gmt");
 
-/** The editions acorn can parse, lowest first: 2015 up to the first one it refuses. */
-function supportedEditions() {
-  const editions = [];
-  for (let year = 2015; year < 2100; year += 1) {
-    try {
-      parse("", { ecmaVersion: year, sourceType: "module" });
-    } catch {
-      break;
-    }
-    editions.push(year);
+/** The lowest edition the floor reports: ES2015, the first with modules. */
+const FIRST_EDITION = 2015;
+
+/** Whether acorn parses `source` as a module under `ecmaVersion`. */
+function parses(source, ecmaVersion) {
+  try {
+    parse(source, { ecmaVersion, sourceType: "module" });
+    return true;
+  } catch {
+    return false;
   }
-  return editions;
 }
 
 /**
  * The lowest edition that parses every source.
+ *
+ * acorn refuses no edition year: it reads any year past its newest grammar as that grammar. So
+ * one parse with `"latest"` settles whether any edition parses a source, and the climb from 2015
+ * then stops at the lowest one that does, no later than acorn's newest.
  * @param {string[]} sources JavaScript module text
  * @returns {number} an ECMA-262 edition year
  * @throws {Error} naming the source index when no edition parses a source
  */
 export function syntaxFloor(sources) {
-  const editions = supportedEditions();
-  let floor = editions[0];
+  let floor = FIRST_EDITION;
   sources.forEach((source, index) => {
-    let lastError = null;
-    for (const edition of editions) {
-      try {
-        parse(source, { ecmaVersion: edition, sourceType: "module" });
-        floor = Math.max(floor, edition);
-        return;
-      } catch (error) {
-        lastError = error;
-      }
+    try {
+      parse(source, { ecmaVersion: "latest", sourceType: "module" });
+    } catch (error) {
+      throw new Error(
+        `source ${index}: no edition parses it (${error.message})`,
+      );
     }
-    throw new Error(
-      `source ${index}: no edition parses it (${lastError?.message})`,
-    );
+    let edition = FIRST_EDITION;
+    while (!parses(source, edition)) edition += 1;
+    floor = Math.max(floor, edition);
   });
   return floor;
 }

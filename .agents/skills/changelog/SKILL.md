@@ -37,4 +37,4 @@ See [references/steps.md](references/steps.md) for the full step-by-step (findin
 - **Do not run `changeset:version`** — it bumps versions and consumes every pending changeset. It is a maintainer's deliberate release action, run in a release PR of its own. See [PUBLISHING.md](../../../PUBLISHING.md).
 - **Never fabricate function names.** Every export named in the description must exist in `packages/*/src/`. Verify with `grep` if uncertain.
 - **One changeset file per affected package group.** If multiple packages are in the same changeset file, the description must cover all of them, or note which packages are unaffected.
-- **Internal-only changes** (skills, agent config, test infrastructure, README) do not warrant a changeset entry by themselves. If the changeset exists only because of those, flag it for the user.
+- **Internal-only changes** (skills, agent config, test infrastructure, README) get an empty changeset when they touch `packages/`, never a bump. Flag a bump that exists only because of those.

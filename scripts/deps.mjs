@@ -484,7 +484,7 @@ function check() {
   // Canary: the hand-written cell names stories some tracker knows, none of them Done.
   const canary = canaryTracker();
   const allStatus = new Map(
-    [...rows, ...canary.rows].map((r) => [r.id, r.status]),
+    [...rows, ...dox.rows, ...canary.rows].map((r) => [r.id, r.status]),
   );
   for (const r of canary.rows) {
     for (const d of r.deps.map(bareId)) {

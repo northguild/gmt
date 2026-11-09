@@ -27,24 +27,25 @@ ICU is the Unicode library that holds locale text and time zone data. Each engin
 
 | Browser or runtime | Engine | Where its ICU and time zone data comes from | Weekly leg |
 | --- | --- | --- | --- |
-| Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet | Chromium | bundled with the browser | `chromium` |
+| Chrome, Edge, Brave, Opera and Vivaldi on desktop | Chromium | bundled with the browser | `chromium` |
+| Chrome, Samsung Internet and other Chromium browsers on Android, and Android System WebView | Chromium | bundled with the browser, in a smaller data file built for Android | none |
 | Firefox | Gecko and SpiderMonkey | bundled with the browser | `firefox` |
 | Safari on macOS | WebKit and JavaScriptCore | the operating system | `webkit-macos` |
 | Safari and other browsers on iPhone and iPad | WebKit, except where Apple allows another engine | the operating system | `webkit-macos` (same engine and Apple's ICU; iOS's own data is not tested) |
-| DuckDuckGo | the system engine: WebKit on macOS and iOS, Chromium-based on Windows and Android | as that engine | `webkit-macos` or `chromium` |
+| DuckDuckGo | the system engine: WebKit on macOS and iOS, Chromium on Windows, Android System WebView on Android | as that engine | `webkit-macos` or `chromium`; none on Android |
 | WebKit on Linux (WebKitGTK, WPE) | WebKit and JavaScriptCore | the Linux distribution's ICU | `webkit` |
 | Node.js | V8 | bundled with Node (full ICU) | `node` |
 | Deno | V8 | not documented | none |
 | Cloudflare Workers | V8 | not documented | none |
 | Bun | JavaScriptCore | not documented | none |
 
-Brave, Edge, Opera, Vivaldi, Samsung Internet and DuckDuckGo are covered through their engine. No run tests them by name.
+Brave, Edge, Opera, Vivaldi and DuckDuckGo are covered on desktop through their engine. No run tests them by name, and no run tests a browser on Android.
 
 Bun runs JavaScriptCore, the engine Safari uses. No weekly run tests Bun, and its time zone and locale data is not documented.
 
 Where each cell comes from:
 
-- Chromium bundles its own ICU data ([Chromium ICU notes](https://chromium.googlesource.com/chromium/deps/icu/+/refs/heads/main/README.chromium)).
+- Chromium bundles its own ICU data, and builds a separate, smaller data file for Android with only minimal calendar data ([Chromium ICU notes](https://chromium.googlesource.com/chromium/deps/icu/+/refs/heads/main/README.chromium)). The `chromium` leg runs the desktop data.
 - Brave, Edge, Opera, Vivaldi and Samsung Internet are built on Chromium: [Brave](https://github.com/brave/brave-core/blob/master/README.md), [Edge](https://learn.microsoft.com/en-us/deployedge/ms-edge-security-for-business), [Opera](https://dev.opera.com/extensions/), [Vivaldi](https://vivaldi.com/blog/vivaldi-browser-open-source/) and [Samsung Internet](https://developer.samsung.com/internet/release-note.html).
 - Firefox keeps its own copy of ICU ([`intl/icu`](https://github.com/mozilla-firefox/firefox/tree/main/intl/icu)) and of the time zone data ([`intl/tzdata`](https://github.com/mozilla-firefox/firefox/tree/main/intl/tzdata)). Its engines are [Gecko](https://mozilla.github.io/geckoview/) and [SpiderMonkey](https://spidermonkey.dev/).
 - Apple's WebKit links the operating system's ICU: the [WebKit source](https://github.com/WebKit/WebKit/blob/main/Source/WTF/WTF.xcodeproj/project.pbxproj) references `libicucore.dylib`, which [Apple's open-source ICU](https://github.com/apple-oss-distributions/ICU) builds.
@@ -61,7 +62,7 @@ The weekly run does not cover these. A wrong answer there is still a GMT bug, an
 - Browser versions older than the one each weekly run installs.
 - Other macOS versions, and iOS itself. The `webkit-macos` leg runs the macOS version its runner has.
 - Deno, Bun and Cloudflare Workers, which have their own data.
-- Android System WebView.
+- Chromium on Android: Chrome, Samsung Internet, DuckDuckGo and Android System WebView. They read the smaller Android data file, which the `chromium` leg does not load.
 
 ## Where the results are
 

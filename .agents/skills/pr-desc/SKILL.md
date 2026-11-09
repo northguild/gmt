@@ -74,7 +74,7 @@ The changeset(s) in `.changeset/` and their bump level, per [coding-standards §
 - [ ] Each "What Changed" section has a corresponding entry
 - [ ] Type-check passed
 - [ ] No secrets committed
-- [ ] Changeset present with the correct bump (or none, for no behaviour change)
+- [ ] Changeset present with the correct bump (empty for no behaviour change under `packages/`; none for a change outside it)
 
 ---
 

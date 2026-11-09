@@ -19,10 +19,12 @@ in both passes, 119 of which no tag explains, and passes two tag groups Linux We
 Morocco 2026 rows and Linux's pre-2023d tzdb). No leg tests the data Safari users have, so a
 wrong answer GMT gives them can go unseen.
 
-Brave, Edge, Opera, Samsung Internet and the other Chromium browsers get no leg of their own. They
-run Chromium's V8 and its bundled ICU, the `chromium` leg's engine and data. DuckDuckGo has no
-engine of its own and no automation hook: it runs on the system engine (WebKit on macOS and iOS,
-Chromium on Windows and Android). The browser support page says this, instead of a job per brand.
+Brave, Edge, Opera, Vivaldi and the other desktop Chromium browsers get no leg of their own. They
+run Chromium's V8 and its bundled ICU, the `chromium` leg's engine and data. Chromium on Android
+(Chrome, Samsung Internet, Android System WebView) reads a separate, smaller ICU data file that no
+leg loads, so it is listed as not tested. DuckDuckGo has no engine of its own and no automation
+hook: it runs on the system engine (WebKit on macOS and iOS, Chromium on Windows, Android System
+WebView on Android). The browser support page says this, instead of a job per brand.
 
 ## Parts
 
@@ -64,7 +66,7 @@ Chromium on Windows and Android). The browser support page says this, instead of
 
 - A Dox page under Start here, beside Install: which browsers GMT supports, the engine each one
   runs, and the weekly leg that tests that engine. It covers the Chromium family (Chrome, Edge,
-  Brave, Opera, Vivaldi, Samsung Internet), the Firefox family, Safari and every iOS browser,
+  Brave, Opera, Vivaldi on desktop; Chromium on Android as not tested), the Firefox family, Safari and every iOS browser,
   DuckDuckGo, and the server runtimes on V8 (Node, Deno, Cloudflare Workers).
 - It states the support floor from evidence: the published build's syntax target and what
   `@js-temporal/polyfill` needs from the host (`Intl.DateTimeFormat` with time zones). It names no
@@ -126,7 +128,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - `LEG_BROWSER` maps each leg to its Playwright browser and Vitest project; `LEG_HOST` names the OS a leg must run on (`webkit`: Linux, `webkit-macos`: macOS). A verdict names the data it tested, so `native-suite.mjs` refuses a leg on the wrong host with two could-not-run verdicts and exit 2, never a result filed under another host's name.
 - The engine line is `macOS WebKit <version> · macOS <os version>` for the Mac leg and `WebKit <version>` for the Linux leg, from `engineLine`; the compat verdict and the preflight use it, so one leg's two lines agree. `legLabel` keeps every word before the first version (`macOS WebKit 26`), so each WebKit leg keeps its own issue keys and titles.
 - The workflow `native-suite` matrix is `include:` rows with `leg`, `browser` and `os`; the job name stays `Native Temporal suite (<leg>)`, so the report job's artifact parsing needs no change (`temporal-oracle-workflow.test.ts` runs its `awk` program to prove it). `macos-latest` is a moving label on purpose: the leg tests the data Apple ships now, and the engine line records which macOS ran. System packages (`--with-deps`) install on Linux only. The resource trace uses `df -Pk` and, where `free` is missing, `vm_stat`. An `otool -L` step prints which ICU Playwright's JavaScriptCore links (`libicucore` on the Mac) and never fails the job.
-- The leg runs on `macos-latest` at no cost because the repository is public (GitHub Docs, "About billing for GitHub Actions"). Brave, Edge, Opera, Vivaldi and Samsung Internet run Chromium's engine and bundled ICU, so they have no leg of their own; DuckDuckGo runs the system engine and has no automation hook. The browser support page says both.
+- The leg runs on `macos-latest` at no cost because the repository is public (GitHub Docs, "About billing for GitHub Actions"). Brave, Edge, Opera and Vivaldi on desktop run Chromium's engine and bundled ICU, so they have no leg of their own; Chromium on Android, Samsung Internet included, reads a smaller ICU data file no leg loads; DuckDuckGo runs the system engine and has no automation hook. The browser support page says both.
 
 **Tags**
 

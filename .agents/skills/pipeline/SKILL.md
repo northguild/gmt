@@ -33,8 +33,8 @@ and [§ Git — Only on an Explicit Instruction](../../../AGENTS.md#git--only-on
 | --- | --- | --- | --- |
 | **A. Story** | A tracker story: realm (`MAR-*`, `CORE-*`, …) or `DOX-*` | [`/plan-story`](../plan-story/SKILL.md) in its own session, then the gate, then `tdd-dev` → (`tester`) → `gmt-reviewer` → (`dox-builder` → `dox-tester`) → `finalizer` | per rule |
 | **B. Bug fix** | Incorrect behaviour or a failing test | (`researcher`) → `tdd-dev` → `tester` → `gmt-reviewer` → `finalizer` | `patch` |
-| **C. Refactor** | Internals only, no behaviour change | `tdd-dev` → `tester` → `finalizer` (commit message only) | none |
-| **D. Documentation** | Docs, READMEs, JSDoc | `finalizer` (documentation steps only) | none |
+| **C. Refactor** | Internals only, no behaviour change | `tdd-dev` → `tester` → `finalizer` (commit message only) | empty |
+| **D. Documentation** | Docs, READMEs, JSDoc | `finalizer` (documentation steps only) | empty if `packages/` changed |
 | **E. Research** | Temporal behaviour, design options | `researcher` only; do not implement unless asked | — |
 | **F. Code review** | Review code or a diff | `gmt-reviewer` ([checklist](../../../context/code-review-checklist.md) first) | — |
 | **G. Owner's spec, no story** | The owner hands over a complete spec for work with no tracker row | `tdd-dev` → `gmt-reviewer` → `finalizer` | per rule |
