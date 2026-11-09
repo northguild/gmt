@@ -14,7 +14,13 @@
  * matrix is unit-testable in isolation.
  */
 
-import { SITE_ORIGIN, isUnderBase, stripBase, withBase } from "~/lib/site";
+import {
+  SITE_ORIGIN,
+  isUnderBase,
+  pageHref,
+  stripBase,
+  withBase,
+} from "~/lib/site";
 
 export type ResolvedHref =
   /** Render a real anchor pointing at `href`. */
@@ -104,9 +110,10 @@ export function resolveHref(
     if (!isUnderBase(url.pathname)) return { kind: "text" };
     const route = stripBase(url.pathname);
     if (!isKnownRoute(route, knownRoutes)) return { kind: "text" };
+    // The slash the static host serves the page at, so the link costs no redirect.
     return {
       kind: "link",
-      href: `${withBase(route)}${url.search}${url.hash}`,
+      href: pageHref(`${route}${url.search}${url.hash}`),
     };
   }
 

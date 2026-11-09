@@ -53,18 +53,40 @@ describe("prefixMarkdownLinks", () => {
   it("keeps rewriting after a closed fence when an unclosed one follows", () => {
     const md = "```md\n[a](/x)\n```\n\n```\n[b](/y)\n";
     expect(prefixMarkdownLinks(md)).toBe(
-      "```md\n[a](/x)\n```\n\n```\n[b](/gmt/y)\n",
+      "```md\n[a](/x)\n```\n\n```\n[b](/gmt/y/)\n",
     );
   });
 
   it("leaves an inline code span unchanged", () => {
     const md = "write `[a](/x)` then [b](/y)";
-    expect(prefixMarkdownLinks(md)).toBe("write `[a](/x)` then [b](/gmt/y)");
+    expect(prefixMarkdownLinks(md)).toBe("write `[a](/x)` then [b](/gmt/y/)");
   });
 
   it("leaves external, protocol-relative and hash links unchanged", () => {
     const md = "[a](https://x.dev/) [b](//cdn/x) [c](#h) [d](mailto:a@b)";
     expect(prefixMarkdownLinks(md)).toBe(md);
+  });
+
+  it("gives a page link the trailing slash, keeping its title, query and hash", () => {
+    expect(
+      prefixMarkdownLinks(
+        '[a](/reference/precision/convert/toNanoseconds) [b](/x?q=1#h "t") [c](</y>)',
+      ),
+    ).toBe(
+      '[a](/gmt/reference/precision/convert/toNanoseconds/) [b](/gmt/x/?q=1#h "t") [c](</gmt/y/>)',
+    );
+    expect(prefixMarkdownLinks("[id]: /x#h\n")).toBe("[id]: /gmt/x/#h\n");
+    expect(prefixMarkdownLinks('<a href="/x">x</a>')).toBe(
+      '<a href="/gmt/x/">x</a>',
+    );
+  });
+
+  it("adds no slash to a file link, an image or a raw src", () => {
+    const md =
+      '[l](/llms.txt) [m](/reference/x.md) ![i](/img/x.png) <img src="/og/card">';
+    expect(prefixMarkdownLinks(md)).toBe(
+      '[l](/gmt/llms.txt) [m](/gmt/reference/x.md) ![i](/gmt/img/x.png) <img src="/gmt/og/card">',
+    );
   });
 });
 

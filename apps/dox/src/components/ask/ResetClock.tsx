@@ -47,7 +47,7 @@ import { RESET_FORMATS, findResetFormat } from "~/lib/reset-formats";
 import type { BrainsInfo } from "./use-brains";
 import { useEscLayer } from "./use-esc-layer";
 import type { ResetClockState } from "./use-reset-clock";
-import { withBase } from "~/lib/site";
+import { pageHref } from "~/lib/site";
 
 export function ResetClock({
   info,
@@ -192,7 +192,7 @@ export function ResetClock({
             conversation. */}
         <a
           className="gmt-hive-clock-call gmt-sonar-focus"
-          href={withBase(preset.route)}
+          href={pageHref(preset.route)}
           target="_blank"
           rel="noopener"
         >

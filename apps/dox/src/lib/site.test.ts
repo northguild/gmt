@@ -1,5 +1,12 @@
 import { referenceRoutes } from "~/generated/reference/route-manifest";
-import { SITE_URL, isUnderBase, stripBase, withBase } from "./site";
+import {
+  SITE_URL,
+  isUnderBase,
+  pageHref,
+  stripBase,
+  withBase,
+  withPageSlash,
+} from "./site";
 
 describe("site constants", () => {
   it("SITE_URL has no trailing slash", () => {
@@ -48,6 +55,33 @@ describe("isUnderBase", () => {
   });
   it.each(["/", "/gmtx", "/api/chat"])("false for %s", (p) => {
     expect(isUnderBase(p)).toBe(false);
+  });
+});
+
+describe("withPageSlash", () => {
+  it.each([
+    ["/gmt/reference/x", "/gmt/reference/x/"],
+    ["/gmt/reference/x#opts", "/gmt/reference/x/#opts"],
+    ["/gmt/tools/x?w=1#a", "/gmt/tools/x/?w=1#a"],
+    ["/gmt", "/gmt/"],
+  ])("%s -> %s", (input, expected) => {
+    expect(withPageSlash(input)).toBe(expected);
+  });
+  it.each(["/gmt/", "/gmt/x/#h", "/gmt/llms.txt", "/gmt/a/b.md?x=1"])(
+    "leaves %s unchanged",
+    (p) => {
+      expect(withPageSlash(p)).toBe(p);
+    },
+  );
+});
+
+describe("pageHref", () => {
+  it.each([
+    ["/migrate/luxon", "/gmt/migrate/luxon/"],
+    ["/gmt/install", "/gmt/install/"],
+    ["/llms.txt", "/gmt/llms.txt"],
+  ])("%s -> %s", (input, expected) => {
+    expect(pageHref(input)).toBe(expected);
   });
 });
 

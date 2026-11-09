@@ -12,12 +12,12 @@ const OPTIONS = {
 };
 
 describe("resolveHref", () => {
-  it("renders a relative path that is in the manifest as a real link", () => {
+  it("renders a relative path that is in the manifest as a real link, with the page slash", () => {
     expect(
       resolveHref("/reference/zoned/convert/convertZonedToZoned", OPTIONS),
     ).toEqual({
       kind: "link",
-      href: "/gmt/reference/zoned/convert/convertZonedToZoned",
+      href: "/gmt/reference/zoned/convert/convertZonedToZoned/",
     });
   });
 
@@ -38,7 +38,7 @@ describe("resolveHref", () => {
       ),
     ).toEqual({
       kind: "link",
-      href: "/gmt/reference/zoned/convert/convertZonedToZoned",
+      href: "/gmt/reference/zoned/convert/convertZonedToZoned/",
     });
   });
 
@@ -70,7 +70,7 @@ describe("resolveHref", () => {
     ]) {
       expect(resolveHref(href, options), href).toEqual({
         kind: "link",
-        href: href.replace(SITE, "").replace(/^\/(?!gmt\/)/, "/gmt/"),
+        href: "/gmt/reference/transport/calculate/dwellTime/#dwell",
       });
     }
     // The fragment does not rescue a page that is not known.
@@ -152,7 +152,7 @@ describe("resolveHref", () => {
   it("accepts a path already under the base, and a full URL under it", () => {
     const expected = {
       kind: "link",
-      href: "/gmt/reference/zoned/convert/convertZonedToZoned",
+      href: "/gmt/reference/zoned/convert/convertZonedToZoned/",
     };
     expect(
       resolveHref("/gmt/reference/zoned/convert/convertZonedToZoned", OPTIONS),
