@@ -6,7 +6,8 @@ industries: [core]
 
 import { TabItem, Tabs } from "@astrojs/starlight/components";
 
-import { gmtVersion } from "~/generated/versions";
+import { syntaxFloor } from "~/generated/syntax-floor";
+import { gmtNodeEngines, gmtVersion } from "~/generated/versions";
 
 Latest release: **v{gmtVersion}**
 
@@ -41,7 +42,7 @@ bun add @northguild/gmt
   </TabItem>
 </Tabs>
 
-Which browsers and runtimes run GMT: [Browser support](/browser-support/).
+GMT runs in any browser or runtime that parses ECMAScript {syntaxFloor.edition} and whose `Intl.DateTimeFormat` accepts IANA time zones. On Node, its `engines` field asks for <code>{gmtNodeEngines}</code>. It ships its own Temporal, so a built-in `Temporal` is not needed. [Temporal in every engine](/native-engines/) shows the weekly test runs on each engine.
 
 ## Your first call
 

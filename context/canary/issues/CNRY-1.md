@@ -1,4 +1,4 @@
-# CNRY-1 — Safari's ICU and time zone data in the native suite, and a browser support page
+# CNRY-1 — Safari's ICU and time zone data in the native suite, and an engine page
 
 **Issue:** #483
 
@@ -24,7 +24,7 @@ run Chromium's V8 and its bundled ICU, the `chromium` leg's engine and data. Chr
 (Chrome, Samsung Internet, Android System WebView) reads a separate, smaller ICU data file that no
 leg loads, so it is listed as not tested. DuckDuckGo has no engine of its own and no automation
 hook: it runs on the system engine (WebKit on macOS and iOS, Chromium on Windows, Android System
-WebView on Android). The browser support page says this, instead of a job per brand.
+WebView on Android). The engine page says this, instead of a job per brand.
 
 ## Parts
 
@@ -62,15 +62,15 @@ WebView on Android). The browser support page says this, instead of a job per br
 - The report job's artifact parsing already keys on the job name, so `Native Temporal suite
   (webkit-macos)` needs no change there. A test confirms it.
 
-### 2. The browser support page
+### 2. The engine page
 
-- A Dox page under Start here, beside Install: which browsers GMT supports, the engine each one
-  runs, and the weekly leg that tests that engine. It covers the Chromium family (Chrome, Edge,
+- A Dox page, "Temporal in every engine", beside "Helping fix Temporal": the engine each browser
+  and runtime runs, where its data comes from, and the weekly leg that tests it. It covers the Chromium family (Chrome, Edge,
   Brave, Opera, Vivaldi on desktop; Chromium on Android as not tested), the Firefox family, Safari and every iOS browser,
   DuckDuckGo, and the server runtimes on V8 (Node, Deno, Cloudflare Workers).
-- It states the support floor from evidence: the published build's syntax target and what
-  `@js-temporal/polyfill` needs from the host (`Intl.DateTimeFormat` with time zones). It names no
-  version it has not checked.
+- Install states the host floor from evidence in one line: the published build's syntax target
+  and what `@js-temporal/polyfill` needs from the host (`Intl.DateTimeFormat` with time zones). It
+  names no version it has not checked.
 - It says plainly that Brave and DuckDuckGo are covered through their engine, not run by name.
 - It links to the weekly workflow, not to a dated run.
 
@@ -124,7 +124,7 @@ The runner disagrees with that Mac. `temporal-oracle.yml` run 42578821204 on the
 - The `webkit-macos` leg passes, or every failure it reports is tagged with evidence or fixed in
   GMT. No control-only failure is tagged.
 - `pnpm --filter dox test` passes with the new leg in every canary test that lists legs.
-- The browser support page builds, passes the Dox gates and is linked from Start here.
+- The engine page builds, passes the Dox gates and is linked from Install.
 
 ## Decisions
 
@@ -137,7 +137,7 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - `LEG_BROWSER` maps each leg to its Playwright browser and Vitest project; `LEG_HOST` names the OS a leg must run on (`webkit`: Linux, `webkit-macos`: macOS). A verdict names the data it tested, so `native-suite.mjs` refuses a leg on the wrong host with two could-not-run verdicts and exit 2, never a result filed under another host's name.
 - The engine line is `macOS WebKit <version> · macOS <os version>` for the Mac leg and `WebKit <version>` for the Linux leg, from `engineLine`; the compat verdict and the preflight use it, so one leg's two lines agree. `legLabel` keeps every word before the first version (`macOS WebKit 26`), so each WebKit leg keeps its own issue keys and titles.
 - The workflow `native-suite` matrix is `include:` rows with `leg`, `browser` and `os`; the job name stays `Native Temporal suite (<leg>)`, so the report job's artifact parsing needs no change (`temporal-oracle-workflow.test.ts` runs its `awk` program to prove it). `macos-latest` is a moving label on purpose: the leg tests the data Apple ships now, and the engine line records which macOS ran. System packages (`--with-deps`) install on Linux only. The resource trace uses `df -Pk` and, where `free` is missing, `vm_stat`. An `otool -L` step prints which ICU Playwright's JavaScriptCore links (`libicucore` on the Mac) and never fails the job.
-- The leg runs on `macos-latest` at no cost because the repository is public (GitHub Docs, "About billing for GitHub Actions"). Brave, Edge, Opera and Vivaldi on desktop run Chromium's engine and bundled ICU, so they have no leg of their own; Chromium on Android, Samsung Internet included, reads a smaller ICU data file no leg loads; DuckDuckGo runs the system engine and has no automation hook. The browser support page says both.
+- The leg runs on `macos-latest` at no cost because the repository is public (GitHub Docs, "About billing for GitHub Actions"). Brave, Edge, Opera and Vivaldi on desktop run Chromium's engine and bundled ICU, so they have no leg of their own; Chromium on Android, Samsung Internet included, reads a smaller ICU data file no leg loads; DuckDuckGo runs the system engine and has no automation hook. The engine page says both.
 
 **Tags**
 
@@ -147,9 +147,10 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - Record AE: ICU4C 75 and later count every Persian year before year 0 as a leap year, so `addDate` and `subtractDate` on a Persian date at ISO -271820 diverge on macOS WebKit. It is an engine defect with the rows tagged on `webkit-macos` only, shipped GMT is right (it runs the polyfill), and nothing about it goes on a Dox page except the bullet in `upstream.mdx` § Native engines. A control-only failure is never tagged; it is a GMT bug and gets fixed.
 - Tags are checked against the leg's own run. The runner's macOS can differ from a local Mac, so a branch dispatch of `temporal-oracle.yml` reconciles the Mac tags before merge: a group the runner passes is narrowed or dropped, a new failure is tagged with evidence or fixed. Nothing is filed upstream, and no issue edited, until the owner approves the exact text. The POSIX zone ids are [WebKit bug 330688](https://bugs.webkit.org/show_bug.cgi?id=330688); record AE's text and its icu-support thread sit in `context/domination/js-temporal-polyfill-bugs.md`.
 
-**Browser support page**
+**Engine page and Install's host line**
 
-- `browser-support.mdx` sits second under Start here (`START_HERE`: `install`, `browser-support`, `core-rules`, `why-gmt`). It states no figure by hand: `syntaxFloor` (`~/generated/syntax-floor`) and `gmtNodeEngines` (`~/generated/versions`) are generated before the build. MDX does not evaluate an expression inside a backtick span, so a figure is written outside code ticks. `browser-support.test.ts` checks that the table's leg column equals `NATIVE_LEGS`, that both figures are used, that no version number is typed, and that the workflow link is the workflow URL and no dated run.
+- `native-engines.mdx` ("Temporal in every engine") tracks the engines' built-in `Temporal` and data, not GMT's support: GMT ships its own `Temporal` and runs on every host the page lists, and the page says so first. It sits in the Migrate group right after `upstream` ("Helping fix Temporal"), never under Start here (`START_HERE`: `install`, `core-rules`, `why-gmt`).
+- What GMT needs from a host is one line on Install, linking the engine page. It states no figure by hand: `syntaxFloor` (`~/generated/syntax-floor`) and `gmtNodeEngines` (`~/generated/versions`) are generated before the build. MDX does not evaluate an expression inside a backtick span, so a figure is written as `<code>{…}</code>`. `native-engines.test.ts` checks that the table's leg column equals `NATIVE_LEGS`, that neither page types a version number, that Install uses both figures, that the workflow link is the workflow URL and no dated run, and the sidebar placement; `install-host-line-built.test.ts` checks the figures reach the built Install page.
 - The syntax floor is measured, not read from the `tsdown` target (`esnext`): `scripts/syntax-floor.mjs` bundles each `exports` entry in memory with esbuild, polyfill and `jsbi` included, and parses it with acorn (`8.16.0`, exact) from `ecmaVersion` 2015 upward. An entry's floor is the lowest edition that parses; the page's floor is the highest entry floor. A bundle no edition parses exits 2 naming the entry; there is no fallback. The ECMA-262 edition table decides what each edition adds; acorn is the tool, not the authority. `gmtNodeEngines` comes from `packages/gmt/package.json` `engines.node`, and a missing field exits 1.
 - Every cell that names a data source cites its primary page, or says "not documented". The iPhone row cites Apple App Review Guidelines §2.5.6 and Apple's BrowserEngineKit documentation, names no law or region, and says only "except where Apple allows another engine". Bun runs JavaScriptCore with its own data and no weekly run tests it. The page states Safari's native `Temporal` status only with a source from WebKit's feature status page or Apple's release notes, and otherwise says nothing, because Playwright's WebKit build is not Safari.
 - The page names no browser version it has not run; versions belong to the weekly job summary. It links to the workflow, never to a dated run. The table passes `dox-tables` at 390px.

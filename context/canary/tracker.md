@@ -16,7 +16,7 @@ the package.
 | 2     | CORE-82  | The suite runs on native `Temporal`: Node 26, Chromium, Firefox, WebKit, weekly | —          | #322         | Done   |
 | 3     | CORE-92  | Weekly check for a `temporal-polyfill` release GMT can swap to                  | —          | #386         | Done   |
 | 4     | CORE-110 | The weekly upgrade check compares each calendar's years with native `Temporal`  | —          | #468         | Done   |
-| 5     | CNRY-1   | Safari's ICU and time zone data in the native suite, and a browser support page | —          | #483         | Done   |
+| 5     | CNRY-1   | Safari's ICU and time zone data in the native suite, and an engine page | —          | #483         | Done   |
 
 Canary issues fixed with no story of their own:
 

@@ -30,12 +30,10 @@ describe("topLevelPages", () => {
       "../content/docs/index.mdx": "x",
       "../content/docs/why-gmt.mdx": "w",
       "../content/docs/core-rules.mdx": "c",
-      "../content/docs/browser-support.mdx": "b",
     };
     expect(topLevelPages(raw)).toEqual([
       { slug: "index", source: "x" },
       { slug: "install", source: "i" },
-      { slug: "browser-support", source: "b" },
       { slug: "core-rules", source: "c" },
       { slug: "why-gmt", source: "w" },
       { slug: "alpha", source: "a" },
@@ -115,17 +113,18 @@ describe("migratePages", () => {
     ).toEqual([{ slug: "migrate/index", source: "index" }]);
   });
 
-  it("names eleven pages, the overview keyed as a folder index", () => {
-    expect(MIGRATE_ORDER).toHaveLength(11);
+  it("names twelve pages, the overview keyed as a folder index", () => {
+    expect(MIGRATE_ORDER).toHaveLength(12);
     expect(MIGRATE_ORDER[0]).toBe("migrate/index");
   });
 
-  it("lists compare, bundle-size and upstream after the overview", () => {
-    expect(MIGRATE_ORDER.slice(0, 4)).toEqual([
+  it("lists compare, bundle-size, upstream and native-engines after the overview", () => {
+    expect(MIGRATE_ORDER.slice(0, 5)).toEqual([
       "migrate/index",
       "compare",
       "bundle-size",
       "upstream",
+      "native-engines",
     ]);
   });
 });

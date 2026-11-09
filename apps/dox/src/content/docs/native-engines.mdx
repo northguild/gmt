@@ -1,25 +1,21 @@
 ---
-title: Browser support
-description: What GMT needs from a browser or runtime, which engine each one runs, and which weekly test run covers it.
+title: Temporal in every engine
+description: GMT's whole test suite runs every week on each engine's built-in Temporal and data. Which engine each browser and runtime runs, where its data comes from, and which weekly run tests it.
 industries: [core]
 ---
 
-import { syntaxFloor } from "~/generated/syntax-floor";
-import { gmtNodeEngines } from "~/generated/versions";
+GMT runs on every browser and runtime on this page. It ships its own Temporal, the community
+[`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill), so it does not wait
+for an engine to build Temporal in.
 
-## What GMT needs from a host
+**If you use GMT, there is nothing on this page for you to do.** The page tracks the engines
+themselves. Every week, GMT's whole test suite runs on each engine's built-in `Temporal` and on its
+time zone and locale data. That shows us where an engine differs from the standard, and the
+[bugs we found](/upstream/#native-engines) go back to the engine's makers.
 
-GMT runs on any host that has these three things:
+## Why each engine is tested
 
-1. **Modern JavaScript.** The code GMT ships, with its Temporal polyfill, parses as ECMAScript edition {syntaxFloor.edition} (ES modules). The number is measured on every build: the lowest edition whose grammar parses all {syntaxFloor.entries} entry points.
-2. **`Intl.DateTimeFormat` with time zones.** It must accept an IANA `timeZone` and format a date and time to the second. The bundled polyfill reads every offset from it ([polyfill source, `lib/ecmascript.ts`](https://github.com/js-temporal/temporal-polyfill/blob/v0.5.1/lib/ecmascript.ts)). The `timeZone` option is defined in [ECMA-402](https://tc39.es/ecma402/#sec-createdatetimeformat).
-3. **On Node, the version GMT's package asks for.** Its `engines` field says <code>{gmtNodeEngines}</code>.
-
-Native `Temporal` is not needed. GMT ships its own.
-
-## Why the engine still matters
-
-A host's time zone offsets and locale text are the host's own data. The Temporal specification leaves time zone offsets to the implementation ([GetNamedTimeZoneOffsetNanoseconds](https://tc39.es/proposal-temporal/#GetNamedTimeZoneOffsetNanoseconds) and [GetNamedTimeZoneEpochNanoseconds](https://tc39.es/proposal-temporal/#GetNamedTimeZoneEpochNanoseconds)), and ECMA-402 does the same for [locale data](https://tc39.es/ecma402/#sec-internal-slots). GMT gives the right answer for the data it is handed. So two browsers can show different text for one call, and a browser whose data is older than a time zone release gives that release's old offsets. [Upstream](/upstream/#native-engines) lists the cases we found.
+A host's time zone offsets and locale text are the host's own data. The Temporal specification leaves time zone offsets to the implementation ([GetNamedTimeZoneOffsetNanoseconds](https://tc39.es/proposal-temporal/#GetNamedTimeZoneOffsetNanoseconds) and [GetNamedTimeZoneEpochNanoseconds](https://tc39.es/proposal-temporal/#GetNamedTimeZoneEpochNanoseconds)), and ECMA-402 does the same for [locale data](https://tc39.es/ecma402/#sec-internal-slots). GMT gives the right answer for the data it is handed. So two browsers can show different text for one call, and a browser whose data is older than a time zone release gives that release's old offsets. [Helping fix Temporal](/upstream/#native-engines) lists the cases we found.
 
 ## Browsers and runtimes
 
@@ -55,9 +51,9 @@ Where each cell comes from:
 - Node ships full ICU data ([Node Intl](https://nodejs.org/api/intl.html)) and runs on [V8](https://nodejs.org/en/learn/getting-started/the-v8-javascript-engine).
 - Deno is [built on V8](https://github.com/denoland/deno/blob/main/README.md), Cloudflare Workers run [V8](https://developers.cloudflare.com/workers/reference/how-workers-works/), and Bun runs [JavaScriptCore](https://bun.sh/docs/runtime/). None of the three documents where its ICU or time zone data comes from.
 
-## Not tested
+## No weekly run yet
 
-The weekly run does not cover these. A wrong answer there is still a GMT bug, and we want the report.
+GMT runs on these too, but no weekly run tests their engine or data yet. If GMT gives a wrong answer on one, we want the report.
 
 - Browser versions older than the one each weekly run installs.
 - Other macOS versions, and iOS itself. The `webkit-macos` leg runs the macOS version its runner has.

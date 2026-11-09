@@ -3,16 +3,20 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { NATIVE_LEGS } from "../../../../scripts/lib/canary-issues.mjs";
-import { START_HERE } from "./section-order";
+import { MIGRATE, START_HERE } from "./section-order";
 
 /**
- * The browser support page states no figure by hand and names exactly the
- * weekly legs the workflow runs.
+ * The engine page names exactly the weekly legs the workflow runs and no version by hand, and
+ * Install's host line takes its figures from the generated values.
  */
 
 const HERE = fileURLToPath(import.meta.url);
 const page = readFileSync(
-  resolve(HERE, "../../content/docs/browser-support.mdx"),
+  resolve(HERE, "../../content/docs/native-engines.mdx"),
+  "utf8",
+);
+const install = readFileSync(
+  resolve(HERE, "../../content/docs/install.mdx"),
   "utf8",
 );
 const WORKFLOW =
@@ -36,21 +40,10 @@ function legColumn(): string[] {
   return spans;
 }
 
-describe("browser support page", () => {
+describe("Temporal in every engine", () => {
   it("lists every native-suite leg in the table's last column, and no other leg", () => {
     const spans = new Set(legColumn());
     expect([...spans].sort()).toEqual([...NATIVE_LEGS].sort());
-  });
-
-  it("imports and uses syntaxFloor and gmtNodeEngines", () => {
-    expect(page).toMatch(
-      /import \{ syntaxFloor \} from "~\/generated\/syntax-floor";/,
-    );
-    expect(page).toMatch(
-      /import \{ gmtNodeEngines \} from "~\/generated\/versions";/,
-    );
-    expect(text).toContain("{syntaxFloor.edition}");
-    expect(text).toContain("{gmtNodeEngines}");
   });
 
   it.each`
@@ -73,13 +66,39 @@ describe("browser support page", () => {
   });
 });
 
-describe("START_HERE", () => {
-  it("puts browser-support second", () => {
+describe("Install's host line", () => {
+  it("imports and uses syntaxFloor and gmtNodeEngines", () => {
+    expect(install).toMatch(
+      /import \{ syntaxFloor \} from "~\/generated\/syntax-floor";/,
+    );
+    expect(install).toMatch(
+      /import \{ gmtNodeEngines, gmtVersion \} from "~\/generated\/versions";/,
+    );
+    expect(install).toContain("ECMAScript {syntaxFloor.edition}");
+    expect(install).toContain("<code>{gmtNodeEngines}</code>");
+    expect(install).toContain("](/native-engines/)");
+  });
+
+  it.each`
+    label                   | pattern
+    ${"an ECMAScript year"} | ${/ES20\d\d/}
+    ${"a node range"}       | ${/>=\s*\d/}
+  `("has no hand-written figure: $label", ({ pattern }) => {
+    expect(install).not.toMatch(pattern);
+  });
+});
+
+describe("the sidebar", () => {
+  it("keeps the engine page out of Start here", () => {
     expect(START_HERE.map((p) => p.slug)).toEqual([
       "install",
-      "browser-support",
       "core-rules",
       "why-gmt",
     ]);
+  });
+
+  it("puts the engine page right after Helping fix Temporal", () => {
+    const slugs = MIGRATE.map((p) => p.slug);
+    expect(slugs.indexOf("native-engines")).toBe(slugs.indexOf("upstream") + 1);
   });
 });

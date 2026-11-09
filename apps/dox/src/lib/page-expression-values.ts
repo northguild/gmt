@@ -128,7 +128,6 @@ export function pageExpressionValues(): Record<string, string> {
       largestSuite.stats.tests,
     ),
     "syntaxFloor.edition": String(syntaxFloor.edition),
-    "syntaxFloor.entries": String(syntaxFloor.entries),
     gmtNodeEngines,
     "competitorTimeResolutionLabel()": competitorTimeResolutionLabel(),
   };
