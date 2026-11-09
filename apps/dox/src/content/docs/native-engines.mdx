@@ -4,7 +4,8 @@ description: GMT's whole test suite runs every week on each engine's built-in Te
 industries: [core]
 ---
 
-GMT runs on every browser and runtime on this page. It ships its own Temporal, the community
+GMT runs on every current browser and runtime on this page, and on any older one that meets
+[Install's requirements](/install/). It ships its own Temporal, the community
 [`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill), so it does not wait
 for an engine to build Temporal in.
 
@@ -53,7 +54,8 @@ Where each cell comes from:
 
 ## No weekly run yet
 
-GMT runs on these too, but no weekly run tests their engine or data yet. If GMT gives a wrong answer on one, we want the report.
+GMT runs on these too, as long as they meet [Install's requirements](/install/), but no weekly run
+tests their engine or data yet. If GMT gives a wrong answer on one, we want the report.
 
 - Browser versions older than the one each weekly run installs.
 - Other macOS versions, and iOS itself. The `webkit-macos` leg runs the macOS version its runner has.
