@@ -2876,7 +2876,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). Its
     limit is 60 minutes, and the gate step's is 55. A typical run takes 20 to 27. A diff that changes a
     gate script runs every gate on the sample pages. With the Timetable Reader selected too, that took
-    40 minutes locally without the build and more than 44 in CI (#480). `readout-still` took 24 of
+    40 minutes locally without the build and 47 in CI (#480). `readout-still` took 24 of
     them: 60 drags on the Reader (10 sliders at six widths) and 32 on the Dwell Ledger. The runner
     prints its screen only when it ends and appends it to `$GITHUB_STEP_SUMMARY` in a fenced `text`
     block (`gates/step-summary.mjs`). Each gate writes its log in `.gates/` as it runs, so the step's
