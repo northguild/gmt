@@ -168,6 +168,8 @@ describe("the chat island's static import graph", () => {
       "lib/satellite-clock-converter.ts",
       "lib/gnss-rollover-checker.ts",
       "lib/leap-second-timeline.ts",
+      "lib/terrestrial-time-stack.ts",
+      "widgets/families/timescale/scale-stack.ts",
       "lib/elapsed-vs-clock.ts",
       "lib/stored-time-audit.ts",
       "lib/stored-time-lib.ts",

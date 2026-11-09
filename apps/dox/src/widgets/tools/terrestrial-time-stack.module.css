@@ -1,0 +1,235 @@
+/*
+ * Terrestrial Time Stack: what only this tool needs. The sections, plates, range, preset, table
+ * and code frame are the kit's, and the drawing is the timescale family's (`scale-stack`); this
+ * sheet lays out the plates, the scales table, the NO SIGNAL slot and the notes.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an accent edge is never
+ * a single side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* The stage: the plates, then the drawing, then the NO SIGNAL slot. It is the container the
+   layout reads. */
+.stage {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+/* Four plates on four equal tracks, two by two below 36rem. A track does not move with its
+   content, so a reading never reflows the row. */
+.platesSlot {
+  min-inline-size: 0;
+
+  & dl {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    @container (inline-size < 36rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* A value and its unit do not wrap, so a plate has to be as wide as the widest reading. */
+    @container (inline-size < 20rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+.drawingSlot {
+  min-inline-size: 0;
+}
+
+/* The NO SIGNAL slot is always laid out; a reading only makes the pill visible. */
+.signalSlot {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.signal {
+  justify-self: start;
+  box-sizing: border-box;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-signal-ink);
+  white-space: nowrap;
+
+  &[data-state="off"] {
+    visibility: hidden;
+  }
+}
+
+.sentence {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+/* A held line keeps the room of its longest sentence. */
+.held {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The table's cells: tabular figures in the mono face, held by their widest sample. */
+.cell {
+  display: block;
+
+  /* A length, so the code's coloured spans cannot make a line taller than the plain sample that
+     reserves it. */
+  line-height: 1.375rem;
+
+  /* The page styles a bare `code`; the plain sample that reserves this cell has none of it. */
+  padding: 0;
+  border: 0;
+  background: none;
+  min-inline-size: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell * {
+  line-height: inherit;
+}
+
+.wrap {
+  display: block;
+  min-inline-size: 0;
+}
+
+.mono {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.scale {
+  font-weight: 600;
+}
+
+.contents {
+  display: contents;
+}
+
+.tag {
+  display: block;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+
+  &[data-state="off"] {
+    visibility: hidden;
+  }
+}
+
+/* Under 46rem the four rows become labelled blocks: each cell names its column from the
+   `data-col` the table wrote, and the header row is read by the labels instead. */
+.scales {
+  container-type: inline-size;
+  min-inline-size: 0;
+
+  @container (inline-size < 46rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+
+    & .cell span,
+    & .mono {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .signal {
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .scales td::before,
+  .scales th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .note,
+  .tag,
+  .scales td::before,
+  .scales th::before {
+    color: var(--gmt-ice);
+  }
+
+  .signal {
+    border-color: var(--gmt-signal-ink);
+  }
+}
