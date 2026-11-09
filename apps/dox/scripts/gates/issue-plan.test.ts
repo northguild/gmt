@@ -464,8 +464,8 @@ describe("planIssueActions", () => {
         { ...context, runId: "4242" },
       ) as any[];
       expect(a.body.indexOf("/big/")).toBeLessThan(a.body.indexOf("/small/"));
-      expect(a.body).toContain("dox-gate-chromium-1-4242");
-      expect(a.body).toContain("dox-gate-webkit-2-4242");
+      expect(a.body).toContain("dox-gates-chromium-1-4242");
+      expect(a.body).toContain("dox-gates-webkit-2-4242");
       expect(a.body).toContain("14 days");
       expect(a.body).toContain(context.runUrl);
       expect(a.body).toContain(

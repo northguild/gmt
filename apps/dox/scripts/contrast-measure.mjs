@@ -249,7 +249,11 @@ function collect() {
     }
     return false;
   };
-  /** Rect clipped to every scrolling or clipping ancestor. */
+  /**
+   * Rect clipped to every scrolling or clipping ancestor's client (padding) box, never its border
+   * box: text cannot paint over a border or a classic scrollbar, so those pixels are not "behind"
+   * the glyph.
+   */
   const clip = (e, r) => {
     let [l, t, rr, b] = [r.left, r.top, r.right, r.bottom];
     for (
@@ -261,13 +265,15 @@ function collect() {
       if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
       if (p === document.body) continue;
       const pb = p.getBoundingClientRect();
+      const cl = pb.left + p.clientLeft;
+      const ct = pb.top + p.clientTop;
       if (cs.overflowX !== "visible") {
-        l = Math.max(l, pb.left);
-        rr = Math.min(rr, pb.right);
+        l = Math.max(l, cl);
+        rr = Math.min(rr, cl + p.clientWidth);
       }
       if (cs.overflowY !== "visible") {
-        t = Math.max(t, pb.top);
-        b = Math.min(b, pb.bottom);
+        t = Math.max(t, ct);
+        b = Math.min(b, ct + p.clientHeight);
       }
     }
     return rr - l > 1 && b - t > 1 ? [l, t, rr - l, b - t] : null;

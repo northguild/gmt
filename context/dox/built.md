@@ -1403,6 +1403,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     so no value moves a column edge. Under 38rem of pane the table is labelled blocks, one per row,
     each cell naming its column from `data-col`. The row cards hold the Offset select, which needs
     about 15.5rem, so the rowset is two columns from 31rem of pane and four from 63.5rem.
+  - **In a hold cell the NO SIGNAL chip wraps at its space.** `.cellHold .lost` is
+    `inline-block`, `max-inline-size: 100%` and `white-space: normal`, so the chip fits the 300px
+    value column the sizer sets and never overflows the table into a scrollbar that moves the page
+    below it (WebKit, 300px root). Two lines are no taller than the sizer. `.live` stays stretched.
   - **One local-day track, a handle per row.** The track is the local calendar day of the
     first row that holds a valid time, 00:00 to 24:00 on the "Printed in" clock. Each row
     has its own lane and its own handle, a `gmt-handle`
@@ -2845,7 +2849,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`). Rule `table-scrolls`. A second check,
     `measureCells` in `scripts/lib/cell-overflow.mjs`, runs at 1440 and at 390 px: it fails a cell whose
     content is larger than the cell, or whose text or element reaches more than 1.5 px past the cell's
-    edges, scrolling table or not (a header kept visually hidden by a stacked layout is skipped). Rule
+    edges, scrolling table or not (a header kept visually hidden by a stacked layout is skipped, and so
+    is anything inside a visually hidden descendant such as `.gmt-sr-only`, because a text range ignores
+    clipping and would report a label nothing paints). Rule
     `cell-overflows`; the last line counts `<n> scroll, <n> spill`. The same check runs
     in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in
     Chromium, whenever a Dox file or page changes; the browser tests (Test isolation) run there first.
@@ -2877,7 +2883,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     table that overflows its card, a visible cell holding more than its box, a word of a visible
     cell or head on two line boxes, and a visible element that passes its card's left or right
     edge by more than 1 px. `contrast-measure` is
-    Chromium only.
+    Chromium only. It clips a glyph rect to each scroller's client (padding) box, never its border
+    box, so a scroller's border or classic scrollbar is never scored as the background behind a glyph.
   - **Selection.** A changed file selects the pages whose import closure holds it (`.mdx`, `.astro`,
     `.ts`, `.tsx`, `.mjs`, `.css`; relative paths and the `~/` alias); a change under
     `packages/gmt/src/<ns>/<module>/` selects the pages that import
@@ -4605,7 +4612,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     run opens none and files one `dox-gate:flood` issue (a comment if it is already open). Its body
     groups the held-back findings by `gate:rule:page`: count, browsers, widths and up to three example
     targets, largest group first, `TABLE_ROWS` (40) rows and a count of the rest, then the run URL and
-    the leg artifacts (`dox-gate-<leg>-<runId>`, kept 14 days). It says each run comments there until
+    the leg artifacts (`dox-gates-<leg>-<runId>`, kept 14 days). It says each run comments there until
     ten or fewer remain, and then each is filed on its own. Every other body and comment is cut by `fitBody`
     to 60,000 characters on a line boundary, and `file-issues` exits 1 before any write when one still
     passes GitHub's 65,536; a sweep of 1,545 findings is a 6,585-character body. Comments on
