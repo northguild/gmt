@@ -4,7 +4,7 @@ Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, w
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
 tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way. It also lists
 GMT's five reports to `fullcalendar/temporal-polyfill`, found by the swap check
-([research §4.6](../research/temporal-polyfill-swap.md#46-upstream)).
+([research §4.6](research/temporal-polyfill-swap.md#46-upstream)).
 
 > **Status of this document:** updated 2026-11-04. **Filed:** 14 items by us, plus a comment on the
 > maintainer's own PR #361, and five reports to `fullcalendar/temporal-polyfill` (fc #119, #120, #121, #125, #126; see "Filed"). The newest is tc39 #3335 (AB, D21), 2026-10-31; before it, tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
@@ -31,10 +31,10 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D2`: buddhist dates before 1582 | js-temporal `2bb6ba1` | Nothing |
 | `D3`: Hebrew leap years for negative years | js-temporal `57d7734` (PR #361; `86a89df` on its branch) | `D4`. The two share one group and one code path, and leave together |
 | `D4`: Hebrew years 0 and earlier, one day off | ICU `5267bb5778` (unicode-org/icu, ICU-23007). Not a polyfill fix | An ICU4C release with that commit, and a Node release that bundles it as GMT's `engines.node` floor |
-| `D16`: `formatRange` cuts long zone names to short and drops offset names (V8, JSC; ICU-20548) | Not a polyfill fix. ICU-20548 is open | An ICU release that keeps `long`, `longGeneric`, `shortOffset` and `longOffset` in range output, in every engine GMT supports. `pnpm compat` reports the Node half: the `D16` probes must all pass on the `engines.node` floor. The weekly `temporal-oracle` run runs the same probes in Chromium, Firefox and WebKit (`temporal-compat-<leg>` verdicts) and files the removal issue only when every engine says removable |
+| `D16`: `formatRange` cuts long zone names to short and drops offset names (V8, JSC; ICU-20548) | Not a polyfill fix. ICU-20548 is open | An ICU release that keeps `long`, `longGeneric`, `shortOffset` and `longOffset` in range output, in every engine GMT supports. `pnpm compat` reports the Node half: the `D16` probes must all pass on the `engines.node` floor. The weekly `temporal-oracle` run runs the same probes in Chromium, Firefox, WebKit on Linux and WebKit on macOS (the `temporal-compat-chromium`, `-firefox`, `-webkit` and `-webkit-macos` verdicts) and files the removal issue only when all five sources say removable |
 | `D17`: Firefox `formatRange` prints AM/PM for a day period with a zone name (§ Q) | Not a polyfill fix. A SpiderMonkey bug, open as [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525) | A Firefox release that prints the flexible day period in a range: the weekly `temporal-oracle` run's compat check in Firefox (`temporal-compat-firefox`) reports D17 removable, and Firefox is the only engine in D17's scope |
-| `D18`: Islamic dates before the Hijra read as positive years in WebKit (§ R) | None. Not filed yet | A js-temporal release that reads the Islamic eras (`main` declares them; whether its parser accepts WebKit's `Before Hijra` spelling is untested), or a WebKit that prints the year as V8 does, so every `D18` repro passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D18's scope |
-| `D19`: `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (§ U) | None. Not filed yet | A js-temporal release that finds a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, so the `D19` probe passes in the weekly `temporal-oracle` run's compat check in WebKit (`temporal-compat-webkit`); WebKit is the only engine in D19's scope |
+| `D18`: Islamic dates before the Hijra read as positive years in WebKit (§ R) | None. Not filed yet | A js-temporal release that reads the Islamic eras (`main` declares them; whether its parser accepts WebKit's `Before Hijra` spelling is untested), or a WebKit that prints the year as V8 does, so every `D18` repro passes in the weekly `temporal-oracle` run's compat check in both WebKit builds (the `temporal-compat-webkit` and `temporal-compat-webkit-macos` verdicts, Linux and macOS); WebKit is the only engine in D18's scope |
+| `D19`: `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (§ U) | None. Not filed yet | A js-temporal release that finds a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, so the `D19` probe passes in the weekly `temporal-oracle` run's compat check in both WebKit builds (the `temporal-compat-webkit` and `temporal-compat-webkit-macos` verdicts, Linux and macOS); WebKit is the only engine in D19's scope |
 | `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | A js-temporal rebase and a release |
 | `D21`: `Temporal.Now` reads a millisecond early after a pre-1970 clock reading (§ AB) | None. Filed as tc39 #3335 | A tc39 fix, the js-temporal rebase and a release, so the `D21` canary repro passes |
 | `D22`: a length in days or larger is measured from the wrong pass of a repeated hour (§ AC) | js-temporal `3c403686d39` | tc39 #3319 in the same release, or `P7D` with `largestUnit: "week"` regresses to `P1W1D`. A release that still strips the Asserts of tc39/proposal-temporal#3336, #3311 and #3310 keeps GMT's gate |
@@ -2218,7 +2218,7 @@ Probe: `new Intl.DateTimeFormat("en", { hour: "numeric", dayPeriod: "short", tim
 
 ### Status
 
-**Not filed.** Draft in the session scratchpad (`draft-upstream-polyfill-islamic-era.md`); the owner files it on js-temporal/temporal-polyfill. Reproduced with polyfill 0.5.1 in Playwright WebKit 26.6 (JavaScriptCore, macOS); V8 (Node 26, Chromium 153) and SpiderMonkey (Firefox 155) are right. GMT corrects it as `D18` (a lazy probe, dormant on every engine that passes), scoped to WebKit (`engines: ["webkit"]` in `scripts/lib/workarounds.mjs`, so the Node, Chromium and Firefox checks report it as out of scope, never removable). The removal signal is the weekly run's compat check in WebKit (`temporal-compat-webkit`): once every `D18` repro returns the spec value there, the run files the removal issue. js-temporal `main` declares the Islamic eras (`ah`, `bh`); whether its era parser accepts WebKit's `Before Hijra` spelling is untested, so a release may or may not retire D18 on its own.
+**Not filed.** Draft in the session scratchpad (`draft-upstream-polyfill-islamic-era.md`); the owner files it on js-temporal/temporal-polyfill. Reproduced with polyfill 0.5.1 in Playwright WebKit 26.6 (JavaScriptCore, macOS); V8 (Node 26, Chromium 153) and SpiderMonkey (Firefox 155) are right. GMT corrects it as `D18` (a lazy probe, dormant on every engine that passes), scoped to WebKit (`engines: ["webkit"]` in `scripts/lib/workarounds.mjs`, so the Node, Chromium and Firefox checks report it as out of scope, never removable). The removal signal is the weekly run's compat check in both WebKit builds (the `temporal-compat-webkit` and `temporal-compat-webkit-macos` verdicts, Linux and macOS): once every `D18` repro returns the spec value in both, the run files the removal issue. js-temporal `main` declares the Islamic eras (`ah`, `bh`); whether its era parser accepts WebKit's `Before Hijra` spelling is untested, so a release may or may not retire D18 on its own.
 
 ### What goes wrong
 
@@ -2252,7 +2252,7 @@ Before D18 the WebKit control pass of the native suite (the polyfill in WebKit) 
 
 ### Status
 
-**Not filed.** Draft in the session scratchpad (`draft-webkit-islamic-add-year.md`); the owner files it on bugs.webkit.org. Reproduced on WebKit 26.6's own `Temporal` (JavaScriptCore; Playwright's Linux build and the Mac build agree). The polyfill in the same WebKit, V8 (Node 26.12.1, Chromium 153) and SpiderMonkey (Firefox 155) give the spec value. Six rows of the native suite fail on it and are tagged with this anchor in `scripts/lib/native-suite-tags.mjs` (WebKit leg only).
+**Not filed.** Draft in the session scratchpad (`draft-webkit-islamic-add-year.md`); the owner files it on bugs.webkit.org. Reproduced on WebKit 26.6's own `Temporal` (JavaScriptCore; Playwright's Linux build and the Mac build agree). The polyfill in the same WebKit, V8 (Node 26.12.1, Chromium 153) and SpiderMonkey (Firefox 155) give the spec value. Six rows of the native suite fail on it and are tagged with this anchor in `scripts/lib/native-suite-tags.mjs` (both WebKit legs, Linux and macOS).
 
 ### What goes wrong
 
@@ -2282,7 +2282,7 @@ Only GMT run on WebKit's own `Temporal` sees it: `addDate`, `diffDateAsDuration`
 
 ### Status
 
-**Not filed.** Draft in the session scratchpad (`draft-webkit-indian-add-year.md`); the owner files it on bugs.webkit.org. Reproduced on WebKit 26.6's own `Temporal` (JavaScriptCore; Playwright's Linux build and the Mac build agree). The polyfill in the same WebKit, V8 (Node 26.12.1, Chromium 153) and SpiderMonkey (Firefox 155) give the spec value. One row of the native suite fails on it and is tagged with this anchor in `scripts/lib/native-suite-tags.mjs` (WebKit leg only).
+**Not filed.** Draft in the session scratchpad (`draft-webkit-indian-add-year.md`); the owner files it on bugs.webkit.org. Reproduced on WebKit 26.6's own `Temporal` (JavaScriptCore; Playwright's Linux build and the Mac build agree). The polyfill in the same WebKit, V8 (Node 26.12.1, Chromium 153) and SpiderMonkey (Firefox 155) give the spec value. One row of the native suite fails on it and is tagged with this anchor in `scripts/lib/native-suite-tags.mjs` (both WebKit legs, Linux and macOS).
 
 ### What goes wrong
 
@@ -2323,7 +2323,7 @@ native WebKit `Temporal`, Node 26, Chromium 153 and Firefox 155. Confirmed on po
 No upstream issue found (searched the polyfill's issues for `resolvedOptions`, `canonical` and
 `GetAvailableNamedTimeZoneIdentifier`). GMT works around it as temporalCompat **D19** (`temporalCompat/timeZoneEquals.ts`,
 probe `isTimeZoneEqualsCompatNeeded`), scoped to WebKit (`engines: ["webkit"]` in `scripts/lib/workarounds.mjs`, so the
-Node, Chromium and Firefox checks report it out of scope, and the weekly run's `temporal-compat-webkit` verdict decides).
+Node, Chromium and Firefox checks report it out of scope, and the weekly run's `temporal-compat-webkit` and `temporal-compat-webkit-macos` verdicts decide).
 
 ### What goes wrong
 
@@ -2740,3 +2740,103 @@ None in the library, which gives `P1W` on the polyfill. Only GMT run on Node 26'
 earlier-pass rows of the same table pass on Node 26. The native-suite runner tags the two rows of
 `packages/gmt/src/test/laterPassOrigin.test.ts` that pin it, the UTC and New York noon origins, to this section (Node
 leg only). When a Node release carries a `temporal_rs` with #723, the tags go stale and the runner reports it.
+
+## AE. ICU4C 75+ counts every Persian year before year 0 as a leap year (macOS WebKit, engine)
+
+### Status
+
+**Not filed yet.** The filing text is below; the owner decides where it goes. The tracker is the ICU Jira (project ICU, component calendar). Cause: ICU4C commit `d43d216feb` (ICU-22633, 2024-03-08) changed `PersianCalendar::isLeapYear` in `i18n/persncal.cpp` from
+
+```cpp
+ClockMath::floorDivide(25*year+11, 33, &remainder); return remainder < 8;
+```
+
+to
+
+```cpp
+int64_t y = year*25LL+11LL; return (y % 33L < 8);
+```
+
+C++ `%` rounds toward zero, so for every year -1 and earlier the remainder is zero or negative, which is below 8, and the year counts as leap. The change is in ICU4C 75-1 and every later release (read in the release tags 75-1, 76-1, 77-1 and 78.1 and in `main`; 77-1, 78.1 and `main` add a table of corrections for some later years, but keep the `%` line); release 74-2 still uses `floorDivide`, and ICU4J still does. ICU4C 78.3 gives the symptom (see the check below). Reproduced on WebKit 26.6's own `Temporal` as built for macOS (Playwright 1.63.0, macOS 27.0.1, Apple's libicucore). Playwright's Linux WebKit 26.6 links the runner's ICU 74, so it is right; Chromium 153 and Node 26 do their calendar arithmetic in temporal_rs on ICU4X, so they are right too. Intl formatting on the same Mac is right because it goes through `firstJulianOfYear`, which still uses `floorDivide`. The polyfill does its own arithmetic and is right. Two rows of the native suite fail on it and are tagged with this anchor in `scripts/lib/native-suite-tags.mjs` (`webkit-macos` leg only).
+
+**Risk:** if the Linux runner's ICU moves to 75 or later, the Playwright `webkit` leg starts failing the same two rows, and the two tags need that leg.
+
+### What goes wrong
+
+A Persian year before year 0 counts as leap in every case: in WebKit on macOS `inLeapYear` is true for 272,441 of the 272,441 years from -272441 to -1, where the correct count is 66,046 (Chromium and Node give it). Year 0 and years 1 and later are right. The calendar then thinks Esfand (`M12`) has 30 days in a common year. That is not a range-limit problem: it happens at ordinary years.
+
+- Adding a month to the 30th of `M11`, or subtracting a month from the 30th of `M01`, lands in a 29-day Esfand and has to constrain the day to 29. WebKit throws `RangeError: Result of calendar date addition is outside representable range` instead. The result is inside the supported range.
+- `daysInMonth` for Esfand of such a year says 30, but `from({ calendar: "persian", year: -722, monthCode: "M12", day: 30 }, { overflow: "reject" })` throws "Day is out of range for the given month in this calendar", so the two answers disagree.
+- With the default `constrain` the same call returns a wrong date without an error: `-000100-03-21[u-ca=persian]` (1 Farvardin of year -721), where the day should be constrained to the 29th of Esfand, `-000100-03-20`.
+
+No test262 file covers a negative Persian year: `intl402/Temporal/Calendar/prototype/inLeapYear/basic-persian.js` covers 1348 to 1427, `add/constrain-day-persian.js` covers 1362 to 1364, and `from/extreme-dates.js` covers the minimum only. So the expected values come from the Temporal specification (`overflow: "constrain"` clamps a day past the end of the month, and the calendar's year and month lengths follow the Intl Era and Month Code rules), and Node, Chromium and Linux WebKit agree with them.
+
+### Repro (macOS WebKit 26.6 native `Temporal`; expected values Node 26.12.1 native `Temporal`, which Chromium 153 and Linux WebKit also give)
+
+| Call | macOS WebKit | Expected |
+| ---- | ------------ | -------- |
+| `PlainDate.from({ calendar: "persian", year: -722, monthCode: "M11", day: 30 }).add({ months: 1 })` (`-000100-02-19`) | throws `RangeError: Result of calendar date addition is outside representable range` | `-000100-03-20[u-ca=persian]` (year -722, M12, day 29) |
+| `PlainDate.from({ calendar: "persian", year: -721, monthCode: "M01", day: 30 }).subtract({ months: 1 })` (`-000100-04-19`) | throws the same `RangeError` | `-000100-03-20[u-ca=persian]` |
+| `PlainDate.from({ calendar: "persian", year: -722, monthCode: "M12", day: 30 })` | `-000100-03-21[u-ca=persian]` (year -721, M01, day 1) | `-000100-03-20[u-ca=persian]` |
+| the same with `{ overflow: "reject" }` | throws `RangeError: Day is out of range for the given month in this calendar` | throws a `RangeError` |
+| `PlainDate.from("-271820-03-11[u-ca=persian]").add({ months: 1 })` (year -272442, M11 day 30; the suite's `xscan persian min[327]` row) | throws the same `RangeError` | `-271820-04-09[u-ca=persian]` |
+| `PlainDate.from("-271820-05-09[u-ca=persian]").subtract({ months: 1 })` (year -272441, M01 day 30; the suite's `D1-A persian (xscan min[386])` row) | throws the same `RangeError` | `-271820-04-09[u-ca=persian]` |
+| `PlainDate.from({ calendar: "persian", year: 1402, monthCode: "M11", day: 30 }).add({ months: 1 })` | `2024-03-19[u-ca=persian]` | `2024-03-19[u-ca=persian]` |
+| `PlainDate.from({ calendar: "persian", year: 0, monthCode: "M12", day: 1 }).daysInMonth` | 29 | 29 |
+
+ICU4C 78.3 check (`ucal_open` with `en@calendar=persian`, `ucal_getLimit(UCAL_DATE, UCAL_ACTUAL_MAXIMUM)` on Esfand (ICU month 11, counted from 0) and `UCAL_DAY_OF_YEAR` for the year): year 1403 gives 30 and 366 (right), 1402 gives 29 and 365, year 1 gives 30 and 366 (right), year 0 gives 29 and 365 (right), years -1, -2, -722 and -272442 give 30 and 366 where they should give 29 and 365; year -721 gives 30 and 366, which is right (it is a leap year).
+
+The raw polyfill (0.5.1) throws `RangeError: Invalid ISO date: -271821-01-01T00:00Z` on the two suite rows in every engine, which is polyfill defect `D1`; GMT's workaround for it gives the right answer, so GMT on the polyfill passes in macOS WebKit.
+
+### Effect on GMT
+
+Only GMT run on macOS WebKit's own `Temporal` sees it: `addDate` and `subtractDate` return the sentinel `''` where the engine throws, and a day 30 of Esfand would be read as the next year's first day. The two native-suite rows (`plain/calculate/addDate.test.ts`, the `xscan persian min[327]` row, and `plain/calculate/subtractDate.test.ts`, the `D1-A persian (xscan min[386])` row) are tagged to this section for the `webkit-macos` leg; the tag goes stale, with a finding, once the Mac's ICU counts the years right. GMT on the polyfill is right.
+
+### Filed text
+
+Title: Persian calendar: isLeapYear says every year before year 0 is a leap year (ICU4C 75 and later)
+
+Since ICU4C 75, `PersianCalendar::isLeapYear` says that every Persian year before year 0 is a leap year. Years 0 and later are right, and ICU4C 74 is right.
+
+The cause is commit d43d216feb (ICU-22633, March 2024). It replaced
+
+    ClockMath::floorDivide(25 * year + 11, 33, &remainder);
+    return (remainder < 8);
+
+with
+
+    int64_t y = year * 25LL + 11LL;
+    return (y % 33L < 8);
+
+In C++, `%` rounds toward zero, so for a negative year `y % 33` is zero or negative, and a number that small is always below 8. `floorDivide` gave a remainder from 0 to 32, which is what the rule needs. ICU4J still uses `floorDivide`.
+
+How to see it with ICU4C 78.3: open a calendar with `ucal_open(u"UTC", -1, "en@calendar=persian", UCAL_DEFAULT, &status)`, set the extended year, month 11 (Esfand, since ICU counts months from 0) and date 1, then call `ucal_getLimit` with `UCAL_DATE` and `UCAL_ACTUAL_MAXIMUM`, and with `UCAL_DAY_OF_YEAR` and `UCAL_ACTUAL_MAXIMUM`.
+
+- Year 1403: 30 days in Esfand, 366 days in the year (right).
+- Year 1402: 29 and 365 (right).
+- Year 1: 30 and 366 (right).
+- Year 0: 29 and 365 (right).
+- Year -722: 30 and 366. It should be 29 and 365.
+- Years -1, -2 and -272442 also give 30 and 366. They should be 29 and 365. (Year -721 is a leap year, so 30 and 366 is right for it.)
+
+It shows in WebKit's Temporal on macOS (WebKit 26.6, Playwright's macOS build, on macOS 27.0.1 with the system ICU, libicucore), which uses this code. Temporal counts months from 1, so Bahman is month 11 and Esfand is month 12. Adding one month to day 30 of Bahman in year -722 throws `RangeError: Result of calendar date addition is outside representable range`, where it should give day 29 of Esfand. Creating day 30 of Esfand in year -722 gives the first day of year -721 instead of day 29 of Esfand. Formatting dates is not affected, because it does not use `isLeapYear` for this.
+
+The fix is to go back to `floorDivide`, or to use a modulo that floors, for example `((y % 33) + 33) % 33 < 8`.
+
+### POSIX zone ids: draft for bugs.webkit.org (not filed)
+
+Title: Temporal and Intl reject the time zone ids CST6CDT, EST5EDT, MST7MDT and PST8PDT
+
+WebKit 26.6 (Playwright's builds for Linux and for macOS 27.0.1) does not accept four time zone identifiers that the time zone database defines as zones: `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT`. Chromium 153, Firefox 155 and Node 26 accept them.
+
+What I did, with `id` set to each of the four in turn (the output below is for `EST5EDT`; the other three are the same except for the name):
+
+1. `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" })` throws `RangeError: invalid time zone: EST5EDT`.
+2. `Temporal.ZonedDateTime.from("2024-07-15T12:00:00-04:00[EST5EDT]")` throws `RangeError: '2024-07-15T12:00:00-04:00[EST5EDT]' contains an invalid time zone identifier`.
+3. `new Temporal.ZonedDateTime(0n, "EST5EDT")` throws `RangeError: 'EST5EDT' is not a valid time zone identifier`.
+
+The other legacy ids work in the same WebKit on macOS: `CET`, `EET`, `MET`, `WET`, `EST`, `MST` and `HST` are accepted by `Intl.DateTimeFormat` and by `new Temporal.ZonedDateTime(0n, id)`.
+
+Why I think the four ids are valid: the time zone database release 2026e, in its file `backward`, defines them as zones: `Zone EST5EDT -5:00 USback E%sT`, `Zone CST6CDT -6:00 USback C%sT`, `Zone MST7MDT -7:00 USback M%sT` and `Zone PST8PDT -8:00 USback P%sT`. ECMA-402 section 6.5 (Use of the IANA Time Zone Database) says that each Zone in the IANA Time Zone Database must be a primary time zone identifier, so these four should be accepted and `Temporal` should treat them as named zones.
+
+What I expected: the same results as in Chromium, Firefox and Node, for example `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" }).resolvedOptions().timeZone` returns `"EST5EDT"`.

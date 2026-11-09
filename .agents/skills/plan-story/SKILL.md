@@ -17,14 +17,14 @@ Planning ends with approved specs on disk. Implementation is a separate, fresh s
 - **`MAR-16`:** use it as given.
 
 Find the row: `grep -n '| MAR-16 ' context/domination/tracker.md` (a `DOX-*` id lives in
-`context/dox/tracker.md`). Read the row only, not the whole tracker. If no row matches, stop and
+`context/dox/tracker.md`, a `CNRY-*` id in `context/canary/tracker.md`). Read the row only, not the whole tracker. If no row matches, stop and
 ask the owner which story they mean.
 
 ## 2. Gate
 
 - Run `pnpm deps:ready`. If the story is not in the ready list, stop and report its `Blocked by`.
 - If the row's `Status` is `Done`, stop and say so.
-- If `context/domination/specs/<ID>/index.md` already exists, show its scope and ask the owner
+- If `context/domination/specs/<ID>/index.md` (`context/canary/specs/<ID>/` for `CNRY-*`) already exists, show its scope and ask the owner
   whether to revise it or start over. Never overwrite a spec silently.
 
 ## 3. Route
@@ -34,6 +34,7 @@ ask the owner which story they mean.
 | Realm story (`MAR-*`, `TRAN-*`, `INT-*`, `CORE-*`, …) | 4, then 5 |
 | `CORE-*` story that adds no function and whose work is the docs site (`CORE-86` … `CORE-88`) | 4 only, then `dox: none`. The writer is `dox-architect` for `apps/dox` work (`CORE-86`, `CORE-88`) and `architect` for the export step (`CORE-87`); skip 5, there is no tool |
 | `DOX-*` story | 5 only (skip the library index input) |
+| `CNRY-*` story | 4 only, with every `context/domination/` path read as `context/canary/` (issue file, spec folder). A Dox page the story names is a slice of the same spec; `dox: none` unless it adds a Dox tool, then 5 |
 
 ## 4. Library spec — `architect` (Opus)
 

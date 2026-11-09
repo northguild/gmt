@@ -1,0 +1,68 @@
+---
+title: Browser support
+description: What GMT needs from a browser or runtime, which engine each one runs, and which weekly test run covers it.
+industries: [core]
+---
+
+import { syntaxFloor } from "~/generated/syntax-floor";
+import { gmtNodeEngines } from "~/generated/versions";
+
+## What GMT needs from a host
+
+GMT runs on any host that has these three things:
+
+1. **Modern JavaScript.** The code GMT ships, with its Temporal polyfill, parses as ECMAScript edition {syntaxFloor.edition} (ES modules). The number is measured on every build: the lowest edition whose grammar parses all {syntaxFloor.entries} entry points.
+2. **`Intl.DateTimeFormat` with time zones.** It must accept an IANA `timeZone` and format a date and time to the second. The bundled polyfill reads every offset from it ([polyfill source, `lib/ecmascript.ts`](https://github.com/js-temporal/temporal-polyfill/blob/v0.5.1/lib/ecmascript.ts)). The `timeZone` option is defined in [ECMA-402](https://tc39.es/ecma402/#sec-createdatetimeformat).
+3. **On Node, the version GMT's package asks for.** Its `engines` field says <code>{gmtNodeEngines}</code>.
+
+Native `Temporal` is not needed. GMT ships its own.
+
+## Why the engine still matters
+
+A host's time zone offsets and locale text are the host's own data. The Temporal specification leaves time zone offsets to the implementation ([GetNamedTimeZoneOffsetNanoseconds](https://tc39.es/proposal-temporal/#GetNamedTimeZoneOffsetNanoseconds) and [GetNamedTimeZoneEpochNanoseconds](https://tc39.es/proposal-temporal/#GetNamedTimeZoneEpochNanoseconds)), and ECMA-402 does the same for [locale data](https://tc39.es/ecma402/#sec-internal-slots). GMT gives the right answer for the data it is handed. So two browsers can show different text for one call, and a browser whose data is older than a time zone release gives that release's old offsets. [Upstream](/upstream/#native-engines) lists the cases we found.
+
+## Browsers and runtimes
+
+ICU is the Unicode library that holds locale text and time zone data. Each engine uses its own copy or the system's.
+
+| Browser or runtime | Engine | Where its ICU and time zone data comes from | Weekly leg |
+| --- | --- | --- | --- |
+| Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet | Chromium | bundled with the browser | `chromium` |
+| Firefox | Gecko and SpiderMonkey | bundled with the browser | `firefox` |
+| Safari on macOS | WebKit and JavaScriptCore | the operating system | `webkit-macos` |
+| Safari and other browsers on iPhone and iPad | WebKit, except where Apple allows another engine | the operating system | `webkit-macos` (same engine and Apple's ICU; iOS's own data is not tested) |
+| DuckDuckGo | the system engine: WebKit on macOS and iOS, Chromium-based on Windows and Android | as that engine | `webkit-macos` or `chromium` |
+| WebKit on Linux (WebKitGTK, WPE) | WebKit and JavaScriptCore | the Linux distribution's ICU | `webkit` |
+| Node.js | V8 | bundled with Node (full ICU) | `node` |
+| Deno | V8 | not documented | none |
+| Cloudflare Workers | V8 | not documented | none |
+| Bun | JavaScriptCore | not documented | none |
+
+Brave, Edge, Opera, Vivaldi, Samsung Internet and DuckDuckGo are covered through their engine. No run tests them by name.
+
+Bun runs JavaScriptCore, the engine Safari uses. No weekly run tests Bun, and its time zone and locale data is not documented.
+
+Where each cell comes from:
+
+- Chromium bundles its own ICU data ([Chromium ICU notes](https://chromium.googlesource.com/chromium/deps/icu/+/refs/heads/main/README.chromium)).
+- Brave, Edge, Opera, Vivaldi and Samsung Internet are built on Chromium: [Brave](https://github.com/brave/brave-core/blob/master/README.md), [Edge](https://learn.microsoft.com/en-us/deployedge/ms-edge-security-for-business), [Opera](https://dev.opera.com/extensions/), [Vivaldi](https://vivaldi.com/blog/vivaldi-browser-open-source/) and [Samsung Internet](https://developer.samsung.com/internet/release-note.html).
+- Firefox keeps its own copy of ICU ([`intl/icu`](https://github.com/mozilla-firefox/firefox/tree/main/intl/icu)) and of the time zone data ([`intl/tzdata`](https://github.com/mozilla-firefox/firefox/tree/main/intl/tzdata)). Its engines are [Gecko](https://mozilla.github.io/geckoview/) and [SpiderMonkey](https://spidermonkey.dev/).
+- Apple's WebKit links the operating system's ICU: the [WebKit source](https://github.com/WebKit/WebKit/blob/main/Source/WTF/WTF.xcodeproj/project.pbxproj) references `libicucore.dylib`, which [Apple's open-source ICU](https://github.com/apple-oss-distributions/ICU) builds.
+- WebKit on Linux uses the ICU the distribution provides: see the [WebKitGTK](https://github.com/WebKit/WebKit/blob/main/Source/cmake/OptionsGTK.cmake) and [WPE](https://github.com/WebKit/WebKit/blob/main/Source/cmake/OptionsWPE.cmake) build files.
+- On iPhone and iPad, browsers must use WebKit unless Apple grants an entitlement: [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) and [BrowserEngineKit](https://developer.apple.com/documentation/browserenginekit).
+- DuckDuckGo uses the system engine: [WebKit on Mac](https://spreadprivacy.com/introducing-duckduckgo-for-mac/), [WebKit on iPhone and iPad](https://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections), [WebView2 on Windows](https://spreadprivacy.com/windows-browser-open-beta/), and on Android the [Android WebView](https://chromium.googlesource.com/chromium/src/+/main/android_webview/README.md), which Chromium implements.
+- Node ships full ICU data ([Node Intl](https://nodejs.org/api/intl.html)) and runs on [V8](https://nodejs.org/en/learn/getting-started/the-v8-javascript-engine).
+- Deno is [built on V8](https://github.com/denoland/deno/blob/main/README.md), Cloudflare Workers run [V8](https://developers.cloudflare.com/workers/reference/how-workers-works/), and Bun runs [JavaScriptCore](https://bun.sh/docs/runtime/). None of the three documents where its ICU or time zone data comes from.
+
+## Not tested
+
+The weekly run does not cover these. A wrong answer there is still a GMT bug, and we want the report.
+
+- Browser versions older than the one each weekly run installs.
+- Other macOS versions, and iOS itself. The `webkit-macos` leg runs the macOS version its runner has.
+- Deno, Bun and Cloudflare Workers, which have their own data.
+- Android System WebView.
+
+## Where the results are
+
+The [weekly workflow](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml) lists every run. Each run's summary names the engine version it tested and, for `webkit-macos`, the macOS version.

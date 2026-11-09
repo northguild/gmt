@@ -7,13 +7,17 @@
  * the verdict holds them, with no locale grouping, so the summary matches the log digit for digit.
  */
 
-import { COMPAT_SOURCES, compatStates, swapReady } from "./canary-issues.mjs";
+import {
+  COMPAT_SOURCES,
+  compatStates,
+  NATIVE_LEGS,
+  SWAP_LEGS,
+  swapReady,
+} from "./canary-issues.mjs";
 
 const CHECK = "temporal-compat-check";
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
-
-const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"];
 
 const NO_VERDICT = "no verdict file: an earlier step or job failed";
 
@@ -281,7 +285,7 @@ const SWAP_CALENDARS_LISTED = 10;
  * @returns {string[]}
  */
 function swapBlocks(verdicts) {
-  const legs = NATIVE_LEGS.map((leg) => ({
+  const legs = SWAP_LEGS.map((leg) => ({
     leg,
     found: sourceOf(verdicts, `temporal-polyfill-swap-${leg}`),
   }));

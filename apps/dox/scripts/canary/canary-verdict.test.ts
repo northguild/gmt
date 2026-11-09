@@ -520,12 +520,15 @@ describe("VERDICT_FILES", () => {
       "temporal-compat-chromium": "artifacts/temporal-compat-chromium.json",
       "temporal-compat-firefox": "artifacts/temporal-compat-firefox.json",
       "temporal-compat-webkit": "artifacts/temporal-compat-webkit.json",
+      "temporal-compat-webkit-macos":
+        "artifacts/temporal-compat-webkit-macos.json",
       "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
       "leap-seconds": "artifacts/leap-seconds.json",
       "native-suite-node": "artifacts/native-suite-node.json",
       "native-suite-chromium": "artifacts/native-suite-chromium.json",
       "native-suite-firefox": "artifacts/native-suite-firefox.json",
       "native-suite-webkit": "artifacts/native-suite-webkit.json",
+      "native-suite-webkit-macos": "artifacts/native-suite-webkit-macos.json",
       "temporal-polyfill-swap-node":
         "artifacts/temporal-polyfill-swap-node.json",
       "temporal-polyfill-swap-chromium":

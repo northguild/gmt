@@ -30,6 +30,8 @@ import {
   industryNamespaces,
   runsPerTest,
 } from "../data/gmt-stats";
+import { syntaxFloor } from "../generated/syntax-floor";
+import { gmtNodeEngines } from "../generated/versions";
 import { measurementDateRange } from "./library-compare-tables";
 import { familyCounts, formatFamilyCounts } from "./locale-families";
 import { formatOffset, zoneOffsetRange } from "./timezone-offset-range";
@@ -125,6 +127,9 @@ export function pageExpressionValues(): Record<string, string> {
     "formatCount(largestSuite.stats.tests)": formatCount(
       largestSuite.stats.tests,
     ),
+    "syntaxFloor.edition": String(syntaxFloor.edition),
+    "syntaxFloor.entries": String(syntaxFloor.entries),
+    gmtNodeEngines,
     "competitorTimeResolutionLabel()": competitorTimeResolutionLabel(),
   };
 }

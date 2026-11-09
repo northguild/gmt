@@ -18,6 +18,7 @@ const PAGES = [
   "why-gmt.mdx",
   "compare.mdx",
   "compare/behaviour.mdx",
+  "browser-support.mdx",
   "migrate/index.mdx",
   "migrate/date-fns.mdx",
   "migrate/luxon.mdx",

@@ -10,6 +10,7 @@
 /** What a reader needs first, in reading order. */
 export const START_HERE = [
   { slug: "install" },
+  { slug: "browser-support" },
   { slug: "core-rules" },
   { slug: "why-gmt" },
 ] as const satisfies readonly { slug: string; label?: string }[];

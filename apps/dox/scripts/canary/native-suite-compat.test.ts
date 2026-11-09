@@ -14,7 +14,11 @@ import {
   compatFile,
   compatPage,
   compatPaths,
+  engineLine,
   groupResults,
+  hostProblem,
+  LEG_BROWSER,
+  LEG_HOST,
   runBrowserCompat,
 } from "../../../../scripts/lib/native-suite-compat.mjs";
 import {
@@ -282,10 +286,22 @@ describe("runBrowserCompat with a fake browser", () => {
       },
       close: async () => log.push({ close: true }),
     };
-    const launcher = { launch: async () => browser };
+    /** The browser types launched, in order: proves which Playwright browser a leg asked for. */
+    const launched: string[] = [];
+    const launcher = (name: string) => ({
+      launch: async () => {
+        launched.push(name);
+        return browser;
+      },
+    });
     return {
       log,
-      module: { chromium: launcher, firefox: launcher, webkit: launcher },
+      launched,
+      module: {
+        chromium: launcher("chromium"),
+        firefox: launcher("firefox"),
+        webkit: launcher("webkit"),
+      },
       route: (pathname: string) => {
         const fulfilled: Record<string, unknown>[] = [];
         if (!handler) throw new Error("no route was registered");
@@ -343,7 +359,33 @@ describe("runBrowserCompat with a fake browser", () => {
       chromium: "Chromium",
       firefox: "Firefox",
       webkit: "WebKit",
+      "webkit-macos": "macOS WebKit",
     });
+  });
+
+  it("launches the webkit browser type for webkit-macos and labels the verdict macOS WebKit", async () => {
+    const fake = fakePlaywright({ results: everyProbe() });
+    const verdict = await runBrowserCompat("webkit-macos", root, {
+      playwright: async () => fake.module,
+      osVersion: () => "15.7.2",
+    });
+    expect(fake.launched).toEqual(["webkit"]);
+    expect(verdict).toMatchObject({
+      source: "temporal-compat-webkit-macos",
+      leg: "webkit-macos",
+      engine: "macOS WebKit 1.2.3 \u00b7 macOS 15.7.2",
+      engineId: "webkit",
+    });
+  });
+
+  it("launches each other leg's own browser type", async () => {
+    const fake = fakePlaywright({ results: everyProbe() });
+    for (const leg of ["chromium", "firefox", "webkit"] as const) {
+      await runBrowserCompat(leg, root, {
+        playwright: async () => fake.module,
+      });
+    }
+    expect(fake.launched).toEqual(["chromium", "firefox", "webkit"]);
   });
 
   it("answers the page at /, a dist file from disk, and 404 for anything else", async () => {
@@ -412,5 +454,49 @@ describe("runBrowserCompat with a fake browser", () => {
       }),
     ).rejects.toThrow("packages/gmt/dist is missing: run pnpm build first");
     expect(loaded).toBe(false);
+  });
+});
+
+describe("LEG_BROWSER and LEG_HOST", () => {
+  it("maps both WebKit legs to the webkit browser and project, every other leg to itself", () => {
+    expect(LEG_BROWSER).toEqual({
+      chromium: "chromium",
+      firefox: "firefox",
+      webkit: "webkit",
+      "webkit-macos": "webkit",
+    });
+  });
+
+  it("pins the two WebKit legs to their host OS and leaves the rest free", () => {
+    expect(LEG_HOST).toEqual({ webkit: "linux", "webkit-macos": "darwin" });
+  });
+});
+
+describe("hostProblem", () => {
+  it.each`
+    leg               | platform    | problem
+    ${"webkit"}       | ${"linux"}  | ${null}
+    ${"webkit"}       | ${"darwin"} | ${"webkit runs on Linux; this host is darwin"}
+    ${"webkit-macos"} | ${"darwin"} | ${null}
+    ${"webkit-macos"} | ${"linux"}  | ${"webkit-macos runs on macOS; this host is linux"}
+    ${"webkit-macos"} | ${"win32"}  | ${"webkit-macos runs on macOS; this host is win32"}
+    ${"chromium"}     | ${"darwin"} | ${null}
+    ${"firefox"}      | ${"linux"}  | ${null}
+    ${"node"}         | ${"win32"}  | ${null}
+  `("'$leg' on '$platform': $problem", ({ leg, platform, problem }) => {
+    expect(hostProblem(leg, platform)).toBe(problem);
+  });
+});
+
+describe("engineLine", () => {
+  it.each`
+    leg               | version      | os          | line
+    ${"webkit-macos"} | ${"26.6"}    | ${"15.7.2"} | ${"macOS WebKit 26.6 \u00b7 macOS 15.7.2"}
+    ${"webkit-macos"} | ${"26.6"}    | ${null}     | ${"macOS WebKit 26.6"}
+    ${"webkit"}       | ${"26.6"}    | ${null}     | ${"WebKit 26.6"}
+    ${"chromium"}     | ${"153.0.1"} | ${null}     | ${"Chromium 153.0.1"}
+    ${"firefox"}      | ${"155.0"}   | ${null}     | ${"Firefox 155.0"}
+  `("'$leg' '$version' with OS $os: $line", ({ leg, version, os, line }) => {
+    expect(engineLine(leg, version, os)).toBe(line);
   });
 });

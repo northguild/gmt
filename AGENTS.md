@@ -20,6 +20,7 @@ Read these before working in the repo. Each is scoped — load only what you nee
 | [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                                                                             |
 | [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                                                                 |
 | [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first                                                                         |
+| [context/canary/index.md](./context/canary/index.md)                                             | When working on a canary (scheduled checks that file issues) or a `CNRY-*` story                                                                 |
 
 ## Git — Only on an Explicit Instruction
 

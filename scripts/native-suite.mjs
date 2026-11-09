@@ -2,8 +2,11 @@
 /**
  * Runs the whole packages/gmt suite on a native Temporal engine and sorts what fails.
  *
- *   node scripts/native-suite.mjs <node|chromium|firefox|webkit>
- *   node scripts/native-suite.mjs summary <node|chromium|firefox|webkit>
+ *   node scripts/native-suite.mjs <node|chromium|firefox|webkit|webkit-macos>
+ *   node scripts/native-suite.mjs summary <node|chromium|firefox|webkit|webkit-macos>
+ *
+ * `webkit` runs on Linux and `webkit-macos` on macOS; on another host a leg writes could-not-run
+ * verdicts and exits 2, because its verdict names the data of the host it ran on.
  *
  * A leg runs the suite twice on the same host: once on @js-temporal/polyfill (the control) and
  * once on the native engine. A test that fails natively and passes on the control is a
@@ -35,7 +38,7 @@
  *
  * Node built-ins and Vitest only, and no `Date`.
  */
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire, stripTypeScriptTypes } from "node:module";
 import { dirname, join } from "node:path";
@@ -47,9 +50,13 @@ import {
   VERDICT_FILES,
 } from "./lib/canary-verdict.mjs";
 import {
-  BROWSER_LABELS,
+  engineLine,
+  hostProblem,
+  LEG_BROWSER,
+  LEG_HOST,
   runBrowserCompat,
 } from "./lib/native-suite-compat.mjs";
+import { ENGINE_IDS } from "./lib/workarounds.mjs";
 import {
   classify,
   KNOWN_HOST_FAILURES,
@@ -58,10 +65,11 @@ import {
 } from "./lib/native-suite-tags.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const LEGS = ["node", "chromium", "firefox", "webkit"];
+/** The native-suite legs: the one list in `ENGINE_IDS`. */
+const LEGS = Object.keys(ENGINE_IDS);
 const USAGE =
-  "Usage: node scripts/native-suite.mjs <node|chromium|firefox|webkit>\n" +
-  "       node scripts/native-suite.mjs summary <node|chromium|firefox|webkit>";
+  `Usage: node scripts/native-suite.mjs <${LEGS.join("|")}>\n` +
+  `       node scripts/native-suite.mjs summary <${LEGS.join("|")}>`;
 const SHOWN = 20;
 /**
  * One pass may run this long, all of its shards together (the job allows 45 minutes for both
@@ -85,14 +93,16 @@ const NO_NATIVE_MESSAGE = "native Temporal is not available on this runtime";
 const SHIM_PATH = "packages/gmt/src/test/nativeTemporal.ts";
 
 /**
- * @typedef {"node" | "chromium" | "firefox" | "webkit"} Leg
+ * @typedef {"node" | "chromium" | "firefox" | "webkit" | "webkit-macos"} Leg
  * @typedef {"control" | "native" | "swap"} Pass
  * @typedef {{ index: number, count: number }} Shard  one of a pass's Vitest runs, 1-based
  * @typedef {{ engine: string, playwright: string | null }} Engine
  * @typedef {ReturnType<typeof import("./lib/canary-verdict.mjs").browserCompatVerdict>} CompatVerdict
  * @typedef {{
- *   preflight: (leg: Leg, root: string) => Promise<Engine>,
- *   compatCheck: (leg: Exclude<Leg, "node">, root: string) => Promise<CompatVerdict>,
+ *   preflight: (leg: Leg, root: string, osVersion: string | null) => Promise<Engine>,
+ *   compatCheck: (leg: Exclude<Leg, "node">, root: string, osVersion: string | null) => Promise<CompatVerdict>,
+ *   platform: () => NodeJS.Platform,
+ *   osVersion: () => string | null,
  *   runPass: (leg: Leg, pass: Pass, root: string, shard: Shard, timeoutMs: number) => number | void,
  *   shards: (leg: Leg) => number,
  *   runtime: () => { node: string, vitest: string },
@@ -434,9 +444,10 @@ async function bareProblems(context, load) {
 /**
  * @param {Exclude<Leg, "node">} leg
  * @param {string} root
+ * @param {string | null} osVersion
  * @returns {Promise<Engine>}
  */
-async function browserPreflight(leg, root) {
+async function browserPreflight(leg, root, osVersion) {
   const require = createRequire(import.meta.url);
   let playwright;
   try {
@@ -447,7 +458,7 @@ async function browserPreflight(leg, root) {
   const version = JSON.parse(
     readFileSync(require.resolve("playwright/package.json"), "utf8"),
   ).version;
-  const browser = await playwright[leg].launch();
+  const browser = await playwright[LEG_BROWSER[leg]].launch();
   try {
     const zone = "America/New_York";
     const context = await browser.newContext({ timezoneId: zone });
@@ -467,7 +478,7 @@ async function browserPreflight(leg, root) {
       ...(await bareProblems(context, load)),
     ]);
     return {
-      engine: `${BROWSER_LABELS[leg]} ${browser.version()}`,
+      engine: engineLine(leg, browser.version(), osVersion),
       playwright: version,
     };
   } finally {
@@ -481,10 +492,13 @@ async function browserPreflight(leg, root) {
  * with its time zone set through the context and without `Temporal` in a second page.
  * @param {Leg} leg
  * @param {string} root
+ * @param {string | null} osVersion  the macOS version for a browser's engine line
  * @returns {Promise<Engine>}
  */
-function preflight(leg, root) {
-  return leg === "node" ? nodePreflight(root) : browserPreflight(leg, root);
+function preflight(leg, root, osVersion) {
+  return leg === "node"
+    ? nodePreflight(root)
+    : browserPreflight(leg, root, osVersion);
 }
 
 /**
@@ -556,7 +570,9 @@ export function runPass(
       "run",
       "--config",
       config,
-      ...(browser ? ["--project", leg] : []),
+      ...(browser
+        ? ["--project", LEG_BROWSER[/** @type {Exclude<Leg, "node">} */ (leg)]]
+        : []),
       ...(shard.count > 1 ? [`--shard=${shard.index}/${shard.count}`] : []),
       // The module cache is keyed by path, so a `temporal-polyfill` upgraded in place would run
       // from the old version's cached transform.
@@ -594,11 +610,34 @@ export function runPass(
   return result.status;
 }
 
+/**
+ * The macOS version (`sw_vers -productVersion`), or null on another OS or when the command fails:
+ * the engine line then has no OS part. Never throws.
+ * @returns {string | null}
+ */
+function macOsVersion() {
+  if (process.platform !== "darwin") return null;
+  try {
+    const text = execFileSync("sw_vers", ["-productVersion"], {
+      encoding: "utf8",
+      timeout: CHILD_TIMEOUT_MS,
+    }).trim();
+    return text === "" ? null : text;
+  } catch {
+    return null;
+  }
+}
+
 /** @type {Deps} */
 const realDeps = {
   preflight,
-  compatCheck: (leg, root) =>
-    runBrowserCompat(leg, root, { playwright: () => import("playwright") }),
+  compatCheck: (leg, root, osVersion) =>
+    runBrowserCompat(leg, root, {
+      playwright: () => import("playwright"),
+      osVersion: () => osVersion,
+    }),
+  platform: () => process.platform,
+  osVersion: macOsVersion,
   runPass,
   shards: shardsFor,
   runtime: () => ({
@@ -1059,13 +1098,28 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
     return 2;
   };
 
+  // A verdict names the data of the host it ran on, so a leg refuses another OS's runner.
+  const problem = hostProblem(leg, d.platform());
+  if (problem) {
+    if (leg !== "node") {
+      saveVerdict(
+        root,
+        couldNotRunVerdict(`temporal-compat-${leg}`, problem),
+        "native-suite",
+      );
+    }
+    return couldNotRun(new Error(problem));
+  }
+  // Only a leg pinned to macOS reports the macOS version in its engine line.
+  const osVersion = LEG_HOST[leg] === "darwin" ? d.osVersion() : null;
+
   // The compat check comes first and on its own: it needs the browser and the built dist, not
   // the suite, and a check that cannot run must not stop the suite (nor the other way round).
   let compatFailed = false;
   if (leg !== "node") {
     const compatSource = `temporal-compat-${leg}`;
     try {
-      const compat = await d.compatCheck(leg, root);
+      const compat = await d.compatCheck(leg, root, osVersion);
       saveVerdict(root, compat, "native-suite");
       stdout(`${compatLine(compat)}\n`);
     } catch (error) {
@@ -1087,7 +1141,7 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
   /** @type {ReturnType<typeof runPasses>} */
   let passes;
   try {
-    engine = await d.preflight(leg, root);
+    engine = await d.preflight(leg, root, osVersion);
     passes = runPasses(leg, root, d, stderr);
   } catch (error) {
     return couldNotRun(error);

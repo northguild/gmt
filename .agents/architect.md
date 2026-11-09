@@ -33,8 +33,8 @@ You do not delegate. Return the finished plan to whoever invoked you — the mai
 ## Process
 
 1. Read the user's request and any referenced plan/story/spec documents. For an epic
-   story, that is `context/domination/issues/<ID>.md` — and **check the story's
-   `Blocked by` cell in `context/domination/tracker.md` before planning it.** A
+   story, that is `context/domination/issues/<ID>.md` (`context/canary/` for `CNRY-*`) — and
+   **check the story's `Blocked by` cell in its tracker before planning it.** A
    non-empty cell means something must land first: say so and propose a different
    story rather than planning around the gap. A `(parenthesised)` entry is not a
    blocker — it is a shared primitive this story must build as part of its own scope,
@@ -63,7 +63,7 @@ You do not delegate. Return the finished plan to whoever invoked you — the mai
 
 A plan the main session can hand straight to `tdd-dev`. Include function signatures, file locations, error-handling shape (try-catch + sentinel), JSDoc format, and the specific edge cases to test. A spec with a loop over a span, a log or a list states the target complexity and the bench rows that show it, per [§ Loop cost](../context/coding-standards.md#loop-cost).
 
-**Shape — a spec folder, not one long file.** Write `context/domination/specs/<ID>/index.md`, 150 lines or fewer, starting with frontmatter `story`, `issue`, `status: draft` and `dox: none` (the [plan gate](./skills/plan-story/SKILL.md#6-approve-and-hand-over) reads it; only the owner's approval sets `approved`): scope, signatures, file list, the authority table, and a slice table linking one file per function or slice (`<ID>/<slice>.md`, 200 lines or fewer each). Each worker reads the index plus its own slice, so a slice must stand on its own: its edge cases, expected values and the clauses it implements. Link context files by section; never copy them in.
+**Shape — a spec folder, not one long file.** Write `context/domination/specs/<ID>/index.md` (`context/canary/specs/<ID>/index.md` for a `CNRY-*` story), 150 lines or fewer, starting with frontmatter `story`, `issue`, `status: draft` and `dox: none` (the [plan gate](./skills/plan-story/SKILL.md#6-approve-and-hand-over) reads it; only the owner's approval sets `approved`): scope, signatures, file list, the authority table, and a slice table linking one file per function or slice (`<ID>/<slice>.md`, 200 lines or fewer each). Each worker reads the index plus its own slice, so a slice must stand on its own: its edge cases, expected values and the clauses it implements. Link context files by section; never copy them in.
 
 ### The Authority table
 

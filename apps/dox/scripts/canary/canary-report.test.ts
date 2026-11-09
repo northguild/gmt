@@ -449,6 +449,7 @@ describe("main", () => {
     chromium: "v8",
     firefox: "firefox",
     webkit: "webkit",
+    "webkit-macos": "webkit",
   };
   const browserCompatVerdict = (
     leg: string,
@@ -603,13 +604,19 @@ describe("main", () => {
     }
   };
   const writeNativeFiles = () => {
-    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
+    for (const leg of [
+      "node",
+      "chromium",
+      "firefox",
+      "webkit",
+      "webkit-macos",
+    ]) {
       write(`native-suite-${leg}.json`, nativeVerdict(leg));
     }
   };
-  /** The three browsers' compat verdicts, the same rows as the Node check. */
+  /** The four browsers' compat verdicts, the same rows as the Node check. */
   const writeCompatFiles = (workarounds?: ReturnType<typeof workaround>[]) => {
-    for (const leg of ["chromium", "firefox", "webkit"]) {
+    for (const leg of ["chromium", "firefox", "webkit", "webkit-macos"]) {
       write(
         `temporal-compat-${leg}.json`,
         browserCompatVerdict(leg, workarounds),
@@ -733,6 +740,24 @@ describe("main", () => {
     expect(actions[0].body).toContain(
       "- **temporal-polyfill-swap-firefox**: unreadable verdict:",
     );
+  });
+
+  it("a run with no webkit-macos artifacts lists both of its sources as could-not-run", () => {
+    writeOracleFiles();
+    rmSync(join(root, "artifacts", "native-suite-webkit-macos.json"));
+    rmSync(join(root, "artifacts", "temporal-compat-webkit-macos.json"));
+    const { code, out } = run(["temporal-oracle", "--print"]);
+    expect(code).toBe(0);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions).toHaveLength(1);
+    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].body).toContain(
+      "- **temporal-compat-webkit-macos**: no verdict file: an earlier step or job failed",
+    );
+    expect(actions[0].body).toContain(
+      "- **native-suite-webkit-macos**: no verdict file: an earlier step or job failed",
+    );
+    expect(actions[0].body).not.toContain("polyfill-swap-webkit-macos");
   });
 
   it("a missing swap verdict file is listed as no verdict", () => {

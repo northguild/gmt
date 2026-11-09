@@ -65,7 +65,8 @@ and one slice), never no spec. Nothing else has a story spec, so nothing else ru
 
 Planning is [`/plan-story`](../plan-story/SKILL.md), in its own session. To implement, read the
 story id from the branch (`feature/197-mar-16-…` → `MAR-16`) and load
-`context/domination/specs/<ID>/index.md`, plus `context/dox/specs/<id>/index.md` if it exists.
+`context/domination/specs/<ID>/index.md` (`context/canary/specs/<ID>/index.md` for `CNRY-*`), plus
+`context/dox/specs/<id>/index.md` if it exists.
 For a story (category A), run `python3 .agents/skills/plan-story/scripts/plan_gate.py` first. On
 `FAIL`, stop and tell the owner to run `/plan-story`; never plan inline.
 

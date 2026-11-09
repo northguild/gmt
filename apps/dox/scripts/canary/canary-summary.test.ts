@@ -56,6 +56,7 @@ const BROWSER_ENGINE_IDS: Record<string, string> = {
   chromium: "v8",
   firefox: "firefox",
   webkit: "webkit",
+  "webkit-macos": "webkit",
 };
 
 /** The compat check's verdict in one browser: the same probes, no snapshot. */
@@ -76,7 +77,7 @@ const compat = (
 
 const cleanCompat = () =>
   Object.fromEntries(
-    ["chromium", "firefox", "webkit"].map((leg) => [
+    ["chromium", "firefox", "webkit", "webkit-macos"].map((leg) => [
       `temporal-compat-${leg}`,
       compat(leg, [guardWorkaround], {
         stillNeeded: 15,
@@ -93,7 +94,7 @@ const compatEverywhere = (
 ) => ({
   "temporal-compat-check": check(workarounds, counts),
   ...Object.fromEntries(
-    ["chromium", "firefox", "webkit"].map((leg) => [
+    ["chromium", "firefox", "webkit", "webkit-macos"].map((leg) => [
       `temporal-compat-${leg}`,
       compat(leg, workarounds, counts),
     ]),
@@ -135,6 +136,7 @@ const ENGINES: Record<string, string> = {
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
+  "webkit-macos": "macOS WebKit 26.6 \u00b7 macOS 15.7.2",
 };
 
 const native = (leg: string, over: Record<string, unknown> = {}) => ({
@@ -171,6 +173,7 @@ const cleanNative = () => ({
   "native-suite-chromium": native("chromium"),
   "native-suite-firefox": native("firefox"),
   "native-suite-webkit": native("webkit"),
+  "native-suite-webkit-macos": native("webkit-macos"),
 });
 
 const swapSweep = (differingZones = 0) => ({
@@ -285,6 +288,7 @@ const CLEAN_SUMMARY = [
   "| temporal-compat-chromium | Chromium 153.0.8010.12 (v8) | 15 | 0 | 1 | 0 |",
   "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 0 | 1 | 0 |",
   "| temporal-compat-webkit | WebKit 26.6 (webkit) | 15 | 0 | 1 | 0 |",
+  "| temporal-compat-webkit-macos | macOS WebKit 26.6 \u00b7 macOS 15.7.2 (webkit) | 15 | 0 | 1 | 0 |",
   "",
   "| Oracle | Count |",
   "| --- | --- |",
@@ -303,6 +307,7 @@ const CLEAN_SUMMARY = [
   "| chromium | Chromium 153.0.8010.12 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "| webkit | WebKit 26.6 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
+  "| webkit-macos | macOS WebKit 26.6 \u00b7 macOS 15.7.2 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "",
   ...SWAP_BLOCK,
   "",
@@ -313,6 +318,27 @@ const CLEAN_SUMMARY = [
 describe("summaryMarkdown: temporal-oracle", () => {
   it("clean oracle run with D10 guard: the whole layout", () => {
     expect(oracleSummary(clean())).toBe(CLEAN_SUMMARY);
+  });
+
+  it("every native and swap source ran: five native rows, five compat rows, four swap rows, no swap row for webkit-macos", () => {
+    const lines = oracleSummary(clean()).split("\n");
+    const rowsOf = (prefix: string) =>
+      lines.filter((l) => l.startsWith(prefix));
+    expect(
+      lines.filter(
+        (l) =>
+          /^\| (node|chromium|firefox|webkit|webkit-macos) \| .* \| 61613 \|/.test(
+            l,
+          ) && l.includes("| 61600 |"),
+      ),
+    ).toHaveLength(5);
+    expect(rowsOf("| temporal-compat-")).toHaveLength(5);
+    expect(
+      lines
+        .filter((l) => /^\| \S+ \| 71337 \|/.test(l))
+        .map((l) => l.split(" | ")[0]),
+    ).toEqual(["| node", "| chromium", "| firefox", "| webkit"]);
+    expect(lines.join("\n")).not.toContain("did not run");
   });
 
   it("a leg that could not run is a row with the message and empty counts", () => {
@@ -445,13 +471,16 @@ describe("summaryMarkdown: temporal-oracle", () => {
     const lines = oracleSummary(verdicts).split("\n");
     expect(lines).not.toContain("Removable on every engine in scope: D2");
     expect(lines).toContain(
-      "Removable on some engines only: D2 (Node v24.11.0: removable; Chromium 153.0.8010.12: still needed, 2 of 2 probes fail; temporal-compat-firefox: no verdict; temporal-compat-webkit: no verdict)",
+      "Removable on some engines only: D2 (Node v24.11.0: removable; Chromium 153.0.8010.12: still needed, 2 of 2 probes fail; temporal-compat-firefox: no verdict; temporal-compat-webkit: no verdict; temporal-compat-webkit-macos: no verdict)",
     );
     expect(lines).toContain(
       "| temporal-compat-firefox | could not run — the compat page failed in firefox: boom | — | — | — | — |",
     );
     expect(lines).toContain(
       "| temporal-compat-webkit | could not run — no verdict file: an earlier step or job failed | — | — | — | — |",
+    );
+    expect(lines).toContain(
+      "| temporal-compat-webkit-macos | could not run — no verdict file: an earlier step or job failed | — | — | — | — |",
     );
   });
 
@@ -477,6 +506,12 @@ describe("summaryMarkdown: temporal-oracle", () => {
         guard: 0,
       }),
       "temporal-compat-webkit": compat("webkit", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-webkit-macos": compat("webkit-macos", [elsewhere], {
         stillNeeded: 15,
         removable: 0,
         guard: 0,
@@ -520,6 +555,12 @@ describe("summaryMarkdown: temporal-oracle", () => {
         stillNeeded: 16,
         removable: 0,
         guard: 0,
+      }),
+      "temporal-compat-webkit-macos": compat("webkit-macos", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        guard: 0,
+        outOfScope: 1,
       }),
       "temporal-oracle": oracle(),
     };

@@ -74,6 +74,23 @@ describe("runPass", () => {
     },
   );
 
+  it.each`
+    leg               | project
+    ${"chromium"}     | ${"chromium"}
+    ${"firefox"}      | ${"firefox"}
+    ${"webkit"}       | ${"webkit"}
+    ${"webkit-macos"} | ${"webkit"}
+  `("starts the $leg pass with --project $project", ({ leg, project }) => {
+    runPass(leg, "native", rootDir());
+    const args = spawned[0]?.args ?? [];
+    expect(args[args.indexOf("--project") + 1]).toBe(project);
+  });
+
+  it("starts the node pass without --project", () => {
+    runPass("node", "native", rootDir());
+    expect(spawned[0]?.args).not.toContain("--project");
+  });
+
   it("starts the native browser pass without GMT_TEMPORAL, keeping the parent's other variables", () => {
     vi.stubEnv("GMT_TEMPORAL", undefined as never);
     vi.stubEnv("RUN_PASS_PROBE", "kept");

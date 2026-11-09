@@ -21,26 +21,51 @@ export const DRY_RUN_LABEL = "canary-dry-run";
 export const COMPAT_LABEL = "temporal-compat";
 /** GitHub issue type every canary issue is created with. */
 export const ISSUE_TYPE = "Task";
-/** The four `temporal-polyfill` swap legs' verdict sources (CORE-92), in leg order. */
-export const SWAP_SOURCES = [
-  "temporal-polyfill-swap-node",
-  "temporal-polyfill-swap-chromium",
-  "temporal-polyfill-swap-firefox",
-  "temporal-polyfill-swap-webkit",
+/**
+ * The native-suite legs, in the order their findings and summary rows list them. Derived from
+ * `ENGINE_IDS`, the one list: a new leg is added there and nowhere else.
+ */
+export const NATIVE_LEGS = Object.keys(ENGINE_IDS);
+/**
+ * The `temporal-polyfill` swap legs (CORE-92). The swap runs on one host per engine, so it keeps
+ * its own four legs when the native suite gains a second WebKit leg.
+ */
+export const SWAP_LEGS = ["node", "chromium", "firefox", "webkit"];
+/** The swap legs' verdict sources, in leg order. */
+export const SWAP_SOURCES = SWAP_LEGS.map(
+  (leg) => `temporal-polyfill-swap-${leg}`,
+);
+
+const CHECK = "temporal-compat-check";
+/** @param {string} leg */
+const COMPAT = (leg) => `temporal-compat-${leg}`;
+/** @param {string} leg */
+const NATIVE = (leg) => `native-suite-${leg}`;
+/** @param {string} leg */
+const SWAP = (leg) => `temporal-polyfill-swap-${leg}`;
+/**
+ * Every source that judges the workaround groups, the Node check first, then one browser per
+ * native-suite leg. A group is removable when every source in its scope says so.
+ */
+export const COMPAT_SOURCES = [
+  CHECK,
+  ...NATIVE_LEGS.filter((leg) => leg !== "node").map(COMPAT),
 ];
+/** The engine a compat source runs on, with or without its verdict. */
+const SOURCE_ENGINE = Object.fromEntries([
+  [CHECK, ENGINE_IDS.node],
+  ...NATIVE_LEGS.filter((leg) => leg !== "node").map((leg) => [
+    COMPAT(leg),
+    /** @type {Record<string, string>} */ (ENGINE_IDS)[leg],
+  ]),
+]);
 
 /** The verdict sources each workflow reads, in the order its could-not-run message lists them. */
 export const WORKFLOW_SOURCES = {
   "temporal-oracle": [
-    "temporal-compat-check",
-    "temporal-compat-chromium",
-    "temporal-compat-firefox",
-    "temporal-compat-webkit",
+    ...COMPAT_SOURCES,
     "temporal-oracle",
-    "native-suite-node",
-    "native-suite-chromium",
-    "native-suite-firefox",
-    "native-suite-webkit",
+    ...NATIVE_LEGS.map(NATIVE),
     ...SWAP_SOURCES,
   ],
   "leap-seconds": ["leap-seconds"],
@@ -54,36 +79,11 @@ export const WORKFLOW_SOURCES = {
  */
 const UNTAGGED_GROUPS_IN_BODY = 50;
 
-const CHECK = "temporal-compat-check";
-/** @param {string} leg */
-const COMPAT = (leg) => `temporal-compat-${leg}`;
-/**
- * Every source that judges the workaround groups, the Node check first, then one browser per
- * native-suite leg. A group is removable when every source in its scope says so.
- */
-export const COMPAT_SOURCES = [
-  CHECK,
-  COMPAT("chromium"),
-  COMPAT("firefox"),
-  COMPAT("webkit"),
-];
-/** The engine a compat source runs on, with or without its verdict. */
-const SOURCE_ENGINE = {
-  [CHECK]: ENGINE_IDS.node,
-  [COMPAT("chromium")]: ENGINE_IDS.chromium,
-  [COMPAT("firefox")]: ENGINE_IDS.firefox,
-  [COMPAT("webkit")]: ENGINE_IDS.webkit,
-};
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
 const LEAP_IANA = "IANA leap-seconds.list";
 const LEAP_IANA_URL = "https://data.iana.org/time-zones/tzdb/leap-seconds.list";
 const LEAP_IERS_URL = "https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat";
-/** The native-suite legs, in the order their findings and summary rows list them. */
-const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"];
-/** @param {string} leg */
-const NATIVE = (leg) => `native-suite-${leg}`;
-const SWAP = (leg) => `temporal-polyfill-swap-${leg}`;
 const SWAP_NODE = SWAP("node");
 const SWAP_RESEARCH_URL =
   "https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md";
@@ -138,7 +138,7 @@ const FORCED_ROW = {
  *   workarounds: Workaround[], forced?: { removable: string },
  * }} CompatCheckVerdict
  * @typedef {{
- *   source: string, status: "ran", leg: "chromium" | "firefox" | "webkit", engine: string,
+ *   source: string, status: "ran", leg: "chromium" | "firefox" | "webkit" | "webkit-macos", engine: string,
  *   engineId: "v8" | "firefox" | "webkit",
  *   runtime: { polyfill: string, node: string, playwright: string },
  *   counts: CompatCounts, workarounds: Workaround[],
@@ -167,7 +167,7 @@ const FORCED_ROW = {
  *   after they ran
  * @typedef {{ file: string, test: string, message: string }} NativeFailure
  * @typedef {{
- *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
+ *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit" | "webkit-macos", engine: string,
  *   runtime: { node: string, vitest: string, playwright: string | null },
  *   counts: { files: number, tests: number, passed: number, skipped: number, tagged: number, untagged: number,
  *             hostTagged: number, hostUntagged: number, controlOnly: number, staleTags: number },
@@ -319,7 +319,7 @@ function forceNativeFailure(copy, skipped) {
  * @param {{ flag: string, reason: string }[]} skipped
  */
 function forceSwapReady(copy, skipped) {
-  const first = NATIVE_LEGS.find((leg) => copy[SWAP(leg)]?.status === "ran");
+  const first = SWAP_LEGS.find((leg) => copy[SWAP(leg)]?.status === "ran");
   if (first) {
     copy[SWAP(first)].forced = { swapReady: true };
     return;
@@ -702,12 +702,12 @@ function mismatchFinding(oracle, isForced, runUrl) {
 }
 
 /**
- * "Node 26" or "Chromium 153" from a verdict's engine line; the leg name when the line has no
- * leading name and version.
+ * "Node 26", "Chromium 153" or "macOS WebKit 26" from a verdict's engine line: every word before
+ * the first version. The leg name when the line has no leading name and version.
  * @param {NativeSuiteVerdict} v
  */
 function legLabel(v) {
-  const m = /^(\w+) v?(\d+)/.exec(v.engine);
+  const m = /^(.+?) v?(\d+)/.exec(v.engine);
   return m ? `${m[1]} ${m[2]}` : v.leg;
 }
 
@@ -1208,7 +1208,7 @@ function swapRuntimeName(leg, v) {
  * @returns {string[]}
  */
 function swapParagraphs(verdicts, version, ready) {
-  const rows = NATIVE_LEGS.map((leg) => {
+  const rows = SWAP_LEGS.map((leg) => {
     const v = verdictOf(verdicts, SWAP(leg));
     if (v?.status !== "ran") {
       return [SWAP_LEG_NAMES[leg], "did not run", "", "", ""];
@@ -1276,12 +1276,12 @@ function swapParagraphs(verdicts, version, ready) {
  */
 function swapFindings(verdicts, runUrl) {
   const result = swapReady(verdicts);
-  const forcedBy = NATIVE_LEGS.some(
+  const forcedBy = SWAP_LEGS.some(
     (leg) => /** @type {any} */ (verdictOf(verdicts, SWAP(leg)))?.forced,
   );
   if (!result.ready && !forcedBy) return [];
   const firstRan = /** @type {SwapVerdict | undefined} */ (
-    NATIVE_LEGS.map((leg) => verdictOf(verdicts, SWAP(leg))).find(
+    SWAP_LEGS.map((leg) => verdictOf(verdicts, SWAP(leg))).find(
       (v) => v?.status === "ran",
     )
   );

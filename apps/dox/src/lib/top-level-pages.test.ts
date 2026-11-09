@@ -30,10 +30,12 @@ describe("topLevelPages", () => {
       "../content/docs/index.mdx": "x",
       "../content/docs/why-gmt.mdx": "w",
       "../content/docs/core-rules.mdx": "c",
+      "../content/docs/browser-support.mdx": "b",
     };
     expect(topLevelPages(raw)).toEqual([
       { slug: "index", source: "x" },
       { slug: "install", source: "i" },
+      { slug: "browser-support", source: "b" },
       { slug: "core-rules", source: "c" },
       { slug: "why-gmt", source: "w" },
       { slug: "alpha", source: "a" },
