@@ -25,6 +25,7 @@ import {
 import {
   INSIDE_SECOND_TEXT,
   NO_RESULT_TEXT,
+  PAST_9999_FOOTNOTE,
   SENTENCES,
   STACK_PRESETS,
   secondsText,
@@ -275,6 +276,32 @@ describe("what a reading says in place of an answer", () => {
     await enter(w, "");
     expect(pillIsShown()).toBe(false);
     PLATE_CAPTIONS.forEach((c) => expect(plateValue(c)).toBe(NO_RESULT_TEXT));
+  });
+
+  it("shows no result in a row the library wrote no label for, and says why", async () => {
+    const value = "9999-12-31T23:57:00Z";
+    const w = await open({ value });
+    expect(pillIsShown()).toBe(false);
+    expect(cellsInColumn(table(), "Label").map(shown)).toEqual([
+      value,
+      lib.toTAI(value),
+      lib.toTT(value),
+      NO_RESULT_TEXT,
+    ]);
+    expect(shown(cellsInColumn(table(), "Back to UTC")[3]!)).toBe(
+      NO_RESULT_TEXT,
+    );
+    expect(shown(w.root)).toContain(PAST_9999_FOOTNOTE);
+    await enter(w, "2026-01-01T00:00:00Z");
+    expect(shown(w.root)).not.toContain(PAST_9999_FOOTNOTE);
+    await expectNoAxeViolations(w.root);
+  });
+
+  it("gives the year-9999 sentence for a valid instant with no TT label", async () => {
+    const w = await open();
+    await enter(w, "9999-12-31T23:59:59Z");
+    expect(pillIsShown()).toBe(true);
+    expect(status()).toHaveTextContent(SENTENCES.past9999);
   });
 
   it("names the reader's own scale", async () => {

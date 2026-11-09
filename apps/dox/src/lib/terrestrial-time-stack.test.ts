@@ -2,9 +2,11 @@ import { lib } from "~/test/timescale-lib";
 import {
   CUSTOM_PRESET_ID,
   DEFAULT_PRESET,
+  INSIDE_FOOTNOTE,
   INSIDE_SECOND_TEXT,
   MAX_VALUE_LENGTH,
   NO_RESULT_TEXT,
+  PAST_9999_FOOTNOTE,
   SENTENCES,
   SLIDER_MAX,
   SLIDER_MIN,
@@ -27,6 +29,7 @@ import {
   yearOf,
 } from "./terrestrial-time-stack";
 import { durationSecondsText } from "./gnss-widgets";
+import { INTEGER_UTC_FROM } from "./timescale-widgets";
 
 const preset = (id: string) => STACK_PRESETS.find((p) => p.id === id)!;
 const readPreset = (id: string) => readStack(lib, preset(id).state);
@@ -46,20 +49,24 @@ describe("routing the typed value", () => {
     expect(read("2026-01-01T01:00:00+01:00").utc).toBe("2026-01-01T00:00:00Z");
   });
 
-  it.each([
-    ["TAI", "fromTAI"],
-    ["TT", "fromTT"],
-    ["TCG", "fromTCG"],
-  ])("sends a %s label to %s and records that call first", (token, fn) => {
-    const base = read("2026-01-01T00:00:00Z");
-    const label = base.rows.find((r) => r.scale === token)!.label;
-    const r = read(label);
-    expect(r.scale).toBe(token);
-    expect(r.calls[0]!.fn).toBe(fn);
-    expect(r.calls[0]!.args).toEqual([label]);
-    expect(r.utc).toBe("2026-01-01T00:00:00Z");
-    expect(r.rows.find((x) => x.yours)!.scale).toBe(token);
-  });
+  it.each`
+    token    | fn
+    ${"TAI"} | ${"fromTAI"}
+    ${"TT"}  | ${"fromTT"}
+    ${"TCG"} | ${"fromTCG"}
+  `(
+    "sends a $token label to $fn and records that call first",
+    ({ token, fn }: { token: string; fn: string }) => {
+      const base = read("2026-01-01T00:00:00Z");
+      const label = base.rows.find((r) => r.scale === token)!.label;
+      const r = read(label);
+      expect(r.scale).toBe(token);
+      expect(r.calls[0]!.fn).toBe(fn);
+      expect(r.calls[0]!.args).toEqual([label]);
+      expect(r.utc).toBe("2026-01-01T00:00:00Z");
+      expect(r.rows.find((x) => x.yours)!.scale).toBe(token);
+    },
+  );
 
   it("makes the calls once each, in order", () => {
     const r = read("2026-01-01T00:00:00Z");
@@ -86,22 +93,59 @@ describe("routing the typed value", () => {
 });
 
 describe("the sentences", () => {
-  it.each([
-    ["2026-01-01T00:00:00 UTC", SENTENCES.unknownToken],
-    ["2026-01-01T00:00:00 GPS", SENTENCES.unknownToken],
-    ["2026-01-01T00:00:00Z extra words", SENTENCES.notAnInstant],
-    ["2026-01-01T00:00:00", SENTENCES.notAnInstant],
-    ["not a time", SENTENCES.notAnInstant],
-    ["2017-12-31T23:59:60Z", SENTENCES.noLeapSecond],
-    ["1971-12-31T23:59:59Z", SENTENCES.before1972],
-    ["2026-13-01T00:00:00 TT", SENTENCES.notOnScale],
-    ["garbage TT", SENTENCES.notOnScale],
-  ])("%s says its sentence", (value, sentence) => {
-    const r = read(value);
-    expect(r.status).toBe("sentinel");
-    expect(r.failure).toBe(sentence);
-    expect(r.rows.every((row) => row.label === "")).toBe(true);
-    expect(r.plates.every((p) => p.value === null)).toBe(true);
+  it.each`
+    value                                  | sentence
+    ${"2026-01-01T00:00:00 UTC"}           | ${SENTENCES.unknownToken}
+    ${"2026-01-01T00:00:00 GPS"}           | ${SENTENCES.unknownToken}
+    ${"2026-01-01T00:00:00Z extra words"}  | ${SENTENCES.notAnInstant}
+    ${"2026-01-01T00:00:00"}               | ${SENTENCES.notAnInstant}
+    ${"not a time"}                        | ${SENTENCES.notAnInstant}
+    ${"2017-12-31T23:59:60Z"}              | ${SENTENCES.noLeapSecond}
+    ${"1971-12-31T23:59:59Z"}              | ${SENTENCES.before1972}
+    ${"9999-12-31T23:59:59Z"}              | ${SENTENCES.past9999}
+    ${"9999-12-31T23:00:00-05:00"}         | ${SENTENCES.past9999}
+    ${"1972-01-01T00:00:00 TT"}            | ${SENTENCES.before1972}
+    ${"1972-01-01T00:00:09.999999999 TAI"} | ${SENTENCES.before1972}
+    ${"1972-01-01T00:00:42 TCG"}           | ${SENTENCES.before1972}
+    ${"0001-01-01T00:00:00 TT"}            | ${SENTENCES.before1972}
+    ${"2026-13-01T00:00:00 TT"}            | ${SENTENCES.notOnScale}
+    ${"1960-13-01T00:00:00 TT"}            | ${SENTENCES.notOnScale}
+    ${"1971-06-30T23:59:60 TAI"}           | ${SENTENCES.notOnScale}
+    ${"garbage TT"}                        | ${SENTENCES.notOnScale}
+  `(
+    "$value says its sentence",
+    ({ value, sentence }: { value: string; sentence: string }) => {
+      const r = read(value);
+      expect(r.status).toBe("sentinel");
+      expect(r.failure).toBe(sentence);
+      expect(r.rows.every((row) => row.label === "")).toBe(true);
+      expect(r.plates.every((p) => p.value === null)).toBe(true);
+    },
+  );
+
+  it("the last instant of 9999 is a valid UTC instant with no TT label", () => {
+    const value = "9999-12-31T23:59:59Z";
+    expect(lib.isValidInstant(value)).toBe(true);
+    expect(lib.taiMinusUtc(value)).not.toBeNull();
+    expect(lib.toTT(value)).toBe("");
+  });
+
+  it("reads each scale's label for the first instant of integer UTC", () => {
+    for (const label of [
+      lib.toTAI(INTEGER_UTC_FROM),
+      lib.toTT(INTEGER_UTC_FROM),
+      lib.toTCG(INTEGER_UTC_FROM),
+    ]) {
+      const r = read(label);
+      expect(r.status, label).toBe("ok");
+      expect(r.utc, label).toBe(INTEGER_UTC_FROM);
+    }
+  });
+
+  it("a label before 1972 keeps only the call it made", () => {
+    expect(read("1972-01-01T00:00:00 TT").calls.map((c) => c.fn)).toEqual([
+      "fromTT",
+    ]);
   });
 
   it("a missing offset is named before a leap second", () => {
@@ -188,9 +232,14 @@ describe("each preset", () => {
     expect(r.failure).toBe(SENTENCES.before1972);
   });
 
-  it.each(["utc-2026", "epoch", "far-future"])(
-    "%s: steps + constant + drift is TT-label-in-TCG minus UTC",
-    (id) => {
+  it.each`
+    id
+    ${"utc-2026"}
+    ${"epoch"}
+    ${"far-future"}
+  `(
+    "$id: steps + constant + drift is TT-label-in-TCG minus UTC",
+    ({ id }: { id: string }) => {
       const r = readPreset(id);
       const tcg = dt(r.rows[3]!.label);
       const whole = durationSecondsText(
@@ -203,6 +252,44 @@ describe("each preset", () => {
       expect(Math.abs(sum - Number(whole))).toBeLessThan(1e-9);
     },
   );
+});
+
+describe("the end of 9999", () => {
+  it("an ok reading near the end has no TCG label, and the footnote says why", () => {
+    const value = "9999-12-31T23:57:00Z";
+    expect(lib.toTT(value)).not.toBe("");
+    expect(lib.toTCG(value)).toBe("");
+    const r = read(value);
+    expect(r.status).toBe("ok");
+    expect(r.rows.map((row) => row.label === "")).toEqual([
+      false,
+      false,
+      false,
+      true,
+    ]);
+    expect(r.rows[3]!.back).toBe("");
+    expect(r.segments.drift.kind).toBe("seconds");
+    expect(r.footnote).toBe(PAST_9999_FOOTNOTE);
+  });
+
+  it("a TAI label in the last seconds of 9999 has neither a TT nor a TCG label", () => {
+    const r = read("9999-12-31T23:59:59 TAI");
+    expect(r.status).toBe("ok");
+    expect(r.rows.map((row) => row.label === "")).toEqual([
+      false,
+      false,
+      true,
+      true,
+    ]);
+    expect(r.gap.kind).toBe("none");
+    expect(r.footnote).toBe(PAST_9999_FOOTNOTE);
+  });
+
+  it("no footnote while every label is written, and the inside one in a leap second", () => {
+    expect(readPreset("far-future").footnote).toBe("");
+    expect(readPreset("utc-2026").footnote).toBe("");
+    expect(readPreset("inside-leap-second").footnote).toBe(INSIDE_FOOTNOTE);
+  });
 });
 
 describe("the drift lane", () => {
@@ -291,6 +378,12 @@ describe("seed and permalink", () => {
     expect(isSeeded({ value: "" })).toBe(false);
     expect(isSeeded({ value: 3 })).toBe(false);
     expect(isSeeded(undefined)).toBe(false);
+    expect(isSeeded({ preset: "epoch" })).toBe(true);
+    expect(isSeeded({ value: "", preset: "epoch" })).toBe(true);
+    expect(isSeeded({ value: "", preset: "" })).toBe(false);
+    expect(readArgs({ value: "", preset: "epoch" })).toEqual(
+      preset("epoch").state,
+    );
     expect(readArgs({ value: 3 })).toEqual(DEFAULT_PRESET.state);
     expect(readArgs({ preset: "epoch" })).toEqual(preset("epoch").state);
     expect(readArgs({ value: "x".repeat(100) }).value).toHaveLength(

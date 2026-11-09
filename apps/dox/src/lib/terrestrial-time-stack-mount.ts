@@ -57,7 +57,7 @@ import type { EdiCall } from "./edi-widgets";
 import {
   CUSTOM_PRESET_ID,
   DEFAULT_PRESET,
-  INSIDE_FOOTNOTE,
+  FOOTNOTES,
   INSIDE_SECOND_TEXT,
   MAX_VALUE_LENGTH,
   NO_RESULT_TEXT,
@@ -284,14 +284,14 @@ interface ScaleCells extends Record<(typeof TABLE_COLUMNS)[number], SafeHtml> {}
 function tableOf(read: StackRead | null, samples: Samples): SafeHtml {
   const rows = (read?.rows ?? emptyRead().rows).map((row): ScaleCells => {
     const lost = read === null || read.status !== "ok";
+    // An ok reading near the end of 9999 can still have a row the library wrote no label for.
+    const shown = (text: string): string =>
+      lost || text === "" ? NO_RESULT_TEXT : text;
     return {
       Scale: scaleCell(row),
       Call: callCell(row, samples),
-      Label: heldInstant(lost ? NO_RESULT_TEXT : row.label, samples.labels),
-      "Back to UTC": heldInstant(
-        lost ? NO_RESULT_TEXT : row.back,
-        samples.backs,
-      ),
+      Label: heldInstant(shown(row.label), samples.labels),
+      "Back to UTC": heldInstant(shown(row.back), samples.backs),
     };
   });
   return table({
@@ -323,13 +323,9 @@ function signalOf(read: StackRead | null): SafeHtml {
 
 function footnoteOf(read: StackRead | null): SafeHtml {
   const text = read?.footnote ?? "";
-  return hold(
-    html`<span>${text === "" ? NBSP : text}</span>`,
-    [INSIDE_FOOTNOTE],
-    {
-      ghostClass: styles.note!,
-    },
-  );
+  return hold(html`<span>${text === "" ? NBSP : text}</span>`, [...FOOTNOTES], {
+    ghostClass: styles.note!,
+  });
 }
 
 function codeOf(read: StackRead | null, samples: Samples): SafeHtml {

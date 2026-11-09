@@ -32,8 +32,14 @@ import { INTEGER_UTC_FROM, lacksOffset } from "./timescale-widgets";
 
 export { BEFORE_1972_NOTE, INSIDE_SECOND_TEXT, NO_RESULT_TEXT };
 
-/** The one footnote a reading can carry. */
+/** The footnote for a reading inside an inserted second. */
 export const INSIDE_FOOTNOTE = `${INSIDE_SECOND_TEXT}: UTC has no instant to count the gap from.`;
+
+/** The footnote for a reading near the end of 9999, where a row has no label. */
+export const PAST_9999_FOOTNOTE = `${NO_RESULT_TEXT}: the label on that scale would fall after 9999, the last year the library writes with four digits.`;
+
+/** Every footnote a reading can carry. A reading carries one at most. */
+export const FOOTNOTES = [INSIDE_FOOTNOTE, PAST_9999_FOOTNOTE] as const;
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -85,7 +91,7 @@ export const GAP_NOTE = "an ephemeris's time argument is this far ahead of UTC";
 const EMPTY_TEXT =
   "Type a time on UTC, TAI, TT or TCG, or pick a preset, to see the stack.";
 
-/** The five sentences the tool says in place of an answer. */
+/** The six sentences the tool says in place of an answer. */
 export const SENTENCES = {
   unknownToken: `The scale after the space is not one of ${TOKEN_LIST}.`,
   noLeapSecond: "No leap second was inserted at the end of that day.",
@@ -95,6 +101,8 @@ export const SENTENCES = {
     "The library does not read this as a time on that scale: check the form of the label.",
   notAnInstant:
     "That is not a UTC instant: write it like 2026-01-01T00:00:00Z, or add a scale after a space, such as 2026-01-01T00:01:09.184 TT.",
+  past9999:
+    "The TT label of that instant would fall after 9999, the last year the library writes with four digits.",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -191,12 +199,11 @@ export function matchPreset(state: StackState): string {
   return hit ? hit.id : CUSTOM_PRESET_ID;
 }
 
-/** Whether `args` carries anything the widget can seed from. */
+/** Whether `args` carries a value or a preset id, the two things `readArgs` seeds from. */
 export function isSeeded(args: TerrestrialTimeStackArgs | undefined): boolean {
+  const filled = (v: unknown): boolean => typeof v === "string" && v !== "";
   return (
-    args !== undefined &&
-    (typeof args["value"] === "string" || typeof args["preset"] === "string") &&
-    (args["value"] ?? args["preset"]) !== ""
+    args !== undefined && (filled(args["value"]) || filled(args["preset"]))
   );
 }
 
@@ -412,20 +419,51 @@ const WRITE = {
   TCG: "toTCG",
 } as const satisfies Record<ScaleToken, keyof TimescaleLib>;
 
-/** The sentence for a value the library did not read as UTC. */
+/** The date-time part of a label, written with `Z` for `diffUtcAsDuration`. */
+const asUtc = (label: string): string => `${label.split(" ")[0] ?? ""}Z`;
+
+/**
+ * The sentence for a value the library did not read as UTC. A valid instant fails for one of
+ * two reasons: it is before 1972, or its TT label would fall after 9999.
+ */
 function whyNotUtc(lib: TimescaleLib, value: string): string {
   if (lacksOffset(lib, value)) return SENTENCES.notAnInstant;
   if (lib.hasSecond60(value) && !lib.isLeapSecond(value)) {
     return SENTENCES.noLeapSecond;
   }
-  if (lib.isValidInstant(value) && lib.taiMinusUtc(value) === null) {
-    return SENTENCES.before1972;
+  if (lib.isValidInstant(value)) {
+    if (lib.taiMinusUtc(value) === null) return SENTENCES.before1972;
+    if (lib.toTT(value) === "") return SENTENCES.past9999;
   }
   return SENTENCES.notAnInstant;
 }
 
-/** The date-time part of a label, written with `Z` for `diffUtcAsDuration`. */
-const asUtc = (label: string): string => `${label.split(" ")[0] ?? ""}Z`;
+/**
+ * Whether a label is dated before its scale's label for the first instant of integer UTC. The
+ * library writes that label and measures the gap; a label it cannot read is not before it.
+ */
+function beforeIntegerUtc(
+  lib: TimescaleLib,
+  token: ScaleToken,
+  label: string,
+): boolean {
+  const start = lib[WRITE[token]](INTEGER_UTC_FROM);
+  const seconds = durationSecondsText(
+    lib.diffUtcAsDuration(asUtc(label), asUtc(start), "seconds"),
+  );
+  return seconds !== null && Number(seconds) > 0;
+}
+
+/** The sentence for a label whose `from` call gave no UTC instant. */
+function whyNotOnScale(
+  lib: TimescaleLib,
+  token: ScaleToken,
+  label: string,
+): string {
+  return beforeIntegerUtc(lib, token, label)
+    ? SENTENCES.before1972
+    : SENTENCES.notOnScale;
+}
 
 /**
  * Read the stack's one value with the library. The value is trimmed, and the scale it is on is
@@ -456,7 +494,8 @@ export function readStack(lib: TimescaleLib, state: StackState): StackRead {
     calls.push(call);
     utc = call.result as string;
     if (utc === "") {
-      return blank(state, "sentinel", SENTENCES.notOnScale, scale, calls);
+      const why = whyNotOnScale(lib, parts.token, value);
+      return blank(state, "sentinel", why, scale, calls);
     }
   } else {
     // The library's own `Z` spelling of what was typed, asked without a recorded call.
@@ -539,6 +578,8 @@ export function readStack(lib: TimescaleLib, state: StackState): StackRead {
     };
   });
 
+  // Near the end of 9999 a label can fall past the four-digit limit: TCG first, then TT.
+  const pastEnd = rows.some((row) => row.label === "");
   const segments = { steps, constant, drift };
   return {
     state,
@@ -551,7 +592,7 @@ export function readStack(lib: TimescaleLib, state: StackState): StackRead {
     segments,
     gap,
     plates: platesOf({ gap, segments }),
-    footnote: inside ? INSIDE_FOOTNOTE : "",
+    footnote: inside ? INSIDE_FOOTNOTE : pastEnd ? PAST_9999_FOOTNOTE : "",
     calls,
   };
 }

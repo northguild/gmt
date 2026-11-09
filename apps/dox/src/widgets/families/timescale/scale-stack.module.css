@@ -213,6 +213,7 @@
   padding: 1px var(--gmt-space-1);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
   background: var(--gmt-surface);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
