@@ -1404,9 +1404,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     each cell naming its column from `data-col`. The row cards hold the Offset select, which needs
     about 15.5rem, so the rowset is two columns from 31rem of pane and four from 63.5rem.
   - **In a hold cell the NO SIGNAL chip wraps at its space.** `.cellHold .lost` is
-    `inline-block`, `max-inline-size: 100%` and `white-space: normal`, so the chip fits the 300px
-    value column the sizer sets and never overflows the table into a scrollbar that moves the page
-    below it (WebKit, 300px root). Two lines are no taller than the sizer. `.live` stays stretched.
+    `inline-block`, `max-inline-size: 100%` and `white-space: normal`, so the chip fits the value
+    column the sizer sets (118px at a 300px root) and never overflows the table into a scrollbar
+    that moves the page below it (WebKit). Two lines are no taller than the sizer. `.live` stays
+    stretched.
   - **One local-day track, a handle per row.** The track is the local calendar day of the
     first row that holds a valid time, 00:00 to 24:00 on the "Printed in" clock. Each row
     has its own lane and its own handle, a `gmt-handle`
@@ -2768,10 +2769,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
   of each frame's last `ResizeObserver` callback, before paint; the post-frame reading is kept as
   `rawMaxJump`, reported and never asserted, because a mount task between a frame and its sample can
   show a height that was pinned back before anything was drawn), every `.gmt-grow` at rest, a final height
-  equal to the reduced-motion run's, and that each interaction it asks for (the select, the drag) actually
-  happened. A tool's `drag` entry names the handle or range it drags, and for a custom handle the
-  script reads the handle's parent as its track. The Timetable Reader's entry is `handle-1`, whose
-  parent, its lane, is as wide as the track.
+  equal to the reduced-motion run's (the interaction pass reads it once the root has held its height
+  for 500 ms with nothing growing, capped at 8 s and reported as `not-at-rest`, because the eased
+  growth lasts longer on slow frames and a fixed wait read it mid-ease), and that each interaction it
+  asks for (the select, the drag) actually happened. A tool's `drag` entry names the handle or range
+  it drags, and for a custom handle the script reads the handle's parent as its track. The
+  Timetable Reader's entry is `handle-1`, whose parent, its lane, is as wide as the track.
   A run that measured nothing, skipped an interaction, or crashed fails. Both gates are
   diagnostics: a few px of browser difference is read, not chased. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
   in the Departure Board, Punctuality Board, ETA Drift Chart, Timetable Reader, Free Time Ledger,
@@ -2885,6 +2888,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     edge by more than 1 px. `contrast-measure` is
     Chromium only. It clips a glyph rect to each scroller's client (padding) box, never its border
     box, so a scroller's border or classic scrollbar is never scored as the background behind a glyph.
+    A scroller with no client box (an inline element) clips to its border box, and one with no box
+    at all is skipped, so no glyph is dropped.
   - **Selection.** A changed file selects the pages whose import closure holds it (`.mdx`, `.astro`,
     `.ts`, `.tsx`, `.mjs`, `.css`; relative paths and the `~/` alias); a change under
     `packages/gmt/src/<ns>/<module>/` selects the pages that import
