@@ -1,7 +1,7 @@
 import { parse as parseYaml } from "yaml";
 import { industryLabels } from "./industry-tags";
 import { renderMdxComponents } from "./mdx-jsx";
-import { withBase } from "./site";
+import { pageHref, withBase } from "./site";
 
 /**
  * Pure helpers for converting MDX/Markdown pages to clean Markdown output.
@@ -202,28 +202,32 @@ export function stripMdx(
   return prefixMarkdownLinks(md);
 }
 
-const rootAbsolute = (url: string) =>
-  url.startsWith("//") ? url : withBase(url);
+/** A link: prefixed, and given the trailing slash when it names a page. `//host` is left alone. */
+const linkUrl = (url: string) => (url.startsWith("//") ? url : pageHref(url));
+
+/** A `src`: prefixed only. `//host` is left alone. */
+const srcUrl = (url: string) => (url.startsWith("//") ? url : withBase(url));
 
 /** Prefix the links in one stretch of prose that holds no code span. */
 function prefixProse(part: string): string {
   return (
     part
-      // Inline links and images: `](/x "title")`, `](</x>)`. A title after the URL is left as written.
+      // Inline links and images: `](/x "title")`, `](</x>)`. A title after the URL is left as
+      // written. An image keeps its form: its last segment has a dot, so `pageHref` adds no slash.
       .replace(
         /\]\((<?)(\/[^)\s>]*)/g,
-        (_m, open: string, url: string) => `](${open}${rootAbsolute(url)}`,
+        (_m, open: string, url: string) => `](${open}${linkUrl(url)}`,
       )
       // Reference definitions at line start: `[id]: /x`, `[id]: </x>`.
       .replace(
         /^([ \t]{0,3}\[[^\]\n]+\]:[ \t]+<?)(\/[^\s>]*)/gm,
-        (_m, head: string, url: string) => `${head}${rootAbsolute(url)}`,
+        (_m, head: string, url: string) => `${head}${linkUrl(url)}`,
       )
       // Raw HTML left in the text.
       .replace(
         /\b(href|src)=(["'])(\/[^"']*)\2/g,
         (_m, attr: string, quote: string, url: string) =>
-          `${attr}=${quote}${rootAbsolute(url)}${quote}`,
+          `${attr}=${quote}${attr === "href" ? linkUrl(url) : srcUrl(url)}${quote}`,
       )
   );
 }
@@ -231,8 +235,9 @@ function prefixProse(part: string): string {
 /**
  * Put the site base in front of every root-absolute link in Markdown text, so the `.md` twins and
  * `llms*.txt` link to `/gmt/…` like the rendered pages do (the rehype plugin does that for HTML;
- * both call `withBase`). Code in fences and inline code spans is never rewritten; `//host`, `#…`
- * and `https:` links are left alone.
+ * both call `pageHref` for a link and `withBase` for a `src`). A link to a page also gets the
+ * trailing slash the static host serves it at. Code in fences and inline code spans is never
+ * rewritten; `//host`, `#…` and `https:` links are left alone.
  */
 export function prefixMarkdownLinks(md: string): string {
   return outsideFences(md, (part) => {

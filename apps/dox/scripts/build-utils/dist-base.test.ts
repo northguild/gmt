@@ -10,6 +10,8 @@ import {
   badUrlsInHtml,
   baseHelperNames,
   LANDING,
+  pageLinksWithoutSlash,
+  pageLinksWithoutSlashInMarkdown,
 } from "./dist-base";
 
 const values = (found: Array<{ value: string }>) => found.map((f) => f.value);
@@ -135,6 +137,62 @@ describe("badUrlsInHtml", () => {
     expect(
       values(badUrlsInHtml('<a title="a > b" href="/install/">x</a>')),
     ).toEqual(["/install/"]);
+  });
+});
+
+describe("pageLinksWithoutSlash", () => {
+  it("passes page links with the slash, files, hashes and other hosts", () => {
+    const html = `<a href="/gmt/">home</a> <a href="/gmt/reference/x/#opts">x</a>
+      <a href="/gmt/tools/x/?w=1">t</a> <a href="/gmt/llms.txt">l</a>
+      <a href="/gmt/reference/x.md">md</a> <a href="#top">h</a>
+      <a href="https://northguild.dev/gmt/install/">abs</a> <a href="https://example.com/a">ext</a>
+      <a href="https://northguild.dev/">landing</a> <link rel="canonical" href="/gmt/x">`;
+    expect(pageLinksWithoutSlash(html)).toEqual([]);
+  });
+
+  it("finds a page link without the slash, root-absolute or absolute, with hash or query", () => {
+    const html = `<a class="c" href="/gmt/reference/types/Overflow">o</a>
+      <a href="/gmt/reference/x#opts">x</a> <area href='/gmt/tools/x?w=1'>
+      <a href="https://northguild.dev/gmt/install">abs</a> <a href="/gmt">bare</a>`;
+    expect(values(pageLinksWithoutSlash(html))).toEqual([
+      "/gmt/reference/types/Overflow",
+      "/gmt/reference/x#opts",
+      "/gmt/tools/x?w=1",
+      "https://northguild.dev/gmt/install",
+      "/gmt",
+    ]);
+  });
+});
+
+describe("pageLinksWithoutSlashInMarkdown", () => {
+  it("passes page links with the slash, files, images, code and other hosts", () => {
+    const md = [
+      "[a](/gmt/) [b](/gmt/reference/x/#opts) [c](</gmt/tools/x/?w=1>)",
+      "[l](/gmt/llms.txt) [m](https://northguild.dev/gmt/reference/x.md) ![i](/gmt/img/x.png)",
+      '<img src="/gmt/og/card"> [e](https://example.com/a) [h](#top)',
+      "Write `[t](/gmt/x)` to link. See https://northguild.dev/gmt/install/.",
+      "[r]: /gmt/install/",
+      "```md",
+      "[f](/gmt/x)",
+      "```",
+    ].join("\n");
+    expect(pageLinksWithoutSlashInMarkdown(md)).toEqual([]);
+  });
+
+  it("finds a page link without the slash in each Markdown form", () => {
+    const md = [
+      '[a](/gmt/reference/x) [b](</gmt/y#h> "t")',
+      "[r]: https://northguild.dev/gmt/z?q=1",
+      '<a href="/gmt/w">w</a>',
+      "See https://northguild.dev/gmt/install.",
+    ].join("\n");
+    expect(values(pageLinksWithoutSlashInMarkdown(md))).toEqual([
+      "/gmt/reference/x",
+      "/gmt/y#h",
+      "https://northguild.dev/gmt/z?q=1",
+      "/gmt/w",
+      "https://northguild.dev/gmt/install",
+    ]);
   });
 });
 
