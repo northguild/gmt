@@ -2861,8 +2861,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
-    pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). The
-    runner appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
+    pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). Its
+    limit is 45 minutes: a typical run takes 20 to 27, and a diff that changes a gate script runs
+    every gate on the sample pages, which reached 30 and was cancelled with no output. The runner
+    appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
     (`gates/step-summary.mjs`); a failed job uploads `apps/dox/.gates/` (without `vite-cache/`) as the
     `dox-gates-<run id>` artifact. It is **advisory**: the owner makes it a required check after about
     10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` or `pnpm-lock.yaml` skips it;
