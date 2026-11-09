@@ -13,7 +13,8 @@ name: Temporal oracle
 # have filed in the job summary and files nothing.
 #
 # The native-suite job runs the whole packages/gmt suite on native Temporal in Node 26,
-# Chromium, Firefox and WebKit, one matrix leg each. A failing leg means an untagged failure of either
+# Chromium, Firefox, WebKit on Linux and WebKit on macOS (Apple's ICU and time zone data, the data
+# Safari uses), one matrix leg each. A failing leg means an untagged failure of either
 # kind: a divergence (fails natively, passes on the polyfill in the same runtime) or a host
 # failure (fails on both) that no host group covers. The report job files it as an issue, one per
 # engine for divergences.
@@ -122,12 +123,19 @@ jobs:
 
   native-suite:
     name: Native Temporal suite (${{ matrix.leg }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        leg: [node, chromium, firefox, webkit]
+        # macos-latest is free because the repository is public. It is a moving label on purpose:
+        # the webkit-macos leg tests the data Apple ships now, and its engine line names the macOS.
+        include:
+          - { leg: node, os: ubuntu-latest }
+          - { leg: chromium, browser: chromium, os: ubuntu-latest }
+          - { leg: firefox, browser: firefox, os: ubuntu-latest }
+          - { leg: webkit, browser: webkit, os: ubuntu-latest }
+          - { leg: webkit-macos, browser: webkit, os: macos-latest }
     steps:
       - uses: actions/checkout@v7
 
@@ -142,11 +150,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
 
-      - name: Install Playwright ${{ matrix.leg }}
+      - name: Install Playwright ${{ matrix.browser }}
         if: matrix.leg != 'node'
         env:
-          LEG: ${{ matrix.leg }}
-        run: pnpm --filter @gmt/dox exec playwright install --with-deps "$LEG"
+          BROWSER: ${{ matrix.browser }}
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            pnpm --filter @gmt/dox exec playwright install --with-deps "$BROWSER"
+          else
+            pnpm --filter @gmt/dox exec playwright install "$BROWSER"
+          fi
+
+      # Shows which ICU Playwright's JavaScriptCore links, so each run's log names the data source.
+      # It never fails the job.
+      - name: Show the ICU WebKit links
+        if: runner.os == 'macOS'
+        run: |
+          find ~/Library/Caches/ms-playwright -path '*JavaScriptCore.framework/Versions/A/JavaScriptCore' \
+            -exec otool -L {} \; | grep -iE 'icu|:$' || echo "JavaScriptCore not found or no ICU linked"
 
       - name: Build
         if: matrix.leg != 'node'
@@ -158,14 +179,25 @@ jobs:
         env:
           LEG: ${{ matrix.leg }}
         run: |
+          avail_mib() { df -Pk "${TMPDIR:-/tmp}" | awk 'NR == 2 { print int($4 / 1024) }'; }
+          mem_mib() {
+            if command -v free >/dev/null 2>&1; then
+              free -m | awk '/^Mem:/ { print $7 }'
+            else
+              vm_stat | awk '
+                /page size of/ { size = $8 }
+                /^Pages (free|inactive|speculative):/ { gsub(/\./, "", $NF); pages += $NF }
+                END { print int(pages * size / 1048576) }'
+            fi
+          }
           if [ "$LEG" != node ]; then
             (
               while true; do
                 printf 'resources %s: %s MiB free under %s, %s MiB memory available\n' \
                   "$(date -u +%H:%M:%S)" \
-                  "$(($(df --output=avail -k "${TMPDIR:-/tmp}" | tail -1) / 1024))" \
+                  "$(avail_mib)" \
                   "${TMPDIR:-/tmp}" \
-                  "$(free -m | awk '/^Mem:/ { print $7 }')"
+                  "$(mem_mib)"
                 sleep 15
               done
             ) &

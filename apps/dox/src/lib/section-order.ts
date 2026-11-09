@@ -14,12 +14,13 @@ export const START_HERE = [
   { slug: "why-gmt" },
 ] as const satisfies readonly { slug: string; label?: string }[];
 
-/** The Migrate group: the overview, the pages that weigh GMT against the others, one page per library, then the behaviour matrix. */
+/** The Migrate group: the overview, the pages that weigh GMT against the others, the weekly engine runs, one page per library, then the behaviour matrix. */
 export const MIGRATE = [
   { slug: "migrate", label: "Overview" },
   { slug: "compare", label: "GMT vs. the others" },
   { slug: "bundle-size" },
   { slug: "upstream" },
+  { slug: "native-engines" },
   { slug: "migrate/date-fns", label: "From date-fns" },
   { slug: "migrate/luxon", label: "From Luxon" },
   { slug: "migrate/dayjs", label: "From Day.js" },

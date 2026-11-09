@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import {
   CANARY_LABEL,
   DRY_RUN_LABEL,
+  NATIVE_LEGS as DERIVED_NATIVE_LEGS,
+  SWAP_LEGS as DERIVED_SWAP_LEGS,
   SWAP_SOURCES,
   WORKFLOW_SOURCES,
   applyForce,
@@ -72,17 +74,21 @@ const check = (workarounds: Workaround[], current = true) => ({
   workarounds,
 });
 
-const BROWSER_LEGS = ["chromium", "firefox", "webkit"] as const;
+/** The macOS WebKit leg's engine line, as its verdicts print it. */
+const MACOS_ENGINE = "macOS WebKit 26.6 \u00b7 macOS 15.7.2";
+const BROWSER_LEGS = ["chromium", "firefox", "webkit", "webkit-macos"] as const;
 type BrowserLeg = (typeof BROWSER_LEGS)[number];
 const BROWSER_ENGINE_IDS: Record<BrowserLeg, string> = {
   chromium: "v8",
   firefox: "firefox",
   webkit: "webkit",
+  "webkit-macos": "webkit",
 };
 const BROWSER_ENGINES: Record<BrowserLeg, string> = {
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
+  "webkit-macos": "macOS WebKit 26.6 \u00b7 macOS 15.7.2",
 };
 
 /** The same probes run in one browser of the native suite: no snapshot, the browser's engine. */
@@ -108,9 +114,9 @@ const everywhere = (workarounds: Workaround[], current = true) => ({
   ),
 });
 
-/** The four engines' names in the order the compat sources run, as the bodies list them. */
+/** The five engines' names in the order the compat sources run, as the bodies list them. */
 const EVERY_ENGINE =
-  "Node v24.11.0, Chromium 153.0.8010.12, Firefox 155.0, WebKit 26.6";
+  "Node v24.11.0, Chromium 153.0.8010.12, Firefox 155.0, WebKit 26.6, macOS WebKit 26.6 \u00b7 macOS 15.7.2";
 
 const mismatchRow = (n: number, over: Record<string, unknown> = {}) => ({
   scan: "grid",
@@ -177,12 +183,19 @@ const cleanCheck = () =>
     workaround("D10", "guard", { guard: { ...GUARD, lapsed: false } }),
   ]);
 
-const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"] as const;
+const NATIVE_LEGS = [
+  "node",
+  "chromium",
+  "firefox",
+  "webkit",
+  "webkit-macos",
+] as const;
 const ENGINES = {
   node: "Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c",
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
+  "webkit-macos": "macOS WebKit 26.6 \u00b7 macOS 15.7.2",
 };
 
 interface NativeOptions {
@@ -247,7 +260,7 @@ const native = (
   staleTags,
 });
 
-/** The four legs, all clean. */
+/** Every native-suite leg, all clean. */
 const cleanNative = () =>
   Object.fromEntries(
     NATIVE_LEGS.map((leg) => [`native-suite-${leg}`, native(leg)]),
@@ -442,11 +455,13 @@ describe("constants and marker", () => {
         "temporal-compat-chromium",
         "temporal-compat-firefox",
         "temporal-compat-webkit",
+        "temporal-compat-webkit-macos",
         "temporal-oracle",
         "native-suite-node",
         "native-suite-chromium",
         "native-suite-firefox",
         "native-suite-webkit",
+        "native-suite-webkit-macos",
         "temporal-polyfill-swap-node",
         "temporal-polyfill-swap-chromium",
         "temporal-polyfill-swap-firefox",
@@ -568,7 +583,8 @@ describe("removable body", () => {
         "| temporal-compat-check | Node v24.11.0 | removable | 2 of 2 pass |\n" +
         "| temporal-compat-chromium | Chromium 153.0.8010.12 | removable | 2 of 2 pass |\n" +
         "| temporal-compat-firefox | Firefox 155.0 | removable | 2 of 2 pass |\n" +
-        "| temporal-compat-webkit | WebKit 26.6 | removable | 2 of 2 pass |\n\n" +
+        "| temporal-compat-webkit | WebKit 26.6 | removable | 2 of 2 pass |\n" +
+        `| temporal-compat-webkit-macos | ${MACOS_ENGINE} | removable | 2 of 2 pass |\n\n` +
         "### Removal steps",
     );
   });
@@ -713,6 +729,7 @@ describe("removable on every engine in scope", () => {
       ["temporal-compat-chromium", true, "removable"],
       ["temporal-compat-firefox", true, "still-needed"],
       ["temporal-compat-webkit", true, "removable"],
+      ["temporal-compat-webkit-macos", true, "removable"],
     ]);
   });
 
@@ -792,6 +809,7 @@ describe("removable on every engine in scope", () => {
       ["temporal-compat-chromium", false, "out-of-scope"],
       ["temporal-compat-firefox", true, "removable"],
       ["temporal-compat-webkit", false, "still-needed"],
+      ["temporal-compat-webkit-macos", false, "out-of-scope"],
     ]);
   });
 
@@ -1026,6 +1044,7 @@ describe("could not run", () => {
         "- **temporal-compat-chromium**: no verdict file: an earlier step or job failed\n" +
         "- **temporal-compat-firefox**: no verdict file: an earlier step or job failed\n" +
         "- **temporal-compat-webkit**: no verdict file: an earlier step or job failed\n" +
+        "- **temporal-compat-webkit-macos**: no verdict file: an earlier step or job failed\n" +
         "- **temporal-oracle**: no Temporal\n",
     );
   });
@@ -1174,7 +1193,7 @@ describe("applyForce and forced findings", () => {
       "**Dry run.** Forced by a manual dispatch (--force-removable=D2); nothing here is a real finding. Close this issue once checked.",
     );
     expect(action.body).toContain(
-      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; still needed (2 of 2 probes fail) on Chromium 153.0.8010.12; still needed (2 of 2 probes fail) on Firefox 155.0; still needed (2 of 2 probes fail) on WebKit 26.6.",
+      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; still needed (2 of 2 probes fail) on Chromium 153.0.8010.12; still needed (2 of 2 probes fail) on Firefox 155.0; still needed (2 of 2 probes fail) on WebKit 26.6; still needed (2 of 2 probes fail) on macOS WebKit 26.6 \u00b7 macOS 15.7.2.",
     );
     expect(action.body).toContain(
       "| temporal-compat-check | Node v24.11.0 | still needed (2 of 2 probes fail) | 0 of 2 pass |",
@@ -1201,7 +1220,7 @@ describe("applyForce and forced findings", () => {
       "temporal-oracle/could-not-run",
     ]);
     expect(actions[0].body).toContain(
-      "Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; removable on Chromium 153.0.8010.12; no verdict (the compat page failed in firefox: boom) on temporal-compat-firefox; removable on WebKit 26.6.",
+      "Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; removable on Chromium 153.0.8010.12; no verdict (the compat page failed in firefox: boom) on temporal-compat-firefox; removable on WebKit 26.6; removable on macOS WebKit 26.6 \u00b7 macOS 15.7.2.",
     );
     expect(actions[0].body).toContain(
       "| temporal-compat-firefox | — | no verdict (the compat page failed in firefox: boom) | — |",
@@ -1220,7 +1239,7 @@ describe("applyForce and forced findings", () => {
     );
     const [action] = forcedOpen(verdicts);
     expect(action.body).toContain(
-      "Real state on this run: guard on Node v24.11.0; guard on Chromium 153.0.8010.12; guard on Firefox 155.0; guard on WebKit 26.6.",
+      "Real state on this run: guard on Node v24.11.0; guard on Chromium 153.0.8010.12; guard on Firefox 155.0; guard on WebKit 26.6; guard on macOS WebKit 26.6 \u00b7 macOS 15.7.2.",
     );
   });
 
@@ -1961,7 +1980,7 @@ describe("native suite findings", () => {
     ${HOST_KEY}
     ${CONTROL_KEY}
   `(
-    "body size: 4 legs of 50 rows with 300-character messages stay under 65,536 for $key, every leg cut to the same count",
+    "body size: 5 legs of 50 rows with 300-character messages stay under 65,536 for $key, every leg cut to the same count",
     ({ key }) => {
       const message = "m".repeat(300);
       const options = optionsOf(key, message);
@@ -1971,14 +1990,15 @@ describe("native suite findings", () => {
           chromium: native("chromium", options),
           firefox: native("firefox", options),
           webkit: native("webkit", options),
+          "webkit-macos": native("webkit-macos", options),
         }),
         key,
       );
       const shown = finding.body.match(/m{300}/g)?.length ?? 0;
       expect(shown).toBeGreaterThan(0);
       expect(shown).toBeLessThan(200);
-      expect(shown % 4).toBe(0);
-      const perLeg = shown / 4;
+      expect(shown % NATIVE_LEGS.length).toBe(0);
+      const perLeg = shown / NATIVE_LEGS.length;
       for (const engine of Object.values(ENGINES)) {
         expect(finding.body).toContain(`### ${engine} (first ${perLeg} of 60)`);
       }
@@ -1992,7 +2012,7 @@ describe("native suite findings", () => {
     ${HOST_KEY}
     ${CONTROL_KEY}
   `(
-    "body size: 4 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
+    "body size: 5 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
     ({ key }) => {
       const longName = (
         leg: (typeof NATIVE_LEGS)[number],
@@ -2019,6 +2039,7 @@ describe("native suite findings", () => {
           chromium: longName("chromium", options),
           firefox: longName("firefox", options),
           webkit: longName("webkit", options),
+          "webkit-macos": longName("webkit-macos", options),
         }),
         key,
       );
@@ -2029,10 +2050,13 @@ describe("native suite findings", () => {
       );
       expect(finding.body).toMatch(/### Firefox 155.0 \(first \d+ of 60\)/);
       expect(finding.body).toMatch(/### WebKit 26.6 \(first \d+ of 60\)/);
+      expect(finding.body).toMatch(
+        /### macOS WebKit 26.6 \u00b7 macOS 15.7.2 \(first \d+ of 60\)/,
+      );
     },
   );
 
-  it("body size: 4 legs of 60 rows with 365-character names give four untagged findings, each under 65,536 with one section", () => {
+  it("body size: 5 legs of 60 rows with 365-character names give five untagged findings, each under 65,536 with one section", () => {
     const longName = (leg: (typeof NATIVE_LEGS)[number]) => {
       const v = native(leg, { untagged: 60, message: "m".repeat(300) });
       return {
@@ -2049,6 +2073,7 @@ describe("native suite findings", () => {
       chromium: longName("chromium"),
       firefox: longName("firefox"),
       webkit: longName("webkit"),
+      "webkit-macos": longName("webkit-macos"),
     });
     for (const leg of NATIVE_LEGS) {
       const [finding] = only(verdicts, failureKey(leg));
@@ -2825,5 +2850,168 @@ describe("shortenRepeats", () => {
     expect(shortenRepeats([open], history(`key\n${A}`), NEXT_RUN)).toEqual([
       open,
     ]);
+  });
+});
+
+describe("the macOS WebKit leg", () => {
+  it("is one list of legs, with the swap check on four", () => {
+    expect(DERIVED_NATIVE_LEGS).toEqual([
+      "node",
+      "chromium",
+      "firefox",
+      "webkit",
+      "webkit-macos",
+    ]);
+    expect(DERIVED_SWAP_LEGS).toEqual([
+      "node",
+      "chromium",
+      "firefox",
+      "webkit",
+    ]);
+  });
+
+  it.each`
+    engine                                                              | label
+    ${"Node v26.12.1 \u00b7 V8 14.6.1 \u00b7 ICU 78.3 \u00b7 tz 2026e"} | ${"Node 26"}
+    ${"Chromium 153.0.8010.12"}                                         | ${"Chromium 153"}
+    ${"WebKit 26.6"}                                                    | ${"WebKit 26"}
+    ${"macOS WebKit 26.6 \u00b7 macOS 15.7.2"}                          | ${"macOS WebKit 26"}
+  `(
+    "the engine line '$engine' titles the issue '$label'",
+    ({ engine, label }) => {
+      const leg = engine.startsWith("macOS") ? "webkit-macos" : "webkit";
+      const [f] = findings(
+        withLegs({ [leg]: { ...native(leg, { untagged: 1 }), engine } }),
+        ORACLE_CONTEXT,
+      );
+      expect(f.title).toBe(`Native Temporal: GMT tests fail on ${label}`);
+    },
+  );
+
+  it("an engine line with no version titles the issue with the leg name", () => {
+    const [f] = findings(
+      withLegs({
+        "webkit-macos": {
+          ...native("webkit-macos", { untagged: 1 }),
+          engine: "(no version)",
+        },
+      }),
+      ORACLE_CONTEXT,
+    );
+    expect(f.title).toBe("Native Temporal: GMT tests fail on webkit-macos");
+  });
+
+  it("keys the two WebKit legs apart: separate issues, titled by their own label", () => {
+    const found = findings(
+      withLegs({
+        webkit: native("webkit", { untagged: 1 }),
+        "webkit-macos": native("webkit-macos", { untagged: 1 }),
+      }),
+      ORACLE_CONTEXT,
+    ).filter((f) => f.key.startsWith("native-suite/untagged-failure/"));
+    expect(found.map((f) => [f.key, f.title])).toEqual([
+      [
+        "native-suite/untagged-failure/webkit",
+        "Native Temporal: GMT tests fail on WebKit 26",
+      ],
+      [
+        "native-suite/untagged-failure/webkit-macos",
+        "Native Temporal: GMT tests fail on macOS WebKit 26",
+      ],
+    ]);
+  });
+
+  it.each`
+    key            | title
+    ${HOST_KEY}    | ${"Native suite: tests fail on both engines in WebKit 26, macOS WebKit 26"}
+    ${CONTROL_KEY} | ${"Native suite: tests fail only on the polyfill in WebKit 26, macOS WebKit 26"}
+  `(
+    "the $key title lists both WebKit labels when both legs have rows",
+    ({ key, title }) => {
+      const options = optionsOf(key, "m");
+      const [f] = findings(
+        withLegs({
+          webkit: native("webkit", options),
+          "webkit-macos": native("webkit-macos", options),
+        }),
+        ORACLE_CONTEXT,
+      ).filter((x) => x.key === key);
+      expect(f.title).toBe(title);
+    },
+  );
+
+  it("a missing native-suite-webkit-macos verdict is a could-not-run line, and nothing else", () => {
+    const verdicts = {
+      ...(withLegs({}) as object),
+      "native-suite-webkit-macos": null,
+    };
+    const [f] = findings(verdicts as never, ORACLE_CONTEXT);
+    expect(f.key).toBe("temporal-oracle/could-not-run");
+    expect(f.body).toContain(
+      "- **native-suite-webkit-macos**: no verdict file: an earlier step or job failed\n",
+    );
+    expect(f.body).not.toContain("**native-suite-webkit**");
+  });
+});
+
+describe("workarounds scoped to WebKit, with two WebKit legs", () => {
+  const d18 = (state: State) =>
+    workaround("D18", state, { engines: ["webkit"] });
+  const states = (verdicts: unknown) =>
+    compatStates(verdicts as never).map((s) => [s.everywhere]);
+
+  it("D18 removable on webkit but no webkit-macos verdict: not removable", () => {
+    const verdicts = {
+      ...everywhere([d18("removable")]),
+      "temporal-compat-webkit-macos": null,
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[false]]);
+    expect(plan(verdicts).map((a) => a.key)).not.toContain(
+      "temporal-compat/removable/D18",
+    );
+  });
+
+  it("D18 removable on webkit, still needed on webkit-macos: not removable", () => {
+    const verdicts = {
+      ...everywhere([d18("removable")]),
+      "temporal-compat-webkit-macos": browserCompat("webkit-macos", [
+        d18("still-needed"),
+      ]),
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[false]]);
+  });
+
+  it("D18 removable on both WebKit legs, out of scope elsewhere: removable everywhere", () => {
+    const verdicts = {
+      ...everywhere([d18("out-of-scope")]),
+      "temporal-compat-webkit": browserCompat("webkit", [d18("removable")]),
+      "temporal-compat-webkit-macos": browserCompat("webkit-macos", [
+        d18("removable"),
+      ]),
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[true]]);
+  });
+
+  it("D16 with no engines needs all five compat sources", () => {
+    const d16 = (state: State) => workaround("D16", state);
+    const verdicts = {
+      ...everywhere([d16("removable")]),
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[true]]);
+    const [row] = compatStates(verdicts as never);
+    expect(row.engines.map((e) => e.source)).toEqual([
+      "temporal-compat-check",
+      "temporal-compat-chromium",
+      "temporal-compat-firefox",
+      "temporal-compat-webkit",
+      "temporal-compat-webkit-macos",
+    ]);
+    expect(
+      states({ ...verdicts, "temporal-compat-webkit-macos": null }),
+    ).toEqual([[false]]);
   });
 });

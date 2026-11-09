@@ -64,6 +64,7 @@
     "@tanstack/intent": "^0.4.0",
     "@types/node": "^22.13.10",
     "@vitest/browser-playwright": "5.0.5",
+    "acorn": "8.16.0",
     "esbuild": "^0.28.2",
     "fallow": "^3.35.0",
     "oxfmt": "^0.67.0",

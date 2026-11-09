@@ -739,7 +739,12 @@ Body text here.`;
       const startHere = section("Start here");
       expect(startHere[0]).toMatch(/\/install\.md\)/);
       const migrate = section("Migrate");
-      for (const slug of ["compare", "bundle-size", "upstream"]) {
+      for (const slug of [
+        "compare",
+        "bundle-size",
+        "upstream",
+        "native-engines",
+      ]) {
         const link = new RegExp(`/${slug}\\.md\\)`);
         expect(
           migrate.some((line) => link.test(line)),
@@ -768,7 +773,7 @@ Body text here.`;
       expect(firstMigrate).toBeGreaterThan(lastStart);
       for (const url of urls.slice(firstMigrate)) {
         expect(path(url), url).toMatch(
-          /^(migrate\/|compare\/behaviour\.md$|compare\.md$|bundle-size\.md$|upstream\.md$)/,
+          /^(migrate\/|compare\/behaviour\.md$|compare\.md$|bundle-size\.md$|upstream\.md$|native-engines\.md$)/,
         );
       }
     });

@@ -21,6 +21,7 @@ import {
   shimSource,
 } from "../../../../scripts/native-suite.mjs";
 import { browserCompatVerdict } from "../../../../scripts/lib/canary-verdict.mjs";
+import { engineLine } from "../../../../scripts/lib/native-suite-compat.mjs";
 import NativeSuiteReporter from "../../../../scripts/lib/native-suite-reporter.mjs";
 import { ENGINE_IDS } from "../../../../scripts/lib/workarounds.mjs";
 import {
@@ -38,7 +39,7 @@ import {
  * is control-only.
  */
 
-type Leg = "node" | "chromium" | "firefox" | "webkit";
+type Leg = "node" | "chromium" | "firefox" | "webkit" | "webkit-macos";
 type Row = {
   file: string;
   test: string;
@@ -1071,6 +1072,66 @@ describe("classify, overlapping host groups", () => {
   });
 });
 
+describe("classify, the two WebKit legs", () => {
+  const failing = report(suite(OTHER, [["format > is-IS", "failed"]]));
+  const passing = report(suite(OTHER, [["format > is-IS", "passed"]]));
+  const both = group({
+    id: "webkit-shared",
+    legs: ["webkit", "webkit-macos"],
+  });
+  const linuxOnly = group({ id: "webkit-linux-only", legs: ["webkit"] });
+
+  it("a group naming both WebKit legs matches a failure on webkit-macos", () => {
+    const r = classify(failing, failing, "webkit-macos", [], [both]);
+    expect(r.hostTagged.map((g) => [g.group, g.count])).toEqual([
+      ["webkit-shared", 1],
+    ]);
+    expect(r.counts).toMatchObject({ hostTagged: 1, hostUntagged: 0 });
+  });
+
+  it("a group naming only webkit does not match a failure on webkit-macos", () => {
+    const r = classify(failing, failing, "webkit-macos", [], [linuxOnly]);
+    expect(r.hostTagged).toEqual([]);
+    expect(r.counts).toMatchObject({ hostTagged: 0, hostUntagged: 1 });
+  });
+
+  it("a group naming only webkit goes stale on neither webkit-macos nor the legs it does not name", () => {
+    for (const leg of ["webkit-macos", "chromium"] as const) {
+      const r = classify(passing, passing, leg, [], [linuxOnly]);
+      expect(r.staleTags).toEqual([]);
+    }
+  });
+
+  it("a group naming both WebKit legs goes stale on webkit-macos when its tests pass there", () => {
+    const r = classify(passing, passing, "webkit-macos", [], [both]);
+    expect(r.staleTags.map((s) => (s.kind === "host" ? s.group : ""))).toEqual([
+      "webkit-shared",
+    ]);
+  });
+
+  it("a divergence row naming both WebKit legs tags a failure on webkit-macos; one naming webkit does not", () => {
+    const fails = report(suite(FILE, [["round > day", "failed"]]));
+    const passes = report(suite(FILE, [["round > day", "passed"]]));
+    const shared = classify(
+      fails,
+      passes,
+      "webkit-macos",
+      [row({ legs: ["webkit", "webkit-macos"] })],
+      [],
+    );
+    expect(shared.counts).toMatchObject({ tagged: 1, untagged: 0 });
+    const linux = classify(
+      fails,
+      passes,
+      "webkit-macos",
+      [row({ legs: ["webkit"] })],
+      [],
+    );
+    expect(linux.counts).toMatchObject({ tagged: 0, untagged: 1 });
+    expect(linux.staleTags).toEqual([]);
+  });
+});
+
 // --- the command -----------------------------------------------------------------------------
 
 type Spec = {
@@ -1087,6 +1148,7 @@ const BROWSER_ENGINES: Record<string, string> = {
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
+  "webkit-macos": "macOS WebKit 26.6 \u00b7 macOS 15.7.2",
 };
 const COMPAT_RUNTIME = {
   polyfill: "0.5.1",
@@ -1094,10 +1156,10 @@ const COMPAT_RUNTIME = {
   playwright: "1.63.0",
 };
 /** The stubbed compat check's verdict for a browser leg: one group, still needed. */
-function compatVerdict(leg: string) {
+function compatVerdict(leg: string, engine = BROWSER_ENGINES[leg]) {
   return browserCompatVerdict({
-    leg: leg as "chromium" | "firefox" | "webkit",
-    engine: BROWSER_ENGINES[leg],
+    leg: leg as "chromium" | "firefox" | "webkit" | "webkit-macos",
+    engine,
     engineId: ENGINE_IDS[leg as keyof typeof ENGINE_IDS],
     runtime: COMPAT_RUNTIME,
     groups: [
@@ -1129,6 +1191,9 @@ function setup() {
     stdout: (t: string) => (out += t),
     stderr: (t: string) => (err += t),
     deps: {
+      // The suite's legs run on whatever host the test names; the host check has its own rows.
+      platform: (): NodeJS.Platform => "linux",
+      osVersion: (): string | null => null,
       preflight: async () => ({ engine: ENGINE, playwright: null }),
       compatCheck: async (leg: string) => compatVerdict(leg),
       runPass: (
@@ -2082,6 +2147,7 @@ describe("native-suite command", () => {
     ${["node", "extra"]}
     ${["summary"]}
     ${["summary", "safari"]}
+    ${["webkit-linux"]}
   `(
     "argument $argv: usage on stderr, exit 2, no verdict file",
     async ({ argv }) => {
@@ -2090,7 +2156,10 @@ describe("native-suite command", () => {
         const code = await main(argv, s.io(null));
         expect(code).toBe(2);
         expect(s.err()).toContain(
-          "Usage: node scripts/native-suite.mjs <node|chromium|firefox|webkit>",
+          "Usage: node scripts/native-suite.mjs <node|chromium|firefox|webkit|webkit-macos>",
+        );
+        expect(s.err()).toContain(
+          "node scripts/native-suite.mjs summary <node|chromium|firefox|webkit|webkit-macos>",
         );
         expect(existsSync(join(s.root, "artifacts"))).toBe(false);
       } finally {
@@ -2212,6 +2281,162 @@ describe("native-suite command: the compat check in a browser", () => {
       expect(await main(["summary", "webkit"], s.io(null))).toBe(0);
       expect(s.out().slice(before)).toBe(
         `${ENGINE}\n1 tests in 1 files: 1 passed, 0 tagged, 0 untagged, 0 host tagged, 0 host untagged, 0 control only, 0 stale tags\ntemporal-compat-webkit: could not run — no browser\n`,
+      );
+    } finally {
+      s.done();
+    }
+  });
+});
+
+describe("native-suite command: the host check", () => {
+  const ok = report(suite(FILE, [["a", "passed"]]));
+
+  /** A run that must stop at the host check: nothing after it may be called. */
+  const guarded = (calls: string[]) => ({
+    compatCheck: async () => {
+      calls.push("compatCheck");
+      return compatVerdict("webkit");
+    },
+    preflight: async () => {
+      calls.push("preflight");
+      return { engine: ENGINE, playwright: null };
+    },
+    runPass: () => {
+      calls.push("runPass");
+      return 0;
+    },
+  });
+
+  it.each`
+    leg               | platform    | problem
+    ${"webkit-macos"} | ${"linux"}  | ${"webkit-macos runs on macOS; this host is linux"}
+    ${"webkit-macos"} | ${"win32"}  | ${"webkit-macos runs on macOS; this host is win32"}
+    ${"webkit"}       | ${"darwin"} | ${"webkit runs on Linux; this host is darwin"}
+  `(
+    "'$leg' on '$platform': exit 2, both could-not-run verdicts, nothing else called",
+    async ({ leg, platform, problem }) => {
+      const s = setup();
+      try {
+        const calls: string[] = [];
+        const code = await main(
+          [leg],
+          s.io(null, { ...guarded(calls), platform: () => platform }),
+        );
+        expect(code).toBe(2);
+        expect(calls).toEqual([]);
+        expect(s.compat(leg)).toEqual({
+          source: `temporal-compat-${leg}`,
+          status: "could-not-run",
+          message: problem,
+        });
+        expect(s.verdict(leg)).toEqual({
+          source: `native-suite-${leg}`,
+          status: "could-not-run",
+          message: problem,
+        });
+        expect(s.err()).toContain(
+          `native-suite: ${leg} could not run: ${problem}\n`,
+        );
+      } finally {
+        s.done();
+      }
+    },
+  );
+
+  it.each`
+    leg               | platform
+    ${"webkit-macos"} | ${"darwin"}
+    ${"webkit"}       | ${"linux"}
+    ${"chromium"}     | ${"darwin"}
+    ${"chromium"}     | ${"linux"}
+    ${"firefox"}      | ${"darwin"}
+  `("'$leg' on '$platform': runs", async ({ leg, platform }) => {
+    const s = setup();
+    try {
+      const code = await main(
+        [leg],
+        s.io({ native: ok, control: ok }, { platform: () => platform }),
+      );
+      expect(code).toBe(0);
+      expect(s.verdict(leg).status).toBe("ran");
+      expect(s.compat(leg).status).toBe("ran");
+    } finally {
+      s.done();
+    }
+  });
+
+  it("the node leg writes no compat verdict on a refused host and no host refuses it", async () => {
+    const s = setup();
+    try {
+      const code = await main(
+        ["node"],
+        s.io({ native: ok, control: ok }, { platform: () => "win32" }),
+      );
+      expect(code).toBe(0);
+      expect(s.hasCompat("node")).toBe(false);
+    } finally {
+      s.done();
+    }
+  });
+
+  it.each`
+    leg               | platform    | os          | seen        | line
+    ${"webkit-macos"} | ${"darwin"} | ${"15.7.2"} | ${"15.7.2"} | ${"macOS WebKit 26.6 \u00b7 macOS 15.7.2"}
+    ${"chromium"}     | ${"darwin"} | ${"15.7.2"} | ${null}     | ${"Chromium 26.6"}
+    ${"firefox"}      | ${"darwin"} | ${"15.7.2"} | ${null}     | ${"Firefox 26.6"}
+    ${"webkit"}       | ${"linux"}  | ${null}     | ${null}     | ${"WebKit 26.6"}
+  `(
+    "'$leg' on '$platform' with OS $os: both steps get $seen and the engine lines agree",
+    async ({ leg, platform, os, seen: want, line }) => {
+      // The real browserPreflight loads Playwright through createRequire, so it cannot be injected
+      // here; its use of engineLine is covered by the engineLine table, not by this test.
+      const s = setup();
+      try {
+        const seen: unknown[] = [];
+        await main(
+          [leg],
+          s.io(
+            { native: ok, control: ok },
+            {
+              platform: () => platform,
+              osVersion: () => os,
+              compatCheck: async (
+                l: Parameters<typeof engineLine>[0],
+                _r: string,
+                o: string | null,
+              ) => {
+                seen.push(["compat", o]);
+                return compatVerdict(l, engineLine(l, "26.6", o));
+              },
+              preflight: async (
+                l: Parameters<typeof engineLine>[0],
+                _r: string,
+                o: string | null,
+              ) => {
+                seen.push(["preflight", o]);
+                return { engine: engineLine(l, "26.6", o), playwright: null };
+              },
+            },
+          ),
+        );
+        expect(seen).toEqual([
+          ["compat", want],
+          ["preflight", want],
+        ]);
+        expect(s.verdict(leg).engine).toBe(s.compat(leg).engine);
+        expect(s.compat(leg).engine).toBe(line);
+      } finally {
+        s.done();
+      }
+    },
+  );
+
+  it("accepts webkit-macos in summary and reports both of its sources", async () => {
+    const s = setup();
+    try {
+      expect(await main(["summary", "webkit-macos"], s.io(null))).toBe(0);
+      expect(s.out()).toBe(
+        "native-suite-webkit-macos: no verdict\ntemporal-compat-webkit-macos: no verdict\n",
       );
     } finally {
       s.done();

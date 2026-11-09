@@ -30,7 +30,56 @@ export const BROWSER_LABELS = Object.freeze({
   chromium: "Chromium",
   firefox: "Firefox",
   webkit: "WebKit",
+  "webkit-macos": "macOS WebKit",
 });
+
+/** The Playwright browser and Vitest project each browser leg runs. */
+export const LEG_BROWSER = Object.freeze({
+  chromium: "chromium",
+  firefox: "firefox",
+  webkit: "webkit",
+  "webkit-macos": "webkit",
+});
+
+/**
+ * The host OS a leg must run on; a leg not listed runs anywhere. Values are `process.platform`.
+ * A verdict names the data it tested (the host's time zone and locale data), so a result from
+ * another host under that leg's name would be false.
+ */
+export const LEG_HOST = Object.freeze({
+  webkit: "linux",
+  "webkit-macos": "darwin",
+});
+
+/** How `hostProblem` names a host OS. */
+const HOST_NAMES = { linux: "Linux", darwin: "macOS" };
+
+/**
+ * The engine line a verdict and the preflight print: "macOS WebKit 26.6 · macOS 15.7.2",
+ * "WebKit 26.6", "Chromium 153.0…". Only `webkit-macos` is given an OS version.
+ * @param {BrowserLeg} leg
+ * @param {string} browserVersion
+ * @param {string | null} osVersion
+ * @returns {string}
+ */
+export function engineLine(leg, browserVersion, osVersion) {
+  const line = `${BROWSER_LABELS[leg]} ${browserVersion}`;
+  return typeof osVersion === "string"
+    ? `${line} \u00b7 macOS ${osVersion}`
+    : line;
+}
+
+/**
+ * Why this host cannot run the leg, or null when it can.
+ * @param {string} leg
+ * @param {string} platform  `process.platform`
+ * @returns {string | null}
+ */
+export function hostProblem(leg, platform) {
+  const host = /** @type {Record<string, string>} */ (LEG_HOST)[leg];
+  if (host === undefined || host === platform) return null;
+  return `${leg} runs on ${/** @type {Record<string, string>} */ (HOST_NAMES)[host]}; this host is ${platform}`;
+}
 
 /** The origin the compat page is served from; nothing listens there, routing answers it. */
 export const COMPAT_ORIGIN = "http://gmt.local";
@@ -48,7 +97,7 @@ const PAGE_ZONE = "UTC";
 const PAGE_LOCALE = "en-US";
 
 /**
- * @typedef {"chromium" | "firefox" | "webkit"} BrowserLeg
+ * @typedef {"chromium" | "firefox" | "webkit" | "webkit-macos"} BrowserLeg
  * @typedef {{ defect: string, calendar: string, name: string, output: string, passes: boolean }} ProbeResult
  * @typedef {{ dist: string, polyfill: string, jsbi: string }} Paths
  */
@@ -190,9 +239,14 @@ export function groupResults(results, installed, engineId) {
  * verdict for the `temporal-compat-<leg>` source.
  * @param {BrowserLeg} leg
  * @param {string} root
- * @param {{ playwright: () => Promise<any> }} deps  loads the `playwright` module
+ * @param {{ playwright: () => Promise<any>, osVersion?: () => string | null }} deps
+ *   `playwright` loads the module; `osVersion` is the macOS version for the engine line (none by default)
  */
-export async function runBrowserCompat(leg, root, { playwright: load }) {
+export async function runBrowserCompat(
+  leg,
+  root,
+  { playwright: load, osVersion = () => null },
+) {
   const paths = compatPaths(root);
   const page = compatPage();
   let playwright;
@@ -209,7 +263,7 @@ export async function runBrowserCompat(leg, root, { playwright: load }) {
       "utf8",
     ),
   ).version;
-  const browser = await playwright[leg].launch();
+  const browser = await playwright[LEG_BROWSER[leg]].launch();
   try {
     const context = await browser.newContext({
       timezoneId: PAGE_ZONE,
@@ -248,7 +302,7 @@ export async function runBrowserCompat(leg, root, { playwright: load }) {
     const polyfill = polyfillVersion();
     return browserCompatVerdict({
       leg,
-      engine: `${BROWSER_LABELS[leg]} ${browser.version()}`,
+      engine: engineLine(leg, browser.version(), osVersion()),
       engineId,
       runtime: {
         polyfill,

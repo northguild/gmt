@@ -14,12 +14,14 @@ export const VERDICT_FILES = {
   "temporal-compat-chromium": "artifacts/temporal-compat-chromium.json",
   "temporal-compat-firefox": "artifacts/temporal-compat-firefox.json",
   "temporal-compat-webkit": "artifacts/temporal-compat-webkit.json",
+  "temporal-compat-webkit-macos": "artifacts/temporal-compat-webkit-macos.json",
   "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
   "leap-seconds": "artifacts/leap-seconds.json",
   "native-suite-node": "artifacts/native-suite-node.json",
   "native-suite-chromium": "artifacts/native-suite-chromium.json",
   "native-suite-firefox": "artifacts/native-suite-firefox.json",
   "native-suite-webkit": "artifacts/native-suite-webkit.json",
+  "native-suite-webkit-macos": "artifacts/native-suite-webkit-macos.json",
   "temporal-polyfill-swap-node": "artifacts/temporal-polyfill-swap-node.json",
   "temporal-polyfill-swap-chromium":
     "artifacts/temporal-polyfill-swap-chromium.json",
@@ -105,7 +107,7 @@ export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
  * (`scripts/lib/native-suite-compat.mjs`), against the polyfill GMT ships. No snapshot: the
  * committed one is Node's.
  *
- * @param {{ leg: "chromium" | "firefox" | "webkit", engine: string,
+ * @param {{ leg: "chromium" | "firefox" | "webkit" | "webkit-macos", engine: string,
  *           engineId: "v8" | "firefox" | "webkit",
  *           runtime: { polyfill: string, node: string, playwright: string },
  *           groups: CompatGroup[] }} input
@@ -180,7 +182,7 @@ const MESSAGE_CHARS_IN_VERDICT = 300;
  * from `classify`; the verdict keeps the first 50 of each, with each message cut to 300 characters, and
  * says when it cut. The counts stay the full numbers. Raw Vitest reports stay in `artifacts/`.
  *
- * @param {{ leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
+ * @param {{ leg: "node" | "chromium" | "firefox" | "webkit" | "webkit-macos", engine: string,
  *           runtime: { node: string, vitest: string, playwright: string | null },
  *           counts: { files: number, tests: number, passed: number, tagged: number,
  *                     untagged: number, hostTagged: number, hostUntagged: number,

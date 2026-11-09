@@ -25,14 +25,19 @@ const LAST_OF_D1_D7 = `The last of D1–D7 to go also follows ${COMPAT_README} �
 
 /**
  * The JavaScript engine each native-suite leg runs on, as a group's `engines` names it. Node and
- * Chromium are both V8: a defect in V8 or in the ICU it bundles reads the same on both.
- * @type {Readonly<Record<"node" | "chromium" | "firefox" | "webkit", "v8" | "firefox" | "webkit">>}
+ * Chromium are both V8: a defect in V8 or in the ICU it bundles reads the same on both. WebKit
+ * runs on two hosts (Playwright's build on Linux, and on macOS the ICU and time zone data Apple
+ * ships), so it has two legs of one engine. The keys are the native-suite legs, in leg order: the
+ * one list every canary script derives its legs from.
+ * @type {Readonly<Record<"node" | "chromium" | "firefox" | "webkit" | "webkit-macos",
+ *   "v8" | "firefox" | "webkit">>}
  */
 export const ENGINE_IDS = Object.freeze({
   node: "v8",
   chromium: "v8",
   firefox: "firefox",
   webkit: "webkit",
+  "webkit-macos": "webkit",
 });
 
 export const WORKAROUNDS = [
@@ -194,7 +199,7 @@ export const WORKAROUNDS = [
     defects: ["D16"],
     title: "D16 — formatRange drops O and long zone-name widths (ICU-20548)",
     trigger:
-      "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and by every browser the native suite runs, so every D16 repro passes on every engine: this check reports Node, and the weekly run's compat check in each browser (the temporal-compat-chromium, -firefox and -webkit verdicts) reports the rest; D16 is removable only when all of them say so",
+      "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and by every browser the native suite runs, so every D16 repro passes on every engine: this check reports Node, and the weekly run's compat check in each browser (the temporal-compat-chromium, -firefox, -webkit and -webkit-macos verdicts) reports the rest; D16 is removable only when all of them say so",
     steps: [
       "Delete the zoneNames branch of rangeWithRepairedParts and its gate in zoned/format/formatZonedRange.ts, isRangeZoneNameCompatNeeded in capabilities.ts and its export in index.ts, and the D16 repros.",
       "Keep every formatZonedRange row: their values are the field formats and hold either way.",
@@ -222,7 +227,7 @@ export const WORKAROUNDS = [
     title:
       "D18 — Islamic calendar dates before the Hijra read as positive years in a second era (WebKit)",
     trigger:
-      "the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports D18 removable: every D18 repro passes in the WebKit the native suite runs, once a js-temporal release reads the Islamic eras or WebKit prints the year as V8 does. WebKit is the only engine in D18's scope; this check runs on Node, where D18 is out of scope and never removable",
+      "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts, Linux and macOS) reports D18 removable: every D18 repro passes in the WebKit the native suite runs, once a js-temporal release reads the Islamic eras or WebKit prints the year as V8 does. WebKit is the only engine in D18's scope; this check runs on Node, where D18 is out of scope and never removable",
     steps: [
       "Delete islamicEra.ts, fixedMonthArithmetic.ts and their tests, islamicFields, polyfillMisreadsIslamicEra and polyfillCannotReturn in calendarFields.ts, the D18 branch and term in calendarDateFromFields.ts, fixedMonthsIfPolyfillCannotReturn in readArithmeticModel.ts, reachesPolyfillLimit and lowestYearOfSum in calendarDateArithmetic.ts, fixedMonthsPerYearOf in largeMonthSpan.ts, and the D18 repros.",
       "Keep every Islamic row of diffDateAsDuration.edges.test.ts and addDate.edges.test.ts: the values are the spec's and hold either way.",
@@ -238,7 +243,7 @@ export const WORKAROUNDS = [
     title:
       "D19 — ZonedDateTime#equals answers false for two identifiers of one zone where resolvedOptions keeps the identifier (JavaScriptCore)",
     trigger:
-      "a js-temporal release whose TimeZoneEquals finds the primary identifier on a host whose Intl.DateTimeFormat#resolvedOptions returns the identifier as written, so the D19 probe (Etc/UTC equals UTC, ECMA-402 §6.5) passes in the WebKit the native suite runs: the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports it. WebKit is the only engine in D19's scope; this check runs on Node, where D19 is out of scope and never removable",
+      "a js-temporal release whose TimeZoneEquals finds the primary identifier on a host whose Intl.DateTimeFormat#resolvedOptions returns the identifier as written, so the D19 probe (Etc/UTC equals UTC, ECMA-402 §6.5) passes in the WebKit the native suite runs: the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts, Linux and macOS) reports it. WebKit is the only engine in D19's scope; this check runs on Node, where D19 is out of scope and never removable",
     steps: [
       "Delete timeZoneEquals.ts, its exports in index.ts, isTimeZoneEqualsCompatNeeded in capabilities.ts and the D19 repros; isCalendarDifferenceAcrossZones (internal/zonedWallClockDifference.ts) compares with new Temporal.ZonedDateTime(0n, id).equals(...) again.",
       "Keep every diffZoned and intervalLengthZoned row: the values are TimeZoneEquals answers and hold either way.",

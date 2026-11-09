@@ -128,7 +128,7 @@ found no differences.
 ## Native engines
 
 Every week, GMT runs its whole test suite on the Temporal built into Node 26, Chromium,
-Firefox and WebKit, and expects the same answers it gets on the polyfill. A failure that no known bug
+Firefox, WebKit on Linux and WebKit on macOS, and expects the same answers it gets on the polyfill. A failure that no known bug
 explains opens an issue in GMT's repository. Each run lists the exact engine versions it used:
 see the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml).
 
@@ -146,10 +146,18 @@ The built-in engines have a few bugs of their own. We report each one we find. T
   zoned date on 19 April −271821, just outside the range the standard allows.
 - [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525): Firefox prints AM and
   PM in a time range that asks for a day period such as "in the morning", when a zone name is shown.
-- WebKit adds a year to the 30th of Dhu al-Hijjah in an Islamic year before the Hijra as 13
-  months, so the result lands a month late. The report to WebKit is pending.
-- WebKit throws when it adds a year to the last day of Chaitra in a year before about
-  4800 BCE. The report to WebKit is pending.
+- WebKit, on Linux and on macOS, adds a year to the 30th of Dhu al-Hijjah in an Islamic year
+  before the Hijra as 13 months, so the result lands a month late. The report to WebKit is pending.
+- WebKit, on Linux and on macOS, throws when it adds a year to the last day of Chaitra in a year
+  before about 4800 BCE. The report to WebKit is pending.
+- [WebKit bug 330688](https://bugs.webkit.org/show_bug.cgi?id=330688): WebKit on Linux, and
+  Safari on macOS 27, reject the time zone ids `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT`,
+  which the time zone database still defines.
+- ICU 75 and later, which WebKit on macOS uses for calendar arithmetic, counts every Persian year
+  before year 0 (621 CE) as a leap year. Adding a month to the 30th of Bahman, the 11th month, in
+  such a year then throws instead of giving the 29th of Esfand. We reported it on
+  [ICU's support list](https://groups.google.com/a/unicode.org/g/icu-support/c/IJBZUe3T4WY); the
+  ICU ticket is pending.
 
 GMT gives the standard's answer in every case.
 
