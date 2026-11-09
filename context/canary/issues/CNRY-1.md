@@ -108,6 +108,15 @@ at 58d4e150, with the Linux leg's tags. Run 2026-11-08.
 - **2 stale tags on the Mac:** `browser-morocco-2026-tz-data` and `webkit-linux-tz-data` pass, so
   Apple's tzdb has those changes.
 
+The runner disagrees with that Mac. `temporal-oracle.yml` run 42578821204 on the branch
+(`macos-26-arm64`, macOS 26.7.2, WebKit 26.6): 45 untagged host failures and 1 stale tag.
+
+- 44 rows of `oh-morocco.test.ts`: the runner's time zone data predates tzdb 2026c, so
+  `browser-morocco-2026-tz-data` names the Mac leg too.
+- The pt-PT short weekday names (`webkit-macos-26-pt-pt-short-weekdays`).
+- `webkit-posix-zone-ids` is stale: macOS 26.7.2 accepts `CST6CDT`, `EST5EDT`, `MST7MDT` and
+  `PST8PDT`, so the group names the Linux leg only.
+
 ## Definition of done
 
 - A `workflow_dispatch` run of `temporal-oracle.yml` on `main` shows five native-suite legs, and
@@ -132,11 +141,11 @@ Stated as current rules. Where each rule is enforced is named beside it.
 
 **Tags**
 
-- A tag group covers two legs only when one cause, shown by the same received value, holds on both, so a group's `reason` is true on every leg it names. A group covering both WebKit legs has no `linux` in its id. A group the Mac passes stays off the Mac leg, or it would go stale there: `browser-morocco-2026-tz-data` and `webkit-linux-tz-data`.
-- JavaScriptCore divergences S and T, `webkit-ar-sa-islamic-default-calendar`, `browser-canada-2026-tz-data` (`America/Winnipeg` still changes clocks on 2026-11-01) and the POSIX zone ids `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT` (group `webkit-posix-zone-ids`) cover both WebKit legs. `webkit-legacy-zone-ids` narrows to `CET`, `EET`, `MET` and `WET` on Linux. Those ids are valid in ECMA-402 §6.5, "Use of the IANA Time Zone Database" (every IANA Zone and Link name), and the IANA `backward` file, so a refusal is the host's defect, and the tag stays whether or not it is filed.
+- A tag group covers two legs only when one cause, shown by the same received value, holds on both, so a group's `reason` is true on every leg it names. A group covering both WebKit legs has no `linux` in its id. A group the Mac runner passes stays off the Mac leg, or it would go stale there: `webkit-linux-tz-data`, and `webkit-posix-zone-ids` while the runner's macOS 26 accepts those ids. A group the runner fails names the Mac leg even where a newer local Mac passes it: `browser-morocco-2026-tz-data`.
+- JavaScriptCore divergences S and T, `webkit-ar-sa-islamic-default-calendar` and `browser-canada-2026-tz-data` (`America/Winnipeg` still changes clocks on 2026-11-01) cover both WebKit legs. The POSIX zone ids `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT` (group `webkit-posix-zone-ids`) fail on Linux and on macOS 27, not on the runner's macOS 26, so the group names the Linux leg. `webkit-legacy-zone-ids` narrows to `CET`, `EET`, `MET` and `WET` on Linux. Those ids are valid in ECMA-402 §6.5, "Use of the IANA Time Zone Database" (every IANA Zone and Link name), and the IANA `backward` file, so a refusal is the host's defect, and the tag stays whether or not it is filed.
 - The `webkit-macos-*` groups hold Apple's ICU locale text, sorted by cause, each with evidence: engine and OS version, one call and its received value, Node 26's value, and the other legs' result. Never a pattern that matches everything; prefer `file` plus a `test` pattern naming the locale or id. Before a week-start or connector row is tagged as host data, the CLDR element for the Node release's ICU decides whether the test's expected value is the wrong one, which is then fixed in the test instead.
 - Record AE: ICU4C 75 and later count every Persian year before year 0 as a leap year, so `addDate` and `subtractDate` on a Persian date at ISO -271820 diverge on macOS WebKit. It is an engine defect with the rows tagged on `webkit-macos` only, shipped GMT is right (it runs the polyfill), and nothing about it goes on a Dox page except the bullet in `upstream.mdx` § Native engines. A control-only failure is never tagged; it is a GMT bug and gets fixed.
-- Tags are checked against the leg's own run. The runner's macOS can differ from a local Mac, so a branch dispatch of `temporal-oracle.yml` reconciles the Mac tags before merge: a group the runner passes is narrowed or dropped, a new failure is tagged with evidence or fixed. Nothing is filed upstream, and no issue edited, until the owner approves the exact text; the drafts sit in `context/domination/js-temporal-polyfill-bugs.md` (record AE, and the POSIX zone ids for bugs.webkit.org).
+- Tags are checked against the leg's own run. The runner's macOS can differ from a local Mac, so a branch dispatch of `temporal-oracle.yml` reconciles the Mac tags before merge: a group the runner passes is narrowed or dropped, a new failure is tagged with evidence or fixed. Nothing is filed upstream, and no issue edited, until the owner approves the exact text. The POSIX zone ids are [WebKit bug 330688](https://bugs.webkit.org/show_bug.cgi?id=330688); record AE's text and its icu-support thread sit in `context/domination/js-temporal-polyfill-bugs.md`.
 
 **Browser support page**
 

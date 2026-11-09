@@ -2745,7 +2745,7 @@ leg only). When a Node release carries a `temporal_rs` with #723, the tags go st
 
 ### Status
 
-**Not filed yet.** The filing text is below; the owner decides where it goes. The tracker is the ICU Jira (project ICU, component calendar). Cause: ICU4C commit `d43d216feb` (ICU-22633, 2024-03-08) changed `PersianCalendar::isLeapYear` in `i18n/persncal.cpp` from
+**Reported, no ticket yet.** The ICU Jira (project ICU, component calendar) did not let a new account create issues, so the report went to the icu-support list with a request for access or a ticket: [icu-support thread](https://groups.google.com/a/unicode.org/g/icu-support/c/IJBZUe3T4WY). The filing text below is the ticket to open once that is granted. Cause: ICU4C commit `d43d216feb` (ICU-22633, 2024-03-08) changed `PersianCalendar::isLeapYear` in `i18n/persncal.cpp` from
 
 ```cpp
 ClockMath::floorDivide(25*year+11, 33, &remainder); return remainder < 8;
@@ -2823,7 +2823,9 @@ It shows in WebKit's Temporal on macOS (WebKit 26.6, Playwright's macOS build, o
 
 The fix is to go back to `floorDivide`, or to use a modulo that floors, for example `((y % 33) + 33) % 33 < 8`.
 
-### POSIX zone ids: draft for bugs.webkit.org (not filed)
+### POSIX zone ids: WebKit bug 330688
+
+**Filed** as [WebKit bug 330688](https://bugs.webkit.org/show_bug.cgi?id=330688). Safari on macOS gives the same `RangeError` for step 1; the bug carries a screenshot of its console. Mac WebKit 26.6 on GitHub's `macos-26-arm64` runner (macOS 26.7.2) accepts all four ids, so on the Mac the refusal comes with macOS 27. The filed text:
 
 Title: Temporal and Intl reject the time zone ids CST6CDT, EST5EDT, MST7MDT and PST8PDT
 

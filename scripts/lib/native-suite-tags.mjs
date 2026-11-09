@@ -394,15 +394,17 @@ export const KNOWN_HOST_FAILURES = [
     // Evidence: under Playwright 1.63.0, Chromium 153.0.8010.12 gives Africa/Casablanca and
     // Africa/El_Aaiun +01:00 at 2026-09-20T01:00Z, 2026-11-02T12:00Z and 2027-06-01T12:00Z, and
     // +00:00 at 2027-02-22T12:00Z (tz data before 2026c). Chromium 156.0.8078.4 under Playwright
-    // 1.64.1, Mac WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. Firefox 155.0 under
-    // Playwright 1.63.0 fails the same 44 rows of this file: it gives Africa/Casablanca +01:00 at
-    // 2026-09-20T01:00Z, where tz data from 2026c gives +00:00. Playwright's Linux WebKit 26.6
-    // (ubuntu-24.04, the runner's libicu74 74.2) fails the same 44 rows on both engines. The group
-    // goes stale once a Playwright Chromium, Firefox and Linux WebKit all carry 2026c.
+    // 1.64.1, Mac WebKit 26.6 on macOS 27.0.1 and Node 26.12.1 (tz 2026e) give +00:00 at all four.
+    // Firefox 155.0 under Playwright 1.63.0 fails the same 44 rows of this file: it gives
+    // Africa/Casablanca +01:00 at 2026-09-20T01:00Z, where tz data from 2026c gives +00:00.
+    // Playwright's Linux WebKit 26.6 (ubuntu-24.04, the runner's libicu74 74.2) fails the same 44 rows
+    // on both engines, and so does Mac WebKit 26.6 on the macos-26-arm64 runner (macOS 26.7.2), whose
+    // system time zone data predates 2026c. The group goes stale once a Playwright Chromium, Firefox,
+    // Linux WebKit and the Mac runner all carry 2026c.
     id: "browser-morocco-2026-tz-data",
-    legs: ["chromium", "firefox", "webkit"],
+    legs: ["chromium", "firefox", "webkit", "webkit-macos"],
     reason:
-      "Chromium's, Firefox's and Linux WebKit's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
+      "Chromium's, Firefox's, Linux WebKit's and the Mac runner's time zone data predates tzdb 2026c, so Morocco and Western Sahara still read +01:00 outside the old Ramadan weeks.",
     file: /\/oh-morocco\.test\.ts$/,
   },
   {
@@ -422,17 +424,20 @@ export const KNOWN_HOST_FAILURES = [
     test: /\bManila\b|Antarctica\/Casey/,
   },
   {
-    // Evidence, WebKit 26.6 on both builds (Playwright's Linux build on ubuntu-24.04, and the Mac build on
-    // macOS 27.0.1): `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" })` throws `RangeError: invalid
+    // Evidence, WebKit 26.6 (Playwright's Linux build on ubuntu-24.04; also the Mac build on macOS 27.0.1,
+    // and Safari there): `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" })` throws `RangeError: invalid
     // time zone: EST5EDT`, and `Temporal.ZonedDateTime.from("2024-07-15T12:00:00-04:00[EST5EDT]")` throws
     // `RangeError` too; the same for CST6CDT, MST7MDT and PST8PDT. Node 26.12.1, Chromium 153 and
     // Firefox 155 accept all four. IANA's `backward` file (tzdb 2026e) defines them as zones
     // (`Zone EST5EDT -5:00 USback E%sT`, and the same for CST6CDT, MST7MDT and PST8PDT), and ECMA-402
     // § 6.5 makes each Zone of the IANA Time Zone Database a primary time zone identifier.
+    // Filed as https://bugs.webkit.org/show_bug.cgi?id=330688. The Mac leg's runner (macos-26-arm64,
+    // macOS 26.7.2) accepts all four, so the group names the Linux leg only; a Mac runner on macOS 27
+    // fails these rows untagged, and the group then needs `webkit-macos` again.
     id: "webkit-posix-zone-ids",
-    legs: ["webkit", "webkit-macos"],
+    legs: ["webkit"],
     reason:
-      "WebKit refuses the tzdb legacy zone ids CST6CDT, EST5EDT, MST7MDT and PST8PDT as invalid time zones, so the rows that pass them through fail.",
+      "Linux WebKit refuses the tzdb legacy zone ids CST6CDT, EST5EDT, MST7MDT and PST8PDT as invalid time zones, so the rows that pass them through fail.",
     file: /\/(isValidTimeZone|toOffsetInstant|fromOffsetInstant|getTimeZoneOffset)\.test\.ts$/,
     test: /\b(CST6CDT|EST5EDT|MST7MDT|PST8PDT)\b/,
   },
@@ -554,6 +559,19 @@ export const KNOWN_HOST_FAILURES = [
     reason:
       "Mac WebKit's short Arabic weekday names drop the article (أحد where CLDR 48 ar.xml has الأحد), so the short list differs from Node's.",
     test: /getLocaleWeekdayNames returns 7 weekday names \(long\/short\/narrow\) for ar-SA/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 on the macos-26-arm64 runner (macOS 26.7.2): the pt-PT short weekday
+    // list fails `expected [ Array(7) ] to deeply equal [ 'domingo', 'segunda', 'terça', …(4) ]`; the
+    // runner's report does not print the names it got. Node 26.12.1 (CLDR 48.0) and Mac WebKit 26.6 on
+    // macOS 27.0.1 return domingo, segunda, terça, quarta, quinta, sexta, sábado. On the runner the long
+    // list passes and the short one fails (the narrow one is not reached), so this is the older macOS's
+    // locale data.
+    id: "webkit-macos-26-pt-pt-short-weekdays",
+    legs: ["webkit-macos"],
+    reason:
+      "The Mac runner's macOS 26 locale data gives other short Portuguese (pt-PT) weekday names than CLDR 48's domingo, segunda, terça.",
+    test: /getLocaleWeekdayNames returns 7 weekday names \(long\/short\/narrow\) for pt-PT/,
   },
   {
     // Evidence, Mac WebKit 26.6 against Node 26.12.1 (CLDR 48.0), 12-hour day periods: zh-CN and zh-TW at
