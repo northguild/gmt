@@ -448,7 +448,7 @@ Note about installation.
       const result = stripMdx(input, { gmtVersion: "1.0.0" }).trim();
       expect(result).not.toMatch(/<Icon|import/);
       expect(result.replace(/\s+/g, " ")).toBe(
-        "- [Transport](/gmt/reference/transport): Legs and dwell.",
+        "- [Transport](/gmt/reference/transport/): Legs and dwell.",
       );
     });
 

@@ -10,8 +10,13 @@
  * One rule: a URL that starts with `/` but not `//` becomes `withBase(url)`. Absolute URLs,
  * protocol-relative URLs, `#` anchors, `mailto:` and relative paths are left alone, and a path
  * already under the base is not doubled.
+ *
+ * A link (`href`) to a page also gets the trailing slash the static host serves the page at:
+ * `/reference/types/Overflow` becomes `/gmt/reference/types/Overflow/`. Without it every link costs
+ * a redirect, and search engines crawl and report each page twice. A page path is one whose last
+ * segment has no dot; a file such as `/llms.txt` or `/x.md` is left as it is.
  */
-import { withBase } from "./site";
+import { pageHref, withBase } from "./site";
 
 export interface HastNode {
   type: string;
@@ -42,6 +47,11 @@ function prefix(value: string): string {
   return isRootAbsolute(value) ? withBase(value) : value;
 }
 
+/** A link: prefixed, and given the trailing slash when it names a page. */
+function prefixHref(value: string): string {
+  return isRootAbsolute(value) ? pageHref(value) : value;
+}
+
 function prefixSrcset(value: string): string {
   return value
     .split(",")
@@ -59,7 +69,7 @@ const POSTER_TAGS = new Set(["video"]);
 
 /** MDX JSX attribute names whose string value is a URL, and how to rewrite it. */
 const MDX_URL_ATTRS: Record<string, (value: string) => string> = {
-  href: prefix,
+  href: prefixHref,
   src: prefix,
   poster: prefix,
   srcset: prefixSrcset,
@@ -104,7 +114,7 @@ function visit(node: HastNode): void {
   if (node.type === "element" && node.tagName && node.properties) {
     const properties = node.properties;
     if (HREF_TAGS.has(node.tagName) && typeof properties.href === "string") {
-      properties.href = prefix(properties.href);
+      properties.href = prefixHref(properties.href);
     }
     if (SRC_TAGS.has(node.tagName) && typeof properties.src === "string") {
       properties.src = prefix(properties.src);
