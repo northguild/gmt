@@ -233,7 +233,8 @@ function layoutOf(shape: FixShape): string {
 
 /**
  * Why the library refused `text`. The first probe that fits wins, and every probe is a library
- * call: the text with its second `60` changed to `59`, then the text without its fraction.
+ * call: the text with its second `60` changed to `59` (and then, to tell a wrong day from a wrong
+ * minute, the text moved to 23:59), then the text without its fraction.
  */
 export function reasonOf(
   lib: FinanceLib,
@@ -241,12 +242,17 @@ export function reasonOf(
   shape: FixShape | null,
 ): string {
   if (shape === null) return "Not a FIX UTCTimestamp.";
-  const [, , , second] = shape.spans;
+  const [, hour, minute, second] = shape.spans;
 
   if (text.slice(second[0], second[1]) === "60") {
     const ordinary = `${text.slice(0, second[0])}59${text.slice(second[1])}`;
     if (lib.parseFixUtcTimestamp(ordinary) !== null) {
-      return "Second 60 on a day UTC inserted no second.";
+      // The same day at 23:59:60 parses only if UTC inserted a second that day.
+      const lastMinute = `${text.slice(0, hour[0])}23${text.slice(hour[1], minute[0])}59${text.slice(minute[1])}`;
+      return lastMinute !== text &&
+        lib.parseFixUtcTimestamp(lastMinute) !== null
+        ? "Second 60 at a time UTC inserted no second; it inserts one only at 23:59:60."
+        : "Second 60 on a day UTC inserted no second.";
     }
   }
 
@@ -273,6 +279,7 @@ export function reasonOf(
  */
 export const REASON_SAMPLES: readonly string[] = [
   "Second 60 on a day UTC inserted no second.",
+  "Second 60 at a time UTC inserted no second; it inserts one only at 23:59:60.",
   "A fraction of 99 digits states no precision FIX names; other widths need the parties' agreement.",
   "Not a FIX UTCTimestamp: YYYYMMDD-HH:MM:SS, then a period and 3, 6, 9 or 12 digits, or nothing.",
 ];

@@ -166,6 +166,22 @@ describe("reasonOf", () => {
     });
   });
 
+  it("tells a 60 at the wrong minute of an insertion day from a 60 on an ordinary day", () => {
+    const wrongTime =
+      "Second 60 at a time UTC inserted no second; it inserts one only at 23:59:60.";
+    // 2016-12-31 inserted a second, at 23:59:60 and at no other minute.
+    expect(reasonOf(lib, "20161231-23:58:60", shape)).toBe(wrongTime);
+    expect(reasonOf(lib, "20161231-22:59:60", shape)).toBe(wrongTime);
+    expect(reasonOf(lib, "20161231-00:00:60.500", shape)).toBe(wrongTime);
+    // 2017-12-31 inserted none, so a 60 at any minute is the wrong-day reason.
+    expect(reasonOf(lib, "20171231-23:58:60", shape)).toBe(
+      "Second 60 on a day UTC inserted no second.",
+    );
+    expect(wrongTime.length).toBeLessThanOrEqual(
+      Math.max(...REASON_SAMPLES.map((s) => s.length)),
+    );
+  });
+
   it("gives the general sentence for any other refusal", () => {
     const general =
       "Not a FIX UTCTimestamp: YYYYMMDD-HH:MM:SS, then a period and 3, 6, 9 or 12 digits, or nothing.";
