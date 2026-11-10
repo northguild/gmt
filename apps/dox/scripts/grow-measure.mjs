@@ -274,6 +274,11 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "ssim-date-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
     slug: "holiday-rule-builder",
     preset: PRESET,
     drag: { role: "spinbutton", name: "Year" },

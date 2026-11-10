@@ -336,6 +336,7 @@ export const EXAMPLE_AREAS = [
   { id: "intermodal", label: "Intermodal" },
   { id: "gnss", label: "GNSS" },
   { id: "finance", label: "Finance" },
+  { id: "aviation", label: "Aviation" },
 ] as const;
 
 type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
@@ -896,6 +897,12 @@ export const CHAT_STARTERS: readonly {
     widget: "showTerrestrialTimeStack",
     area: "core",
     args: { value: "2026-01-01T00:00:00Z" },
+  },
+  {
+    text: "Does the SSIM date 01JAN26 read the same as the locale pattern parser's reading, with a window from 2000?",
+    widget: "showSsimDateReader",
+    area: "aviation",
+    args: { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
   },
 ];
 

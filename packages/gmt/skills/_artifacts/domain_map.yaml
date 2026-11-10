@@ -27,7 +27,7 @@ domains:
     description: Integrating gmt with application frameworks and linting tools
   - name: Industry Layers
     slug: industry-layers
-    description: One skill per industry layer (gnss/, finance/, transport/, intermodal/, workforce/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
+    description: One skill per industry layer (gnss/, finance/, aviation/, transport/, intermodal/, workforce/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
   - name: Contributor
     slug: contributor
     description: Library maintainer workflows — issues, PRs, implementation, testing
@@ -455,6 +455,23 @@ skills:
       - Write an instant as a FIX UTCTimestamp at a counterparty's precision, cut and never rounded
       - Tell a real inserted leap second from a second 60 on an ordinary day in a FIX message
       - Check whether a value is a FIX UTCTimestamp
+
+  - name: GMT Aviation
+    slug: gmt-aviation
+    domain: industry-layers
+    description: Read, write and check the IATA SSIM schedule date DDMMMYY (parseSsimDate/formatSsimDate/isValidSsimDate) — fixed English upper-case month letters that never go through Intl, a required yearWindow for the century, sentinels instead of exceptions
+    type: core
+    packages:
+      - '@northguild/gmt'
+    covers:
+      - parseSsimDate
+      - formatSsimDate
+      - isValidSsimDate
+    tasks:
+      - Read an SSIM schedule date such as 01JAN26 as an ISO date, in a century the caller states with yearWindow
+      - Write an ISO date as an SSIM date, refusing a year outside the window
+      - Check whether a value is a valid SSIM date
+      - Know that the month letters are a fixed English code, never read through Intl, and that lower case and other languages are not read
 
   - name: GMT Transport
     slug: gmt-transport

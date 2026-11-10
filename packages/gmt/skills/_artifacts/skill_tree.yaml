@@ -172,6 +172,22 @@ skills:
       - 'northguild/gmt:packages/gmt/src/finance/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/types/fix.ts'
 
+  - name: GMT Aviation
+    slug: gmt-aviation
+    type: core
+    domain: industry-layers
+    path: 'skills/gmt-aviation/SKILL.md'
+    package: 'packages/gmt'
+    description: Read, write and check the IATA SSIM schedule date DDMMMYY (parseSsimDate/formatSsimDate/isValidSsimDate) — fixed English upper-case month letters that never go through Intl, a required yearWindow for the century, sentinels instead of exceptions
+    requires:
+      - gmt-intermodal
+    sources:
+      - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/aviation-message-times.mdx'
+      - 'northguild/gmt:packages/gmt/src/aviation/format/index.ts'
+      - 'northguild/gmt:packages/gmt/src/aviation/parse/index.ts'
+      - 'northguild/gmt:packages/gmt/src/aviation/validate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/two-digit-year.ts'
+
   - name: GMT Transport
     slug: gmt-transport
     type: core

@@ -629,6 +629,26 @@ export const showFixTimestampReaderInput = z.object({
   instant: z.string().max(64).optional(),
 });
 
+/**
+ * SSIM Date Reader: the SSIM text to read (`value`), the window its two-digit year is read in
+ * (`yearWindow`: a first year or "rolling"), the locale the comparison passes the pattern
+ * parser (`locale`) and an ISO date to write back (`date`). Nothing is trimmed, upper-cased or
+ * defaulted: a call with no `yearWindow` opens with the window blank, and the chat never picks
+ * a century. The widget's permalink calls `yearWindow` `window`.
+ */
+export const showSsimDateReaderInput = z
+  .object({
+    value: z.string().max(16).optional(),
+    yearWindow: z
+      .union([z.literal("rolling"), z.number().int().min(0).max(9900)])
+      .optional(),
+    locale: z.string().optional(),
+    date: z.string().max(32).optional(),
+  })
+  .refine((a) => a.value !== undefined || a.date !== undefined, {
+    message: "Give a value to read or a date to write.",
+  });
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1258,7 +1278,8 @@ export type DoxToolName =
   | "showDatabaseTimestampReader"
   | "showTai64nLogReader"
   | "showTerrestrialTimeStack"
-  | "showFixTimestampReader";
+  | "showFixTimestampReader"
+  | "showSsimDateReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1582,6 +1603,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what a FIX UTCTimestamp or a SendingTime or TransactTime value means, its precision, whether a second 60 in it is real, or how to write an instant at milli-, micro-, nano- or picosecond precision",
     args: "stamp: optional, the FIX UTCTimestamp exactly as the reader gave it, never trimmed or corrected; instant: optional, an instant with Z or an offset to write at the five precisions, only when the reader gave one.",
   },
+  {
+    name: "showSsimDateReader",
+    purpose:
+      "Read an IATA SSIM DDMMMYY date with a window you state, beside the locale pattern parser, and write a date back.",
+    when: "Call when the reader asks about SSIM or airline schedule dates such as 01JAN26, a month code read in the wrong language, or which century a two-digit year means in a schedule. Pass only what the reader gave: never a yearWindow they did not state, never a locale inferred from a place, never an upper-cased value.",
+    args: 'value: the SSIM text exactly as the reader gave it, at most 16 characters, never trimmed or upper-cased; yearWindow: only when the reader stated one, a first year from 0 to 9900 or "rolling"; locale: a BCP 47 tag, only when the reader named one, passed to the pattern comparison alone; date: an ISO date to write back. Give value or date.',
+  },
 ];
 
 /**
@@ -1770,6 +1798,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[44].purpose,
     inputSchema: showFixTimestampReaderInput,
   }),
+  showSsimDateReader: tool({
+    description: DOX_TOOL_DOCS[45].purpose,
+    inputSchema: showSsimDateReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1838,6 +1870,7 @@ export const ENABLED_TOOL_NAMES = [
   "showTai64nLogReader",
   "showTerrestrialTimeStack",
   "showFixTimestampReader",
+  "showSsimDateReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

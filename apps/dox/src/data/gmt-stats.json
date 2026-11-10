@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 72507,
-  "files": 957,
-  "executions": 2175210,
+  "tests": 72833,
+  "files": 961,
+  "executions": 2184990,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 745,
+  "functions": 748,
   "patterns": 30,
   "byNamespace": [
     {
@@ -105,6 +105,10 @@
       "count": 4
     },
     {
+      "namespace": "aviation",
+      "count": 3
+    },
+    {
       "namespace": "finance",
       "count": 3
     }
@@ -114,6 +118,7 @@
     "transport",
     "workforce",
     "gnss",
+    "aviation",
     "finance"
   ],
   "industryLayers": [
@@ -181,7 +186,13 @@
       "label": "Finance",
       "own": 3,
       "drawsOn": []
+    },
+    {
+      "id": "aviation",
+      "label": "Aviation",
+      "own": 3,
+      "drawsOn": []
     }
   ],
-  "industryFunctions": 87
+  "industryFunctions": 90
 }

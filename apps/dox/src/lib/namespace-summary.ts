@@ -47,6 +47,8 @@ export const NAMESPACE_SUMMARIES: Readonly<Record<string, string>> = {
   gnss: "Functions that convert between UTC and the satellite navigation system times, GNSS week numbers and RINEX weeks.",
   finance:
     "Functions that read, write and check the timestamps of financial messages, starting with the FIX UTCTimestamp.",
+  aviation:
+    "Functions that read, write and check the dates of aviation messages, starting with the SSIM date DDMMMYY.",
 };
 
 /**

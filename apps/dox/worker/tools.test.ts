@@ -429,6 +429,57 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showSsimDateReader", () => {
+    const schema = (
+      tools.showSsimDateReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value, a date or both, with a window as a year or rolling", async () => {
+      for (const input of [
+        { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
+        { value: "01JAN26", yearWindow: "rolling" },
+        { value: "01JAN26" },
+        { date: "2026-01-01", yearWindow: 2000 },
+        { value: "01jan26", date: "2026-01-01" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showSsimDateReader", input)).toMatchObject({
+          ok: true,
+          widget: "ssim-date-reader",
+        });
+      }
+    });
+
+    it("needs a value or a date", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: 2000 }).success).toBe(false);
+    });
+
+    it("refuses a window that is not a year or rolling, and a value over 16 characters", () => {
+      expect(schema.safeParse({ value: "x", yearWindow: "now" }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ value: "x", yearWindow: 1.5 }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ value: "x", yearWindow: -1 }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ value: "a".repeat(16) }).success).toBe(true);
+      expect(schema.safeParse({ value: "a".repeat(17) }).success).toBe(false);
+    });
+
+    it("does not default the window", () => {
+      expect(schema.safeParse({ value: "01JAN26" }).data).toEqual({
+        value: "01JAN26",
+      });
+    });
+  });
+
   describe("showTerrestrialTimeStack", () => {
     const schema = (
       tools.showTerrestrialTimeStack as unknown as {

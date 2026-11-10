@@ -1,0 +1,56 @@
+---
+title: SSIM Date Reader
+description: Read an IATA SSIM date such as 01JAN26 in a window you state, see why a locale pattern parser reads the same text differently, and write an ISO date back.
+industries: [aviation]
+---
+
+import SsimDateReader from "../../../components/SsimDateReader.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="Airline schedule dates">
+
+<Fragment slot="keypoint">
+
+An SSIM date is a code, not a sentence in a language: the month letters are fixed, and the century is yours to state.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Airline schedules write a date as `DDMMMYY`, such as `01JAN26`. Two things in it are easy to get wrong. The month letters are the same in every country, and the two-digit year does not say which century it means. [`parseSsimDate`](/reference/aviation/parse/parseSsimDate/) reads the code with the window you give it and takes no locale.
+
+Type a date, state a window and pick a locale, or press one of the presets. Section 1 reads the date. Section 2 puts the same text through [`parseDateWithPattern`](/reference/plain/parse/parseDateWithPattern/), which reads the month as the locale's own short name: a different function, used wrongly, and the table beside it shows why. Section 3 writes an ISO date back. Every date and every month letter on the page is a library result, and each section prints the calls it made.
+
+</Fragment>
+
+<SsimDateReader fullbleed />
+
+<Fragment slot="after">
+
+**SSIM reads.** [`parseSsimDate`](/reference/aviation/parse/parseSsimDate/) takes upper-case letters only, and the window you pass says which hundred years the two-digit year falls in: a first year, or a rolling window that moves with today. With no window there is no date, and the page says so.
+
+**Valid.** [`isValidSsimDate`](/reference/aviation/validate/isValidSsimDate/) is true exactly when the read returns a date.
+
+**The locale pattern.** [`parseDateWithPattern`](/reference/plain/parse/parseDateWithPattern/) reads `MMM` as the short month names of the locale it is given, and ignores case. For an SSIM date that is the wrong function: the month letters are part of the format, and a translated month is not the code. [`getLocaleMonthNames`](/reference/plain/locale/getLocaleMonthNames/) lists the names the table sets beside the SSIM letters.
+
+**SSIM writes.** [`formatSsimDate`](/reference/aviation/format/formatSsimDate/) writes an ISO date as `DDMMMYY`, and refuses a year outside the window, because it would read back as another century.
+
+See [Aviation message times](/guides/industries/aviation-message-times/), [an SSIM month read in the wrong language](/scenarios/an-ssim-month-read-in-the-wrong-language/) and [Aviation mistakes](/mistakes/aviation/).
+
+**Worth trying:**
+
+- [01JAN26 with an fr-FR pattern](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22french-locale%22%7D) — the SSIM reader gives 2026-01-01 and the pattern parser has no date, because that locale writes the month `janv.`.
+- [The same text with an English pattern](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22english-locale%22%7D) — the two agree only because English short names happen to match the code.
+- [25OCT26 with a tr-TR pattern](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22turkish-locale%22%7D) — the locale you pass the pattern parser changes nothing for the SSIM reader.
+- [Lower case](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22lower-case%22%7D) — the SSIM reader refuses `01jan26`, and the pattern parser reads it.
+- [A translated month](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22spanish-locale%22%7D) — `01ENE26` reads under `es-ES` and is refused by the SSIM reader.
+- [An archive window](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22archive%22%7D) — a window from 1950 puts `09` in 2009.
+- [29FEB00 from 2000](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22leap-2000%22%7D) — valid, because 2000 is a leap year.
+- [29FEB00 from 1900](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22leap-1900%22%7D) — not valid, because 1900 has no 29 February.
+- [A rolling window](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22rolling%22%7D) — the window moves with today.
+- [No window](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22no-window%22%7D) — no century stated, no date.
+- [Write a year outside the window](/tools/ssim-date-reader/?w=ssim&wa=%7B%22preset%22%3A%22write-outside%22%7D) — the writer refuses 1999-12-31 in a window from 2000.
+
+</Fragment>
+
+</ToolLayout>

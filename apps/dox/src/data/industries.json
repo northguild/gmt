@@ -51,5 +51,14 @@
     "guide": "/guides/industries/finance-message-timestamps/",
     "namespace": "finance",
     "drawsOn": []
+  },
+  {
+    "id": "aviation",
+    "label": "Aviation",
+    "definition": "Airline schedule dates in IATA SSIM files, with English month letters and a century the caller states.",
+    "icon": "industry-aviation",
+    "guide": "/guides/industries/aviation-message-times/",
+    "namespace": "aviation",
+    "drawsOn": []
   }
 ]

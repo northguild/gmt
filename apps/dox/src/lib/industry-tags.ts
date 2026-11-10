@@ -168,8 +168,8 @@ const STROKE =
  *  `DETAILS`, in the transport icons' format (transport-icons.ts): a 24x24
  *  viewBox, stroke-based, legible at 14px. A clock for core, a person beside a
  *  clock face for workforce, a route between two points for transport, a
- *  container for intermodal. None reuses a transport mode's glyph, which
- *  already means that mode inside the widgets. */
+ *  container for intermodal, a control tower for aviation. None reuses a transport
+ *  mode's glyph, which already means that mode inside the widgets. */
 export const INDUSTRY_ICON_PATHS: Readonly<Record<string, string>> = {
   "industry-core": `<g ${STROKE}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g>`,
   "industry-workforce": `<g ${STROKE}><circle cx="7" cy="7" r="3"/><path d="M2 21v-2a5 5 0 0 1 10 0v2"/><circle cx="17.5" cy="14" r="4.5"/><path d="M17.5 11.5V14l1.8 1.2"/></g>`,
@@ -178,6 +178,7 @@ export const INDUSTRY_ICON_PATHS: Readonly<Record<string, string>> = {
   "industry-gnss": `<g ${STROKE}><rect x="9.5" y="9.5" width="5" height="5" rx="1" transform="rotate(45 12 12)"/><path d="M5.5 8.5l3-3 2.2 2.2-3 3zM13.3 16.3l3-3 2.2 2.2-3 3z"/><path d="M4 16.5a5 5 0 0 0 3.5 3.5M3 13.5a8 8 0 0 0 7.5 7.5"/></g>`,
   "industry-maritime": `<g ${STROKE}><circle cx="12" cy="5" r="2"/><path d="M12 7v14M8 11h8M4 14a8 8 0 0 0 16 0"/></g>`,
   "industry-finance": `<g ${STROKE}><path d="M6 4v3M6 17v3M12 3v4M12 15v6M18 6v2M18 16v3"/><rect x="4" y="7" width="4" height="10" rx="1"/><rect x="10" y="7" width="4" height="8" rx="1"/><rect x="16" y="8" width="4" height="8" rx="1"/></g>`,
+  "industry-aviation": `<g ${STROKE}><path d="M10.5 21V13h3v8M7 21h10"/><path d="M8 4.5h8l2 5.5H6z"/><path d="M12 4.5V2"/></g>`,
 };
 
 /**

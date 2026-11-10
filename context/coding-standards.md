@@ -136,6 +136,20 @@ The same three rules extend to `parseFixUtcTimestamp`, `formatFixUtcTimestamp` a
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: aviation message grammars in `aviation/` (AV-97)
+
+The same three rules extend to `parseSsimDate` and `formatSsimDate` in `packages/gmt/src/aviation/`. The SSIM date `DDMMMYY` (`01JAN26`) is not ISO 8601, and Temporal's `.from()` cannot parse it at any layer. The grammar is fixed, never caller-supplied:
+
+1. One regex, in `internal/ssimDate.ts`, built from the table of twelve month letters, with a field reader and a writer derived from the same table. No public function slices the string itself. The grammar is not a public pattern, because a value is a date only once its century is known: the public check is `isValidSsimDate(value, options)`, and `regex/` gains nothing.
+2. The extracted fields are always handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })`.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+**The month letters are a code.** They are fixed English and upper case, never read through `Intl`, and never case-folded. This is an explicit exception to the library's locale-aware formatting.
+
+**The century is the caller's.** Both functions take `TwoDigitYearOptions` and return the sentinel without `yearWindow`, under the INT-15 [No century is guessed](#scoped-exception-edi-datetime-grammars-in-the-parseedifact-and-parsex12-functions-int-15) rule.
+
+This prohibition stands for every other function in the library.
+
 ### Scoped exception: TAI64 text labels in `timescale/convert` (SPA-46)
 
 The same three rules extend to `fromTai64n` (reader) and `toTai64n` (writer) in `packages/gmt/src/timescale/convert/`. A TAI64, TAI64N or TAI64NA label (`@400000002a2b2c2d00000000`) is hex text, not ISO 8601, and no `Temporal.*.from` reads it. Bernstein's [TAI64, TAI64N, and TAI64NA](https://cr.yp.to/libtai/tai64.html) defines the byte layouts (8, 12 and 16 bytes); daemontools [`tai64n`](https://cr.yp.to/daemontools/tai64n.html) defines only the TAI64N text, `@` and 24 lowercase hex digits. Reading 16 or 32 digits, an optional `@` and either hex case is GMT's own rule (precedent: `fromObjectId` reads either case). The grammar is fixed:
