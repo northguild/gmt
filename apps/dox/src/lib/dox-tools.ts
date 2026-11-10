@@ -610,6 +610,16 @@ export const showTai64nLogReaderInput = z.object({
   instant: z.string().max(64).optional(),
 });
 
+/**
+ * FIX Timestamp Reader: the `UTCTimestamp` to read (`stamp`) and the instant to write at the
+ * five precisions (`instant`). Neither is trimmed: the library reads the text as given, and a
+ * stamp with a stray space is refused. The widget's permalink calls `instant` `write`.
+ */
+export const showFixTimestampReaderInput = z.object({
+  stamp: z.string().max(64).optional(),
+  instant: z.string().max(64).optional(),
+});
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1237,7 +1247,8 @@ export type DoxToolName =
   | "showLeapDayBirthday"
   | "showExpiryCalculator"
   | "showDatabaseTimestampReader"
-  | "showTai64nLogReader";
+  | "showTai64nLogReader"
+  | "showFixTimestampReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1547,6 +1558,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader pastes or asks about a TAI64 / TAI64N / TAI64NA label or a daemontools, multilog or s6 log line starting with `@4000…`, or asks why such a label reads 37 (or 27) seconds off, or what time a label such as @4000000037c219bf2ef02e94 is. Pass the lines exactly as given.",
     args: "values: required, the log lines exactly as the reader gave them, one per line, at most 12 lines read; line: optional, the 1-based line to draw; instant: optional UTC instant, only when the reader named one to write as a label.",
   },
+  {
+    name: "showFixTimestampReader",
+    purpose:
+      "Read a FIX UTCTimestamp as an instant, the precision its digit count states and whether its second 60 is an inserted leap second, and write one instant at second, millisecond, microsecond, nanosecond and picosecond precision.",
+    when: "the reader asks what a FIX UTCTimestamp or a SendingTime or TransactTime value means, its precision, whether a second 60 in it is real, or how to write an instant at milli-, micro-, nano- or picosecond precision",
+    args: "stamp: optional, the FIX UTCTimestamp exactly as the reader gave it, never trimmed or corrected; instant: optional, an instant with Z or an offset to write at the five precisions, only when the reader gave one.",
+  },
 ];
 
 /**
@@ -1727,6 +1745,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[42].purpose,
     inputSchema: showTai64nLogReaderInput,
   }),
+  showFixTimestampReader: tool({
+    description: DOX_TOOL_DOCS[43].purpose,
+    inputSchema: showFixTimestampReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1793,6 +1815,7 @@ export const ENABLED_TOOL_NAMES = [
   "showExpiryCalculator",
   "showDatabaseTimestampReader",
   "showTai64nLogReader",
+  "showFixTimestampReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

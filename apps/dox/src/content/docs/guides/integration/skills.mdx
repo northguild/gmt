@@ -46,6 +46,7 @@ Sample output:
   - gmt-timezone
   - gmt-integration
   - gmt-gnss
+  - gmt-finance
   - gmt-transport
   - gmt-intermodal
   - gmt-workforce
@@ -78,7 +79,7 @@ For projects that want explicit routing, pass `--map` to bind a task keyword to 
 skill so `intent list` highlights the right match automatically:
 
 ```bash
-npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "gnss=gmt-gnss" --map "transport=gmt-transport" --map "intermodal=gmt-intermodal" --map "workforce=gmt-workforce" --map "lint=first-time-setup"
+npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "gnss=gmt-gnss" --map "finance=gmt-finance" --map "transport=gmt-transport" --map "intermodal=gmt-intermodal" --map "workforce=gmt-workforce" --map "lint=first-time-setup"
 ```
 
 ## Allowlist skills
@@ -129,6 +130,7 @@ its tasks use `gmt-gnss`.
 | <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> Transport | `gmt-transport` | Transit legs, connections, cut-offs, punctuality, departures | `src/transport/` |
 | <Icon name="industry-intermodal" size="1.1em" class="gmt-ref-industry-icon" /> Intermodal | `gmt-intermodal` | Free time, demurrage, billing deadlines, bill of lading dates, EDI and EPCIS timestamps | `src/intermodal/` |
 | <Icon name="industry-gnss" size="1.1em" class="gmt-ref-industry-icon" /> GNSS | `gmt-gnss` | GNSS time scales, broadcast and RINEX week numbers, rollover eras | `src/gnss/` |
+| <Icon name="industry-finance" size="1.1em" class="gmt-ref-industry-icon" /> Finance | `gmt-finance` | FIX `UTCTimestamp` values: precision from the digit count, picoseconds, leap seconds | `src/finance/` |
 
 > **Skills are routing pointers, not API documentation.** The skill files carry the
 > core rules and common pitfalls. For a signature, a locale matrix or an example,

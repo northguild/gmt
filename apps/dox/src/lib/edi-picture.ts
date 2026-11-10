@@ -246,6 +246,11 @@ export interface PicField {
   word: string;
   /** The words under its bracket, when they are not the group's name. */
   bracket?: string;
+  /**
+   * Fields of one group that sit under separate brackets name different runs; the figure
+   * splits where `run` changes. Absent for every code that draws one bracket per group.
+   */
+  run?: string;
 }
 
 /** One half of a value: a whole value, or one end of a period. */

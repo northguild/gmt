@@ -27,7 +27,7 @@ domains:
     description: Integrating gmt with application frameworks and linting tools
   - name: Industry Layers
     slug: industry-layers
-    description: One skill per industry layer (gnss/, transport/, intermodal/, workforce/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
+    description: One skill per industry layer (gnss/, finance/, transport/, intermodal/, workforce/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
   - name: Contributor
     slug: contributor
     description: Library maintainer workflows — issues, PRs, implementation, testing
@@ -433,6 +433,23 @@ skills:
       - Decode a broadcast GNSS week and time of week by its named counter, with an integer era, "rolling" or a firmware-date notBefore pivot
       - Read a continuous RINEX navigation-file week, which never wraps, apart from a broadcast week
 
+  - name: GMT Finance
+    slug: gmt-finance
+    domain: industry-layers
+    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded
+    type: core
+    packages:
+      - '@northguild/gmt'
+    covers:
+      - parseFixUtcTimestamp
+      - formatFixUtcTimestamp
+      - isValidFixUtcTimestamp
+    tasks:
+      - Read a FIX UTCTimestamp and the precision its digit count states, with picoseconds returned apart from the instant
+      - Write an instant as a FIX UTCTimestamp at a counterparty's precision, cut and never rounded
+      - Tell a real inserted leap second from a second 60 on an ordinary day in a FIX message
+      - Check whether a value is a FIX UTCTimestamp
+
   - name: GMT Transport
     slug: gmt-transport
     domain: industry-layers
@@ -672,6 +689,9 @@ cross_references:
   - from: gmt-integration
     to: gmt-gnss
     reason: GNSS offsets rest on the leap-second table in timescale/; a second 60 is accepted only on a listed insertion day
+  - from: gmt-integration
+    to: gmt-finance
+    reason: A FIX UTCTimestamp second 60 rests on the same closed leap-second table; finance/ accepts it only on a listed insertion day
   - from: gmt-arithmetic
     to: gmt-workforce
     reason: Hours-of-work rules are built on interval and duration arithmetic

@@ -1,7 +1,9 @@
 /* The ghosts of a call frame and a result pane: blocks of the real thing's size. */
 
+/* The live frame has a 1px border of its own around the pre, so the ghost's margin stands in
+   for it: a hold that shows no call is then as tall as one that shows five. */
 .frameGhost {
-  margin: 0;
+  margin: 1px 0;
   padding-block: 0.75rem;
   padding-inline: 1rem 3rem;
   border: 1px solid var(--gmt-hairline);

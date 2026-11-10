@@ -171,6 +171,10 @@ const PAGES = [
     widget: "tai64n-log-reader",
   },
   {
+    path: "tools/fix-timestamp-reader",
+    widget: "fix-timestamp-reader",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

@@ -188,8 +188,8 @@ input before you act on it.
   not (`"2024-06-15T12:34:60Z"` is `true`). `isLeapSecond`, from `timescale/`,
   is the table lookup: it is true only for the 27 inserted leap seconds
   (`"2016-12-31T23:59:60Z"` is `true`, `"2024-06-15T12:34:60Z"` is `false`).
-  Only the `timescale/` and `gnss/` functions accept a second 60, and only a
-  listed one; see the `gmt-integration` and `gmt-gnss` skills.
+  Only the `timescale/`, `gnss/` and `finance/` functions accept a second 60, and only a
+  listed one; see the `gmt-integration`, `gmt-gnss` and `gmt-finance` skills.
 - `isValidTimeZone` accepts every IANA name, including single-component links
   such as `Japan`, `Zulu` and `EST5EDT`, and ignores case. It also accepts
   offset zone ids such as `"+05:00"`, as Temporal does.

@@ -1,0 +1,249 @@
+---
+title: "Finance: Message Timestamps"
+description: parseFixUtcTimestamp, formatFixUtcTimestamp and isValidFixUtcTimestamp — read and write the FIX UTCTimestamp at the precision its digits state, with a second of sixty accepted only for a leap second UTC really inserted.
+sidebar:
+  order: 11
+industries: [finance]
+---
+
+Trading and payment messages carry timestamps in their own formats, and FIX is the one most
+systems meet first. A FIX `UTCTimestamp` is written `YYYYMMDD-HH:MM:SS`, with an optional fraction
+of a second after a period, and it is always UTC. It is not ISO 8601: it has no dashes in the date,
+no `T`, and no `Z`.
+
+What makes it worth a layer is that the stamp states how precisely it was measured, and it does so
+by its length. Three fraction digits are milliseconds, six microseconds, nine nanoseconds and
+twelve picoseconds. A reader that turns the stamp into a plain instant loses that, and one that
+widens it invents digits nobody measured. The functions here read and write the stamp and keep
+what the digits say.
+
+```typescript
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
+import { isValidFixUtcTimestamp } from "@northguild/gmt/finance/validate";
+```
+
+The functions live in `@northguild/gmt/finance/parse`, `@northguild/gmt/finance/format` and
+`@northguild/gmt/finance/validate`. The leap seconds they read come from
+[`timescale/`](/reference/timescale), which is Core: [Leap Seconds and
+TAI](/guides/core-date-operations/leap-seconds-and-tai/) explains the table. Which FIX field
+carries which stamp (`SendingTime`, `TransactTime`) is the message's business, not this layer's.
+
+## Reading a FIX timestamp
+
+[`parseFixUtcTimestamp(value)`](/reference/finance/parse/parseFixUtcTimestamp) reads a stamp and
+returns an object with four fields: the `instant` as a standard UTC string, the `precision` the
+digits state, whether the second is a `leapSecond`, and the `picoseconds`. It returns `null` for
+anything that is not a valid stamp.
+
+```typescript
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20240615-14:30:00");
+// { instant: "2024-06-15T14:30:00Z", precision: "second", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.123");
+// { instant: "2024-06-15T14:30:00.123Z", precision: "millisecond", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.123456");
+// { instant: "2024-06-15T14:30:00.123456Z", precision: "microsecond", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.123456789");
+// { instant: "2024-06-15T14:30:00.123456789Z", precision: "nanosecond", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.123456789012");
+// { instant: "2024-06-15T14:30:00.123456789Z", precision: "picosecond", leapSecond: false, picoseconds: 12 }
+```
+
+The five precisions are `"second"`, `"millisecond"`, `"microsecond"`, `"nanosecond"` and
+`"picosecond"`. The shape is strict, as FIX states it: the dash, the colons and the period are
+required, and a month the date lacks, an hour of 24 or a minute of 60 is refused.
+
+```typescript
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("2024-06-15T14:30:00Z");
+// null (an ISO 8601 string, not a FIX stamp)
+parseFixUtcTimestamp("20240631-10:00:00");
+// null (no 31 June)
+parseFixUtcTimestamp("20240615-24:00:00");
+// null (hour 24)
+```
+
+## Precision is in the digits
+
+The fraction is not a decimal of any width. `.100` states milliseconds, so it is a millisecond
+stamp that happens to end in zeros, and it is not `.1`, a tenth of a second. The instant keeps the
+digits that were sent, trailing zeros included, so the precision survives the trip.
+
+```typescript
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20240615-14:30:00.100");
+// { instant: "2024-06-15T14:30:00.100Z", precision: "millisecond", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.000");
+// { instant: "2024-06-15T14:30:00.000Z", precision: "millisecond", leapSecond: false, picoseconds: 0 }
+```
+
+A standard instant holds nanoseconds, and a picosecond stamp has twelve digits. The instant keeps
+the first nine, and the last three come back beside it as `picoseconds`, a number from 0 to 999.
+The parser never cuts a value without saying so.
+
+A fraction of any other width, such as `.12` or `.1234`, is a bilateral agreement between two
+counterparties. FIX names no precision for it and a value does not carry the agreement, so the
+parser returns `null` and does not guess. If both sides of a link have agreed a width, read the
+stamp with [`parseDateTimeWithPattern`](/reference/plain/parse/parseDateTimeWithPattern) and a
+pattern that states it.
+
+```typescript
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20240615-14:30:00.12");
+// null (two digits is no FIX precision)
+parseFixUtcTimestamp("20240615-14:30:00.1234");
+// null
+```
+
+## Writing at the precision asked for
+
+[`formatFixUtcTimestamp(value, precision)`](/reference/finance/format/formatFixUtcTimestamp)
+writes an instant as a FIX stamp of the width you ask for. An offset or a zone on the input is
+converted to UTC first, because the stamp is UTC. It returns `""` when it cannot write one.
+
+```typescript
+import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
+
+formatFixUtcTimestamp("2024-06-15T14:30:00.123456789Z", "second");
+// "20240615-14:30:00"
+formatFixUtcTimestamp("2024-06-15T14:30:00.123456789Z", "millisecond");
+// "20240615-14:30:00.123"
+formatFixUtcTimestamp("2024-06-15T14:30:00.123456789Z", "nanosecond");
+// "20240615-14:30:00.123456789"
+formatFixUtcTimestamp("2024-06-15T14:30:00.123456789Z", "picosecond");
+// "20240615-14:30:00.123456789000"
+formatFixUtcTimestamp("2024-06-15T16:30:00.123+02:00", "millisecond");
+// "20240615-14:30:00.123"
+formatFixUtcTimestamp("2024-06-15T10:30:00.5-04:00[America/New_York]", "microsecond");
+// "20240615-14:30:00.500000"
+```
+
+Asking for a width wider than the instant holds pads with zeros, and `"picosecond"` ends in
+`000`, because a standard instant carries no digits past nanoseconds.
+
+### Cut, never rounded
+
+Narrowing cuts the fraction and does not round it. Rounding can carry into the next second, the
+next minute or the next day, and a stamp that moved forward names a moment that had not happened
+when the trade was stamped.
+
+```typescript
+import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
+
+formatFixUtcTimestamp("2024-06-15T23:59:59.9996Z", "millisecond");
+// "20240615-23:59:59.999" (rounded, it would be the next day at 00:00:00.000)
+formatFixUtcTimestamp("2024-06-15T23:59:59.9996Z", "second");
+// "20240615-23:59:59"
+formatFixUtcTimestamp("2024-06-15T23:59:59.9996Z", "microsecond");
+// "20240615-23:59:59.999600"
+```
+
+### A local time is not a UTC stamp
+
+A date-time with no offset names no UTC second, so the formatter refuses it and returns `""`.
+Resolve it in its zone first with [`resolveLocal`](/reference/instant/convert/resolveLocal), which
+makes the choice for a repeated or skipped wall time explicit, and then write the instant.
+
+```typescript
+import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+formatFixUtcTimestamp("2024-06-15T14:30:00", "millisecond");
+// ""
+resolveLocal("2024-06-15T14:30:00", "America/New_York");
+// "2024-06-15T18:30:00Z"
+formatFixUtcTimestamp(resolveLocal("2024-06-15T14:30:00", "America/New_York"), "millisecond");
+// "20240615-18:30:00.000"
+```
+
+A precision is accepted singular or plural, as `"millisecond"` or `"milliseconds"`. A name that is
+neither returns `""`.
+
+## Leap seconds
+
+FIX allows a second of `60` and says it is for a UTC leap second only. Its own example is the
+sequence that ended 1998:
+
+```typescript
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("19981231-23:59:59");
+// { instant: "1998-12-31T23:59:59Z", precision: "second", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("19981231-23:59:60");
+// { instant: "1998-12-31T23:59:60Z", precision: "second", leapSecond: true, picoseconds: 0 }
+parseFixUtcTimestamp("19990101-00:00:00");
+// { instant: "1999-01-01T00:00:00Z", precision: "second", leapSecond: false, picoseconds: 0 }
+```
+
+Only the 27 leap seconds UTC has inserted, the first at the end of June 1972 and the last at the
+end of 2016, are real. A `60` on any other day returns `null`, and so does a leap second before
+1972. [`isValidFixUtcTimestamp(value)`](/reference/finance/validate/isValidFixUtcTimestamp) answers
+the same question as a boolean, and is `true` exactly when the parser returns a value.
+
+```typescript
+import { isValidFixUtcTimestamp } from "@northguild/gmt/finance/validate";
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+isValidFixUtcTimestamp("20161231-23:59:60");
+// true
+isValidFixUtcTimestamp("20171231-23:59:60");
+// false (no leap second was inserted that day)
+parseFixUtcTimestamp("19720630-23:59:60");
+// { instant: "1972-06-30T23:59:60Z", precision: "second", leapSecond: true, picoseconds: 0 }
+parseFixUtcTimestamp("19710630-23:59:60");
+// null
+```
+
+The instant of a leap second is written `…T23:59:60Z`, the way the rest of the library writes it. A
+fraction carries through, and the formatter writes the leap second back:
+
+```typescript
+import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
+import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20161231-23:59:60.500");
+// { instant: "2016-12-31T23:59:60.500Z", precision: "millisecond", leapSecond: true, picoseconds: 0 }
+formatFixUtcTimestamp("2016-12-31T23:59:60.5Z", "millisecond");
+// "20161231-23:59:60.500"
+```
+
+The instant reads back through the leap-second functions of `timescale/`, which are the ones that
+accept a second of 60. [`toTAI`](/reference/timescale/convert/toTAI) places it, and
+[`isLeapSecond`](/reference/timescale/validate/isLeapSecond) confirms it:
+
+```typescript
+import { toTAI } from "@northguild/gmt/timescale/convert";
+import { isLeapSecond } from "@northguild/gmt/timescale/validate";
+
+toTAI("2016-12-31T23:59:60Z");
+// "2017-01-01T00:00:36 TAI"
+isLeapSecond("2016-12-31T23:59:60Z");
+// true
+isLeapSecond("2017-12-31T23:59:60Z");
+// false
+```
+
+A plain `Temporal.Instant.from` does not accept the second. It clamps `2016-12-31T23:59:60Z` to
+`2016-12-31T23:59:59Z`, so the inserted second is stored as the one before it, and on a day with no
+leap second it stores a second that never happened as a real one. Read the stamp with
+`parseFixUtcTimestamp` first.
+
+## See it break, then work
+
+- [A Millisecond Stamp Read as Nanoseconds](/scenarios/a-millisecond-stamp-read-as-nanoseconds/)
+- [Second Sixty on an Ordinary Day](/scenarios/second-sixty-on-an-ordinary-day/)
+- [Finance mistakes](/mistakes/finance/)
+
+## Sources
+
+- FIX Trading Community, FIX Latest, data type `UTCTimestamp` (read through the FIX Orchestra
+  data-type browser): the format, the field ranges, a second of 60 only for a UTC leap second, the
+  four named precisions, the bilateral-agreement clause and the 1998 leap-second example.
+- ITU-R Recommendation TF.460-6: the inserted second is the one before a positive step, and it is
+  written 23h 59m 60s.
+- IERS, `Leap_Second.dat` and Bulletin C 72, for the 27 leap seconds.

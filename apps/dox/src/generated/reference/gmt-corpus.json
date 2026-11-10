@@ -2167,6 +2167,125 @@
     ]
   },
   {
+    "url": "/reference/finance/format/formatFixUtcTimestamp",
+    "page": "/reference/finance/format/formatFixUtcTimestamp",
+    "name": "formatFixUtcTimestamp",
+    "namespace": "finance",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatFixUtcTimestamp(value: string, precision: FixPrecision): string",
+    "description": "Write an instant as a FIX `UTCTimestamp` at the precision a counterparty asks for.",
+    "sourcePath": "packages/gmt/src/finance/format/formatFixUtcTimestamp.ts",
+    "examples": [
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"second\")",
+        "result": "\"20240615-14:30:00\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"millisecond\")",
+        "result": "\"20240615-14:30:00.123\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"microsecond\")",
+        "result": "\"20240615-14:30:00.123456\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"nanosecond\")",
+        "result": "\"20240615-14:30:00.123456789\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"picosecond\")",
+        "result": "\"20240615-14:30:00.123456789000\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2016-12-31T23:59:60Z\", \"second\")",
+        "result": "\"20161231-23:59:60\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T14:30:00\", \"second\")",
+        "result": "\"\" (no offset: name the zone first, with resolveLocal)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/parse/parseFixUtcTimestamp",
+    "page": "/reference/finance/parse/parseFixUtcTimestamp",
+    "name": "parseFixUtcTimestamp",
+    "namespace": "finance",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseFixUtcTimestamp(value: string): FixUtcTimestamp | null",
+    "description": "Read a FIX `UTCTimestamp` as a UTC instant and the precision its digits state.",
+    "sourcePath": "packages/gmt/src/finance/parse/parseFixUtcTimestamp.ts",
+    "examples": [
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00.123456\")",
+        "result": "{ instant: \"2024-06-15T14:30:00.123456Z\", precision: \"microsecond\", leapSecond: false, picoseconds: 0 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00\")",
+        "result": "{ instant: \"2024-06-15T14:30:00Z\", precision: \"second\", leapSecond: false, picoseconds: 0 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00.123456789012\")",
+        "result": "{ instant: \"2024-06-15T14:30:00.123456789Z\", precision: \"picosecond\", leapSecond: false, picoseconds: 12 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20161231-23:59:60\")",
+        "result": "{ instant: \"2016-12-31T23:59:60Z\", precision: \"second\", leapSecond: true, picoseconds: 0 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20171231-23:59:60\")",
+        "result": "null (no leap second was inserted on 2017-12-31)"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00.12\")",
+        "result": "null (2 digits: FIX names no precision for it)"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240230-00:00:00\")",
+        "result": "null (2024 has no 30 February)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/validate/isValidFixUtcTimestamp",
+    "page": "/reference/finance/validate/isValidFixUtcTimestamp",
+    "name": "isValidFixUtcTimestamp",
+    "namespace": "finance",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFixUtcTimestamp(value: string): boolean\nisValidFixUtcTimestamp(value: void | {} | null | undefined): boolean\nisValidFixUtcTimestamp(value: unknown): value is string",
+    "description": "Return true when `value` is a FIX `UTCTimestamp` that states a real UTC second.",
+    "sourcePath": "packages/gmt/src/finance/validate/isValidFixUtcTimestamp.ts",
+    "examples": [
+      {
+        "call": "isValidFixUtcTimestamp(\"20240615-14:30:00.123\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"20161231-23:59:60\")",
+        "result": "true (an inserted leap second)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"20171231-23:59:60\")",
+        "result": "false (no insertion that day)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"20240615-14:30:00.12\")",
+        "result": "false (2 digits: FIX names no precision)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"2024-06-15T14:30:00Z\")",
+        "result": "false (ISO 8601, not FIX)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/gnss/convert/gnssToUtc",
     "page": "/reference/gnss/convert/gnssToUtc",
     "name": "gnssToUtc",
@@ -21228,6 +21347,49 @@
       {
         "name": "yearLabel",
         "description": "The calendar year that names a fiscal year."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/FixPrecision",
+    "page": "/reference/types/FixPrecision",
+    "name": "FixPrecision",
+    "namespace": "types",
+    "module": "fix",
+    "kind": "type",
+    "signature": "",
+    "description": "How many fraction digits a FIX `UTCTimestamp` states. FIX Latest, `UTCTimestamp`: \"3 digits to convey milliseconds, 6 digits to convey microseconds, 9 digits to convey nanoseconds, 12 digits to convey picoseconds\"; whole seconds carry no period.",
+    "sourcePath": "packages/gmt/src/types/fix.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/finance/parse/parseFixUtcTimestamp#fixutctimestamp",
+    "page": "/reference/finance/parse/parseFixUtcTimestamp",
+    "name": "FixUtcTimestamp",
+    "namespace": "types",
+    "module": "fix",
+    "kind": "type",
+    "signature": "",
+    "description": "A FIX `UTCTimestamp` (`YYYYMMDD-HH:MM:SS[.fraction]`) read as an instant plus what the digits stated. Returned by `parseFixUtcTimestamp`.",
+    "sourcePath": "packages/gmt/src/types/fix.ts",
+    "examples": [],
+    "inlineOn": "parseFixUtcTimestamp",
+    "members": [
+      {
+        "name": "instant",
+        "description": "The moment as an ISO 8601 instant string ending in `Z`, with the fraction digits that were sent, up to the ninth. It keeps the digits sent, so `.100` stays `.100Z`; it is therefore not always the string `Temporal.Instant#toString()` writes. In a leap second it is `…T23:59:60…Z`, which only the `timescale/`, `gnss/` and `finance/` functions read back."
+      },
+      {
+        "name": "precision",
+        "description": "The precision the digit count stated: 0, 3, 6, 9 or 12 fraction digits."
+      },
+      {
+        "name": "leapSecond",
+        "description": "Whether the second was `60`, an inserted leap second."
+      },
+      {
+        "name": "picoseconds",
+        "description": "Digits 10 to 12 of a 12-digit fraction, 0 to 999. `0` for every other precision. Temporal holds nanoseconds, so these are returned apart from `instant`."
       }
     ]
   },

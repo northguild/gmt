@@ -120,6 +120,10 @@ import {
   renderTai64nLogReaderTemplate,
 } from "./tai64n-log-reader-mount";
 import {
+  mountFixTimestampReader,
+  renderFixTimestampReaderTemplate,
+} from "./fix-timestamp-reader-mount";
+import {
   mountHolidayRuleBuilder,
   renderHolidayRuleBuilderTemplate,
 } from "./holiday-rule-builder-mount";
@@ -315,6 +319,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "tai64n log reader",
     () => renderTai64nLogReaderTemplate("test"),
     mountTai64nLogReader as MountFn<never>,
+  ],
+  [
+    "fix timestamp reader",
+    () => renderFixTimestampReaderTemplate("test"),
+    mountFixTimestampReader as MountFn<never>,
   ],
   [
     "holiday rule builder",

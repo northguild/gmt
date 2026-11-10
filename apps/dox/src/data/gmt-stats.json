@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 71610,
-  "files": 947,
-  "executions": 2148300,
+  "tests": 72066,
+  "files": 951,
+  "executions": 2161980,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 737,
+  "functions": 740,
   "patterns": 30,
   "byNamespace": [
     {
@@ -103,9 +103,19 @@
     {
       "namespace": "recurrence",
       "count": 4
+    },
+    {
+      "namespace": "finance",
+      "count": 3
     }
   ],
-  "industryNamespaces": ["intermodal", "transport", "workforce", "gnss"],
+  "industryNamespaces": [
+    "intermodal",
+    "transport",
+    "workforce",
+    "gnss",
+    "finance"
+  ],
   "industryLayers": [
     {
       "id": "workforce",
@@ -165,7 +175,13 @@
           "shared": false
         }
       ]
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "own": 3,
+      "drawsOn": []
     }
   ],
-  "industryFunctions": 84
+  "industryFunctions": 87
 }
