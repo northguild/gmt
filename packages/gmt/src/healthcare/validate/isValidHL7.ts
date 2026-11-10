@@ -14,6 +14,9 @@ import { parseHL7 } from "../parse/parseHL7";
  * - A valid value is not necessarily an instant: `parseHL7` reads a value at a minute or finer
  *   with no offset as `"local"`, one at year to hour precision as `"partial"` (with or without
  *   an offset), and `'""'` as `"null"`.
+ * - Components are read as `parseHL7` reads them: `^` and `&` are the separators (ch. 2
+ *   §2.5.4), and components and subcomponents that are present but not expected are ignored
+ *   (§2.6.2), so `20240615^D^X` and `2024&X` are valid, while `&X` is not.
  * - No public regex exists: a `DTM` is valid only as a whole (calendar, clock, offset and
  *   degree of precision together), which a pattern alone cannot check.
  * - False for a value that is not a string. Never throws.
@@ -24,6 +27,7 @@ import { parseHL7 } from "../parse/parseHL7";
  * @example isValidHL7("20240615103000-0500") // true
  * @example isValidHL7("2024") // true
  * @example isValidHL7('""') // true (the null value)
+ * @example isValidHL7("20240615^D^X") // true (the third component is ignored)
  * @example isValidHL7("20240615^S") // false (a degree finer than the digits)
  * @example isValidHL7("20240230") // false (30 February)
  * @example isValidHL7("") // false (not the null value)

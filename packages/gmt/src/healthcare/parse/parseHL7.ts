@@ -11,7 +11,11 @@ import type { Hl7DtmFields } from "../../internal/hl7DateTime";
 import { Temporal } from "../../internal/temporal";
 import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
 import { utcOffset } from "../../regex/utc-offset";
-import type { Hl7DateTime, Hl7Precision } from "../../types";
+import type {
+  Hl7DateTime,
+  Hl7MomentPrecision,
+  Hl7Precision,
+} from "../../types";
 
 /**
  * Read an HL7 v2 date-time (`DTM`, or the older `TS`) as what it states: a moment, the sender's
@@ -40,10 +44,14 @@ import type { Hl7DateTime, Hl7Precision } from "../../types";
  * - `+0000` and `-0000` are both UTC (2.A.22), read as `+00:00`.
  * - `""` (two double quote marks) is the null value and differs from `''` (ch. 2 §2.5.3: "is
  *   different from omitting an optional data field"); `''` returns `null`.
- * - Only `^` separates a `TS`. When a feed's MSH-2 names another separator, the caller
- *   re-joins that `TS` with `^` first.
- * - An empty trailing component is not present (ch. 2 §2.6.2), so `20240615^D^` reads as
- *   `20240615^D` and `""^` as the null value. A third component that is not empty returns `null`.
+ * - A lone `TS` carries no MSH-2, so `^` separates its components and `&` their subcomponents,
+ *   the separators Figure 2-1 recommends (ch. 2 §2.5.4). When a feed's MSH-2 names others, the
+ *   caller re-joins that `TS` with `^` and `&` first.
+ * - Components and subcomponents that are present but not expected are ignored (ch. 2 §2.6.2;
+ *   a later version adds them at the end, §2.8.1 and §2.8.2), so `20240615^D^X` reads as
+ *   `20240615^D` and `2024&X` as `2024`. An empty component is not present (§2.6.2), so
+ *   `20240615^D^` reads as `20240615^D` and `""^` as the null value, while `^D` and `&X` return
+ *   `null`.
  * - Second `60` and hour `24` are rejected, as is any day the month lacks.
  * - Returns `null` on invalid input and for any value that is not a string. Never throws.
  *
@@ -54,6 +62,7 @@ import type { Hl7DateTime, Hl7Precision } from "../../types";
  * @example parseHL7("20240615103000") // { kind: "local", local: "2024-06-15T10:30:00", precision: "second" }
  * @example parseHL7("20240615") // { kind: "partial", local: "2024-06-15", offset: "", precision: "day" }
  * @example parseHL7("199904011200^L") // { kind: "partial", local: "1999-04", offset: "", precision: "month" }
+ * @example parseHL7("20240615^D^X") // { kind: "partial", local: "2024-06-15", offset: "", precision: "day" }
  * @example parseHL7('""') // { kind: "null" }
  * @example parseHL7("") // null
  * @example parseHL7("20240615240000") // null (hour 24)
@@ -83,7 +92,7 @@ export function parseHL7(value: string): Hl7DateTime | null {
     if (offset === null) {
       return null;
     }
-    if (hl7PrecisionRank(precision) >= hl7PrecisionRank("minute")) {
+    if (isMoment(precision)) {
       if (offset === "") {
         return { kind: "local", local, precision };
       }
@@ -104,6 +113,13 @@ export function parseHL7(value: string): Hl7DateTime | null {
     // Never throws (Core Rule 3)
     return null;
   }
+}
+
+/** A minute or finer names a moment; a coarser precision names a span. */
+function isMoment(precision: Hl7Precision): precision is Hl7MomentPrecision {
+  return (
+    precision === "minute" || precision === "second" || precision === "fraction"
+  );
 }
 
 /** The precision after a `TS` degree (2.A.77.2 lowers only); `null` for a bad or finer degree. */
@@ -175,7 +191,7 @@ function writeLocal(fields: Hl7DtmFields, precision: Hl7Precision): string {
 /** A minute or finer: cut to `precision`, seconds always written. */
 function writeClock(
   dateTime: Temporal.PlainDateTime,
-  precision: "minute" | "second" | "fraction",
+  precision: Hl7MomentPrecision,
   fractionDigits: number,
 ): string {
   return precision === "fraction"

@@ -515,24 +515,18 @@ export function stripOf(
 export const REASON_DEGREE =
   "The degree of precision after ^ is not one of Y L D H M S, or it is finer than the digits sent.";
 export const REASON_PICTURE =
-  "HL7 v2.5.1 2.A.22 reads one field, YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ], and for a TS a degree of precision after ^. A field that does not exist, an hour of 24, a second of 60, more than four fraction digits, a third component that is not empty or a separator other than ^ is not read.";
+  "HL7 v2.5.1 2.A.22 reads one field, YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ], and for a TS a degree of precision after ^. A field that does not exist, an hour of 24, a second of 60, more than four fraction digits or a separator other than ^ and & is not read.";
 
 /**
- * The one sentence under NO SIGNAL, decided from a library probe, never guessed. An empty
- * trailing component is not present (ch. 2 §2.6.2), so it is dropped before the components are
- * counted; a third one left is the picture's refusal, not the degree's.
+ * The one sentence under NO SIGNAL, decided from a library probe, never guessed. The probe is
+ * the first component cut at its first `&`, the `DTM` `parseHL7` reads (what is not expected is
+ * ignored, ch. 2 §2.6.2). When that reads, the degree is what refused the value; when it does
+ * not, the picture is.
  */
 export function sentinelText(read: Hl7Read, lib: Hl7Lib): string {
-  const all = read.value.split("^");
-  let sent = all.length;
-  for (let i = all.length - 1; i > 0 && all[i] === ""; i -= 1) {
-    sent = i;
-  }
-  const parts = all.slice(0, sent);
-  if (parts.length === 2 && lib.parseHL7(parts[0] as string) !== null) {
-    return REASON_DEGREE;
-  }
-  return REASON_PICTURE;
+  const [first = ""] = read.value.split("^", 1);
+  const [dtm = ""] = first.split("&", 1);
+  return lib.parseHL7(dtm) !== null ? REASON_DEGREE : REASON_PICTURE;
 }
 
 // ---------------------------------------------------------------------------
@@ -573,9 +567,11 @@ interface Hl7Figure {
 /**
  * The value taken apart. The width of the group for precision p is the characters
  * `formatHL7(local, { precision: p })` adds to the rung before it, for each p up to the result's
- * precision. Digits sent past that precision (before any sign or `^`) are one dashed box, cut by
- * the degree and not read. The offset and the `^degree` are their own boxes. The null value and
- * the sentinel are one neutral box of the raw text.
+ * precision. Digits sent past that precision (before any sign, `&` or `^`) are one dashed box, cut
+ * by the degree and not read. The offset and the `^degree` are their own boxes. What `parseHL7`
+ * ignores (ch. 2 §2.6.2), the subcomponents after a component's first `&` and every component
+ * after the second, is a dashed box of its own after the part it follows. The null value and the
+ * sentinel are one neutral box of the raw text.
  */
 export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
   const raw = read.value;
@@ -589,8 +585,14 @@ export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
   if (parsed === null || parsed.kind === "null") return plain();
 
   const caret = raw.indexOf("^");
-  const body = caret < 0 ? raw : raw.slice(0, caret);
-  const degree = caret < 0 ? "" : raw.slice(caret);
+  const first = caret < 0 ? raw : raw.slice(0, caret);
+  const amp = first.indexOf("&");
+  const body = amp < 0 ? first : first.slice(0, amp);
+  const bodyIgnored = first.slice(body.length);
+  const rest = caret < 0 ? "" : raw.slice(caret);
+  const degreeEnd = rest.slice(1).search(/[\^&]/);
+  const degree = degreeEnd < 0 ? rest : rest.slice(0, degreeEnd + 1);
+  const restIgnored = rest.slice(degree.length);
   const signAt = body.search(/[+-]/);
   const digits = signAt < 0 ? body : body.slice(0, signAt);
   const offsetText = signAt < 0 ? "" : body.slice(signAt);
@@ -638,6 +640,7 @@ export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
       word: "offset",
     });
   }
+  if (bodyIgnored !== "") fields.push(ignoredField(bodyIgnored));
   if (degree !== "") {
     fields.push({
       text: degree,
@@ -647,6 +650,7 @@ export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
       bracket: "degree",
     });
   }
+  if (restIgnored !== "") fields.push(ignoredField(restIgnored));
   const halves: PicHalf[] = [{ label: "", fields }];
   const closing = offsetText === "" ? "no offset" : "";
   return {
@@ -656,6 +660,16 @@ export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
     aria: figureAria(raw, "", halves, closing),
   };
 }
+
+/** A part `parseHL7` does not read, because it was not expected (ch. 2 §2.6.2). */
+const ignoredField = (text: string): PicField => ({
+  text,
+  mask: "",
+  group: "none",
+  word: "not expected, ignored",
+  bracket: "ignored, not read",
+  run: "ignored",
+});
 
 // ---------------------------------------------------------------------------
 // The writer ladder

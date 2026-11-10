@@ -223,6 +223,22 @@ export const hl7TsRows: readonly Hl7ParseRow[] = [
     "2024-06-15T10:30:00",
     "second",
   ),
+  // components and subcomponents not expected are ignored (ch. 2 §2.6.2, §2.8.1, §2.8.2)
+  partial("20240615^D^X", "2024-06-15", "", "day"),
+  partial("20240615^^D", "2024-06-15", "", "day"),
+  partial("20240615^D^X^", "2024-06-15", "", "day"),
+  partial("2024&X", "2024", "", "year"),
+  partial("2024^Y&X", "2024", "", "year"),
+  partial("20240615^D&X", "2024-06-15", "", "day"),
+  partial("20240615&X^D", "2024-06-15", "", "day"),
+  local("20240615103000&X&Y^S&Z^Q", "2024-06-15T10:30:00", "second"),
+  instant(
+    "202406151030-0500&X^M",
+    "2024-06-15T15:30:00Z",
+    "-05:00",
+    "2024-06-15T10:30:00",
+    "minute",
+  ),
 ];
 
 /** Strings that return `null`. */
@@ -240,16 +256,19 @@ export const hl7NullRows: readonly string[] = [
   "2024061510^M",
   "20240615^H",
   "20240615^S^",
-  // unknown, lower-case and padded degrees, a third component that is not empty, an empty DTM
+  // the subcomponent is cut, then D is finer than the year sent
+  "2024^D&X",
+  "2024&X^D",
+  // unknown, lower-case and padded degrees, an empty DTM
   "20240615^X",
   "20240615^d",
   "20240615^ D",
-  "20240615^D^X",
-  "20240615^^D",
-  "20240615^D^X^",
   "^D",
   "^^",
   "^^D",
+  "&X",
+  "&X^D",
+  "^D&X",
   "20240615^toString",
   "20240615^__proto__",
   "20240615^constructor",
@@ -309,10 +328,17 @@ export const hl7NullRows: readonly string[] = [
 ];
 
 /**
- * Strings that read as the HL7 null value (ch. 2 §2.5.3): `""` alone, or with empty trailing
- * components, which are not present (ch. 2 §2.6.1.1, §2.6.2).
+ * Strings that read as the HL7 null value (ch. 2 §2.5.3): `""` alone, with empty components,
+ * which are not present, or with components and subcomponents not expected, which are ignored
+ * (ch. 2 §2.6.2).
  */
-export const hl7NullValueInputs: readonly string[] = ['""', '""^', '""^^'];
+export const hl7NullValueInputs: readonly string[] = [
+  '""',
+  '""^',
+  '""^^',
+  '""^^X',
+  '""&X',
+];
 
 /** Every string input above, for the `isValidHL7` agreement test. */
 export const hl7AllStringInputs: readonly string[] = [

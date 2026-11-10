@@ -2644,6 +2644,10 @@
         "result": "{ kind: \"partial\", local: \"1999-04\", offset: \"\", precision: \"month\" }"
       },
       {
+        "call": "parseHL7(\"20240615^D^X\")",
+        "result": "{ kind: \"partial\", local: \"2024-06-15\", offset: \"\", precision: \"day\" }"
+      },
+      {
         "call": "parseHL7('\"\"')",
         "result": "{ kind: \"null\" }"
       },
@@ -2679,6 +2683,10 @@
       {
         "call": "isValidHL7('\"\"')",
         "result": "true (the null value)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^D^X\")",
+        "result": "true (the third component is ignored)"
       },
       {
         "call": "isValidHL7(\"20240615^S\")",
@@ -21855,14 +21863,39 @@
     ]
   },
   {
-    "url": "/reference/types/Hl7Precision",
-    "page": "/reference/types/Hl7Precision",
+    "url": "/reference/healthcare/format/formatHL7#hl7precision",
+    "page": "/reference/healthcare/format/formatHL7",
     "name": "Hl7Precision",
     "namespace": "types",
     "module": "hl7",
     "kind": "type",
     "signature": "",
     "description": "The precision of an HL7 v2 date-time, coarsest first. HL7 v2.5.1 ch. 2A 2.A.22 (headed 2.A.1.22 in the [hl7.eu v2.5.1 copy](https://www.hl7.eu/HL7v2x/v251/std251/ch02a.html)): \"The number of characters populated (excluding the time zone specification) specifies the precision\". The characters before the offset, per member:",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": [],
+    "inlineOn": "formatHL7"
+  },
+  {
+    "url": "/reference/types/Hl7PartialPrecision",
+    "page": "/reference/types/Hl7PartialPrecision",
+    "name": "Hl7PartialPrecision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of a span: a year, month, day or hour, which names no single moment (`Hl7Precision` lists the characters each one takes).",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/Hl7MomentPrecision",
+    "page": "/reference/types/Hl7MomentPrecision",
+    "name": "Hl7MomentPrecision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of a moment: a minute or finer (`Hl7Precision` lists the characters each one takes).",
     "sourcePath": "packages/gmt/src/types/hl7.ts",
     "examples": []
   },

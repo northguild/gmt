@@ -215,19 +215,29 @@ describe("splitHl7Ts", () => {
     },
   );
 
+  // ch. 2 §2.6.2: components and subcomponents not expected are ignored
   it.each`
-    value
-    ${"20240615^D^X"}
-    ${"20240615^^D"}
-    ${"20240615^D^X^"}
-    ${"^^D"}
-  `("rejects '$value': a third component that is not empty", ({ value }) => {
-    expect(splitHl7Ts(value)).toBeNull();
-  });
+    value              | dtm           | degree
+    ${"20240615^D^X"}  | ${"20240615"} | ${"D"}
+    ${"20240615^^D"}   | ${"20240615"} | ${""}
+    ${"20240615^D^X^"} | ${"20240615"} | ${"D"}
+    ${"^^D"}           | ${""}         | ${""}
+    ${"2024&X"}        | ${"2024"}     | ${""}
+    ${"2024^D&X"}      | ${"2024"}     | ${"D"}
+    ${"2024&X^D"}      | ${"2024"}     | ${"D"}
+    ${"2024&X&Y^D&Z"}  | ${"2024"}     | ${"D"}
+    ${"&X"}            | ${""}         | ${""}
+    ${"&X^D"}          | ${""}         | ${"D"}
+    ${'""&X'}          | ${'""'}       | ${""}
+  `(
+    "ignores what is not expected in '$value': '$dtm' and degree '$degree'",
+    ({ value, dtm, degree }) => {
+      expect(splitHl7Ts(value)).toEqual({ dtm, degree });
+    },
+  );
 
   it.each`
     value            | separator
-    ${"20240615&D"}  | ${"&"}
     ${"20240615~D"}  | ${"~"}
     ${"20240615|D"}  | ${"|"}
     ${"20240615\\D"} | ${"\\"}

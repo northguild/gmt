@@ -1649,7 +1649,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Picture widths are read off `formatHL7`.** The width of the group for precision p is the
     characters `formatHL7(local, { precision: p })` adds to the rung before it. Digits sent past the
     precision are one dashed box, "cut by the degree, not read". The offset and the `^degree` are
-    their own boxes.
+    their own boxes. What `parseHL7` ignores (ch. 2 §2.6.2), the subcomponents after a component's
+    first `&` and every component after the second, is a dashed box of its own, "ignored, not
+    read", after the part it follows.
   - **The UTC reading is a library call.** `resolveLocal(local, "UTC", reject)` gives the reading,
     and `diffUtcAsDuration` gives "5 h 30 min later". Both are printed in the calls.
   - **The ladder's columns.** Seven rows, year to fraction, with "As sent" and a third column,
@@ -1658,9 +1660,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **The writer's second column** uses zone 1's offset for a value with no offset and `+0000`
     for one with an offset. A partial value with an offset makes no `formatHL7` call, and one
     sentence says why. The call is printed once, in the caption, with `{ precision }` as the row.
-  - **The NO SIGNAL reason** comes from probing `parseHL7` on the text before `^`, after the
-    empty trailing components are dropped; a third component left gives the picture's reason,
-    not the degree's. The starter zone is `Asia/Kolkata`, and the permalink never trims the value.
+  - **The NO SIGNAL reason** comes from probing `parseHL7` on the first component, cut at its
+    first `&`: when that reads, the degree's reason; when it does not, the picture's. The starter zone is `Asia/Kolkata`, and the permalink never trims the value.
   - **The site holds no table of codes.** Whether the library reads a code, and its kind, come from
     the classifier, and a code's layout comes from what its kind's formatter writes, so the widgets
     cannot drift from the library's code table. The one list of codes is `TWO_DIGIT_YEAR_CODES`

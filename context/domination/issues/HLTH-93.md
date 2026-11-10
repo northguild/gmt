@@ -175,4 +175,4 @@ HL7 Europe's published copy.
 
 ## Decisions
 
-[Decisions](HLTH-93/decisions.md): the four result kinds, the offset and `TS` degree rules, what `formatHL7` writes and refuses, the clause numbering, the docs and Dox choices, and four open owner questions.
+[Decisions](HLTH-93/decisions.md): the four result kinds, the offset and `TS` degree rules, what `formatHL7` writes and refuses, the clause numbering, and the docs and Dox choices.

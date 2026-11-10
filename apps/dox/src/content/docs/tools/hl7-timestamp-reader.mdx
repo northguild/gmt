@@ -25,7 +25,7 @@ Type an HL7 v2 date-time, the `DTM` of a field or the older `TS` with its precis
 
 <Fragment slot="after">
 
-**How a value is read.** The tool reads one field. A `TS` is split on `^` only, and no `MSH-2` is read, so a message with other separators is not read as a message. A value that is not a date-time shows `NO SIGNAL` with one sentence saying why.
+**How a value is read.** The tool reads one field. No `MSH-2` is read, so `^` separates the components and `&` the subcomponents, as HL7 recommends, and a message with other separators is not read as a message. A third component, and anything after a component's first `&`, is shown as ignored and not read, because HL7 tells a receiver to ignore what it does not expect. A value that is not a date-time shows `NO SIGNAL` with one sentence saying why.
 
 **The four kinds.** A value to the minute or finer, with an offset, is an instant. The same with no offset is a local time. A year, a month, a day or an hour is a partial value, with or without an offset, and so is a finer value that a `TS` degree of precision cuts to one of those. A partial value has a precision and no instant, and the tool never pads it. The null value, two quote characters, is its own kind. It clears a stored time, and it is not a missing field.
 

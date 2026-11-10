@@ -53,9 +53,12 @@ sender's zone is known is in the `gmt-timezone` skill.
    the empty string). `precision` says which digits were sent.
 3. **A `TS` degree of precision only lowers the precision.** `199904011200^L` is
    April 1999, not 12:00. A degree finer than the digits sent, or not one of
-   `Y L D H M S`, returns `null`. Only `^` separates a `TS`. An empty trailing
-   component is not sent, so `20240615^D^` reads as `20240615^D` and `'""^'` as
-   the null value; a third component that is not empty returns `null`.
+   `Y L D H M S`, returns `null`. `^` separates the components and `&` the
+   subcomponents (ch. 2 §2.5.4); a feed whose MSH-2 names others re-joins the
+   field first. What is present but not expected is ignored (§2.6.2), so
+   `20240615^D^X` reads as `20240615^D` and `2024&X` as `2024`. An empty
+   component is not present: `20240615^D^` is `20240615^D`, `'""^'` the null
+   value, and `^D` and `&X` return `null`.
 4. **`formatHL7` writes a `DTM`, never a `TS`, and never rounds.** It reads the
    precision from the form of the input and `{ precision }` only lowers it; a
    fraction is cut to four digits. An instant with `Z` writes `+0000`. A local
@@ -72,7 +75,8 @@ sender's zone is known is in the `gmt-timezone` skill.
 
 - **Read and write**: `parseHL7`, `formatHL7`
 - **Check**: `isValidHL7`
-- **Types**: `Hl7DateTime`, `Hl7Precision`, `Hl7FormatOptions`
+- **Types**: `Hl7DateTime`, `Hl7Precision`, `Hl7PartialPrecision`,
+  `Hl7MomentPrecision`, `Hl7FormatOptions`
 
 ## References
 

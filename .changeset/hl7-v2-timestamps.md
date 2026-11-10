@@ -22,4 +22,4 @@ resolveLocal("2024-06-15T10:30:00", "Europe/Helsinki"); // "2024-06-15T07:30:00Z
 formatHL7("2024-06-15T15:30:00Z"); // "20240615153000+0000"
 ```
 
-`parseHL7` returns `null`, `formatHL7` returns `""` and `isValidHL7` returns `false` for a value that does not fit, a day the month lacks, an hour of 24 or a second of 60. None of them throws. The functions are also at `@northguild/gmt/healthcare`, `@northguild/gmt/healthcare/parse`, `@northguild/gmt/healthcare/format` and `@northguild/gmt/healthcare/validate`, with the types `Hl7DateTime`, `Hl7Precision` and `Hl7FormatOptions`.
+`parseHL7` returns `null`, `formatHL7` returns `""` and `isValidHL7` returns `false` for a value that does not fit, a day the month lacks, an hour of 24 or a second of 60. None of them throws. The functions are also at `@northguild/gmt/healthcare`, `@northguild/gmt/healthcare/parse`, `@northguild/gmt/healthcare/format` and `@northguild/gmt/healthcare/validate`, with the types `Hl7DateTime`, `Hl7Precision`, `Hl7PartialPrecision`, `Hl7MomentPrecision` and `Hl7FormatOptions`.

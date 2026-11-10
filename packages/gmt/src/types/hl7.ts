@@ -15,16 +15,26 @@
  * The six coarser members are the degrees of precision of Table 0529 (`Y`, `L`, `D`, `H`, `M`,
  * `S`). `"fraction"` has no Table 0529 letter.
  *
- * Returned in `Hl7DateTime` by `parseHL7`; taken by `formatHL7` through `Hl7FormatOptions`.
+ * The union of `Hl7PartialPrecision` and `Hl7MomentPrecision`. Taken by `formatHL7` through
+ * `Hl7FormatOptions`; `parseHL7` returns the narrower one for each `kind` of `Hl7DateTime`.
  */
-export type Hl7Precision =
-  | "year"
-  | "month"
-  | "day"
-  | "hour"
-  | "minute"
-  | "second"
-  | "fraction";
+export type Hl7Precision = Hl7PartialPrecision | Hl7MomentPrecision;
+
+/**
+ * The precision of a span: a year, month, day or hour, which names no single moment
+ * (`Hl7Precision` lists the characters each one takes).
+ *
+ * Returned in the `"partial"` kind of `Hl7DateTime` by `parseHL7`.
+ */
+export type Hl7PartialPrecision = "year" | "month" | "day" | "hour";
+
+/**
+ * The precision of a moment: a minute or finer (`Hl7Precision` lists the characters each one
+ * takes).
+ *
+ * Returned in the `"instant"` and `"local"` kinds of `Hl7DateTime` by `parseHL7`.
+ */
+export type Hl7MomentPrecision = "minute" | "second" | "fraction";
 
 /**
  * An HL7 v2 date-time (`DTM`, 2.A.22; or `TS`, 2.A.77) read as what it states. What the sender
@@ -50,7 +60,7 @@ export type Hl7DateTime =
        */
       local: string;
       /** The digits sent, or the `TS` degree of precision when it lowers them. */
-      precision: Hl7Precision;
+      precision: Hl7MomentPrecision;
     }
   | {
       /** No offset and a precision of a minute or finer: the sender's local time. */
@@ -63,7 +73,7 @@ export type Hl7DateTime =
        */
       local: string;
       /** The digits sent, or the `TS` degree of precision when it lowers them. */
-      precision: Hl7Precision;
+      precision: Hl7MomentPrecision;
     }
   | {
       /**
@@ -82,7 +92,7 @@ export type Hl7DateTime =
        */
       offset: string;
       /** The digits sent, or the `TS` degree of precision when it lowers them. */
-      precision: Hl7Precision;
+      precision: Hl7PartialPrecision;
     }
   | {
       /**

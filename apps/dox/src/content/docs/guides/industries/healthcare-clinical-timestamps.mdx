@@ -177,8 +177,23 @@ parseHL7("20240615^D^");
 // { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — so is an empty third component
 ```
 
-Only `^` is read as the component separator. A feed whose MSH-2 names another one re-joins the
-field with `^` before it calls `parseHL7`.
+A field read on its own carries no MSH-2, so `parseHL7` takes the separators Figure 2-1
+recommends: `^` between components and `&` between subcomponents (ch. 2 §2.5.4). A feed whose
+MSH-2 names others re-joins the field with `^` and `&` before it calls `parseHL7`.
+
+A receiver ignores "components, subcomponents, and extra repetitions of a field that are present
+but were not expected" (ch. 2 §2.6.2), and a later version of HL7 adds components at the end of a
+data type (§2.8.1, §2.8.2). So a third component, and anything after a component's first `&`, is
+not read. A component left empty is not present, so an empty `DTM` returns `null`.
+
+```typescript
+parseHL7("20240615^D^X");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — the third component is ignored
+parseHL7("2024&X");
+// { kind: "partial", local: "2024", offset: "", precision: "year" } — so is the subcomponent
+parseHL7("&X");
+// null — the DTM before the subcomponent is empty
+```
 
 ### Midnight is the start of the day
 
@@ -266,21 +281,24 @@ isValidHL7("20240615^S"); // false
 
 ### What is not read
 
-These return `null` from `parseHL7` and `false` from `isValidHL7`: a component separator other
-than `^`, a third `TS` component that is not empty, a lower-case degree, a leap second, more
-than four fraction digits and ISO 8601 extended form (`2024-06-15T10:30:00`).
+These return `null` from `parseHL7` and `false` from `isValidHL7`: a separator other than `^`
+and `&`, an empty `DTM`, a lower-case degree, a leap second, more than four fraction digits and
+ISO 8601 extended form (`2024-06-15T10:30:00`).
 
 ```typescript
 parseHL7("20240615~D"); // null
-parseHL7("20240615103000^D^X"); // null
+parseHL7("^D"); // null — the DTM is empty
 parseHL7("20240615^l"); // null
 parseHL7("2024-06-15T10:30:00"); // null — ISO 8601 is the input of formatHL7
 ```
 
 ### The exported types
 
-[`Hl7DateTime`](/reference/healthcare/parse/parseHL7/#hl7datetime) is the result of `parseHL7`,
-[`Hl7Precision`](/reference/types/Hl7Precision/) is the precision it names and
+[`Hl7DateTime`](/reference/healthcare/parse/parseHL7/#hl7datetime) is the result of `parseHL7`.
+Its `precision` is an [`Hl7PartialPrecision`](/reference/types/Hl7PartialPrecision/), year to
+hour, for a `"partial"` value and an [`Hl7MomentPrecision`](/reference/types/Hl7MomentPrecision/),
+minute to fraction, for an `"instant"` or `"local"` one.
+[`Hl7Precision`](/reference/healthcare/format/formatHL7/#hl7precision) is the two together, and
 [`Hl7FormatOptions`](/reference/healthcare/format/formatHL7/#hl7formatoptions) is the options of
 `formatHL7`.
 

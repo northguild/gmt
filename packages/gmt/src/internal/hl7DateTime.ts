@@ -15,8 +15,10 @@
  *   https://www.hl7.eu/HL7v2x/v251/std251/ch02a.html
  *   https://www.hl7.eu/HL7v2x/v26/std26/ch02a.html
  * - 2.A.77 TS, 2.A.77.2 degree of precision, Table 0529 (`Y L D H M S`), same pages.
- * - Ch. 2 §2.5.3 (the null value `""`), §2.6.1.1 (a sender writes `^` only before another
- *   populated component) and §2.6.2 (a component not sent is not present):
+ * - Ch. 2 §2.5.3 (the null value `""`), §2.5.4 and Figure 2-1 (the recommended separators `^`
+ *   and `&`), §2.6.1.1 (a sender writes `^` only before another populated component), §2.6.2 (a
+ *   component not sent is not present, and one not expected is ignored) and §2.8.1, §2.8.2 (a
+ *   later version adds components at the end):
  *   https://www.hl7.eu/HL7v2x/v251/std251/ch02.html
  */
 
@@ -182,19 +184,21 @@ function finestPrecision(
 }
 
 /**
- * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) on `^`. `^` is the only separator read
- * (**GMT rule**; ch. 2 §2.5.4 gives `^` as the suggested value, and the field alone cannot name
- * MSH-2). An empty trailing component carries nothing: a sender writes `^` only before another
- * populated component (ch. 2 §2.6.1.1), and a component not sent is "not present" (§2.6.2). So
- * every trailing `^` is dropped first, and `20240615^` is `20240615`, `20240615^D^` is
- * `20240615^D`. A third component that is not empty is refused (**GMT rule**).
+ * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) into its two components, each read up to
+ * its first subcomponent. A lone field carries no MSH-2, so the separators are the ones Figure
+ * 2-1 recommends, `^` between components and `&` between subcomponents (ch. 2 §2.5.4). A
+ * recipient ignores components and subcomponents "that are present but were not expected"
+ * (ch. 2 §2.6.2), and a later version adds components at the end of a data type (§2.8.1,
+ * §2.8.2), so everything after the second component and after each first `&` is ignored:
+ * `20240615^D^X` is `20240615^D`, and `2024&X^D` is `2024^D`. A component left empty is not
+ * present (§2.6.2), so `20240615^` and `20240615^^D` are `20240615`.
  *
  * @param value candidate `TS` text
- * @returns the two sides, `degree` `""` when absent; `null` when a third component is not empty
+ * @returns the two components, each `""` when not present; `null` for a value that is not a string
  *
  * @example splitHl7Ts("199904011200^L") // { dtm: "199904011200", degree: "L" }
- * @example splitHl7Ts("20240615^D^") // { dtm: "20240615", degree: "D" }
- * @example splitHl7Ts("20240615^D^X") // null
+ * @example splitHl7Ts("20240615^D^X") // { dtm: "20240615", degree: "D" }
+ * @example splitHl7Ts("2024&X^D") // { dtm: "2024", degree: "D" }
  */
 export function splitHl7Ts(
   value: string,
@@ -202,17 +206,15 @@ export function splitHl7Ts(
   if (typeof value !== "string") {
     return null;
   }
-  // A loop, not /\^+$/, which backtracks over a long run of `^` that does not end the value.
-  // Bounded by one pass over the input.
-  let end = value.length;
-  for (let i = value.length - 1; i >= 0 && value[i] === "^"; i -= 1) {
-    end = i;
-  }
-  const parts = value.slice(0, end).split("^");
-  if (parts.length > 2) {
-    return null;
-  }
-  return { dtm: parts[0] as string, degree: parts[1] ?? "" };
+  // The limit stops the split at the second component, so the rest is never read.
+  const [dtm = "", degree = ""] = value.split("^", 2);
+  return { dtm: firstSubcomponent(dtm), degree: firstSubcomponent(degree) };
+}
+
+/** A component up to its first `&`; the subcomponents after it are not expected (ch. 2 §2.6.2). */
+function firstSubcomponent(component: string): string {
+  const amp = component.indexOf("&");
+  return amp < 0 ? component : component.slice(0, amp);
 }
 
 const ISO_OFFSET =

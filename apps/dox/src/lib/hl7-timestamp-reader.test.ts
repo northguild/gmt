@@ -170,13 +170,15 @@ describe("reading", () => {
     expect(sentinelText(read("20240615^S"), lib)).not.toBe("");
   });
 
-  it("names the degree only when the DTM reads and no third component is sent", () => {
+  it("names the degree only when the DTM before any & reads", () => {
     expect(sentinelText(read("20240615^S"), lib)).toBe(REASON_DEGREE);
-    // an empty trailing component is not present (ch. 2 §2.6.2)
+    // what is not expected is ignored (ch. 2 §2.6.2)
     expect(sentinelText(read("20240615^S^"), lib)).toBe(REASON_DEGREE);
-    expect(sentinelText(read("20240615^D^X"), lib)).toBe(REASON_PICTURE);
-    expect(sentinelText(read("20240615^^D"), lib)).toBe(REASON_PICTURE);
+    expect(sentinelText(read("20240615^S^X"), lib)).toBe(REASON_DEGREE);
+    expect(sentinelText(read("20240615&X^S"), lib)).toBe(REASON_DEGREE);
     expect(sentinelText(read("2024061^D"), lib)).toBe(REASON_PICTURE);
+    expect(sentinelText(read("&X^D"), lib)).toBe(REASON_PICTURE);
+    expect(sentinelText(read("20240615~D"), lib)).toBe(REASON_PICTURE);
   });
 
   it("applies the strip to a local value only", () => {
@@ -418,5 +420,43 @@ describe("hl7Texts", () => {
         r.value,
       );
     }
+  });
+  it("draws what is not expected as its own box, ignored and not read (ch. 2 §2.6.2)", () => {
+    const boxes = (v: string) =>
+      hl7Figure(read(v), lib).halves[0]!.fields.map((f) => ({
+        text: f.text,
+        group: f.group,
+        bracket: f.bracket,
+      }));
+    const ignored = (text: string) => ({
+      text,
+      group: "none",
+      bracket: "ignored, not read",
+    });
+    expect(boxes("20240615^D^X")).toEqual([
+      { text: "2024", group: "date", bracket: undefined },
+      { text: "06", group: "date", bracket: undefined },
+      { text: "15", group: "date", bracket: undefined },
+      { text: "^D", group: "neutral", bracket: "degree" },
+      ignored("^X"),
+    ]);
+    expect(boxes("20240615103000&X^D").map((f) => f.text)).toEqual([
+      "2024",
+      "06",
+      "15",
+      "103000",
+      "&X",
+      "^D",
+    ]);
+    const cutThenIgnored = hl7Figure(read("20240615103000&X^D"), lib)
+      .halves[0]!.fields.slice(3, 5)
+      .map((f) => f.run);
+    expect(cutThenIgnored).toEqual([undefined, "ignored"]);
+    expect(boxes("202406151030-0500&X^M&Y").slice(-4)).toEqual([
+      { text: "-0500", group: "offset", bracket: undefined },
+      ignored("&X"),
+      { text: "^M", group: "neutral", bracket: "degree" },
+      ignored("&Y"),
+    ]);
   });
 });
