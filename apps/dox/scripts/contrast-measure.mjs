@@ -249,7 +249,12 @@ function collect() {
     }
     return false;
   };
-  /** Rect clipped to every scrolling or clipping ancestor. */
+  /**
+   * Rect clipped to every scrolling or clipping ancestor's client (padding) box, never its border
+   * box: text cannot paint over a border or a classic scrollbar, so those pixels are not "behind"
+   * the glyph. An element with no client box (an inline element, where `overflow` does not apply)
+   * clips to its border box instead, and one with no box at all is skipped, so no glyph is dropped.
+   */
   const clip = (e, r) => {
     let [l, t, rr, b] = [r.left, r.top, r.right, r.bottom];
     for (
@@ -261,13 +266,19 @@ function collect() {
       if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
       if (p === document.body) continue;
       const pb = p.getBoundingClientRect();
+      const noClient = p.clientWidth === 0 && p.clientHeight === 0;
+      if (noClient && pb.width === 0 && pb.height === 0) continue;
+      const cl = noClient ? pb.left : pb.left + p.clientLeft;
+      const ct = noClient ? pb.top : pb.top + p.clientTop;
+      const cw = noClient ? pb.width : p.clientWidth;
+      const ch = noClient ? pb.height : p.clientHeight;
       if (cs.overflowX !== "visible") {
-        l = Math.max(l, pb.left);
-        rr = Math.min(rr, pb.right);
+        l = Math.max(l, cl);
+        rr = Math.min(rr, cl + cw);
       }
       if (cs.overflowY !== "visible") {
-        t = Math.max(t, pb.top);
-        b = Math.min(b, pb.bottom);
+        t = Math.max(t, ct);
+        b = Math.min(b, ct + ch);
       }
     }
     return rr - l > 1 && b - t > 1 ? [l, t, rr - l, b - t] : null;

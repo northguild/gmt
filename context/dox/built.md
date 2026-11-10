@@ -1415,6 +1415,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     so no value moves a column edge. Under 38rem of pane the table is labelled blocks, one per row,
     each cell naming its column from `data-col`. The row cards hold the Offset select, which needs
     about 15.5rem, so the rowset is two columns from 31rem of pane and four from 63.5rem.
+  - **In a hold cell the NO SIGNAL chip wraps at its space.** `.cellHold .lost` is
+    `inline-block`, `max-inline-size: 100%` and `white-space: normal`, so the chip fits the value
+    column the sizer sets (118px at a 300px root) and never overflows the table into a scrollbar
+    that moves the page below it (WebKit). Two lines are no taller than the sizer. `.live` stays
+    stretched.
   - **One local-day track, a handle per row.** The track is the local calendar day of the
     first row that holds a valid time, 00:00 to 24:00 on the "Printed in" clock. Each row
     has its own lane and its own handle, a `gmt-handle`
@@ -2800,10 +2805,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
   of each frame's last `ResizeObserver` callback, before paint; the post-frame reading is kept as
   `rawMaxJump`, reported and never asserted, because a mount task between a frame and its sample can
   show a height that was pinned back before anything was drawn), every `.gmt-grow` at rest, a final height
-  equal to the reduced-motion run's, and that each interaction it asks for (the select, the drag) actually
-  happened. A tool's `drag` entry names the handle or range it drags, and for a custom handle the
-  script reads the handle's parent as its track. The Timetable Reader's entry is `handle-1`, whose
-  parent, its lane, is as wide as the track.
+  equal to the reduced-motion run's (the interaction pass reads it once the root has held its height
+  for 500 ms with nothing growing, capped at 8 s and reported as `not-at-rest`, because the eased
+  growth lasts longer on slow frames and a fixed wait read it mid-ease), and that each interaction it
+  asks for (the select, the drag) actually happened. A tool's `drag` entry names the handle or range
+  it drags, and for a custom handle the script reads the handle's parent as its track. The
+  Timetable Reader's entry is `handle-1`, whose parent, its lane, is as wide as the track.
   A run that measured nothing, skipped an interaction, or crashed fails. Both gates are
   diagnostics: a few px of browser difference is read, not chased. `scripts/readout-still.mjs` (`pnpm run readout:still`) drags every handle
   in the Departure Board, Punctuality Board, ETA Drift Chart, Timetable Reader, Free Time Ledger,
@@ -2881,19 +2888,27 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`.gmt-cw`, `code:not(.gmt-codebreak)`, `.gmt-nobreak`). Rule `table-scrolls`. A second check,
     `measureCells` in `scripts/lib/cell-overflow.mjs`, runs at 1440 and at 390 px: it fails a cell whose
     content is larger than the cell, or whose text or element reaches more than 1.5 px past the cell's
-    edges, scrolling table or not (a header kept visually hidden by a stacked layout is skipped). Rule
+    edges, scrolling table or not (a header kept visually hidden by a stacked layout is skipped, and so
+    is anything inside a visually hidden descendant such as `.gmt-sr-only`, because a text range ignores
+    clipping and would report a label nothing paints). Rule
     `cell-overflows`; the last line counts `<n> scroll, <n> spill`. The same check runs
     in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in
     Chromium, whenever a Dox file or page changes; the browser tests (Test isolation) run there first.
   - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
     runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
     --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
-    pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). The
-    runner appends its screen to `$GITHUB_STEP_SUMMARY` in a fenced `text` block
-    (`gates/step-summary.mjs`); a failed job uploads `apps/dox/.gates/` (without `vite-cache/`) as the
-    `dox-gates-<run id>` artifact. It is **advisory**: the owner makes it a required check after about
-    10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` or `pnpm-lock.yaml` skips it;
-    a lockfile change alone runs it, since it can bump Playwright or axe-core.
+    pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). Its
+    limit is 60 minutes, and the gate step's is 55. A typical run takes 20 to 27. A diff that changes a
+    gate script runs every gate on the sample pages. With the Timetable Reader selected too, that took
+    40 minutes locally without the build and 47 in CI (#480). `readout-still` took 24 of
+    them: 60 drags on the Reader (10 sliders at six widths) and 32 on the Dwell Ledger. The runner
+    prints its screen only when it ends and appends it to `$GITHUB_STEP_SUMMARY` in a fenced `text`
+    block (`gates/step-summary.mjs`). Each gate writes its log in `.gates/` as it runs, so the step's
+    own limit leaves time to upload them: a failed or cancelled job uploads `apps/dox/.gates/`
+    (without `vite-cache/`) as the `dox-gates-<run id>` artifact. It is **advisory**: the owner makes
+    it a required check after about 10 clean Dox PR runs. A PR that touches nothing under `apps/dox/`
+    or `pnpm-lock.yaml` skips it; a lockfile change alone runs it, since it can bump Playwright or
+    axe-core.
   - **The page contract.** Every gate script answers `--list-pages` (a JSON array of site paths,
     no `/gmt`, without a browser), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
     never an empty run) and, when it loads pages, `--base <url>`. With `GATE_REPORT` set, each
@@ -2913,7 +2928,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     table that overflows its card, a visible cell holding more than its box, a word of a visible
     cell or head on two line boxes, and a visible element that passes its card's left or right
     edge by more than 1 px. `contrast-measure` is
-    Chromium only.
+    Chromium only. It clips a glyph rect to each scroller's client (padding) box, never its border
+    box, so a scroller's border or classic scrollbar is never scored as the background behind a glyph.
+    A scroller with no client box (an inline element) clips to its border box, and one with no box
+    at all is skipped, so no glyph is dropped.
   - **Selection.** A changed file selects the pages whose import closure holds it (`.mdx`, `.astro`,
     `.ts`, `.tsx`, `.mjs`, `.css`; relative paths and the `~/` alias); a change under
     `packages/gmt/src/<ns>/<module>/` selects the pages that import
@@ -4641,7 +4659,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     run opens none and files one `dox-gate:flood` issue (a comment if it is already open). Its body
     groups the held-back findings by `gate:rule:page`: count, browsers, widths and up to three example
     targets, largest group first, `TABLE_ROWS` (40) rows and a count of the rest, then the run URL and
-    the leg artifacts (`dox-gate-<leg>-<runId>`, kept 14 days). It says each run comments there until
+    the leg artifacts (`dox-gates-<leg>-<runId>`, kept 14 days). It says each run comments there until
     ten or fewer remain, and then each is filed on its own. Every other body and comment is cut by `fitBody`
     to 60,000 characters on a line boundary, and `file-issues` exits 1 before any write when one still
     passes GitHub's 65,536; a sweep of 1,545 findings is a 6,585-character body. Comments on
