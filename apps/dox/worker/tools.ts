@@ -59,6 +59,7 @@ import {
   showDemurrageClockInput,
   showDepartureBoardInput,
   showDtmDecoderInput,
+  showHl7TimestampReaderInput,
   showEpcisEventReaderInput,
   showElapsedVsClockInput,
   showGnssRolloverCheckerInput,
@@ -373,6 +374,23 @@ export function buildWorkerTools(
               `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
             )
           : accept("dtm-decoder");
+      },
+    }),
+
+    // The zones are the ones the reader named, to read a value with no offset in.
+    showHl7TimestampReader: tool({
+      description: docFor("showHl7TimestampReader"),
+      inputSchema: showHl7TimestampReaderInput,
+      execute: ({ zone1, zone2, zone3, zone4 }) => {
+        const unknown = unknownZones(
+          [zone1, zone2, zone3, zone4].filter((z): z is string => Boolean(z)),
+        );
+        return unknown.length > 0
+          ? reject(
+              "hl7-timestamp-reader",
+              `not IANA time zones this runtime knows: ${unknown.join(", ")}.`,
+            )
+          : accept("hl7-timestamp-reader");
       },
     }),
 

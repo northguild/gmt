@@ -359,9 +359,10 @@ export function unreadCodeText(
 // Drawing text
 // ---------------------------------------------------------------------------
 
-const DURATION = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/;
+const DURATION = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/;
 
-/** `PT15H` as `15 h`, `PT9H30M` as `9 h 30 min`, `PT0S` as `0 h`. A regular
+/** `PT15H` as `15 h`, `PT9H30M` as `9 h 30 min`, `PT0S` as `0 h`, and a fraction of a
+ *  second as it came (`PT2H59M59.8766S` as `2 h 59 min 59.8766 s`). A regular
  *  expression over the returned string; no arithmetic. */
 export function durationText(iso: string): string {
   const m = DURATION.exec(iso);
@@ -394,7 +395,7 @@ export function readoutOf(
 export function resolveReason(
   local: string,
   zone: string,
-  lib: EdiLib,
+  lib: Pick<EdiLib, "classifyLocal">,
 ): string {
   const time = local.slice(11, 16);
   switch (lib.classifyLocal(local, zone)) {
@@ -434,7 +435,7 @@ interface ZoneResolution {
 export function resolveInZone(
   local: string,
   rawZone: string,
-  lib: EdiLib,
+  lib: Pick<EdiLib, "resolveLocal" | "toOffsetInstant" | "classifyLocal">,
 ): ZoneResolution {
   const zone = rawZone.trim();
   const row: ZoneResolution = { zone, instant: "", offset: "", reason: "" };
@@ -462,7 +463,7 @@ export interface WidestGap {
  *  `minUtc`, `maxUtc` and `diffUtcAsDuration`. `null` with fewer than two. */
 export function widestGap(
   rows: readonly { zone: string; instant: string }[],
-  lib: EdiLib,
+  lib: Pick<EdiLib, "minUtc" | "maxUtc" | "diffUtcAsDuration">,
 ): WidestGap | null {
   const resolved = rows.filter((r) => r.instant !== "");
   if (resolved.length < 2) return null;

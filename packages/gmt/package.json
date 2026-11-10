@@ -105,6 +105,18 @@
       "gnss/convert": [
         "./dist/gnss/convert/index.d.ts"
       ],
+      "healthcare": [
+        "./dist/healthcare/index.d.ts"
+      ],
+      "healthcare/format": [
+        "./dist/healthcare/format/index.d.ts"
+      ],
+      "healthcare/parse": [
+        "./dist/healthcare/parse/index.d.ts"
+      ],
+      "healthcare/validate": [
+        "./dist/healthcare/validate/index.d.ts"
+      ],
       "instant": [
         "./dist/instant/index.d.ts"
       ],
@@ -417,6 +429,22 @@
     "./gnss/convert": {
       "types": "./dist/gnss/convert/index.d.ts",
       "default": "./dist/gnss/convert/index.js"
+    },
+    "./healthcare": {
+      "types": "./dist/healthcare/index.d.ts",
+      "default": "./dist/healthcare/index.js"
+    },
+    "./healthcare/format": {
+      "types": "./dist/healthcare/format/index.d.ts",
+      "default": "./dist/healthcare/format/index.js"
+    },
+    "./healthcare/parse": {
+      "types": "./dist/healthcare/parse/index.d.ts",
+      "default": "./dist/healthcare/parse/index.js"
+    },
+    "./healthcare/validate": {
+      "types": "./dist/healthcare/validate/index.d.ts",
+      "default": "./dist/healthcare/validate/index.js"
     },
     "./instant": {
       "types": "./dist/instant/index.d.ts",

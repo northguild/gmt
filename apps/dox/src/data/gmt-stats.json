@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 71610,
-  "files": 947,
-  "executions": 2148300,
+  "tests": 71999,
+  "files": 951,
+  "executions": 2159970,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 737,
+  "functions": 740,
   "patterns": 30,
   "byNamespace": [
     {
@@ -103,9 +103,19 @@
     {
       "namespace": "recurrence",
       "count": 4
+    },
+    {
+      "namespace": "healthcare",
+      "count": 3
     }
   ],
-  "industryNamespaces": ["intermodal", "transport", "workforce", "gnss"],
+  "industryNamespaces": [
+    "intermodal",
+    "transport",
+    "workforce",
+    "gnss",
+    "healthcare"
+  ],
   "industryLayers": [
     {
       "id": "workforce",
@@ -165,7 +175,13 @@
           "shared": false
         }
       ]
+    },
+    {
+      "id": "healthcare",
+      "label": "Healthcare",
+      "own": 3,
+      "drawsOn": []
     }
   ],
-  "industryFunctions": 84
+  "industryFunctions": 87
 }

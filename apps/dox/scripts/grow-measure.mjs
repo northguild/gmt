@@ -194,6 +194,11 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "hl7-timestamp-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
     slug: "x12-time-reader",
     preset: { ...PRESET, nth: 0 },
     drag: null,

@@ -1621,6 +1621,39 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Every zone is read with `disambiguation: "reject"`**, stated beside the result and in the
     printed call, because any other policy picks an instant for a repeated or skipped time.
     `classifyLocal` supplies the reason for a refused one.
+  The HL7 Timestamp Reader (HLTH-93, `/tools/hl7-timestamp-reader/`) is a third member of the
+  family, for the healthcare layer. It reads one HL7 v2 `DTM` or `TS` field with `parseHL7`
+  (`lib/hl7-timestamp-reader.ts` is the pure module, `hl7-timestamp-reader-mount.ts` the template
+  and mount, `hl7-lib.ts` the loader) and states which of four kinds it is: an instant, a local
+  time with no offset (the sender's time, not UTC), a partial value that names a span and no
+  instant, or the null value. A local value goes through the same four-zone strip, with a third
+  column that sets each instant against the same digits read as UTC ("5 h 30 min later"), and a
+  fourth section writes the value back with `formatHL7` at seven precisions. Its rules:
+  - **The timeline takes an optional `reference` mark.** A spec with a `reference` draws a pin
+    and a label for a value that is not an instant of its own (the digits read as UTC). The
+    DTM Decoder and X12 Time Reader pass none, and their snapshots are unchanged.
+  - **`edi-widgets.ts` narrows with `Pick<EdiLib>`.** `resolveReason`, `resolveInZone` and
+    `widestGap` ask for the functions they call and no more, so the Reader's `Hl7Lib` satisfies
+    them without carrying the EDI functions. The duration reader keeps a fraction of an hour.
+  - **A preset-only permalink.** While the state matches a preset the link is `{ preset }`
+    alone, and the zod `value` of the chat tool stays required (the Leap Day precedent).
+    Otherwise the link carries the untrimmed value and the trimmed zones.
+  - **The ladder never rounds.** `formatHL7` only lowers the precision; a finer one is `no result`
+    in the cell, which is a correct answer and not the sentinel.
+  - **Picture widths are read off `formatHL7`.** The width of the group for precision p is the
+    characters `formatHL7(local, { precision: p })` adds to the rung before it. Digits sent past the
+    precision are one dashed box, "cut by the degree, not read". The offset and the `^degree` are
+    their own boxes.
+  - **The UTC reading is a library call.** `resolveLocal(local, "UTC", reject)` gives the reading,
+    and `diffUtcAsDuration` gives "5 h 30 min later". Both are printed in the calls.
+  - **The ladder's columns.** Seven rows, year to fraction, with "As sent" and a third column,
+    "With offset" or "In UTC (+0000)". Each cell reserves 24ch in tabular figures, and a value
+    never wraps above 36rem. The note prints the calls once.
+  - **The writer's second column** uses zone 1's offset for a value with no offset and `+0000`
+    for one with an offset. A partial value with an offset makes no `formatHL7` call, and one
+    sentence says why. The call is printed once, in the caption, with `{ precision }` as the row.
+  - **The NO SIGNAL reason** comes from probing `parseHL7` on the text before `^`. The starter
+    zone is `Asia/Kolkata`, and the permalink never trims the value.
   - **The site holds no table of codes.** Whether the library reads a code, and its kind, come from
     the classifier, and a code's layout comes from what its kind's formatter writes, so the widgets
     cannot drift from the library's code table. The one list of codes is `TWO_DIGIT_YEAR_CODES`
@@ -2707,7 +2740,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `/tools/timetable-reader/`, `/tools/crossing-clock/`, `/tools/cutoff-stack/`,
   `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, `/tools/punctuality-board/`,
   `/tools/eta-drift/`, `/tools/departure-board/`, `/tools/dtm-decoder/`,
-  `/tools/x12-time-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
+  `/tools/x12-time-reader/`, `/tools/hl7-timestamp-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
   `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
@@ -4108,6 +4141,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     pair. A zone is passed only when the reader named it, never chosen from the time code.
     Both schemas check a code's shape only (`ediCodeSchema`): a code the library does not read is
     the widget's sentinel to show, not a failed tool call.
+  - `showHl7TimestampReader({ value, zone1?, zone2?, zone3?, zone4? })` (HLTH-93): `value` is
+    one HL7 v2 `DTM` or `TS` field as typed, up to 64 characters, never trimmed. A zone is passed
+    only when the reader named it, never chosen from a facility or a sending system.
   - `showBlDateStamp({ value, event, timeZone, zone2?, zone3?, zone4?, latest? })` (INT-14):
     `value` is a moment, never a bare local time, and `timeZone` is the place where the event
     happened. A zone is passed only when the reader named it, never chosen from a port or a place.
@@ -4197,8 +4233,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   set.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
-  grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal and
-  GNSS, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
+  grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal,
+  GNSS and Healthcare, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
   and a card's `area` is its tool page's tag. An industry with no tool has no area (Workforce and
   Maritime gain one with their first tool). `startersByArea()` returns the groups in that order.
   `chat-starters.test.ts` asserts each area is an industry with that industry's label and icon,

@@ -148,6 +148,83 @@ describe("timelineLayout", () => {
     expect(timelineLayout([])).toBeNull();
   });
 
+  describe("the reference mark", () => {
+    const zones = [
+      { n: 1, instant: "2024-06-15T05:00:00Z" },
+      { n: 2, instant: "2024-06-15T09:30:00Z" },
+    ];
+
+    it("is null without a reference, and the layout is unchanged", () => {
+      const without = timelineLayout(zones)!;
+      expect(without.reference).toBeNull();
+      expect(timelineLayout(zones, null)).toEqual(without);
+    });
+
+    it("widens the axis to span the reference", () => {
+      const without = timelineLayout(zones)!;
+      const withLater = timelineLayout(zones, "2024-06-15T14:30:00Z")!;
+      expect(withLater.ticks.length).toBeGreaterThan(without.ticks.length);
+      expect(withLater.reference!.at).toBeGreaterThan(0);
+      expect(withLater.reference!.at).toBeLessThan(100);
+      expect(withLater.marks.every((m) => m.at < withLater.reference!.at)).toBe(
+        true,
+      );
+    });
+
+    it("leaves the span (the widest gap) among the zones", () => {
+      const without = timelineLayout(zones)!;
+      const withFar = timelineLayout(zones, "2024-06-16T10:30:00Z")!;
+      const gapWidth = (l: typeof without) => l.span!.to - l.span!.from;
+      // The span is still the zones' two marks: a wider axis makes it a smaller share.
+      expect(gapWidth(withFar)).toBeLessThan(gapWidth(without));
+      expect(withFar.marks.map((m) => m.n)).toEqual([1, 2]);
+    });
+
+    it("writes its label on the side with room", () => {
+      expect(
+        timelineLayout(zones, "2024-06-15T05:00:00Z")!.reference!.side,
+      ).toBe("end");
+      expect(
+        timelineLayout(zones, "2024-06-15T09:30:00Z")!.reference!.side,
+      ).toBe("start");
+    });
+
+    it("takes a lane with no zone mark near its label", () => {
+      const stacked = timelineLayout(
+        [
+          { n: 1, instant: "2024-06-15T12:00:00Z" },
+          { n: 2, instant: "2024-06-15T12:00:00Z" },
+        ],
+        "2024-06-15T12:00:00Z",
+      )!;
+      expect(stacked.marks.map((m) => m.lane)).toEqual([0, 1]);
+      expect(stacked.reference!.lane).toBe(2);
+    });
+
+    it("never takes a fifth lane", () => {
+      const four = [1, 2, 3, 4].map((n) => ({
+        n,
+        instant: "2024-06-15T12:00:00Z",
+      }));
+      expect(
+        timelineLayout(four, "2024-06-15T12:00:00Z")!.reference!.lane,
+      ).toBe(0);
+    });
+  });
+
+  it("adds the reference to the spoken line, after the gap", () => {
+    expect(
+      timelineAria(
+        [{ n: 1, zone: "Europe/Berlin", instant: "2024-06-15T12:30:00Z" }],
+        "",
+        "",
+        { label: "Read as UTC", instant: "2024-06-15T10:30:00Z" },
+      ),
+    ).toBe(
+      "A UTC timeline with 1 zone marked: 1, Europe/Berlin, 2024-06-15T12:30:00Z. Read as UTC: 2024-06-15T10:30:00Z.",
+    );
+  });
+
   it("says each zone's instant in words", () => {
     expect(
       timelineAria(

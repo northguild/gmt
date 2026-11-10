@@ -26,6 +26,8 @@ type TimelineSpec =
       kind: "marks";
       rows: readonly TimelineInput[];
       gap: WidestGap | null;
+      /** A comparison instant drawn as a hollow pin: the value read as UTC. Absent draws none. */
+      reference?: { instant: string; label: string } | null;
     };
 
 function plot(
@@ -33,6 +35,7 @@ function plot(
   stated: boolean,
   gap: string,
   aria: string,
+  reference: { label: string } | null = null,
 ): SafeHtml {
   const ticks = layout.ticks.map(
     (t) =>
@@ -50,6 +53,13 @@ function plot(
         ><span class="${styles.pin}">${stated ? "" : m.n}</span></span
       >`,
   );
+  const ref =
+    reference === null || layout.reference === null
+      ? ""
+      : html`<span class="${styles.reference}" data-side="${layout.reference.side}" style="--x:${layout.reference.at.toFixed(3)}%;--lane:${layout.reference.lane}"
+          ><span class="${styles.referencePin}"></span
+          ><span class="${styles.referenceLabel}">${reference.label}</span></span
+        >`;
   const bracket =
     layout.span === null
       ? ""
@@ -59,7 +69,7 @@ function plot(
   return html`<div class="${styles.plot}" role="img" aria-label="${aria}"
     ><span class="${styles.axis}"></span
     ><span class="${styles.ticks}">${ticks}</span
-    ><span class="${styles.marks}">${marks}</span>${bracket}</div
+    ><span class="${styles.marks}">${marks}${ref}</span>${bracket}</div
   >`;
 }
 
@@ -88,10 +98,14 @@ export function timelineContent(spec: TimelineSpec): SafeHtml {
           : "No chosen zone gives an instant.",
     });
   }
-  const layout = timelineLayout(placed)!;
+  const reference = spec.reference ?? null;
+  const layout = timelineLayout(
+    placed,
+    reference === null ? null : reference.instant,
+  )!;
   const gap = spec.gap === null ? "" : durationText(spec.gap.duration);
   return html`<div class="${styles.box}" data-state="marks"
-    >${plot(layout, false, gap, timelineAria(placed, spec.gap === null ? "" : spec.gap.text, ""))}<p class="${styles.caption}"
+    >${plot(layout, false, gap, timelineAria(placed, spec.gap === null ? "" : spec.gap.text, "", reference), reference)}<p class="${styles.caption}"
       >All times in UTC.</p
     ></div
   >`;

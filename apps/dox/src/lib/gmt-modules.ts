@@ -76,6 +76,11 @@ export const GMT_MODULES: Record<
   "intermodal/parse": () => import("@northguild/gmt/intermodal/parse"),
   "intermodal/validate": () => import("@northguild/gmt/intermodal/validate"),
 
+  // --- healthcare ---
+  "healthcare/format": () => import("@northguild/gmt/healthcare/format"),
+  "healthcare/parse": () => import("@northguild/gmt/healthcare/parse"),
+  "healthcare/validate": () => import("@northguild/gmt/healthcare/validate"),
+
   // --- duration ---
   "duration/calculate": () => import("@northguild/gmt/duration/calculate"),
   "duration/compare": () => import("@northguild/gmt/duration/compare"),

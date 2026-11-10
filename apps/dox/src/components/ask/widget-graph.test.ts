@@ -159,6 +159,8 @@ describe("the chat island's static import graph", () => {
       "lib/edi-widgets.ts",
       "lib/edi-lib.ts",
       "lib/dtm-decoder.ts",
+      "lib/hl7-lib.ts",
+      "lib/hl7-timestamp-reader.ts",
       "lib/x12-time-reader.ts",
       "lib/gnss-widgets.ts",
       "lib/gnss-lib.ts",

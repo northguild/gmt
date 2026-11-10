@@ -2,6 +2,7 @@ export { Intl, Temporal, toTemporalInstant } from "./internal/temporal";
 export * from "./calendar";
 export * from "./duration";
 export * from "./gnss";
+export * from "./healthcare";
 export * from "./instant";
 export * from "./intermodal";
 export * from "./interval";

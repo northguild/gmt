@@ -168,6 +168,16 @@ An RFC 5545 §3.3.10 RECUR value (`FREQ=MONTHLY;BYDAY=-1FR`) and a five-field cr
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: HL7 v2 date/time grammar in `parseHL7` and `formatHL7` (HLTH-93)
+
+HL7 v2 `DTM` (`YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ]`, ch. 2A 2.A.22) and the `TS` that wraps it (2.A.77) are not ISO 8601, and no `Temporal.*.from` reads either. The grammar is fixed and published:
+
+1. The grammar is one regex in `internal/hl7DateTime.ts`, built from fragments named in the picture's own notation, with the split of a `TS` at `^` and Table 0529 beside it. Fields come out as named groups, never by per-call slicing in a public function. It is not a public pattern: a `DTM` is valid only as a whole, so the public check is `isValidHL7`.
+2. Extracted fields are **always** handed to `Temporal.PlainDate.from`, `Temporal.PlainYearMonth.from` or `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A value at minute precision or finer that carries an offset is rebuilt as an extended ISO string and read by `toOffsetInstant`; the offset of a partial value (year, month, day or hour precision) is checked with the `utcOffset` regex and normalised with `formatUtcOffset`; `formatHL7` reads its input through `toOffsetInstant`, `fromOffsetInstant` and Temporal, and writes digits from Temporal's fields.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+This prohibition stands for every other function in the library.
+
 ### Calendar-annotated strings are RFC 9557 (E1, E7)
 
 A calendar string is the RFC 9557 form Temporal writes: the ISO 8601 date (or zoned datetime),

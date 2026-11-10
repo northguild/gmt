@@ -113,10 +113,11 @@ describe("industry overviews", () => {
     (id) => {
       for (const text of everyText(id)) {
         // A figure typed here would go stale; the pages state none. A function name (`{{..}}`)
-        // and the standard's own name (X12) are not figures.
-        expect(text.replace(/\{\{\w+\}\}|\bX12\b/g, ""), "digit").not.toMatch(
-          /\d/,
-        );
+        // and the standards' own names (X12, HL7) are not figures.
+        expect(
+          text.replace(/\{\{\w+\}\}|\bX12\b|\bHL7\b/g, ""),
+          "digit",
+        ).not.toMatch(/\d/);
         expect(text, "GMT").not.toMatch(/\bGMT\b/);
         expect(text, "law").not.toMatch(
           /\b(act|statute|regulation|regulator|docket|section|§|cfr|usc)\b/i,

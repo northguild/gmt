@@ -28,6 +28,7 @@ import { parseSkill, type VocabularySkill } from "./select-vocabulary";
 import gmtArithmetic from "../../../packages/gmt/skills/gmt-arithmetic/SKILL.md";
 import gmtBasics from "../../../packages/gmt/skills/gmt-basics/SKILL.md";
 import gmtGnss from "../../../packages/gmt/skills/gmt-gnss/SKILL.md";
+import gmtHealthcare from "../../../packages/gmt/skills/gmt-healthcare/SKILL.md";
 import gmtIntegration from "../../../packages/gmt/skills/gmt-integration/SKILL.md";
 import gmtIntermodal from "../../../packages/gmt/skills/gmt-intermodal/SKILL.md";
 import gmtTimezone from "../../../packages/gmt/skills/gmt-timezone/SKILL.md";
@@ -43,4 +44,5 @@ export const VOCABULARY_SKILLS: readonly VocabularySkill[] = [
   gmtTransport,
   gmtIntermodal,
   gmtWorkforce,
+  gmtHealthcare,
 ].map((s) => parseSkill(s as unknown as string));

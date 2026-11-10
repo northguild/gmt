@@ -49,6 +49,7 @@ Sample output:
   - gmt-transport
   - gmt-intermodal
   - gmt-workforce
+  - gmt-healthcare
 
 @northguild/gmt-eslint
   - first-time-setup
@@ -78,7 +79,7 @@ For projects that want explicit routing, pass `--map` to bind a task keyword to 
 skill so `intent list` highlights the right match automatically:
 
 ```bash
-npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "gnss=gmt-gnss" --map "transport=gmt-transport" --map "intermodal=gmt-intermodal" --map "workforce=gmt-workforce" --map "lint=first-time-setup"
+npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "gnss=gmt-gnss" --map "transport=gmt-transport" --map "intermodal=gmt-intermodal" --map "workforce=gmt-workforce" --map "healthcare=gmt-healthcare" --map "lint=first-time-setup"
 ```
 
 ## Allowlist skills
@@ -126,6 +127,7 @@ its tasks use `gmt-gnss`.
 | Industry | Slug | Task area | Source folders it points to |
 | --- | --- | --- | --- |
 | <Icon name="industry-workforce" size="1.1em" class="gmt-ref-industry-icon" /> Workforce | `gmt-workforce` | Hours-of-work rules over a duty log, with the caller's own limits | `src/workforce/` |
+| <Icon name="industry-healthcare" size="1.1em" class="gmt-ref-industry-icon" /> Healthcare | `gmt-healthcare` | HL7 v2 date-times, with the sender's local time kept apart from UTC | `src/healthcare/` |
 | <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> Transport | `gmt-transport` | Transit legs, connections, cut-offs, punctuality, departures | `src/transport/` |
 | <Icon name="industry-intermodal" size="1.1em" class="gmt-ref-industry-icon" /> Intermodal | `gmt-intermodal` | Free time, demurrage, billing deadlines, bill of lading dates, EDI and EPCIS timestamps | `src/intermodal/` |
 | <Icon name="industry-gnss" size="1.1em" class="gmt-ref-industry-icon" /> GNSS | `gmt-gnss` | GNSS time scales, broadcast and RINEX week numbers, rollover eras | `src/gnss/` |

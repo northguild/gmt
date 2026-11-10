@@ -45,6 +45,8 @@ export const NAMESPACE_SUMMARIES: Readonly<Record<string, string>> = {
   intermodal:
     "Functions for container free time, demurrage and billing, plus parsers and formatters for EDIFACT, X12 and EPCIS date-times.",
   gnss: "Functions that convert between UTC and the satellite navigation system times, GNSS week numbers and RINEX weeks.",
+  healthcare:
+    "Functions that read, write and check HL7 version 2 date-times, keeping the precision sent and a missing offset as local time.",
 };
 
 /**

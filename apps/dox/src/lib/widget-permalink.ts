@@ -54,6 +54,7 @@ export type WidgetKind =
   | "departure"
   | "planner"
   | "dtm"
+  | "hl7"
   | "xtime"
   | "demclock"
   | "bldate"
@@ -113,6 +114,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   departure: "/tools/departure-board/",
   planner: "/tools/zone-planner/",
   dtm: "/tools/dtm-decoder/",
+  hl7: "/tools/hl7-timestamp-reader/",
   xtime: "/tools/x12-time-reader/",
   demclock: "/tools/demurrage-clock/",
   bldate: "/tools/bl-date-stamp/",

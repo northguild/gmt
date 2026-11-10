@@ -1,0 +1,31 @@
+# HLTH-93 — Decisions
+
+Part of [HLTH-93](../HLTH-93.md).
+
+Settled by the owner. They are the current rules for this code.
+
+- The three functions are `parseHL7`, `formatHL7` and `isValidHL7`, in `healthcare/{parse,format,validate}/`, with the types `Hl7DateTime`, `Hl7Precision` and `Hl7FormatOptions` in `types/hl7.ts`. The subpaths are `@northguild/gmt/healthcare`, `/healthcare/parse`, `/healthcare/format` and `/healthcare/validate`. Sentinels are `null`, `""` and `false`; none throws, for a value of any type. Every call is constant work, so there are no bench rows.
+- Section numbers are cited as "2.A.22 (headed 2.A.1.22 in the hl7.eu v2.5.1 copy)", once per JSDoc. hl7.eu numbers `DTM`, `TS` and the degree of precision 2.A.1.22, 2.A.1.77 and 2.A.1.77.2; HL7's own cross-references and the v2.6 copy say 2.A.22 and 2.A.77. The quote "Retained only for purposes of backward compatibility as of v 2.3" is in 2.A.77.2, not 2.A.77 as the issue text says.
+- `parseHL7` returns one of four kinds. `"instant"` has an offset and a minute or finer. `"local"` has no offset and a minute or finer, and has no `instant` member. `"partial"` is a year, month, day or hour: it names a span, keeps the offset it was sent with (`""` when none), and has no instant. `"null"` is the string `""` (two double quotes), which differs from the empty string, which returns `null`. `local` is the wall clock as sent, at the precision sent (`2024-06-15T10`, no minute added), with seconds always written from the minute on and the fraction kept as sent (`.1000`). `instant` is `toOffsetInstant`'s output (`.1Z`).
+- No offset is the sender's local time, never UTC (2.A.22). The caller supplies the sender's zone to `resolveLocal`. `+0000` and `-0000` both read `+00:00`. `0000` is the start of the stated day, so `198807050000` is `1988-07-05T00:00:00`. Any `±HHMM` with hours `00`–`23` is read; HL7's "legally-defined time zones" names no list to check against.
+- A `TS` degree of precision (`Y L D H M S`, upper case) only lowers the precision, by cutting and never rounding. A degree finer than the digits sent, a lower-case degree, a third component and any separator but `^` return `null`. `^S` on a fractional value cuts the fraction, because Table 0529 has no value for a fraction. An empty degree (`20240615^`) reads as `20240615`. The caller re-joins a `TS` whose MSH-2 names another component separator.
+- Hour `24`, second `60` and a day the month lacks return `null`; a fraction is one to four digits and follows seconds only.
+- `formatHL7` writes a `DTM` and never a `TS`, which HL7 withdrew in v2.6. It reads the precision from the form the input is written in, and `precision` only lowers it; a fraction is cut to four digits, never rounded. A finer `precision` than the value carries, a year outside 0000–9999, an offset with seconds, a reduced ISO form with an offset (`2024-06-15-05:00`) and a local form with a zone annotation and no offset (`2024-06-15T10:30:00[Europe/Helsinki]`) return `""`. It writes the offset the value has (`Z` writes `+0000`) and never drops or rounds one.
+- A minute-precision `local` comes back from `parseHL7` with `:00` seconds, so writing it with the digits sent takes `{ precision: result.precision }`. A `"partial"` value with an offset is written from the instant with `{ precision }`, for example `formatHL7("2024-06-15T10:30:00-05:00", { precision: "day" })` is `20240615-0500`.
+- The round trip `parseHL7(formatHL7(iso))` holds for instants of four fraction digits or fewer. A longer fraction is cut, so the round trip returns the cut instant.
+- `isValidHL7(value)` is `parseHL7(value) !== null`, so the two cannot disagree. `'""'` is valid.
+- The grammar lives in `internal/hl7DateTime.ts`, pure (regexes and tables, no Temporal), not in `regex/`: HL7 publishes a format picture, not a pattern, and the public check is `isValidHL7`. `coding-standards.md` carries the scoped exception, as it does for the EDI grammars. The parse and format files import `toOffsetInstant` and `fromOffsetInstant` themselves.
+- The guide and the mistakes page are named for the industry (`healthcare-clinical-timestamps`, `mistakes/healthcare`), with HL7 under its own `##` heading so HLTH-94 adds a FHIR section beside it. Its type links are anchors on the reference pages of the functions that use them (`/reference/healthcare/parse/parseHL7/#hl7datetime`, `/reference/healthcare/format/formatHL7/#hl7formatoptions`), because a type has no reference page of its own.
+- A skipped or repeated wall time is resolved by `resolveLocal`'s default disambiguation, `"compatible"`: a skipped hour takes the later reading and a repeated hour the earlier. GMT does not refuse it unless the caller passes `"reject"`. The guide says so.
+- The hub text on the Healthcare industry (`INDUSTRY_OVERVIEWS.healthcare`) names only `healthcare` functions, since Healthcare declares no `drawsOn`. `HL7` joins `X12` as an exemption from the digit rule in `industry-overview.test.ts`. The glyph is a plain cross. `namespace-summary.ts` carries a healthcare line, which the spec did not name.
+- The Dox tool is the HL7 Timestamp Reader at `/tools/hl7-timestamp-reader/`; its rules are in `context/dox/built.md`. The timeline kit gained an optional `reference` mark (the DTM Decoder and X12 Time Reader pass `null`), and `resolveInZone`, `resolveReason` and `widestGap` take `Pick<EdiLib, …>`, which is type-only.
+- The realm exports no pattern. HLTH-94 adds the FHIR functions to it without reshaping what is here.
+
+## Open owner questions
+
+Not decided. They stay open until the owner answers.
+
+- **(a) `20240615^D^` returns `null`** under the rule that a third component is refused. Ch. 2 §2.6.2 ("treat fields and components that are expected but were not included … as not present") suggests it could read as `20240615^D`.
+- **(b) `'""^'` returns `null`** (the sentinel), not `{ kind: "null" }`. Under the same §2.6.2 reading of an empty trailing component it could be the HL7 null value.
+- **(c) The root bundle budget** in `scripts/bundle-size.budgets.json` rose from 569400 to 580215 B (the measured 574470 B plus 1%). The raise is not yet approved.
+- **(d) "most of their records"**, in `INDUSTRY_OVERVIEWS.healthcare.about` (`apps/dox/src/lib/industry-overview.ts`) and in the guide intro, has no source.

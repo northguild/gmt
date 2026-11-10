@@ -213,6 +213,8 @@ describe("durationText", () => {
     ["PT45M", "45 min"],
     ["PT1H30S", "1 h 30 s"],
     ["P1D", "P1D"],
+    ["PT2H59M59.8766S", "2 h 59 min 59.8766 s"],
+    ["PT0.5S", "0.5 s"],
   ])("%s is %s", (iso, text) => {
     expect(durationText(iso)).toBe(text);
   });

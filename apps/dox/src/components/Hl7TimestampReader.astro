@@ -1,0 +1,54 @@
+---
+/**
+ * HL7 Timestamp Reader widget (HLTH-93).
+ *
+ * A typed HL7 v2 date-time (a DTM or the older TS): `parseHL7` says whether it
+ * states an instant, an offset, a local time or only a partial date, the widget
+ * reads a value with no offset in the zones you choose, and it shows what
+ * `formatHL7` writes back at each precision.
+ *
+ * **The markup and the wiring both live in `lib/hl7-timestamp-reader-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderHl7TimestampReaderTemplate } from "../lib/hl7-timestamp-reader-mount";
+
+/**
+ * `fullbleed` lets the page say the widget may use the whole main pane; see
+ * DtmDecoder.astro for the marker it adds and why it sits on a wrapper.
+ */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderHl7TimestampReaderTemplate("hl7-timestamp-reader", {}).value;
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountHl7TimestampReader } from "../lib/hl7-timestamp-reader-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=hl7&wa=` permalink seeds the widget with the values it names; see
+       lib/widget-permalink.ts. Absent or malformed, the widget opens on its
+       first preset. */
+    const seed = seedFromLocation("hl7");
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="hl7-timestamp-reader"]')
+      .forEach((el) => {
+        mountHl7TimestampReader(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>
