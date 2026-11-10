@@ -372,6 +372,15 @@
   min-inline-size: auto;
 }
 
+/* The sentinel in a hold cell wraps at its one space (the `\a0` in its brackets keep each bracket
+   on its word) so the chip fits the value column the sizer sets; two lines are no taller than
+   the sizer. Nowrap here overflowed the table and gave it a scrollbar in WebKit at a 300px root. */
+.cellHold .lost {
+  display: inline-block;
+  max-inline-size: 100%;
+  white-space: normal;
+}
+
 .noteCell > .live > * {
   max-inline-size: 100%;
   white-space: normal;

@@ -14,6 +14,7 @@ import {
   exclusionMatches,
   exclusionProblems,
   focusVisibleProblem,
+  heldAtRest,
   isExcluded,
   isOffSite,
   jumpProblems,
@@ -1011,5 +1012,35 @@ describe("attributeFrames", () => {
       { h: 936, m: 1436, l: 0, g: 1, ticks: 2, eased: -64 },
     ]);
     expect(second).toMatchObject({ l: 0, g: 1, h: 968, m: 1468 });
+  });
+});
+
+describe("heldAtRest", () => {
+  /** Frames every 50 ms from 0 to `ms`, all at height `h` and not growing. */
+  const still = (ms: number, h = 900) =>
+    Array.from({ length: ms / 50 + 1 }, (_, i) => ({ t: i * 50, h, g: 0 }));
+
+  it("is true when 600 ms of frames hold one height with nothing growing", () => {
+    expect(heldAtRest(still(600), 500)).toBe(true);
+  });
+
+  it("is false when the last frame is growing", () => {
+    const frames = still(600);
+    frames[frames.length - 1]!.g = 1;
+    expect(heldAtRest(frames, 500)).toBe(false);
+  });
+
+  it("is false when the height changes by 0.5 px inside the final hold", () => {
+    const frames = still(600);
+    frames[frames.length - 5]!.h = 900.5;
+    expect(heldAtRest(frames, 500)).toBe(false);
+  });
+
+  it("is false when the frames span only 300 ms", () => {
+    expect(heldAtRest(still(300), 500)).toBe(false);
+  });
+
+  it("is false for no frames", () => {
+    expect(heldAtRest([], 500)).toBe(false);
   });
 });
