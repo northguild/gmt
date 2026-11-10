@@ -1,4 +1,5 @@
 import {
+  FIX_FRACTION_DIGITS,
   FIX_UTC_TIMESTAMP,
   fixInstantText,
   fixPrecisionOfDigits,
@@ -139,6 +140,13 @@ describe("fixPrecisionOfDigits", () => {
   `("maps $count digits to $expected", ({ count, expected }) => {
     expect(fixPrecisionOfDigits(count)).toBe(expected);
   });
+
+  it.each(Object.entries(FIX_FRACTION_DIGITS))(
+    "is FIX_FRACTION_DIGITS the other way round for %s",
+    (precision, digits) => {
+      expect(fixPrecisionOfDigits(digits)).toBe(precision);
+    },
+  );
 });
 
 describe("resolveFixPrecision", () => {

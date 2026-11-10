@@ -24,13 +24,14 @@ export const FIX_FRACTION_DIGITS: Readonly<
   picosecond: 12,
 };
 
-/** `FIX_FRACTION_DIGITS` the other way round, so the two cannot disagree. */
-const PRECISION_OF_DIGITS = Object.fromEntries(
-  Object.entries(FIX_FRACTION_DIGITS).map(([precision, digits]) => [
-    digits,
-    precision,
-  ]),
-) as Readonly<Record<0 | 3 | 6 | 9 | 12, FixPrecision>>;
+/** `FIX_FRACTION_DIGITS` the other way round. A test checks that the two agree. */
+const PRECISION_OF_DIGITS = {
+  0: "second",
+  3: "millisecond",
+  6: "microsecond",
+  9: "nanosecond",
+  12: "picosecond",
+} as const satisfies Readonly<Record<0 | 3 | 6 | 9 | 12, FixPrecision>>;
 
 /**
  * The precision a fraction digit count states.

@@ -711,9 +711,9 @@ function snapshotInPage(
     });
   };
   widget.querySelectorAll(hero).forEach((el) => add("hero", el));
-  // A tool that draws no chart has no frame (`frame: false` on its row).
-  const frameEl = widget.querySelector(frame);
-  if (frameEl) add("frame", frameEl);
+  // A tool that draws no chart has no frame (`frame: false` on its row, so `frame` is null). Any
+  // other tool must have one: a missing frame throws here rather than going unmeasured.
+  if (frame) add("frame", widget.querySelector(frame));
   add("control", control);
   const everything = scope === "widget";
   const within = everything ? widget : section;
@@ -768,7 +768,7 @@ async function snapshot(page, ctl, tool) {
   );
   return ctl.evaluate(snapshotInPage, {
     hero: gate("hero"),
-    frame: gate("frame"),
+    frame: tool.frame === false ? null : gate("frame"),
     // A row with no drawn part matches nothing, and `:not(*)` is a selector that cannot match.
     drawn:
       (tool.drawn ?? ["drawn"]).map((p) => DRAWN_PART[p]).join(", ") ||

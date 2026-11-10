@@ -61,6 +61,11 @@
   font-size: var(--gmt-text-sm);
   line-height: 1.3;
   white-space: nowrap;
+
+  /* The pill's ghost in the value's hold is an empty pill that draws its words. */
+  &[data-sample]::before {
+    content: attr(data-sample);
+  }
 }
 
 /* The UUID version, or a precision: a full border, in the ink of the plate. A block that is
