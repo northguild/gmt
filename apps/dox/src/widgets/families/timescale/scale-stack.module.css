@@ -1,0 +1,369 @@
+/*
+ * The Terrestrial Time Stack's drawing: a chip row, the bar of three pieces on an axis of
+ * seconds, and the drift lane. Hatching and dots are SVG patterns, never background gradients.
+ * A series colour (`--series`) is on a mark, never on text. Every chip sits on an opaque
+ * surface. Amber is not used here: NO SIGNAL belongs to the tool's own slot.
+ * A place is `--at` / `--level` in percent.
+ */
+
+.frame {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
+  & [data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  & [data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  & [data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+/* The three chips: three fixed slots, so a narrow piece never pushes another. */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  /* Three narrow chips cannot hold a nine-digit value on one line, and a value that overflows
+     its chip is as wide as its text, so the box would change with the reading. One column keeps
+     each box the width of the frame. */
+  @container (inline-size < 30rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.chip {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  padding: var(--gmt-space-2);
+  border: 1px solid var(--gmt-border-strong);
+  border-block-end: 3px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.3;
+  color: var(--gmt-ice);
+}
+
+.chipName,
+.chipValue {
+  display: block;
+  min-inline-size: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chipValue {
+  overflow-wrap: normal;
+}
+
+.chipWords {
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+
+  @container (inline-size < 30rem) {
+    display: none;
+  }
+}
+
+/* The bar and its baseline at UTC. */
+.bar {
+  position: relative;
+  box-sizing: border-box;
+  block-size: 3.25rem;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill);
+  overflow: hidden;
+}
+
+.barSvg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.segment {
+  stroke: var(--series, var(--gmt-ice));
+  stroke-width: 1px;
+  fill-opacity: 1;
+
+  &[data-pattern="solid"] {
+    fill: var(--series, var(--gmt-ice));
+  }
+
+  &[data-negative="true"] {
+    stroke-width: 2px;
+  }
+}
+
+.tile {
+  fill: var(--gmt-fill);
+}
+
+.hatchLine {
+  stroke: var(--series, var(--gmt-ice));
+  stroke-width: 2px;
+}
+
+.dot {
+  fill: var(--series, var(--gmt-ice));
+}
+
+.baseline {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 2px;
+  background: var(--gmt-ice);
+}
+
+/* The axis in seconds under the bar. */
+.axis,
+.laneAxis {
+  position: relative;
+  min-inline-size: 0;
+  block-size: 1.4rem;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.axisName {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: 1.4rem;
+  white-space: nowrap;
+  color: var(--gmt-ice-dim);
+}
+
+.axis {
+  margin-block-end: var(--gmt-space-4);
+}
+
+.tick {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--at, 0%);
+  translate: -50% 0;
+  white-space: nowrap;
+
+  &[data-minor="true"] {
+    @container (inline-size < 34rem) {
+      visibility: hidden;
+    }
+  }
+}
+
+/* The drift lane. */
+.laneBox {
+  position: relative;
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+}
+
+.laneName {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+/* The two end values sit above and below the field, in their own rows, so no label is ever
+   drawn over the line, the guide or the dot wherever the cursor is. */
+.lane {
+  display: grid;
+  grid-template-rows: auto 9rem auto;
+
+  /* The cursor dot (11px, with its 3px halo) sits on the field's edge at either end of the
+     years, so the rows keep it clear of the chips. */
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+.yLabel {
+  justify-self: start;
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  padding: 1px var(--gmt-space-1);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  /* Before there is a reading the chip holds its line and shows nothing. */
+  &[data-state="off"] {
+    visibility: hidden;
+  }
+
+  &[data-end="max"] {
+    grid-row: 1;
+  }
+
+  &[data-end="min"] {
+    grid-row: 3;
+  }
+}
+
+.field {
+  position: relative;
+  grid-row: 2;
+  block-size: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill);
+
+  /* Visible, so the cursor dot at 1972 and at 9999 is a whole circle and not a quarter. */
+  overflow: visible;
+}
+
+.laneSvg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.zero {
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.laneLine {
+  fill: none;
+  stroke: var(--gmt-series-4);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.guide {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at, 0%);
+  inline-size: 2px;
+  background: var(--gmt-ice);
+}
+
+.cursorDot {
+  position: absolute;
+  inset-inline-start: var(--at, 0%);
+  inset-block-end: var(--level, 0%);
+  translate: -50% 50%;
+  box-sizing: border-box;
+  inline-size: 11px;
+  block-size: 11px;
+  border: 2px solid var(--gmt-surface);
+  border-radius: 50%;
+  background: var(--gmt-series-4);
+  box-shadow: 0 0 0 3px color(from var(--gmt-series-4) srgb r g b / 35%);
+}
+
+/* The key. */
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.keyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.keySwatch {
+  flex: none;
+  border: 1px solid var(--gmt-border-strong);
+  background: var(--gmt-fill);
+  forced-color-adjust: none;
+}
+
+@media (forced-colors: active) {
+  .frame,
+  .chip,
+  .bar,
+  .field,
+  .yLabel {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+
+  .segment,
+  .laneLine,
+  .zero {
+    stroke: CanvasText;
+  }
+
+  .segment[data-pattern="solid"] {
+    fill: CanvasText;
+  }
+
+  .guide,
+  .cursorDot,
+  .baseline {
+    background: CanvasText;
+    border-color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame,
+  .chip,
+  .bar,
+  .field {
+    border-color: var(--gmt-ice);
+  }
+
+  .chipWords,
+  .laneName,
+  .axisName,
+  .key {
+    color: var(--gmt-ice);
+  }
+}

@@ -1,14 +1,16 @@
 /**
- * Loads the real gmt functions the two leap-second tools need (the Leap Second
- * Timeline and Elapsed vs. Clock Difference), at module granularity, and hands
- * them back as a `TimescaleLib` (`timescale-widgets.ts`).
+ * Loads the real gmt functions the three timescale tools need (the Leap Second
+ * Timeline, Elapsed vs. Clock Difference and the Terrestrial Time Stack), at
+ * module granularity, and hands them back as a `TimescaleLib`
+ * (`timescale-widgets.ts`).
  *
- * `taiMinusUtc`, `leapSecondsBetween` and `nextLeapSecond` live in
- * `timescale/calculate`; `toTAI` and `fromTAI` in `timescale/convert`;
- * `isLeapSecond` in `timescale/validate`; `spanNs` in `span/calculate`;
- * `addUtc` and `startOfUtc` in `utc/calculate`; `hasSecond60` in
- * `plain/validate`; `isValidInstant` in `precision/validate`. Each name is
- * picked from its module and nothing else is read.
+ * `taiMinusUtc`, `tcgMinusTt`, `leapSecondsBetween` and `nextLeapSecond` live in
+ * `timescale/calculate`; `toTAI`, `fromTAI`, `toTT`, `fromTT`, `toTCG` and
+ * `fromTCG` in `timescale/convert`; `isLeapSecond` in `timescale/validate`;
+ * `spanNs` in `span/calculate`; `addUtc`, `startOfUtc` and `diffUtcAsDuration`
+ * in `utc/calculate`; `hasSecond60` in `plain/validate`; `isValidInstant` in
+ * `precision/validate`. Each name is picked from its module and nothing else is
+ * read.
  *
  * A heavy module: it is never imported statically from the chat island. Only
  * each widget's mount reaches it, so a rejected import, or a name a module no
@@ -21,27 +23,45 @@ import { WidgetLoadError } from "./widget-mount";
 /** The functions the two leap-second tools call, as the library declares them. */
 export interface TimescaleLib {
   taiMinusUtc(isoString: string): number | null;
+  tcgMinusTt(isoString: string): number | null;
   leapSecondsBetween(start: string, end: string): number | null;
   nextLeapSecond(isoString: string): string;
   toTAI(isoString: string): string;
   fromTAI(taiString: string): string;
+  toTT(isoString: string): string;
+  fromTT(ttString: string): string;
+  toTCG(isoString: string): string;
+  fromTCG(tcgString: string): string;
   isLeapSecond(isoString: string): boolean;
   spanNs(start: string, end: string): bigint | null;
   addUtc(value: string, units: Record<string, number>): string;
   startOfUtc(value: string, unit: string): string;
+  diffUtcAsDuration(start: string, end: string, unit: string): string;
   hasSecond60(value: string): boolean;
   isValidInstant(value: string): boolean;
 }
 
 const CALCULATE_NAMES = [
   "taiMinusUtc",
+  "tcgMinusTt",
   "leapSecondsBetween",
   "nextLeapSecond",
 ] as const;
-const CONVERT_NAMES = ["toTAI", "fromTAI"] as const;
+const CONVERT_NAMES = [
+  "toTAI",
+  "fromTAI",
+  "toTT",
+  "fromTT",
+  "toTCG",
+  "fromTCG",
+] as const;
 const VALIDATE_NAMES = ["isLeapSecond"] as const;
 const SPAN_NAMES = ["spanNs"] as const;
-const UTC_CALCULATE_NAMES = ["addUtc", "startOfUtc"] as const;
+const UTC_CALCULATE_NAMES = [
+  "addUtc",
+  "startOfUtc",
+  "diffUtcAsDuration",
+] as const;
 const PLAIN_VALIDATE_NAMES = ["hasSecond60"] as const;
 const PRECISION_VALIDATE_NAMES = ["isValidInstant"] as const;
 

@@ -124,6 +124,10 @@ import {
   renderFixTimestampReaderTemplate,
 } from "./fix-timestamp-reader-mount";
 import {
+  mountTerrestrialTimeStack,
+  renderTerrestrialTimeStackTemplate,
+} from "./terrestrial-time-stack-mount";
+import {
   mountHolidayRuleBuilder,
   renderHolidayRuleBuilderTemplate,
 } from "./holiday-rule-builder-mount";
@@ -324,6 +328,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "fix timestamp reader",
     () => renderFixTimestampReaderTemplate("test"),
     mountFixTimestampReader as MountFn<never>,
+  ],
+  [
+    "terrestrial time stack",
+    () => renderTerrestrialTimeStackTemplate("test"),
+    mountTerrestrialTimeStack as MountFn<never>,
   ],
   [
     "holiday rule builder",

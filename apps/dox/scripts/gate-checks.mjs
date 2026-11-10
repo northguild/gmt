@@ -19,6 +19,20 @@
 export const MIN_FRAMES = 5;
 
 /**
+ * Whether the sampled frames show the root at rest: they reach back at least `holdMs` before the
+ * last frame, and every frame in that final `holdMs` is not growing (`g === 0`) and holds the last
+ * frame's height to within 0.01 px. It is the load pass's predicate without its minimum run time.
+ * An empty list is not at rest.
+ */
+export function heldAtRest(frames, holdMs) {
+  const last = frames.at(-1);
+  if (!last || last.t - frames[0].t < holdMs) return false;
+  return frames
+    .filter((f) => f.t >= last.t - holdMs)
+    .every((f) => f.g === 0 && Math.abs(f.h - last.h) < 0.01);
+}
+
+/**
  * Problems with one grow-measure page load, before any statistic is read.
  * `status` is the HTTP status of the navigation (null when there was no
  * response), `rootFound` whether `rootSelector` matched an element once the

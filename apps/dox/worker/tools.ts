@@ -73,6 +73,7 @@ import {
   showDatabaseTimestampReaderInput,
   showTai64nLogReaderInput,
   showFixTimestampReaderInput,
+  showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
   showObservanceComparatorInput,
@@ -638,6 +639,11 @@ export function buildWorkerTools(
       description: docFor("showFixTimestampReader"),
       inputSchema: showFixTimestampReaderInput,
       execute: () => accept("fix-timestamp-reader"),
+    }),
+    showTerrestrialTimeStack: tool({
+      description: docFor("showTerrestrialTimeStack"),
+      inputSchema: showTerrestrialTimeStackInput,
+      execute: () => accept("terrestrial-time-stack"),
     }),
   };
 
