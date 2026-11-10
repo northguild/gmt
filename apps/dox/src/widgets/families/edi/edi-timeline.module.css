@@ -142,6 +142,60 @@
   line-height: 1;
 }
 
+/* The reference: a hollow pin on a dashed stem, labelled on the side with room. Nothing here is
+   a stripe on a card's left edge. */
+.reference {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--x);
+  inline-size: 0;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: calc(var(--lane) * 30px + 28px) 0;
+    inline-size: 2px;
+    translate: -1px 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--gmt-ice-dim) 0 4px,
+      transparent 4px 8px
+    );
+  }
+}
+
+.referencePin {
+  position: absolute;
+  inset-block-start: calc(var(--lane) * 30px);
+  translate: -50% 0;
+  box-sizing: border-box;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 2px solid var(--gmt-ice-dim);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: transparent;
+}
+
+.referenceLabel {
+  position: absolute;
+  inset-block-start: calc(var(--lane) * 30px + 4px);
+  padding-inline: var(--gmt-space-1);
+  white-space: nowrap;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+  line-height: 20px;
+
+  .reference[data-side="end"] > & {
+    inset-inline-start: 18px;
+  }
+
+  .reference[data-side="start"] > & {
+    inset-inline-end: 18px;
+  }
+}
+
 .bracket {
   position: absolute;
   inset-block-end: 26px;
@@ -198,6 +252,23 @@
     background: CanvasText;
   }
 
+  .reference::after {
+    background: repeating-linear-gradient(
+      to bottom,
+      CanvasText 0 4px,
+      transparent 4px 8px
+    );
+  }
+
+  .referencePin {
+    border-color: CanvasText;
+  }
+
+  .referenceLabel {
+    background: Canvas;
+    color: CanvasText;
+  }
+
   .pin {
     border-color: CanvasText;
     background: Canvas;
@@ -222,6 +293,7 @@
   .label,
   .day,
   .caption,
+  .referenceLabel,
   .empty {
     color: var(--gmt-ice);
   }

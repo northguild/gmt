@@ -133,6 +133,7 @@ const PAGES = [
   { slug: "tool-eta-drift", path: "/tools/eta-drift/" },
   { slug: "tool-departure-board", path: "/tools/departure-board/" },
   { slug: "tool-dtm-decoder", path: "/tools/dtm-decoder/" },
+  { slug: "tool-hl7-timestamp-reader", path: "/tools/hl7-timestamp-reader/" },
   { slug: "tool-x12-time-reader", path: "/tools/x12-time-reader/" },
   { slug: "tool-demurrage-clock", path: "/tools/demurrage-clock/" },
   { slug: "tool-bl-date-stamp", path: "/tools/bl-date-stamp/" },

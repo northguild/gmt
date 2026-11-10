@@ -348,15 +348,31 @@ interface TimelineMarkPos {
   lane: number;
 }
 
+/** Where the reference mark sits: along the axis, in a pin lane, and which side its label is on. */
+interface TimelineReferencePos {
+  at: number;
+  lane: number;
+  /** The side of the pin the label is written on: toward the nearer end of the axis' room. */
+  side: "start" | "end";
+}
+
 export interface TimelineLayout {
   ticks: TimelineTick[];
   marks: TimelineMarkPos[];
-  /** The outermost marks, as positions along the axis, when there are two. */
+  /** The outermost zone marks, as positions along the axis, when there are two. */
   span: { from: number; to: number } | null;
+  /** The reference mark, when the caller passed one. */
+  reference: TimelineReferencePos | null;
 }
 
 /** The marks nearer than this, in percent of the axis, share no lane. */
 const LANE_GAP = 8;
+
+/** The pin lanes the plot holds: the reference mark takes one of them and never a fifth. */
+const LANES = 4;
+
+/** The room, in percent of the axis, the reference mark's label needs beside its pin. */
+const REFERENCE_CLEAR = 30;
 
 /** How many tick labels the axis holds before it skips ticks. */
 const MAX_LABELS = 8;
@@ -376,18 +392,28 @@ function utcHour(ms: number): { hour: number; day: string } {
  * after the latest (a few more for one instant alone), with a tick on every whole
  * hour and a label on every n-th so the labels never touch. A mark takes the
  * first lane in which the one before it is far enough away.
+ *
+ * A `reference` instant (a value read some other way, drawn as its own mark) is part of the
+ * axis' domain, so the axis spans it. It takes no part in the zone marks' lanes, the span or
+ * the widest gap: it goes in the first lane with no zone mark near its label.
  */
 export function timelineLayout(
   inputs: readonly { n: number; instant: string }[],
+  reference: string | null = null,
 ): TimelineLayout | null {
   if (inputs.length === 0) return null;
   const ms = inputs.map(
     (i) => Temporal.Instant.from(i.instant).epochMilliseconds,
   );
-  const lowest = Math.min(...ms);
-  const highest = Math.max(...ms);
+  const referenceMs =
+    reference === null
+      ? null
+      : Temporal.Instant.from(reference).epochMilliseconds;
+  const everyMs = referenceMs === null ? ms : [...ms, referenceMs];
+  const lowest = Math.min(...everyMs);
+  const highest = Math.max(...everyMs);
   const hours = Math.max(0, Math.ceil((highest - lowest) / HOUR));
-  const pad = inputs.length === 1 ? 3 : Math.max(1, Math.ceil(hours / 10));
+  const pad = everyMs.length === 1 ? 3 : Math.max(1, Math.ceil(hours / 10));
   const from = Math.floor(lowest / HOUR) * HOUR - pad * HOUR;
   const to = Math.ceil(highest / HOUR) * HOUR + pad * HOUR;
   const total = to - from;
@@ -417,11 +443,36 @@ export function timelineLayout(
     laneEnds[lane] = m.at;
     return { n: m.n, at: m.at, lane };
   });
+  const zoneLowest = Math.min(...ms);
+  const zoneHighest = Math.max(...ms);
   const span =
-    inputs.length > 1 && highest > lowest
-      ? { from: at(lowest), to: at(highest) }
+    inputs.length > 1 && zoneHighest > zoneLowest
+      ? { from: at(zoneLowest), to: at(zoneHighest) }
       : null;
-  return { ticks, marks, span };
+  return {
+    ticks,
+    marks,
+    span,
+    reference:
+      referenceMs === null ? null : referencePos(at(referenceMs), marks),
+  };
+}
+
+/** The first pin lane with no zone mark within the label's room, else the first lane. */
+function referencePos(
+  position: number,
+  marks: readonly TimelineMarkPos[],
+): TimelineReferencePos {
+  const free = Array.from({ length: LANES }, (_, lane) => lane).find((lane) =>
+    marks.every(
+      (m) => m.lane !== lane || Math.abs(m.at - position) >= REFERENCE_CLEAR,
+    ),
+  );
+  return {
+    at: position,
+    lane: free ?? 0,
+    side: position > 100 - REFERENCE_CLEAR ? "start" : "end",
+  };
 }
 
 /**
@@ -432,6 +483,7 @@ export function timelineAria(
   inputs: readonly TimelineInput[],
   gap: string,
   stated: string,
+  reference: { label: string; instant: string } | null = null,
 ): string {
   if (stated !== "")
     return `The instant the value states, ${stated}, on a UTC timeline.`;
@@ -439,7 +491,9 @@ export function timelineAria(
     .filter((i) => i.instant !== "")
     .map((i) => `${i.n}, ${i.zone}, ${i.instant}`)
     .join("; ");
-  return `A UTC timeline with ${inputs.length} ${inputs.length === 1 ? "zone" : "zones"} marked: ${marks}${gap === "" ? "" : `. ${gap}`}.`;
+  const read =
+    reference === null ? "" : ` ${reference.label}: ${reference.instant}.`;
+  return `A UTC timeline with ${inputs.length} ${inputs.length === 1 ? "zone" : "zones"} marked: ${marks}${gap === "" ? "" : `. ${gap}`}.${read}`;
 }
 
 // ---------------------------------------------------------------------------

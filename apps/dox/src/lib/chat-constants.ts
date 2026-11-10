@@ -336,6 +336,7 @@ export const EXAMPLE_AREAS = [
   { id: "intermodal", label: "Intermodal" },
   { id: "gnss", label: "GNSS" },
   { id: "finance", label: "Finance" },
+  { id: "healthcare", label: "Healthcare" },
   { id: "aviation", label: "Aviation" },
 ] as const;
 
@@ -736,6 +737,14 @@ export const CHAT_STARTERS: readonly {
       counter: "IRN-LNAV",
       firmwareNotBefore: "2020-01-01T00:00:00Z",
     },
+  },
+  {
+    text: "An HL7 time of 20240615103000, no offset, from a Kolkata facility. What instant is it?",
+    widget: "showHl7TimestampReader",
+    area: "healthcare",
+    // The question names the IANA zone, so the seed carries it as a literal
+    // field; the value states no zone.
+    args: { value: "20240615103000", zone1: "Asia/Kolkata" },
   },
   {
     text: "How many leap seconds were inserted from 2000 to 2024, and what was TAI - UTC in 2000?",

@@ -23,6 +23,7 @@ describe("no-throw harness coverage", () => {
         "duration",
         "finance",
         "gnss",
+        "healthcare",
         "instant",
         "intermodal",
         "interval",

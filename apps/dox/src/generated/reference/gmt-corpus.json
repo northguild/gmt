@@ -2691,6 +2691,141 @@
     ]
   },
   {
+    "url": "/reference/healthcare/format/formatHL7",
+    "page": "/reference/healthcare/format/formatHL7",
+    "name": "formatHL7",
+    "namespace": "healthcare",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatHL7(value: string, options?: Hl7FormatOptions): string",
+    "description": "Write an ISO 8601 string as an HL7 v2 date-time (`DTM`): the inverse of `parseHL7`.",
+    "sourcePath": "packages/gmt/src/healthcare/format/formatHL7.ts",
+    "examples": [
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:00-05:00\")",
+        "result": "\"20240615103000-0500\""
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T15:30:00Z\")",
+        "result": "\"20240615153000+0000\""
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:00\")",
+        "result": "\"20240615103000\" (the sender's local time)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:45.98765-05:00\")",
+        "result": "\"20240615103045.9876-0500\" (cut, not rounded)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:45.98765-05:00\", { precision: \"day\" })",
+        "result": "\"20240615-0500\""
+      },
+      {
+        "call": "formatHL7(\"2024-06\", { precision: \"day\" })",
+        "result": "\"\" (finer than the value carries)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15-05:00\")",
+        "result": "\"\" (not ISO 8601)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:00[Europe/Helsinki]\")",
+        "result": "\"\" (a zone with no offset)"
+      },
+      {
+        "call": "formatHL7(\"2024-02-30\")",
+        "result": "\"\" (no such day)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/parse/parseHL7",
+    "page": "/reference/healthcare/parse/parseHL7",
+    "name": "parseHL7",
+    "namespace": "healthcare",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseHL7(value: string): Hl7DateTime | null",
+    "description": "Read an HL7 v2 date-time (`DTM`, or the older `TS`) as what it states: a moment, the sender's local time, or a span.",
+    "sourcePath": "packages/gmt/src/healthcare/parse/parseHL7.ts",
+    "examples": [
+      {
+        "call": "parseHL7(\"20240615103000-0500\")",
+        "result": "{ kind: \"instant\", instant: \"2024-06-15T15:30:00Z\", offset: \"-05:00\", local: \"2024-06-15T10:30:00\", precision: \"second\" }"
+      },
+      {
+        "call": "parseHL7(\"20240615103000\")",
+        "result": "{ kind: \"local\", local: \"2024-06-15T10:30:00\", precision: \"second\" }"
+      },
+      {
+        "call": "parseHL7(\"20240615\")",
+        "result": "{ kind: \"partial\", local: \"2024-06-15\", offset: \"\", precision: \"day\" }"
+      },
+      {
+        "call": "parseHL7(\"199904011200^L\")",
+        "result": "{ kind: \"partial\", local: \"1999-04\", offset: \"\", precision: \"month\" }"
+      },
+      {
+        "call": "parseHL7(\"20240615^D^X\")",
+        "result": "{ kind: \"partial\", local: \"2024-06-15\", offset: \"\", precision: \"day\" }"
+      },
+      {
+        "call": "parseHL7('\"\"')",
+        "result": "{ kind: \"null\" }"
+      },
+      {
+        "call": "parseHL7(\"\")",
+        "result": "null"
+      },
+      {
+        "call": "parseHL7(\"20240615240000\")",
+        "result": "null (hour 24)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/validate/isValidHL7",
+    "page": "/reference/healthcare/validate/isValidHL7",
+    "name": "isValidHL7",
+    "namespace": "healthcare",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidHL7(value: string): boolean",
+    "description": "Return true when `value` is an HL7 v2 `DTM`, or a `TS` with a degree of precision the digits carry, that `parseHL7` reads.",
+    "sourcePath": "packages/gmt/src/healthcare/validate/isValidHL7.ts",
+    "examples": [
+      {
+        "call": "isValidHL7(\"20240615103000-0500\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidHL7(\"2024\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidHL7('\"\"')",
+        "result": "true (the null value)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^D^X\")",
+        "result": "true (the third component is ignored)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^S\")",
+        "result": "false (a degree finer than the digits)"
+      },
+      {
+        "call": "isValidHL7(\"20240230\")",
+        "result": "false (30 February)"
+      },
+      {
+        "call": "isValidHL7(\"\")",
+        "result": "false (not the null value)"
+      }
+    ]
+  },
+  {
     "url": "/reference/types/LocalTimeClassification",
     "page": "/reference/types/LocalTimeClassification",
     "name": "LocalTimeClassification",
@@ -21847,6 +21982,75 @@
       {
         "name": "timeOfWeekSeconds",
         "description": "Seconds since the start of the week, from 0 up to but not including 604 800."
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/format/formatHL7#hl7precision",
+    "page": "/reference/healthcare/format/formatHL7",
+    "name": "Hl7Precision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of an HL7 v2 date-time, coarsest first. HL7 v2.5.1 ch. 2A 2.A.22 (headed 2.A.1.22 in the [hl7.eu v2.5.1 copy](https://www.hl7.eu/HL7v2x/v251/std251/ch02a.html)): \"The number of characters populated (excluding the time zone specification) specifies the precision\". The characters before the offset, per member:",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": [],
+    "inlineOn": "formatHL7"
+  },
+  {
+    "url": "/reference/types/Hl7PartialPrecision",
+    "page": "/reference/types/Hl7PartialPrecision",
+    "name": "Hl7PartialPrecision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of a span: a year, month, day or hour, which names no single moment (`Hl7Precision` lists the characters each one takes).",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/Hl7MomentPrecision",
+    "page": "/reference/types/Hl7MomentPrecision",
+    "name": "Hl7MomentPrecision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of a moment: a minute or finer (`Hl7Precision` lists the characters each one takes).",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/healthcare/parse/parseHL7#hl7datetime",
+    "page": "/reference/healthcare/parse/parseHL7",
+    "name": "Hl7DateTime",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "An HL7 v2 date-time (`DTM`, 2.A.22; or `TS`, 2.A.77) read as what it states. What the sender did not send is not invented: a value with no offset has no instant, and a year or a day has no moment.",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": [],
+    "inlineOn": "parseHL7"
+  },
+  {
+    "url": "/reference/healthcare/format/formatHL7#hl7formatoptions",
+    "page": "/reference/healthcare/format/formatHL7",
+    "name": "Hl7FormatOptions",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "Options for `formatHL7`.",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": [],
+    "inlineOn": "formatHL7",
+    "members": [
+      {
+        "name": "precision",
+        "description": "Lowers the precision written; never raises it. The precision is read from the form the input is written in, and a value lower than that cuts the digits (never rounds)."
       }
     ]
   },

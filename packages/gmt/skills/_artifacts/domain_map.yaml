@@ -27,7 +27,7 @@ domains:
     description: Integrating gmt with application frameworks and linting tools
   - name: Industry Layers
     slug: industry-layers
-    description: One skill per industry layer (gnss/, finance/, aviation/, transport/, intermodal/, workforce/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
+    description: One skill per industry layer (gnss/, finance/, transport/, intermodal/, workforce/, healthcare/, aviation/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
   - name: Contributor
     slug: contributor
     description: Library maintainer workflows — issues, PRs, implementation, testing
@@ -612,6 +612,23 @@ skills:
       - Find the operator-designated day an instant falls in, from a start time in a reference zone
       - Total time in a set of statuses, the longest unbroken stretch, and the rests or paired rests that qualify
 
+  - name: GMT Healthcare
+    slug: gmt-healthcare
+    domain: industry-layers
+    description: HL7 v2 date-times, @northguild/gmt/healthcare (parseHL7/formatHL7/isValidHL7); an HL7 time with no offset is the sender's local time, never UTC
+    type: core
+    packages:
+      - '@northguild/gmt'
+    covers:
+      - parseHL7
+      - formatHL7
+      - isValidHL7
+    tasks:
+      - Read an HL7 v2 DTM or TS as an instant, a local time with no offset, a partial value or the null value
+      - Take the instant of an HL7 time that carries no offset, once the sender's zone is known
+      - Write an ISO 8601 value as an HL7 DTM at the precision the caller names
+      - Check an HL7 v2 date-time before storing it
+
   - name: Issue Creation
     slug: issue-creation
     domain: contributor
@@ -718,6 +735,9 @@ cross_references:
   - from: gmt-arithmetic
     to: gmt-workforce
     reason: Hours-of-work rules are built on interval and duration arithmetic
+  - from: gmt-timezone
+    to: gmt-healthcare
+    reason: An HL7 time with no offset becomes an instant through resolveLocal and the sender's zone
   - from: issue-creation
     to: new-method-implementation
     reason: Issue is first step; implementation skill guides actual code

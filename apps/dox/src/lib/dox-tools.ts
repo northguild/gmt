@@ -630,6 +630,21 @@ export const showFixTimestampReaderInput = z.object({
 });
 
 /**
+ * The HL7 Timestamp Reader: one HL7 v2 date-time (a `DTM`, or a `TS` with its degree of
+ * precision after `^`), read by `parseHL7`. `zone1` to `zone4` are zones the reader named, to
+ * read a value with no offset in. The value is kept as typed, so it is not trimmed. The widget
+ * judges the value itself: one the library does not read is the widget's NO SIGNAL, not a
+ * failed tool call.
+ */
+export const showHl7TimestampReaderInput = z.object({
+  value: z.string().min(1).max(64),
+  zone1: zoneSchema.optional(),
+  zone2: zoneSchema.optional(),
+  zone3: zoneSchema.optional(),
+  zone4: zoneSchema.optional(),
+});
+
+/**
  * SSIM Date Reader: the SSIM text to read (`value`), the window its two-digit year is read in
  * (`yearWindow`: a first year or "rolling"), the locale the comparison passes the pattern
  * parser (`locale`) and an ISO date to write back (`date`). Nothing is trimmed, upper-cased or
@@ -1279,6 +1294,7 @@ export type DoxToolName =
   | "showTai64nLogReader"
   | "showTerrestrialTimeStack"
   | "showFixTimestampReader"
+  | "showHl7TimestampReader"
   | "showSsimDateReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1604,6 +1620,13 @@ export const DOX_TOOL_DOCS: {
     args: "stamp: optional, the FIX UTCTimestamp exactly as the reader gave it, never trimmed or corrected; instant: optional, an instant with Z or an offset to write at the five precisions, only when the reader gave one.",
   },
   {
+    name: "showHl7TimestampReader",
+    purpose:
+      "An HL7 v2 date-time (a DTM, or a TS with its degree of precision after ^) read by parseHL7: its kind, precision and offset; a value with no offset read in the zones the reader picks with resolveLocal, beside the instant a parser that assumes UTC gets; and the value written back by formatHL7 at each precision.",
+    when: "the reader asks what an HL7 v2 DTM or TS value means, what instant an HL7 time with no offset names, what a TS degree of precision such as ^L or ^D does, or how to write an instant as an HL7 DTM",
+    args: "value (the HL7 date-time exactly as the reader gave it, such as 20240615103000 or 199904011200^L; at most 64 characters; never corrected, and never given an offset the reader did not send), zone1 to zone4 (optional IANA ids to read a value with no offset in; only zones the reader named: never choose one from a facility, a place, a vendor or an abbreviation, because the value states none).",
+  },
+  {
     name: "showSsimDateReader",
     purpose:
       "Read an IATA SSIM DDMMMYY date with a window you state, beside the locale pattern parser, and write a date back.",
@@ -1798,8 +1821,12 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[44].purpose,
     inputSchema: showFixTimestampReaderInput,
   }),
-  showSsimDateReader: tool({
+  showHl7TimestampReader: tool({
     description: DOX_TOOL_DOCS[45].purpose,
+    inputSchema: showHl7TimestampReaderInput,
+  }),
+  showSsimDateReader: tool({
+    description: DOX_TOOL_DOCS[46].purpose,
     inputSchema: showSsimDateReaderInput,
   }),
 } as const;
@@ -1870,6 +1897,7 @@ export const ENABLED_TOOL_NAMES = [
   "showTai64nLogReader",
   "showTerrestrialTimeStack",
   "showFixTimestampReader",
+  "showHl7TimestampReader",
   "showSsimDateReader",
 ] as const satisfies readonly DoxToolName[];
 
