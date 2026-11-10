@@ -198,14 +198,13 @@ export function matchPreset(state: ClockState): string {
 // Permalink and seed
 // ---------------------------------------------------------------------------
 
-/** Whether `args` carries anything the widget can seed from. */
+/** Whether `args` carries a value or a preset id, the two things `readArgs` seeds from. */
 export function isSeeded(
   args: SatelliteClockConverterArgs | undefined,
 ): boolean {
+  const filled = (v: unknown): boolean => typeof v === "string" && v !== "";
   return (
-    args !== undefined &&
-    (typeof args["value"] === "string" || typeof args["preset"] === "string") &&
-    (args["value"] ?? args["preset"]) !== ""
+    args !== undefined && (filled(args["value"]) || filled(args["preset"]))
   );
 }
 
