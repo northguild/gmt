@@ -8,8 +8,8 @@
  * validator is the single place the §3.3.10 value ranges and MUST NOT sentences live, so a
  * hand-built rule meets the same rules as a parsed one. Names and enumerated values are
  * case-insensitive (RFC 5234 §2.3, quoted ABNF strings); `UNTIL`'s `T` and `Z` are capitals only
- * (RFC 5545 §3.3.5), and its second 60 is rejected (coding-standards: only `timescale/` and
- * `gnss/` read it). The `i` flag on a non-Unicode regex
+ * (RFC 5545 §3.3.5), and its second 60 is rejected (coding-standards: only `timescale/`, `gnss/`
+ * and `finance/` read it). The `i` flag on a non-Unicode regex
  * never folds a non-ASCII letter onto an ASCII one, so the matched text is safe to upper-case.
  *
  * Every loop is bounded by the input length (one pass over the parts, one over each list).

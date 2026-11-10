@@ -1605,7 +1605,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   (the `edi-figure` and `edi-timeline` builders and their CSS Modules, with `edi-picture.ts` and `edi-render.ts` holding the pure helpers), and the zone code (`widestGap`, in
   `edi-widgets.ts`), and they print every call made, one a line, with the same
   `formatValue`/`callArgs`. A picture field's optional `run` ends a bracket where it changes, so one group
-  can bracket several runs of digits (the Finance tool's ms, µs, ns and ps); no field with a `run` leaves a picture as it was. Their rules:
+  can bracket several runs of digits (the Finance tool's ms, µs, ns and ps). A picture with no `run` field draws exactly as before. Their rules:
   - **Nothing derives a zone from a place, a zone name, an abbreviation or a time code**,
     because the standards state no such mapping: typing `ET` never fills, suggests or changes a
     zone, and no site module holds a lookup from a name or code to an IANA id (a test asserts
@@ -2477,7 +2477,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **The site holds no grammar, width table or leap-second table.** `fix-picture.ts` probes the
     library once per reading (the base and the widths come from formatting a fixed instant at each
     precision), and a refusal is explained by asking the library again, in this order: the text
-    with `60` changed to `59`, then the text with its fraction removed, then one general sentence.
+    with `60` changed to `59`, then the same day at 23:59:60 (which tells a wrong minute from a
+    wrong day), then the text with its fraction removed, then one general sentence.
     The first probe the library accepts names the reason, so a reason is never a guess.
   - **"None sent" is not `0`.** The parser reports `picoseconds: 0` both for a stamp that sent
     nothing below the nanosecond and for one that sent `000`. The digit count tells them apart, so
@@ -2492,7 +2493,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
     precision, and a precision finer than the instant is padded with `000` and says so. A local
     time (no offset) is the library's `""`, shown as "no result" in the five plates and explained
     by one sentence; an empty box is a plain empty state, never `NO SIGNAL`.
-  - **Not in `readout-still`, which has no handle to drag to.** `fix-timestamp-reader-holds.browser.test.ts`
+  - **In `readout-still` by typed values, and in a browser test.** Its `readout-still` row has no
+    handle: on the first and last stamp preset it types nine stamps and six instants and picks
+    every instant preset, and only a hold's live content may change (`scope: "widget"`,
+    `drawn: ["hold"]`, and `frame: false` because it draws no chart). Each call frame's hold is
+    sampled with a call on 64 characters, the most a box takes. The frame scrolls sideways when a
+    line is too long, so a shorter sample left the scrollbar unreserved: a 64-character stamp
+    grew the read call's hold by 20 px in WebKit at 1440 px, whose pane is 20 px narrower than
+    Chromium's.
+    `fix-timestamp-reader-holds.browser.test.ts`
     (`vitest.browser.config.ts`; Chromium and WebKit) steps every preset of each section, and then
     both boxes emptied, at 300 px and 1280 px, and holds every `hold`, hero, plates and frame box to
     0.5 px of the first. Only a hold is measured, never the code frame inside it, which is shorter
@@ -2873,7 +2882,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   pointer sweep takes 48 steps of 30 minutes, so it always enters the shaded hour. The pass/fail decisions live in
   `scripts/gate-checks.mjs`, unit-tested in `gate-checks.test.ts`. A tool with no drag handle,
   such as the DTM Decoder, the X12 Time Reader, the Demurrage Clock, the EPCIS Event Reader, the
-  Journey Split, Billing Deadlines, the Stored Time Audit, the ID Timestamp Decoder, the Column Timestamp Bridge, the Database Timestamp Reader and the FIX Timestamp Reader, is not in `readout-still`. Its definition of done measures
+  Journey Split, Billing Deadlines, the Stored Time Audit, the ID Timestamp Decoder, the Column Timestamp Bridge and the Database Timestamp Reader, is not in `readout-still`. Its definition of done measures
   the same boxes across every preset instead: each plate keeps its size, and a held region keeps
   its height. A result region may grow from one preset to the next through `.gmt-grow`, which
   `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a

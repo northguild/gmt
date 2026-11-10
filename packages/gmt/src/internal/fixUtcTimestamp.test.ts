@@ -6,6 +6,7 @@ import {
   readFixUtcFields,
   resolveFixPrecision,
 } from "./fixUtcTimestamp";
+import { Temporal } from "./temporal";
 
 /** 2024-06-15T14:30:00.123Z, checked with `Temporal.Instant.from(...).epochNanoseconds`. */
 const ORDINARY = { epochNanoseconds: 1718461800123000000n, secondSixty: false };
@@ -135,11 +136,6 @@ describe("fixPrecisionOfDigits", () => {
     ${6}  | ${"microsecond"}
     ${9}  | ${"nanosecond"}
     ${12} | ${"picosecond"}
-    ${1}  | ${null}
-    ${2}  | ${null}
-    ${4}  | ${null}
-    ${10} | ${null}
-    ${13} | ${null}
   `("maps $count digits to $expected", ({ count, expected }) => {
     expect(fixPrecisionOfDigits(count)).toBe(expected);
   });
@@ -175,34 +171,56 @@ describe("resolveFixPrecision", () => {
 
 describe("fixInstantText", () => {
   it.each`
-    label                | reading                                                             | digits | expected
-    ${"ordinary"}        | ${ORDINARY}                                                         | ${0}   | ${"2024-06-15T14:30:00Z"}
-    ${"ordinary"}        | ${ORDINARY}                                                         | ${3}   | ${"2024-06-15T14:30:00.123Z"}
-    ${"ordinary"}        | ${ORDINARY}                                                         | ${6}   | ${"2024-06-15T14:30:00.123000Z"}
-    ${"ordinary"}        | ${ORDINARY}                                                         | ${9}   | ${"2024-06-15T14:30:00.123000000Z"}
-    ${"leap, no fract."} | ${LEAP_0}                                                           | ${0}   | ${"2016-12-31T23:59:60Z"}
-    ${"leap, .5"}        | ${LEAP_500}                                                         | ${3}   | ${"2016-12-31T23:59:60.500Z"}
-    ${"leap, .5"}        | ${LEAP_500}                                                         | ${6}   | ${"2016-12-31T23:59:60.500000Z"}
-    ${"leap, .5"}        | ${LEAP_500}                                                         | ${9}   | ${"2016-12-31T23:59:60.500000000Z"}
-    ${"leap, .5"}        | ${LEAP_500}                                                         | ${0}   | ${"2016-12-31T23:59:60Z"}
-    ${"leap, near next"} | ${LEAP_NEAR_NEXT}                                                   | ${3}   | ${"2016-12-31T23:59:60.999Z"}
-    ${"leap, near next"} | ${LEAP_NEAR_NEXT}                                                   | ${9}   | ${"2016-12-31T23:59:60.999999999Z"}
-    ${"nine digits"}     | ${NINE}                                                             | ${3}   | ${"2024-06-15T14:30:00.123Z"}
-    ${"nine digits"}     | ${NINE}                                                             | ${6}   | ${"2024-06-15T14:30:00.123456Z"}
-    ${"nine digits"}     | ${NINE}                                                             | ${9}   | ${"2024-06-15T14:30:00.123456789Z"}
-    ${"near next"}       | ${NEAR_NEXT}                                                        | ${0}   | ${"2024-06-15T14:30:00Z"}
-    ${"near next"}       | ${NEAR_NEXT}                                                        | ${3}   | ${"2024-06-15T14:30:00.999Z"}
-    ${"before 1970"}     | ${{ epochNanoseconds: -1n, secondSixty: false }}                    | ${3}   | ${"1969-12-31T23:59:59.999Z"}
-    ${"year 9999 end"}   | ${{ epochNanoseconds: 253402300799000000000n, secondSixty: false }} | ${0}   | ${"9999-12-31T23:59:59Z"}
-    ${"before year 0"}   | ${{ epochNanoseconds: -62167219201000000000n, secondSixty: false }} | ${0}   | ${""}
-    ${"year 0"}          | ${{ epochNanoseconds: -62167219200000000000n, secondSixty: false }} | ${0}   | ${"0000-01-01T00:00:00Z"}
-    ${"past 9999"}       | ${{ epochNanoseconds: 253402300800000000000n, secondSixty: false }} | ${0}   | ${""}
-  `(
-    "writes $label with $digits digits as '$expected'",
-    ({ reading, digits, expected }) => {
-      expect(fixInstantText(reading, digits)).toBe(expected);
-    },
-  );
+    label                | value                               | expected
+    ${"no fraction"}     | ${"20240615-14:30:00"}              | ${"2024-06-15T14:30:00Z"}
+    ${"3 digits"}        | ${"20240615-14:30:00.123"}          | ${"2024-06-15T14:30:00.123Z"}
+    ${"trailing zeros"}  | ${"20240615-14:30:00.100"}          | ${"2024-06-15T14:30:00.100Z"}
+    ${"6 digits"}        | ${"20240615-14:30:00.123000"}       | ${"2024-06-15T14:30:00.123000Z"}
+    ${"9 digits"}        | ${"20240615-14:30:00.123456789"}    | ${"2024-06-15T14:30:00.123456789Z"}
+    ${"12 digits"}       | ${"20240615-14:30:00.123456789012"} | ${"2024-06-15T14:30:00.123456789Z"}
+    ${"near next"}       | ${"20240615-14:30:00.999999999"}    | ${"2024-06-15T14:30:00.999999999Z"}
+    ${"leap, no fract."} | ${"20161231-23:59:60"}              | ${"2016-12-31T23:59:60Z"}
+    ${"leap, .5"}        | ${"20161231-23:59:60.500"}          | ${"2016-12-31T23:59:60.500Z"}
+    ${"leap, 9 digits"}  | ${"20161231-23:59:60.999999999"}    | ${"2016-12-31T23:59:60.999999999Z"}
+    ${"leap, 12 digits"} | ${"20161231-23:59:60.500000000999"} | ${"2016-12-31T23:59:60.500000000Z"}
+    ${"before 1970"}     | ${"19691231-23:59:59.999"}          | ${"1969-12-31T23:59:59.999Z"}
+    ${"year 0"}          | ${"00000101-00:00:00"}              | ${"0000-01-01T00:00:00Z"}
+    ${"year 9999 end"}   | ${"99991231-23:59:59"}              | ${"9999-12-31T23:59:59Z"}
+    ${"leading zeros"}   | ${"00010203-04:05:06.007008009"}    | ${"0001-02-03T04:05:06.007008009Z"}
+  `("writes $label ($value) as '$expected'", ({ value, expected }) => {
+    expect(fixInstantText(readFixUtcFields(value)!)).toBe(expected);
+  });
+
+  it.each`
+    value
+    ${"20240615-14:30:00"}
+    ${"20240615-14:30:00.123"}
+    ${"20240615-14:30:00.123456"}
+    ${"20240615-14:30:00.123456789"}
+    ${"19691231-23:59:59.999999999"}
+    ${"00000101-00:00:00"}
+    ${"99991231-23:59:59.999"}
+  `("writes $value as Temporal writes the same instant", ({ value }) => {
+    const fields = readFixUtcFields(value)!;
+    const instant = Temporal.PlainDateTime.from({
+      year: fields.year,
+      month: fields.month,
+      day: fields.day,
+      hour: fields.hour,
+      minute: fields.minute,
+      second: fields.second,
+      millisecond: fields.millisecond,
+      microsecond: fields.microsecond,
+      nanosecond: fields.nanosecond,
+    })
+      .toZonedDateTime("UTC")
+      .toInstant();
+    expect(fixInstantText(fields)).toBe(
+      instant.toString({
+        fractionalSecondDigits: fields.fractionDigits as 0 | 3 | 6 | 9,
+      }),
+    );
+  });
 });
 
 describe("fixTimestampText", () => {

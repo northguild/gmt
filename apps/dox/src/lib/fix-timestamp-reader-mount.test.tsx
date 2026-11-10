@@ -21,6 +21,7 @@ import { pictureOf, probeShape } from "./fix-picture";
 import { reservedFigure } from "./fix-timestamp-reader-mount";
 import {
   EMPTY_STAMP_TEXT,
+  FIX_MAX_CHARS,
   NONE_SENT_TEXT,
   STAMP_PRESETS,
   WRITE_PRESETS,
@@ -187,6 +188,19 @@ describe("the figure", () => {
       pictureOf(text, shape, true)?.halves,
     );
   });
+});
+
+describe("the call frames", () => {
+  // A frame scrolls sideways when a line is too long. Its hold keeps a call with the longest
+  // text a box takes, so the scrollbar is reserved before anyone types that text.
+  it.each(["parseFixUtcTimestamp", "formatFixUtcTimestamp"])(
+    "the %s frame reserves a call with the longest text a box takes",
+    async (fn) => {
+      await open();
+      const longest = new RegExp(`${fn}\\(.${"0".repeat(FIX_MAX_CHARS)}.`);
+      expect(screen.getAllByText(longest)).not.toHaveLength(0);
+    },
+  );
 });
 
 describe("the permalink", () => {

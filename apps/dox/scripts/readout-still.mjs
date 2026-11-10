@@ -43,6 +43,8 @@
  * A `TOOLS` entry may carry optional fields:
  *
  *   presetName    the accessible name of the preset select (default "Preset");
+ *   frame         false: the tool draws no chart, so `--resolve-only` does not
+ *                 ask for its frame part;
  *   drawn         the parts whose insides move by design (default `["drawn"]`).
  *                 `"hold"` stands for the first child of a hold (the kit's hold
  *                 writes the live wrapper first), `"grid"` for a month grid;
@@ -564,6 +566,52 @@ const TOOLS = [
     riders: true,
     textBoxes: ["codeframe"],
   },
+  {
+    // FIN-95. No handle: the reader types a stamp or an instant, or picks an instant preset.
+    // The first preset reads a stamp and the last is refused, so each value is typed from both.
+    slug: "fix-timestamp-reader",
+    root: '[data-widget="fix-timestamp-reader"]',
+    presets: ["milliseconds", "second-60-ordinary"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "UTCTimestamp",
+        values: [
+          "20240615-14:30:00",
+          "20240615-14:30:00.123456789012",
+          "20161231-23:59:60.500",
+          "20161231-23:58:60",
+          "20171231-23:59:60",
+          "20240615-14:30:00.12345678",
+          "2024-06-15",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Instant",
+        values: [
+          "2024-06-15T14:30:00Z",
+          "2016-12-31T23:59:60.123456789Z",
+          "2024-06-15T16:30:00.123456789+02:00",
+          "2024-06-15T14:30:00",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      { role: "combobox", name: "Instant preset", values: "options" },
+    ],
+    track: null,
+    // It draws no chart, so it has no frame part.
+    frame: false,
+    scope: "widget",
+    // The figure, the calls, the outputs, the verdict and the notes are holds: their live
+    // wrapper is left out, and the hold that reserves the space is measured.
+    drawn: ["hold"],
+    textBoxes: ["instant"],
+  },
 ];
 
 /**
@@ -663,7 +711,9 @@ function snapshotInPage(
     });
   };
   widget.querySelectorAll(hero).forEach((el) => add("hero", el));
-  add("frame", widget.querySelector(frame));
+  // A tool that draws no chart has no frame (`frame: false` on its row).
+  const frameEl = widget.querySelector(frame);
+  if (frameEl) add("frame", frameEl);
   add("control", control);
   const everything = scope === "widget";
   const within = everything ? widget : section;
@@ -788,7 +838,7 @@ async function run() {
     console.log(`FAIL ${id}: ${message}`);
   };
   if (RESOLVE_ONLY) {
-    const browser = await ENGINES.chromium.launch();
+    const browser = await launchBrowser("chromium");
     const context = await browser.newContext({
       viewport: { width: 1440, height: 900 },
       colorScheme: "dark",
@@ -824,7 +874,11 @@ async function run() {
           min: c.optional ? 0 : 1,
           max: 1,
         })),
-        { name: "frame part", sel: gate("frame"), min: 1 },
+        {
+          name: "frame part",
+          sel: gate("frame"),
+          min: tool.frame === false ? 0 : 1,
+        },
         ...(tool.track
           ? [{ name: "track part", sel: gate(tool.track), min: 1 }]
           : []),

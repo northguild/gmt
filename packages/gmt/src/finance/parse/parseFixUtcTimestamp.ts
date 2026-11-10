@@ -26,6 +26,8 @@ import type { FixUtcTimestamp } from "../../types/fix";
  *   | 9               | `"nanosecond"`  |
  *   | 12              | `"picosecond"`  |
  *
+ * - These are the FIX Latest widths. FIX 4.2 and 4.4 define only whole seconds and `.sss`; this
+ *   function still reads 6, 9 and 12 digits, and does not return `null` for them.
  * - Precision is reported, never widened: `instant` keeps the digits sent, trailing zeros
  *   included, so `.100` stays `.100Z`.
  * - Temporal holds nanoseconds. For a 12-digit fraction the first nine digits go in `instant`
@@ -60,12 +62,9 @@ export function parseFixUtcTimestamp(value: string): FixUtcTimestamp | null {
     if (fields === null) {
       return null;
     }
-    const precision = fixPrecisionOfDigits(fields.fractionDigits);
-    if (precision === null) {
-      return null;
-    }
     // MAR-16 rule 2: a second of 60 never reaches Temporal; it goes in as 59 with a flag.
     const secondSixty = fields.second === 60;
+    // Throws, and so returns null, for 30 February, hour 24, minute 60 or month 13.
     const plain = Temporal.PlainDateTime.from(
       {
         year: fields.year,
@@ -80,24 +79,19 @@ export function parseFixUtcTimestamp(value: string): FixUtcTimestamp | null {
       },
       { overflow: "reject" },
     );
-    const reading = {
-      epochNanoseconds: plain.toZonedDateTime("UTC").epochNanoseconds,
-      secondSixty,
-    };
     // Only for a 60: taiOfUtc is null before 1972 for an ordinary second too, and FIX allows 0000.
-    if (secondSixty && taiOfUtc(LEAP_SECOND_STEPS, reading) === null) {
-      return null;
-    }
-    const instant = fixInstantText(
-      reading,
-      Math.min(fields.fractionDigits, 9) as 0 | 3 | 6 | 9,
-    );
-    if (instant === "") {
+    if (
+      secondSixty &&
+      taiOfUtc(LEAP_SECOND_STEPS, {
+        epochNanoseconds: plain.toZonedDateTime("UTC").epochNanoseconds,
+        secondSixty,
+      }) === null
+    ) {
       return null;
     }
     return {
-      instant,
-      precision,
+      instant: fixInstantText(fields),
+      precision: fixPrecisionOfDigits(fields.fractionDigits),
       leapSecond: secondSixty,
       picoseconds: fields.picoseconds,
     };

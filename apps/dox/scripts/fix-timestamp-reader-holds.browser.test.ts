@@ -12,11 +12,11 @@ import { distDirOrSkip } from "./dist-dir";
 import { serveStatic } from "./lib/static-server.mjs";
 
 /**
- * The FIX Timestamp Reader keeps its boxes still. The tool has typed input and no drag handle, so
- * it is not in `readout-still`; this reads the built page in a browser instead. For every preset
- * of each section, at 300 px and at desktop width, each hold and plate row keeps its width and
- * height to within 0.5 px of what it was on the first preset. A second case reads the first load:
- * every hold the server draws keeps its size when the mount fills it. Firefox is left to CI.
+ * The FIX Timestamp Reader keeps its boxes still. The tool has typed input and no drag handle:
+ * `readout-still` types values into it, and this reads the built page in a browser. For every
+ * preset of each section, at 300 px and at desktop width, each hold and plate row keeps its width
+ * and height to within 0.5 px of what it was on the first preset. A second case reads the first
+ * load: every hold the server draws keeps its size when the mount fills it. Firefox is left to CI.
  */
 
 const dist = distDirOrSkip();

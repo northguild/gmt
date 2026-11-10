@@ -8,7 +8,8 @@
  * cut.
  *
  * A refusal is explained by asking the library again, in this order: the text with its second
- * `60` changed to `59`, then the text with its fraction removed, then one general sentence.
+ * `60` changed to `59`, then the same day at 23:59:60, then the text with its fraction removed,
+ * then one general sentence.
  *
  * No DOM; the library arrives as a `FinanceLib`.
  */

@@ -398,6 +398,37 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showFixTimestampReader", () => {
+    const schema = (
+      tools.showFixTimestampReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a stamp, an instant, both or neither", async () => {
+      for (const input of [
+        { stamp: "20161231-23:59:60.500" },
+        { instant: "2024-06-15T14:30:00.123Z" },
+        { stamp: "20240615-14:30:00.100", instant: "2016-12-31T23:59:60Z" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showFixTimestampReader", input)).toMatchObject({
+          ok: true,
+          widget: "fix-timestamp-reader",
+        });
+      }
+    });
+
+    it("refuses a stamp or instant over 64 characters in the tool's own schema", () => {
+      expect(schema.safeParse({ stamp: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ stamp: "a".repeat(65) }).success).toBe(false);
+      expect(schema.safeParse({ instant: "a".repeat(65) }).success).toBe(false);
+    });
+  });
+
   describe("showTerrestrialTimeStack", () => {
     const schema = (
       tools.showTerrestrialTimeStack as unknown as {

@@ -15,7 +15,7 @@ import type { RecurrenceRule } from "../../types";
  * - `UNTIL` is rebuilt, not kept as written, in Temporal's ISO form: `"1997-12-24T00:00:00Z"` for a
  *   UTC date-time, `"1997-12-24T00:00:00"` for a floating one, `"1997-12-24"` for a date. Its `T`
  *   and `Z` must be capitals (RFC 5545 §3.3.5). A second of 60 returns `null`, UTC or floating:
- *   GMT reads second 60 only in `timescale/` and `gnss/`.
+ *   GMT reads second 60 only in `timescale/`, `gnss/` and `finance/`.
  * - `COUNT=0` returns `null` by a GMT rule: the RFC grammar (`1*DIGIT`) would allow it.
  * - Returns `null` for anything §3.3.10 does not allow: a missing `FREQ`, `COUNT` together with
  *   `UNTIL`, a value out of its range, a numeric `BYDAY` outside `MONTHLY` and `YEARLY`,

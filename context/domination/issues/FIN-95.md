@@ -107,10 +107,11 @@ through the FIX Orchestra data-type browser, to which FIXimate now redirects.
 
 ## What gmt provides (do not re-implement)
 
-- `toNanoseconds`, `fromNanoseconds`, `truncateNanoseconds` from CORE-1 — sub-second precision
-- `isLeapSecond` from SPA-48 — checking a seconds field of `60` against the leap-second table, and
-  the internal second-60 reading and writing behind `fromTAI`
-- `resolveLocal` from CORE-4 — the instant of a local time, before it is written
+- `LEAP_SECOND_STEPS` and `taiOfUtc` (`internal/leapSeconds.ts`) from SPA-48 — the leap-second
+  table, which a seconds field of `60` is checked against in both directions
+- `parseUtcReading` and `MAX_FOUR_DIGIT_YEAR` (`internal/utcReading.ts`) from MAR-16 — reading the
+  formatter's instant, second 60 included, and the four-digit year bound
+- `isoYearString` from INT-15 — writing the year as four digits
 
 ## Verification
 

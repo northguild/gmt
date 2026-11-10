@@ -16,8 +16,9 @@ import {
  * - UTC = TAI − (TAI − UTC), from the IERS leap-second table built into GMT (Leap_Second.dat
  *   through Bulletin C 72, 6 July 2026). The table is closed: after the last insertion
  *   (2016-12-31) TAI − UTC stays 37 s.
- * - During an inserted second the result is `…T23:59:60Z` (ITU-R TF.460-6 Annex 3). Only this
- *   realm's functions read that string back; other GMT functions reject a second of 60.
+ * - During an inserted second the result is `…T23:59:60Z` (ITU-R TF.460-6 Annex 3). Only the
+ *   `timescale/`, `gnss/` and `finance/` functions read that string back; other GMT functions
+ *   reject a second of 60.
  * - Nanoseconds are kept exactly. TAI64NA attoseconds are checked (0 to 999999999) and dropped:
  *   truncated, never rounded.
  * - daemontools `tai64n` assumes the system clock counts TAI seconds since 1970-01-01 00:00:10 TAI

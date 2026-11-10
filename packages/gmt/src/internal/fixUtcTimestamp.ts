@@ -2,11 +2,7 @@
 import { Temporal } from "./temporal";
 import type { FixPrecision } from "../types/fix";
 import { isoYearString } from "./isoYearString";
-import {
-  MAX_FOUR_DIGIT_YEAR,
-  secondSixtyWallClock,
-  type UtcReading,
-} from "./utcReading";
+import { MAX_FOUR_DIGIT_YEAR, type UtcReading } from "./utcReading";
 
 /**
  * FIX `UTCTimestamp`: date, dash, time with colons, optional period and 3, 6, 9 or 12 digits
@@ -28,30 +24,25 @@ export const FIX_FRACTION_DIGITS: Readonly<
   picosecond: 12,
 };
 
+/** `FIX_FRACTION_DIGITS` the other way round, so the two cannot disagree. */
+const PRECISION_OF_DIGITS = Object.fromEntries(
+  Object.entries(FIX_FRACTION_DIGITS).map(([precision, digits]) => [
+    digits,
+    precision,
+  ]),
+) as Readonly<Record<0 | 3 | 6 | 9 | 12, FixPrecision>>;
+
 /**
  * The precision a fraction digit count states.
  *
- * @param count digits after the period
- * @returns the precision, or null for any count FIX does not name
+ * @param count digits after the period, one of the counts `FIX_UTC_TIMESTAMP` matches
+ * @returns the precision
  *
  * @example fixPrecisionOfDigits(3) // "millisecond"
- * @example fixPrecisionOfDigits(4) // null
+ * @example fixPrecisionOfDigits(12) // "picosecond"
  */
-export function fixPrecisionOfDigits(count: number): FixPrecision | null {
-  switch (count) {
-    case 0:
-      return "second";
-    case 3:
-      return "millisecond";
-    case 6:
-      return "microsecond";
-    case 9:
-      return "nanosecond";
-    case 12:
-      return "picosecond";
-    default:
-      return null;
-  }
+export function fixPrecisionOfDigits(count: 0 | 3 | 6 | 9 | 12): FixPrecision {
+  return PRECISION_OF_DIGITS[count];
 }
 
 /**
@@ -152,36 +143,29 @@ function nineDigitFraction(nanoseconds: bigint): string {
 }
 
 /**
- * The ISO instant text of a UTC reading with exactly `digits` fraction digits: `YYYY-MM-DDTHH:MM:SS[.d…]Z`,
- * the second `60` for a leap reading. Throws where Temporal throws, so call it inside `try`.
+ * The ISO instant text of matched FIX fields, `YYYY-MM-DDTHH:MM:SS[.d…]Z`, written from the digits
+ * as sent: the second stays `60`, and a 12-digit fraction keeps its first nine digits. Nothing is
+ * checked here; check the fields with `Temporal.PlainDateTime.from(…, { overflow: "reject" })`
+ * first. The year needs no check: the grammar gives four digits, and a FIX stamp is already UTC.
  *
- * @param reading the UTC reading
- * @param digits fraction digits to write: 0, 3, 6 or 9 (cut, never rounded)
- * @returns the instant string, or "" for a year outside 0000-9999
+ * @param fields the fields from `readFixUtcFields`
+ * @returns the instant string
  *
- * @example fixInstantText({ epochNanoseconds: 1718461800123000000n, secondSixty: false }, 3) // "2024-06-15T14:30:00.123Z"
+ * @example fixInstantText(readFixUtcFields("20240615-14:30:00.100")!) // "2024-06-15T14:30:00.100Z"
+ * @example fixInstantText(readFixUtcFields("20161231-23:59:60")!) // "2016-12-31T23:59:60Z"
  */
-export function fixInstantText(
-  reading: UtcReading,
-  digits: 0 | 3 | 6 | 9,
-): string {
-  const instant = Temporal.Instant.fromEpochNanoseconds(
-    reading.epochNanoseconds,
-  );
-  const year = instant.toZonedDateTimeISO("UTC").year;
-  if (year < 0 || year > MAX_FOUR_DIGIT_YEAR) {
-    return "";
-  }
-  if (!reading.secondSixty) {
-    return instant.toString({ fractionalSecondDigits: digits });
-  }
-  const wall = secondSixtyWallClock(reading.epochNanoseconds);
-  const head = wall.slice(0, wall.indexOf(":60") + 3);
+export function fixInstantText(fields: FixUtcFields): string {
+  const two = (n: number): string => String(n).padStart(2, "0");
+  const three = (n: number): string => String(n).padStart(3, "0");
+  const digits = Math.min(fields.fractionDigits, 9);
   const fraction =
     digits === 0
       ? ""
-      : `.${nineDigitFraction(reading.epochNanoseconds).slice(0, digits)}`;
-  return `${head}${fraction}Z`;
+      : `.${three(fields.millisecond)}${three(fields.microsecond)}${three(fields.nanosecond)}`.slice(
+          0,
+          digits + 1,
+        );
+  return `${String(fields.year).padStart(4, "0")}-${two(fields.month)}-${two(fields.day)}T${two(fields.hour)}:${two(fields.minute)}:${two(fields.second)}${fraction}Z`;
 }
 
 /**

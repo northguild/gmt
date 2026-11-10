@@ -211,9 +211,16 @@ const writeCalls = (text: string): EdiCall[] =>
     result: WIDEST_STAMP,
   }));
 
-const READ_CALL_SAMPLES = [callLines(readCalls(WIDEST_STAMP)).plain];
+/**
+ * The longest text either box takes. A call frame scrolls sideways when a line is too long, so
+ * its hold is sampled with this: the ghost then draws the same scrollbar, and the frame does not
+ * grow when a long stamp or instant is typed.
+ */
+const LONGEST_TYPED = "0".repeat(FIX_MAX_CHARS);
+
+const READ_CALL_SAMPLES = [callLines(readCalls(LONGEST_TYPED)).plain];
 const READ_OUTPUT_SAMPLES = [callResultsText(readCalls(WIDEST_STAMP))];
-const WRITE_CALL_SAMPLES = [callLines(writeCalls(WIDEST_WRITE)).plain];
+const WRITE_CALL_SAMPLES = [callLines(writeCalls(LONGEST_TYPED)).plain];
 const WRITE_OUTPUT_SAMPLES = [callResultsText(writeCalls(WIDEST_WRITE))];
 
 const VERDICT_TITLES = [
