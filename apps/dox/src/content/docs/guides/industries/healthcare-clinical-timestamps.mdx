@@ -1,0 +1,310 @@
+---
+title: "Healthcare: Clinical Timestamps"
+description: Read and write the date-times in HL7 version 2 messages, keep a time with no offset local until you name the sender's zone, and keep a partial date a span.
+sidebar:
+  order: 11
+industries: [healthcare]
+---
+
+HL7 International calls HL7 version 2 "one of the most widely implemented standards for
+healthcare information in the world"
+([HL7 product list](https://tscwiki.hl7.org/TSC_Product_List_V2)). The date-time in a version 2
+message is not ISO 8601. The number of digits says how precise the value is, and the offset is
+optional. A reader that takes a value without an offset for UTC moves every event by the offset
+of the place that sent it, and a reader that pads a year to a moment states a fact nobody sent.
+
+There are three functions: `parseHL7` reads a value, `formatHL7` writes one and `isValidHL7`
+checks one. Each takes a string and returns a string, an object or a boolean, and none of them
+throws. A call the types accept returns the sentinel (`null`, `""` or `false`) when the value is
+wrong.
+
+```typescript
+import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+import { formatHL7 } from "@northguild/gmt/healthcare/format";
+import { isValidHL7 } from "@northguild/gmt/healthcare/validate";
+```
+
+Each function has a page in the [healthcare reference](/reference/healthcare/parse/), with a
+playground that runs it.
+
+## HL7 version 2: DTM and TS
+
+The standard names two types. `DTM` is the date-time. `TS` is the older time stamp, a `DTM`
+followed by a degree of precision. The degree is kept only for backward compatibility, and
+version 2.6 withdrew `TS`. HL7's own chapters call them 2.A.22 and 2.A.77, and the degree 2.A.77.2
+(headed 2.A.1.22, 2.A.1.77 and 2.A.1.77.2 in the hl7.eu copy of version 2.5.1).
+
+### The four kinds
+
+`parseHL7` returns one of four kinds, or `null` for a value it does not read.
+
+| Kind        | When                                    | Members                                  |
+| ----------- | --------------------------------------- | ---------------------------------------- |
+| `"instant"` | a minute or finer, with an offset       | `instant`, `offset`, `local`, `precision` |
+| `"local"`   | a minute or finer, no offset            | `local`, `precision`                     |
+| `"partial"` | year, month, day or hour, or cut to one by a `TS` degree | `local`, `offset`, `precision` |
+| `"null"`    | the null value `""`                     | none                                     |
+
+```typescript
+import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+
+parseHL7("20240615103000+0300");
+// { kind: "instant", instant: "2024-06-15T07:30:00Z", offset: "+03:00",
+//   local: "2024-06-15T10:30:00", precision: "second" }
+parseHL7("20240615103000");
+// { kind: "local", local: "2024-06-15T10:30:00", precision: "second" }
+parseHL7("20240615");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" }
+parseHL7('""');
+// { kind: "null" }
+parseHL7("2024-06-15");
+// null
+```
+
+The type makes you check `kind` before you read `instant`. Only the `"instant"` kind has one.
+
+### Precision is the number of digits
+
+The picture in 2.A.22 is `YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ]`, and the standard says
+"The number of characters populated (excluding the time zone specification) specifies the
+precision". The digits sent are the precision.
+
+| Digits sent            | Precision    |
+| ---------------------- | ------------ |
+| 4                      | `"year"`     |
+| 6                      | `"month"`    |
+| 8                      | `"day"`      |
+| 10                     | `"hour"`     |
+| 12                     | `"minute"`   |
+| 14                     | `"second"`   |
+| 14, a point, 1 to 4    | `"fraction"` |
+
+`local` is written at the precision sent, so an hour is `2024-06-15T10` and no minute is added.
+From the minute on, seconds are always written, so a minute reads as `10:30:00`. At most four
+fraction digits are read, and the fraction is kept as it was sent.
+
+```typescript
+parseHL7("2024061510");
+// { kind: "partial", local: "2024-06-15T10", offset: "", precision: "hour" }
+parseHL7("202406151030");
+// { kind: "local", local: "2024-06-15T10:30:00", precision: "minute" }
+parseHL7("20240615103000.1234");
+// { kind: "local", local: "2024-06-15T10:30:00.1234", precision: "fraction" }
+parseHL7("20240615103000.12345");
+// null
+```
+
+### The offset that is not there
+
+2.A.22 says "if the time zone is not included, the time zone defaults to that of the local time
+zone of the sender". A value with no offset is the sender's local time, so the `"local"` kind
+has no instant. Appending `Z` would state a place the message never named.
+
+An offset is `+` or `-` and four digits. `+0000` and `-0000` both mean UTC and both read as
+`+00:00`. The standard restricts offsets to "legally-defined time zones" but names no list, so
+any hour from `00` to `23` and minute from `00` to `59` is read.
+
+```typescript
+parseHL7("20240615103000+0000");
+// { kind: "instant", instant: "2024-06-15T10:30:00Z", offset: "+00:00",
+//   local: "2024-06-15T10:30:00", precision: "second" }
+parseHL7("20240615103000-0000");
+// { kind: "instant", instant: "2024-06-15T10:30:00Z", offset: "+00:00",
+//   local: "2024-06-15T10:30:00", precision: "second" }
+parseHL7("20240615103000+0530");
+// { kind: "instant", instant: "2024-06-15T05:00:00Z", offset: "+05:30",
+//   local: "2024-06-15T10:30:00", precision: "second" }
+```
+
+### From a local time to an instant
+
+When the message names no offset, you know the zone and GMT does not. Pass the `local` member and
+the sending facility's IANA zone to `resolveLocal`:
+
+```typescript
+import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+const result = parseHL7("20240615103000");
+if (result?.kind === "local") {
+  resolveLocal(result.local, "Europe/Helsinki"); // "2024-06-15T07:30:00Z"
+}
+```
+
+A wall time can fall in an hour the zone skips or repeats. `resolveLocal` takes a
+`disambiguation` option for those, and its [reference page](/reference/instant/convert/resolveLocal/)
+says what each value does. `"reject"` returns `""` instead of choosing:
+
+```typescript
+resolveLocal("2024-03-31T03:30:00", "Europe/Helsinki"); // "2024-03-31T01:30:00Z" — 03:30 was skipped; the default, "compatible", takes the later reading
+resolveLocal("2024-03-31T03:30:00", "Europe/Helsinki", { disambiguation: "reject" }); // ""
+resolveLocal("2024-10-27T03:30:00", "Europe/Helsinki"); // "2024-10-27T00:30:00Z" — 03:30 happened twice; "compatible" takes the earlier reading
+resolveLocal("2024-10-27T03:30:00", "Europe/Helsinki", { disambiguation: "later" }); // "2024-10-27T01:30:00Z" — 03:30 happened twice
+resolveLocal("2024-10-27T03:30:00", "Europe/Helsinki", { disambiguation: "reject" }); // ""
+```
+
+### A partial value names a span
+
+`1965` is a birth year. It is not 1 January 1965 at midnight, and padding it to a moment states a
+fact the sender did not send. A `"partial"` value keeps its precision and has no instant. It keeps
+an offset when one was sent with it.
+
+```typescript
+parseHL7("1965");
+// { kind: "partial", local: "1965", offset: "", precision: "year" }
+parseHL7("196506");
+// { kind: "partial", local: "1965-06", offset: "", precision: "month" }
+parseHL7("20240615-0500");
+// { kind: "partial", local: "2024-06-15", offset: "-05:00", precision: "day" }
+```
+
+### `TS` and its degree of precision
+
+A `TS` is a `DTM`, then `^`, then one of `Y L D H M S` (year, month, day, hour, minute, second).
+The degree only lowers the precision. 2.A.77.2 says it "is either the same as or overrides the
+precision indicated by the first component. It may not indicate greater precision".
+
+```typescript
+parseHL7("199904011200^L");
+// { kind: "partial", local: "1999-04", offset: "", precision: "month" } — April 1999
+parseHL7("20240615103000.1234^S");
+// { kind: "local", local: "2024-06-15T10:30:00", precision: "second" } — the fraction is cut
+parseHL7("20240615^S");
+// null — a second is finer than the day sent
+parseHL7("20240615^");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — an empty degree is absent
+parseHL7("20240615^D^");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — so is an empty third component
+```
+
+A field read on its own carries no MSH-2, so `parseHL7` takes the separators Figure 2-1
+recommends: `^` between components and `&` between subcomponents (ch. 2 §2.5.4). A feed whose
+MSH-2 names others re-joins the field with `^` and `&` before it calls `parseHL7`.
+
+A receiver ignores "components, subcomponents, and extra repetitions of a field that are present
+but were not expected" (ch. 2 §2.6.2), and a later version of HL7 adds components at the end of a
+data type (§2.8.1, §2.8.2). So a third component, and anything after a component's first `&`, is
+not read. A component left empty is not present, so an empty `DTM` returns `null`.
+
+```typescript
+parseHL7("20240615^D^X");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — the third component is ignored
+parseHL7("2024&X");
+// { kind: "partial", local: "2024", offset: "", precision: "year" } — so is the subcomponent
+parseHL7("&X");
+// null — the DTM before the subcomponent is empty
+```
+
+### Midnight is the start of the day
+
+2.A.22 gives `198807050000` as "Midnight of the night extending from July 4 to July 5, 1988", so
+`0000` is the start of the stated day. Hour `24` and second `60` are refused.
+
+```typescript
+parseHL7("198807050000");
+// { kind: "local", local: "1988-07-05T00:00:00", precision: "minute" }
+parseHL7("2024061524");
+// null
+parseHL7("20240615103060");
+// null
+```
+
+### The null value
+
+A field that holds two double quotes (`""`) is the null value. It clears a stored value, and
+chapter 2 says it "is different from omitting an optional data field". `parseHL7` returns it as
+its own kind. An empty string is not the null value and returns `null`. Never treat one as the
+other.
+
+```typescript
+parseHL7('""'); // { kind: "null" }
+parseHL7(""); // null
+```
+
+### Writing a `DTM`
+
+`formatHL7` takes an ISO 8601 value and writes a `DTM`. It writes the offset the value has, and
+`Z` writes `+0000`. It never writes a `TS`. The precision is the one the input is written in, and
+the `precision` option only lowers it. It cuts and never rounds, so a fraction of `.98765` is
+written as `.9876`.
+
+```typescript
+import { formatHL7 } from "@northguild/gmt/healthcare/format";
+
+formatHL7("2024-06-15T10:30:00"); // "20240615103000"
+formatHL7("2024-06-15T10:30"); // "202406151030"
+formatHL7("2024-06-15T10:30:00Z"); // "20240615103000+0000"
+formatHL7("2024-06-15T10:30:45.98765-05:00"); // "20240615103045.9876-0500"
+formatHL7("2024-06-15T10:30:45.5Z", { precision: "minute" }); // "202406151030+0000"
+```
+
+A `"local"` value read at minute precision comes back from `parseHL7` with `:00` seconds, so
+writing it with the digits it was sent with takes the precision `parseHL7` returned. A
+`"partial"` value with an offset has no ISO input form, because `2024-06-15-05:00` is not ISO
+8601. Write it from the instant, at the precision you want:
+
+```typescript
+const r = parseHL7("202406151030");
+if (r?.kind === "local") {
+  formatHL7(r.local); // "20240615103000" — seconds added
+  formatHL7(r.local, { precision: r.precision }); // "202406151030" — the digits sent
+}
+formatHL7("2024-06-15T10:30:00-05:00", { precision: "day" }); // "20240615-0500"
+formatHL7("2024-06-15-05:00"); // "" — not ISO 8601
+```
+
+`formatHL7` returns `""` when it cannot write the value without changing it: an offset with
+seconds, a year outside 0000–9999, a reduced ISO form with an offset, a zone annotation with no
+offset (choosing the offset is a disambiguation it does not make) and a precision finer than the
+input.
+
+```typescript
+formatHL7("2024-06-15T10:30:00+05:30:15"); // "" — the offset has seconds
+formatHL7("+010000-01-01T00:00:00"); // "" — the year is outside 0000–9999
+formatHL7("2024-06-15T10:30:00[Europe/Helsinki]"); // "" — a zone, and no offset to write
+formatHL7("2024-06-15T10:30:00", { precision: "fraction" }); // "" — there is no fraction to write
+```
+
+### Check before reading
+
+`isValidHL7` is `parseHL7(value) !== null`, so the two cannot disagree. The null value is valid.
+
+```typescript
+import { isValidHL7 } from "@northguild/gmt/healthcare/validate";
+
+isValidHL7("20240615103000"); // true
+isValidHL7("199904011200^L"); // true
+isValidHL7('""'); // true
+isValidHL7(""); // false
+isValidHL7("20240615^S"); // false
+```
+
+### What is not read
+
+These return `null` from `parseHL7` and `false` from `isValidHL7`: a separator other than `^`
+and `&`, an empty `DTM`, a lower-case degree, a leap second, more than four fraction digits and
+ISO 8601 extended form (`2024-06-15T10:30:00`).
+
+```typescript
+parseHL7("20240615~D"); // null
+parseHL7("^D"); // null — the DTM is empty
+parseHL7("20240615^l"); // null
+parseHL7("2024-06-15T10:30:00"); // null — ISO 8601 is the input of formatHL7
+```
+
+### The exported types
+
+[`Hl7DateTime`](/reference/healthcare/parse/parseHL7/#hl7datetime) is the result of `parseHL7`.
+Its `precision` is an [`Hl7PartialPrecision`](/reference/types/Hl7PartialPrecision/), year to
+hour, for a `"partial"` value and an [`Hl7MomentPrecision`](/reference/types/Hl7MomentPrecision/),
+minute to fraction, for an `"instant"` or `"local"` one.
+[`Hl7Precision`](/reference/healthcare/format/formatHL7/#hl7precision) is the two together, and
+[`Hl7FormatOptions`](/reference/healthcare/format/formatHL7/#hl7formatoptions) is the options of
+`formatHL7`.
+
+## See it break, then work
+
+- [An HL7 Time Read as UTC](/scenarios/an-hl7-time-read-as-utc/)
+- [A TS Date Read as a Time](/scenarios/a-ts-date-read-as-a-time/)
+- [Healthcare mistakes](/mistakes/healthcare/)
+- [HL7 Timestamp Reader](/tools/hl7-timestamp-reader/), a tool that reads a value of your own

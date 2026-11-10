@@ -21,6 +21,7 @@ export * from "./fix";
 export * from "./fractional-digit";
 export * from "./free-time-options";
 export * from "./gnss";
+export * from "./hl7";
 export * from "./holiday-rule";
 export * from "./interval";
 export * from "./now-unit";

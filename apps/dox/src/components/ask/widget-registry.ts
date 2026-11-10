@@ -68,6 +68,7 @@ import type { PunctualityBoardArgs } from "~/lib/punctuality-board-mount";
 import type { EtaDriftArgs } from "~/lib/eta-drift-mount";
 import type { DepartureBoardArgs } from "~/lib/departure-board-mount";
 import type { DtmDecoderArgs } from "~/lib/dtm-decoder-mount";
+import type { Hl7Args } from "~/lib/hl7-timestamp-reader-mount";
 import type { X12TimeReaderArgs } from "~/lib/x12-time-reader-mount";
 import type { ZonePlannerArgs } from "~/lib/zone-planner-mount";
 import type { GnssWeekDecoderArgs } from "~/lib/gnss-week-decoder-mount";
@@ -107,6 +108,7 @@ import {
   showDepartureBoardInput,
   showDstInspectorInput,
   showDtmDecoderInput,
+  showHl7TimestampReaderInput,
   showEpcisEventReaderInput,
   showElapsedVsClockInput,
   showGnssRolloverCheckerInput,
@@ -635,6 +637,31 @@ const dtmEntry = defineWidget<DtmDecoderArgs>({
       renderTemplate: (idPrefix, args) =>
         m.renderDtmDecoderTemplate(idPrefix, args),
       mount: m.mountDtmDecoder,
+    })),
+  validate: ({ zone1, zone2, zone3, zone4 }) =>
+    checkZones([zone1, zone2, zone3, zone4].filter((z): z is string => !!z)),
+});
+
+const hl7Entry = defineWidget<Hl7Args>({
+  title: "HL7 timestamp reader",
+  kind: "hl7",
+  parse: (input) => {
+    const result = showHl7TimestampReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. Only the four zones are checked here; a value the library does not
+     read is the widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/hl7-timestamp-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderHl7TimestampReaderTemplate(idPrefix, args),
+      mount: m.mountHl7TimestampReader,
     })),
   validate: ({ zone1, zone2, zone3, zone4 }) =>
     checkZones([zone1, zone2, zone3, zone4].filter((z): z is string => !!z)),
@@ -1332,6 +1359,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showDepartureBoard: departureEntry,
   showZonePlanner: plannerEntry,
   showDtmDecoder: dtmEntry,
+  showHl7TimestampReader: hl7Entry,
   showX12TimeReader: x12TimeEntry,
   showDemurrageClock: demurrageEntry,
   showBlDateStamp: blDateEntry,

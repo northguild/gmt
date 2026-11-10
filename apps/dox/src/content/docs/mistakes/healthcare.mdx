@@ -1,0 +1,108 @@
+---
+title: Healthcare mistakes
+description: Common mistakes with HL7 version 2 dates and times, from an offset that is not there to a degree of precision that was dropped, in GMT's healthcare layer.
+industries: [healthcare]
+sidebar:
+  label: Healthcare
+---
+
+The healthcare layer reads the date-times of clinical messages. The mistakes around them are the
+ones a hand-written reader makes: taking a value with no offset for UTC, padding a year to a
+moment, dropping the precision a time stamp carries, treating the null value as an empty field,
+reading midnight as the end of the day before, and rounding when writing. Every output shown here
+is what the code returns.
+
+import Mistake from "../../../components/Mistake.astro";
+
+## HL7 version 2
+
+<Mistake
+  severity="critical"
+  title="Reading an HL7 time with no offset as UTC"
+  description="HL7 says a time with no offset is the local time of the sender. Appending Z states a place the message never named, and the event moves by the sender's offset. parseHL7 returns a local time with no instant, and resolveLocal joins it to the zone you name."
+  wrongCode={`const value = "20240615103000"; // no offset
+const iso = value.slice(0, 4) + "-" + value.slice(4, 6) + "-" + value.slice(6, 8) + "T" + value.slice(8, 10) + ":" + value.slice(10, 12) + ":" + value.slice(12, 14) + "Z";
+new Date(iso).toISOString();
+// "2024-06-15T10:30:00.000Z" — three hours out for a lab in Helsinki`}
+  rightCode={`import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+parseHL7("20240615103000");
+// { kind: "local", local: "2024-06-15T10:30:00", precision: "second" }
+resolveLocal("2024-06-15T10:30:00", "Europe/Helsinki");
+// "2024-06-15T07:30:00Z"`}
+  rightSpecId="parseHL7"
+/>
+
+<Mistake
+  severity="high"
+  title="Padding a birth year to midnight on 1 January"
+  description="A value of four digits names a year, not a moment. Padding it states a day, a time and a place the sender did not send. parseHL7 keeps the precision and returns no instant."
+  wrongCode={`const birth = "1965";
+new Date(Date.UTC(Number(birth), 0, 1)).toISOString();
+// "1965-01-01T00:00:00.000Z" — a day and a time nobody sent`}
+  rightCode={`import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+
+parseHL7("1965");
+// { kind: "partial", local: "1965", offset: "", precision: "year" }`}
+  rightSpecId="parseHL7"
+/>
+
+<Mistake
+  severity="high"
+  title="Dropping the degree of precision from a TS"
+  description="In an older time stamp the letter after the caret says how much of the value to keep. Dropping it reads the full digits as a time the sender did not give at that precision. parseHL7 cuts the value to the degree."
+  wrongCode={`const [dtm] = "20240615103000^D".split("^");
+dtm.slice(0, 4) + "-" + dtm.slice(4, 6) + "-" + dtm.slice(6, 8) + "T" + dtm.slice(8, 10) + ":" + dtm.slice(10, 12) + ":" + dtm.slice(12, 14);
+// "2024-06-15T10:30:00" — the sender said the day`}
+  rightCode={`import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+
+parseHL7("20240615103000^D");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" }`}
+  rightSpecId="parseHL7"
+/>
+
+<Mistake
+  severity="high"
+  title="Treating the null value as an empty field"
+  description="Two double quotes are the null value, and it clears what is stored. It is different from an empty field, which leaves the stored value alone. A reader that strips quotes cannot tell them apart. parseHL7 returns the null value as its own kind and an empty string as null."
+  wrongCode={`const value = '""';
+value.replace(/"/g, "") === "";
+// true — dropped as empty, so the stored time is never cleared`}
+  rightCode={`import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+
+parseHL7('""');
+// { kind: "null" }
+parseHL7("");
+// null`}
+  rightSpecId="parseHL7"
+/>
+
+<Mistake
+  severity="medium"
+  title="Reading 0000 as the end of the day before"
+  description="HL7 gives 198807050000 as the midnight of the night that runs from 4 July to 5 July, so 0000 is the start of the stated day. Moving it back to hour 24 of the day before writes a time HL7 does not allow."
+  wrongCode={`const day = new Date(Date.UTC(1988, 6, 5));
+day.setUTCDate(day.getUTCDate() - 1);
+day.toISOString().slice(0, 10) + "T24:00:00";
+// "1988-07-04T24:00:00" — the sender said 5 July`}
+  rightCode={`import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+
+parseHL7("198807050000");
+// { kind: "local", local: "1988-07-05T00:00:00", precision: "minute" }`}
+  rightSpecId="parseHL7"
+/>
+
+<Mistake
+  severity="medium"
+  title="Rounding a fraction or the offset when writing"
+  description="Rounding changes what the sender sent, and carrying the digits without the offset loses the place. formatHL7 writes the offset the value has and cuts the fraction to four digits."
+  wrongCode={`const seconds = (45.98765).toFixed(4);
+"20240615" + "1030" + seconds;
+// "20240615103045.9877" — rounded up, and the offset is gone`}
+  rightCode={`import { formatHL7 } from "@northguild/gmt/healthcare/format";
+
+formatHL7("2024-06-15T10:30:45.98765-05:00");
+// "20240615103045.9876-0500"`}
+  rightSpecId="formatHL7"
+/>

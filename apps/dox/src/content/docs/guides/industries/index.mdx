@@ -68,6 +68,9 @@ Three things hold across every industry layer:
   `UTCTimestamp` at the precision its digits state, cut rather than rounded when narrowed, with a
   second of sixty accepted only for a leap second UTC really inserted. Draws on the leap-second
   table.
+- [Healthcare: clinical timestamps](./healthcare-clinical-timestamps/) — read and write HL7
+  version 2 dates and times, keep a time with no offset local until you name the sender's zone,
+  and keep a partial date a span.
 
 ## Scenarios
 
@@ -95,7 +98,9 @@ GMT approach working, on the same live widget:
 - [The EPCIS Offset Nobody Kept](/scenarios/the-epcis-offset-nobody-kept/)
 - [A Millisecond Stamp Read as Nanoseconds](/scenarios/a-millisecond-stamp-read-as-nanoseconds/)
 - [Second Sixty on an Ordinary Day](/scenarios/second-sixty-on-an-ordinary-day/)
+- [An HL7 Time Read as UTC](/scenarios/an-hl7-time-read-as-utc/)
+- [A TS Date Read as a Time](/scenarios/a-ts-date-read-as-a-time/)
 
 The mistakes that have hurt people in these layers are collected under
-[Transport mistakes](/mistakes/transport/), [Intermodal mistakes](/mistakes/intermodal/) and
-[Finance mistakes](/mistakes/finance/).
+[Transport mistakes](/mistakes/transport/), [Intermodal mistakes](/mistakes/intermodal/),
+[Finance mistakes](/mistakes/finance/) and [Healthcare mistakes](/mistakes/healthcare/).

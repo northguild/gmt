@@ -3,6 +3,7 @@ export * from "./calendar";
 export * from "./duration";
 export * from "./finance";
 export * from "./gnss";
+export * from "./healthcare";
 export * from "./instant";
 export * from "./intermodal";
 export * from "./interval";

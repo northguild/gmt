@@ -60,4 +60,31 @@ describe("ediTimeline", () => {
     );
     expect(host).toHaveTextContent("empty words");
   });
+
+  it("draws the value read as UTC beside the zones, and names it", async () => {
+    const { host } = renderHtml(
+      timelineContent({
+        kind: "marks",
+        rows: [{ n: 1, zone: "Asia/Kolkata", instant: "2024-06-15T05:00:00Z" }],
+        gap: null,
+        reference: { instant: "2024-06-15T10:30:00Z", label: "Read as UTC" },
+      }),
+    );
+    expect(host).toHaveTextContent("Read as UTC");
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      /Read as UTC: 2024-06-15T10:30:00Z/,
+    );
+    await expectNoAxeViolations(host);
+  });
+
+  it("draws no reference without one", () => {
+    const { host } = renderHtml(
+      timelineContent({
+        kind: "marks",
+        rows: [{ n: 1, zone: "Asia/Kolkata", instant: "2024-06-15T05:00:00Z" }],
+        gap: null,
+      }),
+    );
+    expect(host).not.toHaveTextContent("Read as UTC");
+  });
 });

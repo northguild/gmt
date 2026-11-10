@@ -172,3 +172,7 @@ HL7 Europe's published copy.
 - `isValidHL7('20240615103000-0500')`, `'2024'` and `'""'` are `true`; `'20240615^S'`, `'20240230'` and `''` are `false`
 - `isValidHL7` agrees with `parseHL7` on every `parseHL7` row above; `isValidHL7(20240615)` and `isValidHL7(null)` are `false`
 - `pnpm run validate` stays green
+
+## Decisions
+
+[Decisions](HLTH-93/decisions.md): the four result kinds, the offset and `TS` degree rules, what `formatHL7` writes and refuses, the clause numbering, and the docs and Dox choices.

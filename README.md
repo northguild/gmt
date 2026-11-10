@@ -53,7 +53,7 @@ addZoned("2024-03-30T12:00:00+01:00[Europe/Berlin]", { hours: 24 }); // "2024-03
 resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // ""
 ```
 
-- **745 functions, to the nanosecond**, tested in 17 locales.
+- **748 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
 The latest test counts, CI volume and the comparison with Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date` are on the [Why GMT](https://northguild.dev/gmt/why-gmt/) page. The full comparison and the method are on the [compare](https://northguild.dev/gmt/compare/) page.
@@ -79,9 +79,9 @@ convertUtcToZoned("2024-06-15T12:00:00Z", "Asia/Tokyo"); // "2024-06-15T21:00:00
 ```
 
 Every function has a reference page with a live playground:
-[plain](https://northguild.dev/gmt/reference/plain/) · [zoned](https://northguild.dev/gmt/reference/zoned/) · [utc](https://northguild.dev/gmt/reference/utc/) · [unix](https://northguild.dev/gmt/reference/unix/) · [instant](https://northguild.dev/gmt/reference/instant/) · [calendar](https://northguild.dev/gmt/reference/calendar/) · [duration](https://northguild.dev/gmt/reference/duration/) · [interval](https://northguild.dev/gmt/reference/interval/) · [workforce](https://northguild.dev/gmt/reference/workforce/) · [span](https://northguild.dev/gmt/reference/span/) · [precision](https://northguild.dev/gmt/reference/precision/) · [recurrence](https://northguild.dev/gmt/reference/recurrence/) · [timescale](https://northguild.dev/gmt/reference/timescale/) · [gnss](https://northguild.dev/gmt/reference/gnss/) · [transport](https://northguild.dev/gmt/reference/transport/) · [intermodal](https://northguild.dev/gmt/reference/intermodal/) · [finance](https://northguild.dev/gmt/reference/finance/)
+[plain](https://northguild.dev/gmt/reference/plain/) · [zoned](https://northguild.dev/gmt/reference/zoned/) · [utc](https://northguild.dev/gmt/reference/utc/) · [unix](https://northguild.dev/gmt/reference/unix/) · [instant](https://northguild.dev/gmt/reference/instant/) · [calendar](https://northguild.dev/gmt/reference/calendar/) · [duration](https://northguild.dev/gmt/reference/duration/) · [interval](https://northguild.dev/gmt/reference/interval/) · [workforce](https://northguild.dev/gmt/reference/workforce/) · [span](https://northguild.dev/gmt/reference/span/) · [precision](https://northguild.dev/gmt/reference/precision/) · [recurrence](https://northguild.dev/gmt/reference/recurrence/) · [timescale](https://northguild.dev/gmt/reference/timescale/) · [gnss](https://northguild.dev/gmt/reference/gnss/) · [transport](https://northguild.dev/gmt/reference/transport/) · [intermodal](https://northguild.dev/gmt/reference/intermodal/) · [finance](https://northguild.dev/gmt/reference/finance/) · [healthcare](https://northguild.dev/gmt/reference/healthcare/)
 
-By industry: [Workforce](https://northguild.dev/gmt/industries/workforce/) · [Transport](https://northguild.dev/gmt/industries/transport/) · [Intermodal](https://northguild.dev/gmt/industries/intermodal/) · [GNSS](https://northguild.dev/gmt/industries/gnss/) · [Maritime](https://northguild.dev/gmt/industries/maritime/) · [Finance](https://northguild.dev/gmt/industries/finance/)
+By industry: [Workforce](https://northguild.dev/gmt/industries/workforce/) · [Transport](https://northguild.dev/gmt/industries/transport/) · [Intermodal](https://northguild.dev/gmt/industries/intermodal/) · [GNSS](https://northguild.dev/gmt/industries/gnss/) · [Maritime](https://northguild.dev/gmt/industries/maritime/) · [Finance](https://northguild.dev/gmt/industries/finance/) · [Healthcare](https://northguild.dev/gmt/industries/healthcare/)
 
 Then the [guides](https://northguild.dev/gmt/guides/) show how to do each job, and the [tools](https://northguild.dev/gmt/tools/) let you try it on your own values.
 

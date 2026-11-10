@@ -629,6 +629,21 @@ export const showFixTimestampReaderInput = z.object({
   instant: z.string().max(64).optional(),
 });
 
+/**
+ * The HL7 Timestamp Reader: one HL7 v2 date-time (a `DTM`, or a `TS` with its degree of
+ * precision after `^`), read by `parseHL7`. `zone1` to `zone4` are zones the reader named, to
+ * read a value with no offset in. The value is kept as typed, so it is not trimmed. The widget
+ * judges the value itself: one the library does not read is the widget's NO SIGNAL, not a
+ * failed tool call.
+ */
+export const showHl7TimestampReaderInput = z.object({
+  value: z.string().min(1).max(64),
+  zone1: zoneSchema.optional(),
+  zone2: zoneSchema.optional(),
+  zone3: zoneSchema.optional(),
+  zone4: zoneSchema.optional(),
+});
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1258,7 +1273,8 @@ export type DoxToolName =
   | "showDatabaseTimestampReader"
   | "showTai64nLogReader"
   | "showTerrestrialTimeStack"
-  | "showFixTimestampReader";
+  | "showFixTimestampReader"
+  | "showHl7TimestampReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1582,6 +1598,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what a FIX UTCTimestamp or a SendingTime or TransactTime value means, its precision, whether a second 60 in it is real, or how to write an instant at milli-, micro-, nano- or picosecond precision",
     args: "stamp: optional, the FIX UTCTimestamp exactly as the reader gave it, never trimmed or corrected; instant: optional, an instant with Z or an offset to write at the five precisions, only when the reader gave one.",
   },
+  {
+    name: "showHl7TimestampReader",
+    purpose:
+      "An HL7 v2 date-time (a DTM, or a TS with its degree of precision after ^) read by parseHL7: its kind, precision and offset; a value with no offset read in the zones the reader picks with resolveLocal, beside the instant a parser that assumes UTC gets; and the value written back by formatHL7 at each precision.",
+    when: "the reader asks what an HL7 v2 DTM or TS value means, what instant an HL7 time with no offset names, what a TS degree of precision such as ^L or ^D does, or how to write an instant as an HL7 DTM",
+    args: "value (the HL7 date-time exactly as the reader gave it, such as 20240615103000 or 199904011200^L; at most 64 characters; never corrected, and never given an offset the reader did not send), zone1 to zone4 (optional IANA ids to read a value with no offset in; only zones the reader named: never choose one from a facility, a place, a vendor or an abbreviation, because the value states none).",
+  },
 ];
 
 /**
@@ -1770,6 +1793,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[44].purpose,
     inputSchema: showFixTimestampReaderInput,
   }),
+  showHl7TimestampReader: tool({
+    description: DOX_TOOL_DOCS[45].purpose,
+    inputSchema: showHl7TimestampReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1838,6 +1865,7 @@ export const ENABLED_TOOL_NAMES = [
   "showTai64nLogReader",
   "showTerrestrialTimeStack",
   "showFixTimestampReader",
+  "showHl7TimestampReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

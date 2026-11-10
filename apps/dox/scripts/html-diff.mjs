@@ -123,6 +123,10 @@ const PAGES = [
     widget: "dtm-decoder",
   },
   {
+    path: "tools/hl7-timestamp-reader",
+    widget: "hl7-timestamp-reader",
+  },
+  {
     path: "tools/x12-time-reader",
     widget: "x12-time-reader",
   },

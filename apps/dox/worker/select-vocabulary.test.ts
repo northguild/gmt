@@ -21,6 +21,7 @@ const SKILL_NAMES = [
   "gmt-transport",
   "gmt-intermodal",
   "gmt-workforce",
+  "gmt-healthcare",
 ];
 const SKILLS = SKILL_NAMES.map((name) =>
   parseSkill(

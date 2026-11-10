@@ -601,6 +601,7 @@ export function renderMdxComponents(body: string): string {
     "EpcisEventReader",
     "EtaDrift",
     "FreeTimeLedger",
+    "Hl7TimestampReader",
     "JourneySplit",
     "PunctualityBoard",
     "TimetableReader",

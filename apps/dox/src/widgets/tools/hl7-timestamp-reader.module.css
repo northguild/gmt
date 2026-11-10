@@ -1,0 +1,118 @@
+/*
+ * HL7 Timestamp Reader: what only this tool needs. The sections, tables, code frames, verdict and
+ * asides are the kit's and the EDI family's; this sheet places them and styles the writer ladder's
+ * cells. The two bands (the value and what it states; the zones and where they land) sit side by
+ * side where the widget is wide and one under the other where it is not. The widget root is the
+ * container.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+/* The stack of controls keeps a gap. */
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The value field takes the whole row. */
+.main {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* A band: two panes, a column each when there is room for both. */
+.split,
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 67.75rem) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(28rem, 1fr) minmax(38.75rem, 1fr);
+    column-gap: var(--gmt-space-4);
+    align-items: stretch;
+  }
+}
+
+/* The box a picture sits in; it takes the pane's spare height so the two bottoms line up. */
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+/* The ladder and its note stack, a column wide. */
+.written {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A ladder cell reserves the width of the longest value it can hold, so a coarser or finer
+   answer never moves a column edge; a value never wraps. */
+.ladderCell {
+  display: inline-block;
+  min-inline-size: var(--w);
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  /* No result, or a hint to choose a zone, is quieter than a value. */
+  &[data-state="none"],
+  &[data-state="hint"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+/* Two columns of 24 characters do not fit a phone. Below this width a value breaks inside its
+   cell, and the cell holds two lines whatever it shows, so nothing moves as the value changes. */
+@media (width <= 36rem) {
+  .ladderCell {
+    display: block;
+    min-inline-size: 0;
+    min-block-size: 2lh;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+.precision {
+  font-family: var(--gmt-font-mono);
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .ladderCell[data-state="none"],
+  .ladderCell[data-state="hint"] {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .panel {
+    border-color: var(--gmt-ice);
+  }
+
+  .ladderCell[data-state="none"],
+  .ladderCell[data-state="hint"] {
+    color: var(--gmt-ice);
+  }
+}

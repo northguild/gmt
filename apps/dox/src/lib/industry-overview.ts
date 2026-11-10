@@ -448,6 +448,82 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       },
     ],
   },
+  healthcare: {
+    about:
+      'Healthcare is time in clinical messages. HL7 International calls version two of its HL7 messaging standard "one of the most widely implemented standards for healthcare information in the world". A date and time in an HL7 message says how precise it is by how many digits it carries, and leaves the place out unless the sender adds an offset. This layer reads and writes those values without guessing the place.',
+    guideTitle: "Healthcare: Clinical Timestamps",
+    solves: [
+      {
+        problem: "A message time with no offset is stored as UTC.",
+        answer:
+          "{{parseHL7}} returns it as a local time with no instant, so the sending facility's zone has to be named before it becomes one.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/an-hl7-time-read-as-utc/",
+          },
+          {
+            label: "HL7 Timestamp Reader",
+            href: "/tools/hl7-timestamp-reader/",
+          },
+        ],
+      },
+      {
+        problem: "A birth year is padded to midnight on the first of January.",
+        answer:
+          "{{parseHL7}} keeps a year, month, day or hour as a partial value with its precision and no instant.",
+        see: [
+          {
+            label: "HL7 Timestamp Reader",
+            href: "/tools/hl7-timestamp-reader/",
+          },
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+        ],
+      },
+      {
+        problem:
+          "An older time stamp whose precision code says it is a date is read as a time.",
+        answer:
+          "{{parseHL7}} reads the precision code and cuts the value to it, never past the digits sent.",
+        see: [
+          {
+            label: "scenario",
+            href: "/scenarios/a-ts-date-read-as-a-time/",
+          },
+        ],
+      },
+      {
+        problem:
+          "A message clears a stored time by sending the null value, and the reader drops it as empty.",
+        answer:
+          "{{isValidHL7}} accepts the null value and {{parseHL7}} returns it as its own kind, so it is never mistaken for a missing field.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+        ],
+      },
+      {
+        problem: "An instant is written back with its offset lost or rounded.",
+        answer:
+          "{{formatHL7}} writes the offset the value has, cuts to the precision asked for and never rounds.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+        ],
+      },
+    ],
+  },
 };
 
 /** The `{{name}}` tokens in a pain point's text, in order. */

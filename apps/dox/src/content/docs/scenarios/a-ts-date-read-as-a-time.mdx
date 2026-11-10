@@ -1,0 +1,33 @@
+---
+title: "A TS Date Read as a Time"
+description: An older HL7 time stamp whose degree of precision says month, read as noon on the first of April.
+industries: [healthcare]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A TS Date Read as a Time"
+  description="An older feed sends an HL7 TS with its degree of precision: 199904011200^L. The receiver splits off the first component and reads a time."
+  naiveCode={`// The naive approach: keep the first component, drop the degree of precision
+const value = "199904011200^L";
+const dtm = value.split("^")[0];
+dtm.slice(0, 4) + "-" + dtm.slice(4, 6) + "-" + dtm.slice(6, 8) + "T" + dtm.slice(8, 10) + ":" + dtm.slice(10, 12) + ":00";
+// "1999-04-01T12:00:00" — the sender said April 1999`}
+  explanation={`In a TS the letter after the caret is the degree of precision, and L is the month. It overrides the digits and may only lower them. The value names April 1999, not noon on the first. parseHL7 cuts the value to the precision and returns a partial value with no instant. A degree finer than the digits sent is refused, because it would claim a precision the sender did not have.`}
+  gmtCode={`import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+
+parseHL7("199904011200^L");
+// { kind: "partial", local: "1999-04", offset: "", precision: "month" }
+
+parseHL7("20240615103000^D");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" }
+
+parseHL7("20240615^S");
+// null — a second is finer than the day sent`}
+  fixedSpecId="parseHL7"
+/>
+
+Type `199904011200^L` into the widget and it returns a month. Delete `^L` and the same digits read
+as a time. The full rules are in
+[Healthcare: Clinical Timestamps](/guides/industries/healthcare-clinical-timestamps/#ts-and-its-degree-of-precision).

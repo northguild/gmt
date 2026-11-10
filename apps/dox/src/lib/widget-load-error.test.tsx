@@ -59,6 +59,10 @@ import {
 } from "./departure-board-mount";
 import { mountDtmDecoder, renderDtmDecoderTemplate } from "./dtm-decoder-mount";
 import {
+  mountHl7TimestampReader,
+  renderHl7TimestampReaderTemplate,
+} from "./hl7-timestamp-reader-mount";
+import {
   mountBlDateStamp,
   renderBlDateStampTemplate,
 } from "./bl-date-stamp-mount";
@@ -263,6 +267,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "dtm decoder",
     () => renderDtmDecoderTemplate("dtm-decoder"),
     mountDtmDecoder as MountFn<never>,
+  ],
+  [
+    "hl7 timestamp reader",
+    () => renderHl7TimestampReaderTemplate("hl7-timestamp-reader"),
+    mountHl7TimestampReader as MountFn<never>,
   ],
   [
     "x12 time reader",
