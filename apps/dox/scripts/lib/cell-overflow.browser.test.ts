@@ -57,4 +57,37 @@ describe("measureCells", () => {
       ),
     ).toEqual([]);
   });
+
+  const SR_ONLY =
+    "position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap";
+  const narrow = (inner: string) =>
+    `<table style="table-layout:fixed;width:60px"><tbody><tr><td style="position:relative">ok ${inner}</td></tr></tbody></table>`;
+
+  it("skips a screen-reader-only label inside a cell, as ranges ignore its clip", async () => {
+    expect(
+      await cellsOf(
+        narrow(
+          `<span style="${SR_ONLY}">a long screen-reader only label</span>`,
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it("still reports the same text when it is visible", async () => {
+    const found = await cellsOf(
+      narrow(
+        `<span style="white-space:nowrap">a long screen-reader only label</span>`,
+      ),
+    );
+    expect(found).toHaveLength(1);
+  });
+
+  it("still reports a spill inside a display: contents wrapper", async () => {
+    const found = await cellsOf(
+      narrow(
+        `<span style="display:contents"><span style="white-space:nowrap">a long visible spill</span></span>`,
+      ),
+    );
+    expect(found).toHaveLength(1);
+  });
 });

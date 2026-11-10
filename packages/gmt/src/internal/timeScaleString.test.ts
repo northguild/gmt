@@ -17,10 +17,12 @@ function labelNs(wall: string): bigint {
 }
 
 describe("timeScaleString", () => {
-  // FITS 4.0 Table 30 (TAI) and the six RINEX 4.02 §5.2.8 time-system identifiers.
+  // FITS 4.0 Table 30 (TAI, TT, TCG) and the six RINEX 4.02 §5.2.8 time-system identifiers.
   it.each`
     token
     ${"TAI"}
+    ${"TT"}
+    ${"TCG"}
     ${"GPS"}
     ${"GAL"}
     ${"BDT"}
@@ -36,6 +38,12 @@ describe("timeScaleString", () => {
     ${"2026-01-01T00:00:37 UTC"}
     ${"2026-01-01T00:00:37 BDS"}
     ${"2026-01-01T00:00:37 tai"}
+    ${"2026-01-01T00:00:37 TDT"}
+    ${"2026-01-01T00:00:37 ET"}
+    ${"2026-01-01T00:00:37 tt"}
+    ${"2026-01-01T00:00:37 TCB"}
+    ${"2026-01-01T00:00:37 TDB"}
+    ${"2026-01-01T00:00:37TT"}
   `("does not match the token in $value", ({ value }) => {
     expect(timeScaleString.test(value)).toBe(false);
   });
@@ -51,6 +59,8 @@ describe("parseTimeScaleString", () => {
     ${"2026-01-01T00:00:37.123456789 TAI"} | ${"TAI"} | ${"2026-01-01T00:00:37.123456789"}
     ${"9999-12-31T23:59:59.999999999 TAI"} | ${"TAI"} | ${"9999-12-31T23:59:59.999999999"}
     ${"0000-01-01T00:00:00 TAI"}           | ${"TAI"} | ${"0000-01-01T00:00:00"}
+    ${"2026-01-01T00:01:09.184 TT"}        | ${"TT"}  | ${"2026-01-01T00:01:09.184"}
+    ${"2026-01-01T00:01:10.261661917 TCG"} | ${"TCG"} | ${"2026-01-01T00:01:10.261661917"}
     ${"2024-01-01T00:00:18 GPS"}           | ${"GPS"} | ${"2024-01-01T00:00:18"}
     ${"2024-01-01T00:00:00 GLO"}           | ${"GLO"} | ${"2024-01-01T00:00:00"}
   `(
@@ -84,6 +94,10 @@ describe("parseTimeScaleString", () => {
     value                                   | token    | why
     ${"2016-12-31T23:59:60 TAI"}            | ${"TAI"} | ${"TAI is continuous: no second 60"}
     ${"2016-12-31T23:59:60 GPS"}            | ${"GPS"} | ${"GPS is continuous: no second 60"}
+    ${"2016-12-31T23:59:60 TT"}             | ${"TT"}  | ${"TT is continuous: no second 60"}
+    ${"2016-12-31T23:59:60 TCG"}            | ${"TCG"} | ${"TCG is continuous: no second 60"}
+    ${"2026-01-01T00:01:09.184 TT"}         | ${"TAI"} | ${"token mismatch: TT read as TAI"}
+    ${"2026-01-01T00:01:09.184 TAI"}        | ${"TT"}  | ${"token mismatch: TAI read as TT"}
     ${"2016-12-31T23:59:61 GLO"}            | ${"GLO"} | ${"second 61"}
     ${"2024-01-01T00:00:18 GPS"}            | ${"TAI"} | ${"wrong token"}
     ${"2024-01-01T00:00:18 TAI"}            | ${"GPS"} | ${"wrong token"}

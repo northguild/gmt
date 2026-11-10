@@ -163,6 +163,10 @@ const PAGES = [
     widget: "leap-second-timeline",
   },
   {
+    path: "tools/terrestrial-time-stack",
+    widget: "terrestrial-time-stack",
+  },
+  {
     path: "tools/elapsed-vs-clock-difference",
     widget: "elapsed-vs-clock",
   },

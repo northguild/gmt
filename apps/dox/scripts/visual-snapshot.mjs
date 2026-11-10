@@ -147,6 +147,10 @@ const PAGES = [
   { slug: "tool-gnss-rollover-checker", path: "/tools/gnss-rollover-checker/" },
   { slug: "tool-leap-second-timeline", path: "/tools/leap-second-timeline/" },
   {
+    slug: "tool-terrestrial-time-stack",
+    path: "/tools/terrestrial-time-stack/",
+  },
+  {
     slug: "tool-elapsed-vs-clock-difference",
     path: "/tools/elapsed-vs-clock-difference/",
   },

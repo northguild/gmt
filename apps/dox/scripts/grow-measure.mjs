@@ -11,7 +11,9 @@
  *                server-rendered empty sections;
  *   interaction  after the page rests: switch the preset (or another input),
  *                sample 2 s, drag a handle or range across ~60% of its track
- *                in ~20 pointer steps, sample 2 s.
+ *                in ~20 pointer steps, sample 2 s, then wait until the root has held its
+ *                height for 500 ms with nothing growing (at most 8 s), so the final height
+ *                is read at rest, not mid-ease on slow frames.
  *
  * Per run it reports total growth, the largest frame-to-frame jump, the number
  * of frames over 48 px, the final height, whether every `data-gate="grow"` section is at rest
@@ -73,6 +75,7 @@ import {
   dragProblem,
   emptyRunProblem,
   frameDiagnostic,
+  heldAtRest,
   withJumpDiagnostic,
   jumpProblems,
   locatorCountProblem,
@@ -94,6 +97,10 @@ const JUMP_LIMIT_PX = 48;
 const HEIGHT_MATCH_PX = 1;
 const LOAD_MS = 4000;
 const INTERACT_MS = 2000;
+/** The interaction pass reads its final height once the root has held it this long, growing nothing. */
+const REST_HOLD_MS = 500;
+/** The longest the interaction pass waits for that rest, after its last step. */
+const REST_CAP_MS = 8000;
 
 /* One row per page. `root` is the element whose height is sampled. `preset` is
    the select the interaction pass switches (to the next option); a tool with no
@@ -245,6 +252,11 @@ const PAGES = [
     slug: "leap-second-timeline",
     preset: PRESET,
     drag: { role: "slider", name: "Move the date" },
+  },
+  {
+    slug: "terrestrial-time-stack",
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the year" },
   },
   {
     slug: "elapsed-vs-clock-difference",
@@ -767,6 +779,20 @@ async function waitForRest(page, rootSelector, capMs = 8000) {
   return false;
 }
 
+/**
+ * Waits, polling from Node every 100 ms, until the sampled frames show the root held at rest for
+ * `REST_HOLD_MS`. Returns false once `REST_CAP_MS` of polls have passed; each poll's round trip
+ * adds to that, so the real cap is a little longer.
+ */
+async function waitForHeldRest(page) {
+  for (let waited = 0; ; waited += 100) {
+    const recent = await page.evaluate(() => window.__grow.frames.slice(-240));
+    if (heldAtRest(recent, REST_HOLD_MS)) return true;
+    if (waited >= REST_CAP_MS) return false;
+    await sleep(100);
+  }
+}
+
 /* True when every `data-gate="grow"` section is at rest. Polls up to 1 s so the timeout
    fallback (duration + 100 ms) has run. */
 async function growsAtRest(page) {
@@ -1063,6 +1089,8 @@ async function runOneUnguarded(
         frames = [];
         await page.evaluate(() => window.__grow.start());
         await sleep(INTERACT_MS);
+        if (!(await waitForHeldRest(page)))
+          problems.push("root not at rest 8 s after the interaction");
         frames = await page.evaluate(() => window.__grow.stop());
       } else {
         await page.evaluate(() => window.__grow.start());
@@ -1075,6 +1103,8 @@ async function runOneUnguarded(
           problems.push(...skippedProblem("the drag", skip2));
           await sleep(INTERACT_MS);
         } else notes.push("no drag handle");
+        if (!(await waitForHeldRest(page)))
+          problems.push("root not at rest 8 s after the interaction");
         frames = await page.evaluate(() => window.__grow.stop());
       }
       if (!reduce && def.holdStill) {

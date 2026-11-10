@@ -419,6 +419,26 @@ const TOOLS = [
     textBoxes: ["codeframe"],
   },
   {
+    slug: "terrestrial-time-stack",
+    root: '[data-widget="terrestrial-time-stack"]',
+    presets: [
+      "utc-2026",
+      "epoch",
+      "inside-leap-second",
+      "far-future",
+      "before-1972",
+    ],
+    controls: [{ role: "slider", name: "Move the year" }],
+    track: null,
+    scope: "widget",
+    // The sentence, footnote and table cells are holds: their live wrapper is left out.
+    drawn: ["drawn", "hold"],
+    moving: ["cursor"],
+    riders: true,
+    textBoxes: ["codeframe", "instant"],
+    extraWidths: [300],
+  },
+  {
     slug: "elapsed-vs-clock-difference",
     root: '[data-widget="elapsed-vs-clock"]',
     presets: ["across-2016", "twenty-four-years", "no-insertions"],

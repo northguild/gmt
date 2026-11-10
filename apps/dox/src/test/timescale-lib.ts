@@ -10,22 +10,40 @@ import {
   leapSecondsBetween,
   nextLeapSecond,
   taiMinusUtc,
+  tcgMinusTt,
 } from "@northguild/gmt/timescale/calculate";
-import { fromTAI, toTAI } from "@northguild/gmt/timescale/convert";
+import {
+  fromTAI,
+  fromTCG,
+  fromTT,
+  toTAI,
+  toTCG,
+  toTT,
+} from "@northguild/gmt/timescale/convert";
 import { isLeapSecond } from "@northguild/gmt/timescale/validate";
-import { addUtc, startOfUtc } from "@northguild/gmt/utc/calculate";
+import {
+  addUtc,
+  diffUtcAsDuration,
+  startOfUtc,
+} from "@northguild/gmt/utc/calculate";
 import type { TimescaleLib } from "~/lib/timescale-lib";
 
 export const lib = {
   taiMinusUtc,
+  tcgMinusTt,
   leapSecondsBetween,
   nextLeapSecond,
   toTAI,
   fromTAI,
+  toTT,
+  fromTT,
+  toTCG,
+  fromTCG,
   isLeapSecond,
   spanNs,
   addUtc,
   startOfUtc,
+  diffUtcAsDuration,
   hasSecond60,
   isValidInstant,
 } as unknown as TimescaleLib;

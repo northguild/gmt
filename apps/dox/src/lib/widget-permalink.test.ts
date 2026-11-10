@@ -1,6 +1,12 @@
 import { showHolidayRuleBuilderInput } from "./dox-tools";
 import { formatRuleLines } from "./holiday-codec";
 import {
+  DEFAULT_PRESET,
+  MAX_VALUE_LENGTH,
+  STACK_PRESETS,
+  permalinkOf as stackPermalinkOf,
+} from "./terrestrial-time-stack";
+import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,
   handoffHref,
@@ -223,6 +229,27 @@ describe("widget permalinks", () => {
     expect(seedFromLocation("tai64n", url.slice(url.indexOf("?")))).toEqual(
       state,
     );
+  });
+
+  it("opens each Terrestrial Time Stack preset's link on that preset", () => {
+    for (const preset of STACK_PRESETS) {
+      if (preset === DEFAULT_PRESET) continue;
+      const args = stackPermalinkOf(preset.state);
+      const url = encodeWidgetPermalink("ttstack", args);
+      expect(url).toContain("/tools/terrestrial-time-stack/");
+      expect(seedFromLocation("ttstack", url.slice(url.indexOf("?")))).toEqual(
+        preset.state,
+      );
+    }
+  });
+
+  it("keeps a Terrestrial Time Stack value at its 64-character cap", () => {
+    const value = "2026-01-01T00:01:10.261661917 TCG";
+    expect(value.length).toBeLessThanOrEqual(MAX_VALUE_LENGTH);
+    const url = encodeWidgetPermalink("ttstack", { value });
+    expect(seedFromLocation("ttstack", url.slice(url.indexOf("?")))).toEqual({
+      value,
+    });
   });
 
   it("registers the three holiday tools at their own pages", () => {

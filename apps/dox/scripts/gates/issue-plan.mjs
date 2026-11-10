@@ -426,7 +426,8 @@ function floodTable(groups) {
 function artifactLine(legs, context) {
   const names = legs
     .map(
-      (l) => `\`dox-gate-${l.leg}${context.runId ? `-${context.runId}` : ""}\``,
+      (l) =>
+        `\`dox-gates-${l.leg}${context.runId ? `-${context.runId}` : ""}\``,
     )
     .join(", ");
   return `Full findings: the run's artifacts ${names} (kept ${ARTIFACT_DAYS} days).`;

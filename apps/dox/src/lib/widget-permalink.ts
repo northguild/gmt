@@ -78,7 +78,8 @@ export type WidgetKind =
   | "leapday"
   | "expiry"
   | "dbstamp"
-  | "tai64n";
+  | "tai64n"
+  | "ttstack";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -143,6 +144,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   expiry: "/tools/expiry-calculator/",
   dbstamp: "/tools/database-timestamp-reader/",
   tai64n: "/tools/tai64n-log-reader/",
+  ttstack: "/tools/terrestrial-time-stack/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */

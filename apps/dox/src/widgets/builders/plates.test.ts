@@ -53,6 +53,24 @@ describe("plates", () => {
     );
   });
 
+  it("keeps a word value readable beside a number's reserved room", () => {
+    renderHtml(
+      plates([
+        {
+          caption: "Gap",
+          value: "inside an inserted second",
+          lines: [],
+          samples: ["888.888888888 s", "inside an inserted second"],
+          words: ["inside an inserted second"],
+        },
+      ]),
+    );
+    expect(screen.getByRole("definition")).toHaveTextContent(
+      "inside an inserted second",
+    );
+    expect(screen.getAllByText("inside an inserted second")[0]).toBeVisible();
+  });
+
   it("reserves the widest text of a line, hidden from assistive technology", () => {
     renderHtml(
       plates([

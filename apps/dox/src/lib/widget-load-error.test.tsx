@@ -124,6 +124,10 @@ import {
   renderTai64nLogReaderTemplate,
 } from "./tai64n-log-reader-mount";
 import {
+  mountTerrestrialTimeStack,
+  renderTerrestrialTimeStackTemplate,
+} from "./terrestrial-time-stack-mount";
+import {
   mountHolidayRuleBuilder,
   renderHolidayRuleBuilderTemplate,
 } from "./holiday-rule-builder-mount";
@@ -324,6 +328,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "tai64n log reader",
     () => renderTai64nLogReaderTemplate("test"),
     mountTai64nLogReader as MountFn<never>,
+  ],
+  [
+    "terrestrial time stack",
+    () => renderTerrestrialTimeStackTemplate("test"),
+    mountTerrestrialTimeStack as MountFn<never>,
   ],
   [
     "holiday rule builder",

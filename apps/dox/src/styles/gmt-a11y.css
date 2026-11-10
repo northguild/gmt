@@ -217,6 +217,39 @@
     background: Canvas;
     border: 1px solid CanvasText;
   }
+
+  /* The Terrestrial Time Stack tells its three segments apart by pattern, and the patterns keep
+     their shape in system colours: the solid piece is CanvasText, the hatch is a CanvasText
+     line on Canvas and the dots are CanvasText on Canvas. The axis, zero line and drift polyline
+     are CanvasText strokes, and the cursor is Highlight so it still reads against the line. */
+  [data-widget="terrestrial-time-stack"] [data-segment] {
+    stroke: CanvasText;
+  }
+
+  [data-widget="terrestrial-time-stack"] [data-segment][data-pattern="solid"] {
+    fill: CanvasText;
+  }
+
+  [data-widget="terrestrial-time-stack"] pattern rect {
+    fill: Canvas;
+  }
+
+  [data-widget="terrestrial-time-stack"] pattern line {
+    stroke: CanvasText;
+  }
+
+  [data-widget="terrestrial-time-stack"] pattern circle {
+    fill: CanvasText;
+  }
+
+  [data-widget="terrestrial-time-stack"] svg :is(line, path) {
+    stroke: CanvasText;
+  }
+
+  [data-widget="terrestrial-time-stack"] [data-gate="moving"] {
+    background: Highlight;
+    border-color: Highlight;
+  }
 }
 
 /* =======================================================================

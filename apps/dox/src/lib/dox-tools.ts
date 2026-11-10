@@ -592,6 +592,15 @@ export const showStoredTimeAuditInput = z.object({
 });
 
 /**
+ * Terrestrial Time Stack: one value exactly as the reader gave it, a UTC
+ * instant or a string ending in TAI, TT or TCG. The chat args are the
+ * permalink args; a blank value is left out.
+ */
+export const showTerrestrialTimeStackInput = z.object({
+  value: z.string().max(64).optional(),
+});
+
+/**
  * TAI64N Log Reader: the reader's log lines, one per line, exactly as given
  * (`line` picks the row to draw, `instant` fills the writer). The chat args are
  * the permalink args.
@@ -1253,6 +1262,7 @@ export type DoxToolName =
   | "showExpiryCalculator"
   | "showDatabaseTimestampReader"
   | "showTai64nLogReader"
+  | "showTerrestrialTimeStack"
   | "showHl7TimestampReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1564,6 +1574,13 @@ export const DOX_TOOL_DOCS: {
     args: "values: required, the log lines exactly as the reader gave them, one per line, at most 12 lines read; line: optional, the 1-based line to draw; instant: optional UTC instant, only when the reader named one to write as a label.",
   },
   {
+    name: "showTerrestrialTimeStack",
+    purpose:
+      "Show one instant on UTC, TAI, TT and TCG, with TAI − UTC, TT − TAI and TCG − TT as one stack, and how TCG − TT grows over the years.",
+    when: "the reader asks about Terrestrial Time (TT) or Geocentric Coordinate Time (TCG), what time argument an ephemeris needs, how far TT is from UTC or TAI, how far TCG has drifted from TT, or to convert a TT or TCG string to UTC",
+    args: "value exactly as the reader gave it: a UTC instant or a string ending in TAI, TT or TCG",
+  },
+  {
     name: "showHl7TimestampReader",
     purpose:
       "An HL7 v2 date-time (a DTM, or a TS with its degree of precision after ^) read by parseHL7: its kind, precision and offset; a value with no offset read in the zones the reader picks with resolveLocal, beside the instant a parser that assumes UTC gets; and the value written back by formatHL7 at each precision.",
@@ -1750,8 +1767,12 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[42].purpose,
     inputSchema: showTai64nLogReaderInput,
   }),
-  showHl7TimestampReader: tool({
+  showTerrestrialTimeStack: tool({
     description: DOX_TOOL_DOCS[43].purpose,
+    inputSchema: showTerrestrialTimeStackInput,
+  }),
+  showHl7TimestampReader: tool({
+    description: DOX_TOOL_DOCS[44].purpose,
     inputSchema: showHl7TimestampReaderInput,
   }),
 } as const;
@@ -1820,6 +1841,7 @@ export const ENABLED_TOOL_NAMES = [
   "showExpiryCalculator",
   "showDatabaseTimestampReader",
   "showTai64nLogReader",
+  "showTerrestrialTimeStack",
   "showHl7TimestampReader",
 ] as const satisfies readonly DoxToolName[];
 

@@ -893,6 +893,12 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { values: "@4000000037c219bf2ef02e94" },
   },
+  {
+    text: "How far is TT ahead of UTC at 2026-01-01T00:00:00Z, and how far has TCG drifted from TT?",
+    widget: "showTerrestrialTimeStack",
+    area: "core",
+    args: { value: "2026-01-01T00:00:00Z" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

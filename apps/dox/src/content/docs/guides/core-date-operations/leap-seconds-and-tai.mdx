@@ -1,6 +1,6 @@
 ---
 title: Leap Seconds and TAI
-description: The inserted seconds in a table, TAI minus UTC by date, which days really have a second 60, counting and finding leap seconds, moving between UTC and TAI through an inserted second, and elapsed time against the clock difference.
+description: The inserted seconds in a table, TAI minus UTC by date, which days really have a second 60, counting and finding leap seconds, moving between UTC and TAI through an inserted second, TT and TCG, and elapsed time against the clock difference.
 sidebar:
   order: 14
 industries: [core]
@@ -147,6 +147,50 @@ fromTAI("2017-01-01T00:00:36 TAI");
 // "2016-12-31T23:59:60Z"
 ```
 
+## TT and TCG
+
+Terrestrial Time (TT) is TAI plus a fixed 32.184 seconds (IERS Technical Note 36, section 10.1). It
+is the time argument an Earth ephemeris takes, so TT − UTC follows the leap-second steps: it was
+42.184 seconds at the start of 1972 and has been 69.184 seconds since the end of 2016.
+[`toTT`](/reference/timescale/convert/toTT) and [`fromTT`](/reference/timescale/convert/fromTT)
+move an instant between UTC and a TT label, through the same table as `toTAI`.
+
+Geocentric Coordinate Time (TCG) differs from TT by a rate, not by a label. IAU 2000 Resolution
+B1.9 fixes TCG − TT at zero at 32.184 seconds past midnight on 1977-01-01 TT, and the gap grows
+by a constant fraction of every second after that. It is negative before 1977 and has grown by
+about 22 milliseconds a year since. [`toTCG`](/reference/timescale/convert/toTCG) and
+[`fromTCG`](/reference/timescale/convert/fromTCG) apply it, and
+[`tcgMinusTt`](/reference/timescale/calculate/tcgMinusTt) is exported so that a caller sees the
+size of the gap and not only the label it makes.
+
+Before 1972 there is no whole-second TAI − UTC, so every one of these returns the sentinel:
+`""` for the converters and `null` for `tcgMinusTt`.
+
+```typescript
+import { tcgMinusTt } from "@northguild/gmt/timescale/calculate";
+import { fromTCG, fromTT, toTCG, toTT } from "@northguild/gmt/timescale/convert";
+
+toTT("2026-01-01T00:00:00Z");
+// "2026-01-01T00:01:09.184 TT"
+toTCG("2026-01-01T00:00:00Z");
+// "2026-01-01T00:01:10.261661917 TCG"
+tcgMinusTt("2026-01-01T00:00:00Z");
+// 1.077661917
+tcgMinusTt("1976-12-31T23:59:45Z");
+// 0
+tcgMinusTt("1971-01-01T00:00:00Z");
+// null
+toTT("1971-01-01T00:00:00Z");
+// ""
+fromTT("2026-01-01T00:01:09.184 TT");
+// "2026-01-01T00:00:00Z"
+fromTCG("2026-01-01T00:01:10.261661917 TCG");
+// "2026-01-01T00:00:00Z"
+```
+
+The [Terrestrial Time Stack](/tools/terrestrial-time-stack/) draws the three pieces of the gap as
+one bar, and plots `tcgMinusTt` across the years.
+
 ## Elapsed seconds against the clock difference
 
 Two UTC readings two hours apart on the clock are 7201 seconds apart in elapsed time when an
@@ -175,6 +219,8 @@ seconds](/mistakes/leap-seconds/).
 
 - The [Leap Second Timeline](/tools/leap-second-timeline/?w=leapline&wa=%7B%22check%22%3A%222016-12-31T23%3A59%3A60Z%22%7D) draws every insertion, and the
   integer-seconds era before and the continuous era after.
+- The [Terrestrial Time Stack](/tools/terrestrial-time-stack/) shows one instant on UTC, TAI, TT and TCG, with
+  TAI − UTC, TT − TAI and TCG − TT as one bar and the growth of TCG − TT across the years.
 - [Elapsed vs. Clock Difference](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222016-12-31T23%3A00%3A00Z%22%2C%22end%22%3A%222017-01-01T01%3A00%3A00Z%22%7D) shows the clock difference and
   the elapsed seconds of two readings side by side.
 

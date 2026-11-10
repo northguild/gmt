@@ -27,5 +27,5 @@ Not decided. They stay open until the owner answers.
 
 - **(a) `20240615^D^` returns `null`** under the rule that a third component is refused. Ch. 2 §2.6.2 ("treat fields and components that are expected but were not included … as not present") suggests it could read as `20240615^D`.
 - **(b) `'""^'` returns `null`** (the sentinel), not `{ kind: "null" }`. Under the same §2.6.2 reading of an empty trailing component it could be the HL7 null value.
-- **(c) The root bundle budget** in `scripts/bundle-size.budgets.json` rose from 569400 to 580215 B (the measured 574470 B plus 1%). The raise is not yet approved.
+- **(c) The root bundle budget** in `scripts/bundle-size.budgets.json` rose from 570400 (main after SPA-47) to 581300 B: 575497 B measured with both stories in, plus 1%, rounded up to the next 100 as `bundle-size.mjs --update` does. The raise is not yet approved.
 - **(d) "most of their records"**, in `INDUSTRY_OVERVIEWS.healthcare.about` (`apps/dox/src/lib/industry-overview.ts`) and in the guide intro, has no source.
