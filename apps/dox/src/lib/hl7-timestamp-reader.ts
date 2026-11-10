@@ -523,8 +523,12 @@ export const REASON_PICTURE =
  * counted; a third one left is the picture's refusal, not the degree's.
  */
 export function sentinelText(read: Hl7Read, lib: Hl7Lib): string {
-  const parts = read.value.split("^");
-  while (parts.length > 1 && parts.at(-1) === "") parts.pop();
+  const all = read.value.split("^");
+  let sent = all.length;
+  for (let i = all.length - 1; i > 0 && all[i] === ""; i -= 1) {
+    sent = i;
+  }
+  const parts = all.slice(0, sent);
   if (parts.length === 2 && lib.parseHL7(parts[0] as string) !== null) {
     return REASON_DEGREE;
   }
@@ -726,13 +730,9 @@ export function inSentForm(
     return iso;
   }
   const secondsEnd = t + "THH:MM:SS".length;
-  let end = secondsEnd;
-  if (iso[end] === ".") {
-    end += 1;
-    while (end < iso.length && iso[end]! >= "0" && iso[end]! <= "9") {
-      end += 1;
-    }
-  }
+  // The fraction Temporal wrote, if any: `.` and its digits.
+  const end =
+    secondsEnd + (/^\.[0-9]*/.exec(iso.slice(secondsEnd))?.[0].length ?? 0);
   const dot = local.indexOf(".");
   const head =
     precision === "minute"

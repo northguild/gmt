@@ -203,9 +203,10 @@ export function splitHl7Ts(
     return null;
   }
   // A loop, not /\^+$/, which backtracks over a long run of `^` that does not end the value.
+  // Bounded by one pass over the input.
   let end = value.length;
-  while (end > 0 && value[end - 1] === "^") {
-    end -= 1;
+  for (let i = value.length - 1; i >= 0 && value[i] === "^"; i -= 1) {
+    end = i;
   }
   const parts = value.slice(0, end).split("^");
   if (parts.length > 2) {
