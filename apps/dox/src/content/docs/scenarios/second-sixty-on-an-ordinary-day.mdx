@@ -1,0 +1,35 @@
+---
+title: "Second Sixty on an Ordinary Day"
+description: A FIX stamp ends in :60 on a day with no leap second, the shape check passes, and Temporal stores it as a second that already happened.
+industries: [finance]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="Second Sixty on an Ordinary Day"
+  description="A counterparty sends the FIX timestamp 20171231-23:59:60. A shape check allows a second of 60, so the message goes through. What does the system store?"
+  naiveCode={`// The naive approach: a pattern that allows 60, then Temporal
+const fix = "20171231-23:59:60";
+/^\\d{8}-\\d{2}:\\d{2}:[0-6]\\d$/.test(fix);
+// true — well-formed
+
+Temporal.Instant.from("2017-12-31T23:59:60Z").toString();
+// "2017-12-31T23:59:59Z" — a second that never happened, stored as a real one`}
+  explanation={`FIX allows a second of 60 only for a UTC leap second, and UTC has inserted 27, the last at the end of 2016. The pattern checks the spelling and cannot say whether the second exists, and Temporal clamps any 60 to 59 without a word. So a stamp from a day with no leap second becomes the second before it, and a real leap second is lost the same way. \`parseFixUtcTimestamp\` looks the day up in the leap-second table: it returns \`null\` for 2017-12-31, and for 2016-12-31 it reads the inserted second and flags it.`}
+  gmtCode={`import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20171231-23:59:60");
+// null — no leap second was inserted that day
+parseFixUtcTimestamp("20161231-23:59:60");
+// { instant: "2016-12-31T23:59:60Z", precision: "second", leapSecond: true, picoseconds: 0 }`}
+  fixedSpecId="parseFixUtcTimestamp"
+/>
+
+In the widget, change the year to 2016 and the stamp is read as the inserted second. Any other
+year with the same month and day returns `null`. A boolean check is
+[`isValidFixUtcTimestamp`](/reference/finance/validate/isValidFixUtcTimestamp), and the rules
+are in [Finance: Message
+Timestamps](/guides/industries/finance-message-timestamps/#leap-seconds). The same lesson for a
+log line in ISO form is [A Leap Second That Never
+Happened](/scenarios/a-leap-second-that-never-happened/).

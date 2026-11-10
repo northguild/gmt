@@ -84,6 +84,7 @@ import type { ExpiryArgs } from "~/lib/expiry-calculator-mount";
 import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
+import type { FixTimestampReaderArgs } from "~/lib/fix-timestamp-reader-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -124,6 +125,7 @@ import {
   showExpiryCalculatorInput,
   showDatabaseTimestampReaderInput,
   showTai64nLogReaderInput,
+  showFixTimestampReaderInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -911,6 +913,35 @@ const tai64nEntry = defineWidget<Tai64nLogReaderArgs>({
     })),
 });
 
+const fixTimestampEntry = defineWidget<FixTimestampReaderArgs>({
+  title: "FIX timestamp reader",
+  kind: "fixstamp",
+  parse: (input) => {
+    const result = showFixTimestampReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { stamp, instant } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(stamp === undefined ? {} : { stamp }),
+        ...(instant === undefined ? {} : { write: instant }),
+      },
+    };
+  },
+  /* No `validate`: a stamp the library does not read is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/fix-timestamp-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderFixTimestampReaderTemplate(idPrefix, args),
+      mount: m.mountFixTimestampReader,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1325,6 +1356,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showExpiryCalculator: expiryEntry,
   showDatabaseTimestampReader: databaseReaderEntry,
   showTai64nLogReader: tai64nEntry,
+  showFixTimestampReader: fixTimestampEntry,
   showTerrestrialTimeStack: ttStackEntry,
 };
 

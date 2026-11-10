@@ -42,5 +42,14 @@
     "icon": "industry-maritime",
     "guide": "/guides/industries/maritime-gnss-time-and-week-rollover/",
     "drawsOn": ["gnss", "timescale"]
+  },
+  {
+    "id": "finance",
+    "label": "Finance",
+    "definition": "Timestamps in trading and payment messages: FIX UTC timestamps at the precision their digits state, leap seconds included.",
+    "icon": "industry-finance",
+    "guide": "/guides/industries/finance-message-timestamps/",
+    "namespace": "finance",
+    "drawsOn": []
   }
 ]

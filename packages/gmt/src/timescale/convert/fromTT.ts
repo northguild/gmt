@@ -14,8 +14,9 @@ import {
  * - UTC = TT − 32.184 s − (TAI − UTC), from the IERS leap-second table built into GMT
  *   (Leap_Second.dat through Bulletin C 72, 6 July 2026). The table is closed: after the last
  *   insertion (2016-12-31) TAI − UTC stays 37 s.
- * - During an inserted leap second the result is `…T23:59:60Z` (ITU-R TF.460-6 Annex 3). Only this
- *   realm's functions read that string back; other GMT functions reject a second of 60.
+ * - During an inserted leap second the result is `…T23:59:60Z` (ITU-R TF.460-6 Annex 3). Only the
+ *   `timescale/`, `gnss/` and `finance/` functions read that string back; other GMT functions
+ *   reject a second of 60.
  * - "" before 1972-01-01T00:00:42.184 TT and on invalid input.
  *
  * @param ttString TT time-scale string

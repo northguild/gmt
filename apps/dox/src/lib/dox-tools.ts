@@ -619,6 +619,16 @@ export const showTai64nLogReaderInput = z.object({
   instant: z.string().max(64).optional(),
 });
 
+/**
+ * FIX Timestamp Reader: the `UTCTimestamp` to read (`stamp`) and the instant to write at the
+ * five precisions (`instant`). Neither is trimmed: the library reads the text as given, and a
+ * stamp with a stray space is refused. The widget's permalink calls `instant` `write`.
+ */
+export const showFixTimestampReaderInput = z.object({
+  stamp: z.string().max(64).optional(),
+  instant: z.string().max(64).optional(),
+});
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1247,7 +1257,8 @@ export type DoxToolName =
   | "showExpiryCalculator"
   | "showDatabaseTimestampReader"
   | "showTai64nLogReader"
-  | "showTerrestrialTimeStack";
+  | "showTerrestrialTimeStack"
+  | "showFixTimestampReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1564,6 +1575,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks about Terrestrial Time (TT) or Geocentric Coordinate Time (TCG), what time argument an ephemeris needs, how far TT is from UTC or TAI, how far TCG has drifted from TT, or to convert a TT or TCG string to UTC",
     args: "value exactly as the reader gave it: a UTC instant or a string ending in TAI, TT or TCG",
   },
+  {
+    name: "showFixTimestampReader",
+    purpose:
+      "Read a FIX UTCTimestamp as an instant, the precision its digit count states and whether its second 60 is an inserted leap second, and write one instant at second, millisecond, microsecond, nanosecond and picosecond precision.",
+    when: "the reader asks what a FIX UTCTimestamp or a SendingTime or TransactTime value means, its precision, whether a second 60 in it is real, or how to write an instant at milli-, micro-, nano- or picosecond precision",
+    args: "stamp: optional, the FIX UTCTimestamp exactly as the reader gave it, never trimmed or corrected; instant: optional, an instant with Z or an offset to write at the five precisions, only when the reader gave one.",
+  },
 ];
 
 /**
@@ -1748,6 +1766,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[43].purpose,
     inputSchema: showTerrestrialTimeStackInput,
   }),
+  showFixTimestampReader: tool({
+    description: DOX_TOOL_DOCS[44].purpose,
+    inputSchema: showFixTimestampReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1815,6 +1837,7 @@ export const ENABLED_TOOL_NAMES = [
   "showDatabaseTimestampReader",
   "showTai64nLogReader",
   "showTerrestrialTimeStack",
+  "showFixTimestampReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

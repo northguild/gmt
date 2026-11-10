@@ -17,8 +17,9 @@ import {
  *   Then UTC from TT as `fromTT` does.
  * - Exact inverse of `toTCG` to the nanosecond. About one TCG nanosecond in 1.4 × 10⁹ is never
  *   written by `toTCG`; it reads as the next nanosecond's UTC instant.
- * - During an inserted leap second the result is `…T23:59:60Z` (ITU-R TF.460-6 Annex 3). Only this
- *   realm's functions read that string back; other GMT functions reject a second of 60.
+ * - During an inserted leap second the result is `…T23:59:60Z` (ITU-R TF.460-6 Annex 3). Only the
+ *   `timescale/`, `gnss/` and `finance/` functions read that string back; other GMT functions
+ *   reject a second of 60.
  * - "" before 1972-01-01T00:00:42.07398781 TCG and on invalid input.
  *
  * @param tcgString TCG time-scale string

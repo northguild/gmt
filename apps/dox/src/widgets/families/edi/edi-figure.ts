@@ -58,13 +58,18 @@ function groupLabel(group: PicGroup, fields: readonly PicField[]): string {
   return group;
 }
 
-/** Splits a half's fields into runs of one group. */
+/** Splits a half's fields into runs of one group, and again where a field names another `run`. */
 function runsOf(fields: readonly PicField[]): PicField[][] {
   const runs: PicField[][] = [];
   for (const f of fields) {
     const last = runs[runs.length - 1];
-    if (last !== undefined && last[0]!.group === f.group) last.push(f);
-    else runs.push([f]);
+    if (
+      last !== undefined &&
+      last[0]!.group === f.group &&
+      last[0]!.run === f.run
+    ) {
+      last.push(f);
+    } else runs.push([f]);
   }
   return runs;
 }

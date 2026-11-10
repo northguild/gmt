@@ -120,6 +120,10 @@ import {
   renderTai64nLogReaderTemplate,
 } from "./tai64n-log-reader-mount";
 import {
+  mountFixTimestampReader,
+  renderFixTimestampReaderTemplate,
+} from "./fix-timestamp-reader-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -319,6 +323,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "tai64n log reader",
     () => renderTai64nLogReaderTemplate("test"),
     mountTai64nLogReader as MountFn<never>,
+  ],
+  [
+    "fix timestamp reader",
+    () => renderFixTimestampReaderTemplate("test"),
+    mountFixTimestampReader as MountFn<never>,
   ],
   [
     "terrestrial time stack",

@@ -142,6 +142,15 @@ export {
   writtenOffset,
 } from "./utcOffsetString";
 export {
+  FIX_FRACTION_DIGITS,
+  FIX_UTC_TIMESTAMP,
+  fixInstantText,
+  fixPrecisionOfDigits,
+  fixTimestampText,
+  readFixUtcFields,
+  resolveFixPrecision,
+} from "./fixUtcTimestamp";
+export {
   formatUtcReading,
   LAST_FOUR_DIGIT_UTC_NANOSECONDS,
   parseUtcReading,

@@ -50,7 +50,8 @@
  *     node scripts/hero-space-check.mjs --base http://127.0.0.1:4351/gmt [--browsers chromium]
  *
  * It uses a real GPU when Playwright's `chromium` channel has one, and the canvas-2D renderer
- * (`?globe=canvas2d`) where it reads pixels. Exits non-zero on any failure.
+ * (`?globe=canvas2d`), drawn on the main thread, where it reads pixels. Exits non-zero on any
+ * failure.
  */
 import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
@@ -148,6 +149,17 @@ async function answersWithin(page, ms) {
 
 /** How long the page may take to bring the globe up before a check gives up on it. */
 const LOAD_TIMEOUT = 90_000;
+
+/**
+ * An init script for a check that reads the globe's pixels. The canvas-2D globe draws in a worker,
+ * on a canvas handed over with `transferControlToOffscreen`, and a canvas handed over cannot be
+ * read: `getContext` throws. Without that method the engine draws on the main thread. Both
+ * threads use the same painter (`src/lib/globe/canvas2d/painter.ts`) and camera, so the disc is
+ * drawn in the same place and to the same edge.
+ */
+function drawGlobeOnMainThread() {
+  delete HTMLCanvasElement.prototype.transferControlToOffscreen;
+}
 
 async function open(
   browser,
@@ -1032,6 +1044,7 @@ async function checkZoomFills(browser) {
     const { page, context } = await open(browser, size, {
       query: "?globe=canvas2d",
       reduce: true,
+      init: drawGlobeOnMainThread,
     });
     for (let i = 0; i < 8; i++) await page.locator(ZOOM_IN).click();
     await page.waitForTimeout(1500);
@@ -2394,6 +2407,7 @@ async function checkSkyCamera(browser) {
     reduce: true,
     fixed: pin.at,
     context: { timezoneId: pin.zone },
+    init: drawGlobeOnMainThread,
   });
   for (const problem of problems) fail("page-error", "page", problem, WIDE);
   for (const zoom of ["1x", "one step in"]) {

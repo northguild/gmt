@@ -17,6 +17,7 @@ export * from "./edi";
 export * from "./epcis";
 export * from "./exact-duration-unit";
 export * from "./fiscal-calendar";
+export * from "./fix";
 export * from "./fractional-digit";
 export * from "./free-time-options";
 export * from "./gnss";

@@ -1604,7 +1604,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   zone table, the timeline, the verdict plate and the holds that reserve every region's height
   (the `edi-figure` and `edi-timeline` builders and their CSS Modules, with `edi-picture.ts` and `edi-render.ts` holding the pure helpers), and the zone code (`widestGap`, in
   `edi-widgets.ts`), and they print every call made, one a line, with the same
-  `formatValue`/`callArgs`. Their rules:
+  `formatValue`/`callArgs`. A picture field's optional `run` ends a bracket where it changes, so one group
+  can bracket several runs of digits (the Finance tool's ms, µs, ns and ps). A picture with no `run` field draws exactly as before. Their rules:
   - **Nothing derives a zone from a place, a zone name, an abbreviation or a time code**,
     because the standards state no such mapping: typing `ET` never fills, suggests or changes a
     zone, and no site module holds a lookup from a name or code to an IANA id (a test asserts
@@ -2460,6 +2461,59 @@ Shared hooks come first, then the globe, then the clock-change pages.
     group, fourth after API Reference, and each namespace index under `/reference/` keeps a one-line
     pointer. `space` is never an industry, area, kind or namespace name, because a planned spatial
     expansion takes the word.
+- **Finance** (FIN-95): one tool, the **FIX Timestamp Reader** (`/tools/fix-timestamp-reader/`,
+  `fixstamp`, finance). A pasted FIX `UTCTimestamp` is read by `parseFixUtcTimestamp` and
+  `isValidFixUtcTimestamp`, both called on the text as typed: the instant, the precision the digit
+  count states, whether second 60 is an inserted leap second, and the picosecond digits apart from
+  the instant. A second section writes one instant at all five precisions with
+  `formatFixUtcTimestamp`, and "Use the instant read above" copies the read instant into it, so a
+  leap second round-trips. Finance `drawsOn` is `[]`: the tool calls only `finance/*`, and the
+  "27 inserted leap seconds" in its prose is held to the library by
+  `fix-timestamp-reader-prose.test.ts` through `timescale`, so the check never enters the tool.
+  - **The loader is `finance-lib.ts`** (`finance/parse`, `finance/format` and `finance/validate`
+    by `GMT_MODULES`), with its types and `FIX_PRECISIONS` in `finance-widgets.ts`. They are named
+    for Finance and not for FIX because FIN-96's SWIFT Value Date Reader extends both. There is no
+    `widgets/families/finance/` until a second shared piece needs one.
+  - **The site holds no grammar, width table or leap-second table.** `fix-picture.ts` probes the
+    library once per reading (the base and the widths come from formatting a fixed instant at each
+    precision), and a refusal is explained by asking the library again, in this order: the text
+    with `60` changed to `59`, then the same day at 23:59:60 (which tells a wrong minute from a
+    wrong day), then the text with its fraction removed, then one general sentence.
+    The first probe the library accepts names the reason, so a reason is never a guess.
+  - **"None sent" is not `0`.** The parser reports `picoseconds: 0` both for a stamp that sent
+    nothing below the nanosecond and for one that sent `000`. The digit count tells them apart, so
+    the plate shows the three digits as sent (`012` keeps its zero) only when twelve were sent, and
+    "none sent" otherwise.
+  - **The stamp is drawn with `edi-figure`**, whose `PicField` takes an optional `run`: a change of
+    `run` ends a bracket, so the ms, µs, ns and ps digits each get their own. Two things hold
+    the EDI pictures: the `edi-figure` test "a field with no run", which counts the brackets drawn
+    for fields with no `run` (it fails if `runsOf` splits on a key no field has), and `html-diff`
+    against a baseline, which compares the built EDI and ID tool pages.
+  - **The writer cuts and never rounds.** A stamp near midnight stays in its second at every
+    precision, and a precision finer than the instant is padded with `000` and says so. A local
+    time (no offset) is the library's `""`, shown as "no result" in the five plates and explained
+    by one sentence; an empty box is a plain empty state, never `NO SIGNAL`.
+  - **In `readout-still` by typed values, and in a browser test.** Its `readout-still` row has no
+    handle: on the first and last stamp preset it types nine stamps and six instants and picks
+    every instant preset, and only a hold's live content may change (`scope: "widget"`,
+    `drawn: ["hold"]`, and `frame: false` because it draws no chart). Each call frame's hold is
+    sampled with a call on 64 characters, the most a box takes. The frame scrolls sideways when a
+    line is too long, so a shorter sample left the scrollbar unreserved: a 64-character stamp
+    grew the read call's hold by 20 px in WebKit at 1440 px, whose pane is 20 px narrower than
+    Chromium's.
+    `fix-timestamp-reader-holds.browser.test.ts`
+    (`vitest.browser.config.ts`; Chromium and WebKit) steps every preset of each section, and then
+    both boxes emptied, at 300 px and 1280 px, and holds every `hold`, hero, plates and frame box to
+    0.5 px of the first. Only a hold is measured, never the code frame inside it, which is shorter
+    when a call fits on a line.
+  - **A hold is the same height whatever its live content is.** `instantHero`'s pill and chip are
+    `display: block` and `fit-content`: as inline boxes they gave the live wrapper a line-box strut
+    that the ghost lacked, so the value and chip holds changed height between a reading and NO
+    SIGNAL. The call frame's ghost has a 1px block margin for the live frame's border, so a hold
+    with no call is as tall as one with five.
+  - **Permalink `fixstamp`** at `/tools/fix-timestamp-reader/`: `stamp` and `write`, or `preset` and
+    `writePreset` while a box matches a preset. The chat tool is `showFixTimestampReader`
+    (`stamp`, `instant`; the registry maps `instant` to `write`), appended to `DOX_TOOL_DOCS`.
 - **Cron in a Zone** (CORE-84, `/tools/cron-in-a-zone/`, `cronzone`): a Core tool that draws
   `@northguild/gmt/recurrence`. The reader types a five-field cron line and picks a zone, a year
   and one of that year's clock changes.
@@ -4239,8 +4293,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   set.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
-  grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal and
-  GNSS, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
+  grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal,
+  GNSS and Finance, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
   and a card's `area` is its tool page's tag. An industry with no tool has no area (Workforce and
   Maritime gain one with their first tool). `startersByArea()` returns the groups in that order.
   `chat-starters.test.ts` asserts each area is an industry with that industry's label and icon,

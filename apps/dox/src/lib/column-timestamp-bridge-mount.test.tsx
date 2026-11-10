@@ -21,7 +21,7 @@ import {
 } from "~/test/render-widget";
 import { BRIDGE_PRESETS } from "./column-timestamp-bridge-presets";
 import { ZONELESS_CHIP } from "./column-timestamp-bridge";
-import { NO_SIGNAL_PILL } from "./column-timestamp-bridge-mount";
+import { DEFAULT_CALLS, NO_SIGNAL_PILL } from "./column-timestamp-bridge-mount";
 import { SITE_BASE } from "./site";
 import { seedFromLocation } from "./widget-permalink";
 
@@ -629,6 +629,22 @@ describe("behaviour", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(calls()).toHaveTextContent(
       'toParquetInt96("<img src=x onerror=\\"1\\">")',
+    );
+  });
+});
+
+describe("the held calls", () => {
+  // The template holds DEFAULT_CALLS before the library loads; the browser gates measure the
+  // space. Here: that space is what the default preset's calls really fill.
+  it("holds the lines and the width the default preset's calls fill", async () => {
+    await open();
+    const lines = (within(calls()).getByRole("code").textContent ?? "").split(
+      "\n",
+    );
+    expect(lines).toHaveLength(DEFAULT_CALLS.lines);
+    expect(Math.max(...lines.map((l) => l.length))).toBe(DEFAULT_CALLS.widest);
+    expect((output().textContent ?? "").split("\n")).toHaveLength(
+      DEFAULT_CALLS.lines,
     );
   });
 });

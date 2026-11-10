@@ -65,10 +65,11 @@ file week. TAI and the leap-second table are in the `gmt-integration` skill.
    rinexWeekToUtc("IRN", 2295, 86418); // "2024-01-01T00:00:00Z"
    gnssWeekToUtc("IRN-L1NV", 2295, 86418, 0); // "2043-08-17T00:00:00Z" (not the same week)
    ```
-3. **Second 60 is accepted only on a listed insertion day.** `gnss/` and
-   `timescale/` accept `:60` only on a listed insertion day, and may return
-   `…T23:59:60Z`. Every other GMT function rejects `:60`, so do not pass that
-   result on.
+3. **Second 60 is accepted only on a listed insertion day.** Only the
+   `timescale/`, `gnss/` and `finance/` functions accept `:60`, and only on a
+   listed insertion day (for `finance/`, see the `gmt-finance` skill). They may
+   return `…T23:59:60Z`. Every other GMT function rejects `:60`, so do not pass
+   that result on.
 4. **Convert at the boundary and store the era rule.** Convert a GNSS label to
    a UTC instant on the way in (`gnssToUtc`, `gnssWeekToUtc`, `rinexWeekToUtc`),
    and back on the way out. Store the era rule you used with any week you
