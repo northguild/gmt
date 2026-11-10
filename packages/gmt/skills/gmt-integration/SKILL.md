@@ -139,8 +139,8 @@ which lint package to install for Date-ban enforcement.
      All floor to the nanosecond and return `""` before 1972.
    - Before 1972-01-01 TAI − UTC was fractional, so every function returns its
      sentinel there.
-   - `timescale/` and `gnss/` accept a second 60 only on a listed insertion
-     day (for `gnss/`, see the `gmt-gnss` skill), and may return `…T23:59:60Z`. Every other GMT function rejects `:60`,
+   - `timescale/`, `gnss/` and `finance/` accept a second 60 only on a listed insertion
+     day (for `gnss/`, see the `gmt-gnss` skill; for `finance/`, the `gmt-finance` skill), and may return `…T23:59:60Z`. Every other GMT function rejects `:60`,
      so do not pass that result on.
    - A smeared clock never reads `23:59:60` and is up to a second off UTC
      around an insertion. GMT cannot detect smearing.

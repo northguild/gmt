@@ -83,12 +83,22 @@
   white-space: normal;
 }
 
+/* A stored line and a ladder rung are blocks. An inline line in the hold's live wrapper sits in
+   a line box with the wrapper's strut, which is taller than the line, while its ghost (a block)
+   is not: the held space came out shorter than the loaded card. */
+.line,
+.rungText {
+  display: block;
+}
+
 .wrap {
   overflow-wrap: anywhere;
 }
 
+/* The chip and the refusal are blocks only as wide as their words, for the same reason. */
 .chip {
-  display: inline-block;
+  display: block;
+  inline-size: fit-content;
   padding: 0 var(--gmt-space-2);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
@@ -97,7 +107,8 @@
 }
 
 .signal {
-  display: inline-flex;
+  display: flex;
+  inline-size: fit-content;
   align-items: baseline;
   gap: var(--gmt-space-2);
   font-size: var(--gmt-text-xs);
@@ -110,6 +121,12 @@
   color: var(--gmt-signal-ink);
   font-family: var(--gmt-font-mono);
   white-space: nowrap;
+}
+
+/* The refusal's ghost has the pill and the literal as empty boxes; each draws its sample. */
+.pill[data-sample]::before,
+.literal[data-sample]::before {
+  content: attr(data-sample);
 }
 
 .validator,
@@ -137,11 +154,16 @@
   background: var(--gmt-surface-widget);
 }
 
+/* The label and the value start at the top, not on a baseline. The value is a hold, and before
+   the mount fills it its live wrapper is empty: an empty box's baseline is its bottom edge, so
+   baseline alignment pushed the label down and the held rung came out taller than the loaded one
+   (in WebKit at 390 px, shorter). The label and the value are one face and size, so their first
+   lines still line up. */
 .rung {
   display: grid;
   grid-template-columns: 6rem minmax(0, 1fr);
   gap: var(--gmt-space-2);
-  align-items: baseline;
+  align-items: start;
   min-inline-size: 0;
 }
 

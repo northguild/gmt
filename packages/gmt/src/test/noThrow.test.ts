@@ -21,6 +21,7 @@ describe("no-throw harness coverage", () => {
       expect.arrayContaining([
         "calendar",
         "duration",
+        "finance",
         "gnss",
         "healthcare",
         "instant",

@@ -21,7 +21,7 @@ import {
   type RenderedWidget,
 } from "~/test/render-widget";
 import { FORMATS, ID_PRESETS } from "./id-timestamp-decoder";
-import { NO_SIGNAL_PILL } from "./id-timestamp-decoder-mount";
+import { DEFAULT_CALLS, NO_SIGNAL_PILL } from "./id-timestamp-decoder-mount";
 import { SITE_BASE } from "./site";
 import { seedFromLocation } from "./widget-permalink";
 
@@ -169,6 +169,22 @@ describe("the template", () => {
     await enter(a, boxes[0]!, "abc");
     expect(boxes[0]).toHaveValue("abc");
     expect(boxes[1]).toHaveValue(kept);
+  });
+});
+
+describe("the held calls", () => {
+  // The template holds DEFAULT_CALLS before the library loads; the browser gates measure the
+  // space. Here: that space is what the default preset's calls really fill.
+  it("holds the lines and the width the default preset's calls fill", async () => {
+    await open();
+    const lines = (within(calls()).getByRole("code").textContent ?? "").split(
+      "\n",
+    );
+    expect(lines).toHaveLength(DEFAULT_CALLS.lines);
+    expect(Math.max(...lines.map((l) => l.length))).toBe(DEFAULT_CALLS.widest);
+    expect((output().textContent ?? "").split("\n")).toHaveLength(
+      DEFAULT_CALLS.lines,
+    );
   });
 });
 

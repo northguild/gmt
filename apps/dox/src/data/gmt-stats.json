@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 72457,
-  "files": 957,
-  "executions": 2173710,
+  "tests": 72914,
+  "files": 961,
+  "executions": 2187420,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 745,
+  "functions": 748,
   "patterns": 30,
   "byNamespace": [
     {
@@ -105,6 +105,10 @@
       "count": 4
     },
     {
+      "namespace": "finance",
+      "count": 3
+    },
+    {
       "namespace": "healthcare",
       "count": 3
     }
@@ -114,6 +118,7 @@
     "transport",
     "workforce",
     "gnss",
+    "finance",
     "healthcare"
   ],
   "industryLayers": [
@@ -177,11 +182,17 @@
       ]
     },
     {
+      "id": "finance",
+      "label": "Finance",
+      "own": 3,
+      "drawsOn": []
+    },
+    {
       "id": "healthcare",
       "label": "Healthcare",
       "own": 3,
       "drawsOn": []
     }
   ],
-  "industryFunctions": 87
+  "industryFunctions": 90
 }

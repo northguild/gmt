@@ -620,6 +620,16 @@ export const showTai64nLogReaderInput = z.object({
 });
 
 /**
+ * FIX Timestamp Reader: the `UTCTimestamp` to read (`stamp`) and the instant to write at the
+ * five precisions (`instant`). Neither is trimmed: the library reads the text as given, and a
+ * stamp with a stray space is refused. The widget's permalink calls `instant` `write`.
+ */
+export const showFixTimestampReaderInput = z.object({
+  stamp: z.string().max(64).optional(),
+  instant: z.string().max(64).optional(),
+});
+
+/**
  * The HL7 Timestamp Reader: one HL7 v2 date-time (a `DTM`, or a `TS` with its degree of
  * precision after `^`), read by `parseHL7`. `zone1` to `zone4` are zones the reader named, to
  * read a value with no offset in. The value is kept as typed, so it is not trimmed. The widget
@@ -1263,6 +1273,7 @@ export type DoxToolName =
   | "showDatabaseTimestampReader"
   | "showTai64nLogReader"
   | "showTerrestrialTimeStack"
+  | "showFixTimestampReader"
   | "showHl7TimestampReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1581,6 +1592,13 @@ export const DOX_TOOL_DOCS: {
     args: "value exactly as the reader gave it: a UTC instant or a string ending in TAI, TT or TCG",
   },
   {
+    name: "showFixTimestampReader",
+    purpose:
+      "Read a FIX UTCTimestamp as an instant, the precision its digit count states and whether its second 60 is an inserted leap second, and write one instant at second, millisecond, microsecond, nanosecond and picosecond precision.",
+    when: "the reader asks what a FIX UTCTimestamp or a SendingTime or TransactTime value means, its precision, whether a second 60 in it is real, or how to write an instant at milli-, micro-, nano- or picosecond precision",
+    args: "stamp: optional, the FIX UTCTimestamp exactly as the reader gave it, never trimmed or corrected; instant: optional, an instant with Z or an offset to write at the five precisions, only when the reader gave one.",
+  },
+  {
     name: "showHl7TimestampReader",
     purpose:
       "An HL7 v2 date-time (a DTM, or a TS with its degree of precision after ^) read by parseHL7: its kind, precision and offset; a value with no offset read in the zones the reader picks with resolveLocal, beside the instant a parser that assumes UTC gets; and the value written back by formatHL7 at each precision.",
@@ -1771,8 +1789,12 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[43].purpose,
     inputSchema: showTerrestrialTimeStackInput,
   }),
-  showHl7TimestampReader: tool({
+  showFixTimestampReader: tool({
     description: DOX_TOOL_DOCS[44].purpose,
+    inputSchema: showFixTimestampReaderInput,
+  }),
+  showHl7TimestampReader: tool({
+    description: DOX_TOOL_DOCS[45].purpose,
     inputSchema: showHl7TimestampReaderInput,
   }),
 } as const;
@@ -1842,6 +1864,7 @@ export const ENABLED_TOOL_NAMES = [
   "showDatabaseTimestampReader",
   "showTai64nLogReader",
   "showTerrestrialTimeStack",
+  "showFixTimestampReader",
   "showHl7TimestampReader",
 ] as const satisfies readonly DoxToolName[];
 

@@ -122,7 +122,17 @@ The same three rules extend to `fromTAI`, `fromTT` and `fromTCG` (`packages/gmt/
 2. The extracted fields are always handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A second of 60 never reaches Temporal: it is refused for every token but `GLO`, and for `GLO` it is passed as 59 with a flag, and kept only for one of the 27 inserted leap seconds.
 3. The try-catch and sentinel-return rules above are unchanged.
 
-The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual parsing: GMT's instant grammar with second 60 (`internal/utcReading.ts`) checks the shape, and `Temporal.Instant.from` reads it with the specification's clamp to 59. Only the `timescale/` and `gnss/` converters do this, and only for one of the 27 inserted leap seconds. Every other function still rejects a second of 60.
+The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual parsing: GMT's instant grammar with second 60 (`internal/utcReading.ts`) checks the shape, and `Temporal.Instant.from` reads it with the specification's clamp to 59. Only the `timescale/` and `gnss/` converters and `finance/`'s FIX functions (`parseFixUtcTimestamp`, `formatFixUtcTimestamp`, `isValidFixUtcTimestamp`) do this, and only for one of the 27 inserted leap seconds. `formatFixUtcTimestamp` accepts a second-60 instant, and `parseFixUtcTimestamp` returns one. `isValidFixUtcTimestamp` only agrees with the parser. Every other function still rejects a second of 60.
+
+This prohibition stands for every other function in the library.
+
+### Scoped exception: finance message grammars in `finance/` (FIN-95)
+
+The same three rules extend to `parseFixUtcTimestamp`, `formatFixUtcTimestamp` and `isValidFixUtcTimestamp` in `packages/gmt/src/finance/`. The FIX `UTCTimestamp` (`YYYYMMDD-HH:MM:SS[.sss…]`) is not ISO 8601 and no `Temporal.*.from` reads it. The grammar is fixed, never caller-supplied:
+
+1. One regex, `FIX_UTC_TIMESTAMP` in `internal/fixUtcTimestamp.ts`, with its field reader and both writers beside it. Not in `regex/`: FIX states the format in prose. The public check is `isValidFixUtcTimestamp`.
+2. The fields are always handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A second of 60 is passed as 59 with a flag, and kept only for one of the 27 inserted leap seconds.
+3. The try-catch and sentinel-return rules above are unchanged.
 
 This prohibition stands for every other function in the library.
 
@@ -163,7 +173,7 @@ This prohibition stands for every other function in the library.
 An RFC 5545 §3.3.10 RECUR value (`FREQ=MONTHLY;BYDAY=-1FR`) and a five-field crontab schedule (`*/5 9-17 * * mon-fri`) are not ISO 8601, and no `Temporal.*.from` reads either. Both grammars are fixed and published (the RFC's ABNF; POSIX `crontab` with cronie crontab(5) extensions):
 
 1. One tokenizer per grammar: `internal/recurrenceRuleText.ts` splits on `;`, `=` and `,`, and `internal/cronText.ts` splits on blanks, `,`, `-` and `/`. Each token is matched whole against an anchored `^…$` regex or a fixed name table. The modules live in `internal/`, outside `regex/`, because they are grammars, not single patterns.
-2. Numbers are read from digit runs (the signed RRULE parts, `BYMONTHDAY`, `BYYEARDAY`, `BYWEEKNO`, `BYSETPOS` and the `BYDAY` ordinal, also take a leading `+` or `-`) and range-checked against the clause's stated bounds. A date or date-time (`UNTIL`) is rebuilt as an ISO 8601 string and handed whole to `Temporal.PlainDate.from`, `Temporal.PlainDateTime.from` or `Temporal.Instant.from`. An `UNTIL` with second 60 is rejected, as everywhere outside `timescale/` and `gnss/`.
+2. Numbers are read from digit runs (the signed RRULE parts, `BYMONTHDAY`, `BYYEARDAY`, `BYWEEKNO`, `BYSETPOS` and the `BYDAY` ordinal, also take a leading `+` or `-`) and range-checked against the clause's stated bounds. A date or date-time (`UNTIL`) is rebuilt as an ISO 8601 string and handed whole to `Temporal.PlainDate.from`, `Temporal.PlainDateTime.from` or `Temporal.Instant.from`. An `UNTIL` with second 60 is rejected, as everywhere outside `timescale/`, `gnss/` and `finance/`.
 3. The try-catch and sentinel-return rules above are unchanged.
 
 This prohibition stands for every other function in the library.
@@ -291,8 +301,8 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 - `plain/` — timezone-free operations (`PlainDate`, `PlainTime`, `PlainDateTime`)
 - `zoned/` — IANA timezone-aware operations (`ZonedDateTime`)
 - Never mix the two in the same function or module.
-- **Core namespaces, industry layers, cross-industry layers.** Core namespaces hold general time primitives anyone uses (`calendar/`, `duration/`, `instant/`, `zoned/`, `timescale/`, `precision/` and the rest). Industry layers are named for an industry and hold its own functions (`transport/`, `intermodal/`, later `maritime/`, `aviation/` and the rest). A cross-industry layer is a recognised industry domain that other industries draw on: `workforce/` (people's working time, the CORE-76 duty engine) and `gnss/`. A function shared across industries goes in the cross-industry layer for its domain, or in Core if it is truly general — never in a grab-bag "shared" namespace, never in one industry's namespace when other industries also need it, and never in a new namespace that is not a recognised domain.
-- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/`, `intermodal/`, `workforce/`, `gnss/` (see `packages/gmt/src/`).
+- **Core namespaces, industry layers, cross-industry layers.** Core namespaces hold general time primitives anyone uses (`calendar/`, `duration/`, `instant/`, `zoned/`, `timescale/`, `precision/` and the rest). Industry layers are named for an industry and hold its own functions (`transport/`, `intermodal/`, `finance/`, later `maritime/`, `aviation/` and the rest). A cross-industry layer is a recognised industry domain that other industries draw on: `workforce/` (people's working time, the CORE-76 duty engine) and `gnss/`. A function shared across industries goes in the cross-industry layer for its domain, or in Core if it is truly general — never in a grab-bag "shared" namespace, never in one industry's namespace when other industries also need it, and never in a new namespace that is not a recognised domain.
+- The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/`, `intermodal/`, `finance/`, `workforce/`, `gnss/` (see `packages/gmt/src/`).
 
 ## International authority first
 

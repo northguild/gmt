@@ -64,6 +64,10 @@ Three things hold across every industry layer:
 - [Intermodal: EDI timestamps](./intermodal-edi-timestamps/) — read and write the dates and
   times in UN/EDIFACT `DTM` segments, X12 elements and EPCIS events, and know for each one
   whether its offset is stated. An offsetless value stays a local time until you name the zone.
+- [Finance: message timestamps](./finance-message-timestamps/) — read and write a FIX
+  `UTCTimestamp` at the precision its digits state, cut rather than rounded when narrowed, with a
+  second of sixty accepted only for a leap second UTC really inserted. Draws on the leap-second
+  table.
 - [Healthcare: clinical timestamps](./healthcare-clinical-timestamps/) — read and write HL7
   version 2 dates and times, keep a time with no offset local until you name the sender's zone,
   and keep a partial date a span.
@@ -92,9 +96,11 @@ GMT approach working, on the same live widget:
 - [A 203 Read as UTC](/scenarios/a-203-read-as-utc/)
 - [ET Is Not an Offset](/scenarios/et-is-not-an-offset/)
 - [The EPCIS Offset Nobody Kept](/scenarios/the-epcis-offset-nobody-kept/)
+- [A Millisecond Stamp Read as Nanoseconds](/scenarios/a-millisecond-stamp-read-as-nanoseconds/)
+- [Second Sixty on an Ordinary Day](/scenarios/second-sixty-on-an-ordinary-day/)
 - [An HL7 Time Read as UTC](/scenarios/an-hl7-time-read-as-utc/)
 - [A TS Date Read as a Time](/scenarios/a-ts-date-read-as-a-time/)
 
 The mistakes that have hurt people in these layers are collected under
-[Transport mistakes](/mistakes/transport/), [Intermodal mistakes](/mistakes/intermodal/) and
-[Healthcare mistakes](/mistakes/healthcare/).
+[Transport mistakes](/mistakes/transport/), [Intermodal mistakes](/mistakes/intermodal/),
+[Finance mistakes](/mistakes/finance/) and [Healthcare mistakes](/mistakes/healthcare/).

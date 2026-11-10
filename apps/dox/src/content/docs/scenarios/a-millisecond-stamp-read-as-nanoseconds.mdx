@@ -1,0 +1,33 @@
+---
+title: "A Millisecond Stamp Read as Nanoseconds"
+description: A FIX stamp with three fraction digits goes through an ISO conversion and comes out with nine, and the extra six were never measured.
+industries: [finance]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Millisecond Stamp Read as Nanoseconds"
+  description="A trade report carries the FIX timestamp 20240615-14:30:00.123, three digits of fraction. The code turns it into ISO, reads it as an instant and writes it back for an audit trail that stores nine digits. What does the trail say about the precision?"
+  naiveCode={`// The naive approach: rewrite the stamp as ISO and let Temporal fill in the rest
+const fix = "20240615-14:30:00.123";
+const iso = fix.replace(/^(\\d{4})(\\d{2})(\\d{2})-(.*)$/, "$1-$2-$3T$4Z");
+
+Temporal.Instant.from(iso).toString({ fractionalSecondDigits: 9 });
+// "2024-06-15T14:30:00.123000000Z" — six digits of precision nobody measured`}
+  explanation={`A FIX timestamp states its precision by how many fraction digits it has: three are milliseconds, six microseconds, nine nanoseconds, twelve picoseconds. The instant that Temporal builds holds nanoseconds whatever the source said, so writing it at nine digits pads with zeros that look like a measurement. An audit trail then claims a clock that was never there. \`parseFixUtcTimestamp\` returns the precision with the instant, \`"millisecond"\` here, and the instant keeps only the digits that were sent. A caller that must write the stamp back asks \`formatFixUtcTimestamp\` for the width it states.`}
+  gmtCode={`import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20240615-14:30:00.123");
+// { instant: "2024-06-15T14:30:00.123Z", precision: "millisecond", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.123456789");
+// { instant: "2024-06-15T14:30:00.123456789Z", precision: "nanosecond", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.12");
+// null — two digits is no FIX precision`}
+  fixedSpecId="parseFixUtcTimestamp"
+/>
+
+Add six digits to the stamp in the widget and the precision moves from `"millisecond"` to
+`"nanosecond"`, and the instant follows. The rules are in [Finance: Message
+Timestamps](/guides/industries/finance-message-timestamps/#precision-is-in-the-digits), and the
+same slip is listed in [Finance mistakes](/mistakes/finance/#precision).

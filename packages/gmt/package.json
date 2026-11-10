@@ -99,6 +99,18 @@
       "duration/validate": [
         "./dist/duration/validate/index.d.ts"
       ],
+      "finance": [
+        "./dist/finance/index.d.ts"
+      ],
+      "finance/format": [
+        "./dist/finance/format/index.d.ts"
+      ],
+      "finance/parse": [
+        "./dist/finance/parse/index.d.ts"
+      ],
+      "finance/validate": [
+        "./dist/finance/validate/index.d.ts"
+      ],
       "gnss": [
         "./dist/gnss/index.d.ts"
       ],
@@ -421,6 +433,22 @@
     "./duration/validate": {
       "types": "./dist/duration/validate/index.d.ts",
       "default": "./dist/duration/validate/index.js"
+    },
+    "./finance": {
+      "types": "./dist/finance/index.d.ts",
+      "default": "./dist/finance/index.js"
+    },
+    "./finance/format": {
+      "types": "./dist/finance/format/index.d.ts",
+      "default": "./dist/finance/format/index.js"
+    },
+    "./finance/parse": {
+      "types": "./dist/finance/parse/index.d.ts",
+      "default": "./dist/finance/parse/index.js"
+    },
+    "./finance/validate": {
+      "types": "./dist/finance/validate/index.d.ts",
+      "default": "./dist/finance/validate/index.js"
     },
     "./gnss": {
       "types": "./dist/gnss/index.d.ts",

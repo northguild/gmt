@@ -395,6 +395,59 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       },
     ],
   },
+  finance: {
+    about:
+      "Trading and payment messages carry timestamps in their own formats, not the ISO date-time format. A FIX timestamp states its precision by how many fraction digits it has, and may name a leap second. This layer reads and writes those values as standard instants, keeping what the digits say.",
+    guideTitle: "Finance: Message Timestamps",
+    solves: [
+      {
+        problem: "A trade stamp loses its precision.",
+        answer:
+          "{{parseFixUtcTimestamp}} reports the precision the digits state and keeps every digit sent, picoseconds included.",
+        see: [
+          { label: "tool", href: "/tools/fix-timestamp-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-millisecond-stamp-read-as-nanoseconds/",
+          },
+        ],
+      },
+      {
+        problem:
+          "A counterparty asks for a precision the clock does not match.",
+        answer:
+          "{{formatFixUtcTimestamp}} writes the width asked for, cutting the fraction rather than rounding it, so a stamp never moves into the next second.",
+        see: [
+          { label: "tool", href: "/tools/fix-timestamp-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          { label: "mistakes", href: "/mistakes/finance/" },
+        ],
+      },
+      {
+        problem: "A leap second is rejected, or accepted on the wrong day.",
+        answer:
+          "{{isValidFixUtcTimestamp}} accepts a second of sixty only for a leap second UTC really inserted.",
+        see: [
+          { label: "tool", href: "/tools/fix-timestamp-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/second-sixty-on-an-ordinary-day/",
+          },
+        ],
+      },
+    ],
+  },
   healthcare: {
     about:
       'Healthcare is time in clinical messages. HL7 International calls version two of its HL7 messaging standard "one of the most widely implemented standards for healthcare information in the world". A date and time in an HL7 message says how precise it is by how many digits it carries, and leaves the place out unless the sender adds an offset. This layer reads and writes those values without guessing the place.',

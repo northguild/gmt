@@ -156,6 +156,22 @@ skills:
       - 'northguild/gmt:packages/gmt/src/gnss/index.ts'
       - 'northguild/gmt:packages/gmt/src/types/gnss.ts'
 
+  - name: GMT Finance
+    slug: gmt-finance
+    type: core
+    domain: industry-layers
+    path: 'skills/gmt-finance/SKILL.md'
+    package: 'packages/gmt'
+    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded
+    requires:
+      - gmt-integration
+    sources:
+      - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/finance-message-timestamps.mdx'
+      - 'northguild/gmt:packages/gmt/src/finance/format/index.ts'
+      - 'northguild/gmt:packages/gmt/src/finance/parse/index.ts'
+      - 'northguild/gmt:packages/gmt/src/finance/validate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/fix.ts'
+
   - name: GMT Transport
     slug: gmt-transport
     type: core

@@ -24,9 +24,12 @@ pattern that allows `60` on any day accepts a second that never happened on all 
 - `packages/gmt/src/finance/format/formatFixUtcTimestamp.ts`:
   - `formatFixUtcTimestamp(value: string, precision: FixPrecision): string`
 - `packages/gmt/src/finance/validate/isValidFixUtcTimestamp.ts`:
-  - `isValidFixUtcTimestamp(value: string): boolean` — True exactly when `parseFixUtcTimestamp`
-    returns a value; it calls the parser, so the two cannot disagree. False for a value that is
-    not a string.
+  - `isValidFixUtcTimestamp(value: string): boolean`,
+    `isValidFixUtcTimestamp(value: {} | null | undefined | void): boolean` and
+    `isValidFixUtcTimestamp(value: unknown): value is string` — the overload trio every
+    one-argument `isValid*` validator uses. True exactly when `parseFixUtcTimestamp` returns a
+    value; it calls the parser, so the two cannot disagree. False for a value that is not a
+    string, a `String` object included, and a true result narrows an `unknown` value to `string`.
 - `internal/fixUtcTimestamp.ts` — the one `UTCTimestamp` regex: digits, dash, colons, and a fraction
   of 0, 3, 6, 9 or 12 digits. Not in `regex/`: the FIX Trading Community states the format in prose,
   not as a pattern. It joins `context/coding-standards.md` as a scoped exception, as INT-15's EDI
@@ -78,32 +81,9 @@ measurement, and `60` is real on 27 days.
 
 ## Design notes
 
-- **Precision comes from the digit count and is reported, never widened.** A millisecond stamp
-  returns `"millisecond"` and an instant with three fraction digits.
-- **Nothing is dropped silently.** Temporal holds nanoseconds, and FIX allows picoseconds. The
-  parser puts the first nine digits in `instant` and the last three in `picoseconds`, so a caller
-  who needs them keeps them. INT-15 refuses a fraction longer than nine digits for the same reason:
-  a parser must not cut a value without saying so.
-- **The formatter cuts to the precision and never rounds**, as INT-15's formatters do. Under
-  `"picosecond"` it writes the nine nanosecond digits and then `000`: the value holds nothing finer.
-  This widens the field to the width the counterparty asked for, as INT-15 writes `14:30:00` as
-  `14300000` under `HHMMSSDD`.
-- **The leap second is checked against the table, not the pattern.** `60` is well-formed on any day
-  and real on 27. The parser accepts it only where `isLeapSecond` (SPA-48) does, and returns the
-  instant as `…T23:59:60Z`, the string `fromTAI` writes. The formatter takes that string back, so a
-  leap second round-trips.
-- **One public check, no public pattern.** A `UTCTimestamp` is valid only once its day exists and
-  its `60` is an inserted second, which no pattern can say. So the public check is
-  `isValidFixUtcTimestamp`, and the grammar stays in `internal/`, as INT-15 keeps the EDI grammars.
-- **A local time is not written.** `UTCTimestamp` is UTC. A local date-time with no offset names no
-  UTC second until a zone is supplied, so the formatter returns the sentinel for one; `resolveLocal`
-  gives the instant first.
-- **Another width is the parties' agreement, not the standard's.** FIX says "Other number of digits
-  may be used with bilateral agreement". The precision of such a width is whatever the parties
-  agreed, which no value states, so the parser returns the sentinel and the caller who has the
-  agreement reads it with `parseDateTimeWithPattern` or its own code.
-- Which FIX field carries which timestamp (`SendingTime`, `TransactTime`) is the FIX dictionary's
-  concern. This story reads and writes the data type.
+[Design notes](FIN-95/design-notes.md): precision from the digit count, the picosecond digits
+kept apart, cut and never rounded, the leap second checked against the table, one public check
+and no public pattern, no local time written, and another width left to the parties.
 
 ## Authority — what each rule rests on
 
@@ -127,10 +107,11 @@ through the FIX Orchestra data-type browser, to which FIXimate now redirects.
 
 ## What gmt provides (do not re-implement)
 
-- `toNanoseconds`, `fromNanoseconds`, `truncateNanoseconds` from CORE-1 — sub-second precision
-- `isLeapSecond` from SPA-48 — checking a seconds field of `60` against the leap-second table, and
-  the internal second-60 reading and writing behind `fromTAI`
-- `resolveLocal` from CORE-4 — the instant of a local time, before it is written
+- `LEAP_SECOND_STEPS` and `taiOfUtc` (`internal/leapSeconds.ts`) from SPA-48 — the leap-second
+  table, which a seconds field of `60` is checked against in both directions
+- `parseUtcReading` and `MAX_FOUR_DIGIT_YEAR` (`internal/utcReading.ts`) from MAR-16 — reading the
+  formatter's instant, second 60 included, and the four-digit year bound
+- `isoYearString` from INT-15 — writing the year as four digits
 
 ## Verification
 
@@ -145,3 +126,50 @@ through the FIX Orchestra data-type browser, to which FIXimate now redirects.
 - `isValidFixUtcTimestamp('20240615-14:30:00.123')` and `'20161231-23:59:60'` are `true`; `'20171231-23:59:60'`, `'20240615-14:30:00.12'` and `'2024-06-15T14:30:00Z'` are `false`
 - `isValidFixUtcTimestamp` agrees with `parseFixUtcTimestamp` on every parse row above; a number, `null` and `undefined` are `false`
 - `pnpm run validate` stays green
+
+## Decisions
+
+- **Precision names.** `FixPrecision` is singular in the type: `"second"`, `"millisecond"`,
+  `"microsecond"`, `"nanosecond"`, `"picosecond"`. `formatFixUtcTimestamp` also accepts the plural
+  at run time, as the API Contract's unit rule says; the parser always reports the singular. The
+  names are compared against the five literal strings, so `"toString"` and `"__proto__"` are
+  refused.
+- **Another width is refused.** FIX names the precision of four widths (3, 6, 9, 12 digits) and
+  says other widths are "used with bilateral agreement". No value carries that agreement, so the
+  parser returns `null` for 1, 2, 4, 5 or any other count of fraction digits.
+- **The leap second is checked against the table, not the pattern.** A seconds field of `60` is
+  well-formed on any day and real on 27. The parser accepts it only for one of the 27 inserted
+  leap seconds in SPA-48's closed table and returns `…T23:59:60…Z`, the string `fromTAI` writes.
+  The formatter takes that string back (in `Z` or any offset spelling), so a leap second
+  round-trips; a second 60 on any other day, and any `60` before 1972, returns the sentinel.
+  `coding-standards.md` names the `finance/` FIX functions beside `timescale/` and `gnss/` as the
+  ones that read and write second 60.
+- **What the formatter takes.** An instant in GMT's instant grammar: `Z` or a numeric offset, an
+  optional bracketed zone, a fraction of 1 to 9 digits. It converts to UTC first. A local
+  date-time with no offset returns `""`, since it names no UTC second until `resolveLocal` gives
+  one; the function converts no wall time and takes no disambiguation option. A year outside
+  0000–9999 once in UTC returns `""`.
+- **Picoseconds are returned apart.** Temporal holds nanoseconds and FIX allows picoseconds. The
+  parser puts the first nine fraction digits in `instant` and digits 10 to 12 in `picoseconds`
+  (0–999, and `0` at every other precision), so nothing is cut without saying so. The formatter
+  under `"picosecond"` writes the nine nanosecond digits and `000`.
+- **The digits sent are kept.** `instant` carries the fraction digits as sent, up to the ninth:
+  `.100Z` stays `.100Z`, not `.1Z`. The digit count is a fact about the measurement, so a
+  millisecond stamp is never widened to nanoseconds. `instant` is therefore not always the string
+  `Temporal.Instant#toString()` writes.
+- **The formatter cuts and never rounds.** Rounding could move a stamp into the next second,
+  minute or day.
+- **No options argument on the formatter.** It takes the instant and the precision only. An
+  optional third argument can be added later without breaking a caller, so nothing is reserved.
+- **The grammar is internal.** FIX states the format in prose and publishes no pattern, so
+  `FIX_UTC_TIMESTAMP` lives in `internal/fixUtcTimestamp.ts`, not in `regex/`. It proves shape and
+  a seconds field of 00–60; month, day, hour and minute ranges go to
+  `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. The public check is
+  `isValidFixUtcTimestamp`. The rule is the scoped exception in `coding-standards.md` § finance
+  message grammars.
+- **The validator's overload trio** replaces the issue's first signature `value: string`, as every
+  one-argument `isValid*` validator does.
+- **FIN-96 inherits the realm.** The `finance/{parse,format,validate}/` layout, the barrels, the
+  four subpaths, the sentinels (parser `null`, formatter `""`, validator calls the parser), the
+  coding-standards section and the Dox Finance industry. No helper is shared and no
+  `types/finance.ts` umbrella exists; FIN-96 adds `types/swift.ts` if it needs a type.

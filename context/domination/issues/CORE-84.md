@@ -64,7 +64,7 @@ Not in scope: iCalendar files, `VTIMEZONE`, alarms, `EXRULE` (deprecated by RFC 
 
 - **`"reject"` returns `[]` for the whole call**, as `recurringWindows` and `operatingIntervals` do.
 - **Cron has two policies and no default:** `"crontabMatch"` and `"daemonCatchUp"`.
-- **`UNTIL`:** a DATE or floating `UNTIL` gives `[]` from `expandRecurrence`, since a zoned `DTSTART` needs a UTC one (RFC 5545 section 3.3.10). Second 60 returns `null` (only `timescale/` and `gnss/` read 60). Only a capital `T` and `Z` are read.
+- **`UNTIL`:** a DATE or floating `UNTIL` gives `[]` from `expandRecurrence`, since a zoned `DTSTART` needs a UTC one (RFC 5545 section 3.3.10). Second 60 returns `null` (only `timescale/`, `gnss/` and `finance/` read 60). Only a capital `T` and `Z` are read.
 - **`COUNT` counts before duplicates collapse.** Equal instants collapse to the first row in local order.
 - **`DTSTART` is always the first occurrence**, even when the rule does not match it. The guide notes that rrule.js and dateutil drop an unmatched one.
 - **Caps:** 10,000 rows and 2,000,000 steps; exhaustion returns `[]`.

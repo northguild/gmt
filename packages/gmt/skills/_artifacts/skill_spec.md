@@ -10,7 +10,7 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | Arithmetic            | Add/subtract, durations, interval range math                            | gmt-arithmetic                                                                                 |
 | Zoned Date Operations | IANA timezone-aware date operations, DST disambiguation               | gmt-timezone                                                                                   |
 | Integration           | Application framework integration, cache keys, lint package selection | gmt-integration                                                                                |
-| Industry Layers       | One skill per industry layer, drawing on the core skills              | gmt-gnss, gmt-transport, gmt-intermodal, gmt-workforce, gmt-healthcare |
+| Industry Layers       | One skill per industry layer, drawing on the core skills              | gmt-gnss, gmt-finance, gmt-transport, gmt-intermodal, gmt-workforce, gmt-healthcare |
 | Contributor           | Library maintainer workflows — issues, PRs, implementation, testing   | issue-creation, pr-contribution, new-method-implementation, unit-test-generation, api-expansion-workflow |
 
 ## Skill Inventory
@@ -22,6 +22,7 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | gmt-timezone            | core        | Zoned Date Operations | getZonedNow, formatZonedDateTime, convertPlainDateTimeToZoned, addZoned, startOfZoned, hasDaylightSaving         |               |
 | gmt-integration         | composition | Integration           | Cache keys, router/query params, table-sort keys, foreign epochs, TAI and leap seconds (timescale/), lint package selection |               |
 | gmt-gnss                | core        | Industry Layers       | utcToGnss, gnssToUtc, gnssWeekToUtc, utcToGnssWeek, rinexWeekToUtc, utcToRinexWeek (gnss/) |               |
+| gmt-finance             | core        | Industry Layers       | parseFixUtcTimestamp, formatFixUtcTimestamp, isValidFixUtcTimestamp (finance/) |               |
 | gmt-transport           | core        | Industry Layers       | transitTime, etaAtZone, dwellTime, scheduleDelivery, cutoffAt, classifyPunctuality, nextDeparture (transport/) |               |
 | gmt-intermodal          | core        | Industry Layers       | freeTimeExpiry, chargeableDays, demurrageClock, billingTimeline, bolTimestamp, EDI and EPCIS timestamps (intermodal/) |               |
 | gmt-workforce           | core        | Industry Layers       | evaluateDutyLog, dutyViolations, dutyDayFor, dutyTotals (workforce/) |               |
@@ -64,7 +65,7 @@ examples of industry functions.
 
 - **Consumer skills** (shipped in the npm tarball): `skills/gmt-basics/`,
   `skills/gmt-arithmetic/`, `skills/gmt-timezone/`, `skills/gmt-integration/`,
-  `skills/gmt-gnss/`, `skills/gmt-transport/`, `skills/gmt-intermodal/`,
+  `skills/gmt-gnss/`, `skills/gmt-finance/`, `skills/gmt-transport/`, `skills/gmt-intermodal/`,
   `skills/gmt-workforce/`, `skills/gmt-healthcare/`
   — lightweight routing pointers (~30-60 lines each) that point agents to the
   docs site and the JSDoc in the installed package for full API details.
@@ -73,7 +74,7 @@ examples of industry functions.
 
 ## Recommended Skill File Structure
 
-- **Consumer skills:** gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration, gmt-gnss, gmt-transport, gmt-intermodal, gmt-workforce, gmt-healthcare
+- **Consumer skills:** gmt-basics, gmt-arithmetic, gmt-timezone, gmt-integration, gmt-gnss, gmt-finance, gmt-transport, gmt-intermodal, gmt-workforce, gmt-healthcare
 - **Contributor skills:** issue-creation, pr-contribution, new-method-implementation, unit-test-generation, api-expansion-workflow
 
 ## Notes

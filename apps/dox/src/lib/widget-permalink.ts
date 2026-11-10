@@ -79,6 +79,7 @@ export type WidgetKind =
   | "expiry"
   | "dbstamp"
   | "tai64n"
+  | "fixstamp"
   | "ttstack";
 
 /**
@@ -144,6 +145,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   expiry: "/tools/expiry-calculator/",
   dbstamp: "/tools/database-timestamp-reader/",
   tai64n: "/tools/tai64n-log-reader/",
+  fixstamp: "/tools/fix-timestamp-reader/",
   ttstack: "/tools/terrestrial-time-stack/",
 };
 
@@ -246,6 +248,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   expiry: new Set(["amount", "start"]),
   // A cleared field or zone is a state of its own: the form reads it, not the default.
   dbstamp: new Set(["value", "value2", "value3", "zone"]),
+  // A cleared stamp or instant is the empty state: the link must open cleared, not on the default.
+  fixstamp: new Set(["stamp", "write"]),
 };
 
 /**

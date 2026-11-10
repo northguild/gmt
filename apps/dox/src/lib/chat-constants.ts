@@ -335,6 +335,7 @@ export const EXAMPLE_AREAS = [
   { id: "transport", label: "Transport" },
   { id: "intermodal", label: "Intermodal" },
   { id: "gnss", label: "GNSS" },
+  { id: "finance", label: "Finance" },
   { id: "healthcare", label: "Healthcare" },
 ] as const;
 
@@ -892,6 +893,12 @@ export const CHAT_STARTERS: readonly {
     widget: "showTai64nLogReader",
     area: "core",
     args: { values: "@4000000037c219bf2ef02e94" },
+  },
+  {
+    text: "Is the FIX timestamp 20161231-23:59:60.500 a real second, and at what precision?",
+    widget: "showFixTimestampReader",
+    area: "finance",
+    args: { stamp: "20161231-23:59:60.500" },
   },
   {
     text: "How far is TT ahead of UTC at 2026-01-01T00:00:00Z, and how far has TCG drifted from TT?",

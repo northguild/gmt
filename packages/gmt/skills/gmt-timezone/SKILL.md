@@ -186,7 +186,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `toOffsetInstant` returns IANA casing (`"asia/kolkata"` gives
     `"Asia/Kolkata"`). `:60` is invalid in every spelling (`T`, `t`, space,
     basic format) and every zoned function returns its sentinel for it rather
-    than reading `:59`; only `timescale/` and `gnss/` accept a listed one (for `gnss/`, see the `gmt-gnss` skill).
+    than reading `:59`; only `timescale/`, `gnss/` and `finance/` accept a listed one (for `gnss/`, see the `gmt-gnss` skill; for `finance/`, the `gmt-finance` skill).
 14. **A zoned value formats in its own zone.** `formatZonedDateTime`,
     `formatZonedRange` and `formatZonedToParts` return `""`/`[]` for a
     `timeZone` option. To show an instant in another zone, use

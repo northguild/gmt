@@ -231,6 +231,18 @@ describe("widget permalinks", () => {
     );
   });
 
+  it("round-trips a FIX stamp and the instant to write", () => {
+    const state = {
+      stamp: "20161231-23:59:60.500",
+      write: "2016-12-31T23:59:60.5Z",
+    };
+    const url = encodeWidgetPermalink("fixstamp", state);
+    expect(url).toContain("/tools/fix-timestamp-reader/");
+    expect(seedFromLocation("fixstamp", url.slice(url.indexOf("?")))).toEqual(
+      state,
+    );
+  });
+
   it("opens each Terrestrial Time Stack preset's link on that preset", () => {
     for (const preset of STACK_PRESETS) {
       if (preset === DEFAULT_PRESET) continue;
