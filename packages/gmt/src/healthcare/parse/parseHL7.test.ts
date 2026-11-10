@@ -1,5 +1,10 @@
 import { resolveLocal } from "../../instant/convert";
-import { hl7DtmRows, hl7NullRows, hl7TsRows } from "../../test/hl7ParseRows";
+import {
+  hl7DtmRows,
+  hl7NullRows,
+  hl7NullValueInputs,
+  hl7TsRows,
+} from "../../test/hl7ParseRows";
 import { NON_STRINGS } from "../../test/nonStrings";
 import { parseHL7 } from "./parseHL7";
 
@@ -18,9 +23,12 @@ describe("parseHL7", () => {
     },
   );
 
-  it("reads '\"\"' as the null value (ch. 2 §2.5.3)", () => {
-    expect(parseHL7('""')).toStrictEqual({ kind: "null" });
-  });
+  it.each(hl7NullValueInputs.map((input) => ({ input })))(
+    "reads '$input' as the null value (ch. 2 §2.5.3, an empty trailing component §2.6.2)",
+    ({ input }) => {
+      expect(parseHL7(input)).toStrictEqual({ kind: "null" });
+    },
+  );
 
   it("gives a local value no instant member", () => {
     const result = parseHL7("20240615103000");

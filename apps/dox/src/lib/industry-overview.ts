@@ -397,7 +397,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
   },
   healthcare: {
     about:
-      "Healthcare is time in clinical messages. Hospital systems still exchange most of their records as HL7 messages, whose dates and times say how precise they are by how many digits they carry, and leave the place out unless the sender adds an offset. This layer reads and writes those values without guessing the place.",
+      'Healthcare is time in clinical messages. HL7 International calls version two of its HL7 messaging standard "one of the most widely implemented standards for healthcare information in the world". A date and time in an HL7 message says how precise it is by how many digits it carries, and leaves the place out unless the sender adds an offset. This layer reads and writes those values without guessing the place.',
     guideTitle: "Healthcare: Clinical Timestamps",
     solves: [
       {

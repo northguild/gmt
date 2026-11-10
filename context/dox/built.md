@@ -1657,8 +1657,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **The writer's second column** uses zone 1's offset for a value with no offset and `+0000`
     for one with an offset. A partial value with an offset makes no `formatHL7` call, and one
     sentence says why. The call is printed once, in the caption, with `{ precision }` as the row.
-  - **The NO SIGNAL reason** comes from probing `parseHL7` on the text before `^`. The starter
-    zone is `Asia/Kolkata`, and the permalink never trims the value.
+  - **The NO SIGNAL reason** comes from probing `parseHL7` on the text before `^`, after the
+    empty trailing components are dropped; a third component left gives the picture's reason,
+    not the degree's. The starter zone is `Asia/Kolkata`, and the permalink never trims the value.
   - **The site holds no table of codes.** Whether the library reads a code, and its kind, come from
     the classifier, and a code's layout comes from what its kind's formatter writes, so the widgets
     cannot drift from the library's code table. The one list of codes is `TWO_DIGIT_YEAR_CODES`

@@ -42,6 +42,8 @@ import type { Hl7DateTime, Hl7Precision } from "../../types";
  *   different from omitting an optional data field"); `''` returns `null`.
  * - Only `^` separates a `TS`. When a feed's MSH-2 names another separator, the caller
  *   re-joins that `TS` with `^` first.
+ * - An empty trailing component is not present (ch. 2 §2.6.2), so `20240615^D^` reads as
+ *   `20240615^D` and `""^` as the null value. A third component that is not empty returns `null`.
  * - Second `60` and hour `24` are rejected, as is any day the month lacks.
  * - Returns `null` on invalid input and for any value that is not a string. Never throws.
  *
@@ -61,12 +63,12 @@ export function parseHL7(value: string): Hl7DateTime | null {
     if (typeof value !== "string") {
       return null;
     }
-    if (value === HL7_NULL_VALUE) {
-      return { kind: "null" };
-    }
     const ts = splitHl7Ts(value);
     if (ts === null || ts.dtm === "") {
       return null;
+    }
+    if (ts.dtm === HL7_NULL_VALUE) {
+      return ts.degree === "" ? { kind: "null" } : null;
     }
     const fields = readHl7Dtm(ts.dtm);
     if (fields === null) {

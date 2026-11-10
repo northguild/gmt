@@ -203,6 +203,11 @@ describe("splitHl7Ts", () => {
     ${"20240615^"}      | ${"20240615"}     | ${""}
     ${"^D"}             | ${""}             | ${"D"}
     ${""}               | ${""}             | ${""}
+    ${"20240615^D^"}    | ${"20240615"}     | ${"D"}
+    ${"20240615^D^^"}   | ${"20240615"}     | ${"D"}
+    ${"20240615^^"}     | ${"20240615"}     | ${""}
+    ${'""^'}            | ${'""'}           | ${""}
+    ${"^^"}             | ${""}             | ${""}
   `(
     "splits '$value' into '$dtm' and degree '$degree'",
     ({ value, dtm, degree }) => {
@@ -213,9 +218,10 @@ describe("splitHl7Ts", () => {
   it.each`
     value
     ${"20240615^D^X"}
-    ${"^^"}
-    ${"20240615^D^"}
-  `("rejects '$value': more than two components", ({ value }) => {
+    ${"20240615^^D"}
+    ${"20240615^D^X^"}
+    ${"^^D"}
+  `("rejects '$value': a third component that is not empty", ({ value }) => {
     expect(splitHl7Ts(value)).toBeNull();
   });
 

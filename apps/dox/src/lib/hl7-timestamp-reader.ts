@@ -515,12 +515,17 @@ export function stripOf(
 export const REASON_DEGREE =
   "The degree of precision after ^ is not one of Y L D H M S, or it is finer than the digits sent.";
 export const REASON_PICTURE =
-  "HL7 v2.5.1 2.A.22 reads one field, YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ], and for a TS a degree of precision after ^. A field that does not exist, an hour of 24, a second of 60, more than four fraction digits, a third component or a separator other than ^ is not read.";
+  "HL7 v2.5.1 2.A.22 reads one field, YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ], and for a TS a degree of precision after ^. A field that does not exist, an hour of 24, a second of 60, more than four fraction digits, a third component that is not empty or a separator other than ^ is not read.";
 
-/** The one sentence under NO SIGNAL, decided from a library probe, never guessed. */
+/**
+ * The one sentence under NO SIGNAL, decided from a library probe, never guessed. An empty
+ * trailing component is not present (ch. 2 §2.6.2), so it is dropped before the components are
+ * counted; a third one left is the picture's refusal, not the degree's.
+ */
 export function sentinelText(read: Hl7Read, lib: Hl7Lib): string {
-  const caret = read.value.indexOf("^");
-  if (caret >= 0 && lib.parseHL7(read.value.slice(0, caret)) !== null) {
+  const parts = read.value.split("^");
+  while (parts.length > 1 && parts.at(-1) === "") parts.pop();
+  if (parts.length === 2 && lib.parseHL7(parts[0] as string) !== null) {
     return REASON_DEGREE;
   }
   return REASON_PICTURE;

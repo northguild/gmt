@@ -12,6 +12,9 @@ describe("isValidHL7", () => {
     ${'""'}                   | ${true}  | ${"the null value clears the stored one (ch. 2 §2.5.3)"}
     ${"199904011200^L"}       | ${true}  | ${"a TS whose degree lowers the precision to the month"}
     ${"20240615^"}            | ${true}  | ${"a TS with an empty degree of precision"}
+    ${"20240615^D^"}          | ${true}  | ${"an empty trailing component is not present (ch. 2 §2.6.2)"}
+    ${'""^'}                  | ${true}  | ${"the null value with an empty degree of precision"}
+    ${"20240615^D^X"}         | ${false} | ${"a third component that is not empty"}
     ${"20240615^S"}           | ${false} | ${"a degree finer than the digits (2.A.77.2)"}
     ${"20240230"}             | ${false} | ${"30 February"}
     ${""}                     | ${false} | ${"an empty string is not the null value"}

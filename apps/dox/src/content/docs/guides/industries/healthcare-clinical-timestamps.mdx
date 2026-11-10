@@ -6,8 +6,10 @@ sidebar:
 industries: [healthcare]
 ---
 
-Clinical systems exchange most of their records as HL7 version 2 messages, and the date-time in
-one is not ISO 8601. The number of digits says how precise the value is, and the offset is
+HL7 International calls HL7 version 2 "one of the most widely implemented standards for
+healthcare information in the world"
+([HL7 product list](https://tscwiki.hl7.org/TSC_Product_List_V2)). The date-time in a version 2
+message is not ISO 8601. The number of digits says how precise the value is, and the offset is
 optional. A reader that takes a value without an offset for UTC moves every event by the offset
 of the place that sent it, and a reader that pads a year to a moment states a fact nobody sent.
 
@@ -171,6 +173,8 @@ parseHL7("20240615^S");
 // null — a second is finer than the day sent
 parseHL7("20240615^");
 // { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — an empty degree is absent
+parseHL7("20240615^D^");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — so is an empty third component
 ```
 
 Only `^` is read as the component separator. A feed whose MSH-2 names another one re-joins the
@@ -263,8 +267,8 @@ isValidHL7("20240615^S"); // false
 ### What is not read
 
 These return `null` from `parseHL7` and `false` from `isValidHL7`: a component separator other
-than `^`, a third `TS` component, a lower-case degree, a leap second, more than four fraction
-digits and ISO 8601 extended form (`2024-06-15T10:30:00`).
+than `^`, a third `TS` component that is not empty, a lower-case degree, a leap second, more
+than four fraction digits and ISO 8601 extended form (`2024-06-15T10:30:00`).
 
 ```typescript
 parseHL7("20240615~D"); // null

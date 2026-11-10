@@ -170,6 +170,15 @@ describe("reading", () => {
     expect(sentinelText(read("20240615^S"), lib)).not.toBe("");
   });
 
+  it("names the degree only when the DTM reads and no third component is sent", () => {
+    expect(sentinelText(read("20240615^S"), lib)).toBe(REASON_DEGREE);
+    // an empty trailing component is not present (ch. 2 §2.6.2)
+    expect(sentinelText(read("20240615^S^"), lib)).toBe(REASON_DEGREE);
+    expect(sentinelText(read("20240615^D^X"), lib)).toBe(REASON_PICTURE);
+    expect(sentinelText(read("20240615^^D"), lib)).toBe(REASON_PICTURE);
+    expect(sentinelText(read("2024061^D"), lib)).toBe(REASON_PICTURE);
+  });
+
   it("applies the strip to a local value only", () => {
     expect(stripApplies(read("20240615103000"))).toBe(true);
     expect(stripApplies(read("20240615103000+0200"))).toBe(false);

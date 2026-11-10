@@ -15,7 +15,8 @@
  *   https://www.hl7.eu/HL7v2x/v251/std251/ch02a.html
  *   https://www.hl7.eu/HL7v2x/v26/std26/ch02a.html
  * - 2.A.77 TS, 2.A.77.2 degree of precision, Table 0529 (`Y L D H M S`), same pages.
- * - Ch. 2 §2.5.3 (the null value `""`) and §2.6.2 (an empty trailing component is not present):
+ * - Ch. 2 §2.5.3 (the null value `""`), §2.6.1.1 (a sender writes `^` only before another
+ *   populated component) and §2.6.2 (a component not sent is not present):
  *   https://www.hl7.eu/HL7v2x/v251/std251/ch02.html
  */
 
@@ -181,15 +182,18 @@ function finestPrecision(
 }
 
 /**
- * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) once on `^`. `^` is the only separator
- * read (**GMT rule**; ch. 2 §2.5.4 gives `^` as the suggested value, and the field alone cannot
- * name MSH-2). An empty degree is "not present" (ch. 2 §2.6.2), so `20240615^` is `20240615`.
+ * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) on `^`. `^` is the only separator read
+ * (**GMT rule**; ch. 2 §2.5.4 gives `^` as the suggested value, and the field alone cannot name
+ * MSH-2). An empty trailing component carries nothing: a sender writes `^` only before another
+ * populated component (ch. 2 §2.6.1.1), and a component not sent is "not present" (§2.6.2). So
+ * every trailing `^` is dropped first, and `20240615^` is `20240615`, `20240615^D^` is
+ * `20240615^D`. A third component that is not empty is refused (**GMT rule**).
  *
  * @param value candidate `TS` text
- * @returns the two sides, `degree` `""` when absent; `null` for two or more `^`
+ * @returns the two sides, `degree` `""` when absent; `null` when a third component is not empty
  *
  * @example splitHl7Ts("199904011200^L") // { dtm: "199904011200", degree: "L" }
- * @example splitHl7Ts("20240615^") // { dtm: "20240615", degree: "" }
+ * @example splitHl7Ts("20240615^D^") // { dtm: "20240615", degree: "D" }
  * @example splitHl7Ts("20240615^D^X") // null
  */
 export function splitHl7Ts(
@@ -198,7 +202,12 @@ export function splitHl7Ts(
   if (typeof value !== "string") {
     return null;
   }
-  const parts = value.split("^");
+  // A loop, not /\^+$/, which backtracks over a long run of `^` that does not end the value.
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "^") {
+    end -= 1;
+  }
+  const parts = value.slice(0, end).split("^");
   if (parts.length > 2) {
     return null;
   }
