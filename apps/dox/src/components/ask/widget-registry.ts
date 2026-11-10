@@ -74,6 +74,7 @@ import type { GnssWeekDecoderArgs } from "~/lib/gnss-week-decoder-mount";
 import type { SatelliteClockConverterArgs } from "~/lib/satellite-clock-converter-mount";
 import type { GnssRolloverCheckerArgs } from "~/lib/gnss-rollover-checker-mount";
 import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
+import type { TerrestrialTimeStackArgs } from "~/lib/terrestrial-time-stack-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
@@ -123,6 +124,7 @@ import {
   showExpiryCalculatorInput,
   showDatabaseTimestampReaderInput,
   showTai64nLogReaderInput,
+  showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -909,6 +911,27 @@ const tai64nEntry = defineWidget<Tai64nLogReaderArgs>({
     })),
 });
 
+const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
+  title: "Terrestrial Time Stack",
+  kind: "ttstack",
+  parse: (input) => {
+    const result = showTerrestrialTimeStackInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/terrestrial-time-stack-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderTerrestrialTimeStackTemplate(idPrefix, args),
+      mount: m.mountTerrestrialTimeStack,
+    })),
+});
+
 const holidayBuilderEntry = defineWidget<HolidayRuleBuilderArgs>({
   title: "Holiday rule builder",
   kind: "holidays",
@@ -1302,6 +1325,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showExpiryCalculator: expiryEntry,
   showDatabaseTimestampReader: databaseReaderEntry,
   showTai64nLogReader: tai64nEntry,
+  showTerrestrialTimeStack: ttStackEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

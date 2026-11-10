@@ -249,6 +249,11 @@ const PAGES = [
     drag: { role: "slider", name: "Move the date" },
   },
   {
+    slug: "terrestrial-time-stack",
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the year" },
+  },
+  {
     slug: "elapsed-vs-clock-difference",
     preset: PRESET,
     drag: { role: "slider", name: "Move the end" },

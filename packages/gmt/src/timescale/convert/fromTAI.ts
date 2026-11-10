@@ -29,7 +29,7 @@ import {
 export function fromTAI(taiString: string): string {
   try {
     const label = parseTimeScaleString(taiString, "TAI");
-    if (label === null || label.secondSixty) {
+    if (label === null) {
       return "";
     }
     const reading = utcOfTai(LEAP_SECOND_STEPS, label.labelNanoseconds);

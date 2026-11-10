@@ -1734,7 +1734,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`compareHandoffHref` asks the library). The Comparator's `holiday-note` says which seeded
     holidays are not dates. The Comparator's permalink adds a `year` key and repeatable custom
     columns.
-- **The GNSS and leap-second family** (MAR-16): three GNSS tools and two Core ones. Each pure
+- **The GNSS and leap-second family** (MAR-16): three GNSS tools and three Core ones. Each pure
   module takes a loaded library (`GnssLib` from `gnss-lib.ts`, or `TimescaleLib` from
   `timescale-lib.ts`, both throwing `WidgetLoadError`) and draws its results; the site holds no
   table of library rules. Shared modules: `gnss-names.ts` (counters, RINEX systems, the six
@@ -1764,6 +1764,30 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Leap Second Timeline** (`/tools/leap-second-timeline/`): a staircase of TAI - UTC, a riser
     per inserted second, a hatched run from `CONTINUOUS_UTC_FROM`, the date as a cursor, the
     counted span as a band, and a checked `23:59:60` as a lit riser or a struck-through ghost.
+  - **Terrestrial Time Stack** (`/tools/terrestrial-time-stack/`, `ttstack`, core, chat tool
+    `showTerrestrialTimeStack`): one instant on UTC, TAI, TT and TCG. A bar from UTC has three
+    segments, each sized by one library call and drawn in a pattern of its own (solid, hatch, dots)
+    with its size in words, so no piece is told apart by colour alone: TAI − UTC steps
+    (`taiMinusUtc`), TT − TAI is constant (`diffUtcAsDuration` between the TAI and TT labels of the
+    instant) and TCG − TT drifts (`tcgMinusTt`). A headline plate gives TT − UTC, the gap a UTC
+    timestamp carries when it is passed as an ephemeris's TT argument. A four-row table writes the
+    instant on every scale, prints each call and spells each label back through `fromTAI`,
+    `fromTT` and `fromTCG`.
+    - **The drift lane** plots `tcgMinusTt` as a polyline across the slider's whole range, sampled
+      every 25 years plus both end years, with a cursor at the reader's year.
+    - **The bar's scale is fixed once, from the two end years** (`stackReach`: the larger of
+      TT − UTC plus TCG − TT at 1972 and at 9999), so the bar never rescales while the reader drags.
+    - **The slider is uniform whole years, 1972 to 9999**, each stop at 1 January 00:00Z. Its lower
+      bound is `INTEGER_UTC_FROM` (the first year with whole-second TAI − UTC, from
+      `timescale-widgets.ts`) and its upper bound is the last year the library writes in
+      four digits. Insertions are reached through the presets, not the slider.
+    - **A pasted label is routed by its token.** `TAI`, `TT` or `TCG` after one space goes to the
+      matching `from…` call, and anything else is read as UTC. `TDT` and `ET` are not tokens.
+      The permalink has one key, `value`, capped at 64 characters; the default preset writes
+      nothing.
+    - **No 32.184 or L_G on the site.** Every number on screen is a library result, and the
+      modules hold none of the constants; the only literals are in the presets' texts, which the
+      tests assert against the library.
   - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
     identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
     `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its

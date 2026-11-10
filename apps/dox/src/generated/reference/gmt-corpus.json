@@ -18115,6 +18115,39 @@
     ]
   },
   {
+    "url": "/reference/timescale/calculate/tcgMinusTt",
+    "page": "/reference/timescale/calculate/tcgMinusTt",
+    "name": "tcgMinusTt",
+    "namespace": "timescale",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "tcgMinusTt(isoString: string): number | null",
+    "description": "Return TCG − TT, in seconds, at a UTC instant.",
+    "sourcePath": "packages/gmt/src/timescale/calculate/tcgMinusTt.ts",
+    "examples": [
+      {
+        "call": "tcgMinusTt(\"2026-01-01T00:00:00Z\")",
+        "result": "1.077661917"
+      },
+      {
+        "call": "tcgMinusTt(\"2000-01-01T12:00:00Z\")",
+        "result": "0.50583333"
+      },
+      {
+        "call": "tcgMinusTt(\"1976-12-31T23:59:45Z\")",
+        "result": "0 — the epoch T₀"
+      },
+      {
+        "call": "tcgMinusTt(\"2016-12-31T23:59:60Z\")",
+        "result": "0.879736307 — the inserted second"
+      },
+      {
+        "call": "tcgMinusTt(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
     "url": "/reference/timescale/convert/fromTAI",
     "page": "/reference/timescale/convert/fromTAI",
     "name": "fromTAI",
@@ -18144,6 +18177,72 @@
       {
         "call": "fromTAI(\"2016-12-31T23:59:60 TAI\")",
         "result": "\"\" — TAI has no leap seconds"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromTCG",
+    "page": "/reference/timescale/convert/fromTCG",
+    "name": "fromTCG",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromTCG(tcgString: string): string",
+    "description": "Convert a Geocentric Coordinate Time string to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromTCG.ts",
+    "examples": [
+      {
+        "call": "fromTCG(\"2026-01-01T00:01:10.261661917 TCG\")",
+        "result": "\"2026-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromTCG(\"2017-01-01T00:01:09.063736307 TCG\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "fromTCG(\"1977-01-01T00:00:32.184 TCG\")",
+        "result": "\"1976-12-31T23:59:45Z\""
+      },
+      {
+        "call": "fromTCG(\"1972-01-01T00:00:42.073987809 TCG\")",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromTCG(\"2026-01-01T00:01:10.261661917 TT\")",
+        "result": "\"\" — wrong token"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromTT",
+    "page": "/reference/timescale/convert/fromTT",
+    "name": "fromTT",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromTT(ttString: string): string",
+    "description": "Convert a Terrestrial Time string to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromTT.ts",
+    "examples": [
+      {
+        "call": "fromTT(\"2026-01-01T00:01:09.184 TT\")",
+        "result": "\"2026-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromTT(\"2017-01-01T00:01:08.184 TT\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "fromTT(\"2017-01-01T00:01:08.684 TT\")",
+        "result": "\"2016-12-31T23:59:60.5Z\""
+      },
+      {
+        "call": "fromTT(\"2026-01-01T00:01:09.184 TAI\")",
+        "result": "\"\" — wrong token"
+      },
+      {
+        "call": "fromTT(\"2016-12-31T23:59:60 TT\")",
+        "result": "\"\" — TT has no second 60"
       }
     ]
   },
@@ -18217,6 +18316,76 @@
       },
       {
         "call": "toTAI(\"1971-12-31T00:00:00Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toTCG",
+    "page": "/reference/timescale/convert/toTCG",
+    "name": "toTCG",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toTCG(isoString: string): string",
+    "description": "Convert a UTC instant to a Geocentric Coordinate Time string, `YYYY-MM-DDTHH:MM:SS[.fraction] TCG`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toTCG.ts",
+    "examples": [
+      {
+        "call": "toTCG(\"2026-01-01T00:00:00Z\")",
+        "result": "\"2026-01-01T00:01:10.261661917 TCG\""
+      },
+      {
+        "call": "toTCG(\"2000-01-01T12:00:00Z\")",
+        "result": "\"2000-01-01T12:01:04.68983333 TCG\""
+      },
+      {
+        "call": "toTCG(\"1976-12-31T23:59:45Z\")",
+        "result": "\"1977-01-01T00:00:32.184 TCG\" — the epoch, TCG = TT"
+      },
+      {
+        "call": "toTCG(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2017-01-01T00:01:09.063736307 TCG\""
+      },
+      {
+        "call": "toTCG(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "toTCG(\"1971-12-31T23:59:59Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toTT",
+    "page": "/reference/timescale/convert/toTT",
+    "name": "toTT",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toTT(isoString: string): string",
+    "description": "Convert a UTC instant to a Terrestrial Time string, `YYYY-MM-DDTHH:MM:SS[.fraction] TT`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toTT.ts",
+    "examples": [
+      {
+        "call": "toTT(\"2026-01-01T00:00:00Z\")",
+        "result": "\"2026-01-01T00:01:09.184 TT\""
+      },
+      {
+        "call": "toTT(\"2013-06-01T00:00:00Z\")",
+        "result": "\"2013-06-01T00:01:07.184 TT\""
+      },
+      {
+        "call": "toTT(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2017-01-01T00:01:08.184 TT\""
+      },
+      {
+        "call": "toTT(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "toTT(\"1971-12-31T23:59:59Z\")",
         "result": "\"\""
       }
     ]

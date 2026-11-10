@@ -61,6 +61,12 @@
   content: "\a0" / "";
 }
 
+/* A value in words, at the size the empty plate's words use. Written after `.shown` so it
+   wins at equal weight. */
+.words {
+  font-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
+}
+
 .ghost {
   visibility: hidden;
   pointer-events: none;
@@ -99,6 +105,12 @@
 
     color: var(--gmt-ice-dim);
   }
+}
+
+/* A number and its unit stay on one line; a phrase (`.words`) still wraps. */
+.value[data-unbroken="true"] > :not(.words) {
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .line {

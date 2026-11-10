@@ -10,15 +10,15 @@ The first draft bundled TT with TDB in one story. TDB needs the two-part Julian 
 
 ## Scope
 
-Paths are under the Space realm namespace, written `<space-ns>/` below: its name is decided when the SPA stories start, because "space" would collide with a planned spatial/geo expansion.
+Paths are under `packages/gmt/src/timescale/`.
 
-- `<space-ns>/convert/tt.ts`:
+- `timescale/convert/toTT.ts, fromTT.ts`:
   - `toTT(isoString: string): string` — ISO UTC to a TT scale string.
   - `fromTT(ttString: string): string` — TT to ISO UTC.
-- `<space-ns>/convert/tcg.ts`:
+- `timescale/convert/toTCG.ts, fromTCG.ts` and `timescale/calculate/tcgMinusTt.ts`:
   - `toTCG(isoString: string): string` — ISO UTC to a TCG scale string.
   - `fromTCG(tcgString: string): string` — TCG to ISO UTC.
-  - `tcgMinusTt(isoString: string): number` — The accumulated rate difference in seconds, exposed so callers see the magnitude.
+  - `tcgMinusTt(isoString: string): number | null` — The accumulated rate difference in seconds, exposed so callers see the magnitude.
 
 ## Key constants
 
@@ -36,7 +36,7 @@ Paths are under the Space realm namespace, written `<space-ns>/` below: its name
 
 ## Tool
 
-**Extends Satellite Clock Converter** with Terrestrial Time and Geocentric Coordinate Time: each appears as another row, with its gap from UTC. Calls `toTT`, `fromTT`, `toTCG`, `fromTCG`.
+**Terrestrial Time Stack** (`/tools/terrestrial-time-stack/`): one bar of TAI − UTC (steps), TT − TAI (constant) and TCG − TT (drifts), a drift lane across 1972–9999, and the instant on UTC, TAI, TT and TCG. Calls `toTT`, `fromTT`, `toTCG`, `fromTCG`, `tcgMinusTt`, `taiMinusUtc`, `toTAI`, `fromTAI`. It is a separate tool, not a row in the Satellite Clock Converter: that tool's ladder tops out at TAI, so TT would sit above its top rail, and it shows TCG at one instant, where the drift reads as another rung.
 
 ## Design notes
 
@@ -51,8 +51,8 @@ The first draft's `tdbMinusTt`, `toTDB` and `fromTDB` moved to SPA-74 together w
 
 ## What gmt provides (do not re-implement)
 
-- `toTAI` / `fromTAI` from MAR-16 — TT is a constant offset from TAI
-- `toNanoseconds` / `fromNanoseconds` from CORE-1 — exact elapsed time since the 1977 epoch for the TCG rate
+- `toTAI` / `fromTAI` from MAR-16 — TT is a constant offset from TAI. The public functions are not called (a public function never calls another); their internal hinge (`parseUtcReading`, `taiOfUtc`, `utcOfTai`, `formatUtcReading`, `LEAP_SECOND_STEPS`) is.
+- `floorDivide` from CORE-3 — the floor toward −∞ in both directions.
 
 ## Verification
 
@@ -65,3 +65,18 @@ The first draft's `tdbMinusTt`, `toTDB` and `fromTDB` moved to SPA-74 together w
 - Round-trip for TCG returns an equivalent UTC string to nanosecond precision
 - A date before 1972-01-01 returns the sentinel
 - `pnpm run validate` stays green
+
+## Decisions
+
+Settled by the owner. They are the current rules for this code.
+
+- The five functions live in `timescale/`, one file each: `convert/toTT.ts`, `fromTT.ts`, `toTCG.ts`, `fromTCG.ts` and `calculate/tcgMinusTt.ts`. They are general scales, not Space-only, and SPA-49 and SPA-52 take their `timescale/` paths from this.
+- `tcgMinusTt` returns `number | null` (the sentinel for a number), as `taiMinusUtc` does. It is a UTC instant in, and the value is exactly the floored nanosecond offset `toTCG` applies, in seconds, so `toTCG(x) − toTT(x) === tcgMinusTt(x)`.
+- Inputs, outputs, sentinels and bounds match `toTAI` and `fromTAI`: any instant `parseUtcReading` reads, full-nanosecond shortest-digit output, `""` before 1972-01-01 UTC, past year 9999 and on invalid input. TT and TCG have no second 60. `TT` is the only spelling read, not FITS's deprecated `TDT` or `ET`.
+- Rounding floors toward −∞ in bigint, in both directions. TCG − TT is `d × 6969290134 / (10¹⁹ − 6969290134)` nanoseconds, `d` being TT nanoseconds since the epoch. `fromTCG` uses the closed-form inverse `TT = TCG − floor(D × 6969290134 / 10¹⁹)` with no iteration, so `fromTCG(toTCG(x)) === x` for every nanosecond. The unreachable TCG nanosecond (about one in 1.4 × 10⁹) reads as the next one's UTC instant, and that is accepted.
+- Sources: TT = TAI + 32.184 s is IERS TN 36 §10.1. Resolution B1.9 states only dTT/dTCG = 1 − L_G and the value of L_G, with no epoch and no closed form. The epoch T₀ and eq. (10.1) come from TN 36 §10.1. The floor to the nanosecond, and the closed-form inverse that follows from it, are GMT's own rule.
+- No Julian Date is computed: `(JD_TT − T₀) × 86400` is TT nanoseconds since the TT label `1977-01-01T00:00:32.184`, which is why SPA-49 can depend on this story. The `1 / (1 − L_G)` factor is kept. The verification values are `toTT('2026-01-01T00:00:00Z')` = `…T00:01:09.184 TT`, `tcgMinusTt('2000-01-01T12:00:00Z')` = 0.50583333 s, and the TCG/TT epoch as a UTC input = `1976-12-31T23:59:45Z`.
+- Time-scale strings: the scoped exception in `coding-standards.md` lists `fromTT`, `fromTCG` and the `TT` and `TCG` tokens. `toTAI` and `fromTAI` changed only in an `@returns` line and a dead `|| label.secondSixty` check removed from `fromTAI`; behaviour is the same.
+- The root bundle budget in `scripts/bundle-size.budgets.json` rose from 569400 to 570400 B (+1000 B). The measured size is 570338 B, which leaves 62 B. This is a reviewed raise for the new exports, with SPA-46 as precedent.
+- The Dox tool is the Terrestrial Time Stack at `/tools/terrestrial-time-stack/` (chat tool `showTerrestrialTimeStack`, permalink kind `ttstack`); its rules are in `context/dox/built.md`. "Ephemeris Time" is not used as a name, because it names ET, TT's deprecated predecessor, which `fromTT` refuses.
+- Dox deviations from the spec: (a) the `readout-still` entry is `drawn: ["drawn", "hold"]`, not `["drawn"]`, because `hold` exempts only a hold's live wrapper (four other entries do the same); (b) the plates fall to one column below a 20rem container, as well as to 2 × 2 below 36rem, so a value and its unit never wrap; (c) the shared `widgets/builders/plates.ts` gained two optional fields, `words` (a value given in words at the quiet size) and `unbroken` (a value and its unit on one line), both opt-in, and `html-diff` showed the other 43 widget pages' markup unchanged; (d) the drift lane's y-labels sit in their own rows above and below the field.

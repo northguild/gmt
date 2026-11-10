@@ -3,23 +3,23 @@ import type { GnssSystem } from "../types/gnss";
 import { MAX_FOUR_DIGIT_YEAR, secondSixtyWallClock } from "./utcReading";
 
 /**
- * The token naming a time scale: `TAI` (FITS 4.0 §9.2.1 Table 30) or one of the six RINEX 4.02
- * §5.2.8 time-system identifiers.
+ * The token naming a time scale: `TAI`, `TT` or `TCG` (FITS 4.0 §9.2.1 Table 30) or one of the six
+ * RINEX 4.02 §5.2.8 time-system identifiers.
  */
-export type TimeScaleToken = "TAI" | GnssSystem;
+export type TimeScaleToken = "TAI" | "TT" | "TCG" | GnssSystem;
 
 /**
  * A time-scale string: an ISO 8601 extended local date-time, one space, and the token naming the
  * scale (`2026-01-01T00:00:37 TAI`). Four-digit year, `T`, seconds required, 1 to 9 fraction digits
  * after `.` (RFC 3339 §5.6 `time-secfrac`; Temporal's nanosecond resolution). Tokens: FITS 4.0
- * Table 30 (`TAI`) and RINEX 4.02 §5.2.8 (`GPS`, `GAL`, `BDT`, `QZS`, `GLO`, `IRN`). Joining the
+ * Table 30 (`TAI`, `TT`, `TCG`) and RINEX 4.02 §5.2.8 (`GPS`, `GAL`, `BDT`, `QZS`, `GLO`, `IRN`). Joining the
  * date-time and the token with a space is a GMT rule: no standard joins the two.
  *
  * Capture groups: 1 year, 2 month, 3 day, 4 hour, 5 minute, 6 second, 7 fraction digits, 8 token.
  * A match proves shape only; `parseTimeScaleString` hands the fields to Temporal.
  */
 export const timeScaleString: RegExp =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))? (TAI|GPS|GAL|BDT|QZS|GLO|IRN)$/;
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))? (TAI|TT|TCG|GPS|GAL|BDT|QZS|GLO|IRN)$/;
 
 /** A time scale's wall clock, read as if UTC, and whether its second field was 60. */
 export interface TimeScaleLabel {

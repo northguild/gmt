@@ -33,10 +33,18 @@ export interface Plate {
   series?: 1 | 2 | 3 | 4;
   /** A secondary result, at the smaller value size. */
   quiet?: boolean;
+  /** A value and its unit are one unit: the value never wraps (words still do). */
+  unbroken?: boolean;
   /** Every caption this plate can show, when the caption follows a choice. */
   captions?: readonly string[];
   /** The widest values it can show, to reserve their width. */
   samples?: readonly string[];
+  /**
+   * Values that are words and not a number (`inside an inserted second`). A word value is set
+   * at the quiet size, and so is its reserved room, so a phrase the plate may never show does
+   * not hold the height of a large number's wrap.
+   */
+  words?: readonly string[];
   /**
    * For each line, the longest texts it can show, to reserve their wrap. A line whose words
    * change with the reading (`read from GAL` against `as typed`) would otherwise wrap in a
@@ -45,14 +53,20 @@ export interface Plate {
   lineSamples?: readonly (readonly string[] | undefined)[];
 }
 
-function ghosts(list: readonly string[], cls: string): SafeHtml[] {
+function ghosts(
+  list: readonly string[],
+  cls: string,
+  words: readonly string[] = [],
+): SafeHtml[] {
   return [...new Set(list)].map(
-    (text) => html`<span class="${cls}" aria-hidden="true">${text}</span>`,
+    (text) =>
+      html`<span class="${words.includes(text) ? `${cls} ${styles.words}` : cls}" aria-hidden="true">${text}</span>`,
   );
 }
 
 function plate(p: Plate): SafeHtml {
   const empty = p.value === null;
+  const words = p.words ?? [];
   return html`<div
     class="${styles.plate}"
     data-state="${empty ? "empty" : "live"}"
@@ -61,9 +75,9 @@ function plate(p: Plate): SafeHtml {
     ><dt class="${styles.caption}"
       ><span class="${styles.shown}">${p.caption}</span
       >${ghosts(p.captions ?? [], styles.ghost!)}</dt
-    ><dd class="${styles.value}"
-      ><span class="${styles.shown}">${empty ? NO_RESULT : p.value}</span
-      >${ghosts(p.samples ?? [], styles.ghost!)}</dd
+    ><dd class="${styles.value}" ${p.unbroken === true ? html`data-unbroken="true"` : ""}
+      ><span class="${p.value !== null && words.includes(p.value) ? `${styles.shown} ${styles.words}` : styles.shown}">${empty ? NO_RESULT : p.value}</span
+      >${ghosts(p.samples ?? [], styles.ghost!, words)}</dd
     >${p.lines.map(
       (text, i) =>
         html`<dd class="${styles.line}"><span class="${styles.shown}">${empty ? "" : text}</span

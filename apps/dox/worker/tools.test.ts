@@ -398,6 +398,35 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showTerrestrialTimeStack", () => {
+    const schema = (
+      tools.showTerrestrialTimeStack as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a UTC instant, a scale label or no value", async () => {
+      for (const input of [
+        { value: "2026-01-01T00:00:00Z" },
+        { value: "2026-01-01T00:01:09.184 TT" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showTerrestrialTimeStack", input)).toMatchObject({
+          ok: true,
+          widget: "terrestrial-time-stack",
+        });
+      }
+    });
+
+    it("refuses a value over 64 characters in the tool's own schema", () => {
+      expect(schema.safeParse({ value: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "a".repeat(65) }).success).toBe(false);
+    });
+  });
+
   describe("showIdTimestampDecoder refusals", () => {
     it("accepts a real id", async () => {
       expect(
