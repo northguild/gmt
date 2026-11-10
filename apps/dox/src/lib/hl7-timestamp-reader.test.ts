@@ -238,9 +238,59 @@ describe("the writer ladder", () => {
     expect(l.third).toBe(LADDER_HEAD_OFFSET);
   });
 
+  it("keeps the fraction digits as sent, trailing zeros too", () => {
+    const l = ladderOf(read("20240615103000.1000+0000"), null, lib);
+    expect(l.rows[6]!.sent).toEqual({
+      text: "20240615103000.1000+0000",
+      state: "value",
+    });
+    expect(l.rows[6]!.offset).toEqual({
+      text: "20240615103000.1000+0000",
+      state: "value",
+    });
+    expect(l.note).toContain('"2024-06-15T10:30:00.1000+00:00"');
+  });
+
+  it("writes a fraction of zeros, which is still a fraction", () => {
+    const l = ladderOf(read("20240615103000.0000+0200"), null, lib);
+    expect(l.rows[6]!.sent.text).toBe("20240615103000.0000+0200");
+    expect(l.rows[6]!.offset.text).toBe("20240615083000.0000+0000");
+  });
+
+  it("makes up no seconds for a value sent to the minute", () => {
+    const l = ladderOf(read("202406151030+0200"), null, lib);
+    expect(l.rows[4]!.sent.text).toBe("202406151030+0200");
+    expect(l.rows[4]!.offset.text).toBe("202406150830+0000");
+    expect(l.rows[5]!.sent.state).toBe("none");
+    expect(l.rows[5]!.offset.state).toBe("none");
+    expect(
+      ladderOf(read("20240615103000^M"), null, lib).rows[5]!.sent.state,
+    ).toBe("none");
+  });
+
+  it("writes a local value in zone 1 with the digits as sent", () => {
+    const zoned = ladderOf(
+      read("20240615103000.1000"),
+      stripOf("2024-06-15T10:30:00.1000", ["Europe/Helsinki"], lib),
+      lib,
+    );
+    expect(zoned.rows[6]!.sent.text).toBe("20240615103000.1000");
+    expect(zoned.rows[6]!.offset.text).toBe("20240615103000.1000+0300");
+
+    const minute = ladderOf(
+      read("202406151030"),
+      stripOf("2024-06-15T10:30:00", ["Europe/Helsinki"], lib),
+      lib,
+    );
+    expect(minute.rows[4]!.offset.text).toBe("202406151030+0300");
+    expect(minute.rows[5]!.sent.state).toBe("none");
+    expect(minute.rows[5]!.offset.state).toBe("none");
+  });
+
   it("makes no call for a partial value that carries an offset", () => {
-    const l = ladderOf(read("202406"), null, lib);
-    expect(l.note.length).toBeGreaterThan(0);
+    const l = ladderOf(read("202406-0500"), null, lib);
+    expect(l.note).toMatch(/makes no call/);
+    expect(l.rows.every((r) => r.sent.state === "empty")).toBe(true);
   });
 
   it("is empty for a blank field", () => {

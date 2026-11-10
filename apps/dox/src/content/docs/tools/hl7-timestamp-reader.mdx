@@ -27,7 +27,7 @@ Type an HL7 v2 date-time, the `DTM` of a field or the older `TS` with its precis
 
 **How a value is read.** The tool reads one field. A `TS` is split on `^` only, and no `MSH-2` is read, so a message with other separators is not read as a message. A value that is not a date-time shows `NO SIGNAL` with one sentence saying why.
 
-**The four kinds.** A value with an offset and a fraction of a second or more is an instant. A value with an offset only states the offset. A value with digits down to the second and no offset is a local time. A year, a month, a day or an hour is a partial value: it has a precision and no instant, and the tool never pads it. The null value, two quote characters, is its own kind. It clears a stored time, and it is not a missing field.
+**The four kinds.** A value to the minute or finer, with an offset, is an instant. The same with no offset is a local time. A year, a month, a day or an hour is a partial value, with or without an offset, and so is a finer value that a `TS` degree of precision cuts to one of those. A partial value has a precision and no instant, and the tool never pads it. The null value, two quote characters, is its own kind. It clears a stored time, and it is not a missing field.
 
 **Why the zones are yours.** The library maps no facility to a zone, so the four zones are your picks. The presets open with example zones, and the value does not say any of them. Each row calls [`resolveLocal`](/reference/instant/convert/resolveLocal/) with `disambiguation: "reject"`: a time the clock shows twice, or never, is not resolved, and the row says why. The strip also sets each result against the same digits read as UTC, which is the mistake the page is about.
 

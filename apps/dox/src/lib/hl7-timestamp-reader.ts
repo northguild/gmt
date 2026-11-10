@@ -686,11 +686,63 @@ const writeCell = (text: string): LadderCell =>
 const ladderCall = (source: string): string =>
   `formatHL7(${JSON.stringify(source)}, { precision })`;
 
+/** `YYYY-MM-DDTHH:MM`, the length of a minute-precision ISO 8601 date-time. */
+const MINUTE_FORM = "YYYY-MM-DDTHH:MM".length;
+
 /**
- * Seven rows, `year` to `fraction`, every cell a real `formatHL7` call. The source is the value's
- * own form: `fromOffsetInstant({ instant, offset })` for an instant, `local` for a value with no
- * offset. The second column writes it with an offset: zone 1's for a local value, `+00:00` for an
- * instant.
+ * `parseHL7`'s `local` written at the precision it was sent with. `local` always writes seconds
+ * from the minute on, so a minute-precision value loses its `:00`, and `formatHL7` then writes no
+ * second the sender did not send.
+ */
+export const sentLocal = (local: string, precision: Hl7Precision): string =>
+  precision === "minute" ? local.slice(0, MINUTE_FORM) : local;
+
+/**
+ * `fromOffsetInstant`'s output written with the digits the value was sent with. That output drops
+ * trailing zeros from the fraction (`.1000` is `.1`, `.0000` is gone) and always writes seconds.
+ * An offset is whole seconds, so the fraction is the same in every offset: this puts back the
+ * sent fraction, and cuts a minute-precision value back to the minute.
+ *
+ * @param iso a `fromOffsetInstant` result
+ * @param local `parseHL7`'s `local` for the same value
+ * @param precision `parseHL7`'s `precision` for the same value
+ * @returns `iso` with the sent seconds and fraction digits; `iso` unchanged when it has no time
+ *
+ * @example inSentForm("2024-06-15T10:30:00.1+00:00", "2024-06-15T10:30:00.1000", "fraction") // "2024-06-15T10:30:00.1000+00:00"
+ * @example inSentForm("2024-06-15T10:30:00+02:00", "2024-06-15T10:30:00", "minute") // "2024-06-15T10:30+02:00"
+ */
+export function inSentForm(
+  iso: string,
+  local: string,
+  precision: Hl7Precision,
+): string {
+  const t = iso.indexOf("T");
+  if (t < 0) {
+    return iso;
+  }
+  const secondsEnd = t + "THH:MM:SS".length;
+  let end = secondsEnd;
+  if (iso[end] === ".") {
+    end += 1;
+    while (end < iso.length && iso[end]! >= "0" && iso[end]! <= "9") {
+      end += 1;
+    }
+  }
+  const dot = local.indexOf(".");
+  const head =
+    precision === "minute"
+      ? iso.slice(0, t + "THH:MM".length)
+      : iso.slice(0, secondsEnd);
+  const fraction = precision === "fraction" && dot >= 0 ? local.slice(dot) : "";
+  return head + fraction + iso.slice(end);
+}
+
+/**
+ * Seven rows, `year` to `fraction`, every cell a real `formatHL7` call. The source is the value
+ * as sent: `local` at its precision (`sentLocal`), with the offset for an instant, so the writer
+ * keeps every digit the sender wrote and makes up none. The second column writes it with an
+ * offset, `+00:00` for an instant and zone 1's for a local value, through `fromOffsetInstant` and
+ * `inSentForm`.
  */
 export function ladderOf(
   read: Hl7Read,
@@ -722,14 +774,12 @@ export function ladderOf(
     writeCell(lib.formatHL7(source, { precision }));
 
   if (parsed.kind === "instant") {
-    const asSent = lib.fromOffsetInstant({
-      instant: parsed.instant,
-      offset: parsed.offset,
-    });
-    const inUtc = lib.fromOffsetInstant({
-      instant: parsed.instant,
-      offset: "+00:00",
-    });
+    const asSent = sentLocal(parsed.local, parsed.precision) + parsed.offset;
+    const inUtc = inSentForm(
+      lib.fromOffsetInstant({ instant: parsed.instant, offset: "+00:00" }),
+      parsed.local,
+      parsed.precision,
+    );
     return {
       third: LADDER_HEAD_UTC,
       rows: PRECISIONS.map((precision) => ({
@@ -755,10 +805,18 @@ export function ladderOf(
   }
 
   // A local value: the second column writes it with zone 1's offset.
+  const sent = sentLocal(local, parsed.precision);
   const first = strip?.rows[0];
   const withOffset =
     first !== undefined && first.instant !== "" && first.offset !== ""
-      ? lib.fromOffsetInstant({ instant: first.instant, offset: first.offset })
+      ? inSentForm(
+          lib.fromOffsetInstant({
+            instant: first.instant,
+            offset: first.offset,
+          }),
+          local,
+          parsed.precision,
+        )
       : "";
   const hint: LadderCell = {
     text:
@@ -771,10 +829,10 @@ export function ladderOf(
     third: LADDER_HEAD_OFFSET,
     rows: PRECISIONS.map((precision) => ({
       precision,
-      sent: write(local, precision),
+      sent: write(sent, precision),
       offset: withOffset === "" ? hint : write(withOffset, precision),
     })),
-    note: `As sent: ${ladderCall(local)}.${withOffset === "" ? "" : ` With an offset: ${ladderCall(withOffset)}.`} ${LADDER_ONLY_LOWERS}`,
+    note: `As sent: ${ladderCall(sent)}.${withOffset === "" ? "" : ` With an offset: ${ladderCall(withOffset)}.`} ${LADDER_ONLY_LOWERS}`,
   };
 }
 

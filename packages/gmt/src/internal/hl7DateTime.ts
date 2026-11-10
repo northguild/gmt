@@ -5,9 +5,9 @@
  *
  * Pure: this module imports only `types/hl7` and nothing from `instant/` or Temporal, so, like
  * `ediGrammar.ts`, it is re-exported from `internal/index.ts`. The parse and format files import
- * `toOffsetInstant` and `fromOffsetInstant` themselves. If a later change moves either import
- * into this module, it leaves the barrel, for the cycle the comment above the `ediGrammar` block
- * in `internal/index.ts` describes.
+ * `toOffsetInstant` themselves. If a later change moves that import, or any other from
+ * `instant/`, into this module, it leaves the barrel, for the cycle the comment above the
+ * `ediGrammar` block in `internal/index.ts` describes.
  *
  * Sources (HL7 Europe's published copies of the standard; the v2.5.1 copy heads these sections
  * 2.A.1.22 and 2.A.1.77, HL7's own cross-references and the v2.6 copy say 2.A.22 and 2.A.77):
