@@ -76,6 +76,7 @@ import {
   showFixTimestampReaderInput,
   showSsimDateReaderInput,
   showJulianDayCounterInput,
+  showDoublePrecisionMeterInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
@@ -674,6 +675,11 @@ export function buildWorkerTools(
       description: docFor("showJulianDayCounter"),
       inputSchema: showJulianDayCounterInput,
       execute: () => accept("julian-day-counter"),
+    }),
+    showDoublePrecisionMeter: tool({
+      description: docFor("showDoublePrecisionMeter"),
+      inputSchema: showDoublePrecisionMeterInput,
+      execute: () => accept("double-precision-meter"),
     }),
   };
 

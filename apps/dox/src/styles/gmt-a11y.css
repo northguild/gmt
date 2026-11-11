@@ -262,6 +262,17 @@
   [data-widget="julian-day-counter"] [role="img"][data-series="4"] {
     background: Highlight;
   }
+
+  /* The Double Precision Meter's plot tells its lines apart by dash pattern, so every line is
+     CanvasText and the reader's year is Highlight. */
+  [data-widget="double-precision-meter"] svg :is(line, path) {
+    stroke: CanvasText;
+  }
+
+  [data-widget="double-precision-meter"] [data-gate="moving"] {
+    background: Highlight;
+    border-color: Highlight;
+  }
 }
 
 /* =======================================================================

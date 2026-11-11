@@ -77,6 +77,7 @@ import type { GnssRolloverCheckerArgs } from "~/lib/gnss-rollover-checker-mount"
 import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
 import type { TerrestrialTimeStackArgs } from "~/lib/terrestrial-time-stack-mount";
 import type { JulianDayCounterArgs } from "~/lib/julian-day-counter-mount";
+import type { DoublePrecisionMeterArgs } from "~/lib/double-precision-meter-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
@@ -132,6 +133,7 @@ import {
   showFixTimestampReaderInput,
   showSsimDateReaderInput,
   showJulianDayCounterInput,
+  showDoublePrecisionMeterInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -1046,6 +1048,27 @@ const julianDayCounterEntry = defineWidget<JulianDayCounterArgs>({
     })),
 });
 
+const doublePrecisionMeterEntry = defineWidget<DoublePrecisionMeterArgs>({
+  title: "Double Precision Meter",
+  kind: "dpmeter",
+  parse: (input) => {
+    const result = showDoublePrecisionMeterInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/double-precision-meter-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderDoublePrecisionMeterTemplate(idPrefix, args),
+      mount: m.mountDoublePrecisionMeter,
+    })),
+});
+
 const holidayBuilderEntry = defineWidget<HolidayRuleBuilderArgs>({
   title: "Holiday rule builder",
   kind: "holidays",
@@ -1444,6 +1467,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showSsimDateReader: ssimEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,
+  showDoublePrecisionMeter: doublePrecisionMeterEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

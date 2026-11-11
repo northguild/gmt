@@ -1856,6 +1856,28 @@ Shared hooks come first, then the globe, then the clock-change pages.
       with no `read` reads as a JD, and a scale that is not named is UTC. The default preset
       writes nothing to the permalink.
     - **The forms table** stacks under 46rem, each cell naming its column from `data-col`.
+  - **Double Precision Meter** (`/tools/double-precision-meter/`, `dpmeter`, core, chat tool
+    `showDoublePrecisionMeter`): how far a single JD, an MJD and seconds since J2000.0 drift from
+    the instant they encode, against the exact two-part JD. The reader drags a year from 1972 to
+    9999. Four plates give the drift at the reader's instant, and a log-axis plot (`drift-lanes`,
+    1 ns to 100 µs, nothing drawn as a drift of 0 sits on a labelled floor band) gives the measured
+    drift across the years. Every drift is a library round trip (`spell` and `roundTrip` from
+    `day-count-widgets.ts`); the tool does arithmetic on no JD.
+    - **Samples** (`meterSamples`, `double-precision-meter.ts`) probe 15 June of each sampled year
+      at four fixed times of day, three library calls per round trip using `spanNs` on UTC labels,
+      7886 calls per scale (a test holds it under 8000). A probe on 15 June meets no inserted
+      second, so the span is exact. `sampleCache` memoises per scale for one mount.
+    - **The step.** JD 2²² falls on 7 July 6771, so on the 15 June probe the first year past it is
+      6772 (`stepYearOf`). Half the spacing of doubles is 2⁻³² day, 20.117 µs below it and twice that
+      above. The JSDoc's 20 µs and 40 µs are rounded; the bound test uses the exact half spacing.
+    - **The samples table is written lazily**, when the disclosure opens (axe over 165 rows costs
+      about 5 s even hidden). The plot is one `role="img"` whose label is the summary in words.
+    - **Seeds.** `value` (64 characters at most), `scale` and the preset. The default preset writes
+      nothing. A slider input sets the preset to custom and leaves the value text following the
+      year only while the read is ok.
+    - **Gates.** `readout-still` (`year-slider`, 300 px extra width), `grow-measure`,
+      `contrast-measure`, `visual-snapshot` and `html-diff` carry the tool, and `worker/tools.ts`
+      lists it.
   - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
     identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
     `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its

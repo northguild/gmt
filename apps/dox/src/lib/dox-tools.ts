@@ -676,6 +676,16 @@ export const showJulianDayCounterInput = z.object({
   scale: z.enum(["UTC", "TAI", "TT", "TCG"]).optional(),
 });
 
+/**
+ * The Double Precision Meter: how far a single Julian Date, an MJD and seconds since J2000.0
+ * drift from the instant they encode. `value` is the UTC instant as the reader gave it; `scale`
+ * only when they named one.
+ */
+export const showDoublePrecisionMeterInput = z.object({
+  value: z.string().max(64).optional(),
+  scale: z.enum(["UTC", "TAI", "TT", "TCG"]).optional(),
+});
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1308,7 +1318,8 @@ export type DoxToolName =
   | "showFixTimestampReader"
   | "showHl7TimestampReader"
   | "showSsimDateReader"
-  | "showJulianDayCounter";
+  | "showJulianDayCounter"
+  | "showDoublePrecisionMeter";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1653,6 +1664,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks for a Julian Date, Modified Julian Date or seconds since J2000 for a time, which scale a JD is on, why a JD day starts at noon, or to convert a JD or MJD back to UTC",
     args: "value: exactly as the reader gave it, never corrected. read and scale only when the reader named them; never guess a scale.",
   },
+  {
+    name: "showDoublePrecisionMeter",
+    purpose:
+      "Measure how far a single Julian Date, a Modified Julian Date and seconds since J2000.0 drift from the instant they encode, against the exact two-part Julian Date, at the reader's year and across 1972 to 9999.",
+    when: "the reader asks how precise a Julian Date stored in one number is, why a JD loses microseconds, whether to store JD, MJD or seconds since J2000, or why two-part JDs exist",
+    args: "value: exactly as the reader gave it. scale only when the reader named one.",
+  },
 ];
 
 /**
@@ -1853,6 +1871,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[47].purpose,
     inputSchema: showJulianDayCounterInput,
   }),
+  showDoublePrecisionMeter: tool({
+    description: DOX_TOOL_DOCS[48].purpose,
+    inputSchema: showDoublePrecisionMeterInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1924,6 +1946,7 @@ export const ENABLED_TOOL_NAMES = [
   "showHl7TimestampReader",
   "showSsimDateReader",
   "showJulianDayCounter",
+  "showDoublePrecisionMeter",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

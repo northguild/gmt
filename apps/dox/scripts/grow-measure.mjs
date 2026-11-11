@@ -262,6 +262,31 @@ const PAGES = [
     slug: "julian-day-counter",
     preset: PRESET,
     drag: null,
+    // The four plates ("hero") and the ruler lanes keep their boxes across every preset and
+    // while a Value is typed.
+    holdStill: {
+      parts: ["hero", "ruler"],
+      typing: {
+        field: { role: "textbox", name: "Value" },
+        text: "2026-01-01T12:00:00Z",
+        parts: ["hero", "ruler"],
+      },
+    },
+  },
+  {
+    slug: "double-precision-meter",
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the year" },
+    // The four plates ("hero") and the drift plot keep their boxes across every preset and while
+    // an Instant is typed.
+    holdStill: {
+      parts: ["hero", "frame"],
+      typing: {
+        field: { role: "textbox", name: "Instant" },
+        text: "2026-06-15T13:47:12.345678912Z",
+        parts: ["hero", "frame"],
+      },
+    },
   },
   {
     slug: "elapsed-vs-clock-difference",

@@ -171,6 +171,10 @@ const PAGES = [
     widget: "julian-day-counter",
   },
   {
+    path: "tools/double-precision-meter",
+    widget: "double-precision-meter",
+  },
+  {
     path: "tools/elapsed-vs-clock-difference",
     widget: "elapsed-vs-clock",
   },

@@ -919,6 +919,12 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { value: "2026-01-01T12:00:00Z", read: "instant", scale: "TT" },
   },
+  {
+    text: "How far does a single Julian Date drift at 2026-06-15T13:47:12.345678912Z?",
+    widget: "showDoublePrecisionMeter",
+    area: "core",
+    args: { value: "2026-06-15T13:47:12.345678912Z" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

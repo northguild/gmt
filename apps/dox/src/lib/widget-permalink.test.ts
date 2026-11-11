@@ -5,6 +5,12 @@ import {
   permalinkOf as counterPermalinkOf,
   readArgs as readCounterArgs,
 } from "./julian-day-counter";
+import {
+  DEFAULT_PRESET as METER_DEFAULT,
+  METER_PRESETS,
+  permalinkOf as meterPermalinkOf,
+  readArgs as readMeterArgs,
+} from "./double-precision-meter";
 import { formatRuleLines } from "./holiday-codec";
 import {
   DEFAULT_PRESET,
@@ -294,6 +300,20 @@ describe("widget permalinks", () => {
         readCounterArgs(
           seedFromLocation("jdcount", url.slice(url.indexOf("?"))),
         ),
+      ).toEqual(preset.state);
+    }
+  });
+
+  it("opens each Double Precision Meter preset's link on that preset", () => {
+    for (const preset of METER_PRESETS) {
+      if (preset === METER_DEFAULT) continue;
+      const url = encodeWidgetPermalink(
+        "dpmeter",
+        meterPermalinkOf(preset.state),
+      );
+      expect(url).toContain("/tools/double-precision-meter/");
+      expect(
+        readMeterArgs(seedFromLocation("dpmeter", url.slice(url.indexOf("?")))),
       ).toEqual(preset.state);
     }
   });

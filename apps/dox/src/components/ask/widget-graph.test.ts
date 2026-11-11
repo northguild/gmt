@@ -173,6 +173,8 @@ describe("the chat island's static import graph", () => {
       "lib/terrestrial-time-stack.ts",
       "lib/julian-day-counter.ts",
       "lib/day-count-widgets.ts",
+      "lib/double-precision-meter.ts",
+      "widgets/families/timescale/drift-lanes.ts",
       "widgets/families/timescale/scale-stack.ts",
       "lib/elapsed-vs-clock.ts",
       "lib/stored-time-audit.ts",

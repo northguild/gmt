@@ -136,6 +136,10 @@ import {
   renderJulianDayCounterTemplate,
 } from "./julian-day-counter-mount";
 import {
+  mountDoublePrecisionMeter,
+  renderDoublePrecisionMeterTemplate,
+} from "./double-precision-meter-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -360,6 +364,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "julian day counter",
     () => renderJulianDayCounterTemplate("test"),
     mountJulianDayCounter as MountFn<never>,
+  ],
+  [
+    "double precision meter",
+    () => renderDoublePrecisionMeterTemplate("test"),
+    mountDoublePrecisionMeter as MountFn<never>,
   ],
   [
     "holiday rule builder",

@@ -130,6 +130,11 @@ const ALL_PAGES = [
   { id: "dox-chat+ssim", path: "/dox/", open: "showSsimDateReader" },
   { id: "dox-chat+jdcount", path: "/dox/", open: "showJulianDayCounter" },
   {
+    id: "dox-chat+dpmeter",
+    path: "/dox/",
+    open: "showDoublePrecisionMeter",
+  },
+  {
     id: "check:canada-2026-clock-change",
     path: "/check/canada-2026-clock-change/",
   },

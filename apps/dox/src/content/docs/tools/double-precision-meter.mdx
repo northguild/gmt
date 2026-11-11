@@ -1,0 +1,46 @@
+---
+title: Double Precision Meter
+description: Slide a year from 1972 to 9999 and see how far a single Julian Date, a Modified Julian Date and seconds since J2000.0 drift from the instant they encode, against the exact two-part Julian Date.
+industries: [core]
+---
+
+import DoublePrecisionMeter from "../../../components/DoublePrecisionMeter.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="time scales">
+
+<Fragment slot="keypoint">
+
+A double keeps about 15 to 16 digits, and a Julian Date spends 7 of them on whole days, so a single JD is off by up to about 20 µs, and by up to about 40 µs from 6771. The two-part JD is exact.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+An instant can be stored four ways: as one **Julian Date**, as one **Modified Julian Date** (MJD), as **seconds since J2000.0**, or as a **two-part Julian Date** that keeps the whole days and the fraction of a day in two numbers. The first three are one double each, and a double has a fixed number of digits to spend. A Julian Date near the present uses 7 of them on the day count, so little is left for the fraction. An MJD counts from a later origin, so it spends fewer digits on days. Seconds since J2000.0 keep the most digits at the year 2000 and fewer the further the instant lies from it.
+
+Type an instant that ends in `Z`, or drag the year from 1972 to 9999. Each plate shows how far its form lands from the instant you gave. The tool writes the instant in that form with the library, reads it back to UTC with the library and states the gap. No drift here comes from a formula.
+
+The plot under the plates shows the same drift measured across the whole range, on a log axis from 1 ns to 100 µs. A line on the floor band is exact. Each line is the worst of four fixed times of day in each sampled year, so a value you type can drift less than the line, and never more than the bound in the function's documentation.
+
+</Fragment>
+
+<DoublePrecisionMeter fullbleed />
+
+<Fragment slot="after">
+
+**Single Julian Date.** [`toJulianDate`](/reference/timescale/convert/toJulianDate/) and [`fromJulianDate`](/reference/timescale/convert/fromJulianDate/) write and read one double. Its spacing is about 40 µs, so a value lands up to about 20 µs from the instant. After the JD passes 2²² days, in 6771, the spacing doubles. Near either end of the range one double cannot hold the instant, and `toJulianDate` returns `null`.
+
+**Modified Julian Date.** [`toModifiedJulianDate`](/reference/timescale/convert/toModifiedJulianDate/) and [`fromModifiedJulianDate`](/reference/timescale/convert/fromModifiedJulianDate/) count from a later origin, so the number is smaller and keeps more digits for the fraction near the present.
+
+**Seconds since J2000.0.** [`toJ2000Seconds`](/reference/timescale/convert/toJ2000Seconds/) and [`fromJ2000Seconds`](/reference/timescale/convert/fromJ2000Seconds/) are exact at J2000.0 itself and lose precision as the count grows away from it.
+
+**Two-part Julian Date.** [`toJulianDateParts`](/reference/timescale/convert/toJulianDateParts/) and [`fromJulianDateParts`](/reference/timescale/convert/fromJulianDateParts/) keep the whole days in one number and the fraction in another, so the fraction keeps its precision across the whole range.
+
+**Worth trying:** [Twenty microseconds](/tools/double-precision-meter/?w=dpmeter&wa=%7B%22value%22%3A%222026-01-01T12%3A00%3A00.00002Z%22%2C%22scale%22%3A%22UTC%22%7D) — the single JD drops them and the two parts keep them. [Past the step](/tools/double-precision-meter/?w=dpmeter&wa=%7B%22value%22%3A%227000-06-15T13%3A47%3A12.345678912Z%22%2C%22scale%22%3A%22UTC%22%7D) — the spacing has doubled. [J2000.0 itself](/tools/double-precision-meter/?w=dpmeter&wa=%7B%22value%22%3A%222000-01-01T11%3A58%3A55.816Z%22%2C%22scale%22%3A%22TT%22%7D) — J2000 seconds is exactly 0, so nothing drifts. [The far end](/tools/double-precision-meter/?w=dpmeter&wa=%7B%22value%22%3A%229999-06-15T13%3A47%3A12.345678912Z%22%2C%22scale%22%3A%22TT%22%7D) — J2000 seconds has grown large and drifts too.
+
+**Reference:** [`toJulianDate`](/reference/timescale/convert/toJulianDate/), [`toJulianDateParts`](/reference/timescale/convert/toJulianDateParts/), [`toModifiedJulianDate`](/reference/timescale/convert/toModifiedJulianDate/) and [`toJ2000Seconds`](/reference/timescale/convert/toJ2000Seconds/). The sibling tool is the [Julian Day Counter](/tools/julian-day-counter/).
+
+</Fragment>
+
+</ToolLayout>

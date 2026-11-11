@@ -550,6 +550,36 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showDoublePrecisionMeter", () => {
+    const schema = (
+      tools.showDoublePrecisionMeter as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts an instant, a scale or nothing", async () => {
+      for (const input of [
+        { value: "2026-06-15T13:47:12.345678912Z", scale: "TT" },
+        { scale: "TCG" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showDoublePrecisionMeter", input)).toMatchObject({
+          ok: true,
+          widget: "double-precision-meter",
+        });
+      }
+    });
+
+    it("refuses TDB and a value over 64 characters", () => {
+      expect(schema.safeParse({ scale: "TDB" }).success).toBe(false);
+      expect(schema.safeParse({ value: "1".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "1".repeat(65) }).success).toBe(false);
+    });
+  });
+
   describe("showIdTimestampDecoder refusals", () => {
     it("accepts a real id", async () => {
       expect(
