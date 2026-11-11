@@ -59,16 +59,16 @@ describe("the /compare tables", () => {
     const byName = Object.fromEntries(
       overviewTable().rows.map((r) => [r[0].text, r[column].text]),
     );
-    expect(byName["Spacetime"]).toBe("41");
+    expect(byName["Day.js"]).toBe("1");
     expect(byName["Luxon"]).toBe("not measured");
   });
 
   it("gives the version, commit, date and command of each measurement", () => {
     const rows = measuredTable().rows;
     const intl = rows.find((r) => r[0].text === "@internationalized/date")!;
-    expect(intl[1].text).toBe("3.12.3; API counted at 3.12.4");
-    expect(intl[2].text).toBe("adobe/react-spectrum@5d191ab");
-    expect(intl[3].text).toBe("2026-08-22");
+    expect(intl[1].text).toBe("3.12.4");
+    expect(intl[2].text).toBe("adobe/react-spectrum@d354aa2");
+    expect(intl[3].text).toBe("2026-11-11");
     expect(intl[4].text).toContain("jest");
   });
 
@@ -84,15 +84,21 @@ describe("the /compare tables", () => {
     expect(byName["Day.js"][5].text).toBe(
       "iamkun/dayjs/blob/dev/.github/workflows/lint-test.yml",
     );
-    expect(byName["Spacetime"][1].text).toBe("7.13.0");
+    expect(byName["Spacetime"][1].text).toBe("7.17.1");
     expect(byName["Spacetime"][5].text).toBe(
       "spencermountain/spacetime/tree/master/.github/workflows",
     );
   });
 
   it("never invents a field that was not recorded", () => {
-    const dateFns = measuredTable().rows.find((r) => r[0].text === "date-fns")!;
-    expect(dateFns[4].text).toBe("not recorded");
+    for (const m of libraryMeasurements) {
+      const row = measuredTable().rows.find(
+        (r) =>
+          r[0].text ===
+          competitorComparisons.find((c) => c.id === m.id)!.displayName,
+      )!;
+      expect(row[4].text).toBe(m.command ?? "not recorded");
+    }
   });
 
   it("states the combined multiple from the data, for all the other libraries", () => {
@@ -142,8 +148,8 @@ describe("the /compare tables", () => {
 
   it("reports the oldest and newest measurement date", () => {
     expect(measurementDateRange()).toEqual({
-      oldest: "2026-08-22",
-      newest: "2026-09-09",
+      oldest: "2026-11-11",
+      newest: "2026-11-11",
     });
   });
 });
@@ -151,8 +157,8 @@ describe("the /compare tables", () => {
 describe("inline code in strings that come from the data", () => {
   it("leaves no backtick in the page's notes, and keeps them in the Markdown", () => {
     for (const html of notesHtml()) expect(html).not.toContain("`");
-    expect(notesHtml().join("")).toContain("<code>dst-off</code>");
-    expect(notesMarkdown()).toContain("`dst-off`");
+    expect(notesHtml().join("")).toContain("<code>main</code>");
+    expect(notesMarkdown()).toContain("`main`");
   });
 
   it("renders a code cell and a linked cell as HTML", () => {

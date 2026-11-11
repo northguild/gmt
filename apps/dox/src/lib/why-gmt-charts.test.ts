@@ -152,10 +152,10 @@ describe("ciExecutionTooltip", () => {
     });
   });
 
-  it("reports Spacetime's known failures", () => {
-    expect(tooltipOf("spacetime").rows.at(-1)).toEqual({
+  it("reports Day.js's known failure", () => {
+    expect(tooltipOf("dayjs").rows.at(-1)).toEqual({
       label: "Known failures",
-      value: "41",
+      value: "1",
     });
   });
 
@@ -168,13 +168,22 @@ describe("ciExecutionTooltip", () => {
     ]);
   });
 
+  it("shows date-fns's Node and time-zone re-runs", () => {
+    expect(tooltipOf("date-fns").rows).toEqual([
+      { label: "Suite tests", value: formatCount(3167) },
+      { label: "Matrix re-runs", value: formatCount(1206627) },
+      { label: "Matrix", value: "4 Node versions + 378 time zones" },
+      { label: "CI executions", value: formatCount(1209794) },
+    ]);
+  });
+
   it("omits the matrix rows for a single-run library", () => {
-    expect(tooltipOf("date-fns")).toEqual({
-      title: "date-fns",
+    expect(tooltipOf("@internationalized/date")).toEqual({
+      title: "@internationalized/date",
       color: expect.any(String),
       rows: [
-        { label: "Suite tests", value: "3,213" },
-        { label: "CI executions", value: "3,213" },
+        { label: "Suite tests", value: "386" },
+        { label: "CI executions", value: "386" },
       ],
     });
   });

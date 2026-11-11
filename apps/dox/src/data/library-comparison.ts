@@ -119,7 +119,7 @@ export interface LibraryComparison {
   displayName: string;
   /**
    * The finest time unit the library's public API represents. Measured from each library's
-   * published TypeScript declarations at its `publicApi` version (2026-09-15): no alternative
+   * published TypeScript declarations at its `publicApi` version (2026-11-11): no alternative
    * declares a microsecond or nanosecond field or unit anywhere, so each stops at the
    * millisecond, like `Date`. GMT is nanosecond: Temporal counts epoch nanoseconds, and GMT
    * keeps them exact as `bigint` (the `precision` namespace).
@@ -193,6 +193,7 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "date-fns",
     timeResolution: "millisecond",
     displayName: measured("date-fns").name,
+    matrixLabel: "4 Node versions + 378 time zones",
     kind: "wraps",
     foundation: "built on Date",
     detail:
@@ -230,11 +231,11 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "spacetime",
     timeResolution: "millisecond",
     displayName: measured("spacetime").name,
-    matrixLabel: "2 Node versions",
+    matrixLabel: "5 Node versions",
     kind: "wraps",
     foundation: "leans on Date",
     detail:
-      "now()/today() default through new Date(). Four DST edge-case suites are named .ignore.js and never run — and the DST tests that do run are currently failing.",
+      "now()/today() default through Date.now(), the system clock. Its own suite passes in full.",
     measurement: measured("spacetime"),
     stats: statsOf(measured("spacetime")),
   },
