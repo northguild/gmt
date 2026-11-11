@@ -56,7 +56,8 @@
       "tests": 3167,
       "executions": 1209794,
       "nodeVersions": 4,
-      "timezones": 378,
+      "timezones": 0,
+      "fullSuiteZones": 378,
       "locales": 0,
       "publicApi": {
         "functions": 245,

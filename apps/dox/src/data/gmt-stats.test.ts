@@ -207,13 +207,13 @@ describe("competitor comparisons", () => {
 
   // Expected ranges come from each library's entry in library-measurements.json: locale test
   // files 0 (@internationalized/date, Luxon, date-fns) to 140 (Moment.js), tz/DST test files
-  // 0 (most) to 378 (date-fns), Node versions 1 (Day.js, @internationalized/date) to
+  // 0 (most) to 22 (Spacetime), Node versions 1 (Day.js, @internationalized/date) to
   // 5 (Spacetime). A new or re-measured library that moves a range must fail here, so the why-gmt
   // table is re-checked rather than silently changing.
   it.each`
     stat              | min  | max
     ${"locales"}      | ${0} | ${140}
-    ${"timezones"}    | ${0} | ${378}
+    ${"timezones"}    | ${0} | ${22}
     ${"nodeVersions"} | ${1} | ${5}
   `(
     "spans $stat from $min to $max across the alternatives",

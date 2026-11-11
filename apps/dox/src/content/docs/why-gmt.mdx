@@ -34,6 +34,7 @@ import {
   competitorsByPublicApi,
   competitorTimeResolutionLabel,
   executionRatio,
+  fullSuiteZoneClauses,
   largestCompetitorSuite,
   publicApiTotal,
 } from "../../data/library-comparison";
@@ -48,6 +49,7 @@ import {
 export const executionRange = competitorExecutionRange();
 export const localeRange = competitorStatRange("locales");
 export const timezoneRange = competitorStatRange("timezones");
+export const fullSuiteZoneNote = fullSuiteZoneClauses().map((c) => `; ${c}`).join("");
 export const nodeRange = competitorStatRange("nodeVersions");
 export const testRange = competitorStatRange("tests");
 export const publicApiRange = competitorPublicApiRange();
@@ -200,7 +202,7 @@ Most date bugs hide at the extremes, where ordinary tests never look. GMT tests 
 | --------------------- | ------------------------------------------------ | -------------------------------------------------------------------- |
 | **CI executions**     | {formatCount(gmtStats.executions)}               | {formatCount(executionRange.min)} – {formatCount(executionRange.max)} |
 | **Locales tested**    | {gmtStats.locales}, built into every test        | {localeRange.min} – {localeRange.max} files, tested in isolation from the rest of the API surface |
-| **Timezones tested**  | {gmtStats.timezones} × every public function     | {timezoneRange.min} – {timezoneRange.max} files, tested in isolation |
+| **Timezones tested**  | {gmtStats.timezones} × every public function     | {timezoneRange.min} – {timezoneRange.max} files, tested in isolation{fullSuiteZoneNote} |
 | **Node versions**     | {gmtStats.nodes.join(", ")}                      | {nodeRange.min} – {nodeRange.max} |
 | **Public functions**  | {formatCount(gmtStats.functions)}                | {publicApiRange.min} – {publicApiRange.max}<sup><a href="#public-api-counts" aria-label="How public functions are counted">*</a></sup> |
 | **Time precision**    | Nanoseconds, exact as `bigint`                   | {competitorTimeResolutionLabel()}                                     |

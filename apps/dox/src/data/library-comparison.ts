@@ -46,7 +46,10 @@ export interface LibraryMeasurement {
   tests: number;
   executions: number;
   nodeVersions: number;
+  /** Dedicated time-zone and DST test files that run. */
   timezones: number;
+  /** Time-zone settings the library's CI re-runs its whole suite under. */
+  fullSuiteZones?: number;
   /** Time-zone test files re-run under several zones rather than the whole suite. */
   partialZoneRuns?: { testFiles: number; zones: number; unit: string };
   /** True when a dedicated time-zone workflow exists whose scope could not be read. */
@@ -79,6 +82,9 @@ function statsOf(m: LibraryMeasurement): LibraryComparisonStats {
     timezones: m.timezones,
     nodeVersions: m.nodeVersions,
     executions: m.executions,
+    ...(m.fullSuiteZones === undefined
+      ? {}
+      : { fullSuiteZones: m.fullSuiteZones }),
     ...(m.knownFailures === undefined
       ? {}
       : { knownFailures: m.knownFailures }),
@@ -93,6 +99,8 @@ export interface LibraryComparisonStats {
   locales: number;
   /** Distinct timezone contexts exercised by dedicated tz/DST test files. */
   timezones: number;
+  /** Time-zone settings the library's CI re-runs its whole suite under, if any. */
+  fullSuiteZones?: number;
   /** Node.js versions covered by the library's own CI matrix. */
   nodeVersions: number;
   /** Total test executions the library's own CI actually runs (tests × any TZ/Node matrix its own scripts apply). */
@@ -256,10 +264,27 @@ export function competitorExecutionRange(): { min: number; max: number } {
 
 /** Fewest and most of one stat among the alternatives — so page copy never types a range. */
 export function competitorStatRange(
-  stat: keyof Omit<LibraryComparisonStats, "knownFailures" | "publicApi">,
+  stat: keyof Omit<
+    LibraryComparisonStats,
+    "knownFailures" | "publicApi" | "fullSuiteZones"
+  >,
 ): { min: number; max: number } {
   const values = competitorComparisons.map((l) => l.stats[stat]);
   return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+/**
+ * One clause per alternative whose CI re-runs the whole suite under a time-zone matrix, for
+ * pages that count dedicated time-zone test files separately.
+ */
+export function fullSuiteZoneClauses(): string[] {
+  return competitorComparisons.flatMap((l) =>
+    l.stats.fullSuiteZones
+      ? [
+          `${l.displayName} re-runs its whole suite under ${l.stats.fullSuiteZones} time-zone settings`,
+        ]
+      : [],
+  );
 }
 
 /** A library's public callable API: functions plus methods (see `LibraryComparisonStats.publicApi`). */

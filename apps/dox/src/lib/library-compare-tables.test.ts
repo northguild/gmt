@@ -3,6 +3,7 @@ import {
   combinedCompetitorExecutions,
   competitorComparisons,
   executionRatio,
+  fullSuiteZoneClauses,
   libraryMeasurements,
 } from "../data/library-comparison";
 import {
@@ -38,6 +39,7 @@ describe("library-measurements.json", () => {
       expect(library.stats.executions).toBe(m.executions);
       expect(library.stats.nodeVersions).toBe(m.nodeVersions);
       expect(library.stats.timezones).toBe(m.timezones);
+      expect(library.stats.fullSuiteZones).toBe(m.fullSuiteZones);
       expect(library.stats.locales).toBe(m.locales);
       expect(library.stats.publicApi).toEqual(m.publicApi);
     }
@@ -124,6 +126,22 @@ describe("the /compare tables", () => {
       expect(zones[2].text).toContain(library.displayName);
       expect(locales[2].text).toContain(library.displayName);
     }
+  });
+
+  it("states date-fns's zone matrix as whole-suite runs, never as files", () => {
+    const zones = differsTable().rows[0][2].text;
+    expect(zones).toContain(
+      "date-fns re-runs its whole suite under 378 time-zone settings",
+    );
+    expect(zones).not.toContain("378 time-zone test files");
+    expect(fullSuiteZoneClauses()).toEqual([
+      "date-fns re-runs its whole suite under 378 time-zone settings",
+    ]);
+    const timeZonesColumn = overviewTable().head.indexOf("Time zones");
+    const dateFnsRow = overviewTable().rows.find(
+      (row) => row[0].text === "date-fns",
+    )!;
+    expect(dateFnsRow[timeZonesColumn].text).toBe("378");
   });
 
   it("renders Markdown pipe tables with one line per row", () => {
