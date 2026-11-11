@@ -94,7 +94,7 @@ at 58d4e150, with the Linux leg's tags. Run 2026-11-08.
 - **2 untagged native failures.** `addDate` and `subtractDate` on Persian dates at -271820, the
   range minimum: JavaScriptCore's native `Temporal` returns an empty string where the polyfill
   returns `-271820-04-09[u-ca=persian]`. An engine defect: tagged with evidence, and filed
-  upstream through the usual upstream-filing steps.
+  upstream as [ICU-23609](https://unicode-org.atlassian.net/browse/ICU-23609) (open).
 - **220 host failures** (both passes fail, so the data is Apple's, not GMT's):
   - 101 match existing tags: ar-SA Islamic default calendar 47, Linux ICU 74 locale data 39,
     legacy zone ids 8, Canada 2026 tz data 7 (`America/Winnipeg` still changes clocks on

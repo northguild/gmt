@@ -57,6 +57,7 @@ describe("affected: which checks a change runs", () => {
         { path: "apps/dox/src/content/docs/guides/zones.mdx", status: "M" },
       ],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -74,6 +75,7 @@ describe("affected: which checks a change runs", () => {
       ],
       checks: [
         "markers",
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -90,6 +92,7 @@ describe("affected: which checks a change runs", () => {
       changes: ["apps/dox/src/content/docs/guides/zones.mdx"],
       checks: [
         "markers",
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -184,6 +187,7 @@ describe("affected: which checks a change runs", () => {
       name: "a package changelog runs the checks of the Dox page it becomes",
       changes: [{ path: "packages/gmt/CHANGELOG.md", status: "M" }],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -198,6 +202,7 @@ describe("affected: which checks a change runs", () => {
       name: "a plugin's changelog runs the checks of the Dox page it becomes",
       changes: [{ path: "packages/gmt-biome/CHANGELOG.md", status: "M" }],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -217,6 +222,7 @@ describe("affected: which checks a change runs", () => {
       name: "the DST guide's source runs the checks of the Dox page it becomes",
       changes: [{ path: "docs/dst-disambiguation.md", status: "M" }],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
