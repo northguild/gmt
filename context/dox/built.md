@@ -3038,10 +3038,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     legs: `readout-still` alone (`--only readout-still`) and every other gate (`--skip readout-still`,
     so a gate added later joins that leg). Each runs `gates --tier pr --browsers chromium --themes
     dark,light --against origin/<base>`, so the `pr` tier only, on the pages the diff selects; the
-    weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). A leg's limit is 30 minutes,
-    and its gate step's is 25. A diff that changes a gate script runs every gate on the sample pages.
+    weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). The `readout-still` leg's limit is 40
+    minutes and its gate step's 35; the other leg's are 30 and 25. A diff that changes a gate script runs every gate on the sample pages.
     With the Timetable Reader selected too, one job took 40 minutes locally without the build and 47 in
-    CI (#480), and `readout-still` took 24 of them: 60 drags on the Reader (10 sliders at six widths)
+    CI (#480), and `readout-still` took 24 of them locally, 25m37s in CI: 60 drags on the Reader (10 sliders at six widths)
     and 32 on the Dwell Ledger (#490 split it out). The runner prints its screen only when it ends and
     appends it to `$GITHUB_STEP_SUMMARY` in a fenced `text` block (`gates/step-summary.mjs`). Each gate
     writes its log in `.gates/` as it runs, so the step's own limit leaves time to upload them: a failed
@@ -4882,8 +4882,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - the Tier 3 keyboard-only, reduced-preference and Firefox/Safari pass;
   - the Firefox and WebKit legs of `a11y-axe`, `a11y-tab-walk` and `a11y-media` (`--browsers
     firefox`): the scripts accept the engine, but Firefox cannot launch on the author's machine;
-  - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): a run passes in under 15 minutes (record
-    the time in the "The PR job" bullet), and a PR that touches nothing under `apps/dox/` or
+  - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): each leg passes inside its limit (record
+    each leg's time in the "The PR job" bullet; the `readout-still` leg needs a run that selects the
+    Timetable Reader, since #486's took 25m37s plus a 2m06s build), and a PR that touches nothing under `apps/dox/` or
     `pnpm-lock.yaml` shows the job as skipped;
   - **the weekly gate sweep** (`dox-gates-weekly.yml`, "The weekly gate sweep"), which can only be
     dispatched once the file is on `main`:
