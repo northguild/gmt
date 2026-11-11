@@ -1825,6 +1825,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     - **No 32.184 or L_G on the site.** Every number on screen is a library result, and the
       modules hold none of the constants; the only literals are in the presets' texts, which the
       tests assert against the library.
+    - **The table's columns have room to spare.** Each column is held by its widest sample, and
+      at the 46rem table layout the samples, at 0.6em a character (Linux's monospace faces), fit
+      with a few pixels spare only with 4px side padding on the cells and widths of 15, 30, 34 and
+      21 per cent. With the page's 12px padding they spilled a cell and scrolled the table at
+      1440 px. A sample wider than the current widest has to move these numbers.
   - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
     identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
     `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its
