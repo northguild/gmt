@@ -99,7 +99,7 @@ Satellite Clock Converter.
 | The domain ends in year 9999 | GMT rule (`MAX_FOUR_DIGIT_YEAR`), so every value has a `from*` inverse |
 | A double out is one correctly rounded division of exact integers | IEEE 754-2019 §4.3 |
 | Back to nanoseconds: the exact value of the doubles, rounded once, a half rounding up | GMT rule; Temporal `halfExpand` |
-| Single JD = `jd1 + jd2` in one IEEE addition | GMT rule |
+| A single JD or MJD is the exact value rounded once, never a sum of rounded parts | IEEE 754-2019 §4.3 |
 | J2000 seconds = (JD on the scale − 2451545.0) × 86 400, one formula on every scale | ERFA `ERFA_DJ00`; GMT rule |
 | TDB is not offered | GMT rule: no story provides TDB |
 | An explicit `undefined` scale means the default and `null` returns the sentinel | coding-standards § API Contract |

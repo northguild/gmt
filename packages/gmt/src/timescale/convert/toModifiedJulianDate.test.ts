@@ -3,6 +3,8 @@ import {
   canonicalInstant,
   dayPositionOfLabel,
   edgeSweepFailures,
+  exactEpochDaysOf,
+  nearestDoubleOf,
   PARTS_INSTANTS,
 } from "../../test/julianDateFixtures";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
@@ -12,8 +14,8 @@ import { toJulianDateParts } from "./toJulianDateParts";
 import { toModifiedJulianDate } from "./toModifiedJulianDate";
 
 // Expected values come from the rule (ITU-R TF.457-2 Rec. 2: MJD = JD - 2400000.5, counted from
-// midnight; ERFA_DJM00 = 51544.5 is J2000.0) worked out by hand: MJD of the day, plus the
-// fraction as one division of integers. Never JD - 2400000.5 in doubles.
+// midnight; ERFA_DJM00 = 51544.5 is J2000.0) worked out by hand: the exact MJD, day number plus
+// fraction of the day, rounded once to the nearest double. Never JD - 2400000.5 in doubles.
 describe("toModifiedJulianDate", () => {
   it.each`
     isoString                      | scale        | expected                                       | why
@@ -183,9 +185,8 @@ describe("toModifiedJulianDate", () => {
     // ulp of a positive double: 2^(floor(log2 x) - 52) (IEEE 754-2019 §3.4).
     const ulp = (x: number): number =>
       x === 0 ? 0 : 2 ** (Math.floor(Math.log2(x)) - 52);
-    // ½ ulp(result) + ½ ulp(fraction), in days.
-    const bound = (value: number, fraction: number): number =>
-      (ulp(value) + ulp(fraction)) / 2;
+    // Half an ulp of the result, in days: the exact MJD is rounded once.
+    const bound = (value: number): number => ulp(value) / 2;
     const DAY = 86_400_000_000_000;
     // Nanoseconds since 1970-01-01 on TAI (a uniform count), from the slice-2 parts.
     const taiNanos = (x: string): bigint => {
@@ -216,15 +217,49 @@ describe("toModifiedJulianDate", () => {
           if (back === "") {
             return true;
           }
-          const fraction = mjd - Math.floor(mjd);
           // A leap-second day is 86 401 s long on UTC, so a day's fraction scales by 86 401 / 86 400.
-          const allowed = bound(mjd, fraction) * 86_401e9 + 1;
+          const allowed = bound(mjd) * 86_401e9 + 1;
           const error = taiNanos(back) - taiNanos(canonicalInstant(x));
           return Math.abs(Number(error)) > allowed;
         });
         expect(bad).toEqual([]);
       },
     );
+
+    it.each`
+      scale
+      ${"UTC"}
+      ${"TAI"}
+      ${"TT"}
+      ${"TCG"}
+    `(
+      "is the double nearest the exact MJD for each instant with a label on $scale",
+      ({ scale }: { scale: TimeScale }) => {
+        // The label writers stop at 9999, so the last nanosecond of 9999 has no TAI, TT or TCG
+        // label to count from; the edge sweep covers it.
+        const counted = PARTS_INSTANTS.filter(
+          (x) => exactEpochDaysOf(x, scale) !== null,
+        );
+        expect(counted.length).toBeGreaterThanOrEqual(
+          PARTS_INSTANTS.length - 1,
+        );
+        const bad = counted.filter((x) => {
+          const nearest = nearestModifiedJulianDate(x, scale);
+          const expected =
+            fromModifiedJulianDate(nearest, scale) === "" ? null : nearest;
+          return !Object.is(toModifiedJulianDate(x, scale), expected);
+        });
+        expect(bad).toEqual([]);
+      },
+    );
+
+    // Within picoseconds of a tie between two doubles: rounding the day's fraction first and then
+    // adding the day number lands on the tie, and ties to even picks the double one ulp away.
+    it("returns 60000.750000002234 for 2023-02-25T18:00:00.000192679Z, one rounding next to a tie", () => {
+      const x = "2023-02-25T18:00:00.000192679Z";
+      expect(nearestModifiedJulianDate(x, "UTC")).toBe(60_000.750_000_002_234);
+      expect(toModifiedJulianDate(x)).toBe(60_000.750_000_002_234);
+    });
 
     // ulp(61041) = 2^-37 day = 628.8 ns, so half an ulp is 314.4 ns: 300 ns rounds down, 400 ns up.
     it.each`
@@ -260,12 +295,21 @@ describe("toModifiedJulianDate", () => {
       const bad = early.filter((x) => {
         const mjd = toModifiedJulianDate(x) as number;
         const parts = toJulianDateParts(x) as { jd1: number; jd2: number };
-        return (
-          32 * bound(mjd, mjd - Math.floor(mjd)) >
-          bound(parts.jd1 + parts.jd2, parts.jd2)
-        );
+        return 32 * bound(mjd) > bound(parts.jd1 + parts.jd2);
       });
       expect(bad).toEqual([]);
     });
   });
 });
+
+/** The exact MJD of `x` on `scale` (days since 1970-01-01T00:00 + 40 587), rounded once. */
+function nearestModifiedJulianDate(x: string, scale: TimeScale): number {
+  const days = exactEpochDaysOf(x, scale) as {
+    numerator: bigint;
+    denominator: bigint;
+  };
+  return nearestDoubleOf(
+    days.numerator + 40_587n * days.denominator,
+    days.denominator,
+  );
+}

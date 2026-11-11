@@ -231,7 +231,6 @@ export {
   epochDaysOfJulianDate,
   epochDaysOfModifiedJulianDate,
   exactDyadic,
-  fractionOfDay,
   isTimeScale,
   J2000_EPOCH_DAY,
   JD_OF_UNIX_EPOCH_MIDNIGHT_HALF_DAYS,

@@ -3,8 +3,9 @@ import {
   dayPositionOf,
   epochDaysOfJulianDate,
   isTimeScale,
-  julianDatePartsOf,
+  JD_OF_UNIX_EPOCH_MIDNIGHT_HALF_DAYS,
   LEAP_SECOND_STEPS,
+  nearestDouble,
   parseUtcReading,
   readsBackInDomain,
 } from "../../internal";
@@ -16,8 +17,9 @@ import {
  *   6771, so any one value can be up to 20 µs off; after 6771, 80 µs and 40 µs. Use
  *   `toJulianDateParts` for nanosecond precision, or `toModifiedJulianDate`, which keeps about 64
  *   times more digits for dates before 2038.
- * - JD days begin at noon (IAU 1997 B1 App. 2): midnight UTC is `.5`. The result is `jd1 + jd2`
- *   of the parts `toJulianDateParts` writes, one IEEE 754 addition.
+ * - JD days begin at noon (IAU 1997 B1 App. 2): midnight UTC is `.5`. The result is the exact
+ *   Julian Date rounded once to the nearest double, ties to even, so it can differ by one ulp
+ *   from `jd1 + jd2` of the parts `toJulianDateParts` writes, which rounds twice.
  * - On `"UTC"` the count is ERFA's quasi-JD, the same as `toJulianDateParts`: a leap-second day
  *   counts as one day. On `"TAI"`, `"TT"` and `"TCG"` it is a true JD. TDB is not available.
  * - Accepts any offset or bracketed zone, and a listed leap second `…T23:59:60Z`.
@@ -53,8 +55,14 @@ export function toJulianDate(
     if (position === null) {
       return null;
     }
-    const { jd1, jd2 } = julianDatePartsOf(position);
-    const jd = jd1 + jd2;
+    const { epochDay, nanosOfDay, dayLength } = position;
+    // JD = epochDay + 2 440 587.5 + nanosOfDay / dayLength (on UTC a day of 86 401 s still counts
+    // as one, ERFA dtf2d.c Note 4), as one fraction over 2 × dayLength, rounded once.
+    const jd = nearestDouble(
+      (2n * epochDay + JD_OF_UNIX_EPOCH_MIDNIGHT_HALF_DAYS) * dayLength +
+        2n * nanosOfDay,
+      2n * dayLength,
+    );
     return readsBackInDomain(
       epochDaysOfJulianDate(jd),
       LEAP_SECOND_STEPS,

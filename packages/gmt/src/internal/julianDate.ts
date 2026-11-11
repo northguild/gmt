@@ -384,16 +384,6 @@ export function readsBackInDomain(
 }
 
 /**
- * The part of the day gone, as one correctly rounded division (both operands are below 2⁵³).
- *
- * @param position the day position
- * @returns a number from 0 up to but not including 1
- */
-export function fractionOfDay(position: DayPosition): number {
-  return Number(position.nanosOfDay) / Number(position.dayLength);
-}
-
-/**
  * A day position as two-part Julian Date: `jd1` a whole number, `jd2` in [0, 1), split at noon
  * (IAU 1997 B1 App. 2: the JD counts from the preceding noon). `jd2` is one division.
  *

@@ -1,4 +1,8 @@
 import { Temporal } from "../internal/temporal";
+import { toTAI } from "../timescale/convert/toTAI";
+import { toTCG } from "../timescale/convert/toTCG";
+import { toTT } from "../timescale/convert/toTT";
+import type { TimeScale } from "../types/time-scale";
 
 /** The 27 inserted leap seconds (IERS Leap_Second.dat through Bulletin C 72), as UTC dates. */
 export const LEAP_SECOND_DAYS = [
@@ -51,6 +55,7 @@ export const PARTS_INSTANTS: string[] = [
 ];
 
 const DAY = 86_400_000_000_000n;
+const SECOND = 1_000_000_000n;
 
 /**
  * The day and the nanoseconds into it that a time-scale label names, computed from the label
@@ -93,6 +98,46 @@ export function partsOfLabel(label: string): { jd1: number; jd2: number } {
   const total = epochDay * DAY + nanosOfDay + 2_440_587n * DAY + DAY / 2n;
   const jd1 = total / DAY;
   return { jd1: Number(jd1), jd2: Number(total - jd1 * DAY) / Number(DAY) };
+}
+
+/**
+ * Days since 1970-01-01T00:00 on a scale, as an exact fraction. On `"UTC"` a day counts as one
+ * whatever its length, so a reading on a leap-second day is its nanoseconds into that day over
+ * 86 401 s (ERFA `dtf2d.c` Note 4); on `"TAI"`, `"TT"` and `"TCG"` it is the label `toTAI`,
+ * `toTT` or `toTCG` writes, over 86 400 s. The Julian Date is this plus 2 440 587.5 and the MJD
+ * this plus 40 587, so `nearestDoubleOf` on either gives the one correctly rounded double.
+ *
+ * @param x a UTC instant in `Z` form, or a `…T23:59:60[.fraction]Z` reading
+ * @param scale the time scale to count on
+ * @returns the exact day count, or null where the scale has no label
+ */
+export function exactEpochDaysOf(
+  x: string,
+  scale: TimeScale,
+): { numerator: bigint; denominator: bigint } | null {
+  if (scale !== "UTC") {
+    const label = { TAI: toTAI, TT: toTT, TCG: toTCG }[scale](x);
+    if (label === "") {
+      return null;
+    }
+    const { epochDay, nanosOfDay } = dayPositionOfLabel(label);
+    return { numerator: epochDay * DAY + nanosOfDay, denominator: DAY };
+  }
+  const reading = canonicalInstant(x);
+  const leap = /^(\d{4}-\d{2}-\d{2})T23:59:60(?:\.(\d{1,9}))?Z$/.exec(reading);
+  const date = reading.slice(0, 10);
+  const { epochDay, nanosOfDay } =
+    leap === null
+      ? dayPositionOfLabel(reading.slice(0, -1))
+      : {
+          epochDay: dayPositionOfLabel(`${date}T00:00:00`).epochDay,
+          nanosOfDay: 86_400n * SECOND + BigInt((leap[2] ?? "").padEnd(9, "0")),
+        };
+  const dayLength = LEAP_SECOND_DAYS.includes(date) ? DAY + SECOND : DAY;
+  return {
+    numerator: epochDay * dayLength + nanosOfDay,
+    denominator: dayLength,
+  };
 }
 
 /** `x` in `Z` form with Temporal's shortest fraction; a `:60` reading is already canonical. */

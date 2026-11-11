@@ -1,20 +1,23 @@
 import { Temporal } from "../../internal/temporal";
 import {
   edgeSweepFailures,
+  exactEpochDaysOf,
+  LEAP_SECOND_DAYS,
+  nearestDoubleOf,
   PARTS_INSTANTS,
   partsOfLabel,
 } from "../../test/julianDateFixtures";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
-import type { JulianDateParts, TimeScale } from "../../types/time-scale";
+import type { TimeScale } from "../../types/time-scale";
 import { toJulianDate } from "./toJulianDate";
-import { toJulianDateParts } from "./toJulianDateParts";
 import { fromJulianDate } from "./fromJulianDate";
 import { toTAI } from "./toTAI";
 import { toTCG } from "./toTCG";
 import { toTT } from "./toTT";
 
 // Expected values come from the rule: JD days begin at noon (IAU 1997 B1 App. 2), the result is
-// the one IEEE 754 addition jd1 + jd2, and a double near JD 2.46e6 is spaced 2^-31 day apart.
+// the exact Julian Date rounded once to the nearest double (IEEE 754-2019 §4.3.1, ties to even),
+// and a double near JD 2.46e6 is spaced 2^-31 day apart.
 describe("toJulianDate", () => {
   it.each`
     isoString                       | scale        | expected                      | why
@@ -79,14 +82,19 @@ describe("toJulianDate", () => {
     ${"TT"}
     ${"TCG"}
   `(
-    "equals jd1 + jd2 of toJulianDateParts for each of 41 instants on $scale",
+    "is the double nearest the exact Julian Date for each instant with a label on $scale",
     ({ scale }: { scale: TimeScale }) => {
-      const bad = PARTS_INSTANTS.filter((x) => {
-        const parts = toJulianDateParts(x, scale) as JulianDateParts;
-        const sum = parts.jd1 + parts.jd2;
-        // The sum, or null where the nearest double lies outside the domain.
-        const expected = fromJulianDate(sum, scale) === "" ? null : sum;
-        return toJulianDate(x, scale) !== expected;
+      // The label writers stop at 9999, so the last nanosecond of 9999 has no TAI, TT or TCG label
+      // to count from; the edge sweep below covers it.
+      const counted = PARTS_INSTANTS.filter(
+        (x) => exactEpochDaysOf(x, scale) !== null,
+      );
+      expect(counted.length).toBeGreaterThanOrEqual(PARTS_INSTANTS.length - 1);
+      const bad = counted.filter((x) => {
+        const nearest = nearestJulianDate(x, scale) as number;
+        // The nearest double, or null where it lies outside the domain.
+        const expected = fromJulianDate(nearest, scale) === "" ? null : nearest;
+        return !Object.is(toJulianDate(x, scale), expected);
       });
       expect(bad).toEqual([]);
     },
@@ -123,29 +131,57 @@ describe("toJulianDate precision", () => {
     );
   });
 
+  // Each of these lies within picoseconds of a tie between two doubles. Rounding the day's
+  // fraction first and then adding it to the day number lands on the tie, and ties to even then
+  // picks the double one ulp away; one rounding of the exact value does not.
   it.each`
-    scale
-    ${"UTC"}
-    ${"TAI"}
-    ${"TT"}
-    ${"TCG"}
+    isoString                           | expected
+    ${"2023-02-25T06:00:00.024843961Z"} | ${2_460_000.750_000_287_3}
+    ${"2024-10-04T12:02:48.885525316Z"} | ${2_460_588.001_954_694}
   `(
-    "stays within half an ulp of the exact Julian Date on $scale",
-    ({ scale }: { scale: TimeScale }) => {
-      const numbers = PARTS_INSTANTS.filter(
-        (x) => toJulianDate(x, scale) !== null,
-      );
-      expect(numbers.length).toBeGreaterThanOrEqual(PARTS_INSTANTS.length - 3);
-      const bad = numbers.filter((x) => {
-        const parts = toJulianDateParts(x, scale) as JulianDateParts;
-        const jd = toJulianDate(x, scale) as number;
-        // |jd - (jd1 + jd2)| in days, from exact bigint arithmetic on the dyadic value of jd.
-        const errorDays = Math.abs(exactDifference(jd, parts.jd1, parts.jd2));
-        return errorDays > ulp(jd) / 2 + ulp(parts.jd2) / 2 + 2 ** -60;
-      });
-      expect(bad).toEqual([]);
+    "returns $expected for $isoString, one rounding of the exact value next to a tie",
+    ({ isoString, expected }: { isoString: string; expected: number }) => {
+      expect(nearestJulianDate(isoString, "UTC")).toBe(expected);
+      expect(toJulianDate(isoString)).toBe(expected);
     },
   );
+
+  it("is the double nearest the exact quasi-JD at 300 readings on each leap-second day", () => {
+    // A fixed linear congruential sequence (Knuth MMIX), so a failure names the same reading.
+    let state = 0x2026_1111n;
+    const next = (): bigint => {
+      state =
+        (state * 6_364_136_223_846_793_005n + 1_442_695_040_888_963_407n) &
+        0xffff_ffff_ffff_ffffn;
+      return state >> 32n;
+    };
+    const bad: string[] = [];
+    for (const day of LEAP_SECOND_DAYS) {
+      const dayStart = Temporal.Instant.from(
+        `${day}T00:00:00Z`,
+      ).epochNanoseconds;
+      for (let i = 0; i < 300; i += 1) {
+        const random = (next() << 32n) | next();
+        const n =
+          i % 10 === 0
+            ? 86_400_000_000_000n + (random % 1_000_000_000n)
+            : random % 86_400_000_000_000n;
+        const isoString =
+          n >= 86_400_000_000_000n
+            ? `${day}T23:59:60.${String(n - 86_400_000_000_000n).padStart(9, "0")}Z`
+            : Temporal.Instant.fromEpochNanoseconds(dayStart + n).toString();
+        if (
+          !Object.is(
+            toJulianDate(isoString),
+            nearestJulianDate(isoString, "UTC"),
+          )
+        ) {
+          bad.push(isoString);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
 
   // At the two domain edges the nearest double can lie outside the domain (the ceiling on UTC, TAI
   // and TT lands in year 10000, the floor on TAI and TT a few microseconds before 1972-01-01), and
@@ -328,7 +364,18 @@ function nanoseconds(x: string): bigint {
   return Temporal.Instant.from(x).epochNanoseconds;
 }
 
-/** (the double jd) - (jd1 + jd2) in days; jd - jd1 is exact, and Sterbenz keeps the rest exact. */
-function exactDifference(jd: number, jd1: number, jd2: number): number {
-  return jd - jd1 - jd2;
+/**
+ * The exact Julian Date of `x` on `scale`, rounded once to the nearest double by bigint search,
+ * or null where the scale has no label (past 9999).
+ */
+function nearestJulianDate(x: string, scale: TimeScale): number | null {
+  const days = exactEpochDaysOf(x, scale);
+  if (days === null) {
+    return null;
+  }
+  // JD = days since 1970-01-01T00:00 + 2 440 587.5, over twice the denominator.
+  return nearestDoubleOf(
+    2n * days.numerator + 4_881_175n * days.denominator,
+    2n * days.denominator,
+  );
 }

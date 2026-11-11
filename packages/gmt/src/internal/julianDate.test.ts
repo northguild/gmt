@@ -8,7 +8,6 @@ import {
   epochDaysOfJulianDate,
   epochDaysOfModifiedJulianDate,
   exactDyadic,
-  fractionOfDay,
   isTimeScale,
   J2000_EPOCH_DAY,
   JD_OF_UNIX_EPOCH_MIDNIGHT_HALF_DAYS,
@@ -504,23 +503,6 @@ describe("dayPositionOfDays", () => {
   `("has no position for $label ($n/$d)", ({ n, d }) => {
     expect(dayPositionOfDays(n, d, LEAP_SECOND_STEPS, "UTC")).toBeNull();
   });
-});
-
-describe("fractionOfDay", () => {
-  it.each`
-    nanosOfDay          | dayLength           | expected
-    ${43_200n * SECOND} | ${DAY}              | ${0.5}
-    ${0n}               | ${DAY}              | ${0}
-    ${1n}               | ${DAY}              | ${1 / 86_400_000_000_000}
-    ${43_200n * SECOND} | ${86_401n * SECOND} | ${43_200 / 86_401}
-  `(
-    "is $nanosOfDay over $dayLength as one division",
-    ({ nanosOfDay, dayLength, expected }) => {
-      expect(fractionOfDay({ epochDay: 0n, nanosOfDay, dayLength })).toBe(
-        expected,
-      );
-    },
-  );
 });
 
 describe("julianDatePartsOf", () => {

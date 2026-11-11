@@ -2,10 +2,10 @@ import type { TimeScale } from "../../types/time-scale";
 import {
   dayPositionOf,
   epochDaysOfModifiedJulianDate,
-  fractionOfDay,
   isTimeScale,
   LEAP_SECOND_STEPS,
   MJD_OF_UNIX_EPOCH,
+  nearestDouble,
   parseUtcReading,
   readsBackInDomain,
 } from "../../internal";
@@ -17,11 +17,12 @@ import {
  *   a whole number, and J2000.0 (noon) is 51544.5.
  * - One double. For present-day dates it keeps about 64 times the resolution of a single-double
  *   JD (about 0.6 µs against 40 µs), so it suits a system that takes only one number. The error is
- *   at most ½ ulp(MJD) + ½ ulp(fraction) days: 2⁻³⁸ day (0.31 µs) from 1972 to 2038-04-22, 0.63 µs
- *   to about 2217, doubling with each later doubling of the MJD, up to 20.1 µs (2⁻³² day) by year 9999, as MJD stays below 2²². For
- *   nanoseconds use `toJulianDateParts`.
- * - The result is the day number plus the fraction of the day, never `JD − 2400000.5` in doubles,
- *   which would lose the digits MJD exists to keep.
+ *   at most ½ ulp(MJD) days: 2⁻³⁸ day (0.31 µs) from 1972 to 2038-04-22, 0.63 µs to about 2217,
+ *   doubling with each later doubling of the MJD, up to 20.1 µs (2⁻³² day) by year 9999, as MJD
+ *   stays below 2²². For nanoseconds use `toJulianDateParts`.
+ * - The result is the exact day number plus fraction of the day, rounded once to the nearest
+ *   double, ties to even; never `JD − 2400000.5` in doubles, which would lose the digits MJD exists
+ *   to keep.
  * - On `"UTC"` the count is ERFA's quasi-MJD: a leap-second day counts as one day, so the
  *   difference between two UTC values is not an exact interval (ERFA `dtf2d.c` Notes 4 and 7). On
  *   `"TAI"`, `"TT"` and `"TCG"` it is read from the label `toTAI` / `toTT` / `toTCG` writes. TDB
@@ -59,8 +60,12 @@ export function toModifiedJulianDate(
     if (position === null) {
       return null;
     }
-    const mjd =
-      Number(position.epochDay + MJD_OF_UNIX_EPOCH) + fractionOfDay(position);
+    const { epochDay, nanosOfDay, dayLength } = position;
+    // MJD = epochDay + 40 587 + nanosOfDay / dayLength, as one fraction, rounded once.
+    const mjd = nearestDouble(
+      (epochDay + MJD_OF_UNIX_EPOCH) * dayLength + nanosOfDay,
+      dayLength,
+    );
     return readsBackInDomain(
       epochDaysOfModifiedJulianDate(mjd),
       LEAP_SECOND_STEPS,
