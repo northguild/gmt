@@ -59,12 +59,6 @@ export interface SsimPreset {
   locale: string;
   /** An ISO date for section 3, or `""`. */
   date: string;
-  /**
-   * The preset's own data says the month has no such day in the windowed year. The library
-   * tells every refused input apart from none other, so this is the only way the page can name
-   * the reason, and only for this exact value and window.
-   */
-  noSuchDay?: true;
 }
 
 const WINDOW_NOTE = "The window is this example's pick: change it.";
@@ -142,7 +136,6 @@ export const SSIM_PRESETS: readonly SsimPreset[] = [
     window: "1900",
     locale: "en",
     date: "",
-    noSuchDay: true,
   },
   {
     id: "rolling",
@@ -315,6 +308,7 @@ function hasWindow(options: YearWindowOptions): boolean {
 export type ReadReasonKey =
   | "empty"
   | "noWindow"
+  | "badWindow"
   | "lowerCase"
   | "noSuchDay"
   | "shape"
@@ -324,6 +318,8 @@ export const READ_REASONS: Record<ReadReasonKey, string> = {
   empty: "Type an SSIM date, such as 01JAN26, to read it.",
   noWindow:
     "No window, no date: SSIM does not say which century 26 is, so you state it.",
+  badWindow:
+    "The library refuses this window: a first year is a whole number from 0 to 9900.",
   lowerCase:
     "Lower case is refused: the letters are a code, written upper case.",
   noSuchDay: "That month has no such day in the windowed year.",
@@ -365,17 +361,42 @@ export interface ReadResult {
   calls: string[];
 }
 
-/**
- * Read the typed SSIM text. The case probe asks the library: `toUpperCase` does not depend on
- * the locale (ECMA-262 defines it by Unicode default case conversion, and only
- * `toLocaleUpperCase` takes one), so the probe cannot be moved by the reader's machine. It
- * runs only for a refusal with a window, and only when upper casing changed the text.
- */
-export function readSsim(
+/** The first of January exists in every year, so it reads in every window the library takes. */
+const WINDOW_PROBE = "01JAN00";
+
+/** Two ASCII digits of day at the start: the day probe swaps them for `01`. */
+const LEADING_DAY = /^[0-9]{2}/;
+
+/** Ask the library to read `text`, print the call, and say whether it gave a date. */
+function probe(
   lib: AviationLib,
-  state: SsimState,
-  presetId: string = matchPreset(state),
-): ReadResult {
+  text: string,
+  options: YearWindowOptions,
+  calls: string[],
+): boolean {
+  const read = lib.parseSsimDate(text, options);
+  calls.push(
+    `parseSsimDate(${literal(text)}, ${literal(options)}); // ${literal(read)}`,
+  );
+  return read !== "";
+}
+
+/**
+ * Read the typed SSIM text. A refusal with a window is named by asking the library again,
+ * each probe printed with the calls, in this order:
+ *
+ * 1. **The window.** `01JAN00` reads in every window the library takes, so a refusal of it is
+ *    the window's.
+ * 2. **The case.** The text upper-cased. `toUpperCase` does not depend on the locale
+ *    (ECMA-262 defines it by Unicode default case conversion, and only `toLocaleUpperCase`
+ *    takes one), so the probe cannot be moved by the reader's machine.
+ * 3. **The day.** The text with its two digits of day swapped for `01`. Every month has a
+ *    first day in every year, so when this reads, the day is the only fault.
+ *
+ * A probe whose text is the typed text is not run: it has already been refused. Whatever no
+ * probe reads has the wrong shape.
+ */
+export function readSsim(lib: AviationLib, state: SsimState): ReadResult {
   if (state.value === "") {
     return {
       blank: true,
@@ -399,27 +420,23 @@ export function readSsim(
     return { blank: false, ssim: read, valid, reason: "read", calls };
   }
 
+  const reads = (text: string): boolean =>
+    text !== state.value && probe(lib, text, options, calls);
+  const upper = state.value.toUpperCase();
+  const firstDay = LEADING_DAY.test(state.value)
+    ? `01${state.value.slice(2)}`
+    : state.value;
   let reason: ReadReasonKey;
   if (!hasWindow(options)) {
     reason = "noWindow";
+  } else if (!reads(WINDOW_PROBE)) {
+    reason = "badWindow";
+  } else if (reads(upper)) {
+    reason = "lowerCase";
+  } else if (reads(firstDay)) {
+    reason = "noSuchDay";
   } else {
-    const upper = state.value.toUpperCase();
-    let lowerCase = false;
-    if (upper !== state.value) {
-      const probe = lib.parseSsimDate(upper, options);
-      calls.push(
-        `parseSsimDate(${literal(upper)}, ${literal(options)}); // ${literal(probe)}`,
-      );
-      lowerCase = probe !== "";
-    }
-    const preset = SSIM_PRESETS.find((p) => p.id === presetId);
-    reason = lowerCase
-      ? "lowerCase"
-      : preset?.noSuchDay === true &&
-          preset.value === state.value &&
-          preset.window === windowOf(state)
-        ? "noSuchDay"
-        : "shape";
+    reason = "shape";
   }
   return { blank: false, ssim: null, valid, reason, calls };
 }
@@ -593,9 +610,10 @@ export type CallsSection = "read" | "pattern" | "write";
  */
 export function callsSizerText(section: CallsSection): string {
   const wide = {
-    // The typed text is refused and its upper-cased twin is read, so the probe prints.
+    // The typed text and its upper-cased twin are refused and the window probe reads, so all
+    // three probes print.
     parseSsimDate: (value: string) =>
-      value === "01jan26" || value === "2026-01-01" ? "" : "2026-01-01",
+      value === "31apr26" || value === "31APR26" ? "" : "2026-01-01",
     formatSsimDate: () => "01JAN26",
     isValidSsimDate: () => false,
     parseDateWithPattern: () => "2026-01-01",
@@ -604,7 +622,7 @@ export function callsSizerText(section: CallsSection): string {
     isValidDate: () => true,
   } as unknown as AviationLib;
   const state: SsimState = {
-    value: "01jan26",
+    value: "31apr26",
     mode: "fixed",
     first: "2000",
     locale: "fr-FR",

@@ -473,6 +473,15 @@ describe("worker tool execute", () => {
       expect(schema.safeParse({ value: "a".repeat(17) }).success).toBe(false);
     });
 
+    it("caps the locale at 35 characters, as the Duration Parser Bench does", () => {
+      const withLocale = (locale: string) =>
+        schema.safeParse({ value: "01JAN26", locale }).success;
+      expect(withLocale("en")).toBe(true);
+      expect(withLocale("a".repeat(35))).toBe(true);
+      expect(withLocale("a".repeat(36))).toBe(false);
+      expect(withLocale("e")).toBe(false);
+    });
+
     it("does not default the window", () => {
       expect(schema.safeParse({ value: "01JAN26" }).data).toEqual({
         value: "01JAN26",

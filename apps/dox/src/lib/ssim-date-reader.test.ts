@@ -134,7 +134,9 @@ describe("the read", () => {
     const cases: [SsimState, string][] = [
       [blankState(), "empty"],
       [state({ value: "01JAN26" }), "noWindow"],
+      [state({ value: "01JAN26", first: "10000" }), "badWindow"],
       [state({ value: "01jan26", first: "2000" }), "lowerCase"],
+      [state({ value: "31APR26", first: "2000" }), "noSuchDay"],
       [state({ value: "1JAN26", first: "2000" }), "shape"],
       [state({ value: "01JAN26", first: "2000" }), "read"],
     ];
@@ -143,22 +145,62 @@ describe("the read", () => {
       expect(r.reason).toBe(key);
       seen.add(r.reason);
     }
-    seen.add(
-      readSsim(aviationLib, presetState(preset("leap-1900")), "leap-1900")
-        .reason,
-    );
     expect([...seen].sort()).toEqual(Object.keys(READ_REASONS).sort());
   });
 
-  it("names noSuchDay only for the preset that says so, for its own value and window", () => {
-    const s = presetState(preset("leap-1900"));
-    expect(readSsim(aviationLib, s, "leap-1900").reason).toBe("noSuchDay");
+  // Each reason is decided by hand from the grammar and the window rule (a first year is an
+  // integer from 0 to 9900), never read from the probes under test.
+  it.each`
+    value        | first      | reason         | why
+    ${"31APR26"} | ${"2000"}  | ${"noSuchDay"} | ${"April has 30 days"}
+    ${"30FEB26"} | ${"2000"}  | ${"noSuchDay"} | ${"February never has 30 days"}
+    ${"29FEB25"} | ${"2000"}  | ${"noSuchDay"} | ${"2025 is not a leap year"}
+    ${"29FEB00"} | ${"1900"}  | ${"noSuchDay"} | ${"1900 is not a leap year"}
+    ${"29FEB00"} | ${"1800"}  | ${"noSuchDay"} | ${"00 reads as 1900 in a window from 1800"}
+    ${"30FEB00"} | ${"1900"}  | ${"noSuchDay"} | ${"February never has 30 days"}
+    ${"00JAN26"} | ${"2000"}  | ${"noSuchDay"} | ${"there is no day 0"}
+    ${"32JAN26"} | ${"2000"}  | ${"noSuchDay"} | ${"January has 31 days"}
+    ${"01JAN26"} | ${"10000"} | ${"badWindow"} | ${"a first year above 9900"}
+    ${"01JAN26"} | ${"9901"}  | ${"badWindow"} | ${"a first year above 9900"}
+    ${"01JAN26"} | ${"-1"}    | ${"badWindow"} | ${"a first year below 0"}
+    ${"01JAN00"} | ${"-1"}    | ${"badWindow"} | ${"the window probe's own text"}
+    ${"31APR26"} | ${"-1"}    | ${"badWindow"} | ${"the window is named before the day"}
+    ${"01jan26"} | ${"10000"} | ${"badWindow"} | ${"the window is named before the case"}
+    ${"01jan26"} | ${"2000"}  | ${"lowerCase"} | ${"lower case"}
+    ${"31apr26"} | ${"2000"}  | ${"shape"}     | ${"lower case, and upper-cased it names no day"}
+    ${"abJAN26"} | ${"2000"}  | ${"shape"}     | ${"no digits of day to swap"}
+    ${"01ENE26"} | ${"2000"}  | ${"shape"}     | ${"ENE is not a month code"}
+    ${"1JAN26"}  | ${"2000"}  | ${"shape"}     | ${"one digit of day"}
+  `(
+    "names $reason for '$value' from $first: $why",
+    ({ value, first, reason }) => {
+      expect(readSsim(aviationLib, state({ value, first })).reason).toBe(
+        reason,
+      );
+    },
+  );
+
+  it("prints each probe it runs, and none whose text is the typed text", () => {
     expect(
-      readSsim(aviationLib, { ...s, value: "30FEB00" }, "leap-1900").reason,
-    ).toBe("shape");
+      readSsim(aviationLib, state({ value: "31APR26", first: "2000" })).calls,
+    ).toEqual([
+      'parseSsimDate("31APR26", { yearWindow: 2000 }); // ""',
+      'isValidSsimDate("31APR26", { yearWindow: 2000 }); // false',
+      'parseSsimDate("01JAN00", { yearWindow: 2000 }); // "2000-01-01"',
+      'parseSsimDate("01APR26", { yearWindow: 2000 }); // "2026-04-01"',
+    ]);
     expect(
-      readSsim(aviationLib, { ...s, first: "1800" }, "leap-1900").reason,
-    ).toBe("shape");
+      readSsim(aviationLib, state({ value: "01JAN00", first: "-1" })).calls,
+    ).toHaveLength(2);
+  });
+
+  it("the widest printed read is a path the library can take", () => {
+    const widest = callsSizerText("read").split("\n").length;
+    const real = readSsim(
+      aviationLib,
+      state({ value: "31apr26", first: "2000" }),
+    );
+    expect(real.calls).toHaveLength(widest);
   });
 
   it("valid is true exactly when the read gives a date", () => {
@@ -352,7 +394,8 @@ describe("the permalink and the chat seed", () => {
 
 describe("the printed calls", () => {
   it("each section's widest text prints every call it can make", () => {
-    expect(callsSizerText("read").split("\n").length).toBe(3);
+    // The read, the validator, and the window, case and day probes.
+    expect(callsSizerText("read").split("\n").length).toBe(5);
     expect(callsSizerText("pattern").split("\n").length).toBe(
       1 + MONTH_COUNT + 1,
     );

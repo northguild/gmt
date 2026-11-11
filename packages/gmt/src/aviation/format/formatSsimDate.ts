@@ -12,18 +12,19 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   the month's English name in upper case, and two digits of year.
  * - **Locale-independent.** The letters are a fixed code. They are never read or written
  *   through `Intl`, so the platform's or the caller's locale changes nothing.
- * - **`value`** is a date, as `Temporal.PlainDate.from` and `isValidDate` accept it, in the ISO
- *   calendar. A date-time, an instant or a non-ISO calendar returns `""`.
+ * - **`value`** is a date, as `isValidDate` accepts it, in the ISO calendar. A date-time, an
+ *   instant or a non-ISO calendar returns `""`.
  * - **The year must lie inside the window.** `options.yearWindow` is a fixed first year or
  *   `"rolling"`. A year outside the hundred years it covers returns `""`: written as two
  *   digits, it would read back as another century. So
  *   `parseSsimDate(formatSsimDate(d, o), o)` is `d` for every canonical date it writes, with the
  *   same fixed window.
  * - **Without `yearWindow`** the result is `""`.
- * - **Sources.** The day and the month letters: SSIM Chapter 6, as AECFA's _Quick Guide to Using
- *   the IATA SSIM format_ gives it. The seven-character form: EUROCONTROL's _CSST Users Guide_
- *   §3.2 Figure 1. Avinor's SSIM description shows a two-digit year in the validity period.
- *   IATA's own Chapter 7 text was not reached.
+ * - **Sources.** The day and the month letters: SSIM Chapter 6, as two guides give it. They are
+ *   ACL's _An Introductory Guide to SSIM_ (April 2021), which shows `01APR`, and AECFA's
+ *   _Quick Guide to Using the IATA SSIM format_, which is no longer online. The seven-character
+ *   form: EUROCONTROL's _CSST Users Guide_ §3.2 Figure 1. Avinor's SSIM description shows a
+ *   two-digit year in the validity period. IATA's own Chapter 7 text was not reached.
  *
  * @param value An ISO 8601 calendar date (e.g. "2026-10-25")
  * @param options The hundred-year window the year must lie in

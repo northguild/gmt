@@ -657,7 +657,7 @@ export const showSsimDateReaderInput = z
     yearWindow: z
       .union([z.literal("rolling"), z.number().int().min(0).max(9900)])
       .optional(),
-    locale: z.string().optional(),
+    locale: z.string().min(2).max(35).optional(),
     date: z.string().max(32).optional(),
   })
   .refine((a) => a.value !== undefined || a.date !== undefined, {

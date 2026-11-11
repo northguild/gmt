@@ -7,7 +7,10 @@
  * - The day and the month letters: AECFA (Spain), _Quick Guide to Using the IATA SSIM format_,
  *   Chapter 6: "The first two are the day of the month. Shown as 01, 02,….30, 31"; "The last
  *   three are the first three letters of the name of the month in English: JAN, FEB, ……, NOV,
- *   DEC".
+ *   DEC". The guide is no longer online, so it is cited by name only.
+ * - The same day and month letters, upper case: ACL (UK), _An Introductory Guide to SSIM_
+ *   (April 2021), a condensed extract of Chapter 6 (`01APR`, `10JAN`),
+ *   https://www.acl-uk.org/wp-content/uploads/2021/04/SSIM-Review-Final2.pdf
  * - The seven-character form with a two-digit year: EUROCONTROL, _CSST Users Guide_ Ed. 8.0
  *   (28-04-2021), §3.2 Figure 1 (`05APR10`, `16DEC09`). Avinor's SSIM description shows a
  *   two-digit year in the validity period.

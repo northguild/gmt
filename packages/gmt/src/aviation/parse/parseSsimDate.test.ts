@@ -15,18 +15,16 @@ describe("parseSsimDate", () => {
     vi.restoreAllMocks();
   });
 
-  const VALID = SSIM_VALID_ROWS;
-
-  it.each(VALID)(
-    "reads '%s' in window %d as %s",
-    (value, yearWindow, expected) => {
+  it.each(SSIM_VALID_ROWS)(
+    "reads '$value' in window $yearWindow as $expected",
+    ({ value, yearWindow, expected }) => {
       expect(parseSsimDate(value, { yearWindow })).toBe(expected);
     },
   );
 
   it.each(SSIM_SENTINEL_ROWS)(
-    "returns '' for '%s' (window %d): %s",
-    (value, yearWindow) => {
+    "returns '' for '$value' (window $yearWindow): $reason",
+    ({ value, yearWindow }) => {
       expect(parseSsimDate(value, { yearWindow })).toBe("");
     },
   );
@@ -170,7 +168,7 @@ describe("parseSsimDate", () => {
 
     it("constructs no Intl formatter", () => {
       const run = (): void => {
-        for (const [value, yearWindow] of VALID) {
+        for (const { value, yearWindow } of SSIM_VALID_ROWS) {
           parseSsimDate(value, { yearWindow });
         }
       };
@@ -183,7 +181,7 @@ describe("parseSsimDate", () => {
       const upper = vi.spyOn(String.prototype, "toLocaleUpperCase");
       const lower = vi.spyOn(String.prototype, "toLocaleLowerCase");
       const compare = vi.spyOn(String.prototype, "localeCompare");
-      for (const [value, yearWindow] of VALID) {
+      for (const { value, yearWindow } of SSIM_VALID_ROWS) {
         parseSsimDate(value, { yearWindow });
       }
       const calls = [

@@ -272,6 +272,28 @@ describe("typing", () => {
     await expectNoAxeViolations(w.root);
   });
 
+  it("a day the month lacks has its own reason, and the day probe prints", async () => {
+    const w = await open();
+    await paste(w, valueBox(), "31APR26");
+    reads("SSIM reads", SIGNAL);
+    expect(reason("Reason for the read")).toHaveTextContent(
+      READ_REASONS.noSuchDay,
+    );
+    expect(calls("the SSIM read")).toHaveTextContent('parseSsimDate("01APR26"');
+  });
+
+  it("a first year the library refuses has its own reason, not the shape's", async () => {
+    const w = await open();
+    await paste(w, firstBox(), "10000");
+    reads("SSIM reads", SIGNAL);
+    expect(reason("Reason for the read")).toHaveTextContent(
+      READ_REASONS.badWindow,
+    );
+    expect(calls("the SSIM read")).toHaveTextContent(
+      'parseSsimDate("01JAN00", { yearWindow: 10000 })',
+    );
+  });
+
   it("a cleared window is the no-date reason, never a default", async () => {
     const w = await open();
     await w.user.clear(firstBox());

@@ -71,13 +71,11 @@
   white-space: nowrap;
 }
 
-.strip {
-  min-inline-size: 0;
-}
-
 /* Under 40rem the twelve rows become labelled blocks: each cell names its column from the
    `data-col` the table wrote, and the header row is read by the labels instead. */
 .strip {
+  min-inline-size: 0;
+
   @container (inline-size < 40rem) {
     & table,
     & caption,

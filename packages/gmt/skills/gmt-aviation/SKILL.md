@@ -22,9 +22,8 @@ metadata:
 # GMT Aviation
 
 Use this skill when the task is reading or writing a date from an IATA SSIM
-schedule file, such as `01JAN26` in a validity period or a creation date. The
-`yearWindow` option is the same one the EDI parsers take; see the
-`gmt-intermodal` skill.
+schedule file, such as `01JAN26` in a validity period. The `yearWindow` option
+is the same one the EDI parsers take; see the `gmt-intermodal` skill.
 
 ## When to load
 
@@ -63,7 +62,7 @@ schedule file, such as `01JAN26` in a validity period or a creation date. The
    formatSsimDate("1999-12-31", { yearWindow: 2000 }); // ""
    ```
 6. **Validate before you trust.** `isValidSsimDate(value, options)` is `true`
-   exactly when the parser returns a date, and it narrows `unknown` to `string`.
+   exactly when the parser returns a date.
 7. **Read the docs site.** This skill is a routing pointer. The map of the
    docs is `https://northguild.dev/gmt/llms.txt`, and each page has a `.md`
    twin that holds its text. The JSDoc ships in the installed package:

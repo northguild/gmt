@@ -3,6 +3,7 @@ import { countIntlConstructions } from "../../test/countIntlConstructions";
 import { MustTestLocales } from "../../test/localeMatrix";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { NON_STRINGS } from "../../test/nonStrings";
+import { SSIM_VALID_ROWS } from "../../test/ssimDateRows";
 import { isValidDate } from "../../plain/validate/isValidDate";
 import { formatSsimDate } from "./formatSsimDate";
 
@@ -15,36 +16,35 @@ describe("formatSsimDate", () => {
     vi.restoreAllMocks();
   });
 
-  const VALID = [
-    ["2026-10-25", 2000, "25OCT26"],
-    ["2026-01-01", 2000, "01JAN26"],
-    ["2000-01-01", 2000, "01JAN00"],
-    ["2099-12-31", 2000, "31DEC99"],
-    ["2000-02-29", 2000, "29FEB00"],
-    ["1950-01-01", 1950, "01JAN50"],
-    ["2049-12-31", 1950, "31DEC49"],
-    ["2010-04-05", 1950, "05APR10"],
-    ["0000-01-01", 0, "01JAN00"],
-    ["9999-12-31", 9900, "31DEC99"],
-    ["2026-01-09", 2000, "09JAN26"],
-    ["2026-02-09", 2000, "09FEB26"],
-    ["2026-03-09", 2000, "09MAR26"],
-    ["2026-04-09", 2000, "09APR26"],
-    ["2026-05-09", 2000, "09MAY26"],
-    ["2026-06-09", 2000, "09JUN26"],
-    ["2026-07-09", 2000, "09JUL26"],
-    ["2026-08-09", 2000, "09AUG26"],
-    ["2026-09-09", 2000, "09SEP26"],
-    ["2026-10-09", 2000, "09OCT26"],
-    ["2026-11-09", 2000, "09NOV26"],
-    ["2026-12-09", 2000, "09DEC26"],
-    ["2026-01-01[u-ca=iso8601]", 2000, "01JAN26"],
-    ["2026-10-25[Europe/Paris]", 2000, "25OCT26"],
-  ] as const;
-
-  it.each(VALID)(
-    "writes '%s' in window %d as %s",
-    (value, yearWindow, expected) => {
+  it.each`
+    value                         | yearWindow | expected
+    ${"2026-10-25"}               | ${2000}    | ${"25OCT26"}
+    ${"2026-01-01"}               | ${2000}    | ${"01JAN26"}
+    ${"2000-01-01"}               | ${2000}    | ${"01JAN00"}
+    ${"2099-12-31"}               | ${2000}    | ${"31DEC99"}
+    ${"2000-02-29"}               | ${2000}    | ${"29FEB00"}
+    ${"1950-01-01"}               | ${1950}    | ${"01JAN50"}
+    ${"2049-12-31"}               | ${1950}    | ${"31DEC49"}
+    ${"2010-04-05"}               | ${1950}    | ${"05APR10"}
+    ${"0000-01-01"}               | ${0}       | ${"01JAN00"}
+    ${"9999-12-31"}               | ${9900}    | ${"31DEC99"}
+    ${"2026-01-09"}               | ${2000}    | ${"09JAN26"}
+    ${"2026-02-09"}               | ${2000}    | ${"09FEB26"}
+    ${"2026-03-09"}               | ${2000}    | ${"09MAR26"}
+    ${"2026-04-09"}               | ${2000}    | ${"09APR26"}
+    ${"2026-05-09"}               | ${2000}    | ${"09MAY26"}
+    ${"2026-06-09"}               | ${2000}    | ${"09JUN26"}
+    ${"2026-07-09"}               | ${2000}    | ${"09JUL26"}
+    ${"2026-08-09"}               | ${2000}    | ${"09AUG26"}
+    ${"2026-09-09"}               | ${2000}    | ${"09SEP26"}
+    ${"2026-10-09"}               | ${2000}    | ${"09OCT26"}
+    ${"2026-11-09"}               | ${2000}    | ${"09NOV26"}
+    ${"2026-12-09"}               | ${2000}    | ${"09DEC26"}
+    ${"2026-01-01[u-ca=iso8601]"} | ${2000}    | ${"01JAN26"}
+    ${"2026-10-25[Europe/Paris]"} | ${2000}    | ${"25OCT26"}
+  `(
+    "writes '$value' in window $yearWindow as $expected",
+    ({ value, yearWindow, expected }) => {
       expect(formatSsimDate(value, { yearWindow })).toBe(expected);
     },
   );
@@ -212,8 +212,8 @@ describe("formatSsimDate", () => {
 
     it("constructs no Intl formatter", () => {
       const run = (): void => {
-        for (const [value, yearWindow] of VALID) {
-          formatSsimDate(value, { yearWindow });
+        for (const { expected, yearWindow } of SSIM_VALID_ROWS) {
+          formatSsimDate(expected, { yearWindow });
         }
       };
       expect(
@@ -225,8 +225,8 @@ describe("formatSsimDate", () => {
       const upper = vi.spyOn(String.prototype, "toLocaleUpperCase");
       const lower = vi.spyOn(String.prototype, "toLocaleLowerCase");
       const compare = vi.spyOn(String.prototype, "localeCompare");
-      for (const [value, yearWindow] of VALID) {
-        formatSsimDate(value, { yearWindow });
+      for (const { expected, yearWindow } of SSIM_VALID_ROWS) {
+        formatSsimDate(expected, { yearWindow });
       }
       const calls = [
         upper.mock.calls.length,

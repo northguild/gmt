@@ -106,12 +106,18 @@ describe("isValidSsimDate", () => {
       const { sweep: result, fail } = sweep();
       const rows: [string, number, boolean][] = [
         ...SSIM_VALID_ROWS.map(
-          ([value, yearWindow]) =>
-            [value, yearWindow, true] as [string, number, boolean],
+          ({ value, yearWindow }): [string, number, boolean] => [
+            value,
+            yearWindow,
+            true,
+          ],
         ),
         ...SSIM_SENTINEL_ROWS.map(
-          ([value, yearWindow]) =>
-            [value, yearWindow, false] as [string, number, boolean],
+          ({ value, yearWindow }): [string, number, boolean] => [
+            value,
+            yearWindow,
+            false,
+          ],
         ),
       ];
       for (const [value, yearWindow, expected] of rows) {
