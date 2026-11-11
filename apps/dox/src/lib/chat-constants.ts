@@ -913,6 +913,12 @@ export const CHAT_STARTERS: readonly {
     area: "aviation",
     args: { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
   },
+  {
+    text: "Which year does SWIFT read the value date 350615 as, and is 750615 a valid value date?",
+    widget: "showSwiftValueDateReader",
+    area: "finance",
+    args: { value: "350615" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

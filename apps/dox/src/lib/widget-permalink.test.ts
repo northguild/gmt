@@ -257,6 +257,21 @@ describe("widget permalinks", () => {
     }
   });
 
+  it("round-trips a SWIFT read: a preset name, a typed value and a cleared box", () => {
+    for (const state of [
+      { preset: "nineteen", writePreset: "round-trip" },
+      { value: "350615", date: "2024-06-15" },
+      { value: "", date: "" },
+      { preset: "twenty", date: "" },
+    ]) {
+      const url = encodeWidgetPermalink("swiftdate", state);
+      expect(url).toContain("/tools/swift-value-date-reader/");
+      expect(
+        seedFromLocation("swiftdate", url.slice(url.indexOf("?"))),
+      ).toEqual(state);
+    }
+  });
+
   it("opens each Terrestrial Time Stack preset's link on that preset", () => {
     for (const preset of STACK_PRESETS) {
       if (preset === DEFAULT_PRESET) continue;

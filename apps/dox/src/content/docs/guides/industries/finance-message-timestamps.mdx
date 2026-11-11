@@ -1,6 +1,6 @@
 ---
 title: "Finance: Message Timestamps"
-description: parseFixUtcTimestamp, formatFixUtcTimestamp and isValidFixUtcTimestamp — read and write the FIX UTCTimestamp at the precision its digits state, with a second of sixty accepted only for a leap second UTC really inserted.
+description: parseFixUtcTimestamp, formatFixUtcTimestamp and isValidFixUtcTimestamp read and write the FIX UTCTimestamp at the precision its digits state, with a second of sixty accepted only for a leap second UTC really inserted. parseSwiftDate, formatSwiftDate and isValidSwiftDate do the same for the SWIFT MT value date, using the century SWIFT states.
 sidebar:
   order: 11
 industries: [finance]
@@ -10,6 +10,10 @@ Trading and payment messages carry timestamps in their own formats, and FIX is t
 systems meet first. A FIX `UTCTimestamp` is written `YYYYMMDD-HH:MM:SS`, with an optional fraction
 of a second after a period, and it is always UTC. It is not ISO 8601: it has no dashes in the date,
 no `T`, and no `Z`.
+
+SWIFT MT payment messages carry a different kind of date: a six-digit value date, `YYMMDD`. A
+two-digit year has no century until someone states one. For value dates, SWIFT states it, so the
+SWIFT functions below need no window from you.
 
 What makes it worth a layer is that the stamp states how precisely it was measured, and it does so
 by its length. Three fraction digits are milliseconds, six microseconds, nine nanoseconds and
@@ -21,6 +25,9 @@ what the digits say.
 import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
 import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
 import { isValidFixUtcTimestamp } from "@northguild/gmt/finance/validate";
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+import { formatSwiftDate } from "@northguild/gmt/finance/format";
+import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
 ```
 
 The functions live in `@northguild/gmt/finance/parse`, `@northguild/gmt/finance/format` and
@@ -233,10 +240,134 @@ A plain `Temporal.Instant.from` does not accept the second. It clamps `2016-12-3
 leap second it stores a second that never happened as a real one. Read the stamp with
 `parseFixUtcTimestamp` first.
 
+## Reading a SWIFT value date
+
+A SWIFT value date is the date a payment takes effect. It is written `YYMMDD`: two digits for the
+year, two for the month and two for the day. SWIFT describes the format as `<DATE2>`, or `6!n`
+(six digits, exactly). It sits in field 30, and at the front of field 32A.
+
+[`parseSwiftDate(value)`](/reference/finance/parse/parseSwiftDate) reads bare digits and returns
+the ISO date. It returns `""` for anything that is not a value date. A `:32A:` subfield also
+holds a currency and an amount, so split it first and pass the date alone.
+
+```typescript
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("240615");
+// "2024-06-15"
+parseSwiftDate("240615EUR1000,00");
+// "" (the whole 32A subfield; pass the first six characters)
+```
+
+The rule applies where SWIFT states it: field 32A of MT 910, and fields 30 and 32A of category 1
+and 2 messages, except the common group messages n92, n95 and n96. SWIFT states no century for
+other six-digit dates, such as field 31D of MT 700. Read those with
+[`parseDateWithPattern`](/reference/plain/parse/parseDateWithPattern) and the `yearWindow` you
+know.
+
+## How a two-digit year gets its century
+
+SWIFT's _Message Format Validation Rules_ (Part II §4.1.1) give the rule. A year above 79 is in
+the 1900s, and any other year is in the 2000s. A year after 2060 is not allowed: SWIFT answers it
+with error code T50. So the rule covers 1980 to 2060 and nothing else. In SWIFT's words:
+
+> The valid range of value dates implemented on the SWII system is from 1980 to 2060 (limits
+> included).
+
+```text
+IF YY >79 THEN year = "19" || "YY" ELSE year = "20" || "YY" ENDIF
+IF year > 2060 THEN <error:'T50'> ENDIF
+```
+
+| Digits | Century | Reads as    |
+| ------ | ------- | ----------- |
+| 80–99  | 19YY    | 1980–1999   |
+| 00–60  | 20YY    | 2000–2060   |
+| 61–79  | none    | refused     |
+
+```typescript
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("990615");
+// "1999-06-15"
+parseSwiftDate("000101");
+// "2000-01-01"
+parseSwiftDate("601231");
+// "2060-12-31"
+parseSwiftDate("610101");
+// "" (2061 is after 2060)
+parseSwiftDate("750101");
+// "" (2075 is after 2060)
+```
+
+The SSIM and EDI parsers ask you for a window. These functions take none, because the standard
+mandates the rule: there is no choice to make. The
+[Aviation guide](/guides/industries/aviation-message-times/) shows the windowed case.
+
+The day must exist in the year the rule gives. `000229` is 29 February 2000, so it is accepted.
+`850229` is 29 February 1985, which was not a leap year, so it is refused.
+
+```typescript
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("000229");
+// "2000-02-29"
+parseSwiftDate("840229");
+// "1984-02-29"
+parseSwiftDate("850229");
+// ""
+```
+
+## Writing a value date, and why the round trip refuses some years
+
+[`formatSwiftDate(value)`](/reference/finance/format/formatSwiftDate) takes an ISO date, such as
+`2024-06-15`, and returns the six digits. It refuses a year the rule cannot read back. `1979-12-31`
+and `2061-01-01` are outside 1980 to 2060. `1924-06-15` is the subtle one: its last two digits,
+`24`, would read back as 2024, a century later than the date you wrote. So it returns `""`.
+
+```typescript
+import { formatSwiftDate } from "@northguild/gmt/finance/format";
+
+formatSwiftDate("2024-06-15");
+// "240615"
+formatSwiftDate("1980-01-01");
+// "800101"
+formatSwiftDate("2060-12-31");
+// "601231"
+formatSwiftDate("1979-12-31");
+// ""
+formatSwiftDate("2061-01-01");
+// ""
+formatSwiftDate("1924-06-15");
+// ""
+```
+
+Every date the function writes reads back as the same date:
+`parseSwiftDate(formatSwiftDate(d)) === d`.
+
+The result is the date only. If you start from a date-time, take it to its date in the zone you
+mean first. `formatSwiftDate("2024-06-15T10:00:00")` returns `""`.
+
+[`isValidSwiftDate(value)`](/reference/finance/validate/isValidSwiftDate) answers the reading
+question as a boolean. It is `true` exactly when `parseSwiftDate` returns a date.
+
+```typescript
+import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
+
+isValidSwiftDate("240615");
+// true
+isValidSwiftDate("850229");
+// false
+isValidSwiftDate("750101");
+// false
+```
+
 ## See it break, then work
 
 - [A Millisecond Stamp Read as Nanoseconds](/scenarios/a-millisecond-stamp-read-as-nanoseconds/)
 - [Second Sixty on an Ordinary Day](/scenarios/second-sixty-on-an-ordinary-day/)
+- [A Value Date in the Wrong Century](/scenarios/a-value-date-in-the-wrong-century/)
+- [SWIFT Value Date Reader](/tools/swift-value-date-reader/)
 - [Finance mistakes](/mistakes/finance/)
 
 ## Sources
@@ -247,3 +378,9 @@ leap second it stores a second that never happened as a real one. Read the stamp
 - ITU-R Recommendation TF.460-6: the inserted second is the one before a positive step, and it is
   written 23h 59m 60s.
 - IERS, `Leap_Second.dat` and Bulletin C 72, for the 27 leap seconds.
+- SWIFT, _Message Format Validation Rules_ (November 2006), Part II §4.1 Date and §4.1.1 Value
+  Date: the `YYMMDD` form, the century rule, the 1980 to 2060 range and error code T50.
+- SWIFT Standards MT (2015 User Handbook), MT 103 field 32A: the format `6!n3!a15d` and "Date must
+  be a valid date expressed as YYMMDD".
+- Both SWIFT sources were read through a public mirror of SWIFT's User Handbook, because SWIFT's
+  own copy needs a login. The 2006 edition is the newest reachable without one.

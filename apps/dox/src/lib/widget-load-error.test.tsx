@@ -132,6 +132,10 @@ import {
   renderSsimDateReaderTemplate,
 } from "./ssim-date-reader-mount";
 import {
+  mountSwiftValueDateReader,
+  renderSwiftValueDateReaderTemplate,
+} from "./swift-value-date-reader-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -346,6 +350,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "ssim date reader",
     () => renderSsimDateReaderTemplate("test"),
     mountSsimDateReader as MountFn<never>,
+  ],
+  [
+    "swift value date reader",
+    () => renderSwiftValueDateReaderTemplate("test"),
+    mountSwiftValueDateReader as MountFn<never>,
   ],
   [
     "terrestrial time stack",

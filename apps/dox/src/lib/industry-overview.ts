@@ -397,7 +397,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
   },
   finance: {
     about:
-      "Trading and payment messages carry timestamps in their own formats, not the ISO date-time format. A FIX timestamp states its precision by how many fraction digits it has, and may name a leap second. This layer reads and writes those values as standard instants, keeping what the digits say.",
+      "Trading and payment messages carry timestamps in their own formats, not the ISO date-time format. A FIX timestamp states its precision by how many fraction digits it has, and may name a leap second. This layer reads and writes those values as standard instants, keeping what the digits say. A SWIFT value date has a two-digit year, and SWIFT states its century by rule, so it needs no window from you.",
     guideTitle: "Finance: Message Timestamps",
     solves: [
       {
@@ -443,6 +443,22 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
           {
             label: "scenario",
             href: "/scenarios/second-sixty-on-an-ordinary-day/",
+          },
+        ],
+      },
+      {
+        problem: "A two-digit value date lands in the wrong century.",
+        answer:
+          "{{parseSwiftDate}} applies SWIFT's own century rule, and refuses a year past the end of SWIFT's range, as SWIFT does.",
+        see: [
+          { label: "tool", href: "/tools/swift-value-date-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-value-date-in-the-wrong-century/",
           },
         ],
       },

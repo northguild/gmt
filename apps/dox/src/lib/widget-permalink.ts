@@ -81,6 +81,7 @@ export type WidgetKind =
   | "tai64n"
   | "fixstamp"
   | "ssim"
+  | "swiftdate"
   | "ttstack";
 
 /**
@@ -148,6 +149,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   tai64n: "/tools/tai64n-log-reader/",
   fixstamp: "/tools/fix-timestamp-reader/",
   ssim: "/tools/ssim-date-reader/",
+  swiftdate: "/tools/swift-value-date-reader/",
   ttstack: "/tools/terrestrial-time-stack/",
 };
 
@@ -254,6 +256,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   fixstamp: new Set(["stamp", "write"]),
   // A cleared value, window or date is a state of its own: a blank window is the no-date reason, and the link must open on it.
   ssim: new Set(["value", "window", "date"]),
+  // A cleared value or date is a real answer: the link must open cleared, not on the default preset.
+  swiftdate: new Set(["value", "date"]),
 };
 
 /**

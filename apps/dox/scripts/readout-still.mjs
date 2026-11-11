@@ -612,6 +612,51 @@ const TOOLS = [
     drawn: ["hold"],
     textBoxes: ["instant"],
   },
+  {
+    // FIN-96. No handle: the reader types a value date or an ISO date, or picks a preset for each.
+    // The first read preset reads a date and the last is refused, so each value is typed from both.
+    slug: "swift-value-date-reader",
+    root: '[data-widget="swift-value-date-reader"]',
+    presets: ["nineteen", "whole-subfield"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Value date (YYMMDD)",
+        values: [
+          "990615",
+          "240615",
+          "750101",
+          "850229",
+          "000229",
+          "2406",
+          "240615EUR1000,00",
+          "２４０６１５",
+          "9".repeat(16),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "ISO date",
+        values: [
+          "2024-06-15",
+          "1979-12-31",
+          "2061-01-01",
+          "2024-06-15T10:00:00",
+          "x".repeat(32),
+          "",
+        ],
+      },
+      { role: "combobox", name: "Date preset", values: "options" },
+    ],
+    track: null,
+    // It draws no chart, so it has no frame part.
+    frame: false,
+    scope: "widget",
+    drawn: ["hold"],
+    textBoxes: ["codeframe"],
+  },
 ];
 
 /**

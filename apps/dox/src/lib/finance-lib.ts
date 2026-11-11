@@ -2,10 +2,12 @@
  * Loads the finance functions the finance tools need, at module granularity, and hands them
  * back as a `FinanceLib`.
  *
- * `parseFixUtcTimestamp` is picked from `finance/parse`, `formatFixUtcTimestamp` from
- * `finance/format` and `isValidFixUtcTimestamp` from `finance/validate`. Nothing else is read.
- * FIN-96's SWIFT Value Date Reader adds its names here and to `FinanceLib`
- * (`finance-widgets.ts`), so the second finance tool does not rename either file.
+ * The FIX Timestamp Reader (FIN-95) reads `parseFixUtcTimestamp` from `finance/parse`,
+ * `formatFixUtcTimestamp` from `finance/format` and `isValidFixUtcTimestamp` from
+ * `finance/validate`. The SWIFT Value Date Reader (FIN-96) reads `parseSwiftDate`,
+ * `formatSwiftDate` and `isValidSwiftDate` from the same three modules, and `isValidDate` from
+ * `plain/validate`. Nothing else is read. Both tools are built and share this loader and
+ * `FinanceLib` (`finance-widgets.ts`).
  *
  * A heavy module: it is never imported statically from the chat island. Only the widget's mount
  * reaches it, so a rejected import, or a name a module no longer exports, becomes a
@@ -29,15 +31,17 @@ function pick(module: Record<string, unknown>, names: readonly string[]) {
 
 export async function loadFinanceLib(): Promise<FinanceLib> {
   try {
-    const [parse, format, validate] = await Promise.all([
+    const [parse, format, validate, plainValidate] = await Promise.all([
       GMT_MODULES["finance/parse"](),
       GMT_MODULES["finance/format"](),
       GMT_MODULES["finance/validate"](),
+      GMT_MODULES["plain/validate"](),
     ]);
     return {
-      ...pick(parse, ["parseFixUtcTimestamp"]),
-      ...pick(format, ["formatFixUtcTimestamp"]),
-      ...pick(validate, ["isValidFixUtcTimestamp"]),
+      ...pick(parse, ["parseFixUtcTimestamp", "parseSwiftDate"]),
+      ...pick(format, ["formatFixUtcTimestamp", "formatSwiftDate"]),
+      ...pick(validate, ["isValidFixUtcTimestamp", "isValidSwiftDate"]),
+      ...pick(plainValidate, ["isValidDate"]),
     } as unknown as FinanceLib;
   } catch (cause) {
     // Loud, not inert: the host decides what to show (see `WidgetLoadError`).

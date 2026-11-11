@@ -116,3 +116,40 @@ through a public mirror; SWIFT's own copies need a login.
 - `isValidSwiftDate('240615')` and `isValidSwiftDate('000229')` are `true`; `isValidSwiftDate('750101')`, `isValidSwiftDate('241315')` and `isValidSwiftDate('850229')` are `false`
 - `isValidSwiftDate` agrees with `parseSwiftDate` on every parse row above; a number and `null` are `false`
 - `pnpm run validate` stays green
+
+## Decisions
+
+- **Shapes.** Only the six-digit `YYMMDD` value date (SWIFT component `<DATE2>`, `6!n`) is read and
+  written. `<DATE4>` (`YYYYMMDD`), ISO 15022 `:98A:`/`:98C:`, ISO 20022 dates, MT time indications
+  (13C, 13D), field parsing (tag, currency, amount) and which field carries which date are not
+  part of it.
+- **Names and reach.** The names are `parseSwiftDate`, `formatSwiftDate` and `isValidSwiftDate`.
+  The JSDoc states the section 4.1.1 reach (MT 910 field 32A, and categories 1 and 2 with field 30
+  and/or 32A, except n92, n95 and n96) and sends other six-digit dates, such as MT 700 field 31D,
+  to `parseDateWithPattern`.
+- **Edition.** The rule is cited from the November 2006 _Message Format Validation Rules_, the
+  newest edition reachable without a login. No newer public source states the 1980 to 2060 range.
+  A later Standards Release that moves it changes the two constants in `internal/swiftDate.ts`
+  and the rows that pin them.
+- **The century rule is SWIFT's IF/THEN coded literally**, not `internal/twoDigitYear.ts`. `YY`
+  above 79 is 19`YY`, the rest 20`YY`, and a year after 2060 is refused (T50). GMT takes no window,
+  as `parseRfc2822` and `parseHttpDate` take none.
+- **Input is six bare ASCII digits** (`[0-9]`, never `\d`). A tag, currency, amount, whitespace or
+  other digits returns the sentinel. Splitting a field into subfields is the caller's.
+- **The formatter takes exactly what `isValidDate` accepts** (the AV-97 precedent): an ISO
+  calendar date. A date-time names a calendar date only in a zone the caller states.
+- **The formatter refuses a year outside 1980 to 2060**, because its two digits would read back as
+  another year or be refused with T50.
+- **Sentinels** are `""`, `""` and `false`. Nothing throws, there are no options and no new types.
+  The validator calls the parser, so the two cannot disagree. Every function is O(1): no bench
+  rows.
+- **Plain dates only.** A value date is a `PlainDate`: no zone, no `Intl`, no locale matrix.
+- **The grammar is internal.** SWIFT gives a format code, not a pattern, so the grammar lives in
+  `internal/swiftDate.ts`, not in `regex/`. `coding-standards.md` extends the FIN-95 finance
+  section, retitled `(FIN-95, FIN-96)`, and names SWIFT as the third mandated rule in the INT-15
+  two-digit-year paragraph.
+- **Dox.** One tool, the SWIFT Value Date Reader. Its decisions are recorded in
+  [`dox/built.md`](../../dox/built.md) § Finance. The guide keeps its title "Finance: Message
+  Timestamps" and slug, and the scenario and mistakes page compare SWIFT's rule with a home-made
+  cut-off of 1930. There is no Dox changeset; the changeset for the three functions is
+  `.changeset/swift-value-dates.md`.

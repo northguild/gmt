@@ -429,6 +429,39 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showSwiftValueDateReader", () => {
+    const schema = (
+      tools.showSwiftValueDateReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value, a date or both", async () => {
+      for (const input of [
+        { value: "350615" },
+        { date: "2024-06-15" },
+        { value: "350615", date: "2024-06-15" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showSwiftValueDateReader", input)).toMatchObject({
+          ok: true,
+          widget: "swift-value-date-reader",
+        });
+      }
+    });
+
+    it("needs a value or a date", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+    });
+
+    it("refuses a value over 16 characters and a date over 32", () => {
+      expect(schema.safeParse({ value: "9".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ date: "x".repeat(33) }).success).toBe(false);
+    });
+  });
+
   describe("showSsimDateReader", () => {
     const schema = (
       tools.showSsimDateReader as unknown as {

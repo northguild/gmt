@@ -664,6 +664,20 @@ export const showSsimDateReaderInput = z
     message: "Give a value to read or a date to write.",
   });
 
+/**
+ * SWIFT Value Date Reader: the six-character value date to read (`value`) and an ISO date to
+ * write back (`date`). Nothing is trimmed, upper-cased or repaired, and the chat never fills in
+ * `value` from a date or `date` from a value.
+ */
+export const showSwiftValueDateReaderInput = z
+  .object({
+    value: z.string().max(16).optional(),
+    date: z.string().max(32).optional(),
+  })
+  .refine((a) => a.value !== undefined || a.date !== undefined, {
+    message: "Give a value date to read or an ISO date to write.",
+  });
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1295,7 +1309,8 @@ export type DoxToolName =
   | "showTerrestrialTimeStack"
   | "showFixTimestampReader"
   | "showHl7TimestampReader"
-  | "showSsimDateReader";
+  | "showSsimDateReader"
+  | "showSwiftValueDateReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1633,6 +1648,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks about SSIM or airline schedule dates such as 01JAN26, a month code read in the wrong language, or which century a two-digit year means in a schedule. Pass only what the reader gave: never a yearWindow they did not state, never a locale inferred from a place, never an upper-cased value.",
     args: 'value: the SSIM text exactly as the reader gave it, at most 16 characters, never trimmed or upper-cased; yearWindow: only when the reader stated one, a first year from 0 to 9900 or "rolling"; locale: a BCP 47 tag, only when the reader named one, passed to the pattern comparison alone; date: an ISO date to write back. Give value or date.',
   },
+  {
+    name: "showSwiftValueDateReader",
+    purpose:
+      "Reads a SWIFT MT value date (YYMMDD, field 30 or 32A) with parseSwiftDate and shows the century SWIFT's rule gives, or the T50 refusal; writes an ISO date back with formatSwiftDate.",
+    when: "the reader asks which year a two-digit SWIFT value date means, why a value date is refused, or how to write a date as YYMMDD for SWIFT",
+    args: "value (six digits as sent), date (an ISO date to write)",
+  },
 ];
 
 /**
@@ -1829,6 +1851,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[46].purpose,
     inputSchema: showSsimDateReaderInput,
   }),
+  showSwiftValueDateReader: tool({
+    description: DOX_TOOL_DOCS[47].purpose,
+    inputSchema: showSwiftValueDateReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1899,6 +1925,7 @@ export const ENABLED_TOOL_NAMES = [
   "showFixTimestampReader",
   "showHl7TimestampReader",
   "showSsimDateReader",
+  "showSwiftValueDateReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

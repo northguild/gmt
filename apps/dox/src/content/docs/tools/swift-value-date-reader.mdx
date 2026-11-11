@@ -1,0 +1,51 @@
+---
+title: SWIFT Value Date Reader
+description: "Paste a SWIFT value date, YYMMDD. The tool reads it with parseSwiftDate and isValidSwiftDate, shows the century SWIFT gives the two-digit year and the T50 refusal, and writes an ISO date back with formatSwiftDate."
+industries: [finance]
+---
+
+import ToolLayout from "../../../components/ToolLayout.astro";
+import SwiftValueDateReader from "../../../components/SwiftValueDateReader.astro";
+
+<ToolLayout useCase="SWIFT value dates">
+
+<Fragment slot="keypoint">
+
+Two digits do not carry a century. SWIFT fixes one by rule, not by the calendar: `99` is 1999 and `24` is 2024, and a `75` is refused, because the rule puts it past 2060.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A SWIFT value date is six characters, `YYMMDD`: the date of field 30, and the date at the front of the 32A subfield. Paste one and the tool says what it reads as. [`parseSwiftDate`](/reference/finance/parse/parseSwiftDate/) returns the ISO date, or the empty string when the text is not one, and [`isValidSwiftDate`](/reference/finance/validate/isValidSwiftDate/) says whether it is. Everything on the page is what those calls returned. A last section goes the other way with [`formatSwiftDate`](/reference/finance/format/formatSwiftDate/).
+
+</Fragment>
+
+<SwiftValueDateReader fullbleed />
+
+<Fragment slot="after">
+
+**The century is a rule, and the table is the library's answer.** The tool asks the library about the first of January of every two-digit year, from `00` to `99`, and groups the years it reads alike. The rows of the century table are those groups. The table marks the row of the year you typed, and marks none when the text does not start with two digits. The rule is quoted under the table from the SWIFT Message Format Validation Rules. The site never runs it.
+
+**T50.** The SWIFT rules answer a malformed date with error code T50. The tool shows it for any refused text that is exactly six characters long. A refused text of any other length gets no code, because the date component is six characters and a longer string, such as a whole `32A` subfield, was never a date. When a text is refused, the sentence under the verdict comes from asking the library again: is the year in the refused group, is the month a month, is the day a day, and, if all three are, the day does not exist in that month of that year. A refused 29 February names the year the library gave for the first of February of that year, so the tool does no leap-year sum of its own.
+
+**Writing a date.** `formatSwiftDate` writes two digits for the year, so it refuses a year that two digits would read back as another year. The tool says so, with the range taken from the table. The box accepts a calendar date. A date-time names a calendar date only in a zone, so the tool asks for the date first.
+
+```ts
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+import { formatSwiftDate } from "@northguild/gmt/finance/format";
+import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
+
+parseSwiftDate("990615"); // "1999-06-15"
+parseSwiftDate("240615"); // "2024-06-15"
+parseSwiftDate("750101"); // ""
+isValidSwiftDate("850229"); // false
+formatSwiftDate("2024-06-15"); // "240615"
+formatSwiftDate("1979-12-31"); // ""
+```
+
+**Worth trying:** [a 19YY date](/tools/swift-value-date-reader/?w=swiftdate&wa=%7B%22preset%22%3A%22nineteen%22%7D) reads as 1999, not as this year's century; [a year past the last SWIFT reads](/tools/swift-value-date-reader/?w=swiftdate&wa=%7B%22preset%22%3A%22past-limit%22%7D) is refused with T50 and names its group; and [29 February 1985](/tools/swift-value-date-reader/?w=swiftdate&wa=%7B%22preset%22%3A%22no-leap-1985%22%7D) has no such day. The [FIX Timestamp Reader](/tools/fix-timestamp-reader/) reads the other timestamp a payment message carries. The rules are in [Finance: Message Timestamps](/guides/industries/finance-message-timestamps/).
+
+</Fragment>
+
+</ToolLayout>
