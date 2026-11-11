@@ -162,8 +162,10 @@
 
   /* The four columns are held by their widest sample. At 46rem the samples at 0.6em a character
      (Linux's monospace faces) plus the page's 12px cell padding need more than the table has, so
-     a cell spills and the table scrolls. The 4px padding leaves each column a few pixels spare. */
+     a cell spills and the table scrolls. The 4px padding leaves each column a few pixels spare.
+     The caption takes it too, so its text lines up with the cells. */
   @container (inline-size >= 46rem) {
+    & caption,
     & th,
     & td {
       padding-inline: var(--gmt-space-1);
