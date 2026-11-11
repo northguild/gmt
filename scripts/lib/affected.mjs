@@ -106,7 +106,7 @@ export const CHECKS = [
   {
     id: "typecheck:dox",
     run: "pnpm --filter @gmt/dox run typecheck",
-    needs: ["build:gmt"],
+    needs: ["build:gmt", "build:gmt-oxlint"],
   },
   {
     id: "test:gmt-oxlint",

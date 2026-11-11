@@ -63,8 +63,8 @@ const BOA_723 = "https://github.com/boa-dev/temporal/pull/723";
  * Two more fail on the Mac build alone and are AE: Apple's libicucore (ICU4C 75 or later) counts every
  * Persian year before year 0 as a leap year, so adding a month to day 30 of Bahman, or subtracting one from
  * day 30 of Farvardin, in a year before year 0 throws. If the Linux runner's ICU moves to 75 or later, the
- * `webkit` leg starts failing
- * these two rows too and they need that leg. None is filed yet. Evidence: the records.
+ * `webkit` leg starts failing these two rows too and they need that leg. Both are filed as ICU-23609.
+ * Evidence: the records.
  * Goose Bay day rounding is not here: it was a GMT defect and is fixed (temporalCompat D14).
  *
  * @type {ReadonlyArray<{ file: string, test: string, legs: Leg[], defect: string, upstream: string | null }>}
