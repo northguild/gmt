@@ -160,7 +160,7 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * arguments are expressions over a driver value, so they cannot be bound to an input here.
  * `apps/dox/src/lib/databases-guide.test.ts` runs every snippet on that page instead.
  */
-const SKIP_BUDGET = { examples: 184, docResults: 60 };
+const SKIP_BUDGET = { examples: 186, docResults: 60 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {

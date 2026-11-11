@@ -82,7 +82,7 @@ export function overviewTable(): CompareTable {
       plain(formatCount(stats.tests)),
       plain(formatCount(stats.executions)),
       plain(String(stats.nodeVersions)),
-      plain(String(stats.timezones)),
+      plain(String(stats.fullSuiteZones ?? stats.timezones)),
       plain(String(stats.locales)),
       plain(
         stats.knownFailures === undefined
@@ -164,6 +164,9 @@ function timeZoneStatement(library: LibraryComparison): string {
   }
   if (m.timeZoneWorkflowScopeUnclear) {
     return `${library.displayName} has a dedicated time-zone workflow whose scope is unclear`;
+  }
+  if (m.fullSuiteZones) {
+    return `${library.displayName} re-runs its whole suite under ${m.fullSuiteZones} time-zone settings`;
   }
   if (m.timezones > 0) {
     return `${library.displayName} has ${m.timezones} time-zone test files, run once per Node version`;

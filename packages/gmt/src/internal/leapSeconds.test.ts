@@ -6,6 +6,7 @@ import {
   nextStepIndex,
   stepReading,
   taiOfUtc,
+  utcDayLengthNanoseconds,
   utcOfTai,
 } from "./leapSeconds";
 import { formatUtcReading } from "./utcReading";
@@ -284,5 +285,42 @@ describe("stepReading", () => {
     ${negativeStepSteps} | ${28} | ${"2029-12-31T23:59:59Z"}
   `("writes step $index as $written", ({ steps, index, written }) => {
     expect(formatUtcReading(stepReading(steps, index))).toBe(written);
+  });
+});
+
+describe("utcDayLengthNanoseconds", () => {
+  const DAY = 86_400_000_000_000n;
+  const SECOND = 1_000_000_000n;
+
+  // ITU-R TF.460-6 Annex 1 §2.2: the day before a positive step holds 86 401 s.
+  it.each`
+    day           | iso             | length
+    ${17_166n}    | ${"2016-12-31"} | ${86_401n}
+    ${17_167n}    | ${"2017-01-01"} | ${86_400n}
+    ${17_165n}    | ${"2016-12-30"} | ${86_400n}
+    ${730n}       | ${"1972-01-01"} | ${86_400n}
+    ${729n}       | ${"1971-12-31"} | ${86_400n}
+    ${0n}         | ${"1970-01-01"} | ${86_400n}
+    ${-1_000n}    | ${"1967-04-08"} | ${86_400n}
+    ${2_932_896n} | ${"9999-12-31"} | ${86_400n}
+  `("the UTC day $iso (epoch day $day) holds $length s", ({ day, length }) => {
+    expect(utcDayLengthNanoseconds(LEAP_SECOND_STEPS, day)).toBe(
+      length * SECOND,
+    );
+  });
+
+  it("gives 86 401 s on each of the 27 inserted-second days and 86 400 s on the day after", () => {
+    for (let index = 1; index < LEAP_SECOND_STEPS.at.length; index += 1) {
+      const next = LEAP_SECOND_STEPS.at[index] / DAY;
+      expect(utcDayLengthNanoseconds(LEAP_SECOND_STEPS, next - 1n)).toBe(
+        DAY + SECOND,
+      );
+      expect(utcDayLengthNanoseconds(LEAP_SECOND_STEPS, next)).toBe(DAY);
+    }
+  });
+
+  it("gives 86 399 s on the day before a negative step (hand-built table)", () => {
+    const day = utcNs("2029-12-31T00:00:00Z") / DAY;
+    expect(utcDayLengthNanoseconds(negativeStepSteps, day)).toBe(DAY - SECOND);
   });
 });

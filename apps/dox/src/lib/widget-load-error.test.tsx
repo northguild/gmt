@@ -132,6 +132,14 @@ import {
   renderSsimDateReaderTemplate,
 } from "./ssim-date-reader-mount";
 import {
+  mountJulianDayCounter,
+  renderJulianDayCounterTemplate,
+} from "./julian-day-counter-mount";
+import {
+  mountDoublePrecisionMeter,
+  renderDoublePrecisionMeterTemplate,
+} from "./double-precision-meter-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -351,6 +359,16 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "terrestrial time stack",
     () => renderTerrestrialTimeStackTemplate("test"),
     mountTerrestrialTimeStack as MountFn<never>,
+  ],
+  [
+    "julian day counter",
+    () => renderJulianDayCounterTemplate("test"),
+    mountJulianDayCounter as MountFn<never>,
+  ],
+  [
+    "double precision meter",
+    () => renderDoublePrecisionMeterTemplate("test"),
+    mountDoublePrecisionMeter as MountFn<never>,
   ],
   [
     "holiday rule builder",

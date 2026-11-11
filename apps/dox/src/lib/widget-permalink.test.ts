@@ -1,4 +1,16 @@
 import { showHolidayRuleBuilderInput } from "./dox-tools";
+import {
+  COUNTER_PRESETS,
+  DEFAULT_PRESET as COUNTER_DEFAULT,
+  permalinkOf as counterPermalinkOf,
+  readArgs as readCounterArgs,
+} from "./julian-day-counter";
+import {
+  DEFAULT_PRESET as METER_DEFAULT,
+  METER_PRESETS,
+  permalinkOf as meterPermalinkOf,
+  readArgs as readMeterArgs,
+} from "./double-precision-meter";
 import { formatRuleLines } from "./holiday-codec";
 import {
   DEFAULT_PRESET,
@@ -276,6 +288,34 @@ describe("widget permalinks", () => {
     expect(seedFromLocation("ttstack", url.slice(url.indexOf("?")))).toEqual({
       value,
     });
+  });
+
+  it("opens each Julian Day Counter preset's link on that preset", () => {
+    for (const preset of COUNTER_PRESETS) {
+      if (preset === COUNTER_DEFAULT) continue;
+      const args = counterPermalinkOf(preset.state);
+      const url = encodeWidgetPermalink("jdcount", args);
+      expect(url).toContain("/tools/julian-day-counter/");
+      expect(
+        readCounterArgs(
+          seedFromLocation("jdcount", url.slice(url.indexOf("?"))),
+        ),
+      ).toEqual(preset.state);
+    }
+  });
+
+  it("opens each Double Precision Meter preset's link on that preset", () => {
+    for (const preset of METER_PRESETS) {
+      if (preset === METER_DEFAULT) continue;
+      const url = encodeWidgetPermalink(
+        "dpmeter",
+        meterPermalinkOf(preset.state),
+      );
+      expect(url).toContain("/tools/double-precision-meter/");
+      expect(
+        readMeterArgs(seedFromLocation("dpmeter", url.slice(url.indexOf("?")))),
+      ).toEqual(preset.state);
+    }
   });
 
   it("registers the three holiday tools at their own pages", () => {

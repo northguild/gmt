@@ -81,7 +81,9 @@ export type WidgetKind =
   | "tai64n"
   | "fixstamp"
   | "ssim"
-  | "ttstack";
+  | "ttstack"
+  | "jdcount"
+  | "dpmeter";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -149,6 +151,8 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   fixstamp: "/tools/fix-timestamp-reader/",
   ssim: "/tools/ssim-date-reader/",
   ttstack: "/tools/terrestrial-time-stack/",
+  jdcount: "/tools/julian-day-counter/",
+  dpmeter: "/tools/double-precision-meter/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */

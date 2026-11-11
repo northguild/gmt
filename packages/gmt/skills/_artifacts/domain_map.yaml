@@ -399,6 +399,14 @@ skills:
       - toTCG
       - fromTCG
       - tcgMinusTt
+      - toJulianDateParts
+      - fromJulianDateParts
+      - toJulianDate
+      - fromJulianDate
+      - toModifiedJulianDate
+      - fromModifiedJulianDate
+      - toJ2000Seconds
+      - fromJ2000Seconds
     tasks:
       - Create stable cache keys from date values
       - Use with routers and query params
@@ -416,6 +424,7 @@ skills:
       - Convert between UTC and a TAI time-scale string, a listed leap second included
       - Read and write the TAI64N labels in qmail, daemontools and s6 logs (toTai64n, fromTai64n)
       - Convert between UTC and Terrestrial Time or Geocentric Coordinate Time, and read the TCG − TT gap (toTT, fromTT, toTCG, fromTCG, tcgMinusTt)
+      - Convert between a UTC instant and a two-part Julian Date, a single Julian Date, a Modified Julian Date or seconds since J2000.0, on UTC, TAI, TT or TCG
       - Choose ESLint config
       - Choose Biome config
       - Choose Oxlint config

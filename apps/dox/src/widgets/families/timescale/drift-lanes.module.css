@@ -1,0 +1,261 @@
+/*
+ * The Double Precision Meter's drawing: one plot on a log axis, a key and nothing else. Series
+ * differ by dash pattern, never by colour alone; a series colour is on a stroke, never on text.
+ * Every label sits on an opaque surface. Amber is not used here: NO SIGNAL belongs to the
+ * tool's own slot. A place is `--at` (along the years) or `--level` (up the axis) in percent.
+ */
+
+.frame {
+  container: drift / inline-size;
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: linear-gradient(
+    var(--gmt-glass-tint),
+    var(--gmt-glass-tint-subtle)
+  );
+  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
+  & [data-series="1"] {
+    --series: var(--gmt-series-1);
+  }
+
+  & [data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+
+  & [data-series="3"] {
+    --series: var(--gmt-series-3);
+  }
+
+  & [data-series="4"] {
+    --series: var(--gmt-series-4);
+  }
+}
+
+/* One grid holds the y labels, the field, the end labels and the year axis, so every label lines
+   up with the field it names. The field's height is fixed: nothing here moves with a reading. */
+.plot {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr) 6.5rem;
+  grid-template-rows: 12rem 1.5rem;
+  column-gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  @container drift (inline-size < 34rem) {
+    grid-template-columns: 3.75rem minmax(0, 1fr);
+  }
+}
+
+.field {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  box-sizing: border-box;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-fill);
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: hidden;
+}
+
+.floor {
+  fill: var(--gmt-surface-widget);
+}
+
+.grid {
+  stroke: var(--gmt-hairline);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.line {
+  fill: none;
+  stroke: var(--series, var(--gmt-ice));
+  stroke-width: 2px;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+
+  &[data-series="1"] {
+    stroke-dasharray: none;
+  }
+
+  &[data-series="2"] {
+    stroke-dasharray: 7 4;
+  }
+
+  &[data-series="3"] {
+    stroke-dasharray: 2 4;
+  }
+
+  &[data-series="4"] {
+    stroke-dasharray: 10 3 2 3;
+  }
+}
+
+.guide {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at, 0%);
+  inline-size: 2px;
+  background: var(--gmt-ice);
+}
+
+.yAxis {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  min-inline-size: 0;
+}
+
+.yTick,
+.endLabel {
+  position: absolute;
+  inset-block-end: var(--level, 0%);
+  translate: 0 50%;
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  line-height: 1.2;
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.yTick {
+  inset-inline-end: 0;
+
+  &[data-floor="true"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+.ends {
+  position: relative;
+  grid-column: 3;
+  grid-row: 1;
+  min-inline-size: 0;
+}
+
+.endLabel {
+  inset-inline-start: 0;
+  padding: 1px var(--gmt-space-1);
+  border: 1px solid var(--gmt-border);
+  border-block-end: 3px solid var(--series, var(--gmt-border-strong));
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+}
+
+.xAxis {
+  position: relative;
+  grid-column: 2;
+  grid-row: 2;
+  min-inline-size: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice);
+  font-variant-numeric: tabular-nums;
+}
+
+.xTick {
+  position: absolute;
+  inset-block-start: 0.25rem;
+  inset-inline-start: var(--at, 0%);
+  translate: -50% 0;
+  white-space: nowrap;
+
+  /* The end years are labelled apart, so a tick near them is dropped on a narrow plot. */
+  @container drift (inline-size < 34rem) {
+    visibility: hidden;
+  }
+}
+
+.xEnd {
+  position: absolute;
+  inset-block-start: 1.25rem;
+  white-space: nowrap;
+  color: var(--gmt-ice-dim);
+
+  &[data-end="start"] {
+    inset-inline-start: 0;
+  }
+
+  &[data-end="finish"] {
+    inset-inline-end: 0;
+  }
+}
+
+/* The key. */
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2) var(--gmt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.keyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  margin: 0;
+}
+
+.swatch {
+  flex: none;
+  forced-color-adjust: none;
+}
+
+@media (forced-colors: active) {
+  .frame,
+  .field,
+  .endLabel {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+
+  .line,
+  .grid {
+    stroke: CanvasText;
+  }
+
+  .floor {
+    fill: Canvas;
+  }
+
+  .guide {
+    background: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frame,
+  .field {
+    border-color: var(--gmt-ice);
+  }
+
+  .key,
+  .xEnd,
+  .yTick[data-floor="true"] {
+    color: var(--gmt-ice);
+  }
+}

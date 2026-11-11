@@ -75,6 +75,8 @@ import {
   showTai64nLogReaderInput,
   showFixTimestampReaderInput,
   showSsimDateReaderInput,
+  showJulianDayCounterInput,
+  showDoublePrecisionMeterInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
@@ -668,6 +670,16 @@ export function buildWorkerTools(
       description: docFor("showTerrestrialTimeStack"),
       inputSchema: showTerrestrialTimeStackInput,
       execute: () => accept("terrestrial-time-stack"),
+    }),
+    showJulianDayCounter: tool({
+      description: docFor("showJulianDayCounter"),
+      inputSchema: showJulianDayCounterInput,
+      execute: () => accept("julian-day-counter"),
+    }),
+    showDoublePrecisionMeter: tool({
+      description: docFor("showDoublePrecisionMeter"),
+      inputSchema: showDoublePrecisionMeterInput,
+      execute: () => accept("double-precision-meter"),
     }),
   };
 

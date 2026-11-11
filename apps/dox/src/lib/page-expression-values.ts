@@ -19,6 +19,7 @@ import {
   competitorStatRange,
   competitorTimeResolutionLabel,
   executionRatio,
+  fullSuiteZoneClauses,
   largestCompetitorSuite,
 } from "../data/library-comparison";
 import {
@@ -72,6 +73,9 @@ export function pageExpressionValues(): Record<string, string> {
     "measurementDates.newest": measuredOn.newest,
     "gmtStats.tests": String(gmtStats.tests),
     "gmtStats.timezones": String(gmtStats.timezones),
+    fullSuiteZoneNote: fullSuiteZoneClauses()
+      .map((c) => `; ${c}`)
+      .join(""),
     "gmtStats.locales": String(gmtStats.locales),
     "gmtStats.patterns": String(gmtStats.patterns),
     "gmtStats.nodes.length": String(gmtStats.nodes.length),

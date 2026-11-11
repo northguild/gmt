@@ -628,6 +628,8 @@ export function renderMdxComponents(body: string): string {
     "ExpiryCalculator",
     "DatabaseTimestampReader",
     "TerrestrialTimeStack",
+    "JulianDayCounter",
+    "DoublePrecisionMeter",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",

@@ -18525,6 +18525,146 @@
     ]
   },
   {
+    "url": "/reference/timescale/convert/fromJ2000Seconds",
+    "page": "/reference/timescale/convert/fromJ2000Seconds",
+    "name": "fromJ2000Seconds",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromJ2000Seconds(seconds: number, scale?: TimeScale): string",
+    "description": "Convert seconds since J2000.0 on a time scale to a UTC instant string. **The scale defaults to `\"TT\"`, unlike the Julian Date and MJD functions, which default to `\"UTC\"`**: J2000.0 is defined as 2000-01-01T12:00:00 TT (IAU 1994 Resolution C7).",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromJ2000Seconds.ts",
+    "examples": [
+      {
+        "call": "fromJ2000Seconds(0)",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromJ2000Seconds(0, \"UTC\")",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJ2000Seconds(820497600, \"UTC\")",
+        "result": "\"2026-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromJ2000Seconds(-883656000.5, \"UTC\")",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromJ2000Seconds(NaN)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromJulianDate",
+    "page": "/reference/timescale/convert/fromJulianDate",
+    "name": "fromJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromJulianDate(jd: number, scale?: TimeScale): string",
+    "description": "Convert a single Julian Date on a time scale to a UTC instant string. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromJulianDate.ts",
+    "examples": [
+      {
+        "call": "fromJulianDate(2451545)",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJulianDate(2451545, \"TT\")",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromJulianDate(2451544.5)",
+        "result": "\"2000-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromJulianDate(2461042 + 2 ** -31)",
+        "result": "\"2026-01-01T12:00:00.000040233Z\""
+      },
+      {
+        "call": "fromJulianDate(2441317.4)",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromJulianDate(NaN)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromJulianDateParts",
+    "page": "/reference/timescale/convert/fromJulianDateParts",
+    "name": "fromJulianDateParts",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromJulianDateParts(parts: JulianDateParts, scale?: TimeScale): string",
+    "description": "Convert a two-part Julian Date on a time scale to a UTC instant string. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromJulianDateParts.ts",
+    "examples": [
+      {
+        "call": "fromJulianDateParts({ jd1: 2451545, jd2: 0 })",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2451545, jd2: 0 }, \"TT\")",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2400000.5, jd2: 51544.5 })",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2457754, jd2: 86399 / 172802 })",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2441317, jd2: 0.4999999 })",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: NaN, jd2: 0 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromModifiedJulianDate",
+    "page": "/reference/timescale/convert/fromModifiedJulianDate",
+    "name": "fromModifiedJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromModifiedJulianDate(mjd: number, scale?: TimeScale): string",
+    "description": "Convert a Modified Julian Date on a time scale to a UTC instant string. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromModifiedJulianDate.ts",
+    "examples": [
+      {
+        "call": "fromModifiedJulianDate(51544)",
+        "result": "\"2000-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromModifiedJulianDate(51544.5, \"TT\")",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromModifiedJulianDate(57753.5)",
+        "result": "\"2016-12-31T12:00:00.5Z\""
+      },
+      {
+        "call": "fromModifiedJulianDate(41316.99)",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromModifiedJulianDate(NaN)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/timescale/convert/fromTAI",
     "page": "/reference/timescale/convert/fromTAI",
     "name": "fromTAI",
@@ -18661,6 +18801,142 @@
       {
         "call": "fromTai64n(\"@400000002a2b2c2d0000000\")",
         "result": "\"\" — 23 hex digits"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toJ2000Seconds",
+    "page": "/reference/timescale/convert/toJ2000Seconds",
+    "name": "toJ2000Seconds",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toJ2000Seconds(isoString: string, scale?: TimeScale): number | null",
+    "description": "Convert a UTC instant to seconds since J2000.0 on a time scale. **The scale defaults to `\"TT\"`, unlike the Julian Date and MJD functions, which default to `\"UTC\"`**: J2000.0 is defined as 2000-01-01T12:00:00 TT (IAU 1994 Resolution C7).",
+    "sourcePath": "packages/gmt/src/timescale/convert/toJ2000Seconds.ts",
+    "examples": [
+      {
+        "call": "toJ2000Seconds(\"2000-01-01T11:58:55.816Z\")",
+        "result": "0 — J2000.0 itself"
+      },
+      {
+        "call": "toJ2000Seconds(\"2000-01-01T12:00:00Z\")",
+        "result": "64.184"
+      },
+      {
+        "call": "toJ2000Seconds(\"2000-01-01T12:00:00Z\", \"UTC\")",
+        "result": "0"
+      },
+      {
+        "call": "toJ2000Seconds(\"2026-01-01T00:00:00Z\", \"TAI\")",
+        "result": "820497637"
+      },
+      {
+        "call": "toJ2000Seconds(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toJulianDate",
+    "page": "/reference/timescale/convert/toJulianDate",
+    "name": "toJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toJulianDate(isoString: string, scale?: TimeScale): number | null",
+    "description": "Convert a UTC instant to a single Julian Date on a time scale. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toJulianDate.ts",
+    "examples": [
+      {
+        "call": "toJulianDate(\"2000-01-01T12:00:00Z\")",
+        "result": "2451545"
+      },
+      {
+        "call": "toJulianDate(\"2000-01-01T00:00:00Z\")",
+        "result": "2451544.5"
+      },
+      {
+        "call": "toJulianDate(\"2000-01-01T11:58:55.816Z\", \"TT\")",
+        "result": "2451545"
+      },
+      {
+        "call": "toJulianDate(\"2026-01-01T12:00:00.00002Z\")",
+        "result": "2461042 — a double there is 40.2 µs wide, so 20 µs past noon rounds back to noon"
+      },
+      {
+        "call": "toJulianDate(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toJulianDateParts",
+    "page": "/reference/timescale/convert/toJulianDateParts",
+    "name": "toJulianDateParts",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toJulianDateParts(isoString: string, scale?: TimeScale): JulianDateParts | null",
+    "description": "Convert a UTC instant to a two-part Julian Date `{ jd1, jd2 }` on a time scale, exact to the nanosecond. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toJulianDateParts.ts",
+    "examples": [
+      {
+        "call": "toJulianDateParts(\"2000-01-01T12:00:00Z\")",
+        "result": "{ jd1: 2451545, jd2: 0 }"
+      },
+      {
+        "call": "toJulianDateParts(\"2000-01-01T00:00:00Z\")",
+        "result": "{ jd1: 2451544, jd2: 0.5 }"
+      },
+      {
+        "call": "toJulianDateParts(\"2000-01-01T11:58:55.816Z\", \"TT\")",
+        "result": "{ jd1: 2451545, jd2: 0 }"
+      },
+      {
+        "call": "toJulianDateParts(\"2016-12-31T23:59:60Z\")",
+        "result": "{ jd1: 2457754, jd2: 0.4999884260598836 } (86399 / 172802)"
+      },
+      {
+        "call": "toJulianDateParts(\"2026-01-01T00:00:00Z\", \"TAI\")",
+        "result": "{ jd1: 2461041, jd2: 0.50042824... }"
+      },
+      {
+        "call": "toJulianDateParts(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toModifiedJulianDate",
+    "page": "/reference/timescale/convert/toModifiedJulianDate",
+    "name": "toModifiedJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toModifiedJulianDate(isoString: string, scale?: TimeScale): number | null",
+    "description": "Convert a UTC instant to a Modified Julian Date on a time scale. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toModifiedJulianDate.ts",
+    "examples": [
+      {
+        "call": "toModifiedJulianDate(\"2000-01-01T00:00:00Z\")",
+        "result": "51544"
+      },
+      {
+        "call": "toModifiedJulianDate(\"2000-01-01T12:00:00Z\")",
+        "result": "51544.5"
+      },
+      {
+        "call": "toModifiedJulianDate(\"2000-01-01T11:58:55.816Z\", \"TT\")",
+        "result": "51544.5"
+      },
+      {
+        "call": "toModifiedJulianDate(\"2026-01-01T00:00:00Z\", \"TAI\")",
+        "result": "61041.00042824... (61041 + 37 / 86400)"
+      },
+      {
+        "call": "toModifiedJulianDate(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
       }
     ]
   },
@@ -22676,6 +22952,40 @@
     "description": "A time field of an ISO 8601 duration, in the plural, from `\"hours\"` down to `\"nanoseconds\"`. It names the unit an amount of time is given in or a time difference is measured in.",
     "sourcePath": "packages/gmt/src/types/time-duration-unit.ts",
     "examples": []
+  },
+  {
+    "url": "/reference/types/TimeScale",
+    "page": "/reference/types/TimeScale",
+    "name": "TimeScale",
+    "namespace": "types",
+    "module": "time-scale",
+    "kind": "type",
+    "signature": "",
+    "description": "A time scale a Julian Date, Modified Julian Date or J2000 count can be taken on: UTC, TAI, Terrestrial Time or Geocentric Coordinate Time. TDB is not one: GMT does not provide it.",
+    "sourcePath": "packages/gmt/src/types/time-scale.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/JulianDateParts",
+    "page": "/reference/types/JulianDateParts",
+    "name": "JulianDateParts",
+    "namespace": "types",
+    "module": "time-scale",
+    "kind": "type",
+    "signature": "",
+    "description": "A Julian Date in two parts, whose sum is the JD (ERFA `jd2cal.c` Note 2: the date \"is apportioned in any convenient way between the arguments\").",
+    "sourcePath": "packages/gmt/src/types/time-scale.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "jd1",
+        "description": "Whole days. `to*` writes a whole number; `from*` accepts any finite number."
+      },
+      {
+        "name": "jd2",
+        "description": "The rest of the day. `to*` writes a value from 0 up to but not including 1."
+      }
+    ]
   },
   {
     "url": "/reference/types/TimeUnit",

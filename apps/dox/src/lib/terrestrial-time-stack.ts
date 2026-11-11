@@ -28,7 +28,7 @@ import {
   NO_RESULT_TEXT,
 } from "./satellite-clock-converter";
 import type { TimescaleLib } from "./timescale-lib";
-import { INTEGER_UTC_FROM, lacksOffset } from "./timescale-widgets";
+import { asUtc, INTEGER_UTC_FROM, lacksOffset } from "./timescale-widgets";
 
 export { BEFORE_1972_NOTE, INSIDE_SECOND_TEXT, NO_RESULT_TEXT };
 
@@ -418,9 +418,6 @@ const WRITE = {
   TT: "toTT",
   TCG: "toTCG",
 } as const satisfies Record<ScaleToken, keyof TimescaleLib>;
-
-/** The date-time part of a label, written with `Z` for `diffUtcAsDuration`. */
-const asUtc = (label: string): string => `${label.split(" ")[0] ?? ""}Z`;
 
 /**
  * The sentence for a value the library did not read as UTC. A valid instant fails for one of
