@@ -79,6 +79,7 @@ export const SENTENCES = {
   notAnInstant:
     "That is not a UTC instant: write it like 2026-01-01T12:00:00Z.",
   range: "The library counts days only from 1972-01-01 to the end of 9999.",
+  noInsertedSecond: "No second was inserted at the end of that day.",
 } as const;
 
 /** The footnote when a single double cannot hold the instant. */
@@ -462,7 +463,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}T/;
 function whyNotInstant(lib: DayCountLib, value: string): string {
   if (lacksOffset(lib, value)) return SENTENCES.missingOffset;
   const year = yearOf(value);
-  if (lib.hasSecond60(value) && Number.isFinite(year)) return missingDate(year);
+  if (lib.hasSecond60(value)) return SENTENCES.noInsertedSecond;
   if (lib.isValidInstant(value)) return SENTENCES.range;
   if (ISO_DATE.test(value) && Number.isFinite(year)) {
     return year >= SLIDER_MIN && year <= SLIDER_MAX

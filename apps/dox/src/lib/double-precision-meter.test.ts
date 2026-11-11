@@ -118,6 +118,15 @@ describe("the sentinels", () => {
     );
   });
 
+  it("second 60 on a day with no leap second says no second was inserted", () => {
+    expect(read({ value: "2017-12-31T23:59:60Z", scale: "UTC" }).failure).toBe(
+      SENTENCES.noInsertedSecond,
+    );
+    expect(read({ value: "2016-12-31T23:59:60Z", scale: "UTC" }).status).toBe(
+      "ok",
+    );
+  });
+
   it("29 February moved into a common year is the date-does-not-exist sentence", () => {
     const moved = yearAt("2024-02-29T12:00:00Z", 2027);
     expect(read({ value: moved, scale: "UTC" }).failure).toBe(
