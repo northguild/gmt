@@ -1856,6 +1856,19 @@ Shared hooks come first, then the globe, then the clock-change pages.
       with no `read` reads as a JD, and a scale that is not named is UTC. The default preset
       writes nothing to the permalink.
     - **The forms table** stacks under 46rem, each cell naming its column from `data-col`.
+    - **One scale picker.** `UTC · TAI · TT · TCG` chips, starting on UTC, apply to all four forms,
+      and every call line names its scale. A forms-by-scales grid is too wide at 300 px.
+    - **The JD field takes two-part input.** It accepts `jd1 + jd2` as well as one number.
+    - **The default preset is J2000.0 on TT:** `2451545` read as a JD on TT, which shows
+      11:58:55.816 UTC.
+    - **The ruler's two ends are exact.** Both come from `fromJulianDateParts`, so no double is
+      rounded. The lanes are the JD day (noon), the MJD day on the scale (midnight) and, off UTC,
+      the UTC day.
+    - **The tool has its own loader.** `loadDayCountLib()` sits beside `TimescaleLib`, and the
+      earlier timescale tools are untouched. A shift is a library round trip measured with `spanNs`
+      on TAI labels; the site computes no ulp and holds no epoch constant.
+    - **When only one single-double form is `null`,** its row reads "no result" with `EDGE_NOTE`,
+      not NO SIGNAL.
   - **Double Precision Meter** (`/tools/double-precision-meter/`, `dpmeter`, core, chat tool
     `showDoublePrecisionMeter`): how far a single JD, an MJD and seconds since J2000.0 drift from
     the instant they encode, against the exact two-part JD. The reader drags a year from 1972 to
@@ -1875,6 +1888,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
     - **Seeds.** `value` (64 characters at most), `scale` and the preset. The default preset writes
       nothing. A slider input sets the preset to custom and leaves the value text following the
       year only while the read is ok.
+    - **Sampling is measured, not computed.** The samples are 1972, every 50th year from 2000,
+      9999, and the two years either side of JD 2²². Each year takes the worst of four fixed probes,
+      cached per scale, and the two-part JD is the zero baseline. The scale picker is the Julian
+      Day Counter's, starting on UTC.
+    - **A date that does not exist is NO SIGNAL.** 29 February in a common year shows the pill and a
+      sentence; the slider is never clamped and the date is never moved.
     - **Gates.** `readout-still` (`year-slider`, 300 px extra width), `grow-measure`,
       `contrast-measure`, `visual-snapshot` and `html-diff` carry the tool, and `worker/tools.ts`
       lists it.

@@ -115,7 +115,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 40  | CORE-106 | Core       | Database audit: SQL offset timestamps<br>read and validated, a guide matrix per database                 | —          | #438  | —       | Done        |
 | 41  | SPA-46   | Space      | TAI64 / TAI64N / TAI64NA text labels                                                                     | —          | #227  | —       | Done        |
 | 42  | SPA-47   | Space      | `toTT` + `toTCG`                                                                                         | —          | #228  | —       | Done        |
-| 43  | SPA-49   | Space      | Two-part Julian Date + MJD + J2000                                                                       | —          | #230  | —       | Not started |
+| 43  | SPA-49   | Space      | Two-part Julian Date + MJD + J2000                                                                       | —          | #230  | —       | Done        |
 | 44  | SPA-52   | Space      | CCSDS ASCII time codes A and B                                                                           | —          | #233  | Cut     | Not started |
 | 45  | HLTH-93  | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`, `isValidHL7`                                              | —          | #401  | —       | Done        |
 | 46  | HLTH-94  | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes                          | —          | #402  | —       | Not started |

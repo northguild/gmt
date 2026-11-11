@@ -158,7 +158,7 @@ describe("toJ2000Seconds", () => {
     },
   );
 
-  // The D5 band is null just outside (pinned below) and a number just inside. 100 µs is past the
+  // The edge band is null just outside (pinned below) and a number just inside. 100 µs is past the
   // widest band (a double is 30 µs wide at the ceiling); there is no band at the floor.
   it.each`
     isoString                           | scale    | label

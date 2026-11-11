@@ -8,8 +8,11 @@ description: >
   Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS
   leap-second table (taiMinusUtc, leapSecondsBetween, nextLeapSecond,
   isLeapSecond, toTAI, fromTAI, toTai64n, fromTai64n, toTT, fromTT, toTCG,
-  fromTCG, tcgMinusTt), and lint package selection (ESLint, Biome,
-  Oxlint). GNSS time is in gmt-gnss. Reads the docs site (llms.txt and each
+  fromTCG, tcgMinusTt), Julian Date, Modified Julian Date and J2000
+  seconds (toJulianDateParts, fromJulianDateParts, toJulianDate,
+  fromJulianDate, toModifiedJulianDate, fromModifiedJulianDate,
+  toJ2000Seconds, fromJ2000Seconds), and lint package selection (ESLint,
+  Biome, Oxlint). GNSS time is in gmt-gnss. Reads the docs site (llms.txt and each
   page's .md twin) and the installed package's JSDoc for API details, and the
   lint-package READMEs for lint setup; this skill is a routing pointer, not an
   API dump.
@@ -127,6 +130,11 @@ which lint package to install for Date-ban enforcement.
    toTCG("2026-01-01T00:00:00Z"); // "2026-01-01T00:01:10.261661917 TCG"
    fromTCG("2026-01-01T00:01:10.261661917 TCG"); // "2026-01-01T00:00:00Z"
    tcgMinusTt("2026-01-01T00:00:00Z"); // 1.077661917
+   toJulianDateParts("2026-01-01T00:00:00.123456789Z"); // { jd1: 2461041, jd2: 0.5000014288980208 }
+   toJulianDate("2026-01-01T12:00:00Z"); // 2461042
+   toModifiedJulianDate("2000-01-01T00:00:00Z"); // 51544
+   toJ2000Seconds("2000-01-01T11:58:55.816Z"); // 0
+   fromJ2000Seconds(0); // "2000-01-01T11:58:55.816Z"
    ```
    - `toTai64n` and `fromTai64n` read and write the TAI64N labels of qmail,
      daemontools and s6 logs. A label counts TAI seconds, so reading one as Unix
@@ -137,6 +145,17 @@ which lint package to install for Date-ban enforcement.
      Time (TAI + 32.184 s) and Geocentric Coordinate Time, which runs ahead of
      TT at a fixed rate. `tcgMinusTt` returns the gap in seconds, or `null`.
      All floor to the nanosecond and return `""` before 1972.
+   - `toJulianDateParts` / `fromJulianDateParts` carry a Julian Date as two
+     doubles, `jd1` a whole number of days and `jd2` the fraction, and keep
+     the nanosecond. `toJulianDate` and `toModifiedJulianDate` return one
+     double, which is rounded: about 20 µs at today's JD, and the MJD keeps
+     more digits than the JD. Each `to*` has a `from*` that returns the UTC
+     instant. They take an optional scale (`"UTC"`, `"TAI"`, `"TT"`,
+     `"TCG"`). The default is `"UTC"`, except `toJ2000Seconds` and
+     `fromJ2000Seconds`, which default to `"TT"`, the scale J2000.0 is defined
+     in. A JD day starts at noon and an MJD day at midnight. On UTC every day
+     counts as one day, a leap-second day included. Any other scale, such as
+     `"TDB"`, returns the sentinel.
    - Before 1972-01-01 TAI − UTC was fractional, so every function returns its
      sentinel there.
    - `timescale/`, `gnss/` and `finance/` accept a second 60 only on a listed insertion
@@ -202,7 +221,9 @@ the pattern.
 ## Key functions
 
 - **Leap seconds and TAI** (`@northguild/gmt/timescale`): `taiMinusUtc`,
-  `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`, `toTai64n`, `fromTai64n`, `toTT`, `fromTT`, `toTCG`, `fromTCG`, `tcgMinusTt`
+  `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`, `toTai64n`, `fromTai64n`, `toTT`, `fromTT`, `toTCG`, `fromTCG`, `tcgMinusTt`,
+  `toJulianDateParts`, `fromJulianDateParts`, `toJulianDate`, `fromJulianDate`,
+  `toModifiedJulianDate`, `fromModifiedJulianDate`, `toJ2000Seconds`, `fromJ2000Seconds`
 
 - **Identifiers** (`@northguild/gmt/precision/identifiers`): `fromUuidTimestamp`,
   `uuidV7TimestampPrefix`, `fromUlid`, `ulidTimestampPrefix`, `fromObjectId`,

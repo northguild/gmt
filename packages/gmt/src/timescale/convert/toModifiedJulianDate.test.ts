@@ -99,7 +99,7 @@ describe("toModifiedJulianDate", () => {
     },
   );
 
-  // The D5 band is null just outside (pinned above) and a number just inside. 100 µs is past the
+  // The edge band is null just outside (pinned above) and a number just inside. 100 µs is past the
   // widest band (a double is 40 µs wide); the expected number is the label's whole MJD plus its
   // fraction of the day, one division of two exact integers.
   it.each`

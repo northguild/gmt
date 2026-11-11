@@ -244,7 +244,7 @@ describe("toJulianDate precision", () => {
     },
   );
 
-  // The D5 band is null just outside and a number just inside. 100 µs is past the widest band (a
+  // The edge band is null just outside and a number just inside. 100 µs is past the widest band (a
   // double is 40 µs wide); the expected number is the sum of the label's two exact parts.
   it.each`
     isoString                      | scale    | label
