@@ -11,7 +11,9 @@ systems meet first. A FIX `UTCTimestamp` is written `YYYYMMDD-HH:MM:SS`, with an
 of a second after a period, and it is always UTC. It is not ISO 8601: it has no dashes in the date,
 no `T`, and no `Z`.
 
-SWIFT MT payment messages carry a different kind of date: a six-digit value date, `YYMMDD`. A
+SWIFT MT messages carry a different kind of date: a six-digit value date, `YYMMDD`. Most
+cross-border payment instructions between banks moved from MT to ISO 20022 on 22 November 2025,
+but messages such as MT 101 and MT 910 still carry this date, and so do archived messages. A
 two-digit year has no century until someone states one. For value dates, SWIFT states it, so the
 SWIFT functions below need no window from you.
 
@@ -342,8 +344,8 @@ formatSwiftDate("1924-06-15");
 // ""
 ```
 
-Every date the function writes reads back as the same date:
-`parseSwiftDate(formatSwiftDate(d)) === d`.
+Every date the function writes reads back as the same date, written `YYYY-MM-DD`. So
+`parseSwiftDate(formatSwiftDate(d)) === d` when `d` is already written that way.
 
 The result is the date only. If you start from a date-time, take it to its date in the zone you
 mean first. `formatSwiftDate("2024-06-15T10:00:00")` returns `""`.

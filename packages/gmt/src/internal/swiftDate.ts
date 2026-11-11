@@ -1,5 +1,7 @@
 /*
- * The SWIFT value date `<DATE2>` `YYMMDD` (`240615`), SWIFT's `6!n` date of MT fields 30 and 32A.
+ * The SWIFT value date `<DATE2>` `YYMMDD` (`240615`), SWIFT's `6!n` date, where §4.1.1 below
+ * applies: field 32A of MT 910, and fields 30 and 32A of category 1 and 2 messages other than n92,
+ * n95 and n96.
  * Private: a value is a date only once its century and range are known, so the public check is
  * `isValidSwiftDate(value)`, never a pattern.
  *

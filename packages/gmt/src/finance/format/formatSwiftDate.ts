@@ -9,12 +9,13 @@ import { Temporal } from "../../internal/temporal";
 /**
  * Write an ISO 8601 date as a SWIFT MT value date, `YYMMDD`. The inverse of `parseSwiftDate`.
  *
- * - **What it writes.** The six-digit date component (`<DATE2>`, `6!n`) of field 30 or field
- *   32A: two digits each of year, month and day.
+ * - **What it writes.** The six-digit value date (`<DATE2>`, `6!n`) that SWIFT's rule covers:
+ *   field 32A of MT 910, and fields 30 and 32A of category 1 and 2 messages other than the
+ *   common group messages n92, n95 and n96. Two digits each of year, month and day.
  * - **`value`** is a date, as `isValidDate` accepts it, in the ISO calendar. A date-time, an
  *   instant or a non-ISO calendar returns `""`: a date-time names a calendar date only in a
  *   zone, so take the date in the zone you mean first.
- * - **The year must be 1980 to 2060**, the range SWIFT accepts for a value date. Any other year
+ * - **The year must be 1980 to 2060**, the range SWIFT accepts for those value dates. Any other year
  *   returns `""`: written as two digits, it would read back as another year or be refused with
  *   error T50. So `parseSwiftDate(formatSwiftDate(d))` reads back as the same date, written
  *   `YYYY-MM-DD` (`d` itself when `d` is already written that way).

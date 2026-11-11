@@ -81,10 +81,11 @@ message: `SendingTime`, `TransactTime` and every other field of the
    Other widths are a bilateral agreement the value does not carry, so the
    parser returns `null` for them.
 6. **A SWIFT value date is `YYMMDD`, and SWIFT chooses the century.** For
-   fields 30 and 32A, a `YY` above 79 is 19`YY` and the rest is 20`YY`; a year
-   after 2060 is refused (error T50). The range is 1980 to 2060, limits
-   included. There are no options and no window to pass. The day is checked in
-   the year the rule gives, so `000229` is real and `850229` is not.
+   field 32A of MT 910, and fields 30 and 32A of category 1 and 2 messages
+   other than n92, n95 and n96, a `YY` above 79 is 19`YY` and the rest is
+   20`YY`; a year after 2060 is refused (error T50). The range is 1980 to 2060,
+   limits included. There are no options and no window to pass. The day is
+   checked in the year the rule gives, so `000229` is real and `850229` is not.
    ```typescript
    parseSwiftDate("240615"); // "2024-06-15"
    parseSwiftDate("990615"); // "1999-06-15"

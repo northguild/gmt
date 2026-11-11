@@ -4,7 +4,9 @@
 
 ## Gap
 
-Payments cross SWIFT MT messages, and their value date is six digits. Field 32A carries
+SWIFT MT messages carry a six-digit value date. Most cross-border payment instructions between
+banks moved to ISO 20022 on 22 November 2025, but MT 101, MT 910 and archived messages still carry
+it. Field 32A carries
 `6!n3!a15d` — a date, a currency and an amount — and its network validated rule says the date
 "must be a valid date expressed as YYMMDD" ([painpoints § Findings — Finance](../painpoints.md#findings--finance)).
 A general date parser does not read it, and a two-digit year needs a century. SWIFT states one for
