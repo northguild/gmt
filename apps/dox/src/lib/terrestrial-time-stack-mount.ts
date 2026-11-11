@@ -305,7 +305,7 @@ function tableOf(read: StackRead | null, samples: Samples): SafeHtml {
     rows,
     rowHeader: "Scale",
     layout: "fixed",
-    widths: ["15%", "30%", "35%", "20%"],
+    widths: ["15%", "30%", "34%", "21%"],
     labelCells: true,
     roles: true,
   });
