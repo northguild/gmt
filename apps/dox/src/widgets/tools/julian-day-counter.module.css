@@ -97,6 +97,11 @@
   min-inline-size: 0;
 }
 
+/* The spare lane on UTC: it holds the height of the UTC-day lane and shows nothing. */
+.laneSpare {
+  visibility: hidden;
+}
+
 /* The ruler: fixed lane heights and a fixed axis, so a new reading moves only the marks. */
 .seam {
   --gmt-timeline-h: 2.25rem;
@@ -159,10 +164,10 @@
 
 /* The forms table: tabular figures in the mono face, held by their widest sample. */
 .forms {
-  container-type: inline-size;
+  container: forms / inline-size;
   min-inline-size: 0;
 
-  @container (inline-size >= 46rem) {
+  @container forms (inline-size >= 46rem) {
     & caption,
     & th,
     & td {
@@ -172,7 +177,7 @@
 
   /* Under 46rem the four rows become labelled blocks: each cell names its column from the
      `data-col` the table wrote, and the header row is read by the labels instead. */
-  @container (inline-size < 46rem) {
+  @container forms (inline-size < 46rem) {
     & table,
     & caption,
     & tbody,

@@ -14,6 +14,9 @@ slice 2 are in [index.md](index.md).
   11:58:55.816 UTC.
 - **D6 — the ruler's ends are exact.** Both come from `fromJulianDateParts`; no double is rounded.
   Lanes: JD day (noon), MJD day on the scale (midnight), UTC day when the scale is not UTC.
+- **D10 — accepted deviations.** When only one single-double form is `null`, its row reads "no
+  result" with the `EDGE_NOTE`, not NO SIGNAL. The ruler is clamped to the library's domain, and a
+  mark that cannot be written as an instant is dropped.
 
 ## Tasks beyond the tool
 
@@ -172,7 +175,7 @@ keys. Otherwise the keys are `value`, `read` and `scale`.
 - **`day-count-widgets.test.ts`:**
   - `microsText` signs and rounding on bigint edge values.
   - `numberText` reads back to the same double.
-  - `shiftNs` returns `null` past 9999 on TAI.
+  - `shiftNs` falls back to `spanNs` plus `leapSecondsBetween` past 9999 on TAI.
   - The banned-literal grep.
 - **`julian-day-counter-mount.test.tsx`:**
   - Chips use the APG radio keyboard model.

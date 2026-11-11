@@ -52,10 +52,10 @@ Decisions (settled; each slice states its own under `## Decisions`):
 - `roundTrip(lib, utc, rep, scale): string`. Writes `utc` with that representation's `to*` and
   reads it back with the matching `from*` on the same scale. Returns `""` when either call returns
   its sentinel.
-- `shiftNs(lib, utc, back): bigint | null`. Returns the signed nanoseconds from `utc` to `back`,
-  measured as `spanNs(asUtc(toTAI(utc)), asUtc(toTAI(back)))`. It is measured on TAI labels because
-  `spanNs` refuses second 60 and does not count inserted seconds; TAI has neither problem. Returns
-  `null` when a label is `""`, for example a TAI label after 9999.
+- `shiftNs(lib, utc, back): bigint | null`. Returns the signed nanoseconds from `utc` to `back`.
+  The lib type is `Pick<DayCountLib, "toTAI" | "spanNs" | "leapSecondsBetween">`. It is
+  `spanNs(asUtc(toTAI(utc)), asUtc(toTAI(back)))` on TAI labels, which have no second 60. Past 9999
+  a TAI label is `""`, so it falls back to `spanNs` on UTC labels plus `leapSecondsBetween`.
 - `microsText(ns: bigint): string`. Drawing only: a signed value in µs with three decimals and an
   explicit sign (`+18.626 µs`, `−0.001 µs`, `0 µs`). Exact bigint arithmetic, never `Number(ns)/1000`.
 - `numberText(n: number): string`. Prints a double with `String(n)`, the shortest text that reads

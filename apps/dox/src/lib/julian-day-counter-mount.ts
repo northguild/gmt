@@ -274,12 +274,17 @@ function rulerOf(ruler: Ruler | null, scale: Scale): SafeHtml {
       at: i / 4,
       label,
     }));
-  return html`<div class="${styles.seam}">${lanes.map((l) =>
+  return html`<div class="${styles.seam}" data-gate="ruler">${lanes.map((l) =>
     lane(
       { label: l.name },
       l.marks.map((m) => mark({ label: m.label, at: m.at, series: m.series })),
     ),
-  )}${axis(ticks.map((t) => tick(t)))}</div>`;
+  )}${
+    // On UTC there is no UTC-day lane. A hidden lane keeps its room, so a scale change moves no height.
+    lanes.length < lanesFor("TAI").length
+      ? html`<div class="${styles.laneSpare}" aria-hidden="true">${lane({ label: LANE_UTC }, [])}</div>`
+      : ""
+  }${axis(ticks.map((t) => tick(t)))}</div>`;
 }
 
 function leapNoteOf(ruler: Ruler | null): SafeHtml {

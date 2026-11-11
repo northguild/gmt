@@ -29,7 +29,7 @@ The ruler under the plates shows two days around the instant, in three lanes: wh
 
 <Fragment slot="after">
 
-**To a Julian Date.** [`toJulianDate`](/reference/timescale/convert/toJulianDate/) writes a UTC instant as one Julian Date on a scale. A double near today's date keeps about 40 µs, so it returns `null` within about 40 µs of either end of the range, where it cannot hold the instant.
+**To a Julian Date.** [`toJulianDate`](/reference/timescale/convert/toJulianDate/) writes a UTC instant as one Julian Date on a scale. A double for a date in this century keeps about 40 µs, so it returns `null` within about 40 µs of either end of the range, where it cannot hold the instant.
 
 **To a two-part Julian Date.** [`toJulianDateParts`](/reference/timescale/convert/toJulianDateParts/) writes the day count and the fraction as two numbers, so the fraction keeps its precision. It covers the whole range.
 
