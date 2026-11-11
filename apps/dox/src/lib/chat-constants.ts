@@ -914,6 +914,18 @@ export const CHAT_STARTERS: readonly {
     args: { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
   },
   {
+    text: "What is the Julian Date of 2026-01-01T12:00:00Z on TT, and why isn't it a whole number?",
+    widget: "showJulianDayCounter",
+    area: "core",
+    args: { value: "2026-01-01T12:00:00Z", read: "instant", scale: "TT" },
+  },
+  {
+    text: "How far does a single Julian Date drift at 2026-06-15T13:47:12.345678912Z?",
+    widget: "showDoublePrecisionMeter",
+    area: "core",
+    args: { value: "2026-06-15T13:47:12.345678912Z" },
+  },
+  {
     text: "Which year does SWIFT read the value date 350615 as, and is 750615 a valid value date?",
     widget: "showSwiftValueDateReader",
     area: "finance",

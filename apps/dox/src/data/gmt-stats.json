@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 73435,
-  "files": 969,
-  "executions": 2203050,
+  "tests": 74092,
+  "files": 978,
+  "executions": 2222760,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 754,
+  "functions": 762,
   "patterns": 30,
   "byNamespace": [
     {
@@ -69,16 +69,16 @@
       "count": 31
     },
     {
+      "namespace": "timescale",
+      "count": 21
+    },
+    {
       "namespace": "duration",
       "count": 18
     },
     {
       "namespace": "transport",
       "count": 15
-    },
-    {
-      "namespace": "timescale",
-      "count": 13
     },
     {
       "namespace": "interval",
@@ -164,7 +164,7 @@
       "drawsOn": [
         {
           "module": "timescale",
-          "count": 13,
+          "count": 21,
           "shared": false
         }
       ]
@@ -181,7 +181,7 @@
         },
         {
           "module": "timescale",
-          "count": 13,
+          "count": 21,
           "shared": false
         }
       ]

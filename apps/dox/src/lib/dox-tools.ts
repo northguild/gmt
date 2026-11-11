@@ -665,6 +665,28 @@ export const showSsimDateReaderInput = z
   });
 
 /**
+ * Julian Day Counter: the value to read (`value`), what it is (`read`: an instant, a JD, an MJD
+ * or seconds since J2000.0) and the scale the days are counted on (`scale`). Nothing is trimmed
+ * or corrected, and a scale the reader did not name is never filled in. The chat args are the
+ * permalink args.
+ */
+export const showJulianDayCounterInput = z.object({
+  value: z.string().max(64).optional(),
+  read: z.enum(["instant", "jd", "mjd", "j2000"]).optional(),
+  scale: z.enum(["UTC", "TAI", "TT", "TCG"]).optional(),
+});
+
+/**
+ * The Double Precision Meter: how far a single Julian Date, an MJD and seconds since J2000.0
+ * drift from the instant they encode. `value` is the UTC instant as the reader gave it; `scale`
+ * only when they named one.
+ */
+export const showDoublePrecisionMeterInput = z.object({
+  value: z.string().max(64).optional(),
+  scale: z.enum(["UTC", "TAI", "TT", "TCG"]).optional(),
+});
+
+/**
  * SWIFT Value Date Reader: the six-character value date to read (`value`) and an ISO date to
  * write back (`date`). Nothing is trimmed, upper-cased or repaired, and the chat never fills in
  * `value` from a date or `date` from a value.
@@ -1310,6 +1332,8 @@ export type DoxToolName =
   | "showFixTimestampReader"
   | "showHl7TimestampReader"
   | "showSsimDateReader"
+  | "showJulianDayCounter"
+  | "showDoublePrecisionMeter"
   | "showSwiftValueDateReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1649,6 +1673,20 @@ export const DOX_TOOL_DOCS: {
     args: 'value: the SSIM text exactly as the reader gave it, at most 16 characters, never trimmed or upper-cased; yearWindow: only when the reader stated one, a first year from 0 to 9900 or "rolling"; locale: a BCP 47 tag, only when the reader named one, passed to the pattern comparison alone; date: an ISO date to write back. Give value or date.',
   },
   {
+    name: "showJulianDayCounter",
+    purpose:
+      "Write one instant as a two-part Julian Date, a single Julian Date, a Modified Julian Date and seconds since J2000.0 on UTC, TAI, TT or TCG, read each back to UTC, and show where a JD day begins against the MJD day and the calendar day.",
+    when: "the reader asks for a Julian Date, Modified Julian Date or seconds since J2000 for a time, which scale a JD is on, why a JD day starts at noon, or to convert a JD or MJD back to UTC",
+    args: "value: exactly as the reader gave it, never corrected. read and scale only when the reader named them; never guess a scale.",
+  },
+  {
+    name: "showDoublePrecisionMeter",
+    purpose:
+      "Measure how far a single Julian Date, a Modified Julian Date and seconds since J2000.0 drift from the instant they encode, against the exact two-part Julian Date, at the reader's year and across 1972 to 9999.",
+    when: "the reader asks how precise a Julian Date stored in one number is, why a JD loses microseconds, whether to store JD, MJD or seconds since J2000, or why two-part JDs exist",
+    args: "value: exactly as the reader gave it. scale only when the reader named one.",
+  },
+  {
     name: "showSwiftValueDateReader",
     purpose:
       "Reads a SWIFT MT value date (YYMMDD, field 30 or 32A) with parseSwiftDate and shows the century SWIFT's rule gives, or the T50 refusal; writes an ISO date back with formatSwiftDate.",
@@ -1851,8 +1889,16 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[46].purpose,
     inputSchema: showSsimDateReaderInput,
   }),
-  showSwiftValueDateReader: tool({
+  showJulianDayCounter: tool({
     description: DOX_TOOL_DOCS[47].purpose,
+    inputSchema: showJulianDayCounterInput,
+  }),
+  showDoublePrecisionMeter: tool({
+    description: DOX_TOOL_DOCS[48].purpose,
+    inputSchema: showDoublePrecisionMeterInput,
+  }),
+  showSwiftValueDateReader: tool({
+    description: DOX_TOOL_DOCS[49].purpose,
     inputSchema: showSwiftValueDateReaderInput,
   }),
 } as const;
@@ -1925,6 +1971,8 @@ export const ENABLED_TOOL_NAMES = [
   "showFixTimestampReader",
   "showHl7TimestampReader",
   "showSsimDateReader",
+  "showJulianDayCounter",
+  "showDoublePrecisionMeter",
   "showSwiftValueDateReader",
 ] as const satisfies readonly DoxToolName[];
 

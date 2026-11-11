@@ -98,3 +98,79 @@ export async function loadTimescaleLib(): Promise<TimescaleLib> {
     throw new WidgetLoadError(cause);
   }
 }
+
+/**
+ * The functions the Julian Day Counter and the Double Precision Meter call, as the library
+ * declares them. A separate loader from `TimescaleLib`: the three older tools stay as they are.
+ * `scale` is always passed, so no call leans on a default.
+ */
+export interface DayCountLib {
+  toJulianDateParts(
+    isoString: string,
+    scale: string,
+  ): { jd1: number; jd2: number } | null;
+  fromJulianDateParts(
+    parts: { jd1: number; jd2: number },
+    scale: string,
+  ): string;
+  toJulianDate(isoString: string, scale: string): number | null;
+  fromJulianDate(jd: number, scale: string): string;
+  toModifiedJulianDate(isoString: string, scale: string): number | null;
+  fromModifiedJulianDate(mjd: number, scale: string): string;
+  toJ2000Seconds(isoString: string, scale: string): number | null;
+  fromJ2000Seconds(seconds: number, scale: string): string;
+  toTAI(isoString: string): string;
+  spanNs(start: string, end: string): bigint | null;
+  startOfUtc(value: string, unit: string): string;
+  addUtc(value: string, units: Record<string, number>): string;
+  leapSecondsBetween(start: string, end: string): number | null;
+  isValidInstant(value: string): boolean;
+  hasSecond60(value: string): boolean;
+}
+
+const DAY_COUNT_CONVERT_NAMES = [
+  "toJulianDateParts",
+  "fromJulianDateParts",
+  "toJulianDate",
+  "fromJulianDate",
+  "toModifiedJulianDate",
+  "fromModifiedJulianDate",
+  "toJ2000Seconds",
+  "fromJ2000Seconds",
+  "toTAI",
+] as const;
+const DAY_COUNT_CALCULATE_NAMES = ["leapSecondsBetween"] as const;
+
+/**
+ * Loads the day-count functions at module granularity. A rejected import, or a name a module no
+ * longer exports, becomes a `WidgetLoadError`, as in `loadTimescaleLib`.
+ */
+export async function loadDayCountLib(): Promise<DayCountLib> {
+  try {
+    const [
+      convert,
+      calculate,
+      spanCalculate,
+      utcCalculate,
+      plainValidate,
+      precisionValidate,
+    ] = await Promise.all([
+      GMT_MODULES["timescale/convert"](),
+      GMT_MODULES["timescale/calculate"](),
+      GMT_MODULES["span/calculate"](),
+      GMT_MODULES["utc/calculate"](),
+      GMT_MODULES["plain/validate"](),
+      GMT_MODULES["precision/validate"](),
+    ]);
+    return {
+      ...pickFunctions(convert, DAY_COUNT_CONVERT_NAMES),
+      ...pickFunctions(calculate, DAY_COUNT_CALCULATE_NAMES),
+      ...pickFunctions(spanCalculate, SPAN_NAMES),
+      ...pickFunctions(utcCalculate, ["startOfUtc", "addUtc"]),
+      ...pickFunctions(plainValidate, PLAIN_VALIDATE_NAMES),
+      ...pickFunctions(precisionValidate, PRECISION_VALIDATE_NAMES),
+    } as unknown as DayCountLib;
+  } catch (cause) {
+    throw new WidgetLoadError(cause);
+  }
+}

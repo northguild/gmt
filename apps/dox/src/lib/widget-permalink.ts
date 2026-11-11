@@ -81,8 +81,10 @@ export type WidgetKind =
   | "tai64n"
   | "fixstamp"
   | "ssim"
-  | "swiftdate"
-  | "ttstack";
+  | "ttstack"
+  | "jdcount"
+  | "dpmeter"
+  | "swiftdate";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -151,6 +153,8 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   ssim: "/tools/ssim-date-reader/",
   swiftdate: "/tools/swift-value-date-reader/",
   ttstack: "/tools/terrestrial-time-stack/",
+  jdcount: "/tools/julian-day-counter/",
+  dpmeter: "/tools/double-precision-meter/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */

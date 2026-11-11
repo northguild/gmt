@@ -153,3 +153,7 @@ through a public mirror; SWIFT's own copies need a login.
   Timestamps" and slug, and the scenario and mistakes page compare SWIFT's rule with a home-made
   cut-off of 1930. There is no Dox changeset; the changeset for the three functions is
   `.changeset/swift-value-dates.md`.
+- **Bundle budget.** The root budget in `scripts/bundle-size.budgets.json` is 590500 B. The branch
+  alone measures 579905 B, under the 584000 it had. `main` gained SPA-49 (#502) while #503 was open,
+  and measures 583762 B. Together the root measures 584561 B; plus 1%, rounded up to the next 100 as
+  `bundle-size.mjs --update` does, that is 590500. The other entries are unchanged and under budget.

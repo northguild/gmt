@@ -227,8 +227,28 @@ export {
   nextStepIndex,
   stepReading,
   taiOfUtc,
+  utcDayLengthNanoseconds,
   utcOfTai,
 } from "./leapSeconds";
+export {
+  type DayPosition,
+  dayPositionOf,
+  dayPositionOfDays,
+  type EpochDays,
+  epochDaysOfJ2000Seconds,
+  epochDaysOfJulianDate,
+  epochDaysOfModifiedJulianDate,
+  exactDyadic,
+  isTimeScale,
+  J2000_EPOCH_DAY,
+  JD_OF_UNIX_EPOCH_MIDNIGHT_HALF_DAYS,
+  julianDatePartsOf,
+  MJD_OF_UNIX_EPOCH,
+  nearestDouble,
+  readingOfDayPosition,
+  readsBackInDomain,
+  UTC_JD_FLOOR_NANOSECONDS,
+} from "./julianDate";
 export {
   formatTai64nLabel,
   parseTai64Label,

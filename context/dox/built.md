@@ -1830,6 +1830,73 @@ Shared hooks come first, then the globe, then the clock-change pages.
       with a few pixels spare only with 4px side padding on the cells and widths of 15, 30, 34 and
       21 per cent. With the page's 12px padding they spilled a cell and scrolled the table at
       1440 px. A sample wider than the current widest has to move these numbers.
+  - **Julian Day Counter** (`/tools/julian-day-counter/`, `jdcount`, core, chat tool
+    `showJulianDayCounter`): one UTC instant, or one count, written as a two-part JD, a single JD,
+    an MJD and seconds since J2000.0 on UTC, TAI, TT or TCG, each read back to UTC with the gap in
+    microseconds. Four plates, a four-row table that prints each call, and a two-day ruler with a
+    lane for where each JD day begins (noon), one for where each midnight falls on the chosen scale
+    and, off UTC, one for UTC's midnights. A triangle, a bar, a thin bar and a capped line tell the
+    marks apart, so colour is never the only cue. The tool computes no day count and holds no epoch
+    or day length: every number is a library result, and the modules hold none of 2400000.5,
+    2451545, 86400 or 32.184 outside the presets' texts (a test greps for them).
+    - **The shared pieces are `DayCountLib`/`loadDayCountLib` (`timescale-lib.ts`) and
+      `day-count-widgets.ts`.** The second holds the scales, the four forms, `spell` and
+      `roundTrip`, `shiftNs`, `microsText` and the number and two-part parsers, so a second
+      day-count tool imports them. `asUtc` lives in `timescale-widgets.ts`.
+    - **A shift is measured on TAI**, where every day has the same length. Near the end of the
+      range TAI runs past 9999 and the library writes no label, so `shiftNs` falls back to the span
+      of the two UTC labels plus `leapSecondsBetween`, the recipe in the `spanNs` JSDoc.
+    - **The single-double forms return `null` within about 40 µs of either end of the range.** The
+      plate then says no result and carries `EDGE_NOTE`; the pill stays for an unreadable instant
+      or count. The two-part form covers the whole range.
+    - **The ruler's window is two days, midnight to midnight** (`{J-1, .5}` to `{J+1, .5}` as
+      two-part JDs), clamped to the first integer-UTC instant and the last instant when the
+      library writes no label past the range. A mark the library cannot write is left out.
+    - **Seeds.** `value`, `read` (`instant`, `jd`, `mjd`, `j2000`) and `scale`. A numeric value
+      with no `read` reads as a JD, and a scale that is not named is UTC. The default preset
+      writes nothing to the permalink.
+    - **The forms table** stacks under 46rem, each cell naming its column from `data-col`.
+    - **One scale picker.** `UTC · TAI · TT · TCG` chips, starting on UTC, apply to all four forms,
+      and every call line names its scale. A forms-by-scales grid is too wide at 300 px.
+    - **The JD field takes two-part input.** It accepts `jd1 + jd2` as well as one number.
+    - **The default preset is J2000.0 on TT:** `2451545` read as a JD on TT, which shows
+      11:58:55.816 UTC.
+    - **The ruler's two ends are exact.** Both come from `fromJulianDateParts`, so no double is
+      rounded. The lanes are the JD day (noon), the MJD day on the scale (midnight) and, off UTC,
+      the UTC day.
+    - **The tool has its own loader.** `loadDayCountLib()` sits beside `TimescaleLib`, and the
+      earlier timescale tools are untouched. A shift is a library round trip measured with `spanNs`
+      on TAI labels; the site computes no ulp and holds no epoch constant.
+    - **When only one single-double form is `null`,** its row reads "no result" with `EDGE_NOTE`,
+      not NO SIGNAL.
+  - **Double Precision Meter** (`/tools/double-precision-meter/`, `dpmeter`, core, chat tool
+    `showDoublePrecisionMeter`): how far a single JD, an MJD and seconds since J2000.0 drift from
+    the instant they encode, against the exact two-part JD. The reader drags a year from 1972 to
+    9999. Four plates give the drift at the reader's instant, and a log-axis plot (`drift-lanes`,
+    1 ns to 100 µs, nothing drawn as a drift of 0 sits on a labelled floor band) gives the measured
+    drift across the years. Every drift is a library round trip (`spell` and `roundTrip` from
+    `day-count-widgets.ts`); the tool does arithmetic on no JD.
+    - **Samples** (`meterSamples`, `double-precision-meter.ts`) probe 15 June of each sampled year
+      at four fixed times of day, three library calls per round trip using `spanNs` on UTC labels,
+      7886 calls per scale (a test holds it under 8000). A probe on 15 June meets no inserted
+      second, so the span is exact. `sampleCache` memoises per scale for one mount.
+    - **The step.** JD 2²² falls on 7 July 6771, so on the 15 June probe the first year past it is
+      6772 (`stepYearOf`). Half the spacing of doubles is 2⁻³² day, 20.117 µs below it and twice that
+      above. The JSDoc's 20 µs and 40 µs are rounded; the bound test uses the exact half spacing.
+    - **The samples table is written lazily**, when the disclosure opens (axe over 165 rows costs
+      about 5 s even hidden). The plot is one `role="img"` whose label is the summary in words.
+    - **Seeds.** `value` (64 characters at most), `scale` and the preset. The default preset writes
+      nothing. A slider input sets the preset to custom and leaves the value text following the
+      year only while the read is ok.
+    - **Sampling is measured, not computed.** The samples are 1972, every 50th year from 2000,
+      9999, and the two years either side of JD 2²². Each year takes the worst of four fixed probes,
+      cached per scale, and the two-part JD is the zero baseline. The scale picker is the Julian
+      Day Counter's, starting on UTC.
+    - **A date that does not exist is NO SIGNAL.** 29 February in a common year shows the pill and a
+      sentence; the slider is never clamped and the date is never moved.
+    - **Gates.** `readout-still` (`year-slider`, 300 px extra width), `grow-measure`,
+      `contrast-measure`, `visual-snapshot` and `html-diff` carry the tool, and `worker/tools.ts`
+      lists it.
   - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
     identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
     `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its

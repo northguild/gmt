@@ -1,4 +1,4 @@
-import { NANOSECONDS_PER_SECOND } from "./foreignEpochs";
+import { NANOSECONDS_PER_DAY, NANOSECONDS_PER_SECOND } from "./foreignEpochs";
 import type { UtcReading } from "./utcReading";
 
 /** TAI − UTC by date: `at[i]` (epoch ns, 00:00:00 UTC on a month's first day) starts `taiMinusUtc[i]`. */
@@ -201,4 +201,28 @@ export function nextStepIndex(
     }
   }
   return -1;
+}
+
+/**
+ * The length in nanoseconds of the UTC day that starts at `epochDay × 86 400 s`: 86 400 s plus the
+ * step whose row starts at the next midnight, if there is one (ITU-R TF.460-6 Annex 1 §2.2: a
+ * positive leap second makes the day before it 86 401 s, a negative one 86 399 s). Row 0 is the
+ * start of whole-second TAI − UTC, not a step, so the day before it is an ordinary day.
+ * Loop bound: one scan of `steps.at`.
+ *
+ * @param steps the leap-second table
+ * @param epochDay days since 1970-01-01 of the UTC day
+ * @returns the day's length in nanoseconds
+ */
+export function utcDayLengthNanoseconds(
+  steps: LeapSecondSteps,
+  epochDay: bigint,
+): bigint {
+  const nextMidnight = (epochDay + 1n) * NANOSECONDS_PER_DAY;
+  for (let index = 1; index < steps.at.length; index += 1) {
+    if (steps.at[index] === nextMidnight) {
+      return NANOSECONDS_PER_DAY + stepAt(steps, index);
+    }
+  }
+  return NANOSECONDS_PER_DAY;
 }

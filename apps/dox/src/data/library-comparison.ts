@@ -46,7 +46,10 @@ export interface LibraryMeasurement {
   tests: number;
   executions: number;
   nodeVersions: number;
+  /** Dedicated time-zone and DST test files that run. */
   timezones: number;
+  /** Time-zone settings the library's CI re-runs its whole suite under. */
+  fullSuiteZones?: number;
   /** Time-zone test files re-run under several zones rather than the whole suite. */
   partialZoneRuns?: { testFiles: number; zones: number; unit: string };
   /** True when a dedicated time-zone workflow exists whose scope could not be read. */
@@ -79,6 +82,9 @@ function statsOf(m: LibraryMeasurement): LibraryComparisonStats {
     timezones: m.timezones,
     nodeVersions: m.nodeVersions,
     executions: m.executions,
+    ...(m.fullSuiteZones === undefined
+      ? {}
+      : { fullSuiteZones: m.fullSuiteZones }),
     ...(m.knownFailures === undefined
       ? {}
       : { knownFailures: m.knownFailures }),
@@ -93,6 +99,8 @@ export interface LibraryComparisonStats {
   locales: number;
   /** Distinct timezone contexts exercised by dedicated tz/DST test files. */
   timezones: number;
+  /** Time-zone settings the library's CI re-runs its whole suite under, if any. */
+  fullSuiteZones?: number;
   /** Node.js versions covered by the library's own CI matrix. */
   nodeVersions: number;
   /** Total test executions the library's own CI actually runs (tests × any TZ/Node matrix its own scripts apply). */
@@ -119,7 +127,7 @@ export interface LibraryComparison {
   displayName: string;
   /**
    * The finest time unit the library's public API represents. Measured from each library's
-   * published TypeScript declarations at its `publicApi` version (2026-09-15): no alternative
+   * published TypeScript declarations at its `publicApi` version (2026-11-11): no alternative
    * declares a microsecond or nanosecond field or unit anywhere, so each stops at the
    * millisecond, like `Date`. GMT is nanosecond: Temporal counts epoch nanoseconds, and GMT
    * keeps them exact as `bigint` (the `precision` namespace).
@@ -193,6 +201,7 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "date-fns",
     timeResolution: "millisecond",
     displayName: measured("date-fns").name,
+    matrixLabel: "4 Node versions + 378 time zones",
     kind: "wraps",
     foundation: "built on Date",
     detail:
@@ -230,11 +239,11 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "spacetime",
     timeResolution: "millisecond",
     displayName: measured("spacetime").name,
-    matrixLabel: "2 Node versions",
+    matrixLabel: "5 Node versions",
     kind: "wraps",
     foundation: "leans on Date",
     detail:
-      "now()/today() default through new Date(). Four DST edge-case suites are named .ignore.js and never run — and the DST tests that do run are currently failing.",
+      "now()/today() default through Date.now(), the system clock. Its own suite passes in full.",
     measurement: measured("spacetime"),
     stats: statsOf(measured("spacetime")),
   },
@@ -255,10 +264,27 @@ export function competitorExecutionRange(): { min: number; max: number } {
 
 /** Fewest and most of one stat among the alternatives — so page copy never types a range. */
 export function competitorStatRange(
-  stat: keyof Omit<LibraryComparisonStats, "knownFailures" | "publicApi">,
+  stat: keyof Omit<
+    LibraryComparisonStats,
+    "knownFailures" | "publicApi" | "fullSuiteZones"
+  >,
 ): { min: number; max: number } {
   const values = competitorComparisons.map((l) => l.stats[stat]);
   return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+/**
+ * One clause per alternative whose CI re-runs the whole suite under a time-zone matrix, for
+ * pages that count dedicated time-zone test files separately.
+ */
+export function fullSuiteZoneClauses(): string[] {
+  return competitorComparisons.flatMap((l) =>
+    l.stats.fullSuiteZones
+      ? [
+          `${l.displayName} re-runs its whole suite under ${l.stats.fullSuiteZones} time-zone settings`,
+        ]
+      : [],
+  );
 }
 
 /** A library's public callable API: functions plus methods (see `LibraryComparisonStats.publicApi`). */

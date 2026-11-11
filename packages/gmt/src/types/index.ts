@@ -41,6 +41,7 @@ export * from "./rounding-options";
 export * from "./stored-zoned-classification";
 export * from "./time-cycle-field";
 export * from "./time-duration-unit";
+export * from "./time-scale";
 export * from "./time-unit";
 export * from "./transport-timestamps";
 export * from "./two-digit-year";

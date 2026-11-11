@@ -441,6 +441,19 @@ const TOOLS = [
     extraWidths: [300],
   },
   {
+    slug: "double-precision-meter",
+    root: '[data-widget="double-precision-meter"]',
+    presets: ["mid-2026", "lost", "past-6771", "j2000", "far"],
+    controls: [{ role: "slider", name: "Move the year" }],
+    track: null,
+    scope: "widget",
+    // The sentence, footnote and plate cells are holds: their live wrapper is left out.
+    drawn: ["drawn", "hold"],
+    moving: ["cursor"],
+    riders: true,
+    extraWidths: [300],
+  },
+  {
     slug: "elapsed-vs-clock-difference",
     root: '[data-widget="elapsed-vs-clock"]',
     presets: ["across-2016", "twenty-four-years", "no-insertions"],

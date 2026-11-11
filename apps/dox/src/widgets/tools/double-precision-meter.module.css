@@ -1,0 +1,186 @@
+/*
+ * Double Precision Meter: what only this tool needs. The sections, plates, preset, slider, chips,
+ * disclosure and table are the kit's, and the drift plot has its own sheet; this one lays out the
+ * plates, the NO SIGNAL slot, the notes and the samples table.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an accent edge is never
+ * a single side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* The stage: the plates, the NO SIGNAL slot and the footnote. It is the container the layout
+   reads. */
+.stage {
+  container: stage / inline-size;
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+/* Two plates a row, one below 24rem. A track does not move with its content, so a reading never
+   reflows the row. */
+.platesSlot {
+  min-inline-size: 0;
+
+  & dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    @container stage (inline-size < 24rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+/* The NO SIGNAL slot is always laid out; a reading only makes the pill visible. */
+.signalSlot {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.signal {
+  justify-self: start;
+  box-sizing: border-box;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-signal-ink);
+  white-space: nowrap;
+
+  &[data-state="off"] {
+    visibility: hidden;
+  }
+}
+
+.sentence {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+.drawingSlot {
+  min-inline-size: 0;
+}
+
+/* The forms table: tabular figures in the mono face, held by their widest sample. */
+.forms {
+  container: forms / inline-size;
+  min-inline-size: 0;
+
+  @container forms (inline-size >= 46rem) {
+    & caption,
+    & th,
+    & td {
+      padding-inline: var(--gmt-space-1);
+    }
+  }
+
+  /* Under 46rem the four rows become labelled blocks: each cell names its column from the
+     `data-col` the table wrote, and the header row is read by the labels instead. */
+  @container forms (inline-size < 46rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+
+    & .mono {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
+.year {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.mono {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .signal {
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .forms td::before,
+  .forms th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .note,
+  .forms td::before,
+  .forms th::before {
+    color: var(--gmt-ice);
+  }
+
+  .signal {
+    border-color: var(--gmt-signal-ink);
+  }
+}
