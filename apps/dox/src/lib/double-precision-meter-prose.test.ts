@@ -29,7 +29,7 @@ const worstJd = (data: MeterSamples, keep: (year: number) => boolean): bigint =>
     .reduce((a, s) => (s.ns.jd > a ? s.ns.jd : a), 0n);
 
 describe("the key point", () => {
-  it("says a single JD is off by up to about 20 µs, and about 40 µs from 6771", () => {
+  it("says a single JD is off by up to about 20 µs, and about 40 µs after 6771", () => {
     const step = stepYearOf(lib, "UTC")!;
     // Half a double's spacing, from the library: 20 µs, then 40 µs once the spacing doubles.
     const before = worstJd(utc, (y) => y < step);
@@ -39,7 +39,7 @@ describe("the key point", () => {
     expect(after).toBeGreaterThan(30_000n);
     expect(after).toBeLessThanOrEqual(40_236n);
     expect(page).toContain(
-      "up to about 20 µs, and by up to about 40 µs from 6771",
+      "up to about 20 µs, and by up to about 40 µs after 6771",
     );
   });
 

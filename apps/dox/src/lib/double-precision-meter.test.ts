@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { lib } from "~/test/day-count-lib";
 import type { DayCountLib } from "./timescale-lib";
 import { shiftNs } from "./day-count-widgets";

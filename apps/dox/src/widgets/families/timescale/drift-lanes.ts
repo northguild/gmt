@@ -114,7 +114,7 @@ export function keepApart(levels: readonly number[]): number[] {
     const ceiling = next === undefined ? top : next.level - LABEL_GAP;
     order[k]!.level = Math.min(order[k]!.level, ceiling);
   }
-  const out = new Array<number>(levels.length).fill(0);
+  const out = levels.map(() => 0);
   for (const o of order) out[o.i] = round(o.level);
   return out;
 }

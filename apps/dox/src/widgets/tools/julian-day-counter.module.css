@@ -22,7 +22,7 @@
 /* The stage: the plates, the NO SIGNAL slot and the footnote. It is the container the layout
    reads. */
 .stage {
-  container-type: inline-size;
+  container: stage / inline-size;
   display: grid;
   gap: var(--gmt-space-4);
   min-inline-size: 0;
@@ -36,7 +36,7 @@
   & dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    @container (inline-size < 24rem) {
+    @container stage (inline-size < 24rem) {
       grid-template-columns: minmax(0, 1fr);
     }
   }
@@ -107,7 +107,7 @@
   --gmt-timeline-h: 2.25rem;
   --gmt-timeline-label-w: 10rem;
 
-  container-type: inline-size;
+  container: ruler / inline-size;
   display: grid;
   gap: var(--gmt-space-2);
   min-inline-size: 0;
