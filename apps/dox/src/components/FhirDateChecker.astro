@@ -1,0 +1,53 @@
+---
+/**
+ * FHIR Date Checker widget (HLTH-94).
+ *
+ * A typed FHIR R4 value: `isValidFHIR` and FHIR's own patterns say whether it is a `date`, a
+ * `dateTime` or an `instant`, the widget shows what it names, and what `formatFHIR` writes back
+ * at each precision.
+ *
+ * **The markup and the wiring both live in `lib/fhir-date-checker-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderFhirDateCheckerTemplate } from "../lib/fhir-date-checker-mount";
+
+/**
+ * `fullbleed` lets the page say the widget may use the whole main pane; see
+ * DtmDecoder.astro for the marker it adds and why it sits on a wrapper.
+ */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderFhirDateCheckerTemplate("fhir-date-checker", {}).value;
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountFhirDateChecker } from "../lib/fhir-date-checker-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=fhir&wa=` permalink seeds the widget with the values it names; see
+       lib/widget-permalink.ts. Absent or malformed, the widget opens on its
+       first preset. */
+    const seed = seedFromLocation("fhir");
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="fhir-date-checker"]')
+      .forEach((el) => {
+        mountFhirDateChecker(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

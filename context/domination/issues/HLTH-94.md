@@ -28,7 +28,8 @@ every ordering, age and date-range query downstream inherits the invented fact.
     — Writes an ISO 8601 value as a FHIR value of the named type.
 - `packages/gmt/src/healthcare/validate/isValidFHIR.ts`:
   - `isValidFHIR(value: string, type: FhirDateType): boolean` — True exactly when `parseFHIR`
-    returns a value at a precision `type` allows; it calls the parser, so the two cannot disagree.
+    returns a value at a precision `type` allows. Both it and `parseFHIR` call the internal core
+    `readFhirValue`, so the two cannot disagree and no public function calls another.
     False for a value that is not a string.
 - `packages/gmt/src/regex/fhir.ts` — `fhirDate`, `fhirDateTime` and `fhirInstant`, the three
   patterns FHIR R4 publishes, verbatim and anchored with `^…$`, exported from `regex/index.ts` and
@@ -80,8 +81,8 @@ Teaches: `2024-06` is a month, not midnight on the first.
 
 - **Precision is kept, not padded.** `parseFHIR` returns the value as sent, with its precision.
   Comparing two partial values is FHIRPath's precision-by-precision rule and is not this story's.
-- **One parser, three validators.** `instant` and `date` are both narrower than `dateTime`, so
-  `parseFHIR` reads the `dateTime` grammar and the type check is a question about the result:
+- **One core, three validators.** `instant` and `date` are both narrower than `dateTime`, so
+  `readFhirValue` reads the `dateTime` grammar and the type check is a question about the result:
   `isValidFHIR(v, "dateTime")` is true exactly when `parseFHIR(v)` returns a value;
   `"date"` adds a precision of day or coarser; `"instant"` adds second or fraction.
 - **The patterns are FHIR's, and they prove shape only.** FHIR calls its regexes "informative, not
@@ -118,7 +119,7 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 | `fhirDate`, `fhirDateTime`, `fhirInstant` | FHIR R4 StructureDefinitions `date`, `dateTime` and `instant`, the `regex` extension on `.value`, verbatim |
 | The patterns are informative | FHIR R4 §2.24.0.1: "The regexes are provided to assist with tooling, but are informative, not normative" |
 | A pattern match is shape only; validity is `isValidFHIR`'s | **GMT rule**, as for `epcisEventTime` and `isValidEpcisEventTime` (INT-15) |
-| `isValidFHIR` calls `parseFHIR` | **GMT rule.** The validator calls the parser, so the two cannot disagree |
+| `isValidFHIR` and `parseFHIR` share one core | **GMT rule.** Both call the internal `readFhirValue`, so the two cannot disagree; a public function never calls another public function ([coding-standards § Loop cost](../../coding-standards.md#loop-cost)) |
 | A second of `60` only on an inserted leap second | **GMT rule**, on SPA-48's closed leap-second table |
 | A fraction of more than nine digits is refused | **GMT rule.** Temporal holds nanoseconds |
 | `Z`, `+00:00`, `-00:00` read as `+00:00` | **GMT rule.** One spelling for one fact |
@@ -154,3 +155,7 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 - `fhirDateTime.test('2024-02-30')`, `fhirInstant.test('2017-12-31T23:59:60Z')` and an instant with a ten-digit fraction are `true`, and `isValidFHIR` is `false` for each: the pattern is shape only
 - Every value `isValidFHIR(v, t)` accepts in the rows above matches `t`'s pattern; `isValidFHIR(20240615, 'date')` and `isValidFHIR(null, 'dateTime')` are `false`
 - `pnpm run validate` stays green
+
+## Decisions
+
+[Decisions](HLTH-94/decisions.md): the shared core, the precision and zone rules, the patterns as shape only, what `formatFHIR` writes and refuses, and the bundle budget.

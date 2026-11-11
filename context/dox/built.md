@@ -1632,8 +1632,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   family, for the healthcare layer. It reads one HL7 v2 `DTM` or `TS` field with `parseHL7`
   (`lib/hl7-timestamp-reader.ts` is the pure module, `hl7-timestamp-reader-mount.ts` the template
   and mount, `hl7-lib.ts` the loader) and states which of four kinds it is: an instant, a local
-  time with no offset (the sender's time, not UTC), a partial value that names a span and no
-  instant, or the null value. A local value goes through the same four-zone strip, with a third
+  time with no offset (the sender's time, not UTC), a partial value that has a precision and no
+  instant (its strip says so in words and draws no span), or the null value. A local value goes through the same four-zone strip, with a third
   column that sets each instant against the same digits read as UTC ("5 h 30 min later"), and a
   fourth section writes the value back with `formatHL7` at seven precisions. Its rules:
   - **The timeline takes an optional `reference` mark.** A spec with a `reference` draws a pin
@@ -1670,6 +1670,54 @@ Shared hooks come first, then the globe, then the clock-change pages.
     classifier does not know; a test asserts each code in it is one the classifiers return `null`
     for. There is no year-window control, and an old link that carries a `yearWindow` loads and
     ignores it.
+  The FHIR Date Checker (HLTH-94, `/tools/fhir-date-checker/`) is a fourth member of the family. It
+  reads one FHIR R4 `date`, `dateTime` or `instant` with `parseFHIR` (`lib/fhir-date-checker.ts` is
+  the pure module, `fhir-date-checker-mount.ts` the template and mount, `fhir-lib.ts` the loader),
+  and shows which of the three types the value fits, what it names, and what `formatFHIR` writes
+  back. It takes no HL7 input and uses no zones. Its rules:
+  - **The timeline takes a `span` kind.** `spanLayout` in `edi-picture.ts` places a year, month or
+    day as a band between its two edges, with the padded moment as its reference pin; `spanAria`
+    is a sibling of `timelineAria`. The HL7 Reader draws no span, and the DTM Decoder and X12 Time
+    Reader snapshots are unchanged.
+  - **The span strip's reference label wraps inside the room on its side of the pin.** Only the
+    `span` state makes the plot a size container and sets `--n` on the reference, so the label
+    never spills out of the card at 320 px; the marks timelines are unchanged.
+  - **The span band holds no text.** The days it covers ("2016-05-01 to 2016-05-31", 24 characters)
+    are wider than the band in a narrow pane, so they are the caption's first line, one line at any
+    width: the box is a size container in the `span` state and the label sets its type at the
+    box's width over 15. Nothing then touches the band's border at 320, 390, 768 or 1280 px.
+  - **Nothing in section 2 or 4 changes a box between presets.** The type table and the member
+    table are fixed-layout with set widths; each member cell holds its longest answer as a hidden
+    line; a writer cell is one line (two under 22rem) in the stacked layout. The type table stacks
+    under a 36rem (576 px) content box. At a 1280 px viewport that box is 588 px in Chromium, so
+    the table stays a table, and 568 px in WebKit, so it stacks there. Its widths
+    are `%` (a `<col width>` takes no `rem`) with the Type column wide enough for `dateTime`.
+  - **Reasons come from library probes.** The NO SIGNAL sentence and the per-type "Why" line are
+    chosen by probing `parseFHIR` and `isValidFHIR`, so they cannot drift from the library.
+  - **Allowed precisions are probed, not stored.** Which of year, month, day, second and fraction a
+    type accepts is read by calling `isValidFHIR` on one fixed sample per precision, once per type
+    (`probeAllowed`), and the site keeps no table of them.
+  - **A pattern match is shape only.** Each type shows the regex result and the library result
+    apart, because HL7 International calls the patterns informative, not normative.
+  - **"No result" covers both refusals.** The writer's cell reads the same whether the moment does
+    not fit the type or the library refuses the value (no minute precision, no leap second, no
+    zero fill). It is a correct answer and not the sentinel.
+  - **One field feeds the checker and the writer**, so there is one permalink. Its kind is `fhir`; it is
+    `{ preset }` alone while the value matches a preset, and `{ value }` (untrimmed, at most 64
+    characters) otherwise. The first preset, `2024-06`, is the chat starter. The presets include the
+    values that are ISO but not FHIR: minute precision, a bracketed zone and a time with no zone.
+  - **The reference pin is the mistake drawn.** On the span strip the pin marks
+    `<first day>T00:00:00Z`, the instant `new Date("2024-06")` names, labelled "Padded to midnight
+    UTC: …"; no library function makes that call. A valid inserted leap second has no pin and says
+    "it has no instant of its own on a UTC axis", because `toOffsetInstant` refuses `:60` and the
+    tool invents no stand-in. The writer's first row is "Default (no precision)", the call most
+    callers make.
+  - **Comparing two partial values is out of scope.** The strip draws one value's span and never
+    orders two values (FHIRPath's rule).
+  - **The tool is linked** from the HL7 Timestamp Reader's page, the guide's tools list and the
+    healthcare `solves` entry in `industry-overview.ts`; `namespace-summary.ts` names FHIR R4.
+  - **A blank custom value has no permalink state.** `permalinkOf` returns `{}`, so the link opens
+    on the first preset.
   - **The printed call is the call made.** A blank form in either tool (nothing typed in any field
     of the section, `dtmBlank`, `mainBlank`, `dtpBlank`) makes no call, hides the call frame and
     renders "nothing to read", never amber. Anything typed is partial input and gets the library's
@@ -2942,7 +2990,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `/tools/timetable-reader/`, `/tools/crossing-clock/`, `/tools/cutoff-stack/`,
   `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, `/tools/punctuality-board/`,
   `/tools/eta-drift/`, `/tools/departure-board/`, `/tools/dtm-decoder/`,
-  `/tools/x12-time-reader/`, `/tools/hl7-timestamp-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
+  `/tools/x12-time-reader/`, `/tools/hl7-timestamp-reader/`, `/tools/fhir-date-checker/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
   `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
@@ -4361,6 +4409,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - `showHl7TimestampReader({ value, zone1?, zone2?, zone3?, zone4? })` (HLTH-93): `value` is
     one HL7 v2 `DTM` or `TS` field as typed, up to 64 characters, never trimmed. A zone is passed
     only when the reader named it, never chosen from a facility or a sending system.
+  - `showFhirDateChecker({ value })` (HLTH-94): `value` is one FHIR `date`, `dateTime` or `instant`
+    as typed, 1 to 64 characters, never trimmed. No zone is passed.
   - `showBlDateStamp({ value, event, timeZone, zone2?, zone3?, zone4?, latest? })` (INT-14):
     `value` is a moment, never a bare local time, and `timeZone` is the place where the event
     happened. A zone is passed only when the reader named it, never chosen from a port or a place.

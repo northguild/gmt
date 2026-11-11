@@ -53,7 +53,7 @@ addZoned("2024-03-30T12:00:00+01:00[Europe/Berlin]", { hours: 24 }); // "2024-03
 resolveLocal("2024-03-31T02:30:00", "Europe/Berlin", { disambiguation: "reject" }); // ""
 ```
 
-- **759 functions, to the nanosecond**, tested in 17 locales.
+- **762 functions, to the nanosecond**, tested in 17 locales.
 - **Never throws.** ISO 8601 strings in. Invalid input returns `""`, `null`, `false` or `[]`.
 
 The latest test counts, CI volume and the comparison with Luxon, date-fns, Moment.js, Day.js, Spacetime and `@internationalized/date` are on the [Why GMT](https://northguild.dev/gmt/why-gmt/) page. The full comparison and the method are on the [compare](https://northguild.dev/gmt/compare/) page.

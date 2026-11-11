@@ -1,0 +1,40 @@
+---
+title: FHIR Date Checker
+description: "Type a FHIR R4 date, dateTime or instant. The tool says which of the three types the value fits, what it names, and what formatFHIR writes back, and it keeps the precision that was sent."
+industries: [healthcare]
+---
+
+import FhirDateChecker from "../../../components/FhirDateChecker.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="FHIR R4 date, dateTime and instant">
+
+<Fragment slot="keypoint">
+
+`2024-06` is a month. It is not midnight on the first.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Type a FHIR R4 value. FHIR is published by HL7 International, and it has three primitive types that carry a date: `date`, `dateTime` and `instant`. The tool calls [`parseFHIR`](/reference/healthcare/parse/parseFHIR/) and [`isValidFHIR`](/reference/healthcare/validate/isValidFHIR/) and shows which of the three types the value fits, and what it names: a year, a month, a day, a local time or an instant. The last section shows what [`formatFHIR`](/reference/healthcare/format/formatFHIR/) writes back.
+
+</Fragment>
+
+<FhirDateChecker fullbleed />
+
+<Fragment slot="after">
+
+**How a value is read.** `parseFHIR` keeps the precision that was sent. A year, a month or a day is a partial value with no instant, and the tool never pads it. A time to the second or finer with an offset is an instant. A `dateTime` with a time and no offset is a local time, and it is not UTC.
+
+**Why a pattern match is shape only.** HL7 International publishes one regular expression for each type, and the specification calls them "informative, not normative". A value can match its pattern and still not be a date, such as `2024-02-30`. The tool shows the pattern result and the library result side by side, and the "Why" line says what the pattern cannot catch.
+
+**What the writer refuses.** `formatFHIR` writes a type only when the moment fits it, and the cell says "no result" when it does not. FHIR has no minute precision, so a time to the minute is not written. It has no leap second, so `:60` is refused. It never fills in what was not sent: a `date` has no time to give an `instant`, and the writer will not make one up. An offset of `-00:00` is kept as sent.
+
+**The functions.** [`parseFHIR`](/reference/healthcare/parse/parseFHIR/) reads, [`formatFHIR`](/reference/healthcare/format/formatFHIR/) writes and [`isValidFHIR`](/reference/healthcare/validate/isValidFHIR/) tells a bad value from a good one. The rules are in [Healthcare: Clinical Timestamps](/guides/industries/healthcare-clinical-timestamps/#fhir-r4-date-datetime-and-instant). For an HL7 v2 value, use the [HL7 Timestamp Reader](/tools/hl7-timestamp-reader/).
+
+**Worth trying:** [a date that is not on the calendar](/tools/fhir-date-checker/?w=fhir&wa=%7B%22preset%22%3A%22feb-30%22%7D), which matches its pattern and is still refused. Then [a time to the minute](/tools/fhir-date-checker/?w=fhir&wa=%7B%22preset%22%3A%22minute%22%7D): ISO 8601 allows it, and FHIR does not.
+
+</Fragment>
+
+</ToolLayout>

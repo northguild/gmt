@@ -77,6 +77,7 @@ import {
   showSsimDateReaderInput,
   showJulianDayCounterInput,
   showDoublePrecisionMeterInput,
+  showFhirDateCheckerInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
@@ -660,6 +661,11 @@ export function buildWorkerTools(
       description: docFor("showFixTimestampReader"),
       inputSchema: showFixTimestampReaderInput,
       execute: () => accept("fix-timestamp-reader"),
+    }),
+    showFhirDateChecker: tool({
+      description: docFor("showFhirDateChecker"),
+      inputSchema: showFhirDateCheckerInput,
+      execute: () => accept("fhir-date-checker"),
     }),
     showSsimDateReader: tool({
       description: docFor("showSsimDateReader"),

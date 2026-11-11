@@ -249,13 +249,14 @@ skills:
     domain: industry-layers
     path: 'skills/gmt-healthcare/SKILL.md'
     package: 'packages/gmt'
-    description: HL7 v2 date-times, @northguild/gmt/healthcare (parseHL7/formatHL7/isValidHL7); an HL7 time with no offset is the sender's local time, never UTC
+    description: HL7 v2 and FHIR R4 date-times, @northguild/gmt/healthcare (parseHL7/formatHL7/isValidHL7, parseFHIR/formatFHIR/isValidFHIR); an HL7 time with no offset is the sender's local time, never UTC; a FHIR time with no zone is invalid
     requires:
       - gmt-timezone
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/healthcare-clinical-timestamps.mdx'
       - 'northguild/gmt:packages/gmt/src/healthcare/index.ts'
       - 'northguild/gmt:packages/gmt/src/types/hl7.ts'
+      - 'northguild/gmt:packages/gmt/src/types/fhir.ts'
 
   # Lifecycle skills (contributors only — excluded from consumer intent install)
   - name: Issue Creation

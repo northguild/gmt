@@ -200,6 +200,18 @@ HL7 v2 `DTM` (`YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ]`, ch. 2A 2.A.22) a
 2. Extracted fields are **always** checked by Temporal before they are used. `parseHL7` hands them to `Temporal.PlainDate.from(fields, { overflow: "reject" })` and `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A value at minute precision or finer that carries an offset is rebuilt as an extended ISO string and read by `toOffsetInstant`; the offset of a partial value (year, month, day or hour precision) is checked with the `utcOffset` regex and normalised with `formatUtcOffset`. `formatHL7` reads its input by the precision it is written at: a year's group goes to `Temporal.PlainDate.from({ year, month: 1, day: 1 }, { overflow: "reject" })`; a month is read from the string by `Temporal.PlainYearMonth.from`; a day is checked with `isValidDate` and then read from the string by `Temporal.PlainDate.from`; an hour's groups go to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A local minute or finer is checked with `isValidDateTime` and read from the string by `Temporal.PlainDateTime.from`, and a form with an offset is read by `toOffsetInstant`. It writes digits from Temporal's fields.
 3. The try-catch and sentinel-return rules above are unchanged.
 
+### Scoped exception: FHIR R4 date/time grammar in `parseFHIR`, `isValidFHIR` and `formatFHIR` (HLTH-94)
+
+FHIR R4 `date`, `dateTime` and `instant` are profiles of ISO 8601. Temporal reads none of them as they stand: a FHIR value may stop at a year or a month, and a second of `60` is allowed. HL7 publishes one `regex` per type in the R4 StructureDefinitions.
+
+1. **The grammar is FHIR's own regexes.** They are published unchanged in `regex/fhir.ts` and anchored as R4 Datatypes §2.24.0.1 asks. `internal/fhirDateTime.ts` reads fields from `fhirDateTime`'s numbered groups, and nowhere else. `formatFHIR` reads the form of its ISO 8601 input with `isoHl7Form`, as `formatHL7` does.
+2. **Temporal checks every extracted field.**
+   - The date goes to `Temporal.PlainDate.from(fields, { overflow: "reject" })`.
+   - A moment is read by `toOffsetInstant`.
+   - A second of `60` is checked against the leap-second table (`parseUtcReading` and `taiOfUtc`).
+   - `formatFHIR` reads a local form with `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`, and a form with an offset with `toOffsetInstant`. It writes digits from Temporal's fields, then checks its own result with the same reader.
+3. The try-catch and sentinel-return rules above are unchanged.
+
 This prohibition stands for every other function in the library.
 
 ### Calendar-annotated strings are RFC 9557 (E1, E7)

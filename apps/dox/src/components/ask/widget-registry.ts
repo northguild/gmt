@@ -88,6 +88,7 @@ import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
 import type { FixTimestampReaderArgs } from "~/lib/fix-timestamp-reader-mount";
+import type { FhirArgs } from "~/lib/fhir-date-checker-mount";
 import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
@@ -134,6 +135,7 @@ import {
   showSsimDateReaderInput,
   showJulianDayCounterInput,
   showDoublePrecisionMeterInput,
+  showFhirDateCheckerInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -975,6 +977,29 @@ const fixTimestampEntry = defineWidget<FixTimestampReaderArgs>({
     })),
 });
 
+const fhirEntry = defineWidget<FhirArgs>({
+  title: "FHIR Date Checker",
+  kind: "fhir",
+  parse: (input) => {
+    const result = showFhirDateCheckerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: the one argument is a control
+     value. A value the library does not read is the widget's own NO SIGNAL, with
+     its reason. */
+  load: () =>
+    import("~/lib/fhir-date-checker-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderFhirDateCheckerTemplate(idPrefix, args),
+      mount: m.mountFhirDateChecker,
+    })),
+});
+
 const ssimEntry = defineWidget<SsimDateReaderArgs>({
   title: "SSIM Date Reader",
   kind: "ssim",
@@ -1465,6 +1490,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showTai64nLogReader: tai64nEntry,
   showFixTimestampReader: fixTimestampEntry,
   showSsimDateReader: ssimEntry,
+  showFhirDateChecker: fhirEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,
   showDoublePrecisionMeter: doublePrecisionMeterEntry,

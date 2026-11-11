@@ -186,7 +186,8 @@ remains to the user rather than looping.
 - **Never re-open a settled decision without a new primary source.** Closed:
   [the "Intentional — do not flag" list](../context/code-review-checklist.md), the seven
   decisions in [§ Calendar & zone semantics](../context/coding-standards.md#calendar--zone-semantics),
-  the three scoped manual-parsing exceptions, and every story's `## Corrections` section.
+  every `Scoped exception:` section in [coding-standards](../context/coding-standards.md), and
+  every story's `## Corrections` section.
   Re-raising one of these is noise, and noise is what makes a review get skimmed.
 - **Say what you checked and found clean.** A bare "looks good" is indistinguishable from a
   shallow pass. Name the rules you verified.

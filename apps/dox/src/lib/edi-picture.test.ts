@@ -16,6 +16,8 @@ import {
   probeFamily,
   shapeOf,
   picHalves,
+  spanAria,
+  spanLayout,
   timelineAria,
   timelineLayout,
 } from "./edi-picture";
@@ -234,6 +236,99 @@ describe("timelineLayout", () => {
       ),
     ).toBe(
       "A UTC timeline with 1 zone marked: 1, Europe/Berlin, 2024-06-15T12:30:00Z.",
+    );
+  });
+});
+
+describe("spanLayout", () => {
+  const year = spanLayout({
+    from: "2024-01-01",
+    to: "2025-01-01",
+    unit: "year",
+    reference: "2024-01-01",
+  });
+  const month = spanLayout({
+    from: "2024-02-01",
+    to: "2024-03-01",
+    unit: "month",
+    reference: "2024-02-01",
+  });
+  const day = spanLayout({
+    from: "2024-06-15",
+    to: "2024-06-16",
+    unit: "day",
+    reference: "2024-06-15",
+  });
+  const labelled = (l: typeof year) => l.ticks.filter((t) => t.label !== "");
+
+  it("fills the middle half of the axis with the span, whatever the unit", () => {
+    for (const l of [year, month, day]) {
+      expect(l.span!.from).toBeCloseTo(25, 5);
+      expect(l.span!.to).toBeCloseTo(75, 5);
+      expect(l.marks).toEqual([]);
+    }
+  });
+
+  it("puts the reference at the start of the span", () => {
+    for (const l of [year, month, day]) {
+      expect(l.reference!.at).toBeCloseTo(l.span!.from, 5);
+    }
+  });
+
+  it("draws no reference when none is given", () => {
+    expect(
+      spanLayout({
+        from: "2024-06-15",
+        to: "2024-06-16",
+        unit: "day",
+        reference: null,
+      }).reference,
+    ).toBeNull();
+  });
+
+  it("gives a year monthly ticks, labelled by quarter, with the year under January", () => {
+    expect(year.ticks.length).toBeGreaterThanOrEqual(12);
+    expect(labelled(year).every((t) => /^\d\d$/.test(t.label))).toBe(true);
+    expect(labelled(year).filter((t) => t.day !== "")).toEqual([
+      expect.objectContaining({ label: "01", day: "2024" }),
+      expect.objectContaining({ label: "01", day: "2025" }),
+    ]);
+  });
+
+  it("gives a leap-year February a tick on every day, the 1st and each Monday labelled", () => {
+    const days = month.ticks.length;
+    // 29 days padded by 14.5 days a side, minus the ticks at or beyond the ends.
+    expect(days).toBeGreaterThanOrEqual(43);
+    expect(labelled(month).filter((t) => t.day !== "")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "01", day: "2024-02" }),
+        expect.objectContaining({ label: "01", day: "2024-03" }),
+      ]),
+    );
+  });
+
+  it("gives a day three-hour ticks, labelled HH:00, with the date under midnight", () => {
+    expect(labelled(day).every((t) => /^\d\d:00$/.test(t.label))).toBe(true);
+    expect(labelled(day).filter((t) => t.day !== "")).toEqual([
+      expect.objectContaining({ label: "00:00", day: "06-15" }),
+      expect.objectContaining({ label: "00:00", day: "06-16" }),
+    ]);
+  });
+
+  it("never labels more than eight ticks, nor two within the least room", () => {
+    for (const l of [year, month, day]) {
+      const at = labelled(l).map((t) => t.at);
+      expect(at.length).toBeLessThanOrEqual(8);
+      for (let i = 1; i < at.length; i++) {
+        expect(at[i]! - at[i - 1]!).toBeGreaterThanOrEqual(10.9);
+      }
+      expect(l.ticks.every((t) => t.at > 0 && t.at < 100)).toBe(true);
+    }
+  });
+
+  it("reads the span in words", () => {
+    expect(spanAria("2024-06-01 to 2024-06-30", "2024-06-01T00:00:00Z")).toBe(
+      "Spans 2024-06-01 to 2024-06-30; padded reading at 2024-06-01T00:00:00Z. Calendar dates, no zone.",
     );
   });
 });

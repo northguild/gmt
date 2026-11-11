@@ -925,6 +925,13 @@ export const CHAT_STARTERS: readonly {
     area: "core",
     args: { value: "2026-06-15T13:47:12.345678912Z" },
   },
+  {
+    text: "Is 2024-06 a valid FHIR instant?",
+    widget: "showFhirDateChecker",
+    area: "healthcare",
+    // The question gives the value exactly; the widget reads it, so nothing is padded here.
+    args: { value: "2024-06" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

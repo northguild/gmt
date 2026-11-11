@@ -134,6 +134,7 @@ const PAGES = [
   { slug: "tool-departure-board", path: "/tools/departure-board/" },
   { slug: "tool-dtm-decoder", path: "/tools/dtm-decoder/" },
   { slug: "tool-hl7-timestamp-reader", path: "/tools/hl7-timestamp-reader/" },
+  { slug: "tool-fhir-date-checker", path: "/tools/fhir-date-checker/" },
   { slug: "tool-x12-time-reader", path: "/tools/x12-time-reader/" },
   { slug: "tool-demurrage-clock", path: "/tools/demurrage-clock/" },
   { slug: "tool-bl-date-stamp", path: "/tools/bl-date-stamp/" },
