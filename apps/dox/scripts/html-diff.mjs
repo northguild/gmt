@@ -183,6 +183,10 @@ const PAGES = [
     widget: "fix-timestamp-reader",
   },
   {
+    path: "tools/ssim-date-reader",
+    widget: "ssim-date-reader",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

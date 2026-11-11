@@ -435,6 +435,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     (`industry-<id>`), `guide`, the `namespace` it owns (or none) and the modules it `drawsOn`.
     Workforce owns `workforce`; Transport owns `transport` and draws on `workforce`; Intermodal
     owns `intermodal` and draws on `transport`; GNSS owns `gnss` and draws on `timescale`;
+    Finance owns `finance` and Aviation owns `aviation`, each drawing on nothing;
     Maritime owns none and draws on `gnss` and `timescale`. `src/lib/industry-tags.ts`, a leaf
     module, reads it (`INDUSTRIES`, `INDUSTRY_TAG_IDS` with `core` first, `OWN_NAMESPACES`,
     `industryOwning`, `drawsOn`, `industriesUsing`, `INDUSTRY_ICON_PATHS`); `core` and `space` are
@@ -2549,6 +2550,50 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Permalink `fixstamp`** at `/tools/fix-timestamp-reader/`: `stamp` and `write`, or `preset` and
     `writePreset` while a box matches a preset. The chat tool is `showFixTimestampReader`
     (`stamp`, `instant`; the registry maps `instant` to `write`), appended to `DOX_TOOL_DOCS`.
+- **Aviation** (AV-97): one tool, the **SSIM Date Reader** (`/tools/ssim-date-reader/`, `ssim`,
+  aviation). An IATA SSIM date (`DDMMMYY`, such as `01JAN26`) is read by `parseSsimDate` and
+  `isValidSsimDate` with a window the reader states, beside the locale pattern parser
+  (`parseDateWithPattern`, `ddMMMyy`) under a locale the reader picks. Section 2 also tables the
+  locale's short month names (`getLocaleMonthNames`) against the letters `formatSsimDate` writes,
+  and section 3 writes an ISO date back with `formatSsimDate` and reads it back. Aviation `drawsOn` is `[]`.
+  It opens on the `french-locale` preset (`01JAN26`, window 2000, `fr-FR`) so the comparison shows
+  a difference before anything is touched. Its rules:
+  - **The window is always an input, and never defaulted.** The century is the caller's, so
+    a blank window is the library's `""` with the reason "no window", and a chat call with no
+    `yearWindow` opens with the window blank. Both forms are offered (`Fixed from` and `Rolling`
+    chips) because the type has both; a test that uses the rolling window pins the clock.
+  - **The value is never upper-cased, trimmed or repaired before a call.** `parseSsimDate` reads
+    upper case only, so `01jan26` is a refusal whose reason says so, and the printed call carries
+    the text as typed.
+  - **The locale feeds the comparison alone.** `parseSsimDate` takes no locale and the printed
+    call shows none; the select (`CONVERTER_LOCALES`) reaches only the pattern parser and the
+    month table, so a locale change redraws section 2 and the month table redraws only then.
+    The page never says the parser reads the machine's language: that is what naive code does.
+  - **The month table's "Short name" header is constant.** The caption, not the header, names the
+    locale. Under 40rem the header becomes each block's `data-col` label, and "fr-FR short name"
+    wrapped to two lines where "en short name" did not, so the table changed height by 258 px
+    when the locale changed. A CSS `content` label cannot hold a hidden twin.
+  - **A refusal is told apart from an empty field and from "no date".** NO SIGNAL (amber) shows
+    only when the library refused typed text. An empty field reads "nothing typed" and makes no
+    call; the pattern plate reads a neutral "no date" because a locale that does not know `JAN`
+    is a finding, not a fault. A raw `""` appears only in a printed call.
+  - **A reason asks the library again.** The site holds no grammar: a refusal with a window is
+    probed once with the text upper-cased (a hit is "lower case"), and a preset marks the one
+    case (`noSuchDay`) that no probe tells from a bad shape, for that exact value and window.
+    The probe uses `toUpperCase`, which no locale moves. The month table's letters come from
+    `formatSsimDate`, so the site holds no month list.
+  - **Out of scope, so nowhere in a preset, hint or reason:** `00XXX00` (the open-ended date) and
+    `DDMMM` with no year.
+  - **Every region is present in every state and holds still.** The hero plates, the reasons, the
+    comparison badge ("differs from SSIM", with a ghost twin), the month table and each call
+    frame draw every text they can show, hidden; a blank section keeps its empty frame at its
+    reserved height rather than hiding it. The strip stacks under a 40rem container.
+  - **Permalink `ssim`** at `/tools/ssim-date-reader/`: `preset` alone while the state matches
+    one, else `value`, `window` (`rolling`, a year, or empty), `locale` and `date`; empty
+    `value`, `window` and `date` are real answers and survive the link. The chat tool is
+    `showSsimDateReader` (`value`, `yearWindow`, `locale`, `date`; the registry maps `yearWindow`
+    to `window`), appended to `DOX_TOOL_DOCS`. A call passes only what the reader gave: never a
+    window they did not state, never a locale inferred from a place.
 - **Cron in a Zone** (CORE-84, `/tools/cron-in-a-zone/`, `cronzone`): a Core tool that draws
   `@northguild/gmt/recurrence`. The reader types a five-field cron line and picks a zone, a year
   and one of that year's clock changes.
@@ -4332,7 +4377,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
   grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal,
-  GNSS, Finance and Healthcare, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
+  GNSS, Finance, Healthcare and Aviation, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
   and a card's `area` is its tool page's tag. An industry with no tool has no area (Workforce and
   Maritime gain one with their first tool). `startersByArea()` returns the groups in that order.
   `chat-starters.test.ts` asserts each area is an industry with that industry's label and icon,

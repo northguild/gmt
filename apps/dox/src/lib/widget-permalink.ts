@@ -80,6 +80,7 @@ export type WidgetKind =
   | "dbstamp"
   | "tai64n"
   | "fixstamp"
+  | "ssim"
   | "ttstack";
 
 /**
@@ -146,6 +147,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   dbstamp: "/tools/database-timestamp-reader/",
   tai64n: "/tools/tai64n-log-reader/",
   fixstamp: "/tools/fix-timestamp-reader/",
+  ssim: "/tools/ssim-date-reader/",
   ttstack: "/tools/terrestrial-time-stack/",
 };
 
@@ -250,6 +252,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   dbstamp: new Set(["value", "value2", "value3", "zone"]),
   // A cleared stamp or instant is the empty state: the link must open cleared, not on the default.
   fixstamp: new Set(["stamp", "write"]),
+  // A cleared value, window or date is a state of its own: a blank window is the no-date reason, and the link must open on it.
+  ssim: new Set(["value", "window", "date"]),
 };
 
 /**

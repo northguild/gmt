@@ -243,6 +243,20 @@ describe("widget permalinks", () => {
     );
   });
 
+  it("round-trips an SSIM read with a blank window and a cleared value", () => {
+    for (const state of [
+      { value: "01JAN26", window: "", locale: "fr-FR", date: "" },
+      { value: "", window: "rolling", locale: "en", date: "2026-01-01" },
+      { value: "01JAN26", window: "2000", locale: "en", date: "" },
+    ]) {
+      const url = encodeWidgetPermalink("ssim", state);
+      expect(url).toContain("/tools/ssim-date-reader/");
+      expect(seedFromLocation("ssim", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
   it("opens each Terrestrial Time Stack preset's link on that preset", () => {
     for (const preset of STACK_PRESETS) {
       if (preset === DEFAULT_PRESET) continue;

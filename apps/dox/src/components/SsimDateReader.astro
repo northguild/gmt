@@ -1,0 +1,45 @@
+---
+/**
+ * SSIM Date Reader widget (AV-97).
+ *
+ * An IATA SSIM date (`01JAN26`) read in a window the reader states, beside the locale pattern
+ * parser it is not, and an ISO date written back.
+ *
+ * **The markup and the wiring both live in `lib/ssim-date-reader-mount.ts`**, so the chat rail
+ * mounts the same widget this page server-renders.
+ */
+import { renderSsimDateReaderTemplate } from "../lib/ssim-date-reader-mount";
+
+/** `fullbleed` lets the page use the whole main pane (see ObservanceComparator). */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderSsimDateReaderTemplate("ssim-date-reader", {}).value;
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountSsimDateReader } from "../lib/ssim-date-reader-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    const seed = seedFromLocation("ssim");
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="ssim-date-reader"]')
+      .forEach((el) => {
+        mountSsimDateReader(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+  }
+</script>

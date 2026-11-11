@@ -128,6 +128,10 @@ import {
   renderFixTimestampReaderTemplate,
 } from "./fix-timestamp-reader-mount";
 import {
+  mountSsimDateReader,
+  renderSsimDateReaderTemplate,
+} from "./ssim-date-reader-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -337,6 +341,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "fix timestamp reader",
     () => renderFixTimestampReaderTemplate("test"),
     mountFixTimestampReader as MountFn<never>,
+  ],
+  [
+    "ssim date reader",
+    () => renderSsimDateReaderTemplate("test"),
+    mountSsimDateReader as MountFn<never>,
   ],
   [
     "terrestrial time stack",

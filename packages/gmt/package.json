@@ -60,6 +60,18 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
+      "aviation": [
+        "./dist/aviation/index.d.ts"
+      ],
+      "aviation/format": [
+        "./dist/aviation/format/index.d.ts"
+      ],
+      "aviation/parse": [
+        "./dist/aviation/parse/index.d.ts"
+      ],
+      "aviation/validate": [
+        "./dist/aviation/validate/index.d.ts"
+      ],
       "calendar": [
         "./dist/calendar/index.d.ts"
       ],
@@ -381,6 +393,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./aviation": {
+      "types": "./dist/aviation/index.d.ts",
+      "default": "./dist/aviation/index.js"
+    },
+    "./aviation/format": {
+      "types": "./dist/aviation/format/index.d.ts",
+      "default": "./dist/aviation/format/index.js"
+    },
+    "./aviation/parse": {
+      "types": "./dist/aviation/parse/index.d.ts",
+      "default": "./dist/aviation/parse/index.js"
+    },
+    "./aviation/validate": {
+      "types": "./dist/aviation/validate/index.d.ts",
+      "default": "./dist/aviation/validate/index.js"
     },
     "./calendar": {
       "types": "./dist/calendar/index.d.ts",

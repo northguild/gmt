@@ -1,0 +1,114 @@
+---
+title: Aviation mistakes
+description: Common mistakes with SSIM schedule dates, the month letters, upper case, the century and the window, in GMT's Aviation layer.
+industries: [aviation]
+sidebar:
+  label: Aviation
+---
+
+The Aviation layer reads and writes the dates in airline schedule files. The mistakes around them
+are the ones a quick parser makes: reading the month letters as a word in the machine's language,
+accepting lower case, fixing a century in code, writing a year the reader will place in another
+century, and judging a leap day without knowing the century. Every output shown here is what the
+function returns.
+
+import Mistake from "../../../components/Mistake.astro";
+
+## Month letters
+
+<Mistake
+  severity="high"
+  title="Reading the month through the locale"
+  description="The three letters of an SSIM month are a fixed English code. A pattern parser given the platform's language rejects JAN on a machine set to Spanish and accepts ENE, which no file writes. parseSsimDate reads a constant table and never asks for a language."
+  wrongCode={`import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+const locale = "es-ES"; // what the platform reports on this server
+
+parseDateWithPattern("01JAN26", "ddMMMyy", locale, { yearWindow: 2000 });
+// "" — the code is read as a Spanish word`}
+  rightCode={`import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01JAN26", { yearWindow: 2000 });
+// "2026-01-01"
+parseSsimDate("01ENE26", { yearWindow: 2000 });
+// ""`}
+  rightSpecId="parseSsimDate"
+/>
+
+<Mistake
+  severity="medium"
+  title="Accepting lower case"
+  description="SSIM writes the month letters in upper case. A parser that ignores case accepts jan, so a writer built beside it emits jan, and a file the other side rejects. parseSsimDate takes upper case only."
+  wrongCode={`import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+parseDateWithPattern("01jan26", "ddMMMyy", "en", { yearWindow: 2000 });
+// "2026-01-01" — a spelling no SSIM file writes`}
+  rightCode={`import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01jan26", { yearWindow: 2000 });
+// ""
+parseSsimDate("01Jan26", { yearWindow: 2000 });
+// ""
+parseSsimDate("01JAN26", { yearWindow: 2000 });
+// "2026-01-01"`}
+  rightSpecId="parseSsimDate"
+/>
+
+## The century
+
+<Mistake
+  severity="high"
+  title="A century pivot fixed in code"
+  description="A rule such as 'a year under 70 is 20xx' is right for the files of one period and wrong for the rest, and it flips the day it is passed. The century is a fact about your files. parseSsimDate takes the window you state, and gives nothing without one."
+  wrongCode={`const yy = 26;
+const year = yy < 70 ? 2000 + yy : 1900 + yy;
+// 2026 — and 01JAN70 in an archive from the 2070s is read as 1970`}
+  rightCode={`import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01JAN70", { yearWindow: 1970 });
+// "1970-01-01"
+parseSsimDate("01JAN70", { yearWindow: 1971 });
+// "2070-01-01"
+parseSsimDate("01JAN70", {});
+// ""`}
+  rightSpecId="parseSsimDate"
+/>
+
+<Mistake
+  severity="high"
+  title="Formatting a year outside the window"
+  description="Writing a year as two digits drops its century. If the reader's window does not hold that year, it reads back as another one. formatSsimDate refuses a year outside the window you state, so what it writes reads back as the same date, with the same window."
+  wrongCode={`const year = 2100;
+String(year).slice(-2);
+// "00" — which a reader with a window from 2000 places in 2000`}
+  rightCode={`import { formatSsimDate } from "@northguild/gmt/aviation/format";
+
+formatSsimDate("2100-01-01", { yearWindow: 2000 });
+// ""
+formatSsimDate("2026-01-01", { yearWindow: 2000 });
+// "01JAN26"`}
+  rightSpecId="formatSsimDate"
+/>
+
+<Mistake
+  severity="medium"
+  title="Validating without the window"
+  description="Whether 29FEB00 exists depends on the century: 2000 was a leap year and 1900 was not. A check that never asks for the window cannot answer. isValidSsimDate takes the window, and is false without one."
+  wrongCode={`// a pattern that checks the shape and day 1 to 31
+/^(0[1-9]|[12][0-9]|3[01])(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[0-9]{2}$/.test("29FEB00");
+// true — in which century?`}
+  rightCode={`import { isValidSsimDate } from "@northguild/gmt/aviation/validate";
+
+isValidSsimDate("29FEB00", { yearWindow: 2000 });
+// true
+isValidSsimDate("29FEB00", { yearWindow: 1900 });
+// false
+isValidSsimDate("29FEB00", {});
+// false`}
+  rightSpecId="isValidSsimDate"
+/>
+
+See [An SSIM Month Read in the Wrong
+Language](/scenarios/an-ssim-month-read-in-the-wrong-language/), and the reasoning in [Aviation:
+Message Times](/guides/industries/aviation-message-times/). To try a date yourself, use the
+[SSIM Date Reader](/tools/ssim-date-reader/).

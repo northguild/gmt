@@ -15,7 +15,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 
 - [ ] Plain/zoned separation maintained — no `PlainDateTime`/`ZonedDateTime` mixing in the same function
 - [ ] All Temporal method calls wrapped in `try-catch` — the only exception is the [UTC clock readers](./coding-standards.md#scoped-exception-the-utc-clock-readers); a read of the system time zone still needs one
-- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `finance/`, `gnss/`, `instant/`, `intermodal/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `timescale/`, `transport/`, `unix/`, `utc/`, `workforce/`, `zoned/`) and the `get/` vs `calculate/` rule
+- [ ] New functions follow the existing directory structure (`aviation/`, `calendar/`, `duration/`, `finance/`, `gnss/`, `healthcare/`, `instant/`, `intermodal/`, `interval/`, `plain/`, `precision/`, `recurrence/`, `regex/`, `span/`, `timescale/`, `transport/`, `unix/`, `utc/`, `workforce/`, `zoned/`) and the `get/` vs `calculate/` rule
 - [ ] A function shared across industries is in the cross-industry layer for its domain (`workforce/`, `gnss/`) or in Core if truly general — not in a grab-bag "shared" namespace, not in one industry's namespace, not in a new namespace that is not a recognised domain ([§ Plain / Zoned Separation](./coding-standards.md#plain--zoned-separation))
 - [ ] Zoned unit boundaries are not computed by truncating the wall clock and re-resolving it (`round({ roundingMode: "trunc" })`, `.with()` + `"compatible"`) — see [§ Calendar & zone semantics](./coding-standards.md#calendar--zone-semantics)
 - [ ] Bounded loops (walkers, steppers, caps) return the sentinel on exhaustion, never a partial value

@@ -616,6 +616,7 @@ export function renderMdxComponents(body: string): string {
     "StoredTimeAudit",
     "Tai64nLogReader",
     "FixTimestampReader",
+    "SsimDateReader",
     "HolidayRuleBuilder",
     "ObservanceComparator",
     "MovingFeasts",

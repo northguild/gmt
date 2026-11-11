@@ -1,4 +1,5 @@
 export { Intl, Temporal, toTemporalInstant } from "./internal/temporal";
+export * from "./aviation";
 export * from "./calendar";
 export * from "./duration";
 export * from "./finance";

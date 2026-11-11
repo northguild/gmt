@@ -86,6 +86,7 @@ import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
 import type { FixTimestampReaderArgs } from "~/lib/fix-timestamp-reader-mount";
+import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -128,6 +129,7 @@ import {
   showDatabaseTimestampReaderInput,
   showTai64nLogReaderInput,
   showFixTimestampReaderInput,
+  showSsimDateReaderInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -969,6 +971,37 @@ const fixTimestampEntry = defineWidget<FixTimestampReaderArgs>({
     })),
 });
 
+const ssimEntry = defineWidget<SsimDateReaderArgs>({
+  title: "SSIM Date Reader",
+  kind: "ssim",
+  parse: (input) => {
+    const result = showSsimDateReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { value, yearWindow, locale, date } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(value === undefined ? {} : { value }),
+        ...(yearWindow === undefined ? {} : { window: String(yearWindow) }),
+        ...(locale === undefined ? {} : { locale }),
+        ...(date === undefined ? {} : { date }),
+      },
+    };
+  },
+  /* No `validate`: a date the library does not read is this widget's own NO SIGNAL state, and a call with no window opens with the window blank. */
+  load: () =>
+    import("~/lib/ssim-date-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderSsimDateReaderTemplate(idPrefix, args),
+      mount: m.mountSsimDateReader,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1385,6 +1418,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showDatabaseTimestampReader: databaseReaderEntry,
   showTai64nLogReader: tai64nEntry,
   showFixTimestampReader: fixTimestampEntry,
+  showSsimDateReader: ssimEntry,
   showTerrestrialTimeStack: ttStackEntry,
 };
 

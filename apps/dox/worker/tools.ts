@@ -74,6 +74,7 @@ import {
   showDatabaseTimestampReaderInput,
   showTai64nLogReaderInput,
   showFixTimestampReaderInput,
+  showSsimDateReaderInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
@@ -657,6 +658,11 @@ export function buildWorkerTools(
       description: docFor("showFixTimestampReader"),
       inputSchema: showFixTimestampReaderInput,
       execute: () => accept("fix-timestamp-reader"),
+    }),
+    showSsimDateReader: tool({
+      description: docFor("showSsimDateReader"),
+      inputSchema: showSsimDateReaderInput,
+      execute: () => accept("ssim-date-reader"),
     }),
     showTerrestrialTimeStack: tool({
       description: docFor("showTerrestrialTimeStack"),

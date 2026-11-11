@@ -524,6 +524,54 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       },
     ],
   },
+  aviation: {
+    about:
+      "Airlines exchange schedules in IATA's SSIM files, and their dates are not ISO. A date there is a day, three English month letters and a two-digit year. This layer reads and writes that date without the platform's language settings and without picking a century for you.",
+    guideTitle: "Aviation: Message Times",
+    solves: [
+      {
+        problem:
+          "A schedule date reads differently on a machine set to another language.",
+        answer:
+          "The month letters are a fixed English code. {{parseSsimDate}} reads them from a constant table and never asks the platform's language, so the same file gives the same date everywhere.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/an-ssim-month-read-in-the-wrong-language/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem: "A two-digit year lands in the wrong century.",
+        answer:
+          "The format does not say which century it means. {{parseSsimDate}} and {{isValidSsimDate}} take the hundred-year window you state, a fixed start for an archive or a rolling one for a live feed, and give nothing without it.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem: "A date written back reads as another year.",
+        answer:
+          "{{formatSsimDate}} writes upper-case letters and refuses a year outside your window, so reading its output back with the same window gives the same date.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+    ],
+  },
 };
 
 /** The `{{name}}` tokens in a pain point's text, in order. */

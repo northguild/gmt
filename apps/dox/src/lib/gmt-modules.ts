@@ -54,6 +54,11 @@ export const GMT_MODULES: Record<
   "instant/parse": () => import("@northguild/gmt/instant/parse"),
   "instant/validate": () => import("@northguild/gmt/instant/validate"),
 
+  // --- aviation ---
+  "aviation/format": () => import("@northguild/gmt/aviation/format"),
+  "aviation/parse": () => import("@northguild/gmt/aviation/parse"),
+  "aviation/validate": () => import("@northguild/gmt/aviation/validate"),
+
   // --- calendar ---
   "calendar/business": () => import("@northguild/gmt/calendar/business"),
   "calendar/calculate": () => import("@northguild/gmt/calendar/calculate"),

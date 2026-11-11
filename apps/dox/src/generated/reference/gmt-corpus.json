@@ -1,5 +1,128 @@
 [
   {
+    "url": "/reference/aviation/format/formatSsimDate",
+    "page": "/reference/aviation/format/formatSsimDate",
+    "name": "formatSsimDate",
+    "namespace": "aviation",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatSsimDate(value: string, options: TwoDigitYearOptions): string",
+    "description": "Write an ISO 8601 date as an SSIM schedule date. The inverse of `parseSsimDate`.",
+    "sourcePath": "packages/gmt/src/aviation/format/formatSsimDate.ts",
+    "examples": [
+      {
+        "call": "formatSsimDate(\"2026-10-25\", { yearWindow: 2000 })",
+        "result": "\"25OCT26\""
+      },
+      {
+        "call": "formatSsimDate(\"2000-02-29\", { yearWindow: 2000 })",
+        "result": "\"29FEB00\""
+      },
+      {
+        "call": "formatSsimDate(\"2049-12-31\", { yearWindow: 1950 })",
+        "result": "\"31DEC49\""
+      },
+      {
+        "call": "formatSsimDate(\"1999-12-31\", { yearWindow: 2000 })",
+        "result": "\"\""
+      },
+      {
+        "call": "formatSsimDate(\"2026-10-25\", { yearWindow: \"rolling\" })",
+        "result": "\"25OCT26\" (while the current UTC year is 1977–2076)"
+      },
+      {
+        "call": "formatSsimDate(\"2026-10-25\", {})",
+        "result": "\"\""
+      },
+      {
+        "call": "formatSsimDate(\"2026-10-25T10:00\", { yearWindow: 2000 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/parse/parseSsimDate",
+    "page": "/reference/aviation/parse/parseSsimDate",
+    "name": "parseSsimDate",
+    "namespace": "aviation",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseSsimDate(value: string, options: TwoDigitYearOptions): string",
+    "description": "Parse an SSIM schedule date as an ISO 8601 date.",
+    "sourcePath": "packages/gmt/src/aviation/parse/parseSsimDate.ts",
+    "examples": [
+      {
+        "call": "parseSsimDate(\"01JAN26\", { yearWindow: 2000 })",
+        "result": "\"2026-01-01\""
+      },
+      {
+        "call": "parseSsimDate(\"29FEB00\", { yearWindow: 2000 })",
+        "result": "\"2000-02-29\""
+      },
+      {
+        "call": "parseSsimDate(\"29FEB00\", { yearWindow: 1900 })",
+        "result": "\"\""
+      },
+      {
+        "call": "parseSsimDate(\"16DEC09\", { yearWindow: 1950 })",
+        "result": "\"2009-12-16\""
+      },
+      {
+        "call": "parseSsimDate(\"01JAN26\", { yearWindow: \"rolling\" })",
+        "result": "\"2026-01-01\" (while the current UTC year is 1977–2076)"
+      },
+      {
+        "call": "parseSsimDate(\"01jan26\", { yearWindow: 2000 })",
+        "result": "\"\""
+      },
+      {
+        "call": "parseSsimDate(\"01ENE26\", { yearWindow: 2000 })",
+        "result": "\"\""
+      },
+      {
+        "call": "parseSsimDate(\"01JAN26\", {})",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/validate/isValidSsimDate",
+    "page": "/reference/aviation/validate/isValidSsimDate",
+    "name": "isValidSsimDate",
+    "namespace": "aviation",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidSsimDate(value: string, options: TwoDigitYearOptions): boolean",
+    "description": "Return true when `value` is a real SSIM date (`DDMMMYY`) in the stated hundred-year window.",
+    "sourcePath": "packages/gmt/src/aviation/validate/isValidSsimDate.ts",
+    "examples": [
+      {
+        "call": "isValidSsimDate(\"01JAN26\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidSsimDate(\"29FEB00\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidSsimDate(\"29FEB00\", { yearWindow: 1900 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidSsimDate(\"01jan26\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidSsimDate(\"31APR26\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidSsimDate(\"01JAN26\", {})",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/business/businessDaysBetween",
     "page": "/reference/calendar/business/businessDaysBetween",
     "name": "businessDaysBetween",

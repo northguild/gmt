@@ -1,0 +1,215 @@
+---
+title: "Aviation: Message Times"
+description: parseSsimDate, formatSsimDate and isValidSsimDate — read, write and check the SSIM schedule date, with English month letters that ignore the platform's language and a century the caller states.
+sidebar:
+  order: 12
+industries: [aviation]
+---
+
+Airlines and airports exchange schedules in the files and messages of IATA's Standard Schedules
+Information Manual, SSIM. Their dates are not ISO 8601. An SSIM date is written `01JAN26`: two
+digits of day, three letters of month and two digits of year. Nothing in it says which century
+the year is in, and the month is a code, not a word in any language.
+
+The functions here read and write that date and check it. They never read the platform's
+language, and they never choose a century for you.
+
+```typescript
+import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+import { formatSsimDate } from "@northguild/gmt/aviation/format";
+import { isValidSsimDate } from "@northguild/gmt/aviation/validate";
+```
+
+The functions live in `@northguild/gmt/aviation/parse`, `@northguild/gmt/aviation/format` and
+`@northguild/gmt/aviation/validate`. They use only Core: a date check from
+[`plain/`](/reference/plain/) and the library's two-digit-year window.
+
+## The SSIM date form
+
+The form is day, month letters, year: `01JAN26`. EUROCONTROL's CSST guide shows it in a schedule
+file, in the carrier record, the second record of the file. Its period of schedule validity
+runs from `05APR10` to `11APR10`, and a third date, `16DEC09`, follows (the figure does not
+label it). The three are written together as `05APR1011APR1016DEC09`. The month letters are the
+first three letters of the English month name in upper case: `JAN`, `FEB`, `MAR`, `APR`, `MAY`,
+`JUN`, `JUL`, `AUG`, `SEP`, `OCT`, `NOV`, `DEC`.
+
+[`parseSsimDate(value, options)`](/reference/aviation/parse/parseSsimDate/) returns an ISO date.
+It returns `""` for anything that is not a valid SSIM date.
+
+```typescript
+import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01JAN26", { yearWindow: 2000 });
+// "2026-01-01"
+parseSsimDate("05APR10", { yearWindow: 2000 });
+// "2010-04-05"
+parseSsimDate("16DEC09", { yearWindow: 1950 });
+// "2009-12-16"
+parseSsimDate("29FEB25", { yearWindow: 2000 });
+// "" (no 29 February in 2025)
+parseSsimDate("31APR26", { yearWindow: 2000 });
+// "" (no 31 April)
+parseSsimDate("00XXX00", { yearWindow: 2000 });
+// "" (XXX is not a month)
+```
+
+Slot messages write the day and month with no year (`01APR`), as ACL's introductory guide shows.
+This layer does not read that form, because a date with no year needs a season to anchor it.
+
+## Why the month letters bypass the locale
+
+The letters are a code. `JAN` is the code for January in every file, whatever language the
+machine reading it uses. A pattern parser that is given the platform's language breaks on this
+in both directions. On a machine set to Spanish it rejects `JAN` and accepts `ENE`, which the
+format never writes. Other languages want their own words, such as `JANV.` with its full stop.
+And it accepts lower case, `jan`, which the format never writes either.
+
+`parseSsimDate` reads the letters from a constant table. The platform's language is never read,
+so the answer is the same on every machine.
+
+```typescript
+import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01JAN26", { yearWindow: 2000 });
+// "2026-01-01" (on every machine)
+parseSsimDate("01ENE26", { yearWindow: 2000 });
+// "" (Spanish for January; not an SSIM month)
+parseSsimDate("01JANV26", { yearWindow: 2000 });
+// "" (letters from another language)
+parseSsimDate("01jan26", { yearWindow: 2000 });
+// "" (lower case)
+parseSsimDate("01Jan26", { yearWindow: 2000 });
+// "" (mixed case)
+```
+
+Upper case only is deliberate. A reader that accepts `jan` invites a writer that emits it, and
+folding case can change a letter: `"ſEP".toUpperCase() === "SEP"` maps another letter onto a
+month code, and `"i".toLocaleUpperCase("tr") === "İ"` depends on the locale.
+
+## The window
+
+A two-digit year does not say which century it is in. `parseSsimDate` takes the hundred-year
+window you state in `yearWindow`, and returns `""` without one. There are two ways to state it.
+
+A fixed first year suits an archive, because the same file then reads the same way in any year.
+`yearWindow: 2000` places `YY` in 2000 to 2099, and `yearWindow: 1950` places it in 1950 to
+2049.
+
+```typescript
+import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01JAN26", { yearWindow: 2000 });
+// "2026-01-01"
+parseSsimDate("01JAN26", { yearWindow: 1900 });
+// "1926-01-01"
+parseSsimDate("01JAN70", { yearWindow: 1970 });
+// "1970-01-01"
+parseSsimDate("01JAN70", { yearWindow: 1971 });
+// "2070-01-01"
+```
+
+`"rolling"` suits a live feed. The window moves with the current UTC year, so a date near today
+is read as near today.
+
+```typescript
+import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01JAN26", { yearWindow: "rolling" });
+// "2026-01-01" (while the current UTC year is 1977 to 2076)
+parseSsimDate("01JAN26", {});
+// "" (no window stated)
+```
+
+The window also settles whether a day exists. `29FEB00` is a date from 2000, which was a leap
+year, and nothing from 1900, which was not:
+
+```typescript
+import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("29FEB00", { yearWindow: 2000 });
+// "2000-02-29"
+parseSsimDate("29FEB00", { yearWindow: 1900 });
+// ""
+```
+
+The library holds no cut-off year of its own. Any fixed pivot is right for the files of one
+period and wrong for the others, and it would change its answer on the day it was passed. The
+century is a fact about your files, so you state it.
+
+## Writing a date back
+
+[`formatSsimDate(value, options)`](/reference/aviation/format/formatSsimDate/) writes an ISO date
+as an SSIM date, with upper-case letters. It takes the same window, and it returns `""` for a
+year outside it, because the two digits it would write would read back as another year.
+
+```typescript
+import { formatSsimDate } from "@northguild/gmt/aviation/format";
+
+formatSsimDate("2026-01-01", { yearWindow: 2000 });
+// "01JAN26"
+formatSsimDate("2000-02-29", { yearWindow: 2000 });
+// "29FEB00"
+formatSsimDate("2026-01-01", { yearWindow: 1900 });
+// "" (2026 is outside 1900 to 1999)
+formatSsimDate("2100-01-01", { yearWindow: 2000 });
+// "" (2100 is outside 2000 to 2099)
+formatSsimDate("2026-01-01", {});
+// "" (no window stated)
+```
+
+A round trip never changes a century. Whatever the formatter writes, the parser reads back to the
+same date in the same window:
+
+```typescript
+import { formatSsimDate } from "@northguild/gmt/aviation/format";
+import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+formatSsimDate("1999-12-31", { yearWindow: 1950 });
+// "31DEC99"
+parseSsimDate("31DEC99", { yearWindow: 1950 });
+// "1999-12-31"
+```
+
+## Checking a value
+
+[`isValidSsimDate(value, options)`](/reference/aviation/validate/isValidSsimDate/) takes the same
+window and answers with a boolean. It is `true` exactly when `parseSsimDate` returns a date.
+
+```typescript
+import { isValidSsimDate } from "@northguild/gmt/aviation/validate";
+
+isValidSsimDate("01JAN26", { yearWindow: 2000 });
+// true
+isValidSsimDate("29FEB00", { yearWindow: 2000 });
+// true
+isValidSsimDate("29FEB00", { yearWindow: 1900 });
+// false
+isValidSsimDate("01jan26", { yearWindow: 2000 });
+// false
+isValidSsimDate("01JAN26", {});
+// false
+```
+
+The window is part of the question. `29FEB00` is neither valid nor invalid until you say which
+century it is in.
+
+## See it break, then work
+
+- [An SSIM Month Read in the Wrong Language](/scenarios/an-ssim-month-read-in-the-wrong-language/)
+- [Aviation mistakes](/mistakes/aviation/)
+- [SSIM Date Reader](/tools/ssim-date-reader/), a tool that reads, compares and writes a date
+
+## Sources
+
+- EUROCONTROL, [_CSST Users Guide_](https://www.eurocontrol.int/archive_download/all/node/9248),
+  Edition 8.0 (28-04-2021), section 3.2, Figure 1: an SSIM schedule file with the seven-character
+  form `DDMMMYY`.
+- ACL (Airport Coordination Limited, UK),
+  [_An Introductory Guide to SSIM_](https://www.acl-uk.org/wp-content/uploads/2021/04/SSIM-Review-Final2.pdf),
+  a condensed extract of Chapter 6: the day and the month letters, as `01APR`.
+- AECFA (Spain), _Quick Guide to Using the IATA SSIM format_, Chapter 6: the day as two digits and
+  the month as the first three letters of its English name. It is no longer online.
+- Avinor (Norway), SSIM wiki, [Period of Schedule Validity](https://xwiki.avinor.no/x/rYC5Ag):
+  shown as `ddmmyy`, a two-digit year.
+- IATA's _Standard Schedules Information Manual_ is not openly published, and its own text was
+  not reached.

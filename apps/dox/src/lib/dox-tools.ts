@@ -644,6 +644,26 @@ export const showHl7TimestampReaderInput = z.object({
   zone4: zoneSchema.optional(),
 });
 
+/**
+ * SSIM Date Reader: the SSIM text to read (`value`), the window its two-digit year is read in
+ * (`yearWindow`: a first year or "rolling"), the locale the comparison passes the pattern
+ * parser (`locale`) and an ISO date to write back (`date`). Nothing is trimmed, upper-cased or
+ * defaulted: a call with no `yearWindow` opens with the window blank, and the chat never picks
+ * a century. The widget's permalink calls `yearWindow` `window`.
+ */
+export const showSsimDateReaderInput = z
+  .object({
+    value: z.string().max(16).optional(),
+    yearWindow: z
+      .union([z.literal("rolling"), z.number().int().min(0).max(9900)])
+      .optional(),
+    locale: z.string().min(2).max(35).optional(),
+    date: z.string().max(32).optional(),
+  })
+  .refine((a) => a.value !== undefined || a.date !== undefined, {
+    message: "Give a value to read or a date to write.",
+  });
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1274,7 +1294,8 @@ export type DoxToolName =
   | "showTai64nLogReader"
   | "showTerrestrialTimeStack"
   | "showFixTimestampReader"
-  | "showHl7TimestampReader";
+  | "showHl7TimestampReader"
+  | "showSsimDateReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1605,6 +1626,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what an HL7 v2 DTM or TS value means, what instant an HL7 time with no offset names, what a TS degree of precision such as ^L or ^D does, or how to write an instant as an HL7 DTM",
     args: "value (the HL7 date-time exactly as the reader gave it, such as 20240615103000 or 199904011200^L; at most 64 characters; never corrected, and never given an offset the reader did not send), zone1 to zone4 (optional IANA ids to read a value with no offset in; only zones the reader named: never choose one from a facility, a place, a vendor or an abbreviation, because the value states none).",
   },
+  {
+    name: "showSsimDateReader",
+    purpose:
+      "Read an IATA SSIM DDMMMYY date with a window you state, beside the locale pattern parser, and write a date back.",
+    when: "Call when the reader asks about SSIM or airline schedule dates such as 01JAN26, a month code read in the wrong language, or which century a two-digit year means in a schedule. Pass only what the reader gave: never a yearWindow they did not state, never a locale inferred from a place, never an upper-cased value.",
+    args: 'value: the SSIM text exactly as the reader gave it, at most 16 characters, never trimmed or upper-cased; yearWindow: only when the reader stated one, a first year from 0 to 9900 or "rolling"; locale: a BCP 47 tag, only when the reader named one, passed to the pattern comparison alone; date: an ISO date to write back. Give value or date.',
+  },
 ];
 
 /**
@@ -1797,6 +1825,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[45].purpose,
     inputSchema: showHl7TimestampReaderInput,
   }),
+  showSsimDateReader: tool({
+    description: DOX_TOOL_DOCS[46].purpose,
+    inputSchema: showSsimDateReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1866,6 +1898,7 @@ export const ENABLED_TOOL_NAMES = [
   "showTerrestrialTimeStack",
   "showFixTimestampReader",
   "showHl7TimestampReader",
+  "showSsimDateReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

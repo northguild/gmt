@@ -268,7 +268,7 @@ and GTFS-RT POSIX seconds.
   NOV, DEC", upper case. A period of operation adds two digits of year after them (IATA
   SSIM Chapter 7, not reached; marked, not asserted). A parser that reads the month
   through the platform's locale breaks on any machine whose default locale is not
-  English, and a two-digit year has no century until someone states one. ([AECFA, _Quick Guide to Using the IATA SSIM format_](https://www.slotcoordination.es/sites/Satellite?blobcol=urldata&blobkey=id&blobtable=MungoBlobs&blobwhere=1576865330896&ssbinary=true))
+  English, and a two-digit year has no century until someone states one. (AECFA, _Quick Guide to Using the IATA SSIM format_, no longer online; [ACL, _An Introductory Guide to SSIM_](https://www.acl-uk.org/wp-content/uploads/2021/04/SSIM-Review-Final2.pdf); [EUROCONTROL, _CSST Users Guide_](https://www.eurocontrol.int/archive_download/all/node/9248))
 - **`DDHHMMZ` is ambiguous; NOTAM validity is not.** METAR and TAF report times carry
   day-of-month, hour and minute only — **no month, no year** — so parsing one *requires*
   a reference instant to disambiguate. ICAO NOTAM items B) and C), by contrast, use a

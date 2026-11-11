@@ -4,6 +4,13 @@ import type { RouteManifest } from "~/reference-types";
 
 export const referenceRoutes: RouteManifest = new Set([
   "/reference",
+  "/reference/aviation",
+  "/reference/aviation/format",
+  "/reference/aviation/format/formatSsimDate",
+  "/reference/aviation/parse",
+  "/reference/aviation/parse/parseSsimDate",
+  "/reference/aviation/validate",
+  "/reference/aviation/validate/isValidSsimDate",
   "/reference/calendar",
   "/reference/calendar/business",
   "/reference/calendar/business/businessDaysBetween",

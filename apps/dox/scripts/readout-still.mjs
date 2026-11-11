@@ -3,9 +3,9 @@
  * Readouts-hold-still gate (context/dox/reference/visual-design.md, "Layout stability",
  * and the Timetable Reader's rules in context/dox/built.md).
  *
- * Dragging a handle must move nothing except the values themselves. For each of
- * the seven tool pages (Departure Board, Punctuality Board, ETA Drift Chart,
- * Timetable Reader, Free Time Ledger, Dwell Ledger, B/L Date Stamp), every
+ * Dragging a handle must move nothing except the values themselves. For each
+ * tool page in `TOOLS` (the table below lists the handles of the first seven; a later
+ * entry names its own controls), every
  * preset, and each of these widths, the script takes every control the reader
  * drags:
  *
