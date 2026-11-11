@@ -518,6 +518,38 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showJulianDayCounter", () => {
+    const schema = (
+      tools.showJulianDayCounter as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts an instant, a count, a read mode, a scale or nothing", async () => {
+      for (const input of [
+        { value: "2026-01-01T12:00:00Z", read: "instant", scale: "TT" },
+        { value: "2461042 + 0.5", read: "jd", scale: "UTC" },
+        { scale: "TCG" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showJulianDayCounter", input)).toMatchObject({
+          ok: true,
+          widget: "julian-day-counter",
+        });
+      }
+    });
+
+    it("refuses TDB, an unknown read mode and a value over 64 characters", () => {
+      expect(schema.safeParse({ scale: "TDB" }).success).toBe(false);
+      expect(schema.safeParse({ read: "gps" }).success).toBe(false);
+      expect(schema.safeParse({ value: "1".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "1".repeat(65) }).success).toBe(false);
+    });
+  });
+
   describe("showIdTimestampDecoder refusals", () => {
     it("accepts a real id", async () => {
       expect(

@@ -250,6 +250,18 @@
     background: Highlight;
     border-color: Highlight;
   }
+
+  /* The Julian Day Counter's ruler tells its marks apart by shape (a triangle, a bar, a thin
+     bar, a capped line), and the shapes keep in system colours: every mark is CanvasText on
+     Canvas and the instant's cursor is Highlight so it still reads against the lanes. */
+  [data-widget="julian-day-counter"] [role="img"][data-series] {
+    background: CanvasText;
+    border-color: CanvasText;
+  }
+
+  [data-widget="julian-day-counter"] [role="img"][data-series="4"] {
+    background: Highlight;
+  }
 }
 
 /* =======================================================================

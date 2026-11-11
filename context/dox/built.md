@@ -1830,6 +1830,32 @@ Shared hooks come first, then the globe, then the clock-change pages.
       with a few pixels spare only with 4px side padding on the cells and widths of 15, 30, 34 and
       21 per cent. With the page's 12px padding they spilled a cell and scrolled the table at
       1440 px. A sample wider than the current widest has to move these numbers.
+  - **Julian Day Counter** (`/tools/julian-day-counter/`, `jdcount`, core, chat tool
+    `showJulianDayCounter`): one UTC instant, or one count, written as a two-part JD, a single JD,
+    an MJD and seconds since J2000.0 on UTC, TAI, TT or TCG, each read back to UTC with the gap in
+    microseconds. Four plates, a four-row table that prints each call, and a two-day ruler with a
+    lane for where each JD day begins (noon), one for where each midnight falls on the chosen scale
+    and, off UTC, one for UTC's midnights. A triangle, a bar, a thin bar and a capped line tell the
+    marks apart, so colour is never the only cue. The tool computes no day count and holds no epoch
+    or day length: every number is a library result, and the modules hold none of 2400000.5,
+    2451545, 86400 or 32.184 outside the presets' texts (a test greps for them).
+    - **The shared pieces are `DayCountLib`/`loadDayCountLib` (`timescale-lib.ts`) and
+      `day-count-widgets.ts`.** The second holds the scales, the four forms, `spell` and
+      `roundTrip`, `shiftNs`, `microsText` and the number and two-part parsers, so a second
+      day-count tool imports them. `asUtc` lives in `timescale-widgets.ts`.
+    - **A shift is measured on TAI**, where every day has the same length. Near the end of the
+      range TAI runs past 9999 and the library writes no label, so `shiftNs` falls back to the span
+      of the two UTC labels plus `leapSecondsBetween`, the recipe in the `spanNs` JSDoc.
+    - **The single-double forms return `null` within about 40 µs of either end of the range.** The
+      plate then says no result and carries `EDGE_NOTE`; the pill stays for an unreadable instant
+      or count. The two-part form covers the whole range.
+    - **The ruler's window is two days, midnight to midnight** (`{J-1, .5}` to `{J+1, .5}` as
+      two-part JDs), clamped to the first integer-UTC instant and the last instant when the
+      library writes no label past the range. A mark the library cannot write is left out.
+    - **Seeds.** `value`, `read` (`instant`, `jd`, `mjd`, `j2000`) and `scale`. A numeric value
+      with no `read` reads as a JD, and a scale that is not named is UTC. The default preset
+      writes nothing to the permalink.
+    - **The forms table** stacks under 46rem, each cell naming its column from `data-col`.
   - **ID Timestamp Decoder** (`/tools/id-timestamp-decoder/`, `iddecode`, core): one pasted
     identifier goes, exactly as typed, to all five decoders (`fromUuidTimestamp`, `fromUlid`,
     `fromObjectId`, `fromKsuid`, `fromSnowflake`). A hero names the format that read it and its

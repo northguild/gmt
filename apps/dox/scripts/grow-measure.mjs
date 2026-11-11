@@ -259,6 +259,11 @@ const PAGES = [
     drag: { role: "slider", name: "Move the year" },
   },
   {
+    slug: "julian-day-counter",
+    preset: PRESET,
+    drag: null,
+  },
+  {
     slug: "elapsed-vs-clock-difference",
     preset: PRESET,
     drag: { role: "slider", name: "Move the end" },

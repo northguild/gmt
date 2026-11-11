@@ -151,6 +151,10 @@ const PAGES = [
     path: "/tools/terrestrial-time-stack/",
   },
   {
+    slug: "tool-julian-day-counter",
+    path: "/tools/julian-day-counter/",
+  },
+  {
     slug: "tool-elapsed-vs-clock-difference",
     path: "/tools/elapsed-vs-clock-difference/",
   },

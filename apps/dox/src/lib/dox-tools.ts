@@ -664,6 +664,18 @@ export const showSsimDateReaderInput = z
     message: "Give a value to read or a date to write.",
   });
 
+/**
+ * Julian Day Counter: the value to read (`value`), what it is (`read`: an instant, a JD, an MJD
+ * or seconds since J2000.0) and the scale the days are counted on (`scale`). Nothing is trimmed
+ * or corrected, and a scale the reader did not name is never filled in. The chat args are the
+ * permalink args.
+ */
+export const showJulianDayCounterInput = z.object({
+  value: z.string().max(64).optional(),
+  read: z.enum(["instant", "jd", "mjd", "j2000"]).optional(),
+  scale: z.enum(["UTC", "TAI", "TT", "TCG"]).optional(),
+});
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1295,7 +1307,8 @@ export type DoxToolName =
   | "showTerrestrialTimeStack"
   | "showFixTimestampReader"
   | "showHl7TimestampReader"
-  | "showSsimDateReader";
+  | "showSsimDateReader"
+  | "showJulianDayCounter";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1633,6 +1646,13 @@ export const DOX_TOOL_DOCS: {
     when: "Call when the reader asks about SSIM or airline schedule dates such as 01JAN26, a month code read in the wrong language, or which century a two-digit year means in a schedule. Pass only what the reader gave: never a yearWindow they did not state, never a locale inferred from a place, never an upper-cased value.",
     args: 'value: the SSIM text exactly as the reader gave it, at most 16 characters, never trimmed or upper-cased; yearWindow: only when the reader stated one, a first year from 0 to 9900 or "rolling"; locale: a BCP 47 tag, only when the reader named one, passed to the pattern comparison alone; date: an ISO date to write back. Give value or date.',
   },
+  {
+    name: "showJulianDayCounter",
+    purpose:
+      "Write one instant as a two-part Julian Date, a single Julian Date, a Modified Julian Date and seconds since J2000.0 on UTC, TAI, TT or TCG, read each back to UTC, and show where a JD day begins against the MJD day and the calendar day.",
+    when: "the reader asks for a Julian Date, Modified Julian Date or seconds since J2000 for a time, which scale a JD is on, why a JD day starts at noon, or to convert a JD or MJD back to UTC",
+    args: "value: exactly as the reader gave it, never corrected. read and scale only when the reader named them; never guess a scale.",
+  },
 ];
 
 /**
@@ -1829,6 +1849,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[46].purpose,
     inputSchema: showSsimDateReaderInput,
   }),
+  showJulianDayCounter: tool({
+    description: DOX_TOOL_DOCS[47].purpose,
+    inputSchema: showJulianDayCounterInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1899,6 +1923,7 @@ export const ENABLED_TOOL_NAMES = [
   "showFixTimestampReader",
   "showHl7TimestampReader",
   "showSsimDateReader",
+  "showJulianDayCounter",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

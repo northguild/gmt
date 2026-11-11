@@ -1,4 +1,10 @@
 import { showHolidayRuleBuilderInput } from "./dox-tools";
+import {
+  COUNTER_PRESETS,
+  DEFAULT_PRESET as COUNTER_DEFAULT,
+  permalinkOf as counterPermalinkOf,
+  readArgs as readCounterArgs,
+} from "./julian-day-counter";
 import { formatRuleLines } from "./holiday-codec";
 import {
   DEFAULT_PRESET,
@@ -276,6 +282,20 @@ describe("widget permalinks", () => {
     expect(seedFromLocation("ttstack", url.slice(url.indexOf("?")))).toEqual({
       value,
     });
+  });
+
+  it("opens each Julian Day Counter preset's link on that preset", () => {
+    for (const preset of COUNTER_PRESETS) {
+      if (preset === COUNTER_DEFAULT) continue;
+      const args = counterPermalinkOf(preset.state);
+      const url = encodeWidgetPermalink("jdcount", args);
+      expect(url).toContain("/tools/julian-day-counter/");
+      expect(
+        readCounterArgs(
+          seedFromLocation("jdcount", url.slice(url.indexOf("?"))),
+        ),
+      ).toEqual(preset.state);
+    }
   });
 
   it("registers the three holiday tools at their own pages", () => {

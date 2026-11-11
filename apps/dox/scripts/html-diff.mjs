@@ -167,6 +167,10 @@ const PAGES = [
     widget: "terrestrial-time-stack",
   },
   {
+    path: "tools/julian-day-counter",
+    widget: "julian-day-counter",
+  },
+  {
     path: "tools/elapsed-vs-clock-difference",
     widget: "elapsed-vs-clock",
   },

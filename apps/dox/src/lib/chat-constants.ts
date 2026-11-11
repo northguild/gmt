@@ -913,6 +913,12 @@ export const CHAT_STARTERS: readonly {
     area: "aviation",
     args: { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
   },
+  {
+    text: "What is the Julian Date of 2026-01-01T12:00:00Z on TT, and why isn't it a whole number?",
+    widget: "showJulianDayCounter",
+    area: "core",
+    args: { value: "2026-01-01T12:00:00Z", read: "instant", scale: "TT" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

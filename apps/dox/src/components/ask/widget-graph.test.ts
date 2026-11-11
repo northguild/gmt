@@ -171,6 +171,8 @@ describe("the chat island's static import graph", () => {
       "lib/gnss-rollover-checker.ts",
       "lib/leap-second-timeline.ts",
       "lib/terrestrial-time-stack.ts",
+      "lib/julian-day-counter.ts",
+      "lib/day-count-widgets.ts",
       "widgets/families/timescale/scale-stack.ts",
       "lib/elapsed-vs-clock.ts",
       "lib/stored-time-audit.ts",
