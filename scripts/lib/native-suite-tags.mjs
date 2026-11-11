@@ -37,6 +37,7 @@ const T_ANCHOR =
   "t-webkit-throws-adding-a-year-to-the-last-day-of-chaitra-in-far-past-indian-years-webkit-only-engine";
 const AE_ANCHOR =
   "ae-icu4c-75-counts-every-persian-year-before-year-0-as-a-leap-year-macos-webkit-engine";
+const ICU_23609 = "https://unicode-org.atlassian.net/browse/ICU-23609";
 const AD_ANCHOR =
   "ad-node-26s-v8-rounds-p7d-to-weeks-as-p1w1d-from-a-zoned-origin-node-only-engine";
 const BOA_723 = "https://github.com/boa-dev/temporal/pull/723";
@@ -299,14 +300,14 @@ export const KNOWN_NATIVE_FAILURES = [
     test: "addDate returns -271820-04-09[u-ca=persian] for -271820-03-11[u-ca=persian] + { months: 1 } (xscan persian min[327]: into the 29-day…)",
     legs: ["webkit-macos"],
     defect: AE_ANCHOR,
-    upstream: null,
+    upstream: ICU_23609,
   },
   {
     file: "src/plain/calculate/subtractDate.test.ts",
     test: "subtractDate returns '-271820-04-09[u-ca=persian]' for -271820-05-09[u-ca=persian] - { months: 1 } (D1-A persian (xscan min[386]))",
     legs: ["webkit-macos"],
     defect: AE_ANCHOR,
-    upstream: null,
+    upstream: ICU_23609,
   },
   {
     file: "src/test/laterPassOrigin.test.ts",
