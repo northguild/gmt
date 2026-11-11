@@ -416,15 +416,23 @@ jobs:
   # check until the owner makes it one. `main` is covered by the weekly sweep, not by this job.
   # `--against` is the merge base `determine-affected` computes, so both see the same diff.
   dox-gates:
-    name: Dox gates (changed pages, Chromium)
+    name: Dox gates (${{ matrix.leg }}, Chromium)
     runs-on: ubuntu-latest
     needs: determine-affected
     if: github.event_name == 'pull_request' && needs.determine-affected.outputs.dox_changed == 'true'
-    # A typical run takes 20 to 27 minutes. A diff that changes a gate script runs every gate on the
-    # sample pages. With the Timetable Reader selected as well, that took 40 locally without the build
-    # and 47 here (#480), 24 of them in readout-still. The gate step stops at 55, so its
-    # logs are still uploaded.
-    timeout-minutes: 60
+    # `readout-still` alone can take as long as every other gate together: with the Timetable Reader
+    # selected it took 24 of 40 minutes locally (#490). So it runs as its own leg, and the other leg
+    # runs everything else. `--skip` keeps that leg on any gate added later. Each leg stays well under
+    # 30 minutes; the gate step stops at 25, so its logs are still uploaded.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: readout-still
+            select: --only readout-still
+          - leg: other gates
+            select: --skip readout-still
     steps:
       - uses: actions/checkout@v7
         with:
@@ -460,16 +468,17 @@ jobs:
       # The runner prints one screen to the log, when it ends, and appends it to the job summary.
       # A gate writes its log in .gates/ as it goes, so a run stopped at the limit still has them.
       - name: Gates on the changed pages
-        timeout-minutes: 55
+        timeout-minutes: 25
         run: >
           pnpm --filter dox gates --tier pr --browsers chromium --themes dark,light
+          ${{ matrix.select }}
           --against "origin/${{ github.base_ref }}"
 
       - name: Upload the gate logs
         if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
-          name: dox-gates-${{ github.run_id }}
+          name: dox-gates-${{ matrix.leg == 'readout-still' && 'readout-still' || 'other' }}-${{ github.run_id }}
           path: |
             apps/dox/.gates/
             !apps/dox/.gates/vite-cache/

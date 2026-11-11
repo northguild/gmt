@@ -3,7 +3,7 @@
  * The Dox gate runner: build once, serve once, run only the gates and pages the diff touches, and
  * print one screen.
  *
- *     pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--pages <path,...>]
+ *     pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--skip <gate,...>] [--pages <path,...>]
  *                             [--browsers chromium,webkit] [--themes dark,light]
  *                             [--tier pr|weekly|local] [--retries 1] [--shard <i>/<n>]
  *                             [--baseline <path to base apps/dox>] [--no-build] [--plan] [--json]
@@ -66,7 +66,7 @@ const elapsed = () => performance.now() - t0;
 function usage(message) {
   if (message) console.error(`gates: ${message}`);
   console.error(
-    "usage: pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--pages <path,...>]\n" +
+    "usage: pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--skip <gate,...>] [--pages <path,...>]\n" +
       "                               [--browsers chromium,webkit] [--themes dark,light] [--tier pr|weekly|local]\n" +
       "                               [--retries 1] [--shard <i>/<n>] [--baseline <path>] [--no-build] [--plan] [--json]",
   );
@@ -78,6 +78,7 @@ function parseArgs(argv) {
     all: false,
     against: null,
     only: null,
+    skip: null,
     pages: null,
     browsers: ["chromium", "webkit"],
     themes: ["dark", "light"],
@@ -100,6 +101,7 @@ function parseArgs(argv) {
     if (a === "--all") o.all = true;
     else if (a === "--against") o.against = next();
     else if (a === "--only") o.only = list();
+    else if (a === "--skip") o.skip = list();
     else if (a === "--pages") o.pages = list();
     else if (a === "--browsers") o.browsers = list();
     else if (a === "--themes") o.themes = list();
@@ -133,7 +135,7 @@ function parseArgs(argv) {
     usage(`--themes takes ${KNOWN_THEMES.join(", ")}`);
   }
   const ids = GATES.map((g) => g.id);
-  for (const id of o.only ?? [])
+  for (const id of [...(o.only ?? []), ...(o.skip ?? [])])
     if (!ids.includes(id)) usage(`unknown gate "${id}" (${ids.join(", ")})`);
   if (o.baseline && !existsSync(path.join(o.baseline, "dist/gmt/index.html"))) {
     usage(
@@ -277,7 +279,10 @@ function changedFiles() {
 }
 
 const requestedGates = GATES.filter(
-  (g) => inTier(g, opts.tier) && (!opts.only || opts.only.includes(g.id)),
+  (g) =>
+    inTier(g, opts.tier) &&
+    (!opts.only || opts.only.includes(g.id)) &&
+    !opts.skip?.includes(g.id),
 );
 
 const early = !opts.all && !opts.pages;

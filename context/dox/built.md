@@ -3028,20 +3028,22 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `cell-overflows`; the last line counts `<n> scroll, <n> spill`. The same check runs
     in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in
     Chromium, whenever a Dox file or page changes; the browser tests (Test isolation) run there first.
-  - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (changed pages, Chromium)")
-    runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22: `gates --tier pr
-    --browsers chromium --themes dark,light --against origin/<base>`, so the `pr` tier only, on the
-    pages the diff selects; the weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). Its
-    limit is 60 minutes, and the gate step's is 55. A typical run takes 20 to 27. A diff that changes a
-    gate script runs every gate on the sample pages. With the Timetable Reader selected too, that took
-    40 minutes locally without the build and 47 in CI (#480). `readout-still` took 24 of
-    them: 60 drags on the Reader (10 sliders at six widths) and 32 on the Dwell Ledger. The runner
-    prints its screen only when it ends and appends it to `$GITHUB_STEP_SUMMARY` in a fenced `text`
-    block (`gates/step-summary.mjs`). Each gate writes its log in `.gates/` as it runs, so the step's
-    own limit leaves time to upload them: a failed or cancelled job uploads `apps/dox/.gates/`
-    (without `vite-cache/`) as the `dox-gates-<run id>` artifact. It is **advisory**: the owner makes
-    it a required check after about 10 clean Dox PR runs. A PR that touches nothing under `apps/dox/`
-    or `pnpm-lock.yaml` skips it; a lockfile change alone runs it, since it can bump Playwright or
+  - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (<leg>, Chromium)")
+    runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22, as two parallel
+    legs: `readout-still` alone (`--only readout-still`) and every other gate (`--skip readout-still`,
+    so a gate added later joins that leg). Each runs `gates --tier pr --browsers chromium --themes
+    dark,light --against origin/<base>`, so the `pr` tier only, on the pages the diff selects; the
+    weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). A leg's limit is 30 minutes,
+    and its gate step's is 25. A diff that changes a gate script runs every gate on the sample pages.
+    With the Timetable Reader selected too, one job took 40 minutes locally without the build and 47 in
+    CI (#480), and `readout-still` took 24 of them: 60 drags on the Reader (10 sliders at six widths)
+    and 32 on the Dwell Ledger (#490 split it out). The runner prints its screen only when it ends and
+    appends it to `$GITHUB_STEP_SUMMARY` in a fenced `text` block (`gates/step-summary.mjs`). Each gate
+    writes its log in `.gates/` as it runs, so the step's own limit leaves time to upload them: a failed
+    or cancelled leg uploads `apps/dox/.gates/` (without `vite-cache/`) as the
+    `dox-gates-<readout-still|other>-<run id>` artifact. It is **advisory**: the owner makes it a
+    required check after about 10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` or
+    `pnpm-lock.yaml` skips it; a lockfile change alone runs it, since it can bump Playwright or
     axe-core.
   - **The page contract.** Every gate script answers `--list-pages` (a JSON array of site paths,
     no `/gmt`, without a browser), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
@@ -4661,7 +4663,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   (`FLAKY` and `SKIP` pass); 1 a gate failed or measured nothing; 2 usage, a live lock, a failed
   build or a gate that exited 2.
   - `--plan` prints the selection and exits without running a gate; it builds only when `dist` is
-    missing. `--only <gate,...>`, `--pages <path,...>` (replaces the diff selection),
+    missing. `--only <gate,...>`, `--skip <gate,...>` (every gate but these), `--pages <path,...>` (replaces the diff selection),
     `--browsers`, `--themes`, `--tier pr|weekly|local` (default `local`), `--shard i/n` (every
     n-th page of each gate's sorted list), `--no-build` (needs `dist/gmt/index.html`) and `--json`
     (the summary as JSON) narrow or reshape a run. `--against <ref>` is the diff base (default
