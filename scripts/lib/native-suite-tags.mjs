@@ -37,6 +37,7 @@ const T_ANCHOR =
   "t-webkit-throws-adding-a-year-to-the-last-day-of-chaitra-in-far-past-indian-years-webkit-only-engine";
 const AE_ANCHOR =
   "ae-icu4c-75-counts-every-persian-year-before-year-0-as-a-leap-year-macos-webkit-engine";
+const ICU_23609 = "https://unicode-org.atlassian.net/browse/ICU-23609";
 const AD_ANCHOR =
   "ad-node-26s-v8-rounds-p7d-to-weeks-as-p1w1d-from-a-zoned-origin-node-only-engine";
 const BOA_723 = "https://github.com/boa-dev/temporal/pull/723";
@@ -62,8 +63,8 @@ const BOA_723 = "https://github.com/boa-dev/temporal/pull/723";
  * Two more fail on the Mac build alone and are AE: Apple's libicucore (ICU4C 75 or later) counts every
  * Persian year before year 0 as a leap year, so adding a month to day 30 of Bahman, or subtracting one from
  * day 30 of Farvardin, in a year before year 0 throws. If the Linux runner's ICU moves to 75 or later, the
- * `webkit` leg starts failing
- * these two rows too and they need that leg. None is filed yet. Evidence: the records.
+ * `webkit` leg starts failing these two rows too and they need that leg. Both are filed as ICU-23609.
+ * Evidence: the records.
  * Goose Bay day rounding is not here: it was a GMT defect and is fixed (temporalCompat D14).
  *
  * @type {ReadonlyArray<{ file: string, test: string, legs: Leg[], defect: string, upstream: string | null }>}
@@ -299,14 +300,14 @@ export const KNOWN_NATIVE_FAILURES = [
     test: "addDate returns -271820-04-09[u-ca=persian] for -271820-03-11[u-ca=persian] + { months: 1 } (xscan persian min[327]: into the 29-day…)",
     legs: ["webkit-macos"],
     defect: AE_ANCHOR,
-    upstream: null,
+    upstream: ICU_23609,
   },
   {
     file: "src/plain/calculate/subtractDate.test.ts",
     test: "subtractDate returns '-271820-04-09[u-ca=persian]' for -271820-05-09[u-ca=persian] - { months: 1 } (D1-A persian (xscan min[386]))",
     legs: ["webkit-macos"],
     defect: AE_ANCHOR,
-    upstream: null,
+    upstream: ICU_23609,
   },
   {
     file: "src/test/laterPassOrigin.test.ts",
