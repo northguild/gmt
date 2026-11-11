@@ -16,8 +16,9 @@ import {
  *   1970-01-01), then rounded once to the nearest nanosecond, a half rounding up (Temporal's
  *   `halfExpand`).
  * - MJD = JD − 2 400 000.5 and counts from midnight, not noon: `51544` is midnight, `51544.5` noon.
- * - One double carries at most ½ ulp(MJD) + ½ ulp(fraction) days of error: 0.31 µs for 1972 to
- *   2038-04-22, growing to 20.1 µs (2⁻³² day) by year 9999, as MJD stays below 2²². For nanoseconds use `fromJulianDateParts`.
+ * - A double from `toModifiedJulianDate` is at most ½ ulp(MJD) days from the instant: 0.31 µs
+ *   for 1972 to 2038-04-22, growing to 20.1 µs (2⁻³² day) by year 9999, as MJD stays below 2²².
+ *   For nanoseconds use `fromJulianDateParts`.
  * - On `"UTC"` the count is ERFA's quasi-MJD: a day with a leap second counts as one day, so on a
  *   leap-second day the fraction 86400/86401 of the day is where `…T23:59:60Z` begins. On
  *   `"TAI"`, `"TT"` and `"TCG"` it is a true count. TDB is not available.
