@@ -41,7 +41,9 @@
     color: var(--gmt-cyan);
 
     /* `:where` keeps the kit's copied and failed states above this rule. */
-    &:is(:hover, :focus-visible):where(:not([data-state="copied"], [data-state="failed"])) {
+    &:is(:hover, :focus-visible):where(
+        :not([data-state="copied"], [data-state="failed"])
+      ) {
       border-color: var(--gmt-border);
       background: var(--gmt-fill-strong);
       color: var(--gmt-cyan-bright);
