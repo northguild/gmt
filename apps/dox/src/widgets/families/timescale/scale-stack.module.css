@@ -344,11 +344,29 @@
     fill: CanvasText;
   }
 
-  .guide,
-  .cursorDot,
+  /* The hatch and the dots keep their shape: CanvasText on a Canvas tile. */
+  .tile {
+    fill: Canvas;
+  }
+
+  .hatchLine {
+    stroke: CanvasText;
+  }
+
+  .dot {
+    fill: CanvasText;
+  }
+
   .baseline {
     background: CanvasText;
     border-color: CanvasText;
+  }
+
+  /* The cursor is Highlight, so it still reads against the CanvasText drift line. */
+  .guide,
+  .cursorDot {
+    background: Highlight;
+    border-color: Highlight;
   }
 }
 

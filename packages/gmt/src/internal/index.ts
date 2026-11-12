@@ -154,6 +154,18 @@ export {
   writtenOffset,
 } from "./utcOffsetString";
 export {
+  CCSDS_ASCII_A,
+  CCSDS_ASCII_B,
+  ccsdsCodeAText,
+  ccsdsCodeBText,
+  ccsdsInstantText,
+  readCcsdsAsciiA,
+  readCcsdsAsciiB,
+  type CcsdsAsciiAFields,
+  type CcsdsAsciiBFields,
+  type CcsdsTimeFields,
+} from "./ccsdsAsciiTime";
+export {
   FIX_FRACTION_DIGITS,
   FIX_UTC_TIMESTAMP,
   fixInstantText,

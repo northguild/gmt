@@ -39,6 +39,8 @@ export const GMT_MODULES: Record<
   // --- timescale ---
   "timescale/calculate": () => import("@northguild/gmt/timescale/calculate"),
   "timescale/convert": () => import("@northguild/gmt/timescale/convert"),
+  "timescale/format": () => import("@northguild/gmt/timescale/format"),
+  "timescale/parse": () => import("@northguild/gmt/timescale/parse"),
   "timescale/validate": () => import("@northguild/gmt/timescale/validate"),
 
   // --- finance ---

@@ -144,6 +144,14 @@ import {
   renderDoublePrecisionMeterTemplate,
 } from "./double-precision-meter-mount";
 import {
+  mountCcsdsTimeCodeDecoder,
+  renderCcsdsTimeCodeDecoderTemplate,
+} from "./ccsds-time-code-decoder-mount";
+import {
+  mountCodeBDayRuler,
+  renderCodeBDayRulerTemplate,
+} from "./code-b-day-ruler-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -378,6 +386,16 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "double precision meter",
     () => renderDoublePrecisionMeterTemplate("test"),
     mountDoublePrecisionMeter as MountFn<never>,
+  ],
+  [
+    "ccsds time code decoder",
+    () => renderCcsdsTimeCodeDecoderTemplate("test"),
+    mountCcsdsTimeCodeDecoder as MountFn<never>,
+  ],
+  [
+    "code b day ruler",
+    () => renderCodeBDayRulerTemplate("test"),
+    mountCodeBDayRuler as MountFn<never>,
   ],
   [
     "holiday rule builder",

@@ -195,6 +195,14 @@ const PAGES = [
     widget: "fix-timestamp-reader",
   },
   {
+    path: "tools/ccsds-time-code-decoder",
+    widget: "ccsds-time-code-decoder",
+  },
+  {
+    path: "tools/code-b-day-ruler",
+    widget: "code-b-day-ruler",
+  },
+  {
     path: "tools/ssim-date-reader",
     widget: "ssim-date-reader",
   },

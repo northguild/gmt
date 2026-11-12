@@ -39,10 +39,37 @@ describe("timeline", () => {
     expect(isInaccessible(screen.getByText("00:00"))).toBe(true);
   });
 
+  it("hides a tick placed in a lane, where the marks already carry the facts", () => {
+    renderHtml(
+      lane({ label: "Months" }, [
+        mark({ label: "January, from day 001", at: 0, span: 0.5 }),
+        tick({ at: 0, label: "Jan" }),
+      ]),
+    );
+    const group = screen.getByRole("group", { name: "Months" });
+    expect(within(group).getByText("Jan")).toBeInTheDocument();
+    expect(isInaccessible(within(group).getByText("Jan"))).toBe(true);
+  });
+
   it("escapes a label", () => {
     renderHtml(lane({ label: '"><b>x' }, mark({ label: "<i>", at: 0.5 })));
     expect(screen.getByRole("group", { name: '"><b>x' })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "<i>" })).toBeInTheDocument();
+  });
+
+  it("keeps a hatched mark named like a solid one", async () => {
+    const r = renderHtml(
+      lane({ label: "Months" }, [
+        mark({ label: "January", at: 0, span: 0.5, pattern: "solid" }),
+        mark({ label: "February", at: 0.5, span: 0.5, pattern: "hatch" }),
+      ]),
+    );
+    const group = screen.getByRole("group", { name: "Months" });
+    expect(within(group).getAllByRole("img")).toHaveLength(2);
+    expect(
+      within(group).getByRole("img", { name: "February" }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(r.host);
   });
 
   it("has no axe violations", async () => {

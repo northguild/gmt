@@ -45,6 +45,11 @@ export interface MarkOptions {
   /** Width, 0 to 1. Omit for a point. */
   span?: number;
   series?: TimelineSeries;
+  /**
+   * `hatch` draws the mark with a diagonal pattern, so two neighbouring marks of one colour
+   * (a month band and the next) read apart without colour. Default `solid`.
+   */
+  pattern?: "solid" | "hatch";
 }
 
 export function mark(o: MarkOptions): SafeHtml {
@@ -55,6 +60,7 @@ export function mark(o: MarkOptions): SafeHtml {
     aria-label="${o.label}"
     data-kind="${o.span === undefined ? "point" : "range"}"
     data-series="${o.series ?? 1}"
+    ${o.pattern === "hatch" ? html`data-pattern="hatch"` : ""}
     style="--gmt-at: ${unit(o.at)}${span}"
   ></span>`;
 }
@@ -67,7 +73,8 @@ export interface TickOptions {
 }
 
 export function tick(o: TickOptions): SafeHtml {
-  return html`<span class="${styles.tick}" style="--gmt-at: ${unit(o.at)}">${o.label}</span>`;
+  // Hidden on its own, so a tick placed in a lane is no second copy of the marks' names.
+  return html`<span class="${styles.tick}" aria-hidden="true" style="--gmt-at: ${unit(o.at)}">${o.label}</span>`;
 }
 
 /** The scale under a lane. `children` are `tick` results. Drawn text only. */

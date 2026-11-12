@@ -19287,6 +19287,138 @@
     ]
   },
   {
+    "url": "/reference/timescale/format/formatCcsdsAsciiA",
+    "page": "/reference/timescale/format/formatCcsdsAsciiA",
+    "name": "formatCcsdsAsciiA",
+    "namespace": "timescale",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatCcsdsAsciiA(isoString: string, fractionalSecondDigits?: FractionalDigit): string",
+    "description": "Write an instant as a CCSDS ASCII Time Code A string (`YYYY-MM-DDThh:mm:ss.d…dZ`).",
+    "sourcePath": "packages/gmt/src/timescale/format/formatCcsdsAsciiA.ts",
+    "examples": [
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T12:30:00.123456789+02:00\", 6)",
+        "result": "\"2024-06-15T10:30:00.123456Z\""
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T12:30:00.123456789+02:00\")",
+        "result": "\"2024-06-15T10:30:00.123456789Z\""
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T12:30:00.123456789+02:00\", 0)",
+        "result": "\"2024-06-15T10:30:00Z\""
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2016-12-31T23:59:60.5Z\", 3)",
+        "result": "\"2016-12-31T23:59:60.500Z\" — the inserted second"
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T10:30:00\")",
+        "result": "\"\" — no offset, so no instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/format/formatCcsdsAsciiB",
+    "page": "/reference/timescale/format/formatCcsdsAsciiB",
+    "name": "formatCcsdsAsciiB",
+    "namespace": "timescale",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatCcsdsAsciiB(isoString: string, fractionalSecondDigits?: FractionalDigit): string",
+    "description": "Write an instant as a CCSDS ASCII Time Code B string (`YYYY-DDDThh:mm:ss.d…dZ`, day of year).",
+    "sourcePath": "packages/gmt/src/timescale/format/formatCcsdsAsciiB.ts",
+    "examples": [
+      {
+        "call": "formatCcsdsAsciiB(\"1988-01-18T17:20:43.123456Z\")",
+        "result": "\"1988-018T17:20:43.123456Z\" — CCSDS's own example"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2024-12-31T23:59:59Z\")",
+        "result": "\"2024-366T23:59:59Z\" — day 366"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2024-01-01T01:00:00+02:00\")",
+        "result": "\"2023-365T23:00:00Z\" — the UTC day"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2016-366T23:59:60Z\" — the inserted second"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2024-06-15T10:30:00\")",
+        "result": "\"\" — no offset, so no instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/parse/parseCcsdsAsciiA",
+    "page": "/reference/timescale/parse/parseCcsdsAsciiA",
+    "name": "parseCcsdsAsciiA",
+    "namespace": "timescale",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseCcsdsAsciiA(value: string): string",
+    "description": "Read a CCSDS ASCII Time Code A (`YYYY-MM-DDThh:mm:ss.d…dZ`) as an ISO 8601 UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/parse/parseCcsdsAsciiA.ts",
+    "examples": [
+      {
+        "call": "parseCcsdsAsciiA(\"1988-01-18T17:20:43.123456Z\")",
+        "result": "\"1988-01-18T17:20:43.123456Z\" — CCSDS's own example"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2024-06-15T10:30:00\")",
+        "result": "\"2024-06-15T10:30:00Z\" — the Z is optional"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2016-12-31T23:59:60Z\" — the inserted second"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2024-06-15\")",
+        "result": "\"\" — a day, not an instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/parse/parseCcsdsAsciiB",
+    "page": "/reference/timescale/parse/parseCcsdsAsciiB",
+    "name": "parseCcsdsAsciiB",
+    "namespace": "timescale",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseCcsdsAsciiB(value: string): string",
+    "description": "Read a CCSDS ASCII Time Code B (`YYYY-DDDThh:mm:ss.d…dZ`, day of year) as an ISO 8601 UTC instant string in calendar form.",
+    "sourcePath": "packages/gmt/src/timescale/parse/parseCcsdsAsciiB.ts",
+    "examples": [
+      {
+        "call": "parseCcsdsAsciiB(\"1988-018T17:20:43.123456Z\")",
+        "result": "\"1988-01-18T17:20:43.123456Z\" — CCSDS's own example"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2024-366T12:00:00Z\")",
+        "result": "\"2024-12-31T12:00:00Z\" — day 366 of a leap year"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2023-366T12:00:00Z\")",
+        "result": "\"\" — 2023 has 365 days"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2016-366T23:59:60Z\")",
+        "result": "\"2016-12-31T23:59:60Z\" — the inserted second"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2024-167\")",
+        "result": "\"\" — a day, not an instant"
+      }
+    ]
+  },
+  {
     "url": "/reference/timescale/validate/isLeapSecond",
     "page": "/reference/timescale/validate/isLeapSecond",
     "name": "isLeapSecond",

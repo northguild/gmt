@@ -147,6 +147,27 @@ fromTAI("2017-01-01T00:00:36 TAI");
 // "2016-12-31T23:59:60Z"
 ```
 
+## CCSDS ASCII time codes
+
+CCSDS 301.0-B-4 section 3.5 defines two text codes for a UTC instant. Code A is a calendar date,
+`YYYY-MM-DDThh:mm:ss.d…dZ`. Code B is a day of the year, `YYYY-DDDThh:mm:ss.d…dZ`. The `Z` is
+optional when a code is read, and the formatters always write it.
+
+A second of `60` is read only where UTC inserted one. A code coarser than whole seconds names a
+span and not an instant, so it returns `""`. A code that is read keeps its fraction as sent, up to
+nine digits. A code that is written cuts the fraction to the digits you ask for and never rounds
+it, so the last second of a year stays in that year.
+
+```ts
+import { parseCcsdsAsciiA, parseCcsdsAsciiB } from "@northguild/gmt/timescale/parse";
+import { formatCcsdsAsciiA, formatCcsdsAsciiB } from "@northguild/gmt/timescale/format";
+
+parseCcsdsAsciiB("2016-366T23:59:60.5Z"); // "2016-12-31T23:59:60.5Z"
+parseCcsdsAsciiA("1988-01-18T17:20:43.123456"); // "1988-01-18T17:20:43.123456Z"
+formatCcsdsAsciiA("2024-06-15T16:30:00+02:00"); // "2024-06-15T14:30:00Z"
+formatCcsdsAsciiB("2026-12-31T23:59:59.9999999Z", 3); // "2026-365T23:59:59.999Z"
+```
+
 ## TT and TCG
 
 Terrestrial Time (TT) is TAI plus a fixed 32.184 seconds (IERS Technical Note 36, section 10.1). It
@@ -223,6 +244,10 @@ seconds](/mistakes/leap-seconds/).
   TAI − UTC, TT − TAI and TCG − TT as one bar and the growth of TCG − TT across the years.
 - [Elapsed vs. Clock Difference](/tools/elapsed-vs-clock-difference/?w=elapsed&wa=%7B%22start%22%3A%222016-12-31T23%3A00%3A00Z%22%2C%22end%22%3A%222017-01-01T01%3A00%3A00Z%22%7D) shows the clock difference and
   the elapsed seconds of two readings side by side.
+- The [CCSDS Time Code Decoder](/tools/ccsds-time-code-decoder/?w=ccsds&wa=%7B%22code%22%3A%222016-366T23%3A59%3A60.5Z%22%7D) reads a Code A or Code B text and shows the
+  inserted second at `2016-366T23:59:60.5Z`.
+- The [Code B Day Ruler](/tools/code-b-day-ruler/?w=dayruler&wa=%7B%22year%22%3A%222024%22%2C%22compare%22%3A%222026%22%2C%22day%22%3A%2261%22%7D) reads one Code B day in two years and draws each year's
+  months on one scale, so the leap-day shift and the missing day 366 show.
 
 ## Sources
 

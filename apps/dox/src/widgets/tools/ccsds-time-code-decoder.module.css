@@ -1,0 +1,167 @@
+/*
+ * CCSDS Time Code Decoder: what only this tool needs. The sections, preset, fields, plates, hero,
+ * verdict, code frames, chips and links are the kit's and the EDI family's; this sheet places
+ * them. The reading and its calls sit side by side where the widget is wide and one under the
+ * other where it is not. The widget root is the container.
+ *
+ * Amber is the sentinel's alone, and nothing here has a single-sided accent edge.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A sentence of explanation under the controls. */
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+/* The chips take the whole row. */
+.wide {
+  min-inline-size: 0;
+}
+
+/* The button sits under its field and keeps its own width. */
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-3);
+  align-items: center;
+  min-inline-size: 0;
+}
+
+/* A band: two panes, a column each when there is room for both. */
+.split,
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 60rem) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--gmt-space-4);
+    align-items: stretch;
+  }
+}
+
+/* The box the reading sits in. */
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+/* The two written codes: stacked when narrow, pinned to opposite edges from 46rem. */
+.outPlates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 46rem) {
+  .outPlates {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.outPlate {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.outCaption {
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+.outRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.outValue {
+  min-inline-size: 0;
+}
+
+/* No code to copy: the button keeps its place and is out of sight and reach. */
+.copyIdle {
+  visibility: hidden;
+}
+
+/* A written code holds still: figures tabulated, never wrapped. */
+.code {
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The sentinel's word inside a written code's plate. */
+.lost {
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  white-space: nowrap;
+}
+
+.cut {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+  white-space: nowrap;
+}
+
+.cutLabel {
+  color: var(--gmt-ice-dim);
+}
+
+.struck {
+  text-decoration: line-through;
+}
+
+@media (forced-colors: active) {
+  .panel,
+  .outPlate {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .lost {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .panel,
+  .outPlate {
+    border-color: var(--gmt-ice);
+  }
+}

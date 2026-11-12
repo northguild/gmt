@@ -314,6 +314,16 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "ccsds-time-code-decoder",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "code-b-day-ruler",
+    preset: PRESET,
+    drag: { role: "slider", name: "Day of year" },
+  },
+  {
     slug: "ssim-date-reader",
     preset: PRESET,
     drag: null,
