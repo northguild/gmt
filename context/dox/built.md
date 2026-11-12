@@ -31,6 +31,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `scripts/probe-brains.ts` and real readers spend quota.
 - **React lives only inside `/dox`.** Every other page is Astro plus plain-DOM modules.
 - **Restyle native controls; never rebuild them from `div`s.**
+- **No `:has()` on a box that holds the whole page** (`:root`, `html`, `body`, `.main-frame`,
+  `.content-panel`) unless an attribute on `<html>` gates it first. Chrome then re-styles the
+  whole page on every DOM change inside it. On the landing that was about 27 full style passes
+  while the globe's clock list mounted, most of the mobile Lighthouse TBT. Key a page-level rule
+  on Starlight's `data-has-hero`, `data-has-sidebar` or `data-has-toc` instead, or put
+  `[data-has-sidebar]` in front of the `:has()` (`dox.css`).
+- **Widget CSS reaches only the pages that use it.** `pruneWidgetCss()`
+  (`src/lib/prune-widget-css.ts`, on `astro:build:done`) drops a widget's stylesheet link and
+  its inline `<style>` block from every page that neither shows the widget nor loads a script
+  that names its classes. Astro inlines some widget sheets into every page's head with no
+  `_astro/` file behind them, so for those blocks a dynamic `import()` or a chunk in Vite's
+  preload list counts as use too.
 - **Every tier after Tier 1 stays droppable**, and the docs work with the chat deleted.
 - **No `octane` or `@octanejs/*`**, anywhere.
 - **Minimum rendered text size 12px (0.75rem)**; enforced by `font-floor.test.ts`.

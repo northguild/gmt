@@ -1,4 +1,6 @@
-/* codeFrame: a code line with a copy button. The code scrolls on its own line and never wraps. */
+/* codeFrame: a code line with a copy button. The code scrolls on its own line and never wraps.
+   The frame and the copy button match a docs code fence (Expressive Code): the same surface
+   and glass, and the button in the same top corner. */
 
 .root {
   position: relative;
@@ -7,15 +9,51 @@
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background: var(--gmt-code-surface);
+  backdrop-filter: var(--gmt-glass-blur-saturate);
 }
 
 .copy {
   position: absolute;
-  inset-block-start: 0.25rem;
-  inset-inline-end: 0.25rem;
+  inset-block-start: 0.375rem;
+  inset-inline-end: 0.5rem;
 
   /* `.sl-markdown-content pre` is positioned, so the later `pre` would paint over this. */
   z-index: var(--gmt-z-raised);
+
+  /* The caption goes on the far side of the button, so the button sits in the corner. An empty
+     caption takes no room; "Copied" shows beside the button for as long as it lasts. */
+  & > * {
+    flex-direction: row-reverse;
+  }
+
+  & [role="status"] {
+    min-inline-size: 0;
+  }
+
+  /* The docs code fence's button: transparent at rest, a bevelled chip on hover. */
+  & button {
+    inline-size: 2.375rem;
+    block-size: 2.375rem;
+    border-color: transparent;
+    border-radius: var(--gmt-radius-md);
+    corner-shape: bevel;
+    background: transparent;
+    color: var(--gmt-cyan);
+
+    /* `:where` keeps the kit's copied and failed states above this rule. */
+    &:is(:hover, :focus-visible):where(
+        :not([data-state="copied"], [data-state="failed"])
+      ) {
+      border-color: var(--gmt-border);
+      background: var(--gmt-fill-strong);
+      color: var(--gmt-cyan-bright);
+    }
+  }
+
+  & svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
 }
 
 .pre {
@@ -23,7 +61,7 @@
   padding-block: 0.75rem;
 
   /* leaves room for the copy button */
-  padding-inline: 1rem 3rem;
+  padding-inline: 1rem 3.25rem;
   overflow-x: auto;
   color: var(--gmt-ice);
 
@@ -37,6 +75,15 @@
     outline: 2px solid var(--gmt-cyan);
     outline-offset: -2px;
   }
+}
+
+/* The frame is the one box. `.sl-markdown-content pre` (gmt-content.css, gmt-glass.css) gives
+   every page `pre` its own border, bevel and glass, which drew a second frame inside this one. */
+.root > .pre {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  backdrop-filter: none;
 }
 
 .code {
@@ -61,7 +108,16 @@
 
 @container (inline-size < 20rem) {
   .pre {
-    padding-inline-end: 2.75rem;
+    padding-inline-end: 3rem;
+  }
+}
+
+/* The frame now paints the code surface itself (the `pre` inside is cleared above), so it takes
+   the near-opaque fill that gmt-a11y.css gives a page `pre`. */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent surface, which is the status quo */
+@media (prefers-reduced-transparency: reduce) {
+  .root {
+    background-color: var(--gmt-surface);
   }
 }
 
@@ -78,6 +134,12 @@
       outline: 2px solid Highlight;
     }
   }
+
+  .copy button {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
 }
 
 @media (prefers-contrast: more) {
@@ -87,5 +149,9 @@
 
   .pre:focus-visible {
     outline-width: 3px;
+  }
+
+  .copy button {
+    border-color: var(--gmt-ice);
   }
 }

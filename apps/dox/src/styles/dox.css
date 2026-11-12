@@ -30,8 +30,13 @@ html:not([data-has-sidebar]) .sl-container {
  * 4vh, 3rem)`, so Starlight's padding here is pure double-counting for this
  * one page — zero it instead of trying to thread it through the calc.
  * `.content-panel`'s padding rule is `@layer starlight.core`, so this plain declaration in
- * `gmt.shell` wins on its own. */
-.content-panel:has(.gmt-herostage) {
+ * `gmt.shell` wins on its own.
+ *
+ * Keyed on Starlight's `data-has-hero`, which only the landing's frontmatter sets, and not on
+ * `:has(.gmt-herostage)`. A `:has()` on a box that holds the whole page has Chrome re-style the
+ * whole page whenever anything inside it changes: on the landing, every clock row the globe's
+ * list mounted cost a full style pass. */
+:root[data-has-hero] .content-panel {
   padding-block: 0;
 }
 
@@ -76,8 +81,15 @@ html:not([data-has-sidebar]) .sl-container {
  *
  * The TOC no longer takes a bonus share of the spare width on any page — it is
  * a fixed `--sl-sidebar-width` site-wide (gmt-shell.css, "Wide-screen
- * columns") — so there is nothing to claw back from it here. */
-.main-frame:has([data-tools-fullbleed]) .main-pane {
+ * columns") — so there is nothing to claw back from it here.
+ *
+ * Both rules below start from `[data-has-sidebar]`, which Starlight sets on
+ * `<html>`. The widening only matters beside a sidebar: a page without one is
+ * already full width (`html:not([data-has-sidebar]) .sl-container`, above).
+ * The gate also keeps Chrome from checking the `:has()` on such a page, the
+ * landing among them, where a `:has()` on `.main-frame` re-styled the whole
+ * page on every DOM change. */
+[data-has-sidebar] .main-frame:has([data-tools-fullbleed]) .main-pane {
   flex-grow: 1;
 }
 
@@ -96,7 +108,7 @@ html:not([data-has-sidebar]) .sl-container {
  * anywhere. Matching every `.sl-container` inside `main` takes the title with
  * it; `main` is what keeps the TOC's own container (1), which is a sibling of
  * `.main-pane` and not a descendant of `main`, at its proper width. */
-.main-frame:has([data-tools-fullbleed]) main .sl-container {
+[data-has-sidebar] .main-frame:has([data-tools-fullbleed]) main .sl-container {
   max-inline-size: none;
 }
 
