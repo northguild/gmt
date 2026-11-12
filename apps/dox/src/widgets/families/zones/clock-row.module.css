@@ -103,6 +103,13 @@
   font-size: 0.8rem;
   color: var(--gmt-cyan-ink);
   font-variant-numeric: tabular-nums;
+
+  /* A row is built, and measured, before its first reading. The time is the tallest text on
+     its line, so an empty one holds that line's height; without it the line collapses and the
+     row measures about 19px short, then grows when the reading lands. */
+  &:empty::before {
+    content: "\a0";
+  }
 }
 
 /* The "+1d" chip, in the purple of the wash behind it. The text names the direction, so
@@ -128,7 +135,13 @@
   color: var(--gmt-dst-gold-ink);
   font-weight: 600;
   letter-spacing: 0.04em;
-  line-height: 1.35;
+
+  /* A row is measured before its first reading writes the mark, so the mark must not change the
+     line's height. With its two border pixels it stays shorter than the name (17.6px against
+     18px at the xs size), and centred rather than on the baseline: the semibold face's metrics
+     differ, and lining up baselines pushed the line 0.6px taller in Chromium. */
+  align-self: center;
+  line-height: 1.3;
 
   &:empty {
     display: none;

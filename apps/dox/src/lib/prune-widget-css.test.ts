@@ -2,7 +2,9 @@ import {
   astroFile,
   classTokens,
   moduleClasses,
+  pruneInlineStyles,
   pruneStylesheetLinks,
+  referencedScripts,
   scriptFiles,
   usesStylesheet,
 } from "./prune-widget-css";
@@ -93,6 +95,56 @@ describe("pruneStylesheetLinks", () => {
   it("keeps a print sheet and a sheet it does not know", () => {
     const html = `<link rel="stylesheet" href="/gmt/_astro/print.D.css" media="print">${link("new.E.css")}`;
     expect(pruneStylesheetLinks(html, sheets, "").removed).toEqual([]);
+  });
+});
+
+describe("pruneInlineStyles", () => {
+  const block = (name: string) => `<style>.${g(name)}{color:red}</style>`;
+  const scoped = "<style>.why:where(.astro-x){display:flex}</style>";
+
+  it("removes an unused widget block and keeps every other block", () => {
+    const html = `<head>${block("face__root")}${scoped}</head><body></body>`;
+    expect(pruneInlineStyles(html, "")).toEqual({
+      html: `<head>${scoped}</head><body></body>`,
+      removed: 1,
+    });
+  });
+
+  it("keeps the block of a widget the page shows", () => {
+    const html = `${block("face__root")}<div class="${g("face__root")}"></div>`;
+    expect(pruneInlineStyles(html, "").removed).toBe(0);
+  });
+
+  it("keeps a block whose class a script the page can load names", () => {
+    expect(
+      pruneInlineStyles(block("face__root"), `x="${g("face__root")}"`).removed,
+    ).toBe(0);
+  });
+
+  it("leaves a page with an Astro island untouched", () => {
+    const html = `${block("face__root")}<astro-island></astro-island>`;
+    expect(pruneInlineStyles(html, "")).toEqual({ html, removed: 0 });
+  });
+});
+
+describe("referencedScripts", () => {
+  it("names static, dynamic and preloaded scripts, in a page or a chunk", () => {
+    const page =
+      '<script type="module" src="/gmt/_astro/page.X.js"></script><script type="module">import("/gmt/_astro/lazy.Z.js")</script>';
+    expect(referencedScripts(page).sort()).toEqual(["lazy.Z.js", "page.X.js"]);
+    const chunk =
+      'import{a}from"./b.Y.js";m.f=["_astro/pre.P.js"];import(`./lazy.Z.js`)';
+    expect(referencedScripts(chunk).sort()).toEqual([
+      "b.Y.js",
+      "lazy.Z.js",
+      "pre.P.js",
+    ]);
+  });
+
+  it("ignores a script on another origin", () => {
+    expect(
+      referencedScripts('"https://static.example.com/beacon.min.js"'),
+    ).toEqual([]);
   });
 });
 
