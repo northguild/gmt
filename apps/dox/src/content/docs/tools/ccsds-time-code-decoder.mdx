@@ -1,0 +1,53 @@
+---
+title: CCSDS Time Code Decoder
+description: "Paste a CCSDS ASCII time code. The tool reads it with parseCcsdsAsciiA and parseCcsdsAsciiB: which code it is, the instant, whether a second 60 is an inserted leap second, and the fraction digits it keeps and drops. A second section writes one instant as both codes."
+industries: [core]
+---
+
+import ToolLayout from "../../../components/ToolLayout.astro";
+import CcsdsTimeCodeDecoder from "../../../components/CcsdsTimeCodeDecoder.astro";
+
+<ToolLayout useCase="CCSDS ASCII time codes">
+
+<Fragment slot="keypoint">
+
+Code B counts days, not months. `2016-366T23:59:60.5Z` is the 366th day of 2016 and half a second into the second UTC inserted at the end of it.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+CCSDS 301.0-B-4 writes a UTC instant as text in two ways: Code A carries a calendar date, Code B carries the day of the year. Paste one and the tool says which it is. [`parseCcsdsAsciiA`](/reference/timescale/parse/parseCcsdsAsciiA/) and [`parseCcsdsAsciiB`](/reference/timescale/parse/parseCcsdsAsciiB/) both read the text exactly as typed, and at most one of them returns an instant. A second section goes the other way with [`formatCcsdsAsciiA`](/reference/timescale/format/formatCcsdsAsciiA/) and [`formatCcsdsAsciiB`](/reference/timescale/format/formatCcsdsAsciiB/).
+
+</Fragment>
+
+<CcsdsTimeCodeDecoder fullbleed />
+
+<Fragment slot="after">
+
+**Two codes, both UTC.** Code A is `YYYY-MM-DDThh:mm:ss`, Code B is `YYYY-DDDThh:mm:ss`, and either may end with a fraction of a second and a `Z`. A code without its `Z` is still UTC: CCSDS has no local form. `T` and `Z` are upper case only, so `2024-06-15t10:30:00z` is refused. The tool sends every text to both parsers and never chooses between them by its shape; a Code B text is not a Code A text, because `018` is not a month.
+
+**Day of year.** The three digits of Code B count days from 1 January, so `1988-018` is 18 January and `2024-061` is 1 March, because 2024 is a leap year. The caption under the field is the month and day the parser returned, with the month name from the library. Day 366 exists only in a leap year, so `2023-366T00:00:00Z` is refused.
+
+**Second 60.** A second of 60 is allowed only where UTC inserted one. UTC has inserted 27 since 1972, the last at the end of 2016, and none has been scheduled since. `2016-366T23:59:60.5Z` reads as the instant `2016-12-31T23:59:60.5Z`, and `2017-365T23:59:60Z` is refused. When a text is refused, the reason comes from asking the library again with a small change: the letters upper-cased, the 60 changed to 59, day 366 changed to 365, then `:00` added. The first change a parser accepts names the reason. The tool holds no CCSDS grammar, leap-second table or leap-year rule.
+
+**Digits kept, digits dropped.** The standard allows any number of fraction digits. An instant here holds nine, so a code with twelve is read with the first nine and the plate says how many were dropped. A code with no fraction is read to the second, and a code coarser than that, such as `2024-06-15T10:30Z`, names a span and not an instant.
+
+**Writing a code.** The second section writes one instant as both codes. On `auto` the library keeps the digits the instant has; on a number it cuts to that many and never rounds, so `2026-12-31T23:59:59.9999999Z` at three digits is `2026-365T23:59:59.999Z` and stays in 2026. The cut line shows the digits that were left off, struck through. An instant written with an offset such as `+02:00` comes out in UTC with a `Z`, and a local time with no `Z` or offset is refused because it names no instant. The button copies the instant read in section 2, a leap second included.
+
+```ts
+import { parseCcsdsAsciiA, parseCcsdsAsciiB } from "@northguild/gmt/timescale/parse";
+import { formatCcsdsAsciiA, formatCcsdsAsciiB } from "@northguild/gmt/timescale/format";
+
+parseCcsdsAsciiB("2016-366T23:59:60.5Z"); // "2016-12-31T23:59:60.5Z"
+parseCcsdsAsciiA("2016-366T23:59:60.5Z"); // ""
+parseCcsdsAsciiB("2017-365T23:59:60Z"); // ""
+formatCcsdsAsciiB("2026-12-31T23:59:59.9999999Z", 3); // "2026-365T23:59:59.999Z"
+formatCcsdsAsciiA("2024-06-15T16:30:00.123456789+02:00"); // "2024-06-15T14:30:00.123456789Z"
+```
+
+**Worth trying:** [the 2016 leap second as Code B](/tools/ccsds-time-code-decoder/?w=ccsds&wa=%7B%22code%22%3A%222016-366T23%3A59%3A60.5Z%22%7D) reads as inserted; then [the same second on an ordinary day](/tools/ccsds-time-code-decoder/?w=ccsds&wa=%7B%22code%22%3A%222017-365T23%3A59%3A60Z%22%7D) and read the reason. The [Leap Second Timeline](/tools/leap-second-timeline/) lists every second UTC inserted, and the rules are in [Leap seconds and TAI](/guides/core-date-operations/leap-seconds-and-tai/).
+
+</Fragment>
+
+</ToolLayout>

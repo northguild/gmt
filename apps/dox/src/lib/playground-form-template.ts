@@ -155,7 +155,7 @@ function scalarField(
   const cellClass = isWide(f.kind)
     ? `${styles.cell} ${styles.wide}`
     : styles.cell;
-  const attrs = html`data-field="${f.name}" data-kind="${f.kind}" ${f.optional ? html`data-optional="true"` : ""}`;
+  const attrs = html`data-field="${f.name}" data-kind="${f.kind}" ${f.optional ? html`data-optional="true"` : ""} ${f.numeric?.length ? html`data-numeric="${f.numeric.join("\n")}"` : ""}`;
   const choices = (f.choices ?? []).map((c) => ({ value: c, label: c }));
 
   if (f.kind === "units") {

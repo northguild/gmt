@@ -50,6 +50,8 @@ export interface ParamSpec {
   type: ParamType;
   value: string;
   options?: string[];
+  /** `enum` params only: the choices that are number literals, passed bare rather than quoted. */
+  numericOptions?: string[];
   unitValue?: string;
   arrayType?: "number" | "string";
   /** `x?:` in the signature — the example may legitimately omit it. */
@@ -61,6 +63,8 @@ export interface ParamSpec {
 export interface ClassifiedType {
   type: ParamType;
   options?: string[];
+  /** `enum` only: the choices that are number literals (`6` in `0 | … | 9 | "auto"`). */
+  numericOptions?: string[];
   arrayType?: "number" | "string";
   intervalShape?: boolean;
 }
@@ -587,14 +591,25 @@ function classifyTypeAsPrinted(
     );
     if (stringLits.length > 0 && numberLits.length > 0) {
       const allLiterals: string[] = [];
+      const numericOptions: string[] = [];
       for (const m of members) {
         if (m.flags & ts.TypeFlags.StringLiteral) {
           allLiterals.push((m as ts.StringLiteralType).value);
         } else if (m.flags & ts.TypeFlags.NumberLiteral) {
-          allLiterals.push(_checker.typeToString(m));
+          const text = _checker.typeToString(m);
+          allLiterals.push(text);
+          numericOptions.push(text);
         }
       }
-      return { type: "enum", options: allLiterals };
+      // The checker holds a union in the order it created the members, not the order the source
+      // wrote them (`"auto"` can land among the digits): numbers ascending, then the words.
+      numericOptions.sort((a, b) => Number(a) - Number(b));
+      const words = allLiterals.filter((c) => !numericOptions.includes(c));
+      return {
+        type: "enum",
+        options: [...numericOptions, ...words],
+        numericOptions,
+      };
     }
 
     // Union containing string-literal union + array of that union
@@ -819,15 +834,17 @@ function classifyTypeFromStringAsWritten(s: string): ClassifiedType {
   const hasStringLit = /"[^"]*"/.test(t);
   if (hasNumberLit && hasStringLit && t.includes("|")) {
     const opts: string[] = [];
+    const numericOptions: string[] = [];
     for (const part of t.split("|")) {
       const p = part.trim();
       if (/^\d+$/.test(p)) {
         opts.push(p);
+        numericOptions.push(p);
       } else if (/^"[^"]*"$/.test(p)) {
         opts.push(p.slice(1, -1));
       }
     }
-    if (opts.length > 0) return { type: "enum", options: opts };
+    if (opts.length > 0) return { type: "enum", options: opts, numericOptions };
   }
   return { type: "string" };
 }
@@ -1137,6 +1154,7 @@ export function buildPlaygroundSpec(
     const value = seedForParam(input.examples, params.length, info);
     const spec: ParamSpec = { name, type: info.type, value };
     if (info.options) spec.options = info.options;
+    if (info.numericOptions?.length) spec.numericOptions = info.numericOptions;
     if (p.optional || rest?.[0]?.optional) spec.optional = true;
     if (info.type === "units") {
       const unitValue = seedForUnitsParam(input.examples, params.length, info);
@@ -1155,6 +1173,7 @@ export function buildPlaygroundSpec(
     const value = seedForOption(input.examples, optName, info);
     const spec: ParamSpec = { name: optName, type: info.type, value };
     if (info.options) spec.options = info.options;
+    if (info.numericOptions?.length) spec.numericOptions = info.numericOptions;
     return spec;
   });
 

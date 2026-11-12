@@ -746,6 +746,7 @@ describe("classifyTypeFromString (mixed unions / arrays)", () => {
     expect(classifyTypeFromString(`0 | 1 | 2 | "auto"`)).toEqual({
       type: "enum",
       options: ["0", "1", "2", "auto"],
+      numericOptions: ["0", "1", "2"],
     });
   });
   it("classifies number[] as array", () => {
@@ -785,6 +786,7 @@ describe("classifyType (checker-backed — complex types)", () => {
     expect(classifyType(checker, types[0])).toEqual({
       type: "enum",
       options: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "auto"],
+      numericOptions: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
     });
   });
   it("classifies Record<UnitEnum, number> as units", () => {
@@ -1170,6 +1172,7 @@ describe("classifyType (checker-backed — string literals beside an open type)"
     // The checker's order is not ours to pin: compare the choices as a set.
     expect(mixed?.type).toBe("enum");
     expect([...(mixed?.options ?? [])].sort()).toEqual(["1", "2", "x"]);
+    expect([...(mixed?.numericOptions ?? [])].sort()).toEqual(["1", "2"]);
   });
 
   it("leaves `string | number` as it was, because it holds no string literal", () => {
@@ -1199,6 +1202,7 @@ describe("classifyTypeFromString (string literals beside an open type)", () => {
     expect(classifyTypeFromString(`1 | 2 | "x"`)).toEqual({
       type: "enum",
       options: ["1", "2", "x"],
+      numericOptions: ["1", "2"],
     });
   });
 });

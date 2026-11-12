@@ -89,7 +89,7 @@ export type { DoublePrecisionMeterArgs } from "./double-precision-meter";
 
 const WIDGET_NAME = "double-precision-meter";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 const NO_SIGNAL_PILL = "⟨ NO SIGNAL — invalid input ⟩";
 
 const TABLE_CAPTION = "Worst measured drift in each sampled year";
