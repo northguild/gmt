@@ -720,6 +720,20 @@ export const showCodeBDayRulerInput = z.object({
   day: z.number().int().min(1).max(366).optional(),
 });
 
+/**
+ * SWIFT Value Date Reader: the six-character value date to read (`value`) and an ISO date to
+ * write back (`date`). Nothing is trimmed, upper-cased or repaired, and the chat never fills in
+ * `value` from a date or `date` from a value.
+ */
+export const showSwiftValueDateReaderInput = z
+  .object({
+    value: z.string().max(16).optional(),
+    date: z.string().max(32).optional(),
+  })
+  .refine((a) => a.value !== undefined || a.date !== undefined, {
+    message: "Give a value date to read or an ISO date to write.",
+  });
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1356,7 +1370,8 @@ export type DoxToolName =
   | "showDoublePrecisionMeter"
   | "showCcsdsTimeCodeDecoder"
   | "showCodeBDayRuler"
-  | "showFhirDateChecker";
+  | "showFhirDateChecker"
+  | "showSwiftValueDateReader";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1729,6 +1744,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks whether a value is a valid FHIR date, dateTime or instant, why a FHIR value such as 2024-06 or 2024-02-30 is or is not accepted, what a FHIR month or year means, whether a FHIR time needs seconds and an offset, or how to write a FHIR value at a coarser precision",
     args: "value (the FHIR value exactly as the reader gave it, such as 2024-06 or 2015-02-07T13:28:17-05:00; at most 64 characters; never corrected, never padded to a day or a midnight, and never given an offset the reader did not send).",
   },
+  {
+    name: "showSwiftValueDateReader",
+    purpose:
+      "Reads a SWIFT MT value date (YYMMDD, field 30 or 32A) with parseSwiftDate and shows the century SWIFT's rule gives, or the T50 refusal; writes an ISO date back with formatSwiftDate.",
+    when: "the reader asks which year a two-digit SWIFT value date means, why a value date is refused, or how to write a date as YYMMDD for SWIFT",
+    args: "value (six digits as sent), date (an ISO date to write)",
+  },
 ];
 
 /**
@@ -1945,6 +1967,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[51].purpose,
     inputSchema: showFhirDateCheckerInput,
   }),
+  showSwiftValueDateReader: tool({
+    description: DOX_TOOL_DOCS[52].purpose,
+    inputSchema: showSwiftValueDateReaderInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -2020,6 +2046,7 @@ export const ENABLED_TOOL_NAMES = [
   "showCcsdsTimeCodeDecoder",
   "showCodeBDayRuler",
   "showFhirDateChecker",
+  "showSwiftValueDateReader",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

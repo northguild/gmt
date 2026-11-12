@@ -2708,8 +2708,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     group, fourth after API Reference, and each namespace index under `/reference/` keeps a one-line
     pointer. `space` is never an industry, area, kind or namespace name, because a planned spatial
     expansion takes the word.
-- **Finance** (FIN-95): one tool, the **FIX Timestamp Reader** (`/tools/fix-timestamp-reader/`,
-  `fixstamp`, finance). A pasted FIX `UTCTimestamp` is read by `parseFixUtcTimestamp` and
+- **Finance** (FIN-95, FIN-96): two tools, the **FIX Timestamp Reader** (FIN-95,
+  `/tools/fix-timestamp-reader/`, `fixstamp`, finance) and the **SWIFT Value Date Reader** (below). A pasted FIX `UTCTimestamp` is read by `parseFixUtcTimestamp` and
   `isValidFixUtcTimestamp`, both called on the text as typed: the instant, the precision the digit
   count states, whether second 60 is an inserted leap second, and the picosecond digits apart from
   the instant. A second section writes one instant at all five precisions with
@@ -2719,7 +2719,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `fix-timestamp-reader-prose.test.ts` through `timescale`, so the check never enters the tool.
   - **The loader is `finance-lib.ts`** (`finance/parse`, `finance/format` and `finance/validate`
     by `GMT_MODULES`), with its types and `FIX_PRECISIONS` in `finance-widgets.ts`. They are named
-    for Finance and not for FIX because FIN-96's SWIFT Value Date Reader extends both. There is no
+    for Finance and not for FIX because the SWIFT Value Date Reader shares them (it adds the three
+    SWIFT names and `isValidDate` from `plain/validate` to `FinanceLib`). There is no
     `widgets/families/finance/` until a second shared piece needs one.
   - **The site holds no grammar, width table or leap-second table.** `fix-picture.ts` probes the
     library once per reading (the base and the widths come from formatting a fixed instant at each
@@ -2761,6 +2762,52 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Permalink `fixstamp`** at `/tools/fix-timestamp-reader/`: `stamp` and `write`, or `preset` and
     `writePreset` while a box matches a preset. The chat tool is `showFixTimestampReader`
     (`stamp`, `instant`; the registry maps `instant` to `write`), appended to `DOX_TOOL_DOCS`.
+- **SWIFT Value Date Reader** (FIN-96, `/tools/swift-value-date-reader/`, `swiftdate`, finance).
+  A pasted SWIFT MT value date (`YYMMDD`, field 30 or 32A) is read by `parseSwiftDate` and
+  `isValidSwiftDate`, both called on the text as typed: the date, the year SWIFT's rule gives, and
+  why a text is refused. A table shows the three bands of the rule, a second section writes an ISO
+  date with `formatSwiftDate` and reads it back, and "Use the date read above" copies the read
+  date into it. It shares `finance-lib.ts` and `FinanceLib` with the FIX reader, and imports
+  `plain/validate` for `isValidDate` only, as Core does. Finance `drawsOn` stays `[]`.
+  - **The site holds no SWIFT rule, range or band edge.** `deriveBands` calls
+    `parseSwiftDate(YY + "0101")` for all 100 values of `YY` at mount and groups equal outcomes
+    into runs: `01–60` read as 2001–2060, then the refused `00` and `61–99`, by `YY`. The first
+    and last years shown are the range. The rule's text from §6.3.1 and §6.3.6 of SWIFT's
+    Standards MT General Information (November 2025) is a quoted citation, never executed. A
+    change to the range moves the table, and `swift-value-date-reader-prose.test.ts` holds the
+    page's prose to the library.
+  - **T50 follows any refused text of exactly six characters** (MT 103 field 32A and General
+    Information §6.3.6: T50 follows any `<DATE2>` date error). A text of another length shows no
+    code, because it never reached the date check.
+  - **A refusal names the band, not a year the site computed.** The reason is the first probe
+    the library accepts, in this order: the `YY` is not two ASCII digits, the `YY` is in a
+    refused band, the month is not 01 to 12 (`YYMM01`), the day is not 01 to 31 (`YY01DD`),
+    otherwise the day does not exist in that month. A refused 29 February names the year the
+    library gave for `YY + "0201"`. The site does no leap-year arithmetic.
+  - **A refused write** reads "outside 2001 to 2060, would read back as another year", with the
+    range from the bands. The write box takes what `isValidDate` takes; a date-time is told to
+    take the date first. The concrete `1924` case appears only as a pasted call in the guide and
+    the mistakes page.
+  - **The reader is SWIFT-only.** The comparison with a home-made cut-off lives in the scenario
+    and the mistakes page, which use `parseDateWithPattern` with `yearWindow: 1930`: `350615`
+    reads as 1935 there, and `750615` is accepted.
+  - **As the Aviation reader, the value is never trimmed, upper-cased or repaired** before a call.
+    An empty box reads "nothing typed" and makes no call. NO SIGNAL (amber) shows only for a
+    library refusal.
+  - **Permalink `swiftdate`** at `/tools/swift-value-date-reader/`: `value` and `date`, or
+    `preset` and `writePreset` while a box matches a preset. Reading opens on `240615` and
+    writing on `2024-06-15`. The chat tool is `showSwiftValueDateReader` (`value` up to 16
+    characters, `date` up to 32, at least one required), appended to `DOX_TOOL_DOCS`, with a
+    Finance starter on `350615`.
+  - **In `readout-still` by typed values, and in a browser test.** The row has no handle and
+    draws no chart (`scope: "widget"`, `drawn: ["hold"]`, `frame: false`). Every hold reserves its
+    widest text as a hidden ghost twin, and the two plates in a strip are pinned to opposite
+    edges. `swift-value-date-reader-holds.browser.test.ts` (`vitest.browser.config.ts`; Chromium
+    and WebKit) steps every preset and the emptied boxes at 300 px and 1280 px and holds every
+    hold, the plates strip, the band table and each call frame to 0.5 px of the first. Each
+    mount test aborts its controller in `afterEach`; the mount starts no timer.
+  - **Defaults.** Updates are live on `input`; the URL state is `value`, `date`, `preset` and
+    `writePreset`; the guide keeps the title "Finance: Message Timestamps" and its slug.
 - **Aviation** (AV-97): one tool, the **SSIM Date Reader** (`/tools/ssim-date-reader/`, `ssim`,
   aviation). An IATA SSIM date (`DDMMMYY`, such as `01JAN26`) is read by `parseSsimDate` and
   `isValidSsimDate` with a window the reader states, beside the locale pattern parser

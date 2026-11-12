@@ -1,6 +1,6 @@
 ---
 title: "Finance: Message Timestamps"
-description: parseFixUtcTimestamp, formatFixUtcTimestamp and isValidFixUtcTimestamp — read and write the FIX UTCTimestamp at the precision its digits state, with a second of sixty accepted only for a leap second UTC really inserted.
+description: parseFixUtcTimestamp, formatFixUtcTimestamp and isValidFixUtcTimestamp read and write the FIX UTCTimestamp at the precision its digits state, with a second of sixty accepted only for a leap second UTC really inserted. parseSwiftDate, formatSwiftDate and isValidSwiftDate do the same for the SWIFT MT value date, using the century SWIFT states.
 sidebar:
   order: 11
 industries: [finance]
@@ -10,6 +10,12 @@ Trading and payment messages carry timestamps in their own formats, and FIX is t
 systems meet first. A FIX `UTCTimestamp` is written `YYYYMMDD-HH:MM:SS`, with an optional fraction
 of a second after a period, and it is always UTC. It is not ISO 8601: it has no dashes in the date,
 no `T`, and no `Z`.
+
+SWIFT MT messages carry a different kind of date: a six-digit value date, `YYMMDD`. Most
+cross-border payment instructions between banks moved from MT to ISO 20022 on 22 November 2025,
+but messages such as MT 101 and MT 910 still carry this date, and so do archived messages. A
+two-digit year has no century until someone states one. For value dates, SWIFT states it, so the
+SWIFT functions below need no window from you.
 
 What makes it worth a layer is that the stamp states how precisely it was measured, and it does so
 by its length. Three fraction digits are milliseconds, six microseconds, nine nanoseconds and
@@ -21,6 +27,9 @@ what the digits say.
 import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
 import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
 import { isValidFixUtcTimestamp } from "@northguild/gmt/finance/validate";
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+import { formatSwiftDate } from "@northguild/gmt/finance/format";
+import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
 ```
 
 The functions live in `@northguild/gmt/finance/parse`, `@northguild/gmt/finance/format` and
@@ -233,10 +242,135 @@ A plain `Temporal.Instant.from` does not accept the second. It clamps `2016-12-3
 leap second it stores a second that never happened as a real one. Read the stamp with
 `parseFixUtcTimestamp` first.
 
+## Reading a SWIFT value date
+
+A SWIFT value date is the date a payment takes effect. It is written `YYMMDD`: two digits for the
+year, two for the month and two for the day. SWIFT describes the format as `<DATE2>`, or `6!n`
+(six digits, exactly). It sits in field 30, and at the front of field 32A.
+
+[`parseSwiftDate(value)`](/reference/finance/parse/parseSwiftDate) reads bare digits and returns
+the ISO date. It returns `""` for anything that is not a value date. A `:32A:` subfield also
+holds a currency and an amount, so split it first and pass the date alone.
+
+```typescript
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("240615");
+// "2024-06-15"
+parseSwiftDate("240615EUR1000,00");
+// "" (the whole 32A subfield; pass the first six characters)
+```
+
+The rule applies where SWIFT states it: field 32A of MT 910, and fields 30 and 32A of category 1
+and 2 messages, except the common group messages n92, n95 and n96. SWIFT states no century for
+other six-digit dates, such as field 31D of MT 700. Read those with
+[`parseDateWithPattern`](/reference/plain/parse/parseDateWithPattern) and the `yearWindow` you
+know.
+
+## How a two-digit year gets its century
+
+SWIFT's _Standards MT General Information_ (Standards MT November 2025) gives the rule. The year
+of a value date is a `YY` from 01 to 60, read as 2001 to 2060. Any other `YY`, `00` and `61` to
+`99` included, is not allowed: SWIFT answers it with error code T50. In SWIFT's words, from §6.3.1
+Dates:
+
+> The six-digit date thus ranges from 2001 to 2060
+
+and, for value dates, from §6.3.6 Value Date Ordering:
+
+> allowed: a year component … 'YY' in the range of 01 through 60
+>
+> not allowed: any 'YY' component outside of this range
+
+| Digits | Century | Reads as  |
+| ------ | ------- | --------- |
+| 01–60  | 20YY    | 2001–2060 |
+| 00     | none    | refused   |
+| 61–99  | none    | refused   |
+
+```typescript
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("010101");
+// "2001-01-01"
+parseSwiftDate("601231");
+// "2060-12-31"
+parseSwiftDate("000101");
+// "" (YY 00 is not from 01 to 60)
+parseSwiftDate("610101");
+// "" (2061 is after 2060)
+parseSwiftDate("990615");
+// "" (YY 99 is not from 01 to 60, so it is not 1999 either)
+```
+
+The SSIM and EDI parsers ask you for a window. These functions take none, because the standard
+mandates the rule: there is no choice to make. The
+[Aviation guide](/guides/industries/aviation-message-times/) shows the windowed case.
+
+The day must exist in the year the rule gives. `040229` is 29 February 2004, so it is accepted.
+`050229` is 29 February 2005, which was not a leap year, so it is refused.
+
+```typescript
+import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("040229");
+// "2004-02-29"
+parseSwiftDate("600229");
+// "2060-02-29"
+parseSwiftDate("050229");
+// ""
+```
+
+## Writing a value date, and why the round trip refuses some years
+
+[`formatSwiftDate(value)`](/reference/finance/format/formatSwiftDate) takes an ISO date, such as
+`2024-06-15`, and returns the six digits. It refuses a year the rule cannot read back. `2000-12-31`
+and `2061-01-01` are outside 2001 to 2060. `1924-06-15` shows why the range matters: its last two
+digits, `24`, would read back as 2024, a century later than the date you wrote. So it returns `""`.
+
+```typescript
+import { formatSwiftDate } from "@northguild/gmt/finance/format";
+
+formatSwiftDate("2024-06-15");
+// "240615"
+formatSwiftDate("2001-01-01");
+// "010101"
+formatSwiftDate("2060-12-31");
+// "601231"
+formatSwiftDate("2000-12-31");
+// ""
+formatSwiftDate("2061-01-01");
+// ""
+formatSwiftDate("1924-06-15");
+// ""
+```
+
+Every date the function writes reads back as the same date, written `YYYY-MM-DD`. So
+`parseSwiftDate(formatSwiftDate(d)) === d` when `d` is already written that way.
+
+The result is the date only. If you start from a date-time, take it to its date in the zone you
+mean first. `formatSwiftDate("2024-06-15T10:00:00")` returns `""`.
+
+[`isValidSwiftDate(value)`](/reference/finance/validate/isValidSwiftDate) answers the reading
+question as a boolean. It is `true` exactly when `parseSwiftDate` returns a date.
+
+```typescript
+import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
+
+isValidSwiftDate("240615");
+// true
+isValidSwiftDate("050229");
+// false
+isValidSwiftDate("750101");
+// false
+```
+
 ## See it break, then work
 
 - [A Millisecond Stamp Read as Nanoseconds](/scenarios/a-millisecond-stamp-read-as-nanoseconds/)
 - [Second Sixty on an Ordinary Day](/scenarios/second-sixty-on-an-ordinary-day/)
+- [A Value Date in the Wrong Century](/scenarios/a-value-date-in-the-wrong-century/)
+- [SWIFT Value Date Reader](/tools/swift-value-date-reader/)
 - [Finance mistakes](/mistakes/finance/)
 
 ## Sources
@@ -247,3 +381,9 @@ leap second it stores a second that never happened as a real one. Read the stamp
 - ITU-R Recommendation TF.460-6: the inserted second is the one before a positive step, and it is
   written 23h 59m 60s.
 - IERS, `Leap_Second.dat` and Bulletin C 72, for the 27 leap seconds.
+- SWIFT, _Standards MT General Information_ (Standards MT November 2025, 18 July 2025), §6.3.1
+  Dates (p. 44) and §6.3.6 Value Date Ordering (p. 59): the `YYMMDD` form, the 2001 to 2060
+  range, `YY` from 01 to 60 and error code T50. It needs no login:
+  [usgi_20250718.pdf](https://www2.swift.com/knowledgecentre/rest/v1/publications/usgi_20250718/2.0/usgi_20250718.pdf).
+- SWIFT Standards MT (2015 User Handbook), MT 103 field 32A: the format `6!n3!a15d` and "Date must
+  be a valid date expressed as YYMMDD". It is in SWIFT's Knowledge Centre, which needs a login.

@@ -92,6 +92,7 @@ import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
 import type { FixTimestampReaderArgs } from "~/lib/fix-timestamp-reader-mount";
 import type { FhirArgs } from "~/lib/fhir-date-checker-mount";
 import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
+import type { SwiftValueDateReaderArgs } from "~/lib/swift-value-date-reader-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -140,6 +141,7 @@ import {
   showCcsdsTimeCodeDecoderInput,
   showCodeBDayRulerInput,
   showFhirDateCheckerInput,
+  showSwiftValueDateReaderInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -1035,6 +1037,35 @@ const ssimEntry = defineWidget<SsimDateReaderArgs>({
     })),
 });
 
+const swiftDateEntry = defineWidget<SwiftValueDateReaderArgs>({
+  title: "SWIFT Value Date Reader",
+  kind: "swiftdate",
+  parse: (input) => {
+    const result = showSwiftValueDateReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { value, date } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(value === undefined ? {} : { value }),
+        ...(date === undefined ? {} : { date }),
+      },
+    };
+  },
+  /* No `validate`: a value the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/swift-value-date-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderSwiftValueDateReaderTemplate(idPrefix, args),
+      mount: m.mountSwiftValueDateReader,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1546,6 +1577,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showFixTimestampReader: fixTimestampEntry,
   showSsimDateReader: ssimEntry,
   showFhirDateChecker: fhirEntry,
+  showSwiftValueDateReader: swiftDateEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,
   showDoublePrecisionMeter: doublePrecisionMeterEntry,

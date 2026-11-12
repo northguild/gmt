@@ -944,6 +944,12 @@ export const CHAT_STARTERS: readonly {
     // The question gives the value exactly; the widget reads it, so nothing is padded here.
     args: { value: "2024-06" },
   },
+  {
+    text: "Which year does SWIFT read the value date 350615 as, and is 750615 a valid value date?",
+    widget: "showSwiftValueDateReader",
+    area: "finance",
+    args: { value: "350615" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

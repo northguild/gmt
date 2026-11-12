@@ -207,6 +207,10 @@ const PAGES = [
     widget: "ssim-date-reader",
   },
   {
+    path: "tools/swift-value-date-reader",
+    widget: "swift-value-date-reader",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

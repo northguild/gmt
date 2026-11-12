@@ -162,7 +162,7 @@ skills:
     domain: industry-layers
     path: 'skills/gmt-finance/SKILL.md'
     package: 'packages/gmt'
-    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded
+    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded; read, write and check the SWIFT MT value date YYMMDD (parseSwiftDate/formatSwiftDate/isValidSwiftDate) — the century SWIFT's own rule gives, 2001 to 2060, no window
     requires:
       - gmt-integration
     sources:
