@@ -709,7 +709,7 @@ const TOOLS = [
     // The first read preset reads a date and the last is refused, so each value is typed from both.
     slug: "swift-value-date-reader",
     root: '[data-widget="swift-value-date-reader"]',
-    presets: ["nineteen", "whole-subfield"],
+    presets: ["twenty", "whole-subfield"],
     controls: [],
     entries: [
       {
@@ -719,8 +719,8 @@ const TOOLS = [
           "990615",
           "240615",
           "750101",
-          "850229",
-          "000229",
+          "050229",
+          "040229",
           "2406",
           "240615EUR1000,00",
           "２４０６１５",
@@ -733,7 +733,7 @@ const TOOLS = [
         name: "ISO date",
         values: [
           "2024-06-15",
-          "1979-12-31",
+          "2000-12-31",
           "2061-01-01",
           "2024-06-15T10:00:00",
           "x".repeat(32),

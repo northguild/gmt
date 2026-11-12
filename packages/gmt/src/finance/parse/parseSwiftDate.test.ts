@@ -12,8 +12,9 @@ function pad2(n: number): string {
 }
 
 /**
- * Every expected value is read off SWIFT _Message Format Validation Rules_ (Nov 2006) Part II
- * §4.1 (`<DATE2>` `YYMMDD`) and §4.1.1 (century, 1980 to 2060), never off the code under test.
+ * Every expected value is read off SWIFT _Standards MT General Information_ (Nov 2025) §6.3.1
+ * (`YYMMDD`, 2001 to 2060) and §6.3.6 (`YY` 01 through 60, else T50), never off the code under
+ * test.
  */
 describe("parseSwiftDate", () => {
   afterEach(() => {
@@ -34,21 +35,20 @@ describe("parseSwiftDate", () => {
     },
   );
 
-  it("places every YY by the §4.1.1 rule: 80-99 in 19YY, 00-60 in 20YY, 61-79 refused", () => {
+  it("places every YY by the §6.3.6 rule: 01-60 in 20YY, 00 and 61-99 refused", () => {
     for (let yy = 0; yy <= 99; yy += 1) {
-      // §4.1.1: IF YY > 79 THEN "19"||YY ELSE "20"||YY; IF year > 2060 THEN T50.
-      const year = yy > 79 ? 1900 + yy : 2000 + yy;
-      const expected = year > 2060 ? "" : `${year}-01-01`;
+      // §6.3.6: YY 01 through 60 allowed, any other YY is T50; §6.3.1: 2001 to 2060.
+      const expected = yy >= 1 && yy <= 60 ? `${2000 + yy}-01-01` : "";
       expect(parseSwiftDate(`${pad2(yy)}0101`), `yy ${yy}`).toBe(expected);
     }
   });
 
-  // Days from 1980-01-01 to 2060-12-31 by the tens digit of YY (81 years x 365 + 21 leap days
-  // = 29,586; 2000 and 2060 are leap years). Counted with a plain Temporal until(); one test per
+  // Days from 2001-01-01 to 2060-12-31 by the tens digit of YY (60 years x 365 + 15 leap days
+  // = 21,915; 2004 to 2060 in steps of 4). Counted with a plain Temporal until(); one test per
   // decade keeps each under the 0.3 s test cost.
   it.each`
     tens | days
-    ${0} | ${3653}
+    ${0} | ${3287}
     ${1} | ${3652}
     ${2} | ${3653}
     ${3} | ${3652}
@@ -56,8 +56,8 @@ describe("parseSwiftDate", () => {
     ${5} | ${3652}
     ${6} | ${366}
     ${7} | ${0}
-    ${8} | ${3653}
-    ${9} | ${3652}
+    ${8} | ${0}
+    ${9} | ${0}
   `(
     "parses $days distinct days for YY with tens digit $tens",
     ({ tens, days }) => {
@@ -71,7 +71,7 @@ describe("parseSwiftDate", () => {
             if (out !== "") {
               parsed += 1;
               seen.add(out);
-              if (out < "1980-01-01" || out > "2060-12-31") {
+              if (out < "2001-01-01" || out > "2060-12-31") {
                 outOfRange += 1;
               }
             }

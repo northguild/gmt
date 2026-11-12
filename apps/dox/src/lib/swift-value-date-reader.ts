@@ -9,8 +9,9 @@
  * The site holds no SWIFT rule, range or band edge. The bands come from `deriveBands`, which
  * asks the library for the first of January of every two-digit year, and every reason comes
  * from a library call: a refusal is explained by asking the library again. Only the T50 code
- * (MFVR §4.1: T50 follows any `<DATE2>` format error) is the site's word, and it is shown for a
- * refused text exactly six characters long.
+ * (MT 103 field 32A: a date that is not a valid `YYMMDD` is error T50, and so, by Standards MT
+ * General Information 2025 §6.3.6, is a `YY` outside its range) is the site's word, and it is
+ * shown for a refused text exactly six characters long.
  *
  * No DOM, no library import (the library arrives as a `FinanceLib`).
  */
@@ -26,7 +27,7 @@ export const READ_MAX_CHARS = 16;
 /** The most the write box takes. */
 export const WRITE_MAX_CHARS = 32;
 
-/** The code a refused six-character text shows (MFVR §4.1: T50 follows a `<DATE2>` error). */
+/** The code a refused six-character text shows (MT 103 field 32A and General Information §6.3.6). */
 export const T50 = "T50";
 
 export const NOTHING_TYPED = "nothing typed";
@@ -63,22 +64,29 @@ interface SwiftPreset {
 /** Each preset's reading is the library's, asserted in the unit test. */
 export const READ_PRESETS: readonly SwiftPreset[] = [
   {
+    id: "twenty",
+    label: "A 20YY date",
+    description: "The century is SWIFT's rule, not today's.",
+    text: "240615",
+  },
+  {
     id: "nineteen",
     label: "A 19YY date",
-    description: "The century is SWIFT's rule, not today's.",
+    description:
+      "The same two-digit year shape, in the century before. SWIFT reads no year in it: refused with T50.",
     text: "990615",
   },
   {
-    id: "twenty",
-    label: "A 20YY date",
-    description: "The same two-digit year shape, in the other century.",
-    text: "240615",
+    id: "year-00",
+    label: "Year 00",
+    description: "YY 00 is not a year SWIFT reads: refused with T50.",
+    text: "000101",
   },
   {
     id: "first-year",
     label: "The first year",
     description: "The earliest year SWIFT reads.",
-    text: "800101",
+    text: "010101",
   },
   {
     id: "last-day",
@@ -93,16 +101,16 @@ export const READ_PRESETS: readonly SwiftPreset[] = [
     text: "750101",
   },
   {
-    id: "leap-2000",
-    label: "29 February 2000",
+    id: "leap-2004",
+    label: "29 February 2004",
     description: "The day exists in the year the rule gives.",
-    text: "000229",
+    text: "040229",
   },
   {
-    id: "no-leap-1985",
-    label: "29 February 1985",
+    id: "no-leap-2005",
+    label: "29 February 2005",
     description: "The year the rule gives has no such day: refused with T50.",
-    text: "850229",
+    text: "050229",
   },
   {
     id: "whole-subfield",
@@ -130,7 +138,7 @@ export const WRITE_PRESETS: readonly SwiftPreset[] = [
     id: "before-first",
     label: "Before the first year",
     description: "Refused: two digits would read back as another year.",
-    text: "1979-12-31",
+    text: "2000-12-31",
   },
   {
     id: "after-last",
@@ -214,13 +222,13 @@ export interface Band {
   /** The first and last `YY` of the run, as two digits. */
   from: string;
   to: string;
-  /** The years the run reads as, or `null` for the refused run. */
+  /** The years the run reads as, or `null` for a refused run. */
   firstYear: number | null;
   lastYear: number | null;
 }
 
 export interface Bands {
-  /** Ordered by year; the refused run is last. */
+  /** Ordered by year; the refused runs, which have none, are last, by `YY`. */
   list: readonly Band[];
   /** The first and last year the library reads. */
   first: number | null;
@@ -265,7 +273,7 @@ export function deriveBands(lib: FinanceLib): Bands {
       firstYear: r.years[0] ?? null,
       lastYear: r.years[r.years.length - 1] ?? null,
     }))
-    // By year; the refused run, which has none, is last.
+    // By year; the refused runs, which have none, are last, by YY.
     .sort(
       (a, b) =>
         (a.firstYear ?? Infinity) - (b.firstYear ?? Infinity) ||
@@ -285,7 +293,7 @@ export function deriveBands(lib: FinanceLib): Bands {
   };
 }
 
-/** `1980–2060`, or `""` when the library read no year. */
+/** `2001–2060`, or `""` when the library read no year. */
 export function rangeText(bands: Bands): string {
   return bands.first === null || bands.last === null
     ? ""
@@ -298,9 +306,9 @@ export function rangeText(bands: Bands): string {
  */
 export const WIDTH_BANDS: Bands = {
   list: [
-    { from: "99", to: "99", firstYear: 9999, lastYear: 9999 },
-    { from: "99", to: "99", firstYear: 9999, lastYear: 9999 },
-    { from: "99", to: "99", firstYear: null, lastYear: null },
+    { from: "00", to: "99", firstYear: 9999, lastYear: 9999 },
+    { from: "00", to: "99", firstYear: null, lastYear: null },
+    { from: "00", to: "99", firstYear: null, lastYear: null },
   ],
   first: 9999,
   last: 9999,
@@ -311,7 +319,16 @@ export const WIDTH_BANDS: Bands = {
 // Reasons
 // ---------------------------------------------------------------------------
 
-const bandText = (b: Band): string => `${b.from}–${b.to}`;
+/** `01–60`, or `00` for a run of one `YY`. */
+export const bandText = (b: Band): string =>
+  b.from === b.to ? b.from : `${b.from}–${b.to}`;
+
+/** The `YY` the library reads, as runs: `01–60`. */
+const readYyText = (bands: Bands): string =>
+  bands.list
+    .filter((b) => b.firstYear !== null)
+    .map(bandText)
+    .join(", ");
 
 export const NOT_SIX_REASON =
   "A value date is six characters, YYMMDD; pass the date component alone (no tag, currency or amount).";
@@ -325,12 +342,8 @@ export const EMPTY_WRITE_TEXT = "Type an ISO date, or use the date read above.";
 const acceptedReason = (yy: string, band: Band): string =>
   `YY ${yy} falls in ${bandText(band)}, which SWIFT reads as ${band.firstYear}–${band.lastYear}.`;
 
-const bandRefusedReason = (
-  yy: string,
-  band: Band,
-  last: number | null,
-): string =>
-  `YY ${yy} falls in ${bandText(band)}. SWIFT's rule puts that year after ${last}, so it is refused.`;
+const bandRefusedReason = (yy: string, bands: Bands): string =>
+  `SWIFT reads only YY ${readYyText(bands)}, as ${rangeText(bands)}, so YY ${yy} is refused.`;
 
 const noDayReason = (mm: string, dd: string, year: number | null): string =>
   mm === "02" && dd === "29"
@@ -342,16 +355,14 @@ const outsideReason = (bands: Bands): string =>
 
 /** Every reading reason, at its widest, for the reason line's reserved room. */
 export function readReasonSamples(bands: Bands): string[] {
-  const refused = bands.list.find((b) => b.firstYear === null);
+  const refused = bands.list.some((b) => b.firstYear === null);
   return [
     NOT_SIX_REASON,
     NOT_DIGITS_REASON,
     ...bands.list
       .filter((b) => b.firstYear !== null)
       .map((b) => acceptedReason("99", b)),
-    ...(refused === undefined
-      ? []
-      : [bandRefusedReason("99", refused, bands.last)]),
+    ...(refused ? [bandRefusedReason("99", bands)] : []),
     BAD_MONTH_REASON,
     BAD_DAY_REASON,
     noDayReason("02", "29", bands.last),
@@ -392,7 +403,7 @@ export interface ValueReading {
  * the reason:
  *
  * 1. `YY` is not one of the hundred two-digit strings.
- * 2. `YY` falls in the run the library refuses.
+ * 2. `YY` falls in a run the library refuses.
  * 3. `YY MM 01` is refused, so MM is wrong.
  * 4. `YY 01 DD` is refused, so DD is wrong.
  * 5. Otherwise the day does not exist in that month of the year the library gave.
@@ -453,7 +464,7 @@ export function readValueDate(
   if (band < 0) return refused(NOT_DIGITS_REASON);
   const found = bands.list[band] as Band;
   if (found.firstYear === null) {
-    return refused(bandRefusedReason(yy, found, bands.last));
+    return refused(bandRefusedReason(yy, bands));
   }
   const monthDate = lib.parseSwiftDate(`${text.slice(0, 4)}01`);
   if (monthDate === "") return refused(BAD_MONTH_REASON);

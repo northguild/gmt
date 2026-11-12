@@ -456,7 +456,7 @@ skills:
   - name: GMT Finance
     slug: gmt-finance
     domain: industry-layers
-    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded; read, write and check the SWIFT MT value date YYMMDD (parseSwiftDate/formatSwiftDate/isValidSwiftDate) — the century SWIFT's own rule gives, 1980 to 2060, no window
+    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded; read, write and check the SWIFT MT value date YYMMDD (parseSwiftDate/formatSwiftDate/isValidSwiftDate) — the century SWIFT's own rule gives, 2001 to 2060, no window
     type: core
     packages:
       - '@northguild/gmt'
@@ -473,7 +473,7 @@ skills:
       - Tell a real inserted leap second from a second 60 on an ordinary day in a FIX message
       - Check whether a value is a FIX UTCTimestamp
       - Read the six-digit YYMMDD value date of a SWIFT MT field 30 or 32A in the century SWIFT's rule gives, with no window to choose
-      - Write an ISO date as a SWIFT value date, refusing a year outside 1980 to 2060 so it never reads back as another century
+      - Write an ISO date as a SWIFT value date, refusing a year outside 2001 to 2060 so it never reads back as another century
       - Check whether a value is a SWIFT value date
 
   - name: GMT Aviation

@@ -25,10 +25,10 @@ function sweepStrings(tens: number): string[] {
   return all;
 }
 
-// Days from 1980-01-01 to 2060-12-31 by the tens digit of YY, counted with a plain Temporal
-// until(); they sum to 29,586. One test per group keeps each under the 0.3 s test cost.
+// Days from 2001-01-01 to 2060-12-31 by the tens digit of YY, counted with a plain Temporal
+// until(); they sum to 21,915. One test per group keeps each under the 0.3 s test cost.
 const DAYS_BY_YY_TENS = [
-  { tens: 0, days: 3653 },
+  { tens: 0, days: 3287 },
   { tens: 1, days: 3652 },
   { tens: 2, days: 3653 },
   { tens: 3, days: 3652 },
@@ -36,15 +36,13 @@ const DAYS_BY_YY_TENS = [
   { tens: 5, days: 3652 },
   { tens: 6, days: 366 },
   { tens: 7, days: 0 },
-  { tens: 8, days: 3653 },
-  { tens: 9, days: 3652 },
+  { tens: 8, days: 0 },
+  { tens: 9, days: 0 },
 ] as const;
 
 // The same days by decade of calendar year, for the date round trip.
 const DAYS_BY_DECADE = [
-  { first: 1980, last: 1989, days: 3653 },
-  { first: 1990, last: 1999, days: 3652 },
-  { first: 2000, last: 2009, days: 3653 },
+  { first: 2001, last: 2009, days: 3287 },
   { first: 2010, last: 2019, days: 3652 },
   { first: 2020, last: 2029, days: 3653 },
   { first: 2030, last: 2039, days: 3652 },
@@ -54,17 +52,20 @@ const DAYS_BY_DECADE = [
 ] as const;
 
 /**
- * Every expected value is read off SWIFT _Message Format Validation Rules_ (Nov 2006) Part II
- * §4.1 (`<DATE2>` `YYMMDD`) and §4.1.1 (century, 1980 to 2060), never off the code under test.
+ * Every expected value is read off SWIFT _Standards MT General Information_ (Nov 2025) §6.3.1
+ * (`YYMMDD`, 2001 to 2060) and §6.3.6 (`YY` 01 through 60, else T50), never off the code under
+ * test.
  */
 describe("isValidSwiftDate", () => {
   it.each`
     value       | expected
     ${"240615"} | ${true}
-    ${"000229"} | ${true}
+    ${"040229"} | ${true}
+    ${"990615"} | ${false}
+    ${"000229"} | ${false}
     ${"750101"} | ${false}
     ${"241315"} | ${false}
-    ${"850229"} | ${false}
+    ${"050229"} | ${false}
   `("returns $expected for '$value'", ({ value, expected }) => {
     expect(isValidSwiftDate(value)).toBe(expected);
   });
@@ -168,9 +169,9 @@ describe("isValidSwiftDate", () => {
 
     it.each`
       call                            | actual
-      ${"formatSwiftDate 1979-12-31"} | ${() => formatSwiftDate("1979-12-31")}
+      ${"formatSwiftDate 2000-12-31"} | ${() => formatSwiftDate("2000-12-31")}
       ${"formatSwiftDate 2061-01-01"} | ${() => formatSwiftDate("2061-01-01")}
-      ${"parseSwiftDate 791231"}      | ${() => parseSwiftDate("791231")}
+      ${"parseSwiftDate 001231"}      | ${() => parseSwiftDate("001231")}
       ${"parseSwiftDate 610101"}      | ${() => parseSwiftDate("610101")}
     `("returns '' for $call, one step outside the range", ({ actual }) => {
       expect(actual()).toBe("");

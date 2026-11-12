@@ -25,21 +25,22 @@ const write = (text: string) => writeValueDate(lib, text, bands);
 const preset = (id: string) => READ_PRESETS.find((p) => p.id === id)!.text;
 
 describe("deriveBands", () => {
-  it("gives three runs, ordered by year with the refused run last", () => {
+  it("gives three runs, the read run first and the refused runs last, by YY", () => {
     expect(
       bands.list.map((b) => [b.from, b.to, b.firstYear, b.lastYear]),
     ).toEqual([
-      ["80", "99", 1980, 1999],
-      ["00", "60", 2000, 2060],
-      ["61", "79", null, null],
+      ["01", "60", 2001, 2060],
+      ["00", "00", null, null],
+      ["61", "99", null, null],
     ]);
-    expect(rangeText(bands)).toBe("1980–2060");
+    expect(rangeText(bands)).toBe("2001–2060");
   });
 
   it("finds the row of a two-digit year, and none for anything else", () => {
-    expect(bands.indexOf("99")).toBe(0);
-    expect(bands.indexOf("24")).toBe(1);
+    expect(bands.indexOf("24")).toBe(0);
+    expect(bands.indexOf("00")).toBe(1);
     expect(bands.indexOf("75")).toBe(2);
+    expect(bands.indexOf("99")).toBe(2);
     expect(bands.indexOf("２４")).toBe(-1);
     expect(bands.indexOf(" 9")).toBe(-1);
   });
@@ -47,13 +48,14 @@ describe("deriveBands", () => {
 
 describe("readValueDate", () => {
   it.each([
-    ["nineteen", "1999-06-15", null],
     ["twenty", "2024-06-15", null],
-    ["first-year", "1980-01-01", null],
+    ["nineteen", null, T50],
+    ["year-00", null, T50],
+    ["first-year", "2001-01-01", null],
     ["last-day", "2060-12-31", null],
-    ["leap-2000", "2000-02-29", null],
     ["past-limit", null, T50],
-    ["no-leap-1985", null, T50],
+    ["leap-2004", "2004-02-29", null],
+    ["no-leap-2005", null, T50],
     ["whole-subfield", null, null],
   ])("reads the %s preset as the library does", (id, iso, code) => {
     const r = read(preset(id));
@@ -68,12 +70,23 @@ describe("readValueDate", () => {
   });
 
   it("names the band of an accepted year", () => {
-    const r = read("990615");
-    expect(r.year).toBe("1999");
+    const r = read("240615");
+    expect(r.year).toBe("2024");
     expect(r.reason).toBe(
-      "YY 99 falls in 80–99, which SWIFT reads as 1980–1999.",
+      "YY 24 falls in 01–60, which SWIFT reads as 2001–2060.",
     );
     expect(r.band).toBe(0);
+  });
+
+  it("refuses a YY in the century before, naming the YY SWIFT reads", () => {
+    const r = read("990615");
+    expect(r.kind).toBe("refused");
+    expect(r.code).toBe(T50);
+    expect(r.reason).toBe(
+      "SWIFT reads only YY 01–60, as 2001–2060, so YY 99 is refused.",
+    );
+    expect(r.band).toBe(2);
+    expect(read("000101").band).toBe(1);
   });
 
   it("makes no call for an empty box", () => {
@@ -88,12 +101,12 @@ describe("readValueDate", () => {
       "The year digits are not two ASCII digits.",
     );
     expect(read("750101").reason).toBe(
-      "YY 75 falls in 61–79. SWIFT's rule puts that year after 2060, so it is refused.",
+      "SWIFT reads only YY 01–60, as 2001–2060, so YY 75 is refused.",
     );
     expect(read("241301").reason).toBe("MM is not a month, 01 to 12.");
     expect(read("240632").reason).toBe("DD is not a day, 01 to 31.");
-    expect(read("850229").reason).toBe(
-      "29 February does not exist in 1985: 1985 is not a leap year.",
+    expect(read("050229").reason).toBe(
+      "29 February does not exist in 2005: 2005 is not a leap year.",
     );
     expect(read("240431").reason).toBe(
       "Day 31 does not exist in month 04 of 2024.",
@@ -136,13 +149,13 @@ describe("writeValueDate", () => {
     ]);
   });
 
-  it.each(["1979-12-31", "2061-01-01"])(
+  it.each(["2000-12-31", "2061-01-01"])(
     "refuses %s as outside the range, from the bands",
     (text) => {
       const w = write(text);
       expect(w.kind).toBe("refused");
       expect(w.reason).toBe(
-        "Outside 1980–2060, would read back as another year.",
+        "Outside 2001–2060, would read back as another year.",
       );
       expect(w.calls.map((c) => c.fn)).toEqual([
         "formatSwiftDate",
@@ -163,14 +176,14 @@ describe("writeValueDate", () => {
 });
 
 describe("presets and arguments", () => {
-  it("opens on 990615 and 2024-06-15", () => {
-    expect(presetState()).toEqual({ value: "990615", date: "2024-06-15" });
+  it("opens on 240615 and 2024-06-15", () => {
+    expect(presetState()).toEqual({ value: "240615", date: "2024-06-15" });
   });
 
   it("matches a preset by its exact text and anything else is custom", () => {
     expect(matchReadPreset("990615")).toBe("nineteen");
     expect(matchReadPreset("9906150")).toBe(CUSTOM_PRESET_ID);
-    expect(matchWritePreset("1979-12-31")).toBe("before-first");
+    expect(matchWritePreset("2000-12-31")).toBe("before-first");
     expect(matchWritePreset("")).toBe(CUSTOM_PRESET_ID);
   });
 
@@ -186,8 +199,8 @@ describe("presets and arguments", () => {
   });
 
   it("makes a permalink from a preset id or from the text", () => {
-    expect(permalinkOf({ value: "990615", date: "2024-06-15" })).toEqual({
-      preset: "nineteen",
+    expect(permalinkOf({ value: "240615", date: "2024-06-15" })).toEqual({
+      preset: "twenty",
       writePreset: "round-trip",
     });
     expect(permalinkOf({ value: "", date: "x" })).toEqual({

@@ -9,9 +9,9 @@ import {
 const ALL_YY = Array.from({ length: 100 }, (_, i) => i);
 
 describe("SWIFT value-date limits", () => {
-  it("are 1980 and 2060", () => {
+  it("are 2001 and 2060", () => {
     expect([SWIFT_VALUE_DATE_FIRST_YEAR, SWIFT_VALUE_DATE_LAST_YEAR]).toEqual([
-      1980, 2060,
+      2001, 2060,
     ]);
   });
 });
@@ -58,19 +58,19 @@ describe("readSwiftDateFields", () => {
 describe("swiftValueDateYear", () => {
   it.each`
     yy    | expected | clause
-    ${0}  | ${2000}  | ${"ELSE branch"}
-    ${24} | ${2024}  | ${"ELSE branch"}
-    ${60} | ${2060}  | ${"limit included"}
-    ${61} | ${null}  | ${"2061 > 2060, T50"}
-    ${75} | ${null}  | ${"2075, T50"}
-    ${79} | ${null}  | ${"2079, T50 (79 is not > 79)"}
-    ${80} | ${1980}  | ${"THEN branch, limit included"}
-    ${99} | ${1999}  | ${"THEN branch"}
+    ${0}  | ${null}  | ${"00 is outside 01 to 60, T50"}
+    ${1}  | ${2001}  | ${"first YY allowed"}
+    ${24} | ${2024}  | ${"in range"}
+    ${60} | ${2060}  | ${"last YY allowed"}
+    ${61} | ${null}  | ${"61 is outside 01 to 60, T50"}
+    ${79} | ${null}  | ${"T50"}
+    ${80} | ${null}  | ${"T50 (the 2006 rule read it as 1980)"}
+    ${99} | ${null}  | ${"T50 (the 2006 rule read it as 1999)"}
   `("gives $expected for yy $yy ($clause)", ({ yy, expected }) => {
     expect(swiftValueDateYear(yy)).toBe(expected);
   });
 
-  it("is null for exactly yy 61 to 79 and in range otherwise", () => {
+  it("is null for exactly yy 00 and 61 to 99 and in range otherwise", () => {
     const nulls = ALL_YY.filter((yy) => swiftValueDateYear(yy) === null);
     const years = ALL_YY.map((yy) => swiftValueDateYear(yy)).filter(
       (y): y is number => y !== null,
@@ -81,9 +81,9 @@ describe("swiftValueDateYear", () => {
       min: Math.min(...years),
       max: Math.max(...years),
     }).toEqual({
-      nulls: Array.from({ length: 19 }, (_, i) => 61 + i),
-      distinct: 81,
-      min: 1980,
+      nulls: [0, ...Array.from({ length: 39 }, (_, i) => 61 + i)],
+      distinct: 60,
+      min: 2001,
       max: 2060,
     });
   });
@@ -93,8 +93,8 @@ describe("writeSwiftDate", () => {
   it.each`
     year    | month | day   | expected
     ${2024} | ${6}  | ${15} | ${"240615"}
-    ${2000} | ${2}  | ${29} | ${"000229"}
-    ${1980} | ${1}  | ${1}  | ${"800101"}
+    ${2004} | ${2}  | ${29} | ${"040229"}
+    ${2001} | ${1}  | ${1}  | ${"010101"}
     ${2060} | ${12} | ${31} | ${"601231"}
     ${2005} | ${1}  | ${9}  | ${"050109"}
   `(

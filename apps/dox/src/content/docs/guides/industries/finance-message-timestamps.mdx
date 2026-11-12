@@ -269,74 +269,75 @@ know.
 
 ## How a two-digit year gets its century
 
-SWIFT's _Message Format Validation Rules_ (Part II §4.1.1) give the rule. A year above 79 is in
-the 1900s, and any other year is in the 2000s. A year after 2060 is not allowed: SWIFT answers it
-with error code T50. So the rule covers 1980 to 2060 and nothing else. In SWIFT's words:
+SWIFT's _Standards MT General Information_ (Standards MT November 2025) gives the rule. The year
+of a value date is a `YY` from 01 to 60, read as 2001 to 2060. Any other `YY`, `00` and `61` to
+`99` included, is not allowed: SWIFT answers it with error code T50. In SWIFT's words, from §6.3.1
+Dates:
 
-> The valid range of value dates implemented on the SWII system is from 1980 to 2060 (limits
-> included).
+> The six-digit date thus ranges from 2001 to 2060
 
-```text
-IF YY >79 THEN year = "19" || "YY" ELSE year = "20" || "YY" ENDIF
-IF year > 2060 THEN <error:'T50'> ENDIF
-```
+and, for value dates, from §6.3.6 Value Date Ordering:
 
-| Digits | Century | Reads as    |
-| ------ | ------- | ----------- |
-| 80–99  | 19YY    | 1980–1999   |
-| 00–60  | 20YY    | 2000–2060   |
-| 61–79  | none    | refused     |
+> allowed: a year component … 'YY' in the range of 01 through 60
+>
+> not allowed: any 'YY' component outside of this range
+
+| Digits | Century | Reads as  |
+| ------ | ------- | --------- |
+| 01–60  | 20YY    | 2001–2060 |
+| 00     | none    | refused   |
+| 61–99  | none    | refused   |
 
 ```typescript
 import { parseSwiftDate } from "@northguild/gmt/finance/parse";
 
-parseSwiftDate("990615");
-// "1999-06-15"
-parseSwiftDate("000101");
-// "2000-01-01"
+parseSwiftDate("010101");
+// "2001-01-01"
 parseSwiftDate("601231");
 // "2060-12-31"
+parseSwiftDate("000101");
+// "" (YY 00 is not from 01 to 60)
 parseSwiftDate("610101");
 // "" (2061 is after 2060)
-parseSwiftDate("750101");
-// "" (2075 is after 2060)
+parseSwiftDate("990615");
+// "" (YY 99 is not from 01 to 60, so it is not 1999 either)
 ```
 
 The SSIM and EDI parsers ask you for a window. These functions take none, because the standard
 mandates the rule: there is no choice to make. The
 [Aviation guide](/guides/industries/aviation-message-times/) shows the windowed case.
 
-The day must exist in the year the rule gives. `000229` is 29 February 2000, so it is accepted.
-`850229` is 29 February 1985, which was not a leap year, so it is refused.
+The day must exist in the year the rule gives. `040229` is 29 February 2004, so it is accepted.
+`050229` is 29 February 2005, which was not a leap year, so it is refused.
 
 ```typescript
 import { parseSwiftDate } from "@northguild/gmt/finance/parse";
 
-parseSwiftDate("000229");
-// "2000-02-29"
-parseSwiftDate("840229");
-// "1984-02-29"
-parseSwiftDate("850229");
+parseSwiftDate("040229");
+// "2004-02-29"
+parseSwiftDate("600229");
+// "2060-02-29"
+parseSwiftDate("050229");
 // ""
 ```
 
 ## Writing a value date, and why the round trip refuses some years
 
 [`formatSwiftDate(value)`](/reference/finance/format/formatSwiftDate) takes an ISO date, such as
-`2024-06-15`, and returns the six digits. It refuses a year the rule cannot read back. `1979-12-31`
-and `2061-01-01` are outside 1980 to 2060. `1924-06-15` is the subtle one: its last two digits,
-`24`, would read back as 2024, a century later than the date you wrote. So it returns `""`.
+`2024-06-15`, and returns the six digits. It refuses a year the rule cannot read back. `2000-12-31`
+and `2061-01-01` are outside 2001 to 2060. `1924-06-15` shows why the range matters: its last two
+digits, `24`, would read back as 2024, a century later than the date you wrote. So it returns `""`.
 
 ```typescript
 import { formatSwiftDate } from "@northguild/gmt/finance/format";
 
 formatSwiftDate("2024-06-15");
 // "240615"
-formatSwiftDate("1980-01-01");
-// "800101"
+formatSwiftDate("2001-01-01");
+// "010101"
 formatSwiftDate("2060-12-31");
 // "601231"
-formatSwiftDate("1979-12-31");
+formatSwiftDate("2000-12-31");
 // ""
 formatSwiftDate("2061-01-01");
 // ""
@@ -358,7 +359,7 @@ import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
 
 isValidSwiftDate("240615");
 // true
-isValidSwiftDate("850229");
+isValidSwiftDate("050229");
 // false
 isValidSwiftDate("750101");
 // false
@@ -380,8 +381,9 @@ isValidSwiftDate("750101");
 - ITU-R Recommendation TF.460-6: the inserted second is the one before a positive step, and it is
   written 23h 59m 60s.
 - IERS, `Leap_Second.dat` and Bulletin C 72, for the 27 leap seconds.
-- SWIFT, _Message Format Validation Rules_ (November 2006), Part II §4.1 Date and §4.1.1 Value
-  Date: the `YYMMDD` form, the century rule, the 1980 to 2060 range and error code T50.
+- SWIFT, _Standards MT General Information_ (Standards MT November 2025, 18 July 2025), §6.3.1
+  Dates (p. 44) and §6.3.6 Value Date Ordering (p. 59): the `YYMMDD` form, the 2001 to 2060
+  range, `YY` from 01 to 60 and error code T50. It needs no login:
+  [usgi_20250718.pdf](https://www2.swift.com/knowledgecentre/rest/v1/publications/usgi_20250718/2.0/usgi_20250718.pdf).
 - SWIFT Standards MT (2015 User Handbook), MT 103 field 32A: the format `6!n3!a15d` and "Date must
-  be a valid date expressed as YYMMDD".
-- Both SWIFT sources are in SWIFT's Knowledge Centre, which needs a login.
+  be a valid date expressed as YYMMDD". It is in SWIFT's Knowledge Centre, which needs a login.

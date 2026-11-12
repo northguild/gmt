@@ -78,6 +78,7 @@ import {
   WIDTH_BANDS,
   WRITE_MAX_CHARS,
   WRITE_PRESETS,
+  bandText,
   deriveBands,
   isSeeded,
   matchReadPreset,
@@ -108,16 +109,18 @@ const ISO_SAMPLE = "2060-12-31";
 const YEAR_SAMPLE = "2060";
 const CODE_TEXT = `Error code ${T50}`;
 
-/** MFVR §4.1.1, quoted; the site never runs it. */
-const RULE_QUOTE = `IF YY >79
-THEN year = "19" || "YY"
-ELSE year = "20" || "YY"
-ENDIF
-IF year > 2060
-THEN <error:'T50'>
-ENDIF`;
+/** Standards MT General Information (2025) §6.3.1 and §6.3.6, quoted; the site never runs it. */
+const RULE_QUOTE = `§6.3.1 Dates
+The six-digit date thus ranges
+from 2001 to 2060
+
+§6.3.6 Value Date Ordering
+allowed: a year component …
+'YY' in the range of 01 through 60
+not allowed: any 'YY' component
+outside of this range`;
 const RULE_CITATION =
-  "Quoted from the SWIFT Message Format Validation Rules, Nov 2006, Part II §4.1.1. The site never runs this: every row above is a library answer.";
+  "Quoted from SWIFT Standards MT General Information, Standards MT November 2025, §6.3.1 (p. 44) and §6.3.6 (p. 59), which gives error code T50. The site never runs this: every row above is a library answer.";
 
 /** The links under the calls. */
 const LINKS = [
@@ -250,7 +253,7 @@ function codeChip(code: string | null): SafeHtml {
 /** The band table's rows: the library's bands, or dashes before the library has loaded. */
 function bandsOf(bands: Bands | null, current: number): SafeHtml {
   const rows = (bands?.list ?? WIDTH_BANDS.list).map((b) => ({
-    yy: bands === null ? "–" : `${b.from}–${b.to}`,
+    yy: bands === null ? "–" : bandText(b),
     year:
       bands === null
         ? "–"
@@ -374,7 +377,7 @@ export function renderSwiftValueDateReaderTemplate(
     { id: id("century"), heading: "2. The century SWIFT states", level: 4 },
     html`<p class="${styles.note}">Each row groups the two-digit years the library reads alike. The row for the year you typed is marked.</p><div id="${id("bands")}">${bandsOf(null, -1)}</div>${codeFrame(
       {
-        label: "SWIFT year rule, MFVR 4.1.1",
+        label: "SWIFT year rule, General Information 2025",
         copyLabel: "Copy the SWIFT year rule",
         copyText: RULE_QUOTE,
         code: html`${RULE_QUOTE}`,

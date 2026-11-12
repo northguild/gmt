@@ -82,15 +82,15 @@ message: `SendingTime`, `TransactTime` and every other field of the
    parser returns `null` for them.
 6. **A SWIFT value date is `YYMMDD`, and SWIFT chooses the century.** For
    field 32A of MT 910, and fields 30 and 32A of category 1 and 2 messages
-   other than n92, n95 and n96, a `YY` above 79 is 19`YY` and the rest is
-   20`YY`; a year after 2060 is refused (error T50). The range is 1980 to 2060,
-   limits included. There are no options and no window to pass. The day is
-   checked in the year the rule gives, so `000229` is real and `850229` is not.
+   other than n92, n95 and n96, a `YY` from 01 to 60 is 20`YY`, 2001 to 2060;
+   any other `YY`, `00` and `61` to `99` included, is refused (error T50).
+   There are no options and no window to pass. The day is checked in the year
+   the rule gives, so `040229` is real and `050229` is not.
    ```typescript
    parseSwiftDate("240615"); // "2024-06-15"
-   parseSwiftDate("990615"); // "1999-06-15"
-   parseSwiftDate("000229"); // "2000-02-29"
-   parseSwiftDate("750101"); // "": 2075 is past 2060
+   parseSwiftDate("990615"); // "": YY 99 is not from 01 to 60
+   parseSwiftDate("040229"); // "2004-02-29"
+   parseSwiftDate("750101"); // "": YY 75 is not from 01 to 60
    formatSwiftDate("2024-06-15"); // "240615"
    formatSwiftDate("1924-06-15"); // "": its digits would read back as 2024
    isValidSwiftDate("750101"); // false

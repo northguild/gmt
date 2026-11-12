@@ -2346,20 +2346,20 @@
         "result": "\"240615\""
       },
       {
-        "call": "formatSwiftDate(\"1980-01-01\")",
-        "result": "\"800101\""
+        "call": "formatSwiftDate(\"2001-01-01\")",
+        "result": "\"010101\""
       },
       {
         "call": "formatSwiftDate(\"2060-12-31\")",
         "result": "\"601231\""
       },
       {
-        "call": "formatSwiftDate(\"2000-02-29\")",
-        "result": "\"000229\""
+        "call": "formatSwiftDate(\"2004-02-29\")",
+        "result": "\"040229\""
       },
       {
-        "call": "formatSwiftDate(\"1979-12-31\")",
-        "result": "\"\" (before 1980)"
+        "call": "formatSwiftDate(\"2000-12-31\")",
+        "result": "\"\" (before 2001)"
       },
       {
         "call": "formatSwiftDate(\"2061-01-01\")",
@@ -2428,24 +2428,24 @@
         "result": "\"2024-06-15\""
       },
       {
-        "call": "parseSwiftDate(\"990615\")",
-        "result": "\"1999-06-15\""
-      },
-      {
         "call": "parseSwiftDate(\"601231\")",
         "result": "\"2060-12-31\""
       },
       {
+        "call": "parseSwiftDate(\"990615\")",
+        "result": "\"\" (YY 99 is outside 01 to 60: SWIFT error T50)"
+      },
+      {
         "call": "parseSwiftDate(\"750101\")",
-        "result": "\"\" (2075 is after 2060: SWIFT error T50)"
+        "result": "\"\" (YY 75 is outside 01 to 60: SWIFT error T50)"
       },
       {
-        "call": "parseSwiftDate(\"000229\")",
-        "result": "\"2000-02-29\""
+        "call": "parseSwiftDate(\"040229\")",
+        "result": "\"2004-02-29\""
       },
       {
-        "call": "parseSwiftDate(\"850229\")",
-        "result": "\"\" (1985 is not a leap year)"
+        "call": "parseSwiftDate(\"050229\")",
+        "result": "\"\" (2005 is not a leap year)"
       },
       {
         "call": "parseSwiftDate(\"240615EUR1000,00\")",
@@ -2506,11 +2506,15 @@
         "result": "true"
       },
       {
-        "call": "isValidSwiftDate(\"000229\")",
+        "call": "isValidSwiftDate(\"040229\")",
         "result": "true"
       },
       {
-        "call": "isValidSwiftDate(\"750101\")",
+        "call": "isValidSwiftDate(\"990615\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSwiftDate(\"000229\")",
         "result": "false"
       },
       {
@@ -2518,7 +2522,7 @@
         "result": "false"
       },
       {
-        "call": "isValidSwiftDate(\"850229\")",
+        "call": "isValidSwiftDate(\"050229\")",
         "result": "false"
       }
     ]

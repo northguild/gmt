@@ -68,11 +68,11 @@ async function paste(w: RenderedWidget, box: HTMLElement, value: string) {
 }
 
 describe("opening", () => {
-  it("opens on 990615, read as 1999", async () => {
+  it("opens on 240615, read as 2024", async () => {
     await open();
-    expect(readPreset()).toHaveValue("nineteen");
-    expect(valueBox()).toHaveValue("990615");
-    expect(many("1999-06-15")).toBeGreaterThan(0);
+    expect(readPreset()).toHaveValue("twenty");
+    expect(valueBox()).toHaveValue("240615");
+    expect(many("2024-06-15")).toBeGreaterThan(0);
     expect(dateBox()).toHaveValue("2024-06-15");
     expect(writePreset()).toHaveValue("round-trip");
     expect(useRead()).toBeEnabled();
@@ -110,16 +110,17 @@ describe("opening", () => {
 });
 
 describe("reading a value date", () => {
-  it("reads a 20YY date and moves the marked band", async () => {
+  it("marks the band of the year read, and moves it", async () => {
     const w = await open();
-    await w.user.selectOptions(readPreset(), "twenty");
-    expect(many("2024-06-15")).toBeGreaterThan(0);
-    const rows = screen.getAllByRole("row");
-    const marked = rows.filter(
-      (r) => r.getAttribute("aria-current") === "true",
-    );
-    expect(marked).toHaveLength(1);
-    expect(marked[0]).toHaveTextContent("2000–2060");
+    const marked = () =>
+      screen
+        .getAllByRole("row")
+        .filter((r) => r.getAttribute("aria-current") === "true");
+    expect(marked()).toHaveLength(1);
+    expect(marked()[0]).toHaveTextContent("2001–2060");
+    await w.user.selectOptions(readPreset(), "nineteen");
+    expect(marked()).toHaveLength(1);
+    expect(marked()[0]).toHaveTextContent("61–99");
   });
 
   it("shows T50 for a refused six-character text, and the band that names it", async () => {
@@ -127,14 +128,14 @@ describe("reading a value date", () => {
     await w.user.selectOptions(readPreset(), "past-limit");
     expect(many("⟨ NO SIGNAL ⟩")).toBeGreaterThan(0);
     expect(many("Error code T50")).toBe(1);
-    expect(many(/falls in 61–79/)).toBeGreaterThan(0);
+    expect(many(/SWIFT reads only YY 01–60/)).toBeGreaterThan(0);
     expect(useRead()).toBeDisabled();
   });
 
   it("names the year the library gave for a refused 29 February", async () => {
     const w = await open();
-    await w.user.selectOptions(readPreset(), "no-leap-1985");
-    expect(many(/29 February does not exist in 1985/)).toBeGreaterThan(0);
+    await w.user.selectOptions(readPreset(), "no-leap-2005");
+    expect(many(/29 February does not exist in 2005/)).toBeGreaterThan(0);
   });
 
   it("shows no code and marks no band for a whole subfield", async () => {
@@ -179,7 +180,7 @@ describe("writing a value date", () => {
     await w.user.selectOptions(writePreset(), "before-first");
     expect(many("Refused")).toBeGreaterThan(0);
     expect(
-      many("Outside 1980–2060, would read back as another year."),
+      many("Outside 2001–2060, would read back as another year."),
     ).toBeGreaterThan(0);
   });
 
@@ -205,8 +206,8 @@ describe("the call frames", () => {
     const [readFrame, writeFrame] = screen.getAllByRole("group", {
       name: "Calls made",
     });
-    expect(readFrame).toHaveTextContent('parseSwiftDate("990615")');
-    expect(readFrame).toHaveTextContent('isValidSwiftDate("990615")');
+    expect(readFrame).toHaveTextContent('parseSwiftDate("240615")');
+    expect(readFrame).toHaveTextContent('isValidSwiftDate("240615")');
     expect(writeFrame).toHaveTextContent('formatSwiftDate("2024-06-15")');
   });
 });

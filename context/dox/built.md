@@ -2771,18 +2771,20 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `plain/validate` for `isValidDate` only, as Core does. Finance `drawsOn` stays `[]`.
   - **The site holds no SWIFT rule, range or band edge.** `deriveBands` calls
     `parseSwiftDate(YY + "0101")` for all 100 values of `YY` at mount and groups equal outcomes
-    into three runs (19xx, 20xx, refused). The first and last years shown are the range. The
-    rule's pseudo-code in §4.1.1 is a quoted citation, never executed. A change to the range moves
-    the table and `swift-value-date-reader-prose.test.ts` holds the page's prose to the library.
-  - **T50 follows any refused text of exactly six characters** (MFVR §4.1: T50 follows any
-    `<DATE2>` format error). A text of another length shows no code, because it never reached
-    the date check.
+    into runs: `01–60` read as 2001–2060, then the refused `00` and `61–99`, by `YY`. The first
+    and last years shown are the range. The rule's text from §6.3.1 and §6.3.6 of SWIFT's
+    Standards MT General Information (November 2025) is a quoted citation, never executed. A
+    change to the range moves the table, and `swift-value-date-reader-prose.test.ts` holds the
+    page's prose to the library.
+  - **T50 follows any refused text of exactly six characters** (MT 103 field 32A and General
+    Information §6.3.6: T50 follows any `<DATE2>` date error). A text of another length shows no
+    code, because it never reached the date check.
   - **A refusal names the band, not a year the site computed.** The reason is the first probe
-    the library accepts, in this order: the `YY` is not two ASCII digits, the `YY` is in the
+    the library accepts, in this order: the `YY` is not two ASCII digits, the `YY` is in a
     refused band, the month is not 01 to 12 (`YYMM01`), the day is not 01 to 31 (`YY01DD`),
     otherwise the day does not exist in that month. A refused 29 February names the year the
     library gave for `YY + "0201"`. The site does no leap-year arithmetic.
-  - **A refused write** reads "outside 1980 to 2060, would read back as another year", with the
+  - **A refused write** reads "outside 2001 to 2060, would read back as another year", with the
     range from the bands. The write box takes what `isValidDate` takes; a date-time is told to
     take the date first. The concrete `1924` case appears only as a pasted call in the guide and
     the mistakes page.
@@ -2793,7 +2795,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     An empty box reads "nothing typed" and makes no call. NO SIGNAL (amber) shows only for a
     library refusal.
   - **Permalink `swiftdate`** at `/tools/swift-value-date-reader/`: `value` and `date`, or
-    `preset` and `writePreset` while a box matches a preset. Reading opens on `990615` and
+    `preset` and `writePreset` while a box matches a preset. Reading opens on `240615` and
     writing on `2024-06-15`. The chat tool is `showSwiftValueDateReader` (`value` up to 16
     characters, `date` up to 32, at least one required), appended to `DOX_TOOL_DOCS`, with a
     Finance starter on `350615`.

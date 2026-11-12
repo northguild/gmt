@@ -19,19 +19,19 @@ describe("the keypoint", () => {
   const bands = deriveBands(realFinanceLib);
 
   it("states the years the bands give", () => {
-    expect(parseSwiftDate("990615").startsWith("1999")).toBe(true);
     expect(parseSwiftDate("240615").startsWith("2024")).toBe(true);
+    expect(parseSwiftDate("990615")).toBe("");
     expect(parseSwiftDate("750101")).toBe("");
-    expect(page).toContain(
-      "`99` is 1999 and `24` is 2024, and a `75` is refused",
-    );
+    expect(page).toContain("`24` is 2024, and a `99` or a `75` is refused");
   });
 
-  it("puts the refused years past the last year the bands read", () => {
-    const refused = bands.list.find((b) => b.firstYear === null)!;
-    expect(refused.from <= "75" && "75" <= refused.to).toBe(true);
-    expect(page).toContain("past 2060");
-    expect(bands.last).toBe(2060);
+  it("names the years the bands read, and refuses 99 and 75 outside them", () => {
+    const refused = bands.list.filter((b) => b.firstYear === null);
+    for (const yy of ["99", "75"]) {
+      expect(refused.some((b) => b.from <= yy && yy <= b.to)).toBe(true);
+    }
+    expect(page).toContain("only 2001 to 2060");
+    expect([bands.first, bands.last]).toEqual([2001, 2060]);
   });
 });
 

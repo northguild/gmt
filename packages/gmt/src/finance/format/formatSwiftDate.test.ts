@@ -7,8 +7,8 @@ import { isValidDate } from "../../plain/validate/isValidDate";
 import { formatSwiftDate } from "./formatSwiftDate";
 
 /**
- * Every expected value is written by hand from SWIFT Message Format Validation Rules (Nov 2006)
- * Part II §4.1 (`YYMMDD`, zero-padded) and §4.1.1 (a value date lies in 1980 to 2060).
+ * Every expected value is written by hand from SWIFT Standards MT General Information (Nov 2025)
+ * §6.3.1 (`YYMMDD`, zero-padded; a value date lies in 2001 to 2060) and §6.3.6 (`YY` 01 to 60).
  */
 describe("formatSwiftDate", () => {
   afterEach(() => {
@@ -18,12 +18,9 @@ describe("formatSwiftDate", () => {
   it.each`
     value                         | expected    | why
     ${"2024-06-15"}               | ${"240615"} | ${"an ordinary date"}
-    ${"1980-01-01"}               | ${"800101"} | ${"the lower limit"}
+    ${"2001-01-01"}               | ${"010101"} | ${"the lower limit"}
     ${"2060-12-31"}               | ${"601231"} | ${"the upper limit"}
-    ${"1999-12-31"}               | ${"991231"} | ${"the last of the 19YY years"}
-    ${"2000-01-01"}               | ${"000101"} | ${"year 00"}
-    ${"2000-02-29"}               | ${"000229"} | ${"a leap day in 2000"}
-    ${"1980-02-29"}               | ${"800229"} | ${"a leap day at the lower limit"}
+    ${"2004-02-29"}               | ${"040229"} | ${"the first leap day in range"}
     ${"2060-02-29"}               | ${"600229"} | ${"a leap day at the upper limit"}
     ${"2005-01-09"}               | ${"050109"} | ${"month, day and year are padded"}
     ${"2024-06-15[u-ca=iso8601]"} | ${"240615"} | ${"the ISO calendar annotation, as isValidDate"}
@@ -33,7 +30,11 @@ describe("formatSwiftDate", () => {
 
   it.each`
     value                                       | reason
-    ${"1979-12-31"}                             | ${"before 1980"}
+    ${"2000-12-31"}                             | ${"before 2001: YY 00 is T50"}
+    ${"2000-01-01"}                             | ${"before 2001: YY 00 is T50"}
+    ${"2000-02-29"}                             | ${"before 2001, though a leap day"}
+    ${"1999-12-31"}                             | ${"before 2001: YY 99 is T50"}
+    ${"1980-01-01"}                             | ${"before 2001: the 2006 rule's first year"}
     ${"2061-01-01"}                             | ${"after 2060"}
     ${"2079-06-15"}                             | ${"would read back as T50"}
     ${"1924-06-15"}                             | ${"would read back as 2024"}
