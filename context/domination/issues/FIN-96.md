@@ -132,10 +132,8 @@ needs a login. The General Information is a public PDF.
   and/or 32A, except n92, n95 and n96) and sends other six-digit dates, such as MT 700 field 31D,
   to `parseDateWithPattern`.
 - **Edition.** The rule is cited from _Standards MT General Information_, Standards MT November
-  2025 (§6.3.1, §6.3.6). It replaced the November 2006 _Message Format Validation Rules_, whose
-  1980 to 2060 range the story first followed, after craig-o-curtis's review of #503. A later
-  Standards Release that moves the range changes the two constants in `internal/swiftDate.ts` and
-  the rows that pin them.
+  2025 (§6.3.1, §6.3.6). A later Standards Release that moves the range changes the two
+  constants in `internal/swiftDate.ts` and the rows that pin them.
 - **The century rule is SWIFT's §6.3.6 rule coded literally**, not `internal/twoDigitYear.ts`.
   `YY` from 01 to 60 is 20`YY`, and any other `YY` is refused (T50). GMT takes no window,
   as `parseRfc2822` and `parseHttpDate` take none.
