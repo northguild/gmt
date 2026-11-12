@@ -77,6 +77,8 @@ import {
   showSsimDateReaderInput,
   showJulianDayCounterInput,
   showDoublePrecisionMeterInput,
+  showCcsdsTimeCodeDecoderInput,
+  showCodeBDayRulerInput,
   showSwiftValueDateReaderInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
@@ -686,6 +688,16 @@ export function buildWorkerTools(
       description: docFor("showDoublePrecisionMeter"),
       inputSchema: showDoublePrecisionMeterInput,
       execute: () => accept("double-precision-meter"),
+    }),
+    showCcsdsTimeCodeDecoder: tool({
+      description: docFor("showCcsdsTimeCodeDecoder"),
+      inputSchema: showCcsdsTimeCodeDecoderInput,
+      execute: () => accept("ccsds-time-code-decoder"),
+    }),
+    showCodeBDayRuler: tool({
+      description: docFor("showCodeBDayRuler"),
+      inputSchema: showCodeBDayRulerInput,
+      execute: () => accept("code-b-day-ruler"),
     }),
   };
 

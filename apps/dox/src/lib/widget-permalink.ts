@@ -84,6 +84,8 @@ export type WidgetKind =
   | "ttstack"
   | "jdcount"
   | "dpmeter"
+  | "ccsds"
+  | "dayruler"
   | "swiftdate";
 
 /**
@@ -155,6 +157,8 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
   dpmeter: "/tools/double-precision-meter/",
+  ccsds: "/tools/ccsds-time-code-decoder/",
+  dayruler: "/tools/code-b-day-ruler/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -260,6 +264,10 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   fixstamp: new Set(["stamp", "write"]),
   // A cleared value, window or date is a state of its own: a blank window is the no-date reason, and the link must open on it.
   ssim: new Set(["value", "window", "date"]),
+  // A cleared code or instant is the empty state: the link must open cleared, not on the default.
+  ccsds: new Set(["code", "instant"]),
+  // A cleared year is the empty state: the link must open on the empty year, not the default.
+  dayruler: new Set(["year", "compare"]),
   // A cleared value or date is a real answer: the link must open cleared, not on the default preset.
   swiftdate: new Set(["value", "date"]),
 };

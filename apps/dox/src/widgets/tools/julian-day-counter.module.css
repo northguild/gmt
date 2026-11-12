@@ -275,6 +275,18 @@
   .forms th::before {
     color: CanvasText;
   }
+
+  /* The ruler tells its marks apart by shape (a triangle, a bar, a thin bar, a capped line), so
+     every mark is CanvasText and the instant's cursor is Highlight, which still reads against
+     the lanes. These beat the timeline kit's own forced-colours rules by specificity. */
+  .seam [role="img"][data-series] {
+    border-color: CanvasText;
+    background: CanvasText;
+  }
+
+  .seam [role="img"][data-series="4"] {
+    background: Highlight;
+  }
 }
 
 @media (prefers-contrast: more) {

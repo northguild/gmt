@@ -59,6 +59,18 @@
     --series: var(--gmt-series-4);
   }
 
+  /* A hatched mark: diagonal stripes in the series colour over the same tint, so it reads
+     apart from a solid neighbour without colour. */
+  &[data-pattern="hatch"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--series) 0,
+      var(--series) 2px,
+      transparent 2px,
+      transparent 7px
+    );
+  }
+
   &[data-kind="point"] {
     inline-size: 0.5rem;
     inset-inline-start: calc(var(--gmt-at) * 100% - 0.25rem);
@@ -93,6 +105,20 @@
   white-space: nowrap;
 }
 
+/* A tick inside a lane is a label on an opaque plate (a month name on its band). */
+.track > .tick {
+  inset-block-start: 0.25rem;
+  padding-inline: 0.25rem;
+  background: var(--gmt-surface-widget);
+  line-height: 1.25;
+  pointer-events: none;
+
+  /* Below this width a band is narrower than its label's plate, so the label goes. */
+  @container (inline-size < 40rem) {
+    display: none;
+  }
+}
+
 @media (forced-colors: active) {
   .track {
     border-color: CanvasText;
@@ -114,6 +140,17 @@
     &[data-series="3"] {
       border-style: double;
     }
+
+    /* Forced colours drop the gradient, so a hatched mark keeps its difference as a dotted edge. */
+    &[data-pattern="hatch"] {
+      background-image: none;
+      border-style: dotted;
+    }
+  }
+
+  .track > .tick {
+    background: Canvas;
+    color: CanvasText;
   }
 
   .label,

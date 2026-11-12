@@ -378,7 +378,7 @@ skills:
   - name: GMT Integration
     slug: gmt-integration
     domain: integration
-    description: Integrate gmt with application frameworks — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI/toTai64n/fromTai64n), and lint package selection (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss
+    description: Integrate gmt with application frameworks — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI/toTai64n/fromTai64n/toTT/fromTT/toTCG/fromTCG/tcgMinusTt), Julian Date, Modified Julian Date and J2000 seconds, CCSDS ASCII time codes A and B (parseCcsdsAsciiA/parseCcsdsAsciiB/formatCcsdsAsciiA/formatCcsdsAsciiB), and lint package selection (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss
     type: composition
     packages:
       - '@northguild/gmt'
@@ -407,6 +407,10 @@ skills:
       - fromModifiedJulianDate
       - toJ2000Seconds
       - fromJ2000Seconds
+      - parseCcsdsAsciiA
+      - parseCcsdsAsciiB
+      - formatCcsdsAsciiA
+      - formatCcsdsAsciiB
     tasks:
       - Create stable cache keys from date values
       - Use with routers and query params
@@ -425,6 +429,7 @@ skills:
       - Read and write the TAI64N labels in qmail, daemontools and s6 logs (toTai64n, fromTai64n)
       - Convert between UTC and Terrestrial Time or Geocentric Coordinate Time, and read the TCG − TT gap (toTT, fromTT, toTCG, fromTCG, tcgMinusTt)
       - Convert between a UTC instant and a two-part Julian Date, a single Julian Date, a Modified Julian Date or seconds since J2000.0, on UTC, TAI, TT or TCG
+      - Read and write the CCSDS ASCII time codes, A by calendar date and B by day of year, with a chosen number of fractional digits (parseCcsdsAsciiA, parseCcsdsAsciiB, formatCcsdsAsciiA, formatCcsdsAsciiB)
       - Choose ESLint config
       - Choose Biome config
       - Choose Oxlint config

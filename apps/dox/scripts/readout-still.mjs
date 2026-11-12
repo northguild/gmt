@@ -83,6 +83,8 @@
  *                 strings to type (a text box) or `"options"` to choose every
  *                 option in turn (a select). Each value is set, and every box
  *                 must stay where it was; the first value is put back after;
+ *                 An entry with `chips: true` names a group of radio chips (a
+ *                 `group` role named by its legend) and clicks each radio in turn;
  *   value         per control, the role and name of the field the handle edits.
  *                 A ledger handle's `aria-valuenow` is its place on a canvas that
  *                 is refitted after each key, so the same number can mean
@@ -624,6 +626,83 @@ const TOOLS = [
     // wrapper is left out, and the hold that reserves the space is measured.
     drawn: ["hold"],
     textBoxes: ["instant"],
+  },
+  {
+    // SPA-52. No handle: the reader types a code or an instant, picks a preset or clicks a digit chip.
+    // The first preset reads a Code B and the second is refused, so each value is typed from both.
+    slug: "ccsds-time-code-decoder",
+    root: '[data-widget="ccsds-time-code-decoder"]',
+    presets: ["leap-2016-b", "minutes-only"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "CCSDS ASCII time code",
+        values: [
+          "2016-366T23:59:60.5Z",
+          "1988-01-18T17:20:43.123456Z",
+          "1988-018T17:20:43.123456Z",
+          "2024-001T00:00:00",
+          "2024-06-15T10:30:00.123456789012Z",
+          "2017-365T23:59:60Z",
+          "2023-366T00:00:00Z",
+          "2024-06-15T10:30Z",
+          "2024-06-15t10:30:00z",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Instant",
+        values: [
+          "2026-12-31T23:59:59.9999999Z",
+          "2016-12-31T23:59:60.999999999Z",
+          "2024-06-15T16:30:00.123456789+02:00",
+          "2024-06-15T14:30:00",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      { role: "group", name: "Fraction digits", chips: true },
+      { role: "combobox", name: "Instant preset", values: "options" },
+    ],
+    track: null,
+    // It draws no chart, so it has no frame part.
+    frame: false,
+    scope: "widget",
+    // The figure, the calls, the outputs, the verdict and the notes are holds: their live
+    // wrapper is left out, and the hold that reserves the space is measured.
+    drawn: ["hold"],
+    textBoxes: ["instant"],
+  },
+  {
+    // SPA-52. The day slider by keyboard and by pointer, and each year typed from every kind of
+    // value: a leap year, a common year, a century year, one the library refuses, and blank. The
+    // lanes' marks and the cursor move by design, so each lane is `drawn`; the two readouts, the
+    // comparison line and every hold keep their boxes.
+    slug: "code-b-day-ruler",
+    root: '[data-widget="code-b-day-ruler"]',
+    presets: ["after-leap-day", "day-366", "century"],
+    controls: [{ role: "slider", name: "Day of year" }],
+    entries: [
+      {
+        role: "spinbutton",
+        name: "Year",
+        values: ["2016", "2017", "2100", "10000", "1", ""],
+      },
+      {
+        role: "spinbutton",
+        name: "Compare with",
+        values: ["2016", "2017", "2100", "10000", "1", ""],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["drawn", "hold"],
+    riders: true,
+    textBoxes: ["codeframe"],
   },
   {
     // FIN-96. No handle: the reader types a value date or an ISO date, or picks a preset for each.
@@ -1214,6 +1293,46 @@ async function run() {
               (await ctl.count()) > 0 && (await ctl.first().isVisible());
             if (!visible) {
               fail(id, "the field is not on the page");
+              continue;
+            }
+            if (entry.chips === true) {
+              // A group of radio chips: click each in turn, then put the first back.
+              const radios = ctl.first().getByRole("radio");
+              const names = await radios.evaluateAll((els) =>
+                els.map((el) => el.value),
+              );
+              const base = await snapshot(page, ctl, tool);
+              for (const value of names) {
+                await ctl
+                  .first()
+                  .locator(`input[value="${value}"]`)
+                  .evaluate((el) => el.click());
+                await page.waitForTimeout(60);
+                await settled(page, tool.root);
+                for (const p of diffSnapshots(
+                  base,
+                  await snapshot(page, ctl, tool),
+                  false,
+                )) {
+                  result.problems.push(`${JSON.stringify(value)}: ${p}`);
+                }
+                result.keyboard++;
+              }
+              await ctl
+                .first()
+                .locator(`input[value="${names[0]}"]`)
+                .evaluate((el) => el.click());
+              await settled(page, tool.root);
+              const ok = result.problems.length === 0;
+              if (!ok) failures++;
+              summary.push({ id, ...result, ok });
+              recordDragFindings(result, controlLabel(entry));
+              console.log(
+                `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} values` +
+                  (ok ? "" : `, ${result.problems.length} problem(s)`),
+              );
+              for (const p of result.problems.slice(0, 6))
+                console.log(`       ${p}`);
               continue;
             }
             const isSelect = await ctl.evaluate(

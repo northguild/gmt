@@ -122,7 +122,7 @@ The same three rules extend to `fromTAI`, `fromTT` and `fromTCG` (`packages/gmt/
 2. The extracted fields are always handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A second of 60 never reaches Temporal: it is refused for every token but `GLO`, and for `GLO` it is passed as 59 with a flag, and kept only for one of the 27 inserted leap seconds.
 3. The try-catch and sentinel-return rules above are unchanged.
 
-The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual parsing: GMT's instant grammar with second 60 (`internal/utcReading.ts`) checks the shape, and `Temporal.Instant.from` reads it with the specification's clamp to 59. Only the `timescale/` and `gnss/` converters and `finance/`'s FIX functions (`parseFixUtcTimestamp`, `formatFixUtcTimestamp`, `isValidFixUtcTimestamp`) do this, and only for one of the 27 inserted leap seconds. `formatFixUtcTimestamp` accepts a second-60 instant, and `parseFixUtcTimestamp` returns one. `isValidFixUtcTimestamp` only agrees with the parser. Every other function still rejects a second of 60.
+The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual parsing: GMT's instant grammar with second 60 (`internal/utcReading.ts`) checks the shape, and `Temporal.Instant.from` reads it with the specification's clamp to 59. Only the `timescale/` and `gnss/` converters, `timescale/`'s CCSDS ASCII time codes (`parseCcsdsAsciiA`, `parseCcsdsAsciiB`, `formatCcsdsAsciiA`, `formatCcsdsAsciiB`) and `finance/`'s FIX functions (`parseFixUtcTimestamp`, `formatFixUtcTimestamp`, `isValidFixUtcTimestamp`) do this, and only for one of the 27 inserted leap seconds. `formatFixUtcTimestamp` and `formatCcsdsAsciiA`/`B` accept a second-60 instant, and `parseFixUtcTimestamp` and `parseCcsdsAsciiA`/`B` return one. `isValidFixUtcTimestamp` only agrees with the parser. Every other function still rejects a second of 60.
 
 This prohibition stands for every other function in the library.
 
@@ -161,6 +161,16 @@ The same three rules extend to `fromTai64n` (reader) and `toTai64n` (writer) in 
 3. The try-catch and sentinel-return rules above are unchanged.
 
 This prohibition stands for every other function in the library, `fromTAI` and `toTAI` included.
+
+### Scoped exception: CCSDS ASCII time codes in `timescale/` (SPA-52)
+
+The same three rules extend to `parseCcsdsAsciiA`, `parseCcsdsAsciiB` (`packages/gmt/src/timescale/parse/`), `formatCcsdsAsciiA` and `formatCcsdsAsciiB` (`packages/gmt/src/timescale/format/`). CCSDS 301.0-B-4 §3.5.1 defines ASCII Time Code A (`YYYY-MM-DDThh:mm:ss.d…dZ`) and Code B (`YYYY-DDDThh:mm:ss.d…dZ`, day of year). Both are UTC and the `Z` is optional. No `Temporal.*.from` reads Code A without its `Z`, or with a second of 60, or reads Code B at all, because Temporal does not read an ordinal date. Reading only codes as fine as whole seconds is GMT's own rule. The grammar is fixed:
+
+1. Two regexes, `CCSDS_ASCII_A` and `CCSDS_ASCII_B` in `internal/ccsdsAsciiTime.ts`, matched against the whole input. A function reads the capture groups only and never searches the string.
+2. The year, month and day go to `Temporal.PlainDate.from(…, { overflow: "reject" })`. A Code B day is checked against `daysInYear` and added to 1 January with `PlainDate#add`. The date and time go to `Temporal.PlainDateTime.from(…, { overflow: "reject" })`. A second of 60 goes in as 59, and `taiOfUtc` decides whether it was one of the 27 inserted leap seconds. The writers take the UTC wall clock from `Temporal.Instant` and use `PlainTime#toString` for the time and `dayOfYear` for Code B.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+This prohibition stands for every other function in the library.
 
 ### Scoped exception: human duration strings (CORE-85)
 

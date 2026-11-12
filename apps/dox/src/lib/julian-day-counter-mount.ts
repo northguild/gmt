@@ -89,7 +89,7 @@ export type { JulianDayCounterArgs } from "./julian-day-counter";
 
 const WIDGET_NAME = "julian-day-counter";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 const NO_SIGNAL_PILL = "⟨ NO SIGNAL — invalid input ⟩";
 
 const TABLE_CAPTION = "The same instant in each form";
