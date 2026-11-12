@@ -118,7 +118,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 43  | SPA-49   | Space      | Two-part Julian Date + MJD + J2000                                                                       | —          | #230  | —       | Done        |
 | 44  | SPA-52   | Space      | CCSDS ASCII time codes A and B                                                                           | —          | #233  | Cut     | Done        |
 | 45  | HLTH-93  | Healthcare | HL7 v2 timestamps: `parseHL7`,<br>`formatHL7`, `isValidHL7`                                              | —          | #401  | —       | Done        |
-| 46  | HLTH-94  | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes                          | —          | #402  | —       | Not started |
+| 46  | HLTH-94  | Healthcare | FHIR datetimes: `parseFHIR`, `formatFHIR`,<br>`isValidFHIR`, three FHIR regexes                          | —          | #402  | —       | Done        |
 | 47  | FIN-95   | Finance    | FIX UTC timestamps: parse, format and<br>`isValidFixUtcTimestamp`                                        | —          | #403  | —       | Done        |
 | 48  | FIN-96   | Finance    | SWIFT dates: `parseSwiftDate`,<br>`formatSwiftDate`, `isValidSwiftDate`                                  | —          | #404  | —       | Not started |
 | 49  | AV-97    | Aviation   | SSIM dates: `parseSsimDate`,<br>`formatSsimDate`, `isValidSsimDate`                                      | —          | #405  | —       | Done        |

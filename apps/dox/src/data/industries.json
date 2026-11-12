@@ -55,7 +55,7 @@
   {
     "id": "healthcare",
     "label": "Healthcare",
-    "definition": "Timestamps in HL7 clinical messages: a precision set by the number of digits sent, and a missing offset that means the sender's local time.",
+    "definition": "Timestamps in HL7 and FHIR clinical data: a precision set by what is sent, and a time with no offset, which HL7 reads as local time and FHIR refuses.",
     "icon": "industry-healthcare",
     "guide": "/guides/industries/healthcare-clinical-timestamps/",
     "namespace": "healthcare",

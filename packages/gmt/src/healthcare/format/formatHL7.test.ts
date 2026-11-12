@@ -25,6 +25,10 @@ const WRITTEN = [
   { input: "2024-06", expected: "202406" },
   { input: "2024-06-15", expected: "20240615" },
   { input: "2024-06-15T10", expected: "2024061510" },
+  // ISO 8601-1 §5.3.1.3 reduced precision: an hour with an offset, read by Temporal
+  { input: "2024-06-15T10-05:00", expected: "2024061510-0500" },
+  { input: "2024-06-15T10Z", expected: "2024061510+0000" },
+  { input: "2024-06-15T10Z[Europe/Helsinki]", expected: "2024061513+0300" },
   { input: "0000-01-01", expected: "00000101" },
   {
     input: "2024-06-15T10:30:00+05:30[Asia/Kolkata]",
@@ -193,7 +197,10 @@ const REFUSED: {
   { input: "+010000-01-01", why: "expanded year" },
   { input: "-000001-01-01T00:00:00Z", why: "negative year" },
   { input: "2024-06-15-05:00", why: "day with an offset" },
-  { input: "2024-06-15T10-05:00", why: "hour with an offset" },
+  {
+    input: "2024-06-15T10+00:00[Europe/Helsinki]",
+    why: "hour offset contradicts zone",
+  },
   { input: "2024-06Z", why: "month with an offset" },
   { input: "2024-06-15T10:30:00[Europe/Helsinki]", why: "zone with no offset" },
   { input: "2024-06-15[u-ca=iso8601]", why: "annotated date" },

@@ -1,6 +1,6 @@
 ---
 title: Healthcare mistakes
-description: Common mistakes with HL7 version 2 dates and times, from an offset that is not there to a degree of precision that was dropped, in GMT's healthcare layer.
+description: Common mistakes with HL7 version 2 and FHIR R4 dates and times, from an offset that is not there to a month padded to midnight, in GMT's healthcare layer.
 industries: [healthcare]
 sidebar:
   label: Healthcare
@@ -9,8 +9,9 @@ sidebar:
 The healthcare layer reads the date-times of clinical messages. The mistakes around them are the
 ones a hand-written reader makes: taking a value with no offset for UTC, padding a year to a
 moment, dropping the precision a time stamp carries, treating the null value as an empty field,
-reading midnight as the end of the day before, and rounding when writing. Every output shown here
-is what the code returns.
+reading midnight as the end of the day before, and rounding when writing. FHIR R4 adds its own:
+padding a month to a moment, sending a time with no zone, trusting the published regex, mishandling
+a leap second and comparing offsets as strings. Every output shown here is what the code returns.
 
 import Mistake from "../../../components/Mistake.astro";
 
@@ -105,4 +106,85 @@ parseHL7("198807050000");
 formatHL7("2024-06-15T10:30:45.98765-05:00");
 // "20240615103045.9876-0500"`}
   rightSpecId="formatHL7"
+/>
+
+## FHIR R4
+
+<Mistake
+  severity="high"
+  title="Padding a FHIR month or day to a time"
+  description="A FHIR date can stop at a year, a month or a day. Handing it to new Date, or adding a time to it, states a midnight the sender did not send, and a range check counts the whole period as its first moment. parseFHIR keeps the precision and pads nothing."
+  wrongCode={`new Date("2024-06").toISOString();
+// "2024-06-01T00:00:00.000Z" — a day, a time and a place nobody sent
+new Date("2024-06-15").toISOString();
+// "2024-06-15T00:00:00.000Z" — a time and a place nobody sent`}
+  rightCode={`import { parseFHIR } from "@northguild/gmt/healthcare/parse";
+
+parseFHIR("2024-06");
+// { value: "2024-06", precision: "month", offset: "" }
+parseFHIR("2024-06-15");
+// { value: "2024-06-15", precision: "day", offset: "" }`}
+  rightSpecId="parseFHIR"
+/>
+
+<Mistake
+  severity="critical"
+  title="Accepting a dateTime that has no zone"
+  description="HL7 version 2 leaves a time with no offset to the sender's local time. FHIR does not: if hours and minutes are given, a zone SHALL be given. Appending Z to make it parse invents UTC. parseFHIR returns null, so the sender's error is found and the time is not guessed."
+  wrongCode={`const value = "2024-06-15T10:30:00"; // no zone
+new Date(value + "Z").toISOString();
+// "2024-06-15T10:30:00.000Z" — a place the resource never named`}
+  rightCode={`import { parseFHIR } from "@northguild/gmt/healthcare/parse";
+import { isValidFHIR } from "@northguild/gmt/healthcare/validate";
+
+parseFHIR("2024-06-15T10:30:00");
+// null
+isValidFHIR("2024-06-15T10:30:00", "dateTime");
+// false`}
+  rightSpecId="parseFHIR"
+/>
+
+<Mistake
+  severity="high"
+  title="Treating the R4 regex as validation"
+  description="HL7 calls the published regexes informative, and says they may allow a broader set of values than are valid. They accept 30 February. isValidFHIR reads the value as well as its shape."
+  wrongCode={`import { fhirDateTime } from "@northguild/gmt/regex";
+
+fhirDateTime.test("2024-02-30");
+// true — there is no 30 February`}
+  rightCode={`import { isValidFHIR } from "@northguild/gmt/healthcare/validate";
+
+isValidFHIR("2024-02-30", "dateTime");
+// false`}
+  rightSpecId="isValidFHIR"
+/>
+
+<Mistake
+  severity="medium"
+  title="Refusing a leap second, or accepting it on any day"
+  description="FHIR allows a second of 60, and the platform's date parser does not. A pattern that allows it accepts it on every day, though one was inserted only at the end of a few. isValidFHIR accepts only the inserted second itself (23:59:60 UTC, at any offset spelling), on a day one was inserted, and refuses a second of 60 anywhere else."
+  wrongCode={`new Date("2016-12-31T23:59:60Z").getTime();
+// NaN — refused, though a second was inserted that day`}
+  rightCode={`import { isValidFHIR } from "@northguild/gmt/healthcare/validate";
+
+isValidFHIR("2016-12-31T23:59:60Z", "instant");
+// true
+isValidFHIR("2017-12-31T23:59:60Z", "instant");
+// false`}
+  rightSpecId="isValidFHIR"
+/>
+
+<Mistake
+  severity="medium"
+  title="Comparing Z, +00:00 and -00:00 as strings"
+  description="Z, +00:00 and -00:00 name the same offset. Compared as strings they are three offsets, and one instant reads as three. parseFHIR reads all three as +00:00 and keeps the spelling sent in value."
+  wrongCode={`"2024-06-15T10:30:00Z".slice(19) === "2024-06-15T10:30:00+00:00".slice(19);
+// false — "Z" and "+00:00" are the same offset`}
+  rightCode={`import { parseFHIR } from "@northguild/gmt/healthcare/parse";
+
+parseFHIR("2024-06-15T10:30:00Z")?.offset === parseFHIR("2024-06-15T10:30:00+00:00")?.offset;
+// true
+parseFHIR("2024-06-15T10:30:00-00:00")?.offset;
+// "+00:00"`}
+  rightSpecId="parseFHIR"
 />
