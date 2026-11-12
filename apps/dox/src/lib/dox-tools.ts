@@ -1968,15 +1968,15 @@ export const DOX_TOOLS = {
     inputSchema: showDoublePrecisionMeterInput,
   }),
   showCcsdsTimeCodeDecoder: tool({
-    description: DOX_TOOL_DOCS[49].purpose,
+    description: DOX_TOOL_DOCS[50].purpose,
     inputSchema: showCcsdsTimeCodeDecoderInput,
   }),
   showCodeBDayRuler: tool({
-    description: DOX_TOOL_DOCS[50].purpose,
+    description: DOX_TOOL_DOCS[51].purpose,
     inputSchema: showCodeBDayRulerInput,
   }),
   showFhirDateChecker: tool({
-    description: DOX_TOOL_DOCS[51].purpose,
+    description: DOX_TOOL_DOCS[52].purpose,
     inputSchema: showFhirDateCheckerInput,
   }),
 } as const;
