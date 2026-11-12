@@ -570,6 +570,39 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
           { label: "mistakes", href: "/mistakes/aviation/" },
         ],
       },
+      {
+        problem:
+          "A weather report names a day and no month, and the wrong month is chosen.",
+        answer:
+          "A METAR time needs a reference instant you state, and is never read against now. {{parseMetarTime}} chooses the nearest month that has the day, and {{isValidMetarTime}} is false when the reference is missing, so a stored report reads the same every month.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-metar-from-last-month/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem: "A NOTAM end of PERM is stored as a date.",
+        answer:
+          "PERM is a state, not a far-future date, and EST keeps its instant. {{parseNotamValidity}} returns each as it is, and {{isValidNotamValidity}} checks an item against the window you state.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/perm-read-as-a-date/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
     ],
   },
 };

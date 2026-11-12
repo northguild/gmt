@@ -185,6 +185,7 @@ describe("the chat island's static import graph", () => {
       "lib/fix-timestamp-reader.ts",
       "lib/aviation-lib.ts",
       "lib/ssim-date-reader.ts",
+      "lib/report-time-resolver.ts",
       "lib/tai64n-presets.ts",
       "lib/tai64n-lib.ts",
       "lib/holiday-widgets.ts",

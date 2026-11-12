@@ -166,6 +166,10 @@ const PAGES = [
   { slug: "tool-tai64n-log-reader", path: "/tools/tai64n-log-reader/" },
   { slug: "tool-fix-timestamp-reader", path: "/tools/fix-timestamp-reader/" },
   { slug: "tool-ssim-date-reader", path: "/tools/ssim-date-reader/" },
+  {
+    slug: "tool-report-time-resolver",
+    path: "/tools/report-time-resolver/",
+  },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",

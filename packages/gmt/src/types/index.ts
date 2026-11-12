@@ -24,6 +24,7 @@ export * from "./gnss";
 export * from "./hl7";
 export * from "./holiday-rule";
 export * from "./interval";
+export * from "./notam";
 export * from "./now-unit";
 export * from "./observance-policy";
 export * from "./offset";

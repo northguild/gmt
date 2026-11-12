@@ -314,6 +314,11 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "report-time-resolver",
+    preset: { role: "combobox", name: "METAR preset" },
+    drag: { role: "slider", name: "Move the reference" },
+  },
+  {
     slug: "holiday-rule-builder",
     preset: PRESET,
     drag: { role: "spinbutton", name: "Year" },

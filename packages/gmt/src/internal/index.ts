@@ -198,12 +198,17 @@ export {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,
 } from "./englishCalendarNames";
+export { readMetarTimeFields, type MetarTimeFields } from "./metarTime";
 export {
   readSsimDateFields,
   SSIM_MONTH_LETTERS,
   type SsimDateFields,
   writeSsimDate,
 } from "./ssimDate";
+export {
+  type NotamDateTimeFields,
+  readNotamDateTimeFields,
+} from "./notamDateTime";
 export { defaultFractionalDigits } from "./defaultFractionalDigits";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { resolveMinimalDaysInFirstWeek } from "./resolveMinimalDaysInFirstWeek";

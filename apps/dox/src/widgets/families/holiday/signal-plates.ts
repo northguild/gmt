@@ -36,7 +36,7 @@ function plate(p: SignalPlate): SafeHtml {
     data-state="${lost ? "signal" : "live"}"
     data-series="${String(p.series)}"
     ><dt class="${styles.caption}">${p.caption}</dt
-    ><dd class="${styles.value}"
+    ><dd class="${styles.value}" data-scrolls
       ><span class="${styles.shown}">${lost ? SIGNAL_TEXT : p.value}</span
       >${[...new Set([...p.samples, SIGNAL_TEXT])].map(
         (sample) =>

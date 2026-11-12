@@ -686,6 +686,28 @@ export const showDoublePrecisionMeterInput = z.object({
   scale: z.enum(["UTC", "TAI", "TT", "TCG"]).optional(),
 });
 
+/**
+ * Report Time Resolver: a METAR, SPECI or TAF time group (`group`) read against a reference the
+ * reader states (`reference`), and NOTAM items B) and C) (`itemB`, `itemC`) read in a window the
+ * reader states (`yearWindow`: a first year or "rolling"). Nothing is trimmed, upper-cased or
+ * defaulted: a call with no `reference` opens with Reference blank, never now, and a call with no
+ * `yearWindow` opens with the window blank. `metarPreset` and `notamPreset` open a section on one
+ * of its presets. The widget's permalink calls these `ref`, `b`, `c` and `window`.
+ */
+export const showReportTimeResolverInput = z
+  .object({
+    group: z.string().max(16).optional(),
+    reference: z.string().max(64).optional(),
+    itemB: z.string().max(16).optional(),
+    itemC: z.string().max(16).optional(),
+    yearWindow: z
+      .union([z.literal("rolling"), z.number().int().min(0).max(9900)])
+      .optional(),
+    metarPreset: z.string().max(32).optional(),
+    notamPreset: z.string().max(32).optional(),
+  })
+  .strict();
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1318,6 +1340,7 @@ export type DoxToolName =
   | "showFixTimestampReader"
   | "showHl7TimestampReader"
   | "showSsimDateReader"
+  | "showReportTimeResolver"
   | "showJulianDayCounter"
   | "showDoublePrecisionMeter";
 
@@ -1658,6 +1681,13 @@ export const DOX_TOOL_DOCS: {
     args: 'value: the SSIM text exactly as the reader gave it, at most 16 characters, never trimmed or upper-cased; yearWindow: only when the reader stated one, a first year from 0 to 9900 or "rolling"; locale: a BCP 47 tag, only when the reader named one, passed to the pattern comparison alone; date: an ISO date to write back. Give value or date.',
   },
   {
+    name: "showReportTimeResolver",
+    purpose:
+      "Resolve a METAR, SPECI or TAF time group against a reference you state, and read NOTAM items B) and C) in a window you state.",
+    when: "the reader asks about METAR or TAF times such as 302350Z, which month a report belongs to, what NOTAM item B) or C) times mean, or what EST or PERM means in a NOTAM",
+    args: 'group: the METAR, SPECI or TAF time group exactly as the reader gave it, at most 16 characters, never trimmed or upper-cased; reference: only when the reader stated one, an instant exactly as given, and never fill in now; itemB, itemC: the NOTAM items exactly as given, at most 16 characters each; yearWindow: only when the reader stated one, a first year from 0 to 9900 or "rolling"; metarPreset, notamPreset: only when the reader named a case.',
+  },
+  {
     name: "showJulianDayCounter",
     purpose:
       "Write one instant as a two-part Julian Date, a single Julian Date, a Modified Julian Date and seconds since J2000.0 on UTC, TAI, TT or TCG, read each back to UTC, and show where a JD day begins against the MJD day and the calendar day.",
@@ -1867,12 +1897,16 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[46].purpose,
     inputSchema: showSsimDateReaderInput,
   }),
-  showJulianDayCounter: tool({
+  showReportTimeResolver: tool({
     description: DOX_TOOL_DOCS[47].purpose,
+    inputSchema: showReportTimeResolverInput,
+  }),
+  showJulianDayCounter: tool({
+    description: DOX_TOOL_DOCS[48].purpose,
     inputSchema: showJulianDayCounterInput,
   }),
   showDoublePrecisionMeter: tool({
-    description: DOX_TOOL_DOCS[48].purpose,
+    description: DOX_TOOL_DOCS[49].purpose,
     inputSchema: showDoublePrecisionMeterInput,
   }),
 } as const;
@@ -1945,6 +1979,7 @@ export const ENABLED_TOOL_NAMES = [
   "showFixTimestampReader",
   "showHl7TimestampReader",
   "showSsimDateReader",
+  "showReportTimeResolver",
   "showJulianDayCounter",
   "showDoublePrecisionMeter",
 ] as const satisfies readonly DoxToolName[];

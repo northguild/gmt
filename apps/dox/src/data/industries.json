@@ -64,7 +64,7 @@
   {
     "id": "aviation",
     "label": "Aviation",
-    "definition": "Airline schedule dates in IATA SSIM files, with English month letters and a century the caller states.",
+    "definition": "Airline schedule dates in IATA SSIM files, METAR and TAF report times with no month, and NOTAM validity times.",
     "icon": "industry-aviation",
     "guide": "/guides/industries/aviation-message-times/",
     "namespace": "aviation",

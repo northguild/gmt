@@ -75,6 +75,7 @@ import {
   showTai64nLogReaderInput,
   showFixTimestampReaderInput,
   showSsimDateReaderInput,
+  showReportTimeResolverInput,
   showJulianDayCounterInput,
   showDoublePrecisionMeterInput,
   showTerrestrialTimeStackInput,
@@ -665,6 +666,11 @@ export function buildWorkerTools(
       description: docFor("showSsimDateReader"),
       inputSchema: showSsimDateReaderInput,
       execute: () => accept("ssim-date-reader"),
+    }),
+    showReportTimeResolver: tool({
+      description: docFor("showReportTimeResolver"),
+      inputSchema: showReportTimeResolverInput,
+      execute: () => accept("report-time-resolver"),
     }),
     showTerrestrialTimeStack: tool({
       description: docFor("showTerrestrialTimeStack"),

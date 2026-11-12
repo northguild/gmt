@@ -914,6 +914,12 @@ export const CHAT_STARTERS: readonly {
     args: { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
   },
   {
+    text: "A METAR says 302350Z and reached us at 00:05 UTC on 1 July 2024. Which day was it observed?",
+    widget: "showReportTimeResolver",
+    area: "aviation",
+    args: { group: "302350Z", reference: "2024-07-01T00:05:00Z" },
+  },
+  {
     text: "What is the Julian Date of 2026-01-01T12:00:00Z on TT, and why isn't it a whole number?",
     widget: "showJulianDayCounter",
     area: "core",

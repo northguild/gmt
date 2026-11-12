@@ -136,17 +136,19 @@ The same three rules extend to `parseFixUtcTimestamp`, `formatFixUtcTimestamp` a
 
 This prohibition stands for every other function in the library.
 
-### Scoped exception: aviation message grammars in `aviation/` (AV-97)
+### Scoped exception: aviation message grammars in `aviation/` (AV-97, AV-98)
 
-The same three rules extend to `parseSsimDate` and `formatSsimDate` in `packages/gmt/src/aviation/`. The SSIM date `DDMMMYY` (`01JAN26`) is not ISO 8601, and Temporal's `.from()` cannot parse it at any layer. The grammar is fixed, never caller-supplied:
+The same three rules extend to `parseSsimDate` and `formatSsimDate`, and to `parseMetarTime` and `parseNotamValidity`, in `packages/gmt/src/aviation/`. The SSIM date `DDMMMYY` (`01JAN26`), the METAR group `YYGGggZ` (`251200Z`) and the NOTAM group `YYMMDDHHMM[EST]` or `PERM` (`1407031230EST`) are not ISO 8601, and Temporal's `.from()` cannot parse them at any layer. The grammars are fixed, never caller-supplied:
 
-1. One regex, in `internal/ssimDate.ts`, built from the table of twelve month letters, with a field reader and a writer derived from the same table. No public function slices the string itself. The grammar is not a public pattern, because a value is a date only once its century is known: the public check is `isValidSsimDate(value, options)`, and `regex/` gains nothing.
-2. The extracted fields are always handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })`.
+1. One regex, in `internal/ssimDate.ts`, built from the table of twelve month letters, with a field reader and a writer derived from the same table. The METAR group and the NOTAM group each get one regex and its reader in the same way: `internal/metarTime.ts` and `internal/notamDateTime.ts`. No public function slices the string itself. None of the grammars is a public pattern: an SSIM or NOTAM value is a date only once its century is known, and a METAR group is a time only once its month is known. Not in `regex/`: WMO gives the METAR group as a symbolic form and OPADD gives the NOTAM group in prose. The public checks are `isValidSsimDate(value, options)`, `isValidMetarTime(value, referenceInstant)` and `isValidNotamValidity(value, options)`, and `regex/` gains nothing.
+2. The extracted fields are always handed to `Temporal.PlainDate.from(fields, { overflow: "reject" })`. For a METAR group, the month is chosen first by epoch-day arithmetic (`internal/epochDay.ts`) over at most two months each way from the reference; the chosen fields then go to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`, and the hour and minute go to `Temporal.PlainTime.from` with `"reject"` before that.
 3. The try-catch and sentinel-return rules above are unchanged.
 
 **The month letters are a code.** They are fixed English and upper case, never read through `Intl`, and never case-folded. This is an explicit exception to the library's locale-aware formatting.
 
-**The century is the caller's.** Both functions take `TwoDigitYearOptions` and return the sentinel without `yearWindow`, under the INT-15 [No century is guessed](#scoped-exception-edi-datetime-grammars-in-the-parseedifact-and-parsex12-functions-int-15) rule.
+**The century is the caller's.** `parseSsimDate`, `formatSsimDate`, `parseNotamValidity` and `isValidNotamValidity` take `TwoDigitYearOptions` and return the sentinel without `yearWindow`, under the INT-15 [No century is guessed](#scoped-exception-edi-datetime-grammars-in-the-parseedifact-and-parsex12-functions-int-15) rule. `PERM` is included: without a window it returns `null`, like every other value.
+
+**A METAR time needs a reference.** The group names no month or year, so `parseMetarTime` takes a required reference instant and never reads the clock.
 
 This prohibition stands for every other function in the library.
 

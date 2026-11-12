@@ -81,6 +81,7 @@ export type WidgetKind =
   | "tai64n"
   | "fixstamp"
   | "ssim"
+  | "reporttime"
   | "ttstack"
   | "jdcount"
   | "dpmeter";
@@ -150,6 +151,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   tai64n: "/tools/tai64n-log-reader/",
   fixstamp: "/tools/fix-timestamp-reader/",
   ssim: "/tools/ssim-date-reader/",
+  reporttime: "/tools/report-time-resolver/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
   dpmeter: "/tools/double-precision-meter/",
@@ -258,6 +260,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   fixstamp: new Set(["stamp", "write"]),
   // A cleared value, window or date is a state of its own: a blank window is the no-date reason, and the link must open on it.
   ssim: new Set(["value", "window", "date"]),
+  // A blank group, reference, item or window is a state of its own: a blank reference is the no-reference reason and a blank window the no-window reason.
+  reporttime: new Set(["group", "ref", "b", "c", "window"]),
 };
 
 /**

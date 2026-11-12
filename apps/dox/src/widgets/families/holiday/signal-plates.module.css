@@ -17,8 +17,12 @@
 
   flex: 1 1 max-content;
 
-  /* The live value's size; the sentinel's smaller one holds the same height. */
+  /* The live value's size, and the sentinel's. The sentinel's is smaller, and its height is held
+     by `min-block-size` below. A tool that sets the live size smaller sets the sentinel's with
+     it (`--value-signal: var(--value-live)`), so the two lines are the same height; setting
+     `font-size` on the value from another sheet loses to the rule below on specificity. */
   --value-live: clamp(1.25rem, 1.05rem + 1vw, 2rem);
+  --value-signal: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
 
   display: grid;
   gap: 0.25rem;
@@ -78,9 +82,13 @@
 }
 
 /* The value's ghosts are set in the live size in either state, so the cell is as wide as the
-   widest live value and a plate going from a date to the sentinel does not change its width. */
+   widest live value and a plate going from a date to the sentinel does not change its width. They
+   are clipped, so that width asks for room (the plate sizes itself by it) but is never scrollable
+   overflow: where the plate is narrower than its widest ghost, the value would scroll sideways, or
+   with classic scrollbars (WebKit) draw a bar over the text, though the text shown fits. */
 .value .ghost {
   font-size: var(--value-live);
+  overflow: clip;
 }
 
 .value {
@@ -90,12 +98,20 @@
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
   white-space: nowrap;
-  overflow-x: auto;
+
+  /* One track as wide as the value, not as wide as its widest ghost: a value wider than the
+     plate scrolls by its own width, and the ghosts' extra width is not part of it. The value
+     has no fixed height, so ink is never cut. Its vertical overflow is hidden, not `auto` (what
+     a sideways scroller gets by default): with classic scrollbars (WebKit) the sideways bar
+     takes height, the content then overflows by that much, a vertical bar appears and takes
+     width, and the value is wider than before. */
+  grid-template-columns: minmax(0, 1fr);
+  overflow: auto hidden;
 
   .plate[data-state="signal"] & {
     min-block-size: calc(1.15 * var(--value-live));
     color: var(--gmt-signal-ink);
-    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.375rem);
+    font-size: var(--value-signal);
   }
 
   @container (max-width: 30rem) {

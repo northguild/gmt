@@ -195,6 +195,10 @@ const PAGES = [
     widget: "ssim-date-reader",
   },
   {
+    path: "tools/report-time-resolver",
+    widget: "report-time-resolver",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

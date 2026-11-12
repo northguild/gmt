@@ -1,0 +1,35 @@
+---
+title: "PERM Read as a Date"
+description: A NOTAM ends in PERM, a parser turns it into 9999-12-31, and an "is it in force?" check is right until that day.
+industries: [aviation]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="PERM Read as a Date"
+  description="A briefing tool keeps each NOTAM's end as a date, so it can ask whether the NOTAM is in force. A NOTAM's item C) says PERM. What is stored?"
+  naiveCode={`// The naive approach: give PERM an end date far away
+function endOf(c: string): string {
+  return c === "PERM" ? "9999-12-31T23:59:00Z" : toIso(c);
+}
+
+endOf("PERM");
+// "9999-12-31T23:59:00Z" — a date for something that has no end
+isInForce(endOf("PERM"), "2026-11-11T12:00:00Z");
+// true — until the last minute of 9999`}
+  explanation={`Item C) says when a NOTAM ends, and \`PERM\` says it does not. A far-future date makes the check give the right answer today, so nothing fails. But the date is a claim the NOTAM never made. It sorts and groups with real end dates, it shows up in a report as an expiry, and it is wrong the moment a rule asks "how long until this ends?". \`parseNotamValidity\` returns \`{ kind: "permanent" }\`. There is no date to compare, so the code that reads it has to decide what permanent means. An \`EST\` end is different: it has an instant, and the result keeps it with \`estimated: true\`.`}
+  gmtCode={`import { parseNotamValidity } from "@northguild/gmt/aviation/parse";
+
+parseNotamValidity("PERM", { yearWindow: 2000 });
+// { kind: "permanent" }
+parseNotamValidity("1407031230EST", { yearWindow: 2000 });
+// { kind: "instant", instant: "2014-07-03T12:30:00Z", estimated: true }`}
+  fixedSpecId="parseNotamValidity"
+/>
+
+The fix is to keep `PERM` as a state. See [Aviation: Message
+Times](/guides/industries/aviation-message-times/#notam-validity) for the reasoning, and
+[Aviation mistakes](/mistakes/aviation/#notam-validity) for the others that come with it.
+
+[Try it in the Report Time Resolver](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22permanent%22%7D).

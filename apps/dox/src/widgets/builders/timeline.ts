@@ -45,6 +45,12 @@ export interface MarkOptions {
   /** Width, 0 to 1. Omit for a point. */
   span?: number;
   series?: TimelineSeries;
+  /**
+   * Draw the mark larger, inside a ring, to single it out among its neighbours. The shape tells
+   * it apart, so it does not lean on colour (WCAG 1.4.1). Assistive technology hears it as `aria-current`. It stays a named image: a static
+   * picture, not a control.
+   */
+  emphasis?: boolean;
 }
 
 export function mark(o: MarkOptions): SafeHtml {
@@ -54,7 +60,7 @@ export function mark(o: MarkOptions): SafeHtml {
     role="img"
     aria-label="${o.label}"
     data-kind="${o.span === undefined ? "point" : "range"}"
-    data-series="${o.series ?? 1}"
+    data-series="${o.series ?? 1}"${o.emphasis === true ? html` aria-current="true"` : ""}
     style="--gmt-at: ${unit(o.at)}${span}"
   ></span>`;
 }
