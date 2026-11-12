@@ -2002,7 +2002,7 @@ export const DOX_TOOLS = {
     inputSchema: showFhirDateCheckerInput,
   }),
   showSwiftValueDateReader: tool({
-    description: DOX_TOOL_DOCS[52].purpose,
+    description: DOX_TOOL_DOCS[53].purpose,
     inputSchema: showSwiftValueDateReaderInput,
   }),
 } as const;
