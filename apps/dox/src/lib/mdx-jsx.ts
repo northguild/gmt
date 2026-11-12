@@ -600,6 +600,7 @@ export function renderMdxComponents(body: string): string {
     "DwellLedger",
     "EpcisEventReader",
     "EtaDrift",
+    "FhirDateChecker",
     "FreeTimeLedger",
     "Hl7TimestampReader",
     "JourneySplit",

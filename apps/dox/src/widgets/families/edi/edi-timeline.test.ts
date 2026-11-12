@@ -88,3 +88,28 @@ describe("ediTimeline", () => {
     expect(host).not.toHaveTextContent("Read as UTC");
   });
 });
+
+describe("a calendar span", () => {
+  const spec = {
+    kind: "span",
+    from: "2024-06-01",
+    to: "2024-07-01",
+    unit: "month",
+    label: "2024-06-01 to 2024-06-30",
+    reference: { label: "Padded to midnight UTC: 2024-06-01T00:00:00Z" },
+  } as const;
+
+  it("names the days it covers, the padded moment and that no zone applies", async () => {
+    const { host } = renderHtml(timelineContent(spec));
+    expect(host).toHaveTextContent("2024-06-01 to 2024-06-30");
+    expect(host).toHaveTextContent(
+      "Padded to midnight UTC: 2024-06-01T00:00:00Z",
+    );
+    expect(host).toHaveTextContent("Calendar dates, no zone");
+    expect(host).not.toHaveTextContent("All times in UTC");
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      "Spans 2024-06-01 to 2024-06-30; padded reading at 2024-06-01T00:00:00Z. Calendar dates, no zone.",
+    );
+    await expectNoAxeViolations(host);
+  });
+});

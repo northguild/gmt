@@ -196,6 +196,34 @@
   }
 }
 
+/* A calendar strip's reference label is long ("Padded to midnight UTC: 2024-06-01T00:00:00Z"), so
+   it wraps inside the room on its side of the pin and never spills out of the card. The plot is
+   a size container only here, so the other timelines are unchanged. */
+.box[data-state="span"] .plot {
+  container-type: inline-size;
+}
+
+:where(.box[data-state="span"]) .reference[data-side="end"] > .referenceLabel {
+  inline-size: max-content;
+  max-inline-size: max(
+    6rem,
+    calc(100cqi * (100 - var(--n)) / 100 - 18px - var(--gmt-space-2))
+  );
+  white-space: normal;
+}
+
+:where(.box[data-state="span"])
+  .reference[data-side="start"]
+  > .referenceLabel {
+  inline-size: max-content;
+  max-inline-size: max(
+    6rem,
+    calc(100cqi * var(--n) / 100 - 18px - var(--gmt-space-2))
+  );
+  white-space: normal;
+  text-align: end;
+}
+
 .bracket {
   position: absolute;
   inset-block-end: 26px;
@@ -205,6 +233,21 @@
   border: 2px solid var(--gmt-ice-dim);
   border-block-start-width: 0;
   border-radius: 0 0 var(--gmt-radius-sm) var(--gmt-radius-sm);
+}
+
+/* A calendar span: a full bevelled border and a tinted fill, never one coloured edge. It sits
+   where the bracket does and holds no text: a month's days ("2016-05-01 to 2016-05-31") are wider
+   than a narrow pane's band, so the label is the caption's first line, whatever the width. */
+.band {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: var(--from) calc(100% - var(--to));
+  block-size: 24px;
+  box-sizing: border-box;
+  border: 2px solid var(--gmt-ice-dim);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: color-mix(in srgb, var(--gmt-series-2) 22%, var(--gmt-surface));
 }
 
 .gap {
@@ -227,6 +270,21 @@
 }
 
 .value {
+  color: var(--gmt-ice);
+}
+
+/* The days a calendar span covers: the caption's first line. It never wraps, so the caption stays
+   two lines: in a pane too narrow for the 24 characters of "2016-05-01 to 2016-05-31" it sets the
+   type smaller (a mono character is 0.6em, so the box's width over 15 fits it). The box is a size
+   container only here, so the other timelines are unchanged. */
+.box[data-state="span"] {
+  container-type: inline-size;
+}
+
+.spanLabel {
+  display: block;
+  font-size: min(1em, calc(100cqi / 15));
+  white-space: nowrap;
   color: var(--gmt-ice);
 }
 
@@ -275,13 +333,19 @@
     color: CanvasText;
   }
 
-  .bracket {
+  .bracket,
+  .band {
     border-color: CanvasText;
+  }
+
+  .band {
+    background: Canvas;
   }
 
   .label,
   .day,
   .gap,
+  .spanLabel,
   .caption,
   .value,
   .empty {
@@ -299,6 +363,7 @@
   }
 
   .bracket,
+  .band,
   .axis {
     border-color: var(--gmt-ice);
   }

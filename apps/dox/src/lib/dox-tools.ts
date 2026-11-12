@@ -645,6 +645,15 @@ export const showHl7TimestampReaderInput = z.object({
 });
 
 /**
+ * The FHIR Date Checker: one FHIR R4 `date`, `dateTime` or `instant` value, exactly as the reader
+ * gave it. The value is kept as typed, so it is not trimmed. The widget judges the value itself:
+ * one the library does not read is the widget's NO SIGNAL, not a failed tool call.
+ */
+export const showFhirDateCheckerInput = z.object({
+  value: z.string().min(1).max(64),
+});
+
+/**
  * SSIM Date Reader: the SSIM text to read (`value`), the window its two-digit year is read in
  * (`yearWindow`: a first year or "rolling"), the locale the comparison passes the pattern
  * parser (`locale`) and an ISO date to write back (`date`). Nothing is trimmed, upper-cased or
@@ -1346,7 +1355,8 @@ export type DoxToolName =
   | "showJulianDayCounter"
   | "showDoublePrecisionMeter"
   | "showCcsdsTimeCodeDecoder"
-  | "showCodeBDayRuler";
+  | "showCodeBDayRuler"
+  | "showFhirDateChecker";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1712,6 +1722,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks which date a day-of-year number such as day 61 is, why a Code B date moves by a day in a leap year, whether a year has a day 366, or how Code B and Code A dates line up across years",
     args: "year and compareYear: whole years from 1 to 9999, only when the reader named them; day: a whole day number from 1 to 366, only when the reader named one. Never guess a year.",
   },
+  {
+    name: "showFhirDateChecker",
+    purpose:
+      "A FHIR R4 date, dateTime or instant value checked by isValidFHIR and FHIR's own published patterns, with the reason each type refuses it; what the value names (a year, month or day as a span of calendar dates, a moment as one instant); and the value written back by formatFHIR at each precision.",
+    when: "the reader asks whether a value is a valid FHIR date, dateTime or instant, why a FHIR value such as 2024-06 or 2024-02-30 is or is not accepted, what a FHIR month or year means, whether a FHIR time needs seconds and an offset, or how to write a FHIR value at a coarser precision",
+    args: "value (the FHIR value exactly as the reader gave it, such as 2024-06 or 2015-02-07T13:28:17-05:00; at most 64 characters; never corrected, never padded to a day or a midnight, and never given an offset the reader did not send).",
+  },
 ];
 
 /**
@@ -1924,6 +1941,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[50].purpose,
     inputSchema: showCodeBDayRulerInput,
   }),
+  showFhirDateChecker: tool({
+    description: DOX_TOOL_DOCS[51].purpose,
+    inputSchema: showFhirDateCheckerInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1998,6 +2019,7 @@ export const ENABLED_TOOL_NAMES = [
   "showDoublePrecisionMeter",
   "showCcsdsTimeCodeDecoder",
   "showCodeBDayRuler",
+  "showFhirDateChecker",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

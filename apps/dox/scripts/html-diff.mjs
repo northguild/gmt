@@ -127,6 +127,10 @@ const PAGES = [
     widget: "hl7-timestamp-reader",
   },
   {
+    path: "tools/fhir-date-checker",
+    widget: "fhir-date-checker",
+  },
+  {
     path: "tools/x12-time-reader",
     widget: "x12-time-reader",
   },

@@ -429,6 +429,37 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showFhirDateChecker", () => {
+    const schema = (
+      tools.showFhirDateChecker as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value exactly as given, preset values included", async () => {
+      for (const value of [
+        "2024-06",
+        "2024-02-30",
+        "2015-02-07T13:28:17-05:00",
+      ]) {
+        expect(schema.safeParse({ value }).success).toBe(true);
+        expect(await run("showFhirDateChecker", { value })).toMatchObject({
+          ok: true,
+          widget: "fhir-date-checker",
+        });
+      }
+    });
+
+    it("refuses an empty value and one over 64 characters", () => {
+      expect(schema.safeParse({ value: "" }).success).toBe(false);
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ value: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "a".repeat(65) }).success).toBe(false);
+    });
+  });
+
   describe("showSsimDateReader", () => {
     const schema = (
       tools.showSsimDateReader as unknown as {
