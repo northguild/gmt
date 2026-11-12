@@ -19,9 +19,8 @@ import { Temporal } from "../../internal/temporal";
  *   29 February 1984, and `850229` returns `""`.
  * - **Sources.** SWIFT Standards MT, MT 103 field 32A (format `6!n3!a15d`; "Date must be a valid
  *   date expressed as YYMMDD", T50). SWIFT _Message Format Validation Rules_ (November 2006),
- *   Part II §4.1 Date and §4.1.1 Value Date. Both read through a public mirror of SWIFT's User
- *   Handbook; SWIFT's own copy needs a login. The November 2006 edition is the newest public
- *   source for the 1980–2060 range.
+ *   Part II §4.1 Date and §4.1.1 Value Date. Both are in SWIFT's Knowledge Centre, which needs a
+ *   login.
  * - Returns `""` for a non-string argument.
  *
  * @param value A SWIFT value date, `YYMMDD` (e.g. "240615")

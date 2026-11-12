@@ -20,7 +20,7 @@ import { Temporal } from "../../internal/temporal";
  *   error T50. So `parseSwiftDate(formatSwiftDate(d))` reads back as the same date, written
  *   `YYYY-MM-DD` (`d` itself when `d` is already written that way).
  * - **Sources.** SWIFT _Message Format Validation Rules_ (November 2006), Part II §4.1 Date and
- *   §4.1.1 Value Date, read through a public mirror of SWIFT's User Handbook.
+ *   §4.1.1 Value Date, in SWIFT's Knowledge Centre.
  * - Returns `""` for a non-string argument.
  *
  * @param value An ISO 8601 calendar date (e.g. "2024-06-15")

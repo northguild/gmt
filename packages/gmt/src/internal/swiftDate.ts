@@ -5,17 +5,14 @@
  * Private: a value is a date only once its century and range are known, so the public check is
  * `isValidSwiftDate(value)`, never a pattern.
  *
- * Sources (SWIFT's own copies need a login; both were read through a public mirror of SWIFT's
- * User Handbook):
+ * Sources (both in SWIFT's Knowledge Centre, which needs a login):
  * - SWIFT Standards MT (2015 UHB), MT 103 field 32A: format `6!n3!a15d`; network validated rule
  *   "Date must be a valid date expressed as YYMMDD (Error code(s): T50)".
- *   https://pinas.synology.me/Swift_Manual/2015/books/us1m/aih006.htm
  * - SWIFT _Message Format Validation Rules_ (Nov 2006), Part II §4.1 Date: "`<DATE2>` YYMMDD";
  *   "all 'Y', 'M', and 'D' characters must be numeric characters : i.e. figures 0, 1, 2, 3, 4, 5,
  *   6, 7, 8, 9"; "Standard presentation: `<DATE2>` 6!n"; month "00<MM<13"; "'DD' check: this
  *   check depends upon the 'YY' or 'YYYY', and 'MM' values"; "Leap years are accommodated";
  *   "The code error "T50" is returned after a format error".
- *   https://pinas.synology.me/Swift_Manual/2006/FINAL/UTMF/PTII.PDF
  * - The same, §4.1.1 Value Date: "The valid range of value dates implemented on the SWII system
  *   is from 1980 to 2060 (limits included)"; "IF YY >79 THEN year = "19" || "YY" ELSE year =
  *   "20" || "YY" ENDIF IF year > 2060 THEN <error:'T50'> ENDIF"; "This validation is in

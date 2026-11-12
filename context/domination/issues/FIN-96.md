@@ -14,10 +14,8 @@ value dates: its validation rules read `YY` above 79 as 19`YY` and the rest as 2
 a year after 2060 with error T50. A parser that applies a cut-off of its own, or asks the caller
 for one, reads some dates SWIFT accepts as another year, and accepts dates SWIFT refuses.
 
-([SWIFT Standards MT, MT 103 field 32A](https://pinas.synology.me/Swift_Manual/2015/books/us1m/aih006.htm) —
-a mirror of SWIFT's User Handbook, whose own copy needs a login;
-[Message Format Validation Rules (November 2006), Part II §4.1.1](https://pinas.synology.me/Swift_Manual/2006/FINAL/UTMF/PTII.PDF),
-on the same mirror)
+(SWIFT Standards MT, MT 103 field 32A; SWIFT _Message Format Validation Rules_ (November 2006),
+Part II §4.1.1. Both are in SWIFT's Knowledge Centre, which needs a login.)
 
 ## Scope
 
@@ -69,9 +67,8 @@ Teaches: a two-digit year has no century until someone states one, and for value
   coding standards' rule that GMT never picks a century where it has a choice: like RFC 5322 §4.3
   and RFC 9110, SWIFT mandates the rule, so there is no choice to make, and `parseRfc2822` and
   `parseHttpDate` are the precedent for applying it exactly.
-- **The edition.** The rule is cited from the November 2006 edition, the newest reachable without
-  a login. If a later Standards Release moves the range, the story follows that edition and its
-  rows change with it.
+- **The edition.** The rule is cited from the November 2006 edition. If a later Standards Release
+  moves the range, the story follows that edition and its rows change with it.
 - **Leap days are checked in the year the rule gives.** `000229` is 29 February 2000 and `840229`
   29 February 1984; `850229` is refused. So the day check runs after the century is known.
 - **The validator takes the value alone.** The century is fixed by the rule, so `isValidSwiftDate`
@@ -86,8 +83,8 @@ Teaches: a two-digit year has no century until someone states one, and for value
 
 ## Authority — what each rule rests on
 
-SWIFT is a multinational industry body. The User Handbook and the validation rules were read
-through a public mirror; SWIFT's own copies need a login.
+SWIFT is a multinational industry body. The User Handbook and the validation rules are in SWIFT's
+Knowledge Centre, which needs a login.
 
 | Rule | Source |
 | --- | --- |
@@ -129,10 +126,9 @@ through a public mirror; SWIFT's own copies need a login.
   The JSDoc states the section 4.1.1 reach (MT 910 field 32A, and categories 1 and 2 with field 30
   and/or 32A, except n92, n95 and n96) and sends other six-digit dates, such as MT 700 field 31D,
   to `parseDateWithPattern`.
-- **Edition.** The rule is cited from the November 2006 _Message Format Validation Rules_, the
-  newest edition reachable without a login. No newer public source states the 1980 to 2060 range.
-  A later Standards Release that moves it changes the two constants in `internal/swiftDate.ts`
-  and the rows that pin them.
+- **Edition.** The rule is cited from the November 2006 _Message Format Validation Rules_. A later
+  Standards Release that moves the range changes the two constants in `internal/swiftDate.ts` and
+  the rows that pin them.
 - **The century rule is SWIFT's IF/THEN coded literally**, not `internal/twoDigitYear.ts`. `YY`
   above 79 is 19`YY`, the rest 20`YY`, and a year after 2060 is refused (T50). GMT takes no window,
   as `parseRfc2822` and `parseHttpDate` take none.
