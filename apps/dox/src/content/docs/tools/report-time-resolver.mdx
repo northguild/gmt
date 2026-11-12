@@ -37,7 +37,7 @@ Section 1 reads a group against a reference you type and draws the candidate mon
 
 **The strip.** The seven slots are the months around the answer, from three back to three forward. Each one is [`addUtc`](/reference/utc/calculate/addUtc/) with `overflow: "reject"`, so a month without the day is a gap and not a shifted date. The chosen candidate is the one equal to the library's answer, and the page marks it with a ring as well as a colour.
 
-See [Aviation message times](/guides/industries/aviation-message-times/), [a METAR from last month](/scenarios/a-metar-from-last-month/), [PERM read as a date](/scenarios/perm-read-as-a-date/) and [Aviation mistakes](/mistakes/aviation/). The time formats follow WMO and EUROCONTROL OPADD.
+See [Aviation message times](/guides/industries/aviation-message-times/), [a METAR from last month](/scenarios/a-metar-from-last-month/), [PERM read as a date](/scenarios/perm-read-as-a-date/) and [Aviation mistakes](/mistakes/aviation/). The time formats follow WMO and ICAO, with EUROCONTROL's OPADD for the NOTAM rules ICAO leaves out.
 
 **Worth trying:**
 
@@ -49,8 +49,8 @@ See [Aviation message times](/guides/industries/aviation-message-times/), [a MET
 - [An estimated end](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22opadd-estimate%22%7D) — `1407031230EST` is an instant that is estimated, not a different kind of value.
 - [Permanent](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22permanent%22%7D) — `PERM` is a state with no date, shown as "permanent, no date" and not as a far-future instant.
 - [No window](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22no-window%22%7D) — nothing says which century `25` is, so with no window there is no date, and `PERM` is refused too.
-- [EST in item B)](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22est-in-b%22%7D) — the library reads it, and a note says OPADD allows `EST` in item C) only.
-- [Write the end of a day as 2400](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22end-2400%22%7D) — `2506152400` is refused: OPADD writes the end of a day as 2359.
+- [EST in item B)](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22est-in-b%22%7D) — the library reads it, and a note says ICAO allows `EST` in item C) only.
+- [Write the end of a day as 2400](/tools/report-time-resolver/?w=reporttime&wa=%7B%22notamPreset%22%3A%22end-2400%22%7D) — `2506152400` is refused: ICAO writes the end of a day as 2359.
 
 </Fragment>
 

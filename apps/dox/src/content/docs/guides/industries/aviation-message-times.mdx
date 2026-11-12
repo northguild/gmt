@@ -269,9 +269,9 @@ is a year after the report, you get a time in the wrong year. Check staleness wi
 ## NOTAM validity
 
 A NOTAM states when it starts in item B) and when it ends in item C). Each is ten digits,
-`YYMMDDHHMM`, in UTC. EUROCONTROL's OPADD (section 2.3.16, section 2.3.17 and the chapter "NOTAM
-Items") also lets item C) end in `EST`, with no space, to say the end is an estimate, or be the
-word `PERM`, to say there is no end.
+`YYMMDDHHMM`, in UTC. ICAO's NOTAM format (PANS-AIM, Appendix 3) also lets item C) end in `EST`,
+to say the end is an estimate, or be the word `PERM`, to say there is no end. EUROCONTROL's OPADD,
+which applies the format across Europe, adds that there is no space before `EST`.
 
 [`parseNotamValidity(value, options)`](/reference/aviation/parse/parseNotamValidity/) returns one
 of two objects, or `null` for anything it does not read. It reads one group at a time, with no
@@ -316,10 +316,10 @@ parseNotamValidity("2506151200", {});
 // null (no window stated)
 ```
 
-Nothing is corrected. OPADD tells the NOTAM Processing Unit not to write `2400`, and not to use
-`WIE`, `UFN` or `APRX DUR`. A reader that rounds them into something valid hides a message that
-broke the rules, so each of these returns `null`, as does a month, day, hour or minute that does
-not exist:
+Nothing is corrected. ICAO ends a day at `2359` and says not to write `2400`, and OPADD does not
+allow `WIE`, `UFN` or `APRX DUR`. A reader that rounds them into something valid hides a message
+that broke the rules, so each of these returns `null`, as does a month, day, hour or minute that
+does not exist:
 
 ```typescript
 import { parseNotamValidity } from "@northguild/gmt/aviation/parse";
@@ -409,9 +409,14 @@ isValidNotamValidity("2506152400", { yearWindow: 2000 });
 - WMO, _Manual on Codes_ (WMO-No. 306), Volume I.1, Part A (2011 edition, updated 2013): FM 15
   METAR and SPECI, regulations 15.3.1 and 15.3.2, and FM 51 TAF, regulation 51.1.2. They give the
   group `YYGGggZ` in UTC with no space before the `Z`.
+- ICAO, _Procedures for Air Navigation Services: Aeronautical Information Management_ (PANS-AIM,
+  Doc 10066), First Edition (2018), Appendix 3, "Instructions for the completion of the NOTAM
+  Format", sections 5 and 6. They give the ten-figure group in UTC, `0000` and `2359` (not
+  `2400`), `EST` and `PERM`, and say that a NOTAM with `EST` is later cancelled or replaced.
 - EUROCONTROL, _OPADD_ (EUROCONTROL-GUID-121), Edition 4.1 (07/12/2020), in the copy ICAO's Asia
-  and Pacific office hosts: §2.2, §2.3.16 and §2.3.17, and Chapter 3, "NOTAM Items".
-  They give the ten-digit group, `EST`, `PERM`, and the values not to use.
-- ICAO PANS-AIM (Doc 10066) and ICAO Annex 3, Appendix 3, were not reached.
+  and Pacific office hosts: §2.3.16 and §2.3.17, and Chapter 3, "NOTAM Items". A multinational
+  peer, cited for what ICAO does not say: no space before `EST`, the values not to use, and the
+  corrections a NOTAM Processing Unit makes.
+- ICAO Annex 3, Appendix 3, was not reached.
 - IATA's _Standard Schedules Information Manual_ is not openly published, and its own text was
   not reached.

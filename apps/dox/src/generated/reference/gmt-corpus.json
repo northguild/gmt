@@ -23155,7 +23155,7 @@
     "module": "notam",
     "kind": "type",
     "signature": "",
-    "description": "A NOTAM validity value: item B) (when the NOTAM comes into force) or item C) (when it ceases), as read by `parseNotamValidity`. EUROCONTROL-GUID-121, _OPADD_ Ed. 4.1, §2.3.16 and §2.3.17.",
+    "description": "A NOTAM validity value: item B) (when the NOTAM comes into force) or item C) (when it ceases), as read by `parseNotamValidity`. ICAO PANS-AIM (Doc 10066), Appendix 3 §5 and §6; EUROCONTROL-GUID-121, _OPADD_ Ed. 4.1, §2.3.16 and §2.3.17, as the multinational peer.",
     "sourcePath": "packages/gmt/src/types/notam.ts",
     "examples": [],
     "inlineOn": "parseNotamValidity"

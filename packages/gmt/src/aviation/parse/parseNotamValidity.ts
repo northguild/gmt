@@ -26,8 +26,11 @@ import type { TwoDigitYearOptions } from "../../types/two-digit-year";
  *   returns `null`.
  * - **UTC in and out.** Both are UTC by the standard, so no local wall time is resolved and no
  *   disambiguation policy applies.
- * - **Sources.** EUROCONTROL-GUID-121, _OPADD_ Ed. 4.1, §2.2, §2.3.16 and §2.3.17. ICAO PANS-AIM
- *   (Doc 10066) was not reached.
+ * - **Sources.** ICAO PANS-AIM (Doc 10066), Appendix 3 §5 and §6: the ten-figure group in UTC,
+ *   `0000`, `2359` and not `2400`, `EST`, `PERM`, and the later cancellation or replacement of an
+ *   `EST` NOTAM. EUROCONTROL-GUID-121, _OPADD_ Ed. 4.1, as the multinational peer, for what ICAO
+ *   does not say: no space before `EST` and no `WIE`, `WEF`, `UFN` or `APRX DUR` (§2.3.16,
+ *   §2.3.17), and the corrections a NOTAM Processing Unit makes (Ch. 3).
  *
  * @param value A NOTAM item B) or C) value (e.g. "2506151200", "1407031230EST", "PERM")
  * @param options The hundred-year window a two-digit year is read in

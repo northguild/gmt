@@ -1,7 +1,9 @@
 /**
- * The NOTAM validity rows the parse and validate tests share, written by hand from OPADD 4.1
- * §2.3.16 and §2.3.17 (`YYMMDDHHMM`, `EST`, `PERM`, the caller's hundred-year window) and never
- * read from the code under test.
+ * The NOTAM validity rows the parse and validate tests share, written by hand and never read from
+ * the code under test. ICAO PANS-AIM (Doc 10066) Appendix 3 §5 and §6 give `YYMMDDHHMM` in UTC,
+ * `EST`, `PERM`, and `2359` rather than `2400`; OPADD 4.1 §2.3.16 and §2.3.17, the multinational
+ * peer, give no space before `EST` and the values not permitted. The hundred-year window is the
+ * caller's.
  */
 import type { NotamValidity } from "../types/notam";
 
@@ -120,7 +122,11 @@ export const NOTAM_VALID_ROWS: readonly NotamValidRow[] = [
 ];
 
 export const NOTAM_SENTINEL_ROWS: readonly NotamSentinelRow[] = [
-  { value: "2506152400", yearWindow: 2000, reason: "OPADD: do not use '2400'" },
+  {
+    value: "2506152400",
+    yearWindow: 2000,
+    reason: "PANS-AIM App 3 §6: do not use '2400'",
+  },
   { value: "2506151260", yearWindow: 2000, reason: "minute 60" },
   { value: "2513151200", yearWindow: 2000, reason: "month 13" },
   { value: "2500151200", yearWindow: 2000, reason: "month 00" },

@@ -214,6 +214,19 @@ export const METAR_VALID_ROWS: readonly MetarValidRow[] = [
     reason:
       "a critical calendar annotation the engine knows does not change UTC months (RFC 9557 3.3)",
   },
+  {
+    value: "251200Z",
+    reference: "2024-06-15T00:00:00Z[foo=bar]",
+    expected: "2024-06-25T12:00:00Z",
+    reason: "an elective unknown annotation is ignored (RFC 9557 3.3)",
+  },
+  {
+    value: "251200Z",
+    reference: "2024-06-15T02:00:00+02:00[!Europe/Paris]",
+    expected: "2024-06-25T12:00:00Z",
+    reason:
+      "a critical time zone that agrees with the offset is accepted, and months stay UTC: the reference is 00:00Z on 15 June",
+  },
 ];
 
 const REF = "2024-06-25T12:20:00Z";

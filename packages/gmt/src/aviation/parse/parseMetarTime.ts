@@ -36,10 +36,11 @@ function candidate(
  * - **A reference is required.** The group has no month or year, and the function never uses
  *   "now": a stored report reads the same every month. Pass the time the report was received,
  *   or the archive's timestamp.
- * - **How the month is chosen.** The result is the nearer, in exact elapsed time, of the latest
- *   candidate at or before the reference and the earliest after it. A month that lacks the day
- *   (31 in a 30-day month, 29 to 31 in February) is skipped. Of two equally near candidates the
- *   earlier wins. There is no distance limit; check staleness with `spanNs`.
+ * - **How the month is chosen** (GMT rule; WMO-No. 306 gives the day, hour and minute only). The
+ *   result is the nearer, in exact elapsed time, of the latest candidate at or before the
+ *   reference and the earliest after it. A month that lacks the day (31 in a 30-day month, 29 to
+ *   31 in February) is skipped. Of two equally near candidates the earlier wins. There is no
+ *   distance limit; check staleness with `spanNs`.
  * - **UTC throughout.** Months are counted in UTC whatever the reference's offset, and the result
  *   always ends in `Z`. No local wall time is resolved, so no disambiguation policy applies.
  * - **Sources.** WMO-No. 306 FM 15 reg. 15.3.1 and 15.3.2 (METAR, SPECI), FM 51 reg. 51.1.2 (TAF

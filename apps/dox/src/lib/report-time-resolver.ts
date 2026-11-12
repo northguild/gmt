@@ -1116,7 +1116,7 @@ export const NOTAM_PRESETS: readonly NotamPreset[] = [
   {
     id: "est-in-b",
     label: "EST in item B)",
-    description: `The library reads it. OPADD allows EST in item C) only, so the page adds a note. ${WINDOW_NOTE}`,
+    description: `The library reads it. ICAO allows EST in item C) only, so the page adds a note. ${WINDOW_NOTE}`,
     itemB: "1407031230EST",
     itemC: "PERM",
     window: "2000",
@@ -1124,7 +1124,7 @@ export const NOTAM_PRESETS: readonly NotamPreset[] = [
   {
     id: "end-2400",
     label: "Write the end of a day as 2400",
-    description: `OPADD writes the end of a day as 2359. GMT corrects nothing. ${WINDOW_NOTE}`,
+    description: `ICAO writes the end of a day as 2359. GMT corrects nothing. ${WINDOW_NOTE}`,
     itemB: "2506151200",
     itemC: "2506152400",
     window: "2000",
@@ -1295,10 +1295,10 @@ export const NOTAM_REASONS: Record<NotamReasonKey, string> = {
     "An estimated end. It needs a later NOTAM to replace or cancel it.",
   permanent: "Permanent information. No end date to compare against.",
   markedInB:
-    "OPADD allows EST and PERM in item C) only. A reader of item B) treats this as malformed.",
+    "ICAO allows EST and PERM in item C) only. A reader of item B) treats this as malformed.",
   noWindow: "A two-digit year names no century. State the window.",
   lowerCase: "Letters are upper case only.",
-  end2400: "OPADD writes the end of a day as 2359; GMT corrects nothing.",
+  end2400: "ICAO writes the end of a day as 2359; GMT corrects nothing.",
   wie: "OPADD does not allow WIE or UFN; GMT corrects nothing.",
   ufn: "OPADD does not allow WIE or UFN; GMT corrects nothing.",
   spaceBeforeEst: "No space before EST.",
