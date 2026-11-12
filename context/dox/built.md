@@ -1059,7 +1059,7 @@ label does not compile. Family pieces, shared by the tools of one family, live i
 `timeline`'s `mark` takes `{ pattern: "hatch" }`, which sets `data-pattern="hatch"`: a 45° repeating gradient in
 the mark's `--series` over its tint, so a mark reads apart from a solid neighbour without colour. A `tick` inside a
 lane (`.track > .tick`) is a label on an opaque `--gmt-surface-widget` plate with `pointer-events: none`, hidden
-below a 40rem container. Under forced colours the hatch drops its image and takes a dotted border, and the plate
+below a 40rem container. Every `tick` is `aria-hidden` wherever it sits; the marks carry the facts. Under forced colours the hatch drops its image and takes a dotted border, and the plate
 is `Canvas` with `CanvasText`; both rules sit in the timeline module.
 
 **Line breaks in `.astro` text.** Astro 7 defaults to `compressHTML: "jsx"`: whitespace that holds a
@@ -1936,8 +1936,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
       cached by year inside the mount's signal.
     - **The scale is fixed at 366 columns for both lanes,** so they line up by day number and never
       rescale. Month bands alternate solid and `mark({ pattern: "hatch" })`; a common year's day 366
-      is a hatched mark with an `srOnly` `no day 366`. Month names (`getLocaleMonthNames`) sit on
-      in-lane tick plates. The cursor is the only `moving` part.
+      is a hatched mark labelled `no day 366`. Month names (`getLocaleMonthNames`) sit on in-lane
+      tick plates, hidden from screen readers like every `tick`: the band marks name the months. The cursor is the only `moving` part.
     - **Cards do not move.** Each has a fixed `inline-size` in `ch` set from its ghosts (the widest
       Code B, Code A and date, the date found by measuring the library's long month names) and
       stacks below 30rem by container query. A year accent is a bottom border.

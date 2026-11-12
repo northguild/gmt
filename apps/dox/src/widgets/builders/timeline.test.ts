@@ -39,6 +39,18 @@ describe("timeline", () => {
     expect(isInaccessible(screen.getByText("00:00"))).toBe(true);
   });
 
+  it("hides a tick placed in a lane, where the marks already carry the facts", () => {
+    renderHtml(
+      lane({ label: "Months" }, [
+        mark({ label: "January, from day 001", at: 0, span: 0.5 }),
+        tick({ at: 0, label: "Jan" }),
+      ]),
+    );
+    const group = screen.getByRole("group", { name: "Months" });
+    expect(within(group).getByText("Jan")).toBeInTheDocument();
+    expect(isInaccessible(within(group).getByText("Jan"))).toBe(true);
+  });
+
   it("escapes a label", () => {
     renderHtml(lane({ label: '"><b>x' }, mark({ label: "<i>", at: 0.5 })));
     expect(screen.getByRole("group", { name: '"><b>x' })).toBeInTheDocument();
