@@ -112,6 +112,15 @@
   }
 }
 
+/* The frame now paints the code surface itself (the `pre` inside is cleared above), so it takes
+   the near-opaque fill that gmt-a11y.css gives a page `pre`. */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent surface, which is the status quo */
+@media (prefers-reduced-transparency: reduce) {
+  .root {
+    background-color: var(--gmt-surface);
+  }
+}
+
 @media (forced-colors: active) {
   .root {
     border-color: CanvasText;

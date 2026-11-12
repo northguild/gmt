@@ -27,6 +27,12 @@ import {
   dstState,
 } from "./zone-readout";
 
+/* The real reading, wrapped so one test can move the viewer's date mid-run. */
+vi.mock("./zone-clock", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./zone-clock")>();
+  return { ...real, readViewerDate: vi.fn(real.readViewerDate) };
+});
+
 installJsdomShims();
 
 const ZONES = [
@@ -325,6 +331,34 @@ describe("mountZoneClockList", () => {
       for (const row of screen.getAllByRole("option"))
         expect(within(row).getByText(reading)).toBeInTheDocument();
     } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("writes a tick that joins a run already going against the viewer's date as it is then", async () => {
+    /* Sliced as above, so the second tick arrives while the first run is still reading rows. A
+       date far from any zone's gives every row a chip, so a row written against the old date
+       cannot pass by chance. */
+    let clock = 0;
+    const now = vi
+      .spyOn(performance, "now")
+      .mockImplementation(() => (clock += 10));
+    const viewer = vi.mocked(readViewerDate);
+    try {
+      const { list } = mount();
+      const first = list.tick();
+      const moved = "2000-01-01";
+      viewer.mockReturnValue(moved);
+      await Promise.all([first, list.tick()]);
+      for (const zone of ZONES) {
+        const zoneReading = readZoneNow(zone);
+        if (!zoneReading.ok) throw new Error(`${zone} gave no reading`);
+        const chip = dayShiftChip(dayDelta(zoneReading.date, moved));
+        expect(chip).not.toBe("");
+        expect(within(option(zone)).getByText(chip)).toBeInTheDocument();
+      }
+    } finally {
+      viewer.mockReset();
       now.mockRestore();
     }
   });

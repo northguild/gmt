@@ -126,6 +126,9 @@ export function mountZoneClockList(
   const pending = new Set<HTMLElement>();
   let filling = false;
   let filled: Promise<void> = Promise.resolve();
+  /* Set by every request for readings, so a tick that joins a run already going is written
+     against the viewer's date as it is now, not as it was when the run started. */
+  let dateStale = true;
   /* Not `signal` below: the first rows are read during `_willUpdate()`, before it exists. */
   let destroyed = false;
 
@@ -258,11 +261,13 @@ export function mountZoneClockList(
    * A reading costs a few milliseconds, most of it the daylight-time rule reading the zone's
    * transitions, and a jump down the list mounts some twenty rows at once. Read in one go, that
    * was the landing page's longest task. The first slice is written at once and the rest after
-   * the thread has been handed back. A row is built with its fields empty at its full height,
-   * so a row still waiting moves nothing. A row removed before its turn is skipped.
+   * the thread has been handed back. A row is built with its fields empty at its full height
+   * (clock-row.module.css holds the empty time's line), so a row still waiting moves nothing.
+   * A row removed before its turn is skipped.
    */
   function queueReadings(queued: Iterable<HTMLElement>): Promise<void> {
     for (const row of queued) pending.add(row);
+    dateStale = true;
     if (!filling && pending.size > 0) filled = fillReadings();
     return filled;
   }
@@ -271,9 +276,13 @@ export function mountZoneClockList(
     filling = true;
     try {
       const slicer = createSlicer();
-      const viewerDate = readViewerDate();
+      let viewerDate = "";
       for (const row of pending) {
         if (destroyed) return;
+        if (dateStale) {
+          viewerDate = readViewerDate();
+          dateStale = false;
+        }
         pending.delete(row);
         const id = rowZones.get(row);
         if (id !== undefined && row.isConnected)
