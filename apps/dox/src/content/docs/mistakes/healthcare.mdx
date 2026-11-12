@@ -114,7 +114,9 @@ formatHL7("2024-06-15T10:30:45.98765-05:00");
   severity="high"
   title="Padding a FHIR month or day to a time"
   description="A FHIR date can stop at a year, a month or a day. Handing it to new Date, or adding a time to it, states a midnight the sender did not send, and a range check counts the whole period as its first moment. parseFHIR keeps the precision and pads nothing."
-  wrongCode={`new Date("2024-06-15").toISOString();
+  wrongCode={`new Date("2024-06").toISOString();
+// "2024-06-01T00:00:00.000Z" — a day, a time and a place nobody sent
+new Date("2024-06-15").toISOString();
 // "2024-06-15T00:00:00.000Z" — a time and a place nobody sent`}
   rightCode={`import { parseFHIR } from "@northguild/gmt/healthcare/parse";
 

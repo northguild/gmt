@@ -17,7 +17,7 @@ import ToolLayout from "../../../components/ToolLayout.astro";
 
 <Fragment slot="intro">
 
-Type a FHIR R4 value. FHIR is published by HL7 International, and it has three primitive types that carry a date: `date`, `dateTime` and `instant`. The tool calls [`parseFHIR`](/reference/healthcare/parse/parseFHIR/) and [`isValidFHIR`](/reference/healthcare/validate/isValidFHIR/) and shows which of the three types the value fits, and what it names: a year, a month, a day, a local time or an instant. The last section shows what [`formatFHIR`](/reference/healthcare/format/formatFHIR/) writes back.
+Type a FHIR R4 value. FHIR is published by HL7 International, and it has three primitive types that carry a date: `date`, `dateTime` and `instant`. The tool calls [`parseFHIR`](/reference/healthcare/parse/parseFHIR/) and [`isValidFHIR`](/reference/healthcare/validate/isValidFHIR/) and shows which of the three types the value fits, and what it names: a year, a month, a day or an instant. The last section shows what [`formatFHIR`](/reference/healthcare/format/formatFHIR/) writes back.
 
 </Fragment>
 
@@ -25,7 +25,7 @@ Type a FHIR R4 value. FHIR is published by HL7 International, and it has three p
 
 <Fragment slot="after">
 
-**How a value is read.** `parseFHIR` keeps the precision that was sent. A year, a month or a day is a partial value with no instant, and the tool never pads it. A time to the second or finer with an offset is an instant. A `dateTime` with a time and no offset is a local time, and it is not UTC.
+**How a value is read.** `parseFHIR` keeps the precision that was sent. A year, a month or a day is a partial value with no instant, and the tool never pads it. A time to the second or finer with an offset is an instant. A `dateTime` with a time must also carry an offset or `Z`. Without one it is not a FHIR value, and the tool reads it neither as a local time nor as UTC.
 
 **Why a pattern match is shape only.** HL7 International publishes one regular expression for each type, and the specification calls them "informative, not normative". A value can match its pattern and still not be a date, such as `2024-02-30`. The tool shows the pattern result and the library result side by side, and the "Why" line says what the pattern cannot catch.
 
