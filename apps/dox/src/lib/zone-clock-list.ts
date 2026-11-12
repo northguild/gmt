@@ -37,6 +37,7 @@ import {
 } from "~/widgets/families/zones/clock-row";
 import { type GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import { readViewerDate, readZoneNow } from "./zone-clock";
+import { createSlicer } from "./yield-to-main";
 import {
   dayDelta,
   dayShift,
@@ -71,8 +72,8 @@ interface ZoneClockList {
   setIds(ids: readonly string[]): void;
   /** Scroll the zone into view (centred) and mark it selected; null clears. */
   select(id: string | null): void;
-  /** Refresh the ticking "now" text on every currently-rendered row. */
-  tick(): void;
+  /** Refresh the ticking "now" text on every currently-rendered row; resolves once all are written. */
+  tick(): Promise<void>;
   destroy(): void;
 }
 
@@ -117,6 +118,16 @@ export function mountZoneClockList(
    * `writeReading` first runs, and the whole mount throws.
    */
   const fields = new WeakMap<HTMLElement, Fields>();
+  /** The zone each row shows, for the readings taken after the row is built. */
+  const rowZones = new WeakMap<HTMLElement, string>();
+
+  /* Rows waiting for a reading, in the order they were asked for. Declared above the
+     virtualizer for the same reason as `fields`. */
+  const pending = new Set<HTMLElement>();
+  let filling = false;
+  let filled: Promise<void> = Promise.resolve();
+  /* Not `signal` below: the first rows are read during `_willUpdate()`, before it exists. */
+  let destroyed = false;
 
   /* Pending follow-up render after a filter change — see `setIds`. */
   let settleFrame: number | null = null;
@@ -163,6 +174,7 @@ export function mountZoneClockList(
       }),
     );
     const row = holder.firstElementChild as HTMLElement;
+    rowZones.set(row, ids[index] as string);
     fields.set(row, {
       time: row.querySelector<HTMLElement>("[data-field='time']"),
       offset: row.querySelector<HTMLElement>("[data-field='offset']"),
@@ -240,6 +252,41 @@ export function mountZoneClockList(
     }
   }
 
+  /**
+   * Takes the readings for these rows, a slice at a time.
+   *
+   * A reading costs a few milliseconds, most of it the daylight-time rule reading the zone's
+   * transitions, and a jump down the list mounts some twenty rows at once. Read in one go, that
+   * was the landing page's longest task. The first slice is written at once and the rest after
+   * the thread has been handed back. A row is built with its fields empty at its full height,
+   * so a row still waiting moves nothing. A row removed before its turn is skipped.
+   */
+  function queueReadings(queued: Iterable<HTMLElement>): Promise<void> {
+    for (const row of queued) pending.add(row);
+    if (!filling && pending.size > 0) filled = fillReadings();
+    return filled;
+  }
+
+  async function fillReadings(): Promise<void> {
+    filling = true;
+    try {
+      const slicer = createSlicer();
+      const viewerDate = readViewerDate();
+      for (const row of pending) {
+        if (destroyed) return;
+        pending.delete(row);
+        const id = rowZones.get(row);
+        if (id !== undefined && row.isConnected)
+          writeReading(row, id, viewerDate);
+        await slicer.turn();
+      }
+    } finally {
+      /* Reached in the same turn as the loop's last check, so a row queued after that check
+         starts a new run rather than waiting on one that has ended. */
+      filling = false;
+    }
+  }
+
   /* Called at the end of every render, the one place the set of mounted rows changes: the
      listbox re-marks the selected and the active option and points
      `aria-activedescendant` only at a row that is in the DOM. */
@@ -265,7 +312,6 @@ export function mountZoneClockList(
   }
 
   function renderPass(instance: Virtualizer<GmtListbox, HTMLElement>): void {
-    const viewerDate = readViewerDate();
     sizer.style.height = `${instance.getTotalSize()}px`;
     const items = instance.getVirtualItems().slice(0, MAX_MOUNTED_ROWS);
     const visible = new Set(items.map((item) => item.index));
@@ -273,17 +319,21 @@ export function mountZoneClockList(
       if (!visible.has(index)) {
         row.remove();
         rows.delete(index);
+        pending.delete(row);
       }
     }
+    /* Only a new row is read here. A row already on screen keeps its reading, which `tick`
+       refreshes: re-reading every row on each render cost a full reading per row per scroll. */
+    const built: HTMLElement[] = [];
     for (const item of items) {
       let row = rows.get(item.index);
       if (!row) {
         row = buildRow(item.index);
         rows.set(item.index, row);
         sizer.appendChild(row);
+        built.push(row);
       }
       row.style.transform = `translateY(${item.start}px)`;
-      writeReading(row, ids[item.index] as string, viewerDate);
     }
     /* Measured after every row is written: a measure straight after each write forced a layout
        per row (80 of them, up to three passes), the page's longest task on the landing. */
@@ -291,6 +341,7 @@ export function mountZoneClockList(
       const row = rows.get(item.index);
       if (row) instance.measureElement(row);
     }
+    void queueReadings(built);
   }
 
   // The listbox moved its active option: bring that row in view and draw it.
@@ -326,6 +377,7 @@ export function mountZoneClockList(
          so this does not trigger a re-measure flash. */
       for (const [, row] of rows) row.remove();
       rows.clear();
+      pending.clear();
       virtualizer.setOptions({ ...virtualizerOptions, count: ids.length });
       /* Browsing restarts at the top, because the list does too (below). Row 0
          is the one row certain to be mounted after the reset; with no zones
@@ -379,17 +431,15 @@ export function mountZoneClockList(
          write, once a second, for every visible clock. That thrash was the
          globe's biggest source of dropped frames. Scrolling still goes through
          `onChange` -> `renderRows`. */
-      const viewerDate = readViewerDate();
-      for (const [index, row] of rows) {
-        const id = ids[index];
-        if (id) writeReading(row, id, viewerDate);
-      }
+      return queueReadings(rows.values());
     },
     destroy() {
+      destroyed = true;
       abort.abort();
       if (settleFrame !== null) cancelAnimationFrame(settleFrame);
       unmount();
       rows.clear();
+      pending.clear();
       sizer.remove();
     },
   };

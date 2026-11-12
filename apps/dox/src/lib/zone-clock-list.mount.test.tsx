@@ -124,9 +124,9 @@ describe("mountZoneClockList", () => {
     expect(screen.queryAllByRole("option")).toHaveLength(0);
   });
 
-  it("writes a live time, offset and date into every row", () => {
+  it("writes a live time, offset and date into every row", async () => {
     const { list } = mount();
-    list.tick();
+    await list.tick();
     const rows = screen.getAllByRole("option");
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
@@ -141,12 +141,12 @@ describe("mountZoneClockList", () => {
     }
   });
 
-  it("states a day shift in words, and only when the day really differs", () => {
+  it("states a day shift in words, and only when the day really differs", async () => {
     /* The invariant, not a fixed expectation: which of these zones is on another day
        depends on the wall clock and the machine's own zone, so the test derives the
        answer the way the widget does and checks the two agree. */
     const { list } = mount();
-    list.tick();
+    await list.tick();
     const viewerDate = readViewerDate();
     let shifted = 0;
     for (const zone of ["Pacific/Kiritimati", "Pacific/Midway", "Asia/Tokyo"]) {
@@ -168,9 +168,9 @@ describe("mountZoneClockList", () => {
     expect(shifted, "at least one zone is on another day").toBeGreaterThan(0);
   });
 
-  it("marks only a zone actually on summer time, in words", () => {
+  it("marks only a zone actually on summer time, in words", async () => {
     const { list } = mount();
-    list.tick();
+    await list.tick();
     // Asia/Tokyo has had no DST since 1951: nothing to mark.
     expect(
       within(option("Asia/Tokyo")).queryByText("DST"),
@@ -205,10 +205,10 @@ describe("mountZoneClockList", () => {
     expect(screen.getAllByRole("option").length).toBeGreaterThan(2);
   });
 
-  it("keeps ticking after a filter change", () => {
+  it("keeps ticking after a filter change", async () => {
     const { list } = mount();
     list.setIds(["Europe/London"]);
-    list.tick();
+    await list.tick();
     expect(
       within(option("Europe/London")).getByText(/^(\d{2}:\d{2}:\d{2}|— — —)$/),
     ).toBeInTheDocument();
@@ -304,6 +304,29 @@ describe("mountZoneClockList", () => {
     // Selecting a zone far from the rendered window: whatever the attribute says must resolve.
     list.select(many[120] as string);
     expect(resolves()).toBe(true);
+  });
+
+  it("reads the rows a slice at a time, and every row has a reading once a tick resolves", async () => {
+    /* Every reading outlasts a slice's budget here, so the list hands the thread back after each
+       row rather than reading the whole view in one long task. */
+    let clock = 0;
+    const now = vi
+      .spyOn(performance, "now")
+      .mockImplementation(() => (clock += 10));
+    try {
+      const { list } = mount();
+      const reading = /^(\d{2}:\d{2}:\d{2}|— — —)$/;
+      const unread = (row: HTMLElement): boolean =>
+        within(row).queryByText(reading) === null;
+      const rows = screen.getAllByRole("option");
+      expect(rows.length).toBeGreaterThan(2);
+      expect(rows.filter(unread).length).toBeGreaterThan(0);
+      await list.tick();
+      for (const row of screen.getAllByRole("option"))
+        expect(within(row).getByText(reading)).toBeInTheDocument();
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it("mounts no rows in a panel with no size yet, and names no active descendant", () => {
