@@ -1,0 +1,47 @@
+---
+title: Code B Day Ruler
+description: "Pick two years and a day number. The tool reads that CCSDS Code B day in each year with parseCcsdsAsciiB, writes it as Code A and Code B, and draws each year's twelve months on one scale, so the shift after the leap day and the missing day 366 show."
+industries: [core]
+---
+
+import ToolLayout from "../../../components/ToolLayout.astro";
+import CodeBDayRuler from "../../../components/CodeBDayRuler.astro";
+
+<ToolLayout useCase="time scales">
+
+<Fragment slot="keypoint">
+
+A Code B day is a count from 1 January, so every date after February moves by one in a leap year.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+CCSDS Code B writes a UTC date as a year and a day number, such as `2024-061`. Pick two years and a day: the tool reads the day in each with [`parseCcsdsAsciiB`](/reference/timescale/parse/parseCcsdsAsciiB/), writes it back with [`formatCcsdsAsciiA`](/reference/timescale/format/formatCcsdsAsciiA/), and finds where each month starts with [`formatCcsdsAsciiB`](/reference/timescale/format/formatCcsdsAsciiB/). To read a whole code, use the [CCSDS Time Code Decoder](/tools/ccsds-time-code-decoder/).
+
+</Fragment>
+
+<CodeBDayRuler fullbleed />
+
+<Fragment slot="after">
+
+**Day of year, not month.** Day 061 is 1 March in 2024 and 2 March in 2026, because 2024 has a 29 February and 2026 does not. Every date after February moves by one day between a leap year and a common year, so a Code B text names no fixed month and day. Days 1 to 59 do not move: `2024-059` and `2026-059` are both 28 February. The ruler puts both years on one scale of 366 day columns, so each month after February starts a column further left in a leap year.
+
+**Day 366.** Only a leap year has one. `2016-366` is 31 December 2016, and the library refuses `2017-366`. The ruler draws that last column hatched and labelled `no day 366` in a year that lacks it.
+
+**Leap years come from the library.** The tool holds no leap-year rule and no table of month lengths. It asks `parseCcsdsAsciiB` whether a year has a day 366, and `formatCcsdsAsciiB` for the day each month starts on. So 2000 has a 29 February and 2100 does not: day 060 is 29 February in 2000 and 1 March in 2100. A year the library cannot read, such as 10000, shows `no result` beside a lane that still works.
+
+```ts
+import { parseCcsdsAsciiB } from "@northguild/gmt/timescale/parse";
+import { formatCcsdsAsciiA } from "@northguild/gmt/timescale/format";
+
+formatCcsdsAsciiA(parseCcsdsAsciiB("2024-061T00:00:00Z"), 0); // "2024-03-01T00:00:00Z"
+formatCcsdsAsciiA(parseCcsdsAsciiB("2026-061T00:00:00Z"), 0); // "2026-03-02T00:00:00Z"
+parseCcsdsAsciiB("2017-366T00:00:00Z"); // ""
+```
+
+**Worth trying:** [day 061 in 2024 against 2026](/tools/code-b-day-ruler/?w=dayruler&wa=%7B%22year%22%3A%222024%22%2C%22compare%22%3A%222026%22%2C%22day%22%3A%2261%22%7D), then drag the slider to day 366 with [2016 against 2017](/tools/code-b-day-ruler/?w=dayruler&wa=%7B%22year%22%3A%222016%22%2C%22compare%22%3A%222017%22%2C%22day%22%3A%22366%22%7D). The rules are in [Leap seconds and TAI](/guides/core-date-operations/leap-seconds-and-tai/).
+
+</Fragment>
+
+</ToolLayout>

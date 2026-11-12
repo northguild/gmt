@@ -47,6 +47,11 @@ export interface PlaygroundField {
   /** Choices for `kind: "enum"`, or the element choices for a `kind: "list"`. */
   choices?: string[];
   /**
+   * `kind: "enum"` — the choices that are number literals. The call writes these bare
+   * (`6`), every other choice quoted (`"auto"`).
+   */
+  numeric?: string[];
+  /**
    * Plural names the select dropped, each mapped to the singular it offers. Present only when a
    * unit was offered in both spellings. Tests read it; the client ignores it.
    */

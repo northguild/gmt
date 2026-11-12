@@ -1275,7 +1275,11 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
         args.push(p.value === "true" ? "true" : "false");
         break;
       case "enum":
-        args.push(JSON.stringify(p.value));
+        args.push(
+          p.numericOptions?.includes(p.value)
+            ? p.value
+            : JSON.stringify(p.value),
+        );
         break;
       case "array":
         args.push(
@@ -1307,11 +1311,13 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
           val = o.value || "0";
           break;
         case "enum":
-          val = o.value
-            ? JSON.stringify(o.value)
-            : o.options?.[0]
-              ? JSON.stringify(o.options[0])
-              : JSON.stringify("");
+          val = o.numericOptions?.includes(o.value)
+            ? o.value
+            : o.value
+              ? JSON.stringify(o.value)
+              : o.options?.[0]
+                ? JSON.stringify(o.options[0])
+                : JSON.stringify("");
           break;
         default:
           val = o.value ? JSON.stringify(o.value) : JSON.stringify("");
@@ -1410,7 +1416,20 @@ function fieldForParam(
   if (p.type === "enum") {
     const { choices, aliases } = BU.collapseUnitAliases(p.options ?? []);
     if (!choices.length) return null;
-    if (raw !== undefined && !QUOTED_ARG.test(raw)) return null;
+    // A number literal is a choice only where the type lists it as one.
+    if (
+      raw !== undefined &&
+      !QUOTED_ARG.test(raw) &&
+      !(NUMERIC_ARG.test(raw) && p.numericOptions?.includes(raw))
+    )
+      return null;
+    // `"6"` is a string; where the number `6` is the choice, it is not that choice.
+    if (
+      raw !== undefined &&
+      QUOTED_ARG.test(raw) &&
+      p.numericOptions?.includes(argToValue(raw))
+    )
+      return null;
     const value = p.value ? BU.canonicalChoice(p.value, aliases) : "";
     const seed = omitted
       ? ""
@@ -1422,6 +1441,7 @@ function fieldForParam(
       kind: "enum",
       seed,
       choices,
+      ...(p.numericOptions?.length ? { numeric: p.numericOptions } : {}),
       ...(Object.keys(aliases).length ? { aliases } : {}),
       ...opt,
     };
@@ -1659,7 +1679,8 @@ export function buildChoiceSeeds(
       const raw = res.objectArg
         ? BU.parseObjectArgEntries(rawArgs[0]).find(([k]) => k === ef.name)?.[1]
         : rawArgs[idx];
-      if (raw === undefined || !QUOTED_ARG.test(raw)) continue;
+      if (raw === undefined) continue;
+      if (!QUOTED_ARG.test(raw) && !ef.numeric?.includes(raw)) continue;
       const choice = BU.canonicalChoice(argToValue(raw), ef.aliases);
       if (!ef.choices!.includes(choice) || entries[choice]) continue;
 

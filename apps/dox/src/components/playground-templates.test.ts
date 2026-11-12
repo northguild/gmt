@@ -43,6 +43,9 @@ function seededField(field: PlaygroundField): CallField {
   if (field.kind === "units") {
     return { ...base, value: field.seed, unit: field.unitSeed };
   }
+  if (field.numeric?.length) {
+    return { ...base, value: field.seed, numeric: field.numeric };
+  }
   return { ...base, value: field.seed };
 }
 
