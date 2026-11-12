@@ -46,6 +46,12 @@ export interface MarkOptions {
   span?: number;
   series?: TimelineSeries;
   /**
+   * Draw the mark larger, inside a ring, to single it out among its neighbours. The shape tells
+   * it apart, so it does not lean on colour (WCAG 1.4.1). Assistive technology hears it as `aria-current`. It stays a named image: a static
+   * picture, not a control.
+   */
+  emphasis?: boolean;
+  /**
    * `hatch` draws the mark with a diagonal pattern, so two neighbouring marks of one colour
    * (a month band and the next) read apart without colour. Default `solid`.
    */
@@ -59,7 +65,7 @@ export function mark(o: MarkOptions): SafeHtml {
     role="img"
     aria-label="${o.label}"
     data-kind="${o.span === undefined ? "point" : "range"}"
-    data-series="${o.series ?? 1}"
+    data-series="${o.series ?? 1}"${o.emphasis === true ? html` aria-current="true"` : ""}
     ${o.pattern === "hatch" ? html`data-pattern="hatch"` : ""}
     style="--gmt-at: ${unit(o.at)}${span}"
   ></span>`;

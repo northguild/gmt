@@ -1,0 +1,240 @@
+/*
+ * Report Time Resolver: what only this tool needs. The sections, preset, fields, plates, range,
+ * table, code frames, disclosure and held lines are the kit's and the holiday family's; this
+ * sheet lays the controls out, draws the strip's frame and sets the table's cells.
+ *
+ * Amber is the sentinel's alone: a plate the library refused reads a bracketed NO SIGNAL. The
+ * chosen candidate is told apart by a ring and by the word "chosen", never by colour alone, and
+ * nothing here has a coloured left edge.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* A field that does not apply keeps its room, so nothing below it moves. */
+.away[data-away] {
+  visibility: hidden;
+}
+
+.slot {
+  container: slot / inline-size;
+  min-inline-size: 0;
+
+  /* The slider's chip is as wide as its widest reading, "-30 d 23 h 59 m". The two ends of the
+     range read shorter ("-31 d"), so the chip's own samples cannot hold it. */
+  & [data-gate="rider"] {
+    min-inline-size: 22ch;
+  }
+
+  /* A call line can run past the frame. Where scrollbars take room (WebKit), the track is
+     always there, so a long line scrolling in does not make the frame taller. */
+  & pre {
+    overflow-x: scroll;
+  }
+
+  /* A floor on the live value too, not on the sentinel's alone: a text line box and this length
+     round differently (WebKit to 1/64 px), so with the floor on one state only a live plate and
+     a NO SIGNAL one were a hair apart, and this tool's gate measures them to the pixel. It is a
+     floor and not a height, so a taller line makes the box taller and cuts no ink. */
+  & [data-series] > dd:where(:not(:last-child)) {
+    min-block-size: calc(1.15 * var(--value-live));
+  }
+
+  /* The longest instant, +275760-09-13T00:00:00Z, must fit a plate without the value scrolling.
+     A narrow slot sets the plates' value a size smaller, down to 12px; the ghosts use the same
+     size, so a plate still holds its width. The sentinel takes the live size here, so a plate
+     going from a date to NO SIGNAL keeps its height; the call line under the value stays at its
+     own size, or its height would change with the state. A value with nanoseconds is wider than
+     the plate at 320px: it scrolls sideways (`signal-plates.module.css`). */
+  @container slot (inline-size < 40rem) {
+    & [data-series] {
+      --value-live: clamp(0.75rem, (100cqi - 2.5rem) / 21, 1rem);
+      --value-signal: var(--value-live);
+    }
+  }
+}
+
+/* The strip: two lanes and an axis in a bevelled box that is its own container. */
+.seam {
+  --gmt-timeline-h: 2.25rem;
+  --gmt-timeline-label-w: 7rem;
+
+  container: strip / inline-size;
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+}
+
+/* The month labels under the strip ("Oct 2023") are as wide as a seventh of the axis or wider, so
+   in a narrow slot they would run into each other. There they stand on end, turned a quarter
+   about their start and moved half a line so each is centred on its tick; the axis is as tall
+   as the longest ("Sep 275760"), so it never changes height. Wide, they lie flat and start at
+   their tick, so the last one ("May 2024") runs past the axis and the strip leaves it room. The
+   axis is the strip's one `aria-hidden` child. */
+@container slot (inline-size < 43rem) {
+  .seam > [aria-hidden="true"] {
+    block-size: 5rem;
+
+    & > span {
+      transform: translateX(0.5lh) rotate(90deg);
+      transform-origin: 0 0;
+    }
+  }
+}
+
+@container slot (inline-size >= 43rem) {
+  .seam {
+    padding-inline-end: calc(var(--gmt-space-3) + 3.5rem);
+  }
+}
+
+/* A table cell: dates and distances in tabular figures with no wrap. */
+.cell {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Words in a cell (a side, a distance) may break at a space, so the five columns fit the
+   desktop width without the table scrolling. The held text reserves its longest reading, so
+   every row is as tall as the widest wraps and nothing moves as the reading changes. */
+.words,
+.words span {
+  white-space: normal;
+}
+
+/* Under 40rem the seven rows become labelled blocks: each cell names its column from the
+   `data-col` the table wrote, and the header row is read by the labels instead. */
+.strip {
+  min-inline-size: 0;
+
+  @container (inline-size < 40rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    /* The longest instant is wider than what is left beside a label, so this one's label sits
+       above its value. */
+    & td[data-col="Candidate"] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .strip td::before,
+  .strip th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .strip td::before,
+  .strip th::before {
+    color: var(--gmt-ice);
+  }
+}
+
+/* Section 2: item B) and item C) side by side, each in its own column. */
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The estimate badge: the live one and a hidden twin share one cell, so the row never moves. */
+.badgeHold {
+  display: grid;
+  justify-items: start;
+  min-inline-size: 0;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.badgeOn {
+  padding-block-end: var(--gmt-space-1);
+  border-block-end: 2px solid var(--gmt-series-2);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 0,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+.badgeGhost {
+  padding-block-end: var(--gmt-space-1);
+  border-block-end: 2px solid transparent;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (forced-colors: active) {
+  .badgeOn {
+    background-image: none;
+    border-block-end-color: CanvasText;
+    border-block-end-style: double;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .badgeOn {
+    border-block-end-width: 3px;
+  }
+}

@@ -329,6 +329,11 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "report-time-resolver",
+    preset: { role: "combobox", name: "METAR preset" },
+    drag: { role: "slider", name: "Move the reference" },
+  },
+  {
     slug: "swift-value-date-reader",
     preset: PRESET,
     drag: null,

@@ -73,7 +73,8 @@ Three things hold across every industry layer:
   and keep a partial date a span.
 - [Aviation: message times](./aviation-message-times/) — read, write and check an SSIM schedule
   date such as `01JAN26`, with month letters that ignore the platform's language and a century
-  you state. Draws on Core only.
+  you state. Read a METAR time such as `251200Z` against the time it was received, and a NOTAM
+  validity with its `EST` and `PERM`. Draws on Core only.
 
 ## Scenarios
 
@@ -105,6 +106,8 @@ GMT approach working, on the same live widget:
 - [A TS Date Read as a Time](/scenarios/a-ts-date-read-as-a-time/)
 - [A FHIR Month Padded to Midnight](/scenarios/a-fhir-month-padded-to-midnight/)
 - [An SSIM Month Read in the Wrong Language](/scenarios/an-ssim-month-read-in-the-wrong-language/)
+- [A METAR from Last Month](/scenarios/a-metar-from-last-month/)
+- [PERM Read as a Date](/scenarios/perm-read-as-a-date/)
 
 The mistakes that have hurt people in these layers are collected under
 [Transport mistakes](/mistakes/transport/), [Intermodal mistakes](/mistakes/intermodal/),

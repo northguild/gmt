@@ -180,6 +180,15 @@ describe("signatureOf", () => {
       nullable: false,
     });
   });
+
+  it("resolves a named union whose members carry JSDoc comments (NotamValidity)", () => {
+    const source =
+      "export function n(value: string): NotamValidity | null {\n  return null;\n}";
+    expect(signatureOf(source, "n").declared).toEqual({
+      kinds: ["object"],
+      nullable: true,
+    });
+  });
 });
 
 describe.each(corpusNamespaces().map((namespace) => ({ namespace })))(

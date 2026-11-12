@@ -1,16 +1,19 @@
 ---
 title: Aviation mistakes
-description: Common mistakes with SSIM schedule dates, the month letters, upper case, the century and the window, in GMT's Aviation layer.
+description: Common mistakes with SSIM schedule dates, METAR report times and NOTAM validity — the month letters, the century, the window, the reference month, PERM and EST — in GMT's Aviation layer.
 industries: [aviation]
 sidebar:
   label: Aviation
 ---
 
-The Aviation layer reads and writes the dates in airline schedule files. The mistakes around them
-are the ones a quick parser makes: reading the month letters as a word in the machine's language,
+The Aviation layer reads and writes the dates in airline schedule files, and reads the times in
+weather reports and notices to air missions. The mistakes around them are the ones a quick parser
+makes: reading the month letters as a word in the machine's language,
 accepting lower case, fixing a century in code, writing a year the reader will place in another
-century, and judging a leap day without knowing the century. Every output shown here is what the
-function returns.
+century, and judging a leap day without knowing the century. A METAR time has no month, and a
+NOTAM can end in a word or an estimate, so there are three more: assuming the current month,
+turning `PERM` into a date and dropping `EST`. Every output shown here is what the function
+returns.
 
 import Mistake from "../../../components/Mistake.astro";
 
@@ -108,7 +111,61 @@ isValidSsimDate("29FEB00", {});
   rightSpecId="isValidSsimDate"
 />
 
+## The METAR time
+
+<Mistake
+  severity="high"
+  title="Assuming the current month"
+  description="A METAR time group is a day, an hour and a minute, with no month. Putting it in the month the report was received gives a time 30 days ahead for any report that crosses a month end. parseMetarTime takes the time the report was received and chooses the nearest candidate."
+  wrongCode={`const received = new Date("2024-07-01T00:05:00Z");
+
+new Date(Date.UTC(received.getUTCFullYear(), received.getUTCMonth(), 30, 23, 50));
+// 2024-07-30T23:50:00Z — the report was issued on 30 June`}
+  rightCode={`import { parseMetarTime } from "@northguild/gmt/aviation/parse";
+
+parseMetarTime("302350Z", "2024-07-01T00:05:00Z");
+// "2024-06-30T23:50:00Z"
+parseMetarTime("312350Z", "2024-07-01T00:05:00Z");
+// "2024-05-31T23:50:00Z"
+parseMetarTime("302350Z", "");
+// ""`}
+  rightSpecId="parseMetarTime"
+/>
+
+## NOTAM validity
+
+<Mistake
+  severity="high"
+  title="PERM as a date"
+  description="PERM says a NOTAM has no end. A far-future date makes 'is it in force?' right until that day, and gives the NOTAM an expiry it never stated. parseNotamValidity returns { kind: 'permanent' }, which has nothing to compare."
+  wrongCode={`const end = c === "PERM" ? "9999-12-31T23:59:00Z" : toIso(c);
+// a date for something that has no end`}
+  rightCode={`import { parseNotamValidity } from "@northguild/gmt/aviation/parse";
+
+parseNotamValidity("PERM", { yearWindow: 2000 });
+// { kind: "permanent" }
+parseNotamValidity("2506151200", { yearWindow: 2000 });
+// { kind: "instant", instant: "2025-06-15T12:00:00Z", estimated: false }`}
+  rightSpecId="parseNotamValidity"
+/>
+
+<Mistake
+  severity="medium"
+  title="Dropping EST"
+  description="EST after the ten digits says the end is an estimate and the NOTAM may be replaced or cancelled first. Cutting it off with slice(0, 10) shows a guess as a promise. parseNotamValidity keeps the instant and sets estimated: true."
+  wrongCode={`const end = value.slice(0, 10); // "1407031230EST" becomes "1407031230"
+// the estimate is now a firm end time`}
+  rightCode={`import { parseNotamValidity } from "@northguild/gmt/aviation/parse";
+
+parseNotamValidity("1407031230EST", { yearWindow: 2000 });
+// { kind: "instant", instant: "2014-07-03T12:30:00Z", estimated: true }
+parseNotamValidity("1407031230 EST", { yearWindow: 2000 });
+// null`}
+  rightSpecId="parseNotamValidity"
+/>
+
 See [An SSIM Month Read in the Wrong
-Language](/scenarios/an-ssim-month-read-in-the-wrong-language/), and the reasoning in [Aviation:
+Language](/scenarios/an-ssim-month-read-in-the-wrong-language/), [A METAR from Last
+Month](/scenarios/a-metar-from-last-month/), [PERM Read as a Date](/scenarios/perm-read-as-a-date/), and the reasoning in [Aviation:
 Message Times](/guides/industries/aviation-message-times/). To try a date yourself, use the
 [SSIM Date Reader](/tools/ssim-date-reader/).

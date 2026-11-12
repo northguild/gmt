@@ -41,6 +41,88 @@
     ]
   },
   {
+    "url": "/reference/aviation/parse/parseMetarTime",
+    "page": "/reference/aviation/parse/parseMetarTime",
+    "name": "parseMetarTime",
+    "namespace": "aviation",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMetarTime(value: string, referenceInstant: string): string",
+    "description": "Parse a METAR report-time group as an ISO 8601 UTC instant, read against a reference instant.",
+    "sourcePath": "packages/gmt/src/aviation/parse/parseMetarTime.ts",
+    "examples": [
+      {
+        "call": "parseMetarTime(\"251200Z\", \"2024-06-25T12:20:00Z\")",
+        "result": "\"2024-06-25T12:00:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"302350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "\"2024-06-30T23:50:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"312350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "\"2024-05-31T23:50:00Z\" (June has no 31st)"
+      },
+      {
+        "call": "parseMetarTime(\"312350Z\", \"2025-01-01T00:05:00Z\")",
+        "result": "\"2024-12-31T23:50:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"010010Z\", \"2024-06-30T23:55:00Z\")",
+        "result": "\"2024-07-01T00:10:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"151200Z\", \"2024-06-30T12:00:00Z\")",
+        "result": "\"2024-06-15T12:00:00Z\" (a tie: the earlier)"
+      },
+      {
+        "call": "parseMetarTime(\"251200\", \"2024-06-25T12:20:00Z\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseMetarTime(\"251200Z\", \"2024-06-25T12:20:00\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/parse/parseNotamValidity",
+    "page": "/reference/aviation/parse/parseNotamValidity",
+    "name": "parseNotamValidity",
+    "namespace": "aviation",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseNotamValidity(value: string, options: TwoDigitYearOptions): NotamValidity | null",
+    "description": "Parse a NOTAM item B) or C) value as a UTC instant, an estimate, or a permanent validity.",
+    "sourcePath": "packages/gmt/src/aviation/parse/parseNotamValidity.ts",
+    "examples": [
+      {
+        "call": "parseNotamValidity(\"2506151200\", { yearWindow: 2000 })",
+        "result": "{ kind: \"instant\", instant: \"2025-06-15T12:00:00Z\", estimated: false }"
+      },
+      {
+        "call": "parseNotamValidity(\"1407031230EST\", { yearWindow: 2000 })",
+        "result": "{ kind: \"instant\", instant: \"2014-07-03T12:30:00Z\", estimated: true }"
+      },
+      {
+        "call": "parseNotamValidity(\"PERM\", { yearWindow: 2000 })",
+        "result": "{ kind: \"permanent\" }"
+      },
+      {
+        "call": "parseNotamValidity(\"1407031230 EST\", { yearWindow: 2000 })",
+        "result": "null"
+      },
+      {
+        "call": "parseNotamValidity(\"2506152400\", { yearWindow: 2000 })",
+        "result": "null"
+      },
+      {
+        "call": "parseNotamValidity(\"2506151200\", {})",
+        "result": "null"
+      }
+    ]
+  },
+  {
     "url": "/reference/aviation/parse/parseSsimDate",
     "page": "/reference/aviation/parse/parseSsimDate",
     "name": "parseSsimDate",
@@ -82,6 +164,76 @@
       {
         "call": "parseSsimDate(\"01JAN26\", {})",
         "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/validate/isValidMetarTime",
+    "page": "/reference/aviation/validate/isValidMetarTime",
+    "name": "isValidMetarTime",
+    "namespace": "aviation",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidMetarTime(value: string, referenceInstant: string): boolean",
+    "description": "Return true when `value` is a METAR, SPECI or TAF time group (`YYGGggZ`) that resolves against `referenceInstant`.",
+    "sourcePath": "packages/gmt/src/aviation/validate/isValidMetarTime.ts",
+    "examples": [
+      {
+        "call": "isValidMetarTime(\"302350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidMetarTime(\"312350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "true (resolves to 31 May)"
+      },
+      {
+        "call": "isValidMetarTime(\"321200Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidMetarTime(\"251200\", \"2024-06-25T12:20:00Z\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidMetarTime(\"251200Z\", \"2024-06-25T12:20:00\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/validate/isValidNotamValidity",
+    "page": "/reference/aviation/validate/isValidNotamValidity",
+    "name": "isValidNotamValidity",
+    "namespace": "aviation",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidNotamValidity(value: string, options: TwoDigitYearOptions): boolean",
+    "description": "Return true when `value` is a NOTAM item B) or C) value (`YYMMDDHHMM`, the same followed by `EST`, or `PERM`) in the stated hundred-year window.",
+    "sourcePath": "packages/gmt/src/aviation/validate/isValidNotamValidity.ts",
+    "examples": [
+      {
+        "call": "isValidNotamValidity(\"2506151200\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidNotamValidity(\"1407031230EST\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidNotamValidity(\"PERM\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidNotamValidity(\"1407031230 EST\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidNotamValidity(\"2502301200\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidNotamValidity(\"2506151200\", {})",
+        "result": "false"
       }
     ]
   },
@@ -22994,6 +23146,19 @@
         "description": "The first instant after the interval, as an ISO 8601 instant string with an offset; it is not itself inside. It may equal `start`, which makes the interval empty, but not precede it."
       }
     ]
+  },
+  {
+    "url": "/reference/aviation/parse/parseNotamValidity#notamvalidity",
+    "page": "/reference/aviation/parse/parseNotamValidity",
+    "name": "NotamValidity",
+    "namespace": "types",
+    "module": "notam",
+    "kind": "type",
+    "signature": "",
+    "description": "A NOTAM validity value: item B) (when the NOTAM comes into force) or item C) (when it ceases), as read by `parseNotamValidity`. ICAO PANS-AIM (Doc 10066), Appendix 3 §5 and §6; EUROCONTROL-GUID-121, _OPADD_ Ed. 4.1, §2.3.16 and §2.3.17, as the multinational peer.",
+    "sourcePath": "packages/gmt/src/types/notam.ts",
+    "examples": [],
+    "inlineOn": "parseNotamValidity"
   },
   {
     "url": "/reference/plain/get/getNowUnit#nowunit",

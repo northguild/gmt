@@ -178,7 +178,7 @@ skills:
     domain: industry-layers
     path: 'skills/gmt-aviation/SKILL.md'
     package: 'packages/gmt'
-    description: Read, write and check the IATA SSIM schedule date DDMMMYY (parseSsimDate/formatSsimDate/isValidSsimDate) — fixed English upper-case month letters that never go through Intl, a required yearWindow for the century, sentinels instead of exceptions
+    description: Read, write and check the IATA SSIM schedule date DDMMMYY (parseSsimDate/formatSsimDate/isValidSsimDate), read the METAR report time YYGGggZ against a reference instant (parseMetarTime/isValidMetarTime), and read NOTAM validity YYMMDDHHMM, EST and PERM (parseNotamValidity/isValidNotamValidity) — fixed English month letters that never go through Intl, a required yearWindow for the century, sentinels instead of exceptions
     requires:
       - gmt-intermodal
     sources:
@@ -186,6 +186,7 @@ skills:
       - 'northguild/gmt:packages/gmt/src/aviation/format/index.ts'
       - 'northguild/gmt:packages/gmt/src/aviation/parse/index.ts'
       - 'northguild/gmt:packages/gmt/src/aviation/validate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/notam.ts'
       - 'northguild/gmt:packages/gmt/src/types/two-digit-year.ts'
 
   - name: GMT Transport

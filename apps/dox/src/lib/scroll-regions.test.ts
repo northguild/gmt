@@ -109,6 +109,28 @@ describe("mountScrollRegions", () => {
     expect(captioned).toHaveFocus();
   });
 
+  it("gives a value a widget marks a tab stop while it overflows, and no name, so the value is what is read", async () => {
+    const dd = el(
+      "dd",
+      { "data-scrolls": "" },
+      "2024-06-30T12:00:00.000000001Z",
+    );
+    document.body.replaceChildren(
+      el("dl", {}, el("div", {}, el("dt", {}, "Reference"), dd)),
+    );
+    size(dd, 300);
+    mountScrollRegions(document);
+    const value = screen.getByRole("definition");
+    expect(value).not.toHaveAttribute("aria-label");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    await userEvent.tab();
+    expect(value).toHaveFocus();
+
+    size(dd, 100);
+    report([dd]);
+    expect(value).not.toHaveAttribute("tabindex");
+  });
+
   it("removes only what it added when the box fits again", () => {
     const pre = mount(
       codeBlock("x", { "aria-label": "Example", tabindex: "-1" }),

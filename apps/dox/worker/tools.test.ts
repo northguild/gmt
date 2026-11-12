@@ -553,6 +553,56 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showReportTimeResolver", () => {
+    const schema = (
+      tools.showReportTimeResolver as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts either section, or both, with a window as a year or rolling", async () => {
+      for (const input of [
+        { group: "302350Z", reference: "2024-07-01T00:05:00Z" },
+        { group: "302350Z" },
+        { itemB: "2506151200", itemC: "PERM", yearWindow: 2000 },
+        { itemB: "2506151200", yearWindow: "rolling" },
+        { metarPreset: "month-end", notamPreset: "permanent" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showReportTimeResolver", input)).toMatchObject({
+          ok: true,
+          widget: "report-time-resolver",
+        });
+      }
+    });
+
+    it("refuses a window that is not a year or rolling, an unknown field and values over their caps", () => {
+      expect(schema.safeParse({ yearWindow: "now" }).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: 1.5 }).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: -1 }).success).toBe(false);
+      expect(schema.safeParse({ now: true }).success).toBe(false);
+      expect(schema.safeParse({ group: "a".repeat(16) }).success).toBe(true);
+      expect(schema.safeParse({ group: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ itemB: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ itemC: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ reference: "a".repeat(64) }).success).toBe(
+        true,
+      );
+      expect(schema.safeParse({ reference: "a".repeat(65) }).success).toBe(
+        false,
+      );
+    });
+
+    it("defaults nothing: no reference, no window", () => {
+      expect(schema.safeParse({ group: "302350Z" }).data).toEqual({
+        group: "302350Z",
+      });
+    });
+  });
+
   describe("showTerrestrialTimeStack", () => {
     const schema = (
       tools.showTerrestrialTimeStack as unknown as {

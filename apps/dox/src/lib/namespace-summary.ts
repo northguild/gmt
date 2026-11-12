@@ -50,7 +50,7 @@ export const NAMESPACE_SUMMARIES: Readonly<Record<string, string>> = {
   healthcare:
     "Functions that read, write and check HL7 version 2 and FHIR R4 date-times, keeping the precision sent.",
   aviation:
-    "Functions that read, write and check the dates of aviation messages, starting with the SSIM date DDMMMYY.",
+    "Functions that read, write and check the dates and times of aviation messages: SSIM dates, METAR report times and NOTAM validity.",
 };
 
 /**
