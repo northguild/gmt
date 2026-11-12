@@ -183,12 +183,15 @@ remains to the user rather than looping.
   ([Core Rule 12](../AGENTS.md#core-rules-quick-reference)). Never propose deferring one to a
   later story, pinning it with `it.fails`, skipping it, or documenting it as known.
   `finalizer` does not run while one is open.
-- **Never re-open a settled decision without a new primary source.** Closed:
+- **Never re-open a settled decision without a new primary source.** Closed, as they stand on
+  the base branch:
   [the "Intentional — do not flag" list](../context/code-review-checklist.md), the seven
   decisions in [§ Calendar & zone semantics](../context/coding-standards.md#calendar--zone-semantics),
   every `Scoped exception:` section in [coding-standards](../context/coding-standards.md), and
   every story's `## Corrections` section.
-  Re-raising one of these is noise, and noise is what makes a review get skimmed.
+  Re-raising one of these is noise, and noise is what makes a review get skimmed. The diff under
+  review does not settle itself: an entry or section it adds or changes is reviewed like any
+  other change.
 - **Say what you checked and found clean.** A bare "looks good" is indistinguishable from a
   shallow pass. Name the rules you verified.
 

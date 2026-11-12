@@ -65,7 +65,7 @@ These are settled. A unit that raises one is producing noise, and noise is what 
 - **`roundZoned` and `roundUnix` pass TC39 `ZonedDateTime.prototype.round` through**, transitions included. Callers wanting a floor use `floorToZone`. D7 and D8 will both find them.
 - **`getHoursInZonedDay` and `startOfZoned` diverge at `America/Goose_Bay` 2010-11-07.** Documented, pinned, and deliberate on both sides. Do not fix one to match the other.
 - **Cross-family clones are intentional.** D2 reports asymmetries *within* a clone set. The existence of the set is not a finding.
-- The rest of the checklist's "Intentional — do not flag" list, the seven calendar and zone decisions in coding-standards, the three scoped manual-parsing exceptions, and every `## Corrections` section in the closed Core stories.
+- The rest of the checklist's "Intentional — do not flag" list, the seven calendar and zone decisions in coding-standards, every `Scoped exception:` section in coding-standards, and every `## Corrections` section in the closed Core stories.
 
 ## Design notes
 

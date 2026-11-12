@@ -29,7 +29,8 @@ every ordering, age and date-range query downstream inherits the invented fact.
 - `packages/gmt/src/healthcare/validate/isValidFHIR.ts`:
   - `isValidFHIR(value: string, type: FhirDateType): boolean` — True exactly when `parseFHIR`
     returns a value at a precision `type` allows. Both it and `parseFHIR` call the internal core
-    `readFhirValue`, so the two cannot disagree and no public function calls another.
+    `readFhirValue`, so the two cannot disagree. No FHIR function calls another public function:
+    a moment is read by the internal `readOffsetInstant`, the core of `toOffsetInstant`.
     False for a value that is not a string.
 - `packages/gmt/src/regex/fhir.ts` — `fhirDate`, `fhirDateTime` and `fhirInstant`, the three
   patterns FHIR R4 publishes, verbatim and anchored with `^…$`, exported from `regex/index.ts` and
@@ -97,10 +98,11 @@ Teaches: `2024-06` is a month, not midnight on the first.
   days, so it is valid only where `isLeapSecond` (SPA-48) says the second was inserted.
 - **A fraction longer than nine digits is refused.** The R4 regex allows any length. Temporal holds
   nanoseconds, and GMT does not call a value valid that it cannot hold; INT-15 refuses a long EPCIS
-  fraction for the same reason.
-- **`Z`, `+00:00` and `-00:00` are one offset.** `offset` reads all three as `+00:00`, one spelling
-  for one fact, as INT-15 reads `-00`. `value` keeps the spelling sent, and `formatFHIR` writes the
-  offset the input has.
+  fraction for the same reason. XSD 1.0, which gives FHIR its XML types, lets a processor set this
+  limit as long as it documents it, and the JSDoc does.
+- **`Z`, `+00:00` and `-00:00` are one offset.** XSD 1.0 says so. `offset` reads all three as
+  `+00:00`, one spelling for one fact, as INT-15 reads `-00`. `value` keeps the spelling sent.
+  `formatFHIR` writes the designator the input has, or the zone's offset after a bracketed zone.
 - **The formatter reads the wall clock as written.** Under `date`, an instant with an offset writes
   its local date, not its UTC date: `2024-06-15T23:30:00-05:00` is `2024-06-15`. A caller who wants
   the UTC date passes the `Z` form.
@@ -115,14 +117,16 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 | `dateTime` forms; zone with a time; seconds required; no `24:00` | FHIR R4 §2.24.0.1, `dateTime`: "If hours and minutes are specified, a time zone SHALL be populated. Seconds must be provided due to schema type constraints"; "The time '24:00' is not allowed" |
 | `instant` precision and zone | FHIR R4 §2.24.0.1, `instant`: "The time SHALL specified at least to the second and SHALL include a time zone" |
 | Leap seconds are allowed | FHIR R4 §2.24.0.1, `dateTime`: "Leap Seconds are allowed"; the second field of each regex is `([0-5][0-9]\|60)` |
-| Offset range `-14:00` … `+14:00`; year `0000` refused | FHIR R4 §2.24.0.1 regexes. The page calls the regexes "informative, not normative"; **GMT rule** to follow them where the prose is silent |
+| FHIR's types are XSD 1.0's | FHIR R4 §2.24.0.1 gives the XML type of `date` as `xs:gYear \| xs:gYearMonth \| xs:date`, of `dateTime` as "a union of xs:dateTime, xs:date, xs:gYearMonth, xs:gYear", and of `instant` as `xs:dateTime` |
+| Offset range `-14:00` … `+14:00` | FHIR R4 §2.24.0.1 regexes; XSD 1.0 Part 2 §3.2.7.3: "the hour magnitude limited to at most 14, and the minute magnitude limited to at most 59, except that if the hour magnitude is 14, the minute value must be 0" |
+| Year `0000` refused | FHIR R4 §2.24.0.1 regexes; XSD 1.0 Part 2 §3.2.7.1: "'0000' is prohibited", for `dateTime` and for the `date`, `gYearMonth` and `gYear` forms written the same way |
 | `fhirDate`, `fhirDateTime`, `fhirInstant` | FHIR R4 StructureDefinitions `date`, `dateTime` and `instant`, the `regex` extension on `.value`, verbatim |
 | The patterns are informative | FHIR R4 §2.24.0.1: "The regexes are provided to assist with tooling, but are informative, not normative" |
 | A pattern match is shape only; validity is `isValidFHIR`'s | **GMT rule**, as for `epcisEventTime` and `isValidEpcisEventTime` (INT-15) |
-| `isValidFHIR` and `parseFHIR` share one core | **GMT rule.** Both call the internal `readFhirValue`, so the two cannot disagree; a public function never calls another public function ([coding-standards § Loop cost](../../coding-standards.md#loop-cost)) |
+| `isValidFHIR` and `parseFHIR` share one core | **GMT rule.** Both call the internal `readFhirValue`, so the two cannot disagree. It reads a moment with the internal `readOffsetInstant`, the core of `toOffsetInstant`; a public function never calls another public function ([coding-standards § Loop cost](../../coding-standards.md#loop-cost)) |
 | A second of `60` only on an inserted leap second | **GMT rule**, on SPA-48's closed leap-second table |
-| A fraction of more than nine digits is refused | **GMT rule.** Temporal holds nanoseconds |
-| `Z`, `+00:00`, `-00:00` read as `+00:00` | **GMT rule.** One spelling for one fact |
+| A fraction of more than nine digits is refused | XSD 1.0 Part 2 §3.2.7 applies §3.2.6's conformance note: a processor supports at least three fraction digits and "may set an application-defined limit on the maximum number of digits", which "must be clearly documented". GMT's limit is nine, the nanoseconds Temporal holds, and `parseFHIR`'s JSDoc states it |
+| `Z`, `+00:00`, `-00:00` are one offset | XSD 1.0 Part 2 §3.2.7.3: "'+00:00', '-00:00', and 'Z' all represent the same zero-length duration timezone, UTC". Reading all three as `+00:00` is a **GMT rule** (XSD's canonical spelling is `Z`): one spelling for one fact |
 | A month, day or time that does not exist is rejected | TC39 Temporal `overflow: "reject"`; [coding-standards § Calendar & zone semantics](../../coding-standards.md#calendar--zone-semantics) |
 | Sentinels | [coding-standards § API Contract](../../coding-standards.md#api-contract) |
 
@@ -130,10 +134,12 @@ FHIR is published by HL7 International, a multinational industry body. R4 was re
 
 - HLTH-93 — the `healthcare/` realm: its subpaths, its Dox industry, the guide and the mistakes
   page this story extends
-- `toOffsetInstant` from CORE-4 — the instant-plus-offset pair a full FHIR value is
-- `isLeapSecond` from SPA-48 — checking a second of `60` against the leap-second table
-- `isValidDate`, `isValidDateTime` — the ISO values the formatter takes
-- `regex/utc-offset` — the `±HH:MM` shape `offset` has
+- `readOffsetInstant` and `readFormOffsetInstant`, the core of CORE-4's `toOffsetInstant` — the
+  instant-plus-offset pair a full FHIR value is
+- `LEAP_SECOND_STEPS`, `parseUtcReading` and `taiOfUtc`, the core of SPA-48's `isLeapSecond` —
+  checking a second of `60` against the leap-second table
+- `isoHl7Form`, `isoHl7Precision` and `hl7PrecisionRank` from HLTH-93 — the ISO 8601 forms
+  `formatFHIR` reads, as `formatHL7` does
 
 ## Verification
 

@@ -5,11 +5,10 @@ import {
   isoStringBody,
   isOptionsArgument,
   parseUtcOffsetNanoseconds,
+  readFormOffsetInstant,
 } from "../../internal";
+import { isDateString, plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
-import { isValidDate } from "../../plain/validate/isValidDate";
-import { isValidDateTime } from "../../plain/validate/isValidDateTime";
 import type { Hl7FormatOptions, Hl7Precision } from "../../types";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000n;
@@ -21,8 +20,6 @@ const MAX_FOUR_DIGIT_YEAR = 9999;
 
 // 2.A.22 picture `[.S[S[S[S]]]]`: a fraction of one to four digits.
 const MAX_FRACTION_DIGITS = 4;
-
-const RANK_MINUTE = hl7PrecisionRank("minute");
 
 /**
  * Write an ISO 8601 string as an HL7 v2 date-time (`DTM`): the inverse of `parseHL7`.
@@ -50,14 +47,15 @@ const RANK_MINUTE = hl7PrecisionRank("minute");
  *   (2.A.22: "if the time zone is not included, the time zone defaults to that of the local time
  *   zone of the sender"). To send a facility's wall clock with its offset, pass the string
  *   `fromOffsetInstant` writes for that zone.
- * - The offset written is `toOffsetInstant`'s: the one written, or the zone's when a zone
- *   annotation follows `Z` (`…Z[Europe/Helsinki]` writes `+0300`); `Z` alone writes `+0000`. It is
- *   never dropped and never rounded: an offset that is not a whole number of minutes returns `""`.
+ * - The offset written is the one `toOffsetInstant` reads: the one written, or the zone's when a
+ *   zone annotation follows `Z` (`…Z[Europe/Helsinki]` writes `+0300`); `Z` alone writes `+0000`.
+ *   It is never dropped and never rounded: an offset that is not a whole number of minutes
+ *   returns `""`.
  * - `Z` and `-00:00` (RFC 9557 §2.2: UTC known, local offset unknown) write `+0000`; HL7 has no
  *   spelling for an unknown offset (2.A.22: "+0000 or -0000 both represent UTC").
- * - A date with an offset is not ISO 8601, and an hour with one is refused, as `isValidInstant`
- *   refuses it; both return `""`. To write a partial value with its offset, pass the instant with
- *   `precision`:
+ * - A date with an offset is not ISO 8601 and returns `""`. An hour with one is ISO 8601-1
+ *   §5.3.1.3 reduced precision and is written (`2024-06-15T10-05:00` is `2024061510-0500`). To
+ *   write a date with its offset, pass the instant with `precision`:
  *   `formatHL7("2024-06-15T10:30:00-05:00", { precision: "day" })` is `20240615-0500`.
  * - Disambiguation: none. The function never converts a wall time without an offset to an
  *   instant, and a zone annotation with no offset (`2024-06-15T10:30:00[Europe/Helsinki]`)
@@ -81,6 +79,7 @@ const RANK_MINUTE = hl7PrecisionRank("minute");
  * @example formatHL7("2024-06-15T10:30:45.98765-05:00") // "20240615103045.9876-0500" (cut, not rounded)
  * @example formatHL7("2024-06-15T10:30:45.98765-05:00", { precision: "day" }) // "20240615-0500"
  * @example formatHL7("2024-06", { precision: "day" }) // "" (finer than the value carries)
+ * @example formatHL7("2024-06-15T10-05:00") // "2024061510-0500" (an hour with an offset)
  * @example formatHL7("2024-06-15-05:00") // "" (not ISO 8601)
  * @example formatHL7("2024-06-15T10:30:00[Europe/Helsinki]") // "" (a zone with no offset)
  * @example formatHL7("2024-02-30") // "" (no such day)
@@ -97,7 +96,7 @@ export function formatHL7(value: string, options?: Hl7FormatOptions): string {
     }
     const { target, written, fractionDigits, hasOffset } = form;
     const read = hasOffset
-      ? readOffsetForm(value)
+      ? readOffsetForm(value, written)
       : readLocalForm(value, match, written);
     if (read === null) {
       return "";
@@ -139,7 +138,7 @@ function planForm(
   }
   const { precision: written, fractionDigits } = isoHl7Precision(match);
   const hasOffset = match.groups?.["offset"] !== undefined;
-  if (!isWritableForm(value, hasOffset, written)) {
+  if (!isWritableForm(value, hasOffset)) {
     return null;
   }
   const target = requested ?? written;
@@ -150,17 +149,11 @@ function planForm(
 }
 
 /**
- * A zone with no offset needs a disambiguation choice this function does not make; a date with an
- * offset is not ISO 8601, and an hour with one is refused, as `isValidInstant` refuses it.
+ * A zone with no offset needs a disambiguation choice this function does not make. (A date with
+ * an offset is not ISO 8601, and `isoHl7Form` has already refused it.)
  */
-function isWritableForm(
-  value: string,
-  hasOffset: boolean,
-  written: Hl7Precision,
-): boolean {
-  return hasOffset
-    ? hl7PrecisionRank(written) >= RANK_MINUTE
-    : !value.includes("[");
+function isWritableForm(value: string, hasOffset: boolean): boolean {
+  return hasOffset || !value.includes("[");
 }
 
 interface WallClockRead {
@@ -192,7 +185,7 @@ function readLocalForm(
       break;
     }
     case "day":
-      if (!isValidDate(own)) {
+      if (!isDateString(own)) {
         return null;
       }
       wallClock = Temporal.PlainDate.from(own).toPlainDateTime();
@@ -208,18 +201,26 @@ function readLocalForm(
         reject,
       );
       break;
-    default:
-      if (!isValidDateTime(own)) {
+    default: {
+      const dateTime = plainDateTimeOf(own);
+      if (dateTime === null) {
         return null;
       }
-      wallClock = Temporal.PlainDateTime.from(own);
+      wallClock = dateTime;
+    }
   }
   return { wallClock, offset: null };
 }
 
-/** A form with an offset: `toOffsetInstant` reads it, and the wall clock is the instant seen at that offset. */
-function readOffsetForm(value: string): WallClockRead | null {
-  const pair = toOffsetInstant(value);
+/**
+ * A form with an offset: `readFormOffsetInstant` reads it as `toOffsetInstant` does, an hour-only
+ * time included, and the wall clock is the instant seen at that offset.
+ */
+function readOffsetForm(
+  value: string,
+  written: Hl7Precision,
+): WallClockRead | null {
+  const pair = readFormOffsetInstant(value, written);
   if (pair === null) {
     return null;
   }

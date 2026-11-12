@@ -32,13 +32,14 @@ describe("fhirTypeAllows", () => {
     },
   );
 
-  it.each([
-    { type: "toString" },
-    { type: "__proto__" },
-    { type: undefined },
-    { type: "DateTime" },
-    { type: "time" },
-  ])("is false for the unknown type $type", ({ type }) => {
+  it.each`
+    type
+    ${"toString"}
+    ${"__proto__"}
+    ${undefined}
+    ${"DateTime"}
+    ${"time"}
+  `("is false for the unknown type $type", ({ type }) => {
     expect(fhirTypeAllows(type, "year")).toBe(false);
   });
 });
@@ -55,12 +56,14 @@ describe("FHIR precision tables", () => {
     expect(Object.isFrozen(FHIR_PRECISIONS)).toBe(true);
   });
 
-  it.each(["date", "dateTime", "instant"] as const)(
-    "freezes the precisions of '%s'",
-    (type) => {
-      expect(Object.isFrozen(FHIR_TYPE_PRECISIONS[type])).toBe(true);
-    },
-  );
+  it.each`
+    type
+    ${"date"}
+    ${"dateTime"}
+    ${"instant"}
+  `("freezes the precisions of '$type'", ({ type }: { type: FhirDateType }) => {
+    expect(Object.isFrozen(FHIR_TYPE_PRECISIONS[type])).toBe(true);
+  });
 
   it("freezes FHIR_TYPE_PRECISIONS itself", () => {
     expect(Object.isFrozen(FHIR_TYPE_PRECISIONS)).toBe(true);
@@ -86,11 +89,15 @@ describe("readFhirValue", () => {
 
   // A String object, a number and an array all stringify to "2024": only the typeof check
   // refuses them.
-  it.each([
-    { label: "new String('2024')", make: () => new String("2024") },
-    { label: "2024", make: () => 2024 },
-    { label: "['2024']", make: () => ["2024"] },
-  ])("returns null for the non-string $label", ({ make }) => {
-    expect(readFhirValue(make())).toBeNull();
-  });
+  it.each`
+    label                   | make
+    ${"new String('2024')"} | ${() => new String("2024")}
+    ${"2024"}               | ${() => 2024}
+    ${"['2024']"}           | ${() => ["2024"]}
+  `(
+    "returns null for the non-string $label",
+    ({ make }: { make: () => unknown }) => {
+      expect(readFhirValue(make())).toBeNull();
+    },
+  );
 });

@@ -31,11 +31,15 @@ describe("parseFHIR", () => {
 
   // A String object, a number and an array all stringify to "2024": only the typeof check
   // refuses them.
-  it.each([
-    { label: "new String('2024')", make: () => new String("2024") },
-    { label: "2024", make: () => 2024 },
-    { label: "['2024']", make: () => ["2024"] },
-  ])("returns null for the non-string $label", ({ make }) => {
-    expect(parseFHIR(make() as string)).toBeNull();
-  });
+  it.each`
+    label                   | make
+    ${"new String('2024')"} | ${() => new String("2024")}
+    ${"2024"}               | ${() => 2024}
+    ${"['2024']"}           | ${() => ["2024"]}
+  `(
+    "returns null for the non-string $label",
+    ({ make }: { make: () => unknown }) => {
+      expect(parseFHIR(make() as string)).toBeNull();
+    },
+  );
 });

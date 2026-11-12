@@ -1,18 +1,17 @@
 import {
+  FHIR_PRECISIONS,
+  fhirTypeAllows,
+  hasTimeZoneAnnotation,
   hl7PrecisionRank,
   isoHl7Form,
   isoHl7Precision,
   isoStringBody,
   isOptionsArgument,
   parseUtcOffsetNanoseconds,
-} from "../../internal";
-import {
-  FHIR_PRECISIONS,
-  fhirTypeAllows,
   readFhirValue,
-} from "../../internal/fhirDateTime";
+  readFormOffsetInstant,
+} from "../../internal";
 import { Temporal } from "../../internal/temporal";
-import { toOffsetInstant } from "../../instant/convert/toOffsetInstant";
 import type {
   FhirDateType,
   FhirFormatOptions,
@@ -45,13 +44,20 @@ const RANK_SECOND = hl7PrecisionRank("second");
  *   A `…Z[zone]` value gives that zone's local date (`2024-06-15T23:30:00Z[Europe/Berlin]` is
  *   `2024-06-16`): RFC 9557 §3.4 says a `Z` timestamp asserts no local time, so it comes from the
  *   zone suffix.
- * - The designator is written as the input spells it (`Z`, `+00:00` and `-00:00` stay as
- *   written); a bracketed zone after `Z` writes that zone's offset
- *   (`…Z[Europe/Berlin]` writes `+02:00`). The fraction always uses `.`.
+ * - With no bracketed zone, the designator is written as the input spells it (`Z`, `+00:00` and
+ *   `-00:00` stay as written; `+05:30:00` is written `+05:30`). After a bracketed zone, the
+ *   zone's offset at that instant is written, whatever the designator: `…Z[Europe/Berlin]` in
+ *   June writes `+02:00`, and `…Z[Europe/London]` in January writes `+00:00`. The fraction
+ *   always uses `.`.
+ * - `-00:00` before a bracketed zone returns `""` unless the zone's offset is zero at that
+ *   instant (`2024-06-15T10:30:00-00:00[Europe/Berlin]`): Temporal's `ZonedDateTime.from` reads
+ *   `-00:00` as the offset `+00:00` and rejects an offset the zone contradicts (RFC 9557 §3.4).
  * - A second of `60` returns `""`: §2.24.0.1 says "applications producing them MAY choose to avoid
  *   encoding leap seconds".
  * - There is no hour or minute precision, and nothing is zero-filled: a value written to the hour
- *   or minute is written only when cut to a day or coarser.
+ *   or minute, with or without an offset, is written only when cut to a day or coarser
+ *   (`2024-06-15T23-05:00` is `2024-06-15` under `date`). An hour-only time is ISO 8601-1
+ *   §5.3.1.3 reduced precision, which Temporal reads.
  * - An offset that is not a whole number of minutes returns `""` (`+02:00:30`; Monrovia before
  *   1972, `Africa/Monrovia`, was −0:44:30). This applies under `date` too, even though a `date`
  *   never writes the offset.
@@ -72,6 +78,8 @@ const RANK_SECOND = hl7PrecisionRank("second");
  * @returns the FHIR value, or `""` when the value cannot be written as `type`
  *
  * @example formatFHIR("2024-06-15T23:30:00-05:00", "date") // "2024-06-15"
+ * @example formatFHIR("2024-06-15T23-05:00", "date") // "2024-06-15" (an hour with an offset)
+ * @example formatFHIR("2024-01-15T10:30:00Z[Europe/London]", "dateTime") // "2024-01-15T10:30:00+00:00"
  * @example formatFHIR("2024-06-15T23:30:00-05:00", "instant") // "2024-06-15T23:30:00-05:00"
  * @example formatFHIR("2024-06-15T10:30:00", "instant") // "" (an instant needs a zone)
  * @example formatFHIR("2024-06-15T10:30:00Z", "dateTime", { precision: "month" }) // "2024-06"
@@ -91,15 +99,16 @@ export function formatFHIR(
     if (plan === null) {
       return "";
     }
-    const { target, rank, fractionDigits, designator, groups } = plan;
-    const pair = designator === undefined ? null : readOffsetPair(value);
+    const { target, written, rank, fractionDigits, designator, groups } = plan;
+    const pair =
+      designator === undefined ? null : readOffsetPair(value, written);
     if (designator !== undefined && pair === null) {
       return "";
     }
     const wallClock = readWallClock(groups, pair);
     let result = writeDigits(wallClock, target, rank, fractionDigits);
     if (rank >= RANK_SECOND && pair !== null) {
-      result += keepSpelling(designator as string, pair.offset);
+      result += keepSpelling(value, designator as string, pair.offset);
     }
     const check = readFhirValue(result);
     return check !== null && fhirTypeAllows(type, check.precision)
@@ -113,6 +122,7 @@ export function formatFHIR(
 
 interface WritePlan {
   readonly target: Hl7Precision;
+  readonly written: Hl7Precision;
   readonly rank: number;
   readonly fractionDigits: number;
   readonly designator: string | undefined;
@@ -158,17 +168,19 @@ function planWrite(
   if (rank >= RANK_SECOND && designator === undefined) {
     return null;
   }
-  return { target, rank, fractionDigits, designator, groups };
+  return { target, written, rank, fractionDigits, designator, groups };
 }
 
 /**
- * `toOffsetInstant`'s reading, or null when it refuses or the offset is not a whole number of
- * minutes (as `formatHL7`): Temporal cannot show an instant at an offset with seconds.
+ * The instant and offset `toOffsetInstant` reads (`readFormOffsetInstant`, which also reads an
+ * hour-only time), or null when it refuses or the offset is not a whole number of minutes (as
+ * `formatHL7`): Temporal cannot show an instant at an offset with seconds.
  */
 function readOffsetPair(
   value: string,
+  written: Hl7Precision,
 ): { instant: string; offset: string } | null {
-  const pair = toOffsetInstant(value);
+  const pair = readFormOffsetInstant(value, written);
   if (pair === null) {
     return null;
   }
@@ -216,8 +228,18 @@ function pickTarget(
   return hl7PrecisionRank(target) > hl7PrecisionRank(written) ? null : target;
 }
 
-/** The input's own spelling when it names the offset Temporal read; otherwise that offset. */
-function keepSpelling(designator: string, offset: string): string {
+/**
+ * After a bracketed zone, the zone's offset. Otherwise the input's own spelling when it names the
+ * offset Temporal read (`Z` and `-00:00` name `+00:00`), and that offset when it does not.
+ */
+function keepSpelling(
+  value: string,
+  designator: string,
+  offset: string,
+): string {
+  if (hasTimeZoneAnnotation(value)) {
+    return offset;
+  }
   const named =
     designator === "Z" || designator === "-00:00" ? "+00:00" : designator;
   return named === offset ? designator : offset;

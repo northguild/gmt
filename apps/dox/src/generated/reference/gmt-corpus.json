@@ -2706,6 +2706,14 @@
         "result": "\"2024-06-15\""
       },
       {
+        "call": "formatFHIR(\"2024-06-15T23-05:00\", \"date\")",
+        "result": "\"2024-06-15\" (an hour with an offset)"
+      },
+      {
+        "call": "formatFHIR(\"2024-01-15T10:30:00Z[Europe/London]\", \"dateTime\")",
+        "result": "\"2024-01-15T10:30:00+00:00\""
+      },
+      {
         "call": "formatFHIR(\"2024-06-15T23:30:00-05:00\", \"instant\")",
         "result": "\"2024-06-15T23:30:00-05:00\""
       },
@@ -2761,6 +2769,10 @@
       {
         "call": "formatHL7(\"2024-06\", { precision: \"day\" })",
         "result": "\"\" (finer than the value carries)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10-05:00\")",
+        "result": "\"2024061510-0500\" (an hour with an offset)"
       },
       {
         "call": "formatHL7(\"2024-06-15-05:00\")",

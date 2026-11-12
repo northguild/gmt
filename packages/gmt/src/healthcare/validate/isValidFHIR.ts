@@ -1,4 +1,4 @@
-import { fhirTypeAllows, readFhirValue } from "../../internal/fhirDateTime";
+import { fhirTypeAllows, readFhirValue } from "../../internal";
 import type { FhirDateType } from "../../types";
 
 /**

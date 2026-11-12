@@ -1,4 +1,4 @@
-import { readFhirValue } from "../../internal/fhirDateTime";
+import { readFhirValue } from "../../internal";
 import type { FhirDateTime } from "../../types";
 
 /**

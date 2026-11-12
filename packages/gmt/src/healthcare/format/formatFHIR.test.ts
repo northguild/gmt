@@ -80,14 +80,33 @@ const ROWS: Row[] = [
   {
     input: "2024-06-15T10:30:00Z[UTC]",
     type: "instant",
-    expected: "2024-06-15T10:30:00Z",
-    why: "same offset keeps spelling",
+    expected: "2024-06-15T10:30:00+00:00",
+    why: "a bracketed zone writes its offset",
   },
   {
+    input: "2024-01-15T10:30:00Z[Europe/London]",
+    type: "dateTime",
+    expected: "2024-01-15T10:30:00+00:00",
+    why: "a zero zone offset is written as an offset",
+  },
+  {
+    input: "2024-01-15T10:30:00-00:00[Europe/London]",
+    type: "dateTime",
+    expected: "2024-01-15T10:30:00+00:00",
+    why: "-00:00 agrees with a zero zone offset",
+  },
+  {
+    // Temporal.ZonedDateTime.from rejects an offset the zone contradicts (RFC 9557 §3.4)
     input: "2024-06-15T10:30:00-00:00[Europe/Berlin]",
     type: "dateTime",
     expected: "",
-    why: "toOffsetInstant refuses",
+    why: "-00:00 contradicts the zone",
+  },
+  {
+    input: "2024-06-15T10:30:00+05:30:00",
+    type: "dateTime",
+    expected: "2024-06-15T10:30:00+05:30",
+    why: "zero offset seconds dropped",
   },
   {
     input: "2024-06-15T10:30:00-00:00",
@@ -182,8 +201,26 @@ const ROWS: Row[] = [
   {
     input: "2024-06-15T10Z",
     type: "date",
+    expected: "2024-06-15",
+    why: "an hour with an offset (ISO 8601-1 §5.3.1.3)",
+  },
+  {
+    input: "2024-06-15T23-05:00",
+    type: "date",
+    expected: "2024-06-15",
+    why: "an hour, wall-clock day at its offset",
+  },
+  {
+    input: "2024-06-15T23Z[Europe/Berlin]",
+    type: "date",
+    expected: "2024-06-16",
+    why: "an hour, wall-clock day in the zone",
+  },
+  {
+    input: "2024-06-15T10Z",
+    type: "dateTime",
     expected: "",
-    why: "an hour with an offset",
+    why: "an hour with an offset, not cut",
   },
   {
     input: "2024-06-15T10:30:00",
@@ -479,7 +516,7 @@ describe("formatFHIR", () => {
       expect(formatFHIR("1960-01-01T00:00:00Z[Africa/Monrovia]", "date")).toBe(
         "",
       );
-      // toOffsetInstant shows the instant in the zone; only a guard-less formatFHIR shows it at
+      // readFormOffsetInstant shows the instant in the zone; only a guard-less formatFHIR shows it at
       // the sub-minute offset itself.
       expect(spy.mock.calls.map(([zone]) => String(zone))).not.toContain(
         "-00:44:30",
@@ -549,15 +586,16 @@ describe("formatFHIR", () => {
       },
     );
 
-    it.each([
-      { input: "2024", precision: "year" },
-      { input: "2024-06", precision: "month" },
-      { input: "2024-06-15", precision: "day" },
-      { input: "2024-06-15T10:30:00-05:00", precision: "second" },
-      { input: "2024-06-15T10:30:00.250-05:00", precision: "fraction" },
-    ])(
+    it.each`
+      input                              | precision
+      ${"2024"}                          | ${"year"}
+      ${"2024-06"}                       | ${"month"}
+      ${"2024-06-15"}                    | ${"day"}
+      ${"2024-06-15T10:30:00-05:00"}     | ${"second"}
+      ${"2024-06-15T10:30:00.250-05:00"} | ${"fraction"}
+    `(
       "keeps the precision $precision of '$input' through formatFHIR and parseFHIR",
-      ({ input, precision }) => {
+      ({ input, precision }: { input: string; precision: FhirPrecision }) => {
         expect(parseFHIR(formatFHIR(input, "dateTime"))?.precision).toBe(
           precision,
         );
