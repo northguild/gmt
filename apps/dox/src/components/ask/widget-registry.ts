@@ -78,6 +78,8 @@ import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
 import type { TerrestrialTimeStackArgs } from "~/lib/terrestrial-time-stack-mount";
 import type { JulianDayCounterArgs } from "~/lib/julian-day-counter-mount";
 import type { DoublePrecisionMeterArgs } from "~/lib/double-precision-meter-mount";
+import type { CcsdsTimeCodeDecoderArgs } from "~/lib/ccsds-time-code-decoder-mount";
+import type { DayRulerArgs } from "~/lib/code-b-day-ruler-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
@@ -88,6 +90,7 @@ import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
 import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
 import type { FixTimestampReaderArgs } from "~/lib/fix-timestamp-reader-mount";
+import type { FhirArgs } from "~/lib/fhir-date-checker-mount";
 import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
 import type { ReportTimeResolverArgs } from "~/lib/report-time-resolver-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
@@ -136,6 +139,9 @@ import {
   showReportTimeResolverInput,
   showJulianDayCounterInput,
   showDoublePrecisionMeterInput,
+  showCcsdsTimeCodeDecoderInput,
+  showCodeBDayRulerInput,
+  showFhirDateCheckerInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -977,6 +983,29 @@ const fixTimestampEntry = defineWidget<FixTimestampReaderArgs>({
     })),
 });
 
+const fhirEntry = defineWidget<FhirArgs>({
+  title: "FHIR Date Checker",
+  kind: "fhir",
+  parse: (input) => {
+    const result = showFhirDateCheckerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: the one argument is a control
+     value. A value the library does not read is the widget's own NO SIGNAL, with
+     its reason. */
+  load: () =>
+    import("~/lib/fhir-date-checker-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderFhirDateCheckerTemplate(idPrefix, args),
+      mount: m.mountFhirDateChecker,
+    })),
+});
+
 const ssimEntry = defineWidget<SsimDateReaderArgs>({
   title: "SSIM Date Reader",
   kind: "ssim",
@@ -1110,6 +1139,57 @@ const doublePrecisionMeterEntry = defineWidget<DoublePrecisionMeterArgs>({
       renderTemplate: (idPrefix, args) =>
         m.renderDoublePrecisionMeterTemplate(idPrefix, args),
       mount: m.mountDoublePrecisionMeter,
+    })),
+});
+
+const ccsdsTimeCodeDecoderEntry = defineWidget<CcsdsTimeCodeDecoderArgs>({
+  title: "CCSDS Time Code Decoder",
+  kind: "ccsds",
+  parse: (input) => {
+    const result = showCcsdsTimeCodeDecoderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a code the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/ccsds-time-code-decoder-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderCcsdsTimeCodeDecoderTemplate(idPrefix, args),
+      mount: m.mountCcsdsTimeCodeDecoder,
+    })),
+});
+
+const codeBDayRulerEntry = defineWidget<DayRulerArgs>({
+  title: "Code B Day Ruler",
+  kind: "dayruler",
+  parse: (input) => {
+    const result = showCodeBDayRulerInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { year, compareYear, day } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(year === undefined ? {} : { year }),
+        ...(compareYear === undefined ? {} : { compare: compareYear }),
+        ...(day === undefined ? {} : { day }),
+      },
+    };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a year the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/code-b-day-ruler-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderCodeBDayRulerTemplate(idPrefix, args),
+      mount: m.mountCodeBDayRuler,
     })),
 });
 
@@ -1510,9 +1590,12 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showFixTimestampReader: fixTimestampEntry,
   showSsimDateReader: ssimEntry,
   showReportTimeResolver: reportTimeEntry,
+  showFhirDateChecker: fhirEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,
   showDoublePrecisionMeter: doublePrecisionMeterEntry,
+  showCcsdsTimeCodeDecoder: ccsdsTimeCodeDecoderEntry,
+  showCodeBDayRuler: codeBDayRulerEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

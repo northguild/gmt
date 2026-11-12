@@ -1420,6 +1420,29 @@ describe("generateRegexExamples", () => {
 // ---------------------------------------------------------------------------
 
 describe("synthesizeTemplate", () => {
+  const digits = {
+    module: "timescale/format",
+    fn: "formatCcsdsAsciiA",
+    returnType: "string" as const,
+  };
+  const digitParam = (value: string) => ({
+    name: "fractionalSecondDigits",
+    type: "enum" as const,
+    value,
+    options: ["0", "1", "6", "auto"],
+    numericOptions: ["0", "1", "6"],
+  });
+
+  it("writes a numeric choice bare and a string choice quoted", () => {
+    const iso = { name: "value", type: "string" as const, value: "x" };
+    expect(
+      BR.synthesizeTemplate({ ...digits, params: [iso, digitParam("6")] }),
+    ).toBe('formatCcsdsAsciiA("x", 6)');
+    expect(
+      BR.synthesizeTemplate({ ...digits, params: [iso, digitParam("auto")] }),
+    ).toBe('formatCcsdsAsciiA("x", "auto")');
+  });
+
   it("synthesizes a call string from a PlaygroundSpec", () => {
     const template = BR.synthesizeTemplate({
       module: "plain",
@@ -1678,6 +1701,66 @@ describe("buildChoiceSeeds", () => {
         hours: { units: { seed: "-90", unitSeed: "minutes" } },
       },
     });
+  });
+});
+
+describe("an enum that mixes number and string literals", () => {
+  const spec = (value: string) => ({
+    module: "timescale/format",
+    fn: "formatCcsdsAsciiA",
+    returnType: "string" as const,
+    params: [
+      { name: "value", type: "string" as const, value: "2024-06-15" },
+      {
+        name: "fractionalSecondDigits",
+        type: "enum" as const,
+        value,
+        options: ["0", "1", "6", "auto"],
+        numericOptions: ["0", "1", "6"],
+        optional: true,
+      },
+    ],
+  });
+
+  it("seeds a choice an example passes as an unquoted number", () => {
+    const res = BR.buildPlaygroundFields(
+      spec("6"),
+      'formatCcsdsAsciiA("2024-06-15", 6)',
+    );
+    expect(res?.fields[1]).toMatchObject({
+      kind: "enum",
+      seed: "6",
+      choices: ["0", "1", "6", "auto"],
+      numeric: ["0", "1", "6"],
+    });
+  });
+
+  it("seeds a choice an example passes as a quoted string", () => {
+    const res = BR.buildPlaygroundFields(
+      spec("auto"),
+      'formatCcsdsAsciiA("2024-06-15", "auto")',
+    );
+    expect(res?.fields[1]).toMatchObject({ seed: "auto" });
+  });
+
+  it("leaves the control empty when the example omits the argument", () => {
+    const res = BR.buildPlaygroundFields(
+      spec(""),
+      'formatCcsdsAsciiA("2024-06-15")',
+    );
+    expect(res?.fields[1]).toMatchObject({
+      seed: "",
+      numeric: ["0", "1", "6"],
+    });
+  });
+
+  it("does not take a quoted digit for the number choice", () => {
+    expect(
+      BR.buildPlaygroundFields(
+        spec("6"),
+        'formatCcsdsAsciiA("2024-06-15", "6")',
+      ),
+    ).toBeUndefined();
   });
 });
 

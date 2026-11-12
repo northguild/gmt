@@ -127,6 +127,10 @@ const PAGES = [
     widget: "hl7-timestamp-reader",
   },
   {
+    path: "tools/fhir-date-checker",
+    widget: "fhir-date-checker",
+  },
+  {
     path: "tools/x12-time-reader",
     widget: "x12-time-reader",
   },
@@ -189,6 +193,14 @@ const PAGES = [
   {
     path: "tools/fix-timestamp-reader",
     widget: "fix-timestamp-reader",
+  },
+  {
+    path: "tools/ccsds-time-code-decoder",
+    widget: "ccsds-time-code-decoder",
+  },
+  {
+    path: "tools/code-b-day-ruler",
+    widget: "code-b-day-ruler",
   },
   {
     path: "tools/ssim-date-reader",

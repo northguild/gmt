@@ -78,6 +78,9 @@ import {
   showReportTimeResolverInput,
   showJulianDayCounterInput,
   showDoublePrecisionMeterInput,
+  showCcsdsTimeCodeDecoderInput,
+  showCodeBDayRulerInput,
+  showFhirDateCheckerInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
@@ -662,6 +665,11 @@ export function buildWorkerTools(
       inputSchema: showFixTimestampReaderInput,
       execute: () => accept("fix-timestamp-reader"),
     }),
+    showFhirDateChecker: tool({
+      description: docFor("showFhirDateChecker"),
+      inputSchema: showFhirDateCheckerInput,
+      execute: () => accept("fhir-date-checker"),
+    }),
     showSsimDateReader: tool({
       description: docFor("showSsimDateReader"),
       inputSchema: showSsimDateReaderInput,
@@ -686,6 +694,16 @@ export function buildWorkerTools(
       description: docFor("showDoublePrecisionMeter"),
       inputSchema: showDoublePrecisionMeterInput,
       execute: () => accept("double-precision-meter"),
+    }),
+    showCcsdsTimeCodeDecoder: tool({
+      description: docFor("showCcsdsTimeCodeDecoder"),
+      inputSchema: showCcsdsTimeCodeDecoderInput,
+      execute: () => accept("ccsds-time-code-decoder"),
+    }),
+    showCodeBDayRuler: tool({
+      description: docFor("showCodeBDayRuler"),
+      inputSchema: showCodeBDayRulerInput,
+      execute: () => accept("code-b-day-ruler"),
     }),
   };
 

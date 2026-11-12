@@ -21,6 +21,13 @@
  *   import's preload list, so the stylesheet arrives with the chunk.
  * - The `/dox` chat rail, which mounts any widget on demand: a page with an Astro island is
  *   left alone, and `DoxPage`'s own preload list names every mount stylesheet.
+ *
+ * Astro also writes some widget sheets straight into every page's head as a `<style>` block,
+ * with no `_astro/` file behind them: about 105 KB of the landing's 166 KB of HTML was such
+ * blocks for widgets it never shows. The same hook drops a block made only of CSS-Module
+ * classes when the page does not use it. Such a block is the only copy of its CSS, so here
+ * "use" also counts a script the page can load later: a dynamic `import()` or a chunk in
+ * Vite's preload list, as well as a static import.
  */
 import type { AstroIntegration } from "astro";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -30,6 +37,11 @@ import { fileURLToPath } from "node:url";
 const CLASS_SELECTOR = /\.(-?[_a-zA-Z][\w-]*)/g;
 const MODULE_CLASS = /^gmt-[\w-]+__[\w-]+$/;
 const STYLESHEET_LINK = /<link\b[^>]*\brel="stylesheet"[^>]*>/g;
+const INLINE_STYLE = /<style>([\s\S]*?)<\/style>/g;
+/* A quoted `_astro/` script: `"./x.js"` inside a chunk, `"_astro/x.js"` in Vite's preload
+   list, `"/gmt/_astro/x.js"` in a page. */
+const SCRIPT_REFERENCE =
+  /["'`](?:\.\/|[^"'`\s]*\/_astro\/|_astro\/)([\w.-]+\.js)["'`]/g;
 const HREF = /\bhref="([^"]+)"/;
 const ASTRO_FILE = /_astro\/([^"'\s?#)]+)$/;
 
@@ -102,6 +114,37 @@ export function pruneStylesheetLinks(
   return { html: pruned, removed };
 }
 
+/**
+ * Removes the inline `<style>` blocks that hold only CSS-Module classes and that neither the
+ * page's markup nor `scriptText` names. Returns the new HTML and how many blocks it dropped.
+ */
+export function pruneInlineStyles(
+  html: string,
+  scriptText: string,
+): { html: string; removed: number } {
+  // The chat rail mounts widgets on demand; its page keeps every block.
+  if (html.includes("<astro-island")) return { html, removed: 0 };
+  const tokens = classTokens(html);
+  let removed = 0;
+  const pruned = html.replace(INLINE_STYLE, (block, css: string) => {
+    const classes = moduleClasses(css);
+    if (!classes || usesStylesheet(classes, tokens, scriptText)) return block;
+    removed += 1;
+    return "";
+  });
+  return { html: pruned, removed };
+}
+
+/**
+ * Every `_astro/` script a text names in a string: a static import, a dynamic `import()`, or
+ * an entry of Vite's preload list. In a page this takes in `src` attributes too.
+ */
+export function referencedScripts(text: string): string[] {
+  const files = new Set<string>();
+  for (const match of text.matchAll(SCRIPT_REFERENCE)) files.add(match[1]!);
+  return [...files];
+}
+
 /** The `_astro/` scripts a page loads: `src`, and static `import`/`from` in inline modules. */
 export function scriptFiles(html: string): string[] {
   const files = new Set<string>();
@@ -143,29 +186,36 @@ export function pruneWidgetCss(): AstroIntegration {
           if (classes) widgetSheets.set(name, classes);
         }
 
-        // A script's text, with the text of the scripts it imports statically.
-        const scriptCache = new Map<string, string>();
-        const importsOf = new Map<string, string[]>();
-        const load = (name: string): string => {
-          let text = scriptCache.get(name);
-          if (text === undefined) {
+        /* A script's text, and the scripts it names: `imports` are its static imports, `all`
+           adds its dynamic imports and Vite's preload list. */
+        const scriptCache = new Map<
+          string,
+          { text: string; imports: string[]; all: string[] }
+        >();
+        const load = (name: string) => {
+          let script = scriptCache.get(name);
+          if (script === undefined) {
+            let text = "";
             try {
               text = readFileSync(join(astroDir, basename(name)), "utf8");
             } catch {
-              text = "";
+              // A name that is not an `_astro/` file adds no text.
             }
-            scriptCache.set(name, text);
-            const deps: string[] = [];
+            const imports: string[] = [];
             for (const match of text.matchAll(
               /(?:\bimport\s*|\bfrom\s*)["']([^"']+\.js)["']/g,
             )) {
-              deps.push(basename(match[1]!));
+              imports.push(basename(match[1]!));
             }
-            importsOf.set(name, deps);
+            script = { text, imports, all: referencedScripts(text) };
+            scriptCache.set(name, script);
           }
-          return text;
+          return script;
         };
-        const reachableText = (files: string[]): string => {
+        const reachableText = (
+          files: string[],
+          follow: "imports" | "all",
+        ): string => {
           const seen = new Set<string>();
           const parts: string[] = [];
           const stack = [...files];
@@ -173,28 +223,35 @@ export function pruneWidgetCss(): AstroIntegration {
             const name = stack.pop()!;
             if (seen.has(name)) continue;
             seen.add(name);
-            parts.push(load(name));
-            stack.push(...(importsOf.get(name) ?? []));
+            const script = load(name);
+            parts.push(script.text);
+            stack.push(...script[follow]);
           }
           return parts.join("\n");
         };
 
         let removedLinks = 0;
+        let removedBlocks = 0;
         let pages = 0;
         for (const path of walkHtml(root)) {
           const html = readFileSync(path, "utf8");
-          const { html: next, removed } = pruneStylesheetLinks(
+          const links = pruneStylesheetLinks(
             html,
             widgetSheets,
-            reachableText(scriptFiles(html)),
+            reachableText(scriptFiles(html), "imports"),
           );
-          if (removed.length === 0) continue;
-          writeFileSync(path, next);
-          removedLinks += removed.length;
+          const blocks = pruneInlineStyles(
+            links.html,
+            reachableText(referencedScripts(html), "all"),
+          );
+          if (links.removed.length === 0 && blocks.removed === 0) continue;
+          writeFileSync(path, blocks.html);
+          removedLinks += links.removed.length;
+          removedBlocks += blocks.removed;
           pages += 1;
         }
         logger.info(
-          `removed ${removedLinks} unused widget stylesheet links from ${pages} pages`,
+          `removed ${removedLinks} unused widget stylesheet links and ${removedBlocks} unused widget style blocks from ${pages} pages`,
         );
       },
     },

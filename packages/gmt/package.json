@@ -267,6 +267,12 @@
       "timescale/convert": [
         "./dist/timescale/convert/index.d.ts"
       ],
+      "timescale/format": [
+        "./dist/timescale/format/index.d.ts"
+      ],
+      "timescale/parse": [
+        "./dist/timescale/parse/index.d.ts"
+      ],
       "timescale/validate": [
         "./dist/timescale/validate/index.d.ts"
       ],
@@ -669,6 +675,14 @@
     "./timescale/convert": {
       "types": "./dist/timescale/convert/index.d.ts",
       "default": "./dist/timescale/convert/index.js"
+    },
+    "./timescale/format": {
+      "types": "./dist/timescale/format/index.d.ts",
+      "default": "./dist/timescale/format/index.js"
+    },
+    "./timescale/parse": {
+      "types": "./dist/timescale/parse/index.d.ts",
+      "default": "./dist/timescale/parse/index.js"
     },
     "./timescale/validate": {
       "types": "./dist/timescale/validate/index.d.ts",

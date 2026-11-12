@@ -458,6 +458,148 @@ export function timelineLayout(
   };
 }
 
+/** The unit a calendar span is one of. */
+export type SpanUnit = "year" | "month" | "day";
+
+/** The least room, in percent of the axis, between two labels on a calendar axis. */
+const SPAN_LABEL_GAP = 11;
+
+type PlainDT = Temporal.PlainDateTime;
+
+/** Epoch milliseconds of a zone-free date-time read as UTC: drawing geometry only. */
+const planeMs = (d: PlainDT): number =>
+  d.toZonedDateTime("UTC").epochMilliseconds;
+
+/** One tick of a calendar axis: its date-time, its label (or ""), and whether it must keep it. */
+interface SpanCandidate {
+  when: PlainDT;
+  label: string;
+  day: string;
+  priority: boolean;
+}
+
+/** The ticks a calendar axis draws across [start, end], per unit. */
+function spanCandidates(
+  unit: SpanUnit,
+  start: PlainDT,
+  end: PlainDT,
+): SpanCandidate[] {
+  const out: SpanCandidate[] = [];
+  if (unit === "year") {
+    let t = start.with({ day: 1, hour: 0, minute: 0, second: 0 });
+    if (Temporal.PlainDateTime.compare(t, start) < 0) t = t.add({ months: 1 });
+    for (
+      ;
+      Temporal.PlainDateTime.compare(t, end) <= 0;
+      t = t.add({ months: 1 })
+    ) {
+      out.push({
+        when: t,
+        label: t.month % 3 === 1 ? pad2(t.month) : "",
+        day: t.month === 1 ? String(t.year) : "",
+        priority: t.month === 1,
+      });
+    }
+  } else if (unit === "month") {
+    let t = start.with({ hour: 0, minute: 0, second: 0 });
+    if (Temporal.PlainDateTime.compare(t, start) < 0) t = t.add({ days: 1 });
+    for (
+      ;
+      Temporal.PlainDateTime.compare(t, end) <= 0;
+      t = t.add({ days: 1 })
+    ) {
+      const first = t.day === 1;
+      out.push({
+        when: t,
+        label: first || t.dayOfWeek === 1 ? pad2(t.day) : "",
+        day: first ? `${t.year}-${pad2(t.month)}` : "",
+        priority: first,
+      });
+    }
+  } else {
+    let t = start.with({ hour: 0, minute: 0, second: 0 });
+    while (Temporal.PlainDateTime.compare(t, start) < 0)
+      t = t.add({ hours: 3 });
+    for (
+      ;
+      Temporal.PlainDateTime.compare(t, end) <= 0;
+      t = t.add({ hours: 3 })
+    ) {
+      out.push({
+        when: t,
+        label: t.hour % 6 === 0 ? `${pad2(t.hour)}:00` : "",
+        day: t.hour === 0 ? `${pad2(t.month)}-${pad2(t.day)}` : "",
+        priority: t.hour === 0,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * A calendar axis for one span of whole units: a year, a month or a day, `to` exclusive. The axis
+ * runs half the span before `from` to half the span after `to`, so the span fills the middle half.
+ * Arithmetic is zone-free (`PlainDateTime`): drawing geometry, no claim about the library.
+ * A label that must stay (January, the 1st, midnight) always does; the rest keep their room
+ * from every label already placed, and never more than `MAX_LABELS` in all.
+ */
+export function spanLayout(o: {
+  from: string;
+  to: string;
+  unit: SpanUnit;
+  reference: string | null;
+}): TimelineLayout {
+  const start = Temporal.PlainDate.from(o.from).toPlainDateTime();
+  const end = Temporal.PlainDate.from(o.to).toPlainDateTime();
+  const fromMs = planeMs(start);
+  const toMs = planeMs(end);
+  const pad = (toMs - fromMs) / 2;
+  const axisFrom = fromMs - pad;
+  const total = toMs + pad - axisFrom;
+  const at = (v: number): number => ((v - axisFrom) / total) * 100;
+  const plain = (ms: number): PlainDT =>
+    Temporal.Instant.fromEpochMilliseconds(ms)
+      .toZonedDateTimeISO("UTC")
+      .toPlainDateTime();
+  const axisStart = plain(axisFrom);
+  const axisEnd = plain(toMs + pad);
+
+  const inside = spanCandidates(o.unit, axisStart, axisEnd)
+    .map((c) => ({ ...c, pos: at(planeMs(c.when)) }))
+    .filter((c) => c.pos > 0 && c.pos < 100);
+  const kept: number[] = [];
+  const room = (pos: number): boolean =>
+    kept.every((k) => Math.abs(inside[k]!.pos - pos) >= SPAN_LABEL_GAP);
+  inside.forEach((c, i) => {
+    if (c.priority) kept.push(i);
+  });
+  inside.forEach((c, i) => {
+    if (!c.priority && c.label !== "" && room(c.pos)) kept.push(i);
+  });
+  const labelled = new Set(kept.sort((a, b) => a - b).slice(0, MAX_LABELS));
+  const ticks: TimelineTick[] = inside.map((c, i) => ({
+    at: c.pos,
+    label: labelled.has(i) ? c.label : "",
+    day: labelled.has(i) ? c.day : "",
+  }));
+
+  const here =
+    o.reference === null
+      ? null
+      : at(planeMs(Temporal.PlainDateTime.from(o.reference)));
+  return {
+    ticks,
+    marks: [],
+    span: { from: at(fromMs), to: at(toMs) },
+    reference: here === null ? null : referencePos(here, []),
+  };
+}
+
+/** The calendar span's spoken line, in words. */
+export function spanAria(label: string, padded: string): string {
+  return `Spans ${label}; padded reading at ${padded}. Calendar dates, no zone.`;
+}
+
 /** The first pin lane with no zone mark within the label's room, else the first lane. */
 function referencePos(
   position: number,

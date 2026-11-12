@@ -645,6 +645,15 @@ export const showHl7TimestampReaderInput = z.object({
 });
 
 /**
+ * The FHIR Date Checker: one FHIR R4 `date`, `dateTime` or `instant` value, exactly as the reader
+ * gave it. The value is kept as typed, so it is not trimmed. The widget judges the value itself:
+ * one the library does not read is the widget's NO SIGNAL, not a failed tool call.
+ */
+export const showFhirDateCheckerInput = z.object({
+  value: z.string().min(1).max(64),
+});
+
+/**
  * SSIM Date Reader: the SSIM text to read (`value`), the window its two-digit year is read in
  * (`yearWindow`: a first year or "rolling"), the locale the comparison passes the pattern
  * parser (`locale`) and an ISO date to write back (`date`). Nothing is trimmed, upper-cased or
@@ -707,6 +716,31 @@ export const showReportTimeResolverInput = z
     notamPreset: z.string().max(32).optional(),
   })
   .strict();
+
+/**
+ * The CCSDS Time Code Decoder: one CCSDS 301.0-B-4 ASCII time code to read (`code`), an instant
+ * to write as Code A and Code B (`instant`) and the number of fraction digits to write
+ * (`digits`: "auto" or "0" to "9"). Neither text is trimmed or upper-cased: the library reads
+ * the text as given. The chat args are the permalink args.
+ */
+export const showCcsdsTimeCodeDecoderInput = z.object({
+  code: z.string().max(64).optional(),
+  instant: z.string().max(64).optional(),
+  digits: z
+    .enum(["auto", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
+    .optional(),
+});
+
+/**
+ * The Code B Day Ruler: two years to compare (`year`, `compareYear`) and one day of the year
+ * (`day`, 1 to 366). A year is passed as typed, so a blank or refused year stays the tool's own
+ * state. The chat args are the permalink args.
+ */
+export const showCodeBDayRulerInput = z.object({
+  year: z.number().int().min(1).max(9999).optional(),
+  compareYear: z.number().int().min(1).max(9999).optional(),
+  day: z.number().int().min(1).max(366).optional(),
+});
 
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
@@ -1342,7 +1376,10 @@ export type DoxToolName =
   | "showSsimDateReader"
   | "showReportTimeResolver"
   | "showJulianDayCounter"
-  | "showDoublePrecisionMeter";
+  | "showDoublePrecisionMeter"
+  | "showCcsdsTimeCodeDecoder"
+  | "showCodeBDayRuler"
+  | "showFhirDateChecker";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1701,6 +1738,27 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks how precise a Julian Date stored in one number is, why a JD loses microseconds, whether to store JD, MJD or seconds since J2000, or why two-part JDs exist",
     args: "value: exactly as the reader gave it. scale only when the reader named one.",
   },
+  {
+    name: "showCcsdsTimeCodeDecoder",
+    purpose:
+      "Read a CCSDS 301.0-B-4 ASCII time code (Code A calendar date or Code B day of year) into an instant, show whether its second 60 is an inserted leap second, and write an instant back as both codes at a chosen number of fraction digits.",
+    when: "the reader asks what a CCSDS time code such as 2016-366T23:59:60.5Z means, whether it is Code A or Code B, what day 366 or a second 60 is, why a code was refused, or how an instant is written as a CCSDS ASCII code. Pass only what the reader gave.",
+    args: 'code: the time code exactly as the reader gave it, at most 64 characters, never trimmed or upper-cased; instant: an instant to write as both codes, at most 64 characters; digits: "auto" or "0" to "9", only when the reader named a number of fraction digits.',
+  },
+  {
+    name: "showCodeBDayRuler",
+    purpose:
+      "Show what one CCSDS Code B day of the year number is as a calendar date in two years, with each year's twelve months drawn on one scale, so the shift after the leap day and the missing day 366 in a common year are visible.",
+    when: "the reader asks which date a day-of-year number such as day 61 is, why a Code B date moves by a day in a leap year, whether a year has a day 366, or how Code B and Code A dates line up across years",
+    args: "year and compareYear: whole years from 1 to 9999, only when the reader named them; day: a whole day number from 1 to 366, only when the reader named one. Never guess a year.",
+  },
+  {
+    name: "showFhirDateChecker",
+    purpose:
+      "A FHIR R4 date, dateTime or instant value checked by isValidFHIR and FHIR's own published patterns, with the reason each type refuses it; what the value names (a year, month or day as a span of calendar dates, a moment as one instant); and the value written back by formatFHIR at each precision.",
+    when: "the reader asks whether a value is a valid FHIR date, dateTime or instant, why a FHIR value such as 2024-06 or 2024-02-30 is or is not accepted, what a FHIR month or year means, whether a FHIR time needs seconds and an offset, or how to write a FHIR value at a coarser precision",
+    args: "value (the FHIR value exactly as the reader gave it, such as 2024-06 or 2015-02-07T13:28:17-05:00; at most 64 characters; never corrected, never padded to a day or a midnight, and never given an offset the reader did not send).",
+  },
 ];
 
 /**
@@ -1909,6 +1967,18 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[49].purpose,
     inputSchema: showDoublePrecisionMeterInput,
   }),
+  showCcsdsTimeCodeDecoder: tool({
+    description: DOX_TOOL_DOCS[49].purpose,
+    inputSchema: showCcsdsTimeCodeDecoderInput,
+  }),
+  showCodeBDayRuler: tool({
+    description: DOX_TOOL_DOCS[50].purpose,
+    inputSchema: showCodeBDayRulerInput,
+  }),
+  showFhirDateChecker: tool({
+    description: DOX_TOOL_DOCS[51].purpose,
+    inputSchema: showFhirDateCheckerInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -1982,6 +2052,9 @@ export const ENABLED_TOOL_NAMES = [
   "showReportTimeResolver",
   "showJulianDayCounter",
   "showDoublePrecisionMeter",
+  "showCcsdsTimeCodeDecoder",
+  "showCodeBDayRuler",
+  "showFhirDateChecker",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

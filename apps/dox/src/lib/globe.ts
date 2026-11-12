@@ -719,7 +719,7 @@ export async function initGlobe(
     const stamp = readViewerStamp();
     viewerDate = stamp.date;
     refreshBuckets(stamp);
-    zoneClockList?.tick();
+    void zoneClockList?.tick();
     if (selectedId) {
       selectedReading = readZoneNow(selectedId);
       renderTooltip();

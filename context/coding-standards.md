@@ -122,7 +122,7 @@ The same three rules extend to `fromTAI`, `fromTT` and `fromTCG` (`packages/gmt/
 2. The extracted fields are always handed to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A second of 60 never reaches Temporal: it is refused for every token but `GLO`, and for `GLO` it is passed as 59 with a flag, and kept only for one of the 27 inserted leap seconds.
 3. The try-catch and sentinel-return rules above are unchanged.
 
-The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual parsing: GMT's instant grammar with second 60 (`internal/utcReading.ts`) checks the shape, and `Temporal.Instant.from` reads it with the specification's clamp to 59. Only the `timescale/` and `gnss/` converters and `finance/`'s FIX functions (`parseFixUtcTimestamp`, `formatFixUtcTimestamp`, `isValidFixUtcTimestamp`) do this, and only for one of the 27 inserted leap seconds. `formatFixUtcTimestamp` accepts a second-60 instant, and `parseFixUtcTimestamp` returns one. `isValidFixUtcTimestamp` only agrees with the parser. Every other function still rejects a second of 60.
+The UTC side reads a second-60 instant (`"2016-12-31T23:59:60Z"`) without manual parsing: GMT's instant grammar with second 60 (`internal/utcReading.ts`) checks the shape, and `Temporal.Instant.from` reads it with the specification's clamp to 59. Only the `timescale/` and `gnss/` converters, `timescale/`'s CCSDS ASCII time codes (`parseCcsdsAsciiA`, `parseCcsdsAsciiB`, `formatCcsdsAsciiA`, `formatCcsdsAsciiB`) and `finance/`'s FIX functions (`parseFixUtcTimestamp`, `formatFixUtcTimestamp`, `isValidFixUtcTimestamp`) do this, and only for one of the 27 inserted leap seconds. `formatFixUtcTimestamp` and `formatCcsdsAsciiA`/`B` accept a second-60 instant, and `parseFixUtcTimestamp` and `parseCcsdsAsciiA`/`B` return one. `isValidFixUtcTimestamp` only agrees with the parser. Every other function still rejects a second of 60.
 
 This prohibition stands for every other function in the library.
 
@@ -162,6 +162,16 @@ The same three rules extend to `fromTai64n` (reader) and `toTai64n` (writer) in 
 
 This prohibition stands for every other function in the library, `fromTAI` and `toTAI` included.
 
+### Scoped exception: CCSDS ASCII time codes in `timescale/` (SPA-52)
+
+The same three rules extend to `parseCcsdsAsciiA`, `parseCcsdsAsciiB` (`packages/gmt/src/timescale/parse/`), `formatCcsdsAsciiA` and `formatCcsdsAsciiB` (`packages/gmt/src/timescale/format/`). CCSDS 301.0-B-4 §3.5.1 defines ASCII Time Code A (`YYYY-MM-DDThh:mm:ss.d…dZ`) and Code B (`YYYY-DDDThh:mm:ss.d…dZ`, day of year). Both are UTC and the `Z` is optional. No `Temporal.*.from` reads Code A without its `Z`, or with a second of 60, or reads Code B at all, because Temporal does not read an ordinal date. Reading only codes as fine as whole seconds is GMT's own rule. The grammar is fixed:
+
+1. Two regexes, `CCSDS_ASCII_A` and `CCSDS_ASCII_B` in `internal/ccsdsAsciiTime.ts`, matched against the whole input. A function reads the capture groups only and never searches the string.
+2. The year, month and day go to `Temporal.PlainDate.from(…, { overflow: "reject" })`. A Code B day is checked against `daysInYear` and added to 1 January with `PlainDate#add`. The date and time go to `Temporal.PlainDateTime.from(…, { overflow: "reject" })`. A second of 60 goes in as 59, and `taiOfUtc` decides whether it was one of the 27 inserted leap seconds. The writers take the UTC wall clock from `Temporal.Instant` and use `PlainTime#toString` for the time and `dayOfYear` for Code B.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+This prohibition stands for every other function in the library.
+
 ### Scoped exception: human duration strings (CORE-85)
 
 The same three rules extend to `parseHumanDuration` (`packages/gmt/src/duration/parse/`). A human duration string (`"2h 30m"`, `"3 days"`) is not ISO 8601, and no `Temporal.*.from` reads one. The grammar is GMT's own, fixed, and stated in full in the function's JSDoc:
@@ -199,7 +209,19 @@ This prohibition stands for every other function in the library.
 HL7 v2 `DTM` (`YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ]`, ch. 2A 2.A.22) and the `TS` that wraps it (2.A.77) are not ISO 8601, and no `Temporal.*.from` reads either. The grammar is fixed and published:
 
 1. The grammar is one regex in `internal/hl7DateTime.ts`, built from fragments named in the picture's own notation, with the split of a `TS` at `^` and `&` and Table 0529 beside it. Fields come out as named groups, never by per-call slicing in a public function. It is not a public pattern: a `DTM` is valid only as a whole, so the public check is `isValidHL7`. A second regex in the same file, `isoHl7Form`, reads the form of `formatHL7`'s ISO 8601 input and never its values: which groups are present (so the written precision, through `isoHl7Precision`), how many fraction digits there are, and whether there is an offset.
-2. Extracted fields are **always** checked by Temporal before they are used. `parseHL7` hands them to `Temporal.PlainDate.from(fields, { overflow: "reject" })` and `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A value at minute precision or finer that carries an offset is rebuilt as an extended ISO string and read by `toOffsetInstant`; the offset of a partial value (year, month, day or hour precision) is checked with the `utcOffset` regex and normalised with `formatUtcOffset`. `formatHL7` reads its input by the precision it is written at: a year's group goes to `Temporal.PlainDate.from({ year, month: 1, day: 1 }, { overflow: "reject" })`; a month is read from the string by `Temporal.PlainYearMonth.from`; a day is checked with `isValidDate` and then read from the string by `Temporal.PlainDate.from`; an hour's groups go to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A local minute or finer is checked with `isValidDateTime` and read from the string by `Temporal.PlainDateTime.from`, and a form with an offset is read by `toOffsetInstant`. It writes digits from Temporal's fields.
+2. Extracted fields are **always** checked by Temporal before they are used. `parseHL7` hands them to `Temporal.PlainDate.from(fields, { overflow: "reject" })` and `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A value at minute precision or finer that carries an offset is rebuilt as an extended ISO string and read by `toOffsetInstant`; the offset of a partial value (year, month, day or hour precision) is checked with the `utcOffset` regex and normalised with `formatUtcOffset`. `formatHL7` reads its input by the precision it is written at: a year's group goes to `Temporal.PlainDate.from({ year, month: 1, day: 1 }, { overflow: "reject" })`; a month is read from the string by `Temporal.PlainYearMonth.from`; a day is checked with `isDateString`, the core of `isValidDate`, and then read from the string by `Temporal.PlainDate.from`; an hour's groups go to `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`. A local minute or finer is read from the string by `plainDateTimeOf`, the core of `isValidDateTime`, which calls `Temporal.PlainDateTime.from`, and a form with an offset, an hour-only one included, is read by `readFormOffsetInstant`, the reader `formatFHIR` shares. It writes digits from Temporal's fields.
+3. The try-catch and sentinel-return rules above are unchanged.
+
+### Scoped exception: FHIR R4 date/time grammar in `parseFHIR`, `isValidFHIR` and `formatFHIR` (HLTH-94)
+
+FHIR R4 `date`, `dateTime` and `instant` are profiles of ISO 8601. Temporal reads none of them as they stand: a FHIR value may stop at a year or a month, and a second of `60` is allowed. HL7 publishes one `regex` per type in the R4 StructureDefinitions.
+
+1. **The grammar is FHIR's own regexes.** They are published unchanged in `regex/fhir.ts` and anchored as R4 Datatypes §2.24.0.1 asks. `internal/fhirDateTime.ts` reads fields from `fhirDateTime`'s numbered groups, and nowhere else. `formatFHIR` reads the form of its ISO 8601 input with `isoHl7Form`, as `formatHL7` does.
+2. **Temporal checks every extracted field.**
+   - The date goes to `Temporal.PlainDate.from(fields, { overflow: "reject" })`.
+   - A moment is read by `readOffsetInstant`, the internal core of `toOffsetInstant`.
+   - A second of `60` is checked against the leap-second table (`parseUtcReading` and `taiOfUtc`).
+   - `formatFHIR` reads a local form with `Temporal.PlainDateTime.from(fields, { overflow: "reject" })`, and a form with an offset with `readFormOffsetInstant`, which reads an hour-only time with `Temporal.Instant.from` and every finer one with `readOffsetInstant`. It writes digits from Temporal's fields, then checks its own result with the same reader.
 3. The try-catch and sentinel-return rules above are unchanged.
 
 This prohibition stands for every other function in the library.

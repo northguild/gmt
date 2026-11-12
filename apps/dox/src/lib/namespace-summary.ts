@@ -48,7 +48,7 @@ export const NAMESPACE_SUMMARIES: Readonly<Record<string, string>> = {
   finance:
     "Functions that read, write and check the timestamps of financial messages, starting with the FIX UTCTimestamp.",
   healthcare:
-    "Functions that read, write and check HL7 version 2 date-times, keeping the precision sent and a missing offset as local time.",
+    "Functions that read, write and check HL7 version 2 and FHIR R4 date-times, keeping the precision sent.",
   aviation:
     "Functions that read, write and check the dates and times of aviation messages: SSIM dates, METAR report times and NOTAM validity.",
 };

@@ -25,6 +25,16 @@ describe("selectTools", () => {
     },
   );
 
+  it("offers the FHIR Date Checker for questions that name FHIR, not only its starter", () => {
+    for (const q of [
+      "Is 2024-06 a valid FHIR date?",
+      "Why does a FHIR dateTime need seconds and an offset?",
+      "How do I write a FHIR instant at day precision?",
+    ]) {
+      expect(pick(q), q).toContain("showFhirDateChecker");
+    }
+  });
+
   it("always offers the core tools, first", () => {
     expect(pick("recommend a pizza restaurant").slice(0, CORE.length)).toEqual(
       CORE,

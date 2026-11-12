@@ -33,7 +33,7 @@ Type an HL7 v2 date-time, the `DTM` of a field or the older `TS` with its precis
 
 **What is written back.** The last section calls `formatHL7` once for each precision, from year to fraction, on the same moment. It cuts to the precision asked for and never rounds. A precision finer than the value carries is not made up.
 
-**The functions.** [`parseHL7`](/reference/healthcare/parse/parseHL7/) reads, [`formatHL7`](/reference/healthcare/format/formatHL7/) writes and [`isValidHL7`](/reference/healthcare/validate/isValidHL7/) tells a bad value from a good one. The rules are in [Healthcare: Clinical Timestamps](/guides/industries/healthcare-clinical-timestamps/).
+**The functions.** [`parseHL7`](/reference/healthcare/parse/parseHL7/) reads, [`formatHL7`](/reference/healthcare/format/formatHL7/) writes and [`isValidHL7`](/reference/healthcare/validate/isValidHL7/) tells a bad value from a good one. The rules are in [Healthcare: Clinical Timestamps](/guides/industries/healthcare-clinical-timestamps/). For a FHIR R4 `date`, `dateTime` or `instant`, see the [FHIR Date Checker](/tools/fhir-date-checker/).
 
 **Worth trying:** [a month sent as a time stamp](/tools/hl7-timestamp-reader/?w=hl7&wa=%7B%22preset%22%3A%22ts-month%22%7D) —
 the value is a partial one, and no instant appears. Then [a time that falls in the hour the clocks go back](/tools/hl7-timestamp-reader/?w=hl7&wa=%7B%22preset%22%3A%22fall-back%22%7D): the clock shows it twice, so the zones that observe the change refuse it.

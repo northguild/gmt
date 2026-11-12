@@ -27,7 +27,7 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | gmt-transport           | core        | Industry Layers       | transitTime, etaAtZone, dwellTime, scheduleDelivery, cutoffAt, classifyPunctuality, nextDeparture (transport/) |               |
 | gmt-intermodal          | core        | Industry Layers       | freeTimeExpiry, chargeableDays, demurrageClock, billingTimeline, bolTimestamp, EDI and EPCIS timestamps (intermodal/) |               |
 | gmt-workforce           | core        | Industry Layers       | evaluateDutyLog, dutyViolations, dutyDayFor, dutyTotals (workforce/) |               |
-| gmt-healthcare          | core        | Industry Layers       | parseHL7, formatHL7, isValidHL7 (healthcare/) |               |
+| gmt-healthcare          | core        | Industry Layers       | parseHL7, formatHL7, isValidHL7, parseFHIR, formatFHIR, isValidFHIR (healthcare/) |               |
 | issue-creation          | lifecycle   | Contributor           | Feature requests, missing methods, issue templates                                                             |               |
 | pr-contribution         | lifecycle   | Contributor           | PR workflow, tests, contribution guidelines                                                                      |               |
 | new-method-implementation | maintainer | Contributor        | Adding methods to gmt source                                                                                   |               |

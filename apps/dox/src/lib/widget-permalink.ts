@@ -82,9 +82,12 @@ export type WidgetKind =
   | "fixstamp"
   | "ssim"
   | "reporttime"
+  | "fhir"
   | "ttstack"
   | "jdcount"
-  | "dpmeter";
+  | "dpmeter"
+  | "ccsds"
+  | "dayruler";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -152,9 +155,12 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   fixstamp: "/tools/fix-timestamp-reader/",
   ssim: "/tools/ssim-date-reader/",
   reporttime: "/tools/report-time-resolver/",
+  fhir: "/tools/fhir-date-checker/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
   dpmeter: "/tools/double-precision-meter/",
+  ccsds: "/tools/ccsds-time-code-decoder/",
+  dayruler: "/tools/code-b-day-ruler/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -262,6 +268,10 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   ssim: new Set(["value", "window", "date"]),
   // A blank group, reference, item or window is a state of its own: a blank reference is the no-reference reason and a blank window the no-window reason.
   reporttime: new Set(["group", "ref", "b", "c", "window"]),
+  // A cleared code or instant is the empty state: the link must open cleared, not on the default.
+  ccsds: new Set(["code", "instant"]),
+  // A cleared year is the empty state: the link must open on the empty year, not the default.
+  dayruler: new Set(["year", "compare"]),
 };
 
 /**

@@ -134,6 +134,7 @@ const PAGES = [
   { slug: "tool-departure-board", path: "/tools/departure-board/" },
   { slug: "tool-dtm-decoder", path: "/tools/dtm-decoder/" },
   { slug: "tool-hl7-timestamp-reader", path: "/tools/hl7-timestamp-reader/" },
+  { slug: "tool-fhir-date-checker", path: "/tools/fhir-date-checker/" },
   { slug: "tool-x12-time-reader", path: "/tools/x12-time-reader/" },
   { slug: "tool-demurrage-clock", path: "/tools/demurrage-clock/" },
   { slug: "tool-bl-date-stamp", path: "/tools/bl-date-stamp/" },
@@ -165,6 +166,11 @@ const PAGES = [
   { slug: "tool-stored-time-audit", path: "/tools/stored-time-audit/" },
   { slug: "tool-tai64n-log-reader", path: "/tools/tai64n-log-reader/" },
   { slug: "tool-fix-timestamp-reader", path: "/tools/fix-timestamp-reader/" },
+  {
+    slug: "tool-ccsds-time-code-decoder",
+    path: "/tools/ccsds-time-code-decoder/",
+  },
+  { slug: "tool-code-b-day-ruler", path: "/tools/code-b-day-ruler/" },
   { slug: "tool-ssim-date-reader", path: "/tools/ssim-date-reader/" },
   {
     slug: "tool-report-time-resolver",

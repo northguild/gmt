@@ -267,6 +267,19 @@ describe("widget permalinks", () => {
     );
   });
 
+  it("round-trips a FHIR value and a preset, each a string", () => {
+    for (const state of [
+      { value: "2024-06-15T10:30:00Z[Europe/Berlin]" },
+      { preset: "feb-30" },
+    ]) {
+      const url = encodeWidgetPermalink("fhir", state);
+      expect(url).toContain("/tools/fhir-date-checker/");
+      expect(seedFromLocation("fhir", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
   it("round-trips an SSIM read with a blank window and a cleared value", () => {
     for (const state of [
       { value: "01JAN26", window: "", locale: "fr-FR", date: "" },

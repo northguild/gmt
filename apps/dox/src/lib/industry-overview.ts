@@ -450,7 +450,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
   },
   healthcare: {
     about:
-      'Healthcare is time in clinical messages. HL7 International calls version two of its HL7 messaging standard "one of the most widely implemented standards for healthcare information in the world". A date and time in an HL7 message says how precise it is by how many digits it carries, and leaves the place out unless the sender adds an offset. This layer reads and writes those values without guessing the place.',
+      'Healthcare is time in clinical messages. HL7 International calls version two of its HL7 messaging standard "one of the most widely implemented standards for healthcare information in the world". A date and time in an HL7 message says how precise it is by how many digits it carries, and leaves the place out unless the sender adds an offset. A FHIR date follows the ISO date format but can stop at a year or a month, and a FHIR time must carry a zone. This layer reads and writes both without guessing the place.',
     guideTitle: "Healthcare: Clinical Timestamps",
     solves: [
       {
@@ -475,11 +475,19 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       {
         problem: "A birth year is padded to midnight on the first of January.",
         answer:
-          "{{parseHL7}} keeps a year, month, day or hour as a partial value with its precision and no instant.",
+          "{{parseHL7}} keeps a year, month, day or hour as a partial value with its precision and no instant, and {{parseFHIR}} does the same for a FHIR year, month or day.",
         see: [
+          {
+            label: "scenario",
+            href: "/scenarios/a-fhir-month-padded-to-midnight/",
+          },
           {
             label: "HL7 Timestamp Reader",
             href: "/tools/hl7-timestamp-reader/",
+          },
+          {
+            label: "FHIR Date Checker",
+            href: "/tools/fhir-date-checker/",
           },
           {
             label: "guide",

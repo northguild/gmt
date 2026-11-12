@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 74312,
-  "files": 980,
-  "executions": 2229360,
+  "tests": 75426,
+  "files": 993,
+  "executions": 2262780,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,8 +37,8 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 763,
-  "patterns": 30,
+  "functions": 770,
+  "patterns": 33,
   "byNamespace": [
     {
       "namespace": "plain",
@@ -70,7 +70,7 @@
     },
     {
       "namespace": "timescale",
-      "count": 21
+      "count": 25
     },
     {
       "namespace": "duration",
@@ -101,6 +101,10 @@
       "count": 6
     },
     {
+      "namespace": "healthcare",
+      "count": 6
+    },
+    {
       "namespace": "span",
       "count": 5
     },
@@ -111,10 +115,6 @@
     {
       "namespace": "finance",
       "count": 3
-    },
-    {
-      "namespace": "healthcare",
-      "count": 3
     }
   ],
   "industryNamespaces": [
@@ -123,8 +123,8 @@
     "workforce",
     "aviation",
     "gnss",
-    "finance",
-    "healthcare"
+    "healthcare",
+    "finance"
   ],
   "industryLayers": [
     {
@@ -164,7 +164,7 @@
       "drawsOn": [
         {
           "module": "timescale",
-          "count": 21,
+          "count": 25,
           "shared": false
         }
       ]
@@ -181,7 +181,7 @@
         },
         {
           "module": "timescale",
-          "count": 21,
+          "count": 25,
           "shared": false
         }
       ]
@@ -195,7 +195,7 @@
     {
       "id": "healthcare",
       "label": "Healthcare",
-      "own": 3,
+      "own": 6,
       "drawsOn": []
     },
     {
@@ -205,5 +205,5 @@
       "drawsOn": []
     }
   ],
-  "industryFunctions": 97
+  "industryFunctions": 100
 }

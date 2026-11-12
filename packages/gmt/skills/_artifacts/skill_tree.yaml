@@ -125,7 +125,7 @@ skills:
     domain: integration
     path: 'skills/gmt-integration/SKILL.md'
     package: 'packages/gmt'
-    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI/toTai64n/fromTai64n/toTT/fromTT/toTCG/fromTCG/tcgMinusTt), Julian Date, Modified Julian Date and J2000 seconds (toJulianDateParts/fromJulianDateParts/toJulianDate/fromJulianDate/toModifiedJulianDate/fromModifiedJulianDate/toJ2000Seconds/fromJ2000Seconds), and lint package selection; GNSS time is in gmt-gnss
+    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI/toTai64n/fromTai64n/toTT/fromTT/toTCG/fromTCG/tcgMinusTt), Julian Date, Modified Julian Date and J2000 seconds (toJulianDateParts/fromJulianDateParts/toJulianDate/fromJulianDate/toModifiedJulianDate/fromModifiedJulianDate/toJ2000Seconds/fromJ2000Seconds), CCSDS ASCII time codes A and B (parseCcsdsAsciiA/parseCcsdsAsciiB/formatCcsdsAsciiA/formatCcsdsAsciiB), and lint package selection; GNSS time is in gmt-gnss
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'
@@ -250,13 +250,14 @@ skills:
     domain: industry-layers
     path: 'skills/gmt-healthcare/SKILL.md'
     package: 'packages/gmt'
-    description: HL7 v2 date-times, @northguild/gmt/healthcare (parseHL7/formatHL7/isValidHL7); an HL7 time with no offset is the sender's local time, never UTC
+    description: HL7 v2 and FHIR R4 date-times, @northguild/gmt/healthcare (parseHL7/formatHL7/isValidHL7, parseFHIR/formatFHIR/isValidFHIR); an HL7 time with no offset is the sender's local time, never UTC; a FHIR time with no zone is invalid
     requires:
       - gmt-timezone
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/healthcare-clinical-timestamps.mdx'
       - 'northguild/gmt:packages/gmt/src/healthcare/index.ts'
       - 'northguild/gmt:packages/gmt/src/types/hl7.ts'
+      - 'northguild/gmt:packages/gmt/src/types/fhir.ts'
 
   # Lifecycle skills (contributors only — excluded from consumer intent install)
   - name: Issue Creation

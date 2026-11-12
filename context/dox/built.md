@@ -31,6 +31,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `scripts/probe-brains.ts` and real readers spend quota.
 - **React lives only inside `/dox`.** Every other page is Astro plus plain-DOM modules.
 - **Restyle native controls; never rebuild them from `div`s.**
+- **No `:has()` on a box that holds the whole page** (`:root`, `html`, `body`, `.main-frame`,
+  `.content-panel`) unless an attribute on `<html>` gates it first. Chrome then re-styles the
+  whole page on every DOM change inside it. On the landing that was about 27 full style passes
+  while the globe's clock list mounted, most of the mobile Lighthouse TBT. Key a page-level rule
+  on Starlight's `data-has-hero`, `data-has-sidebar` or `data-has-toc` instead, or put
+  `[data-has-sidebar]` in front of the `:has()` (`dox.css`).
+- **Widget CSS reaches only the pages that use it.** `pruneWidgetCss()`
+  (`src/lib/prune-widget-css.ts`, on `astro:build:done`) drops a widget's stylesheet link and
+  its inline `<style>` block from every page that neither shows the widget nor loads a script
+  that names its classes. Astro inlines some widget sheets into every page's head with no
+  `_astro/` file behind them, so for those blocks a dynamic `import()` or a chunk in Vite's
+  preload list counts as use too.
 - **Every tier after Tier 1 stays droppable**, and the docs work with the chat deleted.
 - **No `octane` or `@octanejs/*`**, anywhere.
 - **Minimum rendered text size 12px (0.75rem)**; enforced by `font-floor.test.ts`.
@@ -1056,6 +1068,12 @@ escape and scope. The elements sit in `src/widgets/primitives/<name>/`: `gmt-ran
 label does not compile. Family pieces, shared by the tools of one family, live in
 `src/widgets/families/<family>/`. A tool's own layout is a CSS Module in `src/widgets/tools/`.
 
+`timeline`'s `mark` takes `{ pattern: "hatch" }`, which sets `data-pattern="hatch"`: a 45° repeating gradient in
+the mark's `--series` over its tint, so a mark reads apart from a solid neighbour without colour. A `tick` inside a
+lane (`.track > .tick`) is a label on an opaque `--gmt-surface-widget` plate with `pointer-events: none`, hidden
+below a 40rem container. Every `tick` is `aria-hidden` wherever it sits; the marks carry the facts. Under forced colours the hatch drops its image and takes a dotted border, and the plate
+is `Canvas` with `CanvasText`; both rules sit in the timeline module.
+
 **Line breaks in `.astro` text.** Astro 7 defaults to `compressHTML: "jsx"`: whitespace that holds a
 line break is deleted where it meets an element or an `{expression}`, so `marked⏎<strong>Theirs</strong>`
 builds as `marked<strong>Theirs</strong>` (and `{LICENCE_LEAD}⏎<a>` lost the space in every page's
@@ -1181,6 +1199,16 @@ splits them into two projects.
   installed. `scripts/lib/cell-overflow.browser.test.ts` is one: the cell check needs real layout,
   which jsdom has none of. `scripts/industry-tags-popover.browser.test.ts` runs in both engines,
   because WebKit places the tag definition by its own rules.
+- **Holds keep their boxes; four things break them.**
+  - A redraw that re-inserts a `data-enter` card replays `gmt-enter` and the card moves, so a mount
+    writes a card once and patches the slots inside it.
+  - A copy button inside a hold is toggled with `visibility: hidden` plus `inert`, never `hidden`,
+    which removes its box.
+  - A holds browser test waits for `document.getAnimations()` to finish before it takes its
+    baseline, or an entering card is measured mid-animation.
+  - A non-breaking space constant (`NBSP`) is written as the escape `"\u00a0"`, never as the
+    literal character: a formatter or editor can turn it into a plain space, and a hold then
+    wraps.
 - **What the shared setup resets.** `src/test/setup-dom.ts` runs after every test, in node and
   jsdom files alike: it restores spies (`vi.restoreAllMocks`), fake timers, `vi.stubGlobal` and
   `vi.stubEnv`. In a jsdom file it also destroys the widgets `renderWidget` mounted and calls
@@ -1340,6 +1368,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
   member (`number`, `bigint` or an object type, `isOpenMember` in `build-utils.ts`) it is a
   source-text field (`expr`), seeded with the example's argument as written, because a select
   cannot hold the open member: `RolloverEra` (`number | "rolling" | { notBefore }`) is one.
+  A union that mixes number and string literals (`FractionalDigit`, `nthWeekdayOfMonth`'s `n`)
+  keeps its numeric choices numeric: `numericOptions` (`build-utils.ts`, numbers ascending, then
+  the words) becomes `numeric` on the `PlaygroundField` and `data-numeric` on the select, and
+  `formatArg` writes those choices bare (`6`, not `"6"`) in the printed call.
   An enum select carries per-choice examples (`choiceSeeds` on the template, built by
   `buildChoiceSeeds`): for each choice, the first `@example` that writes it as a quoted literal,
   whose other arguments are literals the form can hold and whose documented result is not a
@@ -1633,8 +1665,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   family, for the healthcare layer. It reads one HL7 v2 `DTM` or `TS` field with `parseHL7`
   (`lib/hl7-timestamp-reader.ts` is the pure module, `hl7-timestamp-reader-mount.ts` the template
   and mount, `hl7-lib.ts` the loader) and states which of four kinds it is: an instant, a local
-  time with no offset (the sender's time, not UTC), a partial value that names a span and no
-  instant, or the null value. A local value goes through the same four-zone strip, with a third
+  time with no offset (the sender's time, not UTC), a partial value that has a precision and no
+  instant (its strip says so in words and draws no span), or the null value. A local value goes through the same four-zone strip, with a third
   column that sets each instant against the same digits read as UTC ("5 h 30 min later"), and a
   fourth section writes the value back with `formatHL7` at seven precisions. Its rules:
   - **The timeline takes an optional `reference` mark.** A spec with a `reference` draws a pin
@@ -1671,6 +1703,54 @@ Shared hooks come first, then the globe, then the clock-change pages.
     classifier does not know; a test asserts each code in it is one the classifiers return `null`
     for. There is no year-window control, and an old link that carries a `yearWindow` loads and
     ignores it.
+  The FHIR Date Checker (HLTH-94, `/tools/fhir-date-checker/`) is a fourth member of the family. It
+  reads one FHIR R4 `date`, `dateTime` or `instant` with `parseFHIR` (`lib/fhir-date-checker.ts` is
+  the pure module, `fhir-date-checker-mount.ts` the template and mount, `fhir-lib.ts` the loader),
+  and shows which of the three types the value fits, what it names, and what `formatFHIR` writes
+  back. It takes no HL7 input and uses no zones. Its rules:
+  - **The timeline takes a `span` kind.** `spanLayout` in `edi-picture.ts` places a year, month or
+    day as a band between its two edges, with the padded moment as its reference pin; `spanAria`
+    is a sibling of `timelineAria`. The HL7 Reader draws no span, and the DTM Decoder and X12 Time
+    Reader snapshots are unchanged.
+  - **The span strip's reference label wraps inside the room on its side of the pin.** Only the
+    `span` state makes the plot a size container and sets `--n` on the reference, so the label
+    never spills out of the card at 320 px; the marks timelines are unchanged.
+  - **The span band holds no text.** The days it covers ("2016-05-01 to 2016-05-31", 24 characters)
+    are wider than the band in a narrow pane, so they are the caption's first line, one line at any
+    width: the box is a size container in the `span` state and the label sets its type at the
+    box's width over 15. Nothing then touches the band's border at 320, 390, 768 or 1280 px.
+  - **Nothing in section 2 or 4 changes a box between presets.** The type table and the member
+    table are fixed-layout with set widths; each member cell holds its longest answer as a hidden
+    line; a writer cell is one line (two under 22rem) in the stacked layout. The type table stacks
+    under a 36rem (576 px) content box. At a 1280 px viewport that box is 588 px in Chromium, so
+    the table stays a table, and 568 px in WebKit, so it stacks there. Its widths
+    are `%` (a `<col width>` takes no `rem`) with the Type column wide enough for `dateTime`.
+  - **Reasons come from library probes.** The NO SIGNAL sentence and the per-type "Why" line are
+    chosen by probing `parseFHIR` and `isValidFHIR`, so they cannot drift from the library.
+  - **Allowed precisions are probed, not stored.** Which of year, month, day, second and fraction a
+    type accepts is read by calling `isValidFHIR` on one fixed sample per precision, once per type
+    (`probeAllowed`), and the site keeps no table of them.
+  - **A pattern match is shape only.** Each type shows the regex result and the library result
+    apart, because HL7 International calls the patterns informative, not normative.
+  - **"No result" covers both refusals.** The writer's cell reads the same whether the moment does
+    not fit the type or the library refuses the value (no minute precision, no leap second, no
+    zero fill). It is a correct answer and not the sentinel.
+  - **One field feeds the checker and the writer**, so there is one permalink. Its kind is `fhir`; it is
+    `{ preset }` alone while the value matches a preset, and `{ value }` (untrimmed, at most 64
+    characters) otherwise. The first preset, `2024-06`, is the chat starter. The presets include the
+    values that are ISO but not FHIR: minute precision, a bracketed zone and a time with no zone.
+  - **The reference pin is the mistake drawn.** On the span strip the pin marks
+    `<first day>T00:00:00Z`, the instant `new Date("2024-06")` names, labelled "Padded to midnight
+    UTC: …"; no library function makes that call. A valid inserted leap second has no pin and says
+    "it has no instant of its own on a UTC axis", because `toOffsetInstant` refuses `:60` and the
+    tool invents no stand-in. The writer's first row is "Default (no precision)", the call most
+    callers make.
+  - **Comparing two partial values is out of scope.** The strip draws one value's span and never
+    orders two values (FHIRPath's rule).
+  - **The tool is linked** from the HL7 Timestamp Reader's page, the guide's tools list and the
+    healthcare `solves` entry in `industry-overview.ts`; `namespace-summary.ts` names FHIR R4.
+  - **A blank custom value has no permalink state.** `permalinkOf` returns `{}`, so the link opens
+    on the first preset.
   - **The printed call is the call made.** A blank form in either tool (nothing typed in any field
     of the section, `dtmBlank`, `mainBlank`, `dtpBlank`) makes no call, hides the call frame and
     renders "nothing to read", never amber. Anything typed is partial input and gets the library's
@@ -1774,7 +1854,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     columns.
 - **The GNSS and leap-second family** (MAR-16): three GNSS tools and three Core ones. Each pure
   module takes a loaded library (`GnssLib` from `gnss-lib.ts`, or `TimescaleLib` from
-  `timescale-lib.ts`, both throwing `WidgetLoadError`) and draws its results; the site holds no
+  `timescale-lib.ts`, both throwing `WidgetLoadError`; the CCSDS tools' `CcsdsLib` comes from
+  `loadCcsdsLib` in `ccsds-lib.ts`) and draws its results; the site holds no
   table of library rules. Shared modules: `gnss-names.ts` (counters, RINEX systems, the six
   systems, modes, in RINEX tokens), `gnss-widgets.ts` (eras, leads, durations, the no-reading
   texts) and `timescale-widgets.ts` (the insertions, and the two dates the site holds,
@@ -1870,6 +1951,64 @@ Shared hooks come first, then the globe, then the clock-change pages.
       on TAI labels; the site computes no ulp and holds no epoch constant.
     - **When only one single-double form is `null`,** its row reads "no result" with `EDGE_NOTE`,
       not NO SIGNAL.
+  - **CCSDS Time Code Decoder** (`/tools/ccsds-time-code-decoder/`, `ccsds`, core, chat tool
+    `showCcsdsTimeCodeDecoder`): a CCSDS 301.0-B-4 ASCII time code (Code A calendar date, Code B
+    day of year) read to its instant, and an instant written back as both codes at `auto` or 0-9
+    fraction digits. Section 1 has five hero plates (code kind, instant, second 60, digits kept,
+    `Z` sent or not) over a field picture (`ediFigure`); section 2 has a Code A and a Code B plate,
+    each with a copy button, and a `cut, not rounded:` line. Component
+    `components/CcsdsTimeCodeDecoder.astro`, widget root `data-widget="ccsds-time-code-decoder"`.
+    - **Both parsers get the text as typed.** `parseCcsdsAsciiA` and `parseCcsdsAsciiB` each read it;
+      the site never picks by shape, upper-cases or trims. At most one returns an instant
+      (`MM-DD` against `DDD`), and the pure module throws on two. The default preset is `leap-2016-b`.
+    - **The field picture is the library's own output.** The fields are `formatCcsdsAsciiA` or `B`
+      of the return at the kept digit count, split at `-`, `T`, `:`, `.` and `Z`, never the
+      reader's text. A Code B `DDD` field's caption is the date from the return (`day 061 = 1 March`).
+    - **A refusal is explained by probing the library** (`ccsds-picture.ts`): upper-case `T` and
+      `Z`, `:60` to `:59` (then the same day at `23:59:60`), `-366T` to `-365T`, a trailing `:00`
+      or `T00:00:00`. The first probe accepted names the reason, else one general sentence, and a
+      disclosure prints each probe's call. A probe only explains; it never stands in for the text.
+    - **Digits are counted by string length.** Kept digits come from the return's fraction. Digits
+      dropped past the ninth are the input's length (minus `Z`) less that of the return written at
+      nine. The cut line's struck digits are the `auto` fraction past the `n`-digit one.
+    - **An empty box is a plain empty state,** never NO SIGNAL. An instant with no `Z` or offset
+      writes `no result` and one sentence that names `resolveLocal`.
+    - **Seeds** `code`, `instant` (64 characters at most) and `digits` (`"auto"`, `"0"` to `"9"`,
+      mapped back to `FractionalDigit` by the registry). A cleared box opens cleared. The loader is
+      `ccsds-lib.ts` (`loadCcsdsLib`: `timescale/parse`, `timescale/format`, `plain/locale`);
+      `CcsdsLib` and `CCSDS_DIGITS` live in `ccsds-widgets.ts`. The site holds no grammar,
+      leap-second table or clock, and `ccsds-guide-prose.test.ts` holds the guide's CCSDS section
+      to the library.
+    - **Gates.** No handle, so `readout-still` types every read text and instant and clicks every
+      digit chip (`scope: "widget"`, `drawn: ["hold"]`, `frame: false`), and
+      `ccsds-time-code-decoder-holds.browser.test.ts` steps every preset and chip at 300 and 1280 px.
+  - **Code B Day Ruler** (`/tools/code-b-day-ruler/`, `dayruler`, core, chat tool
+    `showCodeBDayRuler`): one day number dragged across two years, with the date each year's Code
+    B names (`2024-061` is 1 March, `2026-061` is 2 March) and day 366 absent from a common year.
+    Two readout cards pinned to opposite edges, a comparison line, two year lanes of month bands
+    and one `Day of year` range. Component `components/CodeBDayRuler.astro`, widget root
+    `data-widget="code-b-day-ruler"`.
+    - **Every year fact is a call.** A year has 366 days when `parseCcsdsAsciiB` reads day 366, 365
+      when it reads day 365, else the lane says `no result`. A month start is the day field of
+      `formatCcsdsAsciiB` on the first of the month; a date is `formatCcsdsAsciiA` of the parsed
+      instant. The site holds no leap-year or month-length arithmetic, so the 2000 against 2100
+      preset shows the library's Gregorian rule.
+    - **A drag step is four calls,** two parses and two formats. Month starts and year lengths are
+      cached by year inside the mount's signal.
+    - **The scale is fixed at 366 columns for both lanes,** so they line up by day number and never
+      rescale. Month bands alternate solid and `mark({ pattern: "hatch" })`; a common year's day 366
+      is a hatched mark labelled `no day 366`. Month names (`getLocaleMonthNames`) sit on in-lane
+      tick plates, hidden from screen readers like every `tick`: the band marks name the months. The cursor is the only `moving` part.
+    - **Cards do not move.** Each has a fixed `inline-size` in `ch` set from its ghosts (the widest
+      Code B, Code A and date, the date found by measuring the library's long month names) and
+      stacks below 30rem by container query. A year accent is a bottom border.
+    - **Seeds** `year`, `compare` and `day` as digit strings; a cleared year opens cleared. The chat
+      tool's `compareYear` maps to `compare`. The default preset is `after-leap-day` (2024 against
+      2026, day 61). The loader is the Decoder's `loadCcsdsLib`.
+    - **Gates.** `readout-still` drags `Day of year` (`riders: true`, `scope: "widget"`,
+      `drawn: ["drawn", "hold"]`) and types each year from every kind of value;
+      `code-b-day-ruler-holds.browser.test.ts` steps every day by keyboard and drags the full track
+      at 300 to 1440 px in both themes.
   - **Double Precision Meter** (`/tools/double-precision-meter/`, `dpmeter`, core, chat tool
     `showDoublePrecisionMeter`): how far a single JD, an MJD and seconds since J2000.0 drift from
     the instant they encode, against the exact two-part JD. The reader drags a year from 1972 to
@@ -2823,9 +2962,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - `PAGES` in `scripts/html-diff.mjs`, `scripts/visual-snapshot.mjs` and
     `scripts/grow-measure.mjs`;
   - `TOOLS` in `scripts/readout-still.mjs`, for a tool with a drag handle;
-  - its forced-colours rules in `src/styles/gmt-a11y.css`. A mark or a line drawn as a
-    `background` gradient disappears under forced colours and needs a system-colour rule there:
-    the EDI pictures' boxes, brackets, pins and axis have one, so they keep an edge.
+  - its forced-colours rules, in the CSS Module that draws the element (the tool's own, or the
+    kit or family module). A module is unlayered, so it beats every rule in
+    `src/styles/gmt-a11y.css` (the `gmt.a11y` layer) whatever the specificity: a rule there for
+    a property a module also sets never applies, and no test fails. A mark or a line drawn as a
+    `background` gradient disappears under forced colours and needs a system-colour rule: the
+    EDI pictures' boxes, brackets, pins and axis have one in `edi-figure.module.css`, so they
+    keep an edge. A tool's rule that changes a kit piece's colour (the Julian Day Counter's
+    CanvasText marks over the timeline's Canvas) is scoped under the tool's own class and wins
+    by specificity.
 
   One more fails only after a build: the component's name in the dropped-components list in
   `src/lib/mdx-jsx.ts`, which `scripts/llms.test.ts` checks against the built text surfaces.
@@ -2894,7 +3039,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     Starlight's prose spacing never reaches widget internals.
   - **A disabled input or select has one shared style**
     (the `textInput` and `select` CSS Modules): dimmer text, a dashed border, no fill and a not-allowed
-    cursor, with no opacity (both modules set `opacity: 1`, so a browser's own dimming of a disabled control never lowers the text or border contrast). Forced colours restate it as `GrayText` (`gmt-a11y.css`). A
+    cursor, with no opacity (both modules set `opacity: 1`, so a browser's own dimming of a disabled control never lowers the text or border contrast). Forced colours restate it as `GrayText` (in each module). A
     widget sets `disabled` and styles nothing itself, and a select is always the `select`
     builder's, never a bare `<select>`, so the state looks the same in every tool. The tools that disable such a control are:
     - the Punctuality Board: the early and second late tolerance inputs while each one is
@@ -2995,7 +3140,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `/tools/timetable-reader/`, `/tools/crossing-clock/`, `/tools/cutoff-stack/`,
   `/tools/cutoff-ruler/`, `/tools/cutoff-countdown/`, `/tools/punctuality-board/`,
   `/tools/eta-drift/`, `/tools/departure-board/`, `/tools/dtm-decoder/`,
-  `/tools/x12-time-reader/`, `/tools/hl7-timestamp-reader/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
+  `/tools/x12-time-reader/`, `/tools/hl7-timestamp-reader/`, `/tools/fhir-date-checker/`, `/tools/bl-date-stamp/`, `/tools/demurrage-clock/`,
   `/tools/epcis-event-reader/`, `/tools/journey-split/`, `/tools/gnss-week-decoder/`,
   `/tools/satellite-clock-converter/`, `/tools/gnss-rollover-checker/`,
   `/tools/leap-second-timeline/`, `/tools/elapsed-vs-clock-difference/`, `/tools/stored-time-audit/`,
@@ -3092,6 +3237,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   its height. A result region may grow from one preset to the next through `.gmt-grow`, which
   `grow:measure` gates: the reason aside under a sentinel, a second lane for a second zone, or a
   chart that moves down because section 1 shows more fields.
+  An `entries` item in `readout-still.mjs` takes `values` (strings to type, or `"options"` for a select)
+  or `chips: true`, which names a `group` role by its legend and clicks each radio chip in turn.
   **Traps in these gates.** Firefox lays out in fractions, so `readout-still` compares raw box
   values with a 0.5 px epsilon and never rounds a value before the compare (a rounded 1815.5 against
   1816.4 reads as a 1 px move that was 0.9 px). It takes a second snapshot after the scroll into
@@ -4414,6 +4561,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - `showHl7TimestampReader({ value, zone1?, zone2?, zone3?, zone4? })` (HLTH-93): `value` is
     one HL7 v2 `DTM` or `TS` field as typed, up to 64 characters, never trimmed. A zone is passed
     only when the reader named it, never chosen from a facility or a sending system.
+  - `showFhirDateChecker({ value })` (HLTH-94): `value` is one FHIR `date`, `dateTime` or `instant`
+    as typed, 1 to 64 characters, never trimmed. No zone is passed.
   - `showBlDateStamp({ value, event, timeZone, zone2?, zone3?, zone4?, latest? })` (INT-14):
     `value` is a moment, never a bare local time, and `timeZone` is the place where the event
     happened. A zone is passed only when the reader named it, never chosen from a port or a place.
@@ -4478,6 +4627,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `dbstamp`, and the Worker's `execute` is `accept("database-timestamp-reader")` after the problems
     check and the zone check. The registry's `validate` refuses an unknown form id and a zone the
     runtime cannot read.
+  - `showCcsdsTimeCodeDecoder({ code?, instant?, digits? })`: `code` and `instant` are strings of at
+    most 64 characters, passed exactly as sent; `digits` is `"auto"` or `"0"` to `"9"`. The widget
+    kind is `ccsds`, and the Worker's `execute` is `accept("ccsds-time-code-decoder")`.
+  - `showCodeBDayRuler({ year?, compareYear?, day? })`: integers 1 to 9999, 1 to 9999 and 1 to 366,
+    each defaulting to the default preset. The widget kind is `dayruler`, the registry maps
+    `compareYear` to `compare`, and the Worker's `execute` is `accept("code-b-day-ruler")`.
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
   Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change
