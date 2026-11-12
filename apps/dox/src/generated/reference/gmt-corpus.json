@@ -2806,6 +2806,51 @@
     ]
   },
   {
+    "url": "/reference/healthcare/format/formatFHIR",
+    "page": "/reference/healthcare/format/formatFHIR",
+    "name": "formatFHIR",
+    "namespace": "healthcare",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatFHIR(value: string, type: FhirDateType, options?: FhirFormatOptions): string",
+    "description": "Write an ISO 8601 string as a FHIR R4 `date`, `dateTime` or `instant`: the inverse of `parseFHIR`.",
+    "sourcePath": "packages/gmt/src/healthcare/format/formatFHIR.ts",
+    "examples": [
+      {
+        "call": "formatFHIR(\"2024-06-15T23:30:00-05:00\", \"date\")",
+        "result": "\"2024-06-15\""
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T23-05:00\", \"date\")",
+        "result": "\"2024-06-15\" (an hour with an offset)"
+      },
+      {
+        "call": "formatFHIR(\"2024-01-15T10:30:00Z[Europe/London]\", \"dateTime\")",
+        "result": "\"2024-01-15T10:30:00+00:00\""
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T23:30:00-05:00\", \"instant\")",
+        "result": "\"2024-06-15T23:30:00-05:00\""
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T10:30:00\", \"instant\")",
+        "result": "\"\" (an instant needs a zone)"
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T10:30:00Z\", \"dateTime\", { precision: \"month\" })",
+        "result": "\"2024-06\""
+      },
+      {
+        "call": "formatFHIR(\"2024-06\", \"dateTime\", { precision: \"day\" })",
+        "result": "\"\" (finer than the value carries)"
+      },
+      {
+        "call": "formatFHIR(\"2016-12-31T23:59:60Z\", \"instant\")",
+        "result": "\"\" (a leap second)"
+      }
+    ]
+  },
+  {
     "url": "/reference/healthcare/format/formatHL7",
     "page": "/reference/healthcare/format/formatHL7",
     "name": "formatHL7",
@@ -2841,6 +2886,10 @@
         "result": "\"\" (finer than the value carries)"
       },
       {
+        "call": "formatHL7(\"2024-06-15T10-05:00\")",
+        "result": "\"2024061510-0500\" (an hour with an offset)"
+      },
+      {
         "call": "formatHL7(\"2024-06-15-05:00\")",
         "result": "\"\" (not ISO 8601)"
       },
@@ -2851,6 +2900,35 @@
       {
         "call": "formatHL7(\"2024-02-30\")",
         "result": "\"\" (no such day)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/parse/parseFHIR",
+    "page": "/reference/healthcare/parse/parseFHIR",
+    "name": "parseFHIR",
+    "namespace": "healthcare",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseFHIR(value: string): FhirDateTime | null",
+    "description": "Reads a FHIR R4 `date`, `dateTime` or `instant` string (R4 Datatypes §2.24.0.1) as it is written, and returns what it states: the input, its precision and its offset.",
+    "sourcePath": "packages/gmt/src/healthcare/parse/parseFHIR.ts",
+    "examples": [
+      {
+        "call": "parseFHIR(\"2024-06\")",
+        "result": "{ value: \"2024-06\", precision: \"month\", offset: \"\" }"
+      },
+      {
+        "call": "parseFHIR(\"2015-02-07T13:28:17-05:00\")",
+        "result": "{ value: \"2015-02-07T13:28:17-05:00\", precision: \"second\", offset: \"-05:00\" }"
+      },
+      {
+        "call": "parseFHIR(\"2017-01-01T00:00:00.000Z\")",
+        "result": "{ value: \"2017-01-01T00:00:00.000Z\", precision: \"fraction\", offset: \"+00:00\" }"
+      },
+      {
+        "call": "parseFHIR(\"2024-06-15T10:30:00\")",
+        "result": "null (a time needs a zone)"
       }
     ]
   },
@@ -2896,6 +2974,47 @@
       {
         "call": "parseHL7(\"20240615240000\")",
         "result": "null (hour 24)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/validate/isValidFHIR",
+    "page": "/reference/healthcare/validate/isValidFHIR",
+    "name": "isValidFHIR",
+    "namespace": "healthcare",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFHIR(value: string, type: FhirDateType): boolean\nisValidFHIR(value: void | {} | null | undefined, type: FhirDateType): boolean\nisValidFHIR(value: unknown, type: FhirDateType): value is string",
+    "description": "Return true when `value` is a real FHIR R4 `date`, `dateTime` or `instant`, as `type` names.",
+    "sourcePath": "packages/gmt/src/healthcare/validate/isValidFHIR.ts",
+    "examples": [
+      {
+        "call": "isValidFHIR(\"2024-06\", \"date\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFHIR(\"2024-06-15T10:30:00-05:00\", \"dateTime\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFHIR(\"2016-12-31T23:59:60Z\", \"instant\")",
+        "result": "true (an inserted leap second)"
+      },
+      {
+        "call": "isValidFHIR(\"2024-06-15\", \"instant\")",
+        "result": "false (an instant is a second or finer)"
+      },
+      {
+        "call": "isValidFHIR(\"2024-06-15T10:30:00\", \"dateTime\")",
+        "result": "false (a time needs a zone)"
+      },
+      {
+        "call": "isValidFHIR(\"2024-02-30\", \"date\")",
+        "result": "false (30 February; the fhirDate pattern matches it)"
+      },
+      {
+        "call": "isValidFHIR(20240615, \"date\")",
+        "result": "false (not a string)"
       }
     ]
   },
@@ -17477,6 +17596,105 @@
     ]
   },
   {
+    "url": "/reference/regex/fhir/fhirDate",
+    "page": "/reference/regex/fhir/fhirDate",
+    "name": "fhirDate",
+    "namespace": "regex",
+    "module": "fhir",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a FHIR R4 `date`: the `regex` of the `date` StructureDefinition (https://hl7.org/fhir/R4/date.profile.json), verbatim and anchored.",
+    "sourcePath": "packages/gmt/src/regex/fhir.ts",
+    "examples": [
+      {
+        "call": "fhirDate.test(\"2024-06-15\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirDate.test(\"2024\")",
+        "result": "true (year precision)"
+      },
+      {
+        "call": "fhirDate.test(\"2024-06-15T10:30:00Z\")",
+        "result": "false (a date carries no time)"
+      },
+      {
+        "call": "fhirDate.test(\"0000-01-01\")",
+        "result": "false (year 0000 is not in the pattern)"
+      },
+      {
+        "call": "fhirDate.test(\"2023-02-29\")",
+        "result": "true (shape only; the day does not exist)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/fhir/fhirDateTime",
+    "page": "/reference/regex/fhir/fhirDateTime",
+    "name": "fhirDateTime",
+    "namespace": "regex",
+    "module": "fhir",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a FHIR R4 `dateTime`: the `regex` of the `dateTime` StructureDefinition (https://hl7.org/fhir/R4/datetime.profile.json), verbatim and anchored.",
+    "sourcePath": "packages/gmt/src/regex/fhir.ts",
+    "examples": [
+      {
+        "call": "fhirDateTime.test(\"2024-06\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirDateTime.test(\"2015-02-07T13:28:17.239+02:00\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirDateTime.test(\"2024-06-15T10:30:00\")",
+        "result": "false (a time needs a zone)"
+      },
+      {
+        "call": "fhirDateTime.test(\"2024-06-15T10:30Z\")",
+        "result": "false (seconds are required)"
+      },
+      {
+        "call": "fhirDateTime.test(\"2024-06-15T10:30:00+14:30\")",
+        "result": "false (offset past 14:00)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/fhir/fhirInstant",
+    "page": "/reference/regex/fhir/fhirInstant",
+    "name": "fhirInstant",
+    "namespace": "regex",
+    "module": "fhir",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a FHIR R4 `instant`: the `regex` of the `instant` StructureDefinition (https://hl7.org/fhir/R4/instant.profile.json), verbatim and anchored.",
+    "sourcePath": "packages/gmt/src/regex/fhir.ts",
+    "examples": [
+      {
+        "call": "fhirInstant.test(\"2015-02-07T13:28:17.239+02:00\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15T10:30:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15\")",
+        "result": "false (an instant needs a time)"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15T10:30:00\")",
+        "result": "false (a zone is required)"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15T10:30:00z\")",
+        "result": "false (upper-case Z only)"
+      }
+    ]
+  },
+  {
     "url": "/reference/regex/http-date/httpDate",
     "page": "/reference/regex/http-date/httpDate",
     "name": "httpDate",
@@ -22233,6 +22451,76 @@
     "sourcePath": "packages/gmt/src/types/exact-duration-unit.ts",
     "examples": [],
     "inlineOn": "totalUnits"
+  },
+  {
+    "url": "/reference/types/FhirDateType",
+    "page": "/reference/types/FhirDateType",
+    "name": "FhirDateType",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "The three FHIR R4 primitive types that carry a date (R4 Datatypes §2.24.0.1).",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/FhirPrecision",
+    "page": "/reference/types/FhirPrecision",
+    "name": "FhirPrecision",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "How much of a FHIR value is written, coarsest first. FHIR has no hour or minute precision: a time always carries seconds.",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/healthcare/parse/parseFHIR#fhirdatetime",
+    "page": "/reference/healthcare/parse/parseFHIR",
+    "name": "FhirDateTime",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "A FHIR `date`, `dateTime` or `instant` value, read as sent.",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": [],
+    "inlineOn": "parseFHIR",
+    "members": [
+      {
+        "name": "value",
+        "description": "The input, unchanged: nothing is padded and the offset is spelled as sent."
+      },
+      {
+        "name": "precision",
+        "description": "The finest field the value writes."
+      },
+      {
+        "name": "offset",
+        "description": "`±HH:MM` (`Z` and `-00:00` read as `+00:00`), or `\"\"` for a year, month or day."
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/format/formatFHIR#fhirformatoptions",
+    "page": "/reference/healthcare/format/formatFHIR",
+    "name": "FhirFormatOptions",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "Options for `formatFHIR`.",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": [],
+    "inlineOn": "formatFHIR",
+    "members": [
+      {
+        "name": "precision",
+        "description": "The precision to write, no finer than the input's."
+      }
+    ]
   },
   {
     "url": "/reference/types/FiscalPattern",

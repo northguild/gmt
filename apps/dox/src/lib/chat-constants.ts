@@ -938,6 +938,13 @@ export const CHAT_STARTERS: readonly {
     args: { year: 2024, compareYear: 2026, day: 61 },
   },
   {
+    text: "Is 2024-06 a valid FHIR instant?",
+    widget: "showFhirDateChecker",
+    area: "healthcare",
+    // The question gives the value exactly; the widget reads it, so nothing is padded here.
+    args: { value: "2024-06" },
+  },
+  {
     text: "Which year does SWIFT read the value date 350615 as, and is 750615 a valid value date?",
     widget: "showSwiftValueDateReader",
     area: "finance",

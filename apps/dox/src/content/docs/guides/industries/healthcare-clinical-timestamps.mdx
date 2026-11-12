@@ -1,6 +1,6 @@
 ---
 title: "Healthcare: Clinical Timestamps"
-description: Read and write the date-times in HL7 version 2 messages, keep a time with no offset local until you name the sender's zone, and keep a partial date a span.
+description: Read and write the date-times in HL7 version 2 messages and FHIR R4 resources, keep an HL7 time with no offset local until you name the sender's zone, require a zone on a FHIR time, and keep a partial date a span.
 sidebar:
   order: 11
 industries: [healthcare]
@@ -13,10 +13,16 @@ message is not ISO 8601. The number of digits says how precise the value is, and
 optional. A reader that takes a value without an offset for UTC moves every event by the offset
 of the place that sent it, and a reader that pads a year to a moment states a fact nobody sent.
 
-There are three functions: `parseHL7` reads a value, `formatHL7` writes one and `isValidHL7`
-checks one. Each takes a string and returns a string, an object or a boolean, and none of them
+FHIR R4 is the other standard a clinical system meets. Its `date`, `dateTime` and `instant` are
+profiles of ISO 8601, and they differ from HL7 version 2 on the point that matters most: a FHIR
+time must carry a zone, so there is no sender's local time to guess.
+
+There are three functions for each standard. For HL7, `parseHL7` reads a value, `formatHL7`
+writes one and `isValidHL7` checks one. For FHIR, `parseFHIR`, `formatFHIR` and `isValidFHIR` do
+the same. Each takes a string and returns a string, an object or a boolean, and none of them
 throws. A call the types accept returns the sentinel (`null`, `""` or `false`) when the value is
-wrong.
+wrong. The HL7 sections come first, and [FHIR R4](#fhir-r4-date-datetime-and-instant) follows
+them.
 
 ```typescript
 import { parseHL7 } from "@northguild/gmt/healthcare/parse";
@@ -302,9 +308,189 @@ minute to fraction, for an `"instant"` or `"local"` one.
 [`Hl7FormatOptions`](/reference/healthcare/format/formatHL7/#hl7formatoptions) is the options of
 `formatHL7`.
 
+## FHIR R4: date, dateTime and instant
+
+FHIR R4 Datatypes §2.24.0.1 defines three primitive types that carry a date. HL7 publishes one
+regular expression for each in the R4 StructureDefinitions, and GMT exposes them as `fhirDate`,
+`fhirDateTime` and `fhirInstant` in `@northguild/gmt/regex`. The notes in §2.24.0.1 call them
+"informative, not normative", so they are a first filter and not a check.
+
+```typescript
+import { parseFHIR } from "@northguild/gmt/healthcare/parse";
+import { formatFHIR } from "@northguild/gmt/healthcare/format";
+import { isValidFHIR } from "@northguild/gmt/healthcare/validate";
+```
+
+### Three types, one grammar
+
+`parseFHIR` reads a value of any of the three types and returns the value as sent, its precision
+and its offset. `isValidFHIR` and `formatFHIR` take the type as their second argument, because the
+type decides which precisions are allowed.
+
+| Precision    | Example                     | Allowed in            |
+| ------------ | --------------------------- | --------------------- |
+| `"year"`     | `2024`                      | `date`, `dateTime`    |
+| `"month"`    | `2024-06`                   | `date`, `dateTime`    |
+| `"day"`      | `2024-06-15`                | `date`, `dateTime`    |
+| `"second"`   | `2015-02-07T13:28:17-05:00` | `dateTime`, `instant` |
+| `"fraction"` | `2015-02-07T13:28:17.239Z`  | `dateTime`, `instant` |
+
+A `second` value is `YYYY-MM-DDThh:mm:ss` and a zone. A `fraction` value adds a decimal part to the
+seconds.
+
+```typescript
+parseFHIR("2015-02-07T13:28:17-05:00");
+// { value: "2015-02-07T13:28:17-05:00", precision: "second", offset: "-05:00" }
+parseFHIR("2024-06-15T10:30:00.5+02:00");
+// { value: "2024-06-15T10:30:00.5+02:00", precision: "fraction", offset: "+02:00" }
+
+isValidFHIR("2024-06-15T10:30:00Z", "instant"); // true
+isValidFHIR("2024-06-15", "instant"); // false — an instant is a second or finer
+isValidFHIR("2024-06-15T10:30:00Z", "date"); // false — a date has no time
+```
+
+There is no hour or minute precision in FHIR: a time always carries seconds. A fraction of more
+than nine digits is refused, not cut short, because Temporal holds nanoseconds.
+
+### Precision is kept
+
+`2024-06` is a month. It is not midnight on 1 June, and padding it states a day and a time the
+sender did not send. `parseFHIR` returns the value as it was sent, with nothing added.
+
+```typescript
+parseFHIR("2024");
+// { value: "2024", precision: "year", offset: "" }
+parseFHIR("2024-06");
+// { value: "2024-06", precision: "month", offset: "" }
+parseFHIR("2024-6-15");
+// null — the month is not padded
+```
+
+Comparing one partial value with another is a different problem. FHIRPath defines it in its
+[Equality](https://hl7.org/fhirpath/N1/#equality) and
+[Comparison](https://hl7.org/fhirpath/N1/#comparison) sections, and GMT does not compare partial
+values. Use a FHIRPath engine for that, and use `parseFHIR` to read each value first.
+
+### A time needs a zone
+
+HL7 version 2 reads a time with no offset as the sender's local time. FHIR does not allow one:
+§2.24.0.1 says that "if hours and minutes are specified, a time zone SHALL be populated". So a
+FHIR time with no zone is not a local time to resolve later. It is invalid, and `parseFHIR`
+returns `null` for it.
+
+```typescript
+parseFHIR("2024-06-15T10:30:00"); // null — no zone
+parseFHIR("2024-06-15T10:30"); // null — no seconds, and no zone
+parseFHIR("2024-06-15T24:00:00Z"); // null — 24:00 is not allowed
+isValidFHIR("2024-06-15T10:30:00", "dateTime"); // false
+```
+
+The zone is `Z` or `±hh:mm` from `-14:00` to `+14:00`. `Z`, `+00:00` and `-00:00` all read as
+`offset: "+00:00"`, and `value` keeps the spelling that was sent. Compare `offset`, not the
+strings.
+
+```typescript
+parseFHIR("2024-06-15T10:30:00Z");
+// { value: "2024-06-15T10:30:00Z", precision: "second", offset: "+00:00" }
+parseFHIR("2024-06-15T10:30:00-00:00");
+// { value: "2024-06-15T10:30:00-00:00", precision: "second", offset: "+00:00" }
+parseFHIR("2024-06-15T10:30:00+14:30"); // null — past +14:00
+```
+
+### Leap seconds
+
+FHIR allows a second of `60`: "Leap Seconds are allowed" in §2.24.0.1. GMT accepts it only on an
+inserted leap second, at any offset spelling. `2016-12-31T23:59:60Z` was a real second, and
+`2017-12-31T23:59:60Z` was not.
+
+```typescript
+isValidFHIR("2016-12-31T23:59:60Z", "instant"); // true
+isValidFHIR("2017-12-31T23:59:60Z", "instant"); // false — no second was inserted that day
+parseFHIR("2016-12-31T18:59:60-05:00");
+// { value: "2016-12-31T18:59:60-05:00", precision: "second", offset: "-05:00" } — the same second
+```
+
+### The patterns prove shape only
+
+`fhirDate`, `fhirDateTime` and `fhirInstant` accept strings that `isValidFHIR` refuses. A match
+says the value has the right shape, not that it is a real date or a real second.
+
+```typescript
+import { fhirDateTime, fhirInstant } from "@northguild/gmt/regex";
+
+fhirDateTime.test("2024-02-30"); // true — there is no 30 February
+isValidFHIR("2024-02-30", "dateTime"); // false
+
+fhirInstant.test("2017-12-31T23:59:60Z"); // true — a second of 60 on any day
+isValidFHIR("2017-12-31T23:59:60Z", "instant"); // false
+
+fhirInstant.test("2024-06-15T10:30:00.1234567890Z"); // true — a fraction of any length
+isValidFHIR("2024-06-15T10:30:00.1234567890Z", "instant"); // false — ten digits
+```
+
+The other direction holds: a value that `isValidFHIR` accepts always matches the pattern for its
+type. Use the pattern to filter, then `isValidFHIR` or `parseFHIR` to decide.
+
+### Writing a FHIR value
+
+`formatFHIR` takes an ISO 8601 value and writes it as a `date`, `dateTime` or `instant`. It reads
+the wall clock as written, and it cuts and never rounds, so the result never names a later second,
+day or month than the input. The `precision` option only lowers the precision. A finer one returns
+`""`.
+
+```typescript
+formatFHIR("2024-06-15T23:59:59.999Z", "instant", { precision: "second" }); // "2024-06-15T23:59:59Z" — cut, not rounded
+formatFHIR("2024-12-31T23:59:59.999-05:00", "dateTime", { precision: "year" }); // "2024"
+formatFHIR("2024-06", "dateTime", { precision: "day" }); // "" — finer than the value carries
+```
+
+Under `date`, the result is the wall-clock date at the input's own offset, because FHIR forbids a
+zone on a `date`. The designator is written as the input spells it, so `Z`, `+00:00` and `-00:00`
+stay as they were. A second of `60` returns `""`, because §2.24.0.1 says applications producing
+leap seconds "MAY choose to avoid" them.
+
+```typescript
+formatFHIR("2024-06-15T23:30:00-05:00", "date"); // "2024-06-15" — the date where the sender was
+formatFHIR("2024-06-15T10:30:00-00:00", "dateTime"); // "2024-06-15T10:30:00-00:00"
+formatFHIR("2024-06-15T10:30:00", "instant"); // "" — an instant needs a zone
+formatFHIR("2016-12-31T23:59:60Z", "instant"); // "" — a leap second is not written
+```
+
+A `Z` timestamp states no local time, so a `Z[zone]` value gives that zone's local date:
+`formatFHIR("2024-06-15T23:30:00Z[Europe/Berlin]", "date")` is `"2024-06-16"`. An offset that is
+not a whole number of minutes, such as `+02:00:30`, returns `""`, under `date` too.
+
+FHIR has no minute precision, and `formatFHIR` never zero-fills. An HL7 version 2 time at minute
+precision therefore gives `""` under `dateTime` and `instant`. The caller either cuts it to a day
+or adds `:00` knowingly. `parseHL7` already writes `:00` into `local` for a minute value, so look
+at `precision` before you join `local` and `offset`.
+
+```typescript
+import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+import { formatFHIR } from "@northguild/gmt/healthcare/format";
+
+formatFHIR("2024-06-15T10:30-05:00", "dateTime"); // "" — no minute precision in FHIR
+const sent = parseHL7("202406151030-0500");
+if (sent?.kind === "instant" && sent.precision === "minute") {
+  const iso = sent.local + sent.offset; // "2024-06-15T10:30:00-05:00": the :00 is added
+  formatFHIR(iso, "dateTime", { precision: "day" }); // "2024-06-15"
+  // Writing the whole value is right only if a zero second is acceptable.
+  formatFHIR(iso, "dateTime"); // "2024-06-15T10:30:00-05:00"
+}
+```
+
+[`FhirDateTime`](/reference/healthcare/parse/parseFHIR/#fhirdatetime) is the result of
+`parseFHIR`. Its `precision` is a [`FhirPrecision`](/reference/types/FhirPrecision/).
+[`FhirDateType`](/reference/types/FhirDateType/) is the second argument of `isValidFHIR` and
+`formatFHIR`, and
+[`FhirFormatOptions`](/reference/healthcare/format/formatFHIR/#fhirformatoptions) is the options
+of `formatFHIR`.
+
 ## See it break, then work
 
 - [An HL7 Time Read as UTC](/scenarios/an-hl7-time-read-as-utc/)
 - [A TS Date Read as a Time](/scenarios/a-ts-date-read-as-a-time/)
-- [Healthcare mistakes](/mistakes/healthcare/)
+- [A FHIR Month Padded to Midnight](/scenarios/a-fhir-month-padded-to-midnight/)
+- [Healthcare mistakes](/mistakes/healthcare/), and the [FHIR R4 mistakes](/mistakes/healthcare/#fhir-r4)
 - [HL7 Timestamp Reader](/tools/hl7-timestamp-reader/), a tool that reads a value of your own
+- [FHIR Date Checker](/tools/fhir-date-checker/), a tool that checks a FHIR `date`, `dateTime` or `instant` of your own

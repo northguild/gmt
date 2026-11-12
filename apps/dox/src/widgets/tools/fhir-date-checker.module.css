@@ -1,0 +1,266 @@
+/*
+ * FHIR Date Checker: what only this tool needs. The sections, tables, code frames, verdict,
+ * badge and held lines are the kit's and the EDI family's; this sheet places them and styles the
+ * result cells and the writer grid. The two panes sit side by side where the widget is wide and
+ * one under the other where it is not. The widget root is the container.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.main {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.split,
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 67.75rem) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(34rem, 1.2fr) minmax(26rem, 1fr);
+    column-gap: var(--gmt-space-4);
+    align-items: start;
+  }
+}
+
+/* The box the timeline sits in. */
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+.written {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.mono {
+  font-family: var(--gmt-font-mono);
+}
+
+/* A result word and the pattern cell's badge share a row; the badge always has its room. */
+.patternCell {
+  display: grid;
+  gap: var(--gmt-space-1);
+  justify-items: start;
+  min-inline-size: 0;
+}
+
+/* A member value: monospace, and quieter when the value does not state it or nothing was read. */
+.member {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+
+  & [data-state="absent"],
+  & [data-state="none"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+.result {
+  display: inline-block;
+
+  /* "Not valid" and "no result" are the longest answers: a shorter one never narrows the cell. */
+  min-inline-size: 9ch;
+  white-space: nowrap;
+
+  &[data-state="none"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+/* A writer cell reserves the width of the longest value it can hold, so a coarser or finer answer
+   never moves a column edge; a value never wraps. A precision the type does not allow is dimmer. */
+.writeCell {
+  display: inline-block;
+  min-inline-size: var(--w);
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &[data-state="none"],
+  &[data-allowed="0"] {
+    color: var(--gmt-ice-dim);
+  }
+}
+
+/* The type table becomes labelled blocks under 36rem, the writer grid under 60rem: each cell
+   names its column from the `data-col` the table wrote, and the header row is read by the labels. */
+.stack,
+.stackWide {
+  min-inline-size: 0;
+}
+
+.stack {
+  @container (inline-size < 36rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    /* A value gets the whole line under its name, so the longest one wraps at most once. */
+    & td {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--gmt-space-1);
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+  }
+}
+
+.stackWide {
+  @container (inline-size < 60rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    /* A value gets the whole line under its name, so the longest one wraps at most once. */
+    & td {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--gmt-space-1);
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+
+    & .writeCell {
+      display: block;
+      min-inline-size: 0;
+      min-block-size: 1lh;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* Under 22rem the longest value takes two lines, so every cell holds two. */
+  @container (inline-size < 22rem) {
+    & .writeCell {
+      min-block-size: 2lh;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .member [data-state="absent"],
+  .member [data-state="none"],
+  .result[data-state="none"],
+  .writeCell[data-state="none"],
+  .writeCell[data-allowed="0"],
+  .stack td::before,
+  .stack th::before,
+  .stackWide td::before,
+  .stackWide th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .panel {
+    border-color: var(--gmt-ice);
+  }
+
+  .member [data-state="absent"],
+  .member [data-state="none"],
+  .result[data-state="none"],
+  .writeCell[data-state="none"],
+  .writeCell[data-allowed="0"],
+  .stack td::before,
+  .stack th::before,
+  .stackWide td::before,
+  .stackWide th::before {
+    color: var(--gmt-ice);
+  }
+}

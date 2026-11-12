@@ -16,6 +16,7 @@ export * from "./duty";
 export * from "./edi";
 export * from "./epcis";
 export * from "./exact-duration-unit";
+export * from "./fhir";
 export * from "./fiscal-calendar";
 export * from "./fix";
 export * from "./fractional-digit";

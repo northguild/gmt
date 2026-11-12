@@ -59,6 +59,10 @@ import {
 } from "./departure-board-mount";
 import { mountDtmDecoder, renderDtmDecoderTemplate } from "./dtm-decoder-mount";
 import {
+  mountFhirDateChecker,
+  renderFhirDateCheckerTemplate,
+} from "./fhir-date-checker-mount";
+import {
   mountHl7TimestampReader,
   renderHl7TimestampReaderTemplate,
 } from "./hl7-timestamp-reader-mount";
@@ -296,6 +300,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "hl7 timestamp reader",
     () => renderHl7TimestampReaderTemplate("hl7-timestamp-reader"),
     mountHl7TimestampReader as MountFn<never>,
+  ],
+  [
+    "fhir date checker",
+    () => renderFhirDateCheckerTemplate("fhir-date-checker"),
+    mountFhirDateChecker as MountFn<never>,
   ],
   [
     "x12 time reader",

@@ -147,6 +147,13 @@
     forced-color-adjust: none;
   }
 
+  /* A calendar span on the EDI timeline: its edge is a system colour, and its fill is the canvas,
+     so the span reads as an outlined box and never as a solid block. */
+  [data-band="1"] {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
   .gmt-ng-mark :is(.ng-mark-pane, .ng-mark-sheen) {
     fill: none;
   }

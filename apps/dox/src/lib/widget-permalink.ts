@@ -81,6 +81,7 @@ export type WidgetKind =
   | "tai64n"
   | "fixstamp"
   | "ssim"
+  | "fhir"
   | "ttstack"
   | "jdcount"
   | "dpmeter"
@@ -153,6 +154,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   tai64n: "/tools/tai64n-log-reader/",
   fixstamp: "/tools/fix-timestamp-reader/",
   ssim: "/tools/ssim-date-reader/",
+  fhir: "/tools/fhir-date-checker/",
   swiftdate: "/tools/swift-value-date-reader/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",

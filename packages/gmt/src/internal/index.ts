@@ -87,8 +87,8 @@ export {
 export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
 export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
-// The EDI readers (./ediDateTimeFields) and writers (./ediDateTimeWriter) are deliberately not
-// re-exported here: they import `instant/convert/toOffsetInstant`, which reads this barrel at
+// The EDI readers (./ediDateTimeFields) and the EDI writers (./ediDateTimeWriter) are deliberately
+// not re-exported here: they import `instant/convert/toOffsetInstant`, which reads this barrel at
 // module top level, so a barrel entry would close a cycle. Import each from its own file
 // ("../../internal/ediDateTimeFields", "../../internal/ediDateTimeWriter").
 export {
@@ -136,6 +136,14 @@ export {
   halfOpenXor,
 } from "./halfOpenIntervals";
 export { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
+export { hasTimeZoneAnnotation } from "./timeZoneAnnotation";
+export { readFormOffsetInstant, readOffsetInstant } from "./offsetInstant";
+export {
+  FHIR_PRECISIONS,
+  FHIR_TYPE_PRECISIONS,
+  fhirTypeAllows,
+  readFhirValue,
+} from "./fhirDateTime";
 export { formatHourDuration } from "./hourDurationString";
 export { canonicalInstantIntervals } from "./instantIntervalText";
 export { instantFrom, parseInstantNanoseconds } from "./instantNanoseconds";

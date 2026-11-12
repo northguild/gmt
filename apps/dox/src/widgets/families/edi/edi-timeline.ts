@@ -9,8 +9,11 @@
  * moves nothing and no hold is needed.
  */
 import {
+  spanAria,
+  spanLayout,
   timelineAria,
   timelineLayout,
+  type SpanUnit,
   type TimelineInput,
   type TimelineLayout,
 } from "~/lib/edi-picture";
@@ -19,8 +22,20 @@ import { html, type SafeHtml } from "../../builders/html";
 import styles from "./edi-timeline.module.css";
 
 /** What the timeline draws. */
-type TimelineSpec =
+export type TimelineSpec =
   | { kind: "empty"; text: string }
+  | {
+      kind: "span";
+      /** The first day, a `PlainDate`. */
+      from: string;
+      /** The day after the last, a `PlainDate`. */
+      to: string;
+      unit: SpanUnit;
+      /** The days it covers: the caption's first line. */
+      label: string;
+      /** The pin at `from`: the moment a padding parser invents. */
+      reference: { label: string };
+    }
   | { kind: "stated"; instant: string }
   | {
       kind: "marks";
@@ -36,6 +51,7 @@ function plot(
   gap: string,
   aria: string,
   reference: { label: string } | null = null,
+  band = false,
 ): SafeHtml {
   const ticks = layout.ticks.map(
     (t) =>
@@ -56,7 +72,7 @@ function plot(
   const ref =
     reference === null || layout.reference === null
       ? ""
-      : html`<span class="${styles.reference}" data-side="${layout.reference.side}" style="--x:${layout.reference.at.toFixed(3)}%;--lane:${layout.reference.lane}"
+      : html`<span class="${styles.reference}" data-side="${layout.reference.side}" style="--x:${layout.reference.at.toFixed(3)}%;--lane:${layout.reference.lane}${band ? `;--n:${layout.reference.at.toFixed(3)}` : ""}"
           ><span class="${styles.referencePin}"></span
           ><span class="${styles.referenceLabel}">${reference.label}</span></span
         >`;
@@ -66,10 +82,14 @@ function plot(
       : html`<span class="${styles.bracket}" style="--from:${layout.span.from.toFixed(3)}%;--to:${layout.span.to.toFixed(3)}%"
           ><span class="${styles.gap}">${gap}</span></span
         >`;
+  const bandHtml =
+    !band || layout.span === null
+      ? ""
+      : html`<span class="${styles.band}" data-band="1" style="--from:${layout.span.from.toFixed(3)}%;--to:${layout.span.to.toFixed(3)}%"></span>`;
   return html`<div class="${styles.plot}" role="img" aria-label="${aria}"
     ><span class="${styles.axis}"></span
     ><span class="${styles.ticks}">${ticks}</span
-    ><span class="${styles.marks}">${marks}${ref}</span>${bracket}</div
+    ><span class="${styles.marks}">${marks}${ref}</span>${bracket}${bandHtml}</div
   >`;
 }
 
@@ -78,6 +98,19 @@ export function timelineContent(spec: TimelineSpec): SafeHtml {
   if (spec.kind === "empty") {
     return html`<div class="${styles.box}" data-state="empty"
       ><p class="${styles.empty}">${spec.text}</p></div
+    >`;
+  }
+  if (spec.kind === "span") {
+    const layout = spanLayout({
+      from: spec.from,
+      to: spec.to,
+      unit: spec.unit,
+      reference: spec.from,
+    });
+    return html`<div class="${styles.box}" data-state="span"
+      >${plot(layout, false, "", spanAria(spec.label, `${spec.from}T00:00:00Z`), spec.reference, true)}<p class="${styles.caption}"
+        ><span class="${styles.spanLabel}">${spec.label}</span>Calendar dates, no zone</p
+      ></div
     >`;
   }
   if (spec.kind === "stated") {
