@@ -81,6 +81,7 @@ import {
   showCcsdsTimeCodeDecoderInput,
   showCodeBDayRulerInput,
   showFhirDateCheckerInput,
+  showSwiftValueDateReaderInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
@@ -679,6 +680,11 @@ export function buildWorkerTools(
       description: docFor("showReportTimeResolver"),
       inputSchema: showReportTimeResolverInput,
       execute: () => accept("report-time-resolver"),
+    }),
+    showSwiftValueDateReader: tool({
+      description: docFor("showSwiftValueDateReader"),
+      inputSchema: showSwiftValueDateReaderInput,
+      execute: () => accept("swift-value-date-reader"),
     }),
     showTerrestrialTimeStack: tool({
       description: docFor("showTerrestrialTimeStack"),

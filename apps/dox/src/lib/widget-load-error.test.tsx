@@ -156,6 +156,10 @@ import {
   renderCodeBDayRulerTemplate,
 } from "./code-b-day-ruler-mount";
 import {
+  mountSwiftValueDateReader,
+  renderSwiftValueDateReaderTemplate,
+} from "./swift-value-date-reader-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -380,6 +384,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "report time resolver",
     () => renderReportTimeResolverTemplate("test"),
     mountReportTimeResolver as MountFn<never>,
+  ],
+  [
+    "swift value date reader",
+    () => renderSwiftValueDateReaderTemplate("test"),
+    mountSwiftValueDateReader as MountFn<never>,
   ],
   [
     "terrestrial time stack",

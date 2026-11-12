@@ -51,6 +51,54 @@ function distDirOrSkip(): string | null {
   return root === null ? null : resolve(root, "gmt");
 }
 
+/**
+ * The capitalised tags left in `text` outside code: a fenced block and an inline code span show
+ * markup, they do not carry it. SWIFT writes its date format as `<DATE2>`, and a code sample may
+ * show `<Foo />`; neither is a component that failed to render. A bare `<Foo />` in prose is.
+ *
+ * The lookbehind keeps TypeScript generics out: a signature like `RoundingOptions<DateUnit>` is
+ * not a tag, and a `<` that follows an identifier character never opens one.
+ */
+function rawComponentTags(text: string): string[] {
+  const prose = text
+    .replace(/^[ \t]*(```|~~~)[\s\S]*?^[ \t]*\1[^\n]*$/gm, "")
+    // A code span never crosses a blank line (CommonMark: a paragraph boundary ends it).
+    .replace(/(`+)(?:(?!\n[ \t]*\n)[^`])*?\1/g, "");
+  return prose.match(/(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g) ?? [];
+}
+
+describe("rawComponentTags", () => {
+  it("passes a backticked SWIFT format token", () => {
+    expect(
+      rawComponentTags("The date is `<DATE2>`, as SWIFT writes it."),
+    ).toEqual([]);
+  });
+
+  it("passes a fenced block holding a component tag", () => {
+    expect(
+      rawComponentTags("Before.\n\n```tsx\n<Foo />\n```\n\nAfter."),
+    ).toEqual([]);
+  });
+
+  it("still fails a bare component tag in prose", () => {
+    expect(rawComponentTags("Text.\n\n<Foo />\n")).toEqual(["<Foo"]);
+    expect(rawComponentTags("Text.\n\n<SwiftValueDateReader />\n")).toEqual([
+      "<SwiftValueDateReader",
+    ]);
+  });
+
+  it("fails a tag between two unclosed backticks that a blank line separates", () => {
+    expect(
+      rawComponentTags("Use the `a flag.\n\n<Foo />\n\nAnd `b flag."),
+    ).toEqual(["<Foo"]);
+  });
+
+  it("still fails a tag that follows a closed code span or fence", () => {
+    expect(rawComponentTags("`<DATE2>` then <Foo />")).toEqual(["<Foo"]);
+    expect(rawComponentTags("```\n<A />\n```\n<B />")).toEqual(["<B"]);
+  });
+});
+
 describe("llms.txt surface", () => {
   it("has a non-empty corpus to build sections from", () => {
     const corpus = JSON.parse(
@@ -495,10 +543,7 @@ Note about installation.
         const { body } = stripFrontmatter(
           readFileSync(resolve(docsDir, name), "utf8"),
         );
-        const tags =
-          stripMdx(body, { gmtVersion: "1.0.0" }).match(
-            /(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g,
-          ) ?? [];
+        const tags = rawComponentTags(stripMdx(body, { gmtVersion: "1.0.0" }));
         return tags.length > 0 ? [{ file: name, tags }] : [];
       });
       expect(left).toEqual([]);
@@ -1138,21 +1183,10 @@ Body text here.`;
       }
     });
 
-    /**
-     * Any capitalised tag, not a list of the ones we remembered.
-     *
-     * This used to name nine components — exactly the nine `renderMdxComponents` handles — so it
-     * mirrored the handler list instead of checking it, and `<UpstreamDefects />` shipped raw into
-     * every text surface while the gate stayed green (CORE-8 review, #253). A lowercase HTML tag is
-     * fine in Markdown; an uppercase one is a component that never rendered.
-     *
-     * The lookbehind keeps TypeScript generics out: a signature like `RoundingOptions<DateUnit>`
-     * in a documented result is not a tag, and a `<` that follows an identifier character never
-     * opens one.
+    /*
+     * Any capitalised tag, not a list of the ones we remembered (CORE-8 review, #253): see
+     * `rawComponentTags`, which skips code spans and fences.
      */
-    const rawComponentTags = (text: string): string[] =>
-      text.match(/(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g) ?? [];
-
     it("no built text surface carries a raw component tag", () => {
       const distDir = distDirOrSkip();
       if (distDir === null) return;

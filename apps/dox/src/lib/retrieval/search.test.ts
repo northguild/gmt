@@ -288,3 +288,28 @@ describe("searchChunks — GNSS and leap-second questions", () => {
     ).toBe(true);
   });
 });
+
+describe("searchChunks — SWIFT value dates (FIN-96)", () => {
+  it("'which century is a SWIFT value date' finds parseSwiftDate near the top and a guide chunk", () => {
+    const results = searchChunks(chunks, "which century is a SWIFT value date");
+    expect(
+      results
+        .slice(0, 3)
+        .some((c) => c.kind === "function" && c.title === "parseSwiftDate"),
+    ).toBe(true);
+    expect(
+      results.some((c) =>
+        c.url.startsWith("/guides/industries/finance-message-timestamps/#"),
+      ),
+    ).toBe(true);
+  });
+
+  it("'write a date as YYMMDD for SWIFT' finds formatSwiftDate in the top 3", () => {
+    const results = searchChunks(chunks, "write a date as YYMMDD for SWIFT");
+    expect(
+      results
+        .slice(0, 3)
+        .some((c) => c.kind === "function" && c.title === "formatSwiftDate"),
+    ).toBe(true);
+  });
+});

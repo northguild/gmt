@@ -211,6 +211,10 @@ const PAGES = [
     widget: "report-time-resolver",
   },
   {
+    path: "tools/swift-value-date-reader",
+    widget: "swift-value-date-reader",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

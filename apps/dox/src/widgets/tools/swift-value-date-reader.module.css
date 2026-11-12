@@ -1,0 +1,153 @@
+/*
+ * SWIFT Value Date Reader: what only this tool needs. The sections, preset, fields, plates,
+ * figure, verdict, code frames, table and links are the kit's and the EDI and holiday families';
+ * this sheet places them. The reading and its calls sit side by side where the widget is wide
+ * and one under the other where it is not. The widget root is the container.
+ *
+ * Amber is the sentinel's alone, and nothing here has a single-sided accent edge.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A sentence of explanation. */
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+/* The button sits under its field and keeps its own width. */
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-3);
+  align-items: center;
+  min-inline-size: 0;
+}
+
+/* A band: two panes, a column each when there is room for both. */
+.split,
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 60rem) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--gmt-space-4);
+    align-items: stretch;
+  }
+}
+
+/* The box the reading sits in. */
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+/* The two plates are equal halves of the strip whenever both fit on a row, so neither edge moves
+   with the value typed. Each still asks for its widest ghost as a minimum: where both do not
+   fit they stack, and that choice does not depend on the value either. */
+.plates dl > div {
+  flex: 1 1 calc(50% - var(--gmt-space-2) / 2);
+  min-inline-size: max-content;
+}
+
+/* The error code: always laid out, in tabular figures with no wrap. A grid, so the line is the
+   held text's own and not an inline box beside a strut: empty or full, it is one height. */
+.chip {
+  display: grid;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Under 40rem the rows become labelled blocks: each cell names its column from the `data-col`
+   the table wrote, and the header row is read by the labels instead. */
+.strip {
+  min-inline-size: 0;
+
+  @container (inline-size < 40rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .strip td::before,
+  .strip th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .panel {
+    border-color: var(--gmt-ice);
+  }
+
+  .strip td::before,
+  .strip th::before {
+    color: var(--gmt-ice);
+  }
+}

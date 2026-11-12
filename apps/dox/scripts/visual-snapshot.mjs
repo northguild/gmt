@@ -176,6 +176,10 @@ const PAGES = [
     slug: "tool-report-time-resolver",
     path: "/tools/report-time-resolver/",
   },
+  {
+    slug: "tool-swift-value-date-reader",
+    path: "/tools/swift-value-date-reader/",
+  },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",

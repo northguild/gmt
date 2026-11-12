@@ -1,6 +1,6 @@
 ---
 title: Finance mistakes
-description: Common mistakes with FIX UTC timestamps, the precision their digits state, rounding when narrowing, and the second of sixty, in GMT's Finance layer.
+description: Common mistakes with FIX UTC timestamps, the precision their digits state, rounding when narrowing, the second of sixty, and SWIFT value dates and the century they state, in GMT's Finance layer.
 industries: [finance]
 sidebar:
   label: Finance
@@ -10,7 +10,9 @@ The Finance layer reads and writes the timestamps of trading and payment message
 around them are the ones a quick conversion makes: treating the fraction as a decimal of any
 width, widening a stamp to digits nobody measured, rounding it into the next second, reading a
 second of sixty as the start of the next minute, accepting it on any day, and writing a local
-time as a UTC stamp. Every output shown here is what the function returns.
+time as a UTC stamp. SWIFT value dates add three more: a century cut-off of your own, writing a
+year SWIFT cannot read back, and checking the digits without the century. Every output shown here
+is what the function returns.
 
 ## Precision
 
@@ -115,3 +117,62 @@ formatFixUtcTimestamp(resolveLocal("2024-06-15T14:30:00", "America/New_York"), "
 // "20240615-18:30:00"`}
   rightSpecId="formatFixUtcTimestamp"
 />
+
+## Value dates
+
+<Mistake
+  severity="high"
+  title="A century cut-off of your own"
+  description="A SWIFT value date has two year digits, and SWIFT states the century: it reads 01 to 60 as 2001 to 2060 and refuses any other year with T50. A cut-off of your own is a choice, not that rule. With 1930 as the window, 350615 reads as 1935, a century early, and 750615 is accepted, though SWIFT refuses it. parseSwiftDate applies the SWIFT rule."
+  wrongCode={`import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+parseDateWithPattern("350615", "yyMMdd", undefined, { yearWindow: 1930 });
+// "1935-06-15"
+parseDateWithPattern("750615", "yyMMdd", undefined, { yearWindow: 1930 });
+// "1975-06-15" — accepted`}
+  rightCode={`import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("350615");
+// "2035-06-15"
+parseSwiftDate("750615");
+// ""`}
+  rightSpecId="parseSwiftDate"
+/>
+
+<Mistake
+  severity="high"
+  title="Writing a year SWIFT cannot read back"
+  description="Keeping the last two digits of a year drops its century. SWIFT reads 24 as 2024, so a date in 1924 written that way comes back a century late. formatSwiftDate refuses a year outside 2001 to 2060, so everything it writes reads back as the same date."
+  wrongCode={`String(1924).slice(-2) + "0615";
+// "240615" — which SWIFT reads as 15 June 2024`}
+  rightCode={`import { formatSwiftDate } from "@northguild/gmt/finance/format";
+
+formatSwiftDate("1924-06-15");
+// ""
+formatSwiftDate("2060-12-31");
+// "601231"`}
+  rightSpecId="formatSwiftDate"
+/>
+
+<Mistake
+  severity="medium"
+  title="Checking the digits without the century"
+  description="Whether a value date exists depends on its year, and SWIFT states the year. 050229 has a valid month and a day from 1 to 31, but 2005 was not a leap year. 750101 has valid digits too, but 75 is not a year SWIFT reads, so it is refused. isValidSwiftDate applies the century first."
+  wrongCode={`/^\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test("050229");
+// true
+/^\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test("750101");
+// true`}
+  rightCode={`import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
+
+isValidSwiftDate("040229");
+// true
+isValidSwiftDate("050229");
+// false
+isValidSwiftDate("750101");
+// false`}
+  rightSpecId="isValidSwiftDate"
+/>
+
+See [A Value Date in the Wrong Century](/scenarios/a-value-date-in-the-wrong-century/), the guide
+[Finance: Message Timestamps](/guides/industries/finance-message-timestamps/) and the [SWIFT Value
+Date Reader](/tools/swift-value-date-reader/).

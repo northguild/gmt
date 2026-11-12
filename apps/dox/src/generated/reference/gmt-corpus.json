@@ -2483,6 +2483,47 @@
     ]
   },
   {
+    "url": "/reference/finance/format/formatSwiftDate",
+    "page": "/reference/finance/format/formatSwiftDate",
+    "name": "formatSwiftDate",
+    "namespace": "finance",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatSwiftDate(value: string): string",
+    "description": "Write an ISO 8601 date as a SWIFT MT value date, `YYMMDD`. The inverse of `parseSwiftDate`.",
+    "sourcePath": "packages/gmt/src/finance/format/formatSwiftDate.ts",
+    "examples": [
+      {
+        "call": "formatSwiftDate(\"2024-06-15\")",
+        "result": "\"240615\""
+      },
+      {
+        "call": "formatSwiftDate(\"2001-01-01\")",
+        "result": "\"010101\""
+      },
+      {
+        "call": "formatSwiftDate(\"2060-12-31\")",
+        "result": "\"601231\""
+      },
+      {
+        "call": "formatSwiftDate(\"2004-02-29\")",
+        "result": "\"040229\""
+      },
+      {
+        "call": "formatSwiftDate(\"2000-12-31\")",
+        "result": "\"\" (before 2001)"
+      },
+      {
+        "call": "formatSwiftDate(\"2061-01-01\")",
+        "result": "\"\" (after 2060)"
+      },
+      {
+        "call": "formatSwiftDate(\"2024-06-15T10:00:00\")",
+        "result": "\"\" (a date-time: take the date first)"
+      }
+    ]
+  },
+  {
     "url": "/reference/finance/parse/parseFixUtcTimestamp",
     "page": "/reference/finance/parse/parseFixUtcTimestamp",
     "name": "parseFixUtcTimestamp",
@@ -2524,6 +2565,47 @@
     ]
   },
   {
+    "url": "/reference/finance/parse/parseSwiftDate",
+    "page": "/reference/finance/parse/parseSwiftDate",
+    "name": "parseSwiftDate",
+    "namespace": "finance",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseSwiftDate(value: string): string",
+    "description": "Read the value date of a SWIFT MT message, `YYMMDD`, as an ISO 8601 date.",
+    "sourcePath": "packages/gmt/src/finance/parse/parseSwiftDate.ts",
+    "examples": [
+      {
+        "call": "parseSwiftDate(\"240615\")",
+        "result": "\"2024-06-15\""
+      },
+      {
+        "call": "parseSwiftDate(\"601231\")",
+        "result": "\"2060-12-31\""
+      },
+      {
+        "call": "parseSwiftDate(\"990615\")",
+        "result": "\"\" (YY 99 is outside 01 to 60: SWIFT error T50)"
+      },
+      {
+        "call": "parseSwiftDate(\"750101\")",
+        "result": "\"\" (YY 75 is outside 01 to 60: SWIFT error T50)"
+      },
+      {
+        "call": "parseSwiftDate(\"040229\")",
+        "result": "\"2004-02-29\""
+      },
+      {
+        "call": "parseSwiftDate(\"050229\")",
+        "result": "\"\" (2005 is not a leap year)"
+      },
+      {
+        "call": "parseSwiftDate(\"240615EUR1000,00\")",
+        "result": "\"\" (pass the date component alone)"
+      }
+    ]
+  },
+  {
     "url": "/reference/finance/validate/isValidFixUtcTimestamp",
     "page": "/reference/finance/validate/isValidFixUtcTimestamp",
     "name": "isValidFixUtcTimestamp",
@@ -2556,6 +2638,43 @@
       },
       {
         "call": "isValidFixUtcTimestamp(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/validate/isValidSwiftDate",
+    "page": "/reference/finance/validate/isValidSwiftDate",
+    "name": "isValidSwiftDate",
+    "namespace": "finance",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidSwiftDate(value: string): boolean",
+    "description": "Return true when `value` is a SWIFT MT value date, `YYMMDD`, that SWIFT accepts.",
+    "sourcePath": "packages/gmt/src/finance/validate/isValidSwiftDate.ts",
+    "examples": [
+      {
+        "call": "isValidSwiftDate(\"240615\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSwiftDate(\"040229\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSwiftDate(\"990615\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSwiftDate(\"000229\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSwiftDate(\"241315\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSwiftDate(\"050229\")",
         "result": "false"
       }
     ]

@@ -619,6 +619,7 @@ export function renderMdxComponents(body: string): string {
     "FixTimestampReader",
     "SsimDateReader",
     "ReportTimeResolver",
+    "SwiftValueDateReader",
     "HolidayRuleBuilder",
     "ObservanceComparator",
     "MovingFeasts",
