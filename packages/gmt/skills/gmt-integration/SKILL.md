@@ -9,9 +9,9 @@ description: >
   leap-second table (taiMinusUtc, leapSecondsBetween, nextLeapSecond,
   isLeapSecond, toTAI, fromTAI, toTai64n, fromTai64n, toTT, fromTT, toTCG,
   fromTCG, tcgMinusTt), Julian Date, Modified Julian Date and J2000
-  seconds (toJulianDateParts, fromJulianDateParts, toJulianDate,
-  fromJulianDate, toModifiedJulianDate, fromModifiedJulianDate,
-  toJ2000Seconds, fromJ2000Seconds), and lint package selection (ESLint,
+  seconds (toJulianDate, toModifiedJulianDate, toJ2000Seconds and their
+  from and Parts forms), CCSDS ASCII time codes A and B (parseCcsdsAscii*,
+  formatCcsdsAscii*), and lint package selection (ESLint,
   Biome, Oxlint). GNSS time is in gmt-gnss. Reads the docs site (llms.txt and each
   page's .md twin) and the installed package's JSDoc for API details, and the
   lint-package READMEs for lint setup; this skill is a routing pointer, not an
@@ -135,6 +135,10 @@ which lint package to install for Date-ban enforcement.
    toModifiedJulianDate("2000-01-01T00:00:00Z"); // 51544
    toJ2000Seconds("2000-01-01T11:58:55.816Z"); // 0
    fromJ2000Seconds(0); // "2000-01-01T11:58:55.816Z"
+   parseCcsdsAsciiA("1988-01-18T17:20:43.123456Z"); // "1988-01-18T17:20:43.123456Z"
+   parseCcsdsAsciiB("2024-366T12:00:00Z"); // "2024-12-31T12:00:00Z"
+   formatCcsdsAsciiA("2024-06-15T12:30:00.123456789+02:00", 6); // "2024-06-15T10:30:00.123456Z"
+   formatCcsdsAsciiB("2016-12-31T23:59:60Z"); // "2016-366T23:59:60Z"
    ```
    - `toTai64n` and `fromTai64n` read and write the TAI64N labels of qmail,
      daemontools and s6 logs. A label counts TAI seconds, so reading one as Unix
@@ -156,6 +160,16 @@ which lint package to install for Date-ban enforcement.
      in. A JD day starts at noon and an MJD day at midnight. On UTC every day
      counts as one day, a leap-second day included. Any other scale, such as
      `"TDB"`, returns the sentinel.
+   - `parseCcsdsAsciiA` / `formatCcsdsAsciiA` and `parseCcsdsAsciiB` /
+     `formatCcsdsAsciiB` read and write the CCSDS ASCII time codes (CCSDS
+     301.0-B-4). Code A names the day by calendar date
+     (`1988-01-18T17:20:43.123456Z`), Code B by day of year
+     (`1988-018T17:20:43.123456Z`). The code is UTC: `Z` is optional on input
+     and always written. A parser needs the seconds, keeps the fraction digits
+     as sent (up to nine, never rounded) and returns the instant as ISO 8601.
+     A formatter takes `fractionalSecondDigits` (`"auto"`, or 0 to 9; extra
+     digits are cut, never rounded). Second 60 is read and written only at an
+     inserted leap second. All four return `""` on input that does not fit.
    - Before 1972-01-01 TAI − UTC was fractional, so every function returns its
      sentinel there.
    - `timescale/`, `gnss/` and `finance/` accept a second 60 only on a listed insertion

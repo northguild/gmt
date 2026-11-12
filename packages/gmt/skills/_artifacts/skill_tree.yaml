@@ -125,7 +125,7 @@ skills:
     domain: integration
     path: 'skills/gmt-integration/SKILL.md'
     package: 'packages/gmt'
-    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI/toTai64n/fromTai64n/toTT/fromTT/toTCG/fromTCG/tcgMinusTt), Julian Date, Modified Julian Date and J2000 seconds (toJulianDateParts/fromJulianDateParts/toJulianDate/fromJulianDate/toModifiedJulianDate/fromModifiedJulianDate/toJ2000Seconds/fromJ2000Seconds), and lint package selection; GNSS time is in gmt-gnss
+    description: Application integration patterns — cache keys, router/query params, table-sort keys, nanosecond and foreign-epoch boundaries, the instant inside a UUID, ULID, ObjectId, Snowflake or KSUID, Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS leap-second table (taiMinusUtc/leapSecondsBetween/nextLeapSecond/isLeapSecond/toTAI/fromTAI/toTai64n/fromTai64n/toTT/fromTT/toTCG/fromTCG/tcgMinusTt), Julian Date, Modified Julian Date and J2000 seconds (toJulianDateParts/fromJulianDateParts/toJulianDate/fromJulianDate/toModifiedJulianDate/fromModifiedJulianDate/toJ2000Seconds/fromJ2000Seconds), CCSDS ASCII time codes A and B (parseCcsdsAsciiA/parseCcsdsAsciiB/formatCcsdsAsciiA/formatCcsdsAsciiB), and lint package selection; GNSS time is in gmt-gnss
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/install.mdx'
       - 'northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integration.mdx'

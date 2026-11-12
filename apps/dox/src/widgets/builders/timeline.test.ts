@@ -45,6 +45,21 @@ describe("timeline", () => {
     expect(screen.getByRole("img", { name: "<i>" })).toBeInTheDocument();
   });
 
+  it("keeps a hatched mark named like a solid one", async () => {
+    const r = renderHtml(
+      lane({ label: "Months" }, [
+        mark({ label: "January", at: 0, span: 0.5, pattern: "solid" }),
+        mark({ label: "February", at: 0.5, span: 0.5, pattern: "hatch" }),
+      ]),
+    );
+    const group = screen.getByRole("group", { name: "Months" });
+    expect(within(group).getAllByRole("img")).toHaveLength(2);
+    expect(
+      within(group).getByRole("img", { name: "February" }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(r.host);
+  });
+
   it("has no axe violations", async () => {
     const r = renderHtml(
       html`${lane({ label: "Lane A" }, [
