@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { advanceToWeekday, isValidDayOfWeek } from "../../internal";
-import { isValidDate } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -54,10 +53,10 @@ export function previousWeekday(
     return "";
   }
 
-  if (!isValidDate(value) || !isValidDayOfWeek(dayOfWeek)) return "";
+  const date = plainDateOf(value);
+  if (date === null || !isValidDayOfWeek(dayOfWeek)) return "";
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return advanceToWeekday(
       date,
       dayOfWeek,

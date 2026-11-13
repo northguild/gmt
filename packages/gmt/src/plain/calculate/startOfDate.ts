@@ -1,8 +1,9 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import type { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
+import { startOfPlainDate } from "../../internal/plainDateSteps";
 import { isOptionsArgument } from "../../internal/isObject";
 
 const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
@@ -48,43 +49,19 @@ export function startOfDate(
 
     if (
       weekStartsOn === null ||
-      !isValidDate(value) ||
       !supported.includes(resolvedUnit as Temporal.DateUnit)
     )
       return "";
 
+    const source = plainDateOf(value);
+    if (source === null) return "";
+
     try {
-      const source = Temporal.PlainDate.from(value);
-      let result: Temporal.PlainDate;
-
-      switch (resolvedUnit) {
-        case "year":
-          result = source.with({ month: 1, day: 1 });
-          break;
-        case "month":
-          result = source.with({ day: 1 });
-          break;
-        case "day":
-          result = source;
-          break;
-        case "week": {
-          // Week start: compute how many days to subtract to reach Monday.
-          // Temporal: 1 (Mon) to 7 (Sun)
-          // If Monday start: Monday(1) subtracts 0, Sunday(7) subtracts 6.
-          // If Sunday start: Sunday(7) subtracts 0, Monday(1) subtracts 1.
-          const daysToSubtract =
-            weekStartsOn === "monday"
-              ? source.dayOfWeek - 1
-              : source.dayOfWeek % 7;
-
-          result = source.subtract({ days: daysToSubtract });
-          break;
-        }
-        default:
-          return "";
-      }
-
-      return result.toString();
+      return startOfPlainDate(
+        source,
+        resolvedUnit as Temporal.DateUnit,
+        weekStartsOn,
+      ).toString();
     } catch {
       return "";
     }

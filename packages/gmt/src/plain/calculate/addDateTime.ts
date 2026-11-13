@@ -1,8 +1,8 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { readDurationUnits, resolveOverflow } from "../../internal";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
-import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -38,15 +38,14 @@ export function addDateTime(
       return "";
     }
 
-    const validDateTime = isValidDateTime(value);
-    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
+    const dateTime = plainDateTimeOf(value);
+    const amounts = readDurationUnits(units, isDateTimeDurationUnitName);
 
-    if (!validDateTime || amounts === null) {
+    if (dateTime === null || amounts === null) {
       return "";
     }
 
     try {
-      const dateTime = Temporal.PlainDateTime.from(value);
       return dateTime
         .add(amounts, { overflow: resolveOverflow(options?.overflow) })
         .toString();

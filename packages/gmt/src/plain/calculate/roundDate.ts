@@ -1,4 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { isDateUnitName } from "../../internal/unitNames";
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   addDateUnit,
@@ -10,7 +12,6 @@ import { measureNearRangeEnd } from "../../internal/measureNearRangeEnd";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveManualRoundingOptions } from "../../internal/resolveManualRoundingOptions";
 import type { DateUnit } from "../../types";
-import { isValidDate, isValidDateUnit } from "../validate";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -80,11 +81,10 @@ export function roundDate(
       options.smallestUnit as unknown,
     );
 
-    if (!isValidDate(value) || !isValidDateUnit(smallestUnit)) return "";
+    const source = plainDateOf(value);
+    if (source === null || !isDateUnitName(smallestUnit)) return "";
 
     try {
-      const source = Temporal.PlainDate.from(value);
-
       // Manual rounding for all date units (year, month, week, day)
       const resolved = resolveManualRoundingOptions(
         roundingIncrement,

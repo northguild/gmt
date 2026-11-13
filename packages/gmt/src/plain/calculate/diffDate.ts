@@ -1,3 +1,5 @@
+import { isDateDurationUnitName } from "../../internal/unitNames";
+import { calendarDateOf } from "../../internal/calendarDateString";
 import type { Temporal } from "../../internal/temporal";
 import {
   parseCalendarDatePairForArithmetic,
@@ -5,10 +7,11 @@ import {
   plainDateUntil,
 } from "../../internal";
 import { differenceRecord } from "../../internal/differenceRecord";
-import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
+import {
+  largestDateDurationUnit,
+  resolveDurationUnit,
+} from "../../internal/resolveDurationUnit";
 import type { DateDurationUnit, RoundingOptions } from "../../types";
-import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
-import { getLargestDateDurationUnit } from "./getLargestDateDurationUnit";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -71,15 +74,16 @@ export function diffDate(
     if (!isOptionsArgument(options)) {
       return null;
     }
-    const validDates = isValidCalendarDate(date1) && isValidCalendarDate(date2);
+    const validDates =
+      calendarDateOf(date1) !== null && calendarDateOf(date2) !== null;
     // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
     const resolved = Array.isArray(unitArg)
       ? unitArg.map((unit) => resolveDurationUnit(unit))
       : resolveDurationUnit(unitArg);
     const isSingleUnit = !Array.isArray(resolved);
     const validUnits = isSingleUnit
-      ? isValidDateDurationUnit(resolved)
-      : resolved.every(isValidDateDurationUnit);
+      ? isDateDurationUnitName(resolved)
+      : resolved.every(isDateDurationUnitName);
 
     if (!validDates || !validUnits) {
       return null;
@@ -89,7 +93,7 @@ export function diffDate(
       // An empty units list names no largest unit, so there is nothing to measure.
       const largestUnit = isSingleUnit
         ? (resolved as DateDurationUnit)
-        : getLargestDateDurationUnit(resolved as DateDurationUnit[]);
+        : largestDateDurationUnit(resolved as DateDurationUnit[]);
       if (largestUnit === "") return null;
 
       const { a: d1, b: d2 } = parseCalendarDatePairForArithmetic(date1, date2);

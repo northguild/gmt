@@ -1,11 +1,8 @@
-import { Temporal } from "../../internal/temporal";
-import {
-  DATE_TIME_FIELDS,
-  readSetFields,
-  resolveOverflow,
-} from "../../internal";
+import type { Temporal } from "../../internal/temporal";
+import { resolveOverflow } from "../../internal/resolveOverflow";
+import { withDateTimeFields } from "../../internal/readSetFields";
 import type { Overflow } from "../../types";
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -60,19 +57,15 @@ export function setDateTime(
     return "";
   }
 
-  if (!isValidDateTime(value)) return "";
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) return "";
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
-    const set = readSetFields(fields, DATE_TIME_FIELDS);
-    if (set === null) return "";
-    // Only the values readSetFields checked reach Temporal. An empty result sets nothing: a
-    // no-op here, where Temporal's with() would throw.
-    if (Object.keys(set).length === 0) return dateTime.toString();
-
-    return dateTime
-      .with(set, { overflow: resolveOverflow(options?.overflow) })
-      .toString();
+    return (
+      withDateTimeFields(dateTime, fields, () =>
+        resolveOverflow(options?.overflow),
+      )?.toString() ?? ""
+    );
   } catch {
     return "";
   }

@@ -1,11 +1,14 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { differenceRecord } from "../../internal/differenceRecord";
 import { plainUntilWithRounding } from "../../internal";
-import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
+import {
+  largestDateTimeDurationUnit,
+  resolveDurationUnit,
+} from "../../internal/resolveDurationUnit";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
-import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
-import { getLargestDateTimeDurationUnit } from "./getLargestDateTimeDurationUnit";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -56,19 +59,19 @@ export function diffDateTime(
     if (!isOptionsArgument(options)) {
       return null;
     }
-    const validDateTimes =
-      isValidDateTime(dateTime1) && isValidDateTime(dateTime2);
+    const dt1 = plainDateTimeOf(dateTime1);
+    const dt2 = dt1 === null ? null : plainDateTimeOf(dateTime2);
     // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
     const resolved = Array.isArray(units)
       ? units.map((unit) => resolveDurationUnit(unit))
       : resolveDurationUnit(units);
     const isSingleUnit = !Array.isArray(resolved);
     const validUnits = isSingleUnit
-      ? isValidDateTimeDurationUnit(resolved)
-      : resolved.every(isValidDateTimeDurationUnit);
+      ? isDateTimeDurationUnitName(resolved)
+      : resolved.every(isDateTimeDurationUnitName);
     //
 
-    if (!validDateTimes || !validUnits) {
+    if (dt1 === null || dt2 === null || !validUnits) {
       return null;
     }
 
@@ -76,11 +79,8 @@ export function diffDateTime(
       // An empty units list names no largest unit, so there is nothing to measure.
       const largestUnit = isSingleUnit
         ? (resolved as DateTimeDurationUnit)
-        : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
+        : largestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
       if (largestUnit === "") return null;
-
-      const dt1 = Temporal.PlainDateTime.from(dateTime1);
-      const dt2 = Temporal.PlainDateTime.from(dateTime2);
 
       const duration = plainUntilWithRounding(dt1, dt2, {
         largestUnit,

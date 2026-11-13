@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenXor } from "../../internal";
-import { isValidDateTime } from "../validate";
 
 /**
  * Return the symmetric difference of two datetime intervals — time covered by exactly one interval.
@@ -53,21 +53,20 @@ export function intervalXorDateTime(
     return [];
   }
 
-  if (
-    !isValidDateTime(aStart) ||
-    !isValidDateTime(aEnd) ||
-    !isValidDateTime(bStart) ||
-    !isValidDateTime(bEnd)
-  ) {
+  const aS = plainDateTimeOf(aStart);
+
+  const aE = aS === null ? null : plainDateTimeOf(aEnd);
+
+  const bS = aS === null || aE === null ? null : plainDateTimeOf(bStart);
+
+  const bE =
+    aS === null || aE === null || bS === null ? null : plainDateTimeOf(bEnd);
+
+  if (aS === null || aE === null || bS === null || bE === null) {
     return [];
   }
 
   try {
-    const aS = Temporal.PlainDateTime.from(aStart);
-    const aE = Temporal.PlainDateTime.from(aEnd);
-    const bS = Temporal.PlainDateTime.from(bStart);
-    const bE = Temporal.PlainDateTime.from(bEnd);
-
     if (Temporal.PlainDateTime.compare(aS, aE) > 0) {
       return [];
     }

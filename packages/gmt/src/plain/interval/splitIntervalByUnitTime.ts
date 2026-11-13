@@ -1,6 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { plainTimeOf } from "../../internal/inputChecks";
+import { isTimeDurationUnitName } from "../../internal/unitNames";
 import { Temporal } from "../../internal/temporal";
-import { isValidTime, isValidTimeDurationUnit } from "../validate";
 import { resolveDurationUnit } from "../../internal";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 import {
@@ -73,7 +74,11 @@ export function splitIntervalByUnitTime(
       return [];
     }
 
-    if (!isValidTime(start) || !isValidTime(end)) {
+    const startVal = plainTimeOf(start);
+
+    const endVal = startVal === null ? null : plainTimeOf(end);
+
+    if (startVal === null || endVal === null) {
       return [];
     }
 
@@ -84,7 +89,7 @@ export function splitIntervalByUnitTime(
     const resolvedUnit = resolveDurationUnit(unit);
 
     // An unknown unit is invalid whatever the span, a zero-length one included.
-    if (!isValidTimeDurationUnit(resolvedUnit)) {
+    if (!isTimeDurationUnitName(resolvedUnit)) {
       return [];
     }
 
@@ -99,9 +104,6 @@ export function splitIntervalByUnitTime(
     }
 
     try {
-      const startVal = Temporal.PlainTime.from(start);
-      const endVal = Temporal.PlainTime.from(end);
-
       if (Temporal.PlainTime.compare(startVal, endVal) > 0) {
         return [];
       }

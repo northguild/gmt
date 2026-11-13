@@ -56,4 +56,13 @@ describe("setTime", () => {
   it("returns an empty string when the with() call throws for a malformed fields object", () => {
     expect(setTime("12:00:00", { hour: Number.NaN })).toBe("");
   });
+
+  it("returns the input unchanged for an empty field set without reading the overflow option", () => {
+    const options = {
+      get overflow(): never {
+        throw new Error("overflow read");
+      },
+    };
+    expect(setTime("08:00:00", {}, options)).toBe("08:00:00");
+  });
 });

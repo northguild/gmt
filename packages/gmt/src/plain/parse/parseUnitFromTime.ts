@@ -1,7 +1,7 @@
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
-import { isValidTime } from "../validate";
 
 /**
  * Return a specific time unit extracted from a PlainTime string.
@@ -31,13 +31,12 @@ export function parseUnitFromTime(
     "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
   >,
 ): string {
-  if (!isValidTime(value)) {
+  const time = plainTimeOf(value);
+  if (time === null) {
     return "";
   }
 
   try {
-    const time = Temporal.PlainTime.from(value);
-
     switch (resolveDateTimeUnit(unit)) {
       case "hour":
         return time.hour.toString().padStart(2, "0");

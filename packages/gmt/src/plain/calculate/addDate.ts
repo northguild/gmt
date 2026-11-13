@@ -1,14 +1,14 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { isDateDurationUnitName } from "../../internal/unitNames";
+import { calendarDateOf } from "../../internal/calendarDateString";
 import {
   calendarSystemOfDateValue,
   formatDateInCalendar,
-  parseCalendarDateValue,
   plainDateAdd,
   readDurationUnits,
   resolveOverflow,
 } from "../../internal";
 import type { DateDurationUnit, Overflow } from "../../types";
-import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -58,10 +58,10 @@ export function addDate(
       return "";
     }
 
-    const validDate = isValidCalendarDate(value);
-    const amounts = readDurationUnits(units, isValidDateDurationUnit);
+    const date = calendarDateOf(value);
+    const amounts = readDurationUnits(units, isDateDurationUnitName);
 
-    if (!validDate || amounts === null) {
+    if (date === null || amounts === null) {
       return "";
     }
 
@@ -70,7 +70,6 @@ export function addDate(
       if (!calendar) {
         return "";
       }
-      const date = parseCalendarDateValue(value);
       const result = plainDateAdd(
         date,
         amounts,

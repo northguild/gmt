@@ -1,7 +1,6 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidDate } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -71,7 +70,8 @@ export function formatDateToParts(
    */
   value: string;
 }> {
-  if (!isValidDate(value)) {
+  const valueParsed = plainDateOf(value);
+  if (valueParsed === null) {
     return [];
   }
 
@@ -89,7 +89,7 @@ export function formatDateToParts(
       return [];
     }
     const epochMilliseconds =
-      Temporal.PlainDate.from(value).toZonedDateTime("UTC").epochMilliseconds;
+      valueParsed.toZonedDateTime("UTC").epochMilliseconds;
     return cachedFormatter("DateTimeFormat", locale, resolved)
       .formatToParts(epochMilliseconds)
       .map((p) => ({ type: p.type, value: p.value }));

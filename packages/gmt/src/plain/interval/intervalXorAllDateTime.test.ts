@@ -110,4 +110,12 @@ describe("intervalXorAllDateTime", () => {
       expect(intervalXorAllDateTime(intervals)).toEqual(expected);
     },
   );
+
+  it("skips a hole in a sparse list instead of rejecting it", () => {
+    const sparse: Array<{ start: string; end: string }> = [];
+    sparse[1] = { start: "2024-01-01T00:00", end: "2024-01-02T00:00" };
+    expect(intervalXorAllDateTime(sparse)).toEqual([
+      { start: "2024-01-01T00:00:00", end: "2024-01-02T00:00:00" },
+    ]);
+  });
 });

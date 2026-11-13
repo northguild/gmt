@@ -1,8 +1,8 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import { isTimeDurationUnitName } from "../../internal/unitNames";
+import { plainTimeOf } from "../../internal/inputChecks";
 import { readDurationUnits } from "../../internal";
 import type { TimeDurationUnit } from "../../types";
-import { isValidTime, isValidTimeDurationUnit } from "../validate";
 
 /**
  * Return a PlainTime ISO string with `units` subtracted from `value`.
@@ -26,15 +26,14 @@ export function subtractTime(
   units: Partial<Record<TimeDurationUnit, number>>,
 ): string {
   try {
-    const validTime = isValidTime(value);
-    const amounts = readDurationUnits(units, isValidTimeDurationUnit);
+    const time = plainTimeOf(value);
+    const amounts = readDurationUnits(units, isTimeDurationUnitName);
 
-    if (!validTime || amounts === null) {
+    if (time === null || amounts === null) {
       return "";
     }
 
     try {
-      const time = Temporal.PlainTime.from(value);
       return time.subtract(amounts).toString();
     } catch {
       return "";

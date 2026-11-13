@@ -1,12 +1,11 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 
 import {
   getLocaleFirstDayOfWeek,
   getLocaleWeekYearBounds,
   resolveMinimalDaysInFirstWeek,
 } from "../../internal";
-import { isValidDate } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -63,14 +62,15 @@ export function getLocaleWeekYear(
       return null;
     }
 
-    if (!isValidDate(value)) return null;
+    const date = plainDateOf(value);
+
+    if (date === null) return null;
 
     const firstDay = getLocaleFirstDayOfWeek(locale);
     const minimalDays = resolveMinimalDaysInFirstWeek(options);
     if (firstDay === null || minimalDays === null) return null;
 
     try {
-      const date = Temporal.PlainDate.from(value);
       return getLocaleWeekYearBounds(date, firstDay, minimalDays).weekYear;
     } catch {
       return null;

@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDate } from "./isValidDate";
+import { plainDateOf } from "../../internal/inputChecks";
 import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -56,14 +55,15 @@ export function isValidDateRange(props: IsValidDateRangeProps): boolean {
     const { value1, value2, options } = props;
     if (!isOptionsArgument(options)) return false;
 
-    if (!isValidDate(value1) || !isValidDate(value2)) {
+    const date1 = plainDateOf(value1);
+
+    const date2 = date1 === null ? null : plainDateOf(value2);
+
+    if (date1 === null || date2 === null) {
       return false;
     }
 
     try {
-      const date1 = Temporal.PlainDate.from(value1);
-      const date2 = Temporal.PlainDate.from(value2);
-
       const isLessThan =
         date1.year < date2.year ||
         (date1.year === date2.year && date1.month < date2.month) ||

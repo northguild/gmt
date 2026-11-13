@@ -1,10 +1,9 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import {
   isBusinessDate,
   resolveBusinessCalendar,
 } from "../../internal/businessCalendar";
 import type { BusinessCalendar } from "../../types";
-import { isValidDate } from "../validate";
 
 /**
  * Return true when `value` is a working day in `calendar`.
@@ -46,10 +45,11 @@ export function isBusinessDay(
   try {
     const resolved = resolveBusinessCalendar(calendar);
 
-    if (!isValidDate(value) || resolved === null) return false;
+    const valueParsed = plainDateOf(value);
+    if (valueParsed === null || resolved === null) return false;
 
     try {
-      return isBusinessDate(Temporal.PlainDate.from(value), resolved);
+      return isBusinessDate(valueParsed, resolved);
     } catch {
       return false;
     }

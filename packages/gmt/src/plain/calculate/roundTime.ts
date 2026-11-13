@@ -1,11 +1,12 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { isTimeUnitName } from "../../internal/unitNames";
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
   isObject,
   resolveDateTimeUnit,
 } from "../../internal";
-import { isValidTime, isValidTimeUnit } from "../validate";
 
 /**
  * Round an ISO 8601 time string to the specified time unit.
@@ -63,10 +64,10 @@ export function roundTime(
       options.smallestUnit as unknown,
     );
 
-    if (!isValidTime(value) || !isValidTimeUnit(smallestUnit)) return "";
+    const source = plainTimeOf(value);
+    if (source === null || !isTimeUnitName(smallestUnit)) return "";
 
     try {
-      const source = Temporal.PlainTime.from(value);
       const result = source.round({
         smallestUnit,
         roundingIncrement,

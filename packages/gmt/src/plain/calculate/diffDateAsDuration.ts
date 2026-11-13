@@ -1,3 +1,5 @@
+import { isDateDurationUnitName } from "../../internal/unitNames";
+import { calendarDateOf } from "../../internal/calendarDateString";
 import type { Temporal } from "../../internal/temporal";
 import {
   durationUntilString,
@@ -9,7 +11,6 @@ import type {
   DurationStringOptions,
   RoundingOptions,
 } from "../../types";
-import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -60,10 +61,11 @@ export function diffDateAsDuration(
   if (!isOptionsArgument(options)) {
     return "";
   }
-  const validDates = isValidCalendarDate(date1) && isValidCalendarDate(date2);
+  const validDates =
+    calendarDateOf(date1) !== null && calendarDateOf(date2) !== null;
   // Singular names resolve to their plural (Temporal §13.17).
   const resolvedUnit = resolveDurationUnit(unit);
-  const validUnit = isValidDateDurationUnit(resolvedUnit);
+  const validUnit = isDateDurationUnitName(resolvedUnit);
 
   if (!validDates || !validUnit) {
     return "";

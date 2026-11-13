@@ -1,7 +1,6 @@
-import { Temporal } from "../../internal/temporal";
+import { plainTimeOf } from "../../internal/inputChecks";
 import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
-import { isValidTime } from "../validate";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
 import { isObject } from "../../internal/isObject";
 import { nowPlainTimeISO } from "../../internal/temporalCompat";
@@ -66,19 +65,18 @@ export function formatRelativeTime(
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
     if (!isObject(options)) return "";
-    if (!isValidTime(value)) return "";
+    const target = plainTimeOf(value);
+    if (target === null) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidTime(referenceOption))
+    const referenceOptionParsed = plainTimeOf(referenceOption);
+    if (referenceOption !== undefined && referenceOptionParsed === null)
       return "";
 
     try {
       const forcedUnit = resolveRelativeUnit(options.largestUnit, TIME_UNITS);
       const roundingMethod = options.roundingMethod;
-      const target = Temporal.PlainTime.from(value);
-      const reference = referenceOption
-        ? Temporal.PlainTime.from(referenceOption)
-        : nowPlainTimeISO();
+      const reference = referenceOptionParsed ?? nowPlainTimeISO();
 
       const diff = target.since(reference);
       const absSeconds = Math.abs(diff.total("second"));

@@ -1,3 +1,4 @@
+import { isDateCycleFieldName } from "../../internal/unitNames";
 import type { DateCycleField } from "../../types";
 
 /**
@@ -20,9 +21,5 @@ import type { DateCycleField } from "../../types";
  * @example isValidDateCycleField(null) // false
  */
 export function isValidDateCycleField(field: unknown): field is DateCycleField {
-  if (typeof field !== "string") {
-    return false;
-  }
-
-  return field === "year" || field === "month" || field === "day";
+  return isDateCycleFieldName(field);
 }

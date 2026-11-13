@@ -1,8 +1,7 @@
+import { plainDateTimeOf, durationOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../../duration/validate";
 import { resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
-import { isValidDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -59,11 +58,14 @@ export function intervalFromDurationDateTime(
     return null;
   }
 
-  if (typeof value !== "string" || !isValidDateTime(value)) {
+  const point = plainDateTimeOf(value);
+  if (typeof value !== "string" || point === null) {
     return null;
   }
 
-  if (!isValidDuration(duration)) {
+  const dur = durationOf(duration);
+
+  if (dur === null) {
     return null;
   }
 
@@ -72,8 +74,6 @@ export function intervalFromDurationDateTime(
   }
 
   try {
-    const point = Temporal.PlainDateTime.from(value);
-    const dur = Temporal.Duration.from(duration);
     const overflow = resolveOverflow(options?.overflow);
 
     const other =

@@ -1,21 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import type { Temporal } from "../../internal/temporal";
-import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
+import { largestDateTimeDurationUnit } from "../../internal/resolveDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
-import { isValidDateTimeDurationUnit } from "../validate/isValidDateTimeDurationUnit";
-
-const ORDER: readonly DateTimeDurationUnit[] = [
-  "years",
-  "months",
-  "weeks",
-  "days",
-  "hours",
-  "minutes",
-  "seconds",
-  "milliseconds",
-  "microseconds",
-  "nanoseconds",
-];
 
 /**
  * Return the largest DateTimeDurationUnit from the provided array.
@@ -40,23 +26,5 @@ const ORDER: readonly DateTimeDurationUnit[] = [
 export function getLargestDateTimeDurationUnit(
   units: Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
 ): DateTimeDurationUnit | "" {
-  try {
-    if (!Array.isArray(units) || units.length === 0) return "";
-
-    const plurals: unknown[] = units.map((unit) => resolveDurationUnit(unit));
-    if (
-      !plurals.every(
-        (unit): unit is DateTimeDurationUnit =>
-          typeof unit === "string" && isValidDateTimeDurationUnit(unit),
-      )
-    ) {
-      return "";
-    }
-
-    return ORDER.find((unit) => plurals.includes(unit)) ?? "";
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return "";
-  }
+  return largestDateTimeDurationUnit(units);
 }

@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidTime } from "./isValidTime";
 import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -53,14 +53,15 @@ export function isValidTimeRange(props: {
       return false;
     }
 
-    if (!isValidTime(value1) || !isValidTime(value2)) {
+    const time1 = plainTimeOf(value1);
+
+    const time2 = time1 === null ? null : plainTimeOf(value2);
+
+    if (time1 === null || time2 === null) {
       return false;
     }
 
     try {
-      const time1 = Temporal.PlainTime.from(value1);
-      const time2 = Temporal.PlainTime.from(value2);
-
       const cmp = Temporal.PlainTime.compare(time1, time2);
 
       if (options?.allowEqual) {

@@ -1,10 +1,12 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import type { Temporal } from "../../internal/temporal";
 import { defaultFractionalDigits } from "../../internal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import type { FractionalDigit } from "../../types";
-import { isValidDateTime, isValidDateTimeUnit } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
+import { startOfPlainDateTime } from "../../internal/plainDateSteps";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -54,72 +56,13 @@ export function startOfDateTime(
 
     const resolvedUnit = resolveDateTimeUnit(unit);
 
-    if (
-      weekStartsOn === null ||
-      !isValidDateTime(value) ||
-      !isValidDateTimeUnit(resolvedUnit)
-    )
-      return "";
+    if (weekStartsOn === null || !isDateTimeUnitName(resolvedUnit)) return "";
+
+    const source = plainDateTimeOf(value);
+    if (source === null) return "";
 
     try {
-      const source = Temporal.PlainDateTime.from(value);
-      let result: Temporal.PlainDateTime;
-
-      switch (resolvedUnit) {
-        case "year":
-          result = source.with({ month: 1, day: 1 }).withPlainTime();
-          break;
-        case "month":
-          result = source.with({ day: 1 }).withPlainTime();
-          break;
-        case "week": {
-          const daysToSubtract =
-            weekStartsOn === "monday"
-              ? source.dayOfWeek - 1
-              : source.dayOfWeek % 7;
-          result = source.subtract({ days: daysToSubtract }).withPlainTime();
-          break;
-        }
-        case "day":
-          result = source.withPlainTime();
-          break;
-        case "hour":
-          result = source.with({
-            minute: 0,
-            second: 0,
-            millisecond: 0,
-            microsecond: 0,
-            nanosecond: 0,
-          });
-          break;
-        case "minute":
-          result = source.with({
-            second: 0,
-            millisecond: 0,
-            microsecond: 0,
-            nanosecond: 0,
-          });
-          break;
-        case "second":
-          result = source.with({
-            millisecond: 0,
-            microsecond: 0,
-            nanosecond: 0,
-          });
-          break;
-        case "millisecond":
-          result = source.with({ microsecond: 0, nanosecond: 0 });
-          break;
-        case "microsecond":
-          result = source.with({ nanosecond: 0 });
-          break;
-        case "nanosecond":
-          result = source; // Smallest unit, nothing to reset
-          break;
-        default:
-          return "";
-      }
-
+      const result = startOfPlainDateTime(source, resolvedUnit, weekStartsOn);
       const fractionalDigits = defaultFractionalDigits(
         resolvedUnit,
         fractionalSecondDigits,

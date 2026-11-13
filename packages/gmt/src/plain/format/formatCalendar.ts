@@ -1,10 +1,9 @@
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { cachedFormatter } from "../../internal/formatterCache";
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import { Temporal } from "../../internal/temporal";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
-import { isValidDateTime } from "../validate";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 import { isObject } from "../../internal/isObject";
 import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
@@ -76,17 +75,16 @@ export function formatCalendar(
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
     if (!isObject(options)) return "";
-    if (!isValidDateTime(value)) return "";
+    const target = plainDateTimeOf(value);
+    if (target === null) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidDateTime(referenceOption))
+    const referenceOptionParsed = plainDateTimeOf(referenceOption);
+    if (referenceOption !== undefined && referenceOptionParsed === null)
       return "";
 
     try {
-      const target = Temporal.PlainDateTime.from(value);
-      const reference = referenceOption
-        ? Temporal.PlainDateTime.from(referenceOption)
-        : nowPlainDateTimeISO();
+      const reference = referenceOptionParsed ?? nowPlainDateTimeISO();
 
       const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
       // "long"/"full" are outside the type but reachable from JS; their zone

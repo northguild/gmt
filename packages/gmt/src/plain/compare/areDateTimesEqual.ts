@@ -1,6 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return true if two PlainDateTime ISO strings represent the same instant of local date/time components.
@@ -17,14 +15,13 @@ import { isValidDateTime } from "../validate";
  * @example areDateTimesEqual("2024-02-29T12:34:56", "invalid") // false
  */
 export function areDateTimesEqual(value1: string, value2: string): boolean {
-  if (!isValidDateTime(value1) || !isValidDateTime(value2)) {
+  const dateTime1 = plainDateTimeOf(value1);
+  const dateTime2 = dateTime1 === null ? null : plainDateTimeOf(value2);
+  if (dateTime1 === null || dateTime2 === null) {
     return false;
   }
 
   try {
-    const dateTime1 = Temporal.PlainDateTime.from(value1);
-    const dateTime2 = Temporal.PlainDateTime.from(value2);
-
     return (
       dateTime1.year === dateTime2.year &&
       dateTime1.month === dateTime2.month &&

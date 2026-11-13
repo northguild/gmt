@@ -1,3 +1,4 @@
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import type { DateTimeUnit } from "../../types";
 
 /**
@@ -17,22 +18,6 @@ import type { DateTimeUnit } from "../../types";
  * @example isValidDateTimeUnit(123) // false
  * @example isValidDateTimeUnit(null) // false
  */
-
 export function isValidDateTimeUnit(unit: unknown): unit is DateTimeUnit {
-  if (typeof unit !== "string") {
-    return false;
-  }
-
-  return (
-    unit === "year" ||
-    unit === "month" ||
-    unit === "week" ||
-    unit === "day" ||
-    unit === "hour" ||
-    unit === "minute" ||
-    unit === "second" ||
-    unit === "millisecond" ||
-    unit === "microsecond" ||
-    unit === "nanosecond"
-  );
+  return isDateTimeUnitName(unit);
 }

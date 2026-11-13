@@ -139,4 +139,12 @@ describe("intervalXorAllTime", () => {
       ]),
     ).toEqual([{ start: "09:00:00", end: "12:00:00" }]);
   });
+
+  it("skips a hole in a sparse list instead of rejecting it", () => {
+    const sparse: Array<{ start: string; end: string }> = [];
+    sparse[1] = { start: "01:00", end: "02:00" };
+    expect(intervalXorAllTime(sparse)).toEqual([
+      { start: "01:00:00", end: "02:00:00" },
+    ]);
+  });
 });

@@ -1,6 +1,6 @@
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenContainsPoint, halfOpenContainsSpan } from "../../internal";
-import { isValidDateTime } from "../validate";
 
 /**
  * Return true when `pointOrStart` lies in the half-open interval `[intervalStart, intervalEnd)`
@@ -45,33 +45,29 @@ export function intervalContainsDateTime(
     return false;
   }
 
-  if (
-    !isValidDateTime(intervalStart) ||
-    !isValidDateTime(intervalEnd) ||
-    !isValidDateTime(pointOrStart) ||
-    (pointEnd !== undefined && !isValidDateTime(pointEnd))
-  ) {
+  const s = plainDateTimeOf(intervalStart);
+  const e = s === null ? null : plainDateTimeOf(intervalEnd);
+  const p = s === null || e === null ? null : plainDateTimeOf(pointOrStart);
+  const pe =
+    s === null || e === null || p === null || pointEnd === undefined
+      ? undefined
+      : plainDateTimeOf(pointEnd);
+  if (s === null || e === null || p === null || pe === null) {
     return false;
   }
 
   try {
-    const s = Temporal.PlainDateTime.from(intervalStart);
-    const e = Temporal.PlainDateTime.from(intervalEnd);
-    const p = Temporal.PlainDateTime.from(pointOrStart);
-
     if (Temporal.PlainDateTime.compare(s, e) > 0) {
       return false;
     }
 
-    if (pointEnd === undefined) {
+    if (pe === undefined) {
       return halfOpenContainsPoint(
         { start: s, end: e },
         p,
         Temporal.PlainDateTime.compare,
       );
     }
-
-    const pe = Temporal.PlainDateTime.from(pointEnd);
 
     if (Temporal.PlainDateTime.compare(p, pe) > 0) {
       return false;
