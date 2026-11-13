@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimesOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the latest (maximum) of the given ZonedDateTime values.
@@ -20,16 +19,17 @@ export function maxZoned(zonedDateTimes: string[]): string | null {
   try {
     if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
 
-    const valid = zonedDateTimes.filter(isValidZonedDateTime);
+    const valid = zonedDateTimesOf(zonedDateTimes);
     if (!valid.length) return null;
 
     try {
-      const max = valid.reduce((currentMax, candidateStr) => {
-        const candidate = zonedDateTimeFrom(candidateStr);
-        return Temporal.ZonedDateTime.compare(candidate, currentMax) > 0
-          ? candidate
-          : currentMax;
-      }, zonedDateTimeFrom(valid[0]));
+      const max = valid.reduce(
+        (currentMax, candidate) =>
+          Temporal.ZonedDateTime.compare(candidate, currentMax) > 0
+            ? candidate
+            : currentMax,
+        valid[0],
+      );
 
       return max.toString();
     } catch {

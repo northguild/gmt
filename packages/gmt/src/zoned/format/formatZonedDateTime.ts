@@ -1,9 +1,9 @@
 import { cachedFormatter } from "../../internal/formatterCache";
-import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
+import { normalizeDateTime } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidZonedDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Format a zoned ISO 8601 datetime string using the Intl.DateTimeFormat implementation.
@@ -50,7 +50,8 @@ export function formatZonedDateTime(
   if (options === null) {
     return "";
   }
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
@@ -59,7 +60,6 @@ export function formatZonedDateTime(
     // zone with the options ZonedDateTime#toLocaleString resolves to
     // (GetDateTimeFormat ~any~, ~zoned-date-time~, ~all~), so the requested
     // fields and widths are kept.
-    const zonedDateTime = zonedDateTimeFrom(value);
     const resolved = instantFormatOptions(
       readDateTimeFormatOptions(options),
       zonedDateTime.timeZoneId,

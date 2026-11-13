@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -53,23 +52,10 @@ export function isBetweenZoned(
     const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
     const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
-    if (
-      !isValidZonedDateTime(zoned) ||
-      !isValidZonedDateTime(start) ||
-      !isValidZonedDateTime(end)
-    ) {
-      return false;
-    }
-
-    let zdt: Temporal.ZonedDateTime;
-    let startZdt: Temporal.ZonedDateTime;
-    let endZdt: Temporal.ZonedDateTime;
-
-    try {
-      zdt = zonedDateTimeFrom(zoned);
-      startZdt = zonedDateTimeFrom(start);
-      endZdt = zonedDateTimeFrom(end);
-    } catch {
+    const zdt = zonedDateTimeOf(zoned);
+    const startZdt = zonedDateTimeOf(start);
+    const endZdt = zonedDateTimeOf(end);
+    if (zdt === null || startZdt === null || endZdt === null) {
       return false;
     }
 

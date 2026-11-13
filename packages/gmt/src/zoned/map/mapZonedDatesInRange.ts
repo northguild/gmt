@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { timeZoneEquals } from "../../internal/temporalCompat";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
@@ -67,23 +66,13 @@ export function mapZonedDatesInRange(
       return [];
     }
 
-    if (
-      !isValidZonedDateTime(startZonedDateTime) ||
-      !isValidZonedDateTime(endZonedDateTime)
-    ) {
+    const start = zonedDateTimeOf(startZonedDateTime);
+    const end = zonedDateTimeOf(endZonedDateTime);
+    if (start === null || end === null) {
       return [];
     }
 
     try {
-      let start: Temporal.ZonedDateTime;
-      let end: Temporal.ZonedDateTime;
-      try {
-        start = zonedDateTimeFrom(startZonedDateTime);
-        end = zonedDateTimeFrom(endZonedDateTime);
-      } catch {
-        return [];
-      }
-
       if (!timeZoneEquals(start, end)) {
         return [];
       }

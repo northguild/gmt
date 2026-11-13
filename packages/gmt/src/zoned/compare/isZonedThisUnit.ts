@@ -1,9 +1,8 @@
-import { Temporal } from "../../internal/temporal";
-import { getLocaleStartOfWeek } from "../../plain/calculate/getLocaleStartOfWeek";
-import { areDatesEqualBy } from "../../plain/compare/areDatesEqualBy";
-import { isValidDateUnit } from "../../plain/validate";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import type { Temporal } from "../../internal/temporal";
+import { getLocaleFirstDayOfWeek } from "../../internal/getLocaleFirstDayOfWeek";
+import { localeStartOfWeek, sameDateBy } from "../../internal/plainDateSteps";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
+import { isDateUnitName } from "../../internal/unitNames";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveLocale } from "../../internal/resolveLocale";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
@@ -50,29 +49,32 @@ export function isZonedThisUnit(
   try {
     const resolvedUnit = resolveDateTimeUnit(unit);
 
+    const zonedDateTime = zonedDateTimeOf(value);
+
     if (
-      !isValidZonedDateTime(value) ||
-      !isValidDateUnit(resolvedUnit) ||
+      zonedDateTime === null ||
+      !isDateUnitName(resolvedUnit) ||
       (locale !== undefined && resolveLocale(locale) === null)
     ) {
       return false;
     }
 
     try {
-      const zonedDateTime = zonedDateTimeFrom(value);
-      const today = nowZonedDateTimeISO(zonedDateTime.timeZoneId)
-        .toPlainDate()
-        .toString();
-      const valueDate = zonedDateTime.toPlainDate().toString();
+      const today = nowZonedDateTimeISO(zonedDateTime.timeZoneId).toPlainDate();
+      const valueDate = zonedDateTime.toPlainDate();
 
       if (resolvedUnit === "week" && locale !== undefined) {
-        const startOfWeekValue = getLocaleStartOfWeek(valueDate, locale);
-        const startOfWeekToday = getLocaleStartOfWeek(today, locale);
+        const firstDay = getLocaleFirstDayOfWeek(locale);
+        if (firstDay === null) {
+          return false;
+        }
 
-        return startOfWeekValue !== "" && startOfWeekValue === startOfWeekToday;
+        return localeStartOfWeek(valueDate, firstDay).equals(
+          localeStartOfWeek(today, firstDay),
+        );
       }
 
-      return areDatesEqualBy(valueDate, today, resolvedUnit);
+      return sameDateBy(valueDate, today, resolvedUnit, "monday");
     } catch {
       return false;
     }

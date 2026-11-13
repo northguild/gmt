@@ -1,8 +1,8 @@
-import { zonedDateTimeFrom, zonedUnitEnd } from "../../internal";
+import { zonedUnitEnd } from "../../internal";
 import type { FractionalDigit } from "../../types";
-import { isValidZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the end of the quarter for a given zoned ISO datetime.
@@ -43,7 +43,8 @@ export function endOfQuarterForZoned(
       return "";
     }
 
-    if (!isValidZonedDateTime(value)) {
+    const zonedDateTime = zonedDateTimeOf(value);
+    if (zonedDateTime === null) {
       return "";
     }
 
@@ -55,7 +56,7 @@ export function endOfQuarterForZoned(
     );
 
     try {
-      const end = zonedUnitEnd(zonedDateTimeFrom(value), "quarter");
+      const end = zonedUnitEnd(zonedDateTime, "quarter");
       return end ? end.toString({ fractionalSecondDigits }) : "";
     } catch {
       return "";

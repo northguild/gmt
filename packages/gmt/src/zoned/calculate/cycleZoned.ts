@@ -3,20 +3,21 @@ import {
   dateCycleFieldBounds,
   isValidAmount,
   timeCycleFieldBounds,
-  zonedDateTimeFrom,
 } from "../../internal";
 import {
-  isValidDateCycleField,
-  isValidDateTimeCycleField,
-} from "../../plain/validate";
+  isDateCycleFieldName,
+  isDateTimeCycleFieldName,
+} from "../../internal/unitNames";
+import { optionOrDefault } from "../../internal/optionOrDefault";
+import { resolveOverflow } from "../../internal/resolveOverflow";
+import { setZonedFields } from "../../internal/setZonedFields";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import type {
   DateTimeCycleField,
   Disambiguation,
   Offset,
   Overflow,
 } from "../../types";
-import { isValidZonedDateTime } from "../validate";
-import { setZoned } from "./setZoned";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -99,17 +100,17 @@ export function cycleZoned(
     return "";
   }
 
+  const zoned = zonedDateTimeOf(value);
   if (
-    !isValidZonedDateTime(value) ||
-    !isValidDateTimeCycleField(field) ||
+    zoned === null ||
+    !isDateTimeCycleFieldName(field) ||
     !isValidAmount(amount)
   ) {
     return "";
   }
 
   try {
-    const zoned = zonedDateTimeFrom(value);
-    const bounds = isValidDateCycleField(field)
+    const bounds = isDateCycleFieldName(field)
       ? dateCycleFieldBounds(field, zoned)
       : timeCycleFieldBounds(field);
     const newValue = cycleFieldValue(
@@ -118,7 +119,20 @@ export function cycleZoned(
       bounds,
       options?.round ?? false,
     );
-    return setZoned(value, { [field]: newValue }, options);
+    return (
+      setZonedFields(
+        zoned,
+        { [field]: newValue },
+        {
+          overflow: resolveOverflow(options?.overflow),
+          disambiguation: optionOrDefault(
+            options?.disambiguation,
+            "compatible",
+          ),
+          offset: optionOrDefault(options?.offset, "prefer"),
+        },
+      )?.toString() ?? ""
+    );
   } catch {
     return "";
   }

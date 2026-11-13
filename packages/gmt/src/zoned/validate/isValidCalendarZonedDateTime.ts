@@ -1,4 +1,4 @@
-import { parseCalendarZonedValue } from "../../internal";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Return true if `value` is a valid GMT ZonedDateTime string: a bare ISO zoned datetime
@@ -53,13 +53,5 @@ export function isValidCalendarZonedDateTime(
 ): boolean;
 export function isValidCalendarZonedDateTime(value: unknown): value is string;
 export function isValidCalendarZonedDateTime(value: unknown): boolean {
-  if (typeof value !== "string" || value.length === 0) {
-    return false;
-  }
-
-  try {
-    return parseCalendarZonedValue(value).timeZoneId.length > 0;
-  } catch {
-    return false;
-  }
+  return calendarZonedOf(value) !== null;
 }

@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidTimeZone } from "../validate";
+import { isZoneId } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
@@ -51,7 +51,7 @@ export function getZonedNow(
     const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
       smallestUnit: optionOrDefault(optionsArg?.smallestUnit, "millisecond"),
     };
-    if (!isValidTimeZone(ianaTimezone)) {
+    if (!isZoneId(ianaTimezone)) {
       return "";
     }
 

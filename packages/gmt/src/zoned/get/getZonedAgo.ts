@@ -1,9 +1,9 @@
 import { readLengthUnits } from "../../internal/lengthFromNow";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 import { subtractFromZoned } from "../../internal/zonedWallClockOperations";
-import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit } from "../../types";
-import { isValidTimeZone } from "../validate";
+import { isZoneId } from "../../internal/inputChecks";
 
 /**
  * Return the zoned datetime before now in `timeZone`, counted from the current time.
@@ -40,10 +40,10 @@ export function getZonedAgo(
   units: Partial<Record<DateTimeDurationUnit, number>>,
 ): string {
   try {
-    if (!isValidTimeZone(timeZone)) {
+    if (!isZoneId(timeZone)) {
       return "";
     }
-    const amounts = readLengthUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readLengthUnits(units, isDateTimeDurationUnitName);
     if (amounts === null) {
       return "";
     }

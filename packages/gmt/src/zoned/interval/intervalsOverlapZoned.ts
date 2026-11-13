@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "../../internal/temporal";
-import { halfOpenOverlap, parseCalendarZonedValue } from "../../internal";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { halfOpenOverlap } from "../../internal";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Return true when the half-open intervals `[aStart, aEnd)` and `[bStart, bEnd)` share at least
@@ -47,21 +47,15 @@ export function intervalsOverlapZoned(
   // empty strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown
   // zones and a calendar annotation before the zone — and, unlike `isValidZonedDateTime`, accepts
   // RFC 9557 calendar annotations.
-  if (
-    !isValidCalendarZonedDateTime(aStart) ||
-    !isValidCalendarZonedDateTime(aEnd) ||
-    !isValidCalendarZonedDateTime(bStart) ||
-    !isValidCalendarZonedDateTime(bEnd)
-  ) {
+  const aZdt = calendarZonedOf(aStart);
+  const aZde = calendarZonedOf(aEnd);
+  const bZdt = calendarZonedOf(bStart);
+  const bZde = calendarZonedOf(bEnd);
+  if (aZdt === null || aZde === null || bZdt === null || bZde === null) {
     return false;
   }
 
   try {
-    const aZdt = parseCalendarZonedValue(aStart);
-    const aZde = parseCalendarZonedValue(aEnd);
-    const bZdt = parseCalendarZonedValue(bStart);
-    const bZde = parseCalendarZonedValue(bEnd);
-
     const aSI = aZdt.toInstant();
     const aEI = aZde.toInstant();
     const bSI = bZdt.toInstant();

@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Returns the zoned datetime string truncated to minute precision.
@@ -14,9 +13,10 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example chopZonedSeconds("invalid") // ""
  */
 export function chopZonedSeconds(value: string): string {
-  if (!isValidZonedDateTime(value)) return "";
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) return "";
   try {
-    return zonedDateTimeFrom(value).toString({
+    return zonedDateTime.toString({
       smallestUnit: "minute",
     });
   } catch {

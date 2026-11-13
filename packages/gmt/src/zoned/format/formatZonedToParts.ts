@@ -1,9 +1,8 @@
 import { cachedFormatter } from "../../internal/formatterCache";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the locale-formatted parts of a ZonedDateTime.
@@ -76,7 +75,8 @@ export function formatZonedToParts(
   if (options === null) {
     return [];
   }
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return [];
   }
 
@@ -85,7 +85,6 @@ export function formatZonedToParts(
     // pass its instant (epochMilliseconds) and its own IANA zone as the
     // formatter's timeZone, with the options ZonedDateTime#toLocaleString
     // resolves to (GetDateTimeFormat ~any~, ~zoned-date-time~, ~all~).
-    const zonedDateTime = zonedDateTimeFrom(value);
     const resolved = instantFormatOptions(
       readDateTimeFormatOptions(options),
       zonedDateTime.timeZoneId,

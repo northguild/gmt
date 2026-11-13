@@ -7,11 +7,13 @@ import {
   zonedUntil,
 } from "../../internal";
 import { differenceRecord } from "../../internal/differenceRecord";
-import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
-import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import {
+  largestDateTimeDurationUnit,
+  resolveDurationUnit,
+} from "../../internal/resolveDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -87,16 +89,15 @@ export function diffZoned(
       return null;
     }
     const validZonedDateTimes =
-      isValidCalendarZonedDateTime(value1) &&
-      isValidCalendarZonedDateTime(value2);
+      calendarZonedOf(value1) !== null && calendarZonedOf(value2) !== null;
     // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
     const resolved = Array.isArray(units)
       ? units.map((unit) => resolveDurationUnit(unit))
       : resolveDurationUnit(units);
     const isSingleUnit = !Array.isArray(resolved);
     const validUnits = isSingleUnit
-      ? isValidDateTimeDurationUnit(resolved)
-      : resolved.every(isValidDateTimeDurationUnit);
+      ? isDateTimeDurationUnitName(resolved)
+      : resolved.every(isDateTimeDurationUnitName);
 
     if (!validZonedDateTimes || !validUnits) {
       return null;
@@ -106,7 +107,7 @@ export function diffZoned(
       const { a, b } = parseCalendarZonedPairForArithmetic(value1, value2);
       const largestUnit = isSingleUnit
         ? (resolved as DateTimeDurationUnit)
-        : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
+        : largestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
       if (largestUnit === "") return null;
       if (isCalendarDifferenceAcrossZones(a, b, largestUnit)) {
         return null;

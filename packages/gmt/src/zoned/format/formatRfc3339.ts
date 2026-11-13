@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000;
 
@@ -39,10 +38,10 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  * @example formatRfc3339("invalid") // ""
  */
 export function formatRfc3339(value: string): string {
-  if (!isValidZonedDateTime(value)) return "";
+  const zdt = zonedDateTimeOf(value);
+  if (zdt === null) return "";
 
   try {
-    const zdt = zonedDateTimeFrom(value);
     // time-numoffset holds whole minutes. A local mean time offset (e.g.
     // Africa/Monrovia -00:44:30) would be rounded by toString into a string
     // naming a different instant; RFC 3339 §4.2 NOTE: "applications must

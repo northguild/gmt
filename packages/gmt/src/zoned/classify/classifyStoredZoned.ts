@@ -13,7 +13,7 @@ import {
   hasInstantShape,
   hasZonedDateTimeShape,
 } from "../../internal/isoStringBody";
-import { hasSecond60 } from "../../plain/validate/hasSecond60";
+import { hasSecond60Field } from "../../internal/inputChecks";
 import { utcOffset } from "../../regex";
 import type { StoredZonedClassification } from "../../types";
 
@@ -69,7 +69,7 @@ export function classifyStoredZoned(
 ): StoredZonedClassification | null {
   if (
     typeof value !== "string" ||
-    hasSecond60(value) ||
+    hasSecond60Field(value) ||
     !hasZonedDateTimeShape(value) ||
     !hasInstantShape(value)
   ) {

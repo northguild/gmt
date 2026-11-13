@@ -1,10 +1,13 @@
 import { Temporal } from "../../internal/temporal";
-import { durationTotal, zonedDateTimeFrom } from "../../internal";
+import { durationTotal } from "../../internal";
+import {
+  zonedDateTimeFrom,
+  zonedDateTimeOf,
+} from "../../internal/zonedWallClock";
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
-import { isValidUtc } from "../../utc/validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
-import { isValidZonedDateTime } from "../validate";
 import { isObject } from "../../internal/isObject";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
@@ -91,14 +94,14 @@ export function formatRelativeZoned(
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
     if (!isObject(options)) return "";
-    if (!isValidZonedDateTime(value)) return "";
+    const valueZDT = zonedDateTimeOf(value);
+    if (valueZDT === null) return "";
 
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
     if (!isValidZonedFormatReference(referenceOption)) return "";
 
     try {
-      const valueZDT = zonedDateTimeFrom(value);
       const valueInstant = valueZDT.toInstant();
 
       const refZDT = resolveZonedReference(
@@ -137,8 +140,9 @@ function resolveZonedReference(
     // UTC string → place into value's zone for a consistent calendar anchor.
     // ZonedDateTime string → keep its own zone; Temporal handles cross-zone diffs.
     // isValidUtc covers both `Z` and `z` suffixes (the regex accepts [Zz]).
-    return isValidUtc(reference)
-      ? Temporal.Instant.from(reference).toZonedDateTimeISO(timeZoneId)
+    const instant = utcInstantOf(reference);
+    return instant !== null
+      ? instant.toZonedDateTimeISO(timeZoneId)
       : zonedDateTimeFrom(reference);
   }
   // Numeric epoch (ms) → place into value's zone.

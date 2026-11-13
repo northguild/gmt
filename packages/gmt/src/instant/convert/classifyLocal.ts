@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
 import { classifyWall } from "../../internal/earlierOccurrence";
-import { isValidDateTime } from "../../plain/validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { instantOfWallClock, isoStringBody, zoneFrame } from "../../internal";
 
 /**
@@ -63,7 +62,8 @@ export function classifyLocal(
 ): LocalTimeClassification | null {
   const frame = zoneFrame(timeZone);
 
-  if (!isValidDateTime(localDateTime) || frame === null) {
+  const local = plainDateTimeOf(localDateTime);
+  if (local === null || frame === null) {
     return null;
   }
 
@@ -75,10 +75,7 @@ export function classifyLocal(
       return "unique";
     }
 
-    return classifyWall(
-      Temporal.PlainDateTime.from(localDateTime),
-      frame.timeZone,
-    ).kind;
+    return classifyWall(local, frame.timeZone).kind;
   } catch {
     return null;
   }

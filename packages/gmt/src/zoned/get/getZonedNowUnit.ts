@@ -1,6 +1,6 @@
 import type { Temporal } from "../../internal/temporal";
 import { zonedNowUnitValue } from "../../internal/zonedNowUnitValue";
-import { parseWeekFromDate } from "../../plain/parse";
+import { weekNumberOf } from "../../internal/weekNumber";
 import { frameNowWallClock, zoneFrame } from "../../internal/zoneFrame";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
@@ -98,7 +98,7 @@ export function getZonedNowUnit(
     const now = frameNowWallClock(frame);
 
     return zonedNowUnitValue(now, resolvedUnit, (wallClock) => {
-      const w = parseWeekFromDate(wallClock.toPlainDate().toString());
+      const w = weekNumberOf(wallClock.toPlainDate(), "monday");
       return w === null ? "" : w.toString();
     });
   } catch {

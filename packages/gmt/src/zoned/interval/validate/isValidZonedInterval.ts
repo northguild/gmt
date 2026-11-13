@@ -1,6 +1,5 @@
 import { Temporal } from "../../../internal/temporal";
-import { zonedDateTimeFrom } from "../../../internal";
-import { isValidZonedDateTime } from "../../validate/isValidZonedDateTime";
+import { zonedDateTimeOf } from "../../../internal/zonedWallClock";
 
 /**
  * Return true if `start` and `end` form a valid zoned interval — both valid ISO ZonedDateTime
@@ -27,13 +26,15 @@ import { isValidZonedDateTime } from "../../validate/isValidZonedDateTime";
  * @example isValidZonedInterval("invalid", "2024-12-31T23:59:59+00:00[UTC]") // false
  */
 export function isValidZonedInterval(start: string, end: string): boolean {
-  if (!isValidZonedDateTime(start) || !isValidZonedDateTime(end)) {
+  const startZoned = zonedDateTimeOf(start);
+  const endZoned = zonedDateTimeOf(end);
+  if (startZoned === null || endZoned === null) {
     return false;
   }
 
   try {
-    const startInstant = zonedDateTimeFrom(start).toInstant();
-    const endInstant = zonedDateTimeFrom(end).toInstant();
+    const startInstant = startZoned.toInstant();
+    const endInstant = endZoned.toInstant();
 
     return Temporal.Instant.compare(startInstant, endInstant) <= 0;
   } catch {

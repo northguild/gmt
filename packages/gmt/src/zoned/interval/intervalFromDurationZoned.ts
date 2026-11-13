@@ -1,14 +1,13 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../../duration/validate";
+import { durationOf } from "../../internal/inputChecks";
 import {
   addToZonedDisambiguated,
   calendarSystemOfZonedValue,
   formatZonedInCalendar,
-  parseCalendarZonedValue,
   resolveOverflow,
 } from "../../internal";
 import type { Disambiguation, Overflow } from "../../types";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -99,11 +98,13 @@ export function intervalFromDurationZoned(
       return null;
     }
 
-    if (!isValidCalendarZonedDateTime(value)) {
+    const point = calendarZonedOf(value);
+    if (point === null) {
       return null;
     }
 
-    if (!isValidDuration(duration)) {
+    const dur = durationOf(duration);
+    if (dur === null) {
       return null;
     }
 
@@ -122,8 +123,6 @@ export function intervalFromDurationZoned(
       if (!calendar) {
         return null;
       }
-      const point = parseCalendarZonedValue(value);
-      const dur = Temporal.Duration.from(duration);
 
       const other = addToZonedDisambiguated(
         point,
