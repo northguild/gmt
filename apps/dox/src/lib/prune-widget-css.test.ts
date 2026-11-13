@@ -6,6 +6,7 @@ import {
   pruneStylesheetLinks,
   referencedScripts,
   scriptFiles,
+  searchText,
   usesStylesheet,
 } from "./prune-widget-css";
 
@@ -46,15 +47,23 @@ describe("classTokens", () => {
 describe("usesStylesheet", () => {
   const classes = new Set([g("x__a"), g("x__b")]);
   it("matches a class in the markup", () => {
-    expect(usesStylesheet(classes, new Set([g("x__b")]), "")).toBe(true);
+    expect(usesStylesheet(classes, new Set([g("x__b")]), searchText(""))).toBe(
+      true,
+    );
   });
   it("matches a class literal in a script", () => {
     expect(
-      usesStylesheet(classes, new Set(), `e.className="${g("x__a")}"`),
+      usesStylesheet(
+        classes,
+        new Set(),
+        searchText(`e.className="${g("x__a")}"`),
+      ),
     ).toBe(true);
   });
   it("is false when neither shows the widget", () => {
-    expect(usesStylesheet(classes, new Set(["other"]), "var a=1")).toBe(false);
+    expect(
+      usesStylesheet(classes, new Set(["other"]), searchText("var a=1")),
+    ).toBe(false);
   });
 });
 
@@ -67,26 +76,32 @@ describe("pruneStylesheetLinks", () => {
 
   it("removes an unused widget sheet and keeps global sheets", () => {
     const html = `<head>${link("globe.A.css")}${global}</head><body></body>`;
-    const out = pruneStylesheetLinks(html, sheets, "");
+    const out = pruneStylesheetLinks(html, sheets, searchText(""));
     expect(out.removed).toEqual(["globe.A.css"]);
     expect(out.html).toBe(`<head>${global}</head><body></body>`);
   });
 
   it("keeps the sheet of a widget the page shows", () => {
     const html = `${link("globe.A.css")}<div class="${g("globe__stage")}"></div>`;
-    expect(pruneStylesheetLinks(html, sheets, "").removed).toEqual([]);
+    expect(pruneStylesheetLinks(html, sheets, searchText("")).removed).toEqual(
+      [],
+    );
   });
 
   it("keeps a sheet whose class a loaded script names", () => {
     const html = link("readout.B.css");
     expect(
-      pruneStylesheetLinks(html, sheets, `x="${g("readout__value")}"`).removed,
+      pruneStylesheetLinks(
+        html,
+        sheets,
+        searchText(`x="${g("readout__value")}"`),
+      ).removed,
     ).toEqual([]);
   });
 
   it("leaves a page with an Astro island untouched", () => {
     const html = `${link("globe.A.css")}<astro-island></astro-island>`;
-    expect(pruneStylesheetLinks(html, sheets, "")).toEqual({
+    expect(pruneStylesheetLinks(html, sheets, searchText(""))).toEqual({
       html,
       removed: [],
     });
@@ -94,7 +109,9 @@ describe("pruneStylesheetLinks", () => {
 
   it("keeps a print sheet and a sheet it does not know", () => {
     const html = `<link rel="stylesheet" href="/gmt/_astro/print.D.css" media="print">${link("new.E.css")}`;
-    expect(pruneStylesheetLinks(html, sheets, "").removed).toEqual([]);
+    expect(pruneStylesheetLinks(html, sheets, searchText("")).removed).toEqual(
+      [],
+    );
   });
 });
 
@@ -104,7 +121,7 @@ describe("pruneInlineStyles", () => {
 
   it("removes an unused widget block and keeps every other block", () => {
     const html = `<head>${block("face__root")}${scoped}</head><body></body>`;
-    expect(pruneInlineStyles(html, "")).toEqual({
+    expect(pruneInlineStyles(html, searchText(""))).toEqual({
       html: `<head>${scoped}</head><body></body>`,
       removed: 1,
     });
@@ -112,18 +129,24 @@ describe("pruneInlineStyles", () => {
 
   it("keeps the block of a widget the page shows", () => {
     const html = `${block("face__root")}<div class="${g("face__root")}"></div>`;
-    expect(pruneInlineStyles(html, "").removed).toBe(0);
+    expect(pruneInlineStyles(html, searchText("")).removed).toBe(0);
   });
 
   it("keeps a block whose class a script the page can load names", () => {
     expect(
-      pruneInlineStyles(block("face__root"), `x="${g("face__root")}"`).removed,
+      pruneInlineStyles(
+        block("face__root"),
+        searchText(`x="${g("face__root")}"`),
+      ).removed,
     ).toBe(0);
   });
 
   it("leaves a page with an Astro island untouched", () => {
     const html = `${block("face__root")}<astro-island></astro-island>`;
-    expect(pruneInlineStyles(html, "")).toEqual({ html, removed: 0 });
+    expect(pruneInlineStyles(html, searchText(""))).toEqual({
+      html,
+      removed: 0,
+    });
   });
 });
 
@@ -156,5 +179,36 @@ describe("scriptFiles and astroFile", () => {
   });
   it("ignores external URLs", () => {
     expect(astroFile("https://static.example.com/beacon.min.js")).toBeNull();
+  });
+});
+
+describe("searchText", () => {
+  it("finds a name anywhere in the text, and gives the same answer every time", () => {
+    const has = searchText(`a="${g("x__a")}"`);
+    expect(has(g("x__a"))).toBe(true);
+    expect(has(g("x__a"))).toBe(true);
+    expect(has(g("x__b"))).toBe(false);
+    expect(has(g("x__b"))).toBe(false);
+  });
+
+  it("keeps the substring rule: a class that is a prefix of a script literal is used", () => {
+    const has = searchText(`a="${g("x__a-b")}"`);
+    expect(usesStylesheet(new Set([g("x__a")]), new Set(), has)).toBe(true);
+  });
+
+  it("gives two pages that share one script set the same result", () => {
+    const sheets = new Map([["x.css", new Set([g("x__a")])]]);
+    const shared = searchText(`a="${g("x__a-b")}"`);
+    const first = pruneStylesheetLinks(link("x.css"), sheets, shared);
+    const second = pruneStylesheetLinks(link("x.css"), sheets, shared);
+    expect(first).toEqual(second);
+    expect(first.removed).toEqual([]);
+    const none = searchText("var a=1");
+    expect(pruneStylesheetLinks(link("x.css"), sheets, none).removed).toEqual([
+      "x.css",
+    ]);
+    expect(pruneStylesheetLinks(link("x.css"), sheets, none).removed).toEqual([
+      "x.css",
+    ]);
   });
 });

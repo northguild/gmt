@@ -78,15 +78,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
 
+      # Playwright picks each browser build by Ubuntu release, and `install` keeps a browser folder
+      # that is already there, so the key names the release: WebKit built for 24.04 fails on 26.04.
       - name: Playwright version
         id: pw
-        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          . /etc/os-release && echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
 
       - name: Install ${{ matrix.browser }}
         run: pnpm --filter @gmt/dox exec playwright install --with-deps ${{ matrix.browser }}

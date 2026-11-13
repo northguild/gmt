@@ -72,14 +72,33 @@ export function classTokens(html: string): Set<string> {
   return tokens;
 }
 
+/** Whether a script set's text holds a name; see `searchText`. */
+export type ScriptSearch = (name: string) => boolean;
+
+/**
+ * A substring test over `text` that scans it once per distinct name. Pages share script sets,
+ * so one test serves every page that reaches the same set.
+ */
+export function searchText(text: string): ScriptSearch {
+  const answers = new Map<string, boolean>();
+  return (name) => {
+    let found = answers.get(name);
+    if (found === undefined) {
+      found = text.includes(name);
+      answers.set(name, found);
+    }
+    return found;
+  };
+}
+
 /** True when the page shows the widget: a class of the sheet in its markup, or in its scripts. */
 export function usesStylesheet(
   classes: ReadonlySet<string>,
   tokens: ReadonlySet<string>,
-  scriptText: string,
+  scriptHas: ScriptSearch,
 ): boolean {
   for (const name of classes) {
-    if (tokens.has(name) || scriptText.includes(name)) return true;
+    if (tokens.has(name) || scriptHas(name)) return true;
   }
   return false;
 }
@@ -96,7 +115,7 @@ export function astroFile(url: string): string | null {
 export function pruneStylesheetLinks(
   html: string,
   widgetSheets: ReadonlyMap<string, ReadonlySet<string>>,
-  scriptText: string,
+  scriptHas: ScriptSearch,
 ): { html: string; removed: string[] } {
   // The chat rail mounts widgets on demand; its page keeps every sheet.
   if (html.includes("<astro-island")) return { html, removed: [] };
@@ -106,7 +125,7 @@ export function pruneStylesheetLinks(
     const href = HREF.exec(link)?.[1];
     const file = href ? astroFile(href) : null;
     const classes = file ? widgetSheets.get(file) : undefined;
-    if (!file || !classes || usesStylesheet(classes, tokens, scriptText))
+    if (!file || !classes || usesStylesheet(classes, tokens, scriptHas))
       return link;
     removed.push(file);
     return "";
@@ -116,11 +135,11 @@ export function pruneStylesheetLinks(
 
 /**
  * Removes the inline `<style>` blocks that hold only CSS-Module classes and that neither the
- * page's markup nor `scriptText` names. Returns the new HTML and how many blocks it dropped.
+ * page's markup nor `scriptHas` names. Returns the new HTML and how many blocks it dropped.
  */
 export function pruneInlineStyles(
   html: string,
-  scriptText: string,
+  scriptHas: ScriptSearch,
 ): { html: string; removed: number } {
   // The chat rail mounts widgets on demand; its page keeps every block.
   if (html.includes("<astro-island")) return { html, removed: 0 };
@@ -128,7 +147,7 @@ export function pruneInlineStyles(
   let removed = 0;
   const pruned = html.replace(INLINE_STYLE, (block, css: string) => {
     const classes = moduleClasses(css);
-    if (!classes || usesStylesheet(classes, tokens, scriptText)) return block;
+    if (!classes || usesStylesheet(classes, tokens, scriptHas)) return block;
     removed += 1;
     return "";
   });
@@ -212,6 +231,22 @@ export function pruneWidgetCss(): AstroIntegration {
           }
           return script;
         };
+        /* Pages share script sets (about 54 sets across 1,290 pages), so the search over a
+           set's joined text is built once per set and reused. The cache lives in this
+           closure, so no build sees an earlier one's scripts. */
+        const searches = new Map<string, ScriptSearch>();
+        const reachableSearch = (
+          files: string[],
+          follow: "imports" | "all",
+        ): ScriptSearch => {
+          const key = `${follow}|${files.slice().sort().join(",")}`;
+          let search = searches.get(key);
+          if (search === undefined) {
+            search = searchText(reachableText(files, follow));
+            searches.set(key, search);
+          }
+          return search;
+        };
         const reachableText = (
           files: string[],
           follow: "imports" | "all",
@@ -238,11 +273,11 @@ export function pruneWidgetCss(): AstroIntegration {
           const links = pruneStylesheetLinks(
             html,
             widgetSheets,
-            reachableText(scriptFiles(html), "imports"),
+            reachableSearch(scriptFiles(html), "imports"),
           );
           const blocks = pruneInlineStyles(
             links.html,
-            reachableText(referencedScripts(html), "all"),
+            reachableSearch(referencedScripts(html), "all"),
           );
           if (links.removed.length === 0 && blocks.removed === 0) continue;
           writeFileSync(path, blocks.html);

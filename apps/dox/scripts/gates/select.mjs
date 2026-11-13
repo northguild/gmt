@@ -45,9 +45,14 @@ const RUNNER_PREFIXES = [
   "apps/dox/scripts/lib/",
 ];
 
-/** Whether a changed file is worth a build at all (the early exit). */
+/**
+ * Whether a changed file is worth a build at all (the early exit). A test file (any
+ * `*.test.{js,mjs,cjs,ts,mts,cts,jsx,tsx}`) and a test helper under `apps/dox/src/test/` never
+ * ship, and only test files import them, so neither selects a page.
+ */
 export function isRelevant(file) {
-  if (file.endsWith(".test.ts")) return false;
+  if (/\.test\.[cm]?[jt]sx?$/.test(file)) return false;
+  if (file.startsWith("apps/dox/src/test/")) return false;
   return (
     file.startsWith("apps/dox/") ||
     file.startsWith("packages/gmt/src/") ||

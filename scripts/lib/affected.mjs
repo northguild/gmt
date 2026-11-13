@@ -77,6 +77,7 @@ export const CHECKS = [
   {
     id: "dox-dist",
     local: false,
+    // In CI the `dox-browser` job runs this, on the site the `dox-site` job built.
     // Every Node test that imports apps/dox/scripts/dist-dir.ts, found by apps/dox/scripts/dist-tests.mjs.
     run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox run test:dist",
     needs: ["build:dox"],
@@ -84,6 +85,7 @@ export const CHECKS = [
   {
     // No table on a built page scrolls sideways at 1440 px (apps/dox/scripts/table-fit.mjs). The
     // browser tests run first: they test the cell check table-fit uses, and need its Chromium.
+    // In CI the `dox-browser` job runs both, on the site the `dox-site` job built.
     id: "dox-tables",
     run: "pnpm --filter @gmt/dox exec vitest run --config vitest.browser.config.ts && pnpm --filter @gmt/dox exec node scripts/table-fit.mjs",
     needs: ["build:dox"],
