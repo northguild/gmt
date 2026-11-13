@@ -42,7 +42,9 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   its inline `<style>` block from every page that neither shows the widget nor loads a script
   that names its classes. Astro inlines some widget sheets into every page's head with no
   `_astro/` file behind them, so for those blocks a dynamic `import()` or a chunk in Vite's
-  preload list counts as use too.
+  preload list counts as use too. Pages share script sets (54 sets across about 1,290 pages), so the
+  hook builds each set's search once and every page that reaches the set reuses it: the hook takes
+  18 s where a search per page took 126 s, and the pruned HTML is byte-identical.
 - **Every tier after Tier 1 stays droppable**, and the docs work with the chat deleted.
 - **No `octane` or `@octanejs/*`**, anywhere.
 - **Minimum rendered text size 12px (0.75rem)**; enforced by `font-floor.test.ts`.
@@ -265,7 +267,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     The reference hash includes the commit dates, so a new commit to an input regenerates.
     `build-guides.mjs` and `build-changelog.mjs` write their own `lastUpdated`.
   - **Every workflow job that builds Dox uses `fetch-depth: 0`**, because a shallow clone gives every
-    page the one commit's date: `consistency` and `dox-gates` in `ci.yml`, `deploy` in
+    page the one commit's date: `consistency`, `dox-site`, `dox-browser` and `dox-gates` in `ci.yml`, `deploy` in
     `deploy-dox.yml`, `sweep` in `dox-gates-weekly.yml` and `oracle` in `temporal-oracle.yml` (its
     `pnpm build` builds every workspace package, Dox included).
   - **Where a type is documented is decided by use, not by source directory.**
@@ -1195,10 +1197,13 @@ splits them into two projects.
   against the scan.
 - **Browser tests.** A test that launches a real browser is named `*.browser.test.ts` and stays out
   of both projects (`BROWSER_TEST_GLOB` in `isolation.ts`): the Tests job installs no browser.
-  `vitest.browser.config.ts` runs them, in the `dox-tables` check, after Chromium and WebKit are
-  installed. `scripts/lib/cell-overflow.browser.test.ts` is one: the cell check needs real layout,
+  `vitest.browser.config.ts` runs them, in the `dox-browser` job's `dox-tables` check, after Chromium
+  and WebKit are installed. `scripts/lib/cell-overflow.browser.test.ts` is one: the cell check needs real layout,
   which jsdom has none of. `scripts/industry-tags-popover.browser.test.ts` runs in both engines,
-  because WebKit places the tag definition by its own rules.
+  because WebKit places the tag definition by its own rules. `maxConcurrency` is 4, the CI runner's
+  vCPU count: `code-b-day-ruler-holds.browser.test.ts` runs its 16 tests (2 engines, 2 themes,
+  4 widths) concurrently, each on its own page, and the other browser test files share those cores,
+  so a higher limit adds contention, not speed.
 - **Holds keep their boxes; four things break them.**
   - A redraw that re-inserts a `data-enter` card replays `gmt-enter` and the card moves, so a mount
     writes a card once and patches the slots inside it.
@@ -2007,8 +2012,15 @@ Shared hooks come first, then the globe, then the clock-change pages.
       2026, day 61). The loader is the Decoder's `loadCcsdsLib`.
     - **Gates.** `readout-still` drags `Day of year` (`riders: true`, `scope: "widget"`,
       `drawn: ["drawn", "hold"]`) and types each year from every kind of value;
-      `code-b-day-ruler-holds.browser.test.ts` steps every day by keyboard and drags the full track
-      at 300 to 1440 px in both themes.
+      `code-b-day-ruler-holds.browser.test.ts` runs every preset at 300, 390, 1280 and 1440 px in
+      both themes in Chromium and WebKit. It steps days 1 to 366 inside the page: one `evaluate`
+      per preset sets the slider's value, sends its bubbling `input` event (what a key on a native
+      range sends, and what the mount listens to), waits one frame (a `requestAnimationFrame`
+      callback, then a `MessageChannel` message, so ResizeObserver callbacks have run) and measures
+      the `hold`, `hero` and `drawn` boxes and the status line within 0.5 px. The real keys then
+      run: `Home`, `ArrowRight` twice and `End`, each checked against the slider's value and the
+      boxes. A pointer drag across the full track follows. The tests run concurrently; the file
+      takes 86 to 100 s locally, where a round trip per day took 13m41s to 14m20s in CI.
   - **Double Precision Meter** (`/tools/double-precision-meter/`, `dpmeter`, core, chat tool
     `showDoublePrecisionMeter`): how far a single JD, an MJD and seconds since J2000.0 drift from
     the instant they encode, against the exact two-part JD. The reader drags a year from 1972 to
@@ -3324,8 +3336,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     keeps its state icon, and a badge on the title's line, within 2 px of the middle of the
     title's first line; and on `/why-gmt/` and `/migrate/luxon/` each Markdown list dash and
     checklist tick sits within 2 px of the middle of its item's first line, while no component
-    list item has the dash. A page with nothing to measure fails. CI's `dox-tables` check runs
-    it in Chromium and WebKit after `table-fit`.
+    list item has the dash. A page with nothing to measure fails. CI's `dox-browser` job runs
+    it in Chromium and WebKit as part of the `dox-tables` check, on the `dox-site` artifact.
   - **`table-fit`** (`scripts/table-fit.mjs`, tier `weekly`, all three engines) opens every built page
     that holds a `<table` (`listTablePages` in `scripts/lib/table-pages.mjs`, read from `dist`, never a
     fixed count) at 1440 x 900 with every `<details>` open and every tab panel shown, and fails when a
@@ -3344,26 +3356,74 @@ Shared hooks come first, then the globe, then the clock-change pages.
     edges, scrolling table or not (a header kept visually hidden by a stacked layout is skipped, and so
     is anything inside a visually hidden descendant such as `.gmt-sr-only`, because a text range ignores
     clipping and would report a label nothing paints). Rule
-    `cell-overflows`; the last line counts `<n> scroll, <n> spill`. The same check runs
-    in the `consistency` job as `dox-tables` (`scripts/lib/affected.mjs`, after `dox-dist`), in
-    Chromium, whenever a Dox file or page changes; the browser tests (Test isolation) run there first.
-  - **The PR job.** `dox-gates` in `.github/workflows/ci.yml` ("Dox gates (<leg>, Chromium)")
-    runs on pull requests when `determine-affected` reports `dox_changed`, on Node 22, as two parallel
-    legs: `readout-still` alone (`--only readout-still`) and every other gate (`--skip readout-still`,
-    so a gate added later joins that leg). Each runs `gates --tier pr --browsers chromium --themes
-    dark,light --against origin/<base>`, so the `pr` tier only, on the pages the diff selects; the
-    weekly sweep covers the rest (Firefox, WebKit, the clock-still gates). The `readout-still` leg's limit is 40
-    minutes and its gate step's 35; the other leg's are 30 and 25. A diff that changes a gate script runs every gate on the sample pages.
-    With the Timetable Reader selected too, one job took 40 minutes locally without the build and 47 in
-    CI (#480), and `readout-still` took 24 of them locally, 25m37s in CI: 60 drags on the Reader (10 sliders at six widths)
-    and 32 on the Dwell Ledger (#490 split it out). The runner prints its screen only when it ends and
-    appends it to `$GITHUB_STEP_SUMMARY` in a fenced `text` block (`gates/step-summary.mjs`). Each gate
-    writes its log in `.gates/` as it runs, so the step's own limit leaves time to upload them: a failed
-    or cancelled leg uploads `apps/dox/.gates/` (without `vite-cache/`) as the
-    `dox-gates-<readout-still|other>-<run id>` artifact. It is **advisory**: the owner makes it a
-    required check after about 10 clean Dox PR runs. A PR that touches nothing under `apps/dox/` or
-    `pnpm-lock.yaml` skips it; a lockfile change alone runs it, since it can bump Playwright or
-    axe-core.
+    `cell-overflows`; the last line counts `<n> scroll, <n> spill`. Each page gets one 1440 px load,
+    where `measureTables` runs and then `measureCells` on the same settled page, and a fresh 390 px
+    load for `measureCells` (a phone-width load runs the page's width-dependent scripts at that
+    width, which resizing the 1440 page would not). `--shard <i>/<n>` keeps every n-th page of the
+    sorted list (`shardOf` in `scripts/gates/contract.mjs`, shared with the weekly sweep's legs)
+    after the page contract applies, so `--list-pages` still prints every page.
+    CI runs it as the `dox-tables` check (`scripts/lib/affected.mjs`) in four `dox-table-fit` jobs
+    ("Dox tables fit (shard 1/4)" to "4/4"), in Chromium, on the `dox-site` artifact. The check
+    runs on every Dox change and on every `packages/gmt/src` change (`GMT_LIB` selects it), and it
+    always opens every table page, never only the changed ones: a shared change can spill a table
+    on a page it never touched. Each shard's last line counts its own pages, and a shard that
+    measures no table fails.
+  - **The PR job.** The Dox jobs in `.github/workflows/ci.yml` run on one build. `dox-site`
+    ("Dox site build") builds `@northguild/gmt` and the site once, on Node 22 with `fetch-depth: 0`,
+    and uploads the `dox-site` artifact. It runs when `determine-affected` selects `dox-dist` or
+    `dox-tables`, and on every pull request that reports `dox_changed`, since the gate legs select
+    pages from the built tree. The artifact is one tar (not thousands of small uploads, and it keeps
+    file modes) holding the build's whole output: `apps/dox/dist`, every gitignored file the
+    generators wrote (`src/generated/`, the reference, changelog and industry pages under
+    `src/content/docs/`, `public/llms*.txt`) and every tracked file the build rewrote (some files
+    under `src/generated/` are ignored yet tracked, so both lists are packed). Gate selection reads
+    `src/content/docs/**`, and some `test:dist` tests read generated sources, so `dist/` alone is not
+    enough. The pack step passes NUL-delimited names to `tar --null -T -`. The upload keeps the
+    artifact one day and sets `overwrite: true`: `download-artifact` keeps the first of two artifacts
+    with one name, so a re-run attempt must replace the earlier one (#380). A failed `dox-site`
+    skips every job that needs it, so its failure shows once, on `dox-site`.
+    - **`consistency`** keeps only the fast checks (audit, format, deps, markers, licences, docs
+      checks, stats, api-surface, bundle-size and the changeset check). It builds nothing.
+    - **`dox-browser`** ("Dox browser tests (Chromium, WebKit)") unpacks the artifact, builds
+      `@northguild/gmt` and runs `test:dist` (`DOX_DIST_REQUIRED=1`), the browser tests (Test
+      isolation) and `frame-check`, on the `dox-dist` and `dox-tables` checks.
+    - **`dox-table-fit`** runs `table-fit` in four shards (`table-fit`, above), each on its own
+      4 vCPU with Chromium only. `fail-fast` is off, so every shard reports.
+    - **`dox-gates`** ("Dox gates (<leg>, Chromium)") runs on pull requests that report `dox_changed`,
+      on Node 22, after `dox-site`, as five parallel legs on the artifact. Each runs
+      `gates --tier pr --browsers chromium --themes dark,light --no-build --against origin/<base>`:
+      the `pr` tier only, on the pages the diff selects, and the runner exits 2 when
+      `dist/gmt/index.html` is missing, so a broken artifact cannot pass quietly. The weekly
+      sweep covers the rest (Firefox, WebKit, the clock-still gates). The legs keep the gates serial
+      within a leg, because the clock-still gates flake when gates share a runner, and give each
+      group its own 4 vCPU:
+
+      | Leg | Select | Gate times (serial, measured) | Job / step limit |
+      | --- | --- | --- | --- |
+      | `readout-still` | `--only readout-still` | 4m35s on one page; 25m37s with the Timetable Reader selected | 40 / 35 min |
+      | `contrast` | `--only contrast-measure` | 5m04s to 5m38s | 20 / 15 |
+      | `canada, credits, media, frames` (slug `canada`) | `--only canada-layout-check,data-credits-check,a11y-media,frame-check` | canada-layout-check 3m46s to 3m50s, data-credits-check about 23 s, a11y-media about 26 s, frame-check about 2 s | 20 / 15 |
+      | `escape and grow` (slug `esc-grow`) | `--only esc-cascade,grow-measure` | esc-cascade 2m12s, grow-measure about 1m58s | 20 / 15 |
+      | `every other gate` (slug `other`) | `--skip` the gates the other four legs name | a11y-tab-walk 1m18s to 1m35s, a11y-axe 50 s to 1m07s | 20 / 15 |
+
+      `--skip` keeps a gate added later in the last leg. `scripts/gates/ci-legs.test.ts` reads
+      `ci.yml` and fails when a `pr`-tier gate in `registry.mjs` runs in no leg or in two, so a typo in
+      a leg's list cannot leave a gate out. A diff that changes a gate script runs every gate on the
+      sample pages. With the Timetable Reader selected too, one job took 40 minutes locally and 47 in
+      CI (#480), and `readout-still` took 24 of them locally, 25m37s in CI: 60 drags on the Reader (10
+      sliders at six widths) and 32 on the Dwell Ledger (#490 split it out), so that leg keeps its
+      40 minutes. The runner prints its screen only when it ends and appends it to
+      `$GITHUB_STEP_SUMMARY` in a fenced `text` block (`gates/step-summary.mjs`). Each gate writes
+      its log in `.gates/` as it runs, and a leg's gate step stops 5 minutes before its job, so a
+      failed or cancelled leg uploads `apps/dox/.gates/` (without `vite-cache/`) as the
+      `dox-gates-<readout-still|contrast|canada|esc-grow|other>-<run id>` artifact. The jobs are
+      **advisory**: the owner makes `dox-gates` a required check after about 10 clean Dox PR runs.
+      A PR that touches nothing under `apps/dox/` or `pnpm-lock.yaml` skips it; a lockfile change
+      alone runs it, since it can bump Playwright or axe-core.
+    - **Job count.** One Dox PR runs up to 11 Dox jobs (`dox-site`, `dox-browser`, four
+      `dox-table-fit` shards, five `dox-gates` legs) against the organisation's 20 concurrent jobs.
+      They start once `dox-site` ends, when the matrix legs have mostly finished. No check was removed
+      to get here: each runs on the same changes as before.
   - **The page contract.** Every gate script answers `--list-pages` (a JSON array of site paths,
     no `/gmt`, without a browser), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
     never an empty run) and, when it loads pages, `--base <url>`. With `GATE_REPORT` set, each
@@ -3398,9 +3458,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     registry; `registry.test.ts` asserts each path is in `dist`). A changed gate script runs that
     gate on the sample, and a changed runner file (`scripts/gates/`, `gates.mjs`, `gate-checks.mjs`,
     `scripts/lib/`) runs every gate on the sample. Over 12 pages, the run keeps the sample plus 6 picked evenly from the rest (the
-    screen's context line says so under `--plan`); `--all` lifts the cap. With no changed file under
-    `apps/dox/` (other than `*.test.ts`), `packages/gmt/src/` or `pnpm-lock.yaml`, the runner prints
-    `gates: PASS  nothing to check` and does not build.
+    screen's context line says so under `--plan`); `--all` lifts the cap. A test file
+    (`*.test.` with a js, mjs, cjs, ts, mts, cts, jsx or tsx extension) and a helper under
+    `apps/dox/src/test/` never select a page: neither ships, and only test files import the helpers.
+    With no changed file under `apps/dox/` (other than those), `packages/gmt/src/` or
+    `pnpm-lock.yaml`, the runner prints `gates: PASS  nothing to check` and does not build.
   - **An empty run is not a pass.** When the diff selects pages but no requested browser can run a
     gate that applies (`emptyRunOutcome` in `gates/select.mjs`), `gates` exits 2 with
     `gates: nothing was run: none of <browsers> runs <gates> (it runs in <browsers>)`.
@@ -5204,10 +5266,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - the Tier 3 keyboard-only, reduced-preference and Firefox/Safari pass;
   - the Firefox and WebKit legs of `a11y-axe`, `a11y-tab-walk` and `a11y-media` (`--browsers
     firefox`): the scripts accept the engine, but Firefox cannot launch on the author's machine;
-  - **the `dox-gates` PR job** (`ci.yml`, "The PR job"): each leg passes inside its limit (record
-    each leg's time in the "The PR job" bullet; the `readout-still` leg needs a run that selects the
-    Timetable Reader, since #486's took 25m37s plus a 2m06s build), and a PR that touches nothing under `apps/dox/` or
-    `pnpm-lock.yaml` shows the job as skipped;
+  - **the Dox PR jobs** (`ci.yml`, "The PR job"): `dox-site` uploads `dox-site`, each of the five
+    `dox-gates` legs passes inside its limit with its build row shown as `SKIP --no-build` (the
+    `readout-still` leg needs a run that selects the Timetable Reader, since #486's took 25m37s),
+    the four `dox-table-fit` shards' pages and tables add up to the whole table-page list, and a PR
+    that touches nothing under `apps/dox/` or `pnpm-lock.yaml` shows the jobs as skipped;
   - **the weekly gate sweep** (`dox-gates-weekly.yml`, "The weekly gate sweep"), which can only be
     dispatched once the file is on `main`:
     - a `force_finding` dispatch finishes every leg, Firefox included, and files one `[dry run]`
