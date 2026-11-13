@@ -14,5 +14,8 @@ export default defineConfig({
     include: [BROWSER_TEST_GLOB],
     // Launching Chromium can take several seconds on a cold runner.
     hookTimeout: 60_000,
+    // The Day Ruler file runs its 16 tests concurrently, each on its own page. Four is the
+    // runner's vCPU count; the other browser test files share those cores.
+    maxConcurrency: 4,
   },
 });
