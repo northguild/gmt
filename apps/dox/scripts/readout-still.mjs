@@ -204,6 +204,11 @@ const MOVING_PART = {
   // encodes the slider date by position, so it moves with the slider by design; the staircase,
   // marks, tick labels and axis stay measured.
   cursor: gate("moving"),
+  // The Report Time Resolver's NOTAM section: it has its own presets, badges, reasons and call
+  // lines, so its insides change by design (their element count differs from preset to preset).
+  // Its two hero plates are still measured, because heroes are collected before this part is
+  // left out, so a NOTAM preset is compared on section 1 and on the NOTAM plates.
+  notam: gate("notam"),
 };
 /** The selector of each kind of text box a tool names. */
 const TEXT_PART = {
@@ -702,6 +707,69 @@ const TOOLS = [
     scope: "widget",
     drawn: ["drawn", "hold"],
     riders: true,
+    textBoxes: ["codeframe"],
+  },
+  {
+    // AV-98. The slider moves the reference one minute at a time across a month: no plate, card,
+    // table row or section moves or resizes, and only the marks on the two drawn lanes do. The
+    // second pass chooses every NOTAM preset and checks that section 1 and the two NOTAM plates
+    // (heroes) stay where they were; the rest of section 2 moves by design.
+    slug: "report-time-resolver",
+    root: '[data-widget="report-time-resolver"]',
+    presetName: "METAR preset",
+    presets: ["month-end", "february-31", "tie", "offset-reference"],
+    controls: [{ role: "slider", name: "Move the reference" }],
+    entries: [{ role: "combobox", name: "NOTAM preset", values: "options" }],
+    track: "track",
+    scope: "widget",
+    drawn: ["drawn", "hold", "grid"],
+    moving: ["notam"],
+    riders: true,
+    textBoxes: ["codeframe"],
+  },
+  {
+    // FIN-96. No handle: the reader types a value date or an ISO date, or picks a preset for each.
+    // The first read preset reads a date and the last is refused, so each value is typed from both.
+    slug: "swift-value-date-reader",
+    root: '[data-widget="swift-value-date-reader"]',
+    presets: ["twenty", "whole-subfield"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Value date (YYMMDD)",
+        values: [
+          "990615",
+          "240615",
+          "750101",
+          "050229",
+          "040229",
+          "2406",
+          "240615EUR1000,00",
+          "２４０６１５",
+          "9".repeat(16),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "ISO date",
+        values: [
+          "2024-06-15",
+          "2000-12-31",
+          "2061-01-01",
+          "2024-06-15T10:00:00",
+          "x".repeat(32),
+          "",
+        ],
+      },
+      { role: "combobox", name: "Date preset", values: "options" },
+    ],
+    track: null,
+    // It draws no chart, so it has no frame part.
+    frame: false,
+    scope: "widget",
+    drawn: ["hold"],
     textBoxes: ["codeframe"],
   },
 ];

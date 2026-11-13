@@ -57,6 +57,38 @@ describe("timeline", () => {
     expect(screen.getByRole("img", { name: "<i>" })).toBeInTheDocument();
   });
 
+  describe("emphasis", () => {
+    it("marks only the emphasised mark as current, and keeps every name", () => {
+      renderHtml(
+        lane({ label: "Candidates" }, [
+          mark({ label: "Chosen 30 Jun", at: 0.5, emphasis: true }),
+          mark({ label: "Other 31 May", at: 0.2, emphasis: false }),
+          mark({ label: "Plain 31 Jul", at: 0.8 }),
+        ]),
+      );
+      expect(
+        screen.getByRole("img", { name: "Chosen 30 Jun", current: true }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("img", { current: true })).toHaveLength(1);
+      expect(
+        screen.getByRole("img", { name: "Other 31 May" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: "Plain 31 Jul" }),
+      ).toBeInTheDocument();
+    });
+
+    it("renders an unemphasised mark exactly as it did without the option", () => {
+      const base = { label: "Gate", at: 0.5, series: 2 as const };
+      expect(String(mark({ ...base, emphasis: false }))).toBe(
+        String(mark(base)),
+      );
+      renderHtml(mark(base));
+      expect(screen.getByRole("img", { name: "Gate" })).toBeInTheDocument();
+      expect(screen.queryAllByRole("img", { current: true })).toHaveLength(0);
+    });
+  });
+
   it("keeps a hatched mark named like a solid one", async () => {
     const r = renderHtml(
       lane({ label: "Months" }, [

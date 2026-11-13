@@ -1,6 +1,6 @@
 ---
 title: "Aviation: Message Times"
-description: parseSsimDate, formatSsimDate and isValidSsimDate — read, write and check the SSIM schedule date, with English month letters that ignore the platform's language and a century the caller states.
+description: Read the SSIM schedule date, the METAR report time and NOTAM validity — English month letters that ignore the platform's language, a century the caller states, and a reference instant for a time that names no month.
 sidebar:
   order: 12
 industries: [aviation]
@@ -11,13 +11,19 @@ Information Manual, SSIM. Their dates are not ISO 8601. An SSIM date is written 
 digits of day, three letters of month and two digits of year. Nothing in it says which century
 the year is in, and the month is a code, not a word in any language.
 
-The functions here read and write that date and check it. They never read the platform's
-language, and they never choose a century for you.
+Weather reports and notices to air missions have the same problem. A METAR writes its time as
+`251200Z`: day, hour and minute, and no month. A NOTAM writes its validity as ten digits,
+`1407031230`, with a two-digit year, and sometimes adds `EST` or writes `PERM` in place of a time.
+
+The functions here read and write these values and check them. They never read the platform's
+language, they never choose a century for you, and they never read the clock to find a month.
 
 ```typescript
 import { parseSsimDate } from "@northguild/gmt/aviation/parse";
 import { formatSsimDate } from "@northguild/gmt/aviation/format";
 import { isValidSsimDate } from "@northguild/gmt/aviation/validate";
+import { parseMetarTime, parseNotamValidity } from "@northguild/gmt/aviation/parse";
+import { isValidMetarTime, isValidNotamValidity } from "@northguild/gmt/aviation/validate";
 ```
 
 The functions live in `@northguild/gmt/aviation/parse`, `@northguild/gmt/aviation/format` and
@@ -170,6 +176,166 @@ parseSsimDate("31DEC99", { yearWindow: 1950 });
 // "1999-12-31"
 ```
 
+## The METAR report time
+
+A METAR opens with a group of six digits and a letter: `YYGGggZ`. `YY` is the day of the month,
+`GG` the hour, `gg` the minute, and `Z` says the time is UTC. WMO-No. 306 gives the group for a
+METAR and a SPECI (FM 15, regulation 15.3.1) and for the issue time of a TAF (FM 51,
+regulation 51.1.2). The `Z` follows the digits with no space.
+
+[`parseMetarTime(value, referenceInstant)`](/reference/aviation/parse/parseMetarTime/) returns an
+ISO instant in UTC. It returns `""` for anything that is not a METAR time group, and for a
+reference that is not an instant with `Z` or an offset.
+
+```typescript
+import { parseMetarTime } from "@northguild/gmt/aviation/parse";
+
+parseMetarTime("251200Z", "2024-06-25T12:20:00Z");
+// "2024-06-25T12:00:00Z"
+parseMetarTime("251200", "2024-06-25T12:20:00Z");
+// "" (no Z)
+parseMetarTime("251200z", "2024-06-25T12:20:00Z");
+// "" (lower case)
+parseMetarTime("252400Z", "2024-06-25T12:20:00Z");
+// "" (hour 24)
+parseMetarTime("251200Z", "2024-06-25T12:20:00");
+// "" (the reference has no offset)
+```
+
+## Choosing the month
+
+The group names no month and no year, so the function needs a reference: the time the report
+was received, or the timestamp the archive stored with it. It is required. The function never
+uses the current time, because an archive read in March must give the same answer as one read
+in October.
+
+The result is the candidate nearest the reference in exact time. The candidates are the latest
+one at or before the reference and the earliest one after it. A report is usually a few minutes
+old, so a group just before the end of a month, read just after the start of the next, belongs to
+the month before:
+
+```typescript
+import { parseMetarTime } from "@northguild/gmt/aviation/parse";
+
+parseMetarTime("302350Z", "2024-07-01T00:05:00Z");
+// "2024-06-30T23:50:00Z" (30 days ahead if you assume the current month)
+parseMetarTime("010010Z", "2024-06-30T23:55:00Z");
+// "2024-07-01T00:10:00Z" (a clock that runs ahead of the sender)
+parseMetarTime("312350Z", "2025-01-01T00:05:00Z");
+// "2024-12-31T23:50:00Z" (back across a year)
+```
+
+A month that lacks the day is skipped. June has no 31st, so `312350Z` received just after
+midnight on 1 July is from 31 May, which is nearer than 31 July. February has no 31st either:
+two months back is the nearest 31st.
+
+```typescript
+import { parseMetarTime } from "@northguild/gmt/aviation/parse";
+
+parseMetarTime("312350Z", "2024-07-01T00:05:00Z");
+// "2024-05-31T23:50:00Z"
+parseMetarTime("312359Z", "2024-03-01T00:00:00Z");
+// "2024-01-31T23:59:00Z"
+```
+
+When two candidates are equally near, the earlier wins. This is GMT's rule, not WMO's. A group of `151200Z` read at noon on 30 June is exactly 15 days from each
+neighbour. One nanosecond later, the later one is nearer:
+
+```typescript
+import { parseMetarTime } from "@northguild/gmt/aviation/parse";
+
+parseMetarTime("151200Z", "2024-06-30T12:00:00Z");
+// "2024-06-15T12:00:00Z" (a tie: the earlier)
+parseMetarTime("151200Z", "2024-06-30T12:00:00.000000001Z");
+// "2024-07-15T12:00:00Z"
+```
+
+The months are counted in UTC, whatever offset the reference carries. A reference of
+`2024-07-01T00:05:00+02:00` is 22:05 UTC on 30 June:
+
+```typescript
+import { parseMetarTime } from "@northguild/gmt/aviation/parse";
+
+parseMetarTime("302350Z", "2024-07-01T00:05:00+02:00");
+// "2024-06-30T23:50:00Z"
+parseMetarTime("302350Z", "2024-06-30T20:05:00-04:00");
+// "2024-06-30T23:50:00Z"
+```
+
+The function sets no limit on how far the result may be from the reference. If your reference
+is a year after the report, you get a time in the wrong year. Check staleness with
+[`spanNs`](/reference/span/calculate/spanNs/) before you trust the answer.
+
+## NOTAM validity
+
+A NOTAM states when it starts in item B) and when it ends in item C). Each is ten digits,
+`YYMMDDHHMM`, in UTC. ICAO's NOTAM format (PANS-AIM, Appendix 3) also lets item C) end in `EST`,
+to say the end is an estimate, or be the word `PERM`, to say there is no end. EUROCONTROL's OPADD,
+which applies the format across Europe, adds that there is no space before `EST`.
+
+[`parseNotamValidity(value, options)`](/reference/aviation/parse/parseNotamValidity/) returns one
+of two objects, or `null` for anything it does not read. It reads one group at a time, with no
+`B)` or `C)` label.
+
+```typescript
+import { parseNotamValidity } from "@northguild/gmt/aviation/parse";
+
+parseNotamValidity("2506151200", { yearWindow: 2000 });
+// { kind: "instant", instant: "2025-06-15T12:00:00Z", estimated: false }
+parseNotamValidity("1407031230EST", { yearWindow: 2000 });
+// { kind: "instant", instant: "2014-07-03T12:30:00Z", estimated: true }
+parseNotamValidity("PERM", { yearWindow: 2000 });
+// { kind: "permanent" }
+parseNotamValidity("1407031230 EST", { yearWindow: 2000 });
+// null (OPADD writes no space before EST)
+```
+
+`PERM` is a state, not a date. A permanent NOTAM has no end, so the function returns
+`{ kind: "permanent" }` and not a far-future instant. If you turn `PERM` into `9999-12-31`, a
+check that asks "is it in force?" is right until that day and wrong after it. With a state, there
+is nothing to compare, and your code has to say what permanent means.
+
+`EST` keeps its instant. The time is the estimate the originator gave, and the NOTAM may be
+replaced or cancelled before it. The result carries `estimated: true`, so you can show it as an
+estimate. Dropping the flag turns a guess into a promise.
+
+The function does not know which item it is reading. In item B) both `EST` and `PERM` are
+malformed, so check `kind` and `estimated` yourself when you read a start time.
+
+The century is the caller's, as for SSIM, and it also applies to `PERM`: without `yearWindow` the
+result is `null` for every value. `"rolling"` suits a live feed.
+
+```typescript
+import { parseNotamValidity } from "@northguild/gmt/aviation/parse";
+
+parseNotamValidity("9912312359EST", { yearWindow: 1950 });
+// { kind: "instant", instant: "1999-12-31T23:59:00Z", estimated: true }
+parseNotamValidity("5001010000", { yearWindow: 1950 });
+// { kind: "instant", instant: "1950-01-01T00:00:00Z", estimated: false }
+parseNotamValidity("2506151200", {});
+// null (no window stated)
+```
+
+Nothing is corrected. ICAO ends a day at `2359` and says not to write `2400`, and OPADD does not
+allow `WIE`, `UFN` or `APRX DUR`. A reader that rounds them into something valid hides a message
+that broke the rules, so each of these returns `null`, as does a month, day, hour or minute that
+does not exist:
+
+```typescript
+import { parseNotamValidity } from "@northguild/gmt/aviation/parse";
+
+parseNotamValidity("2506152400", { yearWindow: 2000 });
+// null (do not use 2400)
+parseNotamValidity("WIE", { yearWindow: 2000 });
+// null
+parseNotamValidity("UFN", { yearWindow: 2000 });
+// null
+parseNotamValidity("2502291200", { yearWindow: 2000 });
+// null (2025 has no 29 February)
+parseNotamValidity("0002290000", { yearWindow: 2000 });
+// { kind: "instant", instant: "2000-02-29T00:00:00Z", estimated: false }
+```
+
 ## Checking a value
 
 [`isValidSsimDate(value, options)`](/reference/aviation/validate/isValidSsimDate/) takes the same
@@ -193,11 +359,40 @@ isValidSsimDate("01JAN26", {});
 The window is part of the question. `29FEB00` is neither valid nor invalid until you say which
 century it is in.
 
+[`isValidMetarTime(value, referenceInstant)`](/reference/aviation/validate/isValidMetarTime/) and
+[`isValidNotamValidity(value, options)`](/reference/aviation/validate/isValidNotamValidity/) call
+their parsers, so each is `true` exactly when the parser gives a result.
+
+```typescript
+import {
+  isValidMetarTime,
+  isValidNotamValidity,
+} from "@northguild/gmt/aviation/validate";
+
+isValidMetarTime("302350Z", "2024-07-01T00:05:00Z");
+// true
+isValidMetarTime("251200", "2024-06-25T12:20:00Z");
+// false
+isValidMetarTime("251200Z", "2024-06-25T12:20:00");
+// false (the reference has no offset)
+isValidNotamValidity("1407031230EST", { yearWindow: 2000 });
+// true
+isValidNotamValidity("PERM", { yearWindow: 2000 });
+// true
+isValidNotamValidity("PERM", {});
+// false
+isValidNotamValidity("2506152400", { yearWindow: 2000 });
+// false
+```
+
 ## See it break, then work
 
 - [An SSIM Month Read in the Wrong Language](/scenarios/an-ssim-month-read-in-the-wrong-language/)
+- [A METAR from Last Month](/scenarios/a-metar-from-last-month/)
+- [PERM Read as a Date](/scenarios/perm-read-as-a-date/)
 - [Aviation mistakes](/mistakes/aviation/)
 - [SSIM Date Reader](/tools/ssim-date-reader/), a tool that reads, compares and writes a date
+- [Report Time Resolver](/tools/report-time-resolver/), a tool that reads a METAR time against a reference you state and reads NOTAM items B) and C)
 
 ## Sources
 
@@ -211,5 +406,17 @@ century it is in.
   the month as the first three letters of its English name. It is no longer online.
 - Avinor (Norway), SSIM wiki, [Period of Schedule Validity](https://xwiki.avinor.no/x/rYC5Ag):
   shown as `ddmmyy`, a two-digit year.
+- WMO, _Manual on Codes_ (WMO-No. 306), Volume I.1, Part A (2011 edition, updated 2013): FM 15
+  METAR and SPECI, regulations 15.3.1 and 15.3.2, and FM 51 TAF, regulation 51.1.2. They give the
+  group `YYGGggZ` in UTC with no space before the `Z`.
+- ICAO, _Procedures for Air Navigation Services: Aeronautical Information Management_ (PANS-AIM,
+  Doc 10066), First Edition (2018), Appendix 3, "Instructions for the completion of the NOTAM
+  Format", sections 5 and 6. They give the ten-figure group in UTC, `0000` and `2359` (not
+  `2400`), `EST` and `PERM`, and say that a NOTAM with `EST` is later cancelled or replaced.
+- EUROCONTROL, _OPADD_ (EUROCONTROL-GUID-121), Edition 4.1 (07/12/2020), in the copy ICAO's Asia
+  and Pacific office hosts: §2.3.16 and §2.3.17, and Chapter 3, "NOTAM Items". A multinational
+  peer, cited for what ICAO does not say: no space before `EST`, the values not to use, and the
+  corrections a NOTAM Processing Unit makes.
+- ICAO Annex 3, Appendix 3, was not reached.
 - IATA's _Standard Schedules Information Manual_ is not openly published, and its own text was
   not reached.

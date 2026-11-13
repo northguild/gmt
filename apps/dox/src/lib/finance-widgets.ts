@@ -1,10 +1,11 @@
 /**
  * What the finance tools share: the library's finance functions as one typed object, and the
- * order of FIX's five precisions.
+ * order of FIX's five precisions. Both finance tools are built on it: the FIX Timestamp Reader
+ * (FIN-95) uses the FIX names, and the SWIFT Value Date Reader (FIN-96) the SWIFT names and
+ * `isValidDate`.
  *
  * No DOM and no library import (the library arrives as a `FinanceLib`), so a pure module can
- * take it. FIN-96's SWIFT Value Date Reader adds its own names to `FinanceLib` and to
- * `finance-lib.ts`.
+ * take it.
  */
 import type { FixPrecision, FixUtcTimestamp } from "@northguild/gmt";
 
@@ -14,6 +15,16 @@ export interface FinanceLib {
   /** The boolean overload: the tool prints what the validator returned. */
   isValidFixUtcTimestamp(value: string): boolean;
   formatFixUtcTimestamp(value: string, precision: FixPrecision): string;
+  /** The ISO date of a SWIFT `YYMMDD` value date, or `""`. */
+  parseSwiftDate(value: string): string;
+  /** The `YYMMDD` of an ISO date, or `""`. */
+  formatSwiftDate(value: string): string;
+  isValidSwiftDate(value: string): boolean;
+  /**
+   * The ISO calendar-date check from `plain/validate`. The reader's write box takes what it
+   * takes, and asks it to tell a date-time from a date outside SWIFT's range.
+   */
+  isValidDate(value: string): boolean;
 }
 
 /**

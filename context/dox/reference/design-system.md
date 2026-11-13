@@ -163,6 +163,10 @@ Every widget control composes the primitives and builders in `src/widgets/` (eac
 it never restyles a thumb, a chip or a label row. Their dimensions are tokens in
 `gmt-tokens.css` (`--gmt-range-*`, `--gmt-handle-*`).
 
+- **The timeline `mark` takes `emphasis`.** The mark is drawn larger inside a ring, so a chosen
+  point among its neighbours does not rely on colour (WCAG 1.4.1). It writes `aria-current="true"`
+  and the ring selects on that attribute: the chosen candidate is exposed to assistive technology,
+  not only drawn with a ring. The mark stays a named `role="img"`; a mark without it renders as before.
 - **`.gmt-field-grid`** holds every row of labelled fields:
   `repeat(auto-fit, minmax(min(100%, 11rem), 1fr))`. Each `.gmt-label` spans two rows with
   `grid-template-rows: subgrid`, so label texts share one row and controls share the next.

@@ -10,7 +10,8 @@
  * - A name that says which way it scrolls. A code block gets `role="region"` and an
  *   `aria-label` ("Code, scrolls sideways"). A table keeps its own role, so a screen reader still
  *   announces its rows, columns and headers, and gets an `aria-label` ("Scrolls sideways") only
- *   when it has no name of its own (a caption, `aria-label`, `aria-labelledby` or `title`).
+ *   when it has no name of its own (a caption, `aria-label`, `aria-labelledby` or `title`). A
+ *   widget's `[data-scrolls]` value gets no name (see `CANDIDATES`).
  * - `data-scroll-region`, which `gmt-a11y.css` turns into a visible focus ring. Its value lists
  *   the attributes this module added, and only those are removed when the box fits again: an
  *   author's own tab stop, role or name is kept.
@@ -27,7 +28,13 @@
  * the browser has not laid out yet can say it fits.
  */
 
-const CANDIDATES = "pre, table";
+/**
+ * `[data-scrolls]` is a box a widget lets scroll sideways when its text is wider than it: a
+ * signal plate's value. It takes a tab stop and nothing else: it keeps its own role (a
+ * definition), and it gets no name, because a screen reader reads the whole value whatever the
+ * box shows, and a name would be read in place of the value.
+ */
+const CANDIDATES = "pre, table, [data-scrolls]";
 const SLACK_PX = 1;
 
 function labelFor(el: HTMLElement, sideways: boolean, upDown: boolean): string {
@@ -37,9 +44,9 @@ function labelFor(el: HTMLElement, sideways: boolean, upDown: boolean): string {
       : sideways
         ? "scrolls sideways"
         : "scrolls up and down";
-  return el.tagName === "TABLE"
-    ? how[0].toUpperCase() + how.slice(1)
-    : `Code, ${how}`;
+  return el.tagName === "PRE"
+    ? `Code, ${how}`
+    : how[0].toUpperCase() + how.slice(1);
 }
 
 /** Whether a table has a name of its own; an `aria-label` this module set does not count. */
@@ -72,8 +79,11 @@ function update(el: HTMLElement): void {
     owned.add(name);
   };
   set("tabindex", "0");
-  if (el.tagName !== "TABLE") set("role", "region");
-  if (el.tagName !== "TABLE" || !namedTable(el as HTMLTableElement, owned)) {
+  if (el.tagName === "PRE") set("role", "region");
+  if (
+    el.tagName === "PRE" ||
+    (el.tagName === "TABLE" && !namedTable(el as HTMLTableElement, owned))
+  ) {
     set("aria-label", labelFor(el, sideways, upDown));
   }
   el.dataset.scrollRegion = [...owned].join(" ");

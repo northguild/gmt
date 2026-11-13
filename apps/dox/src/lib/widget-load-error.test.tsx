@@ -136,6 +136,10 @@ import {
   renderSsimDateReaderTemplate,
 } from "./ssim-date-reader-mount";
 import {
+  mountReportTimeResolver,
+  renderReportTimeResolverTemplate,
+} from "./report-time-resolver-mount";
+import {
   mountJulianDayCounter,
   renderJulianDayCounterTemplate,
 } from "./julian-day-counter-mount";
@@ -151,6 +155,10 @@ import {
   mountCodeBDayRuler,
   renderCodeBDayRulerTemplate,
 } from "./code-b-day-ruler-mount";
+import {
+  mountSwiftValueDateReader,
+  renderSwiftValueDateReaderTemplate,
+} from "./swift-value-date-reader-mount";
 import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
@@ -371,6 +379,16 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "ssim date reader",
     () => renderSsimDateReaderTemplate("test"),
     mountSsimDateReader as MountFn<never>,
+  ],
+  [
+    "report time resolver",
+    () => renderReportTimeResolverTemplate("test"),
+    mountReportTimeResolver as MountFn<never>,
+  ],
+  [
+    "swift value date reader",
+    () => renderSwiftValueDateReaderTemplate("test"),
+    mountSwiftValueDateReader as MountFn<never>,
   ],
   [
     "terrestrial time stack",

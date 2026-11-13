@@ -456,7 +456,7 @@ skills:
   - name: GMT Finance
     slug: gmt-finance
     domain: industry-layers
-    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded
+    description: Read, write and check the FIX UTCTimestamp (parseFixUtcTimestamp/formatFixUtcTimestamp/isValidFixUtcTimestamp) — precision from the digit count, picoseconds apart, second 60 only on a real leap second, written cut and never rounded; read, write and check the SWIFT MT value date YYMMDD (parseSwiftDate/formatSwiftDate/isValidSwiftDate) — the century SWIFT's own rule gives, 2001 to 2060, no window
     type: core
     packages:
       - '@northguild/gmt'
@@ -464,16 +464,22 @@ skills:
       - parseFixUtcTimestamp
       - formatFixUtcTimestamp
       - isValidFixUtcTimestamp
+      - parseSwiftDate
+      - formatSwiftDate
+      - isValidSwiftDate
     tasks:
       - Read a FIX UTCTimestamp and the precision its digit count states, with picoseconds returned apart from the instant
       - Write an instant as a FIX UTCTimestamp at a counterparty's precision, cut and never rounded
       - Tell a real inserted leap second from a second 60 on an ordinary day in a FIX message
       - Check whether a value is a FIX UTCTimestamp
+      - Read the six-digit YYMMDD value date of a SWIFT MT field 30 or 32A in the century SWIFT's rule gives, with no window to choose
+      - Write an ISO date as a SWIFT value date, refusing a year outside 2001 to 2060 so it never reads back as another century
+      - Check whether a value is a SWIFT value date
 
   - name: GMT Aviation
     slug: gmt-aviation
     domain: industry-layers
-    description: Read, write and check the IATA SSIM schedule date DDMMMYY (parseSsimDate/formatSsimDate/isValidSsimDate) — fixed English upper-case month letters that never go through Intl, a required yearWindow for the century, sentinels instead of exceptions
+    description: Read, write and check the IATA SSIM schedule date DDMMMYY (parseSsimDate/formatSsimDate/isValidSsimDate), read the METAR report time YYGGggZ against a reference instant (parseMetarTime/isValidMetarTime), and read NOTAM validity YYMMDDHHMM, EST and PERM (parseNotamValidity/isValidNotamValidity) — fixed English month letters that never go through Intl, a required yearWindow for the century, sentinels instead of exceptions
     type: core
     packages:
       - '@northguild/gmt'
@@ -481,11 +487,18 @@ skills:
       - parseSsimDate
       - formatSsimDate
       - isValidSsimDate
+      - parseMetarTime
+      - isValidMetarTime
+      - parseNotamValidity
+      - isValidNotamValidity
     tasks:
       - Read an SSIM schedule date such as 01JAN26 as an ISO date, in a century the caller states with yearWindow
       - Write an ISO date as an SSIM date, refusing a year outside the window
       - Check whether a value is a valid SSIM date
       - Know that the month letters are a fixed English code, never read through Intl, and that lower case and other languages are not read
+      - Read a METAR, SPECI or TAF time group such as 302350Z as an instant, against the time the report was received
+      - Read a NOTAM item B) or C) value as an instant, an estimate (EST) or permanent (PERM), in a century the caller states
+      - Check whether a METAR time group or a NOTAM validity is valid
 
   - name: GMT Transport
     slug: gmt-transport

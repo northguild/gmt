@@ -19,6 +19,18 @@ import {
   permalinkOf as stackPermalinkOf,
 } from "./terrestrial-time-stack";
 import {
+  METAR_PRESETS,
+  NOTAM_PRESETS,
+  blankNotam,
+  blankState,
+  notamPermalinkOf,
+  notamPresetState,
+  permalinkOf as reportPermalinkOf,
+  presetState as reportPresetState,
+  readArgs as readReportArgs,
+  readNotamArgs,
+} from "./report-time-resolver";
+import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,
   handoffHref,
@@ -279,6 +291,65 @@ describe("widget permalinks", () => {
       expect(seedFromLocation("ssim", url.slice(url.indexOf("?")))).toEqual(
         state,
       );
+    }
+  });
+
+  it("round-trips every Report Time Resolver preset, and a custom state with a blank reference and window", () => {
+    const via = (args: Record<string, unknown>) => {
+      const url = encodeWidgetPermalink("reporttime", args);
+      expect(url).toContain("/tools/report-time-resolver/");
+      return seedFromLocation("reporttime", url.slice(url.indexOf("?")));
+    };
+    for (const p of METAR_PRESETS) {
+      const state = reportPresetState(p);
+      expect(readReportArgs(via(reportPermalinkOf(state)) as never)).toEqual(
+        state,
+      );
+    }
+    for (const p of NOTAM_PRESETS) {
+      const state = notamPresetState(p);
+      expect(readNotamArgs(via(notamPermalinkOf(state)) as never)).toEqual(
+        state,
+      );
+    }
+    const metar = { ...blankState(), group: "302350Z", reference: "" };
+    const notam = { ...blankNotam(), itemB: "2506151200", itemC: "2506160000" };
+    const seed = via({
+      ...reportPermalinkOf(metar),
+      ...notamPermalinkOf(notam),
+    });
+    expect(seed).toEqual({
+      group: "302350Z",
+      ref: "",
+      b: "2506151200",
+      c: "2506160000",
+      window: "",
+    });
+    expect(readReportArgs(seed as never)).toEqual(metar);
+    expect(readNotamArgs(seed as never)).toEqual(notam);
+    const shifted = {
+      ...blankState(),
+      group: "302350Z",
+      reference: "x",
+      shift: -45,
+    };
+    expect(readReportArgs(via(reportPermalinkOf(shifted)) as never)).toEqual(
+      shifted,
+    );
+  });
+
+  it("round-trips a SWIFT read: a preset name, a typed value and a cleared box", () => {
+    for (const state of [
+      { preset: "nineteen", writePreset: "round-trip" },
+      { value: "350615", date: "2024-06-15" },
+      { value: "", date: "" },
+      { preset: "twenty", date: "" },
+    ]) {
+      const url = encodeWidgetPermalink("swiftdate", state);
+      expect(url).toContain("/tools/swift-value-date-reader/");
+      expect(
+        seedFromLocation("swiftdate", url.slice(url.indexOf("?"))),
+      ).toEqual(state);
     }
   });
 

@@ -108,7 +108,10 @@ function libraryFiles(): [string, string][] {
   );
 }
 
-/** Right-hand sides of every named type in the source tree (`interface` maps to an object literal). */
+/**
+ * Right-hand sides of every named type in the source tree (`interface` maps to an object literal),
+ * with comments removed, since a JSDoc line on a union member would otherwise be read as a member.
+ */
 function namedTypes(): Map<string, string> {
   const types = new Map<string, string>();
   for (const [, source] of libraryFiles()) {
@@ -119,7 +122,8 @@ function namedTypes(): Map<string, string> {
       /^(?:export )?type (\w+)(?:<[^=]*>)? =/gm,
     )) {
       const start = match.index + match[0].length;
-      const rhs = splitTopLevel(source.slice(start), ";")[0] ?? "";
+      const rhs =
+        splitTopLevel(withoutComments(source.slice(start)), ";")[0] ?? "";
       types.set(match[1], rhs);
     }
   }

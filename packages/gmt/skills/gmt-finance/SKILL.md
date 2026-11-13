@@ -1,11 +1,13 @@
 ---
 name: gmt-finance
 description: >
-  Financial messaging timestamps in @northguild/gmt/finance — the FIX
+  Financial messaging dates and timestamps in @northguild/gmt/finance — the FIX
   UTCTimestamp (YYYYMMDD-HH:MM:SS[.sss*]) read, written and checked:
   parseFixUtcTimestamp (precision from the digit count, picoseconds apart,
   second 60 only on a real leap second), formatFixUtcTimestamp (cut, never
-  rounded, at a counterparty's precision) and isValidFixUtcTimestamp. Reads
+  rounded, at a counterparty's precision) and isValidFixUtcTimestamp; and the
+  SWIFT MT value date (YYMMDD): parseSwiftDate, formatSwiftDate and
+  isValidSwiftDate, in the century SWIFT's own rule gives. Reads
   the docs site (llms.txt) and the installed package's JSDoc; a routing
   pointer, not an API dump.
 sources:
@@ -24,7 +26,8 @@ metadata:
 
 Use this skill when the task is reading or writing a timestamp from a FIX
 message: `SendingTime`, `TransactTime` and every other field of the
-`UTCTimestamp` data type. TAI and the leap-second table are in the
+`UTCTimestamp` data type, and the six-digit value date of a SWIFT MT message
+(`30` and `32A`). TAI and the leap-second table are in the
 `gmt-integration` skill.
 
 ## When to load
@@ -32,6 +35,8 @@ message: `SendingTime`, `TransactTime` and every other field of the
 - The user has a FIX `UTCTimestamp` such as `20240615-14:30:00.123456` to read,
   or an instant to write in that form at a counterparty's precision.
 - The user asks whether a FIX timestamp is valid, or what precision it states.
+- The user has a SWIFT MT value date such as `240615` (`YYMMDD`) to read, or an
+  ISO date to write in that form, or asks which century a `YY` means.
 
 ## Core rules
 
@@ -75,7 +80,28 @@ message: `SendingTime`, `TransactTime` and every other field of the
    exactly when the parser returns a value, and it narrows `unknown` to `string`.
    Other widths are a bilateral agreement the value does not carry, so the
    parser returns `null` for them.
-6. **Read the docs site.** This skill is a routing pointer. The map of the
+6. **A SWIFT value date is `YYMMDD`, and SWIFT chooses the century.** For
+   field 32A of MT 910, and fields 30 and 32A of category 1 and 2 messages
+   other than n92, n95 and n96, a `YY` from 01 to 60 is 20`YY`, 2001 to 2060;
+   any other `YY`, `00` and `61` to `99` included, is refused (error T50).
+   There are no options and no window to pass. The day is checked in the year
+   the rule gives, so `040229` is real and `050229` is not.
+   ```typescript
+   parseSwiftDate("240615"); // "2024-06-15"
+   parseSwiftDate("990615"); // "": YY 99 is not from 01 to 60
+   parseSwiftDate("040229"); // "2004-02-29"
+   parseSwiftDate("750101"); // "": YY 75 is not from 01 to 60
+   formatSwiftDate("2024-06-15"); // "240615"
+   formatSwiftDate("1924-06-15"); // "": its digits would read back as 2024
+   isValidSwiftDate("750101"); // false
+   ```
+   - Pass the bare six digits. A tag, currency, amount or space returns `""`;
+     splitting a field into subfields is yours.
+   - `formatSwiftDate` takes an ISO calendar date. A date-time returns `""`:
+     take the date first, in the zone you mean.
+   - Other six-digit dates, such as field 31D of an MT 700, are not covered by
+     SWIFT's value-date rule: read them with `parseDateWithPattern`.
+7. **Read the docs site.** This skill is a routing pointer. The map of the
    docs is `https://northguild.dev/gmt/llms.txt`, and each page has a `.md`
    twin that holds its text. The JSDoc ships in the installed package:
    `node_modules/@northguild/gmt/dist/**/*.d.ts`.
@@ -85,6 +111,8 @@ message: `SendingTime`, `TransactTime` and every other field of the
 - **FIX `UTCTimestamp`** (`@northguild/gmt/finance`): `parseFixUtcTimestamp`,
   `formatFixUtcTimestamp`, `isValidFixUtcTimestamp`, types `FixPrecision`,
   `FixUtcTimestamp`
+- **SWIFT MT value date** (`@northguild/gmt/finance`): `parseSwiftDate`,
+  `formatSwiftDate`, `isValidSwiftDate`
 
 ## References
 

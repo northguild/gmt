@@ -214,12 +214,25 @@ export {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,
 } from "./englishCalendarNames";
+export { readMetarTimeFields, type MetarTimeFields } from "./metarTime";
 export {
   readSsimDateFields,
   SSIM_MONTH_LETTERS,
   type SsimDateFields,
   writeSsimDate,
 } from "./ssimDate";
+export {
+  type NotamDateTimeFields,
+  readNotamDateTimeFields,
+} from "./notamDateTime";
+export {
+  readSwiftDateFields,
+  SWIFT_VALUE_DATE_FIRST_YEAR,
+  SWIFT_VALUE_DATE_LAST_YEAR,
+  type SwiftDateFields,
+  swiftValueDateYear,
+  writeSwiftDate,
+} from "./swiftDate";
 export { defaultFractionalDigits } from "./defaultFractionalDigits";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { resolveMinimalDaysInFirstWeek } from "./resolveMinimalDaysInFirstWeek";

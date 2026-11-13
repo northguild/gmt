@@ -460,6 +460,39 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showSwiftValueDateReader", () => {
+    const schema = (
+      tools.showSwiftValueDateReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value, a date or both", async () => {
+      for (const input of [
+        { value: "350615" },
+        { date: "2024-06-15" },
+        { value: "350615", date: "2024-06-15" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showSwiftValueDateReader", input)).toMatchObject({
+          ok: true,
+          widget: "swift-value-date-reader",
+        });
+      }
+    });
+
+    it("needs a value or a date", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+    });
+
+    it("refuses a value over 16 characters and a date over 32", () => {
+      expect(schema.safeParse({ value: "9".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ date: "x".repeat(33) }).success).toBe(false);
+    });
+  });
+
   describe("showSsimDateReader", () => {
     const schema = (
       tools.showSsimDateReader as unknown as {
@@ -516,6 +549,56 @@ describe("worker tool execute", () => {
     it("does not default the window", () => {
       expect(schema.safeParse({ value: "01JAN26" }).data).toEqual({
         value: "01JAN26",
+      });
+    });
+  });
+
+  describe("showReportTimeResolver", () => {
+    const schema = (
+      tools.showReportTimeResolver as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts either section, or both, with a window as a year or rolling", async () => {
+      for (const input of [
+        { group: "302350Z", reference: "2024-07-01T00:05:00Z" },
+        { group: "302350Z" },
+        { itemB: "2506151200", itemC: "PERM", yearWindow: 2000 },
+        { itemB: "2506151200", yearWindow: "rolling" },
+        { metarPreset: "month-end", notamPreset: "permanent" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showReportTimeResolver", input)).toMatchObject({
+          ok: true,
+          widget: "report-time-resolver",
+        });
+      }
+    });
+
+    it("refuses a window that is not a year or rolling, an unknown field and values over their caps", () => {
+      expect(schema.safeParse({ yearWindow: "now" }).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: 1.5 }).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: -1 }).success).toBe(false);
+      expect(schema.safeParse({ now: true }).success).toBe(false);
+      expect(schema.safeParse({ group: "a".repeat(16) }).success).toBe(true);
+      expect(schema.safeParse({ group: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ itemB: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ itemC: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ reference: "a".repeat(64) }).success).toBe(
+        true,
+      );
+      expect(schema.safeParse({ reference: "a".repeat(65) }).success).toBe(
+        false,
+      );
+    });
+
+    it("defaults nothing: no reference, no window", () => {
+      expect(schema.safeParse({ group: "302350Z" }).data).toEqual({
+        group: "302350Z",
       });
     });
   });

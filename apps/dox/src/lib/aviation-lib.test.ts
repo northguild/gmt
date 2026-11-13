@@ -12,6 +12,22 @@ const NAMES = [
   "parseDateWithPattern",
   "getLocaleMonthNames",
   "isValidDate",
+  "parseMetarTime",
+  "parseNotamValidity",
+  "isValidMetarTime",
+  "isValidNotamValidity",
+  "addUtc",
+  "startOfUtc",
+  "diffUtc",
+  "diffUtcAsDuration",
+  "isBeforeUtc",
+  "areUtcEqual",
+  "formatUtc",
+  "toOffsetInstant",
+  "fromOffsetInstant",
+  "spanNs",
+  "isValidInstant",
+  "formatDuration",
 ];
 
 describe("loadAviationLib", () => {

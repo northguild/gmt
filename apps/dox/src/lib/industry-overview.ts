@@ -397,7 +397,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
   },
   finance: {
     about:
-      "Trading and payment messages carry timestamps in their own formats, not the ISO date-time format. A FIX timestamp states its precision by how many fraction digits it has, and may name a leap second. This layer reads and writes those values as standard instants, keeping what the digits say.",
+      "Trading and payment messages carry timestamps in their own formats, not the ISO date-time format. A FIX timestamp states its precision by how many fraction digits it has, and may name a leap second. This layer reads and writes those values as standard instants, keeping what the digits say. A SWIFT value date has a two-digit year, and SWIFT states its century by rule, so it needs no window from you.",
     guideTitle: "Finance: Message Timestamps",
     solves: [
       {
@@ -443,6 +443,22 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
           {
             label: "scenario",
             href: "/scenarios/second-sixty-on-an-ordinary-day/",
+          },
+        ],
+      },
+      {
+        problem: "A two-digit value date lands in the wrong century.",
+        answer:
+          "{{parseSwiftDate}} applies SWIFT's own century rule, and refuses a year past the end of SWIFT's range, as SWIFT does.",
+        see: [
+          { label: "tool", href: "/tools/swift-value-date-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-value-date-in-the-wrong-century/",
           },
         ],
       },
@@ -574,6 +590,39 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
           {
             label: "guide",
             href: "/guides/industries/aviation-message-times/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem:
+          "A weather report names a day and no month, and the wrong month is chosen.",
+        answer:
+          "A METAR time needs a reference instant you state, and is never read against now. {{parseMetarTime}} chooses the nearest month that has the day, and {{isValidMetarTime}} is false when the reference is missing, so a stored report reads the same every month.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-metar-from-last-month/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem: "A NOTAM end of PERM is stored as a date.",
+        answer:
+          "PERM is a state, not a far-future date, and EST keeps its instant. {{parseNotamValidity}} returns each as it is, and {{isValidNotamValidity}} checks an item against the window you state.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/perm-read-as-a-date/",
           },
           { label: "mistakes", href: "/mistakes/aviation/" },
         ],

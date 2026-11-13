@@ -92,6 +92,8 @@ import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
 import type { FixTimestampReaderArgs } from "~/lib/fix-timestamp-reader-mount";
 import type { FhirArgs } from "~/lib/fhir-date-checker-mount";
 import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
+import type { ReportTimeResolverArgs } from "~/lib/report-time-resolver-mount";
+import type { SwiftValueDateReaderArgs } from "~/lib/swift-value-date-reader-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -135,11 +137,13 @@ import {
   showTai64nLogReaderInput,
   showFixTimestampReaderInput,
   showSsimDateReaderInput,
+  showReportTimeResolverInput,
   showJulianDayCounterInput,
   showDoublePrecisionMeterInput,
   showCcsdsTimeCodeDecoderInput,
   showCodeBDayRulerInput,
   showFhirDateCheckerInput,
+  showSwiftValueDateReaderInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -1035,6 +1039,77 @@ const ssimEntry = defineWidget<SsimDateReaderArgs>({
     })),
 });
 
+const reportTimeEntry = defineWidget<ReportTimeResolverArgs>({
+  title: "Report Time Resolver",
+  kind: "reporttime",
+  parse: (input) => {
+    const result = showReportTimeResolverInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const {
+      group,
+      reference,
+      itemB,
+      itemC,
+      yearWindow,
+      metarPreset,
+      notamPreset,
+    } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(metarPreset === undefined ? {} : { metarPreset }),
+        ...(notamPreset === undefined ? {} : { notamPreset }),
+        ...(group === undefined ? {} : { group }),
+        ...(reference === undefined ? {} : { ref: reference }),
+        ...(itemB === undefined ? {} : { b: itemB }),
+        ...(itemC === undefined ? {} : { c: itemC }),
+        ...(yearWindow === undefined ? {} : { window: String(yearWindow) }),
+      },
+    };
+  },
+  /* No `validate`: a group the library does not read is this widget's own NO SIGNAL state. A call with no `reference` opens with Reference blank and a call with no `yearWindow` opens with the window blank. */
+  load: () =>
+    import("~/lib/report-time-resolver-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderReportTimeResolverTemplate(idPrefix, args),
+      mount: m.mountReportTimeResolver,
+    })),
+});
+
+const swiftDateEntry = defineWidget<SwiftValueDateReaderArgs>({
+  title: "SWIFT Value Date Reader",
+  kind: "swiftdate",
+  parse: (input) => {
+    const result = showSwiftValueDateReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { value, date } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(value === undefined ? {} : { value }),
+        ...(date === undefined ? {} : { date }),
+      },
+    };
+  },
+  /* No `validate`: a value the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/swift-value-date-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderSwiftValueDateReaderTemplate(idPrefix, args),
+      mount: m.mountSwiftValueDateReader,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1545,7 +1620,9 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showTai64nLogReader: tai64nEntry,
   showFixTimestampReader: fixTimestampEntry,
   showSsimDateReader: ssimEntry,
+  showReportTimeResolver: reportTimeEntry,
   showFhirDateChecker: fhirEntry,
+  showSwiftValueDateReader: swiftDateEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,
   showDoublePrecisionMeter: doublePrecisionMeterEntry,

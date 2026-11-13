@@ -172,6 +172,14 @@ const PAGES = [
   },
   { slug: "tool-code-b-day-ruler", path: "/tools/code-b-day-ruler/" },
   { slug: "tool-ssim-date-reader", path: "/tools/ssim-date-reader/" },
+  {
+    slug: "tool-report-time-resolver",
+    path: "/tools/report-time-resolver/",
+  },
+  {
+    slug: "tool-swift-value-date-reader",
+    path: "/tools/swift-value-date-reader/",
+  },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",

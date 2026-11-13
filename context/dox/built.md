@@ -31,6 +31,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   `scripts/probe-brains.ts` and real readers spend quota.
 - **React lives only inside `/dox`.** Every other page is Astro plus plain-DOM modules.
 - **Restyle native controls; never rebuild them from `div`s.**
+- **No `:has()` on a box that holds the whole page** (`:root`, `html`, `body`, `.main-frame`,
+  `.content-panel`) unless an attribute on `<html>` gates it first. Chrome then re-styles the
+  whole page on every DOM change inside it. On the landing that was about 27 full style passes
+  while the globe's clock list mounted, most of the mobile Lighthouse TBT. Key a page-level rule
+  on Starlight's `data-has-hero`, `data-has-sidebar` or `data-has-toc` instead, or put
+  `[data-has-sidebar]` in front of the `:has()` (`dox.css`).
+- **Widget CSS reaches only the pages that use it.** `pruneWidgetCss()`
+  (`src/lib/prune-widget-css.ts`, on `astro:build:done`) drops a widget's stylesheet link and
+  its inline `<style>` block from every page that neither shows the widget nor loads a script
+  that names its classes. Astro inlines some widget sheets into every page's head with no
+  `_astro/` file behind them, so for those blocks a dynamic `import()` or a chunk in Vite's
+  preload list counts as use too.
 - **Every tier after Tier 1 stays droppable**, and the docs work with the chat deleted.
 - **No `octane` or `@octanejs/*`**, anywhere.
 - **Minimum rendered text size 12px (0.75rem)**; enforced by `font-floor.test.ts`.
@@ -1298,6 +1310,7 @@ list of their own. A widget root is `data-widget="<tool slug>"` (`widget()` in
 | `hero`                                                      | A hero plate row (`plates`, `instantHero`, `fuseStatus`): the result that must hold still                        | `readout-still`                                                   |
 | `drawn`                                                     | A drawn part whose marks move with the value: a lane, plot, axis or ledger row. Its box is measured; its insides are not | `readout-still`                                                   |
 | `moving`                                                    | A part whose own box moves with the value by design: the leap-second chart's date cursor (guide, dot, pin and date tag, not the band's tag). `readout-still` leaves its box and insides out of the comparison| `readout-still` (`moving`)                                        |
+| `notam`                                                   | The Report Time Resolver's NOTAM section: its presets, badges and call lines change it by design, so `readout-still` leaves the section and its insides out; its two plates carry `hero` and are measured, and section 1 is checked against every NOTAM preset | `readout-still` (`moving`, with the plates as `hero`) |
 | `track`                                                     | The lane a pointer drag runs along (`ledgerLane`, `gnssLane`, the punctuality tolerance track, `drawn track`)    | `readout-still` (`track`)                                         |
 | `rider`                                                     | The value chip a `<gmt-range>` draws on its thumb (`range()` writes it on every range)                           | `readout-still` (rows with `riders: true`: its left may move)     |
 | `hold`                                                      | A hold: a live wrapper (its first child) over hidden sizers, so the height is the longest text                   | `readout-still`                                                   |
@@ -1834,7 +1847,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     and an empty month keeps its reserved line. The Comparator's cells are two lines and the table
     stacks under 34rem. The rule and holiday lists carry `data-grow="slot"`. The Builder's call
     frame reserves its worst case through `ruleCallSizerText` and `pairBound`, and Moving Feasts
-    holds its nth-note and call frame with sizers, so no readout resizes. The Comparator's matrix, before the library answers, is a skeleton: the default span's year cards (and the padding rows up to `MAX_YEARS`) with one blank block per holiday per column, an `aria-busy` table and a visible Loading status laid over it. Moving Feasts' signal plates are a wrapping flex row, each plate sized by hidden twins of the widest ISO date, so a date never narrows its neighbour. A day outside the shown month is drawn bare (a dashed hairline, no fill, no mark) and is left out of the week strip's marked list.
+    holds its nth-note and call frame with sizers, so no readout resizes. The Comparator's matrix, before the library answers, is a skeleton: the default span's year cards (and the padding rows up to `MAX_YEARS`) with one blank block per holiday per column, an `aria-busy` table and a visible Loading status laid over it. Moving Feasts' signal plates are a wrapping flex row, each plate sized by hidden twins of the widest ISO date, so a date never narrows its neighbour. A signal plate's value (`signal-plates.module.css`, shared by the SSIM Date Reader, Observance Comparator, Leap-Day Birthday, Moving Feasts and Report Time Resolver) has no fixed height and one grid track as wide as the value (`minmax(0, 1fr)`): a fixed height with hidden overflow cut the bottoms of `NO SIGNAL` where its bracket glyphs come from a taller fallback face, and an `auto` track as wide as the widest ghost made the value scroll sideways, or draw a classic scrollbar over its text (WebKit), when the text shown fitted. The ghosts are `overflow: clip`, so they ask the plate for room and are never scrollable overflow. The sentinel's size is `--value-signal`, not a `font-size` set from another sheet, because the shared rule wins on specificity; a tool that shrinks `--value-live` sets `--value-signal: var(--value-live)` with it, so a live plate and a `NO SIGNAL` one are the same height. A value wider than its plate (the nanosecond reference at 320px) scrolls sideways, and `scroll-regions.ts` gives it a tab stop only while it overflows (`data-scrolls`), because a scroller the keyboard cannot reach hides its text. It gets no name, because a screen reader reads the whole value anyway and a name would be read in its place. A change here must not give the value a fixed height without a gate that fails on clipped ink. A day outside the shown month is drawn bare (a dashed hairline, no fill, no mark) and is left out of the week strip's marked list.
   - **Links and notes.** The Builder's compare link appears only for a valid `fixed` rule
     (`compareHandoffHref` asks the library). The Comparator's `holiday-note` says which seeded
     holidays are not dates. The Comparator's permalink adds a `year` key and repeatable custom
@@ -2696,8 +2709,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     group, fourth after API Reference, and each namespace index under `/reference/` keeps a one-line
     pointer. `space` is never an industry, area, kind or namespace name, because a planned spatial
     expansion takes the word.
-- **Finance** (FIN-95): one tool, the **FIX Timestamp Reader** (`/tools/fix-timestamp-reader/`,
-  `fixstamp`, finance). A pasted FIX `UTCTimestamp` is read by `parseFixUtcTimestamp` and
+- **Finance** (FIN-95, FIN-96): two tools, the **FIX Timestamp Reader** (FIN-95,
+  `/tools/fix-timestamp-reader/`, `fixstamp`, finance) and the **SWIFT Value Date Reader** (below). A pasted FIX `UTCTimestamp` is read by `parseFixUtcTimestamp` and
   `isValidFixUtcTimestamp`, both called on the text as typed: the instant, the precision the digit
   count states, whether second 60 is an inserted leap second, and the picosecond digits apart from
   the instant. A second section writes one instant at all five precisions with
@@ -2707,7 +2720,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `fix-timestamp-reader-prose.test.ts` through `timescale`, so the check never enters the tool.
   - **The loader is `finance-lib.ts`** (`finance/parse`, `finance/format` and `finance/validate`
     by `GMT_MODULES`), with its types and `FIX_PRECISIONS` in `finance-widgets.ts`. They are named
-    for Finance and not for FIX because FIN-96's SWIFT Value Date Reader extends both. There is no
+    for Finance and not for FIX because the SWIFT Value Date Reader shares them (it adds the three
+    SWIFT names and `isValidDate` from `plain/validate` to `FinanceLib`). There is no
     `widgets/families/finance/` until a second shared piece needs one.
   - **The site holds no grammar, width table or leap-second table.** `fix-picture.ts` probes the
     library once per reading (the base and the widths come from formatting a fixed instant at each
@@ -2749,7 +2763,53 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Permalink `fixstamp`** at `/tools/fix-timestamp-reader/`: `stamp` and `write`, or `preset` and
     `writePreset` while a box matches a preset. The chat tool is `showFixTimestampReader`
     (`stamp`, `instant`; the registry maps `instant` to `write`), appended to `DOX_TOOL_DOCS`.
-- **Aviation** (AV-97): one tool, the **SSIM Date Reader** (`/tools/ssim-date-reader/`, `ssim`,
+- **SWIFT Value Date Reader** (FIN-96, `/tools/swift-value-date-reader/`, `swiftdate`, finance).
+  A pasted SWIFT MT value date (`YYMMDD`, field 30 or 32A) is read by `parseSwiftDate` and
+  `isValidSwiftDate`, both called on the text as typed: the date, the year SWIFT's rule gives, and
+  why a text is refused. A table shows the three bands of the rule, a second section writes an ISO
+  date with `formatSwiftDate` and reads it back, and "Use the date read above" copies the read
+  date into it. It shares `finance-lib.ts` and `FinanceLib` with the FIX reader, and imports
+  `plain/validate` for `isValidDate` only, as Core does. Finance `drawsOn` stays `[]`.
+  - **The site holds no SWIFT rule, range or band edge.** `deriveBands` calls
+    `parseSwiftDate(YY + "0101")` for all 100 values of `YY` at mount and groups equal outcomes
+    into runs: `01–60` read as 2001–2060, then the refused `00` and `61–99`, by `YY`. The first
+    and last years shown are the range. The rule's text from §6.3.1 and §6.3.6 of SWIFT's
+    Standards MT General Information (November 2025) is a quoted citation, never executed. A
+    change to the range moves the table, and `swift-value-date-reader-prose.test.ts` holds the
+    page's prose to the library.
+  - **T50 follows any refused text of exactly six characters** (MT 103 field 32A and General
+    Information §6.3.6: T50 follows any `<DATE2>` date error). A text of another length shows no
+    code, because it never reached the date check.
+  - **A refusal names the band, not a year the site computed.** The reason is the first probe
+    the library accepts, in this order: the `YY` is not two ASCII digits, the `YY` is in a
+    refused band, the month is not 01 to 12 (`YYMM01`), the day is not 01 to 31 (`YY01DD`),
+    otherwise the day does not exist in that month. A refused 29 February names the year the
+    library gave for `YY + "0201"`. The site does no leap-year arithmetic.
+  - **A refused write** reads "outside 2001 to 2060, would read back as another year", with the
+    range from the bands. The write box takes what `isValidDate` takes; a date-time is told to
+    take the date first. The concrete `1924` case appears only as a pasted call in the guide and
+    the mistakes page.
+  - **The reader is SWIFT-only.** The comparison with a home-made cut-off lives in the scenario
+    and the mistakes page, which use `parseDateWithPattern` with `yearWindow: 1930`: `350615`
+    reads as 1935 there, and `750615` is accepted.
+  - **As the Aviation reader, the value is never trimmed, upper-cased or repaired** before a call.
+    An empty box reads "nothing typed" and makes no call. NO SIGNAL (amber) shows only for a
+    library refusal.
+  - **Permalink `swiftdate`** at `/tools/swift-value-date-reader/`: `value` and `date`, or
+    `preset` and `writePreset` while a box matches a preset. Reading opens on `240615` and
+    writing on `2024-06-15`. The chat tool is `showSwiftValueDateReader` (`value` up to 16
+    characters, `date` up to 32, at least one required), appended to `DOX_TOOL_DOCS`, with a
+    Finance starter on `350615`.
+  - **In `readout-still` by typed values, and in a browser test.** The row has no handle and
+    draws no chart (`scope: "widget"`, `drawn: ["hold"]`, `frame: false`). Every hold reserves its
+    widest text as a hidden ghost twin, and the two plates in a strip are pinned to opposite
+    edges. `swift-value-date-reader-holds.browser.test.ts` (`vitest.browser.config.ts`; Chromium
+    and WebKit) steps every preset and the emptied boxes at 300 px and 1280 px and holds every
+    hold, the plates strip, the band table and each call frame to 0.5 px of the first. Each
+    mount test aborts its controller in `afterEach`; the mount starts no timer.
+  - **Defaults.** Updates are live on `input`; the URL state is `value`, `date`, `preset` and
+    `writePreset`; the guide keeps the title "Finance: Message Timestamps" and its slug.
+- **Aviation** (AV-97, AV-98): two tools, the **SSIM Date Reader** (`/tools/ssim-date-reader/`, `ssim`,
   aviation). An IATA SSIM date (`DDMMMYY`, such as `01JAN26`) is read by `parseSsimDate` and
   `isValidSsimDate` with a window the reader states, beside the locale pattern parser
   (`parseDateWithPattern`, `ddMMMyy`) under a locale the reader picks. Section 2 also tables the
@@ -2793,6 +2853,58 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `showSsimDateReader` (`value`, `yearWindow`, `locale`, `date`; the registry maps `yearWindow`
     to `window`), appended to `DOX_TOOL_DOCS`. A call passes only what the reader gave: never a
     window they did not state, never a locale inferred from a place.
+- **Report Time Resolver** (AV-98, `/tools/report-time-resolver/`, `reporttime`, aviation): section 1
+  reads a METAR, SPECI or TAF group (`DDHHMMZ`) against a reference the reader states with
+  `parseMetarTime` and `isValidMetarTime`, and draws the candidate months on a strip of seven
+  slots; a slider moves the reference across a month end. Section 2 reads NOTAM items B) and C)
+  in a window the reader states with `parseNotamValidity` and `isValidNotamValidity`. The strip
+  adds `addUtc`, `startOfUtc`, `formatUtc`, `diffUtc`, `diffUtcAsDuration`, `formatDuration`,
+  `isBeforeUtc`, `areUtcEqual`, `spanNs`, `toOffsetInstant`, `fromOffsetInstant` and
+  `isValidInstant`. It opens on `month-end` (METAR) and `opadd-estimate` (NOTAM). Its rules:
+  - **The reference is an input like the window.** It is never defaulted, never now, and has no
+    `placeholder`, because a stored report must read the same every month. A chat call with no
+    `reference` opens with Reference blank, and one with no `yearWindow` opens with the window blank.
+  - **The strip is anchored on the base reference's answer, k = -3 to +3, and the slider moves
+    within +/-1 month.** Because of that bound the answer is always on the strip, and nothing but
+    the marks moves during a drag. The slider steps one minute and the typed reference field is the
+    exact control, so a nanosecond tie is reached only through a preset.
+  - **The candidate months are `addUtc` with `"reject"`, and a gap's reason is the `"constrain"`
+    call.** The site never cuts the group into day, hour and minute, and calculates no month, day
+    count or distance.
+  - **A slid reference keeps its offset and drops its zone,** because a zone's offset can change
+    within a month; the hint under the slider says so.
+  - **`EST` and `PERM` in item B) are the library's result plus a neutral note, never `NO SIGNAL`,**
+    because the library did not refuse them.
+  - **There is no B)-against-C) check,** because ordering is out of the library's scope.
+  - **The timeline `mark` takes `emphasis`:** a larger mark inside a ring, so the chosen candidate
+    does not rely on colour (WCAG 1.4.1). It writes `aria-current="true"` and the ring selects on
+    that, so the chosen candidate is exposed to assistive technology and not only drawn with a
+    ring. The mark stays a named `role="img"`.
+  - **Permalink `reporttime`** at `/tools/report-time-resolver/`: `metarPreset` and `notamPreset`
+    while that section matches a preset, else `group`, `ref` and `shift` (written only when not
+    zero, clamped to the slider bounds on load) for section 1 and `b`, `c` and `window` for
+    section 2. Empty `group`, `ref`, `b`, `c` and `window` are real answers and survive the link.
+    The chat tool is `showReportTimeResolver` (`group`, `reference`, `itemB`, `itemC`,
+    `yearWindow`, `metarPreset`, `notamPreset`; the registry maps `reference` to `ref`, `itemB` to
+    `b`, `itemC` to `c` and `yearWindow` to `window`). A call passes only what the reader gave.
+  - **Nothing moves while the reader slides or picks a preset.** The slider's chip reserves its
+    widest reading (`min-inline-size: 22ch`, since the ends of the range read shorter than the
+    middle); the First-year field in rolling mode stays in its place, `inert` and hidden from
+    view, because hiding it would pull the plates up; a plate that goes to `NO SIGNAL` in a slot
+    narrower than 40rem takes the live value's size (`--value-signal`), and its call line under it
+    keeps its own, so a live plate and a `NO SIGNAL` one take the same box at every width; the strip's
+    month labels under a 43rem slot stand on end, centred on their tick, and the axis is fixed at
+    5rem, because flat labels run into each other (wide, they lie flat and the strip leaves the last
+    one room); and
+    the strip table's side and distance cells may break at a space, the Candidate cell stacks its
+    label above its value on a phone, so no cell passes its edge at either width.
+  - **The slider rows use `offset-reference`, not `no-reference`,** because with no reference the
+    slider is disabled and cannot move.
+  - **Gate rows:** `readout-still` drags the slider (`Move the reference`) over four METAR presets and
+    steps every NOTAM preset (`NOTAM preset`) to prove section 1 and the two NOTAM plates (`hero`) hold
+    still, with the rest of section 2 left out (`moving: ["notam"]`) because its badge, reasons and
+    call lines differ in element count from preset to preset; `grow-measure`,
+    `html-diff`, `visual-snapshot` and `contrast-measure` (`dox-chat+reporttime`) list the page.
 - **Cron in a Zone** (CORE-84, `/tools/cron-in-a-zone/`, `cronzone`): a Core tool that draws
   `@northguild/gmt/recurrence`. The reader types a five-field cron line and picks a zone, a year
   and one of that year's clock changes.
