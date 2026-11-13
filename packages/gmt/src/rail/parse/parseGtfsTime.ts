@@ -1,9 +1,5 @@
-import { readGtfsTimeFields, SECONDS_PER_DAY } from "../../internal/gtfsTime";
+import { readGtfsTime } from "../../internal/gtfsTime";
 import type { GtfsTime } from "../../types";
-
-const SECONDS_PER_HOUR = 3600;
-const SECONDS_PER_MINUTE = 60;
-const HOURS_PER_DAY = SECONDS_PER_DAY / SECONDS_PER_HOUR;
 
 /**
  * Reads a GTFS Schedule `Time` value, keeping the days past the service day apart from the time
@@ -30,16 +26,5 @@ const HOURS_PER_DAY = SECONDS_PER_DAY / SECONDS_PER_HOUR;
  * @example parseGtfsTime(" 25:35:00") // null
  */
 export function parseGtfsTime(value: string): GtfsTime | null {
-  if (typeof value !== "string") return null;
-  const fields = readGtfsTimeFields(value);
-  if (fields === null) return null;
-  const { hours, minutes, seconds } = fields;
-  if (minutes > 59 || seconds > 59) return null;
-  return {
-    seconds:
-      (hours % HOURS_PER_DAY) * SECONDS_PER_HOUR +
-      minutes * SECONDS_PER_MINUTE +
-      seconds,
-    dayOverflow: Math.floor(hours / HOURS_PER_DAY),
-  };
+  return readGtfsTime(value);
 }

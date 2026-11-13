@@ -27,7 +27,8 @@ service day, and every trip after midnight moves to the wrong date.
     returns `25:35:00`, never `01:35:00`.
 - `packages/gmt/src/rail/validate/isValidGtfsTime.ts`:
   - `isValidGtfsTime(value: string): boolean` — True exactly when `parseGtfsTime` returns a value;
-    it calls the parser, so the two cannot disagree. False for a value that is not a string.
+    both call `readGtfsTime` in `internal/`, so the two cannot disagree. False for a value that is
+    not a string.
 - `internal/gtfsTime.ts` — the one `H:MM:SS` / `HH:MM:SS` / `HHH:MM:SS` regex. Not in `regex/`: GTFS states the
   format in prose, not as a pattern. It joins `context/coding-standards.md` as a scoped exception,
   as INT-15's EDI grammars did.
@@ -95,7 +96,7 @@ agencies in many countries; the reference was read at gtfs.org.
 | Values past `24:00:00` belong to the service day | GTFS Reference, Field Types, Time: "For times occurring after midnight on the service day, enter the time as a value greater than 24:00:00 in HH:MM:SS"; examples `14:30:00` and `25:35:00` "for 1:35AM on the next day" |
 | The overflow is returned apart and written back | **GMT rule.** The service day is the field's meaning; normalising drops it |
 | The grammar is internal; the public check is `isValidGtfsTime` | **GMT rule**, INT-15's: GTFS states the format in prose and publishes no pattern |
-| `isValidGtfsTime` is true exactly when the parser returns a value | **GMT rule.** The validator calls the parser, so the two cannot disagree |
+| `isValidGtfsTime` is true exactly when the parser returns a value | **GMT rule.** The validator and the parser call one internal core, so the two cannot disagree |
 | Hours up to 999 | **GMT rule**: GTFS states no upper bound, VIA Rail Canada's live feed writes `110:29:00`, and MobilityData's gtfs-validator reads `H:MM:SS`, `HH:MM:SS` or `HHH:MM:SS` |
 | Sentinels | [coding-standards § API Contract](../../coding-standards.md#api-contract) |
 

@@ -113,8 +113,8 @@ formatGtfsTime({ seconds: 86400, dayOverflow: 0 });
 
 ## Checking a value
 
-[`isValidGtfsTime(value)`](/reference/rail/validate/isValidGtfsTime/) calls the parser, so it is
-true exactly when the parser returns a record.
+[`isValidGtfsTime(value)`](/reference/rail/validate/isValidGtfsTime/) reads the value the same way
+the parser does, so it is true exactly when the parser returns a record.
 
 ```typescript
 import { isValidGtfsTime } from "@northguild/gmt/rail/validate";

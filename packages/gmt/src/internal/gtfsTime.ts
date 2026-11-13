@@ -25,8 +25,13 @@
  *   for Temporal to check that a pattern and two integer comparisons do not.
  */
 
+import type { GtfsTime } from "../types";
+
 /** Seconds in a GTFS day: the unit `dayOverflow` counts. */
 export const SECONDS_PER_DAY = 86_400;
+const SECONDS_PER_HOUR = 3600;
+const SECONDS_PER_MINUTE = 60;
+const HOURS_PER_DAY = SECONDS_PER_DAY / SECONDS_PER_HOUR;
 /** The largest hour three digits can write. */
 export const GTFS_MAX_HOUR = 999;
 
@@ -50,6 +55,28 @@ export function readGtfsTimeFields(value: string): GtfsTimeFields | null {
   if (match === null) return null;
   const [, hh, mm, ss] = match as unknown as [string, string, string, string];
   return { hours: Number(hh), minutes: Number(mm), seconds: Number(ss) };
+}
+
+/**
+ * Read a GTFS time as the time of day and the whole days past the service day, or null. The core
+ * of `parseGtfsTime` and `isValidGtfsTime`, so the two cannot disagree.
+ *
+ * @example readGtfsTime("25:35:00") // { seconds: 5700, dayOverflow: 1 }
+ * @example readGtfsTime("25:60:00") // null
+ */
+export function readGtfsTime(value: string): GtfsTime | null {
+  if (typeof value !== "string") return null;
+  const fields = readGtfsTimeFields(value);
+  if (fields === null) return null;
+  const { hours, minutes, seconds } = fields;
+  if (minutes > 59 || seconds > 59) return null;
+  return {
+    seconds:
+      (hours % HOURS_PER_DAY) * SECONDS_PER_HOUR +
+      minutes * SECONDS_PER_MINUTE +
+      seconds,
+    dayOverflow: Math.floor(hours / HOURS_PER_DAY),
+  };
 }
 
 function pad2(n: number): string {

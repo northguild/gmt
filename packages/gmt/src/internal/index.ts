@@ -218,6 +218,7 @@ export { readMetarTimeFields, type MetarTimeFields } from "./metarTime";
 export {
   GTFS_MAX_HOUR,
   type GtfsTimeFields,
+  readGtfsTime,
   readGtfsTimeFields,
   SECONDS_PER_DAY,
   writeGtfsTime,

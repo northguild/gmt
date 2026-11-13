@@ -1,4 +1,35 @@
-import { readGtfsTimeFields, writeGtfsTime } from "./gtfsTime";
+import { readGtfsTime, readGtfsTimeFields, writeGtfsTime } from "./gtfsTime";
+
+describe("readGtfsTime", () => {
+  it.each`
+    value          | expected
+    ${"25:35:00"}  | ${{ seconds: 5700, dayOverflow: 1 }}
+    ${"8:05:00"}   | ${{ seconds: 29100, dayOverflow: 0 }}
+    ${"24:00:00"}  | ${{ seconds: 0, dayOverflow: 1 }}
+    ${"110:29:00"} | ${{ seconds: 52140, dayOverflow: 4 }}
+    ${"999:59:59"} | ${{ seconds: 57599, dayOverflow: 41 }}
+  `(
+    "reads '$value' as a time of day and the days past",
+    ({ value, expected }) => {
+      expect(readGtfsTime(value)).toEqual(expected);
+    },
+  );
+
+  it.each`
+    value
+    ${"25:60:00"}
+    ${"25:35:60"}
+    ${"1000:00:00"}
+    ${" 25:35:00"}
+    ${""}
+  `("returns null for '$value'", ({ value }) => {
+    expect(readGtfsTime(value)).toBeNull();
+  });
+
+  it("returns null for a value that is not a string", () => {
+    expect(readGtfsTime(42 as unknown as string)).toBeNull();
+  });
+});
 
 describe("readGtfsTimeFields", () => {
   it.each`

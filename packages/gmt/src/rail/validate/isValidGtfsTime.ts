@@ -1,4 +1,4 @@
-import { parseGtfsTime } from "../parse/parseGtfsTime";
+import { readGtfsTime } from "../../internal/gtfsTime";
 
 /**
  * Checks a GTFS Schedule `Time` value, including one past `24:00:00`.
@@ -7,7 +7,7 @@ import { parseGtfsTime } from "../parse/parseGtfsTime";
  *   `00`–`59`.
  * - `25:35:00` is valid: 1:35 on the following day, still on the same service day.
  * - Nothing is trimmed, so a space or newline makes it false; an empty field is false.
- * - True exactly when `parseGtfsTime` returns a value.
+ * - True exactly when `parseGtfsTime` returns a value: both read the value with one internal core.
  *
  * Source: GTFS Schedule Reference § Field Types, Time.
  *
@@ -21,5 +21,5 @@ import { parseGtfsTime } from "../parse/parseGtfsTime";
  * @example isValidGtfsTime("1000:00:00") // false
  */
 export function isValidGtfsTime(value: string): boolean {
-  return parseGtfsTime(value) !== null;
+  return readGtfsTime(value) !== null;
 }
