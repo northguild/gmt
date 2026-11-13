@@ -629,6 +629,56 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       },
     ],
   },
+  rail: {
+    about:
+      "Transit agencies publish timetables as GTFS feeds. A stop time there can run past midnight, because a trip that leaves late in the evening still belongs to the day it began. This layer reads, writes and checks that time without folding it back into one day.",
+    guideTitle: "Rail: GTFS Service Days",
+    solves: [
+      {
+        problem: "A trip after midnight lands on the wrong day.",
+        answer:
+          "{{parseGtfsTime}} returns the time of day and the whole days past the service day as two numbers, so a stop after midnight stays with the trip that reaches it.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/rail-gtfs-service-days/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-gtfs-time-folded-into-one-day/",
+          },
+          { label: "tool", href: "/tools/gtfs-time-reader/" },
+        ],
+      },
+      {
+        problem: "A time written back loses its service day.",
+        answer:
+          "{{formatGtfsTime}} writes the hours past midnight as the feed wrote them, so reading its output back gives the same day and time.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/rail-gtfs-service-days/",
+          },
+          { label: "mistakes", href: "/mistakes/rail/" },
+        ],
+      },
+      {
+        problem: "A clock-time check refuses a valid stop time.",
+        answer:
+          "A time of day stops before midnight, and a stop time does not. {{isValidGtfsTime}} accepts any hour the format can hold and refuses minutes or seconds out of range.",
+        see: [
+          { label: "mistakes", href: "/mistakes/rail/" },
+          { label: "tool", href: "/tools/gtfs-time-reader/" },
+        ],
+      },
+      {
+        problem: "A printed timetable time is read in the wrong zone.",
+        answer:
+          "Rail draws on the transport layer. {{scheduleDelivery}} reads a printed departure in the zone you name, and the timetable reader shows a repeated or skipped hour.",
+        see: [{ label: "tool", href: "/tools/timetable-reader/" }],
+      },
+    ],
+  },
 };
 
 /** The `{{name}}` tokens in a pain point's text, in order. */

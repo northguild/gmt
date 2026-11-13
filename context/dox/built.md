@@ -447,7 +447,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     (`industry-<id>`), `guide`, the `namespace` it owns (or none) and the modules it `drawsOn`.
     Workforce owns `workforce`; Transport owns `transport` and draws on `workforce`; Intermodal
     owns `intermodal` and draws on `transport`; GNSS owns `gnss` and draws on `timescale`;
-    Finance owns `finance` and Aviation owns `aviation`, each drawing on nothing;
+    Finance owns `finance` and Aviation owns `aviation`, each drawing on nothing; Rail owns `rail` and
+    draws on `transport`;
     Maritime owns none and draws on `gnss` and `timescale`. `src/lib/industry-tags.ts`, a leaf
     module, reads it (`INDUSTRIES`, `INDUSTRY_TAG_IDS` with `core` first, `OWN_NAMESPACES`,
     `industryOwning`, `drawsOn`, `industriesUsing`, `INDUSTRY_ICON_PATHS`); `core` and `space` are
@@ -4703,10 +4704,37 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `select-tools.test.ts` checks that every starter's own widget is offered for its own
   question. A new tool whose starter misses needs better `Call when` wording, not a larger
   set.
+- **GTFS Time Reader** (RAI-99, `/tools/gtfs-time-reader/`, `gtfstime`, rail). A GTFS stop time
+  (`H:MM:SS` or `HH:MM:SS`, hours 0 to 999) is read by `parseGtfsTime` and `isValidGtfsTime`, both
+  called on the text as typed. Section 1 reads it into seconds and days past the service day, section
+  2 folds it with `isValidTime` from `plain/validate` to show what a clock-time check does to it, and
+  section 3 writes seconds and days back with `formatGtfsTime` and reads them back. "Use the time read
+  above" copies the read record into section 3. It shares `rail-lib.ts` and `RailLib`. Rail `drawsOn`
+  `transport`.
+  - **The site holds no GTFS rule.** Every value, refusal and reason comes from the library or a
+    probe of it (`rail-lib.ts`); the hour limit is not typed on the site. `gtfs-time-reader-prose.test.ts`
+    holds the page's prose to the library.
+  - **No date, and never "since midnight".** The tool says days past the service day and seconds
+    of the time of day. The clock note is always shown: the pair is counted from noon minus 12 hours of
+    the service day, so turning it into a clock time needs the agency's zone, and `gtfsToInstant`
+    (RAI-100, not built) is named in code font with no link and no token.
+  - **An empty box reads "nothing typed" and makes no call.** NO SIGNAL (amber) shows only for a
+    library refusal. A write with days past the limit shows the library's `""` as a refusal.
+  - **Plate strips keep one layout in every state.** The sentinel takes the live size
+    (`--value-signal: var(--value-live)`) because the value's `14ch` floor made a NO SIGNAL plate
+    narrower than a live one; the hero and write strips are two equal grid columns (one column in a
+    narrow slot), not a wrapping flex row sized by contents. A call frame's `pre` scrolls on `x`
+    always, because WebKit's classic scrollbar grew the frame.
+  - **Permalink `gtfstime`** at `/tools/gtfs-time-reader/`: `value`, `seconds`, `dayOverflow`, or `preset` and `writePreset` while a
+    box matches a preset. Reading opens on `25:35:00`. The chat tool is `showGtfsTimeReader`, with
+    a Rail starter on `25:35:00`.
+  - **Tests.** `gtfs-time-reader-holds.browser.test.ts` steps every preset and typed value at 300,
+    390, 1280 and 1440 px in Chromium and WebKit; `gtfs-time-reader-mount.test.tsx` aborts its
+    controller in `afterEach`. The "Use the time read above" button uses the native `disabled`.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
   grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal,
-  GNSS, Finance, Healthcare and Aviation, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
+  GNSS, Finance, Healthcare, Aviation and Rail, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
   and a card's `area` is its tool page's tag. An industry with no tool has no area (Workforce and
   Maritime gain one with their first tool). `startersByArea()` returns the groups in that order.
   `chat-starters.test.ts` asserts each area is an industry with that industry's label and icon,

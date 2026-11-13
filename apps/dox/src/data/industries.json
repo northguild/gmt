@@ -69,5 +69,14 @@
     "guide": "/guides/industries/aviation-message-times/",
     "namespace": "aviation",
     "drawsOn": []
+  },
+  {
+    "id": "rail",
+    "label": "Rail",
+    "definition": "Public transport timetables in GTFS feeds, where a stop time runs past midnight and still belongs to the service day its trip began on.",
+    "icon": "industry-rail",
+    "guide": "/guides/industries/rail-gtfs-service-days/",
+    "namespace": "rail",
+    "drawsOn": ["transport"]
   }
 ]

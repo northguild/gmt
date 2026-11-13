@@ -88,7 +88,8 @@ export type WidgetKind =
   | "dpmeter"
   | "ccsds"
   | "dayruler"
-  | "swiftdate";
+  | "swiftdate"
+  | "gtfstime";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -158,6 +159,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   reporttime: "/tools/report-time-resolver/",
   fhir: "/tools/fhir-date-checker/",
   swiftdate: "/tools/swift-value-date-reader/",
+  gtfstime: "/tools/gtfs-time-reader/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
   dpmeter: "/tools/double-precision-meter/",
@@ -276,6 +278,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   dayruler: new Set(["year", "compare"]),
   // A cleared value or date is a real answer: the link must open cleared, not on the default preset.
   swiftdate: new Set(["value", "date"]),
+  // A cleared time or seconds box is the empty state: the link must open cleared, not on the default preset.
+  gtfstime: new Set(["value", "seconds", "dayOverflow"]),
 };
 
 /**

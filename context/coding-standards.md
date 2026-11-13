@@ -228,6 +228,18 @@ FHIR R4 `date`, `dateTime` and `instant` are profiles of ISO 8601. Temporal read
 
 This prohibition stands for every other function in the library.
 
+### Scoped exception: GTFS Time in `rail/` (RAI-99)
+
+Rules 1 and 3 extend to `parseGtfsTime`, `formatGtfsTime` and `isValidGtfsTime` in `packages/gmt/src/rail/`; rule 2 is replaced. A GTFS Schedule `Time` (`25:35:00`) is not ISO 8601: its hour runs past 23 to name a time after midnight on the same service day. The grammar is fixed, never caller-supplied:
+
+1. One regex, in `internal/gtfsTime.ts`, with a field reader and a writer. No public function slices the string itself. Not in `regex/`: GTFS states the format in prose (Reference § Field Types, Time) and publishes no pattern. The public check is `isValidGtfsTime`, and `regex/` gains nothing.
+2. **No Temporal call, and this is the difference.** A GTFS time names no date, and its hour is allowed past 23, so no time-of-day type holds it: `PlainTime` caps the hour at 23, refusing `25:35:00` as a string or with `"reject"`, and clamping it to `23:35:00` under the default `"constrain"`. There is nothing for Temporal to check that the regex and integer comparisons do not. The regex limits the hour to one to three digits (0–999); the parser compares minutes and seconds against 0–59; the writer checks `seconds` 0–86399, `dayOverflow` a non-negative integer, and the hour it writes at most 999. Turning a GTFS time into an instant is `gtfsToInstant`'s (RAI-100), which does call Temporal, with `"reject"`.
+3. The try-catch and sentinel-return rules above are unchanged. `formatGtfsTime` reads a caller's record and so keeps its try-catch; the parser and the validator make no call that can throw.
+
+**Nothing is trimmed.** GTFS § File Requirements asks producers to remove extra spaces and forbids tabs and line breaks in a value; a value that still carries them returns the sentinel, and the caller's CSV reader removes them.
+
+This prohibition stands for every other function in the library.
+
 ### Calendar-annotated strings are RFC 9557 (E1, E7)
 
 A calendar string is the RFC 9557 form Temporal writes: the ISO 8601 date (or zoned datetime),
@@ -341,7 +353,7 @@ Avoid `while` loops in new code. Prefer `for` loops or array methods (`map`, `fi
 - `plain/` — timezone-free operations (`PlainDate`, `PlainTime`, `PlainDateTime`)
 - `zoned/` — IANA timezone-aware operations (`ZonedDateTime`)
 - Never mix the two in the same function or module.
-- **Core namespaces, industry layers, cross-industry layers.** Core namespaces hold general time primitives anyone uses (`calendar/`, `duration/`, `instant/`, `zoned/`, `timescale/`, `precision/` and the rest). Industry layers are named for an industry and hold its own functions (`transport/`, `intermodal/`, `finance/`, `aviation/`, `healthcare/` and, later, `maritime/` and the rest). A cross-industry layer is a recognised industry domain that other industries draw on: `workforce/` (people's working time, the CORE-76 duty engine) and `gnss/`. A function shared across industries goes in the cross-industry layer for its domain, or in Core if it is truly general — never in a grab-bag "shared" namespace, never in one industry's namespace when other industries also need it, and never in a new namespace that is not a recognised domain.
+- **Core namespaces, industry layers, cross-industry layers.** Core namespaces hold general time primitives anyone uses (`calendar/`, `duration/`, `instant/`, `zoned/`, `timescale/`, `precision/` and the rest). Industry layers are named for an industry and hold its own functions (`transport/`, `intermodal/`, `finance/`, `aviation/`, `healthcare/`, `rail/` and, later, `maritime/` and the rest). A cross-industry layer is a recognised industry domain that other industries draw on: `workforce/` (people's working time, the CORE-76 duty engine) and `gnss/`. A function shared across industries goes in the cross-industry layer for its domain, or in Core if it is truly general — never in a grab-bag "shared" namespace, never in one industry's namespace when other industries also need it, and never in a new namespace that is not a recognised domain.
 - The other namespaces follow the same one-type-per-function rule: `utc/`, `unix/`, `instant/`, `calendar/`, `span/`, `interval/`, `precision/`, `duration/`, `regex/`, `transport/`, `intermodal/`, `finance/`, `workforce/`, `gnss/` (see `packages/gmt/src/`).
 
 ## International authority first

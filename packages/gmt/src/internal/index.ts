@@ -220,6 +220,13 @@ export {
 } from "./englishCalendarNames";
 export { readMetarTimeFields, type MetarTimeFields } from "./metarTime";
 export {
+  GTFS_MAX_HOUR,
+  type GtfsTimeFields,
+  readGtfsTimeFields,
+  SECONDS_PER_DAY,
+  writeGtfsTime,
+} from "./gtfsTime";
+export {
   readSsimDateFields,
   SSIM_MONTH_LETTERS,
   type SsimDateFields,

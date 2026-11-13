@@ -19,6 +19,7 @@ const SKILL_NAMES = [
   "gmt-gnss",
   "gmt-finance",
   "gmt-aviation",
+  "gmt-rail",
   "gmt-transport",
   "gmt-intermodal",
   "gmt-workforce",

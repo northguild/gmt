@@ -1,0 +1,55 @@
+---
+title: GTFS Time Reader
+description: "Paste a GTFS stop time, H:MM:SS with hours up to 999. The tool reads it with parseGtfsTime and isValidGtfsTime, shows the days past the service day, the same text put through a clock-time check, and writes a record back with formatGtfsTime."
+industries: [rail]
+---
+
+import ToolLayout from "../../../components/ToolLayout.astro";
+import GtfsTimeReader from "../../../components/GtfsTimeReader.astro";
+
+<ToolLayout useCase="Transit stop times">
+
+<Fragment slot="keypoint">
+
+A GTFS stop time can run past 24:00:00. `25:35:00` is not an error: it is 1 day past the service day, 01:35:00, and still part of the same service day. A clock-time check refuses it, and a fold into one day loses the day.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A GTFS `arrival_time` or `departure_time` is `H:MM:SS`, counted from the start of the service day, so a trip that runs through midnight keeps counting. Paste one and the tool says what it reads as. [`parseGtfsTime`](/reference/rail/parse/parseGtfsTime/) returns the time of day and the days past the service day, or `null` when the text is not one, and [`isValidGtfsTime`](/reference/rail/validate/isValidGtfsTime/) says whether it is. Everything on the page is what those calls returned. A second section puts the same text through a clock-time check and a fold into one day, and a last section goes the other way with [`formatGtfsTime`](/reference/rail/format/formatGtfsTime/).
+
+</Fragment>
+
+<GtfsTimeReader fullbleed />
+
+<Fragment slot="after">
+
+**A record, not a date.** The library returns seconds into the day and a count of days past the service day. It never names a date, because the start of a service day is set by the agency and its zone. The note under the first section says the same, and names `gtfsToInstant`, planned for a later release, as the call that will turn a record into an instant.
+
+**The fold.** The second section asks [`isValidTime`](/reference/plain/validate/isValidTime/) about the same text and then writes the time of day with the days dropped. A reader that does that agrees with GTFS for every time before 24:00:00 and loses a whole day for every time after it.
+
+**Refusals.** The library gives no reason, so the tool asks again. Spaces around the value are tried first, because GTFS asks the feed to remove them and the reader does not. A text that is exactly one of the presets names its own reason, such as minutes of 60, four hour digits, a missing seconds field, a sign or a fraction. Any other refused text gets the shape rule.
+
+**Writing a record.** `formatGtfsTime` writes two hour digits below 100 and refuses a record it cannot write. The tool says whether the days, the seconds or the hours are the cause by asking the library about the same record with the other part set to zero.
+
+```ts
+import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+import { formatGtfsTime } from "@northguild/gmt/rail/format";
+import { isValidGtfsTime } from "@northguild/gmt/rail/validate";
+import { isValidTime } from "@northguild/gmt/plain/validate";
+
+parseGtfsTime("25:35:00"); // { seconds: 5700, dayOverflow: 1 }
+parseGtfsTime("9:05:00"); // { seconds: 32700, dayOverflow: 0 }
+parseGtfsTime("24:60:00"); // null
+isValidGtfsTime("25:35:00"); // true
+isValidTime("25:35:00"); // false
+formatGtfsTime({ seconds: 5700, dayOverflow: 1 }); // "25:35:00"
+formatGtfsTime({ seconds: 100, dayOverflow: 42 }); // ""
+```
+
+**Worth trying:** [a stop after midnight](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22next-day%22%7D) is valid and a day past the service day; [minute 60](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22bad-minute%22%7D) is refused; and [four hour digits](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22four-digits%22%7D) are refused too, because hours stop at 999. The guide is [Rail: GTFS service days](/guides/industries/rail-gtfs-service-days/), the story is [a GTFS time folded into one day](/scenarios/a-gtfs-time-folded-into-one-day/), and the pitfalls are in [Rail mistakes](/mistakes/rail/).
+
+</Fragment>
+
+</ToolLayout>
