@@ -19,18 +19,8 @@ import { serveStatic } from "./lib/static-server.mjs";
 const dist = distDirOrSkip();
 const EPSILON = 0.5;
 const WIDTHS = [375, 1024, 1440];
-/**
- * Firefox does not launch on macOS 27; it runs in CI, or here when `GMT_PW_FIREFOX_WS` names the
- * run-server (context/dox/built.md, Runbooks).
- */
-const FIREFOX =
-  process.env["CI"] !== undefined ||
-  (process.env["GMT_PW_FIREFOX_WS"] ?? "") !== "";
-const ENGINES: ["chromium" | "firefox" | "webkit"][] = [
-  ["chromium"],
-  ...(FIREFOX ? [["firefox"] as ["firefox"]] : []),
-  ["webkit"],
-];
+/** The engines the CI browser job installs; Firefox runs in the weekly sweep, not here. */
+const ENGINES: ["chromium" | "webkit"][] = [["chromium"], ["webkit"]];
 /** What must hold: the section, the map's frame, the list card, the pin panel and its cells, the legend. */
 const HELD =
   "[data-gate~='us-section'], [data-gate~='map-frame'], [data-gate~='pickcard'], [data-gate~='us-pin'], [data-gate~='us-pin-cell'], ul[aria-label='Map classes']";
