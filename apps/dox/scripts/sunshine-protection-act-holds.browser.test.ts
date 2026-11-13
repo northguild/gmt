@@ -401,6 +401,7 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
       await page.goto(`${base}/check/us-sunshine-protection-act/`);
       await page.getByText("Checking\u2026").waitFor({ state: "hidden" });
       await settle(page);
+      await drawn(page);
       // Flat fills only: the page has no <pattern> at all.
       expect(
         await page.evaluate(
