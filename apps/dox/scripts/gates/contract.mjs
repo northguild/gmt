@@ -48,3 +48,20 @@ export function applyPageContract({
   }
   return wanted;
 }
+
+/**
+ * One shard of a list: sorted, then every entry whose index is `i - 1` modulo `n`. The shards of
+ * one list cover it exactly once. `shard` is `{ i, n }` with `1 <= i <= n`, or null for the whole
+ * sorted list.
+ *
+ * @template T
+ * @param {T[]} list
+ * @param {{ i: number, n: number } | null | undefined} shard
+ * @returns {T[]}
+ */
+export function shardOf(list, shard) {
+  const sorted = [...list].sort();
+  return shard
+    ? sorted.filter((_, idx) => idx % shard.n === shard.i - 1)
+    : sorted;
+}
