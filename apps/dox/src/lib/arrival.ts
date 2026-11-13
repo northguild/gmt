@@ -9,8 +9,12 @@
  *   `run`. If nothing has by `ARRIVAL_FAILSAFE_MS` the script writes `static`, which shows
  *   everything, so a module that never loads cannot hide the buttons.
  * - On the landing it also sets `data-home-carousel="wait"`, so the paged layout is the first
- *   layout. `home-carousel.ts` writes `on` once it has wired the pages; the failsafe removes a
- *   `wait` nothing has replaced.
+ *   layout. `home-carousel.ts` writes `on` once it has wired the pages. At `DOMContentLoaded` it
+ *   removes a `wait` nothing has replaced. That is not a timer: the carousel is a deferred module
+ *   script, and every deferred module has run (or failed) by then, so a slow load keeps the paged
+ *   layout and only a carousel that never ran falls back to the pages in order. A timer fired
+ *   mid-load on a cold cache, while the carousel was still queued behind the globe's modules, and
+ *   switched the landing to the fallback layout.
  * - On every page it listens for `pagereveal`. An arrival through a view transition sets
  *   `data-arrival="transition"`, which keeps the header still; any other load sets `load`, so the
  *   sequencer can tell that the reveal has happened and the header's state is known. A value set
@@ -58,6 +62,7 @@ var p=location.pathname.replace(/\\/(index\\.html)?$/,"");
 if(p!==${site})return;
 d.dataset.entrance="wait";
 d.dataset.homeCarousel="wait";
-setTimeout(function(){if(d.dataset.entrance==="wait")d.dataset.entrance="static";if(d.dataset.homeCarousel==="wait")delete d.dataset.homeCarousel},${ARRIVAL_FAILSAFE_MS});
+setTimeout(function(){if(d.dataset.entrance==="wait")d.dataset.entrance="static"},${ARRIVAL_FAILSAFE_MS});
+window.addEventListener("DOMContentLoaded",function(){if(d.dataset.homeCarousel==="wait")delete d.dataset.homeCarousel});
 })();`;
 }

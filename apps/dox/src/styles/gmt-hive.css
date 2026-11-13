@@ -139,6 +139,22 @@
   white-space: nowrap;
 }
 
+/* Before mount the clock and the badge hold their places unseen (HeaderClock.tsx,
+   DoxPage.tsx): the server cannot know the reader's zone or which Worker the
+   page talks to. The strip is its full height from the first paint, so the
+   chat under it never moves; the values fade in where they will sit. */
+.gmt-hive-now[data-pending],
+.gmt-hive-env[data-pending] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gmt-hive-now,
+  .gmt-hive-env {
+    transition: opacity var(--gmt-duration-fast) var(--gmt-easing);
+  }
+}
+
 /* Amber for local, because the site reserves `--gmt-signal` for "this is not
    the real thing" states and a Worker on your laptop is exactly that. Spring
    green for the deployed one: the same colour the design system already uses

@@ -43,8 +43,9 @@ import { isSameWidget, resolveWidget } from "./widget-registry";
  * `window.location` made the server render one value and the client render
  * another, which React reports as a hydration mismatch (#418) — this is
  * client-only state, so it has to arrive in a second pass. `null` is the
- * pre-mount state and renders nothing, which is also why the badge cannot
- * flicker from the wrong label to the right one. */
+ * pre-mount state: the badge holds its place, unseen and hidden from assistive
+ * tech, so the strip keeps its height and the chat under it never moves, and
+ * the label shows only once it is known. */
 type Environment = "local" | "live";
 
 function useEnvironment(): Environment | null {
@@ -180,19 +181,22 @@ export default function DoxPage() {
           {/* The reader's local time, in the app's date format. */}
           <HeaderClock />
           {/* Standing status rather than a control, so it keeps the corner. */}
-          {environment && (
-            <span
-              className="gmt-hive-env"
-              data-env={environment}
-              title={
-                environment === "local"
+          {/* One element before and after mount, so the label fades in. */}
+          <span
+            className="gmt-hive-env"
+            data-env={environment ?? undefined}
+            data-pending={environment ? undefined : ""}
+            aria-hidden={environment ? undefined : true}
+            title={
+              environment === null
+                ? undefined
+                : environment === "local"
                   ? "Pointed at a Worker on this machine"
                   : "Pointed at the deployed Worker"
-              }
-            >
-              ● {environment}
-            </span>
-          )}
+            }
+          >
+            ● {environment ?? "live"}
+          </span>
         </div>
       </div>
       <div

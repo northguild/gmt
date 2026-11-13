@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  *
  * The inline head script runs before first paint: it marks a landing load as waiting for the
- * entrance, frees the page after a failsafe, and notes an arrival through a view transition. It
- * runs here against a stand-in window so no listener outlives a test.
+ * entrance, frees the page after a failsafe, drops a carousel mark nothing took over once the
+ * document is parsed, and notes an arrival through a view transition. It runs here against a
+ * stand-in window so no listener outlives a test.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -29,6 +30,8 @@ function transition(): { types: Set<string> } {
 interface Stand {
   /** Delivers `pagereveal` to what the script registered. */
   reveal: (viewTransition: unknown) => void;
+  /** Delivers `DOMContentLoaded`: every deferred module script has run. */
+  parsed: () => void;
   root: HTMLElement;
 }
 
@@ -37,6 +40,7 @@ const ORIGIN = "https://northguild.dev";
 /** Runs the script for `path` on a stand-in window and a fresh root element. */
 function run(base: string, path: string, from: Origin = {}): Stand {
   const listeners: Listener[] = [];
+  const onParsed: (() => void)[] = [];
   const win = {
     navigation:
       from.activation === undefined
@@ -44,6 +48,7 @@ function run(base: string, path: string, from: Origin = {}): Stand {
         : { activation: { from: { url: from.activation } } },
     addEventListener: (name: string, listener: Listener) => {
       if (name === "pagereveal") listeners.push(listener);
+      if (name === "DOMContentLoaded") onParsed.push(listener as () => void);
     },
   };
   const root = document.createElement("html");
@@ -55,6 +60,9 @@ function run(base: string, path: string, from: Origin = {}): Stand {
   return {
     reveal: (viewTransition) => {
       for (const listener of listeners) listener({ viewTransition });
+    },
+    parsed: () => {
+      for (const listener of onParsed) listener();
     },
     root,
   };
@@ -220,16 +228,24 @@ describe("the carousel mark", () => {
     expect(run("/gmt/", "/gmt/").root.dataset["homeCarousel"]).toBe("wait");
   });
 
-  it("removes a mark nothing has replaced when the failsafe fires", () => {
-    const { root } = run("/", "/");
-    vi.advanceTimersByTime(ARRIVAL_FAILSAFE_MS);
+  it("removes a mark nothing has replaced once the document is parsed", () => {
+    const { parsed, root } = run("/", "/");
+    parsed();
     expect(root.dataset["homeCarousel"]).toBe(undefined);
   });
 
-  it("keeps the mark once the carousel has taken it over", () => {
+  it("keeps the mark through a slow load, however long the modules take", () => {
+    // On a cold cache the carousel waits behind the globe's modules. A timer would drop the
+    // paged layout while it waits, and the landing would switch layouts mid-load.
     const { root } = run("/", "/");
+    vi.advanceTimersByTime(ARRIVAL_FAILSAFE_MS * 10);
+    expect(root.dataset["homeCarousel"]).toBe("wait");
+  });
+
+  it("keeps the mark once the carousel has taken it over", () => {
+    const { parsed, root } = run("/", "/");
     root.dataset["homeCarousel"] = "on";
-    vi.advanceTimersByTime(ARRIVAL_FAILSAFE_MS);
+    parsed();
     expect(root.dataset["homeCarousel"]).toBe("on");
   });
 });
