@@ -1,12 +1,11 @@
 import type { Temporal } from "./temporal";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
-import { zonedDateTimeFrom } from "./zonedWallClock";
+import { zonedDateTimeOf } from "./zonedWallClock";
 import { zonedUnitEnd, zonedUnitStart } from "./zonedBucket";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "./resolveWeekStartsOn";
-import { isValidDateTimeUnit } from "../plain/validate";
+import { isDateTimeUnitName } from "./unitNames";
 import type { DateTimeUnit, FractionalDigit } from "../types";
-import { isValidZonedDateTime } from "../zoned/validate";
 import { optionOrDefault } from "./optionOrDefault";
 
 /**
@@ -37,9 +36,10 @@ export function startOrEndOfZoned(
   const resolvedUnit = resolveDateTimeUnit(unit);
   const weekStartsOn = resolveWeekStartsOn(options.weekStartsOn);
 
+  const source = zonedDateTimeOf(value);
   if (
-    !isValidZonedDateTime(value) ||
-    !isValidDateTimeUnit(resolvedUnit) ||
+    source === null ||
+    !isDateTimeUnitName(resolvedUnit) ||
     weekStartsOn === null
   )
     return "";
@@ -52,7 +52,6 @@ export function startOrEndOfZoned(
     : defaultFractionalDigits(resolvedUnit, options.fractionalSecondDigits);
 
   try {
-    const source = zonedDateTimeFrom(value);
     const boundary = isEnd
       ? zonedUnitEnd(source, resolvedUnit, weekStartDay)
       : zonedUnitStart(source, resolvedUnit, weekStartDay);

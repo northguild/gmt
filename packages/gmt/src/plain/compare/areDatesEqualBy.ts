@@ -1,10 +1,9 @@
-import { Temporal } from "../../internal/temporal";
+import type { Temporal } from "../../internal/temporal";
 
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { startOfDate } from "../calculate/startOfDate";
-import { isValidDate } from "../validate";
-import { areDatesEqual } from "./areDatesEqual";
+import { plainDateOf } from "../../internal/inputChecks";
+import { sameDateBy, sameIsoDateLike } from "../../internal/plainDateSteps";
 import { isOptionsArgument } from "../../internal/isObject";
 
 const supported: readonly string[] = ["year", "month", "week", "day"];
@@ -71,9 +70,12 @@ export function areDatesEqualBy(
     const resolvedUnit = resolveDateTimeUnit(unit);
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
+    const date1 = plainDateOf(value1);
+    const date2 = plainDateOf(value2);
+
     if (
-      !isValidDate(value1) ||
-      !isValidDate(value2) ||
+      date1 === null ||
+      date2 === null ||
       !supported.includes(resolvedUnit) ||
       weekStartsOn === null
     ) {
@@ -82,18 +84,16 @@ export function areDatesEqualBy(
 
     // "day" has no coarser boundary to reset, so this is just direct equality.
     if (resolvedUnit === "day") {
-      return areDatesEqual(value1, value2);
+      return sameIsoDateLike(value1, value2);
     }
 
     try {
-      const start1 = startOfDate(value1, resolvedUnit as Temporal.DateUnit, {
+      return sameDateBy(
+        date1,
+        date2,
+        resolvedUnit as Temporal.DateUnit,
         weekStartsOn,
-      });
-      const start2 = startOfDate(value2, resolvedUnit as Temporal.DateUnit, {
-        weekStartsOn,
-      });
-
-      return start1 !== "" && start1 === start2;
+      );
     } catch {
       return false;
     }

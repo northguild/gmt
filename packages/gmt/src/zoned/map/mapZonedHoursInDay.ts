@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { addToZoned, zonedDateTimeFrom, zonedStartOfDay } from "../../internal";
+import { addToZoned, zonedStartOfDay } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return an array of zoned datetime strings representing each hour boundary of the anchor's local day.
@@ -22,12 +22,13 @@ import { addToZoned, zonedDateTimeFrom, zonedStartOfDay } from "../../internal";
  * @example mapZonedHoursInDay("invalid") // []
  */
 export function mapZonedHoursInDay(anchor: string): string[] {
-  if (!isValidZonedDateTime(anchor)) {
+  const zonedDateTime = zonedDateTimeOf(anchor);
+  if (zonedDateTime === null) {
     return [];
   }
 
   try {
-    const start = zonedStartOfDay(zonedDateTimeFrom(anchor));
+    const start = zonedStartOfDay(zonedDateTime);
     const nextDay = zonedStartOfDay(addToZoned(start, { days: 1 }));
 
     const result: string[] = [];

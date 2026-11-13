@@ -1,11 +1,7 @@
+import { dateIntervalOf } from "../../internal/intervalChecks";
+import { calendarDateOf } from "../../internal/calendarDateString";
 import { Temporal } from "../../internal/temporal";
-import {
-  calendarOfAllDateValues,
-  formatDateInCalendar,
-  parseCalendarDateValue,
-} from "../../internal";
-import { isValidCalendarDate } from "../validate";
-import { isValidDateInterval } from "./validate";
+import { calendarOfAllDateValues, formatDateInCalendar } from "../../internal";
 
 /**
  * Split a date interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -66,7 +62,8 @@ export function intervalSplitAtDate(
       return [];
     }
 
-    if (!isValidDateInterval(start, end)) {
+    const bounds = dateIntervalOf(start, end);
+    if (bounds === null) {
       return [];
     }
 
@@ -74,8 +71,17 @@ export function intervalSplitAtDate(
       return [];
     }
 
-    if (!points.every((point) => isValidCalendarDate(point))) {
-      return [];
+    const parsedPoints: Temporal.PlainDate[] = [];
+    for (let index = 0; index < points.length; index++) {
+      if (!(index in points)) {
+        continue;
+      }
+      const point = points[index];
+      const parsedPoint = calendarDateOf(point);
+      if (parsedPoint === null) {
+        return [];
+      }
+      parsedPoints[index] = parsedPoint;
     }
 
     const calendar = calendarOfAllDateValues([start, end, ...points]);
@@ -84,10 +90,7 @@ export function intervalSplitAtDate(
     }
 
     try {
-      const startVal = parseCalendarDateValue(start);
-      const endVal = parseCalendarDateValue(end);
-
-      const parsedPoints = points.map((point) => parseCalendarDateValue(point));
+      const [startVal, endVal] = bounds;
 
       const inRangePoints = parsedPoints.filter(
         (point) =>

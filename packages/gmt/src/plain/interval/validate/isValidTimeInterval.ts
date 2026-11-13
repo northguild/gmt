@@ -1,5 +1,4 @@
-import { Temporal } from "../../../internal/temporal";
-import { isValidTime } from "../../validate";
+import { timeIntervalOf } from "../../../internal/intervalChecks";
 
 /**
  * Return true if `start` and `end` form a valid time interval — both parseable as
@@ -24,22 +23,5 @@ import { isValidTime } from "../../validate";
  * @example isValidTimeInterval("09:00:00[!foo=bar]", "17:00:00") // false (unknown critical annotation)
  */
 export function isValidTimeInterval(start: string, end: string): boolean {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return false;
-  }
-
-  if (!isValidTime(start) || !isValidTime(end)) {
-    return false;
-  }
-
-  try {
-    return (
-      Temporal.PlainTime.compare(
-        Temporal.PlainTime.from(start),
-        Temporal.PlainTime.from(end),
-      ) <= 0
-    );
-  } catch {
-    return false;
-  }
+  return timeIntervalOf(start, end) !== null;
 }

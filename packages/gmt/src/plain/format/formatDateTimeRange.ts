@@ -1,8 +1,7 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -49,7 +48,9 @@ export function formatDateTimeRange(
   locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
-  if (!isValidDateTime(start) || !isValidDateTime(end)) {
+  const startParsed = plainDateTimeOf(start);
+  const endParsed = plainDateTimeOf(end);
+  if (startParsed === null || endParsed === null) {
     return "";
   }
 
@@ -66,9 +67,8 @@ export function formatDateTimeRange(
       locale,
       plainDateTimeFormatOptions(read),
     ).formatRange(
-      Temporal.PlainDateTime.from(start).toZonedDateTime("UTC")
-        .epochMilliseconds,
-      Temporal.PlainDateTime.from(end).toZonedDateTime("UTC").epochMilliseconds,
+      startParsed.toZonedDateTime("UTC").epochMilliseconds,
+      endParsed.toZonedDateTime("UTC").epochMilliseconds,
     );
     return normalizeDateTime(out);
   } catch {

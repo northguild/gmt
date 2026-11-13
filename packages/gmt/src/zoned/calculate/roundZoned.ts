@@ -5,9 +5,8 @@ import {
   isObject,
   resolveDateTimeUnit,
   roundZonedDateTime,
-  zonedDateTimeFrom,
 } from "../../internal";
-import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 const ZONED_ROUNDING_UNITS: readonly unknown[] = [
   "day",
@@ -98,13 +97,13 @@ export function roundZoned(
       options.smallestUnit as unknown,
     );
 
-    if (!isValidZonedDateTime(value)) return "";
+    const source = zonedDateTimeOf(value);
+    if (source === null) return "";
 
     // Temporal ZonedDateTime.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~, « day »)
     if (!isZonedRoundingUnit(smallestUnit)) return "";
 
     try {
-      const source = zonedDateTimeFrom(value);
       const result = roundZonedDateTime(source, {
         smallestUnit,
         roundingIncrement,

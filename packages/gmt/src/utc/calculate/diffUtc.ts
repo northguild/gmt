@@ -2,11 +2,13 @@
 import { Temporal } from "../../internal/temporal";
 import { addToZoned, zonedUntil } from "../../internal";
 import { differenceRecord } from "../../internal/differenceRecord";
-import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
-import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import {
+  largestDateTimeDurationUnit,
+  resolveDurationUnit,
+} from "../../internal/resolveDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -62,18 +64,25 @@ export function diffUtc(
     if (!isOptionsArgument(options)) {
       return null;
     }
-    const validUtc1 = isValidUtc(value1);
-    const validUtc2 = isValidUtc(value2);
+    const instant1 = utcInstantOf(value1);
+    if (instant1 === null) {
+      return null;
+    }
+
+    const instant2 = utcInstantOf(value2);
+    if (instant2 === null) {
+      return null;
+    }
     // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
     const resolved = Array.isArray(units)
       ? units.map((unit) => resolveDurationUnit(unit))
       : resolveDurationUnit(units);
     const isSingleUnit = !Array.isArray(resolved);
     const validUnits = isSingleUnit
-      ? isValidDateTimeDurationUnit(resolved)
-      : resolved.every(isValidDateTimeDurationUnit);
+      ? isDateTimeDurationUnitName(resolved)
+      : resolved.every(isDateTimeDurationUnitName);
 
-    if (!validUtc1 || !validUtc2 || !validUnits) {
+    if (!validUnits) {
       return null;
     }
 
@@ -81,11 +90,8 @@ export function diffUtc(
       // An empty units list names no largest unit, so there is nothing to measure.
       const largestUnit = isSingleUnit
         ? (resolved as DateTimeDurationUnit)
-        : getLargestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
+        : largestDateTimeDurationUnit(resolved as DateTimeDurationUnit[]);
       if (largestUnit === "") return null;
-
-      const instant1 = Temporal.Instant.from(value1);
-      const instant2 = Temporal.Instant.from(value2);
 
       const zdt1 = instant1.toZonedDateTimeISO("UTC");
       const zdt2 = instant2.toZonedDateTimeISO("UTC");

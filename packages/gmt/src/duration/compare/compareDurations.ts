@@ -1,6 +1,6 @@
 import { durationCompare, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
-import { isValidDuration } from "../validate/isValidDuration";
+import { durationOf } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -76,14 +76,20 @@ export function compareDurations(
     return null;
   }
 
-  if (!isValidDuration(a) || !isValidDuration(b)) {
+  const first = durationOf(a);
+  if (first === null) {
+    return null;
+  }
+
+  const second = durationOf(b);
+  if (second === null) {
     return null;
   }
 
   try {
     return durationCompare(
-      a,
-      b,
+      first,
+      second,
       resolveDurationRelativeTo(options?.relativeTo),
     );
   } catch {

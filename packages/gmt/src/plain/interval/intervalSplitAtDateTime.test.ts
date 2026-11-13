@@ -118,4 +118,15 @@ describe("intervalSplitAtDateTime on a zero-length interval", () => {
       ).toEqual([{ start: "2024-01-05T12:00:00", end: "2024-01-05T12:00:00" }]);
     },
   );
+
+  it("skips a hole in a sparse list instead of rejecting it", () => {
+    const sparse: string[] = [];
+    sparse[1] = "2024-01-05T00:00";
+    expect(
+      intervalSplitAtDateTime("2024-01-01T00:00", "2024-01-10T00:00", sparse),
+    ).toEqual([
+      { start: "2024-01-01T00:00:00", end: "2024-01-05T00:00:00" },
+      { start: "2024-01-05T00:00:00", end: "2024-01-10T00:00:00" },
+    ]);
+  });
 });

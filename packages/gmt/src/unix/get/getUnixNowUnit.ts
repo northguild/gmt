@@ -4,14 +4,14 @@ import {
   zonedNowUnitValue,
 } from "../../internal/zonedNowUnitValue";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
-import { isValidDateTimeUnit } from "../../plain/validate";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import type { UnixNowUnit } from "../../types";
 import { nowInstant } from "../../internal/temporalCompat";
 
 export type { UnixNowUnit };
 
 function isValidUnixNowUnit(unit: string): unit is UnixNowUnit {
-  return isValidDateTimeUnit(unit) || unit === "dayOfWeek";
+  return isDateTimeUnitName(unit) || unit === "dayOfWeek";
 }
 
 /**

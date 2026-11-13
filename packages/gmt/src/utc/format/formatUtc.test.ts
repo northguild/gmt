@@ -1,14 +1,14 @@
 import { MustTestLocales } from "../../test";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { formatUtc } from "./formatUtc";
 
-vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../../internal/resolveLocale", { spy: true });
 
 // A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
 // restores only spies it created itself, so one reset after every row covers the file, even a
 // row that fails while mocked.
 afterEach(() => {
-  vi.mocked(getSystemTimeZone).mockReset();
+  vi.mocked(systemTimeZone).mockReset();
 });
 
 describe("formatUtc", () => {
@@ -46,8 +46,8 @@ describe("formatUtc", () => {
     ).toEqual("February 3, 2024 at 3:30:45 PM");
   });
 
-  it("uses getSystemTimeZone() when timeZone is 'local'", () => {
-    vi.mocked(getSystemTimeZone).mockReturnValue("Europe/Paris");
+  it("reads the system time zone when timeZone is 'local'", () => {
+    vi.mocked(systemTimeZone).mockReturnValue("Europe/Paris");
 
     expect(
       formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, {
@@ -59,7 +59,7 @@ describe("formatUtc", () => {
   });
 
   it("returns the host's own zone again after the 'local' row mocked it", () => {
-    expect(getSystemTimeZone()).toBe(
+    expect(systemTimeZone()).toBe(
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
   });

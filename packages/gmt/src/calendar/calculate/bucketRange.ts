@@ -2,14 +2,13 @@ import { Temporal } from "../../internal/temporal";
 import {
   frameInstant,
   frameZoned,
-  instantFrom,
   nextZonedBucketStart,
   zonedUnitStart,
   zoneFrame,
 } from "../../internal";
-import { isValidInstant } from "../../precision/validate";
+import { instantOf } from "../../internal/instantNanoseconds";
 import type { ZoneBucketUnit } from "../../types";
-import { isValidZoneBucketUnit } from "../validate";
+import { isZoneBucketUnitName } from "../../internal/unitNames";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { certainlyTouchesMoreBuckets } from "../../internal/zoneBucketCap";
 
@@ -103,18 +102,23 @@ export function bucketRange(
 
   const frame = zoneFrame(timeZone);
 
-  if (
-    !isValidInstant(start) ||
-    !isValidInstant(end) ||
-    !isValidZoneBucketUnit(resolvedUnit) ||
-    frame === null
-  ) {
+  const startInstant = instantOf(start);
+  if (startInstant === null) {
+    return [];
+  }
+
+  const endInstant = instantOf(end);
+  if (endInstant === null) {
+    return [];
+  }
+
+  if (!isZoneBucketUnitName(resolvedUnit) || frame === null) {
     return [];
   }
 
   try {
-    const startZoned = frameZoned(instantFrom(start), frame);
-    const endZoned = frameZoned(instantFrom(end), frame);
+    const startZoned = frameZoned(startInstant, frame);
+    const endZoned = frameZoned(endInstant, frame);
 
     if (Temporal.ZonedDateTime.compare(startZoned, endZoned) > 0) return [];
     if (

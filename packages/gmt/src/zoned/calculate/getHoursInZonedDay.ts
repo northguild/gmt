@@ -1,5 +1,5 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom, zonedHoursInDay } from "../../internal";
+import { zonedHoursInDay } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the number of hours in the calendar day a zoned datetime falls on.
@@ -30,12 +30,13 @@ import { zonedDateTimeFrom, zonedHoursInDay } from "../../internal";
  * @example getHoursInZonedDay("invalid")                                      // null
  */
 export function getHoursInZonedDay(value: string): number | null {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return null;
   }
 
   try {
-    return zonedHoursInDay(zonedDateTimeFrom(value));
+    return zonedHoursInDay(zonedDateTime);
   } catch {
     return null;
   }

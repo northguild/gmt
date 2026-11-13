@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { isValidUtcInterval } from "./validate";
+import { utcIntervalOf } from "../../internal/intervalChecks";
 import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
@@ -73,13 +73,13 @@ export function intervalDivideEquallyUtc(
       return [];
     }
 
-    if (!isValidUtcInterval(start, end)) {
+    const pair = utcIntervalOf(start, end);
+    if (pair === null) {
       return [];
     }
 
     try {
-      const startVal = Temporal.Instant.from(start);
-      const endVal = Temporal.Instant.from(end);
+      const [startVal, endVal] = pair;
 
       if (startVal.equals(endVal)) {
         return Array.from({ length: n }, () => ({

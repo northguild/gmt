@@ -1,5 +1,4 @@
-import { Temporal } from "../../../internal/temporal";
-import { parseCalendarZonedValue } from "../../../internal";
+import { calendarZonedIntervalOf } from "../../../internal/intervalChecks";
 
 /**
  * Return true if `start` and `end` form a valid GMT zoned interval — both parseable as bare ISO
@@ -38,16 +37,5 @@ export function isValidCalendarZonedInterval(
   start: string,
   end: string,
 ): boolean {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return false;
-  }
-
-  try {
-    const startInstant = parseCalendarZonedValue(start).toInstant();
-    const endInstant = parseCalendarZonedValue(end).toInstant();
-
-    return Temporal.Instant.compare(startInstant, endInstant) <= 0;
-  } catch {
-    return false;
-  }
+  return calendarZonedIntervalOf(start, end) !== null;
 }

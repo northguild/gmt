@@ -1,20 +1,7 @@
-import { isValidDateTime } from "../../plain/validate";
 import type { Disambiguation } from "../../types";
-import {
-  instantOfWallClock,
-  isoStringBody,
-  zonedDateTimeFrom,
-  zoneFrame,
-} from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
-
-const DISAMBIGUATIONS: readonly string[] = [
-  "compatible",
-  "earlier",
-  "later",
-  "reject",
-];
+import { resolveLocalInstant } from "../../internal/resolveLocalInstant";
 
 /**
  * Resolve a zoneless local wall time in a time zone and return the instant it names.
@@ -74,40 +61,11 @@ export function resolveLocal(
       return "";
     }
 
-    const disambiguation = optionOrDefault(
-      optionsArg?.disambiguation,
-      "compatible",
+    return resolveLocalInstant(
+      localDateTime,
+      timeZone,
+      optionOrDefault(optionsArg?.disambiguation, "compatible"),
     );
-
-    const frame = zoneFrame(timeZone);
-
-    if (
-      !isValidDateTime(localDateTime) ||
-      frame === null ||
-      !DISAMBIGUATIONS.includes(disambiguation)
-    ) {
-      return "";
-    }
-
-    try {
-      // An offset with seconds is no time zone identifier, so it cannot go in a bracket. It needs
-      // none: the wall time at a fixed offset is one instant, whatever `disambiguation` says.
-      if (frame.shiftNanoseconds !== 0n) {
-        return instantOfWallClock(
-          isoStringBody(localDateTime),
-          frame,
-        ).toString();
-      }
-
-      return zonedDateTimeFrom(
-        `${isoStringBody(localDateTime)}[${frame.timeZone}]`,
-        { disambiguation },
-      )
-        .toInstant()
-        .toString();
-    } catch {
-      return "";
-    }
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

@@ -1,5 +1,5 @@
-import { readEdiValue } from "../../internal/ediDateTimeFields";
 import type { EdifactOffsetDateTimeFormat } from "../../types/edi";
+import { edifactOffsetDateTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse a UN/EDIFACT `DTM` value that states a date and a time with an offset from UTC, as an
@@ -63,10 +63,5 @@ export function parseEdifactOffsetDateTime(
   value: string,
   format: EdifactOffsetDateTimeFormat,
 ): string {
-  try {
-    return readEdiValue("edifact", "offsetDateTime", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return edifactOffsetDateTimeText(value, format);
 }

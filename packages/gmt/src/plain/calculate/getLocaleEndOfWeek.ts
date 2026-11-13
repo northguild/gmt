@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { getLocaleFirstDayOfWeek } from "../../internal";
-import { isValidDate } from "../validate";
 
 /**
  * Return the end of the week containing `value`, using `locale`'s first
@@ -33,13 +32,13 @@ export function getLocaleEndOfWeek(
   value: string,
   locale: string | string[],
 ): string {
-  if (!isValidDate(value)) return "";
+  const source = plainDateOf(value);
+  if (source === null) return "";
 
   const firstDay = getLocaleFirstDayOfWeek(locale);
   if (firstDay === null) return "";
 
   try {
-    const source = Temporal.PlainDate.from(value);
     const daysToSubtract = (source.dayOfWeek - firstDay + 7) % 7;
     return source.add({ days: 6 - daysToSubtract }).toString();
   } catch {

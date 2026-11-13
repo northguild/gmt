@@ -24,6 +24,8 @@
  *   never `internal/twoDigitYear.ts`; there is no window to choose.
  */
 
+import { Temporal } from "./temporal";
+
 /** The first year SWIFT accepts in a value date (Standards MT General Information, 2025, §6.3.1). */
 export const SWIFT_VALUE_DATE_FIRST_YEAR = 2001;
 /** The last year SWIFT accepts in a value date; any other year is error T50 (same, §6.3.6). */
@@ -70,4 +72,34 @@ export function writeSwiftDate(
   day: number,
 ): string {
   return pad2(year % 100) + pad2(month) + pad2(day);
+}
+
+/**
+ * The core of `parseSwiftDate` and `isValidSwiftDate`: the ISO date a SWIFT `YYMMDD` value date
+ * names, or `""`. Never throws.
+ *
+ * @example readSwiftDate("240315") // "2024-03-15"
+ * @example readSwiftDate("240230") // ""
+ */
+export function readSwiftDate(value: string): string {
+  try {
+    if (typeof value !== "string") {
+      return "";
+    }
+    const fields = readSwiftDateFields(value);
+    if (fields === null) {
+      return "";
+    }
+    // The year is resolved before the day is checked: 040229 is in 2004, 050229 in 2005.
+    const year = swiftValueDateYear(fields.yy);
+    if (year === null) {
+      return "";
+    }
+    return Temporal.PlainDate.from(
+      { year, month: fields.month, day: fields.day },
+      { overflow: "reject" },
+    ).toString();
+  } catch {
+    return "";
+  }
 }

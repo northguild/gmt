@@ -1,4 +1,4 @@
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -14,7 +14,7 @@ import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
  * @example getMonth() // "" (when system timeZone unavailable)
  */
 export function getMonth(): string {
-  const timeZone = getSystemTimeZone();
+  const timeZone = systemTimeZone();
   if (!timeZone) return "";
 
   try {

@@ -2,8 +2,9 @@ import { Temporal } from "../../internal/temporal";
 
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { startOfDateTime } from "../calculate/startOfDateTime";
-import { isValidDateTime, isValidDateTimeUnit } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
+import { startOfPlainDateTime } from "../../internal/plainDateSteps";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -66,25 +67,23 @@ export function areDateTimesEqualBy(
     const resolvedUnit = resolveDateTimeUnit(unit);
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
+    const dateTime1 = plainDateTimeOf(value1);
+    const dateTime2 = plainDateTimeOf(value2);
+
     if (
-      !isValidDateTime(value1) ||
-      !isValidDateTime(value2) ||
-      !isValidDateTimeUnit(resolvedUnit) ||
+      dateTime1 === null ||
+      dateTime2 === null ||
+      !isDateTimeUnitName(resolvedUnit) ||
       weekStartsOn === null
     ) {
       return false;
     }
 
     try {
-      const start1 = startOfDateTime(value1, resolvedUnit, { weekStartsOn });
-      const start2 = startOfDateTime(value2, resolvedUnit, { weekStartsOn });
-
-      if (start1 === "" || start2 === "") return false;
-
       return (
         Temporal.PlainDateTime.compare(
-          Temporal.PlainDateTime.from(start1),
-          Temporal.PlainDateTime.from(start2),
+          startOfPlainDateTime(dateTime1, resolvedUnit, weekStartsOn),
+          startOfPlainDateTime(dateTime2, resolvedUnit, weekStartsOn),
         ) === 0
       );
     } catch {

@@ -6,7 +6,7 @@ import {
   unixEpochToInstant,
   type UnixEpochUnit,
 } from "./unixEpochValue";
-import { isValidDateTimeUnit } from "../plain/validate";
+import { isDateTimeUnitName } from "./unitNames";
 import { frameZoned, normalizeZoneFrame, type ZoneFrame } from "./zoneFrame";
 
 export interface ResolvedUnixInterval {
@@ -60,7 +60,7 @@ export function resolveUnixIntervalPair(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateTimeUnit(resolvedUnit)) {
+  if (!isDateTimeUnitName(resolvedUnit)) {
     return null;
   }
 

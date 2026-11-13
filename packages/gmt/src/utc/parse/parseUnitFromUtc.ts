@@ -3,8 +3,8 @@ import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
-import { isValidUtc } from "../validate";
+import { weekNumberOf } from "../../internal/weekNumber";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 import { isoYearString } from "../../internal/isoYearString";
 
@@ -107,12 +107,14 @@ export function parseUnitFromUtc(
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
     const frame = normalizeZoneFrame(optionsArg?.timeZone);
 
-    if (!isValidUtc(value) || weekStartsOn === null || frame === null) {
+    const instant = utcInstantOf(value);
+
+    if (instant === null || weekStartsOn === null || frame === null) {
       return "";
     }
 
     try {
-      const dateTime = frameWallClock(Temporal.Instant.from(value), frame);
+      const dateTime = frameWallClock(instant, frame);
 
       switch (resolveDateTimeUnit(unit)) {
         case "year":
@@ -121,7 +123,7 @@ export function parseUnitFromUtc(
           return dateTime.month.toString().padStart(2, "0");
         case "week":
           return (
-            getWeekNumber(dateTime.toPlainDate().toString(), weekStartsOn) ?? 0
+            weekNumberOf(dateTime.toPlainDate(), weekStartsOn) ?? 0
           ).toString();
         case "day":
           return dateTime.day.toString().padStart(2, "0");

@@ -3,9 +3,8 @@ import { Temporal } from "../../internal/temporal";
 import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
-  parseCalendarZonedValue,
 } from "../../internal";
-import { isValidCalendarZonedInterval } from "./validate";
+import { calendarZonedIntervalOf } from "../../internal/intervalChecks";
 import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
@@ -87,7 +86,8 @@ export function intervalDivideEquallyZoned(
       return [];
     }
 
-    if (!isValidCalendarZonedInterval(start, end)) {
+    const interval = calendarZonedIntervalOf(start, end);
+    if (interval === null) {
       return [];
     }
 
@@ -99,8 +99,7 @@ export function intervalDivideEquallyZoned(
     }
 
     try {
-      const startVal = parseCalendarZonedValue(start);
-      const endVal = parseCalendarZonedValue(end);
+      const [startVal, endVal] = interval;
 
       // Safe: `.equals()` here is `Temporal.Instant.prototype.equals`, and `Instant` carries no
       // calendar field at all — verified calendar-blind. E7 re-audited this site rather than

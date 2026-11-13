@@ -1,3 +1,4 @@
+import { Temporal } from "./temporal";
 import {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,
@@ -200,4 +201,46 @@ export function readRfc5322DateTime(
     second: second === undefined ? 0 : Number(second),
     offset,
   };
+}
+
+/**
+ * The core of `parseRfc2822` and `isValidRfc2822DateTime`: the zoned date-time an RFC 2822
+ * date-time names. Never throws.
+ *
+ * @param value an RFC 2822 date-time
+ * @returns an ISO 8601 zoned string, or `""` when `value` is not a valid RFC 2822 date-time
+ *
+ * @example readRfc2822("Fri, 15 Mar 2024 12:30:45 +0100") // "2024-03-15T12:30:45+01:00[+01:00]"
+ * @example readRfc2822("Sat, 15 Mar 2024 12:30:45 +0100") // ""
+ */
+export function readRfc2822(value: string): string {
+  if (typeof value !== "string") return "";
+
+  const fields = readRfc5322DateTime(value);
+  if (fields === null) return "";
+
+  try {
+    const plainDateTime = Temporal.PlainDateTime.from(
+      {
+        year: fields.year,
+        month: fields.month,
+        day: fields.day,
+        hour: fields.hour,
+        minute: fields.minute,
+        second: fields.second,
+      },
+      { overflow: "reject" },
+    );
+    // "the day-of-week (if included) MUST be the day implied by the date"
+    if (
+      fields.dayOfWeek !== undefined &&
+      fields.dayOfWeek !== plainDateTime.dayOfWeek
+    ) {
+      return "";
+    }
+
+    return plainDateTime.toZonedDateTime(fields.offset).toString();
+  } catch {
+    return "";
+  }
 }

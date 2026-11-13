@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000;
 
@@ -62,12 +61,13 @@ export function getZonedOffsetAs(
   value: string,
   unit: ZonedOffsetUnit,
 ): number | null {
-  if (!isValidZonedDateTime(value) || !isValidZonedOffsetUnit(unit)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null || !isValidZonedOffsetUnit(unit)) {
     return null;
   }
 
   try {
-    const { offsetNanoseconds } = zonedDateTimeFrom(value);
+    const { offsetNanoseconds } = zonedDateTime;
     return unit === "nanoseconds" || unit === "nanosecond"
       ? offsetNanoseconds
       : offsetNanoseconds / NANOSECONDS_PER_MINUTE;

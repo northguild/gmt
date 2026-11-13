@@ -1,10 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import {
-  calendarOfAllDateValues,
-  formatDateInCalendar,
-  parseCalendarDateValue,
-} from "../../internal";
-import { isValidDateInterval } from "./validate";
+import { dateIntervalOf } from "../../internal/intervalChecks";
+import { calendarOfAllDateValues, formatDateInCalendar } from "../../internal";
 import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
@@ -84,7 +80,8 @@ export function intervalDivideEquallyDate(
       return [];
     }
 
-    if (!isValidDateInterval(start, end)) {
+    const bounds = dateIntervalOf(start, end);
+    if (bounds === null) {
       return [];
     }
 
@@ -94,8 +91,7 @@ export function intervalDivideEquallyDate(
     }
 
     try {
-      const startVal = parseCalendarDateValue(start);
-      const endVal = parseCalendarDateValue(end);
+      const [startVal, endVal] = bounds;
 
       if (startVal.equals(endVal)) {
         return Array.from({ length: n }, () => ({

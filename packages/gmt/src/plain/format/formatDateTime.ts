@@ -1,8 +1,7 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -48,7 +47,8 @@ export function formatDateTime(
   locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
-  if (!isValidDateTime(value)) {
+  const valueParsed = plainDateTimeOf(value);
+  if (valueParsed === null) {
     return "";
   }
 
@@ -62,9 +62,7 @@ export function formatDateTime(
     const read = readDateTimeFormatOptions(options);
     checkFormatterArguments("DateTimeFormat", locale, read);
     const epochMilliseconds =
-      Temporal.PlainDateTime.from(value).toZonedDateTime(
-        "UTC",
-      ).epochMilliseconds;
+      valueParsed.toZonedDateTime("UTC").epochMilliseconds;
     return normalizeDateTime(
       cachedFormatter(
         "DateTimeFormat",

@@ -1,4 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { plainDateTimeOf } from "../../internal/inputChecks";
+import { isDateTimeUnitName, isDateUnitName } from "../../internal/unitNames";
 import { Temporal } from "../../internal/temporal";
 import { getUnitSpan, resolveDateTimeUnit } from "../../internal";
 import {
@@ -6,11 +8,6 @@ import {
   getStartOfNextDateTimeUnit,
 } from "../../internal/dateTimeUnitHelpers";
 import type { DateTimeUnit } from "../../types";
-import {
-  isValidDateTime,
-  isValidDateTimeUnit,
-  isValidDateUnit,
-} from "../validate";
 
 /** One of each time unit, for stepping to the next time-unit bucket. */
 const ONE_TIME_UNIT: Readonly<Record<string, Temporal.DurationLike>> = {
@@ -34,7 +31,7 @@ function startOfUnitIfRepresentable(
   unit: DateTimeUnit,
 ): Temporal.PlainDateTime | null {
   try {
-    if (isValidDateUnit(unit)) {
+    if (isDateUnitName(unit)) {
       return getStartOfDateTimeUnit(source, unit);
     }
 
@@ -52,7 +49,7 @@ function startOfNextUnit(
   source: Temporal.PlainDateTime,
   unit: DateTimeUnit,
 ): Temporal.PlainDateTime {
-  if (isValidDateUnit(unit)) {
+  if (isDateUnitName(unit)) {
     return getStartOfNextDateTimeUnit(source, unit);
   }
 
@@ -97,7 +94,11 @@ export function intervalCountDateTime(
     return null;
   }
 
-  if (!isValidDateTime(start) || !isValidDateTime(end)) {
+  const startVal = plainDateTimeOf(start);
+
+  const endVal = plainDateTimeOf(end);
+
+  if (startVal === null || endVal === null) {
     return null;
   }
 
@@ -107,14 +108,11 @@ export function intervalCountDateTime(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateTimeUnit(resolvedUnit)) {
+  if (!isDateTimeUnitName(resolvedUnit)) {
     return null;
   }
 
   try {
-    const startVal = Temporal.PlainDateTime.from(start);
-    const endVal = Temporal.PlainDateTime.from(end);
-
     const order = Temporal.PlainDateTime.compare(startVal, endVal);
 
     if (order > 0) {

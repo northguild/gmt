@@ -1,5 +1,7 @@
 import type { Temporal } from "../../internal/temporal";
-import { startOfUnix } from "../calculate/startOfUnix";
+import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -81,8 +83,12 @@ export function areUnixEqualBy(
       timeZone: options?.timeZone,
       weekStartsOn: options?.weekStartsOn,
     };
-    const start1 = startOfUnix(value1, unit, read);
-    const start2 = startOfUnix(value2, unit, read);
+    const resolvedUnit =
+      typeof unit === "string" ? resolveDateTimeUnit(unit) : unit;
+    if (!isDateTimeUnitName(resolvedUnit)) return false;
+
+    const start1 = startOrEndOfUnix(value1, resolvedUnit, read, false);
+    const start2 = startOrEndOfUnix(value2, resolvedUnit, read, false);
 
     return start1 !== null && start1 === start2;
   } catch {

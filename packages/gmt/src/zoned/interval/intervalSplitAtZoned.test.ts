@@ -25,6 +25,31 @@ describe("intervalSplitAtZoned", () => {
     ]);
   });
 
+  it("skips a hole in a sparse list of points", () => {
+    const sparse = ["2024-01-02T00:00:00+00:00[UTC]"];
+    sparse[2] = "2024-01-03T00:00:00+00:00[UTC]";
+    expect(
+      intervalSplitAtZoned(
+        "2024-01-01T00:00:00+00:00[UTC]",
+        "2024-01-04T00:00:00+00:00[UTC]",
+        sparse,
+      ),
+    ).toEqual([
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-01-02T00:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-01-02T00:00:00+00:00[UTC]",
+        end: "2024-01-03T00:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-01-03T00:00:00+00:00[UTC]",
+        end: "2024-01-04T00:00:00+00:00[UTC]",
+      },
+    ]);
+  });
+
   it("splits at a single in-range point", () => {
     expect(
       intervalSplitAtZoned(

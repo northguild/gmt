@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimesOf } from "../../internal/zonedWallClock";
 
 /**
  * Sort an array of ZonedDateTime values in ascending or descending order.
@@ -25,11 +24,10 @@ export function sortZoned(
   try {
     if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return [];
 
-    const valid = zonedDateTimes.filter(isValidZonedDateTime);
-    if (!valid.length) return [];
+    const comparables = zonedDateTimesOf(zonedDateTimes);
+    if (!comparables.length) return [];
 
     try {
-      const comparables = valid.map((d) => zonedDateTimeFrom(d));
       comparables.sort(Temporal.ZonedDateTime.compare);
 
       if (order === "desc") {

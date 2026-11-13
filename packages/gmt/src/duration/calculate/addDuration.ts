@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../validate/isValidDuration";
+import { durationOf } from "../../internal/inputChecks";
 
 /**
  * Combine two ISO 8601 duration strings by addition.
@@ -21,12 +20,18 @@ import { isValidDuration } from "../validate/isValidDuration";
  * @example addDuration("P1D", "not a duration") // ""
  */
 export function addDuration(a: string, b: string): string {
-  if (!isValidDuration(a) || !isValidDuration(b)) {
+  const first = durationOf(a);
+  if (first === null) {
+    return "";
+  }
+
+  const second = durationOf(b);
+  if (second === null) {
     return "";
   }
 
   try {
-    return Temporal.Duration.from(a).add(b).toString();
+    return first.add(second).toString();
   } catch {
     return "";
   }

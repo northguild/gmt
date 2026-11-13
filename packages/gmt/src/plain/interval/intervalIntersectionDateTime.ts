@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenIntersection } from "../../internal";
-import { isValidDateTime } from "../validate";
 
 /**
  * Return the overlapping span of two datetime intervals, or null when they do not overlap.
@@ -54,21 +54,19 @@ export function intervalIntersectionDateTime(
     return null;
   }
 
-  if (
-    !isValidDateTime(aStart) ||
-    !isValidDateTime(aEnd) ||
-    !isValidDateTime(bStart) ||
-    !isValidDateTime(bEnd)
-  ) {
+  const aS = plainDateTimeOf(aStart);
+
+  const aE = plainDateTimeOf(aEnd);
+
+  const bS = plainDateTimeOf(bStart);
+
+  const bE = plainDateTimeOf(bEnd);
+
+  if (aS === null || aE === null || bS === null || bE === null) {
     return null;
   }
 
   try {
-    const aS = Temporal.PlainDateTime.from(aStart);
-    const aE = Temporal.PlainDateTime.from(aEnd);
-    const bS = Temporal.PlainDateTime.from(bStart);
-    const bE = Temporal.PlainDateTime.from(bEnd);
-
     if (Temporal.PlainDateTime.compare(aS, aE) > 0) {
       return null;
     }

@@ -1,8 +1,5 @@
-import {
-  parseInstantNanoseconds,
-  parseIntervalNanoseconds,
-} from "../../internal";
 import type { Interval } from "../../types";
+import { intervalContainsValue } from "../../internal/intervalNanoseconds";
 
 /**
  * Return true when an ISO 8601 instant string lies inside a half-open interval.
@@ -31,18 +28,5 @@ export function intervalContains(
   interval: Interval,
   isoString: string,
 ): boolean {
-  try {
-    const record = parseIntervalNanoseconds(interval);
-    const instant = parseInstantNanoseconds(isoString);
-
-    if (record === null || instant === null) {
-      return false;
-    }
-
-    return record.start <= instant && instant < record.end;
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return false;
-  }
+  return intervalContainsValue(interval, isoString);
 }

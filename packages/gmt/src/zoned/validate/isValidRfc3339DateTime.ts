@@ -1,4 +1,4 @@
-import { parseRfc3339 } from "../parse/parseRfc3339";
+import { readRfc3339 } from "../../internal/rfc3339DateTime";
 
 /**
  * Return true when `value` is a real RFC 3339 date-time: an ISO 8601 date and time that always
@@ -39,5 +39,5 @@ export function isValidRfc3339DateTime(
 ): boolean;
 export function isValidRfc3339DateTime(value: unknown): value is string;
 export function isValidRfc3339DateTime(value: unknown): boolean {
-  return typeof value === "string" && parseRfc3339(value) !== "";
+  return typeof value === "string" && readRfc3339(value) !== "";
 }

@@ -1,8 +1,8 @@
-// Re-exported from `internal/index.ts` (all of its symbols); the FIX functions import it from there.
 import { Temporal } from "./temporal";
-import type { FixPrecision } from "../types/fix";
+import type { FixPrecision, FixUtcTimestamp } from "../types/fix";
 import { isoYearString } from "./isoYearString";
 import { MAX_FOUR_DIGIT_YEAR, type UtcReading } from "./utcReading";
+import { LEAP_SECOND_STEPS, taiOfUtc } from "./leapSeconds";
 
 /**
  * FIX `UTCTimestamp`: date, dash, time with colons, optional period and 3, 6, 9 or 12 digits
@@ -118,6 +118,7 @@ export function readFixUtcFields(value: unknown): FixUtcFields | null {
     return null;
   }
   const fraction = (match[7] ?? "").padEnd(12, "0");
+  // fallow-ignore-next-line code-duplication -- two parsers read the same six numbered fields into different result shapes
   return {
     year: Number(match[1]),
     month: Number(match[2]),
@@ -201,4 +202,58 @@ export function fixTimestampText(
     Math.min(digits, 9),
   );
   return `${head}.${fraction}${digits === 12 ? "000" : ""}`;
+}
+
+/**
+ * The core of `parseFixUtcTimestamp` and `isValidFixUtcTimestamp`: one `UTCTimestamp` read into
+ * its instant, precision, leap-second flag and picoseconds. Never throws.
+ *
+ * @param value a FIX `UTCTimestamp` such as `20240315-12:30:45.123`
+ * @returns the reading, or `null` when `value` is not a real UTCTimestamp
+ *
+ * @example readFixUtcTimestamp("20240315-12:30:45.123") // an instant, precision and flags
+ * @example readFixUtcTimestamp("20240230-12:30:45") // null
+ */
+export function readFixUtcTimestamp(value: string): FixUtcTimestamp | null {
+  try {
+    const fields = readFixUtcFields(value);
+    if (fields === null) {
+      return null;
+    }
+    // MAR-16 rule 2: a second of 60 never reaches Temporal; it goes in as 59 with a flag.
+    const secondSixty = fields.second === 60;
+    // Throws, and so returns null, for 30 February, hour 24, minute 60 or month 13.
+    const plain = Temporal.PlainDateTime.from(
+      {
+        year: fields.year,
+        month: fields.month,
+        day: fields.day,
+        hour: fields.hour,
+        minute: fields.minute,
+        second: secondSixty ? 59 : fields.second,
+        millisecond: fields.millisecond,
+        microsecond: fields.microsecond,
+        nanosecond: fields.nanosecond,
+      },
+      { overflow: "reject" },
+    );
+    // Only for a 60: taiOfUtc is null before 1972 for an ordinary second too, and FIX allows 0000.
+    if (
+      secondSixty &&
+      taiOfUtc(LEAP_SECOND_STEPS, {
+        epochNanoseconds: plain.toZonedDateTime("UTC").epochNanoseconds,
+        secondSixty,
+      }) === null
+    ) {
+      return null;
+    }
+    return {
+      instant: fixInstantText(fields),
+      precision: fixPrecisionOfDigits(fields.fractionDigits),
+      leapSecond: secondSixty,
+      picoseconds: fields.picoseconds,
+    };
+  } catch {
+    return null;
+  }
 }

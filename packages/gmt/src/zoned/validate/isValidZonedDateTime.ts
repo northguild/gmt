@@ -1,6 +1,4 @@
-import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
-import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
-import { hasSecond60 } from "../../plain/validate/hasSecond60";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Validate whether a string is a valid ISO 8601 zoned datetime string.
@@ -52,21 +50,5 @@ export function isValidZonedDateTime(
 ): boolean;
 export function isValidZonedDateTime(value: unknown): value is string;
 export function isValidZonedDateTime(value: unknown): boolean {
-  if (typeof value !== "string" || value.length === 0) {
-    return false;
-  }
-
-  if (hasSecond60(value) || !hasZonedDateTimeShape(value)) {
-    return false;
-  }
-
-  try {
-    const zonedDateTime = zonedDateTimeFrom(value);
-    return (
-      zonedDateTime.timeZoneId.length > 0 &&
-      zonedDateTime.calendarId === "iso8601"
-    );
-  } catch {
-    return false;
-  }
+  return zonedDateTimeOf(value) !== null;
 }

@@ -3,7 +3,7 @@ import { getUnixNow } from "../../unix/get/getUnixNow";
 import { getUtcYear } from "../../utc/get/getUtcYear";
 import { getYear } from "../../plain/get/getYear";
 import { getZonedNow } from "../../zoned/get/getZonedNow";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../resolveLocale";
 import {
   nowInstant,
   nowPlainDateISO,
@@ -12,7 +12,7 @@ import {
   nowZonedDateTimeISO,
 } from "./index";
 
-vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../resolveLocale", { spy: true });
 
 const MAX_MS = 8_640_000_000_000_000;
 const LIMIT_NS = BigInt(MAX_MS) * 1_000_000n;
@@ -30,7 +30,7 @@ describe("D21: the clock readers", () => {
   // 1798761600000 ms.
   describe("after the clock was set before 1970", () => {
     beforeEach(() => {
-      vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+      vi.mocked(systemTimeZone).mockReturnValue("UTC");
       vi.useFakeTimers();
     });
 

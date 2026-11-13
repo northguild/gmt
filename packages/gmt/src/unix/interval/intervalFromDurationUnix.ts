@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../../duration/validate";
+import { durationOf } from "../../internal/inputChecks";
 import {
   addToZoned,
   frameInstant,
@@ -103,7 +103,8 @@ export function intervalFromDurationUnix(
       return null;
     }
 
-    if (!isValidDuration(duration)) {
+    const dur = durationOf(duration);
+    if (dur === null) {
       return null;
     }
 
@@ -126,7 +127,6 @@ export function intervalFromDurationUnix(
 
     try {
       const point = frameZoned(instant, frame);
-      const dur = Temporal.Duration.from(duration);
       const overflow = resolveOverflow(options?.overflow);
 
       const other =

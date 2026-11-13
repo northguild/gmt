@@ -1,12 +1,11 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { dateIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   calendarOfAllDateValues,
   formatDateInCalendar,
   halfOpenXor,
-  parseCalendarDateValue,
 } from "../../internal";
-import { isValidDateInterval } from "./validate";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -58,14 +57,22 @@ export function intervalXorAllDate(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          isValidDateInterval(interval.start, interval.end),
-      )
-    ) {
-      return [];
+    const parsed: Array<{
+      start: Temporal.PlainDate;
+      end: Temporal.PlainDate;
+    }> = [];
+    for (let index = 0; index < intervals.length; index++) {
+      if (!(index in intervals)) {
+        continue;
+      }
+      const interval = intervals[index];
+      const bounds = isObject(interval)
+        ? dateIntervalOf(interval.start, interval.end)
+        : null;
+      if (bounds === null) {
+        return [];
+      }
+      parsed[index] = { start: bounds[0], end: bounds[1] };
     }
 
     const calendar = calendarOfAllDateValues(
@@ -76,11 +83,6 @@ export function intervalXorAllDate(
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: parseCalendarDateValue(interval.start),
-        end: parseCalendarDateValue(interval.end),
-      }));
-
       return halfOpenXor(parsed, Temporal.PlainDate.compare).map(
         ({ start, end }) => ({
           start: formatDateInCalendar(start, calendar),

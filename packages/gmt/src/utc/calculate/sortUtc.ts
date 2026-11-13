@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Sort an array of UTC datetime values in ascending or descending order.
@@ -24,11 +24,12 @@ export function sortUtc(
   try {
     if (!Array.isArray(utcDateTimes) || !utcDateTimes.length) return [];
 
-    const valid = utcDateTimes.filter(isValidUtc);
-    if (!valid.length) return [];
+    const comparables = utcDateTimes
+      .map((candidate) => utcInstantOf(candidate))
+      .filter((candidate) => candidate !== null);
+    if (!comparables.length) return [];
 
     try {
-      const comparables = valid.map((d) => Temporal.Instant.from(d));
       comparables.sort(Temporal.Instant.compare);
 
       if (order === "desc") {

@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "../../internal/temporal";
 import { halfOpenIntersection } from "../../internal";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return how many distinct UTC calendar dates two UTC intervals share.
@@ -40,21 +40,27 @@ export function intervalOverlappingDaysUtc(
     return null;
   }
 
-  if (
-    !isValidUtc(aStart) ||
-    !isValidUtc(aEnd) ||
-    !isValidUtc(bStart) ||
-    !isValidUtc(bEnd)
-  ) {
+  const aS = utcInstantOf(aStart);
+  if (aS === null) {
+    return null;
+  }
+
+  const aE = utcInstantOf(aEnd);
+  if (aE === null) {
+    return null;
+  }
+
+  const bS = utcInstantOf(bStart);
+  if (bS === null) {
+    return null;
+  }
+
+  const bE = utcInstantOf(bEnd);
+  if (bE === null) {
     return null;
   }
 
   try {
-    const aS = Temporal.Instant.from(aStart);
-    const aE = Temporal.Instant.from(aEnd);
-    const bS = Temporal.Instant.from(bStart);
-    const bE = Temporal.Instant.from(bEnd);
-
     if (
       Temporal.Instant.compare(aS, aE) > 0 ||
       Temporal.Instant.compare(bS, bE) > 0

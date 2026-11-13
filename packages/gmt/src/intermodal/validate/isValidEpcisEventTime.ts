@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { epcisEventTime } from "../../regex";
+import { isEpcisEventTime } from "../../internal/epcisTime";
 
 /**
  * Return true when `value` is a real GS1 EPCIS 2.0 `eventTime`: the moment a supply-chain event
@@ -41,16 +40,5 @@ export function isValidEpcisEventTime(
 ): boolean;
 export function isValidEpcisEventTime(value: unknown): value is string;
 export function isValidEpcisEventTime(value: unknown): boolean {
-  if (typeof value !== "string" || !epcisEventTime.test(value)) {
-    return false;
-  }
-
-  try {
-    // The two checks the pattern cannot make: a day the month does not have, and a fraction past
-    // nine digits (Temporal's grammar stops at nanoseconds). Both are a RangeError.
-    Temporal.Instant.from(value);
-    return true;
-  } catch {
-    return false;
-  }
+  return isEpcisEventTime(value);
 }

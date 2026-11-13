@@ -67,4 +67,13 @@ describe("setDate", () => {
   it("returns an empty string when the with() call throws for a malformed fields object", () => {
     expect(setDate("2024-03-10", { year: Number.NaN })).toBe("");
   });
+
+  it("returns the input unchanged for an empty field set without reading the overflow option", () => {
+    const options = {
+      get overflow(): never {
+        throw new Error("overflow read");
+      },
+    };
+    expect(setDate("2024-03-10", {}, options)).toBe("2024-03-10");
+  });
 });

@@ -4,9 +4,8 @@ import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
   halfOpenXor,
-  parseCalendarZonedValue,
 } from "../../internal";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Return the symmetric difference of two half-open zoned intervals `[start, end)` — the instants
@@ -74,12 +73,11 @@ export function intervalXorZoned(
   // One gate for all four endpoints: `isValidCalendarZonedDateTime` covers non-strings, empty
   // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
   // and a calendar annotation before the zone, while accepting RFC 9557 calendar annotations.
-  if (
-    !isValidCalendarZonedDateTime(aStart) ||
-    !isValidCalendarZonedDateTime(aEnd) ||
-    !isValidCalendarZonedDateTime(bStart) ||
-    !isValidCalendarZonedDateTime(bEnd)
-  ) {
+  const aSZdt = calendarZonedOf(aStart);
+  const aEZdt = calendarZonedOf(aEnd);
+  const bSZdt = calendarZonedOf(bStart);
+  const bEZdt = calendarZonedOf(bEnd);
+  if (aSZdt === null || aEZdt === null || bSZdt === null || bEZdt === null) {
     return [];
   }
 
@@ -91,11 +89,6 @@ export function intervalXorZoned(
   }
 
   try {
-    const aSZdt = parseCalendarZonedValue(aStart);
-    const aEZdt = parseCalendarZonedValue(aEnd);
-    const bSZdt = parseCalendarZonedValue(bStart);
-    const bEZdt = parseCalendarZonedValue(bEnd);
-
     if (Temporal.ZonedDateTime.compare(aSZdt, aEZdt) > 0) {
       return [];
     }

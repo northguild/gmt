@@ -1,6 +1,6 @@
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenContainsPoint, halfOpenContainsSpan } from "../../internal";
-import { isValidTime } from "../validate";
 
 /**
  * Return true when `pointOrStart` lies in the half-open interval `[intervalStart, intervalEnd)`
@@ -50,33 +50,26 @@ export function intervalContainsTime(
     return false;
   }
 
-  if (
-    !isValidTime(intervalStart) ||
-    !isValidTime(intervalEnd) ||
-    !isValidTime(pointOrStart) ||
-    (pointEnd !== undefined && !isValidTime(pointEnd))
-  ) {
+  const s = plainTimeOf(intervalStart);
+  const e = plainTimeOf(intervalEnd);
+  const p = plainTimeOf(pointOrStart);
+  const pe = pointEnd === undefined ? undefined : plainTimeOf(pointEnd);
+  if (s === null || e === null || p === null || pe === null) {
     return false;
   }
 
   try {
-    const s = Temporal.PlainTime.from(intervalStart);
-    const e = Temporal.PlainTime.from(intervalEnd);
-    const p = Temporal.PlainTime.from(pointOrStart);
-
     if (Temporal.PlainTime.compare(s, e) > 0) {
       return false;
     }
 
-    if (pointEnd === undefined) {
+    if (pe === undefined) {
       return halfOpenContainsPoint(
         { start: s, end: e },
         p,
         Temporal.PlainTime.compare,
       );
     }
-
-    const pe = Temporal.PlainTime.from(pointEnd);
 
     if (Temporal.PlainTime.compare(p, pe) > 0) {
       return false;

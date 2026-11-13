@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { yearMonthString } from "../../internal/yearMonth";
-import { isValidDate } from "../validate";
 
 /**
  * Return the year-month (`YYYY-MM`) of an ISO 8601 date string.
@@ -19,10 +18,11 @@ import { isValidDate } from "../validate";
  * @example parseYearMonthFromDate("2026-10-01[u-ca=hebrew]") // ""
  */
 export function parseYearMonthFromDate(value: string): string {
-  if (!isValidDate(value)) return "";
+  const valueParsed = plainDateOf(value);
+  if (valueParsed === null) return "";
 
   try {
-    return yearMonthString(Temporal.PlainDate.from(value).toPlainYearMonth());
+    return yearMonthString(valueParsed.toPlainYearMonth());
   } catch {
     return "";
   }

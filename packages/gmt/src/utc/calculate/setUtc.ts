@@ -5,7 +5,7 @@ import {
   resolveOverflow,
 } from "../../internal";
 import type { Overflow } from "../../types";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -68,12 +68,12 @@ export function setUtc(
       return "";
     }
 
-    if (!isValidUtc(value)) return "";
+    const instant = utcInstantOf(value);
+    if (instant === null) return "";
 
     const overflow = resolveOverflow(options?.overflow);
 
     try {
-      const instant = Temporal.Instant.from(value);
       const zoned = instant.toZonedDateTimeISO("UTC");
       const set = readSetFields(fields, DATE_TIME_FIELDS);
       if (set === null) return "";

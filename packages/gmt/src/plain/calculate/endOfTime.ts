@@ -1,8 +1,8 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import type { FractionalDigit } from "../../types";
-import { isValidTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -67,10 +67,10 @@ export function endOfTime(
 
     const resolvedUnit = resolveDateTimeUnit(unit);
 
-    if (!isValidTime(value) || !supported.includes(resolvedUnit)) return "";
+    const source = plainTimeOf(value);
+    if (source === null || !supported.includes(resolvedUnit)) return "";
 
     try {
-      const source = Temporal.PlainTime.from(value);
       let result: Temporal.PlainTime;
 
       switch (resolvedUnit) {

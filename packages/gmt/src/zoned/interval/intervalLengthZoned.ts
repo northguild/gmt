@@ -5,8 +5,8 @@ import {
   resolveDateTimeUnit,
   zonedUntil,
 } from "../../internal";
-import { isValidDateTimeUnit } from "../../plain/validate";
-import { isValidCalendarZonedInterval } from "./validate";
+import { isDateTimeUnitName } from "../../internal/unitNames";
+import { calendarZonedIntervalOf } from "../../internal/intervalChecks";
 
 /**
  * Return the exact length of a zoned interval in `unit`, as a real (possibly fractional) number.
@@ -58,11 +58,11 @@ export function intervalLengthZoned(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateTimeUnit(resolvedUnit)) {
+  if (!isDateTimeUnitName(resolvedUnit)) {
     return null;
   }
 
-  if (!isValidCalendarZonedInterval(start, end)) {
+  if (calendarZonedIntervalOf(start, end) === null) {
     return null;
   }
 

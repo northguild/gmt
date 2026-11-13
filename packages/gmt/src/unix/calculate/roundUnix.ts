@@ -1,5 +1,5 @@
 import type { Temporal } from "../../internal/temporal";
-import { isValidDateTimeUnit } from "../../plain";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import {
   frameInstant,
   frameZoned,
@@ -131,7 +131,7 @@ export function roundUnix(
     if (
       frame === null ||
       epochUnit === null ||
-      !isValidDateTimeUnit(smallestUnit)
+      !isDateTimeUnitName(smallestUnit)
     ) {
       return null;
     }

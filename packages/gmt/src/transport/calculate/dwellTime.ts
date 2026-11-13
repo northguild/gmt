@@ -1,12 +1,8 @@
 import { Temporal } from "../../internal/temporal";
-import {
-  countZonedLocalDates,
-  instantFrom,
-  zonedDateTimeFrom,
-} from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
-import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
-import { isValidZonedDateTime } from "../../zoned/validate/isValidZonedDateTime";
+import { countZonedLocalDates } from "../../internal";
+import { instantOf } from "../../internal/instantNanoseconds";
+import { isZoneId } from "../../internal/inputChecks";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /** What `dwellTime` returns: exact elapsed time plus the local view every charging regime counts in. */
 export interface Dwell {
@@ -36,16 +32,9 @@ function dwellZone(
   targetZone: string | undefined,
 ): string | null {
   if (targetZone !== undefined) {
-    return isValidTimeZone(targetZone) ? targetZone : null;
+    return isZoneId(targetZone) ? targetZone : null;
   }
-  if (!isValidZonedDateTime(entry)) {
-    return null;
-  }
-  try {
-    return zonedDateTimeFrom(entry).timeZoneId;
-  } catch {
-    return null;
-  }
+  return zonedDateTimeOf(entry)?.timeZoneId ?? null;
 }
 
 /**
@@ -123,7 +112,13 @@ export function dwellTime(
   targetZone?: string,
 ): Dwell | null {
   try {
-    if (!isValidInstant(entry) || !isValidInstant(exit)) {
+    const entryInstant = instantOf(entry);
+    if (entryInstant === null) {
+      return null;
+    }
+
+    const exitInstant = instantOf(exit);
+    if (exitInstant === null) {
       return null;
     }
 
@@ -132,8 +127,6 @@ export function dwellTime(
       return null;
     }
 
-    const entryInstant = instantFrom(entry);
-    const exitInstant = instantFrom(exit);
     if (Temporal.Instant.compare(entryInstant, exitInstant) > 0) {
       return null;
     }

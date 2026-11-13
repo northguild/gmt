@@ -1,9 +1,5 @@
-import { cachedFormatter } from "../../internal/formatterCache";
-// fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { resolveRequiredLocale } from "../../internal/resolveLocale";
+import { eraNamesFor } from "../../internal/localeNames";
 import type { LocaleNameStyle } from "./getLocaleMonthNames";
-// Imported from its module, not the `internal` barrel: `internal/patternToken.ts` imports this file.
-import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
 
 /**
  * Return a locale's Gregorian era names as [BCE-label, CE-label].
@@ -40,53 +36,5 @@ export function getLocaleEraNames(
   locale: string | string[],
   style: LocaleNameStyle = "long",
 ): string[] {
-  try {
-    const resolvedLocale = resolveRequiredLocale(locale);
-    if (resolvedLocale === null) return [];
-
-    try {
-      const resolved: "long" | "short" | "narrow" =
-        style === "short" || style === "narrow" ? style : "long";
-
-      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
-        calendar: "gregory",
-        era: resolved,
-        timeZone: "UTC",
-      });
-
-      // Year 1 BC (proleptic Gregorian) — Temporal represents 1 BC as year 0.
-      const bceInstant = zonedDateTimeFrom({
-        year: 0,
-        month: 1,
-        day: 1,
-        hour: 12,
-        timeZone: "UTC",
-        calendar: "gregory",
-      }).toInstant();
-
-      // Year 1 AD (proleptic Gregorian).
-      const ceInstant = zonedDateTimeFrom({
-        year: 1,
-        month: 1,
-        day: 1,
-        hour: 12,
-        timeZone: "UTC",
-        calendar: "gregory",
-      }).toInstant();
-
-      const bceParts = formatter.formatToParts(bceInstant.epochMilliseconds);
-      const bceEra = bceParts.find((part) => part.type === "era")?.value ?? "";
-
-      const ceParts = formatter.formatToParts(ceInstant.epochMilliseconds);
-      const ceEra = ceParts.find((part) => part.type === "era")?.value ?? "";
-
-      return [bceEra, ceEra];
-    } catch {
-      return [];
-    }
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return [];
-  }
+  return eraNamesFor(locale, style);
 }

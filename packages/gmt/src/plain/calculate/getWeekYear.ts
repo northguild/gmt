@@ -1,6 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /**
  * Return the ISO 8601 week-numbering year `value` belongs to.
@@ -23,10 +21,10 @@ import { isValidDate } from "../validate";
  * @example getWeekYear("invalid") // null
  */
 export function getWeekYear(value: string): number | null {
-  if (!isValidDate(value)) return null;
+  const date = plainDateOf(value);
+  if (date === null) return null;
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return date.yearOfWeek ?? null;
   } catch {
     return null;

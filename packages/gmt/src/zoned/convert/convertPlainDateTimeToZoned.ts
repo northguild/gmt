@@ -1,7 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../../plain/validate";
+import { isZoneId, plainDateTimeOf } from "../../internal/inputChecks";
 import type { Disambiguation } from "../../types";
-import { isValidTimeZone } from "../validate";
 import { isoStringBody, zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
@@ -60,7 +59,7 @@ export function convertPlainDateTimeToZoned(
       return "";
     }
 
-    if (!isValidDateTime(value) || !isValidTimeZone(timeZone)) {
+    if (plainDateTimeOf(value) === null || !isZoneId(timeZone)) {
       return "";
     }
 

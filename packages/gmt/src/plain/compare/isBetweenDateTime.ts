@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 
-import { isValidDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -59,19 +59,17 @@ export function isBetweenDateTime(
     const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
     const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
 
-    if (
-      !isValidDateTime(dateTime) ||
-      !isValidDateTime(start) ||
-      !isValidDateTime(end)
-    ) {
+    const d = plainDateTimeOf(dateTime);
+
+    const s = plainDateTimeOf(start);
+
+    const e = plainDateTimeOf(end);
+
+    if (d === null || s === null || e === null) {
       return false;
     }
 
     try {
-      const d = Temporal.PlainDateTime.from(dateTime);
-      const s = Temporal.PlainDateTime.from(start);
-      const e = Temporal.PlainDateTime.from(end);
-
       if (Temporal.PlainDateTime.compare(s, e) === 1) {
         return false;
       }

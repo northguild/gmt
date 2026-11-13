@@ -1,8 +1,4 @@
-import { isOptionsArgument } from "../../internal";
-import { readSsimDateFields } from "../../internal/ssimDate";
-import { Temporal } from "../../internal/temporal";
-import { twoDigitYear } from "../../internal/twoDigitYear";
-import { readYearWindowStart } from "../../internal/yearWindowStart";
+import { readSsimDate } from "../../internal/ssimDate";
 import type { TwoDigitYearOptions } from "../../types/two-digit-year";
 
 /**
@@ -42,30 +38,5 @@ export function parseSsimDate(
   value: string,
   options: TwoDigitYearOptions,
 ): string {
-  try {
-    if (typeof value !== "string") {
-      return "";
-    }
-    if (!isOptionsArgument(options)) {
-      return "";
-    }
-    const fields = readSsimDateFields(value);
-    if (fields === null) {
-      return "";
-    }
-    const windowStart = readYearWindowStart(options);
-    if (windowStart === null) {
-      return "";
-    }
-    return Temporal.PlainDate.from(
-      {
-        year: twoDigitYear(fields.yy, windowStart),
-        month: fields.month,
-        day: fields.day,
-      },
-      { overflow: "reject" },
-    ).toString();
-  } catch {
-    return "";
-  }
+  return readSsimDate(value, options);
 }

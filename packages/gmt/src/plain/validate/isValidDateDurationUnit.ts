@@ -1,3 +1,4 @@
+import { isDateDurationUnitName } from "../../internal/unitNames";
 import type { DateDurationUnit } from "../../types";
 
 /**
@@ -19,7 +20,5 @@ import type { DateDurationUnit } from "../../types";
 export const isValidDateDurationUnit = (
   unit: unknown,
 ): unit is DateDurationUnit => {
-  return (
-    unit === "years" || unit === "months" || unit === "weeks" || unit === "days"
-  );
+  return isDateDurationUnitName(unit);
 };

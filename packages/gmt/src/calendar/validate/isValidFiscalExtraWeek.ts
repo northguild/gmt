@@ -1,3 +1,4 @@
+import { isFiscalExtraWeekName } from "../../internal/unitNames";
 import type { FiscalExtraWeek } from "../../types";
 
 /**
@@ -20,9 +21,5 @@ import type { FiscalExtraWeek } from "../../types";
 export function isValidFiscalExtraWeek(
   value: unknown,
 ): value is FiscalExtraWeek {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  return value === "firstPeriod" || value === "lastPeriod";
+  return isFiscalExtraWeekName(value);
 }

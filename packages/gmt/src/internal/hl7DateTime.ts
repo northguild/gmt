@@ -3,11 +3,8 @@
  * degree of precision (2.A.77.2, Table 0529). Private: a `DTM` is valid only as a whole, so its
  * public form is the validator `isValidHL7`, never a pattern.
  *
- * Pure: this module imports only `types/hl7` and nothing from `instant/` or Temporal, so, like
- * `ediGrammar.ts`, it is re-exported from `internal/index.ts`. The parse and format files import
- * `toOffsetInstant` themselves. If a later change moves that import, or any other from
- * `instant/`, into this module, it leaves the barrel, for the cycle the comment above the
- * `ediGrammar` block in `internal/index.ts` describes.
+ * The grammar is pure; `readHl7DateTime` is the one reader that builds Temporal values, through
+ * `readOffsetInstant`. Both import their dependencies directly, never through `internal/index.ts`.
  *
  * Sources (HL7 Europe's published copies of the standard; the v2.5.1 copy heads these sections
  * 2.A.1.22 and 2.A.1.77, HL7's own cross-references and the v2.6 copy say 2.A.22 and 2.A.77):
@@ -22,7 +19,15 @@
  *   https://www.hl7.eu/HL7v2x/v251/std251/ch02.html
  */
 
-import type { Hl7Precision } from "../types/hl7";
+import type {
+  Hl7DateTime,
+  Hl7MomentPrecision,
+  Hl7Precision,
+} from "../types/hl7";
+import { utcOffset } from "../regex/utc-offset";
+import { readOffsetInstant } from "./offsetInstant";
+import { Temporal } from "./temporal";
+import { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
 
 /**
  * The seven precisions of an HL7 v2 date-time, coarsest first. Every "lower or raise" test in
@@ -253,4 +258,162 @@ export function isoHl7Precision(match: RegExpExecArray): {
     precision: finestPrecision(groups, fraction),
     fractionDigits: fraction === undefined ? 0 : fraction.length,
   };
+}
+
+/**
+ * The core of `parseHL7` and `isValidHL7`: the structured value an HL7 v2 `DTM` or `TS` names.
+ * Never throws.
+ *
+ * @param value an HL7 v2 `DTM`, or a `TS` with its degree of precision
+ * @returns the structured value, or `null` when `value` is not one
+ *
+ * @example readHl7DateTime("20240710143000+0200")?.kind // "instant"
+ * @example readHl7DateTime("202407")?.kind // "partial"
+ * @example readHl7DateTime("not a date") // null
+ */
+export function readHl7DateTime(value: string): Hl7DateTime | null {
+  try {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const ts = splitHl7Ts(value);
+    if (ts === null || ts.dtm === "") {
+      return null;
+    }
+    if (ts.dtm === HL7_NULL_VALUE) {
+      return ts.degree === "" ? { kind: "null" } : null;
+    }
+    const fields = readHl7Dtm(ts.dtm);
+    if (fields === null) {
+      return null;
+    }
+    const precision = loweredPrecision(fields.precision, ts.degree);
+    if (precision === null) {
+      return null;
+    }
+    const local = writeHl7Local(fields, precision);
+    const offset = readHl7Offset(fields);
+    if (offset === null) {
+      return null;
+    }
+    if (isMomentPrecision(precision)) {
+      if (offset === "") {
+        return { kind: "local", local, precision };
+      }
+      const pair = readOffsetInstant(local + offset);
+      if (pair === null) {
+        return null;
+      }
+      return {
+        kind: "instant",
+        instant: pair.instant,
+        offset: pair.offset,
+        local,
+        precision,
+      };
+    }
+    return { kind: "partial", local, offset, precision };
+  } catch {
+    // Never throws (Core Rule 3)
+    return null;
+  }
+}
+
+/** A minute or finer names a moment; a coarser precision names a span. */
+function isMomentPrecision(
+  precision: Hl7Precision,
+): precision is Hl7MomentPrecision {
+  return (
+    precision === "minute" || precision === "second" || precision === "fraction"
+  );
+}
+
+/** The precision after a `TS` degree (2.A.77.2 lowers only); `null` for a bad or finer degree. */
+function loweredPrecision(
+  written: Hl7Precision,
+  degree: string,
+): Hl7Precision | null {
+  if (degree === "") {
+    return written;
+  }
+  const lowered = hl7DegreePrecision(degree);
+  return lowered === null ||
+    hl7PrecisionRank(lowered) > hl7PrecisionRank(written)
+    ? null
+    : lowered;
+}
+
+/** The sent offset as `±HH:MM` (`-0000` reads `+00:00`), `""` when none, `null` when out of range. */
+function readHl7Offset(fields: Hl7DtmFields): string | null {
+  if (fields.sign === undefined) {
+    return "";
+  }
+  const sent = `${fields.sign}${fields.offsetHour}:${fields.offsetMinute}`;
+  const nanoseconds = utcOffset.test(sent)
+    ? parseUtcOffsetNanoseconds(sent)
+    : null;
+  return nanoseconds === null ? null : formatUtcOffset(nanoseconds);
+}
+
+/**
+ * Validates the calendar of `fields` with Temporal (`overflow: "reject"`), then writes `local` at
+ * `precision`, cutting and never rounding. A field out of range throws a `RangeError`, which
+ * `parseHL7` catches.
+ */
+function writeHl7Local(fields: Hl7DtmFields, precision: Hl7Precision): string {
+  const reject = { overflow: "reject" } as const;
+  const date = Temporal.PlainDate.from(
+    {
+      year: Number(fields.year),
+      month: hl7Num(fields.month, 1),
+      day: hl7Num(fields.day, 1),
+    },
+    reject,
+  );
+  const hour = hl7Num(fields.hour, 0);
+  const minute = hl7Num(fields.minute, 0);
+  const second = hl7Num(fields.second, 0);
+  // The field bag rejects second 60 and hour 24, which a string would clamp or refuse.
+  Temporal.PlainDateTime.from(
+    { year: date.year, month: date.month, day: date.day, hour, minute, second },
+    reject,
+  );
+  if (precision === "year" || precision === "month" || precision === "day") {
+    return date.toString().slice(0, { year: 4, month: 7, day: 10 }[precision]);
+  }
+  if (precision === "hour") {
+    return `${date.toString()}T${hl7Pad(hour)}`;
+  }
+  const clock = `${hl7Pad(hour)}:${hl7Pad(minute)}:${hl7Pad(second)}`;
+  return writeHl7Clock(
+    Temporal.PlainDateTime.from(
+      `${date.toString()}T${clock}${fields.fraction === undefined ? "" : `.${fields.fraction}`}`,
+    ),
+    precision,
+    fields.fractionDigits,
+  );
+}
+
+/** A minute or finer: cut to `precision`, seconds always written. */
+function writeHl7Clock(
+  dateTime: Temporal.PlainDateTime,
+  precision: Hl7MomentPrecision,
+  fractionDigits: number,
+): string {
+  return precision === "fraction"
+    ? dateTime.toString({
+        fractionalSecondDigits: fractionDigits as 1 | 2 | 3 | 4,
+      })
+    : dateTime
+        .round({ smallestUnit: precision, roundingMode: "trunc" })
+        .toString({ smallestUnit: "second" });
+}
+
+/** An absent group reads as its first value (month 1, day 1, time 0). */
+function hl7Num(group: string | undefined, absent: number): number {
+  return group === undefined ? absent : Number(group);
+}
+
+function hl7Pad(n: number): string {
+  return String(n).padStart(2, "0");
 }

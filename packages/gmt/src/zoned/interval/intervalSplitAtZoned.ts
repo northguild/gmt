@@ -1,10 +1,10 @@
 import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
-  parseCalendarZonedValue,
 } from "../../internal";
-import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
-import { isValidCalendarZonedInterval } from "./validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
+import { calendarZonedIntervalOf } from "../../internal/intervalChecks";
+import type { Temporal } from "../../internal/temporal";
 
 /**
  * Split a zoned interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -65,11 +65,22 @@ export function intervalSplitAtZoned(
       return [];
     }
 
-    if (!isValidCalendarZonedInterval(start, end)) {
+    const interval = calendarZonedIntervalOf(start, end);
+    if (interval === null) {
       return [];
     }
 
-    if (!points.every((point) => isValidCalendarZonedDateTime(point))) {
+    const pointValues: Temporal.ZonedDateTime[] = [];
+    if (
+      !points.every((point, index) => {
+        const value = calendarZonedOf(point);
+        if (value === null) {
+          return false;
+        }
+        pointValues[index] = value;
+        return true;
+      })
+    ) {
       return [];
     }
 
@@ -81,18 +92,14 @@ export function intervalSplitAtZoned(
     }
 
     try {
-      const startVal = parseCalendarZonedValue(start);
-      const endVal = parseCalendarZonedValue(end);
+      const [startVal, endVal] = interval;
       const startNs = startVal.epochNanoseconds;
       const endNs = endVal.epochNanoseconds;
 
       // Each point's instant is read once; filter, sort and dedupe compare the bigints. `sort`
       // is stable, so points on one instant keep input order and the dedupe keeps the first.
-      const timedPoints = points
-        .map((point) => {
-          const value = parseCalendarZonedValue(point);
-          return { value, ns: value.epochNanoseconds };
-        })
+      const timedPoints = pointValues
+        .map((value) => ({ value, ns: value.epochNanoseconds }))
         .filter(({ ns }) => ns > startNs && ns < endNs);
 
       timedPoints.sort((a, b) => (a.ns < b.ns ? -1 : a.ns > b.ns ? 1 : 0));

@@ -1,8 +1,8 @@
-import { zonedDateTimeFrom, zonedUnitStart } from "../../internal";
+import { zonedUnitStart } from "../../internal";
 import type { FractionalDigit } from "../../types";
-import { isValidZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the start of the quarter for a given zoned ISO datetime.
@@ -38,7 +38,8 @@ export function startOfQuarterForZoned(
       return "";
     }
 
-    if (!isValidZonedDateTime(value)) {
+    const zonedDateTime = zonedDateTimeOf(value);
+    if (zonedDateTime === null) {
       return "";
     }
 
@@ -48,7 +49,7 @@ export function startOfQuarterForZoned(
     );
 
     try {
-      const start = zonedUnitStart(zonedDateTimeFrom(value), "quarter");
+      const start = zonedUnitStart(zonedDateTime, "quarter");
       return start ? start.toString({ fractionalSecondDigits }) : "";
     } catch {
       return "";

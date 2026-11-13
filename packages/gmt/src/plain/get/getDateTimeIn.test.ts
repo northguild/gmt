@@ -3,23 +3,23 @@ import { Temporal } from "../../internal/temporal";
 import { hostileProxy } from "../../test/hostileValues";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { setFakeSystemTime } from "../../test/setFakeSystemTime";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { addDateTime } from "../calculate/addDateTime";
 import { getDateTimeIn } from "./getDateTimeIn";
 import { getNow } from "./getNow";
 
-vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../../internal/resolveLocale", { spy: true });
 
 // The fake clock is 2027-06-15T12:00:00Z and the system zone is UTC unless a row says otherwise.
 const NOW = "2027-06-15T12:00:00Z";
 
 describe("getDateTimeIn", () => {
-  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
+  let timeZoneSpy: MockedFunction<typeof systemTimeZone>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     setFakeSystemTime(NOW);
-    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(systemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
@@ -138,13 +138,13 @@ describe("getDateTimeIn", () => {
 
 // A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
 // restores only spies it created itself, so each file resets this one explicitly.
-describe("getSystemTimeZone after a mocked row", () => {
+describe("systemTimeZone after a mocked row", () => {
   afterEach(() => {
-    vi.mocked(getSystemTimeZone).mockReset();
+    vi.mocked(systemTimeZone).mockReset();
   });
 
   it("returns the host's own zone again after a reset", () => {
-    expect(getSystemTimeZone()).toBe(
+    expect(systemTimeZone()).toBe(
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
   });

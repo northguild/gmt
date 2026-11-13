@@ -1,10 +1,5 @@
-import {
-  frameWallClock,
-  instantFrom,
-  isOptionsArgument,
-  zoneFrame,
-} from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { frameWallClock, isOptionsArgument, zoneFrame } from "../../internal";
+import { instantOf } from "../../internal/instantNanoseconds";
 
 /**
  * Which date on a bill of lading a value is rendered for, one per dated field of the DCSA
@@ -100,15 +95,16 @@ export function bolTimestamp(
       return "";
     }
     const frame = zoneFrame(options.timeZone);
+    const instant = instantOf(value);
     if (
       frame === null ||
       !BILL_OF_LADING_EVENTS.has(event) ||
-      !isValidInstant(value)
+      instant === null
     ) {
       return "";
     }
 
-    return frameWallClock(instantFrom(value), frame).toPlainDate().toString();
+    return frameWallClock(instant, frame).toPlainDate().toString();
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

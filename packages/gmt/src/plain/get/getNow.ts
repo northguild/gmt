@@ -1,4 +1,4 @@
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -12,7 +12,7 @@ import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
  * @example getNow() // "2024-03-15T14:30:45" (current time)
  */
 export function getNow(): string {
-  const timeZone = getSystemTimeZone();
+  const timeZone = systemTimeZone();
 
   if (!timeZone) {
     return "";

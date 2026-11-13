@@ -4,9 +4,8 @@ import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
   halfOpenIntersection,
-  parseCalendarZonedValue,
 } from "../../internal";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Return the overlapping span of two half-open zoned intervals `[start, end)`, or null when they
@@ -67,12 +66,11 @@ export function intervalIntersectionZoned(
   // One gate for all four endpoints: `isValidCalendarZonedDateTime` covers non-strings, empty
   // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
   // and a calendar annotation before the zone, while accepting RFC 9557 calendar annotations.
-  if (
-    !isValidCalendarZonedDateTime(aStart) ||
-    !isValidCalendarZonedDateTime(aEnd) ||
-    !isValidCalendarZonedDateTime(bStart) ||
-    !isValidCalendarZonedDateTime(bEnd)
-  ) {
+  const aZdt = calendarZonedOf(aStart);
+  const aZde = calendarZonedOf(aEnd);
+  const bZdt = calendarZonedOf(bStart);
+  const bZde = calendarZonedOf(bEnd);
+  if (aZdt === null || aZde === null || bZdt === null || bZde === null) {
     return null;
   }
 
@@ -84,11 +82,6 @@ export function intervalIntersectionZoned(
   }
 
   try {
-    const aZdt = parseCalendarZonedValue(aStart);
-    const aZde = parseCalendarZonedValue(aEnd);
-    const bZdt = parseCalendarZonedValue(bStart);
-    const bZde = parseCalendarZonedValue(bEnd);
-
     if (Temporal.ZonedDateTime.compare(aZdt, aZde) > 0) {
       return null;
     }

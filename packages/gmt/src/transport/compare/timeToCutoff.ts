@@ -1,5 +1,4 @@
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { instantOf } from "../../internal/instantNanoseconds";
 
 /**
  * Measure the time left until a cut-off, negative once it has passed.
@@ -33,13 +32,17 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  */
 export function timeToCutoff(now: string, cutoff: string): string {
   try {
-    if (!isValidInstant(now) || !isValidInstant(cutoff)) {
+    const nowInstant = instantOf(now);
+    if (nowInstant === null) {
       return "";
     }
 
-    return instantFrom(now)
-      .until(instantFrom(cutoff), { largestUnit: "hours" })
-      .toString();
+    const cutoffInstant = instantOf(cutoff);
+    if (cutoffInstant === null) {
+      return "";
+    }
+
+    return nowInstant.until(cutoffInstant, { largestUnit: "hours" }).toString();
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

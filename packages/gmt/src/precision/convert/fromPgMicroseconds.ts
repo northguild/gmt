@@ -3,7 +3,7 @@ import {
   NANOSECONDS_PER_MICROSECOND,
   PG_EPOCH_OFFSET_MICROSECONDS,
 } from "../../internal";
-import { fromNanoseconds } from "./fromNanoseconds";
+import { zonedStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 
 /**
  * Convert PostgreSQL's internal `timestamptz` value back to an ISO 8601 instant string.
@@ -35,7 +35,7 @@ export function fromPgMicroseconds(value: bigint): string {
     return "";
   }
 
-  return fromNanoseconds(
+  return zonedStringFromEpochNanoseconds(
     (value + PG_EPOCH_OFFSET_MICROSECONDS) * NANOSECONDS_PER_MICROSECOND,
   );
 }

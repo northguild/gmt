@@ -28,5 +28,5 @@ export function isValidDateTime(value: string): boolean;
 export function isValidDateTime(value: {} | null | undefined | void): boolean;
 export function isValidDateTime(value: unknown): value is string;
 export function isValidDateTime(value: unknown): boolean {
-  return typeof value === "string" && plainDateTimeOf(value) !== null;
+  return plainDateTimeOf(value) !== null;
 }

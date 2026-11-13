@@ -1,4 +1,4 @@
-import { parseCalendarDateValue } from "../../internal";
+import { calendarDateOf } from "../../internal/calendarDateString";
 
 /**
  * Return true if `value` is a valid GMT PlainDate string: a bare ISO date ("2024-10-03") or an
@@ -55,14 +55,5 @@ export function isValidCalendarDate(
 ): boolean;
 export function isValidCalendarDate(value: unknown): value is string;
 export function isValidCalendarDate(value: unknown): boolean {
-  if (typeof value !== "string" || value.length === 0) {
-    return false;
-  }
-
-  try {
-    parseCalendarDateValue(value);
-    return true;
-  } catch {
-    return false;
-  }
+  return calendarDateOf(value) !== null;
 }

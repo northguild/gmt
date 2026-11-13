@@ -1,5 +1,5 @@
 import type { X12DateTimeRangeFormat } from "../../types/edi";
-import { parseX12DateTimeRange } from "../parse/parseX12DateTimeRange";
+import { x12DateTimeRangeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is an X12 Date Time Period value (data element 1251) that states a
@@ -13,7 +13,7 @@ import { parseX12DateTimeRange } from "../parse/parseX12DateTimeRange";
  * | `DTS` | `CCYYMMDDHHMMSS-CCYYMMDDHHMMSS` | "Range of Date and Time Expressed in Format CCYYMMDDHHMMSS-CCYYMMDDHHMMSS" |
  *
  * - True exactly when `parseX12DateTimeRange` returns a range for the same arguments: the
- *   validator calls the parser, so the two cannot disagree.
+ *   validator and the parser share one core, so the two cannot disagree.
  * - A range is valid with exactly one hyphen, and only against its code.
  * - A range whose end precedes its start is false; an end equal to its start is true.
  * - Checks the calendar as well as the shape: hour 24, second 60 and 29 February 2023 are
@@ -34,5 +34,5 @@ export function isValidX12DateTimeRange(
   value: string,
   format: X12DateTimeRangeFormat,
 ): boolean {
-  return parseX12DateTimeRange(value, format) !== null;
+  return x12DateTimeRangeText(value, format) !== null;
 }
