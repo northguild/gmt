@@ -24,8 +24,9 @@
 - **a11y and media:** `a11y-axe` (WCAG 2.2 AA tags; exclusions for false positives only) and
   `a11y-media` (reduced motion, reduced transparency, more contrast, forced colours).
 - **Tables fit:** `table-fit` (`scripts/table-fit.mjs`) fails when a table on any built page
-  scrolls sideways at 1440 px, or holds a cell whose content spills out of it at 1440 or 390 px. It is a weekly gate in three browsers and the `dox-tables` check in
-  CI, in Chromium.
+  scrolls sideways at 1440 px, or holds a cell whose content spills out of it at 1440 or 390 px. It is a weekly gate in three browsers. In CI it is the `dox-tables` check,
+  run in Chromium as four `dox-table-fit` shards on the `dox-site` artifact, on every Dox change and
+  every `packages/gmt/src` change, and always over every table page.
 - **Visual gates** after any CSS or widget-markup change: `visual:diff` and
   `scripts/html-diff.mjs`, through `pnpm --filter dox gates --baseline <base apps/dox>` (see
   [design-system.md](design-system.md)).
