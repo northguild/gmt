@@ -772,6 +772,59 @@ const TOOLS = [
     drawn: ["hold"],
     textBoxes: ["codeframe"],
   },
+  {
+    // RAI-99. No handle: the reader types a GTFS time, or seconds and days to write, or picks a preset.
+    // The first read preset reads a time and the last is refused, so each value is typed from both.
+    slug: "gtfs-time-reader",
+    root: '[data-widget="gtfs-time-reader"]',
+    presets: ["next-day", "space"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "GTFS time",
+        values: [
+          "25:35:00",
+          "9:05:00",
+          "999:59:59",
+          "24:60:00",
+          "1000:00:00",
+          "25:35",
+          "-01:00:00",
+          "25:35:00.5",
+          " 25:35:00",
+          "９:０５:００",
+          "9".repeat(16),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Seconds (less whole days)",
+        values: [
+          "5700",
+          "0",
+          "86399",
+          "86400",
+          "-1",
+          "1.5",
+          "x",
+          "9".repeat(16),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Days past the service day",
+        values: ["0", "1", "41", "42", "-1", "1.5", "x", "9".repeat(16), ""],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["hold"],
+    textBoxes: ["codeframe"],
+  },
 ];
 
 /**

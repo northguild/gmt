@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 75622,
-  "files": 997,
-  "executions": 2268660,
+  "tests": 75852,
+  "files": 1001,
+  "executions": 2275560,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 773,
+  "functions": 776,
   "patterns": 33,
   "byNamespace": [
     {
@@ -115,6 +115,10 @@
     {
       "namespace": "recurrence",
       "count": 4
+    },
+    {
+      "namespace": "rail",
+      "count": 3
     }
   ],
   "industryNamespaces": [
@@ -124,7 +128,8 @@
     "aviation",
     "finance",
     "gnss",
-    "healthcare"
+    "healthcare",
+    "rail"
   ],
   "industryLayers": [
     {
@@ -203,7 +208,19 @@
       "label": "Aviation",
       "own": 7,
       "drawsOn": []
+    },
+    {
+      "id": "rail",
+      "label": "Rail",
+      "own": 3,
+      "drawsOn": [
+        {
+          "module": "transport",
+          "count": 15,
+          "shared": true
+        }
+      ]
     }
   ],
-  "industryFunctions": 103
+  "industryFunctions": 106
 }

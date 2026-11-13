@@ -75,6 +75,8 @@ Three things hold across every industry layer:
   date such as `01JAN26`, with month letters that ignore the platform's language and a century
   you state. Read a METAR time such as `251200Z` against the time it was received, and a NOTAM
   validity with its `EST` and `PERM`. Draws on Core only.
+- [Rail: GTFS service days](./rail-gtfs-service-days/) — read, write and check a GTFS stop time
+  such as `25:35:00`, which runs past midnight and stays with its service day. Draws on Transport.
 
 ## Scenarios
 
@@ -108,8 +110,9 @@ GMT approach working, on the same live widget:
 - [An SSIM Month Read in the Wrong Language](/scenarios/an-ssim-month-read-in-the-wrong-language/)
 - [A METAR from Last Month](/scenarios/a-metar-from-last-month/)
 - [PERM Read as a Date](/scenarios/perm-read-as-a-date/)
+- [A GTFS Time Folded into One Day](/scenarios/a-gtfs-time-folded-into-one-day/)
 
 The mistakes that have hurt people in these layers are collected under
 [Transport mistakes](/mistakes/transport/), [Intermodal mistakes](/mistakes/intermodal/),
-[Finance mistakes](/mistakes/finance/), [Healthcare mistakes](/mistakes/healthcare/) and
-[Aviation mistakes](/mistakes/aviation/).
+[Finance mistakes](/mistakes/finance/), [Healthcare mistakes](/mistakes/healthcare/),
+[Aviation mistakes](/mistakes/aviation/) and [Rail mistakes](/mistakes/rail/).
