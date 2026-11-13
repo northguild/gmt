@@ -1,4 +1,4 @@
-import { spanNs } from "./spanNs";
+import { spanNanoseconds } from "../../internal/instantNanoseconds";
 
 /** Nanoseconds in a second. */
 const NANOSECONDS_PER_SECOND = 1_000_000_000n;
@@ -35,7 +35,7 @@ const NANOSECONDS_PER_SECOND = 1_000_000_000n;
  * @example spanSeconds("2027-06-15T12:00:00Z", "soon") // null
  */
 export function spanSeconds(start: string, end: string): number | null {
-  const nanoseconds = spanNs(start, end);
+  const nanoseconds = spanNanoseconds(start, end);
 
   if (nanoseconds === null) {
     return null;

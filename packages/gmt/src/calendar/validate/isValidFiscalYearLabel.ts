@@ -1,3 +1,4 @@
+import { isFiscalYearLabelName } from "../../internal/unitNames";
 import type { FiscalYearLabel } from "../../types";
 
 /**
@@ -21,11 +22,5 @@ import type { FiscalYearLabel } from "../../types";
 export function isValidFiscalYearLabel(
   value: unknown,
 ): value is FiscalYearLabel {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  return (
-    value === "startYear" || value === "endYear" || value === "majorityYear"
-  );
+  return isFiscalYearLabelName(value);
 }

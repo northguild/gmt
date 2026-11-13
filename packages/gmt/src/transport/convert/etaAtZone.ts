@@ -1,6 +1,4 @@
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
-import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
+import { etaAtZoneText } from "../../internal/deliverySchedule";
 
 /**
  * Render an arrival instant as local time in the zone where it will be read.
@@ -50,15 +48,5 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
  * @example etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokio") // ""
  */
 export function etaAtZone(arrivalUtc: string, targetZone: string): string {
-  try {
-    if (!isValidInstant(arrivalUtc) || !isValidTimeZone(targetZone)) {
-      return "";
-    }
-
-    return instantFrom(arrivalUtc).toZonedDateTimeISO(targetZone).toString();
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return "";
-  }
+  return etaAtZoneText(arrivalUtc, targetZone);
 }

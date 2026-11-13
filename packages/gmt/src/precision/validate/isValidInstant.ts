@@ -1,4 +1,4 @@
-import { parseInstantNanoseconds } from "../../internal";
+import { instantOf } from "../../internal/instantNanoseconds";
 
 /**
  * Validate whether a string is an ISO 8601 instant string the `precision/` namespace accepts.
@@ -52,5 +52,5 @@ export function isValidInstant(value: string): boolean;
 export function isValidInstant(value: {} | null | undefined | void): boolean;
 export function isValidInstant(value: unknown): value is string;
 export function isValidInstant(value: unknown): boolean {
-  return typeof value === "string" && parseInstantNanoseconds(value) !== null;
+  return instantOf(value) !== null;
 }

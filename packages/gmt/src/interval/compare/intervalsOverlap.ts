@@ -1,5 +1,5 @@
-import { parseIntervalNanoseconds } from "../../internal";
 import type { Interval } from "../../types";
+import { intervalPairOverlaps } from "../../internal/intervalNanoseconds";
 
 /**
  * Return true when two half-open intervals share at least one instant.
@@ -28,18 +28,5 @@ import type { Interval } from "../../types";
  * @example intervalsOverlap({ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }, { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" }) // false — inverted
  */
 export function intervalsOverlap(a: Interval, b: Interval): boolean {
-  try {
-    const first = parseIntervalNanoseconds(a);
-    const second = parseIntervalNanoseconds(b);
-
-    if (first === null || second === null) {
-      return false;
-    }
-
-    return first.start < second.end && second.start < first.end;
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return false;
-  }
+  return intervalPairOverlaps(a, b);
 }

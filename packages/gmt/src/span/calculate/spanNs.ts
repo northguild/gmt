@@ -1,4 +1,4 @@
-import { parseInstantNanoseconds } from "../../internal";
+import { spanNanoseconds } from "../../internal/instantNanoseconds";
 
 /**
  * Return the exact elapsed nanoseconds between two ISO 8601 instant strings.
@@ -50,12 +50,5 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example spanNs("2024-03-10T12:00:00Z", "invalid") // null
  */
 export function spanNs(start: string, end: string): bigint | null {
-  const startNanoseconds = parseInstantNanoseconds(start);
-  const endNanoseconds = parseInstantNanoseconds(end);
-
-  if (startNanoseconds === null || endNanoseconds === null) {
-    return null;
-  }
-
-  return endNanoseconds - startNanoseconds;
+  return spanNanoseconds(start, end);
 }

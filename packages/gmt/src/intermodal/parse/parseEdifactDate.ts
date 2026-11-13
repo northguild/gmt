@@ -1,5 +1,5 @@
-import { readEdiValue } from "../../internal/ediDateTimeFields";
 import type { EdifactDateFormat } from "../../types/edi";
+import { edifactDateText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse a UN/EDIFACT `DTM` value that states a calendar date, as an ISO 8601 date.
@@ -40,10 +40,5 @@ export function parseEdifactDate(
   value: string,
   format: EdifactDateFormat,
 ): string {
-  try {
-    return readEdiValue("edifact", "date", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return edifactDateText(value, format);
 }

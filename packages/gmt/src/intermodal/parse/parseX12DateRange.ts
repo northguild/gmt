@@ -1,5 +1,5 @@
-import { readEdiRange } from "../../internal/ediDateTimeFields";
 import type { EdiDatePeriod, X12DateRangeFormat } from "../../types/edi";
+import { x12DateRangeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse an X12 Date Time Period value that states a range between two calendar dates, as its
@@ -47,10 +47,5 @@ export function parseX12DateRange(
   value: string,
   format: X12DateRangeFormat,
 ): EdiDatePeriod | null {
-  try {
-    return readEdiRange("x12", "dateRange", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return null;
-  }
+  return x12DateRangeText(value, format);
 }

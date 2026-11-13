@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { instantOf } from "../../internal/instantNanoseconds";
 
 /**
  * Report whether a cut-off has passed.
@@ -36,11 +35,17 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  */
 export function isPastCutoff(now: string, cutoff: string): boolean {
   try {
-    if (!isValidInstant(now) || !isValidInstant(cutoff)) {
+    const nowInstant = instantOf(now);
+    if (nowInstant === null) {
       return false;
     }
 
-    return Temporal.Instant.compare(instantFrom(now), instantFrom(cutoff)) >= 0;
+    const cutoffInstant = instantOf(cutoff);
+    if (cutoffInstant === null) {
+      return false;
+    }
+
+    return Temporal.Instant.compare(nowInstant, cutoffInstant) >= 0;
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

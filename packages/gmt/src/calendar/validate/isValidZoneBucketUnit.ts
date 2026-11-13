@@ -1,5 +1,5 @@
 import type { Temporal } from "../../internal/temporal";
-import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
+import { isZoneBucketUnitName } from "../../internal/unitNames";
 import type { ZoneBucketUnit } from "../../types";
 
 /**
@@ -33,15 +33,5 @@ import type { ZoneBucketUnit } from "../../types";
 export function isValidZoneBucketUnit(
   unit: unknown,
 ): unit is Temporal.SmallestUnit<ZoneBucketUnit> {
-  if (typeof unit !== "string") {
-    return false;
-  }
-
-  const singular = resolveDateTimeUnit(unit);
-  return (
-    singular === "hour" ||
-    singular === "day" ||
-    singular === "week" ||
-    singular === "month"
-  );
+  return isZoneBucketUnitName(unit);
 }

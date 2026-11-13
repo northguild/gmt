@@ -1,5 +1,5 @@
-import { readEdiValue } from "../../internal/ediDateTimeFields";
 import type { X12DateTimeFormat } from "../../types/edi";
+import { x12DateTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse an X12 Date Time Period value that states a date and a time, as an ISO 8601 local
@@ -48,10 +48,5 @@ export function parseX12DateTime(
   value: string,
   format: X12DateTimeFormat,
 ): string {
-  try {
-    return readEdiValue("x12", "dateTime", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return x12DateTimeText(value, format);
 }

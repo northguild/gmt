@@ -1,8 +1,4 @@
-import {
-  exactDurationNanoseconds,
-  readExactMoment,
-  writeExactMoment,
-} from "../../internal";
+import { transitTimeText } from "../../internal/deliverySchedule";
 
 /**
  * Add a transit duration to a departure and return the arrival, in the departure's own zone.
@@ -75,35 +71,5 @@ import {
  * @example transitTime("2024-06-15T10:00:00Z", "2 hours") // ""
  */
 export function transitTime(departure: string, duration: string): string {
-  // A non-string would reach the regex tests below, which coerce it: a throwing `toString`, a
-  // Symbol or a hostile Proxy would escape. Refuse it before any read.
-  if (typeof departure !== "string" || typeof duration !== "string") {
-    return "";
-  }
-
-  try {
-    return addLeg(departure, duration);
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return "";
-  }
-}
-
-/** `transitTime` for two strings, without the guard. */
-function addLeg(departure: string, duration: string): string {
-  // Days are 24 exact hours; years, months and weeks are refused.
-  const amount = exactDurationNanoseconds(duration);
-  if (amount === null) {
-    return "";
-  }
-
-  // A string that names a zone must name a real one that agrees with its offset; only a string
-  // that names none is read as an instant, keeping its offset text.
-  const moment = readExactMoment(departure);
-  if (moment === null) {
-    return "";
-  }
-
-  return writeExactMoment(moment.nanoseconds + amount, moment.notation);
+  return transitTimeText(departure, duration);
 }

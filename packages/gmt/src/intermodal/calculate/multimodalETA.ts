@@ -4,9 +4,9 @@ import { formatHourDuration } from "../../internal/hourDurationString";
 import {
   type Leg,
   type ScheduleDeliveryOptions,
-  scheduleDelivery,
 } from "../../transport/calculate/scheduleDelivery";
 import { isObject } from "../../internal/isObject";
+import { scheduleDeliveryValue } from "../../internal/deliverySchedule";
 
 /** What `multimodalETA` returns: the end-to-end ETA, with the time moving and the time waiting kept apart. */
 export interface MultimodalJourney {
@@ -128,7 +128,7 @@ export function multimodalETA(
       return null;
     }
     const snapshot = legs.map(snapshotLeg) as Leg[];
-    const schedule = scheduleDelivery(snapshot, options);
+    const schedule = scheduleDeliveryValue(snapshot, options);
     if (schedule === null) {
       return null;
     }

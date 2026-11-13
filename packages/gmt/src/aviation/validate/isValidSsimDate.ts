@@ -1,4 +1,4 @@
-import { parseSsimDate } from "../parse/parseSsimDate";
+import { readSsimDate } from "../../internal/ssimDate";
 import type { TwoDigitYearOptions } from "../../types/two-digit-year";
 
 /**
@@ -26,5 +26,5 @@ export function isValidSsimDate(
   value: string,
   options: TwoDigitYearOptions,
 ): boolean {
-  return parseSsimDate(value, options) !== "";
+  return readSsimDate(value, options) !== "";
 }

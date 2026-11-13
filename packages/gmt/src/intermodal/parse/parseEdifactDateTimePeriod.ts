@@ -1,8 +1,8 @@
-import { readEdiRange } from "../../internal/ediDateTimeFields";
 import type {
   EdiDateTimePeriod,
   EdifactDateTimePeriodFormat,
 } from "../../types/edi";
+import { edifactDateTimePeriodText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse a UN/EDIFACT `DTM` value that states a period between two local date-times, as its
@@ -51,10 +51,5 @@ export function parseEdifactDateTimePeriod(
   value: string,
   format: EdifactDateTimePeriodFormat,
 ): EdiDateTimePeriod | null {
-  try {
-    return readEdiRange("edifact", "dateTimePeriod", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return null;
-  }
+  return edifactDateTimePeriodText(value, format);
 }

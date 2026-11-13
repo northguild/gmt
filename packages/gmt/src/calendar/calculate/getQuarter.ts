@@ -6,7 +6,7 @@ import {
 } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
 import type { FiscalYearLabel } from "../../types";
-import { isValidFiscalYearLabel } from "../validate";
+import { isFiscalYearLabelName } from "../../internal/unitNames";
 
 /** Months in a quarter. */
 const MONTHS_PER_QUARTER = 3;
@@ -91,7 +91,7 @@ export function getQuarter(
       !Number.isInteger(fiscalYearStartMonth) ||
       fiscalYearStartMonth < 1 ||
       fiscalYearStartMonth > MONTHS_PER_YEAR ||
-      !isValidFiscalYearLabel(yearLabel)
+      !isFiscalYearLabelName(yearLabel)
     ) {
       return null;
     }

@@ -1,10 +1,5 @@
-import type {
-  X12OffsetTimeCode,
-  X12TimeCodeClass,
-  X12ZoneTimeCode,
-} from "../../types/edi";
-import { x12TimeCodeOffset } from "./x12TimeCodeOffset";
-import { x12TimeCodeZone } from "./x12TimeCodeZone";
+import { classifyX12TimeCodeOf } from "../../internal/x12TimeCodes";
+import type { X12TimeCodeClass } from "../../types/edi";
 
 /**
  * Say whether an X12 time code (data element 623) states an offset or names a zone, and return
@@ -51,13 +46,5 @@ import { x12TimeCodeZone } from "./x12TimeCodeZone";
  * @example classifyX12TimeCode("et") // null (matching is exact)
  */
 export function classifyX12TimeCode(timeCode: string): X12TimeCodeClass | null {
-  // Each reader owns the list of its codes and returns its sentinel for any other value, so a
-  // code is an offset code exactly when the offset reader reads it.
-  if (x12TimeCodeOffset(timeCode as X12OffsetTimeCode) !== "") {
-    return { kind: "offset", timeCode: timeCode as X12OffsetTimeCode };
-  }
-  if (x12TimeCodeZone(timeCode) !== null) {
-    return { kind: "zone", timeCode: timeCode as X12ZoneTimeCode };
-  }
-  return null;
+  return classifyX12TimeCodeOf(timeCode);
 }

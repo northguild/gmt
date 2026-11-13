@@ -1,8 +1,8 @@
-import { readEdiRange } from "../../internal/ediDateTimeFields";
 import type {
   EdiDateTimePeriod,
   X12DateTimeRangeFormat,
 } from "../../types/edi";
+import { x12DateTimeRangeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse an X12 Date Time Period value that states a range between two local date-times, as its
@@ -52,10 +52,5 @@ export function parseX12DateTimeRange(
   value: string,
   format: X12DateTimeRangeFormat,
 ): EdiDateTimePeriod | null {
-  try {
-    return readEdiRange("x12", "dateTimeRange", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return null;
-  }
+  return x12DateTimeRangeText(value, format);
 }

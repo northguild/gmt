@@ -1,5 +1,5 @@
-import { parseIntervalNanoseconds } from "../../internal";
 import type { Interval } from "../../types";
+import { intersectIntervalPair } from "../../internal/intervalNanoseconds";
 
 /**
  * Return the half-open interval two intervals share, or null when they share no instant.
@@ -23,25 +23,5 @@ import type { Interval } from "../../types";
  * @example intersectIntervals({ start: "invalid", end: "2024-01-01T17:00:00Z" }, { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" }) // null
  */
 export function intersectIntervals(a: Interval, b: Interval): Interval | null {
-  try {
-    const first = parseIntervalNanoseconds(a);
-    const second = parseIntervalNanoseconds(b);
-
-    if (first === null || second === null) {
-      return null;
-    }
-
-    if (!(first.start < second.end && second.start < first.end)) {
-      return null;
-    }
-
-    return {
-      start: first.start >= second.start ? first.startText : second.startText,
-      end: first.end <= second.end ? first.endText : second.endText,
-    };
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return null;
-  }
+  return intersectIntervalPair(a, b);
 }

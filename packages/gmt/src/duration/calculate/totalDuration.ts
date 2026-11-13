@@ -1,8 +1,8 @@
 import { Temporal } from "../../internal/temporal";
 import { durationTotal, resolveDurationRelativeTo } from "../../internal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, DurationRelativeTo } from "../../types";
-import { isValidDuration } from "../validate/isValidDuration";
+import { durationOf } from "../../internal/inputChecks";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -90,13 +90,15 @@ export function totalDuration(
 
   const resolvedUnit = resolveDurationUnit(unit);
 
-  if (!isValidDuration(value) || !isValidDateTimeDurationUnit(resolvedUnit)) {
+  const duration = durationOf(value);
+
+  if (duration === null || !isDateTimeDurationUnitName(resolvedUnit)) {
     return null;
   }
 
   try {
     return durationTotal(
-      Temporal.Duration.from(value),
+      duration,
       resolvedUnit,
       resolveDurationRelativeTo(options?.relativeTo),
     );

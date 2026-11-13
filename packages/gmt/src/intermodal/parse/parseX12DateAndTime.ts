@@ -1,4 +1,4 @@
-import { readX12DateAndTime } from "../../internal/ediDateTimeFields";
+import { x12DateAndTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Read the date and the time of an X12 segment, sent as two elements, as one ISO 8601 local
@@ -52,10 +52,5 @@ import { readX12DateAndTime } from "../../internal/ediDateTimeFields";
  * @example parseX12DateAndTime("240615", "1430") // "" (the date element has a four-digit year)
  */
 export function parseX12DateAndTime(date: string, time: string): string {
-  try {
-    return readX12DateAndTime(date, time);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return x12DateAndTimeText(date, time);
 }

@@ -4,7 +4,7 @@ import {
   parseInstantNanoseconds,
   PG_EPOCH_OFFSET_MICROSECONDS,
 } from "../../internal";
-import { truncateNanoseconds } from "../calculate";
+import { truncateEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 
 /**
  * Convert an ISO 8601 instant string to PostgreSQL's internal `timestamptz` value.
@@ -42,7 +42,7 @@ export function toPgMicroseconds(isoString: string): bigint {
   }
 
   const microseconds =
-    truncateNanoseconds(nanoseconds, "us") / NANOSECONDS_PER_MICROSECOND -
+    truncateEpochNanoseconds(nanoseconds, "us") / NANOSECONDS_PER_MICROSECOND -
     PG_EPOCH_OFFSET_MICROSECONDS;
 
   if (microseconds < MIN_PG_MICROSECONDS) {

@@ -1,4 +1,4 @@
-import { isValidNanoPattern } from "../validate/isValidNanoPattern";
+import { isNanoPattern } from "../../internal/inputChecks";
 
 /**
  * Parse a decimal string produced by `formatNanoseconds` — typically one field of a JSON
@@ -29,5 +29,5 @@ import { isValidNanoPattern } from "../validate/isValidNanoPattern";
 export function parseNanoseconds(value: string): bigint {
   // Shape, length and range all live in the validator, so `isValidNanoPattern(v)` and
   // "parseNanoseconds(v) is a real value" can never disagree.
-  return isValidNanoPattern(value) ? BigInt(value) : 0n;
+  return isNanoPattern(value) ? BigInt(value) : 0n;
 }

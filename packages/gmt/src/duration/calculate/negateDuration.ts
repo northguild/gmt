@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../validate/isValidDuration";
+import { durationOf } from "../../internal/inputChecks";
 
 /**
  * Flip the sign of an ISO 8601 duration string.
@@ -21,12 +20,14 @@ import { isValidDuration } from "../validate/isValidDuration";
  * @example negateDuration("not a duration") // ""
  */
 export function negateDuration(value: string): string {
-  if (!isValidDuration(value)) {
+  const duration = durationOf(value);
+
+  if (duration === null) {
     return "";
   }
 
   try {
-    return Temporal.Duration.from(value).negated().toString();
+    return duration.negated().toString();
   } catch {
     return "";
   }
