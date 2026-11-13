@@ -1,5 +1,11 @@
 import { defineConfig } from "oxlint";
 import { recommendedRules } from "@northguild/gmt-oxlint";
+import {
+  CORE_NESTED_RULE,
+  CORE_RULE,
+  POLYFILL_RULE,
+  PUBLIC_RULE,
+} from "./packages/gmt/oxlint.boundary.mts";
 
 /**
  * The `@northguild/gmt-oxlint` rules are the point of this file: a library that
@@ -54,21 +60,42 @@ export default defineConfig({
   },
   overrides: [
     {
-      // CORE-80: `internal/temporal.ts` is the one library file that names the Temporal implementation.
+      // CORE-80: `internal/temporal.ts` is the one file that names the Temporal implementation.
       files: ["packages/gmt/src/**"],
+      rules: { "no-restricted-imports": POLYFILL_RULE },
+    },
+    {
+      // PUBLIC_RULE: a public function never calls another public function (coding-standards § Loop cost).
+      files: ["packages/gmt/src/**"],
+      rules: { "no-restricted-imports": PUBLIC_RULE },
+    },
+    {
+      // CORE_RULE: an internal core never imports a public module.
+      files: [
+        "packages/gmt/src/internal/*.ts",
+        "packages/gmt/src/regex/*.ts",
+        "packages/gmt/src/types/*.ts",
+      ],
       rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            paths: [
-              {
-                name: "@js-temporal/polyfill",
-                message: "Import Temporal from internal/temporal",
-              },
-            ],
-          },
-        ],
+        "no-restricted-imports": CORE_RULE,
       },
+    },
+    {
+      // CORE_NESTED_RULE: the same for `internal/*/**`.
+      files: ["packages/gmt/src/internal/*/**"],
+      rules: {
+        "no-restricted-imports": CORE_NESTED_RULE,
+      },
+    },
+    {
+      // Barrels, tests and browser entries may import public modules; they keep the polyfill ban.
+      files: [
+        "packages/gmt/src/**/index.ts",
+        "packages/gmt/src/**/*.test.ts",
+        "packages/gmt/src/test/**",
+        "packages/gmt/src/**/*.browser.ts",
+      ],
+      rules: { "no-restricted-imports": POLYFILL_RULE },
     },
     {
       files: ["packages/gmt/src/internal/temporal.ts"],
