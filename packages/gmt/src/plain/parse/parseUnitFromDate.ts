@@ -1,8 +1,8 @@
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { getWeekNumber } from "../calculate/getWeekNumber";
-import { isValidDate } from "../validate";
+import { weekNumberOf } from "../../internal/weekNumber";
 import { isOptionsArgument } from "../../internal/isObject";
 import { isoYearString } from "../../internal/isoYearString";
 
@@ -57,13 +57,12 @@ export function parseUnitFromDate(
     }
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
-    if (!isValidDate(value) || weekStartsOn === null) {
+    const date = plainDateOf(value);
+    if (date === null || weekStartsOn === null) {
       return "";
     }
 
     try {
-      const date = Temporal.PlainDate.from(value);
-
       switch (resolveDateTimeUnit(unit)) {
         case "year":
           return isoYearString(date.year);
@@ -72,7 +71,7 @@ export function parseUnitFromDate(
         case "day":
           return date.day.toString().padStart(2, "0");
         case "week":
-          return (getWeekNumber(value, weekStartsOn) ?? 0).toString();
+          return (weekNumberOf(date, weekStartsOn) ?? 0).toString();
         case "dayOfWeek":
           return date.dayOfWeek.toString();
         default:

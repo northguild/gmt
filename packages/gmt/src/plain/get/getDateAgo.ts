@@ -1,11 +1,11 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { isDateDurationUnitName } from "../../internal/unitNames";
 import { Temporal } from "../../internal/temporal";
 import { plainDateAdd } from "../../internal/plainDateAdd";
 import { readLengthUnits } from "../../internal/lengthFromNow";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import type { DateDurationUnit } from "../../types";
-import { isValidDateDurationUnit } from "../validate/isValidDateDurationUnit";
 
 /**
  * Return the PlainDate before today, as an ISO string, counted from the current time.
@@ -37,12 +37,12 @@ export function getDateAgo(
   units: Partial<Record<DateDurationUnit, number>>,
 ): string {
   try {
-    const amounts = readLengthUnits(units, isValidDateDurationUnit);
+    const amounts = readLengthUnits(units, isDateDurationUnitName);
     if (amounts === null) {
       return "";
     }
 
-    const timeZone = getSystemTimeZone();
+    const timeZone = systemTimeZone();
     if (!timeZone) {
       return "";
     }

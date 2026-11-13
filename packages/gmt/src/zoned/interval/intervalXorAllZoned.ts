@@ -4,9 +4,8 @@ import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
   halfOpenXor,
-  parseCalendarZonedValue,
 } from "../../internal";
-import { isValidCalendarZonedInterval } from "./validate";
+import { calendarZonedIntervalOf } from "../../internal/intervalChecks";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -61,14 +60,26 @@ export function intervalXorAllZoned(
       return [];
     }
 
+    const parsed: Array<{
+      start: Temporal.ZonedDateTime;
+      end: Temporal.ZonedDateTime;
+    }> = [];
     if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          typeof interval.start === "string" &&
-          typeof interval.end === "string" &&
-          isValidCalendarZonedInterval(interval.start, interval.end),
-      )
+      !intervals.every((interval, index) => {
+        if (
+          !isObject(interval) ||
+          typeof interval.start !== "string" ||
+          typeof interval.end !== "string"
+        ) {
+          return false;
+        }
+        const pair = calendarZonedIntervalOf(interval.start, interval.end);
+        if (pair === null) {
+          return false;
+        }
+        parsed[index] = { start: pair[0], end: pair[1] };
+        return true;
+      })
     ) {
       return [];
     }
@@ -83,11 +94,6 @@ export function intervalXorAllZoned(
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: parseCalendarZonedValue(interval.start),
-        end: parseCalendarZonedValue(interval.end),
-      }));
-
       // Ordering and grouping use `Temporal.ZonedDateTime.compare`, which compares epoch nanoseconds
       // only — calendar- and zone-blind, unlike `ZonedDateTime.prototype.equals`. Each boundary stays
       // the ZonedDateTime of the input that contributed it, so it is formatted in that input's zone.

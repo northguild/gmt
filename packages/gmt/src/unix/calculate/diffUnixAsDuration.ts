@@ -9,7 +9,7 @@ import {
   resolveUnixEpochUnit,
   unixEpochToInstant,
 } from "../../internal/unixEpochValue";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type {
   DateTimeDurationUnit,
   DurationStringOptions,
@@ -97,7 +97,7 @@ export function diffUnixAsDuration(
     const largestUnit =
       typeof unit === "string" ? resolveDurationUnit(unit) : unit;
 
-    if (!isValidDateTimeDurationUnit(largestUnit)) {
+    if (!isDateTimeDurationUnitName(largestUnit)) {
       return "";
     }
 

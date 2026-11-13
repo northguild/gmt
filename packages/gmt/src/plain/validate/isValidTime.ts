@@ -1,4 +1,4 @@
-import { isTimeString } from "../../internal/inputChecks";
+import { plainTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return true when `value` is a valid ISO PlainTime string.
@@ -27,5 +27,5 @@ export function isValidTime(value: string): boolean;
 export function isValidTime(value: {} | null | undefined | void): boolean;
 export function isValidTime(value: unknown): value is string;
 export function isValidTime(value: unknown): boolean {
-  return typeof value === "string" && isTimeString(value);
+  return plainTimeOf(value) !== null;
 }

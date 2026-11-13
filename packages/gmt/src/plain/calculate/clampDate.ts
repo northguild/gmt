@@ -1,6 +1,5 @@
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-
-import { isValidDate } from "../validate";
 
 /**
  * Restrict `value` to the range [`min`, `max`].
@@ -22,15 +21,14 @@ import { isValidDate } from "../validate";
  * @example clampDate("invalid", "2024-03-01", "2024-03-31") // ""
  */
 export function clampDate(value: string, min: string, max: string): string {
-  if (!isValidDate(value) || !isValidDate(min) || !isValidDate(max)) {
+  const v = plainDateOf(value);
+  const mn = plainDateOf(min);
+  const mx = plainDateOf(max);
+  if (v === null || mn === null || mx === null) {
     return "";
   }
 
   try {
-    const v = Temporal.PlainDate.from(value);
-    const mn = Temporal.PlainDate.from(min);
-    const mx = Temporal.PlainDate.from(max);
-
     if (Temporal.PlainDate.compare(mn, mx) === 1) {
       return "";
     }

@@ -1,5 +1,6 @@
 import { parseInstantNanoseconds } from "./instantNanoseconds";
 import { isObject } from "./isObject";
+import type { Interval } from "../types";
 
 /** An `Interval` parsed once: bigint epoch nanoseconds plus the exact strings they came from. */
 export interface IntervalNanoseconds {
@@ -116,4 +117,208 @@ export function coalesceIntervalNanoseconds(
   }
 
   return runs.filter((run) => run.start < run.end);
+}
+
+/**
+ * The overlap of two parsed intervals, as the interval it spans. Never throws.
+ *
+ * @param first the first parsed interval
+ * @param second the second parsed interval
+ * @returns the shared span, or null when the two share no instant
+ *
+ * @example intersectIntervalRecords({ start: 1n, end: 5n, startText: "a", endText: "e" }, { start: 3n, end: 9n, startText: "c", endText: "i" }) // { start: "c", end: "e" }
+ * @example intersectIntervalRecords({ start: 1n, end: 2n, startText: "a", endText: "b" }, { start: 2n, end: 3n, startText: "b", endText: "c" }) // null
+ */
+export function intersectIntervalRecords(
+  first: IntervalNanoseconds,
+  second: IntervalNanoseconds,
+): Interval | null {
+  if (!(first.start < second.end && second.start < first.end)) {
+    return null;
+  }
+
+  return {
+    start: first.start >= second.start ? first.startText : second.startText,
+    end: first.end <= second.end ? first.endText : second.endText,
+  };
+}
+
+/**
+ * The core of `intersectIntervals`: the overlap of two intervals. Never throws.
+ *
+ * @returns what `intersectIntervals` returns, for the same arguments
+ */
+export function intersectIntervalPair(
+  a: Interval,
+  b: Interval,
+): Interval | null {
+  try {
+    const first = parseIntervalNanoseconds(a);
+    const second = parseIntervalNanoseconds(b);
+
+    if (first === null || second === null) {
+      return null;
+    }
+
+    return intersectIntervalRecords(first, second);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return null;
+  }
+}
+
+/**
+ * The core of `mergeIntervals`: the union of a list of intervals as sorted, disjoint runs. Never throws.
+ *
+ * @returns what `mergeIntervals` returns, for the same arguments
+ */
+export function mergeIntervalList(intervals: Interval[]): Interval[] {
+  try {
+    const records = parseIntervalNanosecondsList(intervals);
+
+    if (records === null) {
+      return [];
+    }
+
+    return coalesceIntervalNanoseconds(records).map((run) => ({
+      start: run.startText,
+      end: run.endText,
+    }));
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return [];
+  }
+}
+
+/**
+ * The core of `intervalContains`: whether an interval holds an instant. Never throws.
+ *
+ * @returns what `intervalContains` returns, for the same arguments
+ */
+export function intervalContainsValue(
+  interval: Interval,
+  isoString: string,
+): boolean {
+  try {
+    const record = parseIntervalNanoseconds(interval);
+    const instant = parseInstantNanoseconds(isoString);
+
+    if (record === null || instant === null) {
+      return false;
+    }
+
+    return record.start <= instant && instant < record.end;
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return false;
+  }
+}
+
+/**
+ * An interval less a list of parsed removals, as the pieces left over. Never throws.
+ *
+ * @param source the parsed interval to cut from
+ * @param removals the parsed intervals to remove, in any order
+ * @returns the remaining pieces in order, empty when nothing is left
+ *
+ * @example subtractIntervalRecords({ start: 0n, end: 9n, startText: "a", endText: "i" }, [{ start: 3n, end: 5n, startText: "c", endText: "e" }]) // [{ start: "a", end: "c" }, { start: "e", end: "i" }]
+ * @example subtractIntervalRecords({ start: 0n, end: 9n, startText: "a", endText: "i" }, [{ start: 0n, end: 9n, startText: "a", endText: "i" }]) // []
+ */
+export function subtractIntervalRecords(
+  source: IntervalNanoseconds,
+  removals: readonly IntervalNanoseconds[],
+): Interval[] {
+  const pieces: Interval[] = [];
+  let cursor = source.start;
+  let cursorText = source.startText;
+
+  for (const removal of coalesceIntervalNanoseconds(removals)) {
+    if (cursor >= source.end || removal.start >= source.end) {
+      break;
+    }
+
+    if (removal.end <= cursor) {
+      continue;
+    }
+
+    if (removal.start > cursor) {
+      pieces.push({ start: cursorText, end: removal.startText });
+    }
+
+    cursor = removal.end;
+    cursorText = removal.endText;
+  }
+
+  if (cursor < source.end) {
+    pieces.push({ start: cursorText, end: source.endText });
+  }
+
+  return pieces;
+}
+
+/**
+ * The core of `subtractIntervals`: an interval less a list of removals. Never throws.
+ *
+ * @returns what `subtractIntervals` returns, for the same arguments
+ */
+export function subtractIntervalList(
+  from: Interval,
+  remove: Interval[],
+): Interval[] {
+  try {
+    const source = parseIntervalNanoseconds(from);
+    const removals = parseIntervalNanosecondsList(remove);
+
+    if (source === null || removals === null) {
+      return [];
+    }
+
+    return subtractIntervalRecords(source, removals);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return [];
+  }
+}
+
+/**
+ * Whether two parsed intervals share an instant.
+ *
+ * @param first the first parsed interval
+ * @param second the second parsed interval
+ * @returns true when the half-open spans overlap
+ *
+ * @example intervalRecordsOverlap({ start: 1n, end: 5n, startText: "a", endText: "e" }, { start: 3n, end: 9n, startText: "c", endText: "i" }) // true
+ * @example intervalRecordsOverlap({ start: 1n, end: 2n, startText: "a", endText: "b" }, { start: 2n, end: 3n, startText: "b", endText: "c" }) // false
+ */
+export function intervalRecordsOverlap(
+  first: IntervalNanoseconds,
+  second: IntervalNanoseconds,
+): boolean {
+  return first.start < second.end && second.start < first.end;
+}
+
+/**
+ * The core of `intervalsOverlap`: whether two intervals share an instant. Never throws.
+ *
+ * @returns what `intervalsOverlap` returns, for the same arguments
+ */
+export function intervalPairOverlaps(a: Interval, b: Interval): boolean {
+  try {
+    const first = parseIntervalNanoseconds(a);
+    const second = parseIntervalNanoseconds(b);
+
+    if (first === null || second === null) {
+      return false;
+    }
+
+    return intervalRecordsOverlap(first, second);
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return false;
+  }
 }

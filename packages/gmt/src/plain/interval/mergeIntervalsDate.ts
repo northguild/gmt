@@ -1,11 +1,10 @@
+import { dateIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   calendarOfAllDateValues,
   formatDateInCalendar,
   halfOpenMerge,
-  parseCalendarDateValue,
 } from "../../internal";
-import { isValidDateInterval } from "./validate";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -56,14 +55,18 @@ export function mergeIntervalsDate(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          isValidDateInterval(interval.start, interval.end),
-      )
-    ) {
-      return [];
+    const parsed: Array<{
+      start: Temporal.PlainDate;
+      end: Temporal.PlainDate;
+    }> = [];
+    for (const interval of intervals) {
+      const bounds = isObject(interval)
+        ? dateIntervalOf(interval.start, interval.end)
+        : null;
+      if (bounds === null) {
+        return [];
+      }
+      parsed.push({ start: bounds[0], end: bounds[1] });
     }
 
     const calendar = calendarOfAllDateValues(
@@ -74,11 +77,6 @@ export function mergeIntervalsDate(
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: parseCalendarDateValue(interval.start),
-        end: parseCalendarDateValue(interval.end),
-      }));
-
       const merged = halfOpenMerge(parsed, Temporal.PlainDate.compare);
 
       return merged.map((interval) => ({

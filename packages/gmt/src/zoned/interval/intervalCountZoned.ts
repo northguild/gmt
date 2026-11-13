@@ -5,8 +5,8 @@ import {
   parseCalendarZonedPairForArithmetic,
   resolveDateTimeUnit,
 } from "../../internal";
-import { isValidDateTimeUnit } from "../../plain/validate";
-import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
+import { isDateTimeUnitName } from "../../internal/unitNames";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Count how many `unit` boundaries a zoned interval crosses.
@@ -59,10 +59,7 @@ export function intervalCountZoned(
   end: string,
   unit: string,
 ): number | null {
-  if (
-    !isValidCalendarZonedDateTime(start) ||
-    !isValidCalendarZonedDateTime(end)
-  ) {
+  if (calendarZonedOf(start) === null || calendarZonedOf(end) === null) {
     return null;
   }
 
@@ -72,7 +69,7 @@ export function intervalCountZoned(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateTimeUnit(resolvedUnit)) {
+  if (!isDateTimeUnitName(resolvedUnit)) {
     return null;
   }
 

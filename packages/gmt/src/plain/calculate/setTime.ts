@@ -1,7 +1,8 @@
-import { Temporal } from "../../internal/temporal";
-import { TIME_FIELDS, readSetFields, resolveOverflow } from "../../internal";
+import type { Temporal } from "../../internal/temporal";
+import { resolveOverflow } from "../../internal/resolveOverflow";
+import { withTimeFields } from "../../internal/readSetFields";
 import type { Overflow } from "../../types";
-import { isValidTime } from "../validate";
+import { plainTimeOf } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -57,19 +58,15 @@ export function setTime(
     return "";
   }
 
-  if (!isValidTime(value)) return "";
+  const time = plainTimeOf(value);
+  if (time === null) return "";
 
   try {
-    const time = Temporal.PlainTime.from(value);
-    const set = readSetFields(fields, TIME_FIELDS);
-    if (set === null) return "";
-    // Only the values readSetFields checked reach Temporal. An empty result sets nothing: a
-    // no-op here, where Temporal's with() would throw.
-    if (Object.keys(set).length === 0) return time.toString();
-
-    return time
-      .with(set, { overflow: resolveOverflow(options?.overflow) })
-      .toString();
+    return (
+      withTimeFields(time, fields, () =>
+        resolveOverflow(options?.overflow),
+      )?.toString() ?? ""
+    );
   } catch {
     return "";
   }

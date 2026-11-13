@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -37,7 +36,8 @@ export function parseTimeFromUtc(
       return "";
     }
 
-    if (!isValidUtc(value)) {
+    const instant = utcInstantOf(value);
+    if (instant === null) {
       return "";
     }
 
@@ -47,7 +47,6 @@ export function parseTimeFromUtc(
     }
 
     try {
-      const instant = Temporal.Instant.from(value);
       const dateTime = frameWallClock(instant, frame);
       return dateTime.toPlainTime().toString();
     } catch {

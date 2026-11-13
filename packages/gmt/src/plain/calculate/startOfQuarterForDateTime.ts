@@ -1,6 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the start of the quarter for a given ISO datetime.
@@ -19,12 +17,12 @@ import { isValidDateTime } from "../validate";
  * @example startOfQuarterForDateTime("invalid") // ""
  */
 export function startOfQuarterForDateTime(value: string): string {
-  if (!isValidDateTime(value)) {
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) {
     return "";
   }
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
     const month = dateTime.month;
     const quarterStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
 

@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit } from "../../types";
-import { isValidDuration } from "../validate/isValidDuration";
+import { durationOf } from "../../internal/inputChecks";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 
 /**
@@ -41,12 +41,14 @@ export function getDurationUnit(
 ): number | null {
   const resolvedUnit = resolveDurationUnit(unit);
 
-  if (!isValidDuration(value) || !isValidDateTimeDurationUnit(resolvedUnit)) {
+  const duration = durationOf(value);
+
+  if (duration === null || !isDateTimeDurationUnitName(resolvedUnit)) {
     return null;
   }
 
   try {
-    return Temporal.Duration.from(value)[resolvedUnit];
+    return duration[resolvedUnit];
   } catch {
     return null;
   }

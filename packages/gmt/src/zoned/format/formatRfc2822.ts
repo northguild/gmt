@@ -1,6 +1,5 @@
-import { zonedDateTimeFrom } from "../../internal";
 import { englishDateTimeStem } from "../../internal/englishCalendarNames";
-import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 const NANOSECONDS_PER_MINUTE = 60_000_000_000;
 
@@ -39,10 +38,10 @@ const NANOSECONDS_PER_MINUTE = 60_000_000_000;
  * @example formatRfc2822("invalid") // ""
  */
 export function formatRfc2822(value: string): string {
-  if (!isValidZonedDateTime(value)) return "";
+  const zdt = zonedDateTimeOf(value);
+  if (zdt === null) return "";
 
   try {
-    const zdt = zonedDateTimeFrom(value);
     // zone = ("+" / "-") 4DIGIT counts whole minutes (RFC 5322 §3.3); a
     // local mean time offset such as -00:44:30 has no such form.
     if (zdt.offsetNanoseconds % NANOSECONDS_PER_MINUTE !== 0) return "";

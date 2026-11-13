@@ -1,9 +1,5 @@
-// Not re-exported from `internal/index.ts`: `toOffsetInstant` reads that barrel at module top
-// level (`TIME_ZONE_ANNOTATION`), so a barrel entry for this module would close a cycle and leave
-// the constant undefined when `toOffsetInstant` evaluates. Import this file directly.
 import { Temporal } from "./temporal";
-import { fromOffsetInstant } from "../instant/convert/fromOffsetInstant";
-import { toOffsetInstant } from "../instant/convert/toOffsetInstant";
+import { readOffsetInstant, writeOffsetInstant } from "./offsetInstant";
 import {
   type EdiCode,
   type EdiKind,
@@ -16,6 +12,21 @@ import {
   X12_TIME_ELEMENT_LAYOUT,
   ediCodeOfKind,
 } from "./ediGrammar";
+import type {
+  EdiDatePeriod,
+  EdiDateTimePeriod,
+  EdifactDateFormat,
+  EdifactDatePeriodFormat,
+  EdifactDateTimeFormat,
+  EdifactDateTimePeriodFormat,
+  EdifactOffsetDateTimeFormat,
+  EdifactTimeFormat,
+  X12DateFormat,
+  X12DateRangeFormat,
+  X12DateTimeFormat,
+  X12DateTimeRangeFormat,
+  X12TimeFormat,
+} from "../types/edi";
 
 /** The digits one half of a value carries, as numbers, before Temporal has seen them. */
 interface EdiFieldBag {
@@ -336,8 +347,8 @@ const HALF_READERS: Readonly<
   // `fromOffsetInstant`: the pair's own string, so `-00:00` is `+00:00` and the result reads
   // back through the instant functions.
   offsetDateTime: (bag) => {
-    const pair = toOffsetInstant(`${localDateTime(bag)}${bag.offset ?? ""}`);
-    const written = pair === null ? "" : fromOffsetInstant(pair);
+    const pair = readOffsetInstant(`${localDateTime(bag)}${bag.offset ?? ""}`);
+    const written = pair === null ? "" : writeOffsetInstant(pair);
     return written === "" ? null : written;
   },
 };
@@ -354,4 +365,203 @@ function endPrecedesStart(
   return valueKind === "date"
     ? Temporal.PlainDate.compare(end, start) < 0
     : Temporal.PlainDateTime.compare(end, start) < 0;
+}
+
+/**
+ * The core of `parseEdifactDate` and `isValidEdifactDate`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseEdifactDate` returns when the input is invalid
+ */
+export function edifactDateText(
+  value: string,
+  format: EdifactDateFormat,
+): string {
+  try {
+    return readEdiValue("edifact", "date", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseEdifactTime` and `isValidEdifactTime`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseEdifactTime` returns when the input is invalid
+ */
+export function edifactTimeText(
+  value: string,
+  format: EdifactTimeFormat,
+): string {
+  try {
+    return readEdiValue("edifact", "time", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseEdifactDateTime` and `isValidEdifactDateTime`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseEdifactDateTime` returns when the input is invalid
+ */
+export function edifactDateTimeText(
+  value: string,
+  format: EdifactDateTimeFormat,
+): string {
+  try {
+    return readEdiValue("edifact", "dateTime", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseEdifactOffsetDateTime` and `isValidEdifactOffsetDateTime`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseEdifactOffsetDateTime` returns when the input is invalid
+ */
+export function edifactOffsetDateTimeText(
+  value: string,
+  format: EdifactOffsetDateTimeFormat,
+): string {
+  try {
+    return readEdiValue("edifact", "offsetDateTime", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseEdifactDatePeriod` and `isValidEdifactDatePeriod`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseEdifactDatePeriod` returns when the input is invalid
+ */
+export function edifactDatePeriodText(
+  value: string,
+  format: EdifactDatePeriodFormat,
+): EdiDatePeriod | null {
+  try {
+    return readEdiRange("edifact", "datePeriod", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return null;
+  }
+}
+
+/**
+ * The core of `parseEdifactDateTimePeriod` and `isValidEdifactDateTimePeriod`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseEdifactDateTimePeriod` returns when the input is invalid
+ */
+export function edifactDateTimePeriodText(
+  value: string,
+  format: EdifactDateTimePeriodFormat,
+): EdiDateTimePeriod | null {
+  try {
+    return readEdiRange("edifact", "dateTimePeriod", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return null;
+  }
+}
+
+/**
+ * The core of `parseX12Date` and `isValidX12Date`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseX12Date` returns when the input is invalid
+ */
+export function x12DateText(value: string, format: X12DateFormat): string {
+  try {
+    return readEdiValue("x12", "date", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseX12Time` and `isValidX12Time`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseX12Time` returns when the input is invalid
+ */
+export function x12TimeText(value: string, format?: X12TimeFormat): string {
+  try {
+    // No qualifier: the element fixes its own forms. With one, the value is read against that
+    // code's mask, and a code that is not a time code is refused there.
+    return format === undefined
+      ? readX12Time(value)
+      : readEdiValue("x12", "time", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseX12DateTime` and `isValidX12DateTime`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseX12DateTime` returns when the input is invalid
+ */
+export function x12DateTimeText(
+  value: string,
+  format: X12DateTimeFormat,
+): string {
+  try {
+    return readEdiValue("x12", "dateTime", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseX12DateAndTime` and `isValidX12DateAndTime`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseX12DateAndTime` returns when the input is invalid
+ */
+export function x12DateAndTimeText(date: string, time: string): string {
+  try {
+    return readX12DateAndTime(date, time);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return "";
+  }
+}
+
+/**
+ * The core of `parseX12DateRange` and `isValidX12DateRange`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseX12DateRange` returns when the input is invalid
+ */
+export function x12DateRangeText(
+  value: string,
+  format: X12DateRangeFormat,
+): EdiDatePeriod | null {
+  try {
+    return readEdiRange("x12", "dateRange", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return null;
+  }
+}
+
+/**
+ * The core of `parseX12DateTimeRange` and `isValidX12DateTimeRange`: the text or period the element reads to. Never throws.
+ *
+ * @returns the reading, or the sentinel `parseX12DateTimeRange` returns when the input is invalid
+ */
+export function x12DateTimeRangeText(
+  value: string,
+  format: X12DateTimeRangeFormat,
+): EdiDateTimePeriod | null {
+  try {
+    return readEdiRange("x12", "dateTimeRange", format, value);
+  } catch {
+    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
+    return null;
+  }
 }

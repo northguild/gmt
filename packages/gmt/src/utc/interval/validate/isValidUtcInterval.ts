@@ -1,5 +1,4 @@
-import { Temporal } from "../../../internal/temporal";
-import { isValidUtc } from "../../validate";
+import { utcIntervalOf } from "../../../internal/intervalChecks";
 
 /**
  * Return true if `start` and `end` form a valid UTC interval — both parseable as
@@ -25,20 +24,5 @@ import { isValidUtc } from "../../validate";
  * @example isValidUtcInterval("2024-01-01T10:00:00Z[!foo=bar]", "2024-12-31T23:59:59Z") // false (unknown critical annotation)
  */
 export function isValidUtcInterval(start: string, end: string): boolean {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return false;
-  }
-
-  if (!isValidUtc(start) || !isValidUtc(end)) {
-    return false;
-  }
-
-  try {
-    const startInstant = Temporal.Instant.from(start);
-    const endInstant = Temporal.Instant.from(end);
-
-    return Temporal.Instant.compare(startInstant, endInstant) <= 0;
-  } catch {
-    return false;
-  }
+  return utcIntervalOf(start, end) !== null;
 }

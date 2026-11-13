@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { rfc3339DateTime } from "../../regex";
+import { readRfc3339 } from "../../internal/rfc3339DateTime";
 
 /**
  * Parse a strict RFC 3339 datetime string into a zoned ISO 8601 datetime
@@ -30,22 +29,5 @@ import { rfc3339DateTime } from "../../regex";
  * @example parseRfc3339("not a date") // ""
  */
 export function parseRfc3339(value: string): string {
-  if (typeof value !== "string") return "";
-
-  const match = rfc3339DateTime.exec(value);
-  if (match === null) return "";
-
-  const [, year, month, day, hour, minute, second, fraction, offsetToken] =
-    match;
-  const offset =
-    offsetToken === "Z" || offsetToken === "z" ? "+00:00" : offsetToken;
-  const isoDateTime = `${year}-${month}-${day}T${hour}:${minute}:${second}${fraction ?? ""}`;
-
-  try {
-    return Temporal.PlainDateTime.from(isoDateTime)
-      .toZonedDateTime(offset)
-      .toString();
-  } catch {
-    return "";
-  }
+  return readRfc3339(value);
 }

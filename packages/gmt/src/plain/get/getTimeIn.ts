@@ -1,9 +1,9 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { isTimeDurationUnitName } from "../../internal/unitNames";
 import { readLengthUnits } from "../../internal/lengthFromNow";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import type { TimeDurationUnit } from "../../types";
-import { isValidTimeDurationUnit } from "../validate/isValidTimeDurationUnit";
 
 /**
  * Return the PlainTime after now, as an ISO string, counted from the current time.
@@ -33,12 +33,12 @@ export function getTimeIn(
   units: Partial<Record<TimeDurationUnit, number>>,
 ): string {
   try {
-    const amounts = readLengthUnits(units, isValidTimeDurationUnit);
+    const amounts = readLengthUnits(units, isTimeDurationUnitName);
     if (amounts === null) {
       return "";
     }
 
-    const timeZone = getSystemTimeZone();
+    const timeZone = systemTimeZone();
     if (!timeZone) {
       return "";
     }

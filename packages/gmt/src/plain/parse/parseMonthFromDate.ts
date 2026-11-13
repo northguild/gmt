@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /**
  * Return the month (1-12) for a given ISO 8601 date string.
@@ -14,10 +13,10 @@ import { isValidDate } from "../validate";
  * @example parseMonthFromDate("invalid") // ""
  */
 export function parseMonthFromDate(value: string): string {
-  if (!isValidDate(value)) return "";
+  const date = plainDateOf(value);
+  if (date === null) return "";
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return date.month.toString().padStart(2, "0");
   } catch {
     return "";

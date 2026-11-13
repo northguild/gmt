@@ -1,10 +1,6 @@
-import {
-  canonicalCalendarSystem,
-  formatZonedInCalendar,
-  parseCalendarZonedValue,
-} from "../../internal";
+import { canonicalCalendarSystem, formatZonedInCalendar } from "../../internal";
 import type { CalendarSystem } from "../../types";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Express a zoned datetime in a calendar system: the RFC 9557 string
@@ -45,7 +41,8 @@ export function convertZonedToCalendar(
   value: string,
   calendar: CalendarSystem,
 ): string {
-  if (!isValidCalendarZonedDateTime(value)) {
+  const zoned = calendarZonedOf(value);
+  if (zoned === null) {
     return "";
   }
   const target = canonicalCalendarSystem(calendar);
@@ -54,7 +51,7 @@ export function convertZonedToCalendar(
   }
 
   try {
-    return formatZonedInCalendar(parseCalendarZonedValue(value), target);
+    return formatZonedInCalendar(zoned, target);
   } catch {
     return "";
   }

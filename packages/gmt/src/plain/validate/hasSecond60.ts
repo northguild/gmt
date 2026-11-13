@@ -1,4 +1,4 @@
-import { leapSecond } from "../../regex/leap-second";
+import { hasSecond60Field } from "../../internal/inputChecks";
 
 /**
  * Return true if the provided ISO 8601 date-time or time string has a second-60 field.
@@ -36,9 +36,5 @@ import { leapSecond } from "../../regex/leap-second";
  * @example /T\d{2}:\d{2}:60(?:[.,]\d+)?[-+Zz[]/.test("2016-12-31t23:59:60Z") // false (the earlier uppercase-T-only test)
  */
 export function hasSecond60(value: string): boolean {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  return leapSecond.test(value);
+  return hasSecond60Field(value);
 }

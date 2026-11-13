@@ -6,16 +6,12 @@ const overrides = vi.hoisted(() => ({
   standAlone: null as string[] | null,
 }));
 
-vi.mock("../plain/locale/getLocaleMonthNames", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("../plain/locale/getLocaleMonthNames")
-    >();
+vi.mock("./localeNames", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./localeNames")>();
   return {
     ...actual,
-    getLocaleMonthNames: (
-      ...args: Parameters<typeof actual.getLocaleMonthNames>
-    ) => overrides.standAlone ?? actual.getLocaleMonthNames(...args),
+    monthNamesFor: (...args: Parameters<typeof actual.monthNamesFor>) =>
+      overrides.standAlone ?? actual.monthNamesFor(...args),
   };
 });
 

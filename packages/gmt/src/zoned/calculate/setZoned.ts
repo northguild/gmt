@@ -1,13 +1,8 @@
-import { Temporal } from "../../internal/temporal";
-import {
-  DATE_TIME_FIELDS,
-  readSetFields,
-  resolveOverflow,
-  withZonedFields,
-  zonedDateTimeFrom,
-} from "../../internal";
+import type { Temporal } from "../../internal/temporal";
+import { resolveOverflow } from "../../internal/resolveOverflow";
+import { setZonedFields } from "../../internal/setZonedFields";
 import type { Disambiguation, Offset, Overflow } from "../../types";
-import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -97,7 +92,8 @@ export function setZoned(
       return "";
     }
 
-    if (!isValidZonedDateTime(value)) return "";
+    const zoned = zonedDateTimeOf(value);
+    if (zoned === null) return "";
 
     const overflow = resolveOverflow(options?.overflow);
     const disambiguation = optionOrDefault(
@@ -108,18 +104,13 @@ export function setZoned(
     const offset = optionOrDefault(options?.offset, "prefer");
 
     try {
-      const zoned = zonedDateTimeFrom(value);
-      const set = readSetFields(fields, DATE_TIME_FIELDS);
-      if (set === null) return "";
-      // Only the values readSetFields checked reach Temporal, on both paths of withZonedFields. An
-      // empty result sets nothing: a no-op here, where Temporal's with() would throw.
-      if (Object.keys(set).length === 0) return zoned.toString();
-
-      return withZonedFields(zoned, set, {
-        overflow,
-        disambiguation,
-        offset,
-      }).toString();
+      return (
+        setZonedFields(zoned, fields, {
+          overflow,
+          disambiguation,
+          offset,
+        })?.toString() ?? ""
+      );
     } catch {
       return "";
     }

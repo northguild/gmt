@@ -8,7 +8,7 @@ import {
 } from "../../internal/lengthFromNow";
 import { nowInstant } from "../../internal/temporalCompat";
 import { toUnixEpoch } from "../../internal/unixEpochValue";
-import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit } from "../../types";
 
 /**
@@ -65,7 +65,7 @@ export function ttlFromNow(
   units: Partial<Record<DateTimeDurationUnit, number>>,
 ): Ttl | null {
   try {
-    const amounts = readLengthUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readLengthUnits(units, isDateTimeDurationUnitName);
     if (amounts === null) {
       return null;
     }

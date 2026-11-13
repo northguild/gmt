@@ -1,5 +1,5 @@
-import { readEdiRange } from "../../internal/ediDateTimeFields";
 import type { EdiDatePeriod, EdifactDatePeriodFormat } from "../../types/edi";
+import { edifactDatePeriodText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse a UN/EDIFACT `DTM` value that states a period between two calendar dates, as its start
@@ -46,10 +46,5 @@ export function parseEdifactDatePeriod(
   value: string,
   format: EdifactDatePeriodFormat,
 ): EdiDatePeriod | null {
-  try {
-    return readEdiRange("edifact", "datePeriod", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return null;
-  }
+  return edifactDatePeriodText(value, format);
 }

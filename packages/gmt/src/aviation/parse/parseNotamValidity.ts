@@ -1,11 +1,6 @@
-import { isOptionsArgument } from "../../internal";
-import { readNotamDateTimeFields } from "../../internal/notamDateTime";
-import { Temporal } from "../../internal/temporal";
-import { twoDigitYear } from "../../internal/twoDigitYear";
-import { readYearWindowStart } from "../../internal/yearWindowStart";
-import { utcEpochNanoseconds } from "../../internal/zonedWallClock";
 import type { NotamValidity } from "../../types/notam";
 import type { TwoDigitYearOptions } from "../../types/two-digit-year";
+import { readNotamValidity } from "../../internal/notamDateTime";
 
 /**
  * Parse a NOTAM item B) or C) value as a UTC instant, an estimate, or a permanent validity.
@@ -47,42 +42,5 @@ export function parseNotamValidity(
   value: string,
   options: TwoDigitYearOptions,
 ): NotamValidity | null {
-  try {
-    if (typeof value !== "string") {
-      return null;
-    }
-    if (!isOptionsArgument(options)) {
-      return null;
-    }
-    const fields = readNotamDateTimeFields(value);
-    if (fields === null) {
-      return null;
-    }
-    const windowStart = readYearWindowStart(options);
-    if (windowStart === null) {
-      return null;
-    }
-    if (fields.kind === "permanent") {
-      return { kind: "permanent" };
-    }
-    const wall = Temporal.PlainDateTime.from(
-      {
-        year: twoDigitYear(fields.yy, windowStart),
-        month: fields.month,
-        day: fields.day,
-        hour: fields.hour,
-        minute: fields.minute,
-      },
-      { overflow: "reject" },
-    );
-    return {
-      kind: "instant",
-      instant: Temporal.Instant.fromEpochNanoseconds(
-        utcEpochNanoseconds(wall),
-      ).toString(),
-      estimated: fields.estimated,
-    };
-  } catch {
-    return null;
-  }
+  return readNotamValidity(value, options);
 }

@@ -1,9 +1,8 @@
 import { cachedFormatter } from "../../internal/formatterCache";
-import type { Temporal } from "../../internal/temporal";
-import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
+import { normalizeDateTime } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidZonedDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import { timeZoneEquals } from "../../internal/temporalCompat";
 import { repairRangeParts } from "../../internal/repairRangeParts";
@@ -100,16 +99,9 @@ export function formatZonedRange(
     if (options === null) {
       return "";
     }
-    if (!isValidZonedDateTime(from) || !isValidZonedDateTime(to)) {
-      return "";
-    }
-
-    let zdt1: Temporal.ZonedDateTime;
-    let zdt2: Temporal.ZonedDateTime;
-    try {
-      zdt1 = zonedDateTimeFrom(from);
-      zdt2 = zonedDateTimeFrom(to);
-    } catch {
+    const zdt1 = zonedDateTimeOf(from);
+    const zdt2 = zonedDateTimeOf(to);
+    if (zdt1 === null || zdt2 === null) {
       return "";
     }
 

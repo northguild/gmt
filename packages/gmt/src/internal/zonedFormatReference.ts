@@ -1,5 +1,5 @@
-import { isValidUtc } from "../utc/validate/isValidUtc";
-import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
+import { utcInstantOf } from "./utcInstant";
+import { zonedDateTimeOf } from "./zonedWallClock";
 
 /**
  * Whether the `reference` option of the zoned formatters can be read: omitted (`undefined`), a
@@ -18,7 +18,9 @@ import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
 export function isValidZonedFormatReference(reference: unknown): boolean {
   if (reference === undefined) return true;
   if (typeof reference === "string") {
-    return isValidZonedDateTime(reference) || isValidUtc(reference);
+    return (
+      zonedDateTimeOf(reference) !== null || utcInstantOf(reference) !== null
+    );
   }
   return typeof reference === "number" && Number.isFinite(reference);
 }

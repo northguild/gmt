@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return whether `value1` represents an instant strictly after `value2`.
@@ -17,16 +16,9 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example isAfterZoned("invalid", "2024-02-29T12:34:56.789+00:00[UTC]") // false
  */
 export function isAfterZoned(value1: string, value2: string): boolean {
-  if (!isValidZonedDateTime(value1) || !isValidZonedDateTime(value2)) {
-    return false;
-  }
-
-  let zonedDateTime1: Temporal.ZonedDateTime;
-  let zonedDateTime2: Temporal.ZonedDateTime;
-  try {
-    zonedDateTime1 = zonedDateTimeFrom(value1);
-    zonedDateTime2 = zonedDateTimeFrom(value2);
-  } catch {
+  const zonedDateTime1 = zonedDateTimeOf(value1);
+  const zonedDateTime2 = zonedDateTimeOf(value2);
+  if (zonedDateTime1 === null || zonedDateTime2 === null) {
     return false;
   }
 

@@ -1,7 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isoStringBody } from "../../internal/isoStringBody";
-import { hasSecond60 } from "../../plain/validate";
-import { utcDateTime } from "../../regex/utc-date-time";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return true when the provided string is a valid ISO 8601 UTC datetime.
@@ -37,24 +34,5 @@ export function isValidUtc(value: string): boolean;
 export function isValidUtc(value: {} | null | undefined | void): boolean;
 export function isValidUtc(value: unknown): value is string;
 export function isValidUtc(value: unknown): boolean {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  const body = isoStringBody(value);
-
-  if (hasSecond60(body)) {
-    return false;
-  }
-
-  if (!utcDateTime.test(body)) {
-    return false;
-  }
-
-  try {
-    Temporal.Instant.from(value);
-    return true;
-  } catch {
-    return false;
-  }
+  return utcInstantOf(value) !== null;
 }

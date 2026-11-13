@@ -1,3 +1,4 @@
+import { isTimeDurationUnitName } from "../../internal/unitNames";
 import type { TimeDurationUnit } from "../../types";
 
 /**
@@ -19,12 +20,5 @@ import type { TimeDurationUnit } from "../../types";
 export const isValidTimeDurationUnit = (
   unit: unknown,
 ): unit is TimeDurationUnit => {
-  return (
-    unit === "hours" ||
-    unit === "minutes" ||
-    unit === "seconds" ||
-    unit === "milliseconds" ||
-    unit === "microseconds" ||
-    unit === "nanoseconds"
-  );
+  return isTimeDurationUnitName(unit);
 };

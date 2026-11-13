@@ -1,7 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
-import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
+import { instantOf } from "../../internal/instantNanoseconds";
+import { isZoneId } from "../../internal/inputChecks";
 
 /** What `crossingTime` returns: exact elapsed time plus the local view at either end. */
 export interface Crossing {
@@ -73,16 +72,16 @@ export function crossingTime(
 ): Crossing | null {
   try {
     // fallow-ignore-next-line code-duplication -- not delegated to dwellTime: its transition walk returns null past 10,000 transitions, a false null for a long crossing, and its calendar-day count is work crossingTime does not use
-    if (
-      !isValidInstant(entry) ||
-      !isValidInstant(exit) ||
-      !isValidTimeZone(targetZone)
-    ) {
+    const entryInstant = instantOf(entry);
+    if (entryInstant === null) {
       return null;
     }
 
-    const entryInstant = instantFrom(entry);
-    const exitInstant = instantFrom(exit);
+    const exitInstant = instantOf(exit);
+    if (exitInstant === null || !isZoneId(targetZone)) {
+      return null;
+    }
+
     if (Temporal.Instant.compare(entryInstant, exitInstant) > 0) {
       return null;
     }

@@ -1,5 +1,5 @@
-import { getLocaleFirstDayOfWeek, zonedDateTimeFrom } from "../../internal";
-import { isValidZonedDateTime } from "../validate";
+import { getLocaleFirstDayOfWeek } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the locale-relative day-of-week index for a zoned `value`.
@@ -29,13 +29,13 @@ export function getLocaleZonedDayOfWeek(
   value: string,
   locale: string | string[],
 ): number | null {
-  if (!isValidZonedDateTime(value)) return null;
+  const zoned = zonedDateTimeOf(value);
+  if (zoned === null) return null;
 
   const firstDay = getLocaleFirstDayOfWeek(locale);
   if (firstDay === null) return null;
 
   try {
-    const zoned = zonedDateTimeFrom(value);
     return (zoned.dayOfWeek - firstDay + 7) % 7;
   } catch {
     return null;

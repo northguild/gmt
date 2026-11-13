@@ -1,10 +1,11 @@
 import type { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveLocale } from "../../internal/resolveLocale";
-import { getLocaleStartOfWeek } from "../calculate/getLocaleStartOfWeek";
-import { getToday } from "../get/getToday";
-import { isValidDateUnit } from "../validate";
-import { areDatesEqualBy } from "./areDatesEqualBy";
+import { getLocaleFirstDayOfWeek } from "../../internal/getLocaleFirstDayOfWeek";
+import { plainDateOf } from "../../internal/inputChecks";
+import { localeStartOfWeek, sameDateBy } from "../../internal/plainDateSteps";
+import { todayDate } from "../../internal/todayDate";
+import { isDateUnitName } from "../../internal/unitNames";
 
 /**
  * Return true when `value` falls in the same `unit` as today, per the
@@ -17,7 +18,7 @@ import { areDatesEqualBy } from "./areDatesEqualBy";
  *   varies by locale (e.g. fr-FR: Monday, pt-BR: Sunday). When `unit` is
  *   `"week"` and `locale` is given, the comparison uses `getLocaleStartOfWeek`
  *   instead of the ISO Monday-start default `areDatesEqualBy` otherwise uses.
- * - Compares against `getToday()`, so this depends on the **system clock and
+ * - Compares against today, so this depends on the **system clock and
  *   system timeZone**. A caller needing determinism should use
  *   `isZonedThisUnit` with an explicit timeZone, or compare against an
  *   explicit reference with `areDatesEqualBy`.
@@ -59,25 +60,30 @@ export function isThisUnit(
     const resolvedUnit = resolveDateTimeUnit(unit);
 
     if (
-      !isValidDateUnit(resolvedUnit) ||
+      !isDateUnitName(resolvedUnit) ||
       (locale !== undefined && resolveLocale(locale) === null)
     ) {
       return false;
     }
 
-    const today = getToday();
-    if (today === "") {
+    const today = todayDate();
+    const date = plainDateOf(value);
+    if (today === null || date === null) {
       return false;
     }
 
     if (resolvedUnit === "week" && locale !== undefined) {
-      const startOfWeekValue = getLocaleStartOfWeek(value, locale);
-      const startOfWeekToday = getLocaleStartOfWeek(today, locale);
+      const firstDay = getLocaleFirstDayOfWeek(locale);
+      if (firstDay === null) {
+        return false;
+      }
 
-      return startOfWeekValue !== "" && startOfWeekValue === startOfWeekToday;
+      return localeStartOfWeek(date, firstDay).equals(
+        localeStartOfWeek(today, firstDay),
+      );
     }
 
-    return areDatesEqualBy(value, today, resolvedUnit);
+    return sameDateBy(date, today, resolvedUnit, "monday");
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

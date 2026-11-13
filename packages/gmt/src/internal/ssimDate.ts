@@ -26,6 +26,12 @@
  *   Temporal rejects them later.
  */
 
+import { isOptionsArgument } from "./isObject";
+import { Temporal } from "./temporal";
+import { twoDigitYear } from "./twoDigitYear";
+import { readYearWindowStart } from "./yearWindowStart";
+import type { TwoDigitYearOptions } from "../types/two-digit-year";
+
 /** The SSIM month letters, January first: the first three letters of each English month name, upper case. */
 export const SSIM_MONTH_LETTERS = [
   "JAN",
@@ -75,4 +81,47 @@ function pad2(n: number): string {
 /** Write `DDMMMYY` from a day 1–31, a month 1–12 and a year 0–99. The caller passes valid values. */
 export function writeSsimDate(day: number, month: number, yy: number): string {
   return pad2(day) + SSIM_MONTH_LETTERS[month - 1] + pad2(yy);
+}
+
+/**
+ * The core of `parseSsimDate` and `isValidSsimDate`: the ISO date an SSIM `DDMMMYY` names, with
+ * its two-digit year placed by the caller's `yearWindow` option. Never throws.
+ *
+ * @param value an SSIM date such as `15MAR24`
+ * @param options how the two-digit year is placed
+ * @returns the ISO 8601 date, or `""` when `value` or `options` is invalid
+ *
+ * @example readSsimDate("15MAR24", { yearWindow: 2000 }) // "2024-03-15"
+ * @example readSsimDate("32MAR24", { yearWindow: 2000 }) // ""
+ */
+export function readSsimDate(
+  value: string,
+  options: TwoDigitYearOptions,
+): string {
+  try {
+    if (typeof value !== "string") {
+      return "";
+    }
+    if (!isOptionsArgument(options)) {
+      return "";
+    }
+    const fields = readSsimDateFields(value);
+    if (fields === null) {
+      return "";
+    }
+    const windowStart = readYearWindowStart(options);
+    if (windowStart === null) {
+      return "";
+    }
+    return Temporal.PlainDate.from(
+      {
+        year: twoDigitYear(fields.yy, windowStart),
+        month: fields.month,
+        day: fields.day,
+      },
+      { overflow: "reject" },
+    ).toString();
+  } catch {
+    return "";
+  }
 }

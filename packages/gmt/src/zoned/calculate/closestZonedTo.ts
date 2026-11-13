@@ -1,5 +1,7 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import {
+  zonedDateTimeOf,
+  zonedDateTimesOf,
+} from "../../internal/zonedWallClock";
 
 /**
  * Return the candidate zoned datetime nearest to `target` by temporal distance.
@@ -20,42 +22,33 @@ import { zonedDateTimeFrom } from "../../internal";
  */
 export function closestZonedTo(target: string, candidates: string[]): string {
   try {
-    if (
-      !isValidZonedDateTime(target) ||
-      !Array.isArray(candidates) ||
-      !candidates.length
-    ) {
+    const t = zonedDateTimeOf(target);
+    if (t === null || !Array.isArray(candidates) || !candidates.length) {
       return "";
     }
 
     try {
-      const t = zonedDateTimeFrom(target);
-      const validCandidates = candidates.filter(isValidZonedDateTime);
+      const parsed = zonedDateTimesOf(candidates);
 
-      if (!validCandidates.length) {
+      if (!parsed.length) {
         return "";
       }
-
-      const parsed = validCandidates.map((c) => ({
-        str: c,
-        date: zonedDateTimeFrom(c),
-      }));
 
       const closest = parsed.reduce((best, candidate) => {
         const bestDist =
           Math.abs(
-            best.date.toInstant().epochMilliseconds -
+            best.toInstant().epochMilliseconds -
               t.toInstant().epochMilliseconds,
           ) / 86400000;
         const candDist =
           Math.abs(
-            candidate.date.toInstant().epochMilliseconds -
+            candidate.toInstant().epochMilliseconds -
               t.toInstant().epochMilliseconds,
           ) / 86400000;
         return candDist < bestDist ? candidate : best;
       }, parsed[0]);
 
-      return closest.date.toString();
+      return closest.toString();
     } catch {
       return "";
     }

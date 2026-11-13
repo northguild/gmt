@@ -1,9 +1,9 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../../duration/validate";
+import { durationOf } from "../../internal/inputChecks";
 import { resolveOverflow } from "../../internal";
 import type { Overflow } from "../../types";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -59,11 +59,13 @@ export function intervalFromDurationUtc(
     return null;
   }
 
-  if (typeof value !== "string" || !isValidUtc(value)) {
+  const instant = utcInstantOf(value);
+  if (instant === null) {
     return null;
   }
 
-  if (!isValidDuration(duration)) {
+  const dur = durationOf(duration);
+  if (dur === null) {
     return null;
   }
 
@@ -72,9 +74,7 @@ export function intervalFromDurationUtc(
   }
 
   try {
-    const instant = Temporal.Instant.from(value);
     const point = instant.toZonedDateTimeISO("UTC");
-    const dur = Temporal.Duration.from(duration);
     const overflow = resolveOverflow(options?.overflow);
 
     const other =

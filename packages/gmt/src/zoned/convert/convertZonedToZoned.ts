@@ -1,5 +1,5 @@
-import { isValidTimeZone, isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
+import { isZoneId } from "../../internal/inputChecks";
 
 /**
  * Convert a zoned ISO 8601 datetime string to the same instant in a different `timeZone`.
@@ -19,12 +19,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example convertZonedToZoned("invalid", "Asia/Kolkata") // ""
  */
 export function convertZonedToZoned(value: string, timeZone: string): string {
-  if (!isValidZonedDateTime(value) || !isValidTimeZone(timeZone)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null || !isZoneId(timeZone)) {
     return "";
   }
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.withTimeZone(timeZone).toString();
   } catch {
     return "";

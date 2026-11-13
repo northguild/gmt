@@ -1,4 +1,4 @@
-import { parseFixUtcTimestamp } from "../parse/parseFixUtcTimestamp";
+import { readFixUtcTimestamp } from "../../internal/fixUtcTimestamp";
 
 /**
  * Return true when `value` is a FIX `UTCTimestamp` that states a real UTC second.
@@ -29,5 +29,5 @@ export function isValidFixUtcTimestamp(
 ): boolean;
 export function isValidFixUtcTimestamp(value: unknown): value is string;
 export function isValidFixUtcTimestamp(value: unknown): boolean {
-  return typeof value === "string" && parseFixUtcTimestamp(value) !== null;
+  return typeof value === "string" && readFixUtcTimestamp(value) !== null;
 }

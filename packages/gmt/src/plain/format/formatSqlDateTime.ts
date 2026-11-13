@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Format a plain ISO 8601 datetime string as a SQL timestamp literal without a time zone — the
@@ -27,11 +26,10 @@ import { isValidDateTime } from "../validate";
  * @example formatSqlDateTime("invalid") // ""
  */
 export function formatSqlDateTime(value: string): string {
-  if (!isValidDateTime(value)) return "";
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) return "";
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
-
     // SQL-92 Table 10: YEAR 0001 to 9999.
     if (dateTime.year < 1 || dateTime.year > 9999) return "";
 

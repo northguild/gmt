@@ -1,5 +1,4 @@
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { instantOf } from "../../internal/instantNanoseconds";
 
 /**
  * Measure how far an actual time is from its plan: positive when late, negative when early.
@@ -39,12 +38,18 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  */
 export function scheduleDeviation(planned: string, actual: string): string {
   try {
-    if (!isValidInstant(planned) || !isValidInstant(actual)) {
+    const plannedInstant = instantOf(planned);
+    if (plannedInstant === null) {
       return "";
     }
 
-    return instantFrom(planned)
-      .until(instantFrom(actual), { largestUnit: "hours" })
+    const actualInstant = instantOf(actual);
+    if (actualInstant === null) {
+      return "";
+    }
+
+    return plannedInstant
+      .until(actualInstant, { largestUnit: "hours" })
       .toString();
   } catch {
     // Never throws (Core Rule 3): a hostile

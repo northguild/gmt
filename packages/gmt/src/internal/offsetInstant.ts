@@ -7,7 +7,13 @@ import { parseInstantNanoseconds } from "./instantNanoseconds";
 import { isoStringBody } from "./isoStringBody";
 import { Temporal } from "./temporal";
 import { hasTimeZoneAnnotation } from "./timeZoneAnnotation";
-import { writtenOffset } from "./utcOffsetString";
+import { isObject } from "./isObject";
+import {
+  formatUtcOffset,
+  parseUtcOffsetNanoseconds,
+  writtenOffset,
+} from "./utcOffsetString";
+import { wallClockAtOffset } from "./wallClockAtOffset";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 import { frameOffset, type ZoneFrame, zoneFrame } from "./zoneFrame";
 
@@ -159,4 +165,65 @@ function offsetInstantInZone(
     offset: zoned.offset,
     timeZone: zoned.timeZoneId,
   };
+}
+
+/**
+ * The core of `fromOffsetInstant`: the local time an instant-plus-offset pair describes, with the
+ * pair's own offset, or the bracketed zoned string when the pair names a zone. Never throws.
+ *
+ * @param value `{ instant, offset, timeZone? }` pair, as `readOffsetInstant` returns
+ * @returns the local ISO 8601 string, or `""` on invalid input or a zone that contradicts the offset
+ *
+ * @example writeOffsetInstant({ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }) // "2024-07-15T12:00:00-04:00"
+ */
+export function writeOffsetInstant(value: OffsetInstant): string {
+  try {
+    if (!isObject(value)) {
+      return "";
+    }
+
+    const epochNanoseconds = parseInstantNanoseconds(value.instant);
+    const offsetNanoseconds = parseUtcOffsetNanoseconds(value.offset);
+
+    if (epochNanoseconds === null || offsetNanoseconds === null) {
+      return "";
+    }
+
+    const offset = formatUtcOffset(offsetNanoseconds);
+
+    if (offset === null) {
+      return "";
+    }
+
+    try {
+      const instant = Temporal.Instant.fromEpochNanoseconds(epochNanoseconds);
+
+      if (value.timeZone !== undefined) {
+        // Temporal is the authority on what identifier this is, exactly as it is for a
+        // bracketed zone in `toOffsetInstant` — an unrecognised one throws, and the two
+        // functions have to agree or a pair one produced would not survive the other. The
+        // canonicalised id is what gets tested for an offset, since `"-0400"` and `"+05"` are
+        // offsets too and only Temporal knows that.
+        const zoned = instant.toZonedDateTimeISO(value.timeZone);
+
+        if (utcOffset.test(zoned.timeZoneId)) {
+          return "";
+        }
+
+        return zoned.offset === offset ? zoned.toString() : "";
+      }
+
+      // With no zone, the offset is the only thing that can shift the instant onto a wall
+      // clock (`wallClockAtOffset` keeps both range limits and sub-minute offsets).
+      const wallClock = wallClockAtOffset(instant, offsetNanoseconds);
+
+      return `${wallClock.toString()}${offset}`;
+    } catch {
+      return "";
+    }
+  } catch {
+    // Never throws (Core Rule 3): a hostile
+    // argument is invalid input, not an exception.
+    return "";
+  }
 }

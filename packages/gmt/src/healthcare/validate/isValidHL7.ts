@@ -1,4 +1,4 @@
-import { parseHL7 } from "../parse/parseHL7";
+import { readHl7DateTime } from "../../internal/hl7DateTime";
 
 /**
  * Return true when `value` is an HL7 v2 `DTM`, or a `TS` with a degree of precision the digits
@@ -33,5 +33,5 @@ import { parseHL7 } from "../parse/parseHL7";
  * @example isValidHL7("") // false (not the null value)
  */
 export function isValidHL7(value: string): boolean {
-  return parseHL7(value) !== null;
+  return readHl7DateTime(value) !== null;
 }

@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the PlainDate portion extracted from an ISO PlainDateTime string.
@@ -14,9 +13,10 @@ import { isValidDateTime } from "../validate";
  * @example chopTime("invalid") // ""
  */
 export function chopTime(value: string): string {
-  if (!isValidDateTime(value)) return "";
+  const valueParsed = plainDateTimeOf(value);
+  if (valueParsed === null) return "";
   try {
-    return Temporal.PlainDateTime.from(value).toPlainDate().toString();
+    return valueParsed.toPlainDate().toString();
   } catch {
     return "";
   }

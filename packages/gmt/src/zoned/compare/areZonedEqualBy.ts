@@ -1,10 +1,9 @@
 import { Temporal } from "../../internal/temporal";
 
-import { isValidDateTimeUnit } from "../../plain/validate";
 import type { DateTimeUnit } from "../../types";
-import { startOfZoned } from "../calculate/startOfZoned";
-import { isValidZonedDateTime } from "../validate";
+import { startOrEndOfZoned } from "../../internal/startOrEndOfZoned";
 import { zonedDateTimeFrom } from "../../internal";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -72,18 +71,23 @@ export function areZonedEqualBy(
     const resolvedUnit = resolveDateTimeUnit(unit);
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
-    if (
-      !isValidZonedDateTime(value1) ||
-      !isValidZonedDateTime(value2) ||
-      !isValidDateTimeUnit(resolvedUnit) ||
-      weekStartsOn === null
-    ) {
+    if (!isDateTimeUnitName(resolvedUnit) || weekStartsOn === null) {
       return false;
     }
 
     try {
-      const start1 = startOfZoned(value1, resolvedUnit, { weekStartsOn });
-      const start2 = startOfZoned(value2, resolvedUnit, { weekStartsOn });
+      const start1 = startOrEndOfZoned(
+        value1,
+        resolvedUnit,
+        { weekStartsOn },
+        false,
+      );
+      const start2 = startOrEndOfZoned(
+        value2,
+        resolvedUnit,
+        { weekStartsOn },
+        false,
+      );
 
       if (start1 === "" || start2 === "") return false;
 

@@ -1,10 +1,9 @@
 import { Temporal } from "../../internal/temporal";
 
-import { isValidDateTimeUnit } from "../../plain";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { startOfUtc } from "../calculate/startOfUtc";
-import { isValidUtc } from "../validate";
+import { startOrEndOfUtc } from "../../internal/startOrEndOfUtc";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -60,27 +59,27 @@ export function areUtcEqualBy(
     const resolvedUnit = resolveDateTimeUnit(unit);
     const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
 
-    if (
-      !isValidUtc(value1) ||
-      !isValidUtc(value2) ||
-      !isValidDateTimeUnit(resolvedUnit) ||
-      weekStartsOn === null
-    ) {
+    if (!isDateTimeUnitName(resolvedUnit) || weekStartsOn === null) {
       return false;
     }
 
     try {
-      const start1 = startOfUtc(value1, resolvedUnit, { weekStartsOn });
-      const start2 = startOfUtc(value2, resolvedUnit, { weekStartsOn });
+      const start1 = startOrEndOfUtc(
+        value1,
+        resolvedUnit,
+        { weekStartsOn },
+        false,
+      );
+      const start2 = startOrEndOfUtc(
+        value2,
+        resolvedUnit,
+        { weekStartsOn },
+        false,
+      );
 
       if (start1 === "" || start2 === "") return false;
 
-      return (
-        Temporal.Instant.compare(
-          Temporal.Instant.from(start1),
-          Temporal.Instant.from(start2),
-        ) === 0
-      );
+      return start1 === start2;
     } catch {
       return false;
     }

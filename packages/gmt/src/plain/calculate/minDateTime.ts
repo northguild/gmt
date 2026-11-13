@@ -1,5 +1,5 @@
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../validate";
 
 /**
  * Return the earliest (minimum) of the given PlainDateTime values.
@@ -17,16 +17,19 @@ export function minDateTime(dateTimes: string[]): string | null {
   try {
     if (!Array.isArray(dateTimes) || !dateTimes.length) return null;
 
-    const valid = dateTimes.filter(isValidDateTime);
+    const valid: Temporal.PlainDateTime[] = [];
+    dateTimes.forEach((item) => {
+      const parsed = plainDateTimeOf(item);
+      if (parsed !== null) valid.push(parsed);
+    });
     if (!valid.length) return null;
 
     try {
-      const min = valid.reduce((currentMin, candidateStr) => {
-        const candidate = Temporal.PlainDateTime.from(candidateStr);
+      const min = valid.reduce((currentMin, candidate) => {
         return Temporal.PlainDateTime.compare(candidate, currentMin) < 0
           ? candidate
           : currentMin;
-      }, Temporal.PlainDateTime.from(valid[0]));
+      }, valid[0]);
 
       return min.toString();
     } catch {

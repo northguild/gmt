@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -15,7 +15,7 @@ import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
  * @example getWeekOfYear() // null (when system timeZone unavailable)
  */
 export function getWeekOfYear(): number | null {
-  const timeZone = getSystemTimeZone();
+  const timeZone = systemTimeZone();
   if (!timeZone) {
     return null;
   }

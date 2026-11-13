@@ -1,9 +1,9 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { getWeekNumber } from "../calculate/getWeekNumber";
-import { isValidDateTime } from "../validate";
+import { weekNumberOf } from "../../internal/weekNumber";
 import { isOptionsArgument } from "../../internal/isObject";
 import { isoYearString } from "../../internal/isoYearString";
 
@@ -71,13 +71,12 @@ export function parseUnitFromDateTime(
     }
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
-    if (!isValidDateTime(value) || weekStartsOn === null) {
+    const dateTime = plainDateTimeOf(value);
+    if (dateTime === null || weekStartsOn === null) {
       return "";
     }
 
     try {
-      const dateTime = Temporal.PlainDateTime.from(value);
-
       switch (resolveDateTimeUnit(unit)) {
         case "year":
           return isoYearString(dateTime.year);
@@ -87,7 +86,7 @@ export function parseUnitFromDateTime(
           return dateTime.day.toString().padStart(2, "0");
         case "week":
           return (
-            getWeekNumber(dateTime.toPlainDate().toString(), weekStartsOn) ?? 0
+            weekNumberOf(dateTime.toPlainDate(), weekStartsOn) ?? 0
           ).toString();
         case "dayOfWeek":
           return dateTime.dayOfWeek.toString();

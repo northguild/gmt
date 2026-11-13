@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the day of the week (1-7, Monday-Sunday) from a zoned datetime string.
@@ -15,12 +14,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example parseDayOfWeekFromZoned("invalid") // null
  */
 export function parseDayOfWeekFromZoned(value: string): number | null {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return null;
   }
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.dayOfWeek;
   } catch {
     return null;

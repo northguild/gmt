@@ -3,8 +3,7 @@ import {
   toUnixEpoch,
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../../unix/validate/isValidUnixUnit";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Convert an ISO 8601 zoned datetime string to a unix epoch value in milliseconds (default) or seconds.
@@ -39,12 +38,13 @@ export function convertZonedToUnix(
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);
 
-    if (!isValidZonedDateTime(value) || epochUnit === null) {
+    const zoned = zonedDateTimeOf(value);
+    if (zoned === null || epochUnit === null) {
       return null;
     }
 
     try {
-      return toUnixEpoch(zonedDateTimeFrom(value).toInstant(), epochUnit);
+      return toUnixEpoch(zoned.toInstant(), epochUnit);
     } catch {
       return null;
     }

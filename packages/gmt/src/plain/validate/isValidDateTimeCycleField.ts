@@ -1,6 +1,5 @@
+import { isDateTimeCycleFieldName } from "../../internal/unitNames";
 import type { DateTimeCycleField } from "../../types";
-import { isValidDateCycleField } from "./isValidDateCycleField";
-import { isValidTimeCycleField } from "./isValidTimeCycleField";
 
 /**
  * Return true when `field` is a valid DateTimeCycleField (a valid DateCycleField or
@@ -19,5 +18,5 @@ import { isValidTimeCycleField } from "./isValidTimeCycleField";
 export function isValidDateTimeCycleField(
   field: unknown,
 ): field is DateTimeCycleField {
-  return isValidDateCycleField(field) || isValidTimeCycleField(field);
+  return isDateTimeCycleFieldName(field);
 }

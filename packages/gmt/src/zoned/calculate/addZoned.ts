@@ -3,17 +3,16 @@ import {
   addToZonedDisambiguated,
   calendarSystemOfZonedValue,
   formatZonedInCalendar,
-  parseCalendarZonedValue,
   readDurationUnits,
   resolveOverflow,
 } from "../../internal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type {
   DateTimeDurationUnit,
   Disambiguation,
   Overflow,
 } from "../../types";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -98,10 +97,10 @@ export function addZoned(
       return "";
     }
 
-    const validZonedDateTime = isValidCalendarZonedDateTime(value);
-    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
+    const zoned = calendarZonedOf(value);
+    const amounts = readDurationUnits(units, isDateTimeDurationUnitName);
 
-    if (!validZonedDateTime || amounts === null) {
+    if (zoned === null || amounts === null) {
       // TODO descriptive messages of what failed - likely could be GMT offset for historical changes and DST
       return "";
     }
@@ -117,7 +116,6 @@ export function addZoned(
       if (!calendar) {
         return "";
       }
-      const zoned = parseCalendarZonedValue(value);
       const added = addToZonedDisambiguated(zoned, amounts, 1, {
         overflow,
         disambiguation,

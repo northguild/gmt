@@ -4,6 +4,7 @@ import {
   ENGLISH_WEEKDAY_NAMES,
 } from "./englishCalendarNames";
 import { nowInstant } from "./temporalCompat";
+import { httpDate } from "../regex";
 
 /** Date-time fields read from an RFC 9110 HTTP-date, before calendar validation. */
 export interface HttpDateFields {
@@ -119,4 +120,64 @@ export function readObsoleteHttpDate(value: string): HttpDateFields | null {
   }
 
   return null;
+}
+
+function readHttpDateFields(value: string): HttpDateFields | null {
+  const match = httpDate.exec(value);
+  if (match === null) return readObsoleteHttpDate(value);
+
+  const [, dayName, day, month, year, hour, minute, second] = match;
+  return {
+    dayOfWeek:
+      ENGLISH_WEEKDAY_NAMES.indexOf(
+        dayName as (typeof ENGLISH_WEEKDAY_NAMES)[number],
+      ) + 1,
+    year: Number(year),
+    month:
+      ENGLISH_MONTH_NAMES.indexOf(
+        month as (typeof ENGLISH_MONTH_NAMES)[number],
+      ) + 1,
+    day: Number(day),
+    hour: Number(hour),
+    minute: Number(minute),
+    second: Number(second),
+  };
+}
+
+/**
+ * The core of `parseHttpDate`, `isValidHttpDate`, `secondsUntilHttpDate` and
+ * `secondsUntilRetryAfter`: the instant an HTTP-date names. Never throws.
+ *
+ * @param value an HTTP-date (IMF-fixdate, or one of the obsolete RFC 850 and asctime forms)
+ * @returns the instant, or `null` when `value` is not a real HTTP-date or names the wrong weekday
+ *
+ * @example httpDateInstantOf("Fri, 15 Mar 2024 12:30:45 GMT") // 2024-03-15T12:30:45Z
+ * @example httpDateInstantOf("Sat, 15 Mar 2024 12:30:45 GMT") // null
+ */
+export function httpDateInstantOf(value: unknown): Temporal.Instant | null {
+  if (typeof value !== "string") return null;
+
+  try {
+    const fields = readHttpDateFields(value);
+    if (fields === null) return null;
+
+    const plainDateTime = Temporal.PlainDateTime.from(
+      {
+        year: fields.year,
+        month: fields.month,
+        day: fields.day,
+        hour: fields.hour,
+        minute: fields.minute,
+        second: fields.second,
+      },
+      { overflow: "reject" },
+    );
+    // RFC 9110 gives day-name RFC 5322's semantics: "the day-of-week (if
+    // included) MUST be the day implied by the date".
+    if (fields.dayOfWeek !== plainDateTime.dayOfWeek) return null;
+
+    return plainDateTime.toZonedDateTime("UTC").toInstant();
+  } catch {
+    return null;
+  }
 }

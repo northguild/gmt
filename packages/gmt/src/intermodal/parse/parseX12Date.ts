@@ -1,5 +1,5 @@
-import { readEdiValue } from "../../internal/ediDateTimeFields";
 import type { X12DateFormat } from "../../types/edi";
+import { x12DateText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse an X12 Date Time Period value that states a calendar date, as an ISO 8601 date.
@@ -39,10 +39,5 @@ import type { X12DateFormat } from "../../types/edi";
  * @example parseX12Date("202406151430", "DT") // "" (a date-time code: use parseX12DateTime)
  */
 export function parseX12Date(value: string, format: X12DateFormat): string {
-  try {
-    return readEdiValue("x12", "date", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return x12DateText(value, format);
 }

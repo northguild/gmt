@@ -5,7 +5,7 @@ import {
   utcLengthFrame,
 } from "../../internal/lengthFromNow";
 import { nowInstant } from "../../internal/temporalCompat";
-import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit } from "../../types";
 
 /**
@@ -40,7 +40,7 @@ export function formatHttpDateFromNow(
   units: Partial<Record<DateTimeDurationUnit, number>>,
 ): string {
   try {
-    const amounts = readLengthUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readLengthUnits(units, isDateTimeDurationUnitName);
     if (amounts === null) {
       return "";
     }

@@ -11,6 +11,8 @@ import {
   isZIgnoreExactCompatNeeded,
 } from "./temporalCompat";
 import { optionOrDefault } from "./optionOrDefault";
+import { hasSecond60Field } from "./inputChecks";
+import { hasZonedDateTimeShape } from "./isoStringBody";
 
 /*
  * ---------------------------------------------------------------------------------------------
@@ -886,4 +888,59 @@ export function zonedDateTimeFrom(
 
     return recovered;
   }
+}
+
+/**
+ * The check behind `isValidZonedDateTime`: the ISO calendar `ZonedDateTime` a zoned string names,
+ * or `null`.
+ *
+ * The string must have GMT's strict extended shape and no second 60, then `zonedDateTimeFrom`
+ * reads it. The zone id must be non-empty and the calendar ISO.
+ *
+ * @param value the candidate; a value that is not a string is not a zoned date-time
+ * @returns the `ZonedDateTime` `zonedDateTimeFrom` returns for it, else `null`
+ *
+ * @example zonedDateTimeOf("2024-03-10T12:00:00+00:00[UTC]")?.timeZoneId // "UTC"
+ * @example zonedDateTimeOf("2024-03-10T12:00:00") // null
+ * @example zonedDateTimeOf(null) // null
+ */
+export function zonedDateTimeOf(value: unknown): Temporal.ZonedDateTime | null {
+  if (typeof value !== "string" || value.length === 0) {
+    return null;
+  }
+  if (hasSecond60Field(value) || !hasZonedDateTimeShape(value)) {
+    return null;
+  }
+  try {
+    const zonedDateTime = zonedDateTimeFrom(value);
+    return zonedDateTime.timeZoneId.length > 0 &&
+      zonedDateTime.calendarId === "iso8601"
+      ? zonedDateTime
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Every value in `values` that `zonedDateTimeOf` reads, in order, each parsed once. A value that
+ * is not a zoned date-time is left out, and so is an empty slot of a sparse array.
+ *
+ * @param values the candidates
+ * @returns the `ZonedDateTime` of each valid candidate
+ *
+ * @example zonedDateTimesOf(["2024-03-10T12:00:00+00:00[UTC]", "bad"]).length // 1
+ * @example zonedDateTimesOf([]).length // 0
+ */
+export function zonedDateTimesOf(
+  values: readonly unknown[],
+): Temporal.ZonedDateTime[] {
+  const parsed: Temporal.ZonedDateTime[] = [];
+  values.forEach((value) => {
+    const zonedDateTime = zonedDateTimeOf(value);
+    if (zonedDateTime !== null) {
+      parsed.push(zonedDateTime);
+    }
+  });
+  return parsed;
 }

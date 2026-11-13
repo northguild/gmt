@@ -4,7 +4,7 @@ import {
   MIN_DOT_NET_TICKS,
   NANOSECONDS_PER_TICK,
 } from "../../internal";
-import { fromNanoseconds } from "./fromNanoseconds";
+import { zonedStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 
 /**
  * Convert .NET `DateTime.Ticks` back to an ISO 8601 instant string.
@@ -44,7 +44,7 @@ export function fromDotNetTicks(value: bigint): string {
     return "";
   }
 
-  return fromNanoseconds(
+  return zonedStringFromEpochNanoseconds(
     (value - DOT_NET_TICKS_EPOCH_OFFSET) * NANOSECONDS_PER_TICK,
   );
 }

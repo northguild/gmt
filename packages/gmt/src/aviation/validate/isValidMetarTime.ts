@@ -1,4 +1,4 @@
-import { parseMetarTime } from "../parse/parseMetarTime";
+import { readMetarTime } from "../../internal/metarTime";
 
 /**
  * Return true when `value` is a METAR, SPECI or TAF time group (`YYGGggZ`) that resolves against
@@ -24,5 +24,5 @@ export function isValidMetarTime(
   value: string,
   referenceInstant: string,
 ): boolean {
-  return parseMetarTime(value, referenceInstant) !== "";
+  return readMetarTime(value, referenceInstant) !== "";
 }

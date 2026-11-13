@@ -2,13 +2,12 @@ import type { Temporal } from "../../internal/temporal";
 import {
   frameInstant,
   frameZoned,
-  instantFrom,
   zonedUnitStart,
   zoneFrame,
 } from "../../internal";
-import { isValidInstant } from "../../precision/validate";
+import { instantOf } from "../../internal/instantNanoseconds";
 import type { ZoneBucketUnit } from "../../types";
-import { isValidZoneBucketUnit } from "../validate";
+import { isZoneBucketUnitName } from "../../internal/unitNames";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 /**
@@ -70,16 +69,18 @@ export function floorToZone(
 
   const frame = zoneFrame(timeZone);
 
+  const instant = instantOf(value);
+
   if (
-    !isValidInstant(value) ||
-    !isValidZoneBucketUnit(resolvedUnit) ||
+    instant === null ||
+    !isZoneBucketUnitName(resolvedUnit) ||
     frame === null
   ) {
     return "";
   }
 
   try {
-    const zoned = frameZoned(instantFrom(value), frame);
+    const zoned = frameZoned(instant, frame);
     const start = zonedUnitStart(zoned, resolvedUnit);
 
     return start ? frameInstant(start, frame).toString() : "";

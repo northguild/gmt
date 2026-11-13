@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { isValidUtc } from "./isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -49,14 +49,17 @@ export function isValidUtcRange(props: {
       return false;
     }
 
-    if (!isValidUtc(value1) || !isValidUtc(value2)) {
+    const startInstant = utcInstantOf(value1);
+    if (startInstant === null) {
+      return false;
+    }
+
+    const endInstant = utcInstantOf(value2);
+    if (endInstant === null) {
       return false;
     }
 
     try {
-      const startInstant = Temporal.Instant.from(value1);
-      const endInstant = Temporal.Instant.from(value2);
-
       const cmp = Temporal.Instant.compare(startInstant, endInstant);
 
       if (options?.allowEqual) {

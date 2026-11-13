@@ -1,6 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../../duration/validate";
-import { isValidTime } from "../validate";
+import { plainTimeOf, durationOf } from "../../internal/inputChecks";
 
 const NANOSECONDS_PER_DAY = 86_400_000_000_000n;
 
@@ -71,11 +69,14 @@ export function intervalFromDurationTime(
    */
   end: string;
 } | null {
-  if (typeof value !== "string" || !isValidTime(value)) {
+  const point = plainTimeOf(value);
+  if (typeof value !== "string" || point === null) {
     return null;
   }
 
-  if (!isValidDuration(duration)) {
+  const dur = durationOf(duration);
+
+  if (dur === null) {
     return null;
   }
 
@@ -84,8 +85,6 @@ export function intervalFromDurationTime(
   }
 
   try {
-    const dur = Temporal.Duration.from(duration);
-
     if (
       dur.years !== 0 ||
       dur.months !== 0 ||
@@ -94,8 +93,6 @@ export function intervalFromDurationTime(
     ) {
       return null;
     }
-
-    const point = Temporal.PlainTime.from(value);
 
     // Measure the span exactly: PlainTime.add wraps modulo 24 h, so comparing the wrapped
     // endpoints misses a span of 24 h or more and a negative duration that wraps.

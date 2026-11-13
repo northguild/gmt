@@ -1,7 +1,6 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 
 import { getLocaleWeekYearBounds } from "../../internal";
-import { isValidDate } from "../validate";
 
 /**
  * Return the number of ISO weeks (52 or 53) in the ISO week-numbering year
@@ -27,12 +26,13 @@ import { isValidDate } from "../validate";
  * @example getWeeksInYear("invalid") // null
  */
 export function getWeeksInYear(value: string): number | null {
-  if (!isValidDate(value)) return null;
+  const valueParsed = plainDateOf(value);
+  if (valueParsed === null) return null;
 
   try {
     // ISO 8601 week-numbering: weeks start on Monday and week 1 holds January 4 (4 of its days).
     const { startOffsetDays, endOffsetDays } = getLocaleWeekYearBounds(
-      Temporal.PlainDate.from(value),
+      valueParsed,
       1,
       4,
     );

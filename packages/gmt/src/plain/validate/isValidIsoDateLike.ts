@@ -1,7 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isoStringBody } from "../../internal/isoStringBody";
-import { plainDate, plainDateTime } from "../../regex";
-import { hasSecond60 } from "./hasSecond60";
+import { isoDateLikeOf } from "../../internal/inputChecks";
 
 /**
  * Return true when the input is a valid PlainDate or PlainDateTime ISO string.
@@ -33,31 +30,5 @@ export function isValidIsoDateLike(
 ): boolean;
 export function isValidIsoDateLike(value: unknown): value is string;
 export function isValidIsoDateLike(value: unknown): boolean {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  const body = isoStringBody(value);
-
-  if (hasSecond60(body)) {
-    return false;
-  }
-
-  if (plainDate.test(body)) {
-    try {
-      return Temporal.PlainDate.from(value).calendarId === "iso8601";
-    } catch {
-      return false;
-    }
-  }
-
-  if (plainDateTime.test(body)) {
-    try {
-      return Temporal.PlainDateTime.from(value).calendarId === "iso8601";
-    } catch {
-      return false;
-    }
-  }
-
-  return false;
+  return isoDateLikeOf(value);
 }

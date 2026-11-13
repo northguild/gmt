@@ -1,6 +1,6 @@
 import { Temporal } from "./temporal";
-import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
-import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
+import { systemTimeZone } from "./resolveLocale";
+import { isZoneId } from "./inputChecks";
 import { instantFrom } from "./instantNanoseconds";
 import { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
 import { wallClockAtOffset } from "./wallClockAtOffset";
@@ -67,7 +67,7 @@ export function zoneFrame(zone: unknown): ZoneFrame | null {
     return null;
   }
 
-  if (isValidTimeZone(zone)) {
+  if (isZoneId(zone)) {
     return { timeZone: zone, shiftNanoseconds: 0n };
   }
 
@@ -121,7 +121,7 @@ export function normalizeZoneFrame(option?: unknown): ZoneFrame | null {
     return { timeZone: "UTC", shiftNanoseconds: 0n };
   }
 
-  return zoneFrame(option === "local" ? getSystemTimeZone() : option);
+  return zoneFrame(option === "local" ? systemTimeZone() : option);
 }
 
 /**

@@ -1,12 +1,5 @@
-import {
-  fixInstantText,
-  fixPrecisionOfDigits,
-  LEAP_SECOND_STEPS,
-  readFixUtcFields,
-  taiOfUtc,
-} from "../../internal";
-import { Temporal } from "../../internal/temporal";
 import type { FixUtcTimestamp } from "../../types/fix";
+import { readFixUtcTimestamp } from "../../internal/fixUtcTimestamp";
 
 /**
  * Read a FIX `UTCTimestamp` as a UTC instant and the precision its digits state.
@@ -57,45 +50,5 @@ import type { FixUtcTimestamp } from "../../types/fix";
  * @example parseFixUtcTimestamp("20240230-00:00:00") // null (2024 has no 30 February)
  */
 export function parseFixUtcTimestamp(value: string): FixUtcTimestamp | null {
-  try {
-    const fields = readFixUtcFields(value);
-    if (fields === null) {
-      return null;
-    }
-    // MAR-16 rule 2: a second of 60 never reaches Temporal; it goes in as 59 with a flag.
-    const secondSixty = fields.second === 60;
-    // Throws, and so returns null, for 30 February, hour 24, minute 60 or month 13.
-    const plain = Temporal.PlainDateTime.from(
-      {
-        year: fields.year,
-        month: fields.month,
-        day: fields.day,
-        hour: fields.hour,
-        minute: fields.minute,
-        second: secondSixty ? 59 : fields.second,
-        millisecond: fields.millisecond,
-        microsecond: fields.microsecond,
-        nanosecond: fields.nanosecond,
-      },
-      { overflow: "reject" },
-    );
-    // Only for a 60: taiOfUtc is null before 1972 for an ordinary second too, and FIX allows 0000.
-    if (
-      secondSixty &&
-      taiOfUtc(LEAP_SECOND_STEPS, {
-        epochNanoseconds: plain.toZonedDateTime("UTC").epochNanoseconds,
-        secondSixty,
-      }) === null
-    ) {
-      return null;
-    }
-    return {
-      instant: fixInstantText(fields),
-      precision: fixPrecisionOfDigits(fields.fractionDigits),
-      leapSecond: secondSixty,
-      picoseconds: fields.picoseconds,
-    };
-  } catch {
-    return null;
-  }
+  return readFixUtcTimestamp(value);
 }

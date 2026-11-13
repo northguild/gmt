@@ -1,5 +1,5 @@
 import { isoStringBody } from "../../internal/isoStringBody";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return the UTC datetime string with a trailing Z removed if present.
@@ -18,7 +18,7 @@ import { isValidUtc } from "../validate";
  * @example chopUtc("2024-03-10T12:00:00Z[foo=bar]") // "2024-03-10T12:00:00"
  */
 export function chopUtc(value: string): string {
-  if (!isValidUtc(value)) {
+  if (utcInstantOf(value) === null) {
     return "";
   }
 

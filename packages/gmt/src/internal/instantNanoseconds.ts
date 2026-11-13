@@ -229,6 +229,27 @@ function zonedReadingOutsideWrittenRange(
 }
 
 /**
+ * The check behind `isValidInstant`: the `Temporal.Instant` `parseInstantNanoseconds` reads, or
+ * `null`.
+ *
+ * @param value the candidate; a value that is not a string is not an instant
+ * @returns the instant the string names, else `null`
+ *
+ * @example instantOf("1970-01-01T00:00:00Z")?.epochNanoseconds // 0n
+ * @example instantOf("2024-03-10T12:00:00") // null
+ * @example instantOf(null) // null
+ */
+export function instantOf(value: unknown): Temporal.Instant | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const nanoseconds = parseInstantNanoseconds(value);
+  return nanoseconds === null
+    ? null
+    : Temporal.Instant.fromEpochNanoseconds(nanoseconds);
+}
+
+/**
  * `parseInstantNanoseconds` as a `Temporal.Instant`, for callers that already hold a validated
  * string and go on to Temporal arithmetic. Use it wherever a caller's instant string would
  * otherwise go to `Temporal.Instant.from`, so a minute-rounded offset is read the same way
@@ -243,9 +264,25 @@ function zonedReadingOutsideWrittenRange(
  * @example instantFrom("2024-06-15T10:00:00") // throws RangeError
  */
 export function instantFrom(value: string): Temporal.Instant {
-  const nanoseconds = parseInstantNanoseconds(value);
-  if (nanoseconds === null) {
+  const instant = instantOf(value);
+  if (instant === null) {
     throw new RangeError("Not an ISO 8601 instant string");
   }
-  return Temporal.Instant.fromEpochNanoseconds(nanoseconds);
+  return instant;
+}
+
+/**
+ * The core of `spanNs`: the nanoseconds from one instant string to another. Never throws.
+ *
+ * @returns what `spanNs` returns, for the same arguments
+ */
+export function spanNanoseconds(start: string, end: string): bigint | null {
+  const startNanoseconds = parseInstantNanoseconds(start);
+  const endNanoseconds = parseInstantNanoseconds(end);
+
+  if (startNanoseconds === null || endNanoseconds === null) {
+    return null;
+  }
+
+  return endNanoseconds - startNanoseconds;
 }

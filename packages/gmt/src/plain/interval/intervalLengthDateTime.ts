@@ -1,7 +1,6 @@
-import { Temporal } from "../../internal/temporal";
+import { dateTimeIntervalOf } from "../../internal/intervalChecks";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import { durationTotal, resolveDateTimeUnit } from "../../internal";
-import { isValidDateTimeUnit } from "../validate";
-import { isValidDateTimeInterval } from "./validate";
 
 /**
  * Return the exact length of a datetime interval in `unit`, as a real (possibly fractional) number.
@@ -37,17 +36,17 @@ export function intervalLengthDateTime(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateTimeUnit(resolvedUnit)) {
+  if (!isDateTimeUnitName(resolvedUnit)) {
     return null;
   }
 
-  if (!isValidDateTimeInterval(start, end)) {
+  const bounds = dateTimeIntervalOf(start, end);
+  if (bounds === null) {
     return null;
   }
 
   try {
-    const startVal = Temporal.PlainDateTime.from(start);
-    const endVal = Temporal.PlainDateTime.from(end);
+    const [startVal, endVal] = bounds;
 
     const duration = startVal.until(endVal, { largestUnit: resolvedUnit });
 

@@ -1,3 +1,5 @@
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { durationUntilString } from "../../internal";
@@ -6,7 +8,6 @@ import type {
   DurationStringOptions,
   RoundingOptions,
 } from "../../types";
-import { isValidDateTime, isValidDateTimeDurationUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -49,19 +50,16 @@ export function diffDateTimeAsDuration(
   if (!isOptionsArgument(options)) {
     return "";
   }
-  const validDateTimes =
-    isValidDateTime(dateTime1) && isValidDateTime(dateTime2);
+  const dt1 = plainDateTimeOf(dateTime1);
+  const dt2 = plainDateTimeOf(dateTime2);
   const resolvedUnit = resolveDurationUnit(unit);
-  const validUnit = isValidDateTimeDurationUnit(resolvedUnit);
+  const validUnit = isDateTimeDurationUnitName(resolvedUnit);
 
-  if (!validDateTimes || !validUnit) {
+  if (dt1 === null || dt2 === null || !validUnit) {
     return "";
   }
 
   try {
-    const dt1 = Temporal.PlainDateTime.from(dateTime1);
-    const dt2 = Temporal.PlainDateTime.from(dateTime2);
-
     return durationUntilString(dt1, dt2, resolvedUnit, options);
   } catch {
     return "";

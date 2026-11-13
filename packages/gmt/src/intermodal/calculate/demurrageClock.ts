@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { instantFrom, isObject } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { isObject } from "../../internal";
+import { instantOf } from "../../internal/instantNanoseconds";
 import type { Interval } from "../../types";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -189,13 +189,26 @@ function selectClock(
 
   // `Array.from` turns a hole into `undefined`, which the check rejects; `every` would skip it.
   const list = Array.from(events) as unknown[];
-  const wellFormed = list.every(
-    (event) =>
-      isObject(event) &&
-      CLOCK_EVENT_TYPES.includes((event as ClockEvent).type) &&
-      typeof (event as ClockEvent).at === "string" &&
-      isValidInstant((event as ClockEvent).at),
-  );
+  // Each `at` is read and parsed once here; the clock below compares those instants and returns
+  // the strings that were checked.
+  const instants: Temporal.Instant[] = [];
+  const texts: string[] = [];
+  const wellFormed = list.every((event, index) => {
+    if (
+      !isObject(event) ||
+      !CLOCK_EVENT_TYPES.includes((event as ClockEvent).type)
+    ) {
+      return false;
+    }
+    const at = (event as ClockEvent).at;
+    const instant = instantOf(at);
+    if (instant === null) {
+      return false;
+    }
+    instants[index] = instant;
+    texts[index] = at;
+    return true;
+  });
   if (!wellFormed) {
     return null;
   }
@@ -207,11 +220,11 @@ function selectClock(
         ? ["gatedOut", "emptyReturned"]
         : [startEvent, scope === "combined" ? "emptyReturned" : "gatedOut"];
 
-  const only = (type: ClockEventType): string | null => {
-    const matches = (list as ClockEvent[]).filter(
-      (event) => event.type === type,
+  const only = (type: ClockEventType): number | null => {
+    const matches = (list as ClockEvent[]).flatMap((event, index) =>
+      event.type === type ? [index] : [],
     );
-    return matches.length === 1 ? matches[0].at : null;
+    return matches.length === 1 ? matches[0] : null;
   };
 
   const start = only(startType);
@@ -220,7 +233,10 @@ function selectClock(
     return null;
   }
 
-  return Temporal.Instant.compare(instantFrom(start), instantFrom(end)) > 0
+  return Temporal.Instant.compare(instants[start], instants[end]) > 0
     ? null
-    : { start, end };
+    : {
+        start: texts[start],
+        end: texts[end],
+      };
 }

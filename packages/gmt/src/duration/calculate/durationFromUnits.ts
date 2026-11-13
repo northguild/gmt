@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { readDurationUnits } from "../../internal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit } from "../../types";
 
 /**
@@ -52,7 +52,7 @@ export function durationFromUnits(
   units: Partial<Record<DateTimeDurationUnit, number>>,
 ): string {
   try {
-    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readDurationUnits(units, isDateTimeDurationUnitName);
 
     if (amounts === null) {
       return "";

@@ -31,6 +31,14 @@
  *   caller treats them in item B) as malformed.
  */
 
+import { isOptionsArgument } from "./isObject";
+import { Temporal } from "./temporal";
+import { twoDigitYear } from "./twoDigitYear";
+import { readYearWindowStart } from "./yearWindowStart";
+import { utcEpochNanoseconds } from "./zonedWallClock";
+import type { NotamValidity } from "../types/notam";
+import type { TwoDigitYearOptions } from "../types/two-digit-year";
+
 /** The fields of an item B) or C) value: `PERM`, or a `YYMMDDHHMM` group with its `EST` flag. */
 export type NotamDateTimeFields =
   | { kind: "permanent" }
@@ -65,4 +73,56 @@ export function readNotamDateTimeFields(
     minute: Number(minute),
     estimated: est !== undefined,
   };
+}
+
+/**
+ * The core of `parseNotamValidity` and `isValidNotamValidity`: the instant an item B) or C) value
+ * names, with its two-digit year placed by the caller's `yearWindow` option; `PERM` as itself.
+ * Never throws.
+ *
+ * @example readNotamValidity("2403151200", { yearWindow: 2000 }) // { kind: "instant", instant: "2024-03-15T12:00:00Z", estimated: false }
+ * @example readNotamValidity("2413151200", { yearWindow: 2000 }) // null
+ */
+export function readNotamValidity(
+  value: string,
+  options: TwoDigitYearOptions,
+): NotamValidity | null {
+  try {
+    if (typeof value !== "string") {
+      return null;
+    }
+    if (!isOptionsArgument(options)) {
+      return null;
+    }
+    const fields = readNotamDateTimeFields(value);
+    if (fields === null) {
+      return null;
+    }
+    const windowStart = readYearWindowStart(options);
+    if (windowStart === null) {
+      return null;
+    }
+    if (fields.kind === "permanent") {
+      return { kind: "permanent" };
+    }
+    const wall = Temporal.PlainDateTime.from(
+      {
+        year: twoDigitYear(fields.yy, windowStart),
+        month: fields.month,
+        day: fields.day,
+        hour: fields.hour,
+        minute: fields.minute,
+      },
+      { overflow: "reject" },
+    );
+    return {
+      kind: "instant",
+      instant: Temporal.Instant.fromEpochNanoseconds(
+        utcEpochNanoseconds(wall),
+      ).toString(),
+      estimated: fields.estimated,
+    };
+  } catch {
+    return null;
+  }
 }

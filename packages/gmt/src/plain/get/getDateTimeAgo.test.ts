@@ -3,23 +3,23 @@ import { Temporal } from "../../internal/temporal";
 import { hostileProxy } from "../../test/hostileValues";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { setFakeSystemTime } from "../../test/setFakeSystemTime";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { subtractDateTime } from "../calculate/subtractDateTime";
 import { getDateTimeAgo } from "./getDateTimeAgo";
 import { getNow } from "./getNow";
 
-vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../../internal/resolveLocale", { spy: true });
 
 // The fake clock is 2027-06-15T12:00:00Z and the system zone is UTC unless a row says otherwise.
 const NOW = "2027-06-15T12:00:00Z";
 
 describe("getDateTimeAgo", () => {
-  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
+  let timeZoneSpy: MockedFunction<typeof systemTimeZone>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     setFakeSystemTime(NOW);
-    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(systemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {

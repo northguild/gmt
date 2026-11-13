@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidTime } from "../validate";
+import { plainTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the second (0-59) for a given ISO 8601 time string.
@@ -15,10 +14,10 @@ import { isValidTime } from "../validate";
  * @example parseSecondFromTime("invalid") // ""
  */
 export function parseSecondFromTime(value: string): string {
-  if (!isValidTime(value)) return "";
+  const time = plainTimeOf(value);
+  if (time === null) return "";
 
   try {
-    const time = Temporal.PlainTime.from(value);
     return time.second.toString().padStart(2, "0");
   } catch {
     return "";

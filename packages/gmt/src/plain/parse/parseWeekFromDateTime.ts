@@ -1,7 +1,6 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { getWeekNumber } from "../calculate/getWeekNumber";
-import { isValidDateTime } from "../validate";
+import { weekNumberOf } from "../../internal/weekNumber";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -39,7 +38,9 @@ export function parseWeekFromDateTime(
       return null;
     }
 
-    if (!isValidDateTime(value)) {
+    const valueParsed = plainDateTimeOf(value);
+
+    if (valueParsed === null) {
       return null;
     }
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
@@ -47,10 +48,7 @@ export function parseWeekFromDateTime(
 
     try {
       // getWeekNumber takes a PlainDate string only, so pass the date half.
-      return getWeekNumber(
-        Temporal.PlainDateTime.from(value).toPlainDate().toString(),
-        weekStartsOn,
-      );
+      return weekNumberOf(valueParsed.toPlainDate(), weekStartsOn);
     } catch {
       return null;
     }

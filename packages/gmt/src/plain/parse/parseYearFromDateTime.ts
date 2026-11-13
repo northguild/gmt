@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { isoYearString } from "../../internal/isoYearString";
 
 /**
@@ -17,10 +16,10 @@ import { isoYearString } from "../../internal/isoYearString";
  * @example parseYearFromDateTime("invalid") // ""
  */
 export function parseYearFromDateTime(value: string): string {
-  if (!isValidDateTime(value)) return "";
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) return "";
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
     return isoYearString(dateTime.year);
   } catch {
     return "";

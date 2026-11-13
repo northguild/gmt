@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -45,10 +44,10 @@ export function convertUtcToPlainDateTime(
     const frame = normalizeZoneFrame(options?.timeZone);
 
     if (frame === null) return "";
-    if (!isValidUtc(value)) return "";
+    const instant = utcInstantOf(value);
+    if (instant === null) return "";
 
     try {
-      const instant = Temporal.Instant.from(value);
       const wallClock = frameWallClock(instant, frame);
       // Temporal writes the date-time, so a year outside 0000 to 9999 gets its sign and six
       // digits. `smallestUnit: "second"` always prints the seconds and cuts off any fraction.

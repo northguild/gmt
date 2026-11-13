@@ -13,7 +13,7 @@ import {
   toUnixEpoch,
   unixEpochToInstant,
 } from "../../internal/unixEpochValue";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -84,7 +84,7 @@ export function subtractUnix(
 
     if (frame === null || epochUnit === null) return null;
 
-    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readDurationUnits(units, isDateTimeDurationUnitName);
 
     if (amounts === null) {
       return null;

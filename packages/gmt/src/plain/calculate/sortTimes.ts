@@ -1,5 +1,5 @@
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidTime } from "../validate";
 
 /**
  * Sort an array of PlainTime values in ascending or descending order.
@@ -21,11 +21,15 @@ export function sortTimes(
   try {
     if (!Array.isArray(times) || !times.length) return [];
 
-    const valid = times.filter(isValidTime);
+    const valid: Temporal.PlainTime[] = [];
+    times.forEach((item) => {
+      const parsed = plainTimeOf(item);
+      if (parsed !== null) valid.push(parsed);
+    });
     if (!valid.length) return [];
 
     try {
-      const comparables = valid.map((t) => Temporal.PlainTime.from(t));
+      const comparables = valid;
       comparables.sort(Temporal.PlainTime.compare);
 
       if (order === "desc") {

@@ -1,5 +1,5 @@
 import type { TwoDigitYearOptions } from "../../types/two-digit-year";
-import { parseNotamValidity } from "../parse/parseNotamValidity";
+import { readNotamValidity } from "../../internal/notamDateTime";
 
 /**
  * Return true when `value` is a NOTAM item B) or C) value (`YYMMDDHHMM`, the same followed by
@@ -29,5 +29,5 @@ export function isValidNotamValidity(
   value: string,
   options: TwoDigitYearOptions,
 ): boolean {
-  return parseNotamValidity(value, options) !== null;
+  return readNotamValidity(value, options) !== null;
 }

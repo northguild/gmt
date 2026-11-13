@@ -1,3 +1,4 @@
+import { isFiscalPatternName } from "../../internal/unitNames";
 import type { FiscalPattern } from "../../types";
 
 /**
@@ -26,9 +27,5 @@ import type { FiscalPattern } from "../../types";
 export function isValidFiscalPattern(
   pattern: unknown,
 ): pattern is FiscalPattern {
-  if (typeof pattern !== "string") {
-    return false;
-  }
-
-  return pattern === "4-5-4" || pattern === "4-4-5" || pattern === "5-4-4";
+  return isFiscalPatternName(pattern);
 }

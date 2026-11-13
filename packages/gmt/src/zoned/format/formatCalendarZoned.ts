@@ -1,9 +1,11 @@
 import { Temporal } from "../../internal/temporal";
-import { zonedDateTimeFrom } from "../../internal";
+import {
+  zonedDateTimeFrom,
+  zonedDateTimeOf,
+} from "../../internal/zonedWallClock";
 import { formatCalendarDays } from "../../internal/formatCalendarDays";
-import { isValidUtc } from "../../utc/validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
-import { isValidZonedDateTime } from "../validate";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 import { isObject } from "../../internal/isObject";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
@@ -62,23 +64,25 @@ export function formatCalendarZoned(
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
     if (!isObject(options)) return "";
-    if (!isValidZonedDateTime(value)) return "";
+    const target = zonedDateTimeOf(value);
+    if (target === null) return "";
 
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
     if (!isValidZonedFormatReference(referenceOption)) return "";
 
     try {
-      const target = zonedDateTimeFrom(value);
       const timeZone = target.timeZoneId;
 
       let reference: Temporal.ZonedDateTime;
       if (referenceOption === undefined) {
         reference = nowZonedDateTimeISO(timeZone);
       } else if (typeof referenceOption === "string") {
-        reference = isValidUtc(referenceOption)
-          ? Temporal.Instant.from(referenceOption).toZonedDateTimeISO(timeZone)
-          : zonedDateTimeFrom(referenceOption).withTimeZone(timeZone);
+        const referenceInstant = utcInstantOf(referenceOption);
+        reference =
+          referenceInstant !== null
+            ? referenceInstant.toZonedDateTimeISO(timeZone)
+            : zonedDateTimeFrom(referenceOption).withTimeZone(timeZone);
       } else {
         reference =
           Temporal.Instant.fromEpochMilliseconds(

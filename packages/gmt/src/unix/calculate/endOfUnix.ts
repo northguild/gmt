@@ -2,7 +2,7 @@
 import type { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
-import { isValidDateTimeUnit } from "../../plain/validate";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -76,7 +76,7 @@ export function endOfUnix(
     const resolvedUnit =
       typeof unit === "string" ? resolveDateTimeUnit(unit) : unit;
 
-    if (!isValidDateTimeUnit(resolvedUnit)) return null;
+    if (!isDateTimeUnitName(resolvedUnit)) return null;
 
     return startOrEndOfUnix(value, resolvedUnit, options ?? {}, true);
   } catch {

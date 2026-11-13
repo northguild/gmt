@@ -1,6 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /**
  * Return the ordinal day-of-year (1-based) for `value`.
@@ -18,10 +16,10 @@ import { isValidDate } from "../validate";
  * @example getDayOfYear("invalid") // null
  */
 export function getDayOfYear(value: string): number | null {
-  if (!isValidDate(value)) return null;
+  const date = plainDateOf(value);
+  if (date === null) return null;
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return date.dayOfYear;
   } catch {
     return null;

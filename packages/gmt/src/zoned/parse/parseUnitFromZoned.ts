@@ -1,7 +1,6 @@
 import type { Temporal } from "../../internal/temporal";
-import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { weekNumberOf } from "../../internal/weekNumber";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -110,9 +109,10 @@ export function parseUnitFromZoned(
     }
     const resolvedUnit = resolveDateTimeUnit(unit);
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
+    const zonedDateTime = zonedDateTimeOf(value);
 
     if (
-      !isValidZonedDateTime(value) ||
+      zonedDateTime === null ||
       !isValidZonedUnit(resolvedUnit) ||
       weekStartsOn === null
     ) {
@@ -120,8 +120,6 @@ export function parseUnitFromZoned(
     }
 
     try {
-      const zonedDateTime = zonedDateTimeFrom(value);
-
       switch (resolvedUnit) {
         case "year":
           return isoYearString(zonedDateTime.year);
@@ -129,10 +127,7 @@ export function parseUnitFromZoned(
           return zonedDateTime.month.toString().padStart(2, "0");
         case "week":
           return (
-            getWeekNumber(
-              zonedDateTime.toPlainDate().toString(),
-              weekStartsOn,
-            ) ?? 0
+            weekNumberOf(zonedDateTime.toPlainDate(), weekStartsOn) ?? 0
           ).toString();
         case "day":
           return zonedDateTime.day.toString().padStart(2, "0");

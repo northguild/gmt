@@ -1,9 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import {
-  instantStringFromEpochNanoseconds,
-  isValidEpochNanoseconds,
-} from "../../internal";
-import { isValidTimeZone } from "../../zoned/validate";
+import { zonedStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 
 /**
  * Convert nanoseconds since the Unix epoch back to an ISO 8601 string.
@@ -43,24 +38,5 @@ export function fromNanoseconds(
   nanoseconds: bigint,
   timeZone?: string,
 ): string {
-  // An explicit `undefined` is the same as omitting the argument (TC39 optional parameters).
-  if (timeZone === undefined) {
-    return instantStringFromEpochNanoseconds(nanoseconds);
-  }
-
-  if (
-    !isValidEpochNanoseconds(nanoseconds) ||
-    typeof timeZone !== "string" ||
-    !isValidTimeZone(timeZone)
-  ) {
-    return "";
-  }
-
-  try {
-    return Temporal.Instant.fromEpochNanoseconds(nanoseconds)
-      .toZonedDateTimeISO(timeZone)
-      .toString();
-  } catch {
-    return "";
-  }
+  return zonedStringFromEpochNanoseconds(nanoseconds, timeZone);
 }

@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { hasSecond60 } from "../../plain/validate/hasSecond60";
+import { hasSecond60Field } from "../../internal/inputChecks";
 import { isObject, isOptionsArgument, zonedDateTimeFrom } from "../../internal";
 import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
 
@@ -58,8 +58,8 @@ export function isValidZonedRange(props: {
     }
 
     if (
-      hasSecond60(value1) ||
-      hasSecond60(value2) ||
+      hasSecond60Field(value1) ||
+      hasSecond60Field(value2) ||
       !hasZonedDateTimeShape(value1) ||
       !hasZonedDateTimeShape(value2)
     ) {

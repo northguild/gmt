@@ -1,6 +1,6 @@
 import { isValidAmount } from "../../internal";
 import { adjustZonedBusinessDays } from "../../internal/adjustZonedBusinessDays";
-import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return a zoned ISO 8601 datetime string with `amount` business days subtracted from `value`.
@@ -26,13 +26,14 @@ export function subtractZonedBusinessDays(
   value: string,
   amount: number,
 ): string {
-  if (!isValidZonedDateTime(value) || !isValidAmount(amount)) {
+  const zoned = zonedDateTimeOf(value);
+  if (zoned === null || !isValidAmount(amount)) {
     return "";
   }
 
   if (amount === 0) {
-    return adjustZonedBusinessDays(value, 1, 0);
+    return adjustZonedBusinessDays(zoned, 1, 0);
   }
 
-  return adjustZonedBusinessDays(value, -1, Math.abs(amount));
+  return adjustZonedBusinessDays(zoned, -1, Math.abs(amount));
 }

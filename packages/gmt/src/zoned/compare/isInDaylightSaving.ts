@@ -1,5 +1,5 @@
-import { isValidZonedDateTime } from "../validate";
-import { isInDaylightTime, zonedDateTimeFrom } from "../../internal";
+import { isInDaylightTime } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Check whether a zoned value's instant falls within daylight saving time.
@@ -53,12 +53,13 @@ import { isInDaylightTime, zonedDateTimeFrom } from "../../internal";
  * @example isInDaylightSaving("invalid") // false
  */
 export function isInDaylightSaving(value: string): boolean {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return false;
   }
 
   try {
-    return isInDaylightTime(zonedDateTimeFrom(value));
+    return isInDaylightTime(zonedDateTime);
   } catch {
     return false;
   }

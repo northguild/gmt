@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidTime } from "../validate";
+import { plainTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return true if two PlainTime ISO strings represent the same time components.
@@ -19,14 +18,13 @@ import { isValidTime } from "../validate";
  * @example areTimesEqual("12:34:56", "invalid") // false
  */
 export function areTimesEqual(value1: string, value2: string): boolean {
-  if (!isValidTime(value1) || !isValidTime(value2)) {
+  const time1 = plainTimeOf(value1);
+  const time2 = plainTimeOf(value2);
+  if (time1 === null || time2 === null) {
     return false;
   }
 
   try {
-    const time1 = Temporal.PlainTime.from(value1);
-    const time2 = Temporal.PlainTime.from(value2);
-
     return (
       time1.hour === time2.hour &&
       time1.minute === time2.minute &&

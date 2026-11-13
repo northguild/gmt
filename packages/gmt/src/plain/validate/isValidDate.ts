@@ -1,4 +1,4 @@
-import { isDateString } from "../../internal/inputChecks";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /**
  * Return true if `value` is a valid ISO PlainDate string.
@@ -30,5 +30,5 @@ export function isValidDate(value: string): boolean;
 export function isValidDate(value: {} | null | undefined | void): boolean;
 export function isValidDate(value: unknown): value is string;
 export function isValidDate(value: unknown): boolean {
-  return typeof value === "string" && isDateString(value);
+  return plainDateOf(value) !== null;
 }

@@ -1,4 +1,4 @@
-import { parseSwiftDate } from "../parse/parseSwiftDate";
+import { readSwiftDate } from "../../internal/swiftDate";
 
 /**
  * Return true when `value` is a SWIFT MT value date, `YYMMDD`, that SWIFT accepts.
@@ -21,5 +21,5 @@ import { parseSwiftDate } from "../parse/parseSwiftDate";
  * @example isValidSwiftDate("050229") // false
  */
 export function isValidSwiftDate(value: string): boolean {
-  return parseSwiftDate(value) !== "";
+  return readSwiftDate(value) !== "";
 }

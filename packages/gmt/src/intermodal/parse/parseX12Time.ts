@@ -1,5 +1,5 @@
-import { readEdiValue, readX12Time } from "../../internal/ediDateTimeFields";
 import type { X12TimeFormat } from "../../types/edi";
+import { x12TimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse an X12 time as an ISO 8601 time: a data element 337 value with no qualifier, or a time
@@ -65,14 +65,5 @@ import type { X12TimeFormat } from "../../types/edi";
  * @example parseX12Time("14:30") // "" (the value is the digits of the element)
  */
 export function parseX12Time(value: string, format?: X12TimeFormat): string {
-  try {
-    // No qualifier: the element fixes its own forms. With one, the value is read against that
-    // code's mask, and a code that is not a time code is refused there.
-    return format === undefined
-      ? readX12Time(value)
-      : readEdiValue("x12", "time", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return x12TimeText(value, format);
 }

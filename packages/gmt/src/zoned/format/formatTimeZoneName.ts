@@ -1,6 +1,6 @@
 import { cachedFormatter } from "../../internal/formatterCache";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
-import { isValidTimeZone } from "../validate";
+import { isZoneId } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 import { nowInstant } from "../../internal/temporalCompat";
@@ -90,7 +90,7 @@ export function formatTimeZoneName(
       return "";
     }
 
-    if (!isValidTimeZone(timeZone)) {
+    if (!isZoneId(timeZone)) {
       return "";
     }
 

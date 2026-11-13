@@ -24,6 +24,20 @@ describe("mergeIntervalsZoned", () => {
     },
   );
 
+  it("returns [] for a sparse list whose trailing slot is a hole", () => {
+    const first = {
+      start: "2024-11-03T00:30:00-04:00[America/New_York]",
+      end: "2024-11-03T01:30:00-04:00[America/New_York]",
+    };
+    const third = {
+      start: first.end,
+      end: "2024-11-03T01:30:00-05:00[America/New_York]",
+    };
+    const sparse = [first, third];
+    sparse.length = 3;
+    expect(mergeIntervalsZoned(sparse)).toEqual([]);
+  });
+
   it("merges intervals across different time zones by instant", () => {
     expect(
       mergeIntervalsZoned([

@@ -1,9 +1,5 @@
-import { isObject } from "../../internal/isObject";
-import { isValidDate } from "../../plain/validate";
+import { isFiscalCalendarRecord } from "../../internal/unitNames";
 import type { FiscalCalendar } from "../../types";
-import { isValidFiscalExtraWeek } from "./isValidFiscalExtraWeek";
-import { isValidFiscalPattern } from "./isValidFiscalPattern";
-import { isValidFiscalYearLabel } from "./isValidFiscalYearLabel";
 
 /**
  * Return true when `calendar` is a `FiscalCalendar` that `getFiscalPeriod` accepts.
@@ -29,26 +25,5 @@ import { isValidFiscalYearLabel } from "./isValidFiscalYearLabel";
 export function isValidFiscalCalendar(
   calendar: unknown,
 ): calendar is FiscalCalendar {
-  try {
-    if (!isObject(calendar) || Array.isArray(calendar)) {
-      return false;
-    }
-
-    const { pattern, yearEndsOn, extraWeek, yearLabel } = calendar as Record<
-      string,
-      unknown
-    >;
-
-    return (
-      isValidFiscalPattern(pattern) &&
-      typeof yearEndsOn === "string" &&
-      isValidDate(yearEndsOn) &&
-      isValidFiscalExtraWeek(extraWeek) &&
-      isValidFiscalYearLabel(yearLabel)
-    );
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return false;
-  }
+  return isFiscalCalendarRecord(calendar);
 }

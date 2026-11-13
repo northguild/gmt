@@ -1,5 +1,5 @@
-import { cachedFormatter } from "../../internal/formatterCache";
-import { resolveRequiredLocale } from "../../internal/resolveLocale";
+import { meridiemsFor } from "../../internal/localeNames";
+
 /**
  * Return a locale's AM/PM (day-period) labels as `[AM-label, PM-label]`.
  *
@@ -22,30 +22,5 @@ import { resolveRequiredLocale } from "../../internal/resolveLocale";
  * @example getLocaleMeridiems(["ja-JP", "en-US"]) // ["午前", "午後"]
  */
 export function getLocaleMeridiems(locale: string | string[]): string[] {
-  try {
-    const resolvedLocale = resolveRequiredLocale(locale);
-    if (resolvedLocale === null) return [];
-
-    try {
-      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
-        timeZone: "UTC",
-        hour: "numeric",
-        hour12: true,
-      });
-      const am =
-        formatter.formatToParts(0).find((part) => part.type === "dayPeriod")
-          ?.value ?? "";
-      const pm =
-        formatter
-          .formatToParts(12 * 60 * 60 * 1000)
-          .find((part) => part.type === "dayPeriod")?.value ?? "";
-      return [am, pm];
-    } catch {
-      return [];
-    }
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return [];
-  }
+  return meridiemsFor(locale);
 }

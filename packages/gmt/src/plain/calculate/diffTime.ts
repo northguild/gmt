@@ -1,10 +1,13 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { isTimeDurationUnitName } from "../../internal/unitNames";
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { differenceRecord } from "../../internal/differenceRecord";
-import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
+import {
+  largestTimeDurationUnit,
+  resolveDurationUnit,
+} from "../../internal/resolveDurationUnit";
 import type { RoundingOptions, TimeDurationUnit } from "../../types";
-import { isValidTime, isValidTimeDurationUnit } from "../validate";
-import { getLargestTimeDurationUnit } from "./getLargestTimeDurationUnit";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -56,17 +59,18 @@ export function diffTime(
     if (!isOptionsArgument(options)) {
       return null;
     }
-    const validTimes = isValidTime(time1) && isValidTime(time2);
+    const t1 = plainTimeOf(time1);
+    const t2 = plainTimeOf(time2);
     // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
     const resolved = Array.isArray(units)
       ? units.map((unit) => resolveDurationUnit(unit))
       : resolveDurationUnit(units);
     const isSingleUnit = !Array.isArray(resolved);
     const validUnits = isSingleUnit
-      ? isValidTimeDurationUnit(resolved)
-      : resolved.every(isValidTimeDurationUnit);
+      ? isTimeDurationUnitName(resolved)
+      : resolved.every(isTimeDurationUnitName);
 
-    if (!validTimes || !validUnits) {
+    if (t1 === null || t2 === null || !validUnits) {
       return null;
     }
 
@@ -74,11 +78,8 @@ export function diffTime(
       // An empty units list names no largest unit, so there is nothing to measure.
       const largestUnit = isSingleUnit
         ? (resolved as TimeDurationUnit)
-        : getLargestTimeDurationUnit(resolved as TimeDurationUnit[]);
+        : largestTimeDurationUnit(resolved as TimeDurationUnit[]);
       if (largestUnit === "") return null;
-
-      const t1 = Temporal.PlainTime.from(time1);
-      const t2 = Temporal.PlainTime.from(time2);
 
       const duration = t1.until(t2, {
         largestUnit,

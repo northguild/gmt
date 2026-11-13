@@ -1,8 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 
 import { getLocaleFirstDayOfWeek, monthGridWeekRow } from "../../internal";
-import { isValidDate } from "../validate";
 
 /**
  * Return the 1-based row `value` falls on within its month's calendar
@@ -34,13 +33,13 @@ export function getWeekOfMonth(
   value: string,
   locale: string | string[],
 ): number | null {
-  if (!isValidDate(value)) return null;
+  const date = plainDateOf(value);
+  if (date === null) return null;
 
   const firstDay = getLocaleFirstDayOfWeek(locale);
   if (firstDay === null) return null;
 
   try {
-    const date = Temporal.PlainDate.from(value);
     // The 1st's weekday, counted back from the date rather than built with `with({ day: 1 })`:
     // the 1st of the first representable month (April -271821) lies before the range.
     const dayOfWeek = ((((date.dayOfWeek - date.day) % 7) + 7) % 7) + 1;

@@ -1,9 +1,9 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import { readLengthUnits } from "../../internal/lengthFromNow";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import type { DateTimeDurationUnit } from "../../types";
-import { isValidDateTimeDurationUnit } from "../validate/isValidDateTimeDurationUnit";
 
 /**
  * Return the PlainDateTime before now, as an ISO string, counted from the current time.
@@ -34,12 +34,12 @@ export function getDateTimeAgo(
   units: Partial<Record<DateTimeDurationUnit, number>>,
 ): string {
   try {
-    const amounts = readLengthUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readLengthUnits(units, isDateTimeDurationUnitName);
     if (amounts === null) {
       return "";
     }
 
-    const timeZone = getSystemTimeZone();
+    const timeZone = systemTimeZone();
     if (!timeZone) {
       return "";
     }

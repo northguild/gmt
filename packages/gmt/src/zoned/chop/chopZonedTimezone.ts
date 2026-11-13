@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Returns the local plain datetime (date + time) extracted from a zoned datetime string.
@@ -14,9 +13,10 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example chopZonedTimezone("invalid") // ""
  */
 export function chopZonedTimezone(value: string): string {
-  if (!isValidZonedDateTime(value)) return "";
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) return "";
   try {
-    return zonedDateTimeFrom(value).toPlainDateTime().toString();
+    return zonedDateTime.toPlainDateTime().toString();
   } catch {
     return "";
   }
