@@ -110,11 +110,14 @@ describe("repros", () => {
 
   // D6: test262 wrapping-at-end-of-month-{hebrew,ethioaa}.js; the others are Chromium 152 grid rows,
   // and gregory is Chromium 153 (gregory joined CalendarSystem in CORE-8).
+  // D6 cachedDay: tc39/proposal-temporal#3327 problem 1, Chromium 153 (Node 26.12.1 agrees).
   // D7 mixedSign: Chromium 152 grid, ISO 2024-02-11 + 384 days by years.
   // D7 leapMonthEnd: Chromium and NonISODateSurpasses (unconstrained day 30 > 29), per
   // js-temporal-polyfill-bugs.md § C (C-D7b).
   it.each`
     defect  | calendar              | name              | expected
+    ${"D6"} | ${"hebrew"}           | ${"cachedDay"}    | ${"-P1M1D"}
+    ${"D6"} | ${"islamic-civil"}    | ${"cachedDay"}    | ${"-P1Y1M1D"}
     ${"D6"} | ${"buddhist"}         | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"gregory"}          | ${"monthEnd"}     | ${"P30D"}
     ${"D6"} | ${"japanese"}         | ${"monthEnd"}     | ${"P30D"}

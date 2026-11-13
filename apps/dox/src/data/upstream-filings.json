@@ -1,5 +1,5 @@
 {
-  "checked": "2026-11-13T15:18:33.593083807Z",
+  "checked": "2026-11-13T16:44:38.201248729Z",
   "filings": [
     {
       "repo": "js-temporal/temporal-polyfill",
@@ -22,7 +22,7 @@
       "comments": 1,
       "maintainerComments": 0,
       "createdAt": "2026-04-22",
-      "updatedAt": "2026-09-21",
+      "updatedAt": "2026-11-13",
       "closedAt": "2026-09-21",
       "mergedAt": "2026-09-21"
     },
@@ -215,7 +215,7 @@
       "comments": 1,
       "maintainerComments": 0,
       "createdAt": "2026-09-18",
-      "updatedAt": "2026-09-18",
+      "updatedAt": "2026-11-13",
       "closedAt": null,
       "mergedAt": null
     },
@@ -238,7 +238,7 @@
       "comments": 1,
       "maintainerComments": 0,
       "createdAt": "2026-09-18",
-      "updatedAt": "2026-09-18",
+      "updatedAt": "2026-11-13",
       "closedAt": null,
       "mergedAt": null
     },
@@ -261,7 +261,7 @@
       "comments": 0,
       "maintainerComments": 0,
       "createdAt": "2026-09-18",
-      "updatedAt": "2026-09-18",
+      "updatedAt": "2026-11-13",
       "closedAt": null,
       "mergedAt": null
     },
@@ -308,7 +308,7 @@
       "comments": 1,
       "maintainerComments": 0,
       "createdAt": "2026-10-21",
-      "updatedAt": "2026-10-24",
+      "updatedAt": "2026-11-13",
       "closedAt": "2026-10-24",
       "mergedAt": null
     },
@@ -342,7 +342,7 @@
       "work": "report",
       "title": "Polyfill: Temporal.Now reads a millisecond before Date.now() after a pre-1970 clock reading",
       "url": "https://github.com/tc39/proposal-temporal/issues/3335",
-      "summary": "After the clock reads a date before 1970, the next Temporal.Now reading can land a millisecond before Date.now(), so a 2027 clock can read as the last millisecond of 2026. The polyfill carries the previous reading's milliseconds modulo a million as a sub-millisecond part, and the remainder keeps its minus sign. Fake timers in tests hit this whenever they set a pre-1970 date. The issue proposes a floor modulo.",
+      "summary": "After the clock reads a date before 1970, the next Temporal.Now reading can land a millisecond before Date.now(), so a 2027 clock can read as the last millisecond of 2026. The polyfill carries the previous reading's milliseconds modulo a million as a sub-millisecond part, and the remainder keeps its minus sign. In js-temporal's polyfill, fake timers in tests hit this whenever they set a pre-1970 date. The issue proposes a floor modulo.",
       "pairsWith": [],
       "closes": [],
       "dependsOn": [],
@@ -354,7 +354,7 @@
       "comments": 0,
       "maintainerComments": 0,
       "createdAt": "2026-10-31",
-      "updatedAt": "2026-10-31",
+      "updatedAt": "2026-11-13",
       "closedAt": null,
       "mergedAt": null
     },
@@ -520,7 +520,7 @@
       "comments": 2,
       "maintainerComments": 0,
       "createdAt": "2026-11-06",
-      "updatedAt": "2026-11-06",
+      "updatedAt": "2026-11-13",
       "closedAt": null,
       "mergedAt": null
     },
@@ -536,14 +536,14 @@
       "closes": [],
       "dependsOn": [],
       "gmtGuard": null,
-      "gmtNote": "GMT runs on `@js-temporal/polyfill`, which throws on Chinese and Dangi dates under ICU 78 instead (js-temporal/temporal-polyfill#360). GMT's weekly swap check compares each calendar's years with native Temporal on every new `temporal-polyfill` release.",
+      "gmtNote": "GMT runs on `@js-temporal/polyfill`, whose 0.5.1 release throws on Chinese and Dangi dates under ICU 78 instead (js-temporal/temporal-polyfill#360, fixed on its `main` and not yet released). GMT's weekly swap check compares each calendar's years with native Temporal on every new `temporal-polyfill` release.",
       "state": "open",
       "draft": false,
       "reviewDecision": null,
       "comments": 0,
       "maintainerComments": 0,
       "createdAt": "2026-11-06",
-      "updatedAt": "2026-11-06",
+      "updatedAt": "2026-11-13",
       "closedAt": null,
       "mergedAt": null
     },
@@ -554,7 +554,7 @@
       "work": "fix",
       "title": "Apply the ICU4X leap-year corrections to the Persian calendar",
       "url": "https://github.com/fullcalendar/temporal-polyfill/pull/131",
-      "summary": "The Persian calendar skips the corrections ICU4X makes to 78 leap years from 1502 to 2987 AP, so from 2123 the last day of each affected year reads as the first day of the next. This applies the same corrections as ICU4X.",
+      "summary": "The Persian calendar skips the corrections ICU4X makes to 78 leap years from 1502 to 2987 AP, so the first day of the year after each one reads as an extra 30th day of month 12, and every other day of that year one day early. This applies the same corrections as ICU4X.",
       "pairsWith": [],
       "closes": ["fullcalendar/temporal-polyfill#127"],
       "dependsOn": [],
@@ -582,7 +582,7 @@
       "closes": ["fullcalendar/temporal-polyfill#128"],
       "dependsOn": [],
       "gmtGuard": null,
-      "gmtNote": "GMT runs on `@js-temporal/polyfill`, which throws on Chinese and Dangi dates under ICU 78 instead (js-temporal/temporal-polyfill#360). GMT's weekly swap check compares each calendar's years with native Temporal on every new `temporal-polyfill` release.",
+      "gmtNote": "GMT runs on `@js-temporal/polyfill`, whose 0.5.1 release throws on Chinese and Dangi dates under ICU 78 instead (js-temporal/temporal-polyfill#360, fixed on its `main` and not yet released). GMT's weekly swap check compares each calendar's years with native Temporal on every new `temporal-polyfill` release.",
       "state": "open",
       "draft": false,
       "reviewDecision": null,

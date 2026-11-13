@@ -2,8 +2,8 @@
 
 35 sub-stories on 26 GitHub issues: #130–#142, #171 (`DOX-C0`), #240 (`DOX-C4`), #288
 (`DOX-A6`), #289 (`DOX-E1c`), #293 (`DOX-E1d`), #430 (`DOX-G1`), #447 (`DOX-G2`), #467
-(`DOX-G3`), #458 (`DOX-G4`), #448 (`DOX-G6`), #477 (`DOX-G7`,
-with #475), #487 (`DOX-G8`) and #522 (`DOX-G9`). What each done story shipped is in [built.md](built.md).
+(`DOX-G3`), #458 (`DOX-G4`), #448 (`DOX-G6`), #477 (`DOX-G7`, with #475), #487 (`DOX-G8`) and
+#522 (`DOX-G9`). What each done story shipped is in [built.md](built.md).
 
 A row here is a `DOX-*` story with its own GitHub issue. Add one, then run `pnpm deps:sync`,
 which generates `Blocked by`, only for Dox work that belongs to no realm story. The Dox pages and

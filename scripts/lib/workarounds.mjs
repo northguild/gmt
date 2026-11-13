@@ -89,7 +89,8 @@ export const WORKAROUNDS = [
   {
     defects: ["D6"],
     title: "D6 — non-ISO until re-constrains the day while counting months",
-    trigger: "a js-temporal release contains 10aeb98 (already on main)",
+    trigger:
+      "a js-temporal release contains 10aeb98 (already on main) and no longer writes the un-constrained day into its calendar cache (tc39/proposal-temporal#3327 problem 1, on main since 853fc8b)",
     steps: [
       "Delete the D6 repros and the D6 terms in calendarDateArithmetic.ts.",
       LAST_OF_D1_D7,
@@ -139,7 +140,7 @@ export const WORKAROUNDS = [
     title:
       "D11 — the calendar nudge window is never retried, so total, round and until with a calendar smallestUnit answer over the wrong bounds (relativeTo on the 29th-31st)",
     trigger:
-      "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
+      "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (17e12be0af42, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
     steps: [
       "Delete the D11 repros in probeRepros.ts, isNudgeWindowCompatNeeded in capabilities.ts and its export in index.ts, and internal/zonedDifference/nudgeWindow.ts with its calls in zonedWallClockDifference.ts (the monthTotalBySpec and monthRoundBySpec operands in durationTotal and durationRound, the defect-4 term in untilTakesSpecPath, and the plainUntilWithRounding re-export), the plainUntilWithRounding export in internal/index.ts, and its call in plain/calculate/diffDateTime.ts, which calls dt1.until(dt2, { largestUnit, smallestUnit, roundingIncrement, roundingMode }) again, the same object it passes to plainUntilWithRounding now. The last of defects 3–5 to go also deletes untilTakesSpecPath, the // defects 3–5 block in zonedUntil that calls untilAtLimit, and the bySpec blocks in durationTotal and durationRound. Then drop the imports and locals tsc reports unused, and the internal/zonedDifference/operations.ts exports fallow reports unused.",
       "Keep test/nudgeWindowRetry.test.ts and test/intervalLengthOracle.test.ts, and the progress === 0n branch in nudgeToCalendarUnit (internal/zonedDifference/operations.ts; GMT's own fix, not the polyfill's).",
