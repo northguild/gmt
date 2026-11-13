@@ -3379,9 +3379,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     under `src/generated/` are ignored yet tracked, so both lists are packed). Gate selection reads
     `src/content/docs/**`, and some `test:dist` tests read generated sources, so `dist/` alone is not
     enough. The pack step passes NUL-delimited names to `tar --null -T -`. The upload keeps the
-    artifact one day and sets `overwrite: true`: `download-artifact` keeps the first of two artifacts
-    with one name, so a re-run attempt must replace the earlier one (#380). A failed `dox-site`
-    skips every job that needs it, so its failure shows once, on `dox-site`.
+    artifact 14 days, like the other artifacts, so **Re-run failed jobs** on a gate leg or a shard,
+    which does not run `dox-site` again, still finds it days later. It sets `overwrite: true`:
+    `download-artifact` keeps the first of two artifacts with one name, so a re-run attempt must
+    replace the earlier one (#380). A failed `dox-site` skips every job that needs it, so its
+    failure shows once, on `dox-site`.
     - **`consistency`** keeps only the fast checks (audit, format, deps, markers, licences, docs
       checks, stats, api-surface, bundle-size and the changeset check). It builds nothing.
     - **`dox-browser`** ("Dox browser tests (Chromium, WebKit)") unpacks the artifact, builds

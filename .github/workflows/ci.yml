@@ -347,13 +347,15 @@ jobs:
           } | tar -cf "$RUNNER_TEMP/dox-site.tar" apps/dox/dist --null -T -
           ls -lh "$RUNNER_TEMP/dox-site.tar"
 
+      # 14 days, like the other artifacts: Re-run failed jobs does not run this job again, so a
+      # re-run gate leg or shard must still find the artifact days later.
       # `overwrite` replaces the artifact of an earlier attempt: download-artifact keeps the first
       # of two artifacts with the same name (#380, see temporal-oracle.yml).
       - uses: actions/upload-artifact@v7
         with:
           name: dox-site
           path: ${{ runner.temp }}/dox-site.tar
-          retention-days: 1
+          retention-days: 14
           overwrite: true
           compression-level: 6
 
@@ -409,17 +411,21 @@ jobs:
           DOX_DIST_REQUIRED: "1"
         run: pnpm --filter dox run test:dist
 
+      # Playwright picks each browser build by Ubuntu release, and `install` keeps a browser folder
+      # that is already there, so the key names the release: WebKit built for 24.04 fails on 26.04.
       - name: Playwright version
         id: pw
         if: contains(fromJSON(env.CHECKS), 'dox-tables')
-        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          . /etc/os-release && echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         if: contains(fromJSON(env.CHECKS), 'dox-tables')
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium-webkit
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.os }}-${{ steps.pw.outputs.version }}-chromium-webkit
 
       # WebKit too: the industry tag test checks where Safari's engine places the tag definition.
       - name: Install Chromium and WebKit
@@ -481,15 +487,19 @@ jobs:
       - name: Unpack the build
         run: tar -xf "$RUNNER_TEMP/dox-site/dox-site.tar"
 
+      # Playwright picks each browser build by Ubuntu release, and `install` keeps a browser folder
+      # that is already there, so the key names the release: WebKit built for 24.04 fails on 26.04.
       - name: Playwright version
         id: pw
-        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          . /etc/os-release && echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.os }}-${{ steps.pw.outputs.version }}-chromium
 
       - name: Install Chromium
         run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
@@ -633,15 +643,19 @@ jobs:
       - name: Unpack the build
         run: tar -xf "$RUNNER_TEMP/dox-site/dox-site.tar"
 
+      # Playwright picks each browser build by Ubuntu release, and `install` keeps a browser folder
+      # that is already there, so the key names the release: WebKit built for 24.04 fails on 26.04.
       - name: Playwright version
         id: pw
-        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          . /etc/os-release && echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.os }}-${{ steps.pw.outputs.version }}-chromium
 
       - name: Install Chromium
         run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
