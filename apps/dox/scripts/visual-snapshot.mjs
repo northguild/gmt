@@ -208,6 +208,10 @@ const PAGES = [
     slug: "check-morocco-2026-clock-change",
     path: "/check/morocco-2026-clock-change/",
   },
+  {
+    slug: "check-us-sunshine-protection-act",
+    path: "/check/us-sunshine-protection-act/",
+  },
   { slug: "tool-cron-in-a-zone", path: "/tools/cron-in-a-zone/" },
   { slug: "tool-leap-day-birthday", path: "/tools/leap-day-birthday/" },
   { slug: "tool-expiry-calculator", path: "/tools/expiry-calculator/" },

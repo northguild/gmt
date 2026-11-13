@@ -376,6 +376,14 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "sunshine-protection-act",
+    path: "/check/us-sunshine-protection-act/",
+    preset: null,
+    click: { role: "radio", name: "Proposals" },
+    presetNote: "no preset; switches to the Proposals view",
+    drag: null,
+  },
+  {
     slug: "duration-parser-bench",
     preset: { role: "combobox", name: "Locale" },
     presetNote: "no preset; changes the locale",

@@ -1,0 +1,21 @@
+# trimmed excerpt of tzdata 2026e australasia
+Rule	Guam	1959	only	-	Jun	27	2:00	1:00	D
+Rule	Guam	1961	only	-	Jan	29	2:00	0	S
+Rule	Guam	1967	only	-	Sep	 1	2:00	1:00	D
+Rule	Guam	1969	only	-	Jan	26	0:01	0	S
+Rule	Guam	1969	only	-	Jun	22	2:00	1:00	D
+Rule	Guam	1969	only	-	Aug	31	2:00	0	S
+Rule	Guam	1970	1971	-	Apr	lastSun	2:00	1:00	D
+Rule	Guam	1970	1971	-	Sep	Sun>=1	2:00	0	S
+Rule	Guam	1973	only	-	Dec	16	2:00	1:00	D
+Rule	Guam	1974	only	-	Feb	24	2:00	0	S
+Rule	Guam	1976	only	-	May	26	2:00	1:00	D
+Rule	Guam	1976	only	-	Aug	22	2:01	0	S
+Rule	Guam	1977	only	-	Apr	24	2:00	1:00	D
+Rule	Guam	1977	only	-	Aug	28	2:00	0	S
+Zone	Pacific/Guam	-14:21:00 -	LMT	1844 Dec 31
+			 9:39:00 -	LMT	1901        # Agana
+			10:00	-	GST	1941 Dec 10 # Guam
+			 9:00	-	%z	1944 Jul 31
+			10:00	Guam	G%sT	2000 Dec 23
+			10:00	-	ChST	# Chamorro Standard Time

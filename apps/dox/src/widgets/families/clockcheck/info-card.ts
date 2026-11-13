@@ -77,6 +77,35 @@ export function serversCard(o: ServersCardOptions): SafeHtml {
   </section>`;
 }
 
+interface InfoCardOptions {
+  idPrefix: string;
+  /** Names the card's heading id, so two cards on a page never share one. */
+  name: string;
+  title: string;
+  /** One paragraph each. */
+  lines: readonly string[];
+  /** More markup after the lines (a dated line, a link). */
+  after?: SafeHtml;
+  /** The part name a browser gate finds the card by. */
+  gate?: string;
+}
+
+/** An info card of a title and a few plain lines, in the card style of the servers card. */
+export function infoCard(o: InfoCardOptions): SafeHtml {
+  const titleId = `${o.idPrefix}-${o.name}-title`;
+  return html`<section
+    class="${styles.card}"
+    ${gateAttr(o.gate)}
+    aria-labelledby="${titleId}"
+  >
+    ${infoIcon()}
+    <div class="${styles.body}">
+      <h4 class="${styles.title}" id="${titleId}">${o.title}</h4>
+      ${o.lines.map((line) => html`<p>${line}</p>`)}${o.after ?? ""}
+    </div>
+  </section>`;
+}
+
 /** The runtimes' minimum releases: one row to a line, each with its sources. */
 export function minimumsCard(idPrefix: string, text: MinimumsText): SafeHtml {
   const titleId = `${idPrefix}-minimums-title`;

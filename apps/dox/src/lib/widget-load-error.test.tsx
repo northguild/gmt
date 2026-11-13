@@ -184,6 +184,10 @@ import {
   renderMoroccoClockChangeWidgetTemplate,
 } from "./morocco-clock-change-mount";
 import {
+  mountSunshineProtectionActWidget,
+  renderSunshineProtectionActWidgetTemplate,
+} from "./sunshine-protection-act-mount";
+import {
   mountDurationParserBench,
   renderDurationParserBenchTemplate,
 } from "./duration-parser-bench-mount";
@@ -439,6 +443,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "morocco clock-change checker",
     () => renderMoroccoClockChangeWidgetTemplate("morocco", moroccoTense),
     mountMoroccoClockChangeWidget as MountFn<never>,
+  ],
+  [
+    "sunshine protection act",
+    () => renderSunshineProtectionActWidgetTemplate("sunshine"),
+    mountSunshineProtectionActWidget as MountFn<never>,
   ],
   [
     "duration parser bench",

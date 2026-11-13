@@ -1,0 +1,78 @@
+name: US clock-change watch
+
+# Compares three sources with the committed snapshot (scripts/us-clock-watch.snapshot.json): the
+# Congress.gov API and the Open States API for bills on the clock-change subject (new, or a changed
+# latest action), and the IANA tz database for any change to the rules of a zone in
+# apps/dox/src/lib/us-region-zones.json. Manual and weekly only: never part of ci.yml or
+# `pnpm run validate`, because those runs have no network or keys. A difference opens or updates one
+# `canary` issue per kind (federal, state, tz-us-zone); a source that cannot run (a network or HTTP
+# error, a 429, a body that does not parse, a missing secret) opens or updates one could-not-run
+# issue and the others still report. The tz issue is the signal to start CORE-90 phase 2. The
+# federal and state issues ask a person to review and refresh the snapshot: the canary edits
+# nothing. The dispatch input is a dry run: it files a clearly marked [dry run] issue and changes no
+# comparison or exit code. Issues are filed only from main: a run on another branch lists what it
+# would have filed in the job summary and files nothing.
+#
+# Retirement (specs/CORE-90/index.md, Decisions 11 and 13): the tz part when the US clock-change
+# checker (CORE-90 phase 2) ships; the federal and state parts when the Proposals view's data is
+# removed or replaced.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_difference:
+        description: "Dry run: file a [dry run] issue for one synthetic federal difference"
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    # Mondays 07:17 UTC
+    - cron: "17 7 * * 1"
+
+concurrency:
+  group: us-clock-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: US clock-change sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The script uses only Node built-ins and `fetch`: no install, no build.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          check-latest: true
+
+      # The two API keys go to this step only. The script sends each one in a request header and
+      # never prints it or a URL that holds it.
+      - name: Compare with Congress.gov, Open States and the IANA tz database
+        id: check
+        env:
+          CONGRESS_GOV_API_KEY: ${{ secrets.CONGRESS_GOV_API_KEY }}
+          OPEN_STATES_API_KEY: ${{ secrets.OPEN_STATES_API_KEY }}
+        run: node scripts/us-clock-watch.mjs check
+
+      # One job: it installs nothing and runs only first-party Node and `gh`, so there is no
+      # third-party code to keep away from the write token. `!cancelled()` runs this after the
+      # comparison's exit 1 or 2, so the run fails and the issue opens. It holds no API key.
+      - name: Open or update canary issues
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_DIFFERENCE: ${{ inputs.force_difference }}
+        run: |
+          args=(us-clock-watch)
+          if [ "$FORCE_DIFFERENCE" = "true" ]; then args+=(--force-us-clock-difference); fi
+          node scripts/canary-report.mjs "${args[@]}"

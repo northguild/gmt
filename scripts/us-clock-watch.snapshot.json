@@ -1,0 +1,52 @@
+{
+  "federal": {
+    "checkedAt": "2026-11-13T10:31:11Z",
+    "congress": 0,
+    "bills": []
+  },
+  "state": {
+    "checkedAt": "2026-11-13T10:31:11Z",
+    "bills": []
+  },
+  "tz": {
+    "release": "2026e",
+    "zones": {
+      "Pacific/Pago_Pago": "457257832ad73f19293fccc1256579e0c235542384aa79244cb14574e1cb8ce8",
+      "Pacific/Guam": "26136333e440bd7cff1a83e09d5e24b469bef24ad94f49683c621bc333ead3b9",
+      "Pacific/Saipan": "6ebc614d2ec891741529efc0d63d0304f8fcc74f804cee53a7e7bf49c17df7e8",
+      "America/Puerto_Rico": "9419fadac7b8a293d5e6ff7b0350367653f5680cc733463ab68f5ead8a9161ca",
+      "Pacific/Midway": "933aed05c126f85f411c88c534a93b11d5d78eed4b0aec08c00302b7c388bc5a",
+      "Pacific/Wake": "519708311a58a6677b2d127272229e7fb79a640990dc6717160e433ff246abd7",
+      "America/New_York": "42c5a0ed276abb32631376943c11a985ee6989966cba858e16a5d86479a295a9",
+      "America/Detroit": "256c89086c8abd9013206e4850e096e616f8012bcc9790a3864b107f7311713f",
+      "America/Kentucky/Louisville": "e58467fc574a5c776a18929691cb7456a7788e95eb2ab155686804f5179441e9",
+      "America/Kentucky/Monticello": "da775b8072a40f1932bca897a1a86212d1c3a4d30447a2fc7612a1ee4e548d1a",
+      "America/Indiana/Indianapolis": "94a9ccc5cce8cf33f691cae1082e4762235c16e17cfa489cfbc851c923547eb0",
+      "America/Indiana/Vincennes": "a2cf1369f89c158162d7ccd083227ce7a7ceff6a8f7589aa7f3c852e44105c2f",
+      "America/Indiana/Winamac": "1cfed08658d45578afc6a50907e690ad430371beec1ad3db858a94d64ec227a1",
+      "America/Indiana/Marengo": "2f06070a65c6beb51e6814fe15676c3911ab4f72092d6ac0d7f6e23b4f6c2ab5",
+      "America/Indiana/Petersburg": "639f733150fd0474df9e4ae270e93b70223661f5865f29de6987378c019d5488",
+      "America/Indiana/Vevay": "24ee88228a2109265503a3e35f7a2ad2688b0cacdb0acbf3938b6efebba1f3d2",
+      "America/Chicago": "178bb9b9317f69f240c1805348a2f3352309694679995b8924e57607de21629b",
+      "America/Indiana/Tell_City": "43c70ba109eeff0f83c2eadad118799a4477e0806489fbc7e7d3e3b22b08679c",
+      "America/Indiana/Knox": "82852b0d3f6713a648c0154a0f7d967fcdb6934d2c4d692fe9d983ab559c15b4",
+      "America/Menominee": "52ea7890afca21487e9031d6e9707ac92e2b9a8b3a49a119de3ece1ee58da9d9",
+      "America/North_Dakota/Center": "6b28895cd225acb71fbd44ce486eb0927de7bd4e0cad0fafef8e05d437241327",
+      "America/North_Dakota/New_Salem": "f2b474f1150b59936f315c94c2a5aa6c7b29d8e158c5a210c232249feb274747",
+      "America/North_Dakota/Beulah": "972f4f2be037205e7f16fcf3678d4f55171bfc7d6f52d5bc8865b8561d863ce7",
+      "America/Denver": "4ee730c25fbb564898886ff2be2eecd07d2698441c7ed2d19758ad6c8fa3a625",
+      "America/Boise": "5b2035baa590ed10d77b161b5039438c751fead0fcda4f12e81d69bfe96bd0cc",
+      "America/Phoenix": "f67ba024aefd00f0bc6c3f4a52c1d3be388103ef6dbb6eb18959726183b9f985",
+      "America/Los_Angeles": "8a04dd242d2cd9910c99c2f905c88b951957a3cee239c478d1728efec2973d39",
+      "America/Anchorage": "941dc70434da6cec48149a2f6b554f585fe1316e177ad9395f2f7ab1361cb6f1",
+      "America/Juneau": "9dcf9280f7be29479a9c5c50ae781fa282c35085dc3be2a06e6be7f4f19cbd4d",
+      "America/Sitka": "ce4cafa64c507e31baab03123240e61293a24ec109938e78742c718125ae463a",
+      "America/Metlakatla": "61d1c5f93517154d92611f0094171cbb96ffd6ba02cb36b244985e3b2b28c845",
+      "America/Yakutat": "aa6079cfc3484257068978a8a9e8e9e89c75c4b58b772345d34084853ad15205",
+      "America/Nome": "dd2bead9a3db4ad24105e5b3e0ad75a20c54748246ca75f924caab683bc28154",
+      "America/Adak": "ac6dbadd040a116630e423a260a414411f712c9cdb2f4829341d99a23c66cf21",
+      "Pacific/Honolulu": "da4118a079795db0354441b72be3c582028683bcaa6cb2908382f48a4f1775aa",
+      "America/St_Thomas": "3d136db98bd09b0ed4818e6d9b7761a04b8479f9a0827eb7f32abe9e93202844"
+    }
+  }
+}

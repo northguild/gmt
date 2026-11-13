@@ -20,6 +20,8 @@
   --zonemap-changes-fill-a: 0.18;
   --zonemap-changes-edge-a: 0.6;
   --zonemap-stopped-fill-a: 0.45;
+  --zonemap-stopped-soft-fill-a: 0.22;
+  --zonemap-none-soft-fill-a: 0.08;
   --zonemap-sea: color-mix(
     in srgb,
     var(--gmt-cyan) calc(var(--zonemap-sea-cyan) * 100%),
@@ -51,6 +53,22 @@
     from var(--gmt-dst-purple) srgb r g b / var(--zonemap-stopped-fill-a)
   );
   --zonemap-stopped-edge: var(--gmt-dst-purple-ink);
+
+  /* The lighter steps of the US page's proposals: the same hue and stroke at a lower alpha, so a
+     firm position is solid and a conditional or merely proposed one is paler. */
+  --zonemap-stopped-soft-fill: color(
+    from var(--gmt-dst-purple) srgb r g b / var(--zonemap-stopped-soft-fill-a)
+  );
+  --zonemap-none-soft-fill: color(
+    from var(--gmt-cyan) srgb r g b / var(--zonemap-none-soft-fill-a)
+  );
+
+  /* The "still changes" gold laid on the sea, opaque: the Navajo Nation drawn over its cyan state. */
+  --zonemap-changes-solid: color-mix(
+    in srgb,
+    var(--gmt-dst-gold) calc(var(--zonemap-changes-fill-a) * 100%),
+    var(--zonemap-sea)
+  );
 }
 
 /* --- The section: the map, the zone card and the live clocks ---------------- */
@@ -225,6 +243,10 @@
   align-items: center;
   gap: var(--gmt-space-2);
   margin: 0;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 /* The same flat fill and stroke mark the legend, a list card and the pin panel. */
@@ -253,6 +275,55 @@
     background:
       linear-gradient(var(--zonemap-changes-fill), var(--zonemap-changes-fill)),
       var(--zonemap-sea);
+  }
+
+  /* The US page's classes use the same fills and strokes as the map's shapes. */
+  &[data-kind="changes"],
+  &[data-kind="no-position"],
+  &[data-kind="navajo"] {
+    border-color: var(--zonemap-changes-edge);
+    background:
+      linear-gradient(var(--zonemap-changes-fill), var(--zonemap-changes-fill)),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="standard-all-year"] {
+    border-color: var(--zonemap-none-edge);
+    background:
+      linear-gradient(var(--zonemap-none-fill), var(--zonemap-none-fill)),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="standard-proposed"] {
+    border-color: var(--zonemap-none-edge);
+    background:
+      linear-gradient(
+        var(--zonemap-none-soft-fill),
+        var(--zonemap-none-soft-fill)
+      ),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="daylight-if-allowed"] {
+    border-color: var(--zonemap-stopped-edge);
+    background:
+      linear-gradient(var(--zonemap-stopped-fill), var(--zonemap-stopped-fill)),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="daylight-conditional"] {
+    border-color: var(--zonemap-stopped-edge);
+    background:
+      linear-gradient(
+        var(--zonemap-stopped-soft-fill),
+        var(--zonemap-stopped-soft-fill)
+      ),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="no-data"] {
+    border-color: var(--zonemap-land-edge);
+    background: var(--zonemap-land);
   }
 }
 
@@ -397,6 +468,41 @@
     fill: var(--zonemap-stopped-fill);
     stroke: var(--zonemap-stopped-edge);
     stroke-width: 1.5;
+  }
+
+  /* The US page's classes, flat like Canada's: gold still changes, cyan never changes, purple is
+     daylight time if it is allowed. The lighter steps are the same hue at a lower alpha. */
+  &[data-kind="changes"],
+  &[data-kind="no-position"] {
+    fill: var(--zonemap-changes-fill);
+    stroke: var(--zonemap-changes-edge);
+  }
+
+  &[data-kind="standard-all-year"] {
+    fill: var(--zonemap-none-fill);
+    stroke: var(--zonemap-none-edge);
+  }
+
+  &[data-kind="standard-proposed"] {
+    fill: var(--zonemap-none-soft-fill);
+    stroke: var(--zonemap-none-edge);
+  }
+
+  &[data-kind="daylight-if-allowed"] {
+    fill: var(--zonemap-stopped-fill);
+    stroke: var(--zonemap-stopped-edge);
+    stroke-width: 1.5;
+  }
+
+  &[data-kind="daylight-conditional"] {
+    fill: var(--zonemap-stopped-soft-fill);
+    stroke: var(--zonemap-stopped-edge);
+    stroke-width: 1.5;
+  }
+
+  &[data-kind="no-data"] {
+    fill: var(--zonemap-land);
+    stroke: var(--zonemap-land-edge);
   }
 
   /* A light lift on hover: the fill gains alpha and the ring draws the edge in the bright cyan. */
@@ -860,6 +966,75 @@
     fill: CanvasText;
   }
 
+  /* The US page repaints the same way: gold solid, cyan dots, purple hatch, the lighter steps
+     with a sparser mark. */
+  .shape[data-kind="changes"],
+  .shape[data-kind="no-position"],
+  .shape[data-kind="standard-all-year"],
+  .shape[data-kind="standard-proposed"],
+  .shape[data-kind="daylight-if-allowed"],
+  .shape[data-kind="daylight-conditional"],
+  .shape[data-kind="no-data"] {
+    forced-color-adjust: none;
+    stroke: CanvasText;
+  }
+
+  .shape[data-kind="changes"],
+  .shape[data-kind="no-position"] {
+    fill: CanvasText;
+  }
+
+  .shape[data-kind="daylight-if-allowed"] {
+    fill: GrayText;
+  }
+
+  .shape[data-kind="daylight-conditional"],
+  .shape[data-kind="standard-all-year"],
+  .shape[data-kind="standard-proposed"],
+  .shape[data-kind="no-data"] {
+    fill: Canvas;
+  }
+
+  .swatch {
+    &[data-kind="changes"],
+    &[data-kind="no-position"],
+    &[data-kind="navajo"] {
+      background: CanvasText;
+    }
+
+    &[data-kind="daylight-if-allowed"] {
+      background:
+        repeating-linear-gradient(
+          45deg,
+          CanvasText 0 1.5px,
+          transparent 1.5px 5px
+        ),
+        Canvas;
+    }
+
+    &[data-kind="daylight-conditional"] {
+      background:
+        repeating-linear-gradient(45deg, CanvasText 0 1px, transparent 1px 7px),
+        Canvas;
+    }
+
+    &[data-kind="standard-all-year"] {
+      background:
+        radial-gradient(CanvasText 1.2px, transparent 1.6px) 0 0 / 5px 5px,
+        Canvas;
+    }
+
+    &[data-kind="standard-proposed"] {
+      background:
+        radial-gradient(CanvasText 0.8px, transparent 1.2px) 0 0 / 8px 8px,
+        Canvas;
+    }
+
+    &[data-kind="no-data"] {
+      background: Canvas;
+    }
+  }
+
   .zoneButton[aria-pressed="true"] {
     border-color: Highlight;
     outline: 2px solid Highlight;
@@ -869,4 +1044,433 @@
   .marker[data-pinned="true"] {
     stroke: Highlight;
   }
+}
+
+/* Lines or frames drawn over the shapes (zone lines, inset frames): a decoration. */
+.overlay {
+  fill: none;
+  stroke: var(--zonemap-land-edge);
+  stroke-width: 0.75;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* The Navajo Nation: the Denver zone clipped to Arizona, in the "still changes" gold over its
+   state. A decoration, so it takes no pointer. */
+.hatch {
+  fill: var(--zonemap-changes-solid);
+  stroke: var(--zonemap-changes-edge);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* An inset's frame: a thin full border, its corners cut at 45 degrees. */
+.frame {
+  fill: transparent;
+  stroke: var(--zonemap-land-edge);
+  stroke-width: 1;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+
+  /* A press anywhere in the frame pins its place: the shapes in a small inset are too small to hit.
+     It is a pointer convenience, not a control: no focus, no role. */
+  pointer-events: all;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    stroke: var(--gmt-cyan-bright);
+  }
+
+  &[data-pinned="true"] {
+    stroke: var(--gmt-globe-selected);
+    stroke-width: 2;
+  }
+}
+
+/* --- The view switch --------------------------------------------------------- */
+
+/* A native radio group as a segmented control: a full border with bevel corners. The radio is the
+   segment's own hit area (`appearance: none`, laid over it), so the browser keeps the arrow keys,
+   the one tab stop and the form semantics. The checked segment is a fill, an inset bottom accent
+   and a bolder word, never colour alone, and never a left edge. */
+.viewSwitch {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.viewLegend {
+  padding: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.viewSegments {
+  display: inline-flex;
+  max-inline-size: 100%;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-2);
+  overflow: hidden;
+}
+
+.viewSegment {
+  position: relative;
+  display: grid;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.viewInput {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan-bright);
+    outline-offset: -4px;
+  }
+}
+
+.viewText {
+  display: grid;
+  place-items: center;
+  min-block-size: 2rem;
+  min-inline-size: 5rem;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--gmt-ice);
+  border-block-end: 3px solid transparent;
+  pointer-events: none;
+}
+
+.viewInput:hover + .viewText,
+.viewInput:focus-visible + .viewText {
+  background: var(--gmt-fill);
+}
+
+.viewInput:checked + .viewText {
+  background: var(--gmt-fill);
+  border-block-end-color: var(--gmt-cyan-bright);
+  font-weight: 600;
+}
+
+@media (prefers-contrast: more) {
+  .viewSegments {
+    border-color: CanvasText;
+  }
+
+  .overlay {
+    stroke-width: 1.5;
+  }
+}
+
+@media (forced-colors: active) {
+  .viewSegments {
+    border-color: CanvasText;
+  }
+
+  .viewText {
+    color: ButtonText;
+  }
+
+  .viewInput:checked + .viewText {
+    background: Highlight;
+    border-block-end-color: HighlightText;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .viewInput:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .overlay,
+  .frame {
+    stroke: CanvasText;
+  }
+
+  .hatch {
+    fill: CanvasText;
+    stroke: CanvasText;
+    forced-color-adjust: none;
+  }
+
+  .frame[data-pinned="true"] {
+    stroke: Highlight;
+  }
+}
+
+/* --- The Sunshine Protection Act page: a wide map ------------------------------ */
+
+/* The US map is far wider than the checkers' maps, so it takes the full width of the page, with its
+   legend under it. The list and the pin panel sit side by side in the row below from 62rem. The
+   map's height is reserved from its aspect (`--zonemap-map-height`), so nothing moves when the
+   boundary file arrives. */
+
+/* A press on a shape focuses it, and Chromium then draws its auto focus ring as a dark box round the
+   shape's bounding rectangle, even with a transparent outline colour. A focused shape is already
+   marked by its own stroke, so the outline is dropped on this page. Forced colours draw no stroke colours, so there the
+   outline stays and is the focus edge. */
+@media (forced-colors: none) {
+  .usSection .shape,
+  .usSection .marker {
+    outline-width: 0;
+  }
+}
+
+.usSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-4);
+
+  & > * {
+    min-inline-size: 0;
+    margin: 0;
+  }
+}
+
+.usSection .map {
+  /* A wide landscape map takes the full width: the checkers' 70vh cap would leave it narrower than
+     the page on a laptop. */
+  inline-size: 100%;
+}
+
+/* Both views sit in one grid cell, so the block is as tall as the taller of the two and a switch
+   moves nothing below it. The view that is not shown stays laid out but `visibility: hidden`, which
+   keeps it out of the accessibility tree, the tab order and pointer hits. Its descendants are set
+   too, not left to inherit: a pinned ring carries `visibility="visible"` and an inset frame
+   `pointer-events: all`, and either would show through or catch the other view's presses. */
+.usViews {
+  display: grid;
+  min-inline-size: 0;
+
+  & > * {
+    grid-area: 1 / 1;
+    min-inline-size: 0;
+  }
+
+  & > [hidden] {
+    display: block;
+  }
+
+  & > [hidden],
+  & > [hidden] * {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.usCaption {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* Once the map is drawn it is the keyboard path (`keyboard: "shapes"`), so the list is shown only
+   where there is no map: below 520px, or when the boundary file failed (`data-map`). */
+@container gmt-clockcheck (min-width: 520px) {
+  .usSection:not([data-map="failed"]) .pickCard {
+    display: none;
+  }
+}
+
+/* Wide, the map and the pinned place sit side by side. The map's column is as wide as a frame that
+   fills the viewport's height (less the page's header and the view switch) can be, and never so
+   narrow that the panel falls under 20rem; the panel takes the rest. */
+@container gmt-clockcheck (min-width: 62rem) {
+  .usSection {
+    --usmap-frame-block: max(24rem, calc(100dvh - 15rem));
+
+    grid-template-columns:
+      minmax(
+        0,
+        calc(
+          var(--usmap-frame-block) * 800 / var(--zonemap-map-height, 640) + 2 *
+            var(--gmt-space-3) + 2px
+        )
+      )
+      minmax(20rem, 1fr);
+    align-items: start;
+  }
+
+  .usSection .stage {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .usSection .pin {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .usSection .pickCard {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* The list is its own height, up to a bound that shows at least eight rows, then scrolls. It is
+     not laid over its frame, as it is in the checkers' row. */
+  .usSection .zoneScroll {
+    position: static;
+    max-block-size: 46rem;
+  }
+}
+
+/* The pin panel: a head over two columns of readouts, one box for every place. The long values
+   hold their lines, so pinning moves nothing. */
+.usSection .usPin {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.usPinHead {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  margin: 0;
+  min-block-size: 6em;
+
+  & dd {
+    margin: 0;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+}
+
+.usPinName {
+  min-block-size: 2.8em;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.usPinClass {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+  min-block-size: 4.2em;
+  font-size: 0.8125rem;
+
+  & .swatch {
+    inline-size: 1.125rem;
+    block-size: 0.75rem;
+  }
+}
+
+.usRows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding-block-start: var(--gmt-space-3);
+  border-block-start: 1px solid var(--gmt-border);
+}
+
+.usRow,
+.usRowWide,
+.usRowLong {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  font-size: 0.8125rem;
+
+  & dt {
+    color: var(--gmt-ice-dim);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  & dd {
+    min-inline-size: 0;
+    min-block-size: 1.4em;
+    margin: 0;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+}
+
+.usRowWide,
+.usRowLong {
+  grid-column: 1 / -1;
+}
+
+.usRowWide dd {
+  min-block-size: 4.2em;
+}
+
+.usRowLong dd {
+  min-block-size: 5.6em;
+}
+
+@container gmt-clockcheck (min-width: 40rem) {
+  .usPinClass {
+    min-block-size: 2.8em;
+  }
+
+  .usRowWide dd {
+    min-block-size: 2.8em;
+  }
+
+  .usRowLong dd {
+    min-block-size: 4.2em;
+  }
+}
+
+/* Beside the map the panel is a narrow column again, so its readouts hold the narrow lines. */
+@container gmt-clockcheck (min-width: 62rem) {
+  .usPinClass {
+    min-block-size: 4.2em;
+  }
+
+  .usRowWide dd {
+    min-block-size: 4.2em;
+  }
+
+  .usRowLong dd {
+    min-block-size: 5.6em;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .usRow dt,
+  .usRowWide dt,
+  .usRowLong dt,
+  .usCaption {
+    color: var(--gmt-ice);
+  }
+}
+
+/* A legend count holds its width, so the line does not rewrap when the answer arrives. */
+.usCount {
+  display: inline-block;
+  min-inline-size: 2ch;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.usStatus {
+  min-block-size: 1.4em;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }

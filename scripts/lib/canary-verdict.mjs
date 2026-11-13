@@ -17,6 +17,7 @@ export const VERDICT_FILES = {
   "temporal-compat-webkit-macos": "artifacts/temporal-compat-webkit-macos.json",
   "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
   "leap-seconds": "artifacts/leap-seconds.json",
+  "us-clock-watch": "artifacts/us-clock-watch.json",
   "native-suite-node": "artifacts/native-suite-node.json",
   "native-suite-chromium": "artifacts/native-suite-chromium.json",
   "native-suite-firefox": "artifacts/native-suite-firefox.json",
@@ -308,6 +309,22 @@ export function leapSecondsVerdict({
     rows: { gmt: gmtRows, iers: iersRows },
     differences: [...differences],
   };
+}
+
+/**
+ * @typedef {{ status: "ran", differences: string[], [field: string]: unknown }
+ *   | { status: "could-not-run", message: string }} ClockWatchPart
+ */
+
+/**
+ * The `us-clock-watch check` verdict: one part per source (`federal`, `state`, `tz`), each either
+ * ran with its `differences` (bill lines for the first two, zone names for `tz`) or could not run.
+ * A source that failed does not stop the others from reporting.
+ *
+ * @param {{ federal: ClockWatchPart, state: ClockWatchPart, tz: ClockWatchPart }} parts
+ */
+export function usClockWatchVerdict({ federal, state, tz }) {
+  return { source: "us-clock-watch", status: "ran", federal, state, tz };
 }
 
 /**

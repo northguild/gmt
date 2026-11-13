@@ -123,6 +123,39 @@ describe("widget permalinks", () => {
     ).toEqual({});
   });
 
+  it("carries the Sunshine Protection Act's view and place through a link", () => {
+    const seed = (view: unknown) =>
+      seedFromLocation(
+        "sunshineact",
+        encodeWidgetPermalink("sunshineact", { view }).replace(/^[^?]*/, ""),
+      );
+    expect(
+      encodeWidgetPermalink("sunshineact", { view: { kind: "today" } }),
+    ).toContain("/check/us-sunshine-protection-act/?w=sunshineact&");
+    expect(seed({ kind: "today", zone: "America/Phoenix" })).toEqual({
+      view: { kind: "today", zone: "America/Phoenix" },
+    });
+    expect(seed({ kind: "proposals", state: "DE" })).toEqual({
+      view: { kind: "proposals", state: "DE" },
+    });
+    expect(seed({ kind: "proposals" })).toEqual({
+      view: { kind: "proposals" },
+    });
+  });
+
+  it("opens the Sunshine Protection Act on Today, unpinned, for a malformed view", () => {
+    const seed = (view: unknown) =>
+      seedFromLocation(
+        "sunshineact",
+        encodeWidgetPermalink("sunshineact", { view }).replace(/^[^?]*/, ""),
+      );
+    expect(seed("proposals")).toEqual({});
+    expect(seed({ kind: "elsewhere", zone: "UTC" })).toEqual({});
+    expect(seed({ kind: "today", zone: "A".repeat(65) })).toEqual({
+      view: { kind: "today" },
+    });
+  });
+
   it("needs no anchor, because the widget is the whole page", () => {
     // The reference-page targets these replaced each needed a heading anchor to
     // land anywhere useful.

@@ -13,6 +13,8 @@ import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "./bundle-size";
 import { KEY_POINTS } from "../data/canada-key-points";
 import { keyPointsMarkdown } from "../data/clock-change-text";
 import { MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
+import { US_GUIDANCE } from "../data/sunshine-protection-act-guidance";
+import { NATIONAL } from "../data/sunshine-protection-act-proposals";
 import { serversMarkdown } from "./canada-clock-change";
 import { serversMarkdown as moroccoServersMarkdown } from "./morocco-clock-change";
 import { dateFaults } from "../data/date-faults";
@@ -565,6 +567,19 @@ export function renderMdxComponents(body: string): string {
     out,
     "MoroccoClockChange",
     () => keyPointsMarkdown(MOROCCO_KEY_POINTS) + moroccoServersMarkdown(),
+  );
+  // The Sunshine Protection Act page: what the national proposal would do, then the guidance cards.
+  out = replaceElements(
+    out,
+    "SunshineProtectionAct",
+    () =>
+      [
+        "",
+        "## What the national proposal would do",
+        "",
+        ...NATIONAL.effects.map((line) => `- ${line}`),
+        "",
+      ].join("\n") + keyPointsMarkdown(US_GUIDANCE),
   );
   out = replaceElements(out, "WhyDateAlternatives", renderWhyDateAlternatives);
 

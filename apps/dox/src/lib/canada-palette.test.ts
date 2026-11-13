@@ -10,7 +10,7 @@ import { mapPalette } from "./zone-map.fixture";
  * its swatches are dark islands, so the dark theme's token values apply in both themes. The
  * fixture reads the values from the zone-map module, so a change to it is measured.
  */
-const { sea, land, strokes, contrast } = mapPalette();
+const { sea, land, strokes, fills, apart, contrast } = mapPalette();
 
 describe("the map's class strokes", () => {
   it.each(strokes)(
@@ -25,6 +25,26 @@ describe("the map's class strokes", () => {
       expect(contrast(stroke, land)).toBeGreaterThanOrEqual(3);
     },
   );
+});
+
+describe("the lighter steps of the US page's fills", () => {
+  it("keep the cyan step apart from its solid step, the sea and the land", () => {
+    expect(apart(fills["noneSoft"]!, fills["none"]!)).toBeGreaterThanOrEqual(6);
+    expect(apart(fills["noneSoft"]!, sea)).toBeGreaterThanOrEqual(6);
+    expect(apart(fills["noneSoft"]!, land)).toBeGreaterThanOrEqual(4);
+  });
+  it("keep the purple step apart from its solid step, the sea and the land", () => {
+    expect(
+      apart(fills["stoppedSoft"]!, fills["stopped"]!),
+    ).toBeGreaterThanOrEqual(6);
+    expect(apart(fills["stoppedSoft"]!, sea)).toBeGreaterThanOrEqual(6);
+    expect(apart(fills["stoppedSoft"]!, land)).toBeGreaterThanOrEqual(6);
+  });
+  it("keep every class fill apart from the sea", () => {
+    for (const fill of ["none", "changes", "stopped"]) {
+      expect(apart(fills[fill]!, sea), fill).toBeGreaterThanOrEqual(6);
+    }
+  });
 });
 
 describe("the servers card and the key points on the text surfaces", () => {

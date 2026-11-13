@@ -7,6 +7,7 @@ This script is NOT part of the dox build pipeline. Run it manually when the pinn
 
     uv run --with shapely python apps/dox/scripts/prepare-region-boundaries.py --region canada
     uv run --with shapely python apps/dox/scripts/prepare-region-boundaries.py --region morocco
+    uv run --with shapely python apps/dox/scripts/prepare-region-boundaries.py --region us
 
 `--region` names a row of REGIONS: the zone.tab country codes (or `"frame"`), an optional map
 frame, the simplify tolerance, the size budget, whether the zones file carries each zone's zone.tab
@@ -40,7 +41,8 @@ Steps:
      zone with the land. The land the zones leave uncovered inside `land_frame` is one extra
      feature, written first, `{"land": "other"}`: Mali, France, the United States. It is the
      difference, never all the land, so no coastline is stored twice. Land parts under the
-     region's `min_area` (square degrees) are dropped from the zones and from that feature.
+     region's `min_area` (square degrees) are dropped from the zones and from that feature; a
+     `land_parts` box may set its own minimum as a sixth value, after its tolerance.
      `land_frame` must cover the whole drawn box, so that no shape or land edge ends inside it.
      The file must stay under the region's budget.
   5. Write
@@ -50,6 +52,16 @@ Steps:
      Canada: apps/dox/public/timezone-boundaries-canada.json and apps/dox/src/lib/canada-zones.json.
      Morocco: apps/dox/public/timezone-boundaries-morocco.json and
      apps/dox/src/lib/morocco-region-zones.json.
+
+     United States (CORE-90): a row with no single box. `land_parts` lists one bounding box per
+     part of the composite projection (lower 48, Alaska, Hawaii, Puerto Rico and the Virgin Islands,
+     Guam and the Northern Marianas, American Samoa); the land and each zone are cut to those boxes
+     and joined. `undrawn` zones (Midway, Wake) keep their row in the zones file and get no feature.
+     `keep_order` keeps zone.tab's order, which the Sunshine Protection Act page lists. A `states` key
+     writes a second file: the 50 states, DC and five territories from Natural Earth admin-1 and
+     admin-0 (public domain), simplified with the row's tolerance, properties `{ postal, name }`.
+     apps/dox/public/timezone-boundaries-us.json, apps/dox/public/state-boundaries-us.json,
+     apps/dox/src/lib/us-state-names.json and apps/dox/src/lib/us-region-zones.json.
 
 The boundary file is a derived database offered to the public, so it carries the ODbL
 notice as RFC 7946 §6.1 foreign members, like the two sibling files.
@@ -125,6 +137,45 @@ REGIONS = {
         "boundaries": REPO_ROOT / "apps/dox/public/timezone-boundaries-morocco.json",
         "zones": REPO_ROOT / "apps/dox/src/lib/morocco-region-zones.json",
     },
+    "us": {
+        "countries": ["US", "AS", "GU", "MP", "PR", "UM", "VI"],
+        "frame": None,
+        "land_frame": None,
+        # One box per part of `geoUsComposite`: lower 48, Alaska (and the Aleutians across the
+        # antimeridian), Hawaii, Puerto Rico and the Virgin Islands, Guam and the Marianas, Samoa.
+        "land_parts": [
+            (-125.5, 24, -66.5, 49.6),
+            (-180, 50, -129, 72),
+            (172, 50, 180, 54),
+            # An inset is drawn zoomed to fill its card, so a small box keeps a finer simplify
+            # tolerance (the fifth value): at 0.02 degrees Tutuila is five points. It keeps smaller
+            # islands too (the sixth value, square degrees, about 4 km2 here): at the row's 0.01
+            # (about 120 km2) Tinian, Rota, St Thomas, St John, Culebra and all of Manu'a are lost.
+            (-161, 18.5, -154, 22.5, 0.004, 0.0003),
+            (-68, 17.5, -64, 18.8, 0.004, 0.0003),
+            # Guam to Saipan. The islands north of Saipan are left out: 400 km of specks would leave
+            # Guam a third of its card, and the page's caption names them.
+            (144, 13, 146.5, 15.5, 0.003, 0.0003),
+            (-171.5, -14.7, -168, -14, 0.001, 0.0003),
+        ],
+        "box": None,
+        "min_area": 0.01,
+        "tolerance": 0.02,
+        "budget": 300 * 1024,  # the formatted file must stay under 400 KB (409600 bytes)
+        "coords": True,
+        "keep_order": True,
+        "undrawn": ["Pacific/Midway", "Pacific/Wake"],
+        "boundaries": REPO_ROOT / "apps/dox/public/timezone-boundaries-us.json",
+        "zones": REPO_ROOT / "apps/dox/src/lib/us-region-zones.json",
+        "states": {
+            "admin1": "ne_10m_admin_1_states_provinces",  # adm0_a3 == "USA": 50 states + DC
+            "admin0": ["PRI", "VIR", "GUM", "MNP", "ASM"],  # ne_10m_admin_0_countries, by adm0_a3
+            "key": "postal",  # NE's two-letter code; admin-0 rows get PR, VI, GU, MP, AS
+            "out": REPO_ROOT / "apps/dox/public/state-boundaries-us.json",
+            "names": REPO_ROOT / "apps/dox/src/lib/us-state-names.json",  # { postal: name }, for the chat
+            "count": 56,
+        },
+    },
 }
 
 NE_TAG = "v5.1.2"
@@ -138,6 +189,10 @@ RELEASE_URL = (
 LAND_URL = (
     "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
     f"{NE_TAG}/geojson/ne_10m_land.geojson"
+)
+NE_BASE = (
+    "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
+    f"{NE_TAG}/geojson/"
 )
 TZDATA_URL = f"https://data.iana.org/time-zones/releases/tzdata{TZDB}.tar.gz"
 
@@ -169,6 +224,83 @@ def download_land() -> dict:
     print(f"Downloading {LAND_URL} ...")
     with urllib.request.urlopen(LAND_URL) as resp:
         return json.load(resp)
+
+
+def download_ne(name: str) -> dict:
+    url = f"{NE_BASE}{name}.geojson"
+    print(f"Downloading {url} ...")
+    with urllib.request.urlopen(url) as resp:
+        return json.load(resp)
+
+
+def prepare_parts(geom, boxes: list, tolerance: float):
+    """`prepare` for a row with several boxes: each box's cut, joined."""
+    from shapely import make_valid
+    from shapely.geometry import MultiPolygon
+    from shapely.ops import unary_union
+
+    # A box may carry its own tolerance as a fifth value.
+    cuts = [prepare(geom, b[:4], b[4] if len(b) > 4 else tolerance) for b in boxes]
+    return make_valid(unary_union([c for c in cuts if not c.is_empty])) if any(not c.is_empty for c in cuts) else MultiPolygon()
+
+
+def prop(props: dict, name: str):
+    """A Natural Earth property, whatever the case of its key."""
+    for k, v in props.items():
+        if k.lower() == name:
+            return v
+    return None
+
+
+def write_states(spec: dict, boxes: list, tolerance: float, min_area: float) -> int:
+    """The state layer: NE admin-1 (USA) plus the admin-0 territories, `{ postal, name }` only."""
+    from shapely.geometry import shape
+
+    features = []
+    for f in download_ne(spec["admin1"])["features"]:
+        if prop(f["properties"], "adm0_a3") == "USA":
+            features.append(f)
+    for f in download_ne("ne_10m_admin_0_countries")["features"]:
+        if prop(f["properties"], "adm0_a3") in spec["admin0"]:
+            features.append(f)
+    out = []
+    for f in features:
+        postal = prop(f["properties"], "postal")
+        name = prop(f["properties"], "name")
+        geom = finish(prepare_parts(shape(f["geometry"]), boxes, tolerance), min_area, boxes)
+        if not postal or not name or geom is None:
+            print(f"ERROR: state feature {name!r} ({postal!r}) has no postal, name or shape", file=sys.stderr)
+            return 1
+        out.append({"type": "Feature", "properties": {"postal": postal, "name": name}, "geometry": geom})
+    if len(out) != spec["count"] or len({o["properties"]["postal"] for o in out}) != spec["count"]:
+        print(f"ERROR: expected {spec['count']} distinct states and territories, got {len(out)}", file=sys.stderr)
+        return 1
+    out.sort(key=lambda o: o["properties"]["postal"])
+    doc = {
+        "type": "FeatureCollection",
+        "source": f"Natural Earth {NE_TAG[1:]} admin-0 and admin-1, public domain",
+        "features": out,
+    }
+    path: Path = spec["out"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as fh:
+        json.dump(doc, fh, separators=(",", ":"), ensure_ascii=False)
+    size = os.path.getsize(path)
+    print(f"Wrote {path} — {len(out)} features, {size} bytes")
+    names_path: Path = spec["names"]
+    with open(names_path, "w") as fh:
+        json.dump(
+            {o["properties"]["postal"]: o["properties"]["name"] for o in out},
+            fh,
+            indent=2,
+            ensure_ascii=False,
+        )
+        fh.write("\n")
+    print(f"Wrote {names_path} — {len(out)} names")
+    if size > 300 * 1024:
+        print(f"ERROR: {size} bytes is over the {300 * 1024} budget", file=sys.stderr)
+        return 1
+    return 0
 
 
 def load_json(path: str) -> dict:
@@ -294,13 +426,21 @@ def prepare(geom, clip: tuple, tolerance: float):
     return make_valid(set_precision(shape, GRID))
 
 
-def finish(geom, min_area: float) -> dict | None:
+def finish(geom, min_area: float, boxes: list | None = None) -> dict | None:
     """Drop the parts under `min_area`, fix winding (d3-geo wants clockwise exteriors, as the
-    globe script does) and return GeoJSON, or None when nothing is left."""
+    globe script does) and return GeoJSON, or None when nothing is left. A part inside one of
+    `boxes` that carries its own minimum (a sixth value) is held to that one instead."""
     from shapely.geometry import MultiPolygon, mapping
     from shapely.geometry.polygon import orient
 
-    parts = [p for p in polygons(geom) if p.area >= min_area]
+    def least(p) -> float:
+        x, y = p.representative_point().coords[0]
+        for b in boxes or []:
+            if len(b) > 5 and b[0] <= x <= b[2] and b[1] <= y <= b[3]:
+                return b[5]
+        return min_area
+
+    parts = [p for p in polygons(geom) if p.area >= least(p)]
     if not parts:
         return None
     s = parts[0] if len(parts) == 1 else MultiPolygon(parts)
@@ -329,13 +469,15 @@ def main() -> int:
     zones_path: Path = region["zones"]
 
     rows = region_zone_rows(region["countries"])
-    ids = sorted(rows)
+    ids = list(rows) if region.get("keep_order") else sorted(rows)
     named = region["countries"] if region["countries"] == "frame" else ",".join(region["countries"])
     print(f"zone.tab {TZDB}: {len(ids)} rows" + ("" if named == "frame" else f" with country {named}"))
     tolerance: float = region["tolerance"]
     budget: int = region["budget"]
     frame = region["frame"]
     land_frame = region["land_frame"]
+    land_parts = region.get("land_parts")
+    undrawn: list[str] = region.get("undrawn", [])
     min_area: float = region["min_area"]
     from shapely import make_valid
     from shapely.geometry import box, shape
@@ -366,20 +508,20 @@ def main() -> int:
     box_outline = drawn_box(region["box"]) if region["box"] else None
 
     land_data = load_json(args.land_file) if args.land_file else download_land()
-    land = prepare(
-        unary_union([make_valid(shape(f["geometry"])) for f in land_data["features"]]),
-        land_frame,
-        tolerance,
-    )
+    def cut(geom):
+        return prepare_parts(geom, land_parts, tolerance) if land_parts else prepare(geom, land_frame, tolerance)
+
+    land = cut(unary_union([make_valid(shape(f["geometry"])) for f in land_data["features"]]))
 
     zone_shapes = {}
     for tzid in ids:
-        zone = prepare(shape(by_tzid[tzid]["geometry"]), land_frame, tolerance)
-        zone_shapes[tzid] = make_valid(zone.intersection(land))
+        if tzid in undrawn:
+            continue
+        zone_shapes[tzid] = make_valid(cut(shape(by_tzid[tzid]["geometry"])).intersection(land))
 
     # The land no zone of the region covers. The difference, not all the land.
     other = make_valid(land.difference(unary_union(list(zone_shapes.values()))))
-    other_geom = finish(other, min_area)
+    other_geom = finish(other, min_area, land_parts)
     if other_geom is None:
         print("ERROR: no land is left outside the zones", file=sys.stderr)
         return 1
@@ -388,7 +530,9 @@ def main() -> int:
     ]
     dropped = []
     for tzid in list(ids):
-        geom = finish(zone_shapes[tzid], min_area)
+        if tzid in undrawn:
+            continue
+        geom = finish(zone_shapes[tzid], min_area, land_parts)
         if geom is not None and box_outline is not None:
             # A zone whose land lies wholly outside the drawn box has nothing to draw.
             if zone_shapes[tzid].intersection(box_outline).area <= 0:
@@ -417,6 +561,8 @@ def main() -> int:
     )
 
     zones_out: dict = {"tzdb": TZDB, "zones": ids}
+    if undrawn:
+        zones_out["undrawn"] = undrawn
     if region["coords"]:
         zones_out["coords"] = {z: list(rows[z]) for z in ids}
     with open(zones_path, "w") as f:
@@ -427,6 +573,8 @@ def main() -> int:
     if size > budget:
         print(f"ERROR: {size} bytes is over the {budget} budget", file=sys.stderr)
         return 1
+    if region.get("states"):
+        return write_states(region["states"], land_parts, tolerance, min_area)
     return 0
 
 

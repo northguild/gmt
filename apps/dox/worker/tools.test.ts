@@ -155,6 +155,34 @@ describe("worker tool execute", () => {
     expect(refused).toHaveProperty("note");
   });
 
+  it("accepts the Sunshine Protection Act with no place or a listed one, and refuses any other", async () => {
+    const ok = { ok: true, widget: "sunshine-protection-act" };
+    expect(
+      await run("showUsSunshineProtectionAct", { view: { kind: "today" } }),
+    ).toEqual(ok);
+    expect(
+      await run("showUsSunshineProtectionAct", {
+        view: { kind: "today", zone: "America/Phoenix" },
+      }),
+    ).toEqual(ok);
+    expect(
+      await run("showUsSunshineProtectionAct", {
+        view: { kind: "proposals", state: "DE" },
+      }),
+    ).toEqual(ok);
+    for (const view of [
+      { kind: "today", zone: "Europe/Madrid" },
+      { kind: "proposals", state: "ZZ" },
+    ]) {
+      const refused = await run("showUsSunshineProtectionAct", { view });
+      expect(refused).toMatchObject({
+        ok: false,
+        widget: "sunshine-protection-act",
+      });
+      expect(refused).toHaveProperty("note");
+    }
+  });
+
   it("rejects a whitespace-only stored-time list in the tool's own schema", () => {
     const schema = (
       tools.showStoredTimeAudit as unknown as {
@@ -731,6 +759,7 @@ describe("worker tool execute", () => {
         {
           zone: "UTC",
           year: 2026,
+          view: { kind: "today" },
           value: "2026-01-01T00:00",
           from: "UTC",
           to: "UTC",

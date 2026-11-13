@@ -60,30 +60,39 @@ export function transitionsFor(zone: string, year: number): Change[] {
 }
 
 /**
+ * A zone's last change at or before `now` and its next one after it, as instants. `getDstTransitions`
+ * groups by the zone's LOCAL year, so a change within ~14 h of local New Year can sit outside the UTC
+ * year's own list. Three years, in order, cover it; the pick is then made on instants alone.
+ */
+export function lastAndNext(
+  zone: string,
+  now: string,
+): { last: Change | null; next: Change | null } {
+  // The UTC year of `now`, from the string the library returned — not from `Date`.
+  const year = Number(now.slice(0, 4));
+  const window = [year - 1, year, year + 1].flatMap((y) =>
+    transitionsFor(zone, y),
+  );
+  return {
+    last: window.findLast((change) => !isAfterUtc(change.instant, now)) ?? null,
+    next: window.find((change) => isAfterUtc(change.instant, now)) ?? null,
+  };
+}
+
+/**
  * One zone's row: its offset now, its last and next change, and its class. The class is read
  * from the year the checker's story is about (`stopYear`) and the year after: a change after it
  * is `changes-after`, a change in it alone is `stopped`, neither is `none`.
  */
 export function mapZone(zone: string, now: string, stopYear: number): MapZone {
-  // The UTC year of `now`, from the string the library returned — not from `Date`.
-  const year = Number(now.slice(0, 4));
-
   let kind: MapZone["kind"] = "none";
   if (transitionsFor(zone, stopYear + 1).length > 0) kind = "changes-after";
   else if (transitionsFor(zone, stopYear).length > 0) kind = "stopped";
 
-  // `getDstTransitions` groups by the zone's LOCAL year, so a change within ~14 h of local New
-  // Year can sit outside the UTC year's own list. Three years, in order, cover it; the pick is
-  // then made on instants alone.
-  const window = [year - 1, year, year + 1].flatMap((y) =>
-    transitionsFor(zone, y),
-  );
-
   return {
     zone,
     offset: getTimeZoneOffset(zone, now),
-    last: window.findLast((change) => !isAfterUtc(change.instant, now)) ?? null,
-    next: window.find((change) => isAfterUtc(change.instant, now)) ?? null,
+    ...lastAndNext(zone, now),
     kind,
   };
 }

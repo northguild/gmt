@@ -105,6 +105,21 @@ const TARGETS = [
       zones: [],
     },
   },
+  {
+    // The Today view is the one shown on load; the Proposals map has its own credits square.
+    path: "/check/us-sunshine-protection-act/",
+    slug: "us-map",
+    frame: '[id="sunshine-today-map"]',
+    id: "sunshine-today-data-credits",
+    drawn: `[id="sunshine-today-map"] ${gate("map-shape")}`,
+    labels: ["Time zone boundaries", "Coastlines"],
+    absentBelow: 520,
+    stubWorker: true,
+    // The US page's sections are `us-section`, one for each view; the first is Today's.
+    section: "us-section",
+    apiPath: "**/api/sunshine-protection-act",
+    stub: { now: "2026-11-13T12:00:00Z", zones: [] },
+  },
 ];
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -327,7 +342,7 @@ if (args.includes("--resolve-only")) {
     const page = await context.newPage();
     if (target.stubWorker) {
       await page.route(
-        `**/api/${target.api ?? "canada"}-clock-change`,
+        target.apiPath ?? `**/api/${target.api ?? "canada"}-clock-change`,
         (route) =>
           route.fulfill({
             status: 200,
@@ -343,7 +358,8 @@ if (args.includes("--resolve-only")) {
       miss.push(`the page answered HTTP ${res?.status() ?? "none"}`);
     } else {
       if (target.stubWorker) {
-        await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
+        const section = gate(target.section ?? "map-section");
+        await page.locator(section).first().scrollIntoViewIfNeeded();
         await page.waitForTimeout(2000);
       }
       miss.push(
@@ -383,7 +399,7 @@ for (const name of browsers) {
       const page = await context.newPage();
       if (target.stubWorker) {
         await page.route(
-          `**/api/${target.api ?? "canada"}-clock-change`,
+          target.apiPath ?? `**/api/${target.api ?? "canada"}-clock-change`,
           (route) =>
             route.fulfill({
               status: 200,
@@ -402,11 +418,12 @@ for (const name of browsers) {
       const button = page.locator(`[popovertarget="${target.id}"]`);
       if (target.stubWorker) {
         // The map is drawn lazily, when it nears the viewport, and only from 520 px of section.
-        await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
+        const section = gate(target.section ?? "map-section");
+        await page.locator(section).first().scrollIntoViewIfNeeded();
         await page.waitForTimeout(2000);
         const width = await page.evaluate(
           (sel) => document.querySelector(sel).getBoundingClientRect().width,
-          gate("map-section"),
+          section,
         );
         const found = await button.count();
         if (width < target.absentBelow) {

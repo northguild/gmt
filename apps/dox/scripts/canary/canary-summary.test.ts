@@ -1100,3 +1100,101 @@ describe("summaryMarkdown: leap-seconds", () => {
     expect(text).not.toContain("Dry run");
   });
 });
+
+describe("summaryMarkdown: us-clock-watch", () => {
+  const ran = (differences: string[] = [], extra = {}) => ({
+    status: "ran",
+    differences,
+    ...extra,
+  });
+  const watch = (over: Record<string, unknown> = {}) => ({
+    source: "us-clock-watch",
+    status: "ran",
+    federal: ran(),
+    state: ran(),
+    tz: ran([], { release: "2026e", snapshotRelease: "2026e" }),
+    ...over,
+  });
+  const watchSummary = (
+    verdict: unknown,
+    force = {},
+    results: Parameters<typeof summaryMarkdown>[3] = [],
+  ) =>
+    summaryMarkdown(
+      "us-clock-watch",
+      { "us-clock-watch": verdict } as never,
+      force,
+      results,
+    );
+
+  it("a clean run shows no differences and says no US zone changed", () => {
+    expect(watchSummary(watch())).toBe(
+      [
+        "## US clock-change watch",
+        "",
+        "| Source | Result |",
+        "| --- | --- |",
+        "| Federal bills | 0 differences |",
+        "| State bills | 0 differences |",
+        "| tz zones | 0 differences |",
+        "",
+        "tz release 2026e: no US zone changed",
+        "",
+        "**Issues:** No issues filed.",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("lists each source's differences under its own heading", () => {
+    const text = watchSummary(
+      watch({
+        federal: ran(["new: S 7: To adopt permanent standard time"]),
+        tz: ran(["America/Detroit"], {
+          release: "2026f",
+          snapshotRelease: "2026e",
+        }),
+      }),
+    );
+    expect(text).toContain("| Federal bills | 1 differences |");
+    expect(text).toContain("tz release 2026f (snapshot 2026e)");
+    expect(text).toContain(
+      "### Federal bills\n\n- new: S 7: To adopt permanent standard time",
+    );
+    expect(text).toContain("### tz zones\n\n- America/Detroit");
+    expect(text).not.toContain("### State bills");
+  });
+
+  it("names a source that could not run and still shows the others", () => {
+    const text = watchSummary(
+      watch({
+        state: {
+          status: "could-not-run",
+          message: "HTTP 500 from v3.openstates.org/bills",
+        },
+      }),
+    );
+    expect(text).toContain(
+      "| State bills | could not run — HTTP 500 from v3.openstates.org/bills |",
+    );
+    expect(text).toContain("| Federal bills | 0 differences |");
+  });
+
+  it("a whole-run could-not-run verdict gives one line", () => {
+    const text = watchSummary({
+      source: "us-clock-watch",
+      status: "could-not-run",
+      message: "cannot run: no snapshot",
+    });
+    expect(text).toContain(
+      "US clock-change watch: could not run — cannot run: no snapshot",
+    );
+  });
+
+  it("a forced difference names the flag", () => {
+    const text = watchSummary(watch(), { usClockDifference: true });
+    expect(text.split("\n")).toContain(
+      "**Dry run:** --force-us-clock-difference",
+    );
+  });
+});

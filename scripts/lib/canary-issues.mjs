@@ -69,6 +69,7 @@ export const WORKFLOW_SOURCES = {
     ...SWAP_SOURCES,
   ],
   "leap-seconds": ["leap-seconds"],
+  "us-clock-watch": ["us-clock-watch"],
 };
 
 /**
@@ -81,6 +82,7 @@ const UNTAGGED_GROUPS_IN_BODY = 50;
 
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
+const US_WATCH = "us-clock-watch";
 const LEAP_IANA = "IANA leap-seconds.list";
 const LEAP_IANA_URL = "https://data.iana.org/time-zones/tzdb/leap-seconds.list";
 const LEAP_IERS_URL = "https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat";
@@ -110,6 +112,11 @@ const NO_VERDICT = "no verdict file: an earlier step or job failed";
 const FLOOR_STEP =
   "Raise the @js-temporal/polyfill floor in packages/gmt/package.json to the release that made this removable, so no install resolves one with the defect.";
 const FORCED_LEAP_LINE = "dry run: forced difference (no real row differs)";
+const FORCED_US_LINE = "dry run: forced difference (nothing real differs)";
+const US_REVIEW_STEP =
+  "Review the change. Edit the Proposals data module under `apps/dox/src/data/` (`*-proposals.ts`) and its checked date by hand if a position changed, then run `node scripts/us-clock-watch.mjs refresh` and commit the snapshot.";
+const US_TZ_PARAGRAPH =
+  "A tz release changed a US zone's rules. This is the signal to build the US clock-change checker: CORE-90 phase 2, #341.";
 const FORCED_ROW = {
   scan: "dry-run",
   calendar: "iso8601",
@@ -161,6 +168,13 @@ const FORCED_ROW = {
  *   rows: { gmt: number, iers: number }, differences: string[],
  *   forced?: { difference: true },
  * }} LeapSecondsVerdict
+ * @typedef {{ status: "ran", differences: string[], release?: string, snapshotRelease?: string }
+ *   | { status: "could-not-run", message: string }} ClockWatchPart
+ * @typedef {{
+ *   source: "us-clock-watch", status: "ran",
+ *   federal: ClockWatchPart, state: ClockWatchPart, tz: ClockWatchPart,
+ *   forced?: { difference: true },
+ * }} UsClockWatchVerdict
  * @typedef {{ source: string, status: "could-not-run", message: string,
  *   sweep?: SwapVerdict["sweep"], calendarSweep?: SwapVerdict["calendarSweep"] }} CouldNotRunVerdict
  *   `sweep` and `calendarSweep`: the offset and calendar sweeps of a swap Node leg that stopped
@@ -180,7 +194,7 @@ const FORCED_ROW = {
  *     | { kind: "host", group: string, reason: string })[],
  *   forced?: { nativeFailure: true },
  * }} NativeSuiteVerdict
- * @typedef {CompatCheckVerdict | BrowserCompatVerdict | OracleVerdict | LeapSecondsVerdict
+ * @typedef {CompatCheckVerdict | BrowserCompatVerdict | OracleVerdict | LeapSecondsVerdict | UsClockWatchVerdict
  *   | NativeSuiteVerdict | CouldNotRunVerdict} Verdict
  * @typedef {{
  *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit",
@@ -201,8 +215,8 @@ const FORCED_ROW = {
  *   forced?: { swapReady: true },
  * }} SwapVerdict
  * @typedef {{ removable?: string, mismatch?: boolean, nativeFailure?: boolean,
- *   leapDifference?: boolean, swapReady?: boolean }} Force
- * @typedef {{ workflow: "temporal-oracle" | "leap-seconds", runUrl: string }} Context
+ *   leapDifference?: boolean, usClockDifference?: boolean, swapReady?: boolean }} Force
+ * @typedef {{ workflow: "temporal-oracle" | "leap-seconds" | "us-clock-watch", runUrl: string }} Context
  * @typedef {{ key: string, title: string, labels: string[], body: string, comment: string }} Finding
  * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string }
  *   | { kind: "comment", key: string, issue: number, body: string }} Action
@@ -270,6 +284,10 @@ export function applyForce(verdicts, force) {
   if (force.nativeFailure) forceNativeFailure(copy, skipped);
   if (force.leapDifference) {
     const verdict = ran("--force-leap-difference", LEAP);
+    if (verdict) verdict.forced = { difference: true };
+  }
+  if (force.usClockDifference) {
+    const verdict = ran("--force-us-clock-difference", US_WATCH);
     if (verdict) verdict.forced = { difference: true };
   }
   if (force.swapReady) forceSwapReady(copy, skipped);
@@ -1078,6 +1096,122 @@ function leapSecondsFindings(verdicts, runUrl) {
 }
 
 /**
+ * @param {string} title
+ * @param {string} key
+ * @param {string} subject  what the list is about, for the body's first line
+ * @param {string[]} lines
+ * @param {string} extra  the last paragraph
+ * @param {boolean} isForced
+ * @param {string} runUrl
+ * @returns {Finding}
+ */
+function clockWatchFinding(
+  title,
+  key,
+  subject,
+  lines,
+  extra,
+  isForced,
+  runUrl,
+) {
+  const list = (isForced ? [FORCED_US_LINE] : lines)
+    .map((l) => `- ${l}`)
+    .join("\n");
+  const paragraphs = [subject, `### Differences\n\n${list}`, extra];
+  /** @type {Finding} */
+  const real = {
+    key,
+    title,
+    labels: [CANARY_LABEL],
+    body: withRun(paragraphs.join("\n\n"), runUrl),
+    comment: withRun(`Still differs on this run:\n\n${list}`, runUrl),
+  };
+  if (!isForced) return real;
+  return dryRun(real, "--force-us-clock-difference", paragraphs, runUrl);
+}
+
+/**
+ * The findings of the US clock-change watch: one per source that differs (federal, state, tz), then
+ * a could-not-run finding naming each source that failed. The sources that ran still report.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @param {string} runUrl
+ * @returns {Finding[]}
+ */
+function usClockWatchFindings(verdicts, runUrl) {
+  const watch = /** @type {UsClockWatchVerdict | CouldNotRunVerdict | null} */ (
+    verdictOf(verdicts, US_WATCH)
+  );
+  if (watch?.status !== "ran") return [];
+  const { federal, state, tz } = watch;
+  /** @type {Finding[]} */
+  const out = [];
+  if (federal.status === "ran" && federal.differences.length > 0) {
+    out.push(
+      clockWatchFinding(
+        "Federal bills on the clock-change subject changed",
+        "us-clock-watch/federal",
+        "The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed since the committed snapshot (`scripts/us-clock-watch.snapshot.json`).",
+        federal.differences,
+        US_REVIEW_STEP,
+        false,
+        runUrl,
+      ),
+    );
+  }
+  if (watch.forced) {
+    out.push(
+      clockWatchFinding(
+        "Federal bills on the clock-change subject changed",
+        "us-clock-watch/federal",
+        "The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed since the committed snapshot (`scripts/us-clock-watch.snapshot.json`).",
+        [],
+        US_REVIEW_STEP,
+        true,
+        runUrl,
+      ),
+    );
+  }
+  if (state.status === "ran" && state.differences.length > 0) {
+    out.push(
+      clockWatchFinding(
+        "State bills on the clock-change subject changed",
+        "us-clock-watch/state",
+        "The Open States API lists a state bill on the subject (50 states, DC and PR) that is new, or whose latest action changed since the committed snapshot (`scripts/us-clock-watch.snapshot.json`).",
+        state.differences,
+        US_REVIEW_STEP,
+        false,
+        runUrl,
+      ),
+    );
+  }
+  if (tz.status === "ran" && tz.differences.length > 0) {
+    const release = `Release ${tz.release ?? "(unknown)"}; the snapshot has ${tz.snapshotRelease ?? "(unknown)"}.`;
+    out.push(
+      clockWatchFinding(
+        "A tz release changed the rules of a US zone",
+        "us-clock-watch/tz-us-zone",
+        `${US_TZ_PARAGRAPH}\n\n${release}`,
+        tz.differences,
+        "Run `node scripts/us-clock-watch.mjs refresh` after the checker's data is updated, and commit the snapshot.",
+        false,
+        runUrl,
+      ),
+    );
+  }
+  const failed = [
+    ["federal", federal],
+    ["state", state],
+    ["tz", tz],
+  ].flatMap(([source, part]) =>
+    part.status === "could-not-run"
+      ? [{ source: String(source), message: part.message }]
+      : [],
+  );
+  if (failed.length > 0) out.push(couldNotRunFinding(US_WATCH, failed, runUrl));
+  return out;
+}
+
+/**
  * CORE-92: whether the `temporal-polyfill` swap passed on every runtime. Ready only when all four
  * legs ran, name one version, have no test that fails on the swap and passes on the control, and
  * the Node leg's offset sweep ran and found no differing zone, and its calendar sweep ran and found
@@ -1404,6 +1538,7 @@ export function findings(verdicts, context) {
     [ORACLE, oracleFindings],
     [NATIVE("node"), nativeSuiteFindings],
     [LEAP, leapSecondsFindings],
+    [US_WATCH, usClockWatchFindings],
     [SWAP_NODE, swapFindings],
   ];
   const out = perSource.flatMap(([source, make]) =>

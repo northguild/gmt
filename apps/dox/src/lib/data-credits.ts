@@ -63,6 +63,24 @@ export const COASTLINES: DataCredit = {
   ],
 };
 
+/** The state and territory outlines of the Sunshine Protection Act map: Natural Earth admin-0 and admin-1. */
+export const STATE_BOUNDARIES: DataCredit = {
+  label: "State outlines",
+  parts: [
+    "State and territory outlines: ",
+    {
+      text: "Natural Earth",
+      href: "https://www.naturalearthdata.com/",
+    },
+    " 5.1.2, public domain (",
+    {
+      text: NE_TAG,
+      href: `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
+    },
+    ").",
+  ],
+};
+
 export const EARTH_IMAGERY: DataCredit = {
   label: "Earth imagery",
   parts: ["NASA Earth Observatory (Blue Marble Next Generation)."],
