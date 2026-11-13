@@ -756,6 +756,30 @@ export const showSwiftValueDateReaderInput = z
     message: "Give a value date to read or an ISO date to write.",
   });
 
+/**
+ * GTFS Time Reader: a GTFS `Time` to read (`value`, such as 25:35:00), and the two numbers to
+ * write one from (`seconds`, the written time less whole days, and `dayOverflow`, whole days past
+ * the service day).
+ * Every argument is a string of at most 16 characters, passed exactly as the reader gave it.
+ * The chat never trims a value, never coerces a number, and never passes a zone or a date.
+ */
+export const showGtfsTimeReaderInput = z
+  .object({
+    value: z.string().max(16).optional(),
+    seconds: z.string().max(16).optional(),
+    dayOverflow: z.string().max(16).optional(),
+  })
+  .refine(
+    (a) =>
+      a.value !== undefined ||
+      a.seconds !== undefined ||
+      a.dayOverflow !== undefined,
+    {
+      message:
+        "Give a GTFS time to read, or the seconds and days past the service day to write.",
+    },
+  );
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1414,6 +1438,7 @@ export type DoxToolName =
   | "showCodeBDayRuler"
   | "showFhirDateChecker"
   | "showSwiftValueDateReader"
+  | "showGtfsTimeReader"
   | "showUsSunshineProtectionAct";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1802,6 +1827,13 @@ export const DOX_TOOL_DOCS: {
     args: "value (six digits as sent), date (an ISO date to write)",
   },
   {
+    name: "showGtfsTimeReader",
+    purpose:
+      "Reads a GTFS stop time (such as 25:35:00) with parseGtfsTime and shows the whole days past the service day and the seconds left over that it gives, beside what a clock-time check does with the same text; writes seconds and days back with formatGtfsTime. A line says that a clock time on a date needs the agency's zone.",
+    when: "the reader asks whether a GTFS time such as 25:35:00 or 24:00:00 is valid or still part of the service day, why a stop time past midnight is refused by a clock-time check, how many days past the service day a time is, or how to write a GTFS time back",
+    args: "value (a GTFS time exactly as the reader gave it, at most 16 characters, never trimmed or repaired), seconds (the written time less whole days, in seconds, as typed), dayOverflow (whole days past the service day, as typed). Each is a string; give at least one. Never pass a zone or a date.",
+  },
+  {
     name: "showUsSunshineProtectionAct",
     purpose:
       "Show a map of US time zones as the tz data has them today: which change their clocks and which keep the same time all year. A second view shows each state's adopted position on ending the clock changes, dated, and a panel of what the national proposal would do. Below both: evidence on how disruptive a change would be.",
@@ -2032,8 +2064,12 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[53].purpose,
     inputSchema: showSwiftValueDateReaderInput,
   }),
-  showUsSunshineProtectionAct: tool({
+  showGtfsTimeReader: tool({
     description: DOX_TOOL_DOCS[54].purpose,
+    inputSchema: showGtfsTimeReaderInput,
+  }),
+  showUsSunshineProtectionAct: tool({
+    description: DOX_TOOL_DOCS[55].purpose,
     inputSchema: showUsSunshineProtectionActInput,
   }),
 } as const;
@@ -2113,6 +2149,7 @@ export const ENABLED_TOOL_NAMES = [
   "showCodeBDayRuler",
   "showFhirDateChecker",
   "showSwiftValueDateReader",
+  "showGtfsTimeReader",
   "showUsSunshineProtectionAct",
 ] as const satisfies readonly DoxToolName[];
 

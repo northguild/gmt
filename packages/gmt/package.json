@@ -237,6 +237,18 @@
       "precision/validate": [
         "./dist/precision/validate/index.d.ts"
       ],
+      "rail": [
+        "./dist/rail/index.d.ts"
+      ],
+      "rail/format": [
+        "./dist/rail/format/index.d.ts"
+      ],
+      "rail/parse": [
+        "./dist/rail/parse/index.d.ts"
+      ],
+      "rail/validate": [
+        "./dist/rail/validate/index.d.ts"
+      ],
       "recurrence": [
         "./dist/recurrence/index.d.ts"
       ],
@@ -635,6 +647,22 @@
     "./precision/validate": {
       "types": "./dist/precision/validate/index.d.ts",
       "default": "./dist/precision/validate/index.js"
+    },
+    "./rail": {
+      "types": "./dist/rail/index.d.ts",
+      "default": "./dist/rail/index.js"
+    },
+    "./rail/format": {
+      "types": "./dist/rail/format/index.d.ts",
+      "default": "./dist/rail/format/index.js"
+    },
+    "./rail/parse": {
+      "types": "./dist/rail/parse/index.d.ts",
+      "default": "./dist/rail/parse/index.js"
+    },
+    "./rail/validate": {
+      "types": "./dist/rail/validate/index.d.ts",
+      "default": "./dist/rail/validate/index.js"
     },
     "./recurrence": {
       "types": "./dist/recurrence/index.d.ts",

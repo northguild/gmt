@@ -216,6 +216,12 @@ export {
 } from "./englishCalendarNames";
 export { readMetarTimeFields, type MetarTimeFields } from "./metarTime";
 export {
+  type GtfsTimeFields,
+  readGtfsTime,
+  readGtfsTimeFields,
+  writeGtfsTime,
+} from "./gtfsTime";
+export {
   readSsimDateFields,
   SSIM_MONTH_LETTERS,
   type SsimDateFields,

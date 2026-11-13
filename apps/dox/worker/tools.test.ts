@@ -521,6 +521,44 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showGtfsTimeReader", () => {
+    const schema = (
+      tools.showGtfsTimeReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value, seconds, days, or any mix, all as strings", async () => {
+      for (const input of [
+        { value: "25:35:00" },
+        { seconds: "5700", dayOverflow: "1" },
+        { value: "25:35:00", seconds: "0" },
+        { dayOverflow: "" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showGtfsTimeReader", input)).toMatchObject({
+          ok: true,
+          widget: "gtfs-time-reader",
+        });
+      }
+    });
+
+    it("needs at least one argument", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+    });
+
+    it("coerces nothing and caps each argument at 16 characters", () => {
+      expect(schema.safeParse({ seconds: 5700 }).success).toBe(false);
+      expect(schema.safeParse({ dayOverflow: 1 }).success).toBe(false);
+      for (const key of ["value", "seconds", "dayOverflow"]) {
+        expect(schema.safeParse({ [key]: "9".repeat(16) }).success).toBe(true);
+        expect(schema.safeParse({ [key]: "9".repeat(17) }).success).toBe(false);
+      }
+    });
+  });
+
   describe("showSsimDateReader", () => {
     const schema = (
       tools.showSsimDateReader as unknown as {

@@ -386,6 +386,20 @@ describe("widget permalinks", () => {
     }
   });
 
+  it("opens a GTFS Time Reader link on the state it names, even a cleared one", () => {
+    for (const state of [
+      { value: "25:10:00", seconds: "", dayOverflow: "" },
+      { value: "", seconds: "90000", dayOverflow: "" },
+      { value: "", seconds: "", dayOverflow: "" },
+    ]) {
+      const url = encodeWidgetPermalink("gtfstime", state);
+      expect(url).toContain("/tools/gtfs-time-reader/");
+      expect(seedFromLocation("gtfstime", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
   it("opens each Terrestrial Time Stack preset's link on that preset", () => {
     for (const preset of STACK_PRESETS) {
       if (preset === DEFAULT_PRESET) continue;

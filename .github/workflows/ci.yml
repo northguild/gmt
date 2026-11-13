@@ -174,7 +174,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: determine-affected
     # Not a required check, so each step is gated on the check it runs. The audit and the
-    # changeset check run on every change.
+    # changeset check run on every change. The fast checks only: the site build and every check
+    # that reads the built site run in `dox-site` and the jobs after it.
     env:
       CHECKS: ${{ needs.determine-affected.outputs.checks }}
     steps:
@@ -268,68 +269,6 @@ jobs:
         if: contains(fromJSON(env.CHECKS), 'bundle-size')
         run: node scripts/bundle-size.mjs check
 
-      # `llms.test.ts`'s three text-surface gates all early-return when `apps/dox/dist` is absent,
-      # and the Tests job never builds the site — it is a separate runner that builds only
-      # `@northguild/gmt`. So those gates had never run in CI, which is how a raw `<UpstreamDefects />`
-      # reached every text surface with the suite green (CORE-8 review, #253). Built here, once,
-      # rather than in the Node matrix, because one runner is enough to check generated output.
-      - name: Build the dox site
-        if: contains(fromJSON(env.CHECKS), 'dox-dist') || contains(fromJSON(env.CHECKS), 'dox-tables')
-        run: pnpm --filter dox run build
-
-      # DOX_DIST_REQUIRED turns those gates' "no dist, nothing to check" skip into a failure, but
-      # only here, where the step above guarantees a build. Keyed to `CI` it would fire in the
-      # Tests job too, which runs the same suite on three Node versions and does not build the site.
-      # `test:dist` (apps/dox/scripts/dist-tests.mjs) runs every Node test that imports
-      # `scripts/dist-dir.ts`, found by that rule rather than from a list, so a new built-site test
-      # cannot be left out: a hand-kept list here once missed five of them. Among them, the /gmt
-      # base, each page's head tags and share cards, the sidebar's reach, select options and the
-      # gates' sample pages.
-      - name: "Built site: every test that reads apps/dox/dist"
-        if: contains(fromJSON(env.CHECKS), 'dox-dist')
-        env:
-          DOX_DIST_REQUIRED: "1"
-        run: pnpm --filter dox run test:dist
-
-      # No table on a built page scrolls sideways at 1440 px. The check opens every built page with a
-      # table in Chromium, so it needs the browser the Dox gates job installs.
-      - name: Playwright version
-        id: pw
-        if: contains(fromJSON(env.CHECKS), 'dox-tables')
-        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        if: contains(fromJSON(env.CHECKS), 'dox-tables')
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium-webkit
-
-      # WebKit too: the industry tag test checks where Safari's engine places the tag definition.
-      - name: Install Chromium and WebKit
-        if: contains(fromJSON(env.CHECKS), 'dox-tables')
-        run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium webkit
-
-      # The tests that launch a browser (`*.browser.test.ts`, left out of the Tests job, which
-      # installs none): the cell check table-fit uses, and the industry tag definitions. The built
-      # site is there, so a test that needs it fails rather than skips.
-      - name: Browser tests, in Chromium and WebKit
-        if: contains(fromJSON(env.CHECKS), 'dox-tables')
-        env:
-          DOX_DIST_REQUIRED: "1"
-        run: pnpm --filter dox exec vitest run --config vitest.browser.config.ts
-
-      - name: Built site, tables fit at 1440 px
-        if: contains(fromJSON(env.CHECKS), 'dox-tables')
-        run: pnpm --filter dox exec node scripts/table-fit.mjs
-
-      # The code frame under each install tab has a square corner where it meets the tab, each
-      # /upstream/ card keeps its icon and badge on the title's first line, and each list dash
-      # sits on its item's first line.
-      - name: Built site, tab frames, filing card heads and list markers
-        if: contains(fromJSON(env.CHECKS), 'dox-tables')
-        run: pnpm --filter dox exec node scripts/frame-check.mjs --browsers chromium,webkit
-
       # A release PR (`changeset:version` already run) deletes the changesets it consumed
       # and bumps versions instead of adding a new one — that's the point of it, per
       # PUBLISHING.md step 3. `changeset status` can't tell the difference and fails any
@@ -353,6 +292,221 @@ jobs:
           else
             pnpm exec changeset status --since="$BASE"
           fi
+
+  # Builds the Dox site once and hands the whole build to the jobs that check it. `llms.test.ts`'s
+  # three text-surface gates all early-return when `apps/dox/dist` is absent, and the Tests job
+  # never builds the site: it is a separate runner that builds only `@northguild/gmt`. So those
+  # gates had never run in CI, which is how a raw `<UpstreamDefects />` reached every text surface
+  # with the suite green (CORE-8 review, #253). Built here, once, rather than in the Node matrix,
+  # because one runner is enough to check generated output.
+  #
+  # The artifact is the build's whole output, not `dist/` alone: gate selection reads
+  # `src/content/docs/**`, which holds the generated reference, changelog and industry pages, and
+  # some `test:dist` tests read generated sources. `fetch-depth: 0` dates every page from its tags.
+  dox-site:
+    name: Dox site build
+    runs-on: ubuntu-latest
+    needs: determine-affected
+    # The third case is for the gate legs, which select pages from the built tree.
+    if: >-
+      contains(fromJSON(needs.determine-affected.outputs.checks), 'dox-dist') ||
+      contains(fromJSON(needs.determine-affected.outputs.checks), 'dox-tables') ||
+      (github.event_name == 'pull_request' && needs.determine-affected.outputs.dox_changed == 'true')
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - name: Build @northguild/gmt
+        run: pnpm --filter @northguild/gmt run build
+
+      # Its own `generate` step writes every generated page, so no separate dox-pages step.
+      - name: Build the dox site
+        run: pnpm --filter dox run build
+
+      # One tar file, not thousands of small uploads, and it keeps file modes. It holds `dist/`,
+      # every gitignored file the generators wrote (`git ls-files -o -i`) and every tracked file
+      # the build rewrote (`git diff`): some files under `src/generated/` are ignored yet tracked.
+      - name: Pack the build
+        run: |
+          {
+            git ls-files -o -i --exclude-standard -z -- apps/dox/src apps/dox/public
+            git diff --name-only -z -- apps/dox
+          } | tar -cf "$RUNNER_TEMP/dox-site.tar" apps/dox/dist --null -T -
+          ls -lh "$RUNNER_TEMP/dox-site.tar"
+
+      # 14 days, like the other artifacts: Re-run failed jobs does not run this job again, so a
+      # re-run gate leg or shard must still find the artifact days later.
+      # `overwrite` replaces the artifact of an earlier attempt: download-artifact keeps the first
+      # of two artifacts with the same name (#380, see temporal-oracle.yml).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dox-site
+          path: ${{ runner.temp }}/dox-site.tar
+          retention-days: 14
+          overwrite: true
+          compression-level: 6
+
+  # The checks that open the built site in a browser, on the artifact `dox-site` uploaded. A failed
+  # `dox-site` skips this job, so its failure shows once, on `dox-site`.
+  dox-browser:
+    name: Dox browser tests (Chromium, WebKit)
+    runs-on: ubuntu-latest
+    needs: [determine-affected, dox-site]
+    if: contains(fromJSON(needs.determine-affected.outputs.checks), 'dox-dist') || contains(fromJSON(needs.determine-affected.outputs.checks), 'dox-tables')
+    timeout-minutes: 20
+    env:
+      CHECKS: ${{ needs.determine-affected.outputs.checks }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dox-site
+          path: ${{ runner.temp }}/dox-site
+
+      - name: Unpack the build
+        run: tar -xf "$RUNNER_TEMP/dox-site/dox-site.tar"
+
+      # A `test:dist` test that loads the library finds it built.
+      - name: Build @northguild/gmt
+        run: pnpm --filter @northguild/gmt run build
+
+      # DOX_DIST_REQUIRED turns those gates' "no dist, nothing to check" skip into a failure, but
+      # only here, where the unpacked artifact guarantees a build. Keyed to `CI` it would fire in the
+      # Tests job too, which runs the same suite on three Node versions and does not build the site.
+      # `test:dist` (apps/dox/scripts/dist-tests.mjs) runs every Node test that imports
+      # `scripts/dist-dir.ts`, found by that rule rather than from a list, so a new built-site test
+      # cannot be left out: a hand-kept list here once missed five of them. Among them, the /gmt
+      # base, each page's head tags and share cards, the sidebar's reach, select options and the
+      # gates' sample pages.
+      - name: "Built site: every test that reads apps/dox/dist"
+        if: contains(fromJSON(env.CHECKS), 'dox-dist')
+        env:
+          DOX_DIST_REQUIRED: "1"
+        run: pnpm --filter dox run test:dist
+
+      # Playwright picks each browser build by Ubuntu release, and `install` keeps a browser folder
+      # that is already there, so the key names the release: WebKit built for 24.04 fails on 26.04.
+      - name: Playwright version
+        id: pw
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: |
+          echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          . /etc/os-release && echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.os }}-${{ steps.pw.outputs.version }}-chromium-webkit
+
+      # WebKit too: the industry tag test checks where Safari's engine places the tag definition.
+      - name: Install Chromium and WebKit
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium webkit
+
+      # The tests that launch a browser (`*.browser.test.ts`, left out of the Tests job, which
+      # installs none): the cell check table-fit uses, and the industry tag definitions. The built
+      # site is there, so a test that needs it fails rather than skips.
+      - name: Browser tests, in Chromium and WebKit
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        env:
+          DOX_DIST_REQUIRED: "1"
+        run: pnpm --filter dox exec vitest run --config vitest.browser.config.ts
+
+      # The code frame under each install tab has a square corner where it meets the tab, each
+      # /upstream/ card keeps its icon and badge on the title's first line, and each list dash
+      # sits on its item's first line.
+      - name: Built site, tab frames, filing card heads and list markers
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: pnpm --filter dox exec node scripts/frame-check.mjs --browsers chromium,webkit
+
+  # No table on a built page scrolls sideways at 1440 px, and no cell's content reaches outside its
+  # cell. Every PR that triggers `dox-tables` checks every table page, in Chromium, on the artifact
+  # `dox-site` uploaded, split four ways so each shard has its own 4 vCPU. A shared change can spill a
+  # table on a page it never touched, so the check never narrows to the changed pages.
+  dox-table-fit:
+    name: Dox tables fit (shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    needs: [determine-affected, dox-site]
+    if: contains(fromJSON(needs.determine-affected.outputs.checks), 'dox-tables')
+    timeout-minutes: 12
+    env:
+      CHECKS: ${{ needs.determine-affected.outputs.checks }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1/4, 2/4, 3/4, 4/4]
+    steps:
+      # The script reads only `dist`, so the default depth is enough.
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dox-site
+          path: ${{ runner.temp }}/dox-site
+
+      - name: Unpack the build
+        run: tar -xf "$RUNNER_TEMP/dox-site/dox-site.tar"
+
+      # Playwright picks each browser build by Ubuntu release, and `install` keeps a browser folder
+      # that is already there, so the key names the release: WebKit built for 24.04 fails on 26.04.
+      - name: Playwright version
+        id: pw
+        run: |
+          echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          . /etc/os-release && echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.os }}-${{ steps.pw.outputs.version }}-chromium
+
+      - name: Install Chromium
+        run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
+
+      - name: Built site, tables fit at 1440 px
+        if: contains(fromJSON(env.CHECKS), 'dox-tables')
+        run: pnpm --filter dox exec node scripts/table-fit.mjs --shard ${{ matrix.shard }}
 
   # Packs the tarballs a release PR will publish, the way the `publish` job in release.yml packs
   # them, so a package that cannot be packed fails here and not after the merge (#453). 1.21.0
@@ -412,32 +566,56 @@ jobs:
             done
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # The Dox browser gates on the pages the PR changed, in Chromium. Advisory: it is not a required
-  # check until the owner makes it one. `main` is covered by the weekly sweep, not by this job.
+  # The Dox browser gates on the pages the PR changed, in Chromium, on the artifact `dox-site`
+  # uploaded (`--no-build`: the runner fails if it is missing). Advisory: it is not a required check
+  # until the owner makes it one. `main` is covered by the weekly sweep, not by this job.
   # `--against` is the merge base `determine-affected` computes, so both see the same diff.
+  #
+  # Five legs, each on its own 4 vCPU, because the clock-still gates flake when gates share a runner
+  # and the runner keeps gates serial within one. The measured times:
+  #   contrast          contrast-measure 5.4 min
+  #   canada            canada-layout-check 3.8 + data-credits-check 0.4 + a11y-media 0.5 +
+  #                     frame-check 0.1 min
+  #   esc-grow          esc-cascade 2.2 + grow-measure 2.0 min
+  #   other             a11y-axe 1.1 + a11y-tab-walk 1.6 min, and any gate added later (`--skip`)
+  #   readout-still     alone, as long as every other gate together: with the Timetable Reader
+  #                     selected, #486's run recorded it at 25m37s, so it keeps 40 minutes (#490).
+  # Each leg's gate step stops 5 minutes before its job, so its logs are still uploaded.
   dox-gates:
     name: Dox gates (${{ matrix.leg }}, Chromium)
     runs-on: ubuntu-latest
-    needs: determine-affected
+    needs: [determine-affected, dox-site]
     if: github.event_name == 'pull_request' && needs.determine-affected.outputs.dox_changed == 'true'
-    # `readout-still` alone can take as long as every other gate together: with the Timetable Reader
-    # selected, #486's run recorded it at 25m37s next to a 2m06s build, so that leg needs about 28
-    # minutes (#490). It runs as its own leg, and the other leg runs everything else (about 16 minutes
-    # locally). `--skip` keeps that leg on any gate added later. Each leg's gate step stops 5 minutes
-    # before its job, so its logs are still uploaded.
     timeout-minutes: ${{ matrix.job-limit }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - leg: readout-still
+            slug: readout-still
             select: --only readout-still
             job-limit: 40
             step-limit: 35
-          - leg: other gates
-            select: --skip readout-still
-            job-limit: 30
-            step-limit: 25
+          - leg: contrast
+            slug: contrast
+            select: --only contrast-measure
+            job-limit: 20
+            step-limit: 15
+          - leg: canada, credits, media, frames
+            slug: canada
+            select: --only canada-layout-check,data-credits-check,a11y-media,frame-check
+            job-limit: 20
+            step-limit: 15
+          - leg: escape and grow
+            slug: esc-grow
+            select: --only esc-cascade,grow-measure
+            job-limit: 20
+            step-limit: 15
+          - leg: every other gate
+            slug: other
+            select: --skip readout-still,contrast-measure,canada-layout-check,data-credits-check,a11y-media,frame-check,esc-cascade,grow-measure
+            job-limit: 20
+            step-limit: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -457,15 +635,27 @@ jobs:
       - name: Fetch the base branch
         run: git fetch --no-tags origin "${{ github.base_ref }}"
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: dox-site
+          path: ${{ runner.temp }}/dox-site
+
+      - name: Unpack the build
+        run: tar -xf "$RUNNER_TEMP/dox-site/dox-site.tar"
+
+      # Playwright picks each browser build by Ubuntu release, and `install` keeps a browser folder
+      # that is already there, so the key names the release: WebKit built for 24.04 fails on 26.04.
       - name: Playwright version
         id: pw
-        run: echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(pnpm --filter @gmt/dox exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+          . /etc/os-release && echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.os }}-${{ steps.pw.outputs.version }}-chromium
 
       - name: Install Chromium
         run: pnpm --filter @gmt/dox exec playwright install --with-deps chromium
@@ -475,7 +665,7 @@ jobs:
       - name: Gates on the changed pages
         timeout-minutes: ${{ matrix.step-limit }}
         run: >
-          pnpm --filter dox gates --tier pr --browsers chromium --themes dark,light
+          pnpm --filter dox gates --tier pr --browsers chromium --themes dark,light --no-build
           ${{ matrix.select }}
           --against "origin/${{ github.base_ref }}"
 
@@ -483,7 +673,7 @@ jobs:
         if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
-          name: dox-gates-${{ matrix.leg == 'readout-still' && 'readout-still' || 'other' }}-${{ github.run_id }}
+          name: dox-gates-${{ matrix.slug }}-${{ github.run_id }}
           path: |
             apps/dox/.gates/
             !apps/dox/.gates/vite-cache/

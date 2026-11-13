@@ -215,6 +215,10 @@ const PAGES = [
     widget: "swift-value-date-reader",
   },
   {
+    path: "tools/gtfs-time-reader",
+    widget: "gtfs-time-reader",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

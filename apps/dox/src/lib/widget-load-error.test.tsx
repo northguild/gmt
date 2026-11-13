@@ -160,6 +160,10 @@ import {
   renderSwiftValueDateReaderTemplate,
 } from "./swift-value-date-reader-mount";
 import {
+  mountGtfsTimeReader,
+  renderGtfsTimeReaderTemplate,
+} from "./gtfs-time-reader-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -393,6 +397,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "swift value date reader",
     () => renderSwiftValueDateReaderTemplate("test"),
     mountSwiftValueDateReader as MountFn<never>,
+  ],
+  [
+    "gtfs time reader",
+    () => renderGtfsTimeReaderTemplate("test"),
+    mountGtfsTimeReader as MountFn<never>,
   ],
   [
     "terrestrial time stack",

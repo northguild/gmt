@@ -1,4 +1,6 @@
-import { importsOf, sitePathOf } from "./graph.mjs";
+import { fileURLToPath } from "node:url";
+
+import { buildPages, importsOf, sitePathOf } from "./graph.mjs";
 import {
   CAP,
   CAP_REST,
@@ -51,6 +53,14 @@ describe("selectPages", () => {
       "/tools/dwell-ledger/",
       "/why-gmt/",
     ]);
+  });
+
+  it("selects nothing for a changed .test.tsx file", () => {
+    const plan = select([
+      "apps/dox/src/lib/ccsds-time-code-decoder-mount.test.tsx",
+    ]);
+    expect(plan.pages).toEqual([]);
+    expect(plan.reasons).toEqual({});
   });
 
   it("selects the sample for a customCss file", () => {
@@ -212,7 +222,22 @@ describe("isRelevant", () => {
     expect(isRelevant("packages/gmt/src/plain/x.ts")).toBe(true);
     expect(isRelevant("pnpm-lock.yaml")).toBe(true);
     expect(isRelevant("apps/dox/src/lib/a.test.ts")).toBe(false);
+    expect(isRelevant("apps/dox/src/lib/a.test.tsx")).toBe(false);
+    expect(isRelevant("apps/dox/scripts/x.browser.test.ts")).toBe(false);
+    expect(isRelevant("apps/dox/src/test/ccsds-lib.ts")).toBe(false);
     expect(isRelevant("README.md")).toBe(false);
+  });
+
+  it("is safe: no page's closure holds a file it rejects", () => {
+    const root = fileURLToPath(new URL("../../../../", import.meta.url));
+    const pages = buildPages(root);
+    expect(pages.length).toBeGreaterThan(0);
+    const rejected = pages.flatMap((p) =>
+      p.closure
+        .filter((f) => f.startsWith("apps/dox/") && !isRelevant(f))
+        .map((f) => `${p.path} imports ${f}`),
+    );
+    expect(rejected).toEqual([]);
   });
 });
 

@@ -32,6 +32,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { shardOf } from "./gates/contract.mjs";
 import { buildPages } from "./gates/graph.mjs";
 import {
   GATES,
@@ -440,12 +441,7 @@ function groupsFor(gate) {
     gate.browsers.length === 0
       ? []
       : opts.browsers.filter((b) => gate.browsers.includes(b));
-  const keep = (list) => {
-    const sorted = [...list].sort();
-    return opts.shard
-      ? sorted.filter((_, idx) => idx % opts.shard.n === opts.shard.i - 1)
-      : sorted;
-  };
+  const keep = (list) => shardOf(list, opts.shard);
   if (gate.browsers.length > 0 && browsers.length === 0)
     return { groups: [], dropped, reason: "browser" };
   if (opts.all && gate.fullBrowsers) {

@@ -17299,6 +17299,101 @@
     ]
   },
   {
+    "url": "/reference/rail/format/formatGtfsTime",
+    "page": "/reference/rail/format/formatGtfsTime",
+    "name": "formatGtfsTime",
+    "namespace": "rail",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatGtfsTime(value: GtfsTime): string",
+    "description": "Writes a GTFS Schedule `Time` value, keeping the days past the service day in the hour.",
+    "sourcePath": "packages/gmt/src/rail/format/formatGtfsTime.ts",
+    "examples": [
+      {
+        "call": "formatGtfsTime({ seconds: 5700, dayOverflow: 1 })",
+        "result": "\"25:35:00\""
+      },
+      {
+        "call": "formatGtfsTime({ seconds: 29100, dayOverflow: 0 })",
+        "result": "\"08:05:00\""
+      },
+      {
+        "call": "formatGtfsTime({ seconds: 0, dayOverflow: 1 })",
+        "result": "\"24:00:00\""
+      },
+      {
+        "call": "formatGtfsTime({ seconds: 86400, dayOverflow: 0 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/rail/parse/parseGtfsTime",
+    "page": "/reference/rail/parse/parseGtfsTime",
+    "name": "parseGtfsTime",
+    "namespace": "rail",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseGtfsTime(value: string): GtfsTime | null",
+    "description": "Reads a GTFS Schedule `Time` value, keeping the days past the service day apart from the time of day.",
+    "sourcePath": "packages/gmt/src/rail/parse/parseGtfsTime.ts",
+    "examples": [
+      {
+        "call": "parseGtfsTime(\"25:35:00\")",
+        "result": "{ seconds: 5700, dayOverflow: 1 }"
+      },
+      {
+        "call": "parseGtfsTime(\"8:05:00\")",
+        "result": "{ seconds: 29100, dayOverflow: 0 }"
+      },
+      {
+        "call": "parseGtfsTime(\"24:00:00\")",
+        "result": "{ seconds: 0, dayOverflow: 1 }"
+      },
+      {
+        "call": "parseGtfsTime(\"25:60:00\")",
+        "result": "null"
+      },
+      {
+        "call": "parseGtfsTime(\" 25:35:00\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/rail/validate/isValidGtfsTime",
+    "page": "/reference/rail/validate/isValidGtfsTime",
+    "name": "isValidGtfsTime",
+    "namespace": "rail",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidGtfsTime(value: string): boolean",
+    "description": "Checks a GTFS Schedule `Time` value, including one past `24:00:00`.",
+    "sourcePath": "packages/gmt/src/rail/validate/isValidGtfsTime.ts",
+    "examples": [
+      {
+        "call": "isValidGtfsTime(\"25:35:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidGtfsTime(\"8:05:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidGtfsTime(\"110:29:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidGtfsTime(\"25:60:00\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidGtfsTime(\"1000:00:00\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/recurrence/calculate/cronRuns",
     "page": "/reference/recurrence/calculate/cronRuns",
     "name": "cronRuns",
@@ -22949,6 +23044,28 @@
       {
         "name": "timeOfWeekSeconds",
         "description": "Seconds since the start of the week, from 0 up to but not including 604 800."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/GtfsTime",
+    "page": "/reference/types/GtfsTime",
+    "name": "GtfsTime",
+    "namespace": "types",
+    "module": "gtfs",
+    "kind": "type",
+    "signature": "",
+    "description": "A GTFS Schedule `Time` value split into the whole days past the service day and the seconds left over.",
+    "sourcePath": "packages/gmt/src/types/gtfs.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "seconds",
+        "description": "The written time less whole 24-hour blocks: an integer from 0 to 86399."
+      },
+      {
+        "name": "dayOverflow",
+        "description": "The whole days past the service day: 0 up to `23:59:59`, 1 from `24:00:00`, and so on."
       }
     ]
   },

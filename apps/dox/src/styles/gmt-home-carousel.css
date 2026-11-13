@@ -252,6 +252,26 @@
   display: none;
 }
 
+/* The pages fill the column, as they do in the carousel. The column is a flex column whose items
+   take their content's width, and a section page is an inline-size container (dox.css), whose
+   content counts as no width at all: left to size itself, it shrank to nothing and set its text
+   one letter a line. */
+:root:where(:not([data-home-carousel])) .gmt-herostage-copy > [data-page] {
+  align-self: stretch;
+  min-inline-size: 0;
+}
+
+/* Beside the Earth the column is sized to its content. The pages after the intro take no part in
+   that width, as in the carousel, so the intro and the buttons set it and a long paragraph does
+   not push the Earth to the edge. */
+@media (width >= 64rem) and (orientation: landscape) {
+  :root:where(:not([data-home-carousel]))
+    .gmt-herostage-copy
+    > [data-page]:not(:first-child) {
+    contain: inline-size;
+  }
+}
+
 /* ---- Narrow and portrait screens: the copy stacks over the Earth and the page scrolls. The page area is
    capped, so a long page scrolls inside it and the row stays under it. ---- */
 @media (width < 64rem) or (orientation: portrait) {

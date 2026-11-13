@@ -10,6 +10,7 @@ export * from "./intermodal";
 export * from "./interval";
 export * from "./plain";
 export * from "./precision";
+export * from "./rail";
 export * from "./recurrence";
 export * from "./regex";
 export * from "./span";

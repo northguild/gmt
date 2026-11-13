@@ -94,6 +94,7 @@ import type { FhirArgs } from "~/lib/fhir-date-checker-mount";
 import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
 import type { ReportTimeResolverArgs } from "~/lib/report-time-resolver-mount";
 import type { SwiftValueDateReaderArgs } from "~/lib/swift-value-date-reader-mount";
+import type { GtfsTimeReaderArgs } from "~/lib/gtfs-time-reader-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -145,6 +146,7 @@ import {
   showCodeBDayRulerInput,
   showFhirDateCheckerInput,
   showSwiftValueDateReaderInput,
+  showGtfsTimeReaderInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
@@ -1112,6 +1114,36 @@ const swiftDateEntry = defineWidget<SwiftValueDateReaderArgs>({
     })),
 });
 
+const gtfsTimeEntry = defineWidget<GtfsTimeReaderArgs>({
+  title: "GTFS Time Reader",
+  kind: "gtfstime",
+  parse: (input) => {
+    const result = showGtfsTimeReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { value, seconds, dayOverflow } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(value === undefined ? {} : { value }),
+        ...(seconds === undefined ? {} : { seconds }),
+        ...(dayOverflow === undefined ? {} : { dayOverflow }),
+      },
+    };
+  },
+  /* No `validate`: a value the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/gtfs-time-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderGtfsTimeReaderTemplate(idPrefix, args),
+      mount: m.mountGtfsTimeReader,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1664,6 +1696,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showReportTimeResolver: reportTimeEntry,
   showFhirDateChecker: fhirEntry,
   showSwiftValueDateReader: swiftDateEntry,
+  showGtfsTimeReader: gtfsTimeEntry,
   showUsSunshineProtectionAct: sunshineActEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,

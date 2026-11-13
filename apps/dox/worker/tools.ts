@@ -82,6 +82,7 @@ import {
   showCodeBDayRulerInput,
   showFhirDateCheckerInput,
   showSwiftValueDateReaderInput,
+  showGtfsTimeReaderInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
@@ -688,6 +689,11 @@ export function buildWorkerTools(
       description: docFor("showSwiftValueDateReader"),
       inputSchema: showSwiftValueDateReaderInput,
       execute: () => accept("swift-value-date-reader"),
+    }),
+    showGtfsTimeReader: tool({
+      description: docFor("showGtfsTimeReader"),
+      inputSchema: showGtfsTimeReaderInput,
+      execute: () => accept("gtfs-time-reader"),
     }),
     showTerrestrialTimeStack: tool({
       description: docFor("showTerrestrialTimeStack"),
