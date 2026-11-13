@@ -53,9 +53,11 @@ A trip that runs past midnight is written with an hour above 23 (`25:35:00`).
    formatGtfsTime({ seconds: 5700, dayOverflow: 1 }); // "25:35:00"
    formatGtfsTime({ seconds: 29100, dayOverflow: 0 }); // "08:05:00"
    ```
-4. **Hours run 0 to 999.** GTFS states no upper bound, and real feeds write
-   `110:29:00`. The parser reads one to three hour digits; the formatter writes
-   at least two and refuses a total past `999:59:59`.
+4. **Hours run 0 to 999.** GTFS states no upper bound, so the bound is GMT's:
+   MobilityData's gtfs-validator reads one to three hour digits, and real feeds
+   write three (VIA Rail's `110:29:00`). The parser reads one to three hour
+   digits; the formatter writes at least two and refuses a total past
+   `999:59:59`.
 5. **Sentinels, never exceptions.** `parseGtfsTime` returns `null`,
    `formatGtfsTime` returns `""` and `isValidGtfsTime` returns `false`. That
    covers minutes or seconds past 59, a missing field, a fraction, a sign and
@@ -65,9 +67,10 @@ A trip that runs past midnight is written with an hour above 23 (`25:35:00`).
    when `parseGtfsTime` returns a value.
 7. **`dayOverflow * 86400 + seconds` is not a clock reading.** GTFS measures a
    time from noon minus 12 hours of the service day, so it matches the wall
-   clock only on a day with no clock change. The rail functions name no date and
-   read no zone; turning a GTFS time into an instant needs the service date
-   and the agency's zone (planned as `gtfsToInstant`).
+   clock only when no clock change falls between that anchor and the time. The
+   rail functions name no date and read no zone; turning a GTFS time into an
+   instant needs the service date and the agency's zone (planned as
+   `gtfsToInstant`).
 8. **Read the docs site.** This skill is a routing pointer. The map of the
    docs is `https://northguild.dev/gmt/llms.txt`, and each page has a `.md`
    twin that holds its text. The JSDoc ships in the installed package:

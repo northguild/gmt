@@ -67,9 +67,11 @@ hour + ":" + String(minute).padStart(2, "0") + ":00";
   rightCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 import { formatGtfsTime } from "@northguild/gmt/rail/format";
 
-formatGtfsTime(parseGtfsTime("25:35:00"));
+const late = parseGtfsTime("25:35:00");
+if (late !== null) formatGtfsTime(late);
 // "25:35:00"
-formatGtfsTime(parseGtfsTime("8:05:00"));
+const early = parseGtfsTime("8:05:00");
+if (early !== null) formatGtfsTime(early);
 // "08:05:00"`}
   rightSpecId="formatGtfsTime"
 />

@@ -60,15 +60,32 @@ describe("readGtfsTimeFields", () => {
 
 describe("writeGtfsTime", () => {
   it.each`
-    hours  | minutes | seconds | expected
-    ${8}   | ${5}    | ${0}    | ${"08:05:00"}
-    ${99}  | ${59}   | ${59}   | ${"99:59:59"}
-    ${25}  | ${35}   | ${0}    | ${"25:35:00"}
-    ${110} | ${29}   | ${0}    | ${"110:29:00"}
+    seconds  | dayOverflow | expected
+    ${5700}  | ${1}        | ${"25:35:00"}
+    ${29100} | ${0}        | ${"08:05:00"}
+    ${0}     | ${1}        | ${"24:00:00"}
+    ${52140} | ${4}        | ${"110:29:00"}
+    ${57599} | ${41}       | ${"999:59:59"}
   `(
-    "writes $hours, $minutes, $seconds as $expected",
-    ({ hours, minutes, seconds, expected }) => {
-      expect(writeGtfsTime(hours, minutes, seconds)).toBe(expected);
+    "writes $seconds s and $dayOverflow days as $expected",
+    ({ seconds, dayOverflow, expected }) => {
+      expect(writeGtfsTime(seconds, dayOverflow)).toBe(expected);
+    },
+  );
+
+  it.each`
+    seconds  | dayOverflow
+    ${86400} | ${0}
+    ${-1}    | ${0}
+    ${1.5}   | ${0}
+    ${NaN}   | ${0}
+    ${0}     | ${-1}
+    ${0}     | ${0.5}
+    ${0}     | ${42}
+  `(
+    "returns an empty string for $seconds s and $dayOverflow days",
+    ({ seconds, dayOverflow }) => {
+      expect(writeGtfsTime(seconds, dayOverflow)).toBe("");
     },
   );
 });

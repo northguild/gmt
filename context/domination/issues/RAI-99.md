@@ -97,7 +97,7 @@ agencies in many countries; the reference was read at gtfs.org.
 | The overflow is returned apart and written back | **GMT rule.** The service day is the field's meaning; normalising drops it |
 | The grammar is internal; the public check is `isValidGtfsTime` | **GMT rule**, INT-15's: GTFS states the format in prose and publishes no pattern |
 | `isValidGtfsTime` is true exactly when the parser returns a value | **GMT rule.** The validator and the parser call one internal core, so the two cannot disagree |
-| Hours up to 999 | **GMT rule**: GTFS states no upper bound, VIA Rail Canada's live feed writes `110:29:00`, and MobilityData's gtfs-validator reads `H:MM:SS`, `HH:MM:SS` or `HHH:MM:SS` |
+| Hours up to 999 | **GMT rule**: GTFS states no upper bound; MobilityData's gtfs-validator reads `H:MM:SS`, `HH:MM:SS` or `HHH:MM:SS` (`(\\d{1,3}):(\\d\\d):(\\d\\d)` in `GtfsTime.java`), and VIA Rail Canada's live feed writes `110:29:00` |
 | Sentinels | [coding-standards § API Contract](../../coding-standards.md#api-contract) |
 
 ## What gmt provides (do not re-implement)
@@ -125,12 +125,12 @@ agencies in many countries; the reference was read at gtfs.org.
 Folded from the library and Dox specs when the story closed.
 
 - **Hours run from 0 to 999, in one to three digits** (owner decision). GTFS sets no upper bound;
-  VIA Rail Canada's live feed writes `110:29:00` (trip 112, Vancouver to Toronto), and MobilityData's
-  gtfs-validator reads `H:MM:SS`, `HH:MM:SS` and `HHH:MM:SS`. A three-digit spelling of a small hour
+  MobilityData's gtfs-validator reads `H:MM:SS`, `HH:MM:SS` and `HHH:MM:SS`, and real feeds use
+  three digits: VIA Rail Canada's live feed writes `110:29:00` (trip 112, Vancouver to Toronto). A three-digit spelling of a small hour
   (`005:00:00`) is read as the validator reads it. `formatGtfsTime` writes at least two digits.
 - **`seconds` is not "seconds since local midnight".** GTFS measures a time from noon minus 12 h of
   the service day, so `dayOverflow x 86400 + seconds` is the elapsed seconds from that anchor. It
-  equals a clock reading only on a day with no clock change. The type's JSDoc says so, and this is
+  matches the wall clock only when no clock change falls between the anchor and the time. The type's JSDoc says so, and this is
   the quantity RAI-100 adds to its anchor. RAI-100 consumes `parseGtfsTime` and `GtfsTime` as built.
 - **No Temporal call.** A GTFS time names no date and its hour runs past 23 (`PlainTime` refuses
   `25:35:00`, and clamps it to `23:35:00` under `"constrain"`), so the regex and two integer

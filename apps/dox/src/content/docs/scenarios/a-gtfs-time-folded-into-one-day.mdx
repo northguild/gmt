@@ -25,7 +25,7 @@ import { formatGtfsTime } from "@northguild/gmt/rail/format";
 const record = parseGtfsTime("25:35:00");
 // { seconds: 5700, dayOverflow: 1 }
 
-formatGtfsTime(record);
+if (record !== null) formatGtfsTime(record);
 // "25:35:00"`}
   fixedSpecId="parseGtfsTime"
 />

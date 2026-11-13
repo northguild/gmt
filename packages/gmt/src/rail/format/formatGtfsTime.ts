@@ -1,14 +1,5 @@
-import {
-  GTFS_MAX_HOUR,
-  isObject,
-  SECONDS_PER_DAY,
-  writeGtfsTime,
-} from "../../internal";
+import { isObject, writeGtfsTime } from "../../internal";
 import type { GtfsTime } from "../../types";
-
-const SECONDS_PER_HOUR = 3600;
-const SECONDS_PER_MINUTE = 60;
-const HOURS_PER_DAY = SECONDS_PER_DAY / SECONDS_PER_HOUR;
 
 /**
  * Writes a GTFS Schedule `Time` value, keeping the days past the service day in the hour.
@@ -36,22 +27,7 @@ export function formatGtfsTime(value: GtfsTime): string {
   try {
     if (!isObject(value)) return "";
     const { seconds, dayOverflow } = value;
-    if (
-      !Number.isInteger(seconds) ||
-      seconds < 0 ||
-      seconds >= SECONDS_PER_DAY
-    ) {
-      return "";
-    }
-    if (!Number.isInteger(dayOverflow) || dayOverflow < 0) return "";
-    const hours =
-      dayOverflow * HOURS_PER_DAY + Math.floor(seconds / SECONDS_PER_HOUR);
-    if (hours > GTFS_MAX_HOUR) return "";
-    return writeGtfsTime(
-      hours,
-      Math.floor(seconds / SECONDS_PER_MINUTE) % 60,
-      seconds % SECONDS_PER_MINUTE,
-    );
+    return writeGtfsTime(seconds, dayOverflow);
   } catch {
     // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
     return "";

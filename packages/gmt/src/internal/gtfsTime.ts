@@ -15,9 +15,10 @@
  *
  * GMT rules:
  * - Hours 0-999 in one to three digits, minutes and seconds 00-59. GTFS states no upper bound for
- *   the hour; real feeds write three digits (VIA Rail Canada's `110:29:00`) and MobilityData's
- *   gtfs-validator reads one to three. Minutes and seconds are clock fields, and a GTFS time is
- *   an offset from a local anchor, not a UTC reading, so there is no second 60.
+ *   the hour, so the bound is GMT's: MobilityData's gtfs-validator reads one to three hour digits
+ *   (`(\\d{1,3}):(\\d\\d):(\\d\\d)` in `GtfsTime.java`), and real feeds write three (VIA Rail
+ *   Canada's `110:29:00`). Minutes and seconds are clock fields, and a GTFS time is an offset from
+ *   a local anchor, not a UTC reading, so there is no second 60.
  * - Digits are ASCII only: the grammar writes `[0-9]`, not `\d`.
  * - Nothing is trimmed and no byte order mark is stripped (a GMT rule resting on the clauses
  *   above); the caller's CSV reader does that.
@@ -28,12 +29,12 @@
 import type { GtfsTime } from "../types";
 
 /** Seconds in a GTFS day: the unit `dayOverflow` counts. */
-export const SECONDS_PER_DAY = 86_400;
+const SECONDS_PER_DAY = 86_400;
 const SECONDS_PER_HOUR = 3600;
 const SECONDS_PER_MINUTE = 60;
 const HOURS_PER_DAY = SECONDS_PER_DAY / SECONDS_PER_HOUR;
 /** The largest hour three digits can write. */
-export const GTFS_MAX_HOUR = 999;
+const GTFS_MAX_HOUR = 999;
 
 // No `i`, `m`, `u` or `g` flag: `$` then fails before a trailing newline, and `exec` stays
 // stateless.
@@ -83,11 +84,26 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-/** Write `HH:MM:SS`, each field padded to at least two digits. The caller checks the ranges. */
-export function writeGtfsTime(
-  hours: number,
-  minutes: number,
-  seconds: number,
-): string {
-  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
+/**
+ * Write a GTFS time from the written time less whole 24-hour blocks and the whole days past the
+ * service day, or `""`. The core of `formatGtfsTime`.
+ *
+ * - `seconds` is an integer from 0 to 86399 and `dayOverflow` a non-negative integer; anything
+ *   else, a fraction or `NaN` included, gives `""`.
+ * - The hour is written with at least two digits; an hour past 999 gives `""`.
+ *
+ * @example writeGtfsTime(5700, 1) // "25:35:00"
+ * @example writeGtfsTime(29100, 0) // "08:05:00"
+ * @example writeGtfsTime(0, 42) // ""
+ */
+export function writeGtfsTime(seconds: number, dayOverflow: number): string {
+  if (!Number.isInteger(seconds) || seconds < 0 || seconds >= SECONDS_PER_DAY) {
+    return "";
+  }
+  if (!Number.isInteger(dayOverflow) || dayOverflow < 0) return "";
+  const hours =
+    dayOverflow * HOURS_PER_DAY + Math.floor(seconds / SECONDS_PER_HOUR);
+  if (hours > GTFS_MAX_HOUR) return "";
+  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE) % 60;
+  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds % SECONDS_PER_MINUTE)}`;
 }

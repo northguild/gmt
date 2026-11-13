@@ -31,8 +31,8 @@ also accepted)". Minutes and seconds are two digits. The type is used by
 in `stop_times.txt`, by `start_time` and `end_time` in `frequencies.txt`, and by
 `prior_notice_last_time` and `prior_notice_start_time` in `booking_rules.txt`.
 
-GTFS states no upper bound for the hours. GMT reads one, two or three hour digits, so the hours
-run from 0 to 999. The minutes and the seconds run from 00 to 59, and the digits are ASCII digits.
+GTFS states no upper bound for the hours, so the bound is GMT's. MobilityData's gtfs-validator
+reads one, two or three hour digits, and GMT does the same, so the hours run from 0 to 999. The minutes and the seconds run from 00 to 59, and the digits are ASCII digits.
 
 ## Times past midnight
 
@@ -83,25 +83,26 @@ import { formatGtfsTime } from "@northguild/gmt/rail/format";
 const record = parseGtfsTime("25:35:00");
 // { seconds: 5700, dayOverflow: 1 }
 
-formatGtfsTime(record);
-// "25:35:00"
+if (record !== null) {
+  formatGtfsTime(record);
+  // "25:35:00"
+}
 ```
 
 ## Writing a time back
 
 [`formatGtfsTime(record)`](/reference/rail/format/formatGtfsTime/) writes the form back with at
 least two hour digits, so `8:05:00` is written `08:05:00`. It writes three hour digits when it has
-to. VIA Rail's feed has a stop at `110:29:00`, which is why three digits are read. A record it
+to: VIA Rail's feed, for one, has a stop at `110:29:00`. A record it
 cannot write gives `""`: a time of day outside 0 to 86399, a negative or fractional count of days,
 or hours above 999.
 
 ```typescript
-import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 import { formatGtfsTime } from "@northguild/gmt/rail/format";
 
-formatGtfsTime(parseGtfsTime("8:05:00"));
-// "08:05:00"
-formatGtfsTime(parseGtfsTime("110:29:00"));
+formatGtfsTime({ seconds: 29100, dayOverflow: 0 });
+// "08:05:00" (read from 8:05:00)
+formatGtfsTime({ seconds: 52140, dayOverflow: 4 });
 // "110:29:00"
 formatGtfsTime({ seconds: 5700, dayOverflow: 0 });
 // "01:35:00"
@@ -146,17 +147,24 @@ A check made for clock times does not do this job. `isValidTime("25:35:00")` fro
 
 The reference measures the time "from 'noon minus 12h' of the service day (effectively midnight
 except for days on which daylight savings time changes occur)". So `dayOverflow × 86400 + seconds`
-is the elapsed time from that point, and it equals a clock reading only on a day with no clock
-change.
+is the elapsed time from that point, and it matches the wall clock only when no clock change falls
+between that point and the time.
 
 ```typescript
 import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 
-const { dayOverflow, seconds } = parseGtfsTime("25:35:00");
+const record = parseGtfsTime("25:35:00");
 
-dayOverflow * 86400 + seconds;
-// 92100 (seconds from the start of the service day)
+if (record !== null) {
+  record.dayOverflow * 86400 + record.seconds;
+  // 92100 (seconds from noon minus 12 h of the service day)
+}
 ```
+
+A clock change on the night after the service day is enough to break the match. In Berlin the
+clocks go forward from 02:00 to 03:00 early on Sunday 29 March 2026. For the service day Saturday
+28 March, `26:30:00` is 26 hours 30 minutes after Saturday 00:00, which is 03:30 on Sunday, not the
+02:30 that reading it as a clock gives.
 
 Turning a record into an instant needs the agency's time zone and the service date. That is what
 `gtfsToInstant`, planned for a later release, will do. Until then the record is what you keep.

@@ -23061,7 +23061,7 @@
     "members": [
       {
         "name": "seconds",
-        "description": "The time of day as written, with the hour taken modulo 24: an integer from 0 to 86399."
+        "description": "The written time less whole 24-hour blocks: an integer from 0 to 86399."
       },
       {
         "name": "dayOverflow",

@@ -22,7 +22,7 @@ parseGtfsTime("25:60:00"); // null
 ```
 
 - **The days past the service day are kept.** `25:35:00` gives `dayOverflow: 1`, and writing it back gives `25:35:00`, never `01:35:00`.
-- **Hours run from 0 to 999.** GTFS sets no upper limit, and real feeds go well past 48 hours. VIA Rail Canada writes `110:29:00` for a train from Vancouver to Toronto. You can write `H:MM:SS`, `HH:MM:SS` or `HHH:MM:SS`; `formatGtfsTime` writes at least two hour digits.
-- **A GTFS time is not an instant.** It counts from noon minus 12 hours of the service day, so it matches the wall clock only on a day with no clock change. These functions name no date and read no time zone.
+- **Hours run from 0 to 999.** GTFS sets no upper limit, so the limit is GMT's: MobilityData's gtfs-validator reads one to three hour digits, and real feeds go well past 48 hours. VIA Rail Canada writes `110:29:00` for a train from Vancouver to Toronto. You can write `H:MM:SS`, `HH:MM:SS` or `HHH:MM:SS`; `formatGtfsTime` writes at least two hour digits.
+- **A GTFS time is not an instant.** It counts from noon minus 12 hours of the service day, so it matches the wall clock only when no clock change falls between that point and the time. These functions name no date and read no time zone.
 - **Nothing is trimmed.** A space, a tab, a line break or a byte order mark returns the empty result. Remove them when you read the CSV file.
 - **A value that cannot be read returns the empty result.** `parseGtfsTime` returns `null`, `formatGtfsTime` returns `""` and `isValidGtfsTime` returns `false`. This includes minutes or seconds above 59, a fraction, a sign and a value that is not a string.

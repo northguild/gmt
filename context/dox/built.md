@@ -4705,7 +4705,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
   question. A new tool whose starter misses needs better `Call when` wording, not a larger
   set.
 - **GTFS Time Reader** (RAI-99, `/tools/gtfs-time-reader/`, `gtfstime`, rail). A GTFS stop time
-  (`H:MM:SS` or `HH:MM:SS`, hours 0 to 999) is read by `parseGtfsTime` and `isValidGtfsTime`, both
+  (`H:MM:SS`, `HH:MM:SS` or `HHH:MM:SS`, hours 0 to 999) is read by `parseGtfsTime` and `isValidGtfsTime`, both
   called on the text as typed. Section 1 reads it into seconds and days past the service day, section
   2 folds it with `isValidTime` from `plain/validate` to show what a clock-time check does to it, and
   section 3 writes seconds and days back with `formatGtfsTime` and reads them back. "Use the time read
