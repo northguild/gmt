@@ -9,7 +9,7 @@ import {
   utcLengthFrame,
 } from "../../internal/lengthFromNow";
 import { nowInstant } from "../../internal/temporalCompat";
-import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 
@@ -59,7 +59,7 @@ export function getUnixIn(
       return null;
     }
 
-    const amounts = readLengthUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readLengthUnits(units, isDateTimeDurationUnitName);
     if (amounts === null) {
       return null;
     }

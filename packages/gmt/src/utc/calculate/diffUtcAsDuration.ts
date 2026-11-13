@@ -1,13 +1,13 @@
 import { Temporal } from "../../internal/temporal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { durationUntilString } from "../../internal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type {
   DateTimeDurationUnit,
   DurationStringOptions,
   RoundingOptions,
 } from "../../types";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -48,19 +48,16 @@ export function diffUtcAsDuration(
   if (!isOptionsArgument(options)) {
     return "";
   }
-  const validUtc1 = isValidUtc(value1);
-  const validUtc2 = isValidUtc(value2);
+  const instant1 = utcInstantOf(value1);
+  const instant2 = utcInstantOf(value2);
   const resolvedUnit = resolveDurationUnit(unit);
-  const validUnit = isValidDateTimeDurationUnit(resolvedUnit);
+  const validUnit = isDateTimeDurationUnitName(resolvedUnit);
 
-  if (!validUtc1 || !validUtc2 || !validUnit) {
+  if (instant1 === null || instant2 === null || !validUnit) {
     return "";
   }
 
   try {
-    const instant1 = Temporal.Instant.from(value1);
-    const instant2 = Temporal.Instant.from(value2);
-
     const zdt1 = instant1.toZonedDateTimeISO("UTC");
     const zdt2 = instant2.toZonedDateTimeISO("UTC");
 

@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "../../internal/temporal";
 import { halfOpenXor } from "../../internal";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return the symmetric difference of two UTC intervals — time covered by exactly one interval.
@@ -50,21 +50,27 @@ export function intervalXorUtc(
     return [];
   }
 
-  if (
-    !isValidUtc(aStart) ||
-    !isValidUtc(aEnd) ||
-    !isValidUtc(bStart) ||
-    !isValidUtc(bEnd)
-  ) {
+  const aS = utcInstantOf(aStart);
+  if (aS === null) {
+    return [];
+  }
+
+  const aE = utcInstantOf(aEnd);
+  if (aE === null) {
+    return [];
+  }
+
+  const bS = utcInstantOf(bStart);
+  if (bS === null) {
+    return [];
+  }
+
+  const bE = utcInstantOf(bEnd);
+  if (bE === null) {
     return [];
   }
 
   try {
-    const aS = Temporal.Instant.from(aStart);
-    const aE = Temporal.Instant.from(aEnd);
-    const bS = Temporal.Instant.from(bStart);
-    const bE = Temporal.Instant.from(bEnd);
-
     if (Temporal.Instant.compare(aS, aE) > 0) {
       return [];
     }

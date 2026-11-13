@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { canonicalInstantIntervals } from "../../internal";
-import { subtractIntervals } from "../../interval/calculate";
-import { isValidUtc } from "../validate";
+import { subtractIntervalRecords } from "../../internal/intervalNanoseconds";
+import { utcIntervalRecordOf } from "../../internal/intervalChecks";
 
 /**
  * Return the portion(s) of interval A not covered by interval B.
@@ -55,21 +54,15 @@ export function intervalDifferenceUtc(
     return [];
   }
 
-  if (
-    !isValidUtc(aStart) ||
-    !isValidUtc(aEnd) ||
-    !isValidUtc(bStart) ||
-    !isValidUtc(bEnd)
-  ) {
+  const a = utcIntervalRecordOf(aStart, aEnd);
+  if (a === null) {
     return [];
   }
 
-  // subtractIntervals returns [] for an invalid (reversed) interval, the same sentinel.
-  return (
-    canonicalInstantIntervals(
-      subtractIntervals({ start: aStart, end: aEnd }, [
-        { start: bStart, end: bEnd },
-      ]),
-    ) ?? []
-  );
+  const b = utcIntervalRecordOf(bStart, bEnd);
+  if (b === null) {
+    return [];
+  }
+
+  return subtractIntervalRecords(a, [b]);
 }

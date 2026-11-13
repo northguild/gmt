@@ -1,10 +1,9 @@
-import { Temporal } from "../../internal/temporal";
 import {
   resolveUnixEpochUnitOptions,
   toUnixEpoch,
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../../unix/validate/isValidUnixUnit";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Convert a UTC Instant string to a unix epoch value in milliseconds or seconds.
@@ -40,12 +39,14 @@ export function convertUtcToUnix(
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);
 
-    if (!isValidUtc(value) || epochUnit === null) {
+    const instant = utcInstantOf(value);
+
+    if (instant === null || epochUnit === null) {
       return null;
     }
 
     try {
-      return toUnixEpoch(Temporal.Instant.from(value), epochUnit);
+      return toUnixEpoch(instant, epochUnit);
     } catch {
       return null;
     }

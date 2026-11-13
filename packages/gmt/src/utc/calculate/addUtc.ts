@@ -1,9 +1,8 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
 import { readDurationUnits, resolveOverflow } from "../../internal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -40,15 +39,14 @@ export function addUtc(
       return "";
     }
 
-    const validUtc = isValidUtc(value);
-    const amounts = readDurationUnits(units, isValidDateTimeDurationUnit);
+    const instant = utcInstantOf(value);
+    const amounts = readDurationUnits(units, isDateTimeDurationUnitName);
 
-    if (!validUtc || amounts === null) {
+    if (instant === null || amounts === null) {
       return "";
     }
 
     try {
-      const instant = Temporal.Instant.from(value);
       const zoned = instant.toZonedDateTimeISO("UTC");
       const result = zoned.add(amounts, {
         overflow: resolveOverflow(options?.overflow),

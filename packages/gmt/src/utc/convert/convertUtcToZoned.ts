@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidTimeZone } from "../../zoned/validate";
-import { isValidUtc } from "../validate";
+import { isZoneId } from "../../internal/inputChecks";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Convert a UTC Instant string to a zoned ISO 8601 datetime string.
@@ -21,12 +20,13 @@ import { isValidUtc } from "../validate";
  * @example convertUtcToZoned("invalid", "UTC") // ""
  */
 export function convertUtcToZoned(value: string, timeZone: string): string {
-  if (!isValidUtc(value) || !isValidTimeZone(timeZone)) {
+  const instant = utcInstantOf(value);
+  if (instant === null || !isZoneId(timeZone)) {
     return "";
   }
 
   try {
-    return Temporal.Instant.from(value).toZonedDateTimeISO(timeZone).toString();
+    return instant.toZonedDateTimeISO(timeZone).toString();
   } catch {
     return "";
   }

@@ -2,8 +2,7 @@
 import { formatWallClockOrZoned } from "../../internal/instantFormatOptions";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
-import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -77,7 +76,8 @@ export function formatUtc(
   try {
     // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
     if (options === null) return "";
-    if (!isValidUtc(value)) return "";
+    const instant = utcInstantOf(value);
+    if (instant === null) return "";
 
     // Each option is read once (GetOption), inherited ones included.
     const includeTimeZoneName = optionOrDefault(
@@ -85,9 +85,6 @@ export function formatUtc(
       false,
     );
     const { timeZone, ...intlOptions } = readDateTimeFormatOptions(options);
-
-    const instant = toInstantFromUtc(value);
-    if (instant === null) return "";
 
     // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
     const tz = normalizeTimeZone(timeZone);

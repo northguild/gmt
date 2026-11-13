@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidUtcInterval } from "./validate";
-import { isValidUtc } from "../validate";
+import { utcIntervalOf } from "../../internal/intervalChecks";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Split a UTC interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -51,21 +51,25 @@ export function intervalSplitAtUtc(
       return [];
     }
 
-    if (!isValidUtcInterval(start, end)) {
+    const pair = utcIntervalOf(start, end);
+    if (pair === null) {
       return [];
     }
 
+    const parsedPoints: Temporal.Instant[] = [];
     if (
-      !points.every((point) => typeof point === "string" && isValidUtc(point))
+      !points.every((point) => {
+        const parsed = utcInstantOf(point);
+        if (parsed === null) return false;
+        parsedPoints.push(parsed);
+        return true;
+      })
     ) {
       return [];
     }
 
     try {
-      const startVal = Temporal.Instant.from(start);
-      const endVal = Temporal.Instant.from(end);
-
-      const parsedPoints = points.map((point) => Temporal.Instant.from(point));
+      const [startVal, endVal] = pair;
 
       const inRangePoints = parsedPoints.filter(
         (point) =>

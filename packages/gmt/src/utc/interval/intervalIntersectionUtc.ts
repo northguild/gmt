@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { canonicalInstantIntervals } from "../../internal";
-import { intersectIntervals } from "../../interval/calculate";
-import { isValidUtc } from "../validate";
+import { intersectIntervalRecords } from "../../internal/intervalNanoseconds";
+import { utcIntervalRecordOf } from "../../internal/intervalChecks";
 
 /**
  * Return the overlapping span of two UTC intervals, or null when they do not overlap.
@@ -52,21 +51,15 @@ export function intervalIntersectionUtc(
     return null;
   }
 
-  if (
-    !isValidUtc(aStart) ||
-    !isValidUtc(aEnd) ||
-    !isValidUtc(bStart) ||
-    !isValidUtc(bEnd)
-  ) {
+  const a = utcIntervalRecordOf(aStart, aEnd);
+  if (a === null) {
     return null;
   }
 
-  const shared = intersectIntervals(
-    { start: aStart, end: aEnd },
-    { start: bStart, end: bEnd },
-  );
+  const b = utcIntervalRecordOf(bStart, bEnd);
+  if (b === null) {
+    return null;
+  }
 
-  return shared === null
-    ? null
-    : (canonicalInstantIntervals([shared])?.[0] ?? null);
+  return intersectIntervalRecords(a, b);
 }

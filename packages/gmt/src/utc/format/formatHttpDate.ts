@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
 import { imfFixdate } from "../../internal/englishCalendarNames";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Format a UTC ISO 8601 datetime string as an HTTP header date — the RFC 9110
@@ -30,10 +29,11 @@ import { isValidUtc } from "../validate";
  * @example formatHttpDate("invalid") // ""
  */
 export function formatHttpDate(value: string): string {
-  if (!isValidUtc(value)) return "";
+  const instant = utcInstantOf(value);
+  if (instant === null) return "";
 
   try {
-    const zdt = Temporal.Instant.from(value).toZonedDateTimeISO("UTC");
+    const zdt = instant.toZonedDateTimeISO("UTC");
     return imfFixdate(zdt);
   } catch {
     return "";

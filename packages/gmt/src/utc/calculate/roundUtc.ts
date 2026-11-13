@@ -4,9 +4,9 @@ import {
   isObject,
   resolveDateTimeUnit,
 } from "../../internal";
-import { isValidTimeUnit } from "../../plain";
+import { isTimeUnitName } from "../../internal/unitNames";
 import type { FractionalDigit } from "../../types";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Round a UTC datetime string to the specified unit.
@@ -83,10 +83,11 @@ export function roundUtc(
     );
 
     // Temporal Instant.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~)
-    if (!isValidUtc(value) || !isValidTimeUnit(smallestUnit)) return "";
+    const instant = utcInstantOf(value);
+
+    if (instant === null || !isTimeUnitName(smallestUnit)) return "";
 
     try {
-      const instant = Temporal.Instant.from(value);
       const result = instant.round({
         smallestUnit,
         roundingIncrement,

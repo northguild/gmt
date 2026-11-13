@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import { halfOpenContainsSpan } from "../../internal";
-import { intervalContains } from "../../interval/compare";
-import { isValidUtc } from "../validate";
+import { utcIntervalOf } from "../../internal/intervalChecks";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return true when `pointOrStart` lies in the half-open interval `[intervalStart, intervalEnd)`
@@ -48,38 +48,36 @@ export function intervalContainsUtc(
     return false;
   }
 
-  if (
-    !isValidUtc(intervalStart) ||
-    !isValidUtc(intervalEnd) ||
-    !isValidUtc(pointOrStart) ||
-    (pointEnd !== undefined && !isValidUtc(pointEnd))
-  ) {
+  const outer = utcIntervalOf(intervalStart, intervalEnd);
+  if (outer === null) {
     return false;
   }
 
   if (pointEnd === undefined) {
-    return intervalContains(
-      { start: intervalStart, end: intervalEnd },
-      pointOrStart,
-    );
-  }
-
-  try {
-    const startInstant = Temporal.Instant.from(intervalStart);
-    const endInstant = Temporal.Instant.from(intervalEnd);
-    const innerStartInstant = Temporal.Instant.from(pointOrStart);
-    const innerEndInstant = Temporal.Instant.from(pointEnd);
-
-    if (
-      Temporal.Instant.compare(startInstant, endInstant) > 0 ||
-      Temporal.Instant.compare(innerStartInstant, innerEndInstant) > 0
-    ) {
+    const point = utcInstantOf(pointOrStart);
+    if (point === null) {
       return false;
     }
 
+    try {
+      return (
+        Temporal.Instant.compare(outer[0], point) <= 0 &&
+        Temporal.Instant.compare(point, outer[1]) < 0
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  const inner = utcIntervalOf(pointOrStart, pointEnd);
+  if (inner === null) {
+    return false;
+  }
+
+  try {
     return halfOpenContainsSpan(
-      { start: startInstant, end: endInstant },
-      { start: innerStartInstant, end: innerEndInstant },
+      { start: outer[0], end: outer[1] },
+      { start: inner[0], end: inner[1] },
       Temporal.Instant.compare,
     );
   } catch {

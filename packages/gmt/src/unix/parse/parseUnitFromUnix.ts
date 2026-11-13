@@ -1,11 +1,7 @@
 import type { Temporal } from "../../internal/temporal";
-import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
-import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { unixWallClock } from "../../internal/unixWallClock";
-import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
+import { unixUnitString } from "../../internal/unixWallClock";
 import type { UnixUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
-import { isoYearString } from "../../internal/isoYearString";
 
 /**
  * Units extractable from a unix epoch value via `parseUnitFromUnix`. Covers the
@@ -107,50 +103,7 @@ export function parseUnitFromUnix(
     if (!isOptionsArgument(options)) {
       return "";
     }
-    const wallClock = unixWallClock(value, options);
-    const weekStartsOn = resolveWeekStartsOn(options?.weekStartsOn);
-
-    if (
-      wallClock === null ||
-      typeof unit !== "string" ||
-      weekStartsOn === null
-    ) {
-      return "";
-    }
-
-    try {
-      switch (resolveDateTimeUnit(unit)) {
-        case "year":
-          return isoYearString(wallClock.year);
-        case "month":
-          return wallClock.month.toString().padStart(2, "0");
-        case "week": {
-          return (
-            getWeekNumber(wallClock.toPlainDate().toString(), weekStartsOn) ?? 0
-          ).toString();
-        }
-        case "day":
-          return wallClock.day.toString().padStart(2, "0");
-        case "dayOfWeek":
-          return wallClock.dayOfWeek.toString();
-        case "hour":
-          return wallClock.hour.toString().padStart(2, "0");
-        case "minute":
-          return wallClock.minute.toString().padStart(2, "0");
-        case "second":
-          return wallClock.second.toString().padStart(2, "0");
-        case "millisecond":
-          return wallClock.millisecond.toString().padStart(3, "0");
-        case "microsecond":
-          return wallClock.microsecond.toString().padStart(3, "0");
-        case "nanosecond":
-          return wallClock.nanosecond.toString().padStart(3, "0");
-        default:
-          return "";
-      }
-    } catch {
-      return "";
-    }
+    return unixUnitString(value, unit, options);
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

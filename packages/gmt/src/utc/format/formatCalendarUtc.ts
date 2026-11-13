@@ -1,12 +1,9 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { formatCalendarInstants } from "../../internal/formatCalendarDays";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
-import {
-  toInstantFromUtc,
-  toReferenceInstantFromUtc,
-} from "../../internal/toInstantFromUtc";
+import { nowInstant } from "../../internal/temporalCompat";
 import type { CalendarOptions } from "../../types";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 import { isObject } from "../../internal/isObject";
 
@@ -67,20 +64,25 @@ export function formatCalendarUtc(
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
     if (!isObject(options)) return "";
-    if (!isValidUtc(value)) return "";
+    const target = utcInstantOf(value);
+    if (target === null) return "";
     // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
     const timeZone = normalizeTimeZone(options.timeZone);
     if (!timeZone) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidUtc(referenceOption))
-      return "";
+    const parsedReference =
+      referenceOption === undefined ? undefined : utcInstantOf(referenceOption);
+    if (parsedReference === null) return "";
 
-    const target = toInstantFromUtc(value);
-    if (target === null) return "";
-
-    const reference = toReferenceInstantFromUtc(referenceOption);
-    if (reference === null) return "";
+    let reference = parsedReference;
+    if (reference === undefined) {
+      try {
+        reference = nowInstant();
+      } catch {
+        return "";
+      }
+    }
 
     try {
       return formatCalendarInstants(

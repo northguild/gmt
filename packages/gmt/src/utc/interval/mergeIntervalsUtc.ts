@@ -1,6 +1,8 @@
-import { canonicalInstantIntervals } from "../../internal";
-import { mergeIntervals } from "../../interval/calculate";
-import { isValidUtcInterval } from "./validate";
+import {
+  coalesceIntervalNanoseconds,
+  type IntervalNanoseconds,
+} from "../../internal/intervalNanoseconds";
+import { utcIntervalRecordOf } from "../../internal/intervalChecks";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -45,19 +47,28 @@ export function mergeIntervalsUtc(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          typeof interval.start === "string" &&
-          typeof interval.end === "string" &&
-          isValidUtcInterval(interval.start, interval.end),
-      )
-    ) {
-      return [];
+    const records: IntervalNanoseconds[] = [];
+
+    for (let index = 0; index < intervals.length; index++) {
+      const interval = intervals[index] as unknown as {
+        start?: unknown;
+        end?: unknown;
+      } | null;
+      const record = isObject(interval)
+        ? utcIntervalRecordOf(interval.start, interval.end)
+        : null;
+
+      if (record === null) {
+        return [];
+      }
+
+      records.push(record);
     }
 
-    return canonicalInstantIntervals(mergeIntervals(intervals)) ?? [];
+    return coalesceIntervalNanoseconds(records).map((run) => ({
+      start: run.startText,
+      end: run.endText,
+    }));
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.
