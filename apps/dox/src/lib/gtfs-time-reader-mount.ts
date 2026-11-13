@@ -97,7 +97,7 @@ export type { GtfsTimeReaderArgs } from "./gtfs-time-reader";
 const WIDGET_NAME = "gtfs-time-reader";
 const USE_READ_LABEL = "Use the time read above";
 
-/** The widest a time of day reads. */
+/** The widest the seconds read when written with no days. */
 const TIME_SAMPLE = "23:59:59";
 /** The widest a written time reads (`999:59:59`'s length). */
 const WIDEST_WRITTEN = "999:59:59";
@@ -154,7 +154,7 @@ function readLines(r: ReadResult, text: string): SafeHtml {
     ? EMPTY_READING
     : refused || r.record === null
       ? NOT_READ_READING
-      : readingText(r.record.dayOverflow, r.timeOfDay ?? SIGNAL_TEXT);
+      : readingText(r.record.dayOverflow, r.lessDays ?? SIGNAL_TEXT);
   const record = blank
     ? NOTHING_TYPED
     : r.record === null
@@ -210,8 +210,8 @@ function readPlates(r: ReadResult): SafeHtml {
   const blank = r.kind === "empty";
   const list: SignalPlate[] = [
     {
-      caption: "Time of day",
-      value: blank ? NOTHING_TYPED : r.timeOfDay,
+      caption: "Less whole days",
+      value: blank ? NOTHING_TYPED : r.lessDays,
       line: "formatGtfsTime",
       lineSamples: ["formatGtfsTime"],
       series: 1,
@@ -388,7 +388,7 @@ function callsSlot(id: string, which: CallsSection): SafeHtml {
 const blankRead: ReadResult = {
   kind: "empty",
   record: null,
-  timeOfDay: null,
+  lessDays: null,
   writtenBack: null,
   valid: null,
   reason: "empty",
@@ -481,7 +481,7 @@ export function renderGtfsTimeReaderTemplate(
 
   const fold = section(
     { id: id("fold"), heading: "2. Folded into one day", level: 3 },
-    html`<p class="${styles.note}">This is what code that does not know GTFS does with the same text: a clock-time check, then the time of day with the days dropped.</p>${holidayFrame(
+    html`<p class="${styles.note}">This is what code that does not know GTFS does with the same text: a clock-time check, then the time with the days dropped.</p>${holidayFrame(
       html`<div class="${styles.slot}" id="${id("fold-plates")}">${foldPlates(blankFold)}</div
         ><div id="${id("fold-verdict")}">${foldVerdictOf(blankFold)}</div
         ><div id="${id("fold-meaning")}">${foldMeaningOf(blankFold)}</div>`,
@@ -498,7 +498,7 @@ export function renderGtfsTimeReaderTemplate(
       options: presetOptions(WRITE_PRESETS),
     })}</div>${input(
       "seconds",
-      "Seconds (time of day)",
+      "Seconds (less whole days)",
       state.seconds,
       WRITE_MAX_CHARS,
       "numeric",

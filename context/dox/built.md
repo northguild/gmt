@@ -4778,10 +4778,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **The site holds no GTFS rule.** Every value, refusal and reason comes from the library or a
     probe of it (`rail-lib.ts`); the hour limit is not typed on the site. `gtfs-time-reader-prose.test.ts`
     holds the page's prose to the library.
-  - **No date, and never "since midnight".** The tool says days past the service day and seconds
-    of the time of day. The clock note is always shown: the pair is counted from noon minus 12 hours of
-    the service day, so turning it into a clock time needs the agency's zone, and `gtfsToInstant`
-    (RAI-100, not built) is named in code font with no link and no token.
+  - **No date, and never "since midnight".** The tool says days past the service day and the seconds
+    left over, never a time of day. The clock note is always shown: the pair is counted from noon
+    minus 12 hours of the service day, so turning it into a clock time needs the agency's zone, and
+    `gtfsToInstant` (RAI-100, not built) is named in code font with no link and no token.
   - **An empty box reads "nothing typed" and makes no call.** NO SIGNAL (amber) shows only for a
     library refusal. A write with days past the limit shows the library's `""` as a refusal.
   - **Plate strips keep one layout in every state.** The sentinel takes the live size

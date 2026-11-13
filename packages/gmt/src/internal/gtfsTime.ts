@@ -59,8 +59,8 @@ export function readGtfsTimeFields(value: string): GtfsTimeFields | null {
 }
 
 /**
- * Read a GTFS time as the time of day and the whole days past the service day, or null. The core
- * of `parseGtfsTime` and `isValidGtfsTime`, so the two cannot disagree.
+ * Read a GTFS time as the whole days past the service day and the seconds left over, or null. The
+ * core of `parseGtfsTime` and `isValidGtfsTime`, so the two cannot disagree.
  *
  * @example readGtfsTime("25:35:00") // { seconds: 5700, dayOverflow: 1 }
  * @example readGtfsTime("25:60:00") // null

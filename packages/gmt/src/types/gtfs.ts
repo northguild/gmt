@@ -1,5 +1,6 @@
 /**
- * A GTFS Schedule `Time` value split into the time of day and the whole days past the service day.
+ * A GTFS Schedule `Time` value split into the whole days past the service day and the seconds left
+ * over.
  *
  * - `25:35:00` is `{ seconds: 5700, dayOverflow: 1 }`: 1:35 on the day after the service day,
  *   still part of that service day.

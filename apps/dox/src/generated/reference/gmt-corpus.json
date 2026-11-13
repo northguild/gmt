@@ -23055,7 +23055,7 @@
     "module": "gtfs",
     "kind": "type",
     "signature": "",
-    "description": "A GTFS Schedule `Time` value split into the time of day and the whole days past the service day.",
+    "description": "A GTFS Schedule `Time` value split into the whole days past the service day and the seconds left over.",
     "sourcePath": "packages/gmt/src/types/gtfs.ts",
     "examples": [],
     "members": [

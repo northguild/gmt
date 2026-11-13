@@ -9,7 +9,7 @@ A GTFS time, such as the `arrival_time` of a stop, is not a clock reading. A tri
 - `parseGtfsTime(value)` reads a GTFS time and returns a `GtfsTime`, or `null`.
 - `formatGtfsTime(value)` writes a `GtfsTime` back as a GTFS time, or `""`.
 - `isValidGtfsTime(value)` is `true` exactly when `parseGtfsTime` would return a value.
-- `GtfsTime` is `{ seconds: number; dayOverflow: number }`: the time of day in seconds, and the whole days past the service day.
+- `GtfsTime` is `{ seconds: number; dayOverflow: number }`: the written time less whole 24-hour blocks, in seconds, and the whole days past the service day.
 
 ```typescript
 import { formatGtfsTime, parseGtfsTime } from "@northguild/gmt/rail";

@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 const secondsBox = () =>
-  screen.getByRole("textbox", { name: "Seconds (time of day)" });
+  screen.getByRole("textbox", { name: "Seconds (less whole days)" });
 const daysBox = () =>
   screen.getByRole("textbox", { name: "Days past the service day" });
 const noteText = new RegExp(CLOCK_NOTE_LEAD.slice(0, 40));

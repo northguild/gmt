@@ -800,7 +800,7 @@ const TOOLS = [
       },
       {
         role: "textbox",
-        name: "Seconds (time of day)",
+        name: "Seconds (less whole days)",
         values: [
           "5700",
           "0",

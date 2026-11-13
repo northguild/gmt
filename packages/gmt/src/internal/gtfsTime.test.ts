@@ -8,12 +8,9 @@ describe("readGtfsTime", () => {
     ${"24:00:00"}  | ${{ seconds: 0, dayOverflow: 1 }}
     ${"110:29:00"} | ${{ seconds: 52140, dayOverflow: 4 }}
     ${"999:59:59"} | ${{ seconds: 57599, dayOverflow: 41 }}
-  `(
-    "reads '$value' as a time of day and the days past",
-    ({ value, expected }) => {
-      expect(readGtfsTime(value)).toEqual(expected);
-    },
-  );
+  `("reads '$value' as seconds and the days past", ({ value, expected }) => {
+    expect(readGtfsTime(value)).toEqual(expected);
+  });
 
   it.each`
     value

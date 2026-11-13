@@ -637,7 +637,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       {
         problem: "A trip after midnight lands on the wrong day.",
         answer:
-          "{{parseGtfsTime}} returns the time of day and the whole days past the service day as two numbers, so a stop after midnight stays with the trip that reaches it.",
+          "{{parseGtfsTime}} returns the whole days past the service day and the seconds left over as two numbers, so a stop after midnight stays with the trip that reaches it.",
         see: [
           {
             label: "guide",

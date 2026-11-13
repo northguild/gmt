@@ -513,7 +513,7 @@ skills:
       - isValidGtfsTime
     tasks:
       - Read a GTFS stop time such as 25:35:00 without folding it into the next day, keeping the days past the service day apart from the time of day
-      - Write a time of day and its days past the service day back as a GTFS time such as 25:35:00
+      - Write the seconds and the days past the service day back as a GTFS time such as 25:35:00
       - Check whether a value is a GTFS Time
       - Know that a GTFS time is measured from noon minus 12 hours of the service day, and that turning it into an instant needs the service date and the agency's zone
 

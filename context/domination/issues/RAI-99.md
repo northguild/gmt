@@ -33,8 +33,8 @@ service day, and every trip after midnight moves to the wrong date.
   format in prose, not as a pattern. It joins `context/coding-standards.md` as a scoped exception,
   as INT-15's EDI grammars did.
 - `packages/gmt/src/types/gtfs.ts` — `GtfsTime`: `{ seconds: number; dayOverflow: number }`.
-  `seconds` is the time of day in seconds, 0 to 86399; `dayOverflow` is the number of whole days past
-  the service day, 0 or more.
+  `seconds` is the written time less whole 24-hour blocks, 0 to 86399; `dayOverflow` is the number
+  of whole days past the service day, 0 or more.
 - This story opens the `rail/` realm: the `@northguild/gmt/rail`, `@northguild/gmt/rail/parse`,
   `@northguild/gmt/rail/format` and `@northguild/gmt/rail/validate` subpaths (`package.json`
   `exports` and `typesVersions`, the dox `gmt-modules.ts` barrel), and the Rail industry in
@@ -62,8 +62,8 @@ service day, and every trip after midnight moves to the wrong date.
 
 ## Tool
 
-**GTFS Time Reader.** Paste a `stop_times` value and see the time of day and the whole days past the
-service day, never a date; a line says that a clock time on a date needs the agency's zone and
+**GTFS Time Reader.** Paste a `stop_times` value and see the whole days past the service day and the
+seconds left over, never a date; a line says that a clock time on a date needs the agency's zone and
 `gtfsToInstant` (RAI-100). Type a value under `24:00:00` and see the overflow drop to 0. Calls
 `parseGtfsTime`, `formatGtfsTime`. Teaches: `25:35:00` is 01:35 on the day after the service day,
 and still part of that service day.
@@ -146,9 +146,9 @@ Folded from the library and Dox specs when the story closed.
   industry tests fail on a link to a page that does not exist, so they land with the guide, the
   scenario and the mistakes page. Rail is its own industry and `drawsOn` `transport`. Its pages are
   tagged `rail` only, and the hub links Transport's Timetable Reader.
-- **The reader shows no date.** It shows the time of day and the whole days past the service day,
-  never a date or a weekday, and never "since midnight". One line is always shown: a clock time on a
-  date needs the agency's zone, and `gtfsToInstant` (RAI-100) does that. The site holds no GTFS
+- **The reader shows no date.** It shows the whole days past the service day and the seconds left
+  over, never a date or a weekday, and never "since midnight". One line is always shown: a clock time
+  on a date needs the agency's zone, and `gtfsToInstant` (RAI-100) does that. The site holds no GTFS
   grammar; every value and refusal comes from the library or a probe of it.
 - **`gtfsToInstant` is named, never linked,** on a public page until RAI-100's Dox spec adds the link.
   What is built on the site is recorded in `context/dox/built.md` (GTFS Time Reader).

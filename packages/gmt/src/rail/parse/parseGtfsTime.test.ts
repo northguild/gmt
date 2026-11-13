@@ -13,7 +13,7 @@ describe("parseGtfsTime", () => {
     expect(parseGtfsTime(value as string)).toBeNull();
   });
 
-  it("splits every hour from 0 to 999 into whole days and an hour of the day", () => {
+  it("splits every hour from 0 to 999 into whole days and an hour from 0 to 23", () => {
     const wrong: number[] = [];
     for (let h = 0; h <= 999; h++) {
       const result = parseGtfsTime(`${h}:00:00`);

@@ -51,12 +51,12 @@ describe("the read presets, against the library", () => {
       expect(r.valid).toBe(railLib.isValidGtfsTime(value));
       expect(r.kind).toBe(expected === null ? "refused" : "read");
       if (expected !== null) {
-        expect(r.timeOfDay).toBe(
+        expect(r.lessDays).toBe(
           railLib.formatGtfsTime({ seconds: expected.seconds, dayOverflow: 0 }),
         );
         expect(r.writtenBack).toBe(railLib.formatGtfsTime(expected));
       } else {
-        expect(r.timeOfDay).toBeNull();
+        expect(r.lessDays).toBeNull();
         expect(r.writtenBack).toBeNull();
       }
     },
@@ -65,9 +65,9 @@ describe("the read presets, against the library", () => {
   it("reads the opening preset as one day past the service day", () => {
     const r = readGtfs(railLib, readPreset("next-day").value);
     expect(r.record).toEqual({ seconds: 5700, dayOverflow: 1 });
-    expect(r.timeOfDay).toBe("01:35:00");
+    expect(r.lessDays).toBe("01:35:00");
     expect(r.writtenBack).toBe("25:35:00");
-    expect(readingText(1, r.timeOfDay!)).toBe(
+    expect(readingText(1, r.lessDays!)).toBe(
       "1 day past the service day, 01:35:00",
     );
   });

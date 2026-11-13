@@ -41,8 +41,8 @@ A trip that runs past midnight is written with an hour above 23 (`25:35:00`).
    not fold it into `01:35:00`: every trip after midnight then moves to the
    wrong date.
 2. **The overflow is kept apart from the time.** `parseGtfsTime` returns
-   `{ seconds, dayOverflow }`: the time of day in seconds (0 to 86399) and the
-   whole days past the service day.
+   `{ seconds, dayOverflow }`: the written time less whole 24-hour blocks, in
+   seconds (0 to 86399), and the whole days past the service day.
    ```typescript
    parseGtfsTime("25:35:00"); // { seconds: 5700, dayOverflow: 1 }
    parseGtfsTime("8:05:00"); // { seconds: 29100, dayOverflow: 0 }

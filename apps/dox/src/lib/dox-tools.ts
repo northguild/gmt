@@ -758,7 +758,8 @@ export const showSwiftValueDateReaderInput = z
 
 /**
  * GTFS Time Reader: a GTFS `Time` to read (`value`, such as 25:35:00), and the two numbers to
- * write one from (`seconds` of the time of day, `dayOverflow` whole days past the service day).
+ * write one from (`seconds`, the written time less whole days, and `dayOverflow`, whole days past
+ * the service day).
  * Every argument is a string of at most 16 characters, passed exactly as the reader gave it.
  * The chat never trims a value, never coerces a number, and never passes a zone or a date.
  */
@@ -1808,9 +1809,9 @@ export const DOX_TOOL_DOCS: {
   {
     name: "showGtfsTimeReader",
     purpose:
-      "Reads a GTFS stop time (such as 25:35:00) with parseGtfsTime and shows the time of day and the whole days past the service day it gives, beside what a clock-time check does with the same text; writes seconds and days back with formatGtfsTime. A line says that a clock time on a date needs the agency's zone.",
+      "Reads a GTFS stop time (such as 25:35:00) with parseGtfsTime and shows the whole days past the service day and the seconds left over that it gives, beside what a clock-time check does with the same text; writes seconds and days back with formatGtfsTime. A line says that a clock time on a date needs the agency's zone.",
     when: "the reader asks whether a GTFS time such as 25:35:00 or 24:00:00 is valid or still part of the service day, why a stop time past midnight is refused by a clock-time check, how many days past the service day a time is, or how to write a GTFS time back",
-    args: "value (a GTFS time exactly as the reader gave it, at most 16 characters, never trimmed or repaired), seconds (the time of day in seconds, as typed), dayOverflow (whole days past the service day, as typed). Each is a string; give at least one. Never pass a zone or a date.",
+    args: "value (a GTFS time exactly as the reader gave it, at most 16 characters, never trimmed or repaired), seconds (the written time less whole days, in seconds, as typed), dayOverflow (whole days past the service day, as typed). Each is a string; give at least one. Never pass a zone or a date.",
   },
 ];
 

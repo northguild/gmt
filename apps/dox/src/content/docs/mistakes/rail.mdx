@@ -9,7 +9,7 @@ sidebar:
 The Rail layer reads and writes the times in a GTFS feed. A stop time can run past `24:00:00`
 and stay with its service day, so the mistakes around it are the ones a clock-time habit makes:
 folding the hour into a day, asking a clock-time check whether the value is valid, writing the
-time of day alone, trimming a dirty value, and adding the seconds to local midnight. Every
+seconds alone, trimming a dirty value, and adding the seconds to local midnight. Every
 output shown here is what the function returns.
 
 import Mistake from "../../../components/Mistake.astro";
@@ -54,8 +54,8 @@ isValidGtfsTime("25:60:00");
 
 <Mistake
   severity="medium"
-  title="Writing the time of day alone"
-  description="Writing back only the time of day, or the hour in one digit, changes the value. The first drops the days past the service day, and the second is a form the rest of a feed does not use. formatGtfsTime writes the record in full, with at least two hour digits."
+  title="Writing the seconds alone"
+  description="Writing back only the seconds, or the hour in one digit, changes the value. The first drops the days past the service day, and the second is a form the rest of a feed does not use. formatGtfsTime writes the record in full, with at least two hour digits."
   wrongCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 
 const { seconds } = parseGtfsTime("25:35:00");

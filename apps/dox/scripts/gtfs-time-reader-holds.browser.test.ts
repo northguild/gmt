@@ -166,7 +166,7 @@ describe.each(ENGINES)("GTFS Time Reader holds in %s", (_name, type) => {
           name: "GTFS time",
         });
         const secondsBox = page.getByRole("textbox", {
-          name: "Seconds (time of day)",
+          name: "Seconds (less whole days)",
         });
         const daysBox = page.getByRole("textbox", {
           name: "Days past the service day",

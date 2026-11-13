@@ -11,8 +11,8 @@ readings. A trip that leaves at 23:40 and reaches its last stop after midnight d
 the count at `00:00:00`. The stop is written `25:35:00` and stays part of the service day the trip
 began on.
 
-The functions here read that form, write it back and check it. They keep the time of day and the
-whole days past the service day as two numbers, and they never name a date.
+The functions here read that form, write it back and check it. They keep the whole days past the
+service day and the seconds left over as two numbers, and they never name a date.
 
 ```typescript
 import { parseGtfsTime } from "@northguild/gmt/rail/parse";
@@ -48,9 +48,9 @@ of the service day, and it is not the start of the next one.
 ## Reading
 
 [`parseGtfsTime(value)`](/reference/rail/parse/parseGtfsTime/) returns a record with two numbers.
-`seconds` is the time of day, from 0 to 86399. `dayOverflow` is the number of whole days past the
-service day: 0 before `24:00:00`, 1 from `24:00:00`, and so on. It returns `null` for anything that
-is not a GTFS time.
+`seconds` is the written time less whole 24-hour blocks, from 0 to 86399, and it is not always the
+clock time (see below). `dayOverflow` is the number of whole days past the service day: 0 before
+`24:00:00`, 1 from `24:00:00`, and so on. It returns `null` for anything that is not a GTFS time.
 
 ```typescript
 import { parseGtfsTime } from "@northguild/gmt/rail/parse";
@@ -94,7 +94,7 @@ if (record !== null) {
 [`formatGtfsTime(record)`](/reference/rail/format/formatGtfsTime/) writes the form back with at
 least two hour digits, so `8:05:00` is written `08:05:00`. It writes three hour digits when it has
 to: VIA Rail's feed, for one, has a stop at `110:29:00`. A record it
-cannot write gives `""`: a time of day outside 0 to 86399, a negative or fractional count of days,
+cannot write gives `""`: seconds outside 0 to 86399, a negative or fractional count of days,
 or hours above 999.
 
 ```typescript
@@ -109,7 +109,7 @@ formatGtfsTime({ seconds: 5700, dayOverflow: 0 });
 formatGtfsTime({ seconds: 5700, dayOverflow: 42 });
 // "" (1009 hours)
 formatGtfsTime({ seconds: 86400, dayOverflow: 0 });
-// "" (not a time of day)
+// "" (a whole day belongs in dayOverflow)
 ```
 
 ## Checking a value

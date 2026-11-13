@@ -13,8 +13,8 @@ import type { GtfsTime } from "../../types";
  *
  * Source: GTFS Schedule Reference § Field Types, Time.
  *
- * @param value The time of day (`seconds`, 0–86399) and the whole days past the service day
- *   (`dayOverflow`, 0 or more).
+ * @param value The written time less whole 24-hour blocks (`seconds`, 0–86399) and the whole days
+ *   past the service day (`dayOverflow`, 0 or more).
  * @returns The GTFS `Time` string, or `""` on invalid input (not a `GtfsTime`, or past
  *   `999:59:59`)
  *

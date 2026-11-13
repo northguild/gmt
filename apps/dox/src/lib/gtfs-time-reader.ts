@@ -7,7 +7,7 @@
  * clock-time check (`isValidTime`) and folds it into one day, to show what a reader that does
  * not know GTFS loses. Section 3 writes a record from two typed numbers and reads it back.
  *
- * The site holds no GTFS rule. Every time of day, day count, verdict and refusal is a library
+ * The site holds no GTFS rule. Every written time, day count, verdict and refusal is a library
  * result, and a refusal is explained by asking the library again. The one conversion the site
  * makes is a number grammar (`NUMBER`), not a GTFS one; the library judges the number.
  *
@@ -197,7 +197,7 @@ export const WRITE_PRESETS: readonly WritePreset[] = [
   {
     id: "write-full-day",
     label: "86400 seconds",
-    description: "Refused: seconds are the time of day.",
+    description: "Refused: a whole day belongs in the days.",
     seconds: "86400",
     dayOverflow: "0",
   },
@@ -283,9 +283,9 @@ export function permalinkOf(state: GtfsState): Record<string, string> {
 export const daysText = (n: number): string =>
   `${n} ${n === 1 ? "day" : "days"}`;
 
-/** The reading line: the days past the service day, then the time of day. */
-export const readingText = (dayOverflow: number, timeOfDay: string): string =>
-  `${daysText(dayOverflow)} past the service day, ${timeOfDay}`;
+/** The reading line: the days past the service day, then the seconds written with no days. */
+export const readingText = (dayOverflow: number, lessDays: string): string =>
+  `${daysText(dayOverflow)} past the service day, ${lessDays}`;
 
 /** The widest reading, for the held line's room. */
 export const READING_SAMPLE = readingText(41, "23:59:59");
@@ -330,7 +330,7 @@ export type WriteReasonKey =
   | "hours";
 
 export const WRITE_REASONS: Record<WriteReasonKey, string> = {
-  empty: "Type the seconds of the day and the days past the service day.",
+  empty: "Type the seconds and the days past the service day.",
   notNumber:
     "Not a number: type digits, with a minus sign or a decimal point if you like, and the library will say whether it takes them.",
   written:
@@ -348,8 +348,8 @@ export interface ReadResult {
   kind: "empty" | "read" | "refused";
   /** `parseGtfsTime`'s record, as a plain literal the site built, or `null`. */
   record: GtfsTime | null;
-  /** `formatGtfsTime({ seconds, dayOverflow: 0 })`: the library writing the time of day. */
-  timeOfDay: string | null;
+  /** `formatGtfsTime({ seconds, dayOverflow: 0 })`: the library writing the seconds with no days. */
+  lessDays: string | null;
   /** `formatGtfsTime(record)`, or `null`. */
   writtenBack: string | null;
   /** `isValidGtfsTime`, `null` for an empty box. */
@@ -384,7 +384,7 @@ export function readGtfs(lib: RailLib, text: string): ReadResult {
     return {
       kind: "empty",
       record: null,
-      timeOfDay: null,
+      lessDays: null,
       writtenBack: null,
       valid: null,
       reason: "empty",
@@ -403,7 +403,7 @@ export function readGtfs(lib: RailLib, text: string): ReadResult {
       seconds: parsed.seconds,
       dayOverflow: parsed.dayOverflow,
     };
-    const timeOfDay = format(
+    const lessDays = format(
       lib,
       { seconds: record.seconds, dayOverflow: 0 },
       calls,
@@ -412,7 +412,7 @@ export function readGtfs(lib: RailLib, text: string): ReadResult {
     return {
       kind: "read",
       record,
-      timeOfDay: timeOfDay === "" ? null : timeOfDay,
+      lessDays: lessDays === "" ? null : lessDays,
       writtenBack: writtenBack === "" ? null : writtenBack,
       valid,
       reason: "read",
@@ -423,7 +423,7 @@ export function readGtfs(lib: RailLib, text: string): ReadResult {
   const refused = (reason: ReadReasonKey): ReadResult => ({
     kind: "refused",
     record: null,
-    timeOfDay: null,
+    lessDays: null,
     writtenBack: null,
     valid,
     reason,
@@ -446,7 +446,7 @@ export interface FoldResult {
   kind: "empty" | "notRead" | "folded";
   /** `isValidTime` of the typed text, `null` until a value was read. */
   clockValid: boolean | null;
-  /** The time of day, from section 1. */
+  /** The seconds written with no days, from section 1. */
   folded: string | null;
   /** `parseGtfsTime` of the folded text. */
   foldedBack: GtfsTime | null;
@@ -474,7 +474,7 @@ export function foldGtfs(
   const calls: string[] = [];
   const clockValid = lib.isValidTime(text);
   calls.push(`isValidTime(${literal(text)}); // ${literal(clockValid)}`);
-  const folded = read.timeOfDay;
+  const folded = read.lessDays;
   const foldedBack = folded === null ? null : parse(lib, folded, calls);
   return {
     kind: "folded",
