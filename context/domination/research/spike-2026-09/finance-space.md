@@ -201,17 +201,16 @@ https://orchimate.org/fixtrading/fix-latest/datatypes?ref=fiximate).
 
 ## 8. SWIFT MT date/time fields
 
-Source: SWIFT *Standards MT* User Handbook (Category 1, Category 9), as mirrored page-for-page at
-pinas.synology.me (SWIFT's own text; the swift.com Knowledge Centre copy requires login — tried
-`www2.swift.com/knowledgecentre/rest/v1/publications/us9m_20210723/3.0/us9m_20210723.pdf`, got a
-login HTML page; iso20022.org UHB pages returned 403).
+Source: SWIFT *Standards MT* User Handbook, Category 1 and Category 9 (2015 edition), cited by
+handbook, message and field. The User Handbook is in SWIFT's Knowledge Centre, which needs a login
+(the Knowledge Centre PDF returned a login page; iso20022.org UHB pages returned 403).
 
-- **MT 103 field 32A** "Value Date/Currency/Interbank Settled Amount": format "6!n3!a15d" (Date)(Currency)(Amount); NVR: "Date must be a valid date expressed as YYMMDD (Error code(s): T50)." https://pinas.synology.me/Swift_Manual/2015/books/us1m/aih006.htm
-- **MT 103 field 13C** "Time Indication": format "/8c/4!n1!x4!n" (Code)(Time indication)(Sign)(Time offset); "Time must follow HHMM"; "Sign must be + or -"; offset hours "00-13", minutes "00-59"; codes CLSTIME, RNCTIME, SNDTIME; usage: "identified by means of the offset against the UTC (Coordinated Universal Time - ISO 8601)." Example `:13C:/CLSTIME/0915+0100`. https://pinas.synology.me/Swift_Manual/2015/books/us1m/aih002.htm
-- **MT 900** Confirmation of Debit, format spec: "M | 32A | Value Date, Currency Code, Amount | 6!n3!a15d" and "O | 13D | Date/Time Indication | 6!n4!n1!x4!n". https://pinas.synology.me/Swift_Manual/2015/books/us9m/afc.htm
-- **MT 910** Confirmation of Credit, format spec: same two rows. https://pinas.synology.me/Swift_Manual/2015/books/us9m/agc.htm
-- MT 202 field 32A shares the 6!n3!a15d format (Category 2 page found by search, not fetched: https://ccsvie.synology.me/Swift_Manual/2017/books/us2m/aig004.htm — unverified).
-- Field 13D detail page (NVRs for the YYMMDD date + HHMM + sign + offset): NOT FOUND on the mirror (URL pattern guesses 404). The format string `6!n4!n1!x4!n` itself is verified from both format specs.
+- **MT 103 field 32A** "Value Date/Currency/Interbank Settled Amount" (Category 1, 2015 edition, MT 103 field 32A): format "6!n3!a15d" (Date)(Currency)(Amount); NVR: "Date must be a valid date expressed as YYMMDD (Error code(s): T50)."
+- **MT 103 field 13C** "Time Indication" (Category 1, 2015 edition, MT 103 field 13C): format "/8c/4!n1!x4!n" (Code)(Time indication)(Sign)(Time offset); "Time must follow HHMM"; "Sign must be + or -"; offset hours "00-13", minutes "00-59"; codes CLSTIME, RNCTIME, SNDTIME; usage: "identified by means of the offset against the UTC (Coordinated Universal Time - ISO 8601)." Example `:13C:/CLSTIME/0915+0100`.
+- **MT 900** Confirmation of Debit (Category 9, 2015 edition, MT 900 format specifications): "M | 32A | Value Date, Currency Code, Amount | 6!n3!a15d" and "O | 13D | Date/Time Indication | 6!n4!n1!x4!n".
+- **MT 910** Confirmation of Credit (Category 9, 2015 edition, MT 910 format specifications): same two rows.
+- MT 202 field 32A shares the 6!n3!a15d format (Category 2, 2017 edition, MT 202 field 32A; found by search, not read — unverified).
+- Field 13D detail page (NVRs for the YYMMDD date + HHMM + sign + offset): not found. The format string `6!n4!n1!x4!n` itself is verified from both format specs.
 
 ## 9. MiFID II RTS 25 — Commission Delegated Regulation (EU) 2017/574
 
@@ -349,7 +348,7 @@ RBA Bond Basis. Not verified against the ISDA text itself.
 |---|---|---|
 | 2 — SIFMA *Standard Securities Calculation Methods* text for 30/360 US Feb rules | NOT FOUND (book not online) | WebSearch for title + rule wording; ISDA 30/360 page (only an .xls link). Only OpenGamma (secondary) states an EOM Feb rule, and in a different form from the brief. |
 | 6 — CME Rulebook Ch. 1 "Trade Date"/"Trading Day" definition | NOT FOUND (IP blocked by cmegroup.com; fetch tool timeouts; archive.org refused by fetch tool) | Rulebook CME/CBOT ch. 1 PDFs, trading-hours page, crypto FAQ, 4 Globex notices, CFTC filings. Convention itself confirmed from an archived CME Globex notice (Apr 27, 2026). |
-| 8 — SWIFT field 13D detail page (NVRs) for MT 900/910 | NOT FOUND on the UHB mirror (URL guesses 404); swift.com PDF requires login; iso20022.org UHB 403 | Format `6!n4!n1!x4!n` verified from both format-spec pages. 13C rules verified for MT 103. |
+| 8 — SWIFT field 13D detail page (NVRs) for MT 900/910 | Not found; the Knowledge Centre PDF needs a login; iso20022.org UHB 403 | Format `6!n4!n1!x4!n` verified from both format-spec pages. 13C rules verified for MT 103. |
 | 11 — IAU 2000 B1.9 official PDF | iau.org / iauarchive PDFs 404 or HTML | Text taken from SYRTE and the IAU WG explanatory supplement (arXiv astro-ph/0303376 App. A). The TT–TCG JD formula is IERS Conventions 2010 eq. (10.1), not resolution text. |
 | 14 — Meeus ch. 15 / ch. 25 quotes; NREL SPA report | Book not online; nrel.gov DNS failure | h0 = −0.8333° confirmed via NOAA + USNO; 0.01° accuracy for Meeus ch. 25 and the cos H0 ∉ [−1,1] polar rule remain unquoted. |
 | 15 — ISDA 2021 §4.6.1 text | Paywalled (MyLibrary) | Numbering inferred from CDM + FpML; FpML's "(v)" for BUS/252 is internally inconsistent. |
