@@ -338,6 +338,7 @@ export const EXAMPLE_AREAS = [
   { id: "finance", label: "Finance" },
   { id: "healthcare", label: "Healthcare" },
   { id: "aviation", label: "Aviation" },
+  { id: "rail", label: "Rail" },
 ] as const;
 
 type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
@@ -955,6 +956,12 @@ export const CHAT_STARTERS: readonly {
     widget: "showSwiftValueDateReader",
     area: "finance",
     args: { value: "350615" },
+  },
+  {
+    text: "Is the GTFS stop time 25:35:00 still part of today's service?",
+    widget: "showGtfsTimeReader",
+    area: "rail",
+    args: { value: "25:35:00" },
   },
 ];
 

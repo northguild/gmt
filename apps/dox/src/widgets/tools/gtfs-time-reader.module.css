@@ -1,0 +1,104 @@
+/*
+ * GTFS Time Reader: what only this tool needs. The sections, preset, fields, plates, badge,
+ * code frames and held lines are the kit's and the holiday family's; this sheet lays the
+ * controls out and sets the clock note.
+ *
+ * Amber is the sentinel's alone: a plate or a line the library refused reads a bracketed NO
+ * SIGNAL. The clock note is a full bevelled border with a tinted fill, never a coloured left
+ * edge.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.slot {
+  min-inline-size: 0;
+
+  /* The value's floor is 14ch of its own size, so a smaller sentinel size makes a plate narrower
+     in NO SIGNAL than live, and a strip that is two plates wide in one state wraps in the other.
+     The sentinel takes the live size, so the strips keep one layout in every state. */
+  & [data-series] {
+    --value-signal: var(--value-live);
+  }
+
+  /* The two-plate strips are two equal columns, or one column where the slot is narrow, and
+     never a wrapping row sized by what the plates hold: that row moved a plate's edge, or
+     stacked the pair, as a value or a line changed length. */
+  container: slot / inline-size;
+
+  /* A call line can run past the frame. Where scrollbars take room (WebKit), the track is
+     always there, so a long line scrolling in does not make the frame taller. */
+  & pre {
+    overflow-x: scroll;
+  }
+
+  /* In a narrow slot the sentinel's wording, at the live size, is wider than a plate and would
+     scroll (and, with classic scrollbars, grow the plate). Both sizes shrink with the slot. */
+  @container slot (inline-size < 30rem) {
+    & [data-series] {
+      --value-live: clamp(0.75rem, (100cqi - 2.5rem) / 12, 1.25rem);
+      --value-signal: var(--value-live);
+    }
+  }
+
+  & [data-gate="hero"],
+  & [data-gate="write-plates"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+
+    @container slot (inline-size >= 36rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+/* The always-visible clock note: a full border and a tinted fill. */
+.clock {
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  & p {
+    margin: 0;
+    color: var(--gmt-ice-dim);
+    font-size: var(--gmt-text-sm);
+    line-height: 1.5;
+  }
+
+  & code {
+    color: var(--gmt-ice);
+    font-family: var(--gmt-font-mono);
+  }
+}
+
+@media (forced-colors: active) {
+  .clock {
+    border-color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .clock {
+    border-color: var(--gmt-ice);
+  }
+}

@@ -313,3 +313,19 @@ describe("searchChunks — SWIFT value dates (FIN-96)", () => {
     ).toBe(true);
   });
 });
+
+describe("searchChunks — GTFS stop times (RAI-99)", () => {
+  it("'GTFS time past 24:00' finds parseGtfsTime near the top and a guide chunk", () => {
+    const results = searchChunks(chunks, "GTFS time past 24:00");
+    expect(
+      results
+        .slice(0, 3)
+        .some((c) => c.kind === "function" && c.title === "parseGtfsTime"),
+    ).toBe(true);
+    expect(
+      results.some((c) =>
+        c.url.startsWith("/guides/industries/rail-gtfs-service-days/#"),
+      ),
+    ).toBe(true);
+  });
+});

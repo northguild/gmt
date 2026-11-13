@@ -1,0 +1,120 @@
+---
+title: Rail mistakes
+description: Common mistakes with GTFS stop times — folding a time past midnight into one day, checking it as a clock time, writing it back, spaces and the byte-order mark, and treating seconds as a clock reading — in GMT's Rail layer.
+industries: [rail]
+sidebar:
+  label: Rail
+---
+
+The Rail layer reads and writes the times in a GTFS feed. A stop time can run past `24:00:00`
+and stay with its service day, so the mistakes around it are the ones a clock-time habit makes:
+folding the hour into a day, asking a clock-time check whether the value is valid, writing the
+seconds alone, trimming a dirty value, and adding the seconds to local midnight. Every
+output shown here is what the function returns.
+
+import Mistake from "../../../components/Mistake.astro";
+
+## Folding past midnight
+
+<Mistake
+  severity="high"
+  title="Taking the hour modulo 24"
+  description="A stop time of 25:35:00 is 1 day past the service day, 01:35:00, and still part of the service day the trip began on. Taking the hour modulo 24 gives 01:35:00, which is a time at the start of a service day. The stop loses its day and sorts before the stops it followed. parseGtfsTime keeps the days past the service day in a number of their own."
+  wrongCode={`const [hours, minutes, seconds] = "25:35:00".split(":");
+
+[String(Number(hours) % 24).padStart(2, "0"), minutes, seconds].join(":");
+// "01:35:00" — the day is gone`}
+  rightCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+
+parseGtfsTime("25:35:00");
+// { seconds: 5700, dayOverflow: 1 }`}
+  rightSpecId="parseGtfsTime"
+/>
+
+## A clock-time check
+
+<Mistake
+  severity="high"
+  title="Checking a stop time as a clock time"
+  description="A clock has no 25th hour, so a check made for clock times refuses 25:35:00, and an import that trusts it drops a valid stop. isValidGtfsTime asks the GTFS parser, which reads hours up to 999."
+  wrongCode={`import { isValidTime } from "@northguild/gmt/plain/validate";
+
+isValidTime("25:35:00");
+// false — a valid stop time is refused`}
+  rightCode={`import { isValidGtfsTime } from "@northguild/gmt/rail/validate";
+
+isValidGtfsTime("25:35:00");
+// true
+isValidGtfsTime("25:60:00");
+// false (minute 60)`}
+  rightSpecId="isValidGtfsTime"
+/>
+
+## Writing it back
+
+<Mistake
+  severity="medium"
+  title="Writing the seconds alone"
+  description="Writing back only the seconds, or the hour in one digit, changes the value. The first drops the days past the service day, and the second is a form the rest of a feed does not use. formatGtfsTime writes the record in full, with at least two hour digits."
+  wrongCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+
+const { seconds } = parseGtfsTime("25:35:00");
+
+const hour = Math.floor(seconds / 3600);
+const minute = Math.floor(seconds / 60) % 60;
+hour + ":" + String(minute).padStart(2, "0") + ":00";
+// "1:35:00" — one hour digit, and the day is gone`}
+  rightCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+import { formatGtfsTime } from "@northguild/gmt/rail/format";
+
+const late = parseGtfsTime("25:35:00");
+if (late !== null) formatGtfsTime(late);
+// "25:35:00"
+const early = parseGtfsTime("8:05:00");
+if (early !== null) formatGtfsTime(early);
+// "08:05:00"`}
+  rightSpecId="formatGtfsTime"
+/>
+
+## Spaces and the byte-order mark
+
+<Mistake
+  severity="medium"
+  title="Trimming inside the time reader"
+  description="GTFS asks that extra spaces be removed from a feed, and a value with a space in it is a dirty feed. A reader that trims quietly reads it, and the next tool in the chain gets the same dirty file. parseGtfsTime refuses the value, so the CSV reader that splits the row is the place to clean it."
+  wrongCode={`const cell = " 25:35:00";
+
+cell.trim();
+// "25:35:00" — read, and the dirty feed goes on unnoticed`}
+  rightCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+
+parseGtfsTime(" 25:35:00");
+// null
+parseGtfsTime("25:35:00");
+// { seconds: 5700, dayOverflow: 1 }`}
+  rightSpecId="parseGtfsTime"
+/>
+
+## Seconds since midnight
+
+<Mistake
+  severity="medium"
+  title="Adding the seconds to local midnight"
+  description="The days and seconds of a GTFS time are measured from noon minus 12 hours of the service day, which is midnight except on a day the clocks change. Adding them to local midnight is an hour out on that day. The record is what to keep; an instant needs the agency's zone, and gtfsToInstant, planned for a later release, does that."
+  wrongCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+
+const { dayOverflow, seconds } = parseGtfsTime("25:35:00");
+
+const midnight = new Date("2026-03-29T00:00:00"); // local midnight of the service day
+
+new Date(midnight.getTime() + (dayOverflow * 86400 + seconds) * 1000);
+// GTFS measures from noon minus 12 hours, so on a day the clocks change
+// this is an hour from the time the feed means`}
+  rightCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+
+// Keep the record. An instant needs the agency's zone and the service date,
+// which gtfsToInstant, planned for a later release, will take.
+parseGtfsTime("25:35:00");
+// { seconds: 5700, dayOverflow: 1 }`}
+  rightSpecId="parseGtfsTime"
+/>

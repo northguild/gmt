@@ -280,6 +280,7 @@ describe("industriesUsing", () => {
     expect(industriesUsing("transport", "calculate")).toEqual([
       "transport",
       "intermodal",
+      "rail",
     ]);
   });
 });

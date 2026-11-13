@@ -180,6 +180,7 @@ const PAGES = [
     slug: "tool-swift-value-date-reader",
     path: "/tools/swift-value-date-reader/",
   },
+  { slug: "tool-gtfs-time-reader", path: "/tools/gtfs-time-reader/" },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",

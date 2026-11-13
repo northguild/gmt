@@ -139,6 +139,11 @@ export const GMT_MODULES: Record<
   "span/calculate": () => import("@northguild/gmt/span/calculate"),
   "span/validate": () => import("@northguild/gmt/span/validate"),
 
+  // --- rail ---
+  "rail/format": () => import("@northguild/gmt/rail/format"),
+  "rail/parse": () => import("@northguild/gmt/rail/parse"),
+  "rail/validate": () => import("@northguild/gmt/rail/validate"),
+
   // --- recurrence ---
   "recurrence/calculate": () => import("@northguild/gmt/recurrence/calculate"),
   "recurrence/parse": () => import("@northguild/gmt/recurrence/parse"),
