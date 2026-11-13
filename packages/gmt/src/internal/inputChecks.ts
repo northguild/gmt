@@ -1,7 +1,7 @@
 import { Temporal } from "./temporal";
 import { isoStringBody } from "./isoStringBody";
 import { isRememberedZone, rememberZone } from "./validatedZones";
-import { hasSecond60 } from "../plain/validate/hasSecond60";
+import { leapSecond } from "../regex/leap-second";
 import {
   plainDate,
   plainDateTime,
@@ -12,6 +12,11 @@ import {
 } from "../regex";
 import { monthDayFrom, yearMonthFrom } from "./temporalCompat";
 import type { RollConvention } from "../types";
+import { nanosecondDecimal } from "../regex/nanoseconds";
+import {
+  isValidEpochNanoseconds,
+  MAX_EPOCH_NANOSECOND_DIGITS,
+} from "./epochNanoseconds";
 
 /** The cores of the `isValid*` functions, so a public function never calls another. */
 
@@ -59,61 +64,115 @@ export function isZoneId(timeZone: unknown): boolean {
 }
 
 /**
- * The check behind `isValidTime`: a plain ISO 8601 time of day.
+ * The check behind `hasSecond60`: whether the string has a second-60 field, the spelling
+ * Temporal would silently clamp to `:59`.
+ *
+ * @param value the candidate; a value that is not a string has no second field
+ * @returns whether the string has a second-60 field
+ *
+ * @example hasSecond60Field("2016-12-31T23:59:60Z") // true
+ * @example hasSecond60Field("2016-12-31T23:59:59Z") // false
+ */
+export function hasSecond60Field(value: unknown): boolean {
+  return typeof value === "string" && leapSecond.test(value);
+}
+
+/**
+ * The check behind `isValidTime`: the `PlainTime` a plain ISO 8601 time-of-day string names, or
+ * `null`.
+ *
+ * @param value the candidate; a value that is not a string is not a time
+ * @returns the `PlainTime` Temporal reads when it has the strict shape, else `null`
+ *
+ * @example plainTimeOf("17:00")?.hour // 17
+ * @example plainTimeOf("25:00") // null
+ * @example plainTimeOf(null) // null
+ */
+export function plainTimeOf(value: unknown): Temporal.PlainTime | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const body = isoStringBody(value);
+  if (hasSecond60Field(body) || !plainTime.test(body)) {
+    return null;
+  }
+  try {
+    return Temporal.PlainTime.from(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether `value` is a plain ISO 8601 time of day.
  *
  * @param value the candidate string
- * @returns whether Temporal reads it as a `PlainTime` and it has the strict shape
+ * @returns whether `plainTimeOf` reads it
  *
  * @example isTimeString("17:00") // true
  * @example isTimeString("25:00") // false
  */
 export function isTimeString(value: string): boolean {
+  return plainTimeOf(value) !== null;
+}
+
+/**
+ * The check behind `isValidDate`: the ISO calendar `PlainDate` a plain ISO 8601 date string
+ * names, or `null`.
+ *
+ * @param value the candidate; a value that is not a string is not a date
+ * @returns the `PlainDate` Temporal reads when it has the strict shape and the ISO calendar, else `null`
+ *
+ * @example plainDateOf("2024-02-29")?.day // 29
+ * @example plainDateOf("2024-02-30") // null
+ * @example plainDateOf(null) // null
+ */
+export function plainDateOf(value: unknown): Temporal.PlainDate | null {
+  if (typeof value !== "string") {
+    return null;
+  }
   const body = isoStringBody(value);
-  if (hasSecond60(body) || !plainTime.test(body)) {
-    return false;
+  if (hasSecond60Field(body) || !plainDate.test(body)) {
+    return null;
   }
   try {
-    Temporal.PlainTime.from(value);
-    return true;
+    const date = Temporal.PlainDate.from(value);
+    return date.calendarId === "iso8601" ? date : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 /**
- * The check behind `isValidDate`: a plain ISO 8601 calendar date.
+ * Whether `value` is a plain ISO 8601 calendar date.
  *
  * @param value the candidate string
- * @returns whether Temporal reads it as an ISO calendar `PlainDate` and it has the strict shape
+ * @returns whether `plainDateOf` reads it
  *
  * @example isDateString("2024-02-29") // true
  * @example isDateString("2024-02-30") // false
  */
 export function isDateString(value: string): boolean {
-  const body = isoStringBody(value);
-  if (hasSecond60(body) || !plainDate.test(body)) {
-    return false;
-  }
-  try {
-    return Temporal.PlainDate.from(value).calendarId === "iso8601";
-  } catch {
-    return false;
-  }
+  return plainDateOf(value) !== null;
 }
 
 /**
  * The check behind `isValidDateTime`: the ISO calendar `PlainDateTime` a plain ISO 8601
  * date-time string names, or `null`.
  *
- * @param value the candidate string
+ * @param value the candidate; a value that is not a string is not a date-time
  * @returns the `PlainDateTime` Temporal reads when it has the strict shape and the ISO calendar, else `null`
  *
  * @example plainDateTimeOf("2024-02-29T12:00")?.day // 29
  * @example plainDateTimeOf("2024-02-29T23:59:60") // null
+ * @example plainDateTimeOf(null) // null
  */
-export function plainDateTimeOf(value: string): Temporal.PlainDateTime | null {
+export function plainDateTimeOf(value: unknown): Temporal.PlainDateTime | null {
+  if (typeof value !== "string") {
+    return null;
+  }
   const body = isoStringBody(value);
-  if (hasSecond60(body) || !plainDateTime.test(body)) {
+  if (hasSecond60Field(body) || !plainDateTime.test(body)) {
     return null;
   }
   try {
@@ -122,6 +181,34 @@ export function plainDateTimeOf(value: string): Temporal.PlainDateTime | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * The check behind `isValidIsoDateLike`: whether `value` is an ISO calendar `PlainDate` or
+ * `PlainDateTime` string.
+ *
+ * @param value the candidate; a value that is not a string is not date-like
+ * @returns whether it is a strict ISO date or date-time in the ISO calendar
+ *
+ * @example isoDateLikeOf("2024-02-29") // true
+ * @example isoDateLikeOf("2024-02-29T12:34:56") // true
+ * @example isoDateLikeOf("2024-02-30") // false
+ */
+export function isoDateLikeOf(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const body = isoStringBody(value);
+  if (hasSecond60Field(body)) {
+    return false;
+  }
+  if (plainDate.test(body)) {
+    return plainDateOf(value) !== null;
+  }
+  if (plainDateTime.test(body)) {
+    return plainDateTimeOf(value) !== null;
+  }
+  return false;
 }
 
 /**
@@ -182,24 +269,37 @@ export function plainYearMonthOf(
 }
 
 /**
- * The check behind `isValidDuration`: an ISO 8601 duration string.
+ * The check behind `isValidDuration`: the `Duration` an ISO 8601 duration string names, or `null`.
+ *
+ * @param value the candidate; a value that is not a string is not a duration
+ * @returns the `Duration` Temporal reads, else `null`
+ *
+ * @example durationOf("P1DT2H")?.hours // 2
+ * @example durationOf("2 days") // null
+ * @example durationOf(null) // null
+ */
+export function durationOf(value: unknown): Temporal.Duration | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  try {
+    return Temporal.Duration.from(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether `value` is an ISO 8601 duration string.
  *
  * @param value the candidate
- * @returns whether it is a string Temporal reads as a `Duration`
+ * @returns whether `durationOf` reads it
  *
  * @example isDurationString("P1DT2H") // true
  * @example isDurationString("2 days") // false
  */
 export function isDurationString(value: unknown): boolean {
-  if (typeof value !== "string") {
-    return false;
-  }
-  try {
-    Temporal.Duration.from(value);
-    return true;
-  } catch {
-    return false;
-  }
+  return durationOf(value) !== null;
 }
 
 const ROLL_CONVENTIONS: readonly RollConvention[] = [
@@ -227,4 +327,29 @@ export function isRollConventionName(
     typeof convention === "string" &&
     ROLL_CONVENTIONS.includes(convention as RollConvention)
   );
+}
+
+/**
+ * The check behind `isValidNanoPattern`: a decimal integer string in the epoch-nanosecond range.
+ *
+ * @param value the candidate; a value that is not a string is not a nanosecond pattern
+ * @returns whether it is a nanosecond pattern in range
+ *
+ * @example isNanoPattern("1700000000000000000") // true
+ * @example isNanoPattern("1.5") // false
+ */
+export function isNanoPattern(value: unknown): boolean {
+  if (typeof value !== "string" || !nanosecondDecimal.test(value)) {
+    return false;
+  }
+
+  // Out of range by inspection once it is longer than MAX_EPOCH_NANOSECONDS, and stopping
+  // here keeps BigInt off an arbitrarily long payload string.
+  const digits = value.startsWith("-") ? value.length - 1 : value.length;
+
+  if (digits > MAX_EPOCH_NANOSECOND_DIGITS) {
+    return false;
+  }
+
+  return isValidEpochNanoseconds(BigInt(value));
 }

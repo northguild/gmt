@@ -67,3 +67,25 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   }
   return date.withCalendar(computationCalendarId(calendar));
 }
+
+/**
+ * The check behind `isValidCalendarDate`: the `PlainDate` `parseCalendarDateValue` reads, or
+ * `null` where it throws.
+ *
+ * @param value the candidate; a value that is not a non-empty string is not a calendar date
+ * @returns the `PlainDate` in the computation calendar, else `null`
+ *
+ * @example calendarDateOf("2024-10-03[u-ca=hebrew]")?.calendarId // "hebrew"
+ * @example calendarDateOf("2024-02-30") // null
+ * @example calendarDateOf(null) // null
+ */
+export function calendarDateOf(value: unknown): Temporal.PlainDate | null {
+  if (typeof value !== "string" || value.length === 0) {
+    return null;
+  }
+  try {
+    return parseCalendarDateValue(value);
+  } catch {
+    return null;
+  }
+}

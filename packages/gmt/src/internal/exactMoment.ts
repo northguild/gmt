@@ -1,12 +1,8 @@
 import { Temporal } from "./temporal";
-import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
 import { parseInstantNanoseconds } from "./instantNanoseconds";
 import { EXTENDED_UTC_OFFSET, TIME_ZONE_ANNOTATION } from "./isoStringBody";
 import { wallClockAtOffset } from "./wallClockAtOffset";
-import {
-  utcOffsetStringNanoseconds,
-  zonedDateTimeFrom,
-} from "./zonedWallClock";
+import { utcOffsetStringNanoseconds, zonedDateTimeOf } from "./zonedWallClock";
 
 /**
  * How an exact moment was written, so a result can be written the same way: in a named zone
@@ -69,8 +65,8 @@ export function readExactMoment(value: unknown): ExactMoment | null {
   }
 
   try {
-    if (isValidZonedDateTime(value)) {
-      const zoned = zonedDateTimeFrom(value);
+    const zoned = zonedDateTimeOf(value);
+    if (zoned !== null) {
       return {
         nanoseconds: zoned.epochNanoseconds,
         notation: { kind: "zone", timeZone: zoned.timeZoneId },

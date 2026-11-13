@@ -1,10 +1,8 @@
 import { type LocalesArgument, resolveLocale } from "./resolveLocale";
 import { twoDigitYear } from "./twoDigitYear";
 import { readYearWindowStart } from "./yearWindowStart";
-import { getLocaleEraNames } from "../plain/locale/getLocaleEraNames";
-import { getLocaleMeridiems } from "../plain/locale/getLocaleMeridiems";
+import { eraNamesFor, meridiemsFor, weekdayNamesFor } from "./localeNames";
 import { localeMonthNames } from "./localeMonthNames";
-import { getLocaleWeekdayNames } from "../plain/locale/getLocaleWeekdayNames";
 
 /**
  * Shared token-pattern engine for J11's `parse*WithPattern` family.
@@ -393,7 +391,7 @@ function compilePattern(
     }
 
     if (spec.kind === "weekdayShort" || spec.kind === "weekdayLong") {
-      const names = getLocaleWeekdayNames(
+      const names = weekdayNamesFor(
         locale,
         spec.kind === "weekdayLong" ? "long" : "short",
       );
@@ -409,7 +407,7 @@ function compilePattern(
     }
 
     if (spec.kind === "meridiem") {
-      const meridiems = getLocaleMeridiems(locale);
+      const meridiems = meridiemsFor(locale);
       if (meridiems.length !== 2) return null;
       regexPieces.push(`(?<${groupName}>${buildNameAlternation(meridiems)})`);
       tokens.push({
@@ -422,7 +420,7 @@ function compilePattern(
     }
 
     // era (eraShort | eraLong)
-    const eras = getLocaleEraNames(
+    const eras = eraNamesFor(
       locale,
       spec.kind === "eraLong" ? "long" : "short",
     );

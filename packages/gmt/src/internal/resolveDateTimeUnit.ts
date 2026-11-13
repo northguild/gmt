@@ -1,4 +1,4 @@
-import { isValidDateTimeUnit } from "../plain/validate/isValidDateTimeUnit";
+import { isDateTimeUnitName } from "./unitNames";
 
 /**
  * Normalize a date-time unit string to its singular form.
@@ -15,14 +15,14 @@ import { isValidDateTimeUnit } from "../plain/validate/isValidDateTimeUnit";
 export function resolveDateTimeUnit(unit: string): string;
 export function resolveDateTimeUnit(unit: unknown): unknown;
 export function resolveDateTimeUnit(unit: unknown): unknown {
-  if (typeof unit !== "string" || isValidDateTimeUnit(unit)) {
+  if (typeof unit !== "string" || isDateTimeUnitName(unit)) {
     return unit;
   }
 
   if (unit.endsWith("s")) {
     const singular = unit.slice(0, -1);
 
-    if (isValidDateTimeUnit(singular)) {
+    if (isDateTimeUnitName(singular)) {
       return singular;
     }
   }

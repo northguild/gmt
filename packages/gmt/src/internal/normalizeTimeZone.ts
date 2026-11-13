@@ -1,5 +1,5 @@
-import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
-import { isValidTimeZone } from "../zoned/validate";
+import { systemTimeZone } from "./resolveLocale";
+import { isZoneId } from "./inputChecks";
 
 /**
  * Resolve the `timeZone` option of the `unix/` and `utc/` functions that hand the zone to
@@ -9,7 +9,7 @@ import { isValidTimeZone } from "../zoned/validate";
  *
  * - Omitted (`undefined`) → `"UTC"`. A Unix epoch and a UTC string name an instant, so no host
  *   zone is read unless asked for.
- * - `"local"` → the system time zone (`getSystemTimeZone()`), or `""` when the host reports none
+ * - `"local"` → the system time zone (`systemTimeZone()`), or `""` when the host reports none
  *   that is valid.
  * - A valid IANA identifier or UTC offset (`"+05:30"`) → returned as-is.
  * - Anything else (`null`, `""`, a typo, a non-string) → `""`, the caller's cue to return its
@@ -27,11 +27,11 @@ import { isValidTimeZone } from "../zoned/validate";
 export function normalizeTimeZone(timeZone?: unknown): string {
   if (timeZone === undefined) return "UTC";
 
-  const resolved = timeZone === "local" ? getSystemTimeZone() : timeZone;
+  const resolved = timeZone === "local" ? systemTimeZone() : timeZone;
 
   return typeof resolved === "string" &&
     resolved.length > 0 &&
-    isValidTimeZone(resolved)
+    isZoneId(resolved)
     ? resolved
     : "";
 }

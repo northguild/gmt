@@ -1,3 +1,5 @@
+import { isZoneId } from "./inputChecks";
+
 /**
  * A locale argument: one BCP 47 tag, or a preference list of tags (ECMA-402 `locales`).
  */
@@ -66,4 +68,21 @@ export function resolveRequiredLocale(locales: unknown): string | null {
   if (locales === undefined) return null;
   if (Array.isArray(locales) && locales.length === 0) return null;
   return resolveLocale(locales);
+}
+
+/**
+ * The host's default time zone identifier, read fresh on every call because it depends on a
+ * process default and is never remembered.
+ *
+ * @returns the IANA name or offset the host reports, or `""` when it reports none or an invalid one
+ *
+ * @example systemTimeZone() // "Europe/Berlin"
+ */
+export function systemTimeZone(): string {
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return isZoneId(timeZone) ? timeZone : "";
+  } catch {
+    return "";
+  }
 }

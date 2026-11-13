@@ -1,5 +1,5 @@
 import type { Temporal } from "./temporal";
-import { hasSecond60 } from "../plain/validate/hasSecond60";
+import { hasSecond60Field } from "./inputChecks";
 import type { CalendarSystem, Disambiguation, Offset } from "../types";
 import {
   canonicalCalendarSystem,
@@ -31,7 +31,7 @@ import { zonedDateTimeFrom } from "./zonedWallClock";
  * - The result computes in `computationCalendarId(calendar)` (`"ethioaa"` for `"ethiopic"` and
  *   `"coptic"`), so callers that write a string back take the calendar from
  *   `calendarSystemOfZonedValue(value)`.
- * - `hasSecond60` runs first: `Temporal.ZonedDateTime.from("2024-06-30T23:59:60+00:00[UTC]")`
+ * - `hasSecond60Field` runs first: `Temporal.ZonedDateTime.from("2024-06-30T23:59:60+00:00[UTC]")`
  *   clamps to `:59` instead of throwing.
  *
  * @param value ISO zoned datetime string, optionally with RFC 9557 annotations after the zone
@@ -43,7 +43,7 @@ export function parseCalendarZonedValue(
   value: string,
   options?: { disambiguation?: Disambiguation; offset?: Offset },
 ): Temporal.ZonedDateTime {
-  if (hasSecond60(value)) {
+  if (hasSecond60Field(value)) {
     throw new RangeError(`Leap seconds are not supported: ${value}`);
   }
   if (!hasZonedDateTimeShape(value)) {
@@ -61,6 +61,29 @@ export function parseCalendarZonedValue(
     throw new RangeError(`Unsupported calendar: ${zoned.calendarId}`);
   }
   return zoned.withCalendar(computationCalendarId(calendar));
+}
+
+/**
+ * The check behind `isValidCalendarZonedDateTime`: the `ZonedDateTime` `parseCalendarZonedValue`
+ * reads, or `null` where it throws.
+ *
+ * @param value the candidate; a value that is not a non-empty string is not a zoned date-time
+ * @returns the `ZonedDateTime` in the computation calendar, else `null`
+ *
+ * @example calendarZonedOf("2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]")?.calendarId // "hebrew"
+ * @example calendarZonedOf("2024-02-24T14:30:00") // null
+ * @example calendarZonedOf(null) // null
+ */
+export function calendarZonedOf(value: unknown): Temporal.ZonedDateTime | null {
+  if (typeof value !== "string" || value.length === 0) {
+    return null;
+  }
+  try {
+    const zoned = parseCalendarZonedValue(value);
+    return zoned.timeZoneId.length > 0 ? zoned : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
