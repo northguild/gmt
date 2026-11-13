@@ -24,8 +24,9 @@ import type {
  * of the listed names.
  */
 
-// The names the checks below accept. `includes` compares with `===`, so a value that is not one of
-// these strings (a symbol, an object, `undefined`) is `false`.
+// The names the checks below accept. `includes` compares with SameValueZero; every entry is a
+// string, so that is `===` here, and a value that is not one of these strings (a symbol, an object,
+// `undefined`, `NaN`) is `false`.
 const DATE_UNITS: readonly string[] = ["year", "month", "week", "day"];
 const TIME_UNITS: readonly string[] = [
   "hour",
