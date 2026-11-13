@@ -131,7 +131,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 56  | CORE-105 | Core       | One file per workaround in<br>`zonedWallClockDifference.ts`                                              | —          | #437  | —       | Done        |
 | 57  | CORE-107 | Core       | A changelog page in Dox, and the<br>You-Dont-Need-Momentjs PR on `/upstream`                             | —          | #451  | —       | Done        |
 | 58  | CORE-110 | Core       | The weekly upgrade check compares<br>each calendar's years with native Temporal                          | —          | #468  | —       | Done        |
-| 59  | CORE-111 | Core       | Public functions call internal cores,<br>never another public function                                   | —          | #508  | —       | Not started |
+| 59  | CORE-111 | Core       | Public functions call internal cores,<br>never another public function                                   | —          | #508  | —       | Done        |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm
