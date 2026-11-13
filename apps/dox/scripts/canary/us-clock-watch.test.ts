@@ -23,7 +23,7 @@ import {
 } from "../../../../scripts/us-clock-watch.mjs";
 
 /**
- * CORE-90 slice 9: the US clock-change canary. Everything is offline: `fetch` is a fake that serves
+ * CORE-90: the US clock-change canary. Everything is offline: `fetch` is a fake that serves
  * hand-built responses shaped like the documented Congress.gov and Open States bodies and a trimmed
  * excerpt of the IANA tz source (fixtures/us-clock-watch). Each test works in its own temporary
  * root, removed in `afterEach`.

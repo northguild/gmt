@@ -13,7 +13,7 @@ name: US clock-change watch
 # comparison or exit code. Issues are filed only from main: a run on another branch lists what it
 # would have filed in the job summary and files nothing.
 #
-# Retirement (specs/CORE-90/index.md, Decisions 11 and 13): the tz part when the US clock-change
+# Retirement (context/domination/issues/CORE-90.md, Decisions): the tz part when the US clock-change
 # checker (CORE-90 phase 2) ships; the federal and state parts when the Proposals view's data is
 # removed or replaced.
 

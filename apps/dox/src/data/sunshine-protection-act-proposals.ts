@@ -203,7 +203,7 @@ export const STATES: readonly StateRow[] = [
     position: "standard-proposed",
     measure: "resolution",
     year: 2026,
-    note: "A resolution states the health case for standard time all year. Proposals to make it law passed neither chamber.",
+    note: "A resolution states the health case for standard time all year. Proposals to make it law passed neither chamber. In 2018 voters let the state change its daylight time by a two-thirds vote once federal law allows it, such as by keeping daylight time all year.",
     source: "ca-scr7",
   },
 ];

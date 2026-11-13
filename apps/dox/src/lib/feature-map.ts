@@ -17,9 +17,11 @@
  * pointer reaches them. On `"shapes"` the page shows its list only where no map is drawn (narrow,
  * or the file failed), and the section's `data-map` (`drawn` or `failed`) says which.
  *
- * **Below 520 px of section width the map is not drawn and its file is not fetched.** The list
- * stays, and the pin panel opens below it, scrolled into view when a reader pins. The data-credits
- * button belongs to the drawing, so it is added when the map is drawn and a narrow section has none.
+ * **The map is drawn at every width.** Below 520 px of section width the page also shows its list
+ * under the map, as the easy tap and keyboard path, and a pin made there brings the panel into
+ * view. The data-credits button belongs to the drawing, so it is added when the map is drawn. A
+ * label's type stays 12px, so on a small frame the permanent labels that would meet one of higher
+ * priority are hidden, and thinned again on every resize.
  *
  * Every timer, observer and listener is bound to the mount's `signal`, and `destroy()` aborts a
  * child of it. Nothing is drawn after an abort.
@@ -34,6 +36,8 @@ import {
 } from "./data-credits";
 import { enter } from "./enter";
 import {
+  clearLabels,
+  nudgeInto,
   LABEL_HEIGHT_PX,
   labelSize,
   poleOfInaccessibility,
@@ -50,7 +54,7 @@ import { roving } from "~/widgets/primitives/roving";
 
 /** The drawing's own coordinate box; the SVG scales to its container with `viewBox`. */
 export const MAP_WIDTH = 800;
-/** Below this width of the section the map is not drawn (CSS hides it at the same width). */
+/** Below this width of the section the list shows under the map (CSS switches at the same width). */
 export const NARROW_PX = 520;
 
 // ---------------------------------------------------------------------------
@@ -299,6 +303,8 @@ export function wireFeatureMap(
   let labelAnchor: (id: string) => readonly [number, number] | null = () =>
     null;
   const labels = new Map<string, HTMLElement>();
+  /** Thins the labels again when the frame or a label's text changes size (a font, an offset). */
+  let labelWatch: ResizeObserver | undefined;
   let observer: IntersectionObserver | undefined;
   let resolveReady: () => void = () => {};
   const ready = new Promise<void>((resolve) => {
@@ -426,8 +432,8 @@ export function wireFeatureMap(
     reveal(button);
     const shape = shapeOf(id);
     if (shapeStop && shape) shapeStop.set(shape as unknown as HTMLElement);
-    // Narrow, the panel opens below the list, which may be off screen: bring it into view when the
-    // reader pins (not when the page loads on a link).
+    // Narrow, the panel may sit below the list, off screen: bring it into view when the reader pins
+    // (not when the page loads on a link).
     if (user && measure() < NARROW_PX)
       panel?.scrollIntoView?.({ block: "nearest" });
     return true;
@@ -491,11 +497,74 @@ export function wireFeatureMap(
         label = makeLabel(id, at);
         labels.set(id, label);
         layer.append(label);
+        for (const part of label.children) labelWatch?.observe(part);
       }
       label.hidden = false;
       label.dataset["passing"] = String(!permanent.has(id));
     }
     for (const [id, label] of labels) if (!want.has(id)) label.hidden = true;
+    thinLabels();
+  }
+
+  /**
+   * On a frame too small for every label, hides the permanent ones that would meet a label of
+   * higher priority (the pinned and the hovered first, then `labelled` in its order) or cross the
+   * edge of their inset's card. A crowded label keeps its box (`visibility`), so the next measure
+   * still finds it. A label with no parts measures as no size, and so hides nothing.
+   */
+  function thinLabels(): void {
+    const order = [...new Set([pinnedId, hoverId, ...config.labelled])].flatMap(
+      (id) => {
+        const label = id === null ? undefined : labels.get(id);
+        return label && !label.hidden ? [label] : [];
+      },
+    );
+    const cards = [
+      ...(frame?.querySelectorAll<SVGElement>("[data-frame-ids]") ?? []),
+    ].map((card) => ({
+      ids: (card.dataset["frameIds"] ?? "").split(" "),
+      box: card.getBoundingClientRect(),
+    }));
+    // The text's own boxes, not the label's: the label reserves an upper bound of its width.
+    const shown = clearLabels(
+      order.map((label) => {
+        const parts = [...label.children].map((part) =>
+          part.getBoundingClientRect(),
+        );
+        const id = label.dataset["labelFor"] ?? "";
+        // Where the text sits with no nudge: the last one is taken back out.
+        const was = (name: string) =>
+          Number.parseFloat(label.style.getPropertyValue(name)) || 0;
+        const [px, py] = [was("--nx"), was("--ny")];
+        const box = {
+          left: Math.min(...parts.map((r) => r.left)) - px,
+          top: Math.min(...parts.map((r) => r.top)) - py,
+          right: Math.max(...parts.map((r) => r.right)) - px,
+          bottom: Math.max(...parts.map((r) => r.bottom)) - py,
+        };
+        const within = cards.find((card) => card.ids.includes(id))?.box;
+        // In an inset, the label is pushed inside its card when its text fits there.
+        const sized = box.right > box.left && box.bottom > box.top;
+        const { dx, dy } = (within && sized && nudgeInto(box, within)) || {
+          dx: 0,
+          dy: 0,
+        };
+        label.style.setProperty("--nx", `${dx}px`);
+        label.style.setProperty("--ny", `${dy}px`);
+        return {
+          left: box.left + dx,
+          top: box.top + dy,
+          right: box.right + dx,
+          bottom: box.bottom + dy,
+          within,
+        };
+      }),
+    );
+    order.forEach((label, i) => {
+      label.dataset["crowded"] = String(
+        !shown[i] && label.dataset["passing"] !== "true",
+      );
+    });
   }
 
   // --- the shapes ----------------------------------------------------------
@@ -674,6 +743,14 @@ export function wireFeatureMap(
       }
       return poles.get(id) ?? null;
     };
+    // The frame scales with the page while a label's type does not, and a label's text changes
+    // width when its face loads or its offset arrives: thin again on each.
+    if (typeof ResizeObserver === "function") {
+      const watch = new ResizeObserver(() => thinLabels());
+      watch.observe(layer ?? frame);
+      labelWatch = watch;
+      life.addEventListener("abort", () => watch.disconnect(), { once: true });
+    }
     refreshLabels();
     // The boundaries are the one third-party datum the map draws; the button sits on the drawing.
     watchDataCredits();
@@ -687,8 +764,9 @@ export function wireFeatureMap(
     if (pinnedId !== null) pin(pinnedId, false);
     // The site's arrival gesture, as the globe plays it. The stage keeps its own aspect-ratio box
     // and its sea fill, so only the drawing fades in; nothing around it moves. Last, so a pinned
-    // feature's panel is placed from the drawing at rest.
-    enter(svg, { signal: life });
+    // feature's panel is placed from the drawing at rest. The inset cards scale with the drawing
+    // while the labels do not, and a transform resizes nothing: thin again once it is at rest.
+    enter(svg, { signal: life, onEntered: () => thinLabels() });
   }
 
   /** One boundary file, or `null` when it is missing or not a collection. */
@@ -699,7 +777,7 @@ export function wireFeatureMap(
   }
 
   async function loadShapes(): Promise<void> {
-    if (drawn || fetching || life.aborted || measure() < NARROW_PX) return;
+    if (drawn || fetching || life.aborted) return;
     fetching = true;
     try {
       const [boundaries, overlay] = await Promise.all([
@@ -709,8 +787,7 @@ export function wireFeatureMap(
           : // A missing overlay is a missing decoration, never a missing map.
             fetchFile(config.overlayUrl).catch(() => null),
       ]);
-      if (boundaries && !life.aborted && measure() >= NARROW_PX)
-        drawShapes(boundaries, overlay);
+      if (boundaries && !life.aborted) drawShapes(boundaries, overlay);
       else if (!boundaries) section.dataset["map"] = "failed";
     } catch {
       // The list is the complete path; a missing map is not an error to show.
@@ -724,10 +801,6 @@ export function wireFeatureMap(
   // --- lazy load and resize ------------------------------------------------
   function arm(): void {
     if (drawn || fetching || life.aborted) return;
-    if (measure() < NARROW_PX) {
-      resolveReady();
-      return;
-    }
     if (typeof IntersectionObserver === "undefined") {
       void loadShapes();
       return;

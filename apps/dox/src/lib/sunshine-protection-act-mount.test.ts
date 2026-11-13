@@ -123,8 +123,11 @@ describe("the Sunshine Protection Act page", () => {
     await user.click(
       within(todayList()).getByRole("button", { name: /Phoenix/ }),
     );
-    expect(screen.getAllByText("Offset now").length).toBeGreaterThan(0);
-    expect(screen.getByText(/UTC-07:00|−07:00|-07:00/)).toBeVisible();
+    expect(screen.getAllByText("UTC offset").length).toBeGreaterThan(0);
+    // The pin's readouts are its definitions; the live clocks are list items, so only the pin counts.
+    expect(
+      screen.getAllByRole("definition").map((d) => d.textContent),
+    ).toContainEqual(expect.stringMatching(/UTC-07:00|−07:00|-07:00/));
     expect(
       within(todayList()).getByRole("button", { name: /Phoenix/ }),
     ).toBePressed();

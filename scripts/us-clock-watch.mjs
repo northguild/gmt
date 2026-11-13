@@ -32,7 +32,7 @@
  * `checkedAt` is read from a response `Date` header: the script reads no clock of its own.
  *
  * Node built-ins and `fetch` only: no install, no build. Never wired into `validate` or `ci.yml`.
- * Retirement (specs/CORE-90/index.md, Decisions 11 and 13): the tz part when the US clock-change
+ * Retirement (context/domination/issues/CORE-90.md, Decisions): the tz part when the US clock-change
  * checker (CORE-90 phase 2) ships; the federal and state parts when the Proposals view's data is
  * removed or replaced.
  */

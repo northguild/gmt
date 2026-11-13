@@ -310,15 +310,15 @@ describe("the data credits", () => {
 });
 
 describe("narrow screens", () => {
-  it("draws no map and never fetches the boundary file at 375 px", async () => {
+  it("draws the map and its credits at 375 px as well", async () => {
     const { deps, svg, frame, listButton, user } = await draw({
       measure: () => 375,
     });
-    expect(svg()).not.toBeInTheDocument();
+    expect(svg()).toBeInTheDocument();
     expect(
-      within(frame()).queryByRole("button", { name: "Data credits" }),
-    ).not.toBeInTheDocument();
-    expect(deps.fetch).not.toHaveBeenCalled();
+      within(frame()).getByRole("button", { name: "Data credits" }),
+    ).toBeInTheDocument();
+    expect(deps.fetch).toHaveBeenCalled();
     // The list still pins.
     await user.click(listButton("America/Toronto"));
     expect(listButton("America/Toronto")).toBePressed();

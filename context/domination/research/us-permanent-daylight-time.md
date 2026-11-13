@@ -253,6 +253,20 @@ daylight time in the tz data.
 - **SB 1197** (2025–26): held in Senate Appropriations, "Held in committee and under submission",
   on 14 May 2026. In the latest capture (13 July 2026) it had passed no chamber.
 
+- **Proposition 7** (November 2018), a measure the Legislature referred to the voters. It passed
+  on 6 November 2018, 7,167,315 (59.75%) to 4,828,564 (40.25%). The Legislative Analyst's
+  analysis: it "allows the Legislature with a two-thirds vote to change DST", "such as by remaining
+  on DST year-round", if the change is "allowed under federal law". It changes no clock by
+  itself: until the Legislature acts, California keeps the federal daylight period. So it is not a
+  law for daylight time all year and is not one of the 19 rows in §4.2, but it means the Legislature
+  needs no new vote of the people to act once federal law allows daylight time all year. That
+  bears on Oregon's row, which waits on California.
+  - Analysis: https://lao.ca.gov/BallotAnalysis/Proposition?number=7&year=2018
+  - Vote totals: the Secretary of State's Statement of Vote returns 403 to automated clients. The
+    totals above are the certified figures as given by Ballotpedia
+    (https://ballotpedia.org/California_Daylight_Saving_Time_Measure_(2018)) and the UC Law SF
+    ballot measure archive (https://repository.uclawsf.edu/ca_ballot_props/1373), which agree.
+
 leginfo returns 403 to automated clients, so these pages were read from Internet Archive captures:
 
 - http://web.archive.org/web/20260924203530/https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202520260SCR7

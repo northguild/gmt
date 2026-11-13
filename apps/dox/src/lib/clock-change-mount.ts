@@ -114,7 +114,7 @@ interface ChatMountOptions {
 
 /**
  * Mounts a checker in the chat rail. The rail is narrow, so the map's container query shows the
- * zone list; the list pins the same zone. The widget fetches the Worker's endpoint like the page
+ * zone list under the map; the list pins the same zone. The widget fetches the Worker's endpoint like the page
  * does and computes nothing itself. `?zone=` on the chat's URL is neither read nor written.
  *
  * The library load is awaited so a failed load rejects with `WidgetLoadError`, which the host

@@ -2,6 +2,8 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { resolve } from "node:path";
 import { type Browser, type Page } from "@playwright/test";
+import { STATES as STATES_DATA } from "../src/data/sunshine-protection-act-proposals";
+import stateNames from "../src/lib/us-state-names.json";
 import { computeSunshineActZones } from "../worker/sunshine-protection-act";
 import { launchBrowser } from "./lib/browser-launch.mjs";
 import { distDirOrSkip } from "./dist-dir";
@@ -10,10 +12,13 @@ import { serveStatic } from "./lib/static-server.mjs";
 /**
  * The Sunshine Protection Act page holds still. Pinning a zone or a state, switching between Today
  * and Proposals and the Worker's answer arriving must not move the pin panel, the legend, the list
- * card or the map's frame by more than 0.5 px, in either view, at 375 px (the list is the map),
- * 1024 px (the panel below the map) and 1440 px (the panel beside it). It also reads the layout the
- * owner asked for: the map's frame is wider than it is tall, the pin panel sits beside it from
- * 62rem of checker, and wherever the map is drawn there is no list: the map is the keyboard path.
+ * card or the map's frame by more than 0.5 px, in either view, at 375 px, 1024 px (the cards
+ * stacked) and 1440 px (the map, the list and the clocks in one row). It also reads the layout the
+ * owner asked for, as the Canada and Morocco checkers have it: the map is drawn at every width, its
+ * frame wider than it is tall; from 62rem of checker the map card, the list and Today's live clocks
+ * share one row of one height, with the pin panel across the full width under them; the view
+ * switch sits in the map card's heading; each clock's time and offset share a line; and no two
+ * shown map labels meet.
  */
 
 const dist = distDirOrSkip();
@@ -103,7 +108,7 @@ const snapshot = (page: Page): Promise<Box[]> =>
     for (const el of root.querySelectorAll<HTMLElement>(selector)) {
       if (el.closest("[hidden]") !== null) continue;
       const r = el.getBoundingClientRect();
-      // A box that is not drawn (the map's frame below 520 px) holds nothing.
+      // A box that is not drawn holds nothing.
       if (r.width === 0 && r.height === 0) continue;
       origin ??= r;
       boxes.push({
@@ -170,7 +175,7 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
   );
 
   it.each([900, 800])(
-    "puts the pin panel beside a full-width drawing, with no list, and pins from the keyboard on the map in both views at 1440 x %i",
+    "lays the map, the list and the clocks in one row over a full-width pin panel, the switch in the map card, and pins from the keyboard on the map in both views at 1440 x %i",
     async (height) => {
       if (browser === undefined || server === undefined) return;
       const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
@@ -196,27 +201,56 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
             const map = shown("[data-gate~='map-frame']");
             const block = map.closest<HTMLElement>("[data-gate~='map-block']")!;
             const drawing = map.getBoundingClientRect();
+            const section = shown(
+              "[data-gate~='us-section']",
+            ).getBoundingClientRect();
             const pin = shown("[data-gate~='us-pin']").getBoundingClientRect();
             const stage = shown(
               "[data-gate~='map-stage']",
             ).getBoundingClientRect();
+            const list = shown(
+              "[data-gate~='pickcard']",
+            ).getBoundingClientRect();
+            // Today's third column: the live clocks' card, the section's child that holds them.
+            const clocks = shown("[data-gate~='clock']")
+              ?.closest("[data-gate~='us-section'] > *")
+              ?.getBoundingClientRect();
+            const sameRow = (r: DOMRect) =>
+              Math.abs(r.top - stage.top) <= 1 &&
+              Math.abs(r.height - stage.height) <= 1;
             return {
-              listShown: shown("[data-gate~='pickcard']").getClientRects()
-                .length,
-              beside:
-                pin.left >= drawing.right && Math.abs(pin.top - stage.top) <= 1,
-              panel: pin.width,
+              row:
+                sameRow(list) &&
+                list.left >= stage.right &&
+                (clocks === undefined ||
+                  (sameRow(clocks) && clocks.left >= list.right)),
+              hasClocks: clocks !== undefined,
+              under: pin.top >= stage.bottom,
+              fullWidth: Math.abs(pin.width - section.width) <= 1,
+              switchInCard:
+                shown("[data-role='view-switch']")?.closest(
+                  "[data-gate~='map-block']",
+                ) !== null,
               map: drawing.width,
               block: block.getBoundingClientRect().width,
             };
           });
-          expect(layout.listShown, `${view}: the list is shown`).toBe(0);
-          expect(layout.beside, `${view}: the panel is beside the map`).toBe(
+          expect(layout.row, `${view}: map, list and clocks share a row`).toBe(
             true,
           );
-          expect(layout.panel, `${view} panel width`).toBeGreaterThanOrEqual(
-            320,
+          expect(layout.hasClocks, `${view}: the live clocks`).toBe(
+            view === "Today",
           );
+          expect(layout.under, `${view}: the panel is under the row`).toBe(
+            true,
+          );
+          expect(layout.fullWidth, `${view}: the panel spans the row`).toBe(
+            true,
+          );
+          expect(
+            layout.switchInCard,
+            `${view}: the switch is in the map card`,
+          ).toBe(true);
           expect(
             Math.abs(layout.map - layout.block),
             `${view} drawing width`,
@@ -281,6 +315,43 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
       await row.click({ timeout: 5000 });
       await settle(page);
       expect(await row.getAttribute("aria-pressed")).toBe("true");
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it("keeps the list as a path at 1440 while the boundary file loads, and for Midway and Wake once it is drawn", async () => {
+    if (browser === undefined || server === undefined) return;
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
+    const page = await browser.newPage({
+      viewport: { width: 1440, height: 900 },
+    });
+    try {
+      // Hold the boundary file back, as a stalled fetch would, until the list has been used.
+      let release = () => {};
+      const held = new Promise<void>((done) => (release = done));
+      await page.route("**/*-boundaries-us.json", async (route) => {
+        await held;
+        await route.continue();
+      });
+      await page.goto(`${base}/check/us-sunshine-protection-act/`);
+      const list = page.getByRole("region", {
+        name: "US time zones, scrollable list",
+      });
+      await list.waitFor({ state: "visible" });
+      const phoenix = list.getByRole("button", { name: /Phoenix/ });
+      await phoenix.click({ timeout: 5000 });
+      await settle(page);
+      expect(await phoenix.getAttribute("aria-pressed")).toBe("true");
+      // Midway and Wake have no shape in the boundary file: the list is their only path.
+      release();
+      await drawn(page);
+      for (const place of [/Midway/, /Wake/]) {
+        const row = list.getByRole("button", { name: place });
+        await row.click({ timeout: 5000 });
+        await settle(page);
+        expect(await row.getAttribute("aria-pressed")).toBe("true");
+      }
     } finally {
       await page.close();
     }
@@ -392,15 +463,19 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
       await page.getByText("Checking\u2026").waitFor({ state: "hidden" });
       await settle(page);
       await drawn(page);
-      // Flat fills only: the page has no <pattern> at all.
+      // Flat fills only: no shape is painted with a pattern. The svg carries the forced-colours
+      // marks, which only a forced palette puts on a shape.
       expect(
-        await page.evaluate(
-          () =>
-            document.querySelectorAll(
-              "[data-widget='sunshine-protection-act'] pattern",
-            ).length,
+        await page.evaluate(() =>
+          [
+            ...document.querySelectorAll(
+              "[data-widget='sunshine-protection-act'] path[data-feature-id]",
+            ),
+          ]
+            .map((el) => getComputedStyle(el).fill)
+            .filter((fill) => fill.startsWith("url(")),
         ),
-      ).toBe(0);
+      ).toEqual([]);
       // Gold is warm (red and green over blue), cyan is Canada's teal: blue and green over red,
       // in either order. Purple is blue and red over green. The fills are translucent over the
       // dark sea, so the margins are small.
@@ -764,19 +839,24 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
                   ids.includes(s.getAttribute("data-feature-id")!),
               )
               .map((s) => s.getBoundingClientRect());
-            // Each label of this card's places sits inside the card, whole.
+            // Each shown label of this card's places sits inside the card, whole: its text, not
+            // the room the label reserves for its longest offset.
             const labels = [
               ...root.querySelectorAll<HTMLElement>("[data-label-for]"),
             ]
               .filter(
                 (l) =>
-                  visible(l) && ids.includes(l.getAttribute("data-label-for")!),
+                  visible(l) &&
+                  getComputedStyle(l).visibility === "visible" &&
+                  ids.includes(l.getAttribute("data-label-for")!),
               )
               .map((l) => {
-                const b = l.getBoundingClientRect();
+                const parts = [...l.children].map((c) =>
+                  c.getBoundingClientRect(),
+                );
                 return {
-                  left: b.left,
-                  right: b.right,
+                  left: Math.min(...parts.map((r) => r.left)),
+                  right: Math.max(...parts.map((r) => r.right)),
                   text: l.textContent!.trim(),
                 };
               });
@@ -813,7 +893,7 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
             boxes,
             noteSize: size(note),
             legendSize: size(legend?.querySelector("li")),
-            map: { left: m.left, right: m.right },
+            map: { left: m.left, right: m.right, height: m.height },
             credits: {
               left: c.left,
               top: c.top,
@@ -869,11 +949,12 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
           expect(Math.abs(gap - gaps[0]!), `${view} gaps`).toBeLessThanOrEqual(
             1,
           );
+        // Each card is a quarter of the drawing's height, at any width of the map.
         for (const b of measured.boxes)
           expect(
-            b.bottom - b.top,
+            (b.bottom - b.top) / measured.map.height,
             `${view} card height`,
-          ).toBeGreaterThanOrEqual(140);
+          ).toBeGreaterThanOrEqual(0.25);
       }
     } finally {
       await page.close();
@@ -910,10 +991,9 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
         await settle(page);
         expectHeld(first, await snapshot(page), "after the answer");
 
-        // Below 520 px the pin panel is not drawn until the first pin, as on the checkers; the
-        // first pin is then the baseline. Wider, the panel holds its room from the first paint.
+        // The panel holds its room from the first paint at every width. Narrow, the list under the
+        // map is the easy tap path; wider, the map is, by its own keyboard path.
         const narrow = width < 520;
-        // Narrow, the list is the path; wider, the map is, by its own keyboard path.
         const pinFrom = async (list: string, name: RegExp) => {
           if (narrow) {
             await page
@@ -931,26 +1011,67 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
           await settle(page);
         };
         const ZONES = "US time zones, scrollable list";
-        let today = first;
-        let started = 0;
-        if (narrow) {
-          await pinFrom(ZONES, /Phoenix/);
-          today = await snapshot(page);
-          started = 1;
-        }
+        const today = first;
         for (const name of [
           /Phoenix/,
           /New_York|New York/,
           /Honolulu/,
           /Anchorage/,
-        ].slice(started)) {
+        ]) {
           await pinFrom(ZONES, name);
           expectHeld(today, await snapshot(page), `pin ${name}`);
         }
 
-        if (width >= 1024) {
-          // The owner's layout: a landscape frame, the pin panel beside it at 1440 and below it at
-          // 1024, where the checker is under 62rem.
+        // Every shown label's text keeps clear of every other's: a crowded one is hidden.
+        const meet = await page.evaluate(() => {
+          const boxes = [
+            ...document.querySelectorAll<HTMLElement>("[data-label-for]"),
+          ]
+            .filter(
+              (el) =>
+                el.closest("[hidden]") === null &&
+                getComputedStyle(el).visibility === "visible",
+            )
+            .map((el) => ({
+              id: el.dataset["labelFor"],
+              parts: [...el.children].map((c) => c.getBoundingClientRect()),
+            }));
+          const hit = (a: DOMRect, b: DOMRect) =>
+            a.left < b.right &&
+            b.left < a.right &&
+            a.top < b.bottom &&
+            b.top < a.bottom;
+          const pairs: string[] = [];
+          boxes.forEach((a, i) =>
+            boxes.slice(i + 1).forEach((b) => {
+              if (a.parts.some((p) => b.parts.some((q) => hit(p, q))))
+                pairs.push(`${a.id} / ${b.id}`);
+            }),
+          );
+          return pairs;
+        });
+        expect(meet, "labels that meet").toEqual([]);
+
+        // Each live clock's time and offset share one line.
+        const wrapped = await page.evaluate(() =>
+          [
+            ...document.querySelectorAll<HTMLElement>(
+              "[data-gate='clock-time']",
+            ),
+          ]
+            .filter((el) => el.children.length === 2)
+            .filter((el) => {
+              const [hm, off] = [...el.children].map((c) =>
+                c.getBoundingClientRect(),
+              );
+              return off!.top >= hm!.bottom - 1;
+            })
+            .map((el) => el.id),
+        );
+        expect(wrapped, "clocks whose offset wraps").toEqual([]);
+
+        {
+          // The owner's layout: a landscape frame at every width, the pin panel below it.
           const layout = await page.evaluate(() => {
             const rect = (selector: string) =>
               document
@@ -964,27 +1085,38 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
               frameWide: frame.width > frame.height,
               ratio: frame.width / frame.height,
               pinBelow: pin.top >= frame.bottom - 1,
-              pinBeside: pin.left >= frame.right,
             };
           });
           expect(layout.frameWide).toBe(true);
           expect(layout.ratio).toBeGreaterThan(1.1);
           expect(layout.ratio).toBeLessThan(1.6);
-          if (width >= 1440) expect(layout.pinBeside).toBe(true);
-          else expect(layout.pinBelow).toBe(true);
+          expect(layout.pinBelow).toBe(true);
         }
 
         // Switch to Proposals and pin states there: its own boxes hold across its own pins.
         await page.getByRole("radio", { name: "Proposals" }).click();
         await settle(page);
         const STATES = "US states and territories, scrollable list";
-        const states = [/Delaware/, /Idaho/, /Florida/, /Arizona/];
-        let proposals = await snapshot(page);
-        if (narrow) {
-          await pinFrom(STATES, states[0]!);
-          proposals = await snapshot(page);
-        }
-        for (const name of states.slice(narrow ? 1 : 0)) {
+        // The state with the longest note too: its readout must fit the room the panel holds.
+        const longest = STATES_DATA.reduce<{ postal: string; length: number }>(
+          (best, row) =>
+            "note" in row && row.note !== null && row.note.length > best.length
+              ? { postal: row.postal, length: row.note.length }
+              : best,
+          { postal: "", length: 0 },
+        );
+        const longName = (stateNames as Record<string, string>)[
+          longest.postal
+        ]!;
+        const states = [
+          /Delaware/,
+          /Idaho/,
+          /Florida/,
+          /Arizona/,
+          new RegExp(longName),
+        ];
+        const proposals = await snapshot(page);
+        for (const name of states) {
           await pinFrom(STATES, name);
           expectHeld(proposals, await snapshot(page), `pin ${name}`);
         }

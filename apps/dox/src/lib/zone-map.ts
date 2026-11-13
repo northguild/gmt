@@ -128,7 +128,7 @@ export interface ZoneMapConfig {
 
 /** The offset in force at `at`: the next change's offset once `at` has reached it. */
 export function offsetAt(
-  zone: MapZone,
+  zone: Pick<MapZone, "offset" | "next">,
   at: string,
   isBefore: (a: string, b: string) => boolean,
 ): string {

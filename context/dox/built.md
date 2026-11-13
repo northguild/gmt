@@ -54,6 +54,13 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   site holds no table of the library's rules and guesses no zone: a zone, an offset or a code's
   kind comes from the reader or from the library, never from a place name, a port, an abbreviation
   or a lookup the site keeps. A preset is an example, and it carries its zones as literal fields.
+- **One page-scoped exception to the naming rule.** The Sunshine Protection Act page
+  (`/check/us-sunshine-protection-act/`) may carry the name "Sunshine Protection Act" in its title,
+  sidebar label and slug, and in one neutral sentence saying proposals under that name have been
+  put forward in several sessions. Every other string on it, the data, the chat text, the canary
+  script and the tests name no law, bill, statute, docket or body, and the name sets no
+  precedent for another page. Citations live only in
+  `context/domination/research/us-permanent-daylight-time.md`.
 - **GMT tracks no law, and the UI names no body.** No statute, regulation, regulator, court,
   docket, carrier rule or jurisdiction label appears in a widget string, preset, chat doc, page or
   test name; examples are labelled by their numbers ("30-day windows", "a 14/14/45 contract").
@@ -1271,7 +1278,9 @@ number it did not measure.
   screenshots. A rect that moved more than 0.5 px fails the cell and drops its contrast findings,
   because they were measured on stale geometry. The message gives the largest shift.
 - `focus-obscured` names the cover, the scroller and the viewport. The `/dox/` scrollers set
-  `scroll-padding-block`, so focus lands clear of the sticky bars.
+  `scroll-padding-block`, so focus lands clear of the sticky bars. A drawn shape (an SVG
+  geometry element) is sampled at the point of its own fill nearest its box's centre, not at the
+  centre: a place made of islands, such as American Samoa, has open water there.
 - A load jump names the frame, the deepest resized element and the font state. Each widget
   reserves its size, or sits in `<gmt-grow>`, and the fallback font is metric-matched.
   - The Display Fallback face lists `local()` mono faces found on macOS, Windows and Linux
@@ -2239,21 +2248,44 @@ Shared hooks come first, then the globe, then the clock-change pages.
     - **The pin panel has one size.** Clock, offset, last and next change (`none in 2025 or 2026`
       style when `null`) and, for a `stopped` probe zone, the tzdb release; every row reserves
       its height, so pinning another zone moves nothing.
+    - **The pin head is one block** for the checkers and the US page: `pinHead()` in
+      `families/clockcheck/pin-head.ts`, with `pin-head.module.css`. It takes a name, a note (the
+      class) and an optional clock id. The block places the slots (`clock`, `name`, `note`, named
+      in the markup) and holds their lines; the page's class on each value sets only its type.
+      With a clock, the name sits beside the clock and the note runs across the panel under both
+      below 40rem (its longest text takes two to five lines beside the clock as the width changes,
+      three at most across from 320px); from 40rem the note sits beside the clock, under the name.
+    - **The US pin's readouts** (`usPin()` in `families/clockcheck/us-map.ts`) hold their room
+      two ways. A `row` or `wide` readout's text is made when it is pinned (a time, a date), so it
+      holds a count of lines. A `long` readout's texts are known ahead (Proposals' condition and
+      note): the type requires their `values`, and the readout stacks every one of them in its
+      value's cell, `aria-hidden` and `visibility: hidden` (`.usValue`, `.usHeld`). The cell is as
+      tall as the tallest text at every width, so no line count needs re-checking when a note
+      grows. The US browser test pins the state with the longest note.
     - **Probe script.** `CanadaProbeScript.astro`, last in the page, runs `probeInlineSource(canadaProbe("canada"))`
       once the table is parsed, so the verdict and the Yours column are final before first paint.
       `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
       The page lists it in `mdx-jsx.ts`'s dropped components.
-    - **Narrow fallback.** Below 520 px of section width (a container query in `families/clockcheck/zone-map.module.css`) the map and
-      legend are hidden, the boundary file is not fetched, and the panel stays below the list, outside its
-      scroll box, and scrolls into view when a reader pins.
+    - **The map is drawn at every width.** Below 520 px of section width (a container query in
+      `families/clockcheck/zone-map.module.css`) the list shows under the map as the easy tap path,
+      the panel stays below the list, outside its scroll box, and scrolls into view when a reader
+      pins. A label's type stays 12px at every width; on a frame too small for all of them,
+      `wireFeatureMap` hides (`data-crowded`, `visibility`) each permanent label whose box would
+      meet one of higher priority (the pinned and hovered first, then `labelled` in order). A
+      label inside an inset card is nudged by the least move that keeps it whole in the card
+      (`nudgeInto`, through `--nx`/`--ny`), and hidden when its text is wider or taller than the
+      card. Thinning runs again on every resize of the frame or of a label's text, and once the
+      drawing's entrance ends, because the entrance scales the cards but not the labels
+      (`clearLabels`, `lib/zone-map-labels.ts`). A legend row that can hide (Today's No data)
+      sits last with `data-spare` and keeps its room (`visibility`), so the answer moves nothing.
       Zone ids carry a `<wbr>` after each `/` and keep each segment on one line (so
       `Blanc-Sablon` never splits at its hyphen), and no `overflow-wrap: anywhere` on an id. The
       count follows the class words in one text run (`legendCount` in
       `families/clockcheck/zone-map.ts`; `lib/zone-map.ts` sets it). The file is fetched once, when the map nears the viewport.
     - **In the chat** (`mountCanadaClockChangeWidget`). The rail mounts the same markup with
       the same markup with ids namespaced by `idPrefix`; the map's data-credits button takes
-      `<idPrefix>-data-credits` (below). The rail is narrow, so the zone list is the map and there
-      is no credits button. The mount
+      `<idPrefix>-data-credits` (below). The rail draws the map too, with its credits button,
+      and the list under it. The mount
       awaits the library (a failed load rejects with `WidgetLoadError`), starts the Worker fetch
       without awaiting it, pins `zone` once the answer is drawn (an id not on the map leaves the
       widget unpinned), reads and writes no `?zone=` on the chat's URL, and ends every timer on
@@ -2460,12 +2492,45 @@ Shared hooks come first, then the globe, then the clock-change pages.
       `--zonemap-map-height` on the map section in the markup, so the box and the row's
       height are reserved before the drawing arrives. `markerMinPx` and `markers` draw a ring on a zone whose largest
       drawn part is smaller than the threshold (see the Morocco map below).
+    - `lib/feature-map.ts`: the map core, which `lib/zone-map.ts` configures. `wireFeatureMap` draws
+      one boundary file into an SVG and finds each shape by a key, `tzid` for time zones or `postal`
+      for US states (`featureKey`), so a checker and the Sunshine Protection Act page share one
+      drawing, hover, focus, pin, label-thinning and marker code. `MAP_WIDTH` is 800 and `NARROW_PX`
+      is 520. Its config adds the projection, the class of each feature, the labelled list,
+      `keyboard` (`"list"` or `"shapes"`), `toggle` and `markerMinPx`; `FeatureMapDeps` holds
+      `fetch` and `measure` for tests. The handle is `{pin, pinned, ready, destroy}`. `wireZoneMap`
+      is the checker's config over it (`featureKey: "tzid"`), so the checkers keep one call.
+      `lib/zone-map-labels.ts` holds the label helpers: `nudgeInto`, `clearLabels`,
+      `poleOfInaccessibility` and `cityOf`.
+    - `geoUsComposite` (`lib/us-projection.ts`): the composite equal-area projection of the United
+      States and its territories, with `frames()` and `labelPoints()` for the insets (see the
+      Sunshine Protection Act page).
+    - **Forced colours** (`forcedMarks` in `families/clockcheck/zone-map.ts`, the first
+      `forced-colors: active` block of `zone-map.module.css`). Chromium leaves an svg fill or stroke
+      as authored, so each class opts out and wears its swatch's mark in the system pair: solid
+      `CanvasText`, a hatch or dots from the svg's own `<pattern>` defs (named by the
+      `--zonemap-fc-*` properties on the svg), and a sparser hatch or dots for the lighter US steps.
+      The land is `Canvas` edged in `GrayText`, a solid shape is edged in `Canvas` so two solid
+      neighbours stay apart, and focus, hover and pin are `Highlight`.
+      `scripts/zone-map-forced-colors.browser.test.ts` holds the Canada, Morocco and both US views in
+      Chromium, in both system themes.
+    - `viewSwitch` (`families/clockcheck/zone-map.ts`): a radio group that swaps the classes one
+      map shows; `featureListParts` is the pick list over any feature key, and `zoneListParts`
+      is its time-zone form.
+    - `keyPoints(idPrefix, cards, heading = KEY_POINTS_HEADING)` (`families/clockcheck/key-points.ts`):
+      the heading is an argument, so a page whose cards are not the checkers' "Key points" names
+      its own.
     - `worker/clock-change-shared.ts`: `CheckEndpoint {prefix, policy, storedZones, compute}` and
       `handleClockChangeCheck`, which holds the method order, `HEAD`, `POST`, the caps and the
       `Allow: GET, HEAD, POST` answer. The rate-limit bucket is `<prefix>:<clientId>`.
     - `scripts/prepare-region-boundaries.py --region <name>`: one `REGIONS` row per region
       (zone.tab country codes or `"frame"`, `frame`, `land_frame`, `box`, `min_area`, `tolerance`
-      and the two files written); `oxfmt` formats the output.
+      and the two files written); `oxfmt` formats the output. The `us` row has `land_parts` (one
+      box per part of `geoUsComposite`, each with its own tolerance and smallest island) and a
+      `states` output: Natural Earth `ne_10m_admin_1_states_provinces` for the 50 states and DC,
+      `ne_10m_admin_0_countries` for the five territories, keyed by postal code, written to
+      `public/state-boundaries-us.json` with `lib/us-state-names.json` and a `count` of 56 that the
+      script checks.
     - **Coastlines.** The map draws Natural Earth land, not timezone-boundary-builder's shapes as
       they come, and the land around the zones.
       - **Zones are cut back to Natural Earth `ne_10m_land`** (`NE_TAG`, public domain), because
@@ -2608,6 +2673,139 @@ Shared hooks come first, then the globe, then the clock-change pages.
       markup with `renderMoroccoClockChangeWidgetTemplate(idPrefix)`; the zone must be in
       `morocco-region-zones.json`. Text surfaces get `keyPointsMarkdown(MOROCCO_KEY_POINTS)`, the
       servers, minimums and help markdown, and `MoroccoProbeScript` is dropped.
+  - **Sunshine Protection Act page** (`/check/us-sunshine-protection-act/`, widget kind
+    `sunshineact`, core): a map of the United States in two views, with evidence on how disruptive
+    a change would be below it. It is a tool, not a checker: it names no zone that would move and
+    no offset a change would give, because those come from a tz database release.
+    - **The name.** The title, the sidebar label and the slug use "Sunshine Protection Act", and
+      the opening paragraph's first sentence says proposals under that name have been put forward
+      in several sessions and that the page describes what they would change, not any one text.
+      That is the one place the name appears, and it is no precedent (see the binding rule). The
+      page's "Sources" link goes to `context/domination/research/us-permanent-daylight-time.md`,
+      the one file that cites law.
+    - **Files.** `content/docs/check/us-sunshine-protection-act.mdx` (a "Related" list links the
+      Canada and Morocco checkers, Stored Time Audit and the `hasDaylightSaving`,
+      `getDstTransitions` and `getTimeZoneOffset` reference pages, and each links back),
+      `components/SunshineProtectionAct.astro`, `lib/sunshine-protection-act-mount.ts` (page and chat
+      mount), `lib/us-projection.ts`, the Worker `worker/sunshine-protection-act.ts`, and the data
+      modules `data/sunshine-protection-act-proposals.ts` and
+      `data/sunshine-protection-act-guidance.ts`.
+    - **Two views, one map.** `viewSwitch` (a radio group: arrows change the view) swaps the
+      classes the one drawing shows.
+      - **Today:** every US zone as the tz database models it, drawn as `changes` ("Changes its
+        clocks twice a year", solid fill) or `standard-all-year` ("Same time all year", dots, for
+        Arizona outside the Navajo Nation, Hawaii and the territories). The Navajo Nation is a
+        hatched part, the `America/Denver` shape clipped to Arizona (`{feature: "America/Denver",
+        within: "AZ"}`), with an uncounted legend line. A third class, `no-data`, is the last legend
+        row (outline only): it counts a zone the Worker's answer does not list, keeps its room with
+        `spare: true` and is hidden at a count of 0, so the answer moves nothing. The words on the
+        pin and the list are "Still changes clocks", "Never changes clocks" and "No data".
+      - **Proposals:** each state's adopted position, dated, in five classes: `standard-all-year`
+        (dots, as in Today), `daylight-if-allowed` ("Daylight time all year if federal law
+        changes", diagonal hatch), `daylight-conditional` (the same, only if a condition is met,
+        cross-hatch), `standard-proposed` (horizontal lines) and `no-position` (outline only).
+        Counts come from the data, never typed. A text panel (`infoCard`, full border, bevel) gives
+        the national proposal's effects only. It is fetched with its boundary file only when the
+        view is first shown.
+      - **No colour on text, and no reuse of the checkers' "stopped" colour**, which means a dated
+        change happened. Marks use the family's palette tokens, with light and dark values on
+        `:root`. The classes are flat fills; patterns appear only under forced colours (see the map
+        kit's forced-colours rule).
+      - **The keyboard path** is the switch, then the map once (`keyboard: "shapes"`: arrows, Home,
+        End, Enter on the drawn shapes), then the feature list (a roving tab stop), then the
+        guidance links. `toggle: true` unpins on a second press.
+    - **The projection** (`lib/us-projection.ts`, `geoUsComposite`, modelled on d3-geo's
+      `albersUsa`, ISC). One conic equal-area projection per part (lower 48 on EPSG:5070, Alaska on
+      EPSG:3338, and one for each territory group), each clipped to its box, so no part draws in
+      another's frame. Equal-area, because the Proposals view is a choropleth. The lower 48 take
+      the top of the frame; the insets (Alaska, Hawaii, Puerto Rico and the Virgin Islands, Guam
+      and the Marianas, American Samoa) sit side by side in a strip beneath, each in its own card
+      (`frames()` gives them in drawing px for the page to outline, press and light). Samoa's card
+      has two panes, because Manu'a lies 100 km east of Tutuila and one zoom would halve both. A
+      band under the strip holds the data-credits button, and `US_LAYOUT_BOTTOM` and
+      `labelPoints()` keep each card's label band clear of the islands. Insets are not to scale,
+      and the caption says so, and that Midway, Wake and the Northern Mariana Islands north of
+      Saipan are listed but not drawn. Ten Today zones and five Proposals places carry permanent
+      labels.
+    - **The Today endpoint** (`GET /api/sunshine-protection-act`, `worker/sunshine-protection-act.ts`,
+      routed in `worker/index.ts`). It answers `{zones: WatchZone[]}`, one row per zone of
+      `us-region-zones.json` in that file's order, each `{zone, offset, observes, last, next}`,
+      computed with `hasDaylightSaving`, `getTimeZoneOffset` and `lastAndNext` (from
+      `clock-change-shared.ts`) at the request's instant. Other methods answer `405` with
+      `Allow: GET`. It is rate limited on its own key, `sunshine-protection-act`, with
+      `SUNSHINE_ACT_RATE_LIMIT` (20 a minute), and answers `Cache-Control: no-store`. The page
+      words the classes and "Next change" from the instant the Worker answered and reads no clock.
+    - **Boundary data.** `public/timezone-boundaries-us.json` (tbb 2026e, ODbL, cut back to Natural
+      Earth land), `public/state-boundaries-us.json` (Natural Earth 5.1.2 admin-1 for the 50 states
+      and DC and admin-0 for Puerto Rico, the Virgin Islands, Guam, the Northern Mariana Islands
+      and American Samoa: 56 shapes keyed by postal code), `lib/us-region-zones.json` (the zone
+      list) and `lib/us-state-names.json` (`{postal: name}`, for the chat). The credits button
+      carries `TZ_BOUNDARIES`, `COASTLINES` and `STATE_BOUNDARIES`.
+    - **The evidence module** (`data/sunshine-protection-act-proposals.ts`). `STATES` rows are a
+      union: `DaylightRow` (a `condition` string or `null`, and `waitsOn {need, among}` or `null`
+      when the state ties its switch to others), `StandardRow` (a `note`) and `TerritoryRow`; each
+      cites a `SourceId` (a section of the research file) and has a date. `NATIONAL.effects`
+      holds the national proposal's effects in four lines. `PROPOSALS_CHECKED` and `SESSION_ENDS`
+      are hand-edited dates, and `ageWords(today)` words the page's age: "checked N days ago", and
+      a note once the session has ended. `today` comes from `getToday()`, imported dynamically
+      after the template mounts so the polyfill stays off first paint. No test depends on the run
+      date. `STATE_CODES` (56 codes) is the list the Worker and the registry check a state
+      against. The freshness canary (`context/canary/overview.md`) opens issues when the sources
+      move; the module is still edited by hand.
+    - **The guidance** (`data/sunshine-protection-act-guidance.ts`, heading "If the clocks stop
+      changing"). It reaches `keyPoints(idPrefix, cards, heading)`; the heading is the new third
+      argument, defaulting to `KEY_POINTS_HEADING`. Health and safety statements cite international
+      bodies first, then the national peer; the sentence on states that tie their switch to others
+      is derived from the `waitsOn` rows and `us-state-names.json`. The page includes the key
+      points; the chat widget's template takes a `guidance` option and leaves them out.
+    - **Pin panels, one per view** (`usPin()` in `families/clockcheck/us-map.ts`, head from
+      `pinHead()`). Today: a clock beside the head, then time, offset, last and next change.
+      Proposals: the head shows the state and its class, then Condition (the row's `condition`,
+      or "None stated"), Note, and Adopted and As of (with `ageWords`); Arizona's pin adds that
+      the Navajo Nation keeps daylight time. A territory row shows "—" for what it does not have.
+    - **Readouts hold still.** Values use `font-variant-numeric: tabular-nums` and each holds its
+      height: a time or date readout holds a count of lines (one; Last and Next change hold two to
+      three), and Condition and Note hold the height of the tallest text each can show, at every
+      width, by stacking all of them hidden in the value's cell (`.usValue`, `.usHeld`; see the
+      US pin's readouts above). Paired readouts sit at opposite edges
+      (`justify-content: space-between`). Pinning, switching views or a Worker answer arriving
+      moves no card; `sunshine-protection-act-holds.browser.test.ts` measures it with bounding
+      boxes at 375, 1024 and 1440 px in Chromium and WebKit, pinning the state with the longest
+      note.
+    - **Widths.** From 62rem of checker, the map card, pick list and live clocks share one row, up
+      to 52rem tall (46% of the checker's width), with the clocks in one column and the pin
+      panel across the row below. Under 62rem the cards stack: map, list, clocks (16rem columns),
+      pin panel. The map is drawn at every width, 375 px included, and its height is reserved from
+      the projection's aspect before the file arrives. A label's type stays 12px; on a frame too
+      small for every label, a permanent label that would meet one of higher priority is hidden
+      until the frame grows, an inset's label is nudged to stay whole in its card and is hidden
+      when its text is wider than the card, and below 520 px of section width the pin panel's
+      readouts sit one to a line (the label rules are in the Canada checker's bullets, shared
+      through `wireFeatureMap`). The list shows at every width. Nothing scrolls sideways.
+    - **Lifetimes.** `mountSunshineProtectionAct` owns one `AbortController`, a child of its
+      `signal`: the Worker fetch, both boundary fetches, both `wireFeatureMap` handles, the switch
+      listener, the label `ResizeObserver`s and the clock tick end when it aborts, and
+      `destroy()` aborts it. The one timer is the live clocks' tick (`wireClocks`), which also ticks
+      the Today pin's clock and reads gmt's `getUtcNow` through `loadClockLib`. The handle is
+      `{setView, pin, state, ready, destroy}`.
+    - **In the chat** (`showUsSunshineProtectionAct({ view })`, widget kind `sunshineact`): `view`
+      is `{kind: "today", zone?}` or `{kind: "proposals", state?}`, a zone id from
+      `us-region-zones.json` or a two-letter code from `STATE_CODES`, never a place name. The
+      Worker's `execute` accepts `sunshine-protection-act` for a listed place or none, and rejects
+      any other with a sentence that says to call again without one. The registry's `validate`
+      checks the same lists. The permalink is
+      `/check/us-sunshine-protection-act/?w=sunshineact&wa={"view":{…}}`: its `view` is nested, so
+      `widget-permalink.ts` reads it with its own `sunshineSeed`; a `view` that is not one of the
+      two kinds, or a place over 64 characters, opens Today unpinned. The `CHAT_STARTERS` pill
+      ("Which US states want to stop changing their clocks, and which already have?") sits after
+      the first five, and the tool is in the load-error `MOUNTS` list and the `heavy` list of
+      `widget-graph.test.ts`.
+    - **Tests.** `sunshine-protection-act-wording.test.ts` scans the page, the data modules, the
+      chat text, the canary script and the tests for a law, bill or legislature name (title and
+      label lines excepted); the data, guidance, boundary, Worker, projection, feature-map and
+      mount tests sit beside their files; the holds test is the browser test above. The page is
+      a row of `PAGES` in `data-credits-check.mjs`, `html-diff.mjs`, `visual-snapshot.mjs` and
+      `grow-measure.mjs`.
   - **Stored Time Audit** (`/tools/stored-time-audit/`, `storedaudit`, core): a textarea of
     stored zoned strings (12 lines of 80 characters), a fixed table with one row per line (kind
     badge, readings as nowrap tokens) and a two-lane strip for the selected line, the zone's
@@ -4312,10 +4510,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
 - **Boundary data (`CORE-88`).** Three public files hold time-zone shapes, all from
   timezone-boundary-builder (tbb) and all derived from OpenStreetMap: `timezone-boundaries.json`
   (the 10 CI zones, 0.02°, 3 decimals), `timezone-boundaries-globe.json` (every zone, 0.2°) and
-  `timezone-boundaries-canada.json` (Canada, 0.08°, 3 decimals). The two region files (Canada,
-  Morocco) also carry Natural Earth land: `NE_TAG` in the script and in `data-credits.ts` is
+  `timezone-boundaries-canada.json` (Canada, 0.08°, 3 decimals). The region files (Canada,
+  Morocco, and the United States, `timezone-boundaries-us.json`) also carry Natural Earth land: `NE_TAG` in the script and in `data-credits.ts` is
   `v5.1.2`, `ne_10m_land` from `nvkelso/natural-earth-vector` (public domain), named in the
-  file's `landSource` member and credited as "Coastlines".
+  file's `landSource` member and credited as "Coastlines". The United States adds
+  `state-boundaries-us.json`: 56 state and territory shapes from Natural Earth 5.1.2 admin-1 and
+  admin-0 (public domain), keyed by postal code, credited as `STATE_BOUNDARIES`.
   - **One pinned release.** Every `prepare-*-boundaries.py` reads `releases/download/<TBB_TAG>/`
     (today `2026e`), never `releases/latest`, so each file names the release it came from.
     `TBB_TAG` in `src/lib/data-credits.ts` is the same tag; `scripts/boundary-data.test.ts` holds
@@ -4352,8 +4552,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
     the drawing, where the land and the zone dots do not reach. Credits: boundaries only.
     `TimezoneMap.astro` (`/why-gmt/`) renders it in its HTML, in the credited frame (`data-gate="credited-frame"`) beside the
     chart host (which the chart code empties); the zone map (`zone-map.ts`) adds it to
-    the zone map shell's frame (`zoneMapShell`, `families/zones/zone-map-shell.module.css`) when it draws the shapes, so a section narrower than 520 px, where no map is
-    drawn and no file is fetched, has no credit. The chat's `canadaclock` widget follows the same
+    the zone map shell's frame (`zoneMapShell`, `families/zones/zone-map-shell.module.css`) when it draws the shapes, at every width. The chat's `canadaclock` widget follows the same
     rule; the map frame's `data-credits-id` carries its `idPrefix`-based id.
   - **`aria-expanded` is kept by script.** WebKit's accessibility tree does not report a
     `popovertarget` button as expanded when its panel is open (a bare button and popover show it
@@ -4485,7 +4684,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS`; the Canada checker passes
   `canada:<clientId>` with `CANADA_RATE_LIMIT` (20 per 60 s, `src/lib/canada-clock-change.ts`), and
   the Morocco checker passes `morocco:<clientId>` with `MOROCCO_RATE_LIMIT` (same policy,
-  `src/lib/morocco-clock-change.ts`). The prefixes keep the counts apart: each checker has its
+  `src/lib/morocco-clock-change.ts`), and the Sunshine Protection Act endpoint passes
+  `sunshine-protection-act:<clientId>` with `SUNSHINE_ACT_RATE_LIMIT` (same policy,
+  `worker/sunshine-protection-act.ts`). The prefixes keep the counts apart: each checker has its
   own count, so one page cannot spend another's.
 - **`GET /gmt/api/canada-clock-change`** (`worker/canada-clock-change.ts`) computes the
   probe offsets, the 2026-2027 transitions and one row per Canadian zone at request time on
@@ -4739,6 +4940,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     `dbstamp`, and the Worker's `execute` is `accept("database-timestamp-reader")` after the problems
     check and the zone check. The registry's `validate` refuses an unknown form id and a zone the
     runtime cannot read.
+  - `showUsSunshineProtectionAct({ view })`: `view` is `{ kind: "today", zone? }` or
+    `{ kind: "proposals", state? }`; a `zone` is one id from `us-region-zones.json` and a `state` a
+    two-letter code from `STATE_CODES`, never a place name. The Worker's `execute` accepts a
+    listed place or none and rejects any other with a sentence that says to call again without
+    one; the registry's `validate` checks the same lists. The widget kind is `sunshineact`.
   - `showCcsdsTimeCodeDecoder({ code?, instant?, digits? })`: `code` and `instant` are strings of at
     most 64 characters, passed exactly as sent; `digits` is `"auto"` or `"0"` to `"9"`. The widget
     kind is `ccsds`, and the Worker's `execute` is `accept("ccsds-time-code-decoder")`.
@@ -4748,7 +4954,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
 - **Count:** `ENABLED_TOOL_NAMES` and `CHAT_STARTERS` hold the numbers, one starter card per tool;
   re-derive them from there, and never write a literal in a test or a page. The Leap Second
   Timeline, Elapsed vs. Clock Difference, Stored Time Audit, the Canada and Morocco clock-change
-  checkers, Cron in a Zone, the Duration Parser Bench, the three holiday tools, the ID Timestamp
+  checkers, the Sunshine Protection Act, Cron in a Zone, the Duration Parser Bench, the three holiday tools, the ID Timestamp
   Decoder, the Column Timestamp Bridge, the Leap-Day Birthday, the Expiry Calculator and the
   Database Timestamp Reader and TAI64N Log Reader are core.
 - **Parity:** `ENABLED_TOOL_NAMES` equals the widget registry's keys

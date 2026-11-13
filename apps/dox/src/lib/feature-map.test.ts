@@ -39,12 +39,12 @@ describe("wireFeatureMap, keyed by postal", () => {
     await expectNoAxeViolations(document.body);
   });
 
-  it("draws nothing and fetches nothing below 520 px, and keeps the list", async () => {
+  it("draws the map below 520 px as well, beside the list", async () => {
     const deps = featureDeps({ measure: () => 400 });
     const { handle } = drawFeatureMap(featureConfig(), deps);
     await handle.ready;
-    expect(deps.fetch).not.toHaveBeenCalled();
-    expect(map()).toBeNull();
+    expect(deps.fetch).toHaveBeenCalled();
+    expect(map()).not.toBeNull();
     expect(within(list()).getAllByRole("button")).toHaveLength(2);
   });
 

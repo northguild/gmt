@@ -89,14 +89,16 @@
 
 .hm {
   color: var(--gmt-cyan-bright);
-  font-size: 1.25rem;
+
+  /* A card that holds the clocks may set a step down (zone-map.module.css, the US page's column). */
+  font-size: var(--gmt-clock-hm-size, 1.25rem);
   letter-spacing: 0.04em;
   line-height: 1.75rem;
 }
 
 .off {
   color: var(--gmt-ice-dim);
-  font-size: 0.8125rem;
+  font-size: var(--gmt-clock-off-size, 0.8125rem);
 }
 
 /* In a card under 16rem (the nearest container: beside the map) a smaller face, a tighter gap and one step down on the

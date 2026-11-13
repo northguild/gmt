@@ -1,0 +1,71 @@
+/* The head of a pin panel: the pinned place's name over a note (its class), with a crystal clock
+   beside them when the page has one. The block places its three slots and holds their lines; the
+   page's own classes on each value set only the type, so pinning moves nothing. */
+
+.head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "name"
+    "note";
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  align-items: center;
+  min-inline-size: 0;
+}
+
+/* Below 40rem the note runs under the clock and the name, across the panel: beside the clock its
+   longest text (a stated change moment) takes two to five lines as the width changes, so no
+   reserved height would hold. Across the panel it takes at most three from 320px. */
+.headClock {
+  grid-template-columns: 5rem minmax(0, 1fr);
+  grid-template-areas:
+    "clock name"
+    "note note";
+}
+
+.clock {
+  grid-area: clock;
+  inline-size: 5rem;
+  block-size: 5rem;
+}
+
+.name {
+  grid-area: name;
+}
+
+.note {
+  grid-area: note;
+}
+
+.name,
+.note {
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.value {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.nameValue {
+  min-block-size: 2.8em;
+}
+
+.noteValue {
+  min-block-size: 4.2em;
+}
+
+/* From 40rem the note sits beside the clock, under the name; the readouts beside the head are the
+   taller column, so two held lines are enough. */
+@container gmt-clockcheck (min-width: 40rem) {
+  .headClock {
+    grid-template-areas:
+      "clock name"
+      "clock note";
+  }
+
+  .noteValue {
+    min-block-size: 2.8em;
+  }
+}

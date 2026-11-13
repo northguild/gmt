@@ -17,6 +17,7 @@ import { gateAttr } from "../../builders/gate";
 import { html, type HtmlValue, type SafeHtml } from "../../builders/html";
 import { idScope } from "../../builders/ids";
 import { noSignal, zoneId } from "./marks";
+import { pinHead } from "./pin-head";
 import styles from "./zone-map.module.css";
 
 /** What the pin panel says before a zone is pinned. */
@@ -157,35 +158,35 @@ const PIN_FIELDS = [
 export type PinField = (typeof PIN_FIELDS)[number];
 
 /**
- * The pin panel: the clock beside the zone and its class, and five readouts. One announcement says
+ * The pin panel: the clock beside the zone, the zone's class (beside the clock from 40rem, under
+ * it across the panel below), and five readouts. One announcement says
  * the pin (a polite status); the ticking time is plain text outside any live region.
  */
 function pinPanel(idPrefix: string): SafeHtml {
   const id = idScope(`${idPrefix}-pin`);
-  const title = (
-    field: PinField,
-    label: string,
-    text: HtmlValue,
-    className: string,
-    gate: string,
-  ) =>
-    html`<div class="${styles.pinTitleRow}">
-      <dt class="gmt-sr-only">${label}</dt>
-      <dd id="${id(field)}" class="${className}" ${gateAttr(gate)}>${text}</dd>
-    </div>`;
   const row = (field: PinField, label: string, wide = false) =>
     html`<div class="${wide ? styles.pinRowWide : styles.pinRow}">
       <dt>${label}</dt>
       <dd id="${id(field)}" ${gateAttr("pin-cell")}>${EMPTY}</dd>
     </div>`;
   return html`<p class="gmt-sr-only" id="${id("announce")}" role="status"></p>
-    <div class="${styles.pinHead}">
-      <div class="${styles.pinClock}" id="${id("clock")}" aria-hidden="true"></div>
-      <dl class="${styles.pinTitle}">
-        ${title("zone", "Zone", PIN_PLACEHOLDER, styles.pinZone, "pin-cell pin-zone")}
-        ${title("class", "Class", EMPTY, styles.pinClass, "pin-cell")}
-      </dl>
-    </div>
+    ${pinHead({
+      clockId: id("clock"),
+      name: {
+        label: "Zone",
+        id: id("zone"),
+        className: styles.pinZone,
+        gate: "pin-cell pin-zone",
+        content: PIN_PLACEHOLDER,
+      },
+      note: {
+        label: "Class",
+        id: id("class"),
+        className: styles.pinClass,
+        gate: "pin-cell",
+        content: EMPTY,
+      },
+    })}
     <dl class="${styles.pinRows}">
       ${row("time", "Local time")} ${row("offset", "UTC offset")}
       ${row("last", "Last change", true)} ${row("next", "Next change", true)}
@@ -342,6 +343,34 @@ export function framePath(
   return `M${f(x0 + c)} ${f(y0)} H${f(x1 - c)} L${f(x1)} ${f(y0 + c)} V${f(y1 - c)} L${f(x1 - c)} ${f(y1)} H${f(x0 + c)} L${f(x0)} ${f(y1 - c)} V${f(y0 + c)} Z`;
 }
 
+/** The marks a class wears under forced colours, as its legend swatch does. */
+const FORCED_MARKS = ["hatch", "hatch-sparse", "dots", "dots-sparse"] as const;
+type ForcedMark = (typeof FORCED_MARKS)[number];
+
+/**
+ * Forced colours repaint a map in two system colours, so a class keeps its legend swatch's mark
+ * there: dense or sparse hatch, dense or sparse dots, in CanvasText on Canvas. The tiles are in
+ * the drawing's own units (`MAP_WIDTH` is 800), so a tile is about 5 CSS px with the map at its
+ * widest. Only the forced-colours rules in `zone-map.module.css` paint with them, through the
+ * `--zonemap-fc-*` properties the svg sets.
+ */
+function forcedMarks(id: (name: ForcedMark) => string): SafeHtml {
+  const hatch = (name: ForcedMark, size: number, line: number) =>
+    html`<pattern id="${id(name)}" width="${size}" height="${size}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect class="${styles.markGround}" width="${size}" height="${size}"></rect>
+      <rect class="${styles.markInk}" width="${line}" height="${size}"></rect>
+    </pattern>`;
+  const dots = (name: ForcedMark, size: number, r: number) =>
+    html`<pattern id="${id(name)}" width="${size}" height="${size}" patternUnits="userSpaceOnUse">
+      <rect class="${styles.markGround}" width="${size}" height="${size}"></rect>
+      <circle class="${styles.markInk}" cx="${size / 2}" cy="${size / 2}" r="${r}"></circle>
+    </pattern>`;
+  return html`<defs aria-hidden="true">
+    ${hatch("hatch", 7, 2)} ${hatch("hatch-sparse", 11, 1.4)}
+    ${dots("dots", 7, 1.7)} ${dots("dots-sparse", 11, 1.2)}
+  </defs>`;
+}
+
 const ring = (kind: "hover" | "pin"): SafeHtml =>
   html`<g class="${styles.ring}" data-ring="${kind}" aria-hidden="true" visibility="hidden">
     <path class="${styles.ringCasing}"></path>
@@ -354,6 +383,7 @@ const ring = (kind: "hover" | "pin"): SafeHtml =>
  * top. The zone list is the keyboard path.
  */
 export function mapDrawing(options: MapDrawingOptions): SafeHtml {
+  const mark = (name: ForcedMark) => `${options.id}-fc-${name}`;
   return html`<svg
     class="${styles.svg}"
     id="${options.id}"
@@ -362,7 +392,9 @@ export function mapDrawing(options: MapDrawingOptions): SafeHtml {
     role="group"
     aria-label="${options.label}"
     focusable="false"
+    style="${FORCED_MARKS.map((name) => `--zonemap-fc-${name}: url(#${mark(name)})`).join("; ")}"
   >
+    ${forcedMarks(mark)}
     ${options.land.map(
       (d) =>
         html`<path class="${styles.land}" d="${d}" aria-hidden="true"></path>`,

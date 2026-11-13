@@ -126,7 +126,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 51  | RAI-99   | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`, `isValidGtfsTime`                               | —          | #407  | —       | Done        |
 | 52  | RAI-100  | Rail       | GTFS times to instants: `gtfsToInstant`                                                                  | —          | #408  | —       | Not started |
 | 53  | IOT-101  | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                                               | —          | #409  | —       | Not started |
-| 54  | CORE-90  | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law                                 | —          | #341  | —       | In progress |
+| 54  | CORE-90  | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law                                 | —          | #341  | —       | Waiting     |
 | 55  | CORE-92  | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                                        | —          | #386  | —       | Done        |
 | 56  | CORE-105 | Core       | One file per workaround in<br>`zonedWallClockDifference.ts`                                              | —          | #437  | —       | Done        |
 | 57  | CORE-107 | Core       | A changelog page in Dox, and the<br>You-Dont-Need-Momentjs PR on `/upstream`                             | —          | #451  | —       | Done        |
@@ -167,7 +167,9 @@ adds the Canada 2026 clock-change checker to Dox; it follows `CORE-83`, whose `c
 (identifiers, which no story consumes), `CORE-54` (holiday rules), `CORE-84` (recurrence and
 cron, whose ordinal `BYDAY` is `CORE-54`'s first use) and `CORE-85` (human durations) are the
 second release. Every story after them can draw on all eight. `CORE-90`, a United States checker,
-waits at the end of the table until permanent daylight time is law and a tzdb release models it.
+waits at the end of the table: phase 1 (the Sunshine Protection Act page and the US clock-change
+watch) has shipped, and the watch's tz issue, raised when a tz release models the change, starts
+phase 2.
 `CORE-91`, which leaves only the past tense on the Canada checker now that 1 November 2026 has
 passed, is done.
 `CORE-79` (`Position`), `CORE-102` (month-day and year-month values) and `CORE-103` (the core

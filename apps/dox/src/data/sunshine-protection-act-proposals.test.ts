@@ -85,6 +85,13 @@ describe("STATES", () => {
     }
   });
 
+  it("tells a reader on California's pin that its voters already cleared the way for daylight time all year", () => {
+    const ca = STATES.find((row) => row.postal === "CA");
+    expect(ca && "note" in ca ? ca.note : null).toMatch(
+      /2018 voters .* two-thirds vote once federal law allows it/,
+    );
+  });
+
   it("gives a state a condition and a list of states it waits on together, except Tennessee", () => {
     for (const row of STATES) {
       if (row.kind !== "adopted" || row.position !== "daylight-if-allowed")

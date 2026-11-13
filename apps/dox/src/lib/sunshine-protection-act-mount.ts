@@ -1,17 +1,19 @@
 /**
- * The Sunshine Protection Act page's widget (CORE-90): a map of the US time zones as the tz data
- * has them today, and a second view of each state's adopted position on ending the clock changes,
- * with a panel of what the national proposal would do and the guidance cards below.
+ * The Sunshine Protection Act page's widget (CORE-90), laid out as the clock-change checkers are:
+ * the key points beside a panel of what the national proposal would do, then a map of the US time
+ * zones as the tz data has them today, and a second view of each state's adopted position on
+ * ending the clock changes.
  *
  * Today's classes come from one `GET /gmt/api/sunshine-protection-act` answer, computed on the
- * Worker with the library, so every reader sees the same map. The Proposals view is data
- * (`data/sunshine-protection-act-proposals.ts`), dated and read in effects only. The page starts no
- * timers: "Next change" is worded from the instant the Worker answered.
+ * Worker with the library, so every reader sees the same map. Today's live clocks and the pinned
+ * place's clock read the client's now from the library (`getUtcNow`) at the offset the Worker gave
+ * each zone, switching to the next offset once the next change has passed. The Proposals view is
+ * data (`data/sunshine-protection-act-proposals.ts`), dated and read in effects only.
  *
  * `renderSunshineProtectionActTemplate()` is pure markup, so the server writes every list, panel
- * and card and nothing grows when the answer arrives. The chat's copy leaves out the guidance
- * cards. The maps are drawn by `wireFeatureMap`; the Proposals map is fetched only when its view is
- * first shown. The map takes the full width of the page (`widgets/families/clockcheck/us-map.ts`).
+ * and card and nothing grows when the answer arrives. The chat's copy leaves out the key points.
+ * The maps are drawn by `wireFeatureMap`; the Proposals map is fetched only when its view is first
+ * shown. The map's section is the checkers' (`widgets/families/clockcheck/us-map.ts`).
  */
 import {
   US_GUIDANCE,
@@ -27,8 +29,18 @@ import {
   longDate,
   type StateRow,
 } from "../data/sunshine-protection-act-proposals";
-import { changeText, cityOf, signedOffset } from "./clock-change-common";
-import { ask } from "./clock-change-mount";
+import { wireClocks } from "./clock-change-clocks";
+import {
+  SIGNAL_LOST,
+  changeText,
+  cityOf,
+  msToNextSecond,
+  signedOffset,
+  wallHms,
+} from "./clock-change-common";
+import { ask, loadClockLib, type ClockLib } from "./clock-change-mount";
+import { spokenOffset } from "./crossing-clock";
+import { updateCrystalClock } from "./crystal-clock";
 import { COASTLINES, STATE_BOUNDARIES, TZ_BOUNDARIES } from "./data-credits";
 import {
   MAP_WIDTH,
@@ -51,7 +63,7 @@ import {
   showUnavailable,
   type MountFn,
 } from "./widget-mount";
-import { offsetWords } from "./zone-map";
+import { offsetAt, offsetWords } from "./zone-map";
 import type {
   SunshineActZones,
   WatchZone,
@@ -65,11 +77,17 @@ import {
   type FoundWidget,
   type SafeHtml,
 } from "~/widgets/builders";
+import { clocksCard } from "~/widgets/families/clockcheck/clocks-card";
 import { infoCard } from "~/widgets/families/clockcheck/info-card";
 import { keyPoints } from "~/widgets/families/clockcheck/key-points";
-import { stack } from "~/widgets/families/clockcheck/stack";
+import {
+  CLOCK_PARTS,
+  clockNoSignal,
+} from "~/widgets/families/clockcheck/clocks";
+import { row, stack } from "~/widgets/families/clockcheck/stack";
 import {
   usLegend,
+  usSide,
   usStatus,
   usView,
   usViews,
@@ -143,6 +161,19 @@ const NAMES = stateNames as Readonly<Record<string, string>>;
 const rowOf = (postal: string): StateRow | undefined =>
   STATES.find((row) => row.postal === postal);
 
+/** The condition readout of a daylight row that states none. */
+const NONE_STATED = "None stated";
+/** Every condition and note the Proposals pin can show: their readouts hold the tallest. */
+const CONDITIONS: readonly string[] = [
+  ...STATES.flatMap((row) =>
+    "condition" in row && row.condition !== null ? [row.condition] : [],
+  ),
+  NONE_STATED,
+];
+const NOTES: readonly string[] = STATES.flatMap((row) =>
+  "note" in row && row.note !== null ? [row.note] : [],
+);
+
 export function proposalKind(postal: string): ProposalKind {
   const row = rowOf(postal);
   if (row === undefined) return "no-position";
@@ -169,6 +200,20 @@ const nationalAge = (today: string | null): string => {
       : `${longDate(PROPOSALS_CHECKED)}, ${ageWords(today)}`;
   return `Last checked on ${line}${line.endsWith(".") ? "" : "."}`;
 };
+
+/** The places Today labels on its map, each with a live clock. */
+const LABELLED_ZONES: readonly string[] = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Phoenix",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Puerto_Rico",
+  "Pacific/Guam",
+  "Pacific/Pago_Pago",
+];
 
 const TODAY_PLACEHOLDER = "Press a place to pin it.";
 const PROPOSALS_PLACEHOLDER = "Press a state to pin it.";
@@ -206,10 +251,28 @@ const proposalItems = (): UsListItem[] =>
       };
     });
 
+/**
+ * The view switch beside each view's map heading. Each view draws its own (the one not shown is
+ * hidden with its view), and the mount keeps them in step.
+ */
+const switcher = (scope: string, shown: SunshineActView): SafeHtml =>
+  viewSwitch({
+    id: `${scope}-switch`,
+    legend: "Show",
+    options: [
+      { value: "today", label: "Today", checked: shown === "today" },
+      {
+        value: "proposals",
+        label: "Proposals",
+        checked: shown === "proposals",
+      },
+    ],
+  });
+
 export interface SunshineActTemplateOptions {
   /** Namespaces every id, so the chat's copy cannot collide with a page's. */
   idPrefix?: string;
-  /** Draws the guidance cards below the views. The page does; the chat rail does not. */
+  /** Draws the key points beside the national card. The page does; the chat rail does not. */
   guidance?: boolean;
 }
 
@@ -229,45 +292,53 @@ export function renderSunshineProtectionActTemplate({
       scope: idPrefix,
     },
     stack(
-      html`${viewSwitch({
-        id: `${idPrefix}-view`,
-        legend: "Show",
-        options: [
-          { value: "today", label: "Today", checked: true },
-          { value: "proposals", label: "Proposals" },
-        ],
-      })}${usStatus(`${idPrefix}-status`)}${usViews([
+      html`${usViews([
         {
           id: `${idPrefix}-today-view`,
           hidden: false,
           body: usView({
             scope: today,
             mapTitle: "US time zones today",
+            switcher: switcher(today, "today"),
+            status: usStatus(`${idPrefix}-status`),
             pickTitle: "Pick a time zone",
-            hint: "Each zone is in one class. Press a zone to pin its offset and its last and next change.",
+            hint: "Each zone is in one class. Press a zone, on the map or in the list, to pin its clock and its last and next change.",
             listLabel: "US time zones, scrollable list",
             items: todayItems(),
             mapHeight: MAP_HEIGHT,
             legend: usLegend(today, [
-              ...TODAY_ORDER.map((kind) => ({
-                kind,
-                text: TODAY_WORDS[kind],
-                count: null,
-              })),
+              ...TODAY_ORDER.filter((kind) => kind !== "no-data").map(
+                (kind) => ({ kind, text: TODAY_WORDS[kind], count: null }),
+              ),
               {
                 kind: "navajo",
                 text: "Navajo Nation, in Arizona: still changes clocks",
                 count: null,
                 uncounted: true,
               },
+              // Last, and it keeps its room when hidden: the answer moves nothing.
+              {
+                kind: "no-data",
+                text: TODAY_WORDS["no-data"],
+                count: null,
+                spare: true,
+              },
             ]),
             caption,
+            aside: clocksCard({
+              idPrefix: today,
+              zones: LABELLED_ZONES,
+              stopped: null,
+              hint: "The time now in each labelled place.",
+            }),
             pin: {
               nameLabel: "Place",
               placeholder: TODAY_PLACEHOLDER,
               startKind: "no-data",
+              clock: true,
               fields: [
-                { key: "offset", label: "Offset now", size: "row" },
+                { key: "time", label: "Local time", size: "row" },
+                { key: "offset", label: "UTC offset", size: "row" },
                 { key: "last", label: "Last change", size: "wide" },
                 { key: "next", label: "Next change", size: "wide" },
               ],
@@ -280,8 +351,9 @@ export function renderSunshineProtectionActTemplate({
           body: html`${usView({
             scope: proposals,
             mapTitle: "US states and what they have adopted",
+            switcher: switcher(proposals, "proposals"),
             pickTitle: "Pick a state",
-            hint: "Each state is in one class. Press a state to pin its position and what it depends on.",
+            hint: "Each state is in one class. Press a state, on the map or in the list, to pin its position and what it depends on.",
             listLabel: "US states and territories, scrollable list",
             items: proposalItems(),
             mapHeight: MAP_HEIGHT,
@@ -304,31 +376,40 @@ export function renderSunshineProtectionActTemplate({
               placeholder: PROPOSALS_PLACEHOLDER,
               startKind: "no-position",
               fields: [
-                { key: "position", label: "Position", size: "wide" },
+                {
+                  key: "condition",
+                  label: "Condition",
+                  size: "long",
+                  values: CONDITIONS,
+                },
+                { key: "note", label: "Note", size: "long", values: NOTES },
                 { key: "since", label: "Adopted", size: "row" },
-                { key: "asof", label: "As of", size: "long" },
-                { key: "condition", label: "Condition", size: "long" },
-                { key: "note", label: "Note", size: "long" },
+                { key: "asof", label: "As of", size: "row" },
               ],
             },
           })}`,
         },
-      ])}${infoCard({
-        idPrefix,
-        name: "national",
-        title: "What the national proposal would do",
-        lines: NATIONAL.effects,
-        after: html`<p id="${idPrefix}-national-age">${nationalAge(null)}</p>
-                <p>
-                  <a href="${SOURCES_URL}" rel="noopener noreferrer">Sources</a>
-                </p>`,
-        gate: "national",
-      })}${guidance ? keyPoints(idPrefix, US_GUIDANCE, US_GUIDANCE_HEADING) : ""}`,
+      ])}${row(
+        html`${guidance ? keyPoints(idPrefix, US_GUIDANCE, US_GUIDANCE_HEADING) : ""}${usSide(
+          infoCard({
+            idPrefix,
+            name: "national",
+            title: "What the national proposal would do",
+            lines: NATIONAL.effects,
+            after: html`<p id="${idPrefix}-national-age">${nationalAge(null)}</p>
+              <p>
+                <a href="${SOURCES_URL}" rel="noopener noreferrer">Sources</a>
+              </p>`,
+            gate: "national",
+          }),
+        )}`,
+        { top: true },
+      )}`,
     ),
   );
 }
 
-/** The chat's markup: the page's views, with ids namespaced by `idPrefix` and no guidance cards. */
+/** The chat's markup: the page's views, with ids namespaced by `idPrefix` and no key points. */
 export function renderSunshineProtectionActWidgetTemplate(
   idPrefix: string,
 ): SafeHtml {
@@ -353,6 +434,10 @@ export interface SunshineActDeps {
   measure?: () => number;
   /** Today's date, `YYYY-MM-DD`. Defaults to the library's `getToday`, loaded after first paint. */
   today: () => Promise<string>;
+  /** The library the clocks call. Defaults to `loadClockLib()`, loaded after first paint. */
+  clockLib: () => Promise<ClockLib>;
+  /** The client's now as a UTC instant. Defaults to the library's `getUtcNow`. */
+  now: () => string;
 }
 
 export interface SunshineActHandle {
@@ -407,16 +492,81 @@ export async function mountSunshineProtectionAct(
     today: w.part(`today-view`),
     proposals: w.part(`proposals-view`),
   };
-  const switchEl = w.part<HTMLFieldSetElement>("view");
+  const switches: Record<SunshineActView, HTMLFieldSetElement> = {
+    today: todayW.part<HTMLFieldSetElement>("switch"),
+    proposals: proposalsW.part<HTMLFieldSetElement>("switch"),
+  };
 
   let view: SunshineActView = "today";
   let rows = new Map<string, WatchZone>();
   let answerNow = "";
   let todayDate: string | null = null;
+  const pins: Record<SunshineActView, string | null> = {
+    today: null,
+    proposals: null,
+  };
 
   const text = (view_: FoundWidget, local: string, value: string): void => {
     view_.part(local).textContent = value;
   };
+
+  // --- the clocks' library -------------------------------------------------
+  // Loaded off the first paint's path. Until it arrives the pin shows the offset the Worker gave,
+  // and the clocks show NO SIGNAL; if it never arrives, they stay so.
+  let lib: ClockLib | null = null;
+  const nowFrom = (from: ClockLib): string => deps.now?.() ?? from.getUtcNow();
+  const pinTime = todayW.part("pin-time");
+  const pinClock = todayW.part("pin-clock");
+  let pinTimer: ReturnType<typeof setTimeout> | undefined;
+  // Set once the library has loaded; the answer may arrive before or after.
+  let clocks = null as { tick(): void } | null;
+  life.addEventListener("abort", () => clearTimeout(pinTimer), { once: true });
+
+  /** The pinned place's time, offset and face: the only parts of the pin that change every second. */
+  function drawPinTime(): void {
+    clearTimeout(pinTimer);
+    const row = pins.today === null ? undefined : rows.get(pins.today);
+    if (row === undefined || lib === null) {
+      pinTime.textContent = EMPTY;
+      pinTime.removeAttribute("title");
+      text(
+        todayW,
+        "pin-offset",
+        row === undefined ? EMPTY : offsetWords(row.offset),
+      );
+      pinClock.replaceChildren();
+      return;
+    }
+    if (life.aborted) return;
+    const at = nowFrom(lib);
+    const offset = offsetAt(row, at, lib.isBeforeUtc);
+    const wall =
+      offset === ""
+        ? ""
+        : lib.convertUtcToPlainDateTime(at, { timeZone: offset });
+    if (wall === "") {
+      setHtml(pinTime, clockNoSignal());
+      pinTime.title = SIGNAL_LOST;
+      text(todayW, "pin-offset", EMPTY);
+      pinClock.replaceChildren();
+    } else {
+      const hms = wallHms(wall);
+      pinTime.textContent = hms;
+      pinTime.removeAttribute("title");
+      text(todayW, "pin-offset", offsetWords(offset));
+      updateCrystalClock(pinClock, {
+        id: todayW.id("pin-face"),
+        hour: Number(wall.slice(11, 13)),
+        minute: Number(wall.slice(14, 16)),
+        second: Number(hms.slice(6, 8)),
+        label: row.zone,
+        sublabel: `${wall.slice(11, 16)}, ${spokenOffset(offset)}`,
+        size: 80,
+        glowable: false,
+      });
+    }
+    pinTimer = setTimeout(drawPinTime, msToNextSecond(at));
+  }
 
   // --- the Today pin ------------------------------------------------------
   function fillTodayPin(id: string | null): void {
@@ -428,11 +578,7 @@ export async function mountSunshineProtectionAct(
     todayW.part("pin-swatch").dataset["kind"] = kind;
     text(todayW, "pin-class", id === null ? EMPTY : TODAY_WORDS[kind]);
     const year = Number(answerNow.slice(0, 4));
-    text(
-      todayW,
-      "pin-offset",
-      row === undefined ? EMPTY : offsetWords(row.offset),
-    );
+    drawPinTime();
     text(
       todayW,
       "pin-last",
@@ -467,11 +613,6 @@ export async function mountSunshineProtectionAct(
     text(proposalsW, "pin-class", id === null ? EMPTY : PROPOSAL_WORDS[kind]);
     text(
       proposalsW,
-      "pin-position",
-      id === null ? EMPTY : PROPOSAL_WORDS[kind],
-    );
-    text(
-      proposalsW,
       "pin-since",
       row?.kind === "adopted"
         ? `${row.measure === "law" ? "Law" : "Resolution"}, ${row.year}`
@@ -495,7 +636,7 @@ export async function mountSunshineProtectionAct(
           ? row.condition
           : row === undefined
             ? EMPTY
-            : "None stated",
+            : NONE_STATED,
     );
     text(
       proposalsW,
@@ -511,10 +652,6 @@ export async function mountSunshineProtectionAct(
     );
   }
 
-  const pins: Record<SunshineActView, string | null> = {
-    today: null,
-    proposals: null,
-  };
   // --- the maps -----------------------------------------------------------
   // Each inset's frame pins its first place when pressed, so a small inset is easy to hit.
   const insetPlaces: Record<
@@ -589,24 +726,19 @@ export async function mountSunshineProtectionAct(
     onPin: (id) => {
       pins.today = id;
       fillTodayPin(id);
+      markPickedClock();
     },
     mapLabel:
       "Map of the US time zones, in classes. Use the arrow keys to move between zones.",
-    labelled: [
-      "America/New_York",
-      "America/Chicago",
-      "America/Denver",
-      "America/Phoenix",
-      "America/Los_Angeles",
-      "America/Anchorage",
-      "Pacific/Honolulu",
-      "America/Puerto_Rico",
-      "Pacific/Guam",
-      "Pacific/Pago_Pago",
-    ],
-    anchors: usZones.coords as unknown as Readonly<
-      Record<string, readonly [number, number]>
-    >,
+    labelled: LABELLED_ZONES,
+    // A label sits at its zone's city, but Los Angeles's would meet Phoenix's at every width, so
+    // it sits north, in the zone's land over Nevada, clear of the Arizona labels.
+    anchors: {
+      ...(usZones.coords as unknown as Readonly<
+        Record<string, readonly [number, number]>
+      >),
+      "America/Los_Angeles": [-119.5, 40.5],
+    },
     credits: [TZ_BOUNDARIES, COASTLINES],
   };
 
@@ -688,6 +820,11 @@ export async function mountSunshineProtectionAct(
     }
     for (const kind of TODAY_ORDER)
       text(todayW, `legend-${kind}`, String(counts.get(kind) ?? 0));
+    // Each clock's border is its place's class, as on the map.
+    for (const zone of LABELLED_ZONES)
+      todayW.part(CLOCK_PARTS.item(zone)).dataset["kind"] = todayKind(
+        rows.get(zone),
+      );
     // A class no zone is in has no row, as on Canada's page.
     const none = todayW.part("legend-no-data").closest("li");
     if (none) none.hidden = (counts.get("no-data") ?? 0) === 0;
@@ -716,6 +853,7 @@ export async function mountSunshineProtectionAct(
       rows = new Map(answer.check.zones.map((row) => [row.zone, row]));
       w.el.dataset["state"] = "ready";
       restyleToday();
+      clocks?.tick();
     } else if (answer.kind === "rate-limited") {
       w.el.dataset["state"] = "error";
       status.textContent =
@@ -727,6 +865,34 @@ export async function mountSunshineProtectionAct(
       status.textContent = "The check could not finish.";
     }
   })();
+
+  // --- the live clocks ----------------------------------------------------
+  /** The clock of the pinned place takes the full highlight, as on the checkers. */
+  function markPickedClock(): void {
+    for (const zone of LABELLED_ZONES) {
+      const item = todayW.part(CLOCK_PARTS.item(zone));
+      if (zone === pins.today) item.dataset["picked"] = "true";
+      else delete item.dataset["picked"];
+    }
+  }
+  const clocked = (deps.clockLib ?? loadClockLib)().then(
+    (loaded) => {
+      if (life.aborted) return;
+      lib = loaded;
+      clocks = wireClocks(todayW, {
+        idPrefix: `${idPrefix}-today`,
+        lib: loaded,
+        now: () => nowFrom(loaded),
+        signal: life,
+        read: () => (rows.size === 0 ? null : [...rows.values()]),
+        zones: LABELLED_ZONES,
+        zoneList: null,
+      });
+      clocks.tick();
+      drawPinTime();
+    },
+    () => {},
+  );
 
   // The date is read off the first paint's path; the pin's "As of" line follows it.
   const dated = (deps.today ?? loadToday)().then(
@@ -744,21 +910,28 @@ export async function mountSunshineProtectionAct(
     view = next;
     sections.today.hidden = next !== "today";
     sections.proposals.hidden = next !== "proposals";
-    for (const input of switchEl.querySelectorAll<HTMLInputElement>(
-      "input[type=radio]",
-    )) {
-      input.checked = input.value === next;
-    }
+    for (const fieldset of Object.values(switches))
+      for (const input of fieldset.querySelectorAll<HTMLInputElement>(
+        "input[type=radio]",
+      ))
+        input.checked = input.value === next;
     if (next === "proposals") ensureProposals();
   }
-  switchEl.addEventListener(
-    "change",
-    (event) => {
-      const value = (event.target as HTMLInputElement).value;
-      if (value === "today" || value === "proposals") setView(value);
-    },
-    { signal: life },
-  );
+  // A choice in one view's switch hides that switch with its view, so focus moves to the same
+  // choice in the switch now shown.
+  for (const fieldset of Object.values(switches))
+    fieldset.addEventListener(
+      "change",
+      (event) => {
+        const value = (event.target as HTMLInputElement).value;
+        if (value !== "today" && value !== "proposals") return;
+        setView(value);
+        switches[value]
+          .querySelector<HTMLInputElement>(`input[value="${value}"]`)
+          ?.focus();
+      },
+      { signal: life },
+    );
 
   function pin(id: string | null): boolean {
     const map = view === "today" ? maps.today : ensureProposals();
@@ -777,6 +950,7 @@ export async function mountSunshineProtectionAct(
   const ready = Promise.all([
     answered,
     dated,
+    clocked,
     maps.today?.ready,
     maps.proposals?.ready,
   ]).then(() => {});
@@ -807,7 +981,7 @@ export interface SunshineActArgs {
 }
 
 /**
- * Mounts the widget in the chat rail. The library's `getToday` is loaded first, so a failed load
+ * Mounts the widget in the chat rail. The library's `getToday` and clocks are loaded first, so a failed load
  * rejects with `WidgetLoadError`, which the host turns into its retry state. The Worker's answer
  * is not awaited: the handle returns at once, and the status line carries a slow or failed Worker.
  */
@@ -815,10 +989,11 @@ export const mountSunshineProtectionActWidget: MountFn<
   SunshineActArgs
 > = async (root, args, signal) => {
   let day: string;
+  let lib: ClockLib;
   try {
-    day = await loadToday();
+    [day, lib] = await Promise.all([loadToday(), loadClockLib()]);
   } catch (cause) {
-    throw new WidgetLoadError(cause);
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }
   const controller = new AbortController();
   const stop = () => controller.abort();
@@ -827,6 +1002,7 @@ export const mountSunshineProtectionActWidget: MountFn<
   let handle: SunshineActHandle | null = null;
   mountSunshineProtectionAct(root, controller.signal, args.view, {
     today: async () => day,
+    clockLib: async () => lib,
   }).then(
     (mounted) => {
       handle = mounted;
