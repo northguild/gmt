@@ -1,5 +1,4 @@
-import { readSwiftDateFields, swiftValueDateYear } from "../../internal";
-import { Temporal } from "../../internal/temporal";
+import { readSwiftDate } from "../../internal/swiftDate";
 
 /**
  * Read the value date of a SWIFT MT message, `YYMMDD`, as an ISO 8601 date.
@@ -35,24 +34,5 @@ import { Temporal } from "../../internal/temporal";
  * @example parseSwiftDate("240615EUR1000,00") // "" (pass the date component alone)
  */
 export function parseSwiftDate(value: string): string {
-  try {
-    if (typeof value !== "string") {
-      return "";
-    }
-    const fields = readSwiftDateFields(value);
-    if (fields === null) {
-      return "";
-    }
-    // The year is resolved before the day is checked: 040229 is in 2004, 050229 in 2005.
-    const year = swiftValueDateYear(fields.yy);
-    if (year === null) {
-      return "";
-    }
-    return Temporal.PlainDate.from(
-      { year, month: fields.month, day: fields.day },
-      { overflow: "reject" },
-    ).toString();
-  } catch {
-    return "";
-  }
+  return readSwiftDate(value);
 }
