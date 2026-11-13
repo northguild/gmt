@@ -58,12 +58,11 @@ export function intervalDifferenceDateTime(
 
   const aS = plainDateTimeOf(aStart);
 
-  const aE = aS === null ? null : plainDateTimeOf(aEnd);
+  const aE = plainDateTimeOf(aEnd);
 
-  const bS = aS === null || aE === null ? null : plainDateTimeOf(bStart);
+  const bS = plainDateTimeOf(bStart);
 
-  const bE =
-    aS === null || aE === null || bS === null ? null : plainDateTimeOf(bEnd);
+  const bE = plainDateTimeOf(bEnd);
 
   if (aS === null || aE === null || bS === null || bE === null) {
     return [];

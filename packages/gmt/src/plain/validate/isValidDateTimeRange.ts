@@ -54,7 +54,7 @@ export function isValidDateTimeRange(props: {
 
     const dt1 = plainDateTimeOf(value1);
 
-    const dt2 = dt1 === null ? null : plainDateTimeOf(value2);
+    const dt2 = plainDateTimeOf(value2);
 
     if (dt1 === null || dt2 === null) {
       return false;

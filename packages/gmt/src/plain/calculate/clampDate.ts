@@ -22,8 +22,8 @@ import { Temporal } from "../../internal/temporal";
  */
 export function clampDate(value: string, min: string, max: string): string {
   const v = plainDateOf(value);
-  const mn = v === null ? null : plainDateOf(min);
-  const mx = v === null || mn === null ? null : plainDateOf(max);
+  const mn = plainDateOf(min);
+  const mx = plainDateOf(max);
   if (v === null || mn === null || mx === null) {
     return "";
   }

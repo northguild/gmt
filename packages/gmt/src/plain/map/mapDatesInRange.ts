@@ -69,7 +69,7 @@ export function mapDatesInRange(
 
     const start = plainDateOf(startDate);
 
-    const end = start === null ? null : plainDateOf(endDate);
+    const end = plainDateOf(endDate);
 
     if (start === null || end === null) {
       return [];

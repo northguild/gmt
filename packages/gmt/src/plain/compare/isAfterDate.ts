@@ -18,7 +18,7 @@ import { Temporal } from "../../internal/temporal";
  */
 export function isAfterDate(value1: string, value2: string): boolean {
   const value1Parsed = plainDateOf(value1);
-  const value2Parsed = value1Parsed === null ? null : plainDateOf(value2);
+  const value2Parsed = plainDateOf(value2);
   if (value1Parsed === null || value2Parsed === null) {
     return false;
   }

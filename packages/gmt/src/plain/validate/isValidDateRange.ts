@@ -57,7 +57,7 @@ export function isValidDateRange(props: IsValidDateRangeProps): boolean {
 
     const date1 = plainDateOf(value1);
 
-    const date2 = date1 === null ? null : plainDateOf(value2);
+    const date2 = plainDateOf(value2);
 
     if (date1 === null || date2 === null) {
       return false;

@@ -55,7 +55,7 @@ export function isValidTimeRange(props: {
 
     const time1 = plainTimeOf(value1);
 
-    const time2 = time1 === null ? null : plainTimeOf(value2);
+    const time2 = plainTimeOf(value2);
 
     if (time1 === null || time2 === null) {
       return false;

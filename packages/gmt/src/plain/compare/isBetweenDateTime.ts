@@ -61,9 +61,9 @@ export function isBetweenDateTime(
 
     const d = plainDateTimeOf(dateTime);
 
-    const s = d === null ? null : plainDateTimeOf(start);
+    const s = plainDateTimeOf(start);
 
-    const e = d === null || s === null ? null : plainDateTimeOf(end);
+    const e = plainDateTimeOf(end);
 
     if (d === null || s === null || e === null) {
       return false;

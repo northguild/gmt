@@ -3,7 +3,11 @@ import type {
   DateTimeDurationUnit,
   TimeDurationUnit,
 } from "../types";
-import { isDateTimeDurationUnitName } from "./unitNames";
+import {
+  DATE_DURATION_UNITS,
+  isDateTimeDurationUnitName,
+  TIME_DURATION_UNITS,
+} from "./unitNames";
 
 /**
  * Normalize a duration unit string to its plural form.
@@ -56,13 +60,6 @@ function largestOf<T extends string>(
   }
 }
 
-const LARGESTDATEDURATIONUNIT_ORDER: readonly DateDurationUnit[] = [
-  "years",
-  "months",
-  "weeks",
-  "days",
-];
-
 /**
  * The largest date duration unit in a list, after each name is resolved to its plural.
  *
@@ -73,21 +70,8 @@ const LARGESTDATEDURATIONUNIT_ORDER: readonly DateDurationUnit[] = [
  * @example largestDateDurationUnit([]) // ""
  */
 export function largestDateDurationUnit(units: unknown): DateDurationUnit | "" {
-  return largestOf(units, LARGESTDATEDURATIONUNIT_ORDER);
+  return largestOf(units, DATE_DURATION_UNITS);
 }
-
-const LARGESTDATETIMEDURATIONUNIT_ORDER: readonly DateTimeDurationUnit[] = [
-  "years",
-  "months",
-  "weeks",
-  "days",
-  "hours",
-  "minutes",
-  "seconds",
-  "milliseconds",
-  "microseconds",
-  "nanoseconds",
-];
 
 /**
  * The largest date-time duration unit in a list, after each name is resolved to its plural.
@@ -101,17 +85,8 @@ const LARGESTDATETIMEDURATIONUNIT_ORDER: readonly DateTimeDurationUnit[] = [
 export function largestDateTimeDurationUnit(
   units: unknown,
 ): DateTimeDurationUnit | "" {
-  return largestOf(units, LARGESTDATETIMEDURATIONUNIT_ORDER);
+  return largestOf(units, [...DATE_DURATION_UNITS, ...TIME_DURATION_UNITS]);
 }
-
-const LARGESTTIMEDURATIONUNIT_ORDER: readonly TimeDurationUnit[] = [
-  "hours",
-  "minutes",
-  "seconds",
-  "milliseconds",
-  "microseconds",
-  "nanoseconds",
-];
 
 /**
  * The largest time duration unit in a list, after each name is resolved to its plural.
@@ -123,5 +98,5 @@ const LARGESTTIMEDURATIONUNIT_ORDER: readonly TimeDurationUnit[] = [
  * @example largestTimeDurationUnit([]) // ""
  */
 export function largestTimeDurationUnit(units: unknown): TimeDurationUnit | "" {
-  return largestOf(units, LARGESTTIMEDURATIONUNIT_ORDER);
+  return largestOf(units, TIME_DURATION_UNITS);
 }

@@ -11,6 +11,19 @@ import type { IntervalNanoseconds } from "./intervalNanoseconds";
  * endpoint is invalid or the start is after the end.
  */
 
+/** The two endpoints in order when `first` is not after `last` by `compare`, else `null`. */
+function ordered<T>(
+  first: T,
+  last: T,
+  compare: (a: T, b: T) => number,
+): readonly [T, T] | null {
+  try {
+    return compare(first, last) <= 0 ? [first, last] : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The check behind `isValidDateInterval`.
  *
@@ -30,11 +43,7 @@ export function dateIntervalOf(
   if (first === null || last === null) {
     return null;
   }
-  try {
-    return Temporal.PlainDate.compare(first, last) <= 0 ? [first, last] : null;
-  } catch {
-    return null;
-  }
+  return ordered(first, last, Temporal.PlainDate.compare);
 }
 
 /**
@@ -56,13 +65,7 @@ export function dateTimeIntervalOf(
   if (first === null || last === null) {
     return null;
   }
-  try {
-    return Temporal.PlainDateTime.compare(first, last) <= 0
-      ? [first, last]
-      : null;
-  } catch {
-    return null;
-  }
+  return ordered(first, last, Temporal.PlainDateTime.compare);
 }
 
 /**
@@ -84,11 +87,7 @@ export function timeIntervalOf(
   if (first === null || last === null) {
     return null;
   }
-  try {
-    return Temporal.PlainTime.compare(first, last) <= 0 ? [first, last] : null;
-  } catch {
-    return null;
-  }
+  return ordered(first, last, Temporal.PlainTime.compare);
 }
 
 /**
@@ -110,11 +109,7 @@ export function utcIntervalOf(
   if (first === null || last === null) {
     return null;
   }
-  try {
-    return Temporal.Instant.compare(first, last) <= 0 ? [first, last] : null;
-  } catch {
-    return null;
-  }
+  return ordered(first, last, Temporal.Instant.compare);
 }
 
 /**

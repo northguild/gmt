@@ -49,7 +49,7 @@ export function formatDateTimeRange(
   options?: DateTimeFormatOptions,
 ): string {
   const startParsed = plainDateTimeOf(start);
-  const endParsed = startParsed === null ? null : plainDateTimeOf(end);
+  const endParsed = plainDateTimeOf(end);
   if (startParsed === null || endParsed === null) {
     return "";
   }

@@ -19,7 +19,7 @@ import { Temporal } from "../../internal/temporal";
  */
 export function isAfterTime(value1: string, value2: string): boolean {
   const value1Parsed = plainTimeOf(value1);
-  const value2Parsed = value1Parsed === null ? null : plainTimeOf(value2);
+  const value2Parsed = plainTimeOf(value2);
   if (value1Parsed === null || value2Parsed === null) {
     return false;
   }

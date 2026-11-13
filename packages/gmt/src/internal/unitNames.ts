@@ -24,6 +24,35 @@ import type {
  * of the listed names.
  */
 
+// The names the checks below accept. `includes` compares with `===`, so a value that is not one of
+// these strings (a symbol, an object, `undefined`) is `false`.
+const DATE_UNITS: readonly string[] = ["year", "month", "week", "day"];
+const TIME_UNITS: readonly string[] = [
+  "hour",
+  "minute",
+  "second",
+  "millisecond",
+  "microsecond",
+  "nanosecond",
+];
+/** The plural date duration unit names, coarsest first. */
+export const DATE_DURATION_UNITS: readonly DateDurationUnit[] = [
+  "years",
+  "months",
+  "weeks",
+  "days",
+];
+/** The plural time duration unit names, coarsest first. */
+export const TIME_DURATION_UNITS: readonly TimeDurationUnit[] = [
+  "hours",
+  "minutes",
+  "seconds",
+  "milliseconds",
+  "microseconds",
+  "nanoseconds",
+];
+const DATE_CYCLE_FIELDS: readonly string[] = ["year", "month", "day"];
+
 /**
  * The check behind `isValidDateTimeDurationUnit`.
  *
@@ -37,16 +66,8 @@ export function isDateTimeDurationUnitName(
   unit: unknown,
 ): unit is DateTimeDurationUnit {
   return (
-    unit === "years" ||
-    unit === "months" ||
-    unit === "weeks" ||
-    unit === "days" ||
-    unit === "hours" ||
-    unit === "minutes" ||
-    unit === "seconds" ||
-    unit === "milliseconds" ||
-    unit === "microseconds" ||
-    unit === "nanoseconds"
+    (DATE_DURATION_UNITS as readonly unknown[]).includes(unit) ||
+    (TIME_DURATION_UNITS as readonly unknown[]).includes(unit)
   );
 }
 
@@ -62,9 +83,7 @@ export function isDateTimeDurationUnitName(
 export function isDateDurationUnitName(
   unit: unknown,
 ): unit is DateDurationUnit {
-  return (
-    unit === "years" || unit === "months" || unit === "weeks" || unit === "days"
-  );
+  return (DATE_DURATION_UNITS as readonly unknown[]).includes(unit);
 }
 
 /**
@@ -79,14 +98,7 @@ export function isDateDurationUnitName(
 export function isTimeDurationUnitName(
   unit: unknown,
 ): unit is TimeDurationUnit {
-  return (
-    unit === "hours" ||
-    unit === "minutes" ||
-    unit === "seconds" ||
-    unit === "milliseconds" ||
-    unit === "microseconds" ||
-    unit === "nanoseconds"
-  );
+  return (TIME_DURATION_UNITS as readonly unknown[]).includes(unit);
 }
 
 /**
@@ -100,16 +112,8 @@ export function isTimeDurationUnitName(
  */
 export function isDateTimeUnitName(unit: unknown): unit is DateTimeUnit {
   return (
-    unit === "year" ||
-    unit === "month" ||
-    unit === "week" ||
-    unit === "day" ||
-    unit === "hour" ||
-    unit === "minute" ||
-    unit === "second" ||
-    unit === "millisecond" ||
-    unit === "microsecond" ||
-    unit === "nanosecond"
+    DATE_UNITS.includes(unit as DateUnit) ||
+    TIME_UNITS.includes(unit as TimeUnit)
   );
 }
 
@@ -123,9 +127,7 @@ export function isDateTimeUnitName(unit: unknown): unit is DateTimeUnit {
  * @example isDateUnitName("hour") // false
  */
 export function isDateUnitName(unit: unknown): unit is DateUnit {
-  return (
-    unit === "year" || unit === "month" || unit === "week" || unit === "day"
-  );
+  return DATE_UNITS.includes(unit as DateUnit);
 }
 
 /**
@@ -138,14 +140,7 @@ export function isDateUnitName(unit: unknown): unit is DateUnit {
  * @example isTimeUnitName("day") // false
  */
 export function isTimeUnitName(unit: unknown): unit is TimeUnit {
-  return (
-    unit === "hour" ||
-    unit === "minute" ||
-    unit === "second" ||
-    unit === "millisecond" ||
-    unit === "microsecond" ||
-    unit === "nanosecond"
-  );
+  return TIME_UNITS.includes(unit as TimeUnit);
 }
 
 /**
@@ -158,7 +153,7 @@ export function isTimeUnitName(unit: unknown): unit is TimeUnit {
  * @example isDateCycleFieldName("week") // false
  */
 export function isDateCycleFieldName(field: unknown): field is DateCycleField {
-  return field === "year" || field === "month" || field === "day";
+  return DATE_CYCLE_FIELDS.includes(field as DateCycleField);
 }
 
 /**
@@ -171,14 +166,7 @@ export function isDateCycleFieldName(field: unknown): field is DateCycleField {
  * @example isTimeCycleFieldName("day") // false
  */
 export function isTimeCycleFieldName(field: unknown): field is TimeCycleField {
-  return (
-    field === "hour" ||
-    field === "minute" ||
-    field === "second" ||
-    field === "millisecond" ||
-    field === "microsecond" ||
-    field === "nanosecond"
-  );
+  return TIME_UNITS.includes(field as TimeCycleField);
 }
 
 /**

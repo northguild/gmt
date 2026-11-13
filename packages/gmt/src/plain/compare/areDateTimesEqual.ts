@@ -16,7 +16,7 @@ import { plainDateTimeOf } from "../../internal/inputChecks";
  */
 export function areDateTimesEqual(value1: string, value2: string): boolean {
   const dateTime1 = plainDateTimeOf(value1);
-  const dateTime2 = dateTime1 === null ? null : plainDateTimeOf(value2);
+  const dateTime2 = plainDateTimeOf(value2);
   if (dateTime1 === null || dateTime2 === null) {
     return false;
   }

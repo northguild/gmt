@@ -60,7 +60,7 @@ export function diffTime(
       return null;
     }
     const t1 = plainTimeOf(time1);
-    const t2 = t1 === null ? null : plainTimeOf(time2);
+    const t2 = plainTimeOf(time2);
     // Singular names resolve to their plural (Temporal §13.17); record keys are the plural names.
     const resolved = Array.isArray(units)
       ? units.map((unit) => resolveDurationUnit(unit))

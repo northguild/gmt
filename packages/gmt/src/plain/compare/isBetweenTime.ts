@@ -63,9 +63,9 @@ export function isBetweenTime(
 
     const t = plainTimeOf(time);
 
-    const s = t === null ? null : plainTimeOf(start);
+    const s = plainTimeOf(start);
 
-    const e = t === null || s === null ? null : plainTimeOf(end);
+    const e = plainTimeOf(end);
 
     if (t === null || s === null || e === null) {
       return false;

@@ -46,12 +46,9 @@ export function intervalContainsDateTime(
   }
 
   const s = plainDateTimeOf(intervalStart);
-  const e = s === null ? null : plainDateTimeOf(intervalEnd);
-  const p = s === null || e === null ? null : plainDateTimeOf(pointOrStart);
-  const pe =
-    s === null || e === null || p === null || pointEnd === undefined
-      ? undefined
-      : plainDateTimeOf(pointEnd);
+  const e = plainDateTimeOf(intervalEnd);
+  const p = plainDateTimeOf(pointOrStart);
+  const pe = pointEnd === undefined ? undefined : plainDateTimeOf(pointEnd);
   if (s === null || e === null || p === null || pe === null) {
     return false;
   }

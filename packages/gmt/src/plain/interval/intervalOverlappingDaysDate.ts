@@ -51,12 +51,11 @@ export function intervalOverlappingDaysDate(
 
   const aS = calendarDateOf(aStart);
 
-  const aE = aS === null ? null : calendarDateOf(aEnd);
+  const aE = calendarDateOf(aEnd);
 
-  const bS = aS === null || aE === null ? null : calendarDateOf(bStart);
+  const bS = calendarDateOf(bStart);
 
-  const bE =
-    aS === null || aE === null || bS === null ? null : calendarDateOf(bEnd);
+  const bE = calendarDateOf(bEnd);
 
   if (aS === null || aE === null || bS === null || bE === null) {
     return null;

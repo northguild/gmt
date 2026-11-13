@@ -51,7 +51,7 @@ export function diffDateTimeAsDuration(
     return "";
   }
   const dt1 = plainDateTimeOf(dateTime1);
-  const dt2 = dt1 === null ? null : plainDateTimeOf(dateTime2);
+  const dt2 = plainDateTimeOf(dateTime2);
   const resolvedUnit = resolveDurationUnit(unit);
   const validUnit = isDateTimeDurationUnitName(resolvedUnit);
 

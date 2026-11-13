@@ -76,7 +76,7 @@ export function splitIntervalByUnitTime(
 
     const startVal = plainTimeOf(start);
 
-    const endVal = startVal === null ? null : plainTimeOf(end);
+    const endVal = plainTimeOf(end);
 
     if (startVal === null || endVal === null) {
       return [];

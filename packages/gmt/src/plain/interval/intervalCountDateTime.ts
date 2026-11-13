@@ -96,7 +96,7 @@ export function intervalCountDateTime(
 
   const startVal = plainDateTimeOf(start);
 
-  const endVal = startVal === null ? null : plainDateTimeOf(end);
+  const endVal = plainDateTimeOf(end);
 
   if (startVal === null || endVal === null) {
     return null;

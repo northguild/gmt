@@ -217,6 +217,27 @@ export function readSetFields<Field extends SetField>(
   return read as SetFields<Field>;
 }
 
+/** The shared body of the three `with*Fields` cores. */
+function withFields<
+  Value extends { with(fields: never, options: never): Value },
+  Field extends SetField,
+>(
+  value: Value,
+  fields: unknown,
+  allowedFields: readonly Field[],
+  overflow: Overflow | (() => Overflow),
+): Value | null {
+  const set = readSetFields(fields, allowedFields);
+  if (set === null) return null;
+  if (Object.keys(set).length === 0) return value;
+  return value.with(
+    set as never,
+    {
+      overflow: typeof overflow === "function" ? overflow() : overflow,
+    } as never,
+  );
+}
+
 /**
  * The `setDate` core: a `PlainDate` with the checked `fields` set.
  *
@@ -237,12 +258,7 @@ export function withDateFields(
   fields: unknown,
   overflow: Overflow | (() => Overflow),
 ): Temporal.PlainDate | null {
-  const set = readSetFields(fields, DATE_FIELDS);
-  if (set === null) return null;
-  if (Object.keys(set).length === 0) return date;
-  return date.with(set, {
-    overflow: typeof overflow === "function" ? overflow() : overflow,
-  });
+  return withFields(date, fields, DATE_FIELDS, overflow);
 }
 
 /**
@@ -263,12 +279,7 @@ export function withDateTimeFields(
   fields: unknown,
   overflow: Overflow | (() => Overflow),
 ): Temporal.PlainDateTime | null {
-  const set = readSetFields(fields, DATE_TIME_FIELDS);
-  if (set === null) return null;
-  if (Object.keys(set).length === 0) return dateTime;
-  return dateTime.with(set, {
-    overflow: typeof overflow === "function" ? overflow() : overflow,
-  });
+  return withFields(dateTime, fields, DATE_TIME_FIELDS, overflow);
 }
 
 /**
@@ -289,10 +300,5 @@ export function withTimeFields(
   fields: unknown,
   overflow: Overflow | (() => Overflow),
 ): Temporal.PlainTime | null {
-  const set = readSetFields(fields, TIME_FIELDS);
-  if (set === null) return null;
-  if (Object.keys(set).length === 0) return time;
-  return time.with(set, {
-    overflow: typeof overflow === "function" ? overflow() : overflow,
-  });
+  return withFields(time, fields, TIME_FIELDS, overflow);
 }

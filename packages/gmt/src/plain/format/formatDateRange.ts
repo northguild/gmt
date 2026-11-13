@@ -46,7 +46,7 @@ export function formatDateRange(
   options?: DateTimeFormatOptions,
 ): string {
   const startParsed = plainDateOf(start);
-  const endParsed = startParsed === null ? null : plainDateOf(end);
+  const endParsed = plainDateOf(end);
   if (startParsed === null || endParsed === null) {
     return "";
   }

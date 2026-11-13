@@ -51,12 +51,9 @@ export function intervalContainsTime(
   }
 
   const s = plainTimeOf(intervalStart);
-  const e = s === null ? null : plainTimeOf(intervalEnd);
-  const p = s === null || e === null ? null : plainTimeOf(pointOrStart);
-  const pe =
-    s === null || e === null || p === null || pointEnd === undefined
-      ? undefined
-      : plainTimeOf(pointEnd);
+  const e = plainTimeOf(intervalEnd);
+  const p = plainTimeOf(pointOrStart);
+  const pe = pointEnd === undefined ? undefined : plainTimeOf(pointEnd);
   if (s === null || e === null || p === null || pe === null) {
     return false;
   }

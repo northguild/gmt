@@ -50,12 +50,9 @@ export function intervalContainsDate(
   }
 
   const s = calendarDateOf(intervalStart);
-  const e = s === null ? null : calendarDateOf(intervalEnd);
-  const p = s === null || e === null ? null : calendarDateOf(pointOrStart);
-  const pe =
-    s === null || e === null || p === null || pointEnd === undefined
-      ? undefined
-      : calendarDateOf(pointEnd);
+  const e = calendarDateOf(intervalEnd);
+  const p = calendarDateOf(pointOrStart);
+  const pe = pointEnd === undefined ? undefined : calendarDateOf(pointEnd);
   if (s === null || e === null || p === null || pe === null) {
     return false;
   }

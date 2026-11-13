@@ -60,12 +60,11 @@ export function intervalDifferenceTime(
 
   const aS = plainTimeOf(aStart);
 
-  const aE = aS === null ? null : plainTimeOf(aEnd);
+  const aE = plainTimeOf(aEnd);
 
-  const bS = aS === null || aE === null ? null : plainTimeOf(bStart);
+  const bS = plainTimeOf(bStart);
 
-  const bE =
-    aS === null || aE === null || bS === null ? null : plainTimeOf(bEnd);
+  const bE = plainTimeOf(bEnd);
 
   if (aS === null || aE === null || bS === null || bE === null) {
     return [];
