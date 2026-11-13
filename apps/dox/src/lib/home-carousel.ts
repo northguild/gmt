@@ -12,6 +12,8 @@
  *
  * `arrival.ts` has already set `data-home-carousel="wait"` before the first paint, so the paged
  * layout is the first layout. This module writes `on`, or removes the mark when it cannot wire.
+ * It must stay a deferred module script (no `async`): `arrival.ts` removes a mark still `wait` at
+ * `DOMContentLoaded`, which is only safe because every deferred module has run by then.
  */
 import {
   wireCarousel,
