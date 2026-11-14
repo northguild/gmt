@@ -4,9 +4,9 @@
  * `scripts/lib/canary-issues.mjs`: it reads the verdict files a canary wrote, applies the dry-run
  * force flags, asks the planner what to do and runs that through the GitHub CLI.
  *
- *   node scripts/canary-report.mjs <temporal-oracle|leap-seconds>
+ *   node scripts/canary-report.mjs <temporal-oracle|leap-seconds|us-clock-watch>
  *        [--force-removable=<id>] [--force-mismatch] [--force-native-failure]
- *        [--force-swap-ready] [--force-leap-difference] [--print]
+ *        [--force-swap-ready] [--force-leap-difference] [--force-us-clock-difference] [--print]
  *
  * Exit 0 when it reported (or had nothing to report), 1 when a `gh` call failed, 2 on a usage
  * error (nothing is filed), on `--force-removable` naming an id the check did not list (nothing is
@@ -47,9 +47,9 @@ import { summaryMarkdown } from "./lib/canary-summary.mjs";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const USAGE =
-  "Usage: node scripts/canary-report.mjs <temporal-oracle|leap-seconds> " +
+  "Usage: node scripts/canary-report.mjs <temporal-oracle|leap-seconds|us-clock-watch> " +
   "[--force-removable=<id>] [--force-mismatch] [--force-native-failure] " +
-  "[--force-swap-ready] [--force-leap-difference] [--print]";
+  "[--force-swap-ready] [--force-leap-difference] [--force-us-clock-difference] [--print]";
 
 /** Flags each workflow accepts besides `--print`. */
 const FORCE_FLAGS = {
@@ -60,6 +60,7 @@ const FORCE_FLAGS = {
     "--force-swap-ready",
   ],
   "leap-seconds": ["--force-leap-difference"],
+  "us-clock-watch": ["--force-us-clock-difference"],
 };
 
 /** What `gh label create` gets for each label the canaries use. Existing labels are never edited. */
@@ -90,7 +91,7 @@ const LABEL_SPECS = {
 
 /**
  * @param {string[]} argv  the arguments after `node scripts/canary-report.mjs`
- * @returns {{ ok: true, workflow: "temporal-oracle" | "leap-seconds", force: Force, print: boolean }
+ * @returns {{ ok: true, workflow: "temporal-oracle" | "leap-seconds" | "us-clock-watch", force: Force, print: boolean }
  *   | { ok: false, error: string }}
  */
 export function parseArgs(argv) {
@@ -100,7 +101,11 @@ export function parseArgs(argv) {
     error: `canary-report: ${detail}\n${USAGE}`,
   });
   const [workflow, ...flags] = args;
-  if (workflow !== "temporal-oracle" && workflow !== "leap-seconds") {
+  if (
+    workflow !== "temporal-oracle" &&
+    workflow !== "leap-seconds" &&
+    workflow !== "us-clock-watch"
+  ) {
     return fail(
       workflow === undefined
         ? "no workflow given"
@@ -129,8 +134,10 @@ export function parseArgs(argv) {
       force.nativeFailure = true;
     } else if (flag === "--force-swap-ready") {
       force.swapReady = true;
-    } else {
+    } else if (flag === "--force-leap-difference") {
       force.leapDifference = true;
+    } else {
+      force.usClockDifference = true;
     }
   }
   return { ok: true, workflow, force, print };
@@ -294,7 +301,7 @@ export function realGh(args, input) {
  * The verdict file of each source the workflow reads: a missing file is `null`, an unreadable one
  * a could-not-run verdict.
  * @param {string} root
- * @param {"temporal-oracle" | "leap-seconds"} workflow
+ * @param {"temporal-oracle" | "leap-seconds" | "us-clock-watch"} workflow
  */
 function readVerdicts(root, workflow) {
   /** @type {Record<string, any>} */

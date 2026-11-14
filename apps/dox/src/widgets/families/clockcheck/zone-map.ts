@@ -17,6 +17,7 @@ import { gateAttr } from "../../builders/gate";
 import { html, type HtmlValue, type SafeHtml } from "../../builders/html";
 import { idScope } from "../../builders/ids";
 import { noSignal, zoneId } from "./marks";
+import { pinHead } from "./pin-head";
 import styles from "./zone-map.module.css";
 
 /** What the pin panel says before a zone is pinned. */
@@ -77,25 +78,40 @@ export function zoneLegend(
   </ul>`;
 }
 
-interface ZoneListItemOptions {
+/** The attribute that names the feature a row, a shape or a ring stands for. */
+export type FeatureIdKey = "tz" | "feature";
+
+const idAttr = (key: FeatureIdKey, id: string): SafeHtml =>
+  key === "feature" ? html`data-feature-id="${id}"` : html`data-tz-id="${id}"`;
+
+interface FeatureListItemOptions {
   idPrefix: string;
   /** Position in the list: the ids of the fields the mount fills. */
   index: number;
-  zone: string;
+  /** The feature the row pins: a zone id, or a state's postal code. */
+  feature: string;
+  /** The words of the row: `feature` when unset. */
+  name?: string;
+  /** The attribute the button carries the feature in; the checkers' is `tz`. */
+  idKey?: FeatureIdKey;
+  /** The part-name stem, `zone` on the checkers (`zone-0-kind`). */
+  stem?: string;
 }
 
-/** One list item: the zone id, its offset and its class, in a button that pins the zone. */
-function zoneListItem(options: ZoneListItemOptions): SafeHtml {
+/** One list item: the feature's name, its value and its class, in a button that pins it. */
+function featureListItem(options: FeatureListItemOptions): SafeHtml {
   const id = idScope(options.idPrefix);
-  const parts = zoneListParts(options.index);
+  const stem = options.stem ?? "feature";
+  const parts = featureListParts(options.index, stem);
+  const key = options.idKey ?? "feature";
   return html`<li class="${styles.zone}">
     <button
       type="button"
       class="${styles.zoneButton}"
-      data-tz-id="${options.zone}"
+      ${idAttr(key, options.feature)}
       aria-pressed="false"
     >
-      <span class="${styles.zoneId}"><code>${zoneId(options.zone)}</code></span>
+      <span class="${styles.zoneId}"><code>${zoneId(options.name ?? options.feature)}</code></span>
       <span class="${styles.zoneKind}"
         >${classSwatch("no-data", id(parts.swatch))}<span id="${id(parts.kind)}">${NO_ANSWER}</span></span
       >
@@ -104,17 +120,29 @@ function zoneListItem(options: ZoneListItemOptions): SafeHtml {
   </li>`;
 }
 
-/** The local part names of a list item's fields (`findWidget(...).id(name)`), for the mount. */
-export function zoneListParts(index: number): {
+/**
+ * The local part names of a list item's fields (`findWidget(...).id(name)`), for the mount. The
+ * row's button carries `data-feature-id`; the checkers' `zoneListParts` is the same with the
+ * `zone` stem and `data-tz-id`.
+ */
+export function featureListParts(
+  index: number,
+  stem = "feature",
+): {
   swatch: string;
   kind: string;
   offset: string;
 } {
   return {
-    swatch: `zone-${index}-swatch`,
-    kind: `zone-${index}-kind`,
-    offset: `zone-${index}-offset`,
+    swatch: `${stem}-${index}-swatch`,
+    kind: `${stem}-${index}-kind`,
+    offset: `${stem}-${index}-offset`,
   };
+}
+
+/** The checkers' form of `featureListParts`: the `zone` stem, on a row that carries `data-tz-id`. */
+export function zoneListParts(index: number) {
+  return featureListParts(index, "zone");
 }
 
 /** The readouts of the pin panel, by the local id the mount reads them by. */
@@ -130,35 +158,35 @@ const PIN_FIELDS = [
 export type PinField = (typeof PIN_FIELDS)[number];
 
 /**
- * The pin panel: the clock beside the zone and its class, and five readouts. One announcement says
+ * The pin panel: the clock beside the zone, the zone's class (beside the clock from 40rem, under
+ * it across the panel below), and five readouts. One announcement says
  * the pin (a polite status); the ticking time is plain text outside any live region.
  */
 function pinPanel(idPrefix: string): SafeHtml {
   const id = idScope(`${idPrefix}-pin`);
-  const title = (
-    field: PinField,
-    label: string,
-    text: HtmlValue,
-    className: string,
-    gate: string,
-  ) =>
-    html`<div class="${styles.pinTitleRow}">
-      <dt class="gmt-sr-only">${label}</dt>
-      <dd id="${id(field)}" class="${className}" ${gateAttr(gate)}>${text}</dd>
-    </div>`;
   const row = (field: PinField, label: string, wide = false) =>
     html`<div class="${wide ? styles.pinRowWide : styles.pinRow}">
       <dt>${label}</dt>
       <dd id="${id(field)}" ${gateAttr("pin-cell")}>${EMPTY}</dd>
     </div>`;
   return html`<p class="gmt-sr-only" id="${id("announce")}" role="status"></p>
-    <div class="${styles.pinHead}">
-      <div class="${styles.pinClock}" id="${id("clock")}" aria-hidden="true"></div>
-      <dl class="${styles.pinTitle}">
-        ${title("zone", "Zone", PIN_PLACEHOLDER, styles.pinZone, "pin-cell pin-zone")}
-        ${title("class", "Class", EMPTY, styles.pinClass, "pin-cell")}
-      </dl>
-    </div>
+    ${pinHead({
+      clockId: id("clock"),
+      name: {
+        label: "Zone",
+        id: id("zone"),
+        className: styles.pinZone,
+        gate: "pin-cell pin-zone",
+        content: PIN_PLACEHOLDER,
+      },
+      note: {
+        label: "Class",
+        id: id("class"),
+        className: styles.pinClass,
+        gate: "pin-cell",
+        content: EMPTY,
+      },
+    })}
     <dl class="${styles.pinRows}">
       ${row("time", "Local time")} ${row("offset", "UTC offset")}
       ${row("last", "Last change", true)} ${row("next", "Next change", true)}
@@ -182,6 +210,8 @@ interface ZoneMapOptions {
   legend: SafeHtml;
   /** The live-clocks card, placed beside the zone list. */
   clocks: SafeHtml;
+  /** `feature` for a map keyed by something other than a zone (`data-feature-id`); `tz` when unset. */
+  idKey?: FeatureIdKey;
 }
 
 /**
@@ -191,7 +221,13 @@ interface ZoneMapOptions {
 export function zoneMap(options: ZoneMapOptions): SafeHtml {
   const id = idScope(options.idPrefix);
   const items = options.zones.map((zone, index) =>
-    zoneListItem({ idPrefix: options.idPrefix, index, zone }),
+    featureListItem({
+      idPrefix: options.idPrefix,
+      index,
+      feature: zone,
+      idKey: options.idKey ?? "tz",
+      stem: options.idKey === "feature" ? "feature" : "zone",
+    }),
   );
   return html`<div
     class="${styles.section}"
@@ -283,6 +319,56 @@ interface MapDrawingOptions {
   /** Every shape, with the stopped ones last so no neighbour paints over any of their border. */
   shapes: readonly DrawnShape[];
   markers: readonly DrawnMarker[];
+  /** Lines or frames drawn over the shapes (zone lines, inset frames): hidden, taking no pointer. */
+  overlay?: readonly string[];
+  /**
+   * Thin bevelled frames (inset frames), as path data with the features each holds: hidden from
+   * assistive technology and not focusable. A pointer press in one pins the first feature.
+   */
+  frames?: readonly { d: string; ids: readonly string[] }[];
+  /** One hatched part, clipped to `clipD`: hidden, taking no pointer. */
+  hatch?: { d: string; clipD: string };
+  /** The attribute shapes and rings carry their feature in; `tz` when unset. */
+  idKey?: FeatureIdKey;
+}
+
+/** A frame's outline: its box with every corner cut at 45 degrees, the house bevel. */
+export function framePath(
+  box: readonly [readonly [number, number], readonly [number, number]],
+  cut = 6,
+): string {
+  const [[x0, y0], [x1, y1]] = box;
+  const c = Math.min(cut, (x1 - x0) / 2, (y1 - y0) / 2);
+  const f = (n: number) => n.toFixed(1);
+  return `M${f(x0 + c)} ${f(y0)} H${f(x1 - c)} L${f(x1)} ${f(y0 + c)} V${f(y1 - c)} L${f(x1 - c)} ${f(y1)} H${f(x0 + c)} L${f(x0)} ${f(y1 - c)} V${f(y0 + c)} Z`;
+}
+
+/** The marks a class wears under forced colours, as its legend swatch does. */
+const FORCED_MARKS = ["hatch", "hatch-sparse", "dots", "dots-sparse"] as const;
+type ForcedMark = (typeof FORCED_MARKS)[number];
+
+/**
+ * Forced colours repaint a map in two system colours, so a class keeps its legend swatch's mark
+ * there: dense or sparse hatch, dense or sparse dots, in CanvasText on Canvas. The tiles are in
+ * the drawing's own units (`MAP_WIDTH` is 800), so a tile is about 5 CSS px with the map at its
+ * widest. Only the forced-colours rules in `zone-map.module.css` paint with them, through the
+ * `--zonemap-fc-*` properties the svg sets.
+ */
+function forcedMarks(id: (name: ForcedMark) => string): SafeHtml {
+  const hatch = (name: ForcedMark, size: number, line: number) =>
+    html`<pattern id="${id(name)}" width="${size}" height="${size}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect class="${styles.markGround}" width="${size}" height="${size}"></rect>
+      <rect class="${styles.markInk}" width="${line}" height="${size}"></rect>
+    </pattern>`;
+  const dots = (name: ForcedMark, size: number, r: number) =>
+    html`<pattern id="${id(name)}" width="${size}" height="${size}" patternUnits="userSpaceOnUse">
+      <rect class="${styles.markGround}" width="${size}" height="${size}"></rect>
+      <circle class="${styles.markInk}" cx="${size / 2}" cy="${size / 2}" r="${r}"></circle>
+    </pattern>`;
+  return html`<defs aria-hidden="true">
+    ${hatch("hatch", 7, 2)} ${hatch("hatch-sparse", 11, 1.4)}
+    ${dots("dots", 7, 1.7)} ${dots("dots-sparse", 11, 1.2)}
+  </defs>`;
 }
 
 const ring = (kind: "hover" | "pin"): SafeHtml =>
@@ -297,6 +383,7 @@ const ring = (kind: "hover" | "pin"): SafeHtml =>
  * top. The zone list is the keyboard path.
  */
 export function mapDrawing(options: MapDrawingOptions): SafeHtml {
+  const mark = (name: ForcedMark) => `${options.id}-fc-${name}`;
   return html`<svg
     class="${styles.svg}"
     id="${options.id}"
@@ -305,10 +392,16 @@ export function mapDrawing(options: MapDrawingOptions): SafeHtml {
     role="group"
     aria-label="${options.label}"
     focusable="false"
+    style="${FORCED_MARKS.map((name) => `--zonemap-fc-${name}: url(#${mark(name)})`).join("; ")}"
   >
+    ${forcedMarks(mark)}
     ${options.land.map(
       (d) =>
         html`<path class="${styles.land}" d="${d}" aria-hidden="true"></path>`,
+    )}
+    ${(options.frames ?? []).map(
+      (inset) =>
+        html`<path class="${styles.frame}" d="${inset.d}" data-frame-ids="${inset.ids.join(" ")}" data-pinned="false" aria-hidden="true" focusable="false"></path>`,
     )}
     ${options.shapes.map(
       (shape) =>
@@ -317,7 +410,7 @@ export function mapDrawing(options: MapDrawingOptions): SafeHtml {
           ${gateAttr("map-shape")}
           d="${shape.d}"
           data-kind="${shape.kind}"
-          data-tz-id="${shape.id}"
+          ${idAttr(options.idKey ?? "tz", shape.id)}
           role="button"
           tabindex="-1"
           aria-pressed="false"
@@ -332,12 +425,27 @@ export function mapDrawing(options: MapDrawingOptions): SafeHtml {
           cy="${marker.cy.toFixed(1)}"
           r="${marker.r}"
           data-kind="${marker.kind}"
-          data-tz-id="${marker.id}"
+          ${idAttr(options.idKey ?? "tz", marker.id)}
           role="button"
           tabindex="-1"
           aria-pressed="false"
           aria-label="${marker.label}"
         ></circle>`,
+    )}
+    ${
+      options.hatch === undefined
+        ? ""
+        : html`<clipPath id="${options.id}-hatch-clip"><path d="${options.hatch.clipD}"></path></clipPath>
+          <path
+            class="${styles.hatch}"
+            d="${options.hatch.d}"
+            clip-path="url(#${options.id}-hatch-clip)"
+            aria-hidden="true"
+          ></path>`
+    }
+    ${(options.overlay ?? []).map(
+      (d) =>
+        html`<path class="${styles.overlay}" d="${d}" aria-hidden="true"></path>`,
     )}
     ${ring("hover")} ${ring("pin")}
   </svg>`;
@@ -351,8 +459,11 @@ export function labelLayer(id: string): SafeHtml {
 interface LabelOptions {
   zone: string;
   city: string;
-  /** The offset the list shows, or `null` for the NO SIGNAL mark. */
-  offset: string | null;
+  /**
+   * The offset the list shows, `null` for the NO SIGNAL mark, or `undefined` for a label that has
+   * no second line (a state's).
+   */
+  offset: string | null | undefined;
   /** The anchor as a share of the frame, in percent. */
   ax: string;
   ay: string;
@@ -374,8 +485,65 @@ export function labelMarkup(options: LabelOptions): SafeHtml {
     style="--ax: ${options.ax}; --ay: ${options.ay}; --lw: ${options.width}px; --lh: ${options.height}px"
   >
     <span class="${styles.labelCity}">${options.city}</span>
-    <span class="${styles.labelOffset}"
-      >${options.offset === null ? noSignal() : options.offset}</span
-    >
+    ${
+      options.offset === undefined
+        ? ""
+        : html`<span class="${styles.labelOffset}"
+          >${options.offset === null ? noSignal() : options.offset}</span
+        >`
+    }
   </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// The view switch
+// ---------------------------------------------------------------------------
+
+interface ViewOption {
+  /** The value the page script reads from the checked radio. */
+  value: string;
+  label: string;
+  /** Checked at the start. Exactly one option is; the first when none says so. */
+  checked?: boolean;
+}
+
+interface ViewSwitchOptions {
+  /** The radio group's `name` and the fieldset's id. */
+  id: string;
+  /** The group's name for assistive technology, shown as the `legend`. */
+  legend: string;
+  options: readonly ViewOption[];
+}
+
+/**
+ * A switch between two or more views of one map: the WAI-ARIA APG Radio Group, written as native
+ * `<fieldset>`, `<legend>` and `<input type="radio">`, so the browser supplies the arrow keys and
+ * the single tab stop. Styled as a segmented control. The page script finds it by
+ * `data-role="view-switch"` and reads the checked radio's value.
+ */
+export function viewSwitch(options: ViewSwitchOptions): SafeHtml {
+  const first = options.options.some((option) => option.checked === true)
+    ? null
+    : options.options[0];
+  return html`<fieldset
+    class="${styles.viewSwitch}"
+    id="${options.id}"
+    data-role="view-switch"
+  >
+    <legend class="${styles.viewLegend}">${options.legend}</legend>
+    <div class="${styles.viewSegments}">
+      ${options.options.map(
+        (option) =>
+          html`<label class="${styles.viewSegment}"
+            ><input
+              class="${styles.viewInput}"
+              type="radio"
+              name="${options.id}"
+              value="${option.value}"
+              ${option.checked === true || option === first ? "checked" : ""}
+            /><span class="${styles.viewText}">${option.label}</span></label
+          >`,
+      )}
+    </div>
+  </fieldset>`;
 }

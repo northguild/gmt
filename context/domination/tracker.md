@@ -168,7 +168,9 @@ adds the Canada 2026 clock-change checker to Dox; it follows `CORE-83`, whose `c
 (identifiers, which no story consumes), `CORE-54` (holiday rules), `CORE-84` (recurrence and
 cron, whose ordinal `BYDAY` is `CORE-54`'s first use) and `CORE-85` (human durations) are the
 second release. Every story after them can draw on all eight. `CORE-90`, a United States checker,
-waits at the end of the table until permanent daylight time is law and a tzdb release models it.
+waits at the end of the table: phase 1 (the Sunshine Protection Act page and the US clock-change
+watch) has shipped, and the watch's tz issue, raised when a tz release models the change, starts
+phase 2.
 `CORE-91`, which leaves only the past tense on the Canada checker now that 1 November 2026 has
 passed, is done.
 `CORE-79` (`Position`), `CORE-102` (month-day and year-month values) and `CORE-103` (the core

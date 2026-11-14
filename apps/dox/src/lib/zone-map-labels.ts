@@ -147,3 +147,77 @@ export function poleOfInaccessibility(
   }
   return bestDistance > 0 ? best : null;
 }
+
+/** A label's box on screen, in CSS px. */
+export interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/** Clear space kept between two labels' boxes, in CSS px. */
+const LABEL_GAP_PX = 2;
+
+/** Slack when a label is held to its card, for sub-pixel rounding, in CSS px. */
+const FIT_SLACK_PX = 0.5;
+
+/**
+ * The least move, in CSS px, that brings a label's box whole inside its card (an inset), or
+ * `null` when the box is wider or taller than the card and no move would. An island near its
+ * card's edge keeps its label, pushed in just far enough.
+ */
+export function nudgeInto(
+  box: Box,
+  card: Box,
+): { dx: number; dy: number } | null {
+  const along = (lo: number, hi: number, min: number, max: number) =>
+    lo < min ? min - lo : hi > max ? max - hi : 0;
+  if (
+    box.right - box.left > card.right - card.left + FIT_SLACK_PX ||
+    box.bottom - box.top > card.bottom - card.top + FIT_SLACK_PX
+  )
+    return null;
+  return {
+    dx: along(box.left, box.right, card.left, card.right),
+    dy: along(box.top, box.bottom, card.top, card.bottom),
+  };
+}
+
+/**
+ * Which labels stay shown on a frame too small for all of them: greedy in priority order, a
+ * label stays when its box keeps `LABEL_GAP_PX` clear of every label kept before it, and lies
+ * whole inside its `within` box (an inset's card) when it has one. A box with no size (not laid
+ * out) meets nothing. The type never shrinks below 12px; a crowded label goes.
+ */
+export function clearLabels(
+  boxes: readonly (Box & { within?: Box })[],
+): boolean[] {
+  const kept: Box[] = [];
+  return boxes.map((box) => {
+    const sized = box.right > box.left && box.bottom > box.top;
+    const card = box.within;
+    if (
+      sized &&
+      card !== undefined &&
+      (box.left < card.left - FIT_SLACK_PX ||
+        box.right > card.right + FIT_SLACK_PX ||
+        box.top < card.top - FIT_SLACK_PX ||
+        box.bottom > card.bottom + FIT_SLACK_PX)
+    )
+      return false;
+    if (
+      sized &&
+      kept.some(
+        (k) =>
+          box.left < k.right + LABEL_GAP_PX &&
+          k.left < box.right + LABEL_GAP_PX &&
+          box.top < k.bottom + LABEL_GAP_PX &&
+          k.top < box.bottom + LABEL_GAP_PX,
+      )
+    )
+      return false;
+    if (sized) kept.push(box);
+    return true;
+  });
+}

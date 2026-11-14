@@ -390,6 +390,23 @@ describe("parseArgs", () => {
     });
   });
 
+  it("reads the US clock-change flag", () => {
+    expect(
+      parseArgs(["us-clock-watch", "--force-us-clock-difference"]),
+    ).toEqual({
+      ok: true,
+      workflow: "us-clock-watch",
+      force: { usClockDifference: true },
+      print: false,
+    });
+    expect(parseArgs(["us-clock-watch"])).toEqual({
+      ok: true,
+      workflow: "us-clock-watch",
+      force: {},
+      print: false,
+    });
+  });
+
   it("treats an empty --force-removable= as no force", () => {
     expect(parseArgs(["temporal-oracle", "--force-removable="])).toEqual({
       ok: true,
@@ -409,6 +426,9 @@ describe("parseArgs", () => {
     ${"a leap flag on the oracle"}       | ${["temporal-oracle", "--force-leap-difference"]}
     ${"the native flag on leap-seconds"} | ${["leap-seconds", "--force-native-failure"]}
     ${"a second positional"}             | ${["temporal-oracle", "leap-seconds"]}
+    ${"the US flag on leap-seconds"}     | ${["leap-seconds", "--force-us-clock-difference"]}
+    ${"the leap flag on the US watch"}   | ${["us-clock-watch", "--force-leap-difference"]}
+    ${"the US flag on the oracle"}       | ${["temporal-oracle", "--force-us-clock-difference"]}
   `("rejects $name with a usage message", ({ argv }) => {
     const parsed = parseArgs(argv);
     expect(parsed.ok).toBe(false);
@@ -988,6 +1008,37 @@ describe("main", () => {
     expect(actions[0].body).toContain(
       "- **temporal-oracle**: unreadable verdict: EISDIR",
     );
+  });
+
+  it("--print files the US clock-change differences of its verdict and calls no gh", () => {
+    write("us-clock-watch.json", {
+      source: "us-clock-watch",
+      status: "ran",
+      federal: { status: "ran", congress: 119, differences: [] },
+      state: { status: "ran", differences: [] },
+      tz: {
+        status: "ran",
+        release: "2026f",
+        snapshotRelease: "2026e",
+        differences: ["America/New_York"],
+      },
+    });
+    const { code, out, gh } = run(["us-clock-watch", "--print"]);
+    expect(code).toBe(0);
+    expect(gh.calls).toEqual([]);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+      "us-clock-watch/tz-us-zone",
+    ]);
+    expect(out).toContain("America/New_York");
+  });
+
+  it("a missing US clock-change verdict reads as could-not-run", () => {
+    const { out } = run(["us-clock-watch", "--print"]);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+      "us-clock-watch/could-not-run",
+    ]);
   });
 
   it.each`

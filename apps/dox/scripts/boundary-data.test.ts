@@ -17,6 +17,7 @@ const FILES = [
   "timezone-boundaries-globe.json",
   "timezone-boundaries-canada.json",
   "timezone-boundaries-morocco.json",
+  "timezone-boundaries-us.json",
 ] as const;
 
 /** `land_frame` of each region row, read from the script that writes the files. */
@@ -273,4 +274,85 @@ describe.each([
       .map((f) => f.properties.tzid);
     expect(empty).toEqual([]);
   });
+});
+
+/**
+ * The United States files (CORE-90): zones keyed by tzid, states keyed by postal code. The points
+ * were checked against the committed files, with no network.
+ */
+describe("the United States files", () => {
+  const { tzdb, zones, undrawn } = JSON.parse(
+    readFileSync(resolve(APP, "src/lib/us-region-zones.json"), "utf8"),
+  ) as { tzdb: string; zones: string[]; undrawn: string[] };
+  const zoneData = load("timezone-boundaries-us.json");
+  const stateData = JSON.parse(
+    readFileSync(resolve(APP, "public/state-boundaries-us.json"), "utf8"),
+  ) as {
+    source: string;
+    features: Array<{ properties: { postal: string; name: string } }>;
+  };
+  const asFeature = (f: unknown) => f as Parameters<typeof geoContains>[0];
+  const at = (
+    features: ReadonlyArray<{ properties: object }>,
+    key: "tzid" | "postal",
+    point: [number, number],
+  ) =>
+    features
+      .filter((f) => geoContains(asFeature(f), point))
+      .map((f) => (f.properties as Record<string, string>)[key]);
+
+  it.each([
+    ["Window Rock (Navajo Nation)", [-109.05, 35.67], "America/Denver"],
+    ["Phoenix", [-112.07, 33.45], "America/Phoenix"],
+    ["Second Mesa (Hopi)", [-110.5, 35.8], "America/Phoenix"],
+    ["Indianapolis", [-86.16, 39.77], "America/Indiana/Indianapolis"],
+    ["Honolulu", [-157.86, 21.31], "Pacific/Honolulu"],
+    // San Juan's own coordinate, [-66.11, 18.47], is harbour water in Natural Earth's land.
+    ["Caguas, 20 km south of San Juan", [-66.04, 18.23], "America/Puerto_Rico"],
+  ] as const)("%s is in its zone", (_label, point, tzid) => {
+    expect(at(zoneData.features, "tzid", [...point])).toEqual([tzid]);
+  });
+
+  it.each([
+    ["Boise", [-116.2, 43.62], "ID"],
+    ["Wilmington", [-75.55, 39.75], "DE"],
+    ["Pago Pago", [-170.7, -14.28], "AS"],
+  ] as const)("%s is in its state", (_label, point, postal) => {
+    expect(at(stateData.features, "postal", [...point])).toEqual([postal]);
+  });
+
+  it("draws every listed zone except the undrawn ones, and nothing else", () => {
+    expect(tzdb).toBe(TBB_TAG);
+    expect(undrawn).toEqual(["Pacific/Midway", "Pacific/Wake"]);
+    for (const id of undrawn) expect(zones).toContain(id);
+    const drawn = zoneData.features
+      .filter((f) => f.properties.land === undefined)
+      .map((f) => f.properties.tzid as string);
+    expect(drawn.sort()).toEqual(
+      zones.filter((z) => !undrawn.includes(z)).sort(),
+    );
+  });
+
+  it("starts the zone file with the land feature", () => {
+    expect(zoneData.features[0]!.properties).toEqual({ land: "other" });
+  });
+
+  it("holds 50 states, DC and five territories, each with a postal code and a name", () => {
+    const postals = stateData.features.map((f) => f.properties.postal);
+    expect(new Set(postals).size).toBe(56);
+    for (const code of ["DC", "PR", "VI", "GU", "MP", "AS"])
+      expect(postals).toContain(code);
+    for (const f of stateData.features)
+      expect(Object.keys(f.properties).sort()).toEqual(["name", "postal"]);
+    expect(stateData.source).toContain("public domain");
+  });
+
+  it.each(["timezone-boundaries-us.json", "state-boundaries-us.json"])(
+    "%s is under 409,600 bytes",
+    (name) => {
+      expect(readFileSync(resolve(APP, "public", name)).length).toBeLessThan(
+        409_600,
+      );
+    },
+  );
 });

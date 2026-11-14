@@ -16,8 +16,8 @@
  *
  * It then pins each of the 23 zones in turn (a fixture row for every zone, the longest texts in
  * the mix) and asserts the pin panel's, the map's and the stored-times form's rects do not change,
- * and that no value cell in the panel is under 4ch wide. At 375 px it asserts the panel opens below
- * the zone list's box instead (the map is not drawn there).
+ * and that no value cell in the panel is under 4ch wide. At 375 px it also asserts the map is drawn
+ * (it is at every width) and the panel opens below the zone list's box.
  *
  * The page says when it is ready: the mount sets `data-state="ready"` on its root right after the
  * first clock tick that has the Worker's answer. The script installs the fake clock and pauses it
@@ -269,10 +269,9 @@ async function checkPinPanel(page, label, width) {
   if (width === 375) {
     await pinned(ALL_ZONES[0]);
     const r = await pinRects(page);
-    if (r.mapShown) fail(`${label}: the map is drawn at 375px`);
+    if (!r.mapShown) fail(`${label}: the map is not drawn at 375px`);
     if (!r.belowList)
       fail(`${label}: the pin panel is not open below the zone list`);
-    return;
   }
   // The page finishes mounting its widgets after the list appears; the baseline is the layout once
   // two reads 400 ms apart agree, so only a pin can be blamed for a later change.

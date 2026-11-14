@@ -11,7 +11,8 @@
  *   tab-unreached     a candidate never took focus
  *   tab-trap          focus came back to a visited element while candidates were unvisited
  *   focus-invisible   focus changed no outline, box-shadow, border or background colour
- *   focus-obscured    the focused element's centre is covered by something else (the sticky header)
+ *   focus-obscured    the focused element's centre (a drawn shape's: the point of its fill nearest
+ *                     its box's centre) is covered by something else (the sticky header)
  *   arrow-no-move     a slider (range, role=slider, drag handle) ignores ArrowRight / ArrowLeft
  *
  * At 390 the mobile menu is opened only when the walk reaches its toggle; the menu's links count as
@@ -175,15 +176,40 @@ function install() {
           hit.contains(el) ||
           (el.labels &&
             [...el.labels].some((l) => l === hit || l.contains(hit))));
-      // One sample per box: did the element at its centre belong to the control?
+      // A drawn shape can be several islands with open water at its box's centre, and whatever
+      // lies under that water is not covering the shape. Sample the point of the shape's own
+      // fill nearest the centre instead (the centre itself for a convex shape).
+      const sampleAt = (r) => {
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const ctm = el instanceof SVGGeometryElement ? el.getScreenCTM() : null;
+        if (ctm === null) return [cx, cy];
+        const toShape = ctm.inverse();
+        const inside = (x, y) =>
+          el.isPointInFill(new DOMPoint(x, y).matrixTransform(toShape));
+        if (inside(cx, cy)) return [cx, cy];
+        const steps = 32;
+        let best = null;
+        let bestD = Infinity;
+        for (let i = 0; i < steps; i++) {
+          for (let j = 0; j < steps; j++) {
+            const x = r.left + ((i + 0.5) * r.width) / steps;
+            const y = r.top + ((j + 0.5) * r.height) / steps;
+            const d = (x - cx) ** 2 + (y - cy) ** 2;
+            if (d < bestD && inside(x, y)) {
+              best = [x, y];
+              bestD = d;
+            }
+          }
+        }
+        return best ?? [cx, cy];
+      };
+      // One sample per box: did the element at that point belong to the control?
       const samples =
         getComputedStyle(el).pointerEvents === "none"
           ? []
           : onScreen.map((r) => {
-              const hit = document.elementFromPoint(
-                r.left + r.width / 2,
-                r.top + r.height / 2,
-              );
+              const hit = document.elementFromPoint(...sampleAt(r));
               if (!hit) return { ok: false, by: "nothing" };
               const cs = getComputedStyle(hit);
               const box = hit.getBoundingClientRect();

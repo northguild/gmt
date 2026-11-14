@@ -89,7 +89,8 @@ export type WidgetKind =
   | "ccsds"
   | "dayruler"
   | "swiftdate"
-  | "gtfstime";
+  | "gtfstime"
+  | "sunshineact";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -149,6 +150,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   iddecode: "/tools/id-timestamp-decoder/",
   colbridge: "/tools/column-timestamp-bridge/",
   moroccoclock: withBase("/check/morocco-2026-clock-change/"),
+  sunshineact: withBase("/check/us-sunshine-protection-act/"),
   cronzone: "/tools/cron-in-a-zone/",
   leapday: "/tools/leap-day-birthday/",
   expiry: "/tools/expiry-calculator/",
@@ -283,6 +285,31 @@ const EMPTY_KEYS_BY_KIND: Readonly<
 };
 
 /**
+ * The Sunshine Protection Act's one argument is a nested `view`, which the flat reader below
+ * would drop. A `view` that is not `today` or `proposals`, or whose place is not a short string,
+ * is a missing value: the page opens on Today, unpinned.
+ */
+function sunshineSeed(args: Record<string, unknown>): Record<string, unknown> {
+  const view = args["view"];
+  if (typeof view !== "object" || view === null || Array.isArray(view))
+    return {};
+  const { kind, zone, state } = view as Record<string, unknown>;
+  const place = (value: unknown): string | undefined =>
+    typeof value === "string" && value.length >= 1 && value.length <= 64
+      ? value
+      : undefined;
+  if (kind === "today") {
+    const id = place(zone);
+    return { view: id === undefined ? { kind } : { kind, zone: id } };
+  }
+  if (kind === "proposals") {
+    const id = place(state);
+    return { view: id === undefined ? { kind } : { kind, state: id } };
+  }
+  return {};
+}
+
+/**
  * Read this page's own permalink, if it carries one for `kind`.
  *
  * Called from each widget's page bootstrap, so a link copied out of the chat —
@@ -312,6 +339,8 @@ export function seedFromLocation(
   const args = decoded.args;
   if (typeof args !== "object" || args === null || Array.isArray(args))
     return {};
+  if (kind === "sunshineact")
+    return sunshineSeed(args as Record<string, unknown>);
 
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(args as Record<string, unknown>)) {

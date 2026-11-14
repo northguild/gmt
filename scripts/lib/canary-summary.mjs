@@ -18,6 +18,7 @@ import {
 const CHECK = "temporal-compat-check";
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
+const US_WATCH = "us-clock-watch";
 
 const NO_VERDICT = "no verdict file: an earlier step or job failed";
 
@@ -393,7 +394,7 @@ function runtimeLine(verdicts) {
 /**
  * The dry-run lines: one naming the flags that were applied, then one per flag that was skipped,
  * with its reason.
- * @param {"temporal-oracle" | "leap-seconds"} workflow
+ * @param {"temporal-oracle" | "leap-seconds" | "us-clock-watch"} workflow
  * @param {Force} force
  * @param {Skipped[]} skipped
  * @returns {string | null}
@@ -408,8 +409,10 @@ function dryRunLines(workflow, force, skipped) {
     if (force.mismatch) flags.push("--force-mismatch");
     if (force.nativeFailure) flags.push("--force-native-failure");
     if (force.swapReady) flags.push("--force-swap-ready");
-  } else if (force.leapDifference) {
-    flags.push("--force-leap-difference");
+  } else if (workflow === "leap-seconds") {
+    if (force.leapDifference) flags.push("--force-leap-difference");
+  } else if (force.usClockDifference) {
+    flags.push("--force-us-clock-difference");
   }
   const lines = [];
   const applied = flags.filter((flag) => !notApplied.has(flag));
@@ -446,8 +449,57 @@ function issuesLine(results, notFiledReason) {
 }
 
 /**
+ * The US clock-change watch: one row per source, then the differences of each. A source that could
+ * not run says why; the others still show.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @returns {string[]}
+ */
+function usClockWatchBlocks(verdicts) {
+  const blocks = ["## US clock-change watch"];
+  const found = sourceOf(verdicts, US_WATCH);
+  if (!("ran" in found)) {
+    blocks.push(
+      `US clock-change watch: could not run — ${oneLine(found.message)}`,
+    );
+    return blocks;
+  }
+  const watch = found.ran;
+  const parts = [
+    ["Federal bills", watch.federal],
+    ["State bills", watch.state],
+    ["tz zones", watch.tz],
+  ];
+  blocks.push(
+    [
+      "| Source | Result |",
+      "| --- | --- |",
+      ...parts.map(([name, part]) =>
+        part.status === "ran"
+          ? `| ${name} | ${part.differences.length} differences |`
+          : `| ${name} | could not run — ${oneLine(part.message)} |`,
+      ),
+    ].join("\n"),
+  );
+  if (watch.tz.status === "ran") {
+    blocks.push(
+      watch.tz.differences.length === 0
+        ? `tz release ${watch.tz.release}: no US zone changed`
+        : `tz release ${watch.tz.release} (snapshot ${watch.tz.snapshotRelease})`,
+    );
+  }
+  for (const [name, part] of parts) {
+    if (part.status === "ran" && part.differences.length > 0) {
+      blocks.push(
+        `### ${name}\n\n${part.differences.map((/** @type {string} */ d) => `- ${oneLine(d)}`).join("\n")}`,
+      );
+    }
+  }
+  return blocks;
+}
+
+/**
  * GFM for $GITHUB_STEP_SUMMARY.
- * @param {"temporal-oracle" | "leap-seconds"} workflow
+ * @param {"temporal-oracle" | "leap-seconds" | "us-clock-watch"} workflow
  * @param {Record<string, Verdict | null>} verdicts  the real verdicts, before applyForce
  * @param {Force} force
  * @param {Result[] | null} results
@@ -481,6 +533,8 @@ export function summaryMarkdown(
       ...nativeBlocks(verdicts),
       ...swapBlocks(verdicts),
     );
+  } else if (workflow === "us-clock-watch") {
+    blocks.push(...usClockWatchBlocks(verdicts));
   } else {
     blocks.push("## Leap-second canary");
     const found = sourceOf(verdicts, LEAP);

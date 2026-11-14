@@ -57,6 +57,12 @@
     font-size: 0.8125rem;
   }
 
+  /* The head's notes are `--gmt-ice-dim` at 12 px: on the content sheet's `--gmt-fill-deep` head
+     they fall to 6.98:1 over Morocco's backdrop, so this head takes the lighter strong fill. */
+  & table thead {
+    background: var(--gmt-fill-strong);
+  }
+
   /* A head keeps its words whole: the kit's `overflow-wrap: anywhere` is lifted here. */
   & table thead th {
     vertical-align: bottom;
@@ -284,6 +290,15 @@
   margin: 0;
   color: var(--gmt-ice-dim);
   font-size: 0.8125rem;
+}
+
+/* The head's lighter fill gives way to the near-opaque surface every table head takes here
+   (`gmt-a11y.css`). */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent fill */
+@media (prefers-reduced-transparency: reduce) {
+  .probe table thead {
+    background: var(--gmt-surface);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

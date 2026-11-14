@@ -1136,6 +1136,25 @@ export const showMoroccoClockChangeInput = z.object({
 });
 
 /**
+ * Sunshine Protection Act checker: the view to open, and optionally the one place to pin. The top
+ * level is an object because tool calling wants one; the view is a union, so a zone cannot ride
+ * along with the states view. A zone is checked against the page's own list (`us-region-zones.json`)
+ * and a state against its 56 codes in the Worker and the registry.
+ */
+export const showUsSunshineProtectionActInput = z.object({
+  view: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("today"), zone: zoneSchema.optional() }),
+    z.object({
+      kind: z.literal("proposals"),
+      state: z
+        .string()
+        .regex(/^[A-Z]{2}$/)
+        .optional(),
+    }),
+  ]),
+});
+
+/**
  * What is wrong with a Cron in a Zone call, as sentences; empty when it is sound.
  * The schema and the Worker both ask, so a direct call is held to the same rules.
  * The cron grammar is never checked here: a line the library refuses is the
@@ -1419,7 +1438,8 @@ export type DoxToolName =
   | "showCodeBDayRuler"
   | "showFhirDateChecker"
   | "showSwiftValueDateReader"
-  | "showGtfsTimeReader";
+  | "showGtfsTimeReader"
+  | "showUsSunshineProtectionAct";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1813,6 +1833,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks whether a GTFS time such as 25:35:00 or 24:00:00 is valid or still part of the service day, why a stop time past midnight is refused by a clock-time check, how many days past the service day a time is, or how to write a GTFS time back",
     args: "value (a GTFS time exactly as the reader gave it, at most 16 characters, never trimmed or repaired), seconds (the written time less whole days, in seconds, as typed), dayOverflow (whole days past the service day, as typed). Each is a string; give at least one. Never pass a zone or a date.",
   },
+  {
+    name: "showUsSunshineProtectionAct",
+    purpose:
+      "Show a map of US time zones as the tz data has them today: which change their clocks and which keep the same time all year. A second view shows each state's adopted position on ending the clock changes, dated, and a panel of what the national proposal would do. Below both: evidence on how disruptive a change would be.",
+    when: "Call when the reader asks which US states or zones change their clocks, which keep one time all year, which states want daylight or standard time all year, what would happen if the US stopped changing clocks, or how a change would affect saved times.",
+    args: "view: { kind: today, zone?: one IANA id from the page's zone list } or { kind: proposals, state?: a two-letter state or territory code }. Never a place name.",
+  },
 ];
 
 /**
@@ -2041,6 +2068,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[54].purpose,
     inputSchema: showGtfsTimeReaderInput,
   }),
+  showUsSunshineProtectionAct: tool({
+    description: DOX_TOOL_DOCS[55].purpose,
+    inputSchema: showUsSunshineProtectionActInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -2119,6 +2150,7 @@ export const ENABLED_TOOL_NAMES = [
   "showFhirDateChecker",
   "showSwiftValueDateReader",
   "showGtfsTimeReader",
+  "showUsSunshineProtectionAct",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

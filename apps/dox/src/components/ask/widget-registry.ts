@@ -101,6 +101,7 @@ import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
 import type { CanadaClockChangeArgs } from "~/lib/canada-clock-change-mount";
 import type { DurationParserBenchArgs } from "~/lib/duration-parser-bench-mount";
 import type { MoroccoClockChangeArgs } from "~/lib/morocco-clock-change-mount";
+import type { SunshineActArgs } from "~/lib/sunshine-protection-act-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
@@ -146,6 +147,7 @@ import {
   showFhirDateCheckerInput,
   showSwiftValueDateReaderInput,
   showGtfsTimeReaderInput,
+  showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
@@ -1453,6 +1455,45 @@ const moroccoClockEntry = defineWidget<MoroccoClockChangeArgs>({
   },
 });
 
+const sunshineActEntry = defineWidget<SunshineActArgs>({
+  title: "Sunshine Protection Act",
+  kind: "sunshineact",
+  parse: (input) => {
+    const result = showUsSunshineProtectionActInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* The chat's copy leaves out the guidance cards and keeps the national panel. The mount pins
+     the place once its map has drawn, so the template paints the same everywhere. */
+  load: async () => {
+    const m = await import("~/lib/sunshine-protection-act-mount");
+    return {
+      renderTemplate: (idPrefix) =>
+        m.renderSunshineProtectionActWidgetTemplate(idPrefix),
+      mount: m.mountSunshineProtectionActWidget,
+    };
+  },
+  /* A zone or state outside the page's own lists would open unpinned, so refuse it with the
+     reason. Both lists are literal data, kept out of the chat's first download. */
+  validate: async ({ view }) => {
+    const place = view.kind === "today" ? view.zone : view.state;
+    if (place === undefined) return null;
+    const listed =
+      view.kind === "today"
+        ? (await import("~/lib/us-region-zones.json")).default.zones.includes(
+            place,
+          )
+        : (
+            await import("~/data/sunshine-protection-act-proposals")
+          ).STATE_CODES.includes(place);
+    return listed ? null : `${place} isn't one of the places the page lists.`;
+  },
+});
+
 const cronZoneEntry = defineWidget<CronInAZoneArgs>({
   title: "Cron in a zone",
   kind: "cronzone",
@@ -1656,6 +1697,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showFhirDateChecker: fhirEntry,
   showSwiftValueDateReader: swiftDateEntry,
   showGtfsTimeReader: gtfsTimeEntry,
+  showUsSunshineProtectionAct: sunshineActEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,
   showDoublePrecisionMeter: doublePrecisionMeterEntry,

@@ -862,6 +862,12 @@ export const CHAT_STARTERS: readonly {
     args: { zone: "Africa/Casablanca" },
   },
   {
+    text: "Which US states want to stop changing their clocks, and which already have?",
+    widget: "showUsSunshineProtectionAct",
+    area: "core",
+    args: { view: { kind: "proposals" } },
+  },
+  {
     text: "When does a `30 1 * * *` cron job run on the night the clocks change in Europe/London?",
     widget: "showCronInAZone",
     area: "core",

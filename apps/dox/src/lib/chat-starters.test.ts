@@ -53,7 +53,7 @@ describe("CHAT_STARTERS", () => {
        answers in prose — which is exactly what the vaguer wording did. */
     for (const starter of CHAT_STARTERS) {
       expect(
-        /Tokyo|New York|London|Sydney|Johannesburg|Kolkata|São Paulo|Rome|\d/.test(
+        /Tokyo|New York|London|Sydney|Johannesburg|Kolkata|São Paulo|Rome|US states|\d/.test(
           starter.text,
         ),
         `${starter.widget} has nothing concrete to pass as an argument`,
