@@ -1815,7 +1815,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "totalDuration(value: string, unit: keyof DurationLike | DateTimeUnit, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "signature": "totalDuration(value: string, unit: keyof DurationLike | DateTimeUnit, options?: { relativeTo?: string; }): number | null",
     "description": "Express an ISO 8601 duration as a single fractional total in one unit.",
     "sourcePath": "packages/gmt/src/duration/calculate/totalDuration.ts",
     "examples": [
@@ -2058,7 +2058,7 @@
     "namespace": "duration",
     "module": "compare",
     "kind": "function",
-    "signature": "compareDurations(a: string, b: string, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "signature": "compareDurations(a: string, b: string, options?: { relativeTo?: string; }): number | null",
     "description": "Compare two ISO 8601 duration strings by length.",
     "sourcePath": "packages/gmt/src/duration/compare/compareDurations.ts",
     "examples": [
@@ -2260,7 +2260,7 @@
     "namespace": "duration",
     "module": "normalize",
     "kind": "function",
-    "signature": "normalizeDuration(value: string, options?: { largestUnit?: LargestUnit<DateTimeUnit>; smallestUnit?: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; relativeTo?: DurationRelativeTo; }): string",
+    "signature": "normalizeDuration(value: string, options?: { largestUnit?: LargestUnit<DateTimeUnit>; smallestUnit?: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; relativeTo?: string; }): string",
     "description": "Roll an ISO 8601 duration string's small units into larger ones.",
     "sourcePath": "packages/gmt/src/duration/normalize/normalizeDuration.ts",
     "examples": [
@@ -3200,6 +3200,10 @@
       {
         "call": "isValidHL7(\"20240615^D^X\")",
         "result": "true (the third component is ignored)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^D^X|Y\")",
+        "result": "false (the field separator cannot sit in a component)"
       },
       {
         "call": "isValidHL7(\"20240615^S\")",
@@ -13784,7 +13788,7 @@
       },
       {
         "call": "parseMonthDay(\"--12-25[u-ca=ISO8601]\")",
-        "result": "\"--12-25\""
+        "result": "\"\" (no annotation of any kind)"
       },
       {
         "call": "parseMonthDay(\"--02-30\")",
@@ -14407,7 +14411,7 @@
       },
       {
         "call": "parseYearMonth(\"2026-10[u-ca=ISO8601]\")",
-        "result": "\"2026-10\""
+        "result": "\"\" (no annotation of any kind)"
       },
       {
         "call": "parseYearMonth(\"+275760-10\")",
@@ -14526,7 +14530,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "hasSecond60(value: string): boolean",
-    "description": "Return true if the provided ISO 8601 date-time or time string has a second-60 field.",
+    "description": "Return true if the string is one of GMT's own kinds with a second-60 field.",
     "sourcePath": "packages/gmt/src/plain/validate/hasSecond60.ts",
     "examples": [
       {
@@ -14542,36 +14546,52 @@
         "result": "true"
       },
       {
-        "call": "hasSecond60(\"2016-12-31T23:59:60.123+00:00\")",
-        "result": "true"
-      },
-      {
-        "call": "hasSecond60(\"2016-12-31t23:59:60Z\")",
-        "result": "true (lowercase t)"
-      },
-      {
-        "call": "hasSecond60(\"20161231 235960Z\")",
-        "result": "true (space separator, basic format)"
+        "call": "hasSecond60(\"2016-12-31T23:59:60+00:00[UTC]\")",
+        "result": "true (zoned)"
       },
       {
         "call": "hasSecond60(\"2016-12-31T23:59:60\")",
-        "result": "true (no designator; PlainDateTime clamps it)"
+        "result": "true (plain date-time)"
       },
       {
         "call": "hasSecond60(\"23:59:60\")",
-        "result": "true (a time; PlainTime clamps it)"
+        "result": "true (plain time)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60,5Z\")",
+        "result": "true (comma fraction)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60[u-ca=hebrew]\")",
+        "result": "true (calendar date-time)"
+      },
+      {
+        "call": "hasSecond60(\"2016-02-30T23:59:60\")",
+        "result": "false (no such day)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60+00:00[Not/AZone]\")",
+        "result": "false (unknown zone)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60[u-ca=notacal]\")",
+        "result": "false (unknown calendar)"
       },
       {
         "call": "hasSecond60(\"2016-12-31T23:59:59Z\")",
         "result": "false"
       },
       {
-        "call": "hasSecond60(\"2024-06-15T12:34:60Z\")",
-        "result": "true (syntactic: no leap second can occur here)"
+        "call": "hasSecond60(\"2016-12-31t23:59:60Z\")",
+        "result": "false (lower-case t is not a GMT shape)"
       },
       {
-        "call": "/T\\d{2}:\\d{2}:60(?:[.,]\\d+)?[-+Zz[]/.test(\"2016-12-31t23:59:60Z\")",
-        "result": "false (the earlier uppercase-T-only test)"
+        "call": "hasSecond60(\"20161231 235960Z\")",
+        "result": "false (space separator, basic format)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60Z[foo=bar]\")",
+        "result": "false (an annotation GMT has no kind for)"
       }
     ]
   },
@@ -20443,11 +20463,11 @@
     "members": [
       {
         "name": "planned",
-        "description": "The planned time, as an ISO 8601 instant or zoned datetime string."
+        "description": "The planned time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one."
       },
       {
         "name": "actual",
-        "description": "The actual time, as an ISO 8601 instant or zoned datetime string."
+        "description": "The actual time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one."
       }
     ]
   },
@@ -20894,11 +20914,11 @@
       },
       {
         "call": "scheduleDeviation(\"2024-04-07T02:30:00+11:00[Australia/Sydney]\", \"2024-04-07T02:30:00+10:00[Australia/Sydney]\")",
-        "result": "\"PT1H\" (the same wall time, one hour later across the fall-back)"
+        "result": "\"\" (a zoned string is not an instant; write the offsets: \"2024-04-07T02:30:00+11:00\" to \"2024-04-07T02:30:00+10:00\" is \"PT1H\" across the fall-back)"
       },
       {
-        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T12:14:00+02:00[Europe/Amsterdam]\")",
-        "result": "\"PT14M\" (the zone it is written in does not matter)"
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T12:14:00+02:00\")",
+        "result": "\"PT14M\" (the offset it is written in does not matter)"
       },
       {
         "call": "scheduleDeviation(\"2024-06-15T10:00:00\", \"2024-06-15T10:14:00Z\")",
@@ -20934,7 +20954,7 @@
         "result": "\"PT0S\""
       },
       {
-        "call": "timeToCutoff(\"2024-10-26T17:00:00+01:00[Europe/London]\", \"2024-10-27T17:00:00+00:00[Europe/London]\")",
+        "call": "timeToCutoff(\"2024-10-26T16:00:00Z\", \"2024-10-27T17:00:00+00:00[Europe/London]\")",
         "result": "\"PT25H\" (across the fall-back)"
       },
       {
@@ -23870,11 +23890,11 @@
       },
       {
         "name": "at",
-        "description": "The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) or zoned string. Functions that return it echo it exactly as written."
+        "description": "The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) with no annotation. Functions that return it echo it exactly as written."
       },
       {
         "name": "recordedAt",
-        "description": "When the timestamp was recorded or received, as an ISO 8601 instant or zoned string. It orders revisions of the same class: the latest recorded is the current one."
+        "description": "When the timestamp was recorded or received, as an ISO 8601 instant with no annotation. It orders revisions of the same class: the latest recorded is the current one."
       }
     ]
   },
