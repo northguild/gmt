@@ -154,6 +154,46 @@ const SHAPES: readonly Shape[] = [
     why: "an offset time zone",
   },
   {
+    annotation: "[Europe/Helsinki][Europe/Helsinki]",
+    oneCalendar: false,
+    why: "the same zone twice",
+  },
+  {
+    annotation: "[ junk ]",
+    oneCalendar: false,
+    why: "spaces inside the bracket break RFC 9557",
+  },
+  {
+    annotation: "[a[b]",
+    oneCalendar: false,
+    why: "an open bracket inside the bracket",
+  },
+  {
+    annotation: "[!!!]",
+    oneCalendar: false,
+    why: "only punctuation inside the bracket",
+  },
+  {
+    annotation: "[+0200]",
+    oneCalendar: false,
+    why: "an offset zone in basic form (RFC 3339 wants HH:MM)",
+  },
+  {
+    annotation: "[+02]",
+    oneCalendar: false,
+    why: "an offset zone of hours only",
+  },
+  {
+    annotation: "junk",
+    oneCalendar: false,
+    why: "trailing text, no bracket",
+  },
+  {
+    annotation: " ",
+    oneCalendar: false,
+    why: "one trailing space",
+  },
+  {
     annotation: "[u-ca=iso8601][Europe/Helsinki]",
     oneCalendar: false,
     why: "a calendar, then a time zone",
@@ -230,4 +270,21 @@ describe("annotations, per validator", () => {
       }
     });
   }
+});
+
+describe("the zone bracket a zoned validator takes", () => {
+  it.each`
+    value                                          | accepted | why
+    ${"2024-10-03T12:00:00+02:00[+02:00]"}         | ${true}  | ${"an offset zone"}
+    ${"2024-10-03T12:00:00+03:00[Europe/Athens]"}  | ${true}  | ${"a named zone"}
+    ${"2024-10-03T12:00:00+03:00[!Europe/Athens]"} | ${true}  | ${"a critical named zone"}
+    ${"2024-10-03T12:00:00+02:00[+02:00][+02:00]"} | ${false} | ${"an offset zone twice"}
+    ${"2024-10-03T12:00:00+02:00[!+02:00]"}        | ${true}  | ${"a critical offset zone"}
+  `(
+    "isValidZonedDateTime reads $value as $accepted ($why)",
+    ({ value, accepted }) => {
+      expect(isValidZonedDateTime(value)).toBe(accepted);
+      expect(isValidCalendarZonedDateTime(value)).toBe(accepted);
+    },
+  );
 });

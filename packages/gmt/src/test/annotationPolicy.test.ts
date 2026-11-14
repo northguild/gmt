@@ -1,3 +1,7 @@
+import { toOffsetInstant } from "../instant/convert/toOffsetInstant";
+import { isPastCutoff } from "../transport/compare/isPastCutoff";
+import { timeToCutoff } from "../transport/compare/timeToCutoff";
+import { transitTime } from "../transport/calculate/transitTime";
 import { isValidDateTime } from "../plain/validate/isValidDateTime";
 import { isValidUtc } from "../utc/validate/isValidUtc";
 import { isValidInstant } from "../precision/validate/isValidInstant";
@@ -57,7 +61,7 @@ const BASES = [
   "2024-02-29T12:34:56+02:00[Europe/Helsinki]",
 ];
 
-/** Every annotation the plain, UTC and instant kinds refuse: a zone, a calendar, an elective key. */
+/** Every suffix the plain, UTC and instant kinds refuse: an annotation of any kind, or trailing text. */
 const ANNOTATIONS = [
   "[Europe/Helsinki]",
   "[Europe/Helsinkiddddd]",
@@ -68,6 +72,20 @@ const ANNOTATIONS = [
   "[!u-ca=iso8601]",
   "[foo=bar]",
   "[!foo=bar]",
+  // A second bracket after the first, and each bracket that breaks RFC 9557's grammar.
+  "[Europe/Helsinki][Europe/Helsinki]",
+  "[foo=bar][baz=qux]",
+  "[u-ca=iso8601][u-ca=hebrew]",
+  "[ junk ]",
+  "[a[b]",
+  "[!!!]",
+  "[+0200]",
+  "[+02]",
+  "[]",
+  // Text after the string that is no annotation at all.
+  "junk",
+  " ",
+  "\n",
 ];
 
 /** Arguments after the string under test, so a function with a second parameter is reached. */
@@ -230,6 +248,45 @@ describe("every public function matches its kind's exact pattern over the whole 
       expect(isValidDateTime(value)).toBe(plainDateTime);
       expect(isValidUtc(value)).toBe(utcInstant);
       expect(isValidInstant(value)).toBe(instant);
+    },
+  );
+});
+
+/**
+ * The functions KEEPS_THE_ZONE leaves out of the sweep read a zoned string: the body plus one
+ * zone bracket and nothing after it. Helsinki is +02:00 on 2024-02-29, so the offset agrees; `now` is after the 10:34:56Z cut-off.
+ */
+describe("a zoned reader takes one zone bracket and nothing after it", () => {
+  const zoned = "2024-02-29T12:34:56+02:00[Europe/Helsinki]";
+  const now = "2024-02-29T11:00:00Z";
+  const readers: Record<string, (value: string) => unknown> = {
+    toOffsetInstant: (value) => toOffsetInstant(value),
+    transitTime: (value) => transitTime(value, "PT1H"),
+    isPastCutoff: (value) => isPastCutoff(now, value),
+    timeToCutoff: (value) => timeToCutoff(now, value),
+  };
+
+  it.each(Object.keys(readers).map((name) => ({ name })))(
+    "$name: no suffix after the zone bracket changes the answer",
+    ({ name }) => {
+      const read = readers[name]!;
+      const garbage = JSON.stringify(read("garbage!"));
+      // Guard: the bare zoned string is read, so a suffix that is read too would show.
+      expect(JSON.stringify(read(zoned))).not.toBe(garbage);
+      const leaks = ANNOTATIONS.filter(
+        (suffix) => JSON.stringify(read(zoned + suffix)) !== garbage,
+      );
+      expect(leaks).toEqual([]);
+    },
+  );
+
+  it.each(Object.keys(readers).map((name) => ({ name })))(
+    "$name: a critical zone bracket reads as the plain one does",
+    ({ name }) => {
+      const read = readers[name]!;
+      expect(
+        JSON.stringify(read("2024-02-29T12:34:56+02:00[!Europe/Helsinki]")),
+      ).not.toBe(JSON.stringify(read("garbage!")));
     },
   );
 });

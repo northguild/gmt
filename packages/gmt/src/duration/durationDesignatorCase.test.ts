@@ -69,3 +69,31 @@ describe("a duration string with a designator in lower case", () => {
     },
   );
 });
+
+// The decimal comma is ISO 8601-1's own spelling, so every reader takes `PT0,5H` (half an hour,
+// checked against the polyfill's `PT0.5H`: PT30M, plus PT1H is PT1H30M, negated is -PT30M, 30
+// minutes) and still refuses it with a lower-case designator.
+describe("a duration string with a decimal comma", () => {
+  it.each`
+    name                 | call                                          | expected
+    ${"isValidDuration"} | ${(d: string) => isValidDuration(d)}          | ${true}
+    ${"parseDuration"}   | ${(d: string) => parseDuration(d)}            | ${"PT30M"}
+    ${"addDuration"}     | ${(d: string) => addDuration(d, "PT1H")}      | ${"PT1H30M"}
+    ${"negateDuration"}  | ${(d: string) => negateDuration(d)}           | ${"-PT30M"}
+    ${"totalDuration"}   | ${(d: string) => totalDuration(d, "minutes")} | ${30}
+  `("$name reads PT0,5H as half an hour", ({ call, expected }) => {
+    expect(call("PT0,5H")).toBe(expected);
+  });
+
+  it.each`
+    name                 | call                                          | sentinel
+    ${"isValidDuration"} | ${(d: string) => isValidDuration(d)}          | ${false}
+    ${"parseDuration"}   | ${(d: string) => parseDuration(d)}            | ${""}
+    ${"addDuration"}     | ${(d: string) => addDuration(d, "PT1H")}      | ${""}
+    ${"negateDuration"}  | ${(d: string) => negateDuration(d)}           | ${""}
+    ${"totalDuration"}   | ${(d: string) => totalDuration(d, "minutes")} | ${null}
+  `("$name refuses pt0,5h and PT0,5h", ({ call, sentinel }) => {
+    expect(call("pt0,5h")).toBe(sentinel);
+    expect(call("PT0,5h")).toBe(sentinel);
+  });
+});
