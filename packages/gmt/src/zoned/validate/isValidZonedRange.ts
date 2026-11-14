@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { Temporal } from "../../internal/temporal";
 import { hasSecond60Field } from "../../internal/inputChecks";
 import { isObject, isOptionsArgument, zonedDateTimeFrom } from "../../internal";
@@ -79,7 +80,7 @@ export function isValidZonedRange(props: {
 
       const cmp = Temporal.Instant.compare(instant1, instant2);
 
-      if (options?.allowEqual) {
+      if (booleanOption(options?.allowEqual, false)) {
         return cmp <= 0;
       }
 

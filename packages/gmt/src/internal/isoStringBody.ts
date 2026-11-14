@@ -43,7 +43,8 @@ export const EXTENDED_UTC_OFFSET =
 /**
  * An RFC 9557 time-zone annotation: a bracket whose content has no `=` (§4.1 `time-zone`,
  * against `suffix-tag`'s `key=value`), with an optional leading `!` marking it critical (§3.3).
- * `[Europe/London]`, `[!+01:00]`; never `[u-ca=hebrew]` or `[!foo=bar]`. Every `key=value`
+ * `[Europe/London]`, `[!+01:00]`; never `[u-ca=hebrew]`, `[!foo=bar]`, `[ junk ]` or the basic-form
+ * offsets `[+0100]` and `[+01]`. Every `key=value`
  * bracket is a tagged annotation, which Temporal reads (or rejects) on its own.
  *
  * A regular-expression source with no anchors and no capture groups, so callers can embed or

@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { Temporal } from "../../internal/temporal";
 import { utcInstantOf } from "../../internal/utcInstant";
 import { isObject, isOptionsArgument } from "../../internal/isObject";
@@ -62,7 +63,7 @@ export function isValidUtcRange(props: {
     try {
       const cmp = Temporal.Instant.compare(startInstant, endInstant);
 
-      if (options?.allowEqual) {
+      if (booleanOption(options?.allowEqual, false)) {
         return cmp <= 0;
       }
 

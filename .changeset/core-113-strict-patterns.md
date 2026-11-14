@@ -17,5 +17,10 @@ Every function now accepts exactly one pattern for each kind of string, over the
 - A `locale` argument that is not `undefined`, a string or an array of strings returns the function's empty result (`""` or `[]`). A number, `true`, an object or a `String` object used to reach `Intl`, which coerced some of them.
 - An unknown `style` for the month, era and weekday name functions returns `[]` instead of the long names.
 - A duration designator must be upper case: `P1d` and `Pt1H` return the function's empty result in every duration function, as ISO 8601-1 writes them. The decimal comma stays (`PT0,5H`).
+- A time zone annotation is an IANA zone name or an extended offset (`[+02:00]`, `[!Europe/London]`). `[ junk ]`, `[a[b]`, `[+0200]`, `[+02]` and `[+24:00]` return the function's empty result, and `isValidZonedDateTime` and `hasSecond60` return `false`. A bare `isValidTimeZone("+0200")` is unchanged.
+- An option the types declare as a string (`roundingMode`, `overflow`, `style`, `dateStyle`, `timeZone`, ...), a boolean (`allowEqual`, `round`, `inclusive`, `inclusiveStart`, `inclusiveEnd`, `includeTimeZoneName`, `zero`, `hour12`) or a number (`roundingIncrement`, `fractionalSecondDigits`) is read only as that type. `new String("floor")`, `"yes"`, `1` or `null` returns the function's empty result (`""`, `[]`, `null` or `false`) and no `toString` or `valueOf` runs. Before, they were converted.
+- Every entry of a `locale` array must be a string. `["en-GB", 5]` returns the empty result.
+- `punctualityRate` and `cutoffSchedule` take an instant string only; `nextDeparture` and `dwellTime` take an instant or a zoned string that carries its offset. A calendar annotation is rejected.
+- `parseHL7`, `isValidHL7` and `hasSecond60` read an HL7 `TS` value as one exact pattern, including its optional extra components (`^` separated).
 
 An instant reader no longer reads a minute-rounded offset against the bracketed zone (`-00:45[Africa/Monrovia]`), because it takes no bracket. Write the offset the instant has (`-00:44:30`), or read the string with a zoned function.

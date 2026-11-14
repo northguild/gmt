@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { booleanOption } from "../../internal/typedOptions";
 import { plainDateOf } from "../../internal/inputChecks";
 import { advanceToWeekday, isValidDayOfWeek } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -61,7 +62,7 @@ export function previousWeekday(
       date,
       dayOfWeek,
       -1,
-      options?.inclusive ?? false,
+      booleanOption(options?.inclusive, false),
     ).toString();
   } catch {
     return "";

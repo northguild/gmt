@@ -39,7 +39,7 @@ intervalsOverlap(shift, { start: "2024-01-01T17:00:00Z", end: "2024-01-01T18:00:
 
 ## Endpoints are instants
 
-Both endpoints must be instant strings: exactly `Z` or `±HH:MM`, with nothing after it. A
+Both endpoints must be instant strings: exactly `Z` or `±HH:MM[:SS[.f]]`, with nothing after it. A
 bracketed zone, a calendar annotation and any other annotation make the endpoint invalid. As
 with a TC39 `Temporal.Instant`, they compare by exact time only, so the two endpoints may be
 written with different offsets. Leap seconds are rejected.

@@ -254,13 +254,13 @@ which records the native Temporal evidence for each rule below.
 
 - **`plain/` `PlainDate`** — `regex/calendar-date.ts`: `<date>[u-ca=<id>]`. Year is Temporal's
   `DateYear` (four digits, or a sign and six; `-000000` rejected). Parsed by
-  `internal/calendarDateString.ts` (GMT's strict date or date-time shape before the first `[`, then
-  `Temporal.PlainDate.from` on the whole string), written by
+  `internal/calendarDateString.ts` (`hasCalendarDateShape`: GMT's strict date or date-time shape, with at most one `u-ca`
+  annotation after it, over the whole string, then `Temporal.PlainDate.from`), written by
   `internal/formatDateInCalendar.ts`.
 - **`zoned/`** — `regex/calendar-zoned-date-time.ts`: `<date>T<time><offset>[<timeZone>][u-ca=<id>]`,
   the calendar annotation after the zone (RFC 9557 §4.1). Parsed by `internal/calendarZonedString.ts`
-  (GMT's strict `zonedDateTimeBody` shape before the first `[`, then the whole string goes to
-  `zonedDateTimeFrom`), written by `formatZonedInCalendar`.
+  (`hasCalendarZonedShape`: GMT's strict zoned shape with the one zone bracket and at most one
+  `u-ca` after it, over the whole string, then `zonedDateTimeFrom`), written by `formatZonedInCalendar`.
 - **The annotation.** A `u-ca` annotation, lower-case key, optionally critical (`[!u-ca=…]`). The
   id goes to Temporal's `CanonicalizeCalendar` (`internal/calendarSystemIds.ts`
   `canonicalCalendarSystem`), which folds case and CLDR aliases (`islamicc` → `islamic-civil`,
@@ -272,19 +272,24 @@ which records the native Temporal evidence for each rule below.
 - **A plain calendar date-time is read as its date**, as `Temporal.PlainDate.from` reads it
   (decision of 2026-09-17; replaces E5 / issue #78's date-only rule).
   `"2024-10-03T14:30[u-ca=hebrew]"` is 2024-10-03 in Hebrew, and a bare date-time is its ISO date:
-  the time is dropped. The part before the first `[` must match GMT's strict `plainDate` or
-  `plainDateTime` shape, as `isValidDate`/`isValidDateTime` require, before Temporal reads the
-  annotations (`internal/calendarDateString.ts`): basic format, a space or lower-case `t`
+  the time is dropped. The date or date-time must match GMT's strict `plainDate` or
+  `plainDateTime` shape, as `isValidDate`/`isValidDateTime` require, and the string ends after the
+  one `u-ca` annotation, before Temporal reads it (`internal/calendarDateString.ts`): basic format, a space or lower-case `t`
   separator, a UTC offset or designator, and a leap second (second `60`) are rejected, although
   `Temporal.PlainDate.from` reads all but the designator. Output is always the date
   (`Temporal.PlainDate#toString()`).
 - **The same strict extended shape gates every zoned, UTC, instant and `relativeTo` string**
-  (`internal/isoStringBody.ts`): before the first `[`, a zoned string is `zonedDateTimeBody`
-  (`<date>T<time>`, then nothing, `Z` or `±HH:MM[:SS[.fraction]]`), an instant `instantBody` (the
-  `Z` or offset required), a UTC string `utcDateTime` (upper-case `Z`), and a `relativeTo` the
-  zoned shape when it has a time zone annotation, otherwise `plainDate`/`plainDateTime`; basic
+  (`internal/isoStringBody.ts`), each over the whole string: a zoned string is
+  `<date>T<time>`, then nothing, `Z` or `±HH:MM[:SS[.fraction]]`, then one zone bracket
+  (`hasZonedDateTimeShape`); an instant is the same with the `Z` or offset required and no bracket
+  (`hasInstantShape`); a UTC string ends in an upper-case `Z`; and a `relativeTo` is the zoned shape
+  (with at most one `u-ca` after the zone) when it has a time zone annotation, otherwise a
+  `plainDate`/`plainDateTime` with at most one `u-ca`; basic
   format, a space or lower-case `t` separator, a lower-case `z`, an hour-only time or offset and a
   zoned date without a time are rejected although Temporal reads them.
+  A zone bracket is an RFC 9557 §4.1 `time-zone`, `TIME_ZONE_ANNOTATION`: an IANA name (`/`-joined
+  parts, each starting with a letter, `.` or `_`) or an extended-form offset `±HH:MM` (RFC 3339
+  §5.6); `[+0200]`, `[+02]`, spaces and a second `[` are rejected.
 - **A plain time is a bare `HH:MM[:SS[.fraction]]`** (`plainTime`): a leading time designator
   (`"T14:30"`, `"t14:30"`) is rejected, although `Temporal.PlainTime.from` reads it. The `T`
   designator belongs to date-time strings, where it separates the date from the time; GMT's strict

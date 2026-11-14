@@ -1,3 +1,4 @@
+import { booleanOption } from "../../internal/typedOptions";
 import {
   cycleFieldValue,
   dateCycleFieldBounds,
@@ -87,7 +88,7 @@ export function cycleDateTime(
       dateTime[field],
       amount,
       bounds,
-      options?.round ?? false,
+      booleanOption(options?.round, false),
     );
     return (
       withDateTimeFields(

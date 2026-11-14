@@ -125,3 +125,28 @@ export function hasTypedTemporalOptions(options: object): boolean {
     return true;
   }
 }
+
+/**
+ * A boolean option as the caller wrote it: `fallback` when it is `undefined`, the value when it is
+ * a boolean, and a `TypeError` for anything else. A flag is read by what it is, never by whether
+ * it is truthy (`"false"`, `1` and `{}` would all switch it on), so a function returns its
+ * sentinel for a value the type `boolean` does not name.
+ *
+ * @param value the option as read from the caller's object
+ * @param fallback the documented default
+ * @returns the flag
+ * @throws TypeError for a value that is neither `undefined` nor a boolean
+ *
+ * @example booleanOption(undefined, true) // true
+ * @example booleanOption(false, true) // false
+ * @example booleanOption("false", true) // throws TypeError
+ */
+export function booleanOption(value: unknown, fallback: boolean): boolean {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== "boolean") {
+    throw new TypeError("a flag must be a boolean");
+  }
+  return value;
+}

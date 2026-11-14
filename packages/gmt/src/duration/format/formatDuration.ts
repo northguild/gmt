@@ -1,3 +1,4 @@
+import { booleanOption } from "../../internal/typedOptions";
 import { cachedFormatter } from "../../internal/formatterCache";
 import { durationFrom } from "../../internal/durationFrom";
 import { exactSeconds } from "../../internal/exactSeconds";
@@ -115,7 +116,7 @@ export function formatDuration(
   try {
     const duration = durationFrom(value);
     const style = optionOrDefault(options.style, "long");
-    const includeZero = options.zero ?? false;
+    const includeZero = booleanOption(options.zero, false);
 
     const amounts: Record<DurationUnit, number | Intl.StringNumericLiteral> = {
       years: duration.years,

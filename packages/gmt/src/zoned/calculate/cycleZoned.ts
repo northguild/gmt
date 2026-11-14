@@ -1,3 +1,4 @@
+import { booleanOption } from "../../internal/typedOptions";
 import {
   cycleFieldValue,
   dateCycleFieldBounds,
@@ -117,7 +118,7 @@ export function cycleZoned(
       zoned[field],
       amount,
       bounds,
-      options?.round ?? false,
+      booleanOption(options?.round, false),
     );
     return (
       setZonedFields(

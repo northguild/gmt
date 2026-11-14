@@ -1,3 +1,4 @@
+import { booleanOption } from "../../internal/typedOptions";
 import { plainDateOf } from "../../internal/inputChecks";
 import { isObject, isOptionsArgument } from "../../internal/isObject";
 
@@ -76,7 +77,7 @@ export function isValidDateRange(props: IsValidDateRangeProps): boolean {
         date1.month === date2.month &&
         date1.day === date2.day;
 
-      if (options?.allowEqual) {
+      if (booleanOption(options?.allowEqual, false)) {
         return isLessThan || isEqual;
       }
 

@@ -11,13 +11,34 @@
 import {
   addDate,
   addZoned,
+  cycleDate,
+  cycleDateTime,
+  cycleTime,
+  cycleZoned,
   cutoffSchedule,
   evaluateDutyLog,
   formatDate,
+  formatDuration,
+  formatUnix,
+  formatUtc,
   formatRelativeTime,
   formatTime,
   formatZonedDateTime,
   getLocaleMonthNames,
+  isBetweenDate,
+  isBetweenDateTime,
+  isBetweenTime,
+  isBetweenUnix,
+  isBetweenUtc,
+  isBetweenZoned,
+  isValidDateRange,
+  isValidDateTimeRange,
+  isValidTimeRange,
+  isValidUnixRange,
+  isValidUtcRange,
+  isValidZonedRange,
+  nextWeekday,
+  previousWeekday,
   normalizeDuration,
   roundTime,
   scheduleDelivery,
@@ -239,11 +260,11 @@ describe("a member typed as a string", () => {
   });
 
   it.each(
-    STRING_ROWS.flatMap((row) =>
+    STRING_ROWS.flatMap((row, rowIndex) =>
       notStrings(row.valid as string).map((value, index) => ({
         ...row,
         value,
-        label: `${row.family}: ${row.member}, bad value #${index + 1}`,
+        label: `${rowIndex + 1}.${index + 1} ${row.family}: ${row.member}`,
       })),
     ),
   )("returns the sentinel for $label", ({ run, value, sentinel }) => {
@@ -276,6 +297,58 @@ describe("a member typed as a boolean or a number", () => {
   `("$label is read only as that type", ({ run, valid, expected, bad }) => {
     expect(run(valid)).toBe(expected);
     for (const value of bad as unknown[]) {
+      expect(run(value), String(typeof value)).toBe("");
+    }
+  });
+});
+
+describe("a flag member typed as a boolean in a function's own option bag", () => {
+  const Z = "2024-06-15T12:00:00+09:00[Asia/Tokyo]";
+  const range =
+    (fn: (a: never) => unknown, v1: unknown, v2: unknown) =>
+    (flag: unknown): unknown =>
+      fn({ value1: v1, value2: v2, options: { allowEqual: flag } } as never);
+  const between =
+    (fn: (...a: never[]) => unknown, args: unknown[], key: string) =>
+    (flag: unknown): unknown =>
+      fn(...(args as never[]), { [key]: flag } as never);
+
+  it.each`
+    label                                | run                                                                                                                           | expected
+    ${"isValidDateRange allowEqual"}     | ${range(isValidDateRange as never, "2024-02-29", "2024-02-29")}                                                               | ${true}
+    ${"isValidTimeRange allowEqual"}     | ${range(isValidTimeRange as never, "12:00:00", "12:00:00")}                                                                   | ${true}
+    ${"isValidDateTimeRange allowEqual"} | ${range(isValidDateTimeRange as never, "2024-01-01T10:00:00", "2024-01-01T10:00:00")}                                         | ${true}
+    ${"isValidUnixRange allowEqual"}     | ${range(isValidUnixRange as never, 1000, 1000)}                                                                               | ${true}
+    ${"isValidUtcRange allowEqual"}      | ${range(isValidUtcRange as never, "2024-01-01T10:00:00Z", "2024-01-01T10:00:00Z")}                                            | ${true}
+    ${"isValidZonedRange allowEqual"}    | ${range(isValidZonedRange as never, Z, Z)}                                                                                    | ${true}
+    ${"isBetweenDate inclusiveStart"}    | ${between(isBetweenDate as never, ["2024-02-01", "2024-02-01", "2024-02-28"], "inclusiveStart")}                              | ${true}
+    ${"isBetweenDate inclusiveEnd"}      | ${between(isBetweenDate as never, ["2024-02-28", "2024-02-01", "2024-02-28"], "inclusiveEnd")}                                | ${true}
+    ${"isBetweenTime inclusiveStart"}    | ${between(isBetweenTime as never, ["12:00:00", "12:00:00", "13:00:00"], "inclusiveStart")}                                    | ${true}
+    ${"isBetweenDateTime inclusiveEnd"}  | ${between(isBetweenDateTime as never, ["2024-02-28T10:00:00", "2024-02-01T00:00:00", "2024-02-28T10:00:00"], "inclusiveEnd")} | ${true}
+    ${"isBetweenUnix inclusiveStart"}    | ${between(isBetweenUnix as never, [1000, 1000, 2000], "inclusiveStart")}                                                      | ${true}
+    ${"isBetweenUtc inclusiveEnd"}       | ${between(isBetweenUtc as never, ["2024-01-02T00:00:00Z", "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z"], "inclusiveEnd")}   | ${true}
+    ${"isBetweenZoned inclusiveStart"}   | ${between(isBetweenZoned as never, [Z, Z, "2024-06-16T12:00:00+09:00[Asia/Tokyo]"], "inclusiveStart")}                        | ${true}
+  `("$label is read only as a boolean", ({ run, expected }) => {
+    expect(run(true)).toBe(expected);
+    for (const value of ["yes", 1, 0, null, "false", {}, [true]]) {
+      expect(run(value), String(typeof value)).toBe(false);
+    }
+  });
+
+  it.each`
+    label                               | run                                                                                                                           | expected
+    ${"cycleDate round"}                | ${between(cycleDate as never, ["2022-02-03", "year", 5], "round")}                                                            | ${"2025-02-03"}
+    ${"cycleTime round"}                | ${between(cycleTime as never, ["09:22:00", "minute", 15], "round")}                                                           | ${"09:30:00"}
+    ${"cycleDateTime round"}            | ${between(cycleDateTime as never, ["2024-06-15T09:22:00", "minute", 15], "round")}                                            | ${"2024-06-15T09:30:00"}
+    ${"cycleZoned round"}               | ${between(cycleZoned as never, ["2024-06-15T09:22:00+09:00[Asia/Tokyo]", "minute", 15], "round")}                             | ${"2024-06-15T09:30:00+09:00[Asia/Tokyo]"}
+    ${"nextWeekday inclusive"}          | ${between(nextWeekday as never, ["2024-03-15", 5], "inclusive")}                                                              | ${"2024-03-15"}
+    ${"previousWeekday inclusive"}      | ${between(previousWeekday as never, ["2024-03-15", 5], "inclusive")}                                                          | ${"2024-03-15"}
+    ${"formatUnix includeTimeZoneName"} | ${(flag: unknown) => formatUnix("1710685845000", "en-GB", { epochUnit: "milliseconds", includeTimeZoneName: flag as never })} | ${"17/03/2024, 14:30:45 UTC"}
+    ${"formatUtc includeTimeZoneName"}  | ${between(formatUtc as never, ["2024-02-03T14:30:45Z", "en-GB"], "includeTimeZoneName")}                                      | ${"03/02/2024, 14:30:45 UTC"}
+    ${"formatDuration zero"}            | ${between(formatDuration as never, ["P1DT0H30M", "en-GB"], "zero")}                                                           | ${"0 years, 0 months, 0 weeks, 1 day, 0 hours, 30 minutes and 0 seconds"}
+  `("$label is read only as a boolean", ({ run, expected }) => {
+    expect(run(true)).toBe(expected);
+    for (const value of ["yes", 1, 0, null, "false", {}, [true]]) {
       expect(run(value), String(typeof value)).toBe("");
     }
   });
