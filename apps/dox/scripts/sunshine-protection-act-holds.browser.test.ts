@@ -1131,4 +1131,92 @@ describe.each(ENGINES)("Sunshine Protection Act holds in %s", (name) => {
     },
     60_000,
   );
+
+  // The age words grow with the date: "today", "1 day ago", and from the session's end a second
+  // sentence. Each dated line holds room for its widest text from the first paint, so neither the
+  // pin's "As of" nor the national card's "Last checked on" grows on any day.
+  const DATES = [
+    "2026-11-13T12:00:00Z",
+    "2026-11-14T12:00:00Z",
+    "2027-01-02T12:00:00Z",
+    "2027-02-01T12:00:00Z",
+    "2100-01-01T12:00:00Z",
+  ];
+  it.each(WIDTHS)(
+    "holds its dated lines on any day at %i px",
+    async (width) => {
+      if (browser === undefined || server === undefined) return;
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
+      const url = `${base}/check/us-sunshine-protection-act/`;
+      const lineHeight = (page: Page) =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector<HTMLElement>("[id$='national-age']")!
+              .getBoundingClientRect().height,
+        );
+      // The server's markup, before any date is read.
+      const still = await browser.newContext({
+        viewport: { width, height: 1000 },
+        javaScriptEnabled: false,
+      });
+      let markup: number;
+      try {
+        const page = await still.newPage();
+        await page.goto(url);
+        markup = await lineHeight(page);
+      } finally {
+        await still.close();
+      }
+      for (const date of DATES) {
+        const page = await browser.newPage({
+          viewport: { width, height: 1000 },
+        });
+        try {
+          await page.clock.setFixedTime(date);
+          await page.goto(url);
+          await page
+            .getByRole("radio", { name: "Proposals" })
+            .click({ timeout: 10_000 });
+          await settle(page);
+          // The date has been read once the national card's line carries the age.
+          await page.waitForFunction(() =>
+            /,/.test(
+              document.querySelector<HTMLElement>("[id$='national-age']")!
+                .textContent ?? "",
+            ),
+          );
+          expect(
+            await lineHeight(page),
+            `${date}: national card's line`,
+          ).toBeCloseTo(markup, 0);
+          const before = await snapshot(page);
+          if (width < 520) {
+            await page
+              .getByRole("region", {
+                name: "US states and territories, scrollable list",
+              })
+              .getByRole("button", { name: /Delaware/ })
+              .click();
+          } else {
+            await drawn(page);
+            const shape = page
+              .locator("[data-gate~='map-frame']")
+              .getByRole("button", { name: /Delaware/ })
+              .first();
+            await shape.focus();
+            await page.keyboard.press("Enter");
+          }
+          await settle(page);
+          expect(
+            await page.locator("[id$='proposals-pin-asof']").textContent(),
+          ).toMatch(/^13 November 2026, /);
+          expectHeld(before, await snapshot(page), `${date}: pin Delaware`);
+        } finally {
+          await page.close();
+        }
+      }
+    },
+    120_000,
+  );
 });

@@ -20,6 +20,7 @@ import {
   US_GUIDANCE_HEADING,
 } from "../data/sunshine-protection-act-guidance";
 import {
+  AGE_WORDS_HELD,
   NATIONAL,
   PROPOSALS_CHECKED,
   SOURCES_URL,
@@ -87,6 +88,7 @@ import {
 import { row, stack } from "~/widgets/families/clockcheck/stack";
 import {
   usLegend,
+  usHeldLine,
   usSide,
   usStatus,
   usView,
@@ -192,14 +194,18 @@ const todayKind = (row: WatchZone | undefined): TodayKind =>
       ? "changes"
       : "standard-all-year";
 
-/** The national card's dated line: the day the facts were checked, and how old that is. */
-const nationalAge = (today: string | null): string => {
+/** The national card's dated line for some age words, or for none before the date is read. */
+const nationalLine = (age: string | null): string => {
   const line =
-    today === null
+    age === null
       ? longDate(PROPOSALS_CHECKED)
-      : `${longDate(PROPOSALS_CHECKED)}, ${ageWords(today)}`;
+      : `${longDate(PROPOSALS_CHECKED)}, ${age}`;
   return `Last checked on ${line}${line.endsWith(".") ? "" : "."}`;
 };
+
+/** The national card's dated line: the day the facts were checked, and how old that is. */
+const nationalAge = (today: string | null): string =>
+  nationalLine(today === null ? null : ageWords(today));
 
 /** The places Today labels on its map, each with a live clock. */
 const LABELLED_ZONES: readonly string[] = [
@@ -384,7 +390,14 @@ export function renderSunshineProtectionActTemplate({
                 },
                 { key: "note", label: "Note", size: "long", values: NOTES },
                 { key: "since", label: "Adopted", size: "row" },
-                { key: "asof", label: "As of", size: "row" },
+                {
+                  key: "asof",
+                  label: "As of",
+                  size: "row",
+                  values: AGE_WORDS_HELD.map(
+                    (age) => `${longDate(PROPOSALS_CHECKED)}, ${age}`,
+                  ),
+                },
               ],
             },
           })}`,
@@ -396,7 +409,11 @@ export function renderSunshineProtectionActTemplate({
             name: "national",
             title: "What the national proposal would do",
             lines: NATIONAL.effects,
-            after: html`<p id="${idPrefix}-national-age">${nationalAge(null)}</p>
+            after: html`${usHeldLine(
+              `${idPrefix}-national-age`,
+              nationalAge(null),
+              AGE_WORDS_HELD.map(nationalLine),
+            )}
               <p>
                 <a href="${SOURCES_URL}" rel="noopener noreferrer">Sources</a>
               </p>`,

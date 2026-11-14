@@ -54,17 +54,18 @@ export function computeSunshineActZones(now: string): SunshineActZones {
 /**
  * `GET /gmt/api/sunshine-protection-act`: the Today classes of the Sunshine Protection Act page,
  * computed on the Worker so every reader sees the same map whatever their browser's tz data.
- * Other methods answer 405 with `Allow: GET`. Rate limited under its own
- * `sunshine-protection-act:` key. `no-store`, as `now` changes every request.
+ * `HEAD` answers as `GET` with no body. Other methods answer 405 with `Allow: GET, HEAD`.
+ * Rate limited under its own `sunshine-protection-act:` key, shared by GET and HEAD. `no-store`,
+ * as `now` changes every request.
  */
 export async function handleSunshineProtectionAct(
   request: Request,
   _env: unknown,
   now: () => string = getUtcNow,
 ): Promise<Response> {
-  if (request.method !== "GET") {
+  if (request.method !== "GET" && request.method !== "HEAD") {
     return json({ error: "Method not allowed.", retryable: false }, 405, {
-      allow: "GET",
+      allow: "GET, HEAD",
     });
   }
   const blocked = rateLimited(
@@ -72,5 +73,13 @@ export async function handleSunshineProtectionAct(
     "sunshine-protection-act",
     SUNSHINE_ACT_RATE_LIMIT,
   );
-  return blocked ?? json(computeSunshineActZones(now()));
+  const answer = blocked ?? json(computeSunshineActZones(now()));
+  // HEAD (RFC 9110 9.1): the GET answer's status and headers, no body; the same bucket.
+  if (request.method === "HEAD") {
+    return new Response(null, {
+      status: answer.status,
+      headers: answer.headers,
+    });
+  }
+  return answer;
 }

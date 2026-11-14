@@ -278,6 +278,18 @@ export const STATE_CODES: readonly string[] = [
   "WY",
 ];
 
+/** Whole days from `PROPOSALS_CHECKED` to `SESSION_ENDS`: from that age on, the session has ended. */
+const DAYS_TO_SESSION_END = diffDate(PROPOSALS_CHECKED, SESSION_ENDS, "days");
+
+/** The age words for an age of `days`. */
+function ageText(days: number): string {
+  const age =
+    days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"} ago`;
+  return typeof DAYS_TO_SESSION_END === "number" && days >= DAYS_TO_SESSION_END
+    ? `${age}. The national session this describes ended on ${longDate(SESSION_ENDS)}. Positions may have changed since.`
+    : age;
+}
+
 /**
  * How old the data is, as words that follow "Last checked on 13 November 2026,": "today" or
  * "30 days ago". On or after `SESSION_ENDS` it adds a sentence saying the session ended.
@@ -285,11 +297,16 @@ export const STATE_CODES: readonly string[] = [
  */
 export function ageWords(today: string): string {
   const raw = diffDate(PROPOSALS_CHECKED, today, "days");
-  const days = typeof raw === "number" && raw > 0 ? raw : 0;
-  const age =
-    days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"} ago`;
-  const ended = diffDate(SESSION_ENDS, today, "days");
-  return typeof ended === "number" && ended >= 0
-    ? `${age}. The national session this describes ended on ${longDate(SESSION_ENDS)}. Positions may have changed since.`
-    : age;
+  return ageText(typeof raw === "number" && raw > 0 ? raw : 0);
 }
+
+/**
+ * The widest texts `ageWords` gives: on the last day of the session, and after it with five
+ * digits of days (figures are tabular, so any five-digit count is as wide). A line that shows the
+ * age stacks these, hidden, in its own cell, so the age arriving or the session ending never grows
+ * it.
+ */
+export const AGE_WORDS_HELD: readonly string[] =
+  typeof DAYS_TO_SESSION_END === "number"
+    ? [ageText(DAYS_TO_SESSION_END - 1), ageText(99_999)]
+    : [];

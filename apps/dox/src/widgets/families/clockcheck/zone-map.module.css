@@ -1516,6 +1516,15 @@
   visibility: hidden;
 }
 
+/* A line of prose with its widest texts in its one cell (`usHeldLine`). */
+.usHeldLine {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
 .usRowWide,
 .usRowLong {
   grid-column: 1 / -1;

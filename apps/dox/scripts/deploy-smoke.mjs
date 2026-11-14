@@ -673,6 +673,133 @@ async function buildRows() {
       },
     ],
   });
+  // The US rows make two calls to the `sunshine-protection-act:` bucket per run (the GET and the
+  // HEAD), under its 20 a minute. The PUT answers 405 before the bucket counts it. The answer has
+  // one row per zone of `us-region-zones.json`, in that file's order; the offsets follow the
+  // season, so the row checks their form, not their values.
+  const US_API = `${ND}/gmt/api/sunshine-protection-act`;
+  const US_ZONES = JSON.parse(
+    readFileSync(
+      new URL("../src/lib/us-region-zones.json", import.meta.url),
+      "utf8",
+    ),
+  ).zones;
+  add({
+    label: "sunshine-protection-act today",
+    url: US_API,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ headers, body }) => {
+          if (headers["cache-control"] !== "no-store")
+            return `cache-control is ${headers["cache-control"]}, not no-store`;
+          let parsed;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            return "body is not JSON";
+          }
+          const { now, zones } = parsed;
+          // An RFC 3339 instant in UTC, as `getUtcNow` writes it.
+          if (
+            typeof now !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(now)
+          )
+            return `now is ${JSON.stringify(now)}, not a UTC instant`;
+          if (!Array.isArray(zones)) return "no zones array";
+          const got = zones.map((z) => z.zone).join(",");
+          if (got !== US_ZONES.join(","))
+            return `zones differ from us-region-zones.json: ${got}`;
+          const bad = zones.filter(
+            (z) =>
+              !/^[+-]\d{2}:\d{2}$/.test(z.offset) ||
+              typeof z.observes !== "boolean" ||
+              !("last" in z) ||
+              !("next" in z),
+          );
+          return bad.length
+            ? `malformed rows: ${bad.map((z) => z.zone).join(", ")}`
+            : undefined;
+        },
+      },
+    ],
+  });
+  add({
+    label: "sunshine-protection-act HEAD",
+    method: "HEAD",
+    url: US_API,
+    steps: [
+      {
+        status: 200,
+        check: ({ headers, body }) => {
+          if (headers["cache-control"] !== "no-store")
+            return `cache-control is ${headers["cache-control"]}, not no-store`;
+          return body === "" ? undefined : "HEAD body is not empty";
+        },
+      },
+    ],
+  });
+  add({
+    label: "sunshine-protection-act PUT",
+    method: "PUT",
+    body: "",
+    url: US_API,
+    steps: [
+      {
+        status: 405,
+        check: ({ headers }) =>
+          headers.allow === "GET, HEAD"
+            ? undefined
+            : `allow is ${headers.allow}, not GET, HEAD`,
+      },
+    ],
+  });
+  add({
+    label: "sunshine-protection-act page",
+    url: `${ND}/gmt/check/us-sunshine-protection-act/`,
+    steps: [{ status: 200, type: "text/html" }],
+  });
+  add({
+    label: "us zone boundary file",
+    url: `${ND}/gmt/timezone-boundaries-us.json`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          try {
+            return JSON.parse(body).license === "ODbL-1.0"
+              ? undefined
+              : "license is not ODbL-1.0";
+          } catch {
+            return "body is not JSON";
+          }
+        },
+      },
+    ],
+  });
+  add({
+    label: "us state boundary file",
+    url: `${ND}/gmt/state-boundaries-us.json`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          let parsed;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            return "body is not JSON";
+          }
+          // The 50 states, DC and five territories, keyed by postal code.
+          const n = parsed.features?.length;
+          return n === 56 ? undefined : `${n} state shapes, not 56`;
+        },
+      },
+    ],
+  });
   add({
     label: "25",
     url: `${ND}/gmtx`,

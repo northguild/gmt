@@ -1349,6 +1349,7 @@ list of their own. A widget root is `data-widget="<tool slug>"` (`widget()` in
 | `map-stage`, `pickcard`, `map-block`                        | The map row's stage, the pin panel, and the map block                                                            | `canada-layout-check`, `canada-stored-still`                      |
 | `map-section`, `map-frame`, `map-svg`, `map-shape`, `map-label` | The map's section, its frame, the drawing, the zone shapes, and the labels laid over it                      | `canada-layout-check`, `canada-clock-still`, `data-credits-check`, `contrast-measure` (`map-label`, `map-section`, `map-svg`) |
 | `map-pin`, `pin-cell`, `pin-zone`                           | The pin, a cell of the pin panel, and its zone cell                                                              | `canada-layout-check`, `canada-clock-still`                       |
+| `us-section`, `us-pin`, `us-pin-cell`                       | The Sunshine Protection Act page: one map section per view (its `data-map` turns `drawn` or `failed`), the pin panel, and a cell of it | `contrast-measure`, `data-credits-check` (`us-section`), `sunshine-protection-act-holds.browser.test.ts` |
 | `clocks`, `clock`, `clock-time`                             | The live-clocks card, one clock, and its time text                                                               | `canada-layout-check`, `canada-clock-still`, `canada-stored-still` |
 | `servers`, `minimums`, `help`, `stack`                      | The servers card, the minimum-versions card, the help card, and the page's card stack                            | `canada-layout-check`                                             |
 | `changes`, `transitions`                                    | The changes list and the transitions table of a clock-change page                                                | `canada-stored-still`                                             |
@@ -2256,12 +2257,23 @@ Shared hooks come first, then the globe, then the clock-change pages.
       below 40rem (its longest text takes two to five lines beside the clock as the width changes,
       three at most across from 320px); from 40rem the note sits beside the clock, under the name.
     - **The US pin's readouts** (`usPin()` in `families/clockcheck/us-map.ts`) hold their room
-      two ways. A `row` or `wide` readout's text is made when it is pinned (a time, a date), so it
-      holds a count of lines. A `long` readout's texts are known ahead (Proposals' condition and
-      note): the type requires their `values`, and the readout stacks every one of them in its
-      value's cell, `aria-hidden` and `visibility: hidden` (`.usValue`, `.usHeld`). The cell is as
-      tall as the tallest text at every width, so no line count needs re-checking when a note
-      grows. The US browser test pins the state with the longest note.
+      two ways. A readout whose text is made when it is pinned (a time, a date) holds a count of
+      lines: one (`row`) or two to three (`wide`). A readout whose texts are known ahead
+      (Proposals' condition and note, `long`, and As of, a `row`) carries them as `values`, and
+      stacks every one of them in its value's cell, `aria-hidden`, `data-pagefind-ignore` and
+      `visibility: hidden` (`.usValue`, `.usHeld`). The cell is as tall as the tallest text at
+      every width, so no line count needs re-checking when a note grows. The US browser test pins
+      the state with the longest note.
+    - **Dated lines hold their widest text.** The age of the Proposals data (`ageWords`) grows
+      with the date: "today", "50 days ago", and from `SESSION_ENDS` a second sentence saying the
+      session ended. `AGE_WORDS_HELD` (in `data/sunshine-protection-act-proposals.ts`) is its
+      widest text on the session's last day and after it with a five-digit day count. The pin's
+      As of readout holds both after the date, and the national card's "Last checked on" line is
+      a `usHeldLine()` (`.usHeldLine`) that holds both from the first paint, before the date is
+      read. `sunshine-protection-act-holds.browser.test.ts` fixes the browser's clock on the
+      check day, the next day, the session's last day, a day after it and in 2100, at 375, 1024
+      and 1440 px: the national line is as tall as the server's markup with scripts off, and
+      pinning Delaware moves no held box.
     - **Probe script.** `CanadaProbeScript.astro`, last in the page, runs `probeInlineSource(canadaProbe("canada"))`
       once the table is parsed, so the verdict and the Yours column are final before first paint.
       `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
@@ -2731,8 +2743,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
       routed in `worker/index.ts`). It answers `{zones: WatchZone[]}`, one row per zone of
       `us-region-zones.json` in that file's order, each `{zone, offset, observes, last, next}`,
       computed with `hasDaylightSaving`, `getTimeZoneOffset` and `lastAndNext` (from
-      `clock-change-shared.ts`) at the request's instant. Other methods answer `405` with
-      `Allow: GET`. It is rate limited on its own key, `sunshine-protection-act`, with
+      `clock-change-shared.ts`) at the request's instant. `HEAD` answers as `GET` with no body
+      (RFC 9110 §9.1); other methods answer `405` with `Allow: GET, HEAD`. It is rate limited on
+      its own key, `sunshine-protection-act`, shared by GET and HEAD, with
       `SUNSHINE_ACT_RATE_LIMIT` (20 a minute), and answers `Cache-Control: no-store`. The page
       words the classes and "Next change" from the instant the Worker answered and reads no clock.
     - **Boundary data.** `public/timezone-boundaries-us.json` (tbb 2026e, ODbL, cut back to Natural
@@ -2765,7 +2778,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
       the Navajo Nation keeps daylight time. A territory row shows "—" for what it does not have.
     - **Readouts hold still.** Values use `font-variant-numeric: tabular-nums` and each holds its
       height: a time or date readout holds a count of lines (one; Last and Next change hold two to
-      three), and Condition and Note hold the height of the tallest text each can show, at every
+      three), and Condition, Note and As of hold the height of the tallest text each can show, at every
       width, by stacking all of them hidden in the value's cell (`.usValue`, `.usHeld`; see the
       US pin's readouts above). Paired readouts sit at opposite edges
       (`justify-content: space-between`). Pinning, switching views or a Worker answer arriving
@@ -4716,6 +4729,21 @@ Shared hooks come first, then the globe, then the clock-change pages.
   boundary file (`license` `ODbL-1.0`). The expected offsets are literals in the row, cited to
   tzdb 2026c; when a later tzdb changes Morocco again the row fails on purpose and the page needs
   updating.
+- **Deploy smoke for the Sunshine Protection Act page.** Two calls to the
+  `sunshine-protection-act:` bucket per run: the GET (`no-store`; `now` an instant; one row per
+  zone of `us-region-zones.json` in its order, each with a `±HH:MM` offset, a boolean `observes`
+  and `last` and `next` keys) and HEAD (`no-store`, empty body). The offsets follow the season, so
+  the row checks their form, not their values. A PUT must answer `405` with `Allow: GET, HEAD`.
+  Three more rows fetch the page, `timezone-boundaries-us.json` (`license` `ODbL-1.0`) and
+  `state-boundaries-us.json` (56 shapes).
+
+- **Contrast on the check pages.** `contrast-measure` lists the Sunshine Protection Act page
+  beside the Canada and Morocco checkers and measures it in both views (Today, then Proposals),
+  each after its map's `us-section` reads `drawn` or `failed`. `--us-fixture` serves a Worker
+  answer to `/api/sunshine-protection-act`, as `--canada-fixture` and `--morocco-fixture` do for
+  theirs. The probe card's head takes `--gmt-fill-strong`, not the content sheet's
+  `--gmt-fill-deep`: on the deeper fill its `--gmt-ice-dim` notes fell to 6.98:1 over Morocco's
+  backdrop.
 
 - **The stream opens before a brain is chosen.** Measured 2026-09-24: two busy brains
   took 2.8 s of a 6.7 s answer, and the reader saw nothing but "Searching corpus…". Now

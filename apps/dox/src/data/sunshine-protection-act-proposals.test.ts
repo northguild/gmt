@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { hasDaylightSaving } from "@northguild/gmt/zoned/validate";
 import {
+  AGE_WORDS_HELD,
   ageWords,
   longDate,
   NATIONAL,
@@ -142,6 +143,27 @@ describe("ageWords", () => {
     expect(ageWords("2027-01-03")).toMatch(
       /The national session this describes ended on 3 January 2027\. Positions may have changed since\.$/,
     );
+  });
+});
+
+describe("AGE_WORDS_HELD", () => {
+  it("is the last day of the session and a five-digit age after it", () => {
+    expect(AGE_WORDS_HELD).toEqual([
+      ageWords("2027-01-02"),
+      "99999 days ago. The national session this describes ended on 3 January 2027. Positions may have changed since.",
+    ]);
+    expect(AGE_WORDS_HELD[0]).toBe("50 days ago");
+  });
+
+  it("is at least as long as the age words on any day of either kind", () => {
+    for (const day of ["2026-11-13", "2026-11-14", "2027-01-02"])
+      expect(ageWords(day).length).toBeLessThanOrEqual(
+        AGE_WORDS_HELD[0]!.length,
+      );
+    for (const day of ["2027-01-03", "2030-06-01", "2100-01-01"])
+      expect(ageWords(day).length).toBeLessThanOrEqual(
+        AGE_WORDS_HELD[1]!.length,
+      );
   });
 });
 

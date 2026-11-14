@@ -81,15 +81,21 @@ export function usLegend(
 }
 
 /**
- * How a readout of the pin panel holds its room. A `row` or `wide` readout's text is made when it
- * is pinned (a time, a date), so it holds a count of lines: one, or two to three. A `long` readout's
- * texts are known ahead (a condition, a note): it spans the row and stacks every one of them,
- * hidden, in its value's cell, so the cell is as tall as the tallest at every width and a pin never
- * grows the panel, however long a new one is.
+ * How a readout of the pin panel holds its room. A readout whose texts are known ahead (a
+ * condition, a note, the age of the data at its widest) stacks every one of them, hidden, in its
+ * value's cell, so the cell is as tall as the tallest at every width and a pin never grows the
+ * panel, however long a new one is; a `long` one spans the row. A readout whose text is made when
+ * it is pinned (a time, a date) holds a count of lines instead: one (`row`), or two to three
+ * (`wide`).
  */
 export type UsPinField =
   | { key: string; label: string; size: "row" | "wide" }
-  | { key: string; label: string; size: "long"; values: readonly string[] };
+  | {
+      key: string;
+      label: string;
+      size: "row" | "long";
+      values: readonly string[];
+    };
 
 export type PinSize = UsPinField["size"];
 
@@ -144,9 +150,9 @@ function usPin(o: UsPinOptions): SafeHtml {
           html`<div class="${SIZE_CLASS[field.size]}">
             <dt>${field.label}</dt>
             <dd class="${styles.usValue}" id="${id(`pin-${field.key}`)}" ${gateAttr("us-pin-cell")}>${EMPTY}</dd>
-            ${[...new Set(field.size === "long" ? field.values : [])].map(
+            ${[...new Set("values" in field ? field.values : [])].map(
               (value) =>
-                html`<dd class="${styles.usValue} ${styles.usHeld}" aria-hidden="true">${value}</dd>`,
+                html`<dd class="${styles.usValue} ${styles.usHeld}" aria-hidden="true" data-pagefind-ignore>${value}</dd>`,
             )}
           </div>`,
       )}
@@ -270,6 +276,24 @@ export function usStatus(id: string): SafeHtml {
 }
 
 /** The card beside the key points (the national card): it keeps its own height. */
+/**
+ * A line of text that changes after the first paint (the age of the data), with its widest texts
+ * stacked, hidden, in the same cell: it is as tall as the tallest from the first paint, so the text
+ * arriving never moves what is below it. The live text is the `<span>` with `id`.
+ */
+export function usHeldLine(
+  id: string,
+  text: string,
+  held: readonly string[],
+): SafeHtml {
+  return html`<p class="${styles.usHeldLine}"><span id="${id}">${text}</span>${[
+    ...new Set(held),
+  ].map(
+    (value) =>
+      html`<span class="${styles.usHeld}" aria-hidden="true" data-pagefind-ignore>${value}</span>`,
+  )}</p>`;
+}
+
 export function usSide(card: HtmlValue): SafeHtml {
   return html`<div class="${styles.usSide}">${card}</div>`;
 }

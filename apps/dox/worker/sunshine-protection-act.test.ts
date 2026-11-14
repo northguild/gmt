@@ -102,12 +102,33 @@ describe("GET /gmt/api/sunshine-protection-act", () => {
     expect(body.zones).toHaveLength(usZones.zones.length);
   });
 
-  it("answers 405 with Allow: GET on any other method", async () => {
-    for (const method of ["POST", "PUT", "DELETE", "HEAD"]) {
+  // RFC 9110 9.1: a general-purpose server supports HEAD wherever it supports GET.
+  it("answers HEAD as GET with no body", async () => {
+    const response = await call("HEAD");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(
+      "application/json; charset=utf-8",
+    );
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe("");
+  });
+
+  it("answers 405 with Allow: GET, HEAD on any other method", async () => {
+    for (const method of ["POST", "PUT", "DELETE", "PATCH"]) {
       const response = await call(method);
       expect(response.status).toBe(405);
-      expect(response.headers.get("allow")).toBe("GET");
+      expect(response.headers.get("allow")).toBe("GET, HEAD");
     }
+  });
+
+  it("counts HEAD in the same bucket as GET", async () => {
+    for (let i = 0; i < SUNSHINE_ACT_RATE_LIMIT.max; i++) {
+      expect((await call(i % 2 ? "HEAD" : "GET")).status).toBe(200);
+    }
+    const blocked = await call("HEAD");
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("retry-after")).not.toBeNull();
+    expect(await blocked.text()).toBe("");
   });
 
   it("answers 429 after the limit, for one client only", async () => {
