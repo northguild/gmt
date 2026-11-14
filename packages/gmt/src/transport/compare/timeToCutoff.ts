@@ -24,7 +24,7 @@ import { zonedInstantOf } from "../../internal/exactMoment";
  * @example timeToCutoff("2024-06-12T13:30:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // "PT1H30M"
  * @example timeToCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // "-PT1H" (an hour past the cut-off)
  * @example timeToCutoff("2024-06-12T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // "PT0S"
- * @example timeToCutoff("2024-10-26T17:00:00+01:00[Europe/London]", "2024-10-27T17:00:00+00:00[Europe/London]") // "PT25H" (across the fall-back)
+ * @example timeToCutoff("2024-10-26T16:00:00Z", "2024-10-27T17:00:00+00:00[Europe/London]") // "PT25H" (across the fall-back)
  * @example timeToCutoff("2024-06-12T16:00:00Z", "2024-06-12T15:00:00Z") // "" (a bare instant is not a zoned cut-off)
  * @example timeToCutoff("2024-06-12T16:00:00Z", "") // ""
  */

@@ -43,11 +43,9 @@ const PRECEDENCE: readonly TimestampClass[] = ["ACT", "PLN", "REQ", "EST"];
  * - Within the chosen class, the newest-recorded event wins (latest `recordedAt`), so a revised
  *   plan or a corrected actual replaces the earlier one. Two records at the same instant go to
  *   the later one in the array.
- * - `at` is echoed exactly as written. `at` and `recordedAt` are instants (`Z`/offset) or zoned
- *   strings, compared as instants and read as `scheduleDeviation` reads them: the offset fixes
- *   the instant, and an offset written to the minute that is the bracketed zone's sub-minute
- *   offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives.
- *   Otherwise the bracket is not checked.
+ * - `at` is echoed exactly as written. `at` and `recordedAt` are instants (`Z` or an offset) with no
+ *   annotation of any kind, compared as instants: the offset fixes the instant. The choice keeps
+ *   no zone, so a zoned string, a real zone bracket included, is invalid.
  * - Returns `null` for an empty list, or when any event is invalid — a `classifier` other than
  *   exactly `PLN`, `EST`, `REQ` or `ACT` included.
  *

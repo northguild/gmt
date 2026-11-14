@@ -34,8 +34,6 @@ describe("readZonedOffsetInstant: a minute-rounded offset in a zoned string", ()
   // have at that wall time, a zone that does not exist, and a skipped wall time are not read.
   it.each`
     value                                              | utc                       | why
-    ${"1960-01-01T01:04:30Z"}                          | ${"1960-01-01T01:04:30Z"} | ${"a Z instant"}
-    ${"1960-01-01T00:20:00-00:45"}                     | ${"1960-01-01T01:05:00Z"} | ${"no bracket"}
     ${"1960-01-01T01:04:30Z[Africa/Monrovia]"}         | ${"1960-01-01T01:04:30Z"} | ${"Z with a zone"}
     ${"1960-01-01T00:20:00-00:44:30[Africa/Monrovia]"} | ${"1960-01-01T01:04:30Z"} | ${"the zone's exact offset"}
     ${"1960-01-01T00:20:00-00:45[-00:45]"}             | ${"1960-01-01T01:05:00Z"} | ${"an offset zone"}
@@ -46,6 +44,15 @@ describe("readZonedOffsetInstant: a minute-rounded offset in a zoned string", ()
   `("reads $value as $utc ($why)", ({ value, utc }) => {
     expect(readNs(value)).toBe(ns(utc));
     expect(readZonedOffsetInstant(value)?.instant).toBe(utc);
+  });
+
+  // A string with no bracket is an instant, not a zoned string: this reader refuses it.
+  it.each`
+    value                          | why
+    ${"1960-01-01T01:04:30Z"}      | ${"a Z instant"}
+    ${"1960-01-01T00:20:00-00:45"} | ${"an offset with no bracket"}
+  `("refuses the unbracketed $value ($why)", ({ value }) => {
+    expect(readZonedOffsetInstant(value)).toBeNull();
   });
 
   it.each`
@@ -95,7 +102,9 @@ describe("readZonedOffsetInstant: a minute-rounded offset in a zoned string", ()
       .toString();
     expect(written).toBe("1952-10-15T23:59:59-11:20[Pacific/Niue]");
     expect(readNs(written)).toBe(-543069621000000000n);
-    expect(readZonedOffsetInstant(written)?.instant).toBe("1952-10-16T11:19:39Z");
+    expect(readZonedOffsetInstant(written)?.instant).toBe(
+      "1952-10-16T11:19:39Z",
+    );
     // The exact offsets name each pass.
     expect(readNs("1952-10-15T23:59:59-11:19:40[Pacific/Niue]")).toBe(
       -543069621000000000n,

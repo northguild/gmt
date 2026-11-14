@@ -12,10 +12,10 @@ import {
 // then the zoned one.
 describe("the exact offset readers", () => {
   it.each`
-    value                                           | timeZone           | reason
-    ${"2024-07-15T16:00:00+05:30"}                  | ${undefined}       | ${"a written offset"}
-    ${"2024-07-15T16:00:00Z"}                       | ${"Europe/London"} | ${"read in a zone"}
-    ${"2024-07-15T16:00:00Z"}                       | ${"Invalid/Zone"}  | ${"an unknown zone"}
+    value                          | timeZone           | reason
+    ${"2024-07-15T16:00:00+05:30"} | ${undefined}       | ${"a written offset"}
+    ${"2024-07-15T16:00:00Z"}      | ${"Europe/London"} | ${"read in a zone"}
+    ${"2024-07-15T16:00:00Z"}      | ${"Invalid/Zone"}  | ${"an unknown zone"}
   `(
     "readInstantOffsetInstant is what toOffsetInstant returns for '$value' ($reason)",
     ({ value, timeZone }: { value: string; timeZone: string | undefined }) => {
@@ -26,11 +26,11 @@ describe("the exact offset readers", () => {
   );
 
   it.each`
-    value                                           | timeZone     | reason
-    ${"1969-12-31T23:15:30-00:45[Africa/Monrovia]"} | ${undefined} | ${"a sub-minute zone"}
-    ${"2024-07-15T16:00:00+05:30[Asia/Kolkata]"}    | ${undefined} | ${"a zone that agrees"}
+    value                                           | timeZone           | reason
+    ${"1969-12-31T23:15:30-00:45[Africa/Monrovia]"} | ${undefined}       | ${"a sub-minute zone"}
+    ${"2024-07-15T16:00:00+05:30[Asia/Kolkata]"}    | ${undefined}       | ${"a zone that agrees"}
     ${"2024-07-15T16:00:00+05:30[Asia/Kolkata]"}    | ${"Europe/London"} | ${"read in another zone"}
-    ${"2024-07-15T12:00:00+00:00[Europe/London]"}   | ${undefined} | ${"an offset the zone contradicts"}
+    ${"2024-07-15T12:00:00+00:00[Europe/London]"}   | ${undefined}       | ${"an offset the zone contradicts"}
   `(
     "readZonedOffsetInstant is what toOffsetInstant returns for '$value' ($reason)",
     ({ value, timeZone }: { value: string; timeZone: string | undefined }) => {
@@ -41,13 +41,13 @@ describe("the exact offset readers", () => {
   );
 
   it.each`
-    value                                         | reason
-    ${"2024-07-15T16:00:00+05:30[Asia/Kolkata]"}  | ${"a zoned string"}
-    ${"2024-07-15T16:00:00Z[Europe/London]"}      | ${"a Z instant with a zone"}
-    ${"2024-07-15T16:00:00Z[foo=bar]"}            | ${"an elective annotation"}
-    ${"2024-07-15T16:00:00Zjunk"}                 | ${"trailing text"}
-    ${"2024-07-15T16:00:00Z "}                    | ${"trailing whitespace"}
-    ${"2024-06-15T10Z"}                           | ${"an hour-only time"}
+    value                                        | reason
+    ${"2024-07-15T16:00:00+05:30[Asia/Kolkata]"} | ${"a zoned string"}
+    ${"2024-07-15T16:00:00Z[Europe/London]"}     | ${"a Z instant with a zone"}
+    ${"2024-07-15T16:00:00Z[foo=bar]"}           | ${"an elective annotation"}
+    ${"2024-07-15T16:00:00Zjunk"}                | ${"trailing text"}
+    ${"2024-07-15T16:00:00Z "}                   | ${"trailing whitespace"}
+    ${"2024-06-15T10Z"}                          | ${"an hour-only time"}
   `(
     "readInstantOffsetInstant returns null for '$value' ($reason)",
     ({ value }) => {
@@ -56,9 +56,9 @@ describe("the exact offset readers", () => {
   );
 
   it.each`
-    value                              | reason
-    ${"2024-07-15T16:00:00+05:30"}     | ${"an offset instant, no bracket"}
-    ${"2024-07-15T16:00:00Z"}          | ${"a Z instant, no bracket"}
+    value                                  | reason
+    ${"2024-07-15T16:00:00+05:30"}         | ${"an offset instant, no bracket"}
+    ${"2024-07-15T16:00:00Z"}              | ${"a Z instant, no bracket"}
     ${"2024-07-15T16:00:00[Asia/Kolkata]"} | ${"a bracket and no offset"}
   `(
     "readZonedOffsetInstant returns null for '$value' ($reason)",
@@ -101,10 +101,10 @@ describe("readFormOffsetInstant", () => {
   });
 
   it.each`
-    value                                         | written
-    ${"2024-06-15T10:30-05:00"}                   | ${"minute"}
-    ${"2024-06-15T10:30:00Z"}                     | ${"second"}
-    ${"2024-06-15T10:30:00.5+02:00"}              | ${"fraction"}
+    value                            | written
+    ${"2024-06-15T10:30-05:00"}      | ${"minute"}
+    ${"2024-06-15T10:30:00Z"}        | ${"second"}
+    ${"2024-06-15T10:30:00.5+02:00"} | ${"fraction"}
   `(
     "reads the $written form '$value' as readInstantOffsetInstant does",
     ({ value, written }) => {

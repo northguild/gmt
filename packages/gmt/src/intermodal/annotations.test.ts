@@ -41,8 +41,8 @@ const terms = {
 } as const;
 
 describe("intermodal annotations (RFC 9557)", () => {
-  // `dtm303` is the instant placed under `CCYYMMDDHHMMZZZ` on the clock of the zone the value
-  // names: 14 June 2024 19:00 at `+00` for `Z` and `[UTC]`, 20:00 at `+01` for `[Europe/London]`.
+  // `dtm303` is the instant placed under `CCYYMMDDHHMMZZZ`: 14 June 2024 19:00 at `+00` for the
+  // bare `Z` instant. A 303 value is an instant, so any annotation, a real zone included, is refused.
   it.each`
     annotation               | zoned    | dtm303               | kind
     ${""}                    | ${true}  | ${"202406141900+00"} | ${"no annotation"}
@@ -51,10 +51,10 @@ describe("intermodal annotations (RFC 9557)", () => {
     ${"[u-ca=gregory]"}      | ${false} | ${""}                | ${"elective calendar"}
     ${"[!u-ca=gregory]"}     | ${false} | ${""}                | ${"critical calendar"}
     ${"[u-ca=iso8601]"}      | ${false} | ${""}                | ${"ISO calendar"}
-    ${"[UTC]"}               | ${true}  | ${"202406141900+00"} | ${"zone"}
-    ${"[!UTC]"}              | ${true}  | ${"202406141900+00"} | ${"critical zone"}
-    ${"[Europe/London]"}     | ${true}  | ${"202406142000+01"} | ${"zone differing from Z: it sets the wall clock a 303 value is written on"}
-    ${"[+01:00]"}            | ${true}  | ${"202406142000+01"} | ${"offset zone"}
+    ${"[UTC]"}               | ${true}  | ${""}                | ${"zone"}
+    ${"[!UTC]"}              | ${true}  | ${""}                | ${"critical zone"}
+    ${"[Europe/London]"}     | ${true}  | ${""}                | ${"zone differing from Z"}
+    ${"[+01:00]"}            | ${true}  | ${""}                | ${"offset zone"}
     ${"[UTC][foo=bar]"}      | ${false} | ${""}                | ${"zone then elective unknown key"}
     ${"[UTC][!foo=bar]"}     | ${false} | ${""}                | ${"zone then critical unknown key"}
     ${"[UTC][u-ca=iso8601]"} | ${false} | ${""}                | ${"zone then ISO calendar"}
@@ -116,7 +116,7 @@ describe("intermodal annotations (RFC 9557)", () => {
             }
           : null,
       );
-      // A 303 value is the wall clock and its offset, so the bracketed zone is read.
+      // A 303 value is an instant: only the bare one is written, and any annotation is refused.
       expect(formatEdifactOffsetDateTime(value, "303")).toBe(dtm303);
       // A departure keeps its zone: body plus one real zone bracket.
       expect(

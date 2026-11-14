@@ -189,16 +189,18 @@ describe("estimateDrift", () => {
   );
 
   it.each`
-    events                                                                                                                          | why
-    ${[]}                                                                                                                           | ${"an empty list"}
-    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z")]}                                                               | ${"a single EST: no drift from one sample"}
-    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("ACT", "2024-06-20T09:00:00Z", "2024-06-21T00:00:00Z")]} | ${"one EST beside another class"}
-    ${[event("PLN", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("PLN", "2024-06-20T09:00:00Z", "2024-06-02T00:00:00Z")]} | ${"no EST at all"}
-    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ACT", "2024-06-20T17:00:00", "2024-06-21T00:00:00Z")]}  | ${"an invalid event of another class"}
-    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ETA", "2024-06-20T17:00:00Z", "2024-06-21T00:00:00Z")]} | ${"an unknown classifier"}
-    ${[...revisions("2024-06-20T08:00:00Z", "-271821-04-19T23:59:59.999999999Z")]}                                                  | ${"an at before the instant range"}
-    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), null]}                                                         | ${"a null event"}
-    ${"EST"}                                                                                                                        | ${"a string for the list"}
+    events                                                                                                                                              | why
+    ${[]}                                                                                                                                               | ${"an empty list"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z")]}                                                                                   | ${"a single EST: no drift from one sample"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("ACT", "2024-06-20T09:00:00Z", "2024-06-21T00:00:00Z")]}                     | ${"one EST beside another class"}
+    ${[event("PLN", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("PLN", "2024-06-20T09:00:00Z", "2024-06-02T00:00:00Z")]}                     | ${"no EST at all"}
+    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ACT", "2024-06-20T17:00:00", "2024-06-21T00:00:00Z")]}                      | ${"an invalid event of another class"}
+    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ETA", "2024-06-20T17:00:00Z", "2024-06-21T00:00:00Z")]}                     | ${"an unknown classifier"}
+    ${[...revisions("2024-06-20T08:00:00Z", "-271821-04-19T23:59:59.999999999Z")]}                                                                      | ${"an at before the instant range"}
+    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), null]}                                                                             | ${"a null event"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("EST", "2024-06-20T17:00:02+02:00[Europe/Berlin]", "2024-06-10T00:00:00Z")]} | ${"an at that is a real zoned string"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("EST", "2024-06-20T17:00:00Z", "2024-06-10T12:00:00+02:00[Europe/Berlin]")]} | ${"a recordedAt that is a real zoned string"}
+    ${"EST"}                                                                                                                                            | ${"a string for the list"}
   `("returns null for $why", ({ events }) => {
     expect(estimateDrift(events, { tolerance: "PT8H" })).toBeNull();
   });

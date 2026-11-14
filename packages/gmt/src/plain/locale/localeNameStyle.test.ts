@@ -6,13 +6,13 @@ import { getLocaleWeekdayNames } from "./getLocaleWeekdayNames";
 // is not a style: ECMA-402 GetOption throws RangeError there, so GMT returns `[]`.
 describe("the style of a locale name list", () => {
   it.each`
-    style        | label
-    ${"shortx"}  | ${"a misspelt style"}
-    ${"LONG"}    | ${"an upper-case style"}
-    ${""}        | ${"an empty style"}
-    ${null}      | ${"null"}
-    ${5}         | ${"a number"}
-    ${{}}        | ${"an object"}
+    style       | label
+    ${"shortx"} | ${"a misspelt style"}
+    ${"LONG"}   | ${"an upper-case style"}
+    ${""}       | ${"an empty style"}
+    ${null}     | ${"null"}
+    ${5}        | ${"a number"}
+    ${{}}       | ${"an object"}
   `("returns [] for $label", ({ style }) => {
     expect(getLocaleWeekdayNames("de-DE", style)).toEqual([]);
     expect(getLocaleMonthNames("de-DE", style)).toEqual([]);

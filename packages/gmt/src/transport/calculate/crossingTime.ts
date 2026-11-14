@@ -44,8 +44,8 @@ export interface Crossing {
  *   `fromOffsetInstant({ instant, offset })` for the local time with its full offset and no
  *   bracket.
  *
- * @param entry ISO 8601 zoned datetime or instant string of entering the crossing
- * @param exit ISO 8601 zoned datetime or instant string of leaving it
+ * @param entry ISO 8601 instant string (`Z` or an offset, no annotation) of entering the crossing
+ * @param exit ISO 8601 instant string (`Z` or an offset, no annotation) of leaving it
  * @param targetZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts) the
  *   crossing is read in
  * @returns exact duration and zone-local entry and exit, or null on invalid input

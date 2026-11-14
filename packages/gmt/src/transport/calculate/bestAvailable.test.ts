@@ -93,19 +93,21 @@ describe("bestAvailable", () => {
   );
 
   it.each`
-    events                                                                                 | why
-    ${[]}                                                                                  | ${"an empty list"}
-    ${[actual, event("ETA", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]}              | ${"an unknown classifier, even beside an ACT"}
-    ${[actual, event("act", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]}              | ${"a lower-case classifier"}
-    ${[actual, event("EST", "2024-06-15T12:00:00", "2024-06-15T12:00:00Z")]}               | ${"a zoneless at"}
-    ${[actual, event("EST", "2024-06-15T12:00:00Z[Not/AZone]", "2024-06-15T12:00:00Z")]}   | ${"an at with a zone annotation"}
-    ${[actual, event("EST", "2024-06-15T12:00:00Z[u-ca=hebrew]", "2024-06-15T12:00:00Z")]} | ${"an at with a calendar annotation"}
-    ${[actual, event("EST", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z[foo=bar]")]}     | ${"a recordedAt with an elective annotation"}
-    ${[actual, event("EST", "2024-06-15T12:00:00Z", "yesterday")]}                         | ${"a malformed recordedAt"}
-    ${[actual, null]}                                                                      | ${"a null event"}
-    ${Object.assign([], { 1: actual })}                                                    | ${"a sparse list: a hole is not an event"}
-    ${"ACT"}                                                                               | ${"a string for the list"}
-    ${null}                                                                                | ${"null for the list"}
+    events                                                                                        | why
+    ${[]}                                                                                         | ${"an empty list"}
+    ${[actual, event("ETA", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]}                     | ${"an unknown classifier, even beside an ACT"}
+    ${[actual, event("act", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]}                     | ${"a lower-case classifier"}
+    ${[actual, event("EST", "2024-06-15T12:00:00", "2024-06-15T12:00:00Z")]}                      | ${"a zoneless at"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z[Not/AZone]", "2024-06-15T12:00:00Z")]}          | ${"an at with a zone annotation"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z[u-ca=hebrew]", "2024-06-15T12:00:00Z")]}        | ${"an at with a calendar annotation"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z[foo=bar]")]}            | ${"a recordedAt with an elective annotation"}
+    ${[actual, event("EST", "2024-06-15T14:00:00+02:00[Europe/Berlin]", "2024-06-15T12:00:00Z")]} | ${"an at that is a real zoned string"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z", "2024-06-15T14:00:00+02:00[Europe/Berlin]")]} | ${"a recordedAt that is a real zoned string"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z", "yesterday")]}                                | ${"a malformed recordedAt"}
+    ${[actual, null]}                                                                             | ${"a null event"}
+    ${Object.assign([], { 1: actual })}                                                           | ${"a sparse list: a hole is not an event"}
+    ${"ACT"}                                                                                      | ${"a string for the list"}
+    ${null}                                                                                       | ${"null for the list"}
   `("returns null for $why", ({ events }) => {
     expect(bestAvailable(events)).toBeNull();
   });

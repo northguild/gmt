@@ -347,7 +347,9 @@ const HALF_READERS: Readonly<
   // `fromOffsetInstant`: the pair's own string, so `-00:00` is `+00:00` and the result reads
   // back through the instant functions.
   offsetDateTime: (bag) => {
-    const pair = readInstantOffsetInstant(`${localDateTime(bag)}${bag.offset ?? ""}`);
+    const pair = readInstantOffsetInstant(
+      `${localDateTime(bag)}${bag.offset ?? ""}`,
+    );
     const written = pair === null ? "" : writeOffsetInstant(pair);
     return written === "" ? null : written;
   },

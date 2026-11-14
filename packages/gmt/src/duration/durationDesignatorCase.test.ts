@@ -27,29 +27,29 @@ describe("a duration string with a designator in lower case", () => {
   const lowers = ["p1dt2h", "P1dT2H", "P1Dt2H", "P1DT2h"];
 
   it.each`
-    name                            | call
-    ${"isValidDuration"}            | ${(d: string) => !isValidDuration(d)}
-    ${"addDuration a"}              | ${(d: string) => addDuration(d, "PT1H") === ""}
-    ${"addDuration b"}              | ${(d: string) => addDuration("PT1H", d) === ""}
-    ${"subtractDuration a"}         | ${(d: string) => subtractDuration(d, "PT1H") === ""}
-    ${"subtractDuration b"}         | ${(d: string) => subtractDuration("PT1H", d) === ""}
-    ${"negateDuration"}             | ${(d: string) => negateDuration(d) === ""}
-    ${"absDuration"}                | ${(d: string) => absDuration(d) === ""}
-    ${"getDurationSign"}            | ${(d: string) => getDurationSign(d) === null}
-    ${"getDurationUnit"}            | ${(d: string) => getDurationUnit(d, "hour") === null}
-    ${"totalDuration"}              | ${(d: string) => totalDuration(d, "hours") === null}
-    ${"compareDurations a"}         | ${(d: string) => compareDurations(d, "PT1H") === null}
-    ${"compareDurations b"}         | ${(d: string) => compareDurations("PT1H", d) === null}
-    ${"normalizeDuration"}          | ${(d: string) => normalizeDuration(d) === ""}
-    ${"formatDuration"}             | ${(d: string) => formatDuration(d, "en") === ""}
-    ${"formatHumanDuration"}        | ${(d: string) => formatHumanDuration(d) === ""}
-    ${"parseDuration"}              | ${(d: string) => parseDuration(d) === ""}
-    ${"intervalFromDurationDate"}   | ${(d: string) => intervalFromDurationDate("2024-06-15", d, "start") === null}
+    name                              | call
+    ${"isValidDuration"}              | ${(d: string) => !isValidDuration(d)}
+    ${"addDuration a"}                | ${(d: string) => addDuration(d, "PT1H") === ""}
+    ${"addDuration b"}                | ${(d: string) => addDuration("PT1H", d) === ""}
+    ${"subtractDuration a"}           | ${(d: string) => subtractDuration(d, "PT1H") === ""}
+    ${"subtractDuration b"}           | ${(d: string) => subtractDuration("PT1H", d) === ""}
+    ${"negateDuration"}               | ${(d: string) => negateDuration(d) === ""}
+    ${"absDuration"}                  | ${(d: string) => absDuration(d) === ""}
+    ${"getDurationSign"}              | ${(d: string) => getDurationSign(d) === null}
+    ${"getDurationUnit"}              | ${(d: string) => getDurationUnit(d, "hour") === null}
+    ${"totalDuration"}                | ${(d: string) => totalDuration(d, "hours") === null}
+    ${"compareDurations a"}           | ${(d: string) => compareDurations(d, "PT1H") === null}
+    ${"compareDurations b"}           | ${(d: string) => compareDurations("PT1H", d) === null}
+    ${"normalizeDuration"}            | ${(d: string) => normalizeDuration(d) === ""}
+    ${"formatDuration"}               | ${(d: string) => formatDuration(d, "en") === ""}
+    ${"formatHumanDuration"}          | ${(d: string) => formatHumanDuration(d) === ""}
+    ${"parseDuration"}                | ${(d: string) => parseDuration(d) === ""}
+    ${"intervalFromDurationDate"}     | ${(d: string) => intervalFromDurationDate("2024-06-15", d, "start") === null}
     ${"intervalFromDurationDateTime"} | ${(d: string) => intervalFromDurationDateTime("2024-06-15T10:00:00", d, "start") === null}
-    ${"intervalFromDurationUnix"}   | ${(d: string) => intervalFromDurationUnix(1718445600, d, "start") === null}
-    ${"intervalFromDurationUtc"}    | ${(d: string) => intervalFromDurationUtc("2024-06-15T10:00:00Z", d, "start") === null}
-    ${"intervalFromDurationZoned"}  | ${(d: string) => intervalFromDurationZoned("2024-06-15T10:00:00+02:00[Europe/Berlin]", d, "start") === null}
-    ${"cutoffAt"}                   | ${(d: string) => cutoffAt("2024-06-14T16:00:00Z", d, { timeZone: "UTC" }) === ""}
+    ${"intervalFromDurationUnix"}     | ${(d: string) => intervalFromDurationUnix(1718445600, d, "start") === null}
+    ${"intervalFromDurationUtc"}      | ${(d: string) => intervalFromDurationUtc("2024-06-15T10:00:00Z", d, "start") === null}
+    ${"intervalFromDurationZoned"}    | ${(d: string) => intervalFromDurationZoned("2024-06-15T10:00:00+02:00[Europe/Berlin]", d, "start") === null}
+    ${"cutoffAt"}                     | ${(d: string) => cutoffAt("2024-06-14T16:00:00Z", d, { timeZone: "UTC" }) === ""}
   `("$name refuses every such spelling", ({ call }) => {
     // The upper-case spelling is not the sentinel, so the sentinel check above is the right one.
     expect(call(upper), upper).toBe(false);
@@ -57,7 +57,6 @@ describe("a duration string with a designator in lower case", () => {
       expect(call(lower), lower).toBe(true);
     }
   });
-
 
   // A time carries hours, minutes and seconds only, so it has its own upper-case spelling.
   it.each(["pt2h", "Pt2H", "PT2h"])(

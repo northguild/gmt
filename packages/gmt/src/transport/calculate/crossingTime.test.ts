@@ -110,23 +110,24 @@ describe("crossingTime", () => {
   );
 
   it.each`
-    entry                                  | exit                                     | targetZone          | reason
-    ${123}                                 | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry is non-string input"}
-    ${"2024-06-15T22:30:00Z"}              | ${123}                                   | ${"Europe/London"}  | ${"exit is non-string input"}
-    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${123}              | ${"targetZone is non-string input"}
-    ${"2024-06-16T01:00:00Z"}              | ${"2024-06-15T22:30:00Z"}                | ${"Europe/London"}  | ${"exit before entry"}
-    ${"2024-06-15T22:30:00"}               | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry has no offset designator"}
-    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00"}                 | ${"Europe/London"}  | ${"exit has no offset designator"}
-    ${"2016-12-31T23:59:60Z"}              | ${"2017-01-01T01:00:00Z"}                | ${"Europe/London"}  | ${"leap second"}
-    ${""}                                  | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"empty entry"}
-    ${"2024-06-15T22:30:00Z"}              | ${"invalid"}                             | ${"Europe/London"}  | ${"garbage exit"}
-    ${"2024-06-15T22:30:00Z[Not/AZone]"}   | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries a zone annotation"}
-    ${"2024-06-15T22:30:00Z[u-ca=hebrew]"} | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries a calendar annotation"}
-    ${"2024-06-15T22:30:00Z[foo=bar]"}     | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries an elective annotation"}
-    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z[Europe/London]"} | ${"Europe/London"}  | ${"exit carries a zone annotation"}
-    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${"Europe/Londres"} | ${"targetZone does not exist"}
-    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${""}               | ${"empty targetZone"}
-    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${undefined}        | ${"targetZone omitted: it is always the rendering zone"}
+    entry                                         | exit                                     | targetZone          | reason
+    ${123}                                        | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry is non-string input"}
+    ${"2024-06-15T22:30:00Z"}                     | ${123}                                   | ${"Europe/London"}  | ${"exit is non-string input"}
+    ${"2024-06-15T22:30:00Z"}                     | ${"2024-06-16T01:00:00Z"}                | ${123}              | ${"targetZone is non-string input"}
+    ${"2024-06-16T01:00:00Z"}                     | ${"2024-06-15T22:30:00Z"}                | ${"Europe/London"}  | ${"exit before entry"}
+    ${"2024-06-15T22:30:00"}                      | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry has no offset designator"}
+    ${"2024-06-15T22:30:00Z"}                     | ${"2024-06-16T01:00:00"}                 | ${"Europe/London"}  | ${"exit has no offset designator"}
+    ${"2016-12-31T23:59:60Z"}                     | ${"2017-01-01T01:00:00Z"}                | ${"Europe/London"}  | ${"leap second"}
+    ${""}                                         | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"empty entry"}
+    ${"2024-06-15T22:30:00Z"}                     | ${"invalid"}                             | ${"Europe/London"}  | ${"garbage exit"}
+    ${"2024-06-15T22:30:00Z[Not/AZone]"}          | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries a zone annotation"}
+    ${"2024-06-15T22:30:00Z[u-ca=hebrew]"}        | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries a calendar annotation"}
+    ${"2024-06-15T22:30:00Z[foo=bar]"}            | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries an elective annotation"}
+    ${"2024-06-15T22:30:00Z"}                     | ${"2024-06-16T01:00:00Z[Europe/London]"} | ${"Europe/London"}  | ${"exit carries a zone annotation"}
+    ${"2024-06-16T00:30:00+02:00[Europe/Berlin]"} | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry is a real zoned string"}
+    ${"2024-06-15T22:30:00Z"}                     | ${"2024-06-16T01:00:00Z"}                | ${"Europe/Londres"} | ${"targetZone does not exist"}
+    ${"2024-06-15T22:30:00Z"}                     | ${"2024-06-16T01:00:00Z"}                | ${""}               | ${"empty targetZone"}
+    ${"2024-06-15T22:30:00Z"}                     | ${"2024-06-16T01:00:00Z"}                | ${undefined}        | ${"targetZone omitted: it is always the rendering zone"}
   `("returns the sentinel when $reason", ({ entry, exit, targetZone }) => {
     expect(crossingTime(entry, exit, targetZone)).toBeNull();
   });
