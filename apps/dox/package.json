@@ -56,7 +56,7 @@
     "@tanstack/store": "^0.11.1",
     "@tanstack/virtual-core": "^3.17.8",
     "ai": "^7.0.95",
-    "astro": "7.4.2",
+    "astro": "7.4.11",
     "canvaskit-wasm": "^0.42.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "2.1.1",
