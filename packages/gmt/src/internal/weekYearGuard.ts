@@ -204,22 +204,23 @@ function textSource(
   return new Intl.DateTimeFormat(resolved.locale, twin);
 }
 
-/** The verdict-cache key: the pattern, never the zone (a zone moves the instant, not the pattern). */
+/**
+ * The verdict-cache key: the pattern, never the zone (a zone moves the instant, not the pattern).
+ * Only the options that choose the pattern are read; locale, calendar, numbering system and hour
+ * cycle come from what the formatter resolved, so a value `Intl` ignores or resolves to the same
+ * thing (`calendar: "always"`, `hour12` next to an `hourCycle`) shares one verdict.
+ */
 function verdictKey(
   options: Intl.DateTimeFormatOptions,
   resolved: Intl.ResolvedDateTimeFormatOptions,
-): string | null {
-  const entries = plainOptionEntries(options);
-  if (entries === null) {
-    return null;
-  }
-  const rest = entries.filter(([name]) => name !== "timeZone");
+): string {
   return JSON.stringify([
     resolved.locale,
     resolved.calendar,
     resolved.numberingSystem,
     resolved.hourCycle ?? "",
-    rest,
+    options.formatMatcher ?? "",
+    [...DATE_KEYS, ...TIME_KEYS].map((key) => options[key] ?? ""),
   ]);
 }
 
@@ -234,7 +235,7 @@ function isFlagged(
     verdictsBuiltWith = Intl.DateTimeFormat;
   }
   const key = verdictKey(options, resolved);
-  const known = key === null ? undefined : verdicts.get(key);
+  const known = verdicts.get(key);
   if (known !== undefined) {
     return known;
   }
@@ -244,12 +245,10 @@ function isFlagged(
     resolved.calendar,
     resolved.numberingSystem,
   );
-  if (key !== null) {
-    if (verdicts.size >= MAX_VERDICTS) {
-      verdicts.clear();
-    }
-    verdicts.set(key, flagged);
+  if (verdicts.size >= MAX_VERDICTS) {
+    verdicts.clear();
   }
+  verdicts.set(key, flagged);
   return flagged;
 }
 
