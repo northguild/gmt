@@ -58,6 +58,7 @@ reader that took two kinds.
   Boolean and number options are typed the same way. Each declared option is read once and checked
   even when the call would not use it.
 - **`hasSecond60`** is true only when the whole string is one of GMT's own kinds with a second of
-  `60`.
+  `60`, and the same string with `59` is a valid value of that kind (date, zone and calendar exist).
+  The leap-second list is not checked.
 - **`set*` functions keep their documented `Temporal.*Like` bags.** Those are their input kind.
 - **Breaking changes ship in a patch.** Users are internal. No compatibility shim or deprecation.

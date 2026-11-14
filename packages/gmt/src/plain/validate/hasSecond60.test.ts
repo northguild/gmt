@@ -56,6 +56,32 @@ describe("hasSecond60", () => {
     expect(hasSecond60(value)).toBe(false);
   });
 
+  // The string must be a valid value of its kind with the seconds read as 59: a date, zone or
+  // calendar that does not exist is not a GMT kind, whatever its shape.
+  it.each`
+    value                                                  | reason
+    ${"2016-02-30T23:59:60"}                               | ${"no such day"}
+    ${"2016-12-31T23:59:60+00:00[Not/AZone]"}              | ${"unknown zone"}
+    ${"2016-12-31T23:59:60[u-ca=notacal]"}                 | ${"unknown calendar"}
+    ${"2016-12-31T23:59:60+05:00[Europe/London]"}          | ${"offset contradicts the zone, as isValidZonedDateTime reads the :59 string"}
+    ${"2015-02-29T23:59:60Z"}                              | ${"no 29 February in 2015"}
+    ${"2016-12-31T23:59:60+00:00[Not/AZone][u-ca=hebrew]"} | ${"unknown zone with a calendar"}
+  `("returns false for $value ($reason)", ({ value }) => {
+    expect(hasSecond60(value)).toBe(false);
+  });
+
+  // The IERS list is not checked: 2024-12-31 had no leap second and is still true.
+  it.each`
+    value
+    ${"2016-12-31T23:59:60Z"}
+    ${"2016-12-31T23:59:60,5Z"}
+    ${"2016-12-31T23:59:60.5+00:00[UTC]"}
+    ${"2016-12-31T23:59:60[u-ca=hebrew]"}
+    ${"2024-12-31T23:59:60Z"}
+  `("returns true for the valid value $value", ({ value }) => {
+    expect(hasSecond60(value)).toBe(true);
+  });
+
   it.each`
     value
     ${"2024-12-31T23:59:59Z"}

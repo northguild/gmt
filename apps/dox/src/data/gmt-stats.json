@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 76511,
+  "tests": 76522,
   "files": 1006,
-  "executions": 2295330,
+  "executions": 2295660,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
