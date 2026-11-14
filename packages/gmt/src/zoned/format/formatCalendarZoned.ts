@@ -7,7 +7,7 @@ import { formatCalendarDays } from "../../internal/formatCalendarDays";
 import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { optionOrDefault } from "../../internal/optionOrDefault";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -63,7 +63,7 @@ export function formatCalendarZoned(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = zonedDateTimeOf(value);
     if (target === null) return "";
 

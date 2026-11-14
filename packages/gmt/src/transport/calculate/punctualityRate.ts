@@ -8,9 +8,9 @@ import type { PunctualityTolerance } from "../../types";
 
 /** One planned/actual pair for `punctualityRate`. */
 export interface PlannedActual {
-  /** The planned time, as an ISO 8601 instant or zoned datetime string. */
+  /** The planned time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one. */
   planned: string;
-  /** The actual time, as an ISO 8601 instant or zoned datetime string. */
+  /** The actual time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one. */
   actual: string;
 }
 

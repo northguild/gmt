@@ -47,6 +47,11 @@ describe("hasSecond60", () => {
     ${"2024-12-31T23:59:60z"}                                      | ${"lower-case z"}
     ${"2024-12-31T23:59:60-0000"}                                  | ${"basic offset"}
     ${"2024-12-31T23:59:60Z\n"}                                    | ${"trailing newline"}
+    ${"2016-12-31T23:59:60[ junk ]"}                               | ${"zone annotation with spaces"}
+    ${"2016-12-31T23:59:60[a[b]"}                                  | ${"zone annotation with an open bracket"}
+    ${"2016-12-31T23:59:60[!!!]"}                                  | ${"zone annotation of only punctuation"}
+    ${"2016-12-31T23:59:60[ ]"}                                    | ${"zone annotation of a space"}
+    ${"2016-12-31T23:59:60[\n]"}                                   | ${"zone annotation of a newline"}
   `("returns false for $value ($reason)", ({ value }) => {
     expect(hasSecond60(value)).toBe(false);
   });

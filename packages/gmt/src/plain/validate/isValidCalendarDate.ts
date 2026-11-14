@@ -15,8 +15,8 @@ import { calendarDateOf } from "../../internal/calendarDateString";
  *   critical annotation (`[foo=bar]`, `[!foo=bar]`) and a second `u-ca` annotation return false.
  * - A date-time is valid and names its date, as `Temporal.PlainDate.from` reads it
  *   (`"2024-10-03T14:30[u-ca=hebrew]"` is 2024-10-03 in Hebrew): the time is dropped.
- * - The part before the first `[` must match GMT's strict extended shape, as `isValidDate` and
- *   `isValidDateTime` require: basic format (`20241003`), a space or lower-case `t` separator, a
+ * - The date or date-time written before the `u-ca` annotation must match GMT's strict extended
+ *   shape, as `isValidDate` and `isValidDateTime` require: basic format (`20241003`), a space or lower-case `t` separator, a
  *   UTC offset or designator and a leap second (second `60`) return false, although
  *   `Temporal.PlainDate.from` reads all but the designator.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result

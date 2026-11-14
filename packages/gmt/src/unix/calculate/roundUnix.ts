@@ -3,7 +3,7 @@ import { isDateTimeUnitName } from "../../internal/unitNames";
 import {
   frameInstant,
   frameZoned,
-  isObject,
+  isOptionsObject,
   normalizeZoneFrame,
   resolveDateTimeUnit,
   roundZonedDateTime,
@@ -118,7 +118,7 @@ export function roundUnix(
   },
 ): number | null {
   try {
-    if (!isObject(options)) return null;
+    if (!isOptionsObject(options)) return null;
 
     const { roundingIncrement, roundingMode } = options;
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);

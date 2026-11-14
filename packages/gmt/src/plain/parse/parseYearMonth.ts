@@ -19,7 +19,7 @@ import { yearMonthString } from "../../internal/yearMonth";
  * @example parseYearMonth("2026-10") // "2026-10"
  * @example parseYearMonth("+002026-10") // "2026-10"
  * @example parseYearMonth("-000001-12") // "-000001-12"
- * @example parseYearMonth("2026-10[u-ca=ISO8601]") // "2026-10"
+ * @example parseYearMonth("2026-10[u-ca=ISO8601]") // "" (no annotation of any kind)
  * @example parseYearMonth("+275760-10") // ""
  * @example parseYearMonth("202610") // ""
  * @example parseYearMonth("2026-10-01") // ""

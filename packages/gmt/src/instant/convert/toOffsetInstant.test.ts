@@ -200,17 +200,6 @@ describe("toOffsetInstant", () => {
   );
 
   it.each`
-    value                                 | expected
-    ${"2024-07-15T12:00:00-04:00[-0400]"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
-    ${"2024-07-15T12:00:00-04:00[-04]"}   | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
-  `(
-    "gives $value no timeZone field either — Temporal canonicalises every offset spelling to ±HH:MM",
-    ({ value, expected }) => {
-      expect(toOffsetInstant(value)).toEqual(expected);
-    },
-  );
-
-  it.each`
     value                                         | expected
     ${"2024-07-15T12:00:00-04:00[US/Eastern]"}    | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "US/Eastern" }}
     ${"2024-07-15T12:00:00-04:00[EST5EDT]"}       | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "EST5EDT" }}
@@ -313,6 +302,8 @@ describe("toOffsetInstant", () => {
     value                                       | description
     ${"2024-07-15T12:00:00"}                    | ${"no offset designator"}
     ${"2024-07-15T12:00:00[America/New_York]"}  | ${"a bracketed zone but no offset"}
+    ${"2024-07-15T12:00:00-04:00[-0400]"}       | ${"a bracketed offset in basic form (RFC 3339 5.6 is HH:MM)"}
+    ${"2024-07-15T12:00:00-04:00[-04]"}         | ${"a bracketed offset of hours only"}
     ${"2024-07-15"}                             | ${"a date with no time"}
     ${"2016-12-31T23:59:60Z"}                   | ${"a leap second"}
     ${"2016-12-31 23:59:60Z"}                   | ${"a leap second with a space separator"}

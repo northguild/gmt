@@ -92,15 +92,17 @@ describe("nextDeparture — list form", () => {
   });
 
   it.each`
-    timetable                                                      | why
-    ${[...ferries, "2024-06-15T12:00:00"]}                         | ${"a zoneless entry: every entry needs an offset"}
-    ${[...ferries, "2024-06-15T12:00:00[America/New_York]"]}       | ${"a zoned wall time without an offset: a repeated hour would be ambiguous"}
-    ${[...ferries, "2024-06-15T12:00:00Z[Not/AZone]"]}             | ${"a named zone that does not exist"}
-    ${[...ferries, "2024-06-15T12:00:00-05:00[America/New_York]"]} | ${"an offset that contradicts its zone"}
-    ${[...ferries, "12:00"]}                                       | ${"a bare time"}
-    ${[...ferries, null]}                                          | ${"a null entry"}
-    ${[...ferries, "+275760-09-13T00:00:00.000000001Z"]}           | ${"an entry past the instant range"}
-    ${Object.assign([], { 0: ferries[0], 2: ferries[2] })}         | ${"a sparse list: a hole is not an entry"}
+    timetable                                                                   | why
+    ${[...ferries, "2024-06-15T12:00:00"]}                                      | ${"a zoneless entry: every entry needs an offset"}
+    ${[...ferries, "2024-06-15T12:00:00[America/New_York]"]}                    | ${"a zoned wall time without an offset: a repeated hour would be ambiguous"}
+    ${[...ferries, "2024-06-15T12:00:00Z[Not/AZone]"]}                          | ${"a named zone that does not exist"}
+    ${[...ferries, "2024-06-15T12:00:00-05:00[America/New_York]"]}              | ${"an offset that contradicts its zone"}
+    ${[...ferries, "12:00"]}                                                    | ${"a bare time"}
+    ${[...ferries, "2024-06-15T12:00:00-04:00[America/New_York][u-ca=hebrew]"]} | ${"a calendar annotation on a zoned entry"}
+    ${[...ferries, "2024-06-15T12:00:00Z[u-ca=iso8601]"]}                       | ${"a calendar annotation on an instant entry"}
+    ${[...ferries, null]}                                                       | ${"a null entry"}
+    ${[...ferries, "+275760-09-13T00:00:00.000000001Z"]}                        | ${"an entry past the instant range"}
+    ${Object.assign([], { 0: ferries[0], 2: ferries[2] })}                      | ${"a sparse list: a hole is not an entry"}
   `("returns an empty string for $why", ({ timetable }) => {
     expect(nextDeparture("2024-06-15T09:00:00Z", timetable)).toBe("");
   });

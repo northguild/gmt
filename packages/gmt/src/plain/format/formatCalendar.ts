@@ -5,7 +5,7 @@ import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
 import { optionOrDefault } from "../../internal/optionOrDefault";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -74,7 +74,7 @@ export function formatCalendar(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = plainDateTimeOf(value);
     if (target === null) return "";
     // Each option is read once (GetOption).

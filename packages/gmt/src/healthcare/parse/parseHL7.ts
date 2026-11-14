@@ -35,7 +35,9 @@ import type { Hl7DateTime } from "../../types";
  *   a later version adds them at the end, §2.8.1 and §2.8.2), so `20240615^D^X` reads as
  *   `20240615^D` and `2024&X` as `2024`. An empty component is not present (§2.6.2), so
  *   `20240615^D^` reads as `20240615^D` and `""^` as the null value, while `^D` and `&X` return
- *   `null`.
+ *   `null`. An ignored component is still a component: one that holds `|`, `~`, a carriage
+ *   return or any other C0 control character is not a `TS`, so `20240615^D^X|Y` returns `null`
+ *   (`&`, `\` and printable characters are data, ch. 2 §2.5.4 and §2.7).
  * - Second `60` and hour `24` are rejected, as is any day the month lacks.
  * - Returns `null` on invalid input and for any value that is not a string. Never throws.
  *

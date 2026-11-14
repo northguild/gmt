@@ -130,7 +130,7 @@ function scheduleEntry(
  * - An offset with seconds (`-00:44:30`) returns `[]`. A written zone cannot carry seconds (RFC
  *   9557 §4.1), so the result could not name it. Pass the IANA name.
  *
- * @param anchor ISO 8601 instant or zoned datetime string of the event the deadlines count back from
+ * @param anchor ISO 8601 instant string (`Z` or `±HH:MM`, no zone bracket) of the event the deadlines count back from
  * @param cutoffs the named deadlines, each with an offset and an optional local time of day
  * @param options The zone every cut-off is read in, and how one rolls off a non-business day, as cutoffAt takes them
  * @returns the named cut-offs, earliest first, or [] on invalid input

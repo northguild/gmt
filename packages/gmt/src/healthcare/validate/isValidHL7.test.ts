@@ -25,6 +25,35 @@ describe("isValidHL7", () => {
     expect(isValidHL7(value)).toBe(expected);
   });
 
+  // ch. 2 §2.6.2: an extra component is ignored, but it is still a component. It cannot hold the
+  // field separator `|`, the repetition separator `~`, a segment terminator or any C0 control.
+  it.each`
+    value                      | expected | label
+    ${"20240615^D^X|Y"}        | ${false} | ${"the field separator inside an extra component"}
+    ${"20240615^D^X~Y"}        | ${false} | ${"the repetition separator inside an extra component"}
+    ${"20240615^D^X\r"}        | ${false} | ${"a carriage return after an extra component"}
+    ${"20240615^D^X\n"}        | ${false} | ${"a line feed after an extra component"}
+    ${"20240615^D^X\t"}        | ${false} | ${"a tab inside an extra component"}
+    ${"20240615^D^X\u0000"}    | ${false} | ${"a NUL inside an extra component"}
+    ${"20240615^D^\u001fX"}    | ${false} | ${"the last C0 control inside an extra component"}
+    ${"20240615|^D"}           | ${false} | ${"the field separator inside the DTM component"}
+    ${"20240615^D|"}           | ${false} | ${"the field separator inside the degree component"}
+    ${"20240615\r"}            | ${false} | ${"a segment terminator after the DTM"}
+    ${"20240615^D^X Y"}        | ${true}  | ${"a space is printable data in an extra component"}
+    ${"20240615^D^X[foo=bar]"} | ${true}  | ${"brackets are plain characters in an extra component"}
+    ${"20240615^D^X&Y"}        | ${true}  | ${"a sub-component separator in an extra component (ch. 2 §2.5.4)"}
+    ${"20240615^D^X\\F\\Y"}    | ${true}  | ${"an escape sequence in an extra component (ch. 2 §2.7)"}
+    ${"20240615^D^X^Y^Z"}      | ${true}  | ${"several extra components"}
+    ${"20240615^^X"}           | ${true}  | ${"an empty degree followed by an extra component is not present (§2.6.2)"}
+    ${"20240615^^"}            | ${true}  | ${"two trailing separators are empty components (§2.6.2)"}
+  `(
+    "returns $expected for an extra-component value: $label",
+    ({ value, expected }) => {
+      expect(isValidHL7(value)).toBe(expected);
+      expect(parseHL7(value) !== null).toBe(expected);
+    },
+  );
+
   it.each(NON_STRINGS.map(([label, make]) => ({ label, make })))(
     "returns false without throwing for $label",
     ({ make }) => {

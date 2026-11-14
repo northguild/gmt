@@ -9,8 +9,8 @@ import { hasInstantShape } from "./isoStringBody";
  * GMT function that reads a moment without keeping its zone reads through here.
  *
  * **Which strings.** The RFC 9557 instant grammar `Temporal.Instant.from` parses, restricted to
- * ISO 8601 extended format before the first `[` (`instantBody`: `<date>T<time>`, then `Z` or
- * `±HH:MM[:SS[.fraction]]`), minus leap seconds (which Temporal clamps rather than rejects).
+ * GMT's own instant shape over the whole string (`hasInstantShape`: ISO 8601 extended
+ * `<date>T<time>`, then `Z` or `±HH:MM[:SS[.fraction]]`, and nothing after it), minus leap seconds (which Temporal clamps rather than rejects).
  * Basic format, a space or lower-case `t` separator, a lower-case `z` and an hour-only time or
  * offset are rejected.
  *

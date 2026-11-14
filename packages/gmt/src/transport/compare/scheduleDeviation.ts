@@ -24,8 +24,8 @@ import { instantOf } from "../../internal/instantNanoseconds";
  * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T09:55:00Z") // "-PT5M" (five minutes early)
  * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T10:00:00Z") // "PT0S"
  * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-17T11:30:00Z") // "PT49H30M" (hours, never days)
- * @example scheduleDeviation("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00[Australia/Sydney]") // "PT1H" (the same wall time, one hour later across the fall-back)
- * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T12:14:00+02:00[Europe/Amsterdam]") // "PT14M" (the zone it is written in does not matter)
+ * @example scheduleDeviation("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00[Australia/Sydney]") // "" (a zoned string is not an instant; write the offsets: "2024-04-07T02:30:00+11:00" to "2024-04-07T02:30:00+10:00" is "PT1H" across the fall-back)
+ * @example scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T12:14:00+02:00") // "PT14M" (the offset it is written in does not matter)
  * @example scheduleDeviation("2024-06-15T10:00:00", "2024-06-15T10:14:00Z") // "" (a zoneless plan is not a moment)
  */
 export function scheduleDeviation(planned: string, actual: string): string {

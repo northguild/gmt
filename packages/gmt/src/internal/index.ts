@@ -249,7 +249,7 @@ export { resolveMinimalDaysInFirstWeek } from "./resolveMinimalDaysInFirstWeek";
 export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getUnitSpan } from "./intervalCountHelpers";
-export { isObject, isOptionsArgument } from "./isObject";
+export { isObject, isOptionsArgument, isOptionsObject } from "./isObject";
 export { readProtoRecord } from "./protoRecord";
 export { isValidAmount } from "./isValidAmount";
 export { joinDateTimeConnector } from "./joinDateTimeConnector";

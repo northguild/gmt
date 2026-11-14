@@ -16,7 +16,7 @@ import { monthDayString } from "../../internal/monthDay";
  * @example parseMonthDay("--12-25") // "--12-25"
  * @example parseMonthDay("12-25") // "--12-25"
  * @example parseMonthDay("--02-29") // "--02-29"
- * @example parseMonthDay("--12-25[u-ca=ISO8601]") // "--12-25"
+ * @example parseMonthDay("--12-25[u-ca=ISO8601]") // "" (no annotation of any kind)
  * @example parseMonthDay("--02-30") // ""
  * @example parseMonthDay("--1225") // ""
  */

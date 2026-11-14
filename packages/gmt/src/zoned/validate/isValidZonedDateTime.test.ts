@@ -162,6 +162,10 @@ describe("isValidZonedDateTime", () => {
     ${"2024-03-10T12:30:00-04:00[!America/New_York]"}    | ${true}  | ${"a critical zone"}
     ${"2024-03-10T12:30:00-04:00[-04:00]"}               | ${true}  | ${"an offset zone"}
     ${"2024-03-10T12:30:00-04:00[Europe/Helsinkiddddd]"} | ${false} | ${"a zone that does not exist"}
+    ${"2024-03-10T12:30:00+02:00[+0200]"}                | ${false} | ${"a basic-form offset zone (RFC 3339 5.6 is HH:MM)"}
+    ${"2024-03-10T12:30:00+02:00[+02]"}                  | ${false} | ${"an hour-only offset zone"}
+    ${"2024-03-10T12:30:00+02:00[ junk ]"}               | ${false} | ${"a zone with spaces"}
+    ${"2024-03-10T12:30:00+02:00[+24:00]"}               | ${false} | ${"an offset zone of 24 hours"}
   `("returns $expected for $value ($reason)", ({ value, expected }) => {
     expect(isValidZonedDateTime(value)).toBe(expected);
   });

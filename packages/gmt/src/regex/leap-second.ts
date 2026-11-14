@@ -10,8 +10,9 @@
  *   `Z`/`z`, a numeric offset, `[` opening an annotation, or the end of the string: Temporal's
  *   ParseISODateTime silently clamps a second of 60 to 59 in each case, so a guard that misses
  *   a spelling lets that clamp through.
- * - Looks only before the first `[`. An RFC 9557 annotation value is `1*alphanum` joined by
- *   `-` (§4.1), so `[x=T123460Z]` is a legal elective tag, not a time of day.
+ * - Looks only at the time of day, never inside an annotation. An RFC 9557 annotation value is
+ *   `1*alphanum` joined by `-` (§4.1), so `[x=T123460Z]` is a legal elective tag, not a time of
+ *   day.
  * - Rejecting a leap second is GMT's decision, not the grammar's range: Temporal's
  *   `TimeSecond` and RFC 3339's `time-second` both admit 60. GMT refuses the value because
  *   Temporal cannot represent it and would otherwise read it as `:59`.

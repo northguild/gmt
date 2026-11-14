@@ -188,6 +188,15 @@ function finestPrecision(
   return finest;
 }
 
+// One component of a `TS` field: any run without a separator that ends the component or the
+// field (`^`, `|`), the repetition separator (`~`) or a C0 control (U+0000 to U+001F, which
+// includes the segment terminator CR and a LF). `&` (the sub-component separator, ch. 2 §2.5.4)
+// and `\` (the escape character, ch. 2 §2.7) are data a component may hold.
+const HL7_COMPONENT = "[^\\u0000-\\u001f|~^]*";
+
+/** A whole `TS` field: components joined by `^`, each free of the separators a component cannot hold. */
+const hl7TsField = new RegExp(`^${HL7_COMPONENT}(?:\\^${HL7_COMPONENT})*$`);
+
 /**
  * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) into its two components, each read up to
  * its first subcomponent. A lone field carries no MSH-2, so the separators are the ones Figure
@@ -198,20 +207,28 @@ function finestPrecision(
  * `20240615^D^X` is `20240615^D`, and `2024&X^D` is `2024^D`. A component left empty is not
  * present (§2.6.2), so `20240615^` and `20240615^^D` are `20240615`.
  *
+ * An ignored component is still a component of the field, so the whole value is checked: no
+ * component holds the field separator `|`, the repetition separator `~`, a segment terminator
+ * (CR) or any other C0 control character, because each of those ends a component, a repetition,
+ * a field or a segment. `&` and the escape character `\` (ch. 2 §2.7) may appear in an extra
+ * component; a space, a bracket or any other printable character is data.
+ *
  * @param value candidate `TS` text
  * @returns the two components, each `""` when not present; `null` for a value that is not a string
+ * or whose components hold a separator or a control character
  *
  * @example splitHl7Ts("199904011200^L") // { dtm: "199904011200", degree: "L" }
  * @example splitHl7Ts("20240615^D^X") // { dtm: "20240615", degree: "D" }
  * @example splitHl7Ts("2024&X^D") // { dtm: "2024", degree: "D" }
+ * @example splitHl7Ts("20240615^D^X|Y") // null (the field separator ends the field)
  */
 export function splitHl7Ts(
   value: string,
 ): { dtm: string; degree: string } | null {
-  if (typeof value !== "string") {
+  if (typeof value !== "string" || !hl7TsField.test(value)) {
     return null;
   }
-  // The limit stops the split at the second component, so the rest is never read.
+  // The limit stops the split at the second component; the rest was checked by `hl7TsField`.
   const [dtm = "", degree = ""] = value.split("^", 2);
   return { dtm: firstSubcomponent(dtm), degree: firstSubcomponent(degree) };
 }

@@ -32,7 +32,7 @@ const DATE = plainDate.source.slice(1, -1);
  * An instant whose second is 60, the whole string, in GMT's strict extended shape:
  * `<date>T<hh>:<mm>:60[.fraction]`, then `Z` or `±HH:MM[:SS[.fraction]]`. The fraction is 1 to 9
  * digits after `.` or `,` (RFC 3339 §5.6 `time-secfrac`; Temporal's nanosecond resolution).
- * Basic format, lower-case `t`/`z` and a space separator are refused, as `instantBody` refuses
+ * Basic format, lower-case `t`/`z` and a space separator are refused, as `hasInstantShape` refuses
  * them for every other second.
  */
 const secondSixtyInstantBody = new RegExp(

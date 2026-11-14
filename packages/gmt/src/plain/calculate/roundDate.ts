@@ -12,7 +12,7 @@ import { measureNearRangeEnd } from "../../internal/measureNearRangeEnd";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveManualRoundingOptions } from "../../internal/resolveManualRoundingOptions";
 import type { DateUnit } from "../../types";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Round an ISO 8601 date string to the specified date unit.
@@ -73,7 +73,7 @@ export function roundDate(
   },
 ): string {
   try {
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
 
     const { roundingIncrement, roundingMode } = options;
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.

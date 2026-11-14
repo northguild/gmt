@@ -4,7 +4,7 @@ import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
-  isObject,
+  isOptionsObject,
   resolveDateTimeUnit,
 } from "../../internal";
 
@@ -56,7 +56,7 @@ export function roundTime(
   },
 ): string {
   try {
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
 
     const { roundingIncrement, roundingMode } = options;
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.

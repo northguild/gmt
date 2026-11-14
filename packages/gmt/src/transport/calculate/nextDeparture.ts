@@ -136,7 +136,7 @@ function headwayDeparture(threshold: bigint, service: Headway): string {
  *   answer.
  * - Returns `""` on invalid input or when no departure qualifies.
  *
- * @param after ISO 8601 instant or zoned datetime string of the arrival that must connect
+ * @param after ISO 8601 instant string, or zoned datetime string that carries its offset, of the arrival that must connect
  * @param timetable the departures as exact moments, or a headway service `{ headway, from, to }`
  * @param options The connection time needed before a departure can be made
  * @returns the departure (a list entry as written, or a headway departure in from's notation; "" when none qualifies), or "" on invalid input

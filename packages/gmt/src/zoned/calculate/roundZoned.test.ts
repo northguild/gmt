@@ -537,21 +537,21 @@ describe("roundZoned", () => {
     },
   );
 
-  // Temporal GetOption converts the value it reads once: ToString for roundingMode, ToNumber for
-  // roundingIncrement. An option given as an object therefore rounds exactly as the plain value
-  // does, on GMT's own day-rounding path as well as on Temporal's.
+  // Temporal GetOption would convert an object (ToString for roundingMode, ToNumber for
+  // roundingIncrement). The types say string and number, so an object returns the sentinel, on
+  // GMT's own day-rounding path as well as on Temporal's.
   it.each`
-    value                                             | options                                                                 | expected                                          | label
-    ${"2024-06-15T16:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("floor") }}           | ${"2024-06-15T00:00:00-04:00[America/New_York]"}  | ${"day floor as a String object"}
-    ${"2024-06-15T01:00:00-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("ceil") }}            | ${"2024-06-16T00:00:00-04:00[America/New_York]"}  | ${"day ceil as a String object"}
-    ${"2024-06-15T12:00:00-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("halfTrunc") }}       | ${"2024-06-15T00:00:00-04:00[America/New_York]"}  | ${"day halfTrunc as a String object"}
-    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${{ smallestUnit: "day", roundingMode: new String("floor") }}           | ${"2010-11-06T00:00:00-03:00[America/Goose_Bay]"} | ${"day floor as a String object in Goose_Bay"}
-    ${"2024-06-15T16:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "hour", roundingMode: new String("floor") }}          | ${"2024-06-15T16:00:00-04:00[America/New_York]"}  | ${"hour floor as a String object"}
-    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingIncrement: new Number(15) }}        | ${"2024-06-15T12:30:00-04:00[America/New_York]"}  | ${"minute with increment as a Number object"}
-    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingIncrement: { valueOf: () => 15 } }} | ${"2024-06-15T12:30:00-04:00[America/New_York]"}  | ${"minute with increment as a valueOf object"}
-    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingMode: { toString: () => "ceil" } }} | ${"2024-06-15T12:35:00-04:00[America/New_York]"}  | ${"minute ceil as a toString object"}
+    value                                             | options                                                                 | expected | label
+    ${"2024-06-15T16:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("floor") }}           | ${""}    | ${"day floor as a String object"}
+    ${"2024-06-15T01:00:00-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("ceil") }}            | ${""}    | ${"day ceil as a String object"}
+    ${"2024-06-15T12:00:00-04:00[America/New_York]"}  | ${{ smallestUnit: "day", roundingMode: new String("halfTrunc") }}       | ${""}    | ${"day halfTrunc as a String object"}
+    ${"2010-11-06T23:30:00-04:00[America/Goose_Bay]"} | ${{ smallestUnit: "day", roundingMode: new String("floor") }}           | ${""}    | ${"day floor as a String object in Goose_Bay"}
+    ${"2024-06-15T16:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "hour", roundingMode: new String("floor") }}          | ${""}    | ${"hour floor as a String object"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingIncrement: new Number(15) }}        | ${""}    | ${"minute with increment as a Number object"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingIncrement: { valueOf: () => 15 } }} | ${""}    | ${"minute with increment as a valueOf object"}
+    ${"2024-06-15T12:34:56-04:00[America/New_York]"}  | ${{ smallestUnit: "minute", roundingMode: { toString: () => "ceil" } }} | ${""}    | ${"minute ceil as a toString object"}
   `(
-    "rounds $value with options given as objects ($label) to $expected",
+    "returns an empty string for $value with options given as objects ($label)",
     ({ value, options, expected }) => {
       expect(roundZoned(value, options)).toBe(expected);
     },

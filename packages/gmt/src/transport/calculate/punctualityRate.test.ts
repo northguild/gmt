@@ -113,20 +113,22 @@ describe("punctualityRate", () => {
   });
 
   it.each`
-    pairs                                                                              | tolerance                          | why
-    ${[]}                                                                              | ${{ late: "PT15M" }}               | ${"an empty list has no rate"}
-    ${[...fourWithOneLate, pair("2024-06-15T10:14:00")]}                               | ${{ late: "PT15M" }}               | ${"one zoneless actual: never a partial rate"}
-    ${[...fourWithOneLate, { planned: "not a date", actual: "2024-06-15T10:00:00Z" }]} | ${{ late: "PT15M" }}               | ${"one malformed plan"}
-    ${[...fourWithOneLate, null]}                                                      | ${{ late: "PT15M" }}               | ${"a null pair"}
-    ${[...fourWithOneLate, "2024-06-15T10:00:00Z"]}                                    | ${{ late: "PT15M" }}               | ${"a string pair"}
-    ${[{ planned: "2024-06-15T10:00:00Z" }]}                                           | ${{ late: "PT15M" }}               | ${"a pair without an actual"}
-    ${fourWithOneLate}                                                                 | ${{ late: "-PT15M" }}              | ${"a negative tolerance"}
-    ${fourWithOneLate}                                                                 | ${{ late: "P1M" }}                 | ${"a calendar-unit tolerance"}
-    ${fourWithOneLate}                                                                 | ${{ late: "PT15M", early: "P1W" }} | ${"a calendar-unit early tolerance"}
-    ${fourWithOneLate}                                                                 | ${null}                            | ${"no tolerance"}
-    ${"2024-06-15T10:00:00Z"}                                                          | ${{ late: "PT15M" }}               | ${"a string for the list"}
-    ${{ 0: fourWithOneLate[0], length: 1 }}                                            | ${{ late: "PT15M" }}               | ${"an array-like object"}
-    ${Object.assign([], { 0: fourWithOneLate[0], 2: fourWithOneLate[1] })}             | ${{ late: "PT15M" }}               | ${"a sparse list: a hole is not a pair"}
+    pairs                                                                                           | tolerance                          | why
+    ${[]}                                                                                           | ${{ late: "PT15M" }}               | ${"an empty list has no rate"}
+    ${[...fourWithOneLate, pair("2024-06-15T10:14:00")]}                                            | ${{ late: "PT15M" }}               | ${"one zoneless actual: never a partial rate"}
+    ${[...fourWithOneLate, { planned: "not a date", actual: "2024-06-15T10:00:00Z" }]}              | ${{ late: "PT15M" }}               | ${"one malformed plan"}
+    ${[{ planned: "2024-06-15T10:00:00Z", actual: "2024-06-15T10:05:00+00:00[UTC]" }]}              | ${{ late: "PT15M" }}               | ${"a zoned actual: only an instant is read"}
+    ${[{ planned: "2024-06-15T06:00:00-04:00[America/New_York]", actual: "2024-06-15T10:05:00Z" }]} | ${{ late: "PT15M" }}               | ${"a zoned plan: only an instant is read"}
+    ${[...fourWithOneLate, null]}                                                                   | ${{ late: "PT15M" }}               | ${"a null pair"}
+    ${[...fourWithOneLate, "2024-06-15T10:00:00Z"]}                                                 | ${{ late: "PT15M" }}               | ${"a string pair"}
+    ${[{ planned: "2024-06-15T10:00:00Z" }]}                                                        | ${{ late: "PT15M" }}               | ${"a pair without an actual"}
+    ${fourWithOneLate}                                                                              | ${{ late: "-PT15M" }}              | ${"a negative tolerance"}
+    ${fourWithOneLate}                                                                              | ${{ late: "P1M" }}                 | ${"a calendar-unit tolerance"}
+    ${fourWithOneLate}                                                                              | ${{ late: "PT15M", early: "P1W" }} | ${"a calendar-unit early tolerance"}
+    ${fourWithOneLate}                                                                              | ${null}                            | ${"no tolerance"}
+    ${"2024-06-15T10:00:00Z"}                                                                       | ${{ late: "PT15M" }}               | ${"a string for the list"}
+    ${{ 0: fourWithOneLate[0], length: 1 }}                                                         | ${{ late: "PT15M" }}               | ${"an array-like object"}
+    ${Object.assign([], { 0: fourWithOneLate[0], 2: fourWithOneLate[1] })}                          | ${{ late: "PT15M" }}               | ${"a sparse list: a hole is not a pair"}
   `("returns null for $why", ({ pairs, tolerance }) => {
     expect(punctualityRate(pairs, tolerance)).toBeNull();
   });

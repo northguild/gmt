@@ -466,7 +466,7 @@ describe("formatZonedRange with inherited options", () => {
 // month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
 // print "M 15".
 describe("formatZonedRange with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -480,7 +480,7 @@ describe("formatZonedRange with an option that is an object", () => {
       "en-US",
       { month, day: "numeric" } as never,
     );
-    expect({ out, coercions }).toEqual({ out: "March 15 - 17", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
 });
 

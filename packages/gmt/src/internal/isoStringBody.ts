@@ -52,7 +52,10 @@ export const EXTENDED_UTC_OFFSET =
  * @example new RegExp(TIME_ZONE_ANNOTATION).test("2024-06-15T10:00:00Z[!Europe/London]") // true
  * @example new RegExp(TIME_ZONE_ANNOTATION).test("2024-06-15T10:00:00Z[u-ca=gregory]") // false
  */
-export const TIME_ZONE_ANNOTATION = "\\[!?[^\\]=]+\\]";
+export const TIME_ZONE_ANNOTATION =
+  // RFC 9557 §4.1 `time-zone`: an IANA name (`/`-joined parts that start with a letter, `.` or `_`,
+  // then letters, digits, `.`, `_`, `-` or `+`) or an extended-form offset (RFC 3339 §5.6 `±HH:MM`).
+  "\\[!?(?:[A-Za-z._][A-Za-z0-9._+-]*(?:/[A-Za-z._][A-Za-z0-9._+-]*)*|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])\\]";
 
 /**
  * An RFC 9557 calendar annotation: `[u-ca=<id>]` or the critical `[!u-ca=<id>]`, the id one or
