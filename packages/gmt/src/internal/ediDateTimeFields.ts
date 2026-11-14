@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { readOffsetInstant, writeOffsetInstant } from "./offsetInstant";
+import { readInstantOffsetInstant, writeOffsetInstant } from "./offsetInstant";
 import {
   type EdiCode,
   type EdiKind,
@@ -84,7 +84,7 @@ const UTC_LITERALS: readonly string[] = ["UTC", "GMT"];
  *   Seconds are always written, `00` for a mask without them.
  * - A date-time with an offset (`205`, `208`; `303` and `304`, whose `ZZZ` is `[+-]HH`, `UTC` or
  *   `GMT`) is the wall clock as written with its offset, `YYYY-MM-DDTHH:MM:SS±HH:MM`. The wall
- *   clock and the offset are joined as an extended ISO string, read by `toOffsetInstant` and
+ *   clock and the offset are joined as an extended ISO string, read by `readInstantOffsetInstant` and
  *   written by `fromOffsetInstant`; no offset digit is moved by hand.
  * - Never throws: any failure is `""`.
  *
@@ -343,11 +343,11 @@ const HALF_READERS: Readonly<
     ).toString(),
   time: timeOf,
   dateTime: localDateTime,
-  // The wall clock and its offset, read by `toOffsetInstant` and written back by
+  // The wall clock and its offset, read by `readInstantOffsetInstant` and written back by
   // `fromOffsetInstant`: the pair's own string, so `-00:00` is `+00:00` and the result reads
   // back through the instant functions.
   offsetDateTime: (bag) => {
-    const pair = readOffsetInstant(`${localDateTime(bag)}${bag.offset ?? ""}`);
+    const pair = readInstantOffsetInstant(`${localDateTime(bag)}${bag.offset ?? ""}`);
     const written = pair === null ? "" : writeOffsetInstant(pair);
     return written === "" ? null : written;
   },

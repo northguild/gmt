@@ -45,15 +45,14 @@ describe("isLeapYear", () => {
     },
   );
 
-  // isValidDate reads annotations as Temporal.PlainDate.from does (RFC 9557 §3.3): `[u-ca=iso8601]`
-  // names the ISO calendar and an elective annotation is ignored, so 2024 is a leap year.
+  // CORE-113: a plain value matches its exact pattern over the whole string, so any annotation (zone, calendar or elective) makes it invalid.
   it.each`
     value                         | expected
-    ${"2024-06-15[u-ca=iso8601]"} | ${true}
-    ${"2024-06-15[foo=bar]"}      | ${true}
+    ${"2024-06-15[u-ca=iso8601]"} | ${false}
+    ${"2024-06-15[foo=bar]"}      | ${false}
     ${"2024-06-15[!foo=bar]"}     | ${false}
   `(
-    "reads the annotations of $value as Temporal does → $expected",
+    "reads the annotations of $value by the exact pattern → $expected",
     ({ value, expected }) => {
       expect(isLeapYear(value)).toBe(expected);
     },

@@ -406,7 +406,12 @@ export function departureWait(
   made: string,
   lib: PunctualityLib,
 ): string {
-  return made === "" ? "" : lib.scheduleDeviation(after.trim(), made);
+  if (made === "") return "";
+  // The timetable and the arrival may be zoned; `scheduleDeviation` reads instants.
+  return lib.scheduleDeviation(
+    lib.toInstant(after.trim()),
+    lib.toInstant(made),
+  );
 }
 
 const ICON_ALIASES: Readonly<Record<string, TransportMode>> = {

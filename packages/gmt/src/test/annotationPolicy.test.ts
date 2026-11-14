@@ -1,0 +1,235 @@
+import { isValidDateTime } from "../plain/validate/isValidDateTime";
+import { isValidUtc } from "../utc/validate/isValidUtc";
+import { isValidInstant } from "../precision/validate/isValidInstant";
+import * as plain from "../plain";
+import * as utc from "../utc";
+import * as instant from "../instant";
+import * as precision from "../precision";
+import * as unix from "../unix";
+import * as calendar from "../calendar";
+import * as duration from "../duration";
+import * as finance from "../finance";
+import * as healthcare from "../healthcare";
+import * as intermodal from "../intermodal";
+import * as interval from "../interval";
+import * as rail from "../rail";
+import * as recurrence from "../recurrence";
+import * as span from "../span";
+import * as timescale from "../timescale";
+import * as transport from "../transport";
+import * as workforce from "../workforce";
+import * as aviation from "../aviation";
+import * as gnss from "../gnss";
+import * as zoned from "../zoned";
+
+const SPACES: Record<string, Record<string, unknown>> = {
+  plain,
+  utc,
+  instant,
+  precision,
+  unix,
+  calendar,
+  duration,
+  finance,
+  healthcare,
+  intermodal,
+  interval,
+  rail,
+  recurrence,
+  span,
+  timescale,
+  transport,
+  workforce,
+  aviation,
+  gnss,
+  zoned,
+};
+
+/** Strings of every kind GMT reads: a plain date, a plain date-time, a time, and two instants. */
+const BASES = [
+  "2024-02-29",
+  "2024-02-29T12:34:56",
+  "12:34:56",
+  "2024-02",
+  "--02-29",
+  "2024-02-29T12:34:56Z",
+  "2024-02-29T12:34:56+02:00",
+  "2024-02-29T12:34:56+02:00[Europe/Helsinki]",
+];
+
+/** Every annotation the plain, UTC and instant kinds refuse: a zone, a calendar, an elective key. */
+const ANNOTATIONS = [
+  "[Europe/Helsinki]",
+  "[Europe/Helsinkiddddd]",
+  "[!Europe/Helsinki]",
+  "[!Not/AZone]",
+  "[+02:00]",
+  "[u-ca=iso8601]",
+  "[!u-ca=iso8601]",
+  "[foo=bar]",
+  "[!foo=bar]",
+];
+
+/** Arguments after the string under test, so a function with a second parameter is reached. */
+const EXTRAS: unknown[][] = [
+  [],
+  ["UTC"],
+  [1],
+  ["P1D"],
+  ["Europe/Helsinki"],
+  [{}],
+  ["2024-02-29"],
+  ["2024-02-29T12:34:56Z"],
+];
+
+/** Functions that read no input string: the current time, so two calls differ. */
+const READS_THE_CLOCK = new Set([
+  "getNow",
+  "getUtcNow",
+  "getMillisecond",
+  "getNanosecond",
+  "getUnixMillisecond",
+  "getUnixNanosecond",
+  "getUtcMillisecond",
+  "getUtcNanosecond",
+]);
+
+/**
+ * Functions whose kind keeps the zone, so a string it reads may carry the zone bracket
+ * (a zoned string: the body plus the bracket and nothing else). Each is pinned by its own tests.
+ */
+const KEEPS_THE_ZONE = new Set([
+  "toOffsetInstant",
+  "formatHL7",
+  "transitTime",
+  "isPastCutoff",
+  "timeToCutoff",
+]);
+
+/**
+ * Calendar-aware functions: the body plus at most one `u-ca`. They accept exactly the two ISO
+ * calendar annotations below and nothing else in ANNOTATIONS.
+ */
+const CALENDAR_AWARE = new Set([
+  "isValidCalendarDate",
+  "isValidDateInterval",
+  "isValidCalendarZonedDateTime",
+  "isValidCalendarZonedInterval",
+]);
+const ONE_CALENDAR = new Set(["[u-ca=iso8601]", "[!u-ca=iso8601]"]);
+
+const run = (fn: (...args: never[]) => unknown, args: unknown[]): string => {
+  try {
+    return (
+      JSON.stringify(
+        (fn as (...a: unknown[]) => unknown)(...args),
+        (_key, value) => (typeof value === "bigint" ? `${value}n` : value),
+      ) ?? "undefined"
+    );
+  } catch {
+    return "THROW";
+  }
+};
+
+const isAllowed = (name: string, annotation: string): boolean =>
+  READS_THE_CLOCK.has(name) ||
+  KEEPS_THE_ZONE.has(name) ||
+  (CALENDAR_AWARE.has(name) && ONE_CALENDAR.has(annotation));
+
+/**
+ * The whole-string rule (coding-standards § Calendar & zone semantics): a reader never lets an
+ * annotation change its answer. Each public function is called with a string of every kind and
+ * with the same string plus an annotation; where the plain string is read at all, the annotated
+ * one must give the same answer as plain garbage.
+ */
+describe("every public function matches its kind's exact pattern over the whole string", () => {
+  it.each(Object.keys(SPACES).map((namespace) => ({ namespace })))(
+    "$namespace: an annotation after the first string argument changes no answer",
+    ({ namespace }) => {
+      const leaks: string[] = [];
+      for (const [name, fn] of Object.entries(SPACES[namespace]!)) {
+        if (typeof fn !== "function" || /^[A-Z]/.test(name)) continue;
+        for (const extra of EXTRAS) {
+          const garbage = run(fn as never, ["garbage!", ...extra]);
+          for (const base of BASES) {
+            if (run(fn as never, [base, ...extra]) === garbage) continue;
+            for (const annotation of ANNOTATIONS) {
+              if (isAllowed(name, annotation)) continue;
+              const answer = run(fn as never, [base + annotation, ...extra]);
+              if (answer !== garbage) {
+                leaks.push(
+                  `${name}(${base}${annotation}) => ${answer.slice(0, 40)}`,
+                );
+              }
+            }
+          }
+        }
+      }
+      expect(leaks).toEqual([]);
+    },
+  );
+
+  it.each(Object.keys(SPACES).map((namespace) => ({ namespace })))(
+    "$namespace: an annotation on a later string argument changes no answer",
+    ({ namespace }) => {
+      const leaks: string[] = [];
+      for (const [name, fn] of Object.entries(SPACES[namespace]!)) {
+        if (typeof fn !== "function" || /^[A-Z]/.test(name)) continue;
+        for (const base of BASES) {
+          if (
+            run(fn as never, [base, base]) ===
+            run(fn as never, [base, "garbage!"])
+          ) {
+            continue;
+          }
+          for (const annotation of ANNOTATIONS) {
+            if (isAllowed(name, annotation)) continue;
+            for (const args of [
+              [base, base + annotation],
+              [base, base + annotation, "UTC"],
+              ["UTC", base + annotation],
+              [base, base, base + annotation],
+            ]) {
+              const garbage = run(
+                fn as never,
+                args.map((arg) =>
+                  arg === base + annotation ? "garbage!" : arg,
+                ),
+              );
+              const answer = run(fn as never, args);
+              if (answer !== garbage) {
+                leaks.push(
+                  `${name}(${JSON.stringify(args)}) => ${answer.slice(0, 40)}`,
+                );
+              }
+            }
+          }
+        }
+      }
+      expect(leaks).toEqual([]);
+    },
+  );
+
+  // The reported case and its neighbours, by hand: a time zone that does not exist, a real one,
+  // and a calendar, each after a plain date-time, a UTC instant and an instant.
+  it.each`
+    value                                          | plainDateTime | utcInstant | instant
+    ${"2024-02-29T12:34:56"}                       | ${true}       | ${false}   | ${false}
+    ${"2024-02-29T12:34:56Z"}                      | ${false}      | ${true}    | ${true}
+    ${"2024-02-29T12:34:56+02:00"}                 | ${false}      | ${false}   | ${true}
+    ${"2024-02-29T12:34:56[Europe/Helsinkiddddd]"} | ${false}      | ${false}   | ${false}
+    ${"2024-02-29T12:34:56[Europe/Helsinki]"}      | ${false}      | ${false}   | ${false}
+    ${"2024-02-29T12:34:56[!Europe/Helsinki]"}     | ${false}      | ${false}   | ${false}
+    ${"2024-02-29T12:34:56[u-ca=iso8601]"}         | ${false}      | ${false}   | ${false}
+    ${"2024-02-29T12:34:56Z[Europe/Helsinki]"}     | ${false}      | ${false}   | ${false}
+    ${"2024-02-29T12:34:56Z[foo=bar]"}             | ${false}      | ${false}   | ${false}
+    ${"2024-02-29T12:34:56+02:00[+02:00]"}         | ${false}      | ${false}   | ${false}
+  `(
+    "isValidDateTime, isValidUtc and isValidInstant read $value as $plainDateTime, $utcInstant and $instant",
+    ({ value, plainDateTime, utcInstant, instant }) => {
+      expect(isValidDateTime(value)).toBe(plainDateTime);
+      expect(isValidUtc(value)).toBe(utcInstant);
+      expect(isValidInstant(value)).toBe(instant);
+    },
+  );
+});

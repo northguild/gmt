@@ -201,18 +201,13 @@ describe("formatEpcisEvent", () => {
     },
   );
 
-  // Only the instant is read from `instant`: annotations are read as `isValidInstant` reads
-  // them, and a bracketed zone resolves an offset rounded to the minute and is otherwise not
-  // checked. Africa/Monrovia stood at -00:44:30 in 1960 (written `-00:45`), and America/New_York
-  // at -04:56:02 until noon on 18 November 1883 (written `-04:56`).
+  // `instant` is read as `isValidInstant` reads it: `…Z` or `…±HH:MM[:SS[.f]]`. Africa/Monrovia
+  // stood at -00:44:30 in 1960, and America/New_York at -04:56:02 until noon on 18 November 1883.
   it.each`
-    instant                                          | eventTime                 | reads
-    ${"2024-06-15T10:30:00-04:00[America/New_York]"} | ${"2024-06-15T14:30:00Z"} | ${"a zoned string"}
-    ${"2024-06-15T14:30:00Z[u-ca=hebrew]"}           | ${"2024-06-15T14:30:00Z"} | ${"a calendar annotation: an instant has none"}
-    ${"2024-06-15T14:30:00Z[foo=bar]"}               | ${"2024-06-15T14:30:00Z"} | ${"an elective unknown annotation"}
-    ${"2024-06-15T14:30:00Z[Not/AZone]"}             | ${"2024-06-15T14:30:00Z"} | ${"a bracketed zone that does not exist"}
-    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T01:04:30Z"} | ${"a minute-rounded offset, read as the zone's -00:44:30"}
-    ${"1883-11-18T09:00:00-04:56[America/New_York]"} | ${"1883-11-18T13:56:02Z"} | ${"a minute-rounded offset, read as the zone's -04:56:02"}
+    instant                           | eventTime                 | reads
+    ${"2024-06-15T10:30:00-04:00"}    | ${"2024-06-15T14:30:00Z"} | ${"an offset"}
+    ${"1960-01-01T00:20:00-00:44:30"} | ${"1960-01-01T01:04:30Z"} | ${"an offset with seconds, Monrovia's"}
+    ${"1883-11-18T09:00:00-04:56:02"} | ${"1883-11-18T13:56:02Z"} | ${"an offset with seconds, New York's"}
   `(
     "reads $instant as its instant and writes $eventTime ($reads)",
     ({ instant, eventTime }) => {
@@ -285,24 +280,31 @@ describe("formatEpcisEvent", () => {
     expect(formatEpcisEvent({ instant, offset: offset as never })).toBeNull();
   });
 
-  // `instant` is any string `isValidInstant` accepts, and nothing else.
+  // `instant` is any string `isValidInstant` accepts, and nothing else: no annotation of any kind.
   it.each`
-    value                                         | reads                                                             | label
-    ${"2024-06-15T14:30:00"}                      | ${"no Z and no offset: not an instant"}                           | ${"'2024-06-15T14:30:00'"}
-    ${"2024-06-15"}                               | ${"a date"}                                                       | ${"'2024-06-15'"}
-    ${"2024-06-15 14:30:00Z"}                     | ${"a space separator"}                                            | ${"'2024-06-15 14:30:00Z'"}
-    ${"2024-06-15T14:30:00z"}                     | ${"lower-case z"}                                                 | ${"'2024-06-15T14:30:00z'"}
-    ${"20240615T143000Z"}                         | ${"basic format"}                                                 | ${"'20240615T143000Z'"}
-    ${"2016-12-31T23:59:60Z"}                     | ${"a leap second, which Temporal does not represent"}             | ${"'2016-12-31T23:59:60Z'"}
-    ${"2024-02-30T14:30:00Z"}                     | ${"a day that does not exist"}                                    | ${"'2024-02-30T14:30:00Z'"}
-    ${"2024-06-15T14:30:00.1234567891Z"}          | ${"a fraction finer than a nanosecond"}                           | ${"'2024-06-15T14:30:00.1234567891Z'"}
-    ${"2024-06-15T14:30:00Z[!foo=bar]"}           | ${"a critical unknown annotation"}                                | ${"'2024-06-15T14:30:00Z[!foo=bar]'"}
-    ${"not an instant"}                           | ${"garbage"}                                                      | ${"'not an instant'"}
-    ${""}                                         | ${"an empty string"}                                              | ${"''"}
-    ${undefined}                                  | ${"missing"}                                                      | ${"undefined"}
-    ${null}                                       | ${"null"}                                                         | ${"null"}
-    ${1718461800000}                              | ${"epoch milliseconds"}                                           | ${"1718461800000"}
-    ${{ toString: () => "2024-06-15T14:30:00Z" }} | ${"an object that stringifies to an instant: nothing is coerced"} | ${"{ toString: () => '2024-06-15T14:30:00Z' }"}
+    value                                            | reads                                                             | label
+    ${"2024-06-15T14:30:00"}                         | ${"no Z and no offset: not an instant"}                           | ${"'2024-06-15T14:30:00'"}
+    ${"2024-06-15"}                                  | ${"a date"}                                                       | ${"'2024-06-15'"}
+    ${"2024-06-15 14:30:00Z"}                        | ${"a space separator"}                                            | ${"'2024-06-15 14:30:00Z'"}
+    ${"2024-06-15T14:30:00z"}                        | ${"lower-case z"}                                                 | ${"'2024-06-15T14:30:00z'"}
+    ${"20240615T143000Z"}                            | ${"basic format"}                                                 | ${"'20240615T143000Z'"}
+    ${"2016-12-31T23:59:60Z"}                        | ${"a leap second, which Temporal does not represent"}             | ${"'2016-12-31T23:59:60Z'"}
+    ${"2024-02-30T14:30:00Z"}                        | ${"a day that does not exist"}                                    | ${"'2024-02-30T14:30:00Z'"}
+    ${"2024-06-15T14:30:00.1234567891Z"}             | ${"a fraction finer than a nanosecond"}                           | ${"'2024-06-15T14:30:00.1234567891Z'"}
+    ${"2024-06-15T14:30:00Z[!foo=bar]"}              | ${"a critical unknown annotation"}                                | ${"'2024-06-15T14:30:00Z[!foo=bar]'"}
+    ${"2024-06-15T10:30:00-04:00[America/New_York]"} | ${"a zoned string"}                                               | ${"'2024-06-15T10:30:00-04:00[America/New_York]'"}
+    ${"2024-06-15T14:30:00Z[u-ca=hebrew]"}           | ${"a calendar annotation"}                                        | ${"'2024-06-15T14:30:00Z[u-ca=hebrew]'"}
+    ${"2024-06-15T14:30:00Z[u-ca=iso8601]"}          | ${"the ISO calendar annotation"}                                  | ${"'2024-06-15T14:30:00Z[u-ca=iso8601]'"}
+    ${"2024-06-15T14:30:00Z[foo=bar]"}               | ${"an elective unknown annotation"}                               | ${"'2024-06-15T14:30:00Z[foo=bar]'"}
+    ${"2024-06-15T14:30:00Z[Not/AZone]"}             | ${"a bracketed zone that does not exist"}                         | ${"'2024-06-15T14:30:00Z[Not/AZone]'"}
+    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia]"}  | ${"a minute-rounded offset in a bracket"}                         | ${"'1960-01-01T00:20:00-00:45[Africa/Monrovia]'"}
+    ${"2024-06-15T14:30:00Z[+00:00]"}                | ${"an offset annotation"}                                         | ${"'2024-06-15T14:30:00Z[+00:00]'"}
+    ${"not an instant"}                              | ${"garbage"}                                                      | ${"'not an instant'"}
+    ${""}                                            | ${"an empty string"}                                              | ${"''"}
+    ${undefined}                                     | ${"missing"}                                                      | ${"undefined"}
+    ${null}                                          | ${"null"}                                                         | ${"null"}
+    ${1718461800000}                                 | ${"epoch milliseconds"}                                           | ${"1718461800000"}
+    ${{ toString: () => "2024-06-15T14:30:00Z" }}    | ${"an object that stringifies to an instant: nothing is coerced"} | ${"{ toString: () => '2024-06-15T14:30:00Z' }"}
   `("returns null when instant is $label ($reads)", ({ value }) => {
     expect(formatEpcisEvent({ instant: value as never, offset })).toBeNull();
   });
@@ -432,7 +434,8 @@ describe("formatEpcisEvent and parseEpcisEvent round-trip", () => {
     },
   );
 
-  // The pair a zoned system holds: `toOffsetInstant` splits the zoned string, and the zone has no
+  // The pair a zoned system holds: `toOffsetInstant` splits the zoned string, and the part before
+  // its bracket is the instant, and the zone has no
   // place in an EPCIS event. The offset each zone was at survives the trip there and back.
   it.each(battlePairs)(
     "carries $value through an EPCIS event and back as $utc at $offset, local $local",
@@ -440,7 +443,11 @@ describe("formatEpcisEvent and parseEpcisEvent round-trip", () => {
       const expected = { eventTime: utc, eventTimeZoneOffset: offset };
 
       expectEpcisEventTime(
-        formatEpcisEvent({ instant: value, offset, timeZone }),
+        formatEpcisEvent({
+          instant: value.slice(0, value.indexOf("[")),
+          offset,
+          timeZone,
+        }),
         expected,
       );
       expectEpcisEventTime(

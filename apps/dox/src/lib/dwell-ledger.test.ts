@@ -70,7 +70,7 @@ describe("gridZone", () => {
 describe("resolveWallTime", () => {
   it("reads a zoneless wall time in the zone", () => {
     expect(resolveWallTime("2024-06-15T23:00:00", "America/New_York")).toBe(
-      "2024-06-15T23:00:00-04:00[America/New_York]",
+      "2024-06-15T23:00:00-04:00",
     );
   });
   it("leaves instants, empty zones and skipped wall times alone", () => {
@@ -115,10 +115,10 @@ describe("fitLedgerCanvas", () => {
       ["America/New_York"],
     )!;
     expect(formatHandleValue(c.startMs, "America/New_York")).toBe(
-      "2024-06-15T00:00:00-04:00[America/New_York]",
+      "2024-06-15T00:00:00-04:00",
     );
     expect(formatHandleValue(c.endMs, "America/New_York")).toBe(
-      "2024-06-17T00:00:00-04:00[America/New_York]",
+      "2024-06-17T00:00:00-04:00",
     );
   });
   it("covers both zones' days when comparing", () => {
@@ -311,10 +311,10 @@ describe("presets", () => {
 });
 
 describe("formatHandleValue", () => {
-  it("writes zoned in the grid zone, else Z, and round-trips", () => {
+  it("writes an offset instant in the grid zone, else Z, and round-trips", () => {
     const at = ms("2024-06-16T03:00:00Z");
     const zoned = formatHandleValue(at, "America/New_York");
-    expect(zoned).toBe("2024-06-15T23:00:00-04:00[America/New_York]");
+    expect(zoned).toBe("2024-06-15T23:00:00-04:00");
     expect(ms(zoned)).toBe(at);
     expect(formatHandleValue(at, null)).toBe("2024-06-16T03:00:00Z");
   });

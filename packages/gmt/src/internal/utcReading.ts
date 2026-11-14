@@ -1,9 +1,8 @@
 import { Temporal } from "./temporal";
 import { plainDate } from "../regex/date";
-import { instantLeapSecond } from "../regex/leap-second";
 import { NANOSECONDS_PER_SECOND } from "./foreignEpochs";
 import { parseInstantNanoseconds } from "./instantNanoseconds";
-import { EXTENDED_UTC_OFFSET, isoStringBody } from "./isoStringBody";
+import { EXTENDED_UTC_OFFSET } from "./isoStringBody";
 
 /**
  * A UTC label that may be a leap second.
@@ -30,7 +29,7 @@ export const LAST_FOUR_DIGIT_UTC_NANOSECONDS = 253_402_300_799_999_999_999n;
 const DATE = plainDate.source.slice(1, -1);
 
 /**
- * An instant body (before the first `[`) whose second is 60, in GMT's strict extended shape:
+ * An instant whose second is 60, the whole string, in GMT's strict extended shape:
  * `<date>T<hh>:<mm>:60[.fraction]`, then `Z` or `±HH:MM[:SS[.fraction]]`. The fraction is 1 to 9
  * digits after `.` or `,` (RFC 3339 §5.6 `time-secfrac`; Temporal's nanosecond resolution).
  * Basic format, lower-case `t`/`z` and a space separator are refused, as `instantBody` refuses
@@ -60,10 +59,7 @@ export function parseUtcReading(value: unknown): UtcReading | null {
     return { epochNanoseconds, secondSixty: false };
   }
 
-  if (
-    !instantLeapSecond.test(value) ||
-    !secondSixtyInstantBody.test(isoStringBody(value))
-  ) {
+  if (!secondSixtyInstantBody.test(value)) {
     return null;
   }
 

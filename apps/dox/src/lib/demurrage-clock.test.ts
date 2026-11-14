@@ -223,12 +223,10 @@ describe("the four lanes", () => {
     const s = state("import-demurrage");
     s.rows[0] = {
       type: "discharged",
-      at: "2024-06-14T15:00:00-04:00[America/New_York]",
+      at: "2024-06-14T15:00:00-04:00",
     };
     const read = readClocks(s, lib);
-    expect(read.chosen.interval!.start).toBe(
-      "2024-06-14T15:00:00-04:00[America/New_York]",
-    );
+    expect(read.chosen.interval!.start).toBe("2024-06-14T15:00:00-04:00");
     expect(read.elapsed!.duration).toBe("PT139H30M");
   });
 
@@ -541,10 +539,10 @@ describe("the hand-off to the Free Time Ledger", () => {
     s.zone = "";
     s.rows[0] = {
       type: "discharged",
-      at: "2024-06-14T15:00:00-04:00[America/New_York]",
+      at: "2024-06-14T15:00:00-04:00",
     };
     expect(freeTimeArgs(readClocks(s, lib), s)).toEqual({
-      clockStart: "2024-06-14T15:00:00-04:00[America/New_York]",
+      clockStart: "2024-06-14T15:00:00-04:00",
       clockEnd: "2024-06-20T14:30:00Z",
     });
   });

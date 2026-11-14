@@ -14,8 +14,8 @@ import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
  * - Comparison is done by instant, so intervals spanning DST transitions are compared
  *   by absolute time.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
- * - Annotations are read as `isValidZonedDateTime` reads them: elective ones are ignored,
- *   `[u-ca=iso8601]` is accepted, and a non-ISO calendar on either endpoint returns `false`.
+ * - Each endpoint is read as `isValidZonedDateTime` reads it: a calendar or elective annotation
+ *   returns `false`.
  *
  * @param props the two endpoints of the range and its optional settings
  * @returns boolean indicating whether the zoned range is valid
@@ -24,7 +24,7 @@ import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
  * @example isValidZonedRange({ value1: "2024-12-31T23:59:59+00:00[UTC]", value2: "2024-01-01T10:00:00+00:00[UTC]" }) // false
  * @example isValidZonedRange({ value1: "2024-06-15T12:00:00+09:00[Asia/Tokyo]", value2: "2024-06-15T12:00:00+09:00[Asia/Tokyo]", options: { allowEqual: true } }) // true
  * @example isValidZonedRange({ value1: "2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]", value2: "2024-02-01T00:00:00+00:00[UTC]" }) // false (non-ISO calendar)
- * @example isValidZonedRange({ value1: "2024-01-01T00:00:00+00:00[UTC][u-ca=iso8601]", value2: "2024-02-01T00:00:00+00:00[UTC]" }) // true
+ * @example isValidZonedRange({ value1: "2024-01-01T00:00:00+00:00[UTC][u-ca=iso8601]", value2: "2024-02-01T00:00:00+00:00[UTC]" }) // false (a calendar annotation)
  * @example isValidZonedRange({ value1: "2024-01-01 10:00:00+00:00[UTC]", value2: "2024-12-31T23:59:59+00:00[UTC]" }) // false (space separator)
  */
 export function isValidZonedRange(props: {

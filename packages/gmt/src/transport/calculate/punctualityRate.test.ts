@@ -1,5 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
+import { offsetString } from "../../test/timeZoneMatrix";
 import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { punctualityRate } from "./punctualityRate";
@@ -45,8 +46,8 @@ describe("punctualityRate", () => {
       punctualityRate(
         [
           {
-            planned: "2024-11-03T01:30:00-04:00[America/New_York]",
-            actual: "2024-11-03T01:30:00-05:00[America/New_York]",
+            planned: "2024-11-03T01:30:00-04:00",
+            actual: "2024-11-03T01:30:00-05:00",
           },
           pair("2024-06-15T10:00:00Z"),
         ],
@@ -57,9 +58,11 @@ describe("punctualityRate", () => {
 
   it("counts every battle-test zone's plan the same way", () => {
     const pairs = battleTestTimeZones.map((timeZone) => ({
-      planned: Temporal.Instant.from("2024-06-15T10:00:00Z")
-        .toZonedDateTimeISO(timeZone)
-        .toString(),
+      planned: offsetString(
+        Temporal.Instant.from("2024-06-15T10:00:00Z").toZonedDateTimeISO(
+          timeZone,
+        ),
+      ),
       actual: "2024-06-15T10:14:59Z",
     }));
     expect(punctualityRate(pairs, { late: "PT15M" })).toEqual({

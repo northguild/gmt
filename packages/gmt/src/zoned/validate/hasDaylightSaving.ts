@@ -50,10 +50,9 @@ export function hasDaylightSaving(
   timeZone: string,
   options?: {
     /**
-     * The reference instant the zone is judged at, as an ISO 8601 instant string ending in `Z`, an
-     * offset or a bracketed zone. It only names an instant, as `isValidInstant` reads it: a
-     * bracketed zone is not validated and does not replace `timeZone`. An invalid value returns
-     * false.
+     * The reference instant the zone is judged at, as an ISO 8601 instant string ending in `Z` or an
+     * offset, as `isValidInstant` reads it. A bracketed zone or any other annotation makes it
+     * invalid. An invalid value returns false.
      *
      * @defaultValue The current instant.
      */

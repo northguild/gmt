@@ -39,7 +39,7 @@ export interface ProtoTimestamp {
  * @example toProtoTimestamp("1970-01-01T00:00:00Z") // { seconds: 0n, nanos: 0 }
  * @example toProtoTimestamp("1969-12-31T23:59:59.5Z") // { seconds: -1n, nanos: 500000000 } — nanos count forward
  * @example toProtoTimestamp("2024-03-10T12:34:56.789Z") // { seconds: 1710074096n, nanos: 789000000 }
- * @example toProtoTimestamp("2024-03-10T13:34:56.789+01:00[Europe/Paris]") // { seconds: 1710074096n, nanos: 789000000 }
+ * @example toProtoTimestamp("2024-03-10T13:34:56.789+01:00") // { seconds: 1710074096n, nanos: 789000000 }
  * @example toProtoTimestamp("0001-01-01T00:00:00Z") // { seconds: -62135596800n, nanos: 0 }
  * @example toProtoTimestamp("9999-12-31T23:59:59.999999999Z") // { seconds: 253402300799n, nanos: 999999999 }
  * @example toProtoTimestamp("+010000-01-01T00:00:00Z") // null — past the protobuf range

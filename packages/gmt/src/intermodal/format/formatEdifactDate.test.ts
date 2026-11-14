@@ -26,12 +26,6 @@ describe("formatEdifactDate", () => {
       expect(formatEdifactDate(value, "102")).toBe(expected);
       expect(parseEdifactDate(expected, "102")).toBe(value);
     });
-
-    it("writes the date of an ISO-calendar annotation, as isValidDate reads it", () => {
-      expect(formatEdifactDate("2024-06-15[u-ca=iso8601]", "102")).toBe(
-        "20240615",
-      );
-    });
   });
 
   describe("the value is a date, as isValidDate accepts it", () => {
@@ -46,6 +40,9 @@ describe("formatEdifactDate", () => {
       ${"2024-06-31"}                | ${"31 June"}
       ${"2024-6-15"}                 | ${"an unpadded month"}
       ${"2024-06-15[u-ca=hebrew]"}   | ${"a calendar other than ISO 8601"}
+      ${"2024-06-15[u-ca=iso8601]"}  | ${"the ISO calendar annotation: a date has none"}
+      ${"2024-06-15[foo=bar]"}       | ${"an elective annotation"}
+      ${"2024-06-15[Europe/Paris]"}  | ${"a zone annotation"}
       ${"+010000-01-01"}             | ${"year 10000: CCYY is four digits"}
       ${"-000001-12-31"}             | ${"a year before 0000: CCYY has no sign"}
       ${"2024-06-15/2024-06-20"}     | ${"an interval: use formatEdifactDatePeriod"}

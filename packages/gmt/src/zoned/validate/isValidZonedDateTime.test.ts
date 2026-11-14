@@ -119,8 +119,8 @@ describe("isValidZonedDateTime", () => {
   );
 
   // zoned/ is ISO-only: a non-ISO calendar annotation is `isValidCalendarZonedDateTime`'s input.
-  // Temporal.ZonedDateTime.from reads the first `u-ca` annotation (proposal-temporal
-  // `ParseISODateTime`), so `[u-ca=iso8601]` names the ISO calendar and is accepted.
+  // GMT matches the zone bracket and nothing after it, so
+  // `[u-ca=iso8601]` is refused too (see the table below).
   it.each`
     value                                                                | label
     ${"2024-02-10T12:00:00-05:00[America/New_York][u-ca=hebrew]"}        | ${"hebrew in America/New_York"}
@@ -135,24 +135,33 @@ describe("isValidZonedDateTime", () => {
     },
   );
 
-  // Temporal's ISO grammar (RFC 9557 §3.3, `ParseISODateTime`): elective annotations are ignored,
-  // the first `u-ca` annotation names the calendar, and an unknown critical annotation, a second
-  // time zone annotation, or a key before the time zone annotation is rejected. Native Temporal
-  // (Chromium 153) agrees on every row.
+  // A zoned string is the zoned body plus the zone bracket and nothing else, over the whole
+  // string (RFC 9557 lets Temporal read more annotations; GMT does not): the ISO calendar, an
+  // elective key, a second zone and a critical flag on an annotation after the zone are refused.
   it.each`
-    value                                                                        | expected | reason
-    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=iso8601]"}               | ${true}  | ${"ISO calendar annotation"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][!u-ca=iso8601]"}              | ${true}  | ${"critical ISO calendar annotation"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=ISO8601]"}               | ${true}  | ${"calendar id in upper case"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=iso8601][u-ca=hebrew]"}  | ${true}  | ${"first calendar annotation is ISO"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][foo=bar]"}                    | ${true}  | ${"elective annotation"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][foo=bar][u-ca=iso8601]"}      | ${true}  | ${"elective annotation before the calendar"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][!foo=bar]"}                   | ${false} | ${"unknown critical annotation"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=hebrew][u-ca=iso8601]"}  | ${false} | ${"first calendar annotation is Hebrew"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][!u-ca=iso8601][u-ca=hebrew]"} | ${false} | ${"second u-ca with a critical flag"}
-    ${"2024-03-10T12:30:00-04:00[foo=bar][America/New_York]"}                    | ${false} | ${"time zone annotation after a key"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][Asia/Tokyo]"}                 | ${false} | ${"two time zone annotations"}
-    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=bogus]"}                 | ${false} | ${"unknown calendar"}
+    value                                                                        | reason
+    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=iso8601]"}               | ${"ISO calendar annotation"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][!u-ca=iso8601]"}              | ${"critical ISO calendar annotation"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=ISO8601]"}               | ${"calendar id in upper case"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=iso8601][u-ca=hebrew]"}  | ${"first calendar annotation is ISO"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][foo=bar]"}                    | ${"elective annotation"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][foo=bar][u-ca=iso8601]"}      | ${"elective annotation before the calendar"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][!foo=bar]"}                   | ${"unknown critical annotation"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=hebrew][u-ca=iso8601]"}  | ${"first calendar annotation is Hebrew"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][!u-ca=iso8601][u-ca=hebrew]"} | ${"second u-ca with a critical flag"}
+    ${"2024-03-10T12:30:00-04:00[foo=bar][America/New_York]"}                    | ${"time zone annotation after a key"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][Asia/Tokyo]"}                 | ${"two time zone annotations"}
+    ${"2024-03-10T12:30:00-04:00[America/New_York][u-ca=bogus]"}                 | ${"unknown calendar"}
+  `("returns false for $value ($reason)", ({ value }) => {
+    expect(isValidZonedDateTime(value)).toBe(false);
+  });
+
+  it.each`
+    value                                                | expected | reason
+    ${"2024-03-10T12:30:00-04:00[America/New_York]"}     | ${true}  | ${"the zone only"}
+    ${"2024-03-10T12:30:00-04:00[!America/New_York]"}    | ${true}  | ${"a critical zone"}
+    ${"2024-03-10T12:30:00-04:00[-04:00]"}               | ${true}  | ${"an offset zone"}
+    ${"2024-03-10T12:30:00-04:00[Europe/Helsinkiddddd]"} | ${false} | ${"a zone that does not exist"}
   `("returns $expected for $value ($reason)", ({ value, expected }) => {
     expect(isValidZonedDateTime(value)).toBe(expected);
   });

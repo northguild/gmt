@@ -7,7 +7,10 @@ import {
   readExactMoment,
   writeExactMoment,
 } from "../../internal";
-import { hasInstantShape } from "../../internal/isoStringBody";
+import {
+  hasInstantShape,
+  hasZonedInstantShape,
+} from "../../internal/isoStringBody";
 
 /**
  * A headway service: a departure every `headway` from `from`, up to (not including) `to` — the
@@ -46,7 +49,8 @@ export interface NextDepartureOptions {
  * a repeated hour it names two instants, and a timetable must say which.
  */
 function readTimetableMoment(value: unknown): ExactMoment | null {
-  return typeof value === "string" && hasInstantShape(value)
+  return typeof value === "string" &&
+    (hasInstantShape(value) || hasZonedInstantShape(value))
     ? readExactMoment(value)
     : null;
 }

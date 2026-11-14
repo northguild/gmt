@@ -18,26 +18,15 @@ import {
 import { hostileProxy, revokedProxy } from "../test/hostileValues";
 
 /**
- * RFC 9557 annotations on a transport instant, read by every transport function.
+ * Annotations on a transport moment, read by every transport function.
  *
- * RFC 9557 §3.3: an elective annotation with an unknown key is ignored and a critical one
- * (`!`) is rejected; `u-ca` is a known key, so a calendar is accepted either way. A time-zone
- * annotation is a bracket without `=` (RFC 9557 §4.1 `time-zone`), and `!` on it is allowed.
- * `Temporal.Instant.from` and `isValidInstant` follow the same rules, so `etaAtZone`,
- * `dwellTime` (which read only the instant when a target zone is given) and `crossingTime`
- * (whose target zone is always the rendering zone) accept exactly what `transitTime` accepts,
- * except a zone that does not exist: `transitTime` keeps the departure's zone, so it must be
- * real, while those three never read it. A `scheduleDelivery` departure reads its bracket the
- * way `transitTime` does — the bracket makes the departure exact, so it must be real — and its
- * sentinel is `null`.
- *
- * The planned-versus-actual functions split the same way. `scheduleDeviation`,
- * `classifyPunctuality`, `punctualityRate`, `bestAvailable` and `estimateDrift` compare instants
- * and echo what they were given, so they never validate the zone, as `timeToCutoff` does not.
- * The one thing an instant-only function takes from a bracket is the real offset behind a
- * minute-rounded one (`subMinuteOffsets.test.ts`); no row here has a sub-minute zone.
- * `nextDeparture` reads every moment as `transitTime` reads a departure — a headway result is
- * written in `from`'s zone, so the zone must be real — in both the list and the headway form.
+ * Each function reads its kind's exact pattern over the whole string. The instant readers
+ * (`etaAtZone`, `crossingTime`, `cutoffAt`, `cutoffSchedule`, `isPastCutoff`, `timeToCutoff`,
+ * `scheduleDeviation`, `classifyPunctuality`, `punctualityRate`, `bestAvailable`,
+ * `estimateDrift`) take `…Z` or `…±HH:MM` and nothing after it. The functions that keep a zone
+ * (`transitTime`, `scheduleDelivery`, `nextDeparture` and `dwellTime`) also take the body plus
+ * one real zone bracket, and nothing else: no calendar or elective annotation, and no second
+ * bracket.
  */
 const departure = "2024-06-15T10:00:00Z";
 
@@ -98,23 +87,24 @@ function expectNextDepartureReads(value: string, transit: string): void {
 
 describe("transport annotations (RFC 9557)", () => {
   it.each`
-    annotation               | transit                                       | instantAccepted | kind
-    ${""}                    | ${"2024-06-15T11:00:00Z"}                     | ${true}         | ${"no annotation"}
-    ${"[foo=bar]"}           | ${"2024-06-15T11:00:00Z"}                     | ${true}         | ${"elective unknown key: ignored"}
-    ${"[!foo=bar]"}          | ${""}                                         | ${false}        | ${"critical unknown key: rejected"}
-    ${"[u-ca=gregory]"}      | ${"2024-06-15T11:00:00Z"}                     | ${true}         | ${"elective calendar: an instant has none"}
-    ${"[!u-ca=gregory]"}     | ${"2024-06-15T11:00:00Z"}                     | ${true}         | ${"critical calendar: a known key"}
-    ${"[UTC]"}               | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}         | ${"elective zone"}
-    ${"[!UTC]"}              | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}         | ${"critical zone"}
-    ${"[Europe/London]"}     | ${"2024-06-15T12:00:00+01:00[Europe/London]"} | ${true}         | ${"zone differing from Z"}
-    ${"[UTC][foo=bar]"}      | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}         | ${"zone then elective unknown key"}
-    ${"[UTC][!foo=bar]"}     | ${""}                                         | ${false}        | ${"zone then critical unknown key"}
-    ${"[UTC][u-ca=iso8601]"} | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}         | ${"zone then ISO calendar"}
-    ${"[UTC][u-ca=gregory]"} | ${""}                                         | ${true}         | ${"zone then non-ISO calendar: a zoned departure's calendar must be ISO"}
-    ${"[Not/AZone]"}         | ${""}                                         | ${true}         | ${"zone that does not exist: only transitTime reads it"}
+    annotation               | transit                                       | zonedAccepted | kind
+    ${""}                    | ${"2024-06-15T11:00:00Z"}                     | ${true}       | ${"no annotation"}
+    ${"[foo=bar]"}           | ${""}                                         | ${false}      | ${"elective unknown key"}
+    ${"[!foo=bar]"}          | ${""}                                         | ${false}      | ${"critical unknown key"}
+    ${"[u-ca=gregory]"}      | ${""}                                         | ${false}      | ${"elective calendar"}
+    ${"[!u-ca=gregory]"}     | ${""}                                         | ${false}      | ${"critical calendar"}
+    ${"[UTC]"}               | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}       | ${"elective zone"}
+    ${"[!UTC]"}              | ${"2024-06-15T11:00:00+00:00[UTC]"}           | ${true}       | ${"critical zone"}
+    ${"[Europe/London]"}     | ${"2024-06-15T12:00:00+01:00[Europe/London]"} | ${true}       | ${"zone differing from Z"}
+    ${"[UTC][foo=bar]"}      | ${""}                                         | ${false}      | ${"zone then elective unknown key"}
+    ${"[UTC][!foo=bar]"}     | ${""}                                         | ${false}      | ${"zone then critical unknown key"}
+    ${"[UTC][u-ca=iso8601]"} | ${""}                                         | ${false}      | ${"zone then ISO calendar"}
+    ${"[UTC][u-ca=gregory]"} | ${""}                                         | ${false}      | ${"zone then non-ISO calendar"}
+    ${"[Not/AZone]"}         | ${""}                                         | ${false}      | ${"zone that does not exist"}
   `(
     "reads '$annotation' on an instant consistently ($kind)",
-    ({ annotation, transit, instantAccepted }) => {
+    ({ annotation, transit, zonedAccepted }) => {
+      const instantAccepted = annotation === "";
       const value = `${departure}${annotation}`;
 
       expect(transitTime(value, "PT1H")).toBe(transit);
@@ -122,7 +112,7 @@ describe("transport annotations (RFC 9557)", () => {
         instantAccepted ? "2024-06-15T10:00:00+00:00[UTC]" : "",
       );
       expect(dwellTime(value, value, "UTC")).toEqual(
-        instantAccepted
+        zonedAccepted
           ? {
               duration: "PT0S",
               enter: "2024-06-15T10:00:00+00:00[UTC]",
@@ -140,8 +130,7 @@ describe("transport annotations (RFC 9557)", () => {
             }
           : null,
       );
-      // The cut-off functions read only the instant, as etaAtZone does: the bracket never
-      // supplies the zone, so one that does not exist is ignored.
+      // The cut-off functions read an instant, as etaAtZone does: any annotation is rejected.
       expect(cutoffAt(value, "PT1H", { timeZone: "UTC" })).toBe(
         instantAccepted ? "2024-06-15T09:00:00+00:00[UTC]" : "",
       );
@@ -154,9 +143,16 @@ describe("transport annotations (RFC 9557)", () => {
           ? [{ name: "gate-in", at: "2024-06-15T09:00:00+00:00[UTC]" }]
           : [],
       );
-      expect(isPastCutoff(value, departure)).toBe(instantAccepted);
+      expect(isPastCutoff(value, "2024-06-15T10:00:00+00:00[UTC]")).toBe(
+        instantAccepted,
+      );
+      // The cutoff is zoned only, because `cutoffAt` writes a zoned string: a bare instant is
+      // refused, and so is any annotation the zoned read rejects.
       expect(timeToCutoff(departure, value)).toBe(
-        instantAccepted ? "PT0S" : "",
+        !instantAccepted && zonedAccepted ? "PT0S" : "",
+      );
+      expect(isPastCutoff(departure, value)).toBe(
+        !instantAccepted && zonedAccepted,
       );
       // The departure reads its bracket, so scheduleDelivery accepts exactly what transitTime
       // accepts; the arrival instant (10:00Z + 1h) is the same whatever zone rendered the input.
@@ -184,25 +180,22 @@ describe("transport annotations (RFC 9557)", () => {
   );
 
   it.each`
-    annotation           | transit                        | kind
-    ${"[foo=bar]"}       | ${"2024-06-15T11:00:00+09:00"} | ${"elective unknown key"}
-    ${"[!u-ca=gregory]"} | ${"2024-06-15T11:00:00+09:00"} | ${"critical calendar"}
-    ${"[!foo=bar]"}      | ${""}                          | ${"critical unknown key"}
-  `(
-    "keeps an offset departure's offset past $annotation ($kind)",
-    ({ annotation, transit }) => {
-      expect(
-        transitTime(`2024-06-15T10:00:00+09:00${annotation}`, "PT1H"),
-      ).toBe(transit);
-      expect(
-        nextDeparture("2024-06-15T01:30:00Z", {
-          headway: "PT1H",
-          from: `2024-06-15T10:00:00+09:00${annotation}`,
-          to: "2024-06-15T12:00:00+09:00",
-        }),
-      ).toBe(transit);
-    },
-  );
+    annotation
+    ${"[foo=bar]"}
+    ${"[!u-ca=gregory]"}
+    ${"[!foo=bar]"}
+  `("rejects an offset departure followed by $annotation", ({ annotation }) => {
+    expect(transitTime(`2024-06-15T10:00:00+09:00${annotation}`, "PT1H")).toBe(
+      "",
+    );
+    expect(
+      nextDeparture("2024-06-15T01:30:00Z", {
+        headway: "PT1H",
+        from: `2024-06-15T10:00:00+09:00${annotation}`,
+        to: "2024-06-15T12:00:00+09:00",
+      }),
+    ).toBe("");
+  });
 });
 
 // Core Rule 3: every transport function returns the sentinel for a value hostile to string

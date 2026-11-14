@@ -24,6 +24,7 @@ export async function loadCutoffLib(): Promise<CutoffLib> {
     zonedValidate,
     plainValidate,
     utcGet,
+    instantConvert,
   ] = await Promise.all([
     GMT_MODULES["transport/calculate"](),
     GMT_MODULES["transport/compare"](),
@@ -32,9 +33,14 @@ export async function loadCutoffLib(): Promise<CutoffLib> {
     GMT_MODULES["zoned/validate"](),
     GMT_MODULES["plain/validate"](),
     GMT_MODULES["utc/get"](),
+    GMT_MODULES["instant/convert"](),
   ]);
+  const toOffsetInstant = instantConvert["toOffsetInstant"] as (
+    value: string,
+  ) => { instant: string } | null;
 
   return {
+    toInstant: (value) => toOffsetInstant(value)?.instant ?? "",
     cutoffAt: transportCalculate["cutoffAt"] as CutoffLib["cutoffAt"],
     cutoffSchedule: transportCalculate[
       "cutoffSchedule"

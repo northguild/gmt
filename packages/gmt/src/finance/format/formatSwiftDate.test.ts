@@ -16,14 +16,13 @@ describe("formatSwiftDate", () => {
   });
 
   it.each`
-    value                         | expected    | why
-    ${"2024-06-15"}               | ${"240615"} | ${"an ordinary date"}
-    ${"2001-01-01"}               | ${"010101"} | ${"the lower limit"}
-    ${"2060-12-31"}               | ${"601231"} | ${"the upper limit"}
-    ${"2004-02-29"}               | ${"040229"} | ${"the first leap day in range"}
-    ${"2060-02-29"}               | ${"600229"} | ${"a leap day at the upper limit"}
-    ${"2005-01-09"}               | ${"050109"} | ${"month, day and year are padded"}
-    ${"2024-06-15[u-ca=iso8601]"} | ${"240615"} | ${"the ISO calendar annotation, as isValidDate"}
+    value           | expected    | why
+    ${"2024-06-15"} | ${"240615"} | ${"an ordinary date"}
+    ${"2001-01-01"} | ${"010101"} | ${"the lower limit"}
+    ${"2060-12-31"} | ${"601231"} | ${"the upper limit"}
+    ${"2004-02-29"} | ${"040229"} | ${"the first leap day in range"}
+    ${"2060-02-29"} | ${"600229"} | ${"a leap day at the upper limit"}
+    ${"2005-01-09"} | ${"050109"} | ${"month, day and year are padded"}
   `("writes '$value' as '$expected': $why", ({ value, expected }) => {
     expect(formatSwiftDate(value)).toBe(expected);
   });
@@ -68,10 +67,12 @@ describe("formatSwiftDate", () => {
   );
 
   it.each`
-    value                         | expected    | why
-    ${"20240615"}                 | ${""}       | ${"the basic form is not accepted by isValidDate"}
-    ${"+002024-06-15"}            | ${"240615"} | ${"an expanded year is the same date"}
-    ${"2024-06-15[Europe/Paris]"} | ${"240615"} | ${"a zone annotation is dropped, the date is kept"}
+    value                                 | expected    | why
+    ${"20240615"}                         | ${""}       | ${"the basic form is not accepted by isValidDate"}
+    ${"+002024-06-15"}                    | ${"240615"} | ${"an expanded year is the same date"}
+    ${"2024-06-15[Europe/Paris]"}         | ${""}       | ${"an annotation is not part of the pattern"}
+    ${"2024-06-15[u-ca=iso8601]"}         | ${""}       | ${"an annotation is not part of the pattern"}
+    ${"2024-06-15[Europe/Helsinkiddddd]"} | ${""}       | ${"an annotation is not part of the pattern"}
   `("writes '$value' as '$expected': $why", ({ value, expected }) => {
     expect(formatSwiftDate(value)).toBe(expected);
   });

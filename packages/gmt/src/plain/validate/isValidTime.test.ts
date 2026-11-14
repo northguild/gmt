@@ -29,12 +29,7 @@ describe("isValidTime", () => {
     },
   );
 
-  // Temporal's ISO string grammar (proposal-temporal spec/abstractops.html `Annotations`,
-  // `ParseISODateTime`; RFC 9557 §3.3): an elective annotation is read and ignored, a time zone
-  // annotation is ignored for a PlainTime, the first `u-ca` annotation names the calendar, and an
-  // unknown critical annotation is rejected. Values checked against native Temporal (Chromium
-  // 153) except `[a=bc]`: native rejects a one-character key, which the spec grammar
-  // (`AKeyLeadingChar`) allows.
+  // CORE-113: a plain value matches its exact pattern over the whole string, so any annotation (zone, calendar or elective) makes it invalid.
   it.each`
     value
     ${"12:30[foo=bar]"}
@@ -53,10 +48,13 @@ describe("isValidTime", () => {
     ${"12:30[u-ca=iso8601][u-ca=hebrew]"}
     ${"12:30[u-ca=hebrew]"}
     ${"12:30[u-ca=bogus]"}
+    ${"12:30[Europe/Helsinki]"}
+    ${"12:30[Europe/Helsinkiddddd]"}
+    ${"12:30[!Europe/Helsinki]"}
   `(
-    "returns true for a PlainTime with annotations Temporal reads and ignores: $value",
+    "returns false for a PlainTime with an annotation, which the exact pattern does not allow: $value",
     ({ value }: { value: string }) => {
-      expect(isValidTime(value)).toBe(true);
+      expect(isValidTime(value)).toBe(false);
     },
   );
 

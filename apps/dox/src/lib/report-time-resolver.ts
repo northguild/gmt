@@ -168,9 +168,9 @@ export const METAR_PRESETS: readonly MetarPreset[] = [
   },
   {
     id: "annotated-reference",
-    label: "A reference with a zone name",
+    label: "A reference with a zone name: refused",
     description:
-      "A bracketed zone on the reference is read and does not change the answer: only its instant counts.",
+      "A reference is an instant: Z or an offset and nothing after it. A zone name in brackets is refused, so nothing is read. Drop the bracket and the same moment reads fine.",
     group: "251200Z",
     reference: "2024-06-25T13:20:00+01:00[Europe/London]",
   },
@@ -544,7 +544,8 @@ export const ANSWER_REASONS: Record<AnswerReasonKey, string> = {
   read: "Read against the reference you stated. The group names no month, so the nearest candidate in exact time is the answer.",
   noReference:
     "A report time names no month. State when it was received; the tool never uses now.",
-  referenceNotInstant: "The reference needs Z or an offset.",
+  referenceNotInstant:
+    "The reference needs Z or an offset, and nothing after it: a zone name in brackets is refused.",
   lowerCase: "The group is upper case only.",
   day32: "Day 32 does not exist: a day of the month runs 01 to 31.",
   hour24: "Hour 24 is not read: hours run 00 to 23.",

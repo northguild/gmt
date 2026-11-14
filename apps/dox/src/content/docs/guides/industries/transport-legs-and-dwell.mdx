@@ -326,8 +326,9 @@ closed days shaded and each rolled cut-off drawn where it landed and where it wo
 
 [`isPastCutoff(now, cutoff)`](/reference/transport/compare/isPastCutoff) is `true` from the
 cut-off instant on. The window to meet a cut-off is half-open, like GMT's
-[intervals](/guides/intervals/interval-basics/): at the cut-off itself it has closed. Both
-arguments are compared as instants, and `now` is always yours, so the answer is reproducible.
+[intervals](/guides/intervals/interval-basics/): at the cut-off itself it has closed. `now` is an
+instant and always yours, and `cutoff` is the zoned string `cutoffAt` returns, so the answer is
+reproducible. A bare `Z` or offset cut-off is not accepted.
 
 ```typescript
 import { isPastCutoff } from "@northguild/gmt/transport";
@@ -350,11 +351,12 @@ import { timeToCutoff } from "@northguild/gmt/transport";
 
 timeToCutoff("2024-06-10T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // "PT48H"
 timeToCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]"); // "-PT1H"
-timeToCutoff("2024-10-26T17:00:00+01:00[Europe/London]", "2024-10-27T17:00:00+00:00[Europe/London]");
+timeToCutoff("2024-10-26T17:00:00+01:00", "2024-10-27T17:00:00+00:00[Europe/London]");
 // "PT25H" — across the fall-back
 ```
 
-`isPastCutoff` and `timeToCutoff` both compare instants, and `now` is always yours. Both return
+`isPastCutoff` and `timeToCutoff` both compare instants, and `now` is always yours. The cut-off is
+the zoned string `cutoffAt` returns; a bare instant there returns the sentinel too. Both return
 their sentinel for `cutoffAt`'s `""`: `false` from `isPastCutoff` and `""` from `timeToCutoff`.
 Check the cut-off first.
 

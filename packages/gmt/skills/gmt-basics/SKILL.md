@@ -166,8 +166,7 @@ input before you act on it.
   `0000` to `9999`, upper-case `T` and `Z`, seconds, an optional dot fraction of one to
   nine digits, and nothing after the `Z`. Use it for a string headed for storage or for
   a reader that is not Temporal. `isValidUtc` also accepts a time without seconds, a
-  comma before the fraction, an expanded `±YYYYYY` year and RFC 9557 annotations
-  (`"2026-10-06T12:00:00Z[Europe/Paris]"`); all four are `false` here. A numeric offset,
+  comma before the fraction and an expanded `±YYYYYY` year; all three are `false` here. A numeric offset,
   `+00:00` included, is `false` too: `isValidRfc3339DateTime` checks the whole RFC 3339
   grammar, with the same two GMT limits (no second `60`, at most nine fraction digits).
   The check is on the spelling and the instant. A reader's own range and precision
@@ -184,8 +183,10 @@ input before you act on it.
   in another zone, use `formatUtc(value, locale, { timeZone })`.
 - A second of `60` is invalid in every spelling (`T`, `t`, space, basic
   format), and validators return `false` for it. Two functions tell you about
-  one. `hasSecond60` is the shape test: it is true for any second 60, real or
-  not (`"2024-06-15T12:34:60Z"` is `true`). `isLeapSecond`, from `timescale/`,
+  one. `hasSecond60` is the shape test: it is true when the whole string is one
+  of GMT's own kinds with a second 60, real or not (`"2024-06-15T12:34:60Z"` is
+  `true`). A spelling that is not a GMT kind (`t`, a space, basic format,
+  `[foo=bar]`, trailing text) is `false`. `isLeapSecond`, from `timescale/`,
   is the table lookup: it is true only for the 27 inserted leap seconds
   (`"2016-12-31T23:59:60Z"` is `true`, `"2024-06-15T12:34:60Z"` is `false`).
   Only the `timescale/`, `gnss/` and `finance/` functions accept a second 60, and only a

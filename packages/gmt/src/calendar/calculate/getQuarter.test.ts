@@ -277,19 +277,16 @@ describe("getQuarter", () => {
     ).toEqual({ year: 2024, quarter: 1 });
   });
 
-  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
-  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  // A plain date or datetime carries no annotation of any kind, so each of these is no input.
   it.each`
-    value                               | expected
-    ${"2024-06-15[foo=bar]"}            | ${{ year: 2024, quarter: 2 }}
-    ${"2024-06-15T12:00[u-ca=iso8601]"} | ${{ year: 2024, quarter: 2 }}
-    ${"2024-06-15[!foo=bar]"}           | ${null}
-  `(
-    "reads the annotations of $value as Temporal does",
-    ({ value, expected }) => {
-      expect(getQuarter(value)).toEqual(expected);
-    },
-  );
+    value
+    ${"2024-06-15[foo=bar]"}
+    ${"2024-06-15T12:00[u-ca=iso8601]"}
+    ${"2024-06-15[!foo=bar]"}
+    ${"2024-06-15[Europe/Helsinki]"}
+  `("returns null for the annotated $value", ({ value }) => {
+    expect(getQuarter(value)).toBeNull();
+  });
   // The caller states the year label: the calendar year the fiscal year starts in, ends in, or
   // holds most of its days in (CORE-5.md, Corrections). The fiscal year runs from day 1 of the
   // start month for a year;

@@ -4,7 +4,7 @@
  * public form is the validator `isValidHL7`, never a pattern.
  *
  * The grammar is pure; `readHl7DateTime` is the one reader that builds Temporal values, through
- * `readOffsetInstant`. Both import their dependencies directly, never through `internal/index.ts`.
+ * `readInstantOffsetInstant`. Both import their dependencies directly, never through `internal/index.ts`.
  *
  * Sources (HL7 Europe's published copies of the standard; the v2.5.1 copy heads these sections
  * 2.A.1.22 and 2.A.1.77, HL7's own cross-references and the v2.6 copy say 2.A.22 and 2.A.77):
@@ -25,7 +25,7 @@ import type {
   Hl7Precision,
 } from "../types/hl7";
 import { utcOffset } from "../regex/utc-offset";
-import { readOffsetInstant } from "./offsetInstant";
+import { readInstantOffsetInstant } from "./offsetInstant";
 import { Temporal } from "./temporal";
 import { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
 
@@ -226,8 +226,8 @@ const ISO_OFFSET =
   "(?<offset>Z|[+-][0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:[.,][0-9]{1,9})?)?)";
 
 /**
- * Which form an ISO 8601 extended string is written in, for `formatHL7`; apply it to
- * `isoStringBody(value)`. It reads the form, never the values (Temporal checks those). Groups
+ * Which form an ISO 8601 extended string is written in, for `formatHL7` and `formatFHIR`. It reads the whole string, so an
+ * annotation of any kind does not match. It reads the form, never the values (Temporal checks those). Groups
  * `year month day hour minute second fraction offset`:
  * - `year` is exactly four digits, so `+010000` and `-000001` do not match.
  * - `fraction` is one to nine digits after `.` or `,` (the decimal signs `plainDateTime` accepts).
@@ -300,7 +300,7 @@ export function readHl7DateTime(value: string): Hl7DateTime | null {
       if (offset === "") {
         return { kind: "local", local, precision };
       }
-      const pair = readOffsetInstant(local + offset);
+      const pair = readInstantOffsetInstant(local + offset);
       if (pair === null) {
         return null;
       }

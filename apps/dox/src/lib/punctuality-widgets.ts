@@ -95,6 +95,9 @@ export interface Headway {
 /** The six real functions the three widgets need, loaded at module
  *  granularity by `punctuality-lib.ts` and injected. */
 export interface PunctualityLib {
+  /** `toOffsetInstant`'s `instant`, or `""` when the text is not a moment: a
+   *  zoned time rewritten as the `Z` instant the instant functions read. */
+  toInstant(value: string): string;
   scheduleDeviation(planned: string, actual: string): string;
   classifyPunctuality(
     planned: string,

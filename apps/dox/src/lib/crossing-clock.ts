@@ -108,10 +108,10 @@ export const CROSSING_PRESETS: readonly CrossingPreset[] = [
     id: "read-elsewhere",
     label: "Logged in Berlin, read on the canal's clock in Panama",
     description:
-      "Logged with Berlin's own offset in brackets, but a bracket in the input is never read: both ends are rendered on the canal authority's clock in Panama.",
+      "Logged with Berlin's own offset, +02:00. The offset fixes each instant, so both ends are rendered on the canal authority's clock in Panama.",
     state: {
-      entry: "2024-06-15T08:00:00+02:00[Europe/Berlin]",
-      exit: "2024-06-15T17:30:00+02:00[Europe/Berlin]",
+      entry: "2024-06-15T08:00:00+02:00",
+      exit: "2024-06-15T17:30:00+02:00",
       targetZone: "America/Panama",
     },
   },
@@ -502,9 +502,9 @@ type CrossingNullReason =
 
 export const NULL_REASON_TEXT: Record<CrossingNullReason, string> = {
   "invalid-entry":
-    "The entry is not an instant: it needs a Z, an offset, or an offset with a bracketed zone.",
+    "The entry is not an instant: it needs a Z or an offset, with no zone name after it.",
   "invalid-exit":
-    "The exit is not an instant: it needs a Z, an offset, or an offset with a bracketed zone.",
+    "The exit is not an instant: it needs a Z or an offset, with no zone name after it.",
   "unknown-zone": "targetZone is not a time zone this browser knows.",
   inverted: "An exit before its entry is a data error, not a negative transit.",
 };

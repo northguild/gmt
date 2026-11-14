@@ -6,8 +6,7 @@ import { calendarZonedOf } from "../../internal/calendarZonedString";
  * ("2024-10-03T14:30:45+02:00[Africa/Johannesburg][u-ca=hebrew]"), as
  * `Temporal.ZonedDateTime#toString()` and `convertZonedToCalendar` write it.
  *
- * - Parallel to `isValidZonedDateTime`, which accepts `[u-ca=iso8601]` and rejects every other
- *   calendar. Only
+ * - Parallel to `isValidZonedDateTime`, which accepts no calendar annotation. Only
  *   the calendar-aware `zoned/` functions gate on this validator, so a string is never certified
  *   by a validator whose own namespace refuses it.
  * - The calendar annotation follows the time zone annotation (RFC 9557 §4.1); a calendar before
@@ -15,11 +14,10 @@ import { calendarZonedOf } from "../../internal/calendarZonedString";
  * - A `[u-ca=<id>]` annotation, optionally critical. Temporal's `CanonicalizeCalendar` validates
  *   the id (folding case and aliases), and the calendar must be one GMT supports
  *   (`CalendarSystem`).
- * - The annotations follow Temporal's ISO grammar, as `Temporal.ZonedDateTime.from` reads them:
- *   elective unknown annotations (`[foo=bar]`) are ignored and the first `u-ca` annotation names
- *   the calendar; an unknown critical annotation or a second `u-ca` annotation when either is
- *   critical returns false.
- * - The part before the first annotation must be ISO 8601 extended format, as
+ * - At most one annotation beyond the zone, the `u-ca` one, after the zone. An elective or
+ *   unknown critical annotation (`[foo=bar]`, `[!foo=bar]`) and a second `u-ca` annotation
+ *   return false.
+ * - The part before the zone must be ISO 8601 extended format, as
  *   `isValidZonedDateTime` requires: basic format, a space or lower-case `t` separator, a
  *   lower-case `z`, an hour-only time or offset and a date without a time return false.
  * - Rejects leap seconds, which `Temporal.ZonedDateTime.from` otherwise clamps to `:59`.
@@ -38,7 +36,7 @@ import { calendarZonedOf } from "../../internal/calendarZonedString";
  *
  * @example isValidCalendarZonedDateTime("2024-10-03T14:30:45+02:00[Africa/Johannesburg]") // true
  * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Africa/Johannesburg][u-ca=hebrew]") // true
- * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Africa/Johannesburg][foo=bar][u-ca=hebrew]") // true (elective annotation ignored)
+ * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Africa/Johannesburg][foo=bar][u-ca=hebrew]") // false (elective annotation)
  * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[u-ca=hebrew][Africa/Johannesburg]") // false (calendar before zone)
  * @example isValidCalendarZonedDateTime("2019-04-30T12:00:00+09:00[Asia/Tokyo][u-ca=japanese;era=heisei]") // false (not RFC 9557)
  * @example isValidCalendarZonedDateTime("2024-02-24T14:30:00+03:00[Africa/Johannesburg][u-ca=hebrew]") // false (offset wrong for the zone)

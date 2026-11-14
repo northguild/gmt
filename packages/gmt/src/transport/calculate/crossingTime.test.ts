@@ -15,17 +15,16 @@ describe("crossingTime", () => {
   // Expected values derived by hand (whole hours on one UTC day) and confirmed against plain
   // @js-temporal/polyfill: Instant.until(largestUnit "hours") and toZonedDateTimeISO(targetZone).
   it.each`
-    entry                                            | exit                                 | targetZone         | duration            | enter                                         | exitLocal
-    ${"2024-06-15T08:00:00Z"}                        | ${"2024-06-15T17:30:00Z"}            | ${"Europe/Berlin"} | ${"PT9H30M"}        | ${"2024-06-15T10:00:00+02:00[Europe/Berlin]"} | ${"2024-06-15T19:30:00+02:00[Europe/Berlin]"}
-    ${"2024-06-15T10:00:00+09:00"}                   | ${"2024-06-15T12:00:00+09:00"}       | ${"Asia/Tokyo"}    | ${"PT2H"}           | ${"2024-06-15T10:00:00+09:00[Asia/Tokyo]"}    | ${"2024-06-15T12:00:00+09:00[Asia/Tokyo]"}
-    ${"2024-06-15T10:00:00Z"}                        | ${"2024-06-15T10:00:00Z"}            | ${"Asia/Tokyo"}    | ${"PT0S"}           | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}    | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}
-    ${"2024-06-15T22:30:00Z"}                        | ${"2024-06-16T01:00:00Z"}            | ${"+02:00"}        | ${"PT2H30M"}        | ${"2024-06-16T00:30:00+02:00[+02:00]"}        | ${"2024-06-16T03:00:00+02:00[+02:00]"}
-    ${"2024-06-10T12:00:00Z"}                        | ${"2024-06-15T12:00:00Z"}            | ${"UTC"}           | ${"PT120H"}         | ${"2024-06-10T12:00:00+00:00[UTC]"}           | ${"2024-06-15T12:00:00+00:00[UTC]"}
-    ${"2024-06-15T10:00:00Z"}                        | ${"2024-06-15T10:00:00.5Z"}          | ${"UTC"}           | ${"PT0.5S"}         | ${"2024-06-15T10:00:00+00:00[UTC]"}           | ${"2024-06-15T10:00:00.5+00:00[UTC]"}
-    ${"2024-06-15T22:30:00Z[Not/AZone]"}             | ${"2024-06-16T01:00:00Z[Not/AZone]"} | ${"UTC"}           | ${"PT2H30M"}        | ${"2024-06-15T22:30:00+00:00[UTC]"}           | ${"2024-06-16T01:00:00+00:00[UTC]"}
-    ${"2024-06-15T10:00:00Z"}                        | ${"2024-06-15T10:00:00.000000001Z"}  | ${"UTC"}           | ${"PT0.000000001S"} | ${"2024-06-15T10:00:00+00:00[UTC]"}           | ${"2024-06-15T10:00:00.000000001+00:00[UTC]"}
-    ${"2024-06-15T10:00:00Z"}                        | ${"2024-06-15T11:00:00Z"}            | ${"asia/tokyo"}    | ${"PT1H"}           | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}    | ${"2024-06-15T20:00:00+09:00[Asia/Tokyo]"}
-    ${"2024-06-15T10:00:00-05:00[America/New_York]"} | ${"2024-06-15T16:00:00Z"}            | ${"UTC"}           | ${"PT1H"}           | ${"2024-06-15T15:00:00+00:00[UTC]"}           | ${"2024-06-15T16:00:00+00:00[UTC]"}
+    entry                          | exit                                | targetZone         | duration            | enter                                         | exitLocal
+    ${"2024-06-15T08:00:00Z"}      | ${"2024-06-15T17:30:00Z"}           | ${"Europe/Berlin"} | ${"PT9H30M"}        | ${"2024-06-15T10:00:00+02:00[Europe/Berlin]"} | ${"2024-06-15T19:30:00+02:00[Europe/Berlin]"}
+    ${"2024-06-15T10:00:00+09:00"} | ${"2024-06-15T12:00:00+09:00"}      | ${"Asia/Tokyo"}    | ${"PT2H"}           | ${"2024-06-15T10:00:00+09:00[Asia/Tokyo]"}    | ${"2024-06-15T12:00:00+09:00[Asia/Tokyo]"}
+    ${"2024-06-15T10:00:00Z"}      | ${"2024-06-15T10:00:00Z"}           | ${"Asia/Tokyo"}    | ${"PT0S"}           | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}    | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}
+    ${"2024-06-15T22:30:00Z"}      | ${"2024-06-16T01:00:00Z"}           | ${"+02:00"}        | ${"PT2H30M"}        | ${"2024-06-16T00:30:00+02:00[+02:00]"}        | ${"2024-06-16T03:00:00+02:00[+02:00]"}
+    ${"2024-06-10T12:00:00Z"}      | ${"2024-06-15T12:00:00Z"}           | ${"UTC"}           | ${"PT120H"}         | ${"2024-06-10T12:00:00+00:00[UTC]"}           | ${"2024-06-15T12:00:00+00:00[UTC]"}
+    ${"2024-06-15T10:00:00Z"}      | ${"2024-06-15T10:00:00.5Z"}         | ${"UTC"}           | ${"PT0.5S"}         | ${"2024-06-15T10:00:00+00:00[UTC]"}           | ${"2024-06-15T10:00:00.5+00:00[UTC]"}
+    ${"2024-06-15T10:00:00Z"}      | ${"2024-06-15T10:00:00.000000001Z"} | ${"UTC"}           | ${"PT0.000000001S"} | ${"2024-06-15T10:00:00+00:00[UTC]"}           | ${"2024-06-15T10:00:00.000000001+00:00[UTC]"}
+    ${"2024-06-15T10:00:00Z"}      | ${"2024-06-15T11:00:00Z"}           | ${"asia/tokyo"}    | ${"PT1H"}           | ${"2024-06-15T19:00:00+09:00[Asia/Tokyo]"}    | ${"2024-06-15T20:00:00+09:00[Asia/Tokyo]"}
+    ${"2024-06-15T10:00:00-05:00"} | ${"2024-06-15T16:00:00Z"}           | ${"UTC"}           | ${"PT1H"}           | ${"2024-06-15T15:00:00+00:00[UTC]"}           | ${"2024-06-15T16:00:00+00:00[UTC]"}
   `(
     "measures $duration from $entry to $exit rendered in $targetZone",
     ({ entry, exit, targetZone, duration, enter, exitLocal }) => {
@@ -43,8 +42,8 @@ describe("crossingTime", () => {
   it("renders ends logged in two other real zones in the target zone only", () => {
     expect(
       crossingTime(
-        "2024-06-15T19:00:00+09:00[Asia/Tokyo]",
-        "2024-06-15T14:00:00+02:00[Europe/Berlin]",
+        "2024-06-15T19:00:00+09:00",
+        "2024-06-15T14:00:00+02:00",
         "America/New_York",
       ),
     ).toEqual({
@@ -111,19 +110,23 @@ describe("crossingTime", () => {
   );
 
   it.each`
-    entry                     | exit                      | targetZone          | reason
-    ${123}                    | ${"2024-06-16T01:00:00Z"} | ${"Europe/London"}  | ${"entry is non-string input"}
-    ${"2024-06-15T22:30:00Z"} | ${123}                    | ${"Europe/London"}  | ${"exit is non-string input"}
-    ${"2024-06-15T22:30:00Z"} | ${"2024-06-16T01:00:00Z"} | ${123}              | ${"targetZone is non-string input"}
-    ${"2024-06-16T01:00:00Z"} | ${"2024-06-15T22:30:00Z"} | ${"Europe/London"}  | ${"exit before entry"}
-    ${"2024-06-15T22:30:00"}  | ${"2024-06-16T01:00:00Z"} | ${"Europe/London"}  | ${"entry has no offset designator"}
-    ${"2024-06-15T22:30:00Z"} | ${"2024-06-16T01:00:00"}  | ${"Europe/London"}  | ${"exit has no offset designator"}
-    ${"2016-12-31T23:59:60Z"} | ${"2017-01-01T01:00:00Z"} | ${"Europe/London"}  | ${"leap second"}
-    ${""}                     | ${"2024-06-16T01:00:00Z"} | ${"Europe/London"}  | ${"empty entry"}
-    ${"2024-06-15T22:30:00Z"} | ${"invalid"}              | ${"Europe/London"}  | ${"garbage exit"}
-    ${"2024-06-15T22:30:00Z"} | ${"2024-06-16T01:00:00Z"} | ${"Europe/Londres"} | ${"targetZone does not exist"}
-    ${"2024-06-15T22:30:00Z"} | ${"2024-06-16T01:00:00Z"} | ${""}               | ${"empty targetZone"}
-    ${"2024-06-15T22:30:00Z"} | ${"2024-06-16T01:00:00Z"} | ${undefined}        | ${"targetZone omitted: it is always the rendering zone"}
+    entry                                  | exit                                     | targetZone          | reason
+    ${123}                                 | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry is non-string input"}
+    ${"2024-06-15T22:30:00Z"}              | ${123}                                   | ${"Europe/London"}  | ${"exit is non-string input"}
+    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${123}              | ${"targetZone is non-string input"}
+    ${"2024-06-16T01:00:00Z"}              | ${"2024-06-15T22:30:00Z"}                | ${"Europe/London"}  | ${"exit before entry"}
+    ${"2024-06-15T22:30:00"}               | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry has no offset designator"}
+    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00"}                 | ${"Europe/London"}  | ${"exit has no offset designator"}
+    ${"2016-12-31T23:59:60Z"}              | ${"2017-01-01T01:00:00Z"}                | ${"Europe/London"}  | ${"leap second"}
+    ${""}                                  | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"empty entry"}
+    ${"2024-06-15T22:30:00Z"}              | ${"invalid"}                             | ${"Europe/London"}  | ${"garbage exit"}
+    ${"2024-06-15T22:30:00Z[Not/AZone]"}   | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries a zone annotation"}
+    ${"2024-06-15T22:30:00Z[u-ca=hebrew]"} | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries a calendar annotation"}
+    ${"2024-06-15T22:30:00Z[foo=bar]"}     | ${"2024-06-16T01:00:00Z"}                | ${"Europe/London"}  | ${"entry carries an elective annotation"}
+    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z[Europe/London]"} | ${"Europe/London"}  | ${"exit carries a zone annotation"}
+    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${"Europe/Londres"} | ${"targetZone does not exist"}
+    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${""}               | ${"empty targetZone"}
+    ${"2024-06-15T22:30:00Z"}              | ${"2024-06-16T01:00:00Z"}                | ${undefined}        | ${"targetZone omitted: it is always the rendering zone"}
   `("returns the sentinel when $reason", ({ entry, exit, targetZone }) => {
     expect(crossingTime(entry, exit, targetZone)).toBeNull();
   });

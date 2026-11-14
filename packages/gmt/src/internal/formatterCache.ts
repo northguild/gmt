@@ -130,10 +130,19 @@ function cacheKey(
  * The locale list as `Intl` canonicalizes it (ECMA-402 CanonicalizeLocaleList): an array is read
  * once, here, through `Intl.getCanonicalLocales`, so the key and the constructor see the same
  * strings even when the array is a Proxy that answers each read differently, and a bad list
- * throws before the options are read, as in the constructors.
+ * throws before the options are read, as in the constructors. A value that is not `undefined`,
+ * a string or an array throws `TypeError`, which every caller turns into its sentinel.
  */
 function canonicalLocale(locale: FormatterLocale): FormatterLocale {
-  return Array.isArray(locale) ? Intl.getCanonicalLocales(locale) : locale;
+  if (locale !== undefined && typeof locale !== "string") {
+    if (!Array.isArray(locale)) {
+      // Not a locale. `Intl` would read a number, an object or a boxed string as a locale
+      // (ToObject, then its length or its keys) and fall back to the default locale.
+      throw new TypeError("locale must be a string or an array of strings");
+    }
+    return Intl.getCanonicalLocales(locale);
+  }
+  return locale;
 }
 
 /**

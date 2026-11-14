@@ -7,15 +7,14 @@ import { mockTemporalPlainYearMonthFromThrow } from "../../test/mocks";
 // AddDurationToYearMonth (day 1 of the month, CalendarDateAdd), not the polyfill's own result.
 describe("addYearMonth", () => {
   it.each`
-    value                         | units                      | expected
-    ${"2026-10"}                  | ${{ months: 1 }}           | ${"2026-11"}
-    ${"2026-12"}                  | ${{ months: 1 }}           | ${"2027-01"}
-    ${"2026-10"}                  | ${{ years: 1, months: 3 }} | ${"2028-01"}
-    ${"2024-02"}                  | ${{ years: 1 }}            | ${"2025-02"}
-    ${"2026-01"}                  | ${{ months: -3 }}          | ${"2025-10"}
-    ${"2026-10"}                  | ${{ months: 0 }}           | ${"2026-10"}
-    ${"+002026-10[u-ca=ISO8601]"} | ${{ months: 1 }}           | ${"2026-11"}
-    ${"+275760-08"}               | ${{ months: 1 }}           | ${"+275760-09"}
+    value           | units                      | expected
+    ${"2026-10"}    | ${{ months: 1 }}           | ${"2026-11"}
+    ${"2026-12"}    | ${{ months: 1 }}           | ${"2027-01"}
+    ${"2026-10"}    | ${{ years: 1, months: 3 }} | ${"2028-01"}
+    ${"2024-02"}    | ${{ years: 1 }}            | ${"2025-02"}
+    ${"2026-01"}    | ${{ months: -3 }}          | ${"2025-10"}
+    ${"2026-10"}    | ${{ months: 0 }}           | ${"2026-10"}
+    ${"+275760-08"} | ${{ months: 1 }}           | ${"+275760-09"}
   `(
     "returns '$expected' for addYearMonth('$value', $units)",
     ({ value, units, expected }) => {
@@ -117,14 +116,13 @@ describe("subtractYearMonth", () => {
   });
 
   it.each`
-    value                         | units
-    ${"2026-10"}                  | ${{ months: 1 }}
-    ${"2026-12"}                  | ${{ months: 1 }}
-    ${"2026-10"}                  | ${{ years: 1, months: 3 }}
-    ${"2024-02"}                  | ${{ years: 1 }}
-    ${"2026-01"}                  | ${{ months: -3 }}
-    ${"2026-10"}                  | ${{ months: 0 }}
-    ${"+002026-10[u-ca=ISO8601]"} | ${{ months: 1 }}
+    value        | units
+    ${"2026-10"} | ${{ months: 1 }}
+    ${"2026-12"} | ${{ months: 1 }}
+    ${"2026-10"} | ${{ years: 1, months: 3 }}
+    ${"2024-02"} | ${{ years: 1 }}
+    ${"2026-01"} | ${{ months: -3 }}
+    ${"2026-10"} | ${{ months: 0 }}
   `(
     "subtractYearMonth undoes addYearMonth('$value', $units)",
     ({ value, units }) => {

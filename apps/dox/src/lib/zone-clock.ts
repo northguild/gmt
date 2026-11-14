@@ -30,6 +30,7 @@ import {
   getTimeZoneOffset,
   getZonedNow,
 } from "@northguild/gmt/zoned/get";
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import { hasDaylightSaving } from "@northguild/gmt/zoned/validate";
 
 export interface ZoneReading {
@@ -63,7 +64,9 @@ function parseZoned(id: string, zoned: string): ZoneReading {
   const match = ZONED_PATTERN.exec(zoned);
   // Whether the zone observes DST is asked for the instant read, not for today:
   // the scrubber reads other dates, and a zone can stop (or start) observing it.
-  const observesDst = hasDaylightSaving(id, { at: zoned });
+  const observesDst = hasDaylightSaving(id, {
+    at: toOffsetInstant(zoned)?.instant ?? "",
+  });
   if (!match) return { id, observesDst: false, ...SENTINEL };
   const [, date, time, rawOffset] = match;
   const offset = rawOffset === "Z" ? "+00:00" : rawOffset;

@@ -37,8 +37,8 @@ export interface IsValidDateRangeProps {
 /**
  * Return whether `value1` is before `value2`.
  *
- * - Validates both dates with `isValidDate`, so each endpoint's RFC 9557 annotations are read as
- *   `Temporal.PlainDate.from` reads them (an elective `[foo=bar]` or `[u-ca=iso8601]` is ignored).
+ * - Validates both dates with `isValidDate`, so an annotation of any kind on either endpoint
+ *   (`[foo=bar]`, `[u-ca=iso8601]`, a time zone) returns `false`.
  * - Rejects leap seconds in either date.
  *
  * @param props The two values to compare and how equal values are treated

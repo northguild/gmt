@@ -32,8 +32,7 @@ const open = (args: Record<string, unknown> = {}): Promise<Widget> =>
 const openPreset = (id: string, extra: Record<string, unknown> = {}) =>
   open({ preset: id, ...extra });
 
-const LONDON = "[Europe/London]";
-const at = (hhmm: string) => `2024-06-14T${hhmm}:00+01:00${LONDON}`;
+const at = (hhmm: string) => `2024-06-14T${hhmm}:00+01:00`;
 const pairs = (...p: [string, string][]) =>
   p.map(([planned, actual]) => ({ planned, actual }));
 
@@ -365,13 +364,13 @@ describe("mountPunctualityBoard: the second tolerance", () => {
 
 describe("mountPunctualityBoard: a deviation past the axis", () => {
   const day = (d: number) =>
-    `2024-06-${String(14 + d).padStart(2, "0")}T09:00:00+01:00${LONDON}`;
+    `2024-06-${String(14 + d).padStart(2, "0")}T09:00:00+01:00`;
 
   it("marks a bar cut at the edge of the axis, for a 10-day and a 30-day delay, and not one inside the week", async () => {
     await open({
       pairs: pairs(
         [at("09:00"), day(10)],
-        [at("09:00"), `2024-07-14T09:00:00+01:00${LONDON}`],
+        [at("09:00"), `2024-07-14T09:00:00+01:00`],
         [at("09:00"), at("09:05")],
       ),
       late: "PT15M",
@@ -431,10 +430,10 @@ describe("mountPunctualityBoard: NO SIGNAL", () => {
   });
 
   it.each([
-    ["2024-02-30T08:00:00+00:00[Europe/London]", "08:00"],
-    ["2024-06-31T10:05:00+03:00[Europe/Helsinki]", "10:05"],
+    ["2024-02-30T08:00:00+00:00", "08:00"],
+    ["2024-06-31T10:05:00+03:00", "10:05"],
   ])(
-    "an impossible zoned planned time (%s) is a NO SIGNAL row and the mount does not reject",
+    "an impossible planned time (%s) is a NO SIGNAL row and the mount does not reject",
     async (planned, clock) => {
       await open({
         pairs: pairs([planned, at("09:05")], [at("09:00"), at("09:05")]),
@@ -448,9 +447,9 @@ describe("mountPunctualityBoard: NO SIGNAL", () => {
     },
   );
 
-  it("an impossible zoned actual time in a seed does not throw either", async () => {
+  it("an impossible actual time in a seed does not throw either", async () => {
     await open({
-      pairs: pairs([at("09:00"), "2024-02-30T08:00:00+00:00[Europe/London]"]),
+      pairs: pairs([at("09:00"), "2024-02-30T08:00:00+00:00"]),
       late: "PT15M",
     });
     expect(rows()[0]).toHaveTextContent("NO SIGNAL");

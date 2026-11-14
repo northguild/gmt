@@ -68,10 +68,13 @@ export interface CutoffTime {
   at: string;
 }
 
-/** The nine real functions every cut-off widget needs, loaded at module
+/** The real functions every cut-off widget needs, loaded at module
  *  granularity by `cutoff-lib.ts`. Injected so this module stays free of gmt
  *  imports and the tests can supply the real library by module path. */
 export interface CutoffLib {
+  /** `toOffsetInstant`'s `instant`, or `""` when the text is not a moment: a
+   *  zoned time rewritten as the `Z` instant `now` and `cutoffAt`'s anchor read. */
+  toInstant(value: string): string;
   cutoffAt(anchor: string, offset: string, options: CutoffAtOptions): string;
   cutoffSchedule(
     anchor: string,

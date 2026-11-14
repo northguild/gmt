@@ -74,7 +74,7 @@ describe("cutoffAt", () => {
 
   describe("across a DST transition", () => {
     // Monday 11 March 2024 18:00 EDT; New York sprang forward on Sunday 10 March.
-    const monday = "2024-03-11T18:00:00-04:00[America/New_York]";
+    const monday = "2024-03-11T18:00:00-04:00";
 
     it.each`
       offset     | atLocalTime  | expected                                         | elapsed
@@ -91,7 +91,7 @@ describe("cutoffAt", () => {
         expect(result).toBe(expected);
         expect(
           Temporal.ZonedDateTime.from(result)
-            .until(Temporal.ZonedDateTime.from(monday), {
+            .until(Temporal.Instant.from(monday).toZonedDateTimeISO(newYork), {
               largestUnit: "hours",
             })
             .toString(),
@@ -175,7 +175,7 @@ describe("cutoffAt", () => {
     // rolled back to Sunday 10 March, 02:30 is the hour New York skipped.
     it("returns the sentinel when the rolled day's wall time does not exist", () => {
       expect(
-        cutoffAt("2024-03-12T02:30:00-04:00[America/New_York]", "PT24H", {
+        cutoffAt("2024-03-12T02:30:00-04:00", "PT24H", {
           timeZone: newYork,
           calendar: {
             weekend: [],
@@ -190,18 +190,18 @@ describe("cutoffAt", () => {
 
   describe("local wall times that are not one-to-one", () => {
     it.each`
-      anchor                                              | offset    | atLocalTime  | timeZone                 | expected                                            | why
-      ${"2024-03-11T18:00:00-04:00[America/New_York]"}    | ${"P1D"}  | ${"02:30"}   | ${newYork}               | ${""}                                               | ${"02:30 on 10 March was skipped"}
-      ${"2024-03-12T02:30:00-04:00[America/New_York]"}    | ${"P2D"}  | ${undefined} | ${newYork}               | ${""}                                               | ${"two days before 02:30 is the skipped hour"}
-      ${"2024-03-12T02:30:00-04:00[America/New_York]"}    | ${"P2D"}  | ${"17:00"}   | ${newYork}               | ${"2024-03-10T17:00:00-04:00[America/New_York]"}    | ${"pinned, only the date of the skipped hour is read"}
-      ${"2024-11-04T18:00:00-05:00[America/New_York]"}    | ${"P1D"}  | ${"01:30"}   | ${newYork}               | ${"2024-11-03T01:30:00-04:00[America/New_York]"}    | ${"a repeated 01:30 takes the earlier pass"}
-      ${"2024-11-04T01:30:00-05:00[America/New_York]"}    | ${"P1D"}  | ${undefined} | ${newYork}               | ${"2024-11-03T01:30:00-04:00[America/New_York]"}    | ${"the repeated hour from a calendar day, earlier pass"}
-      ${"2024-11-03T06:30:00Z"}                           | ${"PT0S"} | ${undefined} | ${newYork}               | ${"2024-11-03T01:30:00-05:00[America/New_York]"}    | ${"an exact result is never re-resolved"}
-      ${"2024-04-08T18:00:00+10:30[Australia/Lord_Howe]"} | ${"P1D"}  | ${"01:45"}   | ${"Australia/Lord_Howe"} | ${"2024-04-07T01:45:00+11:00[Australia/Lord_Howe]"} | ${"a 30-minute overlap takes the earlier pass"}
-      ${"2024-09-30T18:00:00+13:45[Pacific/Chatham]"}     | ${"P1D"}  | ${"03:15"}   | ${"Pacific/Chatham"}     | ${""}                                               | ${"a 45-minute-offset zone's gap"}
-      ${"2024-09-09T18:00:00-03:00[America/Santiago]"}    | ${"P1D"}  | ${"00:00"}   | ${"America/Santiago"}    | ${""}                                               | ${"Santiago skipped its midnight"}
-      ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"P1D"}  | ${"17:00"}   | ${"Pacific/Apia"}        | ${""}                                               | ${"Samoa deleted 30 December"}
-      ${"2011-12-31T12:00:00+14:00[Pacific/Apia]"}        | ${"P1D"}  | ${undefined} | ${"Pacific/Apia"}        | ${""}                                               | ${"the deleted day, unpinned"}
+      anchor                         | offset    | atLocalTime  | timeZone                 | expected                                            | why
+      ${"2024-03-11T18:00:00-04:00"} | ${"P1D"}  | ${"02:30"}   | ${newYork}               | ${""}                                               | ${"02:30 on 10 March was skipped"}
+      ${"2024-03-12T02:30:00-04:00"} | ${"P2D"}  | ${undefined} | ${newYork}               | ${""}                                               | ${"two days before 02:30 is the skipped hour"}
+      ${"2024-03-12T02:30:00-04:00"} | ${"P2D"}  | ${"17:00"}   | ${newYork}               | ${"2024-03-10T17:00:00-04:00[America/New_York]"}    | ${"pinned, only the date of the skipped hour is read"}
+      ${"2024-11-04T18:00:00-05:00"} | ${"P1D"}  | ${"01:30"}   | ${newYork}               | ${"2024-11-03T01:30:00-04:00[America/New_York]"}    | ${"a repeated 01:30 takes the earlier pass"}
+      ${"2024-11-04T01:30:00-05:00"} | ${"P1D"}  | ${undefined} | ${newYork}               | ${"2024-11-03T01:30:00-04:00[America/New_York]"}    | ${"the repeated hour from a calendar day, earlier pass"}
+      ${"2024-11-03T06:30:00Z"}      | ${"PT0S"} | ${undefined} | ${newYork}               | ${"2024-11-03T01:30:00-05:00[America/New_York]"}    | ${"an exact result is never re-resolved"}
+      ${"2024-04-08T18:00:00+10:30"} | ${"P1D"}  | ${"01:45"}   | ${"Australia/Lord_Howe"} | ${"2024-04-07T01:45:00+11:00[Australia/Lord_Howe]"} | ${"a 30-minute overlap takes the earlier pass"}
+      ${"2024-09-30T18:00:00+13:45"} | ${"P1D"}  | ${"03:15"}   | ${"Pacific/Chatham"}     | ${""}                                               | ${"a 45-minute-offset zone's gap"}
+      ${"2024-09-09T18:00:00-03:00"} | ${"P1D"}  | ${"00:00"}   | ${"America/Santiago"}    | ${""}                                               | ${"Santiago skipped its midnight"}
+      ${"2011-12-31T12:00:00+14:00"} | ${"P1D"}  | ${"17:00"}   | ${"Pacific/Apia"}        | ${""}                                               | ${"Samoa deleted 30 December"}
+      ${"2011-12-31T12:00:00+14:00"} | ${"P1D"}  | ${undefined} | ${"Pacific/Apia"}        | ${""}                                               | ${"the deleted day, unpinned"}
     `("$why", ({ anchor, offset, atLocalTime, timeZone, expected }) => {
       expect(cutoffAt(anchor, offset, { timeZone, atLocalTime })).toBe(
         expected,
@@ -211,24 +211,24 @@ describe("cutoffAt", () => {
 
   describe("offset arithmetic", () => {
     it.each`
-      anchor                                           | offset                | atLocalTime     | timeZone              | expected                                                   | why
-      ${"2024-03-31T12:00:00Z"}                        | ${"P1M"}              | ${undefined}    | ${"UTC"}              | ${"2024-02-29T12:00:00+00:00[UTC]"}                        | ${"a month back from 31 March clamps to 29 February"}
-      ${departure}                                     | ${"P1W"}              | ${"17:00"}      | ${amsterdam}          | ${"2024-06-07T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a week"}
-      ${departure}                                     | ${"P1W"}              | ${undefined}    | ${amsterdam}          | ${"2024-06-07T18:00:00+02:00[Europe/Amsterdam]"}           | ${"a week keeps the wall clock"}
-      ${"2024-03-31T12:00:00Z"}                        | ${"P1M"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-02-29T17:00:00+00:00[UTC]"}                        | ${"a pinned month back from 31 March clamps to 29 February"}
-      ${"2024-06-14T00:00:00Z"}                        | ${"P2D"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-06-12T17:00:00+00:00[UTC]"}                        | ${"two days before midnight, pinned"}
-      ${"2024-06-14T00:00:00Z"}                        | ${"P2DT0.000000001S"} | ${"17:00"}      | ${"UTC"}              | ${"2024-06-11T17:00:00+00:00[UTC]"}                        | ${"one nanosecond of exact offset crosses midnight first, so the day moves"}
-      ${departure}                                     | ${"P1DT12H"}          | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"12 hours to Friday 06:00, then a day"}
-      ${departure}                                     | ${"P1DT12H"}          | ${undefined}    | ${amsterdam}          | ${"2024-06-13T06:00:00+02:00[Europe/Amsterdam]"}           | ${"a day, then 12 exact hours"}
-      ${departure}                                     | ${"-P1D"}             | ${"17:00"}      | ${amsterdam}          | ${"2024-06-15T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a negative offset is after the anchor"}
-      ${departure}                                     | ${"PT0S"}             | ${undefined}    | ${amsterdam}          | ${"2024-06-14T18:00:00+02:00[Europe/Amsterdam]"}           | ${"a zero offset is the anchor"}
-      ${departure}                                     | ${"P0D"}              | ${"12:00"}      | ${amsterdam}          | ${"2024-06-14T12:00:00+02:00[Europe/Amsterdam]"}           | ${"noon on the day of departure"}
-      ${departure}                                     | ${"PT24H"}            | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"an exact offset, pinned"}
-      ${"2024-06-14T16:00:00.123456789Z"}              | ${"PT1H"}             | ${undefined}    | ${amsterdam}          | ${"2024-06-14T17:00:00.123456789+02:00[Europe/Amsterdam]"} | ${"nanoseconds survive"}
-      ${departure}                                     | ${"P2D"}              | ${"17:00:30.5"} | ${amsterdam}          | ${"2024-06-12T17:00:30.5+02:00[Europe/Amsterdam]"}         | ${"a fractional atLocalTime"}
-      ${departure}                                     | ${"P2D"}              | ${"17:00"}      | ${"+02:00"}           | ${"2024-06-12T17:00:00+02:00[+02:00]"}                     | ${"a fixed offset observes no DST"}
-      ${departure}                                     | ${"P2D"}              | ${"17:00"}      | ${"europe/amsterdam"} | ${"2024-06-12T17:00:00+02:00[Europe/Amsterdam]"}           | ${"the zone is canonicalised"}
-      ${"2024-06-14T18:00:00+02:00[Europe/Amsterdam]"} | ${"P2D"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-06-12T17:00:00+00:00[UTC]"}                        | ${"timeZone, not the anchor's bracket, is the local frame"}
+      anchor                              | offset                | atLocalTime     | timeZone              | expected                                                   | why
+      ${"2024-03-31T12:00:00Z"}           | ${"P1M"}              | ${undefined}    | ${"UTC"}              | ${"2024-02-29T12:00:00+00:00[UTC]"}                        | ${"a month back from 31 March clamps to 29 February"}
+      ${departure}                        | ${"P1W"}              | ${"17:00"}      | ${amsterdam}          | ${"2024-06-07T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a week"}
+      ${departure}                        | ${"P1W"}              | ${undefined}    | ${amsterdam}          | ${"2024-06-07T18:00:00+02:00[Europe/Amsterdam]"}           | ${"a week keeps the wall clock"}
+      ${"2024-03-31T12:00:00Z"}           | ${"P1M"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-02-29T17:00:00+00:00[UTC]"}                        | ${"a pinned month back from 31 March clamps to 29 February"}
+      ${"2024-06-14T00:00:00Z"}           | ${"P2D"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-06-12T17:00:00+00:00[UTC]"}                        | ${"two days before midnight, pinned"}
+      ${"2024-06-14T00:00:00Z"}           | ${"P2DT0.000000001S"} | ${"17:00"}      | ${"UTC"}              | ${"2024-06-11T17:00:00+00:00[UTC]"}                        | ${"one nanosecond of exact offset crosses midnight first, so the day moves"}
+      ${departure}                        | ${"P1DT12H"}          | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"12 hours to Friday 06:00, then a day"}
+      ${departure}                        | ${"P1DT12H"}          | ${undefined}    | ${amsterdam}          | ${"2024-06-13T06:00:00+02:00[Europe/Amsterdam]"}           | ${"a day, then 12 exact hours"}
+      ${departure}                        | ${"-P1D"}             | ${"17:00"}      | ${amsterdam}          | ${"2024-06-15T17:00:00+02:00[Europe/Amsterdam]"}           | ${"a negative offset is after the anchor"}
+      ${departure}                        | ${"PT0S"}             | ${undefined}    | ${amsterdam}          | ${"2024-06-14T18:00:00+02:00[Europe/Amsterdam]"}           | ${"a zero offset is the anchor"}
+      ${departure}                        | ${"P0D"}              | ${"12:00"}      | ${amsterdam}          | ${"2024-06-14T12:00:00+02:00[Europe/Amsterdam]"}           | ${"noon on the day of departure"}
+      ${departure}                        | ${"PT24H"}            | ${"17:00"}      | ${amsterdam}          | ${"2024-06-13T17:00:00+02:00[Europe/Amsterdam]"}           | ${"an exact offset, pinned"}
+      ${"2024-06-14T16:00:00.123456789Z"} | ${"PT1H"}             | ${undefined}    | ${amsterdam}          | ${"2024-06-14T17:00:00.123456789+02:00[Europe/Amsterdam]"} | ${"nanoseconds survive"}
+      ${departure}                        | ${"P2D"}              | ${"17:00:30.5"} | ${amsterdam}          | ${"2024-06-12T17:00:30.5+02:00[Europe/Amsterdam]"}         | ${"a fractional atLocalTime"}
+      ${departure}                        | ${"P2D"}              | ${"17:00"}      | ${"+02:00"}           | ${"2024-06-12T17:00:00+02:00[+02:00]"}                     | ${"a fixed offset observes no DST"}
+      ${departure}                        | ${"P2D"}              | ${"17:00"}      | ${"europe/amsterdam"} | ${"2024-06-12T17:00:00+02:00[Europe/Amsterdam]"}           | ${"the zone is canonicalised"}
+      ${"2024-06-14T18:00:00+02:00"}      | ${"P2D"}              | ${"17:00"}      | ${"UTC"}              | ${"2024-06-12T17:00:00+00:00[UTC]"}                        | ${"timeZone, not the anchor's bracket, is the local frame"}
     `("$why", ({ anchor, offset, atLocalTime, timeZone, expected }) => {
       expect(cutoffAt(anchor, offset, { timeZone, atLocalTime })).toBe(
         expected,

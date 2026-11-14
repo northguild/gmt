@@ -18,17 +18,17 @@ describe("sumIntervals", () => {
   // Jan 1 → Apr 15 is 31 + 29 + 31 + 14 = 105 days = 2520 h, + 8 h (9 100 800 000 000 001 ns > 2^53);
   // the Instant range is ±10^8 days, so 2 × 10^8 days = 4 800 000 000 h.
   it.each`
-    start                                            | end                                              | expected                  | reason
-    ${"2024-01-01T00:00:00Z"}                        | ${"2024-01-03T01:30:00Z"}                        | ${"PT49H30M"}             | ${"hours are the largest unit, no days"}
-    ${"2024-01-01T00:00:00Z"}                        | ${"2024-01-02T00:00:00Z"}                        | ${"PT24H"}                | ${"one UTC day"}
-    ${"2024-01-01T00:00:00Z"}                        | ${"2024-01-01T00:00:01.5Z"}                      | ${"PT1.5S"}               | ${"fractional seconds"}
-    ${"2024-01-01T00:00:00Z"}                        | ${"2024-01-03T01:30:00.000000001Z"}              | ${"PT49H30M0.000000001S"} | ${"hours plus 1 ns"}
-    ${at("00:00:00")}                                | ${at("00:00:00.000001")}                         | ${"PT0.000001S"}          | ${"1 microsecond"}
-    ${at("00:00:00")}                                | ${at("00:01:00.01")}                             | ${"PT1M0.01S"}            | ${"minute plus centiseconds"}
-    ${at("12:00:00")}                                | ${at("12:00:00")}                                | ${"PT0S"}                 | ${"only an empty interval"}
-    ${"2024-03-09T12:00:00-05:00[America/New_York]"} | ${"2024-03-10T12:00:00-04:00[America/New_York]"} | ${"PT23H"}                | ${"New York spring-forward day is elapsed time"}
-    ${"2024-01-01T00:00:00Z"}                        | ${"2024-04-15T08:00:00.000000001Z"}              | ${"PT2528H0.000000001S"}  | ${"past 2^53 ns"}
-    ${earliest}                                      | ${latest}                                        | ${"PT4800000000H"}        | ${"full Instant range"}
+    start                          | end                                 | expected                  | reason
+    ${"2024-01-01T00:00:00Z"}      | ${"2024-01-03T01:30:00Z"}           | ${"PT49H30M"}             | ${"hours are the largest unit, no days"}
+    ${"2024-01-01T00:00:00Z"}      | ${"2024-01-02T00:00:00Z"}           | ${"PT24H"}                | ${"one UTC day"}
+    ${"2024-01-01T00:00:00Z"}      | ${"2024-01-01T00:00:01.5Z"}         | ${"PT1.5S"}               | ${"fractional seconds"}
+    ${"2024-01-01T00:00:00Z"}      | ${"2024-01-03T01:30:00.000000001Z"} | ${"PT49H30M0.000000001S"} | ${"hours plus 1 ns"}
+    ${at("00:00:00")}              | ${at("00:00:00.000001")}            | ${"PT0.000001S"}          | ${"1 microsecond"}
+    ${at("00:00:00")}              | ${at("00:01:00.01")}                | ${"PT1M0.01S"}            | ${"minute plus centiseconds"}
+    ${at("12:00:00")}              | ${at("12:00:00")}                   | ${"PT0S"}                 | ${"only an empty interval"}
+    ${"2024-03-09T12:00:00-05:00"} | ${"2024-03-10T12:00:00-04:00"}      | ${"PT23H"}                | ${"New York spring-forward day is elapsed time"}
+    ${"2024-01-01T00:00:00Z"}      | ${"2024-04-15T08:00:00.000000001Z"} | ${"PT2528H0.000000001S"}  | ${"past 2^53 ns"}
+    ${earliest}                    | ${latest}                           | ${"PT4800000000H"}        | ${"full Instant range"}
   `(
     "returns $expected for [$start, $end) ($reason) and agrees with Instant.until",
     ({ start, end, expected }) => {
@@ -95,6 +95,10 @@ describe("sumIntervals", () => {
     ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
+    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[foo=bar]", end: "2024-01-01T17:00:00Z" }}        | ${"elective annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[Europe/Berlin]", end: "2024-01-01T17:00:00Z" }}  | ${"time zone annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[+02:00]", end: "2024-01-01T17:00:00Z" }}         | ${"offset annotation"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
     ${{ start: "-271821-04-20T00:00:00Z", end: "+275760-09-13T00:00:00.000000001Z" }} | ${"past the Instant range"}
   `(
@@ -108,23 +112,5 @@ describe("sumIntervals", () => {
     mockTemporalDurationFromThrow();
 
     expect(sumIntervals([A])).toBe("");
-  });
-
-  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
-  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
-  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
-  it("sums annotated disjoint intervals by instant: [09:00Z, 12:00Z) + [13:00Z, 17:00Z) → PT7H", () => {
-    expect(
-      sumIntervals([
-        {
-          start: "2024-01-01T09:00:00Z[u-ca=iso8601]",
-          end: "2024-01-01T12:00:00Z[foo=bar]",
-        },
-        {
-          start: "2024-01-01T13:00:00Z[!u-ca=hebrew]",
-          end: "2024-01-01T17:00:00Z",
-        },
-      ]),
-    ).toBe("PT7H");
   });
 });

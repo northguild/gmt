@@ -1,8 +1,10 @@
 import { Temporal } from "../../internal/temporal";
 import { countZonedLocalDates } from "../../internal";
-import { instantOf } from "../../internal/instantNanoseconds";
 import { isZoneId } from "../../internal/inputChecks";
-import { zonedDateTimeOf } from "../../internal/zonedWallClock";
+import {
+  readInstantOffsetInstant,
+  readZonedOffsetInstant,
+} from "../../internal/offsetInstant";
 
 /** What `dwellTime` returns: exact elapsed time plus the local view every charging regime counts in. */
 export interface Dwell {
@@ -28,13 +30,13 @@ export interface Dwell {
  * moment and nothing else, so with no `targetZone` there is no locality to count days in.
  */
 function dwellZone(
-  entry: string,
+  entryZone: string | undefined,
   targetZone: string | undefined,
 ): string | null {
   if (targetZone !== undefined) {
     return isZoneId(targetZone) ? targetZone : null;
   }
-  return zonedDateTimeOf(entry)?.timeZoneId ?? null;
+  return entryZone ?? null;
 }
 
 /**
@@ -62,16 +64,14 @@ function dwellZone(
  *   touched (`Pacific/Apia` skipped 2011-12-30); and a date the clock falls back into is still
  *   one date (`America/Goose_Bay` fell back from 00:01 on 7 November 2010 into the 6th).
  * - **The zone decides the count, so it has to be stated.** `targetZone` is used when given.
- *   Without it, the entry's bracketed IANA zone is used. A bracketed zone is otherwise not
- *   validated: the entry's must exist and agree with its offset only when it supplies the dwell
- *   zone, because `targetZone` is omitted, and the exit's never supplies it. If the entry and
- *   exit are bare instants — `Z` or an offset — and no `targetZone` is given, the result is `null`: an
- *   offset is not a zone (CORE-4), and a day count in an unstated locality would be a guess.
- * - **The offset fixes each instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it, on the entry and the exit alike. A zone that does
- *   not exist, or that disagrees with the offset, changes nothing.
+ *   Without it, the entry's bracketed IANA zone is used. The exit's bracket never supplies a
+ *   zone. If the entry and exit are bare instants — `Z` or an offset — and no `targetZone` is
+ *   given, the result is `null`: an offset is not a zone (CORE-4), and a day count in an
+ *   unstated locality would be a guess.
+ * - **Each end is an instant or a zoned string, and nothing else.** An instant is `…Z` or
+ *   `…±HH:MM`; a zoned string is that body plus one bracketed zone. A calendar or elective
+ *   annotation (`[u-ca=…]`, `[foo=bar]`), a second bracket, or a bracketed zone that disagrees
+ *   with the written offset returns `null`.
  * - `enter` and `exit` are the two instants rendered in the dwell zone, so a charging record
  *   shows the local times the terminal's own clock showed.
  * - `targetZone` is whatever `isValidTimeZone` accepts, which is what Temporal accepts: an IANA
@@ -112,17 +112,19 @@ export function dwellTime(
   targetZone?: string,
 ): Dwell | null {
   try {
-    const entryInstant = instantOf(entry);
-    if (entryInstant === null) {
+    // Each end is an instant (`Z` or `±HH:MM`) or a zoned string: that body plus the zone
+    // bracket and no other annotation.
+    const entryPair =
+      readInstantOffsetInstant(entry) ?? readZonedOffsetInstant(entry);
+    const exitPair =
+      readInstantOffsetInstant(exit) ?? readZonedOffsetInstant(exit);
+    if (entryPair === null || exitPair === null) {
       return null;
     }
+    const entryInstant = Temporal.Instant.from(entryPair.instant);
+    const exitInstant = Temporal.Instant.from(exitPair.instant);
 
-    const exitInstant = instantOf(exit);
-    if (exitInstant === null) {
-      return null;
-    }
-
-    const zone = dwellZone(entry, targetZone);
+    const zone = dwellZone(entryPair.timeZone, targetZone);
     if (zone === null) {
       return null;
     }

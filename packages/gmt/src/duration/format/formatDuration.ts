@@ -1,6 +1,6 @@
 import { cachedFormatter } from "../../internal/formatterCache";
+import { durationFrom } from "../../internal/durationFrom";
 import { exactSeconds } from "../../internal/exactSeconds";
-import { Temporal } from "../../internal/temporal";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -113,7 +113,7 @@ export function formatDuration(
   }
 
   try {
-    const duration = Temporal.Duration.from(value);
+    const duration = durationFrom(value);
     const style = optionOrDefault(options.style, "long");
     const includeZero = options.zero ?? false;
 

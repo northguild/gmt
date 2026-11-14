@@ -170,11 +170,10 @@ describe("floorToZone", () => {
   });
 
   it.each`
-    value                                      | expected                  | description
-    ${"2024-06-15T03:00:00Z"}                  | ${"2024-06-14T04:00:00Z"} | ${"a UTC instant"}
-    ${"2024-06-15T05:00:00+02:00"}             | ${"2024-06-14T04:00:00Z"} | ${"the same instant written with an offset"}
-    ${"2024-06-15T12:00:00+09:00[Asia/Tokyo]"} | ${"2024-06-14T04:00:00Z"} | ${"the same instant in another bracketed zone, which the argument overrides"}
-    ${"2024-06-15T03:00:00.123456789Z"}        | ${"2024-06-14T04:00:00Z"} | ${"sub-second precision, discarded by the floor"}
+    value                               | expected                  | description
+    ${"2024-06-15T03:00:00Z"}           | ${"2024-06-14T04:00:00Z"} | ${"a UTC instant"}
+    ${"2024-06-15T05:00:00+02:00"}      | ${"2024-06-14T04:00:00Z"} | ${"the same instant written with an offset"}
+    ${"2024-06-15T03:00:00.123456789Z"} | ${"2024-06-14T04:00:00Z"} | ${"sub-second precision, discarded by the floor"}
   `(
     "floors $value in America/New_York to $expected ($description)",
     ({ value, expected }) => {
@@ -294,20 +293,21 @@ describe("floorToZone", () => {
     },
   );
 
-  // isValidInstant reads annotations as Temporal.Instant.from does: a calendar or elective
-  // annotation is ignored (an instant has no calendar) and an unknown critical one is rejected.
-  // 03:00Z is 23:00 EDT on 14 June, whose day began at 04:00Z.
+  // An instant is `Z` or an offset and nothing after it: any bracketed annotation, a zone or not,
+  // makes the string no instant.
   it.each`
-    value                                  | expected
-    ${"2024-06-15T03:00:00Z[u-ca=hebrew]"} | ${"2024-06-14T04:00:00Z"}
-    ${"2024-06-15T03:00:00Z[foo=bar]"}     | ${"2024-06-14T04:00:00Z"}
-    ${"2024-06-15T03:00:00Z[!foo=bar]"}    | ${""}
-  `(
-    "reads the annotations of $value as Temporal does → '$expected'",
-    ({ value, expected }) => {
-      expect(floorToZone(value, "day", "America/New_York")).toBe(expected);
-    },
-  );
+    value
+    ${"2024-06-15T03:00:00Z[u-ca=hebrew]"}
+    ${"2024-06-15T03:00:00Z[u-ca=iso8601]"}
+    ${"2024-06-15T03:00:00Z[foo=bar]"}
+    ${"2024-06-15T03:00:00Z[!foo=bar]"}
+    ${"2024-06-15T12:00:00+09:00[Asia/Tokyo]"}
+    ${"2024-06-15T12:00:00+09:00[Asia/Tokyoooo]"}
+    ${"2024-06-15T12:00:00+09:00[!Asia/Tokyo]"}
+    ${"2024-06-15T12:00:00+09:00[+09:00]"}
+  `("returns an empty string for the annotated $value", ({ value }) => {
+    expect(floorToZone(value, "day", "America/New_York")).toBe("");
+  });
 
   it.each`
     value                     | description

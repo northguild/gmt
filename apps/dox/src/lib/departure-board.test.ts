@@ -2,6 +2,7 @@
  * `departure-board.ts`'s pure helpers, against the real gmt modules. Every
  * expected library result is an appendix Z row (DB1 to DB4, DBR1 to DBR7).
  */
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import {
   classifyPunctuality,
   scheduleDeviation,
@@ -46,6 +47,7 @@ import {
 } from "./punctuality-widgets";
 
 const lib: PunctualityLib = {
+  toInstant: (value: string) => toOffsetInstant(value)?.instant ?? "",
   scheduleDeviation,
   classifyPunctuality,
   punctualityRate,

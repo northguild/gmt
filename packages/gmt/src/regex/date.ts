@@ -50,9 +50,9 @@ export const day: RegExp = /^(0[1-9]|[12][0-9]|3[01])$/;
  *
  * Capture groups: 1 month, 2 day. The year is not captured.
  *
- * The written form only, with no RFC 9557 annotation. `isValidDate` reads more: it matches this
- * against the part before the first `[` and lets Temporal read the annotations
- * (`"…[u-ca=iso8601]"`, an elective `"…[foo=bar]"`).
+ * The whole string, with no RFC 9557 annotation of any kind: `isValidDate` matches this against the
+ * entire value, so a time zone, a calendar (`"…[u-ca=iso8601]"`) or an elective (`"…[foo=bar]"`)
+ * annotation makes the value invalid.
  *
  * @example plainDate.test("2024-03-15")       // true
  * @example plainDate.test("+000031-04-30")    // true (6-digit year)

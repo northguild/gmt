@@ -39,19 +39,13 @@ intervalsOverlap(shift, { start: "2024-01-01T17:00:00Z", end: "2024-01-01T18:00:
 
 ## Endpoints are instants
 
-Both endpoints must be instant strings: an offset (`Z` or `±HH:MM`) is required, and a
-bracketed IANA zone is optional. As with a TC39 `Temporal.Instant`, they compare by
-exact time only, so the two endpoints may name different zones. Leap seconds are
-rejected, and a `[u-ca=…]` calendar annotation is ignored, as `Temporal.Instant.from`
-ignores it.
+Both endpoints must be instant strings: exactly `Z` or `±HH:MM`, with nothing after it. A
+bracketed zone, a calendar annotation and any other annotation make the endpoint invalid. As
+with a TC39 `Temporal.Instant`, they compare by exact time only, so the two endpoints may be
+written with different offsets. Leap seconds are rejected.
 
-The offset fixes the instant. Some zones had an offset with seconds in their history, and an
-offset written to the minute may be that offset rounded: `-00:45[Africa/Monrovia]` stands for
-−00:44:30. GMT reads it as the instant the zone gives, so a zoned string GMT wrote reads back
-as the same moment, from the first instant of the range to the last. The one exception comes
-from Temporal itself. A wall time repeated inside a sub-minute offset change, written with a
-minute-rounded offset, reads as its first pass; `1952-10-15T23:59:59-11:20[Pacific/Niue]` is
-one example, and several zones have such a change in their history.
+The offset fixes the instant. To read a zoned string, use a zoned function such as
+`isValidZonedInterval`, which takes the zoned body and the bracket only.
 
 A plain date or a zoneless datetime has no position on the timeline until you name a
 zone. Resolve it to an instant first. For local-calendar edges such as a local day or a

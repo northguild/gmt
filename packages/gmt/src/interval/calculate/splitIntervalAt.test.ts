@@ -7,8 +7,8 @@ const A = { start: "2024-01-01T09:00:00Z", end: "2024-01-01T17:00:00Z" };
 const at = (time: string) => `2024-01-01T${time}Z`;
 const nineNy = "2024-01-01T04:00:00-05:00";
 const twelveNy = "2024-01-01T07:00:00-05:00";
-const berlinThirteen = "2024-01-01T13:00:00+01:00[Europe/Berlin]";
-const tokyoTwentyThree = "2024-01-01T23:00:00+09:00[Asia/Tokyo]";
+const berlinThirteen = "2024-01-01T13:00:00+01:00";
+const tokyoTwentyThree = "2024-01-01T23:00:00+09:00";
 
 describe("splitIntervalAt", () => {
   // Expected values derive from D3/D5: keep boundaries strictly inside (start < b < end), order by
@@ -107,15 +107,18 @@ describe("splitIntervalAt", () => {
   });
 
   it.each`
-    boundaries                               | reason
-    ${"x"}                                   | ${"not an array"}
-    ${null}                                  | ${"null"}
-    ${["2016-12-31T23:59:60Z"]}              | ${"leap-second boundary outside the interval"}
-    ${[123]}                                 | ${"non-string boundary"}
-    ${["2024-01-01T12:00:00"]}               | ${"zoneless boundary"}
-    ${[at("12:00:00"), undefined]}           | ${"undefined boundary among valid ones"}
-    ${["2024-01-01T12:00:00Z[!foo=bar]"]}    | ${"unknown critical annotation on a boundary inside the interval"}
-    ${["+275760-09-13T00:00:00.000000001Z"]} | ${"boundary past the Instant range"}
+    boundaries                                 | reason
+    ${"x"}                                     | ${"not an array"}
+    ${null}                                    | ${"null"}
+    ${["2016-12-31T23:59:60Z"]}                | ${"leap-second boundary outside the interval"}
+    ${[123]}                                   | ${"non-string boundary"}
+    ${["2024-01-01T12:00:00"]}                 | ${"zoneless boundary"}
+    ${[at("12:00:00"), undefined]}             | ${"undefined boundary among valid ones"}
+    ${["2024-01-01T12:00:00Z[u-ca=iso8601]"]}  | ${"calendar annotation on a boundary"}
+    ${["2024-01-01T12:00:00Z[foo=bar]"]}       | ${"elective annotation on a boundary"}
+    ${["2024-01-01T12:00:00Z[Europe/Berlin]"]} | ${"time zone annotation on a boundary"}
+    ${["2024-01-01T12:00:00Z[!foo=bar]"]}      | ${"unknown critical annotation on a boundary inside the interval"}
+    ${["+275760-09-13T00:00:00.000000001Z"]}   | ${"boundary past the Instant range"}
   `("returns [] when boundaries are invalid ($reason)", ({ boundaries }) => {
     expect(splitIntervalAt(A, boundaries)).toEqual([]);
   });
@@ -131,34 +134,13 @@ describe("splitIntervalAt", () => {
     ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
+    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[foo=bar]", end: "2024-01-01T17:00:00Z" }}        | ${"elective annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[Europe/Berlin]", end: "2024-01-01T17:00:00Z" }}  | ${"time zone annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[+02:00]", end: "2024-01-01T17:00:00Z" }}         | ${"offset annotation"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
     ${{ start: "-271821-04-20T00:00:00Z", end: "+275760-09-13T00:00:00.000000001Z" }} | ${"past the Instant range"}
   `("returns [] when the interval is invalid ($reason)", ({ bad }) => {
     expect(splitIntervalAt(bad, [at("12:00:00")])).toEqual([]);
-  });
-
-  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
-  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
-  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
-  it("splits at annotated boundaries by instant and keeps the annotated texts", () => {
-    expect(
-      splitIntervalAt(
-        {
-          start: "2024-01-01T09:00:00Z[!u-ca=hebrew]",
-          end: "2024-01-01T17:00:00Z",
-        },
-        ["2024-01-01T15:00:00Z[foo=bar]", "2024-01-01T12:00:00Z[u-ca=iso8601]"],
-      ),
-    ).toEqual([
-      {
-        start: "2024-01-01T09:00:00Z[!u-ca=hebrew]",
-        end: "2024-01-01T12:00:00Z[u-ca=iso8601]",
-      },
-      {
-        start: "2024-01-01T12:00:00Z[u-ca=iso8601]",
-        end: "2024-01-01T15:00:00Z[foo=bar]",
-      },
-      { start: "2024-01-01T15:00:00Z[foo=bar]", end: "2024-01-01T17:00:00Z" },
-    ]);
   });
 });

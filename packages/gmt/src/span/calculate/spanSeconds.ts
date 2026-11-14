@@ -15,7 +15,7 @@ const NANOSECONDS_PER_SECOND = 1_000_000_000n;
  *   `spanWallClock` answers the calendar question.
  * - Fractional and unrounded. For a wait that must not fall short, write `Math.ceil(n)`.
  * - Accepts the instant strings `spanMs` accepts: an offset designator (`Z`, `±HH:MM`) is
- *   required, optionally followed by a bracketed IANA zone.
+ *   required and nothing follows it: an annotation of any kind returns `null`.
  * - Returns `null` on invalid input, not `0`, which is the span between an instant and itself.
  * - Needs no safe-range guard: the widest possible span, 17_280_000_000_000 seconds, is well
  *   inside 2^53.
@@ -31,7 +31,7 @@ const NANOSECONDS_PER_SECOND = 1_000_000_000n;
  * @example spanSeconds("2027-06-15T12:01:30Z", "2027-06-15T12:00:00Z") // -90
  * @example spanSeconds("2027-06-15T12:00:00Z", "2027-06-15T12:00:00.500Z") // 0.5
  * @example spanSeconds("2027-06-15T12:00:00Z", "2027-06-15T12:00:00Z") // 0
- * @example spanSeconds("2026-03-28T12:00:00+01:00[Europe/Paris]", "2026-03-29T12:00:00+02:00[Europe/Paris]") // 82800 — 23 hours, not 24
+ * @example spanSeconds("2026-03-28T12:00:00+01:00", "2026-03-29T12:00:00+02:00") // 82800 — 23 hours, not 24
  * @example spanSeconds("2027-06-15T12:00:00Z", "soon") // null
  */
 export function spanSeconds(start: string, end: string): number | null {

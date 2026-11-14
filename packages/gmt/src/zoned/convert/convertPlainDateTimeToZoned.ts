@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import { isZoneId, plainDateTimeOf } from "../../internal/inputChecks";
 import type { Disambiguation } from "../../types";
-import { isoStringBody, zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -73,10 +73,9 @@ export function convertPlainDateTimeToZoned(
     };
 
     try {
-      const zonedDateTime = zonedDateTimeFrom(
-        `${isoStringBody(value)}[${timeZone}]`,
-        { disambiguation },
-      );
+      const zonedDateTime = zonedDateTimeFrom(`${value}[${timeZone}]`, {
+        disambiguation,
+      });
       return zonedDateTime.toString(options);
     } catch {
       return "";

@@ -1,4 +1,7 @@
-import { readOffsetInstant } from "../../internal";
+import {
+  readInstantOffsetInstant,
+  readZonedOffsetInstant,
+} from "../../internal";
 
 /**
  * An absolute instant paired with the local UTC offset in force where the event happened.
@@ -43,11 +46,10 @@ export interface OffsetInstant {
  *   zone at `+02:00` that day. Keep the offset for what already happened; keep the zone for
  *   anything still to be scheduled. `timeZone` is optional because most feeds send no zone.
  * - Accepts a `Z` instant, a bare `±HH:MM` offset, or a bracketed IANA zone, in ISO 8601
- *   extended format with a `T` separator — `isValidInstant`'s grammar. Basic format, a space or
- *   lower-case `t` separator and a lower-case `z` return null. RFC 9557
- *   annotations are read as Temporal reads them (RFC 9557 §3.3, proposal-temporal
- *   `ParseISODateTime`): a calendar (`[u-ca=hebrew]`) or elective (`[x-provenance=estimated]`)
- *   annotation is ignored, and an unknown critical one (`[!foo=bar]`) returns null.
+ *   extended format with a `T` separator. Basic format, a space or
+ *   lower-case `t` separator and a lower-case `z` return null. Annotations are limited to the one time zone bracket: a calendar (`[u-ca=hebrew]`), an
+ *   elective (`[x-provenance=estimated]`) or a critical unknown one (`[!foo=bar]`), or a second
+ *   bracket, returns null.
  * - A bracketed zone whose offset contradicts it (`"...T12:00:00+00:00[Europe/London]"` in
  *   July) returns null. The string states two things that cannot both be true, and guessing
  *   which one the sender meant is exactly the bug the pair exists to prevent.
@@ -103,7 +105,7 @@ export interface OffsetInstant {
  * @example toOffsetInstant("2024-07-15T12:00:00+00:00[Europe/London]") // null (offset contradicts the bracketed zone)
  * @example toOffsetInstant("-271821-04-19T23:59:00-00:01[Europe/London]") // null (a bracketed zone on a local date before Temporal's date range)
  * @example toOffsetInstant("-271821-04-20T00:00:15Z", "Europe/London") // { instant: "-271821-04-20T00:00:15Z", offset: "-00:01:15", timeZone: "Europe/London" }
- * @example toOffsetInstant("2024-07-15T12:00:00-04:00[foo=bar]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — an elective annotation is ignored
+ * @example toOffsetInstant("2024-07-15T12:00:00-04:00[foo=bar]") // null — only the time zone bracket is accepted
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[!foo=bar]") // null (an unknown critical annotation)
  * @example toOffsetInstant("2024-07-15T12:00:00") // null (no offset designator)
  * @example toOffsetInstant("20240715T120000-0400") // null (basic format)
@@ -117,5 +119,8 @@ export function toOffsetInstant(
   value: string,
   timeZone?: string,
 ): OffsetInstant | null {
-  return readOffsetInstant(value, timeZone);
+  return (
+    readInstantOffsetInstant(value, timeZone) ??
+    readZonedOffsetInstant(value, timeZone)
+  );
 }

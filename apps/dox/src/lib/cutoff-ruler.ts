@@ -58,7 +58,7 @@ export const RULER_PRESETS: readonly RulerPreset[] = [
     label: "Sydney, Monday 8 April 2024: the clocks go back in between",
     description:
       "A ship leaves Sydney at 18:00 on Monday 8 April 2024. The clocks went back on Sunday, so two calendar days is 49 hours, 48 hours lands at 19:00, and two days at 17:00 is 50 hours: three answers an hour apart.",
-    anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+    anchor: "2024-04-08T18:00:00+10:00",
     timeZone: SYD,
     days: "2",
     atLocalTime: "17:00",
@@ -221,6 +221,8 @@ export function collectRulerFacts(
   const anchor = state.anchor.trim();
   const timeZone = state.timeZone.trim();
   const specs = readingsOf(state);
+  // `timeToCutoff` reads its cut-off zoned: the departure on the terminal's clock.
+  const departure = lib.etaAtZone(anchor, timeZone);
   const readings = specs.map((spec) => {
     const at = lib.cutoffAt(anchor, spec.offset, spec.options);
     return {
@@ -229,10 +231,10 @@ export function collectRulerFacts(
       offset: spec.offset,
       atLocalTime: spec.options.atLocalTime,
       at,
-      hoursBefore: lib.timeToCutoff(at, anchor),
+      hoursBefore: lib.timeToCutoff(lib.toInstant(at), departure),
     };
   });
-  return { readings, departure: lib.etaAtZone(anchor, timeZone) };
+  return { readings, departure };
 }
 
 // ---------------------------------------------------------------------------
@@ -250,8 +252,9 @@ type RulerNullReason =
 const RULER_NULL_TEXT: Record<RulerNullReason, string> = {
   "invalid-zone": "The terminal clock is not a time zone this browser knows.",
   "zoneless-anchor":
-    "The departure has no offset or zone, so it is not a moment. Write its offset, or its zone in brackets.",
-  "invalid-anchor": "The departure is not an instant or a zoned date-time.",
+    "The departure has no offset, so it is not a moment. Write Z or an offset, such as +02:00.",
+  "invalid-anchor":
+    "The departure is not an instant. Write Z or an offset, with no zone name after it: the terminal clock below names the zone.",
   "invalid-offset":
     "This offset is not an ISO 8601 duration such as P2D or PT48H, or it leaves the range of instants.",
   "invalid-time": "This local time is not a time of day such as 17:00.",

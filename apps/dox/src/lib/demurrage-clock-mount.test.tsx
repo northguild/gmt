@@ -595,16 +595,16 @@ describe("the hand-off to the Free Time Ledger", () => {
 
   it("carries the strings the library returned, and leaves the zone out when there is none", async () => {
     const w = await open();
-    await enter(w, atOf(1), "2024-06-14T15:00:00-04:00[America/New_York]");
+    await enter(w, atOf(1), "2024-06-14T15:00:00-04:00");
     await w.user.selectOptions(zone(), "UTC (no zone)");
     const href = link()!.getAttribute("href")!;
     const seeded = seedFromLocation("freetime", href.slice(href.indexOf("?")));
     expect(seeded).toEqual({
-      clockStart: "2024-06-14T15:00:00-04:00[America/New_York]",
+      clockStart: "2024-06-14T15:00:00-04:00",
       clockEnd: "2024-06-20T14:30:00Z",
     });
     expect(readFreeTimeArgs(seeded).clockStart).toBe(
-      "2024-06-14T15:00:00-04:00[America/New_York]",
+      "2024-06-14T15:00:00-04:00",
     );
   });
 

@@ -31,7 +31,7 @@ describe("isValidDutyLog", () => {
     ${[{ status: "off", start: "2024-01-01T00:00:00Z", end: "2024-01-01T08:00:00Z" }, { status: "on", start: "2024-01-01T09:00:00Z", end: "2024-01-01T10:00:00Z" }]}      | ${"a gap between entries"}
     ${[{ status: "on", start: "2024-01-01T10:00:00+01:00", end: "2024-01-01T09:15:00Z" }, { status: "off", start: "2024-01-01T09:30:00Z", end: "2024-01-01T10:00:00Z" }]} | ${"descending as text, ascending as instants"}
     ${[{ status: "", start: "2024-01-01T00:00:00Z", end: "2024-01-01T01:00:00Z" }]}                                                                                       | ${"empty-string status"}
-    ${[{ status: "on", start: "2024-01-01T00:00:00Z[America/New_York]", end: "2024-01-01T01:00:00Z", note: "x" }]}                                                        | ${"bracketed zone and an extra key"}
+    ${[{ status: "on", start: "2024-01-01T00:00:00Z", end: "2024-01-01T01:00:00Z", note: "x" }]}                                                                          | ${"an extra key"}
   `("returns true for $reason", ({ log }) => {
     expect(isValidDutyLog(log)).toBe(true);
   });
@@ -54,6 +54,9 @@ describe("isValidDutyLog", () => {
     ${[{ status: 1, start: "2024-01-01T00:00:00Z", end: "2024-01-01T01:00:00Z" }]}                                                                                   | ${"non-string status"}
     ${[{ status: "on", start: "2024-01-01T00:00:00", end: "2024-01-01T01:00:00Z" }]}                                                                                 | ${"zoneless start"}
     ${[{ status: "on", start: "2024-01-01T00:00:00Z", end: "2024-01-01" }]}                                                                                          | ${"date-only end"}
+    ${[{ status: "on", start: "2024-01-01T00:00:00Z[America/New_York]", end: "2024-01-01T01:00:00Z" }]}                                                              | ${"start with a zone annotation"}
+    ${[{ status: "on", start: "2024-01-01T00:00:00Z[foo=bar]", end: "2024-01-01T01:00:00Z" }]}                                                                       | ${"start with an elective annotation"}
+    ${[{ status: "on", start: "2024-01-01T00:00:00Z[u-ca=iso8601]", end: "2024-01-01T01:00:00Z" }]}                                                                  | ${"start with the ISO calendar annotation"}
     ${[{ status: "on", start: "2016-12-31T23:00:00Z", end: "2016-12-31T23:59:60Z" }]}                                                                                | ${"leap second"}
     ${[{ status: "on", start: "2024-01-01T01:00:00Z", end: "2024-01-01T01:00:00Z" }]}                                                                                | ${"zero length"}
     ${[{ status: "on", start: "2024-01-01T02:00:00Z", end: "2024-01-01T01:00:00Z" }]}                                                                                | ${"inverted"}

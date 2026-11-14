@@ -8,8 +8,7 @@ import type { ArrowTimeUnit } from "./fromArrowTimestamp";
  * - `dateTime` must be a plain date-time with no offset or `Z`: Arrow reads a zoneless count
  *   "as if" UTC (`Schema.fbs`), and an instant is never silently taken for a wall time. It
  *   returns `0n` for one. For a column with a timezone use `toArrowTimestamp`.
- * - A zone annotation (`[Asia/Tokyo]`) is ignored, as `Temporal.PlainDateTime.from` ignores
- *   it; the wall time is read as written.
+ * - No annotation of any kind is accepted: a time zone (`[Asia/Tokyo]`) returns `0n`.
  * - Digits below the unit floor toward negative infinity.
  * - In seconds, milliseconds and microseconds, every wall time `isValidDateTime` accepts has a
  *   count: `-271821-04-19T00:00:00.000000001` to `+275760-09-13T23:59:59.999999999`, a day past
@@ -26,7 +25,7 @@ import type { ArrowTimeUnit } from "./fromArrowTimestamp";
  * @returns the `int64` count since 1970-01-01T00:00:00 in the column's unit, or `0n` on invalid input
  *
  * @example toArrowLocalTimestamp("2024-01-01T00:00:00", "millisecond") // 1704067200000n
- * @example toArrowLocalTimestamp("2024-01-01T00:00:00[Asia/Tokyo]", "second") // 1704067200n — annotation ignored
+ * @example toArrowLocalTimestamp("2024-01-01T00:00:00[Asia/Tokyo]", "second") // 0n — no annotation of any kind
  * @example toArrowLocalTimestamp("1969-12-31T23:59:59.999999999", "second") // -1n — toward negative infinity
  * @example toArrowLocalTimestamp("2262-04-11T23:47:16.854775807", "nanosecond") // 9223372036854775807n
  * @example toArrowLocalTimestamp("2262-04-11T23:47:16.854775808", "nanosecond") // 0n — past int64

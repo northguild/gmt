@@ -1,4 +1,5 @@
 import { Temporal } from "./temporal";
+import { durationFrom } from "./durationFrom";
 import type { Disambiguation, Offset, Overflow } from "../types";
 import { MAX_EPOCH_NANOSECONDS } from "./epochNanoseconds";
 import {
@@ -532,7 +533,7 @@ function addAtEdge(
   let duration: Temporal.Duration;
   let wall: Temporal.PlainDateTime;
   try {
-    const parsed = Temporal.Duration.from(durationLike);
+    const parsed = durationFrom(durationLike);
     duration = sign === 1 ? parsed : parsed.negated();
     const start = zoned.toPlainDateTime();
     const { years, months, weeks, days } = duration;
@@ -614,7 +615,7 @@ function addWithCalendarCompat(
   if (!isCalendarArithmeticCompatNeeded(zoned.calendarId)) {
     return null;
   }
-  const parsed = Temporal.Duration.from(durationLike);
+  const parsed = durationFrom(durationLike);
   const duration = sign === 1 ? parsed : parsed.negated();
   if (!hasDateUnits(duration)) {
     return null;
@@ -723,7 +724,7 @@ export function addToZonedDisambiguated(
   const disambiguation = `${options.disambiguation}` as Disambiguation;
   // Validates `disambiguation` even when no wall clock is resolved below.
   DISAMBIGUATION_PROBE.toZonedDateTime("UTC", { disambiguation });
-  const parsed = Temporal.Duration.from(duration);
+  const parsed = durationFrom(duration);
 
   if (disambiguation === "compatible" || !hasDateUnits(parsed)) {
     const step = sign === 1 ? addToZoned : subtractFromZoned;

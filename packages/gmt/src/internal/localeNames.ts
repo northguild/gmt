@@ -21,8 +21,13 @@ function listFor(
   }
 }
 
+// The width ECMA-402 GetOption reads: `"long"`, `"short"` or `"narrow"`. Any other value throws
+// RangeError, as `Intl` does, and every caller turns it into `[]`.
 function widthOf(style: LocaleNameStyle): "long" | "short" | "narrow" {
-  return style === "short" || style === "narrow" ? style : "long";
+  if (style === "long" || style === "short" || style === "narrow") {
+    return style;
+  }
+  throw new RangeError(`Invalid style: ${String(style)}`);
 }
 
 // The names of one locale; see the public function of the same name.

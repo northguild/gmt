@@ -2,6 +2,7 @@
  * `cutoff-ruler.ts`'s pure helpers, against the real gmt modules. Every
  * expected literal is an appendix Z row (R1-R5, RA).
  */
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import { cutoffAt } from "@northguild/gmt/transport/calculate";
 import { timeToCutoff } from "@northguild/gmt/transport/compare";
 import { etaAtZone } from "@northguild/gmt/transport/convert";
@@ -24,6 +25,7 @@ import {
 import type { CutoffLib } from "./cutoff-widgets";
 
 const lib: CutoffLib = {
+  toInstant: (value: string) => toOffsetInstant(value)?.instant ?? "",
   cutoffAt,
   cutoffSchedule: () => [],
   isPastCutoff: () => false,

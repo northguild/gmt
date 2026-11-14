@@ -111,6 +111,7 @@ export {
   type ExactMoment,
   readExactMoment,
   writeExactMoment,
+  zonedInstantOf,
 } from "./exactMoment";
 export { formatDateInCalendar } from "./formatDateInCalendar";
 export {
@@ -132,8 +133,11 @@ export {
   halfOpenXor,
 } from "./halfOpenIntervals";
 export { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
-export { hasTimeZoneAnnotation } from "./timeZoneAnnotation";
-export { readFormOffsetInstant, readOffsetInstant } from "./offsetInstant";
+export {
+  readFormOffsetInstant,
+  readInstantOffsetInstant,
+  readZonedOffsetInstant,
+} from "./offsetInstant";
 export {
   FHIR_PRECISIONS,
   FHIR_TYPE_PRECISIONS,

@@ -110,7 +110,7 @@ const DOCS: CutoffFields = {
   atLocalTime: "12:00",
 };
 const VGM: CutoffFields = { name: "VGM", offset: "P1D", atLocalTime: "10:00" };
-const SAIL = "2024-06-17T18:00:00+02:00[Europe/Amsterdam]";
+const SAIL = "2024-06-17T18:00:00+02:00";
 
 /** Every preset is a section 9 row (appendix Z), so every result the widget
  *  shows is a verified value. */
@@ -146,7 +146,7 @@ export const STACK_PRESETS: readonly StackPreset[] = [
     label: "A Thursday holiday: documents back to Wednesday",
     description:
       "The ship sails on Friday 10 May 2024, and Thursday the 9th is a holiday. Documents a day before rolls back to Wednesday. Gate-in six hours before is exact time, on an open day, and does not move.",
-    anchor: "2024-05-10T18:00:00+02:00[Europe/Amsterdam]",
+    anchor: "2024-05-10T18:00:00+02:00",
     timeZone: AMS,
     cutoffs: [
       { name: "gate-in", offset: "PT6H", atLocalTime: "" },
@@ -578,8 +578,8 @@ export function collectStackFacts(
       atLocalTime: match?.atLocalTime,
       unrolled,
       moved,
-      beforeDeparture: lib.timeToCutoff(r.at, anchor),
-      afterDeparture: lib.isPastCutoff(r.at, anchor),
+      beforeDeparture: lib.timeToCutoff(lib.toInstant(r.at), departure),
+      afterDeparture: lib.isPastCutoff(lib.toInstant(r.at), departure),
       series: (idx >= 0 ? idx : rowIdx) + 1,
     };
   });
@@ -617,8 +617,9 @@ const STACK_NULL_TEMPLATE: Record<StackNullReason, string> = {
   "invalid-calendar":
     "The calendar is not valid: check the holidays are real ISO dates.",
   "zoneless-anchor":
-    "The departure has no offset or zone, so it is not a moment. Write its offset, or its zone in brackets.",
-  "invalid-anchor": "The departure is not an instant or a zoned date-time.",
+    "The departure has no offset, so it is not a moment. Write Z or an offset, such as +02:00.",
+  "invalid-anchor":
+    "The departure is not an instant. Write Z or an offset, with no zone name after it: the terminal clock below names the zone.",
   "invalid-offset":
     "Cut-off {n}'s offset is not an ISO 8601 duration such as P2D or PT48H, or it leaves the range of instants.",
   "invalid-time":

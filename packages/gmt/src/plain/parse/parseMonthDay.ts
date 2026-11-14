@@ -6,8 +6,7 @@ import { monthDayString } from "../../internal/monthDay";
  *
  * - Reads `--MM-DD` and `MM-DD`; writes `--MM-DD`. The reference year 1972 is never written.
  * - The extended form only: `--1225` and `1225` are refused.
- * - Annotations are read as `isValidMonthDay` reads them: elective and time zone annotations are
- *   ignored, an unknown critical one refuses, and `u-ca` must be `iso8601` in any case.
+ * - Accepts no annotation, as `isValidMonthDay` does: any bracket returns "".
  * - `--02-29` is valid; `--02-30` and `--04-31` are not.
  * - Returns "" for invalid input.
  *

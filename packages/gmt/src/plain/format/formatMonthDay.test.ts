@@ -73,47 +73,46 @@ describe("formatMonthDay", () => {
 
   // Rules, en-US.
   it.each`
-    value                      | options                                                                                     | expected         | rule
-    ${"--02-29"}               | ${{ month: "long", day: "numeric" }}                                                        | ${"February 29"} | ${"1972 reference year"}
-    ${"12-25"}                 | ${undefined}                                                                                | ${"12/25"}       | ${"input form MM-DD"}
-    ${"--12-25[u-ca=ISO8601]"} | ${undefined}                                                                                | ${"12/25"}       | ${"D20 calendar annotation"}
-    ${"--12-25"}               | ${{ month: "long" }}                                                                        | ${"December"}    | ${"month alone"}
-    ${"--12-25"}               | ${{ day: "numeric" }}                                                                       | ${"25"}          | ${"day alone"}
-    ${"--12-25"}               | ${{ year: "numeric", month: "long", day: "numeric" }}                                       | ${"December 25"} | ${"year dropped"}
-    ${"--12-25"}               | ${{ weekday: "long", month: "long", day: "numeric" }}                                       | ${"December 25"} | ${"weekday dropped"}
-    ${"--12-25"}               | ${{ year: "numeric" }}                                                                      | ${""}            | ${"year only"}
-    ${"--12-25"}               | ${{ hour: "numeric" }}                                                                      | ${""}            | ${"hour only"}
-    ${"--12-25"}               | ${{ weekday: "long" }}                                                                      | ${""}            | ${"weekday only"}
-    ${"--12-25"}               | ${{ dayPeriod: "short" }}                                                                   | ${""}            | ${"dayPeriod only"}
-    ${"--12-25"}               | ${{ minute: "numeric" }}                                                                    | ${""}            | ${"minute only"}
-    ${"--12-25"}               | ${{ second: "numeric" }}                                                                    | ${""}            | ${"second only"}
-    ${"--12-25"}               | ${{ fractionalSecondDigits: 3 }}                                                            | ${""}            | ${"fractionalSecondDigits only"}
-    ${"--12-25"}               | ${{ month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }} | ${"December 25"} | ${"time fields dropped beside month and day"}
-    ${"--12-25"}               | ${{ era: "short" }}                                                                         | ${"12/25"}       | ${"era only is not inherited"}
-    ${"--12-25"}               | ${{ timeZoneName: "short" }}                                                                | ${"12/25"}       | ${"timeZoneName only is not inherited"}
-    ${"--12-25"}               | ${{ timeStyle: "short" }}                                                                   | ${""}            | ${"timeStyle"}
-    ${"--12-25"}               | ${{ dateStyle: "short", timeStyle: "short" }}                                               | ${""}            | ${"dateStyle and timeStyle"}
-    ${"--12-25"}               | ${{ calendar: "gregory" }}                                                                  | ${"12/25"}       | ${"calendar gregory"}
-    ${"--12-25"}               | ${{ calendar: "iso8601" }}                                                                  | ${"12/25"}       | ${"calendar iso8601"}
-    ${"--12-25"}               | ${{ calendar: "hebrew" }}                                                                   | ${""}            | ${"calendar hebrew"}
-    ${"--12-25"}               | ${{ calendar: "japanese" }}                                                                 | ${""}            | ${"calendar japanese"}
-    ${"--12-25"}               | ${{ calendar: "foo" }}                                                                      | ${"12/25"}       | ${"unsupported calendar falls back to en-US gregory"}
-    ${"--12-25"}               | ${{ calendar: "gregorian" }}                                                                | ${""}            | ${"calendar gregorian is a RangeError"}
-    ${"--12-25"}               | ${{ numberingSystem: "arab" }}                                                              | ${"١٢/٢٥"}       | ${"numberingSystem kept"}
-    ${"--12-25"}               | ${{ hour12: true }}                                                                         | ${"12/25"}       | ${"hour12 is accepted and has no effect"}
-    ${"--12-25"}               | ${{ hourCycle: "h23" }}                                                                     | ${"12/25"}       | ${"hourCycle is accepted and has no effect"}
-    ${"--12-25"}               | ${{ hourCycle: "h99" }}                                                                     | ${""}            | ${"invalid hourCycle is a RangeError"}
-    ${"--12-25"}               | ${{ timeZone: "Pacific/Auckland" }}                                                         | ${"12/25"}       | ${"timeZone ignored: noon UTC in 1972 is already 12/26 in Auckland"}
-    ${"--12-25"}               | ${{ timeZone: "Not/AZone" }}                                                                | ${""}            | ${"invalid timeZone is a RangeError"}
-    ${"--12-25"}               | ${{ dateStyle: "huge" }}                                                                    | ${""}            | ${"invalid dateStyle"}
-    ${"--12-25"}               | ${{ dateStyle: "long", month: "short" }}                                                    | ${""}            | ${"dateStyle with a field is a TypeError"}
-    ${"--12-25"}               | ${{ month: "wide" }}                                                                        | ${""}            | ${"invalid month"}
-    ${"--12-25"}               | ${null}                                                                                     | ${""}            | ${"null options"}
-    ${"--02-30"}               | ${undefined}                                                                                | ${""}            | ${"day out of range"}
-    ${"2024-12-25"}            | ${undefined}                                                                                | ${""}            | ${"a date"}
-    ${"--1225"}                | ${undefined}                                                                                | ${""}            | ${"basic form"}
-    ${""}                      | ${undefined}                                                                                | ${""}            | ${"empty string"}
-    ${"1225"}                  | ${undefined}                                                                                | ${""}            | ${"basic form without dashes"}
+    value           | options                                                                                     | expected         | rule
+    ${"--02-29"}    | ${{ month: "long", day: "numeric" }}                                                        | ${"February 29"} | ${"1972 reference year"}
+    ${"12-25"}      | ${undefined}                                                                                | ${"12/25"}       | ${"input form MM-DD"}
+    ${"--12-25"}    | ${{ month: "long" }}                                                                        | ${"December"}    | ${"month alone"}
+    ${"--12-25"}    | ${{ day: "numeric" }}                                                                       | ${"25"}          | ${"day alone"}
+    ${"--12-25"}    | ${{ year: "numeric", month: "long", day: "numeric" }}                                       | ${"December 25"} | ${"year dropped"}
+    ${"--12-25"}    | ${{ weekday: "long", month: "long", day: "numeric" }}                                       | ${"December 25"} | ${"weekday dropped"}
+    ${"--12-25"}    | ${{ year: "numeric" }}                                                                      | ${""}            | ${"year only"}
+    ${"--12-25"}    | ${{ hour: "numeric" }}                                                                      | ${""}            | ${"hour only"}
+    ${"--12-25"}    | ${{ weekday: "long" }}                                                                      | ${""}            | ${"weekday only"}
+    ${"--12-25"}    | ${{ dayPeriod: "short" }}                                                                   | ${""}            | ${"dayPeriod only"}
+    ${"--12-25"}    | ${{ minute: "numeric" }}                                                                    | ${""}            | ${"minute only"}
+    ${"--12-25"}    | ${{ second: "numeric" }}                                                                    | ${""}            | ${"second only"}
+    ${"--12-25"}    | ${{ fractionalSecondDigits: 3 }}                                                            | ${""}            | ${"fractionalSecondDigits only"}
+    ${"--12-25"}    | ${{ month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }} | ${"December 25"} | ${"time fields dropped beside month and day"}
+    ${"--12-25"}    | ${{ era: "short" }}                                                                         | ${"12/25"}       | ${"era only is not inherited"}
+    ${"--12-25"}    | ${{ timeZoneName: "short" }}                                                                | ${"12/25"}       | ${"timeZoneName only is not inherited"}
+    ${"--12-25"}    | ${{ timeStyle: "short" }}                                                                   | ${""}            | ${"timeStyle"}
+    ${"--12-25"}    | ${{ dateStyle: "short", timeStyle: "short" }}                                               | ${""}            | ${"dateStyle and timeStyle"}
+    ${"--12-25"}    | ${{ calendar: "gregory" }}                                                                  | ${"12/25"}       | ${"calendar gregory"}
+    ${"--12-25"}    | ${{ calendar: "iso8601" }}                                                                  | ${"12/25"}       | ${"calendar iso8601"}
+    ${"--12-25"}    | ${{ calendar: "hebrew" }}                                                                   | ${""}            | ${"calendar hebrew"}
+    ${"--12-25"}    | ${{ calendar: "japanese" }}                                                                 | ${""}            | ${"calendar japanese"}
+    ${"--12-25"}    | ${{ calendar: "foo" }}                                                                      | ${"12/25"}       | ${"unsupported calendar falls back to en-US gregory"}
+    ${"--12-25"}    | ${{ calendar: "gregorian" }}                                                                | ${""}            | ${"calendar gregorian is a RangeError"}
+    ${"--12-25"}    | ${{ numberingSystem: "arab" }}                                                              | ${"١٢/٢٥"}       | ${"numberingSystem kept"}
+    ${"--12-25"}    | ${{ hour12: true }}                                                                         | ${"12/25"}       | ${"hour12 is accepted and has no effect"}
+    ${"--12-25"}    | ${{ hourCycle: "h23" }}                                                                     | ${"12/25"}       | ${"hourCycle is accepted and has no effect"}
+    ${"--12-25"}    | ${{ hourCycle: "h99" }}                                                                     | ${""}            | ${"invalid hourCycle is a RangeError"}
+    ${"--12-25"}    | ${{ timeZone: "Pacific/Auckland" }}                                                         | ${"12/25"}       | ${"timeZone ignored: noon UTC in 1972 is already 12/26 in Auckland"}
+    ${"--12-25"}    | ${{ timeZone: "Not/AZone" }}                                                                | ${""}            | ${"invalid timeZone is a RangeError"}
+    ${"--12-25"}    | ${{ dateStyle: "huge" }}                                                                    | ${""}            | ${"invalid dateStyle"}
+    ${"--12-25"}    | ${{ dateStyle: "long", month: "short" }}                                                    | ${""}            | ${"dateStyle with a field is a TypeError"}
+    ${"--12-25"}    | ${{ month: "wide" }}                                                                        | ${""}            | ${"invalid month"}
+    ${"--12-25"}    | ${null}                                                                                     | ${""}            | ${"null options"}
+    ${"--02-30"}    | ${undefined}                                                                                | ${""}            | ${"day out of range"}
+    ${"2024-12-25"} | ${undefined}                                                                                | ${""}            | ${"a date"}
+    ${"--1225"}     | ${undefined}                                                                                | ${""}            | ${"basic form"}
+    ${""}           | ${undefined}                                                                                | ${""}            | ${"empty string"}
+    ${"1225"}       | ${undefined}                                                                                | ${""}            | ${"basic form without dashes"}
   `(
     "formats '$value' with options $options for en-US to '$expected' ($rule)",
     ({ value, options, expected }) => {

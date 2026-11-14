@@ -398,7 +398,7 @@ describe("a seed from the chat", () => {
     expect(chargesOut()).toHaveTextContent('chargedDates: ["2024-06-17"]');
     expect(
       screen.getByRole("group", { name: "Call to chargeableDays" }),
-    ).toHaveTextContent("2024-06-14T15:00:00-04:00[America/New_York]");
+    ).toHaveTextContent("2024-06-14T15:00:00-04:00");
   });
 
   it("shows a hostile value as text", async () => {

@@ -192,18 +192,18 @@ describe("subtractZonedBusinessDays", () => {
     ).toBe("");
   });
 
-  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
-  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  // The zone bracket is the only annotation a zoned string carries (RFC 9557 §3.3 lets Temporal
+  // read others; GMT does not), so an elective annotation or the ISO calendar is refused.
   it.each`
-    value                                                          | amount | expected
-    ${"2024-03-18T14:30:00-04:00[America/New_York][foo=bar]"}      | ${0}   | ${"2024-03-18T14:30:00-04:00[America/New_York]"}
-    ${"2024-03-18T14:30:00-04:00[America/New_York][u-ca=iso8601]"} | ${1}   | ${"2024-03-15T14:30:00-04:00[America/New_York]"}
-  `(
-    "reads the annotations of $value as Temporal does (amount $amount) → $expected",
-    ({ value, amount, expected }) => {
-      expect(subtractZonedBusinessDays(value, amount)).toBe(expected);
-    },
-  );
+    value                                                           | label
+    ${"2024-03-15T14:30:00-04:00[America/New_York][foo=bar]"}       | ${"an elective annotation"}
+    ${"2024-03-15T14:30:00-04:00[America/New_York][u-ca=iso8601]"}  | ${"the ISO calendar annotation"}
+    ${"2024-03-15T14:30:00-04:00[America/New_York][!u-ca=iso8601]"} | ${"a critical ISO calendar annotation"}
+    ${"2024-03-15T14:30:00-04:00[America/New_York][!foo=bar]"}      | ${"a critical elective annotation"}
+  `("returns '' for a value with $label after the zone", ({ value }) => {
+    expect(subtractZonedBusinessDays(value, 1)).toBe("");
+    expect(subtractZonedBusinessDays(value, 0)).toBe("");
+  });
 });
 
 // A business-day count is a whole number of days. A fraction, NaN or an infinity has no date, so

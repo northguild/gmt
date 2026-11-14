@@ -50,7 +50,7 @@ const day = { timeZone: "America/New_York", dayStartTime: "04:00" };
 
 dutyDayFor("2024-01-01T08:59:00Z", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" } — 03:59 local
 dutyDayFor("2024-01-01T09:00:00Z", day); // { start: "2024-01-01T09:00:00Z", end: "2024-01-02T09:00:00Z" } — 04:00 local
-dutyDayFor("2024-01-01T12:00:00+09:00[Asia/Tokyo]", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" } — read in New York
+dutyDayFor("2024-01-01T12:00:00+09:00", day); // { start: "2023-12-31T09:00:00Z", end: "2024-01-01T09:00:00Z" } — read in New York
 dutyDayFor("2024-01-01T12:00:00Z", { timeZone: "UTC" }); // null — no dayStartTime
 ```
 

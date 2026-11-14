@@ -1,5 +1,5 @@
 import { Temporal } from "../temporal";
-import type { DurationRelativeTo } from "../../types";
+import type { ResolvedRelativeTo } from "../resolveDurationRelativeTo";
 import { TIME_ZONE_ANNOTATION } from "../isoStringBody";
 import {
   MAX_EPOCH_NANOSECONDS,
@@ -149,7 +149,7 @@ export interface DurationRoundOptions {
   smallestUnit?: Temporal.SmallestUnit<Temporal.DateTimeUnit>;
   roundingIncrement?: number;
   roundingMode?: Temporal.RoundingMode;
-  relativeTo?: DurationRelativeTo;
+  relativeTo?: ResolvedRelativeTo;
 }
 
 const ZERO_DATE_DURATION: DateDuration = {

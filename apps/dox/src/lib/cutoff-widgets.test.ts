@@ -124,7 +124,7 @@ describe("isZoneless", () => {
 
 describe("callSource", () => {
   it("matches the appendix Z S1 call verbatim, with absent keys omitted", () => {
-    const anchor = "2024-06-17T18:00:00+02:00[Europe/Amsterdam]";
+    const anchor = "2024-06-17T18:00:00+02:00";
     const entries = [
       { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
       { name: "documents", offset: "P3D", atLocalTime: "12:00" },
@@ -140,7 +140,7 @@ describe("callSource", () => {
     };
     const [, plain] = callSource("cutoffSchedule", [anchor, entries, options]);
     expect(plain).toBe(
-      '"2024-06-17T18:00:00+02:00[Europe/Amsterdam]", ' +
+      '"2024-06-17T18:00:00+02:00", ' +
         '[{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, ' +
         '{ name: "documents", offset: "P3D", atLocalTime: "12:00" }], ' +
         '{ timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }',
@@ -174,7 +174,7 @@ describe("callSource", () => {
 describe("formatStack", () => {
   it("collapses to the S1 literal", () => {
     const result = cutoffSchedule(
-      "2024-06-17T18:00:00+02:00[Europe/Amsterdam]",
+      "2024-06-17T18:00:00+02:00",
       [
         { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
         { name: "documents", offset: "P3D", atLocalTime: "12:00" },

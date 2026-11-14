@@ -1,5 +1,5 @@
 import { intervalsOverlap } from "../compare";
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import type { Interval } from "../../types";
 import { intersectIntervals } from "./intersectIntervals";
 
@@ -13,19 +13,19 @@ describe("intersectIntervals", () => {
   // Mixed zones: a = [14:00Z, 17:00Z), b = [15:00Z, 18:00Z); 14 >= 15 fails → b's "15:00Z";
   // 17 <= 18 holds → a's Berlin spelling of 17:00Z.
   it.each`
-    aStart                                           | aEnd                                          | bStart                         | bEnd                                       | expectedStart                  | expectedEnd                                   | reason
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}                     | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T18:00:00Z"}                  | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T17:00:00Z"}                     | ${"partial"}
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}                     | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T11:00:00Z"}                  | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T11:00:00Z"}                     | ${"containment"}
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}                     | ${"2024-01-01T04:00:00-05:00"} | ${"2024-01-01T12:00:00-05:00"}             | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}                     | ${"identical, different spelling: a's"}
-    ${"2024-01-01T04:00:00-05:00"}                   | ${"2024-01-01T12:00:00-05:00"}                | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}                  | ${"2024-01-01T04:00:00-05:00"} | ${"2024-01-01T12:00:00-05:00"}                | ${"identical, swapped: a's"}
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}                     | ${"2024-01-01T04:00:00-05:00"} | ${"2024-01-01T12:00:00Z"}                  | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T12:00:00Z"}                     | ${"same start tie"}
-    ${"2024-01-01T10:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}                     | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T12:00:00-05:00"}             | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T17:00:00Z"}                     | ${"same end tie: a's"}
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T12:00:00-05:00"}                | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T17:00:00Z"}                  | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T12:00:00-05:00"}                | ${"same end tie, swapped: a's"}
-    ${"-271821-04-20T00:00:00Z"}                     | ${"+275760-09-13T00:00:00Z"}                  | ${"1970-01-01T00:00:00Z"}      | ${"+275760-09-13T00:00:00Z"}               | ${"1970-01-01T00:00:00Z"}      | ${"+275760-09-13T00:00:00Z"}                  | ${"full Instant range, end tie at the latest instant"}
-    ${"2024-01-01T12:00:00Z"}                        | ${"2024-01-01T12:00:00Z"}                     | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}                  | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}                     | ${"empty inside"}
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T17:00:00Z"}                     | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}                  | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}                     | ${"empty inside, swapped"}
-    ${"2024-01-01T09:00:00Z"}                        | ${"2024-01-01T12:00:00.000000001Z"}           | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T17:00:00Z"}                  | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00.000000001Z"}           | ${"1 ns overlap"}
-    ${"2024-01-01T09:00:00-05:00[America/New_York]"} | ${"2024-01-01T18:00:00+01:00[Europe/Berlin]"} | ${"2024-01-01T15:00:00Z"}      | ${"2024-01-02T03:00:00+09:00[Asia/Tokyo]"} | ${"2024-01-01T15:00:00Z"}      | ${"2024-01-01T18:00:00+01:00[Europe/Berlin]"} | ${"mixed zones"}
+    aStart                         | aEnd                                | bStart                         | bEnd                           | expectedStart                  | expectedEnd                         | reason
+    ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T18:00:00Z"}      | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"partial"}
+    ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T11:00:00Z"}      | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T11:00:00Z"}           | ${"containment"}
+    ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"2024-01-01T04:00:00-05:00"} | ${"2024-01-01T12:00:00-05:00"} | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"identical, different spelling: a's"}
+    ${"2024-01-01T04:00:00-05:00"} | ${"2024-01-01T12:00:00-05:00"}      | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}      | ${"2024-01-01T04:00:00-05:00"} | ${"2024-01-01T12:00:00-05:00"}      | ${"identical, swapped: a's"}
+    ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"2024-01-01T04:00:00-05:00"} | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T12:00:00Z"}           | ${"same start tie"}
+    ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T12:00:00-05:00"} | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"same end tie: a's"}
+    ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T12:00:00-05:00"}      | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T17:00:00Z"}      | ${"2024-01-01T10:00:00Z"}      | ${"2024-01-01T12:00:00-05:00"}      | ${"same end tie, swapped: a's"}
+    ${"-271821-04-20T00:00:00Z"}   | ${"+275760-09-13T00:00:00Z"}        | ${"1970-01-01T00:00:00Z"}      | ${"+275760-09-13T00:00:00Z"}   | ${"1970-01-01T00:00:00Z"}      | ${"+275760-09-13T00:00:00Z"}        | ${"full Instant range, end tie at the latest instant"}
+    ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}           | ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}      | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}           | ${"empty inside"}
+    ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T17:00:00Z"}           | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00Z"}           | ${"empty inside, swapped"}
+    ${"2024-01-01T09:00:00Z"}      | ${"2024-01-01T12:00:00.000000001Z"} | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T17:00:00Z"}      | ${"2024-01-01T12:00:00Z"}      | ${"2024-01-01T12:00:00.000000001Z"} | ${"1 ns overlap"}
+    ${"2024-01-01T09:00:00-05:00"} | ${"2024-01-01T18:00:00+01:00"}      | ${"2024-01-01T15:00:00Z"}      | ${"2024-01-02T03:00:00+09:00"} | ${"2024-01-01T15:00:00Z"}      | ${"2024-01-01T18:00:00+01:00"}      | ${"mixed zones"}
   `(
     "returns [$expectedStart, $expectedEnd) for [$aStart, $aEnd) and [$bStart, $bEnd) ($reason)",
     ({ aStart, aEnd, bStart, bEnd, expectedStart, expectedEnd }) => {
@@ -68,7 +68,7 @@ describe("intersectIntervals", () => {
     expect(result).not.toBe(b);
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns the first argument's spelling when $value and $utc tie ($timeZone)",
     ({ value, utc }) => {
       const later = "2024-02-29T01:00:00Z";
@@ -111,6 +111,10 @@ describe("intersectIntervals", () => {
     ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
+    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[foo=bar]", end: "2024-01-01T17:00:00Z" }}        | ${"elective annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[Europe/Berlin]", end: "2024-01-01T17:00:00Z" }}  | ${"time zone annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[+02:00]", end: "2024-01-01T17:00:00Z" }}         | ${"offset annotation"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
     ${{ start: "-271821-04-20T00:00:00Z", end: "+275760-09-13T00:00:00.000000001Z" }} | ${"past the Instant range"}
   `("returns null when either interval is invalid ($reason)", ({ bad }) => {
@@ -147,27 +151,6 @@ describe("intersectIntervals", () => {
           expect(intervalsOverlap(a, b)).toBe(intervalsOverlap(b, a));
         }
       }
-    });
-  });
-
-  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
-  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
-  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
-  it("intersects annotated endpoints by instant and keeps each winner's annotated text", () => {
-    expect(
-      intersectIntervals(
-        {
-          start: "2024-01-01T09:00:00Z[u-ca=iso8601]",
-          end: "2024-01-01T17:00:00Z",
-        },
-        {
-          start: "2024-01-01T12:00:00Z[foo=bar]",
-          end: "2024-01-01T18:00:00Z[!u-ca=hebrew]",
-        },
-      ),
-    ).toEqual({
-      start: "2024-01-01T12:00:00Z[foo=bar]",
-      end: "2024-01-01T17:00:00Z",
     });
   });
 });

@@ -55,8 +55,8 @@ the `gmt-timezone` skill.
     Bare instants with no `targetZone` return `null`: an offset is not a place.
     `crossingTime(entry, exit, targetZone)` returns `{ duration, enter, exit }`
     with no day count (a crossing that needs one is a dwell); `targetZone` is
-    required and always the rendering zone — a bracket on the input never
-    supplies it.
+    required and always the rendering zone — the inputs are `Z` or offset
+    strings, and one with a bracket returns `null`.
     `scheduleDelivery(legs, { startTimeZone? })` chains legs into `{ eta,
     legTimes }`: each leg leaves at its explicit `departure` or at the previous
     arrival plus that leg's `dwellAfter`, the minimum connect time. A scheduled
@@ -84,7 +84,9 @@ the `gmt-timezone` skill.
     not check that the cut-off is before the anchor.
     `cutoffSchedule(anchor, [{ name, offset, atLocalTime? }], options)`
     sorts the stack by instant and returns `[]` if any entry fails.
-    `isPastCutoff(now, cutoff)` is `true` from the cut-off instant on;
+    `isPastCutoff(now, cutoff)` is `true` from the cut-off instant on; `now` is
+    an instant and `cutoff` is the zoned string `cutoffAt` returns, so a bare
+    `Z` or offset cut-off returns the sentinel;
     `timeToCutoff(now, cutoff)` is exact hours, `PT0S` at it, negative after.
 3. **Planned versus actual is exact time under the caller's tolerance.**
     `scheduleDeviation(planned, actual)` is `actual − planned` in exact hours

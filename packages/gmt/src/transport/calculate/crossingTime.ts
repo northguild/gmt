@@ -28,15 +28,10 @@ export interface Crossing {
  *   that actually elapsed; the local wall clocks at either end can be an hour apart from that.
  *   Hours is the largest unit, so the value never depends on a calendar.
  * - **`targetZone` is always the rendering zone.** `entry` and `exit` are anything
- *   `isValidInstant` accepts — `Z`, an offset, or an offset with a bracketed zone — and only the
- *   instant is read: a bracketed zone in the input is never the zone the result is rendered
- *   in. That is the one contract difference from `dwellTime`, whose zone may come from its
- *   entry's bracket.
- * - **The offset fixes each instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it. A zone that does not exist, or that disagrees with
- *   the offset, is not checked and changes nothing.
+ *   `isValidInstant` accepts — `Z` or an offset, with no annotation of any kind — so a zone in
+ *   the input is never the zone the result is rendered in. That is the one contract difference
+ *   from `dwellTime`, whose zone may come from its entry's bracket.
+ * - **The offset fixes each instant.** An offset written with seconds is read exactly.
  * - `targetZone` is whatever `isValidTimeZone` accepts, which is what Temporal accepts: an IANA
  *   identifier, or a fixed offset such as `"+02:00"`, which observes no DST.
  * - GMT does not resolve a canal, lock or checkpoint code to a zone; the caller supplies the

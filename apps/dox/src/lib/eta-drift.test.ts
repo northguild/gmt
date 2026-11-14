@@ -2,6 +2,7 @@
  * `eta-drift.ts`'s pure helpers, against the real gmt modules. Every expected
  * library result is an appendix Z row (ED1 to ED4, EDR1 to EDR7).
  */
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import {
   classifyPunctuality,
   scheduleDeviation,
@@ -44,6 +45,7 @@ import {
 } from "./punctuality-widgets";
 
 const lib: PunctualityLib = {
+  toInstant: (value: string) => toOffsetInstant(value)?.instant ?? "",
   scheduleDeviation,
   classifyPunctuality,
   punctualityRate,

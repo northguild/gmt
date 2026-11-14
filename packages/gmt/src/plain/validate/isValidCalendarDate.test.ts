@@ -27,11 +27,6 @@ describe("isValidCalendarDate", () => {
     ${"2024-10-03[u-ca=islamicc]"}
     ${"+002024-10-03[u-ca=roc]"}
     ${"5785-01-01[u-ca=hebrew]"}
-    ${"2024-10-03[u-ca=hebrew][u-ca=roc]"}
-    ${"2024-10-03[Asia/Tokyo][u-ca=hebrew]"}
-    ${"2024-10-03[foo=bar][u-ca=hebrew]"}
-    ${"2024-10-03[u-ca=hebrew][foo=bar]"}
-    ${"2024-10-03[Asia/Tokyo]"}
   `(
     "returns true for valid calendar date: $value",
     ({ value }: { value: string }) => {
@@ -106,6 +101,13 @@ describe("isValidCalendarDate", () => {
     ${"2024-10-03t14:30[u-ca=hebrew]"}                            | ${"lower-case t separator, which isValidDateTime rejects"}
     ${"2024-10-03T14:30+01:00[u-ca=hebrew]"}                      | ${"UTC offset, which isValidDateTime rejects"}
     ${"2024-10-03T14:30:00-05:00[America/New_York][u-ca=hebrew]"} | ${"UTC offset before the time zone annotation"}
+    ${"2024-10-03[u-ca=hebrew][u-ca=roc]"}                        | ${"CORE-113: only one u-ca annotation is allowed, and no zone or elective one"}
+    ${"2024-10-03[Asia/Tokyo][u-ca=hebrew]"}                      | ${"CORE-113: only one u-ca annotation is allowed, and no zone or elective one"}
+    ${"2024-10-03[foo=bar][u-ca=hebrew]"}                         | ${"CORE-113: only one u-ca annotation is allowed, and no zone or elective one"}
+    ${"2024-10-03[u-ca=hebrew][foo=bar]"}                         | ${"CORE-113: only one u-ca annotation is allowed, and no zone or elective one"}
+    ${"2024-10-03[Asia/Tokyo]"}                                   | ${"CORE-113: only one u-ca annotation is allowed, and no zone or elective one"}
+    ${"2024-10-03T14:30:00[America/New_York][u-ca=hebrew]"}       | ${"CORE-113: a zone annotation is not part of the pattern"}
+    ${"2024-10-03[Europe/Helsinkiddddd][u-ca=hebrew]"}            | ${"CORE-113: a zone annotation is not part of the pattern"}
   `(
     "returns false for invalid calendar date: '$value' ($reason)",
     ({ value }: { value: string }) => {
@@ -116,10 +118,9 @@ describe("isValidCalendarDate", () => {
   // A date-time is valid and names its date, as `Temporal.PlainDate.from` reads it (decided
   // 2026-09-17). Each accepted by native Chromium 153 and polyfill 0.5.1.
   it.each`
-    value                                                   | reason
-    ${"2024-10-03T00:00[u-ca=hebrew]"}                      | ${"calendar-annotated date-time"}
-    ${"2024-10-03T14:30:00"}                                | ${"bare date-time (iso8601)"}
-    ${"2024-10-03T14:30:00[America/New_York][u-ca=hebrew]"} | ${"time zone annotation ignored"}
+    value                              | reason
+    ${"2024-10-03T00:00[u-ca=hebrew]"} | ${"calendar-annotated date-time"}
+    ${"2024-10-03T14:30:00"}           | ${"bare date-time (iso8601)"}
   `("returns true for the date-time $value ($reason)", ({ value }) => {
     expect(isValidCalendarDate(value)).toBe(true);
   });

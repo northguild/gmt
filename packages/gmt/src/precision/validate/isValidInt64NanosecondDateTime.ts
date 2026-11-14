@@ -10,7 +10,7 @@ import { fitsInt64, wallClockNanoseconds } from "../../internal";
  * also the epoch, so a caller cannot tell the failure from a real zero without this check.
  *
  * - Accepts the plain date-time strings `isValidDateTime` accepts, then applies the range.
- *   A zone annotation is ignored; an offset or `Z` is rejected.
+ *   An annotation of any kind, an offset or `Z` is rejected.
  * - An empty string returns `false`.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result
  *   narrows an `unknown` value to `string`.

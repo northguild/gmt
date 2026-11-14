@@ -142,20 +142,20 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
     ${"2024-02-24T19:30:00z[America/New_York][u-ca=hebrew]"}                    | ${"lower-case z designator (strict extended shape)"}
     ${"2024-02-24T14:30:00-05[America/New_York][u-ca=hebrew]"}                  | ${"hour-only offset (strict extended shape)"}
     ${"2024-09-18[America/New_York][u-ca=hebrew]"}                              | ${"date without a time (strict extended shape)"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar][u-ca=hebrew]"}      | ${"an elective annotation before the calendar"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][foo=bar]"}      | ${"an elective annotation after the hebrew calendar"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][u-ca=roc]"}     | ${"a second u-ca annotation"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=coptic][foo=bar]"}      | ${"an elective annotation after the coptic calendar"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar]"}                   | ${"an elective annotation alone"}
   `("throws for $value ($reason)", ({ value }) => {
     expect(() => parseCalendarZonedValue(value)).toThrow();
   });
 
   it.each`
-    value                                                                   | calendarId         | label
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"hebrew"}        | ${"[u-ca=hebrew]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=ethiopic]"}         | ${"ethioaa"}       | ${"[u-ca=ethiopic]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=islamicc]"}         | ${"islamic-civil"} | ${"[u-ca=islamicc]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar][u-ca=hebrew]"}  | ${"hebrew"}        | ${"[foo=bar][u-ca=hebrew]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][foo=bar]"}  | ${"hebrew"}        | ${"[u-ca=hebrew][foo=bar]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew][u-ca=roc]"} | ${"hebrew"}        | ${"[u-ca=hebrew][u-ca=roc]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=coptic][foo=bar]"}  | ${"ethioaa"}       | ${"[u-ca=coptic][foo=bar]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][foo=bar]"}               | ${"iso8601"}       | ${"[foo=bar]"}
+    value                                                           | calendarId         | label
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew]"}   | ${"hebrew"}        | ${"[u-ca=hebrew]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=ethiopic]"} | ${"ethioaa"}       | ${"[u-ca=ethiopic]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=islamicc]"} | ${"islamic-civil"} | ${"[u-ca=islamicc]"}
   `(
     "parses a value with annotations $label, computing in $calendarId",
     ({ value, calendarId }) => {

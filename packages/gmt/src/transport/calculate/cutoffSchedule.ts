@@ -1,4 +1,5 @@
 import { Temporal } from "../../internal/temporal";
+import { durationFrom } from "../../internal/durationFrom";
 import {
   cutoffAtResolved,
   resolveCutoffTime,
@@ -101,7 +102,7 @@ function scheduleEntry(
   }
   const found = cutoffAtResolved(
     context.anchorInstant,
-    Temporal.Duration.from(offset),
+    durationFrom(offset),
     local.time,
     context.shared,
   );
