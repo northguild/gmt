@@ -285,6 +285,9 @@ describe("freeTimeExpiry", () => {
     ${friday}                 | ${3}       | ${{ ...calendar, timeZone: "America/Nueva_York" }}                           | ${"invalid timeZone"}
     ${friday}                 | ${3}       | ${{ ...calendar, timeZone: undefined }}                                      | ${"missing timeZone"}
     ${friday}                 | ${3}       | ${{ ...calendar, basis: "working" }}                                         | ${"working basis without a calendar"}
+    ${friday}                 | ${3}       | ${{ ...calendar, calendar: new String("x") }}                                | ${"a String object as the calendar on the calendar basis"}
+    ${friday}                 | ${3}       | ${{ ...calendar, calendar: "x" }}                                            | ${"a string as the calendar on the calendar basis"}
+    ${friday}                 | ${3}       | ${{ ...calendar, calendar: null }}                                           | ${"null as the calendar on the calendar basis"}
     ${friday}                 | ${3}       | ${{ ...working, calendar: { ...weekdays, weekend: [1, 2, 3, 4, 5, 6, 7] } }} | ${"working basis with a calendar that has no working day"}
     ${friday}                 | ${3}       | ${{ ...working, calendar: { ...weekdays, holidays: ["2024-02-30"] } }}       | ${"working basis with a holiday that does not exist"}
   `("returns the sentinel for $reason", ({ clockStart, freeDays, options }) => {

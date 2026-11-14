@@ -41,12 +41,12 @@ describe("isValidHL7", () => {
     ${"20240615\r"}            | ${false} | ${"a segment terminator after the DTM"}
     ${"20240615^D^X Y"}        | ${true}  | ${"a space is printable data in an extra component"}
     ${"20240615^D^X[foo=bar]"} | ${true}  | ${"brackets are plain characters in an extra component"}
-    ${"20240615^D^X&Y"}        | ${false} | ${"a sub-component separator in an extra component (ch. 2 §2.5.4)"}
-    ${"20240615^D^X\\F\\Y"}    | ${false} | ${"an escape character in an extra component (ch. 2 §2.7)"}
-    ${"20240615^D^ X"}         | ${false} | ${"a leading space in an extra component"}
-    ${"20240615^D^X "}         | ${false} | ${"a trailing space in an extra component"}
-    ${"20240615^D^ "}          | ${false} | ${"a space-only extra component"}
-    ${"20240615^D^X^ Y"}       | ${false} | ${"a leading space in a later extra component"}
+    ${"20240615^D^X&Y"}        | ${true}  | ${"a subcomponent in an extra component is ignored (ch. 2 §2.8.2)"}
+    ${"20240615^D^X\\F\\Y"}    | ${true}  | ${"an escape sequence is legal text in an extra component (ch. 2 §2.7)"}
+    ${"20240615^D^ X"}         | ${true}  | ${"a leading space in an extra component is data"}
+    ${"20240615^D^X "}         | ${true}  | ${"a trailing space in an extra component is data"}
+    ${"20240615^D^ "}          | ${true}  | ${"a space-only extra component is data"}
+    ${"20240615^D^X^ Y"}       | ${true}  | ${"a leading space in a later extra component is data"}
     ${"20240615^D^X Y"}        | ${true}  | ${"an inner space is HL7 text"}
     ${"20240615^D^X^Y^Z"}      | ${true}  | ${"several extra components"}
     ${"20240615^^X"}           | ${true}  | ${"an empty degree followed by an extra component is not present (§2.6.2)"}

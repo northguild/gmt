@@ -1,3 +1,4 @@
+import { TIME_ZONE_ANNOTATION } from "../internal/isoStringBody";
 import { isValidCalendarDate, isValidDate, isValidDateTime } from "../plain";
 import { isValidUtc } from "../utc";
 import { isValidCalendarZonedDateTime, isValidZonedDateTime } from "../zoned";
@@ -287,4 +288,24 @@ describe("the zone bracket a zoned validator takes", () => {
       expect(isValidCalendarZonedDateTime(value)).toBe(accepted);
     },
   );
+});
+
+// RFC 9557 §4.1 (time-zone-name = time-zone-name-component *( "/" time-zone-name-component ), with
+// "." and ".." excluded as a whole component): the pattern itself refuses them.
+describe("TIME_ZONE_ANNOTATION zone-name components", () => {
+  it.each`
+    value                     | accepted | why
+    ${"[.]"}                  | ${false} | ${"a lone dot is not a component"}
+    ${"[..]"}                 | ${false} | ${"two dots are not a component"}
+    ${"[Europe/..]"}          | ${false} | ${"two dots as the last component"}
+    ${"[./UTC]"}              | ${false} | ${"a dot as the first component"}
+    ${"[America/./New_York]"} | ${false} | ${"a dot as a middle component"}
+    ${"[!..]"}                | ${false} | ${"a critical two-dot component"}
+    ${"[.foo]"}               | ${true}  | ${"a component that starts with a dot"}
+    ${"[a.b]"}                | ${true}  | ${"a dot inside a component"}
+    ${"[...]"}                | ${true}  | ${"three dots are a component"}
+    ${"[Europe/London]"}      | ${true}  | ${"an ordinary name"}
+  `("the pattern reads $value as $accepted ($why)", ({ value, accepted }) => {
+    expect(new RegExp(`^${TIME_ZONE_ANNOTATION}$`).test(value)).toBe(accepted);
+  });
 });

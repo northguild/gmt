@@ -37,9 +37,13 @@ reader that took two kinds.
   take; GMT checks the shape first and calls Temporal only on a string that passed.
 - **Each deliberate leniency has its own anchored pattern**, never a shared catch-all: RFC 3339
   `t`, `z` and space; RFC 5322 comments and folding whitespace; PostgreSQL hour-only offsets in
-  `parseSqlOffsetDateTime`; HL7 extra components (§2.6.2) and reduced precision; FHIR and TCG leap
+  `parseSqlOffsetDateTime`; HL7 extra components and reduced precision; FHIR and TCG leap
   seconds checked against the leap-second table; the ISO 8601 decimal comma; Unix epochs as
   `-?\d+`; calendar ids case-insensitive (BCP 47).
+- **HL7 `TS`.** Components after TS.2 are ignored, as HL7 v2.5.1 §2.6.2 says, unless one holds a
+  field delimiter (`|`, `~`) or a C0 control character. GMT reads TS.1 as exactly a DTM and TS.2 as
+  exactly empty or a Table 0529 code, and rejects a subcomponent in either (`2024&X`). That is GMT's
+  strict-kind rule; §2.6.2 alone would ignore the subcomponent.
 - **Functions that take two kinds read each with its own exact reader.** `dwellTime`,
   `scheduleDelivery`, `multimodalETA`, `transitTime`, `nextDeparture` and `toOffsetInstant` take an
   instant or a zoned string; `readExactMoment` is the shared two-kind reader.
@@ -51,6 +55,8 @@ reader that took two kinds.
 - **Locale arguments** are `undefined`, a string or an array of strings. Anything else returns the
   sentinel. An unknown name-width style returns `[]`.
 - **String-typed options and record fields are `typeof "string"`.** A `String` object is refused.
+  Boolean and number options are typed the same way. Each declared option is read once and checked
+  even when the call would not use it.
 - **`hasSecond60`** is true only when the whole string is one of GMT's own kinds with a second of
   `60`.
 - **`set*` functions keep their documented `Temporal.*Like` bags.** Those are their input kind.

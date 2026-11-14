@@ -229,6 +229,11 @@ export const hl7TsRows: readonly Hl7ParseRow[] = [
   partial("20240615^D^X^", "2024-06-15", "", "day"),
   partial("20240615^D^X Y", "2024-06-15", "", "day"),
   partial("20240615^D^[foo=bar]", "2024-06-15", "", "day"),
+  partial("20240615^D^X ", "2024-06-15", "", "day"),
+  partial("20240615^D^ X", "2024-06-15", "", "day"),
+  partial("20240615^D^ ", "2024-06-15", "", "day"),
+  partial("20240615^D^\\F\\", "2024-06-15", "", "day"),
+  partial("20240615^D^A&B", "2024-06-15", "", "day"),
 ];
 
 /** Strings that return `null`. */
@@ -246,18 +251,17 @@ export const hl7NullRows: readonly string[] = [
   "2024061510^M",
   "20240615^H",
   "20240615^S^",
-  // nothing follows the DTM inside TS.1 or the code inside TS.2 (2.A.77)
+  // GMT reads TS.1 as exactly a DTM and TS.2 as exactly a code (its strict-kind rule)
   "2024&X",
   "2024^Y&X",
   "20240615^D&X",
   "20240615&X^D",
   "2024^D&X",
   "2024&X^D",
-  "20240615^D^X&Y",
-  "20240615^D^X\\F\\Y",
-  "20240615^D^ X",
-  "20240615^D^X ",
-  "20240615^D^ ",
+  // an ignored component still cannot hold `|`, `~` or a C0 control (ch. 2 §2.6.2)
+  "20240615^D^X|Y",
+  "20240615^D^X~Y",
+  "20240615^D^X\nY",
   // unknown, lower-case and padded degrees, an empty DTM
   "20240615^X",
   "20240615^d",

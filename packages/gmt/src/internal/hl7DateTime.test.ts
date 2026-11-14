@@ -223,6 +223,13 @@ describe("splitHl7Ts", () => {
     ${"20240615^D^X^"}        | ${"20240615"} | ${"D"}
     ${"20240615^D^X Y"}       | ${"20240615"} | ${"D"}
     ${"20240615^D^[foo=bar]"} | ${"20240615"} | ${"D"}
+    ${"20240615^D^X "}        | ${"20240615"} | ${"D"}
+    ${"20240615^D^ X"}        | ${"20240615"} | ${"D"}
+    ${"20240615^D^ "}         | ${"20240615"} | ${"D"}
+    ${"20240615^D^\\F\\"}     | ${"20240615"} | ${"D"}
+    ${"20240615^D^X\\F\\Y"}   | ${"20240615"} | ${"D"}
+    ${"20240615^D^A&B"}       | ${"20240615"} | ${"D"}
+    ${"20240615^D^X^ Y"}      | ${"20240615"} | ${"D"}
     ${"^^D"}                  | ${""}         | ${""}
   `(
     "ignores what is not expected in '$value': '$dtm' and degree '$degree'",
@@ -243,12 +250,6 @@ describe("splitHl7Ts", () => {
     ${"2024&X"}             | ${"a subcomponent after the DTM (TS.1)"}
     ${"2024^D&X"}           | ${"a subcomponent after the degree (TS.2)"}
     ${"&X^D"}               | ${"a subcomponent in an empty DTM"}
-    ${"20240615^D^X&Y"}     | ${"a subcomponent separator in an extra component"}
-    ${"20240615^D^X\\F\\Y"} | ${"an escape sequence in an extra component"}
-    ${"20240615^D^ X"}      | ${"a leading space in an extra component"}
-    ${"20240615^D^X "}      | ${"a trailing space in an extra component"}
-    ${"20240615^D^ "}       | ${"a space-only extra component"}
-    ${"20240615^D^X^ Y"}    | ${"a leading space in a later extra component"}
   `("is not a TS: $label", ({ value }) => {
     expect(splitHl7Ts(value)).toBeNull();
   });

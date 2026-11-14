@@ -1,6 +1,6 @@
 import { type LocalesArgument, resolveLocale } from "./resolveLocale";
 import { twoDigitYear } from "./twoDigitYear";
-import { readYearWindowStart } from "./yearWindowStart";
+import { readYearWindowOption, resolveYearWindow } from "./yearWindowStart";
 import { eraNamesFor, meridiemsFor, weekdayNamesFor } from "./localeNames";
 import { localeMonthNames } from "./localeMonthNames";
 
@@ -448,10 +448,11 @@ function compilePattern(
  * responsible for handing the result to `Temporal.*.from(fields, {
  * overflow: "reject" })`, which is what actually validates it.
  *
- * `options` is the caller's `TwoDigitYearOptions` bag, unread. It is read
- * only when a `yy` token matched, once (`readYearWindowStart`): a pattern
- * with no `yy` never reads `yearWindow`, and so never reads the clock a
- * `"rolling"` window needs. Returns `null` when a `yy` token matched and
+ * `yearWindow` is the caller's `TwoDigitYearOptions.yearWindow`, already read once and
+ * checked against the types by `parseValueWithPattern`. It is resolved
+ * only when a `yy` token matched (`resolveYearWindow`): a pattern
+ * with no `yy` never reads the clock a `"rolling"` window needs.
+ * Returns `null` when a `yy` token matched and
  * the bag names no valid window: no standard says which century a
  * two-digit year belongs to, so without the caller's window the value
  * cannot be read. Reading a hostile bag throws; the public function's
@@ -460,7 +461,7 @@ function compilePattern(
 function resolvePatternFields(
   match: RegExpMatchArray,
   tokens: CompiledToken[],
-  options: unknown,
+  yearWindow: unknown,
 ): ParsedPatternFields | null {
   const groups = (match.groups ?? {}) as Record<string, string | undefined>;
   const fields: ParsedPatternFields = {};
@@ -479,8 +480,8 @@ function resolvePatternFields(
         break;
       case "yearShort": {
         // A pattern holds one year token at most (`compilePattern` rejects
-        // a repeated field), so this is the call's only read of the option.
-        const yearWindowStart = readYearWindowStart(options);
+        // a repeated field), so this resolves the window once.
+        const yearWindowStart = resolveYearWindow(yearWindow);
         if (yearWindowStart === null) return null;
         fields.year = twoDigitYear(Number.parseInt(raw, 10), yearWindowStart);
         break;
@@ -570,10 +571,12 @@ function resolvePatternFields(
  * sentinel-return contract.
  *
  * `options` is the caller's `TwoDigitYearOptions` bag, already accepted
- * by `isOptionsArgument`. It is read lazily: only a matched `yy` token
- * reads `yearWindow`, once, so a pattern without `yy` reads neither the
- * option nor the clock. A bag that throws when read makes this function
- * throw; every caller runs it inside `try`.
+ * by `isOptionsArgument`. `yearWindow` is read once, once the value matches, and a value
+ * the types reject (not `undefined`, `"rolling"` or a number) returns
+ * `null` even when the pattern has no `yy`. Only a matched `yy` token
+ * resolves it, so a pattern without `yy` never reads the clock. A bag that
+ * throws when read makes this function throw; every caller runs it inside
+ * `try`.
  */
 export function parseValueWithPattern(
   value: string,
@@ -608,5 +611,10 @@ export function parseValueWithPattern(
   const match = value.match(compiled.regex);
   if (match === null) return null;
 
-  return resolvePatternFields(match, compiled.tokens, options);
+  // Read once, and checked whether or not the pattern has a `yy`: a value the types reject
+  // returns null. (No match returns null anyway, so the read waits for one.)
+  const window = readYearWindowOption(options);
+  if (window === null) return null;
+
+  return resolvePatternFields(match, compiled.tokens, window.yearWindow);
 }

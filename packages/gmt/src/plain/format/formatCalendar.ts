@@ -90,12 +90,10 @@ export function formatCalendar(
       // "long"/"full" are outside the type but reachable from JS; their zone
       // name would describe the UTC anchor, not the value. Temporal's
       // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
-      // GetOption converts the value once (ToString), so `new String("long")`
-      // is mapped as "long" is; a symbol throws, and that is invalid input.
+      // The option is read once and must be a primitive string: a wrapped
+      // value such as `new String("long")` throws and is invalid input.
       const timeStyle = plainTimeStyle(
-        `${stringOptionOrDefault(options.timeStyle, "short")}` as NonNullable<
-          FormatCalendarOptions["timeStyle"]
-        >,
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
 
       // Plain values carry no timezone. UTC is an arbitrary but stable anchor

@@ -438,6 +438,9 @@ describe("chargeableDays", () => {
     ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, chargeBasis: "weekdays" }}                                     | ${"unknown chargeBasis"}
     ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, chargeBasis: "working" }}                                      | ${"working charge basis without a calendar"}
     ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, basis: "working" }}                                            | ${"working basis without a calendar"}
+    ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, calendar: new String("x") }}                                   | ${"a String object as the calendar on the calendar basis"}
+    ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, calendar: "x" }}                                               | ${"a string as the calendar on the calendar basis"}
+    ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, calendar: null }}                                              | ${"null as the calendar on the calendar basis"}
     ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, timeZone: "America/Nueva_York" }}                              | ${"invalid timeZone"}
     ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, tiers: [10, 5] }}                                              | ${"tiers not ascending"}
     ${friday}                | ${expiry}                | ${3}       | ${{ ...calendar, tiers: [5, 5] }}                                               | ${"duplicate tier"}

@@ -31,15 +31,16 @@ import type { Hl7DateTime } from "../../types";
  * - A lone `TS` carries no MSH-2, so `^` separates its components, the separator Figure 2-1
  *   recommends (ch. 2 §2.5.4). When a feed's MSH-2 names another, the caller re-joins that `TS`
  *   with `^` first.
- * - TS.1 is the DTM and TS.2 is empty or one code from Table 0529; nothing follows either inside
- *   it, so `2024&X` and `2024^D&X` return `null`.
+ * - GMT reads TS.1 as exactly a DTM and TS.2 as exactly a Table 0529 code (or empty) and rejects
+ *   anything else inside them, so `2024&X` and `2024^D&X` return `null`; that is GMT's strict-kind
+ *   rule, not an HL7 rule.
  * - Components after TS.2 are present but not expected and are ignored (ch. 2 §2.6.2; a later
  *   version adds them at the end, §2.8.1 and §2.8.2), so `20240615^D^X` reads as `20240615^D`.
  *   An empty component is not present (§2.6.2), so `20240615^D^` reads as `20240615^D` and `""^`
- *   as the null value, while `^D` returns `null`. An ignored component is still checked: it is
- *   HL7 text with no `|`, `^`, `~`, `\`, `&` or C0 control character (a carriage return ends the
- *   segment) and no leading or trailing space, so `20240615^D^X|Y` and `20240615^D^ X` return
- *   `null`; an inner space is data.
+ *   as the null value, while `^D` returns `null`. An ignored component still cannot hold `|`,
+ *   `~` or a C0 control character (a carriage return ends the segment), so `20240615^D^X|Y`
+ *   returns `null`; a subcomponent (`&`), an escape sequence (`\F\`, §2.7) and white space are
+ *   text and are ignored.
  * - Second `60` and hour `24` are rejected, as is any day the month lacks.
  * - Returns `null` on invalid input and for any value that is not a string. Never throws.
  *
