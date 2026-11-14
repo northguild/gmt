@@ -2278,9 +2278,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
       once the table is parsed, so the verdict and the Yours column are final before first paint.
       `stored-results` and the zone-kind label reserve their height so the late fill moves nothing.
       The page lists it in `mdx-jsx.ts`'s dropped components.
-    - **The map is drawn at every width.** Below 520 px of section width (a container query in
-      `families/clockcheck/zone-map.module.css`) the list shows under the map as the easy tap path,
-      the panel stays below the list, outside its scroll box, and scrolls into view when a reader
+    - **The map and the list show at every width.** The list is never hidden. Below 520 px of
+      section width (a container query in `families/clockcheck/zone-map.module.css`) it sits under
+      the map as the easy tap path, the panel stays below the list, outside its scroll box, and scrolls into view when a reader
       pins. A label's type stays 12px at every width; on a frame too small for all of them,
       `wireFeatureMap` hides (`data-crowded`, `visibility`) each permanent label whose box would
       meet one of higher priority (the pinned and hovered first, then `labelled` in order). A

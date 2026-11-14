@@ -14,11 +14,12 @@
  * over one `<button>` per feature, or over the drawn shapes themselves: the arrow keys move (and
  * wrap), Home and End jump; Enter or Space pins. Either way the Tab key enters once and does not
  * walk dozens of features. On `"list"` the shapes are `role="button"` with `tabindex="-1"`, so only a
- * pointer reaches them. On `"shapes"` the page shows its list only where no map is drawn (narrow,
- * or the file failed), and the section's `data-map` (`drawn` or `failed`) says which.
+ * pointer reaches them. On `"shapes"` the drawn shapes take a roving stop of their own and the
+ * list keeps its stop, so a feature with no shape (the US page's Midway and Wake) is still reached
+ * from the list. The section's `data-map` (`drawn` or `failed`) says whether the drawing came.
  *
- * **The map is drawn at every width.** Below 520 px of section width the page also shows its list
- * under the map, as the easy tap and keyboard path, and a pin made there brings the panel into
+ * **The map and the list show at every width.** The list is never hidden: it is a tap and keyboard
+ * path beside the map or under it, and a pin made there on a narrow section brings the panel into
  * view. The data-credits button belongs to the drawing, so it is added when the map is drawn. A
  * label's type stays 12px, so on a small frame the permanent labels that would meet one of higher
  * priority are hidden, and thinned again on every resize.
@@ -172,7 +173,8 @@ export interface FeatureMapConfig {
   toggle?: boolean;
   /**
    * The keyboard path once the map is drawn: the `list` of buttons, or the drawn `shapes`, one tab
-   * stop over them in the list's order. The list stays the path wherever no map is drawn.
+   * stop over them in the list's order. The list keeps its own stop either way and shows at every
+   * width.
    */
   keyboard: "list" | "shapes";
   /** The map's accessible name. */
