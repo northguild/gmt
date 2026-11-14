@@ -1,3 +1,7 @@
+import { plainOptionEntries } from "./plainOptionEntries";
+import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
+import { repairYearPrinting, widenRelatedYear } from "./yearPrinting";
+
 /** The `Intl` formatter classes this module builds. */
 type FormatterKind =
   | "DateTimeFormat"
@@ -29,6 +33,43 @@ function forgetIfReplaced(kind: FormatterKind): void {
   }
 }
 
+/** The options to build with: widened (D28) when the formatter's calendar is chinese or dangi. */
+function widened(
+  native: Intl.DateTimeFormat,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormatOptions {
+  try {
+    return widenRelatedYear(options, native.resolvedOptions().calendar);
+  } catch {
+    return options;
+  }
+}
+
+/**
+ * A date formatter with the week-year guard (D23, D24) and no year repair (D25 to D27): its parts
+ * are the engine's own, as a caller that reads the engine's era needs them (D18, `islamicEra.ts`).
+ * Not cached; the caller keeps it.
+ *
+ * @param locale BCP 47 locale
+ * @param options the formatter's options, built by GMT code
+ * @returns the guarded formatter
+ *
+ * @example guardedDateTimeFormat("en-u-ca-islamic-civil", { era: "short", timeZone: "UTC" }).formatToParts(0) // the engine's parts
+ */
+export function guardedDateTimeFormat(
+  locale: FormatterLocale,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const native = new Intl.DateTimeFormat(locale, options);
+  // CORE-112 D28: a chinese or dangi `year: "2-digit"` is built as `"numeric"` where the engine
+  // pads the related year.
+  const built = options.year === "2-digit" ? widened(native, options) : options;
+  return guardDateTimeFormat(
+    built === options ? native : new Intl.DateTimeFormat(locale, built),
+    built,
+  );
+}
+
 function construct(
   kind: FormatterKind,
   locale: FormatterLocale,
@@ -36,9 +77,10 @@ function construct(
 ): object {
   switch (kind) {
     case "DateTimeFormat":
-      return new Intl.DateTimeFormat(
-        locale,
+      return repairYearPrinting(
+        guardedDateTimeFormat(locale, options as Intl.DateTimeFormatOptions),
         options as Intl.DateTimeFormatOptions,
+        (twin) => cachedFormatter("DateTimeFormat", locale, twin),
       );
     case "NumberFormat":
       return new Intl.NumberFormat(locale, options as Intl.NumberFormatOptions);
@@ -60,40 +102,6 @@ function isCacheableLocale(locale: FormatterLocale): boolean {
   return (
     typeof locale === "string" || (Array.isArray(locale) && locale.length > 0)
   );
-}
-
-/** Whether `Intl` can read this option value without running caller code. */
-function isPlainOptionValue(value: unknown): boolean {
-  return (
-    typeof value === "string" ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
-  );
-}
-
-/**
- * The own enumerable options as `[name, value]` pairs, read through property descriptors so a
- * getter is never run, or `null` when one is an accessor or holds a value `Intl` would coerce
- * by running caller code (anything but a string, a finite number or a boolean). An `undefined`
- * value is skipped, as `Intl` reads it as absent.
- */
-function plainOptionEntries(options: object): [string, unknown][] | null {
-  const entries: [string, unknown][] = [];
-  for (const name of Object.keys(options)) {
-    const descriptor = Object.getOwnPropertyDescriptor(options, name);
-    if (descriptor === undefined || !("value" in descriptor)) {
-      return null;
-    }
-    const value: unknown = descriptor.value;
-    if (value === undefined) {
-      continue;
-    }
-    if (!isPlainOptionValue(value)) {
-      return null;
-    }
-    entries.push([name, value]);
-  }
-  return entries;
 }
 
 /** Whether these entries carry a `timeZone` string. */
@@ -226,4 +234,5 @@ export function clearFormatterCache(): void {
   formatters.clear();
   checked.clear();
   builtWith.clear();
+  forgetWeekYearVerdicts();
 }

@@ -8,7 +8,7 @@ import {
 /*
  * Every upstream repro for each `@js-temporal/polyfill` defect GMT works around, with the
  * spec-correct answer: the probe groups from `probeRepros.ts` plus the canary-only groups below
- * (zoned.A, zoned.B, zoned.D, zoned.E, D9 and D21). No shipped module imports this file: a repro the
+ * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D28). No shipped module imports this file: a repro the
  * shipped probes do not read lives here, so it never reaches a bundle. It imports ONLY the
  * polyfill (through `../temporal`) and `probeRepros.ts`, so a canary script can load its compiled copy straight from
  * `dist` and report which workarounds are still needed.
@@ -39,8 +39,20 @@ export type ZonedDefectId = "zoned.A" | "zoned.B" | "zoned.D" | "zoned.E";
  */
 export type BoundedWorkDefectId = "D9" | "D21";
 
+/**
+ * Engine and CLDR defects the canary reads without a probe in `probeRepros.ts` (CORE-112). D23:
+ * V8 without commit 0426b0d1045d aborts the process in `formatToParts` and `formatRangeToParts` on
+ * a pattern with the week-of-year year field (nodejs/node#67076). D24: CLDR 48 patterns print that
+ * week-year where the calendar year is meant. The guard in `weekYearGuard.ts` covers both and
+ * changes no output once the engine and the data are right. D25 to D28 (`yearPrinting.ts`): the
+ * japanese calendar prints Japanese eras before 1873-01-01 (ICU-23341, ICU-23619), an islamic calendar prints
+ * a negative year before the Hijra (ICU-23327), `ja` japanese leaves a `2-digit` era year unpadded
+ * (ICU-23620), and chinese and dangi pad the related year under `2-digit` (ICU-23621).
+ */
+export type CanaryDefectId = "D23" | "D24" | "D25" | "D26" | "D27" | "D28";
+
 export interface Repro extends Omit<ProbeRepro, "defect"> {
-  defect: DefectId | ZonedDefectId | BoundedWorkDefectId;
+  defect: DefectId | ZonedDefectId | BoundedWorkDefectId | CanaryDefectId;
 }
 
 const MAX_EPOCH_NANOSECONDS = 8_640_000_000_000_000_000_000n;
@@ -384,8 +396,212 @@ const d21Repros: readonly Repro[] = [
   },
 ];
 
+/**
+ * The recorded inputs of D23 and D24, all `timeZone: "UTC"`. Each is a pattern whose CLDR 48 data
+ * uses the week-of-year year (UTS #35 Part 4 §8, `Y`) where the calendar year (`y`) is meant.
+ */
+const weekYearInputs: readonly {
+  name: string;
+  locale: string;
+  options: Intl.DateTimeFormatOptions;
+  date: [number, number, number];
+  expected: string;
+}[] = [
+  {
+    name: "gdMonthShortYearEnd",
+    locale: "gd",
+    options: { year: "numeric", month: "short" },
+    date: [2024, 12, 30],
+    expected: "Dùbh 2024",
+  },
+  {
+    name: "kshNumericYearStart",
+    locale: "ksh",
+    options: { year: "numeric", month: "numeric" },
+    date: [2027, 1, 1],
+    expected: "2027-01",
+  },
+  {
+    name: "scNumericYearStart",
+    locale: "sc",
+    options: { year: "numeric", month: "numeric" },
+    date: [2027, 1, 1],
+    expected: "01/2027",
+  },
+  {
+    name: "teBuddhistYearEnd",
+    locale: "te-u-ca-buddhist",
+    options: { year: "numeric", month: "long" },
+    date: [2026, 12, 31],
+    expected: "డిసెంబర్ 2569",
+  },
+  {
+    name: "myJapaneseMidYear",
+    locale: "my-u-ca-japanese",
+    options: { year: "numeric", month: "numeric", day: "numeric" },
+    date: [2026, 7, 1],
+    expected: "R ၀၁/၀၇/၈",
+  },
+  {
+    name: "glHebrewDateStyleFull",
+    locale: "gl-u-ca-hebrew",
+    options: { dateStyle: "full" },
+    date: [2026, 9, 12],
+    expected: "sábado, 1 de Tishri de 5787 AM",
+  },
+  {
+    name: "deChEraShortYearEnd",
+    locale: "de-CH",
+    options: {
+      era: "short",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+    },
+    date: [2024, 12, 30],
+    expected: "Mo., 12.30.2024 n. Chr.",
+  },
+];
+
+/**
+ * D24: each input prints the calendar year, with the text the locale data otherwise gives
+ * (ECMA-402 FormatDateTimePattern, `year`: the calendar year, or the era year with an era). Only
+ * `format` is called, so no engine can abort on it.
+ */
+const d24Repros: readonly Repro[] = weekYearInputs.map((input) => ({
+  defect: "D24",
+  calendar: "iso8601",
+  name: input.name,
+  expected: input.expected,
+  run: () =>
+    new Intl.DateTimeFormat(input.locale, {
+      ...input.options,
+      timeZone: "UTC",
+    }).format(
+      Temporal.PlainDate.from({
+        year: input.date[0],
+        month: input.date[1],
+        day: input.date[2],
+      }).toZonedDateTime("UTC").epochMilliseconds,
+    ),
+}));
+
+/**
+ * D23: a component-option formatter resolves a year field for a pattern that holds the week-year.
+ * V8 without commit 0426b0d1045d resolves `undefined` there and aborts in `formatToParts`, and
+ * a fixed V8, SpiderMonkey and JavaScriptCore resolve `numeric` (ECMA-402 CreateDateTimeFormat).
+ * No parts call is made: the canary script confirms the abort in a child process, on Node only.
+ */
+const d23Repros: readonly Repro[] = [
+  {
+    defect: "D23",
+    calendar: "iso8601",
+    name: "resolvedYearOfWeekYearPattern",
+    expected: "numeric",
+    run: () =>
+      String(
+        new Intl.DateTimeFormat("gd", {
+          year: "numeric",
+          month: "short",
+          timeZone: "UTC",
+        }).resolvedOptions().year,
+      ),
+  },
+];
+
+/** The epoch milliseconds of noon UTC on an ISO date, years before 0000 included. */
+function noonMs(year: number, month: number, day: number): number {
+  return Temporal.PlainDate.from({ year, month, day }).toZonedDateTime({
+    timeZone: "UTC",
+    plainTime: "12:00",
+  }).epochMilliseconds;
+}
+
+/** A UTC `Intl.DateTimeFormat` text at an ISO date. */
+function printed(
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  date: readonly [number, number, number],
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    ...options,
+    timeZone: "UTC",
+  }).format(noonMs(date[0], date[1], date[2]));
+}
+
+/**
+ * D25 to D28, text only (`format`), so no engine can abort on a repro. The expected values are the
+ * specifications': Intl era/monthCode Table 2 as amended by tc39/proposal-intl-era-monthcode#86 and
+ * test262 tc39/test262#4877 (japanese before 1873-01-01 is Gregorian, and Meiji 6 starts it),
+ * Table 2 and § 4.1.12 (the islamic calendars have a second era before the Hijra), ECMA-402
+ * FormatDateTimePattern (`2-digit` pads the era year to two digits; the related year is
+ * FormatNumeric at full width).
+ */
+const yearPrintingRepros: readonly Repro[] = [
+  {
+    defect: "D25",
+    calendar: "iso8601",
+    name: "japaneseTwoBc",
+    expected: "2 BC",
+    run: () =>
+      printed(
+        "en-u-ca-japanese",
+        { era: "short", year: "numeric" },
+        [-1, 7, 10],
+      ),
+  },
+  {
+    defect: "D25",
+    calendar: "iso8601",
+    name: "japaneseLastGregorianDay",
+    expected: "1872 AD",
+    run: () =>
+      printed(
+        "en-u-ca-japanese",
+        { era: "short", year: "numeric" },
+        [1872, 12, 31],
+      ),
+  },
+  {
+    defect: "D26",
+    calendar: "iso8601",
+    name: "islamicCivilEraBeforeHijra",
+    expected: "two eras",
+    run: () => {
+      const era = (year: number) =>
+        printed("en-u-ca-islamic-civil", { era: "short", year: "numeric" }, [
+          year,
+          7,
+          10,
+        ]).replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+      return era(600) === era(2025) ? "one era" : "two eras";
+    },
+  },
+  {
+    defect: "D27",
+    calendar: "iso8601",
+    name: "jaJapaneseTwoDigitEraYear",
+    expected: "令和06年",
+    run: () => printed("ja-u-ca-japanese", { year: "2-digit" }, [2024, 7, 10]),
+  },
+  {
+    defect: "D28",
+    calendar: "iso8601",
+    name: "chineseRelatedYearFullWidth",
+    expected: "5",
+    run: () =>
+      /\p{Nd}+/u.exec(
+        printed("en-u-ca-chinese", { year: "2-digit" }, [5, 7, 10]),
+      )?.[0] ?? "",
+  },
+];
+
 export const repros: readonly Repro[] = [
   ...d21Repros,
+  ...d23Repros,
+  ...d24Repros,
+  ...yearPrintingRepros,
   ...d9Repros,
   ...zonedARepros,
   ...zonedBRepros,
@@ -412,7 +628,7 @@ export const repros: readonly Repro[] = [
 
 /** The repro with this defect, calendar and name, if any. */
 export function findRepro(
-  defect: DefectId | ZonedDefectId | BoundedWorkDefectId,
+  defect: DefectId | ZonedDefectId | BoundedWorkDefectId | CanaryDefectId,
   calendar: string,
   name: string,
 ): Repro | undefined {

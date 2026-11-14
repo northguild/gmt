@@ -6,6 +6,8 @@
   "entry": [
     "packages/gmt/src/test/nativeTemporal.ts",
     "scripts/lib/native-suite-reporter.mjs",
+    // The weekly D23/D24 locale sweep (CORE-112), run by hand or from a workflow.
+    "scripts/canary/weekYear.mjs",
     "packages/gmt/bench/*.bench.ts",
     "packages/gmt/src/test/*.browser.ts",
     "packages/gmt/src/test/boundedWorker.ts",
@@ -41,6 +43,19 @@
     "maxCrap": 30,
     "maxUnitSize": 60,
     "thresholdOverrides": [
+      {
+        "files": ["packages/gmt/src/internal/weekYearRange.ts"],
+        "functions": [
+          "farRange",
+          "shiftYears",
+          "digitsMatch",
+          "computeShift",
+          "movedLikeYear",
+          "signOf",
+        ],
+        "maxCrap": 70,
+        "reason": "D24 range verdict: cyclomatic and cognitive are inside the limits; the CRAP figure is estimated from export references because these helpers are not exported, and weekYearRange.test.ts covers every branch through rangeYearVerdict",
+      },
       {
         "files": ["packages/gmt/src/internal/patternToken.ts"],
         "functions": [

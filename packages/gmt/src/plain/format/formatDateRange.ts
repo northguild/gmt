@@ -1,3 +1,4 @@
+import { formatRangeChecked } from "../../internal/weekYearRange";
 import { plainDateOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
@@ -63,11 +64,13 @@ export function formatDateRange(
     if (resolved === null) {
       return "";
     }
-    const out = cachedFormatter("DateTimeFormat", locale, resolved).formatRange(
+    const out = formatRangeChecked(
+      cachedFormatter("DateTimeFormat", locale, resolved),
+      resolved,
       startParsed.toZonedDateTime("UTC").epochMilliseconds,
       endParsed.toZonedDateTime("UTC").epochMilliseconds,
     );
-    return normalizeDateTime(out);
+    return out === null ? "" : normalizeDateTime(out);
   } catch {
     return "";
   }

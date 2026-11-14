@@ -202,7 +202,7 @@ export const WORKAROUNDS = [
     trigger:
       "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and by every browser the native suite runs, so every D16 repro passes on every engine: this check reports Node, and the weekly run's compat check in each browser (the temporal-compat-chromium, -firefox, -webkit and -webkit-macos verdicts) reports the rest; D16 is removable only when all of them say so",
     steps: [
-      "Delete the zoneNames branch of rangeWithRepairedParts and its gate in zoned/format/formatZonedRange.ts, isRangeZoneNameCompatNeeded in capabilities.ts and its export in index.ts, and the D16 repros.",
+      "Delete rangeWithRepairedZoneNames, the zoneNames branch of rangeWithRepairedParts and their gate in zoned/format/formatZonedRange.ts, internal/repairRangeText.ts and its test, isRangeZoneNameCompatNeeded in capabilities.ts and its export in index.ts, and the D16 repros.",
       "Keep every formatZonedRange row: their values are the field formats and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 16.`,
     ],
@@ -285,6 +285,79 @@ export const WORKAROUNDS = [
       "Delete the D22 repros and readOrNone in probeRepros.ts with readOrNone's tests in capabilities.test.ts, isNudgeOriginCompatNeeded in capabilities.ts and its export in index.ts, and internal/zonedDifference/nudgeOrigin.ts with its three calls in zonedWallClockDifference.ts (the originTotalBySpec and originRoundBySpec operands in durationTotal and durationRound, and the defect-5 term in untilTakesSpecPath), the export of possibleEpochNanoseconds from zonedWallClock.ts, WHAT_BREAKS.D22 in apps/dox/src/data/temporal-compat.ts, and this entry. The last of defects 3–5 to go also deletes untilTakesSpecPath, the // defects 3–5 block in zonedUntil that calls untilAtLimit, and the bySpec blocks in durationTotal and durationRound. Then drop the imports and locals tsc reports unused, and the internal/zonedDifference/operations.ts exports fallow reports unused.",
       "Keep the throws in nudgeToCalendarUnit, differenceZonedDateTime, combineDateAndTimeDuration and nudgeToZonedTime, test/laterPassOrigin.test.ts, test/noSpecValue.test.ts and the later-pass rows in internal/lengthFromNow.test.ts: the values are the specification's, but the repros are samples, so run these on the release first and keep D22 if a row fails.",
       `Full wording: ${COMPAT_README} § Removal steps 22.`,
+    ],
+  },
+  {
+    defects: ["D23"],
+    engines: ["v8"],
+    title:
+      "D23 — formatToParts and formatRangeToParts abort V8 on a week-of-year year field (nodejs/node#67076)",
+    trigger:
+      "every V8 the check reads (Node at the engines.node floor, and the temporal-compat-chromium verdict) passes the D23 repro: a gd formatter with year numeric and month short resolves a year, and the Node child-process confirmation of scripts/canary/weekYear.mjs exits 0 with a year part",
+    steps: [
+      "Delete weekYearSynth.ts and its test, the crash signal and path B in weekYearGuard.ts (a flagged formatter takes native parts with the year patched everywhere), and the D23 repro in repros.ts.",
+      "Keep every expected-value row: the values are ECMA-402's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 23.`,
+    ],
+  },
+  {
+    defects: ["D24"],
+    title:
+      "D24 — CLDR date patterns print the week-of-year year where the calendar year is meant (internal/weekYearGuard.ts)",
+    trigger:
+      "every engine's compat verdict passes every D24 repro, and the weekly sweep of scripts/canary/weekYear.mjs flags no locale, calendar or option set",
+    steps: [
+      "Delete weekYearGuard.ts, weekYearSynth.ts, weekYearText.ts, weekYearRange.ts and its tests, the formatRangeChecked calls in formatDateRange.ts, formatDateTimeRange.ts and formatZonedRange.ts, the construct hook and forgetWeekYearVerdicts call in formatterCache.ts, weekYearSource.test.ts and the D24 repros in repros.ts.",
+      "Keep every expected-value row (weekYearSingle.test.ts and the abort rows): the values are ECMA-402's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 24.`,
+    ],
+  },
+  {
+    defects: ["D25"],
+    title:
+      "D25 — the japanese calendar prints Japanese eras before 1873-01-01 (internal/yearPrinting.ts)",
+    trigger:
+      "every engine's compat verdict passes both D25 repros: en-u-ca-japanese prints 2 BC for ISO -0001-07-10 and 1872 AD for 1872-12-31 (tc39/proposal-intl-era-monthcode#86, tc39/test262#4877)",
+    steps: [
+      "Delete the era branch of repairYearPrinting in yearPrinting.ts (beforeEras, the Gregorian twin, the era flag), isJapaneseEraCompatNeeded in capabilities.ts and the D25 repros in repros.ts.",
+      "Keep every D25 row in yearPrinting.test.ts: the values are the proposal's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 25.`,
+    ],
+  },
+  {
+    defects: ["D26"],
+    title:
+      "D26 — an islamic calendar prints a negative year before the Hijra (internal/yearPrinting.ts)",
+    trigger:
+      "every engine's compat verdict passes the D26 repro: en-u-ca-islamic-civil prints a different era text for ISO 600-07-10 and 2025-07-10",
+    steps: [
+      "Delete the Hijra branch of repairYearPrinting in yearPrinting.ts (beforeHijra, the islamic flag), isIslamicEraCompatNeeded in capabilities.ts and the D26 repro in repros.ts. guardedDateTimeFormat in formatterCache.ts stays while D18 does.",
+      "Keep the D26 rows except those that assert the empty value, which a fixed engine replaces with the era's text.",
+      `Full wording: ${COMPAT_README} § Removal steps 26.`,
+    ],
+  },
+  {
+    defects: ["D27"],
+    title:
+      "D27 — ja japanese year 2-digit leaves the era year unpadded (internal/yearPrinting.ts)",
+    trigger:
+      "every engine's compat verdict passes the D27 repro: ja-u-ca-japanese with year 2-digit prints 令和06年 for 2024-07-10",
+    steps: [
+      "Delete the padding branch of repairYearPrinting in yearPrinting.ts (padPart, paddedRange, shiftOf, the pad flag), isJapaneseTwoDigitYearCompatNeeded in capabilities.ts and the D27 repro in repros.ts.",
+      "Keep every D27 row: 令和06年 and 元 are the values either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 27.`,
+    ],
+  },
+  {
+    defects: ["D28"],
+    title:
+      "D28 — chinese and dangi pad the related year under year 2-digit (internal/yearPrinting.ts)",
+    trigger:
+      "every engine's compat verdict passes the D28 repro: en-u-ca-chinese with year 2-digit prints the related year 5 for ISO 0005-07-10",
+    steps: [
+      "Delete widenRelatedYear in yearPrinting.ts and its call in guardedDateTimeFormat (formatterCache.ts), isRelatedYearWidthCompatNeeded in capabilities.ts and the D28 repro in repros.ts; with D25 to D27 gone too, delete yearPrinting.ts and its hook in construct.",
+      "Keep every D28 row: the related year at full width is ECMA-402's value.",
+      `Full wording: ${COMPAT_README} § Removal steps 28.`,
     ],
   },
   {

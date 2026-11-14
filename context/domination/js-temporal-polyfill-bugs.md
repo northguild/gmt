@@ -13,7 +13,7 @@ GMT's seven reports and two PRs to `fullcalendar/temporal-polyfill`, found by th
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) and #3335 are open with no maintainer reply (checked 2026-11-13); #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 25 workarounds, 21 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest is § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags, and § AD, a Node 26 engine defect GMT only tags; § I (D12), fixed on `main` with nothing
+> 31 workarounds, 27 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § AG (D25 to D28: other wrong years in formatted text, from ICU and CLDR, with ICU-23341 and ICU-23327 filed by others, the ECMA-402 wording filed as tc39/ecma402#1116, and ours as ICU-23619, ICU-23620 and ICU-23621), then § AF (D23, a V8 crash fixed in V8 `0426b0d1045d` and asked of Node as nodejs/node#67076, and D24, CLDR patterns with `Y`, reported by someone else as CLDR-19873, where our comment adds the rest), then § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags, and § AD, a Node 26 engine defect GMT only tags; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -38,6 +38,12 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | A js-temporal rebase and a release |
 | `D21`: `Temporal.Now` reads a millisecond early after a pre-1970 clock reading (§ AB) | None. Filed as tc39 #3335 | A tc39 fix, the js-temporal rebase and a release, so the `D21` canary repro passes |
 | `D22`: a length in days or larger is measured from the wrong pass of a repeated hour (§ AC) | js-temporal `3c403686d39` | tc39 #3319 in the same release, or `P7D` with `largestUnit: "week"` regresses to `P1W1D`. A release that still strips the Asserts of tc39/proposal-temporal#3336, #3311 and #3310 keeps GMT's gate |
+| `D23`: V8 stops the process in `formatToParts` and `formatRangeToParts` on a pattern with `Y` (§ AF) | Not a polyfill fix. V8 `0426b0d1045d`, in Chromium 158 | A Node release on every line GMT supports that takes `0426b0d1045d` (nodejs/node#67076), as GMT's `engines.node` floor: the `D23` repro passes in `pnpm compat` and in the weekly `temporal-compat-chromium` verdict. V8 is the only engine in D23's scope |
+| `D24`: some languages print the year of the week-of-year for the calendar year (§ AF) | Not a polyfill fix, and not fixed on CLDR `main` | CLDR-19873 fixed for every pattern on `main` (CLDR 49 adds de, kek, ki and pt), a CLDR and ICU release with it, and engines that ship that ICU: every `D24` repro passes in every compat verdict, and the weekly `scripts/canary/weekYear.mjs` sweep flags nothing |
+| `D25`: the japanese calendar prints Japanese eras before 1873-01-01 (§ AG) | Not a polyfill fix. ICU-23341, fixed for ICU 79.1, for the eras before Meiji | An ICU release with ICU-23341 and with the Gregorian era for Meiji 1 to 5, as ICU4X has (ICU-23619, open), in engines GMT supports: both `D25` repros pass in every compat verdict |
+| `D26`: islamic calendars print a negative year before the Hijra (§ AG) | Not a polyfill fix. ICU-23327 is open | An ICU release that gives the `bh` era a name, in engines GMT supports: the `D26` repro passes in every compat verdict |
+| `D27`: `ja` japanese `year: "2-digit"` leaves the era year unpadded (§ AG) | Not a polyfill fix. ICU-23620 is open | An ICU release whose `jpanyear` numbering keeps the minimum digit count: the `D27` repro passes in every compat verdict |
+| `D28`: chinese and dangi pad the related year under `year: "2-digit"` (§ AG) | Not a polyfill fix. ICU-23621 is open: ICU's pattern generator turns `yy` into `rr` | Engines that print `relatedYear` at full width: the `D28` repro passes in every compat verdict |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3). `main` since `853fc8b` also has tc39/proposal-temporal#3327 problem 1, which the `D6.cachedDay` probes catch |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b). js-temporal `main` took all of `196a3191` in `853fc8b`, months-loop hunk included, so it also carries tc39/proposal-temporal#3327 problem 1. Whether `D7.leapMonthEnd` passes on `main` is unverified (no build) |
@@ -2904,3 +2910,130 @@ The other legacy ids work in the same WebKit on macOS: `CET`, `EET`, `MET`, `WET
 Why I think the four ids are valid: the time zone database release 2026e, in its file `backward`, defines them as zones: `Zone EST5EDT -5:00 USback E%sT`, `Zone CST6CDT -6:00 USback C%sT`, `Zone MST7MDT -7:00 USback M%sT` and `Zone PST8PDT -8:00 USback P%sT`. ECMA-402 section 6.5 (Use of the IANA Time Zone Database) says that each Zone in the IANA Time Zone Database must be a primary time zone identifier, so these four should be accepted and `Temporal` should treat them as named zones.
 
 What I expected: the same results as in Chromium, Firefox and Node, for example `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" }).resolvedOptions().timeZone` returns `"EST5EDT"`.
+
+## AF. Some languages' date patterns print the week-of-year year: the wrong year everywhere, and a V8 crash in `formatToParts` (engine and CLDR)
+
+### Status
+
+Two defects with one cause, so GMT guards them as two groups that can retire on different days.
+
+- **D23, the crash (V8).** **Filed** as [nodejs/node#67076](https://github.com/nodejs/node/issues/67076)
+  (2026-10-28, open, no reply as of 2026-11-13). It asks v22.x, v24.x and v26.x to take V8 commit
+  `0426b0d1045d` ("[intl] Handle UDAT_YEAR_WOY_FIELD in IcuDateFieldIdToDateType", 2026-09-01). Chromium 158
+  has it. Every installed Node aborts: 22.22.2, 24.19.0, 24.21.0, 26.8.2, 26.10.0, 26.12.1 and 26.13.0, all
+  with CLDR 48.0.
+- **D24, the wrong year (CLDR data).** [CLDR-19873](https://unicode-org.atlassian.net/browse/CLDR-19873)
+  (not ours, 2026-10-20, open) reports gl and kek. [Our comment](https://unicode-org.atlassian.net/browse/CLDR-19873?focusedCommentId=213171)
+  (2026-11-13) adds the other patterns on `main`, the gd and te repros and the D23 crash. CLDR 48 has `Y` in ak, de-CH, gd, gl, kok, ksh, my, sc and te; CLDR 49 and `main` (`c0b65ae356`)
+  keep them and add de with its regional variants, kek, ki and pt. Every engine that ships CLDR 48 prints it:
+  Node, Chromium 158 with the fix above, and WebKit 26.6. **Not a polyfill defect**: the polyfill's
+  `toLocaleString` and GMT both format through the host's `Intl.DateTimeFormat`.
+
+### What goes wrong
+
+UTS #35 Part 4 (Dates) § 8, the Date Field Symbol Table, gives `y` as the calendar year and `Y` as the year
+of the week-of-year, which differs from the calendar year in the days around the year's end. Some CLDR 48
+patterns use `Y` where `y` is meant. ECMA-402 has no week-year field: FormatDateTimePattern prints the
+`[[Year]]` of the date (the era year when the pattern has an era), `numeric` with no grouping and no
+padding, `2-digit` as the last two digits, with the part type `year`.
+
+1. **The wrong year, on every engine.** `format`, `formatToParts` (where it does not crash), `formatRange`
+   and `formatRangeToParts` print the week-year. In the Gregorian calendar that is wrong only near the
+   year's end. In a calendar whose year does not start on 1 January, such as Buddhist, Japanese or ROC, the
+   pattern prints the Gregorian week-year all year, so the year is wrong on every day. WebKit gives the
+   part the type `unknown`.
+2. **The crash, on V8 without `0426b0d1045d`.** V8 maps each ICU field to a part type and has no case for
+   `UDAT_YEAR_WOY_FIELD`, so `formatToParts` and `formatRangeToParts` reach `UNREACHABLE()`: the process
+   stops with `Fatal error … unreachable code`, signal SIGTRAP, exit code 133. No exception is thrown and
+   nothing can catch it. `format` and `formatRange` do not crash. The same V8 also drops `year` from
+   `resolvedOptions()` for such a pattern; the fix keeps it, which is the signal GMT reads.
+
+### Repro (Node 26.12.1, V8 14.6.202.34-node.40, ICU 78.3, CLDR 48.0; expected values from ECMA-402 and Temporal `eraYear ?? year`)
+
+`utc` is `{ timeZone: "UTC" }`.
+
+| Call | Node 26 | Expected |
+| ---- | ------- | -------- |
+| `new Intl.DateTimeFormat("gd", { year: "numeric", month: "short", ...utc }).format(new Date("2024-12-30"))` | `Dùbh 2025` | `Dùbh 2024` |
+| the same formatter's `resolvedOptions().year` | `undefined` | `"numeric"` |
+| the same formatter's `formatToParts(new Date("2024-12-30"))` | aborts, exit 133 | a `year` part `2024` |
+| `new Intl.DateTimeFormat("te-u-ca-buddhist", { year: "numeric", month: "long", ...utc }).format(new Date("2026-07-01"))` | `జులై 2026` | `జులై 2569` |
+| `new Intl.DateTimeFormat("gl-u-ca-hebrew", { dateStyle: "full", ...utc }).format(new Date("2026-09-12"))` | `sábado, 1 de Tishri de 5786 AM` | `5787` as the year |
+| the same formatter's `formatToParts(…)` | aborts, exit 133 | parts with a `year` part `5787` |
+
+### Effect on GMT
+
+Shipped GMT aborts Node through two internal parts calls: `formatZonedRange` with `my-u-ca-buddhist` and a
+`long` zone name (the D16 carrier's `formatRangeToParts`), and `formatCalendar` with `gl-u-ca-hebrew`,
+`gl-u-ca-buddhist` or `gl-u-ca-roc` (the `dateStyle: "full"` parts in `joinDateTimeConnector`). Every format
+function also prints the week-year. CORE-112 fixes both:
+
+- `internal/weekYearGuard.ts` checks each formatter once, when `formatterCache` builds it, using only
+  `format` and `resolvedOptions`. A formatter that passes is returned as it is. A flagged one prints the
+  calendar year the ECMA-402 way, and never calls a parts method that could abort.
+- Range text gets its own check, because an interval pattern is not the single pattern: on a
+  formatter's first range call, `format` and `formatRange` probes find a year run that is not the
+  calendar year, and a flagged formatter's range text has that run rewritten. No range parts call
+  is made for it.
+- D16 repairs the range string from `formatRange`; no range parts call can reach V8. D17 keeps its parts
+  merge, which only SpiderMonkey reaches.
+- The canary groups D23 and D24 retire the code: D23 when every V8 GMT supports has `0426b0d1045d`, D24 when
+  CLDR prints `y` (which also ends D23). `scripts/canary/weekYear.mjs` sweeps every CLDR locale weekly, so a
+  new `Y` pattern is found before a user meets it.
+
+## AG. Other wrong years in formatted text: japanese before 1873, islamic before the Hijra, and 2-digit years (engine, ICU and CLDR)
+
+### Status
+
+Four defects found by the CORE-112 range sweep, which compared every year a range prints with Temporal's
+calendar year. None is a polyfill defect: GMT and the polyfill's `toLocaleString` both format through the
+host's `Intl.DateTimeFormat`. Each reaches GMT's format functions, in single dates and in ranges, on Node
+22.22.2, 24.21.0, 26.12.1 and 26.13.0 (ICU 78.2 and 78.3, CLDR 48), Chromium 153 and WebKit 26.6, except
+where a row says otherwise. Each is its own canary group, and the spec is
+[specs/CORE-112/year-printing.md](specs/CORE-112/year-printing.md).
+
+- **D25, japanese before 1873 (ICU, CLDR).** [ICU-23341](https://unicode-org.atlassian.net/browse/ICU-23341)
+  (not ours) is fixed for ICU 79.1, which is not released: with CLDR 49 dropping the eras before Meiji
+  (CLDR-11400), ICU 79 prints the Gregorian era before Meiji. CLDR 49 still starts Meiji on 1868-10-23, so
+  ICU 79 keeps Meiji 1 to 5 for 1868-10-23 to 1872-12-31, where ICU4X prints the Gregorian era in code.
+  Filed as [ICU-23619](https://unicode-org.atlassian.net/browse/ICU-23619) (2026-11-14, open).
+- **D26, islamic before the Hijra (ICU).** [ICU-23327](https://unicode-org.atlassian.net/browse/ICU-23327)
+  (not ours, open). WebKit is right (`643 Before Hijra`, WebKit 321713).
+- **D27, `ja` japanese `year: "2-digit"` (ICU).** ICU-20441 gives `ja` with the japanese calendar the
+  `jpanyear` numbering whenever the pattern holds 年, and `jpanyear` ignores the minimum digit count. Filed
+  as [ICU-23620](https://unicode-org.atlassian.net/browse/ICU-23620) (2026-11-14, open).
+- **D28, chinese and dangi related year under `year: "2-digit"` (ICU).** ICU's pattern generator turns a
+  `yy` skeleton into `rr`, a padded related year, where ECMA-402 prints the related year at full width.
+  Filed as [ICU-23621](https://unicode-org.atlassian.net/browse/ICU-23621) (2026-11-14, open).
+
+### What goes wrong
+
+| Call (`utc` is `{ timeZone: "UTC" }`) | Node 26.12.1 | Expected | Source of the expected value |
+| ---- | ------- | -------- | ---- |
+| `new Intl.DateTimeFormat("en-u-ca-japanese", { era: "short", year: "numeric", ...utc }).format(new Date("-000001-07-10"))` | `-645 Taika (645–650)` | `2 BC` | Intl era/monthCode Table 2, amended by [tc39/proposal-intl-era-monthcode#86](https://github.com/tc39/proposal-intl-era-monthcode/issues/86) (TG2 2026-01-08; test262 tc39/test262#4877, merged): Gregorian eras up to and including 1872-12-31 |
+| the same formatter at `1872-12-31` | `5 Meiji` | `1872 AD` | the same |
+| `new Intl.DateTimeFormat("en-u-ca-islamic-civil", { era: "short", year: "numeric", ...utc }).format(new Date("0600-07-10"))` | `-22 AH` | the year in the `bh` era | Intl era/monthCode Table 2 and § 4.1.12; test262 `intl402/DateTimeFormat/prototype/formatToParts/era.js` requires ISO 600 and 2025 to print different era names |
+| `new Intl.DateTimeFormat("ja-u-ca-japanese", { year: "2-digit", ...utc }).format(new Date("2024-07-10"))` | `令和6年` | `令和06年` | ECMA-402 FormatDateTimePattern: a `2-digit` year is FormatNumeric with `minimumIntegerDigits` 2 |
+| `new Intl.DateTimeFormat("en-u-ca-chinese", { year: "2-digit", ...utc }).format(new Date("0005-07-10"))` | `05(yi-chou)` | `5(yi-chou)` | ECMA-402 FormatDateTimePattern: `relatedYear` is FormatNumeric at full width, with no 2-digit form |
+
+Not defects: indian `-79 Śaka` and persian `-622 AP` at ISO year −1. Table 2 gives each calendar a single
+era with a signed era year, and native Temporal gives `eraYear` −79 and −622 on all three engines.
+ECMA-402 FormatDateTimePattern's "If partType is "year" and value ≤ 0, set value to 1 − value" fits only
+a calendar with an inverse era. Filed as [tc39/ecma402#1116](https://github.com/tc39/ecma402/issues/1116)
+(2026-11-14, open).
+
+### Effect on GMT
+
+`internal/yearPrinting.ts` wraps a formatter only when its defect's probe fails and the formatter can show
+it (its calendar, locale and options). Every replacement text is the engine's own; GMT owns no era or
+numbering data.
+
+- **D25:** a date before 1873-01-01 is formatted through a `calendar: "gregory"` twin. A range with
+  either end before 1873 prints wholly through the twin, so it stays in one calendar.
+- **D26 (owner decision):** a pre-Hijra date formats to the house empty value: `""` for text and ranges,
+  `[]` for parts. No wrong year is printed and no era name is owned. D18 (§ R) keeps the engine's own
+  parts through `guardedDateTimeFormat`.
+- **D27 (owner decision):** a one-digit era year is padded with the zero of the formatter's own numbering
+  system. 元年 stays, as CLDR's `ja` data has it.
+- **D28:** a chinese or dangi `year: "2-digit"` formatter is built with `year: "numeric"`, the same
+  pattern at full width.

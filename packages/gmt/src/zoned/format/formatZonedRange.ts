@@ -6,16 +6,27 @@ import type { DateTimeFormatOptions } from "../../types";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import { timeZoneEquals } from "../../internal/temporalCompat";
 import { repairRangeParts } from "../../internal/repairRangeParts";
+import { formatRangeChecked } from "../../internal/weekYearRange";
+import { repairRangeText } from "../../internal/repairRangeText";
 import {
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
 } from "../../internal/temporalCompat";
+
+/** The `timeZoneName` part's value, or `undefined` when the parts carry none. */
+function zoneNameOf(parts: Intl.DateTimeFormatPart[]): string | undefined {
+  return parts.find((part) => part.type === "timeZoneName")?.value;
+}
 
 /**
  * The range with the parts a host gets wrong written in the requested form: the `timeZoneName`
  * width (defect D16, ICU-20548) and the flexible `dayPeriod` (defect D17). The part merge is
  * `repairRangeParts`. For D16 the carrier formatter uses a `short` zone name, which the engine
  * keeps; for D17 it is the requested formatter.
+ *
+ * `formatRangeToParts` is called only here, and a V8 that aborts on it (CORE-112, defect D23) never
+ * turns the D17 gate on: only SpiderMonkey does, which has no such abort. D16 alone takes
+ * `rangeWithRepairedZoneNames` and never calls a range parts method.
  */
 function rangeWithRepairedParts(
   locale: string | string[] | undefined,
@@ -42,6 +53,44 @@ function rangeWithRepairedParts(
       ...(repair.zoneNames ? ["timeZoneName"] : []),
       ...(repair.dayPeriods ? ["dayPeriod"] : []),
     ],
+  );
+}
+
+/**
+ * The range with the carrier's `short` zone names replaced by the requested ones (defect D16),
+ * read off the `formatRange` string by `repairRangeText`, with no range parts call. A range
+ * pattern is not visible through `resolvedOptions`, so a V8 that aborts on a week-of-year year
+ * field (CORE-112, defect D23) cannot be told which range parts call is safe: this one makes none.
+ * The zone names come from single-date parts, which `cachedFormatter` guards.
+ *
+ * @returns the repaired range, or `""` when a zone name cannot be given to an endpoint
+ */
+function rangeWithRepairedZoneNames(
+  locale: string | string[] | undefined,
+  formatOptions: Intl.DateTimeFormatOptions,
+  ms1: number,
+  ms2: number,
+): string {
+  const want = cachedFormatter("DateTimeFormat", locale, formatOptions);
+  const carrierOptions = { ...formatOptions, timeZoneName: "short" as const };
+  const carrier = cachedFormatter("DateTimeFormat", locale, carrierOptions);
+  // The year repair first (slice 3c), then the zone names: it changes digits only.
+  const text = formatRangeChecked(carrier, carrierOptions, ms1, ms2);
+  if (text === null) {
+    return "";
+  }
+  return (
+    repairRangeText(
+      text,
+      [
+        zoneNameOf(carrier.formatToParts(ms1)),
+        zoneNameOf(carrier.formatToParts(ms2)),
+      ],
+      [
+        zoneNameOf(want.formatToParts(ms1)),
+        zoneNameOf(want.formatToParts(ms2)),
+      ],
+    ) ?? ""
   );
 }
 
@@ -137,17 +186,26 @@ export function formatZonedRange(
         style !== undefined &&
         formatOptions.dayPeriod !== undefined &&
         isRangeDayPeriodCompatNeeded();
-      const out =
-        zoneNames || dayPeriods
-          ? rangeWithRepairedParts(locale, formatOptions, ms1, ms2, {
-              zoneNames,
-              dayPeriods,
-            })
-          : cachedFormatter(
-              "DateTimeFormat",
-              locale,
-              formatOptions,
-            ).formatRange(ms1, ms2);
+      let out: string;
+      if (dayPeriods) {
+        out = rangeWithRepairedParts(locale, formatOptions, ms1, ms2, {
+          zoneNames,
+          dayPeriods,
+        });
+      } else if (zoneNames) {
+        out = rangeWithRepairedZoneNames(locale, formatOptions, ms1, ms2);
+      } else {
+        const text = formatRangeChecked(
+          cachedFormatter("DateTimeFormat", locale, formatOptions),
+          formatOptions,
+          ms1,
+          ms2,
+        );
+        if (text === null) {
+          return "";
+        }
+        out = text;
+      }
       return normalizeDateTime(out);
     } catch {
       return "";

@@ -1,3 +1,4 @@
+import { Temporal } from "../temporal";
 import { type DefectId, type ProbeRepro, probeRepros } from "./probeRepros";
 
 /*
@@ -237,5 +238,120 @@ export function isCalendarArithmeticCompatNeeded(calendarId: string): boolean {
   return (
     calendarId !== "iso8601" &&
     ARITHMETIC_DEFECTS.some((defect) => isDefectPresent(defect, calendarId))
+  );
+}
+
+const engineProbeCache = new Map<string, boolean>();
+
+/** `Intl.DateTimeFormat` text for a UTC date given as year, month and day (any year, 0 to 99 too). */
+function textAt(
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  date: readonly [number, number, number],
+): string {
+  const time = Temporal.PlainDate.from({
+    year: date[0],
+    month: date[1],
+    day: date[2],
+  }).toZonedDateTime("UTC").epochMilliseconds;
+  return new Intl.DateTimeFormat(locale, {
+    ...options,
+    timeZone: "UTC",
+  }).format(time);
+}
+
+/** One engine probe, answered the first time it is asked and kept: `true` when the engine has the defect. */
+function engineDefect(key: string, fails: () => boolean): boolean {
+  const cached = engineProbeCache.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  let present: boolean;
+  try {
+    present = fails();
+  } catch {
+    // An engine that cannot run the probe cannot print the calendar either: nothing to repair.
+    present = false;
+  }
+  engineProbeCache.set(key, present);
+  return present;
+}
+
+/**
+ * True when this runtime's japanese calendar prints a Japanese era for a date the Gregorian
+ * eras cover (defect D25, ICU-23341 and ICU-23619).
+ *
+ * Intl era/monthCode Table 2, as amended by tc39/proposal-intl-era-monthcode#86 (test262
+ * tc39/test262#4877): for dates up to and including 1872-12-31 the japanese calendar uses the
+ * Gregorian eras. ICU 78 prints `-645 Taika` for ISO -0001-07-10 and `5 Meiji` for 1872-12-31. The
+ * probe compares the japanese calendar's era and year with the Gregorian calendar's at both dates.
+ */
+export function isJapaneseEraCompatNeeded(): boolean {
+  return engineDefect("D25", () =>
+    (
+      [
+        [-1, 7, 10],
+        [1872, 12, 31],
+      ] as const
+    ).some(
+      (date) =>
+        textAt("en-u-ca-japanese", { era: "short", year: "numeric" }, date) !==
+        textAt("en-u-ca-gregory", { era: "short", year: "numeric" }, date),
+    ),
+  );
+}
+
+/**
+ * True when this runtime prints a date before the Hijra in the one Islamic era, as a negative year
+ * (defect D26, ICU-23327).
+ *
+ * Intl era/monthCode Table 2 and § 4.1.12 give the `bh` era, and test262
+ * `intl402/DateTimeFormat/prototype/formatToParts/era.js` requires ISO 600 and 2025 to print
+ * different era names. The probe compares the text with its digits and signs taken out.
+ */
+export function isIslamicEraCompatNeeded(): boolean {
+  const eraOf = (date: readonly [number, number, number]): string =>
+    textAt(
+      "en-u-ca-islamic-civil",
+      { era: "short", year: "numeric" },
+      date,
+    ).replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect(
+    "D26",
+    () => eraOf([600, 7, 10]) === eraOf([2025, 7, 10]),
+  );
+}
+
+/**
+ * True when this runtime does not pad a Japanese era year under `year: "2-digit"` (defect D27,
+ * ICU-23620).
+ *
+ * ECMA-402 FormatDateTimePattern, the "2-digit" branch: FormatNumeric with `minimumIntegerDigits:
+ * 2`, so Reiwa 6 is `06`. ICU's `jpanyear` numbering ignores the minimum digit count.
+ */
+export function isJapaneseTwoDigitYearCompatNeeded(): boolean {
+  return engineDefect(
+    "D27",
+    () =>
+      !/\p{Nd}{2}/u.test(
+        textAt("ja-u-ca-japanese", { year: "2-digit" }, [2024, 7, 10]),
+      ),
+  );
+}
+
+/**
+ * True when this runtime pads the related year of the chinese and dangi calendars under `year:
+ * "2-digit"` (defect D28, ICU-23621).
+ *
+ * ECMA-402 FormatDateTimePattern: `relatedYear` is FormatNumeric of the related year at full width,
+ * with no 2-digit form. ICU prints its `rr` field, padded to two digits: `05` for ISO 0005.
+ */
+export function isRelatedYearWidthCompatNeeded(): boolean {
+  return engineDefect(
+    "D28",
+    () =>
+      /\p{Nd}+/u.exec(
+        textAt("en-u-ca-chinese", { year: "2-digit" }, [5, 7, 10]),
+      )?.[0] !== "5",
   );
 }
