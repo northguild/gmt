@@ -20,6 +20,8 @@
   --zonemap-changes-fill-a: 0.18;
   --zonemap-changes-edge-a: 0.6;
   --zonemap-stopped-fill-a: 0.45;
+  --zonemap-stopped-soft-fill-a: 0.22;
+  --zonemap-none-soft-fill-a: 0.08;
   --zonemap-sea: color-mix(
     in srgb,
     var(--gmt-cyan) calc(var(--zonemap-sea-cyan) * 100%),
@@ -51,6 +53,22 @@
     from var(--gmt-dst-purple) srgb r g b / var(--zonemap-stopped-fill-a)
   );
   --zonemap-stopped-edge: var(--gmt-dst-purple-ink);
+
+  /* The lighter steps of the US page's proposals: the same hue and stroke at a lower alpha, so a
+     firm position is solid and a conditional or merely proposed one is paler. */
+  --zonemap-stopped-soft-fill: color(
+    from var(--gmt-dst-purple) srgb r g b / var(--zonemap-stopped-soft-fill-a)
+  );
+  --zonemap-none-soft-fill: color(
+    from var(--gmt-cyan) srgb r g b / var(--zonemap-none-soft-fill-a)
+  );
+
+  /* The "still changes" gold laid on the sea, opaque: the Navajo Nation drawn over its cyan state. */
+  --zonemap-changes-solid: color-mix(
+    in srgb,
+    var(--gmt-dst-gold) calc(var(--zonemap-changes-fill-a) * 100%),
+    var(--zonemap-sea)
+  );
 }
 
 /* --- The section: the map, the zone card and the live clocks ---------------- */
@@ -58,8 +76,8 @@
 /* Below 62rem they stack in that order, the map full width but never taller than 70% of the
    viewport. From 62rem all three share one row of one height: the map's frame is
    `--gmt-zonemap-row` tall at its drawing's own aspect, so its column is as wide as the drawing
-   needs and the sea never letterboxes, and the cards take the rest equally. Below 520px the map is
-   not drawn, and the panel opens below the list, outside its scroll box. Nothing scrolls sideways. */
+   needs and the sea never letterboxes, and the cards take the rest equally. The map is drawn at
+   every width. Nothing scrolls sideways. */
 .section {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -188,20 +206,8 @@
   }
 }
 
-/* Below 520px the map and its legend are not drawn; the list stays. */
+/* Below 520px the panel takes one column. The map is drawn at every width. */
 @container gmt-clockcheck (max-width: 519.98px) {
-  .stage,
-  .map {
-    display: none;
-  }
-
-  /* Until a zone is pinned there is no map to give the panel's space a purpose, so it is not drawn
-     at all: the first paint is already the narrow layout and nothing shrinks when the script runs.
-     The mount sets `data-pinned` on the first pin. */
-  .pin:not([data-pinned="true"]) {
-    display: none;
-  }
-
   .pin {
     grid-template-columns: minmax(0, 1fr);
     margin-block-start: var(--gmt-space-1);
@@ -225,6 +231,16 @@
   align-items: center;
   gap: var(--gmt-space-2);
   margin: 0;
+
+  &[hidden] {
+    display: none;
+  }
+
+  /* A spare line (the US page's No data) keeps its room while hidden: the answer moves nothing. */
+  &[hidden][data-spare] {
+    display: flex;
+    visibility: hidden;
+  }
 }
 
 /* The same flat fill and stroke mark the legend, a list card and the pin panel. */
@@ -253,6 +269,55 @@
     background:
       linear-gradient(var(--zonemap-changes-fill), var(--zonemap-changes-fill)),
       var(--zonemap-sea);
+  }
+
+  /* The US page's classes use the same fills and strokes as the map's shapes. */
+  &[data-kind="changes"],
+  &[data-kind="no-position"],
+  &[data-kind="navajo"] {
+    border-color: var(--zonemap-changes-edge);
+    background:
+      linear-gradient(var(--zonemap-changes-fill), var(--zonemap-changes-fill)),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="standard-all-year"] {
+    border-color: var(--zonemap-none-edge);
+    background:
+      linear-gradient(var(--zonemap-none-fill), var(--zonemap-none-fill)),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="standard-proposed"] {
+    border-color: var(--zonemap-none-edge);
+    background:
+      linear-gradient(
+        var(--zonemap-none-soft-fill),
+        var(--zonemap-none-soft-fill)
+      ),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="daylight-if-allowed"] {
+    border-color: var(--zonemap-stopped-edge);
+    background:
+      linear-gradient(var(--zonemap-stopped-fill), var(--zonemap-stopped-fill)),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="daylight-conditional"] {
+    border-color: var(--zonemap-stopped-edge);
+    background:
+      linear-gradient(
+        var(--zonemap-stopped-soft-fill),
+        var(--zonemap-stopped-soft-fill)
+      ),
+      var(--zonemap-sea);
+  }
+
+  &[data-kind="no-data"] {
+    border-color: var(--zonemap-land-edge);
+    background: var(--zonemap-land);
   }
 }
 
@@ -293,7 +358,8 @@
 
 /* The map is a dark island, so these colours are the same in both themes. The layer lies over the
    drawing and takes no pointer, so a label never steals a click from a shape or a ring. A label's
-   type is a fixed 12px at every frame width; only its position scales, as a share of the frame. */
+   type is a fixed 12px at every frame width; only its position scales, as a share of the frame,
+   and a label that would meet another on a small frame is hidden. */
 .labels {
   position: absolute;
   inset: 0;
@@ -320,7 +386,12 @@
   );
   inline-size: var(--lw);
   block-size: var(--lh);
-  transform: translate(-50%, -50%);
+
+  /* `--nx` and `--ny` push an inset's label inside its card (feature-map.ts). */
+  transform: translate(
+    calc(-50% + var(--nx, 0px)),
+    calc(-50% + var(--ny, 0px))
+  );
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -355,6 +426,11 @@
 
   &[data-passing="true"] {
     z-index: var(--gmt-z-over);
+  }
+
+  /* A permanent label that would meet one of higher priority on a small frame (feature-map.ts). */
+  &[data-crowded="true"] {
+    visibility: hidden;
   }
 }
 
@@ -397,6 +473,41 @@
     fill: var(--zonemap-stopped-fill);
     stroke: var(--zonemap-stopped-edge);
     stroke-width: 1.5;
+  }
+
+  /* The US page's classes, flat like Canada's: gold still changes, cyan never changes, purple is
+     daylight time if it is allowed. The lighter steps are the same hue at a lower alpha. */
+  &[data-kind="changes"],
+  &[data-kind="no-position"] {
+    fill: var(--zonemap-changes-fill);
+    stroke: var(--zonemap-changes-edge);
+  }
+
+  &[data-kind="standard-all-year"] {
+    fill: var(--zonemap-none-fill);
+    stroke: var(--zonemap-none-edge);
+  }
+
+  &[data-kind="standard-proposed"] {
+    fill: var(--zonemap-none-soft-fill);
+    stroke: var(--zonemap-none-edge);
+  }
+
+  &[data-kind="daylight-if-allowed"] {
+    fill: var(--zonemap-stopped-fill);
+    stroke: var(--zonemap-stopped-edge);
+    stroke-width: 1.5;
+  }
+
+  &[data-kind="daylight-conditional"] {
+    fill: var(--zonemap-stopped-soft-fill);
+    stroke: var(--zonemap-stopped-edge);
+    stroke-width: 1.5;
+  }
+
+  &[data-kind="no-data"] {
+    fill: var(--zonemap-land);
+    stroke: var(--zonemap-land-edge);
   }
 
   /* A light lift on hover: the fill gains alpha and the ring draws the edge in the bright cyan. */
@@ -664,54 +775,25 @@
   }
 }
 
-.pinHead {
-  display: grid;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  gap: var(--gmt-space-3);
-  align-items: center;
-  min-block-size: 5rem;
-}
-
-.pinClock {
-  inline-size: 5rem;
-  block-size: 5rem;
-}
-
-.pinTitle {
-  display: grid;
-  gap: var(--gmt-space-1);
-  min-inline-size: 0;
-  margin: 0;
-
-  & dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-    line-height: 1.4;
-  }
-
-  & .swatch {
-    inline-size: 1.125rem;
-    block-size: 0.75rem;
-    margin-inline-end: var(--gmt-space-2);
-  }
-}
-
-.pinTitleRow {
-  min-inline-size: 0;
-}
-
+/* The pin head's type (its layout and held lines are `pin-head.module.css`). */
 .pinZone {
   /* Breaks only at the `<wbr>` after a `/`. */
   overflow-wrap: normal;
-  min-block-size: 2.8em;
   font-family: var(--gmt-font-mono);
   font-size: 0.875rem;
   color: var(--gmt-cyan-bright);
 }
 
 .pinClass {
-  min-block-size: 2.8em;
+  overflow-wrap: anywhere;
   font-size: 0.8125rem;
+
+  /* The mount puts the class's swatch first; under a line's height, so it grows no line. */
+  & .swatch {
+    inline-size: 1.125rem;
+    block-size: 0.75rem;
+    margin-inline-end: var(--gmt-space-2);
+  }
 }
 
 .pinRows {
@@ -826,17 +908,59 @@
     color: CanvasText;
   }
 
-  /* The class of a zone is a pattern as well as a colour, and forced colours repaints the fills as
-     one flat Canvas. Repaint each in system colours so the three classes stay apart: hatch, solid,
-     dots. */
+  /* The class of a zone is a pattern as well as a colour. Forced colours would leave the shapes
+     in colours outside the system pair, or flatten them, so each shape wears its swatch's mark in
+     CanvasText on Canvas: solid, hatch or dots. The marks are the svg's own patterns
+     (`forcedMarks()` in zone-map.ts), named by the `--zonemap-fc-*` properties it sets. */
   .swatch,
-  .shape[data-kind="changes-after"] {
+  .shape[data-kind="changes-after"],
+  .shape[data-kind="stopped"],
+  .shape[data-kind="none"],
+  .markGround,
+  .markInk,
+  .land {
     forced-color-adjust: none;
+  }
+
+  .markGround {
+    fill: Canvas;
+  }
+
+  /* The land around the zones joins the system pair too: Chromium leaves an svg fill as it is, so
+     it kept the dark island's colour, which a light system palette set against Canvas and
+     CanvasText shapes. The lines over the zones are in the view switch's block below. */
+  .land {
+    fill: Canvas;
+    stroke: GrayText;
+  }
+
+  .markInk {
+    fill: CanvasText;
+  }
+
+  .shape[data-kind="stopped"],
+  .shape[data-kind="none"] {
+    stroke: CanvasText;
+  }
+
+  .shape[data-kind="stopped"] {
+    fill: var(--zonemap-fc-hatch);
+  }
+
+  .shape[data-kind="none"] {
+    fill: var(--zonemap-fc-dots);
   }
 
   .swatch {
     border-color: CanvasText;
     background-color: Canvas;
+
+    /* The class rules above set the ground in the sea colour, and they outrank the plain
+       `.swatch` rule: set it again here. */
+    &[data-kind="stopped"],
+    &[data-kind="none"] {
+      background-color: Canvas;
+    }
 
     &[data-kind="stopped"] {
       background-image: repeating-linear-gradient(
@@ -860,13 +984,612 @@
     fill: CanvasText;
   }
 
+  /* The US page repaints the same way: gold solid, cyan dots, purple hatch, the lighter steps
+     with a sparser mark, and no data plain Canvas. */
+  .shape[data-kind="changes"],
+  .shape[data-kind="no-position"],
+  .shape[data-kind="standard-all-year"],
+  .shape[data-kind="standard-proposed"],
+  .shape[data-kind="daylight-if-allowed"],
+  .shape[data-kind="daylight-conditional"],
+  .shape[data-kind="no-data"] {
+    forced-color-adjust: none;
+    stroke: CanvasText;
+  }
+
+  .shape[data-kind="changes"],
+  .shape[data-kind="no-position"] {
+    fill: CanvasText;
+  }
+
+  .shape[data-kind="daylight-if-allowed"] {
+    fill: var(--zonemap-fc-hatch);
+  }
+
+  .shape[data-kind="daylight-conditional"] {
+    fill: var(--zonemap-fc-hatch-sparse);
+  }
+
+  .shape[data-kind="standard-all-year"] {
+    fill: var(--zonemap-fc-dots);
+  }
+
+  .shape[data-kind="standard-proposed"] {
+    fill: var(--zonemap-fc-dots-sparse);
+  }
+
+  .shape[data-kind="no-data"] {
+    fill: Canvas;
+  }
+
+  .swatch {
+    &[data-kind="changes"],
+    &[data-kind="no-position"],
+    &[data-kind="navajo"] {
+      background: CanvasText;
+    }
+
+    &[data-kind="daylight-if-allowed"] {
+      background:
+        repeating-linear-gradient(
+          45deg,
+          CanvasText 0 1.5px,
+          transparent 1.5px 5px
+        ),
+        Canvas;
+    }
+
+    &[data-kind="daylight-conditional"] {
+      background:
+        repeating-linear-gradient(45deg, CanvasText 0 1px, transparent 1px 7px),
+        Canvas;
+    }
+
+    &[data-kind="standard-all-year"] {
+      background:
+        radial-gradient(CanvasText 1.2px, transparent 1.6px) 0 0 / 5px 5px,
+        Canvas;
+    }
+
+    &[data-kind="standard-proposed"] {
+      background:
+        radial-gradient(CanvasText 0.8px, transparent 1.2px) 0 0 / 8px 8px,
+        Canvas;
+    }
+
+    &[data-kind="no-data"] {
+      background: Canvas;
+    }
+  }
+
+  /* A solid shape is edged in Canvas, so two solid neighbours stay two shapes; its own edge
+     colour would come through, as the shapes opt out above. */
+  .shape[data-kind="changes-after"],
+  .shape[data-kind="changes"],
+  .shape[data-kind="no-position"] {
+    stroke: Canvas;
+  }
+
+  /* Focus, hover and pin are all Highlight: the dashed line keeps focus apart from the rings. The
+     pin's soft glow has no system colour, so it goes. */
+  .shape:focus-visible {
+    stroke: Highlight;
+  }
+
+  .marker,
+  .marker[data-kind] {
+    forced-color-adjust: none;
+    stroke: CanvasText;
+  }
+
+  .marker {
+    &:hover,
+    &[data-active="true"],
+    &:focus-visible {
+      stroke: Highlight;
+    }
+  }
+
   .zoneButton[aria-pressed="true"] {
     border-color: Highlight;
     outline: 2px solid Highlight;
   }
 
+  .ring[data-ring="hover"] .ringInk,
   .ring[data-ring="pin"] .ringInk,
   .marker[data-pinned="true"] {
     stroke: Highlight;
   }
+
+  .ring[data-ring="pin"] .ringCasing {
+    stroke: none;
+  }
+}
+
+/* Lines or frames drawn over the shapes (zone lines, inset frames): a decoration. */
+.overlay {
+  fill: none;
+  stroke: var(--zonemap-land-edge);
+  stroke-width: 0.75;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* The Navajo Nation: the Denver zone clipped to Arizona, in the "still changes" gold over its
+   state. A decoration, so it takes no pointer. */
+.hatch {
+  fill: var(--zonemap-changes-solid);
+  stroke: var(--zonemap-changes-edge);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* An inset's frame: a thin full border, its corners cut at 45 degrees. */
+.frame {
+  fill: transparent;
+  stroke: var(--zonemap-land-edge);
+  stroke-width: 1;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+
+  /* A press anywhere in the frame pins its place: the shapes in a small inset are too small to hit.
+     It is a pointer convenience, not a control: no focus, no role. */
+  pointer-events: all;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    stroke: var(--gmt-cyan-bright);
+  }
+
+  &[data-pinned="true"] {
+    stroke: var(--gmt-globe-selected);
+    stroke-width: 2;
+  }
+}
+
+/* --- The view switch --------------------------------------------------------- */
+
+/* A native radio group as a segmented control: a full border with bevel corners. The radio is the
+   segment's own hit area (`appearance: none`, laid over it), so the browser keeps the arrow keys,
+   the one tab stop and the form semantics. The checked segment is a fill, an inset bottom accent
+   and a bolder word, never colour alone, and never a left edge. */
+.viewSwitch {
+  display: grid;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.viewLegend {
+  padding: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.viewSegments {
+  display: inline-flex;
+  max-inline-size: 100%;
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-2);
+  overflow: hidden;
+}
+
+.viewSegment {
+  position: relative;
+  display: grid;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.viewInput {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan-bright);
+    outline-offset: -4px;
+  }
+}
+
+.viewText {
+  display: grid;
+  place-items: center;
+  min-block-size: 2rem;
+  min-inline-size: 5rem;
+  padding: var(--gmt-space-1) var(--gmt-space-3);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--gmt-ice);
+  border-block-end: 3px solid transparent;
+  pointer-events: none;
+}
+
+.viewInput:hover + .viewText,
+.viewInput:focus-visible + .viewText {
+  background: var(--gmt-fill);
+}
+
+.viewInput:checked + .viewText {
+  background: var(--gmt-fill);
+  border-block-end-color: var(--gmt-cyan-bright);
+  font-weight: 600;
+}
+
+@media (prefers-contrast: more) {
+  .viewSegments {
+    border-color: CanvasText;
+  }
+
+  .overlay {
+    stroke-width: 1.5;
+  }
+}
+
+@media (forced-colors: active) {
+  .viewSegments {
+    border-color: CanvasText;
+  }
+
+  .viewText {
+    color: ButtonText;
+  }
+
+  .viewInput:checked + .viewText {
+    background: Highlight;
+    border-block-end-color: HighlightText;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .viewInput:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .overlay,
+  .frame {
+    stroke: CanvasText;
+  }
+
+  .hatch {
+    fill: CanvasText;
+    stroke: CanvasText;
+    forced-color-adjust: none;
+  }
+
+  .frame:hover,
+  .frame:focus-visible,
+  .frame[data-pinned="true"] {
+    stroke: Highlight;
+  }
+}
+
+/* --- The Sunshine Protection Act page ------------------------------------------ */
+
+/* Each view's section is the checkers' `.section`: map, list and side card in one row from 62rem,
+   the pin panel across the width under them. The map's height is reserved from its aspect
+   (`--zonemap-map-height`), so nothing moves when the boundary file arrives. */
+
+/* A press on a shape focuses it, and Chromium then draws its auto focus ring as a dark box round the
+   shape's bounding rectangle, even with a transparent outline colour. A focused shape is already
+   marked by its own stroke, so the outline is dropped on this page. Forced colours draw no stroke colours, so there the
+   outline stays and is the focus edge. */
+@media (forced-colors: none) {
+  .usSection .shape,
+  .usSection .marker {
+    outline-width: 0;
+  }
+}
+
+/* The map's heading, with the view switch beside it when there is room. The switch's "Show" legend
+   is read, not shown: the segments name themselves. */
+.usStageHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-2) var(--gmt-space-3);
+  min-inline-size: 0;
+
+  & h4 {
+    margin: 0;
+  }
+
+  & .viewLegend {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+.usSection .map {
+  /* The checkers cap the map at 70vh below 62rem; the US map is landscape, so it takes the width. */
+  inline-size: 100%;
+}
+
+/* The stage's lines keep their own heights; when the row is taller than the stage (the clocks
+   column is the taller), the spare height falls under the caption, not between the lines. */
+.usSection .block {
+  align-content: start;
+}
+
+/* Both views sit in one grid cell, so the block is as tall as the taller of the two and a switch
+   moves nothing below it. The view that is not shown stays laid out but `visibility: hidden`, which
+   keeps it out of the accessibility tree, the tab order and pointer hits. Its descendants are set
+   too, not left to inherit: a pinned ring carries `visibility="visible"` and an inset frame
+   `pointer-events: all`, and either would show through or catch the other view's presses. */
+.usViews {
+  display: grid;
+  min-inline-size: 0;
+
+  & > * {
+    grid-area: 1 / 1;
+    min-inline-size: 0;
+  }
+
+  & > [hidden] {
+    display: block;
+  }
+
+  & > [hidden],
+  & > [hidden] * {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.usCaption {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* The US map carries ten labels and five insets, so its column takes a larger share of the row than
+   the checkers' maps (46% of the width, up to a 52rem row) to keep them apart. It always leaves
+   28rem to the list and the live clocks (16rem of it the clocks'), so a clock's time and offset
+   stay on one line and the clocks never make the row taller than the map. Proposals takes the same row, so the map keeps its
+   size across a view change, and gives the list the third column. */
+@container gmt-clockcheck (min-width: 62rem) {
+  .usSection {
+    --gmt-zonemap-row: clamp(
+      max(22rem, calc(400px * var(--zonemap-map-height, 640) / 800)),
+      min(
+        46cqw,
+        calc(
+          (100cqw - 28rem - 2 * var(--gmt-space-4) - 2 * var(--gmt-space-3) -
+              2px) *
+            var(--zonemap-map-height, 640) / 800
+        )
+      ),
+      52rem
+    );
+  }
+
+  /* The clocks' column is at least 16rem, so a time and its offset share one line. */
+  .usSection:has(> .clocksSlot) {
+    grid-template-columns:
+      calc(
+        var(--gmt-zonemap-row) * 800 / var(--zonemap-map-height, 640) + 2 *
+          var(--gmt-space-3) + 2px
+      )
+      minmax(0, 1fr) minmax(16rem, 1fr);
+  }
+
+  /* Beside the map, one column whose clocks share the row's spare height from a 3rem floor, not
+     the checkers' 3.75rem. */
+  .usSection .usAside ul {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(3rem, 1fr);
+  }
+
+  .usSection:not(:has(> .clocksSlot)) {
+    grid-template-columns:
+      calc(
+        var(--gmt-zonemap-row) * 800 / var(--zonemap-map-height, 640) + 2 *
+          var(--gmt-space-3) + 2px
+      )
+      minmax(0, 1fr);
+  }
+}
+
+/* Today's live clocks: ten places in one column beside the map, as the checkers stack theirs. Each
+   clock is a step smaller than the checkers' (a 2.25rem face, a 3rem row), so the column is no
+   taller than the map's. Stacked under the list (below 62rem), the card takes the full width, so
+   the clocks take as many 16rem columns as fit. Each clock's border is its place's class, as on
+   the map. */
+.usAside {
+  & ul {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  }
+
+  & li {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: var(--gmt-space-2);
+    min-block-size: 3rem;
+    padding-inline: var(--gmt-space-2);
+  }
+
+  & li > div {
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+  }
+
+  /* One step down on a reading's time and offset (clocks.module.css reads these), so both stay on
+     one line in the narrow column. A NO SIGNAL line keeps its own size. */
+  --gmt-clock-hm-size: 1.125rem;
+  --gmt-clock-off-size: 0.75rem;
+
+  & li[data-kind="changes"] {
+    border-color: var(--gmt-dst-gold-ink);
+  }
+
+  & li[data-kind="standard-all-year"] {
+    border-color: var(--gmt-cyan-ink);
+  }
+}
+
+/* The US pin head's type (its layout and held lines are `pin-head.module.css`); the swatch sits on
+   the class's first line. */
+.usPinName {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.usPinClass {
+  display: flex;
+  align-items: start;
+  gap: var(--gmt-space-2);
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+
+  & .swatch {
+    flex: none;
+    inline-size: 1.125rem;
+    block-size: 0.75rem;
+    margin-block-start: calc((1.4em - 0.75rem) / 2);
+  }
+}
+
+.usRows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding-block-start: var(--gmt-space-3);
+  border-block-start: 1px solid var(--gmt-border);
+}
+
+.usRow,
+.usRowWide,
+.usRowLong {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--gmt-space-1);
+  min-inline-size: 0;
+  font-size: 0.8125rem;
+
+  & dt {
+    color: var(--gmt-ice-dim);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  & dd {
+    min-inline-size: 0;
+    min-block-size: 1.4em;
+    margin: 0;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* A readout's value and, when its texts are known ahead, every one of them hidden: one cell, as
+   tall as the tallest text at every width, so pinning never grows the panel. */
+.usValue {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.usHeld {
+  visibility: hidden;
+}
+
+/* A line of prose with its widest texts in its one cell (`usHeldLine`). */
+.usHeldLine {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.usRowWide,
+.usRowLong {
+  grid-column: 1 / -1;
+}
+
+.usRowWide dd {
+  min-block-size: 4.2em;
+}
+
+/* Narrow, one readout to a line: half a phone's width wraps a date (13 November 2026, today), and
+   a wrap on pinning would move all below it. */
+@container gmt-clockcheck (max-width: 519.98px) {
+  .usRows {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container gmt-clockcheck (min-width: 40rem) {
+  .usRowWide dd {
+    min-block-size: 2.8em;
+  }
+}
+
+/* From 62rem the panel's readouts take half its right column each, two to a line, so the panel is
+   no taller than it needs to be. A wide readout holds three lines there; a long one holds its
+   tallest text (`.usHeld`). */
+@container gmt-clockcheck (min-width: 62rem) {
+  .usRowWide,
+  .usRowLong {
+    grid-column: auto;
+  }
+
+  .usRowWide dd {
+    min-block-size: 4.2em;
+  }
+}
+
+/* The national card beside the key points keeps its own height. */
+.usSide {
+  align-self: start;
+  min-inline-size: 0;
+}
+
+@media (prefers-contrast: more) {
+  .usRow dt,
+  .usRowWide dt,
+  .usRowLong dt,
+  .usCaption {
+    color: var(--gmt-ice);
+  }
+}
+
+/* A legend count holds its width, so the line does not rewrap when the answer arrives. Centred,
+   so a one-digit count reads `(9)`, not `( 9)`. */
+.usCount {
+  display: inline-block;
+  min-inline-size: 2ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.usStatus {
+  min-block-size: 1.4em;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }

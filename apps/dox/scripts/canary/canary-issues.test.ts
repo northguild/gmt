@@ -468,6 +468,7 @@ describe("constants and marker", () => {
         "temporal-polyfill-swap-webkit",
       ],
       "leap-seconds": ["leap-seconds"],
+      "us-clock-watch": ["us-clock-watch"],
     });
   });
   it("names the four swap sources", () => {
@@ -3013,5 +3014,167 @@ describe("workarounds scoped to WebKit, with two WebKit legs", () => {
     expect(
       states({ ...verdicts, "temporal-compat-webkit-macos": null }),
     ).toEqual([[false]]);
+  });
+});
+
+describe("US clock-change watch findings", () => {
+  const WATCH_CONTEXT = { workflow: "us-clock-watch", runUrl: RUN } as const;
+  const ran = (
+    differences: string[] = [],
+    extra: Record<string, unknown> = {},
+  ) => ({
+    status: "ran" as const,
+    differences,
+    ...extra,
+  });
+  const watch = (
+    over: Partial<Record<"federal" | "state" | "tz", unknown>> = {},
+    top: Record<string, unknown> = {},
+  ) => ({
+    source: "us-clock-watch" as const,
+    status: "ran" as const,
+    federal: ran([], { congress: 119 }),
+    state: ran(),
+    tz: ran([], { release: "2026f", snapshotRelease: "2026e" }),
+    ...over,
+    ...top,
+  });
+  const watchPlan = (verdict: unknown, open: ReturnType<typeof issue>[] = []) =>
+    planWithoutReport(
+      { "us-clock-watch": verdict } as never,
+      open,
+      WATCH_CONTEXT,
+    );
+  const opened = (verdict: unknown) =>
+    watchPlan(verdict).map((a) => {
+      if (a.kind !== "open") throw new Error("expected open");
+      return a;
+    });
+
+  it("a clean run files nothing", () => {
+    expect(watchPlan(watch())).toEqual([]);
+  });
+
+  it("each kind of difference opens its own issue", () => {
+    const actions = opened(
+      watch({
+        federal: ran(["new: S 7: To adopt permanent standard time"]),
+        state: ran(["new: Texas 2025 HB 9: Relating to standard time"]),
+        tz: ran(["America/New_York"], {
+          release: "2026f",
+          snapshotRelease: "2026e",
+        }),
+      }),
+    );
+    expect(actions.map((a) => a.key)).toEqual([
+      "us-clock-watch/federal",
+      "us-clock-watch/state",
+      "us-clock-watch/tz-us-zone",
+    ]);
+    expect(actions.map((a) => a.title)).toEqual([
+      "Federal bills on the clock-change subject changed",
+      "State bills on the clock-change subject changed",
+      "A tz release changed the rules of a US zone",
+    ]);
+    for (const action of actions) {
+      expect(action.labels).toEqual(["canary"]);
+      expect(action.body.split("\n")[0]).toBe(
+        `<!-- gmt-canary key="${action.key}" -->`,
+      );
+      expect(action.body.endsWith(`Run: ${RUN}`)).toBe(true);
+    }
+  });
+
+  it("the bill issues list what changed and ask a person to review and refresh", () => {
+    const [federal] = opened(
+      watch({ federal: ran(["new: S 7: To adopt permanent standard time"]) }),
+    );
+    expect(federal.body).toContain(
+      "### Differences\n\n- new: S 7: To adopt permanent standard time",
+    );
+    expect(federal.body).toContain("Review the change.");
+    expect(federal.body).toContain("node scripts/us-clock-watch.mjs refresh");
+    expect(federal.body).not.toContain("CORE-90 phase 2");
+  });
+
+  it("the tz issue names the zones, both releases, and the phase-2 signal", () => {
+    const [tz] = opened(
+      watch({
+        tz: ran(["America/Detroit", "America/New_York"], {
+          release: "2026f",
+          snapshotRelease: "2026e",
+        }),
+      }),
+    );
+    expect(tz.body).toContain(
+      "A tz release changed a US zone's rules. This is the signal to build the US clock-change checker: CORE-90 phase 2, #341.",
+    );
+    expect(tz.body).toContain("Release 2026f; the snapshot has 2026e.");
+    expect(tz.body).toContain("- America/Detroit\n- America/New_York");
+  });
+
+  it("a repeat comments on the open issue rather than opening a second", () => {
+    const verdict = watch({ federal: ran(["changed: HR 1: a title"]) });
+    const actions = watchPlan(verdict, [
+      issue(88, '<!-- gmt-canary key="us-clock-watch/federal" -->\nbody'),
+    ]);
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    expect(action.kind).toBe("comment");
+    expect(action).toMatchObject({ key: "us-clock-watch/federal", issue: 88 });
+    expect(action.body).toContain("- changed: HR 1: a title");
+  });
+
+  it("a source that could not run files one could-not-run issue naming it", () => {
+    const actions = opened(
+      watch({
+        federal: {
+          status: "could-not-run",
+          message: "secret `CONGRESS_GOV_API_KEY` is not set",
+        },
+        state: ran(["new: Texas 2025 HB 9: Relating to standard time"]),
+      }),
+    );
+    expect(actions.map((a) => a.key)).toEqual([
+      "us-clock-watch/state",
+      "us-clock-watch/could-not-run",
+    ]);
+    expect(actions[1].body).toContain(
+      "- **federal**: secret `CONGRESS_GOV_API_KEY` is not set",
+    );
+  });
+
+  it("a whole-run could-not-run verdict files the could-not-run issue", () => {
+    const actions = opened(couldNotRun("us-clock-watch", "cannot run: boom"));
+    expect(actions.map((a) => a.key)).toEqual(["us-clock-watch/could-not-run"]);
+  });
+
+  it("a missing verdict files a could-not-run issue", () => {
+    const actions = watchPlan(null);
+    expect(actions.map((a) => a.key)).toEqual(["us-clock-watch/could-not-run"]);
+  });
+
+  it("forcing a difference opens a labelled dry-run issue and leaves real ones alone", () => {
+    const { verdicts, skipped } = applyForce(
+      { "us-clock-watch": watch() } as never,
+      { usClockDifference: true },
+    );
+    expect(skipped).toEqual([]);
+    const actions = planWithoutReport(verdicts, [], WATCH_CONTEXT);
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe("dry-run/us-clock-watch/federal");
+    expect(action.title.startsWith("[dry run] ")).toBe(true);
+    expect(action.labels).toEqual(["canary", "canary-dry-run"]);
+    expect(action.body).toContain("--force-us-clock-difference");
+  });
+
+  it("forcing a difference when the watch did not run says so and files nothing", () => {
+    const { skipped } = applyForce(
+      { "us-clock-watch": couldNotRun("us-clock-watch", "x") } as never,
+      { usClockDifference: true },
+    );
+    expect(skipped.map((s) => s.flag)).toEqual(["--force-us-clock-difference"]);
   });
 });

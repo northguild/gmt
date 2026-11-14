@@ -355,23 +355,25 @@ textarea::selection {
 /*
  * <pre> horizontal scrollbars — round the bottom corners of track + thumb to
  * seat them inside the code block's border-bottom-radius: var(--gmt-radius-lg)
- * (gmt-content.css:32). Scoped to :horizontal so vertical scrollbars keep the
- * global radius. corner-shape: bevel can't be applied to ::-webkit-scrollbar-*
- * pseudo-elements, so we match with border-radius alone.
+ * (gmt-content.css). A frame with smaller corners sets --gmt-pre-radius on its
+ * pre (code-frame.module.css); scrollbar parts inherit it from the pre. Scoped
+ * to :horizontal so vertical scrollbars keep the global radius. corner-shape:
+ * bevel can't be applied to ::-webkit-scrollbar-* pseudo-elements, so we match
+ * with border-radius alone.
  */
 .sl-markdown-content pre::-webkit-scrollbar-track:horizontal {
   border-start-start-radius: 0;
   border-start-end-radius: 0;
-  border-end-start-radius: var(--gmt-radius-lg);
-  border-end-end-radius: var(--gmt-radius-lg);
+  border-end-start-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
+  border-end-end-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
   corner-shape: bevel;
 }
 
 .sl-markdown-content pre::-webkit-scrollbar-thumb:horizontal {
   border-start-start-radius: 0;
   border-start-end-radius: 0;
-  border-end-start-radius: var(--gmt-radius-lg);
-  border-end-end-radius: var(--gmt-radius-lg);
+  border-end-start-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
+  border-end-end-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
   corner-shape: bevel;
 }
 

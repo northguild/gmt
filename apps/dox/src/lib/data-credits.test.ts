@@ -13,6 +13,7 @@ import {
   NE_TAG,
   NIGHT_SKY,
   renderDataCreditsHtml,
+  STATE_BOUNDARIES,
   TBB_TAG,
   TZ_BOUNDARIES,
 } from "./data-credits";
@@ -57,6 +58,39 @@ describe("the coastline credit", () => {
       `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
     );
     expect(NE_TAG).toBe("v5.1.2");
+  });
+});
+
+describe("the state outline credit", () => {
+  it("is labelled State outlines and names Natural Earth as public domain", () => {
+    show([TZ_BOUNDARIES, COASTLINES, STATE_BOUNDARIES], {
+      id: "c",
+      placement: "corner",
+    });
+    const labels = screen
+      .getAllByRole("term", { hidden: true })
+      .map((t) => t.textContent);
+    expect(labels).toEqual([
+      "Time zone boundaries",
+      "Coastlines",
+      "State outlines",
+    ]);
+    expect(text("State outlines")).toHaveTextContent(
+      `State and territory outlines: Natural Earth 5.1.2, public domain (${NE_TAG}).`,
+    );
+  });
+
+  it("links Natural Earth and the pinned tag", () => {
+    show([STATE_BOUNDARIES], { id: "c", placement: "corner" });
+    expect(
+      screen.getByRole("link", { name: "Natural Earth", hidden: true }),
+    ).toHaveAttribute("href", "https://www.naturalearthdata.com/");
+    expect(
+      screen.getByRole("link", { name: NE_TAG, hidden: true }),
+    ).toHaveAttribute(
+      "href",
+      `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
+    );
   });
 });
 

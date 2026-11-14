@@ -86,6 +86,12 @@
   backdrop-filter: none;
 }
 
+/* A page `pre` rounds its sideways scroll track and thumb to --gmt-pre-radius (gmt-controls.css),
+   the page fence's large radius by default, which stuck out past this frame's smaller corners. */
+.root > .pre {
+  --gmt-pre-radius: var(--gmt-radius-md);
+}
+
 .code {
   display: block;
 

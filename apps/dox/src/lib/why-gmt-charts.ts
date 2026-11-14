@@ -130,11 +130,23 @@ function ciRow(comparison: LibraryComparison, value: number): CiExecutionRow {
   };
 }
 
+/**
+ * GMT's bar first, then every other library from most to least, so the bars read as a ranking.
+ * The sort is stable: libraries with equal values keep their declared order.
+ */
+function ranked(rows: CiExecutionRow[]): CiExecutionRow[] {
+  return rows.sort(
+    (a, b) =>
+      Number(b.comparison.isSubject === true) -
+        Number(a.comparison.isSubject === true) || b.value - a.value,
+  );
+}
+
 /** One bar per library: every test execution its CI runs, matrix re-runs included. */
 export function ciExecutionRows(
   comparisons: readonly LibraryComparison[] = libraryComparisons,
 ): CiExecutionRow[] {
-  return comparisons.map((c) => ciRow(c, c.stats.executions));
+  return ranked(comparisons.map((c) => ciRow(c, c.stats.executions)));
 }
 
 /**
@@ -144,7 +156,7 @@ export function ciExecutionRows(
 export function ciSuiteRows(
   comparisons: readonly LibraryComparison[] = libraryComparisons,
 ): CiExecutionRow[] {
-  return comparisons.map((c) => ciRow(c, c.stats.tests));
+  return ranked(comparisons.map((c) => ciRow(c, c.stats.tests)));
 }
 
 /**

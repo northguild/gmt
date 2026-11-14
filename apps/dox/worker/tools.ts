@@ -83,6 +83,7 @@ import {
   showFhirDateCheckerInput,
   showSwiftValueDateReaderInput,
   showGtfsTimeReaderInput,
+  showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
   showHolidayRuleBuilderInput,
@@ -107,6 +108,8 @@ import {
 } from "../src/lib/dox-tools";
 import canadaZones from "../src/lib/canada-zones.json";
 import moroccoZones from "../src/lib/morocco-region-zones.json";
+import usZones from "../src/lib/us-region-zones.json";
+import { STATE_CODES } from "../src/data/sunshine-protection-act-proposals";
 
 const docFor = (name: string) =>
   DOX_TOOL_DOCS.find((d) => d.name === name)?.purpose ?? name;
@@ -716,6 +719,25 @@ export function buildWorkerTools(
       description: docFor("showCodeBDayRuler"),
       inputSchema: showCodeBDayRulerInput,
       execute: () => accept("code-b-day-ruler"),
+    }),
+    showUsSunshineProtectionAct: tool({
+      description: docFor("showUsSunshineProtectionAct"),
+      inputSchema: showUsSunshineProtectionActInput,
+      // The page pins only the places in its own lists; anything else would open unpinned.
+      execute: ({ view }) => {
+        const place = view.kind === "today" ? view.zone : view.state;
+        const listed =
+          place === undefined ||
+          (view.kind === "today"
+            ? usZones.zones.includes(place)
+            : STATE_CODES.includes(place));
+        return listed
+          ? accept("sunshine-protection-act")
+          : reject(
+              "sunshine-protection-act",
+              `"${place}" is not one of the places the page lists. Call it again without one, or say so plainly.`,
+            );
+      },
     }),
   };
 

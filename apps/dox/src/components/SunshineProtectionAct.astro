@@ -1,0 +1,30 @@
+---
+/**
+ * The Sunshine Protection Act page (CORE-90): US time zones today and each state's adopted
+ * position on ending the clock changes, drawn from the Dox Worker's one answer.
+ *
+ * **The markup and the wiring both live in `lib/sunshine-protection-act-mount.ts`.** The server
+ * renders every list, panel and card, so the page does not grow once the answer arrives.
+ */
+import { renderSunshineProtectionActTemplate } from "../lib/sunshine-protection-act-mount";
+
+const html = renderSunshineProtectionActTemplate({ guidance: true }).value;
+---
+
+<div data-tools-fullbleed set:html={html} />
+
+<script>
+  import { mountSunshineProtectionAct } from "../lib/sunshine-protection-act-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+
+  if (typeof window !== "undefined") {
+    document.querySelectorAll<HTMLElement>('[data-widget="sunshine-protection-act"]').forEach((el) => {
+      // A link from the chat (`?w=sunshineact&wa=...`) arrives with its view and place set.
+      const { view } = seedFromLocation("sunshineact");
+      mountSunshineProtectionAct(el, new AbortController().signal, (view ?? undefined) as never).catch(
+        (error) => showUnavailable(el, error),
+      );
+    });
+  }
+</script>

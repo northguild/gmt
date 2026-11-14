@@ -13,6 +13,7 @@ import {
   oracleVerdict,
   polyfillSwapVerdict,
   saveVerdict,
+  usClockWatchVerdict,
   writeVerdict,
 } from "../../../../scripts/lib/canary-verdict.mjs";
 
@@ -524,6 +525,7 @@ describe("VERDICT_FILES", () => {
         "artifacts/temporal-compat-webkit-macos.json",
       "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
       "leap-seconds": "artifacts/leap-seconds.json",
+      "us-clock-watch": "artifacts/us-clock-watch.json",
       "native-suite-node": "artifacts/native-suite-node.json",
       "native-suite-chromium": "artifacts/native-suite-chromium.json",
       "native-suite-firefox": "artifacts/native-suite-firefox.json",
@@ -696,5 +698,25 @@ describe("saveVerdict", () => {
     expect(String(warn.mock.calls[0][0])).toMatch(
       /^leap-seconds: cannot write verdict: .*EEXIST/,
     );
+  });
+});
+
+describe("usClockWatchVerdict", () => {
+  it("is the source, the status and one part per source", () => {
+    const federal = { status: "ran", differences: ["new: S 7"], congress: 119 };
+    const state = { status: "could-not-run", message: "HTTP 500" };
+    const tz = {
+      status: "ran",
+      differences: [],
+      release: "2026e",
+      snapshotRelease: "2026e",
+    };
+    expect(usClockWatchVerdict({ federal, state, tz } as never)).toEqual({
+      source: "us-clock-watch",
+      status: "ran",
+      federal,
+      state,
+      tz,
+    });
   });
 });

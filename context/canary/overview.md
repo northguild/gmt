@@ -9,11 +9,50 @@
 | Native suite               | `temporal-oracle.yml` job `native-suite`                      | The whole `packages/gmt` suite on native `Temporal` and on the polyfill, per leg: Node 26, Chromium, Firefox, WebKit. Each browser leg also runs the workaround probes in that browser                       | One issue per engine for untagged divergences; one for host failures; one for control-only failures; stale tags | [CORE-82](../domination/issues/CORE-82.md)                                                                  |
 | Polyfill swap              | `temporal-oracle.yml` job `polyfill-swap`                     | The suite on the newest `temporal-polyfill` beside `@js-temporal/polyfill`, per leg. The Node leg also sweeps every zone's offsets against `Intl.DateTimeFormat` and every calendar's years against Node | One issue when every leg passes: the swap is due                                                                | [CORE-92](../domination/issues/CORE-92.md), [CORE-110](../domination/issues/CORE-110.md)                    |
 | Leap-second table          | `leap-seconds.yml`                                            | GMT's leap-second table against IERS `Leap_Second.dat`, or IANA `leap-seconds.list` when IERS is down                                                                                                        | One issue per difference                                                                                        | [CORE-81](../domination/issues/CORE-81.md)                                                                  |
+| US clock-change watch      | `us-clock-watch.yml`                                          | Congress.gov and Open States bills on the clock-change subject, and the tz rules of every US zone, against `scripts/us-clock-watch.snapshot.json`                                                            | One issue per kind (federal, state, tz) for a difference; one for a source that could not run                   | [CORE-90](../domination/issues/CORE-90.md)                                                                  |
 | Dox weekly gate sweep      | `dox-gates-weekly.yml`                                        | Every Dox page's gates in Chromium, Firefox and WebKit, both themes                                                                                                                                          | `dox-gate` issues                                                                                               | Dox epic: [../dox/built.md](../dox/built.md)                                                                |
 | Runtime time zone data     | `apps/dox/src/lib/runtime-tz-canary.test.ts`, in CI           | The test machine's tzdb gives the 2026e offsets the Canada and Morocco pages state                                                                                                                           | Fails the Dox tests with "Update Node."                                                                         | Dox epic                                                                                                    |
 
-The first five run Mondays (06:17 and 06:43 UTC) and on manual dispatch. The gate sweep runs
+The first six run Mondays (06:17, 06:43 and 07:17 UTC) and on manual dispatch. The gate sweep runs
 Sundays.
+
+## US clock-change watch
+
+`scripts/us-clock-watch.mjs` and `.github/workflows/us-clock-watch.yml` (Mondays 07:17 UTC, and
+manual) keep the Sunshine Protection Act page's evidence honest. They compare three sources with
+the committed snapshot `scripts/us-clock-watch.snapshot.json`:
+
+- **federal:** Congress.gov bills whose title names the subject, and each one's latest action;
+- **state:** Open States bills that match the subject terms, and their latest action;
+- **tz:** the rules of every zone in `apps/dox/src/lib/us-region-zones.json`, read from the IANA
+  `northamerica`, `australasia` and `backward` files.
+
+The script holds subject keywords only. A bill's number and title appear in the snapshot and in
+issue bodies as data the APIs returned, never in the script, the site or its tests.
+
+- **Commands.** `check` compares and writes the verdict file; `refresh` rewrites the whole snapshot
+  after a person has reviewed what changed; `snapshot-tz --dir=<folder>` rewrites only the tz part
+  from an unpacked tzdata release and needs no network or key. `check` exits 0 for no difference, 1
+  for a difference and 2 when a source could not run (a network or HTTP error, a 429, a body that
+  does not parse, a spent request budget or a missing secret); the other sources still report.
+- **How `check` reads the federal list.** It asks Congress.gov for bills updated since the
+  snapshot's date at 00:00:00Z (`fromDateTime`); a new congress reads its list whole. Each match
+  takes `latestAction` from the list item, and no bill is fetched on its own. That is enough: any
+  new action moves a bill's `updateDate`, so a changed bill is always on the list. A snapshot bill
+  missing from the list is kept as it was.
+- **Secrets**, read from the environment and sent only in a request header: `CONGRESS_GOV_API_KEY`
+  and `OPEN_STATES_API_KEY`, both repository secrets. A missing one makes that source could-not-run.
+  Open States is paced at one request a second and at most 60 a run; a 429 is could-not-run, with no
+  retry.
+- **Issues.** One per kind (federal, state, tz) for a difference, and one for a source that could
+  not run, filed by `canary-report.mjs` from `main` only. The federal and state issues ask a person
+  to edit the Proposals data module by hand and refresh the snapshot: the canary edits nothing. The
+  `force_difference` dispatch input files a `[dry run]` federal issue.
+- **The tz issue is the signal for phase 2.** A change to a US zone's rules means a tz release
+  models the clock change, so the full US clock-change checker
+  ([CORE-90](../domination/issues/CORE-90.md)) can be built.
+- **Retirement.** The tz part retires when that checker ships. The federal and state parts retire
+  when the Proposals view's data is removed or replaced.
 
 ## Which browsers the canaries cover
 

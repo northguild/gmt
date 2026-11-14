@@ -239,6 +239,10 @@ const PAGES = [
     widget: "morocco-clock-change",
   },
   {
+    path: "check/us-sunshine-protection-act",
+    widget: "sunshine-protection-act",
+  },
+  {
     path: "tools/duration-parser-bench",
     widget: "duration-parser-bench",
   },

@@ -24,6 +24,8 @@ interface EnterOptions {
   delayMs?: number;
   /** Runs once the element has fully entered, or at once under reduced motion. */
   onEntered?: () => void;
+  /** Ends the entrance unfinished: the timer and the listener go, and nothing is marked entered. */
+  signal?: AbortSignal;
 }
 
 function reducedMotion(): boolean {
@@ -44,7 +46,8 @@ export function enter(
   if (el.hasAttribute("data-entered") || el.classList.contains(ENTER_CLASS)) {
     return;
   }
-  const { delayMs = 0, onEntered } = options;
+  const { delayMs = 0, onEntered, signal } = options;
+  if (signal?.aborted) return;
 
   let done = false;
   let fallback: ReturnType<typeof setTimeout> | undefined;
@@ -81,6 +84,16 @@ export function enter(
      rendered, or while the document timeline is paused, and onEntered may arm
      controls the reader needs. */
   fallback = setTimeout(finish, delayMs + SETTLE_MS);
+  signal?.addEventListener(
+    "abort",
+    () => {
+      if (done) return;
+      done = true;
+      clearTimeout(fallback);
+      el.removeEventListener("animationend", onEnd);
+    },
+    { once: true },
+  );
 }
 
 /**

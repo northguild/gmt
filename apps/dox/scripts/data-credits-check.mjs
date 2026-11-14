@@ -9,10 +9,9 @@
  *     where the zone finder's magnifier comes before it; the fourth on the tool page);
  *   - `/why-gmt/`: a glass square in the time-zone map's corner;
  *   - `/check/canada-2026-clock-change/`: a glass square in the Canada map's corner, added by the client
- *     when the map is drawn (the Worker is stubbed). Below 520 px of section width the map is not
- *     drawn, so the 375 px run asserts there is no button at all;
+ *     when the map is drawn (the Worker is stubbed), at every width;
  *   - `/check/morocco-2026-clock-change/`: the same square in the Morocco map's top-start corner
- *     (`corner-start`), since Algeria fills the bottom-end one. The same 375 px rule holds.
+ *     (`corner-start`), since Algeria fills the bottom-end one.
  *
  * WebKit presses Option+Tab where Chromium presses Tab: Safari on macOS leaves buttons out of the
  * plain Tab order for every site, so plain Tab there tests a browser setting, not this page.
@@ -83,8 +82,6 @@ const TARGETS = [
     id: "canada-data-credits",
     drawn: gate("map-shape"),
     labels: ["Time zone boundaries", "Coastlines"],
-    // Drawn by the client from a width of 520 px of section; narrower, there is no map to credit.
-    absentBelow: 520,
     stubWorker: true,
   },
   {
@@ -94,7 +91,6 @@ const TARGETS = [
     id: "morocco-data-credits",
     drawn: `[data-widget="morocco-clock-change"] ${gate("map-shape")}`,
     labels: ["Time zone boundaries", "Coastlines"],
-    absentBelow: 520,
     stubWorker: true,
     api: "morocco",
     stub: {
@@ -104,6 +100,20 @@ const TARGETS = [
       transitions: [],
       zones: [],
     },
+  },
+  {
+    // The Today view is the one shown on load; the Proposals map has its own credits square.
+    path: "/check/us-sunshine-protection-act/",
+    slug: "us-map",
+    frame: '[id="sunshine-today-map"]',
+    id: "sunshine-today-data-credits",
+    drawn: `[id="sunshine-today-map"] ${gate("map-shape")}`,
+    labels: ["Time zone boundaries", "Coastlines"],
+    stubWorker: true,
+    // The US page's sections are `us-section`, one for each view; the first is Today's.
+    section: "us-section",
+    apiPath: "**/api/sunshine-protection-act",
+    stub: { now: "2026-11-13T12:00:00Z", zones: [] },
   },
 ];
 const VIEWPORTS = [
@@ -327,7 +337,7 @@ if (args.includes("--resolve-only")) {
     const page = await context.newPage();
     if (target.stubWorker) {
       await page.route(
-        `**/api/${target.api ?? "canada"}-clock-change`,
+        target.apiPath ?? `**/api/${target.api ?? "canada"}-clock-change`,
         (route) =>
           route.fulfill({
             status: 200,
@@ -343,8 +353,14 @@ if (args.includes("--resolve-only")) {
       miss.push(`the page answered HTTP ${res?.status() ?? "none"}`);
     } else {
       if (target.stubWorker) {
-        await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
-        await page.waitForTimeout(2000);
+        const section = gate(target.section ?? "map-section");
+        await page.locator(section).first().scrollIntoViewIfNeeded();
+        // Wait for the drawing's button itself, not a fixed time: a busy machine draws it late.
+        await page
+          .locator(`[popovertarget="${target.id}"]`)
+          .first()
+          .waitFor({ state: "attached", timeout: 15_000 })
+          .catch(() => {});
       }
       miss.push(
         ...(await resolveMisses(page, [
@@ -383,7 +399,7 @@ for (const name of browsers) {
       const page = await context.newPage();
       if (target.stubWorker) {
         await page.route(
-          `**/api/${target.api ?? "canada"}-clock-change`,
+          target.apiPath ?? `**/api/${target.api ?? "canada"}-clock-change`,
           (route) =>
             route.fulfill({
               status: 200,
@@ -401,26 +417,14 @@ for (const name of browsers) {
       }
       const button = page.locator(`[popovertarget="${target.id}"]`);
       if (target.stubWorker) {
-        // The map is drawn lazily, when it nears the viewport, and only from 520 px of section.
-        await page.locator(gate("map-section")).scrollIntoViewIfNeeded();
-        await page.waitForTimeout(2000);
-        const width = await page.evaluate(
-          (sel) => document.querySelector(sel).getBoundingClientRect().width,
-          gate("map-section"),
-        );
-        const found = await button.count();
-        if (width < target.absentBelow) {
-          if (found !== 0)
-            fail(
-              `${label}: the map is not drawn at ${width}px of section, yet a credits button exists`,
-            );
-          else
-            console.log(
-              `checked ${label}: no map, no button (${Math.round(width)}px)`,
-            );
-          await context.close();
-          continue;
-        }
+        // The map is drawn lazily, when it nears the viewport.
+        const section = gate(target.section ?? "map-section");
+        await page.locator(section).first().scrollIntoViewIfNeeded();
+        // Wait for the drawing's button itself, not a fixed time: a busy machine draws it late.
+        await button
+          .first()
+          .waitFor({ state: "attached", timeout: 15_000 })
+          .catch(() => {});
       }
       if ((await button.count()) !== 1) {
         fail(

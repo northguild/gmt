@@ -17,8 +17,11 @@ interface ClocksConfig {
   /** Namespaces every id. */
   idPrefix: string;
   zones: readonly string[];
-  /** The zones that stop changing their clocks; the rest still change. */
-  stopped: ReadonlySet<string>;
+  /**
+   * The zones that stop changing their clocks; the rest still change. `null` leaves the class to
+   * the page, which marks each clock's `data-kind` once its answer arrives.
+   */
+  stopped: ReadonlySet<string> | null;
 }
 
 /** A zone id as an id-safe word: `Africa/El_Aaiun` is `Africa-El-Aaiun`. */
@@ -47,11 +50,13 @@ export function clockNoSignal(): SafeHtml {
 function clockItem(
   id: (local: string) => string,
   zone: string,
-  stopped: ReadonlySet<string>,
+  stopped: ReadonlySet<string> | null,
 ): SafeHtml {
+  const kind =
+    stopped === null ? "" : stopped.has(zone) ? styles.stopped : styles.changes;
   return html`<li
     id="${id(CLOCK_PARTS.item(zone))}"
-    class="${styles.clock} ${stopped.has(zone) ? styles.stopped : styles.changes}"
+    class="${styles.clock} ${kind}"
     data-gate="clock"
     data-zone="${zone}"
   >
