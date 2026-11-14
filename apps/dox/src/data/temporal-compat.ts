@@ -265,6 +265,12 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D20: "A month and day with an upper-case ISO calendar tag, such as --12-25[u-ca=ISO8601], which the polyfill refuses",
   D21: "The current time when a test fakes a clock before 1970, which the polyfill reads one millisecond early, so a clock function can return the previous year, day or second at a boundary",
   D22: "A length in days or larger measured from a repeated hour, which the polyfill can measure from the wrong pass or refuse, so it can be an hour too long or missing. Where the specification has no value, which also happens after a skipped hour, GMT returns its sentinel",
+  D23: "Some languages and calendars, among them Scottish Gaelic, Galician, Burmese and Telugu, whose date patterns use the week-of-year year: asking Node or Chrome for the parts of such a date, or of a range, stopped the process with no error to catch",
+  D24: "Dates in the same languages near the start or end of a year, which every browser prints with the year the week belongs to rather than the calendar year, and with some calendars, such as Buddhist in Telugu, on every day of the year",
+  D25: "Japanese calendar dates before 1873, which every browser prints in a Japanese era such as Meiji 5 or Taika, where the calendar uses the Gregorian era until the end of 1872",
+  D26: "Islamic calendar dates before the Hijra (622 CE), which Node and Chrome print as a negative year. They have no name for the era before the Hijra, so GMT returns its empty value there",
+  D27: "Japanese calendar dates in Japanese with a two-digit year, which every browser prints as 令和6年 where 令和06年 is asked for. The first year of an era stays 元年",
+  D28: "Chinese and Korean calendar dates with a two-digit year, where the Gregorian year shown beside the cycle year was padded, such as 05 for the year 5",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

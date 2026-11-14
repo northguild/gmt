@@ -35,6 +35,8 @@ For a birthday or a holiday with no year, see [Month-Day Values](/guides/core-da
 
 For a card expiry or a billing month, `formatYearMonth("2026-10", "fr-FR", { year: "numeric", month: "long" })` gives `"octobre 2026"`. A day or time field is dropped, and it formats through the Gregorian calendar.
 
+Some languages' date patterns, such as Scottish Gaelic's month and year, print the year a week belongs to where the calendar year is meant, so 30 December 2024 shows 2025 in every browser, and asking Node for the parts of such a date stops the process. GMT checks each formatter once and prints the calendar year, as the ECMA-402 specification says. [Helping fix Temporal](/upstream/) lists the reports.
+
 ## Locale-elided ranges
 
 `formatDateRange` and `formatDateTimeRange` are the plain counterparts of

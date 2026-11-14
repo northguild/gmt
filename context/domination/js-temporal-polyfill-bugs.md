@@ -3,17 +3,17 @@
 Record of the defects GMT needs fixed in `js-temporal/temporal-polyfill` (and, where noted,
 `tc39/proposal-temporal`), the evidence for each, and what has been filed. The owner files every item, or
 tells an agent in plain words to post a named one: tc39 #3331 (J) and #3332 (K) were posted that way. It also lists
-GMT's five reports to `fullcalendar/temporal-polyfill`, found by the swap check
+GMT's seven reports and two PRs to `fullcalendar/temporal-polyfill`, found by the swap check
 ([research §4.6](research/temporal-polyfill-swap.md#46-upstream)).
 
-> **Status of this document:** updated 2026-11-04. **Filed:** 14 items by us, plus a comment on the
-> maintainer's own PR #361, and five reports to `fullcalendar/temporal-polyfill` (fc #119, #120, #121, #125, #126; see "Filed"). The newest is tc39 #3335 (AB, D21), 2026-10-31; before it, tc39 #3331 (J) and #3332 (K), both 2026-10-21. **All six js-temporal PRs
+> **Status of this document:** updated 2026-11-13. **Filed:** 14 items by us, plus a comment on the
+> maintainer's own PR #361, and nine to `fullcalendar/temporal-polyfill`: seven reports (fc #119, #120, #121, #125, #126, #127, #128) and two PRs (fc #131 fixes #127, fc #132 fixes #128); see "Filed". The newest are fc #131 and #132, 2026-11-13; the newest in js-temporal and tc39 is tc39 #3335 (AB, D21), 2026-10-31. Eleven of our posts were corrected in place, each with a dated note at its end; see "Corrected posts". **All six js-temporal PRs
 > (#367–#372) are closed unmerged and none was rejected** — each was routed to `tc39/proposal-temporal` first, so the polyfill's rebase stays
 > manageable. #373 (release) is open and answered: one release once the rebase has caught up. #361
-> merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply; #3331 (J) is
+> merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) and #3335 are open with no maintainer reply (checked 2026-11-13); #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 25 workarounds, 21 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest is § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags, and § AD, a Node 26 engine defect GMT only tags; § I (D12), fixed on `main` with nothing
+> 31 workarounds, 27 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § AG (D25 to D28: other wrong years in formatted text, from ICU and CLDR, with ICU-23341 and ICU-23327 filed by others, the ECMA-402 wording filed as tc39/ecma402#1116, and ours as ICU-23619, ICU-23620 and ICU-23621), then § AF (D23, a V8 crash fixed in V8 `0426b0d1045d` and asked of Node as nodejs/node#67076, and D24, CLDR patterns with `Y`, reported by someone else as CLDR-19873, where our comment adds the rest), then § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19) and § R (D18), neither filed yet, with § S and § T, two WebKit engine defects GMT only tags, and § AD, a Node 26 engine defect GMT only tags; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), not filed yet and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -38,9 +38,15 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | A js-temporal rebase and a release |
 | `D21`: `Temporal.Now` reads a millisecond early after a pre-1970 clock reading (§ AB) | None. Filed as tc39 #3335 | A tc39 fix, the js-temporal rebase and a release, so the `D21` canary repro passes |
 | `D22`: a length in days or larger is measured from the wrong pass of a repeated hour (§ AC) | js-temporal `3c403686d39` | tc39 #3319 in the same release, or `P7D` with `largestUnit: "week"` regresses to `P1W1D`. A release that still strips the Asserts of tc39/proposal-temporal#3336, #3311 and #3310 keeps GMT's gate |
+| `D23`: V8 stops the process in `formatToParts` and `formatRangeToParts` on a pattern with `Y` (§ AF) | Not a polyfill fix. V8 `0426b0d1045d`, in Chromium 158 | A Node release on every line GMT supports that takes `0426b0d1045d` (nodejs/node#67076), as GMT's `engines.node` floor: the `D23` repro passes in `pnpm compat` and in the weekly `temporal-compat-chromium` verdict. V8 is the only engine in D23's scope |
+| `D24`: some languages print the year of the week-of-year for the calendar year (§ AF) | Not a polyfill fix, and not fixed on CLDR `main` | CLDR-19873 fixed for every pattern on `main` (CLDR 49 adds de, kek, ki and pt), a CLDR and ICU release with it, and engines that ship that ICU: every `D24` repro passes in every compat verdict, and the weekly `scripts/canary/weekYear.mjs` sweep flags nothing |
+| `D25`: the japanese calendar prints Japanese eras before 1873-01-01 (§ AG) | Not a polyfill fix. ICU-23341, fixed for ICU 79.1, for the eras before Meiji | An ICU release with ICU-23341 and with the Gregorian era for Meiji 1 to 5, as ICU4X has (ICU-23619, open), in engines GMT supports: both `D25` repros pass in every compat verdict |
+| `D26`: islamic calendars print a negative year before the Hijra (§ AG) | Not a polyfill fix. ICU-23327 is open | An ICU release that gives the `bh` era a name, in engines GMT supports: the `D26` repro passes in every compat verdict |
+| `D27`: `ja` japanese `year: "2-digit"` leaves the era year unpadded (§ AG) | Not a polyfill fix. ICU-23620 is open | An ICU release whose `jpanyear` numbering keeps the minimum digit count: the `D27` repro passes in every compat verdict |
+| `D28`: chinese and dangi pad the related year under `year: "2-digit"` (§ AG) | Not a polyfill fix. ICU-23621 is open: ICU's pattern generator turns `yy` into `rr` | Engines that print `relatedYear` at full width: the `D28` repro passes in every compat verdict |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
-| `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3) |
-| `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b), which is not on `main`. The `D7.leapMonthEnd` probe fails until it is |
+| `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3). `main` since `853fc8b` also has tc39/proposal-temporal#3327 problem 1, which the `D6.cachedDay` probes catch |
+| `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b). js-temporal `main` took all of `196a3191` in `853fc8b`, months-loop hunk included, so it also carries tc39/proposal-temporal#3327 problem 1. Whether `D7.leapMonthEnd` passes on `main` is unverified (no build) |
 | `D11`: the calendar nudge window is never retried | js-temporal `5af905f` (PR #361; `50d66d2` on its branch) | Nothing |
 | `D12`: a seconds offset matched by minutes (§ I) | js-temporal `23d1275` | Nothing |
 | `D13`: the transition search skips or stalls (§ K) | js-temporal `a79c6a1`, in part | A further upstream fix, filed as tc39 #3332: `main` still stalls for `Africa/El_Aaiun` in 1976 (§ K). `D13` retires only on a release where every `D13` probe passes |
@@ -88,7 +94,8 @@ contain the functions the js-temporal diff touches, so transcribing it would be 
 fix has to do, offer to adapt it properly, and carry the **C-D7b** note with it: when tc39
 `196a3191` is ported, its **months-loop hunk must be left out** — that hunk is what corrupts the
 calendar cache and produces the wrong, non-round-tripping result at ordinary dates. Its
-`CompareSurpasses` hunk is the part worth having.
+`CompareSurpasses` hunk is the part worth having. js-temporal `main` took the whole commit, months-loop
+hunk included, in `853fc8b` (2026-09-22), so tc39/proposal-temporal#3327 now says `main` has problem 1.
 
 - [ ] Post the #3327 comment, including the C-D7b caveat.
 
@@ -186,17 +193,18 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 
 ## Filed
 
-14 filed under the owner's account (`craig-o-curtis`): 11 by the owner, and tc39 #3331, #3332 and #3335 by an
+14 filed in js-temporal and tc39 under the owner's account (`craig-o-curtis`): 11 by the owner, and tc39 #3331, #3332 and #3335 by an
 agent on the owner's instruction. There is also a fifteenth entry on the `/upstream/` tracker that is
 **not** a filing of ours: our comment on ptomato's js-temporal PR #361 (§ H), tracked because its
 state is what retires GMT's `D11`. "Filed" is `createdAt`, UTC. "js" is js-temporal/temporal-polyfill,
-"tc39" is tc39/proposal-temporal, "fc" is fullcalendar/temporal-polyfill. The five fc reports (#119, #120, #121, #125, #126) are not counted in the 14 above.
+"tc39" is tc39/proposal-temporal, "fc" is fullcalendar/temporal-polyfill. The nine fc filings (reports #119, #120, #121, #125, #126, #127, #128 and PRs #131, #132) are not counted in the 14 above.
+Reports on native engines, such as nodejs/node#67457 (§ AD), are recorded in their own sections, not in this table.
 
-**Status as of 2026-10-24** (`gh pr view` / `gh issue view`, comments included). Nothing has moved
-since 2026-09-21 except tc39 #3331: all six js PRs closed, #373 open, #361 merged, and the four older
-tc39 issues open with our own cross-link as the only comment. tc39 #3332, filed 2026-10-21, has no
-comments. tc39 #3331 closed as answered on 2026-10-24, with our comment linking the champions' answer
-on #3014.
+**Status as of 2026-11-13** (`gh api`, comments included). In js-temporal and tc39 nothing has moved
+since 2026-10-24: all six js PRs closed, #373 open, #361 merged, the four older tc39 issues open with
+our own cross-link as the only comment, and tc39 #3332 and #3335 with no comments. tc39 #3331 closed as
+answered on 2026-10-24, with our comment linking the champions' answer on #3014. fc #127 has two
+comments, both ours; fc #128, #131 and #132 have none.
 
 - **All six js PRs (#367–#372) are closed, unmerged — and none was rejected.** ptomato closed #367,
   #368 and #369 with "I'd prefer to keep the commits ported in order — otherwise the rebases become
@@ -209,6 +217,7 @@ on #3014.
 - **Five tc39 issues (#3327–#3330, #3332) are open with no maintainer reply** (checked 2026-10-24); the
   only comments are our own cross-links.
 - **fc #119, #120 and #121 are closed as fixed in temporal-polyfill 1.0.7**, and **#125 and #126 in 1.0.8** (all closed 2026-11-04). They stay listed as credit.
+- **fc #127 (Persian) and #128 (Chinese and Dangi) are open**, each with our fix PR open against it: fc #131 and #132.
 - **tc39 #3331 is closed as answered** (2026-10-24): the champions had already said on #3014 that
   the check is intended until tc39/ecma262#3464 lands (§ J).
 
@@ -233,6 +242,10 @@ on #3014.
 | fc         | 121 | issue | Wrong UTC offset all through the period between two close offset changes (follow-up to #73) | swap §4.3 | none: other polyfill | — | nothing | 2026-10-25 |
 | fc         | 125 | issue | `getTimeZoneTransition("previous")` skips every transition more than three years after today | swap §4.4 | none: other polyfill | — | nothing | 2026-11-04 |
 | fc         | 126 | issue | Time zone transitions before 1847 are not found (`Asia/Manila` and four Pacific zones on 1844-12-31) | E, swap §4.5 | none: other polyfill | — | nothing | 2026-11-04 |
+| fc         | 127 | issue | Persian calendar: 78 years from 1502 to 2987 AP get the wrong leap year | swap §4.6 | fc #131 | — | nothing | 2026-11-06 |
+| fc         | 128 | issue | Chinese and Dangi: dates read from Intl differ from native Temporal (Chinese New Year 2027) | swap §4.6 | fc #132 | — | nothing | 2026-11-06 |
+| fc         | 131 | PR    | Apply the ICU4X leap-year corrections to the Persian calendar | fix for fc #127 | fc #127 | — | fc #127 | 2026-11-13 |
+| fc         | 132 | PR    | Compute the Chinese and Dangi calendars like ICU4X instead of reading Intl | fix for fc #128 | fc #128 | — | fc #128 | 2026-11-13 |
 
 Notes on the filings:
 
@@ -249,6 +262,27 @@ Notes on the filings:
 - Every js-temporal PR states: Node 24.21.0 (ICU 78.3), jest 607 passed, and the pinned test262 passes with no
   new failures or unexpected passes. This closes the "run `npm test` and `npm run test262`" item under "Not
   verified" for #367–#372, as the filings' claim; it was not re-run for this document.
+
+### Corrected posts
+
+These posts were edited in place, with the owner's approval of the exact text. Each ends with a note,
+dated 2026-11-13, that says what changed:
+
+| Post | What was corrected |
+| ---- | ------------------ |
+| js #361, our comment | the proposal-temporal commit (`5dd0b0d97ee1` → `17e12be0af42`, the one on `main`); a sentence misreporting what tc39 #3168 says about other implementations; why #3168's reproducer passes on 0.5.1, and what test262 covers (§ H) |
+| tc39 #3327 | problem 1 happens in both directions, and js-temporal `main` has it since `853fc8b` (`D6.cachedDay`) |
+| tc39 #3328 | the search returns `null` on 45 days; 39 of them are wrong |
+| tc39 #3329 | the inclusive range is 3,285,366 calls |
+| tc39 #3331, our comment | the third link is a suggestion in that thread, not an agreed plan |
+| tc39 #3335 | the repro replaces `Date.now` before the polyfill loads, since the tc39 polyfill keeps its own copy from load time; the fake-timer case applies to js-temporal |
+| fc #127 | the check also finds differences in `chinese` and `dangi`, so "Only `persian` differs" was wrong |
+| fc #128 | the year counts come from comparing each year's first day and length |
+| fc #131 | which day is misread: the first day of the year after each corrected year reads as an extra 30th of month 12 |
+| fc #132 | the host's ICU throws only near the upper end of the range; the `PlainMonthDay` check covers 744 combinations, each in two overflow modes |
+| nodejs/node#67457 | "How often" narrowed to the cases that give a wrong result |
+
+Our 2026-09-18 comment on tc39 #3327 was true when posted and is left as it is.
 
 ### Still unfiled
 
@@ -718,7 +752,8 @@ _Verification log:_
   calendars) #370's output equals `main`'s except 18 coptic calls before the coptic epoch, which `main` got wrong
   and #370 answers with round-tripping values; with #361 underneath the output is identical with and without #370.
 - Current `main` already fixes D2 (buddhist before 1582, `2bb6ba1`) and D6 (month-end `until`,
-  `10aeb98`). GMT canary on a `main` build: D2 2/2 and D6 10/10 REMOVABLE.
+  `10aeb98`). GMT canary on a `main` build: D2 2/2 and D6 10/10 REMOVABLE. That build predates `853fc8b`; the two
+  `D6.cachedDay` probes added since would fail on today's `main`.
 - **Old draft appendix, corrected** (`repros/appendix-claims.mjs`, reads of `2024-01-01`, `2024-06-15`,
   `1000-01-01`, `-000500-06-15` and a fields round trip):
   - "coptic and ethiopic throw at every date": true of **0.5.1 only** (`Era am (ISO year 1740) was not matched by
@@ -1592,7 +1627,7 @@ calls).
 
 This is **tc39/proposal-temporal [#3168](https://github.com/tc39/proposal-temporal/issues/3168)**
 (closed), fixed by **[#3172](https://github.com/tc39/proposal-temporal/pull/3172)** (Normative,
-commit `5dd0b0d97ee1`, merged 2025-11-19). ptomato's diagnosis there is exactly ours: "_destEpochNs_
+commit `17e12be0af42`, merged 2025-11-19). ptomato's diagnosis there is exactly ours: "_destEpochNs_
 (2021-02-28T01:00Z) > _endEpochNs_ (2021-02-28T00:00Z) … _r1_ and _r2_ should be 1 and 2 instead of
 0 and 1."
 
@@ -1620,8 +1655,9 @@ than 0 (spec/duration.html, `NudgeToCalendarUnit` steps 2–9). The polyfill com
 its `assert(start <= dest <= end)` is compiled out of production builds, so `progress` silently
 exceeds 1 and the answer comes from bounds that exclude the target.
 
-Reachable only when the duration's own month count is one short of the truth, which is exactly when
-adding a month constrains the day — a `relativeTo` on the 29th, 30th or 31st.
+Reachable only when the duration's own count of the unit is one short of the truth, which is exactly
+when adding that unit constrains the day — a `relativeTo` on the 29th, 30th or 31st for months, or
+29 February for years.
 
 ### Repro
 
@@ -1645,8 +1681,19 @@ Temporal.Duration.from("P29DT12H")
 ```
 
 Note that #3168's own reproducer (`new Temporal.Duration(1, 0, 0, 0, 1)` relative to `2020-02-29`,
-unit `years`) **passes** on js-temporal 0.5.1 — there `r1` is already 1 from the duration's own years,
-so no retry is needed. The month reproducers above are the ones to file.
+unit `years`) gives the right answer on js-temporal 0.5.1's production build: the assertion it trips
+is stripped there, and the result happens to be right. The polyfill's pinned test262 (`ac3035f0`)
+does not cover this defect. tc39/test262#4662, merged after that pin, adds
+`Duration/prototype/round/rounding-window.js` and `total/rounding-window.js`, and 0.5.1 fails three
+of their cases:
+
+| Case | 0.5.1 | Expected |
+| --- | --- | --- |
+| `P1MT10H` from `2020-01-31`, `round` to months, `expand` | `P1M` | `P2M` |
+| `P2345YT12H` from `2020-02-29`, `round` to years, `expand` | `P2345Y` | `P2346Y` |
+| `P1MT10H` from `2020-01-31`, `total` in months | `1.014367816091954` | `1.0134408602150538` |
+
+GMT gives the expected value for every case in both files.
 
 ### Scope, as scanned (Chromium 153.0.8010.12 vs `@js-temporal/polyfill` 0.5.1)
 
@@ -1701,9 +1748,10 @@ failures, 6 missing; `npm run lint` clean.
    and #361 both leave it that way. If it is a further defect it belongs upstream as a new issue,
    not as a local "fix".
 3. **#3168's own reproducer does not expose this.** `new Temporal.Duration(1, 0, 0, 0, 1)` relative
-   to `2020-02-29` with unit `years` *passes* on 0.5.1 — `r1` is already 1 from the duration's own
-   years field, so no retry is needed. Only a `relativeTo` on the 29th–31st with unit `month`
-   reaches it.
+   to `2020-02-29` with unit `years` gives the right answer on 0.5.1's production build, because the
+   assertion it trips is stripped and the result happens to be right. Wrong answers need a
+   `relativeTo` on the 29th–31st with unit `month`, or unit `year` from 29 February (test262#4662's
+   `P2345YT12H` case above).
 
 ### GMT
 
@@ -2708,38 +2756,58 @@ Chromium passes the other five D22 repros, so before `noDayCorrection` and `empt
 
 If tc39 gives these lengths a value instead, in #3336, #3311 or #3310, the rows, the throws and the repros change together.
 
-## AD. Node 26's V8 rounds `P7D` to weeks as `P1W1D` from a zoned origin (Node only, engine)
+## AD. Node 26 adds one `smallestUnit` when it rounds a whole number of years, months or weeks (Node only, engine)
 
 ### Status
 
-Fixed upstream, waiting for Node. boa-dev/temporal#723 ("Fix ComputeNudgeWindow startEpochNs computation to check
-full startDateDuration sign", merged 2026-05-28 as `d47580805556`, for tc39/proposal-temporal#3316) carries tc39 #3319.
-The first `temporal_rs` release with it is 0.2.4. Chromium 153.0.8010.12 has it. Node 26.13.0 (V8 14.6.202.34-node.40)
-does not. **Not a polyfill defect**: `@js-temporal/polyfill` 0.5.1 gives `P1W`. Nothing to file. GMT makes no change:
-it already follows the spec text.
+**Filed** as [nodejs/node#67457](https://github.com/nodejs/node/issues/67457) (2026-11-13, open). It asks v26.x
+to move to `temporal_rs` 0.2.4 or later, or to take boa-dev/temporal#723 alone. The fix is upstream:
+boa-dev/temporal#723 ("Fix ComputeNudgeWindow startEpochNs computation to check full startDateDuration sign",
+merged 2026-05-28 as `d47580805556`, for tc39/proposal-temporal#3316) carries tc39 #3319, and test262 commit
+`a70493eb104948583a7928d50eac28b6c81114bf` covers it. The first `temporal_rs` release with it is 0.2.4. Node `main`
+pins 0.2.6. Node v26.x pins 0.2.3 in `deps/crates/Cargo.toml`, so 26.12.1, 26.13.0 and 26.13.1 (V8
+14.6.202.34-node.40) have the bug. Chromium 153.0.8010.12 and WebKit 26.6 do not. **Not a polyfill defect**:
+`@js-temporal/polyfill` 0.5.1 is right. GMT makes no change: it already follows the spec text.
 
 ### What goes wrong
 
 `ComputeNudgeWindow` starts the window at the origin's own exact time when the start duration is empty
 (tc39 #3319, tc39/ecma262#3759 commit `1f4e6717ef23`). Node 26's `temporal_rs` still tests _r1_ = 0, the rule #3319
-replaced, so it starts the window a week early when `largestUnit` is `week` and `smallestUnit` is `day`. Only a zoned
-`relativeTo` builds this window. A `PlainDate` `relativeTo` is right.
+replaced. So when the difference is a whole number of a larger unit, the smallest unit comes out as 0, and the window
+starts at the origin instead of at the end of the whole years, months or weeks. When `smallestUnit` is `months` or
+`weeks`, or `days` from a zoned origin, any rounding mode that can round up (`ceil`, `expand` and the five `half`
+modes) then adds one `smallestUnit`. `trunc` and `floor` are right. It shows in `until` and `since` on `PlainDate`,
+`PlainDateTime` and `ZonedDateTime`, in every calendar (checked: `iso8601`, `gregory`, `hebrew`, `chinese`,
+`islamic-umalqura`, `persian`, `japanese`, `coptic`, `indian`), and in `Duration#round`. These are right:
+`PlainYearMonth#until`; `smallestUnit: "days"` from a `PlainDate` or `PlainDateTime` origin; and any time unit as
+`smallestUnit`. From a zoned origin, `P7D` to weeks is wrong even with the default `halfExpand`.
 
-### Repro (Node 26.12.1 and 26.13.0, V8 14.6.202.34-node.40; expected values Chromium 153.0.8010.12 native `Temporal`, which the polyfill also gives)
+### Repro (Node 26.12.1, 26.13.0 and 26.13.1, V8 14.6.202.34-node.40; expected values Chromium 153.0.8010.12 native `Temporal`, which WebKit 26.6 and the polyfill also give)
+
+`start` is `Temporal.PlainDate.from("2000-01-01")`.
 
 | Call | Node 26 | Expected |
 | ---- | ------- | -------- |
+| `start.until("2001-01-01", { largestUnit: "years", smallestUnit: "months", roundingMode: "halfExpand" })` | `P1Y1M` | `P1Y` |
+| the same with `"2003-01-01"` and `roundingMode: "ceil"` | `P3Y1M` | `P3Y` |
+| the same with `"2001-01-01"`, `smallestUnit: "weeks"` and `roundingMode: "ceil"` | `P1Y1W` | `P1Y` |
+| the same with `"2001-01-01"`, `smallestUnit: "months"` and `roundingMode: "trunc"` or `"floor"` | `P1Y` | `P1Y` |
+| `Temporal.Duration.from("P31D").round({ largestUnit: "months", smallestUnit: "weeks", roundingMode: "ceil", relativeTo: "2012-01-01" })` | `P1M1W` | `P1M` |
 | `Temporal.Duration.from("P7D").round({ largestUnit: "week", smallestUnit: "day", relativeTo: "2024-11-01T00:00:00+00:00[UTC]" })` | `P1W1D` | `P1W` |
 | the same with `relativeTo: "2024-06-01T12:00:00-04:00[America/New_York]"` | `P1W1D` | `P1W` |
 | the same with `relativeTo: "2024-11-01"` | `P1W` | `P1W` |
+| `Temporal.ZonedDateTime.from("2000-03-15T00:00[UTC]").until("2000-05-15T00:00[UTC]", { largestUnit: "months", smallestUnit: "days", roundingMode: "ceil" })` | `P2M1D` | `P2M` |
+| the same from `Temporal.PlainDate.from("2000-03-15")` to `"2000-05-15"` | `P2M` | `P2M` |
+| `Temporal.PlainYearMonth.from("2000-01").until("2001-01", { largestUnit: "years", smallestUnit: "months", roundingMode: "ceil" })` | `P1Y` | `P1Y` |
 
 ### Effect on GMT
 
-None in the library, which gives `P1W` on the polyfill. Only GMT run on Node 26's own `Temporal` sees it:
+None in the library, which gives the spec's answers on the polyfill. Only GMT run on Node 26's own `Temporal` sees it:
 `normalizeDuration` returns the engine's answer when the origin is not in a repeated hour. The later-pass and
 earlier-pass rows of the same table pass on Node 26. The native-suite runner tags the two rows of
 `packages/gmt/src/test/laterPassOrigin.test.ts` that pin it, the UTC and New York noon origins, to this section (Node
-leg only). When a Node release carries a `temporal_rs` with #723, the tags go stale and the runner reports it.
+leg only). No other row of GMT's suite reaches it on Node 26. When a Node release carries a `temporal_rs` with #723,
+the tags go stale and the runner reports it.
 
 ## AE. ICU4C 75+ counts every Persian year before year 0 as a leap year (macOS WebKit, engine)
 
@@ -2842,3 +2910,130 @@ The other legacy ids work in the same WebKit on macOS: `CET`, `EET`, `MET`, `WET
 Why I think the four ids are valid: the time zone database release 2026e, in its file `backward`, defines them as zones: `Zone EST5EDT -5:00 USback E%sT`, `Zone CST6CDT -6:00 USback C%sT`, `Zone MST7MDT -7:00 USback M%sT` and `Zone PST8PDT -8:00 USback P%sT`. ECMA-402 section 6.5 (Use of the IANA Time Zone Database) says that each Zone in the IANA Time Zone Database must be a primary time zone identifier, so these four should be accepted and `Temporal` should treat them as named zones.
 
 What I expected: the same results as in Chromium, Firefox and Node, for example `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" }).resolvedOptions().timeZone` returns `"EST5EDT"`.
+
+## AF. Some languages' date patterns print the week-of-year year: the wrong year everywhere, and a V8 crash in `formatToParts` (engine and CLDR)
+
+### Status
+
+Two defects with one cause, so GMT guards them as two groups that can retire on different days.
+
+- **D23, the crash (V8).** **Filed** as [nodejs/node#67076](https://github.com/nodejs/node/issues/67076)
+  (2026-10-28, open, no reply as of 2026-11-13). It asks v22.x, v24.x and v26.x to take V8 commit
+  `0426b0d1045d` ("[intl] Handle UDAT_YEAR_WOY_FIELD in IcuDateFieldIdToDateType", 2026-09-01). Chromium 158
+  has it. Every installed Node aborts: 22.22.2, 24.19.0, 24.21.0, 26.8.2, 26.10.0, 26.12.1 and 26.13.0, all
+  with CLDR 48.0.
+- **D24, the wrong year (CLDR data).** [CLDR-19873](https://unicode-org.atlassian.net/browse/CLDR-19873)
+  (not ours, 2026-10-20, open) reports gl and kek. [Our comment](https://unicode-org.atlassian.net/browse/CLDR-19873?focusedCommentId=213171)
+  (2026-11-13) adds the other patterns on `main`, the gd and te repros and the D23 crash. CLDR 48 has `Y` in ak, de-CH, gd, gl, kok, ksh, my, sc and te; CLDR 49 and `main` (`c0b65ae356`)
+  keep them and add de with its regional variants, kek, ki and pt. Every engine that ships CLDR 48 prints it:
+  Node, Chromium 158 with the fix above, and WebKit 26.6. **Not a polyfill defect**: the polyfill's
+  `toLocaleString` and GMT both format through the host's `Intl.DateTimeFormat`.
+
+### What goes wrong
+
+UTS #35 Part 4 (Dates) § 8, the Date Field Symbol Table, gives `y` as the calendar year and `Y` as the year
+of the week-of-year, which differs from the calendar year in the days around the year's end. Some CLDR 48
+patterns use `Y` where `y` is meant. ECMA-402 has no week-year field: FormatDateTimePattern prints the
+`[[Year]]` of the date (the era year when the pattern has an era), `numeric` with no grouping and no
+padding, `2-digit` as the last two digits, with the part type `year`.
+
+1. **The wrong year, on every engine.** `format`, `formatToParts` (where it does not crash), `formatRange`
+   and `formatRangeToParts` print the week-year. In the Gregorian calendar that is wrong only near the
+   year's end. In a calendar whose year does not start on 1 January, such as Buddhist, Japanese or ROC, the
+   pattern prints the Gregorian week-year all year, so the year is wrong on every day. WebKit gives the
+   part the type `unknown`.
+2. **The crash, on V8 without `0426b0d1045d`.** V8 maps each ICU field to a part type and has no case for
+   `UDAT_YEAR_WOY_FIELD`, so `formatToParts` and `formatRangeToParts` reach `UNREACHABLE()`: the process
+   stops with `Fatal error … unreachable code`, signal SIGTRAP, exit code 133. No exception is thrown and
+   nothing can catch it. `format` and `formatRange` do not crash. The same V8 also drops `year` from
+   `resolvedOptions()` for such a pattern; the fix keeps it, which is the signal GMT reads.
+
+### Repro (Node 26.12.1, V8 14.6.202.34-node.40, ICU 78.3, CLDR 48.0; expected values from ECMA-402 and Temporal `eraYear ?? year`)
+
+`utc` is `{ timeZone: "UTC" }`.
+
+| Call | Node 26 | Expected |
+| ---- | ------- | -------- |
+| `new Intl.DateTimeFormat("gd", { year: "numeric", month: "short", ...utc }).format(new Date("2024-12-30"))` | `Dùbh 2025` | `Dùbh 2024` |
+| the same formatter's `resolvedOptions().year` | `undefined` | `"numeric"` |
+| the same formatter's `formatToParts(new Date("2024-12-30"))` | aborts, exit 133 | a `year` part `2024` |
+| `new Intl.DateTimeFormat("te-u-ca-buddhist", { year: "numeric", month: "long", ...utc }).format(new Date("2026-07-01"))` | `జులై 2026` | `జులై 2569` |
+| `new Intl.DateTimeFormat("gl-u-ca-hebrew", { dateStyle: "full", ...utc }).format(new Date("2026-09-12"))` | `sábado, 1 de Tishri de 5786 AM` | `5787` as the year |
+| the same formatter's `formatToParts(…)` | aborts, exit 133 | parts with a `year` part `5787` |
+
+### Effect on GMT
+
+Shipped GMT aborts Node through two internal parts calls: `formatZonedRange` with `my-u-ca-buddhist` and a
+`long` zone name (the D16 carrier's `formatRangeToParts`), and `formatCalendar` with `gl-u-ca-hebrew`,
+`gl-u-ca-buddhist` or `gl-u-ca-roc` (the `dateStyle: "full"` parts in `joinDateTimeConnector`). Every format
+function also prints the week-year. CORE-112 fixes both:
+
+- `internal/weekYearGuard.ts` checks each formatter once, when `formatterCache` builds it, using only
+  `format` and `resolvedOptions`. A formatter that passes is returned as it is. A flagged one prints the
+  calendar year the ECMA-402 way, and never calls a parts method that could abort.
+- Range text gets its own check, because an interval pattern is not the single pattern: on a
+  formatter's first range call, `format` and `formatRange` probes find a year run that is not the
+  calendar year, and a flagged formatter's range text has that run rewritten. No range parts call
+  is made for it.
+- D16 repairs the range string from `formatRange`; no range parts call can reach V8. D17 keeps its parts
+  merge, which only SpiderMonkey reaches.
+- The canary groups D23 and D24 retire the code: D23 when every V8 GMT supports has `0426b0d1045d`, D24 when
+  CLDR prints `y` (which also ends D23). `scripts/canary/weekYear.mjs` sweeps every CLDR locale weekly, so a
+  new `Y` pattern is found before a user meets it.
+
+## AG. Other wrong years in formatted text: japanese before 1873, islamic before the Hijra, and 2-digit years (engine, ICU and CLDR)
+
+### Status
+
+Four defects found by the CORE-112 range sweep, which compared every year a range prints with Temporal's
+calendar year. None is a polyfill defect: GMT and the polyfill's `toLocaleString` both format through the
+host's `Intl.DateTimeFormat`. Each reaches GMT's format functions, in single dates and in ranges, on Node
+22.22.2, 24.21.0, 26.12.1 and 26.13.0 (ICU 78.2 and 78.3, CLDR 48), Chromium 153 and WebKit 26.6, except
+where a row says otherwise. Each is its own canary group, and the spec is
+[specs/CORE-112/year-printing.md](specs/CORE-112/year-printing.md).
+
+- **D25, japanese before 1873 (ICU, CLDR).** [ICU-23341](https://unicode-org.atlassian.net/browse/ICU-23341)
+  (not ours) is fixed for ICU 79.1, which is not released: with CLDR 49 dropping the eras before Meiji
+  (CLDR-11400), ICU 79 prints the Gregorian era before Meiji. CLDR 49 still starts Meiji on 1868-10-23, so
+  ICU 79 keeps Meiji 1 to 5 for 1868-10-23 to 1872-12-31, where ICU4X prints the Gregorian era in code.
+  Filed as [ICU-23619](https://unicode-org.atlassian.net/browse/ICU-23619) (2026-11-14, open).
+- **D26, islamic before the Hijra (ICU).** [ICU-23327](https://unicode-org.atlassian.net/browse/ICU-23327)
+  (not ours, open). WebKit is right (`643 Before Hijra`, WebKit 321713).
+- **D27, `ja` japanese `year: "2-digit"` (ICU).** ICU-20441 gives `ja` with the japanese calendar the
+  `jpanyear` numbering whenever the pattern holds 年, and `jpanyear` ignores the minimum digit count. Filed
+  as [ICU-23620](https://unicode-org.atlassian.net/browse/ICU-23620) (2026-11-14, open).
+- **D28, chinese and dangi related year under `year: "2-digit"` (ICU).** ICU's pattern generator turns a
+  `yy` skeleton into `rr`, a padded related year, where ECMA-402 prints the related year at full width.
+  Filed as [ICU-23621](https://unicode-org.atlassian.net/browse/ICU-23621) (2026-11-14, open).
+
+### What goes wrong
+
+| Call (`utc` is `{ timeZone: "UTC" }`) | Node 26.12.1 | Expected | Source of the expected value |
+| ---- | ------- | -------- | ---- |
+| `new Intl.DateTimeFormat("en-u-ca-japanese", { era: "short", year: "numeric", ...utc }).format(new Date("-000001-07-10"))` | `-645 Taika (645–650)` | `2 BC` | Intl era/monthCode Table 2, amended by [tc39/proposal-intl-era-monthcode#86](https://github.com/tc39/proposal-intl-era-monthcode/issues/86) (TG2 2026-01-08; test262 tc39/test262#4877, merged): Gregorian eras up to and including 1872-12-31 |
+| the same formatter at `1872-12-31` | `5 Meiji` | `1872 AD` | the same |
+| `new Intl.DateTimeFormat("en-u-ca-islamic-civil", { era: "short", year: "numeric", ...utc }).format(new Date("0600-07-10"))` | `-22 AH` | the year in the `bh` era | Intl era/monthCode Table 2 and § 4.1.12; test262 `intl402/DateTimeFormat/prototype/formatToParts/era.js` requires ISO 600 and 2025 to print different era names |
+| `new Intl.DateTimeFormat("ja-u-ca-japanese", { year: "2-digit", ...utc }).format(new Date("2024-07-10"))` | `令和6年` | `令和06年` | ECMA-402 FormatDateTimePattern: a `2-digit` year is FormatNumeric with `minimumIntegerDigits` 2 |
+| `new Intl.DateTimeFormat("en-u-ca-chinese", { year: "2-digit", ...utc }).format(new Date("0005-07-10"))` | `05(yi-chou)` | `5(yi-chou)` | ECMA-402 FormatDateTimePattern: `relatedYear` is FormatNumeric at full width, with no 2-digit form |
+
+Not defects: indian `-79 Śaka` and persian `-622 AP` at ISO year −1. Table 2 gives each calendar a single
+era with a signed era year, and native Temporal gives `eraYear` −79 and −622 on all three engines.
+ECMA-402 FormatDateTimePattern's "If partType is "year" and value ≤ 0, set value to 1 − value" fits only
+a calendar with an inverse era. Filed as [tc39/ecma402#1116](https://github.com/tc39/ecma402/issues/1116)
+(2026-11-14, open).
+
+### Effect on GMT
+
+`internal/yearPrinting.ts` wraps a formatter only when its defect's probe fails and the formatter can show
+it (its calendar, locale and options). Every replacement text is the engine's own; GMT owns no era or
+numbering data.
+
+- **D25:** a date before 1873-01-01 is formatted through a `calendar: "gregory"` twin. A range with
+  either end before 1873 prints wholly through the twin, so it stays in one calendar.
+- **D26 (owner decision):** a pre-Hijra date formats to the house empty value: `""` for text and ranges,
+  `[]` for parts. No wrong year is printed and no era name is owned. D18 (§ R) keeps the engine's own
+  parts through `guardedDateTimeFormat`.
+- **D27 (owner decision):** a one-digit era year is padded with the zero of the formatter's own numbering
+  system. 元年 stays, as CLDR's `ja` data has it.
+- **D28:** a chinese or dangi `year: "2-digit"` formatter is built with `year: "numeric"`, the same
+  pattern at full width.

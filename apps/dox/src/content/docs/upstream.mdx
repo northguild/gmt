@@ -76,16 +76,23 @@ with no test failing that passes on `@js-temporal/polyfill`. Release 1.0.7 had t
 - **Looking back from far ahead.** Asked for the last clock change before a date more than about
   three years from today, 1.0.7 returned an older one. Asked on 4 November 2026 about June 2030 in
   `America/New_York`, it returned the change in November 2029, not the one in March 2030. Twelve of
-  GMT's tests failed on this. We reported it as #125.
+  GMT's tests failed on this. We reported it as [#125](https://github.com/fullcalendar/temporal-polyfill/issues/125).
 - **Before 1847.** 1.0.7 did not find clock changes before 1847, such as `Asia/Manila` on
-  31 December 1844. We reported it as #126. GMT works around the same bug in
+  31 December 1844. We reported it as [#126](https://github.com/fullcalendar/temporal-polyfill/issues/126). GMT works around the same bug in
   `@js-temporal/polyfill`.
 
-One bug is left, and the maintainers closed its report as a known limitation:
+Three bugs are left in 1.0.8. We found the first two by comparing every calendar's years with
+Node's built-in Temporal, and sent a fix for each:
 
+- **Persian leap years.** From 1502 AP (2123), 78 years are leap years where the built-in Temporal
+  makes the next year the leap year, so each next year starts a day late. We reported it as
+  [#127](https://github.com/fullcalendar/temporal-polyfill/issues/127) and sent the fix as [#131](https://github.com/fullcalendar/temporal-polyfill/pull/131).
+- **Chinese and Dangi.** It reads these calendars from `Intl.DateTimeFormat`, which disagrees with
+  the built-in Temporal in some years. It puts Chinese New Year 2027 on 7 February, not 6 February.
+  We reported it as [#128](https://github.com/fullcalendar/temporal-polyfill/issues/128) and sent the fix as [#132](https://github.com/fullcalendar/temporal-polyfill/pull/132).
 - **Zone names that are links.** It treats a link name such as `Asia/Calcutta` as a different
-  zone from `Asia/Kolkata`. FullCalendar's report of this, #118 (not ours), was closed as a known
-  limitation. GMT's own probe sees it in WebKit as `Etc/UTC` not equal to `UTC`.
+  zone from `Asia/Kolkata`. FullCalendar's report of this, [#118](https://github.com/fullcalendar/temporal-polyfill/issues/118) (not ours), was
+  closed as a known limitation. GMT's own probe sees it in WebKit as `Etc/UTC` not equal to `UTC`.
 
 So for now GMT stays on `@js-temporal/polyfill`. Every week, GMT runs its whole test suite on the newest
 `temporal-polyfill` release in Node and three browsers. It checks every zone's offsets against
@@ -140,6 +147,36 @@ The built-in engines have a few bugs of their own. We report each one we find. T
   accept the calendar `islamic`, which the standard says to reject.
 - Node 26 throws when it rounds to the day on a date that starts twice, such as 6 November 2010
   in `America/Goose_Bay`. Chromium 153 already has the fix, so a later Node will have it too.
+- [`nodejs/node#67457`](https://github.com/nodejs/node/issues/67457): Node 26 adds an extra month
+  or week when it rounds up a length that is a whole number of years, months or weeks. From
+  1 January 2000 to 1 January 2001, rounded up to months, it gives one year and one month. The fix
+  is already in `temporal_rs`, the Temporal code that Node and Chromium share, and Chromium 153
+  has it. The report asks Node 26 to take it.
+- [`nodejs/node#67076`](https://github.com/nodejs/node/issues/67076): Node 22, 24 and 26 stop with
+  a crash when they split a date into parts in a few languages, such as Burmese with the Buddhist
+  calendar, or Galician with the Hebrew calendar and a full date. These languages' date patterns
+  print the year a week belongs to (see the next item). V8, the JavaScript engine in Node and
+  Chromium, has the fix, and Chromium 158 has it. The report asks Node to take it.
+- In CLDR, the data every engine formats dates with, some languages' date patterns print the year
+  a week belongs to instead of the calendar year. Scottish Gaelic, for example, prints December
+  2025 for 30 December 2024, and Telugu with the Buddhist calendar prints 2026 all year instead of
+  2569. Node, Chromium and Safari all print it. Someone else reported two of these languages as
+  [CLDR-19873](https://unicode-org.atlassian.net/browse/CLDR-19873), and
+  [our comment there](https://unicode-org.atlassian.net/browse/CLDR-19873?focusedCommentId=213171)
+  adds the rest.
+- Node, Chromium and Safari print a few other years wrong. Japanese calendar dates before 1873
+  come out in a Japanese era such as Meiji 5, where the standard gives the Gregorian era;
+  [`ICU-23341`](https://unicode-org.atlassian.net/browse/ICU-23341) fixes the years before Meiji
+  in ICU 79.1. Node and Chromium print Islamic dates before the Hijra as a negative year
+  ([`ICU-23327`](https://unicode-org.atlassian.net/browse/ICU-23327)). In Japanese, a two-digit
+  year in the Japanese calendar prints as 令和6年 instead of 令和06年, and the Chinese and Korean
+  calendars pad the Gregorian year shown beside the cycle year, such as 05 for the year 5. We
+  reported these two as [`ICU-23620`](https://unicode-org.atlassian.net/browse/ICU-23620) and
+  [`ICU-23621`](https://unicode-org.atlassian.net/browse/ICU-23621), and Meiji 1 to 5 as
+  [`ICU-23619`](https://unicode-org.atlassian.net/browse/ICU-23619).
+- [`tc39/ecma402#1116`](https://github.com/tc39/ecma402/issues/1116): the standard's rule for
+  years before 1 fits only calendars that count those years backwards in an era of their own, such
+  as BC. It asks to limit the rule to those calendars.
 - [`ICU-20548`](https://unicode-org.atlassian.net/browse/ICU-20548): Node, Chromium and Safari
   shorten a long zone name in a time range, and drop an offset name such as `GMT-5`.
 - [Bugzilla 1998020](https://bugzilla.mozilla.org/show_bug.cgi?id=1998020): Firefox accepts a

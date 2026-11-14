@@ -45,6 +45,32 @@ describe("printsInModernEra", () => {
     },
   );
 
+  // CORE-112 D26 gives a pre-Hijra date the empty value in the public functions. This file reads
+  // the era the engine prints there (D18), so it must be built without that repair: with it the
+  // parts would be `[]`, the era `undefined`, and a V8 date would read as not modern.
+  it.each(calendars.map((calendarId) => ({ calendarId })))(
+    "reads the era the engine prints before the Hijra for $calendarId, not the empty value",
+    ({ calendarId }) => {
+      const eraAt = (iso: string): string | undefined =>
+        new Intl.DateTimeFormat(`en-u-ca-${calendarId}`, {
+          era: "short",
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+          .formatToParts(
+            Temporal.PlainDate.from(iso).toZonedDateTime("UTC")
+              .epochMilliseconds,
+          )
+          .find((part) => part.type === "era")?.value;
+      expect(eraAt("0600-07-10")).toBeDefined();
+      expect(
+        printsInModernEra(Temporal.PlainDate.from("0600-07-10"), calendarId),
+      ).toBe(eraAt("0600-07-10") === eraAt("2000-01-01"));
+    },
+  );
+
   it("reads a date of another calendar by its ISO day", () => {
     const date = Temporal.PlainDate.from("2024-03-15[u-ca=hebrew]");
     expect(printsInModernEra(date, "islamic-civil")).toBe(true);

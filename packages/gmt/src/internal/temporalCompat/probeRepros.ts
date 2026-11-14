@@ -235,12 +235,15 @@ function isoOf(date: Temporal.PlainDate): string {
   return date.withCalendar("iso8601").toString();
 }
 
-function monthsUntil(calendar: string, from: string, to: string): string {
+function monthsUntil(
+  calendar: string,
+  from: string,
+  to: string,
+  largestUnit: "months" | "years" = "months",
+): string {
   return Temporal.PlainDate.from(from)
     .withCalendar(calendar)
-    .until(Temporal.PlainDate.from(to).withCalendar(calendar), {
-      largestUnit: "months",
-    })
+    .until(Temporal.PlainDate.from(to).withCalendar(calendar), { largestUnit })
     .toString();
 }
 
@@ -356,6 +359,21 @@ const d6Repros: ProbeRepro[] = [
           .toString(),
     }),
   ),
+  // tc39/proposal-temporal#3327 problem 1: the months loop writes the un-constrained day into the
+  // cached calendar date, so a count from the 30th across a 29-day month loses a day. 0.5.1 passes;
+  // js-temporal `main` has the loop since 853fc8b, so a release with it must keep D6. Chromium 153.
+  ...(
+    [
+      ["hebrew", "2022-05-01", "2022-03-31", "months", "-P1M1D"],
+      ["islamic-civil", "2023-04-21", "2022-04-01", "years", "-P1Y1M1D"],
+    ] as const
+  ).map(([calendar, from, to, largestUnit, expected]): ProbeRepro => ({
+    defect: "D6",
+    calendar,
+    name: "cachedDay",
+    expected,
+    run: () => monthsUntil(calendar, from, to, largestUnit),
+  })),
 ];
 
 /**

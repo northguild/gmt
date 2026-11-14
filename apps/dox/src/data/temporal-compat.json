@@ -35,8 +35,8 @@
     {
       "defects": ["D6"],
       "title": "D6 — non-ISO until re-constrains the day while counting months",
-      "trigger": "a js-temporal release contains 10aeb98 (already on main)",
-      "probes": 11,
+      "trigger": "a js-temporal release contains 10aeb98 (already on main) and no longer writes the un-constrained day into its calendar cache (tc39/proposal-temporal#3327 problem 1, on main since 853fc8b)",
+      "probes": 13,
       "failing": 11,
       "state": "still-needed"
     },
@@ -72,7 +72,7 @@
     {
       "defects": ["D11"],
       "title": "D11 — the calendar nudge window is never retried, so total, round and until with a calendar smallestUnit answer over the wrong bounds (relativeTo on the 29th-31st)",
-      "trigger": "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (5dd0b0d97ee1, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
+      "trigger": "a js-temporal release contains js-temporal/temporal-polyfill#361's 50d66d2, which ports proposal-temporal #3172 (17e12be0af42, the fix for tc39 #3168) and retries the nudge window; merged to main in PR #361 as 5af905f, so no new filing is needed",
       "probes": 6,
       "failing": 6,
       "state": "still-needed"
