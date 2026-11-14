@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { roundingOptionsOf } from "../../internal/typedOptions";
 import { isTimeDurationUnitName } from "../../internal/unitNames";
 import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
@@ -83,9 +84,7 @@ export function diffTime(
 
       const duration = t1.until(t2, {
         largestUnit,
-        smallestUnit: options?.smallestUnit,
-        roundingIncrement: options?.roundingIncrement,
-        roundingMode: options?.roundingMode,
+        ...roundingOptionsOf(options),
       });
 
       // craft record for units passed

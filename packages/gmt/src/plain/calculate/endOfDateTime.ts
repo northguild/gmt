@@ -5,6 +5,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import type { FractionalDigit } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
+import { fractionalDigitsOption } from "../../internal/typedOptions";
 
 const supported = [
   "year",
@@ -71,7 +72,9 @@ export function endOfDateTime(
     }
 
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+    const fractionalSecondDigits = fractionalDigitsOption(
+      optionsArg?.fractionalSecondDigits,
+    );
 
     const resolvedUnit = resolveDateTimeUnit(unit);
 

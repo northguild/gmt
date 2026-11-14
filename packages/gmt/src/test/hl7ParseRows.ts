@@ -227,18 +227,8 @@ export const hl7TsRows: readonly Hl7ParseRow[] = [
   partial("20240615^D^X", "2024-06-15", "", "day"),
   partial("20240615^^D", "2024-06-15", "", "day"),
   partial("20240615^D^X^", "2024-06-15", "", "day"),
-  partial("2024&X", "2024", "", "year"),
-  partial("2024^Y&X", "2024", "", "year"),
-  partial("20240615^D&X", "2024-06-15", "", "day"),
-  partial("20240615&X^D", "2024-06-15", "", "day"),
-  local("20240615103000&X&Y^S&Z^Q", "2024-06-15T10:30:00", "second"),
-  instant(
-    "202406151030-0500&X^M",
-    "2024-06-15T15:30:00Z",
-    "-05:00",
-    "2024-06-15T10:30:00",
-    "minute",
-  ),
+  partial("20240615^D^X Y", "2024-06-15", "", "day"),
+  partial("20240615^D^[foo=bar]", "2024-06-15", "", "day"),
 ];
 
 /** Strings that return `null`. */
@@ -256,9 +246,18 @@ export const hl7NullRows: readonly string[] = [
   "2024061510^M",
   "20240615^H",
   "20240615^S^",
-  // the subcomponent is cut, then D is finer than the year sent
+  // nothing follows the DTM inside TS.1 or the code inside TS.2 (2.A.77)
+  "2024&X",
+  "2024^Y&X",
+  "20240615^D&X",
+  "20240615&X^D",
   "2024^D&X",
   "2024&X^D",
+  "20240615^D^X&Y",
+  "20240615^D^X\\F\\Y",
+  "20240615^D^ X",
+  "20240615^D^X ",
+  "20240615^D^ ",
   // unknown, lower-case and padded degrees, an empty DTM
   "20240615^X",
   "20240615^d",
@@ -267,6 +266,7 @@ export const hl7NullRows: readonly string[] = [
   "^^",
   "^^D",
   "&X",
+  '""&X',
   "&X^D",
   "^D&X",
   "20240615^toString",
@@ -329,7 +329,7 @@ export const hl7NullRows: readonly string[] = [
 
 /**
  * Strings that read as the HL7 null value (ch. 2 §2.5.3): `""` alone, with empty components,
- * which are not present, or with components and subcomponents not expected, which are ignored
+ * which are not present, or with components not expected, which are ignored
  * (ch. 2 §2.6.2).
  */
 export const hl7NullValueInputs: readonly string[] = [
@@ -337,7 +337,6 @@ export const hl7NullValueInputs: readonly string[] = [
   '""^',
   '""^^',
   '""^^X',
-  '""&X',
 ];
 
 /** Every string input above, for the `isValidHL7` agreement test. */

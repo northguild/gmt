@@ -1,3 +1,7 @@
+import {
+  stringOption,
+  fractionalDigitsOption,
+} from "../../internal/typedOptions";
 import { Temporal } from "../../internal/temporal";
 import { durationFrom } from "../../internal/durationFrom";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -57,9 +61,11 @@ export function parseDuration(
   try {
     const duration = durationFrom(value);
     return duration.toString({
-      smallestUnit: options?.smallestUnit,
-      fractionalSecondDigits: options?.fractionalSecondDigits,
-      roundingMode: options?.roundingMode,
+      smallestUnit: stringOption(options?.smallestUnit),
+      fractionalSecondDigits: fractionalDigitsOption(
+        options?.fractionalSecondDigits,
+      ),
+      roundingMode: stringOption(options?.roundingMode),
     });
   } catch {
     return "";

@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { roundingMembers } from "../../internal/typedOptions";
 import { isDateUnitName } from "../../internal/unitNames";
 import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
@@ -75,7 +76,7 @@ export function roundDate(
   try {
     if (!isOptionsObject(options)) return "";
 
-    const { roundingIncrement, roundingMode } = options;
+    const { roundingIncrement, roundingMode } = roundingMembers(options);
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
     const smallestUnit: unknown = resolveDateTimeUnit(
       options.smallestUnit as unknown,

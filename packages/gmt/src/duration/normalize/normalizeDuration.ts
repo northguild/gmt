@@ -3,7 +3,10 @@ import { durationFrom } from "../../internal/durationFrom";
 import { durationRound, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import {
+  stringOptionOrDefault,
+  roundingOptionsOf,
+} from "../../internal/typedOptions";
 
 /**
  * Roll an ISO 8601 duration string's small units into larger ones.
@@ -104,10 +107,8 @@ export function normalizeDuration(
   try {
     const duration = durationFrom(value);
     return durationRound(duration, {
-      largestUnit: optionOrDefault(options?.largestUnit, "auto"),
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
+      largestUnit: stringOptionOrDefault(options?.largestUnit, "auto"),
+      ...roundingOptionsOf(options),
       relativeTo: resolveDurationRelativeTo(options?.relativeTo),
     }).toString();
   } catch {

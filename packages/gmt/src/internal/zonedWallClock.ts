@@ -10,7 +10,7 @@ import {
   isTransitionSearchCompatNeeded,
   isZIgnoreExactCompatNeeded,
 } from "./temporalCompat";
-import { optionOrDefault } from "./optionOrDefault";
+import { stringOptionOrDefault } from "./typedOptions";
 import { hasSecond60Field } from "./inputChecks";
 import { hasZonedDateTimeShape } from "./isoStringBody";
 
@@ -670,7 +670,10 @@ function stringEpochAtEdge(
     return startOfDayEpochNanoseconds(timeZone, wall.toPlainDate());
   }
 
-  const disambiguation = optionOrDefault(options?.disambiguation, "compatible");
+  const disambiguation = stringOptionOrDefault(
+    options?.disambiguation,
+    "compatible",
+  );
   if (!UTC_OFFSET.test(item)) {
     return epochNanosecondsFor(timeZone, wall, disambiguation);
   }
@@ -692,7 +695,7 @@ function stringEpochAtEdge(
     wall,
     offset,
     disambiguation,
-    optionOrDefault(options?.offset, "reject"),
+    stringOptionOrDefault(options?.offset, "reject"),
     !UTC_OFFSET_WITH_SECONDS.test(item),
   );
 }
@@ -756,8 +759,8 @@ function fromBagAtEdge(
     timeZone,
     wall,
     offset,
-    optionOrDefault(options?.disambiguation, "compatible"),
-    optionOrDefault(options?.offset, "reject"),
+    stringOptionOrDefault(options?.disambiguation, "compatible"),
+    stringOptionOrDefault(options?.offset, "reject"),
     false,
   );
   return new Temporal.ZonedDateTime(epoch, timeZone, wall.calendarId);

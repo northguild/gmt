@@ -1,9 +1,11 @@
-import { booleanOption } from "../../internal/typedOptions";
+import {
+  booleanOption,
+  stringOptionOrDefault,
+} from "../../internal/typedOptions";
 import { cachedFormatter } from "../../internal/formatterCache";
 import { durationFrom } from "../../internal/durationFrom";
 import { exactSeconds } from "../../internal/exactSeconds";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Plural unit keys rendered by `formatDuration`. Maps to singular `Intl.NumberFormat` unit
@@ -115,7 +117,7 @@ export function formatDuration(
 
   try {
     const duration = durationFrom(value);
-    const style = optionOrDefault(options.style, "long");
+    const style = stringOptionOrDefault(options.style, "long");
     const includeZero = booleanOption(options.zero, false);
 
     const amounts: Record<DurationUnit, number | Intl.StringNumericLiteral> = {

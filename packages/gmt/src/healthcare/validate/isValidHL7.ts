@@ -14,10 +14,10 @@ import { readHl7DateTime } from "../../internal/hl7DateTime";
  * - A valid value is not necessarily an instant: `parseHL7` reads a value at a minute or finer
  *   with no offset as `"local"`, one at year to hour precision as `"partial"` (with or without
  *   an offset), and `'""'` as `"null"`.
- * - Components are read as `parseHL7` reads them: `^` and `&` are the separators (ch. 2
- *   §2.5.4), and components and subcomponents that are present but not expected are ignored
- *   (§2.6.2), so `20240615^D^X` and `2024&X` are valid, while `&X` is not. An ignored component may not hold `|`,
- *   `~`, a carriage return or any other C0 control character.
+ * - Components are read as `parseHL7` reads them: `^` separates them (ch. 2 §2.5.4). TS.1 is the
+ *   DTM and TS.2 one code, so nothing follows either inside it: `2024&X` is not valid. Components
+ *   after TS.2 are ignored (§2.6.2), so `20240615^D^X` is valid when each is empty or HL7 text
+ *   with no `|`, `^`, `~`, `\`, `&` or C0 control character and no leading or trailing space.
  * - No public regex exists: a `DTM` is valid only as a whole (calendar, clock, offset and
  *   degree of precision together), which a pattern alone cannot check.
  * - False for a value that is not a string. Never throws.

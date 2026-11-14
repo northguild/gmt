@@ -6,7 +6,7 @@ import {
 } from "../../internal/unixEpochValue";
 import { resolveUnixFormatReference } from "../../internal/unixFormatReference";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { isOptionsObject } from "../../internal/isObject";
 
 /**
@@ -105,7 +105,7 @@ export function formatCalendarUnix(
         reference,
         timeZone,
         locale,
-        optionOrDefault(options.timeStyle, "short"),
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

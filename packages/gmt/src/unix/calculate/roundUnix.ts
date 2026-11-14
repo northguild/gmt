@@ -1,3 +1,4 @@
+import { roundingMembers } from "../../internal/typedOptions";
 import type { Temporal } from "../../internal/temporal";
 import { isDateTimeUnitName } from "../../internal/unitNames";
 import {
@@ -120,7 +121,7 @@ export function roundUnix(
   try {
     if (!isOptionsObject(options)) return null;
 
-    const { roundingIncrement, roundingMode } = options;
+    const { roundingIncrement, roundingMode } = roundingMembers(options);
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);
     const frame = normalizeZoneFrame(options.timeZone);
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.

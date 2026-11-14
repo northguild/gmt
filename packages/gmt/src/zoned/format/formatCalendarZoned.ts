@@ -6,7 +6,7 @@ import {
 import { formatCalendarDays } from "../../internal/formatCalendarDays";
 import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { isOptionsObject } from "../../internal/isObject";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
@@ -95,7 +95,7 @@ export function formatCalendarZoned(
         target.epochMilliseconds,
         timeZone,
         locale,
-        optionOrDefault(options.timeStyle, "short"),
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

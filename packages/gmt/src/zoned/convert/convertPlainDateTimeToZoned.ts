@@ -3,7 +3,7 @@ import { isZoneId, plainDateTimeOf } from "../../internal/inputChecks";
 import type { Disambiguation } from "../../types";
 import { zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 
 /**
  * Attach the specified `timeZone` to a plain datetime string and return a zoned ISO 8601 datetime string.
@@ -63,13 +63,16 @@ export function convertPlainDateTimeToZoned(
       return "";
     }
 
-    const disambiguation = optionOrDefault(
+    const disambiguation = stringOptionOrDefault(
       optionsArg?.disambiguation,
       "compatible",
     );
 
     const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
-      smallestUnit: optionOrDefault(optionsArg?.smallestUnit, "milliseconds"),
+      smallestUnit: stringOptionOrDefault(
+        optionsArg?.smallestUnit,
+        "milliseconds",
+      ),
     };
 
     try {

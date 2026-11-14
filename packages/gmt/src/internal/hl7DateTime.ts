@@ -188,38 +188,44 @@ function finestPrecision(
   return finest;
 }
 
-// One component of a `TS` field: any run without a separator that ends the component or the
-// field (`^`, `|`), the repetition separator (`~`) or a C0 control (U+0000 to U+001F, which
-// includes the segment terminator CR and a LF). `&` (the sub-component separator, ch. 2 §2.5.4)
-// and `\` (the escape character, ch. 2 §2.7) are data a component may hold.
-const HL7_COMPONENT = "[^\\u0000-\\u001f|~^]*";
+// TS.1 and TS.2: any run without a separator that ends the component or the field (`^`, `|`),
+// the repetition separator (`~`), the subcomponent separator (`&`; TS.1 is a primitive DTM and
+// TS.2 a primitive code, so nothing follows inside either, 2.A.77) or a C0 control (U+0000 to
+// U+001F, which includes the segment terminator CR and a LF). The escape character `\` (ch. 2
+// §2.7) is left for the DTM and degree readers to reject.
+const HL7_TS_PART = "[^\\u0000-\\u001f|~^&]*";
 
-/** A whole `TS` field: components joined by `^`, each free of the separators a component cannot hold. */
-const hl7TsField = new RegExp(`^${HL7_COMPONENT}(?:\\^${HL7_COMPONENT})*$`);
+// An extra component (ch. 2 §2.6.2): empty, or HL7 text, which holds no delimiter (`|`, `^`, `~`,
+// `\`, `&`) and no C0 control, and does not start or end with a space.
+const HL7_EXTRA_COMPONENT =
+  "(?:[^\\u0000-\\u001f|~^\\\\&\\s](?:[^\\u0000-\\u001f|~^\\\\&]*[^\\u0000-\\u001f|~^\\\\&\\s])?)?";
+
+/** A whole `TS` field: `TS.1 ^ TS.2`, then any number of `^`-led extra components. */
+const hl7TsField = new RegExp(
+  `^${HL7_TS_PART}(?:\\^${HL7_TS_PART}(?:\\^${HL7_EXTRA_COMPONENT})*)?$`,
+);
 
 /**
- * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) into its two components, each read up to
- * its first subcomponent. A lone field carries no MSH-2, so the separators are the ones Figure
- * 2-1 recommends, `^` between components and `&` between subcomponents (ch. 2 §2.5.4). A
- * recipient ignores components and subcomponents "that are present but were not expected"
- * (ch. 2 §2.6.2), and a later version adds components at the end of a data type (§2.8.1,
- * §2.8.2), so everything after the second component and after each first `&` is ignored:
- * `20240615^D^X` is `20240615^D`, and `2024&X^D` is `2024^D`. A component left empty is not
+ * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) into its two components. A lone field
+ * carries no MSH-2, so `^` separates components, the separator Figure 2-1 recommends (ch. 2
+ * §2.5.4). TS.1 is the DTM and nothing follows the DTM inside it; TS.2 is empty or one code from
+ * Table 0529, and nothing follows that inside it either, so a `&` in either component is not a
+ * `TS`. A recipient ignores components "that are present but were not expected" (ch. 2 §2.6.2),
+ * and a later version adds components at the end of a data type (§2.8.1, §2.8.2), so each
+ * component after TS.2 is ignored: `20240615^D^X` is `20240615^D`. An empty component is not
  * present (§2.6.2), so `20240615^` and `20240615^^D` are `20240615`.
  *
- * An ignored component is still a component of the field, so the whole value is checked: no
- * component holds the field separator `|`, the repetition separator `~`, a segment terminator
- * (CR) or any other C0 control character, because each of those ends a component, a repetition,
- * a field or a segment. `&` and the escape character `\` (ch. 2 §2.7) may appear in an extra
- * component; a space, a bracket or any other printable character is data.
+ * An ignored component is still a component of the field, so it is checked: it is HL7 text with
+ * no delimiter (`|`, `^`, `~`, `\`, `&`, ch. 2 §2.5.4 and §2.7), no C0 control (a CR ends the
+ * segment) and no leading or trailing white space; an inner space is data.
  *
  * @param value candidate `TS` text
  * @returns the two components, each `""` when not present; `null` for a value that is not a string
- * or whose components hold a separator or a control character
+ * or whose components break these rules
  *
  * @example splitHl7Ts("199904011200^L") // { dtm: "199904011200", degree: "L" }
  * @example splitHl7Ts("20240615^D^X") // { dtm: "20240615", degree: "D" }
- * @example splitHl7Ts("2024&X^D") // { dtm: "2024", degree: "D" }
+ * @example splitHl7Ts("2024&X") // null (nothing follows the DTM inside TS.1)
  * @example splitHl7Ts("20240615^D^X|Y") // null (the field separator ends the field)
  */
 export function splitHl7Ts(
@@ -230,13 +236,7 @@ export function splitHl7Ts(
   }
   // The limit stops the split at the second component; the rest was checked by `hl7TsField`.
   const [dtm = "", degree = ""] = value.split("^", 2);
-  return { dtm: firstSubcomponent(dtm), degree: firstSubcomponent(degree) };
-}
-
-/** A component up to its first `&`; the subcomponents after it are not expected (ch. 2 §2.6.2). */
-function firstSubcomponent(component: string): string {
-  const amp = component.indexOf("&");
-  return amp < 0 ? component : component.slice(0, amp);
+  return { dtm, degree };
 }
 
 const ISO_OFFSET =

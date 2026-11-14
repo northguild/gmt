@@ -28,7 +28,7 @@ import {
   startOfDayEpochNanoseconds,
   timeZoneIdOf,
 } from "./zonedWallClock";
-import { optionOrDefault } from "./optionOrDefault";
+import { stringOptionOrDefault } from "./typedOptions";
 import type { DATE_TIME_FIELDS, SetFields } from "./readSetFields";
 
 /*
@@ -780,8 +780,8 @@ function withAtEdge(
     zoned.timeZoneId,
     wall,
     offset,
-    optionOrDefault(options?.disambiguation, "compatible"),
-    optionOrDefault(options?.offset, "prefer"),
+    stringOptionOrDefault(options?.disambiguation, "compatible"),
+    stringOptionOrDefault(options?.offset, "prefer"),
     false,
   );
   return inZoneOf(epoch, zoned);

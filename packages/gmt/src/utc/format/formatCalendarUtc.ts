@@ -4,7 +4,7 @@ import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { nowInstant } from "../../internal/temporalCompat";
 import type { CalendarOptions } from "../../types";
 import { utcInstantOf } from "../../internal/utcInstant";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { isOptionsObject } from "../../internal/isObject";
 
 /**
@@ -90,7 +90,7 @@ export function formatCalendarUtc(
         reference,
         timeZone,
         locale,
-        optionOrDefault(options.timeStyle, "short"),
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

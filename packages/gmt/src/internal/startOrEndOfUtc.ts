@@ -1,3 +1,4 @@
+import { fractionalDigitsOption } from "./typedOptions";
 import { Temporal } from "./temporal";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
@@ -38,7 +39,9 @@ export function startOrEndOfUtc(
 ): string {
   const weekStartsOn = resolveWeekStartsOn(options.weekStartsOn);
   const resolvedUnit = resolveDateTimeUnit(unit);
-  const fractionalSecondDigits = options.fractionalSecondDigits;
+  const fractionalSecondDigits = fractionalDigitsOption(
+    options.fractionalSecondDigits,
+  );
 
   const instant = utcInstantOf(value);
   if (

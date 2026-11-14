@@ -1,6 +1,6 @@
 import type { Disambiguation } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { resolveLocalInstant } from "../../internal/resolveLocalInstant";
 
 /**
@@ -64,7 +64,7 @@ export function resolveLocal(
     return resolveLocalInstant(
       localDateTime,
       timeZone,
-      optionOrDefault(optionsArg?.disambiguation, "compatible"),
+      stringOptionOrDefault(optionsArg?.disambiguation, "compatible"),
     );
   } catch {
     // Never throws (Core Rule 3): a hostile

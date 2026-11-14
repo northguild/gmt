@@ -14,7 +14,7 @@ import type {
 } from "../../types";
 import { calendarZonedOf } from "../../internal/calendarZonedString";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 
 /**
  * Add a temporal amount to a zoned ISO 8601 datetime string and return a zoned ISO 8601 string.
@@ -105,7 +105,7 @@ export function addZoned(
       return "";
     }
 
-    const disambiguation = optionOrDefault(
+    const disambiguation = stringOptionOrDefault(
       optionsArg?.disambiguation,
       "compatible",
     );

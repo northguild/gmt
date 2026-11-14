@@ -204,16 +204,16 @@ describe("formatCalendar", () => {
       },
     );
 
-    // ECMA-402 GetOption converts the value it reads once (ToString), so a
-    // timeStyle given as an object formats exactly as the plain string does.
-    // A symbol makes ToString throw, so it is invalid input.
+    // ECMA-402 GetOption would convert an object with ToString, but timeStyle is
+    // typed as a string: a String object, a toString object or a symbol is
+    // invalid input and returns the sentinel (CORE-113).
     it.each`
       timeStyle                      | shape                      | expected
-      ${new String("long")}          | ${"String object long"}    | ${"tomorrow at 2:30:00 PM"}
-      ${new String("full")}          | ${"String object full"}    | ${"tomorrow at 2:30:00 PM"}
-      ${new String("medium")}        | ${"String object medium"}  | ${"tomorrow at 2:30:00 PM"}
-      ${{ toString: () => "full" }}  | ${"toString object full"}  | ${"tomorrow at 2:30:00 PM"}
-      ${{ toString: () => "short" }} | ${"toString object short"} | ${"tomorrow at 2:30 PM"}
+      ${new String("long")}          | ${"String object long"}    | ${""}
+      ${new String("full")}          | ${"String object full"}    | ${""}
+      ${new String("medium")}        | ${"String object medium"}  | ${""}
+      ${{ toString: () => "full" }}  | ${"toString object full"}  | ${""}
+      ${{ toString: () => "short" }} | ${"toString object short"} | ${""}
       ${Symbol("short")}             | ${"Symbol short"}          | ${""}
     `(
       "timeStyle given as $shape formats tomorrow as '$expected'",

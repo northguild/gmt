@@ -4,7 +4,7 @@ import { cachedFormatter } from "../../internal/formatterCache";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { isOptionsObject } from "../../internal/isObject";
 import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
@@ -93,7 +93,7 @@ export function formatCalendar(
       // GetOption converts the value once (ToString), so `new String("long")`
       // is mapped as "long" is; a symbol throws, and that is invalid input.
       const timeStyle = plainTimeStyle(
-        `${optionOrDefault(options.timeStyle, "short")}` as NonNullable<
+        `${stringOptionOrDefault(options.timeStyle, "short")}` as NonNullable<
           FormatCalendarOptions["timeStyle"]
         >,
       );

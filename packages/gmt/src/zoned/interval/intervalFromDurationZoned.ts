@@ -9,7 +9,7 @@ import {
 import type { Disambiguation, Overflow } from "../../types";
 import { calendarZonedOf } from "../../internal/calendarZonedString";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 
 /**
  * Construct a zoned interval from a single point plus an ISO 8601 duration, anchored at either end.
@@ -112,7 +112,7 @@ export function intervalFromDurationZoned(
       return null;
     }
 
-    const disambiguation = optionOrDefault(
+    const disambiguation = stringOptionOrDefault(
       options?.disambiguation,
       "compatible",
     );

@@ -28,16 +28,18 @@ import type { Hl7DateTime } from "../../types";
  * - `+0000` and `-0000` are both UTC (2.A.22), read as `+00:00`.
  * - `""` (two double quote marks) is the null value and differs from `''` (ch. 2 §2.5.3: "is
  *   different from omitting an optional data field"); `''` returns `null`.
- * - A lone `TS` carries no MSH-2, so `^` separates its components and `&` their subcomponents,
- *   the separators Figure 2-1 recommends (ch. 2 §2.5.4). When a feed's MSH-2 names others, the
- *   caller re-joins that `TS` with `^` and `&` first.
- * - Components and subcomponents that are present but not expected are ignored (ch. 2 §2.6.2;
- *   a later version adds them at the end, §2.8.1 and §2.8.2), so `20240615^D^X` reads as
- *   `20240615^D` and `2024&X` as `2024`. An empty component is not present (§2.6.2), so
- *   `20240615^D^` reads as `20240615^D` and `""^` as the null value, while `^D` and `&X` return
- *   `null`. An ignored component is still a component: one that holds `|`, `~`, a carriage
- *   return or any other C0 control character is not a `TS`, so `20240615^D^X|Y` returns `null`
- *   (`&`, `\` and printable characters are data, ch. 2 §2.5.4 and §2.7).
+ * - A lone `TS` carries no MSH-2, so `^` separates its components, the separator Figure 2-1
+ *   recommends (ch. 2 §2.5.4). When a feed's MSH-2 names another, the caller re-joins that `TS`
+ *   with `^` first.
+ * - TS.1 is the DTM and TS.2 is empty or one code from Table 0529; nothing follows either inside
+ *   it, so `2024&X` and `2024^D&X` return `null`.
+ * - Components after TS.2 are present but not expected and are ignored (ch. 2 §2.6.2; a later
+ *   version adds them at the end, §2.8.1 and §2.8.2), so `20240615^D^X` reads as `20240615^D`.
+ *   An empty component is not present (§2.6.2), so `20240615^D^` reads as `20240615^D` and `""^`
+ *   as the null value, while `^D` returns `null`. An ignored component is still checked: it is
+ *   HL7 text with no `|`, `^`, `~`, `\`, `&` or C0 control character (a carriage return ends the
+ *   segment) and no leading or trailing space, so `20240615^D^X|Y` and `20240615^D^ X` return
+ *   `null`; an inner space is data.
  * - Second `60` and hour `24` are rejected, as is any day the month lacks.
  * - Returns `null` on invalid input and for any value that is not a string. Never throws.
  *
