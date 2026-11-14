@@ -348,8 +348,9 @@ describe("the clock handles", () => {
     const w = await open();
     startHandle().focus();
     await w.user.keyboard("{ArrowRight}");
-    expect((startBox() as HTMLInputElement).value).toMatch(
-      /\[Europe\/London\]$/,
+    // an offset instant on the London clock: `freeTimeExpiry` takes no zone bracket
+    expect((startBox() as HTMLInputElement).value).toBe(
+      "2024-06-14T20:15:00+01:00",
     );
     expect(startHandle()).toHaveAttribute(
       "aria-valuetext",

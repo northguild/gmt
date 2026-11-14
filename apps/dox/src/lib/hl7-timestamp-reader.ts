@@ -515,17 +515,16 @@ export function stripOf(
 export const REASON_DEGREE =
   "The degree of precision after ^ is not one of Y L D H M S, or it is finer than the digits sent.";
 export const REASON_PICTURE =
-  "HL7 v2.5.1 2.A.22 reads one field, YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ], and for a TS a degree of precision after ^. A field that does not exist, an hour of 24, a second of 60, more than four fraction digits or a separator other than ^ and & is not read.";
+  "HL7 v2.5.1 2.A.22 reads one field, YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ], and for a TS a degree of precision after ^. A field that does not exist, an hour of 24, a second of 60, more than four fraction digits, a & inside the date-time or the degree, or a separator other than ^ is not read.";
 
 /**
  * The one sentence under NO SIGNAL, decided from a library probe, never guessed. The probe is
- * the first component cut at its first `&`, the `DTM` `parseHL7` reads (what is not expected is
- * ignored, ch. 2 §2.6.2). When that reads, the degree is what refused the value; when it does
- * not, the picture is.
+ * the first component, the `DTM` `parseHL7` reads, whole: a `&` inside it is refused, not
+ * ignored. When that reads, the degree is what refused the value; when it does not, the picture
+ * is.
  */
 export function sentinelText(read: Hl7Read, lib: Hl7Lib): string {
-  const [first = ""] = read.value.split("^", 1);
-  const [dtm = ""] = first.split("&", 1);
+  const [dtm = ""] = read.value.split("^", 1);
   return lib.parseHL7(dtm) !== null ? REASON_DEGREE : REASON_PICTURE;
 }
 
@@ -569,9 +568,9 @@ interface Hl7Figure {
  * `formatHL7(local, { precision: p })` adds to the rung before it, for each p up to the result's
  * precision. Digits sent past that precision (before any sign, `&` or `^`) are one dashed box, cut
  * by the degree and not read. The offset and the `^degree` are their own boxes. What `parseHL7`
- * ignores (ch. 2 §2.6.2), the subcomponents after a component's first `&` and every component
- * after the second, is a dashed box of its own after the part it follows. The null value and the
- * sentinel are one neutral box of the raw text.
+ * ignores (ch. 2 §2.6.2), every component after the second, is one dashed box at the end. A value
+ * that reads holds no `&` in its first two components, because `parseHL7` refuses one there. The
+ * null value and the sentinel are one neutral box of the raw text.
  */
 export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
   const raw = read.value;
@@ -585,12 +584,9 @@ export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
   if (parsed === null || parsed.kind === "null") return plain();
 
   const caret = raw.indexOf("^");
-  const first = caret < 0 ? raw : raw.slice(0, caret);
-  const amp = first.indexOf("&");
-  const body = amp < 0 ? first : first.slice(0, amp);
-  const bodyIgnored = first.slice(body.length);
+  const body = caret < 0 ? raw : raw.slice(0, caret);
   const rest = caret < 0 ? "" : raw.slice(caret);
-  const degreeEnd = rest.slice(1).search(/[\^&]/);
+  const degreeEnd = rest.slice(1).indexOf("^");
   const degree = degreeEnd < 0 ? rest : rest.slice(0, degreeEnd + 1);
   const restIgnored = rest.slice(degree.length);
   const signAt = body.search(/[+-]/);
@@ -640,7 +636,6 @@ export function hl7Figure(read: Hl7Read, lib: Hl7Lib): Hl7Figure {
       word: "offset",
     });
   }
-  if (bodyIgnored !== "") fields.push(ignoredField(bodyIgnored));
   if (degree !== "") {
     fields.push({
       text: degree,

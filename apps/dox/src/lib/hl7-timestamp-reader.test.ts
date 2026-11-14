@@ -170,12 +170,13 @@ describe("reading", () => {
     expect(sentinelText(read("20240615^S"), lib)).not.toBe("");
   });
 
-  it("names the degree only when the DTM before any & reads", () => {
+  it("names the degree only when the whole first component reads", () => {
     expect(sentinelText(read("20240615^S"), lib)).toBe(REASON_DEGREE);
     // what is not expected is ignored (ch. 2 §2.6.2)
     expect(sentinelText(read("20240615^S^"), lib)).toBe(REASON_DEGREE);
     expect(sentinelText(read("20240615^S^X"), lib)).toBe(REASON_DEGREE);
-    expect(sentinelText(read("20240615&X^S"), lib)).toBe(REASON_DEGREE);
+    expect(sentinelText(read("20240615&X^S"), lib)).toBe(REASON_PICTURE);
+    expect(sentinelText(read("20240615^S&X"), lib)).toBe(REASON_DEGREE);
     expect(sentinelText(read("2024061^D"), lib)).toBe(REASON_PICTURE);
     expect(sentinelText(read("&X^D"), lib)).toBe(REASON_PICTURE);
     expect(sentinelText(read("20240615~D"), lib)).toBe(REASON_PICTURE);
@@ -440,23 +441,28 @@ describe("hl7Texts", () => {
       { text: "^D", group: "neutral", bracket: "degree" },
       ignored("^X"),
     ]);
-    expect(boxes("20240615103000&X^D").map((f) => f.text)).toEqual([
+    expect(boxes("20240615103000^D").map((f) => f.text)).toEqual([
       "2024",
       "06",
       "15",
       "103000",
-      "&X",
       "^D",
     ]);
-    const cutThenIgnored = hl7Figure(read("20240615103000&X^D"), lib)
-      .halves[0]!.fields.slice(3, 5)
+    const cutThenDegree = hl7Figure(read("20240615103000^D^X"), lib)
+      .halves[0]!.fields.slice(3)
       .map((f) => f.run);
-    expect(cutThenIgnored).toEqual([undefined, "ignored"]);
-    expect(boxes("202406151030-0500&X^M&Y").slice(-4)).toEqual([
+    expect(cutThenDegree).toEqual([undefined, undefined, "ignored"]);
+    expect(boxes("202406151030-0500^M^X&Y").slice(-3)).toEqual([
       { text: "-0500", group: "offset", bracket: undefined },
-      ignored("&X"),
       { text: "^M", group: "neutral", bracket: "degree" },
-      ignored("&Y"),
+      ignored("^X&Y"),
     ]);
+  });
+  it("draws a & inside the date-time or the degree as one plain box: it is refused, not ignored", () => {
+    for (const v of ["20240615103000&X^D", "202406151030-0500^M&Y"]) {
+      expect(hl7Figure(read(v), lib).halves[0]!.fields).toEqual([
+        { text: v, mask: "", group: "neutral", word: "text" },
+      ]);
+    }
   });
 });

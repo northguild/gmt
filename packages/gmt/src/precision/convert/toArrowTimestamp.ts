@@ -5,8 +5,8 @@ import type { ArrowTimeUnit } from "./fromArrowTimestamp";
  * Convert an ISO 8601 instant string to the `int64` of an Apache Arrow `Timestamp` column that
  * has a timezone.
  *
- * - `isoString` must be an instant: `Z`, an offset, or a zoned string. A plain date-time returns
- *   `0n`: a wall time is never silently read as UTC. For a column with no timezone use
+ * - `isoString` must be an instant: `Z` or an offset, with nothing after it. A plain date-time
+ *   returns `0n`: a wall time is never silently read as UTC. A zone bracket also returns `0n`. For a column with no timezone use
  *   `toArrowLocalTimestamp`.
  * - The column's zone is display information and does not change the count.
  * - Digits below the unit floor toward negative infinity, so `1969-12-31T23:59:59.9999999Z` in
@@ -18,12 +18,13 @@ import type { ArrowTimeUnit } from "./fromArrowTimestamp";
  *   `isValidInstant` is all they need.
  * - Returns `0n` on invalid input.
  *
- * @param isoString ISO 8601 instant string (with `Z`, an offset or a zone)
+ * @param isoString ISO 8601 instant string (with `Z` or an offset)
  * @param unit the column's `TimeUnit`
  * @returns the `int64` count since 1970-01-01T00:00:00Z in the column's unit, or `0n` on invalid input
  *
  * @example toArrowTimestamp("2024-01-01T00:00:00Z", "millisecond") // 1704067200000n
- * @example toArrowTimestamp("2024-01-01T09:00:00+09:00[Asia/Tokyo]", "second") // 1704067200n
+ * @example toArrowTimestamp("2024-01-01T09:00:00+09:00", "second") // 1704067200n
+ * @example toArrowTimestamp("2024-01-01T09:00:00+09:00[Asia/Tokyo]", "second") // 0n — a zone bracket
  * @example toArrowTimestamp("2024-01-01T00:00:00.123456789Z", "microsecond") // 1704067200123456n — floors
  * @example toArrowTimestamp("1969-12-31T23:59:59.9999999Z", "microsecond") // -1n — toward negative infinity
  * @example toArrowTimestamp("2262-04-11T23:47:16.854775807Z", "nanosecond") // 9223372036854775807n

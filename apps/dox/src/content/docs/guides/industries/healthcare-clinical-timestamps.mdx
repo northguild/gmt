@@ -189,16 +189,18 @@ MSH-2 names others re-joins the field with `^` and `&` before it calls `parseHL7
 
 A receiver ignores "components, subcomponents, and extra repetitions of a field that are present
 but were not expected" (ch. 2 §2.6.2), and a later version of HL7 adds components at the end of a
-data type (§2.8.1, §2.8.2). So a third component, and anything after a component's first `&`, is
-not read. A component left empty is not present, so an empty `DTM` returns `null`.
+data type (§2.8.1, §2.8.2). So a third component, and anything after it, is not read. GMT reads
+the first two components more strictly than §2.6.2 asks: each is exactly one value, so a `&`
+inside the date-time or the degree returns `null`. A component left empty is not present, so an
+empty `DTM` returns `null`.
 
 ```typescript
 parseHL7("20240615^D^X");
 // { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — the third component is ignored
+parseHL7("20240615^D^X&Y");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — a & in an ignored component is ignored too
 parseHL7("2024&X");
-// { kind: "partial", local: "2024", offset: "", precision: "year" } — so is the subcomponent
-parseHL7("&X");
-// null — the DTM before the subcomponent is empty
+// null — a subcomponent inside the date-time
 ```
 
 ### Midnight is the start of the day

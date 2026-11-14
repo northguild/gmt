@@ -13858,7 +13858,7 @@
       },
       {
         "call": "parseMonthDayFromDateTime(\"2024-12-25T10:00:00[Europe/Paris]\")",
-        "result": "\"--12-25\""
+        "result": "\"\""
       }
     ]
   },
@@ -14485,6 +14485,10 @@
       },
       {
         "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00Z\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00[Europe/Paris]\")",
         "result": "\"\""
       }
     ]
@@ -16129,8 +16133,12 @@
         "result": "1704067200000n"
       },
       {
-        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", \"second\")",
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00\", \"second\")",
         "result": "1704067200n"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", \"second\")",
+        "result": "0n — a zone bracket"
       },
       {
         "call": "toArrowTimestamp(\"2024-01-01T00:00:00.123456789Z\", \"microsecond\")",
@@ -16982,8 +16990,12 @@
         "result": "\"01HK153X00\" — floors to the millisecond"
       },
       {
-        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00\")",
         "result": "\"01HK153X00\""
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"\" — a zone bracket"
       },
       {
         "call": "ulidTimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
@@ -17039,8 +17051,12 @@
         "result": "\"018cc251-f400\" — floors to the millisecond"
       },
       {
-        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00\")",
         "result": "\"018cc251-f400\""
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"\" — a zone bracket"
       },
       {
         "call": "uuidV7TimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
