@@ -9,6 +9,7 @@ import {
   LADDER_HEAD_OFFSET,
   MEMBER_ROWS,
   REASON_DEGREE,
+  REASON_EXTRA,
   REASON_PICTURE,
   LADDER_HEAD_UTC,
   detailText,
@@ -180,6 +181,17 @@ describe("reading", () => {
     expect(sentinelText(read("2024061^D"), lib)).toBe(REASON_PICTURE);
     expect(sentinelText(read("&X^D"), lib)).toBe(REASON_PICTURE);
     expect(sentinelText(read("20240615~D"), lib)).toBe(REASON_PICTURE);
+  });
+
+  it("names a component after the degree when the first two components read", () => {
+    for (const v of ["20240615^D^X|Y", "20240615^D^X~Y", "20240615^D^X\r"]) {
+      expect(read(v).parsed, v).toBeNull();
+    }
+    expect(sentinelText(read("20240615^D^X|Y"), lib)).toBe(REASON_EXTRA);
+    expect(sentinelText(read("20240615^D^X~Y"), lib)).toBe(REASON_EXTRA);
+    expect(sentinelText(read("20240615^D^X\r"), lib)).toBe(REASON_EXTRA);
+    expect(sentinelText(read("20240615^^X|Y"), lib)).toBe(REASON_EXTRA);
+    expect(sentinelText(read("20240615^S^X|Y"), lib)).toBe(REASON_DEGREE);
   });
 
   it("applies the strip to a local value only", () => {
@@ -356,6 +368,7 @@ describe("hl7Texts", () => {
     }
     expect(t.reasons).toContain(REASON_DEGREE);
     expect(t.reasons).toContain(REASON_PICTURE);
+    expect(t.reasons).toContain(REASON_EXTRA);
     expect(t.refusals.length).toBeGreaterThan(0);
   });
 

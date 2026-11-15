@@ -88,6 +88,12 @@ describe("resolveWallTime", () => {
       "2024-03-10T02:30:00",
     );
   });
+  it("writes the zone's offset to the second, not rounded to the minute", () => {
+    // New York kept local mean time, -04:56:02, until November 1883.
+    const text = resolveWallTime("1880-01-01T12:00:00", "America/New_York");
+    expect(text).toBe("1880-01-01T12:00:00-04:56:02");
+    expect(ms(text)).toBe(ms("1880-01-01T16:56:02Z"));
+  });
 });
 
 describe("createLedgerCanvas", () => {
@@ -120,6 +126,13 @@ describe("fitLedgerCanvas", () => {
     expect(formatHandleValue(c.endMs, "America/New_York")).toBe(
       "2024-06-17T00:00:00-04:00",
     );
+  });
+  it("writes a handle with the zone's offset to the second", () => {
+    // Monrovia kept -00:44:30 until 1972: a rounded -00:45 reads 30 s later.
+    const at = ms("1960-06-01T12:00:00Z");
+    const text = formatHandleValue(at, "Africa/Monrovia");
+    expect(text).toBe("1960-06-01T11:15:30-00:44:30");
+    expect(ms(text)).toBe(at);
   });
   it("covers both zones' days when comparing", () => {
     const c = fitLedgerCanvas(

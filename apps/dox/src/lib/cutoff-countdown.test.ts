@@ -230,6 +230,15 @@ describe("nowFromSlider", () => {
       ),
     ).toBe("2024-06-12T17:20:00+02:00");
   });
+  it("writes the zone's offset to the second, not rounded to the minute", () => {
+    const now = nowFromSlider(
+      "1960-06-01T11:00:00-00:44:30[Africa/Monrovia]",
+      15,
+      "Africa/Monrovia",
+    );
+    expect(now).toBe("1960-06-01T11:15:00-00:44:30");
+    expect(toOffsetInstant(now)?.instant).toBe("1960-06-01T11:59:30Z");
+  });
 });
 
 describe("matchPreset / permalinkOf", () => {

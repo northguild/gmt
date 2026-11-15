@@ -19,6 +19,7 @@ import {
   isZoneless,
   type CutoffLib,
 } from "./cutoff-widgets";
+import { exactOffsetText } from "./exact-offset";
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -293,9 +294,10 @@ export function nowFromSlider(
   timeZone: string,
 ): string {
   try {
-    return Temporal.Instant.from(cutoff)
-      .add({ minutes })
-      .toString({ timeZone });
+    return exactOffsetText(
+      Temporal.Instant.from(cutoff).add({ minutes }),
+      timeZone,
+    );
   } catch {
     return "";
   }

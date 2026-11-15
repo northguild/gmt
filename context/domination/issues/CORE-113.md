@@ -61,4 +61,5 @@ reader that took two kinds.
   `60`, and the same string with `59` is a valid value of that kind (date, zone and calendar exist).
   The leap-second list is not checked.
 - **`set*` functions keep their documented `Temporal.*Like` bags.** Those are their input kind.
-- **Breaking changes ship in a patch.** Users are internal. No compatibility shim or deprecation.
+- **Released as a `minor` with a Breaking changes section**, as the changeset rule says for a
+  breaking change. Users are internal. No compatibility shim or deprecation.

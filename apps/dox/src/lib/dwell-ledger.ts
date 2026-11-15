@@ -14,6 +14,7 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { CURATED_TIMEZONES } from "./curated-timezones";
+import { exactOffsetText } from "./exact-offset";
 import type { DayMark, PlateSpec, SeriesNumber } from "./ledger-widgets";
 
 export interface DwellLedgerArgs {
@@ -165,7 +166,7 @@ export function resolveWallTime(value: string, zone: string): string {
     const zoned = Temporal.PlainDateTime.from(trimmed).toZonedDateTime(zone, {
       disambiguation: "reject",
     });
-    return zoned.toInstant().toString({ timeZone: zone });
+    return exactOffsetText(zoned.toInstant(), zone);
   } catch {
     return trimmed;
   }
@@ -394,7 +395,7 @@ export function formatHandleValue(ms: number, zone: string | null): string {
   const instant = Temporal.Instant.fromEpochMilliseconds(ms);
   if (zone === null) return instant.toString();
   try {
-    return instant.toString({ timeZone: zone });
+    return exactOffsetText(instant, zone);
   } catch {
     return instant.toString();
   }

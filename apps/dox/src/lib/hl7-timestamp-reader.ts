@@ -517,15 +517,23 @@ export const REASON_DEGREE =
 export const REASON_PICTURE =
   "HL7 v2.5.1 2.A.22 reads one field, YYYY[MM[DD[HH[MM[SS[.S[S[S[S]]]]]]]]][+/-ZZZZ], and for a TS a degree of precision after ^. A field that does not exist, an hour of 24, a second of 60, more than four fraction digits, a & inside the date-time or the degree, or a separator other than ^ is not read.";
 
+export const REASON_EXTRA =
+  "Components after the degree of precision are ignored (HL7 v2.5.1 2.6.2), but not one that holds |, ~ or a control character: those belong to the message, not to the value.";
+
 /**
- * The one sentence under NO SIGNAL, decided from a library probe, never guessed. The probe is
- * the first component, the `DTM` `parseHL7` reads, whole: a `&` inside it is refused, not
- * ignored. When that reads, the degree is what refused the value; when it does not, the picture
- * is.
+ * The one sentence under NO SIGNAL, decided from library probes, never guessed. The first probe
+ * is the first component, the `DTM` `parseHL7` reads, whole: a `&` inside it is refused, not
+ * ignored. When that does not read, the picture refused the value. The second probe adds the
+ * degree: when that does not read, the degree refused it; when it does, a component after the
+ * degree did.
  */
 export function sentinelText(read: Hl7Read, lib: Hl7Lib): string {
-  const [dtm = ""] = read.value.split("^", 1);
-  return lib.parseHL7(dtm) !== null ? REASON_DEGREE : REASON_PICTURE;
+  const [dtm = "", degree] = read.value.split("^", 2);
+  if (lib.parseHL7(dtm) === null) return REASON_PICTURE;
+  if (degree === undefined || lib.parseHL7(`${dtm}^${degree}`) === null) {
+    return REASON_DEGREE;
+  }
+  return REASON_EXTRA;
 }
 
 // ---------------------------------------------------------------------------
@@ -917,7 +925,7 @@ export function hl7Texts() {
     ],
     verdicts: [VERDICT_INSTANT, VERDICT_LOCAL, VERDICT_PARTIAL, VERDICT_NULL],
     gaps: [`Widest gap: 26 h, between ${LONGEST_ZONE} and ${LONGEST_ZONE}`],
-    reasons: [REASON_DEGREE, REASON_PICTURE],
+    reasons: [REASON_DEGREE, REASON_PICTURE, REASON_EXTRA],
     refusals: [refusal("ambiguous"), refusal("nonexistent"), refusal(null)],
     ladderNotes: [
       LADDER_NOTE_NONE,
