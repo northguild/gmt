@@ -51,18 +51,21 @@ describe("isValidPtpTimestamp", () => {
     expect(isValidPtpTimestamp(value)).toBe(false);
   });
 
-  describe.each([37, 0, -32768, 32767])(
-    "agreement with ptpToUtc at offset %i",
-    (offset) => {
-      it.each(INVALID_PTP_RECORDS)(
-        "ptpToUtc returns '' for the invalid record '$name'",
-        ({ value }) => {
-          expect(isValidPtpTimestamp(value)).toBe(false);
-          expect(ptpToUtc(value as never, offset)).toBe("");
-        },
-      );
-    },
-  );
+  describe.each`
+    offset
+    ${37}
+    ${0}
+    ${-32768}
+    ${32767}
+  `("agreement with ptpToUtc at offset $offset", ({ offset }) => {
+    it.each(INVALID_PTP_RECORDS)(
+      "ptpToUtc returns '' for the invalid record '$name'",
+      ({ value }) => {
+        expect(isValidPtpTimestamp(value)).toBe(false);
+        expect(ptpToUtc(value as never, offset)).toBe("");
+      },
+    );
+  });
 
   it("is true for { seconds: 0n, nanoseconds: 0 } although ptpToUtc at offset 37 is '' (the result would be before 1970)", () => {
     const record = { seconds: 0n, nanoseconds: 0 };
@@ -71,14 +74,17 @@ describe("isValidPtpTimestamp", () => {
     expect(ptpToUtc(record, 37)).toBe("");
   });
 
-  it.each([37, 0, -32768])(
-    "a valid record converts when the result is in range (offset %i)",
-    (offset) => {
-      // 1704067237 s - 37 s = 1704067200 s = 2024-01-01T00:00:00Z (TAI is 37 s ahead of UTC)
-      const record = {
-        seconds: 1_704_067_200n + BigInt(offset),
-        nanoseconds: 0,
-      };
+  // 1704067237 s - 37 s = 1704067200 s = 2024-01-01T00:00:00Z (TAI is 37 s ahead of UTC); each
+  // row's seconds are 1704067200 plus its offset.
+  it.each`
+    offset    | seconds
+    ${37}     | ${1_704_067_237n}
+    ${0}      | ${1_704_067_200n}
+    ${-32768} | ${1_704_034_432n}
+  `(
+    "a valid record converts when the result is in range (seconds $seconds, offset $offset)",
+    ({ offset, seconds }) => {
+      const record = { seconds, nanoseconds: 0 };
 
       expect(isValidPtpTimestamp(record)).toBe(true);
       expect(ptpToUtc(record, offset)).toBe("2024-01-01T00:00:00Z");

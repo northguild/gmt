@@ -11,8 +11,7 @@ import type { PtpTimestamp } from "../../types/ptp";
  * - Both members are required. Extra members are ignored.
  * - It checks the record, not a conversion. A record that passes can still make `ptpToUtc` return
  *   `""`: when the result would fall before 1970 (`{ seconds: 0n, nanoseconds: 0 }` with an
- *   offset of 37), or past Temporal's last instant (a `seconds` value above
- *   8 640 000 000 000 plus the offset).
+ *   offset of 37), or past Temporal's last instant, `+275760-09-13T00:00:00Z`.
  * - It narrows `value` to a PTP timestamp record. Never throws: a Proxy or a throwing getter is
  *   not a valid record.
  *

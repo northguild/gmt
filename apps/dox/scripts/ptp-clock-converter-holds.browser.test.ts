@@ -21,6 +21,11 @@ import { serveStatic } from "./lib/static-server.mjs";
  * to a second line only for some values pulls everything below it up). 1440 px is where the two
  * plates sit side by side and a width set by content shows; 390 px is where a paragraph wraps.
  * Firefox is left to CI.
+ *
+ * The ruler is read at the same widths: every label it shows stays inside its axis, the first
+ * starts at the axis start, the last ends at the axis end, every other label is centred on its
+ * value, and the lane's label is one line (PR #532 review: the 40 ran past the axis and was
+ * clipped, and the long lane label wrapped to four lines at 1280 px).
  */
 
 const dist = distDirOrSkip();
@@ -304,5 +309,85 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
       }
     },
     180_000,
+  );
+
+  it.each(WIDTHS)(
+    "keeps every ruler label inside the axis and centred on its value at %i px",
+    async (width) => {
+      if (browser === undefined || server === undefined) return;
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      try {
+        await page.goto(`${base}/tools/ptp-clock-converter/`);
+        await page
+          .getByRole("combobox", { name: "Preset", exact: true })
+          .waitFor({ state: "visible" });
+        await settle(page);
+
+        const ruler = await page.evaluate(() => {
+          const root = document.querySelector(
+            "[data-widget='ptp-clock-converter']",
+          );
+          const axis = root?.querySelector(
+            "[data-gate='moving']",
+          )?.nextElementSibling;
+          const laneLabel = root?.querySelector<HTMLElement>(
+            "[data-gate~='drawn'] > span[aria-hidden='true']",
+          );
+          if (!(axis instanceof HTMLElement) || !laneLabel) {
+            throw new Error("the ruler is not on the page");
+          }
+          const a = axis.getBoundingClientRect();
+          const labels = Array.from(
+            axis.querySelectorAll<HTMLElement>("[style*='--gmt-at']"),
+          )
+            .filter((t) => t.getClientRects().length > 0)
+            .map((t) => {
+              // The text's own box: the label's box has no width.
+              const range = document.createRange();
+              range.selectNodeContents(t);
+              const r = range.getBoundingClientRect();
+              return {
+                text: t.textContent ?? "",
+                at: Number(t.style.getPropertyValue("--gmt-at")),
+                left: r.left,
+                right: r.right,
+              };
+            });
+          return {
+            left: a.left,
+            right: a.right,
+            width: a.width,
+            labels,
+            laneHeight: laneLabel.getBoundingClientRect().height,
+            laneLine: parseFloat(getComputedStyle(laneLabel).lineHeight),
+          };
+        });
+
+        expect(ruler.labels.length).toBeGreaterThanOrEqual(3);
+        const off: string[] = [];
+        for (const l of ruler.labels) {
+          if (
+            l.left < ruler.left - EPSILON ||
+            l.right > ruler.right + EPSILON
+          ) {
+            off.push(
+              `${l.text} at ${l.left}..${l.right}, outside ${ruler.left}..${ruler.right}`,
+            );
+          }
+          const value = ruler.left + l.at * ruler.width;
+          const placed =
+            l.at === 0 ? l.left : l.at === 1 ? l.right : (l.left + l.right) / 2;
+          if (Math.abs(placed - value) > EPSILON) {
+            off.push(`${l.text} placed at ${placed}, its value is at ${value}`);
+          }
+        }
+        expect(off).toEqual([]);
+        expect(ruler.laneHeight).toBeLessThan(ruler.laneLine * 1.5);
+      } finally {
+        await page.close();
+      }
+    },
+    60_000,
   );
 });

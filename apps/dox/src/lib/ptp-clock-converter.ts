@@ -56,7 +56,7 @@ export const NOT_WRITTEN = "nothing written";
 export const RULER_SECONDS = 40;
 /** A mark's width as a share of the ruler: a drawing constant. */
 export const MARK_WIDTH = 0.02;
-export const RULER_LABEL = "Seconds between the PTP count and UTC";
+export const RULER_LABEL = "TAI − UTC (s)";
 
 export interface PtpClockArgs {
   preset?: string;

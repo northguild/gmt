@@ -1,7 +1,4 @@
-import {
-  INVALID_PTP_RECORDS,
-  VALID_PTP_RECORDS,
-} from "../../test/ptpTimestampRows";
+import { INVALID_PTP_RECORDS } from "../../test/ptpTimestampRows";
 import { mockTemporalInstantFromEpochNanosecondsThrow } from "../../test/mocks";
 import { ptpToUtc } from "./ptpToUtc";
 
@@ -70,7 +67,13 @@ describe("ptpToUtc", () => {
     expect(ptpToUtc({ seconds: 1_704_067_237n, nanoseconds: 0 })).toBe("");
   });
 
-  describe.each([37, 0, -32768, 32767])("offset %i", (offset) => {
+  describe.each`
+    offset
+    ${37}
+    ${0}
+    ${-32768}
+    ${32767}
+  `("offset $offset", ({ offset }) => {
     it.each(INVALID_PTP_RECORDS)(
       "returns '' for the invalid record '$name' ($reason)",
       ({ value }) => {
@@ -79,18 +82,22 @@ describe("ptpToUtc", () => {
     );
   });
 
-  it.each(VALID_PTP_RECORDS)(
-    "returns an instant ending in Z for the valid record '$name' at offset 0, or '' past Temporal",
-    ({ value }) => {
-      const result = ptpToUtc(value as never, 0);
-      const { seconds } = value as { seconds: bigint | number };
-
-      // Temporal's last instant is 8_640_000_000_000 s after 1970; the row's own seconds decide.
-      if (BigInt(seconds) > 8_640_000_000_000n) {
-        expect(result).toBe("");
-      } else {
-        expect(result).toMatch(/Z$/);
-      }
+  // The valid shapes of the shared rows, at offset 0: the instant is the seconds since 1970 as
+  // they stand. 2^48 - 1 seconds is past Temporal's last instant, so those rows are "".
+  it.each`
+    value                                                          | expected                            | label
+    ${{ seconds: 0n, nanoseconds: 0 }}                             | ${"1970-01-01T00:00:00Z"}           | ${"zero edge"}
+    ${{ seconds: 281_474_976_710_655n, nanoseconds: 999_999_999 }} | ${""}                               | ${"upper edge, past Temporal"}
+    ${{ seconds: 1_704_067_237n, nanoseconds: 0 }}                 | ${"2024-01-01T00:00:37Z"}           | ${"2024 bigint"}
+    ${{ seconds: 1_704_067_237, nanoseconds: 999_999_999 }}        | ${"2024-01-01T00:00:37.999999999Z"} | ${"number seconds"}
+    ${{ seconds: 281_474_976_710_655, nanoseconds: 0 }}            | ${""}                               | ${"number top, past Temporal"}
+    ${{ seconds: -0, nanoseconds: -0 }}                            | ${"1970-01-01T00:00:00Z"}           | ${"negative zero"}
+    ${{ seconds: 1n, nanoseconds: 1, extra: true }}                | ${"1970-01-01T00:00:01.000000001Z"} | ${"extra member"}
+    ${Object.create({ seconds: 1n, nanoseconds: 1 })}              | ${"1970-01-01T00:00:01.000000001Z"} | ${"inherited members"}
+  `(
+    "returns '$expected' for the valid record at offset 0 ($label)",
+    ({ value, expected }) => {
+      expect(ptpToUtc(value as never, 0)).toBe(expected);
     },
   );
 

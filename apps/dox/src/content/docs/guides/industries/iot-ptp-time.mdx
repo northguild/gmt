@@ -116,8 +116,9 @@ RFC 8575's `time-properties-ds` announces three other values next to the offset.
 
 The library reads none of the three. The record carries only the count, and the function receives
 only the offset, so it cannot see a flag. Check them before you call. If `ptpTimescale` is false or
-`currentUtcOffsetValid` is false, do not call `ptpToUtc` with the number, because a grandmaster in
-that state often announces `0` and the result is the 37-second error with no warning.
+`currentUtcOffsetValid` is false, do not call `ptpToUtc` with the number. In that state the number
+may be stale, a default, or `0`, and passing a `0` through gives the 37-second error with no
+warning.
 
 ## Checking a grandmaster against the table
 
@@ -173,9 +174,10 @@ taiMinusUtc(reading);
 
 - **Before 1970.** A count smaller than the offset gives a result before the epoch, and
   `ptpToUtc` returns `""`. In practice this is a clock that was never set.
-- **Before 1972.** UTC had no whole-second offset from TAI before 1972, so `taiMinusUtc` returns
-  `null` there and no offset is a true reading. The functions still do the arithmetic with the
-  offset you pass.
+- **Before 1972.** UTC had no whole-second offset from TAI before 1972. The IERS file
+  `Leap_Second.dat`, as of IERS Bulletin C 72, starts at 1972-01-01 with TAI − UTC at 10 seconds,
+  and ITU-R TF.460-6 defines UTC from 1972. So `taiMinusUtc` returns `null` there and no offset is
+  a true reading. The functions still do the arithmetic with the offset you pass.
 - **A leap second.** `utcToPtp` refuses `…23:59:60Z`, because one offset for the whole call gives
   an inserted second no reading of its own. During an insertion, pass the newly announced offset.
 
@@ -252,5 +254,8 @@ ptpToUtc({ seconds: 0n, nanoseconds: 0 }, 37);
   timestamp, the epoch, and "not affected by leap seconds".
 - IETF, [_RFC 8575_](https://www.rfc-editor.org/rfc/rfc8575), the `time-properties-ds` container:
   `current-utc-offset`, `current-utc-offset-valid`, `ptp-timescale` and `time-traceable`.
+- IERS, `Leap_Second.dat`, and Bulletin C 72: TAI − UTC from 1972-01-01, the table `taiMinusUtc`
+  reads.
+- ITU-R Recommendation TF.460-6: UTC defined from 1972.
 - IEC/IEEE 61588 (IEEE 1588): not reached. Its text, including how the Announce message carries
   the offset, is not cited.

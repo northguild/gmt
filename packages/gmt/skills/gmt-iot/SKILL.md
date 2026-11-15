@@ -41,10 +41,10 @@ network card or a PTP log, which has to become a UTC instant or come from one.
    time leaves the result ahead by the UTC offset (37 seconds since 2017) and
    raises no error.
 2. **The offset is the grandmaster's, and it is required.**
-   `currentUtcOffset` is TAI minus UTC in seconds, announced in the Announce
-   message. `ptpToUtc` and `utcToPtp` apply the number you pass and never read
-   the leap-second table. There is no default, because a constant would hide a
-   wrong announcement.
+   `currentUtcOffset` is TAI minus UTC in seconds: the `current-utc-offset` of
+   the grandmaster's time-properties data set (RFC 8575). `ptpToUtc` and
+   `utcToPtp` apply the number you pass and never read the leap-second table.
+   There is no default, because a constant would hide a wrong announcement.
    ```typescript
    ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37); // "2024-01-01T00:00:00Z"
    ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 0); // "2024-01-01T00:00:37Z" (the 37-second error)

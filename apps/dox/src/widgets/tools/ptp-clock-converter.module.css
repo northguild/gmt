@@ -85,8 +85,12 @@
   line-height: 1.5;
 }
 
-/* The ruler's lane moves by design (its marks); the wrapper has no box of its own. */
+/* The ruler's lane moves by design (its marks); the wrapper has no box of its own. Its label,
+   TAI − UTC (s), needs a little more than the builder's 6rem column to stay on one line in
+   WebKit; the lane and the axis both read the width, so they stay aligned. */
 .ruler {
+  --gmt-timeline-label-w: 7rem;
+
   container: ruler / inline-size;
   min-inline-size: 0;
 }
@@ -98,6 +102,25 @@
 .major,
 .minor {
   display: contents;
+}
+
+/* A label is centred on its value: the builder starts it there, so it is made a zero-width box
+   that its text overflows equally on both sides. No transform moves it, and right-to-left
+   mirrors itself. The first label starts at 0 and the last ends at 40, so neither runs past the
+   axis and the frame never clips one. */
+.major > *,
+.minor > * {
+  display: flex;
+  justify-content: center;
+  inline-size: 0;
+}
+
+.first > * {
+  justify-content: flex-start;
+}
+
+.last > * {
+  justify-content: flex-end;
 }
 
 /* Below 24rem only 0, 20 and 40 show. */

@@ -34,19 +34,20 @@ ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37);
 <Mistake
   severity="medium"
   title="Fixing the offset at 37"
-  description="37 is right while the grandmaster announces 37. A grandmaster that announces another value, such as 36, reads a different time, and a receiver that fixed the offset disagrees with it by the difference. The offset has no default in ptpToUtc, so the announced value has to be passed in."
+  description="37 is right from 2017 on. For a stamp taken while the grandmaster correctly announced another value, such as 36 from mid-2015 to the end of 2016, a receiver that fixed the offset at 37 reads 1 second early, and nothing raises an error. The offset has no default in ptpToUtc, so the announced value has to be passed in."
   wrongCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
 
-const record = { seconds: 1704067237n, nanoseconds: 0 };
+const record = { seconds: 1464739236n, nanoseconds: 0 };
 
 ptpToUtc(record, 37);
-// "2024-01-01T00:00:00Z" — the grandmaster announces 36, so this is 1 s out`}
+// "2016-05-31T23:59:59Z" — the grandmaster announced 36, so this is 1 s early`}
   rightCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
 
-const announced = 36; // read from the Announce message
+// the current-utc-offset of the grandmaster's time properties (RFC 8575)
+const announced = 36;
 
-ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, announced);
-// "2024-01-01T00:00:01Z"`}
+ptpToUtc({ seconds: 1464739236n, nanoseconds: 0 }, announced);
+// "2016-06-01T00:00:00Z"`}
   rightSpecId="ptpToUtc"
 />
 
@@ -76,10 +77,10 @@ taiMinusUtc(reading);
 <Mistake
   severity="high"
   title="Using the offset when the grandmaster says it is not valid"
-  description="When current-utc-offset-valid is false, or ptp-timescale is false (the arbitrary time scale), the number means nothing. A grandmaster in that state often announces 0. The library reads neither flag, so passing the 0 through gives the 37-second error with no warning. Check the flags first, and do not call the function."
+  description="When current-utc-offset-valid is false, or ptp-timescale is false (the arbitrary time scale), the number means nothing. It may be stale, a default, or 0. The library reads neither flag, so passing a 0 through gives the 37-second error with no warning. Check the flags first, and do not call the function."
   wrongCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
 
-// currentUtcOffsetValid is false and the grandmaster announces 0
+// currentUtcOffsetValid is false, and this grandmaster announces 0
 ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 0);
 // "2024-01-01T00:00:37Z" — 37 s ahead, with no error`}
   rightCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";

@@ -5,7 +5,10 @@ import { utcToPtp } from "./utcToPtp";
 
 // Every expected value: Temporal.Instant.from(value).epochNanoseconds + offset × 10⁹, split into
 // seconds and nanoseconds, checked against @js-temporal/polyfill with a plain script (not against
-// utcToPtp). A result below zero, or an input before 1970, is null (GMT rule).
+// utcToPtp). A result below zero, or an input before 1970, is null (GMT rule). So is a string
+// outside the strict instant grammar of parseInstantNanoseconds (an annotation of any kind, a
+// lower-case t, a space separator, more than nine fraction digits, a second of 60), although
+// Temporal.Instant.from accepts most of them.
 describe("utcToPtp", () => {
   it.each`
     value                               | offset    | seconds               | nanoseconds  | label
@@ -23,6 +26,7 @@ describe("utcToPtp", () => {
     ${"1970-01-01T00:00:00Z"}           | ${32767}  | ${32_767n}            | ${0}         | ${"highest int16 offset"}
     ${"1970-01-01T09:06:08.000000001Z"} | ${-32768} | ${0n}                 | ${1}         | ${"one nanosecond above PTP zero"}
     ${"1969-12-31T23:00:00-02:00"}      | ${37}     | ${3_637n}             | ${0}         | ${"1969 local date, instant after 1970"}
+    ${"2024-01-01T02:00:30+02:00:30"}   | ${37}     | ${1_704_067_237n}     | ${0}         | ${"offset with seconds"}
   `(
     "returns seconds $seconds, nanoseconds $nanoseconds for '$value' at offset $offset ($label)",
     ({ value, offset, seconds, nanoseconds }) => {
@@ -34,20 +38,30 @@ describe("utcToPtp", () => {
   );
 
   it.each`
-    value                               | offset    | label
-    ${"1970-01-01T00:00:00Z"}           | ${-32768} | ${"result below 0 seconds"}
-    ${"1969-12-31T23:59:59Z"}           | ${37}     | ${"before 1970"}
-    ${"1969-12-31T23:59:59.999999999Z"} | ${0}      | ${"one nanosecond before 1970"}
-    ${"1970-01-01T09:06:07.999999999Z"} | ${-32768} | ${"one nanosecond below PTP zero"}
-    ${"1970-01-01T01:00:00+02:00"}      | ${37}     | ${"1970 local date, instant before 1970"}
-    ${"2016-12-31T23:59:60Z"}           | ${37}     | ${"leap second"}
-    ${"2024-01-01T00:00:00"}            | ${37}     | ${"no designator"}
-    ${"2024-01-01"}                     | ${37}     | ${"date only"}
-    ${"2024-01-01T00:00:00Z[UTC]"}      | ${37}     | ${"annotation"}
-    ${"20240101T000000Z"}               | ${37}     | ${"basic format"}
-    ${"2024-01-01T00:00:00z"}           | ${37}     | ${"lower-case z"}
-    ${""}                               | ${37}     | ${"empty string"}
-    ${"invalid"}                        | ${37}     | ${"not a date"}
+    value                                    | offset    | label
+    ${"1970-01-01T00:00:00Z"}                | ${-32768} | ${"result below 0 seconds"}
+    ${"1969-12-31T23:59:59Z"}                | ${37}     | ${"before 1970"}
+    ${"1969-12-31T23:59:59.999999999Z"}      | ${0}      | ${"one nanosecond before 1970"}
+    ${"1970-01-01T09:06:07.999999999Z"}      | ${-32768} | ${"one nanosecond below PTP zero"}
+    ${"1970-01-01T01:00:00+02:00"}           | ${37}     | ${"1970 local date, instant before 1970"}
+    ${"2016-12-31T23:59:60Z"}                | ${37}     | ${"leap second"}
+    ${"2024-01-01T00:00:00"}                 | ${37}     | ${"no designator"}
+    ${"2024-01-01"}                          | ${37}     | ${"date only"}
+    ${"2024-01-01T00:00:00Z[UTC]"}           | ${37}     | ${"annotation"}
+    ${"2024-01-01T00:00:00Z[u-ca=hebrew]"}   | ${37}     | ${"calendar annotation"}
+    ${"2024-01-01T00:00:00Z[!u-ca=iso8601]"} | ${37}     | ${"critical calendar annotation"}
+    ${"2024-01-01T00:00:00Z[foo=bar]"}       | ${37}     | ${"elective annotation"}
+    ${"2024-01-01T00:00:00Z[!foo=bar]"}      | ${37}     | ${"critical unknown annotation"}
+    ${"2024-01-01T00:00:00Z[!Europe/Paris]"} | ${37}     | ${"critical zone annotation"}
+    ${"2024-01-01T00:00:00.1234567890Z"}     | ${37}     | ${"ten fraction digits"}
+    ${"2024-01-01t00:00:00Z"}                | ${37}     | ${"lower-case t"}
+    ${"2024-01-01 00:00:00Z"}                | ${37}     | ${"space separator"}
+    ${"2016-12-31T23:59:60.5Z"}              | ${37}     | ${"leap second with a fraction"}
+    ${"2016-12-31T23:59:60+00:00"}           | ${37}     | ${"leap second with a numeric offset"}
+    ${"20240101T000000Z"}                    | ${37}     | ${"basic format"}
+    ${"2024-01-01T00:00:00z"}                | ${37}     | ${"lower-case z"}
+    ${""}                                    | ${37}     | ${"empty string"}
+    ${"invalid"}                             | ${37}     | ${"not a date"}
   `(
     "returns null for '$value' at offset $offset ($label)",
     ({ value, offset }) => {
@@ -102,6 +116,7 @@ describe("utcToPtp", () => {
     ${"1970-01-01T00:00:00Z"}           | ${32767}
     ${"1970-01-01T09:06:08.000000001Z"} | ${-32768}
     ${"1969-12-31T23:00:00-02:00"}      | ${37}
+    ${"2024-01-01T02:00:30+02:00:30"}   | ${37}
   `(
     "isValidPtpTimestamp accepts the output for '$value' at offset $offset",
     ({ value, offset }) => {
@@ -112,10 +127,21 @@ describe("utcToPtp", () => {
     },
   );
 
-  describe.each([37, 0, -32768, 32767])("round trip at offset %i", (offset) => {
-    it.each([0, 1, 999_999_999])(
-      "utcToPtp(ptpToUtc(t)) equals t for nanoseconds %i",
-      (nanoseconds) => {
+  describe.each`
+    offset
+    ${37}
+    ${0}
+    ${-32768}
+    ${32767}
+  `("round trip at offset $offset", ({ offset }) => {
+    it.each`
+      nanoseconds
+      ${0}
+      ${1}
+      ${999_999_999}
+    `(
+      "utcToPtp(ptpToUtc(t)) equals t for nanoseconds $nanoseconds",
+      ({ nanoseconds }) => {
         const timestamp = { seconds: 1_704_067_237n, nanoseconds };
 
         expect(utcToPtp(ptpToUtc(timestamp, offset), offset)).toEqual(
@@ -124,11 +150,12 @@ describe("utcToPtp", () => {
       },
     );
 
-    it.each([
-      "2024-01-01T00:00:00Z",
-      "2024-01-01T00:00:00.000000001Z",
-      "2024-01-01T00:00:00.999999999Z",
-    ])("ptpToUtc(utcToPtp('%s')) returns the input", (value) => {
+    it.each`
+      value
+      ${"2024-01-01T00:00:00Z"}
+      ${"2024-01-01T00:00:00.000000001Z"}
+      ${"2024-01-01T00:00:00.999999999Z"}
+    `("ptpToUtc(utcToPtp('$value')) returns the input", ({ value }) => {
       const timestamp = utcToPtp(value, offset);
 
       expect(timestamp).not.toBeNull();

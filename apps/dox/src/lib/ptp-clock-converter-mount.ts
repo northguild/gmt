@@ -177,7 +177,9 @@ function readPlates(r: ReadResult): SafeHtml {
       value: word ?? orSignal(r.ignored),
       line: "ptpToUtc",
       lineSamples: ["ptpToUtc"],
-      series: 2,
+      // The wrong reading takes the ruler gap's colour, not the green a reader takes for right.
+      // Amber is the sentinel's alone.
+      series: 3,
       samples: INSTANT_SAMPLES,
     },
   ];
@@ -294,6 +296,15 @@ function roundTripOf(w: WriteResult): SafeHtml {
 
 const TICKS = [0, 10, 20, 30, 40];
 
+/** A label's wrapper: major or minor, and the first and last are held to the axis ends. */
+const tickClass = (t: number): string =>
+  [
+    t % 20 === 0 ? styles.major : styles.minor,
+    t === TICKS[0] ? styles.first : t === TICKS.at(-1) ? styles.last : "",
+  ]
+    .filter((c) => c !== "" && c !== undefined)
+    .join(" ");
+
 function rulerHtml(model: RulerModel): SafeHtml {
   const marks = model.marks.map((m) =>
     mark({
@@ -320,9 +331,10 @@ function rulerHtml(model: RulerModel): SafeHtml {
     >${axis(
       TICKS.map(
         (t) =>
-          html`<span class="${t % 20 === 0 ? styles.major : styles.minor}">${tick(
-            { at: t / RULER_SECONDS, label: String(t) },
-          )}</span>`,
+          html`<span class="${tickClass(t)}">${tick({
+            at: t / RULER_SECONDS,
+            label: String(t),
+          })}</span>`,
       ),
     )}${srOnly(model.facts.join(" "))}</div
   >`;
