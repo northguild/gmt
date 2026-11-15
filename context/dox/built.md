@@ -5171,19 +5171,27 @@ Shared hooks come first, then the globe, then the clock-change pages.
   through `pickTyped`; gmt is imported dynamically only. Rail `drawsOn` `transport`.
   - **Input is a CSV paste with a header line.** The header names `stop_id`, `arrival_time` and
     `departure_time`; `stop_timezone` is optional and other columns are ignored, because feeds order
-    their columns differently. At most 12 rows are read and the rest are counted in a note; a line
-    over 150 characters or with a quoted field is refused with a "Line N" note and never cut or
-    guessed; a paste over 2,000 characters is refused whole. The bound is the same in the reader, the
-    chat schema and the permalink (`LONG_STRING_KEYS.stopTimes`), and the textarea has no `maxlength`,
-    because a paste cut silently is a wrong answer.
+    their columns differently. A leading byte order mark (U+FEFF, which many feeds start with and a
+    paste keeps) is dropped and header cells are trimmed, because they are names; data cells are left
+    as typed, so a stray space in a time reaches the library and is refused there. At most 12 rows
+    are read and the rest are counted in a note; a line over 150 characters or with a quoted field
+    is refused with a "Line N" note and never cut or guessed; a paste over 2,000 characters is
+    refused whole. RFC 4180 quoting is out of scope: a quote anywhere refuses the row, even in a
+    column the board does not read, and the page tells the reader to paste only the columns it reads.
+    The bound is the same in the reader, the chat schema and the permalink, and the textarea has no
+    `maxlength`, because a paste cut silently is a wrong answer. The argument is `stopTimes`, not
+    `rows`: `LONG_STRING_KEYS` in `widget-permalink.ts` is keyed by argument name for every kind, so
+    a generic name would lift the 64-character cap on other tools too.
   - **An empty `stop_timezone` is the agency's zone**, as `stops.txt` says for a parentless stop. A
-    child stop's zone is the reader's to join; the page says so and the board has no `parent_station`
+    header with no `stop_timezone` column puts a note in the list saying every stop is read in the
+    agency's zone, since each row would otherwise read "nothing to misread" with no reason. A child
+    stop's zone is the reader's to join; the page says so and the board has no `parent_station`
     column.
   - **The wrong reading is badged in words.** The column is headed "Read in stop_timezone (wrong)" and
     each value carries a `badge` ("N min later", "N min earlier", `danger`; "same instant", `neutral`),
     so colour is never the only signal. A stop with no `stop_timezone` reads "agency zone: nothing to
-    misread". The page sizes the mistake by the change, an hour in most zones, never as a rule of one
-    hour.
+    misread". The keypoint sizes the mistake by the change, an hour in most zones, never as a rule of
+    one hour; a paragraph about one pair of zones gives that pair's size and season.
   - **Legs.** Elapsed time is `diffUtc` of the previous read stop's departure (or arrival) to this
     arrival; the clocks are `diffDateTime` of each end's `convertUtcToPlainDateTime` in its own zone.
     The verdict is "clocks agree", else "clock change in leg" with the instant, else "zone change",
@@ -5197,8 +5205,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (Vienna to Hamburg, 20261024, times past 24:00:00 and a clock change inside a leg; the wrong
     reading is "same instant" everywhere because Vienna and Berlin share offsets), `andes-june` and
     `andes-january` (a Santiago to Mendoza coach timetable: the mistake exists while Chile's clocks are
-    back and hides when both sides share an offset) and `no-noon` (Samoa, every stop refused). Every
-    value is the built library's, asserted in `gtfs-trip-board.test.ts`.
+    back and hides when both sides share an offset) and `no-noon` (Samoa, every stop refused). The
+    Andes pair runs by coach, and its label says so: GTFS covers coaches, and it is the pair that
+    shows two zones whose offsets differ in one season only. Every value is the built library's,
+    asserted in `gtfs-trip-board.test.ts`.
   - **The hold.** Two hero plates ("Trip, first departure to last arrival", "Stops the wrong zone
     moves") sit at opposite edges of their row and carry `data-gate="hero"`. Every cell value is a
     `hold` with ghosts for `WIDEST_ZONE` (`GHOST_ZONED`, asserted against the library), so for a given

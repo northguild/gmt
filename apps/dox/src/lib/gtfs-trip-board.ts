@@ -205,6 +205,8 @@ export const NOTES = {
   twice: (col: string): string => `The header names \`${col}\` twice.`,
   boxes: "Type a service date and the agency's zone.",
   extra: (n: number): string => `Rows past the 12th are not read: ${n} more.`,
+  noZoneColumn:
+    "The header has no `stop_timezone` column, so every stop is read in the agency's zone.",
 } as const;
 
 /** The most a clock change names in a verdict. */
@@ -268,14 +270,24 @@ export type TripRow = ReadRow | RejectedRow;
 
 export type TripRead =
   | { kind: "refused"; blank: boolean; note: string }
-  | { kind: "rows"; rows: TripRow[]; extra: number };
+  | {
+      kind: "rows";
+      rows: TripRow[];
+      extra: number;
+      /** Whether the header names `stop_timezone`. */
+      zoneColumn: boolean;
+    };
+
+/** A byte order mark many GTFS files start with, which a paste keeps. */
+const BOM = "﻿";
 
 /** Cuts the paste into lines and cells. String work only; no library call. */
 export function readTrip(text: string): TripRead {
   if (text.length > ROWS_MAX_CHARS)
     return { kind: "refused", blank: false, note: NOTES.tooLong };
   const lines: { n: number; text: string }[] = [];
-  text.split("\n").forEach((raw, i) => {
+  const unmarked = text.startsWith(BOM) ? text.slice(BOM.length) : text;
+  unmarked.split("\n").forEach((raw, i) => {
     const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
     if (line.trim() !== "") lines.push({ n: i + 1, text: line });
   });
@@ -283,7 +295,9 @@ export function readTrip(text: string): TripRead {
   if (lines.length < 2)
     return { kind: "refused", blank: true, note: NOTES.empty };
 
-  const header = lines[0]!.text.split(",");
+  // Header cells are names, so a space around one is trimmed. Data cells are left as typed, so
+  // a stray space in a time still reaches the library and is refused there.
+  const header = lines[0]!.text.split(",").map((c) => c.trim());
   const missing = REQUIRED.filter((c) => !header.includes(c));
   if (missing.length > 0)
     return { kind: "refused", blank: false, note: NOTES.missing(missing) };
@@ -327,7 +341,12 @@ export function readTrip(text: string): TripRead {
       zoneCell: iZone < 0 ? "" : cells[iZone]!,
     };
   });
-  return { kind: "rows", rows, extra: Math.max(0, body.length - MAX_STOPS) };
+  return {
+    kind: "rows",
+    rows,
+    extra: Math.max(0, body.length - MAX_STOPS),
+    zoneColumn: iZone >= 0,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -516,6 +535,8 @@ export function computeTrip(lib: TripBoardLib, state: TripState): TripResult {
 
   const notes: string[] = [];
   if (read.extra > 0) notes.push(NOTES.extra(read.extra));
+  // Without the column every stop reads "nothing to misread"; this says why.
+  if (!read.zoneColumn) notes.push(NOTES.noZoneColumn);
 
   // A box left empty is a box the reader has not typed in: no call is made.
   if (state.date === "" || state.zone === "") {

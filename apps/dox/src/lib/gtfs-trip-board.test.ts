@@ -153,6 +153,52 @@ describe("the reader", () => {
     );
     if (r.kind !== "rows") throw new Error("rows");
     expect(r.rows[0]).toMatchObject({ ok: true, zoneCell: "" });
+    expect(r.zoneColumn).toBe(false);
+  });
+
+  it("reads a header that starts with a byte order mark", () => {
+    const r = readTrip(`﻿${HEADER}\r\na,08:00:00,08:00:00,Europe/Lisbon`);
+    if (r.kind !== "rows") throw new Error("rows");
+    expect(r.rows[0]).toMatchObject({
+      ok: true,
+      stopId: "a",
+      zoneCell: "Europe/Lisbon",
+    });
+    expect(r.zoneColumn).toBe(true);
+  });
+
+  it("trims the header cells and leaves the data cells as typed", () => {
+    const r = readTrip(
+      "stop_id, arrival_time ,departure_time,\tstop_timezone\na, 08:00:00,08:00:00,",
+    );
+    if (r.kind !== "rows") throw new Error("rows");
+    expect(r.rows[0]).toMatchObject({ ok: true, arrival: " 08:00:00" });
+    expect(r.zoneColumn).toBe(true);
+    expect(
+      readTrip("stop_id, stop_id,arrival_time,departure_time\na,b,c,d"),
+    ).toMatchObject({ note: "The header names `stop_id` twice." });
+  });
+});
+
+describe("the notes on a read paste", () => {
+  it("says why every stop is read in the agency's zone when the column is missing", () => {
+    const r = computeTrip(lib, {
+      rows: "stop_id,arrival_time,departure_time\na,08:00:00,08:00:00",
+      date: "20260615",
+      zone: "Europe/Madrid",
+    });
+    expect(r.notes).toEqual([NOTES.noZoneColumn]);
+    expect(r.rows[0]!.wrong.text).toBe(NOTHING_TO_MISREAD);
+    expect(run("border").notes).not.toContain(NOTES.noZoneColumn);
+  });
+
+  it("sends a time with a stray space to the library, which refuses it", () => {
+    const r = computeTrip(lib, board("a, 08:00:00,08:00:00,"));
+    expect(r.rows[0]!.arrival.state).toBe("signal");
+    expect(r.rows[0]!.calls[0]).toContain(
+      'gtfsToInstant("20260615", " 08:00:00"',
+    );
+    expect(r.rows[0]!.departure.state).toBe("live");
   });
 });
 
