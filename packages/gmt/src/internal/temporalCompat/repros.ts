@@ -4,11 +4,12 @@ import {
   type ProbeRepro,
   probeReproGroups,
 } from "./probeRepros";
+import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 
 /*
  * Every upstream repro for each `@js-temporal/polyfill` defect GMT works around, with the
  * spec-correct answer: the probe groups from `probeRepros.ts` plus the canary-only groups below
- * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D28). No shipped module imports this file: a repro the
+ * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D30). No shipped module imports this file: a repro the
  * shipped probes do not read lives here, so it never reaches a bundle. It imports ONLY the
  * polyfill (through `../temporal`) and `probeRepros.ts`, so a canary script can load its compiled copy straight from
  * `dist` and report which workarounds are still needed.
@@ -47,9 +48,19 @@ export type BoundedWorkDefectId = "D9" | "D21";
  * changes no output once the engine and the data are right. D25 to D28 (`yearPrinting.ts`): the
  * japanese calendar prints Japanese eras before 1873-01-01 (ICU-23341, ICU-23619), an islamic calendar prints
  * a negative year before the Hijra (ICU-23327), `ja` japanese leaves a `2-digit` era year unpadded
- * (ICU-23620), and chinese and dangi pad the related year under `2-digit` (ICU-23621).
+ * (ICU-23620), and chinese and dangi pad the related year under `2-digit` (ICU-23621). D29
+ * (`rangeFields.ts`): a range drops, repeats or garbles a field of one date. D30
+ * (`formatterCache.ts`): `islamic` and `islamic-rgsa` resolve as Intl era/monthCode says.
  */
-export type CanaryDefectId = "D23" | "D24" | "D25" | "D26" | "D27" | "D28";
+export type CanaryDefectId =
+  | "D23"
+  | "D24"
+  | "D25"
+  | "D26"
+  | "D27"
+  | "D28"
+  | "D29"
+  | "D30";
 
 export interface Repro extends Omit<ProbeRepro, "defect"> {
   defect: DefectId | ZonedDefectId | BoundedWorkDefectId | CanaryDefectId;
@@ -464,26 +475,33 @@ const weekYearInputs: readonly {
   },
 ];
 
+/** The digit runs of a text, in any numbering system, joined by commas: the numbers a pattern prints. */
+const digitRunsOf = (text: string): string =>
+  (text.match(/\p{Nd}+/gu) ?? []).join(",");
+
 /**
- * D24: each input prints the calendar year, with the text the locale data otherwise gives
- * (ECMA-402 FormatDateTimePattern, `year`: the calendar year, or the era year with an era). Only
- * `format` is called, so no engine can abort on it.
+ * D24: each input prints the calendar year (ECMA-402 FormatDateTimePattern, `year`: the calendar
+ * year, or the era year with an era). The value is the numbers the text holds, not its words, so a
+ * wording change in locale data never reads as the defect. Only `format` is called, so no engine
+ * can abort on it.
  */
 const d24Repros: readonly Repro[] = weekYearInputs.map((input) => ({
   defect: "D24",
   calendar: "iso8601",
   name: input.name,
-  expected: input.expected,
+  expected: digitRunsOf(input.expected),
   run: () =>
-    new Intl.DateTimeFormat(input.locale, {
-      ...input.options,
-      timeZone: "UTC",
-    }).format(
-      Temporal.PlainDate.from({
-        year: input.date[0],
-        month: input.date[1],
-        day: input.date[2],
-      }).toZonedDateTime("UTC").epochMilliseconds,
+    digitRunsOf(
+      new Intl.DateTimeFormat(input.locale, {
+        ...input.options,
+        timeZone: "UTC",
+      }).format(
+        Temporal.PlainDate.from({
+          year: input.date[0],
+          month: input.date[1],
+          day: input.date[2],
+        }).toZonedDateTime("UTC").epochMilliseconds,
+      ),
     ),
 }));
 
@@ -531,7 +549,7 @@ function printed(
 }
 
 /**
- * D25 to D28, text only (`format`), so no engine can abort on a repro. The expected values are the
+ * D25 to D30, text only (`format`), so no engine can abort on a repro. The expected values are the
  * specifications': Intl era/monthCode Table 2 as amended by tc39/proposal-intl-era-monthcode#86 and
  * test262 tc39/test262#4877 (japanese before 1873-01-01 is Gregorian, and Meiji 6 starts it),
  * Table 2 and § 4.1.12 (the islamic calendars have a second era before the Hijra), ECMA-402
@@ -586,6 +604,14 @@ const yearPrintingRepros: readonly Repro[] = [
     run: () => printed("ja-u-ca-japanese", { year: "2-digit" }, [2024, 7, 10]),
   },
   {
+    defect: "D27",
+    calendar: "iso8601",
+    name: "jaJapaneseNumberingSystemYear",
+    expected: "令和٦年",
+    run: () =>
+      printed("ja-u-ca-japanese-nu-arab", { year: "numeric" }, [2024, 7, 10]),
+  },
+  {
     defect: "D28",
     calendar: "iso8601",
     name: "chineseRelatedYearFullWidth",
@@ -595,13 +621,46 @@ const yearPrintingRepros: readonly Repro[] = [
         printed("en-u-ca-chinese", { year: "2-digit" }, [5, 7, 10]),
       )?.[0] ?? "",
   },
+  {
+    defect: "D30",
+    calendar: "iso8601",
+    name: "islamicResolvesTbla",
+    expected: "islamic-tbla",
+    run: () =>
+      new Intl.DateTimeFormat("en-u-ca-islamic").resolvedOptions().calendar,
+  },
+  {
+    defect: "D30",
+    calendar: "iso8601",
+    name: "islamicRgsaIsIgnored",
+    expected: "not islamic-rgsa",
+    run: () =>
+      new Intl.DateTimeFormat("en-u-ca-islamic-rgsa").resolvedOptions()
+        .calendar === "islamic-rgsa"
+        ? "islamic-rgsa"
+        : "not islamic-rgsa",
+  },
 ];
+
+/**
+ * D29, text only (`format`, `formatRange`): each case is a range the engine must print with every
+ * field of both dates (ECMA-402 PartitionDateTimeRangePattern; UTS #35 Part 4, Interval Formats).
+ * The value is `complete`, or the engine's own range text when it is not.
+ */
+const rangeFieldRepros: readonly Repro[] = rangeFieldCases.map((c) => ({
+  defect: "D29",
+  calendar: "iso8601",
+  name: c.name,
+  expected: "complete",
+  run: () => rangeFieldProblem(c.locale, c.options, c.from, c.to),
+}));
 
 export const repros: readonly Repro[] = [
   ...d21Repros,
   ...d23Repros,
   ...d24Repros,
   ...yearPrintingRepros,
+  ...rangeFieldRepros,
   ...d9Repros,
   ...zonedARepros,
   ...zonedBRepros,

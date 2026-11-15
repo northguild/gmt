@@ -1,5 +1,7 @@
 name: Dox gates weekly
 
+# Pulse check: dox-gates
+#
 # The PR job (ci.yml, `dox-gates`) checks the changed pages in Chromium. This sweep checks every page
 # in three browsers and both themes, once a week, and files what fails as a `dox-gate` issue, one
 # open issue per finding (apps/dox/scripts/gates/issue-plan.mjs). A failing gate fails its leg; the
@@ -26,7 +28,6 @@ on:
         required: false
         default: false
   schedule:
-    # Sundays 04:41 UTC.
     - cron: "41 4 * * 0"
 
 concurrency:

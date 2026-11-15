@@ -243,6 +243,10 @@ jobs:
         if: contains(fromJSON(env.CHECKS), 'upstream')
         run: node scripts/upstream.mjs check
 
+      - name: Pulse checks match the workflows
+        if: contains(fromJSON(env.CHECKS), 'pulse')
+        run: node apps/dox/scripts/build-pulse.mjs --check
+
       # Some content pages are generated, not committed: `guides/concepts/dst-disambiguation.md`
       # (copied from the canonical `docs/dst-disambiguation.md`), the `changelog/` pages (built
       # from each package's CHANGELOG.md), `scenarios/index.mdx`, `tools/index.mdx` and the

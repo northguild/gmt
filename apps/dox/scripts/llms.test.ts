@@ -768,7 +768,7 @@ Body text here.`;
       expect(wrong).toEqual([]);
     });
 
-    it("llms.txt lists Install first under Start here, and compare, bundle-size and upstream under Migrate", () => {
+    it("llms.txt lists Install first and upstream and pulse under Start here, and compare and bundle-size under Migrate", () => {
       const distDir = distDirOrSkip();
       if (distDir === null) return;
       const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
@@ -784,12 +784,18 @@ Body text here.`;
       const startHere = section("Start here");
       expect(startHere[0]).toMatch(/\/install\.md\)/);
       const migrate = section("Migrate");
-      for (const slug of [
-        "compare",
-        "bundle-size",
-        "upstream",
-        "native-engines",
-      ]) {
+      for (const slug of ["upstream", "pulse"]) {
+        const link = new RegExp(`/${slug}\\.md\\)`);
+        expect(
+          startHere.some((line) => link.test(line)),
+          `${slug} is under Start here`,
+        ).toBe(true);
+        expect(
+          migrate.some((line) => link.test(line)),
+          `${slug} is not under Migrate`,
+        ).toBe(false);
+      }
+      for (const slug of ["compare", "bundle-size", "native-engines"]) {
         const link = new RegExp(`/${slug}\\.md\\)`);
         expect(
           migrate.some((line) => link.test(line)),
@@ -809,7 +815,7 @@ Body text here.`;
       const urls = [...full.matchAll(/^> source: (\S+)$/gm)].map((m) => m[1]!);
       const path = (url: string) => url.replace(/^.*\/gmt\//, "");
       expect(urls.length).toBeGreaterThan(0);
-      const lastStart = urls.findIndex((url) => path(url) === "why-gmt.md");
+      const lastStart = urls.findIndex((url) => path(url) === "pulse.md");
       expect(lastStart).toBeGreaterThanOrEqual(0);
       expect(path(urls[lastStart + 1]!)).toMatch(/^guides\//);
       const firstMigrate = urls.findIndex((url) =>
@@ -818,7 +824,7 @@ Body text here.`;
       expect(firstMigrate).toBeGreaterThan(lastStart);
       for (const url of urls.slice(firstMigrate)) {
         expect(path(url), url).toMatch(
-          /^(migrate\/|compare\/behaviour\.md$|compare\.md$|bundle-size\.md$|upstream\.md$|native-engines\.md$)/,
+          /^(migrate\/|compare\/behaviour\.md$|compare\.md$|bundle-size\.md$|native-engines\.md$)/,
         );
       }
     });

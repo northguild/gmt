@@ -8,8 +8,7 @@
  * fields, so no status is typed by hand. The cells carry no `data-col`: the card is a header, a
  * body and a meta line, not label/value pairs.
  */
-import { shortRef } from "../data/temporal-compat";
-import type { UpstreamFiling } from "../data/upstream-filings";
+import { filingRef, type UpstreamFiling } from "../data/upstream-filings";
 import { inlineCodeHtml } from "../lib/inline-code-html";
 import { octicon } from "../lib/octicons";
 import {
@@ -52,9 +51,9 @@ const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
 <tr data-tone={state.tone}>
   <td class="gmt-upstream-head">
     <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
-    <span class="gmt-sr-only">{filing.kind === "pr" ? "Pull request:" : "Issue:"}</span>
+    <span class="gmt-sr-only">{filing.tracker === "github" && filing.kind === "pr" ? "Pull request:" : "Issue:"}</span>
     <strong class="gmt-upstream-title" set:html={inlineCodeHtml(title)} />
-    <a class="gmt-upstream-ref" href={filing.url}>{shortRef(filing.repo, filing.number)}</a>
+    <a class="gmt-upstream-ref" href={filing.url}>{filingRef(filing)}</a>
     <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
   </td>
   <td class="gmt-upstream-body">
@@ -74,8 +73,17 @@ const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
   <td class="gmt-upstream-meta">
     <span class="gmt-upstream-fact">
       <span set:html={octicon("comment")} />
-      <span class="gmt-sr-only">{countLabel(filing.maintainerComments, "maintainer reply", "maintainer replies")}</span>
-      <span aria-hidden="true">{filing.maintainerComments}<span class="gmt-upstream-long"> {countNoun(filing.maintainerComments, "maintainer reply", "maintainer replies")}</span></span>
+      {filing.maintainerComments === null ? (
+        <>
+          <span class="gmt-sr-only">Maintainer replies are not tracked on this site</span>
+          <span aria-hidden="true">replies not tracked</span>
+        </>
+      ) : (
+        <>
+          <span class="gmt-sr-only">{countLabel(filing.maintainerComments, "maintainer reply", "maintainer replies")}</span>
+          <span aria-hidden="true">{filing.maintainerComments}<span class="gmt-upstream-long"> {countNoun(filing.maintainerComments, "maintainer reply", "maintainer replies")}</span></span>
+        </>
+      )}
     </span>
     <span class="gmt-upstream-fact">
       <span set:html={octicon("clock")} />

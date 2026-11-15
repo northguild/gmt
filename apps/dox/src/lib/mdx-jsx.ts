@@ -9,6 +9,24 @@
  *
  * Kept free of Astro globals so vitest can import it directly.
  */
+import {
+  areas as pulseAreas,
+  cardsIn as pulseCardsIn,
+  checkById as pulseCheck,
+  countWorkarounds,
+  filingsWaitedOn,
+  groupsClaimed,
+  runsFor as pulseRuns,
+  runsRead as pulseRunsRead,
+  type PulseLife,
+} from "../data/pulse";
+import { filingRef as pulseFilingRef } from "../data/upstream-filings";
+import {
+  beats as pulseBeats,
+  beatsCaption,
+  cadenceText,
+  noSignal,
+} from "./pulse-view";
 import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "./bundle-size";
 import { KEY_POINTS } from "../data/canada-key-points";
 import { keyPointsMarkdown } from "../data/clock-change-text";
@@ -24,12 +42,12 @@ import {
   compatGroups,
   groupLabel,
   groupWhatBreaks,
-  shortRef,
   stateLine,
 } from "../data/temporal-compat";
 import {
   filedByUs,
   filedPrs,
+  filingRef,
   filings,
   handledInGmt,
   listings,
@@ -337,9 +355,7 @@ function renderUpstreamDefects(): string {
   const rows = compatGroups.map((group) => {
     const sent = filings
       .filter((f) => f.gmtGuard && group.defects.includes(f.gmtGuard))
-      .map(
-        (f) => `[${shortRef(f.repo, f.number)}](${f.contributionUrl ?? f.url})`,
-      )
+      .map((f) => `[${filingRef(f)}](${f.contributionUrl ?? f.url})`)
       .join(", ");
     const { badge, count } = stateLine(group);
     // A guard row continues with why it is kept. The reason is free text, so it is escaped: a `|`
@@ -464,7 +480,7 @@ function renderBehaviourMatrix(): string {
  * with it (CORE-8 review, #253).
  */
 function renderUpstreamTracker(): string {
-  return `\n**So far we have sent ${filedByUs} reports and fixes to the Temporal projects, ${filedPrs} of them as ready-to-merge code changes${contributionClause}. ${coverageClause}: ${handledInGmt} through its own built-in fix, and ${unaffectingGmt} because the bug is in code GMT doesn't use.**\n`;
+  return `\n**So far we have sent ${filedByUs} reports and fixes to Temporal and the projects it builds on, ${filedPrs} of them as ready-to-merge code changes${contributionClause}. ${coverageClause}: ${handledInGmt} through its own built-in fix, and ${unaffectingGmt} because the bug is in code GMT doesn't use.**\n`;
 }
 
 /**
@@ -482,6 +498,59 @@ function renderUpstreamListings(): string {
     ...rows,
     "",
   ].join("\n");
+}
+
+/** A check's retirement, in words, for the text twin of `/pulse/`. */
+function pulseLife(life: PulseLife): string {
+  if (life.kind === "permanent") return `Stays. ${life.why}`;
+  if (life.kind === "condition") {
+    const waited = filingsWaitedOn(life).map(
+      (f) => `[${pulseFilingRef(f)}](${f.url})`,
+    );
+    return `Retires when ${life.until}.${waited.length > 0 ? ` Waiting on ${waited.join(", ")}.` : ""}`;
+  }
+  const claimed = groupsClaimed(life);
+  if (claimed.length === 0) {
+    return "Retires with its workarounds, which are not in the compatibility snapshot yet.";
+  }
+  const c = countWorkarounds(claimed);
+  return `Retires with its workarounds: ${c.stillNeeded} still needed, ${c.removable} removable, ${c.guards} guards.`;
+}
+
+/**
+ * `<Pulse />` as Markdown: each check's cadence, what it watches, its last results as words and
+ * what retires it. There is no next run: that is a live value the text cannot hold.
+ */
+function renderPulse(): string {
+  const out: string[] = [""];
+  for (const area of pulseAreas) {
+    out.push(`## ${area.heading}`, "", area.blurb, "");
+    for (const card of pulseCardsIn(area.id)) {
+      out.push(`### ${card.name}`, "");
+      const cron = card.crons[0];
+      if (cron === undefined) {
+        out.push("Runs with the Dox tests, never on a schedule.", "");
+      } else {
+        out.push(card.crons.map(cadenceText).join(" and ") + ".", "");
+        const runs = pulseRuns(card);
+        const lost = noSignal(runs, pulseRunsRead);
+        out.push(
+          lost !== null || runs === null || pulseRunsRead === null
+            ? `No signal: ${lost?.text ?? "Run history not read in this build"}.`
+            : beatsCaption(pulseBeats(cron, runs, pulseRunsRead)) + ".",
+          "",
+        );
+      }
+      for (const id of card.checkIds) {
+        const check = pulseCheck(id);
+        out.push(
+          `- **${check.name}.** ${check.watches} ${check.finds} ${pulseLife(check.life)}`,
+        );
+      }
+      out.push("");
+    }
+  }
+  return out.join("\n");
 }
 
 /**
@@ -537,6 +606,7 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "LibraryCompare", renderLibraryCompare);
   out = replaceElements(out, "UpstreamDefects", renderUpstreamDefects);
   out = replaceElements(out, "UpstreamTracker", renderUpstreamTracker);
+  out = replaceElements(out, "Pulse", renderPulse);
   out = replaceElements(out, "UpstreamListings", renderUpstreamListings);
   out = replaceElements(out, "BundleSize", renderBundleSize);
   out = replaceElements(out, "MigrationMap", renderMigrationMap);

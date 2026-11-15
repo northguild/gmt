@@ -1,7 +1,7 @@
 import { Temporal } from "./temporal";
 
 /*
- * CORE-112 slice 7: each repair is dormant behind one engine probe. With the four probes stubbed
+ * CORE-112 slice 7: each repair is dormant behind one engine probe. With the probes stubbed
  * to pass (a fixed engine) no formatter is wrapped: the cache hands out the engine's own
  * `Intl.DateTimeFormat`, so no per-format work runs. With them stubbed to fail, exactly the
  * formatters that can show the defect are wrapped. (`vi.mock` makes this an isolated file; the
@@ -21,7 +21,10 @@ vi.mock("./temporalCompat/capabilities", async (importOriginal) => ({
   isJapaneseEraCompatNeeded: () => probes.needed,
   isIslamicEraCompatNeeded: () => probes.needed,
   isJapaneseTwoDigitYearCompatNeeded: () => probes.needed,
+  isJapaneseNumberingSystemCompatNeeded: () => probes.needed,
+  isIslamicCalendarResolutionCompatNeeded: () => probes.needed,
   isRelatedYearWidthCompatNeeded: () => probes.needed,
+  isRangeFieldCompatNeeded: () => probes.needed,
 }));
 
 const era = { era: "short", year: "numeric", timeZone: "UTC" } as const;
@@ -36,6 +39,7 @@ describe("year printing is dormant on a fixed engine", () => {
     ${"ja-u-ca-japanese"}         | ${twoDigit} | ${"D27 ja japanese"}
     ${"en-u-ca-chinese"}          | ${twoDigit} | ${"D28 chinese"}
     ${"en-u-ca-dangi"}            | ${twoDigit} | ${"D28 dangi"}
+    ${"ja-u-ca-japanese-nu-arab"} | ${era}      | ${"D27 ja japanese nu-arab"}
   `(
     "returns the engine's own formatter for $label when its probe passes",
     async ({ locale, options }) => {
@@ -47,10 +51,11 @@ describe("year printing is dormant on a fixed engine", () => {
   );
 
   it.each`
-    locale                     | options     | label
-    ${"en-u-ca-japanese"}      | ${era}      | ${"D25 japanese"}
-    ${"en-u-ca-islamic-civil"} | ${era}      | ${"D26 islamic-civil"}
-    ${"ja-u-ca-japanese"}      | ${twoDigit} | ${"D27 ja japanese"}
+    locale                        | options     | label
+    ${"en-u-ca-japanese"}         | ${era}      | ${"D25 japanese"}
+    ${"en-u-ca-islamic-civil"}    | ${era}      | ${"D26 islamic-civil"}
+    ${"ja-u-ca-japanese"}         | ${twoDigit} | ${"D27 ja japanese"}
+    ${"ja-u-ca-japanese-nu-arab"} | ${era}      | ${"D27 ja japanese nu-arab"}
   `(
     "wraps the formatter for $label when its probe fails",
     async ({ locale, options }) => {
@@ -144,6 +149,36 @@ describe("every public format function is the engine's own on a fixed engine", (
         range,
       );
     },
+    30_000,
+  );
+});
+
+describe("D30 is dormant on a fixed engine", () => {
+  it.each`
+    locale                    | options                                     | needed   | label
+    ${"en-u-ca-islamic"}      | ${{ timeZone: "UTC" }}                      | ${true}  | ${"islamic keyword, probe fails"}
+    ${"en"}                   | ${{ timeZone: "UTC", calendar: "islamic" }} | ${true}  | ${"islamic option, probe fails"}
+    ${"en-u-ca-islamic-rgsa"} | ${{ timeZone: "UTC" }}                      | ${true}  | ${"rgsa keyword, probe fails"}
+    ${"en-u-ca-islamic"}      | ${{ timeZone: "UTC" }}                      | ${false} | ${"islamic keyword, probe passes"}
+    ${"en-u-ca-islamic-rgsa"} | ${{ timeZone: "UTC" }}                      | ${false} | ${"rgsa keyword, probe passes"}
+  `(
+    "builds with the engine's own resolution when the probe passes, rebuilt otherwise: $label",
+    async ({ locale, options, needed }) => {
+      probes.needed = needed;
+      const { cachedFormatter } = await freshCache();
+      const own = new Intl.DateTimeFormat(locale, options).resolvedOptions();
+      const built = cachedFormatter(
+        "DateTimeFormat",
+        locale,
+        options,
+      ).resolvedOptions();
+      if (needed) {
+        expect(built.calendar).not.toBe("islamic-rgsa");
+        expect(built.calendar).not.toBe("islamic");
+      } else {
+        expect(built.calendar).toBe(own.calendar);
+      }
+    },
   );
 });
 
@@ -194,5 +229,50 @@ describe("the year repair wrapper", () => {
     const resolved = formatter.resolvedOptions();
     expect(resolved.calendar).toBe("japanese");
     expect(resolved.timeZone).toBe("UTC");
+  });
+});
+
+describe("range field repair (D29) is dormant on a fixed engine", () => {
+  const yo = {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    timeZone: "UTC",
+  } as const;
+
+  it("never reads a verdict while the probe passes", async () => {
+    probes.needed = false;
+    vi.resetModules();
+    const { rangeFieldsText } = await import("./rangeFields");
+    expect(
+      rangeFieldsText(
+        new Intl.DateTimeFormat("yo", yo),
+        yo,
+        1_720_569_600_000,
+        1_720_656_000_000,
+      ),
+    ).toBeNull();
+  });
+
+  it("reads the detector's verdict for a formatter whose range is broken once the probe fails", async () => {
+    probes.needed = true;
+    vi.resetModules();
+    const { rangeFieldsText } = await import("./rangeFields");
+    const { rangeFieldCases, rangeFieldProblem } =
+      await import("./temporalCompat/rangeFieldRepros");
+    const own = rangeFieldCases.find(({ name }) => name === "yoWeekdayTwice");
+    const brokenHere =
+      own !== undefined &&
+      rangeFieldProblem(own.locale, own.options, own.from, own.to) !==
+        "complete";
+    expect(
+      rangeFieldsText(
+        new Intl.DateTimeFormat("yo", yo),
+        yo,
+        1_720_569_600_000,
+        1_720_656_000_000,
+      ) !== null,
+    ).toBe(brokenHere);
   });
 });

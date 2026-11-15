@@ -260,4 +260,23 @@ describe("formatDateTimeRange with an option that is an object", () => {
     );
     expect({ out, coercions }).toEqual({ out: "March 15 - 17", coercions: 1 });
   });
+
+  // D25: the same era widths for a range with times (the `-u-ca-gregory` twin's text).
+  it("prints the Gregorian era in a ja japanese date-time range before 1873: 西暦1700/7/10 9:05～西暦1700/7/12 10:06", () => {
+    expect(
+      formatDateTimeRange(
+        "1700-07-10T09:05:00",
+        "1700-07-12T10:06:00",
+        "ja-u-ca-japanese",
+        {
+          era: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+        } as Intl.DateTimeFormatOptions,
+      ),
+    ).toBe("西暦1700/7/10 9:05～西暦1700/7/12 10:06");
+  });
 });

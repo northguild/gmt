@@ -24,10 +24,10 @@
  * `--calendars gregory,hebrew`. Exits 1 on any failure, 2 when it cannot run.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { argument, localeList } from "../lib/cldr-locales.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const DIST = join(ROOT, "packages/gmt/dist");
@@ -57,52 +57,6 @@ const OPTION_SETS = [
 ];
 
 const DATES = [1735554000000, 1798798800000, 1782901200000, 1798755600000];
-
-function argument(name) {
-  const at = process.argv.indexOf(`--${name}`);
-  return at < 0 ? null : (process.argv[at + 1] ?? "").split(",");
-}
-
-/** The locales of `cldr-dates-full` for this engine's CLDR version, fetched into a temp directory. */
-function cldrLocales() {
-  const directory = mkdtempSync(join(tmpdir(), "gmt-cldr-"));
-  try {
-    const version = process.versions.cldr?.split(".")[0] ?? "";
-    const pack = spawnSync(
-      "npm",
-      [
-        "pack",
-        `cldr-dates-full@${version ? `${version}` : "latest"}`,
-        "--silent",
-      ],
-      { cwd: directory, encoding: "utf8" },
-    );
-    if (pack.status !== 0) {
-      return null;
-    }
-    const tarball = pack.stdout.trim().split("\n").at(-1) ?? "";
-    spawnSync("tar", ["-xzf", tarball], { cwd: directory });
-    const main = join(directory, "package", "main");
-    return existsSync(main) ? readdirSync(main) : null;
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-}
-
-function localeList() {
-  const given = argument("locales");
-  if (given !== null) {
-    return given;
-  }
-  const listed = cldrLocales();
-  if (listed === null) {
-    console.error(
-      "cannot fetch cldr-dates-full (npm pack failed): pass --locales",
-    );
-    process.exit(2);
-  }
-  return Intl.DateTimeFormat.supportedLocalesOf(listed);
-}
 
 /** Exit status of a child process running `source`. */
 function exitOf(source) {

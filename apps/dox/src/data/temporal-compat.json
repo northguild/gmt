@@ -169,6 +169,71 @@
       "state": "still-needed"
     },
     {
+      "defects": ["D23"],
+      "title": "D23 — formatToParts and formatRangeToParts abort V8 on a week-of-year year field (nodejs/node#67076)",
+      "trigger": "every V8 the check reads (Node at the engines.node floor, and the temporal-compat-chromium verdict) passes the D23 repro: a gd formatter with year numeric and month short resolves a year, and the Node child-process confirmation of scripts/canary/weekYear.mjs exits 0 with a year part",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed",
+      "engines": ["v8"]
+    },
+    {
+      "defects": ["D24"],
+      "title": "D24 — CLDR date patterns print the week-of-year year where the calendar year is meant (internal/weekYearGuard.ts)",
+      "trigger": "every engine's compat verdict passes every D24 repro, and the weekly sweep of scripts/canary/weekYear.mjs flags no locale, calendar or option set",
+      "probes": 7,
+      "failing": 7,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D25"],
+      "title": "D25 — the japanese calendar prints Japanese eras before 1873-01-01 (internal/yearPrinting.ts)",
+      "trigger": "every engine's compat verdict passes both D25 repros: en-u-ca-japanese prints 2 BC for ISO -0001-07-10 and 1872 AD for 1872-12-31 (tc39/proposal-intl-era-monthcode#86, tc39/test262#4877)",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D26"],
+      "title": "D26 — an islamic calendar prints a negative year before the Hijra (internal/yearPrinting.ts)",
+      "trigger": "every engine's compat verdict passes the D26 repro: en-u-ca-islamic-civil prints a different era text for ISO 600-07-10 and 2025-07-10",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D27"],
+      "title": "D27 — ja japanese leaves the era year unpadded under year 2-digit and in Latin digits under another numbering system (internal/yearPrinting.ts, internal/japaneseNumerals.ts)",
+      "trigger": "every engine's compat verdict passes both D27 repros: ja-u-ca-japanese with year 2-digit prints 令和06年 for 2024-07-10, and ja-u-ca-japanese-nu-arab with year numeric prints 令和٦年",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D28"],
+      "title": "D28 — chinese and dangi pad the related year under year 2-digit (internal/yearPrinting.ts)",
+      "trigger": "every engine's compat verdict passes the D28 repro: en-u-ca-chinese with year 2-digit prints the related year 5 for ISO 0005-07-10",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D29"],
+      "title": "D29 — a range drops, repeats or garbles a field of one date (internal/rangeFields.ts)",
+      "trigger": "every engine's compat verdict passes every D29 repro (rangeFieldRepros.ts, one range per upstream defect, so the gate stays on while any one fails), and the weekly sweep of scripts/canary/rangeFields.mjs flags no locale, calendar or option set",
+      "probes": 18,
+      "failing": 18,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D30"],
+      "title": "D30 — islamic and islamic-rgsa resolve as written (internal/formatterCache.ts)",
+      "trigger": "every engine's compat verdict passes both D30 repros: en-u-ca-islamic resolves islamic-tbla and en-u-ca-islamic-rgsa resolves a calendar other than islamic-rgsa (tc39/proposal-intl-era-monthcode#99)",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

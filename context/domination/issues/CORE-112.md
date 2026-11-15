@@ -3,7 +3,8 @@
 **Scope:** GMT never makes the `formatToParts` or `formatRangeToParts` call that stops V8 on a
 CLDR pattern with `Y`, and prints the calendar year where such a pattern prints the year a week
 belongs to. It also prints the year the specifications give in four more cases the range check
-found (D25 to D28). Adds no library function. Lands in #523 with DOX-G9 (#522). Tracked as #524. The
+found (D25 to D28), range text that keeps every field (D29) and the islamic calendars the caller
+asked for (D30). Adds no library function. Lands in #523 with DOX-G9 (#522). Tracked as #524. The
 spec is [specs/CORE-112/](../specs/CORE-112/index.md); the defect is
 [js-temporal-polyfill-bugs.md § AF](../js-temporal-polyfill-bugs.md#af-some-languages-date-patterns-print-the-week-of-year-year-the-wrong-year-everywhere-and-a-v8-crash-in-formattoparts-engine-and-cldr).
 
@@ -29,3 +30,11 @@ regional variants, kek, ki and pt. ECMA-402 FormatDateTimePattern prints the cal
    dates before the Hijra; `ja` japanese `year: "2-digit"` prints `令和6年` for `令和06年`; and chinese
    and dangi pad the related year to two digits. [specs/CORE-112/year-printing.md](../specs/CORE-112/year-printing.md)
    gives each one's evidence and rule; the bug doc has them as § AG.
+4. **Broken range text (D29).** Some languages' CLDR interval patterns drop or repeat a field, so
+   `formatRange` loses an era, a day period or a date, or prints a field twice. GMT checks each
+   formatter's ranges once and, where a range is broken, prints the two dates joined by the
+   fallback pattern (UTS #35 Part 4, interval formats).
+5. **Islamic calendar resolution (D30).** V8 keeps `islamic` and `islamic-rgsa` as given and prints
+   ICU's astronomical calendar. Intl era/monthCode resolves `islamic` to `islamic-tbla` and
+   `islamic-rgsa` to the locale's default calendar, so GMT rebuilds those formatters with the
+   calendar the proposal gives.

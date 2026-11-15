@@ -6,8 +6,8 @@ import {
   isRelatedYearWidthCompatNeeded,
 } from "./temporalCompat/capabilities";
 import { nowInstant } from "./temporalCompat/clock";
-import { formatRangeChecked, markRangeHandled } from "./weekYearRange";
-import { type DigitRun, digitRuns, digitSetOf, digitsOf } from "./weekYearText";
+import { markRangeHandled, rangeHooks } from "./rangeHooks";
+import { digitSetOf, digitsOf } from "./weekYearText";
 
 /*
  * CORE-112 slice 7, defects D25 to D28: years an engine prints wrongly outside the week-year.
@@ -27,10 +27,16 @@ import { type DigitRun, digitRuns, digitSetOf, digitsOf } from "./weekYearText";
  * - D26 (ICU-23327): an islamic calendar prints a date before the Hijra as a negative year; the
  *   specification gives the era `bh`, which this engine cannot name, so the date has no printable
  *   year and the house empty value answers (`""`, or `[]` for parts).
- * - D27 (ICU-23620): `year: "2-digit"` in `ja` japanese leaves the era year unpadded.
- *   ECMA-402 FormatDateTimePattern pads it to two digits; year 1 stays 元 (owner decision).
+ * - D27 (ICU-23620): `year: "2-digit"` in `ja` japanese leaves the era year unpadded, and its
+ *   `jpanyear` numbering ignores `nu`. ECMA-402 FormatDateTimePattern pads it to two digits and
+ *   prints it in the resolved numbering system (FormatNumeric); year 1 stays 元 (owner decision).
  * - D28 (ICU-23621): `year: "2-digit"` in chinese and dangi pads the related year, which ECMA-402 prints at
  *   full width. The formatter is built with `year: "numeric"`, the same pattern at full width.
+ * - D25 and D27 in a range are `yearPrintingRange.ts`, installed by `rangeFields.ts` through
+ *   `rangeHooks.ts`, so single formatting carries none of it.
+ * - D29 (`rangeFields.ts`) and D30 (`formatterCache.ts`) are repaired beside this module: a range
+ *   that drops, repeats or garbles a field is written from its two singles, and `islamic` and
+ *   `islamic-rgsa` resolve as Intl era/monthCode CreateDateTimeFormat says.
  */
 
 /** The options that give a formatter a date pattern when none of these is set. */
@@ -49,7 +55,7 @@ const FIELD_KEYS = [
 ] as const;
 
 /** Whether the formatter can print an era or a year (ECMA-402 CreateDateTimeFormat defaults). */
-function showsEraOrYear(options: Intl.DateTimeFormatOptions): boolean {
+export function showsEraOrYear(options: Intl.DateTimeFormatOptions): boolean {
   return (
     options.era !== undefined ||
     options.year !== undefined ||
@@ -97,47 +103,39 @@ export function widenRelatedYear(
   return callerOptions;
 }
 
-/**
- * The starts of the one-digit runs of `runs` whose text differs in `other`'s runs, when `other` has
- * as many runs (else none: a year printed as 元 changed the count).
- */
-function changedSingleDigits(
-  runs: readonly DigitRun[],
-  other: string | null,
-  digitSet: ReadonlySet<string>,
-): number[] {
-  const moved = other === null ? [] : digitRuns(other, digitSet);
-  if (moved.length !== runs.length) {
-    return [];
-  }
-  return runs
-    .filter(
-      (run, index) => run.text.length === 1 && run.text !== moved[index]?.text,
-    )
-    .map((run) => run.start);
-}
-
-/** The text with `zero` written before each run that starts at one of `starts`. */
-function insertZeros(
-  text: string,
-  runs: readonly DigitRun[],
-  starts: ReadonlySet<number>,
-  zero: string,
-): string {
-  return runs
-    .filter((run) => starts.has(run.start))
-    .toReversed()
-    .reduce(
-      (out, run) => out.slice(0, run.start) + zero + out.slice(run.start),
-      text,
-    );
-}
-
 /** The ISO year (in the formatter's zone) and the Hijra check of an instant. */
 function zonedAt(ms: number, timeZone: string): Temporal.ZonedDateTime {
   return Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO(
     timeZone,
   );
+}
+
+/**
+ * Where a japanese pattern puts its era relative to the year: after it or before it, and the
+ * literal between them. `null` when the pattern prints no era. Read from the engine's own parts of
+ * a date after 1873 (the era of a date before it is what the twin supplies).
+ */
+function eraSeatOf(
+  formatter: Intl.DateTimeFormat,
+): { after: boolean; glue: string } | null {
+  try {
+    const parts = formatter.formatToParts(1720569600000); // 2024-07-10
+    const era = parts.findIndex((part) => part.type === "era");
+    const year = parts.findIndex((part) => part.type === "year");
+    if (era < 0 || year < 0) {
+      return null;
+    }
+    const between = parts.slice(Math.min(era, year) + 1, Math.max(era, year));
+    return {
+      after: era > year,
+      glue:
+        between.length === 1 && between[0]?.type === "literal"
+          ? between[0].value
+          : "",
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -181,9 +179,80 @@ export function repairYearPrinting(
   }
   const zero = digitsOf(numberingSystem)[0] ?? "0";
   const digitSet = digitSetOf(numberingSystem);
+  const styled =
+    callerOptions.dateStyle !== undefined ||
+    callerOptions.timeStyle !== undefined;
+  // The japanese pattern prints an era with its year, so the twin of a date before 1873 does too
+  // (`1872 AD`): a field pattern gets `era: "short"`; a style pattern cannot be combined with
+  // `era`, so the era is written where the japanese pattern puts it (`eraSplice`).
+  const eraSeat =
+    era && callerOptions.era === undefined ? eraSeatOf(formatter) : null;
   let gregorian: Intl.DateTimeFormat | undefined;
   const twin = (): Intl.DateTimeFormat =>
-    (gregorian ??= twinOf({ ...callerOptions, calendar: "gregory" }));
+    (gregorian ??= twinOf({
+      ...callerOptions,
+      calendar: "gregory",
+      ...(eraSeat !== null && !styled ? { era: "short" as const } : {}),
+    }));
+  let eraName: Intl.DateTimeFormat | undefined;
+  const japaneseForms: Intl.DateTimeFormat[] = [];
+  const japaneseEraNames = (ms: number): string[] => {
+    if (japaneseForms.length === 0) {
+      for (const era of ["long", "short", "narrow"] as const) {
+        japaneseForms.push(
+          twinOf({ calendar: "japanese", era, year: "numeric", timeZone }),
+        );
+      }
+    }
+    const names = japaneseForms.flatMap((form) =>
+      form
+        .formatToParts(ms)
+        .filter((part) => part.type === "era" && part.value !== "")
+        .map((part) => part.value),
+    );
+    return [...new Set(names)].toSorted((x, y) => y.length - x.length);
+  };
+  const eraPart = (ms: number): Intl.DateTimeFormatPart | undefined => {
+    eraName ??= twinOf({
+      calendar: "gregory",
+      era: "short",
+      year: "numeric",
+      timeZone,
+    });
+    return eraName.formatToParts(ms).find((part) => part.type === "era");
+  };
+  /** The twin's parts of a date before 1873, with the Gregorian era added to a style pattern. */
+  const twinParts = (ms: number): Intl.DateTimeFormatPart[] => {
+    const parts = twin().formatToParts(ms);
+    if (eraSeat === null || !styled) {
+      return parts;
+    }
+    const name = eraPart(ms);
+    const at = parts.findIndex((part) => part.type === "year");
+    if (name === undefined || at < 0) {
+      return parts;
+    }
+    const extra: Intl.DateTimeFormatPart[] = eraSeat.after
+      ? [
+          ...(eraSeat.glue
+            ? [{ type: "literal" as const, value: eraSeat.glue }]
+            : []),
+          name,
+        ]
+      : [
+          name,
+          ...(eraSeat.glue
+            ? [{ type: "literal" as const, value: eraSeat.glue }]
+            : []),
+        ];
+    return parts.toSpliced(eraSeat.after ? at + 1 : at, 0, ...extra);
+  };
+  const twinText = (ms: number): string =>
+    eraSeat !== null && styled
+      ? twinParts(ms)
+          .map((part) => part.value)
+          .join("")
+      : twin().format(ms);
 
   /** D25: the instant is before the first Japanese era (ISO year in the formatter's zone). */
   const beforeEras = (ms: number): boolean =>
@@ -224,41 +293,14 @@ export function repairYearPrinting(
     return null;
   };
 
-  /**
-   * D27 in a range: the digit run that changes when an endpoint moves by whole years is an era
-   * year; one digit gains a zero. Each way of moving the endpoints (both, only the first, only the
-   * second) counts only when the number of digit runs is the same, so a year that prints as 元 is
-   * left alone.
-   */
-  const paddedRange = (text: string, a: number, b: number): string => {
-    const shiftedA = shiftOf(a);
-    const shiftedB = shiftOf(b);
-    if (shiftedA === null || shiftedB === null) {
-      return text;
-    }
-    const runs = digitRuns(text, digitSet);
-    const starts = new Set<number>();
-    for (const [x, y] of [
-      [shiftedA, shiftedB],
-      [shiftedA, b],
-      [a, shiftedB],
-    ] as const) {
-      const other = formatRangeChecked(formatter, callerOptions, x, y);
-      for (const start of changedSingleDigits(runs, other, digitSet)) {
-        starts.add(start);
-      }
-    }
-    return insertZeros(text, runs, starts, zero);
-  };
-
-  const standIn = {
+  const standIn: Intl.DateTimeFormat = {
     format(date?: Date | number): string {
       const ms = toMilliseconds(date);
       if (beforeHijra(ms)) {
         return "";
       }
       if (beforeEras(ms)) {
-        return twin().format(ms);
+        return twinText(ms);
       }
       return pad
         ? formatter
@@ -273,7 +315,7 @@ export function repairYearPrinting(
         return [];
       }
       if (beforeEras(ms)) {
-        return twin().formatToParts(ms);
+        return twinParts(ms);
       }
       const parts = formatter.formatToParts(ms);
       return pad ? parts.map(padPart) : parts;
@@ -284,17 +326,32 @@ export function repairYearPrinting(
       if (beforeHijra(a) || beforeHijra(b)) {
         return "";
       }
-      // A range that starts or ends before 1873 prints in one calendar, the Gregorian one.
-      const text =
-        beforeEras(a) || beforeEras(b)
-          ? formatRangeChecked(twin(), callerOptions, a, b)
-          : formatRangeChecked(formatter, callerOptions, a, b);
-      if (text === null) {
-        return "";
+      const hooks = rangeHooks();
+      if (hooks === undefined) {
+        return formatter.formatRange(a, b);
       }
-      return pad && !(beforeEras(a) || beforeEras(b))
-        ? paddedRange(text, a, b)
-        : text;
+      const text = hooks.yearRange(
+        {
+          formatter,
+          options: callerOptions,
+          resolved,
+          twin,
+          eraNameOf: (ms) => eraPart(ms)?.value ?? null,
+          japaneseEraNames,
+          twinText,
+          eraSeat: eraSeat !== null,
+          styled,
+          pad,
+          single: (ms) => standIn.format(ms),
+          zero,
+          digitSet,
+          shiftOf,
+        },
+        a,
+        b,
+        [beforeEras(a), beforeEras(b)],
+      );
+      return text ?? "";
     },
     formatRangeToParts(): never {
       throw new TypeError(
@@ -306,5 +363,5 @@ export function repairYearPrinting(
     },
   };
   markRangeHandled(standIn);
-  return standIn as Intl.DateTimeFormat;
+  return standIn;
 }

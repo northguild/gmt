@@ -1,11 +1,8 @@
+import { DATE_KEYS, TIME_KEYS, verdictKey } from "./patternKey";
 import { plainOptionEntries } from "./plainOptionEntries";
 import { Temporal } from "./temporal";
 import { nowInstant } from "./temporalCompat/clock";
-import {
-  forgetWeekYearRange,
-  formatRangeChecked,
-  markRangeHandled,
-} from "./weekYearRange";
+import { forgetRanges, markRangeHandled, rangeHooks } from "./rangeHooks";
 import { createPartsSynth } from "./weekYearSynth";
 import {
   analyse,
@@ -36,27 +33,6 @@ import {
  * the one hook line in `formatterCache.ts` retires the workaround (the D24 canary says when).
  */
 
-/** The options that make a formatter print time. */
-const TIME_KEYS = [
-  "hour",
-  "minute",
-  "second",
-  "fractionalSecondDigits",
-  "dayPeriod",
-  "timeZoneName",
-  "timeStyle",
-] as const;
-
-/** The options that give a formatter a date pattern. */
-const DATE_KEYS = [
-  "era",
-  "year",
-  "month",
-  "day",
-  "weekday",
-  "dateStyle",
-] as const;
-
 /** ECMA-402 CreateDateTimeFormat reads these to decide whether to add the date defaults. */
 const FIELD_KEYS = [
   "weekday",
@@ -83,7 +59,7 @@ export function forgetWeekYearVerdicts(): void {
   verdicts.clear();
   verdictsBuiltWith = undefined;
   forgetWeekYearText();
-  forgetWeekYearRange();
+  forgetRanges();
 }
 
 /**
@@ -204,26 +180,6 @@ function textSource(
   return new Intl.DateTimeFormat(resolved.locale, twin);
 }
 
-/**
- * The verdict-cache key: the pattern, never the zone (a zone moves the instant, not the pattern).
- * Only the options that choose the pattern are read; locale, calendar, numbering system and hour
- * cycle come from what the formatter resolved, so a value `Intl` ignores or resolves to the same
- * thing (`calendar: "always"`, `hour12` next to an `hourCycle`) shares one verdict.
- */
-function verdictKey(
-  options: Intl.DateTimeFormatOptions,
-  resolved: Intl.ResolvedDateTimeFormatOptions,
-): string {
-  return JSON.stringify([
-    resolved.locale,
-    resolved.calendar,
-    resolved.numberingSystem,
-    resolved.hourCycle ?? "",
-    options.formatMatcher ?? "",
-    [...DATE_KEYS, ...TIME_KEYS].map((key) => options[key] ?? ""),
-  ]);
-}
-
 /** Whether the text of this pattern prints a year other than the calendar year, remembered per pattern. */
 function isFlagged(
   formatter: Intl.DateTimeFormat,
@@ -305,13 +261,13 @@ function guarded(
       // Slice 3c: the range pattern is another pattern, so the year is repaired here too. `null`
       // (a year run that cannot be located) is the empty string, as in the library's range
       // functions.
+      const a = toMilliseconds(start);
+      const b = toMilliseconds(end);
+      const hooks = rangeHooks();
       return (
-        formatRangeChecked(
-          native,
-          options,
-          toMilliseconds(start),
-          toMilliseconds(end),
-        ) ?? ""
+        (hooks
+          ? hooks.checked(native, options, a, b)
+          : native.formatRange(a, b)) ?? ""
       );
     },
     formatRangeToParts(): never {

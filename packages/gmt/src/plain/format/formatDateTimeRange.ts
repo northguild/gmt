@@ -1,4 +1,4 @@
-import { formatRangeChecked } from "../../internal/weekYearRange";
+import { formatRangeRepaired } from "../../internal/rangeFields";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
@@ -64,7 +64,7 @@ export function formatDateTimeRange(
     const read = readDateTimeFormatOptions(options);
     checkFormatterArguments("DateTimeFormat", locale, read);
     const formatOptions = plainDateTimeFormatOptions(read);
-    const out = formatRangeChecked(
+    const out = formatRangeRepaired(
       cachedFormatter("DateTimeFormat", locale, formatOptions),
       formatOptions,
       startParsed.toZonedDateTime("UTC").epochMilliseconds,

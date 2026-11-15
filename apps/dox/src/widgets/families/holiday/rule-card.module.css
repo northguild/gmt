@@ -8,11 +8,16 @@
   min-inline-size: 0;
   margin: 0;
   padding: var(--gmt-space-2) var(--gmt-space-3);
+  padding-block-end: calc(var(--gmt-space-2) + 1px);
   border: 1px solid var(--gmt-border);
-  border-block-end: 2px solid var(--gmt-border-strong);
+  border-block-end-color: var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
+
+  /* The accent edge is the 1px border plus 1px of inset shadow, with the 1px in the padding:
+     unequal border widths on a bevelled box misdraw the opposite edge. */
+  box-shadow: inset 0 -1px 0 var(--gmt-border-strong);
   color: var(--gmt-ice);
   list-style: none;
 }

@@ -65,7 +65,8 @@ Until that release, GMT's own code covers every bug in the table above.
 There are two Temporal polyfills: [`@js-temporal/polyfill`](https://github.com/js-temporal/temporal-polyfill),
 which GMT uses, and [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) from
 FullCalendar, which is smaller and publishes releases more often. We ran GMT's whole test suite on
-`temporal-polyfill` to see whether GMT should switch.
+`temporal-polyfill` to see whether GMT should switch. The check that watches for a fix is on
+[Pulse](/pulse/).
 
 Release 1.0.8 fixes most of the bugs in the table above, and the five bugs we reported in
 `temporal-polyfill` 1.0.6 and 1.0.7. Its UTC offsets match `Intl.DateTimeFormat` in every time
@@ -137,7 +138,8 @@ found no differences.
 Every week, GMT runs its whole test suite on the Temporal built into Node 26, Chromium,
 Firefox, WebKit on Linux and WebKit on macOS, and expects the same answers it gets on the polyfill. A failure that no known bug
 explains opens an issue in GMT's repository. Each run lists the exact engine versions it used:
-see the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml).
+see the [weekly runs](https://github.com/northguild/gmt/actions/workflows/temporal-oracle.yml),
+and [Pulse](/pulse/) for what each check watches and when it retires.
 
 The built-in engines have a few bugs of their own. We report each one we find. The list so far:
 

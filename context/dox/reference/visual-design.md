@@ -190,6 +190,10 @@ Only these things move. Anything not listed stays still.
 No boot sequence, no scanlines, no typewriter reveal for chat replies (Streamdown renders
 progressive markdown itself).
 
+The Pulse next-run dot (`/pulse/`): one slow dot beside each card's next run, opacity and
+`transform` only, in a fixed box. It appears once the mount computes the next run, and it is static
+under reduced motion. Nothing else on the page moves.
+
 Everything is gated behind `prefers-reduced-motion`, `prefers-reduced-transparency` and
   `prefers-contrast` (`gmt-a11y.css`).
 

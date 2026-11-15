@@ -104,6 +104,29 @@ describe("timeline", () => {
     await expectNoAxeViolations(r.host);
   });
 
+  it("names a mark of every pattern the same way, so a pattern is never the only fact", async () => {
+    const r = renderHtml(
+      lane({ label: "Last runs" }, [
+        mark({ label: "Passed", at: 0, span: 0.2, pattern: "solid" }),
+        mark({ label: "Failed", at: 0.25, span: 0.2, pattern: "cross" }),
+        mark({
+          label: "Did not finish",
+          at: 0.5,
+          span: 0.2,
+          pattern: "outline",
+        }),
+        mark({ label: "No run", at: 0.75, span: 0.2, pattern: "dotted" }),
+      ]),
+    );
+    const group = screen.getByRole("group", { name: "Last runs" });
+    expect(
+      within(group)
+        .getAllByRole("img")
+        .map((m) => m.getAttribute("aria-label")),
+    ).toEqual(["Passed", "Failed", "Did not finish", "No run"]);
+    await expectNoAxeViolations(r.host);
+  });
+
   it("has no axe violations", async () => {
     const r = renderHtml(
       html`${lane({ label: "Lane A" }, [

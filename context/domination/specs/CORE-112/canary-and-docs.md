@@ -77,6 +77,17 @@ synthesis twin shapes ([single-repair.md](./single-repair.md) step 1):
 
 Output: counts per group, every failing case, `process.versions`. Exit non-zero on any failure.
 Matrix: the CI Node versions (22 floor, 24, 26).
+`.github/workflows/cldr-sweep-weekly.yml` runs it weekly on those Node versions.
+
+## `scripts/canary/rangeFields.mjs` (weekly, Node)
+
+The D29 sweep ([year-printing.md](./year-printing.md) § D29): GMT's range detector against a
+`formatRangeToParts` oracle over every locale × calendar × the 75 option sets, in child processes
+because a parts call can abort V8. It fails on a detector false negative and on a flag that no
+oracle and no run-together or field-order text defect explains. It writes a JSON report with the
+flagged locales per cause; the workflow compares it with the previous run's report and lists the
+locales that newly break and the ones that are fixed in the job summary. The workflow is
+`.github/workflows/cldr-sweep-weekly.yml`, one leg per Node version (22, 24, 26) and shard.
 
 ## `packages/gmt/src/internal/temporalCompat/README.md`
 

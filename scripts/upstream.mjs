@@ -10,7 +10,10 @@
  *   node scripts/upstream.mjs check    verify the committed file offline; exit 1 on a problem
  *
  * The tracker also covers `fullcalendar/temporal-polyfill`, where GMT reports defects found by
- * the swap check (CORE-92).
+ * the swap check (CORE-92), `tc39/ecma402` and `nodejs/node`, and filings on three trackers that
+ * are not GitHub: the Unicode Jira (ICU and CLDR), the Chromium issue tracker and two Bugzilla
+ * servers (Mozilla, WebKit). Every entry has a `tracker` and that tracker's own identity fields;
+ * `scripts/lib/upstream-trackers.mjs` says how each one is named, fetched and read.
  *
  * GMT reports the `@js-temporal/polyfill` and `tc39/proposal-temporal` defects it works around
  * upstream (`context/domination/js-temporal-polyfill-bugs.md`), and the docs site's `/upstream/`
@@ -25,9 +28,14 @@
  *                 Neither `sync` nor `refresh` ever overwrites these — they always come from the
  *                 committed file; a filing that file doesn't have yet gets them empty, for a
  *                 human to fill in with `pnpm upstream:sync`.
- *   synced        `title`, `state`, `draft`, `reviewDecision`, `comments`, `maintainerComments`,
- *                 `createdAt`, `updatedAt`, `closedAt`, `mergedAt` — read fresh from GitHub, for
- *                 every filing whether or not this run's search re-discovers it.
+ *   synced        `title`, `state`, the comment counts, the dates, and the fields only that
+ *                 tracker has (a GitHub PR's `draft`, `reviewDecision` and `mergedAt`; a Jira or
+ *                 Bugzilla `status` and `resolution`) — read fresh from the tracker, for every
+ *                 filing whether or not this run's search re-discovers it.
+ *
+ * A tracker other than GitHub can fail without failing the run: the Chromium endpoint is not a
+ * public API and Jira or Bugzilla can be down. Such an entry keeps its last known state and the
+ * run prints one warning. Only a GitHub failure is fatal to `sync` and to `refresh`, as before.
  *
  * `sync` vs `refresh` — why there are two commands instead of one:
  *
@@ -57,13 +65,16 @@
  * a new one is added to the committed file by hand with `repo`, `number`, `kind` and `summary`,
  * and `pnpm upstream:sync` fills in the rest.
  *
- * Discovery (`gh search issues --repo <repo> --author <login> --include-prs`, once for each login
- * in `AUTHORS`) is what makes a new filing show up with no code change: one of us files it, and
- * either command's next run finds it. An existing filing the search happens to miss (a query quirk, a temporary API
+ * Discovery is what makes a new filing show up with no code change: one of us files it, and either
+ * command's next run finds it. GitHub is searched with `gh search issues --repo <repo> --author
+ * <login> --include-prs`, once for each login in `AUTHORS`; the Jira, with one search by our
+ * reporter account. The Chromium tracker has no anonymous search and Bugzilla is not searched, so
+ * a filing there is added to the committed file by hand with its identity (`tracker` and `id`, plus
+ * `host` for Bugzilla), and `sync` fills in the rest. An existing filing the search happens to miss (a query quirk, a temporary API
  * hiccup) keeps its stored values rather than being dropped.
  */
 
-import { execFile, execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -77,6 +88,30 @@ import { promisify } from "node:util";
 
 import { formatJson } from "./lib/format-json.mjs";
 import { loadGmt, tryLoadGmt } from "./lib/gmt.mjs";
+import {
+  BUGZILLA_HOSTS,
+  CHROMIUM_HEADERS,
+  COMMON_FIELDS,
+  DATE_FIELDS,
+  IDENTITY_FIELDS,
+  SYNCED_FIELDS,
+  TRACKERS,
+  bugzillaBugUrl,
+  bugzillaCommentsUrl,
+  chromiumIssueUrl,
+  JIRA_HEADERS,
+  identityOf,
+  isJiraKey,
+  jiraDiscoveryUrl,
+  jiraIssueUrl,
+  keyOf,
+  makeDays,
+  parseBugzilla,
+  parseChromium,
+  parseJira,
+  parseJiraDiscovery,
+  urlOf,
+} from "./lib/upstream-trackers.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 // `UPSTREAM_FILE` points `check` at a fixture, so a test can prove it fails on a bad file.
@@ -94,6 +129,8 @@ const REPOS = [
   "js-temporal/temporal-polyfill",
   "tc39/proposal-temporal",
   "fullcalendar/temporal-polyfill",
+  "tc39/ecma402",
+  "nodejs/node",
 ];
 
 /** `refresh`'s total time budget — past this, it gives up rather than run long in a dev loop. */
@@ -103,6 +140,8 @@ const REFRESH_CALL_TIMEOUT_MS = 4_000;
 /** How long a live file counts as fresh: `refresh` makes no network calls inside this window, so
  * restarting `dox:dev` repeatedly costs nothing. CI and `UPSTREAM_REFRESH=force` always refresh. */
 const REFRESH_TTL_MS = 6 * 60 * 60 * 1000;
+/** Cap on one non-GitHub request outside `refresh`, so a hung server cannot hang `sync`. */
+const REQUEST_TIMEOUT_MS = 60_000;
 
 /** Fields the owner sets by hand; `sync` never overwrites them once a filing exists. */
 const HAND_WRITTEN_FIELDS = [
@@ -179,15 +218,11 @@ function viewArgs(repo, number, kind) {
 /** Discovery output as filing identities — no field detail. */
 function parseDiscovered(repo, raw) {
   return JSON.parse(raw).map((row) => ({
+    tracker: "github",
     repo,
     number: row.number,
     kind: row.isPullRequest ? "pr" : "issue",
   }));
-}
-
-/** A filing's canonical GitHub URL. */
-function filingUrl(repo, kind, number) {
-  return `https://github.com/${repo}/${isPr(kind) ? "pull" : "issues"}/${number}`;
 }
 
 /** A date-only (UTC) slice of an ISO timestamp, or `null`. */
@@ -208,14 +243,14 @@ function prOnlyFields(data, kind) {
 
 const isMaintainerComment = (c) => !AUTHORS.includes(c.author?.login);
 
-/** The full synced-field set for one filing, from `gh … view`'s raw JSON output. */
+/** The full synced-field set for one GitHub filing, from `gh … view`'s raw JSON output. */
 function parseSynced(raw, repo, number, kind) {
   const data = JSON.parse(raw);
   const comments = data.comments ?? [];
   const pr = prOnlyFields(data, kind);
   return {
     title: data.title,
-    url: filingUrl(repo, kind, number),
+    url: urlOf({ tracker: "github", repo, number, kind }),
     // `gh pr view` reports MERGED as its own state, which the schema does not have: a merged PR is
     // closed, and `mergedAt` is what tells the two apart (`filingStatus` reads it first). Until
     // #361 merged, no filing of ours had ever exercised this.
@@ -235,19 +270,18 @@ function parseSynced(raw, repo, number, kind) {
 }
 
 /**
- * One filing record. Field order matches the schema documented in the plan: identity, then
- * hand-written judgement, then what GitHub itself reports.
+ * One filing record. Field order: the tracker and its identity, then hand-written judgement, then
+ * what the tracker itself reports (`SYNCED_FIELDS`, which differ by tracker).
  */
-function buildFiling({ repo, number, kind }, hw, synced) {
+function buildFiling(ref, hw, synced) {
   // `role` and `contributionUrl` are written only for a filing we did not open, so the ones we did
   // stay as they are. They have to be listed here as well as in HAND_WRITTEN_FIELDS: this builds
   // the output field by field, so anything it does not name is dropped on the next sync — and a
   // dropped `role` reads as "ours", which is the one mistake this file must not make quietly.
   const ours = hw.role !== "contributor";
   return {
-    repo,
-    number,
-    kind,
+    tracker: ref.tracker,
+    ...identityOf(ref),
     ...(ours ? {} : { role: hw.role }),
     work: hw.work,
     title: synced.title,
@@ -261,20 +295,16 @@ function buildFiling({ repo, number, kind }, hw, synced) {
     gmtNote: hw.gmtNote,
     ...(hw.outcome ? { outcome: hw.outcome } : {}),
     state: synced.state,
-    draft: synced.draft,
-    reviewDecision: synced.reviewDecision,
-    comments: synced.comments,
-    maintainerComments: synced.maintainerComments,
-    createdAt: synced.createdAt,
-    updatedAt: synced.updatedAt,
-    closedAt: synced.closedAt,
-    mergedAt: synced.mergedAt,
+    ...Object.fromEntries(
+      SYNCED_FIELDS[ref.tracker].map((k) => [k, synced[k]]),
+    ),
   };
 }
 
 /** One listing record: its identity, its hand-written `summary`, then what GitHub reports. */
 function buildListing({ repo, number, kind }, summary, synced) {
   return {
+    tracker: "github",
     repo,
     number,
     kind,
@@ -299,50 +329,43 @@ const listingHandWritten = (listing) =>
     LISTING_HAND_WRITTEN_FIELDS.map((k) => [k, listing?.[k] ?? ""]),
   );
 
-const repoRank = (repo) =>
-  REPOS.includes(repo) ? REPOS.indexOf(repo) : REPOS.length;
-const byRepoThenNumber = (a, b) =>
-  repoRank(a.repo) - repoRank(b.repo) ||
-  a.repo.localeCompare(b.repo) ||
-  a.number - b.number;
-
-// ---------------------------------------------------------------- gh helpers
-
-/**
- * Run a `gh` command. `timeout` (ms), when given, bounds the call itself — `execFileSync` kills
- * the process and throws if it runs longer, which is what turns an offline network from a hang
- * into an ordinary catchable error.
- */
-function gh(args, timeout) {
-  return execFileSync("gh", args, {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    ...(timeout ? { timeout } : {}),
-  });
+/** Page order: tracker, then repository (in `REPOS` order) or host, then number. */
+function pageOrder(f) {
+  const rank = TRACKERS.indexOf(f.tracker);
+  switch (f.tracker) {
+    case "github": {
+      const i = REPOS.indexOf(f.repo);
+      return [
+        rank,
+        String(i === -1 ? REPOS.length : i).padStart(3, "0") + f.repo,
+        f.number,
+      ];
+    }
+    case "jira":
+      return [rank, f.key.split("-")[0], Number(f.key.split("-")[1])];
+    case "chromium":
+      return [rank, "", f.id];
+    default:
+      return [rank, f.host ?? "", f.id ?? 0];
+  }
 }
+const byPageOrder = (a, b) => {
+  const [ra, sa, na] = pageOrder(a);
+  const [rb, sb, nb] = pageOrder(b);
+  return ra - rb || sa.localeCompare(sb) || na - nb;
+};
 
-/** Every open-or-closed issue/PR in `repo` by any of `AUTHORS` — discovery only, no field detail. */
-function discover(repo, timeout) {
-  return AUTHORS.flatMap((author) =>
-    parseDiscovered(repo, gh(discoverArgs(repo, author), timeout)),
-  );
-}
-
-/** The full synced-field set for one filing, read live from GitHub. */
-function fetchSynced(repo, number, kind, timeout) {
-  return parseSynced(
-    gh(viewArgs(repo, number, kind), timeout),
-    repo,
-    number,
-    kind,
-  );
-}
+// ---------------------------------------------------------------- tracker requests
 
 const execFileAsync = promisify(execFile);
 
-/** `gh`, run concurrently and awaited — `refresh` fires every call for a batch at once, since
+/**
+ * `gh`, run concurrently and awaited — `refresh` fires every call for a batch at once, since
  * `gh`'s own per-call latency (not CPU) dominates, and doing 13 round trips one at a time is what
- * pushed a warm-network run close to `REFRESH_BUDGET_MS` in testing. */
+ * pushed a warm-network run close to `REFRESH_BUDGET_MS` in testing. `timeout` (ms), when given,
+ * bounds the call itself: the process is killed and the call throws, which is what turns an
+ * offline network from a hang into an ordinary catchable error.
+ */
 async function ghAsync(args, timeout) {
   const { stdout } = await execFileAsync("gh", args, {
     encoding: "utf8",
@@ -351,7 +374,17 @@ async function ghAsync(args, timeout) {
   return stdout;
 }
 
-async function discoverAsync(repo, timeout) {
+/** A plain HTTP GET of `url`, as text; any status but 2xx throws. */
+async function httpGet(url, timeout, headers = {}) {
+  const response = await fetch(url, {
+    headers,
+    signal: AbortSignal.timeout(timeout ?? REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+  return response.text();
+}
+
+async function discoverGitHub(repo, timeout) {
   const found = await Promise.all(
     AUTHORS.map(async (author) =>
       parseDiscovered(repo, await ghAsync(discoverArgs(repo, author), timeout)),
@@ -360,13 +393,82 @@ async function discoverAsync(repo, timeout) {
   return found.flat();
 }
 
-async function fetchSyncedAsync(repo, number, kind, timeout) {
-  return parseSynced(
-    await ghAsync(viewArgs(repo, number, kind), timeout),
-    repo,
-    number,
-    kind,
-  );
+/** Every Jira issue we reported. A search that cannot run is one warning, not a failed run. */
+async function discoverJira(timeout, warn) {
+  try {
+    const { keys, complete } = parseJiraDiscovery(
+      await httpGet(jiraDiscoveryUrl(), timeout, JIRA_HEADERS),
+    );
+    if (!complete)
+      warn("Jira search returned a partial list (over 100 issues)");
+    return keys.map((key) => ({ tracker: "jira", key }));
+  } catch (error) {
+    warn(`Jira discovery skipped (${error.message.split("\n")[0]})`);
+    return [];
+  }
+}
+
+/** Every filing discovery can find: all GitHub repositories (a failure there is fatal) and the Jira. */
+async function discoverAll(timeout, warn) {
+  const [github, jira] = await Promise.all([
+    Promise.all(REPOS.map((repo) => discoverGitHub(repo, timeout()))),
+    discoverJira(timeout(), warn),
+  ]);
+  return [...github.flat(), ...jira];
+}
+
+/** The synced fields of one entry, read live from its own tracker. */
+async function fetchSyncedAsync(ref, days, timeout) {
+  switch (ref.tracker) {
+    case "github":
+      return parseSynced(
+        await ghAsync(viewArgs(ref.repo, ref.number, ref.kind), timeout),
+        ref.repo,
+        ref.number,
+        ref.kind,
+      );
+    case "jira":
+      return parseJira(
+        await httpGet(jiraIssueUrl(ref.key), timeout, JIRA_HEADERS),
+        ref.key,
+        days,
+      );
+    case "chromium":
+      return parseChromium(
+        await httpGet(chromiumIssueUrl(ref.id), timeout, CHROMIUM_HEADERS),
+        ref.id,
+        days,
+      );
+    case "bugzilla": {
+      const [bug, comments] = await Promise.all([
+        httpGet(bugzillaBugUrl(ref.host, ref.id), timeout),
+        httpGet(bugzillaCommentsUrl(ref.host, ref.id), timeout),
+      ]);
+      return parseBugzilla(bug, comments, ref.host, ref.id, days);
+    }
+    default:
+      throw new Error(`unknown tracker "${ref.tracker}"`);
+  }
+}
+
+/**
+ * One filing: the committed hand-written fields over freshly synced ones.
+ *
+ * A GitHub failure throws, as it always has. Any other tracker's failure keeps the committed entry
+ * as it was and warns once, so a changed Chromium response or a Jira outage never fails the run;
+ * an entry that failed and has no committed copy is left out, with the same warning.
+ */
+async function readEntry(ref, committed, { days, timeout, warn }) {
+  try {
+    const synced = await fetchSyncedAsync(ref, days, timeout());
+    return buildFiling(ref, handWrittenFieldsOf(committed), synced);
+  } catch (error) {
+    if (ref.tracker === "github") throw error;
+    warn(
+      `${keyOf(ref)} kept at its last known state (${error.message.split("\n")[0]})`,
+    );
+    return committed ?? null;
+  }
 }
 
 // ---------------------------------------------------------------- guard groups
@@ -395,8 +497,6 @@ function readJsonFile(relPath) {
 
 const readFile = () => readJsonFile(FILE);
 
-const keyOf = (f) => `${f.repo}#${f.number}`;
-
 /** The hand-written fields of `filing`, or the empty defaults when it has none. */
 function handWrittenFieldsOf(filing) {
   return Object.fromEntries(
@@ -404,46 +504,62 @@ function handWrittenFieldsOf(filing) {
   );
 }
 
+/** Prints one warning line and collects it for the caller. */
+function makeWarn() {
+  const warnings = [];
+  const warn = (message) => {
+    warnings.push(message);
+    console.warn(`upstream: warning: ${message}`);
+  };
+  return { warn, warnings };
+}
+
 // ---------------------------------------------------------------- commands
 
 async function sync() {
   const gmt = await loadGmt();
+  const days = makeDays(gmt);
+  const { warn } = makeWarn();
   const existing = readFile();
   const byKey = new Map(existing.filings.map((f) => [keyOf(f), f]));
+  const context = { days, timeout: () => undefined, warn };
 
-  // `(repo) => discover(repo)`, never `flatMap(discover)`: `flatMap` passes the element's index
-  // as the second argument, which `discover` takes as its `timeout`, so the second repository got
-  // a 1 ms cap and `sync` always died there.
-  const discovered = REPOS.flatMap((repo) => discover(repo));
+  const discovered = await discoverAll(() => undefined, warn);
   const newlyFound = [];
-  for (const { repo, number, kind } of discovered) {
-    const key = `${repo}#${number}`;
+  for (const ref of discovered) {
+    const key = keyOf(ref);
     if (!byKey.has(key)) {
-      byKey.set(key, { repo, number, kind, ...EMPTY_HAND_WRITTEN });
+      byKey.set(key, { ...ref, ...EMPTY_HAND_WRITTEN });
       newlyFound.push(key);
     }
   }
 
-  const filings = [...byKey.values()]
-    .map((filing) =>
-      buildFiling(
-        filing,
-        handWrittenFieldsOf(filing),
-        fetchSynced(filing.repo, filing.number, filing.kind),
+  const filings = (
+    await Promise.all(
+      [...byKey.values()].map((filing) =>
+        readEntry(
+          filing,
+          existing.filings.find((f) => keyOf(f) === keyOf(filing)),
+          context,
+        ),
       ),
     )
-    .sort(byRepoThenNumber);
+  )
+    .filter((f) => f !== null)
+    .sort(byPageOrder);
 
   // Listings are never discovered: the committed file decides which exist.
-  const listings = (existing.listings ?? [])
-    .map((l) =>
-      buildListing(
-        l,
-        listingHandWritten(l).summary,
-        fetchSynced(l.repo, l.number, l.kind),
+  const listings = (
+    await Promise.all(
+      (existing.listings ?? []).map(async (l) =>
+        buildListing(
+          l,
+          listingHandWritten(l).summary,
+          await fetchSyncedAsync(l, days),
+        ),
       ),
     )
-    .sort(byRepoThenNumber);
+  ).sort(byPageOrder);
 
   const output = { checked: gmt.getUtcNow(), filings, listings };
   writeFileSync(resolve(ROOT, FILE), formatJson(output));
@@ -454,43 +570,17 @@ async function sync() {
   if (newlyFound.length > 0) {
     console.log(
       `upstream: NEW — fill in the hand-written fields for:\n` +
-        newlyFound.map((k) => `  ${k}`).join("\n"),
+        newlyFound
+          .filter((k) => filings.some((f) => keyOf(f) === k))
+          .map((k) => `  ${k}`)
+          .join("\n"),
     );
   }
 }
 
 /**
- * One filing for `refresh`: the committed hand-written fields over freshly synced ones. Marks a
- * filing `gh` found that the committed file doesn't have yet — real for a reader today, but not
- * something to hand-edit until the owner runs `pnpm upstream:sync` and gives it real hand-written
- * fields.
- */
-async function refreshFiling(key, committedByKey, kindOf, timeout) {
-  const [repo, numStr] = key.split("#");
-  const number = Number(numStr);
-  const committedFiling = committedByKey.get(key);
-  const kind = kindOf.get(key) ?? committedFiling?.kind;
-  const synced = await fetchSyncedAsync(repo, number, kind, timeout);
-  const filing = buildFiling(
-    { repo, number, kind },
-    handWrittenFieldsOf(committedFiling),
-    synced,
-  );
-  if (!committedFiling) filing.new = true;
-  return filing;
-}
-
-/**
- * Best-effort refresh for `apps/dox`'s `generate` script — see the header comment for why this
- * is a separate command from `sync`. Everything here is wrapped in one try/catch: the first `gh`
- * problem of any kind (missing binary, no auth, rate limit, a slow/offline network past
- * `REFRESH_BUDGET_MS`) aborts the whole run with one warning line and writes nothing, leaving
- * whatever live file (or none) already existed. That is deliberately coarser than `sync`'s
- * per-field care — a partial write here would need the same validation `check` already gives the
- * committed file, for a cache nothing depends on being complete.
- */
-/**
- * The live file is fresh enough to reuse: under the TTL, and no CI run or forced refresh.
+ * The live file is fresh enough to reuse: under the TTL, no CI run or forced refresh, and written
+ * in the current shape (a file from before entries named their tracker is rewritten, not reused).
  *
  * `mtimeMs` is filesystem metadata in epoch milliseconds, and this asks how long ago that was —
  * elapsed time, not a date anyone reads. GMT is string-in, string-out for date values and is the
@@ -498,8 +588,15 @@ async function refreshFiling(key, committedByKey, kindOf, timeout) {
  */
 function liveFileIsFresh(livePath) {
   if (process.env.CI || process.env.UPSTREAM_REFRESH === "force") return false;
+  if (!existsSync(livePath)) return false;
+  try {
+    const live = JSON.parse(readFileSync(livePath, "utf8"));
+    if (!(live.filings ?? []).every((f) => TRACKERS.includes(f.tracker)))
+      return false;
+  } catch {
+    return false;
+  }
   return (
-    existsSync(livePath) &&
     // oxlint-disable-next-line @northguild/gmt-oxlint/no-date-now -- see above: elapsed time, not a date
     Date.now() - statSync(livePath).mtimeMs < REFRESH_TTL_MS // date-ban: elapsed time against a file's epoch-ms mtime, not a date value
   );
@@ -541,41 +638,47 @@ function startRefreshBudget() {
 }
 
 /** Every filing the committed file knows plus everything discovery just found, newest state. */
-async function fetchAllFilings(committedByKey, { timeLeft, withBudget }) {
+async function fetchAllFilings(
+  committedByKey,
+  { timeLeft, withBudget },
+  days,
+  warn,
+) {
   // One round trip per repo and author, concurrently — `gh`'s own network latency is what a sequential
   // loop was paying for 13 times over, not CPU work this process does itself.
-  const discovered = (
-    await withBudget(
-      Promise.all(REPOS.map((repo) => discoverAsync(repo, timeLeft()))),
-    )
-  ).flat();
-
-  const kindOf = new Map(discovered.map((d) => [keyOf(d), d.kind]));
-  const keys = [...new Set([...committedByKey.keys(), ...kindOf.keys()])];
-
+  const discovered = await withBudget(discoverAll(timeLeft, warn));
+  const refs = new Map([
+    ...[...committedByKey.values()].map((f) => [keyOf(f), f]),
+    ...discovered.map((d) => [keyOf(d), d]),
+  ]);
+  const context = { days, timeout: timeLeft, warn };
   const filings = await withBudget(
     Promise.all(
-      keys.map((key) => refreshFiling(key, committedByKey, kindOf, timeLeft())),
+      [...refs.entries()].map(async ([key, ref]) => {
+        const committed = committedByKey.get(key);
+        const filing = await readEntry(ref, committed, context);
+        if (filing !== null && !committed) filing.new = true;
+        return filing;
+      }),
     ),
   );
-  return filings.sort(byRepoThenNumber);
+  return filings.filter((f) => f !== null).sort(byPageOrder);
 }
 
 /**
  * Every committed listing, freshly synced. One that cannot be read in time keeps its committed
  * fields, so a slow listing never costs the run its filings.
  */
-async function fetchAllListings(committedListings, { timeLeft, withBudget }) {
+async function fetchAllListings(
+  committedListings,
+  { timeLeft, withBudget },
+  days,
+) {
   const listings = await withBudget(
     Promise.all(
       committedListings.map(async (l) => {
         try {
-          const synced = await fetchSyncedAsync(
-            l.repo,
-            l.number,
-            l.kind,
-            timeLeft(),
-          );
+          const synced = await fetchSyncedAsync(l, days, timeLeft());
           return buildListing(l, listingHandWritten(l).summary, synced);
         } catch {
           return l;
@@ -583,9 +686,19 @@ async function fetchAllListings(committedListings, { timeLeft, withBudget }) {
       }),
     ),
   );
-  return listings.sort(byRepoThenNumber);
+  return listings.sort(byPageOrder);
 }
 
+/**
+ * Best-effort refresh for `apps/dox`'s `generate` script — see the header comment for why this
+ * is a separate command from `sync`. Everything here is wrapped in one try/catch: the first `gh`
+ * problem of any kind (missing binary, no auth, rate limit, a slow/offline network past
+ * `REFRESH_BUDGET_MS`) aborts the whole run with one warning line and writes nothing, leaving
+ * whatever live file (or none) already existed. That is deliberately coarser than `sync`'s
+ * per-field care — a partial write here would need the same validation `check` already gives the
+ * committed file, for a cache nothing depends on being complete. A tracker other than GitHub is
+ * the exception: it fails alone, per entry, and the entry keeps its committed state.
+ */
 async function refresh() {
   // `refresh` must never break dev or CI, so an unbuilt GMT is one warning and no write — the same
   // contract it already honours for a missing or unauthenticated `gh`.
@@ -604,12 +717,18 @@ async function refresh() {
     return;
   }
   const budget = startRefreshBudget();
+  const days = makeDays(gmt);
+  const { warn } = makeWarn();
   const committed = readFile();
   const committedByKey = new Map(committed.filings.map((f) => [keyOf(f), f]));
 
   try {
-    const filings = await fetchAllFilings(committedByKey, budget);
-    const listings = await fetchAllListings(committed.listings ?? [], budget);
+    const filings = await fetchAllFilings(committedByKey, budget, days, warn);
+    const listings = await fetchAllListings(
+      committed.listings ?? [],
+      budget,
+      days,
+    );
     mkdirSync(dirname(livePath), { recursive: true });
     writeFileSync(
       livePath,
@@ -628,33 +747,18 @@ async function refresh() {
 // ---------------------------------------------------------------- check
 
 const STALE_AFTER_DAYS = 30;
-const REQUIRED_FIELDS = [
-  "repo",
-  "number",
-  "kind",
-  "work",
-  "title",
-  "url",
-  "summary",
-  "pairsWith",
-  "closes",
-  "dependsOn",
-  "gmtGuard",
-  "gmtNote",
-  "state",
-  "draft",
-  "reviewDecision",
-  "comments",
-  "maintainerComments",
-  "createdAt",
-  "updatedAt",
-  "closedAt",
-  "mergedAt",
-];
-const DATE_FIELDS = ["createdAt", "updatedAt", "closedAt", "mergedAt"];
 const WORK_VALUES = ["port", "fix", "report", "release"];
 const STATE_VALUES = ["open", "closed"];
 const REVIEW_DECISIONS = ["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED"];
+/** Hand-written members a filing may carry beyond its tracker's own fields. `new` is live-only. */
+const OPTIONAL_FIELDS = ["role", "contributionUrl", "outcome"];
+
+/** What a filing of `tracker` must have, and everything it may have. */
+const requiredFields = (tracker) => [
+  ...COMMON_FIELDS,
+  ...(IDENTITY_FIELDS[tracker] ?? []),
+  ...(SYNCED_FIELDS[tracker] ?? []),
+];
 
 const isNullOrOneOf = (value, allowed) =>
   value === null || allowed.includes(value);
@@ -703,12 +807,28 @@ function checkStamp(checked, report, gmt) {
   reportStampAge(checked, ageDays, report);
 }
 
-const labelOf = (f) => `${FILE}: ${f.repo ?? "?"}#${f.number ?? "?"}`;
+const labelOf = (f) =>
+  `${FILE}: ${TRACKERS.includes(f.tracker) ? keyOf(f) : `${f.repo ?? f.key ?? f.id ?? "?"}#${f.number ?? "?"}`}`;
 
-function checkRequiredFields(f, label, report) {
-  for (const field of REQUIRED_FIELDS) {
+/** Every field the tracker needs is there, and none that belongs to another tracker. */
+function checkFields(f, label, report) {
+  if (!TRACKERS.includes(f.tracker)) {
+    report.problems.push(
+      `${label} — tracker "${f.tracker}" is not ${TRACKERS.join("/")}`,
+    );
+    return;
+  }
+  const required = requiredFields(f.tracker);
+  for (const field of required) {
     if (!Object.hasOwn(f, field))
       report.problems.push(`${label} — missing field "${field}"`);
+  }
+  for (const field of Object.keys(f)) {
+    if (!required.includes(field) && !OPTIONAL_FIELDS.includes(field)) {
+      report.problems.push(
+        `${label} — "${field}" does not belong to a ${f.tracker} filing`,
+      );
+    }
   }
 }
 
@@ -718,16 +838,87 @@ function checkDuplicate(f, label, seen, report) {
   seen.add(key);
 }
 
-function checkKindAndUrl(f, label, report) {
-  if (!["pr", "issue"].includes(f.kind)) {
-    report.problems.push(`${label} — kind "${f.kind}" is not "pr" or "issue"`);
-    return;
+const isCount = (n) => Number.isInteger(n) && n >= 0;
+const isId = (n) => Number.isInteger(n) && n > 0;
+
+/** The tracker's own identity is well formed, and `url` is the one it implies. */
+function checkIdentityAndUrl(f, label, report) {
+  if (!TRACKERS.includes(f.tracker)) return;
+  switch (f.tracker) {
+    case "github":
+      if (!["pr", "issue"].includes(f.kind)) {
+        report.problems.push(
+          `${label} — kind "${f.kind}" is not "pr" or "issue"`,
+        );
+        return;
+      }
+      if (!isId(f.number))
+        report.problems.push(`${label} — number is not a positive integer`);
+      break;
+    case "jira":
+      if (!isJiraKey(f.key))
+        report.problems.push(
+          `${label} — key "${f.key}" is not an ICU or CLDR issue key`,
+        );
+      break;
+    case "chromium":
+      if (!isId(f.id))
+        report.problems.push(`${label} — id is not a positive integer`);
+      break;
+    case "bugzilla":
+      if (!BUGZILLA_HOSTS.includes(f.host))
+        report.problems.push(
+          `${label} — host "${f.host}" is not ${BUGZILLA_HOSTS.join("/")}`,
+        );
+      if (!isId(f.id))
+        report.problems.push(`${label} — id is not a positive integer`);
+      break;
   }
-  const expectedUrl = filingUrl(f.repo, f.kind, f.number);
+  const expectedUrl = urlOf(f);
   if (f.url !== expectedUrl) {
     report.problems.push(
-      `${label} — url "${f.url}" does not match repo/kind/number (expected ${expectedUrl})`,
+      `${label} — url "${f.url}" does not match its identity (expected ${expectedUrl})`,
     );
+  }
+}
+
+/** The comment counts: whole numbers, except Chromium's, which the tracker does not give. */
+function checkCounts(f, label, report) {
+  if (f.tracker === "chromium") {
+    if (f.comments !== null || f.maintainerComments !== null) {
+      report.problems.push(
+        `${label} — comment counts are null on a Chromium filing`,
+      );
+    }
+    return;
+  }
+  if (!isCount(f.comments) || !isCount(f.maintainerComments)) {
+    report.problems.push(
+      `${label} — comments and maintainerComments are whole numbers`,
+    );
+  } else if (f.maintainerComments > f.comments) {
+    report.problems.push(`${label} — maintainerComments is more than comments`);
+  }
+}
+
+/** Jira's and Bugzilla's own words for where a filing stands. */
+function checkStatus(f, label, report) {
+  if (f.tracker !== "jira" && f.tracker !== "bugzilla") return;
+  if (typeof f.status !== "string" || f.status === "") {
+    report.problems.push(`${label} — status is empty`);
+  }
+  if (f.resolution !== null && typeof f.resolution !== "string") {
+    report.problems.push(`${label} — resolution is not a string or null`);
+  }
+  if (f.state === "open" && f.resolution !== null) {
+    report.problems.push(`${label} — open, but resolved as "${f.resolution}"`);
+  }
+  if (
+    f.tracker === "jira" &&
+    (!Array.isArray(f.fixVersions) ||
+      !f.fixVersions.every((v) => typeof v === "string"))
+  ) {
+    report.problems.push(`${label} — fixVersions is not a list of names`);
   }
 }
 
@@ -740,7 +931,10 @@ function checkEnums(f, label, report) {
   if (!STATE_VALUES.includes(f.state)) {
     report.problems.push(`${label} — state "${f.state}" is not open/closed`);
   }
-  if (!isNullOrOneOf(f.reviewDecision, REVIEW_DECISIONS)) {
+  if (
+    f.tracker === "github" &&
+    !isNullOrOneOf(f.reviewDecision, REVIEW_DECISIONS)
+  ) {
     report.problems.push(
       `${label} — reviewDecision "${f.reviewDecision}" is not a known GitHub value or null`,
     );
@@ -776,7 +970,8 @@ function checkGuard(f, label, guards, report) {
  * The page shows GitHub's own state, and "Closed" on its own reads as "rejected" — which is the
  * opposite of what every closure of ours has said so far.
  */
-/** Closed with nothing merged — the state that reads as a rejection unless a row explains it. */
+/** Closed with nothing merged — the state that reads as a rejection unless a row explains it.
+ * Only GitHub needs the explanation: Jira and Bugzilla name the resolution themselves. */
 const closedUnmerged = (f) => f.state === "closed" && !f.mergedAt;
 
 /**
@@ -789,7 +984,7 @@ const closedUnmerged = (f) => f.state === "closed" && !f.mergedAt;
  */
 const OUTCOME_RULES = [
   {
-    applies: (f) => closedUnmerged(f) && !f.outcome,
+    applies: (f) => f.tracker === "github" && closedUnmerged(f) && !f.outcome,
     message: (_f, label) =>
       `${label} — closed without merging, so it needs an outcome saying why (a bare "Closed" reads as a rejection)`,
   },
@@ -840,7 +1035,7 @@ function checkDates(f, label, report, gmt) {
     // These are plain calendar days (`dateOnly` trims the time off on the way in), so the check is
     // GMT's date validator rather than `Date.parse`, which also accepts things like "2026" and
     // whatever the host decides "03/04/2026" means.
-    if (value !== null && !gmt.isValidDate(value)) {
+    if (value !== undefined && value !== null && !gmt.isValidDate(value)) {
       report.problems.push(
         `${label} — ${field} "${value}" is not a valid date`,
       );
@@ -850,10 +1045,12 @@ function checkDates(f, label, report, gmt) {
 
 function checkFiling(f, { guards, seen, report, gmt }) {
   const label = labelOf(f);
-  checkRequiredFields(f, label, report);
+  checkFields(f, label, report);
   checkDuplicate(f, label, seen, report);
-  checkKindAndUrl(f, label, report);
+  checkIdentityAndUrl(f, label, report);
   checkEnums(f, label, report);
+  checkStatus(f, label, report);
+  checkCounts(f, label, report);
   checkGuard(f, label, guards, report);
   checkRole(f, label, report);
   checkOutcome(f, label, report);
@@ -861,18 +1058,25 @@ function checkFiling(f, { guards, seen, report, gmt }) {
   if (f.summary === "") report.warnings.push(`${label} — empty summary`);
 }
 
-/** A listing needs these and nothing that belongs to a filing. */
-const LISTING_REQUIRED_FIELDS = REQUIRED_FIELDS.filter(
-  (field) =>
-    ![
-      "work",
-      "pairsWith",
-      "closes",
-      "dependsOn",
-      "gmtGuard",
-      "gmtNote",
-    ].includes(field),
-);
+/** A listing is a GitHub issue or PR and carries nothing that belongs to a filing. */
+const LISTING_REQUIRED_FIELDS = [
+  "tracker",
+  "repo",
+  "number",
+  "kind",
+  "summary",
+  "title",
+  "url",
+  "state",
+  "draft",
+  "reviewDecision",
+  "comments",
+  "maintainerComments",
+  "createdAt",
+  "updatedAt",
+  "closedAt",
+  "mergedAt",
+];
 
 function checkListing(l, { seen, report, gmt }) {
   const label = `${FILE}: listing ${l.repo ?? "?"}#${l.number ?? "?"}`;
@@ -886,13 +1090,18 @@ function checkListing(l, { seen, report, gmt }) {
         `${label} — "${field}" belongs to a filing, not a listing`,
       );
   }
+  if (l.tracker !== "github") {
+    report.problems.push(
+      `${label} — a listing is a GitHub issue or pull request`,
+    );
+  }
   if (REPOS.includes(l.repo)) {
     report.problems.push(
-      `${label} — ${l.repo} is a Temporal repository, so this belongs in "filings"`,
+      `${label} — ${l.repo} is a tracked repository, so this belongs in "filings"`,
     );
   }
   checkDuplicate(l, label, seen, report);
-  checkKindAndUrl(l, label, report);
+  checkIdentityAndUrl(l, label, report);
   if (!STATE_VALUES.includes(l.state)) {
     report.problems.push(`${label} — state "${l.state}" is not open/closed`);
   }

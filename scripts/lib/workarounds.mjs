@@ -307,7 +307,7 @@ export const WORKAROUNDS = [
     trigger:
       "every engine's compat verdict passes every D24 repro, and the weekly sweep of scripts/canary/weekYear.mjs flags no locale, calendar or option set",
     steps: [
-      "Delete weekYearGuard.ts, weekYearSynth.ts, weekYearText.ts, weekYearRange.ts and its tests, the formatRangeChecked calls in formatDateRange.ts, formatDateTimeRange.ts and formatZonedRange.ts, the construct hook and forgetWeekYearVerdicts call in formatterCache.ts, weekYearSource.test.ts and the D24 repros in repros.ts.",
+      "Delete weekYearGuard.ts, weekYearSynth.ts, weekYearText.ts, weekYearRange.ts and its tests, every formatRangeChecked call (in formatRangeRepaired in rangeFields.ts, in formatZonedRange.ts and in yearPrintingRange.ts; each becomes the formatter's own formatRange), and the formatRangeChecked re-export and forgetWeekYearRange hook in rangeRepairs.ts (rangeRepairs.ts and rangeHooks.ts stay while D25, D27 or D29 is live), the construct hook and forgetWeekYearVerdicts call in formatterCache.ts, weekYearSource.test.ts and the D24 repros in repros.ts.",
       "Keep every expected-value row (weekYearSingle.test.ts and the abort rows): the values are ECMA-402's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 24.`,
     ],
@@ -319,7 +319,7 @@ export const WORKAROUNDS = [
     trigger:
       "every engine's compat verdict passes both D25 repros: en-u-ca-japanese prints 2 BC for ISO -0001-07-10 and 1872 AD for 1872-12-31 (tc39/proposal-intl-era-monthcode#86, tc39/test262#4877)",
     steps: [
-      "Delete the era branch of repairYearPrinting in yearPrinting.ts (beforeEras, the Gregorian twin, the era flag), isJapaneseEraCompatNeeded in capabilities.ts and the D25 repros in repros.ts.",
+      "Delete the era branch of repairYearPrinting in yearPrinting.ts (beforeEras, the Gregorian twin, the era flag), the era branches of yearPrintingRange.ts (eraTwinRange, spliceEra, joinedSingles, laterPair; the file itself when D27 is also gone), isJapaneseEraCompatNeeded in capabilities.ts and the D25 repros in repros.ts.",
       "Keep every D25 row in yearPrinting.test.ts: the values are the proposal's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 25.`,
     ],
@@ -339,12 +339,12 @@ export const WORKAROUNDS = [
   {
     defects: ["D27"],
     title:
-      "D27 — ja japanese year 2-digit leaves the era year unpadded (internal/yearPrinting.ts)",
+      "D27 — ja japanese leaves the era year unpadded under year 2-digit and in Latin digits under another numbering system (internal/yearPrinting.ts, internal/japaneseNumerals.ts)",
     trigger:
-      "every engine's compat verdict passes the D27 repro: ja-u-ca-japanese with year 2-digit prints 令和06年 for 2024-07-10",
+      "every engine's compat verdict passes both D27 repros: ja-u-ca-japanese with year 2-digit prints 令和06年 for 2024-07-10, and ja-u-ca-japanese-nu-arab with year numeric prints 令和٦年",
     steps: [
-      "Delete the padding branch of repairYearPrinting in yearPrinting.ts (padPart, paddedRange, shiftOf, the pad flag), isJapaneseTwoDigitYearCompatNeeded in capabilities.ts and the D27 repro in repros.ts.",
-      "Keep every D27 row: 令和06年 and 元 are the values either way.",
+      "Delete the padding branch of repairYearPrinting in yearPrinting.ts (padPart, shiftOf, the pad flag), paddedRange in yearPrintingRange.ts, isJapaneseTwoDigitYearCompatNeeded in capabilities.ts, japaneseNumerals.ts and its call in guardedDateTimeFormat (formatterCache.ts), isJapaneseNumberingSystemCompatNeeded in capabilities.ts and the D27 repros in repros.ts.",
+      "Keep every D27 row: 令和06年, 令和٦年 and 元 are the values either way.",
       `Full wording: ${COMPAT_README} § Removal steps 27.`,
     ],
   },
@@ -358,6 +358,30 @@ export const WORKAROUNDS = [
       "Delete widenRelatedYear in yearPrinting.ts and its call in guardedDateTimeFormat (formatterCache.ts), isRelatedYearWidthCompatNeeded in capabilities.ts and the D28 repro in repros.ts; with D25 to D27 gone too, delete yearPrinting.ts and its hook in construct.",
       "Keep every D28 row: the related year at full width is ECMA-402's value.",
       `Full wording: ${COMPAT_README} § Removal steps 28.`,
+    ],
+  },
+  {
+    defects: ["D29"],
+    title:
+      "D29 — a range drops, repeats or garbles a field of one date (internal/rangeFields.ts)",
+    trigger:
+      "every engine's compat verdict passes every D29 repro (rangeFieldRepros.ts, one range per upstream defect, so the gate stays on while any one fails), and the weekly sweep of scripts/canary/rangeFields.mjs flags no locale, calendar or option set",
+    steps: [
+      "Delete rangeFields.ts, rangeFieldValues.ts, rangeDetector.ts and their tests, isRangeFieldCompatNeeded in capabilities.ts, rangeFieldRepros.ts and the D29 repros in repros.ts, and scripts/canary/rangeFields.mjs with its entry in .fallowrc.jsonc. In formatDateRange.ts and formatDateTimeRange.ts replace formatRangeRepaired with ensureRangeHooks() and formatRangeChecked, both from internal/rangeRepairs, and in zonedRangeText (formatZonedRange.ts) delete the rangeFieldsText call and the branch that uses its text (its ensureRangeHooks call stays). When D24, D25 and D27 are also gone, delete rangeRepairs.ts and rangeHooks.ts with those calls. rangeFallback.ts stays while D25 uses it, patternKey.ts while D24 does.",
+      "Keep every row of formatZonedRangeFields.test.ts: the ranges are ECMA-402's. A row whose range hit a broken pattern may now print CLDR's rewritten range text instead of the fallback; check it against the fixed engine's own formatRange and update that row.",
+      `Full wording: ${COMPAT_README} § Removal steps 29.`,
+    ],
+  },
+  {
+    defects: ["D30"],
+    title:
+      "D30 — islamic and islamic-rgsa resolve as written (internal/formatterCache.ts)",
+    trigger:
+      "every engine's compat verdict passes both D30 repros: en-u-ca-islamic resolves islamic-tbla and en-u-ca-islamic-rgsa resolves a calendar other than islamic-rgsa (tc39/proposal-intl-era-monthcode#99)",
+    steps: [
+      "Delete islamicResolved and islamicTag and their call in construct (formatterCache.ts), isIslamicCalendarResolutionCompatNeeded in capabilities.ts and the D30 repros in repros.ts.",
+      "Keep every row of islamicCalendarResolution.test.ts: the calendars are the proposal's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 30.`,
     ],
   },
   {

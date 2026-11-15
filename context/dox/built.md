@@ -896,8 +896,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   The figure tiles under the intro are `WhyGmtFigures.astro`, from the list in
   `src/lib/why-gmt-figures.ts` that `mdx-jsx.ts` also renders for the text surfaces.
 - **The sidebar puts first use first, and `src/lib/section-order.ts` is the one place that sets
-  it.** A leaf module with no imports exports `START_HERE` (install, core-rules, why-gmt) and
-  `MIGRATE` (the overview, `compare`, `bundle-size`, `upstream`, one page per library, then
+  it.** A leaf module with no imports exports `START_HERE` (install, core-rules, why-gmt, upstream) and
+  `MIGRATE` (the overview, `compare`, `bundle-size`, `native-engines`, one page per library, then
   `compare/behaviour`, each with its short sidebar label). `astro.config.mjs`, and so Starlight's
   prev/next links, `llms.txt`, `llms-full.txt` and `topLevelPages` all import it; a test fails if
   the config writes the entries out again. The groups run Start here, Guides, API Reference,
@@ -984,6 +984,18 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   site knows (`tc39/proposal-temporal`, `js-temporal/temporal-polyfill`), never inside a URL or
   after a word character, so `and/or#1` and `…/issues/3292#3` stay text. The component has no
   `<style>` block; its rules are in `gmt-content-tables.css`.
+- **`/pulse/` lists every scheduled check.** `scripts/lib/pulse.mjs` holds the one hand-written list
+  (what each check watches, what a finding does, and what retires it: permanent, a set of
+  workarounds, or a condition). `apps/dox/scripts/build-pulse.mjs` reads each workflow and writes
+  `generated/pulse.json`, and fails on drift (`pnpm pulse:check`, in CI Story consistency): a
+  scheduled workflow with no entry, a missing `Pulse check:` line, an unclaimed workaround, or a
+  stale `context/canary/overview.md` table (`pnpm pulse:sync` writes it). Run history is read at
+  build only, best effort, from `gh api` with a 6 h cache (`generated/pulse-runs.live.json`); the
+  browser never calls GitHub. `src/lib/pulse-view.ts` turns a cron and the runs into words and a
+  pattern per run (Passed, Failed, Did not finish, No run); a missing or old history is the amber
+  NO SIGNAL state. The page is Astro shells over `widgets/families/pulse/pulse-template.ts`;
+  `src/lib/pulse-mount.ts` fills only the reserved next-run and read-ago slots after first paint,
+  on `visibilitychange` with no timer. It is a page, so it has no chat pill.
 - **An /upstream/ filing card reads like a row on GitHub.** `src/lib/upstream-badges.ts` works
   every badge out of the filing's own fields (`kind`, `state`, `draft`, `mergedAt`,
   `reviewDecision`, `gmtGuard`, `gmtNote`), with no hand-kept status. The head is a state icon, the

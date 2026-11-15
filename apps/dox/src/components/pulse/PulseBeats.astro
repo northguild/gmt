@@ -1,0 +1,11 @@
+---
+/** The strip of a workflow'\''s last eight runs, or NO SIGNAL. The markup is built in `widgets/families/pulse/pulse-template.ts`. */
+import { cards } from "../../data/pulse";
+import { renderBeats } from "../../widgets/families/pulse/pulse-template";
+interface Props { file: string }
+const card = cards.find((c) => c.file === Astro.props.file);
+if (card === undefined) throw new Error(`pulse: no card for ${Astro.props.file}`);
+const out = renderBeats(card, `pulse-${card.file.replace(/\.[^.]+$/, "")}`).value;
+---
+
+<Fragment set:html={out} />

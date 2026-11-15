@@ -1,3 +1,6 @@
+import type { CalendarSystem } from "../types";
+import { computationCalendarId } from "./calendarSystemIds";
+import { isRangeHandled } from "./rangeHooks";
 import { Temporal } from "./temporal";
 import {
   digitRuns as textDigitRuns,
@@ -37,11 +40,9 @@ const RELATED = new Set(["chinese", "dangi"]);
  * Coptic year is the Ethiopian year less 276 (Calendrical Calculations, chapter 4; the CLDR/ICU
  * calendars of the same names). Only the year number is converted; ICU still prints the text.
  */
-const TEMPORAL_STAND_IN: Readonly<
-  Record<string, { calendar: string; bias: number }>
-> = {
-  coptic: { calendar: "ethioaa", bias: 5776 },
-  ethiopic: { calendar: "ethioaa", bias: 5500 },
+const YEAR_BIAS: Readonly<Record<string, number>> = {
+  coptic: 5776,
+  ethiopic: 5500,
 };
 
 /** A digit run with its value (in the formatter's numbering system) and code point count. */
@@ -65,7 +66,7 @@ interface RefYear {
 interface Env {
   readonly weekday: boolean;
   readonly calendar: string;
-  /** The Temporal calendar that computes this one's dates (see `TEMPORAL_STAND_IN`). */
+  /** The Temporal calendar that computes this one's dates (`computationCalendarId`). */
   readonly temporalCalendar: string;
   /** What `temporalCalendar` adds to this calendar's year number. */
   readonly yearBias: number;
@@ -88,18 +89,11 @@ interface Env {
 const MAX_ENVS = 64;
 let envs = new Map<string, Env>();
 let verdicts = new WeakMap<object, boolean>();
-/** Stand-ins whose own `formatRange` already repairs the year. */
-const handled = new WeakSet<object>();
 
 /** Forget every verdict and environment (a replaced `Intl`, a test seam). */
 export function forgetWeekYearRange(): void {
   envs = new Map();
   verdicts = new WeakMap();
-}
-
-/** Record a stand-in whose `formatRange` is `formatRangeChecked` already. */
-export function markRangeHandled(standIn: object): void {
-  handled.add(standIn);
 }
 
 /** The text a negative number carries before its digits, as ECMA-402 FormatNumeric prints it. */
@@ -147,8 +141,8 @@ function envOf(formatter: Intl.DateTimeFormat): Env {
   const env: Env = {
     weekday,
     calendar,
-    temporalCalendar: TEMPORAL_STAND_IN[calendar]?.calendar ?? calendar,
-    yearBias: TEMPORAL_STAND_IN[calendar]?.bias ?? 0,
+    temporalCalendar: computationCalendarId(calendar as CalendarSystem),
+    yearBias: YEAR_BIAS[calendar] ?? 0,
     timeZone,
     numberingSystem,
     digits: new Set(digitList),
@@ -1371,7 +1365,7 @@ export function formatRangeChecked(
   startMs: number,
   endMs: number,
 ): string | null {
-  if (handled.has(formatter) || !rangeYearVerdict(formatter, options)) {
+  if (isRangeHandled(formatter) || !rangeYearVerdict(formatter, options)) {
     return formatter.formatRange(startMs, endMs);
   }
   return repairRangeYear(formatter, options, startMs, endMs);

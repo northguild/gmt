@@ -1,36 +1,42 @@
 /*
  * formatCard and precisionLadder. A card has a full 1px border and a bottom edge in its
  * form's series colour; nothing here is a single-sided stripe. Amber is the sentinel pill's
- * alone. Stored lines break at any character, so no region here scrolls.
+ * alone. Stored lines break at any character, so no region here scrolls. The bottom edge is the
+ * 1px border plus 2px of inset shadow, with the 2px in the padding: unequal border widths on a
+ * bevelled box misdraw the opposite edge.
  */
 
 .card {
+  --bar: var(--gmt-border);
+
   display: grid;
   gap: var(--gmt-space-2);
   align-content: start;
   min-inline-size: 0;
   padding: var(--gmt-space-3);
+  padding-block-end: calc(var(--gmt-space-3) + 2px);
   border: 1px solid var(--gmt-border);
-  border-block-end: 3px solid var(--gmt-border);
+  border-block-end-color: var(--bar);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
+  box-shadow: inset 0 -2px 0 var(--bar);
   color: var(--gmt-ice);
 
   &[data-series="1"] {
-    border-block-end-color: var(--gmt-series-1);
+    --bar: var(--gmt-series-1);
   }
 
   &[data-series="2"] {
-    border-block-end-color: var(--gmt-series-2);
+    --bar: var(--gmt-series-2);
   }
 
   &[data-series="3"] {
-    border-block-end-color: var(--gmt-series-3);
+    --bar: var(--gmt-series-3);
   }
 
   &[data-series="4"] {
-    border-block-end-color: var(--gmt-series-4);
+    --bar: var(--gmt-series-4);
   }
 
   &[data-state="idle"] {
@@ -147,11 +153,13 @@
   gap: var(--gmt-space-1);
   min-inline-size: 0;
   padding: var(--gmt-space-3);
+  padding-block-end: calc(var(--gmt-space-3) + 2px);
   border: 1px solid var(--gmt-border);
-  border-block-end: 3px solid var(--gmt-series-1);
+  border-block-end-color: var(--gmt-series-1);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
+  box-shadow: inset 0 -2px 0 var(--gmt-series-1);
 }
 
 /* The label and the value start at the top, not on a baseline. The value is a hold, and before

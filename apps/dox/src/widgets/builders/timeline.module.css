@@ -71,6 +71,38 @@
     );
   }
 
+  /* A crossed mark: stripes both ways. */
+  &[data-pattern="cross"] {
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        var(--series) 0,
+        var(--series) 2px,
+        transparent 2px,
+        transparent 7px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        var(--series) 0,
+        var(--series) 2px,
+        transparent 2px,
+        transparent 7px
+      );
+  }
+
+  /* An outline mark: no fill, only its edge. */
+  &[data-pattern="outline"] {
+    background: transparent;
+  }
+
+  /* A dotted mark: a gap, drawn as a box of dots with a dotted edge. */
+  &[data-pattern="dotted"] {
+    border-style: dotted;
+    background-color: transparent;
+    background-image: radial-gradient(var(--series) 1px, transparent 1.5px);
+    background-size: 6px 6px;
+  }
+
   &[data-kind="point"] {
     inline-size: 0.5rem;
     inset-inline-start: calc(var(--gmt-at) * 100% - 0.25rem);
@@ -157,6 +189,23 @@
 
     /* Forced colours drop the gradient, so a hatched mark keeps its difference as a dotted edge. */
     &[data-pattern="hatch"] {
+      background-image: none;
+      border-style: dotted;
+    }
+
+    /* The new patterns keep apart by their edge: a crossed box is double, an outline dashed,
+       a gap dotted. A solid mark keeps its plain edge. */
+    &[data-pattern="cross"] {
+      background-image: none;
+      border-style: double;
+      border-width: 3px;
+    }
+
+    &[data-pattern="outline"] {
+      border-style: dashed;
+    }
+
+    &[data-pattern="dotted"] {
       background-image: none;
       border-style: dotted;
     }

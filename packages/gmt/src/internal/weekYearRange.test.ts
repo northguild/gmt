@@ -1,8 +1,8 @@
+import { markRangeHandled } from "./rangeHooks";
 import { Temporal } from "./temporal";
 import {
   formatRangeChecked,
   forgetWeekYearRange,
-  markRangeHandled,
   repairRangeYear,
   rangeYearVerdict,
 } from "./weekYearRange";

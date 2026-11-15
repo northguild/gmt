@@ -22,6 +22,8 @@
     "stats": "node scripts/stats.mjs",
     "stats:sync": "node scripts/stats.mjs sync",
     "upstream:sync": "node scripts/upstream.mjs sync",
+    "pulse:check": "node apps/dox/scripts/build-pulse.mjs --check",
+    "pulse:sync": "node apps/dox/scripts/build-pulse.mjs --sync",
     "api-surface": "node scripts/api-surface.mjs",
     "size": "node scripts/bundle-size.mjs",
     "bench": "pnpm --filter @northguild/gmt bench",

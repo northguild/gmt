@@ -27,6 +27,7 @@ describe("topLevelPages", () => {
       "../content/docs/guides/intro.mdx": "g",
       "../content/docs/alpha.mdx": "a",
       "../content/docs/upstream.mdx": "u",
+      "../content/docs/pulse.mdx": "p",
       "../content/docs/index.mdx": "x",
       "../content/docs/why-gmt.mdx": "w",
       "../content/docs/core-rules.mdx": "c",
@@ -36,6 +37,8 @@ describe("topLevelPages", () => {
       { slug: "install", source: "i" },
       { slug: "core-rules", source: "c" },
       { slug: "why-gmt", source: "w" },
+      { slug: "upstream", source: "u" },
+      { slug: "pulse", source: "p" },
       { slug: "alpha", source: "a" },
       { slug: "zebra", source: "z" },
     ]);
@@ -45,7 +48,7 @@ describe("topLevelPages", () => {
     const raw = {
       "../content/docs/compare.mdx": "c",
       "../content/docs/bundle-size.mdx": "b",
-      "../content/docs/upstream.mdx": "u",
+      "../content/docs/native-engines.mdx": "n",
       "../content/docs/install.mdx": "i",
     };
     const slugs = topLevelPages(raw).map((p) => p.slug);
@@ -113,17 +116,16 @@ describe("migratePages", () => {
     ).toEqual([{ slug: "migrate/index", source: "index" }]);
   });
 
-  it("names twelve pages, the overview keyed as a folder index", () => {
-    expect(MIGRATE_ORDER).toHaveLength(12);
+  it("names eleven pages, the overview keyed as a folder index", () => {
+    expect(MIGRATE_ORDER).toHaveLength(11);
     expect(MIGRATE_ORDER[0]).toBe("migrate/index");
   });
 
-  it("lists compare, bundle-size, upstream and native-engines after the overview", () => {
-    expect(MIGRATE_ORDER.slice(0, 5)).toEqual([
+  it("lists compare, bundle-size and native-engines after the overview", () => {
+    expect(MIGRATE_ORDER.slice(0, 4)).toEqual([
       "migrate/index",
       "compare",
       "bundle-size",
-      "upstream",
       "native-engines",
     ]);
   });
@@ -142,6 +144,8 @@ describe("the sidebar config", () => {
       "install",
       "core-rules",
       "why-gmt",
+      "upstream",
+      "pulse",
     ]) {
       expect(config, `the config writes out ${slug}`).not.toContain(
         `slug: "${slug}"`,

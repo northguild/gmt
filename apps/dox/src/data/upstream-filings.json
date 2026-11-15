@@ -1,7 +1,8 @@
 {
-  "checked": "2026-11-13T16:44:38.201248729Z",
+  "checked": "2026-11-15T06:33:13.36138981Z",
   "filings": [
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 361,
       "kind": "pr",
@@ -27,6 +28,7 @@
       "mergedAt": "2026-09-21"
     },
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 367,
       "kind": "pr",
@@ -51,6 +53,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 368,
       "kind": "pr",
@@ -75,6 +78,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 369,
       "kind": "pr",
@@ -99,6 +103,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 370,
       "kind": "pr",
@@ -123,6 +128,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 371,
       "kind": "pr",
@@ -147,6 +153,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 372,
       "kind": "pr",
@@ -171,6 +178,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "js-temporal/temporal-polyfill",
       "number": 373,
       "kind": "issue",
@@ -197,6 +205,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3327,
       "kind": "issue",
@@ -220,6 +229,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3328,
       "kind": "issue",
@@ -243,6 +253,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3329,
       "kind": "issue",
@@ -266,6 +277,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3330,
       "kind": "issue",
@@ -289,6 +301,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3331,
       "kind": "issue",
@@ -313,6 +326,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3332,
       "kind": "issue",
@@ -336,6 +350,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3335,
       "kind": "issue",
@@ -359,6 +374,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "tc39/proposal-temporal",
       "number": 3336,
       "kind": "issue",
@@ -382,6 +398,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 119,
       "kind": "issue",
@@ -406,6 +423,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 120,
       "kind": "issue",
@@ -430,6 +448,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 121,
       "kind": "issue",
@@ -454,6 +473,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 125,
       "kind": "issue",
@@ -478,6 +498,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 126,
       "kind": "issue",
@@ -502,6 +523,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 127,
       "kind": "issue",
@@ -525,6 +547,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 128,
       "kind": "issue",
@@ -548,6 +571,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 131,
       "kind": "pr",
@@ -571,6 +595,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "fullcalendar/temporal-polyfill",
       "number": 132,
       "kind": "pr",
@@ -592,10 +617,390 @@
       "updatedAt": "2026-11-13",
       "closedAt": null,
       "mergedAt": null
+    },
+    {
+      "tracker": "github",
+      "repo": "tc39/ecma402",
+      "number": 1116,
+      "kind": "issue",
+      "work": "report",
+      "title": "FormatDateTimePattern: \"value ≤ 0, set value to 1 − value\" is wrong for calendars with a single era",
+      "url": "https://github.com/tc39/ecma402/issues/1116",
+      "summary": "ECMA-402 turns a year of 0 or below into 1 minus the year for every calendar, but only a calendar with an inverse era needs that. The indian and persian calendars have one signed era, so `-79 Śaka` and `-622 AP` are right, and native Temporal already gives those years.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": null,
+      "gmtNote": "GMT prints the year the engine prints and keeps no year rule of its own, so this changes nothing in GMT.",
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 1,
+      "maintainerComments": 1,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-14",
+      "closedAt": null,
+      "mergedAt": null
+    },
+    {
+      "tracker": "github",
+      "repo": "nodejs/node",
+      "number": 67076,
+      "kind": "issue",
+      "work": "report",
+      "title": "Intl.DateTimeFormat formatToParts aborts the process (unreachable code) when the locale pattern has Y: please cherry-pick V8 0426b0d1045d into v22.x, v24.x and v26.x",
+      "url": "https://github.com/nodejs/node/issues/67076",
+      "summary": "Node stops the whole process when `formatToParts` or `formatRangeToParts` formats a date with a pattern that holds the week-of-year year, which some languages' patterns do. It asks Node 22, 24 and 26 to take the V8 fix that Chromium 158 already has.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D23",
+      "gmtNote": null,
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-10-28",
+      "updatedAt": "2026-10-28",
+      "closedAt": null,
+      "mergedAt": null
+    },
+    {
+      "tracker": "github",
+      "repo": "nodejs/node",
+      "number": 67457,
+      "kind": "issue",
+      "work": "report",
+      "title": "Temporal on v26.x: until() and round() add one smallestUnit to a whole number of years, months or weeks (temporal_rs 0.2.3)",
+      "url": "https://github.com/nodejs/node/issues/67457",
+      "summary": "Node 26 adds one `smallestUnit` when it rounds a whole number of years, months or weeks. It asks Node 26 to move to `temporal_rs` 0.2.4 or later, or to take the one fix (boa-dev/temporal#723) on its own.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": null,
+      "gmtNote": "GMT makes no change: it already follows the spec text, and `@js-temporal/polyfill` 0.5.1 is right.",
+      "state": "open",
+      "draft": false,
+      "reviewDecision": null,
+      "comments": 2,
+      "maintainerComments": 2,
+      "createdAt": "2026-11-13",
+      "updatedAt": "2026-11-14",
+      "closedAt": null,
+      "mergedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "CLDR-19873",
+      "role": "contributor",
+      "work": "report",
+      "title": "Incorrect use of week-based year (Y) in gl and kek date patterns",
+      "url": "https://unicode-org.atlassian.net/browse/CLDR-19873",
+      "contributionUrl": "https://unicode-org.atlassian.net/browse/CLDR-19873?focusedCommentId=213171",
+      "summary": "Some languages' date patterns print the week-of-year year where the calendar year belongs. The ticket names gl and kek, and our comment adds the other patterns on `main`, the gd and te repros and the Node crash.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D24",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 1,
+      "maintainerComments": 0,
+      "createdAt": "2026-10-20",
+      "updatedAt": "2026-11-13",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "CLDR-19912",
+      "work": "report",
+      "title": "Interval formats that drop, repeat or misplace a field (yo, rw, sw, brx, dz, en_JP, kgp, yrl, ku, qu, rm, sv, th, wae, ta)",
+      "url": "https://unicode-org.atlassian.net/browse/CLDR-19912",
+      "summary": "Interval patterns in 15 languages drop, repeat or misplace a field when a range is formatted: yo, rw, sw, brx, dz, en-JP, kgp, yrl, ku, qu, rm, sv, th, wae and ta. It includes the rw `yMMMd` pattern that CLDR 49 adds and the ta `hmv` pattern.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D29",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 1,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-15",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "CLDR-19913",
+      "work": "report",
+      "title": "Interval formats that write a field in a different form from the single date, or run two fields together (fur, gsw, ksh, mn, brx, zh iso8601, root chinese)",
+      "url": "https://unicode-org.atlassian.net/browse/CLDR-19913",
+      "summary": "Interval patterns in fur, gsw, ksh and mn write the month in a different form from the single date. They also run two fields together in brx and in zh with the iso8601 calendar, and the root locale drops the chinese related year.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D29",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-14",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23609",
+      "work": "report",
+      "title": "PersianCalendar::isLeapYear returns true for every year before 0 since ICU4C 75",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23609",
+      "summary": "ICU4C 75 and later counts every Persian year before year 0 as a leap year, because a C++ `%` rounds toward zero. WebKit on macOS shows it.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": null,
+      "gmtNote": "Only GMT running on macOS WebKit's own `Temporal` sees it, where `addDate` and `subtractDate` return `\"\"` for the dates it breaks. GMT on the polyfill is right.",
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 2,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-11",
+      "updatedAt": "2026-11-11",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23619",
+      "work": "report",
+      "title": "Japanese calendar: use the Gregorian era for 1868-10-23 to 1872-12-31 (Meiji 1–5)",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23619",
+      "summary": "The japanese calendar prints a date before 1873 in a Japanese era, where the standard asks for the Gregorian era up to the end of 1872. ICU 79 fixes most of it but still prints Meiji 1 to 5 for 1868-10-23 to 1872-12-31.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D25",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-14",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23620",
+      "work": "report",
+      "title": "ja@calendar=japanese: a two-digit year (yy) prints one digit when the pattern contains 年",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23620",
+      "summary": "A `ja` date in the japanese calendar with `year: \"2-digit\"` prints `令和6年` where the standard asks for `令和06年`, because ICU's Japanese year numbering ignores the minimum digit count.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D27",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 1,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-14",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23621",
+      "work": "report",
+      "title": "DateTimePatternGenerator turns a yy skeleton into a padded rr related year (Chinese, Dangi)",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23621",
+      "summary": "Under `year: \"2-digit\"` the chinese and dangi calendars print the related year padded to two digits, where ECMA-402 prints it at full width.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D28",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-14",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23622",
+      "work": "report",
+      "title": "DateIntervalFormat: a flexible day period (B) is printed once for two periods, and a chinese or dangi skeleton with U falls back to a pattern that loses fields",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23622",
+      "summary": "ICU prints the flexible day period B once for two different periods, and the chinese and dangi U skeletons fall back to patterns that lose fields.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D29",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-14",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23623",
+      "work": "report",
+      "title": "DateIntervalFormat: when only the era differs, the range uses the y entry and prints one era, so one date loses its era",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23623",
+      "summary": "When two dates differ only in their era, ICU takes the `y` interval pattern, which prints the era once, so one date loses its era: `scn` in the gregorian calendar, and ca, chr, fi, hr, it and ko in the ethiopic, japanese and roc calendars.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D29",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-15",
+      "updatedAt": "2026-11-15",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23624",
+      "work": "report",
+      "title": "DateIntervalFormat: an hour cycle set by the caller is not applied when the interval pattern comes from CLDR with a different hour letter (ja hm)",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23624",
+      "summary": "A `ja` range with `hourCycle: \"h12\"` keeps the `K` hour of the CLDR interval pattern and prints `0時` where the single date prints 12.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D29",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-15",
+      "updatedAt": "2026-11-15",
+      "closedAt": null
+    },
+    {
+      "tracker": "jira",
+      "key": "ICU-23625",
+      "work": "report",
+      "title": "DateIntervalFormat: the long flexible day period width is not applied to B, so a range prints AM or PM where the single date prints the wide period",
+      "url": "https://unicode-org.atlassian.net/browse/ICU-23625",
+      "summary": "Under `dayPeriod: \"long\"` a range keeps the stored `B` width, so in 22 locales such as bgc, to, sd and gaa it prints AM or PM where the single date prints the wide period.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D29",
+      "gmtNote": null,
+      "state": "open",
+      "status": "New",
+      "resolution": null,
+      "fixVersions": [],
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-15",
+      "updatedAt": "2026-11-15",
+      "closedAt": null
+    },
+    {
+      "tracker": "chromium",
+      "id": 585635918,
+      "work": "report",
+      "title": "Intl.DateTimeFormat keeps the \"islamic\" and \"islamic-rgsa\" calendars instead of the Intl era and monthCode fallbacks",
+      "url": "https://issues.chromium.org/issues/585635918",
+      "summary": "V8 keeps `islamic` and `islamic-rgsa` as the resolved calendar. ECMA-402 turns `islamic` into `islamic-tbla` and no longer has `islamic-rgsa`, and WebKit 26.6 does both.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D30",
+      "gmtNote": null,
+      "state": "open",
+      "comments": null,
+      "maintainerComments": null,
+      "createdAt": "2026-11-14",
+      "updatedAt": "2026-11-14",
+      "closedAt": null
+    },
+    {
+      "tracker": "bugzilla",
+      "host": "bugs.webkit.org",
+      "id": 330688,
+      "work": "report",
+      "title": "Temporal and Intl reject the time zone ids CST6CDT, EST5EDT, MST7MDT and PST8PDT",
+      "url": "https://bugs.webkit.org/show_bug.cgi?id=330688",
+      "summary": "WebKit 26.6 rejects the time zone ids `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT` in `Intl` and `Temporal`, although the time zone database defines all four as zones. Chromium, Firefox and Node accept them.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": null,
+      "gmtNote": "GMT has no workaround for this: it asks the engine about a time zone id, so these four read as invalid input on WebKit until the bug is fixed.",
+      "state": "open",
+      "status": "NEW",
+      "resolution": null,
+      "comments": 1,
+      "maintainerComments": 0,
+      "createdAt": "2026-11-09",
+      "updatedAt": "2026-11-10",
+      "closedAt": null
+    },
+    {
+      "tracker": "bugzilla",
+      "host": "bugzilla.mozilla.org",
+      "id": 2085525,
+      "work": "report",
+      "title": "Intl.DateTimeFormat formatRange prints AM/PM instead of the dayPeriod when timeZoneName is set",
+      "url": "https://bugzilla.mozilla.org/show_bug.cgi?id=2085525",
+      "summary": "Firefox's `formatRange` prints AM/PM instead of the flexible day period when `timeZoneName` is set. A single `format` in Firefox, and `formatRange` in every other engine, print the day period.",
+      "pairsWith": [],
+      "closes": [],
+      "dependsOn": [],
+      "gmtGuard": "D17",
+      "gmtNote": null,
+      "state": "open",
+      "status": "UNCONFIRMED",
+      "resolution": null,
+      "comments": 0,
+      "maintainerComments": 0,
+      "createdAt": "2026-10-24",
+      "updatedAt": "2026-10-26",
+      "closedAt": null
     }
   ],
   "listings": [
     {
+      "tracker": "github",
       "repo": "sindresorhus/awesome-nodejs",
       "number": 1402,
       "kind": "issue",
@@ -613,6 +1018,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "sorrycc/awesome-javascript",
       "number": 1209,
       "kind": "pr",
@@ -630,6 +1036,7 @@
       "mergedAt": null
     },
     {
+      "tracker": "github",
       "repo": "you-dont-need/You-Dont-Need-Momentjs",
       "number": 159,
       "kind": "pr",

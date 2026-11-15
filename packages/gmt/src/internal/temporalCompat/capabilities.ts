@@ -1,4 +1,5 @@
 import { Temporal } from "../temporal";
+import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 import { type DefectId, type ProbeRepro, probeRepros } from "./probeRepros";
 
 /*
@@ -353,5 +354,59 @@ export function isRelatedYearWidthCompatNeeded(): boolean {
       /\p{Nd}+/u.exec(
         textAt("en-u-ca-chinese", { year: "2-digit" }, [5, 7, 10]),
       )?.[0] !== "5",
+  );
+}
+
+/**
+ * True when this runtime resolves `islamic` to a calendar other than `islamic-tbla`, or resolves
+ * `islamic-rgsa` at all (defect D30).
+ *
+ * Intl era/monthCode CreateDateTimeFormat turns a resolved `islamic` into `islamic-tbla`, and since
+ * tc39/proposal-intl-era-monthcode#99 `islamic-rgsa` is not an available calendar, so a
+ * DateTimeFormat ignores it and takes the locale's default (test262
+ * `intl402/DateTimeFormat/constructor-options-calendar-islamic-fallback.js`). ICU keeps both.
+ */
+export function isIslamicCalendarResolutionCompatNeeded(): boolean {
+  const calendarOf = (locale: string): string =>
+    new Intl.DateTimeFormat(locale).resolvedOptions().calendar;
+  return engineDefect(
+    "D30",
+    () =>
+      calendarOf("en-u-ca-islamic") !== "islamic-tbla" ||
+      calendarOf("en-u-ca-islamic-rgsa") === "islamic-rgsa",
+  );
+}
+
+/**
+ * True when this runtime prints a Japanese era year in Latin digits under another numbering
+ * system (defect D27, the numbering part).
+ *
+ * ECMA-402 FormatDateTimePattern: the year is FormatNumeric in the resolved numbering system, so
+ * `ja-u-ca-japanese-nu-arab` prints Reiwa 6 as `令和٦年`. ICU's `jpanyear` numbering ignores `nu`.
+ */
+export function isJapaneseNumberingSystemCompatNeeded(): boolean {
+  return engineDefect("D27nu", () =>
+    /[0-9]/.test(
+      textAt("ja-u-ca-japanese-nu-arab", { year: "numeric" }, [2024, 7, 10]),
+    ),
+  );
+}
+
+/**
+ * True when this runtime prints a range that drops, repeats or garbles a field of one date
+ * (defect D29).
+ *
+ * ECMA-402 PartitionDateTimeRangePattern and UTS #35 Part 4 (Interval Formats): each date's part of
+ * a range holds every field the formatter's single `format` prints for that date. ICU with CLDR
+ * 48 drops the chinese related year, a `B` day period, the end's hebrew month value and more
+ * (`rangeFieldRepros.ts` has one range per upstream defect). The probe asks each of them once and
+ * stays true while any one is broken, so the gate holds until every known cause is fixed.
+ */
+export function isRangeFieldCompatNeeded(): boolean {
+  return engineDefect("D29", () =>
+    rangeFieldCases.some(
+      (c) =>
+        rangeFieldProblem(c.locale, c.options, c.from, c.to) !== "complete",
+    ),
   );
 }

@@ -1,17 +1,17 @@
 ---
 story: CORE-112
-issue: 522
+issue: 524
 status: draft
 dox: none
 ---
 
-# CORE-112 — Week-year `Y` in ICU patterns: no V8 abort, the calendar year printed (D23, D24)
+# CORE-112 — Some languages' date patterns: no V8 abort, the right years and range text (D23 to D30)
 
 ## Scope
 
-Lands as a phase of PR #523 (DOX-G9, #522). `CORE-*` ids are for `packages/gmt` work and this is
-a library fix; `CORE-112` is the next free one ([tracker](../../tracker.md)). No issue file or tracker
-row exists yet: see owner question 1.
+Lands as a phase of PR #523 with DOX-G9 (#522); tracked as #524, issue file
+[issues/CORE-112.md](../../issues/CORE-112.md). `CORE-*` ids are for `packages/gmt` work and this is a
+library fix.
 
 Some CLDR 48 patterns use `Y` (year of the week-of-year) where `y` (calendar year) is meant.
 Two separate defects follow:
@@ -37,6 +37,11 @@ method on a formatter that might hold `Y`, whether the year it prints can be wro
 then prints the calendar year in the form ECMA-402 gives `numeric` and `2-digit`. Dormant on every
 formatter that passes. No range parts call can reach V8: D16 repairs the range string, and D17's
 parts merge stays only where its gate is on (SpiderMonkey). Retired by two canary groups: D23 (the V8 abort) and D24 (the CLDR data).
+
+The range check found six more defects, in [year-printing.md](./year-printing.md) (slice 7): D25 to
+D28, years printed wrongly outside the week-year; D29, range text that drops, repeats or garbles a
+field; and D30, `islamic` and `islamic-rgsa` resolving to calendars ECMA-402 rules out. Each has
+its own probe and canary group.
 
 ## Decisions (settled here)
 
@@ -68,9 +73,10 @@ parts merge stays only where its gate is on (SpiderMonkey). Retired by two canar
 | `packages/gmt/src/internal/repairRangeText.ts` (new) | `repairRangeText(text, carrierNames, wantedNames): string \| null` for D16 ([range.md](./range.md)); `repairRangeParts.ts` stays for D17 |
 | `packages/gmt/src/zoned/format/formatZonedRange.ts` | D16 branch calls `formatRange` and `repairRangeText`; `formatRangeToParts` stays only in the D17 branch (SpiderMonkey) |
 | `packages/gmt/src/internal/temporalCompat/islamicEra.ts` | Builds through `cachedFormatter` |
-| `packages/gmt/src/internal/temporalCompat/repros.ts` | `CanaryDefectId = "D23" \| "D24"` and their repros |
+| `packages/gmt/src/internal/temporalCompat/repros.ts` | `CanaryDefectId`, `"D23"` to `"D30"`, and their repros |
 | `scripts/upstream.mjs` | `nodejs/node` in `REPOS`; `knownGuards()` reads `CanaryDefectId` too |
-| `scripts/lib/workarounds.mjs` | D23 (`engines: ["v8"]`) and D24 (every engine) |
+| `scripts/lib/workarounds.mjs` | D23 (`engines: ["v8"]`), D24 to D30 (every engine) |
+| `packages/gmt/src/internal/yearPrinting.ts` (new) | D25 to D28; D29 and D30 as [year-printing.md](./year-printing.md) gives them |
 | `scripts/canary/weekYear.mjs` (new) | Child-process crash check and in-process data sweep |
 
 ## Authority — what each rule rests on
@@ -97,9 +103,10 @@ parts merge stays only where its gate is on (SpiderMonkey). Retired by two canar
 | 4 | [call-sites.md](./call-sites.md) | Every internal parts call routed; the no-`formatRangeToParts` rule |
 | 5 | [canary-and-docs.md](./canary-and-docs.md) | D23/D24 groups, weekly sweep, upstream row, READMEs, bug doc § AF, changeset, budget |
 | 6 | [tests.md](./tests.md) | Test matrix and expected values |
+| 7 | [year-printing.md](./year-printing.md) | D25 to D30: other wrong years, broken range text, the islamic fallback |
 
 Order: 3a first (it removes the `formatZonedRange` abort with no new detector), then 1 and 4
-(which remove the `formatCalendar` abort), 2, 5, 6; 3c after its gate, which passed (owner question 5).
+(which remove the `formatCalendar` abort), 2, 5, 6; 3c after its gate, which passed. Slice 7 last.
 
 ## Validation (Node 26.12.1, child processes, 662 locales)
 
@@ -115,24 +122,17 @@ Order: 3a first (it removes the `formatZonedRange` abort with no new detector), 
 | Range aborts (`formatRangeToParts`) | single-format population × boundary ranges | 955 aborts on 217 formatters, 12 of them `{hour, minute}` (`my`, non-Gregorian) |
 | Range year verdict prototype | 3,360-formatter sample incl. all 217 | FN 0 against aborts; FP 48 to 175 by variant: **not converged** |
 
-## Open questions — owner
+## Slice choices
 
-1. **Story id.** (a) `CORE-112` with issue file and tracker row, added in this PR (recommended);
-   (b) record it under DOX-G9 only (breaks "CORE is gmt-only").
-2. **CLDR ticket** for the `Y` patterns (gd, gl, ksh, my, sc, te, de-CH, ak, kok; de-CH's month/day
-   swap separately). (a) Draft the text for approval, then file (recommended); (b) track only.
-3. **Native parts where safe** (slice 2 path A). (a) Native parts with the year patched when the
-   crash signal is off and options are component-based, synthesis otherwise (recommended: the
-   engine's own split wherever it cannot abort); (b) synthesis for every flagged formatter.
-4. **D17.** (a) Keep its parts merge, reachable only on SpiderMonkey (recommended: no aborting V8
-   turns the gate on, checked on 7 Node builds); (b) string repair via AM/PM twins, validated in
-   Firefox CI only.
-5. **Range year (slice 3c).** Built with the rest of the phase, on the verdict that passed the
-   gate in range.md (FN 0, FP 0): the verdict runs lazily on a formatter's first range call.
-6. **Verdict cost**: ~0.18 ms once per year-printing formatter key, every engine (the data defect
-   is everywhere). (a) Accept (recommended); (b) skip the text verdict and fix only the abort,
-   leaving wrong years in place (a known defect, so not offered as equal).
-7. **Bundle.** (a) Raise `entries.root.minified` by the measured growth in one reviewed edit
-   (recommended); (b) none: a dynamic import would make sync functions async.
-8. **D16 `null`** (zone name not attributable, 0 of 379,200): (a) `formatZonedRange` returns `""`
-   (recommended: never the defect's own text); (b) return the carrier text unrepaired.
+1. **Story id.** `CORE-112`, with an issue file and a tracker row.
+2. **CLDR ticket** for the `Y` patterns: CLDR-19873 (not ours) covers gl and kek; our comment
+   there adds the other locales.
+3. **Native parts where safe** (slice 2 path A): native parts with the year patched when the crash
+   signal is off and the options are component-based, synthesis otherwise.
+4. **D17** keeps its parts merge, reachable only on SpiderMonkey: no aborting V8 turns its gate on
+   (checked on 7 Node builds).
+5. **Range year** (slice 3c): the verdict that passed the gate in range.md (FN 0, FP 0), run
+   lazily on a formatter's first range call.
+6. **Verdict cost**: about 0.18 ms once per year-printing formatter key, on every engine.
+7. **Bundle**: `entries.root.minified` rises by the measured growth in one reviewed edit.
+8. **D16 `null`** (zone name not attributable, 0 of 379,200): `formatZonedRange` returns `""`.

@@ -423,6 +423,9 @@ importers:
       pngjs:
         specifier: 7.0.0
         version: 7.0.0
+      postcss:
+        specifier: 8.5.31
+        version: 8.5.31
       postcss-html:
         specifier: 1.8.1
         version: 1.8.1

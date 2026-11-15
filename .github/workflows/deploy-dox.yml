@@ -1,5 +1,7 @@
 name: Deploy Dox
 
+# Pulse check: deploy-dox
+#
 on:
   # After Release, never alongside it. Release runs on every push to main, so this
   # still deploys every merge. A push that publishes pushes its
@@ -9,7 +11,7 @@ on:
   # or failure.
   #
   # Failure mode: if Release ever stops running on pushes to main (renamed,
-  # disabled, or given a path filter), merges stop deploying the docs. The daily
+  # disabled, or given a path filter), merges stop deploying the docs. The
   # schedule and workflow_dispatch below still deploy.
   workflow_run:
     workflows: [Release]

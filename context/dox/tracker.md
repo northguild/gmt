@@ -45,7 +45,7 @@ or `architect`, with no tool shortlist; `/pipeline` says who builds it.
 | 23    | DOX-G6                                      | —          | #448         | Done⁶  |
 | 24    | DOX-G7                                      | —          | #477         | Done   |
 | 25    | DOX-G8                                      | —          | #487         | Done   |
-| 26    | DOX-G9                                      | —          | #522         | Done   |
+| 26    | DOX-G9                                      | —          | #522         | In progress |
 
 ¹ Owed verification, not work: a keyboard-only pass, `prefers-reduced-*` emulation, and a
 real Firefox/Safari check.
