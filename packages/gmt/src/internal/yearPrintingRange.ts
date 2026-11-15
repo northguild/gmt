@@ -6,7 +6,7 @@ import { formatRangeChecked } from "./weekYearRange";
 import { type DigitRun, digitRuns } from "./weekYearText";
 
 /*
- * CORE-112 slice 7: the range half of D25 and D27 (`yearPrinting.ts` holds the single-date half).
+ * CORE-112: the range half of D25 and D27 (`yearPrinting.ts` holds the single-date half).
  * Installed by `rangeRepairs.ts` through `rangeHooks.ts`, so a bundle that formats single dates
  * never carries it. Removing it retires only the range repairs of D25 and D27: delete this file
  * and its entry in the `registerRangeHooks` call.

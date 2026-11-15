@@ -3,7 +3,7 @@ import { showsEraOrYear } from "./yearPrinting";
 import { digitRuns, digitSetOf } from "./weekYearText";
 
 /*
- * CORE-112 slice 7, defect D27 (numbering system): the era year of a `ja` japanese formatter. It
+ * CORE-112, defect D27 (numbering system): the era year of a `ja` japanese formatter. It
  * sits under the week-year guard, so the guard reads the same digits in every field, and it is the
  * only place beside the range check that calls a formatter's `formatRange`. Deleting this file and
  * its hook in `formatterCache.ts` retires the repair with its probe.

@@ -1,7 +1,7 @@
 import { repairRangeText } from "./repairRangeText";
 
 /**
- * The D16 text repair (CORE-112 slice 3a): an engine cuts a requested `timeZoneName` width in a
+ * The D16 text repair (CORE-112): an engine cuts a requested `timeZoneName` width in a
  * range (ICU-20548) and keeps the `short` one, so the range text of a `short` carrier formatter has
  * each endpoint's short name in it, and GMT writes the requested name over it.
  *

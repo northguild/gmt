@@ -1,12 +1,14 @@
 /**
- * The wiring of `/pulse/`. The server renders every card; this fills three reserved slots after
- * first paint and changes nothing else: each card's "Next run", the "read … ago" line, and a
- * strip whose run history has grown too old (it switches to NO SIGNAL).
+ * The wiring of `/pulse/`. The server renders every card; this wires each card's workaround
+ * list (a disclosure) at once, then fills three reserved slots after first paint and changes
+ * nothing else: each card's "Next run", the "read … ago" line, and a strip whose run history has
+ * grown too old (it switches to NO SIGNAL).
  *
  * Time is gmt's, loaded from subpaths after first paint, with a `deps.now` seam for tests. There
  * is no timer and no polling: the slots are recomputed when the tab becomes visible again.
  * Aborting the signal removes that listener.
  */
+import { wireDisclosure } from "~/widgets/builders/disclosure";
 import { INERT_HANDLE, type WidgetHandle } from "./widget-mount";
 
 /** A read older than this many days is too old to call "recent" (`pulse-view.ts`). */
@@ -64,6 +66,9 @@ export function mountPulse(
   signal.addEventListener("abort", () => own.abort(), { once: true });
   const life = own.signal;
   const doc = root.ownerDocument;
+  // The workaround lists open without gmt, so they work before (and if) it loads.
+  for (const el of root.querySelectorAll<HTMLElement>("[data-disclosure]"))
+    wireDisclosure(el, { signal: life });
 
   return (deps.lib ?? loadLib)().then((lib) => {
     if (life.aborted) return INERT_HANDLE;

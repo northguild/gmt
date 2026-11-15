@@ -33,7 +33,7 @@ vi.mock("../../internal/repairRangeParts", async (importOriginal) => {
 });
 
 /*
- * CORE-112 slice 7, D29: `repairRangeParts` merges the engine's own range parts with the single
+ * CORE-112, D29: `repairRangeParts` merges the engine's own range parts with the single
  * dates' zone names and day periods. A range that D29 writes from the two single texts holds those
  * already, and its text must never be handed back to the parts repair as if it were engine parts.
  * ECMA-402 FormatDateTimeRange: the text of a range is the two single formats around the range

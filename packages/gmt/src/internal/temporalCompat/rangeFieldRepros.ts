@@ -1,5 +1,5 @@
 /*
- * CORE-112 slice 7, D29: one range per cause, and the check that tells a broken one.
+ * CORE-112, D29: one range per cause, and the check that tells a broken one.
  *
  * ECMA-402 PartitionDateTimeRangePattern and UTS #35 Part 4 (Interval Formats): a range holds every
  * field the formatter's single `format` prints for each date, except that a field the two dates

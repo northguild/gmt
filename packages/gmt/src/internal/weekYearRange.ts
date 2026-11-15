@@ -9,7 +9,7 @@ import {
 } from "./weekYearText";
 
 /*
- * CORE-112 slice 3c (defect D24 in ranges): the calendar year in `formatRange` text.
+ * CORE-112 (defect D24 in ranges): the calendar year in `formatRange` text.
  *
  * A range pattern is a different pattern from the single-date one, so a formatter whose `format`
  * is right can still print the week-based year (`Y`) in `formatRange` (UTS #35 Part 4 §8, rows `y`

@@ -11,7 +11,7 @@ import { ensureRangeHooks, formatRangeChecked } from "./rangeRepairs";
 import { isRangeFieldCompatNeeded } from "./temporalCompat/capabilities";
 
 /*
- * CORE-112 slice 7, D29: the range a formatter prints when its engine's range pattern drops,
+ * CORE-112, D29: the range a formatter prints when its engine's range pattern drops,
  * repeats or garbles a field.
  *
  * ECMA-402 PartitionDateTimeRangePattern gives a range whose pattern has no interval data as the

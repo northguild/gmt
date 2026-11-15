@@ -8,7 +8,7 @@ import {
 } from "./weekYearRange";
 
 /*
- * CORE-112 slice 3c (D24 in ranges). The range pattern is another pattern from the single-date
+ * CORE-112 (D24 in ranges). The range pattern is another pattern from the single-date
  * one, so a formatter whose `format` is right can print the week-year in `formatRange`. Two kinds
  * of formatter are used:
  *

@@ -1,5 +1,5 @@
 /*
- * CORE-112 slice 7: the field values ECMA-402 PartitionDateTimeRangePattern compares, read from
+ * CORE-112: the field values ECMA-402 PartitionDateTimeRangePattern compares, read from
  * the engine's own calendar data. A range collapses to the start's single format only when the
  * two local times hold equal values in every Table 6 row the algorithm checks; the printed texts
  * are never compared (two different dates can print alike: a two-digit year, a narrow month).

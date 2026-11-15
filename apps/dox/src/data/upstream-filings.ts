@@ -394,13 +394,15 @@ function isUpstreamFilings(value: unknown): value is UpstreamFilings {
 // from `lib/mdx-jsx.ts` — which the `.md`, `llms-full.txt` and retrieval-chunk pipeline runs
 // outside Vite — dies on `glob is not a function`. Outside Vite it takes the committed snapshot,
 // which is the same fallback a missing live file already gets, and the one `upstream check` gates.
+// The guard reads `import.meta.env`, which Vite replaces at build; `typeof import.meta.glob`
+// would stay in the built code and be false there (`lib/import-meta-glob-guard.test.ts`).
 const liveModules = (
-  typeof import.meta.glob === "function"
-    ? import.meta.glob("../generated/upstream-filings.live.json", {
+  import.meta.env === undefined
+    ? {}
+    : import.meta.glob("../generated/upstream-filings.live.json", {
         eager: true,
         import: "default",
       })
-    : {}
 ) as Record<string, unknown>;
 const liveData = Object.values(liveModules)[0];
 

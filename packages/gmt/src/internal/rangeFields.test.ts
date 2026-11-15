@@ -4,7 +4,7 @@ import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { expectOneOfIcu, oneOfIcu } from "../test/icuVariants";
 
 /*
- * CORE-112 slice 7, D29: a range that drops, repeats or garbles a field of one date.
+ * CORE-112, D29: a range that drops, repeats or garbles a field of one date.
  *
  * ECMA-402 PartitionDateTimeRangePattern formats a range with the range pattern, and UTS #35 Part 4
  * (Interval Formats) builds that pattern so that each date's part holds every field its single

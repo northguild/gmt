@@ -13,7 +13,7 @@ import { rangeFieldCases } from "./rangeFieldRepros";
 import { repros } from "./repros";
 
 /*
- * CORE-112 slice 7: each shipped probe (D25 to D30) reads the same defect as its canary repros.
+ * CORE-112: each shipped probe (D25 to D30) reads the same defect as its canary repros.
  * The probe says "needed" exactly when some repro of its defect fails on this engine, so the
  * canary's verdict and the library's gate cannot disagree. The test never asserts which way: that
  * would fail the day an engine ships the fix, which is the canary's job.

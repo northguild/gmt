@@ -180,6 +180,18 @@ describe("the stored-times section", () => {
     await expectNoAxeViolations(document.body);
   });
 
+  it("opens the accepted formats by click and closes on Escape", async () => {
+    const { fetch } = fakeFetch();
+    const { user } = await mounted(fetch);
+    const formats = screen.getByRole("button", { name: "Accepted formats" });
+    await user.click(formats);
+    expect(formats).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/Up to \d+ lines and/)).toBeVisible();
+    await user.keyboard("{Escape}");
+    expect(formats).toHaveAttribute("aria-expanded", "false");
+    expect(formats).toHaveFocus();
+  });
+
   it("shows the zone picker only when a line has no zone", async () => {
     const { fetch } = fakeFetch();
     const { user } = await mounted(fetch);

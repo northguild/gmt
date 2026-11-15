@@ -1,7 +1,7 @@
 import { Temporal } from "./temporal";
 
 /*
- * CORE-112 slice 7: each repair is dormant behind one engine probe. With the probes stubbed
+ * CORE-112: each repair is dormant behind one engine probe. With the probes stubbed
  * to pass (a fixed engine) no formatter is wrapped: the cache hands out the engine's own
  * `Intl.DateTimeFormat`, so no per-format work runs. With them stubbed to fail, exactly the
  * formatters that can show the defect are wrapped. (`vi.mock` makes this an isolated file; the

@@ -2989,8 +2989,8 @@ Temporal's calendar year, and D29 compares the fields of a range with the two si
 up beside them. None is a polyfill defect: GMT and the polyfill's `toLocaleString` both format through the
 host's `Intl.DateTimeFormat`. Each reaches GMT's format functions, in single dates and in ranges, on Node
 22.22.2, 24.21.0, 26.12.1 and 26.13.0 (ICU 78.2 and 78.3, CLDR 48), Chromium 153 and WebKit 26.6, except
-where a row says otherwise. Each is its own canary group, and the spec is
-[specs/CORE-112/year-printing.md](specs/CORE-112/year-printing.md).
+where a row says otherwise. Each is its own canary group, and the rules are in
+[issues/CORE-112.md § Decisions](issues/CORE-112.md#decisions).
 
 - **D25, japanese before 1873 (ICU, CLDR).** [ICU-23341](https://unicode-org.atlassian.net/browse/ICU-23341)
   (not ours) is fixed for ICU 79.1, which is not released: with CLDR 49 dropping the eras before Meiji

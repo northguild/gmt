@@ -2,7 +2,7 @@ import { Temporal } from "./temporal";
 import { type RangeSource, rangeVerdict } from "./rangeDetector";
 
 /*
- * CORE-112 slice 7, D29: the detector on synthetic formatters, so no engine's data decides the
+ * CORE-112, D29: the detector on synthetic formatters, so no engine's data decides the
  * answer. Each source prints a date as `weekday d/m/y` (or a part of it) and a range as its own
  * pattern; the rule is ECMA-402 PartitionDateTimeRangePattern and UTS #35 Part 4 (Interval
  * Formats): each date's part of a range holds every field its single prints.

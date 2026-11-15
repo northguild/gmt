@@ -3,7 +3,8 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { screen } from "@testing-library/dom";
-import { setHtml, raw } from "~/widgets/builders";
+import userEvent from "@testing-library/user-event";
+import { disclosure, html, setHtml, raw } from "~/widgets/builders";
 import { mountPulse, type PulseLib } from "./pulse-mount";
 
 const lib: PulseLib = {
@@ -85,6 +86,31 @@ describe("mountPulse", () => {
     // oxlint-disable-next-line dox-test/no-dispatch-event -- no user action changes visibility; the event is the input
     document.dispatchEvent(new Event("visibilitychange"));
     expect(slot).toHaveTextContent("now");
+  });
+
+  it("opens a workaround list by keyboard, before gmt loads", async () => {
+    const root = setup();
+    setHtml(
+      root,
+      disclosure({
+        id: "p-list",
+        label: "3 workarounds",
+        flow: true,
+        children: html`<p>AF</p>`,
+      }),
+    );
+    const c = new AbortController();
+    aborts.push(c);
+    void mountPulse(root, c.signal, { lib: () => new Promise(() => {}) });
+    const user = userEvent.setup();
+    const button = screen.getByRole("button", { name: "3 workarounds" });
+    expect(screen.getByText("AF")).not.toBeVisible();
+    button.focus();
+    await user.keyboard("{Enter}");
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("AF")).toBeVisible();
+    await user.keyboard(" ");
+    expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
   it("does nothing when already aborted", async () => {

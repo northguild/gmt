@@ -5,7 +5,7 @@ import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { normalizeDateTime } from "./normalizeDateTime";
 
 /*
- * CORE-112 (D24, slice 3c): a range prints the calendar year at each end, never the week-year.
+ * CORE-112 (D24): a range prints the calendar year at each end, never the week-year.
  *
  * Every year below is the Temporal calendar year of that endpoint (`eraYear ?? year` where the
  * pattern prints an era), written in the formatter's numbering system, not the engine's text:

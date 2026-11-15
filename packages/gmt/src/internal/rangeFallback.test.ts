@@ -1,7 +1,7 @@
 import { fallbackTemplate, joinFallback, readTemplate } from "./rangeFallback";
 
 /*
- * CORE-112 slice 7, D25 and D29: the text between two dates of a fallback range (UTS #35
+ * CORE-112, D25 and D29: the text between two dates of a fallback range (UTS #35
  * `intervalFormatFallback`, ECMA-402 PartitionDateTimeRangePattern). GMT owns no joiner: it is the
  * text a helper range prints around its two single texts, in one of three shapes.
  */

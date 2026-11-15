@@ -130,7 +130,7 @@ function rangeWithRepairedZoneNames(
   const want = cachedFormatter("DateTimeFormat", locale, formatOptions);
   const carrierOptions = { ...formatOptions, timeZoneName: "short" as const };
   const carrier = cachedFormatter("DateTimeFormat", locale, carrierOptions);
-  // The year repair first (slice 3c), then the zone names: it changes digits only.
+  // The year repair first, then the zone names: it changes digits only.
   const text = formatRangeChecked(carrier, carrierOptions, ms1, ms2);
   if (text === null) {
     return "";

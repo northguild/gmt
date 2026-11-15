@@ -13,7 +13,7 @@ vi.mock("../../internal/temporalCompat", async (importOriginal) => ({
 }));
 
 /*
- * CORE-112 slice 3: which repair `formatZonedRange` takes when the compat gates are forced. D16
+ * CORE-112: which repair `formatZonedRange` takes when the compat gates are forced. D16
  * alone repairs the `formatRange` string and makes no range parts call (a V8 that aborts on a
  * week-of-year year field must never reach one); D17, reachable only on SpiderMonkey, keeps the
  * parts merge, and with both gates on the parts merge handles both. The expected text is the

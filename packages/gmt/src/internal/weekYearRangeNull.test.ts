@@ -13,7 +13,7 @@ vi.mock("./temporalCompat", async (importOriginal) => ({
 }));
 
 /*
- * CORE-112 (slice 3c): a flagged range whose year cannot be repaired is `null`, and every call
+ * CORE-112: a flagged range whose year cannot be repaired is `null`, and every call
  * site answers the invalid-input sentinel `""` for it (coding-standards, API contract), never the
  * wrong-year text. The isolated mock makes `formatRangeChecked` answer `null`, so each of the four
  * paths is reached: the two plain functions, and both zoned paths (plain, and zone-name repair).

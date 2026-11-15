@@ -9,7 +9,7 @@ import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { formatZonedToParts } from "../zoned/format/formatZonedToParts";
 
 /*
- * CORE-112 slice 7 (D25 to D30): the years an engine prints wrongly outside the week-year.
+ * CORE-112 (D25 to D30): the years an engine prints wrongly outside the week-year.
  *
  * Every expected value comes from a specification, never from the engine's text:
  * - D25: Intl era/monthCode Table 2 as amended by tc39/proposal-intl-era-monthcode#86 (test262

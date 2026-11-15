@@ -62,14 +62,16 @@ const isRunsFile = (value: unknown): value is RunsFile =>
   typeof (value as RunsFile).workflows === "object";
 
 // The live file is optional and gitignored. Outside Vite `import.meta.glob` does not exist, and a
-// missing file is the same as a failed read: every strip then says NO SIGNAL.
+// missing file is the same as a failed read: every strip then says NO SIGNAL. The guard reads
+// `import.meta.env`, which Vite replaces at build; `typeof import.meta.glob` would stay in the
+// built code and be false there (`lib/import-meta-glob-guard.test.ts`).
 const liveModules = (
-  typeof import.meta.glob === "function"
-    ? import.meta.glob("../generated/pulse-runs.live.json", {
+  import.meta.env === undefined
+    ? {}
+    : import.meta.glob("../generated/pulse-runs.live.json", {
         eager: true,
         import: "default",
       })
-    : {}
 ) as Record<string, unknown>;
 const live = Object.values(liveModules)[0];
 const runsFile: RunsFile | null = isRunsFile(live) ? live : null;

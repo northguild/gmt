@@ -1,5 +1,5 @@
 /*
- * CORE-112 slice 7, D25 and D29: the text an engine puts between two dates of a range.
+ * CORE-112, D25 and D29: the text an engine puts between two dates of a range.
  *
  * UTS #35 `intervalFormatFallback` (`{0} – {1}`) and ECMA-402 PartitionDateTimeRangePattern give a
  * range whose two ends differ in a field the engine has no interval pattern for. A repair that has

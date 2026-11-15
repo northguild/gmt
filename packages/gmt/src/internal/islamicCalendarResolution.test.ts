@@ -6,7 +6,7 @@ import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { cachedFormatter } from "./formatterCache";
 
 /*
- * CORE-112 slice 7, D30: `islamic` and `islamic-rgsa` resolve to calendars no engine should use.
+ * CORE-112, D30: `islamic` and `islamic-rgsa` resolve to calendars no engine should use.
  *
  * Intl era/monthCode CreateDateTimeFormat: a resolved `islamic` becomes `islamic-tbla`. Since
  * tc39/proposal-intl-era-monthcode#99 `islamic-rgsa` is not an available calendar, so a
