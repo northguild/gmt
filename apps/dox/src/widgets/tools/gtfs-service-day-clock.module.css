@@ -103,6 +103,26 @@
   }
 }
 
+/* The widest zone name (America/Argentina/Buenos_Aires) is one unbreakable piece, about 32
+   monospace characters. In a narrow widget the plate gives up some padding and the value some
+   size so that piece fits; the page never scrolls sideways at 300 px. */
+.card {
+  @container (inline-size < 30rem) {
+    padding-inline: var(--gmt-space-2);
+  }
+
+  /* WebKit sets the monospace face wider; at the narrowest the card gives up more. */
+  @container (inline-size < 20rem) {
+    padding-inline: var(--gmt-space-1);
+  }
+}
+
+.plate {
+  @container (inline-size < 30rem) {
+    padding-inline: var(--gmt-space-2);
+  }
+}
+
 .caption {
   flex: 0 0 auto;
   margin: 0;
@@ -126,6 +146,7 @@
   text-align: end;
 
   @container (inline-size < 30rem) {
+    font-size: var(--gmt-text-xs);
     text-align: start;
   }
 
@@ -143,6 +164,7 @@
   text-align: end;
 
   @container (inline-size < 30rem) {
+    font-size: var(--gmt-text-xs);
     text-align: start;
   }
 }

@@ -13,7 +13,7 @@ import { serveStatic } from "./lib/static-server.mjs";
 
 /**
  * The GTFS Service Day Clock keeps its boxes still. The tool has typed input and no drag handle,
- * so this steps every preset and two typed refusals in a browser and compares each state with the
+ * so this steps every preset, the widest zone and two typed refusals in a browser and compares each state with the
  * first. Both anchor cards keep their x, width and height, and so does every value box inside
  * them (a plate's value is a hold with ghosts). At 1280 and 1440 px the left card's left edge
  * meets the row's left and the right card's right edge meets the row's right; every card has a
@@ -35,6 +35,9 @@ const REFUSALS: [string, string, string][] = [
   ["20240230", "08:00:00", "Europe/Berlin"],
   ["20260329", "25:60:00", "Not/AZone"],
 ];
+
+/** The widest zone name the IANA database holds: its readings are the widest a box ever shows. */
+const WIDEST_ZONE = "America/Argentina/Buenos_Aires";
 
 let server: Server | undefined;
 
@@ -162,6 +165,14 @@ describe.each(ENGINES)("GTFS Service Day Clock holds in %s", (_name, type) => {
               await presetBox.selectOption(id);
             },
           ]),
+          [
+            `widest zone ${WIDEST_ZONE}`,
+            async () => {
+              await dateBox.fill("20260308");
+              await timeBox.fill("08:00:00");
+              await zoneBox.fill(WIDEST_ZONE);
+            },
+          ],
           ...REFUSALS.map(([d, t, z]): [string, () => Promise<void>] => [
             `refusal ${d} ${t} ${z}`,
             async () => {

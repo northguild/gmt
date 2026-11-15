@@ -20,3 +20,15 @@ export function pickFunctions(
     }),
   );
 }
+
+/**
+ * `pickFunctions` with the library's own types: `M` is the module (`typeof import("...")`), so
+ * a name the library renames or retypes fails the typecheck where it is used, not at run time.
+ * The one assertion is here, where a name has just been checked to be a function.
+ */
+export function pickTyped<M extends object, K extends keyof M & string>(
+  module: Record<string, unknown>,
+  names: readonly K[],
+): Pick<M, K> {
+  return pickFunctions(module, names) as Pick<M, K>;
+}

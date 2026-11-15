@@ -18,7 +18,7 @@
  */
 import type { NotamValidity } from "@northguild/gmt/types";
 import type { AviationLib, YearWindowOptions } from "./aviation-lib";
-import { literal } from "./holiday-rule-builder";
+import { literal } from "./literal";
 
 /** What a plate reads while nothing has been typed: an empty field is not a refusal. */
 export const NOTHING_TYPED = "nothing typed";

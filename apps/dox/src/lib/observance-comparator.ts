@@ -27,11 +27,11 @@ import type { HolidayLib } from "./holiday-lib";
 import {
   YEAR_MAX,
   YEAR_MIN,
-  literal,
   normaliseWeekend,
   shortDate,
   type RowState,
 } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import {
   attributeRules,
   marksFromAttribution,

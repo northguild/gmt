@@ -53,6 +53,7 @@ import {
   GTFS_CARD_TITLE,
   MIDNIGHT_CARD_TITLE,
   MIDNIGHT_NOTES,
+  midnightNoteOf,
   NOTHING_TO_DRAW,
   NOTHING_TYPED,
   NOT_DRAWN,
@@ -162,12 +163,8 @@ function cardsOf(id: (local: string) => string, r: ClockResult): SafeHtml {
     )}${plateOf(CAPTIONS.answerLocal, side.answer.local, blank, ghosts.local)}`;
   const ghosts = { local: GHOST_LOCAL, utc: GHOST_UTC };
 
-  const midNote =
-    r.kind === "empty"
-      ? MIDNIGHT_NOTES.empty
-      : r.midnight.answer.utc === ""
-        ? MIDNIGHT_NOTES.none
-        : MIDNIGHT_NOTES.ok;
+  const midKey = midnightNoteOf(r);
+  const midNote = MIDNIGHT_NOTES[midKey];
   return html`<div class="${styles.cards}">${cardOf(
     id("gtfs-title"),
     GTFS_CARD_TITLE,
@@ -186,10 +183,7 @@ function cardsOf(id: (local: string) => string, r: ClockResult): SafeHtml {
     heldText({
       label: "About the midnight anchor",
       text: midNote,
-      state:
-        r.kind === "empty" || midNote === MIDNIGHT_NOTES.ok
-          ? "note"
-          : "sentinel",
+      state: midKey === "none" ? "sentinel" : "note",
       sizers: MIDNIGHT_TEXTS,
       gate: "hold",
     }),

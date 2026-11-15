@@ -15,22 +15,27 @@
  * A heavy module: only a tool's mount imports it. A module that fails to load, or a name it
  * no longer exports, becomes a `WidgetLoadError` rather than a dead control.
  */
-import type { GtfsTime } from "@northguild/gmt/types";
 import { GMT_MODULES } from "./gmt-modules";
-import { pickFunctions } from "./gmt-pick";
+import { pickTyped } from "./gmt-pick";
 import { WidgetLoadError } from "./widget-mount";
 
+/** The library modules the rail tools read, typed by the library itself. */
+type RailParse = typeof import("@northguild/gmt/rail/parse");
+type RailFormat = typeof import("@northguild/gmt/rail/format");
+type RailValidate = typeof import("@northguild/gmt/rail/validate");
+type PlainValidate = typeof import("@northguild/gmt/plain/validate");
+type RailConvert = typeof import("@northguild/gmt/rail/convert");
+type InstantConvert = typeof import("@northguild/gmt/instant/convert");
+type UtcCalculate = typeof import("@northguild/gmt/utc/calculate");
+type UtcConvert = typeof import("@northguild/gmt/utc/convert");
+type ZonedGet = typeof import("@northguild/gmt/zoned/get");
+type PlainParse = typeof import("@northguild/gmt/plain/parse");
+
 /** The functions the rail tools call, as the library declares them. */
-export interface RailLib {
-  // rail/parse
-  parseGtfsTime(value: string): GtfsTime | null;
-  // rail/format
-  formatGtfsTime(value: GtfsTime): string;
-  // rail/validate
-  isValidGtfsTime(value: string): boolean;
-  // plain/validate
-  isValidTime(value: string): boolean;
-}
+export type RailLib = Pick<RailParse, "parseGtfsTime"> &
+  Pick<RailFormat, "formatGtfsTime"> &
+  Pick<RailValidate, "isValidGtfsTime"> &
+  Pick<PlainValidate, "isValidTime">;
 
 export async function loadRailLib(): Promise<RailLib> {
   try {
@@ -42,51 +47,33 @@ export async function loadRailLib(): Promise<RailLib> {
         GMT_MODULES["plain/validate"](),
       ]);
     return {
-      ...pickFunctions(railParse, ["parseGtfsTime"]),
-      ...pickFunctions(railFormat, ["formatGtfsTime"]),
-      ...pickFunctions(railValidate, ["isValidGtfsTime"]),
-      ...pickFunctions(plainValidate, ["isValidTime"]),
-    } as unknown as RailLib;
+      ...pickTyped<RailParse, "parseGtfsTime">(railParse, ["parseGtfsTime"]),
+      ...pickTyped<RailFormat, "formatGtfsTime">(railFormat, [
+        "formatGtfsTime",
+      ]),
+      ...pickTyped<RailValidate, "isValidGtfsTime">(railValidate, [
+        "isValidGtfsTime",
+      ]),
+      ...pickTyped<PlainValidate, "isValidTime">(plainValidate, [
+        "isValidTime",
+      ]),
+    };
   } catch (cause) {
     throw new WidgetLoadError(cause);
   }
 }
 
-/** The duration units the UTC arithmetic takes that the tool uses. */
-export type UtcUnits = Partial<Record<"days" | "hours" | "seconds", number>>;
-
 /** What the GTFS Service Day Clock calls, as the library declares it. */
-export interface ServiceDayLib extends RailLib {
-  // rail/convert
-  gtfsToInstant(
-    serviceDate: string,
-    gtfsTime: string,
-    timeZone: string,
-  ): string;
-  // instant/convert
-  resolveLocal(localDateTime: string, timeZone: string): string;
-  classifyLocal(
-    localDateTime: string,
-    timeZone: string,
-  ): "unique" | "ambiguous" | "nonexistent" | null;
-  // utc/calculate
-  addUtc(value: string, units: UtcUnits): string;
-  subtractUtc(value: string, units: UtcUnits): string;
-  diffUtc(value1: string, value2: string, unit: "minutes"): number | null;
-  minUtc(values: string[]): string | null;
-  maxUtc(values: string[]): string | null;
-  isBetweenUtc(value: string, start: string, end: string): boolean;
-  // utc/convert
-  convertUtcToZoned(value: string, timeZone: string): string;
-  convertUtcToPlainDate(value: string): string;
-  // zoned/get
-  getDstTransitions(
-    timeZone: string,
-    year: number,
-  ): { instant: string; offsetBefore: string; offsetAfter: string }[];
-  // plain/parse
-  parseYearFromDate(value: string): string;
-}
+export type ServiceDayLib = RailLib &
+  Pick<RailConvert, "gtfsToInstant"> &
+  Pick<InstantConvert, "resolveLocal" | "classifyLocal"> &
+  Pick<
+    UtcCalculate,
+    "addUtc" | "subtractUtc" | "diffUtc" | "minUtc" | "maxUtc" | "isBetweenUtc"
+  > &
+  Pick<UtcConvert, "convertUtcToZoned" | "convertUtcToPlainDate"> &
+  Pick<ZonedGet, "getDstTransitions"> &
+  Pick<PlainParse, "parseYearFromDate">;
 
 export async function loadServiceDayLib(): Promise<ServiceDayLib> {
   try {
@@ -109,9 +96,22 @@ export async function loadServiceDayLib(): Promise<ServiceDayLib> {
     ]);
     return {
       ...rail,
-      ...pickFunctions(railConvert, ["gtfsToInstant"]),
-      ...pickFunctions(instantConvert, ["resolveLocal", "classifyLocal"]),
-      ...pickFunctions(utcCalculate, [
+      ...pickTyped<RailConvert, "gtfsToInstant">(railConvert, [
+        "gtfsToInstant",
+      ]),
+      ...pickTyped<InstantConvert, "resolveLocal" | "classifyLocal">(
+        instantConvert,
+        ["resolveLocal", "classifyLocal"],
+      ),
+      ...pickTyped<
+        UtcCalculate,
+        | "addUtc"
+        | "subtractUtc"
+        | "diffUtc"
+        | "minUtc"
+        | "maxUtc"
+        | "isBetweenUtc"
+      >(utcCalculate, [
         "addUtc",
         "subtractUtc",
         "diffUtc",
@@ -119,13 +119,17 @@ export async function loadServiceDayLib(): Promise<ServiceDayLib> {
         "maxUtc",
         "isBetweenUtc",
       ]),
-      ...pickFunctions(utcConvert, [
-        "convertUtcToZoned",
-        "convertUtcToPlainDate",
+      ...pickTyped<UtcConvert, "convertUtcToZoned" | "convertUtcToPlainDate">(
+        utcConvert,
+        ["convertUtcToZoned", "convertUtcToPlainDate"],
+      ),
+      ...pickTyped<ZonedGet, "getDstTransitions">(zonedGet, [
+        "getDstTransitions",
       ]),
-      ...pickFunctions(zonedGet, ["getDstTransitions"]),
-      ...pickFunctions(plainParse, ["parseYearFromDate"]),
-    } as unknown as ServiceDayLib;
+      ...pickTyped<PlainParse, "parseYearFromDate">(plainParse, [
+        "parseYearFromDate",
+      ]),
+    };
   } catch (cause) {
     throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
   }

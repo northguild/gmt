@@ -799,7 +799,7 @@ export const showGtfsServiceDayClockInput = z
         "fall-back",
         "ordinary",
         "past-midnight",
-        "new-york",
+        "lord-howe",
         "no-noon",
         "offset",
       ])
@@ -1881,8 +1881,8 @@ export const DOX_TOOL_DOCS: {
   {
     name: "showGtfsServiceDayClock",
     purpose:
-      "Turns a GTFS service date, stop time and agency_timezone into the instant GTFS means, with gtfsToInstant (noon minus 12 hours of the service day), beside the instant that adding the time to local midnight gives. On a clock-change date the two are an hour apart, and the day rail marks the change. A date whose noon is skipped or repeated has no anchor and reads NO SIGNAL.",
-    when: "the reader asks what instant or local time a GTFS stop time is on a service date, why a feed is an hour off on a clock-change day, whether GTFS times count from midnight, or what 00:00:00 or a time past 24:00:00 means on such a day",
+      "Turns a GTFS service date, stop time and agency_timezone into the instant GTFS means, with gtfsToInstant (noon minus 12 hours of the service day), beside the instant that adding the time to local midnight gives. On a clock-change date the two differ by the size of the change, an hour in most zones, and the day rail marks the change. A date whose noon is skipped or repeated has no anchor and reads NO SIGNAL.",
+    when: "the reader asks what instant or local time a GTFS stop time is on a service date, why a feed is off on a clock-change day, whether GTFS times count from midnight, or what 00:00:00 or a time past 24:00:00 means on such a day",
     args: "serviceDate (YYYYMMDD or YYYY-MM-DD as given), time (a GTFS time as given), timeZone (an IANA name or offset as given), or preset. Never resolve an agency or stop to a zone; ask for agency_timezone.",
   },
 ];

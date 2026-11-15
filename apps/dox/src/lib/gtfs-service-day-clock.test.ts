@@ -11,15 +11,19 @@ import {
   CUSTOM_PRESET_ID,
   GHOST_LOCAL,
   GHOST_UTC,
+  MIDNIGHT_NOTES,
   PRESETS,
   REASONS,
   VERDICT_SAMPLES,
+  WIDEST_ZONE,
   callsSizerText,
   clockOf,
   computeClock,
+  dayOf,
   explainRefusal,
   isSeeded,
   matchPreset,
+  midnightNoteOf,
   permalinkOf,
   presetState,
   readArgs,
@@ -119,12 +123,23 @@ describe("the presets, against the library", () => {
     expect(r.gap).toBe(0);
   });
 
-  it("new-york: spring forward in the US", () => {
-    const p = preset("new-york");
+  it("lord-howe: a 30-minute change, so the anchors are 30 minutes apart", () => {
+    const p = preset("lord-howe");
     const r = run(p.date, p.time, p.zone);
-    expect(readingOf(r.gtfs.answer.local)).toBe("08:00 -04:00");
-    expect(readingOf(r.midnight.answer.local)).toBe("09:00 -04:00");
-    expect(r.gap).toBe(60);
+    expect(readingOf(r.gtfs.answer.local)).toBe("08:00 +11:00");
+    expect(readingOf(r.midnight.answer.local)).toBe("08:30 +11:00");
+    expect(r.gap).toBe(30);
+    expect(verdictOf(r.gap)).toMatchObject({
+      tone: "bad",
+      detail: expect.stringContaining("30 minutes later"),
+    });
+  });
+
+  it("relabels past-midnight and has no US preset", () => {
+    expect(preset("past-midnight").label).toBe(
+      "Berlin, 26:30:00 across the change",
+    );
+    expect(PRESETS.some((p) => p.zone.startsWith("America/"))).toBe(false);
   });
 
   it("no-noon: GTFS gives nothing, the midnight code answers for a day that never happened", () => {
@@ -383,13 +398,27 @@ describe("the held widths", () => {
     return [r.gtfs.answer.utc, r.midnight.answer.utc].filter((v) => v !== "");
   });
 
-  it("each local ghost is a library output", () => {
-    for (const ghost of GHOST_LOCAL) expect(locals).toContain(ghost);
+  it("each local ghost is a library output: the presets', plus the widest zone's", () => {
+    const widest = lib.convertUtcToZoned("2026-03-08T11:00:00Z", WIDEST_ZONE);
+    expect(widest).toBe(`2026-03-08T08:00:00-03:00[${WIDEST_ZONE}]`);
+    for (const ghost of GHOST_LOCAL) {
+      expect(ghost === widest || locals.includes(ghost), ghost).toBe(true);
+    }
+    expect(GHOST_LOCAL).toContain(widest);
+  });
+
+  it("reserves a reading in the widest zone, wider than any preset's", () => {
+    const widest = Math.max(...GHOST_LOCAL.map((g) => g.length));
+    const buenosAires = run("20260308", "08:00:00", WIDEST_ZONE);
+    expect(buenosAires.gtfs.answer.local.length).toBeLessThanOrEqual(widest);
+    expect(GHOST_LOCAL[0]).toBe(buenosAires.gtfs.answer.local);
+    for (const v of locals) expect(v.length).toBeLessThan(widest);
   });
 
   it("no preset reading is wider than the widest ghost", () => {
     const widest = Math.max(...GHOST_LOCAL.map((g) => g.length));
-    for (const v of locals) expect(v.length).toBeLessThanOrEqual(widest);
+    const presetWidest = Math.max(...locals.map((v) => v.length));
+    expect(presetWidest).toBeLessThanOrEqual(widest);
     const widestUtc = Math.max(...GHOST_UTC.map((g) => g.length));
     for (const v of utcs) expect(v.length).toBeLessThanOrEqual(widestUtc);
   });
@@ -400,6 +429,117 @@ describe("the held widths", () => {
 
   it("the verdict samples include the widest it can say", () => {
     expect(VERDICT_SAMPLES.length).toBeGreaterThan(2);
+  });
+});
+
+describe("the midnight card's note", () => {
+  const noteOf = (date: string, time: string, zone: string) =>
+    midnightNoteOf(run(date, time, zone));
+
+  it("says nothing special for a midnight that happened once", () => {
+    const r = run("20260329", "08:00:00", "Europe/Berlin");
+    expect(r.midnightKind).toBe("unique");
+    expect(midnightNoteOf(r)).toBe("ok");
+    expect(MIDNIGHT_NOTES[midnightNoteOf(r)]).toMatch(
+      /^Local midnight of the date/,
+    );
+  });
+
+  it.each([
+    ["the Samoa preset (30 December 2011)", "20111230", "Pacific/Apia"],
+    [
+      "Santiago, where the clocks change at midnight",
+      "20260906",
+      "America/Santiago",
+    ],
+  ])("says midnight did not happen for %s", (_name, date, zone) => {
+    const r = run(date, "08:00:00", zone);
+    expect(lib.classifyLocal(`${r.iso}T00:00:00`, zone)).toBe("nonexistent");
+    expect(r.midnightKind).toBe("nonexistent");
+    expect(midnightNoteOf(r)).toBe("skipped");
+    expect(MIDNIGHT_NOTES.skipped).toContain("did not happen");
+    expect(MIDNIGHT_NOTES.skipped).toContain("moved it forward");
+  });
+
+  it("says midnight happened twice, and the earlier one was taken", () => {
+    const r = run("20261101", "08:00:00", "America/Havana");
+    expect(lib.classifyLocal("2026-11-01T00:00:00", "America/Havana")).toBe(
+      "ambiguous",
+    );
+    expect(r.midnightKind).toBe("ambiguous");
+    expect(midnightNoteOf(r)).toBe("repeated");
+    expect(MIDNIGHT_NOTES.repeated).toContain("happened twice");
+    expect(MIDNIGHT_NOTES.repeated).toContain("took the earlier one");
+    // The earlier reading is the one resolveLocal returns.
+    expect(r.midnight.anchor.utc).toBe(
+      lib.resolveLocal("2026-11-01T00:00:00", "America/Havana"),
+    );
+  });
+
+  it("keeps the empty and the no-signal notes", () => {
+    expect(noteOf("", "08:00:00", "Europe/Berlin")).toBe("empty");
+    expect(noteOf("20260329", "08:00:00", "Not/AZone")).toBe("none");
+    expect(noteOf("20240230", "08:00:00", "Europe/Berlin")).toBe("none");
+  });
+
+  it("has five distinct texts", () => {
+    const texts = Object.values(MIDNIGHT_NOTES);
+    expect(texts).toHaveLength(5);
+    expect(new Set(texts).size).toBe(5);
+  });
+});
+
+describe("a window that crosses into the next year", () => {
+  it("marks the clock change in January that follows a December date (Fiji 2014/15)", () => {
+    const r = run("20141215", "999:59:59", "Pacific/Fiji");
+    expect(r.rail).not.toBeNull();
+    expect(r.gtfs.answer.local.startsWith("2015-01-25")).toBe(true);
+    expect(
+      lib
+        .getDstTransitions("Pacific/Fiji", 2015)
+        .map((t) => `${t.offsetBefore} → ${t.offsetAfter}`)[0],
+    ).toBe("+13:00 → +12:00");
+    expect(r.rail!.changes.map((c) => c.label)).toEqual(["+13:00 → +12:00"]);
+    expect(r.rail!.marks.some((m) => m.kind === "change")).toBe(true);
+    // The date's own year is still the one that sets the DST link.
+    expect(r.year).toBe(2014);
+    expect(r.hasChange).toBe(true);
+    // Each year is asked of the library once.
+    expect(r.calls.filter((c) => c.startsWith("getDstTransitions"))).toEqual([
+      expect.stringContaining('"Pacific/Fiji", 2014'),
+      expect.stringContaining('"Pacific/Fiji", 2015'),
+    ]);
+  });
+
+  it("asks one year for a window inside one year", () => {
+    const r = run("20260615", "08:00:00", "Europe/Berlin");
+    expect(
+      r.calls.filter((c) => c.startsWith("getDstTransitions")),
+    ).toHaveLength(1);
+  });
+});
+
+describe("an axis tick a day or more apart", () => {
+  it("carries the date with the clock", () => {
+    const r = run("20260615", "999:59:59", "Europe/Berlin");
+    expect(r.rail).not.toBeNull();
+    for (const t of r.rail!.ticks)
+      expect(t.label).toMatch(/^\d\d-\d\d \d\d:\d\d$/);
+    // The library's own reading of the first tick.
+    const start = lib.subtractUtc(r.gtfs.anchor.utc, { hours: 2 });
+    const first = lib.convertUtcToZoned(start, "Europe/Berlin");
+    expect(r.rail!.ticks[0]!.label).toBe(`${dayOf(first)} ${clockOf(first)}`);
+  });
+
+  it("is only the clock while the step is under a day", () => {
+    const r = run("20260615", "08:00:00", "Europe/Berlin");
+    for (const t of r.rail!.ticks) expect(t.label).toMatch(/^\d\d:\d\d$/);
+  });
+
+  it("reads the month and day of a zoned string", () => {
+    expect(dayOf("2026-03-29T08:00:00+02:00[Europe/Berlin]")).toBe("03-29");
+    expect(dayOf("+010000-02-10T15:59:59Z")).toBe("02-10");
+    expect(dayOf("")).toBe("");
   });
 });
 

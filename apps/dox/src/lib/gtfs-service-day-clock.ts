@@ -5,7 +5,8 @@
  * `gtfsToInstant` gives the instant GTFS means: noon of the service day minus 12 hours, plus the
  * stop time as exact elapsed seconds. Next to it the tool computes what a midnight anchor gives:
  * `resolveLocal` of local midnight, plus the same elapsed seconds through `addUtc`. On a day the
- * clocks change the two are an hour apart; on any other day they agree. The tool also draws both
+ * clocks change the two differ by the size of the change (an hour in most zones); on any other
+ * day they agree. The tool also draws both
  * on one day rail, with the clock change marked.
  *
  * The site holds no GTFS rule, no offset and no day arithmetic. Every instant, reading, gap and
@@ -15,7 +16,7 @@
  *
  * No DOM, no library import (the library arrives as a `ServiceDayLib`).
  */
-import { literal } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import type { ServiceDayLib } from "./rail-lib";
 
 export const CUSTOM_PRESET_ID = "custom";
@@ -94,19 +95,19 @@ export const PRESETS: readonly ServiceDayPreset[] = [
   },
   {
     id: "past-midnight",
-    label: "26:30:00, the day before",
+    label: "Berlin, 26:30:00 across the change",
     description: "Elapsed seconds from the anchor, not a wall-clock move.",
     date: "20260328",
     time: "26:30:00",
     zone: "Europe/Berlin",
   },
   {
-    id: "new-york",
-    label: "New York, clocks go forward",
-    description: "The same hour, in the US.",
-    date: "20260308",
+    id: "lord-howe",
+    label: "Lord Howe, a 30-minute change",
+    description: "The midnight anchor is 30 minutes after GTFS.",
+    date: "20261004",
     time: "08:00:00",
-    zone: "America/New_York",
+    zone: "Australia/Lord_Howe",
   },
   {
     id: "no-noon",
@@ -216,7 +217,22 @@ export const MIDNIGHT_NOTES = {
   empty: "Type a service date, a stop time and the agency's zone.",
   ok: "Local midnight of the date, plus the stop time as elapsed seconds.",
   none: "The library gave no midnight for this date and zone.",
+  skipped:
+    "Local midnight did not happen on this date in this zone, so resolveLocal moved it forward.",
+  repeated:
+    "Local midnight happened twice on this date in this zone, so resolveLocal took the earlier one.",
 } as const;
+
+export type MidnightNoteKey = keyof typeof MIDNIGHT_NOTES;
+
+/** Which note the midnight card shows, from what the library gave. */
+export function midnightNoteOf(r: ClockResult): MidnightNoteKey {
+  if (r.kind === "empty") return "empty";
+  if (r.midnight.answer.utc === "") return "none";
+  if (r.midnightKind === "nonexistent") return "skipped";
+  if (r.midnightKind === "ambiguous") return "repeated";
+  return "ok";
+}
 
 export const SAME_TITLE = "Same instant:";
 export const SAME_DETAIL =
@@ -252,20 +268,25 @@ export const VERDICT_SAMPLES: readonly { title: string; detail: string }[] = [
 // The held widths
 // ---------------------------------------------------------------------------
 
+/** The widest zone name a feed is likely to hold: its plate must not grow when it is typed. */
+export const WIDEST_ZONE = "America/Argentina/Buenos_Aires";
+
 /**
- * One local reading of each shape the presets give, widest first: the values a card reserves.
- * The unit test asserts each is a preset's library output and none is shorter than any other
- * preset reading.
+ * One local reading of each shape the presets give, and one in the widest zone, widest first: the
+ * values a card reserves. The unit test asserts each is the library's reading of a preset's
+ * answer (the widest-zone one of the same instant as the zone's own) and none of the presets'
+ * readings is wider.
  */
 export const GHOST_LOCAL: readonly string[] = [
-  "2026-03-08T08:00:00-04:00[America/New_York]",
+  `2026-03-08T08:00:00-03:00[${WIDEST_ZONE}]`,
+  "2026-10-04T08:00:00+11:00[Australia/Lord_Howe]",
   "2026-03-29T08:00:00+02:00[Europe/Berlin]",
   "2011-12-31T12:00:00+14:00[Pacific/Apia]",
   "2026-03-29T08:00:00+05:30[+05:30]",
 ];
 
 /** The widest UTC answer the presets give. */
-export const GHOST_UTC: readonly string[] = ["2026-03-28T22:00:00Z"];
+export const GHOST_UTC: readonly string[] = ["2026-10-03T21:00:00Z"];
 
 // ---------------------------------------------------------------------------
 // The calls
@@ -297,6 +318,14 @@ export function readingOf(zoned: string): string {
   if (m === null) return "";
   const seconds = m[2] === undefined || m[2] === ":00" ? "" : m[2];
   return `${m[1]}${seconds} ${m[3]}`;
+}
+
+const READING_DATE = /^[+-]?\d{4,6}-(\d{2}-\d{2})T/;
+
+/** The month and day of a zoned string (`03-29`), for an axis tick a day or more apart. */
+export function dayOf(zoned: string): string {
+  const m = READING_DATE.exec(zoned);
+  return m === null ? "" : m[1]!;
 }
 
 /** Just the clock part of `readingOf`, for an axis tick. */
@@ -358,6 +387,8 @@ export interface ClockResult {
   year: number | null;
   /** Whether the zone changes its clock in that year at all, for the DST link. */
   hasChange: boolean;
+  /** What `classifyLocal` says of local midnight on the date, `null` when it was not asked. */
+  midnightKind: "unique" | "ambiguous" | "nonexistent" | null;
   gtfs: Side;
   midnight: Side;
   noon: Reading;
@@ -377,6 +408,7 @@ export const BLANK_RESULT: ClockResult = {
   iso: "",
   year: null,
   hasChange: false,
+  midnightKind: null,
   gtfs: { anchor: NONE, answer: NONE },
   midnight: { anchor: NONE, answer: NONE },
   noon: NONE,
@@ -427,6 +459,8 @@ const TICK_HOURS = 6;
 /** Most axis ticks drawn: a longer window doubles the step rather than crowd the axis. */
 const MAX_TICKS = 12;
 const WINDOW_PAD = { hours: 2 };
+/** Most years a window is asked about: a longest stop time is under 42 days. */
+const MAX_YEARS = 4;
 
 /** One clock change `getDstTransitions` reports. */
 interface Transition {
@@ -436,11 +470,17 @@ interface Transition {
 }
 
 /** Draws the rail, or returns `null` when the library gave no position for an instant. */
+/** `diffUtc` in minutes. The library types the result for every unit shape; one unit gives a number. */
+function minutesApart(lib: ServiceDayLib, a: string, b: string): number | null {
+  const d = lib.diffUtc(a, b, "minutes");
+  return typeof d === "number" ? d : null;
+}
+
 function drawRail(
   lib: ServiceDayLib,
   call: ReturnType<typeof recorder>,
   zone: string,
-  transitions: readonly Transition[],
+  transitionsFor: (year: number) => Transition[],
   readings: {
     gtfsAnchor: Reading;
     midAnchor: Reading;
@@ -463,10 +503,10 @@ function drawRail(
   );
   const end = call("addUtc", [last, WINDOW_PAD], lib.addUtc(last, WINDOW_PAD));
   if (start === "" || end === "") return null;
-  const width = lib.diffUtc(end, start, "minutes");
+  const width = minutesApart(lib, end, start);
   if (width === null || width === 0) return null;
   const at = (instant: string): number | null => {
-    const d = lib.diffUtc(instant, start, "minutes");
+    const d = minutesApart(lib, instant, start);
     return d === null ? null : d / width;
   };
 
@@ -535,13 +575,35 @@ function drawRail(
     if (instant === "") return null;
     const x = at(instant);
     if (x === null) return null;
+    const zoned = lib.convertUtcToZoned(instant, zone);
+    // A step of a day or more repeats the clock: the date tells the ticks apart.
     ticks.push({
       at: x,
-      label: clockOf(lib.convertUtcToZoned(instant, zone)),
+      label:
+        step >= 24 && dayOf(zoned) !== ""
+          ? `${dayOf(zoned)} ${clockOf(zoned)}`
+          : clockOf(zoned),
     });
   }
 
-  // The clock changes inside the window.
+  // The clock changes inside the window. The window may cross into other years, so every year
+  // from its start to its end is asked, as the zone's own calendar counts them.
+  const yearAt = (instant: string): number => {
+    const parsed = Number(
+      lib.parseYearFromDate(
+        lib.convertUtcToPlainDate(instant, { timeZone: zone }),
+      ),
+    );
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
+  };
+  const firstYear = yearAt(start);
+  const lastYear = yearAt(end);
+  const transitions: Transition[] = [];
+  if (Number.isFinite(firstYear) && Number.isFinite(lastYear)) {
+    for (let y = firstYear; y <= lastYear && y < firstYear + MAX_YEARS; y++) {
+      transitions.push(...transitionsFor(y));
+    }
+  }
   const changes: RailTick[] = [];
   for (const t of transitions) {
     if (!lib.isBetweenUtc(t.instant, start, end)) continue;
@@ -621,6 +683,14 @@ export function computeClock(
           [`${iso}T00:00:00`, zone],
           lib.resolveLocal(`${iso}T00:00:00`, zone),
         );
+  const midnightKind =
+    iso === "" || midUtc === ""
+      ? null
+      : call(
+          "classifyLocal",
+          [`${iso}T00:00:00`, zone],
+          lib.classifyLocal(`${iso}T00:00:00`, zone),
+        );
   const record = call("parseGtfsTime", [time], lib.parseGtfsTime(time));
   const midAnswerUtc =
     midUtc === "" || record === null
@@ -647,22 +717,28 @@ export function computeClock(
   const gap =
     gtfsUtc === "" || midAnswerUtc === ""
       ? null
-      : call(
+      : (call(
           "diffUtc",
           [gtfsUtc, midAnswerUtc, "minutes"],
           lib.diffUtc(gtfsUtc, midAnswerUtc, "minutes"),
-        );
+        ) as number | null);
 
   const parsed = iso === "" ? Number.NaN : Number(lib.parseYearFromDate(iso));
   const year = Number.isFinite(parsed) ? parsed : null;
-  const transitions: Transition[] =
-    year === null
-      ? []
-      : call(
-          "getDstTransitions",
-          [zone, year],
-          lib.getDstTransitions(zone, year),
-        );
+  // Each year is asked once, whoever asks first: the date's year here, the window's in the rail.
+  const asked = new Map<number, Transition[]>();
+  const transitionsFor = (y: number): Transition[] => {
+    const known = asked.get(y);
+    if (known !== undefined) return known;
+    const got = call(
+      "getDstTransitions",
+      [zone, y],
+      lib.getDstTransitions(zone, y),
+    );
+    asked.set(y, got);
+    return got;
+  };
+  const hasChange = year !== null && transitionsFor(year).length > 0;
 
   const reason: ReasonKey =
     gtfsUtc === "" ? explainRefusal(lib, date, time, zone, calls) : "ok";
@@ -676,7 +752,7 @@ export function computeClock(
       lib,
       call,
       zone,
-      transitions,
+      transitionsFor,
       {
         gtfsAnchor: gtfs.anchor,
         midAnchor: midnight.anchor,
@@ -693,7 +769,8 @@ export function computeClock(
     kind: "computed",
     iso,
     year,
-    hasChange: transitions.length > 0,
+    hasChange,
+    midnightKind,
     gtfs,
     midnight,
     noon,
@@ -710,8 +787,10 @@ export function computeClock(
  * a stub library answering with the widest values, run through the real reader.
  */
 export function callsSizerText(): string {
-  const zone = "America/New_York";
+  const zone = WIDEST_ZONE;
   const utc = "2026-03-28T22:00:00Z";
+  // The date's year, then the window's first and last: the window crosses into the next year.
+  let yearsAsked = 0;
   const stub = {
     gtfsToInstant: () => utc,
     resolveLocal: () => utc,
@@ -724,7 +803,7 @@ export function callsSizerText(): string {
     isBetweenUtc: () => true,
     convertUtcToZoned: () => GHOST_LOCAL[0]!,
     convertUtcToPlainDate: () => "2026-03-08",
-    parseYearFromDate: () => "2026",
+    parseYearFromDate: () => String(2026 + (yearsAsked++ >= 2 ? 1 : 0)),
     getDstTransitions: () => [
       { instant: utc, offsetBefore: "-05:00", offsetAfter: "-04:00" },
       { instant: utc, offsetBefore: "-04:00", offsetAfter: "-05:00" },

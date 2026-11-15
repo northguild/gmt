@@ -674,7 +674,7 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       {
         problem: "A stop time is anchored at midnight on a clock-change day.",
         answer:
-          "A GTFS time counts from noon minus twelve hours of the service day, which is an hour off midnight on the two days the clocks change. {{gtfsToInstant}} counts from that point in the agency's zone.",
+          "A GTFS time counts from noon minus twelve hours of the service day, which is off midnight on a day the clocks change, by the size of the change, an hour in most zones. {{gtfsToInstant}} counts from that point in the agency's zone.",
         see: [
           {
             label: "guide",

@@ -18,7 +18,8 @@
  * results. No string here names a country or a statute.
  */
 import type { MonthDayLib } from "./month-day-lib";
-import { NO_SIGNAL_TEXT, literal } from "./holiday-rule-builder";
+import { NO_SIGNAL_TEXT } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import { readersYear, sliderRange, yearNumber } from "./moving-feasts";
 
 export { readersYear, sliderRange, yearNumber };

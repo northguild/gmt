@@ -100,7 +100,7 @@ parseGtfsTime("25:35:00");
 <Mistake
   severity="medium"
   title="Adding the seconds to local midnight"
-  description="The days and seconds of a GTFS time are measured from noon minus 12 hours of the service day, which is midnight except on a day the clocks change. Adding them to local midnight is an hour out on that day. The record is what to keep; an instant needs the agency's zone and the service date, and gtfsToInstant takes both."
+  description="The days and seconds of a GTFS time are measured from noon minus 12 hours of the service day, which is midnight except on a day the clocks change. Adding them to local midnight is out on that day by the size of the change, an hour in most zones. The record is what to keep; an instant needs the agency's zone and the service date, and gtfsToInstant takes both."
   wrongCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 
 const { dayOverflow, seconds } = parseGtfsTime("25:35:00");
@@ -109,11 +109,11 @@ const midnight = new Date("2026-03-29T00:00:00"); // local midnight of the servi
 
 new Date(midnight.getTime() + (dayOverflow * 86400 + seconds) * 1000);
 // GTFS measures from noon minus 12 hours, so on a day the clocks change
-// this is an hour from the time the feed means`}
+// this is out by the size of the change, an hour in Berlin`}
   rightCode={`import { gtfsToInstant } from "@northguild/gmt/rail/convert";
 
-gtfsToInstant("20260329", "08:00:00", "Europe/Berlin");
-// "2026-03-29T06:00:00Z"`}
+gtfsToInstant("20260329", "25:35:00", "Europe/Berlin");
+// "2026-03-29T23:35:00Z"`}
   rightSpecId="gtfsToInstant"
 />
 

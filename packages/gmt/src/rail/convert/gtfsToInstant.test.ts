@@ -19,8 +19,9 @@ function naiveInstant(date: string, seconds: number, timeZone: string): string {
     .toString();
 }
 
-// Expected values below were computed with @js-temporal/polyfill: noon on the service date in the
-// zone with disambiguation "reject", minus 12 h exact, plus the written time as exact seconds.
+// Expected values below are derived from GTFS § Field Types, Time (noon minus 12 h of the service
+// day, then the written time as exact seconds), with noon resolved in the zone with
+// disambiguation "reject"; checked against @js-temporal/polyfill.
 describe("gtfsToInstant", () => {
   describe("valid rows", () => {
     it.each`
@@ -152,6 +153,8 @@ describe("gtfsToInstant", () => {
       ${"X4"} | ${"19690930"} | ${"Pacific/Kwajalein"} | ${"+11 to -12: the whole day repeated, noon ambiguous"}
       ${"X5"} | ${"20111230"} | ${"Pacific/Apia"}      | ${"deleted day"}
       ${"X6"} | ${"18441231"} | ${"Asia/Manila"}       | ${"deleted day before the polyfill search floor"}
+      ${"X7"} | ${"18831118"} | ${NY}                  | ${"US railway time: -04:56:02 to -05:00 at noon, so noon happened twice"}
+      ${"X8"} | ${"19930821"} | ${"Pacific/Kwajalein"} | ${"-12 to +12: deleted day"}
     `(
       "$id: $serviceDate in $timeZone returns '' for 00:00:00 and 25:00:00 ($why)",
       ({ serviceDate, timeZone }) => {
@@ -224,6 +227,9 @@ describe("gtfsToInstant", () => {
       ${"an empty string"}      | ${""}
       ${"a leading space"}      | ${" 20240130"}
       ${"a trailing newline"}   | ${"20240130\n"}
+      ${"a leading tab"}        | ${"\t20240130"}
+      ${"a trailing tab"}       | ${"20240130\t"}
+      ${"a byte order mark"}    | ${"\uFEFF20240130"}
       ${"fullwidth digits"}     | ${"２０２４０１３０"}
       ${"the number 20240130"}  | ${20240130}
       ${"null"}                 | ${null}
@@ -244,6 +250,9 @@ describe("gtfsToInstant", () => {
       ${"no seconds"}          | ${"25:35"}
       ${"an empty string"}     | ${""}
       ${"a leading space"}     | ${" 25:35:00"}
+      ${"a leading tab"}       | ${"\t25:35:00"}
+      ${"a trailing tab"}      | ${"25:35:00\t"}
+      ${"a byte order mark"}   | ${"\uFEFF25:35:00"}
       ${"a negative hour"}     | ${"-01:00:00"}
       ${"a fractional second"} | ${"25:35:00.5"}
       ${"null"}                | ${null}
@@ -256,14 +265,17 @@ describe("gtfsToInstant", () => {
     );
 
     it.each`
-      label                | timeZone
-      ${"an unknown zone"} | ${"Not/AZone"}
-      ${"an empty string"} | ${""}
-      ${"Z"}               | ${"Z"}
-      ${"a leading space"} | ${" UTC"}
-      ${"null"}            | ${null}
-      ${"undefined"}       | ${undefined}
-      ${"the number 123"}  | ${123}
+      label                  | timeZone
+      ${"an unknown zone"}   | ${"Not/AZone"}
+      ${"an empty string"}   | ${""}
+      ${"Z"}                 | ${"Z"}
+      ${"a leading space"}   | ${" UTC"}
+      ${"a leading tab"}     | ${"\tUTC"}
+      ${"a trailing tab"}    | ${"UTC\t"}
+      ${"a byte order mark"} | ${"\uFEFFUTC"}
+      ${"null"}              | ${null}
+      ${"undefined"}         | ${undefined}
+      ${"the number 123"}    | ${123}
     `(
       "returns '' for the time zone $label",
       ({ timeZone }: { timeZone: unknown }) => {

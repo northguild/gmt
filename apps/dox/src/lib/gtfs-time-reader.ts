@@ -14,7 +14,7 @@
  * No DOM, no library import (the library arrives as a `RailLib`).
  */
 import type { GtfsTime } from "@northguild/gmt/types";
-import { literal } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import type { RailLib } from "./rail-lib";
 
 export const CUSTOM_PRESET_ID = "custom";

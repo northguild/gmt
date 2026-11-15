@@ -16,7 +16,7 @@
  * passes its result in.
  */
 import type { ExpiryLib, ExpiryTtl, ExpiryUnits } from "./expiry-lib";
-import { literal } from "./holiday-rule-builder";
+import { literal } from "./literal";
 
 export type ExpiryUnit =
   | "years"

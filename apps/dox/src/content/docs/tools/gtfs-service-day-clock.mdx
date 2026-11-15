@@ -11,7 +11,7 @@ import GtfsServiceDayClock from "../../../components/GtfsServiceDayClock.astro";
 
 <Fragment slot="keypoint">
 
-A GTFS time counts from noon minus 12 hours of the service day. That is midnight except on the two days a year the clocks change, and on those days a midnight anchor is an hour off for every stop.
+A GTFS time counts from noon minus 12 hours of the service day. That is midnight except on a day the clocks change, and on that day a midnight anchor is off for every stop by the size of the change, an hour in most zones.
 
 </Fragment>
 
@@ -25,11 +25,11 @@ A GTFS `stop_times.txt` time is a count of elapsed time, and the service date an
 
 <Fragment slot="after">
 
-**Why noon.** Local midnight can happen twice or not at all on a day the clocks change, and noon happens once. The GTFS anchor is noon of the service day minus 12 hours, which is local midnight on an ordinary day and an hour off it on a clock-change day. The first preset is a Berlin spring-forward day: the midnight anchor reads 09:00 +02:00 where GTFS reads 08:00 +02:00, which is 60 minutes later.
+**Why noon.** Local midnight can happen twice or not at all on a day the clocks change, and noon happens once. The GTFS anchor is noon of the service day minus 12 hours, which is local midnight on an ordinary day and off it on a clock-change day by the size of the change, an hour in most zones. The first preset is a Berlin spring-forward day: the midnight anchor reads 09:00 +02:00 where GTFS reads 08:00 +02:00, which is 60 minutes later. The Lord Howe preset is a 30-minute change, so the gap there is 30 minutes.
 
 **Past 24:00:00.** A time such as `26:30:00` is exact elapsed seconds from the anchor, never a move on the wall clock. The fifth preset is `26:30:00` on 28 March in Berlin, the day before the clocks go forward: the answer is 03:30 +02:00 on 29 March, because 26 hours and 30 minutes of real time passed, and a wall-clock 02:30 that day does not exist.
 
-**No anchor.** When noon of the service date is skipped or repeated in the zone, `gtfsToInstant` returns an empty string. It has no option to choose a reading, so the tool offers no control for one. The Samoa preset is a date whose noon did not happen: the GTFS card reads NO SIGNAL and says why, and the midnight card still gives an answer for a local day that never happened.
+**No anchor.** When noon of the service date is skipped or repeated in the zone, `gtfsToInstant` returns an empty string. It has no option to choose a reading, so the tool offers no control for one. The Samoa preset is a date whose noon did not happen: the GTFS card reads NO SIGNAL and says why, and the midnight card still gives an answer for a local day that never happened. Its note then says that local midnight did not happen and `resolveLocal` moved it forward; where local midnight happened twice, as in `America/Havana` on 1 November 2026, the note says `resolveLocal` took the earlier one.
 
 **Offsets and far years.** The zone can be an offset such as `+05:30`, which never changes, so both anchors agree. A result past year 9999 is the expanded-year string `+010000-…Z` that Temporal writes, and the tool shows it as returned. If the rail cannot place such an instant, the tool says so and does not draw it.
 

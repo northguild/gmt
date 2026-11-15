@@ -5071,7 +5071,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `agency.txt` `agency_timezone`), read by `gtfsToInstant` next to what a midnight anchor gives,
   drawn on one day rail with the clock change marked. `loadServiceDayLib()` in `rail-lib.ts` returns
   `RailLib` plus the functions below; `loadRailLib` is unchanged, so the Time Reader loads nothing new.
-  Rail `drawsOn` `transport`.
+  Both libs take their types from the library (`Pick<typeof import("@northguild/gmt/...")>` through
+  `pickTyped` in `gmt-pick.ts`), so a renamed or retyped function fails the typecheck. `literal`
+  lives in `lib/literal.ts`, not in the holiday builder, so the Temporal polyfill stays out of the
+  page's first-paint chunk. Rail `drawsOn` `transport`.
   - **The calls are the library's; the site re-derives none.** Zone is a text box, not a select,
     because a feed's zone is pasted and an offset such as `+05:30` is accepted.
 
@@ -5085,7 +5088,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     | Midnight answer | `addUtc(midnight, { days, seconds })` from `parseGtfsTime(time)` |
     | Local readings | `convertUtcToZoned(instant, zone)` |
     | Gap | `diffUtc(gtfs, midnightAnswer, "minutes")`: positive when the midnight answer is later |
-    | Clock change | `getDstTransitions(zone, year)`, kept where `isBetweenUtc` holds |
+    | Midnight note | `classifyLocal(`${iso}T00:00:00`, zone)`: `"nonexistent"` reads "did not happen, `resolveLocal` moved it forward", `"ambiguous"` reads "happened twice, `resolveLocal` took the earlier one" |
+    | Clock change | `getDstTransitions(zone, year)` for every year from the window's start to its end (the zone's own calendar, `parseYearFromDate` of `convertUtcToZoned`), kept where `isBetweenUtc` holds |
     | Rail window | `minUtc`/`maxUtc` of the marks, padded 2 h with `subtractUtc`/`addUtc` |
 
     The ISO date comes from noon in UTC (it always exists) so the date rule is the library's, never a
@@ -5097,9 +5101,14 @@ Shared hooks come first, then the globe, then the clock-change pages.
     instant." The order puts the cheapest, most specific cause first so a bad time is never blamed on
     the zone. An empty box reads "nothing typed" and makes no call; NO SIGNAL (amber) is the library's
     refusal only. There is no disambiguation control, because the library has no option.
+  - **Wording: the gap is the size of the change.** On a day the clocks change the two anchors
+    differ by the size of the change, an hour in most zones (30 minutes in `Australia/Lord_Howe`),
+    and a zone may change its clocks more or less than twice a year. No prose, prompt or widget
+    comment says "two days a year" or "an hour off" as a rule.
   - **Presets (8), the default is `spring-forward`.** `spring-forward` (20260329, 08:00:00, Berlin),
     `spring-start` (00:00:00), `fall-back` (20261025), `ordinary` (20260615), `past-midnight`
-    (20260328, 26:30:00), `new-york` (20260308), `no-noon` (20111230, 12:00:00, Pacific/Apia, where
+    ("Berlin, 26:30:00 across the change": 20260328, 26:30:00), `lord-howe` (20261004, 08:00:00,
+    `Australia/Lord_Howe`, a 30-minute gap), `no-noon` (20111230, 12:00:00, Pacific/Apia, where
     GTFS gives `""` and the midnight code still answers) and `offset` (`+05:30`). Every value was pasted
     from `dist`. There is no far-future preset: an expanded year is typed, shown as returned, and only
     grows a card in height. A preset matches only while all three boxes equal it, else `custom`.
@@ -5107,10 +5116,20 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`justify-content: space-between`) and stack below the widget's 52rem container width; each has a
     full bevelled border and a tinted fill, never a coloured left edge. Each value is a `hold` with
     `zonedValue` ghosts at the longest the presets give (`GHOST_LOCAL`, `GHOST_UTC`), breaking only at
-    `<wbr>`, so a longer typed value is taller and never wider. The calls frame reserves the lines of
+    `<wbr>`, so a longer typed value is taller and never wider. `GHOST_LOCAL` also holds a reading in
+    the widest zone (`WIDEST_ZONE`, `America/Argentina/Buenos_Aires`), so a real agency zone does not
+    grow a plate while the reader types; the holds test and the readout-still entry type that zone. Its `[America/Argentina/Buenos_Aires]`
+    piece is one unbreakable run of about 32 mono characters, so below the widget's 30rem container the
+    cards and plates drop to 8px inline padding and the values to `--gmt-text-xs`, and below 20rem
+    the card drops to 4px (WebKit sets the face wider); without that the page scrolled sideways at
+    300 px.
+    The midnight card's note is one of five (`MIDNIGHT_NOTES`: empty, ok, none, skipped, repeated),
+    held with a ghost for each. The calls frame reserves the lines of
     `callsSizerText()`, a stub library run through the real reader with the widest answer (three
-    clock changes, the most any preset's zone has that year). Rail ticks are every 6 h and the step
-    doubles above 12 ticks, so a long window does not crowd the axis.
+    clock changes, the most any preset's zone has that year, and a window that crosses a year, so two
+    `getDstTransitions` lines). Rail ticks are every 6 h and the step doubles above 12 ticks, so a
+    long window does not crowd the axis; at a step of a day or more each tick label carries the date
+    (`03-29 14:30`).
   - **The rail never lies about a position.** If a rail helper returns `null` or `""` the rail is
     not drawn and one line says "Not drawn: the library gave no position for this instant."; only a
     typed expanded year can trigger it.

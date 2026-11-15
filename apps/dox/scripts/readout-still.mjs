@@ -846,7 +846,14 @@ const TOOLS = [
       {
         role: "textbox",
         name: "Zone (agency.txt, agency_timezone)",
-        values: ["Europe/Berlin", "UTC", "+05:30", "Not/AZone", ""],
+        values: [
+          "Europe/Berlin",
+          "UTC",
+          "+05:30",
+          "Not/AZone",
+          "America/Argentina/Buenos_Aires",
+          "",
+        ],
       },
     ],
     track: null,

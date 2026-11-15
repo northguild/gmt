@@ -1,6 +1,6 @@
 ---
 title: "Rail: GTFS Service Days"
-description: Read, write and check a GTFS stop time such as 25:35:00, which runs past midnight and stays with its service day, with the days past the service day kept apart from the time of day.
+description: Read, write and check a GTFS stop time such as 25:35:00, which runs past midnight and stays with its service day, and turn it into an instant on a service date in the agency's zone.
 sidebar:
   order: 13
 industries: [rail]
@@ -12,16 +12,18 @@ the count at `00:00:00`. The stop is written `25:35:00` and stays part of the se
 began on.
 
 The functions here read that form, write it back and check it. They keep the whole days past the
-service day and the seconds left over as two numbers, and they never name a date.
+service day and the seconds left over as two numbers. Parse, format and validate never name a date;
+`gtfsToInstant` takes a service date and the agency's zone and turns a time into an instant.
 
 ```typescript
 import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 import { formatGtfsTime } from "@northguild/gmt/rail/format";
 import { isValidGtfsTime } from "@northguild/gmt/rail/validate";
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
 ```
 
-The functions live in `@northguild/gmt/rail/parse`, `@northguild/gmt/rail/format` and
-`@northguild/gmt/rail/validate`.
+The functions live in `@northguild/gmt/rail/parse`, `@northguild/gmt/rail/format`,
+`@northguild/gmt/rail/validate` and `@northguild/gmt/rail/convert`.
 
 ## The GTFS time form
 
@@ -163,8 +165,9 @@ if (record !== null) {
 
 ### Noon minus 12 hours
 
-The reference counts from noon because noon happens once on a clock-change day. Midnight can be
-missing or repeated on some days, and noon is not, in any zone that changes its clocks at night.
+The reference defines the anchor and gives no reason for it. Our explanation is that counting from
+noon works because noon happens once on a clock-change day. Midnight can be missing or repeated on
+some days, and noon is not, in any zone that changes its clocks at night.
 
 ### The agency's zone
 
@@ -241,7 +244,7 @@ shows both anchors for a date, a time and a zone, with the clock change marked o
 
 - It does not pick the service days a trip runs on. That is `calendar.txt` and
   `calendar_dates.txt`.
-- It does not read the GTFS `Date` type or the `Local time` type.
+- It does not read the `Local time` type.
 - It does not split a CSV row. It reads one field.
 
 ## See it break, then work
@@ -255,8 +258,8 @@ shows both anchors for a date, a time and a zone, with the clock change marked o
 ## Sources
 
 - MobilityData and Google, [_GTFS Schedule Reference_](https://gtfs.org/documentation/schedule/reference/),
-  revised 27 April 2026: Field Types, Time; Term Definitions, Service day; `trips.txt`, Example:
-  Blocks and service day; `stop_times.txt`, `frequencies.txt` and `booking_rules.txt`; File
-  Requirements.
+  revised 27 April 2026: Field Types, Time and Date; Term Definitions, Service day; `trips.txt`,
+  Example: Blocks and service day; `stop_times.txt`, `frequencies.txt` and `booking_rules.txt`;
+  `stops.txt`, `stop_timezone`; `agency.txt`, `agency_timezone`; File Requirements.
 - MobilityData, _gtfs-validator_, `GtfsTime.java`: the source of the three-digit hour (`\d{1,3}`)
   that GMT reads.

@@ -17,7 +17,8 @@ const ANCHOR_HOURS_BEFORE_NOON = 12;
  * - A time past `24:00:00` is elapsed time from that anchor, not a wall-clock move. A later
  *   clock change therefore shifts its local reading: `26:30:00` on 2024-03-09 in New York is
  *   03:30 EDT, and `25:30:00` and `26:30:00` on 2024-11-02 both read 01:30, an hour apart.
- * - `serviceDate` is a GTFS `Date` (`YYYYMMDD`); `YYYY-MM-DD` is read too.
+ * - `serviceDate` is a GTFS `Date` (`YYYYMMDD`). GMT's plain-date form `YYYY-MM-DD` is read too,
+ *   with a four-digit year only, as a GTFS date has.
  * - `timeZone` is `agency.agency_timezone`, even for a stop that has its own `stop_timezone`.
  *   An IANA name is expected; a numeric offset is read as well.
  * - A result outside years 0000 to 9999 is written with Temporal's expanded year
