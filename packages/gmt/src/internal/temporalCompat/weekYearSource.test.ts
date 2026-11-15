@@ -99,9 +99,11 @@ describe("week-year source rule", () => {
   `(
     "imports $module only from $importers",
     ({ module, importers }: { module: string; importers: string[] }) => {
-      expect(found(new RegExp(`from "[./]*/${module}"`), importers)).toEqual(
-        [],
-      );
+      // Any path that ends in the module, static or dynamic: `../internal/weekYearGuard` from a
+      // namespace folder counts as much as `./weekYearGuard`.
+      expect(
+        found(new RegExp(`(?:from |import\\()"[^"]*/${module}"`), importers),
+      ).toEqual([]);
     },
   );
 });
