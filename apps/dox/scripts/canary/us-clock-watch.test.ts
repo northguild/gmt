@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  LIMITS,
   SUBJECT_TERMS,
   TITLE_TERMS,
   isoOfHttpDate,
@@ -49,7 +50,7 @@ const ZONES = [
 const DATE = "Fri, 13 Nov 2026 12:26:01 GMT";
 const SNAPSHOT_DATE = "2026-11-01T00:00:00Z";
 
-type Handler = (url: URL) => Response | Promise<Response>;
+type Handler = (url: URL, init?: RequestInit) => Response | Promise<Response>;
 type Call = { url: URL; headers: Record<string, string> };
 
 const reply = (
@@ -93,6 +94,12 @@ const stateBill = (
   latest_action_date: date,
   latest_action_description: description,
 });
+
+/** A response that never comes: it settles only when the request is aborted. */
+const hang: Handler = (_url, init) =>
+  new Promise((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+  });
 
 const page = (results: unknown[]) => ({
   results,
@@ -189,7 +196,7 @@ function world(overrides: Record<string, Handler> = {}) {
     });
     const handler = handlers[`${url.host}${url.pathname}`];
     if (!handler) return reply("not found", {}, 404);
-    return await handler(url);
+    return await handler(url, init);
   });
   return { fetch: fetchFake as unknown as typeof fetch, calls };
 }
@@ -307,6 +314,21 @@ describe("the committed snapshot", () => {
     for (const hash of Object.values(snapshot.tz.zones)) {
       expect(hash).toMatch(/^[0-9a-f]{64}$/);
     }
+  });
+
+  // #526: a placeholder federal part (congress 0) makes every weekly check report "run `refresh`".
+  it("holds a refreshed federal and state part, not a placeholder", () => {
+    const snapshot = JSON.parse(
+      readFileSync(join(REPO, "scripts/us-clock-watch.snapshot.json"), "utf8"),
+    );
+    expect(Number.isInteger(snapshot.federal.congress)).toBe(true);
+    expect(snapshot.federal.congress).toBeGreaterThan(0);
+    expect(snapshot.federal.checkedAt).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/,
+    );
+    expect(snapshot.state.checkedAt).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/,
+    );
   });
 });
 
@@ -535,7 +557,7 @@ describe("check: state bills", () => {
     expect(r.verdict?.state.differences).toEqual([]);
   });
 
-  it("searches every subject term, every jurisdiction, one request a second", async () => {
+  it("searches every subject term, every jurisdiction, under ten requests a minute", async () => {
     const r = await run(["check"]);
     const searches = r.calls.filter((c) => c.url.pathname === "/bills");
     expect(searches.map((c) => c.url.searchParams.get("q"))).toEqual(
@@ -551,7 +573,7 @@ describe("check: state bills", () => {
       expect(call.url.searchParams.has("jurisdiction")).toBe(false);
       expect(call.headers["X-API-KEY"]).toBe(KEYS.OPEN_STATES_API_KEY);
     }
-    expect(r.sleeps).toEqual([1000, 1000]);
+    expect(r.sleeps).toEqual([7000, 7000]);
   });
 });
 
@@ -657,6 +679,43 @@ describe("check: a source could not run", () => {
     expect(r.verdict?.state.message).toBe(
       "HTTP 500 from v3.openstates.org/bills",
     );
+    expect(
+      r.calls.filter((c) => c.url.host === "v3.openstates.org"),
+    ).toHaveLength(1);
+  });
+
+  // #526: Open States answers a long search with the odd 502; one must not cost a whole run.
+  it("tries a gateway error again, after a pause, and carries on", async () => {
+    let sent = 0;
+    const r = await run(["check"], {
+      overrides: {
+        "v3.openstates.org/bills": () =>
+          (sent += 1) === 1
+            ? reply("<html>502</html>", {}, 502)
+            : reply(page([])),
+      },
+    });
+    expect(r.verdict?.state.status).toBe("ran");
+    expect(
+      r.calls.filter((c) => c.url.host === "v3.openstates.org"),
+    ).toHaveLength(SUBJECT_TERMS.length + 1);
+    expect(r.sleeps).toEqual([10_000, 7000, 7000, 7000]);
+  });
+
+  it("gives up on a gateway error after two more tries", async () => {
+    const r = await run(["check"], {
+      overrides: {
+        "v3.openstates.org/bills": () => reply("<html>503</html>", {}, 503),
+      },
+    });
+    expect(r.code).toBe(2);
+    expect(r.verdict?.state.message).toBe(
+      "HTTP 503 from v3.openstates.org/bills",
+    );
+    expect(
+      r.calls.filter((c) => c.url.host === "v3.openstates.org"),
+    ).toHaveLength(3);
+    expect(r.verdict?.tz.status).toBe("ran");
   });
 
   it("reports a body that is not JSON", async () => {
@@ -691,6 +750,42 @@ describe("check: a source could not run", () => {
     expect(r.code).toBe(2);
     expect(r.verdict?.state.message).toBe("request budget of 2 is spent");
     expect(r.verdict?.federal.status).toBe("ran");
+  });
+
+  it("gives up on an Open States request that outlasts its timeout", async () => {
+    const r = await run(["check"], {
+      limits: { stateTimeoutMs: 20 },
+      overrides: { "v3.openstates.org/bills": hang },
+    });
+    expect(r.code).toBe(2);
+    expect(r.verdict?.state.message).toContain(
+      "network error from v3.openstates.org/bills",
+    );
+    expect(r.verdict?.federal.status).toBe("ran");
+    expect(r.verdict?.tz.status).toBe("ran");
+  });
+
+  // #526: Open States can take a minute a page, so the check stops itself before the job's
+  // timeout does, and the could-not-run issue is still filed.
+  it("stops every source once the check's time limit runs out", async () => {
+    const r = await run(["check"], {
+      limits: { checkDeadlineMs: 20 },
+      overrides: { "v3.openstates.org/bills": hang },
+    });
+    expect(r.code).toBe(2);
+    expect(r.verdict?.federal.status).toBe("ran");
+    expect(r.verdict?.state.message).toBe("the check's time limit ran out");
+    expect(r.verdict?.tz.message).toBe("the check's time limit ran out");
+  });
+
+  it("keeps the check's time limit inside the workflow job's timeout", () => {
+    const workflow = readFileSync(
+      join(REPO, ".github/workflows/us-clock-watch.yml"),
+      "utf8",
+    );
+    const minutes = Number(/timeout-minutes: (\d+)/.exec(workflow)?.[1]);
+    expect(LIMITS.checkDeadlineMs).toBeLessThan(minutes * 60_000);
+    expect(LIMITS.stateTimeoutMs).toBeLessThan(LIMITS.checkDeadlineMs);
   });
 
   it("stops when the rate limit left is below the floor", async () => {
@@ -848,6 +943,19 @@ describe("refresh", () => {
 
     const again = await run(["check"], { root });
     expect(again.code).toBe(0);
+  });
+
+  // #526: a full listing is about 100 Open States pages, more than the 60 a check may send.
+  it("lists the state bills under their own budget, paced like a check", async () => {
+    const r = await run(["refresh"], { limits: { stateRequests: 1 } });
+    expect(r.code).toBe(0);
+    expect(r.sleeps).toEqual([7000, 7000]);
+
+    const spent = await run(["refresh"], {
+      limits: { stateRefreshRequests: 2 },
+    });
+    expect(spent.code).toBe(2);
+    expect(spent.err).toContain("request budget of 2 is spent");
   });
 
   it("writes nothing when a source fails", async () => {

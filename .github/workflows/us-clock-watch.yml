@@ -40,7 +40,8 @@ jobs:
   canary:
     name: US clock-change sources
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The check stops itself at 45 minutes (LIMITS.checkDeadlineMs) and still files its issue.
+    timeout-minutes: 60
     permissions:
       contents: read
       issues: write

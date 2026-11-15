@@ -73,5 +73,9 @@ and a tz release to model it. The canary's tz issue is the trigger. The plan is 
     parts when the Proposals view's data is removed or replaced. The workflow header says so.
 12. **Issue bodies may show the bill numbers and titles the APIs return,** as data, in GitHub
     issues only. The script, snapshot keys and site hold none of their own.
-13. **Open States pacing.** One request a second, at most 60 a run; a 429 is could-not-run, with
-    no retry.
+13. **Open States pacing.** The key allows 10 requests a minute, so requests go 7 seconds apart;
+    at most 60 for a `check` and 250 for a `refresh` (a full listing is about 100 pages). Each
+    request may run 120 seconds, since a search can take most of a minute. A 502, 503, 504 or
+    timed-out request is sent twice more, 10 seconds apart; a 429 is could-not-run, with no retry.
+    A `check` stops itself at 45 minutes, inside the job's 60-minute timeout, so the could-not-run
+    issue is still filed.

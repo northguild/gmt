@@ -16,7 +16,8 @@
  *   node scripts/us-clock-watch.mjs refresh
  *     Fetches all three sources in full and writes the snapshot. Run by hand, with both secrets in
  *     the environment, after a person has reviewed what changed. The first run lists the whole
- *     current congress (about 60 pages).
+ *     current congress (about 60 pages) and every state bill on the subject (about 100 pages, at
+ *     most 10 a minute, so 15 minutes or more).
  *
  *   node scripts/us-clock-watch.mjs snapshot-tz --dir=<folder>
  *     Rewrites only the snapshot's `tz` part from a folder holding `northamerica`, `australasia`,
@@ -73,9 +74,20 @@ const STATE_PAGE = 20;
 export const LIMITS = {
   federalRequests: 400,
   stateRequests: 60,
+  /** `refresh` lists every state bill: about 100 pages of 20 across the three terms. */
+  stateRefreshRequests: 250,
   /** Stop when `X-RateLimit-Remaining` falls below this. */
   rateFloor: 100,
-  statePauseMs: 1000,
+  /** Open States allows 10 requests a minute per key (its 429 body says so); 7 s keeps under it. */
+  statePauseMs: 7000,
+  /** An Open States search can take most of a minute; other hosts get `FETCH_TIMEOUT_MS`. */
+  stateTimeoutMs: 120_000,
+  /** One `check` stops here, inside the workflow job's `timeout-minutes`, so its issue is filed. */
+  checkDeadlineMs: 45 * 60_000,
+  /** A 502, 503, 504 or timed-out request is sent again this many times; never a 429. */
+  retries: 2,
+  /** The wait before such a request is sent again, on top of the source's own pause. */
+  retryPauseMs: 10_000,
   tzRequests: 8,
 };
 
@@ -97,6 +109,25 @@ const MONTHS = [
 /** A source failure with a message safe to print. */
 class SourceError extends Error {}
 
+/** A failure that may pass if the request is sent again: a gateway error or a timeout. */
+class TransientError extends SourceError {}
+
+/** RFC 9110 §15.6: the gateway and availability errors, worth sending again. */
+const TRANSIENT_STATUS = new Set([502, 503, 504]);
+
+const DEADLINE_MESSAGE = "the check's time limit ran out";
+
+/** Throws once `deadline` (an `AbortSignal`, or undefined for no limit) has fired. */
+function beforeDeadline(deadline) {
+  if (deadline?.aborted) throw new SourceError(DEADLINE_MESSAGE);
+}
+
+/** One request's own timeout, cut short by `deadline` when there is one. */
+const requestSignal = (timeoutMs, deadline) =>
+  deadline
+    ? AbortSignal.any([AbortSignal.timeout(timeoutMs), deadline])
+    : AbortSignal.timeout(timeoutMs);
+
 // ---------------------------------------------------------------- requests
 
 /** `Fri, 13 Nov 2026 12:26:01 GMT` (RFC 9110 §5.6.7) as `2026-11-13T12:26:01Z`, or null. */
@@ -113,7 +144,9 @@ export function isoOfHttpDate(text) {
 /**
  * A sequential JSON getter with a request budget. A header carries the key; the URL never does.
  * `get(path)` returns `{ body, date }`, `date` being the response `Date` header as ISO or null.
- * Every thrown message names the host and path only, never the query.
+ * Every thrown message names the host and path only, never the query. `deadline`, an
+ * `AbortSignal`, ends the whole run; `timeoutMs` bounds each request. A transient failure is sent
+ * again up to `retries` times, `retryPauseMs` apart; each send counts against `budget`.
  */
 function requester({
   fetch,
@@ -123,13 +156,32 @@ function requester({
   rateFloor = 0,
   pauseMs = 0,
   sleep,
+  timeoutMs = FETCH_TIMEOUT_MS,
+  deadline,
+  retries = 0,
+  retryPauseMs = 0,
 }) {
   let sent = 0;
   return async function get(path, params = {}) {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await send(path, params);
+      } catch (error) {
+        if (!(error instanceof TransientError) || attempt >= retries) {
+          throw error;
+        }
+        await sleep(retryPauseMs);
+      }
+    }
+  };
+
+  async function send(path, params) {
+    beforeDeadline(deadline);
     if (sent >= budget) {
       throw new SourceError(`request budget of ${budget} is spent`);
     }
     if (sent > 0 && pauseMs > 0) await sleep(pauseMs);
+    beforeDeadline(deadline);
     sent += 1;
     const url = new URL(`${base}${path}`);
     for (const [name, value] of Object.entries(params)) {
@@ -140,16 +192,20 @@ function requester({
     try {
       response = await fetch(url, {
         headers,
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal: requestSignal(timeoutMs, deadline),
       });
     } catch (error) {
-      throw new SourceError(`network error from ${where}: ${error.message}`);
+      beforeDeadline(deadline);
+      throw new TransientError(`network error from ${where}: ${error.message}`);
     }
     if (response.status === 429) {
       throw new SourceError(`HTTP 429 from ${where} (rate limited; no retry)`);
     }
     if (!response.ok) {
-      throw new SourceError(`HTTP ${response.status} from ${where}`);
+      const Failure = TRANSIENT_STATUS.has(response.status)
+        ? TransientError
+        : SourceError;
+      throw new Failure(`HTTP ${response.status} from ${where}`);
     }
     const remaining = Number(response.headers.get("x-ratelimit-remaining"));
     if (
@@ -170,17 +226,19 @@ function requester({
       throw new SourceError(`body from ${where} is not a JSON object`);
     }
     return { body, date: isoOfHttpDate(response.headers.get("date")) };
-  };
+  }
 }
 
 /** Text of `fetch` for a plain file (no key, no budget beyond the caller's loop). */
-async function fetchText(fetch, url) {
+async function fetchText(fetch, url, deadline) {
+  beforeDeadline(deadline);
   let response;
   try {
     response = await fetch(url, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      signal: requestSignal(FETCH_TIMEOUT_MS, deadline),
     });
   } catch (error) {
+    beforeDeadline(deadline);
     throw new SourceError(`network error from ${url}: ${error.message}`);
   }
   if (!response.ok)
@@ -480,11 +538,13 @@ function readZones(root) {
   return zones;
 }
 
-async function loadTz(fetch, zones) {
-  const release = (await fetchText(fetch, `${TZ_BASE}/version`)).trim();
+async function loadTz(fetch, zones, deadline) {
+  const release = (
+    await fetchText(fetch, `${TZ_BASE}/version`, deadline)
+  ).trim();
   const texts = [];
   for (const file of TZ_FILES) {
-    texts.push(await fetchText(fetch, `${TZ_BASE}/${file}`));
+    texts.push(await fetchText(fetch, `${TZ_BASE}/${file}`, deadline));
   }
   return tzSnapshot(release, texts.join("\n"), zones);
 }
@@ -518,6 +578,7 @@ const missing = (env, name) =>
 /**
  * The verdict of one `check`: each source `{ status: "ran", … } | { status: "could-not-run", message }`.
  * `snapshot` is the committed snapshot; `zones` is read lazily so a missing list fails only `tz`.
+ * Every source stops once `limits.checkDeadlineMs` has passed since the call.
  */
 export async function runSources({
   env,
@@ -528,6 +589,7 @@ export async function runSources({
   limits,
 }) {
   const secrets = [env[CONGRESS_KEY], env[OPEN_STATES_KEY]];
+  const deadline = AbortSignal.timeout(limits.checkDeadlineMs);
   const federal = async () => {
     const gone = missing(env, CONGRESS_KEY);
     if (gone) throw new SourceError(gone);
@@ -538,6 +600,9 @@ export async function runSources({
       budget: limits.federalRequests,
       rateFloor: limits.rateFloor,
       sleep,
+      deadline,
+      retries: limits.retries,
+      retryPauseMs: limits.retryPauseMs,
     });
     const { congress, differences } = await checkFederal(get, snapshot.federal);
     return { congress, differences };
@@ -555,12 +620,16 @@ export async function runSources({
       budget: limits.stateRequests,
       pauseMs: limits.statePauseMs,
       sleep,
+      timeoutMs: limits.stateTimeoutMs,
+      deadline,
+      retries: limits.retries,
+      retryPauseMs: limits.retryPauseMs,
     });
     const { differences } = await checkState(get, snapshot.state);
     return { differences };
   };
   const tz = async () => {
-    const current = await loadTz(fetch, zones());
+    const current = await loadTz(fetch, zones(), deadline);
     const changed = compareTz(current, snapshot.tz);
     return {
       release: current.release,
@@ -710,6 +779,8 @@ async function refresh({ root, env, fetch, sleep, stdout, stderr, limits }) {
         budget: limits.federalRequests,
         rateFloor: limits.rateFloor,
         sleep,
+        retries: limits.retries,
+        retryPauseMs: limits.retryPauseMs,
       }),
     );
     const state = await refreshState(
@@ -720,9 +791,12 @@ async function refresh({ root, env, fetch, sleep, stdout, stderr, limits }) {
           "X-API-KEY": env[OPEN_STATES_KEY],
           Accept: "application/json",
         },
-        budget: limits.stateRequests,
+        budget: limits.stateRefreshRequests,
         pauseMs: limits.statePauseMs,
         sleep,
+        timeoutMs: limits.stateTimeoutMs,
+        retries: limits.retries,
+        retryPauseMs: limits.retryPauseMs,
       }),
     );
     const tz = await loadTz(fetch, readZones(root));

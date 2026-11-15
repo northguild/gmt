@@ -42,8 +42,13 @@ issue bodies as data the APIs returned, never in the script, the site or its tes
   missing from the list is kept as it was.
 - **Secrets**, read from the environment and sent only in a request header: `CONGRESS_GOV_API_KEY`
   and `OPEN_STATES_API_KEY`, both repository secrets. A missing one makes that source could-not-run.
-  Open States is paced at one request a second and at most 60 a run; a 429 is could-not-run, with no
-  retry.
+  Open States allows 10 requests a minute per key, so requests go 7 seconds apart: at most 60 for a
+  `check` and 250 for a `refresh`, which lists about 100 pages. A search can take most of a minute,
+  so each Open States request may run 120 seconds; other hosts get 30. A 502, 503, 504 or timed-out
+  request to either API is sent twice more, 10 seconds apart, and each try counts against the
+  budget. A 429 is could-not-run, with no retry. A `check` stops itself at 45 minutes, inside the
+  job's 60-minute timeout: whatever has not run by then is could-not-run, and its issue is still
+  filed.
 - **Issues.** One per kind (federal, state, tz) for a difference, and one for a source that could
   not run, filed by `canary-report.mjs` from `main` only. The federal and state issues ask a person
   to edit the Proposals data module by hand and refresh the snapshot: the canary edits nothing. The
