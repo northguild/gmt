@@ -38,6 +38,17 @@ describe("toEpochMs", () => {
     expect(ms("2024-06-15T23:00:00")).toBeNaN();
     expect(ms("nonsense")).toBeNaN();
   });
+
+  it("reads a zoned string through its zone, not its minute-rounded offset", () => {
+    // Temporal writes Monrovia's -00:44:30 as -00:45 in a zoned string.
+    expect(ms("1960-06-01T11:15:30-00:45[Africa/Monrovia]")).toBe(
+      ms("1960-06-01T12:00:00Z"),
+    );
+    expect(ms("1960-06-01T11:15:30-00:44:30")).toBe(ms("1960-06-01T12:00:00Z"));
+    expect(ms("1880-01-01T12:00:00-04:56[America/New_York]")).toBe(
+      ms("1880-01-01T16:56:02Z"),
+    );
+  });
 });
 
 describe("gridZone", () => {

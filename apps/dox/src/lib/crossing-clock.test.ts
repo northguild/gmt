@@ -12,6 +12,7 @@ import {
   CROSSING_PRESETS,
   CUSTOM_PRESET_ID,
   NULL_REASON_TEXT,
+  crossingClockFace,
   crossingStrip,
   explainNull,
   matchPreset,
@@ -145,6 +146,40 @@ describe("crossingStrip", () => {
     expect(strip.ticks.at(-1)!.percent).toBe(100);
   });
 
+  it("New York 1883: the change from -04:56:02 to -05:00 repeats 3 min 58 s", () => {
+    const result = crossingTime(
+      "1883-11-18T16:00:00Z",
+      "1883-11-18T18:00:00Z",
+      "America/New_York",
+    )!;
+    const strip = crossingStrip(result, "America/New_York");
+    expect(strip.entryLabel).toBe("11:03 -04:56:02");
+    expect(strip.exitLabel).toBe("13:00 -05:00");
+    expect(strip.changes).toEqual([
+      {
+        kind: "repeat",
+        percent: 50,
+        label: "12:00–12:03:58 shown twice · -04:56:02 then -05:00",
+        fromHour: 12,
+        fromMinute: 0,
+        toHour: 12,
+        toMinute: 3,
+      },
+    ]);
+  });
+
+  it("Monrovia 1972: the change from -00:44:30 to +00:00 skips 44 min 30 s", () => {
+    const result = crossingTime(
+      "1972-01-07T00:00:00Z",
+      "1972-01-07T02:00:00Z",
+      "Africa/Monrovia",
+    )!;
+    const strip = crossingStrip(result, "Africa/Monrovia");
+    expect(strip.changes.map((c) => c.label)).toEqual([
+      "00:00–00:44:30 never shown · clocks jumped to +00:00",
+    ]);
+  });
+
   it("a fixed offset has no transition to find", () => {
     const strip = crossingStrip(resultOf("fixed-offset")!, "+02:00");
     expect(strip.changes).toEqual([]);
@@ -160,6 +195,32 @@ describe("crossingStrip", () => {
     expect(strip.stepHours).toBeGreaterThan(1);
     expect(strip.ticks.length).toBeLessThanOrEqual(49);
     expect(strip.ticks.at(-1)!.percent).toBe(100);
+  });
+});
+
+describe("crossingClockFace", () => {
+  it("shows the zone's exact offset, not the zoned string's rounded one", () => {
+    const result = crossingTime(
+      "1960-06-01T12:00:00Z",
+      "1960-06-01T13:00:00Z",
+      "Africa/Monrovia",
+    )!;
+    expect(result.enter).toBe("1960-06-01T11:15:30-00:45[Africa/Monrovia]");
+    expect(crossingClockFace(result.enter)).toEqual({
+      hour: 11,
+      minute: 15,
+      offset: "-00:44:30",
+      zoneLabel: "Monrovia",
+      dateLabel: "1 Jun 1960",
+      timeLabel: "11:15",
+    });
+  });
+
+  it("reads an offset with seconds and no zone as a fixed offset", () => {
+    expect(crossingClockFace("1880-01-01T12:00:00-04:56:02")).toMatchObject({
+      offset: "-04:56:02",
+      zoneLabel: "Fixed offset",
+    });
   });
 });
 

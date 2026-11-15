@@ -18,6 +18,8 @@ import type {
   CronLibTransition,
 } from "./cron-lib";
 import type { EdiCall } from "./edi-widgets";
+import { utcClockText } from "./clock-change-common";
+import { instantAtOffset } from "./exact-offset";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -372,7 +374,7 @@ const plateText = (n: number): string =>
   `${n} ${n === 1 ? "run" : "runs"} in these ${NIGHT_HOURS} hours`;
 
 function changeLabel(t: CronLibTransition): string {
-  return `${t.instant.slice(0, 10)} ${t.instant.slice(11, 16)}Z, ${t.offsetBefore} → ${t.offsetAfter}`;
+  return `${t.instant.slice(0, 10)} ${utcClockText(t.instant)}Z, ${t.offsetBefore} → ${t.offsetAfter}`;
 }
 
 function chipText(t: CronLibTransition): string {
@@ -381,8 +383,17 @@ function chipText(t: CronLibTransition): string {
 
 const HOUR_MS = 3_600_000;
 
-const hhmm = (z: { hour: number; minute: number }): string =>
-  `${String(z.hour).padStart(2, "0")}:${String(z.minute).padStart(2, "0")}`;
+/**
+ * The wall clock `instant` reads at `offset`: `HH:MM`, or `HH:MM:SS` when the offset is not a
+ * whole minute (New York's `-04:56:02` before 1883), which no Temporal offset zone can hold.
+ */
+function wallAt(instant: Temporal.Instant, offset: string): string {
+  const hms = /T(\d{2}:\d{2}:\d{2})/.exec(
+    instantAtOffset(instant, offset) ?? "",
+  )?.[1];
+  if (hms === undefined) return "";
+  return hms.endsWith(":00") ? hms.slice(0, 5) : hms;
+}
 
 function nightTicks(t: CronLibTransition, startMs: number): Tick[] {
   return Array.from({ length: NIGHT_HOURS + 1 }, (_, i) => {
@@ -391,8 +402,8 @@ function nightTicks(t: CronLibTransition, startMs: number): Tick[] {
     const offset = i < NIGHT_HALF_HOURS ? t.offsetBefore : t.offsetAfter;
     return {
       pct: (i / NIGHT_HOURS) * 100,
-      utc: hhmm(instant.toZonedDateTimeISO("UTC")),
-      wall: hhmm(instant.toZonedDateTimeISO(offset)),
+      utc: utcClockText(instant.toString()),
+      wall: wallAt(instant, offset),
     };
   });
 }

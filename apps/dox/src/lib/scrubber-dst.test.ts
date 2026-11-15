@@ -9,12 +9,13 @@ import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
 import { isInDaylightSaving } from "@northguild/gmt/zoned/compare";
 import { convertZonedToZoned } from "@northguild/gmt/zoned/convert";
 import { getDstTransitions } from "@northguild/gmt/zoned/get";
+import { offsetMinutes } from "./exact-offset";
 import { readZoneAt } from "./zone-clock";
 import {
   crossedSwitch,
   dstStatus,
+  formatSwitchShift,
   nextSwitch,
-  offsetMinutes,
   switchesBetween,
   switchesInWindow,
   zoneSwitchesInYear,
@@ -38,18 +39,6 @@ function statusAt(zone: string, ms: number) {
     status: dstStatus(zone, Number(reading.date.slice(0, 4)), reading.inDst),
   };
 }
-
-describe("offsetMinutes", () => {
-  it("reads ±HH:MM, including the half and quarter hours", () => {
-    expect(offsetMinutes("+00:00")).toBe(0);
-    expect(offsetMinutes("-05:00")).toBe(-300);
-    expect(offsetMinutes("+10:30")).toBe(630);
-    expect(offsetMinutes("+05:45")).toBe(345);
-    expect(offsetMinutes("-00:30")).toBe(-30);
-    expect(offsetMinutes("Z")).toBeNull();
-    expect(offsetMinutes("")).toBeNull();
-  });
-});
 
 describe("zoneSwitchesInYear", () => {
   it("is the library's transition list, with the shift worked out from the offsets", () => {
@@ -83,6 +72,43 @@ describe("zoneSwitchesInYear", () => {
       (s) => s.shiftMin,
     );
     expect(shifts.sort((a, b) => a - b)).toEqual([-30, 30]);
+  });
+
+  it("keeps the seconds of an offset that had them", () => {
+    // New York left local mean time for Eastern standard time in 1883, and
+    // Monrovia left -00:44:30 for UTC in 1972.
+    const ny = zoneSwitchesInYear("America/New_York", 1883);
+    expect(ny.map((s) => [s.instant, s.offsetBefore, s.offsetAfter])).toEqual([
+      ["1883-11-18T17:00:00Z", "-04:56:02", "-05:00"],
+    ]);
+    expect(ny[0]!.shiftMin).toBeCloseTo(-(3 + 58 / 60), 10);
+    const monrovia = zoneSwitchesInYear("Africa/Monrovia", 1972);
+    expect(
+      monrovia.map((s) => [s.instant, s.offsetBefore, s.offsetAfter]),
+    ).toEqual([["1972-01-07T00:44:30Z", "-00:44:30", "+00:00"]]);
+    expect(monrovia[0]!.shiftMin).toBe(44.5);
+  });
+
+  it("finds the 1883 switch when a scrub crosses it", () => {
+    const [ny] = zoneSwitchesInYear("America/New_York", 1883);
+    const at = ny!.instantMs;
+    expect(crossedSwitch("America/New_York", at - MIN, at + MIN)?.instant).toBe(
+      "1883-11-18T17:00:00Z",
+    );
+  });
+});
+
+describe("formatSwitchShift", () => {
+  it.each([
+    [60, "+1 h"],
+    [-60, "\u22121 h"],
+    [30, "+30 min"],
+    [150, "+2 h 30 min"],
+    [0, "0 min"],
+    [-(3 + 58 / 60), "\u22123 min 58 s"],
+    [44.5, "+44 min 30 s"],
+  ])("writes %s minutes as %s", (minutes, text) => {
+    expect(formatSwitchShift(minutes)).toBe(text);
   });
 });
 

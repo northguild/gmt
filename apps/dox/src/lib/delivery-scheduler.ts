@@ -16,11 +16,13 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { formatDayLabel } from "./dwell-ledger";
+import { OFFSET_SOURCE, offsetShift } from "./exact-offset";
 import {
   ZERO_LEG,
   epochMs,
   legObject,
   minutesBetween,
+  minutesSecondsText,
   minutesText,
   offsetTableReading,
   type JourneyFacts,
@@ -392,15 +394,29 @@ export function shortZoneLabel(zone: string): string {
   return base.replace(/_/g, " ");
 }
 
+/** `HH:MM` of a local time, with `:SS` when the seconds are not zero (11:15:30
+ *  at Monrovia's -00:44:30 is not 11:15). */
 function hhmm(localText: string): string {
-  const m = /T(\d{2}:\d{2})/.exec(localText);
-  return m ? m[1]! : localText;
+  const m = /T(\d{2}:\d{2})(?::(\d{2}))?/.exec(localText);
+  if (!m) return localText;
+  return m[2] === undefined || m[2] === "00" ? m[1]! : `${m[1]}:${m[2]}`;
 }
 
-/** `+09:00`, `-07:00`, `Z` — the offset off a zoned string's tail, before its
- *  bracket (if any). */
+const TRAILING_OFFSET = new RegExp(`(Z|${OFFSET_SOURCE})$`);
+
+/** `+09:00`, `-07:00`, `-00:44:30`, `Z` — the offset of a zoned string, to the
+ *  second. A zoned string writes its offset rounded to the minute (Monrovia's
+ *  `-00:44:30` as `-00:45`), so one with a bracket is read through its zone;
+ *  an instant's offset is read as written. */
 function offsetOf(localText: string): string {
-  const m = /(Z|[+-]\d{2}:\d{2})(?=\[|$)/.exec(localText);
+  if (localText.includes("[")) {
+    try {
+      return Temporal.ZonedDateTime.from(localText).offset;
+    } catch {
+      return "";
+    }
+  }
+  const m = TRAILING_OFFSET.exec(localText);
   return m ? m[1]! : "";
 }
 
@@ -409,13 +425,6 @@ const WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 /** `Fri 8 Mar 2024` — an itinerary date-group heading. */
 function formatDateHeading(date: Temporal.PlainDate): string {
   return `${WEEKDAY_NAMES[date.dayOfWeek - 1]} ${formatDayLabel(date.toString())} ${date.year}`;
-}
-
-function parseOffsetMinutesLocal(offset: string): number {
-  const m = /^([+-])(\d{2}):(\d{2})/.exec(offset);
-  if (!m) return 0;
-  const sign = m[1] === "-" ? -1 : 1;
-  return sign * (Number(m[2]) * 60 + Number(m[3]));
 }
 
 /** `1 d 22 h`, `2 h 30 min`, `11 d`, `0 min` — whole days, hours and minutes,
@@ -643,14 +652,19 @@ function dstTransitionsIn(
     for (let i = 0; i < 4; i++) {
       const next = cur.getTimeZoneTransition("next");
       if (!next || next.epochMilliseconds > axisEndMs) break;
-      const gapMinutes =
-        parseOffsetMinutesLocal(next.offset) -
-        parseOffsetMinutesLocal(cur.offset);
+      // To the second: New York's 1883 change from -04:56:02 to -05:00 set the
+      // clocks back 3 min 58 s.
+      const shift = offsetShift(cur.offset, next.offset);
+      if (shift === null || shift.sign === 0) {
+        cur = next;
+        continue;
+      }
       const after = next.toPlainTime();
-      const before = after.subtract({ minutes: gapMinutes });
-      const verb = gapMinutes > 0 ? "spring forward" : "fall back";
+      const before = after.subtract(shift);
+      const verb = shift.sign > 0 ? "spring forward" : "fall back";
       const pad = (n: number) => String(n).padStart(2, "0");
-      const wall = (t: Temporal.PlainTime) => `${pad(t.hour)}:${pad(t.minute)}`;
+      const wall = (t: Temporal.PlainTime) =>
+        `${pad(t.hour)}:${pad(t.minute)}${t.second === 0 ? "" : `:${pad(t.second)}`}`;
       out.push({
         instant: next.toInstant().toString(),
         fromOffset: cur.offset,
@@ -771,7 +785,7 @@ export function buildItinerary(
             ? { agrees: true, badge: "agrees" }
             : {
                 agrees: false,
-                badge: `${minutesText(reading.deltaMinutes)} ${reading.deltaMinutes < 0 ? "early" : "late"}`,
+                badge: `${minutesSecondsText(reading.deltaMinutes)} ${reading.deltaMinutes < 0 ? "early" : "late"}`,
                 naiveTime: hhmm(reading.wall),
               };
       }
@@ -1052,7 +1066,7 @@ export function buildChartData(
     if (reading.deltaMinutes !== 0) {
       badges.push({
         kind: "offset",
-        text: `${minutesText(reading.deltaMinutes)} ${reading.deltaMinutes < 0 ? "early" : "late"}`,
+        text: `${minutesSecondsText(reading.deltaMinutes)} ${reading.deltaMinutes < 0 ? "early" : "late"}`,
       });
     }
 
@@ -1209,7 +1223,8 @@ export function buildEtaSummary(
     const z = Temporal.ZonedDateTime.from(facts.result.eta);
     const hh = String(z.hour).padStart(2, "0");
     const mm = String(z.minute).padStart(2, "0");
-    const etaLocal = `${formatDateHeading(z.toPlainDate())} · ${hh}:${mm} ${shortZoneLabel(z.timeZoneId)} (${z.offset})`;
+    const ss = z.second === 0 ? "" : `:${String(z.second).padStart(2, "0")}`;
+    const etaLocal = `${formatDateHeading(z.toPlainDate())} · ${hh}:${mm}${ss} ${shortZoneLabel(z.timeZoneId)} (${z.offset})`;
     const originInstant = facts.departures[0]!;
     const finalArrival = facts.arrivals[facts.arrivals.length - 1]!;
     const doorToDoor = `${formatDaysHoursMinutes(minutesBetween(originInstant, finalArrival))} door to door`;

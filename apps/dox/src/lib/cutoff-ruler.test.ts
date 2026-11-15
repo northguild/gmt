@@ -161,6 +161,44 @@ describe("transitionBetween", () => {
     expect(transitionLabel(t!, state.timeZone)).toContain("go forward 1 h");
   });
 
+  it("New York 1883: back 3 min 58 s, to the second", () => {
+    const state: RulerState = {
+      ...presetState(presetById("amsterdam-june")),
+      timeZone: NY,
+    };
+    const t = transitionBetween(state, {
+      readings: [{ at: "1883-11-18T16:00:00Z" }] as never,
+      departure: "1883-11-18T18:00:00Z",
+    });
+    expect(t).toEqual({
+      instant: "1883-11-18T17:00:00Z",
+      before: "-04:56:02",
+      after: "-05:00",
+      wallBefore: "12:03:58",
+      wallAfter: "12:00",
+    });
+    expect(transitionKind(t!)).toBe("overlap");
+    expect(transitionLabel(t!, NY)).toBe(
+      "Clocks go back 3 min 58 s: Sun 18 Nov, 12:03:58 \u2192 12:00",
+    );
+  });
+
+  it("Monrovia 1972: forward 44 min 30 s, to the second", () => {
+    const state: RulerState = {
+      ...presetState(presetById("amsterdam-june")),
+      timeZone: "Africa/Monrovia",
+    };
+    const t = transitionBetween(state, {
+      readings: [{ at: "1972-01-06T12:00:00Z" }] as never,
+      departure: "1972-01-07T12:00:00Z",
+    });
+    expect(t).toMatchObject({ wallBefore: "00:00", wallAfter: "00:44:30" });
+    expect(transitionKind(t!)).toBe("gap");
+    expect(transitionLabel(t!, "Africa/Monrovia")).toBe(
+      "Clocks go forward 44 min 30 s: Fri 7 Jan, 00:00 \u2192 00:44:30",
+    );
+  });
+
   it("R2: no transition between them", () => {
     const state = presetState(presetById("amsterdam-june"));
     const facts = collectRulerFacts(state, lib);

@@ -62,6 +62,30 @@ describe("readZoneAt", () => {
   });
 });
 
+describe("readZoneAt with an offset that has seconds", () => {
+  it.each([
+    // Monrovia ran at -00:44:30 until 1972; the zoned string rounds it to -00:45.
+    [
+      "Africa/Monrovia",
+      "1960-06-01T12:00:00+00:00[UTC]",
+      "1960-06-01",
+      "11:15:30",
+      "-00:44:30",
+    ],
+    // New York local mean time, before 18 November 1883.
+    [
+      "America/New_York",
+      "1880-01-01T16:56:02+00:00[UTC]",
+      "1880-01-01",
+      "12:00:00",
+      "-04:56:02",
+    ],
+  ])("%s at %s reads %s %s %s", (zone, anchor, date, time, offset) => {
+    const reading = readZoneAt(zone, anchor);
+    expect(reading).toMatchObject({ ok: true, date, time, offset });
+  });
+});
+
 describe("offsetAt", () => {
   it("changes across the US spring-forward boundary (DST 'bite')", () => {
     expect(offsetAt("America/New_York", "2026-03-08T06:59:00Z")).toBe("-05:00");

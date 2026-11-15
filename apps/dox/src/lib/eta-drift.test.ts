@@ -2,6 +2,7 @@
  * `eta-drift.ts`'s pure helpers, against the real gmt modules. Every expected
  * library result is an appendix Z row (ED1 to ED4, EDR1 to EDR7).
  */
+import { Temporal } from "@js-temporal/polyfill";
 import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import {
   classifyPunctuality,
@@ -489,6 +490,18 @@ describe("axis ticks", () => {
     expect(
       xTicks({ ...win, xMax: win.xMin + 3_600_000 * 5 }, "UTC")[0]!.label,
     ).toMatch(/^\d{2}:00$/);
+  });
+
+  it("draws x ticks at an offset with seconds, which no Temporal zone holds", () => {
+    const xMin = Temporal.Instant.from(
+      "1960-06-01T10:00:00Z",
+    ).epochMilliseconds;
+    const win = { xMin, xMax: xMin + 3 * 3_600_000, yMin: 0, yMax: 1 };
+    expect(xTicks(win, "-00:44:30").map((t) => t.label)).toEqual([
+      "10:00",
+      "11:00",
+      "12:00",
+    ]);
   });
 });
 

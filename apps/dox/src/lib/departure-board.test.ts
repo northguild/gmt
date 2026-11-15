@@ -326,6 +326,31 @@ describe("departureNullReason", () => {
     );
   });
 
+  it("names the fault of an arrival whose offset has seconds (Monrovia 1960)", () => {
+    // London kept +01:00 in June 1960, so -00:44:30 disagrees with the zone;
+    // 31 June does not exist. Both offsets are read whole, seconds included.
+    const mismatch = stateOf("ferry-list", {
+      after: "1960-06-01T11:15:30-00:44:30[Europe/London]",
+    });
+    expect(facts(mismatch).made).toBe("");
+    expect(reasonOf(mismatch)).toEqual({
+      kind: "invalid-after",
+      fault: "zone-mismatch",
+    });
+    const impossible = stateOf("ferry-list", {
+      after: "1960-06-31T11:15:30-00:44:30",
+    });
+    expect(reasonOf(impossible)).toEqual({
+      kind: "invalid-after",
+      fault: "impossible-date",
+    });
+    expect(
+      reasonOf(
+        stateOf("ferry-list", { after: "1880-06-31T12:03:58-04:56:02" }),
+      ),
+    ).toEqual({ kind: "invalid-after", fault: "impossible-date" });
+  });
+
   it("DBR4: a negative or calendar connection is invalid-connection", () => {
     for (const connection of ["-PT5M", "P1W"]) {
       const s = stateOf("ferry-list", { minimumConnection: connection });

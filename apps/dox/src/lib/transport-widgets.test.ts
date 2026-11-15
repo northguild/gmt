@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import {
   crossingTime,
   scheduleDelivery,
@@ -12,9 +13,11 @@ import {
   collectJourneyFacts,
   departureAt,
   diagnose,
+  epochMs,
   formatCrossing,
   formatSchedule,
   legObject,
+  minutesSecondsText,
   minutesText,
   offsetTableReading,
   readyAt,
@@ -23,6 +26,10 @@ import {
   type LegFields,
   type TransportLib,
 } from "./transport-widgets";
+
+/** Epoch milliseconds of a `…Z` instant, for expected values. */
+const atMs = (iso: string): number =>
+  Temporal.Instant.from(iso).epochMilliseconds;
 
 const lib: TransportLib = {
   scheduleDelivery,
@@ -196,6 +203,37 @@ describe("minutesText", () => {
     expect(minutesText(90)).toBe("1 h 30 min");
     expect(minutesText(55)).toBe("55 min");
     expect(minutesText(-60)).toBe("1 h");
+  });
+});
+
+describe("minutesSecondsText", () => {
+  it("keeps the seconds of an offset gap (New York 1883, Monrovia 1972)", () => {
+    // -04:56:02 to -05:00 is 3 min 58 s; -00:44:30 to +00:00 is 44 min 30 s.
+    expect(minutesSecondsText(238 / 60)).toBe("3 min 58 s");
+    expect(minutesSecondsText(-44.5)).toBe("44 min 30 s");
+    expect(minutesSecondsText(0.5)).toBe("30 s");
+    expect(minutesSecondsText(61.5)).toBe("1 h 1 min 30 s");
+  });
+
+  it("reads whole minutes exactly as minutesText", () => {
+    for (const n of [0, 5, 60, 90, -60]) {
+      expect(minutesSecondsText(n)).toBe(minutesText(n));
+    }
+  });
+});
+
+describe("epochMs", () => {
+  it("reads a zoned string at its zone's exact offset (Monrovia 1960)", () => {
+    // The string writes -00:44:30 rounded to -00:45; the zone has the exact one.
+    expect(epochMs("1960-06-01T11:15:30-00:45[Africa/Monrovia]")).toBe(
+      atMs("1960-06-01T12:00:00Z"),
+    );
+    expect(epochMs("1960-06-01T11:15:30-00:44:30")).toBe(
+      atMs("1960-06-01T12:00:00Z"),
+    );
+    expect(epochMs("1880-06-01T12:03:58-04:56[America/New_York]")).toBe(
+      atMs("1880-06-01T17:00:00Z"),
+    );
   });
 });
 
@@ -516,6 +554,36 @@ describe("offsetTableReading", () => {
       "2024-06-01T00:00:00Z",
     );
     expect(reading.deltaMinutes).toBe(0);
+  });
+
+  it("keeps the seconds of an offset across New York's 1883 change", () => {
+    // Booked at -04:56:02; on the 20th the zone is at -05:00, so 17:00Z reads
+    // 12:03:58 by the table and 12:00 on the clock: 3 min 58 s ahead.
+    expect(
+      offsetTableReading(
+        "1883-11-20T17:00:00Z",
+        "America/New_York",
+        "1883-11-01T17:00:00Z",
+      ),
+    ).toEqual({
+      wall: "1883-11-20T12:03:58",
+      offset: "-04:56:02",
+      deltaMinutes: 238 / 60,
+    });
+  });
+
+  it("keeps the seconds of an offset across Monrovia's 1972 change", () => {
+    expect(
+      offsetTableReading(
+        "1972-01-10T12:00:00Z",
+        "Africa/Monrovia",
+        "1972-01-01T12:00:00Z",
+      ),
+    ).toEqual({
+      wall: "1972-01-10T11:15:30",
+      offset: "-00:44:30",
+      deltaMinutes: -44.5,
+    });
   });
 });
 

@@ -26,6 +26,7 @@ import {
   type Headway,
   type PunctualityLib,
 } from "./punctuality-widgets";
+import { OFFSET_SOURCE } from "./exact-offset";
 import type { TransportMode } from "./transport-icons";
 
 export const MAX_DEPARTURES = 6;
@@ -498,8 +499,9 @@ export function thresholdOf(after: string, connection: string): string {
   }
 }
 
-const MOMENT_PATTERN =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?(?:\[([^\]]+)\])?$/;
+const MOMENT_PATTERN = new RegExp(
+  String.raw`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(Z|${OFFSET_SOURCE})?(?:\[([^\]]+)\])?$`,
+);
 
 /**
  * What is wrong with an arrival the library has already refused, read off the

@@ -19,6 +19,7 @@ import {
   type CutoffAtOptions,
   type CutoffLib,
 } from "./cutoff-widgets";
+import { offsetMinutes, offsetShift } from "./exact-offset";
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -313,20 +314,33 @@ interface RulerTransition {
   wallAfter: string;
 }
 
-function parseOffsetMinutes(offset: string): number {
-  const m = /^([+-])(\d{2}):(\d{2})/.exec(offset);
-  if (!m) return 0;
-  return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
-}
-
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
 /** The clock's change at the transition, in minutes: negative when the clocks go
- *  back. Drawing only (the width of the repeated-hour band). */
+ *  back, and a fraction when an offset has seconds (New York's 1883 change from
+ *  `-04:56:02` to `-05:00` is −3.9666…). Drawing only (the width of the
+ *  repeated-hour band). */
 export function transitionShiftMinutes(t: RulerTransition): number {
-  return parseOffsetMinutes(t.after) - parseOffsetMinutes(t.before);
+  return (offsetMinutes(t.after) ?? 0) - (offsetMinutes(t.before) ?? 0);
+}
+
+/** `HH:MM`, or `HH:MM:SS` when the second is not zero. */
+function wallText(t: Temporal.PlainTime): string {
+  const hm = `${pad2(t.hour)}:${pad2(t.minute)}`;
+  return t.second === 0 ? hm : `${hm}:${pad2(t.second)}`;
+}
+
+/** `1 h`, `30 min`, `3 min 58 s`: the size of a clock change, to the second. */
+function shiftSizeText(minutes: number): string {
+  const total = Math.round(Math.abs(minutes) * 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  return [h ? `${h} h` : "", m ? `${m} min` : "", sec ? `${sec} s` : ""]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /** A fall-back repeats an hour (`overlap`); a spring-forward skips one (`gap`). */
@@ -364,15 +378,16 @@ export function transitionBetween(
     const before = cur.offset;
     const after = next.offset;
     if (before === after) return null;
-    const gapMinutes = parseOffsetMinutes(after) - parseOffsetMinutes(before);
+    const shift = offsetShift(before, after);
+    if (shift === null) return null;
     const afterTime = next.toPlainTime();
-    const beforeTime = afterTime.subtract({ minutes: gapMinutes });
+    const beforeTime = afterTime.subtract(shift);
     return {
       instant: next.toInstant().toString(),
       before,
       after,
-      wallBefore: `${pad2(beforeTime.hour)}:${pad2(beforeTime.minute)}`,
-      wallAfter: `${pad2(afterTime.hour)}:${pad2(afterTime.minute)}`,
+      wallBefore: wallText(beforeTime),
+      wallAfter: wallText(afterTime),
     };
   } catch {
     return null;
@@ -385,11 +400,13 @@ export function transitionBetween(
 export function transitionLabel(t: RulerTransition, timeZone: string): string {
   const gapMinutes = transitionShiftMinutes(t);
   const direction = gapMinutes < 0 ? "back" : "forward";
-  const hours = Math.abs(gapMinutes) / 60;
-  const hoursText = hours === 1 ? "1 h" : `${hours} h`;
+  const hoursText = shiftSizeText(gapMinutes);
   const zoned = Temporal.Instant.from(t.instant)
     .toZonedDateTimeISO(timeZone)
     .toString();
-  const dateLabel = localLabel(zoned).replace(/\s\d{2}:\d{2}$/, "");
+  const dateLabel = localLabel(zoned).replace(
+    /\s\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/,
+    "",
+  );
   return `Clocks go ${direction} ${hoursText}: ${dateLabel}, ${t.wallBefore} → ${t.wallAfter}`;
 }

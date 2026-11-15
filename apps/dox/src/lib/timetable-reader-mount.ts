@@ -98,6 +98,7 @@ import {
   tagText,
   tickStepHours,
   trackDate,
+  wallClockText,
   windowPct,
   withMinute,
   type ChartLayout,
@@ -168,10 +169,11 @@ const hold = (sizerPart: SafeHtml, live: SafeHtml, extra = ""): SafeHtml =>
 const lost = (): SafeHtml =>
   html`<span class="${styles.lost}">${NO_SIGNAL}</span>`;
 
-/** `HH:MM ±hh:mm` of a zoned instant string, and the whole value beneath it. */
+/** `HH:MM ±hh:mm` of a zoned instant string (the chip's text: seconds and the
+ *  zone's exact offset when they are not whole minutes), and the whole value
+ *  beneath it. */
 function timeCell(iso: string): SafeHtml {
-  const m = /T(\d{2}:\d{2})(?::\d{2})?([+-]\d{2}:\d{2}|Z)/.exec(iso);
-  const short = m ? `${m[1]}${m[2] === "Z" ? " Z" : ` ${m[2]}`}` : iso;
+  const short = arrivalChipText(iso, iso.slice(0, 10));
   const zone = iso.indexOf("[");
   const full =
     zone < 0
@@ -431,10 +433,11 @@ function rowsTable(
 /** Percent to four places, which is what the eye can tell apart. */
 const pct = (n: number): number => Number(n.toFixed(4));
 
-/** `HH:MM` of a zoned instant string. */
+/** `HH:MM` of a zoned instant string, with `:SS` when the seconds are not
+ *  zero (Monrovia's -00:44:30 leaves on the half minute). */
 const hhmmIn = (iso: string | null): string | null => {
-  const m = iso ? /T(\d{2}:\d{2})/.exec(iso) : null;
-  return m ? m[1]! : null;
+  const text = iso ? wallClockText(iso) : "";
+  return text === "" ? null : text;
 };
 
 interface Controller {

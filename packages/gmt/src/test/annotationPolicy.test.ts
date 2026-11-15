@@ -100,17 +100,14 @@ const EXTRAS: unknown[][] = [
   ["2024-02-29T12:34:56Z"],
 ];
 
-/** Functions that read no input string: the current time, so two calls differ. */
-const READS_THE_CLOCK = new Set([
-  "getNow",
-  "getUtcNow",
-  "getMillisecond",
-  "getNanosecond",
-  "getUnixMillisecond",
-  "getUnixNanosecond",
-  "getUtcMillisecond",
-  "getUtcNanosecond",
-]);
+/**
+ * A function that declares no parameters reads no string, so no annotation can change its answer.
+ * Most such functions read the clock (`getMicrosecond`, `getUtcNow`), so two calls can differ by
+ * the time between them; comparing them would test the clock, not the reader. Found from the
+ * function itself, so a new clock reader needs no list entry.
+ */
+const takesNoInput = (fn: (...args: never[]) => unknown): boolean =>
+  fn.length === 0 && /^[^(]*\(\s*\)/.test(Function.prototype.toString.call(fn));
 
 /**
  * Functions whose kind keeps the zone, so a string it reads may carry the zone bracket
@@ -150,7 +147,6 @@ const run = (fn: (...args: never[]) => unknown, args: unknown[]): string => {
 };
 
 const isAllowed = (name: string, annotation: string): boolean =>
-  READS_THE_CLOCK.has(name) ||
   KEEPS_THE_ZONE.has(name) ||
   (CALENDAR_AWARE.has(name) && ONE_CALENDAR.has(annotation));
 
@@ -167,6 +163,7 @@ describe("every public function matches its kind's exact pattern over the whole 
       const leaks: string[] = [];
       for (const [name, fn] of Object.entries(SPACES[namespace]!)) {
         if (typeof fn !== "function" || /^[A-Z]/.test(name)) continue;
+        if (takesNoInput(fn as never)) continue;
         for (const extra of EXTRAS) {
           const garbage = run(fn as never, ["garbage!", ...extra]);
           for (const base of BASES) {
@@ -193,6 +190,7 @@ describe("every public function matches its kind's exact pattern over the whole 
       const leaks: string[] = [];
       for (const [name, fn] of Object.entries(SPACES[namespace]!)) {
         if (typeof fn !== "function" || /^[A-Z]/.test(name)) continue;
+        if (takesNoInput(fn as never)) continue;
         for (const base of BASES) {
           if (
             run(fn as never, [base, base]) ===

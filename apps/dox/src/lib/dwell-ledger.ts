@@ -105,13 +105,18 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
-/** The instant an ISO string names, or NaN. Accepts `Z`, an offset, or a bracketed zone. */
+/**
+ * The instant an ISO string names, or NaN. Accepts `Z`, an offset, or a bracketed zone.
+ * A bracketed zone is read first: Temporal writes a zoned string's offset rounded to the
+ * minute (`1960-06-01T11:15:30-00:45[Africa/Monrovia]`), and only the zone gives back the
+ * exact `-00:44:30`. The offset alone would name a moment 30 seconds later.
+ */
 export function toEpochMs(iso: string): number {
   try {
-    return Temporal.Instant.from(iso).epochMilliseconds;
+    return Temporal.ZonedDateTime.from(iso).epochMilliseconds;
   } catch {
     try {
-      return Temporal.ZonedDateTime.from(iso).epochMilliseconds;
+      return Temporal.Instant.from(iso).epochMilliseconds;
     } catch {
       return Number.NaN;
     }
