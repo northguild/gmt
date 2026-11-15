@@ -104,7 +104,7 @@
     {
       "defects": ["D15"],
       "title": "D15 — `Z` string read by wall clock under offset: \"ignore\" instead of as an exact instant (zonedWallClock.ts defect 6)",
-      "trigger": "a js-temporal release (and Node floor) whose ToTemporalZonedDateTime keeps a Z string's own instant under offset: \"ignore\", as InterpretISODateTimeOffset requires. Native V8 (Node 24.21 with --harmony-temporal) shares the defect; not filed upstream yet, and js-temporal main c55b211 and tc39 main e8cc03f both still have it (bug doc § O). The expected value is the specification's",
+      "trigger": "a js-temporal release (and Node floor) whose ToTemporalZonedDateTime keeps a Z string's own instant under offset: \"ignore\", as InterpretISODateTimeOffset requires. Native V8 (Node 24.21 with --harmony-temporal) shares the defect. Filed as tc39/proposal-temporal#3337; js-temporal main c55b211 and tc39 main b038883 both still have it (bug doc § O). The expected value is the specification's",
       "probes": 1,
       "failing": 1,
       "state": "still-needed"

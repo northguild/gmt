@@ -112,6 +112,45 @@ describe("repairRangeYear: a year printed above the calendar year", () => {
   });
 });
 
+/*
+ * What one environment remembers is keyed by the caller's moments, so it must start again at a
+ * size: a process that formats ranges for years would otherwise keep every start and end it saw.
+ * The engine is asked again after that, and gives the same text.
+ */
+describe("repairRangeYear: what one environment remembers", () => {
+  const options = { year: "numeric" } as const;
+  const start = ms("2024-12-30");
+  const end = ms("2025-01-02");
+  const DAY = 86_400_000;
+
+  /** How many times `run` reaches for an engine formatter's `format` (an accessor in ECMA-402). */
+  const readsDuring = (run: () => void): number => {
+    // TypeScript's lib types `format` as a method, so the accessor is spied through a wider type.
+    const proto: { readonly format: unknown } = Intl.DateTimeFormat.prototype;
+    const reads = vi.spyOn(proto, "format", "get");
+    run();
+    const count = reads.mock.calls.length;
+    reads.mockRestore();
+    return count;
+  };
+
+  it("forgets the first range after 2,000 others, and repairs it the same", () => {
+    const formatter = printing(options, plusOne);
+    const first = repairRangeYear(formatter, options, start, end);
+    expect(digits(first)).toEqual(["2024", "2025"]);
+    const warm = readsDuring(() => {
+      expect(repairRangeYear(formatter, options, start, end)).toBe(first);
+    });
+    for (let i = 1; i <= 2_000; i++) {
+      repairRangeYear(formatter, options, start + i * DAY, end + i * DAY);
+    }
+    const cold = readsDuring(() => {
+      expect(repairRangeYear(formatter, options, start, end)).toBe(first);
+    });
+    expect(cold).toBeGreaterThan(warm);
+  });
+});
+
 describe("rangeYearVerdict: stand-in formatters", () => {
   const yearly = { year: "numeric" } as const;
 

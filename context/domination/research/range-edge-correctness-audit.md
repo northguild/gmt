@@ -156,7 +156,7 @@ GMT imports `@js-temporal/polyfill` everywhere (dependency `^0.5.1`) and never u
 
 ### 5.6 Upstream
 
-- **Filed by the owner** (2026-09-19; the rows and their outcomes are in [the polyfill bug list](../js-temporal-polyfill-bugs.md#filed)):
+- **Filed by the owner** (B, C and D on 2026-09-18, A on 2026-09-19; the rows and their outcomes are in [the polyfill bug list](../js-temporal-polyfill-bugs.md#filed)):
   - A: a release request for `05ce7a3`, js-temporal #373.
   - B: the Santiago next-transition bug (§5.2), js-temporal #371 and tc39 #3328.
   - C: the calendar near-limit bug, plus the ordinary-date calendar defects, js-temporal #368, #369 and #370.

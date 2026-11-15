@@ -90,8 +90,8 @@ import { hasZonedDateTimeShape } from "./isoStringBody";
  *    `ignore` first and read the wall clock in the zone (`2022-07-07T23:14:07Z`). Like defect 4 the
  *    wrong answer looks valid, and near a range limit it can throw for an instant the spec accepts.
  *    While the D15 probe fails, `zExactOptions` reads a string with a UTC designator with
- *    `offset: "use"`, which is the exact reading. Not filed upstream yet. js-temporal `main` (`c55b211`)
- *    and tc39/proposal-temporal `main` (`e8cc03f`) still have it.
+ *    `offset: "use"`, which is the exact reading. Filed as tc39/proposal-temporal#3337; js-temporal
+ *    `main` (`c55b211`) and tc39/proposal-temporal `main` (`b038883`) still have it.
  *
  * Every GMT wall clock → instant conversion goes through this file. Each helper calls the
  * polyfill first and returns its answer whenever it has one; only when the polyfill throws (or

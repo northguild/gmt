@@ -90,9 +90,17 @@ regional variants, kek, ki and pt. ECMA-402 FormatDateTimePattern prints the cal
   where its gate is on (SpiderMonkey); no aborting V8 turns it on.
 - **Range year repair** (`weekYearRange.ts`) runs lazily on a formatter's first range call and
   rewrites only the digit runs that move as a year and hold a whole week-year value.
-- **Source rule.** `new Intl.DateTimeFormat(` appears only in `internal/formatterCache.ts` (and the
-  probes); `formatRangeToParts(` only in the D17 branch and the probes; `weekYearGuard` is imported
-  only by `formatterCache.ts`. A source test pins each.
+- **Source rule.** `temporalCompat/weekYearSource.test.ts` pins where engine formatters are built
+  and called. `new Intl.DateTimeFormat(` appears only in the cache (`formatterCache.ts`),
+  `weekYearGuard`, `weekYearRange`, `weekYearSynth`, `weekYearText`, `rangeFallback`,
+  `rangeFields`, `rangeFieldValues`, `resolveLocale`, the D17 branch of
+  `zoned/format/formatZonedRange.ts` and the four probe files. `formatRangeToParts(` appears only
+  in the probes, `weekYearGuard`, `japaneseNumerals`, `yearPrinting` and the D17 branch;
+  `.formatRange(` only in `weekYearRange`, the D29 helpers (`rangeFallback`, `rangeFields`,
+  `rangeDetector`) and their probe, `japaneseNumerals`, and the two stand-ins (`weekYearGuard`,
+  `yearPrinting`). `weekYearGuard` is imported only by `formatterCache.ts`, `weekYearSynth` only by
+  `weekYearGuard`, `yearPrinting` only by the cache and `japaneseNumerals`, and `weekYearRange`
+  only by `rangeRepairs.ts` and `yearPrintingRange.ts`.
 - **Weekly sweep.** `scripts/canary/weekYear.mjs` reads the locale list from the `cldr-dates-full`
   package for the engine's CLDR version (fetched with `npm pack` at run time, never shipped), checks
   every locale and calendar in process, and runs native parts in child processes to find a guard

@@ -87,6 +87,8 @@ interface Env {
 }
 
 const MAX_ENVS = 64;
+/** The most moments one environment keeps per kind; they are the caller's, so the map starts again. */
+const MAX_MOMENTS = 1024;
 let envs = new Map<string, Env>();
 let verdicts = new WeakMap<object, boolean>();
 
@@ -94,6 +96,14 @@ let verdicts = new WeakMap<object, boolean>();
 export function forgetWeekYearRange(): void {
   envs = new Map();
   verdicts = new WeakMap();
+}
+
+/** `map.set`, emptying the map first once it holds `MAX_MOMENTS` entries. */
+function remember<K, V>(map: Map<K, V>, key: K, value: V): void {
+  if (map.size >= MAX_MOMENTS) {
+    map.clear();
+  }
+  map.set(key, value);
 }
 
 /** The text a negative number carries before its digits, as ECMA-402 FormatNumeric prints it. */
@@ -234,7 +244,7 @@ function monthDayText(ms: number, env: Env): string {
   let text = env.monthDay.get(ms);
   if (text === undefined) {
     text = env.monthDayFormat.format(ms);
-    env.monthDay.set(ms, text);
+    remember(env.monthDay, ms, text);
   }
   return text;
 }
@@ -243,7 +253,7 @@ function eraText(ms: number, env: Env): string {
   let text = env.eras.get(ms);
   if (text === undefined) {
     text = env.eraFormat.format(ms);
-    env.eras.set(ms, text);
+    remember(env.eras, ms, text);
   }
   return text;
 }
@@ -266,7 +276,7 @@ function refYear(ms: number, env: Env): RefYear {
             value: run.value,
             negative: zoneCount(text, run.start, env.referenceMinus) > 0,
           };
-    env.years.set(ms, year);
+    remember(env.years, ms, year);
   }
   return year;
 }
@@ -352,7 +362,7 @@ function shiftYears(
     return known ?? null;
   }
   const moved = computeShift(ms, k, env, exact, keepWeekday);
-  byKey.set(key, moved);
+  remember(byKey, key, moved);
   return moved;
 }
 
