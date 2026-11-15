@@ -566,6 +566,53 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showGtfsTripBoard", () => {
+    const schema = (
+      tools.showGtfsTripBoard as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+    const header = "stop_id,arrival_time,departure_time,stop_timezone";
+
+    it("accepts rows, a date, a zone, a preset, or any mix, all as strings", async () => {
+      for (const input of [
+        {
+          stopTimes: `${header}\na,08:00:00,08:00:00,`,
+          date: "20260615",
+          zone: "Europe/Madrid",
+        },
+        { preset: "border" },
+        { date: "" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showGtfsTripBoard", input)).toMatchObject({
+          ok: true,
+          widget: "gtfs-trip-board",
+        });
+      }
+    });
+
+    it("needs at least one argument and knows only the page's presets", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ preset: "far-future" }).success).toBe(false);
+    });
+
+    it("coerces nothing and caps each argument", () => {
+      expect(schema.safeParse({ date: 20260615 }).success).toBe(false);
+      expect(schema.safeParse({ date: "9".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ zone: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ zone: "a".repeat(65) }).success).toBe(false);
+      expect(schema.safeParse({ stopTimes: "a".repeat(2000) }).success).toBe(
+        true,
+      );
+      expect(schema.safeParse({ stopTimes: "a".repeat(2001) }).success).toBe(
+        false,
+      );
+    });
+  });
+
   describe("showGtfsTimeReader", () => {
     const schema = (
       tools.showGtfsTimeReader as unknown as {

@@ -199,6 +199,8 @@ describe("the chat island's static import graph", () => {
       "lib/gtfs-time-reader-mount.ts",
       "lib/gtfs-service-day-clock.ts",
       "lib/gtfs-service-day-clock-mount.ts",
+      "lib/gtfs-trip-board.ts",
+      "lib/gtfs-trip-board-mount.ts",
       "lib/rail-lib.ts",
       "lib/ptp-clock-converter.ts",
       "lib/ptp-clock-converter-mount.ts",

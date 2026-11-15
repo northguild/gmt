@@ -30,6 +30,7 @@ type UtcCalculate = typeof import("@northguild/gmt/utc/calculate");
 type UtcConvert = typeof import("@northguild/gmt/utc/convert");
 type ZonedGet = typeof import("@northguild/gmt/zoned/get");
 type PlainParse = typeof import("@northguild/gmt/plain/parse");
+type PlainCalculate = typeof import("@northguild/gmt/plain/calculate");
 
 /** The functions the rail tools call, as the library declares them. */
 export type RailLib = Pick<RailParse, "parseGtfsTime"> &
@@ -128,6 +129,32 @@ export async function loadServiceDayLib(): Promise<ServiceDayLib> {
       ]),
       ...pickTyped<PlainParse, "parseYearFromDate">(plainParse, [
         "parseYearFromDate",
+      ]),
+    };
+  } catch (cause) {
+    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
+  }
+}
+
+/** What the GTFS Trip Board calls: the Service Day Clock's, plus the clock-side difference. */
+export type TripBoardLib = ServiceDayLib &
+  Pick<UtcConvert, "convertUtcToPlainDateTime"> &
+  Pick<PlainCalculate, "diffDateTime">;
+
+export async function loadTripBoardLib(): Promise<TripBoardLib> {
+  try {
+    const [serviceDay, utcConvert, plainCalculate] = await Promise.all([
+      loadServiceDayLib(),
+      GMT_MODULES["utc/convert"](),
+      GMT_MODULES["plain/calculate"](),
+    ]);
+    return {
+      ...serviceDay,
+      ...pickTyped<UtcConvert, "convertUtcToPlainDateTime">(utcConvert, [
+        "convertUtcToPlainDateTime",
+      ]),
+      ...pickTyped<PlainCalculate, "diffDateTime">(plainCalculate, [
+        "diffDateTime",
       ]),
     };
   } catch (cause) {

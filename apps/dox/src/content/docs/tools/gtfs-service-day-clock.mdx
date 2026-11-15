@@ -25,6 +25,8 @@ A GTFS `stop_times.txt` time is a count of elapsed time, and the service date an
 
 <Fragment slot="after">
 
+**For a whole trip.** The [GTFS Trip Board](/tools/gtfs-trip-board/?w=gtfstrip&wa=%7B%22preset%22%3A%22border%22%7D) reads every stop of a trip the same way, and shows each leg's length by the clock and by elapsed time.
+
 **Why noon.** Local midnight can happen twice or not at all on a day the clocks change, and noon happens once. The GTFS anchor is noon of the service day minus 12 hours, which is local midnight on an ordinary day and off it on a clock-change day by the size of the change, an hour in most zones. The first preset is a Berlin spring-forward day: the midnight anchor reads 09:00 +02:00 where GTFS reads 08:00 +02:00, which is 60 minutes later. The Lord Howe preset is a 30-minute change, so the gap there is 30 minutes.
 
 **Past 24:00:00.** A time such as `26:30:00` is exact elapsed seconds from the anchor, never a move on the wall clock. The fifth preset is `26:30:00` on 28 March in Berlin, the day before the clocks go forward: the answer is 03:30 +02:00 on 29 March, because 26 hours and 30 minutes of real time passed, and a wall-clock 02:30 that day does not exist.

@@ -1,0 +1,49 @@
+---
+title: GTFS Trip Board
+description: "Paste one trip's stop_times.txt rows with each stop's zone, a service date and the agency's zone. The tool turns every time into an instant with gtfsToInstant, shows the clock on each platform, the reading a stop's own zone would give, and the length of each leg."
+industries: [rail]
+---
+
+import ToolLayout from "../../../components/ToolLayout.astro";
+import GtfsTripBoard from "../../../components/GtfsTripBoard.astro";
+
+<ToolLayout useCase="Transit service days">
+
+<Fragment slot="keypoint">
+
+A GTFS time is read in the agency's zone, whatever zone the stop is in. Read it in the stop's own zone and the instant is off by the size of the change, an hour in most zones.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+`stop_times.txt` gives every time in the agency's zone, and `stops.txt` gives each stop its own `stop_timezone`. Paste one trip's rows with that column joined on, type the service date and the agency's zone, and [`gtfsToInstant`](/reference/rail/convert/gtfsToInstant/) turns each time into an instant. [`convertUtcToZoned`](/reference/utc/convert/convertUtcToZoned/) then gives the clock on the platform, and [`diffUtc`](/reference/utc/calculate/diffUtc/) the length of each leg. Beside each stop the board shows what a reader gets who passes the stop's zone to `gtfsToInstant`, with the gap in minutes. A stop with no `stop_timezone` uses the agency's zone. A child stop takes its parent station's zone, so join that before you paste. Every instant, reading and length on the page is what the library returned, and the calls for one stop are printed under the table.
+
+</Fragment>
+
+<GtfsTripBoard fullbleed />
+
+<Fragment slot="after">
+
+**The mistake.** The Madrid to Lisbon preset crosses a border where the clocks go back an hour. Elvas is at 11:52 on the agency's clock, which is 09:52Z, and 10:52 on the platform. Read as 11:52 in Lisbon it is 10:52Z, an hour late. The wrong column shows that hour as a badge on every stop past the border.
+
+**When it hides.** The two Santiago to Mendoza presets are a coach timetable on the same rows. In June Chile has put its clocks back and Mendoza has not, so every stop in Argentina is off by an hour. In January both sides are on the same offset, so the mistake moves nothing. The mistake is out by the size of the change, an hour in most zones, for half the year only.
+
+**When it does not apply.** Vienna and Berlin keep the same offsets all year, so on the night-train preset the wrong reading is the same instant at every stop. That trip shows another thing instead: a time past `24:00:00` is elapsed time from the service day's anchor, and a leg across the night the clocks go back takes an hour longer than the clocks say. The leg from Würzburg to Göttingen is 2 h 10 min by elapsed time and 1 h 10 min by the clocks.
+
+**No anchor.** When noon of the service date is skipped in the agency's zone, `gtfsToInstant` returns an empty string for every time, and every cell reads NO SIGNAL with the reason. The Samoa preset is a service date that did not happen.
+
+**Limits.** The board reads one trip of up to 12 stops from a paste of up to 2,000 characters, in unquoted CSV with a header line. A row past the 12th, or a line over 150 characters, is counted and named, never cut.
+
+```ts
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+import { convertUtcToZoned } from "@northguild/gmt/utc/convert";
+
+gtfsToInstant("20260615", "11:52:00", "Europe/Madrid"); // "2026-06-15T09:52:00Z"
+convertUtcToZoned("2026-06-15T09:52:00Z", "Europe/Lisbon"); // "2026-06-15T10:52:00+01:00[Europe/Lisbon]"
+gtfsToInstant("20260615", "11:52:00", "Europe/Lisbon"); // "2026-06-15T10:52:00Z"
+```
+
+</Fragment>
+
+</ToolLayout>

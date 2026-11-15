@@ -293,7 +293,7 @@ export const GHOST_UTC: readonly string[] = ["2026-10-03T21:00:00Z"];
 // ---------------------------------------------------------------------------
 
 /** Prints a call and its result the way a call reads, and returns the result. */
-function recorder(calls: string[]) {
+export function recorder(calls: string[]) {
   return function call<T>(name: string, args: unknown[], result: T): T {
     calls.push(
       `${name}(${args.map(literal).join(", ")}); // ${literal(result)}`,
@@ -462,6 +462,20 @@ const WINDOW_PAD = { hours: 2 };
 /** Most years a window is asked about: a longest stop time is under 42 days. */
 const MAX_YEARS = 4;
 
+/** The year an instant falls in, as `zone`'s own calendar counts it; `NaN` when the library gave none. */
+export function yearAt(
+  lib: Pick<ServiceDayLib, "parseYearFromDate" | "convertUtcToPlainDate">,
+  zone: string,
+  instant: string,
+): number {
+  const parsed = Number(
+    lib.parseYearFromDate(
+      lib.convertUtcToPlainDate(instant, { timeZone: zone }),
+    ),
+  );
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
 /** One clock change `getDstTransitions` reports. */
 interface Transition {
   instant: string;
@@ -588,16 +602,8 @@ function drawRail(
 
   // The clock changes inside the window. The window may cross into other years, so every year
   // from its start to its end is asked, as the zone's own calendar counts them.
-  const yearAt = (instant: string): number => {
-    const parsed = Number(
-      lib.parseYearFromDate(
-        lib.convertUtcToPlainDate(instant, { timeZone: zone }),
-      ),
-    );
-    return Number.isFinite(parsed) ? parsed : Number.NaN;
-  };
-  const firstYear = yearAt(start);
-  const lastYear = yearAt(end);
+  const firstYear = yearAt(lib, zone, start);
+  const lastYear = yearAt(lib, zone, end);
   const transitions: Transition[] = [];
   if (Number.isFinite(firstYear) && Number.isFinite(lastYear)) {
     for (let y = firstYear; y <= lastYear && y < firstYear + MAX_YEARS; y++) {

@@ -977,6 +977,12 @@ export const CHAT_STARTERS: readonly {
     args: { preset: "spring-forward" },
   },
   {
+    text: "A GTFS trip from Madrid to Lisbon on 15 June 2026: which stops does stop_timezone move, and by how much?",
+    widget: "showGtfsTripBoard",
+    area: "rail",
+    args: { preset: "border" },
+  },
+  {
     text: "A PTP sensor stamped 1704067237 seconds with currentUtcOffset 37. What UTC time is that?",
     widget: "showPtpClockConverter",
     area: "iot",

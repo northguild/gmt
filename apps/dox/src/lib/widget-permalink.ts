@@ -91,6 +91,7 @@ export type WidgetKind =
   | "swiftdate"
   | "gtfstime"
   | "gtfsday"
+  | "gtfstrip"
   | "ptpclock"
   | "sunshineact";
 
@@ -165,6 +166,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   swiftdate: "/tools/swift-value-date-reader/",
   gtfstime: "/tools/gtfs-time-reader/",
   gtfsday: "/tools/gtfs-service-day-clock/",
+  gtfstrip: "/tools/gtfs-trip-board/",
   ptpclock: "/tools/ptp-clock-converter/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
@@ -237,6 +239,9 @@ const LONG_STRING_KEYS: Readonly<Record<string, number>> = {
   // A calendar's dates (the Free Time Ledger and the Cut-off Stack read
   // `holidays` too: a year of closures runs past 64 characters, six dates).
   holidays: 1000,
+  // A trip's stop_times.txt rows (the GTFS Trip Board): 12 rows of up to 150 characters, and the
+  // reader and the chat schema refuse a paste over 2,000.
+  stopTimes: 2000,
 };
 
 /**
@@ -288,6 +293,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   gtfstime: new Set(["value", "seconds", "dayOverflow"]),
   // A cleared box is the empty state: the link must open cleared, not on the default preset.
   gtfsday: new Set(["serviceDate", "time", "timeZone"]),
+  // A cleared box is the empty state: the link must open cleared, not on the default preset.
+  gtfstrip: new Set(["stopTimes", "date", "zone"]),
   ptpclock: new Set(["seconds", "nanoseconds", "offset", "instant"]),
 };
 

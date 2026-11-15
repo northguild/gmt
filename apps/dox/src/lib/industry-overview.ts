@@ -688,10 +688,14 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
         ],
       },
       {
-        problem: "A printed timetable time is read in the wrong zone.",
+        problem: "A stop's or a printed time is read in the wrong zone.",
         answer:
-          "Rail draws on the transport layer. {{scheduleDelivery}} reads a printed departure in the zone you name, and the timetable reader shows a repeated or skipped hour.",
-        see: [{ label: "tool", href: "/tools/timetable-reader/" }],
+          "Rail draws on the transport layer. GTFS reads every stop time against the agency's zone, so {{gtfsToInstant}} given a stop's own zone moves the instant by the difference between the two offsets that day, an hour from Madrid to Lisbon. {{scheduleDelivery}} reads a printed departure in the zone you name, and the timetable reader shows a repeated or skipped hour.",
+        see: [
+          { label: "mistakes", href: "/mistakes/rail/" },
+          { label: "tool", href: "/tools/gtfs-trip-board/" },
+          { label: "tool", href: "/tools/timetable-reader/" },
+        ],
       },
     ],
   },

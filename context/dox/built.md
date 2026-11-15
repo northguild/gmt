@@ -5163,6 +5163,63 @@ Shared hooks come first, then the globe, then the clock-change pages.
     exists is a claim nothing checks. A page link to a preset carries `preset` alone, as the encoder
     writes it, and `gtfs-time-reader-prose.test.ts` checks each link's preset against the widget its
     `w=` kind opens, so a renamed preset fails the test.
+- **GTFS Trip Board** (RAI-100, `/tools/gtfs-trip-board/`, `gtfstrip`, rail). One trip's
+  `stop_times.txt` rows (with `stop_timezone` joined on), a service date and the agency's zone. For
+  each stop the board shows the `gtfsToInstant` instant, the clock on the platform, the reading a
+  stop's own zone would give (the mistake) and each leg's length. `loadTripBoardLib()` in
+  `rail-lib.ts` is `loadServiceDayLib()` plus `convertUtcToPlainDateTime` and `diffDateTime`, typed
+  through `pickTyped`; gmt is imported dynamically only. Rail `drawsOn` `transport`.
+  - **Input is a CSV paste with a header line.** The header names `stop_id`, `arrival_time` and
+    `departure_time`; `stop_timezone` is optional and other columns are ignored, because feeds order
+    their columns differently. At most 12 rows are read and the rest are counted in a note; a line
+    over 150 characters or with a quoted field is refused with a "Line N" note and never cut or
+    guessed; a paste over 2,000 characters is refused whole. The bound is the same in the reader, the
+    chat schema and the permalink (`LONG_STRING_KEYS.stopTimes`), and the textarea has no `maxlength`,
+    because a paste cut silently is a wrong answer.
+  - **An empty `stop_timezone` is the agency's zone**, as `stops.txt` says for a parentless stop. A
+    child stop's zone is the reader's to join; the page says so and the board has no `parent_station`
+    column.
+  - **The wrong reading is badged in words.** The column is headed "Read in stop_timezone (wrong)" and
+    each value carries a `badge` ("N min later", "N min earlier", `danger`; "same instant", `neutral`),
+    so colour is never the only signal. A stop with no `stop_timezone` reads "agency zone: nothing to
+    misread". The page sizes the mistake by the change, an hour in most zones, never as a rule of one
+    hour.
+  - **Legs.** Elapsed time is `diffUtc` of the previous read stop's departure (or arrival) to this
+    arrival; the clocks are `diffDateTime` of each end's `convertUtcToPlainDateTime` in its own zone.
+    The verdict is "clocks agree", else "clock change in leg" with the instant, else "zone change",
+    else "clocks differ". `getDstTransitions` is asked for every year the leg touches, in each zone's
+    own calendar (`yearAt` in `gtfs-service-day-clock.ts`), so a leg across New Year finds a change in
+    either year.
+  - **NO SIGNAL is the library's refusal only.** An empty box or a header with no rows reads "nothing
+    typed" and makes no call; a paste the reader refuses reads "not read" with its note. A refused
+    time carries the Service Day Clock's `explainRefusal` reason in a "Line N, arrival_time:" note.
+  - **Presets (5), the default is `border`.** `border` (Madrid to Lisbon, 20260615), `night-train`
+    (Vienna to Hamburg, 20261024, times past 24:00:00 and a clock change inside a leg; the wrong
+    reading is "same instant" everywhere because Vienna and Berlin share offsets), `andes-june` and
+    `andes-january` (a Santiago to Mendoza coach timetable: the mistake exists while Chile's clocks are
+    back and hides when both sides share an offset) and `no-noon` (Samoa, every stop refused). Every
+    value is the built library's, asserted in `gtfs-trip-board.test.ts`.
+  - **The hold.** Two hero plates ("Trip, first departure to last arrival", "Stops the wrong zone
+    moves") sit at opposite edges of their row and carry `data-gate="hero"`. Every cell value is a
+    `hold` with ghosts for `WIDEST_ZONE` (`GHOST_ZONED`, asserted against the library), so for a given
+    row count a cell never changes size. The table, a kit `table` with `layout: "fixed"`, `labelCells`
+    and `roles`, sits in `grow()` (the board div is inside the grow host, so `setHtml` on it eases)
+    with `data-gate="drawn"`, and below a 46rem container each stop becomes a block with a full
+    bevelled border. A cell's zone piece and words wrap at the cell (`.zoned > span`, `.board .word`),
+    because the kit's no-wrap piece is wider than a stacked cell at 300 px. The readout-still entry uses `scope: "above"`, since
+    the table and the calls grow with the trip by design.
+  - **Calls for one stop.** A whole trip's calls run past a hundred lines, so a "Calls for" select
+    picks a stop (default: the first stop the wrong zone moves, else the first read) and the code
+    frame reserves the lines and width of `CALLS_SIZER`, a stub-library run through the real reader.
+  - **Chat tool and permalink.** `showGtfsTripBoard` takes optional `stopTimes` (2,000 characters),
+    `date` (16), `zone` (64) and a `preset` from the page's five ids, and at least one of them. The
+    `gtfstrip` permalink carries `preset` alone while the boxes match one, else the three values. The
+    starter card (Rail) opens `border`.
+  - **Tests.** `gtfs-trip-board.test.ts` runs the real library through `~/test/trip-board-lib`; the
+    mount test wraps `loadTripBoardLib` with a spy on `gtfsToInstant` and destroys its widget in
+    `afterEach`; `gtfs-trip-board-prose.test.ts` holds the page's `ts` block to the library;
+    `scripts/gtfs-trip-board-holds.browser.test.ts` steps every preset and the readout-still edits at
+    300, 390, 1280 and 1440 px in Chromium and WebKit.
 - **PTP Clock Converter** (IOT-101, `/tools/ptp-clock-converter/`, `ptpclock`, iot). A Precision
   Time Protocol timestamp counts TAI, and the receiver subtracts the `currentUtcOffset` its
   grandmaster announces. Section 1 reads seconds, nanoseconds and the offset with `ptpToUtc`, beside

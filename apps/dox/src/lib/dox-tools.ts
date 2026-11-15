@@ -818,6 +818,34 @@ export const showGtfsServiceDayClockInput = z
   );
 
 /**
+ * GTFS Trip Board: one trip's `stop_times.txt` rows with a header line (`stopTimes`, at most 2,000
+ * characters), the service date (`date`) and the agency's zone (`zone`), or one of the page's
+ * presets. Every string is passed exactly as the reader gave it, never trimmed or repaired, and the
+ * chat never resolves a stop or an agency to a zone. `preset` is one of the page's ids
+ * (`gtfs-trip-board.test.ts` holds this list to `PRESETS`).
+ */
+export const showGtfsTripBoardInput = z
+  .object({
+    stopTimes: z.string().max(2000).optional(),
+    date: z.string().max(16).optional(),
+    zone: z.string().max(64).optional(),
+    preset: z
+      .enum(["border", "night-train", "andes-june", "andes-january", "no-noon"])
+      .optional(),
+  })
+  .refine(
+    (a) =>
+      a.stopTimes !== undefined ||
+      a.date !== undefined ||
+      a.zone !== undefined ||
+      a.preset !== undefined,
+    {
+      message:
+        "Give a trip's rows with a header line, a service date and a zone, or a preset to open.",
+    },
+  );
+
+/**
  * PTP Clock Converter: a PTP timestamp to read (`seconds`, `nanoseconds` and the announced
  * `offset`), or a UTC `instant` to write one from. Every argument is a string, because JSON
  * carries no bigint, passed exactly as the reader gave it. The chat never coerces a number and
@@ -1503,6 +1531,7 @@ export type DoxToolName =
   | "showGtfsTimeReader"
   | "showUsSunshineProtectionAct"
   | "showGtfsServiceDayClock"
+  | "showGtfsTripBoard"
   | "showPtpClockConverter";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1918,6 +1947,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what UTC time a PTP or IEEE 1588 timestamp is, how TAI differs from UTC, what currentUtcOffset or a grandmaster's announced offset does, why sensor or device time is 37 seconds off, or how to write a UTC instant as a PTP timestamp",
     args: "seconds (the PTP whole seconds as typed), nanoseconds (as typed), offset (the announced currentUtcOffset in seconds, as typed; there is no default), instant (a UTC instant to write, at most 64 characters, never repaired). Each is a string. To read give seconds, nanoseconds and offset; to write give instant, with offset if known.",
   },
+  {
+    name: "showGtfsTripBoard",
+    purpose:
+      "Reads one trip's stop_times.txt rows, with stop_timezone from stops.txt, a service date and agency_timezone, and shows for each stop the instant gtfsToInstant gives, the platform clock's reading of it, the wrong reading you get by passing stop_timezone to gtfsToInstant, and each leg's length. A stop whose clocks and elapsed time disagree is marked, and a date whose noon is skipped has no anchor and reads NO SIGNAL.",
+    when: "the reader asks about a whole trip, or whether a stop's stop_timezone differs from the agency's, which stops a wrong zone moves and by how much, how long a leg really takes across a zone border or a clock change, or what a trip's times mean as instants",
+    args: "stopTimes (the CSV exactly as given, at most 2,000 characters; it needs a header line naming stop_id, arrival_time and departure_time, and may name stop_timezone), date (YYYYMMDD or YYYY-MM-DD as given), zone (agency_timezone as given), or preset. Never resolve a stop or an agency to a zone; ask for stop_timezone and agency_timezone.",
+  },
 ];
 
 /**
@@ -2154,6 +2190,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[56].purpose,
     inputSchema: showGtfsServiceDayClockInput,
   }),
+  showGtfsTripBoard: tool({
+    description: DOX_TOOL_DOCS[58].purpose,
+    inputSchema: showGtfsTripBoardInput,
+  }),
   showPtpClockConverter: tool({
     description: DOX_TOOL_DOCS[57].purpose,
     inputSchema: showPtpClockConverterInput,
@@ -2238,6 +2278,7 @@ export const ENABLED_TOOL_NAMES = [
   "showGtfsTimeReader",
   "showUsSunshineProtectionAct",
   "showGtfsServiceDayClock",
+  "showGtfsTripBoard",
   "showPtpClockConverter",
 ] as const satisfies readonly DoxToolName[];
 

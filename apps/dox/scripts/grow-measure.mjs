@@ -349,6 +349,11 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "gtfs-trip-board",
+    preset: PRESET,
+    drag: null,
+  },
+  {
     slug: "ptp-clock-converter",
     preset: PRESET,
     drag: null,

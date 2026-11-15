@@ -1,0 +1,317 @@
+/*
+ * GTFS Trip Board: what only this tool needs. The sections, preset, fields, table, badges, code
+ * frame, held values, grow and tool links are the kit's; this sheet lays out the controls, the two
+ * plates, the stop cells and the stacked rows.
+ *
+ * Amber is the sentinel's alone: a value the library gave nothing for reads a bracketed NO SIGNAL
+ * in the signal tokens. Every plate and every stacked row has a full bevelled border, never a
+ * coloured left edge.
+ *
+ * The two plates sit at opposite edges of their row (`justify-content: space-between`). A value
+ * reserves the widest the board gives (`hold` ghosts for the widest zone), so for a given number
+ * of rows typing never moves a cell or a plate. The table and the calls grow with the trip, inside
+ * `grow()`.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset and the paste. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* The paste scrolls inside its box, never the page: a line is never wrapped, so a column of
+   times stays a column. */
+.rowsBox textarea {
+  white-space: pre;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-size: var(--gmt-text-sm);
+}
+
+/* ---------------------------------------------------------------------------
+ * Plates
+ * --------------------------------------------------------------------------- */
+
+.plates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+
+  @container (inline-size >= 40rem) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+  }
+}
+
+.plate {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  @container (inline-size >= 40rem) {
+    flex: 0 0 calc(50% - var(--gmt-space-3) / 2);
+    inline-size: calc(50% - var(--gmt-space-3) / 2);
+  }
+
+  &[data-state="signal"] {
+    border-color: var(--gmt-signal-border);
+    background: var(--gmt-signal-fill);
+  }
+
+  /* Narrow: the caption sits above its value. */
+  @container (inline-size < 30rem) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gmt-space-1);
+    padding-inline: var(--gmt-space-2);
+  }
+}
+
+.caption {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.value {
+  flex: 0 0 auto;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  text-align: end;
+  white-space: nowrap;
+
+  @container (inline-size < 30rem) {
+    text-align: start;
+  }
+
+  .plate[data-state="signal"] & {
+    color: var(--gmt-signal-ink);
+  }
+}
+
+.figure,
+.word {
+  white-space: nowrap;
+}
+
+.word[data-state="signal"] {
+  color: var(--gmt-signal-ink);
+}
+
+/* A ghost is set in the live type, so the cell holds the live width and height. */
+.ghost {
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * Board
+ * --------------------------------------------------------------------------- */
+
+.board {
+  container: trip-board / inline-size;
+  min-inline-size: 0;
+
+  /* The cells hold the widest zone name, one 32-character piece. It breaks anywhere when the
+     column is narrower than the piece, and the ghost breaks the same way. */
+  & td,
+  & th {
+    font-size: var(--gmt-text-xs);
+  }
+
+  & td span,
+  & th span {
+    overflow-wrap: anywhere;
+  }
+
+  & td [data-sample]::before {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* The kit keeps each piece of a zoned value on one line. The zone piece (32 characters for the
+   widest zone) is wider than a stacked cell at 300 px, so here a piece may wrap, and only
+   when it does not fit; the break points between pieces stay the kit's. */
+.zoned > span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* A word in a cell wraps at the cell; a plate's word stays on one line. */
+.board .word {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.line {
+  display: block;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+}
+
+.stop {
+  display: block;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.zone {
+  display: block;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.instant {
+  color: var(--gmt-ice-dim);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.notes {
+  margin: var(--gmt-space-2) 0 0;
+  padding-inline-start: 1.25rem;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Under 46rem of board the five columns cannot each hold the widest zone, so each stop becomes a
+   block with a full bevelled border; a cell names its column from the `data-col` the table wrote,
+   and the header row is read by the labels instead. A held value keeps its size from the ghosts
+   and wraps at the block's width. */
+@container trip-board (inline-size < 46rem) {
+  .board :is(table, tbody, tr, th, td) {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .board caption {
+    display: block;
+  }
+
+  .board thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .board tbody {
+    display: grid;
+    gap: var(--gmt-space-3);
+    padding: var(--gmt-space-2);
+  }
+
+  .board tr {
+    box-sizing: border-box;
+    padding: var(--gmt-space-2);
+    border: 1px solid var(--gmt-hairline);
+    border-radius: var(--gmt-radius-md);
+    corner-shape: bevel;
+    background: var(--gmt-surface-widget);
+  }
+
+  .board th,
+  .board td {
+    display: grid;
+    grid-template-columns: minmax(4.5rem, 7rem) minmax(0, 1fr);
+    gap: var(--gmt-space-2);
+    padding-inline: 0;
+    border-block-end: 0;
+    text-align: start;
+  }
+
+  .board th::before,
+  .board td::before {
+    content: attr(data-col);
+    color: var(--gmt-ice-dim);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.callsFor {
+  min-inline-size: 0;
+  max-inline-size: 28rem;
+}
+
+.slot {
+  min-inline-size: 0;
+
+  /* A call line can run past the frame. Where scrollbars take room (WebKit), the track is
+     always there, so a long line scrolling in does not make the frame taller. */
+  & pre {
+    overflow-x: scroll;
+  }
+}
+
+@media (forced-colors: active) {
+  .plate,
+  .board tr {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .plate[data-state="signal"] {
+    border-style: dashed;
+  }
+
+  .caption,
+  .value,
+  .line,
+  .zone,
+  .instant,
+  .board th::before,
+  .board td::before,
+  .word[data-state="signal"] {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .plate,
+  .board tr {
+    border-color: var(--gmt-ice);
+  }
+
+  .caption,
+  .line,
+  .zone,
+  .instant {
+    color: var(--gmt-ice);
+  }
+}
