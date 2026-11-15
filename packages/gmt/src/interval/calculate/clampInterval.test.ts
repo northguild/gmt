@@ -69,12 +69,12 @@ describe("clampInterval", () => {
       ],
       [
         {
-          start: "2024-01-01T09:00:00-05:00[America/New_York]",
-          end: "2024-01-01T18:00:00+01:00[Europe/Berlin]",
+          start: "2024-01-01T09:00:00-05:00",
+          end: "2024-01-01T18:00:00+01:00",
         },
         {
           start: "2024-01-01T15:00:00Z",
-          end: "2024-01-02T03:00:00+09:00[Asia/Tokyo]",
+          end: "2024-01-02T03:00:00+09:00",
         },
       ],
     ];
@@ -109,6 +109,10 @@ describe("clampInterval", () => {
     ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
+    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[foo=bar]", end: "2024-01-01T17:00:00Z" }}        | ${"elective annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[Europe/Berlin]", end: "2024-01-01T17:00:00Z" }}  | ${"time zone annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[+02:00]", end: "2024-01-01T17:00:00Z" }}         | ${"offset annotation"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
     ${{ start: "-271821-04-20T00:00:00Z", end: "+275760-09-13T00:00:00.000000001Z" }} | ${"past the Instant range"}
   `(
@@ -118,25 +122,4 @@ describe("clampInterval", () => {
       expect(clampInterval(bounds, bad)).toBeNull();
     },
   );
-
-  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
-  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
-  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
-  it("clamps annotated endpoints by instant and keeps each winner's annotated text", () => {
-    expect(
-      clampInterval(
-        {
-          start: "2024-01-01T09:30:00Z[u-ca=iso8601]",
-          end: "2024-01-01T18:00:00Z[foo=bar]",
-        },
-        {
-          start: "2024-01-01T09:00:00Z",
-          end: "2024-01-01T17:00:00Z[!u-ca=hebrew]",
-        },
-      ),
-    ).toEqual({
-      start: "2024-01-01T09:30:00Z[u-ca=iso8601]",
-      end: "2024-01-01T17:00:00Z[!u-ca=hebrew]",
-    });
-  });
 });

@@ -145,14 +145,6 @@
       "engines": ["webkit"]
     },
     {
-      "defects": ["D20"],
-      "title": "D20 — PlainYearMonth.from and PlainMonthDay.from reject an upper-case iso8601 calendar annotation",
-      "trigger": "a js-temporal release carrying tc39 385b479bf8 (Canonicalize calendar before checking YYYY-MM or MM-DD format), so the D20 probe (--12-25[u-ca=ISO8601] reads as 12-25 and 2026-10[u-ca=ISO8601] as 2026-10) passes on Node",
-      "probes": 2,
-      "failing": 2,
-      "state": "still-needed"
-    },
-    {
       "defects": ["D21"],
       "title": "D21 — Temporal.Now reads one millisecond early after a clock before 1970 (temporalCompat/clock.ts)",
       "trigger": "a js-temporal release whose SystemUTCEpochNanoSeconds adds a floored modulo (or no tail) so the D21 repro (the second Temporal.Now.instant() with the system clock at 1960-01-01T00:00:00Z reads 1960) passes on Node; filed as tc39/proposal-temporal#3335. The expected value is the specification's and test262's built-ins/Temporal/Now/instant/return-value-value.js",

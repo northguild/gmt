@@ -12,8 +12,8 @@
  * real package. `@js-temporal/polyfill` is imported for drawing only — turning
  * the library's own ISO dates into a day strip — never to compute a deadline.
  *
- * Nor does it order dates as strings. A typed date may carry an RFC 9557
- * annotation or an expanded year, and even canonical ISO strings sort wrongly
+ * Nor does it order dates as strings. A typed date may carry an expanded
+ * year (a date takes no annotation: the library refuses one), and even canonical ISO strings sort wrongly
  * outside years 0000–9999, so every ordering is `Temporal.PlainDate.compare`
  * and every drawn or labelled date is the canonical form the library emits.
  * Only the printed call keeps the text as typed, because it is the real call.

@@ -40,6 +40,26 @@ describe("localParts", () => {
     );
   });
 
+  it.each([
+    "1960-06-01T11:15:30-00:45[Africa/Monrovia]",
+    "1960-06-01T11:15:30-00:44:30[Africa/Monrovia]",
+  ])("gives Monrovia's exact offset for %s", (zoned) => {
+    // Temporal rounds -00:44:30 to -00:45 in the string; the zone has seconds.
+    expect(localParts(zoned)).toEqual({
+      date: "1960-06-01",
+      weekday: "Wed",
+      time: "11:15:30",
+      offset: "-00:44:30",
+      zone: "Africa/Monrovia",
+    });
+  });
+
+  it("gives New York's offset to the second before 1883", () => {
+    expect(
+      localParts("1880-01-01T12:00:00-04:56:02[America/New_York]").offset,
+    ).toBe("-04:56:02");
+  });
+
   it("keeps a fraction of a second", () => {
     expect(
       localParts("2024-06-14T17:00:00.5+02:00[Europe/Amsterdam]").time,
@@ -124,7 +144,7 @@ describe("isZoneless", () => {
 
 describe("callSource", () => {
   it("matches the appendix Z S1 call verbatim, with absent keys omitted", () => {
-    const anchor = "2024-06-17T18:00:00+02:00[Europe/Amsterdam]";
+    const anchor = "2024-06-17T18:00:00+02:00";
     const entries = [
       { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
       { name: "documents", offset: "P3D", atLocalTime: "12:00" },
@@ -140,7 +160,7 @@ describe("callSource", () => {
     };
     const [, plain] = callSource("cutoffSchedule", [anchor, entries, options]);
     expect(plain).toBe(
-      '"2024-06-17T18:00:00+02:00[Europe/Amsterdam]", ' +
+      '"2024-06-17T18:00:00+02:00", ' +
         '[{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, ' +
         '{ name: "documents", offset: "P3D", atLocalTime: "12:00" }], ' +
         '{ timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }',
@@ -174,7 +194,7 @@ describe("callSource", () => {
 describe("formatStack", () => {
   it("collapses to the S1 literal", () => {
     const result = cutoffSchedule(
-      "2024-06-17T18:00:00+02:00[Europe/Amsterdam]",
+      "2024-06-17T18:00:00+02:00",
       [
         { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
         { name: "documents", offset: "P3D", atLocalTime: "12:00" },
@@ -239,5 +259,44 @@ describe("walkTicks with minutes", () => {
       "17:30",
       "17:45",
     ]);
+  });
+});
+
+describe("walkTicks at an offset with seconds", () => {
+  // No Temporal zone holds -00:44:30 (Monrovia before 1972); the ticks still
+  // fall on its whole hours and days, at their exact instants.
+  const at = (iso: string) => Temporal.Instant.from(iso).epochMilliseconds;
+
+  it("ticks Monrovia's whole hours", () => {
+    const ticks = walkTicks(
+      at("1960-06-01T10:00:00Z"),
+      at("1960-06-01T13:00:00Z"),
+      "-00:44:30",
+      "hours",
+      1,
+      minuteTickLabel,
+    );
+    expect(ticks).toEqual([
+      { ms: at("1960-06-01T10:44:30Z"), label: "10:00" },
+      { ms: at("1960-06-01T11:44:30Z"), label: "11:00" },
+      { ms: at("1960-06-01T12:44:30Z"), label: "12:00" },
+    ]);
+  });
+
+  it("ticks New York's local midnights before 1883", () => {
+    const ticks = walkTicks(
+      at("1880-01-01T00:00:00Z"),
+      at("1880-01-03T12:00:00Z"),
+      "-04:56:02",
+      "days",
+      1,
+      minuteTickLabel,
+    );
+    expect(ticks.map((t) => t.ms)).toEqual([
+      at("1880-01-01T04:56:02Z"),
+      at("1880-01-02T04:56:02Z"),
+      at("1880-01-03T04:56:02Z"),
+    ]);
+    expect(ticks.map((t) => t.label)).toEqual(["00:00", "00:00", "00:00"]);
   });
 });

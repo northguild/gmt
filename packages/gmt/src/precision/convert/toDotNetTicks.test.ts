@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { toDotNetTicks } from "./toDotNetTicks";
 
@@ -38,7 +38,7 @@ describe("toDotNetTicks", () => {
     },
   );
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns the same tick count for 2024-02-29T00:00:00Z expressed in $timeZone",
     ({ value }) => {
       expect(toDotNetTicks(value)).toBe(638447616000000000n);
@@ -71,13 +71,9 @@ describe("toDotNetTicks", () => {
     expect(toDotNetTicks(value)).toBe(0n);
   });
 
-  // A calendar annotation is read and ignored, as `Temporal.Instant.from` ignores it (an instant has
-  // no calendar): 2024-03-10T12:00:00-05:00 is 2024-03-10T17:00:00Z. Expected value computed from
-  // native Temporal (Chromium 153) epoch nanoseconds.
-  it("returns 638456868000000000n for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
-    expect(toDotNetTicks("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBe(
-      638456868000000000n,
-    );
+  // An instant is `Z` or an offset and nothing after it: a calendar annotation is no part of it.
+  it("returns the sentinel for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
+    expect(toDotNetTicks("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBe(0n);
   });
 
   it.each`

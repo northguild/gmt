@@ -313,6 +313,14 @@ describe("the axis and the slider", () => {
     expect(drawMs("garbage")).toBeNull();
   });
 
+  it("strips an offset with seconds before drawing", () => {
+    // Monrovia ran at -00:44:30 until 1972.
+    const noon = utcMs("1960-06-01T12:00:00Z");
+    expect(drawMs("1960-06-01T11:15:30-00:44:30")).toBe(noon);
+    expect(drawMs("1960-06-01T11:15:30-004430")).toBe(noon);
+    expect(drawMs("1960-06-01T12:00:00Z")).toBe(noon);
+  });
+
   it("ticks every five years from 1975", () => {
     const ticks = axisTicks(MAY_2026);
     expect(ticks[0]!.year).toBe(1975);

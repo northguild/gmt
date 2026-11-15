@@ -8,6 +8,7 @@ import { plainDateTimeOf } from "../../internal/inputChecks";
 import { startOfPlainDateTime } from "../../internal/plainDateSteps";
 import { isDateTimeUnitName } from "../../internal/unitNames";
 import { isOptionsArgument } from "../../internal/isObject";
+import { fractionalDigitsOption } from "../../internal/typedOptions";
 
 /**
  * Return the start of the specified date-time `unit` for a given ISO 8601 datetime string.
@@ -52,7 +53,9 @@ export function startOfDateTime(
     }
 
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+    const fractionalSecondDigits = fractionalDigitsOption(
+      optionsArg?.fractionalSecondDigits,
+    );
 
     const resolvedUnit = resolveDateTimeUnit(unit);
 

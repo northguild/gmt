@@ -217,18 +217,20 @@ describe("splitHl7Ts", () => {
 
   // ch. 2 §2.6.2: components and subcomponents not expected are ignored
   it.each`
-    value              | dtm           | degree
-    ${"20240615^D^X"}  | ${"20240615"} | ${"D"}
-    ${"20240615^^D"}   | ${"20240615"} | ${""}
-    ${"20240615^D^X^"} | ${"20240615"} | ${"D"}
-    ${"^^D"}           | ${""}         | ${""}
-    ${"2024&X"}        | ${"2024"}     | ${""}
-    ${"2024^D&X"}      | ${"2024"}     | ${"D"}
-    ${"2024&X^D"}      | ${"2024"}     | ${"D"}
-    ${"2024&X&Y^D&Z"}  | ${"2024"}     | ${"D"}
-    ${"&X"}            | ${""}         | ${""}
-    ${"&X^D"}          | ${""}         | ${"D"}
-    ${'""&X'}          | ${'""'}       | ${""}
+    value                     | dtm           | degree
+    ${"20240615^D^X"}         | ${"20240615"} | ${"D"}
+    ${"20240615^^D"}          | ${"20240615"} | ${""}
+    ${"20240615^D^X^"}        | ${"20240615"} | ${"D"}
+    ${"20240615^D^X Y"}       | ${"20240615"} | ${"D"}
+    ${"20240615^D^[foo=bar]"} | ${"20240615"} | ${"D"}
+    ${"20240615^D^X "}        | ${"20240615"} | ${"D"}
+    ${"20240615^D^ X"}        | ${"20240615"} | ${"D"}
+    ${"20240615^D^ "}         | ${"20240615"} | ${"D"}
+    ${"20240615^D^\\F\\"}     | ${"20240615"} | ${"D"}
+    ${"20240615^D^X\\F\\Y"}   | ${"20240615"} | ${"D"}
+    ${"20240615^D^A&B"}       | ${"20240615"} | ${"D"}
+    ${"20240615^D^X^ Y"}      | ${"20240615"} | ${"D"}
+    ${"^^D"}                  | ${""}         | ${""}
   `(
     "ignores what is not expected in '$value': '$dtm' and degree '$degree'",
     ({ value, dtm, degree }) => {
@@ -237,12 +239,26 @@ describe("splitHl7Ts", () => {
   );
 
   it.each`
-    value            | separator
-    ${"20240615~D"}  | ${"~"}
-    ${"20240615|D"}  | ${"|"}
-    ${"20240615\\D"} | ${"\\"}
-  `("reads no other separator: '$separator' stays in the DTM", ({ value }) => {
-    expect(splitHl7Ts(value)).toEqual({ dtm: value, degree: "" });
+    value                   | label
+    ${"20240615~D"}         | ${"the repetition separator"}
+    ${"20240615|D"}         | ${"the field separator"}
+    ${"20240615^D^X|Y"}     | ${"the field separator in an extra component"}
+    ${"20240615^D^X~Y"}     | ${"the repetition separator in an extra component"}
+    ${"20240615^D^X\r"}     | ${"a segment terminator in an extra component"}
+    ${"20240615^D^X\n"}     | ${"a line feed in an extra component"}
+    ${"20240615^D^X\u0007"} | ${"a C0 control in an extra component"}
+    ${"2024&X"}             | ${"a subcomponent after the DTM (TS.1)"}
+    ${"2024^D&X"}           | ${"a subcomponent after the degree (TS.2)"}
+    ${"&X^D"}               | ${"a subcomponent in an empty DTM"}
+  `("is not a TS: $label", ({ value }) => {
+    expect(splitHl7Ts(value)).toBeNull();
+  });
+
+  it("keeps the escape character in the DTM, where the DTM reader rejects it", () => {
+    expect(splitHl7Ts("20240615\\D")).toEqual({
+      dtm: "20240615\\D",
+      degree: "",
+    });
   });
 });
 

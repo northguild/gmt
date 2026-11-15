@@ -3,7 +3,7 @@ import { durationTotal } from "../../internal";
 import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeDateUnit, RelativeTimeFormatOptions } from "../../types";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 import { nowPlainDateISO } from "../../internal/temporalCompat";
 
 /**
@@ -66,7 +66,7 @@ export function formatRelativeDate(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = plainDateOf(value);
     if (target === null) return "";
     // Each option is read once (GetOption).

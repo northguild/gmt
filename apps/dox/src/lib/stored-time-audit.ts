@@ -21,12 +21,12 @@ import {
   getTickerWindow,
   isGap,
   localDateAtTransition,
-  parseOffsetMinutes,
   selectTickMinutes,
   type DstTransition,
   type TickerWindow,
 } from "./dst-inspector";
 import { runCall, type EdiCall } from "./edi-widgets";
+import { offsetNanoseconds } from "./exact-offset";
 import type { StoredTimeLib } from "./stored-time-lib";
 import { encodeWidgetPermalink } from "./widget-permalink";
 
@@ -170,14 +170,16 @@ interface WallParts {
 
 /** The written wall clock of a line, for drawing only. */
 function wallOfLine(value: string): WallParts | null {
-  const m = /^([+-]\d{6}|\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})/.exec(
-    value,
-  );
+  const m =
+    /^([+-]\d{6}|\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(
+      value,
+    );
   if (!m) return null;
   return {
     year: Number(m[1]),
     date: `${m[1]}-${m[2]}-${m[3]}`,
-    minute: Number(m[4]) * 60 + Number(m[5]),
+    // Seconds kept: a pin at 12:03:59 sits outside New York's 1883 repeat.
+    minute: Number(m[4]) * 60 + Number(m[5]) + Number(m[6] ?? 0) / 60,
   };
 }
 
@@ -399,13 +401,26 @@ export function dayTicks(window: TickerWindow, trackPx: number): number[] {
   );
 }
 
-/** The clock change's size, in words: "1 hour" or "30 minutes". */
+const plural = (n: number, unit: string): string =>
+  `${n} ${unit}${n === 1 ? "" : "s"}`;
+
+/**
+ * The clock change's size, in words: "1 hour", "30 minutes", or with seconds
+ * where the offsets had them ("3 minutes 58 seconds", New York's 1883 change
+ * from `-04:56:02` to `-05:00`).
+ */
 export function bandMinutesText(t: DstTransition): string {
   // From the offsets, not the drawn band: a band that ends at midnight is
   // clamped to 23:59 and would read as 59 minutes.
-  const m = Math.abs(
-    parseOffsetMinutes(t.offsetAfter) - parseOffsetMinutes(t.offsetBefore),
-  );
+  const after = offsetNanoseconds(t.offsetAfter) ?? 0;
+  const before = offsetNanoseconds(t.offsetBefore) ?? 0;
+  const seconds = Math.round(Math.abs(after - before) / 1e9);
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (s !== 0)
+    return m === 0
+      ? plural(s, "second")
+      : `${plural(m, "minute")} ${plural(s, "second")}`;
   if (m % 60 === 0) return m === 60 ? "1 hour" : `${m / 60} hours`;
   return `${m} minutes`;
 }

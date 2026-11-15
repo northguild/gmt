@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { isoStringBody } from "./isoStringBody";
+import { durationFrom } from "./durationFrom";
 import { isRememberedZone, rememberZone } from "./validatedZones";
 import { leapSecond } from "../regex/leap-second";
 import {
@@ -10,7 +10,6 @@ import {
   plainYearMonth,
   timeZoneLike,
 } from "../regex";
-import { monthDayFrom, yearMonthFrom } from "./temporalCompat";
 import type { RollConvention } from "../types";
 import { nanosecondDecimal } from "../regex/nanoseconds";
 import {
@@ -64,8 +63,11 @@ export function isZoneId(timeZone: unknown): boolean {
 }
 
 /**
- * The check behind `hasSecond60`: whether the string has a second-60 field, the spelling
- * Temporal would silently clamp to `:59`.
+ * A broad pre-check, not a public test: whether the string has a second-60 field in ANY spelling
+ * Temporal reads (lower-case `t`, a space, basic format, a bare time with or without `T`). It runs
+ * in front of a strict gate that rejects the string anyway, so over-matching only rejects earlier.
+ * `hasSecond60` is the public test and reads GMT's exact kind shapes instead
+ * (`hasSecond60Shape`); never use this one as that.
  *
  * @param value the candidate; a value that is not a string has no second field
  * @returns whether the string has a second-60 field
@@ -92,8 +94,7 @@ export function plainTimeOf(value: unknown): Temporal.PlainTime | null {
   if (typeof value !== "string") {
     return null;
   }
-  const body = isoStringBody(value);
-  if (hasSecond60Field(body) || !plainTime.test(body)) {
+  if (hasSecond60Field(value) || !plainTime.test(value)) {
     return null;
   }
   try {
@@ -131,8 +132,7 @@ export function plainDateOf(value: unknown): Temporal.PlainDate | null {
   if (typeof value !== "string") {
     return null;
   }
-  const body = isoStringBody(value);
-  if (hasSecond60Field(body) || !plainDate.test(body)) {
+  if (hasSecond60Field(value) || !plainDate.test(value)) {
     return null;
   }
   try {
@@ -171,8 +171,7 @@ export function plainDateTimeOf(value: unknown): Temporal.PlainDateTime | null {
   if (typeof value !== "string") {
     return null;
   }
-  const body = isoStringBody(value);
-  if (hasSecond60Field(body) || !plainDateTime.test(body)) {
+  if (hasSecond60Field(value) || !plainDateTime.test(value)) {
     return null;
   }
   try {
@@ -198,14 +197,13 @@ export function isoDateLikeOf(value: unknown): boolean {
   if (typeof value !== "string") {
     return false;
   }
-  const body = isoStringBody(value);
-  if (hasSecond60Field(body)) {
+  if (hasSecond60Field(value)) {
     return false;
   }
-  if (plainDate.test(body)) {
+  if (plainDate.test(value)) {
     return plainDateOf(value) !== null;
   }
-  if (plainDateTime.test(body)) {
+  if (plainDateTime.test(value)) {
     return plainDateTimeOf(value) !== null;
   }
   return false;
@@ -215,9 +213,9 @@ export function isoDateLikeOf(value: unknown): boolean {
  * The check behind `isValidMonthDay`: the ISO calendar `PlainMonthDay` a month-day string names,
  * or `null`.
  *
- * The part before the first annotation must match `plainMonthDay`, which refuses the basic form,
- * a year, a time, `Z`, an offset and a day no year has (`--02-30`) before Temporal is asked.
- * Temporal then reads the annotations (`monthDayFrom`, defect D20) and the calendar must be ISO.
+ * The whole string must match `plainMonthDay`, which refuses the basic form, a year, a time, `Z`,
+ * an offset, any annotation (zone, calendar or elective) and a day no year has (`--02-30`)
+ * before Temporal is asked.
  *
  * @param value the candidate
  * @returns the `PlainMonthDay` when the string is a month-day in the ISO calendar, else `null`
@@ -227,11 +225,11 @@ export function isoDateLikeOf(value: unknown): boolean {
  * @example plainMonthDayOf(null) // null
  */
 export function plainMonthDayOf(value: unknown): Temporal.PlainMonthDay | null {
-  if (typeof value !== "string" || !plainMonthDay.test(isoStringBody(value))) {
+  if (typeof value !== "string" || !plainMonthDay.test(value)) {
     return null;
   }
   try {
-    const monthDay = monthDayFrom(value);
+    const monthDay = Temporal.PlainMonthDay.from(value);
     return monthDay.calendarId === "iso8601" ? monthDay : null;
   } catch {
     return null;
@@ -242,10 +240,9 @@ export function plainMonthDayOf(value: unknown): Temporal.PlainMonthDay | null {
  * The check behind `isValidYearMonth`: the ISO calendar `PlainYearMonth` a year-month string
  * names, or `null`.
  *
- * The part before the first annotation must match `plainYearMonth`, which refuses the basic form,
- * a date, a time, `Z` and an offset before Temporal is asked. Temporal then enforces the range
- * (`-271821-04` to `+275760-09`) and reads the annotations (`yearMonthFrom`, defect D20), and the
- * calendar must be ISO.
+ * The whole string must match `plainYearMonth`, which refuses the basic form, a date, a time, `Z`,
+ * an offset and any annotation (zone, calendar or elective) before Temporal is asked. Temporal
+ * then enforces the range (`-271821-04` to `+275760-09`).
  *
  * @param value the candidate
  * @returns the `PlainYearMonth` when the string is a year-month in the ISO calendar, else `null`
@@ -257,11 +254,11 @@ export function plainMonthDayOf(value: unknown): Temporal.PlainMonthDay | null {
 export function plainYearMonthOf(
   value: unknown,
 ): Temporal.PlainYearMonth | null {
-  if (typeof value !== "string" || !plainYearMonth.test(isoStringBody(value))) {
+  if (typeof value !== "string" || !plainYearMonth.test(value)) {
     return null;
   }
   try {
-    const yearMonth = yearMonthFrom(value);
+    const yearMonth = Temporal.PlainYearMonth.from(value);
     return yearMonth.calendarId === "iso8601" ? yearMonth : null;
   } catch {
     return null;
@@ -283,7 +280,7 @@ export function durationOf(value: unknown): Temporal.Duration | null {
     return null;
   }
   try {
-    return Temporal.Duration.from(value);
+    return durationFrom(value);
   } catch {
     return null;
   }

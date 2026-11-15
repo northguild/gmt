@@ -74,7 +74,7 @@ describe("areZonedEqual compares the instant, the time zone and the calendar", (
     ${"2024-01-01T12:00:00+01:00[europe/berlin]"}                | ${"2024-01-01T12:00:00+01:00[Europe/Berlin]"}                | ${true}  | ${"identifiers match in any letter case"}
     ${"2024-01-01T05:30:00+05:30[+05:30]"}                       | ${"2024-01-01T05:30:00+05:30[+05:30]"}                       | ${true}  | ${"the same offset zone and instant"}
     ${"2024-01-01T05:30:00+05:30[+05:30]"}                       | ${"2024-01-01T06:30:00+06:30[+06:30]"}                       | ${false} | ${"different offset zones are different zones"}
-    ${"2024-01-01T05:30:00+05:30[+05:30]"}                       | ${"2024-01-01T05:30:00+05:30[+0530]"}                        | ${true}  | ${"+05:30 and +0530 write one offset zone"}
+    ${"2024-01-01T05:30:00+05:30[+05:30]"}                       | ${"2024-01-01T05:30:00+05:30[+0530]"}                        | ${false} | ${"+0530 is no zone annotation: RFC 3339 5.6 writes an offset HH:MM"}
     ${"2024-01-01T00:00:00+00:00[+00:00]"}                       | ${"2024-01-01T00:00:00+00:00[UTC]"}                          | ${false} | ${"an offset zone of zero is not UTC"}
     ${"2024-01-01T05:30:00+05:30[+05:30]"}                       | ${"2024-01-01T05:30:00+05:30[Asia/Kolkata]"}                 | ${false} | ${"an offset zone is not a named zone, even at the same instant"}
     ${"2024-01-01T12:00:00+01:00[Europe/Berlin]"}                | ${"2024-01-01T20:00:00+09:00[Asia/Tokyo]"}                   | ${false} | ${"one instant in two zones is not equal"}

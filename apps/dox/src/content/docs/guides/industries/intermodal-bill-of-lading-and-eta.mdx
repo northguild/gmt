@@ -72,14 +72,14 @@ bolTimestamp("2024-06-15T16:30:00Z", "issue", { timeZone: "Europe/London" }); //
 bolTimestamp("2024-06-16T01:00:00Z", "shippedOnBoard"); // "" — every B/L date is local: the zone is required
 ```
 
-Only the instant is read. A bracketed zone in the value, often the zone of the system that logged
-it, is not the zone the date is read in:
+Only the instant is read: `Z` or an offset, with no bracketed zone (a string with one returns
+`""`). The offset of the system that logged it is not the zone the date is read in:
 
 ```typescript
 import { bolTimestamp } from "@northguild/gmt/intermodal";
 
 // Logged in Copenhagen, loaded in São Paulo.
-bolTimestamp("2024-06-16T03:00:00+02:00[Europe/Copenhagen]", "shippedOnBoard", { timeZone: "America/Sao_Paulo" });
+bolTimestamp("2024-06-16T03:00:00+02:00", "shippedOnBoard", { timeZone: "America/Sao_Paulo" });
 // "2024-06-15"
 
 bolTimestamp("2024-06-15T21:00:00", "shippedOnBoard", { timeZone: "America/Sao_Paulo" }); // "" — no offset: not a moment

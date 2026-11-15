@@ -1,11 +1,9 @@
 import {
   FHIR_PRECISIONS,
   fhirTypeAllows,
-  hasTimeZoneAnnotation,
   hl7PrecisionRank,
-  isoHl7Form,
   isoHl7Precision,
-  isoStringBody,
+  isoHl7Form,
   isOptionsArgument,
   parseUtcOffsetNanoseconds,
   readFhirValue,
@@ -41,17 +39,8 @@ const RANK_SECOND = hl7PrecisionRank("second");
  *   input's own wall clock. `options.precision` only lowers the precision; a finer one returns `""`.
  * - Under `date`, the result is the wall-clock date at the input's own offset
  *   (`2024-06-15T23:30:00-05:00` is `2024-06-15`), because §2.24.0.1 forbids a zone on a `date`.
- *   A `…Z[zone]` value gives that zone's local date (`2024-06-15T23:30:00Z[Europe/Berlin]` is
- *   `2024-06-16`): RFC 9557 §3.4 says a `Z` timestamp asserts no local time, so it comes from the
- *   zone suffix.
- * - With no bracketed zone, the designator is written as the input spells it (`Z`, `+00:00` and
- *   `-00:00` stay as written; `+05:30:00` is written `+05:30`). After a bracketed zone, the
- *   zone's offset at that instant is written, whatever the designator: `…Z[Europe/Berlin]` in
- *   June writes `+02:00`, and `…Z[Europe/London]` in January writes `+00:00`. The fraction
- *   always uses `.`.
- * - `-00:00` before a bracketed zone returns `""` unless the zone's offset is zero at that
- *   instant (`2024-06-15T10:30:00-00:00[Europe/Berlin]`): Temporal's `ZonedDateTime.from` reads
- *   `-00:00` as the offset `+00:00` and rejects an offset the zone contradicts (RFC 9557 §3.4).
+ * - The designator is written as the input spells it (`Z`, `+00:00` and `-00:00` stay as
+ *   written; `+05:30:00` is written `+05:30`). The fraction always uses `.`.
  * - A second of `60` returns `""`: §2.24.0.1 says "applications producing them MAY choose to avoid
  *   encoding leap seconds".
  * - There is no hour or minute precision, and nothing is zero-filled: a value written to the hour
@@ -62,12 +51,10 @@ const RANK_SECOND = hl7PrecisionRank("second");
  *   1972, `Africa/Monrovia`, was −0:44:30). This applies under `date` too, even though a `date`
  *   never writes the offset.
  * - Disambiguation: none, in the vocabulary of `LOCAL_TIME_RESOLUTION.md`. A wall time with no
- *   offset is written only as a date, and a zone with no offset returns `""` (see Annotations).
+ *   offset is written only as a date.
  *   In a repeated hour at the end of DST, the offset decides which one is written.
- * - Annotations: on a form with no offset, any bracketed annotation returns `""`
- *   (`2024-06-15[u-ca=iso8601]`, `…T10:30:00[foo=bar]`). On a form with an offset, an elective
- *   `[u-ca=…]` or `[foo=bar]` is ignored and the ISO digits are written, while a critical unknown
- *   key (`[!foo=bar]`) returns `""` (RFC 9557 §3.3).
+ * - Annotations: none is read. A bracket of any kind (a zone, `[u-ca=iso8601]`, `[foo=bar]`) returns
+ *   `""`; write the wall clock with the zone's offset instead.
  * - Never throws: any failure, for input of any type, is `""`.
  *
  * The matching reader is `parseFHIR`.
@@ -79,7 +66,7 @@ const RANK_SECOND = hl7PrecisionRank("second");
  *
  * @example formatFHIR("2024-06-15T23:30:00-05:00", "date") // "2024-06-15"
  * @example formatFHIR("2024-06-15T23-05:00", "date") // "2024-06-15" (an hour with an offset)
- * @example formatFHIR("2024-01-15T10:30:00Z[Europe/London]", "dateTime") // "2024-01-15T10:30:00+00:00"
+ * @example formatFHIR("2024-01-15T10:30:00Z[Europe/London]", "dateTime") // "" (an annotation)
  * @example formatFHIR("2024-06-15T23:30:00-05:00", "instant") // "2024-06-15T23:30:00-05:00"
  * @example formatFHIR("2024-06-15T10:30:00", "instant") // "" (an instant needs a zone)
  * @example formatFHIR("2024-06-15T10:30:00Z", "dateTime", { precision: "month" }) // "2024-06"
@@ -108,7 +95,7 @@ export function formatFHIR(
     const wallClock = readWallClock(groups, pair);
     let result = writeDigits(wallClock, target, rank, fractionDigits);
     if (rank >= RANK_SECOND && pair !== null) {
-      result += keepSpelling(value, designator as string, pair.offset);
+      result += keepSpelling(designator as string, pair.offset);
     }
     const check = readFhirValue(result);
     return check !== null && fhirTypeAllows(type, check.precision)
@@ -141,18 +128,15 @@ function planWrite(
   ) {
     return null;
   }
-  const match = isoHl7Form.exec(isoStringBody(value));
+  const match = isoHl7Form.exec(value);
   if (match === null) {
     return null;
   }
   const groups = match.groups as Record<string, string | undefined>;
   const { precision: written, fractionDigits } = isoHl7Precision(match);
   const designator = groups["offset"];
-  // A second of 60: GMT writes none. A zone with no offset needs a disambiguation choice.
-  if (
-    groups["second"] === "60" ||
-    (designator === undefined && value.includes("["))
-  ) {
+  // A second of 60: GMT writes none.
+  if (groups["second"] === "60") {
     return null;
   }
   const target = pickTarget(
@@ -229,17 +213,10 @@ function pickTarget(
 }
 
 /**
- * After a bracketed zone, the zone's offset. Otherwise the input's own spelling when it names the
- * offset Temporal read (`Z` and `-00:00` name `+00:00`), and that offset when it does not.
+ * The input's own spelling when it names the offset Temporal read (`Z` and `-00:00` name
+ * `+00:00`), and that offset when it does not.
  */
-function keepSpelling(
-  value: string,
-  designator: string,
-  offset: string,
-): string {
-  if (hasTimeZoneAnnotation(value)) {
-    return offset;
-  }
+function keepSpelling(designator: string, offset: string): string {
   const named =
     designator === "Z" || designator === "-00:00" ? "+00:00" : designator;
   return named === offset ? designator : offset;

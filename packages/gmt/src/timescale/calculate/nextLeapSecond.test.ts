@@ -5,7 +5,7 @@ import {
   mockTemporalInstantFromThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
-import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
+import { sameInstantOffsetCases } from "../../test/timeZoneMatrix";
 import { isLeapSecond } from "../validate/isLeapSecond";
 import { nextLeapSecond } from "./nextLeapSecond";
 
@@ -72,7 +72,7 @@ describe("nextLeapSecond", () => {
     },
   );
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns '' for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       expect(nextLeapSecond(value)).toBe("");

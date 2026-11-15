@@ -23,6 +23,7 @@
  */
 
 import { Temporal } from "@js-temporal/polyfill";
+import { OFFSET_SOURCE, wallReader } from "./exact-offset";
 import { isZonelessDeparture } from "./transport-widgets";
 import { codeSpan } from "./widget-ui";
 
@@ -68,10 +69,13 @@ export interface CutoffTime {
   at: string;
 }
 
-/** The nine real functions every cut-off widget needs, loaded at module
+/** The real functions every cut-off widget needs, loaded at module
  *  granularity by `cutoff-lib.ts`. Injected so this module stays free of gmt
  *  imports and the tests can supply the real library by module path. */
 export interface CutoffLib {
+  /** `toOffsetInstant`'s `instant`, or `""` when the text is not a moment: a
+   *  zoned time rewritten as the `Z` instant `now` and `cutoffAt`'s anchor read. */
+  toInstant(value: string): string;
   cutoffAt(anchor: string, offset: string, options: CutoffAtOptions): string;
   cutoffSchedule(
     anchor: string,
@@ -130,8 +134,9 @@ const MONTH_LABELS = [
   "Dec",
 ];
 
-const ZONED_PATTERN =
-  /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)([+-]\d{2}:\d{2}|Z)\[([^\]]+)]$/;
+const ZONED_PATTERN = new RegExp(
+  String.raw`^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(${OFFSET_SOURCE}|Z)\[([^\]]+)]$`,
+);
 
 export interface LocalParts {
   date: string;
@@ -151,10 +156,23 @@ function trimZeroSeconds(time: string): string {
   return `${hm}:${sec}`;
 }
 
+/** The zone's exact offset for `zoned`: a zoned string rounds an offset with
+ *  seconds to the minute (`1960-06-01T11:15:30-00:45[Africa/Monrovia]`), and
+ *  the zone itself says `-00:44:30`. The written offset when Temporal will not
+ *  read the string. */
+function exactOffsetOf(zoned: string, written: string): string {
+  try {
+    return Temporal.ZonedDateTime.from(zoned).offset;
+  } catch {
+    return written === "Z" ? "+00:00" : written;
+  }
+}
+
 /** `{ date, weekday, time, offset, zone }` parsed from a zoned string the
- *  library returned — the weekday label is the one thing not literally in
- *  the string, and it is read from the date with the polyfill (drawing, not
- *  computing a result). An unparseable string gives every field `""`. */
+ *  library returned — the weekday label and the zone's exact offset are the
+ *  things not literally in the string, and both are read with the polyfill
+ *  (drawing, not computing a result). An unparseable string gives every
+ *  field `""`. */
 export function localParts(zoned: string): LocalParts {
   const m = ZONED_PATTERN.exec(zoned);
   if (!m) return { date: "", weekday: "", time: "", offset: "", zone: "" };
@@ -165,7 +183,7 @@ export function localParts(zoned: string): LocalParts {
     date: date!,
     weekday,
     time: trimZeroSeconds(time!),
-    offset: offset!,
+    offset: exactOffsetOf(zoned, offset!),
     zone: zone!,
   };
 }
@@ -236,8 +254,9 @@ export function walkTicks(
 ): AxisTick[] {
   if (endMs <= startMs) return [];
   try {
-    const startZ =
-      Temporal.Instant.fromEpochMilliseconds(startMs).toZonedDateTimeISO(zone);
+    // An offset with seconds is no Temporal zone; `wallReader` carries its wall clock.
+    const read = wallReader(zone);
+    const startZ = read(startMs);
     let cur =
       unit === "hours" || unit === "minutes"
         ? startZ.round({ smallestUnit: "hour", roundingMode: "floor" })
@@ -247,14 +266,9 @@ export function walkTicks(
     const out: AxisTick[] = [];
     // A generous but finite bound: this only ever walks a widget's own axis
     // window, never an unbounded range.
-    for (
-      let guard = 0;
-      guard < 2000 && cur.epochMilliseconds <= endMs;
-      guard++
-    ) {
-      if (cur.epochMilliseconds >= startMs) {
-        out.push({ ms: cur.epochMilliseconds, label: label(cur) });
-      }
+    for (let guard = 0; guard < 2000 && read.msOf(cur) <= endMs; guard++) {
+      const ms = read.msOf(cur);
+      if (ms >= startMs) out.push({ ms, label: label(cur) });
       cur =
         unit === "minutes"
           ? cur.add({ minutes: step })

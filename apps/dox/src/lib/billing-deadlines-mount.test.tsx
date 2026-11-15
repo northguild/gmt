@@ -552,33 +552,39 @@ describe("permalinks", () => {
 
 /**
  * The widget draws and labels the library's canonical dates and orders them
- * with `Temporal.PlainDate.compare`, never by string. An annotated or
- * expanded-year date the library accepts must draw exactly as its bare ISO
- * form does, and string order breaks outside years 0000-9999.
+ * with `Temporal.PlainDate.compare`, never by string. An expanded-year
+ * date the library accepts must draw exactly as its bare ISO form does, and
+ * string order breaks outside years 0000-9999. An annotated date is refused.
  */
 describe("dates the library accepts in any ISO form", () => {
   const WINDOWS = { issueDays: "30", disputeDays: "30", resolutionDays: "30" };
+
+  it("draws an expanded-year anchor exactly as 2026-03-01: its mark, 31 lane cells, a bare summary", async () => {
+    const w = await open();
+    await typeState(w, { anchorOn: "+002026-03-01", ...WINDOWS });
+    expect(output()).toHaveTextContent('invoiceDeadline: "2026-03-31"');
+    const lane1 = laneCells(1);
+    expect(lane1).toHaveLength(31);
+    expect(lane1[0]).toBe("Sun 1 Mar 2026: anchor; issue window day 0");
+    expect(lane1.at(-1)).toBe(
+      "Tue 31 Mar 2026: issue window day 30, invoice deadline",
+    );
+    expect(summary()).toHaveTextContent(
+      exact("31 days from 2026-03-01 to 2026-03-31."),
+    );
+    await expectNoAxeViolations(w.root);
+  });
 
   it.each([
     "2026-03-01[u-ca=iso8601]",
     "2026-03-01[foo=bar]",
     "2026-03-01[Europe/London]",
-    "+002026-03-01",
   ])(
-    "draws anchor %s exactly as 2026-03-01: its mark, 31 lane cells, a bare summary",
+    "shows NO SIGNAL for anchor %s: a date takes no annotation",
     async (anchorOn) => {
       const w = await open();
       await typeState(w, { anchorOn, ...WINDOWS });
-      expect(output()).toHaveTextContent('invoiceDeadline: "2026-03-31"');
-      const lane1 = laneCells(1);
-      expect(lane1).toHaveLength(31);
-      expect(lane1[0]).toBe("Sun 1 Mar 2026: anchor; issue window day 0");
-      expect(lane1.at(-1)).toBe(
-        "Tue 31 Mar 2026: issue window day 30, invoice deadline",
-      );
-      expect(summary()).toHaveTextContent(
-        exact("31 days from 2026-03-01 to 2026-03-31."),
-      );
+      expect(output()).toHaveTextContent("NO SIGNAL");
       await expectNoAxeViolations(w.root);
     },
   );
@@ -591,7 +597,7 @@ describe("dates the library accepts in any ISO form", () => {
     );
   });
 
-  it("marks, lanes and labels annotated invoice and request dates by their bare ISO form", async () => {
+  it("shows NO SIGNAL for annotated invoice and request dates", async () => {
     const w = await open();
     await typeState(w, {
       anchorOn: "2026-03-01",
@@ -599,21 +605,7 @@ describe("dates the library accepts in any ISO form", () => {
       requestReceivedOn: "2026-04-19[foo=bar]",
       ...WINDOWS,
     });
-    const names = cellNames();
-    expect(names).toContain(
-      "Fri 20 Mar 2026: invoice issued; issue window day 19; dispute window day 0",
-    );
-    expect(names).toContain(
-      "Sun 19 Apr 2026: dispute request received; dispute window day 30, dispute deadline; resolution window day 0",
-    );
-    expect(laneCells(2)).toHaveLength(31);
-    expect(laneCells(3)).toHaveLength(31);
-    expect(verdicts()).toHaveTextContent(
-      "Invoice issued 2026-03-20: on or before the deadline",
-    );
-    expect(verdicts()).toHaveTextContent(
-      "Request received 2026-04-19: on or before the deadline",
-    );
+    expect(output()).toHaveTextContent("NO SIGNAL");
   });
 
   it("orders dates across year 9999 by date, not by string", async () => {

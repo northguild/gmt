@@ -3,6 +3,7 @@
  * `punctuality-widgets.ts`'s pure helpers. Every expected literal that a
  * library call produces is an appendix Z row or a JSDoc example.
  */
+import { Temporal } from "@js-temporal/polyfill";
 import {
   callArgs,
   epochMs,
@@ -27,6 +28,10 @@ import {
   writtenTime,
   settledAnnouncer,
 } from "./punctuality-widgets";
+
+/** Epoch milliseconds of a `…Z` instant, for expected values. */
+const atMs = (iso: string): number =>
+  Temporal.Instant.from(iso).epochMilliseconds;
 
 describe("minutesToIso", () => {
   it.each([
@@ -157,6 +162,25 @@ describe("writtenParts, writtenLabel, writtenTime", () => {
 
   it("shows seconds only when non-zero", () => {
     expect(writtenTime("2024-06-15T06:20:30Z")).toBe("06:20:30");
+  });
+
+  it("reads an offset with seconds as written (Monrovia 1960, New York 1880)", () => {
+    expect(writtenParts("1960-06-01T11:15:30-00:44:30")).toEqual({
+      date: "1960-06-01",
+      weekday: "Wed",
+      time: "11:15:30",
+      offset: "-00:44:30",
+      zone: "",
+    });
+    expect(writtenLabel("1960-06-01T11:15:30-00:44:30")).toBe(
+      "Wed 1 Jun 11:15:30",
+    );
+    expect(writtenParts("1880-06-01T12:03:58-04:56:02")).toMatchObject({
+      weekday: "Tue",
+      time: "12:03:58",
+      offset: "-04:56:02",
+    });
+    expect(writtenTime("1880-06-01T12:03:58-04:56:02")).toBe("12:03:58");
   });
 
   it("is all empty when the text does not parse", () => {
@@ -338,6 +362,35 @@ describe("minuteTicks", () => {
   it("is empty for a backwards window", () => {
     expect(minuteTicks(10, 5, "UTC", 20)).toEqual([]);
   });
+
+  it("walks an offset with seconds at its exact instants (Monrovia 1960)", () => {
+    // 12:00Z is 11:15:30 at -00:44:30; the local hour 11:00 is 11:44:30Z.
+    const start = atMs("1960-06-01T12:00:00Z");
+    const end = atMs("1960-06-01T13:00:00Z");
+    const want = [
+      { ms: atMs("1960-06-01T12:04:30Z"), label: "11:20" },
+      { ms: atMs("1960-06-01T12:24:30Z"), label: "11:40" },
+      { ms: atMs("1960-06-01T12:44:30Z"), label: "12:00" },
+    ];
+    expect(minuteTicks(start, end, "-00:44:30", 20)).toEqual(want);
+    expect(minuteTicks(start, end, "Africa/Monrovia", 20)).toEqual(want);
+  });
+
+  it("walks an offset with seconds at its exact instants (New York 1880)", () => {
+    // 17:00Z is 12:03:58 at -04:56:02; the local hour 12:00 is 16:56:02Z.
+    expect(
+      minuteTicks(
+        atMs("1880-06-01T17:00:00Z"),
+        atMs("1880-06-01T18:00:00Z"),
+        "-04:56:02",
+        20,
+      ),
+    ).toEqual([
+      { ms: atMs("1880-06-01T17:16:02Z"), label: "12:20" },
+      { ms: atMs("1880-06-01T17:36:02Z"), label: "12:40" },
+      { ms: atMs("1880-06-01T17:56:02Z"), label: "13:00" },
+    ]);
+  });
 });
 
 describe("constants", () => {
@@ -414,6 +467,19 @@ describe("writeLike and zoneOf", () => {
     );
   });
 
+  it("keeps an offset with seconds to the second (Monrovia 1960, New York 1880)", () => {
+    // 12:30Z at -00:44:30 is 11:45:30; 17:00Z at -04:56:02 is 12:03:58.
+    expect(
+      writeLike("1960-06-01T11:15:30-00:44:30", atMs("1960-06-01T12:30:00Z")),
+    ).toBe("1960-06-01T11:45:30-00:44:30");
+    expect(
+      writeLike("1880-06-01T12:00:00-04:56:02", atMs("1880-06-01T17:00:00Z")),
+    ).toBe("1880-06-01T12:03:58-04:56:02");
+    expect(epochMs("1960-06-01T11:45:30-00:44:30")).toBe(
+      atMs("1960-06-01T12:30:00Z"),
+    );
+  });
+
   it("is empty when the sample does not parse", () => {
     expect(writeLike("soon", t0840)).toBe("");
   });
@@ -422,6 +488,7 @@ describe("writeLike and zoneOf", () => {
     expect(zoneOf(ams)).toBe("Europe/Amsterdam");
     expect(zoneOf("2024-06-15T09:00:00+02:00")).toBe("+02:00");
     expect(zoneOf("2024-06-15T09:00:00Z")).toBe("UTC");
+    expect(zoneOf("1960-06-01T11:15:30-00:44:30")).toBe("-00:44:30");
     expect(zoneOf("soon")).toBe("");
   });
 });

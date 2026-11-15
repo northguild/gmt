@@ -3,7 +3,7 @@ import { Temporal } from "../temporal";
 /*
  * Upstream repros for each `@js-temporal/polyfill` calendar defect GMT works around, with the
  * spec-correct answer. This file holds the repros the shipped capability probes read (D1-D8,
- * D10-D20 and D22); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
+ * D10-D19 and D22); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
  * polyfill, through `../temporal` (no other GMT module), so a canary script can load its compiled
  * copy straight from `dist`.
  *
@@ -32,7 +32,6 @@ export type DefectId =
   | "D17"
   | "D18"
   | "D19"
-  | "D20"
   | "D22";
 
 export interface ProbeRepro {
@@ -842,33 +841,6 @@ const d19Repros: readonly ProbeRepro[] = [
 ];
 
 /**
- * D20 (`temporalCompat/isoCalendarFrom.ts`): `ParseTemporalMonthDayString` and `ParseTemporalYearMonthString` compare the `u-ca` value
- * with `"iso8601"` as written, so an upper-case calendar annotation throws "MM-DD format is only
- * valid with iso8601 calendar" on a month-day and "YYYY-MM format is only valid with iso8601
- * calendar" on a year-month. Temporal ParseISODateTime lower-cases the value first, for goal
- * TemporalMonthDayString with no DateYear and for goal TemporalYearMonthString with no DateDay:
- * "If calendar is not empty and the ASCII-lowercase of calendar is not "iso8601", throw a
- * RangeError exception". tc39
- * `385b479bf8` aligned the reference polyfill. A throw counts as a failed repro.
- */
-const d20Repros: readonly ProbeRepro[] = [
-  {
-    defect: "D20",
-    calendar: "iso8601",
-    name: "upperCaseIsoCalendarOnMonthDay",
-    expected: "12-25",
-    run: () => Temporal.PlainMonthDay.from("--12-25[u-ca=ISO8601]").toString(),
-  },
-  {
-    defect: "D20",
-    calendar: "iso8601",
-    name: "upperCaseIsoCalendarOnYearMonth",
-    expected: "2026-10",
-    run: () => Temporal.PlainYearMonth.from("2026-10[u-ca=ISO8601]").toString(),
-  },
-];
-
-/**
  * D22 (`internal/zonedDifference/nudgeOrigin.ts`): a zoned `relativeTo` or start in either pass of a
  * repeated hour is mismeasured. TC39 `ComputeNudgeWindow` takes the window's start from the origin's
  * own exact time when no unit has been added (tc39/proposal-temporal#3148 for `total`, #3149 for
@@ -1036,7 +1008,6 @@ export const probeReproGroups = {
   d17: d17Repros,
   d18: d18Repros,
   d19: d19Repros,
-  d20: d20Repros,
   d22: d22Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],

@@ -423,7 +423,7 @@ describe("why NO SIGNAL", () => {
   it("says when the value is not a moment", () => {
     for (const value of ["2024-06-16T01:00:00", "not a moment", ""]) {
       expect(blNullText(state({ value }), blDateLib), value).toBe(
-        "The value is not a moment. It needs a Z, an offset, or an offset with a bracketed zone.",
+        "The value is not a moment. It needs a Z or an offset, with no zone name after it.",
       );
     }
   });

@@ -7,7 +7,7 @@ import { cachedFormatter, checkFormatterArguments } from "./formatterCache";
 
 import type { Temporal } from "./temporal";
 import { plainDateTimeFormatOptions } from "./plainFormatOptions";
-import { optionOrDefault } from "./optionOrDefault";
+import { stringOptionOrDefault } from "./typedOptions";
 
 type Options = Intl.DateTimeFormatOptions;
 
@@ -70,7 +70,7 @@ export function instantFormatOptions(
     ...DEFAULT_FIELDS,
     ...(defaults === "zoned-date-time"
       ? {
-          timeZoneName: optionOrDefault(options.timeZoneName, "short"),
+          timeZoneName: stringOptionOrDefault(options.timeZoneName, "short"),
         }
       : {}),
     timeZone,

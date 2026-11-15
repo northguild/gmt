@@ -19,8 +19,10 @@
  */
 
 import { Temporal } from "@js-temporal/polyfill";
+import { instantAtOffset, OFFSET_SOURCE } from "./exact-offset";
 import {
   diagnose,
+  epochMs,
   formatSchedule,
   scheduleNullText,
   type DeliverySchedule,
@@ -300,10 +302,31 @@ export function classify(
   }
 }
 
-/** The written offset in a zoned instant string (`-05:00`), or `""`. */
+const TRAILING_OFFSET = new RegExp(`(${OFFSET_SOURCE})$`);
+
+/**
+ * The offset of an instant string the library returned (`-05:00`), to the
+ * second, or `""`. A zoned string writes its offset rounded to the minute
+ * (New York's `-04:56:02` as `-04:56`), so one with a bracket is read through
+ * its zone; an instant's offset is read as written.
+ */
 function offsetOf(text: string): string {
-  const m = /([+-]\d{2}:\d{2})(?:\[|$)/.exec(text);
+  if (text.includes("[")) {
+    try {
+      return Temporal.ZonedDateTime.from(text).offset;
+    } catch {
+      return "";
+    }
+  }
+  const m = TRAILING_OFFSET.exec(text);
   return m ? m[1]! : "";
+}
+
+/** `HH:MM`, with `:SS` when the seconds are not zero, of a `…THH:MM:SS` text. */
+export function wallClockText(text: string): string {
+  const m = /T(\d{2}:\d{2})(?::(\d{2}))?/.exec(text);
+  if (!m) return "";
+  return m[2] === undefined || m[2] === "00" ? m[1]! : `${m[1]}:${m[2]}`;
 }
 
 /** One choice for a row's Offset field: the value written into the departure,
@@ -615,10 +638,15 @@ export function dayBands(
   const years = [year];
   if (date.endsWith("-12-31")) years.push(year + 1);
   if (date.endsWith("-01-01")) years.unshift(year - 1);
+  // The first printed minute (`HH:MM:00`) at or after `wall`. A band holds
+  // the printed minutes whose start falls inside it, so a wall reading with
+  // seconds (New York's 12:03:58 in 1883) rounds up: 12:03 still repeats.
   const minuteOf = (wall: string): number =>
     wall === dayEnd
       ? 1440
-      : Number(wall.slice(11, 13)) * 60 + Number(wall.slice(14, 16));
+      : Number(wall.slice(11, 13)) * 60 +
+        Number(wall.slice(14, 16)) +
+        (wall.slice(17, 19) === "00" ? 0 : 1);
   const out: DayBand[] = [];
   for (const y of years) {
     if (y < 1 || y > 9999) continue;
@@ -629,8 +657,21 @@ export function dayBands(
       return [];
     }
     for (const t of transitions) {
-      const before = lib.etaAtZone(t.instant, t.offsetBefore).slice(0, 19);
-      const after = lib.etaAtZone(t.instant, t.offsetAfter).slice(0, 19);
+      // `etaAtZone` takes an offset as a zone only in whole minutes; New
+      // York's -04:56:02 before 1883 is read at the offset to the second.
+      const wallAt = (offset: string): string => {
+        const zoned = lib.etaAtZone(t.instant, offset);
+        if (zoned !== "") return zoned.slice(0, 19);
+        try {
+          return (
+            instantAtOffset(Temporal.Instant.from(t.instant), offset) ?? ""
+          ).slice(0, 19);
+        } catch {
+          return "";
+        }
+      };
+      const before = wallAt(t.offsetBefore);
+      const after = wallAt(t.offsetAfter);
       if (before.length < 19 || after.length < 19 || before === after) continue;
       const twice = after < before;
       const start = twice ? after : before;
@@ -642,8 +683,8 @@ export function dayBands(
         kind: twice ? "twice" : "skipped",
         startMinute: minuteOf(clippedStart),
         endMinute: minuteOf(clippedEnd),
-        from: start.slice(11, 16),
-        to: end.slice(11, 16),
+        from: wallClockText(start),
+        to: wallClockText(end),
         startWall: start,
         endWall: end,
         instant: t.instant,
@@ -742,15 +783,18 @@ export function tagText(n: number, hhmm: string, kind: RowClass): string {
   return `${n} · ${hhmm}${word}`;
 }
 
+const CHIP_PATTERN = new RegExp(
+  String.raw`^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(${OFFSET_SOURCE}|Z)`,
+);
+
 /** `HH:MM ±hh:mm` of a zoned instant string, with ` MM-DD` added when its date
- *  is not `date`. The arrival chip's text. */
+ *  is not `date`. The arrival chip's text. Seconds show when not zero, and the
+ *  offset is the zone's to the second (`11:15:30 -00:44:30`). */
 export function arrivalChipText(iso: string, date: string): string {
-  const m =
-    /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?([+-]\d{2}:\d{2}|Z)/.exec(
-      iso,
-    );
+  const m = CHIP_PATTERN.exec(iso);
   if (!m) return iso;
-  const short = `${m[2]} ${m[3] === "Z" ? "Z" : m[3]}`;
+  const offset = m[2] === "Z" ? "Z" : offsetOf(iso) || m[2]!;
+  const short = `${wallClockText(iso)} ${offset}`;
   return m[1] === date ? short : `${short} ${m[1]!.slice(5)}`;
 }
 
@@ -851,13 +895,7 @@ export function bandsFor(
   return hit;
 }
 
-const instantMs = (iso: string): number =>
-  Temporal.Instant.from(iso.replace(/\[.*\]$/, "")).epochMilliseconds;
-
-const offsetIn = (text: string): string => {
-  const m = /([+-]\d{2}:\d{2})(?:\[|$)/.exec(text);
-  return m ? m[1]! : "";
-};
+const instantMs = epochMs;
 
 /**
  * The numbers behind the chart. Both axes measure minutes from the start of the
@@ -959,7 +997,7 @@ export function chartLayout(
 
   const segments: OffsetSegment[] = [];
   if (bands.length === 0) {
-    const offset = offsetIn(lib.etaAtZone(day.start, zone));
+    const offset = offsetOf(lib.etaAtZone(day.start, zone));
     if (offset !== "") segments.push({ from: 0, to: domainMinutes, offset });
   } else {
     const ordered = [...bands].sort(
@@ -1143,12 +1181,16 @@ export function arrivalChipPlacement(o: {
   return { side: "clamp", leftPx: Math.max(0, o.trackPx - o.labelPx) };
 }
 
+const ZONED_PARTS = new RegExp(
+  String.raw`^(.*?)(${OFFSET_SOURCE})?(\[[^\]]*\])?$`,
+);
+
 /** A zoned string split at its only break points: immediately before the
  *  bracketed zone, and inside the zone id after each `/`. The date, the time and
  *  the written offset are one unbreakable part (a value that breaks as
  *  `2024-11-` / `03T00:30:00` cannot be read). */
 export function zonedParts(text: string): string[] {
-  const m = /^(.*?)([+-]\d{2}:\d{2})?(\[[^\]]*\])?$/.exec(text);
+  const m = ZONED_PARTS.exec(text);
   if (!m) return [text];
   const [, base, offset, bracket] = m;
   const parts: string[] = [];

@@ -1,7 +1,11 @@
+import {
+  roundingMembers,
+  fractionalDigitsOption,
+} from "../../internal/typedOptions";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
-  isObject,
+  isOptionsObject,
   resolveDateTimeUnit,
 } from "../../internal";
 import { isTimeUnitName } from "../../internal/unitNames";
@@ -74,9 +78,12 @@ export function roundUtc(
   },
 ): string {
   try {
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
 
-    const { roundingIncrement, roundingMode, fractionalSecondDigits } = options;
+    const { roundingIncrement, roundingMode } = roundingMembers(options);
+    const fractionalSecondDigits = fractionalDigitsOption(
+      options.fractionalSecondDigits,
+    );
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
     const smallestUnit: unknown = resolveDateTimeUnit(
       options.smallestUnit as unknown,

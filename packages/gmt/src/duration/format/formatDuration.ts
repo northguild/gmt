@@ -1,8 +1,11 @@
+import {
+  booleanOption,
+  stringOptionOrDefault,
+} from "../../internal/typedOptions";
 import { cachedFormatter } from "../../internal/formatterCache";
+import { durationFrom } from "../../internal/durationFrom";
 import { exactSeconds } from "../../internal/exactSeconds";
-import { Temporal } from "../../internal/temporal";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Plural unit keys rendered by `formatDuration`. Maps to singular `Intl.NumberFormat` unit
@@ -113,9 +116,9 @@ export function formatDuration(
   }
 
   try {
-    const duration = Temporal.Duration.from(value);
-    const style = optionOrDefault(options.style, "long");
-    const includeZero = options.zero ?? false;
+    const duration = durationFrom(value);
+    const style = stringOptionOrDefault(options.style, "long");
+    const includeZero = booleanOption(options.zero, false);
 
     const amounts: Record<DurationUnit, number | Intl.StringNumericLiteral> = {
       years: duration.years,

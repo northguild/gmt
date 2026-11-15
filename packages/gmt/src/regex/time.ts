@@ -69,9 +69,9 @@ export const millisecond: RegExp = fractionalSecond;
  *
  * Capture groups: 1 hour. The minute, second and fraction are not captured.
  *
- * The written form only, with no RFC 9557 annotation. `isValidTime` reads more: it matches this
- * against the part before the first `[` and lets Temporal read the annotations
- * (`"…[u-ca=iso8601]"`, an elective `"…[foo=bar]"`).
+ * The whole string, with no RFC 9557 annotation of any kind: `isValidTime` matches this against the
+ * entire value, so a time zone, a calendar (`"…[u-ca=iso8601]"`) or an elective (`"…[foo=bar]"`)
+ * annotation makes the value invalid.
  *
  * @example plainTime.test("14:30")              // true
  * @example plainTime.test("14:30:00")           // true

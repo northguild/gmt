@@ -2,6 +2,7 @@
  * `cutoff-stack.ts`'s pure helpers, against the real gmt modules. Every
  * expected literal is an appendix Z row.
  */
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import { cutoffAt, cutoffSchedule } from "@northguild/gmt/transport/calculate";
 import { isPastCutoff, timeToCutoff } from "@northguild/gmt/transport/compare";
 import { etaAtZone } from "@northguild/gmt/transport/convert";
@@ -24,6 +25,7 @@ import {
 import type { CutoffLib } from "./cutoff-widgets";
 
 const lib: CutoffLib = {
+  toInstant: (value: string) => toOffsetInstant(value)?.instant ?? "",
   cutoffAt,
   cutoffSchedule,
   isPastCutoff,
@@ -36,7 +38,7 @@ const lib: CutoffLib = {
 } as unknown as CutoffLib;
 
 const AMS = "Europe/Amsterdam";
-const SAIL = "2024-06-17T18:00:00+02:00[Europe/Amsterdam]";
+const SAIL = "2024-06-17T18:00:00+02:00";
 
 const presetById = (id: string) => STACK_PRESETS.find((p) => p.id === id)!;
 
@@ -286,7 +288,7 @@ describe("collectStackFacts", () => {
   it("S7: following can land a cut-off after the departure", () => {
     const state: StackState = {
       ...presetState(presetById("rotterdam-following")),
-      anchor: "2024-06-17T09:00:00+02:00[Europe/Amsterdam]",
+      anchor: "2024-06-17T09:00:00+02:00",
       cutoffs: [
         { name: "gate-in", offset: "P1D", atLocalTime: "17:00" },
         { name: "documents", offset: "P3D", atLocalTime: "12:00" },

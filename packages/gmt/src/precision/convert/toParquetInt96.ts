@@ -42,7 +42,7 @@ export interface ParquetInt96 {
  * @example toParquetInt96("1970-01-01T00:00:00Z") // { julianDay: 2440588, nanosOfDay: 0n }
  * @example toParquetInt96("1969-12-31T23:59:59.999999999Z") // { julianDay: 2440587, nanosOfDay: 86399999999999n }
  * @example toParquetInt96("2024-03-10T12:34:56.789Z") // { julianDay: 2460380, nanosOfDay: 45296789000000n }
- * @example toParquetInt96("2024-03-10T13:34:56.789+01:00[Europe/Paris]") // { julianDay: 2460380, nanosOfDay: 45296789000000n }
+ * @example toParquetInt96("2024-03-10T13:34:56.789+01:00") // { julianDay: 2460380, nanosOfDay: 45296789000000n }
  * @example toParquetInt96("-004713-11-24T00:00:00Z") // { julianDay: 0, nanosOfDay: 0n } — Julian Day 0
  * @example toParquetInt96("2024-03-10T12:34:56") // null — no offset designator
  * @example toParquetInt96("invalid") // null

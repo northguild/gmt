@@ -45,7 +45,7 @@ export const BRIDGE_PRESETS: readonly BridgePreset[] = [
     description:
       "A time written in Tokyo, stored three ways. The Arrow column has a zone, so it holds the instant.",
     state: stateOf({
-      value: "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+      value: "2024-01-01T09:00:00+09:00",
       unit: "second",
       zone: "Asia/Tokyo",
       duration: "PT1H30M1.5S",

@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import type { Interval } from "../../types";
 import { intervalContains } from "./intervalContains";
 
@@ -19,10 +19,10 @@ describe("intervalContains", () => {
     ${"2024-01-01T12:00:00Z"}               | ${"2024-01-01T12:00:00Z"}    | ${"2024-01-01T12:00:00Z"}               | ${false} | ${"empty interval"}
     ${"-271821-04-20T00:00:00Z"}            | ${"+275760-09-13T00:00:00Z"} | ${"-271821-04-20T00:00:00Z"}            | ${true}  | ${"full range, earliest instant"}
     ${"-271821-04-20T00:00:00Z"}            | ${"+275760-09-13T00:00:00Z"} | ${"+275760-09-13T00:00:00Z"}            | ${false} | ${"full range, latest instant"}
-    ${"2024-01-01T09:00:00Z[u-ca=iso8601]"} | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T12:00:00Z"}               | ${true}  | ${"calendar-annotated start, ignored by Instant.from"}
-    ${"2024-01-01T09:00:00Z"}               | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T12:00:00Z[u-ca=iso8601]"} | ${true}  | ${"calendar-annotated point, ignored"}
+    ${"2024-01-01T09:00:00Z[u-ca=iso8601]"} | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T12:00:00Z"}               | ${false} | ${"an annotation of any kind makes the endpoint invalid"}
+    ${"2024-01-01T09:00:00Z"}               | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T12:00:00Z[u-ca=iso8601]"} | ${false} | ${"an annotation of any kind makes the endpoint invalid"}
     ${"2024-01-01T09:00:00Z"}               | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T17:00:00Z[!u-ca=hebrew]"} | ${false} | ${"critical calendar annotation on end, ignored; end is not"}
-    ${"2024-01-01T09:00:00Z"}               | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T12:00:00Z[foo=bar]"}      | ${true}  | ${"elective unknown annotation, ignored"}
+    ${"2024-01-01T09:00:00Z"}               | ${"2024-01-01T17:00:00Z"}    | ${"2024-01-01T12:00:00Z[foo=bar]"}      | ${false} | ${"an annotation of any kind makes the endpoint invalid"}
   `(
     "returns $expected for $isoString in [$start, $end) ($reason)",
     ({ start, end, isoString, expected }) => {
@@ -30,7 +30,7 @@ describe("intervalContains", () => {
     },
   );
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns true for $utc in [$value, 2024-02-29T01:00:00Z) and false in the empty [$utc, $value) ($timeZone)",
     ({ value, utc }) => {
       expect(

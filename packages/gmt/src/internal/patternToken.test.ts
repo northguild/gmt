@@ -314,7 +314,7 @@ describe("parseValueWithPattern", () => {
       },
     );
 
-    it("reads yearWindow once for a yy pattern and never for a yyyy pattern", () => {
+    it("reads yearWindow once for a yy pattern and once for a yyyy pattern", () => {
       let reads = 0;
       const options = {
         get yearWindow(): number {
@@ -331,7 +331,7 @@ describe("parseValueWithPattern", () => {
           options,
         ),
       ).toEqual({ year: 2024, month: 3, day: 15 });
-      expect(reads).toBe(0);
+      expect(reads).toBe(1);
       expect(
         parseValueWithPattern(
           "24-03-15",
@@ -341,7 +341,7 @@ describe("parseValueWithPattern", () => {
           options,
         ),
       ).toEqual({ year: 2024, month: 3, day: 15 });
-      expect(reads).toBe(1);
+      expect(reads).toBe(2);
     });
 
     it("does not read yearWindow when the value does not match the pattern", () => {

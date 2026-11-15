@@ -96,16 +96,13 @@ describe("bolTimestamp", () => {
     ).toBe("2024-06-15");
   });
 
-  // Only the instant is read: a bracketed zone in the value is not the zone the date is read in.
+  // An instant is read as `…Z` or `…±HH:MM[:SS]`; the zone the date is read in is the option.
   it.each`
-    value                                            | form
-    ${"2024-06-16T01:00:00Z"}                        | ${"Z"}
-    ${"2024-06-15T21:00:00-04:00"}                   | ${"an offset"}
-    ${"2024-06-16T10:00:00+09:00"}                   | ${"another zone's offset"}
-    ${"2024-06-15T21:00:00-04:00[America/New_York]"} | ${"a zoned string in the same zone"}
-    ${"2024-06-16T09:00:00+08:00[Asia/Shanghai]"}    | ${"a zoned string in another zone"}
-    ${"2024-06-16T01:00:00Z[u-ca=hebrew]"}           | ${"a calendar annotation: an instant has none"}
-    ${"2024-06-16T01:00:00.000000000Z"}              | ${"nanosecond digits"}
+    value                               | form
+    ${"2024-06-16T01:00:00Z"}           | ${"Z"}
+    ${"2024-06-15T21:00:00-04:00"}      | ${"an offset"}
+    ${"2024-06-16T10:00:00+09:00"}      | ${"another zone's offset"}
+    ${"2024-06-16T01:00:00.000000000Z"} | ${"nanosecond digits"}
   `(
     "reads $value ($form) as its instant and dates it in America/New_York",
     ({ value }) => {
@@ -180,26 +177,24 @@ describe("bolTimestamp", () => {
     },
   );
 
-  // An offset that disagrees with its bracket is read as written, as every instant reader reads
-  // it: 21:00-05:00 is 02:00Z on the 16th, 22:00 EDT on the 15th.
-  it("reads an offset that disagrees with its bracketed zone as written", () => {
-    expect(
-      bolTimestamp("2024-06-15T21:00:00-05:00[America/New_York]", "issue", {
-        timeZone: "America/New_York",
-      }),
-    ).toBe("2024-06-15");
-  });
-
   it.each`
-    value                                      | reads
-    ${"2024-06-15T21:00:00"}                   | ${"a zoneless wall time: not a moment"}
-    ${"2024-06-15"}                            | ${"a date: not a moment"}
-    ${"2024-06-15T21:00:00[America/New_York]"} | ${"a bracket without an offset: not an instant"}
-    ${"2024-02-30T12:00:00Z"}                  | ${"a day that does not exist"}
-    ${"2024-06-15T21:00:00Z[!foo=bar]"}        | ${"a critical unknown annotation"}
-    ${"2016-12-31T23:59:60Z"}                  | ${"a leap second, which Temporal does not represent"}
-    ${"not a date"}                            | ${"garbage"}
-    ${""}                                      | ${"an empty string"}
+    value                                            | reads
+    ${"2024-06-15T21:00:00"}                         | ${"a zoneless wall time: not a moment"}
+    ${"2024-06-15"}                                  | ${"a date: not a moment"}
+    ${"2024-06-15T21:00:00[America/New_York]"}       | ${"a bracket without an offset: not an instant"}
+    ${"2024-02-30T12:00:00Z"}                        | ${"a day that does not exist"}
+    ${"2024-06-15T21:00:00Z[!foo=bar]"}              | ${"a critical unknown annotation"}
+    ${"2024-06-15T21:00:00Z[foo=bar]"}               | ${"an elective unknown annotation"}
+    ${"2024-06-16T01:00:00Z[u-ca=hebrew]"}           | ${"a calendar annotation"}
+    ${"2024-06-16T01:00:00Z[u-ca=iso8601]"}          | ${"the ISO calendar annotation"}
+    ${"2024-06-16T01:00:00Z[America/New_York]"}      | ${"a zone annotation"}
+    ${"2024-06-15T21:00:00-04:00[America/New_York]"} | ${"a zoned string"}
+    ${"2024-06-15T21:00:00-05:00[America/New_York]"} | ${"an offset that disagrees with its bracket"}
+    ${"2024-06-16T09:00:00+08:00[!Asia/Shanghai]"}   | ${"a critical zone annotation"}
+    ${"2024-06-16T01:00:00Z[+00:00]"}                | ${"an offset annotation"}
+    ${"2016-12-31T23:59:60Z"}                        | ${"a leap second, which Temporal does not represent"}
+    ${"not a date"}                                  | ${"garbage"}
+    ${""}                                            | ${"an empty string"}
   `("returns the sentinel for '$value' ($reads)", ({ value }) => {
     expect(
       bolTimestamp(value, "shippedOnBoard", { timeZone: "America/New_York" }),

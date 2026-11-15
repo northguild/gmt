@@ -48,7 +48,7 @@ The rules `parseSqlOffsetDateTime` and `isValidSqlOffsetDateTime` follow, and wh
 | `-00:00` written `+00:00` | TC39 Temporal §11.1.6 `FormatUTCOffsetNanoseconds`, step 1 ("If offsetNanoseconds ≥ 0 … PLUS SIGN"), as `parseRfc3339` does. SQL gives no meaning to a negative zero offset |
 | Offset seconds written only when non-zero | TC39 Temporal `FormatUTCOffsetNanoseconds` |
 | Fraction trailing zeros dropped | TC39 Temporal `FormatFractionalSeconds`, precision `"auto"`, as `parseSqlDateTime` |
-| A real calendar date and an instant in range | [§9 instant reading](../../../coding-standards.md#9-an-instant-string-is-read-as-the-zoned-string-it-may-be): `parseInstantNanoseconds` is the one reader |
+| A real calendar date and an instant in range | [instant pattern](../../../coding-standards.md#calendar--zone-semantics): `parseInstantNanoseconds` is the one reader |
 | Sentinels `""` and `false`; never throws | [§ API Contract](../../../coding-standards.md#api-contract) |
 | A validator and its parser share an internal core | [§ Loop cost](../../../coding-standards.md#loop-cost), "Resolve once" |
 

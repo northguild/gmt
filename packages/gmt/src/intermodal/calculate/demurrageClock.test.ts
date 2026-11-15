@@ -85,10 +85,10 @@ describe("demurrageClock", () => {
     });
   });
 
-  it("echoes the caller's own strings, zone and all", () => {
+  it("echoes the caller's own strings, offset and all", () => {
     const local = {
       type: "gatedOut",
-      at: "2024-06-20T10:30:00-04:00[America/New_York]",
+      at: "2024-06-20T10:30:00-04:00",
     } as const;
     expect(demurrageClock([local, emptyReturned], "detention", IMPORT)).toEqual(
       {
@@ -96,6 +96,16 @@ describe("demurrageClock", () => {
         end: emptyReturned.at,
       },
     );
+  });
+
+  it("rejects an event whose instant carries a zone annotation", () => {
+    const local = {
+      type: "gatedOut",
+      at: "2024-06-20T10:30:00-04:00[America/New_York]",
+    } as const;
+    expect(
+      demurrageClock([local, emptyReturned], "detention", IMPORT),
+    ).toBeNull();
   });
 
   it("allows a clock that starts and ends at the same instant: an empty interval", () => {

@@ -17,10 +17,9 @@ import { zonedDateTimeOf } from "../../internal/zonedWallClock";
  *   `Temporal.ZonedDateTime.from` requires (`CheckISODaysRange`): a zoned string on
  *   −271821-04-19, which a zone west of Greenwich shows for the first hours of the instant
  *   range, is rejected although `isValidInstant` accepts it.
- * - Reads RFC 9557 annotations as `Temporal.ZonedDateTime.from` does: elective ones
- *   (`[foo=bar]`) are ignored and an unknown critical one (`[!foo=bar]`) is rejected.
- * - The calendar must be ISO: `[u-ca=iso8601]` is accepted, and a non-ISO calendar annotation is
- *   `isValidCalendarZonedDateTime`'s input.
+ * - The zone bracket is the only annotation: a calendar (`[u-ca=iso8601]`, `[u-ca=hebrew]`), an
+ *   elective one (`[foo=bar]`), an unknown critical one or a second bracket returns false.
+ *   `isValidCalendarZonedDateTime` reads the calendar.
  * - Returns false for an empty string.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result
  *   narrows an `unknown` value to `string`.
@@ -30,9 +29,9 @@ import { zonedDateTimeOf } from "../../internal/zonedWallClock";
  *
  * @example isValidZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]") // true
  * @example isValidZonedDateTime("2024-06-30T23:59:60+00:00[UTC]") // false (leap second)
- * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=hebrew]") // false (non-ISO calendar: use isValidCalendarZonedDateTime)
- * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=iso8601]") // true
- * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][foo=bar]") // true (elective annotation ignored)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=hebrew]") // false (a calendar: use isValidCalendarZonedDateTime)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=iso8601]") // false (a calendar: use isValidCalendarZonedDateTime)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][foo=bar]") // false (elective annotation)
  * @example isValidZonedDateTime("20241003T143000+0530[Asia/Kolkata]") // false (basic format)
  * @example isValidZonedDateTime("2024-10-03 14:30:00+05:30[Asia/Kolkata]") // false (space separator)
  * @example isValidZonedDateTime("2024-10-03[Asia/Kolkata]") // false (no time)

@@ -6,24 +6,13 @@ import { arrives, NON_STRINGS } from "../../test/nonStrings";
 // for the range, ParseISODateTime for the annotations. The basic form is a GMT rule.
 describe("isValidYearMonth", () => {
   it.each`
-    value                                    | why
-    ${"2026-10"}                             | ${"DateSpecYearMonth"}
-    ${"0000-01"}                             | ${"year zero"}
-    ${"-000001-12"}                          | ${"a negative year"}
-    ${"+002026-10"}                          | ${"six-digit year"}
-    ${"-271821-04"}                          | ${"earliest year-month (ISOYearMonthWithinLimits)"}
-    ${"+275760-09"}                          | ${"latest year-month (ISOYearMonthWithinLimits)"}
-    ${"2026-10[u-ca=iso8601]"}               | ${"ISO calendar annotation"}
-    ${"2026-10[u-ca=ISO8601]"}               | ${"ParseISODateTime lowercases the calendar (D20)"}
-    ${"2026-10[!u-ca=Iso8601]"}              | ${"critical and mixed case (D20)"}
-    ${"2026-10[Europe/Paris]"}               | ${"time zone annotation ignored"}
-    ${"2026-10[!Europe/Paris]"}              | ${"critical time zone annotation (AnnotatedYearMonth)"}
-    ${"2026-10[foo=bar]"}                    | ${"elective annotation ignored"}
-    ${"2026-10[Europe/Paris][u-ca=ISO8601]"} | ${"time zone annotation then a case-insensitive calendar"}
-    ${"+275760-09[u-ca=ISO8601]"}            | ${"latest year-month with a case-insensitive calendar (D20)"}
-    ${"-271821-04[!u-ca=ISO8601]"}           | ${"earliest year-month with a critical calendar (D20)"}
-    ${"2026-10[u-ca=ISO8601][u-ca=gregory]"} | ${"the first u-ca wins, and it is iso8601"}
-    ${"2026-10[u-ca=iso8601][foo=bar]"}      | ${"elective annotation after the calendar"}
+    value           | why
+    ${"2026-10"}    | ${"DateSpecYearMonth"}
+    ${"0000-01"}    | ${"year zero"}
+    ${"-000001-12"} | ${"a negative year"}
+    ${"+002026-10"} | ${"six-digit year"}
+    ${"-271821-04"} | ${"earliest year-month (ISOYearMonthWithinLimits)"}
+    ${"+275760-09"} | ${"latest year-month (ISOYearMonthWithinLimits)"}
   `("returns true for '$value' ($why)", ({ value }: { value: string }) => {
     expect(isValidYearMonth(value)).toBe(true);
   });
@@ -55,6 +44,20 @@ describe("isValidYearMonth", () => {
     ${"10/2026"}                              | ${"not ISO"}
     ${"--10-01"}                              | ${"a month-day"}
     ${""}                                     | ${"empty string"}
+    ${"2026-10[u-ca=iso8601]"}                | ${"an annotation is not part of the pattern"}
+    ${"2026-10[u-ca=ISO8601]"}                | ${"an annotation is not part of the pattern"}
+    ${"2026-10[!u-ca=Iso8601]"}               | ${"an annotation is not part of the pattern"}
+    ${"2026-10[Europe/Paris]"}                | ${"an annotation is not part of the pattern"}
+    ${"2026-10[!Europe/Paris]"}               | ${"an annotation is not part of the pattern"}
+    ${"2026-10[foo=bar]"}                     | ${"an annotation is not part of the pattern"}
+    ${"2026-10[Europe/Paris][u-ca=ISO8601]"}  | ${"an annotation is not part of the pattern"}
+    ${"+275760-09[u-ca=ISO8601]"}             | ${"an annotation is not part of the pattern"}
+    ${"-271821-04[!u-ca=ISO8601]"}            | ${"an annotation is not part of the pattern"}
+    ${"2026-10[u-ca=ISO8601][u-ca=gregory]"}  | ${"an annotation is not part of the pattern"}
+    ${"2026-10[u-ca=iso8601][foo=bar]"}       | ${"an annotation is not part of the pattern"}
+    ${"2026-10[Europe/Helsinki]"}             | ${"an annotation is not part of the pattern"}
+    ${"2026-10[Europe/Helsinkiddddd]"}        | ${"an annotation is not part of the pattern"}
+    ${"2026-10[!Europe/Helsinki]"}            | ${"an annotation is not part of the pattern"}
   `("returns false for '$value' ($why)", ({ value }: { value: string }) => {
     expect(isValidYearMonth(value)).toBe(false);
   });

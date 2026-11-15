@@ -4,7 +4,6 @@ import { readExactMoment, writeExactMoment } from "./exactMoment";
 import { plainDateTimeOf, isZoneId } from "./inputChecks";
 import { instantOf } from "./instantNanoseconds";
 import { isObject, isOptionsArgument } from "./isObject";
-import { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
 import { optionOrDefault } from "./optionOrDefault";
 import { zonedDateTimeFrom, zonedDateTimeOf } from "./zonedWallClock";
 import type {
@@ -111,8 +110,6 @@ export function transitTimeText(departure: string, duration: string): string {
   }
 }
 
-const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
-
 /**
  * A departure resolved to the exact instant it names, or `null`.
  *
@@ -135,19 +132,13 @@ function departureInstant(
   if (zonedDateTimeOf(departure) !== null) {
     return wallTimeInstant(departure, cursor);
   }
-  if (zoneAnnotation.test(departure)) {
-    return null;
-  }
   const instant = instantOf(departure);
   if (instant !== null) {
     return instant;
   }
   if (wallTimeZone !== undefined && plainDateTimeOf(departure) !== null) {
     // resolveLocal's core: the zone the schedule's wall time is exact in.
-    return wallTimeInstant(
-      `${isoStringBody(departure)}[${wallTimeZone}]`,
-      cursor,
-    );
+    return wallTimeInstant(`${departure}[${wallTimeZone}]`, cursor);
   }
   return null;
 }

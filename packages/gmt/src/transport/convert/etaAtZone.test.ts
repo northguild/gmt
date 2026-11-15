@@ -4,14 +4,14 @@ import { etaAtZone } from "./etaAtZone";
 
 describe("etaAtZone", () => {
   it.each`
-    arrivalUtc                                       | targetZone               | expected
-    ${"2024-06-15T12:30:00Z"}                        | ${"Asia/Tokyo"}          | ${"2024-06-15T21:30:00+09:00[Asia/Tokyo]"}
-    ${"2024-06-15T12:30:00Z"}                        | ${"America/Los_Angeles"} | ${"2024-06-15T05:30:00-07:00[America/Los_Angeles]"}
-    ${"2024-06-15T12:30:00Z"}                        | ${"UTC"}                 | ${"2024-06-15T12:30:00+00:00[UTC]"}
-    ${"2024-06-15T12:30:00+02:00"}                   | ${"Pacific/Apia"}        | ${"2024-06-15T23:30:00+13:00[Pacific/Apia]"}
-    ${"2024-06-15T12:30:00-05:00[America/New_York]"} | ${"Asia/Kolkata"}        | ${"2024-06-15T23:00:00+05:30[Asia/Kolkata]"}
-    ${"2024-06-15T12:30:00.123456789Z"}              | ${"Asia/Kathmandu"}      | ${"2024-06-15T18:15:00.123456789+05:45[Asia/Kathmandu]"}
-    ${"2024-06-15T23:30:00Z"}                        | ${"Pacific/Kiritimati"}  | ${"2024-06-16T13:30:00+14:00[Pacific/Kiritimati]"}
+    arrivalUtc                          | targetZone               | expected
+    ${"2024-06-15T12:30:00Z"}           | ${"Asia/Tokyo"}          | ${"2024-06-15T21:30:00+09:00[Asia/Tokyo]"}
+    ${"2024-06-15T12:30:00Z"}           | ${"America/Los_Angeles"} | ${"2024-06-15T05:30:00-07:00[America/Los_Angeles]"}
+    ${"2024-06-15T12:30:00Z"}           | ${"UTC"}                 | ${"2024-06-15T12:30:00+00:00[UTC]"}
+    ${"2024-06-15T12:30:00+02:00"}      | ${"Pacific/Apia"}        | ${"2024-06-15T23:30:00+13:00[Pacific/Apia]"}
+    ${"2024-06-15T12:30:00-05:00"}      | ${"Asia/Kolkata"}        | ${"2024-06-15T23:00:00+05:30[Asia/Kolkata]"}
+    ${"2024-06-15T12:30:00.123456789Z"} | ${"Asia/Kathmandu"}      | ${"2024-06-15T18:15:00.123456789+05:45[Asia/Kathmandu]"}
+    ${"2024-06-15T23:30:00Z"}           | ${"Pacific/Kiritimati"}  | ${"2024-06-16T13:30:00+14:00[Pacific/Kiritimati]"}
   `(
     "renders $arrivalUtc in $targetZone as $expected",
     ({ arrivalUtc, targetZone, expected }) => {

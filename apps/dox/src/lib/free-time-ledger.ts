@@ -603,9 +603,9 @@ type NullReason =
 
 export const NULL_REASON_TEXT: Record<NullReason, string> = {
   "invalid-start":
-    "The clock start is not an instant. It needs a Z, an offset, or an offset with a bracketed zone.",
+    "The clock start is not an instant. It needs a Z or an offset, with no zone name after it.",
   "invalid-end":
-    "The clock end is not an instant. It needs a Z, an offset, or an offset with a bracketed zone.",
+    "The clock end is not an instant. It needs a Z or an offset, with no zone name after it.",
   "unknown-zone": "The zone is not an IANA time zone this browser knows.",
   "invalid-free-days": "Free days must be a whole number of days, 0 or more.",
   "invalid-calendar":

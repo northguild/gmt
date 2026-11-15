@@ -28,14 +28,12 @@ import type { Punctuality, PunctualityTolerance } from "../../types";
  *   `"PT0S"`, nothing is on time; late is checked first, so the plan itself is late.
  * - Tolerances are exact durations: a day is 24 hours; years, months and weeks return `null`, as
  *   does a negative tolerance (`-PT0S` is zero).
- * - Both times are an instant (`Z`/offset) or a zoned string, read as `scheduleDeviation` reads
- *   them: the offset fixes the instant, and an offset written to the minute that is the
- *   bracketed zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names
- *   the instant the zone gives. Otherwise the bracket is not checked.
+ * - Both times are an instant (`Z`/offset) with no annotation of any kind, read as
+ *   `scheduleDeviation` reads them: the offset fixes the instant.
  * - Returns `null` on invalid input.
  *
- * @param planned ISO 8601 instant or zoned datetime string of the planned time
- * @param actual ISO 8601 instant or zoned datetime string of the actual time
+ * @param planned ISO 8601 instant string of the planned time
+ * @param actual ISO 8601 instant string of the actual time
  * @param tolerance late (required) and early (optional) tolerances as ISO 8601 durations of exact time
  * @returns "early", "onTime" or "late", or null on invalid input
  *
@@ -45,7 +43,7 @@ import type { Punctuality, PunctualityTolerance } from "../../types";
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T09:49:00Z", { late: "PT15M", early: "PT10M" }) // "early"
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T11:30:00Z", { late: "PT120M" }) // "onTime" (a 90-minute delay under a 120-minute tolerance)
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:00:00Z", { late: "PT15M", early: "PT0S" }) // "early" (exactly on the plan is on the early boundary, which is outside)
- * @example classifyPunctuality("2024-10-27T01:30:00+01:00[Europe/London]", "2024-10-27T01:30:00+00:00[Europe/London]", { late: "PT15M" }) // "late" (the same wall time an hour later, across the fall-back)
+ * @example classifyPunctuality("2024-10-27T01:30:00+01:00", "2024-10-27T01:30:00+00:00", { late: "PT15M" }) // "late" (the same wall time an hour later, across the fall-back)
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z", { late: "-PT15M" }) // null (a negative tolerance)
  * @example classifyPunctuality("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z", { late: "P1W" }) // null (weeks need a reference point)
  */

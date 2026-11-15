@@ -5,6 +5,7 @@ import {
   MOROCCO_PROBE,
   MOROCCO_STORED_ZONES,
   MOROCCO_ZONES,
+  localBefore,
   moroccoProbe,
   presentText,
 } from "./morocco-clock-change";
@@ -82,5 +83,30 @@ describe("presentText", () => {
     expect(presentText(change("2026c", false))).toBe(
       "This server does not have it",
     );
+  });
+});
+
+describe("localBefore with an offset that has seconds", () => {
+  it.each([
+    // getDstTransitions("America/New_York", 1883)
+    ["1883-11-18T17:00:00Z", "-04:56:02", "1883-11-18 12:03:58"],
+    // getDstTransitions("Africa/Monrovia", 1972)
+    ["1972-01-07T00:44:30Z", "-00:44:30", "1972-01-07 00:00"],
+    ["2026-09-20T01:00:00Z", "+01:00", "2026-09-20 02:00"],
+  ])("reads %s at %s as %s", (at, from, text) => {
+    expect(localBefore({ at, from, to: "+00:00", recordedBy: "2026c" })).toBe(
+      text,
+    );
+  });
+
+  it("throws on text that is not an offset", () => {
+    expect(() =>
+      localBefore({
+        at: "2026-09-20T01:00:00Z",
+        from: "GMT+1",
+        to: "+00:00",
+        recordedBy: "2026c",
+      }),
+    ).toThrow(/Not an offset/);
   });
 });

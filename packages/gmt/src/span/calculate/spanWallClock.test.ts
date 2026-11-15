@@ -72,6 +72,9 @@ const offsetlessWallClockDayBattleCases = [
   }),
 );
 
+/** The instant form of a zoned string: the same offset, no bracket. */
+const withoutZone = (zoned: string): string => zoned.replace(/\[[^\]]*\]$/, "");
+
 describe("spanWallClock", () => {
   it.each`
     start                                            | end                                              | unit       | expected
@@ -124,7 +127,7 @@ describe("spanWallClock", () => {
     "disagrees with spanMs by exactly one hour across $transition",
     ({ start, end, elapsedMs }) => {
       expect(spanWallClock(start, end, "hours")).toBe(24);
-      expect(spanMs(start, end)).toBe(elapsedMs);
+      expect(spanMs(withoutZone(start), withoutZone(end))).toBe(elapsedMs);
       expect(Math.abs(elapsedMs - 24 * 3600000)).toBe(3600000);
     },
   );
@@ -134,7 +137,7 @@ describe("spanWallClock", () => {
     const end = "2024-04-07T12:00:00+10:30[Australia/Lord_Howe]";
 
     expect(spanWallClock(start, end, "hours")).toBe(24);
-    expect(spanMs(start, end)).toBe(88200000);
+    expect(spanMs(withoutZone(start), withoutZone(end))).toBe(88200000);
   });
 
   it.each(localRangeBattleCases)(

@@ -37,16 +37,15 @@ const T = {
 
 describe("isValidFiscalCalendar", () => {
   it.each`
-    calendar                                              | description
-    ${NRF}                                                | ${"NRF (US)"}
-    ${ONS}                                                | ${"ONS (UK)"}
-    ${{ ...ONS, extraWeek: "lastPeriod" }}                | ${"ONS with the extra week in the last period"}
-    ${JUNE_END_YEAR}                                      | ${"a June year end labelled by end year"}
-    ${T}                                                  | ${"a calendar with a tie year"}
-    ${{ ...NRF, note: "extra" }}                          | ${"NRF with an extra property, which is ignored"}
-    ${{ ...NRF, pattern: "5-4-4" }}                       | ${"NRF with the 5-4-4 pattern"}
-    ${{ ...NRF, yearLabel: "endYear" }}                   | ${"NRF labelled by end year"}
-    ${{ ...NRF, yearEndsOn: "2026-01-31[u-ca=iso8601]" }} | ${"NRF with yearEndsOn in the ISO calendar, annotated"}
+    calendar                               | description
+    ${NRF}                                 | ${"NRF (US)"}
+    ${ONS}                                 | ${"ONS (UK)"}
+    ${{ ...ONS, extraWeek: "lastPeriod" }} | ${"ONS with the extra week in the last period"}
+    ${JUNE_END_YEAR}                       | ${"a June year end labelled by end year"}
+    ${T}                                   | ${"a calendar with a tie year"}
+    ${{ ...NRF, note: "extra" }}           | ${"NRF with an extra property, which is ignored"}
+    ${{ ...NRF, pattern: "5-4-4" }}        | ${"NRF with the 5-4-4 pattern"}
+    ${{ ...NRF, yearLabel: "endYear" }}    | ${"NRF labelled by end year"}
   `("returns true for $description", ({ calendar }) => {
     expect(isValidFiscalCalendar(calendar)).toBe(true);
   });
@@ -62,27 +61,28 @@ describe("isValidFiscalCalendar", () => {
   });
 
   it.each`
-    field           | value                        | label
-    ${"pattern"}    | ${"4-5-5"}                   | ${"'4-5-5'"}
-    ${"pattern"}    | ${undefined}                 | ${"undefined"}
-    ${"pattern"}    | ${454}                       | ${"454"}
-    ${"yearEndsOn"} | ${"2026-02-30"}              | ${"'2026-02-30'"}
-    ${"yearEndsOn"} | ${"2026-01-31T00:00:00"}     | ${"'2026-01-31T00:00:00'"}
-    ${"yearEndsOn"} | ${undefined}                 | ${"undefined"}
-    ${"yearEndsOn"} | ${20260131}                  | ${"20260131"}
-    ${"yearEndsOn"} | ${"2026-01-31[u-ca=hebrew]"} | ${"'2026-01-31[u-ca=hebrew]'"}
-    ${"extraWeek"}  | ${"lastQuarter"}             | ${"'lastQuarter'"}
-    ${"extraWeek"}  | ${"middle"}                  | ${"'middle'"}
-    ${"extraWeek"}  | ${""}                        | ${"''"}
-    ${"extraWeek"}  | ${12}                        | ${"12"}
-    ${"extraWeek"}  | ${null}                      | ${"null"}
-    ${"extraWeek"}  | ${undefined}                 | ${"undefined"}
-    ${"yearLabel"}  | ${"fiscalYear"}              | ${"'fiscalYear'"}
-    ${"yearLabel"}  | ${"StartYear"}               | ${"'StartYear'"}
-    ${"yearLabel"}  | ${""}                        | ${"''"}
-    ${"yearLabel"}  | ${2024}                      | ${"2024"}
-    ${"yearLabel"}  | ${null}                      | ${"null"}
-    ${"yearLabel"}  | ${undefined}                 | ${"undefined"}
+    field           | value                         | label
+    ${"pattern"}    | ${"4-5-5"}                    | ${"'4-5-5'"}
+    ${"pattern"}    | ${undefined}                  | ${"undefined"}
+    ${"pattern"}    | ${454}                        | ${"454"}
+    ${"yearEndsOn"} | ${"2026-02-30"}               | ${"'2026-02-30'"}
+    ${"yearEndsOn"} | ${"2026-01-31T00:00:00"}      | ${"'2026-01-31T00:00:00'"}
+    ${"yearEndsOn"} | ${undefined}                  | ${"undefined"}
+    ${"yearEndsOn"} | ${20260131}                   | ${"20260131"}
+    ${"yearEndsOn"} | ${"2026-01-31[u-ca=hebrew]"}  | ${"'2026-01-31[u-ca=hebrew]'"}
+    ${"yearEndsOn"} | ${"2026-01-31[u-ca=iso8601]"} | ${"'2026-01-31[u-ca=iso8601]'"}
+    ${"extraWeek"}  | ${"lastQuarter"}              | ${"'lastQuarter'"}
+    ${"extraWeek"}  | ${"middle"}                   | ${"'middle'"}
+    ${"extraWeek"}  | ${""}                         | ${"''"}
+    ${"extraWeek"}  | ${12}                         | ${"12"}
+    ${"extraWeek"}  | ${null}                       | ${"null"}
+    ${"extraWeek"}  | ${undefined}                  | ${"undefined"}
+    ${"yearLabel"}  | ${"fiscalYear"}               | ${"'fiscalYear'"}
+    ${"yearLabel"}  | ${"StartYear"}                | ${"'StartYear'"}
+    ${"yearLabel"}  | ${""}                         | ${"''"}
+    ${"yearLabel"}  | ${2024}                       | ${"2024"}
+    ${"yearLabel"}  | ${null}                       | ${"null"}
+    ${"yearLabel"}  | ${undefined}                  | ${"undefined"}
   `(
     "returns false when only $field is wrong, set to $label",
     ({ field, value }) => {

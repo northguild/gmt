@@ -1,5 +1,5 @@
 import { Temporal } from "../temporal";
-import type { DurationRelativeTo } from "../../types";
+import type { ResolvedRelativeTo } from "../resolveDurationRelativeTo";
 import { isNudgeWindowCompatNeeded } from "../temporalCompat";
 import { isObject } from "../isObject";
 import {
@@ -74,7 +74,7 @@ export function isNudgeWindowUnit(unit: Unit | undefined): boolean {
  * the day, so the two denominators coincide and the polyfill's answer is already the spec's.
  */
 function relativeToDayOfMonth(
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
   zoned: Temporal.ZonedDateTime | null,
 ): number {
   if (zoned !== null) {
@@ -101,7 +101,7 @@ function relativeToDayOfMonth(
 
 /** The plain `relativeTo` Temporal would resolve, whatever its calendar, or null. */
 function plainRelativeTo(
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
 ): Temporal.PlainDate | null {
   try {
     if (relativeTo instanceof Temporal.PlainDate) {
@@ -136,7 +136,7 @@ export function monthTotalBySpec(
   duration: Temporal.Duration,
   unitOption: string,
   unit: Unit,
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
   zoned: Temporal.ZonedDateTime | null,
 ): number | null {
   if (

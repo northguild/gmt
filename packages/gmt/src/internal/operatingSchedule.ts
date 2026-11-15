@@ -1,4 +1,5 @@
 import { Temporal } from "./temporal";
+import { durationFrom } from "./durationFrom";
 import { resolveLocalInstant } from "./resolveLocalInstant";
 import { plainDateOf, plainTimeOf } from "./inputChecks";
 import type { Disambiguation } from "../types";
@@ -361,7 +362,7 @@ export function parseSearchHorizon(
   let duration: Temporal.Duration;
 
   try {
-    duration = Temporal.Duration.from(text);
+    duration = durationFrom(text);
   } catch {
     return null;
   }
@@ -1370,7 +1371,7 @@ export function parseOpenTimeAmount(value: unknown): bigint | null {
   }
 
   try {
-    const duration = Temporal.Duration.from(value);
+    const duration = durationFrom(value);
 
     if (
       duration.sign < 0 ||

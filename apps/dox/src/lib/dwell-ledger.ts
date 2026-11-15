@@ -14,6 +14,7 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { CURATED_TIMEZONES } from "./curated-timezones";
+import { exactOffsetText } from "./exact-offset";
 import type { DayMark, PlateSpec, SeriesNumber } from "./ledger-widgets";
 
 export interface DwellLedgerArgs {
@@ -57,8 +58,8 @@ export const DWELL_PRESETS: readonly DwellPreset[] = [
     label: "23:00 → 01:00: two hours, two days",
     description:
       "A container gates in at 23:00 and out at 01:00 in Johannesburg. Two hours elapsed, and it was there on two local dates.",
-    entry: "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",
-    exit: "2024-06-16T01:00:00+02:00[Africa/Johannesburg]",
+    entry: "2024-06-15T23:00:00+02:00",
+    exit: "2024-06-16T01:00:00+02:00",
     zone: "Africa/Johannesburg",
   },
   {
@@ -104,13 +105,18 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
-/** The instant an ISO string names, or NaN. Accepts `Z`, an offset, or a bracketed zone. */
+/**
+ * The instant an ISO string names, or NaN. Accepts `Z`, an offset, or a bracketed zone.
+ * A bracketed zone is read first: Temporal writes a zoned string's offset rounded to the
+ * minute (`1960-06-01T11:15:30-00:45[Africa/Monrovia]`), and only the zone gives back the
+ * exact `-00:44:30`. The offset alone would name a moment 30 seconds later.
+ */
 export function toEpochMs(iso: string): number {
   try {
-    return Temporal.Instant.from(iso).epochMilliseconds;
+    return Temporal.ZonedDateTime.from(iso).epochMilliseconds;
   } catch {
     try {
-      return Temporal.ZonedDateTime.from(iso).epochMilliseconds;
+      return Temporal.Instant.from(iso).epochMilliseconds;
     } catch {
       return Number.NaN;
     }
@@ -149,8 +155,10 @@ const HAS_OFFSET =
  * A wall time with no offset (`2024-06-15T23:00:00`), read in `zone`.
  *
  * What a chat model sends when a reader says "23:00 in New York". It is not an
- * instant, so `dwellTime` would refuse it; reading it in the stated zone is what
- * the reader meant. `reject`, not `compatible`: a wall time inside a skipped
+ * instant, so the library would refuse it; reading it in the stated zone is what
+ * the reader meant. The result is an offset instant (`2024-06-15T23:00:00-04:00`):
+ * the offset fixes the moment, and the library's instant functions take no zone
+ * name after it. `reject`, not `compatible`: a wall time inside a skipped
  * hour is left as typed, and the widget's sentinel says why, rather than being
  * moved silently. Anything that already names an instant is returned unchanged.
  */
@@ -160,9 +168,10 @@ export function resolveWallTime(value: string, zone: string): string {
     return trimmed;
   }
   try {
-    return Temporal.PlainDateTime.from(trimmed)
-      .toZonedDateTime(zone, { disambiguation: "reject" })
-      .toString();
+    const zoned = Temporal.PlainDateTime.from(trimmed).toZonedDateTime(zone, {
+      disambiguation: "reject",
+    });
+    return exactOffsetText(zoned.toInstant(), zone);
   } catch {
     return trimmed;
   }
@@ -382,14 +391,16 @@ export function axisLabels(
 }
 
 /**
- * The string a dragged handle writes back: zoned in the grid zone when there
- * is one, so the reader sees the local time they dragged to, else a `Z` instant.
+ * The string a dragged handle writes back: an offset instant on the grid
+ * zone's clock when there is one, so the reader sees the local time they dragged
+ * to, else a `Z` instant. It never carries a zone name: the library's instant
+ * functions refuse one.
  */
 export function formatHandleValue(ms: number, zone: string | null): string {
   const instant = Temporal.Instant.fromEpochMilliseconds(ms);
   if (zone === null) return instant.toString();
   try {
-    return instant.toZonedDateTimeISO(zone).toString();
+    return exactOffsetText(instant, zone);
   } catch {
     return instant.toString();
   }
@@ -435,8 +446,11 @@ export function explainNull(
   zone: string,
   v: NullValidators,
 ): NullReason | null {
-  if (!v.isValidInstant(entry)) return "invalid-entry";
-  if (!v.isValidInstant(exit)) return "invalid-exit";
+  // `dwellTime` reads either end as an instant or as a zoned string.
+  const isMoment = (value: string) =>
+    v.isValidInstant(value) || v.isValidZonedDateTime(value);
+  if (!isMoment(entry)) return "invalid-entry";
+  if (!isMoment(exit)) return "invalid-exit";
   if (zone !== NO_ZONE) {
     if (!v.isValidTimeZone(zone)) return "unknown-zone";
   } else if (!v.isValidZonedDateTime(entry)) {

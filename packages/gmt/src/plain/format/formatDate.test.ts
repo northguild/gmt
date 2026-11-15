@@ -474,12 +474,11 @@ describe("formatDate with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatDate with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -491,7 +490,7 @@ describe("formatDate with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
 
   // Formatters are shared only when their arguments are fully plain.
@@ -545,17 +544,15 @@ describe("formatDate with an option that is an object", () => {
       expect(built).toBeGreaterThanOrEqual(2);
     });
 
-    it("runs an object option's toString on every call, as before", () => {
-      // The options are read (and coerced) once per call before any cache lookup, so the
-      // caller's code runs each time even though the coerced strings can share a formatter.
+    it("returns the sentinel on every call for an object option, without running its toString", () => {
       let coercions = 0;
       const options = {
         month: { toString: () => ((coercions += 1), "long") },
         day: "numeric",
       } as never;
-      expect(formatDate("2024-03-15", "en-US", options)).toBe("March 15");
-      expect(formatDate("2024-03-15", "en-US", options)).toBe("March 15");
-      expect(coercions).toBe(2);
+      expect(formatDate("2024-03-15", "en-US", options)).toBe("");
+      expect(formatDate("2024-03-15", "en-US", options)).toBe("");
+      expect(coercions).toBe(0);
     });
 
     it("returns an empty string twice for an invalid timeZoneName", () => {

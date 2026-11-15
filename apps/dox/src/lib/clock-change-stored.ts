@@ -11,7 +11,11 @@ import {
   storedTable,
   rowMoved,
 } from "~/widgets/families/clockcheck/stored-table";
-import { cityOf } from "./clock-change-common";
+import {
+  cityOf,
+  offsetFromSeconds,
+  offsetSeconds,
+} from "./clock-change-common";
 import {
   STORED_MAX_BYTES,
   STORED_MAX_LINES,
@@ -45,7 +49,7 @@ interface SavedExample {
 /** What a region states once about its worked example: the zone, its offset now, and the old one. */
 interface SavedFact {
   zone: string;
-  /** The offset the place has now: the reference fact, `+HH:mm`. */
+  /** The offset the place has now: the reference fact, `+HH:mm` (or `+HH:mm:ss`). */
   offset: string;
   /** Minutes the offset an app saved before the change differs from `offset` by: `-60` or `60`. */
   savedShiftMinutes: number;
@@ -111,19 +115,6 @@ function addDays(date: string, days: number): string {
   return `${pad(year, 4)}-${pad(month, 2)}-${pad(day, 2)}`;
 }
 
-function offsetMinutes(offset: string): number {
-  return (
-    (offset.startsWith("-") ? -1 : 1) *
-    (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)))
-  );
-}
-
-function offsetText(minutes: number): string {
-  const abs = Math.abs(minutes);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${minutes < 0 ? "-" : "+"}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
-}
-
 /**
  * The worked example of the saved-times section, from a region's one fact and one wall time
  * (`YYYY-MM-DDTHH:mm:ss`). The saved offset is the fact's offset moved by `savedShiftMinutes`;
@@ -138,7 +129,9 @@ export function savedExample(
   const pad = (n: number) => String(n).padStart(2, "0");
   const wallMinutes =
     Number(wall.slice(11, 13)) * 60 + Number(wall.slice(14, 16));
-  const savedMinutes = offsetMinutes(fact.offset) + fact.savedShiftMinutes;
+  const factSeconds = offsetSeconds(fact.offset);
+  if (factSeconds === null) throw new Error(`Not an offset: ${fact.offset}`);
+  const savedSeconds = factSeconds + fact.savedShiftMinutes * 60;
   const shown = wallMinutes - fact.savedShiftMinutes;
   const dayShift = Math.floor(shown / DAY_MINUTES);
   const shownOfDay = shown - dayShift * DAY_MINUTES;
@@ -148,7 +141,7 @@ export function savedExample(
     number,
   ];
   const shownDate = addDays(wall.slice(0, 10), dayShift);
-  const savedOffset = offsetText(savedMinutes);
+  const savedOffset = offsetFromSeconds(savedSeconds);
   return {
     zone: fact.zone,
     city: cityOf(fact.zone),

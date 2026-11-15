@@ -4,7 +4,7 @@ import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalInstantFromThrow,
 } from "../../test/mocks";
-import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
+import { sameInstantOffsetCases } from "../../test/timeZoneMatrix";
 import { fromTT } from "./fromTT";
 import { toTAI } from "./toTAI";
 import { toTT } from "./toTT";
@@ -13,27 +13,26 @@ describe("toTT", () => {
   // TT = TAI + 32.184 s exactly (IERS Conventions 2010, TN 36 §10.1); TAI − UTC from the
   // Leap_Second.dat row in force. So TT − UTC is 42.184 s in 1972, 67.184 s in 2013, 69.184 s now.
   it.each`
-    isoString                              | expected                              | why
-    ${"2026-01-01T00:00:00Z"}              | ${"2026-01-01T00:01:09.184 TT"}       | ${"37 + 32.184 = 69.184 s"}
-    ${"2013-06-01T00:00:00Z"}              | ${"2013-06-01T00:01:07.184 TT"}       | ${"35 + 32.184 s"}
-    ${"1972-01-01T00:00:00Z"}              | ${"1972-01-01T00:00:42.184 TT"}       | ${"10 + 32.184 s, the first row"}
-    ${"2016-12-31T23:59:59Z"}              | ${"2017-01-01T00:01:07.184 TT"}       | ${"36 + 32.184 s"}
-    ${"2017-01-01T00:00:00Z"}              | ${"2017-01-01T00:01:09.184 TT"}       | ${"37 + 32.184 s"}
-    ${"2026-01-01T00:00:00.000000001Z"}    | ${"2026-01-01T00:01:09.184000001 TT"} | ${"nanoseconds kept"}
-    ${"2026-01-01T01:00:00+01:00"}         | ${"2026-01-01T00:01:09.184 TT"}       | ${"offset read"}
-    ${"2026-01-01T00:00:00Z[Europe/Oslo]"} | ${"2026-01-01T00:01:09.184 TT"}       | ${"bracketed zone ignored"}
-    ${"9999-12-31T23:58:50Z"}              | ${"9999-12-31T23:59:59.184 TT"}       | ${"last whole second that fits"}
-    ${"9999-12-31T23:58:50.815999999Z"}    | ${"9999-12-31T23:59:59.999999999 TT"} | ${"last nanosecond that fits (TT is 69.184 s ahead in 9999)"}
-    ${"9999-12-31T23:58:50.5Z"}            | ${"9999-12-31T23:59:59.684 TT"}       | ${"shortest fraction near the year edge"}
-    ${"2026-01-01T00:00:00.5Z"}            | ${"2026-01-01T00:01:09.684 TT"}       | ${"69.184 + 0.5 s"}
-    ${"2026-01-01T00:00:00.816Z"}          | ${"2026-01-01T00:01:10 TT"}           | ${"fraction .000 drops, whole second"}
-    ${"2026-01-01T00:00:00.816000001Z"}    | ${"2026-01-01T00:01:10.000000001 TT"} | ${"1 ns past the whole second keeps all nine digits"}
-    ${"2025-12-31T23:58:50.816Z"}          | ${"2026-01-01T00:00:00 TT"}           | ${"TT label passes the year while UTC has not"}
-    ${"2025-12-31T23:58:50.815999999Z"}    | ${"2025-12-31T23:59:59.999999999 TT"} | ${"1 ns before the TT year rolls"}
-    ${"2024-02-28T23:58:50.816Z"}          | ${"2024-02-29T00:00:00 TT"}           | ${"TT label reaches the leap day first"}
-    ${"1972-01-01T00:00:00.000000001Z"}    | ${"1972-01-01T00:00:42.184000001 TT"} | ${"1 ns after the first instant"}
-    ${"2016-12-31T23:59:59.999999999Z"}    | ${"2017-01-01T00:01:08.183999999 TT"} | ${"1 ns before the inserted second"}
-    ${"2017-01-01T00:00:00.000000001Z"}    | ${"2017-01-01T00:01:09.184000001 TT"} | ${"1 ns after the inserted second"}
+    isoString                           | expected                              | why
+    ${"2026-01-01T00:00:00Z"}           | ${"2026-01-01T00:01:09.184 TT"}       | ${"37 + 32.184 = 69.184 s"}
+    ${"2013-06-01T00:00:00Z"}           | ${"2013-06-01T00:01:07.184 TT"}       | ${"35 + 32.184 s"}
+    ${"1972-01-01T00:00:00Z"}           | ${"1972-01-01T00:00:42.184 TT"}       | ${"10 + 32.184 s, the first row"}
+    ${"2016-12-31T23:59:59Z"}           | ${"2017-01-01T00:01:07.184 TT"}       | ${"36 + 32.184 s"}
+    ${"2017-01-01T00:00:00Z"}           | ${"2017-01-01T00:01:09.184 TT"}       | ${"37 + 32.184 s"}
+    ${"2026-01-01T00:00:00.000000001Z"} | ${"2026-01-01T00:01:09.184000001 TT"} | ${"nanoseconds kept"}
+    ${"2026-01-01T01:00:00+01:00"}      | ${"2026-01-01T00:01:09.184 TT"}       | ${"offset read"}
+    ${"9999-12-31T23:58:50Z"}           | ${"9999-12-31T23:59:59.184 TT"}       | ${"last whole second that fits"}
+    ${"9999-12-31T23:58:50.815999999Z"} | ${"9999-12-31T23:59:59.999999999 TT"} | ${"last nanosecond that fits (TT is 69.184 s ahead in 9999)"}
+    ${"9999-12-31T23:58:50.5Z"}         | ${"9999-12-31T23:59:59.684 TT"}       | ${"shortest fraction near the year edge"}
+    ${"2026-01-01T00:00:00.5Z"}         | ${"2026-01-01T00:01:09.684 TT"}       | ${"69.184 + 0.5 s"}
+    ${"2026-01-01T00:00:00.816Z"}       | ${"2026-01-01T00:01:10 TT"}           | ${"fraction .000 drops, whole second"}
+    ${"2026-01-01T00:00:00.816000001Z"} | ${"2026-01-01T00:01:10.000000001 TT"} | ${"1 ns past the whole second keeps all nine digits"}
+    ${"2025-12-31T23:58:50.816Z"}       | ${"2026-01-01T00:00:00 TT"}           | ${"TT label passes the year while UTC has not"}
+    ${"2025-12-31T23:58:50.815999999Z"} | ${"2025-12-31T23:59:59.999999999 TT"} | ${"1 ns before the TT year rolls"}
+    ${"2024-02-28T23:58:50.816Z"}       | ${"2024-02-29T00:00:00 TT"}           | ${"TT label reaches the leap day first"}
+    ${"1972-01-01T00:00:00.000000001Z"} | ${"1972-01-01T00:00:42.184000001 TT"} | ${"1 ns after the first instant"}
+    ${"2016-12-31T23:59:59.999999999Z"} | ${"2017-01-01T00:01:08.183999999 TT"} | ${"1 ns before the inserted second"}
+    ${"2017-01-01T00:00:00.000000001Z"} | ${"2017-01-01T00:01:09.184000001 TT"} | ${"1 ns after the inserted second"}
   `("returns $expected for $isoString ($why)", ({ isoString, expected }) => {
     expect(toTT(isoString)).toBe(expected);
   });
@@ -68,19 +67,20 @@ describe("toTT", () => {
   });
 
   it.each`
-    isoString                | label
-    ${null}                  | ${"null"}
-    ${undefined}             | ${"undefined"}
-    ${123}                   | ${"123"}
-    ${""}                    | ${"''"}
-    ${"garbage"}             | ${"'garbage'"}
-    ${"2026-01-01"}          | ${"'2026-01-01'"}
-    ${"2026-01-01T00:00:00"} | ${"'2026-01-01T00:00:00'"}
+    isoString                              | label
+    ${null}                                | ${"null"}
+    ${undefined}                           | ${"undefined"}
+    ${123}                                 | ${"123"}
+    ${""}                                  | ${"''"}
+    ${"garbage"}                           | ${"'garbage'"}
+    ${"2026-01-01"}                        | ${"'2026-01-01'"}
+    ${"2026-01-01T00:00:00"}               | ${"'2026-01-01T00:00:00'"}
+    ${"2026-01-01T00:00:00Z[Europe/Oslo]"} | ${"'2026-01-01T00:00:00Z[Europe/Oslo]'"}
   `("returns '' for the invalid $label", ({ isoString }) => {
     expect(toTT(isoString)).toBe("");
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns 2024-02-29T00:01:09.184 TT for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       expect(toTT(value)).toBe("2024-02-29T00:01:09.184 TT");

@@ -6,30 +6,18 @@ import { instantOf } from "../../internal/instantNanoseconds";
  * The predicate `toNanoseconds` was missing. `toNanoseconds` returns `0n` for both the epoch
  * and a rejected string, and the only public validator close enough to reach for —
  * `isValidUtc` — is *narrower* than this grammar: it gates on GMT's stricter
- * `<date>T<time>Z` shape and rejects the offsets and bracketed zones `toNanoseconds` parses. Validating with it discards valid
+ * `<date>T<time>Z` shape and rejects the offsets `toNanoseconds` parses. Validating with it discards valid
  * input. This accepts exactly what `toNanoseconds` does, so the two never disagree.
  *
- * - Requires an offset designator (`Z`, `±HH:MM`); a bracketed IANA zone may follow, but a
- *   bracket alone is not enough.
- * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it, so a zoned string Temporal wrote is read back as
- *   the instant it was written for, at the first and last instants of the range too, where the
- *   written offset's own reading can fall just outside it
- *   (`-271821-04-19T23:58:45-00:01[Europe/London]` is the first instant). One exception, which
- *   is Temporal's own: a wall time repeated inside a sub-minute offset change, written with a
- *   minute-rounded offset, reads as its first pass (for example `1952-10-15T23:59:59-11:20[Pacific/Niue]`,
- *   where the zone moved from −11:19:40 to −11:20:00, is the pass at −11:19:40). Otherwise the bracket is not checked: a
- *   zone that does not exist, or that disagrees with the offset, changes nothing. Validity never depends
- *   on the bracket.
- * - ISO 8601 extended format before any annotation: `<date>T<time>`, then
+ * - Requires an offset designator (`Z`, `±HH:MM[:SS[.fraction]]`) and nothing after it: an
+ *   annotation of any kind (a time zone, a calendar, an elective one) returns `false`. The offset
+ *   alone fixes the instant, and an offset written with seconds is read exactly, so
+ *   `-00:44:30` and `-00:45` are different instants.
+ * - ISO 8601 extended format over the whole string: `<date>T<time>`, then
  *   `Z` or `±HH:MM[:SS[.fraction]]`. Basic format, a space or lower-case `t` separator, a
  *   lower-case `z` and an hour-only time or offset return `false`, although
  *   `Temporal.Instant.from` reads them.
  * - Rejects leap seconds in every separator and format variant.
- * - Reads RFC 9557 annotations as `Temporal.Instant.from` does: a calendar or elective annotation
- *   is ignored, and an unknown critical one (`[!foo=bar]`) is rejected.
  * - An empty string returns `false`.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result
  *   narrows an `unknown` value to `string`.
@@ -39,8 +27,9 @@ import { instantOf } from "../../internal/instantNanoseconds";
  *
  * @example isValidInstant("2024-03-10T12:00:00Z") // true
  * @example isValidInstant("1970-01-01T00:00:00Z") // true — the epoch, where toNanoseconds returns 0n
- * @example isValidInstant("2024-03-10T12:00:00+05:30[Asia/Kolkata]") // true
- * @example isValidInstant("2024-03-10T12:00:00Z[Not/AZone]") // true — the zone annotation is not checked
+ * @example isValidInstant("2024-03-10T12:00:00+05:30") // true
+ * @example isValidInstant("2024-03-10T12:00:00+05:30[Asia/Kolkata]") // false — no annotation of any kind
+ * @example isValidInstant("2024-03-10T12:00:00Z[u-ca=hebrew]") // false
  * @example isValidInstant("2024-03-10T12:00:00-05:00") // true — isValidUtc says false
  * @example isValidInstant("2024-03-10 12:00:00Z") // false — space separator (extended format only)
  * @example isValidInstant("2024-03-10T12:00:00") // false — no offset designator

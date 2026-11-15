@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { formatWallClockOrZoned } from "../../internal/instantFormatOptions";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
@@ -8,7 +9,6 @@ import {
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatUnix`: every `Intl.DateTimeFormatOptions` field, plus the epoch unit, the
@@ -89,7 +89,7 @@ export function formatUnix(
     if (options === null) return "";
     // Each option is read once (GetOption), inherited ones included.
     const epochUnit = options?.epochUnit;
-    const includeTimeZoneName = optionOrDefault(
+    const includeTimeZoneName = booleanOption(
       options?.includeTimeZoneName,
       false,
     );

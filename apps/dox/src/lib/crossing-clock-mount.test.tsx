@@ -43,7 +43,7 @@ const EXPECTED: Record<string, [string, string | null]> = {
     '{ duration: "PT7H", enter: "2024-03-31T02:00:00+02:00[+02:00]", exit: "2024-03-31T09:00:00+02:00[+02:00]" }',
   ],
   "read-elsewhere": [
-    '"2024-06-15T08:00:00+02:00[Europe/Berlin]", "2024-06-15T17:30:00+02:00[Europe/Berlin]", "America/Panama"',
+    '"2024-06-15T08:00:00+02:00", "2024-06-15T17:30:00+02:00", "America/Panama"',
     '{ duration: "PT9H30M", enter: "2024-06-15T01:00:00-05:00[America/Panama]", exit: "2024-06-15T10:30:00-05:00[America/Panama]" }',
   ],
   inverted: [

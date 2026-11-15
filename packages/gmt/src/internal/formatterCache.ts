@@ -1,4 +1,5 @@
 import { plainOptionEntries } from "./plainOptionEntries";
+import { canonicalLocaleTags } from "./resolveLocale";
 import { isIslamicCalendarResolutionCompatNeeded } from "./temporalCompat/capabilities";
 import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
 import { repairEraYearNumerals } from "./japaneseNumerals";
@@ -202,10 +203,15 @@ function cacheKey(
  * The locale list as `Intl` canonicalizes it (ECMA-402 CanonicalizeLocaleList): an array is read
  * once, here, through `Intl.getCanonicalLocales`, so the key and the constructor see the same
  * strings even when the array is a Proxy that answers each read differently, and a bad list
- * throws before the options are read, as in the constructors.
+ * throws before the options are read, as in the constructors. A value that is not `undefined`,
+ * a string or an array throws `TypeError`, which every caller turns into its sentinel. So does a list with an
+ * entry that is not a string.
  */
 function canonicalLocale(locale: FormatterLocale): FormatterLocale {
-  return Array.isArray(locale) ? Intl.getCanonicalLocales(locale) : locale;
+  // A string stays as it is: its canonical form is the constructor's to read.
+  return typeof locale === "string" || locale === undefined
+    ? locale
+    : canonicalLocaleTags(locale);
 }
 
 /**

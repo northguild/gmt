@@ -1,5 +1,5 @@
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
-import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
+import { sameInstantOffsetCases } from "../../test/timeZoneMatrix";
 import { leapSecondsBetween } from "./leapSecondsBetween";
 
 describe("leapSecondsBetween", () => {
@@ -56,7 +56,7 @@ describe("leapSecondsBetween", () => {
     expect(leapSecondsBetween("2000-01-01T00:00:00Z", value)).toBeNull();
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns 5 from 2000-01-01 to 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       expect(leapSecondsBetween("2000-01-01T00:00:00Z", value)).toBe(5);

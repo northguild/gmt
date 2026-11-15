@@ -89,10 +89,10 @@ describe("writeEdiValue", () => {
       ${"303"} | ${"2024-06-15T14:30:00+14:00"}                | ${"202406151430+14"}     | ${"the largest offset in use"}
       ${"208"} | ${"0000-01-01T00:30:00+02:00"}                | ${"00000101003000+0200"} | ${"the first four-digit year: the instant is before it"}
       ${"205"} | ${"9999-12-31T23:30:00-02:00"}                | ${"999912312330-0200"}   | ${"the last four-digit year: the instant is after it"}
-      ${"303"} | ${"2024-06-15T14:30:00+02:00[Europe/Berlin]"} | ${"202406151430+02"}     | ${"a bracketed zone that agrees with the offset"}
-      ${"303"} | ${"2024-06-14T19:00:00Z[Europe/London]"}      | ${"202406142000+01"}     | ${"a bracketed zone sets the wall clock: 19:00Z is 20:00 at +01:00"}
+      ${"303"} | ${"2024-06-15T14:30:00+02:00[Europe/Berlin]"} | ${""}                    | ${"a bracketed zone: a 303 value is an instant, so any annotation is refused"}
+      ${"303"} | ${"2024-06-14T19:00:00Z[Europe/London]"}      | ${""}                    | ${"a bracketed zone on a Z instant is refused too"}
     `(
-      "writes $value under $code as $expected ($reads)",
+      "writes $value under $code as '$expected' ($reads)",
       ({ code, value, expected }) => {
         expect(writeEdiValue("edifact", "offsetDateTime", code, value)).toBe(
           expected,

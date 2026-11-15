@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { toFileTime } from "./toFileTime";
 
@@ -34,7 +34,7 @@ describe("toFileTime", () => {
     },
   );
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns the same tick count for 2024-02-29T00:00:00Z expressed in $timeZone",
     ({ value }) => {
       expect(toFileTime(value)).toBe(133536384000000000n);
@@ -81,13 +81,9 @@ describe("toFileTime", () => {
     expect(toFileTime(value)).toBe(0n);
   });
 
-  // A calendar annotation is read and ignored, as `Temporal.Instant.from` ignores it (an instant has
-  // no calendar): 2024-03-10T12:00:00-05:00 is 2024-03-10T17:00:00Z. Expected value computed from
-  // native Temporal (Chromium 153) epoch nanoseconds.
-  it("returns 133545636000000000n for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
-    expect(toFileTime("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBe(
-      133545636000000000n,
-    );
+  // An instant is `Z` or an offset and nothing after it: a calendar annotation is no part of it.
+  it("returns the sentinel for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
+    expect(toFileTime("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBe(0n);
   });
 
   it.each`

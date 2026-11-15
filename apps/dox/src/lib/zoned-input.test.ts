@@ -102,4 +102,29 @@ describe("normaliseZonedInput", () => {
     expect(isValidZonedDateTime(normaliseZonedInput("9am"))).toBe(false);
     expect(normaliseZonedInput("")).toBe("");
   });
+
+  it.each([
+    // Monrovia ran at -00:44:30 until 1972; New York at -04:56:02 until 1883.
+    ["1960-06-01T11:15:30-00:44:30", "1960-06-01T12:00:00+00:00[UTC]"],
+    ["1960-06-01T11:15:30-004430", "1960-06-01T12:00:00+00:00[UTC]"],
+    ["1880-01-01T12:00:00-04:56:02", "1880-01-01T16:56:02+00:00[UTC]"],
+  ])("keeps the moment of %s, whose offset has seconds", (input, out) => {
+    // An offset zone cannot hold seconds, so the moment moves to the fallback.
+    const repaired = normaliseZonedInput(input);
+    expect(repaired).toBe(out);
+    expect(isValidZonedDateTime(repaired)).toBe(true);
+    expect(Temporal.Instant.from(repaired).epochMilliseconds).toBe(
+      Temporal.Instant.from(input.replace("-004430", "-00:44:30"))
+        .epochMilliseconds,
+    );
+  });
+
+  it("writes an offset with seconds in a named fallback zone", () => {
+    const repaired = normaliseZonedInput(
+      "1960-06-01T11:15:30-00:44:30",
+      "Africa/Monrovia",
+    );
+    expect(repaired).toBe("1960-06-01T11:15:30-00:45[Africa/Monrovia]");
+    expect(isValidZonedDateTime(repaired)).toBe(true);
+  });
 });

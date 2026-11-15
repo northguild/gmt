@@ -200,17 +200,6 @@ describe("toOffsetInstant", () => {
   );
 
   it.each`
-    value                                 | expected
-    ${"2024-07-15T12:00:00-04:00[-0400]"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
-    ${"2024-07-15T12:00:00-04:00[-04]"}   | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}
-  `(
-    "gives $value no timeZone field either — Temporal canonicalises every offset spelling to ±HH:MM",
-    ({ value, expected }) => {
-      expect(toOffsetInstant(value)).toEqual(expected);
-    },
-  );
-
-  it.each`
     value                                         | expected
     ${"2024-07-15T12:00:00-04:00[US/Eastern]"}    | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "US/Eastern" }}
     ${"2024-07-15T12:00:00-04:00[EST5EDT]"}       | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "EST5EDT" }}
@@ -264,24 +253,23 @@ describe("toOffsetInstant", () => {
     expect(toOffsetInstant(fromOffsetInstant(pair as never))).toEqual(pair);
   });
 
-  // Temporal reads RFC 9557 annotations (proposal-temporal `ParseISODateTime`, RFC 9557 §3.3): an
-  // elective or calendar annotation is ignored, and an unknown critical one, or a key before the
-  // time zone annotation, is rejected. Native Temporal (Chromium 153) agrees on every row.
+  // A zoned string is the body plus at most the zone bracket: an elective or calendar annotation
+  // after it is rejected, as is a critical one.
   it.each`
-    value                                                         | expected                                                                               | label
-    ${"2024-07-15T12:00:00-04:00[foo=bar]"}                       | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}                               | ${"-04:00[foo=bar]"}
-    ${"2024-07-15T12:00:00Z[foo=bar]"}                            | ${{ instant: "2024-07-15T12:00:00Z", offset: "+00:00" }}                               | ${"Z[foo=bar]"}
-    ${"2024-07-15T12:00:00-04:00[x-provenance=estimated]"}        | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}                               | ${"-04:00[x-provenance=estimated]"}
-    ${"2024-07-15T12:00:00-04:00[u-ca=hebrew]"}                   | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}                               | ${"-04:00[u-ca=hebrew]"}
-    ${"2024-07-15T12:00:00-04:00[America/New_York][foo=bar]"}     | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }} | ${"-04:00[America/New_York][foo=bar]"}
-    ${"2024-07-15T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }} | ${"-04:00[America/New_York][u-ca=hebrew]"}
-    ${"2024-07-15T12:00:00-04:00[-04:00][foo=bar]"}               | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00" }}                               | ${"-04:00[-04:00][foo=bar]"}
-    ${"2024-07-15T12:00:00-04:00[America/New_York][!foo=bar]"}    | ${null}                                                                                | ${"-04:00[America/New_York][!foo=bar]"}
-    ${"2024-07-15T12:00:00-04:00[!foo=bar]"}                      | ${null}                                                                                | ${"-04:00[!foo=bar]"}
-    ${"2024-07-15T12:00:00-04:00[foo=bar][America/New_York]"}     | ${null}                                                                                | ${"-04:00[foo=bar][America/New_York]"}
-    ${"2024-07-15T12:00:00-05:00[America/New_York][foo=bar]"}     | ${null}                                                                                | ${"-05:00[America/New_York][foo=bar]"}
+    value                                                         | expected | label
+    ${"2024-07-15T12:00:00-04:00[foo=bar]"}                       | ${null}  | ${"-04:00[foo=bar]"}
+    ${"2024-07-15T12:00:00Z[foo=bar]"}                            | ${null}  | ${"Z[foo=bar]"}
+    ${"2024-07-15T12:00:00-04:00[x-provenance=estimated]"}        | ${null}  | ${"-04:00[x-provenance=estimated]"}
+    ${"2024-07-15T12:00:00-04:00[u-ca=hebrew]"}                   | ${null}  | ${"-04:00[u-ca=hebrew]"}
+    ${"2024-07-15T12:00:00-04:00[America/New_York][foo=bar]"}     | ${null}  | ${"-04:00[America/New_York][foo=bar]"}
+    ${"2024-07-15T12:00:00-04:00[America/New_York][u-ca=hebrew]"} | ${null}  | ${"-04:00[America/New_York][u-ca=hebrew]"}
+    ${"2024-07-15T12:00:00-04:00[-04:00][foo=bar]"}               | ${null}  | ${"-04:00[-04:00][foo=bar]"}
+    ${"2024-07-15T12:00:00-04:00[America/New_York][!foo=bar]"}    | ${null}  | ${"-04:00[America/New_York][!foo=bar]"}
+    ${"2024-07-15T12:00:00-04:00[!foo=bar]"}                      | ${null}  | ${"-04:00[!foo=bar]"}
+    ${"2024-07-15T12:00:00-04:00[foo=bar][America/New_York]"}     | ${null}  | ${"-04:00[foo=bar][America/New_York]"}
+    ${"2024-07-15T12:00:00-05:00[America/New_York][foo=bar]"}     | ${null}  | ${"-05:00[America/New_York][foo=bar]"}
   `(
-    "reads the annotations that follow the time, $label, as Temporal does → $expected",
+    "rejects the annotations that follow the time, $label → $expected",
     ({ value, expected }) => {
       expect(toOffsetInstant(value)).toEqual(expected);
     },
@@ -314,6 +302,8 @@ describe("toOffsetInstant", () => {
     value                                       | description
     ${"2024-07-15T12:00:00"}                    | ${"no offset designator"}
     ${"2024-07-15T12:00:00[America/New_York]"}  | ${"a bracketed zone but no offset"}
+    ${"2024-07-15T12:00:00-04:00[-0400]"}       | ${"a bracketed offset in basic form (RFC 3339 5.6 is HH:MM)"}
+    ${"2024-07-15T12:00:00-04:00[-04]"}         | ${"a bracketed offset of hours only"}
     ${"2024-07-15"}                             | ${"a date with no time"}
     ${"2016-12-31T23:59:60Z"}                   | ${"a leap second"}
     ${"2016-12-31 23:59:60Z"}                   | ${"a leap second with a space separator"}

@@ -3,11 +3,9 @@ import { utcInstantOf } from "../../internal/utcInstant";
 /**
  * Return true when the provided string is a valid ISO 8601 UTC datetime.
  *
- * - The part before the first annotation must match `utcDateTime` (`<date>T<time>Z`): ISO 8601
+ * - The whole string must match `utcDateTime` (`<date>T<time>Z`): ISO 8601
  *   extended format with an upper-case `Z`, so `z`, a `t` or space separator and basic format fail.
- * - Reads RFC 9557 annotations as `Temporal.Instant.from` does: elective ones (`[foo=bar]`), a
- *   time zone annotation and a calendar annotation are ignored (an instant has neither), and an
- *   unknown critical one (`[!foo=bar]`) is rejected.
+ * - Accepts no annotation of any kind: a time zone, a calendar or an elective one returns `false`.
  * - Accepts four forms beyond the timestamp shape `YYYY-MM-DDTHH:MM:SS[.f]Z`: a time without
  *   seconds, a comma before the fraction, an expanded `±YYYYYY` year and RFC 9557 annotations.
  *   For the plain RFC 3339 spelling that readers other than Temporal expect, use
@@ -24,7 +22,7 @@ import { utcInstantOf } from "../../internal/utcInstant";
  * @example isValidUtc("2024-03-17T14:30:45Z") // true
  * @example isValidUtc("2024-01-01Z") // false — date-only not supported
  * @example isValidUtc("2024-03-17T14:30:45z") // false — lower-case z (ISO 8601 extended format only)
- * @example isValidUtc("2024-03-17T14:30:45Z[Europe/Paris]") // true — the annotation is ignored
+ * @example isValidUtc("2024-03-17T14:30:45Z[Europe/Paris]") // false — no annotation of any kind
  * @example isValidUtc("2024-03-17T14:30:45Z[!foo=bar]") // false — unknown critical annotation
  * @example isValidUtc("2024-12-31T23:59:60Z") // false
  * @example isValidUtc("invalid") // false

@@ -264,7 +264,6 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D17: "Time ranges that show a flexible day period and a time zone, such as 10 in the morning GMT-5, which Firefox writes as 10 AM",
   D18: "Islamic calendar dates before the Hijra (622 CE), which Safari reads as positive years in a second era, so a count of months across them never finished",
   D19: "Two names for one zone, such as UTC and Etc/UTC or Asia/Kolkata and Asia/Calcutta, which the polyfill treats as different zones in Safari and WebKit",
-  D20: "A month and day with an upper-case ISO calendar tag, such as --12-25[u-ca=ISO8601], which the polyfill refuses",
   D21: "The current time when a test fakes a clock before 1970, which the polyfill reads one millisecond early, so a clock function can return the previous year, day or second at a boundary",
   D22: "A length in days or larger measured from a repeated hour, which the polyfill can measure from the wrong pass or refuse, so it can be an hour too long or missing. Where the specification has no value, which also happens after a skipped hour, GMT returns its sentinel",
   D23: "Some languages and calendars, among them Scottish Gaelic, Galician, Burmese and Telugu, whose date patterns use the week-of-year year: asking Node or Chrome for the parts of such a date, or of a range, stopped the process with no error to catch",

@@ -133,6 +133,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 58  | CORE-110 | Core       | The weekly upgrade check compares<br>each calendar's years with native Temporal                          | —          | #468  | —       | Done        |
 | 59  | CORE-111 | Core       | Public functions call internal cores,<br>never another public function                                   | —          | #508  | —       | Done        |
 | 60  | CORE-112 | Core       | Some languages' date patterns crash<br>Node and print the wrong year                                     | —          | #524  | —       | In progress |
+| 61  | CORE-113 | Core       | Validators and readers accept text<br>after a valid date or time                                         | —          | #528  | —       | In progress |
 
 **`CORE-8` sits at slot 8, ahead of the realm work.** It gates everything after it: it is the
 standards and consistency pass over the whole public surface before 1.16.0 ships, and a realm

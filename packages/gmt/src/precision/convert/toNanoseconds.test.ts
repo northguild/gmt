@@ -1,38 +1,20 @@
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import { toNanoseconds } from "./toNanoseconds";
 
 describe("toNanoseconds", () => {
   it.each`
-    value                                            | expected
-    ${"1970-01-01T00:00:00Z"}                        | ${0n}
-    ${"1969-12-31T23:59:59Z"}                        | ${-1000000000n}
-    ${"2024-02-29T00:00:00Z"}                        | ${1709164800000000000n}
-    ${"2024-03-10T12:00:00.123456789Z"}              | ${1710072000123456789n}
-    ${"2024-03-10T12:00:00.123456Z"}                 | ${1710072000123456000n}
-    ${"2024-03-10T12:00:00-05:00"}                   | ${1710090000000000000n}
-    ${"2024-03-10T12:00:00-05:00[America/New_York]"} | ${1710090000000000000n}
-    ${"2024-03-10T12:00:00.60Z"}                     | ${1710072000600000000n}
+    value                               | expected
+    ${"1970-01-01T00:00:00Z"}           | ${0n}
+    ${"1969-12-31T23:59:59Z"}           | ${-1000000000n}
+    ${"2024-02-29T00:00:00Z"}           | ${1709164800000000000n}
+    ${"2024-03-10T12:00:00.123456789Z"} | ${1710072000123456789n}
+    ${"2024-03-10T12:00:00.123456Z"}    | ${1710072000123456000n}
+    ${"2024-03-10T12:00:00-05:00"}      | ${1710090000000000000n}
+    ${"2024-03-10T12:00:00.60Z"}        | ${1710072000600000000n}
   `("returns $expected for $value", ({ value, expected }) => {
     expect(toNanoseconds(value)).toBe(expected);
   });
-
-  // A bracketed zone annotation is not validated: the written offset fixes the instant, as in
-  // Temporal.Instant.from (test262 Temporal/Instant/from/
-  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
-  // contradicts the string's, is not checked. (A minute-rounded offset of a sub-minute zone is
-  // the one thing read from a bracket: test/minuteRoundedOffsets.test.ts.) 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
-  it.each`
-    value                                            | expected                | reason
-    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${1710054000000000000n} | ${"offset contradicts the zone"}
-    ${"2024-03-10T12:00:00Z[Not/AZone]"}             | ${1710072000000000000n} | ${"zone that does not exist"}
-    ${"2024-03-10T12:00:00Z[+05:00]"}                | ${1710072000000000000n} | ${"numeric zone annotation"}
-  `(
-    "returns $expected for $value, from the offset alone ($reason)",
-    ({ value, expected }) => {
-      expect(toNanoseconds(value)).toBe(expected);
-    },
-  );
 
   it.each`
     value                            | expected
@@ -56,7 +38,7 @@ describe("toNanoseconds", () => {
     expect(BigInt(Number(nanoseconds))).not.toBe(nanoseconds);
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns the same instant for 2024-02-29T00:00:00Z expressed in $timeZone",
     ({ value }) => {
       expect(toNanoseconds(value)).toBe(1709164800000000000n);
@@ -91,17 +73,6 @@ describe("toNanoseconds", () => {
     expect(toNanoseconds(value)).toBe(0n);
   });
 
-  // A calendar annotation is read and ignored, as `Temporal.Instant.from` ignores it (an instant has
-  // no calendar): the critical flag included. Expected value computed from
-  // native Temporal (Chromium 153) epoch nanoseconds.
-  it.each`
-    value                                       | expected
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${1710090000000000000n}
-    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}     | ${1710072000000000000n}
-  `("returns $expected for $value", ({ value, expected }) => {
-    expect(toNanoseconds(value)).toBe(expected);
-  });
-
   it.each`
     value
     ${null}
@@ -119,5 +90,17 @@ describe("toNanoseconds", () => {
     mockTemporalInstantFromThrow();
 
     expect(toNanoseconds("2024-03-10T12:00:00Z")).toBe(0n);
+  });
+
+  it.each`
+    value
+    ${"2024-03-10T12:00:00-05:00[America/New_York]"}
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"}
+    ${"2024-03-10T12:00:00Z[Not/AZone]"}
+    ${"2024-03-10T12:00:00Z[+05:00]"}
+    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"}
+    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}
+  `("returns 0n for the annotated '$value'", ({ value }) => {
+    expect(toNanoseconds(value)).toBe(0n);
   });
 });

@@ -38,8 +38,6 @@ describe("isValidCalendarZonedDateTime", () => {
     ${"5784-01-01T14:30:00-05:00[America/New_York][!u-ca=hebrew]"}             | ${"ISO year 5784 with a critical calendar annotation"}
     ${"2024-03-10T14:30:00-04:00[!America/New_York][!u-ca=hebrew]"}            | ${"critical zone and critical calendar"}
     ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=HEBREW]"}              | ${"calendar id in upper case (CanonicalizeCalendar folds it)"}
-    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew][u-ca=roc]"}    | ${"a second elective calendar annotation is ignored"}
-    ${"2024-02-24T14:30:00-05:00[America/New_York][foo=bar][u-ca=hebrew]"}     | ${"elective unknown annotation is ignored"}
     ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=ethiopic-amete-alem]"} | ${"alias of ethioaa"}
     ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=gregory]"}             | ${"gregory"}
     ${"2024-10-03T14:30:45-04:00[America/New_York][u-ca=iso8601]"}             | ${"explicit iso8601"}
@@ -70,6 +68,9 @@ describe("isValidCalendarZonedDateTime", () => {
     ${"2024-02-24 14:30:00-05:00[America/New_York][u-ca=hebrew]"}            | ${"space separator (strict extended shape)"}
     ${"2024-02-24t14:30:00-05:00[America/New_York]"}                         | ${"lower-case t separator (strict extended shape)"}
     ${"2024-02-24T19:30:00z[America/New_York][u-ca=hebrew]"}                 | ${"lower-case z designator (strict extended shape)"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][u-ca=hebrew][u-ca=roc]"}  | ${"a second calendar annotation"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][foo=bar][u-ca=hebrew]"}   | ${"an elective annotation besides the calendar"}
+    ${"2024-02-24T14:30:00-05:00[America/New_York][foo=bar]"}                | ${"an elective annotation and no calendar"}
     ${"2024-02-24[America/New_York][u-ca=hebrew]"}                           | ${"date without a time (strict extended shape)"}
   `("returns false for '$value' ($reason)", ({ value }) => {
     expect(isValidCalendarZonedDateTime(value)).toBe(false);

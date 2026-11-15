@@ -8,9 +8,8 @@ import { utcIntervalOf } from "../../../internal/intervalChecks";
  * - Equal `start === end` is valid.
  * - Leap-second strings return `false`.
  * - Invalid input or malformed strings return `false`.
- * - Each endpoint must satisfy `isValidUtc`, so annotations are read as `Temporal.Instant.from` reads
- *   them: a time zone annotation (`[Asia/Tokyo]`), any calendar annotation and an elective annotation
- *   (`[foo=bar]`) are ignored; an unknown critical annotation (`[!foo=bar]`) is rejected.
+ * - Each endpoint must satisfy `isValidUtc`, so an annotation of any kind (a time zone, a
+ *   calendar, an elective one) returns `false`.
  *
  * @param start ISO 8601 UTC datetime string (interval start)
  * @param end ISO 8601 UTC datetime string (interval end)
@@ -20,7 +19,7 @@ import { utcIntervalOf } from "../../../internal/intervalChecks";
  * @example isValidUtcInterval("2024-01-01T10:00:00Z", "2024-01-01T10:00:00Z") // true
  * @example isValidUtcInterval("2024-12-31T23:59:59Z", "2024-01-01T10:00:00Z") // false
  * @example isValidUtcInterval("invalid", "2024-12-31T23:59:59Z") // false
- * @example isValidUtcInterval("2024-01-01T10:00:00Z[u-ca=hebrew]", "2024-12-31T23:59:59Z[foo=bar]") // true (annotations ignored)
+ * @example isValidUtcInterval("2024-01-01T10:00:00Z[u-ca=hebrew]", "2024-12-31T23:59:59Z[foo=bar]") // false (no annotation of any kind)
  * @example isValidUtcInterval("2024-01-01T10:00:00Z[!foo=bar]", "2024-12-31T23:59:59Z") // false (unknown critical annotation)
  */
 export function isValidUtcInterval(start: string, end: string): boolean {

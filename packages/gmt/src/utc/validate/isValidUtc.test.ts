@@ -55,12 +55,7 @@ describe("isValidUtc", () => {
     expect(isValidUtc("2024-01-01T00:00:00Z")).toBe(false);
   });
 
-  // Temporal's ISO string grammar (proposal-temporal spec/abstractops.html `Annotations`,
-  // `ParseISODateTime`; RFC 9557 §3.3): an elective annotation is read and ignored, a time zone
-  // annotation is ignored for a UTC instant, the first `u-ca` annotation names the calendar, and an
-  // unknown critical annotation is rejected. Values checked against native Temporal (Chromium
-  // 153) except `[a=bc]`: native rejects a one-character key, which the spec grammar
-  // (`AKeyLeadingChar`) allows.
+  // CORE-113: a plain value matches its exact pattern over the whole string, so any annotation (zone, calendar or elective) makes it invalid.
   it.each`
     value
     ${"2024-03-10T12:30Z[foo=bar]"}
@@ -79,10 +74,13 @@ describe("isValidUtc", () => {
     ${"2024-03-10T12:30Z[u-ca=iso8601][u-ca=hebrew]"}
     ${"2024-03-10T12:30Z[u-ca=hebrew]"}
     ${"2024-03-10T12:30Z[u-ca=bogus]"}
+    ${"2024-03-10T12:30Z[Europe/Helsinki]"}
+    ${"2024-03-10T12:30Z[Europe/Helsinkiddddd]"}
+    ${"2024-03-10T12:30Z[!Europe/Helsinki]"}
   `(
-    "returns true for a UTC instant with annotations Temporal reads and ignores: $value",
+    "returns false for a UTC instant with an annotation, which the exact pattern does not allow: $value",
     ({ value }: { value: string }) => {
-      expect(isValidUtc(value)).toBe(true);
+      expect(isValidUtc(value)).toBe(false);
     },
   );
 

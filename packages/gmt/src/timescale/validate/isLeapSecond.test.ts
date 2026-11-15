@@ -3,7 +3,8 @@ import { LEAP_SECOND_STEPS } from "../../internal";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import {
   battleTestTimeZones,
-  sameInstantBattleCases,
+  offsetString,
+  sameInstantOffsetCases,
 } from "../../test/timeZoneMatrix";
 import { isLeapSecond } from "./isLeapSecond";
 
@@ -24,37 +25,37 @@ const insertionDays = LEAP_SECOND_STEPS.at.slice(1).map((at) => ({
  */
 const insertedSecondBattleCases = battleTestTimeZones.map((timeZone) => ({
   timeZone,
-  value: Temporal.Instant.from("2016-12-31T23:59:59Z")
-    .toZonedDateTimeISO(timeZone)
-    .toString()
-    .replace(/:59(?=[+-])/, ":60"),
+  value: offsetString(
+    Temporal.Instant.from("2016-12-31T23:59:59Z").toZonedDateTimeISO(timeZone),
+  ).replace(/:59(?=[+-])/, ":60"),
 }));
 
 describe("isLeapSecond", () => {
   it.each`
-    isoString                                        | why
-    ${"2016-12-31T23:59:60Z"}                        | ${"the last insertion"}
-    ${"1972-06-30T23:59:60Z"}                        | ${"the first insertion"}
-    ${"2008-12-31T23:59:60.999999999Z"}              | ${"the last nanosecond of the 2008 insertion"}
-    ${"2009-01-01T08:59:60+09:00"}                   | ${"the 2008 insertion written at +09:00"}
-    ${"2016-12-31T18:59:60-05:00[America/New_York]"} | ${"the 2016 insertion written in New York"}
-    ${"2016-12-31T23:59:60,5Z"}                      | ${"a comma decimal sign (ISO 8601)"}
-    ${"2016-12-31T23:59:60-00:00"}                   | ${"offset -00:00"}
-    ${"2016-12-31T23:59:60+00:00:00"}                | ${"an offset written to the second"}
-    ${"2016-12-31T23:59:60Z[UTC]"}                   | ${"Z with a zone annotation"}
-    ${"2016-12-31T11:59:60-12:00"}                   | ${"offset -12:00, the far west"}
+    isoString                           | why
+    ${"2016-12-31T23:59:60Z"}           | ${"the last insertion"}
+    ${"1972-06-30T23:59:60Z"}           | ${"the first insertion"}
+    ${"2008-12-31T23:59:60.999999999Z"} | ${"the last nanosecond of the 2008 insertion"}
+    ${"2009-01-01T08:59:60+09:00"}      | ${"the 2008 insertion written at +09:00"}
+    ${"2016-12-31T18:59:60-05:00"}      | ${"the 2016 insertion written in New York"}
+    ${"2016-12-31T23:59:60,5Z"}         | ${"a comma decimal sign (ISO 8601)"}
+    ${"2016-12-31T23:59:60-00:00"}      | ${"offset -00:00"}
+    ${"2016-12-31T23:59:60+00:00:00"}   | ${"an offset written to the second"}
+    ${"2016-12-31T11:59:60-12:00"}      | ${"offset -12:00, the far west"}
   `("returns true for $isoString ($why)", ({ isoString }) => {
     expect(isLeapSecond(isoString)).toBe(true);
   });
 
   it.each`
-    isoString                      | why
-    ${"2017-12-31T23:59:60Z"}      | ${"well-formed, no insertion that day"}
-    ${"2016-06-30T23:59:60Z"}      | ${"a month end with no insertion (2016's was in December)"}
-    ${"2016-12-31T12:34:60Z"}      | ${"second 60 mid-day"}
-    ${"1971-12-31T23:59:60Z"}      | ${"before the table"}
-    ${"2016-12-31T23:59:59Z"}      | ${"an ordinary second"}
-    ${"2017-01-01T08:58:60+09:00"} | ${"a minute early at +09:00: 23:58:60Z, not the day's last second"}
+    isoString                                        | why
+    ${"2017-12-31T23:59:60Z"}                        | ${"well-formed, no insertion that day"}
+    ${"2016-06-30T23:59:60Z"}                        | ${"a month end with no insertion (2016's was in December)"}
+    ${"2016-12-31T12:34:60Z"}                        | ${"second 60 mid-day"}
+    ${"1971-12-31T23:59:60Z"}                        | ${"before the table"}
+    ${"2016-12-31T23:59:59Z"}                        | ${"an ordinary second"}
+    ${"2016-12-31T18:59:60-05:00[America/New_York]"} | ${"a bracketed zone: no instant"}
+    ${"2016-12-31T23:59:60Z[UTC]"}                   | ${"Z with a zone annotation: no instant"}
+    ${"2017-01-01T08:58:60+09:00"}                   | ${"a minute early at +09:00: 23:58:60Z, not the day's last second"}
   `("returns false for $isoString ($why)", ({ isoString }) => {
     expect(isLeapSecond(isoString)).toBe(false);
   });
@@ -100,7 +101,7 @@ describe("isLeapSecond", () => {
     },
   );
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns false for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       expect(isLeapSecond(value)).toBe(false);

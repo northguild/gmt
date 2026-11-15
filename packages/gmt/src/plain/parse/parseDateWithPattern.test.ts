@@ -135,14 +135,14 @@ describe("parseDateWithPattern", () => {
     );
 
     // A hostile bag is an Object, so it passes the GetOptionsObject guard; reading `yearWindow`
-    // from it throws. Only a yy pattern reads it.
+    // from it throws, and that is invalid input whatever the pattern.
     it.each`
       make                                                                | kind
       ${() => hostileProxy()}                                             | ${"a Proxy that throws on any trap"}
       ${() => revokedProxy()}                                             | ${"a revoked Proxy"}
       ${() => Object.defineProperty({}, "yearWindow", { get: throwing })} | ${"an object whose yearWindow getter throws"}
     `(
-      'returns "" for a yy pattern with options that are $kind, and never reads them for a yyyy pattern',
+      'returns "" for a yy pattern and for a yyyy pattern with options that are $kind',
       ({ make }) => {
         expect(
           parseDateWithPattern(
@@ -159,11 +159,11 @@ describe("parseDateWithPattern", () => {
             undefined,
             make() as never,
           ),
-        ).toBe("2024-03-15");
+        ).toBe("");
       },
     );
 
-    it("reads yearWindow once per call for a yy pattern, and never for a yyyy pattern", () => {
+    it("reads yearWindow once per call, for a yy pattern and for a yyyy pattern", () => {
       let reads = 0;
       const options = {
         get yearWindow(): number {
@@ -174,8 +174,28 @@ describe("parseDateWithPattern", () => {
       parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, options);
       expect(reads).toBe(1);
       parseDateWithPattern("2024-03-15", "yyyy-MM-dd", undefined, options);
-      expect(reads).toBe(1);
+      expect(reads).toBe(2);
     });
+
+    // A value the types reject returns the sentinel even when the pattern has no yy to use it.
+    it.each`
+      yearWindow               | label
+      ${"2000"}                | ${"a numeric string"}
+      ${"x"}                   | ${"a string that is not rolling"}
+      ${new String("rolling")} | ${"a String object"}
+      ${new Number(2000)}      | ${"a Number object"}
+      ${true}                  | ${"a boolean"}
+      ${null}                  | ${"null"}
+    `(
+      'returns "" for a yyyy pattern when yearWindow is $label',
+      ({ yearWindow }) => {
+        expect(
+          parseDateWithPattern("15.03.2024", "dd.MM.yyyy", undefined, {
+            yearWindow,
+          } as never),
+        ).toBe("");
+      },
+    );
 
     it("reads a function carrying yearWindow as the options object it is", () => {
       expect(
@@ -265,7 +285,7 @@ describe("parseDateWithPattern", () => {
         },
       );
 
-      // A pattern with no yy token never reads the option, so the clock a rolling window needs
+      // A pattern with no yy token never resolves the window, so the clock a rolling window needs
       // is never read for it: the result is the one the same call gives with no options.
       it("a yyyy pattern gives 2024-03-15 with a rolling window when the clock cannot be read", () => {
         mockTemporalNowInstantThrow();

@@ -16,11 +16,11 @@ minutes("03:30") - minutes("01:30"); // 120 — "two hours late", across the spr
   explanation={`A wall-clock subtraction assumes every hour on the clock happened once. On a fall-back night 02:00 to 03:00 happens twice, so the same printed 02:30 names two instants an hour apart. On a spring-forward night 02:00 to 03:00 never happens. \`scheduleDeviation\` subtracts instants, so the delay is 60 minutes both times, and \`classifyPunctuality\` judges that against your tolerance.`}
   gmtCode={`import { classifyPunctuality, scheduleDeviation } from "@northguild/gmt/transport";
 
-scheduleDeviation("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00[Australia/Sydney]");
+scheduleDeviation("2024-04-07T02:30:00+11:00", "2024-04-07T02:30:00+10:00");
 // "PT1H" — the second 02:30 is an hour after the first
-classifyPunctuality("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00[Australia/Sydney]", { late: "PT15M" });
+classifyPunctuality("2024-04-07T02:30:00+11:00", "2024-04-07T02:30:00+10:00", { late: "PT15M" });
 // "late"
-scheduleDeviation("2024-10-06T01:30:00+10:00[Australia/Sydney]", "2024-10-06T03:30:00+11:00[Australia/Sydney]");
+scheduleDeviation("2024-10-06T01:30:00+10:00", "2024-10-06T03:30:00+11:00");
 // "PT1H" — 03:30 AEDT is an hour after 01:30 AEST`}
   fixedSpecId="scheduleDeviation"
 />

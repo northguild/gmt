@@ -297,8 +297,7 @@ function guarded(
  * field.
  *
  * @param formatter the formatter just built
- * @param callerOptions the options it was built with; options that are not plain values are
- * left unguarded
+ * @param callerOptions the options it was built with; options with a getter are left unguarded
  * @returns the formatter, or its stand-in
  *
  * @example guardDateTimeFormat(new Intl.DateTimeFormat("en", { year: "numeric" }), { year: "numeric" }) // the same formatter
@@ -308,9 +307,9 @@ export function guardDateTimeFormat(
   formatter: Intl.DateTimeFormat,
   callerOptions: Intl.DateTimeFormatOptions,
 ): Intl.DateTimeFormat {
-  // Options with a getter or a value `Intl` coerces by running caller code are never read again
-  // here (`formatterCache` builds no key from them either). Library code snapshots a caller's
-  // options into plain values first, so this is only a hand-built object.
+  // Options with a getter are never read again here (`formatterCache` builds no key from them
+  // either), and a value of the wrong type throws as it does there. Library code snapshots a
+  // caller's options into plain values first, so this is only a hand-built object.
   const entries = plainOptionEntries(callerOptions);
   if (entries === null) {
     return formatter;

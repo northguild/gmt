@@ -41,3 +41,14 @@ describe("formatOffset", () => {
     expect(formatOffset(345)).toBe("UTC+5:45");
   });
 });
+
+describe("formatOffset with seconds", () => {
+  it.each([
+    [-44.5, "UTC−0:44:30"],
+    [-296 - 2 / 60, "UTC−4:56:02"],
+    [345, "UTC+5:45"],
+    [-660, "UTC−11"],
+  ])("writes %d minutes as %s", (minutes, text) => {
+    expect(formatOffset(minutes)).toBe(text);
+  });
+});

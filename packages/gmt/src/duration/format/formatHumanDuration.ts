@@ -1,6 +1,6 @@
 import { exactSeconds } from "../../internal/exactSeconds";
+import { durationFrom } from "../../internal/durationFrom";
 import { HUMAN_DURATION_UNITS } from "../../internal/humanDuration";
-import { Temporal } from "../../internal/temporal";
 
 /**
  * Write an ISO 8601 duration in the compact form `parseHumanDuration` reads, such as `2h 30m`.
@@ -36,7 +36,7 @@ import { Temporal } from "../../internal/temporal";
 export function formatHumanDuration(duration: string): string {
   if (typeof duration !== "string") return "";
   try {
-    const value = Temporal.Duration.from(duration);
+    const value = durationFrom(duration);
     const magnitude = value.abs();
     // Rank order: year, month, week, day, hour, minute, second (the millisecond is never written).
     const amounts = [

@@ -94,8 +94,13 @@ function readFreeTimeTerms(
 
   const needsCalendar =
     basis === "working" || (readChargeBasis && chargeBasis === "working");
-  const resolved = needsCalendar ? parseBusinessCalendar(calendar) : null;
-  if (needsCalendar && resolved === null) {
+  // A calendar the caller wrote is checked even on a basis that never counts against it: a value
+  // the types reject returns the sentinel.
+  const resolved =
+    needsCalendar || calendar !== undefined
+      ? parseBusinessCalendar(calendar)
+      : null;
+  if ((needsCalendar || calendar !== undefined) && resolved === null) {
     return null;
   }
 
@@ -112,7 +117,8 @@ function readFreeTimeTerms(
  * Read a `FreeTimeOptions` bag, or `null` when it is not one: a non-object, an unknown `basis`
  * or `firstDay`, a missing `firstDay` (no default: the two conventions differ by a day of
  * charges), an invalid `timeZone`, or a `"working"` basis without a valid `BusinessCalendar`.
- * The `calendar` is read only when a basis that needs it is `"working"`.
+ * The `calendar` is read once; it is required when a basis is `"working"`, and when given it must
+ * be a valid `BusinessCalendar` on either basis.
  *
  * With `readChargeBasis`, `chargeBasis` is required too, and has no default for the same reason:
  * where free time is in working days, tariffs mostly charge every calendar day after it, but some
