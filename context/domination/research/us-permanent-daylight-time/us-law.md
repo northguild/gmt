@@ -1,7 +1,8 @@
 # US permanent daylight time: the US law behind CORE-90
 
 Section 4 of [the CORE-90 research](../us-permanent-daylight-time.md): the national proposal, the
-19 state laws, the states on standard time all year, and California. Checked on 13 November 2026.
+other national proposals, the 19 state laws, the states on standard time all year, and
+California. Checked on 13 November 2026; section 4.1.1 on 15 November 2026.
 
 ## 4. US law
 
@@ -26,6 +27,34 @@ Section 4 of [the CORE-90 research](../us-permanent-daylight-time.md): the natio
 - <https://www.govinfo.gov/content/pkg/BILLS-119hr139rfs/html/BILLS-119hr139rfs.htm>
 - <https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr139.xml>
 - <https://www.govinfo.gov/bulkdata/BILLSTATUS/117/s/BILLSTATUS-117s623.xml>
+
+### 4.1.1 The other national proposals of the 119th Congress
+
+The us-clock-watch canary's GovInfo title search found these. Each text and latest action was read
+on 15 November 2026; no action is dated after 13 November 2026, so the page dates them as of the
+same day as section 4.1.
+
+- **S. 29**, "Sunshine Protection Act of 2025": the same text as H.R. 139 as introduced. Introduced
+  7 January 2025 and referred to the Committee on Commerce, Science, and Transportation; no later
+  action. The page counts it as the national proposal of section 4.1, not as another one.
+- **H.R. 300**, "Daylight Act", and **H.R. 1630**: the same amendment of 15 U.S.C. 260a(a). A state
+  may by law apply daylight time all year, to the whole state or to the whole of its area in any
+  one time zone. The seasonal period stays for every other state. Introduced 9 January 2025 and
+  26 February 2025, each referred to the House Committee on Energy and Commerce; no later action.
+  No effective-date section.
+- **H.R. 9638**, "Sunshine for Our Kids Act of 2026": repeals 15 U.S.C. 260a, so standard time
+  applies all year. A new 15 U.S.C. 261(b) lets a state by law advance its standard time by one
+  hour, all year or for part of it: the whole state, or for a state in more than one zone, the
+  whole of its area in any one zone. Takes effect on the first Sunday of November after enactment.
+  Introduced 9 July 2026 and referred to the House Committee on Energy and Commerce; no later
+  action.
+- **H.Res. 1423** is the House rule for the H.R. 139 vote, not a proposal of its own.
+
+- <https://www.govinfo.gov/content/pkg/BILLS-119s29is/html/BILLS-119s29is.htm>
+- <https://www.govinfo.gov/content/pkg/BILLS-119hr300ih/html/BILLS-119hr300ih.htm>
+- <https://www.govinfo.gov/content/pkg/BILLS-119hr1630ih/html/BILLS-119hr1630ih.htm>
+- <https://www.govinfo.gov/content/pkg/BILLS-119hr9638ih/html/BILLS-119hr9638ih.htm>
+- Latest actions: `scripts/us-clock-watch.snapshot.json`, federal part, from the Congress.gov API
 
 ### 4.2 The 19 states that would keep daylight time if federal law allowed it (fact 14)
 
