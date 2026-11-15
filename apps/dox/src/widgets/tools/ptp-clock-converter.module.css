@@ -1,0 +1,133 @@
+/*
+ * PTP Clock Converter: what only this tool needs. The sections, preset, fields, plates, badge,
+ * verdict, code frames and held lines are the kit's and the holiday family's; this sheet lays
+ * the controls out and sets the ruler's wrappers.
+ *
+ * Amber is the sentinel's alone: a plate or a line the library refused reads a bracketed NO
+ * SIGNAL. Nothing here draws a coloured left edge.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+
+  @media (width >= 40rem) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* A group that needs the whole row: the preset, the instant and the button. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.slot {
+  min-inline-size: 0;
+
+  /* The sentinel takes the live size, so the strips keep one layout in every state. */
+  & [data-series] {
+    --value-signal: var(--value-live);
+  }
+
+  container: slot / inline-size;
+
+  /* A call line can run past the frame. Where scrollbars take room (WebKit), the track is
+     always there, so a long line scrolling in does not make the frame taller. */
+  & pre {
+    overflow-x: scroll;
+  }
+
+  /* In a narrow slot the sentinel's wording, at the live size, is wider than a plate and would
+     scroll. Both sizes shrink with the slot. */
+  @container slot (inline-size < 30rem) {
+    & [data-series] {
+      --value-live: clamp(0.75rem, (100cqi - 2.5rem) / 12, 1.25rem);
+      --value-signal: var(--value-live);
+    }
+  }
+
+  /* Two equal columns from a wide slot, one column below, never a wrapping row. */
+  & [data-gate="hero"],
+  & [data-gate="check-plates"],
+  & [data-gate="write-plates"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+
+    @container slot (inline-size >= 36rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* A value that scrolls (a fraction makes an instant 22 to 30 characters) shows its track in
+     every state, so where scrollbars take room (WebKit) no plate grows when one starts to scroll. */
+  & [data-series] dd {
+    overflow-x: scroll;
+  }
+
+  /* In two columns an instant (20 characters) must fit a half-width plate, or the value scrolls
+     and WebKit's scrollbar makes that plate taller than one that does not. The size follows the
+     slot: a character is about 0.62 of the size wide. */
+  @container slot (inline-size >= 36rem) {
+    & [data-series] {
+      --value-live: clamp(0.75rem, (50cqi - 3.25rem) / 12.6, 2rem);
+      --value-signal: var(--value-live);
+    }
+  }
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+/* The ruler's lane moves by design (its marks); the wrapper has no box of its own. */
+.ruler {
+  container: ruler / inline-size;
+  min-inline-size: 0;
+}
+
+.moving {
+  display: contents;
+}
+
+.major,
+.minor {
+  display: contents;
+}
+
+/* Below 24rem only 0, 20 and 40 show. */
+@container ruler (inline-size < 24rem) {
+  .minor {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .ruler [role="img"] {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: CanvasText;
+  }
+
+  .ruler [role="img"][data-pattern="hatch"] {
+    background-color: Canvas;
+    background-image: repeating-linear-gradient(
+      45deg,
+      CanvasText 0,
+      CanvasText 2px,
+      transparent 2px,
+      transparent 7px
+    );
+  }
+
+  .ruler [role="img"][data-pattern="dotted"] {
+    background-color: Canvas;
+    background-image: radial-gradient(CanvasText 1px, transparent 1.5px);
+    background-size: 6px 6px;
+  }
+}

@@ -125,7 +125,7 @@ ending with lengths of time counted from now, ahead of the remaining realms.
 | 50  | AV-98    | Aviation   | METAR and NOTAM times: parse,<br>`isValidMetarTime`, `isValidNotamValidity`                              | —          | #406  | —       | Done        |
 | 51  | RAI-99   | Rail       | GTFS time strings: `parseGtfsTime`,<br>`formatGtfsTime`, `isValidGtfsTime`                               | —          | #407  | —       | Done        |
 | 52  | RAI-100  | Rail       | GTFS times to instants: `gtfsToInstant`                                                                  | —          | #408  | —       | Not started |
-| 53  | IOT-101  | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                                               | —          | #409  | —       | Not started |
+| 53  | IOT-101  | IoT        | PTP time: `ptpToUtc`, `utcToPtp`,<br>`isValidPtpTimestamp`                                               | —          | #409  | —       | Done        |
 | 54  | CORE-90  | Core       | A US clock-change checker in Dox, once<br>permanent daylight time is law                                 | —          | #341  | —       | Waiting     |
 | 55  | CORE-92  | Core       | Weekly check for a `temporal-polyfill`<br>release GMT can swap to                                        | —          | #386  | —       | Done        |
 | 56  | CORE-105 | Core       | One file per workaround in<br>`zonedWallClockDifference.ts`                                              | —          | #437  | —       | Done        |

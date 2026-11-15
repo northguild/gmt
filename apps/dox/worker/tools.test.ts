@@ -559,6 +559,55 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showPtpClockConverter", () => {
+    const schema = (
+      tools.showPtpClockConverter as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a read triple or an instant, all as strings", async () => {
+      for (const input of [
+        { seconds: "1704067237", nanoseconds: "0", offset: "37" },
+        { instant: "2024-01-01T00:00:00Z", offset: "37" },
+        { instant: "2024-01-01T00:00:00Z" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showPtpClockConverter", input)).toMatchObject({
+          ok: true,
+          widget: "ptp-clock-converter",
+        });
+      }
+    });
+
+    it("needs a read triple or an instant", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ seconds: "1", offset: "37" }).success).toBe(
+        false,
+      );
+    });
+
+    it("coerces nothing and caps the numbers at 24 characters and the instant at 64", () => {
+      expect(
+        schema.safeParse({ seconds: 1, nanoseconds: "0", offset: "37" })
+          .success,
+      ).toBe(false);
+      const triple = { seconds: "1", nanoseconds: "0", offset: "37" };
+      for (const key of ["seconds", "nanoseconds", "offset"]) {
+        expect(
+          schema.safeParse({ ...triple, [key]: "9".repeat(24) }).success,
+        ).toBe(true);
+        expect(
+          schema.safeParse({ ...triple, [key]: "9".repeat(25) }).success,
+        ).toBe(false);
+      }
+      expect(schema.safeParse({ instant: "x".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ instant: "x".repeat(65) }).success).toBe(false);
+    });
+  });
+
   describe("showSsimDateReader", () => {
     const schema = (
       tools.showSsimDateReader as unknown as {

@@ -219,6 +219,10 @@ const PAGES = [
     widget: "gtfs-time-reader",
   },
   {
+    path: "tools/ptp-clock-converter",
+    widget: "ptp-clock-converter",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },
