@@ -156,6 +156,8 @@ export function permalinkOf(state: PtpState): Record<string, string> {
 
 /** Whole seconds, read as a `bigint`: digits with an optional sign. */
 const INTEGER = /^-?\d{1,20}$/;
+/** Seconds with a fraction, read as a `number`: the library takes one and refuses it. */
+const FRACTION = /^-?\d{1,20}\.\d{1,9}$/;
 /** A number with an optional fraction, for the nanoseconds and the offset. */
 const DECIMAL = /^-?\d{1,11}(\.\d{1,9})?$/;
 
@@ -164,11 +166,16 @@ export type Typed<T> =
   | { kind: "notNumber" }
   | { kind: "ok"; value: T };
 
-/** The seconds box: an empty box is "nothing typed", text off the pattern is "not a number". */
-export function readSeconds(text: string): Typed<bigint> {
+/**
+ * The seconds box: an empty box is "nothing typed", text off the pattern is "not a number".
+ * Whole seconds are a `bigint`; with a fraction they are a `number`, so the library's own
+ * refusal shows, as it does for a sign.
+ */
+export function readSeconds(text: string): Typed<bigint | number> {
   if (text === "") return { kind: "empty" };
-  return INTEGER.test(text)
-    ? { kind: "ok", value: BigInt(text) }
+  if (INTEGER.test(text)) return { kind: "ok", value: BigInt(text) };
+  return FRACTION.test(text)
+    ? { kind: "ok", value: Number(text) }
     : { kind: "notNumber" };
 }
 
@@ -195,10 +202,20 @@ export function lit(value: unknown): string {
   return `{ ${entries.map(([k, v]) => `${k}: ${lit(v)}`).join(", ")} }`;
 }
 
-interface Record80 {
+/** A record as `utcToPtp` writes it: whole seconds as a `bigint`. */
+interface WrittenRecord {
   seconds: bigint;
   nanoseconds: number;
 }
+
+/** A record as the library takes it: `bigint` seconds, or `number` seconds, fraction and all. */
+type Record80 = WrittenRecord | { seconds: number; nanoseconds: number };
+
+/** Narrowed once, so the record is one of the two shapes the library declares. */
+const recordOf = (seconds: bigint | number, nanoseconds: number): Record80 =>
+  typeof seconds === "bigint"
+    ? { seconds, nanoseconds }
+    : { seconds, nanoseconds };
 
 // ---------------------------------------------------------------------------
 // Words
@@ -282,10 +299,7 @@ export function readPtp(lib: IotLib, state: PtpState): ReadResult {
     return blankRead("notNumber");
   }
 
-  const record: Record80 = {
-    seconds: seconds.value,
-    nanoseconds: nanoseconds.value,
-  };
+  const record = recordOf(seconds.value, nanoseconds.value);
   const calls: string[] = [];
   const valid = lib.isValidPtpTimestamp(record);
   calls.push(`isValidPtpTimestamp(${lit(record)}); // ${lit(valid)}`);
@@ -623,7 +637,7 @@ export function writePtp(lib: IotLib, state: PtpState): WriteResult {
     };
   }
   // A plain literal the site builds: the library reads any object.
-  const record: Record80 = {
+  const record: WrittenRecord = {
     seconds: written.seconds,
     nanoseconds: written.nanoseconds,
   };

@@ -5091,7 +5091,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     an unset clock, an out-of-range count, a count before 1972, and the write cases.
   - **An empty box makes no call.** Text that is not a number makes none either. Both are neutral
     notes; NO SIGNAL shows only for a library refusal. A sign or a fraction does reach the library,
-    so `-1` and `37.5` show its own refusal.
+    so `-1`, `37.5` and seconds of `1.5` show its own refusal. Whole seconds go as a `bigint`,
+    seconds with a fraction as a `number`.
   - **WebKit layout.** The sentinel takes the live size (`--value-signal: var(--value-live)`).
     From a slot 36rem wide `--value-live` scales with the slot so an instant fits a half-width
     plate, because a value that scrolls made WebKit's classic scrollbar grow that plate. A value

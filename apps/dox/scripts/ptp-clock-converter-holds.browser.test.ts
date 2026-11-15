@@ -55,6 +55,7 @@ const SECONDS_VALUES = [
   "281474976710656",
   "9".repeat(20),
   "-" + "9".repeat(20),
+  "-" + "9".repeat(20) + ".123456789",
 ];
 const NANOS_VALUES = [
   "0",

@@ -49,12 +49,33 @@ describe("the text readers", () => {
 
   it("tells an empty box from a text that is not a number", () => {
     expect(readSeconds("")).toEqual({ kind: "empty" });
-    for (const text of ["1.5", "x", " 1", "1e3", "999999999999999999999"]) {
+    for (const text of [
+      "x",
+      " 1",
+      "1e3",
+      "1.",
+      ".5",
+      "999999999999999999999",
+    ]) {
       expect(readSeconds(text)).toEqual({ kind: "notNumber" });
     }
     expect(readDecimal("")).toEqual({ kind: "empty" });
     expect(readDecimal("abc")).toEqual({ kind: "notNumber" });
   });
+
+  // A fraction is a number, not text off the pattern: it goes to the library as a `number`, and
+  // the library refuses it (PR #532 review).
+  it.each`
+    text      | value
+    ${"1.5"}  | ${1.5}
+    ${"-1.5"} | ${-1.5}
+    ${"1.0"}  | ${1}
+  `(
+    "reads seconds $text with a fraction as the number $value",
+    ({ text, value }) => {
+      expect(readSeconds(text)).toEqual({ kind: "ok", value });
+    },
+  );
 
   it("reads a decimal as a number and turns negative zero into zero", () => {
     expect(readDecimal("37.5")).toEqual({ kind: "ok", value: 37.5 });
@@ -130,6 +151,22 @@ describe("every read preset, against the library", () => {
       readPtp(iotLib, state({ ...readPreset("announced-37"), offset: "37.5" }))
         .reason,
     ).toBe("offsetRefused");
+  });
+
+  it("sends fractional seconds to the library, which refuses the record", () => {
+    const r = readPtp(
+      iotLib,
+      state({ ...readPreset("announced-37"), seconds: "1.5" }),
+    );
+    expect(r).toMatchObject({
+      kind: "refused",
+      reason: "recordOut",
+      valid: false,
+      utc: "",
+    });
+    expect(r.calls[0]).toBe(
+      "isValidPtpTimestamp({ seconds: 1.5, nanoseconds: 0 }); // false",
+    );
   });
 
   it("names a record past the last writable instant", () => {
