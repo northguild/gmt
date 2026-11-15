@@ -10,7 +10,7 @@
  * `upstream-badges.test.ts`.
  */
 import { stateLine, type CompatGroup } from "~/data/temporal-compat";
-import type { UpstreamFiling } from "~/data/upstream-filings";
+import type { GitHubFiling, UpstreamFiling } from "~/data/upstream-filings";
 import { badge } from "../widgets/builders/badge";
 import type { SafeHtml } from "../widgets/builders/html";
 import type { OcticonName } from "./octicons";
@@ -25,22 +25,28 @@ export interface BadgeSpec {
   dim?: boolean;
 }
 
-type StateFields = Pick<
-  UpstreamFiling,
-  "kind" | "state" | "draft" | "mergedAt"
+type GitHubFields = Pick<
+  GitHubFiling,
+  "tracker" | "kind" | "state" | "draft" | "mergedAt" | "reviewDecision"
 >;
-type ReviewFields = Pick<
-  UpstreamFiling,
-  "kind" | "state" | "draft" | "reviewDecision"
->;
+/** The state fields every tracker has; the GitHub ones are read only when `tracker` is `"github"`. */
+type StateFields =
+  | GitHubFields
+  | Pick<
+      Exclude<UpstreamFiling, GitHubFiling>,
+      "tracker" | "state" | "closedAt"
+    >;
+type ReviewFields = StateFields;
 type InGmtFields = Pick<
   UpstreamFiling,
-  "gmtGuard" | "gmtNote" | "kind" | "pairsWith"
->;
+  "gmtGuard" | "gmtNote" | "pairsWith"
+> & {
+  kind?: "pr" | "issue";
+};
 
 /** Where a filing stands on GitHub, with the icon GitHub draws for that state. */
 export function stateBadge(f: StateFields): BadgeSpec & { icon: OcticonName } {
-  if (f.kind === "issue") {
+  if (f.tracker !== "github" || f.kind === "issue") {
     return f.state === "closed"
       ? { text: "Closed", tone: "purple", icon: "issue-closed" }
       : { text: "Open", tone: "spring", icon: "issue-opened" };
@@ -59,8 +65,22 @@ export function stateBadge(f: StateFields): BadgeSpec & { icon: OcticonName } {
  * The part of a filing's state that GitHub's one word loses. A merged pull request is not yet
  * in a published polyfill release, which is the fact that decides whether a user has the fix.
  */
-export function stateNote(f: Pick<UpstreamFiling, "mergedAt">): string | null {
-  return f.mergedAt ? "Merged, not yet in a published release" : null;
+export function stateNote(f: UpstreamFiling): string | null {
+  switch (f.tracker) {
+    case "github":
+      return f.mergedAt ? "Merged, not yet in a published release" : null;
+    case "jira":
+    case "bugzilla": {
+      const resolution = f.resolution ? `, resolution ${f.resolution}` : "";
+      const fixed =
+        f.tracker === "jira" && f.fixVersions.length > 0
+          ? `, fix version ${f.fixVersions.join(", ")}`
+          : "";
+      return `Status ${f.status}${resolution}${fixed}`;
+    }
+    case "chromium":
+      return null;
+  }
 }
 
 /**
@@ -69,6 +89,8 @@ export function stateNote(f: Pick<UpstreamFiling, "mergedAt">): string | null {
  * GitHub leaves `reviewDecision` empty until somebody reviews.
  */
 export function reviewBadge(f: ReviewFields): BadgeSpec | null {
+  // Reviews are a GitHub pull request's: no other tracker has a review verdict.
+  if (f.tracker !== "github") return null;
   if (f.reviewDecision === "APPROVED") {
     return { text: "Approved", tone: "spring", icon: "check", dim: true };
   }

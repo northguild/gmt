@@ -1,3 +1,4 @@
+import { guardedDateTimeFormat } from "../formatterCache";
 import { Temporal } from "../temporal";
 
 /*
@@ -12,7 +13,6 @@ import { Temporal } from "../temporal";
  * no era name and no epoch.
  */
 
-const formatters = new Map<string, Intl.DateTimeFormat>();
 const modernEras = new Map<string, string | undefined>();
 
 /** A date after the epoch of every calendar GMT supports: the era every modern date prints in. */
@@ -21,20 +21,28 @@ const MODERN_DATE_MS =
     "UTC",
   ).epochMilliseconds;
 
+/**
+ * The formatter whose parts the polyfill reads. Built with the week-year guard (CORE-112:
+ * `formatToParts` is never called on a formatter that could abort) and without the year repairs,
+ * which answer `[]` for a date before the Hijra (D26): the era printed there is what this file
+ * reads.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
 function formatterFor(calendarId: string): Intl.DateTimeFormat {
-  let format = formatters.get(calendarId);
-  if (format === undefined) {
+  let formatter = formatters.get(calendarId);
+  if (formatter === undefined) {
     // The options the polyfill reads its fields with, so the parts are the ones it saw.
-    format = new Intl.DateTimeFormat(`en-u-ca-${calendarId}`, {
+    formatter = guardedDateTimeFormat(`en-u-ca-${calendarId}`, {
       era: "short",
       year: "numeric",
       month: "numeric",
       day: "numeric",
       timeZone: "UTC",
     });
-    formatters.set(calendarId, format);
+    formatters.set(calendarId, formatter);
   }
-  return format;
+  return formatter;
 }
 
 function eraPartAt(calendarId: string, ms: number): string | undefined {

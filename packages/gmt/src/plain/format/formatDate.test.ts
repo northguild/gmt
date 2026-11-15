@@ -386,7 +386,7 @@ describe("formatDate", () => {
     ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long" }}                  | ${"令和6年2月"}                  | ${"requested long month kept"}
     ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "numeric" }}               | ${"R6/2"}                        | ${"numeric fields give the pre-1.16.0 text"}
     ${"ja-JP"}               | ${{ month: "long", day: "numeric" }}                   | ${"2月3日"}                      | ${"requested long month kept"}
-    ${"ja-JP-u-ca-japanese"} | ${{ year: "2-digit", month: "short", day: "numeric" }} | ${"令和6年2月3日"}               | ${"requested short month kept"}
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "2-digit", month: "short", day: "numeric" }} | ${"令和06年2月3日"}              | ${"requested short month kept, 2-digit era year padded (D27)"}
     ${"en-US-u-ca-chinese"}  | ${{ year: "numeric", month: "long" }}                  | ${"Twelfth Month 2023(gui-mao)"} | ${"year kept with long month"}
     ${"ko-KR-u-ca-hebrew"}   | ${{ year: "numeric", month: "long" }}                  | ${"AM 5784년 5월"}               | ${"requested long month kept"}
     ${"en-US"}               | ${{ era: "long" }}                                     | ${"2/3/2024 Anno Domini"}        | ${"era alone gets the date defaults"}

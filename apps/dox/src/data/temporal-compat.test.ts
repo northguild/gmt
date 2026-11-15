@@ -214,11 +214,13 @@ describe("temporal compat snapshot", () => {
 
   describe("shortRef", () => {
     it.each`
-      repo                                | number  | label
-      ${"tc39/proposal-temporal"}         | ${3292} | ${"tc39 #3292"}
-      ${"js-temporal/temporal-polyfill"}  | ${369}  | ${"polyfill #369"}
-      ${"fullcalendar/temporal-polyfill"} | ${126}  | ${"fullcalendar #126"}
-      ${"whatwg/html"}                    | ${12}   | ${"whatwg/html #12"}
+      repo                                | number   | label
+      ${"tc39/proposal-temporal"}         | ${3292}  | ${"tc39 #3292"}
+      ${"js-temporal/temporal-polyfill"}  | ${369}   | ${"polyfill #369"}
+      ${"fullcalendar/temporal-polyfill"} | ${126}   | ${"fullcalendar #126"}
+      ${"tc39/ecma402"}                   | ${1116}  | ${"ecma402 #1116"}
+      ${"nodejs/node"}                    | ${67076} | ${"node #67076"}
+      ${"whatwg/html"}                    | ${12}    | ${"whatwg/html #12"}
     `("labels $repo#$number as '$label'", ({ repo, number, label }) => {
       expect(shortRef(repo, number)).toBe(label);
     });

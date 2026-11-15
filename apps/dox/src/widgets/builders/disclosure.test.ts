@@ -89,6 +89,33 @@ describe("disclosure", () => {
   });
 });
 
+describe("disclosure flow", () => {
+  it("opens and shuts the same way, and keeps its name and panel", async () => {
+    const abort = new AbortController();
+    const r = renderHtml(
+      disclosure({
+        id: "f",
+        label: "31 workarounds",
+        flow: true,
+        children: html`<p>The list</p>`,
+      }),
+    );
+    try {
+      wireDisclosure(r.first(), {
+        signal: abort.signal,
+      });
+      const button = screen.getByRole("button", { name: "31 workarounds" });
+      expect(button).toHaveAttribute("aria-expanded", "false");
+      await userEvent.click(button);
+      expect(button).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByText("The list")).toBeVisible();
+      await expectNoAxeViolations(r.host);
+    } finally {
+      abort.abort();
+    }
+  });
+});
+
 describe("disclosure panel width", () => {
   /* jsdom has no layout, so the rule that keeps the panel inside a clipping drawer is read from
      the stylesheet; the browser run measures the rectangle. */

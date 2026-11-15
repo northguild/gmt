@@ -52,11 +52,19 @@ export interface MarkOptions {
    */
   emphasis?: boolean;
   /**
-   * `hatch` draws the mark with a diagonal pattern, so two neighbouring marks of one colour
-   * (a month band and the next) read apart without colour. Default `solid`.
+   * A pattern, so neighbouring marks of one colour read apart without colour (WCAG 1.4.1).
+   * Default `solid`. `hatch` is diagonal stripes; `cross` is stripes both ways; `outline` is an
+   * empty box with only its edge; `dotted` is a box of dots, for a gap where nothing happened.
    */
-  pattern?: "solid" | "hatch";
+  pattern?: TimelinePattern;
 }
+
+export type TimelinePattern =
+  | "solid"
+  | "hatch"
+  | "cross"
+  | "outline"
+  | "dotted";
 
 export function mark(o: MarkOptions): SafeHtml {
   const span = o.span === undefined ? "" : `; --gmt-span: ${unit(o.span)}`;
@@ -66,7 +74,7 @@ export function mark(o: MarkOptions): SafeHtml {
     aria-label="${o.label}"
     data-kind="${o.span === undefined ? "point" : "range"}"
     data-series="${o.series ?? 1}"${o.emphasis === true ? html` aria-current="true"` : ""}
-    ${o.pattern === "hatch" ? html`data-pattern="hatch"` : ""}
+    ${o.pattern === undefined || o.pattern === "solid" ? "" : html`data-pattern="${o.pattern}"`}
     style="--gmt-at: ${unit(o.at)}${span}"
   ></span>`;
 }

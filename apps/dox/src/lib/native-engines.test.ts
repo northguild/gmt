@@ -94,11 +94,15 @@ describe("the sidebar", () => {
       "install",
       "core-rules",
       "why-gmt",
+      "upstream",
+      "pulse",
     ]);
   });
 
-  it("puts the engine page right after Helping fix Temporal", () => {
+  it("puts the engine page right after the bundle-size page", () => {
     const slugs = MIGRATE.map((p) => p.slug);
-    expect(slugs.indexOf("native-engines")).toBe(slugs.indexOf("upstream") + 1);
+    expect(slugs.indexOf("native-engines")).toBe(
+      slugs.indexOf("bundle-size") + 1,
+    );
   });
 });

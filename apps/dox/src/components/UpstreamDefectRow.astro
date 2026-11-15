@@ -14,10 +14,9 @@ import {
   groupLabel,
   groupWhatBreaks,
   reasonParts,
-  shortRef,
   stateLine,
 } from "../data/temporal-compat";
-import type { UpstreamFiling } from "../data/upstream-filings";
+import { filingRef, type UpstreamFiling } from "../data/upstream-filings";
 import { chip, defectBadge } from "../lib/upstream-badges";
 
 interface Props {
@@ -55,7 +54,7 @@ const { count } = stateLine(group);
       <ul class="gmt-defects-refs">
         {filings.map((f) => (
           <li>
-            <a href={f.contributionUrl ?? f.url}>{shortRef(f.repo, f.number)}</a>
+            <a href={f.contributionUrl ?? f.url}>{filingRef(f)}</a>
           </li>
         ))}
       </ul>

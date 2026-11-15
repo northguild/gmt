@@ -329,7 +329,8 @@ export function plainMonthDayFormatOptions(
  *   `dayPeriod`, `hour`, `minute`, `second` or `fractionalSecondDigits` gives `null`
  *   (anyPresent); otherwise year and month default to `"numeric"`, keeping a copied `era`.
  * - **V8 `Y` crash.** The result passes `year`, so it must only be given to `format`, never to
- *   `formatToParts` or `formatRangeToParts`, where V8 before 15.5 traps.
+ *   `formatToParts` or `formatRangeToParts` on a formatter the week-year guard has not covered:
+ *   V8 without commit `0426b0d1045d` aborts there (defect D23, CORE-112).
  * - Returns `null` for a `timeStyle` (a year-month has no time format).
  *
  * @param options caller's `Intl.DateTimeFormatOptions`

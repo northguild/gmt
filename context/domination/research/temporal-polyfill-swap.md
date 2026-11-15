@@ -207,8 +207,10 @@ test fails; only zoned.E's probes do.
 | § 4.3 Wrong offset between two close offset changes (follow-up to #73) | [#121](https://github.com/fullcalendar/temporal-polyfill/issues/121) | Fixed in 1.0.7 |
 | § 4.4 Backward search stops about three years ahead | [#125](https://github.com/fullcalendar/temporal-polyfill/issues/125) | Fixed in 1.0.8 |
 | § 4.5 Transitions before 1847 not found | [#126](https://github.com/fullcalendar/temporal-polyfill/issues/126) | Fixed in 1.0.8 |
+| Persian: 78 years from 1502 to 2987 AP get the wrong leap year | [#127](https://github.com/fullcalendar/temporal-polyfill/issues/127) | Open; our fix is PR [#131](https://github.com/fullcalendar/temporal-polyfill/pull/131) |
+| Chinese and Dangi read from `Intl`, which differs from native Temporal | [#128](https://github.com/fullcalendar/temporal-polyfill/issues/128) | Open; our fix is PR [#132](https://github.com/fullcalendar/temporal-polyfill/pull/132) |
 
-The `/upstream/` tracker lists all five, closed ones included, as credit.
+The `/upstream/` tracker lists all seven reports and both PRs, closed ones included, as credit.
 
 ## 5. What a swap costs
 

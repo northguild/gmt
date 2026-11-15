@@ -1,6 +1,9 @@
 /**
  * The upstream filings GMT has reported against `@js-temporal/polyfill`,
- * `tc39/proposal-temporal` and `fullcalendar/temporal-polyfill`. `/upstream/` and its `UpstreamTracker.astro`
+ * `tc39/proposal-temporal`, `fullcalendar/temporal-polyfill`, `tc39/ecma402` and `nodejs/node` on
+ * GitHub, and on the Unicode Jira, the Chromium issue tracker and two Bugzilla servers. Every entry
+ * names its tracker (`tracker`), and each tracker has its own identity fields, so no entry carries a
+ * member that belongs to another tracker. `/upstream/` and its `UpstreamTracker.astro`
  * import every figure from here, the same way `gmt-stats.ts` is the one place
  * a GMT number is typed.
  *
@@ -23,6 +26,7 @@
  * error, but a glob that matches nothing is just an empty object.
  */
 import { isAfterUtc } from "@northguild/gmt";
+import { shortRef } from "./temporal-compat";
 import committedData from "./upstream-filings.json";
 
 /** `port` mirrors an already-merged upstream commit; `fix` and `report` are a
@@ -30,10 +34,8 @@ import committedData from "./upstream-filings.json";
  * publish of commits already on `main`. */
 export type FilingWork = "port" | "fix" | "report" | "release";
 
-export interface UpstreamFiling {
-  repo: string;
-  number: number;
-  kind: "pr" | "issue";
+/** What every tracker's filing carries: our judgement, then what the tracker reports. */
+interface FilingBase {
   /** `null` only for a filing `sync` just discovered and nobody has classified yet. */
   work: FilingWork | null;
   title: string;
@@ -69,23 +71,78 @@ export interface UpstreamFiling {
    */
   outcome?: string | null;
   /** A `"contributor"` row's link to our own comment. `url` cannot hold it: `sync` rewrites `url`
-   * from the repo, kind and number every run. */
+   * from the tracker's own identity every run. */
   contributionUrl?: string | null;
   state: "open" | "closed";
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  /** Live file only: discovery found this filing but the committed file doesn't have it
+   * yet, so its hand-written fields (`summary`, `gmtGuard`, ...) are still empty. */
+  new?: boolean;
+}
+
+/** A GitHub issue or pull request. */
+export interface GitHubFiling extends FilingBase {
+  tracker: "github";
+  repo: string;
+  number: number;
+  kind: "pr" | "issue";
   draft: boolean;
   reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
   comments: number;
   /** Comments by anyone outside GMT (`AUTHORS` in `scripts/upstream.mjs`), so a
    * cross-link one of us posts never counts as a maintainer response. */
   maintainerComments: number;
-  createdAt: string;
-  updatedAt: string;
-  closedAt: string | null;
   mergedAt: string | null;
-  /** Live file only: `gh` found this filing but the committed file doesn't have it
-   * yet, so its hand-written fields (`summary`, `gmtGuard`, ...) are still empty. */
-  new?: boolean;
 }
+
+/** An issue in the Unicode Jira (`ICU-…` or `CLDR-…`). */
+export interface JiraFiling extends FilingBase {
+  tracker: "jira";
+  /** The Jira key, such as `"ICU-23619"`. */
+  key: string;
+  /** Jira's own status name, such as `"Accepted"` or `"Done"`. */
+  status: string;
+  /** Jira's resolution name once resolved, such as `"Fixed"`; `null` while unresolved. */
+  resolution: string | null;
+  fixVersions: readonly string[];
+  comments: number;
+  maintainerComments: number;
+}
+
+/**
+ * An issue on the Chromium issue tracker. The tracker has no public API, so what is read is the
+ * state and the dates; the comment counts are `null` because the endpoint we can call without
+ * signing in does not return comments.
+ */
+export interface ChromiumFiling extends FilingBase {
+  tracker: "chromium";
+  /** The numeric issue id. */
+  id: number;
+  comments: null;
+  maintainerComments: null;
+}
+
+/** A bug on a Bugzilla server (`bugzilla.mozilla.org` or `bugs.webkit.org`). */
+export interface BugzillaFiling extends FilingBase {
+  tracker: "bugzilla";
+  host: string;
+  /** The numeric bug id. */
+  id: number;
+  /** Bugzilla's status, such as `"NEW"` or `"RESOLVED"`. */
+  status: string;
+  /** Bugzilla's resolution once resolved, such as `"FIXED"`; `null` while open. */
+  resolution: string | null;
+  comments: number;
+  maintainerComments: number;
+}
+
+export type UpstreamFiling =
+  | GitHubFiling
+  | JiraFiling
+  | ChromiumFiling
+  | BugzillaFiling;
 
 /**
  * A pull request or an issue GMT opened on a project outside Temporal, such as a comparison list
@@ -94,6 +151,7 @@ export interface UpstreamFiling {
  * synced.
  */
 export interface UpstreamListing {
+  tracker: "github";
   repo: string;
   number: number;
   kind: "pr" | "issue";
@@ -140,8 +198,22 @@ export const HAND_WRITTEN_FIELDS = [
  * `scripts/upstream.mjs`, which a test holds equal. */
 export const LISTING_HAND_WRITTEN_FIELDS = ["summary"] as const;
 
-const keyOf = (f: { repo: string; number: number }): string =>
-  `${f.repo}#${f.number}`;
+/** The stable identity of an entry: `owner/repo#n`, `ICU-23619`, `chromium#n`, `host#n`. */
+export const filingKey = (f: UpstreamFiling | UpstreamListing): string => {
+  switch (f.tracker) {
+    case "github":
+      return `${f.repo}#${f.number}`;
+    case "jira":
+      return f.key;
+    case "chromium":
+      return `chromium#${f.id}`;
+    case "bugzilla":
+      return `${f.host}#${f.id}`;
+  }
+};
+
+/** The trackers, in page order. Mirrors `TRACKERS` in `scripts/upstream.mjs`. */
+export const TRACKERS = ["github", "jira", "chromium", "bugzilla"] as const;
 
 /**
  * The repositories the tracker follows, in page order. Mirrors `REPOS` in `scripts/upstream.mjs`,
@@ -151,20 +223,98 @@ export const TRACKED_REPOS = [
   "js-temporal/temporal-polyfill",
   "tc39/proposal-temporal",
   "fullcalendar/temporal-polyfill",
+  "tc39/ecma402",
+  "nodejs/node",
 ] as const;
 
-const repoRank = (repo: string): number => {
-  const i = (TRACKED_REPOS as readonly string[]).indexOf(repo);
-  return i === -1 ? TRACKED_REPOS.length : i;
+/** A heading on the page: one GitHub repository, or one other tracker. */
+export interface FilingGroup {
+  /** Stable id, the page's grouping key. */
+  id: string;
+  /** What the heading says. */
+  name: string;
+  /** Where the heading links. */
+  href: string;
+}
+
+const JIRA_HOST = "unicode-org.atlassian.net";
+
+/** Which heading a filing sits under. */
+export function filingGroup(f: UpstreamFiling): FilingGroup {
+  switch (f.tracker) {
+    case "github":
+      return {
+        id: f.repo,
+        name: f.repo,
+        href: `https://github.com/${f.repo}`,
+      };
+    case "jira":
+      return {
+        id: JIRA_HOST,
+        name: "Unicode Jira (ICU and CLDR)",
+        href: `https://${JIRA_HOST}`,
+      };
+    case "chromium":
+      return {
+        id: "issues.chromium.org",
+        name: "Chromium issue tracker",
+        href: "https://issues.chromium.org",
+      };
+    case "bugzilla":
+      return {
+        id: f.host,
+        name:
+          f.host === "bugs.webkit.org" ? "WebKit Bugzilla" : "Mozilla Bugzilla",
+        href: `https://${f.host}`,
+      };
+  }
+}
+
+/** The short label a table prints for one filing: `tc39 #3292`, `ICU-23619`, `Chromium 585635918`. */
+export function filingRef(f: UpstreamFiling | UpstreamListing): string {
+  switch (f.tracker) {
+    case "github":
+      return shortRef(f.repo, f.number);
+    case "jira":
+      return f.key;
+    case "chromium":
+      return `Chromium ${f.id}`;
+    case "bugzilla":
+      return `${f.host === "bugs.webkit.org" ? "WebKit" : "Mozilla"} ${f.id}`;
+  }
+}
+
+/** The page order of two entries: tracker, then repository or host, then number. */
+const orderKey = (
+  f: UpstreamFiling | UpstreamListing,
+): [number, string, number] => {
+  const rank = TRACKERS.indexOf(f.tracker);
+  switch (f.tracker) {
+    case "github": {
+      const i = (TRACKED_REPOS as readonly string[]).indexOf(f.repo);
+      return [
+        rank,
+        String(i === -1 ? TRACKED_REPOS.length : i).padStart(3, "0") + f.repo,
+        f.number,
+      ];
+    }
+    case "jira":
+      return [rank, f.key.split("-")[0], Number(f.key.split("-")[1])];
+    case "chromium":
+      return [rank, "", f.id];
+    case "bugzilla":
+      return [rank, f.host, f.id];
+  }
 };
 
-const byRepoThenNumber = (
-  a: { repo: string; number: number },
-  b: { repo: string; number: number },
-): number =>
-  repoRank(a.repo) - repoRank(b.repo) ||
-  a.repo.localeCompare(b.repo) ||
-  a.number - b.number;
+const byPageOrder = (
+  a: UpstreamFiling | UpstreamListing,
+  b: UpstreamFiling | UpstreamListing,
+): number => {
+  const [ra, sa, na] = orderKey(a);
+  const [rb, sb, nb] = orderKey(b);
+  return ra - rb || sa.localeCompare(sb) || na - nb;
+};
 
 /**
  * The live file laid over the committed one.
@@ -183,9 +333,9 @@ export function overlayLive(
   live: UpstreamFilings,
 ): UpstreamFilings {
   if (!isAfterUtc(live.checked, committed.checked)) return committed;
-  const liveByKey = new Map(live.filings.map((f) => [keyOf(f), f]));
+  const liveByKey = new Map(live.filings.map((f) => [filingKey(f), f]));
   const fromCommitted = committed.filings.map((own) => {
-    const fresh = liveByKey.get(keyOf(own));
+    const fresh = liveByKey.get(filingKey(own));
     if (fresh === undefined) return own;
     const merged: Record<string, unknown> = { ...fresh };
     for (const field of HAND_WRITTEN_FIELDS) {
@@ -194,11 +344,11 @@ export function overlayLive(
     }
     return merged as unknown as UpstreamFiling;
   });
-  const committedKeys = new Set(committed.filings.map(keyOf));
-  const onlyLive = live.filings.filter((f) => !committedKeys.has(keyOf(f)));
+  const committedKeys = new Set(committed.filings.map(filingKey));
+  const onlyLive = live.filings.filter((f) => !committedKeys.has(filingKey(f)));
   return {
     checked: live.checked,
-    filings: [...fromCommitted, ...onlyLive].sort(byRepoThenNumber),
+    filings: [...fromCommitted, ...onlyLive].sort(byPageOrder),
     listings: overlayListings(committed.listings ?? [], live.listings),
   };
 }
@@ -208,17 +358,17 @@ function overlayListings(
   live: readonly UpstreamListing[] | undefined,
 ): readonly UpstreamListing[] {
   if (live === undefined) return committed;
-  const liveByKey = new Map(live.map((l) => [keyOf(l), l]));
+  const liveByKey = new Map(live.map((l) => [filingKey(l), l]));
   return committed
     .map((own) => {
-      const fresh = liveByKey.get(keyOf(own));
+      const fresh = liveByKey.get(filingKey(own));
       if (fresh === undefined) return own;
       const merged: Record<string, unknown> = { ...fresh };
       for (const field of LISTING_HAND_WRITTEN_FIELDS)
         merged[field] = own[field];
       return merged as unknown as UpstreamListing;
     })
-    .sort(byRepoThenNumber);
+    .sort(byPageOrder);
 }
 
 function isUpstreamFilings(value: unknown): value is UpstreamFilings {
@@ -226,7 +376,12 @@ function isUpstreamFilings(value: unknown): value is UpstreamFilings {
     typeof value === "object" &&
     value !== null &&
     typeof (value as UpstreamFilings).checked === "string" &&
-    Array.isArray((value as UpstreamFilings).filings)
+    Array.isArray((value as UpstreamFilings).filings) &&
+    // A live file written before the trackers were named holds GitHub entries without a
+    // `tracker`; it is ignored and the committed file stands.
+    (value as UpstreamFilings).filings.every((f) =>
+      (TRACKERS as readonly string[]).includes(f?.tracker),
+    )
   );
 }
 
@@ -239,13 +394,15 @@ function isUpstreamFilings(value: unknown): value is UpstreamFilings {
 // from `lib/mdx-jsx.ts` — which the `.md`, `llms-full.txt` and retrieval-chunk pipeline runs
 // outside Vite — dies on `glob is not a function`. Outside Vite it takes the committed snapshot,
 // which is the same fallback a missing live file already gets, and the one `upstream check` gates.
+// The guard reads `import.meta.env`, which Vite replaces at build; `typeof import.meta.glob`
+// would stay in the built code and be false there (`lib/import-meta-glob-guard.test.ts`).
 const liveModules = (
-  typeof import.meta.glob === "function"
-    ? import.meta.glob("../generated/upstream-filings.live.json", {
+  import.meta.env === undefined
+    ? {}
+    : import.meta.glob("../generated/upstream-filings.live.json", {
         eager: true,
         import: "default",
       })
-    : {}
 ) as Record<string, unknown>;
 const liveData = Object.values(liveModules)[0];
 
@@ -269,14 +426,14 @@ export const checked: string = upstreamFilings.checked;
 export const listings: readonly UpstreamListing[] =
   upstreamFilings.listings ?? [];
 
-/** Every distinct repository a filing names, in first-seen (JSON) order. */
-export const filingRepos: readonly string[] = [
-  ...new Set(filings.map((f) => f.repo)),
+/** Every distinct heading a filing sits under, in first-seen (JSON) order. */
+export const filingGroups: readonly FilingGroup[] = [
+  ...new Map(filings.map((f) => [filingGroup(f).id, filingGroup(f)])).values(),
 ];
 
-/** Filings for one repository, in the order the JSON lists them (repo, then number). */
-export function filingsForRepo(repo: string): readonly UpstreamFiling[] {
-  return filings.filter((f) => f.repo === repo);
+/** Filings under one heading, in the order the JSON lists them. */
+export function filingsForGroup(id: string): readonly UpstreamFiling[] {
+  return filings.filter((f) => filingGroup(f).id === id);
 }
 
 export interface CountRow {
@@ -284,18 +441,20 @@ export interface CountRow {
   count: number;
 }
 
-/** How many filings name each repository. */
-export const filingsByRepo: readonly CountRow[] = filingRepos.map((repo) => ({
-  label: repo,
-  count: filingsForRepo(repo).length,
+/** How many filings sit under each heading. */
+export const filingsByRepo: readonly CountRow[] = filingGroups.map((g) => ({
+  label: g.id,
+  count: filingsForGroup(g.id).length,
 }));
 
-/** How many filings are a PR versus an issue. */
+/** How many filings are a GitHub PR versus a GitHub issue; other trackers have issues only. */
 export const filingsByKind: readonly CountRow[] = (
   ["pr", "issue"] as const
 ).map((kind) => ({
   label: kind,
-  count: filings.filter((f) => f.kind === kind).length,
+  count: filings.filter(
+    (f) => (f.tracker === "github" ? f.kind : "issue") === kind,
+  ).length,
 }));
 
 /** How many filings are open versus closed. */
@@ -308,7 +467,7 @@ export const filingsByState: readonly CountRow[] = (
 
 /** Filings with at least one comment from someone other than the author. */
 export const filingsWithMaintainerResponse: number = filings.filter(
-  (f) => f.maintainerComments > 0,
+  (f) => (f.maintainerComments ?? 0) > 0,
 ).length;
 
 /** Every distinct non-null `gmtGuard` a filing names — the GMT canary groups
@@ -344,5 +503,5 @@ export const contributions: number = filings.filter((f) => !isOurs(f)).length;
 /** Our own pull requests — the filings that carry a ready-to-merge patch. A maintainer's PR we
  * only commented on is not one of these, which is why the page cannot count `kind === "pr"`. */
 export const filedPrs: number = filings.filter(
-  (f) => isOurs(f) && f.kind === "pr",
+  (f) => isOurs(f) && f.tracker === "github" && f.kind === "pr",
 ).length;

@@ -896,8 +896,8 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   The figure tiles under the intro are `WhyGmtFigures.astro`, from the list in
   `src/lib/why-gmt-figures.ts` that `mdx-jsx.ts` also renders for the text surfaces.
 - **The sidebar puts first use first, and `src/lib/section-order.ts` is the one place that sets
-  it.** A leaf module with no imports exports `START_HERE` (install, core-rules, why-gmt) and
-  `MIGRATE` (the overview, `compare`, `bundle-size`, `upstream`, one page per library, then
+  it.** A leaf module with no imports exports `START_HERE` (install, core-rules, why-gmt, upstream, pulse, in that order) and
+  `MIGRATE` (the overview, `compare`, `bundle-size`, `native-engines`, one page per library, then
   `compare/behaviour`, each with its short sidebar label). `astro.config.mjs`, and so Starlight's
   prev/next links, `llms.txt`, `llms-full.txt` and `topLevelPages` all import it; a test fails if
   the config writes the entries out again. The groups run Start here, Guides, API Reference,
@@ -984,6 +984,42 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   site knows (`tc39/proposal-temporal`, `js-temporal/temporal-polyfill`), never inside a URL or
   after a word character, so `and/or#1` and `…/issues/3292#3` stay text. The component has no
   `<style>` block; its rules are in `gmt-content-tables.css`.
+- **`/pulse/` lists every scheduled check.** `scripts/lib/pulse.mjs` holds the one hand-written list
+  (what each check watches, what a finding does, and what retires it: permanent, a set of
+  workarounds, or a condition). `apps/dox/scripts/build-pulse.mjs` reads each workflow and writes
+  `generated/pulse.json`, and fails on drift (`pnpm pulse:check`, in CI Story consistency): a
+  scheduled workflow with no entry, a missing `Pulse check:` line, an unclaimed workaround, or a
+  stale `context/canary/overview.md` table (`pnpm pulse:sync` writes it). Run history is read at
+  build only, best effort, from `gh api` with a 6 h cache (`generated/pulse-runs.live.json`); the
+  browser never calls GitHub. `src/lib/pulse-view.ts` turns a cron and the runs into words and a
+  pattern per run (Passed, Failed, Did not finish, No run); a missing or old history is the amber
+  NO SIGNAL state. The page is Astro shells over `widgets/families/pulse/pulse-template.ts`;
+  `src/lib/pulse-mount.ts` fills only the reserved next-run and read-ago slots after first paint,
+  on `visibilitychange` with no timer. It is a page, so it has no chat pill.
+  - **Rules the view applies.** `cadenceText` accepts a fixed minute and hour with day-of-week `*`
+    or one weekday and throws on anything else ("Every Monday at 06:17 UTC"); the page says once
+    that GitHub may start a scheduled run hours late. `beats` takes the last 8 expected times from
+    `cronRuns` and gives each run to the expected time it starts after. A missing history, or one
+    more than 8 days older than the mount's now, shows NO SIGNAL. Results are words with a pattern,
+    never green or red.
+  - **Time is gmt's.** Build-time components import `parseCronExpression`, `cronRuns` and the
+    formatters from the `@northguild/gmt` root; the browser dynamic-imports `utc/get`,
+    `recurrence/parse`, `recurrence/calculate` and `utc/format` after first paint, through a
+    `deps.now` seam. No `Date`, `performance` or `Intl`.
+  - **Check list.** A check's `life` is `permanent`, `workarounds` (group ids that must exist in
+    `WORKAROUNDS`) or `condition` (`until`, plus `waitsOn` filing keys). Each source file carries a
+    `# Pulse check: <id>` line (`// Pulse check:` in a test) and no other retirement prose.
+  - **Card.** A full bevelled border (`corner-shape: bevel`) with one width on every side, an
+    opaque plate and a bottom accent; amber only for NO SIGNAL; one slow dot per card beside the
+    next-run value, static under reduced motion. `apps/dox/src/lib/bevel-border-widths.test.ts`
+    fails any bevelled box whose border sides differ in width, because Chromium paints the thick
+    side's colour along part of the opposite edge; the extra thickness is an inset `box-shadow`.
+- **Upstream filings live on four trackers.** `apps/dox/src/data/upstream-filings.json` entries carry
+  a `tracker` (`github`, `jira`, `chromium`, `bugzilla`) and that tracker's own identity fields.
+  `scripts/lib/upstream-trackers.mjs` holds the pure readers (name an entry, its page, what to ask,
+  how to read the answer) and `scripts/upstream.mjs` syncs them (`pnpm upstream:sync`); a reader that
+  does not recognise a response throws, and the caller keeps the last known state and warns. Pages
+  name a filing only through `filingKey`, `filingRef`, `filingGroup` and `UpstreamFilingRefs.astro`.
 - **An /upstream/ filing card reads like a row on GitHub.** `src/lib/upstream-badges.ts` works
   every badge out of the filing's own fields (`kind`, `state`, `draft`, `mergedAt`,
   `reviewDecision`, `gmtGuard`, `gmtNote`), with no hand-kept status. The head is a state icon, the

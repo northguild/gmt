@@ -16,7 +16,7 @@ import { diffUtc } from "../utc";
  * when the duration's own month count is one short of the truth, which is exactly when adding a month
  * constrains the day — a start on the 29th, 30th or 31st.
  *
- * Upstream: tc39/proposal-temporal#3168, fixed by #3172 (`5dd0b0d97ee1`, merged 2025-11-19), which
+ * Upstream: tc39/proposal-temporal#3168, fixed by #3172 (`17e12be0af42`, merged 2025-11-19), which
  * `@js-temporal/polyfill` has not ported on 0.5.1 or `main`. GMT carries the spec algorithm itself
  * (compat defect D11) until a release does.
  *

@@ -2,6 +2,8 @@ import { getTimeZoneOffset } from "@northguild/gmt/zoned/get";
 import { PROBE_INSTANT, PROBE_ZONES } from "./canada-clock-change";
 import { MOROCCO_FACTS, MOROCCO_PROBE } from "./morocco-clock-change";
 
+// Pulse check: runtime-tz
+
 /**
  * A canary for the machine running the tests. The page states what tzdb 2026e gives for each
  * probe zone; a runtime with older time zone data gives another offset, and the Canada checker's

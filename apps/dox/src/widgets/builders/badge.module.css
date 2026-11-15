@@ -7,7 +7,7 @@
   box-sizing: border-box;
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--gmt-badge-edge);
-  border-radius: var(--gmt-radius-sm);
+  border-radius: var(--gmt-bevel-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
   color: var(--gmt-badge-ink);
@@ -76,21 +76,24 @@
   }
 }
 
-/* A solid state pill, as GitHub draws Open, Merged and Closed: the tone fills the whole badge and
-   the page's void colour is the ink, so the word and icon stay readable on it. The fill is the
-   tone's `-ink` token, which is dark enough on the light page and light enough on the dark one for
-   the void ink to hold 4.5:1 either way. It is larger than the outline chips around it. */
+/* A solid state chip, as GitHub draws Open, Merged and Closed: the same bevelled box as the
+   outline chips beside it, filled with its tone, with the page's void colour as the ink. A
+   cyan chip is the selected one, filled ice as `--gmt-selected-fill`. Each fill is the tone's
+   `-ink` token, dark enough on the light page and light enough on the dark one for the void ink
+   to hold 4.5:1 either way. */
 .fill {
-  --gmt-badge-solid: var(--gmt-ice-dim);
+  --gmt-badge-solid: var(--gmt-ice);
 
-  padding: 0.25rem 0.75rem;
-  border-color: transparent;
-  border-radius: 999px;
-  corner-shape: round;
+  border-color: var(--gmt-badge-solid);
   background: var(--gmt-badge-solid);
   color: var(--gmt-void);
-  font-size: var(--gmt-text-sm);
   font-weight: 600;
+
+  &[data-tone="cyan"] {
+    --gmt-badge-solid: var(--gmt-selected-fill);
+
+    color: var(--gmt-selected-ink);
+  }
 
   &[data-tone="spring"] {
     --gmt-badge-solid: var(--gmt-spring-ink);
@@ -98,5 +101,9 @@
 
   &[data-tone="purple"] {
     --gmt-badge-solid: var(--gmt-purple-ink);
+  }
+
+  &[data-tone="danger"] {
+    --gmt-badge-solid: var(--gmt-danger-ink);
   }
 }

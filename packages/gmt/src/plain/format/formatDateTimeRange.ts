@@ -1,3 +1,4 @@
+import { formatRangeRepaired } from "../../internal/rangeFields";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
@@ -62,15 +63,14 @@ export function formatDateTimeRange(
     // Intl.DateTimeFormat raises for invalid ones.
     const read = readDateTimeFormatOptions(options);
     checkFormatterArguments("DateTimeFormat", locale, read);
-    const out = cachedFormatter(
-      "DateTimeFormat",
-      locale,
-      plainDateTimeFormatOptions(read),
-    ).formatRange(
+    const formatOptions = plainDateTimeFormatOptions(read);
+    const out = formatRangeRepaired(
+      cachedFormatter("DateTimeFormat", locale, formatOptions),
+      formatOptions,
       startParsed.toZonedDateTime("UTC").epochMilliseconds,
       endParsed.toZonedDateTime("UTC").epochMilliseconds,
     );
-    return normalizeDateTime(out);
+    return out === null ? "" : normalizeDateTime(out);
   } catch {
     return "";
   }

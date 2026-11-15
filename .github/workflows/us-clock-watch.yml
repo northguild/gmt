@@ -1,5 +1,7 @@
 name: US clock-change watch
 
+# Pulse check: us-clock-watch
+#
 # Compares three sources with the snapshot: the Congress.gov API, with a GovInfo title search, and
 # the Open States API for bills on the clock-change subject (new, or a changed latest action), and
 # the IANA tz database for any change to the rules of a zone in apps/dox/src/lib/us-region-zones.json.
@@ -17,10 +19,6 @@ name: US clock-change watch
 # issue and changes no comparison or exit code. Issues are filed only from main: a run on another
 # branch lists what it would have filed in the job summary and files nothing, and its carried
 # snapshot is never read.
-#
-# Retirement (context/domination/issues/CORE-90.md, Decisions): the tz part when the US clock-change
-# checker (CORE-90 phase 2) ships; the federal and state parts when the Proposals view's data is
-# removed or replaced.
 
 on:
   workflow_dispatch:
@@ -31,7 +29,6 @@ on:
         required: false
         default: false
   schedule:
-    # Mondays 07:17 UTC
     - cron: "17 7 * * 1"
 
 concurrency:

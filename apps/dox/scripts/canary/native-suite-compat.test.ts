@@ -333,13 +333,17 @@ describe("runBrowserCompat with a fake browser", () => {
     expect(verdict.counts).toEqual({
       workarounds: WORKAROUNDS.length,
       stillNeeded: 0,
-      removable: WORKAROUNDS.length - 2,
+      removable: WORKAROUNDS.length - 3,
       guard: 1,
-      outOfScope: 1,
+      outOfScope: 2,
     });
     expect(verdict.workarounds.find((w) => w.id === "D17")).toMatchObject({
       state: "out-of-scope",
       engines: ["firefox"],
+    });
+    expect(verdict.workarounds.find((w) => w.id === "D23")).toMatchObject({
+      state: "out-of-scope",
+      engines: ["v8"],
     });
     expect(verdict.workarounds.find((w) => w.id === "D19")).toMatchObject({
       state: "removable",

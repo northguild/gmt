@@ -213,4 +213,26 @@ describe("formatDateRange with an option that is an object", () => {
     } as never);
     expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
+
+  // D25: before 1873-01-01 the japanese calendar uses the Gregorian eras (Intl era/monthCode
+  // Table 2), so the range reads as the `-u-ca-gregory` twin does: a range keeps the era name
+  // at the era width (long and short 西暦, narrow AD), written once for the shared era.
+  it.each`
+    era         | expected
+    ${"long"}   | ${"西暦1700/07/10～1700/07/12"}
+    ${"short"}  | ${"西暦1700/07/10～1700/07/12"}
+    ${"narrow"} | ${"AD1700/07/10～1700/07/12"}
+  `(
+    "prints the Gregorian era at width $era in a ja japanese range before 1873: $expected",
+    ({ era, expected }) => {
+      expect(
+        formatDateRange("1700-07-10", "1700-07-12", "ja-u-ca-japanese", {
+          era,
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        } as Intl.DateTimeFormatOptions),
+      ).toBe(expected);
+    },
+  );
 });

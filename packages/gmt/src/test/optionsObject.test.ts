@@ -17,6 +17,23 @@
  *   exception both engines make: `"null"` is a well-formed subtag, so it is accepted and ignored.
  */
 import { deepEqual } from "./deepEqual";
+
+// This file asks whether an option given as an object is read like the same option given plainly,
+// over thousands of distinct option sets. The range year check (D24) is a pure function of the
+// formatter, so it answers the same for the wrapped and the plain call; it costs a few milliseconds
+// per new formatter, which these thousands of formatters would turn into over 30 s. The range
+// functions here call the engine's own `formatRange`, and weekYearRange.test.ts and
+// weekYearRangeText.test.ts hold the repair itself.
+vi.mock("../internal/weekYearRange", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../internal/weekYearRange")>()),
+  formatRangeChecked: (
+    formatter: Intl.DateTimeFormat,
+    _options: Intl.DateTimeFormatOptions,
+    startMs: number,
+    endMs: number,
+  ) => formatter.formatRange(startMs, endMs),
+}));
+
 import {
   formatCalendar,
   formatCalendarUnix,

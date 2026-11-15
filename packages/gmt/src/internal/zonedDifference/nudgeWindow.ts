@@ -41,7 +41,7 @@ import type {
  *      and a `relativeTo` on the 29th, 30th or 31st. The operation then takes the spec path in `./operations.ts`,
  *      the same `nudgeToCalendarUnit` the non-ISO calendars already use.
  *    - Retired by: a js-temporal release containing a port of proposal-temporal #3172
- *      (`5dd0b0d97ee1`, merged 2025-11-19), which is the fix for tc39/proposal-temporal#3168. The
+ *      (`17e12be0af42`, merged 2025-11-19), which is the fix for tc39/proposal-temporal#3168. The
  *      port is on js-temporal `main` as `5af905fc1fa`, in no release yet.
  *    - Removal: delete this file and its calls in `../zonedWallClockDifference.ts` (the
  *      `monthTotalBySpec` and `monthRoundBySpec` operands in `durationTotal` and `durationRound`, the

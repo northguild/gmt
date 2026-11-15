@@ -1,0 +1,37 @@
+---
+/**
+ * `/pulse/`: every scheduled check, what it watches, when it runs, its recent runs and what
+ * retires it. The markup is built in `widgets/families/pulse/pulse-template.ts`; the script below
+ * fills three reserved slots after first paint (`lib/pulse-mount.ts`).
+ */
+import { renderAreas, renderRead, renderRetire } from "../../widgets/families/pulse/pulse-template";
+import PulseSummary from "./PulseSummary.astro";
+
+const areas = renderAreas().value;
+const read = renderRead().value;
+const retire = renderRetire().value;
+---
+
+<div data-pulse-root data-tools-fullbleed>
+  <PulseSummary />
+  <Fragment set:html={read} />
+  <p>GitHub may start a scheduled run hours late, so a run can sit well after its time.</p>
+  <Fragment set:html={areas} />
+  <h2 id="how-a-check-retires">How a check retires</h2>
+  <p>
+    A check watches until the fix it waits for ships upstream. Then its workaround is removed, and
+    the check goes with it.
+  </p>
+  <Fragment set:html={retire} />
+</div>
+
+<script>
+  import { mountPulse } from "../../lib/pulse-mount";
+  import { showUnavailable } from "../../lib/widget-mount";
+
+  if (typeof window !== "undefined") {
+    document.querySelectorAll<HTMLElement>("[data-pulse-root]").forEach((el) => {
+      mountPulse(el, new AbortController().signal).catch((error) => showUnavailable(el, error));
+    });
+  }
+</script>

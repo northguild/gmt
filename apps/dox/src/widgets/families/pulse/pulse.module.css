@@ -1,0 +1,207 @@
+/* Pulse: the cards of /pulse/. Every card has one even bevelled border, never a left edge. The only motion is the dot beside the next run: opacity and transform in a fixed
+   box, and none under reduced motion. A value filled after first paint sits in a slot that holds
+   the room of its longest text, so nothing around it moves (invariant 14). */
+
+.read,
+.blurb,
+.cadence,
+.text,
+.lifeLine,
+.caption,
+.more {
+  margin: 0;
+  font-size: var(--gmt-text-base);
+  color: var(--gmt-ice-dim);
+}
+
+.read {
+  margin-block: var(--gmt-space-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.blurb {
+  margin-block-end: var(--gmt-space-4);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--gmt-space-4);
+  align-items: start;
+}
+
+/* The grid gap and the card gap space everything; Starlight's sibling margin would push every
+   card but the first down a row. */
+.cards > *,
+.card > *,
+.check > * {
+  margin-block: 0;
+}
+
+.card {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-4);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  align-items: baseline;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--gmt-text-xl);
+  color: var(--gmt-ice);
+}
+
+.file {
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+}
+
+.next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  font-size: var(--gmt-text-base);
+  color: var(--gmt-ice-dim);
+}
+
+.nextLabel {
+  margin-inline-end: auto;
+}
+
+/* The dot has a fixed box and stays hidden until the mount has a next run. */
+.dot {
+  flex: none;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border-radius: 50%;
+  background: var(--gmt-spring-ink);
+  opacity: 0;
+}
+
+[data-pulse-ready] .dot {
+  opacity: 1;
+  animation: pulse var(--gmt-motion-sonar-loop-duration) var(--gmt-easing)
+    infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-pulse-ready] .dot {
+    animation: none;
+  }
+}
+
+/* A filled value: the visible text and every wider text it may show share one grid cell. */
+.slot {
+  display: inline-grid;
+  justify-items: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--gmt-spring-ink);
+}
+
+.shown,
+.ghost {
+  grid-area: 1 / 1;
+}
+
+.ghost {
+  visibility: hidden;
+}
+
+.read .slot {
+  color: inherit;
+}
+
+/* The strip: a fixed box, so a stale read swaps its content and not its height. */
+.strip {
+  --gmt-timeline-label-w: 6rem;
+  --gmt-timeline-h: 1.25rem;
+
+  display: grid;
+  min-block-size: 3.25rem;
+  align-content: center;
+  padding: var(--gmt-space-2);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+.beats {
+  display: grid;
+  gap: var(--gmt-space-1);
+}
+
+.signal {
+  margin: 0;
+  padding: var(--gmt-space-2);
+  text-align: center;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-base);
+  color: var(--gmt-signal-ink);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+}
+
+.checks {
+  display: grid;
+  gap: var(--gmt-space-4);
+}
+
+.check {
+  display: grid;
+  gap: var(--gmt-space-2);
+  padding-block-start: var(--gmt-space-3);
+  border-block-start: 1px solid var(--gmt-hairline);
+}
+
+.checkName {
+  margin: 0;
+  font-size: var(--gmt-text-lg);
+  color: var(--gmt-ice);
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.more a {
+  display: inline-block;
+  min-block-size: var(--gmt-target-min);
+  line-height: var(--gmt-target-min);
+}

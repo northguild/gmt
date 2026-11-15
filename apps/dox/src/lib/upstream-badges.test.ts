@@ -7,6 +7,7 @@ import {
   stateNote,
   workBadge,
 } from "./upstream-badges";
+import type { UpstreamFiling } from "../data/upstream-filings";
 
 describe("stateBadge", () => {
   it.each`
@@ -20,7 +21,16 @@ describe("stateBadge", () => {
   `(
     "$kind $state draft=$draft merged=$mergedAt is $text",
     ({ kind, state, draft, mergedAt, text, tone, icon }) => {
-      expect(stateBadge({ kind, state, draft, mergedAt })).toEqual({
+      expect(
+        stateBadge({
+          tracker: "github",
+          kind,
+          state,
+          draft,
+          mergedAt,
+          reviewDecision: null,
+        }),
+      ).toEqual({
         text,
         tone,
         icon,
@@ -31,6 +41,7 @@ describe("stateBadge", () => {
 
 describe("a listing that is an issue", () => {
   const issue = {
+    tracker: "github",
     kind: "issue",
     state: "open",
     draft: false,
@@ -50,10 +61,48 @@ describe("a listing that is an issue", () => {
 
 describe("stateNote", () => {
   it("keeps what 'Merged' alone loses", () => {
-    expect(stateNote({ mergedAt: "2026-05-01" })).toBe(
+    const github = (mergedAt: string | null) =>
+      ({ tracker: "github", mergedAt }) as UpstreamFiling;
+    expect(stateNote(github("2026-05-01"))).toBe(
       "Merged, not yet in a published release",
     );
-    expect(stateNote({ mergedAt: null })).toBeNull();
+    expect(stateNote(github(null))).toBeNull();
+  });
+
+  it("gives a Jira or Bugzilla filing the tracker's own words", () => {
+    const jira = {
+      tracker: "jira",
+      status: "Done",
+      resolution: "Fixed",
+      fixVersions: ["79.1"],
+    } as unknown as UpstreamFiling;
+    expect(stateNote(jira)).toBe(
+      "Status Done, resolution Fixed, fix version 79.1",
+    );
+    const open = {
+      tracker: "bugzilla",
+      status: "UNCONFIRMED",
+      resolution: null,
+    } as UpstreamFiling;
+    expect(stateNote(open)).toBe("Status UNCONFIRMED");
+  });
+
+  it("has nothing to add for a Chromium filing", () => {
+    expect(stateNote({ tracker: "chromium" } as UpstreamFiling)).toBeNull();
+  });
+});
+
+describe("a filing on another tracker", () => {
+  it("reads as an issue with no review chip", () => {
+    for (const tracker of ["jira", "chromium", "bugzilla"] as const) {
+      const f = { tracker, state: "closed", closedAt: "2026-11-20" } as const;
+      expect(stateBadge(f)).toEqual({
+        text: "Closed",
+        tone: "purple",
+        icon: "issue-closed",
+      });
+      expect(reviewBadge(f)).toBeNull();
+    }
   });
 });
 
@@ -72,9 +121,16 @@ describe("reviewBadge", () => {
   `(
     "$kind $state draft=$draft $reviewDecision shows $text",
     ({ kind, state, draft, reviewDecision, text }) => {
-      expect(reviewBadge({ kind, state, draft, reviewDecision })?.text).toBe(
-        text,
-      );
+      expect(
+        reviewBadge({
+          tracker: "github",
+          kind,
+          state,
+          draft,
+          mergedAt: null,
+          reviewDecision,
+        })?.text,
+      ).toBe(text);
     },
   );
 });

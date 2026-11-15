@@ -183,7 +183,9 @@
   }
 }
 
-/* The number badge over a stem: the leg's series on its bottom edge, the digit in the primary ink. */
+/* The number badge over a stem: the leg's series on its bottom edge, the digit in the primary ink.
+   The edge is the 1px border plus 2px of inset shadow, with the 2px in the padding: unequal
+   border widths on a bevelled box misdraw the opposite edge. */
 .badge {
   position: absolute;
   inset-block-start: 0;
@@ -194,11 +196,13 @@
   box-sizing: border-box;
   inline-size: 24px;
   block-size: calc(var(--badge-h) - 0.3rem);
+  padding-block-end: 2px;
   border: 1px solid var(--gmt-border-strong);
-  border-block-end: 3px solid var(--series);
+  border-block-end-color: var(--series);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);
+  box-shadow: inset 0 -2px 0 var(--series);
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   line-height: 1;

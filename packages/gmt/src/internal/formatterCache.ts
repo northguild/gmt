@@ -1,5 +1,9 @@
+import { plainOptionEntries } from "./plainOptionEntries";
 import { canonicalLocaleTags } from "./resolveLocale";
-import { isIntlOptionValue } from "./typedOptions";
+import { isIslamicCalendarResolutionCompatNeeded } from "./temporalCompat/capabilities";
+import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
+import { repairEraYearNumerals } from "./japaneseNumerals";
+import { repairYearPrinting, widenRelatedYear } from "./yearPrinting";
 
 /** The `Intl` formatter classes this module builds. */
 type FormatterKind =
@@ -32,17 +36,117 @@ function forgetIfReplaced(kind: FormatterKind): void {
   }
 }
 
+/** The options to build with: widened (D28) when the formatter's calendar is chinese or dangi. */
+function widened(
+  native: Intl.DateTimeFormat,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormatOptions {
+  try {
+    return widenRelatedYear(options, native.resolvedOptions().calendar);
+  } catch {
+    return options;
+  }
+}
+
+/**
+ * A date formatter with the week-year guard (D23, D24) and no year repair (D25 to D27, but for the era-year numerals under the guard): its parts
+ * are the engine's own, as a caller that reads the engine's era needs them (D18, `islamicEra.ts`).
+ * Not cached; the caller keeps it.
+ *
+ * @param locale BCP 47 locale
+ * @param options the formatter's options, built by GMT code
+ * @returns the guarded formatter
+ *
+ * @example guardedDateTimeFormat("en-u-ca-islamic-civil", { era: "short", timeZone: "UTC" }).formatToParts(0) // the engine's parts
+ */
+export function guardedDateTimeFormat(
+  locale: FormatterLocale,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const native = new Intl.DateTimeFormat(locale, options);
+  // CORE-112 D28: a chinese or dangi `year: "2-digit"` is built as `"numeric"` where the engine
+  // pads the related year.
+  const built = options.year === "2-digit" ? widened(native, options) : options;
+  // CORE-112 D27: a `ja` japanese era year is written in the numbering system under the guard, so
+  // the guard reads the same digits in every field.
+  return guardDateTimeFormat(
+    repairEraYearNumerals(
+      built === options ? native : new Intl.DateTimeFormat(locale, built),
+      built,
+    ),
+    built,
+  );
+}
+
+/**
+ * The locale tag as D30 needs it: a `ca` keyword of `islamic` becomes `islamic-tbla`, and one of
+ * `islamic-rgsa` is taken out (with its `-u` when it was the last keyword). Other keywords stay.
+ */
+function islamicTag(tag: string): string {
+  // Most tags name no islamic calendar: no `Intl.Locale` is built for them.
+  if (!/islamic/i.test(tag)) {
+    return tag;
+  }
+  try {
+    const { calendar } = new Intl.Locale(tag);
+    if (calendar === "islamic") {
+      return new Intl.Locale(tag, { calendar: "islamic-tbla" }).toString();
+    }
+    if (calendar === "islamic-rgsa") {
+      return tag
+        .replace(/-ca-islamic-rgsa(?![\da-z])/i, "")
+        .replace(/-u(?=$|-[\da-wyz]-|-x-)/i, "");
+    }
+  } catch {
+    // A tag `Intl.Locale` cannot read is left for the constructor to reject.
+  }
+  return tag;
+}
+
+/**
+ * The locales and options a date formatter is built with, after D30: `islamic` becomes
+ * `islamic-tbla` and `islamic-rgsa` is dropped, where the engine resolves either one (Intl
+ * era/monthCode CreateDateTimeFormat; tc39/proposal-intl-era-monthcode#99).
+ */
+function islamicResolved(
+  locale: FormatterLocale,
+  options: Intl.DateTimeFormatOptions,
+): [FormatterLocale, Intl.DateTimeFormatOptions] {
+  if (!isIslamicCalendarResolutionCompatNeeded()) {
+    return [locale, options];
+  }
+  let nextOptions = options;
+  if (options.calendar === "islamic") {
+    nextOptions = { ...options, calendar: "islamic-tbla" };
+  } else if (options.calendar === "islamic-rgsa") {
+    nextOptions = { ...options };
+    delete nextOptions.calendar;
+  }
+  const rebuilt = Array.isArray(locale)
+    ? locale.map(islamicTag)
+    : typeof locale === "string"
+      ? islamicTag(locale)
+      : locale;
+  return [rebuilt, nextOptions];
+}
+
 function construct(
   kind: FormatterKind,
   locale: FormatterLocale,
   options: object,
 ): object {
   switch (kind) {
-    case "DateTimeFormat":
-      return new Intl.DateTimeFormat(
+    case "DateTimeFormat": {
+      const [built, builtOptions] = islamicResolved(
         locale,
         options as Intl.DateTimeFormatOptions,
       );
+      return repairYearPrinting(
+        guardedDateTimeFormat(built, builtOptions),
+        builtOptions,
+        (twin) => cachedFormatter("DateTimeFormat", built, twin),
+      );
+    }
     case "NumberFormat":
       return new Intl.NumberFormat(locale, options as Intl.NumberFormatOptions);
     case "ListFormat":
@@ -63,36 +167,6 @@ function isCacheableLocale(locale: FormatterLocale): boolean {
   return (
     typeof locale === "string" || (Array.isArray(locale) && locale.length > 0)
   );
-}
-
-/**
- * The own enumerable options as `[name, value]` pairs, read through property descriptors so a
- * getter is never run, or `null` when one is an accessor or a number `JSON` cannot key (not
- * finite). A value of a type the option is not declared with (a boxed string, an object, a
- * string for `hour12`, a string for a digit count) throws `TypeError`, which each caller turns
- * into its sentinel: `Intl` would convert it. An `undefined` value is skipped, as `Intl` reads it
- * as absent.
- */
-function plainOptionEntries(options: object): [string, unknown][] | null {
-  const entries: [string, unknown][] = [];
-  for (const name of Object.keys(options)) {
-    const descriptor = Object.getOwnPropertyDescriptor(options, name);
-    if (descriptor === undefined || !("value" in descriptor)) {
-      return null;
-    }
-    const value: unknown = descriptor.value;
-    if (value === undefined) {
-      continue;
-    }
-    if (!isIntlOptionValue(name, value)) {
-      throw new TypeError(`option ${name} has the wrong type`);
-    }
-    if (typeof value === "number" && !Number.isFinite(value)) {
-      return null;
-    }
-    entries.push([name, value]);
-  }
-  return entries;
 }
 
 /** Whether these entries carry a `timeZone` string. */
@@ -230,4 +304,5 @@ export function clearFormatterCache(): void {
   formatters.clear();
   checked.clear();
   builtWith.clear();
+  forgetWeekYearVerdicts();
 }

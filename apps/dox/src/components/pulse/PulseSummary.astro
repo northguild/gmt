@@ -1,0 +1,7 @@
+---
+/** The four readouts above the cards. The markup is built in `widgets/families/pulse/pulse-template.ts`. */
+import { renderSummary } from "../../widgets/families/pulse/pulse-template";
+const out = renderSummary().value;
+---
+
+<Fragment set:html={out} />

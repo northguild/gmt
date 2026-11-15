@@ -70,6 +70,11 @@ export const CHECKS = [
     needs: ["build:gmt"],
   },
   {
+    id: "pulse",
+    run: "node apps/dox/scripts/build-pulse.mjs --check",
+    needs: [],
+  },
+  {
     id: "api-surface",
     run: "node scripts/api-surface.mjs check",
     needs: ["build:gmt", "dox-pages"],
@@ -331,7 +336,7 @@ export const RULES = [
   },
   {
     test: /^apps\/dox\/src\/data\//,
-    checks: [...DOX_APP, "stats", "compat", "upstream"],
+    checks: [...DOX_APP, "stats", "compat", "upstream", "pulse"],
   },
   {
     test: /^apps\/dox\/src\/generated\//,
@@ -366,7 +371,7 @@ export const RULES = [
   },
   { test: /^scripts\/stats\.mjs$/, checks: ["stats", ...SCRIPT_TESTS] },
   {
-    test: /^scripts\/upstream\.mjs$/,
+    test: /^scripts\/(?:upstream\.mjs|lib\/upstream-trackers\.mjs)$/,
     checks: [
       "upstream",
       "build:dox",
@@ -374,6 +379,11 @@ export const RULES = [
       "typecheck:dox",
       ...SCRIPT_TESTS,
     ],
+  },
+  {
+    // The checks list, its builder, the workflows it names and the canary overview it writes.
+    test: /^(?:scripts\/lib\/pulse\.mjs|apps\/dox\/scripts\/build-pulse\.mjs|\.github\/workflows\/[^/]+\.yml|context\/canary\/overview\.md)$/,
+    checks: ["pulse", ...SCRIPT_TESTS],
   },
   {
     test: /^scripts\/temporal-compat(?:\.mjs$|\/)/,

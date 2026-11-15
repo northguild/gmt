@@ -1,0 +1,10 @@
+---
+/** Watching, Fixed upstream, Retired, for one check. The markup is built in `widgets/families/pulse/pulse-template.ts`. */
+import { checkById } from "../../data/pulse";
+import { renderLife } from "../../widgets/families/pulse/pulse-template";
+interface Props { id: string }
+const check = checkById(Astro.props.id);
+const out = renderLife(check.life).value;
+---
+
+<Fragment set:html={out} />

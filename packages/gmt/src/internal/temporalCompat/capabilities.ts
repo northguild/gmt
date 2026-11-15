@@ -1,3 +1,5 @@
+import { Temporal } from "../temporal";
+import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 import { type DefectId, type ProbeRepro, probeRepros } from "./probeRepros";
 
 /*
@@ -225,5 +227,174 @@ export function isCalendarArithmeticCompatNeeded(calendarId: string): boolean {
   return (
     calendarId !== "iso8601" &&
     ARITHMETIC_DEFECTS.some((defect) => isDefectPresent(defect, calendarId))
+  );
+}
+
+const engineProbeCache = new Map<string, boolean>();
+
+/** `Intl.DateTimeFormat` text for a UTC date given as year, month and day (any year, 0 to 99 too). */
+function textAt(
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  date: readonly [number, number, number],
+): string {
+  const time = Temporal.PlainDate.from({
+    year: date[0],
+    month: date[1],
+    day: date[2],
+  }).toZonedDateTime("UTC").epochMilliseconds;
+  return new Intl.DateTimeFormat(locale, {
+    ...options,
+    timeZone: "UTC",
+  }).format(time);
+}
+
+/** One engine probe, answered the first time it is asked and kept: `true` when the engine has the defect. */
+function engineDefect(key: string, fails: () => boolean): boolean {
+  const cached = engineProbeCache.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  let present: boolean;
+  try {
+    present = fails();
+  } catch {
+    // An engine that cannot run the probe cannot print the calendar either: nothing to repair.
+    present = false;
+  }
+  engineProbeCache.set(key, present);
+  return present;
+}
+
+/**
+ * True when this runtime's japanese calendar prints a Japanese era for a date the Gregorian
+ * eras cover (defect D25, ICU-23341 and ICU-23619).
+ *
+ * Intl era/monthCode Table 2, as amended by tc39/proposal-intl-era-monthcode#86 (test262
+ * tc39/test262#4877): for dates up to and including 1872-12-31 the japanese calendar uses the
+ * Gregorian eras. ICU 78 prints `-645 Taika` for ISO -0001-07-10 and `5 Meiji` for 1872-12-31. The
+ * probe compares the japanese calendar's era and year with the Gregorian calendar's at both dates.
+ */
+export function isJapaneseEraCompatNeeded(): boolean {
+  return engineDefect("D25", () =>
+    (
+      [
+        [-1, 7, 10],
+        [1872, 12, 31],
+      ] as const
+    ).some(
+      (date) =>
+        textAt("en-u-ca-japanese", { era: "short", year: "numeric" }, date) !==
+        textAt("en-u-ca-gregory", { era: "short", year: "numeric" }, date),
+    ),
+  );
+}
+
+/**
+ * True when this runtime prints a date before the Hijra in the one Islamic era, as a negative year
+ * (defect D26, ICU-23327).
+ *
+ * Intl era/monthCode Table 2 and § 4.1.12 give the `bh` era, and test262
+ * `intl402/DateTimeFormat/prototype/formatToParts/era.js` requires ISO 600 and 2025 to print
+ * different era names. The probe compares the text with its digits and signs taken out.
+ */
+export function isIslamicEraCompatNeeded(): boolean {
+  const eraOf = (date: readonly [number, number, number]): string =>
+    textAt(
+      "en-u-ca-islamic-civil",
+      { era: "short", year: "numeric" },
+      date,
+    ).replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect(
+    "D26",
+    () => eraOf([600, 7, 10]) === eraOf([2025, 7, 10]),
+  );
+}
+
+/**
+ * True when this runtime does not pad a Japanese era year under `year: "2-digit"` (defect D27,
+ * ICU-23620).
+ *
+ * ECMA-402 FormatDateTimePattern, the "2-digit" branch: FormatNumeric with `minimumIntegerDigits:
+ * 2`, so Reiwa 6 is `06`. ICU's `jpanyear` numbering ignores the minimum digit count.
+ */
+export function isJapaneseTwoDigitYearCompatNeeded(): boolean {
+  return engineDefect(
+    "D27",
+    () =>
+      !/\p{Nd}{2}/u.test(
+        textAt("ja-u-ca-japanese", { year: "2-digit" }, [2024, 7, 10]),
+      ),
+  );
+}
+
+/**
+ * True when this runtime pads the related year of the chinese and dangi calendars under `year:
+ * "2-digit"` (defect D28, ICU-23621).
+ *
+ * ECMA-402 FormatDateTimePattern: `relatedYear` is FormatNumeric of the related year at full width,
+ * with no 2-digit form. ICU prints its `rr` field, padded to two digits: `05` for ISO 0005.
+ */
+export function isRelatedYearWidthCompatNeeded(): boolean {
+  return engineDefect(
+    "D28",
+    () =>
+      /\p{Nd}+/u.exec(
+        textAt("en-u-ca-chinese", { year: "2-digit" }, [5, 7, 10]),
+      )?.[0] !== "5",
+  );
+}
+
+/**
+ * True when this runtime resolves `islamic` to a calendar other than `islamic-tbla`, or resolves
+ * `islamic-rgsa` at all (defect D30).
+ *
+ * Intl era/monthCode CreateDateTimeFormat turns a resolved `islamic` into `islamic-tbla`, and since
+ * tc39/proposal-intl-era-monthcode#99 `islamic-rgsa` is not an available calendar, so a
+ * DateTimeFormat ignores it and takes the locale's default (test262
+ * `intl402/DateTimeFormat/constructor-options-calendar-islamic-fallback.js`). ICU keeps both.
+ */
+export function isIslamicCalendarResolutionCompatNeeded(): boolean {
+  const calendarOf = (locale: string): string =>
+    new Intl.DateTimeFormat(locale).resolvedOptions().calendar;
+  return engineDefect(
+    "D30",
+    () =>
+      calendarOf("en-u-ca-islamic") !== "islamic-tbla" ||
+      calendarOf("en-u-ca-islamic-rgsa") === "islamic-rgsa",
+  );
+}
+
+/**
+ * True when this runtime prints a Japanese era year in Latin digits under another numbering
+ * system (defect D27, the numbering part).
+ *
+ * ECMA-402 FormatDateTimePattern: the year is FormatNumeric in the resolved numbering system, so
+ * `ja-u-ca-japanese-nu-arab` prints Reiwa 6 as `令和٦年`. ICU's `jpanyear` numbering ignores `nu`.
+ */
+export function isJapaneseNumberingSystemCompatNeeded(): boolean {
+  return engineDefect("D27nu", () =>
+    /[0-9]/.test(
+      textAt("ja-u-ca-japanese-nu-arab", { year: "numeric" }, [2024, 7, 10]),
+    ),
+  );
+}
+
+/**
+ * True when this runtime prints a range that drops, repeats or garbles a field of one date
+ * (defect D29).
+ *
+ * ECMA-402 PartitionDateTimeRangePattern and UTS #35 Part 4 (Interval Formats): each date's part of
+ * a range holds every field the formatter's single `format` prints for that date. ICU with CLDR
+ * 48 drops the chinese related year, a `B` day period, the end's hebrew month value and more
+ * (`rangeFieldRepros.ts` has one range per upstream defect). The probe asks each of them once and
+ * stays true while any one is broken, so the gate holds until every known cause is fixed.
+ */
+export function isRangeFieldCompatNeeded(): boolean {
+  return engineDefect("D29", () =>
+    rangeFieldCases.some(
+      (c) =>
+        rangeFieldProblem(c.locale, c.options, c.from, c.to) !== "complete",
+    ),
   );
 }

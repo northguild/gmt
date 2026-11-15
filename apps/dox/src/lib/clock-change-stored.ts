@@ -290,6 +290,12 @@ export function wireStoredTimes(
   const none = w.part("stored-none");
   const stale = w.part("stored-stale");
   const summary = w.part("stored-summary");
+  wireDisclosure(
+    w.part("stored-formats").closest<HTMLElement>("[data-disclosure]")!,
+    {
+      signal,
+    },
+  );
   const message = (text: string): void => {
     setHtml(results, html`<p>${text}</p>`);
   };

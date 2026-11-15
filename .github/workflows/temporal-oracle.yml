@@ -1,8 +1,13 @@
 name: Temporal oracle
 
+# Pulse check: workaround-node
+# Pulse check: native-oracle
+# Pulse check: native-suite
+# Pulse check: polyfill-swap
+#
 # Compares GMT's calendar results against Chromium's native Temporal (test262 is the final
 # authority where they disagree) and reports which @js-temporal/polyfill workarounds are still
-# needed. Manual and weekly only: never part of ci.yml, because "upstream still broken" must
+# needed. Manual and scheduled only: never part of ci.yml, because "upstream still broken" must
 # never fail a build. A failing oracle job means a GMT result differs from native Temporal on a
 # row that the script's tag list does not explain — a GMT bug to fix.
 #
@@ -59,7 +64,6 @@ on:
         required: false
         default: false
   schedule:
-    # Mondays 06:17 UTC
     - cron: "17 6 * * 1"
 
 concurrency:

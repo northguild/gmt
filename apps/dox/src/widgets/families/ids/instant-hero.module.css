@@ -1,5 +1,7 @@
 /* instantHero: a full bevelled plate with the series colour as a 3px bottom bar while a
-   reading shows. The bar's 3px is always in the padding, so it never changes the height. */
+   reading shows. The bar's 3px is always in the padding, so it never changes the height. In forced
+   colours the bar goes with the background and the even 1px border stays: a thicker bottom border
+   on a bevelled box misdraws the opposite edge. */
 
 .root {
   --bar: transparent;
@@ -130,10 +132,6 @@
   .call,
   .reason {
     color: CanvasText;
-  }
-
-  .root[data-bar="true"] {
-    border-block-end-width: 3px;
   }
 
   .pill {
