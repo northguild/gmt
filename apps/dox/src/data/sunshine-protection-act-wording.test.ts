@@ -19,7 +19,11 @@ import {
 } from "../lib/sunshine-protection-act-mount";
 import { partsText } from "./clock-change-text";
 import { US_GUIDANCE } from "./sunshine-protection-act-guidance";
-import { NATIONAL, STATES } from "./sunshine-protection-act-proposals";
+import {
+  NATIONAL,
+  OTHER_NATIONAL,
+  STATES,
+} from "./sunshine-protection-act-proposals";
 
 const BANNED =
   /\b(congress|senate|house|act|bills?|statute|section|exempt|compliant|legal|federal transport department|department of transportation|H\.R\.|U\.S\.C)\b/i;
@@ -94,6 +98,7 @@ const starterText = (): string[] =>
 const sources: Record<string, () => string[]> = {
   US_GUIDANCE: guidanceText,
   NATIONAL: () => [...NATIONAL.effects],
+  OTHER_NATIONAL: () => [...OTHER_NATIONAL],
   "STATES text": rowText,
   "the page template": () =>
     visibleText(renderSunshineProtectionActTemplate({ guidance: true })),

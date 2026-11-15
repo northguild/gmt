@@ -142,13 +142,13 @@ export const PULSE_CHECKS = Object.freeze([
     source: ".github/workflows/us-clock-watch.yml",
     job: "canary",
     watches:
-      "Federal and state bills on ending the clock changes, and the time zone rules of every US zone, against the committed snapshot.",
+      "Federal and state bills on ending the clock changes, and the time zone rules of every US zone, against the last snapshot it saw.",
     finds:
       "Opens one issue per kind (federal, state, tz) for a difference, and one for a source that could not run.",
     life: {
       kind: "condition",
       until:
-        "the US clock-change checker ships, and the proposals data on the Sunshine Protection Act page is removed",
+        "the US clock-change checker ships, and the proposals data on the Sunshine Protection Act page is removed or replaced",
     },
     story: "CORE-90",
   },

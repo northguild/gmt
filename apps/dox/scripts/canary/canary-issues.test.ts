@@ -3085,15 +3085,27 @@ describe("US clock-change watch findings", () => {
     }
   });
 
-  it("the bill issues list what changed and ask a person to review and refresh", () => {
-    const [federal] = opened(
-      watch({ federal: ran(["new: S 7: To adopt permanent standard time"]) }),
+  it("the bill issues list what changed since the carried snapshot and ask only for a review", () => {
+    const [federal, state] = opened(
+      watch({
+        federal: ran(["new: S 7: To adopt permanent standard time"], {
+          since: "2026-11-09T07:20:00Z",
+        }),
+        state: ran(["new: Texas 2025 HB 9: Relating to standard time"]),
+      }),
+    );
+    expect(federal.body).toContain(
+      "whose latest action changed since the snapshot of 2026-11-09.",
+    );
+    expect(state.body).toContain(
+      "whose latest action changed since the last snapshot.",
     );
     expect(federal.body).toContain(
       "### Differences\n\n- new: S 7: To adopt permanent standard time",
     );
     expect(federal.body).toContain("Review the change.");
-    expect(federal.body).toContain("node scripts/us-clock-watch.mjs refresh");
+    expect(federal.body).toContain("Nothing else to run");
+    expect(federal.body).not.toContain("refresh");
     expect(federal.body).not.toContain("CORE-90 phase 2");
   });
 
@@ -3111,6 +3123,7 @@ describe("US clock-change watch findings", () => {
     );
     expect(tz.body).toContain("Release 2026f; the snapshot has 2026e.");
     expect(tz.body).toContain("- America/Detroit\n- America/New_York");
+    expect(tz.body).toContain("node scripts/us-clock-watch.mjs snapshot-tz");
   });
 
   it("a repeat comments on the open issue rather than opening a second", () => {
@@ -3122,7 +3135,24 @@ describe("US clock-change watch findings", () => {
     const [action] = actions;
     expect(action.kind).toBe("comment");
     expect(action).toMatchObject({ key: "us-clock-watch/federal", issue: 88 });
-    expect(action.body).toContain("- changed: HR 1: a title");
+    expect(action.body).toContain(
+      "New on this run:\n\n- changed: HR 1: a title",
+    );
+  });
+
+  it("a tz repeat says the zone still differs", () => {
+    const actions = watchPlan(
+      watch({
+        tz: ran(["America/Detroit"], {
+          release: "2026f",
+          snapshotRelease: "2026e",
+        }),
+      }),
+      [issue(89, '<!-- gmt-canary key="us-clock-watch/tz-us-zone" -->\nbody')],
+    );
+    expect(actions[0].body).toContain(
+      "Still differs on this run:\n\n- America/Detroit",
+    );
   });
 
   it("a source that could not run files one could-not-run issue naming it", () => {

@@ -5,6 +5,7 @@ import {
   ageWords,
   longDate,
   NATIONAL,
+  OTHER_NATIONAL,
   PROPOSALS_CHECKED,
   SOURCES,
   SOURCES_URL,
@@ -78,6 +79,7 @@ describe("STATES", () => {
         ...("note" in row && row.note ? [row.note] : []),
       ]),
       ...NATIONAL.effects,
+      ...OTHER_NATIONAL,
     ];
     for (const text of strings) {
       expect(text).not.toMatch(
@@ -112,6 +114,12 @@ describe("STATES", () => {
     expect(NATIONAL.effects[3]).toBe(
       "As of 13 November 2026 it had passed one chamber and was waiting in a committee of the other.",
     );
+  });
+
+  it("dates each other national proposal from the check date", () => {
+    expect(OTHER_NATIONAL).toHaveLength(2);
+    for (const text of OTHER_NATIONAL)
+      expect(text).toMatch(/As of 13 November 2026 /);
   });
 });
 

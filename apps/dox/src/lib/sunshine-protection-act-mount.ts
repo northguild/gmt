@@ -1,8 +1,8 @@
 /**
  * The Sunshine Protection Act page's widget (CORE-90), laid out as the clock-change checkers are:
- * the key points beside a panel of what the national proposal would do, then a map of the US time
- * zones as the tz data has them today, and a second view of each state's adopted position on
- * ending the clock changes.
+ * the key points beside a panel of what the national proposal would do and one of the other
+ * national proposals, then a map of the US time zones as the tz data has them today, and a second
+ * view of each state's adopted position on ending the clock changes.
  *
  * Today's classes come from one `GET /gmt/api/sunshine-protection-act` answer, computed on the
  * Worker with the library, so every reader sees the same map. Today's live clocks and the pinned
@@ -22,6 +22,8 @@ import {
 import {
   AGE_WORDS_HELD,
   NATIONAL,
+  OTHER_NATIONAL,
+  OTHER_NATIONAL_HEADING,
   PROPOSALS_CHECKED,
   SOURCES_URL,
   STATES,
@@ -404,7 +406,7 @@ export function renderSunshineProtectionActTemplate({
         },
       ])}${row(
         html`${guidance ? keyPoints(idPrefix, US_GUIDANCE, US_GUIDANCE_HEADING) : ""}${usSide(
-          infoCard({
+          html`${infoCard({
             idPrefix,
             name: "national",
             title: "What the national proposal would do",
@@ -418,7 +420,13 @@ export function renderSunshineProtectionActTemplate({
                 <a href="${SOURCES_URL}" rel="noopener noreferrer">Sources</a>
               </p>`,
             gate: "national",
-          }),
+          })}${infoCard({
+            idPrefix,
+            name: "national-other",
+            title: OTHER_NATIONAL_HEADING,
+            lines: OTHER_NATIONAL,
+            gate: "national-other",
+          })}`,
         )}`,
         { top: true },
       )}`,

@@ -23,7 +23,8 @@ Read only the file for the topic at hand.
 - [Bodies](us-permanent-daylight-time/bodies.md) - sections 1 to 3: the IANA tz database, the
   sleep and rhythm societies, the 2026 systematic review, the EU, the AASM, the crash study and
   CRS R45208.
-- [US law](us-permanent-daylight-time/us-law.md) - section 4: the national proposal, the 19 state
-  laws and their conditions, the states on standard time all year, and California.
+- [US law](us-permanent-daylight-time/us-law.md) - section 4: the national proposal, the other
+  national proposals, the 19 state laws and their conditions, the states on standard time all
+  year, and California.
 - [Corrections](us-permanent-daylight-time/corrections.md) - section 5: the corrections to the
   CORE-90 evidence table, row by row.
