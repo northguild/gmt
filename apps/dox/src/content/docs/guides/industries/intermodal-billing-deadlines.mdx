@@ -116,15 +116,14 @@ billingTimeline({ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20" }, { iss
 // null — validated even though no request exists
 ```
 
-Every emitted date is bare ISO, so an input annotation such as `[u-ca=iso8601]` does not reach
-the output:
+Every date is a plain ISO date with no annotation, in and out. An input with one, such as
+`[u-ca=iso8601]`, returns `null`:
 
 ```typescript
 import { billingTimeline } from "@northguild/gmt/intermodal";
 
 billingTimeline({ anchorOn: "2026-03-01[u-ca=iso8601]" }, { issueDays: 30, disputeDays: 30, resolutionDays: 30 });
-// { invoiceDeadline: "2026-03-31", issuedByDeadline: null, disputeDeadline: null,
-//   requestedByDeadline: null, resolutionDeadline: null }
+// null
 ```
 
 `issuedByDeadline` and `requestedByDeadline` compare dates and say nothing else. What follows

@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { readOffsetInstant } from "./offsetInstant";
+import { readInstantOffsetInstant } from "./offsetInstant";
 import { plainDateOf, plainDateTimeOf, plainTimeOf } from "./inputChecks";
 import {
   type EdiCode,
@@ -43,9 +43,9 @@ type PartText = Partial<Record<EdiPart, string | null>>;
  *   that is not written return `""`.
  * - The kind fixes the ISO 8601 string `value` must be, as the house plain functions fix theirs:
  *   a date is what `isValidDate` accepts, a time what `isValidTime` accepts, a local date-time
- *   what `isValidDateTime` accepts, and a date-time with an offset what `toOffsetInstant` reads
- *   (an offset, `Z`, or a bracketed zone that agrees). Temporal then reads the fields; no digit
- *   of the input is sliced.
+ *   what `isValidDateTime` accepts, and a date-time with an offset what an instant string is
+ *   (`Z` or an offset, no zone bracket or other annotation). Temporal then reads the fields; no
+ *   digit of the input is sliced.
  * - Precision is cut to the mask and never refused: a fraction of a second is dropped under
  *   every 2379 and 1250 mask (none has decimal seconds) and the seconds under a mask with no
  *   `SS`. The cut is a truncation, never a rounding, so a written value never names a later
@@ -203,12 +203,12 @@ const READERS: Readonly<
 };
 
 /**
- * A date-time with an offset as its own wall clock and its offset. `toOffsetInstant` reads the
- * string (an offset, `Z`, or a bracketed zone that agrees), and the wall clock is the instant
+ * A date-time with an offset as its own wall clock and its offset. `readInstantOffsetInstant` reads the
+ * string (an offset or `Z`; a zone bracket is not an instant and is refused), and the wall clock is the instant
  * seen at that offset, so no digit of the input is sliced.
  */
 function readOffsetDateTime(text: string): IsoHalf | null {
-  const pair = readOffsetInstant(text);
+  const pair = readInstantOffsetInstant(text);
   if (pair === null) {
     return null;
   }

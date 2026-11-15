@@ -1,19 +1,27 @@
 import { resolveOverflow } from "./resolveOverflow";
 
 describe("resolveOverflow", () => {
-  // Only an omitted member defaults. Temporal reads any present value through ToString, so
-  // `null` is the string "null": Chromium 153 answers `date.add({ months: 1 }, { overflow: null })`
-  // with "RangeError: Value null out of range for Temporal.PlainDate.prototype.add options
-  // property overflow". Passing it through unchanged is what lets the caller's `catch` return
-  // the sentinel, exactly as the unrecognised "throw" row below already does.
+  // Only an omitted member defaults. A string is passed through for Temporal to accept or reject
+  // (the unrecognised "throw" row), and a value of another type is refused with a TypeError that
+  // the caller's `catch` turns into its sentinel: GMT reads exactly the declared type, where
+  // Temporal's GetOption would turn `null` into "null" and an object into its ToString.
   it.each`
     overflow       | expected
     ${undefined}   | ${"constrain"}
-    ${null}        | ${null}
     ${"constrain"} | ${"constrain"}
     ${"reject"}    | ${"reject"}
     ${"throw"}     | ${"throw"}
   `("returns $expected for overflow $overflow", ({ overflow, expected }) => {
     expect(resolveOverflow(overflow as never)).toBe(expected);
+  });
+
+  it.each`
+    overflow                        | label
+    ${null}                         | ${"null"}
+    ${1}                            | ${"a number"}
+    ${true}                         | ${"a boolean"}
+    ${{ toString: () => "reject" }} | ${"an object with a toString"}
+  `("throws a TypeError for overflow $label", ({ overflow }) => {
+    expect(() => resolveOverflow(overflow as never)).toThrow(TypeError);
   });
 });

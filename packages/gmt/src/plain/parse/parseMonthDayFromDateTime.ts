@@ -5,8 +5,8 @@ import { monthDayString } from "../../internal/monthDay";
  * Return the month-day (`--MM-DD`) of an ISO 8601 date-time string.
  *
  * - The year and the time are dropped, so the time never moves the day.
- * - A `Z` or an offset gives `""`; a time zone annotation with no offset is ignored, as
- *   `isValidDateTime` reads it.
+ * - A `Z`, an offset or any annotation gives `""`, as `isValidDateTime` reads a plain
+ *   date-time.
  * - Only the ISO calendar is read.
  * - Returns "" for invalid input.
  *
@@ -17,7 +17,7 @@ import { monthDayString } from "../../internal/monthDay";
  * @example parseMonthDayFromDateTime("2024-02-29T23:59:59.999999999") // "--02-29"
  * @example parseMonthDayFromDateTime("2024-12-25") // ""
  * @example parseMonthDayFromDateTime("2024-12-25T10:00:00Z") // ""
- * @example parseMonthDayFromDateTime("2024-12-25T10:00:00[Europe/Paris]") // "--12-25"
+ * @example parseMonthDayFromDateTime("2024-12-25T10:00:00[Europe/Paris]") // ""
  */
 export function parseMonthDayFromDateTime(value: string): string {
   const dateTime = plainDateTimeOf(value);

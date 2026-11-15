@@ -3,48 +3,47 @@ import { uuidV7TimestampPrefix } from "./uuidV7TimestampPrefix";
 
 describe("uuidV7TimestampPrefix", () => {
   it.each`
-    input                                      | expected           | reason
-    ${"2024-01-01T00:00:00Z"}                  | ${"018cc251-f400"} | ${"1704067200000 ms = 0x018cc251f400"}
-    ${"2022-02-22T19:22:22Z"}                  | ${"017f22e2-79b0"} | ${"RFC 9562 A.6 prefix, lower case"}
-    ${"1970-01-01T00:00:00Z"}                  | ${"00000000-0000"} | ${"Unix epoch"}
-    ${"2024-01-01T00:00:00.0009Z"}             | ${"018cc251-f400"} | ${"sub-millisecond digits floor"}
-    ${"2024-01-01T09:00:00+09:00[Asia/Tokyo]"} | ${"018cc251-f400"} | ${"zoned input reads as its instant"}
-    ${"2024-01-01T09:00:00+09:00"}             | ${"018cc251-f400"} | ${"offset input"}
-    ${"+010889-08-02T05:31:50.655Z"}           | ${"ffffffff-ffff"} | ${"2^48 - 1 ms"}
-    ${"1970-01-01T00:00:00.001Z"}              | ${"00000000-0001"} | ${"one millisecond"}
-    ${"1970-01-01T00:00:00.0009999Z"}          | ${"00000000-0000"} | ${"sub-ms digits floor at the epoch"}
-    ${"+010889-08-02T05:31:50.6559999Z"}       | ${"ffffffff-ffff"} | ${"sub-ms digits floor at the 48-bit max"}
-    ${"1970-02-19T17:02:47.296Z"}              | ${"00010000-0000"} | ${"2^32 ms = 0x000100000000"}
-    ${"1970-02-19T17:02:47.295Z"}              | ${"0000ffff-ffff"} | ${"2^32 - 1 ms"}
+    input                                | expected           | reason
+    ${"2024-01-01T00:00:00Z"}            | ${"018cc251-f400"} | ${"1704067200000 ms = 0x018cc251f400"}
+    ${"2022-02-22T19:22:22Z"}            | ${"017f22e2-79b0"} | ${"RFC 9562 A.6 prefix, lower case"}
+    ${"1970-01-01T00:00:00Z"}            | ${"00000000-0000"} | ${"Unix epoch"}
+    ${"2024-01-01T00:00:00.0009Z"}       | ${"018cc251-f400"} | ${"sub-millisecond digits floor"}
+    ${"2024-01-01T09:00:00+09:00"}       | ${"018cc251-f400"} | ${"offset input"}
+    ${"+010889-08-02T05:31:50.655Z"}     | ${"ffffffff-ffff"} | ${"2^48 - 1 ms"}
+    ${"1970-01-01T00:00:00.001Z"}        | ${"00000000-0001"} | ${"one millisecond"}
+    ${"1970-01-01T00:00:00.0009999Z"}    | ${"00000000-0000"} | ${"sub-ms digits floor at the epoch"}
+    ${"+010889-08-02T05:31:50.6559999Z"} | ${"ffffffff-ffff"} | ${"sub-ms digits floor at the 48-bit max"}
+    ${"1970-02-19T17:02:47.296Z"}        | ${"00010000-0000"} | ${"2^32 ms = 0x000100000000"}
+    ${"1970-02-19T17:02:47.295Z"}        | ${"0000ffff-ffff"} | ${"2^32 - 1 ms"}
   `("returns $expected for $input ($reason)", ({ input, expected }) => {
     expect(uuidV7TimestampPrefix(input)).toBe(expected);
   });
 
   it.each`
-    input                                 | reason                                                  | label
-    ${"+010889-08-02T05:31:50.656Z"}      | ${"2^48 ms: 12 hex digits cannot hold it"}              | ${"'+010889-08-02T05:31:50.656Z'"}
-    ${"+010889-08-02T05:31:50.6569999Z"}  | ${"sub-ms digits floor to 2^48 ms"}                     | ${"'+010889-08-02T05:31:50.6569999Z'"}
-    ${"+010889-08-02T05:31:50.657Z"}      | ${"one millisecond past 2^48 ms"}                       | ${"'+010889-08-02T05:31:50.657Z'"}
-    ${"+010889-08-02T14:31:50.656+09:00"} | ${"2^48 ms, expressed with an offset"}                  | ${"'+010889-08-02T14:31:50.656+09:00'"}
-    ${"1970-01-01T00:00:00+01:00"}        | ${"an hour before the epoch, expressed with an offset"} | ${"'1970-01-01T00:00:00+01:00'"}
-    ${"-000001-01-01T00:00:00Z"}          | ${"far before the epoch"}                               | ${"'-000001-01-01T00:00:00Z'"}
-    ${"1969-12-31T23:59:59.999Z"}         | ${"before the Unix epoch"}                              | ${"'1969-12-31T23:59:59.999Z'"}
-    ${"1969-12-31T23:59:59.9999999Z"}     | ${"sub-ms before the epoch still negative"}             | ${"'1969-12-31T23:59:59.9999999Z'"}
-    ${"2024-01-01T00:00:00"}              | ${"no offset"}                                          | ${"'2024-01-01T00:00:00'"}
-    ${"invalid"}                          | ${"not a date"}                                         | ${"'invalid'"}
-    ${""}                                 | ${"empty"}                                              | ${"''"}
-    ${42}                                 | ${"number"}                                             | ${"42"}
-    ${undefined}                          | ${"undefined"}                                          | ${"undefined"}
+    input                                      | reason                                                  | label
+    ${"+010889-08-02T05:31:50.656Z"}           | ${"2^48 ms: 12 hex digits cannot hold it"}              | ${"'+010889-08-02T05:31:50.656Z'"}
+    ${"+010889-08-02T05:31:50.6569999Z"}       | ${"sub-ms digits floor to 2^48 ms"}                     | ${"'+010889-08-02T05:31:50.6569999Z'"}
+    ${"+010889-08-02T05:31:50.657Z"}           | ${"one millisecond past 2^48 ms"}                       | ${"'+010889-08-02T05:31:50.657Z'"}
+    ${"+010889-08-02T14:31:50.656+09:00"}      | ${"2^48 ms, expressed with an offset"}                  | ${"'+010889-08-02T14:31:50.656+09:00'"}
+    ${"1970-01-01T00:00:00+01:00"}             | ${"an hour before the epoch, expressed with an offset"} | ${"'1970-01-01T00:00:00+01:00'"}
+    ${"-000001-01-01T00:00:00Z"}               | ${"far before the epoch"}                               | ${"'-000001-01-01T00:00:00Z'"}
+    ${"1969-12-31T23:59:59.999Z"}              | ${"before the Unix epoch"}                              | ${"'1969-12-31T23:59:59.999Z'"}
+    ${"1969-12-31T23:59:59.9999999Z"}          | ${"sub-ms before the epoch still negative"}             | ${"'1969-12-31T23:59:59.9999999Z'"}
+    ${"2024-01-01T00:00:00"}                   | ${"no offset"}                                          | ${"'2024-01-01T00:00:00'"}
+    ${"2024-01-01T09:00:00+09:00[Asia/Tokyo]"} | ${"a bracketed zone, so no instant"}                    | ${"'2024-01-01T09:00:00+09:00[Asia/Tokyo]'"}
+    ${"invalid"}                               | ${"not a date"}                                         | ${"'invalid'"}
+    ${""}                                      | ${"empty"}                                              | ${"''"}
+    ${42}                                      | ${"number"}                                             | ${"42"}
+    ${undefined}                               | ${"undefined"}                                          | ${"undefined"}
   `("returns an empty string for $label ($reason)", ({ input }) => {
     expect(uuidV7TimestampPrefix(input)).toBe("");
   });
 
   it.each`
-    input                                        | floored
-    ${"2024-01-01T00:00:00Z"}                    | ${"2024-01-01T00:00:00Z"}
-    ${"2022-02-22T19:22:22.123456789Z"}          | ${"2022-02-22T19:22:22.123Z"}
-    ${"2024-01-01T09:00:00.5+09:00[Asia/Tokyo]"} | ${"2024-01-01T00:00:00.5Z"}
-    ${"+010889-08-02T05:31:50.655Z"}             | ${"+010889-08-02T05:31:50.655Z"}
+    input                               | floored
+    ${"2024-01-01T00:00:00Z"}           | ${"2024-01-01T00:00:00Z"}
+    ${"2022-02-22T19:22:22.123456789Z"} | ${"2022-02-22T19:22:22.123Z"}
+    ${"+010889-08-02T05:31:50.655Z"}    | ${"+010889-08-02T05:31:50.655Z"}
   `(
     "round-trips $input through fromUuidTimestamp as $floored",
     ({ input, floored }) => {

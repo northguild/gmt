@@ -1,4 +1,8 @@
 import {
+  booleanOption,
+  stringOptionOrDefault,
+} from "../../internal/typedOptions";
+import {
   cycleFieldValue,
   dateCycleFieldBounds,
   isValidAmount,
@@ -8,7 +12,6 @@ import {
   isDateCycleFieldName,
   isDateTimeCycleFieldName,
 } from "../../internal/unitNames";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 import { resolveOverflow } from "../../internal/resolveOverflow";
 import { setZonedFields } from "../../internal/setZonedFields";
 import { zonedDateTimeOf } from "../../internal/zonedWallClock";
@@ -117,7 +120,7 @@ export function cycleZoned(
       zoned[field],
       amount,
       bounds,
-      options?.round ?? false,
+      booleanOption(options?.round, false),
     );
     return (
       setZonedFields(
@@ -125,11 +128,11 @@ export function cycleZoned(
         { [field]: newValue },
         {
           overflow: resolveOverflow(options?.overflow),
-          disambiguation: optionOrDefault(
+          disambiguation: stringOptionOrDefault(
             options?.disambiguation,
             "compatible",
           ),
-          offset: optionOrDefault(options?.offset, "prefer"),
+          offset: stringOptionOrDefault(options?.offset, "prefer"),
         },
       )?.toString() ?? ""
     );

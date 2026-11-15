@@ -2,7 +2,7 @@ import { cachedFormatter } from "../../internal/formatterCache";
 import { resolveRequiredLocale } from "../../internal/resolveLocale";
 import { isZoneId } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { nowInstant } from "../../internal/temporalCompat";
 
 /**
@@ -98,7 +98,7 @@ export function formatTimeZoneName(
     if (resolvedLocale === null) return "";
 
     try {
-      const style = optionOrDefault(options?.style, "long");
+      const style = stringOptionOrDefault(options?.style, "long");
       const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
         timeZone,
         timeZoneName: style,

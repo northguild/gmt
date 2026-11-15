@@ -1,7 +1,7 @@
 import { fhirDateTime } from "../regex/fhir";
 import type { FhirDateTime, FhirDateType, FhirPrecision } from "../types";
 import { LEAP_SECOND_STEPS, taiOfUtc } from "./leapSeconds";
-import { readOffsetInstant } from "./offsetInstant";
+import { readInstantOffsetInstant } from "./offsetInstant";
 import { Temporal } from "./temporal";
 import { parseUtcReading } from "./utcReading";
 
@@ -67,7 +67,7 @@ function isRealCalendarDate(
 
 /**
  * The time and offset are a moment Temporal holds. A second of `60` goes through the leap-second
- * core (exactly what `isLeapSecond` does), because `readOffsetInstant` refuses every one.
+ * core (exactly what `isLeapSecond` does), because `readInstantOffsetInstant` refuses every one.
  */
 function isRealMoment(value: string, second: string | undefined): boolean {
   if (second === "60") {
@@ -78,7 +78,7 @@ function isRealMoment(value: string, second: string | undefined): boolean {
       taiOfUtc(LEAP_SECOND_STEPS, reading) !== null
     );
   }
-  return readOffsetInstant(value) !== null;
+  return readInstantOffsetInstant(value) !== null;
 }
 
 /**

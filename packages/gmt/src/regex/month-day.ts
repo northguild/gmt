@@ -10,8 +10,9 @@
  *
  * Capture groups: none.
  *
- * The written form only, with no RFC 9557 annotation. `isValidMonthDay` matches this against the
- * part before the first `[` and lets Temporal read the annotations.
+ * The whole string, with no RFC 9557 annotation of any kind: `isValidMonthDay` matches this against the
+ * entire value, so a time zone, a calendar (`"…[u-ca=iso8601]"`) or an elective (`"…[foo=bar]"`)
+ * annotation makes the value invalid.
  *
  * @example plainMonthDay.test("--12-25") // true
  * @example plainMonthDay.test("12-25")   // true (the -- is optional)

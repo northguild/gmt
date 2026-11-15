@@ -1,3 +1,4 @@
+import { roundingOptionsOf } from "../../internal/typedOptions";
 import type { Temporal } from "../../internal/temporal";
 import {
   addToZoned,
@@ -132,9 +133,7 @@ export function diffUnix(
         frameZoned(instant2, frame),
         {
           largestUnit,
-          smallestUnit: options?.smallestUnit,
-          roundingIncrement: options?.roundingIncrement,
-          roundingMode: options?.roundingMode,
+          ...roundingOptionsOf(options),
         },
       );
 

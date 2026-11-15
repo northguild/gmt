@@ -389,12 +389,11 @@ describe("formatDateTimeToParts with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatDateTimeToParts with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -406,13 +405,6 @@ describe("formatDateTimeToParts with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({
-      out: [
-        { type: "month", value: "March" },
-        { type: "literal", value: " " },
-        { type: "day", value: "15" },
-      ],
-      coercions: 1,
-    });
+    expect({ out, coercions }).toEqual({ out: [], coercions: 0 });
   });
 });

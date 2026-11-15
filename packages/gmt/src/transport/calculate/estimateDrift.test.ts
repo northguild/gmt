@@ -1,6 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import type { TimestampEvent } from "../../types";
 import { battleTestTimeZones } from "../../test";
+import { offsetString } from "../../test/timeZoneMatrix";
 import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import {
   mockTemporalDurationFromThrow,
@@ -115,15 +116,11 @@ describe("estimateDrift", () => {
     // 10:00+02:00 is 08:00Z; 19:00 in Tokyo (+09:00) is 10:00Z: two hours of drift.
     expect(
       estimateDrift([
-        event(
-          "EST",
-          "2024-06-20T10:00:00+02:00[Europe/Amsterdam]",
-          "2024-06-01T00:00:00Z",
-        ),
+        event("EST", "2024-06-20T10:00:00+02:00", "2024-06-01T00:00:00Z"),
         event("EST", "2024-06-20T19:00:00+09:00", "2024-06-02T00:00:00Z"),
       ]),
     ).toEqual({
-      first: "2024-06-20T10:00:00+02:00[Europe/Amsterdam]",
+      first: "2024-06-20T10:00:00+02:00",
       last: "2024-06-20T19:00:00+09:00",
       drift: "PT2H",
       revisions: 2,
@@ -136,9 +133,9 @@ describe("estimateDrift", () => {
   // reads 2 hours; both are one elapsed hour, so each tolerance gives the opposite answer to the
   // wall-clock reading.
   it.each`
-    first                                            | last                                             | tolerance  | exceedsTolerance | transition
-    ${"2024-11-03T01:30:00-04:00[America/New_York]"} | ${"2024-11-03T01:30:00-05:00[America/New_York]"} | ${"PT30M"} | ${true}          | ${"fall-back"}
-    ${"2024-03-10T01:30:00-05:00[America/New_York]"} | ${"2024-03-10T03:30:00-04:00[America/New_York]"} | ${"PT90M"} | ${false}         | ${"spring-forward"}
+    first                          | last                           | tolerance  | exceedsTolerance | transition
+    ${"2024-11-03T01:30:00-04:00"} | ${"2024-11-03T01:30:00-05:00"} | ${"PT30M"} | ${true}          | ${"fall-back"}
+    ${"2024-03-10T01:30:00-05:00"} | ${"2024-03-10T03:30:00-04:00"} | ${"PT90M"} | ${false}         | ${"spring-forward"}
   `(
     "measures drift across the $transition as exact elapsed time",
     ({ first, last, tolerance, exceedsTolerance }) => {
@@ -164,7 +161,7 @@ describe("estimateDrift", () => {
     "measures the same drift whatever zone the estimates are written in (%s)",
     (timeZone) => {
       const local = (utc: string) =>
-        Temporal.Instant.from(utc).toZonedDateTimeISO(timeZone).toString();
+        offsetString(Temporal.Instant.from(utc).toZonedDateTimeISO(timeZone));
       expect(
         estimateDrift(
           revisions(
@@ -192,16 +189,18 @@ describe("estimateDrift", () => {
   );
 
   it.each`
-    events                                                                                                                          | why
-    ${[]}                                                                                                                           | ${"an empty list"}
-    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z")]}                                                               | ${"a single EST: no drift from one sample"}
-    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("ACT", "2024-06-20T09:00:00Z", "2024-06-21T00:00:00Z")]} | ${"one EST beside another class"}
-    ${[event("PLN", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("PLN", "2024-06-20T09:00:00Z", "2024-06-02T00:00:00Z")]} | ${"no EST at all"}
-    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ACT", "2024-06-20T17:00:00", "2024-06-21T00:00:00Z")]}  | ${"an invalid event of another class"}
-    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ETA", "2024-06-20T17:00:00Z", "2024-06-21T00:00:00Z")]} | ${"an unknown classifier"}
-    ${[...revisions("2024-06-20T08:00:00Z", "-271821-04-19T23:59:59.999999999Z")]}                                                  | ${"an at before the instant range"}
-    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), null]}                                                         | ${"a null event"}
-    ${"EST"}                                                                                                                        | ${"a string for the list"}
+    events                                                                                                                                              | why
+    ${[]}                                                                                                                                               | ${"an empty list"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z")]}                                                                                   | ${"a single EST: no drift from one sample"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("ACT", "2024-06-20T09:00:00Z", "2024-06-21T00:00:00Z")]}                     | ${"one EST beside another class"}
+    ${[event("PLN", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("PLN", "2024-06-20T09:00:00Z", "2024-06-02T00:00:00Z")]}                     | ${"no EST at all"}
+    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ACT", "2024-06-20T17:00:00", "2024-06-21T00:00:00Z")]}                      | ${"an invalid event of another class"}
+    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), event("ETA", "2024-06-20T17:00:00Z", "2024-06-21T00:00:00Z")]}                     | ${"an unknown classifier"}
+    ${[...revisions("2024-06-20T08:00:00Z", "-271821-04-19T23:59:59.999999999Z")]}                                                                      | ${"an at before the instant range"}
+    ${[...revisions("2024-06-20T08:00:00Z", "2024-06-20T17:00:00Z"), null]}                                                                             | ${"a null event"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("EST", "2024-06-20T17:00:02+02:00[Europe/Berlin]", "2024-06-10T00:00:00Z")]} | ${"an at that is a real zoned string"}
+    ${[event("EST", "2024-06-20T08:00:00Z", "2024-06-01T00:00:00Z"), event("EST", "2024-06-20T17:00:00Z", "2024-06-10T12:00:00+02:00[Europe/Berlin]")]} | ${"a recordedAt that is a real zoned string"}
+    ${"EST"}                                                                                                                                            | ${"a string for the list"}
   `("returns null for $why", ({ events }) => {
     expect(estimateDrift(events, { tolerance: "PT8H" })).toBeNull();
   });

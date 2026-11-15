@@ -7,16 +7,8 @@ import { etaAtZoneText } from "../../internal/deliverySchedule";
  * fact: GMT does not resolve a port, airport, terminal or station code to a timezone, and
  * takes an IANA identifier instead (see the parked registries note in the epic's painpoints).
  *
- * - `arrivalUtc` is any instant `isValidInstant` accepts — `Z`, an offset, or an offset with a
- *   bracketed zone. Only the instant is read; a bracketed zone in the input is not the zone the
- *   result is rendered in, `targetZone` is.
- * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it, so rendering this function's own result again gives
- *   the same moment, except a wall time repeated inside a sub-minute offset change, which
- *   reads as its first pass (see `isValidInstant`). A zone that does not exist, or that disagrees with the offset, is not
- *   checked and changes nothing.
+ * - `arrivalUtc` is any instant `isValidInstant` accepts — `Z` or an offset, with no annotation of
+ *   any kind. `targetZone` is the zone the result is rendered in.
  * - **No disambiguation arises.** The input is a moment, and a moment has exactly one wall
  *   time in any zone, so the `disambiguation` vocabulary of `resolveLocal` does not apply here.
  *   On a fall-back night two moments an hour apart print the same wall time with different

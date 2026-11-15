@@ -486,7 +486,7 @@ export function explainClockNull(
     return {
       code: "bad-event",
       lane: `row ${badRow + 1} is not a valid event`,
-      sentence: `Row ${badRow + 1} is not a valid event. It needs one of the seven event types and an instant with a Z, an offset, or an offset and a bracketed zone.`,
+      sentence: `Row ${badRow + 1} is not a valid event. It needs one of the seven event types and an instant with a Z or an offset and no zone name after it.`,
     };
   }
   if (pair === null) return null;

@@ -15,8 +15,8 @@
  * A match proves shape only: `Temporal.PlainDate.from` validates the date and the calendar id.
  * This is the written form. GMT's calendar functions read more (`isValidCalendarDate`): a date-time
  * in `plainDateTime`'s strict shape before the annotations (`"2024-10-03T14:30[u-ca=hebrew]"`, read
- * as its date), and the rest of Temporal's annotation grammar, such as a time zone annotation or an
- * elective `[foo=bar]`, which Temporal ignores. Basic format, a space or lower-case `t` separator
+ * as its date). No other annotation is read: a time zone annotation or an elective `[foo=bar]` is
+ * rejected. Basic format, a space or lower-case `t` separator
  * and a UTC offset are rejected there as well as here.
  *
  * Capture groups: 1 year, 2 month, 3 day, 4 critical flag (`"!"` or undefined), 5 calendar id.

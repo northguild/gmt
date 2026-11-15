@@ -4,8 +4,8 @@ import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { nowInstant } from "../../internal/temporalCompat";
 import type { CalendarOptions } from "../../types";
 import { utcInstantOf } from "../../internal/utcInstant";
-import { optionOrDefault } from "../../internal/optionOrDefault";
-import { isObject } from "../../internal/isObject";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendarUtc`: the instant the day label is measured from, the time zone the
@@ -63,7 +63,7 @@ export function formatCalendarUtc(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = utcInstantOf(value);
     if (target === null) return "";
     // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
@@ -90,7 +90,7 @@ export function formatCalendarUtc(
         reference,
         timeZone,
         locale,
-        optionOrDefault(options.timeStyle, "short"),
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

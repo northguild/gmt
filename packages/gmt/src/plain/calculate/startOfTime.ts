@@ -5,6 +5,7 @@ import { defaultFractionalDigits } from "../../internal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import type { FractionalDigit } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
+import { fractionalDigitsOption } from "../../internal/typedOptions";
 
 /**
  * Units `startOfTime` accepts: a Temporal time unit, or `"day"` for midnight, each singular or plural.
@@ -64,7 +65,9 @@ export function startOfTime(
       return "";
     }
 
-    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+    const fractionalSecondDigits = fractionalDigitsOption(
+      optionsArg?.fractionalSecondDigits,
+    );
     const resolvedUnit = resolveDateTimeUnit(unit);
 
     const source = plainTimeOf(value);

@@ -18,12 +18,12 @@ describe("dutyDayFor", () => {
   // New York is UTC-5 in January, so its 04:00 is 09:00Z. 03:59 local is still the day that
   // began at 04:00 the day before; 04:00 local opens the next one (half-open).
   it.each`
-    instant                                    | start                     | end                       | reason
-    ${"2024-01-01T08:59:00Z"}                  | ${"2023-12-31T09:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"03:59 local belongs to the previous day"}
-    ${"2024-01-01T09:00:00Z"}                  | ${"2024-01-01T09:00:00Z"} | ${"2024-01-02T09:00:00Z"} | ${"04:00 local opens the next day"}
-    ${"2024-01-01T04:00:00-05:00"}             | ${"2024-01-01T09:00:00Z"} | ${"2024-01-02T09:00:00Z"} | ${"the same instant written with an offset"}
-    ${"2024-01-01T12:00:00+09:00[Asia/Tokyo]"} | ${"2023-12-31T09:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"a Tokyo entry read in the reference zone: 22:00 the evening before"}
-    ${"2024-01-01T23:59:59.999999999-05:00"}   | ${"2024-01-01T09:00:00Z"} | ${"2024-01-02T09:00:00Z"} | ${"local midnight is not a day boundary"}
+    instant                                  | start                     | end                       | reason
+    ${"2024-01-01T08:59:00Z"}                | ${"2023-12-31T09:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"03:59 local belongs to the previous day"}
+    ${"2024-01-01T09:00:00Z"}                | ${"2024-01-01T09:00:00Z"} | ${"2024-01-02T09:00:00Z"} | ${"04:00 local opens the next day"}
+    ${"2024-01-01T04:00:00-05:00"}           | ${"2024-01-01T09:00:00Z"} | ${"2024-01-02T09:00:00Z"} | ${"the same instant written with an offset"}
+    ${"2024-01-01T12:00:00+09:00"}           | ${"2023-12-31T09:00:00Z"} | ${"2024-01-01T09:00:00Z"} | ${"a Tokyo entry read in the reference zone: 22:00 the evening before"}
+    ${"2024-01-01T23:59:59.999999999-05:00"} | ${"2024-01-01T09:00:00Z"} | ${"2024-01-02T09:00:00Z"} | ${"local midnight is not a day boundary"}
   `(
     "returns [$start, $end) for $instant with 04:00 in America/New_York ($reason)",
     ({ instant, start, end }) => {
@@ -164,7 +164,10 @@ describe("dutyDayFor", () => {
       const start = at(2, 29);
       const end = at(3, 1);
 
-      expect(dutyDayFor(value, { timeZone, dayStartTime: "04:00" })).toEqual({
+      // The entry is an instant: its offset is written, its bracket is not.
+      const instant = value.slice(0, value.indexOf("["));
+
+      expect(dutyDayFor(instant, { timeZone, dayStartTime: "04:00" })).toEqual({
         start,
         end,
       });
@@ -186,19 +189,24 @@ describe("dutyDayFor", () => {
   );
 
   it.each`
-    instant                      | day                                                                      | reason
-    ${"2024-01-01T12:00:00"}     | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a zoneless instant"}
-    ${123}                       | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a non-string instant"}
-    ${"2024-01-01T12:00:00Z"}    | ${null}                                                                  | ${"a null day"}
-    ${"2024-01-01T12:00:00Z"}    | ${"UTC"}                                                                 | ${"a day that is not an object"}
-    ${"2024-01-01T12:00:00Z"}    | ${{ timeZone: "UTC" }}                                                   | ${"no dayStartTime: local midnight is never assumed"}
-    ${"2024-01-01T12:00:00Z"}    | ${{ dayStartTime: "04:00" }}                                             | ${"no timeZone"}
-    ${"2024-01-01T12:00:00Z"}    | ${{ timeZone: "Invalid/Zone", dayStartTime: "04:00" }}                   | ${"an invalid zone"}
-    ${"2024-01-01T12:00:00Z"}    | ${{ timeZone: "UTC", dayStartTime: "4am" }}                              | ${"a malformed start time"}
-    ${"2024-01-01T12:00:00Z"}    | ${{ timeZone: "UTC", dayStartTime: "24:00" }}                            | ${"hour 24"}
-    ${"2024-01-01T12:00:00Z"}    | ${{ timeZone: "UTC", dayStartTime: "04:00", disambiguation: "nearest" }} | ${"an unknown disambiguation"}
-    ${"2024-01-01T12:00:00Z"}    | ${{ timeZone: "UTC", dayStartTime: "04:00", disambiguation: null }}      | ${"a null disambiguation"}
-    ${"+275760-09-13T00:00:00Z"} | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a day that ends past the instant range"}
+    instant                                    | day                                                                      | reason
+    ${"2024-01-01T12:00:00"}                   | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a zoneless instant"}
+    ${"2024-01-01T12:00:00Z[UTC]"}             | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a zone annotation"}
+    ${"2024-01-01T12:00:00+09:00[Asia/Tokyo]"} | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a zoned string"}
+    ${"2024-01-01T12:00:00Z[foo=bar]"}         | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"an elective annotation"}
+    ${"2024-01-01T12:00:00Z[u-ca=iso8601]"}    | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"the ISO calendar annotation"}
+    ${"2024-01-01T12:00:00Z[!u-ca=gregory]"}   | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a critical calendar annotation"}
+    ${123}                                     | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a non-string instant"}
+    ${"2024-01-01T12:00:00Z"}                  | ${null}                                                                  | ${"a null day"}
+    ${"2024-01-01T12:00:00Z"}                  | ${"UTC"}                                                                 | ${"a day that is not an object"}
+    ${"2024-01-01T12:00:00Z"}                  | ${{ timeZone: "UTC" }}                                                   | ${"no dayStartTime: local midnight is never assumed"}
+    ${"2024-01-01T12:00:00Z"}                  | ${{ dayStartTime: "04:00" }}                                             | ${"no timeZone"}
+    ${"2024-01-01T12:00:00Z"}                  | ${{ timeZone: "Invalid/Zone", dayStartTime: "04:00" }}                   | ${"an invalid zone"}
+    ${"2024-01-01T12:00:00Z"}                  | ${{ timeZone: "UTC", dayStartTime: "4am" }}                              | ${"a malformed start time"}
+    ${"2024-01-01T12:00:00Z"}                  | ${{ timeZone: "UTC", dayStartTime: "24:00" }}                            | ${"hour 24"}
+    ${"2024-01-01T12:00:00Z"}                  | ${{ timeZone: "UTC", dayStartTime: "04:00", disambiguation: "nearest" }} | ${"an unknown disambiguation"}
+    ${"2024-01-01T12:00:00Z"}                  | ${{ timeZone: "UTC", dayStartTime: "04:00", disambiguation: null }}      | ${"a null disambiguation"}
+    ${"+275760-09-13T00:00:00Z"}               | ${{ timeZone: "UTC", dayStartTime: "04:00" }}                            | ${"a day that ends past the instant range"}
   `("returns null for $reason", ({ instant, day }) => {
     expect(dutyDayFor(instant, day)).toBeNull();
   });

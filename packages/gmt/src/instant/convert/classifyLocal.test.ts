@@ -124,7 +124,7 @@ describe("classifyLocal", () => {
     ${undefined} | ${"undefined"}
     ${20241103}  | ${"number"}
     ${true}      | ${"boolean"}
-    ${[]}        | ${"array"}
+    ${[]}        | ${"an array"}
     ${{}}        | ${"object"}
   `("returns null when either argument is $description", ({ input }) => {
     expect(classifyLocal(input as never, "America/New_York")).toBeNull();
@@ -165,17 +165,17 @@ describe("classifyLocal at the maximum instant", () => {
     },
   );
 
-  // Temporal.PlainDateTime.from reads RFC 9557 annotations and ignores a time zone annotation and
-  // an elective one (RFC 9557 §3.3; native Temporal agrees), so only `timeZone` resolves the wall time.
+  // A plain wall time carries no annotation of any kind: a time zone, calendar or elective annotation
+  // makes it invalid, so only `timeZone` resolves the wall time.
   it.each`
     localDateTime                                 | expected
-    ${"2024-11-03T01:30:00[America/New_York]"}    | ${"ambiguous"}
-    ${"2024-11-03T01:30:00[Asia/Tokyo][foo=bar]"} | ${"ambiguous"}
-    ${"2024-11-03T01:30:00[u-ca=iso8601]"}        | ${"ambiguous"}
+    ${"2024-11-03T01:30:00[America/New_York]"}    | ${null}
+    ${"2024-11-03T01:30:00[Asia/Tokyo][foo=bar]"} | ${null}
+    ${"2024-11-03T01:30:00[u-ca=iso8601]"}        | ${null}
     ${"2024-11-03T01:30:00[!foo=bar]"}            | ${null}
     ${"2024-11-03T01:30:00[u-ca=hebrew]"}         | ${null}
   `(
-    "reads the annotations of $localDateTime as Temporal does → $expected",
+    "rejects the annotation of $localDateTime as Temporal does → $expected",
     ({ localDateTime, expected }) => {
       expect(classifyLocal(localDateTime, "America/New_York")).toBe(expected);
     },
@@ -294,8 +294,8 @@ describe("classifyLocal agrees with resolveLocal", () => {
     ${null}       | ${"null"}
     ${undefined}  | ${"undefined"}
     ${{}}         | ${"an object"}
-    ${["UTC"]}    | ${"an array holding a zone name"}
-    ${["+05:30"]} | ${"an array holding an offset"}
+    ${["UTC"]}    | ${"an array of a zone id"}
+    ${["+05:30"]} | ${"an array of an offset"}
     ${true}       | ${"a boolean"}
   `(
     'returns null, and resolveLocal returns "", for $kind as the time zone',

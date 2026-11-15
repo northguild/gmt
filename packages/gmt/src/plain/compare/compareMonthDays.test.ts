@@ -24,18 +24,16 @@ const pairs = ordered.flatMap((a, i) =>
 
 describe("compareMonthDays", () => {
   it.each`
-    a                          | b            | expected | why
-    ${"--12-25"}               | ${"--12-25"} | ${0}     | ${"same value"}
-    ${"12-25"}                 | ${"--12-25"} | ${0}     | ${"input forms"}
-    ${"--12-25[u-ca=ISO8601]"} | ${"--12-25"} | ${0}     | ${"D20 upper-case calendar"}
-    ${"--12-25[Europe/Paris]"} | ${"--12-25"} | ${0}     | ${"zone annotation ignored"}
-    ${"--01-01"}               | ${"--12-31"} | ${-1}    | ${"month first"}
-    ${"--12-31"}               | ${"--01-01"} | ${1}     | ${"month first, reversed"}
-    ${"--03-01"}               | ${"--03-02"} | ${-1}    | ${"then day"}
-    ${"--02-28"}               | ${"--02-29"} | ${-1}    | ${"1972 keeps 29 February"}
-    ${"--02-29"}               | ${"--03-01"} | ${-1}    | ${"29 February before 1 March"}
-    ${"--02-29"}               | ${"--02-29"} | ${0}     | ${"29 February equals itself"}
-    ${"--11-30"}               | ${"--12-01"} | ${-1}    | ${"month boundary"}
+    a            | b            | expected | why
+    ${"--12-25"} | ${"--12-25"} | ${0}     | ${"same value"}
+    ${"12-25"}   | ${"--12-25"} | ${0}     | ${"input forms"}
+    ${"--01-01"} | ${"--12-31"} | ${-1}    | ${"month first"}
+    ${"--12-31"} | ${"--01-01"} | ${1}     | ${"month first, reversed"}
+    ${"--03-01"} | ${"--03-02"} | ${-1}    | ${"then day"}
+    ${"--02-28"} | ${"--02-29"} | ${-1}    | ${"1972 keeps 29 February"}
+    ${"--02-29"} | ${"--03-01"} | ${-1}    | ${"29 February before 1 March"}
+    ${"--02-29"} | ${"--02-29"} | ${0}     | ${"29 February equals itself"}
+    ${"--11-30"} | ${"--12-01"} | ${-1}    | ${"month boundary"}
   `("returns $expected for '$a' vs '$b' ($why)", ({ a, b, expected }) => {
     expect(compareMonthDays(a, b)).toBe(expected);
   });

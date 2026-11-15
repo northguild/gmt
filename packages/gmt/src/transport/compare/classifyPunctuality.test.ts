@@ -1,5 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones } from "../../test";
+import { offsetString } from "../../test/timeZoneMatrix";
 import {
   mockTemporalDurationFromThrow,
   mockTemporalInstantFromThrow,
@@ -14,32 +15,31 @@ describe("classifyPunctuality", () => {
   // given and d ≤ −early; on time strictly inside. Each deviation is whole minutes or seconds on
   // one UTC day, checked with Temporal.Instant#until and Temporal.Duration.compare.
   it.each`
-    actual                               | tolerance                              | expected    | why
-    ${"2024-06-15T10:14:59Z"}            | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"15-minute: 14 min 59 s late is strictly inside"}
-    ${"2024-06-15T10:15:00Z"}            | ${{ late: "PT15M" }}                   | ${"late"}   | ${"15-minute: exactly 15 minutes is late"}
-    ${"2024-06-15T10:14:59.999999999Z"}  | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"15-minute: one nanosecond short of the boundary is inside"}
-    ${"2024-06-15T10:00:00Z"}            | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"15-minute: on the plan"}
-    ${"2024-06-15T08:00:00Z"}            | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"without early, two hours early is on time"}
-    ${"2024-06-15T08:00:00Z"}            | ${{ late: "PT15M", early: undefined }} | ${"onTime"} | ${"early: undefined is the same as no early"}
-    ${"2024-06-15T09:49:00Z"}            | ${{ late: "PT15M", early: "PT10M" }}   | ${"early"}  | ${"with early PT10M, 11 minutes early is early"}
-    ${"2024-06-15T09:50:00Z"}            | ${{ late: "PT15M", early: "PT10M" }}   | ${"early"}  | ${"exactly 10 minutes early is early"}
-    ${"2024-06-15T09:50:00.000000001Z"}  | ${{ late: "PT15M", early: "PT10M" }}   | ${"onTime"} | ${"one nanosecond inside the early boundary"}
-    ${"2024-06-15T09:51:00Z"}            | ${{ late: "PT15M", early: "PT10M" }}   | ${"onTime"} | ${"9 minutes early is strictly inside"}
-    ${"2024-06-15T10:14:59Z"}            | ${{ late: "PT15M", early: "PT10M" }}   | ${"onTime"} | ${"early changes nothing on the late side"}
-    ${"2024-06-15T11:30:00Z"}            | ${{ late: "PT60M" }}                   | ${"late"}   | ${"60-minute: a 90-minute delay is late"}
-    ${"2024-06-15T11:30:00Z"}            | ${{ late: "PT120M" }}                  | ${"onTime"} | ${"120-minute: the same delay is on time"}
-    ${"2024-06-16T09:59:59Z"}            | ${{ late: "P1D", early: "P1D" }}       | ${"onTime"} | ${"day-based: 23:59:59 late is inside"}
-    ${"2024-06-16T10:00:00Z"}            | ${{ late: "P1D", early: "P1D" }}       | ${"late"}   | ${"day-based: a day is 24 hours, so 24 h late is late"}
-    ${"2024-06-14T10:00:00Z"}            | ${{ late: "P1D", early: "P1D" }}       | ${"early"}  | ${"day-based: 24 h early is early"}
-    ${"2024-06-15T10:00:00Z"}            | ${{ late: "PT0S" }}                    | ${"late"}   | ${"late PT0S: on the plan is late"}
-    ${"2024-06-15T09:59:59Z"}            | ${{ late: "PT0S" }}                    | ${"onTime"} | ${"late PT0S without early: an early arrival is still on time"}
-    ${"2024-06-15T09:59:59Z"}            | ${{ late: "PT0S", early: "PT0S" }}     | ${"early"}  | ${"both PT0S: nothing is on time (early side)"}
-    ${"2024-06-15T10:00:00Z"}            | ${{ late: "PT0S", early: "PT0S" }}     | ${"late"}   | ${"both PT0S: on the plan is late, which is checked first"}
-    ${"2024-06-15T10:00:00Z"}            | ${{ late: "PT15M", early: "PT0S" }}    | ${"early"}  | ${"early PT0S: on the plan is on the early boundary, which is outside"}
-    ${"2024-06-15T10:00:00Z"}            | ${{ late: "-PT0S" }}                   | ${"late"}   | ${"-PT0S is zero, not negative"}
-    ${"2024-06-15T19:15:00+09:00"}       | ${{ late: "PT15M" }}                   | ${"late"}   | ${"an offset instant, 10:15Z"}
-    ${"2024-06-15T15:44:59+05:30:15"}    | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"a sub-minute offset instant, 10:14:44Z"}
-    ${"2024-06-15T10:15:00Z[Not/AZone]"} | ${{ late: "PT15M" }}                   | ${"late"}   | ${"a bracket is never read"}
+    actual                              | tolerance                              | expected    | why
+    ${"2024-06-15T10:14:59Z"}           | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"15-minute: 14 min 59 s late is strictly inside"}
+    ${"2024-06-15T10:15:00Z"}           | ${{ late: "PT15M" }}                   | ${"late"}   | ${"15-minute: exactly 15 minutes is late"}
+    ${"2024-06-15T10:14:59.999999999Z"} | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"15-minute: one nanosecond short of the boundary is inside"}
+    ${"2024-06-15T10:00:00Z"}           | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"15-minute: on the plan"}
+    ${"2024-06-15T08:00:00Z"}           | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"without early, two hours early is on time"}
+    ${"2024-06-15T08:00:00Z"}           | ${{ late: "PT15M", early: undefined }} | ${"onTime"} | ${"early: undefined is the same as no early"}
+    ${"2024-06-15T09:49:00Z"}           | ${{ late: "PT15M", early: "PT10M" }}   | ${"early"}  | ${"with early PT10M, 11 minutes early is early"}
+    ${"2024-06-15T09:50:00Z"}           | ${{ late: "PT15M", early: "PT10M" }}   | ${"early"}  | ${"exactly 10 minutes early is early"}
+    ${"2024-06-15T09:50:00.000000001Z"} | ${{ late: "PT15M", early: "PT10M" }}   | ${"onTime"} | ${"one nanosecond inside the early boundary"}
+    ${"2024-06-15T09:51:00Z"}           | ${{ late: "PT15M", early: "PT10M" }}   | ${"onTime"} | ${"9 minutes early is strictly inside"}
+    ${"2024-06-15T10:14:59Z"}           | ${{ late: "PT15M", early: "PT10M" }}   | ${"onTime"} | ${"early changes nothing on the late side"}
+    ${"2024-06-15T11:30:00Z"}           | ${{ late: "PT60M" }}                   | ${"late"}   | ${"60-minute: a 90-minute delay is late"}
+    ${"2024-06-15T11:30:00Z"}           | ${{ late: "PT120M" }}                  | ${"onTime"} | ${"120-minute: the same delay is on time"}
+    ${"2024-06-16T09:59:59Z"}           | ${{ late: "P1D", early: "P1D" }}       | ${"onTime"} | ${"day-based: 23:59:59 late is inside"}
+    ${"2024-06-16T10:00:00Z"}           | ${{ late: "P1D", early: "P1D" }}       | ${"late"}   | ${"day-based: a day is 24 hours, so 24 h late is late"}
+    ${"2024-06-14T10:00:00Z"}           | ${{ late: "P1D", early: "P1D" }}       | ${"early"}  | ${"day-based: 24 h early is early"}
+    ${"2024-06-15T10:00:00Z"}           | ${{ late: "PT0S" }}                    | ${"late"}   | ${"late PT0S: on the plan is late"}
+    ${"2024-06-15T09:59:59Z"}           | ${{ late: "PT0S" }}                    | ${"onTime"} | ${"late PT0S without early: an early arrival is still on time"}
+    ${"2024-06-15T09:59:59Z"}           | ${{ late: "PT0S", early: "PT0S" }}     | ${"early"}  | ${"both PT0S: nothing is on time (early side)"}
+    ${"2024-06-15T10:00:00Z"}           | ${{ late: "PT0S", early: "PT0S" }}     | ${"late"}   | ${"both PT0S: on the plan is late, which is checked first"}
+    ${"2024-06-15T10:00:00Z"}           | ${{ late: "PT15M", early: "PT0S" }}    | ${"early"}  | ${"early PT0S: on the plan is on the early boundary, which is outside"}
+    ${"2024-06-15T10:00:00Z"}           | ${{ late: "-PT0S" }}                   | ${"late"}   | ${"-PT0S is zero, not negative"}
+    ${"2024-06-15T19:15:00+09:00"}      | ${{ late: "PT15M" }}                   | ${"late"}   | ${"an offset instant, 10:15Z"}
+    ${"2024-06-15T15:44:59+05:30:15"}   | ${{ late: "PT15M" }}                   | ${"onTime"} | ${"a sub-minute offset instant, 10:14:44Z"}
   `(
     "classifies $actual under $tolerance as $expected ($why)",
     ({ actual, tolerance, expected }) => {
@@ -50,10 +50,10 @@ describe("classifyPunctuality", () => {
   // New York fell back at 02:00 EDT on 3 November 2024 and sprang forward on 10 March 2024.
   // The deviation is exact elapsed time: a wall-clock reading would say 0, 23 h 30 min or 2 h.
   it.each`
-    plan                                             | actual                                           | tolerance            | expected    | transition
-    ${"2024-11-03T01:30:00-04:00[America/New_York]"} | ${"2024-11-03T01:30:00-05:00[America/New_York]"} | ${{ late: "PT15M" }} | ${"late"}   | ${"fall-back: the same wall time an hour later is 60 min late"}
-    ${"2024-11-02T12:00:00-04:00[America/New_York]"} | ${"2024-11-03T11:30:00-05:00[America/New_York]"} | ${{ late: "P1D" }}   | ${"late"}   | ${"fall-back: 23 h 30 min on the wall clock is 24 h 30 min elapsed"}
-    ${"2024-03-10T01:30:00-05:00[America/New_York]"} | ${"2024-03-10T03:29:00-04:00[America/New_York]"} | ${{ late: "PT60M" }} | ${"onTime"} | ${"spring-forward: 1 h 59 min on the wall clock is 59 min elapsed"}
+    plan                           | actual                         | tolerance            | expected    | transition
+    ${"2024-11-03T01:30:00-04:00"} | ${"2024-11-03T01:30:00-05:00"} | ${{ late: "PT15M" }} | ${"late"}   | ${"fall-back: the same wall time an hour later is 60 min late"}
+    ${"2024-11-02T12:00:00-04:00"} | ${"2024-11-03T11:30:00-05:00"} | ${{ late: "P1D" }}   | ${"late"}   | ${"fall-back: 23 h 30 min on the wall clock is 24 h 30 min elapsed"}
+    ${"2024-03-10T01:30:00-05:00"} | ${"2024-03-10T03:29:00-04:00"} | ${{ late: "PT60M" }} | ${"onTime"} | ${"spring-forward: 1 h 59 min on the wall clock is 59 min elapsed"}
   `(
     "classifies across the $transition",
     ({ plan, actual, tolerance, expected }) => {
@@ -64,9 +64,9 @@ describe("classifyPunctuality", () => {
   it.each(battleTestTimeZones)(
     "gives the same class whatever zone the plan is written in (%s)",
     (timeZone) => {
-      const plan = Temporal.Instant.from(planned)
-        .toZonedDateTimeISO(timeZone)
-        .toString();
+      const plan = offsetString(
+        Temporal.Instant.from(planned).toZonedDateTimeISO(timeZone),
+      );
       expect(
         classifyPunctuality(plan, "2024-06-15T10:15:00Z", { late: "PT15M" }),
       ).toBe("late");
@@ -116,8 +116,11 @@ describe("classifyPunctuality", () => {
     plan                     | actual                                     | why
     ${"2024-06-15T10:00:00"} | ${"2024-06-15T10:14:00Z"}                  | ${"a zoneless plan"}
     ${planned}               | ${"2024-06-15T10:14:00"}                   | ${"a zoneless actual"}
-    ${planned}               | ${"2024-06-15T06:14:00[America/New_York]"} | ${"a zoned wall time without an offset: the bracket is never read"}
+    ${planned}               | ${"2024-06-15T06:14:00[America/New_York]"} | ${"a zoned wall time without an offset: a zone annotation is not an instant"}
     ${"not a date"}          | ${"2024-06-15T10:14:00Z"}                  | ${"a malformed plan"}
+    ${planned}               | ${"2024-06-15T10:15:00Z[Not/AZone]"}       | ${"an instant with a zone annotation"}
+    ${planned}               | ${"2024-06-15T10:15:00Z[u-ca=hebrew]"}     | ${"an instant with a calendar annotation"}
+    ${planned}               | ${"2024-06-15T10:15:00Z[foo=bar]"}         | ${"an instant with an elective annotation"}
     ${planned}               | ${""}                                      | ${"scheduleDeviation's sentinel as the actual"}
     ${planned}               | ${1718446440}                              | ${"a non-string actual"}
   `("returns null for $why", ({ plan, actual }) => {

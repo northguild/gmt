@@ -1,4 +1,4 @@
-import { fromOffsetInstant, toOffsetInstant } from "../../instant/convert";
+import { toOffsetInstant } from "../../instant/convert";
 import { revokedProxy } from "../../test/hostileValues";
 import { NON_STRINGS } from "../../test/nonStrings";
 import type { Hl7FormatOptions } from "../../types";
@@ -28,12 +28,7 @@ const WRITTEN = [
   // ISO 8601-1 §5.3.1.3 reduced precision: an hour with an offset, read by Temporal
   { input: "2024-06-15T10-05:00", expected: "2024061510-0500" },
   { input: "2024-06-15T10Z", expected: "2024061510+0000" },
-  { input: "2024-06-15T10Z[Europe/Helsinki]", expected: "2024061513+0300" },
   { input: "0000-01-01", expected: "00000101" },
-  {
-    input: "2024-06-15T10:30:00+05:30[Asia/Kolkata]",
-    expected: "20240615103000+0530",
-  },
   {
     input: "2024-06-15T10:30:00+23:00",
     expected: "20240615103000+2300",
@@ -49,12 +44,6 @@ const WRITTEN = [
   { input: "2024-06-15T10:30:00+05:45", expected: "20240615103000+0545" },
   { input: "2024-06-15T10:30:00-14:00", expected: "20240615103000-1400" },
   { input: "2024-06-15T10:30:00+14:00", expected: "20240615103000+1400" },
-  // Z names an exact instant; a zone annotation shows it on that zone's clock (EEST, +03:00)
-  {
-    input: "2024-06-15T10:30:00Z[Europe/Helsinki]",
-    expected: "20240615133000+0300",
-  },
-  { input: "2024-06-15T10:30:00Z[UTC]", expected: "20240615103000+0000" },
   { input: "2024-06-15T10:30:00+00:00:00", expected: "20240615103000+0000" },
   // 2.A.22 `YYYY`: years 0000 and 9999 are the ends
   { input: "0000-01-01T00:00:00Z", expected: "00000101000000+0000" },
@@ -71,14 +60,6 @@ const WRITTEN = [
   {
     input: "2024-06-15T10:30:00.123456789+05:45",
     expected: "20240615103000.1234+0545",
-  },
-  {
-    input: fromOffsetInstant({
-      instant: "2024-06-15T15:30:00Z",
-      offset: "-05:00",
-      timeZone: "America/Chicago",
-    }),
-    expected: "20240615103000-0500",
   },
 ] as const;
 
@@ -193,6 +174,26 @@ const REFUSED: {
   {
     input: "1900-01-01T11:34:39-00:25:21[Europe/Dublin]",
     why: "Dublin Mean Time offset",
+  },
+  // No annotation is read, however well it agrees with the offset: the zone is not a bracket on the value
+  {
+    input: "2024-06-15T10Z[Europe/Helsinki]",
+    why: "zone after an hour with Z",
+  },
+  {
+    input: "2024-06-15T10:30:00+05:30[Asia/Kolkata]",
+    why: "zone that agrees with the offset",
+  },
+  { input: "2024-06-15T10:30:00Z[Europe/Helsinki]", why: "zone after Z" },
+  { input: "2024-06-15T10:30:00Z[UTC]", why: "UTC zone after Z" },
+  {
+    input: "2024-06-15T10:30:00Z[!Europe/Helsinki]",
+    why: "critical zone after Z",
+  },
+  { input: "2024-06-15T10:30:00Z[u-ca=iso8601]", why: "calendar after Z" },
+  {
+    input: "2024-06-15T10:30:00Z[foo=bar]",
+    why: "elective annotation after Z",
   },
   { input: "+010000-01-01", why: "expanded year" },
   { input: "-000001-01-01T00:00:00Z", why: "negative year" },
@@ -309,7 +310,6 @@ describe("formatHL7", () => {
         "2024-06-15T15:30:00Z",
         "2024-06-15T10:30:45.1234-05:00",
         "2024-06-15T10:30:45.1-05:00",
-        "2024-06-15T10:30:00+05:30[Asia/Kolkata]",
         "9999-12-31T23:59:59-14:00",
         "2024-06-15T10:30:00+05:45",
         "2024-06-15T10:30:00+14:00",

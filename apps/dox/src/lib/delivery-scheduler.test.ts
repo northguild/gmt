@@ -290,6 +290,96 @@ describe("shortZoneLabel", () => {
   });
 });
 
+describe("offsets with seconds (New York 1883, Monrovia 1960)", () => {
+  // New York left -04:56:02 for -05:00 at 1883-11-18T17:00:00Z: its clocks
+  // went from 12:03:58 back to 12:00. 08:00 at -04:56:02 is 12:56:02Z; eight
+  // hours later is 20:56:02Z, 15:56:02 at -05:00.
+  const nyLegs = [
+    legObject({
+      departure: "1883-11-18T08:00:00-04:56:02[America/New_York]",
+      duration: "PT8H",
+      timeZone: "America/New_York",
+      dwellAfter: "",
+      mode: "",
+    }),
+  ];
+  const nyFacts = collectJourneyFacts(nyLegs, undefined, lib);
+
+  it("writes the 1883 change to the second, as a fall back", () => {
+    const events = buildItinerary(
+      nyFacts,
+      nyLegs,
+      "America/New_York",
+      lib,
+    )!.groups.flatMap((g) => g.events);
+    const dst = events.find((e) => e.kind === "dst")!;
+    expect(dst.instant).toBe("1883-11-18T17:00:00Z");
+    expect(dst.fromOffset).toBe("-04:56:02");
+    expect(dst.toOffset).toBe("-05:00");
+    expect(dst.note).toBe("New York clocks fall back 12:03:58 → 12:00");
+    const chart = buildChartData(nyFacts, nyLegs, "America/New_York", lib)!;
+    expect(chart.transitions.map((t) => t.note)).toEqual([
+      "New York clocks fall back 12:03:58 → 12:00",
+    ]);
+  });
+
+  it("shows each stop's time and offset to the second", () => {
+    const events = buildItinerary(
+      nyFacts,
+      nyLegs,
+      "America/New_York",
+      lib,
+    )!.groups.flatMap((g) => g.events);
+    const dep = events.find((e) => e.kind === "departure")!;
+    expect(dep.instant).toBe("1883-11-18T12:56:02Z");
+    expect(dep.time).toBe("08:00");
+    expect(dep.offset).toBe("-04:56:02");
+    const arr = events.find((e) => e.kind === "arrival")!;
+    expect(arr.instant).toBe("1883-11-18T20:56:02Z");
+    expect(arr.time).toBe("15:56:02");
+    expect(arr.offset).toBe("-05:00");
+    // Booked at -04:56:02, the table reads 20:56:02Z as 16:00: 3 min 58 s late.
+    expect(arr.offsetCheck).toEqual({
+      agrees: false,
+      badge: "3 min 58 s late",
+      naiveTime: "16:00",
+    });
+    const chart = buildChartData(nyFacts, nyLegs, "America/New_York", lib)!;
+    expect(chart.stations.map((s) => [s.time, s.offset])).toEqual([
+      ["08:00", "-04:56:02"],
+      ["15:56:02", "-05:00"],
+    ]);
+    expect(
+      chart.stations.at(-1)!.badges.find((b) => b.kind === "offset")?.text,
+    ).toBe("3 min 58 s late");
+  });
+
+  it("shows Monrovia's -00:44:30, not the rounded -00:45", () => {
+    // 12:00Z at -00:44:30 is 11:15:30; an hour later, 12:15:30.
+    const legs = [
+      legObject({
+        departure: "1960-06-01T12:00:00Z",
+        duration: "PT1H",
+        timeZone: "Africa/Monrovia",
+        dwellAfter: "",
+        mode: "",
+      }),
+    ];
+    const f = collectJourneyFacts(legs, undefined, lib);
+    const events = buildItinerary(
+      f,
+      legs,
+      "Africa/Monrovia",
+      lib,
+    )!.groups.flatMap((g) => g.events);
+    const dep = events.find((e) => e.kind === "departure")!;
+    expect([dep.time, dep.offset]).toEqual(["11:15:30", "-00:44:30"]);
+    const arr = events.find((e) => e.kind === "arrival")!;
+    expect([arr.time, arr.offset]).toEqual(["12:15:30", "-00:44:30"]);
+    expect(arr.offsetCheck).toEqual({ agrees: true, badge: "agrees" });
+  });
+});
+
 describe("buildItinerary", () => {
   const preset = DELIVERY_PRESETS.find((p) => p.id === "truck-ship-rail")!;
   const legs = preset.legs.map((l) => legObject(l));

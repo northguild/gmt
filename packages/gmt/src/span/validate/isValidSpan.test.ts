@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import { spanMs } from "../calculate/spanMs";
 import { spanNs } from "../calculate/spanNs";
 import { spanWallClock } from "../calculate/spanWallClock";
@@ -6,31 +6,14 @@ import { isValidSpan } from "./isValidSpan";
 
 describe("isValidSpan", () => {
   it.each`
-    start                                            | end                          | reason
-    ${"2024-03-10T12:00:00Z"}                        | ${"2024-03-10T12:00:01Z"}    | ${"a one-second span"}
-    ${"2024-03-10T12:00:00Z"}                        | ${"2024-03-10T12:00:00Z"}    | ${"a zero span is a span"}
-    ${"2024-03-10T12:00:01Z"}                        | ${"2024-03-10T12:00:00Z"}    | ${"reversed — spans are signed, not invalid"}
-    ${"2024-03-10T07:00:00-05:00[America/New_York]"} | ${"2024-03-10T12:00:00Z"}    | ${"mixed zone and offset forms"}
-    ${"-271821-04-20T00:00:00Z"}                     | ${"+275760-09-13T00:00:00Z"} | ${"the full representable range"}
+    start                        | end                          | reason
+    ${"2024-03-10T12:00:00Z"}    | ${"2024-03-10T12:00:01Z"}    | ${"a one-second span"}
+    ${"2024-03-10T12:00:00Z"}    | ${"2024-03-10T12:00:00Z"}    | ${"a zero span is a span"}
+    ${"2024-03-10T12:00:01Z"}    | ${"2024-03-10T12:00:00Z"}    | ${"reversed — spans are signed, not invalid"}
+    ${"-271821-04-20T00:00:00Z"} | ${"+275760-09-13T00:00:00Z"} | ${"the full representable range"}
   `("returns true for $start to $end ($reason)", ({ start, end }) => {
     expect(isValidSpan(start, end)).toBe(true);
   });
-
-  // A bracketed zone annotation is not validated: the written offset fixes the instant, as in
-  // Temporal.Instant.from (test262 Temporal/Instant/from/
-  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
-  // contradicts the string's, is not checked. (A minute-rounded offset of a sub-minute zone is
-  // the one thing read from a bracket: test/minuteRoundedOffsets.test.ts.) 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
-  it.each`
-    start                                            | end                                  | reason
-    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${"2024-03-10T12:00:00Z[Not/AZone]"} | ${"contradicting offset, then a zone that does not exist"}
-    ${"2024-03-10T12:00:00Z[+05:00]"}                | ${"2024-03-10T13:00:00Z"}            | ${"numeric zone annotation"}
-  `(
-    "returns true for $start to $end, whose annotations are not checked ($reason)",
-    ({ start, end }) => {
-      expect(isValidSpan(start, end)).toBe(true);
-    },
-  );
 
   it.each`
     start                                      | end                                        | reason
@@ -75,7 +58,7 @@ describe("isValidSpan", () => {
     expect(isValidSpan(start, end)).toBe(isValidSpan(end, start));
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns true against the same instant expressed in $timeZone",
     ({ value }) => {
       expect(isValidSpan("2024-02-29T00:00:00Z", value)).toBe(true);
@@ -114,18 +97,18 @@ describe("isValidSpan", () => {
     expect(spanWallClock(start, end, "hours")).toBe(24);
   });
 
-  // Temporal.Instant.from reads RFC 9557 annotations and ignores a time zone, calendar or elective
-  // annotation (an instant has no calendar; proposal-temporal `ParseTemporalInstantString`), and
-  // rejects an unknown critical one. Native Temporal (Chromium 153) agrees.
   it.each`
-    start                                       | end                                 | expected
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${"2024-03-11T12:00:00-04:00"}      | ${true}
-    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00Z[foo=bar]"}  | ${true}
-    ${"2024-03-10T12:00:00Z"}                   | ${"2024-03-11T12:00:00Z[!foo=bar]"} | ${false}
+    start                                            | end
+    ${"2024-03-10T07:00:00-05:00[America/New_York]"} | ${"2024-03-10T12:00:00Z"}
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${"2024-03-10T12:00:00Z[Not/AZone]"}
+    ${"2024-03-10T12:00:00Z[+05:00]"}                | ${"2024-03-10T13:00:00Z"}
+    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"}      | ${"2024-03-11T12:00:00-04:00"}
+    ${"2024-03-10T12:00:00Z"}                        | ${"2024-03-11T12:00:00Z[foo=bar]"}
+    ${"2024-03-10T12:00:00Z"}                        | ${"2024-03-11T12:00:00Z[!foo=bar]"}
   `(
-    "reads the annotations of $start and $end as Temporal does → $expected",
-    ({ start, end, expected }) => {
-      expect(isValidSpan(start, end)).toBe(expected);
+    "returns false for $start to $end, an endpoint carrying a bracketed annotation",
+    ({ start, end }) => {
+      expect(isValidSpan(start, end)).toBe(false);
     },
   );
 });

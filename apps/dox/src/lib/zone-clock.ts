@@ -30,6 +30,7 @@ import {
   getTimeZoneOffset,
   getZonedNow,
 } from "@northguild/gmt/zoned/get";
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import { hasDaylightSaving } from "@northguild/gmt/zoned/validate";
 
 export interface ZoneReading {
@@ -40,7 +41,10 @@ export interface ZoneReading {
   date: string;
   /** Local wall time, `HH:MM:SS`. */
   time: string;
-  /** UTC offset, `±HH:MM` (or `+00:00` for `Z`). */
+  /** UTC offset, `±HH:MM`, or `±HH:MM:SS` for a zone that ran on one
+   *  (Africa/Monrovia, `-00:44:30` until 1972): the zone's exact offset, read
+   *  through `toOffsetInstant`, never the minute-rounded offset the zoned
+   *  string carries. */
   offset: string;
   /** Whether this instant is in daylight saving in this zone. */
   inDst: boolean;
@@ -48,8 +52,7 @@ export interface ZoneReading {
   observesDst: boolean;
 }
 
-const ZONED_PATTERN =
-  /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})/;
+const ZONED_PATTERN = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/;
 
 const SENTINEL: Omit<ZoneReading, "id" | "observesDst"> = {
   ok: false,
@@ -61,12 +64,13 @@ const SENTINEL: Omit<ZoneReading, "id" | "observesDst"> = {
 
 function parseZoned(id: string, zoned: string): ZoneReading {
   const match = ZONED_PATTERN.exec(zoned);
+  const read = toOffsetInstant(zoned);
   // Whether the zone observes DST is asked for the instant read, not for today:
   // the scrubber reads other dates, and a zone can stop (or start) observing it.
-  const observesDst = hasDaylightSaving(id, { at: zoned });
-  if (!match) return { id, observesDst: false, ...SENTINEL };
-  const [, date, time, rawOffset] = match;
-  const offset = rawOffset === "Z" ? "+00:00" : rawOffset;
+  const observesDst = hasDaylightSaving(id, { at: read?.instant ?? "" });
+  if (!match || !read) return { id, observesDst: false, ...SENTINEL };
+  const [, date, time] = match;
+  const offset = read.offset;
   return {
     id,
     ok: true,
@@ -112,9 +116,11 @@ export function readViewerDate(): string {
 /**
  * The viewer's own local date and minute, `YYYY-MM-DD` and `HH:MM`.
  *
- * The minute is what paces the globe's zone-bucket scan. Every zone's local day
- * and DST state changes only on a whole-minute boundary — IANA offsets are
- * whole minutes, and so are transitions — so rescanning all ~420 zones once a
+ * The minute is what paces the globe's zone-bucket scan, which reads the
+ * present. Every zone's local day and DST state changes only on a whole-minute
+ * boundary today — every offset in use now is a whole number of minutes, and
+ * so is every change between them (older offsets were not: Africa/Monrovia ran
+ * at `-00:44:30` until 1972) — so rescanning all ~420 zones once a
  * second would recompute an answer that provably cannot have moved. Both fields
  * come from one reading, so asking for them costs one call, not two.
  */

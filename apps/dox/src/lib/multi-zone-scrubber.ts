@@ -54,6 +54,7 @@ import { readZoneAt } from "./zone-clock";
 import {
   crossedSwitch,
   dstStatus,
+  formatSwitchShift,
   nextSwitch,
   switchesInWindow,
   type DstSwitch,
@@ -533,7 +534,7 @@ export async function initScrubber(
 
   /** "Spring forward +1 h" or "Fall back −1 h". */
   function switchLabel(s: DstSwitch): string {
-    return `${s.shiftMin > 0 ? "Spring forward" : "Fall back"} ${formatShift(s.shiftMin)}`;
+    return `${s.shiftMin > 0 ? "Spring forward" : "Fall back"} ${formatSwitchShift(s.shiftMin)}`;
   }
 
   function switchTitle(s: DstSwitch): string {
@@ -693,8 +694,8 @@ export async function initScrubber(
       const city = shortZone(next.zone);
       const what =
         next.shiftMin > 0
-          ? `${city} springs forward ${formatShift(next.shiftMin)}`
-          : `${city} falls back ${formatShift(next.shiftMin)}`;
+          ? `${city} springs forward ${formatSwitchShift(next.shiftMin)}`
+          : `${city} falls back ${formatSwitchShift(next.shiftMin)}`;
       const text = `${what} at ${formatInstantShort(next.instant)}. Showing one hour after it.`;
       jumpStatus.textContent = text;
       lastCrossings = text;

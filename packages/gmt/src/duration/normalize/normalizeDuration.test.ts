@@ -304,3 +304,15 @@ describe("normalizeDuration with a non-ISO calendar relativeTo (CORE-6)", () => 
     },
   );
 });
+
+describe("normalizeDuration with a relativeTo that is not a string", () => {
+  it.each`
+    relativeTo                           | label
+    ${{ year: 2023, month: 2, day: 31 }} | ${"a bag with a day to clamp"}
+    ${{ year: 2023, month: 2, day: 1 }}  | ${"a valid bag"}
+  `("returns '' for $label", ({ relativeTo }) => {
+    expect(
+      normalizeDuration("P45D", { largestUnit: "month", relativeTo }),
+    ).toBe("");
+  });
+});

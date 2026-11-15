@@ -345,12 +345,11 @@ describe("formatZonedToParts with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// An option typed as a string is read once and must be a primitive string (CORE-113): a wrapped
+// value, an object with a `toString`, returns the sentinel and is never asked for its value, so
+// no second conversion can give another answer ("long" to the check, "narrow" to the formatter).
 describe("formatZonedToParts with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -363,12 +362,8 @@ describe("formatZonedToParts with an option that is an object", () => {
       day: "numeric",
     } as never);
     expect({ out, coercions }).toEqual({
-      out: [
-        { type: "month", value: "March" },
-        { type: "literal", value: " " },
-        { type: "day", value: "15" },
-      ],
-      coercions: 1,
+      out: [],
+      coercions: 0,
     });
   });
 });

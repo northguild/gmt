@@ -70,13 +70,25 @@ describe("parseTimestampEvents", () => {
     ]);
   });
 
-  it("echoes at as written, a bracket it never reads included", () => {
-    const at = "2024-06-15T12:00:00Z[Not/AZone]";
+  it("echoes at as written, an offset spelling included", () => {
+    const at = "2024-06-15T14:00:00+02:00";
     expect(
       parseTimestampEvents([
         { classifier: "EST", at, recordedAt: "2024-06-15T10:00:00Z" },
       ])?.[0]?.at,
     ).toBe(at);
+  });
+
+  it("returns null for an at with a zone bracket", () => {
+    expect(
+      parseTimestampEvents([
+        {
+          classifier: "EST",
+          at: "2024-06-15T12:00:00Z[Not/AZone]",
+          recordedAt: "2024-06-15T10:00:00Z",
+        },
+      ]),
+    ).toBeNull();
   });
 
   it("returns an empty array for an empty list", () => {

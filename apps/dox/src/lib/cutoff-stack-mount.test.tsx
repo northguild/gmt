@@ -26,19 +26,19 @@ const entry = WIDGET_REGISTRY["showCutoffStack"] as AnyWidgetEntry;
 
 const EXPECTED: Record<string, [string, string | null]> = {
   "rotterdam-weekend": [
-    '"2024-06-17T18:00:00+02:00[Europe/Amsterdam]", [{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, { name: "documents", offset: "P3D", atLocalTime: "12:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }',
+    '"2024-06-17T18:00:00+02:00", [{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, { name: "documents", offset: "P3D", atLocalTime: "12:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "preceding" }',
     '[{ name: "documents", at: "2024-06-14T12:00:00+02:00[Europe/Amsterdam]" }, { name: "gate-in", at: "2024-06-14T17:00:00+02:00[Europe/Amsterdam]" }]',
   ],
   "rotterdam-following": [
-    '"2024-06-17T18:00:00+02:00[Europe/Amsterdam]", [{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, { name: "documents", offset: "P3D", atLocalTime: "12:00" }, { name: "VGM", offset: "P1D", atLocalTime: "10:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "following" }',
+    '"2024-06-17T18:00:00+02:00", [{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, { name: "documents", offset: "P3D", atLocalTime: "12:00" }, { name: "VGM", offset: "P1D", atLocalTime: "10:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" }, roll: "following" }',
     '[{ name: "documents", at: "2024-06-14T12:00:00+02:00[Europe/Amsterdam]" }, { name: "VGM", at: "2024-06-17T10:00:00+02:00[Europe/Amsterdam]" }, { name: "gate-in", at: "2024-06-17T17:00:00+02:00[Europe/Amsterdam]" }]',
   ],
   holiday: [
-    '"2024-05-10T18:00:00+02:00[Europe/Amsterdam]", [{ name: "gate-in", offset: "PT6H" }, { name: "documents", offset: "P1D", atLocalTime: "12:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: ["2024-05-09"], timeZone: "Europe/Amsterdam" }, roll: "preceding" }',
+    '"2024-05-10T18:00:00+02:00", [{ name: "gate-in", offset: "PT6H" }, { name: "documents", offset: "P1D", atLocalTime: "12:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: ["2024-05-09"], timeZone: "Europe/Amsterdam" }, roll: "preceding" }',
     '[{ name: "documents", at: "2024-05-08T12:00:00+02:00[Europe/Amsterdam]" }, { name: "gate-in", at: "2024-05-10T12:00:00+02:00[Europe/Amsterdam]" }]',
   ],
   "no-roll": [
-    '"2024-06-17T18:00:00+02:00[Europe/Amsterdam]", [{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, { name: "documents", offset: "P3D", atLocalTime: "12:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" } }',
+    '"2024-06-17T18:00:00+02:00", [{ name: "gate-in", offset: "P2D", atLocalTime: "17:00" }, { name: "documents", offset: "P3D", atLocalTime: "12:00" }], { timeZone: "Europe/Amsterdam", calendar: { weekend: [6, 7], holidays: [], timeZone: "Europe/Amsterdam" } }',
     null,
   ],
   "no-calendar": [
@@ -175,7 +175,7 @@ describe("mountCutoffStack", () => {
 
   it("renders the chat seed as gate-in moved from Sat 15 Jun, documents no", async () => {
     await open({
-      anchor: "2024-06-17T18:00:00+02:00[Europe/Amsterdam]",
+      anchor: "2024-06-17T18:00:00+02:00",
       timeZone: "Europe/Amsterdam",
       cutoffs: [
         { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
@@ -259,7 +259,7 @@ describe("mountCutoffStack", () => {
 describe("a seed applied to the default template (the tool page)", () => {
   it("keeps a zone outside the curated list and reads it", async () => {
     await open({
-      anchor: "2024-06-12T18:00:00+03:00[Europe/Helsinki]",
+      anchor: "2024-06-12T18:00:00+03:00",
       timeZone: "Europe/Helsinki",
       cutoffs: [{ name: "gate-in", offset: "P2D", atLocalTime: "12:00" }],
     });

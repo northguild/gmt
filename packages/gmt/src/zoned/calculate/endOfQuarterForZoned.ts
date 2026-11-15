@@ -1,7 +1,7 @@
 import { zonedUnitEnd } from "../../internal";
 import type { FractionalDigit } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { fractionalDigitsOptionOrDefault } from "../../internal/typedOptions";
 import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
@@ -50,7 +50,7 @@ export function endOfQuarterForZoned(
 
     // An end is next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
     // print an earlier instant than the end (Calendar & zone semantics §3).
-    const fractionalSecondDigits = optionOrDefault(
+    const fractionalSecondDigits = fractionalDigitsOptionOrDefault(
       optionsArg?.fractionalSecondDigits,
       9,
     );

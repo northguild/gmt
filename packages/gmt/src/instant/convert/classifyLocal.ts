@@ -1,6 +1,6 @@
 import { classifyWall } from "../../internal/earlierOccurrence";
 import { plainDateTimeOf } from "../../internal/inputChecks";
-import { instantOfWallClock, isoStringBody, zoneFrame } from "../../internal";
+import { instantOfWallClock, zoneFrame } from "../../internal";
 
 /**
  * What a zoneless wall time turns out to be once a zone is attached to it.
@@ -33,9 +33,8 @@ export type LocalTimeClassification = "unique" | "ambiguous" | "nonexistent";
  *   and every year, including 30- and 45-minute shifts and zones that skipped a whole
  *   calendar day changing sides of the date line.
  * - `localDateTime` is a PlainDateTime string, as `isValidDateTime` accepts: `<date>T<time>`
- *   with no offset (a string with an offset has no ambiguity left to report). Its RFC 9557
- *   annotations are read as `Temporal.PlainDateTime.from` reads them, so a time zone annotation
- *   is ignored and `timeZone` alone is the zone.
+ *   with no offset and no annotation of any kind (a string with an offset has no ambiguity left
+ *   to report), so `timeZone` alone is the zone.
  * - Returns null on invalid input — never `"unique"`, which would read as a verdict.
  * - `timeZone` may be a UTC offset, including one `getTimeZoneOffset` returned with seconds. A
  *   fixed offset names one instant for every wall time, so the classification is always `"unique"`.
@@ -71,7 +70,7 @@ export function classifyLocal(
     // A fixed offset has no transition: a wall time it can place is one instant, and one it
     // cannot (past the instant range) throws.
     if (frame.shiftNanoseconds !== 0n) {
-      instantOfWallClock(isoStringBody(localDateTime), frame);
+      instantOfWallClock(localDateTime, frame);
       return "unique";
     }
 

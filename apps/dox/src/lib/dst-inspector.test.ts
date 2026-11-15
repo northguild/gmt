@@ -738,3 +738,82 @@ describe("probeContext", () => {
     });
   });
 });
+
+describe("offsets with seconds", () => {
+  // Real transitions from getDstTransitions: New York left local mean time in
+  // 1883 (a 3 min 58 s repeat), Monrovia moved to UTC in 1972 (a 44 min 30 s gap).
+  const NY_1883: DstTransition = {
+    instant: "1883-11-18T17:00:00Z",
+    offsetBefore: "-04:56:02",
+    offsetAfter: "-05:00",
+  };
+  const MONROVIA_1972: DstTransition = {
+    instant: "1972-01-07T00:44:30Z",
+    offsetBefore: "-00:44:30",
+    offsetAfter: "+00:00",
+  };
+
+  it("parses an offset with seconds, keeping them as a fraction", () => {
+    expect(parseOffsetMinutes("-00:44:30")).toBe(-44.5);
+    expect(parseOffsetMinutes("-04:56:02")).toBeCloseTo(-296 - 2 / 60, 12);
+  });
+
+  it("classifies the 1883 change as an overlap and 1972 as a gap", () => {
+    expect(isOverlap(NY_1883)).toBe(true);
+    expect(transitionType(NY_1883)).toBe("overlap");
+    expect(isGap(MONROVIA_1972)).toBe(true);
+  });
+
+  it("keeps the seconds of a transition's local time", () => {
+    expect(localMinuteOfDayAtTransition(NY_1883, "America/New_York")).toBe(720);
+    expect(localMinuteOfDayAtTransition(MONROVIA_1972, "Africa/Monrovia")).toBe(
+      44.5,
+    );
+  });
+
+  it("sizes New York's repeat to 12:03:58 and Monrovia's gap to 00:44:30", () => {
+    const ny = getTickerWindow(NY_1883, "America/New_York")!;
+    expect(formatMinuteOfDay(ny.zoneStartMinutes)).toBe("12:00");
+    expect(formatMinuteOfDay(ny.zoneEndMinutes)).toBe("12:03:58");
+    const monrovia = getTickerWindow(MONROVIA_1972, "Africa/Monrovia")!;
+    expect(formatMinuteOfDay(monrovia.zoneStartMinutes)).toBe("00:00");
+    expect(formatMinuteOfDay(monrovia.zoneEndMinutes)).toBe("00:44:30");
+  });
+
+  it("puts 12:03:57 inside the repeat and 12:03:59 outside it", () => {
+    const at = (time: string) =>
+      classifyProbeResult(
+        `1883-11-18T${time}-05:00[America/New_York]`,
+        [NY_1883],
+        probeContext(`1883-11-18T${time}`, [NY_1883], "America/New_York")
+          .probeHour,
+        "America/New_York",
+      ).type;
+    expect(at("12:03:57")).toBe("overlap");
+    expect(at("12:03:59")).toBe("normal");
+  });
+
+  it("writes a fractional minute to the second", () => {
+    expect(
+      buildZonedValueFromMinutes(
+        "America/New_York",
+        "1883-11-18",
+        723 + 58 / 60,
+      ),
+    ).toBe("1883-11-18T12:03:58[America/New_York]");
+    expect(buildValuePreset("gap", "Africa/Monrovia", [MONROVIA_1972])).toBe(
+      "1972-01-07T00:22:00[Africa/Monrovia]",
+    );
+    expect(buildValuePreset("overlap", "America/New_York", [NY_1883])).toBe(
+      "1883-11-18T12:00:00[America/New_York]",
+    );
+  });
+
+  it.each([
+    ["1883-11-18T12:03:58-04:56:02[America/New_York]", "1883-11-18T12:03:58"],
+    ["1960-06-01T11:15:30-00:44:30", "1960-06-01T11:15:30"],
+    ["1960-06-01T11:15:30.5-00:44:30.25", "1960-06-01T11:15:30.5"],
+  ])("strips the offset with seconds from %s", (value, plain) => {
+    expect(toPlainLocalDateTime(value)).toBe(plain);
+  });
+});

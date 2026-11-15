@@ -143,12 +143,32 @@ const battleTestInstant = Temporal.Instant.from("2024-02-29T00:00:00Z");
 const unixEpochInstant = Temporal.Instant.fromEpochMilliseconds(0);
 
 /**
+ * An instant written as an offset string: the zone's wall clock and its exact offset, with no
+ * annotation. The offset keeps its seconds when it has them (`-00:44:30`), which `toString`
+ * rounds to the minute and so would name a different instant.
+ */
+export function offsetString(zoned: Temporal.ZonedDateTime): string {
+  const total = zoned.offsetNanoseconds / 1_000_000_000;
+  const sign = total < 0 ? "-" : "+";
+  const abs = Math.abs(total);
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  const hhmm = `${pad(Math.floor(abs / 3600))}:${pad(Math.floor((abs % 3600) / 60))}`;
+  const seconds = abs % 60;
+  const offset = seconds === 0 ? hhmm : `${hhmm}:${pad(seconds)}`;
+  return `${zoned.toPlainDateTime().toString()}${sign}${offset}`;
+}
+
+/**
  * Same instant represented in every battle-test timeZone.
  * Use this when asserting conversion parity across zones.
  *
+ * `value` is the same instant as a zoned string, for the functions that keep the zone.
+ * `offsetValue` is the instant written with that zone's offset (an instant string: `Z` or an
+ * offset, nothing after it); `sameInstantOffsetCases` carries it as `value`.
+ *
  * Example rows (for battleTestInstant = 2024-02-29T00:00:00Z):
- * - UTC -> 2024-02-29T00:00:00+00:00[UTC]
- * - America/New_York -> 2024-02-28T19:00:00-05:00[America/New_York]
+ * - UTC -> 2024-02-29T00:00:00+00:00[UTC] (offsetValue 2024-02-29T00:00:00+00:00)
+ * - America/New_York -> 2024-02-28T19:00:00-05:00[America/New_York] (offsetValue 2024-02-28T19:00:00-05:00)
  * - Europe/Helsinki -> 2024-02-29T02:00:00+02:00[Europe/Helsinki]
  * - Pacific/Apia -> 2024-02-29T13:00:00+13:00[Pacific/Apia]
  * - Pacific/Niue -> 2024-02-28T13:00:00-11:00[Pacific/Niue]
@@ -156,6 +176,7 @@ const unixEpochInstant = Temporal.Instant.fromEpochMilliseconds(0);
 export const sameInstantBattleCases = battleTestTimeZones.map((timeZone) => ({
   timeZone,
   value: battleTestInstant.toZonedDateTimeISO(timeZone).toString(),
+  offsetValue: offsetString(battleTestInstant.toZonedDateTimeISO(timeZone)),
   unixMilliseconds: Number(battleTestInstant.epochMilliseconds),
   unixSeconds: Math.floor(Number(battleTestInstant.epochMilliseconds) / 1000),
   utc: battleTestInstant.toString(),
@@ -163,21 +184,26 @@ export const sameInstantBattleCases = battleTestTimeZones.map((timeZone) => ({
 
 /**
  * Unix epoch represented in every battle-test timeZone.
- * Use this to catch historical timeZone-offset differences.
+ * Use this to catch historical timeZone-offset differences. `value` is the zoned string,
+ * `offsetValue` the offset string (see `sameInstantBattleCases`).
  *
  * Example rows (for unixEpochInstant = 1970-01-01T00:00:00Z):
  * - UTC -> 1970-01-01T00:00:00+00:00[UTC]
  * - America/New_York -> 1969-12-31T19:00:00-05:00[America/New_York]
  * - Europe/Helsinki -> 1970-01-01T02:00:00+02:00[Europe/Helsinki]
- * - Pacific/Apia -> 1969-12-31T13:00:00-11:00[Pacific/Apia]
- * - Pacific/Niue -> 1969-12-31T13:00:00-11:00[Pacific/Niue]
  */
 export const unixEpochBattleCases = battleTestTimeZones.map((timeZone) => ({
   timeZone,
   value: unixEpochInstant.toZonedDateTimeISO(timeZone).toString(),
+  offsetValue: offsetString(unixEpochInstant.toZonedDateTimeISO(timeZone)),
   unixMilliseconds: Number(unixEpochInstant.epochMilliseconds),
   unixSeconds: Math.floor(Number(unixEpochInstant.epochMilliseconds) / 1000),
   utc: unixEpochInstant.toString(),
+}));
+/** `sameInstantBattleCases` with `value` the offset string: the rows for the instant readers. */
+export const sameInstantOffsetCases = sameInstantBattleCases.map((row) => ({
+  ...row,
+  value: row.offsetValue,
 }));
 
 /**

@@ -8,7 +8,7 @@ import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -93,7 +93,7 @@ export function formatRelativeZoned(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const valueZDT = zonedDateTimeOf(value);
     if (valueZDT === null) return "";
 

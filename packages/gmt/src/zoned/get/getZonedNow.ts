@@ -1,7 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import { isZoneId } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -49,7 +49,10 @@ export function getZonedNow(
     // Only smallestUnit is read: any other key on the caller's object (roundingMode, offset,
     // timeZoneName, calendarName, fractionalSecondDigits) never reaches Temporal's toString.
     const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
-      smallestUnit: optionOrDefault(optionsArg?.smallestUnit, "millisecond"),
+      smallestUnit: stringOptionOrDefault(
+        optionsArg?.smallestUnit,
+        "millisecond",
+      ),
     };
     if (!isZoneId(ianaTimezone)) {
       return "";

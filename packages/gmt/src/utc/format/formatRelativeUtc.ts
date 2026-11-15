@@ -5,7 +5,7 @@ import { nowInstant } from "../../internal/temporalCompat";
 import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeTimeFormatOptions, RelativeUnit } from "../../types";
 import { utcInstantOf } from "../../internal/utcInstant";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeUtc`: the instant the distance is measured from, the unit it is shown
@@ -77,7 +77,7 @@ export function formatRelativeUtc(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = utcInstantOf(value);
     if (target === null) return "";
     const frame = normalizeZoneFrame(options.timeZone);

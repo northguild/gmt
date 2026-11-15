@@ -54,18 +54,6 @@ describe("formatEdifactOffsetDateTime", () => {
         expect(parseEdifactOffsetDateTime(expected, code)).toBe(readsBack);
       },
     );
-
-    // A bracketed zone is read as `toOffsetInstant` reads it: it must agree with the offset, and
-    // beside `Z` it sets the wall clock. 19:00Z in Europe/London on 14 June 2024 is 20:00 at
-    // +01:00 (British Summer Time).
-    it.each`
-      code     | value                                         | expected
-      ${"303"} | ${"2024-06-15T14:30:00+02:00[Europe/Berlin]"} | ${"202406151430+02"}
-      ${"303"} | ${"2024-06-14T19:00:00Z[Europe/London]"}      | ${"202406142000+01"}
-      ${"205"} | ${"2024-06-14T19:00:00Z[Asia/Kolkata]"}       | ${"202406150030+0530"}
-    `("writes $value under $code as $expected", ({ code, value, expected }) => {
-      expect(formatEdifactOffsetDateTime(value, code)).toBe(expected);
-    });
   });
 
   describe("an offset the field cannot hold is never rounded", () => {
@@ -120,8 +108,11 @@ describe("formatEdifactOffsetDateTime", () => {
       ${"14:30:00+02:00"}                           | ${"a time with an offset: no date"}
       ${"14:30"}                                    | ${"a time"}
       ${"+02:00"}                                   | ${"an offset alone"}
+      ${"2024-06-15T14:30:00+02:00[Europe/Berlin]"} | ${"a zoned string: an instant has no zone bracket"}
+      ${"2024-06-14T19:00:00Z[Europe/London]"}      | ${"a Z instant with a zone bracket"}
       ${"2024-06-15T14:30:00+01:00[Europe/Berlin]"} | ${"an offset its bracketed zone contradicts"}
       ${"2024-06-15T14:30:00+02:00[Not/AZone]"}     | ${"a bracketed zone that does not exist"}
+      ${"2024-06-15T14:30:00+02:00[u-ca=iso8601]"}  | ${"a calendar annotation"}
       ${"2024-06-15T14:30:00+0200"}                 | ${"an offset without its colon"}
       ${"20240615T143000+0200"}                     | ${"basic format: the input is extended ISO 8601"}
       ${"2024-06-15T14:30:00z"}                     | ${"a lower-case z"}
@@ -131,8 +122,6 @@ describe("formatEdifactOffsetDateTime", () => {
       ${"-000001-12-31T23:00:00+00:00"}             | ${"a wall clock before year 0000"}
       ${"+010000-01-01T01:30:00+02:00"}             | ${"a wall clock in year 10000, although its instant is in year 9999"}
       ${"-000001-12-31T23:00:00-02:00"}             | ${"a wall clock before year 0000, although its instant is in year 0000"}
-      ${"9999-12-31T23:30:00Z[Asia/Tokyo]"}         | ${"a Z instant in year 9999 whose zone's wall clock, at +09:00, is in year 10000"}
-      ${"1800-01-01T00:00:00Z[Europe/Amsterdam]"}   | ${"a bracketed zone on local mean time: its offset has seconds, which no mask holds"}
       ${"2024-06-15T14:30:00+24:00"}                | ${"offset hour 24"}
       ${""}                                         | ${"an empty value"}
     `("returns '' for '$value' ($reads)", ({ value }) => {

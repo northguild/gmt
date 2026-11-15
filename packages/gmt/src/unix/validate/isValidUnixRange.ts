@@ -1,3 +1,4 @@
+import { booleanOption } from "../../internal/typedOptions";
 import {
   isObject,
   isOptionsArgument,
@@ -62,7 +63,9 @@ export function isValidUnixRange(props: {
       return false;
     }
 
-    return options?.allowEqual ? first <= second : first < second;
+    return booleanOption(options?.allowEqual, false)
+      ? first <= second
+      : first < second;
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

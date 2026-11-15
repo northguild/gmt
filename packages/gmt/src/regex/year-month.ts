@@ -9,8 +9,9 @@
  *
  * Capture groups: none.
  *
- * The written form only, with no RFC 9557 annotation. `isValidYearMonth` matches this against
- * the part before the first `[` and lets Temporal read the annotations.
+ * The whole string, with no RFC 9557 annotation of any kind: `isValidYearMonth` matches this against the
+ * entire value, so a time zone, a calendar (`"…[u-ca=iso8601]"`) or an elective (`"…[foo=bar]"`)
+ * annotation makes the value invalid.
  *
  * @example plainYearMonth.test("2026-10")    // true
  * @example plainYearMonth.test("+275760-09") // true

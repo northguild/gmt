@@ -3,7 +3,8 @@ import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import {
   battleTestTimeZones,
-  sameInstantBattleCases,
+  offsetString,
+  sameInstantOffsetCases,
 } from "../../test/timeZoneMatrix";
 import { toTai64n } from "./toTai64n";
 
@@ -15,10 +16,9 @@ import { toTai64n } from "./toTai64n";
  */
 const insertedSecondBattleCases = battleTestTimeZones.map((timeZone) => ({
   timeZone,
-  value: Temporal.Instant.from("2016-12-31T23:59:59Z")
-    .toZonedDateTimeISO(timeZone)
-    .toString()
-    .replace(/:59(?=[+-])/, ":60"),
+  value: offsetString(
+    Temporal.Instant.from("2016-12-31T23:59:59Z").toZonedDateTimeISO(timeZone),
+  ).replace(/:59(?=[+-])/, ":60"),
 }));
 
 describe("toTai64n", () => {
@@ -46,10 +46,10 @@ describe("toTai64n", () => {
   );
 
   // Out of the table: the input is longer than the 40 characters Vitest prints of a title value.
-  it("reads an offset with a bracketed zone", () => {
+  it("returns an empty string for an offset with a bracketed zone", () => {
     expect(
       toTai64n("1999-08-23T21:03:43.7874925-07:00[America/Los_Angeles]"),
-    ).toBe("@4000000037c219bf2ef02e94");
+    ).toBe("");
   });
 
   // An inserted second has its own label: the old offset + 1 s (TF.460-6 Annex 1 §2.2).
@@ -114,7 +114,7 @@ describe("toTai64n", () => {
   );
 
   // Same instant, any zone: 2024-02-29T00:00:00Z is 37 s ahead of UTC.
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns @4000000065dfc92500000000 for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value, utc }) => {
       expect(toTai64n(value)).toBe("@4000000065dfc92500000000");

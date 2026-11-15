@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import { isValidUtc } from "../../utc/validate";
 import { toNanoseconds } from "../convert/toNanoseconds";
 import { arrives, NON_STRINGS } from "../../test/nonStrings";
@@ -6,37 +6,17 @@ import { isValidInstant } from "./isValidInstant";
 
 describe("isValidInstant", () => {
   it.each`
-    value                                            | reason
-    ${"2024-03-10T12:00:00Z"}                        | ${"UTC designator"}
-    ${"1970-01-01T00:00:00Z"}                        | ${"the epoch, where toNanoseconds returns 0n"}
-    ${"1969-12-31T23:59:59Z"}                        | ${"pre-epoch"}
-    ${"2024-03-10T12:00:00.123456789Z"}              | ${"nanosecond precision"}
-    ${"2024-03-10T12:00:00-05:00"}                   | ${"numeric offset"}
-    ${"2024-03-10T12:00:00-05:00[America/New_York]"} | ${"bracketed IANA zone"}
-    ${"+275760-09-13T00:00:00Z"}                     | ${"the latest representable instant"}
-    ${"-271821-04-20T00:00:00Z"}                     | ${"the earliest representable instant"}
+    value                               | reason
+    ${"2024-03-10T12:00:00Z"}           | ${"UTC designator"}
+    ${"1970-01-01T00:00:00Z"}           | ${"the epoch, where toNanoseconds returns 0n"}
+    ${"1969-12-31T23:59:59Z"}           | ${"pre-epoch"}
+    ${"2024-03-10T12:00:00.123456789Z"} | ${"nanosecond precision"}
+    ${"2024-03-10T12:00:00-05:00"}      | ${"numeric offset"}
+    ${"+275760-09-13T00:00:00Z"}        | ${"the latest representable instant"}
+    ${"-271821-04-20T00:00:00Z"}        | ${"the earliest representable instant"}
   `("returns true for $value ($reason)", ({ value }) => {
     expect(isValidInstant(value)).toBe(true);
   });
-
-  // A bracketed zone annotation is not validated: the written offset fixes the instant, as in
-  // Temporal.Instant.from (test262 Temporal/Instant/from/
-  // argument-string-time-zone-annotation.js). A zone that does not exist, or one whose offset
-  // contradicts the string's, is not checked. (A minute-rounded offset of a sub-minute zone is
-  // the one thing read from a bracket: test/minuteRoundedOffsets.test.ts.) 12:00+05:00 is 07:00Z; 12:00-04:00 is 16:00Z.
-  it.each`
-    value                                            | reason
-    ${"2024-03-10T12:00:00+05:00[America/New_York]"} | ${"offset contradicts the zone"}
-    ${"2024-03-10T12:00:00Z[Not/AZone]"}             | ${"zone that does not exist"}
-    ${"2024-03-10T12:00:00Z[+05:00]"}                | ${"numeric zone annotation"}
-    ${"2024-01-01T00:00:00Z[x=T123460Z]"}            | ${"elective annotation value shaped like a basic leap second (RFC 9557 §4.1 alphanum)"}
-    ${"2024-01-01T00:00:00Z[x=t000060-y]"}           | ${"elective annotation value shaped like a lowercase leap second"}
-  `(
-    "returns true for $value, whose annotation is not checked ($reason)",
-    ({ value }) => {
-      expect(isValidInstant(value)).toBe(true);
-    },
-  );
 
   it.each`
     value                                      | reason
@@ -61,25 +41,18 @@ describe("isValidInstant", () => {
     expect(isValidInstant(value)).toBe(false);
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns true for 2024-02-29T00:00:00Z expressed in $timeZone",
     ({ value }) => {
       expect(isValidInstant(value)).toBe(true);
     },
   );
 
-  it.each`
-    value                                            | reason
-    ${"2024-03-10T12:00:00-05:00"}                   | ${"numeric offset"}
-    ${"2024-03-10T12:00:00-05:00[America/New_York]"} | ${"bracketed IANA zone"}
-  `(
-    "accepts $value ($reason), which isValidUtc rejects — the gap it exists to close",
-    ({ value }) => {
-      expect(isValidInstant(value)).toBe(true);
-      expect(isValidUtc(value)).toBe(false);
-      expect(toNanoseconds(value)).not.toBe(0n);
-    },
-  );
+  it("accepts 2024-03-10T12:00:00-05:00, which isValidUtc rejects: the gap it exists to close", () => {
+    expect(isValidInstant("2024-03-10T12:00:00-05:00")).toBe(true);
+    expect(isValidUtc("2024-03-10T12:00:00-05:00")).toBe(false);
+    expect(toNanoseconds("2024-03-10T12:00:00-05:00")).not.toBe(0n);
+  });
 
   it("is exactly the predicate that disambiguates toNanoseconds' 0n", () => {
     expect(isValidInstant("1970-01-01T00:00:00Z")).toBe(true);
@@ -92,18 +65,27 @@ describe("isValidInstant", () => {
   // Temporal.Instant.from reads RFC 9557 annotations and ignores a time zone, calendar or elective
   // annotation (an instant has no calendar; proposal-temporal `ParseTemporalInstantString`), and
   // rejects an unknown critical one. Native Temporal (Chromium 153) agrees.
+  // An instant is `Z` or an offset and nothing after it: any bracketed annotation (a zone, a
+  // calendar, an elective or a critical one, one that names a zone that does not exist) is junk.
   it.each`
-    value                                       | expected
-    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"} | ${true}
-    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}     | ${true}
-    ${"2024-03-10T12:00:00Z[foo=bar]"}          | ${true}
-    ${"2024-03-10T12:00:00Z[!foo=bar]"}         | ${false}
-  `(
-    "reads the annotations of $value as Temporal does → $expected",
-    ({ value, expected }) => {
-      expect(isValidInstant(value)).toBe(expected);
-    },
-  );
+    value
+    ${"2024-03-10T12:00:00-05:00[America/New_York]"}
+    ${"2024-03-10T12:00:00+05:00[America/New_York]"}
+    ${"2024-03-10T12:00:00Z[Europe/Helsinkiddddd]"}
+    ${"2024-03-10T12:00:00Z[!Europe/Helsinki]"}
+    ${"2024-03-10T12:00:00Z[Not/AZone]"}
+    ${"2024-03-10T12:00:00Z[+05:00]"}
+    ${"2024-03-10T12:00:00-05:00[u-ca=hebrew]"}
+    ${"2024-03-10T12:00:00Z[u-ca=iso8601]"}
+    ${"2024-03-10T12:00:00Z[!u-ca=iso8601]"}
+    ${"2024-03-10T12:00:00Z[!u-ca=hebrew]"}
+    ${"2024-03-10T12:00:00Z[foo=bar]"}
+    ${"2024-03-10T12:00:00Z[!foo=bar]"}
+    ${"2024-01-01T00:00:00Z[x=T123460Z]"}
+    ${"2024-01-01T00:00:00Z[x=t000060-y]"}
+  `("returns false for the annotated '$value'", ({ value }) => {
+    expect(isValidInstant(value)).toBe(false);
+  });
 
   it("returns false for a value that is not a string", () => {
     for (const [kind, make] of NON_STRINGS) {

@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { isObject, isOptionsArgument } from "../../internal/isObject";
@@ -63,7 +64,7 @@ export function isValidDateTimeRange(props: {
     try {
       const cmp = Temporal.PlainDateTime.compare(dt1, dt2);
 
-      if (options?.allowEqual) {
+      if (booleanOption(options?.allowEqual, false)) {
         return cmp <= 0;
       }
 

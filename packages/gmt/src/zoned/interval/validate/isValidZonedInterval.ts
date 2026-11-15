@@ -9,9 +9,9 @@ import { zonedDateTimeOf } from "../../../internal/zonedWallClock";
  * - Equal `start === end` is valid.
  * - Comparison is done by instant, so intervals spanning DST transitions are compared
  *   by absolute time.
- * - Reads RFC 9557 annotations as `isValidZonedDateTime` does: `[u-ca=iso8601]` and elective
- *   annotations (`[foo=bar]`) are accepted, an unknown critical annotation (`[!foo=bar]`) is
- *   rejected, and a non-ISO calendar is `isValidCalendarZonedInterval`'s input.
+ * - Reads each endpoint as `isValidZonedDateTime` does: the zone bracket is the only annotation,
+ *   and a calendar (`[u-ca=iso8601]`, `[u-ca=hebrew]`) or an elective one (`[foo=bar]`) returns
+ *   `false`. `isValidCalendarZonedInterval` reads the calendar.
  * - Invalid input, malformed strings, or leap-second strings return `false`.
  *
  * @param start ISO ZonedDateTime string (interval start)
@@ -21,8 +21,8 @@ import { zonedDateTimeOf } from "../../../internal/zonedWallClock";
  * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC]", "2024-12-31T23:59:59+00:00[UTC]") // true
  * @example isValidZonedInterval("2024-06-15T12:00:00+02:00[Africa/Johannesburg]", "2024-06-15T12:00:00+02:00[Africa/Johannesburg]") // true
  * @example isValidZonedInterval("2024-12-31T23:59:59+00:00[UTC]", "2024-01-01T10:00:00+00:00[UTC]") // false
- * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=iso8601]", "2024-12-31T23:59:59+00:00[UTC][foo=bar]") // true (ISO calendar and elective annotations)
- * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]", "2024-12-31T23:59:59+00:00[UTC]") // false (non-ISO calendar: use isValidCalendarZonedInterval)
+ * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=iso8601]", "2024-12-31T23:59:59+00:00[UTC][foo=bar]") // false (only the zone bracket is accepted)
+ * @example isValidZonedInterval("2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]", "2024-12-31T23:59:59+00:00[UTC]") // false (a calendar: use isValidCalendarZonedInterval)
  * @example isValidZonedInterval("invalid", "2024-12-31T23:59:59+00:00[UTC]") // false
  */
 export function isValidZonedInterval(start: string, end: string): boolean {

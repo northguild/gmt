@@ -30,7 +30,7 @@ export type ClockEventType =
 export interface ClockEvent {
   /** What happened to the container, as one of the events a charging clock can start or end at. */
   type: ClockEventType;
-  /** The instant it happened, as an ISO 8601 string: `Z`, an offset, or a bracketed zone. */
+  /** The instant it happened, as an ISO 8601 string: `Z` or an offset, with no annotation of any kind. */
   at: string;
 }
 
@@ -137,7 +137,7 @@ const EXPORT_CLOCKS: Record<ClockScope, [ClockEventType, ClockEventType]> = {
  * @example demurrageClock([{ type: "emptyReleased", at: "2024-07-01T08:00:00Z" }, { type: "gatedIn", at: "2024-07-05T16:00:00Z" }, { type: "loaded", at: "2024-07-09T03:00:00Z" }], "demurrage", { direction: "export" }) // { start: "2024-07-05T16:00:00Z", end: "2024-07-09T03:00:00Z" } (gate-in full to loaded on board)
  * @example demurrageClock([{ type: "emptyReleased", at: "2024-07-01T08:00:00Z" }, { type: "gatedIn", at: "2024-07-05T16:00:00Z" }, { type: "loaded", at: "2024-07-09T03:00:00Z" }], "detention", { direction: "export" }) // { start: "2024-07-01T08:00:00Z", end: "2024-07-05T16:00:00Z" } (empty picked up to gate-in full)
  * @example demurrageClock([{ type: "emptyReleased", at: "2024-07-01T08:00:00Z" }, { type: "gatedIn", at: "2024-07-05T16:00:00Z" }, { type: "loaded", at: "2024-07-09T03:00:00Z" }], "combined", { direction: "export" }) // { start: "2024-07-01T08:00:00Z", end: "2024-07-09T03:00:00Z" }
- * @example demurrageClock([{ type: "gatedOut", at: "2024-06-20T10:30:00+02:00[Africa/Johannesburg]" }, { type: "emptyReturned", at: "2024-06-27T09:00:00Z" }], "detention", { direction: "import", startEvent: "available" }) // { start: "2024-06-20T10:30:00+02:00[Africa/Johannesburg]", end: "2024-06-27T09:00:00Z" } (startEvent is not read for detention; strings are echoed as given)
+ * @example demurrageClock([{ type: "gatedOut", at: "2024-06-20T10:30:00+02:00" }, { type: "emptyReturned", at: "2024-06-27T09:00:00Z" }], "detention", { direction: "import", startEvent: "available" }) // { start: "2024-06-20T10:30:00+02:00", end: "2024-06-27T09:00:00Z" } (startEvent is not read for detention; strings are echoed as given)
  * @example demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }, { type: "gatedOut", at: "2024-06-20T14:30:00Z" }], "demurrage") // null (direction has no default)
  * @example demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }, { type: "gatedOut", at: "2024-06-20T14:30:00Z" }], "demurrage", { direction: "import", startEvent: "available" }) // null (no availability event)
  * @example demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }], "demurrage", { direction: "import" }) // null (still in the terminal: no gate-out)

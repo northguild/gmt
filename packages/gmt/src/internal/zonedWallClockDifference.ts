@@ -1,12 +1,12 @@
 import { Temporal } from "./temporal";
-import type { DurationRelativeTo } from "../types";
+import { durationFrom } from "./durationFrom";
+import type { ResolvedRelativeTo } from "./resolveDurationRelativeTo";
 import {
   isCalendarArithmeticCompatNeeded,
   isNudgeWindowCompatNeeded,
   timeZoneEquals,
 } from "./temporalCompat";
 import { zonedDateTimeFrom } from "./zonedWallClock";
-import { isObject } from "./isObject";
 import {
   compareAtLimit,
   defaultLargestUnit,
@@ -90,7 +90,7 @@ function inTimeZone(
 
 /** The zoned `relativeTo` Temporal would resolve, or null when it is not zoned. */
 function zonedRelativeTo(
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
 ): Temporal.ZonedDateTime | null {
   if (relativeTo instanceof Temporal.ZonedDateTime) return relativeTo;
 
@@ -99,14 +99,6 @@ function zonedRelativeTo(
       return timeZoneAnnotation.test(relativeTo)
         ? zonedDateTimeFrom(relativeTo)
         : null;
-    }
-    if (
-      isObject(relativeTo) &&
-      !(relativeTo instanceof Temporal.PlainDateTime) &&
-      "timeZone" in relativeTo &&
-      relativeTo.timeZone !== undefined
-    ) {
-      return zonedDateTimeFrom(relativeTo);
     }
   } catch {
     // Not a valid zoned relativeTo: the polyfill call reports it.
@@ -237,7 +229,7 @@ function untilTakesSpecPath(
 export function durationTotal(
   duration: Temporal.Duration,
   unit: Temporal.TotalUnit<Temporal.DateTimeUnit>,
-  relativeTo?: DurationRelativeTo,
+  relativeTo?: ResolvedRelativeTo,
 ): number {
   const zoned = zonedRelativeTo(relativeTo);
   const resolvedUnit = toUnit(unit);
@@ -339,7 +331,7 @@ export function durationRound(
 export function durationCompare(
   one: Temporal.Duration | string,
   two: Temporal.Duration | string,
-  relativeTo?: DurationRelativeTo,
+  relativeTo?: ResolvedRelativeTo,
 ): number {
   const zoned = zonedRelativeTo(relativeTo);
   // defect 3: this statement and the `if` below go together.
@@ -352,8 +344,8 @@ export function durationCompare(
     return Temporal.Duration.compare(one, two, { relativeTo });
   }
 
-  const first = Temporal.Duration.from(one);
-  const second = Temporal.Duration.from(two);
+  const first = durationFrom(one);
+  const second = durationFrom(two);
   const reach =
     durationReach(first) > durationReach(second)
       ? durationReach(first)

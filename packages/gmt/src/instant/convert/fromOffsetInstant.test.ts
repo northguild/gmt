@@ -259,16 +259,15 @@ describe("fromOffsetInstant", () => {
     },
   );
 
-  // Temporal.Instant.from ignores an elective, calendar or time zone annotation and rejects an
-  // unknown critical one (RFC 9557 §3.3; native Temporal agrees).
+  // An instant is `...Z` or `...±HH:MM` and nothing after it: any bracketed annotation is rejected.
   it.each`
     instant                                 | expected
-    ${"2024-07-15T16:00:00Z[foo=bar]"}      | ${"2024-07-15T12:00:00-04:00"}
-    ${"2024-07-15T16:00:00Z[u-ca=hebrew]"}  | ${"2024-07-15T12:00:00-04:00"}
-    ${"2024-07-15T16:00:00Z[Europe/Paris]"} | ${"2024-07-15T12:00:00-04:00"}
+    ${"2024-07-15T16:00:00Z[foo=bar]"}      | ${""}
+    ${"2024-07-15T16:00:00Z[u-ca=hebrew]"}  | ${""}
+    ${"2024-07-15T16:00:00Z[Europe/Paris]"} | ${""}
     ${"2024-07-15T16:00:00Z[!foo=bar]"}     | ${""}
   `(
-    "reads the annotations of $instant as Temporal does → '$expected'",
+    "rejects the annotation of $instant as Temporal does → '$expected'",
     ({ instant, expected }) => {
       expect(fromOffsetInstant({ instant, offset: "-04:00" })).toBe(expected);
     },

@@ -61,7 +61,7 @@ GMT's object check was `typeof value === "object"`, so every function returned i
 
 - `scheduleDelivery` and the `Leg` type from TRAN-9 — multi-leg scheduling, the missed-connection rule and the ETA
 - `transitTime` / `etaAtZone` from TRAN-8 — the duration grammar and the local ETA, through `scheduleDelivery`
-- `isValidInstant` from CORE-1 — the instant gate, with the minute-rounded offset rule
+- `isValidInstant` from CORE-1 — the instant gate: `Z` or an offset, no annotation
 
 ## Verification
 

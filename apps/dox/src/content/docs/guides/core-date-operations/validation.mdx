@@ -48,7 +48,7 @@ import { isValidCalendarZonedDateTime, isValidUtc } from "@northguild/gmt";
 isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[Asia/Jerusalem][u-ca=hebrew]"); // true
 isValidCalendarZonedDateTime("2024-02-24T14:30:00+02:00[u-ca=hebrew][Asia/Jerusalem]"); // false — the zone comes first
 
-isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]"); // true — a UTC string's calendar annotation is ignored
+isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]"); // false — a UTC string takes no annotation
 ```
 
 See [Calendar Systems](../calendar-systems/) for the rules on calendar annotations.
@@ -67,7 +67,7 @@ import { isValidUtc, isValidUtcTimestamp } from "@northguild/gmt";
 isValidUtcTimestamp("2026-10-06T12:00:00Z"); // true
 isValidUtcTimestamp("2026-10-06T12:00:00.123456789Z"); // true
 
-isValidUtc("2026-10-06T12:00:00Z[Europe/Paris]"); // true
+isValidUtc("2026-10-06T12:00:00Z[Europe/Paris]"); // false — the annotation
 isValidUtcTimestamp("2026-10-06T12:00:00Z[Europe/Paris]"); // false — the annotation
 isValidUtcTimestamp("2026-10-06T12:00:00,5Z"); // false — comma before the fraction
 isValidUtcTimestamp("-005000-01-01T00:00:00Z"); // false — expanded year

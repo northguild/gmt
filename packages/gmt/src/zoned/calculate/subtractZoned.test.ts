@@ -433,7 +433,7 @@ describe("subtractZoned with an option that is an object", () => {
     return option;
   }
 
-  it("calls disambiguation.toString() once and resolves the overlap with its first answer, later", () => {
+  it("returns the sentinel for disambiguation given as an object, and never calls its toString()", () => {
     const disambiguation = answering("later", "earlier");
     const options = { disambiguation };
     const out = subtractZoned(
@@ -442,12 +442,12 @@ describe("subtractZoned with an option that is an object", () => {
       options as never,
     );
     expect({ out, coercions: disambiguation.coercions }).toEqual({
-      out: "2024-11-03T01:30:00-05:00[America/New_York]",
-      coercions: 1,
+      out: "",
+      coercions: 0,
     });
   });
 
-  it("calls overflow.toString() once, with disambiguation later, and clamps with its first answer, constrain", () => {
+  it("returns the sentinel for overflow given as an object, and never calls its toString()", () => {
     const overflow = answering("constrain", "reject");
     const options = { overflow, disambiguation: "later" };
     const out = subtractZoned(
@@ -456,8 +456,8 @@ describe("subtractZoned with an option that is an object", () => {
       options as never,
     );
     expect({ out, coercions: overflow.coercions }).toEqual({
-      out: "2024-02-29T12:00:00-05:00[America/New_York]",
-      coercions: 1,
+      out: "",
+      coercions: 0,
     });
   });
 });

@@ -1530,35 +1530,35 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "A sailing's whole stack of cut-offs, computed by cutoffSchedule against one departure, earliest first, on a day timeline with closed days shaded and each cut-off a weekend or holiday rolled drawn where it landed and where it would have been.",
     when: "the reader asks when each of several deadlines or cut-offs before a sailing, flight or loading closes, or how a weekend or holiday moves them",
-    args: "anchor (the event the cut-offs count back from: an ISO date-time with an offset or a bracketed zone), timeZone (IANA id of the terminal's clock), cutoffs (1 to 4, each a name, an offset as an ISO 8601 duration such as P2D or PT48H, and an optional atLocalTime such as 17:00), weekend (optional ISO weekday numbers of closed days, 6 and 7 for Saturday and Sunday), holidays (optional ISO dates, up to 5), roll (preceding, following, modifiedPreceding, modifiedFollowing or none; required whenever weekend or holidays are given: there is no default, so ask which way a cut-off on a closed day moves). Never invent a zone.",
+    args: "anchor (the event the cut-offs count back from: an instant, Z or an offset such as +02:00, with no zone name after it), timeZone (IANA id of the terminal's clock), cutoffs (1 to 4, each a name, an offset as an ISO 8601 duration such as P2D or PT48H, and an optional atLocalTime such as 17:00), weekend (optional ISO weekday numbers of closed days, 6 and 7 for Saturday and Sunday), holidays (optional ISO dates, up to 5), roll (preceding, following, modifiedPreceding, modifiedFollowing or none; required whenever weekend or holidays are given: there is no default, so ask which way a cut-off on a closed day moves). Never invent a zone.",
   },
   {
     name: "showCutoffRuler",
     purpose:
       'One departure\'s "N days before" read three ways by cutoffAt on one exact-time axis: N calendar days (P2D), N × 24 exact hours (PT48H), and N days before at a fixed local time, with any DST change between them marked.',
     when: "the reader asks whether N days before an event is the same as N × 24 hours before, or where a days-before cut-off lands across a DST change",
-    args: "anchor (ISO date-time with an offset or a bracketed zone), timeZone (IANA id of the clock the cut-off is read on), days (whole days, 1 to 7), atLocalTime (the local time of day for the pinned reading, e.g. 17:00)",
+    args: "anchor (an instant, Z or an offset such as +02:00, with no zone name after it), timeZone (IANA id of the clock the cut-off is read on), days (whole days, 1 to 7), atLocalTime (the local time of day for the pinned reading, e.g. 17:00)",
   },
   {
     name: "showCutoffCountdown",
     purpose:
       "A cut-off compared with a moment by isPastCutoff and timeToCutoff: the time left, or how late as a negative duration, with the cut-off counted as passed at the deadline itself.",
     when: "the reader asks whether a cut-off or deadline has passed at a given time, or how much time is left or how late they are",
-    args: "cutoff (ISO date-time with an offset or a bracketed zone), now (optional ISO date-time with an offset or zone; omit it to use the reader's own clock), timeZone (IANA id of the clock both are shown on)",
+    args: "cutoff (a zoned date-time as cutoffAt writes it: an offset, then the zone name in brackets, e.g. 2024-06-12T17:00:00+02:00[Europe/Amsterdam]), now (optional instant, Z or an offset, with no zone name after it; omit it to use the reader's own clock), timeZone (IANA id of the clock both are shown on)",
   },
   {
     name: "showPunctualityBoard",
     purpose:
       "Planned and actual times judged by scheduleDeviation, classifyPunctuality and punctualityRate on one axis, with the tolerance band drawn and draggable: each deviation in exact time, early, on time or late with both edges outside, and the on-time rate.",
     when: "the reader asks whether an arrival or departure was late, early or on time, by how much, or what share of several was on time under a tolerance",
-    args: "pairs (1 to 6, each a planned and an actual ISO date-time with an offset or a bracketed zone), late (the late tolerance as an ISO 8601 duration such as PT15M or P1D; required: there is no default, so ask for it), early (optional early tolerance; without it an early arrival is on time), compareLate (optional second late tolerance to compare side by side, such as PT120M against PT60M)",
+    args: "pairs (1 to 6, each a planned and an actual instant, Z or an offset such as +01:00, with no zone name after it), late (the late tolerance as an ISO 8601 duration such as PT15M or P1D; required: there is no default, so ask for it), early (optional early tolerance; without it an early arrival is on time), compareLate (optional second late tolerance to compare side by side, such as PT120M against PT60M)",
   },
   {
     name: "showEtaDrift",
     purpose:
       "Planned, estimated, requested and actual timestamps of one event plotted by when each was recorded: the best available pick from bestAvailable with its class beside the naive latest-recorded pick, and how far the estimate moved from estimateDrift, against an optional tolerance.",
     when: "the reader asks which of several planned, estimated, requested or actual times to show for an arrival or event, or how far an ETA or estimate moved between revisions",
-    args: "events (1 to 6, each a classifier PLN, EST, REQ or ACT, an at time and a recordedAt time, both ISO date-times with an offset or a bracketed zone), tolerance (optional ISO 8601 duration such as PT8H; exceedsTolerance is true only when the drift is greater than it)",
+    args: "events (1 to 6, each a classifier PLN, EST, REQ or ACT, an at time and a recordedAt time, both instants, Z or an offset, with no zone name after it), tolerance (optional ISO 8601 duration such as PT8H; exceedsTolerance is true only when the drift is greater than it)",
   },
   {
     name: "showDepartureBoard",
@@ -1593,14 +1593,14 @@ export const DOX_TOOL_DOCS: {
     purpose:
       "A container's events and the four clocks that run between them, each read by demurrageClock: which two events bound demurrage, detention, storage and the merged clock, drawn as half-open bars under one rail of events over the terminal's local days, and a link to count the chosen clock's days in the Free Time Ledger.",
     when: "the reader asks which events a demurrage, detention, storage or combined clock runs between, or how detention differs from demurrage",
-    args: "events (1 to 6 of { type, at }: type is one of discharged, available, gatedOut, emptyReturned, emptyReleased, gatedIn, loaded; at is an ISO instant with Z, an offset, or an offset and a bracketed zone: never a bare local time), scope (demurrage | detention | storage | combined), direction (import | export: required, and never guessed from the events; ask if the reader did not say), startEvent (optional, discharged | available: where an import demurrage, storage or combined clock starts), zone (optional IANA id of the terminal, only when the reader named one: it sets the day columns and the local times, and is not an argument of demurrageClock)",
+    args: "events (1 to 6 of { type, at }: type is one of discharged, available, gatedOut, emptyReturned, emptyReleased, gatedIn, loaded; at is an ISO instant with Z or an offset and no zone name after it: never a bare local time), scope (demurrage | detention | storage | combined), direction (import | export: required, and never guessed from the events; ask if the reader did not say), startEvent (optional, discharged | available: where an import demurrage, storage or combined clock starts), zone (optional IANA id of the terminal, only when the reader named one: it sets the day columns and the local times, and is not an argument of demurrageClock)",
   },
   {
     name: "showBlDateStamp",
     purpose:
       "A moment and the place of an event, and the calendar date bolTimestamp gives for it, the date a bill of lading carries, set against the UTC date and up to three other calendars and drawn as lanes of local days on one time axis, with a slider that moves the moment.",
     when: "the reader asks what date goes on a bill of lading, or why a B/L date differs from a UTC timestamp",
-    args: "value (the moment: an ISO instant with Z, an offset, or an offset and a bracketed zone: never a bare local time), event (shippedOnBoard | received | issue: the DCSA fields shippedOnBoardDate, receivedForShipmentDate and issueDate), timeZone (the place of the event as the reader named it: an IANA id or a UTC offset such as +08:00; never guessed from a port or a city), zone2, zone3 and zone4 (optional other calendars to set beside it, each an IANA id or an offset), latest (optional YYYY-MM-DD, the latest date allowed, the reader's own date)",
+    args: "value (the moment: an ISO instant with Z or an offset and no zone name after it: never a bare local time), event (shippedOnBoard | received | issue: the DCSA fields shippedOnBoardDate, receivedForShipmentDate and issueDate), timeZone (the place of the event as the reader named it: an IANA id or a UTC offset such as +08:00; never guessed from a port or a city), zone2, zone3 and zone4 (optional other calendars to set beside it, each an IANA id or an offset), latest (optional YYYY-MM-DD, the latest date allowed, the reader's own date)",
   },
   {
     name: "showEpcisEventReader",

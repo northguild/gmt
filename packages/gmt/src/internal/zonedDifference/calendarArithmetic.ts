@@ -1,5 +1,6 @@
 import { Temporal } from "../temporal";
-import type { DurationRelativeTo } from "../../types";
+import { durationFrom } from "../durationFrom";
+import type { ResolvedRelativeTo } from "../resolveDurationRelativeTo";
 import { isCalendarArithmeticCompatNeeded } from "../temporalCompat";
 import { utcEpochNanoseconds } from "../zonedWallClock";
 import {
@@ -119,7 +120,7 @@ export function plainDateUntilWithRounding(
  * no calendar annotation is ISO, so it is never parsed here.
  */
 function plainRelativeToNeedingCompat(
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
 ): Temporal.PlainDate | null {
   let plain: Temporal.PlainDate;
   try {
@@ -168,7 +169,7 @@ export function calendarTotalBySpec(
   duration: Temporal.Duration,
   unitOption: string,
   unit: Unit,
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
   zoned: Temporal.ZonedDateTime | null,
 ): number | null {
   if (zoned !== null) {
@@ -204,24 +205,16 @@ export function calendarRoundBySpec(
 export function calendarCompareBySpec(
   one: Temporal.Duration | string,
   two: Temporal.Duration | string,
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
   zoned: Temporal.ZonedDateTime | null,
 ): number | null {
   if (zoned !== null) {
     return isCalendarArithmeticCompatNeeded(zoned.calendarId)
-      ? compareAtLimit(
-          Temporal.Duration.from(one),
-          Temporal.Duration.from(two),
-          zoned,
-        )
+      ? compareAtLimit(durationFrom(one), durationFrom(two), zoned)
       : null;
   }
   const plain = plainRelativeToNeedingCompat(relativeTo);
   return plain === null
     ? null
-    : compareWithPlainRelativeTo(
-        Temporal.Duration.from(one),
-        Temporal.Duration.from(two),
-        plain,
-      );
+    : compareWithPlainRelativeTo(durationFrom(one), durationFrom(two), plain);
 }

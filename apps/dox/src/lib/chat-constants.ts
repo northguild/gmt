@@ -614,7 +614,7 @@ export const CHAT_STARTERS: readonly {
     // "weekend to Friday" is the preceding roll, which the question names
     // because there is no default.
     args: {
-      anchor: "2024-06-17T18:00:00+02:00[Europe/Amsterdam]",
+      anchor: "2024-06-17T18:00:00+02:00",
       timeZone: "Europe/Amsterdam",
       cutoffs: [
         { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
@@ -632,7 +632,7 @@ export const CHAT_STARTERS: readonly {
     // land an hour apart. A spring-forward date would make PT48H and 17:00
     // coincide.
     args: {
-      anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+      anchor: "2024-04-08T18:00:00+10:00",
       timeZone: "Australia/Sydney",
       days: 2,
       atLocalTime: "17:00",
@@ -659,8 +659,8 @@ export const CHAT_STARTERS: readonly {
     args: {
       pairs: [
         {
-          planned: "2024-06-14T09:00:00+01:00[Europe/London]",
-          actual: "2024-06-14T09:15:00+01:00[Europe/London]",
+          planned: "2024-06-14T09:00:00+01:00",
+          actual: "2024-06-14T09:15:00+01:00",
         },
       ],
       late: "PT15M",
@@ -846,11 +846,11 @@ export const CHAT_STARTERS: readonly {
     args: { id: "017f22e2-79b0-7cc3-98c4-dc0c0c07398f" },
   },
   {
-    text: "How is 2024-01-01T09:00:00+09:00[Asia/Tokyo] stored in Parquet, Arrow and protobuf?",
+    text: "How is 2024-01-01T09:00:00+09:00 stored in Parquet, Arrow and protobuf?",
     widget: "showColumnTimestampBridge",
     area: "core",
     args: {
-      value: "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+      value: "2024-01-01T09:00:00+09:00",
       unit: "second",
       zone: "Asia/Tokyo",
     },

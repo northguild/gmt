@@ -9,6 +9,7 @@ import {
   AUDIT_MAX_CHARS,
   AUDIT_MAX_LINES,
   AUDIT_PRESETS,
+  bandMinutesText,
   CUSTOM_PRESET_ID,
   NO_BAND_TEXT,
   NOT_STORED_TEXT,
@@ -316,5 +317,25 @@ describe("args and permalink", () => {
     expect(readArgs({ values: "a", line: "13" }).line).toBeNull();
     expect(readArgs({ values: "a", line: "0" }).line).toBeNull();
     expect(permalinkOf({ values: "", line: 3 })).toEqual({});
+  });
+});
+
+describe("bandMinutesText with offsets that have seconds", () => {
+  it.each([
+    // getDstTransitions("America/New_York", 1883)
+    ["-04:56:02", "-05:00", "3 minutes 58 seconds"],
+    // getDstTransitions("Africa/Monrovia", 1972)
+    ["-00:44:30", "+00:00", "44 minutes 30 seconds"],
+    ["+00:00", "+00:00:30", "30 seconds"],
+    ["+10:30", "+11:00", "30 minutes"],
+    ["-05:00", "-04:00", "1 hour"],
+  ])("from %s to %s is %s", (offsetBefore, offsetAfter, text) => {
+    expect(
+      bandMinutesText({
+        instant: "1883-11-18T17:00:00Z",
+        offsetBefore,
+        offsetAfter,
+      }),
+    ).toBe(text);
   });
 });

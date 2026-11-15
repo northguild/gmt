@@ -35,7 +35,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D17`: Firefox `formatRange` prints AM/PM for a day period with a zone name (§ Q) | Not a polyfill fix. A SpiderMonkey bug, open as [Bugzilla 2085525](https://bugzilla.mozilla.org/show_bug.cgi?id=2085525) | A Firefox release that prints the flexible day period in a range: the weekly `temporal-oracle` run's compat check in Firefox (`temporal-compat-firefox`) reports D17 removable, and Firefox is the only engine in D17's scope |
 | `D18`: Islamic dates before the Hijra read as positive years in WebKit (§ R) | None. Not filed yet | A js-temporal release that reads the Islamic eras (`main` declares them; whether its parser accepts WebKit's `Before Hijra` spelling is untested), or a WebKit that prints the year as V8 does, so every `D18` repro passes in the weekly `temporal-oracle` run's compat check in both WebKit builds (the `temporal-compat-webkit` and `temporal-compat-webkit-macos` verdicts, Linux and macOS); WebKit is the only engine in D18's scope |
 | `D19`: `ZonedDateTime#equals` answers false for two identifiers of one zone where `resolvedOptions` keeps the identifier (§ U) | None. Not filed yet | A js-temporal release that finds a non-primary identifier's primary without `Intl.DateTimeFormat#resolvedOptions`, so the `D19` probe passes in the weekly `temporal-oracle` run's compat check in both WebKit builds (the `temporal-compat-webkit` and `temporal-compat-webkit-macos` verdicts, Linux and macOS); WebKit is the only engine in D19's scope |
-| `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | A js-temporal rebase and a release |
+| `D20`: `PlainMonthDay.from` rejects an upper-case `iso8601` calendar annotation (§ V) | tc39 `385b479bf8` | None: GMT no longer needs the workaround (CORE-113, #528), so nothing waits on the release |
 | `D21`: `Temporal.Now` reads a millisecond early after a pre-1970 clock reading (§ AB) | None. Filed as tc39 #3335 | A tc39 fix, the js-temporal rebase and a release, so the `D21` canary repro passes |
 | `D22`: a length in days or larger is measured from the wrong pass of a repeated hour (§ AC) | js-temporal `3c403686d39` | tc39 #3319 in the same release, or `P7D` with `largestUnit: "week"` regresses to `P1W1D`. A release that still strips the Asserts of tc39/proposal-temporal#3336, #3311 and #3310 keeps GMT's gate |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
@@ -1886,11 +1886,8 @@ branch already allows. If it is meant, the round-trip gap is by design and worth
   `scheduleDelivery`, `toOffsetInstant` and every `zoned/` function return the sentinel for a
   string with an offset on local date −271821-04-19. GMT's own
   `interpretISODateTimeOffset` (`internal/zonedWallClock.ts`) keeps the same check.
-- **Instant readers read it.** `parseInstantNanoseconds` matches the offset against the zone with
-  no date-range check, so `isValidInstant`, `toNanoseconds`, `scheduleDeviation`, `etaAtZone` and
-  the rest read `-271821-04-19T23:59:00-00:01[Europe/London]` as −271821-04-20T00:00:15Z.
-- Stated in [coding-standards § Calendar & zone semantics, rule 9](../coding-standards.md#9-an-instant-string-is-read-as-the-zoned-string-it-may-be)
-  and pinned in `packages/gmt/src/test/minuteRoundedOffsets.test.ts`.
+- **Instant readers do not meet it.** They take no zone bracket, so they read the written offset literally and have no date-range check.
+- Stated in [coding-standards § Calendar & zone semantics](../coding-standards.md#calendar--zone-semantics) (each kind accepts one exact pattern) and pinned in `packages/gmt/src/test/minuteRoundedOffsets.test.ts`.
 - The champions' answer is that the throw is intended until ecma262 `MakeDay` is fixed
   (tc39/ecma262#1087): `MakeDay` differs between engines, and `CheckISODaysRange` keeps
   `from(zdt.toString())` from returning different results in each (tc39/proposal-temporal#3014,
@@ -2388,7 +2385,7 @@ ParseTemporalYearMonthString and ParseTemporalMonthDayString: canonicalize the c
 
 ### Status
 
-**Fixed on tc39 `main` by `385b479bf8` (2026-02-26, "Canonicalize calendar before checking YYYY-MM or MM-DD format"). Not yet on js-temporal `main`** (`c55b211`, 2026-09-22, still has the old check), so it arrives with the polyfill's in-order catch-up and the release in #373. Nothing to file: the fix exists upstream. The one commit fixes both parsers, so GMT works around both as the one temporalCompat **D20** (`temporalCompat/isoCalendarFrom.ts`, probe `isIsoCalendarCaseCompatNeeded`).
+**Fixed on tc39 `main` by `385b479bf8` (2026-02-26, "Canonicalize calendar before checking YYYY-MM or MM-DD format"). Not yet on js-temporal `main`** (`c55b211`, 2026-09-22, still has the old check), so it arrives with the polyfill's in-order catch-up and the release in #373. Nothing to file: the fix exists upstream. The one commit fixes both parsers. GMT worked around both as temporalCompat **D20** and retired the workaround in CORE-113 (#528): no reader passes an annotation to `PlainMonthDay.from` or `PlainYearMonth.from` any more, because the plain month-day and year-month kinds take no annotation of any kind.
 
 ### What goes wrong
 
@@ -2411,7 +2408,7 @@ Probe, two repros that share one answer: `Temporal.PlainMonthDay.from("--12-25[u
 
 ### Effect on GMT
 
-`isValidMonthDay`, `parseMonthDay`, `isValidYearMonth` and `parseYearMonth` would refuse `--12-25[u-ca=ISO8601]` and `2026-10[u-ca=ISO8601]`, which the specification reads. While the D20 probe fails, `monthDayFrom` and `yearMonthFrom` rewrite the value of every `[u-ca=…]` and `[!u-ca=…]` annotation to ASCII lower case before Temporal reads the string. Every other part of the string is passed unchanged, so every other error is Temporal's own.
+None. `isValidMonthDay`, `parseMonthDay`, `isValidYearMonth` and `parseYearMonth` refuse every annotation, `--12-25[u-ca=ISO8601]` and `2026-10[u-ca=ISO8601]` included, before Temporal is asked, so the defect cannot be reached. The D20 workaround and its probe are removed.
 
 ## W. `PlainMonthDay.from` accepts a day no year has (polyfill and tc39 reference polyfill)
 

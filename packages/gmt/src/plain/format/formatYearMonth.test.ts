@@ -90,45 +90,44 @@ describe("formatYearMonth", () => {
 
   // Rules, en-US.
   it.each`
-    value                      | options                                                                       | expected              | rule
-    ${"2026-10"}               | ${{ month: "long" }}                                                          | ${"October"}          | ${"month alone"}
-    ${"2026-10"}               | ${{ year: "numeric" }}                                                        | ${"2026"}             | ${"year alone"}
-    ${"2026-10"}               | ${{ year: "numeric", month: "long", day: "numeric" }}                         | ${"October 2026"}     | ${"day dropped"}
-    ${"2026-10"}               | ${{ weekday: "long", year: "numeric", month: "long" }}                        | ${"October 2026"}     | ${"weekday dropped"}
-    ${"2026-10"}               | ${{ year: "numeric", month: "long", hour: "numeric", timeZoneName: "short" }} | ${"October 2026"}     | ${"time fields dropped"}
-    ${"2026-10"}               | ${{ day: "numeric" }}                                                         | ${""}                 | ${"day only"}
-    ${"2026-10"}               | ${{ weekday: "long" }}                                                        | ${""}                 | ${"weekday only"}
-    ${"2026-10"}               | ${{ hour: "numeric" }}                                                        | ${""}                 | ${"hour only"}
-    ${"2026-10"}               | ${{ dayPeriod: "short" }}                                                     | ${""}                 | ${"dayPeriod only"}
-    ${"2026-10"}               | ${{ minute: "numeric" }}                                                      | ${""}                 | ${"minute only"}
-    ${"2026-10"}               | ${{ second: "numeric" }}                                                      | ${""}                 | ${"second only"}
-    ${"2026-10"}               | ${{ fractionalSecondDigits: 3 }}                                              | ${""}                 | ${"fractionalSecondDigits only"}
-    ${"2026-10"}               | ${{ era: "short", year: "numeric", month: "long" }}                           | ${"October 2026 AD"}  | ${"era kept"}
-    ${"2026-10"}               | ${{ timeZoneName: "short" }}                                                  | ${"10/2026"}          | ${"timeZoneName only is not inherited"}
-    ${"2026-10"}               | ${{ timeStyle: "short" }}                                                     | ${""}                 | ${"timeStyle"}
-    ${"2026-10"}               | ${{ dateStyle: "short", timeStyle: "short" }}                                 | ${""}                 | ${"dateStyle and timeStyle"}
-    ${"2026-10"}               | ${{ calendar: "gregory" }}                                                    | ${"10/2026"}          | ${"calendar gregory"}
-    ${"2026-10"}               | ${{ calendar: "iso8601" }}                                                    | ${"10/2026"}          | ${"calendar iso8601"}
-    ${"2026-10"}               | ${{ calendar: "hebrew" }}                                                     | ${""}                 | ${"calendar hebrew"}
-    ${"2026-10"}               | ${{ calendar: "japanese" }}                                                   | ${""}                 | ${"calendar japanese"}
-    ${"2026-10"}               | ${{ calendar: "gregorian" }}                                                  | ${""}                 | ${"calendar gregorian is a RangeError"}
-    ${"2026-10"}               | ${{ numberingSystem: "arab" }}                                                | ${"١٠/٢٠٢٦"}          | ${"numberingSystem kept"}
-    ${"2026-10[u-ca=ISO8601]"} | ${undefined}                                                                  | ${"10/2026"}          | ${"D20 calendar annotation"}
-    ${"+002026-10"}            | ${undefined}                                                                  | ${"10/2026"}          | ${"six-digit year form"}
-    ${"0000-10"}               | ${{ year: "numeric", month: "long" }}                                         | ${"October 1"}        | ${"year 0 prints era year 1, no era"}
-    ${"-000001-10"}            | ${{ year: "numeric", month: "long" }}                                         | ${"October 2"}        | ${"year -1 prints era year 2"}
-    ${"0000-10"}               | ${{ era: "short", year: "numeric", month: "long" }}                           | ${"October 1 BC"}     | ${"year 0 with era"}
-    ${"-271821-04"}            | ${{ year: "numeric", month: "long" }}                                         | ${"April 271822"}     | ${"lower limit, day-20 rule"}
-    ${"-271821-04"}            | ${{ era: "short", year: "numeric", month: "long" }}                           | ${"April 271822 BC"}  | ${"lower limit with era"}
-    ${"+275760-09"}            | ${{ year: "numeric", month: "long" }}                                         | ${"September 275760"} | ${"upper limit"}
-    ${"2026-10"}               | ${{ month: "wide" }}                                                          | ${""}                 | ${"invalid month"}
-    ${"2026-10"}               | ${{ dateStyle: "long", month: "short" }}                                      | ${""}                 | ${"dateStyle with a field is a TypeError"}
-    ${"2026-10"}               | ${null}                                                                       | ${""}                 | ${"null options"}
-    ${"2026-10"}               | ${"x"}                                                                        | ${"10/2026"}          | ${"string options go through ToObject, as formatDate does"}
-    ${"2026-13"}               | ${undefined}                                                                  | ${""}                 | ${"month 13"}
-    ${"202610"}                | ${undefined}                                                                  | ${""}                 | ${"basic form"}
-    ${"2026-10-01"}            | ${undefined}                                                                  | ${""}                 | ${"a date"}
-    ${""}                      | ${undefined}                                                                  | ${""}                 | ${"empty string"}
+    value           | options                                                                       | expected              | rule
+    ${"2026-10"}    | ${{ month: "long" }}                                                          | ${"October"}          | ${"month alone"}
+    ${"2026-10"}    | ${{ year: "numeric" }}                                                        | ${"2026"}             | ${"year alone"}
+    ${"2026-10"}    | ${{ year: "numeric", month: "long", day: "numeric" }}                         | ${"October 2026"}     | ${"day dropped"}
+    ${"2026-10"}    | ${{ weekday: "long", year: "numeric", month: "long" }}                        | ${"October 2026"}     | ${"weekday dropped"}
+    ${"2026-10"}    | ${{ year: "numeric", month: "long", hour: "numeric", timeZoneName: "short" }} | ${"October 2026"}     | ${"time fields dropped"}
+    ${"2026-10"}    | ${{ day: "numeric" }}                                                         | ${""}                 | ${"day only"}
+    ${"2026-10"}    | ${{ weekday: "long" }}                                                        | ${""}                 | ${"weekday only"}
+    ${"2026-10"}    | ${{ hour: "numeric" }}                                                        | ${""}                 | ${"hour only"}
+    ${"2026-10"}    | ${{ dayPeriod: "short" }}                                                     | ${""}                 | ${"dayPeriod only"}
+    ${"2026-10"}    | ${{ minute: "numeric" }}                                                      | ${""}                 | ${"minute only"}
+    ${"2026-10"}    | ${{ second: "numeric" }}                                                      | ${""}                 | ${"second only"}
+    ${"2026-10"}    | ${{ fractionalSecondDigits: 3 }}                                              | ${""}                 | ${"fractionalSecondDigits only"}
+    ${"2026-10"}    | ${{ era: "short", year: "numeric", month: "long" }}                           | ${"October 2026 AD"}  | ${"era kept"}
+    ${"2026-10"}    | ${{ timeZoneName: "short" }}                                                  | ${"10/2026"}          | ${"timeZoneName only is not inherited"}
+    ${"2026-10"}    | ${{ timeStyle: "short" }}                                                     | ${""}                 | ${"timeStyle"}
+    ${"2026-10"}    | ${{ dateStyle: "short", timeStyle: "short" }}                                 | ${""}                 | ${"dateStyle and timeStyle"}
+    ${"2026-10"}    | ${{ calendar: "gregory" }}                                                    | ${"10/2026"}          | ${"calendar gregory"}
+    ${"2026-10"}    | ${{ calendar: "iso8601" }}                                                    | ${"10/2026"}          | ${"calendar iso8601"}
+    ${"2026-10"}    | ${{ calendar: "hebrew" }}                                                     | ${""}                 | ${"calendar hebrew"}
+    ${"2026-10"}    | ${{ calendar: "japanese" }}                                                   | ${""}                 | ${"calendar japanese"}
+    ${"2026-10"}    | ${{ calendar: "gregorian" }}                                                  | ${""}                 | ${"calendar gregorian is a RangeError"}
+    ${"2026-10"}    | ${{ numberingSystem: "arab" }}                                                | ${"١٠/٢٠٢٦"}          | ${"numberingSystem kept"}
+    ${"+002026-10"} | ${undefined}                                                                  | ${"10/2026"}          | ${"six-digit year form"}
+    ${"0000-10"}    | ${{ year: "numeric", month: "long" }}                                         | ${"October 1"}        | ${"year 0 prints era year 1, no era"}
+    ${"-000001-10"} | ${{ year: "numeric", month: "long" }}                                         | ${"October 2"}        | ${"year -1 prints era year 2"}
+    ${"0000-10"}    | ${{ era: "short", year: "numeric", month: "long" }}                           | ${"October 1 BC"}     | ${"year 0 with era"}
+    ${"-271821-04"} | ${{ year: "numeric", month: "long" }}                                         | ${"April 271822"}     | ${"lower limit, day-20 rule"}
+    ${"-271821-04"} | ${{ era: "short", year: "numeric", month: "long" }}                           | ${"April 271822 BC"}  | ${"lower limit with era"}
+    ${"+275760-09"} | ${{ year: "numeric", month: "long" }}                                         | ${"September 275760"} | ${"upper limit"}
+    ${"2026-10"}    | ${{ month: "wide" }}                                                          | ${""}                 | ${"invalid month"}
+    ${"2026-10"}    | ${{ dateStyle: "long", month: "short" }}                                      | ${""}                 | ${"dateStyle with a field is a TypeError"}
+    ${"2026-10"}    | ${null}                                                                       | ${""}                 | ${"null options"}
+    ${"2026-10"}    | ${"x"}                                                                        | ${"10/2026"}          | ${"string options go through ToObject, as formatDate does"}
+    ${"2026-13"}    | ${undefined}                                                                  | ${""}                 | ${"month 13"}
+    ${"202610"}     | ${undefined}                                                                  | ${""}                 | ${"basic form"}
+    ${"2026-10-01"} | ${undefined}                                                                  | ${""}                 | ${"a date"}
+    ${""}           | ${undefined}                                                                  | ${""}                 | ${"empty string"}
   `(
     "formats '$value' with options $options for en-US to '$expected' ($rule)",
     ({ value, options, expected }) => {

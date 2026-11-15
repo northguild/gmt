@@ -131,12 +131,6 @@ export const METAR_VALID_ROWS: readonly MetarValidRow[] = [
     reason: "negative offset, reference is 00:05Z on 1 July",
   },
   {
-    value: "251200Z",
-    reference: "2024-06-25T13:20:00+01:00[Europe/London]",
-    expected: "2024-06-25T12:00:00Z",
-    reason: "annotated reference",
-  },
-  {
     value: "130000Z",
     reference: "+275760-09-13T00:00:00Z",
     expected: "+275760-09-13T00:00:00Z",
@@ -199,33 +193,6 @@ export const METAR_VALID_ROWS: readonly MetarValidRow[] = [
     reference: "1899-02-28T06:00:00Z",
     expected: "1899-02-28T12:00:00Z",
     reason: "pre-epoch reference in February: same day, 6 h on",
-  },
-  {
-    value: "251200Z",
-    reference: "2024-06-15T00:00:00Z[u-ca=hebrew]",
-    expected: "2024-06-25T12:00:00Z",
-    reason:
-      "an elective calendar annotation is ignored and months stay UTC (RFC 9557 3.3): 25 June is 10.5 d on, 25 May 21.5 d back",
-  },
-  {
-    value: "251200Z",
-    reference: "2024-06-15T00:00:00Z[!u-ca=hebrew]",
-    expected: "2024-06-25T12:00:00Z",
-    reason:
-      "a critical calendar annotation the engine knows does not change UTC months (RFC 9557 3.3)",
-  },
-  {
-    value: "251200Z",
-    reference: "2024-06-15T00:00:00Z[foo=bar]",
-    expected: "2024-06-25T12:00:00Z",
-    reason: "an elective unknown annotation is ignored (RFC 9557 3.3)",
-  },
-  {
-    value: "251200Z",
-    reference: "2024-06-15T02:00:00+02:00[!Europe/Paris]",
-    expected: "2024-06-25T12:00:00Z",
-    reason:
-      "a critical time zone that agrees with the offset is accepted, and months stay UTC: the reference is 00:00Z on 15 June",
   },
 ];
 
@@ -296,5 +263,35 @@ export const METAR_SENTINEL_ROWS: readonly MetarSentinelRow[] = [
     value: "251200Z",
     reference: "2024-06-15T00:00:00Z[!foo=bar]",
     reason: "an unknown critical annotation is rejected (RFC 9557 3.3)",
+  },
+  {
+    value: "251200Z",
+    reference: "2024-06-25T13:20:00+01:00[Europe/London]",
+    reason:
+      "a reference is an instant: no annotation of any kind is read, only Z or an offset",
+  },
+  {
+    value: "251200Z",
+    reference: "2024-06-15T00:00:00Z[u-ca=hebrew]",
+    reason:
+      "a reference is an instant: no annotation of any kind is read, only Z or an offset",
+  },
+  {
+    value: "251200Z",
+    reference: "2024-06-15T00:00:00Z[!u-ca=hebrew]",
+    reason:
+      "a reference is an instant: no annotation of any kind is read, only Z or an offset",
+  },
+  {
+    value: "251200Z",
+    reference: "2024-06-15T00:00:00Z[foo=bar]",
+    reason:
+      "a reference is an instant: no annotation of any kind is read, only Z or an offset",
+  },
+  {
+    value: "251200Z",
+    reference: "2024-06-15T02:00:00+02:00[!Europe/Paris]",
+    reason:
+      "a reference is an instant: no annotation of any kind is read, only Z or an offset",
   },
 ];

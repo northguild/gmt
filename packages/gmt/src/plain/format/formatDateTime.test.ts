@@ -542,12 +542,11 @@ describe("formatDateTime with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatDateTime with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -559,21 +558,25 @@ describe("formatDateTime with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
 });
 
-// A plain date-time has no zone, so a "full" timeStyle is written without one
-// (AdjustDateTimeStyleFormat removes the zone field): 20:05:00 in en-US is "8:05:00 PM". The option
-// is converted to the string "full" before it is looked at, so a String object is treated as the
-// string it holds; 1.17 compared the object itself, missed, and wrote
-// "8:05:00 PM Coordinated Universal Time".
+// A plain date-time has no zone, so a "full" timeStyle is written without one (AdjustDateTimeStyleFormat
+// removes the zone field): 20:05:00 in en-US is "8:05:00 PM". A String object is not the string
+// the type names, so it is refused with the sentinel, where 1.17 treated it as the string it holds.
 describe("formatDateTime with a timeStyle that is a String object", () => {
-  it('formats 2024-03-15T20:05:00 with timeStyle new String("full") as 8:05:00 PM, with no zone name', () => {
+  it('formats 2024-03-15T20:05:00 with timeStyle "full" as 8:05:00 PM, with no zone name', () => {
+    expect(
+      formatDateTime("2024-03-15T20:05:00", "en-US", { timeStyle: "full" }),
+    ).toBe("8:05:00 PM");
+  });
+
+  it('returns "" for 2024-03-15T20:05:00 with timeStyle new String("full")', () => {
     expect(
       formatDateTime("2024-03-15T20:05:00", "en-US", {
         timeStyle: new String("full"),
       } as never),
-    ).toBe("8:05:00 PM");
+    ).toBe("");
   });
 });

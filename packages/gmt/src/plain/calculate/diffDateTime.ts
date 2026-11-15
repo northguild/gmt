@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { roundingOptionsOf } from "../../internal/typedOptions";
 import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
@@ -84,9 +85,7 @@ export function diffDateTime(
 
       const duration = plainUntilWithRounding(dt1, dt2, {
         largestUnit,
-        smallestUnit: options?.smallestUnit,
-        roundingIncrement: options?.roundingIncrement,
-        roundingMode: options?.roundingMode,
+        ...roundingOptionsOf(options),
       });
       if (isSingleUnit) {
         return duration[resolved as DateTimeDurationUnit] ?? 0;

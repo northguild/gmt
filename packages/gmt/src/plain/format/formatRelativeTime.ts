@@ -2,7 +2,7 @@ import { plainTimeOf } from "../../internal/inputChecks";
 import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 import { nowPlainTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -64,7 +64,7 @@ export function formatRelativeTime(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = plainTimeOf(value);
     if (target === null) return "";
     // Each option is read once (GetOption).

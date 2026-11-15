@@ -1,4 +1,4 @@
-import { Temporal } from "./temporal";
+import { durationFrom } from "./durationFrom";
 import {
   NANOSECONDS_PER_DAY,
   NANOSECONDS_PER_MICROSECOND,
@@ -40,7 +40,7 @@ export function exactDurationNanoseconds(value: unknown): bigint | null {
   }
 
   try {
-    const duration = Temporal.Duration.from(value);
+    const duration = durationFrom(value);
     if (duration.years !== 0 || duration.months !== 0 || duration.weeks !== 0) {
       return null;
     }

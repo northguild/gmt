@@ -215,3 +215,46 @@ describe("readArgs without a zone", () => {
     expect(permalinkOf(state)).toMatchObject({ zone: "Europe/London" });
   });
 });
+
+describe("a clock change whose offset has seconds", () => {
+  it("draws Monrovia's 1972 night at -00:44:30 without throwing", () => {
+    // getDstTransitions("Africa/Monrovia", 1972)
+    const { lib } = fakeLib({
+      transitions: [
+        {
+          instant: "1972-01-07T00:44:30Z",
+          offsetBefore: "-00:44:30",
+          offsetAfter: "+00:00",
+        },
+      ],
+    });
+    const view = cronView(
+      lib,
+      readArgs({ zone: "Africa/Monrovia", year: 1972 }),
+    );
+    expect(view.changes.map((c) => c.label)).toEqual([
+      "1972-01-07 00:44:30Z, -00:44:30 → +00:00",
+    ]);
+    const ticks = view.night!.ticks;
+    // 21:44:30Z at -00:44:30 is 21:00 local; from 00:44:30Z the clock reads UTC.
+    expect(ticks.map((t) => t.wall)).toEqual([
+      "21:00",
+      "22:00",
+      "23:00",
+      "00:44:30",
+      "01:44:30",
+      "02:44:30",
+      "03:44:30",
+    ]);
+    // The UTC ticks keep their seconds too: 00:44 would be 30 seconds early.
+    expect(ticks.map((t) => t.utc)).toEqual([
+      "21:44:30",
+      "22:44:30",
+      "23:44:30",
+      "00:44:30",
+      "01:44:30",
+      "02:44:30",
+      "03:44:30",
+    ]);
+  });
+});

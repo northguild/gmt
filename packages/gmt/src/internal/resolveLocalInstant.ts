@@ -1,6 +1,5 @@
 import type { Disambiguation } from "../types";
 import { plainDateTimeOf } from "./inputChecks";
-import { isoStringBody } from "./isoStringBody";
 import { instantOfWallClock, zoneFrame } from "./zoneFrame";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 
@@ -45,16 +44,12 @@ export function resolveLocalInstant(
       // An offset with seconds is no time zone identifier, so it cannot go in a bracket. It needs
       // none: the wall time at a fixed offset is one instant, whatever `disambiguation` says.
       if (frame.shiftNanoseconds !== 0n) {
-        return instantOfWallClock(
-          isoStringBody(localDateTime),
-          frame,
-        ).toString();
+        return instantOfWallClock(localDateTime, frame).toString();
       }
 
-      return zonedDateTimeFrom(
-        `${isoStringBody(localDateTime)}[${frame.timeZone}]`,
-        { disambiguation: disambiguation as Disambiguation },
-      )
+      return zonedDateTimeFrom(`${localDateTime}[${frame.timeZone}]`, {
+        disambiguation: disambiguation as Disambiguation,
+      })
         .toInstant()
         .toString();
     } catch {

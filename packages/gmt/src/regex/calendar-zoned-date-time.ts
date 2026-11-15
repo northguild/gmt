@@ -16,9 +16,8 @@
  * `Temporal.ZonedDateTime.from` (zone, offset, DST) and the calendar id to Temporal's
  * `CanonicalizeCalendar`. This is the written form. GMT's calendar functions read more
  * (`isValidCalendarZonedDateTime`): every date-time `isValidZonedDateTime` reads (the functions
- * take the same strings as the non-calendar zoned functions, then the calendar annotation), and
- * the rest of Temporal's annotation grammar, such as an elective `[foo=bar]`, which Temporal
- * ignores.
+ * take the same strings as the non-calendar zoned functions, then one calendar annotation). Any
+ * other annotation, such as an elective `[foo=bar]`, is rejected.
  *
  * Capture groups: 1 year, 2 month, 3 day, 4 time, 5 offset (optional), 6 time zone annotation
  * (with its critical flag, if any), 7 calendar critical flag (`"!"` or undefined), 8 calendar id.
