@@ -2,7 +2,7 @@
 /**
  * US clock-change freshness canary (CORE-90, #341).
  *
- *   node scripts/us-clock-watch.mjs check
+ *   node scripts/us-clock-watch.mjs check [--carry=<file>]
  *     Compares three sources with the committed snapshot, `scripts/us-clock-watch.snapshot.json`:
  *       federal  the Congress.gov API: bills whose title names the subject, and their latest action;
  *                a GovInfo title search finds the bills whose official or short title names it
@@ -13,10 +13,15 @@
  *     missing secret). The other sources still report. The verdict file
  *     (`artifacts/us-clock-watch.json`) is written before the exit; `scripts/canary-report.mjs`
  *     files the issues from it.
+ *     With `--carry`, the federal and state parts in `<file>` replace the committed ones where they
+ *     are newer, and the check writes the parts it brought up to date back to `<file>`: the
+ *     workflow keeps that file from one run to the next, so each change is reported once and no
+ *     one runs `refresh`. A source that could not run, or got no `Date` header, carries its part
+ *     forward unchanged. The tz part is always the committed one.
  *
  *   node scripts/us-clock-watch.mjs refresh
- *     Fetches the federal and state sources in full and writes them to the snapshot. Run by hand,
- *     with both secrets in the environment, after a person has reviewed what changed. It lists the
+ *     Fetches the federal and state sources in full and writes them to the snapshot. The weekly
+ *     check needs no refresh; one only resets the committed starting point. It lists the
  *     whole current congress (about 80 pages) and every state bill on the subject (about 100 pages,
  *     at most 10 a minute, so 15 minutes or more). The tz part is left as `snapshot-tz` wrote it.
  *
@@ -42,8 +47,8 @@
  * removed or replaced.
  */
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { formatJson } from "./lib/format-json.mjs";
 import { couldNotRunVerdict, saveVerdict } from "./lib/canary-verdict.mjs";
@@ -410,7 +415,7 @@ export async function checkFederal(get, post, snapshot) {
     differences.push(
       prior
         ? `a new session began: congress ${number} (the snapshot has ${prior})`
-        : "the snapshot has no congress number: run `refresh`",
+        : "the snapshot has no congress number, so the whole congress was listed",
     );
     kept = [];
     fromDateTime = undefined;
@@ -426,11 +431,9 @@ export async function checkFederal(get, post, snapshot) {
   for (const b of bills) {
     const before = known.get(billKey(b));
     if (!before) {
-      if (fromDateTime) {
-        differences.push(
-          `new: ${billKey(b)}: ${b.title} (latest action ${describeAction(b.latestAction)})`,
-        );
-      }
+      differences.push(
+        `new: ${billKey(b)}: ${b.title} (latest action ${describeAction(b.latestAction)})`,
+      );
     } else if (!sameAction(before.latestAction, b.latestAction)) {
       differences.push(
         `changed: ${billKey(b)}: ${b.title} (latest action ${describeAction(before.latestAction)} became ${describeAction(b.latestAction)})`,
@@ -696,8 +699,10 @@ const missing = (env, name) =>
 
 /**
  * The verdict of one `check`: each source `{ status: "ran", … } | { status: "could-not-run", message }`.
- * `snapshot` is the committed snapshot; `zones` is read lazily so a missing list fails only `tz`.
- * Every source stops once `limits.checkDeadlineMs` has passed since the call.
+ * `snapshot` is the snapshot compared with; `zones` is read lazily so a missing list fails only
+ * `tz`. A federal or state source that ran gives `since`, the `checkedAt` it compared with, and
+ * `next`, its part brought up to date (null when no response carried a `Date`). Every source stops
+ * once `limits.checkDeadlineMs` has passed since the call.
  */
 export async function runSources({
   env,
@@ -719,12 +724,17 @@ export async function runSources({
       limits,
       deadline,
     });
-    const { congress, differences } = await checkFederal(
+    const { congress, date, bills, differences } = await checkFederal(
       get,
       post,
       snapshot.federal,
     );
-    return { congress, differences };
+    return {
+      congress,
+      since: snapshot.federal.checkedAt,
+      differences,
+      next: date ? { checkedAt: date, congress, bills } : null,
+    };
   };
   const state = async () => {
     const gone = missing(env, OPEN_STATES_KEY);
@@ -744,8 +754,12 @@ export async function runSources({
       retries: limits.retries,
       retryPauseMs: limits.retryPauseMs,
     });
-    const { differences } = await checkState(get, snapshot.state);
-    return { differences };
+    const { date, bills, differences } = await checkState(get, snapshot.state);
+    return {
+      since: snapshot.state.checkedAt,
+      differences,
+      next: date ? { checkedAt: date, bills } : null,
+    };
   };
   const tz = async () => {
     const current = await loadTz(fetch, zones(), deadline);
@@ -780,6 +794,47 @@ function readSnapshot(root) {
   return data;
 }
 
+/** A carried federal or state part: a `checkedAt` timestamp and a bill list. */
+const isPart = (part) =>
+  typeof part?.checkedAt === "string" &&
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(part.checkedAt) &&
+  Array.isArray(part.bills);
+
+/**
+ * The snapshot a `check` compares with: the committed one, with each federal or state part in the
+ * carried file that is newer. `note` says which parts came from where. A carried file that is
+ * missing or does not parse leaves the committed snapshot as it is.
+ */
+function withCarried(committed, carryPath) {
+  if (!existsSync(carryPath)) {
+    return { snapshot: committed, note: "no carried snapshot" };
+  }
+  let carried;
+  try {
+    carried = JSON.parse(readFileSync(carryPath, "utf8"));
+  } catch {
+    return { snapshot: committed, note: "the carried snapshot does not parse" };
+  }
+  const snapshot = { ...committed };
+  const taken = [];
+  for (const part of ["federal", "state"]) {
+    const next = carried?.[part];
+    const valid =
+      isPart(next) && (part === "state" || Number.isInteger(next.congress));
+    if (valid && next.checkedAt > String(committed[part].checkedAt)) {
+      snapshot[part] = next;
+      taken.push(`${part} of ${next.checkedAt}`);
+    }
+  }
+  return {
+    snapshot,
+    note:
+      taken.length > 0
+        ? `carried ${taken.join(", ")}`
+        : "the carried snapshot is no newer",
+  };
+}
+
 /**
  * Runs the command line; returns the exit code. Nothing reads `process` here, so a test passes
  * its own `env`, `fetch`, `sleep` and sinks.
@@ -798,7 +853,7 @@ export async function main(argv, io) {
   const command = args[0] ?? "check";
   const usage = () => {
     stderr(
-      "Usage: node scripts/us-clock-watch.mjs <check|refresh|snapshot-tz --dir=<folder>>\n",
+      "Usage: node scripts/us-clock-watch.mjs <check [--carry=<file>]|refresh|snapshot-tz --dir=<folder>>\n",
     );
     return 1;
   };
@@ -828,6 +883,10 @@ export async function main(argv, io) {
   if (command === "refresh")
     return await refresh({ ...io, limits, sleep, stderr });
 
+  const carry = args.find((a) => a.startsWith("--carry="))?.slice(8);
+  if (carry === "" || args.slice(1).some((a) => !a.startsWith("--carry="))) {
+    return usage();
+  }
   let snapshot;
   try {
     snapshot = readSnapshot(root);
@@ -840,6 +899,12 @@ export async function main(argv, io) {
     );
     return 2;
   }
+  const carryPath = carry === undefined ? null : resolve(root, carry);
+  if (carryPath) {
+    const carried = withCarried(snapshot, carryPath);
+    snapshot = carried.snapshot;
+    stdout(`${PREFIX}: ${carried.note}\n`);
+  }
   const sources = await runSources({
     env,
     fetch: io.fetch,
@@ -848,11 +913,23 @@ export async function main(argv, io) {
     zones: () => readZones(root),
     limits,
   });
+  if (carryPath) {
+    const next = {
+      federal: sources.federal.next ?? snapshot.federal,
+      state: sources.state.next ?? snapshot.state,
+      tz: snapshot.tz,
+    };
+    mkdirSync(dirname(carryPath), { recursive: true });
+    writeFileSync(carryPath, formatJson(next));
+    stdout(
+      `${PREFIX}: carried forward federal of ${next.federal.checkedAt}, state of ${next.state.checkedAt}\n`,
+    );
+  }
   const verdict = {
     source: PREFIX,
     status: "ran",
     ...Object.fromEntries(
-      Object.entries(sources).map(([name, result]) => [
+      Object.entries(sources).map(([name, { next: _next, ...result }]) => [
         name,
         JSON.parse(redact(JSON.stringify(result))),
       ]),

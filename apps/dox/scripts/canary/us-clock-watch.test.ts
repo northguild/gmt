@@ -441,18 +441,20 @@ describe("check: federal bills", () => {
     expect(r.code).toBe(1);
     expect(r.verdict?.federal.differences).toEqual([
       "a new session began: congress 120 (the snapshot has 119)",
+      "new: HR 5: A bill on time zone boundaries (latest action 2026-01-02: Introduced)",
     ]);
     const list = r.calls.find((c) => c.url.pathname === "/v3/bill/120");
     expect(list?.url.searchParams.has("fromDateTime")).toBe(false);
   });
 
-  it("asks for a refresh when the snapshot has no congress number", async () => {
+  it("lists the whole congress when the snapshot has no congress number", async () => {
     const snapshot = snapshotOf();
     snapshot.federal = { checkedAt: SNAPSHOT_DATE, congress: 0, bills: [] };
     const r = await run(["check"], { snapshot });
     expect(r.code).toBe(1);
     expect(r.verdict?.federal.differences).toEqual([
-      "the snapshot has no congress number: run `refresh`",
+      "the snapshot has no congress number, so the whole congress was listed",
+      "new: HR 1: A bill about daylight saving time (latest action 2026-01-02: Introduced)",
     ]);
   });
 
@@ -998,6 +1000,193 @@ describe("check: a source could not run", () => {
   });
 });
 
+describe("check --carry", () => {
+  const CARRY = "artifacts/carry/us-clock-watch.snapshot.json";
+  const LATER = "2026-11-10T07:20:00Z";
+  const carried = (root: string) =>
+    JSON.parse(readFileSync(join(root, CARRY), "utf8")) as Record<string, any>;
+  const carry = (root: string, value: unknown) => {
+    mkdirSync(join(root, "artifacts/carry"), { recursive: true });
+    writeFileSync(
+      join(root, CARRY),
+      typeof value === "string" ? value : JSON.stringify(value),
+    );
+  };
+  const texasRow = {
+    jurisdiction: "Texas",
+    session: "2025",
+    identifier: "HB 9",
+    title: "Relating to standard time",
+    latestActionDate: "2026-02-02",
+    latestActionDescription: "Filed",
+  };
+  const ohioRow = {
+    jurisdiction: "Ohio",
+    session: "2025",
+    identifier: "SB 4",
+    title: "Permanent standard time",
+    latestActionDate: "2026-11-02",
+    latestActionDescription: "Introduced",
+  };
+  const withNewBills: Record<string, Handler> = {
+    "api.congress.gov/v3/bill/119": () =>
+      reply({
+        bills: [
+          federalBill("HR", "1", "A bill about daylight saving time"),
+          federalBill("S", "7", "To adopt permanent standard time"),
+        ],
+        pagination: { count: 2 },
+      }),
+    "v3.openstates.org/bills": () =>
+      reply(
+        page([
+          stateBill("Texas", "HB 9", "Relating to standard time"),
+          stateBill(
+            "Ohio",
+            "SB 4",
+            "Permanent standard time",
+            "2026-11-02",
+            "Introduced",
+          ),
+        ]),
+      ),
+  };
+
+  it("starts from the committed snapshot and writes the next one", async () => {
+    const root = makeRoot();
+    const r = await run(["check", `--carry=${CARRY}`], {
+      root,
+      overrides: withNewBills,
+    });
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("no carried snapshot");
+    expect(r.verdict?.federal.since).toBe(SNAPSHOT_DATE);
+    expect(r.verdict?.state.since).toBe(SNAPSHOT_DATE);
+    expect(r.verdict?.federal).not.toHaveProperty("next");
+    expect(r.verdict?.state).not.toHaveProperty("next");
+    const next = carried(root);
+    expect(next.federal).toMatchObject({
+      checkedAt: "2026-11-13T12:26:01Z",
+      congress: 119,
+    });
+    expect(next.federal.bills.map((b: any) => `${b.type} ${b.number}`)).toEqual(
+      ["HR 1", "S 7"],
+    );
+    expect(next.state.checkedAt).toBe("2026-11-13T12:26:01Z");
+    expect(next.state.bills).toEqual([ohioRow, texasRow]);
+    expect(next.tz).toEqual(snapshotOf().tz);
+  });
+
+  it("reports each change once: the next run compares with what the last one carried", async () => {
+    const root = makeRoot();
+    await run(["check", `--carry=${CARRY}`], { root, overrides: withNewBills });
+    const r = await run(["check", `--carry=${CARRY}`], {
+      root,
+      overrides: withNewBills,
+    });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain(
+      "carried federal of 2026-11-13T12:26:01Z, state of 2026-11-13T12:26:01Z",
+    );
+    expect(r.verdict?.federal.differences).toEqual([]);
+    expect(r.verdict?.state.differences).toEqual([]);
+    expect(r.verdict?.federal.since).toBe("2026-11-13T12:26:01Z");
+    const list = r.calls.find((c) => c.url.pathname === "/v3/bill/119");
+    expect(list?.url.searchParams.get("fromDateTime")).toBe(
+      "2026-11-13T00:00:00Z",
+    );
+  });
+
+  it("ignores a carried part no newer than the committed one", async () => {
+    const root = makeRoot();
+    carry(root, {
+      federal: { checkedAt: "2026-10-01T00:00:00Z", congress: 119, bills: [] },
+      state: { checkedAt: SNAPSHOT_DATE, bills: [] },
+    });
+    const r = await run(["check", `--carry=${CARRY}`], { root });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("the carried snapshot is no newer");
+    expect(r.verdict?.federal.since).toBe(SNAPSHOT_DATE);
+  });
+
+  it("takes each newer part on its own and never the carried tz", async () => {
+    const root = makeRoot();
+    carry(root, {
+      federal: { checkedAt: "2026-10-01T00:00:00Z", congress: 119, bills: [] },
+      state: { checkedAt: LATER, bills: [texasRow, ohioRow] },
+      tz: { release: "1999a", zones: {} },
+    });
+    const r = await run(["check", `--carry=${CARRY}`], {
+      root,
+      overrides: withNewBills,
+    });
+    expect(r.out).toContain(`carried state of ${LATER}`);
+    expect(r.verdict?.federal.differences).toEqual([
+      "new: S 7: To adopt permanent standard time (latest action 2026-01-02: Introduced)",
+    ]);
+    expect(r.verdict?.state.differences).toEqual([]);
+    expect(r.verdict?.tz.differences).toEqual([]);
+    expect(carried(root).tz).toEqual(snapshotOf().tz);
+  });
+
+  it("carries a part forward unchanged when its source could not run", async () => {
+    const root = makeRoot();
+    const state = { checkedAt: LATER, bills: [texasRow, ohioRow] };
+    carry(root, { state });
+    const r = await run(["check", `--carry=${CARRY}`], {
+      root,
+      overrides: {
+        ...withNewBills,
+        "v3.openstates.org/bills": () => reply("limit", {}, 429),
+      },
+    });
+    expect(r.code).toBe(2);
+    expect(r.verdict?.state.status).toBe("could-not-run");
+    const next = carried(root);
+    expect(next.state).toEqual(state);
+    expect(next.federal.checkedAt).toBe("2026-11-13T12:26:01Z");
+  });
+
+  it("keeps a part when no response carried a Date header", async () => {
+    const root = makeRoot();
+    const r = await run(["check", `--carry=${CARRY}`], {
+      root,
+      overrides: {
+        "v3.openstates.org/bills": () =>
+          new Response(JSON.stringify(page([])), { status: 200 }),
+      },
+    });
+    expect(r.verdict?.state.status).toBe("ran");
+    expect(carried(root).state).toEqual(snapshotOf().state);
+  });
+
+  it("falls back to the committed snapshot when the carried file does not parse", async () => {
+    const root = makeRoot();
+    carry(root, "{ not json");
+    const r = await run(["check", `--carry=${CARRY}`], { root });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("the carried snapshot does not parse");
+    expect(carried(root).federal.checkedAt).toBe("2026-11-13T12:26:01Z");
+  });
+
+  it("rejects a carried part that is not a snapshot part", async () => {
+    const root = makeRoot();
+    carry(root, {
+      federal: { checkedAt: LATER, bills: [] },
+      state: { checkedAt: "next week", bills: [] },
+    });
+    const r = await run(["check", `--carry=${CARRY}`], { root });
+    expect(r.out).toContain("the carried snapshot is no newer");
+    expect(r.verdict?.federal.since).toBe(SNAPSHOT_DATE);
+  });
+
+  it("writes no carried file without the option", async () => {
+    const root = makeRoot();
+    await run(["check"], { root });
+    expect(existsSync(join(root, CARRY))).toBe(false);
+  });
+});
+
 describe("no key leaks", () => {
   it("keeps both keys out of stdout, stderr and the verdict, even from an error that holds one", async () => {
     const r = await run(["check"], {
@@ -1207,4 +1396,14 @@ describe("the command line", () => {
     expect(r.err).toContain("Usage: node scripts/us-clock-watch.mjs");
     expect(r.calls).toEqual([]);
   });
+
+  it.each([["--carry="], ["--carry"], ["--dir=x"]])(
+    "rejects check %s",
+    async (arg) => {
+      const r = await run(["check", arg]);
+      expect(r.code).toBe(1);
+      expect(r.err).toContain("Usage: node scripts/us-clock-watch.mjs");
+      expect(r.calls).toEqual([]);
+    },
+  );
 });

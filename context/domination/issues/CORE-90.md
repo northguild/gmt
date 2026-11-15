@@ -39,7 +39,7 @@ Phase 1 needs no law and no tz release. It adds a Dox page, not a library functi
   page". The facts behind it, and the only file that cites law:
   [research/us-permanent-daylight-time.md](../research/us-permanent-daylight-time.md).
 - **A weekly freshness canary** watches Congress.gov, Open States and the tz database against a
-  committed snapshot: [canary/overview.md](../../canary/overview.md), "US clock-change watch".
+  snapshot it carries from run to run: [canary/overview.md](../../canary/overview.md), "US clock-change watch".
 
 ## Phase 2 (waiting)
 
@@ -84,3 +84,9 @@ and a tz release to model it. The canary's tz issue is the trigger. The plan is 
     official or short title names the subject; the weekly list then keeps those and every snapshot
     bill by number. `refresh` keeps the tz part, which `snapshot-tz` writes from the release the
     zone map is built on.
+15. **No manual step.** The federal and state parts are carried from one run to the next as a
+    workflow artifact, not committed: the `main` ruleset requires a pull request on every branch,
+    and a pull request opened by the workflow's token starts no CI. Each change is reported once;
+    the issue asks only for a review of the Proposals data. A part moves on only when its source
+    ran and returned a `Date` header, and the carried file is uploaded only after the issues are
+    filed, so no change is lost. The committed snapshot is the seed when no artifact is left.

@@ -20,7 +20,7 @@ Sundays.
 
 `scripts/us-clock-watch.mjs` and `.github/workflows/us-clock-watch.yml` (Mondays 07:17 UTC, and
 manual) keep the Sunshine Protection Act page's evidence honest. They compare three sources with
-the committed snapshot `scripts/us-clock-watch.snapshot.json`:
+a snapshot, which starts as the committed `scripts/us-clock-watch.snapshot.json`:
 
 - **federal:** Congress.gov bills whose title names the subject, found on the Congress.gov list or
   by a GovInfo title search, and each one's latest action;
@@ -31,8 +31,16 @@ the committed snapshot `scripts/us-clock-watch.snapshot.json`:
 The script holds subject keywords only. A bill's number and title appear in the snapshot and in
 issue bodies as data the APIs returned, never in the script, the site or its tests.
 
+- **The snapshot is carried forward.** `check --carry=<file>` compares with each federal or state
+  part in `<file>` that is newer than the committed one, then writes the parts it brought up to
+  date back to `<file>`. The workflow downloads that file from the last main run (artifact
+  `us-clock-watch-carry`, kept 90 days) and uploads the new one once the issues are filed. So each
+  change is reported once, no one runs `refresh`, and nothing is committed. A source that could not
+  run, or got no `Date` header, carries its part forward unchanged. The tz part is always the
+  committed one. With no artifact (the first run, or 90 days without a run), `check` starts from
+  the committed snapshot, which stays the seed and the tests' fixture.
 - **Commands.** `check` compares and writes the verdict file; `refresh` rewrites the federal and
-  state parts after a person has reviewed what changed, and keeps the tz part;
+  state parts of the committed snapshot in full, to reset the seed, and keeps the tz part;
   `snapshot-tz --dir=<folder>` rewrites only the tz part from an unpacked tzdata release, the one
   `us-region-zones.json` names, and needs no network or key. `check` exits 0 for no difference, 1
   for a difference and 2 when a source could not run (a network or HTTP error, a 429, a body that
@@ -42,7 +50,7 @@ issue bodies as data the APIs returned, never in the script, the site or its tes
   first finds every bill whose official or short title names the subject. GovInfo stems each word,
   so `daylight saving` also finds `daylight savings`. Then `check` asks Congress.gov for bills
   updated since the snapshot's date at 00:00:00Z (`fromDateTime`); a new congress reads its list
-  whole. It keeps a bill whose list title names the subject, or whose number the snapshot or the
+  whole and lists each bill on it as new. It keeps a bill whose list title names the subject, or whose number the snapshot or the
   search holds, and takes `latestAction` from the list item. Any new action moves a bill's
   `updateDate`, so a changed bill is always on the list; a snapshot bill missing from it is kept as
   it was. A search match on neither is new and is read on its own, from
@@ -58,9 +66,11 @@ issue bodies as data the APIs returned, never in the script, the site or its tes
   `check` stops itself at 45 minutes, inside the job's 60-minute timeout: whatever has not run by
   then is could-not-run, and its issue is still filed.
 - **Issues.** One per kind (federal, state, tz) for a difference, and one for a source that could
-  not run, filed by `canary-report.mjs` from `main` only. The federal and state issues ask a person
-  to edit the Proposals data module by hand and refresh the snapshot: the canary edits nothing. The
-  `force_difference` dispatch input files a `[dry run]` federal issue.
+  not run, filed by `canary-report.mjs` from `main` only. The federal and state issues ask for a
+  review: edit the Proposals data module by hand if a position changed, then close the issue; the
+  canary edits nothing in the repo. Their bodies say which snapshot date the list runs from, and a
+  later run comments only what is new on it. The tz issue asks for `snapshot-tz` once the checker's
+  data is updated. The `force_difference` dispatch input files a `[dry run]` federal issue.
 - **The tz issue is the signal for phase 2.** A change to a US zone's rules means a tz release
   models the clock change, so the full US clock-change checker
   ([CORE-90](../domination/issues/CORE-90.md)) can be built.
