@@ -38,6 +38,8 @@ const T_ANCHOR =
 const AE_ANCHOR =
   "ae-icu4c-75-counts-every-persian-year-before-year-0-as-a-leap-year-macos-webkit-engine";
 const ICU_23609 = "https://unicode-org.atlassian.net/browse/ICU-23609";
+const WEBKIT_331725 = "https://bugs.webkit.org/show_bug.cgi?id=331725";
+const WEBKIT_331726 = "https://bugs.webkit.org/show_bug.cgi?id=331726";
 const AD_ANCHOR =
   "ad-node-26-adds-one-smallestunit-when-it-rounds-a-whole-number-of-years-months-or-weeks-node-only-engine";
 const NODE_67457 = "https://github.com/nodejs/node/issues/67457";
@@ -59,7 +61,8 @@ const NODE_67457 = "https://github.com/nodejs/node/issues/67457";
  * spec refuses it (Bugzilla 1998020). The 7 tests that fail on WebKit 26.6 (JavaScriptCore) and pass on
  * the polyfill are S (six: JavaScriptCore adds a year to Dhu al-Hijjah 30 of a year before the Hijra as
  * 13 months) and T (one: it throws adding a year to the last day of Chaitra in a far-past Indian year);
- * both fail on Playwright's Linux build and on the Mac build, so the rows name both WebKit legs.
+ * both fail on Playwright's Linux build and on the Mac build, so the rows name both WebKit legs. S is filed
+ * as WebKit 331725 and T as WebKit 331726; the ICU causes behind them are ICU-23626 and ICU-23627.
  * Two more fail on the Mac build alone and are AE: Apple's libicucore (ICU4C 75 or later) counts every
  * Persian year before year 0 as a leap year, so adding a month to day 30 of Bahman, or subtracting one from
  * day 30 of Farvardin, in a year before year 0 throws. If the Linux runner's ICU moves to 75 or later, the
@@ -251,49 +254,49 @@ export const KNOWN_NATIVE_FAILURES = [
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P1Y5M23D in years from -271820-01-19[u-ca=islamic-civil] to -271819-06-27[u-ca=islamic-civil] (xscan islamic-civil min[275], 800 d ins…)",
     legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P1Y5M24D in years from -271820-01-18[u-ca=islamic-tbla] to -271819-06-27[u-ca=islamic-tbla] (xscan islamic-tbla min[274], 800 d insi…)",
     legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P1Y5M23D in years from -271820-01-19[u-ca=islamic-umalqura] to -271819-06-27[u-ca=islamic-umalqura] (xscan islamic-umalqura min[275], 800 d …)",
     legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P2Y2M7D in years from -271821-04-20[u-ca=indian] to -271819-06-27[u-ca=indian] (xscan indian min[1], 800 d inside)",
     legs: ["webkit", "webkit-macos"],
     defect: T_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331726,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
     test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-civil] as '-271819-01-07[u-ca=islamic-civil]' (xscan islamic-civil min[275])",
     legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
     test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-18[u-ca=islamic-tbla] as '-271819-01-06[u-ca=islamic-tbla]' (xscan islamic-tbla min[274])",
     legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
     test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-umalqura] as '-271819-01-07[u-ca=islamic-umalqura]' (xscan islamic-umalqura min[275])",
     legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/addDate.test.ts",
