@@ -3,6 +3,7 @@ import { Temporal } from "./temporal";
 import {
   formatRangeChecked,
   forgetWeekYearRange,
+  MAX_MOMENTS,
   repairRangeYear,
   rangeYearVerdict,
 } from "./weekYearRange";
@@ -134,21 +135,27 @@ describe("repairRangeYear: what one environment remembers", () => {
     return count;
   };
 
-  it("forgets the first range after 2,000 others, and repairs it the same", () => {
+  it("forgets the first range once the others fill its maps, and repairs it the same", () => {
     const formatter = printing(options, plusOne);
     const first = repairRangeYear(formatter, options, start, end);
     expect(digits(first)).toEqual(["2024", "2025"]);
     const warm = readsDuring(() => {
       expect(repairRangeYear(formatter, options, start, end)).toBe(first);
     });
-    for (let i = 1; i <= 2_000; i++) {
-      repairRangeYear(formatter, options, start + i * DAY, end + i * DAY);
+    // A week apart, so no range shares a start or end with another: each adds two moments.
+    for (let i = 1; i <= MAX_MOMENTS / 2; i++) {
+      repairRangeYear(
+        formatter,
+        options,
+        start + i * 7 * DAY,
+        end + i * 7 * DAY,
+      );
     }
     const cold = readsDuring(() => {
       expect(repairRangeYear(formatter, options, start, end)).toBe(first);
     });
     expect(cold).toBeGreaterThan(warm);
-  });
+  }, 15_000);
 });
 
 describe("rangeYearVerdict: stand-in formatters", () => {

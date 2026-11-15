@@ -88,7 +88,7 @@ interface Env {
 
 const MAX_ENVS = 64;
 /** The most moments one environment keeps per kind; they are the caller's, so the map starts again. */
-const MAX_MOMENTS = 1024;
+export const MAX_MOMENTS = 1024;
 let envs = new Map<string, Env>();
 let verdicts = new WeakMap<object, boolean>();
 
