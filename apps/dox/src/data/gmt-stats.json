@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 77455,
-  "files": 1031,
-  "executions": 2323650,
+  "tests": 77745,
+  "files": 1033,
+  "executions": 2332350,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 779,
+  "functions": 780,
   "patterns": 33,
   "byNamespace": [
     {
@@ -113,15 +113,15 @@
       "count": 5
     },
     {
+      "namespace": "rail",
+      "count": 4
+    },
+    {
       "namespace": "recurrence",
       "count": 4
     },
     {
       "namespace": "iot",
-      "count": 3
-    },
-    {
-      "namespace": "rail",
       "count": 3
     }
   ],
@@ -133,8 +133,8 @@
     "finance",
     "gnss",
     "healthcare",
-    "iot",
-    "rail"
+    "rail",
+    "iot"
   ],
   "industryLayers": [
     {
@@ -217,7 +217,7 @@
     {
       "id": "rail",
       "label": "Rail",
-      "own": 3,
+      "own": 4,
       "drawsOn": [
         {
           "module": "transport",
@@ -244,5 +244,5 @@
       ]
     }
   ],
-  "industryFunctions": 109
+  "industryFunctions": 110
 }

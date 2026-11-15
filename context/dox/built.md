@@ -5050,8 +5050,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     holds the page's prose to the library.
   - **No date, and never "since midnight".** The tool says days past the service day and the seconds
     left over, never a time of day. The clock note is always shown: the pair is counted from noon
-    minus 12 hours of the service day, so turning it into a clock time needs the agency's zone, and
-    `gtfsToInstant` (RAI-100, not built) is named in code font with no link and no token.
+    minus 12 hours of the service day, so turning it into a clock time needs the agency's zone. The
+    note links `gtfsToInstant` (its reference page) and the GTFS Service Day Clock, with the kit's
+    plain anchors and no token; the note sits outside every `hold`, so it needs no ghost.
   - **An empty box reads "nothing typed" and makes no call.** NO SIGNAL (amber) shows only for a
     library refusal. A write with days past the limit shows the library's `""` as a refusal.
   - **Plate strips keep one layout in every state.** The sentinel takes the live size
@@ -5065,6 +5066,170 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Tests.** `gtfs-time-reader-holds.browser.test.ts` steps every preset and typed value at 300,
     390, 1280 and 1440 px in Chromium and WebKit; `gtfs-time-reader-mount.test.tsx` aborts its
     controller in `afterEach`. The "Use the time read above" button uses the native `disabled`.
+- **GTFS Service Day Clock** (RAI-100, `/tools/gtfs-service-day-clock/`, rail). A service date, a
+  stop time and the agency's zone, as a feed holds them (`calendar.txt`, `stop_times.txt`,
+  `agency.txt` `agency_timezone`), read by `gtfsToInstant` next to what a midnight anchor gives,
+  drawn on one day rail with the clock change marked. `loadServiceDayLib()` in `rail-lib.ts` returns
+  `RailLib` plus the functions below; `loadRailLib` is unchanged, so the Time Reader loads nothing new.
+  Both libs take their types from the library (`Pick<typeof import("@northguild/gmt/...")>` through
+  `pickTyped` in `gmt-pick.ts`), so a renamed or retyped function fails the typecheck. `literal`
+  lives in `lib/literal.ts`, not in the holiday builder, so the Temporal polyfill stays out of the
+  page's first-paint chunk. Rail `drawsOn` `transport`.
+  - **The calls are the library's; the site re-derives none.** Zone is a text box, not a select,
+    because a feed's zone is pasted and an offset such as `+05:30` is accepted.
+
+    | Value shown | Call |
+    | --- | --- |
+    | GTFS instant | `gtfsToInstant(date, time, zone)`, as typed |
+    | GTFS anchor (noon minus 12 h) | `gtfsToInstant(date, "00:00:00", zone)` |
+    | GTFS noon | `gtfsToInstant(date, "12:00:00", zone)` |
+    | ISO service date | `convertUtcToPlainDate(gtfsToInstant(date, "12:00:00", "UTC"))` |
+    | Midnight anchor | `resolveLocal(`${iso}T00:00:00`, zone)`, no options |
+    | Midnight answer | `addUtc(midnight, { days, seconds })` from `parseGtfsTime(time)` |
+    | Local readings | `convertUtcToZoned(instant, zone)` |
+    | Gap | `diffUtc(gtfs, midnightAnswer, "minutes")`: positive when the midnight answer is later |
+    | Midnight note | `classifyLocal(`${iso}T00:00:00`, zone)`: `"nonexistent"` reads "did not happen, `resolveLocal` moved it forward", `"ambiguous"` reads "happened twice, `resolveLocal` took the earlier one" |
+    | Clock change | `getDstTransitions(zone, year)` for every year from the window's start to its end (the zone's own calendar, `parseYearFromDate` of `convertUtcToZoned`), kept where `isBetweenUtc` holds |
+    | Rail window | `minUtc`/`maxUtc` of the marks, padded 2 h with `subtractUtc`/`addUtc` |
+
+    The ISO date comes from noon in UTC (it always exists) so the date rule is the library's, never a
+    site regex. `resolveLocal` with defaults is what `new Date("...T00:00:00")` does, which is the
+    anchor the tool exists to compare against.
+  - **Probes name the reason for `""`, first match wins:** `isValidGtfsTime(time)` false (time);
+    `gtfsToInstant(date, "12:00:00", "UTC")` is `""` (date); `classifyLocal(noon, zone)` is `null`
+    (zone), `"nonexistent"` or `"ambiguous"` (no anchor). Anything else reads "The library returned no
+    instant." The order puts the cheapest, most specific cause first so a bad time is never blamed on
+    the zone. An empty box reads "nothing typed" and makes no call; NO SIGNAL (amber) is the library's
+    refusal only. There is no disambiguation control, because the library has no option.
+  - **Wording: the gap is the size of the change.** On a day the clocks change the two anchors
+    differ by the size of the change, an hour in most zones (30 minutes in `Australia/Lord_Howe`),
+    and a zone may change its clocks more or less than twice a year. No prose, prompt or widget
+    comment says "two days a year" or "an hour off" as a rule.
+  - **Presets (8), the default is `spring-forward`.** `spring-forward` (20260329, 08:00:00, Berlin),
+    `spring-start` (00:00:00), `fall-back` (20261025), `ordinary` (20260615), `past-midnight`
+    ("Berlin, 26:30:00 across the change": 20260328, 26:30:00), `lord-howe` (20261004, 08:00:00,
+    `Australia/Lord_Howe`, a 30-minute gap), `no-noon` (20111230, 12:00:00, Pacific/Apia, where
+    GTFS gives `""` and the midnight code still answers) and `offset` (`+05:30`). Every value was pasted
+    from `dist`. There is no far-future preset: an expanded year is typed, shown as returned, and only
+    grows a card in height. A preset matches only while all three boxes equal it, else `custom`.
+  - **The hold.** The two anchor cards sit at opposite edges of their row
+    (`justify-content: space-between`) and stack below the widget's 52rem container width; each has a
+    full bevelled border and a tinted fill, never a coloured left edge. Each value is a `hold` with
+    `zonedValue` ghosts at the longest the presets give (`GHOST_LOCAL`, `GHOST_UTC`), breaking only at
+    `<wbr>`, so a longer typed value is taller and never wider. `GHOST_LOCAL` also holds a reading in
+    the widest zone (`WIDEST_ZONE`, `America/Argentina/Buenos_Aires`), so a real agency zone does not
+    grow a plate while the reader types; the holds test and the readout-still entry type that zone. Its `[America/Argentina/Buenos_Aires]`
+    piece is one unbreakable run of about 32 mono characters, so below the widget's 30rem container the
+    cards and plates drop to 8px inline padding and the values to `--gmt-text-xs`, and below 20rem
+    the card drops to 4px (WebKit sets the face wider); without that the page scrolled sideways at
+    300 px.
+    The midnight card's note is one of five (`MIDNIGHT_NOTES`: empty, ok, none, skipped, repeated),
+    held with a ghost for each. The calls frame reserves the lines of
+    `callsSizerText()`, a stub library run through the real reader with the widest answer (three
+    clock changes, the most any preset's zone has that year, and a window that crosses a year, so two
+    `getDstTransitions` lines). Rail ticks are every 6 h and the step doubles above 12 ticks, so a
+    long window does not crowd the axis; at a step of a day or more each tick label carries the date
+    (`03-29 14:30`).
+  - **The rail never lies about a position.** If a rail helper returns `null` or `""` the rail is
+    not drawn and one line says "Not drawn: the library gave no position for this instant."; only a
+    typed expanded year can trigger it.
+  - **Readout gate.** The rail's container carries `data-gate="drawn"` and the entry in
+    `readout-still.mjs` lists `drawn: ["drawn", "hold"]`: the lanes' marks and the axis labels move
+    with the value by design, and every other swapped text (the reason lines, the verdict, the rail
+    note) sits in a hold. The cards' and the value plates' boxes stay measured.
+  - **Links.** The Time Reader link (`gtfstime`, `value`) is enabled while the time box is not
+    empty; the DST Inspector link (`dst`, `zone` and `year`) only when the zone has a clock change
+    that year.
+  - **Chat tool and permalink.** `showGtfsServiceDayClock` takes optional strings `serviceDate`
+    (16 characters), `time` (16), `timeZone` (64) and a `preset` from the page's eight ids, and at
+    least one of them. The strings pass exactly as given, so a refusal is the widget's own NO SIGNAL,
+    and the chat never resolves an agency to a zone. The `gtfsday` permalink kind carries the same
+    four keys: `preset` alone while the boxes match one, else the three values, even blank (a link
+    from cleared boxes opens cleared). The Astro shell seeds from `seedFromLocation("gtfsday")`, and
+    an unknown preset in a link opens the first. The starter card (Rail) opens `spring-forward`.
+    The descriptor is appended to `DOX_TOOL_DOCS`, and the Time Reader's `purpose` points to this
+    tool for the instant on a date.
+  - **Tests.** `gtfs-service-day-clock.test.ts` runs the real library through `~/test/service-day-lib`;
+    the mount test wraps `loadServiceDayLib` with a spy on `gtfsToInstant` (so "nothing typed" is
+    proven to make no call) and aborts or destroys its widget in `afterEach`;
+    `gtfs-service-day-clock-prose.test.ts` holds the page's `ts` block to the library;
+    `scripts/gtfs-service-day-clock-holds.browser.test.ts` steps every preset and two typed refusals at
+    300, 390, 1280 and 1440 px in Chromium and WebKit.
+  - **Prose names the function as shipped.** The Rail guide's "From a record to an instant"
+    section, the scenario "A GTFS Trip Anchored at Midnight", the mistake "Reading a stop's time in
+    its own zone" and the Rail hub's `solves` row all link `gtfsToInstant` and this tool, and every
+    result in them is pasted from `dist`; a link to the section uses the anchor
+    `#from-a-record-to-an-instant`. No page says "planned", because a promise of a function that now
+    exists is a claim nothing checks. A page link to a preset carries `preset` alone, as the encoder
+    writes it, and `gtfs-time-reader-prose.test.ts` checks each link's preset against the widget its
+    `w=` kind opens, so a renamed preset fails the test.
+- **GTFS Trip Board** (RAI-100, `/tools/gtfs-trip-board/`, `gtfstrip`, rail). One trip's
+  `stop_times.txt` rows (with `stop_timezone` joined on), a service date and the agency's zone. For
+  each stop the board shows the `gtfsToInstant` instant, the clock on the platform, the reading a
+  stop's own zone would give (the mistake) and each leg's length. `loadTripBoardLib()` in
+  `rail-lib.ts` is `loadServiceDayLib()` plus `convertUtcToPlainDateTime` and `diffDateTime`, typed
+  through `pickTyped`; gmt is imported dynamically only. Rail `drawsOn` `transport`.
+  - **Input is a CSV paste with a header line.** The header names `stop_id`, `arrival_time` and
+    `departure_time`; `stop_timezone` is optional and other columns are ignored, because feeds order
+    their columns differently. A leading byte order mark (U+FEFF, which many feeds start with and a
+    paste keeps) is dropped and header cells are trimmed, because they are names; data cells are left
+    as typed, so a stray space in a time reaches the library and is refused there. At most 12 rows
+    are read and the rest are counted in a note; a line over 150 characters or with a quoted field
+    is refused with a "Line N" note and never cut or guessed; a paste over 2,000 characters is
+    refused whole. RFC 4180 quoting is out of scope: a quote anywhere refuses the row, even in a
+    column the board does not read, and the page tells the reader to paste only the columns it reads.
+    The bound is the same in the reader, the chat schema and the permalink, and the textarea has no
+    `maxlength`, because a paste cut silently is a wrong answer. The argument is `stopTimes`, not
+    `rows`: `LONG_STRING_KEYS` in `widget-permalink.ts` is keyed by argument name for every kind, so
+    a generic name would lift the 64-character cap on other tools too.
+  - **An empty `stop_timezone` is the agency's zone**, as `stops.txt` says for a parentless stop. A
+    header with no `stop_timezone` column puts a note in the list saying every stop is read in the
+    agency's zone, since each row would otherwise read "nothing to misread" with no reason. A child
+    stop's zone is the reader's to join; the page says so and the board has no `parent_station`
+    column.
+  - **The wrong reading is badged in words.** The column is headed "Read in stop_timezone (wrong)" and
+    each value carries a `badge` ("N min later", "N min earlier", `danger`; "same instant", `neutral`),
+    so colour is never the only signal. A stop with no `stop_timezone` reads "agency zone: nothing to
+    misread". The keypoint sizes the mistake by the change, an hour in most zones, never as a rule of
+    one hour; a paragraph about one pair of zones gives that pair's size and season.
+  - **Legs.** Elapsed time is `diffUtc` of the previous read stop's departure (or arrival) to this
+    arrival; the clocks are `diffDateTime` of each end's `convertUtcToPlainDateTime` in its own zone.
+    The verdict is "clocks agree", else "clock change in leg" with the instant, else "zone change",
+    else "clocks differ". `getDstTransitions` is asked for every year the leg touches, in each zone's
+    own calendar (`yearAt` in `gtfs-service-day-clock.ts`), so a leg across New Year finds a change in
+    either year.
+  - **NO SIGNAL is the library's refusal only.** An empty box or a header with no rows reads "nothing
+    typed" and makes no call; a paste the reader refuses reads "not read" with its note. A refused
+    time carries the Service Day Clock's `explainRefusal` reason in a "Line N, arrival_time:" note.
+  - **Presets (5), the default is `border`.** `border` (Madrid to Lisbon, 20260615), `night-train`
+    (Vienna to Hamburg, 20261024, times past 24:00:00 and a clock change inside a leg; the wrong
+    reading is "same instant" everywhere because Vienna and Berlin share offsets), `andes-june` and
+    `andes-january` (a Santiago to Mendoza coach timetable: the mistake exists while Chile's clocks are
+    back and hides when both sides share an offset) and `no-noon` (Samoa, every stop refused). The
+    Andes pair runs by coach, and its label says so: GTFS covers coaches, and it is the pair that
+    shows two zones whose offsets differ in one season only. Every value is the built library's,
+    asserted in `gtfs-trip-board.test.ts`.
+  - **The hold.** Two hero plates ("Trip, first departure to last arrival", "Stops the wrong zone
+    moves") sit at opposite edges of their row and carry `data-gate="hero"`. Every cell value is a
+    `hold` with ghosts for `WIDEST_ZONE` (`GHOST_ZONED`, asserted against the library), so for a given
+    row count a cell never changes size. The table, a kit `table` with `layout: "fixed"`, `labelCells`
+    and `roles`, sits in `grow()` (the board div is inside the grow host, so `setHtml` on it eases)
+    with `data-gate="drawn"`, and below a 46rem container each stop becomes a block with a full
+    bevelled border. A cell's zone piece and words wrap at the cell (`.zoned > span`, `.board .word`),
+    because the kit's no-wrap piece is wider than a stacked cell at 300 px. The readout-still entry uses `scope: "above"`, since
+    the table and the calls grow with the trip by design.
+  - **Calls for one stop.** A whole trip's calls run past a hundred lines, so a "Calls for" select
+    picks a stop (default: the first stop the wrong zone moves, else the first read) and the code
+    frame reserves the lines and width of `CALLS_SIZER`, a stub-library run through the real reader.
+  - **Chat tool and permalink.** `showGtfsTripBoard` takes optional `stopTimes` (2,000 characters),
+    `date` (16), `zone` (64) and a `preset` from the page's five ids, and at least one of them. The
+    `gtfstrip` permalink carries `preset` alone while the boxes match one, else the three values. The
+    starter card (Rail) opens `border`.
+  - **Tests.** `gtfs-trip-board.test.ts` runs the real library through `~/test/trip-board-lib`; the
+    mount test wraps `loadTripBoardLib` with a spy on `gtfsToInstant` and destroys its widget in
+    `afterEach`; `gtfs-trip-board-prose.test.ts` holds the page's `ts` block to the library;
+    `scripts/gtfs-trip-board-holds.browser.test.ts` steps every preset and the readout-still edits at
+    300, 390, 1280 and 1440 px in Chromium and WebKit.
 - **PTP Clock Converter** (IOT-101, `/tools/ptp-clock-converter/`, `ptpclock`, iot). A Precision
   Time Protocol timestamp counts TAI, and the receiver subtracts the `currentUtcOffset` its
   grandmaster announces. Section 1 reads seconds, nanoseconds and the offset with `ptpToUtc`, beside

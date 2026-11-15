@@ -46,7 +46,12 @@ import { grow } from "~/widgets/primitives/grow/grow";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/gtfs-time-reader.module.css";
 import {
+  CLOCK_NOTE_CLOCK,
+  CLOCK_NOTE_CLOCK_HREF,
+  CLOCK_NOTE_FN,
+  CLOCK_NOTE_FN_HREF,
   CLOCK_NOTE_LEAD,
+  CLOCK_NOTE_MID,
   CLOCK_NOTE_TAIL,
   CUSTOM_PRESET_ID,
   DIGITS_NOTE,
@@ -90,6 +95,7 @@ import {
   type WriteResult,
 } from "./gtfs-time-reader";
 import { loadRailLib, type RailLib } from "./rail-lib";
+import { withBase } from "./site";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 
 export type { GtfsTimeReaderArgs } from "./gtfs-time-reader";
@@ -474,7 +480,7 @@ export function renderGtfsTimeReaderTemplate(
     )}<div class="${styles.clock}" id="${id("clock-note")}">${
       hint(
         id("clock-note-text"),
-        html`${CLOCK_NOTE_LEAD}<code>gtfsToInstant</code>${CLOCK_NOTE_TAIL}`,
+        html`${CLOCK_NOTE_LEAD}<a href="${withBase(CLOCK_NOTE_FN_HREF)}"><code>${CLOCK_NOTE_FN}</code></a>${CLOCK_NOTE_MID}<a href="${withBase(CLOCK_NOTE_CLOCK_HREF)}">${CLOCK_NOTE_CLOCK}</a>${CLOCK_NOTE_TAIL}`,
       ).html
     }</div>${callsSlot(id("read-calls"), "read")}`,
   );

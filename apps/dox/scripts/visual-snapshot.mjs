@@ -181,6 +181,14 @@ const PAGES = [
     path: "/tools/swift-value-date-reader/",
   },
   { slug: "tool-gtfs-time-reader", path: "/tools/gtfs-time-reader/" },
+  {
+    slug: "tool-gtfs-service-day-clock",
+    path: "/tools/gtfs-service-day-clock/",
+  },
+  {
+    slug: "tool-gtfs-trip-board",
+    path: "/tools/gtfs-trip-board/",
+  },
   { slug: "tool-ptp-clock-converter", path: "/tools/ptp-clock-converter/" },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {

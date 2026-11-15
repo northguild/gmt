@@ -14,7 +14,7 @@
  * No DOM, no library import (the library arrives as a `RailLib`).
  */
 import type { GtfsTime } from "@northguild/gmt/types";
-import { literal } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import type { RailLib } from "./rail-lib";
 
 export const CUSTOM_PRESET_ID = "custom";
@@ -33,10 +33,16 @@ export const NOT_WRITTEN = "nothing written";
 
 /** The wording of the clock note, always visible (the owner's words). */
 export const CLOCK_NOTE_LEAD =
-  "These are days and seconds counted from the start of the service day (noon minus 12 hours). To turn them into a clock time on a date you need the agency's zone, and the result can differ on a day the clocks change. ";
-export const CLOCK_NOTE_TAIL = ", planned for a later release, does that.";
+  "The pair counts from noon minus 12 hours of the service day, so a clock time needs the date and the agency's zone. ";
+export const CLOCK_NOTE_FN = "gtfsToInstant";
+export const CLOCK_NOTE_MID = " does that, and the ";
+export const CLOCK_NOTE_CLOCK = "GTFS Service Day Clock";
+export const CLOCK_NOTE_TAIL = " shows it.";
+/** Where the two names in the note point. */
+export const CLOCK_NOTE_FN_HREF = "/reference/rail/convert/gtfsToInstant/";
+export const CLOCK_NOTE_CLOCK_HREF = "/tools/gtfs-service-day-clock/";
 /** The note as plain text, for the prose test and the chat doc. */
-export const CLOCK_NOTE_TEXT = `${CLOCK_NOTE_LEAD}gtfsToInstant${CLOCK_NOTE_TAIL}`;
+export const CLOCK_NOTE_TEXT = `${CLOCK_NOTE_LEAD}${CLOCK_NOTE_FN}${CLOCK_NOTE_MID}${CLOCK_NOTE_CLOCK}${CLOCK_NOTE_TAIL}`;
 
 /** The note under a written-back time that differs from the typed one. */
 export const DIGITS_NOTE =

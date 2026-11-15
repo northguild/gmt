@@ -140,6 +140,7 @@ export const GMT_MODULES: Record<
   "span/validate": () => import("@northguild/gmt/span/validate"),
 
   // --- rail ---
+  "rail/convert": () => import("@northguild/gmt/rail/convert"),
   "rail/format": () => import("@northguild/gmt/rail/format"),
   "rail/parse": () => import("@northguild/gmt/rail/parse"),
   "rail/validate": () => import("@northguild/gmt/rail/validate"),

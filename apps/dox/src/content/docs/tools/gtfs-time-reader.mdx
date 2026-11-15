@@ -25,7 +25,7 @@ A GTFS `arrival_time` or `departure_time` is `H:MM:SS`, counted from the start o
 
 <Fragment slot="after">
 
-**A record, not a date.** The library returns a count of days past the service day and the seconds left over, which are not always the clock time. It never names a date, because the start of a service day is set by the agency and its zone. The note under the first section says the same, and names `gtfsToInstant`, planned for a later release, as the call that will turn a record into an instant.
+**A record, not a date.** The library returns a count of days past the service day and the seconds left over, which are not always the clock time. It never names a date, because the start of a service day is set by the agency and its zone. [`gtfsToInstant`](/reference/rail/convert/gtfsToInstant/) turns a record into an instant, given the service date and the agency's zone, and the [GTFS Service Day Clock](/tools/gtfs-service-day-clock/) shows it beside the answer you get from adding the time to local midnight. The note under the first section says the same.
 
 **The fold.** The second section asks [`isValidTime`](/reference/plain/validate/isValidTime/) about the same text and then writes the seconds with the days dropped. A reader that does that agrees with GTFS for every time before 24:00:00 and loses a whole day for every time after it.
 
@@ -48,7 +48,7 @@ formatGtfsTime({ seconds: 5700, dayOverflow: 1 }); // "25:35:00"
 formatGtfsTime({ seconds: 100, dayOverflow: 42 }); // ""
 ```
 
-**Worth trying:** [a stop after midnight](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22next-day%22%7D) is valid and a day past the service day; [minute 60](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22bad-minute%22%7D) is refused; and [four hour digits](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22four-digits%22%7D) are refused too, because hours stop at 999. The guide is [Rail: GTFS service days](/guides/industries/rail-gtfs-service-days/), the story is [a GTFS time folded into one day](/scenarios/a-gtfs-time-folded-into-one-day/), and the pitfalls are in [Rail mistakes](/mistakes/rail/).
+**Worth trying:** [the clock on 28 March in Berlin with 26:30:00](/tools/gtfs-service-day-clock/?w=gtfsday&wa=%7B%22preset%22%3A%22past-midnight%22%7D); [a stop after midnight](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22next-day%22%7D) is valid and a day past the service day; [minute 60](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22bad-minute%22%7D) is refused; and [four hour digits](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22four-digits%22%7D) are refused too, because hours stop at 999. The guide is [Rail: GTFS service days](/guides/industries/rail-gtfs-service-days/), the story is [a GTFS time folded into one day](/scenarios/a-gtfs-time-folded-into-one-day/), and the pitfalls are in [Rail mistakes](/mistakes/rail/).
 
 </Fragment>
 

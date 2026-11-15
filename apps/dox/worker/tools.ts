@@ -83,6 +83,8 @@ import {
   showFhirDateCheckerInput,
   showSwiftValueDateReaderInput,
   showGtfsTimeReaderInput,
+  showGtfsServiceDayClockInput,
+  showGtfsTripBoardInput,
   showPtpClockConverterInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
@@ -695,6 +697,16 @@ export function buildWorkerTools(
       description: docFor("showGtfsTimeReader"),
       inputSchema: showGtfsTimeReaderInput,
       execute: () => accept("gtfs-time-reader"),
+    }),
+    showGtfsServiceDayClock: tool({
+      description: docFor("showGtfsServiceDayClock"),
+      inputSchema: showGtfsServiceDayClockInput,
+      execute: () => accept("gtfs-service-day-clock"),
+    }),
+    showGtfsTripBoard: tool({
+      description: docFor("showGtfsTripBoard"),
+      inputSchema: showGtfsTripBoardInput,
+      execute: () => accept("gtfs-trip-board"),
     }),
     showPtpClockConverter: tool({
       description: docFor("showPtpClockConverter"),

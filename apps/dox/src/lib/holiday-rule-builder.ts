@@ -33,6 +33,7 @@ import {
   withoutWalks,
   type RulePair,
 } from "./holiday-widgets";
+import { literal } from "./literal";
 import { encodeWidgetPermalink } from "./widget-permalink";
 
 export type RuleKind = HolidayRule["kind"];
@@ -569,27 +570,6 @@ export function yearOf(state: BuilderState): number | null {
 // ---------------------------------------------------------------------------
 // The printed call
 // ---------------------------------------------------------------------------
-
-const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
-
-/** A value as source, one line: keys unquoted, as the guide writes it. */
-export function literal(value: unknown): string {
-  if (value === null || value === undefined) return "null";
-  if (typeof value === "string") return JSON.stringify(value);
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  if (Array.isArray(value)) return `[${value.map(literal).join(", ")}]`;
-  const entries = Object.entries(value as Record<string, unknown>).filter(
-    ([, v]) => v !== undefined,
-  );
-  if (entries.length === 0) return "{}";
-  return `{ ${entries
-    .map(
-      ([k, v]) =>
-        `${IDENTIFIER.test(k) || /^\d+$/.test(k) ? k : JSON.stringify(k)}: ${literal(v)}`,
-    )
-    .join(", ")} }`;
-}
 
 /** What `buildBusinessCalendar` is called with. */
 function callSpec(state: BuilderState, year: number) {

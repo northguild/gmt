@@ -15,7 +15,7 @@
  * `parseDateWithPattern` and `getLocaleMonthNames` only; no `parseSsimDate` call takes it.
  */
 import type { AviationLib, YearWindowOptions } from "./aviation-lib";
-import { literal } from "./holiday-rule-builder";
+import { literal } from "./literal";
 
 /** The locale the tool opens with when a link or the chat names none. */
 export const DEFAULT_LOCALE = "en";

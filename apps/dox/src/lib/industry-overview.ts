@@ -672,10 +672,30 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
         ],
       },
       {
-        problem: "A printed timetable time is read in the wrong zone.",
+        problem: "A stop time is anchored at midnight on a clock-change day.",
         answer:
-          "Rail draws on the transport layer. {{scheduleDelivery}} reads a printed departure in the zone you name, and the timetable reader shows a repeated or skipped hour.",
-        see: [{ label: "tool", href: "/tools/timetable-reader/" }],
+          "A GTFS time counts from noon minus twelve hours of the service day, which is off midnight on a day the clocks change, by the size of the change, an hour in most zones. {{gtfsToInstant}} counts from that point in the agency's zone.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/rail-gtfs-service-days/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-gtfs-trip-anchored-at-midnight/",
+          },
+          { label: "tool", href: "/tools/gtfs-service-day-clock/" },
+        ],
+      },
+      {
+        problem: "A stop's or a printed time is read in the wrong zone.",
+        answer:
+          "Rail draws on the transport layer. GTFS reads every stop time against the agency's zone, so {{gtfsToInstant}} given a stop's own zone moves the instant by the difference between the two offsets that day, an hour from Madrid to Lisbon. {{scheduleDelivery}} reads a printed departure in the zone you name, and the timetable reader shows a repeated or skipped hour.",
+        see: [
+          { label: "mistakes", href: "/mistakes/rail/" },
+          { label: "tool", href: "/tools/gtfs-trip-board/" },
+          { label: "tool", href: "/tools/timetable-reader/" },
+        ],
       },
     ],
   },

@@ -1,6 +1,6 @@
 ---
 title: "Rail: GTFS Service Days"
-description: Read, write and check a GTFS stop time such as 25:35:00, which runs past midnight and stays with its service day, with the days past the service day kept apart from the time of day.
+description: Read, write and check a GTFS stop time such as 25:35:00, which runs past midnight and stays with its service day, and turn it into an instant on a service date in the agency's zone.
 sidebar:
   order: 13
 industries: [rail]
@@ -12,16 +12,18 @@ the count at `00:00:00`. The stop is written `25:35:00` and stays part of the se
 began on.
 
 The functions here read that form, write it back and check it. They keep the whole days past the
-service day and the seconds left over as two numbers, and they never name a date.
+service day and the seconds left over as two numbers. Parse, format and validate never name a date;
+`gtfsToInstant` takes a service date and the agency's zone and turns a time into an instant.
 
 ```typescript
 import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 import { formatGtfsTime } from "@northguild/gmt/rail/format";
 import { isValidGtfsTime } from "@northguild/gmt/rail/validate";
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
 ```
 
-The functions live in `@northguild/gmt/rail/parse`, `@northguild/gmt/rail/format` and
-`@northguild/gmt/rail/validate`.
+The functions live in `@northguild/gmt/rail/parse`, `@northguild/gmt/rail/format`,
+`@northguild/gmt/rail/validate` and `@northguild/gmt/rail/convert`.
 
 ## The GTFS time form
 
@@ -143,7 +145,7 @@ so a stray space reaches these functions as a refusal, not as a quiet repair.
 A check made for clock times does not do this job. `isValidTime("25:35:00")` from
 `@northguild/gmt/plain/validate` is `false`, because there is no 25th hour on a clock.
 
-## Not a clock reading yet
+## From a record to an instant
 
 The reference measures the time "from 'noon minus 12h' of the service day (effectively midnight
 except for days on which daylight savings time changes occur)". So `dayOverflow × 86400 + seconds`
@@ -161,32 +163,104 @@ if (record !== null) {
 }
 ```
 
-A clock change on the night after the service day is enough to break the match. In Berlin the
-clocks go forward from 02:00 to 03:00 early on Sunday 29 March 2026. For the service day Saturday
-28 March, `26:30:00` is 26 hours 30 minutes after Saturday 00:00, which is 03:30 on Sunday, not the
-02:30 that reading it as a clock gives.
+### Noon minus 12 hours
 
-Turning a record into an instant needs the agency's time zone and the service date. That is what
-`gtfsToInstant`, planned for a later release, will do. Until then the record is what you keep.
+The reference defines the anchor and gives no reason for it. Our explanation is that counting from
+noon works because noon happens once on a clock-change day. Midnight can be missing or repeated on
+some days, and noon is not, in any zone that changes its clocks at night.
+
+### The agency's zone
+
+Every `stop_times.txt` value is in `agency.agency_timezone`, never in `stop_timezone`, and a feed
+has one agency zone. The zone is a parameter of `gtfsToInstant`: GMT looks up no agency, so the
+caller passes the zone from `agency.txt`.
+
+### The two clock-change days
+
+[`gtfsToInstant`](/reference/rail/convert/gtfsToInstant/) takes the service date, the time and the
+zone, and returns the instant. In Berlin the clocks go forward on 29 March 2026 and back on
+25 October 2026.
+
+```typescript
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+gtfsToInstant("20260329", "00:00:00", "Europe/Berlin");
+// "2026-03-28T22:00:00Z"
+gtfsToInstant("20260329", "08:00:00", "Europe/Berlin");
+// "2026-03-29T06:00:00Z"
+gtfsToInstant("20261025", "00:00:00", "Europe/Berlin");
+// "2026-10-24T23:00:00Z"
+gtfsToInstant("20261025", "08:00:00", "Europe/Berlin");
+// "2026-10-25T07:00:00Z"
+```
+
+Adding the time to local midnight gives a different answer on both days. In spring, local midnight
+of 29 March is `2026-03-28T23:00:00Z`, so 08:00:00 becomes `2026-03-29T07:00:00Z`, an hour later
+than the feed means. In autumn, local midnight of 25 October is `2026-10-24T22:00:00Z`, so 08:00:00
+becomes `2026-10-25T06:00:00Z`, an hour earlier.
+
+### More than a day of seconds
+
+A stop time of 24 hours or more is the exact seconds elapsed from that point, not a move on the wall clock.
+For the service day Saturday 28 March, `26:30:00` is 26 hours 30 minutes after the anchor, which is
+03:30 on Sunday in Berlin, not the 02:30 that reading it as a clock gives.
+
+```typescript
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+gtfsToInstant("20260328", "26:30:00", "Europe/Berlin");
+// "2026-03-29T01:30:00Z"
+```
+
+### No anchor
+
+When the zone skipped or repeated the noon of the service date, there is no point to count from,
+and `gtfsToInstant` returns `""`. It has no option to choose one. Samoa skipped the whole of
+30 December 2011 when it moved across the date line.
+
+```typescript
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+gtfsToInstant("20111230", "08:00:00", "Pacific/Apia");
+// ""
+```
+
+The zone can also be an offset such as `+05:30`, and a result after the year 9999 is returned as
+Temporal writes it, with an expanded year:
+
+```typescript
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+gtfsToInstant("20260329", "08:00:00", "+05:30");
+// "2026-03-29T02:30:00Z"
+gtfsToInstant("99991231", "999:59:59", "UTC");
+// "+010000-02-10T15:59:59Z"
+```
+
+The [GTFS Service Day Clock](/tools/gtfs-service-day-clock/?w=gtfsday&wa=%7B%22preset%22%3A%22spring-forward%22%7D)
+shows both anchors for a date, a time and a zone, with the clock change marked on the day.
 
 ## What this layer does not do
 
 - It does not pick the service days a trip runs on. That is `calendar.txt` and
   `calendar_dates.txt`.
-- It does not read the GTFS `Date` type or the `Local time` type.
+- It does not read the `Local time` type.
 - It does not split a CSV row. It reads one field.
 
 ## See it break, then work
 
 - [A GTFS Time Folded into One Day](/scenarios/a-gtfs-time-folded-into-one-day/)
+- [A GTFS Trip Anchored at Midnight](/scenarios/a-gtfs-trip-anchored-at-midnight/)
 - [Rail mistakes](/mistakes/rail/)
 - [GTFS Time Reader](/tools/gtfs-time-reader/), a tool that reads, checks, folds and writes a GTFS time
+- [GTFS Service Day Clock](/tools/gtfs-service-day-clock/), a tool that shows the instant GTFS means beside the answer from local midnight
+- [GTFS Trip Board](/tools/gtfs-trip-board/?w=gtfstrip&wa=%7B%22preset%22%3A%22border%22%7D), a tool that reads a whole trip and shows what each stop's own zone gets wrong
 
 ## Sources
 
 - MobilityData and Google, [_GTFS Schedule Reference_](https://gtfs.org/documentation/schedule/reference/),
-  revised 27 April 2026: Field Types, Time; Term Definitions, Service day; `trips.txt`, Example:
-  Blocks and service day; `stop_times.txt`, `frequencies.txt` and `booking_rules.txt`; File
-  Requirements.
+  revised 27 April 2026: Field Types, Time and Date; Term Definitions, Service day; `trips.txt`,
+  Example: Blocks and service day; `stop_times.txt`, `frequencies.txt` and `booking_rules.txt`;
+  `stops.txt`, `stop_timezone`; `agency.txt`, `agency_timezone`; File Requirements.
 - MobilityData, _gtfs-validator_, `GtfsTime.java`: the source of the three-digit hour (`\d{1,3}`)
   that GMT reads.

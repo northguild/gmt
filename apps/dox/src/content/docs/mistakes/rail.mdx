@@ -100,7 +100,7 @@ parseGtfsTime("25:35:00");
 <Mistake
   severity="medium"
   title="Adding the seconds to local midnight"
-  description="The days and seconds of a GTFS time are measured from noon minus 12 hours of the service day, which is midnight except on a day the clocks change. Adding them to local midnight is an hour out on that day. The record is what to keep; an instant needs the agency's zone, and gtfsToInstant, planned for a later release, does that."
+  description="The days and seconds of a GTFS time are measured from noon minus 12 hours of the service day, which is midnight except on a day the clocks change. Adding them to local midnight is out on that day by the size of the change, an hour in most zones. The record is what to keep; an instant needs the agency's zone and the service date, and gtfsToInstant takes both."
   wrongCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
 
 const { dayOverflow, seconds } = parseGtfsTime("25:35:00");
@@ -109,12 +109,31 @@ const midnight = new Date("2026-03-29T00:00:00"); // local midnight of the servi
 
 new Date(midnight.getTime() + (dayOverflow * 86400 + seconds) * 1000);
 // GTFS measures from noon minus 12 hours, so on a day the clocks change
-// this is an hour from the time the feed means`}
-  rightCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+// this is out by the size of the change, an hour in Berlin`}
+  rightCode={`import { gtfsToInstant } from "@northguild/gmt/rail/convert";
 
-// Keep the record. An instant needs the agency's zone and the service date,
-// which gtfsToInstant, planned for a later release, will take.
-parseGtfsTime("25:35:00");
-// { seconds: 5700, dayOverflow: 1 }`}
-  rightSpecId="parseGtfsTime"
+gtfsToInstant("20260329", "25:35:00", "Europe/Berlin");
+// "2026-03-29T23:35:00Z"`}
+  rightSpecId="gtfsToInstant"
 />
+
+## The stop's own zone
+
+<Mistake
+  severity="medium"
+  title="Reading a stop's time in its own zone"
+  description="The reference says the times in stop_times.txt are in the timezone specified by agency.agency_timezone, not stop_timezone. A stop in another zone still has its time written in the agency's. The same 08:00:00 on 29 March 2026 is 06:00:00Z in Berlin and 07:00:00Z in London, so the wrong zone moves the stop by an hour."
+  wrongCode={`import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+// stop.stop_timezone is "Europe/London"; the agency is in Berlin
+gtfsToInstant("20260329", "08:00:00", "Europe/London");
+// "2026-03-29T07:00:00Z" — an hour from the time the feed means`}
+  rightCode={`import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+// the zone is agency.agency_timezone, for every stop
+gtfsToInstant("20260329", "08:00:00", "Europe/Berlin");
+// "2026-03-29T06:00:00Z"`}
+  rightSpecId="gtfsToInstant"
+/>
+
+The [GTFS Trip Board](/tools/gtfs-trip-board/?w=gtfstrip&wa=%7B%22preset%22%3A%22border%22%7D) reads a whole trip both ways: the instant `gtfsToInstant` gives for each stop, and the one the stop's own zone would give.

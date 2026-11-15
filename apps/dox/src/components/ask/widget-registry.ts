@@ -95,6 +95,8 @@ import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
 import type { ReportTimeResolverArgs } from "~/lib/report-time-resolver-mount";
 import type { SwiftValueDateReaderArgs } from "~/lib/swift-value-date-reader-mount";
 import type { GtfsTimeReaderArgs } from "~/lib/gtfs-time-reader-mount";
+import type { GtfsServiceDayClockArgs } from "~/lib/gtfs-service-day-clock-mount";
+import type { GtfsTripBoardArgs } from "~/lib/gtfs-trip-board-mount";
 import type { PtpClockArgs } from "~/lib/ptp-clock-converter-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
@@ -148,6 +150,8 @@ import {
   showFhirDateCheckerInput,
   showSwiftValueDateReaderInput,
   showGtfsTimeReaderInput,
+  showGtfsServiceDayClockInput,
+  showGtfsTripBoardInput,
   showPtpClockConverterInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
@@ -1146,6 +1150,68 @@ const gtfsTimeEntry = defineWidget<GtfsTimeReaderArgs>({
     })),
 });
 
+const gtfsServiceDayEntry = defineWidget<GtfsServiceDayClockArgs>({
+  title: "GTFS Service Day Clock",
+  kind: "gtfsday",
+  parse: (input) => {
+    const result = showGtfsServiceDayClockInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { serviceDate, time, timeZone, preset } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(serviceDate === undefined ? {} : { serviceDate }),
+        ...(time === undefined ? {} : { time }),
+        ...(timeZone === undefined ? {} : { timeZone }),
+        ...(preset === undefined ? {} : { preset }),
+      },
+    };
+  },
+  /* No `validate`: a date the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/gtfs-service-day-clock-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderGtfsServiceDayClockTemplate(idPrefix, args),
+      mount: m.mountGtfsServiceDayClock,
+    })),
+});
+
+const gtfsTripBoardEntry = defineWidget<GtfsTripBoardArgs>({
+  title: "GTFS Trip Board",
+  kind: "gtfstrip",
+  parse: (input) => {
+    const result = showGtfsTripBoardInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { stopTimes, date, zone, preset } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(stopTimes === undefined ? {} : { stopTimes }),
+        ...(date === undefined ? {} : { date }),
+        ...(zone === undefined ? {} : { zone }),
+        ...(preset === undefined ? {} : { preset }),
+      },
+    };
+  },
+  /* No `validate`: a row or time the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/gtfs-trip-board-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderGtfsTripBoardTemplate(idPrefix, args),
+      mount: m.mountGtfsTripBoard,
+    })),
+});
+
 const ptpClockEntry = defineWidget<PtpClockArgs>({
   title: "PTP Clock Converter",
   kind: "ptpclock",
@@ -1730,6 +1796,8 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showFhirDateChecker: fhirEntry,
   showSwiftValueDateReader: swiftDateEntry,
   showGtfsTimeReader: gtfsTimeEntry,
+  showGtfsServiceDayClock: gtfsServiceDayEntry,
+  showGtfsTripBoard: gtfsTripBoardEntry,
   showPtpClockConverter: ptpClockEntry,
   showUsSunshineProtectionAct: sunshineActEntry,
   showTerrestrialTimeStack: ttStackEntry,

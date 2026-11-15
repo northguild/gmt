@@ -216,6 +216,16 @@ const TEXT_PART = {
   instant: gate("instant"),
 };
 const PRESET = { role: "combobox", name: "Preset" };
+/** The Trip Board's border preset, as pasted: six stops, three of them in Lisbon's zone. */
+const TRIP_BORDER = [
+  "stop_id,arrival_time,departure_time,stop_timezone",
+  "madrid-chamartin,08:00:00,08:00:00,",
+  "caceres,10:32:00,10:35:00,",
+  "badajoz,11:25:00,11:32:00,",
+  "elvas,11:52:00,11:54:00,Europe/Lisbon",
+  "entroncamento,13:20:00,13:22:00,Europe/Lisbon",
+  "lisboa-oriente,14:15:00,14:15:00,Europe/Lisbon",
+].join("\n");
 
 const TOOLS = [
   {
@@ -823,6 +833,86 @@ const TOOLS = [
     frame: false,
     scope: "widget",
     drawn: ["hold"],
+    textBoxes: ["codeframe"],
+  },
+  {
+    // RAI-100. No handle: the reader types a service date, a stop time and a zone, or picks a preset.
+    // The first preset reads a date and the second refuses it, so each box is typed from both.
+    slug: "gtfs-service-day-clock",
+    root: '[data-widget="gtfs-service-day-clock"]',
+    presets: ["spring-forward", "no-noon"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Service date (calendar.txt)",
+        values: ["20260329", "20260230", "2026-03-29", "9".repeat(16), ""],
+      },
+      {
+        role: "textbox",
+        name: "Stop time (stop_times.txt)",
+        values: ["08:00:00", "26:30:00", "25:60:00", "999:59:59", ""],
+      },
+      {
+        role: "textbox",
+        name: "Zone (agency.txt, agency_timezone)",
+        values: [
+          "Europe/Berlin",
+          "UTC",
+          "+05:30",
+          "Not/AZone",
+          "America/Argentina/Buenos_Aires",
+          "",
+        ],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["drawn", "hold"],
+    textBoxes: ["codeframe"],
+  },
+  {
+    // RAI-100. No handle: the reader pastes a trip, types a service date and a zone, or picks a
+    // preset. The table and the calls grow with the trip by design (inside `grow()`), so the
+    // gate records what sits above them: the hero plates, and each value's hold. The pastes below
+    // all keep the border trip's six rows, so a cell is compared at the same row count.
+    slug: "gtfs-trip-board",
+    root: '[data-widget="gtfs-trip-board"]',
+    presets: ["border", "night-train", "no-noon"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Trip rows (stop_times.txt, with stop_timezone from stops.txt)",
+        values: [
+          TRIP_BORDER,
+          TRIP_BORDER.replace("10:32:00,10:35:00", "10:99:00,10:35:00"),
+          TRIP_BORDER.replace("Europe/Lisbon", "Europe/Wien"),
+          TRIP_BORDER.replace("11:25:00,11:32:00", "11:25:00,"),
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Service date (calendar.txt)",
+        values: ["20260615", "20260230", "2026-06-15", ""],
+      },
+      {
+        role: "textbox",
+        name: "Zone (agency.txt, agency_timezone)",
+        values: [
+          "Europe/Madrid",
+          "+05:30",
+          "Not/AZone",
+          "America/Argentina/Buenos_Aires",
+          "",
+        ],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "above",
+    drawn: ["drawn", "hold"],
     textBoxes: ["codeframe"],
   },
   {

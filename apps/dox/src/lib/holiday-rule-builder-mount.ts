@@ -75,7 +75,6 @@ import {
   hasPolicy,
   isSeeded,
   ledgerHandoff,
-  literal,
   matchPreset,
   movedCount,
   normaliseWeekend,
@@ -95,6 +94,7 @@ import {
   type RowState,
   type RuleKind,
 } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import {
   attributeRows,
   attributeRules,

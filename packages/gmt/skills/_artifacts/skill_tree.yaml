@@ -195,9 +195,10 @@ skills:
     domain: industry-layers
     path: 'skills/gmt-rail/SKILL.md'
     package: 'packages/gmt'
-    description: Read, write and check the GTFS Schedule Time value that runs past midnight (parseGtfsTime/formatGtfsTime/isValidGtfsTime) — 25:35:00 reads as { seconds, dayOverflow } and writes back as 25:35:00, hours 0 to 999, sentinels instead of exceptions
+    description: Read, write and check the GTFS Schedule Time value that runs past midnight (parseGtfsTime/formatGtfsTime/isValidGtfsTime) and turn it into an instant (gtfsToInstant) — 25:35:00 reads as { seconds, dayOverflow } and writes back as 25:35:00, hours 0 to 999, sentinels instead of exceptions
     sources:
       - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/rail-gtfs-service-days.mdx'
+      - 'northguild/gmt:packages/gmt/src/rail/convert/index.ts'
       - 'northguild/gmt:packages/gmt/src/rail/format/index.ts'
       - 'northguild/gmt:packages/gmt/src/rail/parse/index.ts'
       - 'northguild/gmt:packages/gmt/src/rail/validate/index.ts'

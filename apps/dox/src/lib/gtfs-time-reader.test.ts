@@ -273,11 +273,12 @@ describe("the words", () => {
     expect(RECORD_SAMPLE).toBe("{ seconds: 86399, dayOverflow: 41 }");
   });
 
-  it("states the clock note once, naming gtfsToInstant as planned", () => {
+  it("states the clock note once, linking gtfsToInstant and the clock", () => {
     expect(CLOCK_NOTE_TEXT).toContain("noon minus 12 hours");
     expect(CLOCK_NOTE_TEXT).toContain(
-      "gtfsToInstant, planned for a later release",
+      "gtfsToInstant does that, and the GTFS Service Day Clock shows it.",
     );
+    expect(CLOCK_NOTE_TEXT).not.toMatch(/planned|later release/i);
   });
 
   it("never names a date, a weekday or midnight-since", () => {

@@ -249,6 +249,9 @@
       "rail": [
         "./dist/rail/index.d.ts"
       ],
+      "rail/convert": [
+        "./dist/rail/convert/index.d.ts"
+      ],
       "rail/format": [
         "./dist/rail/format/index.d.ts"
       ],
@@ -672,6 +675,10 @@
     "./rail": {
       "types": "./dist/rail/index.d.ts",
       "default": "./dist/rail/index.js"
+    },
+    "./rail/convert": {
+      "types": "./dist/rail/convert/index.d.ts",
+      "default": "./dist/rail/convert/index.js"
     },
     "./rail/format": {
       "types": "./dist/rail/format/index.d.ts",

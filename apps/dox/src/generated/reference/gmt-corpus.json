@@ -17482,6 +17482,59 @@
     ]
   },
   {
+    "url": "/reference/rail/convert/gtfsToInstant",
+    "page": "/reference/rail/convert/gtfsToInstant",
+    "name": "gtfsToInstant",
+    "namespace": "rail",
+    "module": "convert",
+    "kind": "function",
+    "signature": "gtfsToInstant(serviceDate: string, gtfsTime: string, timeZone: string): string",
+    "description": "The UTC instant a GTFS time names on its service day in the agency's time zone.",
+    "sourcePath": "packages/gmt/src/rail/convert/gtfsToInstant.ts",
+    "examples": [
+      {
+        "call": "gtfsToInstant(\"20240130\", \"25:35:00\", \"America/Los_Angeles\")",
+        "result": "\"2024-01-31T09:35:00Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"2024-01-30\", \"25:35:00\", \"America/Los_Angeles\")",
+        "result": "\"2024-01-31T09:35:00Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240331\", \"00:00:00\", \"Europe/Berlin\")",
+        "result": "\"2024-03-30T22:00:00Z\" (23:00 local)"
+      },
+      {
+        "call": "gtfsToInstant(\"20240407\", \"00:00:00\", \"Australia/Sydney\")",
+        "result": "\"2024-04-06T14:00:00Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240309\", \"26:30:00\", \"America/New_York\")",
+        "result": "\"2024-03-10T07:30:00Z\" (03:30 EDT)"
+      },
+      {
+        "call": "gtfsToInstant(\"20241102\", \"26:30:00\", \"America/New_York\")",
+        "result": "\"2024-11-03T06:30:00Z\" (second 01:30)"
+      },
+      {
+        "call": "gtfsToInstant(\"99991231\", \"999:59:59\", \"UTC\")",
+        "result": "\"+010000-02-10T15:59:59Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240230\", \"25:35:00\", \"America/Los_Angeles\")",
+        "result": "\"\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240130\", \"25:35:00\", \"+05:30\")",
+        "result": "\"2024-01-30T20:05:00Z\" (an offset is read)"
+      },
+      {
+        "call": "gtfsToInstant(\"20000115\", \"00:00:00\", \"Africa/Khartoum\")",
+        "result": "\"\" (noon nonexistent)"
+      }
+    ]
+  },
+  {
     "url": "/reference/rail/format/formatGtfsTime",
     "page": "/reference/rail/format/formatGtfsTime",
     "name": "formatGtfsTime",

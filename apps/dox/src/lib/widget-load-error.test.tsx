@@ -164,6 +164,14 @@ import {
   renderGtfsTimeReaderTemplate,
 } from "./gtfs-time-reader-mount";
 import {
+  mountGtfsServiceDayClock,
+  renderGtfsServiceDayClockTemplate,
+} from "./gtfs-service-day-clock-mount";
+import {
+  mountGtfsTripBoard,
+  renderGtfsTripBoardTemplate,
+} from "./gtfs-trip-board-mount";
+import {
   mountPtpClockConverter,
   renderPtpClockConverterTemplate,
 } from "./ptp-clock-converter-mount";
@@ -406,6 +414,16 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "gtfs time reader",
     () => renderGtfsTimeReaderTemplate("test"),
     mountGtfsTimeReader as MountFn<never>,
+  ],
+  [
+    "gtfs service day clock",
+    () => renderGtfsServiceDayClockTemplate("test"),
+    mountGtfsServiceDayClock as MountFn<never>,
+  ],
+  [
+    "gtfs trip board",
+    () => renderGtfsTripBoardTemplate("test"),
+    mountGtfsTripBoard as MountFn<never>,
   ],
   [
     "ptp clock converter",

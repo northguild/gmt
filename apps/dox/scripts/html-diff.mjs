@@ -219,6 +219,14 @@ const PAGES = [
     widget: "gtfs-time-reader",
   },
   {
+    path: "tools/gtfs-service-day-clock",
+    widget: "gtfs-service-day-clock",
+  },
+  {
+    path: "tools/gtfs-trip-board",
+    widget: "gtfs-trip-board",
+  },
+  {
     path: "tools/ptp-clock-converter",
     widget: "ptp-clock-converter",
   },

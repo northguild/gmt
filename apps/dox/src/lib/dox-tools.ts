@@ -781,6 +781,71 @@ export const showGtfsTimeReaderInput = z
   );
 
 /**
+ * GTFS Service Day Clock: a service date (`serviceDate`), a stop time (`time`) and the agency's
+ * zone (`timeZone`) to read, or one of the page's presets. Every string is passed exactly as the
+ * reader gave it (at most 16, 16 and 64 characters), never trimmed or repaired, and the chat
+ * never resolves an agency or a stop to a zone. `preset` is one of the page's ids
+ * (`gtfs-service-day-clock.test.ts` holds this list to `PRESETS`).
+ */
+export const showGtfsServiceDayClockInput = z
+  .object({
+    serviceDate: z.string().max(16).optional(),
+    time: z.string().max(16).optional(),
+    timeZone: z.string().max(64).optional(),
+    preset: z
+      .enum([
+        "spring-forward",
+        "spring-start",
+        "fall-back",
+        "ordinary",
+        "past-midnight",
+        "lord-howe",
+        "no-noon",
+        "offset",
+      ])
+      .optional(),
+  })
+  .refine(
+    (a) =>
+      a.serviceDate !== undefined ||
+      a.time !== undefined ||
+      a.timeZone !== undefined ||
+      a.preset !== undefined,
+    {
+      message:
+        "Give a service date, a stop time and a zone, or a preset to open.",
+    },
+  );
+
+/**
+ * GTFS Trip Board: one trip's `stop_times.txt` rows with a header line (`stopTimes`, at most 2,000
+ * characters), the service date (`date`) and the agency's zone (`zone`), or one of the page's
+ * presets. Every string is passed exactly as the reader gave it, never trimmed or repaired, and the
+ * chat never resolves a stop or an agency to a zone. `preset` is one of the page's ids
+ * (`gtfs-trip-board.test.ts` holds this list to `PRESETS`).
+ */
+export const showGtfsTripBoardInput = z
+  .object({
+    stopTimes: z.string().max(2000).optional(),
+    date: z.string().max(16).optional(),
+    zone: z.string().max(64).optional(),
+    preset: z
+      .enum(["border", "night-train", "andes-june", "andes-january", "no-noon"])
+      .optional(),
+  })
+  .refine(
+    (a) =>
+      a.stopTimes !== undefined ||
+      a.date !== undefined ||
+      a.zone !== undefined ||
+      a.preset !== undefined,
+    {
+      message:
+        "Give a trip's rows with a header line, a service date and a zone, or a preset to open.",
+    },
+  );
+
+/**
  * PTP Clock Converter: a PTP timestamp to read (`seconds`, `nanoseconds` and the announced
  * `offset`), or a UTC `instant` to write one from. Every argument is a string, because JSON
  * carries no bigint, passed exactly as the reader gave it. The chat never coerces a number and
@@ -1465,6 +1530,8 @@ export type DoxToolName =
   | "showSwiftValueDateReader"
   | "showGtfsTimeReader"
   | "showUsSunshineProtectionAct"
+  | "showGtfsServiceDayClock"
+  | "showGtfsTripBoard"
   | "showPtpClockConverter";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
@@ -1855,7 +1922,7 @@ export const DOX_TOOL_DOCS: {
   {
     name: "showGtfsTimeReader",
     purpose:
-      "Reads a GTFS stop time (such as 25:35:00) with parseGtfsTime and shows the whole days past the service day and the seconds left over that it gives, beside what a clock-time check does with the same text; writes seconds and days back with formatGtfsTime. A line says that a clock time on a date needs the agency's zone.",
+      "Reads a GTFS stop time (such as 25:35:00) with parseGtfsTime and shows the whole days past the service day and the seconds left over that it gives, beside what a clock-time check does with the same text; writes seconds and days back with formatGtfsTime. A line points to the GTFS Service Day Clock for the instant on a date.",
     when: "the reader asks whether a GTFS time such as 25:35:00 or 24:00:00 is valid or still part of the service day, why a stop time past midnight is refused by a clock-time check, how many days past the service day a time is, or how to write a GTFS time back",
     args: "value (a GTFS time exactly as the reader gave it, at most 16 characters, never trimmed or repaired), seconds (the written time less whole days, in seconds, as typed), dayOverflow (whole days past the service day, as typed). Each is a string; give at least one. Never pass a zone or a date.",
   },
@@ -1867,11 +1934,25 @@ export const DOX_TOOL_DOCS: {
     args: "view: { kind: today, zone?: one IANA id from the page's zone list } or { kind: proposals, state?: a two-letter state or territory code }. Never a place name.",
   },
   {
+    name: "showGtfsServiceDayClock",
+    purpose:
+      "Turns a GTFS service date, stop time and agency_timezone into the instant GTFS means, with gtfsToInstant (noon minus 12 hours of the service day), beside the instant that adding the time to local midnight gives. On a clock-change date the two differ by the size of the change, an hour in most zones, and the day rail marks the change. A date whose noon is skipped or repeated has no anchor and reads NO SIGNAL.",
+    when: "the reader asks what instant or local time a GTFS stop time is on a service date, why a feed is off on a clock-change day, whether GTFS times count from midnight, or what 00:00:00 or a time past 24:00:00 means on such a day",
+    args: "serviceDate (YYYYMMDD or YYYY-MM-DD as given), time (a GTFS time as given), timeZone (an IANA name or offset as given), or preset. Never resolve an agency or stop to a zone; ask for agency_timezone.",
+  },
+  {
     name: "showPtpClockConverter",
     purpose:
       "Reads a PTP (IEEE 1588) timestamp, TAI seconds and nanoseconds, with ptpToUtc and the currentUtcOffset the grandmaster announces, beside the same count read with no offset; checks the announced offset against the leap-second table with taiMinusUtc; writes a UTC instant back with utcToPtp.",
     when: "the reader asks what UTC time a PTP or IEEE 1588 timestamp is, how TAI differs from UTC, what currentUtcOffset or a grandmaster's announced offset does, why sensor or device time is 37 seconds off, or how to write a UTC instant as a PTP timestamp",
     args: "seconds (the PTP whole seconds as typed), nanoseconds (as typed), offset (the announced currentUtcOffset in seconds, as typed; there is no default), instant (a UTC instant to write, at most 64 characters, never repaired). Each is a string. To read give seconds, nanoseconds and offset; to write give instant, with offset if known.",
+  },
+  {
+    name: "showGtfsTripBoard",
+    purpose:
+      "Reads one trip's stop_times.txt rows, with stop_timezone from stops.txt, a service date and agency_timezone, and shows for each stop the instant gtfsToInstant gives, the platform clock's reading of it, the wrong reading you get by passing stop_timezone to gtfsToInstant, and each leg's length. A stop whose clocks and elapsed time disagree is marked, and a date whose noon is skipped has no anchor and reads NO SIGNAL.",
+    when: "the reader asks about a whole trip, or whether a stop's stop_timezone differs from the agency's, which stops a wrong zone moves and by how much, how long a leg really takes across a zone border or a clock change, or what a trip's times mean as instants",
+    args: "stopTimes (the CSV exactly as given, at most 2,000 characters; it needs a header line naming stop_id, arrival_time and departure_time, and may name stop_timezone), date (YYYYMMDD or YYYY-MM-DD as given), zone (agency_timezone as given), or preset. Never resolve a stop or an agency to a zone; ask for stop_timezone and agency_timezone.",
   },
 ];
 
@@ -2105,8 +2186,16 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[55].purpose,
     inputSchema: showUsSunshineProtectionActInput,
   }),
-  showPtpClockConverter: tool({
+  showGtfsServiceDayClock: tool({
     description: DOX_TOOL_DOCS[56].purpose,
+    inputSchema: showGtfsServiceDayClockInput,
+  }),
+  showGtfsTripBoard: tool({
+    description: DOX_TOOL_DOCS[58].purpose,
+    inputSchema: showGtfsTripBoardInput,
+  }),
+  showPtpClockConverter: tool({
+    description: DOX_TOOL_DOCS[57].purpose,
     inputSchema: showPtpClockConverterInput,
   }),
 } as const;
@@ -2188,6 +2277,8 @@ export const ENABLED_TOOL_NAMES = [
   "showSwiftValueDateReader",
   "showGtfsTimeReader",
   "showUsSunshineProtectionAct",
+  "showGtfsServiceDayClock",
+  "showGtfsTripBoard",
   "showPtpClockConverter",
 ] as const satisfies readonly DoxToolName[];
 

@@ -1,5 +1,17 @@
 import { showHolidayRuleBuilderInput } from "./dox-tools";
 import {
+  PRESETS as SERVICE_DAY_PRESETS,
+  permalinkOf as serviceDayPermalinkOf,
+  presetState as serviceDayPresetState,
+  readArgs as serviceDayReadArgs,
+} from "./gtfs-service-day-clock";
+import {
+  PRESETS as TRIP_PRESETS,
+  permalinkOf as tripPermalinkOf,
+  presetState as tripPresetState,
+  readArgs as tripReadArgs,
+} from "./gtfs-trip-board";
+import {
   COUNTER_PRESETS,
   DEFAULT_PRESET as COUNTER_DEFAULT,
   permalinkOf as counterPermalinkOf,
@@ -398,6 +410,67 @@ describe("widget permalinks", () => {
         state,
       );
     }
+  });
+
+  it("opens each GTFS Service Day Clock preset's link on that preset, and keeps typed and cleared boxes", () => {
+    for (const preset of SERVICE_DAY_PRESETS) {
+      const args = serviceDayPermalinkOf(serviceDayPresetState(preset));
+      expect(args).toEqual({ preset: preset.id });
+      const url = encodeWidgetPermalink("gtfsday", args);
+      expect(url).toContain("/tools/gtfs-service-day-clock/");
+      expect(seedFromLocation("gtfsday", url.slice(url.indexOf("?")))).toEqual({
+        preset: preset.id,
+      });
+    }
+    for (const state of [
+      { date: "20240331", time: "03:00:00", zone: "Europe/Berlin" },
+      { date: "", time: "", zone: "" },
+    ]) {
+      const args = serviceDayPermalinkOf(state);
+      expect(Object.keys(args)).toEqual(["serviceDate", "time", "timeZone"]);
+      const url = encodeWidgetPermalink("gtfsday", args);
+      const seed = seedFromLocation("gtfsday", url.slice(url.indexOf("?")));
+      expect(seed).toEqual(args);
+      expect(serviceDayReadArgs(seed)).toEqual(state);
+    }
+  });
+
+  it("opens a GTFS Service Day Clock link with an unknown preset on the default", () => {
+    const url = encodeWidgetPermalink("gtfsday", { preset: "far-future" });
+    const seed = seedFromLocation("gtfsday", url.slice(url.indexOf("?")));
+    expect(serviceDayReadArgs(seed)).toEqual(serviceDayPresetState());
+  });
+
+  it("opens each GTFS Trip Board preset's link on that preset, and keeps typed and cleared boxes", () => {
+    for (const preset of TRIP_PRESETS) {
+      const args = tripPermalinkOf(tripPresetState(preset));
+      expect(args).toEqual({ preset: preset.id });
+      const url = encodeWidgetPermalink("gtfstrip", args);
+      expect(url).toContain("/tools/gtfs-trip-board/");
+      expect(seedFromLocation("gtfstrip", url.slice(url.indexOf("?")))).toEqual(
+        { preset: preset.id },
+      );
+    }
+    for (const state of [
+      { rows: "a\nb", date: "20240331", zone: "Europe/Berlin" },
+      { rows: "", date: "", zone: "" },
+    ]) {
+      const args = tripPermalinkOf(state);
+      expect(Object.keys(args)).toEqual(["stopTimes", "date", "zone"]);
+      const url = encodeWidgetPermalink("gtfstrip", args);
+      const seed = seedFromLocation("gtfstrip", url.slice(url.indexOf("?")));
+      expect(seed).toEqual(args);
+      expect(tripReadArgs(seed)).toEqual(state);
+    }
+  });
+
+  it("keeps a GTFS Trip Board paste of 2,000 characters and drops one of 2,001", () => {
+    const seedOf = (stopTimes: string) => {
+      const url = encodeWidgetPermalink("gtfstrip", { stopTimes });
+      return seedFromLocation("gtfstrip", url.slice(url.indexOf("?")));
+    };
+    expect(seedOf("x".repeat(2000))).toEqual({ stopTimes: "x".repeat(2000) });
+    expect(seedOf("x".repeat(2001))).not.toHaveProperty("stopTimes");
   });
 
   it("opens a PTP Clock Converter link on the state it names, even a cleared one", () => {
