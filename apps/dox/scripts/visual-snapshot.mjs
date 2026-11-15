@@ -185,6 +185,7 @@ const PAGES = [
     slug: "tool-gtfs-service-day-clock",
     path: "/tools/gtfs-service-day-clock/",
   },
+  { slug: "tool-ptp-clock-converter", path: "/tools/ptp-clock-converter/" },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",

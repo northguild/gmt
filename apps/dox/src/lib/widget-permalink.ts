@@ -91,6 +91,7 @@ export type WidgetKind =
   | "swiftdate"
   | "gtfstime"
   | "gtfsday"
+  | "ptpclock"
   | "sunshineact";
 
 /**
@@ -164,6 +165,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   swiftdate: "/tools/swift-value-date-reader/",
   gtfstime: "/tools/gtfs-time-reader/",
   gtfsday: "/tools/gtfs-service-day-clock/",
+  ptpclock: "/tools/ptp-clock-converter/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
   dpmeter: "/tools/double-precision-meter/",
@@ -286,6 +288,7 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   gtfstime: new Set(["value", "seconds", "dayOverflow"]),
   // A cleared box is the empty state: the link must open cleared, not on the default preset.
   gtfsday: new Set(["serviceDate", "time", "timeZone"]),
+  ptpclock: new Set(["seconds", "nanoseconds", "offset", "instant"]),
 };
 
 /**

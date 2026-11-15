@@ -435,6 +435,20 @@ describe("widget permalinks", () => {
     expect(serviceDayReadArgs(seed)).toEqual(serviceDayPresetState());
   });
 
+  it("opens a PTP Clock Converter link on the state it names, even a cleared one", () => {
+    for (const state of [
+      { preset: "stale-36", writePreset: "leap-second" },
+      { seconds: "1704067237", nanoseconds: "0", offset: "35", instant: "" },
+      { seconds: "", nanoseconds: "", offset: "", instant: "" },
+    ]) {
+      const url = encodeWidgetPermalink("ptpclock", state);
+      expect(url).toContain("/tools/ptp-clock-converter/");
+      expect(seedFromLocation("ptpclock", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
   it("opens each Terrestrial Time Stack preset's link on that preset", () => {
     for (const preset of STACK_PRESETS) {
       if (preset === DEFAULT_PRESET) continue;

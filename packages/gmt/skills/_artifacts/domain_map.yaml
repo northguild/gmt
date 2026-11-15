@@ -27,7 +27,7 @@ domains:
     description: Integrating gmt with application frameworks and linting tools
   - name: Industry Layers
     slug: industry-layers
-    description: One skill per industry layer (gnss/, finance/, transport/, intermodal/, workforce/, healthcare/, aviation/, rail/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
+    description: One skill per industry layer (gnss/, finance/, transport/, intermodal/, workforce/, healthcare/, aviation/, rail/, iot/) drawing on the core skills; core namespaces such as timescale/ stay in the core skills
   - name: Contributor
     slug: contributor
     description: Library maintainer workflows — issues, PRs, implementation, testing
@@ -518,6 +518,23 @@ skills:
       - Check whether a value is a GTFS Time
       - Know that a GTFS time is measured from noon minus 12 hours of the service day, and that turning it into an instant needs the service date and the agency's zone
       - Turn a service date, a GTFS time and the agency's time zone into an instant, with gtfsToInstant
+
+  - name: GMT IoT
+    slug: gmt-iot
+    domain: industry-layers
+    description: Convert a Precision Time Protocol timestamp (TAI on the wire) to a UTC instant and back with the currentUtcOffset the grandmaster announces (ptpToUtc/utcToPtp/isValidPtpTimestamp) — the offset is required with no default, sentinels instead of exceptions
+    type: core
+    packages:
+      - '@northguild/gmt'
+    covers:
+      - ptpToUtc
+      - utcToPtp
+      - isValidPtpTimestamp
+    tasks:
+      - Turn a PTP timestamp into a UTC instant using the offset the grandmaster announces, without the silent 37-second error
+      - Turn a UTC instant into a PTP timestamp with the same offset
+      - Check whether a value is a PTP timestamp record
+      - Know that the offset means something only when currentUtcOffsetValid and ptpTimescale are true, and compare it with taiMinusUtc to check a grandmaster
 
   - name: GMT Transport
     slug: gmt-transport

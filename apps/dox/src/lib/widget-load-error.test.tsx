@@ -168,6 +168,10 @@ import {
   renderGtfsServiceDayClockTemplate,
 } from "./gtfs-service-day-clock-mount";
 import {
+  mountPtpClockConverter,
+  renderPtpClockConverterTemplate,
+} from "./ptp-clock-converter-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -411,6 +415,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "gtfs service day clock",
     () => renderGtfsServiceDayClockTemplate("test"),
     mountGtfsServiceDayClock as MountFn<never>,
+  ],
+  [
+    "ptp clock converter",
+    () => renderPtpClockConverterTemplate("test"),
+    mountPtpClockConverter as MountFn<never>,
   ],
   [
     "terrestrial time stack",

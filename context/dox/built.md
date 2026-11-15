@@ -457,7 +457,7 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
     Workforce owns `workforce`; Transport owns `transport` and draws on `workforce`; Intermodal
     owns `intermodal` and draws on `transport`; GNSS owns `gnss` and draws on `timescale`;
     Finance owns `finance` and Aviation owns `aviation`, each drawing on nothing; Rail owns `rail` and
-    draws on `transport`;
+    draws on `transport`; IoT owns `iot` and draws on `timescale` and `precision`;
     Maritime owns none and draws on `gnss` and `timescale`. `src/lib/industry-tags.ts`, a leaf
     module, reads it (`INDUSTRIES`, `INDUSTRY_TAG_IDS` with `core` first, `OWN_NAMESPACES`,
     `industryOwning`, `drawsOn`, `industriesUsing`, `INDUSTRY_ICON_PATHS`); `core` and `space` are
@@ -5163,10 +5163,49 @@ Shared hooks come first, then the globe, then the clock-change pages.
     exists is a claim nothing checks. A page link to a preset carries `preset` alone, as the encoder
     writes it, and `gtfs-time-reader-prose.test.ts` checks each link's preset against the widget its
     `w=` kind opens, so a renamed preset fails the test.
+- **PTP Clock Converter** (IOT-101, `/tools/ptp-clock-converter/`, `ptpclock`, iot). A Precision
+  Time Protocol timestamp counts TAI, and the receiver subtracts the `currentUtcOffset` its
+  grandmaster announces. Section 1 reads seconds, nanoseconds and the offset with `ptpToUtc`, beside
+  the same record read with offset 0 (the 37-second error) and a record badge from
+  `isValidPtpTimestamp`. Section 2 checks the offset against the leap-second table and draws it on a
+  ruler. Section 3 writes an instant back with `utcToPtp` and reads it again with `ptpToUtc`. "Use
+  the reading above" copies section 1's UTC reading into section 3, and one offset box serves both
+  directions. It shares `iot-lib.ts` and `IotLib`, which also loads `taiMinusUtc`. IoT `drawsOn`
+  `timescale` and `precision`.
+  - **The site holds no PTP rule.** No 2^48, 10^9 or int16 bound is typed in the tool's code (a
+    source-pattern test holds it; range numbers appear only in `ptp-clock-presets.ts`), so every
+    value and refusal is the library's.
+  - **Refusal reasons come from asking the library again.** A refused read is probed in order: the
+    record check, then a known-good record with the same offset, then offset 0. Reasons written
+    from ranges would drift from the library.
+  - **The table check reads `taiMinusUtc(ptpToUtc(record, offset))`.** The announced reading is what
+    a receiver would act on. The lookup can be one second out within a second of a step, and the
+    guide says so.
+  - **The ruler is a fixed 0 to 40 s and clamps.** A rescaled axis would hide how small 1 s is next
+    to 37 s. An offset outside it sits on the edge, named "off the ruler: N s".
+  - **`currentUtcOffsetValid` and `ptpTimescale` are prose only.** The library reads neither flag,
+    so a switch would suggest a check the library does not make.
+  - **Ten presets.** They cover the matching offset, a stale 36, an offset of 0, a half second,
+    an unset clock, an out-of-range count, a count before 1972, and the write cases.
+  - **An empty box makes no call.** Text that is not a number makes none either. Both are neutral
+    notes; NO SIGNAL shows only for a library refusal. A sign or a fraction does reach the library,
+    so `-1`, `37.5` and seconds of `1.5` show its own refusal. Whole seconds go as a `bigint`,
+    seconds with a fraction as a `number`.
+  - **WebKit layout.** The sentinel takes the live size (`--value-signal: var(--value-live)`).
+    From a slot 36rem wide `--value-live` scales with the slot so an instant fits a half-width
+    plate, because a value that scrolls made WebKit's classic scrollbar grow that plate. A value
+    and a call frame's `pre` always show their scroll track, for the same reason.
+  - **Permalink `ptpclock`** at `/tools/ptp-clock-converter/`: `seconds`, `nanoseconds`, `offset`
+    and `instant`. The chat tool is `showPtpClockConverter`, with an IoT starter on 1704067237 s
+    and offset 37.
+  - **Tests.** `ptp-clock-converter.test.ts`, `ptp-clock-converter-mount.test.tsx` (aborts its
+    controller in `afterEach`), `ptp-clock-converter-prose.test.ts`, `iot-lib.test.ts` and
+    `scripts/ptp-clock-converter-holds.browser.test.ts`, which steps every preset and typed value
+    at 300, 390, 1280 and 1440 px in Chromium and WebKit.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
   grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal,
-  GNSS, Finance, Healthcare, Aviation and Rail, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
+  GNSS, Finance, Healthcare, Aviation, Rail and IoT, each heading carries its industry's icon (`INDUSTRY_ICON_PATHS` through `industryTag`),
   and a card's `area` is its tool page's tag. An industry with no tool has no area (Workforce and
   Maritime gain one with their first tool). `startersByArea()` returns the groups in that order.
   `chat-starters.test.ts` asserts each area is an industry with that industry's label and icon,

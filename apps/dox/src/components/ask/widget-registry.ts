@@ -96,6 +96,7 @@ import type { ReportTimeResolverArgs } from "~/lib/report-time-resolver-mount";
 import type { SwiftValueDateReaderArgs } from "~/lib/swift-value-date-reader-mount";
 import type { GtfsTimeReaderArgs } from "~/lib/gtfs-time-reader-mount";
 import type { GtfsServiceDayClockArgs } from "~/lib/gtfs-service-day-clock-mount";
+import type { PtpClockArgs } from "~/lib/ptp-clock-converter-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -149,6 +150,7 @@ import {
   showSwiftValueDateReaderInput,
   showGtfsTimeReaderInput,
   showGtfsServiceDayClockInput,
+  showPtpClockConverterInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
@@ -1177,6 +1179,37 @@ const gtfsServiceDayEntry = defineWidget<GtfsServiceDayClockArgs>({
     })),
 });
 
+const ptpClockEntry = defineWidget<PtpClockArgs>({
+  title: "PTP Clock Converter",
+  kind: "ptpclock",
+  parse: (input) => {
+    const result = showPtpClockConverterInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { seconds, nanoseconds, offset, instant } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(seconds === undefined ? {} : { seconds }),
+        ...(nanoseconds === undefined ? {} : { nanoseconds }),
+        ...(offset === undefined ? {} : { offset }),
+        ...(instant === undefined ? {} : { instant }),
+      },
+    };
+  },
+  /* No `validate`: a value the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/ptp-clock-converter-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderPtpClockConverterTemplate(idPrefix, args),
+      mount: m.mountPtpClockConverter,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1731,6 +1764,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showSwiftValueDateReader: swiftDateEntry,
   showGtfsTimeReader: gtfsTimeEntry,
   showGtfsServiceDayClock: gtfsServiceDayEntry,
+  showPtpClockConverter: ptpClockEntry,
   showUsSunshineProtectionAct: sunshineActEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,

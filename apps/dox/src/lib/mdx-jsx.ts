@@ -716,6 +716,7 @@ export function renderMdxComponents(body: string): string {
     "SwiftValueDateReader",
     "GtfsTimeReader",
     "GtfsServiceDayClock",
+    "PtpClockConverter",
     "HolidayRuleBuilder",
     "ObservanceComparator",
     "MovingFeasts",

@@ -862,6 +862,61 @@ const TOOLS = [
     drawn: ["drawn", "hold"],
     textBoxes: ["codeframe"],
   },
+  {
+    // IOT-101. No handle: the reader types a PTP record and an offset, or an instant, or picks a
+    // preset. The ruler's marks move by design. The first read preset reads and the sixth is
+    // refused, so each value is typed from both.
+    slug: "ptp-clock-converter",
+    root: '[data-widget="ptp-clock-converter"]',
+    presets: ["announced-37", "out-of-range"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Seconds",
+        values: [
+          "1704067237",
+          "0",
+          "-1",
+          "1.5",
+          "x",
+          "281474976710656",
+          "9".repeat(20),
+          "-" + "9".repeat(20),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Nanoseconds",
+        values: ["0", "500000000", "-1", "1.5", "x", "9".repeat(11), ""],
+      },
+      {
+        role: "textbox",
+        name: "currentUtcOffset (s)",
+        values: ["37", "36", "0", "-1", "37.5", "x", "90", "9".repeat(11), ""],
+      },
+      {
+        role: "textbox",
+        name: "UTC instant",
+        values: [
+          "2024-01-01T02:00:00+02:00",
+          "2016-12-31T23:59:60Z",
+          "1969-12-31T23:59:59Z",
+          "+275760-09-12T23:59:59.999999999Z",
+          "x",
+          "9".repeat(64),
+          "",
+        ],
+      },
+    ],
+    track: null,
+    moving: ["cursor"],
+    frame: false,
+    scope: "widget",
+    drawn: ["hold"],
+    textBoxes: ["codeframe"],
+  },
 ];
 
 /**

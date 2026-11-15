@@ -329,3 +329,19 @@ describe("searchChunks — GTFS stop times (RAI-99)", () => {
     ).toBe(true);
   });
 });
+
+describe("searchChunks — PTP time (IOT-101)", () => {
+  it("'PTP timestamp to UTC' finds ptpToUtc near the top and a guide chunk", () => {
+    const results = searchChunks(chunks, "PTP timestamp to UTC");
+    expect(
+      results
+        .slice(0, 3)
+        .some((c) => c.kind === "function" && c.title === "ptpToUtc"),
+    ).toBe(true);
+    expect(
+      results.some((c) =>
+        c.url.startsWith("/guides/industries/iot-ptp-time/#"),
+      ),
+    ).toBe(true);
+  });
+});

@@ -8,6 +8,7 @@ export * from "./healthcare";
 export * from "./instant";
 export * from "./intermodal";
 export * from "./interval";
+export * from "./iot";
 export * from "./plain";
 export * from "./precision";
 export * from "./rail";

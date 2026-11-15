@@ -204,6 +204,19 @@ skills:
       - 'northguild/gmt:packages/gmt/src/rail/validate/index.ts'
       - 'northguild/gmt:packages/gmt/src/types/gtfs.ts'
 
+  - name: GMT IoT
+    slug: gmt-iot
+    type: core
+    domain: industry-layers
+    path: 'skills/gmt-iot/SKILL.md'
+    package: 'packages/gmt'
+    description: Convert a Precision Time Protocol timestamp (TAI on the wire) to a UTC instant and back with the currentUtcOffset the grandmaster announces (ptpToUtc/utcToPtp/isValidPtpTimestamp) — the offset is required with no default, sentinels instead of exceptions
+    sources:
+      - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/iot-ptp-time.mdx'
+      - 'northguild/gmt:packages/gmt/src/iot/convert/index.ts'
+      - 'northguild/gmt:packages/gmt/src/iot/validate/index.ts'
+      - 'northguild/gmt:packages/gmt/src/types/ptp.ts'
+
   - name: GMT Transport
     slug: gmt-transport
     type: core

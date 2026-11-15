@@ -260,6 +260,13 @@ export {
   stringOptionOrDefault,
 } from "./typedOptions";
 export { readProtoRecord } from "./protoRecord";
+export {
+  isPtpUtcOffset,
+  PTP_SECONDS_LIMIT,
+  PTP_UTC_OFFSET_MAX,
+  PTP_UTC_OFFSET_MIN,
+  readPtpTimestamp,
+} from "./ptpTimestamp";
 export { isValidAmount } from "./isValidAmount";
 export { joinDateTimeConnector } from "./joinDateTimeConnector";
 export {

@@ -77,6 +77,9 @@ Three things hold across every industry layer:
   validity with its `EST` and `PERM`. Draws on Core only.
 - [Rail: GTFS service days](./rail-gtfs-service-days/) — read, write and check a GTFS stop time
   such as `25:35:00`, which runs past midnight and stays with its service day. Draws on Transport.
+- [IoT: PTP time](./iot-ptp-time/) — convert a Precision Time Protocol timestamp, which counts TAI,
+  to UTC with the offset the grandmaster announces, and check that offset against the leap-second
+  table. Draws on Core only.
 
 ## Scenarios
 
@@ -111,8 +114,9 @@ GMT approach working, on the same live widget:
 - [A METAR from Last Month](/scenarios/a-metar-from-last-month/)
 - [PERM Read as a Date](/scenarios/perm-read-as-a-date/)
 - [A GTFS Time Folded into One Day](/scenarios/a-gtfs-time-folded-into-one-day/)
+- [A PTP Stamp 37 Seconds Ahead](/scenarios/a-ptp-stamp-37-seconds-ahead/)
 
 The mistakes that have hurt people in these layers are collected under
 [Transport mistakes](/mistakes/transport/), [Intermodal mistakes](/mistakes/intermodal/),
 [Finance mistakes](/mistakes/finance/), [Healthcare mistakes](/mistakes/healthcare/),
-[Aviation mistakes](/mistakes/aviation/) and [Rail mistakes](/mistakes/rail/).
+[Aviation mistakes](/mistakes/aviation/), [Rail mistakes](/mistakes/rail/) and [IoT mistakes](/mistakes/iot/).

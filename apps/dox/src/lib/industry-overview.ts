@@ -695,6 +695,56 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       },
     ],
   },
+  iot: {
+    about:
+      "Industrial sensors, lidar and broadcast gear share one clock over the Precision Time Protocol. Its timestamps count TAI, which has no leap seconds, so a receiver turns them into UTC with the offset its grandmaster announces. This layer applies that offset in both directions and checks the timestamp itself; it never picks an offset for you.",
+    guideTitle: "IoT: PTP Time",
+    solves: [
+      {
+        problem: "A sensor's time reads ahead of every other clock.",
+        answer:
+          "{{ptpToUtc}} subtracts the UTC offset the grandmaster announces, and takes no default, so a missing offset is a type error instead of a silent shift.",
+        see: [
+          { label: "guide", href: "/guides/industries/iot-ptp-time/" },
+          {
+            label: "scenario",
+            href: "/scenarios/a-ptp-stamp-37-seconds-ahead/",
+          },
+          { label: "tool", href: "/tools/ptp-clock-converter/" },
+        ],
+      },
+      {
+        problem: "A grandmaster announces the wrong offset.",
+        answer:
+          "{{taiMinusUtc}} gives TAI minus UTC from the leap-second table for the reading's date. Compare it with the announced offset before you trust a reading.",
+        see: [
+          { label: "tool", href: "/tools/ptp-clock-converter/" },
+          { label: "mistakes", href: "/mistakes/iot/" },
+        ],
+      },
+      {
+        problem: "A UTC time put back on the wire loses the offset.",
+        answer:
+          "{{utcToPtp}} adds the announced offset back and returns the seconds as a bigint, so a round trip gives the same timestamp.",
+        see: [
+          { label: "guide", href: "/guides/industries/iot-ptp-time/" },
+          { label: "tool", href: "/tools/ptp-clock-converter/" },
+        ],
+      },
+      {
+        problem: "A malformed timestamp converts without a complaint.",
+        answer:
+          "{{isValidPtpTimestamp}} checks the seconds and nanoseconds against the ranges the wire format allows.",
+        see: [{ label: "mistakes", href: "/mistakes/iot/" }],
+      },
+      {
+        problem: "Nanoseconds are lost on the way to milliseconds.",
+        answer:
+          "{{ptpToUtc}} writes every nanosecond the timestamp carries, and {{toNanoseconds}} reads the instant back as a whole count.",
+        see: [{ label: "guide", href: "/guides/industries/iot-ptp-time/" }],
+      },
+    ],
+  },
 };
 
 /** The `{{name}}` tokens in a pain point's text, in order. */

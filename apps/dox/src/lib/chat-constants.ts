@@ -339,6 +339,7 @@ export const EXAMPLE_AREAS = [
   { id: "healthcare", label: "Healthcare" },
   { id: "aviation", label: "Aviation" },
   { id: "rail", label: "Rail" },
+  { id: "iot", label: "IoT" },
 ] as const;
 
 type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
@@ -974,6 +975,12 @@ export const CHAT_STARTERS: readonly {
     widget: "showGtfsServiceDayClock",
     area: "rail",
     args: { preset: "spring-forward" },
+  },
+  {
+    text: "A PTP sensor stamped 1704067237 seconds with currentUtcOffset 37. What UTC time is that?",
+    widget: "showPtpClockConverter",
+    area: "iot",
+    args: { seconds: "1704067237", nanoseconds: "0", offset: "37" },
   },
 ];
 

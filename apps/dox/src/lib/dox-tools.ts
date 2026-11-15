@@ -817,6 +817,31 @@ export const showGtfsServiceDayClockInput = z
     },
   );
 
+/**
+ * PTP Clock Converter: a PTP timestamp to read (`seconds`, `nanoseconds` and the announced
+ * `offset`), or a UTC `instant` to write one from. Every argument is a string, because JSON
+ * carries no bigint, passed exactly as the reader gave it. The chat never coerces a number and
+ * never checks a range: the library says what it takes.
+ */
+export const showPtpClockConverterInput = z
+  .object({
+    seconds: z.string().max(24).optional(),
+    nanoseconds: z.string().max(24).optional(),
+    offset: z.string().max(24).optional(),
+    instant: z.string().max(64).optional(),
+  })
+  .refine(
+    (a) =>
+      a.instant !== undefined ||
+      (a.seconds !== undefined &&
+        a.nanoseconds !== undefined &&
+        a.offset !== undefined),
+    {
+      message:
+        "Give a PTP timestamp to read (seconds, nanoseconds and offset), or a UTC instant to write.",
+    },
+  );
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1477,7 +1502,8 @@ export type DoxToolName =
   | "showSwiftValueDateReader"
   | "showGtfsTimeReader"
   | "showUsSunshineProtectionAct"
-  | "showGtfsServiceDayClock";
+  | "showGtfsServiceDayClock"
+  | "showPtpClockConverter";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1885,6 +1911,13 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks what instant or local time a GTFS stop time is on a service date, why a feed is off on a clock-change day, whether GTFS times count from midnight, or what 00:00:00 or a time past 24:00:00 means on such a day",
     args: "serviceDate (YYYYMMDD or YYYY-MM-DD as given), time (a GTFS time as given), timeZone (an IANA name or offset as given), or preset. Never resolve an agency or stop to a zone; ask for agency_timezone.",
   },
+  {
+    name: "showPtpClockConverter",
+    purpose:
+      "Reads a PTP (IEEE 1588) timestamp, TAI seconds and nanoseconds, with ptpToUtc and the currentUtcOffset the grandmaster announces, beside the same count read with no offset; checks the announced offset against the leap-second table with taiMinusUtc; writes a UTC instant back with utcToPtp.",
+    when: "the reader asks what UTC time a PTP or IEEE 1588 timestamp is, how TAI differs from UTC, what currentUtcOffset or a grandmaster's announced offset does, why sensor or device time is 37 seconds off, or how to write a UTC instant as a PTP timestamp",
+    args: "seconds (the PTP whole seconds as typed), nanoseconds (as typed), offset (the announced currentUtcOffset in seconds, as typed; there is no default), instant (a UTC instant to write, at most 64 characters, never repaired). Each is a string. To read give seconds, nanoseconds and offset; to write give instant, with offset if known.",
+  },
 ];
 
 /**
@@ -2121,6 +2154,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[56].purpose,
     inputSchema: showGtfsServiceDayClockInput,
   }),
+  showPtpClockConverter: tool({
+    description: DOX_TOOL_DOCS[57].purpose,
+    inputSchema: showPtpClockConverterInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -2201,6 +2238,7 @@ export const ENABLED_TOOL_NAMES = [
   "showGtfsTimeReader",
   "showUsSunshineProtectionAct",
   "showGtfsServiceDayClock",
+  "showPtpClockConverter",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */
