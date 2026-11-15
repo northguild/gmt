@@ -114,7 +114,12 @@ const FLOOR_STEP =
 const FORCED_LEAP_LINE = "dry run: forced difference (no real row differs)";
 const FORCED_US_LINE = "dry run: forced difference (nothing real differs)";
 const US_REVIEW_STEP =
-  "Review the change. Edit the Proposals data module under `apps/dox/src/data/` (`*-proposals.ts`) and its checked date by hand if a position changed, then run `node scripts/us-clock-watch.mjs refresh` and commit the snapshot.";
+  "Review the change. If a position changed, edit the Proposals data module under `apps/dox/src/data/` (`*-proposals.ts`) and its checked date by hand, then close this issue. Nothing else to run: the next weekly run compares with the snapshot this run carried forward, so each change is listed once, and a later change is added here as a comment while this issue is open.";
+/** Where a federal or state list starts from: the snapshot this run compared with. */
+const usSince = (part) =>
+  part.since
+    ? `since the snapshot of ${part.since.slice(0, 10)}`
+    : "since the last snapshot";
 const US_TZ_PARAGRAPH =
   "A tz release changed a US zone's rules. This is the signal to build the US clock-change checker: CORE-90 phase 2, #341.";
 const FORCED_ROW = {
@@ -168,8 +173,9 @@ const FORCED_ROW = {
  *   rows: { gmt: number, iers: number }, differences: string[],
  *   forced?: { difference: true },
  * }} LeapSecondsVerdict
- * @typedef {{ status: "ran", differences: string[], release?: string, snapshotRelease?: string }
- *   | { status: "could-not-run", message: string }} ClockWatchPart
+ * @typedef {{ status: "ran", differences: string[], since?: string, release?: string,
+ *   snapshotRelease?: string } | { status: "could-not-run", message: string }} ClockWatchPart
+ *   `since`: the federal or state snapshot's `checkedAt` that this run compared with
  * @typedef {{
  *   source: "us-clock-watch", status: "ran",
  *   federal: ClockWatchPart, state: ClockWatchPart, tz: ClockWatchPart,
@@ -1101,6 +1107,7 @@ function leapSecondsFindings(verdicts, runUrl) {
  * @param {string} subject  what the list is about, for the body's first line
  * @param {string[]} lines
  * @param {string} extra  the last paragraph
+ * @param {string} lead  the comment's first line on a later run
  * @param {boolean} isForced
  * @param {string} runUrl
  * @returns {Finding}
@@ -1111,6 +1118,7 @@ function clockWatchFinding(
   subject,
   lines,
   extra,
+  lead,
   isForced,
   runUrl,
 ) {
@@ -1124,7 +1132,7 @@ function clockWatchFinding(
     title,
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
-    comment: withRun(`Still differs on this run:\n\n${list}`, runUrl),
+    comment: withRun(`${lead}\n\n${list}`, runUrl),
   };
   if (!isForced) return real;
   return dryRun(real, "--force-us-clock-difference", paragraphs, runUrl);
@@ -1132,7 +1140,9 @@ function clockWatchFinding(
 
 /**
  * The findings of the US clock-change watch: one per source that differs (federal, state, tz), then
- * a could-not-run finding naming each source that failed. The sources that ran still report.
+ * a could-not-run finding naming each source that failed. The sources that ran still report. A
+ * federal or state list holds only what is new since the snapshot carried from the last run, so a
+ * later run's comment lists new changes; a tz difference stays until the committed snapshot moves.
  * @param {Record<string, Verdict | null>} verdicts
  * @param {string} runUrl
  * @returns {Finding[]}
@@ -1150,9 +1160,10 @@ function usClockWatchFindings(verdicts, runUrl) {
       clockWatchFinding(
         "Federal bills on the clock-change subject changed",
         "us-clock-watch/federal",
-        "The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed since the committed snapshot (`scripts/us-clock-watch.snapshot.json`).",
+        `The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed ${usSince(federal)}.`,
         federal.differences,
         US_REVIEW_STEP,
+        "New on this run:",
         false,
         runUrl,
       ),
@@ -1163,9 +1174,10 @@ function usClockWatchFindings(verdicts, runUrl) {
       clockWatchFinding(
         "Federal bills on the clock-change subject changed",
         "us-clock-watch/federal",
-        "The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed since the committed snapshot (`scripts/us-clock-watch.snapshot.json`).",
+        `The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed ${usSince(federal.status === "ran" ? federal : {})}.`,
         [],
         US_REVIEW_STEP,
+        "New on this run:",
         true,
         runUrl,
       ),
@@ -1176,9 +1188,10 @@ function usClockWatchFindings(verdicts, runUrl) {
       clockWatchFinding(
         "State bills on the clock-change subject changed",
         "us-clock-watch/state",
-        "The Open States API lists a state bill on the subject (50 states, DC and PR) that is new, or whose latest action changed since the committed snapshot (`scripts/us-clock-watch.snapshot.json`).",
+        `The Open States API lists a state bill on the subject (50 states, DC and PR) that is new, or whose latest action changed ${usSince(state)}.`,
         state.differences,
         US_REVIEW_STEP,
+        "New on this run:",
         false,
         runUrl,
       ),
@@ -1192,7 +1205,8 @@ function usClockWatchFindings(verdicts, runUrl) {
         "us-clock-watch/tz-us-zone",
         `${US_TZ_PARAGRAPH}\n\n${release}`,
         tz.differences,
-        "Run `node scripts/us-clock-watch.mjs refresh` after the checker's data is updated, and commit the snapshot.",
+        "After the checker's data is updated, run `node scripts/us-clock-watch.mjs snapshot-tz --dir=<tz source folder>` and commit the snapshot.",
+        "Still differs on this run:",
         false,
         runUrl,
       ),

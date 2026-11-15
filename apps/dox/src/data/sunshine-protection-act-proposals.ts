@@ -218,6 +218,15 @@ export const NATIONAL: { effects: readonly string[] } = {
   ],
 };
 
+/** The heading of the other national proposals, on the page and in its Markdown twin. */
+export const OTHER_NATIONAL_HEADING = "Other national proposals";
+
+/** The other national proposals of the same session, one paragraph each, in effects only. */
+export const OTHER_NATIONAL: readonly string[] = [
+  `Let each state choose, by its own law, to keep the time one hour later all year, for the whole state or for its part in one time zone. Everywhere else the twice-yearly change goes on. Two proposals say this. As of ${longDate(PROPOSALS_CHECKED)} both were waiting in a committee of the chamber they were put to.`,
+  `End the twice-yearly change and keep standard time all year, from the first Sunday of November after the day it becomes law. A state could choose, by its own law, to keep the time one hour later, all year or for part of it, for the whole state or for its part in one time zone. As of ${longDate(PROPOSALS_CHECKED)} it was waiting in a committee of the chamber it was put to.`,
+];
+
 /** The 56 postal codes of the places the map draws: the 50 states, DC and five territories. */
 export const STATE_CODES: readonly string[] = [
   "AK",

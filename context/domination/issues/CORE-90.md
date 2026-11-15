@@ -39,7 +39,7 @@ Phase 1 needs no law and no tz release. It adds a Dox page, not a library functi
   page". The facts behind it, and the only file that cites law:
   [research/us-permanent-daylight-time.md](../research/us-permanent-daylight-time.md).
 - **A weekly freshness canary** watches Congress.gov, Open States and the tz database against a
-  committed snapshot: [canary/overview.md](../../canary/overview.md), "US clock-change watch".
+  snapshot it carries from run to run: [canary/overview.md](../../canary/overview.md), "US clock-change watch".
 
 ## Phase 2 (waiting)
 
@@ -73,5 +73,20 @@ and a tz release to model it. The canary's tz issue is the trigger. The plan is 
     parts when the Proposals view's data is removed or replaced. The workflow header says so.
 12. **Issue bodies may show the bill numbers and titles the APIs return,** as data, in GitHub
     issues only. The script, snapshot keys and site hold none of their own.
-13. **Open States pacing.** One request a second, at most 60 a run; a 429 is could-not-run, with
-    no retry.
+13. **Open States pacing.** The key allows 10 requests a minute, so requests go 7 seconds apart, and
+    250 a day: at most 60 for a `check` and 190 for a `refresh` (a full listing is about 100 pages),
+    so both fit in one day. Each request may run 120 seconds, since a search can take most of a
+    minute. A 502, 503, 504 or timed-out request is sent twice more, 10 seconds apart; a 429 is
+    could-not-run, with no retry. A `check` stops itself at 45 minutes, inside the job's 60-minute
+    timeout, so the could-not-run issue is still filed.
+14. **Federal discovery.** A Congress.gov list shows one title per bill, often a short title with no
+    subject term. A GovInfo title search, on the same api.data.gov key, finds the bills whose
+    official or short title names the subject; the weekly list then keeps those and every snapshot
+    bill by number. `refresh` keeps the tz part, which `snapshot-tz` writes from the release the
+    zone map is built on.
+15. **No manual step.** The federal and state parts are carried from one run to the next as a
+    workflow artifact, not committed: the `main` ruleset requires a pull request on every branch,
+    and a pull request opened by the workflow's token starts no CI. Each change is reported once;
+    the issue asks only for a review of the Proposals data. A part moves on only when its source
+    ran and returned a `Date` header, and the carried file is uploaded only after the issues are
+    filed, so no change is lost. The committed snapshot is the seed when no artifact is left.

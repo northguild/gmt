@@ -1836,7 +1836,7 @@ export const DOX_TOOL_DOCS: {
   {
     name: "showUsSunshineProtectionAct",
     purpose:
-      "Show a map of US time zones as the tz data has them today: which change their clocks and which keep the same time all year. A second view shows each state's adopted position on ending the clock changes, dated, and a panel of what the national proposal would do. Below both: evidence on how disruptive a change would be.",
+      "Show a map of US time zones as the tz data has them today: which change their clocks and which keep the same time all year. A second view shows each state's adopted position on ending the clock changes, dated, a panel of what the national proposal would do, and one of the other national proposals. Below both: evidence on how disruptive a change would be.",
     when: "Call when the reader asks which US states or zones change their clocks, which keep one time all year, which states want daylight or standard time all year, what would happen if the US stopped changing clocks, or how a change would affect saved times.",
     args: "view: { kind: today, zone?: one IANA id from the page's zone list } or { kind: proposals, state?: a two-letter state or territory code }. Never a place name.",
   },
