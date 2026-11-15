@@ -825,6 +825,36 @@ const TOOLS = [
     drawn: ["hold"],
     textBoxes: ["codeframe"],
   },
+  {
+    // RAI-100. No handle: the reader types a service date, a stop time and a zone, or picks a preset.
+    // The first preset reads a date and the second refuses it, so each box is typed from both.
+    slug: "gtfs-service-day-clock",
+    root: '[data-widget="gtfs-service-day-clock"]',
+    presets: ["spring-forward", "no-noon"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Service date (calendar.txt)",
+        values: ["20260329", "20260230", "2026-03-29", "9".repeat(16), ""],
+      },
+      {
+        role: "textbox",
+        name: "Stop time (stop_times.txt)",
+        values: ["08:00:00", "26:30:00", "25:60:00", "999:59:59", ""],
+      },
+      {
+        role: "textbox",
+        name: "Zone (agency.txt, agency_timezone)",
+        values: ["Europe/Berlin", "UTC", "+05:30", "Not/AZone", ""],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["drawn", "hold"],
+    textBoxes: ["codeframe"],
+  },
 ];
 
 /**

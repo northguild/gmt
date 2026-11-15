@@ -219,6 +219,10 @@ const PAGES = [
     widget: "gtfs-time-reader",
   },
   {
+    path: "tools/gtfs-service-day-clock",
+    widget: "gtfs-service-day-clock",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

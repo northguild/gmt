@@ -780,6 +780,43 @@ export const showGtfsTimeReaderInput = z
     },
   );
 
+/**
+ * GTFS Service Day Clock: a service date (`serviceDate`), a stop time (`time`) and the agency's
+ * zone (`timeZone`) to read, or one of the page's presets. Every string is passed exactly as the
+ * reader gave it (at most 16, 16 and 64 characters), never trimmed or repaired, and the chat
+ * never resolves an agency or a stop to a zone. `preset` is one of the page's ids
+ * (`gtfs-service-day-clock.test.ts` holds this list to `PRESETS`).
+ */
+export const showGtfsServiceDayClockInput = z
+  .object({
+    serviceDate: z.string().max(16).optional(),
+    time: z.string().max(16).optional(),
+    timeZone: z.string().max(64).optional(),
+    preset: z
+      .enum([
+        "spring-forward",
+        "spring-start",
+        "fall-back",
+        "ordinary",
+        "past-midnight",
+        "new-york",
+        "no-noon",
+        "offset",
+      ])
+      .optional(),
+  })
+  .refine(
+    (a) =>
+      a.serviceDate !== undefined ||
+      a.time !== undefined ||
+      a.timeZone !== undefined ||
+      a.preset !== undefined,
+    {
+      message:
+        "Give a service date, a stop time and a zone, or a preset to open.",
+    },
+  );
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1439,7 +1476,8 @@ export type DoxToolName =
   | "showFhirDateChecker"
   | "showSwiftValueDateReader"
   | "showGtfsTimeReader"
-  | "showUsSunshineProtectionAct";
+  | "showUsSunshineProtectionAct"
+  | "showGtfsServiceDayClock";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1829,7 +1867,7 @@ export const DOX_TOOL_DOCS: {
   {
     name: "showGtfsTimeReader",
     purpose:
-      "Reads a GTFS stop time (such as 25:35:00) with parseGtfsTime and shows the whole days past the service day and the seconds left over that it gives, beside what a clock-time check does with the same text; writes seconds and days back with formatGtfsTime. A line says that a clock time on a date needs the agency's zone.",
+      "Reads a GTFS stop time (such as 25:35:00) with parseGtfsTime and shows the whole days past the service day and the seconds left over that it gives, beside what a clock-time check does with the same text; writes seconds and days back with formatGtfsTime. A line points to the GTFS Service Day Clock for the instant on a date.",
     when: "the reader asks whether a GTFS time such as 25:35:00 or 24:00:00 is valid or still part of the service day, why a stop time past midnight is refused by a clock-time check, how many days past the service day a time is, or how to write a GTFS time back",
     args: "value (a GTFS time exactly as the reader gave it, at most 16 characters, never trimmed or repaired), seconds (the written time less whole days, in seconds, as typed), dayOverflow (whole days past the service day, as typed). Each is a string; give at least one. Never pass a zone or a date.",
   },
@@ -1839,6 +1877,13 @@ export const DOX_TOOL_DOCS: {
       "Show a map of US time zones as the tz data has them today: which change their clocks and which keep the same time all year. A second view shows each state's adopted position on ending the clock changes, dated, a panel of what the national proposal would do, and one of the other national proposals. Below both: evidence on how disruptive a change would be.",
     when: "Call when the reader asks which US states or zones change their clocks, which keep one time all year, which states want daylight or standard time all year, what would happen if the US stopped changing clocks, or how a change would affect saved times.",
     args: "view: { kind: today, zone?: one IANA id from the page's zone list } or { kind: proposals, state?: a two-letter state or territory code }. Never a place name.",
+  },
+  {
+    name: "showGtfsServiceDayClock",
+    purpose:
+      "Turns a GTFS service date, stop time and agency_timezone into the instant GTFS means, with gtfsToInstant (noon minus 12 hours of the service day), beside the instant that adding the time to local midnight gives. On a clock-change date the two are an hour apart, and the day rail marks the change. A date whose noon is skipped or repeated has no anchor and reads NO SIGNAL.",
+    when: "the reader asks what instant or local time a GTFS stop time is on a service date, why a feed is an hour off on a clock-change day, whether GTFS times count from midnight, or what 00:00:00 or a time past 24:00:00 means on such a day",
+    args: "serviceDate (YYYYMMDD or YYYY-MM-DD as given), time (a GTFS time as given), timeZone (an IANA name or offset as given), or preset. Never resolve an agency or stop to a zone; ask for agency_timezone.",
   },
 ];
 
@@ -2072,6 +2117,10 @@ export const DOX_TOOLS = {
     description: DOX_TOOL_DOCS[55].purpose,
     inputSchema: showUsSunshineProtectionActInput,
   }),
+  showGtfsServiceDayClock: tool({
+    description: DOX_TOOL_DOCS[56].purpose,
+    inputSchema: showGtfsServiceDayClockInput,
+  }),
 } as const;
 
 export const DOX_TOOL_NAMES = Object.keys(DOX_TOOLS) as DoxToolName[];
@@ -2151,6 +2200,7 @@ export const ENABLED_TOOL_NAMES = [
   "showSwiftValueDateReader",
   "showGtfsTimeReader",
   "showUsSunshineProtectionAct",
+  "showGtfsServiceDayClock",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

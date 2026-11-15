@@ -1,5 +1,11 @@
 import { showHolidayRuleBuilderInput } from "./dox-tools";
 import {
+  PRESETS as SERVICE_DAY_PRESETS,
+  permalinkOf as serviceDayPermalinkOf,
+  presetState as serviceDayPresetState,
+  readArgs as serviceDayReadArgs,
+} from "./gtfs-service-day-clock";
+import {
   COUNTER_PRESETS,
   DEFAULT_PRESET as COUNTER_DEFAULT,
   permalinkOf as counterPermalinkOf,
@@ -398,6 +404,35 @@ describe("widget permalinks", () => {
         state,
       );
     }
+  });
+
+  it("opens each GTFS Service Day Clock preset's link on that preset, and keeps typed and cleared boxes", () => {
+    for (const preset of SERVICE_DAY_PRESETS) {
+      const args = serviceDayPermalinkOf(serviceDayPresetState(preset));
+      expect(args).toEqual({ preset: preset.id });
+      const url = encodeWidgetPermalink("gtfsday", args);
+      expect(url).toContain("/tools/gtfs-service-day-clock/");
+      expect(seedFromLocation("gtfsday", url.slice(url.indexOf("?")))).toEqual({
+        preset: preset.id,
+      });
+    }
+    for (const state of [
+      { date: "20240331", time: "03:00:00", zone: "Europe/Berlin" },
+      { date: "", time: "", zone: "" },
+    ]) {
+      const args = serviceDayPermalinkOf(state);
+      expect(Object.keys(args)).toEqual(["serviceDate", "time", "timeZone"]);
+      const url = encodeWidgetPermalink("gtfsday", args);
+      const seed = seedFromLocation("gtfsday", url.slice(url.indexOf("?")));
+      expect(seed).toEqual(args);
+      expect(serviceDayReadArgs(seed)).toEqual(state);
+    }
+  });
+
+  it("opens a GTFS Service Day Clock link with an unknown preset on the default", () => {
+    const url = encodeWidgetPermalink("gtfsday", { preset: "far-future" });
+    const seed = seedFromLocation("gtfsday", url.slice(url.indexOf("?")));
+    expect(serviceDayReadArgs(seed)).toEqual(serviceDayPresetState());
   });
 
   it("opens each Terrestrial Time Stack preset's link on that preset", () => {

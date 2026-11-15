@@ -1,0 +1,52 @@
+---
+title: GTFS Service Day Clock
+description: "Type a GTFS service date, a stop time and the agency's zone. The tool turns them into the instant GTFS means with gtfsToInstant, shows the instant a midnight anchor gives next to it, and draws both on one day rail with the clock change marked."
+industries: [rail]
+---
+
+import ToolLayout from "../../../components/ToolLayout.astro";
+import GtfsServiceDayClock from "../../../components/GtfsServiceDayClock.astro";
+
+<ToolLayout useCase="Transit service days">
+
+<Fragment slot="keypoint">
+
+A GTFS time counts from noon minus 12 hours of the service day. That is midnight except on the two days a year the clocks change, and on those days a midnight anchor is an hour off for every stop.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A GTFS `stop_times.txt` time is a count of elapsed time, and the service date and the agency's zone say where the count starts. Type all three and [`gtfsToInstant`](/reference/rail/convert/gtfsToInstant/) returns the instant, or an empty string when it cannot. Beside it the tool shows what code that starts from local midnight gets: [`resolveLocal`](/reference/instant/convert/resolveLocal/) for the midnight, and [`addUtc`](/reference/utc/calculate/addUtc/) for the same seconds. Every instant, gap and position on the page is what the library returned, and the calls are printed under the rail.
+
+</Fragment>
+
+<GtfsServiceDayClock fullbleed />
+
+<Fragment slot="after">
+
+**Why noon.** Local midnight can happen twice or not at all on a day the clocks change, and noon happens once. The GTFS anchor is noon of the service day minus 12 hours, which is local midnight on an ordinary day and an hour off it on a clock-change day. The first preset is a Berlin spring-forward day: the midnight anchor reads 09:00 +02:00 where GTFS reads 08:00 +02:00, which is 60 minutes later.
+
+**Past 24:00:00.** A time such as `26:30:00` is exact elapsed seconds from the anchor, never a move on the wall clock. The fifth preset is `26:30:00` on 28 March in Berlin, the day before the clocks go forward: the answer is 03:30 +02:00 on 29 March, because 26 hours and 30 minutes of real time passed, and a wall-clock 02:30 that day does not exist.
+
+**No anchor.** When noon of the service date is skipped or repeated in the zone, `gtfsToInstant` returns an empty string. It has no option to choose a reading, so the tool offers no control for one. The Samoa preset is a date whose noon did not happen: the GTFS card reads NO SIGNAL and says why, and the midnight card still gives an answer for a local day that never happened.
+
+**Offsets and far years.** The zone can be an offset such as `+05:30`, which never changes, so both anchors agree. A result past year 9999 is the expanded-year string `+010000-…Z` that Temporal writes, and the tool shows it as returned. If the rail cannot place such an instant, the tool says so and does not draw it.
+
+```ts
+import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+import { addUtc } from "@northguild/gmt/utc/calculate";
+
+gtfsToInstant("20260329", "08:00:00", "Europe/Berlin"); // "2026-03-29T06:00:00Z"
+gtfsToInstant("20261025", "08:00:00", "Europe/Berlin"); // "2026-10-25T07:00:00Z"
+gtfsToInstant("20111230", "12:00:00", "Pacific/Apia"); // ""
+gtfsToInstant("20260328", "26:30:00", "Europe/Berlin"); // "2026-03-29T01:30:00Z"
+gtfsToInstant("99991231", "999:59:59", "UTC"); // "+010000-02-10T15:59:59Z"
+resolveLocal("2026-03-29T00:00:00", "Europe/Berlin"); // "2026-03-28T23:00:00Z"
+addUtc("2026-03-28T23:00:00Z", { seconds: 28800 }); // "2026-03-29T07:00:00Z"
+```
+
+</Fragment>
+
+</ToolLayout>

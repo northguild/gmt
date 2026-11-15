@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 76990,
-  "files": 1026,
-  "executions": 2309700,
+  "tests": 77269,
+  "files": 1028,
+  "executions": 2318070,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,7 +37,7 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 776,
+  "functions": 777,
   "patterns": 33,
   "byNamespace": [
     {
@@ -113,12 +113,12 @@
       "count": 5
     },
     {
-      "namespace": "recurrence",
+      "namespace": "rail",
       "count": 4
     },
     {
-      "namespace": "rail",
-      "count": 3
+      "namespace": "recurrence",
+      "count": 4
     }
   ],
   "industryNamespaces": [
@@ -212,7 +212,7 @@
     {
       "id": "rail",
       "label": "Rail",
-      "own": 3,
+      "own": 4,
       "drawsOn": [
         {
           "module": "transport",
@@ -222,5 +222,5 @@
       ]
     }
   ],
-  "industryFunctions": 106
+  "industryFunctions": 107
 }

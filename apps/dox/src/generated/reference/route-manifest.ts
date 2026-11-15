@@ -499,6 +499,8 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/precision/validate/isValidNanoPattern",
   "/reference/precision/validate/isValidNanoseconds",
   "/reference/rail",
+  "/reference/rail/convert",
+  "/reference/rail/convert/gtfsToInstant",
   "/reference/rail/format",
   "/reference/rail/format/formatGtfsTime",
   "/reference/rail/parse",

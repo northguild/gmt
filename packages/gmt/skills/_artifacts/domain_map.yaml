@@ -503,7 +503,7 @@ skills:
   - name: GMT Rail
     slug: gmt-rail
     domain: industry-layers
-    description: Read, write and check the GTFS Schedule Time value that runs past midnight (parseGtfsTime/formatGtfsTime/isValidGtfsTime) — 25:35:00 reads as { seconds, dayOverflow } and writes back as 25:35:00, hours 0 to 999, sentinels instead of exceptions
+    description: Read, write and check the GTFS Schedule Time value that runs past midnight (parseGtfsTime/formatGtfsTime/isValidGtfsTime) and turn it into an instant (gtfsToInstant) — 25:35:00 reads as { seconds, dayOverflow } and writes back as 25:35:00, hours 0 to 999, sentinels instead of exceptions
     type: core
     packages:
       - '@northguild/gmt'
@@ -511,11 +511,13 @@ skills:
       - parseGtfsTime
       - formatGtfsTime
       - isValidGtfsTime
+      - gtfsToInstant
     tasks:
       - Read a GTFS stop time such as 25:35:00 without folding it into the next day, keeping the days past the service day apart from the time of day
       - Write the seconds and the days past the service day back as a GTFS time such as 25:35:00
       - Check whether a value is a GTFS Time
       - Know that a GTFS time is measured from noon minus 12 hours of the service day, and that turning it into an instant needs the service date and the agency's zone
+      - Turn a service date, a GTFS time and the agency's time zone into an instant, with gtfsToInstant
 
   - name: GMT Transport
     slug: gmt-transport

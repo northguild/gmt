@@ -521,6 +521,51 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showGtfsServiceDayClock", () => {
+    const schema = (
+      tools.showGtfsServiceDayClock as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a date, a time, a zone, a preset, or any mix, all as strings", async () => {
+      for (const input of [
+        {
+          serviceDate: "20260329",
+          time: "08:00:00",
+          timeZone: "Europe/Berlin",
+        },
+        { preset: "spring-forward" },
+        { time: "" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showGtfsServiceDayClock", input)).toMatchObject({
+          ok: true,
+          widget: "gtfs-service-day-clock",
+        });
+      }
+    });
+
+    it("needs at least one argument and knows only the page's presets", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ preset: "far-future" }).success).toBe(false);
+    });
+
+    it("coerces nothing and caps each argument", () => {
+      expect(schema.safeParse({ serviceDate: 20260329 }).success).toBe(false);
+      expect(schema.safeParse({ serviceDate: "9".repeat(17) }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ time: "9".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ timeZone: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ timeZone: "a".repeat(65) }).success).toBe(
+        false,
+      );
+    });
+  });
+
   describe("showGtfsTimeReader", () => {
     const schema = (
       tools.showGtfsTimeReader as unknown as {

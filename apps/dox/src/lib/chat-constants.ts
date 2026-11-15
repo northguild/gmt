@@ -969,6 +969,12 @@ export const CHAT_STARTERS: readonly {
     area: "rail",
     args: { value: "25:35:00" },
   },
+  {
+    text: "GTFS stop 08:00:00 on 20260329 in Berlin: what instant is it, and why does midnight plus 8 h say 09:00?",
+    widget: "showGtfsServiceDayClock",
+    area: "rail",
+    args: { preset: "spring-forward" },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a

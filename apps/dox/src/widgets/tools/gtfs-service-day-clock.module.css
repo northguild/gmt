@@ -1,0 +1,201 @@
+/*
+ * GTFS Service Day Clock: what only this tool needs. The sections, preset, fields, verdict,
+ * timeline, code frame, held lines and tool links are the kit's; this sheet lays the controls
+ * and the two anchor cards out.
+ *
+ * Amber is the sentinel's alone: a plate the library gave nothing for reads a bracketed NO
+ * SIGNAL in the signal tokens. Every card and plate has a full bevelled border and a tinted
+ * fill, never a coloured left edge.
+ *
+ * The two cards sit at opposite edges of their row (`justify-content: space-between`) and stack
+ * below the widget's two-column width. In a card, each caption sits at the start of its plate
+ * and each value at the end. A value reserves the widest the presets give (`hold` ghosts) and
+ * breaks only at its `<wbr>` points, so a longer typed value grows a plate in height and never
+ * in width.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* Two cards in a row at the widget's two-column width, one column below it. */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+
+  @container (inline-size >= 52rem) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  @container (inline-size >= 52rem) {
+    flex: 0 0 calc(50% - var(--gmt-space-3) / 2);
+    inline-size: calc(50% - var(--gmt-space-3) / 2);
+  }
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.plates {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+}
+
+.plate {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+
+  &[data-state="signal"] {
+    border-color: var(--gmt-signal-border);
+    background: var(--gmt-signal-fill);
+  }
+}
+
+/* In a narrow widget the caption and the value cannot share a line: the value's nowrap pieces
+   are wider than what the caption leaves, and the page would scroll sideways. The caption sits
+   above its value, which keeps its place at the start. */
+.plate {
+  @container (inline-size < 30rem) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gmt-space-1);
+  }
+}
+
+.caption {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The value takes the room its widest ghost asks for, and shrinks (and wraps at a `<wbr>`)
+   only when the card is narrower. */
+.value {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  text-align: end;
+
+  @container (inline-size < 30rem) {
+    text-align: start;
+  }
+
+  .plate[data-state="signal"] & {
+    color: var(--gmt-signal-ink);
+  }
+}
+
+/* A ghost is set in the live type, so the cell holds the live width and height. It wraps at the
+   same `<wbr>` points as the live value (its pieces are nowrap), so in a narrow card the hidden
+   twin is no wider than the card. */
+.ghost {
+  font-family: var(--gmt-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+
+  @container (inline-size < 30rem) {
+    text-align: start;
+  }
+}
+
+.word {
+  white-space: nowrap;
+}
+
+.rail {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+
+  /* The last axis label is centred on its tick and can overhang the track by a few pixels. */
+  overflow-x: clip;
+}
+
+.slot {
+  min-inline-size: 0;
+
+  /* A call line can run past the frame. Where scrollbars take room (WebKit), the track is
+     always there, so a long line scrolling in does not make the frame taller. */
+  & pre {
+    overflow-x: scroll;
+  }
+}
+
+@media (forced-colors: active) {
+  .card,
+  .plate {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .plate[data-state="signal"] {
+    border-style: dashed;
+  }
+
+  .cardTitle,
+  .caption,
+  .value,
+  .plate[data-state="signal"] .value {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .card,
+  .plate {
+    border-color: var(--gmt-ice);
+  }
+
+  .caption {
+    color: var(--gmt-ice);
+  }
+}

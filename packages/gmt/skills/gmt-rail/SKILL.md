@@ -2,7 +2,8 @@
 name: gmt-rail
 description: >
   GTFS Schedule times in @northguild/gmt/rail — the stop_times value that runs
-  past midnight (25:35:00): parseGtfsTime, formatGtfsTime, isValidGtfsTime and
+  past midnight (25:35:00): parseGtfsTime, formatGtfsTime, isValidGtfsTime,
+  gtfsToInstant (service date, GTFS time and agency zone to an instant) and
   the GtfsTime type { seconds, dayOverflow }. The days past the service day are
   kept apart from the time of day, so 25:35:00 reads as 1:35 with one day of
   overflow and writes back as 25:35:00, never 01:35:00. Hours run 0 to 999.
@@ -10,6 +11,7 @@ description: >
   pointer, not an API dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/rail-gtfs-service-days.mdx'
+  - 'northguild/gmt:packages/gmt/src/rail/convert/index.ts'
   - 'northguild/gmt:packages/gmt/src/rail/format/index.ts'
   - 'northguild/gmt:packages/gmt/src/rail/parse/index.ts'
   - 'northguild/gmt:packages/gmt/src/rail/validate/index.ts'
@@ -22,7 +24,8 @@ metadata:
 
 # GMT Rail
 
-Use this skill when the task is reading, writing or checking a GTFS Schedule
+Use this skill when the task is reading, writing, checking or placing on the
+timeline a GTFS Schedule
 `Time` value, such as `arrival_time` or `departure_time` in `stop_times.txt`.
 A trip that runs past midnight is written with an hour above 23 (`25:35:00`).
 
@@ -32,6 +35,8 @@ A trip that runs past midnight is written with an hour above 23 (`25:35:00`).
 - The user asks why a parser rejects `25:35:00`, or why trips after midnight
   land on the wrong date.
 - The user needs to write a GTFS time back, or check that a value is one.
+- The user needs the real instant of a stop time, from a service date and the
+  agency's time zone.
 
 ## Core rules
 
@@ -68,9 +73,14 @@ A trip that runs past midnight is written with an hour above 23 (`25:35:00`).
 7. **`dayOverflow * 86400 + seconds` is not a clock reading.** GTFS measures a
    time from noon minus 12 hours of the service day, so it matches the wall
    clock only when no clock change falls between that anchor and the time. The
-   rail functions name no date and read no zone; turning a GTFS time into an
-   instant needs the service date and the agency's zone (planned as
-   `gtfsToInstant`).
+   parse, format and validate functions name no date and read no zone. To get
+   the instant, call `gtfsToInstant(serviceDate, gtfsTime, agencyTimezone)`: it
+   returns the UTC instant, or `""` on invalid input. Pass `agency_timezone`
+   even for a stop with its own `stop_timezone`, because the anchor is the
+   agency's. A noon the zone skipped or repeated returns `""`.
+   ```typescript
+   gtfsToInstant("20240130", "25:35:00", "America/Los_Angeles"); // "2024-01-31T09:35:00Z"
+   ```
 8. **Read the docs site.** This skill is a routing pointer. The map of the
    docs is `https://northguild.dev/gmt/llms.txt`, and each page has a `.md`
    twin that holds its text. The JSDoc ships in the installed package:
@@ -80,6 +90,8 @@ A trip that runs past midnight is written with an hour above 23 (`25:35:00`).
 
 - **GTFS times** (`@northguild/gmt/rail`): `parseGtfsTime`, `formatGtfsTime`,
   `isValidGtfsTime`
+- **GTFS time to instant** (`@northguild/gmt/rail/convert`, also in
+  `@northguild/gmt/rail`): `gtfsToInstant`
 - **Type**: `GtfsTime` is `{ seconds: number; dayOverflow: number }`
 
 ## References

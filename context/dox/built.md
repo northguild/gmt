@@ -5050,8 +5050,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
     holds the page's prose to the library.
   - **No date, and never "since midnight".** The tool says days past the service day and the seconds
     left over, never a time of day. The clock note is always shown: the pair is counted from noon
-    minus 12 hours of the service day, so turning it into a clock time needs the agency's zone, and
-    `gtfsToInstant` (RAI-100, not built) is named in code font with no link and no token.
+    minus 12 hours of the service day, so turning it into a clock time needs the agency's zone. The
+    note links `gtfsToInstant` (its reference page) and the GTFS Service Day Clock, with the kit's
+    plain anchors and no token; the note sits outside every `hold`, so it needs no ghost.
   - **An empty box reads "nothing typed" and makes no call.** NO SIGNAL (amber) shows only for a
     library refusal. A write with days past the limit shows the library's `""` as a refusal.
   - **Plate strips keep one layout in every state.** The sentinel takes the live size
@@ -5065,6 +5066,84 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - **Tests.** `gtfs-time-reader-holds.browser.test.ts` steps every preset and typed value at 300,
     390, 1280 and 1440 px in Chromium and WebKit; `gtfs-time-reader-mount.test.tsx` aborts its
     controller in `afterEach`. The "Use the time read above" button uses the native `disabled`.
+- **GTFS Service Day Clock** (RAI-100, `/tools/gtfs-service-day-clock/`, rail). A service date, a
+  stop time and the agency's zone, as a feed holds them (`calendar.txt`, `stop_times.txt`,
+  `agency.txt` `agency_timezone`), read by `gtfsToInstant` next to what a midnight anchor gives,
+  drawn on one day rail with the clock change marked. `loadServiceDayLib()` in `rail-lib.ts` returns
+  `RailLib` plus the functions below; `loadRailLib` is unchanged, so the Time Reader loads nothing new.
+  Rail `drawsOn` `transport`.
+  - **The calls are the library's; the site re-derives none.** Zone is a text box, not a select,
+    because a feed's zone is pasted and an offset such as `+05:30` is accepted.
+
+    | Value shown | Call |
+    | --- | --- |
+    | GTFS instant | `gtfsToInstant(date, time, zone)`, as typed |
+    | GTFS anchor (noon minus 12 h) | `gtfsToInstant(date, "00:00:00", zone)` |
+    | GTFS noon | `gtfsToInstant(date, "12:00:00", zone)` |
+    | ISO service date | `convertUtcToPlainDate(gtfsToInstant(date, "12:00:00", "UTC"))` |
+    | Midnight anchor | `resolveLocal(`${iso}T00:00:00`, zone)`, no options |
+    | Midnight answer | `addUtc(midnight, { days, seconds })` from `parseGtfsTime(time)` |
+    | Local readings | `convertUtcToZoned(instant, zone)` |
+    | Gap | `diffUtc(gtfs, midnightAnswer, "minutes")`: positive when the midnight answer is later |
+    | Clock change | `getDstTransitions(zone, year)`, kept where `isBetweenUtc` holds |
+    | Rail window | `minUtc`/`maxUtc` of the marks, padded 2 h with `subtractUtc`/`addUtc` |
+
+    The ISO date comes from noon in UTC (it always exists) so the date rule is the library's, never a
+    site regex. `resolveLocal` with defaults is what `new Date("...T00:00:00")` does, which is the
+    anchor the tool exists to compare against.
+  - **Probes name the reason for `""`, first match wins:** `isValidGtfsTime(time)` false (time);
+    `gtfsToInstant(date, "12:00:00", "UTC")` is `""` (date); `classifyLocal(noon, zone)` is `null`
+    (zone), `"nonexistent"` or `"ambiguous"` (no anchor). Anything else reads "The library returned no
+    instant." The order puts the cheapest, most specific cause first so a bad time is never blamed on
+    the zone. An empty box reads "nothing typed" and makes no call; NO SIGNAL (amber) is the library's
+    refusal only. There is no disambiguation control, because the library has no option.
+  - **Presets (8), the default is `spring-forward`.** `spring-forward` (20260329, 08:00:00, Berlin),
+    `spring-start` (00:00:00), `fall-back` (20261025), `ordinary` (20260615), `past-midnight`
+    (20260328, 26:30:00), `new-york` (20260308), `no-noon` (20111230, 12:00:00, Pacific/Apia, where
+    GTFS gives `""` and the midnight code still answers) and `offset` (`+05:30`). Every value was pasted
+    from `dist`. There is no far-future preset: an expanded year is typed, shown as returned, and only
+    grows a card in height. A preset matches only while all three boxes equal it, else `custom`.
+  - **The hold.** The two anchor cards sit at opposite edges of their row
+    (`justify-content: space-between`) and stack below the widget's 52rem container width; each has a
+    full bevelled border and a tinted fill, never a coloured left edge. Each value is a `hold` with
+    `zonedValue` ghosts at the longest the presets give (`GHOST_LOCAL`, `GHOST_UTC`), breaking only at
+    `<wbr>`, so a longer typed value is taller and never wider. The calls frame reserves the lines of
+    `callsSizerText()`, a stub library run through the real reader with the widest answer (three
+    clock changes, the most any preset's zone has that year). Rail ticks are every 6 h and the step
+    doubles above 12 ticks, so a long window does not crowd the axis.
+  - **The rail never lies about a position.** If a rail helper returns `null` or `""` the rail is
+    not drawn and one line says "Not drawn: the library gave no position for this instant."; only a
+    typed expanded year can trigger it.
+  - **Readout gate.** The rail's container carries `data-gate="drawn"` and the entry in
+    `readout-still.mjs` lists `drawn: ["drawn", "hold"]`: the lanes' marks and the axis labels move
+    with the value by design, and every other swapped text (the reason lines, the verdict, the rail
+    note) sits in a hold. The cards' and the value plates' boxes stay measured.
+  - **Links.** The Time Reader link (`gtfstime`, `value`) is enabled while the time box is not
+    empty; the DST Inspector link (`dst`, `zone` and `year`) only when the zone has a clock change
+    that year.
+  - **Chat tool and permalink.** `showGtfsServiceDayClock` takes optional strings `serviceDate`
+    (16 characters), `time` (16), `timeZone` (64) and a `preset` from the page's eight ids, and at
+    least one of them. The strings pass exactly as given, so a refusal is the widget's own NO SIGNAL,
+    and the chat never resolves an agency to a zone. The `gtfsday` permalink kind carries the same
+    four keys: `preset` alone while the boxes match one, else the three values, even blank (a link
+    from cleared boxes opens cleared). The Astro shell seeds from `seedFromLocation("gtfsday")`, and
+    an unknown preset in a link opens the first. The starter card (Rail) opens `spring-forward`.
+    The descriptor is appended to `DOX_TOOL_DOCS`, and the Time Reader's `purpose` points to this
+    tool for the instant on a date.
+  - **Tests.** `gtfs-service-day-clock.test.ts` runs the real library through `~/test/service-day-lib`;
+    the mount test wraps `loadServiceDayLib` with a spy on `gtfsToInstant` (so "nothing typed" is
+    proven to make no call) and aborts or destroys its widget in `afterEach`;
+    `gtfs-service-day-clock-prose.test.ts` holds the page's `ts` block to the library;
+    `scripts/gtfs-service-day-clock-holds.browser.test.ts` steps every preset and two typed refusals at
+    300, 390, 1280 and 1440 px in Chromium and WebKit.
+  - **Prose names the function as shipped.** The Rail guide's "From a record to an instant"
+    section, the scenario "A GTFS Trip Anchored at Midnight", the mistake "Reading a stop's time in
+    its own zone" and the Rail hub's `solves` row all link `gtfsToInstant` and this tool, and every
+    result in them is pasted from `dist`; a link to the section uses the anchor
+    `#from-a-record-to-an-instant`. No page says "planned", because a promise of a function that now
+    exists is a claim nothing checks. A page link to a preset carries `preset` alone, as the encoder
+    writes it, and `gtfs-time-reader-prose.test.ts` checks each link's preset against the widget its
+    `w=` kind opens, so a renamed preset fails the test.
 - **Example cards open their widget on the click.** The `CHAT_STARTERS` live in the widget
   rail, not the empty chat, as a scrolling panel of bevelled cards (`ExamplesPanel.tsx`)
   grouped by area. The areas are industries: `EXAMPLE_AREAS` is Core, Transport, Intermodal,

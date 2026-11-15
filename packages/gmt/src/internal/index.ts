@@ -225,6 +225,7 @@ export {
   readGtfsTimeFields,
   writeGtfsTime,
 } from "./gtfsTime";
+export { gtfsServiceDateOf } from "./gtfsServiceDate";
 export {
   readSsimDateFields,
   SSIM_MONTH_LETTERS,

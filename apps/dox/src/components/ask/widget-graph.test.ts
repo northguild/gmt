@@ -197,6 +197,8 @@ describe("the chat island's static import graph", () => {
       "lib/swift-value-date-reader-mount.ts",
       "lib/gtfs-time-reader.ts",
       "lib/gtfs-time-reader-mount.ts",
+      "lib/gtfs-service-day-clock.ts",
+      "lib/gtfs-service-day-clock-mount.ts",
       "lib/rail-lib.ts",
       "lib/tai64n-presets.ts",
       "lib/tai64n-lib.ts",

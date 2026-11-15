@@ -164,6 +164,10 @@ import {
   renderGtfsTimeReaderTemplate,
 } from "./gtfs-time-reader-mount";
 import {
+  mountGtfsServiceDayClock,
+  renderGtfsServiceDayClockTemplate,
+} from "./gtfs-service-day-clock-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -402,6 +406,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "gtfs time reader",
     () => renderGtfsTimeReaderTemplate("test"),
     mountGtfsTimeReader as MountFn<never>,
+  ],
+  [
+    "gtfs service day clock",
+    () => renderGtfsServiceDayClockTemplate("test"),
+    mountGtfsServiceDayClock as MountFn<never>,
   ],
   [
     "terrestrial time stack",

@@ -24,7 +24,7 @@ Temporal-based date and time utilities with timezone support and polyfill integr
 | gmt-gnss                | core        | Industry Layers       | utcToGnss, gnssToUtc, gnssWeekToUtc, utcToGnssWeek, rinexWeekToUtc, utcToRinexWeek (gnss/) |               |
 | gmt-finance             | core        | Industry Layers       | parseFixUtcTimestamp, formatFixUtcTimestamp, isValidFixUtcTimestamp, parseSwiftDate, formatSwiftDate, isValidSwiftDate (finance/) |               |
 | gmt-aviation            | core        | Industry Layers       | parseSsimDate, formatSsimDate, isValidSsimDate, parseMetarTime, isValidMetarTime, parseNotamValidity, isValidNotamValidity (aviation/) |               |
-| gmt-rail                | core        | Industry Layers       | parseGtfsTime, formatGtfsTime, isValidGtfsTime (rail/) |               |
+| gmt-rail                | core        | Industry Layers       | parseGtfsTime, formatGtfsTime, isValidGtfsTime, gtfsToInstant (rail/) |               |
 | gmt-transport           | core        | Industry Layers       | transitTime, etaAtZone, dwellTime, scheduleDelivery, cutoffAt, classifyPunctuality, nextDeparture (transport/) |               |
 | gmt-intermodal          | core        | Industry Layers       | freeTimeExpiry, chargeableDays, demurrageClock, billingTimeline, bolTimestamp, EDI and EPCIS timestamps (intermodal/) |               |
 | gmt-workforce           | core        | Industry Layers       | evaluateDutyLog, dutyViolations, dutyDayFor, dutyTotals (workforce/) |               |

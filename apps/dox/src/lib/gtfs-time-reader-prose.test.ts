@@ -15,6 +15,7 @@ import {
   READ_PRESETS,
   WRITE_PRESETS,
 } from "./gtfs-time-reader";
+import { PRESETS as CLOCK_PRESETS } from "./gtfs-service-day-clock";
 
 const page = readFileSync(
   join(__dirname, "../content/docs/tools/gtfs-time-reader.mdx"),
@@ -36,9 +37,12 @@ describe("the keypoint", () => {
     expect(page).not.toMatch(/\b20\d\d-\d\d-\d\d\b/);
   });
 
-  it("names gtfsToInstant in code font with no link", () => {
-    expect(page).toContain("`gtfsToInstant`");
-    expect(page).not.toMatch(/\[`?gtfsToInstant`?\]/);
+  it("links gtfsToInstant to its reference page", () => {
+    expect(page).toContain(
+      "[`gtfsToInstant`](/reference/rail/convert/gtfsToInstant/)",
+    );
+    expect(page).toContain("(/tools/gtfs-service-day-clock/");
+    expect(page).not.toMatch(/planned|later release/i);
     expect(CLOCK_NOTE_LEAD).not.toMatch(/since midnight/i);
   });
 });
@@ -101,13 +105,19 @@ describe("the code block", () => {
 });
 
 describe("the permalinks", () => {
-  it("name presets that exist", () => {
-    const ids = [...page.matchAll(/%22preset%22%3A%22([\w-]+)%22/g)].map(
-      (m) => m[1],
-    );
-    expect(ids.length).toBeGreaterThan(0);
-    for (const id of ids) {
-      expect(READ_PRESETS.map((p) => p.id)).toContain(id);
+  it("name presets that exist in the widget each link opens", () => {
+    const presetsOf: Record<string, readonly { id: string }[]> = {
+      gtfstime: READ_PRESETS,
+      gtfsday: CLOCK_PRESETS,
+    };
+    const links = [
+      ...page.matchAll(/\?w=(\w+)&wa=%7B%22preset%22%3A%22([\w-]+)%22/g),
+    ].map((m) => ({ kind: m[1]!, id: m[2]! }));
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.some((l) => l.kind === "gtfsday")).toBe(true);
+    for (const { kind, id } of links) {
+      expect(Object.keys(presetsOf)).toContain(kind);
+      expect(presetsOf[kind]!.map((p) => p.id)).toContain(id);
     }
     expect(WRITE_PRESETS.length).toBeGreaterThan(0);
   });

@@ -344,6 +344,11 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "gtfs-service-day-clock",
+    preset: PRESET,
+    drag: null,
+  },
+  {
     slug: "holiday-rule-builder",
     preset: PRESET,
     drag: { role: "spinbutton", name: "Year" },

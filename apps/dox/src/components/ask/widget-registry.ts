@@ -95,6 +95,7 @@ import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
 import type { ReportTimeResolverArgs } from "~/lib/report-time-resolver-mount";
 import type { SwiftValueDateReaderArgs } from "~/lib/swift-value-date-reader-mount";
 import type { GtfsTimeReaderArgs } from "~/lib/gtfs-time-reader-mount";
+import type { GtfsServiceDayClockArgs } from "~/lib/gtfs-service-day-clock-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -147,6 +148,7 @@ import {
   showFhirDateCheckerInput,
   showSwiftValueDateReaderInput,
   showGtfsTimeReaderInput,
+  showGtfsServiceDayClockInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
@@ -1144,6 +1146,37 @@ const gtfsTimeEntry = defineWidget<GtfsTimeReaderArgs>({
     })),
 });
 
+const gtfsServiceDayEntry = defineWidget<GtfsServiceDayClockArgs>({
+  title: "GTFS Service Day Clock",
+  kind: "gtfsday",
+  parse: (input) => {
+    const result = showGtfsServiceDayClockInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { serviceDate, time, timeZone, preset } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(serviceDate === undefined ? {} : { serviceDate }),
+        ...(time === undefined ? {} : { time }),
+        ...(timeZone === undefined ? {} : { timeZone }),
+        ...(preset === undefined ? {} : { preset }),
+      },
+    };
+  },
+  /* No `validate`: a date the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/gtfs-service-day-clock-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderGtfsServiceDayClockTemplate(idPrefix, args),
+      mount: m.mountGtfsServiceDayClock,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1697,6 +1730,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showFhirDateChecker: fhirEntry,
   showSwiftValueDateReader: swiftDateEntry,
   showGtfsTimeReader: gtfsTimeEntry,
+  showGtfsServiceDayClock: gtfsServiceDayEntry,
   showUsSunshineProtectionAct: sunshineActEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,

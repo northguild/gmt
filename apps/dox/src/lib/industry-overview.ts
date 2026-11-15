@@ -672,6 +672,22 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
         ],
       },
       {
+        problem: "A stop time is anchored at midnight on a clock-change day.",
+        answer:
+          "A GTFS time counts from noon minus twelve hours of the service day, which is an hour off midnight on the two days the clocks change. {{gtfsToInstant}} counts from that point in the agency's zone.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/rail-gtfs-service-days/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-gtfs-trip-anchored-at-midnight/",
+          },
+          { label: "tool", href: "/tools/gtfs-service-day-clock/" },
+        ],
+      },
+      {
         problem: "A printed timetable time is read in the wrong zone.",
         answer:
           "Rail draws on the transport layer. {{scheduleDelivery}} reads a printed departure in the zone you name, and the timetable reader shows a repeated or skipped hour.",
