@@ -90,6 +90,7 @@ export type WidgetKind =
   | "dayruler"
   | "swiftdate"
   | "gtfstime"
+  | "ptpclock"
   | "sunshineact";
 
 /**
@@ -162,6 +163,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   fhir: "/tools/fhir-date-checker/",
   swiftdate: "/tools/swift-value-date-reader/",
   gtfstime: "/tools/gtfs-time-reader/",
+  ptpclock: "/tools/ptp-clock-converter/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
   dpmeter: "/tools/double-precision-meter/",
@@ -282,6 +284,8 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   swiftdate: new Set(["value", "date"]),
   // A cleared time or seconds box is the empty state: the link must open cleared, not on the default preset.
   gtfstime: new Set(["value", "seconds", "dayOverflow"]),
+  // A cleared box is the empty state: the link must open cleared, not on the default preset.
+  ptpclock: new Set(["seconds", "nanoseconds", "offset", "instant"]),
 };
 
 /**

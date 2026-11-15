@@ -144,6 +144,10 @@ export const GMT_MODULES: Record<
   "rail/parse": () => import("@northguild/gmt/rail/parse"),
   "rail/validate": () => import("@northguild/gmt/rail/validate"),
 
+  // --- iot ---
+  "iot/convert": () => import("@northguild/gmt/iot/convert"),
+  "iot/validate": () => import("@northguild/gmt/iot/validate"),
+
   // --- recurrence ---
   "recurrence/calculate": () => import("@northguild/gmt/recurrence/calculate"),
   "recurrence/parse": () => import("@northguild/gmt/recurrence/parse"),

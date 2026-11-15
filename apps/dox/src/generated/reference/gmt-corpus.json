@@ -6730,6 +6730,149 @@
     ]
   },
   {
+    "url": "/reference/iot/convert/ptpToUtc",
+    "page": "/reference/iot/convert/ptpToUtc",
+    "name": "ptpToUtc",
+    "namespace": "iot",
+    "module": "convert",
+    "kind": "function",
+    "signature": "ptpToUtc(timestamp: PtpTimestamp | { seconds: number; nanoseconds: number; }, currentUtcOffset: number): string",
+    "description": "Converts a PTP (IEEE 1588) timestamp to a UTC instant string ending in `Z`.",
+    "sourcePath": "packages/gmt/src/iot/convert/ptpToUtc.ts",
+    "examples": [
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37)",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 0)",
+        "result": "\"2024-01-01T00:00:37Z\" — the offset ignored"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 36)",
+        "result": "\"2024-01-01T00:00:01Z\" — a grandmaster still on the 2016 offset"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237, nanoseconds: 500000000 }, 37)",
+        "result": "\"2024-01-01T00:00:00.5Z\" — number seconds"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 37n, nanoseconds: 0 }, 37)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "ptpToUtc({ seconds: 0n, nanoseconds: 0 }, 37)",
+        "result": "\"\" — before 1970: an unset clock"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 0n, nanoseconds: 1000000000 }, 37)",
+        "result": "\"\""
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37.5)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/iot/convert/utcToPtp",
+    "page": "/reference/iot/convert/utcToPtp",
+    "name": "utcToPtp",
+    "namespace": "iot",
+    "module": "convert",
+    "kind": "function",
+    "signature": "utcToPtp(value: string, currentUtcOffset: number): PtpTimestamp | null",
+    "description": "Converts a UTC instant to the PTP (IEEE 1588) timestamp a grandmaster announcing `currentUtcOffset` would send.",
+    "sourcePath": "packages/gmt/src/iot/convert/utcToPtp.ts",
+    "examples": [
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00Z\", 37)",
+        "result": "{ seconds: 1704067237n, nanoseconds: 0 }"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T02:00:00+02:00\", 37)",
+        "result": "{ seconds: 1704067237n, nanoseconds: 0 } — offset input"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00.5Z\", 37)",
+        "result": "{ seconds: 1704067237n, nanoseconds: 500000000 }"
+      },
+      {
+        "call": "utcToPtp(\"1970-01-01T00:00:00Z\", 37)",
+        "result": "{ seconds: 37n, nanoseconds: 0 }"
+      },
+      {
+        "call": "utcToPtp(\"2016-12-31T23:59:60Z\", 37)",
+        "result": "null — a leap second has no reading with one offset"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00\", 37)",
+        "result": "null — no designator"
+      },
+      {
+        "call": "utcToPtp(\"1969-12-31T23:59:59Z\", 37)",
+        "result": "null — before 1970"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00Z\", 37.5)",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/iot/validate/isValidPtpTimestamp",
+    "page": "/reference/iot/validate/isValidPtpTimestamp",
+    "name": "isValidPtpTimestamp",
+    "namespace": "iot",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidPtpTimestamp(value: unknown): value is PtpTimestamp | { seconds: number; nanoseconds: number; }",
+    "description": "Return true when `value` is a PTP timestamp record that `ptpToUtc` reads. It checks the ranges of the 80-bit PTP (IEEE 1588) timestamp: 32 bits of nanoseconds (RFC 8877 section 4.3) and the other 48 bits (80 - 32) of seconds, the nanoseconds in 0 to 10^9 - 1.",
+    "sourcePath": "packages/gmt/src/iot/validate/isValidPtpTimestamp.ts",
+    "examples": [
+      {
+        "call": "isValidPtpTimestamp({ seconds: 1704067237n, nanoseconds: 0 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 1704067237, nanoseconds: 999999999 })",
+        "result": "true — number seconds"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 0n, nanoseconds: 0 })",
+        "result": "true — although ptpToUtc(…, 37) is \"\""
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 281474976710656n, nanoseconds: 0 })",
+        "result": "false — 2⁴⁸"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: -1n, nanoseconds: 0 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 0n, nanoseconds: 1000000000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 1.5, nanoseconds: 0 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 0n })",
+        "result": "false — missing nanoseconds"
+      },
+      {
+        "call": "isValidPtpTimestamp(null)",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp(\"2024-01-01T00:00:00Z\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/plain/calculate/addBusinessDays",
     "page": "/reference/plain/calculate/addBusinessDays",
     "name": "addBusinessDays",
@@ -23479,6 +23622,28 @@
     "description": "What to do when a date or time field is out of range, as Temporal's `overflow` option (`Temporal.PlainDate.prototype.add(item, { overflow })`). `\"constrain\"` clamps the field to the nearest valid value, so January 31 plus one month is the last day of February; `\"reject\"` refuses the value.",
     "sourcePath": "packages/gmt/src/types/overflow.ts",
     "examples": []
+  },
+  {
+    "url": "/reference/types/PtpTimestamp",
+    "page": "/reference/types/PtpTimestamp",
+    "name": "PtpTimestamp",
+    "namespace": "types",
+    "module": "ptp",
+    "kind": "type",
+    "signature": "",
+    "description": "A PTP (IEEE 1588) timestamp: 32 bits of nanoseconds and 48 bits (80 - 32) of whole seconds, 80 bits in all (RFC 8877 section 4.3).",
+    "sourcePath": "packages/gmt/src/types/ptp.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "seconds",
+        "description": "Whole TAI seconds since 1970-01-01T00:00:00 TAI: an integer from 0 to 2^48 - 1."
+      },
+      {
+        "name": "nanoseconds",
+        "description": "Nanoseconds past `seconds`: an integer from 0 to 999 999 999."
+      }
+    ]
   },
   {
     "url": "/reference/types/RecurrenceFrequency",

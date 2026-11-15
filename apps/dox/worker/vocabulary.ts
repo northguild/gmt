@@ -33,6 +33,7 @@ import gmtGnss from "../../../packages/gmt/skills/gmt-gnss/SKILL.md";
 import gmtHealthcare from "../../../packages/gmt/skills/gmt-healthcare/SKILL.md";
 import gmtIntegration from "../../../packages/gmt/skills/gmt-integration/SKILL.md";
 import gmtIntermodal from "../../../packages/gmt/skills/gmt-intermodal/SKILL.md";
+import gmtIot from "../../../packages/gmt/skills/gmt-iot/SKILL.md";
 import gmtRail from "../../../packages/gmt/skills/gmt-rail/SKILL.md";
 import gmtTimezone from "../../../packages/gmt/skills/gmt-timezone/SKILL.md";
 import gmtTransport from "../../../packages/gmt/skills/gmt-transport/SKILL.md";
@@ -47,6 +48,7 @@ export const VOCABULARY_SKILLS: readonly VocabularySkill[] = [
   gmtFinance,
   gmtAviation,
   gmtRail,
+  gmtIot,
   gmtTransport,
   gmtIntermodal,
   gmtWorkforce,

@@ -180,6 +180,15 @@
       "interval/validate": [
         "./dist/interval/validate/index.d.ts"
       ],
+      "iot": [
+        "./dist/iot/index.d.ts"
+      ],
+      "iot/convert": [
+        "./dist/iot/convert/index.d.ts"
+      ],
+      "iot/validate": [
+        "./dist/iot/validate/index.d.ts"
+      ],
       "plain": [
         "./dist/plain/index.d.ts"
       ],
@@ -571,6 +580,18 @@
     "./interval/validate": {
       "types": "./dist/interval/validate/index.d.ts",
       "default": "./dist/interval/validate/index.js"
+    },
+    "./iot": {
+      "types": "./dist/iot/index.d.ts",
+      "default": "./dist/iot/index.js"
+    },
+    "./iot/convert": {
+      "types": "./dist/iot/convert/index.d.ts",
+      "default": "./dist/iot/convert/index.js"
+    },
+    "./iot/validate": {
+      "types": "./dist/iot/validate/index.d.ts",
+      "default": "./dist/iot/validate/index.js"
     },
     "./plain": {
       "types": "./dist/plain/index.d.ts",

@@ -32,6 +32,7 @@ export * from "./observance-policy";
 export * from "./offset";
 export * from "./operating-schedule";
 export * from "./overflow";
+export * from "./ptp";
 export * from "./recurrence";
 export * from "./relative-date-time-unit";
 export * from "./relative-date-unit";

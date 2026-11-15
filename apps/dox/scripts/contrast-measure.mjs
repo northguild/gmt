@@ -132,6 +132,7 @@ const ALL_PAGES = [
   { id: "dox-chat+x12", path: "/dox/", open: "showX12TimeReader" },
   { id: "dox-chat+ssim", path: "/dox/", open: "showSsimDateReader" },
   { id: "dox-chat+gtfstime", path: "/dox/", open: "showGtfsTimeReader" },
+  { id: "dox-chat+ptpclock", path: "/dox/", open: "showPtpClockConverter" },
   {
     id: "dox-chat+reporttime",
     path: "/dox/",

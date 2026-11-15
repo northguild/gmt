@@ -1,0 +1,112 @@
+---
+title: IoT mistakes
+description: Common mistakes with PTP timestamps — reading them as Unix time, hard-coding 37, trusting a stale or invalid announced offset, and converting through the table instead of the announcement — in GMT's IoT layer.
+industries: [iot]
+sidebar:
+  label: IoT
+---
+
+The IoT layer converts Precision Time Protocol timestamps, which count TAI, to UTC with the offset
+the grandmaster announces. The mistakes around it all end in a valid time that is a few seconds
+out: reading the count as Unix time, fixing the offset at 37, trusting an announced offset that is
+stale or not valid, and converting through the table instead of the announcement. Every output
+shown here is what the function returns.
+
+import Mistake from "../../../components/Mistake.astro";
+
+## Reading PTP as Unix time
+
+<Mistake
+  severity="high"
+  title="Reading the PTP seconds as Unix seconds"
+  description="A PTP timestamp has the same epoch value as Unix time, but it counts TAI, and TAI is 37 seconds ahead of UTC from 2017 on. Reading the seconds as Unix time gives a valid time 37 seconds ahead, and nothing raises an error. ptpToUtc subtracts the offset the grandmaster announces."
+  wrongCode={`new Date(Number(1704067237n) * 1000).toISOString();
+// "2024-01-01T00:00:37.000Z" — 37 s ahead`}
+  rightCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37);
+// "2024-01-01T00:00:00Z"`}
+  rightSpecId="ptpToUtc"
+/>
+
+## Hard-coding 37
+
+<Mistake
+  severity="medium"
+  title="Fixing the offset at 37"
+  description="37 is right from 2017 on. For a stamp taken while the grandmaster correctly announced another value, such as 36 from mid-2015 to the end of 2016, a receiver that fixed the offset at 37 reads 1 second early, and nothing raises an error. The offset has no default in ptpToUtc, so the announced value has to be passed in."
+  wrongCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+const record = { seconds: 1464739236n, nanoseconds: 0 };
+
+ptpToUtc(record, 37);
+// "2016-05-31T23:59:59Z" — the grandmaster announced 36, so this is 1 s early`}
+  rightCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+// the current-utc-offset of the grandmaster's time properties (RFC 8575)
+const announced = 36;
+
+ptpToUtc({ seconds: 1464739236n, nanoseconds: 0 }, announced);
+// "2016-06-01T00:00:00Z"`}
+  rightSpecId="ptpToUtc"
+/>
+
+## A stale offset
+
+<Mistake
+  severity="medium"
+  title="Trusting an announced offset without checking it"
+  description="36 was the value until the end of 2016. A grandmaster that still announces it gives a reading 1 second out, and the function applies it because it cannot tell. Comparing the announced offset with taiMinusUtc of the reading catches it."
+  wrongCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 36);
+// "2024-01-01T00:00:01Z" — accepted, and 1 s out`}
+  rightCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+
+const reading = ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 36);
+// "2024-01-01T00:00:01Z"
+
+taiMinusUtc(reading);
+// 37 (the table disagrees with the 36 announced)`}
+  rightSpecId="taiMinusUtc"
+/>
+
+## An offset that is not valid
+
+<Mistake
+  severity="high"
+  title="Using the offset when the grandmaster says it is not valid"
+  description="When current-utc-offset-valid is false, or ptp-timescale is false (the arbitrary time scale), the number means nothing. It may be stale, a default, or 0. The library reads neither flag, so passing a 0 through gives the 37-second error with no warning. Check the flags first, and do not call the function."
+  wrongCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+// currentUtcOffsetValid is false, and this grandmaster announces 0
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 0);
+// "2024-01-01T00:00:37Z" — 37 s ahead, with no error`}
+  rightCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+const announced = { currentUtcOffset: 0, currentUtcOffsetValid: false, ptpTimescale: true };
+
+const reading = announced.currentUtcOffsetValid && announced.ptpTimescale
+  ? ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, announced.currentUtcOffset)
+  : null;
+// null — the offset is not valid, so the stamp is not converted`}
+  rightSpecId="ptpToUtc"
+/>
+
+## Converting through the table
+
+<Mistake
+  severity="medium"
+  title="Converting through the leap-second table instead of the announcement"
+  description="fromTAI answers what UTC was at a TAI time. It does not answer what the receiver read, because the receiver used the offset the grandmaster announced. The two differ exactly when the grandmaster is wrong, so using the table hides the very fault you want to see. ptpToUtc reproduces the receiver's reading."
+  wrongCode={`import { fromTAI } from "@northguild/gmt/timescale/convert";
+
+fromTAI("2024-01-01T00:00:37 TAI");
+// "2024-01-01T00:00:00Z" — what UTC was, not what a grandmaster announcing 36 read`}
+  rightCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 36);
+// "2024-01-01T00:00:01Z" — the receiver's reading`}
+  rightSpecId="ptpToUtc"
+/>
