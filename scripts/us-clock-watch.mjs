@@ -4,7 +4,8 @@
  *
  *   node scripts/us-clock-watch.mjs check
  *     Compares three sources with the committed snapshot, `scripts/us-clock-watch.snapshot.json`:
- *       federal  the Congress.gov API: bills whose title names the subject, and their latest action
+ *       federal  the Congress.gov API: bills whose title names the subject, and their latest action;
+ *                a GovInfo title search finds the bills whose official or short title names it
  *       state    the Open States v3 API: state bills that match the subject terms, latest action
  *       tz       the IANA tz database: the rules of every zone in `apps/dox/src/lib/us-region-zones.json`
  *     Exit 0 when nothing differs, 1 when something does, 2 when any source could not run (a
@@ -14,17 +15,20 @@
  *     files the issues from it.
  *
  *   node scripts/us-clock-watch.mjs refresh
- *     Fetches all three sources in full and writes the snapshot. Run by hand, with both secrets in
- *     the environment, after a person has reviewed what changed. The first run lists the whole
- *     current congress (about 60 pages) and every state bill on the subject (about 100 pages, at
- *     most 10 a minute, so 15 minutes or more).
+ *     Fetches the federal and state sources in full and writes them to the snapshot. Run by hand,
+ *     with both secrets in the environment, after a person has reviewed what changed. It lists the
+ *     whole current congress (about 80 pages) and every state bill on the subject (about 100 pages,
+ *     at most 10 a minute, so 15 minutes or more). The tz part is left as `snapshot-tz` wrote it.
  *
  *   node scripts/us-clock-watch.mjs snapshot-tz --dir=<folder>
  *     Rewrites only the snapshot's `tz` part from a folder holding `northamerica`, `australasia`,
- *     `backward` and `version` (an unpacked tzdata release). It needs no network or key.
+ *     `backward` and `version` (an unpacked tzdata release). It needs no network or key. Run it on
+ *     the release `apps/dox/src/lib/us-region-zones.json` names, so `check` flags a US rule change
+ *     the zone map has not taken in yet.
  *
  * Secrets, read from the environment and sent only in a request header, never in a URL, a log line
- * or the verdict file: `CONGRESS_GOV_API_KEY` (api.data.gov key, header `X-Api-Key`) and
+ * or the verdict file: `CONGRESS_GOV_API_KEY` (an api.data.gov key, header `X-Api-Key`, sent to
+ * Congress.gov and GovInfo) and
  * `OPEN_STATES_API_KEY` (header `X-API-KEY`). A missing one makes that source "could not run".
  *
  * The script holds subject keywords only, no bill, title, statute or body. A bill's number and
@@ -56,10 +60,18 @@ export const SUBJECT_TERMS = [
   "standard time",
   "time zone",
 ];
-/** Congress.gov has no keyword search, so a bill title is matched on these (case-insensitive). */
-export const TITLE_TERMS = [...SUBJECT_TERMS, "daylight time"];
+/**
+ * Congress.gov has no keyword search, so a bill's list title is matched on these (case-insensitive).
+ * GovInfo's title search takes them too; it stems each word, so it needs no spelling variant.
+ */
+export const TITLE_TERMS = [
+  ...SUBJECT_TERMS,
+  "daylight savings time",
+  "daylight time",
+];
 
 const CONGRESS_BASE = "https://api.congress.gov/v3";
+const GOVINFO_BASE = "https://api.govinfo.gov";
 const OPEN_STATES_BASE = "https://v3.openstates.org";
 const TZ_BASE = "https://data.iana.org/time-zones/tzdb";
 /** `backward` holds the `Link` lines of St_Thomas, Midway, Saipan and Wake. */
@@ -69,13 +81,19 @@ const OPEN_STATES_KEY = "OPEN_STATES_API_KEY";
 
 const FETCH_TIMEOUT_MS = 30_000;
 const FEDERAL_PAGE = 250;
+const GOVINFO_PAGE = 100;
 const STATE_PAGE = 20;
 /** The default limits (tests pass smaller ones). */
 export const LIMITS = {
   federalRequests: 400,
+  /** A congress has a few dozen bill versions on the subject: one page of 100, or two. */
+  govinfoRequests: 10,
   stateRequests: 60,
-  /** `refresh` lists every state bill: about 100 pages of 20 across the three terms. */
-  stateRefreshRequests: 250,
+  /**
+   * `refresh` lists every state bill: about 100 pages of 20 across the three terms. Open States
+   * allows 250 requests a day per key, so a refresh and a check fit in one day.
+   */
+  stateRefreshRequests: 190,
   /** Stop when `X-RateLimit-Remaining` falls below this. */
   rateFloor: 100,
   /** Open States allows 10 requests a minute per key (its 429 body says so); 7 s keeps under it. */
@@ -143,7 +161,8 @@ export function isoOfHttpDate(text) {
 
 /**
  * A sequential JSON getter with a request budget. A header carries the key; the URL never does.
- * `get(path)` returns `{ body, date }`, `date` being the response `Date` header as ISO or null.
+ * `get(path, params)` returns `{ body, date }`, `date` being the response `Date` header as ISO or
+ * null. `get(path, params, json)` sends `json` as a POST body: a search, so safe to send again.
  * Every thrown message names the host and path only, never the query. `deadline`, an
  * `AbortSignal`, ends the whole run; `timeoutMs` bounds each request. A transient failure is sent
  * again up to `retries` times, `retryPauseMs` apart; each send counts against `budget`.
@@ -162,10 +181,10 @@ function requester({
   retryPauseMs = 0,
 }) {
   let sent = 0;
-  return async function get(path, params = {}) {
+  return async function get(path, params = {}, json = undefined) {
     for (let attempt = 0; ; attempt += 1) {
       try {
-        return await send(path, params);
+        return await send(path, params, json);
       } catch (error) {
         if (!(error instanceof TransientError) || attempt >= retries) {
           throw error;
@@ -175,7 +194,7 @@ function requester({
     }
   };
 
-  async function send(path, params) {
+  async function send(path, params, json) {
     beforeDeadline(deadline);
     if (sent >= budget) {
       throw new SourceError(`request budget of ${budget} is spent`);
@@ -191,7 +210,13 @@ function requester({
     let response;
     try {
       response = await fetch(url, {
-        headers,
+        ...(json === undefined
+          ? { headers }
+          : {
+              method: "POST",
+              headers: { ...headers, "Content-Type": "application/json" },
+              body: JSON.stringify(json),
+            }),
         signal: requestSignal(timeoutMs, deadline),
       });
     } catch (error) {
@@ -275,8 +300,62 @@ async function currentCongress(get) {
   return { number, date };
 }
 
-/** Every matching bill on the list pages of `congress`, from `fromDateTime` when given. */
-async function listBills(get, congress, fromDateTime) {
+/** One Congress.gov bill, from a list page or `GET /bill/{congress}/{type}/{number}`, as a row. */
+const billRow = (b) => ({
+  type: String(b.type),
+  number: String(b.number),
+  title: String(b.title),
+  latestAction: {
+    actionDate: b.latestAction?.actionDate ?? "",
+    text: b.latestAction?.text ?? "",
+  },
+});
+
+/**
+ * The `type number` keys of the bills in `congress` whose GovInfo title names the subject. GovInfo
+ * searches a bill's official and short titles, where a Congress.gov list shows only one of them.
+ */
+async function searchTitles(post, congress) {
+  const terms = TITLE_TERMS.map((term) => `"${term}"`).join(" OR ");
+  const query = `collection:BILLS AND congress:${congress} AND title:(${terms})`;
+  const keys = new Set();
+  for (let offsetMark = "*"; ;) {
+    const { body } = await post(
+      "/search",
+      {},
+      { query, pageSize: GOVINFO_PAGE, offsetMark },
+    );
+    const results = Array.isArray(body.results) ? body.results : [];
+    for (const r of results) {
+      // A package per printed version: BILLS-119hr139ih, BILLS-119hres1423rh.
+      const id = /^BILLS-(\d+)([a-z]+?)(\d+)[a-z]+$/.exec(String(r.packageId));
+      if (id && Number(id[1]) === congress) {
+        keys.add(`${id[2].toUpperCase()} ${id[3]}`);
+      }
+    }
+    if (results.length < GOVINFO_PAGE || !body.offsetMark) break;
+    if (body.offsetMark === offsetMark) break;
+    offsetMark = body.offsetMark;
+  }
+  return keys;
+}
+
+/** One bill by its `type number` key, for a GovInfo match the list did not return. */
+async function fetchBill(get, congress, key) {
+  const [type, number] = key.split(" ");
+  const path = `/bill/${congress}/${type.toLowerCase()}/${number}`;
+  const { body } = await get(path, { format: "json" });
+  if (!body.bill || typeof body.bill !== "object") {
+    throw new SourceError(`GET ${path}: no bill in body`);
+  }
+  return billRow(body.bill);
+}
+
+/**
+ * Every bill on the list pages of `congress`, from `fromDateTime` when given, whose title matches
+ * or whose key is in `tracked`.
+ */
+async function listBills(get, congress, fromDateTime, tracked) {
   const found = [];
   let date = null;
   for (let offset = 0; ; offset += FEDERAL_PAGE) {
@@ -289,16 +368,9 @@ async function listBills(get, congress, fromDateTime) {
     date ??= page.date;
     const bills = Array.isArray(page.body.bills) ? page.body.bills : [];
     for (const b of bills) {
-      if (!titleMatches(b.title)) continue;
-      found.push({
-        type: String(b.type),
-        number: String(b.number),
-        title: String(b.title),
-        latestAction: {
-          actionDate: b.latestAction?.actionDate ?? "",
-          text: b.latestAction?.text ?? "",
-        },
-      });
+      if (titleMatches(b.title) || tracked.has(billKey(b))) {
+        found.push(billRow(b));
+      }
     }
     if (bills.length < FEDERAL_PAGE || !page.body.pagination?.next) break;
   }
@@ -309,10 +381,26 @@ const byKey = (a, b) =>
   billKey(a).localeCompare(billKey(b), "en", { numeric: true });
 
 /**
+ * The subject's bills in `congress`: those `kept` from the snapshot, by number, and those whose
+ * title names it, on the list or on GovInfo. A list from `fromDateTime` holds only the bills
+ * updated since, so a kept bill missing from it has not changed.
+ */
+async function findBills(get, post, congress, kept, fromDateTime) {
+  const titled = await searchTitles(post, congress);
+  const tracked = new Set([...kept.map(billKey), ...titled]);
+  const { bills, date } = await listBills(get, congress, fromDateTime, tracked);
+  const seen = new Set([...kept, ...bills].map(billKey));
+  for (const key of titled) {
+    if (!seen.has(key)) bills.push(await fetchBill(get, congress, key));
+  }
+  return { bills, date };
+}
+
+/**
  * @returns {{ congress: number, date: string | null, bills: object[], differences: string[] }}
  *   `bills` is the snapshot's list brought up to date.
  */
-export async function checkFederal(get, snapshot) {
+export async function checkFederal(get, post, snapshot) {
   const { number, date: currentDate } = await currentCongress(get);
   const prior = snapshot.congress;
   const differences = [];
@@ -327,7 +415,13 @@ export async function checkFederal(get, snapshot) {
     kept = [];
     fromDateTime = undefined;
   }
-  const { bills, date } = await listBills(get, number, fromDateTime);
+  const { bills, date } = await findBills(
+    get,
+    post,
+    number,
+    kept,
+    fromDateTime,
+  );
   const known = new Map(kept.map((b) => [billKey(b), b]));
   for (const b of bills) {
     const before = known.get(billKey(b));
@@ -353,13 +447,38 @@ export async function checkFederal(get, snapshot) {
 }
 
 /** The whole current congress, for `refresh`. */
-export async function refreshFederal(get) {
+export async function refreshFederal(get, post) {
   const { number, date: currentDate } = await currentCongress(get);
-  const { bills, date } = await listBills(get, number, undefined);
+  const { bills, date } = await findBills(get, post, number, [], undefined);
   return {
     congress: number,
     date: date ?? currentDate,
     bills: bills.sort(byKey),
+  };
+}
+
+/** The Congress.gov getter and the GovInfo search poster, both on the api.data.gov key. */
+function federalRequesters({ env, fetch, sleep, limits, deadline }) {
+  const common = {
+    fetch,
+    headers: { "X-Api-Key": env[CONGRESS_KEY], Accept: "application/json" },
+    rateFloor: limits.rateFloor,
+    sleep,
+    deadline,
+    retries: limits.retries,
+    retryPauseMs: limits.retryPauseMs,
+  };
+  return {
+    get: requester({
+      ...common,
+      base: CONGRESS_BASE,
+      budget: limits.federalRequests,
+    }),
+    post: requester({
+      ...common,
+      base: GOVINFO_BASE,
+      budget: limits.govinfoRequests,
+    }),
   };
 }
 
@@ -593,18 +712,18 @@ export async function runSources({
   const federal = async () => {
     const gone = missing(env, CONGRESS_KEY);
     if (gone) throw new SourceError(gone);
-    const get = requester({
+    const { get, post } = federalRequesters({
+      env,
       fetch,
-      base: CONGRESS_BASE,
-      headers: { "X-Api-Key": env[CONGRESS_KEY], Accept: "application/json" },
-      budget: limits.federalRequests,
-      rateFloor: limits.rateFloor,
       sleep,
+      limits,
       deadline,
-      retries: limits.retries,
-      retryPauseMs: limits.retryPauseMs,
     });
-    const { congress, differences } = await checkFederal(get, snapshot.federal);
+    const { congress, differences } = await checkFederal(
+      get,
+      post,
+      snapshot.federal,
+    );
     return { congress, differences };
   };
   const state = async () => {
@@ -771,18 +890,9 @@ async function refresh({ root, env, fetch, sleep, stdout, stderr, limits }) {
     return 2;
   }
   try {
-    const federal = await refreshFederal(
-      requester({
-        fetch,
-        base: CONGRESS_BASE,
-        headers: { "X-Api-Key": env[CONGRESS_KEY], Accept: "application/json" },
-        budget: limits.federalRequests,
-        rateFloor: limits.rateFloor,
-        sleep,
-        retries: limits.retries,
-        retryPauseMs: limits.retryPauseMs,
-      }),
-    );
+    const { tz } = readSnapshot(root);
+    const { get, post } = federalRequesters({ env, fetch, sleep, limits });
+    const federal = await refreshFederal(get, post);
     const state = await refreshState(
       requester({
         fetch,
@@ -799,7 +909,6 @@ async function refresh({ root, env, fetch, sleep, stdout, stderr, limits }) {
         retryPauseMs: limits.retryPauseMs,
       }),
     );
-    const tz = await loadTz(fetch, readZones(root));
     if (!federal.date || !state.date) {
       throw new SourceError(
         "a response carried no Date header, so there is no checkedAt",
@@ -817,7 +926,7 @@ async function refresh({ root, env, fetch, sleep, stdout, stderr, limits }) {
     writeFileSync(join(root, SNAPSHOT), formatJson(snapshot));
     stdout(
       `${PREFIX}: snapshot written: ${federal.bills.length} federal bills (congress ${federal.congress}), ` +
-        `${state.bills.length} state bills, tz ${tz.release}\n`,
+        `${state.bills.length} state bills; tz ${tz.release} kept\n`,
     );
     return 0;
   } catch (error) {

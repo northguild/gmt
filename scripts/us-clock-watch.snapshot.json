@@ -1,8 +1,26 @@
 {
   "federal": {
-    "checkedAt": "2026-11-15T07:38:48Z",
+    "checkedAt": "2026-11-15T08:46:43Z",
     "congress": 119,
     "bills": [
+      {
+        "type": "HR",
+        "number": "139",
+        "title": "Sunshine Protection Act of 2025",
+        "latestAction": {
+          "actionDate": "2026-07-15",
+          "text": "Received in the Senate and Read twice and referred to the Committee on Commerce, Science, and Transportation."
+        }
+      },
+      {
+        "type": "HR",
+        "number": "300",
+        "title": "Daylight Act",
+        "latestAction": {
+          "actionDate": "2025-01-09",
+          "text": "Referred to the House Committee on Energy and Commerce."
+        }
+      },
       {
         "type": "HR",
         "number": "1630",
@@ -10,6 +28,33 @@
         "latestAction": {
           "actionDate": "2025-02-26",
           "text": "Referred to the House Committee on Energy and Commerce."
+        }
+      },
+      {
+        "type": "HR",
+        "number": "9638",
+        "title": "Sunshine for Our Kids Act of 2026",
+        "latestAction": {
+          "actionDate": "2026-07-09",
+          "text": "Referred to the House Committee on Energy and Commerce."
+        }
+      },
+      {
+        "type": "HRES",
+        "number": "1423",
+        "title": "Providing for consideration of the bill (H.R. 139) to make daylight savings time permanent, and for other purposes; providing for consideration of the bill (H.R. 8595) making appropriations for national security, Department of State, and related programs for the fiscal year ending September 30, 2027, and for other purposes; providing for consideration of the bill (H.R. 9237) to amend titles 10 and 38, United States Code, and other Federal laws, to improve benefits for veterans and the administration of the Department of Veterans Affairs; providing for consideration of the bill (H.R. 1181) to prohibit payment card networks and covered entities from requiring the use of or assigning merchant category codes that distinguish a firearms retailer from general-merchandise retailer or sporting-goods retailer, and for other purposes; and for other purposes.",
+        "latestAction": {
+          "actionDate": "2026-07-14",
+          "text": "Motion to reconsider laid on the table Agreed to without objection."
+        }
+      },
+      {
+        "type": "S",
+        "number": "29",
+        "title": "Sunshine Protection Act of 2025",
+        "latestAction": {
+          "actionDate": "2025-01-07",
+          "text": "Read twice and referred to the Committee on Commerce, Science, and Transportation."
         }
       }
     ]

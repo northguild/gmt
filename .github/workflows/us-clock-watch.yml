@@ -1,17 +1,17 @@
 name: US clock-change watch
 
 # Compares three sources with the committed snapshot (scripts/us-clock-watch.snapshot.json): the
-# Congress.gov API and the Open States API for bills on the clock-change subject (new, or a changed
-# latest action), and the IANA tz database for any change to the rules of a zone in
-# apps/dox/src/lib/us-region-zones.json. Manual and weekly only: never part of ci.yml or
-# `pnpm run validate`, because those runs have no network or keys. A difference opens or updates one
-# `canary` issue per kind (federal, state, tz-us-zone); a source that cannot run (a network or HTTP
-# error, a 429, a body that does not parse, a missing secret) opens or updates one could-not-run
-# issue and the others still report. The tz issue is the signal to start CORE-90 phase 2. The
-# federal and state issues ask a person to review and refresh the snapshot: the canary edits
-# nothing. The dispatch input is a dry run: it files a clearly marked [dry run] issue and changes no
-# comparison or exit code. Issues are filed only from main: a run on another branch lists what it
-# would have filed in the job summary and files nothing.
+# Congress.gov API, with a GovInfo title search, and the Open States API for bills on the
+# clock-change subject (new, or a changed latest action), and the IANA tz database for any change
+# to the rules of a zone in apps/dox/src/lib/us-region-zones.json. Manual and weekly only: never
+# part of ci.yml or `pnpm run validate`, because those runs have no network or keys. A difference
+# opens or updates one `canary` issue per kind (federal, state, tz-us-zone); a source that cannot
+# run (a network or HTTP error, a 429, a body that does not parse, a missing secret) opens or
+# updates one could-not-run issue and the others still report. The tz issue is the signal to start
+# CORE-90 phase 2. The federal and state issues ask a person to review and refresh the snapshot:
+# the canary edits nothing. The dispatch input is a dry run: it files a clearly marked [dry run]
+# issue and changes no comparison or exit code. Issues are filed only from main: a run on another
+# branch lists what it would have filed in the job summary and files nothing.
 #
 # Retirement (context/domination/issues/CORE-90.md, Decisions): the tz part when the US clock-change
 # checker (CORE-90 phase 2) ships; the federal and state parts when the Proposals view's data is

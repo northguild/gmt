@@ -95,6 +95,13 @@ const stateBill = (
   latest_action_description: description,
 });
 
+/** A GovInfo search reply holding one package per id, as `BILLS-119hr139ih`. */
+const packages = (ids: string[], offsetMark = "next") => ({
+  count: ids.length,
+  offsetMark,
+  results: ids.map((packageId) => ({ packageId, collectionCode: "BILLS" })),
+});
+
 /** A response that never comes: it settles only when the request is aborted. */
 const hang: Handler = (_url, init) =>
   new Promise((_resolve, reject) => {
@@ -170,6 +177,7 @@ function world(overrides: Record<string, Handler> = {}) {
         bills: [federalBill("HR", "1", "A bill about daylight saving time")],
         pagination: { count: 1 },
       }),
+    "api.govinfo.gov/search": () => reply(packages(["BILLS-119hr1ih"])),
     "v3.openstates.org/bills": () =>
       reply(
         page([
@@ -286,6 +294,8 @@ describe("the subject words", () => {
   it("match a bill title whatever its case, and ignore other titles", () => {
     expect(titleMatches("To END Daylight Saving Time")).toBe(true);
     expect(titleMatches("A bill on daylight time")).toBe(true);
+    // #526: S 29's official title spells it this way.
+    expect(titleMatches("To make daylight savings time permanent")).toBe(true);
     expect(titleMatches("A bill about farm subsidies")).toBe(false);
     expect(titleMatches("")).toBe(false);
   });
@@ -481,6 +491,129 @@ describe("check: federal bills", () => {
       expect(call.url.href).not.toContain(KEYS.CONGRESS_GOV_API_KEY);
       expect(call.url.href).not.toContain(KEYS.OPEN_STATES_API_KEY);
     }
+  });
+
+  // #526: HR 139 and S 29 are listed under a short title that names no subject term.
+  it("finds a bill by its GovInfo title when its list title is a short title", async () => {
+    const r = await run(["check"], {
+      overrides: {
+        "api.govinfo.gov/search": () =>
+          reply(packages(["BILLS-119hr1ih", "BILLS-119s29is"])),
+        "api.congress.gov/v3/bill/119/s/29": () =>
+          reply({ bill: federalBill("S", "29", "A Short Title Act of 2025") }),
+      },
+    });
+    expect(r.code).toBe(1);
+    expect(r.verdict?.federal.differences).toEqual([
+      "new: S 29: A Short Title Act of 2025 (latest action 2026-01-02: Introduced)",
+    ]);
+  });
+
+  it("takes a GovInfo match from the list when the list has it, with no request of its own", async () => {
+    const r = await run(["check"], {
+      overrides: {
+        ...listOf(
+          federalBill("HR", "1", "A bill about daylight saving time"),
+          federalBill("HR", "5", "A Short Title Act"),
+        ),
+        "api.govinfo.gov/search": () =>
+          reply(packages(["BILLS-119hr1ih", "BILLS-119hr5ih"])),
+      },
+    });
+    expect(r.verdict?.federal.differences).toEqual([
+      "new: HR 5: A Short Title Act (latest action 2026-01-02: Introduced)",
+    ]);
+    expect(r.calls.some((c) => c.url.pathname === "/v3/bill/119/hr/5")).toBe(
+      false,
+    );
+  });
+
+  it("tracks a snapshot bill by its number, whatever its title", async () => {
+    const snapshot = snapshotOf();
+    snapshot.federal.bills = [federalBill("HR", "1", "A Short Title Act")];
+    const r = await run(["check"], {
+      snapshot,
+      overrides: {
+        ...listOf(
+          federalBill(
+            "HR",
+            "1",
+            "A Short Title Act",
+            "2026-10-20",
+            "Passed the House",
+          ),
+        ),
+        "api.govinfo.gov/search": () => reply(packages([])),
+      },
+    });
+    expect(r.verdict?.federal.differences).toEqual([
+      "changed: HR 1: A Short Title Act (latest action 2026-01-02: Introduced became 2026-10-20: Passed the House)",
+    ]);
+  });
+
+  it("reads one bill for each printed version, and none from another congress", async () => {
+    const r = await run(["check"], {
+      overrides: {
+        "api.govinfo.gov/search": () =>
+          reply(
+            packages([
+              "BILLS-119hr1ih",
+              "BILLS-119hres7rh",
+              "BILLS-119hres7eh",
+              "BILLS-118hr2ih",
+            ]),
+          ),
+        "api.congress.gov/v3/bill/119/hres/7": () =>
+          reply({ bill: federalBill("HRES", "7", "Providing for a bill") }),
+      },
+    });
+    expect(r.verdict?.federal.differences).toEqual([
+      "new: HRES 7: Providing for a bill (latest action 2026-01-02: Introduced)",
+    ]);
+    const reads = r.calls.filter((c) =>
+      c.url.pathname.startsWith("/v3/bill/119/"),
+    );
+    expect(reads.map((c) => c.url.pathname)).toEqual(["/v3/bill/119/hres/7"]);
+  });
+
+  it("searches GovInfo titles in the current congress, every page, the key in a header only", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const full = Array.from(
+      { length: 100 },
+      (_, i) => `BILLS-119hr${1000 + i}ih`,
+    );
+    const r = await run(["check"], {
+      overrides: {
+        "api.govinfo.gov/search": (_url, init) => {
+          const body = JSON.parse(String(init?.body));
+          bodies.push(body);
+          return body.offsetMark === "*"
+            ? reply(packages(full, "page-2"))
+            : reply(packages(["BILLS-119hr1ih"], "page-3"));
+        },
+        ...listOf(
+          federalBill("HR", "1", "A bill about daylight saving time"),
+          ...full.map((id) =>
+            federalBill("HR", id.slice(11, -2), "A Short Title Act"),
+          ),
+        ),
+      },
+    });
+    expect(r.code).toBe(1);
+    expect(r.verdict?.federal.differences).toHaveLength(100);
+    expect(bodies).toEqual([
+      {
+        query:
+          'collection:BILLS AND congress:119 AND title:("daylight saving time" OR "standard time" OR "time zone" OR "daylight savings time" OR "daylight time")',
+        pageSize: 100,
+        offsetMark: "*",
+      },
+      expect.objectContaining({ offsetMark: "page-2" }),
+    ]);
+    const search = r.calls.find((c) => c.url.host === "api.govinfo.gov");
+    expect(search!.headers["X-Api-Key"]).toBe(KEYS.CONGRESS_GOV_API_KEY);
+    expect(search!.headers["Content-Type"]).toBe("application/json");
+    expect(search!.url.search).toBe("");
   });
 });
 
@@ -745,6 +878,16 @@ describe("check: a source could not run", () => {
     expect(r.verdict?.state.status).toBe("ran");
   });
 
+  it("stops when the GovInfo request budget is spent", async () => {
+    const full = Array.from({ length: 100 }, (_, i) => `BILLS-119hr${i}ih`);
+    const r = await run(["check"], {
+      limits: { govinfoRequests: 1 },
+      overrides: { "api.govinfo.gov/search": () => reply(packages(full)) },
+    });
+    expect(r.code).toBe(2);
+    expect(r.verdict?.federal.message).toBe("request budget of 1 is spent");
+  });
+
   it("stops when the state request budget is spent", async () => {
     const r = await run(["check"], { limits: { stateRequests: 2 } });
     expect(r.code).toBe(2);
@@ -911,11 +1054,11 @@ describe("refresh", () => {
     ).toBe(before);
   });
 
-  it("writes the whole snapshot, which a later check then matches", async () => {
+  it("writes the federal and state parts, which a later check then matches", async () => {
     const root = makeRoot({
       federal: { checkedAt: "", congress: 0, bills: [] },
       state: { checkedAt: "", bills: [] },
-      tz: { release: "", zones: {} },
+      tz: snapshotOf().tz,
     });
     const r = await run(["refresh"], { root });
     expect(r.code).toBe(0);
@@ -936,13 +1079,60 @@ describe("refresh", () => {
       ),
     });
     expect(written.state.bills).toHaveLength(1);
-    expect(written.tz).toEqual(snapshotOf().tz);
     expect(r.calls.some((c) => c.url.searchParams.has("fromDateTime"))).toBe(
       false,
     );
 
     const again = await run(["check"], { root });
     expect(again.code).toBe(0);
+  });
+
+  it("takes in a bill GovInfo finds by title", async () => {
+    const root = makeRoot();
+    const r = await run(["refresh"], {
+      root,
+      overrides: {
+        "api.govinfo.gov/search": () =>
+          reply(packages(["BILLS-119hr1ih", "BILLS-119s29is"])),
+        "api.congress.gov/v3/bill/119": () =>
+          reply({
+            bills: [
+              federalBill("HR", "1", "A bill about daylight saving time"),
+              federalBill("S", "29", "A Short Title Act of 2025"),
+              federalBill("S", "30", "A bill about farm subsidies"),
+            ],
+            pagination: { count: 3 },
+          }),
+      },
+    });
+    expect(r.code).toBe(0);
+    const written = JSON.parse(
+      readFileSync(join(root, "scripts/us-clock-watch.snapshot.json"), "utf8"),
+    );
+    expect(
+      written.federal.bills.map((b: { number: string }) => b.number),
+    ).toEqual(["1", "29"]);
+  });
+
+  // The tz part follows the release the zone map is built from (`snapshot-tz`), not the newest.
+  it("keeps the tz part, whatever the newest tz release holds", async () => {
+    const root = makeRoot();
+    const r = await run(["refresh"], {
+      root,
+      overrides: {
+        "data.iana.org/time-zones/tzdb/version": () => reply("2026f\n"),
+        ...serveNorthAmerica(
+          changeNorthAmerica("Rule\tUS\t2007\tmax", "Rule\tUS\t2008\tmax"),
+        ),
+      },
+    });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("tz 2026e kept");
+    expect(r.calls.some((c) => c.url.host === "data.iana.org")).toBe(false);
+    const written = JSON.parse(
+      readFileSync(join(root, "scripts/us-clock-watch.snapshot.json"), "utf8"),
+    );
+    expect(written.tz).toEqual(snapshotOf().tz);
   });
 
   // #526: a full listing is about 100 Open States pages, more than the 60 a check may send.
@@ -956,6 +1146,13 @@ describe("refresh", () => {
     });
     expect(spent.code).toBe(2);
     expect(spent.err).toContain("request budget of 2 is spent");
+  });
+
+  // Open States' 429 body: "exceeded limit of 250/day".
+  it("keeps a refresh and a check inside the Open States daily limit", () => {
+    expect(
+      LIMITS.stateRefreshRequests + LIMITS.stateRequests,
+    ).toBeLessThanOrEqual(250);
   });
 
   it("writes nothing when a source fails", async () => {
