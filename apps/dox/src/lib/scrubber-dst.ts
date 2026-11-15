@@ -7,10 +7,11 @@
  * zone's offset changes (its instants and the offsets either side), and
  * `isInDaylightSaving`, through `zone-clock`'s reading, for whether an instant
  * is in DST. Nothing here knows a transition date or does offset arithmetic
- * beyond reading `±HH:MM`. A transition is any offset change the library
+ * beyond reading `±HH:MM[:SS]`. A transition is any offset change the library
  * reports, so a half-hour change (Lord Howe), a negative-DST zone (Dublin) and a
  * zone with several changes in a year (Casablanca around Ramadan) all work the
- * same way.
+ * same way, and so does a change from an offset with seconds (New York's
+ * 1883 move from `-04:56:02` to `-05:00`, a shift of −3 min 58 s).
  *
  * No DOM, no `Date`.
  */
@@ -19,6 +20,7 @@ import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
 import { parseYearFromUtc } from "@northguild/gmt/utc/parse";
 import { convertUtcToUnix } from "@northguild/gmt/utc/convert";
 import { getDstTransitions } from "@northguild/gmt/zoned/get";
+import { offsetMinutes } from "./exact-offset";
 
 /** One offset change, with the instant as epoch milliseconds. */
 export interface DstSwitch {
@@ -28,7 +30,8 @@ export interface DstSwitch {
   instantMs: number;
   offsetBefore: string;
   offsetAfter: string;
-  /** Minutes the clocks move: positive is forward (spring forward), negative back. */
+  /** Minutes the clocks move: positive is forward (spring forward), negative
+   *  back. A fraction when an offset has seconds (−3.9666… for −3 min 58 s). */
   shiftMin: number;
 }
 
@@ -37,12 +40,15 @@ type DstStatus = "dst" | "standard" | "none";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** `±HH:MM` as minutes, or `null` for anything else. */
-export function offsetMinutes(offset: string): number | null {
-  const m = /^([+-])(\d{2}):(\d{2})$/.exec(offset);
-  if (!m) return null;
-  const minutes = Number(m[2]) * 60 + Number(m[3]);
-  return m[1] === "-" ? -minutes : minutes;
+/** `+1 h`, `−30 min`, `−3 min 58 s`: the size of a switch, to the second. */
+export function formatSwitchShift(shiftMin: number): string {
+  const total = Math.round(Math.abs(shiftMin) * 60);
+  if (total === 0) return "0 min";
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  const parts = [h ? `${h} h` : "", m ? `${m} min` : "", sec ? `${sec} s` : ""];
+  return `${shiftMin < 0 ? "\u2212" : "+"}${parts.filter(Boolean).join(" ")}`;
 }
 
 function yearOfMs(ms: number): number | null {

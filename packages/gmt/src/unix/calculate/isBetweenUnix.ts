@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { Temporal } from "../../internal/temporal";
 import { normalizeZoneFrame } from "../../internal/zoneFrame";
 import {
@@ -7,7 +8,6 @@ import {
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when the Unix timestamp is between start and end (inclusive by default).
@@ -76,8 +76,8 @@ export function isBetweenUnix(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
-    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
+    const inclusiveStart = booleanOption(options?.inclusiveStart, true);
+    const inclusiveEnd = booleanOption(options?.inclusiveEnd, true);
 
     if (frame === null || epochUnit === null) return false;
 

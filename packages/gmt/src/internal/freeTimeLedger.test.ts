@@ -14,13 +14,13 @@ const leadingHole: number[] = [];
 leadingHole[1] = 5;
 
 describe("parseFreeTimeTerms", () => {
-  it("reduces a calendar-basis bag and does not read its calendar", () => {
+  it("reduces a calendar-basis bag and does not count against its calendar", () => {
     expect(
       parseFreeTimeTerms({
         basis: "calendar",
         timeZone: "UTC",
         firstDay: "nextDay",
-        calendar: "junk",
+        calendar: { weekend: [6, 7], holidays: [], timeZone: "UTC" },
       }),
     ).toEqual({
       timeZone: "UTC",
@@ -29,6 +29,26 @@ describe("parseFreeTimeTerms", () => {
       chargeCalendar: null,
     });
   });
+
+  it.each`
+    calendar               | label
+    ${"junk"}              | ${"a string"}
+    ${new String("x")}     | ${"a String object"}
+    ${null}                | ${"null"}
+    ${{ weekend: [6, 7] }} | ${"an object that is not a BusinessCalendar"}
+  `(
+    "returns null on the calendar basis when calendar is $label",
+    ({ calendar }) => {
+      expect(
+        parseFreeTimeTerms({
+          basis: "calendar",
+          timeZone: "UTC",
+          firstDay: "nextDay",
+          calendar,
+        }),
+      ).toBeNull();
+    },
+  );
 
   it("requires a charge basis only when asked to read one", () => {
     const bag = { basis: "calendar", timeZone: "UTC", firstDay: "eventDay" };

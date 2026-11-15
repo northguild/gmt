@@ -24,20 +24,18 @@ const pairs = ordered.flatMap((a, i) =>
 
 describe("compareYearMonths", () => {
   it.each`
-    a                          | b               | expected | why
-    ${"2026-10"}               | ${"2026-10"}    | ${0}     | ${"same value"}
-    ${"+002026-10"}            | ${"2026-10"}    | ${0}     | ${"six-digit form"}
-    ${"2026-10[u-ca=ISO8601]"} | ${"2026-10"}    | ${0}     | ${"D20 upper-case calendar"}
-    ${"2026-10[Europe/Paris]"} | ${"2026-10"}    | ${0}     | ${"zone annotation ignored"}
-    ${"2026-09"}               | ${"2026-10"}    | ${-1}    | ${"month"}
-    ${"2026-10"}               | ${"2026-09"}    | ${1}     | ${"month, reversed"}
-    ${"2025-12"}               | ${"2026-01"}    | ${-1}    | ${"year boundary"}
-    ${"2027-01"}               | ${"2026-12"}    | ${1}     | ${"year first, then month"}
-    ${"-000001-12"}            | ${"0000-01"}    | ${-1}    | ${"negative year before year 0"}
-    ${"-271821-04"}            | ${"+275760-09"} | ${-1}    | ${"the limits"}
-    ${"+275760-09"}            | ${"+275760-09"} | ${0}     | ${"upper limit equals itself"}
-    ${"-271821-04"}            | ${"-271821-04"} | ${0}     | ${"lower limit equals itself"}
-    ${"2024-02"}               | ${"2024-03"}    | ${-1}    | ${"leap February before March"}
+    a               | b               | expected | why
+    ${"2026-10"}    | ${"2026-10"}    | ${0}     | ${"same value"}
+    ${"+002026-10"} | ${"2026-10"}    | ${0}     | ${"six-digit form"}
+    ${"2026-09"}    | ${"2026-10"}    | ${-1}    | ${"month"}
+    ${"2026-10"}    | ${"2026-09"}    | ${1}     | ${"month, reversed"}
+    ${"2025-12"}    | ${"2026-01"}    | ${-1}    | ${"year boundary"}
+    ${"2027-01"}    | ${"2026-12"}    | ${1}     | ${"year first, then month"}
+    ${"-000001-12"} | ${"0000-01"}    | ${-1}    | ${"negative year before year 0"}
+    ${"-271821-04"} | ${"+275760-09"} | ${-1}    | ${"the limits"}
+    ${"+275760-09"} | ${"+275760-09"} | ${0}     | ${"upper limit equals itself"}
+    ${"-271821-04"} | ${"-271821-04"} | ${0}     | ${"lower limit equals itself"}
+    ${"2024-02"}    | ${"2024-03"}    | ${-1}    | ${"leap February before March"}
   `("returns $expected for '$a' vs '$b' ($why)", ({ a, b, expected }) => {
     expect(compareYearMonths(a, b)).toBe(expected);
   });

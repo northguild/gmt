@@ -11,14 +11,12 @@ import { calendarDateOf } from "../../internal/calendarDateString";
  *   `CanonicalizeCalendar` validates the id, folding case and aliases (`[u-ca=HEBREW]`,
  *   `[u-ca=ethiopic-amete-alem]`), and the calendar must be one GMT supports (`CalendarSystem`);
  *   `chinese`, `dangi`, `islamic` and `islamic-rgsa` return false.
- * - The annotations follow Temporal's ISO grammar, as `Temporal.PlainDate.from` reads them: a time
- *   zone annotation and elective unknown annotations (`[foo=bar]`) are ignored and the first
- *   `u-ca` annotation names the calendar; an unknown critical annotation (`[!foo=bar]`) or a
- *   second `u-ca` annotation when either is critical returns false.
+ * - At most one annotation, the `u-ca` one. A time zone annotation, an elective or unknown
+ *   critical annotation (`[foo=bar]`, `[!foo=bar]`) and a second `u-ca` annotation return false.
  * - A date-time is valid and names its date, as `Temporal.PlainDate.from` reads it
  *   (`"2024-10-03T14:30[u-ca=hebrew]"` is 2024-10-03 in Hebrew): the time is dropped.
- * - The part before the first `[` must match GMT's strict extended shape, as `isValidDate` and
- *   `isValidDateTime` require: basic format (`20241003`), a space or lower-case `t` separator, a
+ * - The date or date-time written before the `u-ca` annotation must match GMT's strict extended
+ *   shape, as `isValidDate` and `isValidDateTime` require: basic format (`20241003`), a space or lower-case `t` separator, a
  *   UTC offset or designator and a leap second (second `60`) return false, although
  *   `Temporal.PlainDate.from` reads all but the designator.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result
@@ -37,7 +35,7 @@ import { calendarDateOf } from "../../internal/calendarDateString";
  * @example isValidCalendarDate("2024-10-03[u-ca=hebrew]") // true
  * @example isValidCalendarDate("+275760-09-13[u-ca=roc]") // true
  * @example isValidCalendarDate("2024-10-03[!u-ca=japanese]") // true (critical flag)
- * @example isValidCalendarDate("2024-10-03[Asia/Tokyo][u-ca=hebrew]") // true (the time zone annotation is ignored)
+ * @example isValidCalendarDate("2024-10-03[Asia/Tokyo][u-ca=hebrew]") // false (a time zone annotation)
  * @example isValidCalendarDate("2024-10-03T14:30:00[u-ca=hebrew]") // true (a date-time names its date)
  * @example isValidCalendarDate("2024-10-03T14:30:00Z[u-ca=hebrew]") // false (UTC designator on a Plain type)
  * @example isValidCalendarDate("20241003[u-ca=hebrew]") // false (basic format, as isValidDate)

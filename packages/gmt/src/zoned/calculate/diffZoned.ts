@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { roundingOptionsOf } from "../../internal/typedOptions";
 import type { Temporal } from "../../internal/temporal";
 import {
   addToZoned,
@@ -115,9 +116,7 @@ export function diffZoned(
 
       const duration = zonedUntil(a, b, {
         largestUnit,
-        smallestUnit: options?.smallestUnit,
-        roundingIncrement: options?.roundingIncrement,
-        roundingMode: options?.roundingMode,
+        ...roundingOptionsOf(options),
       });
 
       if (isSingleUnit) {

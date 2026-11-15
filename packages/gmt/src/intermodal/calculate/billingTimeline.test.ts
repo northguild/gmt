@@ -202,33 +202,28 @@ describe("billingTimeline", () => {
     });
   });
 
-  // RFC 9557 annotations, as `isValidDate` reads them: the ISO calendar and an elective unknown
-  // annotation are accepted and stripped from every output; a critical unknown annotation and a
-  // non-ISO calendar are rejected. An ISO 8601 expanded year (`+002026`) is the same date and is
-  // emitted in the canonical four-digit form.
+  // A plain date has no annotation of any kind, as `isValidDate` reads it. An ISO 8601 expanded
+  // year (`+002026`) is the same date and is emitted in the canonical four-digit form.
   it.each`
     anchorOn                      | expected
-    ${"2026-03-01[u-ca=iso8601]"} | ${{ invoiceDeadline: "2026-03-31", ...forecast }}
-    ${"2026-03-01[foo=bar]"}      | ${{ invoiceDeadline: "2026-03-31", ...forecast }}
+    ${"2026-03-01[u-ca=iso8601]"} | ${null}
+    ${"2026-03-01[foo=bar]"}      | ${null}
     ${"2026-03-01[!foo=bar]"}     | ${null}
     ${"2026-03-01[u-ca=hebrew]"}  | ${null}
-    ${"2026-03-01[Europe/Paris]"} | ${{ invoiceDeadline: "2026-03-31", ...forecast }}
+    ${"2026-03-01[Europe/Paris]"} | ${null}
     ${"+002026-03-01"}            | ${{ invoiceDeadline: "2026-03-31", ...forecast }}
-  `(
-    "reads anchor $anchorOn as isValidDate does, emitting bare canonical ISO",
-    ({ anchorOn, expected }) => {
-      expect(billingTimeline({ anchorOn }, thirty)).toEqual(expected);
-    },
-  );
+  `("reads anchor $anchorOn as isValidDate does", ({ anchorOn, expected }) => {
+    expect(billingTimeline({ anchorOn }, thirty)).toEqual(expected);
+  });
 
   it.each`
     agreedResolutionOn            | resolutionDeadline
-    ${"2026-06-01[u-ca=iso8601]"} | ${"2026-06-01"}
-    ${"2026-06-01[foo=bar]"}      | ${"2026-06-01"}
+    ${"2026-06-01[u-ca=iso8601]"} | ${null}
+    ${"2026-06-01[foo=bar]"}      | ${null}
     ${"2026-06-01[!foo=bar]"}     | ${null}
     ${"2026-06-01[u-ca=hebrew]"}  | ${null}
   `(
-    "emits an agreed date $agreedResolutionOn as bare ISO, or the sentinel",
+    "rejects an agreed date $agreedResolutionOn that carries an annotation",
     ({ agreedResolutionOn, resolutionDeadline }) => {
       expect(
         billingTimeline(
@@ -252,40 +247,6 @@ describe("billingTimeline", () => {
       );
     },
   );
-
-  it("emits the dispute deadline bare when the invoice date carries an annotation", () => {
-    expect(
-      billingTimeline(
-        { anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31[u-ca=iso8601]" },
-        thirty,
-      ),
-    ).toEqual({
-      invoiceDeadline: "2026-03-31",
-      issuedByDeadline: true,
-      disputeDeadline: "2026-04-30",
-      requestedByDeadline: null,
-      resolutionDeadline: null,
-    });
-  });
-
-  it("emits the resolution deadline bare when the request date carries an annotation", () => {
-    expect(
-      billingTimeline(
-        {
-          anchorOn: "2026-03-01",
-          invoiceIssuedOn: "2026-03-20",
-          requestReceivedOn: "2026-04-19[foo=bar]",
-        },
-        thirty,
-      ),
-    ).toEqual({
-      invoiceDeadline: "2026-03-31",
-      issuedByDeadline: true,
-      disputeDeadline: "2026-04-19",
-      requestedByDeadline: true,
-      resolutionDeadline: "2026-05-19",
-    });
-  });
 
   // No window has a default, and each is a safe integer of at least 0.
   it.each`
@@ -348,6 +309,8 @@ describe("billingTimeline", () => {
     ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31", requestReceivedOn: null }}                      | ${thirty}                                          | ${"null request date: not an omission"}
     ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31", requestReceivedOn: "x" }}                       | ${thirty}                                          | ${"invalid request date"}
     ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31[u-ca=hebrew]" }}                                  | ${thirty}                                          | ${"an invoice date in a non-ISO calendar"}
+    ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31[foo=bar]" }}                                      | ${thirty}                                          | ${"an invoice date with an elective annotation"}
+    ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31[u-ca=iso8601]" }}                                 | ${thirty}                                          | ${"an invoice date with an ISO calendar annotation"}
     ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-31[!foo=bar]" }}                                     | ${thirty}                                          | ${"an invoice date with a critical unknown annotation"}
     ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-19[u-ca=hebrew]" }} | ${thirty}                                          | ${"a request date in a non-ISO calendar"}
     ${{ anchorOn: "2026-03-01", invoiceIssuedOn: "2026-03-20", requestReceivedOn: "2026-04-19[!foo=bar]" }}    | ${thirty}                                          | ${"a request date with a critical unknown annotation"}

@@ -1,3 +1,6 @@
+import { canonicalLocaleTags } from "./resolveLocale";
+import { isIntlOptionValue } from "./typedOptions";
+
 /** The `Intl` formatter classes this module builds. */
 type FormatterKind =
   | "DateTimeFormat"
@@ -62,20 +65,13 @@ function isCacheableLocale(locale: FormatterLocale): boolean {
   );
 }
 
-/** Whether `Intl` can read this option value without running caller code. */
-function isPlainOptionValue(value: unknown): boolean {
-  return (
-    typeof value === "string" ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
-  );
-}
-
 /**
  * The own enumerable options as `[name, value]` pairs, read through property descriptors so a
- * getter is never run, or `null` when one is an accessor or holds a value `Intl` would coerce
- * by running caller code (anything but a string, a finite number or a boolean). An `undefined`
- * value is skipped, as `Intl` reads it as absent.
+ * getter is never run, or `null` when one is an accessor or a number `JSON` cannot key (not
+ * finite). A value of a type the option is not declared with (a boxed string, an object, a
+ * string for `hour12`, a string for a digit count) throws `TypeError`, which each caller turns
+ * into its sentinel: `Intl` would convert it. An `undefined` value is skipped, as `Intl` reads it
+ * as absent.
  */
 function plainOptionEntries(options: object): [string, unknown][] | null {
   const entries: [string, unknown][] = [];
@@ -88,7 +84,10 @@ function plainOptionEntries(options: object): [string, unknown][] | null {
     if (value === undefined) {
       continue;
     }
-    if (!isPlainOptionValue(value)) {
+    if (!isIntlOptionValue(name, value)) {
+      throw new TypeError(`option ${name} has the wrong type`);
+    }
+    if (typeof value === "number" && !Number.isFinite(value)) {
       return null;
     }
     entries.push([name, value]);
@@ -130,10 +129,15 @@ function cacheKey(
  * The locale list as `Intl` canonicalizes it (ECMA-402 CanonicalizeLocaleList): an array is read
  * once, here, through `Intl.getCanonicalLocales`, so the key and the constructor see the same
  * strings even when the array is a Proxy that answers each read differently, and a bad list
- * throws before the options are read, as in the constructors.
+ * throws before the options are read, as in the constructors. A value that is not `undefined`,
+ * a string or an array throws `TypeError`, which every caller turns into its sentinel. So does a list with an
+ * entry that is not a string.
  */
 function canonicalLocale(locale: FormatterLocale): FormatterLocale {
-  return Array.isArray(locale) ? Intl.getCanonicalLocales(locale) : locale;
+  // A string stays as it is: its canonical form is the constructor's to read.
+  return typeof locale === "string" || locale === undefined
+    ? locale
+    : canonicalLocaleTags(locale);
 }
 
 /**

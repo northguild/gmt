@@ -51,3 +51,15 @@ describe("savedExample", () => {
     expect(example.shownDate).toBe("2026-02-28");
   });
 });
+
+describe("savedExample with an offset that has seconds", () => {
+  it("keeps the seconds when it moves the offset", () => {
+    const example = savedExample(
+      { zone: "Africa/Monrovia", offset: "-00:44:30", savedShiftMinutes: 60 },
+      "1960-06-01T12:00:00",
+    );
+    expect(example.savedOffset).toBe("+00:15:30");
+    expect(example.saved).toBe("1960-06-01T12:00:00+00:15:30[Africa/Monrovia]");
+    expect(example.fixed).toBe("1960-06-01T12:00:00-00:44:30[Africa/Monrovia]");
+  });
+});

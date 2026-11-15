@@ -33,14 +33,16 @@ describe("chopUtc", () => {
     expect(chopUtc(invalidValue)).toBe("");
   });
 
-  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
-  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  // CORE-113 (#528): a UTC value is `…Z` and nothing after it, so an annotation of any kind makes it
+  // invalid.
   it.each`
-    value                                   | expected
-    ${"2024-03-10T12:00:00Z[foo=bar]"}      | ${"2024-03-10T12:00:00"}
-    ${"2024-03-10T12:00:00Z[Europe/Paris]"} | ${"2024-03-10T12:00:00"}
+    value                                           | expected
+    ${"2024-03-10T12:00:00Z[foo=bar]"}              | ${""}
+    ${"2024-03-10T12:00:00Z[Europe/Paris]"}         | ${""}
+    ${"2024-03-10T12:00:00Z[Europe/Helsinkiddddd]"} | ${""}
+    ${"2024-03-10T12:00:00Z[u-ca=iso8601]"}         | ${""}
   `(
-    "drops the annotations Temporal ignores: $value → $expected",
+    "returns an empty string for the annotated $value → '$expected'",
     ({ value, expected }) => {
       expect(chopUtc(value)).toBe(expected);
     },

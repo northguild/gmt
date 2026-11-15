@@ -4,7 +4,7 @@
  * public form is the validator `isValidHL7`, never a pattern.
  *
  * The grammar is pure; `readHl7DateTime` is the one reader that builds Temporal values, through
- * `readOffsetInstant`. Both import their dependencies directly, never through `internal/index.ts`.
+ * `readInstantOffsetInstant`. Both import their dependencies directly, never through `internal/index.ts`.
  *
  * Sources (HL7 Europe's published copies of the standard; the v2.5.1 copy heads these sections
  * 2.A.1.22 and 2.A.1.77, HL7's own cross-references and the v2.6 copy say 2.A.22 and 2.A.77):
@@ -25,7 +25,7 @@ import type {
   Hl7Precision,
 } from "../types/hl7";
 import { utcOffset } from "../regex/utc-offset";
-import { readOffsetInstant } from "./offsetInstant";
+import { readInstantOffsetInstant } from "./offsetInstant";
 import { Temporal } from "./temporal";
 import { formatUtcOffset, parseUtcOffsetNanoseconds } from "./utcOffsetString";
 
@@ -188,46 +188,63 @@ function finestPrecision(
   return finest;
 }
 
+// TS.1 and TS.2: any run without a separator that ends the component or the field (`^`, `|`),
+// the repetition separator (`~`), the subcomponent separator (`&`) or a C0 control (U+0000 to
+// U+001F, which includes the segment terminator CR and a LF). `&` is excluded as GMT's own
+// strict-kind rule: TS.1 is read as exactly a DTM and TS.2 as exactly a Table 0529 code. The escape
+// character `\` (ch. 2 §2.7) is left for the DTM and degree readers to reject.
+const HL7_TS_PART = "[^\\u0000-\\u001f|~^&]*";
+
+// An extra component (ch. 2 §2.6.2): ignored by the receiver, so any text that holds no field
+// separator (`|`), no repetition separator (`~`), no component separator (`^`) and no C0 control
+// (a CR ends the segment). Subcomponents (`&`, §2.8.2) and escape sequences (`\F\`, §2.7) are
+// legal in text, and white space is data.
+const HL7_EXTRA_COMPONENT = "[^\\u0000-\\u001f|~^]*";
+
+/** A whole `TS` field: `TS.1 ^ TS.2`, then any number of `^`-led extra components. */
+const hl7TsField = new RegExp(
+  `^${HL7_TS_PART}(?:\\^${HL7_TS_PART}(?:\\^${HL7_EXTRA_COMPONENT})*)?$`,
+);
+
 /**
- * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) into its two components, each read up to
- * its first subcomponent. A lone field carries no MSH-2, so the separators are the ones Figure
- * 2-1 recommends, `^` between components and `&` between subcomponents (ch. 2 §2.5.4). A
- * recipient ignores components and subcomponents "that are present but were not expected"
- * (ch. 2 §2.6.2), and a later version adds components at the end of a data type (§2.8.1,
- * §2.8.2), so everything after the second component and after each first `&` is ignored:
- * `20240615^D^X` is `20240615^D`, and `2024&X^D` is `2024^D`. A component left empty is not
+ * Splits a `TS` (2.A.77: `DTM ^ degree of precision`) into its two components. A lone field
+ * carries no MSH-2, so `^` separates components, the separator Figure 2-1 recommends (ch. 2
+ * §2.5.4). GMT reads TS.1 as exactly a DTM and TS.2 as exactly a Table 0529 code (or empty) and
+ * rejects anything else inside them, a `&` included: that is GMT's strict-kind rule. A recipient ignores components "that are present but were not expected" (ch. 2 §2.6.2),
+ * and a later version adds components at the end of a data type (§2.8.1, §2.8.2), so each
+ * component after TS.2 is ignored: `20240615^D^X` is `20240615^D`. An empty component is not
  * present (§2.6.2), so `20240615^` and `20240615^^D` are `20240615`.
+ *
+ * An ignored component is still a component of the field, so it cannot hold a field separator
+ * (`|`), a repetition separator (`~`) or a C0 control (a CR ends the segment). Anything else is
+ * ignored: a subcomponent (`&`, §2.8.2), an escape sequence (`\F\`, §2.7) and white space are text.
  *
  * @param value candidate `TS` text
  * @returns the two components, each `""` when not present; `null` for a value that is not a string
+ * or whose components break these rules
  *
  * @example splitHl7Ts("199904011200^L") // { dtm: "199904011200", degree: "L" }
  * @example splitHl7Ts("20240615^D^X") // { dtm: "20240615", degree: "D" }
- * @example splitHl7Ts("2024&X^D") // { dtm: "2024", degree: "D" }
+ * @example splitHl7Ts("2024&X") // null (GMT reads TS.1 as exactly a DTM)
+ * @example splitHl7Ts("20240615^D^X|Y") // null (the field separator ends the field)
  */
 export function splitHl7Ts(
   value: string,
 ): { dtm: string; degree: string } | null {
-  if (typeof value !== "string") {
+  if (typeof value !== "string" || !hl7TsField.test(value)) {
     return null;
   }
-  // The limit stops the split at the second component, so the rest is never read.
+  // The limit stops the split at the second component; the rest was checked by `hl7TsField`.
   const [dtm = "", degree = ""] = value.split("^", 2);
-  return { dtm: firstSubcomponent(dtm), degree: firstSubcomponent(degree) };
-}
-
-/** A component up to its first `&`; the subcomponents after it are not expected (ch. 2 §2.6.2). */
-function firstSubcomponent(component: string): string {
-  const amp = component.indexOf("&");
-  return amp < 0 ? component : component.slice(0, amp);
+  return { dtm, degree };
 }
 
 const ISO_OFFSET =
   "(?<offset>Z|[+-][0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:[.,][0-9]{1,9})?)?)";
 
 /**
- * Which form an ISO 8601 extended string is written in, for `formatHL7`; apply it to
- * `isoStringBody(value)`. It reads the form, never the values (Temporal checks those). Groups
+ * Which form an ISO 8601 extended string is written in, for `formatHL7` and `formatFHIR`. It reads the whole string, so an
+ * annotation of any kind does not match. It reads the form, never the values (Temporal checks those). Groups
  * `year month day hour minute second fraction offset`:
  * - `year` is exactly four digits, so `+010000` and `-000001` do not match.
  * - `fraction` is one to nine digits after `.` or `,` (the decimal signs `plainDateTime` accepts).
@@ -300,7 +317,7 @@ export function readHl7DateTime(value: string): Hl7DateTime | null {
       if (offset === "") {
         return { kind: "local", local, precision };
       }
-      const pair = readOffsetInstant(local + offset);
+      const pair = readInstantOffsetInstant(local + offset);
       if (pair === null) {
         return null;
       }

@@ -28,14 +28,19 @@ import type { Hl7DateTime } from "../../types";
  * - `+0000` and `-0000` are both UTC (2.A.22), read as `+00:00`.
  * - `""` (two double quote marks) is the null value and differs from `''` (ch. 2 §2.5.3: "is
  *   different from omitting an optional data field"); `''` returns `null`.
- * - A lone `TS` carries no MSH-2, so `^` separates its components and `&` their subcomponents,
- *   the separators Figure 2-1 recommends (ch. 2 §2.5.4). When a feed's MSH-2 names others, the
- *   caller re-joins that `TS` with `^` and `&` first.
- * - Components and subcomponents that are present but not expected are ignored (ch. 2 §2.6.2;
- *   a later version adds them at the end, §2.8.1 and §2.8.2), so `20240615^D^X` reads as
- *   `20240615^D` and `2024&X` as `2024`. An empty component is not present (§2.6.2), so
- *   `20240615^D^` reads as `20240615^D` and `""^` as the null value, while `^D` and `&X` return
- *   `null`.
+ * - A lone `TS` carries no MSH-2, so `^` separates its components, the separator Figure 2-1
+ *   recommends (ch. 2 §2.5.4). When a feed's MSH-2 names another, the caller re-joins that `TS`
+ *   with `^` first.
+ * - GMT reads TS.1 as exactly a DTM and TS.2 as exactly a Table 0529 code (or empty) and rejects
+ *   anything else inside them, so `2024&X` and `2024^D&X` return `null`; that is GMT's strict-kind
+ *   rule, not an HL7 rule.
+ * - Components after TS.2 are present but not expected and are ignored (ch. 2 §2.6.2; a later
+ *   version adds them at the end, §2.8.1 and §2.8.2), so `20240615^D^X` reads as `20240615^D`.
+ *   An empty component is not present (§2.6.2), so `20240615^D^` reads as `20240615^D` and `""^`
+ *   as the null value, while `^D` returns `null`. An ignored component still cannot hold `|`,
+ *   `~` or a C0 control character (a carriage return ends the segment), so `20240615^D^X|Y`
+ *   returns `null`; a subcomponent (`&`), an escape sequence (`\F\`, §2.7) and white space are
+ *   text and are ignored.
  * - Second `60` and hour `24` are rejected, as is any day the month lacks.
  * - Returns `null` on invalid input and for any value that is not a string. Never throws.
  *

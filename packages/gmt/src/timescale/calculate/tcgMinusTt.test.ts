@@ -1,5 +1,5 @@
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
-import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
+import { sameInstantOffsetCases } from "../../test/timeZoneMatrix";
 import { tcgMinusTt } from "./tcgMinusTt";
 
 describe("tcgMinusTt", () => {
@@ -82,7 +82,7 @@ describe("tcgMinusTt", () => {
     expect(tcgMinusTt(isoString)).toBeNull();
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns 1.037197661 for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       // floor((TT − T₀) × L_G / (1 − L_G)) with TT − T₀ = 1 488 240 037 s, in exact integers.

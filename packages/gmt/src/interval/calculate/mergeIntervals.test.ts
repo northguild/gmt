@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import type { Interval } from "../../types";
 import { mergeIntervals } from "./mergeIntervals";
 
@@ -18,25 +18,25 @@ const seventeenNy = "2024-01-01T12:00:00-05:00";
 
 describe("mergeIntervals", () => {
   it.each`
-    input                                                                                                                                                                          | expected                                                                                          | reason
-    ${[]}                                                                                                                                                                          | ${[]}                                                                                             | ${"empty list"}
-    ${[{ start: thirteenZ, end: seventeenZ }, { start: nineZ, end: twelveZ }]}                                                                                                     | ${[{ start: nineZ, end: twelveZ }, { start: thirteenZ, end: seventeenZ }]}                        | ${"unsorted, disjoint"}
-    ${[{ start: nineZ, end: twelveZ }, { start: twelveZ, end: seventeenZ }]}                                                                                                       | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"touching"}
-    ${[{ start: nineZ, end: thirteenZ }, { start: twelveZ, end: seventeenZ }]}                                                                                                     | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"overlapping"}
-    ${[A, { start: tenZ, end: elevenZ }]}                                                                                                                                          | ${[A]}                                                                                            | ${"contained"}
-    ${[{ start: nineZ, end: twelveZ }, { start: "2024-01-01T12:00:00.000000001Z", end: seventeenZ }]}                                                                              | ${[{ start: nineZ, end: twelveZ }, { start: "2024-01-01T12:00:00.000000001Z", end: seventeenZ }]} | ${"1 ns gap stays two runs"}
-    ${[{ start: fifteenZ, end: seventeenZ }, { start: nineZ, end: twelveZ }, { start: twelveZ, end: fifteenZ }]}                                                                   | ${[A]}                                                                                            | ${"chain, unsorted"}
-    ${[A, { start: twelveZ, end: twelveZ }]}                                                                                                                                       | ${[A]}                                                                                            | ${"empty inside a run is absorbed"}
-    ${[{ start: nineZ, end: twelveZ }, { start: twelveNy, end: twelveNy }]}                                                                                                        | ${[{ start: nineZ, end: twelveZ }]}                                                               | ${"empty touching the end keeps the run's end"}
-    ${[{ start: twelveNy, end: twelveNy }, { start: twelveZ, end: seventeenZ }]}                                                                                                   | ${[{ start: twelveNy, end: seventeenZ }]}                                                         | ${"empty touching the start, listed first, starts the run"}
-    ${[{ start: twelveZ, end: seventeenZ }, { start: twelveNy, end: twelveNy }]}                                                                                                   | ${[{ start: twelveZ, end: seventeenZ }]}                                                          | ${"empty touching the start, listed second"}
-    ${[{ start: nineZ, end: tenZ }, { start: twelveZ, end: twelveZ }]}                                                                                                             | ${[{ start: nineZ, end: tenZ }]}                                                                  | ${"stranded empty dropped"}
-    ${[{ start: twelveZ, end: twelveZ }]}                                                                                                                                          | ${[]}                                                                                             | ${"only an empty interval"}
-    ${[{ start: twelveZ, end: twelveZ }, { start: twelveNy, end: twelveNy }]}                                                                                                      | ${[]}                                                                                             | ${"identical empties"}
-    ${[A, { start: nineNy, end: seventeenNy }]}                                                                                                                                    | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"duplicate, different spelling: first wins"}
-    ${[{ start: nineZ, end: twelveZ }, { start: nineNy, end: seventeenZ }]}                                                                                                        | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"same start, different spelling: first wins"}
-    ${[A, { start: tenZ, end: seventeenNy }]}                                                                                                                                      | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"end tie: first to reach the max end wins"}
-    ${[{ start: "2024-01-01T13:00:00+01:00[Europe/Berlin]", end: "2024-01-01T12:00:00-05:00[America/New_York]" }, { start: nineZ, end: "2024-01-01T21:00:00+09:00[Asia/Tokyo]" }]} | ${[{ start: nineZ, end: "2024-01-01T12:00:00-05:00[America/New_York]" }]}                         | ${"mixed zones: Tokyo 21:00+09:00 and Berlin 13:00+01:00 are both 12:00Z, so the runs touch"}
+    input                                                                                                                             | expected                                                                                          | reason
+    ${[]}                                                                                                                             | ${[]}                                                                                             | ${"empty list"}
+    ${[{ start: thirteenZ, end: seventeenZ }, { start: nineZ, end: twelveZ }]}                                                        | ${[{ start: nineZ, end: twelveZ }, { start: thirteenZ, end: seventeenZ }]}                        | ${"unsorted, disjoint"}
+    ${[{ start: nineZ, end: twelveZ }, { start: twelveZ, end: seventeenZ }]}                                                          | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"touching"}
+    ${[{ start: nineZ, end: thirteenZ }, { start: twelveZ, end: seventeenZ }]}                                                        | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"overlapping"}
+    ${[A, { start: tenZ, end: elevenZ }]}                                                                                             | ${[A]}                                                                                            | ${"contained"}
+    ${[{ start: nineZ, end: twelveZ }, { start: "2024-01-01T12:00:00.000000001Z", end: seventeenZ }]}                                 | ${[{ start: nineZ, end: twelveZ }, { start: "2024-01-01T12:00:00.000000001Z", end: seventeenZ }]} | ${"1 ns gap stays two runs"}
+    ${[{ start: fifteenZ, end: seventeenZ }, { start: nineZ, end: twelveZ }, { start: twelveZ, end: fifteenZ }]}                      | ${[A]}                                                                                            | ${"chain, unsorted"}
+    ${[A, { start: twelveZ, end: twelveZ }]}                                                                                          | ${[A]}                                                                                            | ${"empty inside a run is absorbed"}
+    ${[{ start: nineZ, end: twelveZ }, { start: twelveNy, end: twelveNy }]}                                                           | ${[{ start: nineZ, end: twelveZ }]}                                                               | ${"empty touching the end keeps the run's end"}
+    ${[{ start: twelveNy, end: twelveNy }, { start: twelveZ, end: seventeenZ }]}                                                      | ${[{ start: twelveNy, end: seventeenZ }]}                                                         | ${"empty touching the start, listed first, starts the run"}
+    ${[{ start: twelveZ, end: seventeenZ }, { start: twelveNy, end: twelveNy }]}                                                      | ${[{ start: twelveZ, end: seventeenZ }]}                                                          | ${"empty touching the start, listed second"}
+    ${[{ start: nineZ, end: tenZ }, { start: twelveZ, end: twelveZ }]}                                                                | ${[{ start: nineZ, end: tenZ }]}                                                                  | ${"stranded empty dropped"}
+    ${[{ start: twelveZ, end: twelveZ }]}                                                                                             | ${[]}                                                                                             | ${"only an empty interval"}
+    ${[{ start: twelveZ, end: twelveZ }, { start: twelveNy, end: twelveNy }]}                                                         | ${[]}                                                                                             | ${"identical empties"}
+    ${[A, { start: nineNy, end: seventeenNy }]}                                                                                       | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"duplicate, different spelling: first wins"}
+    ${[{ start: nineZ, end: twelveZ }, { start: nineNy, end: seventeenZ }]}                                                           | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"same start, different spelling: first wins"}
+    ${[A, { start: tenZ, end: seventeenNy }]}                                                                                         | ${[{ start: nineZ, end: seventeenZ }]}                                                            | ${"end tie: first to reach the max end wins"}
+    ${[{ start: "2024-01-01T13:00:00+01:00", end: "2024-01-01T12:00:00-05:00" }, { start: nineZ, end: "2024-01-01T21:00:00+09:00" }]} | ${[{ start: nineZ, end: "2024-01-01T12:00:00-05:00" }]}                                           | ${"mixed zones: Tokyo 21:00+09:00 and Berlin 13:00+01:00 are both 12:00Z, so the runs touch"}
   `("merges $input to $expected ($reason)", ({ input, expected }) => {
     const result = mergeIntervals(input);
 
@@ -68,7 +68,7 @@ describe("mergeIntervals", () => {
     expect(input[0]).toBe(first);
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "keeps $value as the run start when it ties $utc ($timeZone)",
     ({ value, utc }) => {
       expect(
@@ -115,32 +115,13 @@ describe("mergeIntervals", () => {
     ${{ start: "2024-01-01T09:00:00Z[!foo=bar]", end: "2024-01-01T17:00:00Z" }}       | ${"unknown critical annotation"}
     ${{ start: "2024-01-01T09:00:00", end: "2024-01-01T17:00:00Z" }}                  | ${"zoneless"}
     ${{ start: "2024-01-01T09:00:00[UTC]", end: "2024-01-01T17:00:00Z" }}             | ${"bracket-only zone"}
+    ${{ start: "2024-01-01T09:00:00Z[u-ca=iso8601]", end: "2024-01-01T17:00:00Z" }}   | ${"calendar annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[foo=bar]", end: "2024-01-01T17:00:00Z" }}        | ${"elective annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[Europe/Berlin]", end: "2024-01-01T17:00:00Z" }}  | ${"time zone annotation"}
+    ${{ start: "2024-01-01T09:00:00Z[+02:00]", end: "2024-01-01T17:00:00Z" }}         | ${"offset annotation"}
     ${{ start: "2024-01-01", end: "2024-01-01T17:00:00Z" }}                           | ${"date only"}
     ${{ start: "-271821-04-20T00:00:00Z", end: "+275760-09-13T00:00:00.000000001Z" }} | ${"past the Instant range"}
   `("returns [] when any element is invalid ($reason)", ({ bad }) => {
     expect(mergeIntervals([A, bad])).toEqual([]);
-  });
-
-  // Temporal.Instant.from ignores a calendar annotation (critical or not) and an elective unknown
-  // annotation (proposal-temporal ParseTemporalInstantString; RFC 9557 §3.3), so these endpoints
-  // are the unannotated instants. GMT echoes the caller's text (CORE-6), annotation included.
-  it("merges touching annotated intervals by instant and keeps the annotated texts", () => {
-    expect(
-      mergeIntervals([
-        {
-          start: "2024-01-01T09:00:00Z[u-ca=iso8601]",
-          end: "2024-01-01T12:00:00Z[foo=bar]",
-        },
-        {
-          start: "2024-01-01T12:00:00Z",
-          end: "2024-01-01T17:00:00Z[!u-ca=hebrew]",
-        },
-      ]),
-    ).toEqual([
-      {
-        start: "2024-01-01T09:00:00Z[u-ca=iso8601]",
-        end: "2024-01-01T17:00:00Z[!u-ca=hebrew]",
-      },
-    ]);
   });
 });

@@ -39,7 +39,50 @@ export function readYearWindowStart(options: unknown): number | null {
   if (!isObject(options)) {
     return null;
   }
-  const { yearWindow } = options as { yearWindow?: unknown };
+  return resolveYearWindow((options as { yearWindow?: unknown }).yearWindow);
+}
+
+/**
+ * Read `yearWindow` from a caller's options bag once, and refuse a value the types reject:
+ * anything that is not `undefined`, `"rolling"` or a primitive number (a numeric string, a boxed
+ * `String` or `Number`, a boolean, `null`). A number outside 0 to 9900 is a number, so it is
+ * kept; `resolveYearWindow` rejects it only where a two-digit year needs it. A non-Object bag
+ * has no `yearWindow`.
+ *
+ * @param options the caller's options bag
+ * @returns the raw `yearWindow` (possibly `undefined`), or null when the types reject it
+ *
+ * @example readYearWindowOption({ yearWindow: 2000 }) // { yearWindow: 2000 }
+ * @example readYearWindowOption(undefined) // { yearWindow: undefined }
+ * @example readYearWindowOption({ yearWindow: "2000" }) // null
+ */
+export function readYearWindowOption(
+  options: unknown,
+): { yearWindow: unknown } | null {
+  const yearWindow = isObject(options)
+    ? (options as { yearWindow?: unknown }).yearWindow
+    : undefined;
+  if (
+    yearWindow !== undefined &&
+    yearWindow !== "rolling" &&
+    typeof yearWindow !== "number"
+  ) {
+    return null;
+  }
+  return { yearWindow };
+}
+
+/**
+ * {@link readYearWindowStart} for a `yearWindow` already read: the first year of the window, or
+ * null for anything but an integer from 0 to 9900 or `"rolling"`.
+ *
+ * @param yearWindow the raw `yearWindow` value
+ * @returns the window's first year, or null
+ *
+ * @example resolveYearWindow(1950) // 1950
+ * @example resolveYearWindow(9901) // null
+ */
+export function resolveYearWindow(yearWindow: unknown): number | null {
   if (yearWindow === "rolling") {
     return (
       nowInstant().toZonedDateTimeISO("UTC").year - ROLLING_YEARS_BEFORE_NOW

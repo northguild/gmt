@@ -17,7 +17,7 @@ import {
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 
 /**
  * Return a Unix epoch value with the given `fields` set on `value`, interpreted in `timeZone`.
@@ -127,12 +127,12 @@ export function setUnix(
     if (instant === null) return null;
 
     const overflow = resolveOverflow(options?.overflow);
-    const disambiguation = optionOrDefault(
+    const disambiguation = stringOptionOrDefault(
       options?.disambiguation,
       "compatible",
     );
     // Temporal ZonedDateTime.prototype.with: GetTemporalOffsetOption(options, "prefer").
-    const offset = optionOrDefault(options?.offset, "prefer");
+    const offset = stringOptionOrDefault(options?.offset, "prefer");
 
     try {
       const zoned = frameZoned(instant, frame);

@@ -92,11 +92,19 @@ describe("getTimeZoneOffset", () => {
     },
   );
 
-  it("still reads an instant whose elective annotation value looks like a leap second", () => {
-    expect(
-      getTimeZoneOffset("Asia/Tokyo", "2024-01-01T00:00:00Z[x=T123460Z]"),
-    ).toBe("+09:00");
-  });
+  it.each`
+    instant
+    ${"2024-01-01T00:00:00Z[x=T123460Z]"}
+    ${"2024-01-01T00:00:00Z[foo=bar]"}
+    ${"2024-01-01T00:00:00Z[u-ca=iso8601]"}
+    ${"2024-01-01T00:00:00Z[Asia/Tokyo]"}
+    ${"2024-01-01T09:00:00+09:00[Asia/Tokyo]"}
+  `(
+    "returns '' for $instant, an annotation after an instant",
+    ({ instant }) => {
+      expect(getTimeZoneOffset("Asia/Tokyo", instant)).toBe("");
+    },
+  );
 
   for (const timeZone of battleTestTimeZones) {
     it(`returns a non-empty offset for battle-test timeZone ${timeZone}`, () => {

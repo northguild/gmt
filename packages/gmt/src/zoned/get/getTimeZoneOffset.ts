@@ -16,12 +16,10 @@ import { frameOffset, zoneFrame } from "../../internal/zoneFrame";
  *   Compatibility: to look up the offset at the clamped `:59` instant as earlier releases did,
  *   pass that instant (`"2016-12-31T23:59:59Z"`), or call
  *   `Temporal.Instant.from(instant).toZonedDateTimeISO(timeZone).offset` directly.
- * - The instant is ISO 8601 extended format before any annotation (`<date>T<time>`, then `Z` or
- *   `±HH:MM[:SS[.fraction]]`): basic format, a `t` or space separator, a lower-case `z` and an
- *   hour-only offset return "".
- * - Only the instant is read from `instant`, as `isValidInstant` describes it: a bracketed zone
- *   in it is not validated, and an offset written to the minute that is that zone's sub-minute
- *   offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives.
+ * - The instant is exactly ISO 8601 extended `<date>T<time>` then `Z` or `±HH:MM[:SS[.fraction]]`,
+ *   over the whole string: basic format, a `t` or space separator, a lower-case `z`, an
+ *   hour-only offset and an annotation of any kind (`[Asia/Tokyo]`, `[u-ca=iso8601]`, `[foo=bar]`)
+ *   return "".
  * - The result is `±HH:MM`, or `±HH:MM:SS` where the zone was not on a whole minute
  *   (`Africa/Monrovia` stood at `-00:44:30` until 1972). It goes straight into the time zone
  *   position of any function whose result has no zone in it, and of this one: a UTC offset is its

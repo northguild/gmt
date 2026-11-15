@@ -275,7 +275,7 @@ function linksOf(): SafeHtml {
  * template holds that space before the library loads, so the page does not move when the mount
  * draws them. The mount test checks both against the real library.
  */
-export const DEFAULT_CALLS = { lines: 13, widest: 67 } as const;
+export const DEFAULT_CALLS = { lines: 13, widest: 56 } as const;
 
 interface CallsReserve {
   lines: number;

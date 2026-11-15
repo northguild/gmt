@@ -140,7 +140,7 @@ describe("mountCutoffCountdown", () => {
   it("draws day ticks once the window spans several days (C8)", async () => {
     await open({
       cutoff: "2024-06-09T16:00:00+08:00[Asia/Shanghai]",
-      now: "2024-06-15T04:00:00+08:00[Asia/Shanghai]",
+      now: "2024-06-15T04:00:00+08:00",
       timeZone: "Asia/Shanghai",
     });
     expect(screen.getAllByText(/^9 Jun$/).length).toBeGreaterThan(0);
@@ -149,7 +149,7 @@ describe("mountCutoffCountdown", () => {
   it("reads a chat seed as late by 20 minutes", async () => {
     await open({
       cutoff: AMS_CUTOFF,
-      now: "2024-06-12T17:20:00+02:00[Europe/Amsterdam]",
+      now: "2024-06-12T17:20:00+02:00",
       timeZone: "Europe/Amsterdam",
     });
     expect(outPast()).toHaveTextContent("true");
@@ -160,7 +160,7 @@ describe("mountCutoffCountdown", () => {
   it("keeps a seeded zone the list does not carry, and reads through it", async () => {
     await open({
       cutoff: "2024-06-09T16:00:00+03:00[Europe/Helsinki]",
-      now: "2024-06-09T15:00:00+03:00[Europe/Helsinki]",
+      now: "2024-06-09T15:00:00+03:00",
       timeZone: "Europe/Helsinki",
     });
     expect(zoneBox()).toHaveValue("Europe/Helsinki");
@@ -200,7 +200,7 @@ describe("mountCutoffCountdown", () => {
   it("speaks the seconds-level value at 20 s before the cut-off", async () => {
     const w = await open();
     await enter(w, cutoffBox(), AMS_CUTOFF);
-    await enter(w, nowBox(), "2024-06-12T16:59:40+02:00[Europe/Amsterdam]");
+    await enter(w, nowBox(), "2024-06-12T16:59:40+02:00");
     expect(verdictText("On time: 20 s left.")).toBeInTheDocument();
     expect(face()).toHaveTextContent("+20 s");
     expect(screen.getByText("16:59:40 · +20 s")).toBeInTheDocument();
@@ -343,7 +343,7 @@ describe("the announcement", () => {
   it("speaks the summary when the reader leaves a field", async () => {
     const w = await open();
     const status = announcement();
-    await enter(w, nowBox(), "2024-06-12T17:30:00+02:00[Europe/Amsterdam]");
+    await enter(w, nowBox(), "2024-06-12T17:30:00+02:00");
     await w.user.tab();
     expect(status).toHaveTextContent(/^Now is /);
   });

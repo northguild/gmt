@@ -1,3 +1,4 @@
+import { booleanOption } from "../../internal/typedOptions";
 import {
   cycleFieldValue,
   isValidAmount,
@@ -69,7 +70,7 @@ export function cycleTime(
       time[field],
       amount,
       bounds,
-      options?.round ?? false,
+      booleanOption(options?.round, false),
     );
     return (
       withTimeFields(time, { [field]: newValue }, "constrain")?.toString() ?? ""

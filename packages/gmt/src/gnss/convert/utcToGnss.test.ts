@@ -4,7 +4,7 @@ import {
   mockTemporalInstantFromThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
-import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
+import { sameInstantOffsetCases } from "../../test/timeZoneMatrix";
 import { toTAI } from "../../timescale/convert/toTAI";
 import { utcToGnss } from "./utcToGnss";
 
@@ -123,7 +123,7 @@ describe("utcToGnss", () => {
     expect(utcToGnss(system, "2024-01-01T00:00:00Z")).toBe("");
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns 2024-02-29T00:00:18 GPS for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       expect(utcToGnss("GPS", value)).toBe("2024-02-29T00:00:18 GPS");

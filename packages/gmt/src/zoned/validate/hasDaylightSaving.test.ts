@@ -201,25 +201,25 @@ describe("hasDaylightSaving", () => {
   );
 
   it.each`
-    at                                               | why
-    ${"2015-06-15T12:00:00Z"}                        | ${"UTC"}
-    ${"2015-06-15T15:00:00+03:00"}                   | ${"an offset"}
-    ${"2015-06-15T15:00:00+03:00[Europe/Istanbul]"}  | ${"a zoned string"}
-    ${"2015-06-15T08:00:00-04:00[America/New_York]"} | ${"a zoned string in another zone"}
+    at                             | why
+    ${"2015-06-15T12:00:00Z"}      | ${"UTC"}
+    ${"2015-06-15T15:00:00+03:00"} | ${"an offset"}
   `("reads at $at as its instant ($why)", ({ at }) => {
     expect(hasDaylightSaving("Europe/Istanbul", { at })).toBe(true);
   });
 
   it.each`
-    at                        | label
-    ${"2015-06-15"}           | ${"'2015-06-15'"}
-    ${"2015-06-15T12:00:00"}  | ${"'2015-06-15T12:00:00'"}
-    ${"2016-12-31T23:59:60Z"} | ${"'2016-12-31T23:59:60Z'"}
-    ${"invalid"}              | ${"'invalid'"}
-    ${""}                     | ${"''"}
-    ${null}                   | ${"null"}
-    ${123}                    | ${"123"}
-    ${true}                   | ${"true"}
+    at                                               | label
+    ${"2015-06-15"}                                  | ${"'2015-06-15'"}
+    ${"2015-06-15T15:00:00+03:00[Europe/Istanbul]"}  | ${"'2015-06-15T15:00:00+03:00[Europe/Istanbul]'"}
+    ${"2015-06-15T08:00:00-04:00[America/New_York]"} | ${"'2015-06-15T08:00:00-04:00[America/New_York]'"}
+    ${"2015-06-15T12:00:00"}                         | ${"'2015-06-15T12:00:00'"}
+    ${"2016-12-31T23:59:60Z"}                        | ${"'2016-12-31T23:59:60Z'"}
+    ${"invalid"}                                     | ${"'invalid'"}
+    ${""}                                            | ${"''"}
+    ${null}                                          | ${"null"}
+    ${123}                                           | ${"123"}
+    ${true}                                          | ${"true"}
   `("returns false for invalid at $label", ({ at }) => {
     vi.useFakeTimers();
     vi.setSystemTime("2015-06-15T12:00:00.000Z");

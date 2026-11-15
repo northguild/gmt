@@ -1,7 +1,7 @@
 {
   "entries": {
     "root": {
-      "minified": 595600
+      "minified": 597100
     },
     "isValidDate": {
       "minified": 154900
@@ -19,10 +19,10 @@
       "minified": 202600
     },
     "operatingTimeBetween": {
-      "minified": 210400
+      "minified": 210700
     },
     "dutyViolations": {
-      "minified": 234800
+      "minified": 235300
     }
   },
   "absent": {

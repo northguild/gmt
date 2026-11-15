@@ -109,10 +109,9 @@ which lint package to install for Date-ban enforcement.
      unsynchronized" marker. Check for `0n` yourself before trusting it as 1900.
    - .NET ticks name an instant only when `DateTimeKind` is `Utc`. `Local` and
      `Unspecified` ticks count wall-clock time.
-   - `toNanoseconds` and `isValidInstant` read the offset and do not validate a
-     bracketed zone annotation. One thing is read from it: an offset written to the
-     minute that is the zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`)
-     names the instant the zone gives.
+   - `toNanoseconds` and `isValidInstant` take exactly `Z` or a written offset
+     and nothing after it: a bracketed zone, calendar or other annotation
+     (`2024-06-15T10:00:00Z[Europe/London]`) makes the string invalid.
 6. **Leap seconds come from the built-in table, never a literal.** `timescale/`
    holds the IERS leap-second table as a closed record: 27 insertions, the last
    on 2016-12-31, and TAI − UTC stays 37 s for every later date, because UTC

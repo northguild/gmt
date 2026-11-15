@@ -20,15 +20,43 @@ describe("cachedFormatter", () => {
     why                                | locale       | options
     ${"an omitted locale"}             | ${undefined} | ${{ timeZone: "UTC" }}
     ${"a DateTimeFormat with no zone"} | ${"en-GB"}   | ${{ dateStyle: "long" }}
-    ${"an object option value"}        | ${"en-GB"}   | ${{ timeZone: "UTC", month: { toString: () => "long" } }}
     ${"an empty locale array"}         | ${[]}        | ${{ timeZone: "UTC" }}
-    ${"a NaN option value"}            | ${"en-GB"}   | ${{ timeZone: "UTC", unknownOption: NaN }}
-    ${"an Infinity option value"}      | ${"en-GB"}   | ${{ timeZone: "UTC", unknownOption: Infinity }}
   `("builds fresh for $why", ({ locale, options }) => {
     expect(cachedFormatter("DateTimeFormat", locale, options)).not.toBe(
       cachedFormatter("DateTimeFormat", locale, options),
     );
   });
+
+  // Intl would turn an object into its ToString; the gate refuses it before anything is built.
+  it("throws a TypeError for an object option value instead of converting it", () => {
+    expect(() =>
+      cachedFormatter("DateTimeFormat", "en-GB", {
+        timeZone: "UTC",
+        month: { toString: () => "long" },
+      } as never),
+    ).toThrow(TypeError);
+  });
+
+  // Intl refuses a non-finite digit count; the cache never keeps what failed, so each call throws.
+  it.each`
+    label         | value
+    ${"NaN"}      | ${Number.NaN}
+    ${"Infinity"} | ${Number.POSITIVE_INFINITY}
+  `(
+    "throws the RangeError Intl throws for a $label digit count",
+    ({ value }) => {
+      const options = {
+        timeZone: "UTC",
+        fractionalSecondDigits: value,
+      } as never;
+      expect(() => cachedFormatter("DateTimeFormat", "en-GB", options)).toThrow(
+        RangeError,
+      );
+      expect(() => cachedFormatter("DateTimeFormat", "en-GB", options)).toThrow(
+        RangeError,
+      );
+    },
+  );
 
   it("skips an undefined option value, so it shares a formatter with the option left out", () => {
     expect(

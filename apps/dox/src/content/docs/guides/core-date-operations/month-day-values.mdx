@@ -33,7 +33,7 @@ isValidMonthDay("--02-30"); // false — February has no 30th
 isValidMonthDay("--12-25[u-ca=gregory]"); // false — without a year, only the ISO calendar is read
 
 parseMonthDay("12-25"); // "--12-25"
-parseMonthDay("--12-25[u-ca=iso8601]"); // "--12-25" — the annotation is dropped
+parseMonthDay("--12-25[u-ca=iso8601]"); // "" — a month-day takes no annotation
 parseMonthDay("--12-25[u-ca=gregory]"); // ""
 parseMonthDay("--02-30"); // ""
 ```

@@ -1,10 +1,10 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { formatWallClockOrZoned } from "../../internal/instantFormatOptions";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
 import { utcInstantOf } from "../../internal/utcInstant";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatUtc`. Extends `Intl.DateTimeFormatOptions`; only the
@@ -80,7 +80,7 @@ export function formatUtc(
     if (instant === null) return "";
 
     // Each option is read once (GetOption), inherited ones included.
-    const includeTimeZoneName = optionOrDefault(
+    const includeTimeZoneName = booleanOption(
       options?.includeTimeZoneName,
       false,
     );

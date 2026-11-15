@@ -1,8 +1,12 @@
 import { Temporal } from "../../internal/temporal";
+import { durationFrom } from "../../internal/durationFrom";
 import { durationRound, resolveDurationRelativeTo } from "../../internal";
 import type { DurationRelativeTo } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import {
+  stringOptionOrDefault,
+  roundingOptionsOf,
+} from "../../internal/typedOptions";
 
 /**
  * Roll an ISO 8601 duration string's small units into larger ones.
@@ -15,18 +19,17 @@ import { optionOrDefault } from "../../internal/optionOrDefault";
  *   "reject", as Temporal does: an ambiguous wall time takes the earlier instant, a nonexistent
  *   one the later instant, and an offset that does not match the zone returns "". Pass an
  *   explicit offset to pick the other reading of an ambiguous wall time.
- * - A `relativeTo` string is ISO 8601 extended format before its first `[`:
- *   a date, a date-time, or with a time zone annotation a zoned date-time (`<date>T<time>`, then
- *   nothing, `Z` or `±HH:MM`). Basic format (`"20240101"`), a space or lower-case `t` separator, a
- *   lower-case `z`, a UTC offset without a zone and a zoned date without a time are invalid.
+ * - A `relativeTo` string is ISO 8601 extended format over the whole string, and nothing else:
+ *   a date, a date-time, or a zoned date-time (`<date>T<time>`, then nothing, `Z` or `±HH:MM`,
+ *   then one time zone annotation). Basic format (`"20240101"`), a space or lower-case `t`
+ *   separator, a lower-case `z`, a UTC offset without a zone and a zoned date without a time are
+ *   invalid, and so is a time zone annotation on a plain value.
  * - A `relativeTo` string takes a calendar in RFC 9557 form, as `convertDateToCalendar` and
- *   `convertZonedToCalendar` write it: ISO digits and a `[u-ca=<id>]` annotation, after the zone
- *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`).
- *   The annotations are read as Temporal reads them: the critical flag and the id's letter case
- *   are accepted, elective unknown annotations are ignored, the first `u-ca` names the calendar,
- *   and a string with a time zone annotation is zoned. An unknown critical annotation, a critical
- *   duplicate calendar, a calendar before the zone, an unsupported calendar and a leap second in
- *   any spelling return `""`.
+ *   `convertZonedToCalendar` write it: ISO digits and one `[u-ca=<id>]` annotation, after the
+ *   zone for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`).
+ *   The critical flag and the id's letter case are accepted. Any other annotation (an elective
+ *   `[foo=bar]`, a second `u-ca`, an unknown critical one), a calendar before the zone, an
+ *   unsupported calendar and a leap second in any spelling return `""`.
  *   Compatibility: before 1.16.0 the digits were read as the calendar's own year, month and day.
  * - Returns "" for invalid input: non-string value, invalid duration string, or
  *   invalid relativeTo.
@@ -102,12 +105,10 @@ export function normalizeDuration(
   }
 
   try {
-    const duration = Temporal.Duration.from(value);
+    const duration = durationFrom(value);
     return durationRound(duration, {
-      largestUnit: optionOrDefault(options?.largestUnit, "auto"),
-      smallestUnit: options?.smallestUnit,
-      roundingIncrement: options?.roundingIncrement,
-      roundingMode: options?.roundingMode,
+      largestUnit: stringOptionOrDefault(options?.largestUnit, "auto"),
+      ...roundingOptionsOf(options),
       relativeTo: resolveDurationRelativeTo(options?.relativeTo),
     }).toString();
   } catch {

@@ -446,16 +446,14 @@ describe("option members: each is read once and converted once per call", () => 
     );
   }
 
-  // GetOption's second step converts the value it read: ToString, or ToNumber for a number
-  // option. An object is asked through `toString` or `valueOf`, so a member converted twice can
-  // also give two answers — "long" to the check and "narrow" to the formatter. Each value is
-  // wrapped in an object that answers with it and counts the calls; a function that accepts only
-  // primitives never asks, which is 0.
+  // A wrapped value (an object with `toString` and `valueOf`) is not a primitive the types
+  // accept, so the function returns the sentinel and never asks it for a value: 0 conversions.
+  // Each value is wrapped in an object that answers with it and counts the calls; a function
+  // that converted a member, once or more, would show here.
   //
   // Only a call that returned a result is counted. A call that returned the sentinel used no
-  // value, and the wrapper answers the same every time, so a second conversion there cannot have
-  // changed the outcome. (The polyfill itself converts a rejected `fractionalSecondDigits` a
-  // second time to write its RangeError message.)
+  // value. (The polyfill itself converts a rejected `fractionalSecondDigits` a second time to
+  // write its RangeError message.)
   function coercionCounts(testCase: OptionsCase, member: string): number[] {
     return counts(
       testCase,
@@ -508,11 +506,10 @@ describe("option members: each is read once and converted once per call", () => 
 });
 
 describe("option members given as objects", () => {
-  // GetOption converts the value it read: ToString for a string option, ToNumber for a number
-  // option. So `new String("floor")` is "floor" to Temporal and to Intl. A function may accept
-  // only primitives and return its sentinel for an object, but it must never give a third answer:
-  // a branch that compares the object itself with `===` or `Set#has` would skip the right branch
-  // and still return a result.
+  // A member typed as a primitive string or number is read once and checked with `typeof`
+  // (CORE-113: a value the types reject returns the sentinel). So `new String("floor")` and a
+  // wrapped number return the sentinel, whichever other members are set and whether or not the
+  // function would use the member.
   //
   // A member's branch can depend on another member (a mode on GMT's own day-rounding path, a
   // style only within a format), so each member is wrapped with every other member set to each
@@ -608,7 +605,7 @@ describe("option members given as objects", () => {
   }
 
   it.each(CASES.filter(({ readsClock }) => !readsClock))(
-    "$name gives the plain answer or the sentinel for a member given as an object",
+    "$name returns the sentinel for a member given as an object",
     (testCase) => {
       const baseline = testCase.baseline[testCase.position];
       const others: Record<string, unknown> =
@@ -643,10 +640,7 @@ describe("option members given as objects", () => {
               ...options,
               [member]: wrap(value),
             });
-            if (
-              !deepEqual(wrapped, plain) &&
-              !deepEqual(wrapped, testCase.sentinel)
-            ) {
+            if (!deepEqual(wrapped, testCase.sentinel)) {
               wrong.add(`${member}: ${String(value)}`);
             }
           }

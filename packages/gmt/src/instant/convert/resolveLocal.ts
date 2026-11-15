@@ -1,6 +1,6 @@
 import type { Disambiguation } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { resolveLocalInstant } from "../../internal/resolveLocalInstant";
 
 /**
@@ -16,9 +16,9 @@ import { resolveLocalInstant } from "../../internal/resolveLocalInstant";
  *   to `toOffsetInstant` for the offset pair, or reach for `convertPlainDateTimeToZoned` when
  *   what you want is the bracketed zoned string (it defaults to millisecond precision).
  * - `localDateTime` is a PlainDateTime string, as `isValidDateTime` accepts: `<date>T<time>`
- *   with no offset (an offset means the wall time already resolved). Its RFC 9557 annotations
- *   are read as `Temporal.PlainDateTime.from` reads them, so a time zone annotation
- *   (`[Asia/Tokyo]`) is ignored and `timeZone` alone resolves the wall time.
+ *   with no offset (an offset means the wall time already resolved). It takes no annotation
+ *   of any kind: a time zone (`[Asia/Tokyo]`) returns `""`, and `timeZone` alone resolves the
+ *   wall time.
  * - Returns `""` on invalid input.
  * - `timeZone` may be a UTC offset, including one `getTimeZoneOffset` returned with seconds. A
  *   fixed offset names one instant for every wall time, so `disambiguation` has nothing to decide
@@ -38,7 +38,7 @@ import { resolveLocalInstant } from "../../internal/resolveLocalInstant";
  * @example resolveLocal("2024-10-06T02:30:00", "Australia/Sydney", { disambiguation: "earlier" }) // "2024-10-05T15:30:00Z"
  * @example resolveLocal("2024-07-15T12:00:00+05:30", "Asia/Kolkata") // "" (not a zoneless wall time)
  * @example resolveLocal("1970-01-01T12:00:00", "-00:44:30") // "1970-01-01T12:44:30Z" (a stored offset with seconds, what `getTimeZoneOffset` returns for Africa/Monrovia then)
- * @example resolveLocal("2024-07-15T12:00:00[foo=bar]", "Africa/Johannesburg") // "2024-07-15T10:00:00Z" (elective annotation ignored)
+ * @example resolveLocal("2024-07-15T12:00:00[foo=bar]", "Africa/Johannesburg") // "" (a plain wall time takes no annotation)
  * @example resolveLocal("2024-07-15T12:00:00", "Invalid/Zone") // ""
  */
 export function resolveLocal(
@@ -64,7 +64,7 @@ export function resolveLocal(
     return resolveLocalInstant(
       localDateTime,
       timeZone,
-      optionOrDefault(optionsArg?.disambiguation, "compatible"),
+      stringOptionOrDefault(optionsArg?.disambiguation, "compatible"),
     );
   } catch {
     // Never throws (Core Rule 3): a hostile

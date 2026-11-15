@@ -5,7 +5,7 @@ import {
   canonicalCalendarSystem,
   computationCalendarId,
 } from "./calendarSystemIds";
-import { hasZonedDateTimeShape } from "./isoStringBody";
+import { hasCalendarZonedShape } from "./isoStringBody";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 
 /**
@@ -14,18 +14,15 @@ import { zonedDateTimeFrom } from "./zonedWallClock";
  * which is what `Temporal.ZonedDateTime#toString()` writes). Throws on invalid input — callers wrap
  * this in try-catch per GMT's sentinel contract.
  *
- * - The part before the first `[` must be GMT's strict ISO 8601 extended shape
- *   (`zonedDateTimeBody`: `<date>T<time>`, then nothing, `Z` or `±HH:MM[:SS[.fraction]]`), as
- *   `isValidZonedDateTime` requires. Basic format, a space or lower-case `t`
- *   separator, a lower-case `z`, an hour-only time or offset and a date without a time throw,
- *   although `Temporal.ZonedDateTime.from` reads them.
+ * - The whole string must be GMT's strict ISO 8601 extended shape (`hasCalendarZonedShape`:
+ *   `<date>T<time>`, then nothing, `Z` or `±HH:MM[:SS[.fraction]]`, then the time zone annotation,
+ *   then at most one calendar annotation `[u-ca=<id>]` or `[!u-ca=<id>]`) and nothing else, as
+ *   `isValidCalendarZonedDateTime` requires. Basic format, a space or lower-case `t` separator, a
+ *   lower-case `z`, an hour-only time or offset, a date without a time, an elective annotation
+ *   (`[foo=bar]`), an unknown critical annotation, a second `u-ca` and a calendar before the zone
+ *   all throw, although `Temporal.ZonedDateTime.from` reads some of them.
  * - The digits are ISO. The whole string goes to `zonedDateTimeFrom` (`Temporal.ZonedDateTime.from`,
- *   correct at the range limits), which validates the date, time, offset, zone and annotations.
- * - The annotations follow Temporal's ISO grammar (`ParseISODateTime`): the time zone annotation
- *   comes first, elective unknown annotations (`[foo=bar]`) are ignored, the first `u-ca`
- *   annotation names the calendar, and an unknown critical annotation or a second `u-ca`
- *   annotation when either one is critical is rejected. A calendar before the zone and `;era=`
- *   are not RFC 9557 and Temporal rejects them.
+ *   correct at the range limits), which validates the date, time, offset, zone and calendar.
  * - The calendar id is Temporal's canonical one (`CanonicalizeCalendar`) and must be a
  *   `CalendarSystem`.
  * - The result computes in `computationCalendarId(calendar)` (`"ethioaa"` for `"ethiopic"` and
@@ -34,7 +31,7 @@ import { zonedDateTimeFrom } from "./zonedWallClock";
  * - `hasSecond60Field` runs first: `Temporal.ZonedDateTime.from("2024-06-30T23:59:60+00:00[UTC]")`
  *   clamps to `:59` instead of throwing.
  *
- * @param value ISO zoned datetime string, optionally with RFC 9557 annotations after the zone
+ * @param value ISO zoned datetime string, optionally with one calendar annotation after the zone
  * @param options optional Temporal `disambiguation`/`offset`, passed through to
  *   `Temporal.ZonedDateTime.from` so a caller's own DST/offset policy still applies
  * @returns Temporal.ZonedDateTime in the computation calendar (`iso8601` when unannotated)
@@ -46,7 +43,7 @@ export function parseCalendarZonedValue(
   if (hasSecond60Field(value)) {
     throw new RangeError(`Leap seconds are not supported: ${value}`);
   }
-  if (!hasZonedDateTimeShape(value)) {
+  if (!hasCalendarZonedShape(value)) {
     throw new RangeError(
       `Not an extended ISO 8601 zoned date-time: ${String(value)}`,
     );

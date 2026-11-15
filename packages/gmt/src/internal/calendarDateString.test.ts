@@ -35,55 +35,42 @@ describe("parseCalendarDateValue", () => {
     },
   );
 
-  // Temporal's annotation grammar (ParseISODateTime; native Chromium 153 agrees): a time zone
-  // annotation on a date and elective unknown annotations are read and ignored, and the first
-  // u-ca annotation names the calendar. "[x=y]" is a one-character key and value, valid in the
-  // spec's Annotation grammar (Chromium 153 rejects it; the spec text is the authority).
   it.each`
-    value                                      | calendarId
-    ${"2024-10-03[Asia/Tokyo][u-ca=hebrew]"}   | ${"hebrew"}
-    ${"2024-10-03[!Asia/Tokyo][u-ca=hebrew]"}  | ${"hebrew"}
-    ${"2024-10-03[+09:00][u-ca=roc]"}          | ${"roc"}
-    ${"2024-10-03[foo=bar][u-ca=hebrew]"}      | ${"hebrew"}
-    ${"2024-10-03[u-ca=hebrew][foo=bar]"}      | ${"hebrew"}
-    ${"2024-10-03[x=y][u-ca=roc]"}             | ${"roc"}
-    ${"2024-10-03[u-ca=hebrew][u-ca=roc]"}     | ${"hebrew"}
-    ${"2024-10-03[u-ca=hebrew][u-ca=chinese]"} | ${"hebrew"}
-    ${"2024-10-03[u-ca=coptic][foo=bar]"}      | ${"ethioaa"}
-    ${"2024-10-03[Asia/Tokyo]"}                | ${"iso8601"}
-    ${"2024-10-03[foo=bar]"}                   | ${"iso8601"}
-  `(
-    "parses $value to ISO 2024-10-03 computed in $calendarId, ignoring the other annotations",
-    ({ value, calendarId }) => {
-      const date = parseCalendarDateValue(value);
-      expect(date.withCalendar("iso8601").toString()).toBe("2024-10-03");
-      expect(date.calendarId).toBe(calendarId);
-    },
-  );
-
-  it.each`
-    value                                       | reason
-    ${"2024-10-03[!foo=bar][u-ca=hebrew]"}      | ${"unknown critical annotation"}
-    ${"2024-10-03[u-ca=hebrew][!foo=bar]"}      | ${"unknown critical annotation after the calendar"}
-    ${"2024-10-03[!u-ca=hebrew][u-ca=roc]"}     | ${"second calendar after a critical one"}
-    ${"2024-10-03[u-ca=hebrew][!u-ca=roc]"}     | ${"critical second calendar"}
-    ${"2024-10-03[!u-ca=hebrew][!u-ca=hebrew]"} | ${"repeated critical calendar"}
-    ${"2024-10-03[u-ca=chinese][u-ca=hebrew]"}  | ${"the first calendar names one GMT does not support"}
-    ${"2024-10-03[u-ca=hebrew][Asia/Tokyo]"}    | ${"time zone annotation after the calendar"}
-    ${"2024-10-03[Asia/Tokyo][UTC]"}            | ${"two time zone annotations"}
-    ${"2024-10-03[Foo=bar][u-ca=hebrew]"}       | ${"upper-case annotation key"}
-    ${"2024-02-30"}                             | ${"ISO day 30 of February"}
-    ${"2023-02-29[u-ca=hebrew]"}                | ${"ISO 2023 is not a leap year, whatever the calendar"}
-    ${"2024-10-03[u-ca=martian]"}               | ${"unknown calendar"}
-    ${"2024-10-03[u-ca=gregorian]"}             | ${"CLDR alias Temporal does not accept"}
-    ${"2024-10-03[u-ca=taiwan]"}                | ${"pre-1.16.0 GMT name"}
-    ${"2024-10-03[u-ca=islamic]"}               | ${"not in the proposal's calendar table"}
-    ${"2024-10-03[u-ca=chinese]"}               | ${"not supported by GMT"}
-    ${"0006-10-03[u-ca=japanese;era=reiwa]"}    | ${"';era=' is not RFC 9557 syntax"}
-    ${"279517-10-11[u-ca=hebrew]"}              | ${"six-digit unsigned year"}
-    ${"+275760-09-14[u-ca=hebrew]"}             | ${"past the maximum ISO date"}
-    ${"-000000-01-01[u-ca=roc]"}                | ${"negative zero year"}
-    ${"not-a-date"}                             | ${"not a date"}
+    value                                                   | reason
+    ${"2024-10-03[!foo=bar][u-ca=hebrew]"}                  | ${"unknown critical annotation"}
+    ${"2024-10-03[u-ca=hebrew][!foo=bar]"}                  | ${"unknown critical annotation after the calendar"}
+    ${"2024-10-03[Asia/Tokyo][u-ca=hebrew]"}                | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[!Asia/Tokyo][u-ca=hebrew]"}               | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[+09:00][u-ca=roc]"}                       | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[foo=bar][u-ca=hebrew]"}                   | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[u-ca=hebrew][foo=bar]"}                   | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[x=y][u-ca=roc]"}                          | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[u-ca=hebrew][u-ca=roc]"}                  | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[u-ca=hebrew][u-ca=chinese]"}              | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[u-ca=coptic][foo=bar]"}                   | ${"a second annotation next to the calendar or a zone"}
+    ${"2024-10-03[Asia/Tokyo]"}                             | ${"a time zone annotation"}
+    ${"2024-10-03[foo=bar]"}                                | ${"an elective annotation"}
+    ${"2024-10-03[!u-ca=hebrew][u-ca=roc]"}                 | ${"second calendar after a critical one"}
+    ${"2024-10-03[u-ca=hebrew][!u-ca=roc]"}                 | ${"critical second calendar"}
+    ${"2024-10-03[!u-ca=hebrew][!u-ca=hebrew]"}             | ${"repeated critical calendar"}
+    ${"2024-10-03[u-ca=chinese][u-ca=hebrew]"}              | ${"the first calendar names one GMT does not support"}
+    ${"2024-10-03[u-ca=hebrew][Asia/Tokyo]"}                | ${"time zone annotation after the calendar"}
+    ${"2024-10-03[Asia/Tokyo][UTC]"}                        | ${"two time zone annotations"}
+    ${"2024-10-03[Foo=bar][u-ca=hebrew]"}                   | ${"upper-case annotation key"}
+    ${"2024-02-30"}                                         | ${"ISO day 30 of February"}
+    ${"2023-02-29[u-ca=hebrew]"}                            | ${"ISO 2023 is not a leap year, whatever the calendar"}
+    ${"2024-03-10T14:30:00[America/New_York]"}              | ${"a date-time with a time zone annotation"}
+    ${"2024-10-03T14:30:00[America/New_York][u-ca=hebrew]"} | ${"a date-time with a time zone and a calendar annotation"}
+    ${"2024-10-03[u-ca=martian]"}                           | ${"unknown calendar"}
+    ${"2024-10-03[u-ca=gregorian]"}                         | ${"CLDR alias Temporal does not accept"}
+    ${"2024-10-03[u-ca=taiwan]"}                            | ${"pre-1.16.0 GMT name"}
+    ${"2024-10-03[u-ca=islamic]"}                           | ${"not in the proposal's calendar table"}
+    ${"2024-10-03[u-ca=chinese]"}                           | ${"not supported by GMT"}
+    ${"0006-10-03[u-ca=japanese;era=reiwa]"}                | ${"';era=' is not RFC 9557 syntax"}
+    ${"279517-10-11[u-ca=hebrew]"}                          | ${"six-digit unsigned year"}
+    ${"+275760-09-14[u-ca=hebrew]"}                         | ${"past the maximum ISO date"}
+    ${"-000000-01-01[u-ca=roc]"}                            | ${"negative zero year"}
+    ${"not-a-date"}                                         | ${"not a date"}
   `("throws for $value ($reason)", ({ value }) => {
     expect(() => parseCalendarDateValue(value)).toThrow();
   });
@@ -91,13 +78,11 @@ describe("parseCalendarDateValue", () => {
   // A date-time is read as its date, as `Temporal.PlainDate.from` reads it (decided
   // 2026-09-17). Expected `toString()` values from native Chromium 153 (polyfill 0.5.1 agrees).
   it.each`
-    value                                                   | expected
-    ${"2024-03-10T14:30:00"}                                | ${"2024-03-10"}
-    ${"2024-03-10T14:30:00[America/New_York]"}              | ${"2024-03-10"}
-    ${"2024-03-10T14:30:00[u-ca=hebrew]"}                   | ${"2024-03-10[u-ca=hebrew]"}
-    ${"2024-10-03T23:59:59.999999999[u-ca=hebrew]"}         | ${"2024-10-03[u-ca=hebrew]"}
-    ${"2024-10-03T14:30:00[America/New_York][u-ca=hebrew]"} | ${"2024-10-03[u-ca=hebrew]"}
-    ${"+275760-09-13T23:59[u-ca=roc]"}                      | ${"+275760-09-13[u-ca=roc]"}
+    value                                           | expected
+    ${"2024-03-10T14:30:00"}                        | ${"2024-03-10"}
+    ${"2024-03-10T14:30:00[u-ca=hebrew]"}           | ${"2024-03-10[u-ca=hebrew]"}
+    ${"2024-10-03T23:59:59.999999999[u-ca=hebrew]"} | ${"2024-10-03[u-ca=hebrew]"}
+    ${"+275760-09-13T23:59[u-ca=roc]"}              | ${"+275760-09-13[u-ca=roc]"}
   `(
     "reads the date-time $value as the date $expected",
     ({ value, expected }) => {

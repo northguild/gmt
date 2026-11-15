@@ -50,7 +50,7 @@ describe("formatFixUtcTimestamp", () => {
       ${"2024-06-15T14:30:00.9999Z"}                | ${"second"}      | ${"20240615-14:30:00"}              | ${"cut, not rounded"}
       ${"2024-06-15T23:59:59.999999999Z"}           | ${"millisecond"} | ${"20240615-23:59:59.999"}          | ${"cut keeps the day"}
       ${"2024-06-15T14:30:00,5Z"}                   | ${"millisecond"} | ${"20240615-14:30:00.500"}          | ${"comma fraction"}
-      ${"2024-06-15T16:30:00+02:00[Europe/Berlin]"} | ${"second"}      | ${"20240615-14:30:00"}              | ${"zoned string"}
+      ${"2024-06-15T16:30:00+02:00[Europe/Berlin]"} | ${"second"}      | ${""}                               | ${"zoned string, which is no instant"}
       ${"2024-06-16T00:30:00+01:00"}                | ${"second"}      | ${"20240615-23:30:00"}              | ${"offset crosses the day"}
       ${"1969-12-31T23:59:59.999999999Z"}           | ${"nanosecond"}  | ${"19691231-23:59:59.999999999"}    | ${"before 1970, digits as the wall clock"}
       ${"1960-01-01T12:00:00Z"}                     | ${"second"}      | ${"19600101-12:00:00"}              | ${"before the leap table"}
@@ -76,7 +76,7 @@ describe("formatFixUtcTimestamp", () => {
       ${"1972-12-31T23:59:60Z"}           | ${"second"}      | ${"19721231-23:59:60"}              | ${"second inserted second"}
       ${"2016-12-31T23:59:60.999999999Z"} | ${"millisecond"} | ${"20161231-23:59:60.999"}          | ${"leap second fraction is cut"}
       ${"2016-12-31T23:59:60,5Z"}         | ${"millisecond"} | ${"20161231-23:59:60.500"}          | ${"leap second, comma fraction"}
-      ${"2016-12-31T23:59:60+00:00[UTC]"} | ${"second"}      | ${"20161231-23:59:60"}              | ${"leap second, zoned string"}
+      ${"2016-12-31T23:59:60+00:00"}      | ${"second"}      | ${"20161231-23:59:60"}              | ${"leap second, offset zero"}
       ${"2016-12-31T23:59:59Z"}           | ${"second"}      | ${"20161231-23:59:59"}              | ${"the second before the leap second"}
     `(
       "writes '$value' at $precision ($why)",

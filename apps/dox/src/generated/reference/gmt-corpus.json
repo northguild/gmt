@@ -1815,7 +1815,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "totalDuration(value: string, unit: keyof DurationLike | DateTimeUnit, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "signature": "totalDuration(value: string, unit: keyof DurationLike | DateTimeUnit, options?: { relativeTo?: string; }): number | null",
     "description": "Express an ISO 8601 duration as a single fractional total in one unit.",
     "sourcePath": "packages/gmt/src/duration/calculate/totalDuration.ts",
     "examples": [
@@ -2058,7 +2058,7 @@
     "namespace": "duration",
     "module": "compare",
     "kind": "function",
-    "signature": "compareDurations(a: string, b: string, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "signature": "compareDurations(a: string, b: string, options?: { relativeTo?: string; }): number | null",
     "description": "Compare two ISO 8601 duration strings by length.",
     "sourcePath": "packages/gmt/src/duration/compare/compareDurations.ts",
     "examples": [
@@ -2260,7 +2260,7 @@
     "namespace": "duration",
     "module": "normalize",
     "kind": "function",
-    "signature": "normalizeDuration(value: string, options?: { largestUnit?: LargestUnit<DateTimeUnit>; smallestUnit?: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; relativeTo?: DurationRelativeTo; }): string",
+    "signature": "normalizeDuration(value: string, options?: { largestUnit?: LargestUnit<DateTimeUnit>; smallestUnit?: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; relativeTo?: string; }): string",
     "description": "Roll an ISO 8601 duration string's small units into larger ones.",
     "sourcePath": "packages/gmt/src/duration/normalize/normalizeDuration.ts",
     "examples": [
@@ -2982,7 +2982,7 @@
       },
       {
         "call": "formatFHIR(\"2024-01-15T10:30:00Z[Europe/London]\", \"dateTime\")",
-        "result": "\"2024-01-15T10:30:00+00:00\""
+        "result": "\"\" (an annotation)"
       },
       {
         "call": "formatFHIR(\"2024-06-15T23:30:00-05:00\", \"instant\")",
@@ -3050,8 +3050,8 @@
         "result": "\"\" (not ISO 8601)"
       },
       {
-        "call": "formatHL7(\"2024-06-15T10:30:00[Europe/Helsinki]\")",
-        "result": "\"\" (a zone with no offset)"
+        "call": "formatHL7(\"2024-06-15T10:30:00Z[Europe/Helsinki]\")",
+        "result": "\"\" (an annotation)"
       },
       {
         "call": "formatHL7(\"2024-02-30\")",
@@ -3200,6 +3200,10 @@
       {
         "call": "isValidHL7(\"20240615^D^X\")",
         "result": "true (the third component is ignored)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^D^X|Y\")",
+        "result": "false (the field separator cannot sit in a component)"
       },
       {
         "call": "isValidHL7(\"20240615^S\")",
@@ -3386,7 +3390,7 @@
       },
       {
         "call": "resolveLocal(\"2024-07-15T12:00:00[foo=bar]\", \"Africa/Johannesburg\")",
-        "result": "\"2024-07-15T10:00:00Z\" (elective annotation ignored)"
+        "result": "\"\" (a plain wall time takes no annotation)"
       },
       {
         "call": "resolveLocal(\"2024-07-15T12:00:00\", \"Invalid/Zone\")",
@@ -3481,7 +3485,7 @@
       },
       {
         "call": "toOffsetInstant(\"2024-07-15T12:00:00-04:00[foo=bar]\")",
-        "result": "{ instant: \"2024-07-15T16:00:00Z\", offset: \"-04:00\" } — an elective annotation is ignored"
+        "result": "null — only the time zone bracket is accepted"
       },
       {
         "call": "toOffsetInstant(\"2024-07-15T12:00:00-04:00[!foo=bar]\")",
@@ -3984,7 +3988,7 @@
       },
       {
         "name": "at",
-        "description": "The instant it happened, as an ISO 8601 string: `Z`, an offset, or a bracketed zone."
+        "description": "The instant it happened, as an ISO 8601 string: `Z` or an offset, with no annotation of any kind."
       }
     ]
   },
@@ -4094,8 +4098,8 @@
         "result": "{ start: \"2024-07-01T08:00:00Z\", end: \"2024-07-09T03:00:00Z\" }"
       },
       {
-        "call": "demurrageClock([{ type: \"gatedOut\", at: \"2024-06-20T10:30:00+02:00[Africa/Johannesburg]\" }, { type: \"emptyReturned\", at: \"2024-06-27T09:00:00Z\" }], \"detention\", { direction: \"import\", startEvent: \"available\" })",
-        "result": "{ start: \"2024-06-20T10:30:00+02:00[Africa/Johannesburg]\", end: \"2024-06-27T09:00:00Z\" } (startEvent is not read for detention; strings are echoed as given)"
+        "call": "demurrageClock([{ type: \"gatedOut\", at: \"2024-06-20T10:30:00+02:00\" }, { type: \"emptyReturned\", at: \"2024-06-27T09:00:00Z\" }], \"detention\", { direction: \"import\", startEvent: \"available\" })",
+        "result": "{ start: \"2024-06-20T10:30:00+02:00\", end: \"2024-06-27T09:00:00Z\" } (startEvent is not read for detention; strings are echoed as given)"
       },
       {
         "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"demurrage\")",
@@ -4347,8 +4351,8 @@
         "result": "\"2024-06-15\""
       },
       {
-        "call": "bolTimestamp(\"2024-06-16T09:00:00+08:00[Asia/Shanghai]\", \"issue\", { timeZone: \"America/Sao_Paulo\" })",
-        "result": "\"2024-06-15\" (the bracketed zone is not the zone the date is read in)"
+        "call": "bolTimestamp(\"2024-06-16T09:00:00+08:00\", \"issue\", { timeZone: \"America/Sao_Paulo\" })",
+        "result": "\"2024-06-15\" (the offset names the moment; `timeZone` is the zone the date is read in)"
       },
       {
         "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"shippedOnBoard\", { timeZone: \"+08:00\" })",
@@ -6717,11 +6721,11 @@
       },
       {
         "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z[u-ca=iso8601]\", end: \"2024-01-01T17:00:00Z\" })",
-        "result": "true — calendar annotation ignored"
+        "result": "false — no annotation of any kind"
       },
       {
         "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z[!foo=bar]\", end: \"2024-01-01T17:00:00Z\" })",
-        "result": "false — unknown critical annotation"
+        "result": "false — no annotation of any kind"
       }
     ]
   },
@@ -13066,11 +13070,11 @@
       },
       {
         "call": "isValidDateTimeInterval(\"2024-01-01T09:00:00[u-ca=iso8601]\", \"2024-01-01T17:00:00[foo=bar]\")",
-        "result": "true (annotations ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTimeInterval(\"2024-01-01T09:00:00[u-ca=hebrew]\", \"2024-01-01T17:00:00\")",
-        "result": "false (non-ISO calendar)"
+        "result": "false (no annotation of any kind)"
       }
     ]
   },
@@ -13103,11 +13107,11 @@
       },
       {
         "call": "isValidTimeInterval(\"09:00:00[u-ca=iso8601]\", \"17:00:00[foo=bar]\")",
-        "result": "true (annotations ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidTimeInterval(\"09:00:00[!foo=bar]\", \"17:00:00\")",
-        "result": "false (unknown critical annotation)"
+        "result": "false (no annotation of any kind)"
       }
     ]
   },
@@ -13784,7 +13788,7 @@
       },
       {
         "call": "parseMonthDay(\"--12-25[u-ca=ISO8601]\")",
-        "result": "\"--12-25\""
+        "result": "\"\" (no annotation of any kind)"
       },
       {
         "call": "parseMonthDay(\"--02-30\")",
@@ -13854,7 +13858,7 @@
       },
       {
         "call": "parseMonthDayFromDateTime(\"2024-12-25T10:00:00[Europe/Paris]\")",
-        "result": "\"--12-25\""
+        "result": "\"\""
       }
     ]
   },
@@ -14407,7 +14411,7 @@
       },
       {
         "call": "parseYearMonth(\"2026-10[u-ca=ISO8601]\")",
-        "result": "\"2026-10\""
+        "result": "\"\" (no annotation of any kind)"
       },
       {
         "call": "parseYearMonth(\"+275760-10\")",
@@ -14482,6 +14486,10 @@
       {
         "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00Z\")",
         "result": "\"\""
+      },
+      {
+        "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00[Europe/Paris]\")",
+        "result": "\"\""
       }
     ]
   },
@@ -14526,7 +14534,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "hasSecond60(value: string): boolean",
-    "description": "Return true if the provided ISO 8601 date-time or time string has a second-60 field.",
+    "description": "Return true if the string is one of GMT's own kinds with a second-60 field.",
     "sourcePath": "packages/gmt/src/plain/validate/hasSecond60.ts",
     "examples": [
       {
@@ -14542,36 +14550,52 @@
         "result": "true"
       },
       {
-        "call": "hasSecond60(\"2016-12-31T23:59:60.123+00:00\")",
-        "result": "true"
-      },
-      {
-        "call": "hasSecond60(\"2016-12-31t23:59:60Z\")",
-        "result": "true (lowercase t)"
-      },
-      {
-        "call": "hasSecond60(\"20161231 235960Z\")",
-        "result": "true (space separator, basic format)"
+        "call": "hasSecond60(\"2016-12-31T23:59:60+00:00[UTC]\")",
+        "result": "true (zoned)"
       },
       {
         "call": "hasSecond60(\"2016-12-31T23:59:60\")",
-        "result": "true (no designator; PlainDateTime clamps it)"
+        "result": "true (plain date-time)"
       },
       {
         "call": "hasSecond60(\"23:59:60\")",
-        "result": "true (a time; PlainTime clamps it)"
+        "result": "true (plain time)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60,5Z\")",
+        "result": "true (comma fraction)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60[u-ca=hebrew]\")",
+        "result": "true (calendar date-time)"
+      },
+      {
+        "call": "hasSecond60(\"2016-02-30T23:59:60\")",
+        "result": "false (no such day)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60+00:00[Not/AZone]\")",
+        "result": "false (unknown zone)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60[u-ca=notacal]\")",
+        "result": "false (unknown calendar)"
       },
       {
         "call": "hasSecond60(\"2016-12-31T23:59:59Z\")",
         "result": "false"
       },
       {
-        "call": "hasSecond60(\"2024-06-15T12:34:60Z\")",
-        "result": "true (syntactic: no leap second can occur here)"
+        "call": "hasSecond60(\"2016-12-31t23:59:60Z\")",
+        "result": "false (lower-case t is not a GMT shape)"
       },
       {
-        "call": "/T\\d{2}:\\d{2}:60(?:[.,]\\d+)?[-+Zz[]/.test(\"2016-12-31t23:59:60Z\")",
-        "result": "false (the earlier uppercase-T-only test)"
+        "call": "hasSecond60(\"20161231 235960Z\")",
+        "result": "false (space separator, basic format)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60Z[foo=bar]\")",
+        "result": "false (an annotation GMT has no kind for)"
       }
     ]
   },
@@ -14637,7 +14661,7 @@
       },
       {
         "call": "isValidCalendarDate(\"2024-10-03[Asia/Tokyo][u-ca=hebrew]\")",
-        "result": "true (the time zone annotation is ignored)"
+        "result": "false (a time zone annotation)"
       },
       {
         "call": "isValidCalendarDate(\"2024-10-03T14:30:00[u-ca=hebrew]\")",
@@ -14702,11 +14726,11 @@
       },
       {
         "call": "isValidDate(\"2024-03-10[u-ca=iso8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDate(\"2024-03-10[foo=bar]\")",
-        "result": "true (elective annotation ignored)"
+        "result": "false (elective annotation)"
       },
       {
         "call": "isValidDate(\"2024-03-10[!foo=bar]\")",
@@ -14885,15 +14909,15 @@
       },
       {
         "call": "isValidDateTime(\"2024-02-29T12:34:56[Asia/Kolkata]\")",
-        "result": "true (time zone annotation ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTime(\"2024-02-29T12:34:56[!foo=bar]\")",
-        "result": "false (unknown critical annotation)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTime(\"2024-02-29T12:34:56[u-ca=hebrew]\")",
-        "result": "false (non-ISO calendar)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTime(\"2024-02-29T24:00:00\")",
@@ -15119,11 +15143,11 @@
       },
       {
         "call": "isValidIsoDateLike(\"2024-02-29[u-ca=iso8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidIsoDateLike(\"2024-02-29[u-ca=hebrew]\")",
-        "result": "false (non-ISO calendar)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidIsoDateLike(null)",
@@ -15156,7 +15180,7 @@
       },
       {
         "call": "isValidMonthDay(\"--12-25[u-ca=ISO8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidMonthDay(\"--02-30\")",
@@ -15168,7 +15192,7 @@
       },
       {
         "call": "isValidMonthDay(\"--12-25[u-ca=gregory]\")",
-        "result": "false (only iso8601)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidMonthDay(\"2024-12-25\")",
@@ -15254,11 +15278,11 @@
       },
       {
         "call": "isValidTime(\"12:34:56[u-ca=hebrew]\")",
-        "result": "true (calendar annotation ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidTime(\"12:34:56[!foo=bar]\")",
-        "result": "false (unknown critical annotation)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidTime(\"23:60:00\")",
@@ -15427,7 +15451,7 @@
       },
       {
         "call": "isValidYearMonth(\"2026-10[u-ca=ISO8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidYearMonth(\"+275760-10\")",
@@ -15447,7 +15471,7 @@
       },
       {
         "call": "isValidYearMonth(\"2026-10[u-ca=gregory]\")",
-        "result": "false (only iso8601)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidYearMonth(\"\")",
@@ -16061,7 +16085,7 @@
       },
       {
         "call": "toArrowLocalTimestamp(\"2024-01-01T00:00:00[Asia/Tokyo]\", \"second\")",
-        "result": "1704067200n — annotation ignored"
+        "result": "0n — no annotation of any kind"
       },
       {
         "call": "toArrowLocalTimestamp(\"1969-12-31T23:59:59.999999999\", \"second\")",
@@ -16109,8 +16133,12 @@
         "result": "1704067200000n"
       },
       {
-        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", \"second\")",
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00\", \"second\")",
         "result": "1704067200n"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", \"second\")",
+        "result": "0n — a zone bracket"
       },
       {
         "call": "toArrowTimestamp(\"2024-01-01T00:00:00.123456789Z\", \"microsecond\")",
@@ -16313,16 +16341,16 @@
         "result": "-1000000000n"
       },
       {
-        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:30\")",
         "result": "1710052200000000000n"
       },
       {
-        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:00[Asia/Kolkata]\")",
-        "result": "1710054000000000000n — the offset decides, the zone is not checked"
+        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "result": "0n — no annotation of any kind"
       },
       {
-        "call": "toNanoseconds(\"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
-        "result": "-315615330000000000n — the zone's −00:44:30, which `-00:45` rounds"
+        "call": "toNanoseconds(\"1960-01-01T00:20:00-00:44:30\")",
+        "result": "-315615330000000000n — an offset with seconds is read exactly"
       },
       {
         "call": "toNanoseconds(\"2024-03-10T12:00:00\")",
@@ -16425,7 +16453,7 @@
         "result": "{ julianDay: 2460380, nanosOfDay: 45296789000000n }"
       },
       {
-        "call": "toParquetInt96(\"2024-03-10T13:34:56.789+01:00[Europe/Paris]\")",
+        "call": "toParquetInt96(\"2024-03-10T13:34:56.789+01:00\")",
         "result": "{ julianDay: 2460380, nanosOfDay: 45296789000000n }"
       },
       {
@@ -16604,7 +16632,7 @@
         "result": "{ seconds: 1710074096n, nanos: 789000000 }"
       },
       {
-        "call": "toProtoTimestamp(\"2024-03-10T13:34:56.789+01:00[Europe/Paris]\")",
+        "call": "toProtoTimestamp(\"2024-03-10T13:34:56.789+01:00\")",
         "result": "{ seconds: 1710074096n, nanos: 789000000 }"
       },
       {
@@ -16962,8 +16990,12 @@
         "result": "\"01HK153X00\" — floors to the millisecond"
       },
       {
-        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00\")",
         "result": "\"01HK153X00\""
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"\" — a zone bracket"
       },
       {
         "call": "ulidTimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
@@ -17019,8 +17051,12 @@
         "result": "\"018cc251-f400\" — floors to the millisecond"
       },
       {
-        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00\")",
         "result": "\"018cc251-f400\""
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"\" — a zone bracket"
       },
       {
         "call": "uuidV7TimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
@@ -17101,12 +17137,16 @@
         "result": "true — the epoch, where toNanoseconds returns 0n"
       },
       {
-        "call": "isValidInstant(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "call": "isValidInstant(\"2024-03-10T12:00:00+05:30\")",
         "result": "true"
       },
       {
-        "call": "isValidInstant(\"2024-03-10T12:00:00Z[Not/AZone]\")",
-        "result": "true — the zone annotation is not checked"
+        "call": "isValidInstant(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "result": "false — no annotation of any kind"
+      },
+      {
+        "call": "isValidInstant(\"2024-03-10T12:00:00Z[u-ca=hebrew]\")",
+        "result": "false"
       },
       {
         "call": "isValidInstant(\"2024-03-10T12:00:00-05:00\")",
@@ -18766,16 +18806,16 @@
         "result": "123.456789"
       },
       {
-        "call": "spanMs(\"2024-03-30T12:00:00+00:00[Europe/London]\", \"2024-03-31T12:00:00+01:00[Europe/London]\")",
+        "call": "spanMs(\"2024-03-30T12:00:00+00:00\", \"2024-03-31T12:00:00+01:00\")",
         "result": "82800000 — 23 hours, not 24"
       },
       {
-        "call": "spanMs(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00-04:00[Asia/Tokyo]\")",
-        "result": "32400000 — offsets decide, the zone is not checked"
+        "call": "spanMs(\"2024-03-10T12:00:00+05:00\", \"2024-03-10T12:00:00-04:00\")",
+        "result": "32400000 — the offsets decide"
       },
       {
-        "call": "spanMs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
-        "result": "0 — the zone's −00:44:30, which `-00:45` rounds"
+        "call": "spanMs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:44:30\")",
+        "result": "0 — an offset with seconds is read exactly"
       },
       {
         "call": "spanMs(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
@@ -18815,16 +18855,16 @@
         "result": "1n"
       },
       {
-        "call": "spanNs(\"2024-03-10T07:00:00-05:00[America/Bogota]\", \"2024-03-10T12:00:00Z\")",
-        "result": "0n — same instant, different zones"
+        "call": "spanNs(\"2024-03-10T07:00:00-05:00\", \"2024-03-10T12:00:00Z\")",
+        "result": "0n — same instant, different offsets"
       },
       {
-        "call": "spanNs(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00-04:00[Asia/Tokyo]\")",
-        "result": "32400000000000n — offsets decide, the zone is not checked"
+        "call": "spanNs(\"2024-03-10T12:00:00+05:00\", \"2024-03-10T12:00:00-04:00\")",
+        "result": "32400000000000n — the offsets decide"
       },
       {
-        "call": "spanNs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
-        "result": "0n — the zone's −00:44:30, which `-00:45` rounds"
+        "call": "spanNs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:44:30\")",
+        "result": "0n — an offset with seconds is read exactly"
       },
       {
         "call": "spanNs(\"2024-03-10T12:00:00Z\", \"invalid\")",
@@ -18860,7 +18900,7 @@
         "result": "0"
       },
       {
-        "call": "spanSeconds(\"2026-03-28T12:00:00+01:00[Europe/Paris]\", \"2026-03-29T12:00:00+02:00[Europe/Paris]\")",
+        "call": "spanSeconds(\"2026-03-28T12:00:00+01:00\", \"2026-03-29T12:00:00+02:00\")",
         "result": "82800 — 23 hours, not 24"
       },
       {
@@ -18955,12 +18995,12 @@
         "result": "true — spans are signed"
       },
       {
-        "call": "isValidSpan(\"2024-03-10T07:00:00-05:00[America/Bogota]\", \"2024-03-10T12:00:00Z\")",
+        "call": "isValidSpan(\"2024-03-10T07:00:00-05:00\", \"2024-03-10T12:00:00Z\")",
         "result": "true"
       },
       {
-        "call": "isValidSpan(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00Z[Not/AZone]\")",
-        "result": "true — zone annotations are not checked"
+        "call": "isValidSpan(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00Z\")",
+        "result": "false — no annotation of any kind"
       },
       {
         "call": "isValidSpan(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
@@ -20439,11 +20479,11 @@
     "members": [
       {
         "name": "planned",
-        "description": "The planned time, as an ISO 8601 instant or zoned datetime string."
+        "description": "The planned time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one."
       },
       {
         "name": "actual",
-        "description": "The actual time, as an ISO 8601 instant or zoned datetime string."
+        "description": "The actual time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one."
       }
     ]
   },
@@ -20727,7 +20767,7 @@
       },
       {
         "call": "transitTime(\"2024-06-15T10:00:00Z[foo=bar]\", \"PT1H\")",
-        "result": "\"2024-06-15T11:00:00Z\" (an elective unknown annotation is ignored)"
+        "result": "\"\" (only a time zone bracket is accepted)"
       },
       {
         "call": "transitTime(\"2024-06-15T12:30:00+09:00[Asia/Tokyo]\", \"-PT2H30M\")",
@@ -20799,7 +20839,7 @@
         "result": "\"early\" (exactly on the plan is on the early boundary, which is outside)"
       },
       {
-        "call": "classifyPunctuality(\"2024-10-27T01:30:00+01:00[Europe/London]\", \"2024-10-27T01:30:00+00:00[Europe/London]\", { late: \"PT15M\" })",
+        "call": "classifyPunctuality(\"2024-10-27T01:30:00+01:00\", \"2024-10-27T01:30:00+00:00\", { late: \"PT15M\" })",
         "result": "\"late\" (the same wall time an hour later, across the fall-back)"
       },
       {
@@ -20836,12 +20876,24 @@
         "result": "true (at the cut-off, the window has closed)"
       },
       {
-        "call": "isPastCutoff(\"2024-04-07T02:30:00+10:00[Australia/Sydney]\", \"2024-04-07T02:30:00+11:00[Australia/Sydney]\")",
-        "result": "true (the second 02:30 is an hour after the first)"
+        "call": "isPastCutoff(\"2024-04-06T16:00:00Z\", \"2024-04-07T02:30:00+11:00[Australia/Sydney]\")",
+        "result": "true (the first 02:30 is 15:30Z, already gone)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-04-06T16:00:00Z\", \"2024-04-07T02:30:00+10:00[Australia/Sydney]\")",
+        "result": "false (the second 02:30 is 16:30Z, half an hour away)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T16:00:00Z\", \"2024-06-12T15:00:00Z\")",
+        "result": "false (a bare instant is not a zoned cut-off)"
       },
       {
         "call": "isPastCutoff(\"2024-06-12T16:00:00\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
         "result": "false (a zoneless now is not a moment)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T16:00:00+02:00[Europe/Amsterdam]\", \"2024-06-12T15:00:00Z\")",
+        "result": "false (`now` takes no annotation)"
       },
       {
         "call": "isPastCutoff(\"2024-06-12T16:00:00Z\", \"\")",
@@ -20878,11 +20930,11 @@
       },
       {
         "call": "scheduleDeviation(\"2024-04-07T02:30:00+11:00[Australia/Sydney]\", \"2024-04-07T02:30:00+10:00[Australia/Sydney]\")",
-        "result": "\"PT1H\" (the same wall time, one hour later across the fall-back)"
+        "result": "\"\" (a zoned string is not an instant; write the offsets: \"2024-04-07T02:30:00+11:00\" to \"2024-04-07T02:30:00+10:00\" is \"PT1H\" across the fall-back)"
       },
       {
-        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T12:14:00+02:00[Europe/Amsterdam]\")",
-        "result": "\"PT14M\" (the zone it is written in does not matter)"
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T12:14:00+02:00\")",
+        "result": "\"PT14M\" (the offset it is written in does not matter)"
       },
       {
         "call": "scheduleDeviation(\"2024-06-15T10:00:00\", \"2024-06-15T10:14:00Z\")",
@@ -20918,8 +20970,12 @@
         "result": "\"PT0S\""
       },
       {
-        "call": "timeToCutoff(\"2024-10-26T17:00:00+01:00[Europe/London]\", \"2024-10-27T17:00:00+00:00[Europe/London]\")",
+        "call": "timeToCutoff(\"2024-10-26T16:00:00Z\", \"2024-10-27T17:00:00+00:00[Europe/London]\")",
         "result": "\"PT25H\" (across the fall-back)"
+      },
+      {
+        "call": "timeToCutoff(\"2024-06-12T16:00:00Z\", \"2024-06-12T15:00:00Z\")",
+        "result": "\"\" (a bare instant is not a zoned cut-off)"
       },
       {
         "call": "timeToCutoff(\"2024-06-12T16:00:00Z\", \"\")",
@@ -23850,11 +23906,11 @@
       },
       {
         "name": "at",
-        "description": "The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) or zoned string. Functions that return it echo it exactly as written."
+        "description": "The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) with no annotation. Functions that return it echo it exactly as written."
       },
       {
         "name": "recordedAt",
-        "description": "When the timestamp was recorded or received, as an ISO 8601 instant or zoned string. It orders revisions of the same class: the latest recorded is the current one."
+        "description": "When the timestamp was recorded or received, as an ISO 8601 instant with no annotation. It orders revisions of the same class: the latest recorded is the current one."
       }
     ]
   },
@@ -27164,7 +27220,7 @@
       },
       {
         "call": "chopUtc(\"2024-03-10T12:00:00Z[foo=bar]\")",
-        "result": "\"2024-03-10T12:00:00\""
+        "result": "\"\" (annotation)"
       }
     ]
   },
@@ -28534,7 +28590,7 @@
       },
       {
         "call": "isValidUtcInterval(\"2024-01-01T10:00:00Z[u-ca=hebrew]\", \"2024-12-31T23:59:59Z[foo=bar]\")",
-        "result": "true (annotations ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidUtcInterval(\"2024-01-01T10:00:00Z[!foo=bar]\", \"2024-12-31T23:59:59Z\")",
@@ -29080,7 +29136,7 @@
       },
       {
         "call": "isValidUtc(\"2024-03-17T14:30:45Z[Europe/Paris]\")",
-        "result": "true — the annotation is ignored"
+        "result": "false — no annotation of any kind"
       },
       {
         "call": "isValidUtc(\"2024-03-17T14:30:45Z[!foo=bar]\")",
@@ -32639,11 +32695,11 @@
       },
       {
         "call": "isValidZonedInterval(\"2024-01-01T10:00:00+00:00[UTC][u-ca=iso8601]\", \"2024-12-31T23:59:59+00:00[UTC][foo=bar]\")",
-        "result": "true (ISO calendar and elective annotations)"
+        "result": "false (only the zone bracket is accepted)"
       },
       {
         "call": "isValidZonedInterval(\"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
-        "result": "false (non-ISO calendar: use isValidCalendarZonedInterval)"
+        "result": "false (a calendar: use isValidCalendarZonedInterval)"
       },
       {
         "call": "isValidZonedInterval(\"invalid\", \"2024-12-31T23:59:59+00:00[UTC]\")",
@@ -33357,7 +33413,7 @@
       },
       {
         "call": "isValidCalendarZonedDateTime(\"2024-02-24T14:30:00+02:00[Africa/Johannesburg][foo=bar][u-ca=hebrew]\")",
-        "result": "true (elective annotation ignored)"
+        "result": "false (elective annotation)"
       },
       {
         "call": "isValidCalendarZonedDateTime(\"2024-02-24T14:30:00+02:00[u-ca=hebrew][Africa/Johannesburg]\")",
@@ -33565,15 +33621,15 @@
       },
       {
         "call": "isValidZonedDateTime(\"2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=hebrew]\")",
-        "result": "false (non-ISO calendar: use isValidCalendarZonedDateTime)"
+        "result": "false (a calendar: use isValidCalendarZonedDateTime)"
       },
       {
         "call": "isValidZonedDateTime(\"2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=iso8601]\")",
-        "result": "true"
+        "result": "false (a calendar: use isValidCalendarZonedDateTime)"
       },
       {
         "call": "isValidZonedDateTime(\"2024-02-10T12:00:00+11:00[Australia/Sydney][foo=bar]\")",
-        "result": "true (elective annotation ignored)"
+        "result": "false (elective annotation)"
       },
       {
         "call": "isValidZonedDateTime(\"20241003T143000+0530[Asia/Kolkata]\")",
@@ -33646,7 +33702,7 @@
       },
       {
         "call": "isValidZonedRange({ value1: \"2024-01-01T00:00:00+00:00[UTC][u-ca=iso8601]\", value2: \"2024-02-01T00:00:00+00:00[UTC]\" })",
-        "result": "true"
+        "result": "false (a calendar annotation)"
       },
       {
         "call": "isValidZonedRange({ value1: \"2024-01-01 10:00:00+00:00[UTC]\", value2: \"2024-12-31T23:59:59+00:00[UTC]\" })",

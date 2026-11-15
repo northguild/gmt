@@ -1,3 +1,4 @@
+import { Temporal } from "../../internal/temporal";
 import { totalDuration } from "./totalDuration";
 
 describe("totalDuration", () => {
@@ -103,7 +104,6 @@ describe("totalDuration", () => {
     ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=coptic]"}                                  | ${30}    | ${"coptic computes in ethioaa"}
     ${"P1M"} | ${"days"}  | ${"2024-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"}              | ${30}    | ${"zoned, RFC 9557 order"}
     ${"P1D"} | ${"hours"} | ${"2024-03-10T00:00:00-05:00[America/New_York][u-ca=hebrew]"} | ${23}    | ${"zoned calendar string keeps the spring-forward day"}
-    ${"P1M"} | ${"days"}  | ${"2024-02-10[u-ca=hebrew][foo=bar]"}                         | ${30}    | ${"elective unknown annotation ignored"}
     ${"P1M"} | ${"days"}  | ${"5784-06-01T00:00:00[u-ca=hebrew]"}                         | ${29}    | ${"PlainDateTime string: Temporal reads its date"}
   `(
     "totals $value as $expected in $unit relativeTo calendar-annotated $relativeTo ($note)",
@@ -118,6 +118,9 @@ describe("totalDuration", () => {
   it.each`
     relativeTo                                       | reason
     ${"5784-06-01[U-CA=hebrew]"}                     | ${"upper-case key"}
+    ${"2024-02-10[u-ca=hebrew][foo=bar]"}            | ${"an elective unknown annotation beside the calendar"}
+    ${"2024-01-01T00:00:00+00:00[UTC][x=T123460Z]"}  | ${"an elective annotation after the zone"}
+    ${"2024-01-01T00:00:00+00:00[UTC][foo=bar]"}     | ${"an elective annotation without a calendar"}
     ${"2024-02-10[!foo=bar][u-ca=hebrew]"}           | ${"unknown critical annotation"}
     ${"2024-02-10[u-ca=hebrew][!u-ca=roc]"}          | ${"critical second calendar annotation"}
     ${"2024-02-10T00:00:00Z[u-ca=hebrew]"}           | ${"UTC designator without a time zone annotation"}
@@ -146,17 +149,6 @@ describe("totalDuration", () => {
     "returns null for a leap-second relativeTo $relativeTo ($reason)",
     ({ relativeTo }) => {
       expect(totalDuration("PT1H", "seconds", { relativeTo })).toBeNull();
-    },
-  );
-
-  it.each`
-    relativeTo                                      | expected | reason
-    ${"2024-01-01T00:00:00+00:00[UTC][x=T123460Z]"} | ${24}    | ${"an annotation value is not a time of day"}
-    ${"2024-01-01T00:00:00+00:00[UTC][foo=bar]"}    | ${24}    | ${"elective annotation without a calendar"}
-  `(
-    "totals P1D as $expected hours relativeTo $relativeTo ($reason)",
-    ({ relativeTo, expected }) => {
-      expect(totalDuration("P1D", "hours", { relativeTo })).toBe(expected);
     },
   );
 
@@ -389,4 +381,23 @@ describe("totalDuration with a non-ISO calendar relativeTo (CORE-6)", () => {
       expect(totalDuration("P1DT2H30M", unit)).toBe(expected);
     },
   );
+});
+
+// `relativeTo` is a string (AGENTS.md Core Rule 2). Temporal would clamp the day of a property
+// bag (`{ year: 2024, month: 2, day: 30 }` is 29 February, so P1M is 29 days), where the string
+// "2024-02-30" is not a date.
+describe("totalDuration with a relativeTo that is not a string", () => {
+  it.each`
+    relativeTo                                            | label
+    ${{ year: 2024, month: 2, day: 30 }}                  | ${"a bag with a day to clamp"}
+    ${{ year: 2024, month: 13, day: 1 }}                  | ${"a bag with month 13"}
+    ${{ year: "2024", month: 2, day: 1 }}                 | ${"a bag with a string field"}
+    ${Temporal.PlainDateTime.from("2024-02-01T00:00:00")} | ${"a Temporal.PlainDateTime"}
+  `("returns null for $label", ({ relativeTo }) => {
+    expect(totalDuration("P1M", "days", { relativeTo })).toBeNull();
+  });
+
+  it("still reads the string 2024-02-01 (P1M is 29 days)", () => {
+    expect(totalDuration("P1M", "days", { relativeTo: "2024-02-01" })).toBe(29);
+  });
 });

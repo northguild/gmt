@@ -1,9 +1,9 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `time` is between `start` and `end` (inclusive by default).
@@ -58,8 +58,8 @@ export function isBetweenTime(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
-    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
+    const inclusiveStart = booleanOption(options?.inclusiveStart, true);
+    const inclusiveEnd = booleanOption(options?.inclusiveEnd, true);
 
     const t = plainTimeOf(time);
 

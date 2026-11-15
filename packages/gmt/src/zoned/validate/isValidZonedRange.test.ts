@@ -73,18 +73,17 @@ describe("isValidZonedRange", () => {
     },
   );
 
-  // Temporal.ZonedDateTime.from reads the first `u-ca` annotation (proposal-temporal
-  // `ParseISODateTime`). zoned/ is ISO-only, so a non-ISO calendar is rejected (the calendar
-  // functions take `isValidCalendarZonedDateTime`), while `[u-ca=iso8601]` names the ISO calendar
-  // and an elective annotation is ignored (RFC 9557 §3.3). Native Temporal agrees.
+  // An endpoint is the zoned body plus the zone bracket and nothing else: a calendar annotation
+  // (ISO or not) and an elective one are refused (the calendar functions take
+  // `isValidCalendarZonedDateTime`).
   it.each`
     value1                                            | value2                                                          | expected | reason
     ${"2024-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"}  | ${"2024-02-01T00:00:00+00:00[UTC]"}                             | ${false} | ${"non-ISO calendar on value1"}
     ${"2024-01-01T00:00:00+00:00[UTC][!u-ca=hebrew]"} | ${"2024-02-01T00:00:00+00:00[UTC]"}                             | ${false} | ${"critical non-ISO calendar on value1"}
     ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-02-01T00:00:00+00:00[UTC][u-ca=gregory][u-ca=iso8601]"} | ${false} | ${"first calendar on value2 is gregory"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-02-01T00:00:00+00:00[UTC][u-ca=iso8601][u-ca=gregory]"} | ${true}  | ${"first calendar on value2 is iso8601"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-02-01T00:00:00+00:00[UTC][u-ca=iso8601]"}               | ${true}  | ${"iso8601 calendar on value2"}
-    ${"2024-01-01T00:00:00+00:00[UTC][foo=bar]"}      | ${"2024-02-01T00:00:00+00:00[UTC]"}                             | ${true}  | ${"elective annotation on value1"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-02-01T00:00:00+00:00[UTC][u-ca=iso8601][u-ca=gregory]"} | ${false} | ${"first calendar on value2 is iso8601"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}               | ${"2024-02-01T00:00:00+00:00[UTC][u-ca=iso8601]"}               | ${false} | ${"iso8601 calendar on value2"}
+    ${"2024-01-01T00:00:00+00:00[UTC][foo=bar]"}      | ${"2024-02-01T00:00:00+00:00[UTC]"}                             | ${false} | ${"elective annotation on value1"}
     ${"2024-01-01T00:00:00+00:00[UTC][!foo=bar]"}     | ${"2024-02-01T00:00:00+00:00[UTC]"}                             | ${false} | ${"unknown critical annotation on value1"}
   `(
     "returns $expected when an endpoint carries annotations: $value1, $value2 ($reason)",

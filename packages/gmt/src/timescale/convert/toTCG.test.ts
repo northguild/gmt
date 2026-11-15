@@ -4,7 +4,7 @@ import {
   mockTemporalInstantFromEpochNanosecondsThrow,
   mockTemporalInstantFromThrow,
 } from "../../test/mocks";
-import { sameInstantBattleCases } from "../../test/timeZoneMatrix";
+import { sameInstantOffsetCases } from "../../test/timeZoneMatrix";
 import { tcgMinusTt } from "../calculate/tcgMinusTt";
 import { fromTCG } from "./fromTCG";
 import { toTCG } from "./toTCG";
@@ -15,29 +15,28 @@ import { toTT } from "./toTT";
 // 6969290134 / 10^19 (IAU 2000 B1.9).
 describe("toTCG", () => {
   it.each`
-    isoString                              | expected                               | why
-    ${"2026-01-01T00:00:00Z"}              | ${"2026-01-01T00:01:10.261661917 TCG"} | ${"TT 00:01:09.184, plus 1.077661917 s"}
-    ${"2027-01-01T00:00:00Z"}              | ${"2027-01-01T00:01:10.28364027 TCG"}  | ${"plus 1.099640270 s, trailing zero dropped"}
-    ${"2000-01-01T12:00:00Z"}              | ${"2000-01-01T12:01:04.68983333 TCG"}  | ${"TT 12:01:04.184, plus 0.505833330 s"}
-    ${"1976-12-31T23:59:45Z"}              | ${"1977-01-01T00:00:32.184 TCG"}       | ${"the epoch: TCG = TT (TAI - UTC 15 s)"}
-    ${"1975-06-15T12:34:56.789Z"}          | ${"1975-06-15T12:35:42.938950076 TCG"} | ${"TT 12:35:42.973, minus 0.034049924 s (floor of a negative)"}
-    ${"1972-01-01T00:00:00Z"}              | ${"1972-01-01T00:00:42.07398781 TCG"}  | ${"TT 00:00:42.184, minus 0.110012190 s"}
-    ${"2016-12-31T23:59:59Z"}              | ${"2017-01-01T00:01:08.063736306 TCG"} | ${"TT 00:01:07.184, plus 0.879736306 s"}
-    ${"2026-01-01T00:00:00.000000001Z"}    | ${"2026-01-01T00:01:10.261661918 TCG"} | ${"nanoseconds kept"}
-    ${"2026-01-01T01:00:00+01:00"}         | ${"2026-01-01T00:01:10.261661917 TCG"} | ${"offset read"}
-    ${"2026-01-01T00:00:00Z[Europe/Oslo]"} | ${"2026-01-01T00:01:10.261661917 TCG"} | ${"bracketed zone ignored"}
-    ${"9999-12-31T23:55:00Z"}              | ${"9999-12-31T23:59:05.633446526 TCG"} | ${"offset 176.449446526 s by then"}
-    ${"9999-12-31T23:55:54.366553435Z"}    | ${"9999-12-31T23:59:59.999999999 TCG"} | ${"last UTC nanosecond whose TCG is in year 9999"}
-    ${"9999-12-31T23:55:54.366553434Z"}    | ${"9999-12-31T23:59:59.999999998 TCG"} | ${"one nanosecond before the last"}
-    ${"1972-01-01T00:00:00.000000001Z"}    | ${"1972-01-01T00:00:42.073987811 TCG"} | ${"1 ns after the table start; offset still -110012190 ns"}
-    ${"2025-12-31T23:58:49.738338132Z"}    | ${"2026-01-01T00:00:00 TCG"}           | ${"whole-second TCG prints no fraction"}
-    ${"2016-12-31T23:59:60.5Z"}            | ${"2017-01-01T00:01:09.563736307 TCG"} | ${"fraction inside the inserted second"}
-    ${"2016-12-31T23:59:60.999999999Z"}    | ${"2017-01-01T00:01:10.063736306 TCG"} | ${"last nanosecond of the inserted second"}
-    ${"2016-12-31T23:59:59.999999999Z"}    | ${"2017-01-01T00:01:09.063736306 TCG"} | ${"last nanosecond before the inserted second"}
-    ${"2017-01-01T00:00:00Z"}              | ${"2017-01-01T00:01:10.063736307 TCG"} | ${"first nanosecond after the inserted second"}
-    ${"2015-06-30T23:59:60Z"}              | ${"2015-07-01T00:01:08.030618239 TCG"} | ${"inserted second of 2015"}
-    ${"1972-06-30T23:59:60Z"}              | ${"1972-07-01T00:00:42.08494688 TCG"}  | ${"first inserted second (TAI - UTC 10 s)"}
-    ${"1972-12-31T23:59:60Z"}              | ${"1973-01-01T00:00:43.096026379 TCG"} | ${"inserted second of 1972-12-31 (TAI - UTC 11 s)"}
+    isoString                           | expected                               | why
+    ${"2026-01-01T00:00:00Z"}           | ${"2026-01-01T00:01:10.261661917 TCG"} | ${"TT 00:01:09.184, plus 1.077661917 s"}
+    ${"2027-01-01T00:00:00Z"}           | ${"2027-01-01T00:01:10.28364027 TCG"}  | ${"plus 1.099640270 s, trailing zero dropped"}
+    ${"2000-01-01T12:00:00Z"}           | ${"2000-01-01T12:01:04.68983333 TCG"}  | ${"TT 12:01:04.184, plus 0.505833330 s"}
+    ${"1976-12-31T23:59:45Z"}           | ${"1977-01-01T00:00:32.184 TCG"}       | ${"the epoch: TCG = TT (TAI - UTC 15 s)"}
+    ${"1975-06-15T12:34:56.789Z"}       | ${"1975-06-15T12:35:42.938950076 TCG"} | ${"TT 12:35:42.973, minus 0.034049924 s (floor of a negative)"}
+    ${"1972-01-01T00:00:00Z"}           | ${"1972-01-01T00:00:42.07398781 TCG"}  | ${"TT 00:00:42.184, minus 0.110012190 s"}
+    ${"2016-12-31T23:59:59Z"}           | ${"2017-01-01T00:01:08.063736306 TCG"} | ${"TT 00:01:07.184, plus 0.879736306 s"}
+    ${"2026-01-01T00:00:00.000000001Z"} | ${"2026-01-01T00:01:10.261661918 TCG"} | ${"nanoseconds kept"}
+    ${"2026-01-01T01:00:00+01:00"}      | ${"2026-01-01T00:01:10.261661917 TCG"} | ${"offset read"}
+    ${"9999-12-31T23:55:00Z"}           | ${"9999-12-31T23:59:05.633446526 TCG"} | ${"offset 176.449446526 s by then"}
+    ${"9999-12-31T23:55:54.366553435Z"} | ${"9999-12-31T23:59:59.999999999 TCG"} | ${"last UTC nanosecond whose TCG is in year 9999"}
+    ${"9999-12-31T23:55:54.366553434Z"} | ${"9999-12-31T23:59:59.999999998 TCG"} | ${"one nanosecond before the last"}
+    ${"1972-01-01T00:00:00.000000001Z"} | ${"1972-01-01T00:00:42.073987811 TCG"} | ${"1 ns after the table start; offset still -110012190 ns"}
+    ${"2025-12-31T23:58:49.738338132Z"} | ${"2026-01-01T00:00:00 TCG"}           | ${"whole-second TCG prints no fraction"}
+    ${"2016-12-31T23:59:60.5Z"}         | ${"2017-01-01T00:01:09.563736307 TCG"} | ${"fraction inside the inserted second"}
+    ${"2016-12-31T23:59:60.999999999Z"} | ${"2017-01-01T00:01:10.063736306 TCG"} | ${"last nanosecond of the inserted second"}
+    ${"2016-12-31T23:59:59.999999999Z"} | ${"2017-01-01T00:01:09.063736306 TCG"} | ${"last nanosecond before the inserted second"}
+    ${"2017-01-01T00:00:00Z"}           | ${"2017-01-01T00:01:10.063736307 TCG"} | ${"first nanosecond after the inserted second"}
+    ${"2015-06-30T23:59:60Z"}           | ${"2015-07-01T00:01:08.030618239 TCG"} | ${"inserted second of 2015"}
+    ${"1972-06-30T23:59:60Z"}           | ${"1972-07-01T00:00:42.08494688 TCG"}  | ${"first inserted second (TAI - UTC 10 s)"}
+    ${"1972-12-31T23:59:60Z"}           | ${"1973-01-01T00:00:43.096026379 TCG"} | ${"inserted second of 1972-12-31 (TAI - UTC 11 s)"}
   `("returns $expected for $isoString ($why)", ({ isoString, expected }) => {
     expect(toTCG(isoString)).toBe(expected);
   });
@@ -63,19 +62,20 @@ describe("toTCG", () => {
   });
 
   it.each`
-    isoString                | label
-    ${null}                  | ${"null"}
-    ${undefined}             | ${"undefined"}
-    ${123}                   | ${"123"}
-    ${""}                    | ${"''"}
-    ${"garbage"}             | ${"'garbage'"}
-    ${"2026-01-01"}          | ${"'2026-01-01'"}
-    ${"2026-01-01T00:00:00"} | ${"'2026-01-01T00:00:00'"}
+    isoString                              | label
+    ${null}                                | ${"null"}
+    ${undefined}                           | ${"undefined"}
+    ${123}                                 | ${"123"}
+    ${""}                                  | ${"''"}
+    ${"garbage"}                           | ${"'garbage'"}
+    ${"2026-01-01"}                        | ${"'2026-01-01'"}
+    ${"2026-01-01T00:00:00"}               | ${"'2026-01-01T00:00:00'"}
+    ${"2026-01-01T00:00:00Z[Europe/Oslo]"} | ${"'2026-01-01T00:00:00Z[Europe/Oslo]'"}
   `("returns '' for the invalid $label", ({ isoString }) => {
     expect(toTCG(isoString)).toBe("");
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns 2024-02-29T00:01:10.221197661 TCG for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       expect(toTCG(value)).toBe("2024-02-29T00:01:10.221197661 TCG");

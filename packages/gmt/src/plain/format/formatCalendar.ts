@@ -4,8 +4,8 @@ import { cachedFormatter } from "../../internal/formatterCache";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
-import { optionOrDefault } from "../../internal/optionOrDefault";
-import { isObject } from "../../internal/isObject";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
+import { isOptionsObject } from "../../internal/isObject";
 import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -74,7 +74,7 @@ export function formatCalendar(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = plainDateTimeOf(value);
     if (target === null) return "";
     // Each option is read once (GetOption).
@@ -90,12 +90,10 @@ export function formatCalendar(
       // "long"/"full" are outside the type but reachable from JS; their zone
       // name would describe the UTC anchor, not the value. Temporal's
       // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
-      // GetOption converts the value once (ToString), so `new String("long")`
-      // is mapped as "long" is; a symbol throws, and that is invalid input.
+      // The option is read once and must be a primitive string: a wrapped
+      // value such as `new String("long")` throws and is invalid input.
       const timeStyle = plainTimeStyle(
-        `${optionOrDefault(options.timeStyle, "short")}` as NonNullable<
-          FormatCalendarOptions["timeStyle"]
-        >,
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
 
       // Plain values carry no timezone. UTC is an arbitrary but stable anchor

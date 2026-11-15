@@ -1,6 +1,7 @@
 import { Temporal } from "../../internal/temporal";
 import type { TimestampEvent } from "../../types";
 import { battleTestTimeZones } from "../../test";
+import { offsetString } from "../../test/timeZoneMatrix";
 import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { bestAvailable } from "./bestAvailable";
@@ -45,12 +46,11 @@ describe("bestAvailable", () => {
   );
 
   it.each`
-    events                                                                                                                               | expected                                         | why
-    ${[event("ACT", "2024-06-15T12:52:00Z", "2024-06-15T13:00:00Z"), event("ACT", "2024-06-15T12:51:00Z", "2024-06-15T13:00:00Z")]}      | ${"2024-06-15T12:51:00Z"}                        | ${"a recordedAt tie goes to the later index"}
-    ${[event("PLN", "2024-06-15T12:00:00Z", "2024-06-15T15:00:00+02:00"), event("PLN", "2024-06-15T13:00:00Z", "2024-06-15T13:00:00Z")]} | ${"2024-06-15T13:00:00Z"}                        | ${"a tie written in two zones is still a tie"}
-    ${[event("ACT", "2024-06-15T12:51:00Z", "2024-06-15T13:00:00Z"), event("ACT", "2024-06-15T12:52:00Z", "2024-06-15T13:30:00Z")]}      | ${"2024-06-15T12:52:00Z"}                        | ${"the newest-recorded of two ACTs, a corrected actual"}
-    ${[event("ACT", "2024-06-15T14:52:00+02:00[Europe/Amsterdam]", "2024-06-15T13:00:00Z")]}                                             | ${"2024-06-15T14:52:00+02:00[Europe/Amsterdam]"} | ${"at is echoed as written"}
-    ${[event("ACT", "2024-06-15T12:52:00Z[Not/AZone]", "2024-06-15T13:00:00Z")]}                                                         | ${"2024-06-15T12:52:00Z[Not/AZone]"}             | ${"a bracket is never read"}
+    events                                                                                                                               | expected                       | why
+    ${[event("ACT", "2024-06-15T12:52:00Z", "2024-06-15T13:00:00Z"), event("ACT", "2024-06-15T12:51:00Z", "2024-06-15T13:00:00Z")]}      | ${"2024-06-15T12:51:00Z"}      | ${"a recordedAt tie goes to the later index"}
+    ${[event("PLN", "2024-06-15T12:00:00Z", "2024-06-15T15:00:00+02:00"), event("PLN", "2024-06-15T13:00:00Z", "2024-06-15T13:00:00Z")]} | ${"2024-06-15T13:00:00Z"}      | ${"a tie written in two zones is still a tie"}
+    ${[event("ACT", "2024-06-15T12:51:00Z", "2024-06-15T13:00:00Z"), event("ACT", "2024-06-15T12:52:00Z", "2024-06-15T13:30:00Z")]}      | ${"2024-06-15T12:52:00Z"}      | ${"the newest-recorded of two ACTs, a corrected actual"}
+    ${[event("ACT", "2024-06-15T14:52:00+02:00", "2024-06-15T13:00:00Z")]}                                                               | ${"2024-06-15T14:52:00+02:00"} | ${"at is echoed as written"}
   `("returns $expected: $why", ({ events, expected }) => {
     expect(bestAvailable(events)?.at).toBe(expected);
   });
@@ -60,16 +60,8 @@ describe("bestAvailable", () => {
   it("orders records across the fall-back by instant, not by wall clock", () => {
     expect(
       bestAvailable([
-        event(
-          "PLN",
-          "2024-11-04T08:00:00Z",
-          "2024-11-03T01:15:00-05:00[America/New_York]",
-        ),
-        event(
-          "PLN",
-          "2024-11-04T09:00:00Z",
-          "2024-11-03T01:45:00-04:00[America/New_York]",
-        ),
+        event("PLN", "2024-11-04T08:00:00Z", "2024-11-03T01:15:00-05:00"),
+        event("PLN", "2024-11-04T09:00:00Z", "2024-11-03T01:45:00-04:00"),
       ]),
     ).toEqual({ at: "2024-11-04T08:00:00Z", classifier: "PLN" });
   });
@@ -78,7 +70,7 @@ describe("bestAvailable", () => {
     "orders records by instant whatever zone recordedAt is written in (%s)",
     (timeZone) => {
       const local = (utc: string) =>
-        Temporal.Instant.from(utc).toZonedDateTimeISO(timeZone).toString();
+        offsetString(Temporal.Instant.from(utc).toZonedDateTimeISO(timeZone));
       expect(
         bestAvailable([
           event("EST", "2024-06-15T13:00:00Z", local("2024-06-14T23:00:00Z")),
@@ -101,16 +93,21 @@ describe("bestAvailable", () => {
   );
 
   it.each`
-    events                                                                    | why
-    ${[]}                                                                     | ${"an empty list"}
-    ${[actual, event("ETA", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]} | ${"an unknown classifier, even beside an ACT"}
-    ${[actual, event("act", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]} | ${"a lower-case classifier"}
-    ${[actual, event("EST", "2024-06-15T12:00:00", "2024-06-15T12:00:00Z")]}  | ${"a zoneless at"}
-    ${[actual, event("EST", "2024-06-15T12:00:00Z", "yesterday")]}            | ${"a malformed recordedAt"}
-    ${[actual, null]}                                                         | ${"a null event"}
-    ${Object.assign([], { 1: actual })}                                       | ${"a sparse list: a hole is not an event"}
-    ${"ACT"}                                                                  | ${"a string for the list"}
-    ${null}                                                                   | ${"null for the list"}
+    events                                                                                        | why
+    ${[]}                                                                                         | ${"an empty list"}
+    ${[actual, event("ETA", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]}                     | ${"an unknown classifier, even beside an ACT"}
+    ${[actual, event("act", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z")]}                     | ${"a lower-case classifier"}
+    ${[actual, event("EST", "2024-06-15T12:00:00", "2024-06-15T12:00:00Z")]}                      | ${"a zoneless at"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z[Not/AZone]", "2024-06-15T12:00:00Z")]}          | ${"an at with a zone annotation"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z[u-ca=hebrew]", "2024-06-15T12:00:00Z")]}        | ${"an at with a calendar annotation"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z", "2024-06-15T12:00:00Z[foo=bar]")]}            | ${"a recordedAt with an elective annotation"}
+    ${[actual, event("EST", "2024-06-15T14:00:00+02:00[Europe/Berlin]", "2024-06-15T12:00:00Z")]} | ${"an at that is a real zoned string"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z", "2024-06-15T14:00:00+02:00[Europe/Berlin]")]} | ${"a recordedAt that is a real zoned string"}
+    ${[actual, event("EST", "2024-06-15T12:00:00Z", "yesterday")]}                                | ${"a malformed recordedAt"}
+    ${[actual, null]}                                                                             | ${"a null event"}
+    ${Object.assign([], { 1: actual })}                                                           | ${"a sparse list: a hole is not an event"}
+    ${"ACT"}                                                                                      | ${"a string for the list"}
+    ${null}                                                                                       | ${"null for the list"}
   `("returns null for $why", ({ events }) => {
     expect(bestAvailable(events)).toBeNull();
   });

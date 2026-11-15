@@ -2,6 +2,7 @@
  * `punctuality-board.ts`'s pure helpers, against the real gmt modules. Every
  * expected library result is an appendix Z row (PB1 to PB4, PBR1 to PBR7).
  */
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import {
   classifyPunctuality,
   scheduleDeviation,
@@ -33,6 +34,7 @@ import {
 import type { PunctualityLib } from "./punctuality-widgets";
 
 const lib: PunctualityLib = {
+  toInstant: (value: string) => toOffsetInstant(value)?.instant ?? "",
   scheduleDeviation,
   classifyPunctuality,
   punctualityRate,
@@ -46,7 +48,7 @@ const stateOf = (id: string, over: Partial<BoardState> = {}): BoardState => ({
   ...presetState(preset(id)),
   ...over,
 });
-const LON = (t: string) => `2024-06-14T${t}+01:00[Europe/London]`;
+const LON = (t: string) => `2024-06-14T${t}+01:00`;
 
 describe("readArgs", () => {
   it("opens on the first preset with no arguments", () => {

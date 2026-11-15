@@ -51,8 +51,9 @@ import { scheduleDeviation } from "@northguild/gmt/transport";
 scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T10:14:00Z"); // "PT14M"
 scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-15T09:55:00Z"); // "-PT5M" (five minutes early)
 scheduleDeviation("2024-06-15T10:00:00Z", "2024-06-17T11:30:00Z"); // "PT49H30M" (hours, never days)
-scheduleDeviation("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00[Australia/Sydney]"); // "PT1H"
-scheduleDeviation("2024-03-31T00:30:00+00:00[Europe/London]", "2024-03-31T02:30:00+01:00[Europe/London]"); // "PT1H"
+scheduleDeviation("2024-04-07T02:30:00+11:00", "2024-04-07T02:30:00+10:00"); // "PT1H"
+scheduleDeviation("2024-03-31T00:30:00+00:00", "2024-03-31T02:30:00+01:00"); // "PT1H"
+scheduleDeviation("2024-04-07T02:30:00+11:00[Australia/Sydney]", "2024-04-07T02:30:00+10:00"); // "" (a bracket is not an instant)
 scheduleDeviation("2024-06-15T10:00:00", "2024-06-15T10:14:00Z"); // ""
 ```
 

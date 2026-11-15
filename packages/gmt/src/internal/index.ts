@@ -111,6 +111,7 @@ export {
   type ExactMoment,
   readExactMoment,
   writeExactMoment,
+  zonedInstantOf,
 } from "./exactMoment";
 export { formatDateInCalendar } from "./formatDateInCalendar";
 export {
@@ -132,8 +133,11 @@ export {
   halfOpenXor,
 } from "./halfOpenIntervals";
 export { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
-export { hasTimeZoneAnnotation } from "./timeZoneAnnotation";
-export { readFormOffsetInstant, readOffsetInstant } from "./offsetInstant";
+export {
+  readFormOffsetInstant,
+  readInstantOffsetInstant,
+  readZonedOffsetInstant,
+} from "./offsetInstant";
 export {
   FHIR_PRECISIONS,
   FHIR_TYPE_PRECISIONS,
@@ -245,7 +249,15 @@ export { resolveMinimalDaysInFirstWeek } from "./resolveMinimalDaysInFirstWeek";
 export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getUnitSpan } from "./intervalCountHelpers";
-export { isObject, isOptionsArgument } from "./isObject";
+export { isObject, isOptionsArgument, isOptionsObject } from "./isObject";
+export {
+  booleanOption,
+  numberOption,
+  fractionalDigitsOption,
+  fractionalDigitsOptionOrDefault,
+  stringOption,
+  stringOptionOrDefault,
+} from "./typedOptions";
 export { readProtoRecord } from "./protoRecord";
 export { isValidAmount } from "./isValidAmount";
 export { joinDateTimeConnector } from "./joinDateTimeConnector";

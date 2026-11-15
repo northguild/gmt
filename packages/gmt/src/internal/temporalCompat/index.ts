@@ -12,7 +12,6 @@ export { calendarDateFromFields } from "./calendarDateFromFields";
 export {
   isCalendarArithmeticCompatNeeded,
   isDayRoundClampCompatNeeded,
-  isIsoCalendarCaseCompatNeeded,
   isNudgeOriginCompatNeeded,
   isNudgeWindowCompatNeeded,
   isRangeDayPeriodCompatNeeded,
@@ -29,7 +28,6 @@ export {
   nowPlainTimeISO,
   nowZonedDateTimeISO,
 } from "./clock";
-export { monthDayFrom, yearMonthFrom } from "./isoCalendarFrom";
 export { calendarFieldsOf } from "./calendarFields";
 export {
   type HostTemporal,

@@ -4,7 +4,7 @@ import { setZonedFields } from "../../internal/setZonedFields";
 import type { Disambiguation, Offset, Overflow } from "../../types";
 import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 
 /**
  * Return a zoned ISO 8601 datetime string with the given `fields` set on `value`.
@@ -96,12 +96,12 @@ export function setZoned(
     if (zoned === null) return "";
 
     const overflow = resolveOverflow(options?.overflow);
-    const disambiguation = optionOrDefault(
+    const disambiguation = stringOptionOrDefault(
       options?.disambiguation,
       "compatible",
     );
     // Temporal ZonedDateTime#with's own default: keep the source offset while it is still valid.
-    const offset = optionOrDefault(options?.offset, "prefer");
+    const offset = stringOptionOrDefault(options?.offset, "prefer");
 
     try {
       return (

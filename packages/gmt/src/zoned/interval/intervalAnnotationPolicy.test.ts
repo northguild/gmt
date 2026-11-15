@@ -5,32 +5,27 @@ import { intervalsOverlapZoned } from "./intervalsOverlapZoned";
 import { mergeIntervalsZoned } from "./mergeIntervalsZoned";
 import { isValidCalendarZonedInterval, isValidZonedInterval } from "./validate";
 
-// Validator mirror (#22) — zoned interval endpoints read RFC 9557 annotations as
-// `Temporal.ZonedDateTime.from` does: `[u-ca=iso8601]` names the ISO calendar and an elective
-// annotation (`[foo=bar]`) is ignored; an unknown critical annotation (`[!foo=bar]`) is rejected.
-// Native Temporal (Chromium 153): `2024-01-01T09:00+00:00[UTC][u-ca=iso8601]` and
-// `…[UTC][foo=bar]` both read as `2024-01-01T09:00:00+00:00[UTC]` in iso8601, and `…[!foo=bar]`
-// throws a RangeError. Each accepted row's expected value is the unannotated inputs' value, and a
-// re-serialised endpoint is `ZonedDateTime#toString()`'s canonical string: the ISO calendar is
-// not written, and elective annotations are not kept.
+// Validator mirror (#22), CORE-113 (#528): a zoned interval endpoint is the zoned body plus its zone
+// bracket and nothing else, so `[u-ca=iso8601]` and an elective `[foo=bar]` are rejected as well as
+// an unknown critical one. Each function is tested once, as a policy, and returns its sentinel.
 const ICA = "[u-ca=iso8601]";
 const EL = "[foo=bar]";
 const CRIT = "[!foo=bar]";
 const u = (time: string, annotation = "", date = "2024-01-01") =>
   `${date}T${time}+00:00[UTC]${annotation}`;
 
-describe("zoned intervals: annotations Temporal ignores are accepted", () => {
+describe("zoned intervals: an annotation is rejected", () => {
   it.each`
     name                              | call                                                                                                                                     | expected
-    ${"isValidZonedInterval"}         | ${() => isValidZonedInterval(u("09:00:00", ICA), u("17:00:00", EL))}                                                                     | ${true}
-    ${"isValidCalendarZonedInterval"} | ${() => isValidCalendarZonedInterval(u("09:00:00", ICA), u("17:00:00", EL))}                                                             | ${true}
-    ${"intervalsOverlapZoned"}        | ${() => intervalsOverlapZoned(u("09:00:00", ICA), u("13:00:00", EL), u("12:00:00"), u("17:00:00", ICA))}                                 | ${true}
-    ${"intervalIntersectionZoned"}    | ${() => intervalIntersectionZoned(u("09:00:00", ICA), u("13:00:00", EL), u("12:00:00"), u("17:00:00", ICA))}                             | ${{ start: u("12:00:00"), end: u("13:00:00") }}
-    ${"intervalFromDurationZoned"}    | ${() => intervalFromDurationZoned(u("00:00:00", ICA + EL), "P1D", "start")}                                                              | ${{ start: u("00:00:00"), end: u("00:00:00", "", "2024-01-02") }}
-    ${"intervalSplitAtZoned"}         | ${() => intervalSplitAtZoned(u("09:00:00", EL), u("17:00:00", ICA), [u("12:00:00", EL)])}                                                | ${[{ start: u("09:00:00"), end: u("12:00:00") }, { start: u("12:00:00"), end: u("17:00:00") }]}
-    ${"mergeIntervalsZoned"}          | ${() => mergeIntervalsZoned([{ start: u("09:00:00", ICA), end: u("12:00:00", EL) }, { start: u("12:00:00"), end: u("17:00:00", ICA) }])} | ${[{ start: u("09:00:00"), end: u("17:00:00") }]}
+    ${"isValidZonedInterval"}         | ${() => isValidZonedInterval(u("09:00:00", ICA), u("17:00:00", EL))}                                                                     | ${false}
+    ${"isValidCalendarZonedInterval"} | ${() => isValidCalendarZonedInterval(u("09:00:00", ICA), u("17:00:00", EL))}                                                             | ${false}
+    ${"intervalsOverlapZoned"}        | ${() => intervalsOverlapZoned(u("09:00:00", ICA), u("13:00:00", EL), u("12:00:00"), u("17:00:00", ICA))}                                 | ${false}
+    ${"intervalIntersectionZoned"}    | ${() => intervalIntersectionZoned(u("09:00:00", ICA), u("13:00:00", EL), u("12:00:00"), u("17:00:00", ICA))}                             | ${null}
+    ${"intervalFromDurationZoned"}    | ${() => intervalFromDurationZoned(u("00:00:00", ICA + EL), "P1D", "start")}                                                              | ${null}
+    ${"intervalSplitAtZoned"}         | ${() => intervalSplitAtZoned(u("09:00:00", EL), u("17:00:00", ICA), [u("12:00:00", EL)])}                                                | ${[]}
+    ${"mergeIntervalsZoned"}          | ${() => mergeIntervalsZoned([{ start: u("09:00:00", ICA), end: u("12:00:00", EL) }, { start: u("12:00:00"), end: u("17:00:00", ICA) }])} | ${[]}
   `(
-    "$name reads annotated endpoints as their unannotated values and returns $expected",
+    "$name returns $expected for an endpoint carrying an annotation",
     ({ call, expected }) => {
       expect((call as () => unknown)()).toEqual(expected);
     },

@@ -44,7 +44,7 @@ describe("isOpenAt", () => {
     ${"2024-06-15T06:00:00Z"}             | ${false} | ${"the closing instant (half-open)"}
     ${"2024-06-16T01:00:00Z"}             | ${false} | ${"the next night, which Saturday has no window for"}
     ${"2024-06-15T03:00:00+02:00"}        | ${true}  | ${"an offset spelling of 01:00Z"}
-    ${"2024-06-15T01:00:00Z[Asia/Tokyo]"} | ${true}  | ${"a bracketed zone, which is ignored"}
+    ${"2024-06-15T01:00:00Z[Asia/Tokyo]"} | ${false} | ${"a bracketed zone, so no instant"}
   `("is $expected at $reads", ({ at, expected }) => {
     expect(isOpenAt(at, fridayNight)).toBe(expected);
   });

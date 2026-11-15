@@ -6,7 +6,7 @@ import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "./resolveWeekStartsOn";
 import { isDateTimeUnitName } from "./unitNames";
 import type { DateTimeUnit, FractionalDigit } from "../types";
-import { optionOrDefault } from "./optionOrDefault";
+import { fractionalDigitsOption } from "./typedOptions";
 
 /**
  * Internal shared implementation for `startOfZoned` / `endOfZoned`.
@@ -47,9 +47,12 @@ export function startOrEndOfZoned(
   const weekStartDay = weekStartsOn === "monday" ? 1 : 7;
   // An end is next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
   // print an earlier instant than the end (Calendar & zone semantics §3).
+  const requestedDigits = fractionalDigitsOption(
+    options.fractionalSecondDigits,
+  );
   const fractionalSecondDigits = isEnd
-    ? optionOrDefault(options.fractionalSecondDigits, 9)
-    : defaultFractionalDigits(resolvedUnit, options.fractionalSecondDigits);
+    ? (requestedDigits ?? 9)
+    : defaultFractionalDigits(resolvedUnit, requestedDigits);
 
   try {
     const boundary = isEnd

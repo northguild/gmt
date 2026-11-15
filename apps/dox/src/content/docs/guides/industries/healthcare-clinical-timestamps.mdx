@@ -189,16 +189,21 @@ MSH-2 names others re-joins the field with `^` and `&` before it calls `parseHL7
 
 A receiver ignores "components, subcomponents, and extra repetitions of a field that are present
 but were not expected" (ch. 2 §2.6.2), and a later version of HL7 adds components at the end of a
-data type (§2.8.1, §2.8.2). So a third component, and anything after a component's first `&`, is
-not read. A component left empty is not present, so an empty `DTM` returns `null`.
+data type (§2.8.1, §2.8.2). So a third component, and anything after it, is not read, unless it
+holds a `|`, a `~` or a control character: those end the field, the repetition or the segment, so
+the text is not one field and `parseHL7` returns `null`. GMT reads the first two components more
+strictly than §2.6.2 asks: each is exactly one value, so a `&` inside the date-time or the degree
+returns `null`. A component left empty is not present, so an empty `DTM` returns `null`.
 
 ```typescript
 parseHL7("20240615^D^X");
 // { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — the third component is ignored
+parseHL7("20240615^D^X&Y");
+// { kind: "partial", local: "2024-06-15", offset: "", precision: "day" } — a & in an ignored component is ignored too
 parseHL7("2024&X");
-// { kind: "partial", local: "2024", offset: "", precision: "year" } — so is the subcomponent
-parseHL7("&X");
-// null — the DTM before the subcomponent is empty
+// null — a subcomponent inside the date-time
+parseHL7("20240615^D^X|Y");
+// null — a | ends the field, so this is more than one field
 ```
 
 ### Midnight is the start of the day
@@ -260,14 +265,13 @@ formatHL7("2024-06-15-05:00"); // "" — not ISO 8601
 ```
 
 `formatHL7` returns `""` when it cannot write the value without changing it: an offset with
-seconds, a year outside 0000–9999, a reduced ISO form with an offset, a zone annotation with no
-offset (choosing the offset is a disambiguation it does not make) and a precision finer than the
-input.
+seconds, a year outside 0000–9999, a reduced ISO form with an offset, an annotation of any kind (a time
+zone is not read: write the wall clock with its offset) and a precision finer than the input.
 
 ```typescript
 formatHL7("2024-06-15T10:30:00+05:30:15"); // "" — the offset has seconds
 formatHL7("+010000-01-01T00:00:00"); // "" — the year is outside 0000–9999
-formatHL7("2024-06-15T10:30:00[Europe/Helsinki]"); // "" — a zone, and no offset to write
+formatHL7("2024-06-15T10:30:00Z[Europe/Helsinki]"); // "" — an annotation is not read
 formatHL7("2024-06-15T10:30:00", { precision: "fraction" }); // "" — there is no fraction to write
 ```
 
@@ -456,9 +460,9 @@ formatFHIR("2024-06-15T10:30:00", "instant"); // "" — an instant needs a zone
 formatFHIR("2016-12-31T23:59:60Z", "instant"); // "" — a leap second is not written
 ```
 
-A `Z` timestamp states no local time, so a `Z[zone]` value gives that zone's local date:
-`formatFHIR("2024-06-15T23:30:00Z[Europe/Berlin]", "date")` is `"2024-06-16"`. An offset that is
-not a whole number of minutes, such as `+02:00:30`, returns `""`, under `date` too.
+A time zone annotation is not read: `formatFHIR("2024-06-15T23:30:00Z[Europe/Berlin]", "date")` is
+`""`. Write the wall clock with its offset instead. An offset that is not a whole number of
+minutes, such as `+02:00:30`, returns `""`, under `date` too.
 
 FHIR has no minute precision, and `formatFHIR` never zero-fills. An HL7 version 2 time at minute
 precision therefore gives `""` under `dateTime` and `instant`. The caller either cuts it to a day

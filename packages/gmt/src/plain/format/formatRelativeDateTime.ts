@@ -6,7 +6,7 @@ import type {
   RelativeDateTimeUnit,
   RelativeTimeFormatOptions,
 } from "../../types";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
@@ -59,7 +59,7 @@ export function formatRelativeDateTime(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const target = plainDateTimeOf(value);
     if (target === null) return "";
     // Each option is read once (GetOption).

@@ -5,7 +5,8 @@ import {
 } from "../../test/mocks";
 import {
   battleTestTimeZones,
-  sameInstantBattleCases,
+  offsetString,
+  sameInstantOffsetCases,
 } from "../../test/timeZoneMatrix";
 import { toTAI } from "./toTAI";
 
@@ -17,10 +18,9 @@ import { toTAI } from "./toTAI";
  */
 const insertedSecondBattleCases = battleTestTimeZones.map((timeZone) => ({
   timeZone,
-  value: Temporal.Instant.from("2016-12-31T23:59:59Z")
-    .toZonedDateTimeISO(timeZone)
-    .toString()
-    .replace(/:59(?=[+-])/, ":60"),
+  value: offsetString(
+    Temporal.Instant.from("2016-12-31T23:59:59Z").toZonedDateTimeISO(timeZone),
+  ).replace(/:59(?=[+-])/, ":60"),
 }));
 
 describe("toTAI", () => {
@@ -42,16 +42,16 @@ describe("toTAI", () => {
 
   // An inserted second maps to its own TAI second: the old offset + 1 s (TF.460-6 Annex 1 §2.2).
   it.each`
-    isoString                                        | expected
-    ${"2016-12-31T23:59:60Z"}                        | ${"2017-01-01T00:00:36 TAI"}
-    ${"2016-12-31T23:59:60.5Z"}                      | ${"2017-01-01T00:00:36.5 TAI"}
-    ${"2016-12-31T23:59:60.123456789Z"}              | ${"2017-01-01T00:00:36.123456789 TAI"}
-    ${"2016-12-31T23:59:60.999999999Z"}              | ${"2017-01-01T00:00:36.999999999 TAI"}
-    ${"2017-01-01T08:59:60+09:00"}                   | ${"2017-01-01T00:00:36 TAI"}
-    ${"2016-12-31T18:59:60-05:00[America/New_York]"} | ${"2017-01-01T00:00:36 TAI"}
-    ${"2015-06-30T23:59:60Z"}                        | ${"2015-07-01T00:00:35 TAI"}
-    ${"1972-06-30T23:59:60Z"}                        | ${"1972-07-01T00:00:10 TAI"}
-    ${"2017-01-01T08:59:60.5+09:00"}                 | ${"2017-01-01T00:00:36.5 TAI"}
+    isoString                           | expected
+    ${"2016-12-31T23:59:60Z"}           | ${"2017-01-01T00:00:36 TAI"}
+    ${"2016-12-31T23:59:60.5Z"}         | ${"2017-01-01T00:00:36.5 TAI"}
+    ${"2016-12-31T23:59:60.123456789Z"} | ${"2017-01-01T00:00:36.123456789 TAI"}
+    ${"2016-12-31T23:59:60.999999999Z"} | ${"2017-01-01T00:00:36.999999999 TAI"}
+    ${"2017-01-01T08:59:60+09:00"}      | ${"2017-01-01T00:00:36 TAI"}
+    ${"2016-12-31T18:59:60-05:00"}      | ${"2017-01-01T00:00:36 TAI"}
+    ${"2015-06-30T23:59:60Z"}           | ${"2015-07-01T00:00:35 TAI"}
+    ${"1972-06-30T23:59:60Z"}           | ${"1972-07-01T00:00:10 TAI"}
+    ${"2017-01-01T08:59:60.5+09:00"}    | ${"2017-01-01T00:00:36.5 TAI"}
   `(
     "maps the inserted second $isoString to $expected",
     ({ isoString, expected }) => {
@@ -74,21 +74,23 @@ describe("toTAI", () => {
   });
 
   it.each`
-    isoString                     | label
-    ${null}                       | ${"null"}
-    ${undefined}                  | ${"undefined"}
-    ${123}                        | ${"123"}
-    ${""}                         | ${"''"}
-    ${"x"}                        | ${"'x'"}
-    ${"2024-01-01"}               | ${"'2024-01-01'"}
-    ${"2024-01-01T00:00:00"}      | ${"'2024-01-01T00:00:00'"}
-    ${"2024-01-01T00:00:00[UTC]"} | ${"'2024-01-01T00:00:00[UTC]'"}
-    ${"20240101T000000Z"}         | ${"'20240101T000000Z'"}
+    isoString                                        | label
+    ${null}                                          | ${"null"}
+    ${undefined}                                     | ${"undefined"}
+    ${123}                                           | ${"123"}
+    ${""}                                            | ${"''"}
+    ${"x"}                                           | ${"'x'"}
+    ${"2024-01-01"}                                  | ${"'2024-01-01'"}
+    ${"2024-01-01T00:00:00"}                         | ${"'2024-01-01T00:00:00'"}
+    ${"2024-01-01T00:00:00[UTC]"}                    | ${"'2024-01-01T00:00:00[UTC]'"}
+    ${"2016-12-31T18:59:60-05:00[America/New_York]"} | ${"'2016-12-31T18:59:60-05:00[America/New_York]'"}
+    ${"2016-12-31T23:59:60Z[UTC]"}                   | ${"'2016-12-31T23:59:60Z[UTC]'"}
+    ${"20240101T000000Z"}                            | ${"'20240101T000000Z'"}
   `("returns '' for the invalid $label", ({ isoString }) => {
     expect(toTAI(isoString)).toBe("");
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns 2024-02-29T00:00:37 TAI for 2024-02-29T00:00:00Z written in $timeZone",
     ({ value }) => {
       expect(toTAI(value)).toBe("2024-02-29T00:00:37 TAI");

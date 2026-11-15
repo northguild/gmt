@@ -19,7 +19,6 @@ describe("exactDurationNanoseconds", () => {
     ${"-PT0S"}                | ${0n}                         | ${"negative zero is zero"}
     ${"P0Y0M0W1D"}            | ${86_400_000_000_000n}        | ${"zero calendar components change nothing"}
     ${"PT4800000000H"}        | ${17280000000000000000000n}   | ${"the whole instant range, past 2^53"}
-    ${"pt1h"}                 | ${3_600_000_000_000n}         | ${"lower-case designators, as Temporal reads them"}
     ${"PT0,5H"}               | ${1_800_000_000_000n}         | ${"a comma decimal sign (ISO 8601): half an hour"}
     ${"PT9007199254740991S"}  | ${9007199254740991000000000n} | ${"the largest whole seconds Temporal allows (2^53 − 1 s), exact in bigint"}
   `("reads $duration as $expected ns ($why)", ({ duration, expected }) => {
@@ -32,6 +31,8 @@ describe("exactDurationNanoseconds", () => {
     ${"P1M"}                 | ${"months need a reference point"}
     ${"P1Y"}                 | ${"years need a reference point"}
     ${"P1Y2M3DT4H"}          | ${"any calendar component refuses the whole duration"}
+    ${"pt1h"}                | ${"lower-case designators: ISO 8601-1 writes them upper case"}
+    ${"Pt1H"}                | ${"a lower-case time designator"}
     ${"2 hours"}             | ${"not a duration"}
     ${""}                    | ${"empty"}
     ${"PT9007199254740992S"} | ${"past Temporal's duration limit: 2^53 seconds"}

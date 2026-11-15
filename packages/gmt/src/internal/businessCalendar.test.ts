@@ -427,14 +427,10 @@ describe("stepBusinessDates", () => {
 
 // 2024-01-01 is epoch day 19,723 (Monday); 2024-07-04 is 185 days on, 19,908 (Thursday).
 describe("parseHolidays", () => {
-  it("reads one epoch day for three spellings of the same ISO date", () => {
-    expect(
-      parseHolidays([
-        "2024-07-04",
-        "+002024-07-04",
-        "2024-07-04[u-ca=iso8601]",
-      ]),
-    ).toEqual(new Int32Array([19_908]));
+  it("reads one epoch day for two spellings of the same ISO date", () => {
+    expect(parseHolidays(["2024-07-04", "+002024-07-04"])).toEqual(
+      new Int32Array([19_908]),
+    );
   });
 
   // 2024-12-25 is day 359 of a leap year: 19,723 + 359.
@@ -447,6 +443,9 @@ describe("parseHolidays", () => {
   it.each`
     holidays                        | description
     ${["2024-07-04[u-ca=hebrew]"]}  | ${"a holiday in another calendar"}
+    ${["2024-07-04[u-ca=iso8601]"]} | ${"a holiday with the ISO calendar annotation"}
+    ${["2024-07-04[foo=bar]"]}      | ${"a holiday with an elective annotation"}
+    ${["2024-07-04[Europe/Paris]"]} | ${"a holiday with a zone annotation"}
     ${["2024-07-04T10:00"]}         | ${"a holiday with a time"}
     ${[20_240_704]}                 | ${"a numeric holiday"}
     ${"2024-07-04"}                 | ${"holidays that are not an array"}

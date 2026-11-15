@@ -110,38 +110,36 @@ Temporal writes a zone's offset rounded to the minute. A zone with a sub-minute 
 therefore written with an offset up to 30 seconds from the real one. `Africa/Monrovia`
 stood at −00:44:30 until 1972 and is written `-00:45`.
 
-Every function in the library that reads a moment reads such a string as
-`Temporal.ZonedDateTime.from` does. TC39 `ToTemporalZonedDateTime` matches a minute-precision
-offset by minutes. A zoned string the library wrote therefore reads back as the instant it
-was written for:
+An instant reader takes exactly `Z` or a written offset, and nothing after it: a bracketed
+zone, a calendar annotation or any other annotation makes the string invalid. A function that
+keeps the zone reads a zoned string through `Temporal.ZonedDateTime.from`'s rules, and
+TC39 `ToTemporalZonedDateTime` matches a minute-precision offset by minutes. A zoned string
+the library wrote therefore reads back, in a zoned function, as the instant it was written for:
 
 ```typescript
 import { isValidZonedDateTime, toNanoseconds } from "@northguild/gmt";
 
-toNanoseconds("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // -315615330000000000n (01:04:30Z)
-toNanoseconds("1960-01-01T00:20:00-00:45"); // -315615300000000000n (01:05:00Z; no zone, so the offset is exact)
-toNanoseconds("2024-06-15T10:00:00Z[Not/AZone]"); // 1718445600000000000n (an instant reader does not validate the bracket)
+toNanoseconds("1960-01-01T00:20:00-00:45"); // -315615300000000000n (01:05:00Z; the offset is exact)
+toNanoseconds("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // 0n (an instant reader takes no bracket)
+toNanoseconds("2024-06-15T10:00:00Z[Not/AZone]"); // 0n
 
 isValidZonedDateTime("1960-01-01T00:20:00-00:45[Africa/Monrovia]"); // true  (the rounded offset)
 isValidZonedDateTime("1960-01-01T00:20:00-00:44:30[Africa/Monrovia]"); // true  (the exact offset)
 isValidZonedDateTime("1960-01-01T00:20:00-00:45:00[Africa/Monrovia]"); // false (an offset with seconds must be exact)
 ```
 
-- **Where the rule applies.** It applies to `precision/`, `span/`, `interval/`, `calendar/`,
-  `intermodal/`, `transport/` and `getTimeZoneOffset` alike. Any other string keeps its
-  written offset: one without a bracket, a `Z` instant, an offset written with seconds, and
-  a bracket whose zone does not exist or does not fit the offset.
-- **Every string Temporal writes for an instant in range is valid**, the first and last
-  instants included. `-271821-04-19T23:58:45-00:01[Europe/London]` is the first instant.
-- **Functions that keep the zone are stricter.** `isValidZonedDateTime`, `transitTime`,
-  `toOffsetInstant`, every `zoned/` function and a zoned `relativeTo` reject a bracket that
-  contradicts the offset. They require an offset written with seconds to be the zone's
+- **Where the rule applies.** Instant readers (`precision/`, `span/`, `interval/`, `calendar/`,
+  `intermodal/`, `transport/` and `getTimeZoneOffset`) take `Z` or an offset only. The
+  functions that keep the zone (`isValidZonedDateTime`, `transitTime`, `toOffsetInstant`,
+  every `zoned/` function and a zoned `relativeTo`) take the zoned body and the bracket only.
+- **Functions that keep the zone reject a contradiction.** They reject a bracket that
+  contradicts the offset, and require an offset written with seconds to be the zone's
   offset exactly.
 - **Two limits are Temporal's own.** A wall time repeated inside a sub-minute offset change,
   written to the minute, reads as its first pass (`1952-10-15T23:59:59-11:20[Pacific/Niue]`).
   Write the offset with seconds (`-11:20:00`) to name the second. A zoned read also refuses
   a local date of −271821-04-19, which a zone west of Greenwich shows for the first hours of
-  the instant range. Pass that instant in `Z` form.
+  the instant range. Pass that instant in `Z` form to an instant reader.
 
 ## See also
 

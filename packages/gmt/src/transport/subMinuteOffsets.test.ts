@@ -17,7 +17,7 @@ import {
 } from "./index";
 
 /**
- * A zoned string whose zone has a sub-minute UTC offset, read by every transport function.
+ * A moment in a zone with a sub-minute UTC offset, read by every transport function.
  *
  * `Temporal.ZonedDateTime.prototype.toString` writes the offset rounded to the minute
  * (FormatDateTimeUTCOffsetRounded), so a zoned string GMT writes for such a zone carries an
@@ -26,51 +26,55 @@ import {
  * to it (`InterpretISODateTimeOffset`), so the string names the instant it was written from (the
  * one exception, a repeated wall time inside a sub-minute offset change, is pinned in
  * `test/minuteRoundedOffsets.test.ts`).
- * `Temporal.Instant.from` takes the written offset literally and lands up to 30 seconds away.
+ *
+ * The functions that keep a zone (`dwellTime`, `nextDeparture`, `transitTime`,
+ * `scheduleDelivery`) read that zoned string. The instant readers read `…Z` or `…±HH:MM[:SS]`
+ * and nothing after it, so a sub-minute offset is written in full there and a bracketed string
+ * is rejected.
  *
  * Every expected value below is derived from the zone's real offset in the IANA database and
  * checked against a plain `Temporal.ZonedDateTime.from(zoned).toInstant()`:
  *
  * - Africa/Monrovia stood at −00:44:30 until 7 January 1972, written `-00:45`:
- *   00:20:00 local is 01:04:30Z (literal reading: 01:05:00Z, 30 seconds late).
+ *   00:20:00 local is 01:04:30Z.
  * - America/New_York stood at −04:56:02 until noon on 18 November 1883, written `-04:56`:
- *   09:00:00 local is 13:56:02Z (literal reading: 13:56:00Z, 2 seconds early).
+ *   09:00:00 local is 13:56:02Z.
  *
- * `between` is an instant strictly between the real moment and the literal reading.
+ * `between` is an instant strictly between the real moment and the minute-rounded reading.
  */
 describe("transport functions read a minute-rounded offset as its zone's real offset", () => {
   const cases = it.each`
-    zone                  | zoned                                            | instant                   | utc                                 | gap        | earlierZoned                                     | earlierInstant            | laterInstant              | laterZoned                                       | laterUtc                            | between
-    ${"Africa/Monrovia"}  | ${"1960-01-01T00:20:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T01:04:30Z"} | ${"1960-01-01T01:04:30+00:00[UTC]"} | ${"PT20M"} | ${"1960-01-01T00:00:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T00:44:30Z"} | ${"1960-01-01T01:24:30Z"} | ${"1960-01-01T00:40:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T01:24:30+00:00[UTC]"} | ${"1960-01-01T01:04:45Z"}
-    ${"America/New_York"} | ${"1883-11-18T09:00:00-04:56[America/New_York]"} | ${"1883-11-18T13:56:02Z"} | ${"1883-11-18T13:56:02+00:00[UTC]"} | ${"PT1H"}  | ${"1883-11-18T08:00:00-04:56[America/New_York]"} | ${"1883-11-18T12:56:02Z"} | ${"1883-11-18T14:56:02Z"} | ${"1883-11-18T10:00:00-04:56[America/New_York]"} | ${"1883-11-18T14:56:02+00:00[UTC]"} | ${"1883-11-18T13:56:01Z"}
+    zone                  | zoned                                            | exact                             | instant                   | utc                                 | gap        | earlierZoned                                     | earlierInstant            | laterInstant              | laterZoned                                       | laterUtc                            | between
+    ${"Africa/Monrovia"}  | ${"1960-01-01T00:20:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T00:20:00-00:44:30"} | ${"1960-01-01T01:04:30Z"} | ${"1960-01-01T01:04:30+00:00[UTC]"} | ${"PT20M"} | ${"1960-01-01T00:00:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T00:44:30Z"} | ${"1960-01-01T01:24:30Z"} | ${"1960-01-01T00:40:00-00:45[Africa/Monrovia]"}  | ${"1960-01-01T01:24:30+00:00[UTC]"} | ${"1960-01-01T01:04:45Z"}
+    ${"America/New_York"} | ${"1883-11-18T09:00:00-04:56[America/New_York]"} | ${"1883-11-18T09:00:00-04:56:02"} | ${"1883-11-18T13:56:02Z"} | ${"1883-11-18T13:56:02+00:00[UTC]"} | ${"PT1H"}  | ${"1883-11-18T08:00:00-04:56[America/New_York]"} | ${"1883-11-18T12:56:02Z"} | ${"1883-11-18T14:56:02Z"} | ${"1883-11-18T10:00:00-04:56[America/New_York]"} | ${"1883-11-18T14:56:02+00:00[UTC]"} | ${"1883-11-18T13:56:01Z"}
   `;
 
   cases(
-    "scheduleDeviation measures $zoned from its real instant $instant",
-    ({ zoned, instant, gap, earlierInstant }) => {
-      expect(scheduleDeviation(instant, zoned)).toBe("PT0S");
-      expect(scheduleDeviation(zoned, instant)).toBe("PT0S");
-      expect(scheduleDeviation(earlierInstant, zoned)).toBe(gap);
+    "scheduleDeviation measures $exact from its real instant $instant",
+    ({ exact, instant, gap, earlierInstant }) => {
+      expect(scheduleDeviation(instant, exact)).toBe("PT0S");
+      expect(scheduleDeviation(exact, instant)).toBe("PT0S");
+      expect(scheduleDeviation(earlierInstant, exact)).toBe(gap);
     },
   );
 
   cases(
-    "classifyPunctuality calls $zoned on time against $instant under a one-second tolerance",
-    ({ zoned, instant }) => {
+    "classifyPunctuality calls $exact on time against $instant under a one-second tolerance",
+    ({ exact, instant }) => {
       const tolerance = { late: "PT1S", early: "PT1S" };
-      expect(classifyPunctuality(instant, zoned, tolerance)).toBe("onTime");
-      expect(classifyPunctuality(zoned, instant, tolerance)).toBe("onTime");
+      expect(classifyPunctuality(instant, exact, tolerance)).toBe("onTime");
+      expect(classifyPunctuality(exact, instant, tolerance)).toBe("onTime");
     },
   );
 
   cases(
-    "punctualityRate counts $zoned against $instant as on time",
-    ({ zoned, instant }) => {
+    "punctualityRate counts $exact against $instant as on time",
+    ({ exact, instant }) => {
       expect(
         punctualityRate(
           [
-            { planned: instant, actual: zoned },
-            { planned: zoned, actual: instant },
+            { planned: instant, actual: exact },
+            { planned: exact, actual: instant },
           ],
           { late: "PT1S", early: "PT1S" },
         ),
@@ -79,30 +83,30 @@ describe("transport functions read a minute-rounded offset as its zone's real of
   );
 
   cases(
-    "bestAvailable orders a record at $zoned against one at $between by the real instant",
-    ({ zoned, instant, between }) => {
+    "bestAvailable orders a record at $exact against one at $between by the real instant",
+    ({ exact, instant, between }) => {
       const atZoned = "2000-01-01T00:00:00Z";
       const atBetween = "2000-01-02T00:00:00Z";
       // The newest record wins: whichever of the real instant and `between` is later.
       const newest = instant > between ? atZoned : atBetween;
       expect(
         bestAvailable([
-          { classifier: "ACT", at: atZoned, recordedAt: zoned },
+          { classifier: "ACT", at: atZoned, recordedAt: exact },
           { classifier: "ACT", at: atBetween, recordedAt: between },
         ]),
       ).toEqual({ at: newest, classifier: "ACT" });
       expect(
         bestAvailable([
           { classifier: "ACT", at: atBetween, recordedAt: between },
-          { classifier: "ACT", at: atZoned, recordedAt: zoned },
+          { classifier: "ACT", at: atZoned, recordedAt: exact },
         ]),
       ).toEqual({ at: newest, classifier: "ACT" });
     },
   );
 
   cases(
-    "estimateDrift measures an estimate revised from $earlierInstant to $zoned as $gap",
-    ({ zoned, gap, earlierInstant }) => {
+    "estimateDrift measures an estimate revised from $earlierInstant to $exact as $gap",
+    ({ exact, gap, earlierInstant }) => {
       expect(
         estimateDrift([
           {
@@ -110,11 +114,11 @@ describe("transport functions read a minute-rounded offset as its zone's real of
             at: earlierInstant,
             recordedAt: "2000-01-01T00:00:00Z",
           },
-          { classifier: "EST", at: zoned, recordedAt: "2000-01-02T00:00:00Z" },
+          { classifier: "EST", at: exact, recordedAt: "2000-01-02T00:00:00Z" },
         ]),
       ).toEqual({
         first: earlierInstant,
-        last: zoned,
+        last: exact,
         drift: gap,
         revisions: 2,
         exceedsTolerance: null,
@@ -124,30 +128,32 @@ describe("transport functions read a minute-rounded offset as its zone's real of
 
   cases(
     "timeToCutoff and isPastCutoff read a cut-off at $zoned as $instant",
-    ({ zoned, instant, gap, earlierInstant, between }) => {
+    ({ zoned, exact, instant, gap, earlierInstant, between }) => {
       expect(timeToCutoff(earlierInstant, zoned)).toBe(gap);
       expect(timeToCutoff(instant, zoned)).toBe("PT0S");
       // Half-open: at the cut-off itself the window has closed.
       expect(isPastCutoff(instant, zoned)).toBe(true);
-      expect(isPastCutoff(zoned, instant)).toBe(true);
+      expect(isPastCutoff(exact, zoned)).toBe(true);
       // `between` is past the cut-off exactly when it is after the real instant.
       expect(isPastCutoff(between, zoned)).toBe(between > instant);
-      expect(isPastCutoff(zoned, between)).toBe(instant > between);
+      // A cut-off is zoned only: the same moment written as a bare offset is refused.
+      expect(timeToCutoff(earlierInstant, exact)).toBe("");
+      expect(isPastCutoff(instant, exact)).toBe(false);
     },
   );
 
   cases(
-    "etaAtZone renders $zoned as $utc, and in $zone as itself",
-    ({ zone, zoned, utc }) => {
-      expect(etaAtZone(zoned, "UTC")).toBe(utc);
-      expect(etaAtZone(zoned, zone)).toBe(zoned);
+    "etaAtZone renders $exact as $utc, and in $zone as $zoned",
+    ({ zone, zoned, exact, utc }) => {
+      expect(etaAtZone(exact, "UTC")).toBe(utc);
+      expect(etaAtZone(exact, zone)).toBe(zoned);
     },
   );
 
   cases(
-    "crossingTime measures $zoned to $laterInstant as $gap",
-    ({ zoned, utc, gap, laterInstant, laterUtc }) => {
-      expect(crossingTime(zoned, laterInstant, "UTC")).toEqual({
+    "crossingTime measures $exact to $laterInstant as $gap",
+    ({ exact, utc, gap, laterInstant, laterUtc }) => {
+      expect(crossingTime(exact, laterInstant, "UTC")).toEqual({
         duration: gap,
         enter: utc,
         exit: laterUtc,
@@ -170,11 +176,11 @@ describe("transport functions read a minute-rounded offset as its zone's real of
   );
 
   cases(
-    "cutoffAt and cutoffSchedule count $gap back from $zoned to $earlierZoned",
-    ({ zone, zoned, gap, earlierZoned }) => {
-      expect(cutoffAt(zoned, gap, { timeZone: zone })).toBe(earlierZoned);
+    "cutoffAt and cutoffSchedule count $gap back from $exact to $earlierZoned",
+    ({ zone, exact, gap, earlierZoned }) => {
+      expect(cutoffAt(exact, gap, { timeZone: zone })).toBe(earlierZoned);
       expect(
-        cutoffSchedule(zoned, [{ name: "gate-in", offset: gap }], {
+        cutoffSchedule(exact, [{ name: "gate-in", offset: gap }], {
           timeZone: zone,
         }),
       ).toEqual([{ name: "gate-in", at: earlierZoned }]);
@@ -182,7 +188,7 @@ describe("transport functions read a minute-rounded offset as its zone's real of
   );
 
   // GMT's own output is the next GMT function's input: the string one function writes must name
-  // the same instant in the next. `from` is written with the zone's exact offset, so its instant
+  // the same instant in each function that keeps a zone. `from` is written with the zone's exact offset, so its instant
   // is unambiguous under every reading.
   it.each`
     from                                                | after                                               | to                                                  | headway    | departure                                        | instant                   | gap
@@ -195,14 +201,12 @@ describe("transport functions read a minute-rounded offset as its zone's real of
       expect(next).toBe(departure);
       expect(transitTime(from, gap)).toBe(departure);
 
-      expect(scheduleDeviation(from, next)).toBe(gap);
-      expect(classifyPunctuality(instant, next, { late: "PT1S" })).toBe(
-        "onTime",
-      );
-      expect(classifyPunctuality(next, instant, { late: "PT1S" })).toBe(
-        "onTime",
-      );
-      expect(timeToCutoff(from, next)).toBe(gap);
+      // The instant readers take no bracket, so the written string is not theirs to read
+      // (a cutoff, below, takes a bracket and nothing else).
+      expect(scheduleDeviation(instant, next)).toBe("");
+      expect(classifyPunctuality(instant, next, { late: "PT1S" })).toBeNull();
+      // A cutoff keeps its zone, so `cutoffAt`'s own output reads: the same instant, no time left.
+      expect(timeToCutoff(instant, next)).toBe("PT0S");
       expect(isPastCutoff(instant, next)).toBe(true);
       expect(dwellTime(from, next)?.duration).toBe(gap);
       expect(dwellTime(from, next)?.exit).toBe(departure);
@@ -243,33 +247,29 @@ describe("transport functions read a minute-rounded offset as its zone's real of
 });
 
 /**
- * Everything else reads as before: the written offset fixes the instant.
+ * The instant readers take the written offset literally, and nothing after it.
  *
  * - No bracket: nothing names a zone, so `-00:45` is −00:45:00 (01:05:00Z).
- * - An offset written with seconds is matched exactly (TC39 `ToTemporalZonedDateTime`:
- *   match-exactly when the offset has a seconds part), so `-00:45:00[Africa/Monrovia]` is not
- *   Monrovia's −00:44:30 and stays −00:45:00.
- * - A bracket whose zone does not exist, or whose offset is neither the zone's offset nor its
- *   rounded form (`-00:44` for −00:44:30), is not read by the instant readers.
+ * - An offset written with seconds is that offset: `-00:44:30` is 01:04:30Z and `-00:45:00` is
+ *   01:05:00Z.
+ * - Any bracket, a real zone or not, is rejected, with the rounded offset of a sub-minute zone
+ *   as with any other.
  */
-describe("transport instant readers keep the written offset in every other case", () => {
+describe("transport instant readers keep the written offset and reject a bracket", () => {
   it.each`
-    value                                              | instant                   | why
-    ${"1960-01-01T00:20:00-00:45"}                     | ${"1960-01-01T01:05:00Z"} | ${"no bracket"}
-    ${"1960-01-01T00:20:00-00:44:30[Africa/Monrovia]"} | ${"1960-01-01T01:04:30Z"} | ${"the zone's exact offset"}
-    ${"1960-01-01T00:20:00-00:45:00[Africa/Monrovia]"} | ${"1960-01-01T01:05:00Z"} | ${"an offset with seconds is matched exactly"}
-    ${"1960-01-01T00:20:00-00:44[Africa/Monrovia]"}    | ${"1960-01-01T01:04:00Z"} | ${"an offset that is not the zone's rounded offset"}
-    ${"1960-01-01T00:20:00-00:45[Not/AZone]"}          | ${"1960-01-01T01:05:00Z"} | ${"a zone that does not exist"}
-    ${"1960-01-01T00:20:00-00:45[Europe/London]"}      | ${"1960-01-01T01:05:00Z"} | ${"a zone the offset contradicts"}
-    ${"1960-01-01T00:20:00-00:45[-00:45]"}             | ${"1960-01-01T01:05:00Z"} | ${"an offset zone"}
-    ${"2024-06-15T10:00:00-04:00[America/New_York]"}   | ${"2024-06-15T14:00:00Z"} | ${"a whole-minute zone"}
-    ${"2024-06-15T10:00:00-05:00[America/New_York]"}   | ${"2024-06-15T15:00:00Z"} | ${"a whole-minute zone the offset contradicts"}
+    value                             | instant                   | why
+    ${"1960-01-01T00:20:00-00:45"}    | ${"1960-01-01T01:05:00Z"} | ${"no bracket"}
+    ${"1960-01-01T00:20:00-00:44:30"} | ${"1960-01-01T01:04:30Z"} | ${"the zone's exact offset"}
+    ${"1960-01-01T00:20:00-00:45:00"} | ${"1960-01-01T01:05:00Z"} | ${"an offset with seconds"}
+    ${"1960-01-01T00:20:00-00:44"}    | ${"1960-01-01T01:04:00Z"} | ${"a whole-minute offset"}
+    ${"2024-06-15T10:00:00-04:00"}    | ${"2024-06-15T14:00:00Z"} | ${"a whole-minute zone's offset"}
   `("read $value as $instant ($why)", ({ value, instant }) => {
     expect(scheduleDeviation(instant, value)).toBe("PT0S");
     expect(
       classifyPunctuality(instant, value, { late: "PT1S", early: "PT1S" }),
     ).toBe("onTime");
-    expect(timeToCutoff(instant, value)).toBe("PT0S");
+    // A cut-off is zoned only, so a bare offset is not one.
+    expect(timeToCutoff(instant, value)).toBe("");
     expect(etaAtZone(value, "UTC")).toBe(`${instant.slice(0, -1)}+00:00[UTC]`);
     expect(
       estimateDrift([
@@ -277,5 +277,21 @@ describe("transport instant readers keep the written offset in every other case"
         { classifier: "EST", at: value, recordedAt: "2000-01-02T00:00:00Z" },
       ])?.drift,
     ).toBe("PT0S");
+  });
+
+  it.each`
+    value
+    ${"1960-01-01T00:20:00-00:45[Africa/Monrovia]"}
+    ${"1960-01-01T00:20:00-00:44:30[Africa/Monrovia]"}
+    ${"1960-01-01T00:20:00-00:45[Not/AZone]"}
+    ${"1960-01-01T00:20:00-00:45[-00:45]"}
+    ${"2024-06-15T10:00:00-04:00[America/New_York]"}
+  `("reject $value because of its bracket", ({ value }) => {
+    const instant = "1960-01-01T01:05:00Z";
+    expect(scheduleDeviation(instant, value)).toBe("");
+    expect(classifyPunctuality(instant, value, { late: "PT1S" })).toBeNull();
+    expect(timeToCutoff(value, instant)).toBe("");
+    expect(isPastCutoff(value, instant)).toBe(false);
+    expect(etaAtZone(value, "UTC")).toBe("");
   });
 });

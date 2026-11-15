@@ -159,14 +159,14 @@ to `diffDate*`, `intervalLength*`, `intervalCount*` and `diffZoned*` alike.
 
 `duration/`'s `relativeTo` reads a calendar-annotated string as Temporal's
 `ParseTemporalRelativeToString` does: zoned when it carries a time zone annotation,
-otherwise a date. `utc/` reads a UTC string as `Temporal.Instant.from` does, so a
-`[u-ca=...]` annotation is ignored there:
+otherwise a date. `utc/` reads a UTC string as exactly `...Z`, so any annotation, a
+`[u-ca=...]` calendar included, makes it invalid there:
 
 ```typescript
 import { isValidUtc } from "@northguild/gmt";
 
 isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]");
-// true
+// false
 ```
 
 ### Values that name different calendars

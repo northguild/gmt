@@ -71,6 +71,24 @@ describe("parseYearMonthWithPattern", () => {
       },
     );
 
+    // A value the types reject returns the sentinel even when the pattern has no yy to use it.
+    it.each`
+      yearWindow               | label
+      ${"2000"}                | ${"a numeric string"}
+      ${new String("rolling")} | ${"a String object"}
+      ${new Number(2000)}      | ${"a Number object"}
+      ${true}                  | ${"a boolean"}
+    `(
+      "returns '' for the full-year pattern when yearWindow is $label",
+      ({ yearWindow }) => {
+        expect(
+          parseYearMonthWithPattern("10/2026", "MM/yyyy", undefined, {
+            yearWindow,
+          } as never),
+        ).toBe("");
+      },
+    );
+
     it.each`
       label       | options
       ${"null"}   | ${null}

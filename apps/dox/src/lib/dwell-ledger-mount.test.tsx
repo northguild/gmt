@@ -237,7 +237,7 @@ describe("mountDwellLedger", () => {
     await w.user.keyboard("{ArrowRight}");
     const after = (exitBox() as HTMLInputElement).value;
     expect(after).not.toBe(before);
-    expect(after).toMatch(/\[Africa\/Johannesburg\]$/);
+    expect(after).toMatch(/\+02:00$/);
     await expectNoAxeViolations(w.root);
   });
 
@@ -245,9 +245,7 @@ describe("mountDwellLedger", () => {
     const w = await open();
     exitHandle().focus();
     await w.user.keyboard("{ArrowRight}");
-    expect(exitBox()).toHaveValue(
-      "2024-06-16T01:15:00+02:00[Africa/Johannesburg]",
-    );
+    expect(exitBox()).toHaveValue("2024-06-16T01:15:00+02:00");
     await w.user.keyboard("{Home}");
     // The exit cannot pass the entry.
     expect(exitBox()).toHaveValue((entryBox() as HTMLInputElement).value);
@@ -302,9 +300,7 @@ describe("mountDwellLedger", () => {
       exit: "2024-06-16T01:00:00",
       zone: "Africa/Johannesburg",
     });
-    expect(entryBox()).toHaveValue(
-      "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",
-    );
+    expect(entryBox()).toHaveValue("2024-06-15T23:00:00+02:00");
     expect(dwellOutput()).toHaveTextContent(
       EXPECTED["two-hours-two-days"]![0]!.replace(/\s+/g, " "),
     );

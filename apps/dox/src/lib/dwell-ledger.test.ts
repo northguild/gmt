@@ -38,6 +38,17 @@ describe("toEpochMs", () => {
     expect(ms("2024-06-15T23:00:00")).toBeNaN();
     expect(ms("nonsense")).toBeNaN();
   });
+
+  it("reads a zoned string through its zone, not its minute-rounded offset", () => {
+    // Temporal writes Monrovia's -00:44:30 as -00:45 in a zoned string.
+    expect(ms("1960-06-01T11:15:30-00:45[Africa/Monrovia]")).toBe(
+      ms("1960-06-01T12:00:00Z"),
+    );
+    expect(ms("1960-06-01T11:15:30-00:44:30")).toBe(ms("1960-06-01T12:00:00Z"));
+    expect(ms("1880-01-01T12:00:00-04:56[America/New_York]")).toBe(
+      ms("1880-01-01T16:56:02Z"),
+    );
+  });
 });
 
 describe("gridZone", () => {
@@ -70,7 +81,7 @@ describe("gridZone", () => {
 describe("resolveWallTime", () => {
   it("reads a zoneless wall time in the zone", () => {
     expect(resolveWallTime("2024-06-15T23:00:00", "America/New_York")).toBe(
-      "2024-06-15T23:00:00-04:00[America/New_York]",
+      "2024-06-15T23:00:00-04:00",
     );
   });
   it("leaves instants, empty zones and skipped wall times alone", () => {
@@ -87,6 +98,12 @@ describe("resolveWallTime", () => {
     expect(resolveWallTime("2024-03-10T02:30:00", "America/New_York")).toBe(
       "2024-03-10T02:30:00",
     );
+  });
+  it("writes the zone's offset to the second, not rounded to the minute", () => {
+    // New York kept local mean time, -04:56:02, until November 1883.
+    const text = resolveWallTime("1880-01-01T12:00:00", "America/New_York");
+    expect(text).toBe("1880-01-01T12:00:00-04:56:02");
+    expect(ms(text)).toBe(ms("1880-01-01T16:56:02Z"));
   });
 });
 
@@ -115,11 +132,18 @@ describe("fitLedgerCanvas", () => {
       ["America/New_York"],
     )!;
     expect(formatHandleValue(c.startMs, "America/New_York")).toBe(
-      "2024-06-15T00:00:00-04:00[America/New_York]",
+      "2024-06-15T00:00:00-04:00",
     );
     expect(formatHandleValue(c.endMs, "America/New_York")).toBe(
-      "2024-06-17T00:00:00-04:00[America/New_York]",
+      "2024-06-17T00:00:00-04:00",
     );
+  });
+  it("writes a handle with the zone's offset to the second", () => {
+    // Monrovia kept -00:44:30 until 1972: a rounded -00:45 reads 30 s later.
+    const at = ms("1960-06-01T12:00:00Z");
+    const text = formatHandleValue(at, "Africa/Monrovia");
+    expect(text).toBe("1960-06-01T11:15:30-00:44:30");
+    expect(ms(text)).toBe(at);
   });
   it("covers both zones' days when comparing", () => {
     const c = fitLedgerCanvas(
@@ -311,10 +335,10 @@ describe("presets", () => {
 });
 
 describe("formatHandleValue", () => {
-  it("writes zoned in the grid zone, else Z, and round-trips", () => {
+  it("writes an offset instant in the grid zone, else Z, and round-trips", () => {
     const at = ms("2024-06-16T03:00:00Z");
     const zoned = formatHandleValue(at, "America/New_York");
-    expect(zoned).toBe("2024-06-15T23:00:00-04:00[America/New_York]");
+    expect(zoned).toBe("2024-06-15T23:00:00-04:00");
     expect(ms(zoned)).toBe(at);
     expect(formatHandleValue(at, null)).toBe("2024-06-16T03:00:00Z");
   });

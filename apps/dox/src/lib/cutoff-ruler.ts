@@ -19,6 +19,7 @@ import {
   type CutoffAtOptions,
   type CutoffLib,
 } from "./cutoff-widgets";
+import { offsetMinutes, offsetShift } from "./exact-offset";
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -58,7 +59,7 @@ export const RULER_PRESETS: readonly RulerPreset[] = [
     label: "Sydney, Monday 8 April 2024: the clocks go back in between",
     description:
       "A ship leaves Sydney at 18:00 on Monday 8 April 2024. The clocks went back on Sunday, so two calendar days is 49 hours, 48 hours lands at 19:00, and two days at 17:00 is 50 hours: three answers an hour apart.",
-    anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+    anchor: "2024-04-08T18:00:00+10:00",
     timeZone: SYD,
     days: "2",
     atLocalTime: "17:00",
@@ -221,6 +222,8 @@ export function collectRulerFacts(
   const anchor = state.anchor.trim();
   const timeZone = state.timeZone.trim();
   const specs = readingsOf(state);
+  // `timeToCutoff` reads its cut-off zoned: the departure on the terminal's clock.
+  const departure = lib.etaAtZone(anchor, timeZone);
   const readings = specs.map((spec) => {
     const at = lib.cutoffAt(anchor, spec.offset, spec.options);
     return {
@@ -229,10 +232,10 @@ export function collectRulerFacts(
       offset: spec.offset,
       atLocalTime: spec.options.atLocalTime,
       at,
-      hoursBefore: lib.timeToCutoff(at, anchor),
+      hoursBefore: lib.timeToCutoff(lib.toInstant(at), departure),
     };
   });
-  return { readings, departure: lib.etaAtZone(anchor, timeZone) };
+  return { readings, departure };
 }
 
 // ---------------------------------------------------------------------------
@@ -250,8 +253,9 @@ type RulerNullReason =
 const RULER_NULL_TEXT: Record<RulerNullReason, string> = {
   "invalid-zone": "The terminal clock is not a time zone this browser knows.",
   "zoneless-anchor":
-    "The departure has no offset or zone, so it is not a moment. Write its offset, or its zone in brackets.",
-  "invalid-anchor": "The departure is not an instant or a zoned date-time.",
+    "The departure has no offset, so it is not a moment. Write Z or an offset, such as +02:00.",
+  "invalid-anchor":
+    "The departure is not an instant. Write Z or an offset, with no zone name after it: the terminal clock below names the zone.",
   "invalid-offset":
     "This offset is not an ISO 8601 duration such as P2D or PT48H, or it leaves the range of instants.",
   "invalid-time": "This local time is not a time of day such as 17:00.",
@@ -310,20 +314,33 @@ interface RulerTransition {
   wallAfter: string;
 }
 
-function parseOffsetMinutes(offset: string): number {
-  const m = /^([+-])(\d{2}):(\d{2})/.exec(offset);
-  if (!m) return 0;
-  return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
-}
-
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
 /** The clock's change at the transition, in minutes: negative when the clocks go
- *  back. Drawing only (the width of the repeated-hour band). */
+ *  back, and a fraction when an offset has seconds (New York's 1883 change from
+ *  `-04:56:02` to `-05:00` is −3.9666…). Drawing only (the width of the
+ *  repeated-hour band). */
 export function transitionShiftMinutes(t: RulerTransition): number {
-  return parseOffsetMinutes(t.after) - parseOffsetMinutes(t.before);
+  return (offsetMinutes(t.after) ?? 0) - (offsetMinutes(t.before) ?? 0);
+}
+
+/** `HH:MM`, or `HH:MM:SS` when the second is not zero. */
+function wallText(t: Temporal.PlainTime): string {
+  const hm = `${pad2(t.hour)}:${pad2(t.minute)}`;
+  return t.second === 0 ? hm : `${hm}:${pad2(t.second)}`;
+}
+
+/** `1 h`, `30 min`, `3 min 58 s`: the size of a clock change, to the second. */
+function shiftSizeText(minutes: number): string {
+  const total = Math.round(Math.abs(minutes) * 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  return [h ? `${h} h` : "", m ? `${m} min` : "", sec ? `${sec} s` : ""]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /** A fall-back repeats an hour (`overlap`); a spring-forward skips one (`gap`). */
@@ -361,15 +378,16 @@ export function transitionBetween(
     const before = cur.offset;
     const after = next.offset;
     if (before === after) return null;
-    const gapMinutes = parseOffsetMinutes(after) - parseOffsetMinutes(before);
+    const shift = offsetShift(before, after);
+    if (shift === null) return null;
     const afterTime = next.toPlainTime();
-    const beforeTime = afterTime.subtract({ minutes: gapMinutes });
+    const beforeTime = afterTime.subtract(shift);
     return {
       instant: next.toInstant().toString(),
       before,
       after,
-      wallBefore: `${pad2(beforeTime.hour)}:${pad2(beforeTime.minute)}`,
-      wallAfter: `${pad2(afterTime.hour)}:${pad2(afterTime.minute)}`,
+      wallBefore: wallText(beforeTime),
+      wallAfter: wallText(afterTime),
     };
   } catch {
     return null;
@@ -382,11 +400,13 @@ export function transitionBetween(
 export function transitionLabel(t: RulerTransition, timeZone: string): string {
   const gapMinutes = transitionShiftMinutes(t);
   const direction = gapMinutes < 0 ? "back" : "forward";
-  const hours = Math.abs(gapMinutes) / 60;
-  const hoursText = hours === 1 ? "1 h" : `${hours} h`;
+  const hoursText = shiftSizeText(gapMinutes);
   const zoned = Temporal.Instant.from(t.instant)
     .toZonedDateTimeISO(timeZone)
     .toString();
-  const dateLabel = localLabel(zoned).replace(/\s\d{2}:\d{2}$/, "");
+  const dateLabel = localLabel(zoned).replace(
+    /\s\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/,
+    "",
+  );
   return `Clocks go ${direction} ${hoursText}: ${dateLabel}, ${t.wallBefore} → ${t.wallAfter}`;
 }

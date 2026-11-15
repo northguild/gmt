@@ -1,8 +1,7 @@
 import {
   hl7PrecisionRank,
-  isoHl7Form,
   isoHl7Precision,
-  isoStringBody,
+  isoHl7Form,
   isOptionsArgument,
   parseUtcOffsetNanoseconds,
   readFormOffsetInstant,
@@ -35,7 +34,7 @@ const MAX_FRACTION_DIGITS = 4;
  * | `2024-06-15` | day | `20240615` |
  * | `2024-06-15T10` | hour | `2024061510` |
  * | `2024-06-15T10:30` / `…:00` / `…:00.f` | minute / second / fraction | `202406151030` / `20240615103000` / `20240615103000.f` |
- * | the same with `Z` or `±HH:MM`, with or without a bracketed zone | as written, then `±HHMM` | `20240615103000-0500` |
+ * | the same with `Z` or `±HH:MM` | as written, then `±HHMM` | `20240615103000-0500` |
  *
  * - The precision is read from the form the input is written in; `options.precision` only lowers
  *   it, and a finer one returns `""`. A value is cut to its precision and never rounded, so the
@@ -45,10 +44,9 @@ const MAX_FRACTION_DIGITS = 4;
  *   v 2.6", so the result never holds `^`.
  * - A value with no offset writes none, and the HL7 value then means the sender's local time
  *   (2.A.22: "if the time zone is not included, the time zone defaults to that of the local time
- *   zone of the sender"). To send a facility's wall clock with its offset, pass the string
- *   `fromOffsetInstant` writes for that zone.
- * - The offset written is the one `toOffsetInstant` reads: the one written, or the zone's when a
- *   zone annotation follows `Z` (`…Z[Europe/Helsinki]` writes `+0300`); `Z` alone writes `+0000`.
+ *   zone of the sender"). To send a facility's wall clock with its offset, pass that
+ *   wall clock written with the zone's offset (`2024-06-15T10:30:00-05:00`).
+ * - The offset written is the one the value carries; `Z` writes `+0000`.
  *   It is never dropped and never rounded: an offset that is not a whole number of minutes
  *   returns `""`.
  * - `Z` and `-00:00` (RFC 9557 §2.2: UTC known, local offset unknown) write `+0000`; HL7 has no
@@ -58,12 +56,9 @@ const MAX_FRACTION_DIGITS = 4;
  *   write a date with its offset, pass the instant with `precision`:
  *   `formatHL7("2024-06-15T10:30:00-05:00", { precision: "day" })` is `20240615-0500`.
  * - Disambiguation: none. The function never converts a wall time without an offset to an
- *   instant, and a zone annotation with no offset (`2024-06-15T10:30:00[Europe/Helsinki]`)
- *   returns `""`: resolve it first with `resolveLocal` or `toOffsetInstant(value, zone)`.
- * - Annotations: on a form with no offset, any bracketed annotation returns `""`
- *   (`2024-06-15[u-ca=iso8601]`, `…T10:30:00[foo=bar]`). On a form with an offset, `[u-ca=…]`,
- *   `[!u-ca=…]` and an unknown non-critical key are ignored and the ISO digits are written, while
- *   a critical unknown key (`[!foo=bar]`) returns `""`.
+ *   instant.
+ * - Annotations: none is read. A bracket of any kind (a zone, `[u-ca=iso8601]`, `[foo=bar]`)
+ *   returns `""`; write the wall clock with the zone's offset instead.
  * - A minute-precision `local` from `parseHL7` reads back with `:00` seconds; to write the same
  *   digits, pass `{ precision: result.precision }`.
  * - A year outside 0000–9999 returns `""`.
@@ -81,7 +76,7 @@ const MAX_FRACTION_DIGITS = 4;
  * @example formatHL7("2024-06", { precision: "day" }) // "" (finer than the value carries)
  * @example formatHL7("2024-06-15T10-05:00") // "2024061510-0500" (an hour with an offset)
  * @example formatHL7("2024-06-15-05:00") // "" (not ISO 8601)
- * @example formatHL7("2024-06-15T10:30:00[Europe/Helsinki]") // "" (a zone with no offset)
+ * @example formatHL7("2024-06-15T10:30:00Z[Europe/Helsinki]") // "" (an annotation)
  * @example formatHL7("2024-02-30") // "" (no such day)
  */
 export function formatHL7(value: string, options?: Hl7FormatOptions): string {
@@ -89,8 +84,8 @@ export function formatHL7(value: string, options?: Hl7FormatOptions): string {
     if (typeof value !== "string" || !isOptionsArgument(options)) {
       return "";
     }
-    const match = isoHl7Form.exec(isoStringBody(value));
-    const form = match === null ? null : planForm(value, match, options);
+    const match = isoHl7Form.exec(value);
+    const form = match === null ? null : planForm(match, options);
     if (match === null || form === null) {
       return "";
     }
@@ -128,7 +123,6 @@ interface FormPlan {
 
 /** The precisions of a form and the checks that need no Temporal; null when the form is refused. */
 function planForm(
-  value: string,
   match: RegExpExecArray,
   options: Hl7FormatOptions | undefined,
 ): FormPlan | null {
@@ -138,22 +132,11 @@ function planForm(
   }
   const { precision: written, fractionDigits } = isoHl7Precision(match);
   const hasOffset = match.groups?.["offset"] !== undefined;
-  if (!isWritableForm(value, hasOffset)) {
-    return null;
-  }
   const target = requested ?? written;
   if (hl7PrecisionRank(target) > hl7PrecisionRank(written)) {
     return null;
   }
   return { target, written, fractionDigits, hasOffset };
-}
-
-/**
- * A zone with no offset needs a disambiguation choice this function does not make. (A date with
- * an offset is not ISO 8601, and `isoHl7Form` has already refused it.)
- */
-function isWritableForm(value: string, hasOffset: boolean): boolean {
-  return hasOffset || !value.includes("[");
 }
 
 interface WallClockRead {
@@ -170,7 +153,7 @@ function readLocalForm(
 ): WallClockRead | null {
   const groups = match.groups as Record<string, string | undefined>;
   const reject = { overflow: "reject" } as const;
-  const own = isoStringBody(value);
+  const own = value;
   let wallClock: Temporal.PlainDateTime;
   switch (written) {
     case "year":
