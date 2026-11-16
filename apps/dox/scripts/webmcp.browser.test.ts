@@ -113,12 +113,62 @@ function base(): string {
  * in a headless browser, and the browser's own line for a third-party resource that did not load.
  * A same-origin response or request that fails is still a problem (below), so a missing chunk is
  * not hidden.
+ *
+ * The last is the browser's notice about Vite's import helper. A mount that imports a chunk once it
+ * runs (the zone planner's scrubber, the globe) gets a `<link rel="modulepreload">` for each of
+ * that chunk's dependencies. WebKit names any it judges unused a few seconds after `load`, so a slow
+ * runner logs it and a fast one closes the page first. The page has no WebMCP imports in absent
+ * mode: `offerPageTool` returns before it calls its loader, and the zod check below would see one.
  */
 const KNOWN_NOISE = [
   /ResizeObserver loop/,
   /No available adapters/,
   /^Failed to load resource/,
+  /was preloaded using link preload but not used within a few seconds/,
 ];
+
+/**
+ * Opens `url`, waits for `load`, then waits until no request has been in flight for 500 ms.
+ *
+ * Playwright's `networkidle` does not do this. It fires once per navigation and does not wait for
+ * `load`. In WebKit on a busy CI runner it fired while the page was still being parsed:
+ * `readyState` was "loading" and the parser had not reached the widget's markup, so 12 pages
+ * reported no widget root. Counting requests from `load` on also covers the chunks a mount imports
+ * after it runs.
+ */
+async function openSettled(page: Page, url: string): Promise<void> {
+  let inflight = 0;
+  let loaded = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let quiet: () => void = () => {};
+  const settled = new Promise<void>((done) => (quiet = done));
+  const arm = () => {
+    clearTimeout(timer);
+    if (loaded && inflight === 0) timer = setTimeout(quiet, 500);
+  };
+  const start = () => {
+    inflight += 1;
+    clearTimeout(timer);
+  };
+  const end = () => {
+    inflight -= 1;
+    arm();
+  };
+  page.on("request", start);
+  page.on("requestfinished", end);
+  page.on("requestfailed", end);
+  try {
+    await page.goto(url, { waitUntil: "load", timeout: 60_000 });
+    loaded = true;
+    arm();
+    await settled;
+  } finally {
+    clearTimeout(timer);
+    page.off("request", start);
+    page.off("requestfinished", end);
+    page.off("requestfailed", end);
+  }
+}
 
 /** Third parties (analytics, remote fonts) are cut off: slower to fail than to serve, and not ours. */
 async function sameOriginOnly(context: BrowserContext, origin: string) {
@@ -186,10 +236,7 @@ describe.each(ENGINES)("WebMCP on the built site in %s", (_name, type) => {
           await sameOriginOnly(context, base());
           const page = await context.newPage();
           const seen = watch(page, base());
-          await page.goto(`${base()}/tools/${slug}/`, {
-            waitUntil: "networkidle",
-            timeout: 60_000,
-          });
+          await openSettled(page, `${base()}/tools/${slug}/`);
           const state = await page.evaluate(() => ({
             roots: document.querySelectorAll("[data-widget]").length,
             unavailable: document.querySelectorAll('[data-state="unavailable"]')
@@ -216,10 +263,7 @@ describe.each(ENGINES)("WebMCP on the built site in %s", (_name, type) => {
         await context.addInitScript(FAKE_MODEL_CONTEXT);
         const page = await context.newPage();
         const seen = watch(page, base());
-        await page.goto(`${base()}/tools/${tool.page}/`, {
-          waitUntil: "networkidle",
-          timeout: 60_000,
-        });
+        await openSettled(page, `${base()}/tools/${tool.page}/`);
         await page.waitForFunction(
           () =>
             (window as unknown as { __webmcp: unknown[] }).__webmcp.length > 0,
