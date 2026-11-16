@@ -2,7 +2,7 @@
  * Sentences the instrument, finance, EDI and health tools say and their pages never show: what a
  * call that gives a tool too little to read, or no instant to write, is told.
  */
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readArgs as readPtpArgs } from "../ptp-clock-converter";
 import fix, { NEEDS_A_FIELD } from "./tools/fix-timestamp-reader";
 import ptp, {
@@ -27,6 +27,12 @@ import tai, {
 } from "./tools/tai64n-log-reader";
 import { readArgs as readMeterArgs } from "../double-precision-meter";
 import { readArgs as readCounterArgs } from "../julian-day-counter";
+
+// A tool answers with its page's link as a full URL, resolved against the page's address, and
+// Node has none. The setup file restores the global after each test.
+beforeEach(() => {
+  vi.stubGlobal("location", new URL("https://northguild.dev/gmt/tools/"));
+});
 
 describe("the notes a tool adds beyond its page", () => {
   it("asks for seconds, nanoseconds and offset together when the ptp call gives only some, beside an instant", async () => {

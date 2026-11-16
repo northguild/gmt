@@ -2,12 +2,18 @@
  * Three sentences the tools say and the pages never show: what a call that gives the tool nothing
  * to read, a `digits` with no instant, or half a span is told.
  */
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import ccsds, {
   DIGITS_NEED_AN_INSTANT,
   NEEDS_A_FIELD,
 } from "./tools/ccsds-time-code-decoder";
 import leap, { BOTH_ENDS } from "./tools/leap-second-timeline";
+
+// A tool answers with its page's link as a full URL, resolved against the page's address, and
+// Node has none. The setup file restores the global after each test.
+beforeEach(() => {
+  vi.stubGlobal("location", new URL("https://northguild.dev/gmt/tools/"));
+});
 
 describe("the notes a tool adds beyond its page", () => {
   it("asks for a code or an instant when the ccsds call has neither", async () => {

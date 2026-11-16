@@ -8,7 +8,6 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { screen } from "@testing-library/dom";
 import {
   WIDGET_REGISTRY,
   type AnyWidgetEntry,

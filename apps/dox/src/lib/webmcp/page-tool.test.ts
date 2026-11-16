@@ -73,6 +73,37 @@ describe("toModelContextTool", () => {
     });
   });
 
+  describe("the link", () => {
+    const path = "/gmt/tools/cutoff-ruler/?w=ruler&wa=%7B%22days%22%3A2%7D";
+
+    it.each([
+      ["the live site", "https://northguild.dev/gmt/tools/cutoff-ruler/"],
+      ["a preview", "https://preview.example.com/gmt/tools/cutoff-ruler/"],
+      ["a local server", "http://localhost:4321/gmt/tools/cutoff-ruler/"],
+    ])("is a full URL on the origin of %s", async (_where, href) => {
+      vi.stubGlobal("location", new URL(href));
+      const tool = toModelContextTool(
+        def(async () => ({ ...(await ok()), link: path })),
+      );
+      const result = await tool.execute({
+        anchor: "2024-04-08T18:00:00Z",
+        days: 2,
+      });
+      expect(result).toMatchObject({
+        ok: true,
+        link: `${new URL(href).origin}${path}`,
+      });
+    });
+
+    it("stays out of a run that has none", async () => {
+      const result = await toModelContextTool(def(ok)).execute({
+        anchor: "2024-04-08T18:00:00Z",
+        days: 2,
+      });
+      expect(result).not.toHaveProperty("link");
+    });
+  });
+
   it("resolves invalid input with the path and message of each issue, and runs nothing", async () => {
     const run = vi.fn(ok);
     const result = await toModelContextTool(def(run)).execute({ days: 9 });

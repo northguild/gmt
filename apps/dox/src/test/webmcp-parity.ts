@@ -16,6 +16,7 @@ import type {
   ModelContextToolInit,
   PageToolResult,
 } from "~/lib/webmcp/model-context";
+import { decodeWidgetPermalink } from "~/lib/widget-permalink";
 import {
   flushWidget,
   renderWidget,
@@ -96,6 +97,13 @@ export async function expectParity({
     expect(result.ok).toBe(true);
     // The page's value as JSON carries it: an `undefined` in an array is `null` on the wire.
     if (result.ok) expect(result.result).toEqual(asJson(onPage?.value));
+    // A link is a full URL on the page's own origin that reopens a widget.
+    if (result.ok && result.link !== undefined) {
+      const link = new URL(result.link);
+      expect(result.link).toBe(link.href);
+      expect(link.origin).toBe(location.origin);
+      expect(decodeWidgetPermalink(link.search)).not.toBeNull();
+    }
     await inspect?.(page, result);
     return result;
   } finally {

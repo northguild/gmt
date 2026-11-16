@@ -305,6 +305,11 @@ describe.each(ENGINES)("WebMCP on the built site in %s", (_name, type) => {
         expect(summary.annotations).toEqual({ readOnlyHint: true });
         expect(summary.ok.ok).toBe(true);
         expect(summary.json).toEqual(summary.ok);
+        // A link is a full URL on the page's own origin, under the site's base path.
+        if (summary.ok.link !== undefined) {
+          const prefix = `${base()}/`;
+          expect(summary.ok.link.slice(0, prefix.length)).toBe(prefix);
+        }
         // An empty call is refused only by a schema with a required key.
         if (!tool.input.safeParse({}).success) {
           expect(summary.empty.ok).toBe(false);

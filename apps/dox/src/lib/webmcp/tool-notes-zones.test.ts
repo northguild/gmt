@@ -33,6 +33,12 @@ import planner, {
 } from "./tools/zone-planner";
 import earth, { unknownZoneNote } from "./tools/zoned-earth";
 
+// A tool answers with its page's link as a full URL, resolved against the page's address, and
+// Node has none. The setup file restores the global after each test.
+beforeEach(() => {
+  vi.stubGlobal("location", new URL("https://northguild.dev/gmt/tools/"));
+});
+
 async function notesOf(
   tool: { execute(input: object, options?: object): Promise<unknown> },
   args: object,

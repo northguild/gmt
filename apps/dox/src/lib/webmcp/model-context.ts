@@ -15,6 +15,7 @@ export interface PageToolRun<R> {
   input: unknown;
   result: R;
   notes: string[];
+  /** The page's permalink for this call. A run sets a site path; the tool answers with a full URL. */
   link?: string;
 }
 

@@ -137,7 +137,14 @@ export function toModelContextTool(def: PageToolDef): ModelContextToolInit {
       }
       if (signal.aborted) throw signal.reason;
       if (import.meta.env.DEV) assertJsonSafe(name, run);
-      return { ok: true, tool: name, ...run };
+      // A run's link is a site path. The agent may quote it in a chat or hand it to another
+      // tool, so it leaves as a full URL on the page's own origin: localhost, a preview or the
+      // live site.
+      const answer =
+        run.link === undefined
+          ? run
+          : { ...run, link: new URL(run.link, location.href).href };
+      return { ok: true, tool: name, ...answer };
     },
   };
 }

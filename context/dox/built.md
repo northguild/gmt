@@ -3804,6 +3804,10 @@ page loads nothing new and behaves as before.
   for a library that would not load. A sentinel from the library (an empty string, `null`, `false`,
   `[]`) is a result, with a note in `notes`; a legitimately empty answer (two intervals that share no
   time) is not a sentinel and has no note.
+- **The link is a full URL.** A run sets `link` as the site path `encodeWidgetPermalink` returns.
+  `toModelContextTool` resolves it against `location.href`, so the agent gets a URL on the page's
+  own origin (localhost, a preview or the live site) that it can quote or pass on. `expectParity`
+  checks every tool's link: same origin, and `decodeWidgetPermalink` reads its query.
 - **Naming.** A name matches `^(compute|convert|decode|read|check|compare|list|find|schedule|resolve|build|measure)_[a-z0-9_]+$`
   and is at most 48 characters. A description is at most 1,000 characters, holds none of
   drag, click, slider, drawn, widget, shown or page, and no backtick, `*` or `#`. `describeTool`
@@ -3850,8 +3854,9 @@ page loads nothing new and behaves as before.
   - A tool page lists exactly one tool, named as its page's `def.name`.
   - Calling it with the page's `def.example` returns `ok: true`.
   - The landing page and a guide list none.
-- **Follow-ups to file.** Page tools for the three `check/` pages (Canada, Morocco, US Sunshine
-  Protection Act): they have DOX tools but are not tool pages.
+- **Reader guide.** `guides/integration/browser-agents.mdx` explains page tools to a reader, with
+  the Cut-off Ruler's example call and its real answer. Regenerate that answer if the tool's result
+  shape changes.
 
 ## Tier 3 · HUD chrome
 

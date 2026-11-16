@@ -2,7 +2,7 @@
  * Sentences the database, identifier, cron, expiry, duration, holiday and date tools say and their
  * pages never show: what a call that leaves a value out, reads the clock, or is cut short is told.
  */
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CLAMP_NOTE, holidayNoteOf, MAX_YEARS } from "../observance-comparator";
 import {
   HOST_NOTE_TEXT,
@@ -30,6 +30,12 @@ import leap, { defaultYearNote, noLocaleNote } from "./tools/leap-day-birthday";
 import feasts from "./tools/moving-feasts";
 import observance, { columnReasonNote } from "./tools/observance-comparator";
 import stored from "./tools/stored-time-audit";
+
+// A tool answers with its page's link as a full URL, resolved against the page's address, and
+// Node has none. The setup file restores the global after each test.
+beforeEach(() => {
+  vi.stubGlobal("location", new URL("https://northguild.dev/gmt/tools/"));
+});
 
 async function notesOf(
   tool: { execute(input: object, options?: object): Promise<unknown> },
