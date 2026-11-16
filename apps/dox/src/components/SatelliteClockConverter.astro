@@ -43,6 +43,7 @@ const html = renderSatelliteClockConverterTemplate(
   import { mountSatelliteClockConverter } from "../lib/satellite-clock-converter-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=satclock&wa=` permalink seeds the widget with the values it names;
@@ -58,5 +59,9 @@ const html = renderSatelliteClockConverterTemplate(
           new AbortController().signal,
         ).catch((error) => showUnavailable(el, error));
       });
+    void offerPageTool(
+      "satellite-clock-converter",
+      () => import("../lib/webmcp/tools/satellite-clock-converter"),
+    );
   }
 </script>

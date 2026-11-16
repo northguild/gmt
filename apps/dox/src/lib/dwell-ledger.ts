@@ -15,6 +15,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import { exactOffsetText } from "./exact-offset";
+import type { DwellLib } from "./ledger-lib";
 import type { DayMark, PlateSpec, SeriesNumber } from "./ledger-widgets";
 
 export interface DwellLedgerArgs {
@@ -410,7 +411,7 @@ export function formatHandleValue(ms: number, zone: string | null): string {
 // Why null
 // ---------------------------------------------------------------------------
 
-type NullReason =
+export type NullReason =
   | "invalid-entry"
   | "invalid-exit"
   | "unknown-zone"
@@ -567,4 +568,115 @@ export function dwellPlates(
       ],
     },
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Facts: every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+/** The controls `dwellFacts` reads: the two times, the zone days are counted in, and a second zone. */
+export interface DwellInput {
+  entry: string;
+  exit: string;
+  /** `NO_ZONE` counts in the entry's own bracketed zone. */
+  zone: string;
+  /** `NO_ZONE` draws no comparison. */
+  compareZone: string;
+}
+
+/** The most local days `touchedDays` lists; a longer dwell is counted but not listed. */
+export const MAX_LISTED_DAYS = 366;
+
+export interface DwellFacts {
+  /** `dwellTime(entry, exit, zone)`, or `null`. */
+  result: DwellResult | null;
+  /** Why `result` is `null`; `null` when the dwell was read. */
+  reason: NullReason | null;
+  /**
+   * The local dates, `YYYY-MM-DD`, in the counting zone that the half-open dwell touches. `null`
+   * when there is no result, no zone to count in, or more than `MAX_LISTED_DAYS` days.
+   */
+  touchedDays: string[] | null;
+  /** The same instants counted in a second zone; `null` when none was asked for. */
+  compare: { zone: string; result: DwellResult | null } | null;
+}
+
+/**
+ * The local dates the half-open dwell `[entry, exit)` touches in `zone`, and a zero-length dwell
+ * touches the day it sits on: the rule `dayCells` marks and `dwellTime` counts with. `null` past
+ * `MAX_LISTED_DAYS` days or for a zone Temporal cannot read.
+ */
+export function touchedDates(
+  entryMs: number,
+  exitMs: number,
+  zone: string,
+): string[] | null {
+  if (Number.isNaN(entryMs) || Number.isNaN(exitMs) || exitMs < entryMs) {
+    return null;
+  }
+  const days: string[] = [];
+  try {
+    let day = Temporal.Instant.fromEpochMilliseconds(entryMs)
+      .toZonedDateTimeISO(zone)
+      .startOfDay();
+    // A day is touched while it starts before the exit; a dwell of no length touches its own day.
+    while (day.epochMilliseconds < exitMs || days.length === 0) {
+      if (days.length >= MAX_LISTED_DAYS) return null;
+      days.push(day.toPlainDate().toString());
+      day = day.add({ days: 1 }).startOfDay();
+    }
+  } catch {
+    return null;
+  }
+  return days;
+}
+
+/**
+ * What the WebMCP tool tells the agent beside `result`: why there is none, or why the dates are
+ * not listed. Only the tool calls it, because it reads `touchedDays`, which the mount never does.
+ */
+export function dwellNotes(state: DwellInput, facts: DwellFacts): string[] {
+  if (facts.reason) return [NULL_REASON_TEXT[facts.reason]];
+  if (
+    facts.result !== null &&
+    gridZone(state.entry, state.zone) !== null &&
+    facts.touchedDays === null
+  ) {
+    return [
+      `The dwell is longer than ${MAX_LISTED_DAYS} days, so its dates are not listed.`,
+    ];
+  }
+  return [];
+}
+
+/**
+ * The library calls the redraw makes, returned unchanged, with the days the dwell touched. The
+ * mount draws from this and the WebMCP tool answers with it, so the two cannot disagree. No DOM and
+ * no gmt import: `DwellLib` comes in from the caller.
+ */
+export function dwellFacts(state: DwellInput, lib: DwellLib): DwellFacts {
+  const { entry, exit, zone, compareZone } = state;
+  const result = lib.dwellTime(
+    entry,
+    exit,
+    zone === NO_ZONE ? undefined : zone,
+  );
+  const reason = result === null ? explainNull(entry, exit, zone, lib) : null;
+  const compare =
+    compareZone === NO_ZONE
+      ? null
+      : { zone: compareZone, result: lib.dwellTime(entry, exit, compareZone) };
+  return {
+    result,
+    reason,
+    compare,
+    // A getter, so the redraw that runs on every drag step never walks the days it does not
+    // read; JSON carries it, so the tool's answer holds them.
+    get touchedDays() {
+      const grid = gridZone(entry, zone);
+      return result === null || grid === null
+        ? null
+        : touchedDates(toEpochMs(entry), toEpochMs(exit), grid);
+    },
+  };
 }

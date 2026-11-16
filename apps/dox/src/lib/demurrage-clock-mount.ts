@@ -80,6 +80,7 @@ import {
   permalinkOf,
   presetState,
   readArgs,
+  NO_INTERVAL_TEXT,
   readClocks,
   summaryText,
   zoneLabel,
@@ -123,8 +124,6 @@ const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
 };
 
 const EMPTY_TEXT = "Add an event with an instant to draw the clocks.";
-const NO_INTERVAL_TEXT =
-  "The library returned no interval for these events and options.";
 
 interface Option {
   value: string;

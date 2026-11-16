@@ -40,20 +40,24 @@ import { callOutput } from "~/widgets/families/gnss/call-output";
 import { grow } from "~/widgets/primitives/grow/grow";
 import styles from "~/widgets/tools/converter-bench.module.css";
 import { CONVERTER_LOCALES, CURATED_TIMEZONES } from "./curated-timezones";
-import { GMT_MODULES } from "./gmt-modules";
+import {
+  CONVERTER_DEFAULTS,
+  converterFacts,
+  type ConverterFacts,
+  type ConverterLib,
+} from "./converter-bench";
+
+const DEFAULT_VALUE = CONVERTER_DEFAULTS.value;
+const DEFAULT_SOURCE_ZONE = CONVERTER_DEFAULTS.from;
+const DEFAULT_TARGET_ZONE = CONVERTER_DEFAULTS.to;
+const DEFAULT_LOCALE = CONVERTER_DEFAULTS.locale;
+const DEFAULT_REGEX_INPUT = CONVERTER_DEFAULTS.regexInput;
 import { codeSpan } from "./widget-ui";
 import { normaliseZonedInput } from "./zoned-input";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { loadConverterLib } from "./zones-lib";
 
 const WIDGET_NAME = "converter-bench";
-
-/* London and Sydney sit in opposite hemispheres, so their clocks change in
-   opposite seasons. On 15 March London is on GMT and Sydney on daylight time. */
-const DEFAULT_VALUE = "2024-03-15T14:30:00.000+00:00[Europe/London]";
-const DEFAULT_SOURCE_ZONE = "Europe/London";
-const DEFAULT_TARGET_ZONE = "Australia/Sydney";
-const DEFAULT_LOCALE = "en";
-const DEFAULT_REGEX_INPUT = "2024-03-15T14:30:00";
 
 export interface ConverterArgs {
   value?: string;
@@ -171,59 +175,16 @@ export function renderConverterTemplate(
   );
 }
 
-interface RegexConst {
-  name: string;
-  pattern: RegExp;
-}
-
-interface FormatPart {
-  type: string;
-  value: string;
-}
-
-async function loadModules() {
-  const [convMod, fmtMod, regexMod] = await Promise.all([
-    GMT_MODULES["zoned/convert"](),
-    GMT_MODULES["zoned/format"](),
-    GMT_MODULES["regex"](),
-  ]);
-  return {
-    convertZonedToZoned: convMod["convertZonedToZoned"] as (
-      value: string,
-      timeZone: string,
-    ) => string,
-    formatZonedToParts: fmtMod["formatZonedToParts"] as (
-      value: string,
-      locale?: string,
-    ) => FormatPart[],
-    formatRelativeZoned: fmtMod["formatRelativeZoned"] as (
-      value: string,
-      locale?: string,
-    ) => string,
-    regexes: regexMod as Record<string, RegExp>,
-  };
-}
-
-type Modules = Awaited<ReturnType<typeof loadModules>>;
-
-function getRegexList(regexes: Record<string, RegExp>): RegexConst[] {
-  const exclude = ["__esModule"];
-  return Object.keys(regexes)
-    .filter((k) => !exclude.includes(k) && regexes[k] instanceof RegExp)
-    .map((k) => ({ name: k, pattern: regexes[k] }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
 /** One chip per exported pattern. A match says so in words, so it never rests on colour. */
-function regexChips(input: string, regexes: RegexConst[]): SafeHtml {
-  return html`${regexes.map(({ name, pattern }) => {
-    const match = pattern.test(input);
-    return html`<li class="${styles.chip}">${badge({
-      text: match ? `${name} · match` : name,
-      tone: match ? "spring" : "neutral",
-      dim: !match,
-    })}${match ? "" : srOnly(" — no match")}</li>`;
-  })}`;
+function regexChips(matches: ConverterFacts["regexMatches"]): SafeHtml {
+  return html`${matches.map(
+    ({ name, matched }) =>
+      html`<li class="${styles.chip}">${badge({
+        text: matched ? `${name} · match` : name,
+        tone: matched ? "spring" : "neutral",
+        dim: !matched,
+      })}${matched ? "" : srOnly(" — no match")}</li>`,
+  )}`;
 }
 
 function callFrame(
@@ -251,7 +212,7 @@ interface Controller {
 /** Wire the template at `root`. Throws a plain `Error` on a missing element. */
 function setupWidget(
   root: HTMLElement,
-  modules: Modules,
+  modules: ConverterLib,
   signal: AbortSignal,
 ): Controller {
   const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
@@ -270,20 +231,24 @@ function setupWidget(
     callRelative: el("call-format-relative"),
     chips: el("regex-results"),
   };
-  const regexList = getRegexList(modules.regexes);
 
   function run(): void {
-    const converted = modules.convertZonedToZoned(
-      convertVal.value,
-      convertTarget.value,
+    const locale = fmtLocale.value;
+    const { converted, parts, relative, regexMatches } = converterFacts(
+      {
+        convertValue: convertVal.value,
+        target: convertTarget.value,
+        formatValue: fmtVal.value,
+        locale,
+        regexInput: regexInput.value,
+      },
+      modules,
     );
     setHtml(
       slots.convert,
       outputOf("Converted value", converted, converted === ""),
     );
 
-    const locale = fmtLocale.value;
-    const parts = modules.formatZonedToParts(fmtVal.value, locale);
     setHtml(
       slots.parts,
       outputOf("Format parts", JSON.stringify(parts), parts.length === 0),
@@ -297,7 +262,6 @@ function setupWidget(
         locale,
       ),
     );
-    const relative = modules.formatRelativeZoned(fmtVal.value, locale);
     setHtml(
       slots.relative,
       outputOf("Relative format", relative, relative === ""),
@@ -312,7 +276,7 @@ function setupWidget(
       ),
     );
 
-    setHtml(slots.chips, regexChips(regexInput.value, regexList));
+    setHtml(slots.chips, regexChips(regexMatches));
   }
 
   /** A zone seeded from a link or a call joins the list when it is not on it; a locale
@@ -358,7 +322,7 @@ function setupWidget(
 }
 
 /** Recompute every section from the current control values. */
-export function run(container: HTMLElement, modules: Modules): void {
+export function run(container: HTMLElement, modules: ConverterLib): void {
   setupWidget(container, modules, new AbortController().signal).run();
 }
 
@@ -368,13 +332,8 @@ export const mountConverterBench: MountFn<ConverterArgs> = async (
   signal,
 ) => {
   defineElements();
-  let modules: Modules;
-  try {
-    modules = await loadModules();
-  } catch (cause) {
-    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
-  }
+  // `loadConverterLib` throws a `WidgetLoadError`: loud, not inert (see `WidgetLoadError`).
+  const modules = await loadConverterLib();
   if (signal.aborted) return onceDestroy(() => {});
 
   let controller: Controller;

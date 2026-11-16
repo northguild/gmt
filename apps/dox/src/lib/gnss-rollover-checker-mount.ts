@@ -24,7 +24,6 @@
  * widget with the mount's `signal`. The one drag handle is a native range, and the date
  * field is its typed equivalent.
  */
-import { Temporal } from "@js-temporal/polyfill";
 import { defineElements } from "~/widgets/define";
 import {
   aside,
@@ -80,6 +79,7 @@ import {
   ROLLOVER_LINKS,
   ROLLOVER_NOW_MODES,
   ROLLOVER_PRESETS,
+  clockNow,
   dateOfDay,
   dayOfDate,
   fuseYears,
@@ -461,10 +461,6 @@ interface Controller {
   release(): void;
 }
 
-/** The reader's clock as a UTC instant to the second. */
-const nowIso = (): string =>
-  Temporal.Now.instant().toString({ smallestUnit: "second" });
-
 function setupWidget(
   root: HTMLElement,
   lib: GnssLib,
@@ -518,7 +514,7 @@ function setupWidget(
     const today = nowMode() === "today";
     if (today && ticker === null && !signal.aborted) {
       ticker = setInterval(() => {
-        if (nowIso() !== lastNow) render();
+        if (clockNow() !== lastNow) render();
       }, 1000);
     } else if (!today && ticker !== null) {
       clearInterval(ticker);
@@ -557,7 +553,7 @@ function setupWidget(
   function render(): void {
     showFields();
     const state = readState();
-    lastNow = nowIso();
+    lastNow = clockNow();
     const read = readRollover(lib, state, lastNow);
     last = read;
 

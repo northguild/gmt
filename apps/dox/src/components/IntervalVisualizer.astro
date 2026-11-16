@@ -57,6 +57,7 @@ const html = renderIntervalTemplate("interval-visualizer").value;
   import { mountIntervalVisualizer } from "../lib/interval-visualizer-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   /* One mount per instance on the page. The rail passes a real AbortSignal;
      here nothing ever unmounts, so a never-aborted controller is honest about
@@ -73,5 +74,9 @@ const html = renderIntervalTemplate("interval-visualizer").value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "interval-visualizer",
+      () => import("../lib/webmcp/tools/interval-visualizer"),
+    );
   }
 </script>

@@ -23,6 +23,7 @@ import { grow } from "~/widgets/primitives/grow/grow";
 import { range } from "~/widgets/primitives/range/range";
 import { readout } from "~/widgets/primitives/readout/readout";
 import styles from "~/widgets/tools/multi-zone-scrubber.module.css";
+import { SLIDER_STEP_MIN } from "~/lib/zone-step";
 import { utcDatetimeInput } from "./utc-datetime-input";
 
 const SCRUBBER_WIDGET_NAME = "multi-zone-scrubber";
@@ -30,10 +31,7 @@ const SCRUBBER_WIDGET_NAME = "multi-zone-scrubber";
 /** The slider spans this many minutes either side of the reference time (36 h). */
 export const SLIDER_RANGE_MIN = 36 * 60;
 
-/** The granularity of everything the reader can move: the slider's step, the reference-time
- *  field's own step, and what a seeded or restored anchor is rounded to. Named once and
- *  derived everywhere, so two steppers cannot disagree. */
-export const SLIDER_STEP_MIN = 5;
+export { SLIDER_STEP_MIN };
 
 /** The slider's shift as a signed, worded offset: `+1 h 15 min`, `−45 min`, `0 min`. */
 export function formatShift(minutes: number): string {

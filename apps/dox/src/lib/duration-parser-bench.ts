@@ -231,6 +231,17 @@ export function benchView(
   };
 }
 
+/**
+ * The facts the page's redraw computes for the controls' values: what the typed string reads as.
+ * The page and the WebMCP tool both call this, so they cannot disagree.
+ */
+export function durationFacts(
+  state: BenchState,
+  lib: DurationBenchLib,
+): BenchView {
+  return benchView(lib, state.text, state.locale);
+}
+
 // ---------------------------------------------------------------------------
 // Section 3, table A: minute or month
 // ---------------------------------------------------------------------------

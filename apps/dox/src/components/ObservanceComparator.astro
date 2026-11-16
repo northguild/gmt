@@ -35,6 +35,7 @@ const html = renderObservanceComparatorTemplate("observance-comparator", {}).val
   import { mountObservanceComparator } from "../lib/observance-comparator-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("observance");
@@ -45,5 +46,9 @@ const html = renderObservanceComparatorTemplate("observance-comparator", {}).val
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "observance-comparator",
+      () => import("../lib/webmcp/tools/observance-comparator"),
+    );
   }
 </script>

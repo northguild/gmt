@@ -40,6 +40,7 @@ const html = renderGnssWeekDecoderTemplate("gnss-week-decoder", {}).value;
   import { mountGnssWeekDecoder } from "../lib/gnss-week-decoder-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=gnssweek&wa=` permalink seeds the widget with the values it names;
@@ -53,5 +54,9 @@ const html = renderGnssWeekDecoderTemplate("gnss-week-decoder", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "gnss-week-decoder",
+      () => import("../lib/webmcp/tools/gnss-week-decoder"),
+    );
   }
 </script>

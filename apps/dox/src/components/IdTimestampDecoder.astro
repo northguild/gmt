@@ -36,6 +36,7 @@ const html = renderIdTimestampDecoderTemplate("id-timestamp-decoder", {}).value;
   import { mountIdTimestampDecoder } from "../lib/id-timestamp-decoder-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("iddecode");
@@ -46,5 +47,9 @@ const html = renderIdTimestampDecoderTemplate("id-timestamp-decoder", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "id-timestamp-decoder",
+      () => import("../lib/webmcp/tools/id-timestamp-decoder"),
+    );
   }
 </script>

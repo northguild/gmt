@@ -19,6 +19,7 @@ import {
   minutesBetween,
   minutesText,
   readyAt,
+  type DeliverySchedule,
   type ScheduleLeg,
   type TransportLib,
 } from "./transport-widgets";
@@ -301,4 +302,50 @@ export function naiveCheck(state: ConnectionState): NaiveCheck | null {
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Facts — every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+export interface ConnectionFacts {
+  /** `scheduleDelivery(legs)`: the whole handoff, or `null`. */
+  result: DeliverySchedule | null;
+  verdict: Verdict;
+  /** The printed-clock check, or `null` when the text does not parse. */
+  naive: NaiveCheck | null;
+  /** When the inbound leg alone arrives, or `undefined` when it does not. */
+  arrival: string | undefined;
+  /** The inbound leg alone sits at the edge of the time range, so no arrival could be placed. */
+  arrivalOutOfRange: boolean;
+  /** Why the verdict is "no verdict"; `null` for a made or missed connection. */
+  diagnosis: ReturnType<typeof diagnose>;
+}
+
+/**
+ * Everything the redraw asks the library, returned unchanged. The mount draws from this and the
+ * WebMCP tool answers with it, so the two cannot disagree.
+ */
+export function connectionFacts(
+  state: ConnectionState,
+  lib: TransportLib,
+): ConnectionFacts {
+  const legs = legsOf(state);
+  const result = lib.scheduleDelivery(legs);
+  const v = verdict(legs, lib);
+  const naive = naiveCheck(state);
+  let arrival: string | undefined;
+  let arrivalOutOfRange = false;
+  try {
+    arrival = legs[0]
+      ? lib.scheduleDelivery([legs[0]])?.legTimes[0]?.arrival
+      : undefined;
+  } catch (error) {
+    // The strip drew the range-edge note for this; any other error still surfaces.
+    if (!(error instanceof Error && error.name === "RangeError")) throw error;
+    arrivalOutOfRange = true;
+  }
+  const diagnosis =
+    v.kind === "no-verdict" ? diagnose(legs, undefined, lib) : null;
+  return { result, verdict: v, naive, arrival, arrivalOutOfRange, diagnosis };
 }

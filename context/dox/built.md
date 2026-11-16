@@ -89,6 +89,11 @@ that bind future changes, the traps, and the runbooks. Every story is done; stat
   closed dates but not the rule behind each; calling it on the rules before each one gives the
   rule's own dates without a shift computed on the site. This binds every later tool that draws a
   built calendar.
+- **A tool page registers a tool, and its tool calls the facts function its mount calls.** Each page
+  under `src/content/docs/tools/` has one WebMCP tool in `src/lib/webmcp/tools/<slug>.ts`, offered
+  from the widget component's `<script>`. The tool module imports no mount and no CSS, so a missing
+  facts function is extracted into the page's pure module first, and the mount then calls it too
+  ([Page tools (WebMCP)](#page-tools-webmcp)).
 - **Helpers follow the zero-bug house rules.** No catch-all helper: split by kind with narrow
   unions and return one shape. No constant that ages: no fixed year window, century pivot, era
   count or "current era"; a preset's dates carry their year, and the eras to draw come from the
@@ -3765,6 +3770,88 @@ Shared hooks come first, then the globe, then the clock-change pages.
   the reader has chosen a zone; the zone the globe starts on is shown, not opened, and Escape
   passes it by (`globe-mount.ts`).
 - **Trap.** A new layer that listens for Escape on its own breaks the cascade: register it.
+
+### Page tools (WebMCP)
+
+Every tool page registers one tool that an agent in the reader's browser can list and call
+([WebMCP](https://webmachinelearning.github.io/webmcp/): `document.modelContext.registerTool`).
+The tool is read-only (`readOnlyHint: true`) and never drives the widget on the page. It runs the
+pure function the page's own redraw runs and answers with the facts. In a browser without WebMCP the
+page loads nothing new and behaves as before.
+
+- **The marker and the offer are split.** `route-data.ts` puts `<meta name="gmt-webmcp" content="<slug>">`
+  and the origin-trial meta into the head of every `tools/<slug>` page and no other
+  (`webmcpHeadEntries` in `head-tags.ts`). The component's script calls
+  `offerPageTool("<slug>", () => import("../lib/webmcp/tools/<slug>"))` (`webmcp/offer.ts`), which
+  returns before any import when the marker is missing, names another slug, or the browser has no
+  model context. `offer.ts` imports only `model-context.ts`, so the landing page and every browser
+  without WebMCP pay under 1 kB and fetch no tool chunk. `graph.test.ts` holds that import list.
+- **The facts function is shared.** The tool and the mount call one function (`converterFacts`,
+  `dstFacts`, `intervalFacts`, `readZonesAt`, `readZoneNow` and the others), so a tile and the
+  tool's answer cannot disagree. Where a mount computed inline, the code was moved into the page's
+  pure `src/lib/<page>.ts` and the mount calls it. A library the mount loads with a dynamic import
+  gets a `load<X>Lib` (`loadConverterLib`, `loadDstLib`, `loadIntervalLib` in `lib/zones-lib.ts`) that the tool also awaits; a
+  failed load resolves `unavailable` through `loadLibFor`.
+- **Schemas live in `dox-tool-schemas.ts`, free of `ai`.** The tool's `input` is the chat tool's own
+  `<doxTool>Input`, moved out of `dox-tools.ts`, which re-exports it. `coverage.test.ts` asserts the
+  two are the same object, so the chat and the tool take one input.
+- **`io: "input"`, and refinements go in `rules`.** The JSON Schema comes from
+  `z.toJSONSchema(schema, { io: "input" })`, which keeps defaults optional and drops every
+  `.refine`. `describeTool` therefore writes one sentence per refinement from the def's `rules`, and
+  `coverage.test.ts` fails when `rules` is shorter than the schema's refinements.
+- **Errors resolve and never reject.** `execute` safe-parses the input and answers
+  `{ ok: false, error: "invalid-input", issues }` for a refusal and `{ ok: false, error: "unavailable" }`
+  for a library that would not load. A sentinel from the library (an empty string, `null`, `false`,
+  `[]`) is a result, with a note in `notes`; a legitimately empty answer (two intervals that share no
+  time) is not a sentinel and has no note.
+- **Naming.** A name matches `^(compute|convert|decode|read|check|compare|list|find|schedule|resolve|build|measure)_[a-z0-9_]+$`
+  and is at most 48 characters. A description is at most 1,000 characters, holds none of
+  drag, click, slider, drawn, widget, shown or page, and no backtick, `*` or `#`. `describeTool`
+  joins `returns`, the `when` line, the chat `args` line, each rule and `calls`; `argsSwaps` and
+  `whenSwaps` replace a banned phrase and only when one is present.
+- **Seeds are reported.** A value the call left out and the tool filled from the page's starting
+  value or the clock is named in `input` and in a note (`seedNote`), so the agent can see what it
+  was answered for.
+- **The token is a constant.** `ORIGIN_TRIAL_TOKENS` in `webmcp/origin-trial.ts` is a committed list
+  of public origin-trial tokens. Empty, no meta is emitted and the Chrome testing flag still turns
+  WebMCP on.
+- **The gate.** `coverage.test.ts` (names, descriptions, swaps, one module per page), the
+  `parity-<group>.test.ts` files (the tool against the mounted page through
+  `~/test/webmcp-parity`), `head.dist.test.ts` (the built head) and
+  `scripts/webmcp.browser.test.ts` (every page in Chromium and WebKit, with a fake model context and
+  with none).
+- **The globe tool loads through a hop.** `Globe.astro` also runs on the landing page, where the
+  first-input budget is tight, so it offers `zoned-earth` through `webmcp/zoned-earth-hop.ts` (one
+  `import()`, no static import, outside `tools/`) and the tool's preload table sits in the hop chunk
+  and not in the Globe script. No other page needs one.
+- **The stylesheet guard judges the tool import only.** `head.dist.test.ts` walks a page's dynamic
+  imports (through a hop) to the chunk that names the page and checks that import's own preload list
+  against the sheets the page links. A mount's list is walked past: those sheets are the widget's
+  business. It fails when it finds no tool import, so it cannot pass vacuously.
+- **Trap: the planner tool cannot import `multi-zone-scrubber.ts`.** It carries its CSS, which the
+  graph test refuses. The anchor and rounding helpers live in `src/lib/zone-anchor.ts`, `readZonesAt` lives in
+  `zone-clock.ts`, and the step size in `zone-step.ts`.
+- **Runbook: renew the origin-trial token.** The console emails a link before the token expires.
+  Register `https://northguild.dev` there for the WebMCP trial, paste the new token into
+  `ORIGIN_TRIAL_TOKENS`, and deploy. `origin-trial.test.ts` and `head.dist.test.ts` check the tag.
+- **Rules a new or edited page tool must still obey.**
+  - A facts function takes its input from the args only, never from drag or marker state, and a
+    test passes every time argument explicitly so the page and the tool see one instant.
+  - A tool imports only the loader its page needs: `loadFinanceLib` (`finance-lib.ts`),
+    `loadDayCountLib`, `loadHolidayLib` (`holiday-lib.ts`) and `loadPunctualityLib`
+    (`punctuality-lib.ts`) each serve more than one page, and the tool never caches one.
+  - `result` holds the library's own strings, never an object or the escaped HTML the page
+    renders; `json-safe.ts` and the parity test's JSON round trip enforce the first.
+  - Grid and handle geometry stay in the mount. `free-time-ledger` and `demurrage-clock` share terms,
+    so their `returns` sentences must tell the two apart.
+- **Open checks after a deploy** (the owner runs them in Chrome 149 or later on
+  `https://northguild.dev`, with the trial token live or `chrome://flags/#enable-webmcp-testing` on
+  and the Model Context Tool Inspector open):
+  - A tool page lists exactly one tool, named as its page's `def.name`.
+  - Calling it with the page's `def.example` returns `ok: true`.
+  - The landing page and a guide list none.
+- **Follow-ups to file.** Page tools for the three `check/` pages (Canada, Morocco, US Sunshine
+  Protection Act): they have DOX tools but are not tool pages.
 
 ## Tier 3 · HUD chrome
 

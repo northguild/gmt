@@ -82,6 +82,7 @@ import {
   readAuditLines,
   readingsOf,
   stripFor,
+  truncatedText,
   transitionDate,
   type AuditLine,
   type AuditState,
@@ -265,20 +266,6 @@ function auditRow(line: AuditLine, n: number, selected: boolean): AuditRow {
     tokens: mismatch ? items.filter((i) => i.name.startsWith("at")) : items,
     sentence: lineSentence(line),
   };
-}
-
-function truncatedText(parsed: ParsedLines): string {
-  if (!parsed.truncated) return "";
-  const parts: string[] = [];
-  if (parsed.droppedLines > 0) {
-    parts.push(
-      `${parsed.droppedLines} more ${parsed.droppedLines === 1 ? "line" : "lines"} not read, after the first ${AUDIT_MAX_LINES}`,
-    );
-  }
-  if (parsed.cutLines) {
-    parts.push(`lines cut to ${AUDIT_MAX_CHARS} characters`);
-  }
-  return `Read ${parsed.lines.length} ${parsed.lines.length === 1 ? "line" : "lines"}: ${parts.join("; ")}.`;
 }
 
 // ---------------------------------------------------------------------------

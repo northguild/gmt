@@ -71,7 +71,7 @@ import {
   presetState,
   readArgs,
   readPattern,
-  readSsim,
+  buildModel,
   writeSsim,
   type CallsSection,
   type MonthTable,
@@ -544,15 +544,14 @@ function setupWidget(
     localeEl.value = state.locale;
   }
 
-  function drawRead(): void {
-    lastRead = readSsim(lib, state);
+  function drawRead(read: ReadResult): void {
+    lastRead = read;
     setHtml(el("read-plates"), readPlates(lastRead));
     setHtml(el("read-reason"), readReasonOf(lastRead.reason));
     setHtml(el("read-calls"), callsOf("read", lastRead.calls.join("\n")));
   }
 
-  function drawPattern(): void {
-    const pattern = readPattern(lib, state, lastRead);
+  function drawPattern(pattern: PatternResult): void {
     if (drawnLocale !== state.locale) {
       drawnLocale = state.locale;
       months = monthTable(lib, state.locale);
@@ -569,8 +568,7 @@ function setupWidget(
     );
   }
 
-  function drawWrite(): void {
-    const write = writeSsim(lib, state);
+  function drawWrite(write: WriteResult): void {
     setHtml(el("write-plates"), writePlates(write));
     setHtml(el("write-reason"), writeReasonOf(write.reason));
     setHtml(el("write-calls"), callsOf("write", write.calls.join("\n")));
@@ -579,13 +577,14 @@ function setupWidget(
   function draw(scope: Scope): void {
     presetEl.value = matchPreset(state);
     if (scope === "all") {
-      drawRead();
-      drawPattern();
-      drawWrite();
+      const model = buildModel(lib, state);
+      drawRead(model.read);
+      drawPattern(model.pattern);
+      drawWrite(model.write);
     } else if (scope === "locale") {
-      drawPattern();
+      drawPattern(readPattern(lib, state, lastRead));
     } else {
-      drawWrite();
+      drawWrite(writeSsim(lib, state));
     }
   }
 

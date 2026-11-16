@@ -50,9 +50,8 @@ import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import {
   VALUE_PRESETS,
-  buildValuePreset,
-  buildZonedValueFromMinutes,
-  classifyProbeResult,
+  dstFacts,
+  dstScrubFor,
   formatMinuteOfDay,
   getTickerWindow,
   isGap,
@@ -61,18 +60,16 @@ import {
   localDateAtTransition,
   localMinuteOfDayAtTransition,
   minuteToTickerPercent,
-  probeContext,
   selectTickMinutes,
-  toPlainLocalDateTime,
   transitionType,
-  zoneMidpointMinutes,
+  type DstLib,
   type DstTransition,
   type ProbeClassification,
   type TickerWindow,
   type ValuePreset,
 } from "./dst-inspector";
-import { GMT_MODULES } from "./gmt-modules";
-import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { onceDestroy, type MountFn } from "./widget-mount";
+import { loadDstLib } from "./zones-lib";
 import { codeSpan } from "./widget-ui";
 
 const WIDGET_NAME = "dst-inspector";
@@ -204,30 +201,6 @@ function callFrame(label: string, plain: string, code?: SafeHtml): SafeHtml {
 }
 
 // ---------------------------------------------------------------------------
-// Library
-// ---------------------------------------------------------------------------
-
-async function loadModules() {
-  const [getMod, convertMod] = await Promise.all([
-    GMT_MODULES["zoned/get"](),
-    GMT_MODULES["zoned/convert"](),
-  ]);
-  return {
-    getDstTransitions: getMod["getDstTransitions"] as (
-      zone: string,
-      year: number,
-    ) => DstTransition[],
-    convertPlainDateTimeToZoned: convertMod["convertPlainDateTimeToZoned"] as (
-      value: string,
-      timeZone: string,
-      options?: { disambiguation?: string },
-    ) => string,
-  };
-}
-
-type Modules = Awaited<ReturnType<typeof loadModules>>;
-
-// ---------------------------------------------------------------------------
 // Render helpers
 // ---------------------------------------------------------------------------
 
@@ -299,7 +272,7 @@ function explanationAside(
 // Wiring
 // ---------------------------------------------------------------------------
 
-function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
+function setupWidget(root: HTMLElement, m: DstLib, signal: AbortSignal) {
   const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
   const zoneEl = el<HTMLSelectElement>("zone");
   const yearEl = el<HTMLInputElement>("year");
@@ -394,7 +367,16 @@ function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
     const presetType = presetEl.value;
     const dis = disEl.value || "compatible";
 
-    const transitions = m.getDstTransitions(zone, year);
+    const { transitions, value, plainValue, result, classification } = dstFacts(
+      {
+        zone,
+        year,
+        preset: presetType,
+        disambiguation: dis,
+        scrub: { activeTransition, tickerWindow, handleMinuteOfDay },
+      },
+      m,
+    );
     setHtml(el("table"), dstTable(rowsOf(transitions, zone)));
     setHtml(
       el("call-getdst"),
@@ -413,27 +395,6 @@ function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
         desc.textContent = `${zone} has no DST transitions in ${year}, so there is no ${PRESET_NOUN[presetType] ?? "value"} to probe. Pick another zone or year.`;
       }
     }
-
-    // Scrubbable presets take their value from the strip; fixed ones do not.
-    const scrubbable =
-      activeTransition !== null &&
-      tickerWindow !== null &&
-      handleMinuteOfDay !== null;
-    const value = scrubbable
-      ? buildZonedValueFromMinutes(
-          zone,
-          localDateAtTransition(activeTransition!, zone) ?? "",
-          handleMinuteOfDay!,
-        )
-      : buildValuePreset(presetType as ValuePreset, zone, transitions);
-
-    // The call resolves the wall time, so the [zone] and any offset the "transition"
-    // preset embeds are stripped: an offset would answer the ambiguity `disambiguation`
-    // exists to resolve.
-    const plainValue = value ? toPlainLocalDateTime(value) : "";
-    const result = plainValue
-      ? m.convertPlainDateTimeToZoned(plainValue, zone, { disambiguation: dis })
-      : "";
 
     drawTicker(zone, transitions);
 
@@ -462,20 +423,6 @@ function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
         ),
       );
     }
-
-    // A probe can sit inside a transition's range, so classify against the transitions on
-    // its own date. A fixed preset is not assumed normal: a southern zone's "Exact
-    // transition instant" is the start of the repeated hour.
-    const { onDate, probeHour } = probeContext(plainValue, transitions, zone);
-    const classification = classifyProbeResult(
-      result,
-      onDate,
-      probeHour,
-      zone,
-      {
-        disambiguation: dis,
-      },
-    );
 
     setHtml(
       el("probe-result"),
@@ -507,27 +454,12 @@ function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
     const zone = zoneEl.value;
     const year = parseInt(yearEl.value, 10);
     const presetType = presetEl.value;
-    const transitions = m.getDstTransitions(zone, year);
-
-    activeTransition =
-      presetType === "gap"
-        ? (transitions.find(isGap) ?? null)
-        : presetType === "overlap"
-          ? (transitions.find(isOverlap) ?? null)
-          : null;
-    tickerWindow = activeTransition
-      ? getTickerWindow(activeTransition, zone)
-      : null;
-    // The thumb starts in the middle of the skipped or repeated range: the transition's
-    // own local reading is the range's end for a gap, which is outside it.
-    handleMinuteOfDay =
-      activeTransition && tickerWindow
-        ? zoneMidpointMinutes(tickerWindow)
-        : null;
-    if (handleMinuteOfDay !== null && Number.isNaN(handleMinuteOfDay)) {
-      handleMinuteOfDay = null;
-      tickerWindow = null;
-    }
+    ({ activeTransition, tickerWindow, handleMinuteOfDay } = dstScrubFor(
+      zone,
+      year,
+      presetType,
+      m,
+    ));
     render();
   }
 
@@ -601,13 +533,8 @@ export const mountDstInspector: MountFn<DstArgs> = async (
   signal,
 ) => {
   defineElements();
-  let modules: Modules;
-  try {
-    modules = await loadModules();
-  } catch (cause) {
-    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
-  }
+  // `loadDstLib` throws a `WidgetLoadError`: loud, not inert (see `WidgetLoadError`).
+  const modules = await loadDstLib();
   if (signal.aborted) return onceDestroy(() => {});
 
   /* Args go onto the controls before setup, so its first render reads the seeded values

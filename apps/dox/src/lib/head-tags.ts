@@ -271,6 +271,31 @@ export function headEntries(input: HeadInput): HeadEntry[] {
   return entries;
 }
 
+/** The route ids that are the tools index, not a tool page. */
+const TOOLS_INDEX_IDS: ReadonlySet<string> = new Set(["tools", "tools/index"]);
+
+/**
+ * The tags a tool page adds so an agent in the reader's browser can call its WebMCP tool: the
+ * marker that names the page (`offerPageTool` reads it) and one origin-trial meta per token.
+ * Every other page, the tools index included, gets none. A meta with `http-equiv` has no
+ * `replaceKey`, so `upsertHead` adds each token and replaces nothing.
+ */
+export function webmcpHeadEntries(
+  id: string,
+  tokens: readonly string[],
+): HeadEntry[] {
+  if (!id.startsWith("tools/") || TOOLS_INDEX_IDS.has(id)) return [];
+  const slug = id.slice("tools/".length);
+  if (slug === "" || slug.includes("/")) return [];
+  return [
+    { tag: "meta", attrs: { name: "gmt-webmcp", content: slug } },
+    ...tokens.map((token): HeadEntry => ({
+      tag: "meta",
+      attrs: { "http-equiv": "origin-trial", content: token },
+    })),
+  ];
+}
+
 /** The key two entries share when one replaces the other, or undefined when an entry is only added. */
 function replaceKey(entry: HeadEntry): string | undefined {
   const attrs = entry.attrs ?? {};

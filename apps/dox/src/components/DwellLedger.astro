@@ -48,6 +48,7 @@ const html = renderDwellLedgerTemplate("dwell-ledger", {}).value;
   import { mountDwellLedger } from "../lib/dwell-ledger-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=dwell&wa=` permalink seeds the widget with the dwell it names; see
@@ -61,5 +62,9 @@ const html = renderDwellLedgerTemplate("dwell-ledger", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "dwell-ledger",
+      () => import("../lib/webmcp/tools/dwell-ledger"),
+    );
   }
 </script>

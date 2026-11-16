@@ -44,6 +44,7 @@ const html = renderCutoffCountdownTemplate("cutoff-countdown", {}).value;
   import { mountCutoffCountdown } from "../lib/cutoff-countdown-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("cutoffcountdown");
@@ -54,5 +55,9 @@ const html = renderCutoffCountdownTemplate("cutoff-countdown", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "cutoff-countdown",
+      () => import("../lib/webmcp/tools/cutoff-countdown"),
+    );
   }
 </script>

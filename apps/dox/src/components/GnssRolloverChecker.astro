@@ -45,6 +45,7 @@ const html = renderGnssRolloverCheckerTemplate(
   import { mountGnssRolloverChecker } from "../lib/gnss-rollover-checker-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=rollover&wa=` permalink seeds the widget with the values it names;
@@ -58,5 +59,9 @@ const html = renderGnssRolloverCheckerTemplate(
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "gnss-rollover-checker",
+      () => import("../lib/webmcp/tools/gnss-rollover-checker"),
+    );
   }
 </script>

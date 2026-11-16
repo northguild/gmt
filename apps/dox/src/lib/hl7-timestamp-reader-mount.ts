@@ -81,6 +81,7 @@ import {
   READ_AS_UTC,
   detailText,
   hl7Blank,
+  hl7Facts,
   hl7Figure,
   hl7Texts,
   isSeeded,
@@ -90,7 +91,6 @@ import {
   permalinkOf,
   presetState,
   readArgs,
-  readHl7,
   sentinelText,
   stripApplies,
   stripNote,
@@ -368,15 +368,16 @@ function setupWidget(
     presetEl.value = matchPreset(s);
   }
 
-  function renderStrip(s: Hl7State, read: Hl7Read): void {
+  function renderStrip(
+    s: Hl7State,
+    read: Hl7Read,
+    strip: ReturnType<typeof stripOf> | null,
+    ladder: ReturnType<typeof ladderOf>,
+  ): void {
     const applies = stripApplies(read);
     const parsed = read.parsed;
     el("strip-note").textContent = stripNote(read);
 
-    const strip =
-      applies && parsed?.kind === "local"
-        ? stripOf(parsed.local, s.zones, lib)
-        : null;
     const rows: StripRow[] =
       strip !== null
         ? strip.rows
@@ -439,15 +440,11 @@ function setupWidget(
       ),
     );
 
-    drawLadder(read, strip);
+    drawLadder(ladder);
   }
 
   /** The ladder: seven rows of real `formatHL7` calls, or the empty state. */
-  function drawLadder(
-    read: Hl7Read,
-    strip: ReturnType<typeof stripOf> | null,
-  ): void {
-    const ladder = ladderOf(read, strip, lib);
+  function drawLadder(ladder: ReturnType<typeof ladderOf>): void {
     if (ladder.third !== ladderHead) {
       ladderHead = ladder.third;
       setHtml(el("ladder"), ladderTable(id, ladder.third));
@@ -471,7 +468,7 @@ function setupWidget(
 
     // Section 2: the one call. A blank form makes none: it is the empty state, never the sentinel.
     const blank = hl7Blank(s);
-    const read = readHl7(s, lib);
+    const { read, strip, ladder } = hl7Facts(s, lib);
     setHtml(
       el("parse-call"),
       callFrameContent({
@@ -525,7 +522,7 @@ function setupWidget(
     );
 
     // Sections 3 and 4: the strip and the ladder.
-    renderStrip(s, read);
+    renderStrip(s, read, strip, ladder);
   }
 
   /** Write a whole state onto the controls. */

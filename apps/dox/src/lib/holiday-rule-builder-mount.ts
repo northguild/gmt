@@ -66,13 +66,18 @@ import {
   INVALID_REASON,
   KIND_LABELS,
   NO_SIGNAL_TEXT,
+  ROW_NO_YEAR,
   RULE_KINDS,
   YEAR_MAX,
   YEAR_MIN,
+  YEAR_NOTE_INVALID,
+  YEAR_NOTE_NULL,
+  YEAR_RANGE,
   blankRow,
   callArgsText,
   easterLabel,
   hasPolicy,
+  holidayFacts,
   isSeeded,
   ledgerHandoff,
   matchPreset,
@@ -97,7 +102,6 @@ import {
 import { literal } from "./literal";
 import {
   attributeRows,
-  attributeRules,
   marksFromAttribution,
   monthName,
   policySummary,
@@ -123,10 +127,6 @@ const RULE_CALL_SLICE_MS = 4;
 
 const HINT_ORDER =
   "Swap the two rows: the order decides which day each holiday lands on.";
-const YEAR_NOTE_NULL = `${NO_SIGNAL_TEXT}: the calendar cannot be built until every rule is valid.`;
-const YEAR_RANGE = `the year is not a whole number from ${YEAR_MIN} to ${YEAR_MAX}`;
-const YEAR_NOTE_INVALID = `${NO_SIGNAL_TEXT}: ${YEAR_RANGE}.`;
-const ROW_NO_YEAR = `${NO_SIGNAL_TEXT}: there is no year to place it in.`;
 
 const RESULT_SIZERS = [
   ...RULE_KINDS.map((k) => `${NO_SIGNAL_TEXT}: ${INVALID_REASON[k]}.`),
@@ -689,22 +689,17 @@ function setupWidget(
   }
 
   function recompute(): void {
-    const year = yearOf(state);
-    if (year === null) {
+    const facts = holidayFacts(state, lib);
+    if (!facts.ok) {
       yearEl.setAttribute("aria-invalid", "true");
       drawNoYear();
       return;
     }
+    const { year, rules, attribution } = facts;
     yearEl.removeAttribute("aria-invalid");
     lastYear = year;
     syncPreset();
 
-    const rules = rulesOf(state);
-    const attribution = attributeRules(
-      lib,
-      { timeZone: state.zone, weekend: state.weekend, rules },
-      year,
-    );
     drawRows(rules, attribution, year);
     drawYear(attribution, year);
     drawCall(rules, attribution, year);
