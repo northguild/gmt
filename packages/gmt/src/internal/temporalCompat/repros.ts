@@ -9,7 +9,7 @@ import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 /*
  * Every upstream repro for each `@js-temporal/polyfill` defect GMT works around, with the
  * spec-correct answer: the probe groups from `probeRepros.ts` plus the canary-only groups below
- * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D30). No shipped module imports this file: a repro the
+ * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D32). No shipped module imports this file: a repro the
  * shipped probes do not read lives here, so it never reaches a bundle. It imports ONLY the
  * polyfill (through `../temporal`) and `probeRepros.ts`, so a canary script can load its compiled copy straight from
  * `dist` and report which workarounds are still needed.
@@ -45,12 +45,15 @@ export type BoundedWorkDefectId = "D9" | "D21";
  * V8 without commit 0426b0d1045d aborts the process in `formatToParts` and `formatRangeToParts` on
  * a pattern with the week-of-year year field (nodejs/node#67076). D24: CLDR 48 patterns print that
  * week-year where the calendar year is meant. The guard in `weekYearGuard.ts` covers both and
- * changes no output once the engine and the data are right. D25 to D28 (`yearPrinting.ts`): the
+ * changes no output once the engine and the data are right. D25 to D32 (`yearPrinting.ts`): the
  * japanese calendar prints Japanese eras before 1873-01-01 (ICU-23341, ICU-23619), an islamic calendar prints
  * a negative year before the Hijra (ICU-23327), `ja` japanese leaves a `2-digit` era year unpadded
  * (ICU-23620), and chinese and dangi pad the related year under `2-digit` (ICU-23621). D29
  * (`rangeFields.ts`): a range drops, repeats or garbles a field of one date. D30
- * (`formatterCache.ts`): `islamic` and `islamic-rgsa` resolve as Intl era/monthCode says.
+ * (`formatterCache.ts`): `islamic` and `islamic-rgsa` resolve as Intl era/monthCode says. D31
+ * (`copticEra.ts`): the coptic calendar prints `1 - year` and no era before AM 1 (ICU-23277). D32
+ * (`islamicEpochEra.ts`): JavaScriptCore changes the Islamic era in the middle of the first day of year 1
+ * (WebKit 331724).
  */
 export type CanaryDefectId =
   | "D23"
@@ -60,7 +63,9 @@ export type CanaryDefectId =
   | "D27"
   | "D28"
   | "D29"
-  | "D30";
+  | "D30"
+  | "D31"
+  | "D32";
 
 export interface Repro extends Omit<ProbeRepro, "defect"> {
   defect: DefectId | ZonedDefectId | BoundedWorkDefectId | CanaryDefectId;
@@ -549,12 +554,14 @@ function printed(
 }
 
 /**
- * D25 to D30, text only (`format`), so no engine can abort on a repro. The expected values are the
+ * D25 to D32, text only (`format`), so no engine can abort on a repro. The expected values are the
  * specifications': Intl era/monthCode Table 2 as amended by tc39/proposal-intl-era-monthcode#86 and
  * test262 tc39/test262#4877 (japanese before 1873-01-01 is Gregorian, and Meiji 6 starts it),
  * Table 2 and § 4.1.12 (the islamic calendars have a second era before the Hijra), ECMA-402
  * FormatDateTimePattern (`2-digit` pads the era year to two digits; the related year is
- * FormatNumeric at full width).
+ * FormatNumeric at full width), Table 2 and 4.1.12 (coptic has one era, `am`, and its era year is
+ * the year, so ISO -000001-07-10 is -285 AM), Table 2 and 4.1.12 (the era `ah` starts on the whole first
+ * day of year 1: ISO 0622-07-19, and 0622-07-18 for islamic-tbla).
  */
 const yearPrintingRepros: readonly Repro[] = [
   {
@@ -594,6 +601,55 @@ const yearPrintingRepros: readonly Repro[] = [
           10,
         ]).replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
       return era(600) === era(2025) ? "one era" : "two eras";
+    },
+  },
+  {
+    defect: "D31",
+    calendar: "iso8601",
+    name: "copticSignedYearAndEraBeforeAm",
+    expected: "signed year and the era",
+    run: () => {
+      const options = { era: "short", year: "numeric" } as const;
+      const before = printed("en-u-ca-coptic", options, [-1, 7, 10]);
+      const after = printed("en-u-ca-coptic", options, [2000, 1, 1]);
+      const eraOf = (text: string) =>
+        text.replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+      return before.includes("-285") &&
+        eraOf(after) !== "" &&
+        eraOf(before) === eraOf(after)
+        ? "signed year and the era"
+        : "unsigned year or no era";
+    },
+  },
+  {
+    defect: "D32",
+    calendar: "iso8601",
+    name: "islamicEraOnEpochDay",
+    expected: "one era",
+    run: () => {
+      const eraOf = (calendar: string, day: number, hour: number) =>
+        new Intl.DateTimeFormat(`en-u-ca-${calendar}`, {
+          era: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+          .format(
+            Temporal.Instant.from(
+              `0622-07-${day}T${String(hour).padStart(2, "0")}:00:00Z`,
+            ).epochMilliseconds,
+          )
+          .replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+      return [
+        ["islamic-civil", 19],
+        ["islamic-tbla", 18],
+        ["islamic-umalqura", 19],
+      ].every(
+        ([calendar, day]) =>
+          eraOf(calendar as string, day as number, 0) ===
+          eraOf(calendar as string, day as number, 23),
+      )
+        ? "one era"
+        : "two eras";
     },
   },
   {

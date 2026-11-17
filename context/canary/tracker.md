@@ -27,4 +27,12 @@ Canary issues fixed with no story of their own:
 - #372, #373 the browser legs outgrew the runner; each browser pass now runs as eight shards.
 - #380 the report job reads the newest verdict artifact after a rerun.
 - #371 the leap-second canary falls back to IANA `leap-seconds.list` when IERS is down.
-- PR #472 issues are filed only from `main`, one per engine, with one-line repeats.
+- PR #472 issues are filed only from `main`.
+- #539–#543 one run files one rolling issue per workflow, and a US clock-watch change stays
+  listed until a person closes it; module mocks apply in browser legs (the setup file loads no
+  module a test mocks); a test file that imports a Node built-in stays out of browser legs;
+  `rangeBundle` leaves no polyfill globals behind; tags follow the CORE-113 test titles;
+  locale-data gaps grouped per browser. The WebKit legs no longer run out of memory (the range
+  probes skip Islamic years before 1 AH, where the polyfill never returns in WebKit); D31 prints
+  a coptic year before AM 1 signed; D32 prints the first day of 1 AH as 1 AH in WebKit; the en
+  noon range keeps both day periods.

@@ -40,8 +40,8 @@ sweeps every CLDR locale weekly, so a new `Y` pattern is found before a user mee
 
 ## AG. Other wrong years in formatted text, ranges that drop a field, and islamic calendar names (engine, ICU and CLDR)
 
-Six defects found by range sweeps: D25 to D28 compare every year a range prints with Temporal's calendar year, D29 compares
-the fields of a range with the two single dates, and D30 came up beside them. None is a polyfill defect: GMT and the
+Seven defects found by range sweeps: D25 to D28 compare every year a range prints with Temporal's calendar year, D29 compares
+the fields of a range with the two single dates, and D30 and D31 came up beside them. None is a polyfill defect: GMT and the
 polyfill both format through the host's `Intl.DateTimeFormat`. Each reaches GMT's format functions, in single dates and in
 ranges, on Node 22.22.2, 24.21.0, 26.12.1 and 26.13.0 (ICU 78.2 and 78.3, CLDR 48), Chromium 153 and WebKit 26.6, except
 where noted. Each is its own canary group. `internal/yearPrinting.ts`, `internal/japaneseNumerals.ts` and
@@ -91,6 +91,23 @@ replacement text is the engine's own; GMT owns no era, numbering, pattern or cal
   calendar; V8 keeps both and prints ICU's astronomical calendar. WebKit 26.6 is right. Filed as
   [Chromium 585635918](https://issues.chromium.org/issues/585635918). *Workaround:* `formatterCache.ts` builds `islamic` as
   `islamic-tbla`, and `islamic-rgsa` with the keyword taken out, before every other repair.
+- **D31, coptic before AM 1 (ICU).** Intl era/monthCode Table 2 gives `coptic` one era, `am`, with signed era years, and
+  test262 `intl402/Temporal/PlainDate/from/non-positive-single-era-year.js` keeps era year −1 as −1. CLDR 48 removed the
+  `bd` era (CLDR-18465), but ICU 78.3 still models two: ISO −0001-07-10 prints `Epep 18, 286 ` with no era part, where
+  the spec gives `Epep 18, -285 AM`. Node 26.12.1, Chromium 153 and WebKit 26.6; Firefox 147+ patches its ICU (Bugzilla
+  2002735) and is right. `ethiopic` is not affected. Upstream:
+  [ICU-23277](https://unicode-org.atlassian.net/browse/ICU-23277) (not ours, accepted), fix
+  [unicode-org/icu#4081](https://github.com/unicode-org/icu/pull/4081) open. No duplicate in the Chromium or WebKit
+  trackers (searched 2026-11-17); GMT files nothing. *Workaround:* `internal/copticEra.ts` wraps a coptic formatter that
+  can show an era or a year. A date whose coptic year is 0 or less moves forward by whole 28-year cycles (10,227 days,
+  1,461 weeks: month, day, weekday and time stay), the engine formats it, and only the year is rewritten, signed with
+  the locale's minus in the formatter's numbering system (`Intl.NumberFormat`). The era name and its place are the
+  engine's. A range moves as a pair, and the year runs that differ between the two texts are replaced.
+- **D32, Islamic epoch day (WebKit 331724, § R).** JavaScriptCore changes the Islamic era at the fixed instant
+  0622-07-19T07:52:58Z (a day earlier for `islamic-tbla`), so the first hours of 1 Muharram of year 1 print `0 Before
+  Hijra`, and west of UTC the last hours of year 0 print `AH`. Table 2 starts `ah` on the whole day. *Workaround:*
+  `internal/islamicEpochEra.ts` moves an epoch-day or day-before instant by whole 210-year cycles (74,417 days, 10,631
+  weeks), lets the engine name the era, and writes only the year (1). Delete it when the WebKit probe passes.
 
 Not defects: indian `-79 Śaka` and persian `-622 AP` at ISO year −1. Table 2 gives each calendar one era with a signed era
 year, and native Temporal gives `eraYear` −79 and −622 on all three engines. ECMA-402 FormatDateTimePattern's "value ≤ 0,

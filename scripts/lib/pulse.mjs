@@ -50,7 +50,7 @@ export const PULSE_CHECKS = Object.freeze([
     watches:
       "Each workaround's probes on Node: is the polyfill defect still there?",
     finds:
-      "Opens one issue for each workaround that every engine in its scope no longer needs.",
+      "Lists each workaround that every engine in its scope no longer needs in the workflow's rolling issue.",
     life: { kind: "workarounds", groups: "all" },
     story: "CORE-81",
   },
@@ -62,7 +62,7 @@ export const PULSE_CHECKS = Object.freeze([
     job: "oracle",
     watches:
       "GMT's calendar results against Chromium's built-in Temporal. The test262 suite decides a disagreement.",
-    finds: "Opens one issue for the mismatches no workaround accounts for.",
+    finds: "Lists the mismatches no workaround accounts for in the same issue.",
     life: {
       kind: "condition",
       until:
@@ -79,7 +79,7 @@ export const PULSE_CHECKS = Object.freeze([
     watches:
       "The whole library test suite on built-in Temporal and on the polyfill, in Node, Chromium, Firefox and WebKit. Each browser also runs the workaround probes.",
     finds:
-      "Opens one issue per engine for a difference no workaround accounts for, one for a host that failed and one for a stale tag.",
+      "Lists, in the same issue, a section per engine for a difference no workaround accounts for, one for a host that failed and one for a stale tag.",
     life: {
       kind: "condition",
       until:
@@ -95,7 +95,7 @@ export const PULSE_CHECKS = Object.freeze([
     job: "polyfill-swap",
     watches:
       "The suite on the newest `temporal-polyfill`, beside `@js-temporal/polyfill`. The Node run also sweeps every zone's offsets and every calendar's years against Node.",
-    finds: "Opens one issue when every run passes: the swap is due.",
+    finds: "Adds a section when every run passes: the swap is due.",
     life: {
       kind: "condition",
       until:
@@ -127,7 +127,7 @@ export const PULSE_CHECKS = Object.freeze([
     job: "canary",
     watches:
       "GMT's leap-second table against the IERS `Leap_Second.dat` file, or IANA's `leap-seconds.list` when IERS is down.",
-    finds: "Opens one issue per difference.",
+    finds: "Lists each difference in its rolling issue.",
     life: {
       kind: "condition",
       until:
@@ -144,7 +144,7 @@ export const PULSE_CHECKS = Object.freeze([
     watches:
       "Federal and state bills on ending the clock changes, and the time zone rules of every US zone, against the last snapshot it saw.",
     finds:
-      "Opens one issue per kind (federal, state, tz) for a difference, and one for a source that could not run.",
+      "Lists a section per kind (federal, state, tz) for a difference, and one for a source that could not run, in its rolling issue.",
     life: {
       kind: "condition",
       until:

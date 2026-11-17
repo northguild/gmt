@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { playwright } from "@vitest/browser-playwright";
 import {
@@ -6,6 +7,10 @@ import {
   mergeConfig,
   type Plugin,
 } from "vitest/config";
+import {
+  importsNodeBuiltin,
+  listTestFiles,
+} from "./src/test/isolationGroups.ts";
 import { REPO_FILES, repoFile, sourceTree } from "./src/test/sourceTree.ts";
 import { baseConfig as base, testInclude } from "./vitest.config.ts";
 import { SWAP_ENTRY } from "./vitest.swap.config.ts";
@@ -81,13 +86,18 @@ const alias = native
     ? [{ find: /^@js-temporal\/polyfill$/, replacement: SWAP_ENTRY }]
     : [];
 
-// These test the Node-only harness (child processes, `process`, the file system). A browser has
-// no such harness, so they cannot load or run there. Like `testInclude`, each is listed from the
-// package and from the repository root, where scripts/native-suite.mjs starts Vitest.
+// These test the Node-only harness (child processes, `process`, the file system), or import a
+// Node built-in. A browser has no such harness, so they cannot load or run there. Like
+// `testInclude`, each is listed from the package and from the repository root, where
+// scripts/native-suite.mjs starts Vitest.
 const NODE_ONLY_TESTS = [
-  "src/test/boundedChild.test.ts",
-  "src/test/isolationGroups.test.ts",
-  "src/test/sharedState.test.ts",
+  ...new Set([
+    "src/test/boundedChild.test.ts",
+    "src/test/sharedState.test.ts",
+    ...listTestFiles(here).filter((file) =>
+      importsNodeBuiltin(readFileSync(path.join(here, file), "utf8")),
+    ),
+  ]),
 ].flatMap((file) => [file, `packages/gmt/${file}`]);
 
 export default mergeConfig(

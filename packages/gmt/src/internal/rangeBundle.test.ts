@@ -37,11 +37,23 @@ const entries = {
 
 type RangeFunction = (...args: unknown[]) => string;
 
+/**
+ * The bundles import `@js-temporal/polyfill`, which stores two slot functions on `globalThis` when
+ * it loads. A run on a native engine loads no polyfill before this file, so the keys are new here
+ * and must go once the file is done. The loaded copy keeps its own references to both functions.
+ */
+const polyfillSlots = [
+  Symbol.for("@@Temporal__GetSlots"),
+  Symbol.for("@@Temporal__CreateSlots"),
+];
+
 describe("range repairs survive a tree-shaking bundler", () => {
   let dir = "";
   const bundles: Partial<Record<keyof typeof entries, RangeFunction>> = {};
+  const slotsAdded: symbol[] = [];
 
   beforeAll(async () => {
+    slotsAdded.push(...polyfillSlots.filter((key) => !(key in globalThis)));
     dir = mkdtempSync(path.join(tmpdir(), "gmt-range-bundle-"));
     const pkg = path.resolve(here, "../..");
     for (const [name, file] of Object.entries(entries)) {
@@ -68,6 +80,7 @@ describe("range repairs survive a tree-shaking bundler", () => {
 
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });
+    for (const key of slotsAdded) Reflect.deleteProperty(globalThis, key);
   });
 
   it("formatDateRange prints each end of a japanese-calendar range before 1873 in its Gregorian twin", () => {
