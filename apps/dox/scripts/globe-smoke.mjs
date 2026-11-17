@@ -120,7 +120,7 @@ const PAGES = [
  * parity and imagery loops run for the chosen routes only; the fixed single-page checks after
  * them (the fallback, the reference page, the hero) always run, because they are not per page.
  */
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: [...new Set(PAGES.map((target) => target.route))],
 });

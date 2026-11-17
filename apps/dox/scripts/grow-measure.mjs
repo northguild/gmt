@@ -467,7 +467,7 @@ const PAGES = [
   root: `[data-widget="${WIDGET_OF[p.slug] ?? p.slug}"]`,
 }));
 
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: PAGES.map((p) => p.path),
 });

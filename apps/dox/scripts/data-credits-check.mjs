@@ -122,7 +122,7 @@ const VIEWPORTS = [
 ];
 
 // The runner's page contract (`scripts/gates/`).
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: TARGETS.map((target) => target.path),
 });

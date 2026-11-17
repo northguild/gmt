@@ -52,7 +52,7 @@ const MOTION_WAIT_MS = 2000;
 /** How long the contrast check waits for the emulated state to reach the page. */
 const EMULATION_WAIT_MS = 2000;
 
-const run = parseSweep({
+const run = await parseSweep({
   gate: GATE,
   pages: distPages(GATE),
   defaults: { widths: "1440" },

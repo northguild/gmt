@@ -53,7 +53,7 @@ const WIDTHS = [
   { width: 390, height: 844 },
 ];
 
-const PAGES_ARG = applyPageContract({ gate: GATE, pages: PAGES });
+const PAGES_ARG = await applyPageContract({ gate: GATE, pages: PAGES });
 const SELECTED = PAGES_ARG ?? PAGES;
 
 const args = process.argv.slice(2);

@@ -51,8 +51,11 @@ const DIST = path.join(
 
 const args = process.argv.slice(2);
 const pages =
-  applyPageContract({ gate: GATE, pages: Object.keys(CHECKS), argv: args }) ??
-  Object.keys(CHECKS);
+  (await applyPageContract({
+    gate: GATE,
+    pages: Object.keys(CHECKS),
+    argv: args,
+  })) ?? Object.keys(CHECKS);
 const opt = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] && !args[i + 1].startsWith("--")

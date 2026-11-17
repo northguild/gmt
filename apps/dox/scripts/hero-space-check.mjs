@@ -66,7 +66,7 @@ const GATE = "hero-space";
 const ROUTE = "/";
 const PLANNER = "/tools/zone-planner/";
 
-const wanted = applyPageContract({ gate: GATE, pages: [ROUTE, PLANNER] });
+const wanted = await applyPageContract({ gate: GATE, pages: [ROUTE, PLANNER] });
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {

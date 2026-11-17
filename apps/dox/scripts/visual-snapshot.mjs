@@ -240,7 +240,7 @@ const PAGES = [
   { slug: "upstream", path: "/upstream/" },
 ];
 
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: [...new Set(PAGES.map((p) => p.path))],
 });

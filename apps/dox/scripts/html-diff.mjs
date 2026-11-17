@@ -292,7 +292,7 @@ const slug = (p) => p.replaceAll("/", "_") + ".html";
 
 /** A page entry's site path, as the other gates write it. */
 const sitePath = (p) => `/${p.path}/`;
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: PAGES.map(sitePath),
 });

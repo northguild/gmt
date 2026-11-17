@@ -3268,7 +3268,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     any shared helper or loader it adds);
   - `PAGES` in `scripts/html-diff.mjs`, `scripts/visual-snapshot.mjs` and
     `scripts/grow-measure.mjs`;
-  - `TOOLS` in `scripts/readout-still.mjs`, for a tool with a drag handle;
+  - `TOOLS` in `scripts/readout-still.mjs`, for a tool with a drag handle, with its measured
+    WebKit `minutes` (the weekly legs are dealt by them; see the script's header);
   - its forced-colours rules, in the CSS Module that draws the element (the tool's own, or the
     kit or family module). A module is unlayered, so it beats every rule in
     `src/styles/gmt-a11y.css` (the `gmt.a11y` layer) whatever the specificity: a rule there for
@@ -3675,14 +3676,18 @@ Shared hooks come first, then the globe, then the clock-change pages.
       They start once `dox-site` ends, when the matrix legs have mostly finished. No check was removed
       to get here: each runs on the same changes as before.
   - **The page contract.** Every gate script answers `--list-pages` (a JSON array of site paths,
-    no `/gmt`, without a browser), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
+    no `/gmt`, without a browser; printed whole however long, since the runner reads it through a
+    pipe), takes `--pages <path,...>` (an unknown path exits 2, so a typo is
     never an empty run) and, when it loads pages, `--base <url>`. With `GATE_REPORT` set, each
     failure is also appended through `recordFinding` as `{ gate, rule, page, selector, browser,
     width, theme, message }` (`rule` is a short stable id such as `readout-moved`, `grew` or
     `contrast-below-7`, never prose), and the run ends with `recordMeasured(gate, n)`, the pages x
     browsers x widths it measured (`scripts/gates/findings.mjs`, `contract.mjs`). A gate that exits 0
     without that line, or with `n = 0`, is `FAIL measured nothing`; one that exits 0 with findings is
-    a FAIL. `contrast-measure --only` takes a comma list. `grow-measure`, `readout-still`,
+    a FAIL. A gate whose pages differ a lot in run time is `costs: true` in the registry and also
+    answers `--list-page-costs` (each path's measured minutes); `readout-still` is the one, from the
+    `minutes` on each `TOOLS` entry (one WebKit run of that tool, measured on one machine, since only
+    the ratios matter), and a page with no cost stops a sharded run. `contrast-measure --only` takes a comma list. `grow-measure`, `readout-still`,
     `data-credits-check` and the three Canada scripts accept `firefox` in `--browsers`;
     `canada-layout-check` takes `--browsers` as well as `--engine`. It checks both clock-change
     pages (`--pages`), in dark and light, at 1440, 1024, 420, 375 and 300 px (420 is just above
@@ -5558,7 +5563,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   - `--plan` prints the selection and exits without running a gate; it builds only when `dist` is
     missing. `--only <gate,...>`, `--skip <gate,...>` (every gate but these), `--pages <path,...>` (replaces the diff selection),
     `--browsers`, `--themes`, `--tier pr|weekly|local` (default `local`), `--shard i/n` (every
-    n-th page of each gate's sorted list), `--no-build` (needs `dist/gmt/index.html`) and `--json`
+    n-th page of each gate's sorted list; a costed gate's pages are dealt costliest first, each to
+    the leg with the fewest minutes so far), `--no-build` (needs `dist/gmt/index.html`) and `--json`
     (the summary as JSON) narrow or reshape a run. `--against <ref>` is the diff base (default
     `origin/main`, else `main`).
   - `--all` selects every page of every gate. `globe-smoke` is `SKIP needs a GPU` when `CI` is set.
@@ -5569,7 +5575,11 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (51 pages; build 37s, contrast-measure 37m, grow-measure 24m, readout-still 62m, data-credits-check
     36s, canada-layout-check 57s). That first sweep found six text runs under 7:1 on
     `/tools/cron-in-a-zone/` and `/dox/`, since fixed; every other gate passed. A child process that runs 90
-    minutes is stopped and shows `timed out after 90m`. A diff-driven run takes minutes: one page with
+    minutes is stopped and shows `timed out after 90m`. `--deadline <minutes>` caps the whole run from
+    its start, for CI, where a job killed at its own limit leaves no summary: at the deadline the gate in
+    flight is stopped (`stopped at the <n>m deadline`), the gates after it are `not run`, and each is a
+    `FAIL` row with `outOfTime: true`; `summary.json` is still written and carries `deadlineMinutes`.
+    A diff-driven run takes minutes: one page with
     `--only` is about 4 minutes, 36s of it the build; `--plan` shows what a run would do.
   - **Firefox on the author's machine** runs through the Docker route (the next entry).
 - **Firefox on macOS 27 (Docker route).** Playwright 1.63's Firefox does not launch on macOS 27
@@ -5653,25 +5663,32 @@ Shared hooks come first, then the globe, then the clock-change pages.
     On every Dox story, `dox-tester` runs the same command without `--all` on the pages the branch changes, in three
     browsers, and quotes the result; the PR job checks those pages in Chromium only.
   - **Legs.** `pnpm --filter dox gates --all --tier weekly --browsers <b> --themes dark,light
-    --retries 1 --shard i/n`, `timeout-minutes: 90`, `fail-fast: false`. `--shard` splits each
-    gate's sorted page list round-robin, not the gates, so every leg of a browser runs every gate
-    on its share of the pages. Under `--all`, Chromium gets every page of every gate; WebKit and
+    --retries 1 --shard i/n --deadline 80`, `timeout-minutes: 90`, `fail-fast: false`. `--shard`
+    splits each gate's pages, not the gates, so every leg of a browser runs every gate on its share:
+    round-robin by name, and `readout-still` by its measured minutes, so its heavy tools never share a
+    leg and a new tool moves only the tools dealt after it. `--deadline 80` leaves 10 minutes for the
+    summary and the upload, so a leg that runs long files `out-of-time` with every gate's minutes
+    instead of being killed with nothing. The upload carries the gate logs (`*.log`) beside
+    `summary.json` and the findings, so a slow or failed leg can be read without a rerun. Under `--all`, Chromium gets every page of every gate; WebKit and
     Firefox get every page of `grow-measure`, `readout-still`, `data-credits-check` and
     `canada-layout-check`, and the six-page sample of the three a11y gates (`fullBrowsers`);
     `contrast-measure` is Chromium-only; the two clock-still gates have one page each (shard 1 only).
-    Layout: **chromium 6 legs, webkit 3, firefox 3** (12). Sizing, from the local sweep on the
+    Layout: **chromium 6 legs, webkit 4, firefox 4** (14). Sizing, from the local sweep on the
     author's Mac (a runner is assumed 1.5 to 2 times slower; each leg also builds the site, about 40 s
     locally): Chromium is 125 min for `readout-still` (62), `contrast-measure` (37), `grow-measure`
     (24) and the rest, plus the three a11y gates over 1,092 pages and both themes, measured at 77
     (`a11y-axe` 38, `a11y-media` 33, `a11y-tab-walk` 6): about 202 min, so 202 / 6 is 34 per leg and
-    the worst shard (extra single-page gates, rounding up) about 37. WebKit and Firefox are about
-    90 each (`readout-still` 62 plus `grow-measure` 24 plus a few), so 90 / 3 is 30 per leg and the
-    worst about 34. That keeps every leg under 40 local minutes and about 75 on a runner at 2 times;
-    the slowest real leg is recorded here after the first runs. Chromium on 5 legs would be about 44
-    local at the worst shard, which leaves no margin under the 90-minute timeout at 2 times.
+    the worst shard (extra single-page gates, rounding up) about 37. Chromium on 5 legs would be
+    about 44 local at the worst shard, which leaves no margin under the deadline at 2 times. In WebKit,
+    `readout-still` alone is 119 local minutes over 29 tools, from under 1 (Cron in a Zone) to 16
+    (Departure Board); dealt by those minutes over 4 legs, each carries 29 to 30, and the other
+    gates add about 20 per leg, so about 50 local per leg. A runner has taken 1 to 1.45 times the
+    local time per leg, so about 74 at the worst, inside the 80-minute deadline. Firefox is dealt the
+    same way and has run faster than WebKit on the same share. The slowest real leg is recorded here
+    after the first runs.
   - **Report.** Job `report` (`issues: write`) downloads the newest `dox-gates-<leg>-<run id>` artifact of
     each leg (`summary.json`, `*.ndjson`) and runs `apps/dox/scripts/gates/file-issues.mjs --legs <all
-    twelve>`. Only `FAIL` rows file; `FLAKY` (failed, passed on the retry) is listed in the step
+    fourteen>` (`ci-legs.test.ts` checks the list against the matrix). Only `FAIL` rows file; `FLAKY` (failed, passed on the retry) is listed in the step
     summary. The key is `<gate>:<rule>:<page>:<target>`; the target is the element's identity key (see
     "Element identity" below), never a class or an `nth` position;
     browsers, widths and themes are not in it, so one issue tables every place the finding was seen.
@@ -5683,7 +5700,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     succeed. A failed gate run and a lost upload both end with the gates step failed and the upload
     step passed (`if-no-files-found: warn`), so the check step is the only signal that separates
     them. If the job list cannot be read, the leg is filed as could-not-run, saying the cause is
-    unknown. A `FAIL` with no structured finding files `<gate>:unstructured:all:` with its log tail.
+    unknown. A leg whose runner reached its `--deadline` (a row with `outOfTime`) files
+    `dox-gate:out-of-time:<leg>`, titled "Dox weekly: the <leg> leg ran out of time", with a table of
+    every gate's status and minutes; the structured findings the leg reached still file on their own
+    keys. Any other `FAIL` with no structured finding files `<gate>:unstructured:all:` with its log tail.
   - **Issues.** Label `dox-gate` only (created when missing, with `dox-gate-dry-run`), and no issue
     type; first body line `<!-- dox-gate key="…" -->` (`"`, `>` and `--` in a key are written as
     entities). An open `dox-gate` issue whose first line equals the marker gets a comment on the
@@ -5779,7 +5799,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
     dispatched once the file is on `main`:
     - a `force_finding` dispatch finishes every leg, Firefox included, and files one `[dry run]`
       issue with the marker on line 1; a second dispatch comments on it;
-    - every leg finishes inside its 90 minutes; record the slowest leg's time in the runbook entry.
+    - every leg finishes inside its 80-minute deadline, with no `out-of-time` issue; record the
+      slowest leg's time in the runbook entry.
 
 ---
 

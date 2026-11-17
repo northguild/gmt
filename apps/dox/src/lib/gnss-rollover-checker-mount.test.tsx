@@ -416,6 +416,34 @@ describe("the date slider", () => {
     expect(slider()).toHaveValue("20");
     await expectNoAxeViolations(w.root);
   });
+
+  it("holds each plate line at its widest text, so a narrow plate keeps its wrap while sliding", async () => {
+    await open({ preset: "navic-built-2020" });
+    const ghosts = (d: Element) =>
+      // oxlint-disable-next-line testing-library/no-node-access -- the held text is a hidden ghost, and no query reaches a hidden node
+      [...d.querySelectorAll('[aria-hidden="true"]')].map((n) => n.textContent);
+    const widest = "a date 88888 days 88 h 88 min 88 s early";
+    expect(ghosts(defs()[1]!)).toContain(widest);
+    for (const { verdict } of Object.values(EXPECTED))
+      expect(verdict.length).toBeLessThanOrEqual(widest.length);
+    expect(ghosts(defs()[3]!)).toEqual([
+      "the build date's reading, one era on",
+      "the end of era 888",
+    ]);
+  });
+
+  it("holds the calls frame at its widest line, so its scrollbar does not come and go while sliding", async () => {
+    await open({ preset: "navic-built-2020" });
+    const widest =
+      'gnssWeekToUtc("GPS-LNAV", 8888, 888888.888888888, { notBefore: "-888888-88-88T88:88:88.888888888Z" })';
+    const sizer = (frame: Element) =>
+      // oxlint-disable-next-line testing-library/no-node-access -- the held line is a hidden sizer, and no query reaches a hidden node
+      frame.querySelector('pre > [aria-hidden="true"]')?.textContent;
+    expect(sizer(calls())).toBe(widest);
+    // oxlint-disable-next-line testing-library/no-node-access -- the frame's lines are one code block
+    for (const line of calls().querySelector("code")!.textContent.split("\n"))
+      expect(line.length).toBeLessThanOrEqual(widest.length);
+  });
 });
 
 describe("the live clock", () => {
