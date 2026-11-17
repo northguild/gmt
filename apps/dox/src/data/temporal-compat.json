@@ -234,6 +234,15 @@
       "state": "still-needed"
     },
     {
+      "defects": ["D32"],
+      "title": "D32 — the Islamic era changes in the middle of 1 Muharram of year 1 (internal/islamicEpochEra.ts)",
+      "trigger": "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D32 repro: islamic-civil, islamic-tbla and islamic-umalqura print the same era at the first and the last hour of their epoch day in UTC (WebKit 331724)",
+      "probes": 1,
+      "failing": 0,
+      "state": "out-of-scope",
+      "engines": ["webkit"]
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

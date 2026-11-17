@@ -1,5 +1,6 @@
 import {
   isCopticEraCompatNeeded,
+  isIslamicEpochEraCompatNeeded,
   isIslamicEraCompatNeeded,
   isIslamicCalendarResolutionCompatNeeded,
   isJapaneseEraCompatNeeded,
@@ -14,7 +15,7 @@ import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 import { repros } from "./repros";
 
 /*
- * CORE-112: each shipped probe (D25 to D31) reads the same defect as its canary repros.
+ * CORE-112: each shipped probe (D25 to D32) reads the same defect as its canary repros.
  * The probe says "needed" exactly when some repro of its defect fails on this engine, so the
  * canary's verdict and the library's gate cannot disagree. The test never asserts which way: that
  * would fail the day an engine ships the fix, which is the canary's job.
@@ -30,6 +31,7 @@ describe("year printing probes agree with their repros", () => {
     ${"D29"} | ${rangeFieldCases.map((c) => c.name)}              | ${isRangeFieldCompatNeeded}
     ${"D30"} | ${["islamicResolvesTbla", "islamicRgsaIsIgnored"]} | ${isIslamicCalendarResolutionCompatNeeded}
     ${"D31"} | ${["copticSignedYearAndEraBeforeAm"]}              | ${isCopticEraCompatNeeded}
+    ${"D32"} | ${["islamicEraOnEpochDay"]}                        | ${isIslamicEpochEraCompatNeeded}
   `(
     "the probe for $names is true exactly when one of those $defect repros fails",
     ({ defect, names, probe }) => {

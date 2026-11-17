@@ -275,6 +275,7 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D29: "Date ranges in some languages and calendars that leave out, repeat or mix up a part of one date, such as a Chinese calendar range a year apart without the Gregorian year, or a Yoruba range with the weekday twice. GMT prints both dates in full, joined the language's own way",
   D30: "Dates in the calendars named islamic and islamic-rgsa, which Node and Chrome print with an astronomical Islamic calendar the standard no longer offers. GMT uses islamic-tbla for islamic, and the language's default calendar for islamic-rgsa",
   D31: "Coptic calendar dates before the year 1 AM (ISO 284-08-29), which Node and Chrome print as a positive year counted backwards, such as 286 for the year -285, with no era. GMT prints the signed year and the era name",
+  D32: "Islamic calendar dates on the first day of the year 1 AH (ISO 0622-07-19, and 0622-07-18 for islamic-tbla), which Safari prints for its first hours as the year 0 Before Hijra, and, west of UTC, the last hours of the day before as AH. GMT prints year 1 AH for the whole day",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

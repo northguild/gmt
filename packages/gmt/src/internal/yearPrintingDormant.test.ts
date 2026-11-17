@@ -21,6 +21,7 @@ vi.mock("./temporalCompat/capabilities", async (importOriginal) => ({
   isJapaneseEraCompatNeeded: () => probes.needed,
   isIslamicEraCompatNeeded: () => probes.needed,
   isCopticEraCompatNeeded: () => probes.needed,
+  isIslamicEpochEraCompatNeeded: () => probes.needed,
   isJapaneseTwoDigitYearCompatNeeded: () => probes.needed,
   isJapaneseNumberingSystemCompatNeeded: () => probes.needed,
   isIslamicCalendarResolutionCompatNeeded: () => probes.needed,
@@ -41,6 +42,7 @@ describe("year printing is dormant on a fixed engine", () => {
     ${"en-u-ca-chinese"}          | ${twoDigit} | ${"D28 chinese"}
     ${"en-u-ca-dangi"}            | ${twoDigit} | ${"D28 dangi"}
     ${"en-u-ca-coptic"}           | ${era}      | ${"D31 coptic"}
+    ${"en-u-ca-islamic-tbla"}     | ${era}      | ${"D32 islamic-tbla"}
     ${"ja-u-ca-japanese-nu-arab"} | ${era}      | ${"D27 ja japanese nu-arab"}
   `(
     "returns the engine's own formatter for $label when its probe passes",
@@ -59,6 +61,7 @@ describe("year printing is dormant on a fixed engine", () => {
     ${"ja-u-ca-japanese"}         | ${twoDigit} | ${"D27 ja japanese"}
     ${"ja-u-ca-japanese-nu-arab"} | ${era}      | ${"D27 ja japanese nu-arab"}
     ${"en-u-ca-coptic"}           | ${era}      | ${"D31 coptic"}
+    ${"en-u-ca-islamic-tbla"}     | ${era}      | ${"D32 islamic-tbla"}
   `(
     "wraps the formatter for $label when its probe fails",
     async ({ locale, options }) => {
@@ -70,12 +73,13 @@ describe("year printing is dormant on a fixed engine", () => {
   );
 
   it.each`
-    locale                | options                               | label
-    ${"en-u-ca-gregory"}  | ${era}                                | ${"gregory with era"}
-    ${"en-u-ca-japanese"} | ${{ month: "long", timeZone: "UTC" }} | ${"japanese month only"}
-    ${"ja-u-ca-gregory"}  | ${twoDigit}                           | ${"ja gregory 2-digit"}
-    ${"en-u-ca-coptic"}   | ${{ month: "long", timeZone: "UTC" }} | ${"coptic month only"}
-    ${"en-u-ca-ethiopic"} | ${era}                                | ${"ethiopic with era"}
+    locale                    | options                               | label
+    ${"en-u-ca-gregory"}      | ${era}                                | ${"gregory with era"}
+    ${"en-u-ca-japanese"}     | ${{ month: "long", timeZone: "UTC" }} | ${"japanese month only"}
+    ${"ja-u-ca-gregory"}      | ${twoDigit}                           | ${"ja gregory 2-digit"}
+    ${"en-u-ca-coptic"}       | ${{ month: "long", timeZone: "UTC" }} | ${"coptic month only"}
+    ${"en-u-ca-islamic-tbla"} | ${{ month: "long", timeZone: "UTC" }} | ${"islamic-tbla month only"}
+    ${"en-u-ca-ethiopic"}     | ${era}                                | ${"ethiopic with era"}
   `(
     "wraps nothing for $label even when every probe fails",
     async ({ locale, options }) => {
@@ -103,6 +107,7 @@ describe("every public format function is the engine's own on a fixed engine", (
     ${"en-u-ca-chinese"}          | ${{ year: "2-digit", month: "2-digit" }} | ${"0005-07-10"}    | ${"0006-07-10"}
     ${"en-u-ca-dangi"}            | ${{ year: "2-digit" }}                   | ${"-000001-07-10"} | ${"0005-07-10"}
     ${"en-u-ca-coptic"}           | ${{ era: "short", year: "numeric" }}     | ${"-000001-07-10"} | ${"0001-07-10"}
+    ${"en-u-ca-islamic-tbla"}     | ${{ era: "short", year: "numeric" }}     | ${"0622-07-17"}    | ${"0622-07-18"}
   `(
     "formatDate, its parts and the three ranges equal the engine for '$locale' $options at $start to $end",
     async ({ locale, options, start, end }) => {

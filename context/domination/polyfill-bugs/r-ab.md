@@ -22,6 +22,10 @@ hung on `diffDateAsDuration.edges.test.ts` row 82. The fields-to-ISO hang also g
 out of memory (#543). The walk now skips an `islamic*` step before 1 AH. That loses no probe: GMT prints no Islamic date
 before 1 AH (D26), and V8 and SpiderMonkey print one era there, so the walk builds none on them either. Delete the skip
 with D26, when engines print the `bh` era; a polyfill fix alone does not retire it.
+`D32` (`internal/islamicEpochEra.ts`, probe `isIslamicEpochEraCompatNeeded`) repairs the printing: the first hours of 1
+Muharram of year 1 print `0 Before Hijra`, and west of UTC the last hours of year 0 print `AH`. An instant on the epoch day
+or the day before moves by whole 210-year cycles (74,417 days, 10,631 weeks), the engine names the era, and only the year is
+written (1). Delete it when the WebKit probe passes.
 
 **Upstream.** tc39 [#3338](https://github.com/tc39/proposal-temporal/issues/3338) and
 [WebKit 331724](https://bugs.webkit.org/show_bug.cgi?id=331724) (JavaScriptCore switches era at a fixed instant in every

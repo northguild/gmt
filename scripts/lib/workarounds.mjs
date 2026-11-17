@@ -385,6 +385,20 @@ export const WORKAROUNDS = [
     ],
   },
   {
+    defects: ["D32"],
+    // JavaScriptCore only: on any other engine the probe passes because the defect is not there.
+    engines: ["webkit"],
+    title:
+      "D32 — the Islamic era changes in the middle of 1 Muharram of year 1 (internal/islamicEpochEra.ts)",
+    trigger:
+      "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D32 repro: islamic-civil, islamic-tbla and islamic-umalqura print the same era at the first and the last hour of their epoch day in UTC (WebKit 331724)",
+    steps: [
+      "Delete internal/islamicEpochEra.ts, its call in construct (formatterCache.ts), its call in localFieldsOf (rangeFieldValues.ts), isIslamicEpochEraCompatNeeded in capabilities.ts and the D32 repro in repros.ts.",
+      "Keep every row of islamicEpochEra.test.ts: the epoch day and the era are Intl era/monthCode Table 2's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 32.`,
+    ],
+  },
+  {
     defects: ["D9"],
     title:
       "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",

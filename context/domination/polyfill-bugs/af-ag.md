@@ -103,6 +103,11 @@ replacement text is the engine's own; GMT owns no era, numbering, pattern or cal
   1,461 weeks: month, day, weekday and time stay), the engine formats it, and only the year is rewritten, signed with
   the locale's minus in the formatter's numbering system (`Intl.NumberFormat`). The era name and its place are the
   engine's. A range moves as a pair, and the year runs that differ between the two texts are replaced.
+- **D32, Islamic epoch day (WebKit 331724, § R).** JavaScriptCore changes the Islamic era at the fixed instant
+  0622-07-19T07:52:58Z (a day earlier for `islamic-tbla`), so the first hours of 1 Muharram of year 1 print `0 Before
+  Hijra`, and west of UTC the last hours of year 0 print `AH`. Table 2 starts `ah` on the whole day. *Workaround:*
+  `internal/islamicEpochEra.ts` moves an epoch-day or day-before instant by whole 210-year cycles (74,417 days, 10,631
+  weeks), lets the engine name the era, and writes only the year (1). Delete it when the WebKit probe passes.
 
 Not defects: indian `-79 Śaka` and persian `-622 AP` at ISO year −1. Table 2 gives each calendar one era with a signed era
 year, and native Temporal gives `eraYear` −79 and −622 on all three engines. ECMA-402 FormatDateTimePattern's "value ≤ 0,

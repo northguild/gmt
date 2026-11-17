@@ -6,6 +6,8 @@
  * Shared by D25 (`yearPrintingRange.ts`) and D29 (`rangeFields.ts`); imports nothing from either.
  */
 
+import { epochTwin } from "./islamicEpochEra";
+
 /** At most this many cached readers; past it the map clears (a cost of one rebuild each). */
 const MAX_READERS = 256;
 
@@ -56,9 +58,15 @@ export function localFieldsOf(
     }
     calendarFields.set(key, reader);
   }
+  // D32: an islamic date on the epoch day or the day before is read at its twin, so its era is the
+  // true one and its year is year 1 (era year 1 of `bh` is year 0).
+  const twin = epochTwin(ms, resolved.calendar, resolved.timeZone);
   const fields: Record<string, string> = {};
-  for (const part of reader.formatToParts(ms)) {
+  for (const part of reader.formatToParts(twin === null ? ms : twin.ms)) {
     fields[part.type] = (fields[part.type] ?? "") + part.value;
+  }
+  if (twin !== null) {
+    fields["year"] = "1";
   }
   return fields;
 }

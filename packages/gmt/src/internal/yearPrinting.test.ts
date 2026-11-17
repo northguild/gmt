@@ -10,7 +10,7 @@ import { formatZonedToParts } from "../zoned/format/formatZonedToParts";
 import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
 
 /*
- * CORE-112 (D25 to D31): the years an engine prints wrongly outside the week-year.
+ * CORE-112 (D25 to D32): the years an engine prints wrongly outside the week-year.
  *
  * Every expected value comes from a specification, never from the engine's text:
  * - D25: Intl era/monthCode Table 2 as amended by tc39/proposal-intl-era-monthcode#86 (test262

@@ -10,7 +10,7 @@ import { markRangeHandled, rangeHooks } from "./rangeHooks";
 import { digitSetOf, digitsOf } from "./weekYearText";
 
 /*
- * CORE-112, defects D25 to D31: years an engine prints wrongly outside the week-year.
+ * CORE-112, defects D25 to D32: years an engine prints wrongly outside the week-year.
  *
  * Each repair is dormant behind one cached engine probe (`temporalCompat/capabilities.ts`), and a
  * formatter is wrapped only when its probe fails and the formatter can show the defect, so a fixed

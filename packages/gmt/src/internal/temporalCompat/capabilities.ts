@@ -342,6 +342,43 @@ export function isCopticEraCompatNeeded(): boolean {
 }
 
 /**
+ * True when this runtime changes the Islamic era in the middle of the first day of year 1 (defect
+ * D32, WebKit 331724).
+ *
+ * Intl era/monthCode Table 2 and 4.1.12: the era `ah` starts on 1 Muharram of year 1, the whole
+ * calendar day, in every zone. JavaScriptCore switches at one fixed instant (0622-07-19T07:52:58Z,
+ * a day earlier for `islamic-tbla`), so the first hours of the day print year 0 and `Before Hijra`.
+ * The probe formats the epoch day of each calendar (Calendrical Calculations, chapter 6: Friday 16
+ * July 622 Julian for the civil and umalqura calendars, Thursday for the tabular astronomical one)
+ * at its first and its last hour in UTC: both must print the same era name.
+ */
+export function isIslamicEpochEraCompatNeeded(): boolean {
+  const eraOf = (calendar: string, day: number, hour: number): string =>
+    new Intl.DateTimeFormat(`en-u-ca-${calendar}`, {
+      era: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .format(
+        Temporal.Instant.from(
+          `0622-07-${day}T${String(hour).padStart(2, "0")}:00:00Z`,
+        ).epochMilliseconds,
+      )
+      .replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect("D32", () =>
+    (
+      [
+        ["islamic-civil", 19],
+        ["islamic-tbla", 18],
+        ["islamic-umalqura", 19],
+      ] as const
+    ).some(
+      ([calendar, day]) => eraOf(calendar, day, 0) !== eraOf(calendar, day, 23),
+    ),
+  );
+}
+
+/**
  * True when this runtime does not pad a Japanese era year under `year: "2-digit"` (defect D27,
  * ICU-23620).
  *
