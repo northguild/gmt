@@ -1,6 +1,6 @@
 # Slice 5 · Cross-site transition
 
-[Index](./index.md) · Binding rules: [built.md § Tier 3](../../built.md#tier-3--hud-chrome)
+[Index](./index.md) · Binding rules: [Tier 3](../../built/tier-3-chrome.md)
 (cross-document view transitions, `rel="expect"`).
 
 ## Goal
@@ -127,5 +127,5 @@ Optional: skip its `ng-enter-pane` entrance when it arrives through a transition
 
 - [ ] Index gates pass, plus `hero-space`'s cross-site check in Chromium.
 - [ ] In-site navigation looks as before in Chromium and WebKit.
-- [ ] `built.md` Tier 3 describes the shared names, the `from-landing` type and the companion
+- [ ] `built/tier-3-chrome.md` describes the shared names, the `from-landing` type and the companion
       contract (names and the 3.5rem height).

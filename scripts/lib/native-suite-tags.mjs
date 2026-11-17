@@ -45,8 +45,8 @@ const NODE_67457 = "https://github.com/nodejs/node/issues/67457";
 /**
  * One test that fails natively and passes on the polyfill, for a known defect. `file` is
  * package-relative (`src/zoned/calculate/roundZoned.test.ts`); `test` is the Vitest `fullName`
- * exactly; `defect` is the heading anchor of the defect's record in
- * `context/domination/js-temporal-polyfill-bugs.md`; `upstream` is the filed report's URL, or
+ * exactly; `defect` is the heading anchor of the defect's record under
+ * `context/domination/polyfill-bugs/`; `upstream` is the filed report's URL, or
  * `null` until one is filed.
  *
  * The 3 tests that fail on Node 26 and Chromium 153 (V8 on `temporal_rs`) and pass on the

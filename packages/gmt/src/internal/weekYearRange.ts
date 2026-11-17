@@ -1152,7 +1152,7 @@ function earlierEraProbes(
     // `153 Before Hijra` from `format` but `-152` from `formatRange` (D18), which would flag every
     // Islamic formatter. Skipping the step gives WebKit the same walk as the other engines. It also
     // keeps the polyfill from being asked for the date: `Temporal.PlainDate.from` never returns
-    // for an Islamic year before 1 AH on WebKit (bug doc § AH). D26's removal deletes this `if`.
+    // for an Islamic year before 1 AH on WebKit (bug doc § R). D26's removal deletes this `if`.
     if (env.calendar.startsWith("islamic") && anchor - step < 1) {
       continue;
     }

@@ -660,7 +660,7 @@ for (const entry of todo) {
     rows.push({
       id: gate.id,
       status: "SKIP",
-      detail: "needs --baseline (built.md Runbooks: gate baseline)",
+      detail: "needs --baseline (built/tier-6-runbooks.md: gate baseline)",
     });
     continue;
   }

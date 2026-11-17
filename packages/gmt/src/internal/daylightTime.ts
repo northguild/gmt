@@ -145,7 +145,9 @@ function isUndoneFrom(
  * forward change to undo (`Asia/Almaty` 2024).
  *
  * This is GMT's own definition, not the tz database's daylight flag, which no JavaScript API
- * exposes and offsets do not determine.
+ * exposes and offsets do not determine. Nor is it read from `Intl` time zone display names: a
+ * daylight name is missing for 77 zones, `Europe/Dublin`'s is "Irish Standard Time", and the
+ * names disagree with the database for future years in three zones.
  *
  * Cost: one transition lookup forward, then one back, and more only outside the ordinary summer
  * case. A paired change is less than 365 days away, so every lookup is given that limit and reads

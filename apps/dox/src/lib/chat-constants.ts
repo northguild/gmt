@@ -70,7 +70,7 @@ import type { DoxToolName } from "./dox-tools";
  */
 export const BRAINS = [
   // Workers AI — chosen by live probe through the Worker
-  // (`scripts/probe-brains.ts`; results in context/dox/built.md, "Brains and
+  // (`scripts/probe-brains.ts`; results in context/dox/built/tier-6-brains.md, "Brains and
   // budget"): widget calls, refusal of the absent question, link discipline,
   // time to first output and Neurons a question.
   //

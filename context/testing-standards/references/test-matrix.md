@@ -4,7 +4,7 @@ Canonical test **values** for GMT tests. Write them inline as literals. The name
 "Label" columns are descriptive only — **they are not exported constants**, and nothing in
 `packages/gmt/src/test/` exports them. The fixtures that *are* exported (locales, time zones,
 battle cases) are listed under [Reference Fixtures](#reference-fixtures) and must be imported.
-See [index.md § Canonical Date Fixtures](./index.md#canonical-date-fixtures).
+See [writing-tests.md § Canonical Date Fixtures](./writing-tests.md#canonical-date-fixtures).
 
 ## Dates (PlainDate)
 

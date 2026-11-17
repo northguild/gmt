@@ -1,5 +1,5 @@
 /*
- * GMT palette and token layer — per overview.md §3.
+ * GMT palette and token layer — per context/dox/reference/visual-design.md § "Colour".
  *
  * Six named roles (Void / Cyan / Spring / Teal / Ice / Signal) with derived
  * tokens for the site's surfaces, accents, and Starlight overrides.
@@ -23,7 +23,7 @@
   /* ---- Color-scheme ---- */
   color-scheme: light dark;
 
-  /* ---- Six named roles (overview.md §3) ---- */
+  /* ---- Six named roles (context/dox/reference/visual-design.md § "Colour") ---- */
   --gmt-void: #03080c;
 
   /* Near-black that does NOT flip with the theme (the light theme redefines
@@ -83,7 +83,7 @@
 
   /* ---- Glass tokens (blur/saturate/brightness only — fills use relative colors) ----
    *
-   * overview.md §3 "Panel construction" specifies
+   * context/dox/reference/visual-design.md § "Panels" specifies
    * `blur(24px) saturate(1.4) brightness(0.45)` — the brightness component is a
    * *darkening* and is "not optional": it is what creates a stable contrast floor
    * where glass sits over bright content (code blocks, the future globe). Over the

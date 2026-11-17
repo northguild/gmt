@@ -79,7 +79,7 @@ describe("GNSS_TIME_SCALES", () => {
 // RINEX 4.02 §4.1.2 ("the same hours as UTC and not UTC+3 h"), §5.2.8 ("GLO to identify the
 // GLONASS UTC time"); BIPM Annual Report vol. 15 p. 49 ("[UTC - GLONASS time] = 0 s + C1"). No
 // stated epoch, so its labels start where whole-second UTC does: the table's first row
-// (MAR-16.md, Decisions).
+// (the first whole-second leap-second row, 1972-01-01T00:00:00Z).
 describe("GNSS_TIME_SCALES: GLO", () => {
   it("has no TAI offset: GLO labels are UTC's own wall clock", () => {
     expect(GNSS_TIME_SCALES.GLO.taiMinusScale).toBeNull();

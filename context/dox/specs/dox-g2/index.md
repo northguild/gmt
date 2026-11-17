@@ -20,7 +20,7 @@ One PR. Each phase is a slice that `dox-builder` lands and `dox-tester` verifies
 | # | Slice | What the reader sees |
 | --- | --- | --- |
 | 1 | [Header and mark](./s1-header.md) | The northguild.dev mark and "NorthGuild" wordmark in a 3.5rem bar with 4 px blur |
-| 2 | [Frameless hero and zone drawer](./s2-hero-space.md) | Copy and a centred Earth with no box; the zone panel slides in on first use; zoomed in, the Earth fills the hero |
+| 2 | [Frameless hero](./s2-hero-space.md) and [zone drawer](./s2b-zone-drawer.md) | Copy and a centred Earth with no box; the zone panel slides in on first use; zoomed in, the Earth fills the hero |
 | 3 | [Real sky](./s3-sky.md) | The real sky behind the Earth for this moment, turning with the camera; a faint wash, a rare meteor |
 | 3b | [Sun and Moon](./s3b-bodies.md) | The true Moon with its phase, and the Sun's glow when it sits behind the Earth |
 | 4 | [Ice-freeze entrance](./s4-entrance.md) | The copy freezes from the first paint; from one start the sky fades in and the Earth wakes at dawn; the drawer sweeps in on each open |
@@ -57,7 +57,7 @@ Modify:
   `src/widgets/builders/{index,layout}.ts`, `src/widgets/tools/globe.module.css` (space-mode rules only)
 - `src/widgets/primitives/{combobox,listbox}/*.ts` + tests (popup root class; Zone Planner gains it
   too); `scripts/{globe-smoke,data-credits-check}.mjs`, `scripts/gates/registry.mjs`
-- `context/dox/built.md`, `reference/visual-design.md` § Motion, `reference/design-system.md` § Entrance,
+- `context/dox/built/`, `reference/visual-design.md` § Motion, `reference/design-system-motion.md` § Entrance,
   § `/dox` and the header, and its bevel rule (7). Delete `src/assets/northguild-logo.svg`.
 
 ## Kit pieces
@@ -146,6 +146,6 @@ nothing is copied, ported or relicensed from another NorthGuild codebase.
 
 ## Close-out
 
-After slice 7, `dox-builder` brings `built.md` (Tier 3: header, mark, builders; Tiers 1 and 4: hero,
-sky, entrance, carousel, tables) up to date; the finalizer moves the decisions into
-`issues/DOX-G2.md` and deletes this folder, `prototype/` included.
+After slice 7, `dox-builder` brings `built/` (Tier 3: header, mark, builders; Tiers 1 and 4: hero,
+sky, entrance, carousel, tables) up to date; the finalizer moves any rule the code cannot
+show into a code comment and deletes this folder, `prototype/` included.

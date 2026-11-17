@@ -24,6 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import checks_leftovers  # noqa: E402
 import checks_links  # noqa: E402
 import checks_personas  # noqa: E402
 import checks_sync  # noqa: E402
@@ -152,6 +153,7 @@ def summarize(out: dict[str, object]) -> dict[str, int]:
         + sum(1 for e in out["entry_files"] if e["over_budget"] or e["over_line_budget"]),
         "persona_warnings": sum(len(p["warnings"]) for p in out["personas"]),
         "symlink_problems": sym,
+        "leftovers": len(out["leftovers"]),
     }
 
 
@@ -175,6 +177,7 @@ def main() -> None:
         "context": audit_context_dir(root, entry_files),
         "personas": checks_personas.audit_personas(root),
         "sync": checks_sync.check_symlinks(root),
+        "leftovers": checks_leftovers.find_leftovers(root),
     }
     out["summary"] = summarize(out)
     print(json.dumps(out, indent=2))

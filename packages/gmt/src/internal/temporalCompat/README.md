@@ -6,8 +6,10 @@ TC39 Temporal and the Intl era/monthCode proposal. It also lets each workaround 
 upstream ships the fix. The upstream filings for these defects, and their status, are tracked on the
 docs site at `/upstream/` (data: `apps/dox/src/data/upstream-filings.json`).
 
-Decisions: `context/domination/issues/CORE-6.md` § Decisions. Owner choices:
-`context/domination/research/calendar-standards-decisions.md`.
+Sources for expected values, in order: the TC39 Temporal specification, the Intl era/monthCode
+proposal and ECMA-402, test262, the native engine (Chromium), then an independent arithmetic oracle
+(Dershowitz and Reingold for Hebrew). GMT owns calendar data only where the standard cannot be met
+without it: the published Hebrew arithmetic and the Indian leap rule for years the runtime gets wrong.
 
 ## Rules
 

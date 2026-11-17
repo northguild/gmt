@@ -36,7 +36,9 @@ import { edifactOffsetDateTimeText } from "../../internal/ediDateTimeFields";
  *   removing the three letters, and resolve it in the IANA zone you map them to with
  *   `resolveLocal`.
  * - **Pass the unescaped element value.** `+` is the EDIFACT data element separator, so an
- *   interchange transmits `+02` as `?+02`. Remove the release character first:
+ *   interchange transmits `+02` as `?+02` (UN/EDIFACT syntax rules, UNTDID Part 4 Chapter 2.2:
+ *   "? immediately preceding one of the characters ' + : ? restores their normal meaning").
+ *   Remove the release character first:
  *   `"202406151430?+02"` returns `""`.
  * - Seconds are always written in the result, `00` for `205` and `303`. Fields are checked, not
  *   clamped: hour 24, second 60 and 29 February 2023 return `""`.

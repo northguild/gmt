@@ -1,10 +1,10 @@
 # Canary — Tracker
 
-A row is a canary story with its own GitHub issue. New canary work is a `CNRY-<n>` row with its
-spec in [issues/](issues/). `/plan-story` and `/implement` take a `CNRY-*` ID like any other.
+A row is a canary story with its own GitHub issue. New canary work is a `CNRY-<n>` row; while it
+is open its spec lives in `issues/<ID>.md`, and the finalizer deletes it at close. `/plan-story`
+and `/implement` take a `CNRY-*` ID like any other.
 
-The four canary stories built before this epic keep their `CORE-*` IDs and their records in
-[../domination/issues/](../domination/issues/), and their rows stay in
+The four canary stories built before this epic keep their `CORE-*` IDs, and their rows stay in
 [../domination/tracker.md](../domination/tracker.md) as well. A story ID never changes.
 
 `CNRY-*` work ships nothing in `packages/gmt`, so it carries no changeset unless it also changes

@@ -8,7 +8,7 @@
  *
  * The scan reads source text, so it needs no import of the test files. It sees only the
  * four calls below. A test that leaves other global state behind must undo it, as
- * `context/dox/built.md` (Test isolation) says.
+ * `context/dox/built/tier-2-platform.md` (Test isolation) says.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";

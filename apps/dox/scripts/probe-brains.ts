@@ -4,7 +4,7 @@
  * Asks each brain the questions that decide whether it can serve Dox, and
  * reports what actually happened rather than what the model's catalog entry
  * promises. It takes any brain id, so it also serves the brain-list runbook in
- * context/dox/built.md.
+ * context/dox/built/tier-6-ops.md.
  *
  * Per brain, it records:
  *

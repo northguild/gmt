@@ -9,7 +9,7 @@ name: Dox gates weekly
 # issue for a synthetic finding, to prove the filing path without a real failure.
 #
 # Legs: --shard i/n splits each gate's sorted page list round-robin, so the legs of one browser
-# share the work. The shard counts are sized from measured local times (built.md, Runbooks, "The
+# share the work. The shard counts are sized from measured local times (context/dox/built/tier-6-ops.md, "The
 # weekly gate sweep"). Adding or removing a leg means changing the matrix and the LEGS list of the
 # report job, which names every leg so one that crashed without uploading is still filed.
 #
