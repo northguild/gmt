@@ -7,13 +7,17 @@
  * sources at one time `t`, so the distinct times are the voices that played. The gate asserts on
  * that log and never listens to sound.
  *
+ * Sound is opt-in, so every scenario but those marked `sound: "default"` stands for a reader who
+ * turned it on: an init script saves an unmuted `dox:sound` record whenever none is saved.
+ *
  * Per browser and page it runs four scenarios, each in a fresh context:
- *   - `fresh`: storage empty. `data-sound="on"`; no context before a gesture; the first press
- *     makes one and it runs; a button press then starts exactly one voice; a press on a link that
- *     goes to another page (its navigation cancelled) starts exactly one more.
- *   - `reduced`: reduced motion emulated, storage empty. `data-sound="off"`; no context is ever
+ *   - `first visit` (`sound: "default"`): storage empty. `data-sound="off"`; no context is ever
  *     constructed, press or not.
- *   - `reduced-unmuted`: reduced motion, `dox:sound` saved unmuted. A press plays.
+ *   - `opted in`: `data-sound="on"`; no context before a gesture; the first press makes one and
+ *     it runs; a button press then starts exactly one voice; a press on a link that goes to
+ *     another page (its navigation cancelled) starts exactly one more.
+ *   - `reduced, opted in`: reduced motion emulated, sound saved on. A press plays: the system's
+ *     settings never mute.
  *   - `saved-mute`: `dox:sound` saved muted. No context; the mute survives a reload.
  *   - `control` (slice 2, the header's settings control): at 320, 390, 768 and 1440 the
  *     "Settings" button is in the bar and in the tab order; from 50rem it sits right after the Dox
@@ -22,8 +26,8 @@
  *     the "Dark theme" switch, Tab reaches the mute button, the fader, then the Aura switch, an
  *     arrow key moves the fader one notch, Escape closes and focus returns to the button. Open, the popover is inside the viewport
  *     and under the button. A mute survives a reload and the button's icon paints muted before any
- *     script. Under reduced motion with empty storage the mute button reads pressed and one press
- *     unmutes and starts a voice. Hold still: the header items' boxes and the button's stay put
+ *     script. On a first visit (`sound: "default"`) the mute button reads pressed and one press
+ *     turns sound on and starts a voice. Hold still: the header items' boxes and the button's stay put
  *     (0.5 px) while a drag sweeps the fader 1 to 11 to 1 and the mute button toggles.
  *   - `chrome` (slice 3, once per browser, on fixed pages): after a first press unlocks, each cue is
  *     read as a shape: the sorted start offsets of its oscillators (Glass clink 0,0,0.05,0.05; the
@@ -92,6 +96,8 @@ import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 const GATE = "sound-check";
 const PAGES = ["/", "/tools/zoned-earth/"];
 const SOUND_KEY = "dox:sound";
+/** `SOUND_VERSION` in src/lib/sound/settings.ts: a record without it reads as muted. */
+const SOUND_VERSION = 1;
 const ENGINES = ["chromium", "firefox", "webkit"];
 
 const PAGES_ARG = await applyPageContract({ gate: GATE, pages: PAGES });
@@ -227,7 +233,7 @@ const NAVIGATING =
 
 async function newPage(browser, options, listeners) {
   // Clipboard permissions are Chromium's to grant; WebKit and Firefox let a press copy without them.
-  const { permissions, ...rest } = options;
+  const { permissions, sound, ...rest } = options;
   const chromium = browser.browserType().name() === "chromium";
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
@@ -236,6 +242,29 @@ async function newPage(browser, options, listeners) {
   });
   await blockOffSite(context, base);
   await context.addInitScript(installLog);
+  // A reader who turned sound on, unless the scenario is a first visit. Only when nothing is
+  // saved, so a scenario's own choice survives its reloads.
+  if (sound !== "default")
+    await context.addInitScript(
+      ([key, record]) => {
+        try {
+          if (localStorage.getItem(key) === null)
+            localStorage.setItem(key, record);
+        } catch {
+          // about:blank has no storage.
+        }
+      },
+      [
+        SOUND_KEY,
+        JSON.stringify({
+          v: SOUND_VERSION,
+          level: 5,
+          muted: false,
+          aura: true,
+          track: "ice",
+        }),
+      ],
+    );
   const page = await context.newPage();
   page.on("console", (message) => {
     if (message.type() === "error") listeners.errors.push(message.text());
@@ -298,10 +327,11 @@ async function scenario(browser, name, path, options, run) {
   }
 }
 
+/** Save a record as `writeSound` does, with this build's version. */
 const saved = (page, value) =>
   page.evaluate(
     ([key, v]) => localStorage.setItem(key, JSON.stringify(v)),
-    [SOUND_KEY, value],
+    [SOUND_KEY, { v: SOUND_VERSION, ...value }],
   );
 
 const GUIDE = "/guides/conversion/databases/";
@@ -431,19 +461,19 @@ for (const name of browsers) {
       browser,
       name,
       path,
-      { scenario: "fresh" },
+      { scenario: "opted in" },
       async (page, bad) => {
         await load(page, path);
         let log = await page.evaluate(readLog);
         if (log.sound !== "on")
-          bad("data-sound", `fresh: data-sound is "${log.sound}", not "on"`);
+          bad("data-sound", `opted in: data-sound is "${log.sound}", not "on"`);
         if (log.constructed !== 0)
           bad(
             "autoplay",
-            `fresh: ${log.constructed} context(s) before any gesture`,
+            `opted in: ${log.constructed} context(s) before any gesture`,
           );
         if (!(await press(page, PRESSABLE)))
-          return bad("no-target", "fresh: no pressable button on the page");
+          return bad("no-target", "opted in: no pressable button on the page");
         log = await settle(
           page,
           (l) =>
@@ -452,17 +482,17 @@ for (const name of browsers) {
         if (log.constructed !== 1)
           bad(
             "unlock",
-            `fresh: the first press made ${log.constructed} context(s), not 1`,
+            `opted in: the first press made ${log.constructed} context(s), not 1`,
           );
         if (!log.states.includes("running"))
           bad(
             "unlock",
-            "fresh: the context is not running after the first press",
+            "opted in: the context is not running after the first press",
           );
         if (log.voices !== 1)
           bad(
             "click",
-            `fresh: the first button press started ${log.voices} voice(s), not 1`,
+            `opted in: the first button press started ${log.voices} voice(s), not 1`,
           );
         // A second press, a beat later, past the cue's gap: one more voice.
         await page.waitForTimeout(150);
@@ -472,7 +502,7 @@ for (const name of browsers) {
         if (log.voices !== 2)
           bad(
             "click",
-            `fresh: two presses started ${log.voices} voice(s), not 2`,
+            `opted in: two presses started ${log.voices} voice(s), not 2`,
           );
         // A link that goes to another page: its navigation is cancelled so the log stays readable.
         await page.evaluate(() =>
@@ -488,7 +518,7 @@ for (const name of browsers) {
           if (after.voices !== log.voices + 1)
             bad(
               "link",
-              `fresh: a link press started ${after.voices - log.voices} voice(s), not 1`,
+              `opted in: a link press started ${after.voices - log.voices} voice(s), not 1`,
             );
         }
       },
@@ -498,18 +528,21 @@ for (const name of browsers) {
       browser,
       name,
       path,
-      { scenario: "reduced", reducedMotion: "reduce" },
+      { scenario: "first visit", sound: "default" },
       async (page, bad) => {
         await load(page, path);
         await press(page, PRESSABLE);
         await page.waitForTimeout(500);
         const log = await page.evaluate(readLog);
         if (log.sound !== "off")
-          bad("data-sound", `reduced: data-sound is "${log.sound}", not "off"`);
+          bad(
+            "data-sound",
+            `first visit: data-sound is "${log.sound}", not "off"`,
+          );
         if (log.constructed !== 0)
           bad(
             "autoplay",
-            `reduced: ${log.constructed} context(s) while muted by default`,
+            `first visit: ${log.constructed} context(s) for a visitor who never turned sound on`,
           );
       },
     );
@@ -518,7 +551,7 @@ for (const name of browsers) {
       browser,
       name,
       path,
-      { scenario: "reduced-unmuted", reducedMotion: "reduce" },
+      { scenario: "reduced, opted in", reducedMotion: "reduce" },
       async (page, bad) => {
         await load(page, path);
         await saved(page, { level: 5, muted: false, aura: true });
@@ -528,14 +561,14 @@ for (const name of browsers) {
         if (before.sound !== "on")
           bad(
             "data-sound",
-            `reduced-unmuted: data-sound is "${before.sound}", not "on"`,
+            `reduced, opted in: data-sound is "${before.sound}", not "on"`,
           );
         await press(page, PRESSABLE);
         const log = await settle(page, (l) => l.voices >= 1);
         if (log.constructed !== 1 || log.voices !== 1)
           bad(
             "click",
-            `reduced-unmuted: a saved unmute plays ${log.voices} voice(s) in ${log.constructed} context(s), not 1 in 1`,
+            `reduced, opted in: a saved unmute plays ${log.voices} voice(s) in ${log.constructed} context(s), not 1 in 1`,
           );
       },
     );
@@ -768,7 +801,7 @@ for (const name of browsers) {
       browser,
       name,
       path,
-      { scenario: "control reduced", reducedMotion: "reduce" },
+      { scenario: "control first visit", sound: "default" },
       async (page, bad) => {
         await load(page, path);
         await page.locator("#gmt-settings-button").click();
@@ -777,15 +810,15 @@ for (const name of browsers) {
           .getAttribute("aria-pressed");
         if (pressed !== "true")
           bad(
-            "control-reduced",
-            `empty storage under reduced motion: aria-pressed is "${pressed}", not "true"`,
+            "control-first-visit",
+            `first visit: aria-pressed is "${pressed}", not "true"`,
           );
         await page.locator("#gmt-sound-mute").click();
         const log = await settle(page, (l) => l.voices >= 1);
         if (log.voices < 1)
           bad(
-            "control-reduced",
-            "unmuting with the mute button started no voice",
+            "control-first-visit",
+            "turning sound on with the mute button started no voice",
           );
         if (
           (await page
@@ -793,8 +826,8 @@ for (const name of browsers) {
             .getAttribute("aria-pressed")) !== "false"
         )
           bad(
-            "control-reduced",
-            "the mute button still reads pressed after unmuting",
+            "control-first-visit",
+            "the mute button still reads pressed after turning sound on",
           );
       },
     );

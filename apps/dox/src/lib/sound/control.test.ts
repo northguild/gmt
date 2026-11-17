@@ -10,7 +10,8 @@ import {
   renderSettingsControl,
   type SettingsFixture,
 } from "../settings-control-fixture";
-import { readSound, SOUND_KEY } from "./settings";
+import { saveSound } from "~/test/sound-storage";
+import { readSound, SOUND_KEY, SOUND_VERSION } from "./settings";
 
 installJsdomShims();
 
@@ -43,10 +44,7 @@ afterEach(() => {
 
 describe("the sound control", () => {
   it("writes nothing on mount and shows the saved choice", () => {
-    localStorage.setItem(
-      SOUND_KEY,
-      JSON.stringify({ level: 8, muted: true, aura: false, track: "deep" }),
-    );
+    saveSound({ level: 8, muted: true, aura: false, track: "deep" });
     const before = localStorage.getItem(SOUND_KEY);
     show();
     expect(localStorage.getItem(SOUND_KEY)).toBe(before);
@@ -58,18 +56,31 @@ describe("the sound control", () => {
     expect(track("Ice cavern")).not.toBeChecked();
   });
 
-  it("writes nothing on mount when nothing was saved", () => {
+  it("shows sound off on a first visit and writes nothing on mount", () => {
     show();
     expect(localStorage.getItem(SOUND_KEY)).toBeNull();
-    expect(mute()).toHaveAttribute("aria-pressed", "false");
+    expect(mute()).toHaveAttribute("aria-pressed", "true");
+    expect(document.documentElement.dataset.sound).toBe("off");
+    expect(fader()).toHaveAttribute("aria-valuetext", "Volume 5 of 11, muted");
     expect(track("Ice cavern")).toBeChecked();
   });
 
+  it("turns sound on with one press of the mute button, and saves that choice", async () => {
+    show();
+    await userEvent.click(mute());
+    expect(mute()).toHaveAttribute("aria-pressed", "false");
+    expect(document.documentElement.dataset.sound).toBe("on");
+    expect(saved()).toEqual({
+      v: SOUND_VERSION,
+      level: 5,
+      muted: false,
+      aura: true,
+      track: "ice",
+    });
+  });
+
   it("mutes and unmutes with the mute button, keeping the level", async () => {
-    localStorage.setItem(
-      SOUND_KEY,
-      JSON.stringify({ level: 7, muted: false, aura: true }),
-    );
+    saveSound({ level: 7, muted: false, aura: true });
     show();
     const user = userEvent.setup();
     await user.click(mute());
@@ -83,6 +94,7 @@ describe("the sound control", () => {
   });
 
   it("plays the Ice snap on the mute button, on mute and on unmute", async () => {
+    saveSound();
     show();
     const user = userEvent.setup();
     await user.click(mute());
@@ -93,10 +105,7 @@ describe("the sound control", () => {
   });
 
   it("unmutes at the new level when the fader moves while muted", () => {
-    localStorage.setItem(
-      SOUND_KEY,
-      JSON.stringify({ level: 5, muted: true, aura: true }),
-    );
+    saveSound({ level: 5, muted: true, aura: true });
     show();
     setRange(fader(), 9);
     expect(saved()).toMatchObject({ muted: false, level: 9 });
@@ -131,10 +140,7 @@ describe("the sound control", () => {
 
   it("follows another tab", () => {
     show();
-    localStorage.setItem(
-      SOUND_KEY,
-      JSON.stringify({ level: 3, muted: true, aura: false, track: "deep" }),
-    );
+    saveSound({ level: 3, muted: true, aura: false, track: "deep" });
     // oxlint-disable-next-line dox-test/no-dispatch-event -- the browser fires `storage` for a write in another tab; nothing here can press it
     window.dispatchEvent(new StorageEvent("storage", { key: SOUND_KEY }));
     expect(mute()).toHaveAttribute("aria-pressed", "true");

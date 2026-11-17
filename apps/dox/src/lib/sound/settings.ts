@@ -1,14 +1,21 @@
 /**
  * The reader's sound choice: a level, a mute, the landing aura and its track.
  *
- * It is one `localStorage` key, `dox:sound`, the same shape as `dox:earth` (src/lib/earth-look.ts).
- * `ThemeProvider.astro` reads the same key inline, before first paint, and sets `data-sound` on
- * `<html>` by the rule `defaultSound` states, so the header's chip paints right on the first frame.
+ * Sound is opt-in. Every visitor starts muted, whatever the system's settings, and only a reader's
+ * own choice in the settings panel turns it on. Nothing else reads or writes this choice.
  *
- * The key is written only on a reader's choice (mute, the fader, the Aura switch and track); nothing
- * writes it at load. Once written it wins over the reduced-motion default on every later visit.
- * Storage can throw (private windows, blocked site data): every access is guarded and the page
- * is correct without it.
+ * It is one `localStorage` key, `dox:sound`, holding a versioned record (`SOUND_VERSION`).
+ * `ThemeProvider.astro` reads the same key inline, before first paint, and sets `data-sound` on
+ * `<html>` by the same rule, so the panel's speaker paints right on the first frame.
+ *
+ * What makes it hold up:
+ * - Anything this build cannot read (no record, corrupt JSON, another version, a field of the
+ *   wrong type) reads as muted. A bad record can never turn sound on.
+ * - The key is written only on a reader's choice; nothing writes it at load.
+ * - Storage can throw (private windows, blocked site data, a full quota). A choice it cannot keep
+ *   still holds for the rest of the page, so an unmute is not undone by the next read.
+ * - A change in another tab arrives through the `storage` event. A page restored from the
+ *   back/forward cache missed those while frozen, so it reads the key again on `pageshow`.
  */
 
 /** The landing aura's two tracks: "Ice cavern" and "Deep drone". */
@@ -31,49 +38,62 @@ export interface SoundSettings {
 /** The `localStorage` key. `ThemeProvider.astro` reads the same key inline. */
 export const SOUND_KEY = "dox:sound";
 
+/**
+ * The record's version, saved as `v`. A record without it, or with another, reads as the default:
+ * raise it when a field changes meaning, so an old record cannot carry a new meaning in.
+ */
+export const SOUND_VERSION = 1;
+
 export const MIN_LEVEL = 1;
 export const MAX_LEVEL = 11;
 
-/** Where the origin of a change was: this document's own write, or another tab's. */
+/**
+ * Where a change came from: this document's own write (a reader's gesture), or storage (another
+ * tab's write, or the key read again on a return from the back/forward cache).
+ */
 export type SoundOrigin = "local" | "storage";
 
-/**
- * What a visitor gets before choosing anything: level 5, the aura on playing Ice cavern, muted
- * only under reduced motion.
- */
-export function defaultSound(): SoundSettings {
-  let reduce = false;
-  try {
-    reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    // No matchMedia: sound is on.
-  }
-  return { level: 5, muted: reduce, aura: true, track: "ice" };
+/** What a visitor gets before choosing anything: muted, level 5, the aura on playing Ice cavern. */
+function defaultSound(): SoundSettings {
+  return { level: 5, muted: true, aura: true, track: "ice" };
 }
 
 function clampLevel(value: number): number {
   return Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, Math.round(value)));
 }
 
-/** The saved choice, field by field over the default; a bad value reads as the default. */
-export function readSound(): SoundSettings {
+/** The record `writeSound` saves. */
+function soundRecord(settings: SoundSettings): string {
+  return JSON.stringify({ v: SOUND_VERSION, ...settings });
+}
+
+/** The saved choice, field by field over the default; a bad record or field reads as the default. */
+function storedSound(): SoundSettings {
   const settings = defaultSound();
   try {
     const saved: unknown = JSON.parse(
       localStorage.getItem(SOUND_KEY) ?? "null",
     );
-    if (typeof saved === "object" && saved !== null) {
-      const o = saved as Record<string, unknown>;
-      if (typeof o.level === "number" && Number.isFinite(o.level))
-        settings.level = clampLevel(o.level);
-      if (typeof o.muted === "boolean") settings.muted = o.muted;
-      if (typeof o.aura === "boolean") settings.aura = o.aura;
-      if (isTrack(o.track)) settings.track = o.track;
-    }
+    if (typeof saved !== "object" || saved === null) return settings;
+    const o = saved as Record<string, unknown>;
+    if (o.v !== SOUND_VERSION) return settings;
+    if (typeof o.level === "number" && Number.isFinite(o.level))
+      settings.level = clampLevel(o.level);
+    if (typeof o.muted === "boolean") settings.muted = o.muted;
+    if (typeof o.aura === "boolean") settings.aura = o.aura;
+    if (isTrack(o.track)) settings.track = o.track;
   } catch {
     // Unreadable or corrupt: the default stands.
   }
   return settings;
+}
+
+/** This page's last choice, while storage has not kept it. Cleared when a write lands. */
+let unsaved: SoundSettings | null = null;
+
+/** The choice in force: this page's unsaved one, or the saved one, or the default. */
+export function readSound(): SoundSettings {
+  return unsaved ? { ...unsaved } : storedSound();
 }
 
 type Listener = (settings: SoundSettings, origin: SoundOrigin) => void;
@@ -84,24 +104,36 @@ export function writeSound(patch: Partial<SoundSettings>): SoundSettings {
   const next = { ...readSound(), ...patch };
   next.level = clampLevel(next.level);
   try {
-    localStorage.setItem(SOUND_KEY, JSON.stringify(next));
+    localStorage.setItem(SOUND_KEY, soundRecord(next));
+    unsaved = null;
   } catch {
-    // The choice holds for this page; it is just not remembered.
+    // Not remembered for the next page, but it holds for this one.
+    unsaved = next;
   }
-  for (const fn of listeners) fn(next, "local");
-  return next;
+  for (const fn of listeners) fn({ ...next }, "local");
+  return { ...next };
 }
 
-/** Call `fn` on a change here or in another tab. Returns the way to stop. */
+/**
+ * Call `fn` on a change here, in another tab, or on a return from the back/forward cache.
+ * Returns the way to stop.
+ */
 export function onSoundChange(fn: Listener): () => void {
   listeners.add(fn);
   const onStorage = (event: StorageEvent) => {
-    if (event.key === SOUND_KEY || event.key === null)
-      fn(readSound(), "storage");
+    if (event.key !== SOUND_KEY && event.key !== null) return;
+    // Another tab's write landed, so it is newer than any choice this page could not save.
+    unsaved = null;
+    fn(readSound(), "storage");
+  };
+  const onPageShow = (event: PageTransitionEvent) => {
+    if (event.persisted) fn(readSound(), "storage");
   };
   window.addEventListener("storage", onStorage);
+  window.addEventListener("pageshow", onPageShow);
   return () => {
     listeners.delete(fn);
     window.removeEventListener("storage", onStorage);
+    window.removeEventListener("pageshow", onPageShow);
   };
 }

@@ -11,6 +11,7 @@ import {
 } from "../../test/fake-audio";
 import { installJsdomShims } from "../../test/jsdom-shims";
 import { cue, loop, startCue } from "./cue";
+import { saveSound } from "~/test/sound-storage";
 import { SOUND_KEY, writeSound } from "./settings";
 
 const engine = { attach: vi.fn(), destroy: vi.fn() };
@@ -36,6 +37,8 @@ beforeEach(() => {
   vi.useFakeTimers();
   installFakeAudio();
   installMemoryStorage();
+  // Sound is opt-in: these tests stand for a reader who turned it on; "muted" clears it.
+  saveSound();
   reducedMotion(false);
   engine.attach.mockClear();
   engine.destroy.mockClear();
@@ -152,18 +155,24 @@ describe("the first gesture", () => {
 });
 
 describe("muted", () => {
-  it("makes no context and loads no engine, gesture or not", async () => {
-    reducedMotion(true);
-    start();
-    await press();
-    await vi.advanceTimersByTimeAsync(10);
-    await vi.dynamicImportSettled();
-    expect(FakeAudioContext.instances).toHaveLength(0);
-    expect(createEngine).not.toHaveBeenCalled();
-  });
+  it.each([
+    ["a visitor who never chose", () => localStorage.clear()],
+    ["a saved mute", () => saveSound({ muted: true })],
+  ])(
+    "makes no context and loads no engine, gesture or not: %s",
+    async (_name, set) => {
+      set();
+      start();
+      await press();
+      await vi.advanceTimersByTimeAsync(10);
+      await vi.dynamicImportSettled();
+      expect(FakeAudioContext.instances).toHaveLength(0);
+      expect(createEngine).not.toHaveBeenCalled();
+    },
+  );
 
   it("unlocks the moment the reader unmutes, which is itself a gesture", async () => {
-    localStorage.setItem(SOUND_KEY, JSON.stringify({ muted: true }));
+    saveSound({ muted: true });
     start();
     writeSound({ muted: false });
     expect(FakeAudioContext.instances).toHaveLength(1);
@@ -173,9 +182,9 @@ describe("muted", () => {
   });
 
   it("waits for a gesture when another tab unmutes", async () => {
-    localStorage.setItem(SOUND_KEY, JSON.stringify({ muted: true }));
+    saveSound({ muted: true });
     start();
-    localStorage.setItem(SOUND_KEY, JSON.stringify({ muted: false }));
+    saveSound({ muted: false });
     storageChanged();
     expect(FakeAudioContext.instances).toHaveLength(0);
     await press();
@@ -321,7 +330,7 @@ describe("the sidebar's arrival cue", () => {
   });
 
   it("is silent when muted", async () => {
-    localStorage.setItem(SOUND_KEY, JSON.stringify({ muted: true }));
+    saveSound({ muted: true });
     await arriveAfter("0", true);
     expect(heard).toEqual([]);
   });

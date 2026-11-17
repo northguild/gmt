@@ -64,8 +64,8 @@ export function settingsControl(): SafeHtml {
         ${switchField({ id: "gmt-theme-dark", label: "Dark theme", size: "small", checked: true })}
       </div>
       <div class="${styles.sound}">
-        ${button({ id: "gmt-sound-mute", label: "Mute sound", labelHidden: true, pressed: false, cue: true, icon: raw(SPEAKER) })}
-        ${range({ id: "gmt-sound-fader", label: "Volume", look: "fader", min: 1, max: 11, step: 1, value: 5, valueText: "Volume 5 of 11" })}
+        ${button({ id: "gmt-sound-mute", label: "Mute sound", labelHidden: true, pressed: true, cue: true, icon: raw(SPEAKER) })}
+        ${range({ id: "gmt-sound-fader", label: "Volume", look: "fader", min: 1, max: 11, step: 1, value: 5, valueText: "Volume 5 of 11, muted" })}
       </div>
       ${switchField({ id: "gmt-sound-aura", label: "Aura", size: "small", checked: true })}
       <div class="${styles.track}">${chips({

@@ -18,19 +18,13 @@
       }
     } catch (_) {}
     /* The sound choice (src/lib/sound/settings.ts): the same rule, applied here so the settings
-       panel's speaker paints right on the first frame. A saved `muted` wins; otherwise reduced motion mutes. */
-    var soundMuted;
+       panel's speaker paints right on the first frame. Sound is opt-in: it is on only when a
+       record of this version says unmuted; anything else reads as muted. */
+    var soundMuted = true;
     try {
       var soundSaved = JSON.parse(localStorage.getItem('dox:sound'));
-      if (soundSaved && typeof soundSaved.muted === 'boolean') soundMuted = soundSaved.muted;
+      if (soundSaved && soundSaved.v === 1 && soundSaved.muted === false) soundMuted = false;
     } catch (_) {}
-    if (soundMuted === undefined) {
-      try {
-        soundMuted = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      } catch (_) {
-        soundMuted = false;
-      }
-    }
     document.documentElement.dataset.sound = soundMuted ? 'off' : 'on';
   })();
 </script>

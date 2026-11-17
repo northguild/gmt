@@ -11,7 +11,8 @@ import {
 import { installJsdomShims } from "../../test/jsdom-shims";
 import { cue } from "./cue";
 import { createEngine, type Engine } from "./engine";
-import { SOUND_KEY, writeSound } from "./settings";
+import { saveSound } from "~/test/sound-storage";
+import { writeSound } from "./settings";
 import { VOICES, type Voice } from "./voices";
 
 installJsdomShims();
@@ -19,8 +20,9 @@ installJsdomShims();
 let engine: Engine | undefined;
 let ctx: FakeAudioContext;
 
-function boot(saved?: object) {
-  if (saved) localStorage.setItem(SOUND_KEY, JSON.stringify(saved));
+/** The engine loads only once a reader has turned sound on, so each boot saves that choice. */
+function boot(saved: Record<string, unknown> = {}) {
+  saveSound(saved);
   engine = createEngine();
   ctx = new FakeAudioContext();
   engine.attach(ctx as unknown as AudioContext);
@@ -180,6 +182,7 @@ describe("a cue", () => {
   });
 
   it("is silent while muted, and before the context is attached", () => {
+    saveSound();
     engine = createEngine();
     cue("click");
     expect(click).not.toHaveBeenCalled();
@@ -195,6 +198,7 @@ describe("a cue", () => {
       ...navigator,
       userActivation: { isActive: false },
     });
+    saveSound();
     engine = createEngine();
     ctx = new FakeAudioContext();
     engine.attach(ctx as unknown as AudioContext);
@@ -208,6 +212,7 @@ describe("a cue", () => {
       ...navigator,
       userActivation: { isActive: true },
     });
+    saveSound();
     engine = createEngine();
     ctx = new FakeAudioContext();
     engine.attach(ctx as unknown as AudioContext);
@@ -216,6 +221,7 @@ describe("a cue", () => {
   });
 
   it("drops a cue on a suspended context where the browser has no userActivation", () => {
+    saveSound();
     engine = createEngine();
     ctx = new FakeAudioContext();
     engine.attach(ctx as unknown as AudioContext);
