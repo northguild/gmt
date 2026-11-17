@@ -2668,7 +2668,10 @@ describe("the rolling issue", () => {
   const LEAP_ROLL = rollingMarker("leap-seconds");
   /** D2 removable and one oracle mismatch: two findings of one run. */
   const twoFindings = () =>
-    withNative({ ...removableD2(), "temporal-oracle": oracle(1) });
+    withNative({
+      "temporal-compat-check": check([workaround("D2", "removable")]),
+      "temporal-oracle": oracle(1),
+    });
   /** The findings marker an earlier run left, written out. */
   const findingsMarker = (pairs: [string, string][]) =>
     `<!-- gmt-canary findings=${JSON.stringify(pairs)} -->`;
@@ -2735,6 +2738,7 @@ describe("the rolling issue", () => {
 
   it("names the run once, not once per section", () => {
     const [action] = run(twoFindings());
+    if (action.kind !== "open") throw new Error("expected open");
     expect(action.body.match(/Run: /g)).toBeNull();
     expect(action.body.match(new RegExp(RUN, "g"))).toHaveLength(1);
   });
@@ -2746,6 +2750,7 @@ describe("the rolling issue", () => {
       body: expect.stringContaining("1 gone (A --> B)"),
     });
     const [action] = run(twoFindings());
+    if (action.kind !== "open") throw new Error("expected open");
     expect(action.body.split("\n")[1]).not.toMatch(/-->.+-->/);
   });
 

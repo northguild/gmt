@@ -825,6 +825,7 @@ describe("summaryMarkdown: temporal-oracle", () => {
           title: "Remove workaround D2: summary",
           labels: ["canary"],
           body: "b",
+          findings: ["k"],
         },
         ok: false,
         error: "label missing",
