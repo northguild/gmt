@@ -95,6 +95,8 @@ describe("applyPageContract through a pipe", () => {
     path.join(import.meta.dirname, "contract.mjs"),
   ).href;
   const PAGES_LONG = Array.from({ length: 20_000 }, (_, i) => `/page-${i}/`);
+  // The child builds the same list: Linux caps one argument at 128 KiB, so the list cannot be
+  // passed in the script.
   const run = (flag: string) =>
     spawnSync(
       process.execPath,
@@ -102,7 +104,7 @@ describe("applyPageContract through a pipe", () => {
         "--input-type=module",
         "-e",
         `const { applyPageContract } = await import(${JSON.stringify(CONTRACT)});
-        const pages = ${JSON.stringify(PAGES_LONG)};
+        const pages = Array.from({ length: 20_000 }, (_, i) => \`/page-\${i}/\`);
         const costs = Object.fromEntries(pages.map((p) => [p, 1]));
         await applyPageContract({ gate: "long", pages, costs, argv: [${JSON.stringify(flag)}] });
         console.log("ran on");`,
@@ -112,6 +114,7 @@ describe("applyPageContract through a pipe", () => {
 
   it("prints a list far over 64 KiB whole, then exits before the script runs on", () => {
     const r = run("--list-pages");
+    expect(r.error).toBeUndefined();
     expect(r.status).toBe(0);
     expect(r.stdout.length).toBeGreaterThan(4 * 65_536);
     expect(JSON.parse(r.stdout)).toEqual(PAGES_LONG);
@@ -119,6 +122,7 @@ describe("applyPageContract through a pipe", () => {
 
   it("prints the costs whole too", () => {
     const r = run("--list-page-costs");
+    expect(r.error).toBeUndefined();
     expect(r.status).toBe(0);
     expect(Object.keys(JSON.parse(r.stdout))).toEqual(PAGES_LONG);
   });
