@@ -2755,11 +2755,11 @@ function tagProblems(
 
 describe("native-suite tag lists", () => {
   const files = testFiles();
+  const bugs = join(REPO, "context/domination/polyfill-bugs");
   const headings = anchors(
-    readFileSync(
-      join(REPO, "context/domination/js-temporal-polyfill-bugs.md"),
-      "utf8",
-    ),
+    readdirSync(bugs)
+      .map((name) => readFileSync(join(bugs, name), "utf8"))
+      .join("\n"),
   );
   const titles = testTitles(files);
 

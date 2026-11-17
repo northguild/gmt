@@ -61,15 +61,7 @@ if (!existsSync(dstSrc)) {
   process.exit(1);
 }
 
-const canonical = readFileSync(dstSrc, "utf8");
-
-// Rewrite the `## Further reading` section's internal link from
-// `context/roadmap/index.md` to the guides index, so the generated page
-// doesn't leak a source-repo path into the deployed site.
-const body = canonical.replace(
-  /- `context\/roadmap\/index\.md` \(Story Group C\) — the internal tracking doc for rolling `disambiguation` support out across the rest of GMT's zoned-producing functions\./,
-  "- [Guides](/guides/) — the rest of the guides site.",
-);
+const body = readFileSync(dstSrc, "utf8");
 
 // The page's source is outside the docs tree, so Starlight's own git lookup finds no date for
 // it: the date of the commit that last changed `docs/dst-disambiguation.md` is written instead.

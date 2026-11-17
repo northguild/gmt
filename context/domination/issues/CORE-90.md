@@ -35,8 +35,8 @@ Phase 1 needs no law and no tz release. It adds a Dox page, not a library functi
   view (every US zone as the tz database models it) and a Proposals view (each state's adopted
   position, dated), a pin, a permalink, and evidence on how disruptive a change would be. It is a
   chat tool (`showUsSunshineProtectionAct`, kind `sunshineact`). It states effects only and
-  projects no offset. What and where: [built.md](../../dox/built.md), "Sunshine Protection Act
-  page". The facts behind it, and the only file that cites law:
+  projects no offset. What and where: [tier-2-tools.md](../../dox/built/tier-2-tools.md), "Clock-change
+  checkers". The facts behind it, and the only file that cites law:
   [research/us-permanent-daylight-time.md](../research/us-permanent-daylight-time.md).
 - **A weekly freshness canary** watches Congress.gov, Open States and the tz database against a
   snapshot it carries from run to run: [canary/overview.md](../../canary/overview.md), "US clock-change watch".

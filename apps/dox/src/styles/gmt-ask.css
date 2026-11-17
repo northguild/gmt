@@ -11,7 +11,7 @@
  *      every one of these six groups beats every Tailwind utility today, and
  *      would otherwise reach into AI Elements' markup uninvited.
  *   2. Theme the Streamdown reading surface. Streamdown 2.6.0 does not expose
- *      the `[data-streamdown="…"]` attributes design-system.md was originally
+ *      the `[data-streamdown="…"]` attributes design-system-chat.md was originally
  *      written against (verified 2026-09-09 — only `table-wrapper` exists), so
  *      this themes `.gmt-ask-response` instead: the classname `<MessageResponse
  *      className="gmt-ask-response">` is given explicitly at every call site
@@ -21,7 +21,7 @@
 
 /* ---------------------------------------------------------------------- */
 
-/* 1. Global-selector reset (design-system.md's six-group collision set)   */
+/* 1. Global-selector reset (design-system-chat.md's six-group collision set)   */
 
 /* ---------------------------------------------------------------------- */
 

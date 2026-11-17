@@ -21,16 +21,9 @@ The goal: agents that consume `@northguild/gmt`'s skills get an accurate, curren
 
 ## Steps
 
-### 0. Check the `@tanstack/intent` tool itself isn't stale
+### 0. Check the `@tanstack/intent` tool is not stale
 
-The `intent` CLI (`devDependency` in `package.json` and every `packages/*/package.json`) is a separate concern from the *content* drift this skill otherwise handles — it can fall behind npm just like any other dependency, and its CLI/frontmatter contract does change between releases (e.g. the `type`/`library`/`library_version` frontmatter fields moved under a nested `metadata:` key at some point after 0.0.x). Check before doing anything else:
-
-```bash
-npm view @tanstack/intent version
-grep '"@tanstack/intent"' package.json packages/*/package.json
-```
-
-If the installed `devDependency` version is behind latest, use context7/`find-docs` against `/tanstack/intent` to confirm what changed (CLI flags, frontmatter schema, new commands) before bumping — don't assume it's purely additive. Bump the version string in all five `package.json` files that declare it (`package.json`, `packages/gmt/package.json`, `packages/gmt-eslint/package.json`, `packages/gmt-biome/package.json`, `packages/gmt-oxlint/package.json`), run `pnpm install`, then run `pnpm exec intent validate packages/gmt/skills` — a schema-migration error here (like the `metadata:` nesting one) is expected and has a one-shot fix: `pnpm exec intent validate packages/gmt/skills --fix`.
+Compare the `devDependency` with npm and, if it is behind, follow [references/tool-staleness.md](references/tool-staleness.md) before anything else.
 
 ### 1. Audit what changed
 
@@ -162,17 +155,7 @@ The validator checks:
 - `_artifacts/` files (`domain_map.yaml`, `skill_spec.md`, `skill_tree.yaml`) parse and are non-empty.
 - Client-specific scalar fields (`type`, `library`, `library_version`) live under a nested `metadata:` key, not top-level. (This nesting requirement is new as of Intent ≥0.1 — older skill files written against Intent 0.0.x had these fields top-level and will fail validation until migrated.)
 
-If validation reports the `metadata:` nesting error, auto-fix it instead of hand-editing every file:
-
-```bash
-pnpm exec intent validate packages/gmt/skills --fix
-```
-
-To bump every skill's `metadata.library_version` in one pass instead of hand-editing each SKILL.md (step 3's version bump):
-
-```bash
-pnpm exec intent validate packages/gmt/skills --set-version <next-version>
-```
+If validation reports the `metadata:` nesting error, or you need to bump every skill's `metadata.library_version` at once, see [references/tool-staleness.md](references/tool-staleness.md) (`--fix`, `--set-version`).
 
 Fix any remaining reported issues before stopping.
 

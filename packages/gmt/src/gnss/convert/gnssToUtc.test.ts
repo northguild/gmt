@@ -88,7 +88,7 @@ describe("gnssToUtc", () => {
     expect(gnssToUtc("GPS", value)).toBe("");
   });
 
-  // The time-scale string format (MAR-16.md, String format), with the GPS token.
+  // The time-scale string format (extended date-time, one space, the RINEX 4.02 §5.2.8 token), with the GPS token.
   it.each`
     value
     ${"2026-01-01t00:00:18 GPS"}
@@ -118,7 +118,7 @@ describe("gnssToUtc", () => {
     },
   );
 
-  // The time-scale string format (MAR-16.md, String format), with the GAL token.
+  // The time-scale string format (extended date-time, one space, the RINEX 4.02 §5.2.8 token), with the GAL token.
   it.each`
     value
     ${"2026-01-01t00:00:18 GAL"}

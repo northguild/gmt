@@ -6,7 +6,7 @@
  * connects to it instead and reaches the host's static server through Playwright's network
  * tunnel. Chromium and WebKit, and Firefox with the variable unset (CI), launch as before.
  *
- * The runbook is `context/dox/built.md` § Runbooks, "Firefox on macOS 27 (Docker route)". That
+ * The runbook is `context/dox/built/tier-6-runbooks.md`, "Firefox on macOS 27 (Docker route)". That
  * entry also says how to retire this route: delete `firefoxEndpoint` and the connect branch,
  * and keep `launchBrowser` as the single launch seam.
  */

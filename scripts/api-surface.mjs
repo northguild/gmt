@@ -148,7 +148,7 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * example, which reads the clock like every other `get/` reader example in the `clock` bucket,
  * minus 19 `// "" (on failure)` examples. The 19 zero-argument UTC and Unix clock readers cannot
  * fail, so they document no failure example
- * (context/coding-standards.md § Scoped exception: the UTC clock readers).
+ * (context/coding-standards/api-contract.md § Scoped exception: the UTC clock readers).
  *
  * `docResults` counted 55, of which 17 are CORE-104's clock results on three guides and a mistakes page:
  * 12 in `core-date-operations/durations.mdx` (the `relativeTo` pair, the from-now forms, the timer

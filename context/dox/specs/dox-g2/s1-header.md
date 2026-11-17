@@ -1,8 +1,8 @@
 # Slice 1 · Header and mark
 
-[Index](./index.md) · Binding rules: [built.md § Tier 3](../../built.md#tier-3--hud-chrome),
-[built.md § Base `/gmt`](../../built.md#tiers-01--site-generator-ai-surface-brand-guides),
-[design-system.md § `/dox` and the header](../../reference/design-system.md#dox-and-the-header).
+[Index](./index.md) · Binding rules: [Tier 3](../../built/tier-3-chrome.md),
+[Base `/gmt`](../../built/tier-0-1-site.md#base-gmt),
+[design-system-motion.md § `/dox` and the header](../../reference/design-system-motion.md#dox-and-the-header).
 
 ## Goal
 
@@ -107,7 +107,7 @@ there the backing is 0.55 and the bar's text and icons carry `--gmt-shadow-halo`
   dialog (`site-search` modal) renders inside the header in the DOM, so it inherits dark tokens.
   Verify the dialog in light theme with `a11y:axe` and `contrast:measure`. If it inherits
   incorrectly, scope it back to the page theme with `.gmt-theme-light` on the `dialog` element,
-  and record which one shipped in `built.md`.
+  and record which one shipped in `built/tier-3-chrome.md`.
 - `ThemeSelect` still switches the page theme; only the bar stays dark.
 
 ## Constraints
@@ -143,5 +143,5 @@ there the backing is 0.55 and the bar's text and icons carry `--gmt-shadow-halo`
 - [ ] No horizontal overflow at 320, 375 and 390 px, on `/`, a guide and `/dox/`.
 - [ ] `visual-diff`: only the header region changes on guide pages.
 - [ ] Every use of `northguild-logo.svg` is gone and the file is deleted.
-- [ ] `built.md` Tier 3 and `design-system.md` § `/dox` and the header describe the mark, the
+- [ ] `built/tier-3-chrome.md` and `design-system-motion.md` § `/dox` and the header describe the mark, the
       wordmark, the 3.5rem bar and the dark-island rule, in present tense.

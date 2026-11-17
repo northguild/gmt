@@ -1,7 +1,7 @@
 /**
  * The RFC 5545 §3.3.10 RECUR grammar and the rule validator behind `parseRecurrenceRule` and
  * `expandRecurrence` (CORE-84; see "Scoped exception: recurrence and cron grammars" in
- * `context/coding-standards.md`).
+ * `context/coding-standards/string-grammars.md`).
  *
  * `readRecurrenceRule` splits on `;`, `=` and `,`, matches every token whole against a fixed
  * regex or name table, builds a plain record, and hands it to `checkRecurrenceRule`. That

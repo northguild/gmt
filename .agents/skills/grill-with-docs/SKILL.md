@@ -11,7 +11,7 @@ existing gmt functions already cover. Prefer questions that force a concrete exa
 
 Check each answer against the decisions of record before accepting it —
 [AGENTS.md](../../../AGENTS.md) core rules and
-[coding-standards § Calendar & zone semantics](../../../context/coding-standards.md#calendar--zone-semantics).
+[coding-standards § Calendar & zone semantics](../../../context/coding-standards/calendar-and-zones.md#calendar--zone-semantics).
 Flag a conflict instead of silently recording it.
 
 As decisions settle, write them down where future agents will look: the story's

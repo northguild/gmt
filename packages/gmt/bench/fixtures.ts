@@ -8,7 +8,7 @@ import type {
 } from "../src/types";
 
 /**
- * Inputs for the benchmarks, the audit's shapes (perf-and-bundle-size-audit, appendix). Each is
+ * Inputs for the benchmarks, the shapes of the real inputs. Each is
  * generated from integers so a fixture costs nothing to describe and nothing to keep.
  */
 

@@ -32,7 +32,7 @@ pnpm run changeset:add
 
 Pick the changed package(s), pick `patch` or `minor`, write the description. A breaking
 change is `minor` too, with a **Breaking changes** migration section; `major` is never used
-(see [coding-standards § Changesets](./context/coding-standards.md#changesets)).
+(see [coding-standards § Changesets](./context/coding-standards/changesets.md#changesets)).
 
 **This writes a markdown file and nothing else.** It does not touch any
 `package.json` and does not bump anything — the bump level you pick is recorded
