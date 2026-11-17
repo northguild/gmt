@@ -45,6 +45,7 @@ const html = renderDepartureBoardTemplate("departure-board", {}).value;
   import { mountDepartureBoard } from "../lib/departure-board-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("departure");
@@ -55,5 +56,9 @@ const html = renderDepartureBoardTemplate("departure-board", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "departure-board",
+      () => import("../lib/webmcp/tools/departure-board"),
+    );
   }
 </script>

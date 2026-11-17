@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
-
 import {
+  BODY_LIMIT,
   CANARY_LABEL,
   DRY_RUN_LABEL,
   NATIVE_LEGS as DERIVED_NATIVE_LEGS,
@@ -10,11 +9,11 @@ import {
   applyForce,
   compatStates,
   findings,
+  foldedComment,
   marker,
   planIssueActions,
   removableEverywhere,
-  reportMarker,
-  shortenRepeats,
+  rollingMarker,
   swapReady,
 } from "../../../../scripts/lib/canary-issues.mjs";
 
@@ -406,19 +405,6 @@ const issue = (number: number, body: string, labels = [CANARY_LABEL]) => ({
   labels: labels.map((name) => ({ name })),
 });
 
-/** The synthetic row a forced mismatch carries (marked `dry-run` so it cannot pass for a real mismatch), as the groups table shows it. */
-const FORCED_EXAMPLE = {
-  scan: "dry-run",
-  calendar: "iso8601",
-  op: "forced",
-  row: 0,
-  iso: "1970-01-01",
-  input: "dry run",
-  native: "dry run",
-  expected: "dry run",
-  gmt: "forced mismatch",
-};
-
 const D2_KEY = "temporal-compat/removable/D2";
 const D2_MARKER = `<!-- gmt-canary key="${D2_KEY}" -->`;
 
@@ -428,13 +414,23 @@ const removableD2 = () =>
     "temporal-oracle": oracle(),
   }) as never;
 
-/** An action's body without its report line, which the "report markers" tests check on their own. */
-const withoutReport = (body: string) =>
-  body.replace(/\n(\n)?<!-- gmt-canary report="[0-9a-f]{16}" -->/, "");
-
-/** `planIssueActions` with each body's report line removed. */
-const planWithoutReport = (...args: Parameters<typeof planIssueActions>) =>
-  planIssueActions(...args).map((a) => ({ ...a, body: withoutReport(a.body) }));
+/**
+ * One `open` action per finding, as the single-issue shape read before the rolling issue. The
+ * finding tests below check each finding's own title, key, labels and body, which the rolling
+ * issue carries unchanged as a section; the rolling shape has its own tests further down.
+ */
+const planWithoutReport = (
+  verdicts: Parameters<typeof findings>[0],
+  _open: unknown,
+  context: Parameters<typeof findings>[1],
+) =>
+  findings(verdicts, context).map((f) => ({
+    kind: "open" as const,
+    key: f.key,
+    title: f.title,
+    labels: f.labels,
+    body: `${marker(f.key)}\n${f.body}`,
+  }));
 
 const plan = (verdicts: unknown, open: ReturnType<typeof issue>[] = []) =>
   planWithoutReport(withNative(verdicts), open, ORACLE_CONTEXT);
@@ -484,7 +480,7 @@ describe("constants and marker", () => {
   });
 });
 
-describe("planIssueActions: open, comment, no-op", () => {
+describe("the finding plan: no-op and open", () => {
   it("1: no-op when every group is still needed or guarded and the oracle is clean", () => {
     expect(
       plan({
@@ -504,59 +500,6 @@ describe("planIssueActions: open, comment, no-op", () => {
     expect(action.labels).toEqual(["canary"]);
     expect(action.title).toBe("Remove workaround D2: summary of D2");
     expect(action.body.split("\n")[0]).toBe(D2_MARKER);
-  });
-
-  it("3: comments on the open issue that carries the marker", () => {
-    const actions = plan(removableD2(), [issue(41, `${D2_MARKER}\nbody`)]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({
-      kind: "comment",
-      key: D2_KEY,
-      issue: 41,
-    });
-  });
-
-  it("4: opens when the marker is on line 2, not line 1", () => {
-    const actions = plan(removableD2(), [issue(41, `intro\n${D2_MARKER}`)]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
-  });
-
-  it("5: matches a CRLF body", () => {
-    const actions = plan(removableD2(), [issue(41, `${D2_MARKER}\r\nrest`)]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({ kind: "comment", issue: 41 });
-  });
-
-  it("6: opens when the issue lacks the canary label", () => {
-    const actions = plan(removableD2(), [
-      issue(41, `${D2_MARKER}\nbody`, ["temporal-compat"]),
-    ]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
-  });
-
-  it("7: a marker for D1 does not match a finding for D10", () => {
-    const verdicts = {
-      "temporal-compat-check": check([workaround("D10", "removable")]),
-      "temporal-oracle": oracle(),
-    };
-    const d1 = '<!-- gmt-canary key="temporal-compat/removable/D1" -->';
-    const actions = plan(verdicts, [issue(41, `${d1}\nbody`)]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
-  });
-
-  it("8: with two matches, comments on the lowest number", () => {
-    const actions = plan(removableD2(), [
-      issue(50, `${D2_MARKER}\nnewer`),
-      issue(41, `${D2_MARKER}\nolder`),
-    ]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({ kind: "comment", issue: 41 });
-  });
-
-  it("25: planning twice with the same input gives equal output", () => {
-    const verdicts = removableD2();
-    const open = [issue(41, `${D2_MARKER}\nbody`)];
-    expect(plan(verdicts, open)).toEqual(plan(verdicts, open));
   });
 });
 
@@ -661,16 +604,6 @@ describe("removable body", () => {
         RUN,
     );
     expect(body().endsWith(`Run: ${RUN}`)).toBe(true);
-  });
-
-  it("the comment says still removable, gives the snapshot sentence and the run link", () => {
-    const [action] = plan(removableD2(), [issue(41, `${D2_MARKER}\nbody`)]);
-    expect(action.kind).toBe("comment");
-    expect(action.body).toBe(
-      `Still removable on this run on every engine in its scope (${EVERY_ENGINE}; @js-temporal/polyfill 0.5.1).\n\n` +
-        "pnpm compat:snapshot is due in the removal PR: once the group's repros are deleted, run it and commit apps/dox/src/data/temporal-compat.json; validate (snapshot --check) fails until you do.\n\n" +
-        `Run: ${RUN}`,
-    );
   });
 
   it("a group with no dash in its title uses the whole title as the summary", () => {
@@ -783,13 +716,6 @@ describe("removable on every engine in scope", () => {
         "| temporal-compat-chromium | Chromium 153.0.8010.12 | out of scope | 2 of 2 pass |\n" +
         "| temporal-compat-firefox | Firefox 155.0 | removable | 2 of 2 pass |\n" +
         "| temporal-compat-webkit | WebKit 26.6 | out of scope | 2 of 2 pass |",
-    );
-    const [, comment] = [
-      action,
-      plan(verdicts, [issue(7, `${action.body.split("\n")[0]}\nbody`)])[0],
-    ];
-    expect(comment.body).toContain(
-      "Still removable on this run on every engine in its scope (Firefox 155.0; @js-temporal/polyfill 0.5.1).",
     );
   });
 
@@ -954,7 +880,7 @@ describe("untagged mismatch", () => {
     );
   });
 
-  it("26: 300 groups with 50 rows show the first 50 groups and keep body and comment under 65536 characters", () => {
+  it("26: 300 groups with 50 rows show the first 50 groups and keep the body under 65536 characters", () => {
     const example = mismatchRow(1, { input: "x".repeat(400) });
     const groups = Array.from({ length: 300 }, (_, i) => ({
       key: `grid hebrew op${i}`,
@@ -970,17 +896,6 @@ describe("untagged mismatch", () => {
     expect(body).toContain("| grid hebrew op49 |");
     expect(body).not.toContain("| grid hebrew op50 |");
     expect(body.length).toBeLessThan(65536);
-
-    const marked = `<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planWithoutReport(
-      withOracle(o) as never,
-      [issue(9, marked)],
-      ORACLE_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toContain("### Groups (first 50 of 300)");
-    expect(action.body).not.toContain("| grid hebrew op50 |");
-    expect(action.body.length).toBeLessThan(65536);
   });
 
   it("26b: exactly 50 groups keep the plain Groups heading", () => {
@@ -993,19 +908,6 @@ describe("untagged mismatch", () => {
     const { body } = open(withOracle(o));
     expect(body).toContain("### Groups\n");
     expect(body).toContain("| grid hebrew op49 |");
-  });
-
-  it("the comment gives the count and the groups table", () => {
-    const marked = `<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planWithoutReport(
-      withOracle(oracle(3)) as never,
-      [issue(9, marked)],
-      ORACLE_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toContain("Seen again on this run: 3 untagged.\n\n");
-    expect(action.body).toContain("| grid hebrew addMonth | 3 |");
-    expect(action.body.endsWith(`Run: ${RUN}`)).toBe(true);
   });
 });
 
@@ -1057,24 +959,6 @@ describe("could not run", () => {
     ]);
   });
 
-  it("comments with the same list while the finding persists", () => {
-    const key = "temporal-oracle/could-not-run";
-    const [action] = planWithoutReport(
-      withNative({
-        "temporal-compat-check": cleanCheck(),
-        "temporal-oracle": null,
-      }),
-      [issue(12, `<!-- gmt-canary key="${key}" -->\nold`)],
-      ORACLE_CONTEXT,
-    );
-    expect(action).toEqual({
-      kind: "comment",
-      key,
-      issue: 12,
-      body: `- **temporal-oracle**: no verdict file: an earlier step or job failed\n\nRun: ${RUN}`,
-    });
-  });
-
   it("a could-not-run source gives no other finding of its kind", () => {
     const actions = plan({
       "temporal-compat-check": couldNotRun("temporal-compat-check", "boom"),
@@ -1123,20 +1007,6 @@ describe("leap-second findings", () => {
       "packages/gmt/src/internal/leapSeconds.ts no longer matches IANA leap-seconds.list (https://data.iana.org/time-zones/tzdb/leap-seconds.list).",
     );
     expect(action.body).not.toContain("Leap_Second.dat");
-  });
-
-  it("the same finding with the issue open as #77 comments on 77", () => {
-    const actions = leapPlan(leap([DIFFERENCE]), [
-      issue(77, `<!-- gmt-canary key="${KEY}" -->\nbody`),
-    ]);
-    expect(actions).toEqual([
-      {
-        kind: "comment",
-        key: KEY,
-        issue: 77,
-        body: `Still differs on this run (Updated through IERS Bulletin C 72):\n\n- ${DIFFERENCE}\n\nRun: ${RUN}`,
-      },
-    ]);
   });
 
   it("a null leap verdict opens one leap-seconds could-not-run issue", () => {
@@ -1242,32 +1112,6 @@ describe("applyForce and forced findings", () => {
     expect(action.body).toContain(
       "Real state on this run: guard on Node v24.11.0; guard on Chromium 153.0.8010.12; guard on Firefox 155.0; guard on WebKit 26.6; guard on macOS WebKit 26.6 \u00b7 macOS 15.7.2.",
     );
-  });
-
-  it("18: an open dry-run issue #60 gets the comment", () => {
-    const { verdicts } = applyForce(stillNeededD2() as never, {
-      removable: "D2",
-    });
-    const actions = forcedOpen(verdicts, [
-      issue(
-        60,
-        '<!-- gmt-canary key="dry-run/temporal-compat/removable/D2" -->\nbody',
-        ["canary", "canary-dry-run"],
-      ),
-    ]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({ kind: "comment", issue: 60 });
-    expect(actions[0].body).toContain(
-      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0;",
-    );
-  });
-
-  it("19: an open real D2 issue never takes the dry-run comment", () => {
-    const { verdicts } = applyForce(stillNeededD2() as never, {
-      removable: "D2",
-    });
-    const actions = forcedOpen(verdicts, [issue(41, `${D2_MARKER}\nbody`)]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
   });
 
   it("19b: a real removable D2 and a forced D2 give two findings, real first", () => {
@@ -1434,30 +1278,6 @@ describe("applyForce and forced findings", () => {
     );
   });
 
-  it("22c: a second forced mismatch run comments with the dry-run opening, not an unreal count", () => {
-    const { verdicts } = applyForce(
-      {
-        "temporal-compat-check": cleanCheck(),
-        "temporal-oracle": oracle(),
-      } as never,
-      { mismatch: true },
-    );
-    const marked = `<!-- gmt-canary key="dry-run/temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planWithoutReport(
-      verdicts,
-      [issue(60, marked, [CANARY_LABEL, DRY_RUN_LABEL])],
-      ORACLE_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toBe(
-      "Forced mismatch for a dry run. Real counts on this run: 0 untagged of 410000 comparisons.\n\n" +
-        "| Scan, calendar, op | Rows | Example |\n| --- | --- | --- |\n" +
-        `| dry-run iso8601 forced | 1 | \`${JSON.stringify(FORCED_EXAMPLE)}\` |\n\n` +
-        `Run: ${RUN}`,
-    );
-    expect(action.body).not.toContain("Seen again");
-  });
-
   it("22b: a forced mismatch comes after a real one", () => {
     const { verdicts } = applyForce(
       {
@@ -1490,24 +1310,6 @@ describe("applyForce and forced findings", () => {
     );
     expect(action.body.split("\n")[1]).toBe(
       "**Dry run.** Forced by a manual dispatch (--force-leap-difference); nothing here is a real finding. Close this issue once checked.",
-    );
-  });
-
-  it("23c: a second forced leap run comments with the forced line and the run link", () => {
-    const { verdicts } = applyForce({ "leap-seconds": leap() } as never, {
-      leapDifference: true,
-    });
-    const marked = `<!-- gmt-canary key="dry-run/leap-seconds/table-difference" -->\nbody`;
-    const [action] = planWithoutReport(
-      verdicts,
-      [issue(61, marked, [CANARY_LABEL, DRY_RUN_LABEL])],
-      LEAP_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toBe(
-      "Still differs on this run (Updated through IERS Bulletin C 72):\n\n" +
-        "- dry run: forced difference (no real row differs)\n\n" +
-        `Run: ${RUN}`,
     );
   });
 
@@ -1688,21 +1490,6 @@ describe("native suite findings", () => {
     expect(chromium.body).toContain(`### ${ENGINES.chromium}`);
   });
 
-  it("an engine's open issue gets the comment; another engine's failures open their own issue", () => {
-    const actions = plan(
-      withLegs({
-        node: native("node", { untagged: 1 }),
-        chromium: native("chromium", { untagged: 1 }),
-      }),
-      [issue(70, `<!-- gmt-canary key="${failureKey("node")}" -->\nold`)],
-    );
-    expect(actions.map((a) => [a.kind, a.key])).toEqual([
-      ["comment", failureKey("node")],
-      ["open", failureKey("chromium")],
-    ]);
-    expect(actions[0].body).not.toContain(ENGINES.chromium);
-  });
-
   it("a truncated leg says first N of M", () => {
     const [finding] = findings(
       withLegs({ node: native("node", { untagged: 60 }) }),
@@ -1710,16 +1497,6 @@ describe("native suite findings", () => {
     );
     expect(finding.body).toContain(`### ${ENGINES.node} (first 50 of 60)`);
     expect(finding.body.match(/chromium test|node test \d+/g)).toHaveLength(50);
-  });
-
-  it("the comment holds the same tables and not the paragraph", () => {
-    const [finding] = findings(
-      withLegs({ firefox: native("firefox", { untagged: 1 }) }),
-      ORACLE_CONTEXT,
-    );
-    expect(finding.comment).toBe(
-      `### Firefox 155.0\n\n| file | test | message |\n| --- | --- | --- |\n| \`src/firefox/file1.test.ts\` | \`firefox test 1\` | \`message 1\` |\n\nRun: ${RUN}`,
-    );
   });
 
   it("a message with a pipe, a newline and a backtick stays inside its cell", () => {
@@ -1747,17 +1524,6 @@ describe("native suite findings", () => {
     );
     expect(finding.key).toBe("temporal-oracle/could-not-run");
     expect(finding.body).toContain("- **native-suite-node**: needs Node 26");
-  });
-
-  it("an open issue carrying the marker gets a comment, not a new issue", () => {
-    const verdicts = withLegs({ node: native("node", { untagged: 1 }) });
-    const [action] = plan(verdicts, [
-      issue(70, `<!-- gmt-canary key="${FAILURE_KEY}" -->\nold`),
-    ]);
-    expect(action.kind).toBe("comment");
-    if (action.kind !== "comment") return;
-    expect(action.issue).toBe(70);
-    expect(action.key).toBe(FAILURE_KEY);
   });
 
   it("--force-native-failure with node ran: a dry-run finding on node with the synthetic row", () => {
@@ -2004,7 +1770,6 @@ describe("native suite findings", () => {
         expect(finding.body).toContain(`### ${engine} (first ${perLeg} of 60)`);
       }
       expect(finding.body.length).toBeLessThan(65_536);
-      expect(finding.comment.length).toBeLessThan(65_536);
     },
   );
 
@@ -2045,7 +1810,6 @@ describe("native suite findings", () => {
         key,
       );
       expect(finding.body.length).toBeLessThan(65_536);
-      expect(finding.comment.length).toBeLessThan(65_536);
       expect(finding.body).toMatch(
         /### Node v26.10.0[^\n]* \(first \d+ of 60\)/,
       );
@@ -2079,7 +1843,6 @@ describe("native suite findings", () => {
     for (const leg of NATIVE_LEGS) {
       const [finding] = only(verdicts, failureKey(leg));
       expect(finding.body.length).toBeLessThan(65_536);
-      expect(finding.comment.length).toBeLessThan(65_536);
       expect(finding.body.match(/^### /gm)).toEqual(["### "]);
       expect(finding.body).toContain(`### ${ENGINES[leg]}`);
     }
@@ -2104,7 +1867,6 @@ describe("native suite findings", () => {
       STALE_KEY,
     );
     expect(finding.body.length).toBeLessThan(65_536);
-    expect(finding.comment.length).toBeLessThan(65_536);
     expect(finding.body).toMatch(/### Divergence rows \(first \d+ of 600\)/);
     expect(finding.body).toContain(
       "Remove each row from KNOWN_NATIVE_FAILURES",
@@ -2255,29 +2017,6 @@ describe("swap findings", () => {
 
   it("a differing sweep files nothing", () => {
     expect(swapPlan(cleanSwap({ node: { sweep: swapSweep(3) } }))).toEqual([]);
-  });
-
-  it("comments on the open issue, naming the new version, and does not open another", () => {
-    const actions = swapPlan(
-      cleanSwap({
-        node: { version: "1.0.8" },
-        chromium: { version: "1.0.8" },
-        firefox: { version: "1.0.8" },
-        webkit: { version: "1.0.8" },
-      }),
-      [issue(77, `${READY_MARKER}\nold body`)],
-    );
-    expect(actions).toHaveLength(1);
-    const [action] = actions;
-    if (action.kind !== "comment") throw new Error("expected comment");
-    expect(action.issue).toBe(77);
-    expect(action.key).toBe("temporal-polyfill-swap/ready");
-    expect(
-      action.body.startsWith(
-        `temporal-polyfill 1.0.8 also passes.\n\ntemporal-polyfill 1.0.8, imported from`,
-      ),
-    ).toBe(true);
-    expect(action.body).not.toContain("gmt-canary");
   });
 
   it("opens a new issue when the open canary issue has another marker", () => {
@@ -2463,24 +2202,6 @@ describe("swap could not run", () => {
     );
   });
 
-  it("comments on the open could-not-run issue", () => {
-    const key = "temporal-oracle/could-not-run";
-    const [action] = plan(
-      {
-        ...base(),
-        ...cleanSwap(),
-        "temporal-polyfill-swap-webkit": null,
-      },
-      [issue(31, `<!-- gmt-canary key="${key}" -->\nold`)],
-    );
-    expect(action).toEqual({
-      kind: "comment",
-      key,
-      issue: 31,
-      body: `- **temporal-polyfill-swap-webkit**: ${MISSING}\n\nRun: ${RUN}`,
-    });
-  });
-
   it("the leap-seconds workflow does not read swap sources", () => {
     expect(
       planWithoutReport({ "leap-seconds": leap() } as never, [], LEAP_CONTEXT),
@@ -2501,8 +2222,6 @@ describe("swap force", () => {
     );
     return planWithoutReport(verdicts as never, open as never, ORACLE_CONTEXT);
   };
-  const openDryRun = () =>
-    issue(52, `<!-- gmt-canary key="${DRY_KEY}" -->\nold`);
 
   it("marks the first swap leg that ran", () => {
     const { verdicts, skipped } = applyForce(
@@ -2581,33 +2300,6 @@ describe("swap force", () => {
     );
   });
 
-  it("a forced run that is not ready comments on the open dry run with the real result", () => {
-    const actions = forcedPlan(cleanSwap({ webkit: { failed: 2 } }), [
-      openDryRun(),
-    ]);
-    expect(actions.map((a) => a.key)).toEqual([DRY_KEY]);
-    const [dry] = actions;
-    if (dry.kind !== "comment") throw new Error("expected comment");
-    expect(dry.issue).toBe(52);
-    expect(dry.body).toMatch(
-      /^Forced for a dry run\. Real result on this run: not ready to swap\. The first check that blocks it: temporal-polyfill-swap-webkit: 2 tests fail on the swap\.\n\n/,
-    );
-    expect(dry.body).toContain(
-      `temporal-polyfill 1.0.7, imported from \`temporal-polyfill/full/implementation\`, was checked on this run.`,
-    );
-    expect(dry.body).not.toContain("also passes");
-    expect(dry.body).not.toContain("passed every check");
-  });
-
-  it("a forced run that passes comments on the open dry run with the real result", () => {
-    const actions = forcedPlan(cleanSwap(), [openDryRun()]);
-    const dry = actions.find((a) => a.key === DRY_KEY);
-    if (!dry || dry.kind !== "comment") throw new Error("expected comment");
-    expect(dry.body).toMatch(
-      /^Forced for a dry run\. Real result on this run: every check passed\.\n\n/,
-    );
-  });
-
   it("a forced run with differing zones does not claim the sweep matched", () => {
     const actions = forcedPlan(cleanSwap({ node: { sweep: swapSweep(2) } }));
     const dry = actions.find((a) => a.key === DRY_KEY);
@@ -2638,219 +2330,6 @@ describe("swap force", () => {
     const dry = actions.find((a) => a.key === DRY_KEY);
     if (!dry || dry.kind !== "open") throw new Error("expected open");
     expect(dry.body).toContain("| Firefox | did not run |  |  |  |");
-  });
-
-  it("never comments on the real issue", () => {
-    const { verdicts } = applyForce(
-      withNative({ ...base(), ...cleanSwap({ webkit: { failed: 1 } }) }),
-      { swapReady: true },
-    );
-    const actions = planWithoutReport(
-      verdicts as never,
-      [issue(9, '<!-- gmt-canary key="temporal-polyfill-swap/ready" -->\nx')],
-      ORACLE_CONTEXT,
-    );
-    expect(actions.map((a) => [a.kind, a.key])).toEqual([["open", DRY_KEY]]);
-  });
-});
-
-describe("report markers", () => {
-  const LEAP_COMMENT =
-    "Still differs on this run (Updated through IERS Bulletin C 72):\n\n- row 29: fixture difference";
-  /** The fingerprint written out from the comment text: SHA-256, first 16 hex digits. */
-  const DIGEST = createHash("sha256")
-    .update(LEAP_COMMENT)
-    .digest("hex")
-    .slice(0, 16);
-  const MARKER = `<!-- gmt-canary report="${DIGEST}" -->`;
-  const LEAP_KEY_MARKER =
-    '<!-- gmt-canary key="leap-seconds/table-difference" -->';
-  const differs = (row = "row 29: fixture difference") =>
-    ({ "leap-seconds": leap([row]) }) as never;
-  const atRun = (runUrl: string) =>
-    ({ workflow: "leap-seconds", runUrl }) as const;
-
-  it("reportMarker is one hidden line naming the fingerprint", () => {
-    expect(reportMarker("0123456789abcdef")).toBe(
-      '<!-- gmt-canary report="0123456789abcdef" -->',
-    );
-  });
-
-  it("a new issue's body has the key marker, then the report marker", () => {
-    const [action] = planIssueActions(differs(), [], LEAP_CONTEXT);
-    expect(action.body.split("\n").slice(0, 2)).toEqual([
-      LEAP_KEY_MARKER,
-      MARKER,
-    ]);
-  });
-
-  it("a comment ends with the report marker after the run line", () => {
-    const [action] = planIssueActions(
-      differs(),
-      [issue(77, `${LEAP_KEY_MARKER}\nold`)],
-      LEAP_CONTEXT,
-    );
-    expect(action.body).toBe(`${LEAP_COMMENT}\n\nRun: ${RUN}\n\n${MARKER}`);
-  });
-
-  it("the fingerprint ignores the run link and changes with the rows", () => {
-    const body = (verdicts: never, runUrl: string) =>
-      planIssueActions(verdicts, [], atRun(runUrl))[0].body.split("\n")[1];
-    expect(body(differs(), `${RUN}0`)).toBe(MARKER);
-    expect(body(differs(), `${RUN}1`)).toBe(MARKER);
-    expect(body(differs("row 30: another difference"), RUN)).not.toBe(MARKER);
-  });
-
-  /**
-   * Two runs a week apart that found the same things: another run link, and an offset sweep that
-   * ends a week later. Every finding kind, real and dry run, must keep its fingerprint, or its
-   * issue never gets the one-line repeat.
-   */
-  describe("every finding keeps its fingerprint across runs", () => {
-    const NEXT_RUN = "https://github.com/northguild/gmt/actions/runs/124";
-    const swapThrough = (through: string) =>
-      cleanSwap({ node: { sweep: { ...swapSweep(), through } } });
-    const oracleRun = (through: string) => ({
-      ...everywhere([workaround("D2", "removable")]),
-      "temporal-oracle": oracle(1),
-      "native-suite-node": native("node", {
-        untagged: 1,
-        hostUntagged: 1,
-        controlOnly: 1,
-        staleTags: [
-          { kind: "host", group: "old-group", reason: "Old reason." },
-        ],
-      }),
-      "native-suite-chromium": native("chromium", { untagged: 1 }),
-      "native-suite-firefox": null,
-      ...swapThrough(through),
-    });
-    const leapRun = () => ({ "leap-seconds": leap(["row 29: x"]) });
-    const reports = (
-      verdicts: unknown,
-      workflow: "temporal-oracle" | "leap-seconds",
-      runUrl: string,
-    ) =>
-      Object.fromEntries(
-        planIssueActions(verdicts as never, [], { workflow, runUrl }).map(
-          (a) => [a.key, a.body.split("\n")[1]],
-        ),
-      );
-    const forced = (verdicts: unknown) =>
-      applyForce(verdicts as never, {
-        removable: "D2",
-        mismatch: true,
-        nativeFailure: true,
-        leapDifference: true,
-        swapReady: true,
-      }).verdicts;
-
-    it.each`
-      name                     | workflow             | week1                              | week2
-      ${"oracle findings"}     | ${"temporal-oracle"} | ${oracleRun("2036-11-04")}         | ${oracleRun("2036-11-11")}
-      ${"oracle dry runs"}     | ${"temporal-oracle"} | ${forced(oracleRun("2036-11-04"))} | ${forced(oracleRun("2036-11-11"))}
-      ${"leap-second finding"} | ${"leap-seconds"}    | ${leapRun()}                       | ${leapRun()}
-      ${"leap-second dry run"} | ${"leap-seconds"}    | ${forced(leapRun())}               | ${forced(leapRun())}
-    `("$name", ({ workflow, week1, week2 }) => {
-      const first = reports(week1, workflow, RUN);
-      expect(Object.keys(first).length).toBeGreaterThan(0);
-      expect(reports(week2, workflow, NEXT_RUN)).toEqual(first);
-    });
-
-    it("covers the swap issue and every native-suite key", () => {
-      expect(
-        Object.keys(reports(oracleRun("2036-11-04"), "temporal-oracle", RUN)),
-      ).toEqual(
-        expect.arrayContaining([
-          D2_KEY,
-          "temporal-oracle/untagged-mismatch",
-          failureKey("node"),
-          failureKey("chromium"),
-          HOST_KEY,
-          CONTROL_KEY,
-          STALE_KEY,
-          "temporal-oracle/could-not-run",
-          "temporal-polyfill-swap/ready",
-        ]),
-      );
-    });
-  });
-});
-
-describe("shortenRepeats", () => {
-  const ISSUE_URL = "https://github.com/northguild/gmt/issues/77";
-  const COMMENT_URL = `${ISSUE_URL}#issuecomment-5`;
-  const NEXT_RUN = "https://github.com/northguild/gmt/actions/runs/124";
-  const A = '<!-- gmt-canary report="aaaaaaaaaaaaaaaa" -->';
-  const B = '<!-- gmt-canary report="bbbbbbbbbbbbbbbb" -->';
-  const comment = (report: string) => ({
-    kind: "comment" as const,
-    key: "leap-seconds/table-difference",
-    issue: 77,
-    body: `tables\n\nRun: ${RUN}\n\n${report}`,
-  });
-  const history = (
-    body: string,
-    comments: { url: string; body: string }[] = [],
-  ) => new Map([[77, { url: ISSUE_URL, body, comments }]]);
-  const SHORT = (url: string) =>
-    `Same as the [last full report](${url}): nothing has changed.\n\nRun: ${NEXT_RUN}`;
-
-  it("the same report as the issue body: one line linking to the issue", () => {
-    const [action] = shortenRepeats(
-      [comment(A)],
-      history(`key\n${A}\nbody`),
-      NEXT_RUN,
-    );
-    expect(action.body).toBe(SHORT(ISSUE_URL));
-  });
-
-  it("the same report as the latest full comment: one line linking to that comment", () => {
-    const [action] = shortenRepeats(
-      [comment(B)],
-      history(`key\n${A}\nbody`, [
-        { url: COMMENT_URL, body: `tables\n\n${B}` },
-        { url: `${ISSUE_URL}#issuecomment-6`, body: "A person's note." },
-        {
-          url: `${ISSUE_URL}#issuecomment-7`,
-          body: `Same as the [last full report](${COMMENT_URL}): nothing has changed.`,
-        },
-      ]),
-      NEXT_RUN,
-    );
-    expect(action.body).toBe(SHORT(COMMENT_URL));
-  });
-
-  it("a report that differs from the latest full one stays in full, even if an older one matched", () => {
-    const action = comment(A);
-    expect(
-      shortenRepeats(
-        [action],
-        history(`key\n${A}\nbody`, [{ url: COMMENT_URL, body: `t\n\n${B}` }]),
-        NEXT_RUN,
-      ),
-    ).toEqual([action]);
-  });
-
-  it("an issue with no report marker or no history keeps the full comment", () => {
-    const action = comment(A);
-    expect(shortenRepeats([action], history("key\nold"), NEXT_RUN)).toEqual([
-      action,
-    ]);
-    expect(shortenRepeats([action], new Map(), NEXT_RUN)).toEqual([action]);
-  });
-
-  it("an open action is left as it is", () => {
-    const open = {
-      kind: "open" as const,
-      key: "leap-seconds/table-difference",
-      title: "t",
-      labels: ["canary"],
-      body: `key\n${A}\nbody`,
-    };
-    expect(shortenRepeats([open], history(`key\n${A}`), NEXT_RUN)).toEqual([
-      open,
-    ]);
   });
 });
 
@@ -3126,35 +2605,6 @@ describe("US clock-change watch findings", () => {
     expect(tz.body).toContain("node scripts/us-clock-watch.mjs snapshot-tz");
   });
 
-  it("a repeat comments on the open issue rather than opening a second", () => {
-    const verdict = watch({ federal: ran(["changed: HR 1: a title"]) });
-    const actions = watchPlan(verdict, [
-      issue(88, '<!-- gmt-canary key="us-clock-watch/federal" -->\nbody'),
-    ]);
-    expect(actions).toHaveLength(1);
-    const [action] = actions;
-    expect(action.kind).toBe("comment");
-    expect(action).toMatchObject({ key: "us-clock-watch/federal", issue: 88 });
-    expect(action.body).toContain(
-      "New on this run:\n\n- changed: HR 1: a title",
-    );
-  });
-
-  it("a tz repeat says the zone still differs", () => {
-    const actions = watchPlan(
-      watch({
-        tz: ran(["America/Detroit"], {
-          release: "2026f",
-          snapshotRelease: "2026e",
-        }),
-      }),
-      [issue(89, '<!-- gmt-canary key="us-clock-watch/tz-us-zone" -->\nbody')],
-    );
-    expect(actions[0].body).toContain(
-      "Still differs on this run:\n\n- America/Detroit",
-    );
-  });
-
   it("a source that could not run files one could-not-run issue naming it", () => {
     const actions = opened(
       watch({
@@ -3206,5 +2656,586 @@ describe("US clock-change watch findings", () => {
       { usClockDifference: true },
     );
     expect(skipped.map((s) => s.flag)).toEqual(["--force-us-clock-difference"]);
+  });
+});
+
+describe("the rolling issue", () => {
+  const ROLL = rollingMarker("temporal-oracle");
+  const D2_TITLE = "Remove workaround D2: summary of D2";
+  const MISMATCH_TITLE =
+    "Oracle: GMT differs from native Temporal on untagged rows";
+  const LEAP_TITLE = "Leap-second table differs from the IERS table";
+  const LEAP_ROLL = rollingMarker("leap-seconds");
+  /** D2 removable and one oracle mismatch: two findings of one run. */
+  const twoFindings = () =>
+    withNative({
+      "temporal-compat-check": check([workaround("D2", "removable")]),
+      "temporal-oracle": oracle(1),
+    });
+  /** The findings marker an earlier run left, written out. */
+  const findingsMarker = (pairs: [string, string][]) =>
+    `<!-- gmt-canary findings=${JSON.stringify(pairs)} -->`;
+  const rollingIssue = (
+    number: number,
+    pairs: [string, string][],
+    marker_ = ROLL,
+    labels = [CANARY_LABEL],
+  ) => issue(number, `${marker_}\n${findingsMarker(pairs)}\nold`, labels);
+  const bothPairs: [string, string][] = [
+    [D2_KEY, D2_TITLE],
+    ["temporal-oracle/untagged-mismatch", MISMATCH_TITLE],
+  ];
+  const run = (verdicts: unknown, open: ReturnType<typeof issue>[] = []) =>
+    planIssueActions(verdicts as never, open, ORACLE_CONTEXT);
+
+  it("writes the hidden markers", () => {
+    expect(rollingMarker("leap-seconds")).toBe(
+      '<!-- gmt-canary rolling="leap-seconds" -->',
+    );
+    expect(foldedComment(540)).toBe(
+      "The canary now files one issue for each run. Its findings are in #540. Closing this issue.",
+    );
+  });
+
+  it("a clean run with nothing open does nothing", () => {
+    expect(
+      run(
+        withNative({
+          "temporal-compat-check": cleanCheck(),
+          "temporal-oracle": oracle(),
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("opens one issue holding every finding of the run, in sections", () => {
+    const actions = run(twoFindings());
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe("temporal-oracle");
+    expect(action.title).toBe("Canary findings: temporal-oracle");
+    expect(action.labels).toEqual(["canary", "temporal-compat"]);
+    expect(action.findings).toEqual([
+      D2_KEY,
+      "temporal-oracle/untagged-mismatch",
+    ]);
+    const lines = action.body.split("\n");
+    expect(lines[0]).toBe(ROLL);
+    expect(lines[1]).toBe(findingsMarker(bothPairs));
+    expect(lines[2]).toBe(
+      "This issue lists every finding from the latest run of the `temporal-oracle` canary. A failing run rewrites it and adds a comment. A clean run closes it.",
+    );
+    expect(lines[4]).toBe(`Latest run: ${RUN}`);
+    expect(action.body).toContain(`\n## ${D2_TITLE}\n\n`);
+    expect(action.body).toContain(`\n## ${MISMATCH_TITLE}\n\n`);
+    expect(action.body.indexOf(`## ${D2_TITLE}`)).toBeLessThan(
+      action.body.indexOf(`## ${MISMATCH_TITLE}`),
+    );
+    expect(action.body).toContain("### Engines");
+    expect(action.body).toContain("### Groups");
+  });
+
+  it("names the run once, not once per section", () => {
+    const [action] = run(twoFindings());
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body.match(/Run: /g)).toBeNull();
+    expect(action.body.match(new RegExp(RUN, "g"))).toHaveLength(1);
+  });
+
+  it("reads a title that was stored with its angle brackets escaped", () => {
+    const stored = `${ROLL}\n<!-- gmt-canary findings=[["k/old","A --\\u003e B"]] -->\nold`;
+    const [, comment] = run(twoFindings(), [issue(77, stored)]);
+    expect(comment).toMatchObject({
+      body: expect.stringContaining("1 gone (A --> B)"),
+    });
+    const [action] = run(twoFindings());
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body.split("\n")[1]).not.toMatch(/-->.+-->/);
+  });
+
+  it("rewrites the open rolling issue and comments with what changed", () => {
+    const actions = run(twoFindings(), [rollingIssue(77, bothPairs)]);
+    expect(actions.map((a) => a.kind)).toEqual(["edit", "comment"]);
+    const [edit, comment] = actions;
+    if (edit.kind !== "edit" || comment.kind !== "comment")
+      throw new Error("x");
+    expect(edit).toMatchObject({
+      key: "temporal-oracle",
+      issue: 77,
+      title: "Canary findings: temporal-oracle",
+      labels: ["canary", "temporal-compat"],
+      removeLabels: [],
+    });
+    expect(edit.body.split("\n")[0]).toBe(ROLL);
+    expect(edit.body).toContain(`## ${D2_TITLE}`);
+    expect(comment).toEqual({
+      kind: "comment",
+      key: "temporal-oracle",
+      issue: 77,
+      body: `Since the last run: 2 still there.\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("removes a canary label no finding of this run carries, and keeps a person's label", () => {
+    const [edit] = run(
+      withNative({
+        "temporal-compat-check": cleanCheck(),
+        "temporal-oracle": couldNotRun("temporal-oracle", "no Temporal"),
+      }),
+      [
+        rollingIssue(77, bothPairs, ROLL, [
+          CANARY_LABEL,
+          "temporal-compat",
+          "priority",
+        ]),
+      ],
+    );
+    if (edit.kind !== "edit") throw new Error("expected edit");
+    expect(edit.labels).toEqual(["canary"]);
+    expect(edit.removeLabels).toEqual(["temporal-compat"]);
+  });
+
+  it("the comment names what is new, still there and gone", () => {
+    const [, comment] = run(twoFindings(), [
+      rollingIssue(77, [
+        [D2_KEY, D2_TITLE],
+        ["leap/old", "An old finding"],
+        ["leap/older", "An older finding"],
+      ]),
+    ]);
+    expect(comment).toMatchObject({
+      kind: "comment",
+      body: `Since the last run: 1 new (${MISMATCH_TITLE}), 1 still there, 2 gone (An old finding; An older finding).\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("the comment lists three titles at most", () => {
+    const old: [string, string][] = ["a", "b", "c", "d", "e"].map((x) => [
+      `k/${x}`,
+      `Old ${x}`,
+    ]);
+    const [, comment] = run(twoFindings(), [rollingIssue(77, old)]);
+    expect(comment).toMatchObject({
+      body: `Since the last run: 2 new (${D2_TITLE}; ${MISMATCH_TITLE}), 5 gone (Old a; Old b; Old c; and 2 more).\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("an open rolling issue with no findings marker counts every finding as new", () => {
+    const [, comment] = run(twoFindings(), [issue(77, `${ROLL}\nhand edited`)]);
+    expect(comment).toMatchObject({
+      body: `Since the last run: 2 new (${D2_TITLE}; ${MISMATCH_TITLE}).\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("an unreadable findings marker counts every finding as new", () => {
+    const [, comment] = run(twoFindings(), [
+      issue(77, `${ROLL}\n<!-- gmt-canary findings=[oops -->\nx`),
+    ]);
+    expect(comment).toMatchObject({
+      body: expect.stringContaining("Since the last run: 2 new"),
+    });
+  });
+
+  it("matches a CRLF body and the lowest number; ignores a marker on line 2 or without the canary label", () => {
+    const crlf = issue(60, `${ROLL}\r\n${findingsMarker(bothPairs)}\r\nx`);
+    expect(run(twoFindings(), [crlf]).map((a) => a.kind)).toEqual([
+      "edit",
+      "comment",
+    ]);
+    const two = run(twoFindings(), [
+      rollingIssue(80, bothPairs),
+      rollingIssue(50, bothPairs),
+    ]);
+    expect(
+      two.map((a) => [
+        a.kind,
+        "issue" in a ? a.issue : 0,
+        "reason" in a ? a.reason : "",
+      ]),
+    ).toEqual([
+      ["edit", 50, ""],
+      ["comment", 50, ""],
+      ["close", 80, "folded"],
+    ]);
+    const late = issue(61, `intro\n${ROLL}`);
+    expect(run(twoFindings(), [late]).map((a) => a.kind)).toEqual(["open"]);
+    const unlabelled = rollingIssue(62, bothPairs, ROLL, ["temporal-compat"]);
+    expect(run(twoFindings(), [unlabelled]).map((a) => a.kind)).toEqual([
+      "open",
+    ]);
+  });
+
+  it("another workflow's rolling issue is left alone", () => {
+    const other = rollingIssue(90, [], LEAP_ROLL);
+    expect(run(twoFindings(), [other]).map((a) => a.kind)).toEqual(["open"]);
+  });
+
+  it("a clean run comments that it was clean and closes the rolling issue", () => {
+    const actions = run(
+      withNative({
+        "temporal-compat-check": cleanCheck(),
+        "temporal-oracle": oracle(),
+      }),
+      [rollingIssue(77, bothPairs)],
+    );
+    expect(actions).toEqual([
+      {
+        kind: "close",
+        key: "temporal-oracle",
+        issue: 77,
+        reason: "clean",
+        body: `This run found nothing, so this issue is closed. A later run opens a new one if it finds something.\n\nRun: ${RUN}`,
+      },
+    ]);
+  });
+
+  describe("per-finding issues that are already open", () => {
+    const legacy = (number: number, key: string) =>
+      issue(number, `<!-- gmt-canary key="${key}" -->\nbody`);
+
+    it("the first run opens the rolling issue, then closes each old issue as folded in", () => {
+      const actions = run(twoFindings(), [
+        legacy(539, D2_KEY),
+        legacy(541, "native-suite/untagged-failure/node"),
+        legacy(542, "temporal-polyfill-swap/ready"),
+        legacy(543, "dry-run/temporal-oracle/could-not-run"),
+      ]);
+      expect(actions.map((a) => [a.kind, "issue" in a ? a.issue : 0])).toEqual([
+        ["open", 0],
+        ["close", 539],
+        ["close", 541],
+        ["close", 542],
+      ]);
+      expect(actions[1]).toEqual({
+        kind: "close",
+        key: "temporal-oracle",
+        issue: 539,
+        reason: "folded",
+      });
+    });
+
+    it("an old issue is folded in beside an open rolling issue too", () => {
+      const actions = run(twoFindings(), [
+        rollingIssue(77, bothPairs),
+        legacy(539, D2_KEY),
+      ]);
+      expect(actions.map((a) => a.kind)).toEqual(["edit", "comment", "close"]);
+    });
+
+    it("the old issues of another workflow stay open", () => {
+      const actions = run(twoFindings(), [
+        legacy(30, "leap-seconds/table-difference"),
+        legacy(31, "us-clock-watch/federal"),
+      ]);
+      expect(actions.map((a) => a.kind)).toEqual(["open"]);
+    });
+
+    it("a clean run closes the old issues as clean", () => {
+      const actions = run(
+        withNative({
+          "temporal-compat-check": cleanCheck(),
+          "temporal-oracle": oracle(),
+        }),
+        [legacy(539, D2_KEY)],
+      );
+      expect(actions).toEqual([
+        {
+          kind: "close",
+          key: "temporal-oracle",
+          issue: 539,
+          reason: "clean",
+          body: `This run found nothing, so this issue is closed. A later run opens a new one if it finds something.\n\nRun: ${RUN}`,
+        },
+      ]);
+    });
+
+    it("a per-finding issue without the canary label is not touched", () => {
+      const other = issue(40, `<!-- gmt-canary key="${D2_KEY}" -->\nx`, [
+        "bug",
+      ]);
+      expect(run(twoFindings(), [other]).map((a) => a.kind)).toEqual(["open"]);
+    });
+
+    it("the leap-seconds and us-clock-watch workflows fold their own old issues", () => {
+      const leapActions = planIssueActions(
+        { "leap-seconds": leap(["row 29"]) } as never,
+        [legacy(30, "leap-seconds/table-difference")],
+        LEAP_CONTEXT,
+      );
+      expect(leapActions.map((a) => a.kind)).toEqual(["open", "close"]);
+      const watch = planIssueActions(
+        { "us-clock-watch": couldNotRun("us-clock-watch", "x") } as never,
+        [
+          legacy(31, "us-clock-watch/tz-us-zone"),
+          legacy(32, "temporal-oracle/could-not-run"),
+        ],
+        { workflow: "us-clock-watch", runUrl: RUN },
+      );
+      expect(watch.map((a) => [a.kind, "issue" in a ? a.issue : 0])).toEqual([
+        ["open", 0],
+        ["close", 31],
+      ]);
+    });
+  });
+
+  describe("dry runs", () => {
+    const forced = () =>
+      applyForce(
+        withNative({
+          "temporal-compat-check": check([workaround("D2", "still-needed")]),
+          "temporal-oracle": oracle(),
+        }),
+        { removable: "D2" },
+      ).verdicts;
+    const DRY_ROLL = rollingMarker("dry-run/temporal-oracle");
+
+    it("a forced finding goes to its own rolling issue, apart from the real one", () => {
+      const actions = run({
+        ...forced(),
+        "temporal-oracle": oracle(1),
+      });
+      expect(actions.map((a) => [a.kind, a.key])).toEqual([
+        ["open", "temporal-oracle"],
+        ["open", "dry-run/temporal-oracle"],
+      ]);
+      const dry = actions[1];
+      if (dry.kind !== "open") throw new Error("expected open");
+      expect(dry.title).toBe("[dry run] Canary findings: temporal-oracle");
+      expect(dry.labels).toEqual(["canary", "canary-dry-run"]);
+      expect(dry.body.split("\n")[0]).toBe(DRY_ROLL);
+      expect(dry.body).toContain("--force-removable=D2");
+    });
+
+    it("a clean real run never closes an open dry-run issue", () => {
+      const actions = run(
+        withNative({
+          "temporal-compat-check": cleanCheck(),
+          "temporal-oracle": oracle(),
+        }),
+        [rollingIssue(70, [], DRY_ROLL, ["canary", "canary-dry-run"])],
+      );
+      expect(actions).toEqual([]);
+    });
+
+    it("an open dry-run issue is rewritten and commented on, while a clean real group closes its own issue", () => {
+      const actions = run(forced(), [
+        rollingIssue(70, [], DRY_ROLL, ["canary", "canary-dry-run"]),
+        rollingIssue(71, bothPairs),
+      ]);
+      expect(actions.map((a) => [a.kind, "issue" in a ? a.issue : 0])).toEqual([
+        ["close", 71],
+        ["edit", 70],
+        ["comment", 70],
+      ]);
+    });
+  });
+
+  describe("the 65,536-character limit", () => {
+    const big = (n: number, size: number) =>
+      withNative({
+        "leap-seconds": leap(
+          Array.from({ length: n }, (_, i) => `row ${i}: ${"x".repeat(size)}`),
+        ),
+      });
+
+    it("a body that fits is kept whole", () => {
+      const [action] = planIssueActions(big(3, 20), [], LEAP_CONTEXT);
+      expect(action.body).not.toContain("Cut to fit");
+    });
+
+    it("cuts the section that does not fit and says so in the body", () => {
+      const [action] = planIssueActions(big(2000, 100), [], LEAP_CONTEXT);
+      if (action.kind !== "open") throw new Error("expected open");
+      expect(action.body.length).toBeLessThanOrEqual(65_536);
+      expect(action.body).toContain(
+        `Cut to fit GitHub's 65,536-character limit: ${LEAP_TITLE}. The full result is in the run: ${RUN}`,
+      );
+      expect(action.body).toContain("- row 0: ");
+      expect(action.body).not.toContain("- row 1999: ");
+    });
+
+    it("shares the room fairly: a short section stays whole beside a huge one", () => {
+      const verdicts = withNative({
+        "temporal-compat-check": check([workaround("D2", "removable")]),
+        "temporal-oracle": couldNotRun("temporal-oracle", "x".repeat(200_000)),
+      });
+      const [small] = findings(verdicts, ORACLE_CONTEXT);
+      const [action] = planIssueActions(verdicts, [], ORACLE_CONTEXT);
+      if (action.kind !== "open") throw new Error("expected open");
+      expect(action.body.length).toBeLessThanOrEqual(65_536);
+      expect(action.body).toContain(small.body.replace(/\n\nRun: .*$/, ""));
+      expect(action.body).toContain(
+        `Cut to fit GitHub's 65,536-character limit: Canary temporal-oracle could not run.`,
+      );
+    });
+
+    it("cuts the same way on every run", () => {
+      const a = planIssueActions(big(2000, 100), [], LEAP_CONTEXT);
+      const b = planIssueActions(big(2000, 100), [], LEAP_CONTEXT);
+      expect(a).toEqual(b);
+    });
+  });
+});
+
+describe("event findings: a change reported once stays until a person closes the issue", () => {
+  const CTX = { workflow: "us-clock-watch", runUrl: RUN } as const;
+  const ROLL = rollingMarker("us-clock-watch");
+  const ran = (differences: string[] = []) => ({
+    status: "ran" as const,
+    differences,
+  });
+  const watch = (federal: string[] = [], state: string[] = []) => ({
+    source: "us-clock-watch" as const,
+    status: "ran" as const,
+    federal: ran(federal),
+    state: ran(state),
+    tz: { ...ran(), release: "2026f", snapshotRelease: "2026e" },
+  });
+  const plan = (verdict: unknown, open: ReturnType<typeof issue>[] = []) =>
+    planIssueActions({ "us-clock-watch": verdict } as never, open, CTX);
+  /** The issue the first run opens, as GitHub would hold it. */
+  const openedBy = (verdict: unknown, number = 70) => {
+    const [first] = plan(verdict);
+    if (first?.kind !== "open") throw new Error("expected open");
+    return issue(number, first.body, [CANARY_LABEL]);
+  };
+  const edited = (actions: ReturnType<typeof plan>) => {
+    const edit = actions.find((a) => a.kind === "edit");
+    if (edit?.kind !== "edit") throw new Error("expected edit");
+    return edit;
+  };
+
+  it("the first run opens the issue and stores the lines in a hidden marker", () => {
+    const [open] = plan(watch(["bill A advanced"]));
+    if (open?.kind !== "open") throw new Error("expected open");
+    expect(open.findings).toEqual(["us-clock-watch/federal"]);
+    expect(open.body).toContain("<!-- gmt-canary events=");
+    expect(open.body).toContain("- bill A advanced");
+  });
+
+  it("a clean run keeps an issue that lists an event: it rewrites the body and comments", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const actions = plan(watch(), [open]);
+    expect(actions.map((a) => a.kind)).toEqual(["edit", "comment"]);
+    const edit = edited(actions);
+    expect(edit.findings).toEqual(["us-clock-watch/federal"]);
+    expect(edit.body).toContain("- bill A advanced");
+    expect(edit.body).toContain("<!-- gmt-canary events=");
+    expect(edit.body.split("\n")[0]).toBe(ROLL);
+  });
+
+  it("a run with a different new event adds it and keeps the earlier one", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const actions = plan(watch(["bill B introduced"]), [open]);
+    const edit = edited(actions);
+    expect(edit.body).toContain("- bill A advanced\n- bill B introduced");
+    const comment = actions.find((a) => a.kind === "comment");
+    expect(comment?.body).toContain("1 new (Federal bills");
+  });
+
+  it("an event on another source joins the list; a line seen twice is kept once", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const actions = plan(watch(["bill A advanced"], ["state bill C"]), [open]);
+    const edit = edited(actions);
+    expect(edit.findings).toEqual([
+      "us-clock-watch/federal",
+      "us-clock-watch/state",
+    ]);
+    expect(edit.body.match(/- bill A advanced/g)).toHaveLength(1);
+    expect(edit.body).toContain("- state bill C");
+  });
+
+  it("a repeated line is still there, not new", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const comment = plan(watch(["bill A advanced"]), [open]).find(
+      (a) => a.kind === "comment",
+    );
+    expect(comment?.body).toContain("Since the last run: 1 still there.");
+  });
+
+  it("state findings still drop once gone, even beside a kept event", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const withTz = {
+      ...watch(),
+      tz: {
+        ...ran(["Rule changed"]),
+        release: "2026f",
+        snapshotRelease: "2026e",
+      },
+    };
+    const first = plan(withTz, [open]);
+    expect(edited(first).findings).toEqual([
+      "us-clock-watch/tz-us-zone",
+      "us-clock-watch/federal",
+    ]);
+    const tzIssue = issue(70, edited(first).body, [CANARY_LABEL]);
+    const next = plan(watch(), [tzIssue]);
+    expect(edited(next).findings).toEqual(["us-clock-watch/federal"]);
+    expect(edited(next).body).not.toContain("Rule changed");
+    const comment = next.find((a) => a.kind === "comment");
+    expect(comment?.body).toContain("1 gone");
+  });
+
+  it("a clean run with no event on the issue closes it", () => {
+    const stateOnly = {
+      ...watch(),
+      tz: {
+        ...ran(["Rule changed"]),
+        release: "2026f",
+        snapshotRelease: "2026e",
+      },
+    };
+    const open = openedBy(stateOnly);
+    const actions = plan(watch(), [open]);
+    expect(actions.map((a) => a.kind)).toEqual(["close"]);
+  });
+
+  it("a person closing the issue clears the events: the next run opens a fresh one", () => {
+    expect(plan(watch(["bill D"])).map((a) => a.kind)).toEqual(["open"]);
+    expect(plan(watch())).toEqual([]);
+  });
+
+  it("the old per-finding issue of an event key is left open", () => {
+    const old = issue(
+      31,
+      '<!-- gmt-canary key="us-clock-watch/federal" -->\nold',
+      [CANARY_LABEL],
+    );
+    expect(plan(watch(["bill A"]), [old]).map((a) => a.kind)).toEqual(["open"]);
+    expect(plan(watch(), [old])).toEqual([]);
+  });
+
+  it("a duplicate rolling issue's events are merged in before it is folded", () => {
+    const a = openedBy(watch(["bill A"]), 70);
+    const b = openedBy(watch(["bill B"]), 71);
+    const actions = plan(watch(), [a, b]);
+    const edit = edited(actions);
+    expect(edit.body).toContain("- bill A\n- bill B");
+    expect(actions.map((x) => x.kind)).toEqual(["edit", "comment", "close"]);
+  });
+
+  it("lines that pass the stored budget drop oldest first, and the body says so", () => {
+    let open = openedBy(watch(["line 0"]));
+    for (let i = 1; i <= 40; i++) {
+      const edit = edited(
+        plan(watch([`line ${i} ${"x".repeat(1_900)}`]), [open]),
+      );
+      open = issue(70, edit.body, [CANARY_LABEL]);
+    }
+    const final = edited(plan(watch(), [open]));
+    expect(final.body.length).toBeLessThanOrEqual(BODY_LIMIT);
+    expect(final.body).toContain("Older lines dropped to fit GitHub's");
+    expect(final.body).not.toContain("- line 0\n");
+    expect(final.body).toContain("line 40 ");
+  });
+
+  it("an unreadable events marker is treated as no events", () => {
+    const broken = issue(
+      70,
+      `${ROLL}\n<!-- gmt-canary events=[oops] -->\nold`,
+      [CANARY_LABEL],
+    );
+    expect(plan(watch(), [broken]).map((a) => a.kind)).toEqual(["close"]);
   });
 });

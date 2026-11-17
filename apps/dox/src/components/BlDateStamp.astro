@@ -41,6 +41,7 @@ const html = renderBlDateStampTemplate("bl-date-stamp", {}).value;
   import { mountBlDateStamp } from "../lib/bl-date-stamp-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=bldate&wa=` permalink seeds the widget with the values it names;
@@ -54,5 +55,9 @@ const html = renderBlDateStampTemplate("bl-date-stamp", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "bl-date-stamp",
+      () => import("../lib/webmcp/tools/bl-date-stamp"),
+    );
   }
 </script>

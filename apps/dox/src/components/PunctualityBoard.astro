@@ -45,6 +45,7 @@ const html = renderPunctualityBoardTemplate("punctuality-board", {}).value;
   import { mountPunctualityBoard } from "../lib/punctuality-board-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("punctuality");
@@ -55,5 +56,9 @@ const html = renderPunctualityBoardTemplate("punctuality-board", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "punctuality-board",
+      () => import("../lib/webmcp/tools/punctuality-board"),
+    );
   }
 </script>

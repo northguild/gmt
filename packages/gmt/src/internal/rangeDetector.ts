@@ -78,13 +78,16 @@ const PROBES: readonly Probe[] = [
  * pair is `B` when the two times print different day periods and `h` when they print one
  * (ECMA-402 Table 6), decided per formatter, as day-period rules are per locale: 01:25 to 02:40
  * and 13:25 to 14:40 are one period in every locale that has them, 12:25 to 18:40 and 00:10 to
- * 06:45 cross a period boundary in each.
+ * 06:45 cross a period boundary in each. 12:00 to 12:25 is the pair a pattern with minutes prints
+ * as `noon` and `in the afternoon` (en), so a range that keeps only the end's period drops the
+ * start's; where both print one period the pair is `h` and passes.
  */
 const PERIOD_PROBES: readonly Probe[] = [
   ["h", 1715736300000, 1715740800000], // 2024-05-15 01:25 to 02:40
   ["h", 1715779500000, 1715784000000], // 2024-05-15 13:25 to 14:40
   ["B", 1715775900000, 1715798400000], // 2024-05-15 12:25 to 18:40
   ["B", 1715731800000, 1715755500000], // 2024-05-15 00:10 to 06:45
+  ["B", 1715774400000, 1715775900000], // 2024-05-15 12:00 to 12:25
 ];
 /**
  * The pairs at the hour that wraps (00:10 and 12:10 with their 02:40 and 14:40): a 12-hour cycle

@@ -101,9 +101,10 @@ AKeyChar*`). V8 reads annotations with `temporal_rs` and `ixdtf`, whose key pars
 (`Temporal error: Invalid annotation key character.`). Fixed by unicode-org/icu4x#8623 (2026-10-20); no `ixdtf` release
 or V8 roll carries it yet, so Node 26.10.0 and Chromium 153 refuse. Not a polyfill defect: 0.5.1 accepts the strings.
 
-**GMT.** No change; it follows the spec text. The native-suite runner tags the ten tests that pin it to this section
-(`isValidDate`, `isValidDateTime`, `isValidTime`, `isValidInstant` ×2, `isValidUtc`, `spanNs`, `getTimeZoneOffset`,
-`totalDuration`, `parseCalendarDateValue`); the tags go stale once a V8 roll carries the fix and the runner reports it.
+**GMT.** None. No GMT input kind takes an elective annotation (CORE-113): plain, UTC and instant strings take none, a
+zoned string one zone bracket, a calendar-aware string at most one `u-ca` annotation. GMT refuses `[a=bc]` by its own
+pattern before Temporal reads it, on every engine, so no GMT test reaches the defect and the runner tags none. Node
+26.12.1 still throws on the repro.
 Upstream: icu4x#8620 and #8623.
 
 ## M. `[u-ca=islamic]` is accepted instead of refused
@@ -158,8 +159,8 @@ a release.
 `prefer`), `round` and `with` return a value the spec refuses. Mozilla skips eight test262 files for it. Open as
 [Bugzilla 1998020](https://bugzilla.mozilla.org/show_bug.cgi?id=1998020). The polyfill, Node 26 and Chromium 153 throw.
 
-**GMT.** No change. Twelve tests pin the `RangeError` or its sentinel (`zonedDateTimeFrom` ×3, `minuteRoundedOffsets`
-×2, `storedOffsetValues` ×2, `convertZonedToCalendar` ×5); the runner tags them to this section on the Firefox leg and
+**GMT.** No change. Fourteen tests pin the `RangeError` or its sentinel (`zonedDateTimeFrom` ×3, `minuteRoundedOffsets`
+×3, `offsetInstantMinuteRounded` ×1, `storedOffsetValues` ×2, `convertZonedToCalendar` ×5); the runner tags them to this section on the Firefox leg and
 reports when the tags go stale.
 
 ## Q. Firefox `formatRange` prints AM/PM for a day period when a zone name is set (Firefox only, engine)

@@ -61,15 +61,17 @@ import {
   formatInstant,
   formatInterval,
   formatIntervalList,
+  intervalFacts,
+  type IntervalLib,
   type IntervalOperationId,
   type IntervalOperationInfo,
   type RelationshipPreset,
   type TimelineScale,
   type ZonedInterval,
 } from "./interval-visualizer";
-import { GMT_MODULES } from "./gmt-modules";
 import { callArgs } from "./punctuality-widgets";
-import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { onceDestroy, type MountFn } from "./widget-mount";
+import { loadIntervalLib } from "./zones-lib";
 import { codeSpan } from "./widget-ui";
 import { normaliseZonedInput } from "./zoned-input";
 
@@ -373,47 +375,6 @@ export function renderIntervalTemplate(idPrefix: string): SafeHtml {
 }
 
 // ---------------------------------------------------------------------------
-// The library
-// ---------------------------------------------------------------------------
-
-type IntervalFn = (
-  aStart: string,
-  aEnd: string,
-  bStart: string,
-  bEnd: string,
-) => ZonedInterval | ZonedInterval[] | null;
-
-interface Modules {
-  fns: Record<IntervalOperationId, IntervalFn>;
-  isValidZonedDateTime(v: string): boolean;
-  isValidZonedRange(args: {
-    value1: string;
-    value2: string;
-    options?: { allowEqual?: boolean };
-  }): boolean;
-}
-
-async function loadModules(): Promise<Modules> {
-  const [intervalMod, validateMod] = await Promise.all([
-    GMT_MODULES["zoned/interval"](),
-    GMT_MODULES["zoned/validate"](),
-  ]);
-  const fns = {} as Record<IntervalOperationId, IntervalFn>;
-  for (const op of INTERVAL_OPERATIONS) {
-    fns[op.id] = intervalMod[op.fnName] as IntervalFn;
-  }
-  return {
-    fns,
-    isValidZonedDateTime: validateMod[
-      "isValidZonedDateTime"
-    ] as Modules["isValidZonedDateTime"],
-    isValidZonedRange: validateMod[
-      "isValidZonedRange"
-    ] as Modules["isValidZonedRange"],
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 
@@ -428,7 +389,7 @@ interface Controller {
 
 function setupWidget(
   root: HTMLElement,
-  modules: Modules,
+  modules: IntervalLib,
   signal: AbortSignal,
 ): Controller {
   const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
@@ -450,18 +411,6 @@ function setupWidget(
     bStart: inputs.bStart.value,
     bEnd: inputs.bEnd.value,
   });
-
-  function isIntervalValid(start: string, end: string): boolean {
-    return (
-      modules.isValidZonedDateTime(start) &&
-      modules.isValidZonedDateTime(end) &&
-      modules.isValidZonedRange({
-        value1: start,
-        value2: end,
-        options: { allowEqual: true },
-      })
-    );
-  }
 
   /** Move the handles to the typed instants. The end goes first and last, so the start is never held back by the old end. */
   function placeHandles(v: Record<Key, string>): void {
@@ -485,9 +434,7 @@ function setupWidget(
 
   function render(): void {
     const v = read();
-    const aValid = isIntervalValid(v.aStart, v.aEnd);
-    const bValid = isIntervalValid(v.bStart, v.bEnd);
-    const valid = aValid && bValid;
+    const { aValid, bValid, valid, results } = intervalFacts(v, modules);
 
     setHtml(el("bar-a"), barOf("A", v.aStart, v.aEnd, scale, aValid));
     setHtml(el("bar-b"), barOf("B", v.bStart, v.bEnd, scale, bValid));
@@ -507,7 +454,7 @@ function setupWidget(
         el(`call-${op.id}`),
         callFrameOf(op, [v.aStart, v.aEnd, v.bStart, v.bEnd]),
       );
-      if (!valid) {
+      if (results === null) {
         setHtml(el(`marks-${op.id}`), html``);
         setHtml(
           el(`out-${op.id}`),
@@ -515,7 +462,7 @@ function setupWidget(
         );
         continue;
       }
-      const result = modules.fns[op.id](v.aStart, v.aEnd, v.bStart, v.bEnd);
+      const result = results[op.id];
       setHtml(el(`marks-${op.id}`), segmentsOf(op, result, scale));
       setHtml(
         el(`out-${op.id}`),
@@ -591,13 +538,8 @@ export const mountIntervalVisualizer: MountFn<IntervalArgs> = async (
   signal,
 ) => {
   defineElements();
-  let modules: Modules;
-  try {
-    modules = await loadModules();
-  } catch (cause) {
-    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
-  }
+  // `loadIntervalLib` throws a `WidgetLoadError`: loud, not inert (see `WidgetLoadError`).
+  const modules = await loadIntervalLib();
   if (signal.aborted) return onceDestroy(() => {});
 
   const controller = setupWidget(root, modules, signal);

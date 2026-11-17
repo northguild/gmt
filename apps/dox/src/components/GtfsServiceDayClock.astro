@@ -44,6 +44,7 @@ const html = renderGtfsServiceDayClockTemplate("gtfs-service-day-clock", {}).val
   import { mountGtfsServiceDayClock } from "../lib/gtfs-service-day-clock-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=gtfsday&wa=` permalink seeds the widget with the preset or the values it names;
@@ -56,5 +57,9 @@ const html = renderGtfsServiceDayClockTemplate("gtfs-service-day-clock", {}).val
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "gtfs-service-day-clock",
+      () => import("../lib/webmcp/tools/gtfs-service-day-clock"),
+    );
   }
 </script>

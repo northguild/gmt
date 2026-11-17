@@ -12,7 +12,7 @@ one release after the rebase catches up (js #373). `js` is js-temporal/temporal-
 tc39/proposal-temporal, `fc` is fullcalendar/temporal-polyfill.
 
 Native-suite divergence rows (`apps/dox/scripts/canary/native-suite.test.ts`) point at these headings by their
-GitHub slug (the test reads every file under `polyfill-bugs/`), and `scripts/lib/native-suite-tags.mjs` hard-codes the slugs of L, M, P, S, T, AD and AE. Renaming a
+GitHub slug (the test reads every file under `polyfill-bugs/`), and `scripts/lib/native-suite-tags.mjs` hard-codes the slugs of M, P, S, T, AD and AE. Renaming a
 heading breaks them.
 
 ## Where each section lives

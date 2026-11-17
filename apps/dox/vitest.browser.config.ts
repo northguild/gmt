@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 import { BROWSER_TEST_GLOB } from "./src/test/isolation.ts";
 
@@ -7,6 +8,10 @@ import { BROWSER_TEST_GLOB } from "./src/test/isolation.ts";
  * the built site, before `table-fit.mjs`, which uses what they test.
  */
 export default defineConfig({
+  resolve: {
+    // Mirrors vitest.config.ts: a test that imports app code reaches it through `~/`.
+    alias: { "~": path.resolve(import.meta.dirname, "src") },
+  },
   test: {
     globals: true,
     root: ".",

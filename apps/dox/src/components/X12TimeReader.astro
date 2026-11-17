@@ -47,6 +47,7 @@ const html = renderX12TimeReaderTemplate("x12-time-reader", {}).value;
   import { mountX12TimeReader } from "../lib/x12-time-reader-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=xtime&wa=` permalink seeds the widget with the values it names;
@@ -58,5 +59,9 @@ const html = renderX12TimeReaderTemplate("x12-time-reader", {}).value;
         (error) => showUnavailable(el, error),
       );
     });
+    void offerPageTool(
+      "x12-time-reader",
+      () => import("../lib/webmcp/tools/x12-time-reader"),
+    );
   }
 </script>

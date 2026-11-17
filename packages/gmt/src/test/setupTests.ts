@@ -1,5 +1,3 @@
-import { clearFormatterCache } from "../internal/formatterCache";
-import { clearValidatedZones } from "../internal/validatedZones";
 import { Temporal } from "../internal/temporal";
 import { captureSharedState, describeLeaks } from "./sharedState";
 import { installTitleGuard } from "./titleGuard";
@@ -26,9 +24,9 @@ afterAll(() => {
 
 // The formatter cache and the validated-zone set outlive a call: a test that mocks `Intl` or
 // `Temporal` must not meet an entry an earlier test left behind.
-beforeEach(() => {
-  clearFormatterCache();
-  clearValidatedZones();
+beforeEach(async () => {
+  (await import("../internal/formatterCache")).clearFormatterCache();
+  (await import("../internal/validatedZones")).clearValidatedZones();
 });
 
 afterEach(() => {

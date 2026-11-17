@@ -72,7 +72,7 @@ import {
   WRITE_REASONS,
   callsSizerText,
   daysText,
-  foldGtfs,
+  collectGtfsFacts,
   foldMeaning,
   foldVerdictText,
   isSeeded,
@@ -81,10 +81,8 @@ import {
   permalinkOf,
   presetState,
   readArgs,
-  readGtfs,
   readingText,
   recordText,
-  writeGtfs,
   type CallsSection,
   type FoldResult,
   type GtfsState,
@@ -569,8 +567,7 @@ function setupWidget(
     writePresetEl.value = matchWritePreset(s.seconds, s.dayOverflow);
   }
 
-  function renderRead(text: string): void {
-    const r = readGtfs(lib, text);
+  function drawRead(text: string, r: ReadResult, f: FoldResult): void {
     reading = r;
     setHtml(el("read-plates"), readPlates(r));
     setHtml(el("read-lines"), readLines(r, text));
@@ -580,15 +577,13 @@ function setupWidget(
     // A text that was not read has no record to copy.
     useEl.disabled = r.record === null;
 
-    const f = foldGtfs(lib, text, r);
     setHtml(el("fold-plates"), foldPlates(f));
     setHtml(el("fold-verdict"), foldVerdictOf(f));
     setHtml(el("fold-meaning"), foldMeaningOf(f));
     setHtml(el("fold-calls"), callsOf("fold", f.calls.join("\n")));
   }
 
-  function renderWrite(seconds: string, days: string): void {
-    const w = writeGtfs(lib, seconds, days);
+  function drawWrite(w: WriteResult): void {
     setHtml(el("write-plates"), writePlates(w));
     setHtml(el("round-trip"), roundTripOf(w));
     setHtml(el("write-reason"), writeReasonOf(w.reason));
@@ -597,8 +592,9 @@ function setupWidget(
 
   function render(): void {
     const s = readState();
-    renderRead(s.value);
-    renderWrite(s.seconds, s.dayOverflow);
+    const facts = collectGtfsFacts(lib, s);
+    drawRead(s.value, facts.read, facts.fold);
+    drawWrite(facts.write);
   }
 
   function apply(state: GtfsState): void {

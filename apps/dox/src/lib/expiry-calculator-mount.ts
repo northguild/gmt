@@ -45,6 +45,7 @@ import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import { range, type GmtRange } from "~/widgets/primitives/range/range";
 import styles from "~/widgets/tools/expiry-calculator.module.css";
 import {
+  HINT_NOW_NULL,
   AMOUNT_MAX_LENGTH,
   CALL_LINES,
   CUSTOM_PRESET_ID,
@@ -97,8 +98,6 @@ const SPEAK_DELAY_MS = 500;
 
 const HINT_NOW_RESULT =
   "Now is your clock, live. All four plates come from one ttlFromNow call, so they name one instant.";
-const HINT_NOW_NULL =
-  "ttlFromNow takes a whole length of zero or more, and its end needs a four-digit year. A past Expires is formatHttpDate(getUtcAgo({ days: 1 })).";
 const HINT_DATE =
   "A date is pinned: the four plates come from the start below, and the same start always gives the same answer.";
 const HINTS = [HINT_NOW_RESULT, HINT_NOW_NULL, HINT_DATE];

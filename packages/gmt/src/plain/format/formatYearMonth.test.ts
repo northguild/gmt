@@ -17,7 +17,7 @@ function expectText(actual: string, expected: Expected): void {
 }
 
 describe("formatYearMonth", () => {
-  // is-IS: Chromium ships no Icelandic data; those failures are tagged chromium-icelandic-locale-data
+  // is-IS: Chromium ships no Icelandic data; those failures are tagged chromium-reduced-locale-data
   // in scripts/lib/native-suite-tags.mjs by the "is-IS" in the title, as for formatMonthDay.
   // 17 locales, 2026-10. A dateStyle takes the year and month widths from the locale's own date
   // pattern (ECMA-402 AdjustDateTimeStyleFormat), so each style is the locale's: en-US short

@@ -524,6 +524,10 @@ export function explainClockNull(
 // Reading
 // ---------------------------------------------------------------------------
 
+/** The sentence for a clock the library returned no interval for, when no cause could be named. */
+export const NO_INTERVAL_TEXT =
+  "The library returned no interval for these events and options.";
+
 export interface LaneRead {
   scope: string;
   /** The `demurrageClock` call made for this clock. */

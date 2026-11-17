@@ -19,7 +19,7 @@ import type {
   FhirPrecision,
 } from "@northguild/gmt/types";
 import { Temporal } from "@js-temporal/polyfill";
-import type { TimelineSpec } from "~/widgets/families/edi/edi-timeline";
+import type { TimelineSpec } from "./edi-picture";
 import { callResultsText } from "./edi-render";
 import {
   NO_RESULT_TEXT,
