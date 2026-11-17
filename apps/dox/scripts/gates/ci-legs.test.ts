@@ -2,16 +2,33 @@ import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { GATES, inTier } from "./registry.mjs";
 
-type Leg = { leg: string; slug: string; select: string };
-
-const workflow = parseYaml(
-  readFileSync(
-    new URL("../../../../.github/workflows/ci.yml", import.meta.url),
-    "utf8",
-  ),
-) as {
-  jobs: Record<string, { strategy?: { matrix?: { include?: Leg[] } } }>;
+type Leg = {
+  leg: string;
+  slug: string;
+  select: string;
+  "step-limit": number;
+  deadline: number;
 };
+type Workflow = {
+  jobs: Record<
+    string,
+    {
+      "timeout-minutes"?: number;
+      strategy?: { matrix?: { include?: Leg[] } };
+      steps?: { name?: string; run?: string; env?: Record<string, string> }[];
+    }
+  >;
+};
+
+const read = (file: string) =>
+  parseYaml(
+    readFileSync(
+      new URL(`../../../../.github/workflows/${file}`, import.meta.url),
+      "utf8",
+    ),
+  ) as Workflow;
+const workflow = read("ci.yml");
+const weekly = read("dox-gates-weekly.yml");
 const legs = workflow.jobs["dox-gates"]?.strategy?.matrix?.include ?? [];
 const prGates = GATES.filter((g) => inTier(g, "pr")).map((g) => g.id);
 
@@ -41,5 +58,47 @@ describe("the Dox gates legs in ci.yml", () => {
       }
     }
     for (const [id, where] of runs) expect(where, id).toHaveLength(1);
+  });
+
+  it("stops each leg's runner before its gate step's limit", () => {
+    const step = workflow.jobs["dox-gates"]?.steps?.find((s) =>
+      s.run?.includes("--deadline ${{ matrix.deadline }}"),
+    );
+    expect(step).toBeDefined();
+    for (const leg of legs) {
+      expect(leg.deadline, leg.slug).toBeLessThan(leg["step-limit"]);
+    }
+  });
+});
+
+describe("the weekly sweep legs", () => {
+  it("stop their runner at least 5 minutes inside the job's timeout", () => {
+    const sweep = weekly.jobs.sweep;
+    const run = sweep?.steps?.find((s) => s.run?.includes("gates --all"))?.run;
+    const deadline = Number(/--deadline (\d+)/.exec(run ?? "")?.[1]);
+    expect(deadline).toBeGreaterThan(0);
+    expect(deadline).toBeLessThanOrEqual((sweep?.["timeout-minutes"] ?? 0) - 5);
+  });
+
+  // The report names every leg so one that crashed without uploading is still filed, and each
+  // browser's shards must cover its pages exactly once.
+  it("are named in the report's LEGS list, each browser's shards running 1 to n", () => {
+    const matrix = (weekly.jobs.sweep?.strategy?.matrix?.include ??
+      []) as unknown as { leg: string; browser: string; shard: string }[];
+    const listed = weekly.jobs.report?.steps
+      ?.find((s) => s.env?.LEGS)
+      ?.env?.LEGS.split(",");
+    expect(listed).toEqual(matrix.map((m) => m.leg));
+    for (const browser of new Set(matrix.map((m) => m.browser))) {
+      const shards = matrix
+        .filter((m) => m.browser === browser)
+        .map((m) => m.shard);
+      const n = shards.length;
+      expect(shards, browser).toEqual(
+        Array.from({ length: n }, (_, i) => `${i + 1}/${n}`),
+      );
+      for (const m of matrix.filter((l) => l.browser === browser))
+        expect(m.leg).toBe(`${browser}-${m.shard.split("/")[0]}`);
+    }
   });
 });

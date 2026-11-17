@@ -51,7 +51,10 @@ import {
 
 // The runner's page contract (`scripts/gates/`): the one page this gate checks is its `--path`.
 const CHECKER_PATH = "/check/canada-2026-clock-change/";
-const PAGES_ARG = applyPageContract({ gate: GATE, pages: [CHECKER_PATH] });
+const PAGES_ARG = await applyPageContract({
+  gate: GATE,
+  pages: [CHECKER_PATH],
+});
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {

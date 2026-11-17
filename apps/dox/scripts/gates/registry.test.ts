@@ -104,6 +104,23 @@ describe.each(GATES.filter((g) => g.pages !== "dist"))(
       const r = run("--pages", "/no/such/page/");
       expect(r.status).toBe(2);
     });
+
+    // A costed gate's shards are dealt by these minutes, and a page with no cost stops the runner,
+    // so every listed page carries one; any other gate refuses the flag rather than answer `{}`.
+    it(`answers --list-page-costs ${gate.costs ? "with a positive cost for every page" : "with exit 2"}`, () => {
+      if (unbuilt()) return;
+      const r = run("--list-page-costs");
+      if (!gate.costs) {
+        expect(r.status).toBe(2);
+        return;
+      }
+      expect(r.status).toBe(0);
+      const costs: Record<string, number> = JSON.parse(r.stdout);
+      const pages: string[] = JSON.parse(run("--list-pages").stdout);
+      expect(Object.keys(costs).sort()).toEqual([...pages].sort());
+      for (const [page, minutes] of Object.entries(costs))
+        expect(minutes, page).toBeGreaterThan(0);
+    });
   },
 );
 

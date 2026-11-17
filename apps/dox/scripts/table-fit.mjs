@@ -92,7 +92,11 @@ if (!existsSync(path.join(DIST, "gmt", "index.html"))) {
 }
 
 const all = listTablePages(DIST);
-const selected = applyPageContract({ gate: GATE, pages: all, argv: args });
+const selected = await applyPageContract({
+  gate: GATE,
+  pages: all,
+  argv: args,
+});
 let shard = null;
 if (args.includes("--shard")) {
   const m = /^(\d+)\/(\d+)$/.exec(opt("shard", ""));

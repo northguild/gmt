@@ -28,7 +28,7 @@ Lists no single test covers (`docs-site.md` § Purpose-built widgets has the ful
 - `MOUNTS` in `src/lib/widget-load-error.test.tsx`.
 - The `heavy` list in `src/components/ask/widget-graph.test.ts` (the tool's pure module and any shared helper or loader it adds).
 - `PAGES` in `scripts/html-diff.mjs`, `scripts/visual-snapshot.mjs`, `scripts/grow-measure.mjs`.
-- `TOOLS` in `scripts/readout-still.mjs`, for a tool with a drag handle.
+- `TOOLS` in `scripts/readout-still.mjs`, for a tool with a drag handle, with its measured WebKit `minutes` (the weekly legs are dealt by them; see the script's header).
 - Its forced-colours rules (platform file).
 - After a build only: the component's name in the dropped-components list in `src/lib/mdx-jsx.ts`, checked by `scripts/llms.test.ts`.
 - `DOX_TOOLS` reads `DOX_TOOL_DOCS` by position: append a doc, never insert. An insert gives every later tool its neighbour's description and no test fails.

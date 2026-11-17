@@ -325,6 +325,62 @@ describe("planIssueActions", () => {
     );
   });
 
+  describe("a leg that reached its deadline", () => {
+    const outOfTime = (findings: unknown[] = []) => ({
+      leg: "webkit-2",
+      summary: {
+        status: "FAIL",
+        deadlineMinutes: 80,
+        rows: [
+          { id: "build", status: "PASS", detail: "", durationMs: 120_000 },
+          { id: "readout-still", status: "PASS", durationMs: 3_600_000 },
+          {
+            id: "table-fit",
+            status: "FAIL",
+            outOfTime: true,
+            detail: "stopped at the 80m deadline",
+            durationMs: 360_000,
+            findings,
+            logTail: ["killed"],
+          },
+          {
+            id: "a11y-axe",
+            status: "FAIL",
+            outOfTime: true,
+            detail: "not run: the 80m deadline had passed",
+          },
+        ],
+      } as any,
+    });
+
+    it("files one out-of-time issue that tables every gate's minutes", () => {
+      const actions = planIssueActions([outOfTime()], [], context) as any[];
+      expect(actions).toHaveLength(1);
+      const [a] = actions;
+      expect(a.title).toBe("Dox weekly: the webkit-2 leg ran out of time");
+      expect(a.body.split("\n")[0]).toBe(
+        marker("dox-gate:out-of-time:webkit-2"),
+      );
+      expect(a.body).toContain("its 80-minute deadline");
+      expect(a.body).toContain("| readout-still | PASS | 60 |  |");
+      expect(a.body).toContain(
+        "| table-fit | FAIL | 6 | stopped at the 80m deadline |",
+      );
+      expect(a.body).toContain(
+        "| a11y-axe | FAIL | - | not run: the 80m deadline had passed |",
+      );
+      expect(a.body).not.toContain("Reproduce:");
+    });
+
+    it("still files the structured findings the stopped gate reached", () => {
+      const f = finding({ gate: "table-fit", rule: "overflow" });
+      const keys = (
+        planIssueActions([outOfTime([f])], [], context) as any[]
+      ).map((a) => a.key);
+      expect(keys).toEqual(["dox-gate:out-of-time:webkit-2", keyOf(f)]);
+    });
+  });
+
   it("opens ten new issues and floods at eleven", () => {
     const many = (n: number) =>
       leg("chromium-1", [

@@ -584,7 +584,8 @@ jobs:
   #   other             a11y-axe 1.1 + a11y-tab-walk 1.6 min, and any gate added later (`--skip`)
   #   readout-still     alone, as long as every other gate together: with the Timetable Reader
   #                     selected, #486's run recorded it at 25m37s, so it keeps 40 minutes (#490).
-  # Each leg's gate step stops 5 minutes before its job, so its logs are still uploaded.
+  # Each leg's gate step stops 5 minutes before its job, so its logs are still uploaded, and the
+  # runner's --deadline stops 2 minutes before the step, so it still prints which gate ran long.
   dox-gates:
     name: Dox gates (${{ matrix.leg }}, Chromium)
     runs-on: ubuntu-latest
@@ -600,26 +601,31 @@ jobs:
             select: --only readout-still
             job-limit: 40
             step-limit: 35
+            deadline: 33
           - leg: contrast
             slug: contrast
             select: --only contrast-measure
             job-limit: 20
             step-limit: 15
+            deadline: 13
           - leg: canada, credits, media, frames
             slug: canada
             select: --only canada-layout-check,data-credits-check,a11y-media,frame-check
             job-limit: 20
             step-limit: 15
+            deadline: 13
           - leg: escape and grow
             slug: esc-grow
             select: --only esc-cascade,grow-measure
             job-limit: 20
             step-limit: 15
+            deadline: 13
           - leg: every other gate
             slug: other
             select: --skip readout-still,contrast-measure,canada-layout-check,data-credits-check,a11y-media,frame-check,esc-cascade,grow-measure
             job-limit: 20
             step-limit: 15
+            deadline: 13
     steps:
       - uses: actions/checkout@v7
         with:
@@ -670,7 +676,7 @@ jobs:
         timeout-minutes: ${{ matrix.step-limit }}
         run: >
           pnpm --filter dox gates --tier pr --browsers chromium --themes dark,light --no-build
-          ${{ matrix.select }}
+          ${{ matrix.select }} --deadline ${{ matrix.deadline }}
           --against "origin/${{ github.base_ref }}"
 
       - name: Upload the gate logs
