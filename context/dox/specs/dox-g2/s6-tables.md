@@ -1,6 +1,6 @@
 # Slice 6 · Guide tables
 
-[Index](./index.md) · Binding rules: [built.md § Tiers 0–1](../../built.md#tiers-01--site-generator-ai-surface-brand-guides)
+[Index](./index.md) · Binding rules: [Tiers 0–1](../../built/tier-0-1-generator.md)
 (generator, reference tables, `rehype-table-scroll`),
 [design-system.md](../../reference/design-system.md), [visual-design.md](../../reference/visual-design.md).
 
@@ -95,7 +95,7 @@ like card instead of a hairline-separated strip:
       `/guides/core-date-operations/leap-seconds-and-tai/`, `/guides/integration/skills/`,
       `/guides/intervals/interval-basics/` and one reference page with an Options table, in both
       themes.
-- [ ] `built.md` Tier 1 (reference tables and `rehype-table-scroll`) describes the panel, header
+- [ ] `built/tier-0-1-generator.md` (reference tables and `rehype-table-scroll`) describes the panel, header
       strip, zebra, groups and entry cards in present tense; `design-system.md` names the content
       table style beside the kit `table`.
 - [ ] Close-out from the [index](./index.md#close-out) is done, because this is the last slice.

@@ -1,0 +1,82 @@
+# Tier 2: tool rules
+
+Part of [built/index.md](index.md). Platform: [tier-2-platform.md](tier-2-platform.md). Gates: [tier-2-gates.md](tier-2-gates.md). Tool pages live at `/tools/<slug>/`; the list is `scripts/build-tool-index.ts` output.
+
+## Rules for every tool
+
+- A widget draws library results and computes none. The printed call is the call made.
+- The site holds no table of codes, grammar, widths or leap-second data. NO SIGNAL (amber) appears only when the library refuses typed text. A correct empty or "no result" answer is never NO SIGNAL.
+- A value is never trimmed, upper-cased or repaired before a call. A window or reference input is never defaulted and has no placeholder. Reasons come from probing the library, not guesses.
+- Nothing derives a zone from a place name, abbreviation or code. Every zone is read with `disambiguation: "reject"`.
+- On-screen text never calls the library "GMT".
+- Hold still: every region is present in every state and nothing moves as the reader types or drags. Use `hold`, ghost sizers and the `readout-still` gate. Size each region to the tallest thing it can show, reserve fixed slot counts, lay out the NO SIGNAL slot and only make it visible, and make server HTML hide exactly what the initial state hides.
+- State is words and patterns, never colour alone. A series colour goes on marks, never text. Surfaces are tint-and-hairline panels with no `backdrop-filter`. Text plates are opaque.
+- Axis and track labels are fitted by measurement (`label-fit.ts`, `selectTickMinutes`, `placeLabels` in `punctuality-widgets.ts`) and sit on an opaque surface above the lines.
+- A mount whose `GMT_MODULES` import fails throws `WidgetLoadError` (`src/lib/widget-mount.ts`) and never returns an inert handle. Every `.astro` shell catches it and calls `showUnavailable(root, error)`. `widget-load-error.test.tsx` runs every library-backed mount with all imports rejecting.
+- Trap: the notice covers a failed gmt import, not a failed page script. A failed static `@js-temporal/polyfill` import means the script never runs and nothing catches it. A dev server that answers `504 (Outdated Optimize Dep)` does this (tier 6, Runbooks).
+- Result regions ease through `.gmt-grow` (rules: `reference/design-system.md` § Smooth growth). Section 1, the controls, is never wrapped. A list in section 1 whose row count follows a preset carries `data-grow="slot"` itself.
+- `escapeAttr` goes on every template interpolation: values come from a model or a URL.
+- `/why-gmt` "Correct at the edges": every claim links a named `packages/gmt` test and claims nothing beyond it. Its only figure comes from `gmtStats` (`formatCount`). It cites specs only, names no peer library and never says "every time zone".
+- Cut-off Countdown: one property, `--gmt-countdown-inset` (on the root in `tools/cutoff-countdown.module.css`), insets both axis and drag field; padding or a border added to either goes into it.
+- DST Inspector: `buildZonedValueFromMinutes` omits an offset on purpose; resolving the ambiguity is what `startOfZoned` shows.
+- Interval Visualizer: presets use the fixed calendar-year scale; seeded and typed values fit their own scale with 10% padding.
+
+## Registering a new tool
+
+Lists no single test covers (`docs-site.md` § Purpose-built widgets has the full set). The chat side fails `widget-registry.test.ts`, `chat-starters.test.ts`, `widget-permalink.test.ts` or `client-graph.test.ts` when a schema, `ENABLED_TOOL_NAMES` entry, Worker tool, registry entry, `WidgetKind` or `CHAT_STARTERS` card is missing. Kept by hand, and nothing fails when one is forgotten:
+
+- `MOUNTS` in `src/lib/widget-load-error.test.tsx`.
+- The `heavy` list in `src/components/ask/widget-graph.test.ts` (the tool's pure module and any shared helper or loader it adds).
+- `PAGES` in `scripts/html-diff.mjs`, `scripts/visual-snapshot.mjs`, `scripts/grow-measure.mjs`.
+- `TOOLS` in `scripts/readout-still.mjs`, for a tool with a drag handle.
+- Its forced-colours rules (platform file).
+- After a build only: the component's name in the dropped-components list in `src/lib/mdx-jsx.ts`, checked by `scripts/llms.test.ts`.
+- `DOX_TOOLS` reads `DOX_TOOL_DOCS` by position: append a doc, never insert. An insert gives every later tool its neighbour's description and no test fails.
+
+## Industry tags
+
+- A page's frontmatter lists `industries` (`src/content.config.ts`). `IndustryTags.astro` renders them under the title: one style, no colour per industry, not a link. Tags are `core` plus the industries in `src/data/industries.json` (`src/lib/industry-tags.ts`). Index pages carry none. The Markdown export writes an `Industry:` line (`pageToMarkdown`).
+- A new industry is one entry in `industries.json`, one glyph in `INDUSTRY_ICON_PATHS` and one hub text in `industry-overview.ts`; it gets a tag when its first page ships.
+- A page takes the one industry whose own namespace it runs. A page that runs only Core functions (`timescale` included) is `core`. An industry that draws on a layer links that layer's pages from its hub's `solves` list instead of tagging them.
+- `industry-tags.test.ts` fails a page with no tag, an unknown tag, a tag outside `allowedTags`, or more than one tag. It cannot tell the owner from an industry that only draws on the layer; authoring picks the owner.
+- Cross-industry layers (`workforce`, `gnss`) are industries on the site; each user lists them in `drawsOn`. Rule: [`context/coding-standards/design-rules.md`](../../coding-standards/design-rules.md#plain--zoned-separation), "Core namespaces, industry layers, cross-industry layers".
+- Trap: a `core` page never links an own namespace's reference pages. The test reads `/reference/<ns>/` or an `@northguild/gmt/<ns>` import as use of that namespace. The Standards guide names EDI functions as inline code and links the EDI guide.
+
+## Permalinks
+
+- `?w=&wa=` seeds a widget through `seedFromLocation`, with structural checks rather than zod, so a docs page never pulls in `ai`.
+- `seedFromLocation` keeps only top-level strings of 1-64 characters and years. Lists flatten into numbered string keys or joined strings. `content-permalink` tests check every key survives. A preset-only state is `{ preset }` alone; otherwise `{ preset }` plus each scalar that differs (`"none"` clears an optional one).
+- `LONG_STRING_KEYS` exempts long values, each with a regression test: `rules` (capped at 95,000, the longest list the chat schema accepts) and `holidays` (capped at 1,000). `EMPTY_LIST_KEYS` keeps an empty `weekend` or `offsets` as empty, not dropped.
+- An old link with a `yearWindow` loads and the key is ignored.
+- Zone Planner: `?w=planner&wa={"time":...,"zone1":...}`, a UTC instant ending in `Z` and up to eight numbered zone ids, strings only (`permalinkOf` in `src/lib/zone-planner.ts`); `seededZones` also reads a `zones` array, which a chat call carries.
+- Trap: build a permalink written into a page with `encodeWidgetPermalink`, never `encodeURIComponent` or by hand. A `DTM` segment ends in `'`, which `encodeURIComponent` leaves raw and the test's regex (`widget-permalink.test.ts`) cuts at; a raw `+` decodes as a space.
+
+## Traps
+
+- Starlight's `Icon` is not an override slot. Icons live in `src/components/Icon.astro`; a plain-DOM template calls `transportIcon()` (`src/lib/transport-icons.ts`); MDX imports `~/components/Icon.astro`.
+- A second class name containing "card" turns into glass within glass: `[class*="card"]` rules in `gmt-glass.css`, `gmt-a11y.css` and `gmt-light.css` match it. The `card` builder is the widget's one layer. Name parts without the substring, or override all three rules as `tools/cutoff-ruler.module.css` does.
+- An element with an author `display` ignores `hidden`. A chip a fit pass hides needs its own `[hidden] { display: none }`.
+- Tint a hatched element with `background-color`, never the `background` shorthand.
+- A block table (`.gmt-widget.not-content`) takes `overflow-x: auto`, never `hidden`. It does not fill its panel: a table that must reach both edges sets `display: table`, `table-layout: fixed`, widths on `th`s and a `<wbr>` break point in long values (the Timetable Reader does).
+- An unnamed `@container` query inside the field grid resolves to the grid. Name the section and query it by name (`tt-section`).
+- The live wrapper in a hold cell must keep the grid's default stretch (`builders/hold.ts`, `families/edi/edi-hold.ts`, `families/holiday/held-text.ts`). Aligned to the start, its height jumps and `readout:still` reports a resize.
+- A bevelled corner hides text under it: first and last cells need at least 10px of inline padding.
+- The Converter Bench's pattern chips grow with the library (`getRegexList` in `converter-bench-mount.ts`). A new `regex` export changes the bench's height in a visual diff; read that as expected.
+
+## Clock-change checkers (Canada, Morocco, Sunshine Protection Act)
+
+- A checker is a config over the shared modules in `families/clockcheck/`, `lib/clock-change-*.ts` and `worker/clock-change-shared.ts`, never a copy. Years live once. A checker's words use past tense only (`Moment {at, from}`).
+- Tests never assert a 2026e offset as runtime-computed. Only `deploy-smoke.mjs` checks 2026e, against the deployed Worker.
+- The Worker reads form fields with `typeof value === "string"`, answers 400, 413 or 429, and caps stored input with `capStoredInput`.
+- Map data comes from `scripts/prepare-region-boundaries.py --region <name>`, cut back to Natural Earth land. Spend size on `tolerance` and `min_area`, never the 400 KB limit. `isZoneFeature` filters the `{"land":"other"}` feature.
+- The mounts' ready signal and `waitForState` are in `scripts/lib/clock-check-harness.mjs`. Layout gates: `canada-layout-check.mjs`, `canada-stored-still.mjs`.
+- `sunshine-protection-act-wording.test.ts` scans the wording. No law or body is named in the data.
+
+## Rail and IoT tools (GTFS, PTP)
+
+- The GTFS tools load gmt through `rail-lib.ts` (`loadRailLib`, `loadServiceDayLib`, `loadTripBoardLib`) and the PTP tool through `iot-lib.ts`. Each lib takes its types from the library through `pickTyped` (`gmt-pick.ts`), so a renamed or retyped function fails the typecheck. gmt is imported dynamically only, and `literal` lives in `lib/literal.ts`, so the polyfill stays out of the first-paint chunk.
+- No GTFS or PTP bound is typed in the tool's code: no hour limit, 2^48, 10^9 or int16. Range numbers appear only in the preset files. A refused PTP read gets its reason by asking the library again (the record check, then a known-good record with the same offset, then offset 0), never from a range written on the site.
+- **Never "since midnight".** A GTFS time is days past the service day and the seconds left over, counted from noon minus 12 hours, never a time of day. The clock note is always shown, because a clock time needs the agency's zone.
+- A GTFS zone is a text box, not a select: a feed's zone is pasted, and an offset such as `+05:30` is accepted. The chat never resolves an agency to a zone.
+- The PTP ruler is a fixed 0 to 40 s and clamps ("off the ruler: N s"): a rescaled axis would hide how small 1 s is next to 37 s. `currentUtcOffsetValid` and `ptpTimescale` stay prose only, because the library reads neither flag and a switch would suggest a check it does not make.
+- Prose names a function as shipped and pastes its results from `dist`. No page says "planned". A page link to a preset carries `preset` alone, and the prose tests check it against the widget its `w=` kind opens.

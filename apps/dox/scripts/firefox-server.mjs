@@ -8,7 +8,7 @@
  *   node scripts/firefox-server.mjs stop
  *
  * `pnpm --filter dox firefox-server <command>` runs the same. The runbook is
- * `context/dox/built.md` § Runbooks, "Firefox on macOS 27 (Docker route)".
+ * `context/dox/built/tier-6-runbooks.md`, "Firefox on macOS 27 (Docker route)".
  */
 
 import { spawnSync } from "node:child_process";

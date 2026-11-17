@@ -331,6 +331,9 @@ export type RollingCapRule<S extends string = string> = {
  *   crosses a period boundary is cut there, and each part counts in its own period.
  * - With `average`, `used` is the mean over the `adjacent` periods, rounded up to the nanosecond,
  *   and `remaining` is the time left before the mean passes `cap`.
+ * - A rule has one cap and one outcome. A different cap per group of statuses is one rule per
+ *   group, each reported on its own, not a list of buckets inside one rule that would have to be
+ *   folded back into a single number.
  */
 export type FixedPeriodCapRule<S extends string = string> = {
   /** The caller's name for the rule. The report is keyed by it; labels must be unique. */

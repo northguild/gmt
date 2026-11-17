@@ -3,7 +3,7 @@
  *
  * Imported ONLY from the island entry module (never added to `astro.config.mjs`'s
  * `customCss`) — Vite then code-splits it into the island's own chunk, so a page
- * that never opens the chat never loads it. See design-system.md "Tailwind in the
+ * that never opens the chat never loads it. See design-system-chat.md "Tailwind in the
  * chat island".
  *
  * Preflight is deliberately omitted: Tailwind's reset targets

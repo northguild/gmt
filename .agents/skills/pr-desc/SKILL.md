@@ -65,7 +65,7 @@ _Low / Medium / High — and a short justification._
 
 ## Release
 
-The changeset(s) in `.changeset/` and their bump level, per [coding-standards § Changesets](../../../context/coding-standards.md#changesets). Merging publishes nothing; say so if a reviewer might expect otherwise.
+The changeset(s) in `.changeset/` and their bump level, per [coding-standards § Changesets](../../../context/coding-standards/changesets.md#changesets). Merging publishes nothing; say so if a reviewer might expect otherwise.
 
 ---
 

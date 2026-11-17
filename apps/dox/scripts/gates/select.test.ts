@@ -155,7 +155,7 @@ describe("selectPages", () => {
   it("selects nothing for a test file or a file outside the site and the library", () => {
     const plan = select([
       "apps/dox/src/lib/format.test.ts",
-      "context/dox/built.md",
+      "context/dox/built/index.md",
     ]);
     expect(plan.pages).toEqual([]);
     expect(plan.relevant).toBe(false);

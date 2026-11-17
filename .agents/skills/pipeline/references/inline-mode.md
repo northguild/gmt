@@ -43,14 +43,14 @@ finding is open, return to Step 2 with the list.
 Adopt the [`finalizer`](../../../finalizer.md) role and follow its workflow: merge `origin/main`
 in first and commit that merge (a standing instruction in
 [AGENTS.md § Git](../../../../AGENTS.md#git--only-on-an-explicit-instruction)), then skills, changeset
-(per the [changeset rule](../../../../context/coding-standards.md#changesets)), READMEs, dox
+(per the [changeset rule](../../../../context/coding-standards/changesets.md#changesets)), READMEs, dox
 corpus and stats, tracker `Status` + `pnpm deps:sync`, `pnpm run validate`. Draft a commit
 message with `/commit-message` and a PR description with `/pr-desc` **for the owner to use** —
 never commit the story's work or open the PR.
 
 ## Context files per role
 
-- `context/coding-standards.md` — the sections the story touches, always
+- `context/coding-standards/index.md` — and the scoped files the story touches, always
 - `context/testing-standards/references/index.md` — tdd-dev and tester
 - `context/jsdoc-standards.md` — implementation and finalizer
 - `context/project-overview.md` — researcher and architect

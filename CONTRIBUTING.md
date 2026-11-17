@@ -174,7 +174,7 @@ pnpm run lint
 │   │       └── index.mjs       # Flat config banning Date APIs
 │   └── gmt-oxlint/             # @northguild/gmt-oxlint — Oxlint JS plugin (also lints this repo)
 ├── northguild/                  # Workspace configuration (internal, do not publish)
-├── oxlint.config.js             # Root Oxlint config — this repo's linter
+├── oxlint.config.mts            # Root Oxlint config — this repo's linter
 ├── .oxfmtrc.json                # Root oxfmt config — this repo's formatter
 ├── tsconfig.base.json           # Shared TypeScript base config
 └── package.json                 # Workspace root
@@ -314,13 +314,13 @@ export function functionName(...): ... {}
 2. **Show permutations**: valid inputs, invalid inputs, edge cases, empty cases
 3. **Include return type in @returns**: `or "" on invalid input`, `or null on invalid input`, `or false on invalid input`. A function that cannot fail names none — see the exception under [Error handling](#error-handling-always-wrap-temporal-methods)
 4. **No Date objects**: Use Temporal or ISO strings only (enforced elsewhere)
-5. **Match return sentinel** using the single [sentinel table](./context/coding-standards.md#api-contract) — `""` strings, `null` numbers and objects, `false` booleans, `[]` arrays, `0n` precision bigints
+5. **Match return sentinel** using the single [sentinel table](./context/coding-standards/api-contract.md#api-contract) — `""` strings, `null` numbers and objects, `false` booleans, `[]` arrays, `0n` precision bigints
 
 ### Error handling: Always wrap Temporal methods
 
 Any code that calls Temporal methods (`.from()`, `.add()`, `.subtract()`, `.since()`, `.until()`, etc.) **MUST be wrapped in try-catch**.
 
-One exception: the zero-argument UTC clock readers (`getUtcNow`, `getUtcYear`, `getUnixYear` and their siblings) have no catch and no sentinel, because `Temporal.Now.instant()` read through an explicit `"UTC"` cannot fail. The exception does not cover a read of the system time zone or any function that takes an argument — see [coding-standards § Scoped exception: the UTC clock readers](./context/coding-standards.md#scoped-exception-the-utc-clock-readers).
+One exception: the zero-argument UTC clock readers (`getUtcNow`, `getUtcYear`, `getUnixYear` and their siblings) have no catch and no sentinel, because `Temporal.Now.instant()` read through an explicit `"UTC"` cannot fail. The exception does not cover a read of the system time zone or any function that takes an argument — see [coding-standards § Scoped exception: the UTC clock readers](./context/coding-standards/api-contract.md#scoped-exception-the-utc-clock-readers).
 
 Temporal's static methods like `Temporal.PlainDate.from()` throw `RangeError` on invalid input (e.g., malformed strings, invalid calendars). These errors must be caught and converted to the appropriate sentinel value.
 
@@ -358,8 +358,8 @@ export function getDay(dateStr: string): number | null {
 
 **Key rules**:
 
-- Guard with the matching `isValid*` validator first, then wrap the **entire block** that uses Temporal methods (the second parse is intentional — see [coding standards](./context/coding-standards.md))
-- Return the sentinel from the [sentinel table](./context/coding-standards.md#api-contract) (`""` / `null` / `false` / `[]` / `0n`)
+- Guard with the matching `isValid*` validator first, then wrap the **entire block** that uses Temporal methods (the second parse is intentional — see [coding standards](./context/coding-standards/index.md))
+- Return the sentinel from the [sentinel table](./context/coding-standards/api-contract.md#api-contract) (`""` / `null` / `false` / `[]` / `0n`)
 - Never let Temporal exceptions propagate to the caller
 - The catch block should have no arguments (`catch { ... }`) since we don't need the error
 
@@ -373,7 +373,7 @@ export function getDay(dateStr: string): number | null {
 | [Vitest](https://vitest.dev/)                      | Testing                                              |
 | [pnpm](https://pnpm.io/)                           | Package manager and task runner                      |
 
-Lint rules are in [oxlint.config.js](./oxlint.config.js) and formatting in [.oxfmtrc.json](./.oxfmtrc.json). Run `pnpm lint` / `pnpm format:fix`. The Biome and ESLint packages are published for consumers; this repo does not lint itself with them.
+Lint rules are in [oxlint.config.mts](./oxlint.config.mts) and formatting in [.oxfmtrc.json](./.oxfmtrc.json). Run `pnpm lint` / `pnpm format:fix`. The Biome and ESLint packages are published for consumers; this repo does not lint itself with them.
 
 ### Development conventions
 

@@ -29,7 +29,7 @@ local-day grid.
   "Extends <tool> with <facet>".
 - A story that adds no public function ships none, and its `## Tool` says why.
 
-A widget follows the Tier 2 shape in [../dox/built.md](../dox/built.md), under
+A widget follows the Tier 2 shape in [../dox/built/tier-2-platform.md](../dox/built/tier-2-platform.md), under
 `apps/dox/src/`:
 
 | Piece | Path |

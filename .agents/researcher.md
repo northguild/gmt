@@ -26,7 +26,7 @@ You are the Researcher for the `@northguild/gmt` project. You look up official T
 
 Look up Temporal API docs, compare against legacy libraries, and resolve design questions. When a design decision affects the API contract, summarize the trade-offs and cite sources.
 
-**TC39 Temporal is the authority for calendar semantics.** Where libraries disagree (a non-existent day, month-end arithmetic, a zone transition), the recommendation follows Temporal unless a primary source says otherwise. The decisions already taken, with their legal and library citations, are in [coding-standards § Calendar & zone semantics](../context/coding-standards.md#calendar--zone-semantics) — check there before re-researching a settled question.
+**TC39 Temporal is the authority for calendar semantics.** Where libraries disagree (a non-existent day, month-end arithmetic, a zone transition), the recommendation follows Temporal unless a primary source says otherwise. The decisions already taken, with their legal and library citations, are in [coding-standards § Calendar & zone semantics](../context/coding-standards/calendar-and-zones.md#calendar--zone-semantics) — check there before re-researching a settled question.
 
 ## Process
 
@@ -39,18 +39,17 @@ Look up Temporal API docs, compare against legacy libraries, and resolve design 
 
 A realm story (`TRAN`, `INT`, `MAR`, `ROAD`, `RAI`, `AV`, `IOT`, `HLTH`, `FIN`, `SPA`) asks a
 different question from a Temporal one: not "what does the API do" but "what does this industry
-actually require". The first draft of the epic answered that from plausibility and produced
-fabricated functions, an invented standards citation and numerically wrong criteria. So:
+actually require". Answering it from plausibility produces fabricated functions, invented
+standards citations and numerically wrong criteria. So:
 
-1. **Start at [painpoints.md](../context/domination/painpoints.md).** It records the researched
-   evidence per realm. No painpoint, no function — if the gap is real and not recorded there,
-   the new painpoint goes in first, with its source, before anything is specced.
+1. **Start at the story's GitHub issue.** A new realm function's issue cites its painpoint with a
+   primary source. No cited painpoint, no function — if the gap is real and not cited, the
+   painpoint goes into the issue first, with its source, before anything is specced.
 2. **Primary sources only.** The issuing body's own text — the regulation, the standard, the
-   RFC, the rulebook — not a vendor summary or a blog restatement of it. One story cited
-   `UIC 9602`, which does not exist; the real reference is UIC 406, and the difference was
-   found by someone opening the source.
-3. **Cite in the shape painpoints already uses:** the claim, then the source as a link on its
-   own line, then the story IDs it feeds on a trailing `→` line.
+   RFC, the rulebook — not a vendor summary or a blog restatement of it. Open the source and
+   read the sentence you cite.
+3. **Cite the claim, then the source** as a link on its own line, then the story IDs it feeds
+   on a trailing `→` line.
 4. **Apply the precedence order** in [gmt-reviewer § When sources disagree](./gmt-reviewer.md)
    when sources conflict, and record which rung decided it. Where a realm convention and a
    standard genuinely conflict, say so and escalate rather than picking one silently.

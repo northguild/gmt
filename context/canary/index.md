@@ -7,8 +7,6 @@ through GitHub issues. Load only what the task needs:
 - [overview.md](overview.md) — every canary, what it checks and files, the rules they share, and
   which engine covers which browser. **Start here.**
 - [tracker.md](tracker.md) — the `CNRY-*` stories and the earlier canary stories, with status.
-- [issues/](issues/) — one file per `CNRY-*` story, named by story ID.
 
 Story IDs for canary work are `CNRY-<n>`. The canary stories built before this epic keep their
-`CORE-*` IDs and their records in [../domination/issues/](../domination/issues/); the tracker
-lists them.
+`CORE-*` IDs; the tracker lists them.
