@@ -58,7 +58,6 @@ change to the shape fails until the number is dealt with.
 
 ## Where it comes from
 
-Nothing is kept by hand. `generateReference` in `apps/dox/scripts/build-reference.ts` writes the
-corpus, and `export-reference.ts` copies it. `export-reference.test.ts` proves the exported corpus
-equals the generated one, checks the manifest and the command-line errors, and proves the output
-is deterministic.
+`generateReference` in `apps/dox/scripts/build-reference.ts` writes the corpus and
+`export-reference.ts` copies it. `export-reference.test.ts` proves the copy equals the generated
+corpus and is deterministic, and checks the manifest and the command-line errors.

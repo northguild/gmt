@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smooth-growth gate (context/dox/reference/design-system.md, "Smooth growth").
+ * Smooth-growth gate (context/dox/reference/design-system-widgets.md, "Smooth growth").
  *
  * Measures how a tool page's height changes frame by frame, so "result regions
  * ease instead of popping" is a number and not an impression. For each tool

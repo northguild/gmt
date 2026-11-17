@@ -18,7 +18,7 @@ describe("affected: which checks a change runs", () => {
   it.each([
     {
       name: "notes in context/ run nothing",
-      changes: ["context/dox/built.md", "context/skills.md"],
+      changes: ["context/dox/built/index.md", "context/skills.md"],
       checks: [],
     },
     {
@@ -40,6 +40,16 @@ describe("affected: which checks a change runs", () => {
       name: "a tracker runs deps check",
       changes: ["context/domination/tracker.md"],
       checks: ["deps"],
+    },
+    {
+      name: "a polyfill-bugs record runs the native-suite tag test",
+      changes: ["context/domination/polyfill-bugs/h-q.md"],
+      checks: ["deps", "build:gmt", "test:dox"],
+    },
+    {
+      name: "the polyfill-bugs index runs the native-suite tag test",
+      changes: ["context/domination/js-temporal-polyfill-bugs.md"],
+      checks: ["deps", "build:gmt", "test:dox"],
     },
     {
       name: "CONTRIBUTING.md runs the Dox tests and the build they need",

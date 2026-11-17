@@ -1,6 +1,6 @@
 # Slice 3 · Real sky
 
-[Index](./index.md) · Binding rules: [built.md § Tier 4 · Data credits](../../built.md#tier-4--globe-and-scrubber),
+[Index](./index.md) · Binding rules: [Data credits](../../built/tier-4-zones.md#data-credits-core-88),
 [visual-design.md § Motion](../../reference/visual-design.md#motion).
 
 ## Goal
@@ -27,7 +27,7 @@ ground. At rest nothing moves. The opening view differs per reader and per momen
 - **Share-alike.** The star list is an adaptation, so it is licensed CC BY-SA 4.0 too. The sidecar
   `src/assets/hero-sky.json` says so: source, commit, hash, licence URL, and that the repository's
   MIT licence does not cover `hero-sky.bin`. That follows the ODbL precedent of the boundary files
-  ([built.md § Boundary data](../../built.md#tier-4--globe-and-scrubber)); `scripts/licences.test.ts`
+  ([Boundary data](../../built/tier-4-zones.md#boundary-data-core-88)); `scripts/licences.test.ts`
   covers it the same way.
 - **Credit.** `NIGHT_SKY` in `src/lib/data-credits.ts` (built): label "Stars"; "HYG v4.4" linked to
   the pinned commit, ", from Hipparcos, Yale Bright Star and Gliese (", "CC BY-SA 4.0" linked to
@@ -195,6 +195,6 @@ globe's signal. `avoid()` returns the copy column, the open zone drawer and the 
     (`document.getAnimations()` is empty), and the meteor canvas requests no frame for 10 s;
   - `space-fx` and the sky (`sky.ts` with `sky-math.ts`) are each ≤ 4 KB min+gzip;
   - `rg -i 'aurora|comet' apps/dox/src apps/dox/scripts` finds nothing.
-- [ ] `built.md` Tier 4 describes the sky, its source and licence, the credit, how the view
+- [ ] `built/tier-4-globe.md` describes the sky, its source and licence, the credit, how the view
       follows the camera and the sidereal time, and the meteor rules. `visual-design.md` § Motion
       lists the meteor with its reduced-motion rule and the sky's follow-the-camera rule.

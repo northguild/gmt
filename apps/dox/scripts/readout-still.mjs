@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Readouts-hold-still gate (context/dox/reference/visual-design.md, "Layout stability",
- * and the Timetable Reader's rules in context/dox/built.md).
+ * and the Timetable Reader's rules in context/dox/built/tier-2-gates.md).
  *
  * Dragging a handle must move nothing except the values themselves. For each
  * tool page in `TOOLS` (the table below lists the handles of the first seven; a later
@@ -37,7 +37,7 @@
  *
  * Controls are found by ARIA role and accessible name inside the widget root
  * (`lib/locate.mjs`), never by a style class or a role attribute. The structural parts
- * that have no role or name are `data-gate` hooks, listed in `context/dox/built.md`,
+ * that have no role or name are `data-gate` hooks, listed in `context/dox/built/tier-2-platform.md`,
  * "Gate hooks".
  *
  * A `TOOLS` entry may carry optional fields:
@@ -124,7 +124,7 @@
  * Widths: each `--widths` entry is a viewport width (default 1440,390). Each
  * widget root is also forced to 360 and 300 px wide at a 1440 viewport, the
  * widths of the /dox rail. With the default browsers (Chromium and WebKit) that
- * is the documented gate in context/dox/built.md: 1440, 390, 360 and 300 px.
+ * is the documented gate in context/dox/built/tier-2-gates.md: 1440, 390, 360 and 300 px.
  *
  * Serve a build statically first (never `astro dev` on 4321, never the owner's
  * dev server), for example:
@@ -204,7 +204,7 @@ const DRAWN_PART = {
 };
 /** The selector of each part a tool names as moving by design: its own box moves with the
  *  slider and it is left out of the comparison, with everything inside it. It is a
- *  `data-gate="moving"` hook (see "Gate hooks" in context/dox/built.md). */
+ *  `data-gate="moving"` hook (see "Gate hooks" in context/dox/built/tier-2-platform.md). */
 const MOVING_PART = {
   // The leap-second chart's date cursor: the horizontal guide, the dot, the vertical pin and
   // the date tag (the leap-chart builder marks these four, not the band's own tag). The cursor

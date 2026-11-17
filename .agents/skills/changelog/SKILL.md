@@ -32,7 +32,7 @@ See [references/steps.md](references/steps.md) for the full step-by-step (findin
 
 ## Rules
 
-- **Do not change the frontmatter** (`---` block with package names and bump types) — but if the bump contradicts the [changeset rule](../../../context/coding-standards.md#changesets) (fix → `patch`, new API → `minor`), flag it to the user.
+- **Do not change the frontmatter** (`---` block with package names and bump types) — but if the bump contradicts the [changeset rule](../../../context/coding-standards/changesets.md#changesets) (fix → `patch`, new API → `minor`), flag it to the user.
 - **Do not rename the changeset file.** The slug is random but tracked by git.
 - **Do not run `changeset:version`** — it bumps versions and consumes every pending changeset. It is a maintainer's deliberate release action, run in a release PR of its own. See [PUBLISHING.md](../../../PUBLISHING.md).
 - **Never fabricate function names.** Every export named in the description must exist in `packages/*/src/`. Verify with `grep` if uncertain.

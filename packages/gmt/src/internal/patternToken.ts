@@ -7,7 +7,7 @@ import { localeMonthNames } from "./localeMonthNames";
 /**
  * Shared token-pattern engine for J11's `parse*WithPattern` family.
  *
- * This is GMT's one named exception to `context/coding-standards.md`'s
+ * This is GMT's one named exception to `context/coding-standards/string-grammars.md`'s
  * "manual string parsing" prohibition (its section "Scoped exception:
  * manual string parsing"). The exception is scoped to this module
  * and the three `parse*WithPattern` public functions, and is bound by

@@ -78,5 +78,5 @@ Pure functions with cited constants; no data files, no credit needed.
     none on the far side; the Sun in the frame and not hidden: its core pixel is near white;
   - `contrast-measure` passes on `/`, and the hero gate walks the Sun behind every copy line at default motion: 7:1;
   - the sky module (`sky.ts` with `sky-math.ts`) stays ≤ 5 KB min+gzip.
-- [ ] `built.md` Tier 4 describes the Sun and Moon, their formulae and sources, and the media
+- [ ] `built/tier-4-globe.md` describes the Sun and Moon, their formulae and sources, and the media
       rules. `visual-design.md` § Motion lists them with the stars' follow-the-camera rule.

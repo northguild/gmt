@@ -34,6 +34,7 @@ AO = {
         "agents": {"missing": ["tester"], "wrong_target": [], "dangling": [], "extra": []},
         "skills": {"missing": [], "wrong_target": [], "dangling": [], "extra": []},
     },
+    "leftovers": [{"file": "context/domination/specs/CORE-1", "story": "CORE-1"}],
     "summary": {"orphans": 1, "broken_links": 1},
 }
 SO = {
@@ -60,6 +61,7 @@ def test_relevant_keeps_changed_files_and_repo_wide() -> None:
     assert ("context/big.md", "600 lines (budget 200)") in kept
     assert (".agents/skills/foo", "SKILL.md is 211 lines") in kept
     assert ("(repo)", "sync: agents missing: tester") in kept
+    assert any(m.startswith("leftover: context/domination/specs/CORE-1 ") for p, m in kept if p == "(repo)")
     assert not [p for p, _ in kept if p in ("context/old.md", "AGENTS.md")]
 
 

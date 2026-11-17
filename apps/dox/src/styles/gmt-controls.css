@@ -187,9 +187,9 @@ starlight-menu-button button:focus-visible {
 
 /* ---- Keyboard focus ----
  *
- * overview.md §3: "Focus must be more visible than default, never less." A 2px
- * cyan outline plus a soft outer glow — brighter than the browser default and
- * unmistakable on prose, sidebar, buttons, and controls.
+ * context/dox/reference/visual-design.md: focus is "more visible than default,
+ * never less". A 2px cyan outline plus a soft outer glow — brighter than the
+ * browser default and unmistakable on prose, sidebar, buttons, and controls.
  */
 :focus-visible {
   outline: 2px solid var(--gmt-cyan);
@@ -217,7 +217,7 @@ starlight-menu-button button:focus-visible {
 
 /* ---- Blocky terminal caret ---- */
 
-/* overview.md §3 "Controls": a blocky terminal caret on text fields. */
+/* context/dox/reference/visual-design.md § "Controls": a blocky terminal caret on text fields. */
 textarea,
 input:not([type="checkbox"], [type="radio"], [type="range"]),
 [contenteditable] {

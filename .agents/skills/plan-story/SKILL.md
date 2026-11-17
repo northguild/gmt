@@ -90,7 +90,7 @@ library index, then run `python3 .agents/skills/plan-story/scripts/plan_gate.py`
 
 ## Rules
 
-- A spec is temporary. It exists while the story is in progress; `finalizer` folds its decisions into `issues/<ID>.md` (or Dox `built.md`) and deletes it. Write nothing in it that code, comments or other context files will need to cite.
+- Planning files are temporary. The issue file, spec folder and any research exist while the story is open; `finalizer` deletes them at close. Write nothing in them that code, comments or other context files will need to cite.
 - Planning writes only spec files. No source, tests, tracker `Status` or changesets.
 - Nothing is staged or committed ([Git rule](../../../AGENTS.md#git--only-on-an-explicit-instruction)).
 - Pass agents paths, not pasted file content.

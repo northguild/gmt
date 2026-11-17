@@ -11,9 +11,9 @@ name: Dox gates weekly
 # Legs: --shard i/n splits each gate's page list so the legs of one browser share the work: by name,
 # round-robin, or for a gate whose pages differ a lot in run time (readout-still) by each page's
 # measured minutes, so the heavy tools never share a leg. The shard counts are sized from measured
-# local times (built.md, Runbooks, "The weekly gate sweep"). Adding or removing a leg means changing
-# the matrix and the LEGS list of the report job, which names every leg so one that crashed without
-# uploading is still filed.
+# local times (context/dox/built/tier-6-ops.md, "The weekly gate sweep"). Adding or removing a leg
+# means changing the matrix and the LEGS list of the report job, which names every leg so one that
+# crashed without uploading is still filed.
 #
 # A leg whose summary never reaches the report is sorted by its job (apps/dox/scripts/gates/
 # issue-plan.mjs, `missingSummary`): if its "Check the summary was written" step passed, the runner

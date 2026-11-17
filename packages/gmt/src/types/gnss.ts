@@ -3,7 +3,10 @@
  * Galileo time, BeiDou time, QZSS time, GLONASS time (in UTC hours, as RINEX and BIPM report it),
  * NavIC time. The six are peers: IMO recognises GPS, GLONASS, BeiDou, Galileo, NavIC (IRNSS) and
  * QZSS as components of the Worldwide Radionavigation System (resolution A.1046(27), annex revised
- * by MSC.599(111)).
+ * by MSC.599(111)). Each system's own recognition: GPS and GLONASS A.860(20) (1997), BeiDou
+ * SN.1/Circ.329 (2014), Galileo SN.1/Circ.334 (2016), IRNSS SN.1/Circ.340 (2020), QZSS
+ * SN.1/Circ.341 (2021). BeiDou's and IRNSS's are for ocean waters, and IRNSS's is regional (55°E to
+ * 110°E, 5°S to 50°N); GMT converts each system's time everywhere.
  */
 export type GnssSystem = "GPS" | "GAL" | "BDT" | "QZS" | "GLO" | "IRN";
 

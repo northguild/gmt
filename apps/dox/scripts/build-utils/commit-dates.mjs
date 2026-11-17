@@ -2,7 +2,7 @@
  * The date each generated page was last changed, read from git.
  *
  * Starlight finds a page's footer date from the page's own file, and a generated page is not
- * tracked, so it has none (`built.md`, "Trap: an untracked page has no footer date"). Each
+ * tracked, so it has none (`context/dox/built/tier-0-1-site.md`, "Trap: an untracked page has no footer date"). Each
  * generator writes `lastUpdated:` into the page's frontmatter instead, from the commit date of the
  * files the page is made from. The sitemap's `<lastmod>` copies the footer, so the two cannot
  * disagree.

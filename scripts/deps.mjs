@@ -11,8 +11,8 @@
  * The domination column is derived from two inputs: the story IDs named in each story's
  * `## What gmt provides (do not re-implement)` section in `issues/<ID>.md`, minus the ones
  * whose tracker `Status` is already `Done`. So it shrinks as the epic lands, and an empty
- * cell means "nothing is stopping you". The full, permanent graph lives in the issue files
- * — use `whoneeds` to read it back.
+ * cell means "nothing is stopping you". Only an open story has an issue file: the finalizer
+ * deletes it when the story closes, so `whoneeds` reads the graph of the open stories.
  *
  * Dox works the same way, one level down. Its dependency lines are prose inside each
  * sub-story's description block (`Depends on DOX-B1a (the component) and ...`), and its
@@ -98,7 +98,7 @@ function dependsSentence(paragraph) {
  * Dependencies each dox sub-story declares, keyed by sub-story ID.
  *
  * The folder is optional: once every Dox story was done its issue specs were folded into
- * `context/dox/built.md`, so with no issue files there are no declared dependencies and
+ * `context/dox/built/`, so with no issue files there are no declared dependencies and
  * every `Blocked by` cell is `—`. New Dox work restores a file here with a `Depends on` line.
  */
 function doxSubDeps() {
@@ -401,9 +401,11 @@ function check() {
   const known = new Set(rows.map((r) => r.id));
   const done = doneSet(rows);
 
-  // Every story in the tracker has an issue file, and vice versa.
+  // Every open story has an issue file, and every issue file has a tracker row. A `Done`
+  // story's file is deleted at close; `/optimize` reports one left behind.
   for (const r of rows) {
-    if (!declared.has(r.id)) problems.push(`${r.id}: no issues/${r.id}.md`);
+    if (!done.has(r.id) && !declared.has(r.id))
+      problems.push(`${r.id}: no issues/${r.id}.md`);
   }
   for (const id of declared.keys()) {
     if (!known.has(id)) problems.push(`${id}: issue file has no tracker row`);

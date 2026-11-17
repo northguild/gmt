@@ -1,8 +1,8 @@
 # Slice 4 · Ice-freeze entrance
 
 [Index](./index.md) · Binding rules: [visual-design.md § Motion](../../reference/visual-design.md#motion),
-[design-system.md § Entrance](../../reference/design-system.md#entrance),
-[built.md § Tier 4 · Globe](../../built.md#tier-4--globe-and-scrubber).
+[design-system-motion.md § Entrance](../../reference/design-system-motion.md#entrance),
+[Tier 4 · Globe](../../built/tier-4-globe.md).
 
 ## Goal
 
@@ -170,35 +170,14 @@ In the shader, a new `exposure` uniform (default 1, so other hosts are unchanged
 
 - [ ] Index gates pass, plus `globe:smoke` and `hero-space`.
 - [ ] Recordings (1440×900, 390×844) on the PR; reduced motion shows only fades (`a11y:media`).
-- [ ] `visual-design.md` § Motion and `design-system.md` § Entrance describe, in present tense,
+- [ ] `visual-design.md` § Motion and `design-system-motion.md` § Entrance describe, in present tense,
       the sequencer, one-animation rule, freeze, sky fade, dawn, card pop and reduced motion.
 
 ## Prototype
 
-Excerpt of [`prototype/proto.css.txt`](./prototype/proto.css.txt) (`#03070c` body, Michroma `h1`):
-
-```css
-:root {
-  --ice: #e6f6ff; --cyan: #22d3ee; --frost: color-mix(in oklab, var(--ice) 70%, var(--cyan));
-  --mask: linear-gradient(100deg, #000 40%, rgb(0 0 0 / .55) 50%, transparent 62%);
-  --mask-r: linear-gradient(260deg, #000 40%, rgb(0 0 0 / .55) 50%, transparent 62%);
-  --mask-b: linear-gradient(to top, #000 40%, rgb(0 0 0 / .55) 50%, transparent 62%);
-  --ease-sweep: cubic-bezier(.25, .6, .2, 1); --ease-settle: cubic-bezier(.2, .7, .3, 1);
-}
-/* Right: --mask-r, mask-position 0% 0 → 100% 0.
-   Bottom: --mask-b, mask-size 100% 300%, mask-position 0 0% → 0 100%. */
-@keyframes ng-freeze-left {
-  0%   { mask-image: var(--mask); mask-size: 300% 100%; mask-repeat: no-repeat;
-         mask-clip: no-clip; mask-position: 100% 0; opacity: 0; color: var(--frost);
-         animation-timing-function: var(--ease-sweep); }
-  18%  { opacity: 1; }
-  82%  { mask-position: 0% 0; color: var(--frost); }
-  88%  { color: var(--ice); animation-timing-function: var(--ease-settle); } /* the lock */
-  100% { mask-image: var(--mask); mask-size: 300% 100%; mask-repeat: no-repeat;
-         mask-clip: no-clip; mask-position: 0% 0; }       /* colour: back to its own */
-}
-:root[data-entrance="run"] .freeze { animation: ng-freeze-left 1.6s backwards; }
-```
+The full keyframes, masks, easings and tokens are in [`prototype/proto.css.txt`](./prototype/proto.css.txt)
+(`ng-freeze-left`, `--mask*`, `--ease-sweep`, `--ease-settle`, `--frost`); the lock is a `color` step from
+`--frost` to `--ice` at 82 % to 88 %, and the animation runs `1.6s backwards`.
 
 Panes (buttons) add, on the same clock and delay:
 
@@ -206,7 +185,7 @@ Panes (buttons) add, on the same clock and delay:
   g b / .25)`, `88%` `rgb(from var(--ice) r g b / .9)`, `100%` unset.
 - **Frost texture** (`::after`, `inset: 0`, `mix-blend-mode: screen`, `pointer-events: none`):
   opacity `0% 0 → 30% .35 → 82% .12 → 100% 0`. Background, tiled at 160 px:
-  `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .95 0 0 0 0 1 0 0 0 1.2 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E")`.
+  the SVG turbulence tile in `proto.css.txt`.
 - **Glint** (`::before`, from delay + 1.4 s for 240 ms, `--ease-settle`): a
   `linear-gradient(115deg, transparent 40%, rgb(255 255 255 / .55) 50%, transparent 60%)` strip,
   `translate: 100% 0 → -100% 0`, opacity 0 outside it.

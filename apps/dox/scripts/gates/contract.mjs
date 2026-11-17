@@ -1,5 +1,5 @@
 /**
- * The page contract every gate script answers (built.md, "Gates"):
+ * The page contract every gate script answers (`context/dox/built/tier-2-gates.md`, "Gates"):
  *
  *   --list-pages      print a JSON array of site paths (`/tools/dwell-ledger/`, no `/gmt` prefix)
  *                     and exit 0, without launching a browser;
