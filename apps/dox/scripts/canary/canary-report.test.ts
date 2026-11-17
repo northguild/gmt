@@ -213,7 +213,7 @@ describe("runActions", () => {
     });
   });
 
-  it("rewrites an issue with its title, labels and the body on stdin", () => {
+  it("rewrites an issue with its title, adds and removes labels, and the body on stdin", () => {
     const { gh, calls } = fakeGh();
     const edit: Action = {
       kind: "edit",
@@ -221,6 +221,7 @@ describe("runActions", () => {
       issue: 41,
       title: "T",
       labels: ["canary", "temporal-compat"],
+      removeLabels: ["canary-dry-run"],
       body: "BODY",
       findings: ["f"],
     };
@@ -237,6 +238,8 @@ describe("runActions", () => {
           "canary",
           "--add-label",
           "temporal-compat",
+          "--remove-label",
+          "canary-dry-run",
           "--body-file",
           "-",
         ],
@@ -293,6 +296,7 @@ describe("runActions", () => {
       issue: 77,
       title: "T",
       labels: ["canary"],
+      removeLabels: [],
       body: "B",
       findings: [],
     };

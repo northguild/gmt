@@ -219,6 +219,10 @@ export function runActions(gh, actions) {
             "--title",
             action.title,
             ...action.labels.flatMap((label) => ["--add-label", label]),
+            ...action.removeLabels.flatMap((label) => [
+              "--remove-label",
+              label,
+            ]),
             "--body-file",
             "-",
           ],

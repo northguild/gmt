@@ -771,6 +771,7 @@ describe("summaryMarkdown: temporal-oracle", () => {
           issue: 77,
           title: "t",
           labels: ["canary"],
+          removeLabels: [],
           body: "b",
           findings: [],
         },

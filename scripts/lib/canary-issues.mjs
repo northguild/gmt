@@ -29,6 +29,8 @@ export const CANARY_LABEL = "canary";
 export const DRY_RUN_LABEL = "canary-dry-run";
 /** Extra label on a finding where GMT, a native Temporal engine and runtime data disagree. */
 export const COMPAT_LABEL = "temporal-compat";
+/** The labels a canary sets; a rewrite removes one of them no finding carries, never a person's own. */
+const CANARY_LABELS = [CANARY_LABEL, DRY_RUN_LABEL, COMPAT_LABEL];
 /** GitHub issue type every canary issue is created with. */
 export const ISSUE_TYPE = "Task";
 /**
@@ -241,13 +243,14 @@ const FORCED_ROW = {
  * @typedef {{ number: number, body: string, labels: { name: string }[] }} OpenIssue
  * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string,
  *     findings: string[] }
- *   | { kind: "edit", key: string, issue: number, title: string, labels: string[], body: string,
- *     findings: string[] }
+ *   | { kind: "edit", key: string, issue: number, title: string, labels: string[],
+ *     removeLabels: string[], body: string, findings: string[] }
  *   | { kind: "comment", key: string, issue: number, body: string }
  *   | { kind: "close", key: string, issue: number, reason: "clean", body: string }
  *   | { kind: "close", key: string, issue: number, reason: "folded", body?: undefined }} Action
  *   `key`: the group, `<workflow>` or `dry-run/<workflow>`; `findings`: the keys of the findings
- *   the issue lists
+ *   the issue lists; `removeLabels`: the canary labels on the issue that this run's findings no
+ *   longer carry
  */
 
 /** Prefix of a dry-run finding's key and of its group. */
@@ -1992,6 +1995,9 @@ function planGroup(found, group, openIssues, context) {
           issue: current.number,
           title,
           labels,
+          removeLabels: current.labels
+            .map((l) => l.name)
+            .filter((n) => CANARY_LABELS.includes(n) && !labels.includes(n)),
           body,
           findings: findingKeys,
         },

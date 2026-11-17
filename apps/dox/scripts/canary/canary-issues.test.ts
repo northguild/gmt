@@ -2765,6 +2765,7 @@ describe("the rolling issue", () => {
       issue: 77,
       title: "Canary findings: temporal-oracle",
       labels: ["canary", "temporal-compat"],
+      removeLabels: [],
     });
     expect(edit.body.split("\n")[0]).toBe(ROLL);
     expect(edit.body).toContain(`## ${D2_TITLE}`);
@@ -2774,6 +2775,25 @@ describe("the rolling issue", () => {
       issue: 77,
       body: `Since the last run: 2 still there.\n\nRun: ${RUN}`,
     });
+  });
+
+  it("removes a canary label no finding of this run carries, and keeps a person's label", () => {
+    const [edit] = run(
+      withNative({
+        "temporal-compat-check": cleanCheck(),
+        "temporal-oracle": couldNotRun("temporal-oracle", "no Temporal"),
+      }),
+      [
+        rollingIssue(77, bothPairs, ROLL, [
+          CANARY_LABEL,
+          "temporal-compat",
+          "priority",
+        ]),
+      ],
+    );
+    if (edit.kind !== "edit") throw new Error("expected edit");
+    expect(edit.labels).toEqual(["canary"]);
+    expect(edit.removeLabels).toEqual(["temporal-compat"]);
   });
 
   it("the comment names what is new, still there and gone", () => {
