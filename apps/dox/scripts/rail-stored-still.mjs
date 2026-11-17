@@ -38,7 +38,7 @@ const SAVED = 600;
 /** The rail, whichever panel it holds: the examples list or a widget. Named by its label. */
 const RAIL = 'aside[aria-label="Examples"], aside[aria-label="Widget panel"]';
 
-const PAGES_ARG = applyPageContract({ gate: GATE, pages: PAGES });
+const PAGES_ARG = await applyPageContract({ gate: GATE, pages: PAGES });
 const SELECTED = PAGES_ARG ?? PAGES;
 
 const args = process.argv.slice(2);

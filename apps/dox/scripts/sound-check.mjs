@@ -94,7 +94,7 @@ const PAGES = ["/", "/tools/zoned-earth/"];
 const SOUND_KEY = "dox:sound";
 const ENGINES = ["chromium", "firefox", "webkit"];
 
-const PAGES_ARG = applyPageContract({ gate: GATE, pages: PAGES });
+const PAGES_ARG = await applyPageContract({ gate: GATE, pages: PAGES });
 const SELECTED = PAGES_ARG ?? PAGES;
 
 const args = process.argv.slice(2);
