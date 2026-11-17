@@ -40,6 +40,12 @@ const CASES: { cue: string; rank: number; sound: string; peak: number }[] = [
 /** How many seeds each voice renders with. */
 const SEEDS = 20;
 
+/**
+ * A case renders 120 s of stereo audio, with a convolution hall for the arrival cues. Alone it
+ * takes about a second; beside the rest of the browser suite it ran past Vitest's 5 s default.
+ */
+const CASE_TIMEOUT_MS = 30_000;
+
 let browser: Browser;
 let page: Page;
 
@@ -50,7 +56,7 @@ beforeAll(async () => {
         import { VOICES } from "./voices";
         import { setMaster } from "./kit";
         window.peakOf = async (name, rank, seeds) => {
-          let loudest = 0;
+          const renders = [];
           for (let i = 0; i < seeds; i++) {
             let x = 1 + i * 7919;
             Math.random = () => (x = (x * 16807) % 2147483647) / 2147483647;
@@ -59,11 +65,13 @@ beforeAll(async () => {
             bus.connect(c.destination);
             setMaster(c, bus);
             VOICES[name](c, bus, 0.05, rank);
-            const rendered = await c.startRendering();
+            renders.push(c.startRendering());
+          }
+          let loudest = 0;
+          for (const rendered of await Promise.all(renders))
             for (let ch = 0; ch < rendered.numberOfChannels; ch++)
               for (const v of rendered.getChannelData(ch))
                 loudest = Math.max(loudest, Math.abs(v));
-          }
           return loudest;
         };`,
       resolveDir: resolve(import.meta.dirname, "../src/lib/sound"),
@@ -98,5 +106,6 @@ describe("the ported cues play no louder than their audition sounds", () => {
       expect(loudest).toBeGreaterThan(0);
       expect(loudest).toBeLessThanOrEqual(peak);
     },
+    CASE_TIMEOUT_MS,
   );
 });
