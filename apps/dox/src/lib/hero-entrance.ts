@@ -10,8 +10,11 @@
  * is on screen at once. If the failsafe has shown the page already (`static`), the attribute stays
  * and only the dawn starts. It also marks `gmt-entrance-t0`, starts the globe's dawn and, once the
  * last animation has ended, sets `done`. A sky or globe that failed to load counts as ready: the
- * entrance never waits on something that will not come.
+ * entrance never waits on something that will not come. At `t0`, after `run` is set, it also
+ * starts the entrance's sounds (`sound/entrance.ts`), which follow the animations until `done`.
  */
+
+import { entranceSounds } from "./sound/entrance";
 
 export interface HeroEntranceOptions {
   /** Resolves when the sky has drawn for the first time. */
@@ -72,13 +75,23 @@ export function runHeroEntrance(options: HeroEntranceOptions): void {
     // Nothing animates once the entrance has ended: a card that appears later (hidden, then
     // shown) must not play the opening pop again, so the rules keyed on `run` stop matching.
     if (root.dataset["entrance"] === "run") {
+      // A whisper as each piece freezes in and a shing on each glint, on the animations' own
+      // starts. Heard only if the engine is running; a first visit has had no gesture, so it is
+      // silent.
+      const quiet = entranceSounds(root);
       const rest = setTimeout(() => {
+        quiet();
         if (root.dataset["entrance"] === "run")
           root.dataset["entrance"] = "done";
       }, ENTRANCE_MS);
-      signal.addEventListener("abort", () => clearTimeout(rest), {
-        once: true,
-      });
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(rest);
+          quiet();
+        },
+        { once: true },
+      );
     }
   };
 

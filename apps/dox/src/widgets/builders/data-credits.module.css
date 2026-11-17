@@ -73,6 +73,18 @@
   line-height: 1.5;
   color: var(--gmt-ice-dim);
 
+  /* It comes in from its button (gmt-primitives.css, native panels): from the right beside the
+     stack, from below over the corner button, from above under the corner-start one. */
+  --gmt-panel-from: 0.5rem 0;
+
+  &[data-placement="corner"] {
+    --gmt-panel-from: 0 0.5rem;
+  }
+
+  &[data-placement="corner-start"] {
+    --gmt-panel-from: 0 -0.5rem;
+  }
+
   /* One column: each credit's label on its own line, its text under it, a gap before the next. */
   & dl {
     margin: 0;

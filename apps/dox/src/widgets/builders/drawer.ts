@@ -12,8 +12,12 @@
  * goes through the site's order (`lib/esc-layers.ts`): a list or a panel open inside the drawer
  * closes first, and the press that closes the drawer returns focus to the toggle. Which
  * interaction may open it is the caller's.
+ *
+ * Every open and close after mount plays the opening or closing Steel breath (`lib/sound`). The close
+ * button and the caller's toggle carry `data-cue`, so the press ping does not double it.
  */
 import { registerEscLayer } from "~/lib/esc-layers";
+import { cue } from "~/lib/sound/cue";
 import { edgeControl } from "./edge-control";
 import { gateAttr, type GateOption } from "./gate";
 import { html, type SafeHtml } from "./html";
@@ -104,9 +108,13 @@ export function wireDrawer(el: HTMLElement, o: DrawerWire): DrawerHandle {
     toggle.setAttribute("aria-expanded", String(next));
     if (next) focus?.focus();
     else if (hadFocus && returnFocus) toggle.focus();
+    // After the change is committed. Mount never reaches here (the drawer starts closed).
+    cue(next ? "open" : "close");
     o.onToggle?.(next);
   };
 
+  toggle.setAttribute("data-cue", "");
+  close.setAttribute("data-cue", "");
   toggle.setAttribute("aria-controls", region.id);
   toggle.setAttribute("aria-expanded", "false");
   close.addEventListener("click", () => set(false), { signal });
