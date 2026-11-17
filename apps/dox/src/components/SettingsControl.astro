@@ -1,0 +1,15 @@
+---
+/**
+ * The header's settings control (DOX-G10): a gear button, last in the bar, that opens a popover with
+ * the "Dark theme" switch, the mute button, the volume fader and the Aura switch. The markup is
+ * `settings-control.ts`'s; `lib/settings-control.ts` wires it.
+ */
+import { settingsControl } from "./settings-control";
+---
+
+<Fragment set:html={settingsControl().toString()} />
+
+<script>
+  import { mountSettingsControl } from "~/lib/settings-control";
+  mountSettingsControl();
+</script>

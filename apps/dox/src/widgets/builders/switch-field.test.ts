@@ -44,4 +44,15 @@ describe("switchField", () => {
       screen.getByRole("switch", { name: "<i>x</i>" }),
     ).toBeInTheDocument();
   });
+
+  it("is the same switch when small", async () => {
+    const fx = renderHtml(
+      switchField({ label: "Aura", size: "small", checked: true }),
+    );
+    const sw = screen.getByRole("switch", { name: "Aura" });
+    expect(sw).toBeChecked();
+    await userEvent.click(sw);
+    expect(sw).not.toBeChecked();
+    await expectNoAxeViolations(fx.host);
+  });
 });
