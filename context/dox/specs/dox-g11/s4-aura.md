@@ -75,4 +75,4 @@ Modify:
   once, hears the Ice cavern come in under the ping; switches tabs and back; flips the Aura
   switch; moves the fader; mutes; reloads muted and hears nothing.
   `innerWidth`×`innerHeight` = the size recorded in slice 1.
-- `built.md` Sound section: the aura's bus level, fades, landing-only load and hidden-page stop.
+- `built/tier-3-sound.md`: the aura's bus level, fades, landing-only load and hidden-page stop.

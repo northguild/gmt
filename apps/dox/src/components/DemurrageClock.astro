@@ -42,6 +42,7 @@ const html = renderDemurrageClockTemplate("demurrage-clock").value;
   import { mountDemurrageClock } from "../lib/demurrage-clock-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=demclock&wa=` permalink seeds the widget with the values it names;
@@ -55,5 +56,9 @@ const html = renderDemurrageClockTemplate("demurrage-clock").value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "demurrage-clock",
+      () => import("../lib/webmcp/tools/demurrage-clock"),
+    );
   }
 </script>

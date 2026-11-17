@@ -36,6 +36,7 @@ const html = renderColumnTimestampBridgeTemplate("column-timestamp-bridge", {}).
   import { mountColumnTimestampBridge } from "../lib/column-timestamp-bridge-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("colbridge");
@@ -46,5 +47,9 @@ const html = renderColumnTimestampBridgeTemplate("column-timestamp-bridge", {}).
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "column-timestamp-bridge",
+      () => import("../lib/webmcp/tools/column-timestamp-bridge"),
+    );
   }
 </script>

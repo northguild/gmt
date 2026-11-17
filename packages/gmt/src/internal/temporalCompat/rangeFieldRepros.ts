@@ -260,7 +260,9 @@ export const rangeFieldCases: readonly RangeFieldCase[] = [
 
 /**
  * `"complete"` when the engine's range holds every field text of the case the stated number of times, else the range text itself
- * (so a canary shows what the engine printed).
+ * (so a canary shows what the engine printed). A locale the runtime has no data for formats in the
+ * fallback locale and cannot show a defect of its own data, so it answers `"complete"`
+ * (ECMA-402 ResolveLocale falls back to the default locale).
  *
  * @param locale the locale
  * @param options the formatter options (UTC is added)
@@ -276,6 +278,9 @@ export function rangeFieldProblem(
   from: number,
   to: number,
 ): string {
+  if (Intl.DateTimeFormat.supportedLocalesOf([locale]).length === 0) {
+    return "complete";
+  }
   const range = new Intl.DateTimeFormat(locale, {
     ...options,
     timeZone: "UTC",

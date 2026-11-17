@@ -164,7 +164,7 @@ const ALL_PAGES = [
   })),
 ];
 
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: [...new Set(ALL_PAGES.map((p) => p.path))],
 });

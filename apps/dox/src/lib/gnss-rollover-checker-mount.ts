@@ -24,7 +24,6 @@
  * widget with the mount's `signal`. The one drag handle is a native range, and the date
  * field is its typed equivalent.
  */
-import { Temporal } from "@js-temporal/polyfill";
 import { defineElements } from "~/widgets/define";
 import {
   aside,
@@ -80,6 +79,8 @@ import {
   ROLLOVER_LINKS,
   ROLLOVER_NOW_MODES,
   ROLLOVER_PRESETS,
+  RIGHT_DATE_TEXT,
+  clockNow,
   dateOfDay,
   dayOfDate,
   fuseYears,
@@ -117,6 +118,24 @@ const NBSP = "\u00a0";
 const MAX_CALLS = GNSS_WEEK_COUNTERS.length * 3 + 11;
 const WIDGET_NAME = "gnss-rollover-checker";
 
+/**
+ * The widest line the calls frame can show: the firmware's reading of a week with a fractional
+ * time of week, against a typed build date with an extended year and nanoseconds. Held hidden,
+ * so the frame scrolls (or not) the same way at every point of the slider.
+ */
+const CALLS_SIZER = callLines([
+  {
+    fn: "gnssWeekToUtc",
+    args: [
+      "GPS-LNAV",
+      8888,
+      888888.888888888,
+      { notBefore: "-888888-88-88T88:88:88.888888888Z" },
+    ],
+    result: null,
+  },
+]).plain;
+
 const TABLE_COLUMNS = ["Counter", "Width", "Next wrap", "Time left"];
 
 /** The widest instants a plate shows, so the plates keep their width from one reading to the next. */
@@ -124,6 +143,19 @@ const SAMPLE_INSTANT = "8888-88-88T88:88:88Z";
 const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
   "hero-reports": [SAMPLE_INSTANT],
   "hero-wrong-from": [SAMPLE_INSTANT],
+};
+
+/**
+ * The widest line each plate can show, so a narrow plate keeps its wrap while the slider moves.
+ * The verdict is off by at most one era of the widest counter (8192 weeks, five digits of days),
+ * with a leap second's hours, minutes and seconds.
+ */
+const PLATE_LINE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
+  "hero-reports": [RIGHT_DATE_TEXT, "a date 88888 days 88 h 88 min 88 s early"],
+  "hero-wrong-from": [
+    "the build date's reading, one era on",
+    "the end of era 888",
+  ],
 };
 
 /** Every line the countdown's sub line can show, so its box keeps the longest. */
@@ -152,6 +184,7 @@ function plateList(read: RolloverRead | null): Plate[] {
   const specs = (read?.plates ?? platesOf(null)).slice(0, 2);
   return specs.map((s) => {
     const samples = PLATE_SAMPLES[s.role];
+    const lineSamples = PLATE_LINE_SAMPLES[s.role];
     return {
       caption: s.caption,
       value: s.value,
@@ -159,6 +192,7 @@ function plateList(read: RolloverRead | null): Plate[] {
       ...(s.series === undefined ? {} : { series: s.series }),
       ...(s.quiet === true ? { quiet: true } : {}),
       ...(samples === undefined ? {} : { samples }),
+      ...(lineSamples === undefined ? {} : { lineSamples: [lineSamples] }),
     };
   });
 }
@@ -428,6 +462,7 @@ export function renderGnssRolloverCheckerTemplate(
         copyText: "",
         gate: "codeframe",
         minLines: MAX_CALLS,
+        sizer: CALLS_SIZER,
       })}</div>`,
     )}${grow(
       html`<div id="${id("output-slot")}">${callOutput({
@@ -460,10 +495,6 @@ interface Controller {
   syncPreset(): void;
   release(): void;
 }
-
-/** The reader's clock as a UTC instant to the second. */
-const nowIso = (): string =>
-  Temporal.Now.instant().toString({ smallestUnit: "second" });
 
 function setupWidget(
   root: HTMLElement,
@@ -518,7 +549,7 @@ function setupWidget(
     const today = nowMode() === "today";
     if (today && ticker === null && !signal.aborted) {
       ticker = setInterval(() => {
-        if (nowIso() !== lastNow) render();
+        if (clockNow() !== lastNow) render();
       }, 1000);
     } else if (!today && ticker !== null) {
       clearInterval(ticker);
@@ -557,7 +588,7 @@ function setupWidget(
   function render(): void {
     showFields();
     const state = readState();
-    lastNow = nowIso();
+    lastNow = clockNow();
     const read = readRollover(lib, state, lastNow);
     last = read;
 
@@ -582,6 +613,7 @@ function setupWidget(
         code,
         gate: "codeframe",
         minLines: MAX_CALLS,
+        sizer: CALLS_SIZER,
       }),
     );
     const out = outputOf(read.status, calls);

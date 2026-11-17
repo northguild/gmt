@@ -28,9 +28,11 @@ import {
 } from "./holiday-codec";
 import type { HolidayLib } from "./holiday-lib";
 import {
+  attributeRules,
   monthName,
   weekdayShort,
   withoutWalks,
+  type Attribution,
   type RulePair,
 } from "./holiday-widgets";
 import { literal } from "./literal";
@@ -567,6 +569,36 @@ export function yearOf(state: BuilderState): number | null {
     : null;
 }
 
+/** What the page reads for one state: nothing when the year is outside the range a link carries. */
+export type HolidayFacts =
+  | { ok: false }
+  | {
+      ok: true;
+      year: number;
+      rules: HolidayRule[];
+      attribution: Attribution;
+    };
+
+/**
+ * The facts the page draws for one state: the year, the rules the rows ask for and the
+ * library's attribution of every date to its rule. A year outside the range is the one
+ * refusal, and it makes no library call.
+ */
+export function holidayFacts(
+  state: BuilderState,
+  lib: HolidayLib,
+): HolidayFacts {
+  const year = yearOf(state);
+  if (year === null) return { ok: false };
+  const rules = rulesOf(state);
+  const attribution = attributeRules(
+    lib,
+    { timeZone: state.zone, weekend: state.weekend, rules },
+    year,
+  );
+  return { ok: true, year, rules, attribution };
+}
+
 // ---------------------------------------------------------------------------
 // The printed call
 // ---------------------------------------------------------------------------
@@ -606,6 +638,13 @@ export function callSource(state: BuilderState, year: number): string {
 // ---------------------------------------------------------------------------
 
 export const NO_SIGNAL_TEXT = "⟨ NO SIGNAL — invalid input ⟩";
+
+/** The year note when a rule is invalid, so no calendar was built. */
+export const YEAR_NOTE_NULL = `${NO_SIGNAL_TEXT}: the calendar cannot be built until every rule is valid.`;
+export const YEAR_RANGE = `the year is not a whole number from ${YEAR_MIN} to ${YEAR_MAX}`;
+export const YEAR_NOTE_INVALID = `${NO_SIGNAL_TEXT}: ${YEAR_RANGE}.`;
+/** A row's line when there is no year to place it in. */
+export const ROW_NO_YEAR = `${NO_SIGNAL_TEXT}: there is no year to place it in.`;
 
 /** Why `isValidHolidayRule` says no, by kind. It names what to check; the
  *  library holds the rule. */

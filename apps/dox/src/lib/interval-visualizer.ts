@@ -469,3 +469,89 @@ export const INTERVAL_OPERATIONS: IntervalOperationInfo[] = [
     isArray: true,
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Facts: every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+/** One of the four interval operations, as gmt exports it. */
+export type IntervalFn = (
+  aStart: string,
+  aEnd: string,
+  bStart: string,
+  bEnd: string,
+) => ZonedInterval | ZonedInterval[] | null;
+
+/** What the visualizer needs from gmt (`loadIntervalLib` in `zones-lib.ts`). */
+export interface IntervalLib {
+  fns: Record<IntervalOperationId, IntervalFn>;
+  isValidZonedDateTime(v: string): boolean;
+  isValidZonedRange(args: {
+    value1: string;
+    value2: string;
+    options?: { allowEqual?: boolean };
+  }): boolean;
+}
+
+export interface IntervalState {
+  aStart: string;
+  aEnd: string;
+  bStart: string;
+  bEnd: string;
+}
+
+export type IntervalResults = Record<
+  IntervalOperationId,
+  ZonedInterval | ZonedInterval[] | null
+>;
+
+export interface IntervalFacts {
+  aValid: boolean;
+  bValid: boolean;
+  /** Both intervals are valid, so the four operations ran. */
+  valid: boolean;
+  /** Each operation's answer as the library returned it; `null` as a whole when `valid` is false. */
+  results: IntervalResults | null;
+}
+
+/** An interval is valid when both ends are zoned date-times and the end is not before the start. */
+function isIntervalValid(
+  lib: IntervalLib,
+  start: string,
+  end: string,
+): boolean {
+  return (
+    lib.isValidZonedDateTime(start) &&
+    lib.isValidZonedDateTime(end) &&
+    lib.isValidZonedRange({
+      value1: start,
+      value2: end,
+      options: { allowEqual: true },
+    })
+  );
+}
+
+/**
+ * The checks and the four operations the redraw makes, returned unchanged. The mount draws from
+ * this and the WebMCP tool answers with it, so the two cannot disagree. No DOM and no gmt
+ * import: `IntervalLib` comes in from the caller.
+ */
+export function intervalFacts(
+  state: IntervalState,
+  lib: IntervalLib,
+): IntervalFacts {
+  const aValid = isIntervalValid(lib, state.aStart, state.aEnd);
+  const bValid = isIntervalValid(lib, state.bStart, state.bEnd);
+  const valid = aValid && bValid;
+  if (!valid) return { aValid, bValid, valid, results: null };
+  const results = {} as IntervalResults;
+  for (const op of INTERVAL_OPERATIONS) {
+    results[op.id] = lib.fns[op.id](
+      state.aStart,
+      state.aEnd,
+      state.bStart,
+      state.bEnd,
+    );
+  }
+  return { aValid, bValid, valid, results };
+}

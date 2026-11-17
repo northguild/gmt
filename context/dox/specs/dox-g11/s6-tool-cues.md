@@ -71,5 +71,5 @@ Modify:
 - Listening pass at the size recorded in slice 1, Chrome on macOS: the owner drags a handle,
   arrows a slider, types in a playground, makes a readout show NO SIGNAL, opens a widget from
   Dox. `innerWidth`×`innerHeight` = the size recorded in slice 1.
-- `built.md` Sound section: tool hooks, the reader-driven rule, the 150 ms loading delay; Tier 2
+- `built/tier-3-sound.md`: tool hooks, the reader-driven rule, the 150 ms loading delay; Tier 2
   kit entries for `range`, `handle`, `readout` and `textInput` mention their cue.

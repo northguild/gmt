@@ -226,6 +226,23 @@
       "state": "still-needed"
     },
     {
+      "defects": ["D31"],
+      "title": "D31 — a coptic date before AM 1 prints 1 - year and no era (internal/copticEra.ts)",
+      "trigger": "every engine's compat verdict passes the D31 repro: en-u-ca-coptic prints the signed year -285 and the same era name as a later date for ISO -0001-07-10 (ICU-23277; unicode-org/icu#4081)",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D32"],
+      "title": "D32 — the Islamic era changes in the middle of 1 Muharram of year 1 (internal/islamicEpochEra.ts)",
+      "trigger": "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D32 repro: islamic-civil, islamic-tbla and islamic-umalqura print the same era at the first and the last hour of their epoch day in UTC (WebKit 331724)",
+      "probes": 1,
+      "failing": 0,
+      "state": "out-of-scope",
+      "engines": ["webkit"]
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — non-ISO months added and counted one month at a time (heap OOM for in-range amounts; temporalCompat/largeMonthSpan.ts)",
       "trigger": "a js-temporal release adds and differences non-ISO months in bounded work: each D9 probe reads at most 100 Intl dates for 1,200 months",

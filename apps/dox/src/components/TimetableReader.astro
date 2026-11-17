@@ -48,6 +48,7 @@ const html = renderTimetableReaderTemplate("timetable-reader", {}).value;
   import { mountTimetableReader } from "../lib/timetable-reader-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("timetable");
@@ -58,5 +59,9 @@ const html = renderTimetableReaderTemplate("timetable-reader", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "timetable-reader",
+      () => import("../lib/webmcp/tools/timetable-reader"),
+    );
   }
 </script>

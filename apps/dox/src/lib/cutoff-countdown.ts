@@ -257,6 +257,22 @@ export function countdownNullReason(
   return "invalid-instant";
 }
 
+/** Floors a real instant string to the whole second, for a live reading.
+ *  Sub-second precision from `Temporal.Now.instant()` is real but not
+ *  meaningful here, and left in it would print as noise in the duration
+ *  text every single tick. Presentation only: the floored instant is
+ *  still a real instant, and is what `isPastCutoff`/`timeToCutoff` are
+ *  then asked about, never a result computed by this rounding. */
+export function floorToSecond(text: string): string {
+  try {
+    return Temporal.Instant.fromEpochMilliseconds(
+      Math.floor(epochMs(text) / 1000) * 1000,
+    ).toString();
+  } catch {
+    return text;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Drawing: the axis window and the slider's own instant
 // ---------------------------------------------------------------------------

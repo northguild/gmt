@@ -18,6 +18,8 @@
  *   pages         "dist" when the gate lists every built page (`a11y-axe`, `a11y-media`), so the
  *                 runner reads `dist` itself; the default asks the script with `--list-pages`
  *                 (`a11y-tab-walk` lists a subset, so it answers for itself)
+ *   costs         true when the script answers `--list-page-costs`: under `--shard`, the runner
+ *                 deals its pages by measured minutes, not by name (`contract.mjs`, `shardOf`)
  *
  * The page lists are not here: the runner asks each script with `--list-pages`, so nothing is
  * copied out of a gate.
@@ -50,6 +52,7 @@ const ENGINES = ["chromium", "webkit", "firefox"];
  * @property {boolean} [base]
  * @property {boolean} [browserArg]
  * @property {"dist"} [pages]
+ * @property {boolean} [costs]
  */
 
 /** @type {Gate[]} */
@@ -82,6 +85,7 @@ export const GATES = [
     fullBrowsers: null,
     themes: false,
     needs: null,
+    costs: true,
   },
   {
     id: "data-credits-check",

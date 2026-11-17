@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Readouts-hold-still gate (context/dox/reference/visual-design.md, "Layout stability",
- * and the Timetable Reader's rules in context/dox/built.md).
+ * and the Timetable Reader's rules in context/dox/built/tier-2-gates.md).
  *
  * Dragging a handle must move nothing except the values themselves. For each
  * tool page in `TOOLS` (the table below lists the handles of the first seven; a later
@@ -37,7 +37,7 @@
  *
  * Controls are found by ARIA role and accessible name inside the widget root
  * (`lib/locate.mjs`), never by a style class or a role attribute. The structural parts
- * that have no role or name are `data-gate` hooks, listed in `context/dox/built.md`,
+ * that have no role or name are `data-gate` hooks, listed in `context/dox/built/tier-2-platform.md`,
  * "Gate hooks".
  *
  * A `TOOLS` entry may carry optional fields:
@@ -115,10 +115,16 @@
  * `extraWidths` on a TOOLS entry adds viewports for that tool alone: the Timetable
  * Reader's two-column band (1920 and 2000) is checked there and nowhere else.
  *
+ * `minutes` on every TOOLS entry is that tool's measured time for one WebKit run of this gate
+ * (`--browsers webkit --pages /tools/<slug>/`), the slowest engine. The weekly legs are dealt by it
+ * (`--list-page-costs`), so the heavy tools never share a leg; only the ratios matter, so measure
+ * a new tool on the same machine as the others, and measure again when a change makes its sweep
+ * much longer or shorter (more presets, controls or widths).
+ *
  * Widths: each `--widths` entry is a viewport width (default 1440,390). Each
  * widget root is also forced to 360 and 300 px wide at a 1440 viewport, the
  * widths of the /dox rail. With the default browsers (Chromium and WebKit) that
- * is the documented gate in context/dox/built.md: 1440, 390, 360 and 300 px.
+ * is the documented gate in context/dox/built/tier-2-gates.md: 1440, 390, 360 and 300 px.
  *
  * Serve a build statically first (never `astro dev` on 4321, never the owner's
  * dev server), for example:
@@ -136,8 +142,9 @@
  * sandbox on the author's machine.
  *
  * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`): `--list-pages` prints the
- * tool pages and exits; `--pages /tools/<slug>/,...` runs only those (an unknown path exits 2); with
- * `GATE_REPORT` set, every failure is also a finding and the run ends with its measured count.
+ * tool pages and exits; `--list-page-costs` prints each one's `minutes` and exits;
+ * `--pages /tools/<slug>/,...` runs only those (an unknown path exits 2); with `GATE_REPORT` set,
+ * every failure is also a finding and the run ends with its measured count.
  */
 
 import { launchBrowser } from "./lib/browser-launch.mjs";
@@ -197,7 +204,7 @@ const DRAWN_PART = {
 };
 /** The selector of each part a tool names as moving by design: its own box moves with the
  *  slider and it is left out of the comparison, with everything inside it. It is a
- *  `data-gate="moving"` hook (see "Gate hooks" in context/dox/built.md). */
+ *  `data-gate="moving"` hook (see "Gate hooks" in context/dox/built/tier-2-platform.md). */
 const MOVING_PART = {
   // The leap-second chart's date cursor: the horizontal guide, the dot, the vertical pin and
   // the date tag (the leap-chart builder marks these four, not the band's own tag). The cursor
@@ -230,6 +237,7 @@ const TRIP_BORDER = [
 const TOOLS = [
   {
     slug: "departure-board",
+    minutes: 16.3,
     root: '[data-widget="departure-board"]',
     presets: [
       "shuttle-headway",
@@ -248,6 +256,7 @@ const TOOLS = [
   },
   {
     slug: "punctuality-board",
+    minutes: 3.9,
     root: '[data-widget="punctuality-board"]',
     presets: ["fifteen-minute", "sixty-and-120", "day-based", "fall-back"],
     // The early and second-late handles appear only in presets that use them;
@@ -271,6 +280,7 @@ const TOOLS = [
   },
   {
     slug: "eta-drift",
+    minutes: 2.5,
     root: '[data-widget="eta-drift"]',
     presets: ["vessel-slide", "est-after-act", "req-beats-est", "one-estimate"],
     controls: [{ role: "slider", name: "Drag the tolerance" }],
@@ -278,6 +288,7 @@ const TOOLS = [
   },
   {
     slug: "timetable-reader",
+    minutes: 12.0,
     root: '[data-widget="timetable-reader"]',
     presets: [
       "fall-back",
@@ -311,6 +322,7 @@ const TOOLS = [
   },
   {
     slug: "free-time-ledger",
+    minutes: 10.1,
     root: '[data-widget="free-time-ledger"]',
     presets: [
       "friday-three-days",
@@ -339,6 +351,7 @@ const TOOLS = [
   },
   {
     slug: "dwell-ledger",
+    minutes: 5.5,
     root: '[data-widget="dwell-ledger"]',
     // "no-zone" returns null, so it is left out; every other preset returns a
     // value.
@@ -366,6 +379,7 @@ const TOOLS = [
   },
   {
     slug: "bl-date-stamp",
+    minutes: 2.2,
     root: '[data-widget="bl-date-stamp"]',
     // "no-zone" returns no date, so it is left out; every other preset returns
     // a value.
@@ -388,6 +402,7 @@ const TOOLS = [
      the legend, the tables and the call frame are measured. */
   {
     slug: "gnss-week-decoder",
+    minutes: 2.4,
     root: '[data-widget="gnss-week-decoder"]',
     presets: ["galileo-2019", "lnav-2024", "same-reading-two-dates"],
     controls: [
@@ -402,6 +417,7 @@ const TOOLS = [
   },
   {
     slug: "satellite-clock-converter",
+    minutes: 1.4,
     root: '[data-widget="satellite-clock-converter"]',
     presets: ["utc-2024", "galileo-first-instant", "beidou-reading"],
     controls: [{ role: "slider", name: "Step through the leap seconds" }],
@@ -413,6 +429,7 @@ const TOOLS = [
   },
   {
     slug: "gnss-rollover-checker",
+    minutes: 1.7,
     root: '[data-widget="gnss-rollover-checker"]',
     // The presets that check on a stated date: the slider is live only there.
     presets: ["navic-built-2020", "navic-fixed-era", "galileo-built-2024"],
@@ -427,6 +444,7 @@ const TOOLS = [
   },
   {
     slug: "leap-second-timeline",
+    minutes: 2.4,
     root: '[data-widget="leap-second-timeline"]',
     presets: ["from-2000", "last-insertion", "after-the-table"],
     controls: [{ role: "slider", name: "Move the date" }],
@@ -439,6 +457,7 @@ const TOOLS = [
   },
   {
     slug: "terrestrial-time-stack",
+    minutes: 3.7,
     root: '[data-widget="terrestrial-time-stack"]',
     presets: [
       "utc-2026",
@@ -459,6 +478,7 @@ const TOOLS = [
   },
   {
     slug: "double-precision-meter",
+    minutes: 2.7,
     root: '[data-widget="double-precision-meter"]',
     presets: ["mid-2026", "lost", "past-6771", "j2000", "far"],
     controls: [{ role: "slider", name: "Move the year" }],
@@ -472,6 +492,7 @@ const TOOLS = [
   },
   {
     slug: "elapsed-vs-clock-difference",
+    minutes: 1.4,
     root: '[data-widget="elapsed-vs-clock"]',
     presets: ["across-2016", "twenty-four-years", "no-insertions"],
     controls: [{ role: "slider", name: "Move the end" }],
@@ -483,6 +504,7 @@ const TOOLS = [
   },
   {
     slug: "holiday-rule-builder",
+    minutes: 4.5,
     root: '[data-widget="holiday-rule-builder"]',
     presets: [
       "chain",
@@ -503,6 +525,7 @@ const TOOLS = [
   },
   {
     slug: "observance-comparator",
+    minutes: 0.8,
     root: '[data-widget="observance-comparator"]',
     presets: ["adjacent"],
     // The last year, stepped ten times each way: the plates and the table
@@ -516,6 +539,7 @@ const TOOLS = [
   },
   {
     slug: "moving-feasts",
+    minutes: 2.2,
     root: '[data-widget="moving-feasts"]',
     presets: ["third-wednesday", "last-sunday-march", "fifth-friday"],
     controls: [{ role: "slider", name: "Year slider" }],
@@ -527,6 +551,7 @@ const TOOLS = [
   },
   {
     slug: "cron-in-a-zone",
+    minutes: 0.5,
     root: '[data-widget="cron-in-a-zone"]',
     presets: ["london-spring", "sydney-every-five"],
     // The year field, stepped three times each way. Every row, plate and tick
@@ -541,6 +566,7 @@ const TOOLS = [
   },
   {
     slug: "leap-day-birthday",
+    minutes: 3.6,
     root: '[data-widget="leap-day-birthday"]',
     presets: [
       "leap-day-birth",
@@ -565,6 +591,7 @@ const TOOLS = [
   },
   {
     slug: "expiry-calculator",
+    minutes: 9.4,
     root: '[data-widget="expiry-calculator"]',
     presets: [
       "year-across-leap",
@@ -600,6 +627,7 @@ const TOOLS = [
     // FIN-95. No handle: the reader types a stamp or an instant, or picks an instant preset.
     // The first preset reads a stamp and the last is refused, so each value is typed from both.
     slug: "fix-timestamp-reader",
+    minutes: 3.0,
     root: '[data-widget="fix-timestamp-reader"]',
     presets: ["milliseconds", "second-60-ordinary"],
     controls: [],
@@ -646,6 +674,7 @@ const TOOLS = [
     // SPA-52. No handle: the reader types a code or an instant, picks a preset or clicks a digit chip.
     // The first preset reads a Code B and the second is refused, so each value is typed from both.
     slug: "ccsds-time-code-decoder",
+    minutes: 4.2,
     root: '[data-widget="ccsds-time-code-decoder"]',
     presets: ["leap-2016-b", "minutes-only"],
     controls: [],
@@ -697,6 +726,7 @@ const TOOLS = [
     // lanes' marks and the cursor move by design, so each lane is `drawn`; the two readouts, the
     // comparison line and every hold keep their boxes.
     slug: "code-b-day-ruler",
+    minutes: 2.8,
     root: '[data-widget="code-b-day-ruler"]',
     presets: ["after-leap-day", "day-366", "century"],
     controls: [{ role: "slider", name: "Day of year" }],
@@ -725,6 +755,7 @@ const TOOLS = [
     // second pass chooses every NOTAM preset and checks that section 1 and the two NOTAM plates
     // (heroes) stay where they were; the rest of section 2 moves by design.
     slug: "report-time-resolver",
+    minutes: 3.8,
     root: '[data-widget="report-time-resolver"]',
     presetName: "METAR preset",
     presets: ["month-end", "february-31", "tie", "offset-reference"],
@@ -741,6 +772,7 @@ const TOOLS = [
     // FIN-96. No handle: the reader types a value date or an ISO date, or picks a preset for each.
     // The first read preset reads a date and the last is refused, so each value is typed from both.
     slug: "swift-value-date-reader",
+    minutes: 2.8,
     root: '[data-widget="swift-value-date-reader"]',
     presets: ["twenty", "whole-subfield"],
     controls: [],
@@ -786,6 +818,7 @@ const TOOLS = [
     // RAI-99. No handle: the reader types a GTFS time, or seconds and days to write, or picks a preset.
     // The first read preset reads a time and the last is refused, so each value is typed from both.
     slug: "gtfs-time-reader",
+    minutes: 3.5,
     root: '[data-widget="gtfs-time-reader"]',
     presets: ["next-day", "space"],
     controls: [],
@@ -839,6 +872,7 @@ const TOOLS = [
     // RAI-100. No handle: the reader types a service date, a stop time and a zone, or picks a preset.
     // The first preset reads a date and the second refuses it, so each box is typed from both.
     slug: "gtfs-service-day-clock",
+    minutes: 2.2,
     root: '[data-widget="gtfs-service-day-clock"]',
     presets: ["spring-forward", "no-noon"],
     controls: [],
@@ -878,6 +912,7 @@ const TOOLS = [
     // gate records what sits above them: the hero plates, and each value's hold. The pastes below
     // all keep the border trip's six rows, so a cell is compared at the same row count.
     slug: "gtfs-trip-board",
+    minutes: 2.9,
     root: '[data-widget="gtfs-trip-board"]',
     presets: ["border", "night-train", "no-noon"],
     controls: [],
@@ -920,6 +955,7 @@ const TOOLS = [
     // preset. The ruler's marks move by design. The first read preset reads and the sixth is
     // refused, so each value is typed from both.
     slug: "ptp-clock-converter",
+    minutes: 4.2,
     root: '[data-widget="ptp-clock-converter"]',
     presets: ["announced-37", "out-of-range"],
     controls: [],
@@ -981,7 +1017,11 @@ const TOOLS = [
  */
 /** The pages this gate checks, as site paths. */
 const SITE_PAGES = TOOLS.map((t) => `/tools/${t.slug}/`);
-const PAGES_ARG = applyPageContract({ gate: GATE, pages: SITE_PAGES });
+const PAGES_ARG = await applyPageContract({
+  gate: GATE,
+  pages: SITE_PAGES,
+  costs: Object.fromEntries(TOOLS.map((t) => [`/tools/${t.slug}/`, t.minutes])),
+});
 /** The page, browser and width the measurement in progress belongs to, for its findings. */
 let current = { page: null, browser: null, width: null };
 /** The widget the measurement in progress belongs to, as a finding target when nothing finer is. */

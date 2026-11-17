@@ -17,6 +17,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { CURATED_TIMEZONES } from "./curated-timezones";
 import { formatLocal, toEpochMs, type DayCell } from "./dwell-ledger";
+import type { FreeTimeLib } from "./ledger-lib";
 import type { DayMark, PlateSpec } from "./ledger-widgets";
 
 type FirstDay = "eventDay" | "nextDay";
@@ -591,7 +592,7 @@ export function freeTimePlates(args: {
 // Why null
 // ---------------------------------------------------------------------------
 
-type NullReason =
+export type NullReason =
   | "invalid-start"
   | "invalid-end"
   | "unknown-zone"
@@ -685,4 +686,40 @@ function epochMs(iso: string): number {
       return Number.NaN;
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Facts: every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+export interface FreeTimeFacts {
+  /** `freeTimeExpiry(clockStart, freeDays, terms)`, or `null`. */
+  freeTime: FreeTimeResult | null;
+  /** `chargeableDays(clockStart, clockEnd, freeDays, terms)`, or `null`. */
+  charges: ChargesResult | null;
+  /** Why `charges` is `null`; `null` when the dwell was charged. */
+  reason: NullReason | null;
+  /** Why `freeTime` is `null`; `null` when it was read. */
+  expiryReason: NullReason | null;
+}
+
+/**
+ * The two library calls the redraw makes, with the reasons they refused when they did, returned
+ * unchanged. The mount draws from this and the WebMCP tool answers with it, so the two cannot
+ * disagree. No DOM and no gmt import: `FreeTimeLib` comes in from the caller.
+ */
+export function freeTimeFacts(
+  state: LedgerState,
+  lib: FreeTimeLib,
+): FreeTimeFacts {
+  const tiers = tiersOf(state);
+  const days = freeDaysOf(state);
+  const freeTime = lib.freeTimeExpiry(state.clockStart, days, termsOf(state));
+  const charges = lib.chargeableDays(state.clockStart, state.clockEnd, days, {
+    ...chargeTermsOf(state),
+    ...(tiers === undefined ? {} : { tiers: tiers ?? [] }),
+  });
+  const reason = charges === null ? explainNull(state, lib) : null;
+  const expiryReason = freeTime === null ? explainExpiryNull(state, lib) : null;
+  return { freeTime, charges, reason, expiryReason };
 }

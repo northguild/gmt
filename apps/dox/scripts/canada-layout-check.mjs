@@ -62,7 +62,7 @@ const CHECKER_PAGES = [
   "/check/canada-2026-clock-change/",
   "/check/morocco-2026-clock-change/",
 ];
-const PAGES_ARG = applyPageContract({ gate: GATE, pages: CHECKER_PAGES });
+const PAGES_ARG = await applyPageContract({ gate: GATE, pages: CHECKER_PAGES });
 const PAGES = PAGES_ARG ?? CHECKER_PAGES;
 
 const args = process.argv.slice(2);

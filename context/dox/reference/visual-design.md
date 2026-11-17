@@ -21,14 +21,9 @@ disciplined content surface.**
 
 Cool blue→green on a blue-tinted near-black. Everything is a token.
 
-| Role               | Value     | Use                                                        |
-| ------------------ | --------- | ---------------------------------------------------------- |
-| Void               | `#03080C` | Page base                                                  |
-| Cyan (primary)     | `#22D3EE` | Borders, active state, primary accent; **Dox's voice**     |
-| Spring (secondary) | `#4ADE80` | Success, live values, ticking data; **the reader's voice** |
-| Teal (deep)        | `#0E7490` | Idle borders, dividers, inactive chrome                    |
-| Ice (body)         | `#CFEAF2` | **Long-form body copy**                                    |
-| Signal-lost        | `#F5A524` | Sentinel returns only — the one warm colour                |
+Roles (values in `gmt-tokens.css`): Void (page base), Cyan (primary accent, borders, active state;
+**Dox's voice**), Spring (success, live values; **the reader's voice**), Teal (idle borders,
+dividers), Ice (**long-form body copy**) and Signal-lost (amber, sentinel returns only).
 
 - **Body copy is Ice, not cyan or green**, and clears **7:1** measured on real rendered pages.
   Glow is decoration, never a contrast mechanism.
@@ -40,15 +35,10 @@ Cool blue→green on a blue-tinted near-black. Everything is a token.
   Cut-off Ruler and the Timetable Reader. The two also differ in pattern and in words, never
   in colour alone: a double edge is a repeated hour and a dashed edge a skipped one. A new
   chart follows the pair. The Crossing Clock uses the edges but purple for both, and the two
-  ledgers flag a short or long day in gold (built.md § Tier 2, "The DST colours").
-- **The NorthGuild mark** is the northguild.dev ice-frost mark: a pane and a sheen at 7 % and
-  5 % ice fading to nothing, a 1 px edge and ridge and a `</>` glyph, all from `--gmt-ice`. The
-  header it sits in is dark in both themes, so it never follows the page theme.
-- **Role colours in the transcript** resolve from one `--gmt-hive-role` per turn, so recolouring
-  a role is one declaration.
-- **The Dox mark** — the faceted crystal — is one geometry module (`src/lib/dox-mark.ts`) shared
-  by the chat and the header link. It turns clockwise while Dox works and settles square when
-  the answer lands (Web Animations API, `rotateZ` under a fixed `rotateX` tilt).
+  ledgers flag a short or long day in gold.
+- **Role colours in the transcript** resolve from one `--gmt-hive-role` per turn.
+- **The Dox mark** (the faceted crystal) is one geometry module (`src/lib/dox-mark.ts`) shared by the
+  chat and the header link. It turns clockwise while Dox works and settles square when the answer lands.
 
 ## Typography
 
@@ -152,7 +142,7 @@ Only these things move. Anything not listed stays still.
 - **The arrival gesture** (`.gmt-enter`, `lib/enter.ts`): one fade from 92% scale over 0.5 s on
   the spring curve, used by the globe canvas, the globe's zone list, the Crossing Clock's faces, the
   `/dox` crystal and the numbered cards of every tool widget. It plays once, when the content is
-  ready, and never on a value change. See design-system.md § Entrance.
+  ready, and never on a value change. See design-system-motion.md § Entrance.
 - **Cross-document view transitions** (`gmt-view-transitions.css`). The header and sidebar swap
   in place; only the content cross-fades. From northguild.dev the NorthGuild mark and wordmark
   stay perfectly still, the rest of the bar dissolves over 240 ms and the page over 600 ms while the
@@ -164,32 +154,16 @@ Only these things move. Anything not listed stays still.
 - **The meteor** on the landing's night sky (`lib/space-fx.ts`): a faint streak about once a
   minute, never over the copy, an open drawer or the Earth. Under reduced motion none falls.
 - **The landing entrance** (`lib/hero-entrance.ts`, `gmt-entrance-freeze.css`): the hero opens as
-  plain void with the copy on it, and one sequence brings the rest of the page in. It starts (`t0`)
-  when the sky is drawn at its true place and the globe is ready, or 800 ms after navigation at the
-  latest.
-  - **The copy freezes over text already there.** The eyebrow, the title and the tagline are on
-    screen at full opacity from the first paint, so the page's largest text never waits for the sky.
-    Their freeze starts with the page (the tagline 0.12 s after the title) and takes 1.6 s: the
-    letters show in a pale frost colour at half strength, a sweep brings them to full strength left
-    to right, then a short lock beat turns them to their own.
-  - **The buttons and the header freeze into place.** The three buttons (0.75 s after `t0`, 0.08 s
-    apart) take the same 1.6 s, but sweep in from out of sight. The header's
-    NorthGuild link and site title freeze at `t0` on a direct load; a page reached through a view
-    transition leaves the header still. Each button also carries a grain of frost that fades over
-    its freeze and a glint that crosses it once, 1.4 s into its freeze (two pseudo-elements, each
-    with its own animation).
-  - **The sky** fades in once drawn: the stars over 1.4 s from `t0`, the Milky Way over 1.8 s from
-    0.3 s. If the failsafe showed the page first, the sky fades in over 0.6 s when drawn.
-  - **The Earth dawns.** Its light rises from black, starting 0.35 s after `t0` and reaching full
-    at 2.4 s (a 2.05 s ramp); the spin starts when the light is full, and the zoom stack arms with it.
-  - **The location card pops last,** from 30% scale to full over 0.65 s, starting 2 s after `t0`,
-    on a spring curve that overshoots a little. It grows out of its pin.
+  plain void with the copy on it, and one sequence brings the rest in at `t0` (sky drawn and globe
+  ready, or 800 ms after navigation at the latest).
+  - **The copy freezes over text already there,** at full opacity from first paint, so the largest
+    text never waits for the sky. Buttons and the header freeze into place; the Earth dawns from
+    black, then spins; the location card pops last on a spring that overshoots a little.
   - Only opacity, a mask sweep, colour, border colour, the card's scale and the glint's translate
-    animate: no blur, filter or shadow. Each element runs one animation per property, and none
-    holds its end state.
-  - **Reduced motion** shows the copy still and fades the rest (0.6 s, the same order; the card fades
-    over 0.4 s); the Earth is lit at once. **Forced colours** keep the sweep and drop the frost
-    colour.
+    animate: no blur, filter or shadow. Timings and order are in the stylesheet and its gate
+    ([design-system-motion.md](design-system-motion.md)).
+  - **Reduced motion** shows the copy still and fades the rest in the same order; the Earth is lit
+    at once. **Forced colours** keep the sweep and drop the frost colour.
 - **The stars follow the camera** (`lib/sky.ts`): they are the real sky behind the Earth for the
   clock and the camera, so a drag moves them the other way at the Earth's speed, the ambient spin
   carries them, and at rest they turn once a day. They are drawn only when the view moves. A drag
@@ -207,7 +181,7 @@ The Pulse next-run dot (`/pulse/`): one slow dot beside each card's next run, op
 under reduced motion. Nothing else on the page moves.
 
 Everything is gated behind `prefers-reduced-motion`, `prefers-reduced-transparency` and
-  `prefers-contrast` (`gmt-a11y.css`).
+`prefers-contrast` (`gmt-a11y.css`).
 
 ## Layout stability
 
@@ -216,7 +190,7 @@ them must not jump.
 
 - **Reserve single-line slots.** A slot that is empty at first keeps one line
   (`:empty::before { content: "\200b" }`), so text arriving later moves nothing.
-- **Ease height changes in result regions** with `.gmt-grow` (design-system.md § Smooth growth).
+- **Ease height changes in result regions** with `.gmt-grow` (design-system-widgets.md § Smooth growth).
 - **Keep `.gmt-grow` inert without JS.** At rest it is `height: auto`; the wrapper is added at
   runtime, so a reader without JS sees the page as the server rendered it.
 - **Keep section 1 unwrapped.** It holds the controls, and their popovers and focus rings must
@@ -229,7 +203,7 @@ them must not jump.
   and no wrap, and test that the bounding boxes do not change across the handle's range.
 - **A cell whose content comes and goes keeps its size with a hidden sizer.** The sizer has the
   shape of the largest thing the cell can hold and shares one grid cell with the live content,
-  so the cell needs no measured height (design-system.md § Drawn charts).
+  so the cell needs no measured height (design-system-charts.md).
 
 ## Performance
 

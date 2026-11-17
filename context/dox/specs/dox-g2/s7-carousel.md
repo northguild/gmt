@@ -1,7 +1,7 @@
 # Slice 7 · Landing carousel
 
 [Index](./index.md) · Builds on [slice 2](./s2-hero-space.md#layout) and [slice 4](./s4-entrance.md).
-Binding rules: [built.md § Tier 1](../../built.md), [built.md § Tier 3](../../built.md#tier-3--hud-chrome),
+Binding rules: [Tier 1](../../built/tier-0-1-generator.md#landing-carousel), [Tier 3](../../built/tier-3-chrome.md),
 APG [Carousel, tabbed](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/), without autoplay.
 
 ## Goal
@@ -135,4 +135,4 @@ pager is not shown and every page reads in order.
 
 - [ ] Index gates pass, plus `pnpm --filter @gmt/dox gates --only hero-space`.
 - [ ] Every fact and link trimmed from the landing is on its section's guide.
-- [ ] `built.md` Tier 1 describes the paged landing; Tier 3 lists the `carousel` builder.
+- [ ] `built/tier-0-1-generator.md` describes the paged landing; `tier-3-chrome.md` lists the `carousel` builder.

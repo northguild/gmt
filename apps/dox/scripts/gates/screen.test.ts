@@ -63,7 +63,7 @@ const summary = {
     {
       id: "visual-diff",
       status: "SKIP",
-      detail: "needs --baseline (built.md Runbooks: gate baseline)",
+      detail: "needs --baseline (built/tier-6-runbooks.md: gate baseline)",
     },
   ],
 };
@@ -81,7 +81,7 @@ describe("formatGatesScreen", () => {
       "         readout-moved  /tools/dwell-ledger/  chromium 390  .gmt-dwell-total moved 4px",
       "  FLAKY  canada-clock-still    failed once, passed on retry        1m02s",
       "  SKIP   globe-smoke           not selected (no globe page changed)",
-      "  SKIP   visual-diff           needs --baseline (built.md Runbooks: gate baseline)",
+      "  SKIP   visual-diff           needs --baseline (built/tier-6-runbooks.md: gate baseline)",
       "logs: /abs/path/apps/dox/.gates/   summary: .gates/summary.json",
     ]);
   });

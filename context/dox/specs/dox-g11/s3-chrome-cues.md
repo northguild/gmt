@@ -99,5 +99,5 @@ shing at most. Reduced motion is silent.
   the mobile menu, the zone drawer, the `/dox` rail and the data credits; toggles the theme;
   copies a code block; and navigates from a guide back to the landing to hear the entrance.
   `innerWidth`×`innerHeight` = the size recorded in slice 1.
-- `built.md` Sound section: which hook fires which cue, the `data-cue` rule, entrance timing
+- `built/tier-3-sound.md`: which hook fires which cue, the `data-cue` rule, entrance timing
   read from computed style.

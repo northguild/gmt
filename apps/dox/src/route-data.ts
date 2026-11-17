@@ -21,12 +21,14 @@ import {
   ogImageKey,
   removeHead,
   upsertHead,
+  webmcpHeadEntries,
 } from "~/lib/head-tags";
 import { leanSidebar, skipDividers } from "~/lib/lean-sidebar";
 import { docsRelPath, markdownTwinSlugs } from "~/lib/md-twin";
 import { ogCards, ogImageAlt } from "~/lib/og-cards";
 import { pageIndustries, type PageEntry } from "~/lib/page-industries";
 import { SITE_URL } from "~/lib/site";
+import { ORIGIN_TRIAL_TOKENS } from "~/lib/webmcp/origin-trial";
 
 /** The site's description, as `starlight({ description })` in `astro.config.mjs` sets it. */
 const SITE_DESCRIPTION =
@@ -128,5 +130,8 @@ export const onRequest = defineRouteMiddleware(async (context) => {
 
   let head = route.head;
   for (const tag of added) head = upsertHead(head, tag);
+  for (const tag of webmcpHeadEntries(id, ORIGIN_TRIAL_TOKENS)) {
+    head = upsertHead(head, tag);
+  }
   route.head = head;
 });

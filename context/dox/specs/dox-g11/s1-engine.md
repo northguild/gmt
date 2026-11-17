@@ -126,5 +126,5 @@ the press plays. A saved mute survives a reload. No console error.
   buttons, tabs and a sidebar `<summary>` on a guide and hears the Sonar ping after the first
   press, and silence on a link. Record the size here: `innerWidth`×`innerHeight` = ____ × ____.
   Every later pass runs at that size.
-- `built.md` gains the "Sound" section under Tier 3: modules, the key and its default rule,
+- `built/tier-3-sound.md` holds: modules, the key and its default rule,
   unlock, the audio-clock rule, the press hook and its exceptions, traps.

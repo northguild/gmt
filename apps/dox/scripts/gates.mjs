@@ -5,7 +5,7 @@
  *
  *     pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--skip <gate,...>] [--pages <path,...>]
  *                             [--browsers chromium,webkit] [--themes dark,light]
- *                             [--tier pr|weekly|local] [--retries 1] [--shard <i>/<n>]
+ *                             [--tier pr|weekly|local] [--retries 1] [--shard <i>/<n>] [--deadline <minutes>]
  *                             [--baseline <path to base apps/dox>] [--no-build] [--plan] [--json]
  *
  * In order: lock (`.gates/lock`), early exit when no file the site depends on changed, build
@@ -14,6 +14,10 @@
  * flake under load), retry a failed gate on its failing pages, report. Exit 0 when nothing FAILed,
  * 1 when a gate failed or measured nothing, 2 for usage, a live lock, a failed build or a gate that
  * exited 2.
+ *
+ * `--deadline <minutes>` caps the whole run, counted from its start, so a CI leg writes its summary
+ * before the job's own timeout kills it: at the deadline the gate in flight is stopped, the gates
+ * after it are not run, and each of those rows is a FAIL with `outOfTime`.
  *
  * Every gate script speaks the page contract (`gates/contract.mjs`, `gates/findings.mjs`); the
  * gates and their tiers are data in `gates/registry.mjs`, the selection is `gates/select.mjs`.
@@ -32,7 +36,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { shardOf } from "./gates/contract.mjs";
+import { shardOf, stdoutDrained } from "./gates/contract.mjs";
 import { buildPages } from "./gates/graph.mjs";
 import {
   GATES,
@@ -69,7 +73,8 @@ function usage(message) {
   console.error(
     "usage: pnpm --filter dox gates [--all] [--against <ref>] [--only <gate,...>] [--skip <gate,...>] [--pages <path,...>]\n" +
       "                               [--browsers chromium,webkit] [--themes dark,light] [--tier pr|weekly|local]\n" +
-      "                               [--retries 1] [--shard <i>/<n>] [--baseline <path>] [--no-build] [--plan] [--json]",
+      "                               [--retries 1] [--shard <i>/<n>] [--deadline <minutes>] [--baseline <path>] [--no-build]\n" +
+      "                               [--plan] [--json]",
   );
   process.exit(2);
 }
@@ -86,6 +91,7 @@ function parseArgs(argv) {
     tier: "local",
     retries: 1,
     shard: null,
+    deadline: null,
     baseline: null,
     noBuild: false,
     plan: false,
@@ -114,6 +120,10 @@ function parseArgs(argv) {
         usage("--shard needs <i>/<n> with 1 <= i <= n, e.g. 1/3");
       }
       o.shard = { i: Number(m[1]), n: Number(m[2]) };
+    } else if (a === "--deadline") {
+      o.deadline = Number(next());
+      if (!Number.isInteger(o.deadline) || o.deadline < 1)
+        usage("--deadline needs a whole number of minutes, at least 1");
     } else if (a === "--baseline") o.baseline = path.resolve(next());
     else if (a === "--no-build") o.noBuild = true;
     else if (a === "--plan") o.plan = true;
@@ -154,6 +164,10 @@ function git(args) {
   const r = spawnSync("git", args, { cwd: ROOT, encoding: "utf8" });
   return r.status === 0 ? r.stdout.trim() : null;
 }
+
+/** Milliseconds left before `--deadline`; Infinity without one. */
+const timeLeft = () =>
+  opts.deadline === null ? Infinity : opts.deadline * 60_000 - elapsed();
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -202,6 +216,23 @@ function listPages(gate) {
   }
   listCache.set(gate.id, pages);
   return pages;
+}
+
+/** A costed gate's minutes per page, from its own `--list-page-costs`; undefined for the others. */
+function pageCosts(gate) {
+  if (!gate.costs) return undefined;
+  const r = spawnSync(
+    process.execPath,
+    [path.join(SCRIPTS, gate.script), "--list-page-costs"],
+    { cwd: DOX, encoding: "utf8" },
+  );
+  if (r.status !== 0) {
+    console.error(
+      `gates: ${gate.script} --list-page-costs failed\n${r.stderr}`,
+    );
+    process.exit(2);
+  }
+  return JSON.parse(r.stdout);
 }
 
 // --- lock, cleanup ---------------------------------------------------------------------------
@@ -312,8 +343,11 @@ if (opts.plan) {
 
 mkdirSync(GATES_DIR, { recursive: true });
 
-/** Runs a command with its output in a log; resolves its exit code. */
-function run(command, args, { cwd, env, log }) {
+/**
+ * Runs a command with its output in a log; resolves its exit code, or `TIMED_OUT` when it was
+ * stopped after `limitMs`.
+ */
+function run(command, args, { cwd, env, log, limitMs = GATE_TIMEOUT_MS }) {
   return new Promise((resolve) => {
     const fd = openSync(log, "a");
     const p = spawn(command, args, {
@@ -326,7 +360,7 @@ function run(command, args, { cwd, env, log }) {
     const timer = setTimeout(() => {
       timedOut = true;
       p.kill("SIGTERM");
-    }, GATE_TIMEOUT_MS);
+    }, limitMs);
     p.on("close", (code, signal) => {
       clearTimeout(timer);
       closeSync(fd);
@@ -441,7 +475,8 @@ function groupsFor(gate) {
     gate.browsers.length === 0
       ? []
       : opts.browsers.filter((b) => gate.browsers.includes(b));
-  const keep = (list) => shardOf(list, opts.shard);
+  const costs = opts.shard ? pageCosts(gate) : undefined;
+  const keep = (list) => shardOf(list, opts.shard, costs);
   if (gate.browsers.length > 0 && browsers.length === 0)
     return { groups: [], dropped, reason: "browser" };
   if (opts.all && gate.fullBrowsers) {
@@ -525,6 +560,7 @@ if (opts.plan) {
       );
     }
   }
+  await stdoutDrained();
   bail(0);
 }
 
@@ -618,6 +654,7 @@ async function invoke(gate, group, theme, pages, tag, attempt) {
       cwd: step.cwd,
       env: { GATE_REPORT: report },
       log,
+      limitMs: Math.min(GATE_TIMEOUT_MS, Math.max(0, timeLeft())),
     });
     if (code !== 0) break;
   }
@@ -627,11 +664,12 @@ async function invoke(gate, group, theme, pages, tag, attempt) {
   else if (code !== 0 || findings.length > 0) status = "FAIL";
   else if (measured === null || measured === 0) status = "FAIL";
   const timedOut = code === TIMED_OUT;
+  const outOfTime = timedOut && timeLeft() <= 0;
   const empty =
     code === 0 &&
     findings.length === 0 &&
     (measured === null || measured === 0);
-  return { status, code, findings, measured, empty, timedOut, log };
+  return { status, code, findings, measured, empty, timedOut, outOfTime, log };
 }
 
 const rows = [buildRow];
@@ -660,7 +698,17 @@ for (const entry of todo) {
     rows.push({
       id: gate.id,
       status: "SKIP",
-      detail: "needs --baseline (built.md Runbooks: gate baseline)",
+      detail: "needs --baseline (built/tier-6-runbooks.md: gate baseline)",
+    });
+    continue;
+  }
+
+  if (timeLeft() <= 0) {
+    rows.push({
+      id: gate.id,
+      status: "FAIL",
+      outOfTime: true,
+      detail: `not run: the ${opts.deadline}m deadline had passed`,
     });
     continue;
   }
@@ -672,6 +720,10 @@ for (const entry of todo) {
   let invocation = 0;
   for (const group of entry.groups) {
     for (const theme of themesOf(gate)) {
+      if (timeLeft() <= 0) {
+        final = { ...final, status: "FAIL", outOfTime: true };
+        break;
+      }
       invocation += 1;
       const tag = [
         gate.id,
@@ -684,7 +736,10 @@ for (const entry of todo) {
       let result = await invoke(gate, group, theme, pages, tag, 0);
       for (
         let retry = 1;
-        retry <= opts.retries && result.status === "FAIL" && !result.timedOut;
+        retry <= opts.retries &&
+        result.status === "FAIL" &&
+        !result.timedOut &&
+        timeLeft() > 0;
         retry++
       ) {
         const failing = [
@@ -705,6 +760,7 @@ for (const entry of todo) {
           findings: [...(final.findings ?? []), ...result.findings],
           empty: final.empty || result.empty,
           timedOut: final.timedOut || result.timedOut,
+          outOfTime: final.outOfTime || result.outOfTime,
           error: result.status === "ERROR" || final.error,
           log: result.log,
         };
@@ -718,7 +774,10 @@ for (const entry of todo) {
     row.findings = final.findings;
     row.moreIn = path.relative(DOX, final.log ?? lastLog);
     row.logTail = logTail(final.log ?? lastLog, 10);
-    if (final.findings.length === 0) {
+    if (final.outOfTime) {
+      row.outOfTime = true;
+      row.detail = `stopped at the ${opts.deadline}m deadline`;
+    } else if (final.findings.length === 0) {
       row.detail = final.timedOut
         ? "timed out after 90m"
         : final.empty
@@ -760,6 +819,7 @@ const summary = {
   headline,
   context,
   durationMs: elapsed(),
+  deadlineMinutes: opts.deadline,
   rows,
   logsDir: `${GATES_DIR}/`,
   summaryPath: path.relative(DOX, path.join(GATES_DIR, "summary.json")),
@@ -773,5 +833,6 @@ console.log(opts.json ? JSON.stringify(summary, null, 2) : screen);
 appendStepSummary(screen);
 
 cleanup();
+await stdoutDrained();
 // FLAKY and SKIP pass. A gate that exited 2, or a failed build, is a usage-class error.
 process.exit(usageError ? 2 : failed > 0 ? 1 : 0);

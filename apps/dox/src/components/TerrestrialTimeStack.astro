@@ -36,6 +36,7 @@ const html = renderTerrestrialTimeStackTemplate("terrestrial-time-stack").value;
   import { mountTerrestrialTimeStack } from "../lib/terrestrial-time-stack-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("ttstack");
@@ -46,5 +47,9 @@ const html = renderTerrestrialTimeStackTemplate("terrestrial-time-stack").value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "terrestrial-time-stack",
+      () => import("../lib/webmcp/tools/terrestrial-time-stack"),
+    );
   }
 </script>

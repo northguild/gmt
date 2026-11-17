@@ -81,10 +81,11 @@ describe("range, week-year patterns", () => {
  * Slice 3c before ISO year 1, in the calendars the polyfill cannot project directly (`TEMPORAL_STAND_IN`
  * for coptic and ethiopic, `readable()` for indian). Each expected year is the Temporal year of
  * the endpoint (native Temporal, which projects these calendars before ISO year 1), written as
- * Intl prints it: ECMA-402 FormatDateTimePattern turns a year <= 0 into 1 - year, so coptic
- * year -285 (ISO -0001-07-10) prints 286 and -283 prints 284; ethiopic prints the era year of the
- * `aa` era (5491, 5493) because its years before AM 1 have that era; indian is one signed era,
- * so -79 and -77 print as they are, with the locale's minus. The kok formatters print a week-year
+ * Intl prints it: coptic has the one era `am` for every year (Intl era/monthCode Table 2, 4.1.12:
+ * eraYear is year), so coptic year -285 (ISO -0001-07-10) and -283 print as they are, with the
+ * locale's minus and the era name (D31, `copticEra.ts`; ICU prints 286 and 284 with no era);
+ * ethiopic prints the era year of the `aa` era (5491, 5493) because its years before AM 1 have
+ * that era; indian is one signed era, so -79 and -77 print as they are, with the locale's minus. The kok formatters print a week-year
  * in their range pattern (kok-u-ca-coptic and kok-u-ca-ethiopic are flagged), so the repair
  * must write these years; kok-u-ca-indian is not flagged and ICU's text stands.
  */
@@ -97,10 +98,10 @@ describe("range, calendar year before ISO year 1", () => {
 
   it.each`
     locale                    | from               | to                 | expected                        | label
-    ${"kok-u-ca-coptic"}      | ${"-000001-07-10"} | ${"0001-07-10"}    | ${"18-11-286 - 18-11-284"}      | ${"coptic -285 to -283"}
-    ${"kok-Deva-u-ca-coptic"} | ${"-000001-07-10"} | ${"0001-07-10"}    | ${"18-11-286 - 18-11-284"}      | ${"kok-Deva coptic -285 to -283"}
-    ${"kok-u-ca-coptic"}      | ${"-000002-07-10"} | ${"-000001-07-10"} | ${"18-11-287 - 18-11-286"}      | ${"coptic -286 to -285"}
-    ${"kok-u-ca-coptic"}      | ${"0001-01-01"}    | ${"0001-12-31"}    | ${"8-5-284 - 7-5-283"}          | ${"coptic -283 to -282, across the coptic new year"}
+    ${"kok-u-ca-coptic"}      | ${"-000001-07-10"} | ${"0001-07-10"}    | ${"18-11--285 - 18-11--283 AM"} | ${"coptic -285 to -283"}
+    ${"kok-Deva-u-ca-coptic"} | ${"-000001-07-10"} | ${"0001-07-10"}    | ${"18-11--285 - 18-11--283 AM"} | ${"kok-Deva coptic -285 to -283"}
+    ${"kok-u-ca-coptic"}      | ${"-000002-07-10"} | ${"-000001-07-10"} | ${"18-11--286 - 18-11--285 AM"} | ${"coptic -286 to -285"}
+    ${"kok-u-ca-coptic"}      | ${"0001-01-01"}    | ${"0001-12-31"}    | ${"8-5--283 - 7-5--282 AM"}     | ${"coptic -283 to -282, across the coptic new year"}
     ${"kok-u-ca-ethiopic"}    | ${"-000001-07-10"} | ${"0001-07-10"}    | ${"18-11-5491 - 18-11-5493 AA"} | ${"ethiopic aa 5491 to 5493"}
     ${"kok-u-ca-ethiopic"}    | ${"-000002-07-10"} | ${"-000001-07-10"} | ${"18-11-5490 - 18-11-5491 AA"} | ${"ethiopic aa 5490 to 5491"}
     ${"kok-u-ca-ethiopic"}    | ${"0001-01-01"}    | ${"0001-12-31"}    | ${"8-5-5493 - 7-5-5494 AA"}     | ${"ethiopic aa 5493 to 5494"}

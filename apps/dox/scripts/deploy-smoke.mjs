@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * Live redirect and routing checks for Dox after a deploy: the live rows of the redirect matrix
- * (context/domination/issues/CORE-86.md, Decisions D3 to D5). Run by
+ * (the Worker's routing in worker/index.ts and the asset rules in wrangler.jsonc). Run by
  * .github/workflows/deploy-dox.yml after `wrangler deploy`; run it by hand with
  *
  *     node apps/dox/scripts/deploy-smoke.mjs
  *
  * Node 22+, no dependencies. Rows 26-29 (the landing page, the zone and the landing's
- * robots.txt) belong to the landing repo's deploy and are checked by hand (runbook section 5).
+ * robots.txt) belong to the landing repo's deploy and are checked by hand after a deploy.
  *
  * Requests go through `node:https`, not `fetch`: undici adds its own `sec-fetch-mode`
  * header, and the (N) rows must send exactly the headers a browser following a link sends.

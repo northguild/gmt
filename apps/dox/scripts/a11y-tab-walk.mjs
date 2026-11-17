@@ -41,7 +41,7 @@ import { distPages, openRail, parseSweep, sweep } from "./lib/a11y-sweep.mjs";
 const GATE = "a11y-tab-walk";
 const EXTRA_PRESSES = 20;
 
-const run = parseSweep({
+const run = await parseSweep({
   gate: GATE,
   pages: tabWalkPages(distPages(GATE)),
   defaults: { widths: "1440,390" },

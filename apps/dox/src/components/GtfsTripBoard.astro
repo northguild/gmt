@@ -45,6 +45,7 @@ const html = renderGtfsTripBoardTemplate("gtfs-trip-board", {}).value;
   import { mountGtfsTripBoard } from "../lib/gtfs-trip-board-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=gtfstrip&wa=` permalink seeds the widget with the preset or the values it names;
@@ -57,5 +58,9 @@ const html = renderGtfsTripBoardTemplate("gtfs-trip-board", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "gtfs-trip-board",
+      () => import("../lib/webmcp/tools/gtfs-trip-board"),
+    );
   }
 </script>

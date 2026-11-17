@@ -80,4 +80,4 @@ tool page plays Low double buzz once.
 - Listening pass at the size recorded in slice 1, Chrome on macOS: the owner asks Dox two
   questions, stops one mid-answer, types in the composer, and opens a widget from an answer.
   `innerWidth`×`innerHeight` = the size recorded in slice 1.
-- `built.md` Tier 6 § Chat client: one line on the chat cues and where they hook.
+- `built/tier-3-sound.md`: one line on the chat cues and where they hook.

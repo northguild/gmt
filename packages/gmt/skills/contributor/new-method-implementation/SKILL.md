@@ -52,7 +52,7 @@ Follow existing patterns for method names:
 - Array return type: return `[]` on invalid input.
 - Object return type (`{ ... } | null`): return `null` on invalid input.
 - `bigint` return type (precision converters/parsers): return `0n`; `span/` functions return `null`.
-- Canonical table: `context/coding-standards.md` § API Contract.
+- Canonical table: `context/coding-standards/api-contract.md` § API Contract.
 - Calendar arithmetic follows TC39 Temporal (`overflow: "constrain"` clamps Jan 31 + 1 month to Feb 29/28); parsers reject impossible dates.
 
 5. Add tests

@@ -561,3 +561,130 @@ export function buildValuePreset(
 export function isSentinel(result: string): boolean {
   return result === "";
 }
+
+// ---------------------------------------------------------------------------
+// Facts: every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+/** What the inspector needs from gmt (`loadDstLib` in `zones-lib.ts`). */
+export interface DstLib {
+  getDstTransitions(zone: string, year: number): DstTransition[];
+  convertPlainDateTimeToZoned(
+    value: string,
+    timeZone: string,
+    options?: { disambiguation?: string },
+  ): string;
+}
+
+/** The strip's state: which transition it scrubs, its window and where the thumb sits. */
+export interface DstScrub {
+  activeTransition: DstTransition | null;
+  tickerWindow: TickerWindow | null;
+  handleMinuteOfDay: number | null;
+}
+
+/**
+ * Which transition the strip scrubs for a zone, year and preset, and where its thumb starts:
+ * the first gap for `gap`, the first overlap for `overlap`, and nothing for any other preset.
+ */
+export function dstScrubFor(
+  zone: string,
+  year: number,
+  preset: string,
+  lib: DstLib,
+): DstScrub {
+  const transitions = lib.getDstTransitions(zone, year);
+  const activeTransition =
+    preset === "gap"
+      ? (transitions.find(isGap) ?? null)
+      : preset === "overlap"
+        ? (transitions.find(isOverlap) ?? null)
+        : null;
+  let tickerWindow = activeTransition
+    ? getTickerWindow(activeTransition, zone)
+    : null;
+  // The thumb starts in the middle of the skipped or repeated range: the transition's
+  // own local reading is the range's end for a gap, which is outside it.
+  let handleMinuteOfDay =
+    activeTransition && tickerWindow ? zoneMidpointMinutes(tickerWindow) : null;
+  if (handleMinuteOfDay !== null && Number.isNaN(handleMinuteOfDay)) {
+    handleMinuteOfDay = null;
+    tickerWindow = null;
+  }
+  return { activeTransition, tickerWindow, handleMinuteOfDay };
+}
+
+export interface DstState {
+  zone: string;
+  year: number;
+  /** The preset's id; `ValuePreset` for the four the page offers. */
+  preset: string;
+  /** Already defaulted: `compatible` when the control reads empty. */
+  disambiguation: string;
+  scrub: DstScrub;
+}
+
+export interface DstFacts {
+  /** `getDstTransitions(zone, year)`. */
+  transitions: DstTransition[];
+  /** The zoned value the probe starts from; `""` when the zone has no transition to probe. */
+  value: string;
+  /** `value` with its zone and offset stripped; `""` when there is no value. */
+  plainValue: string;
+  /** `convertPlainDateTimeToZoned(plainValue, zone, { disambiguation })`; `""` when refused or not asked. */
+  result: string;
+  /** The transitions on the probe's own local date. */
+  onDate: DstTransition[];
+  /** The probe's local time in hours; NaN when there is no probe. */
+  probeHour: number;
+  classification: ProbeClassification;
+}
+
+/**
+ * Every library call the redraw makes: the year's transitions, the probe resolved with the
+ * disambiguation, and what that probe experienced. The mount draws from this and the WebMCP tool
+ * answers with it, so the two cannot disagree. No DOM and no gmt import: `DstLib` comes in from
+ * the caller.
+ */
+export function dstFacts(state: DstState, lib: DstLib): DstFacts {
+  const { zone, year, preset, disambiguation: dis, scrub } = state;
+  const transitions = lib.getDstTransitions(zone, year);
+
+  // Scrubbable presets take their value from the strip; fixed ones do not.
+  const scrubbable =
+    scrub.activeTransition !== null &&
+    scrub.tickerWindow !== null &&
+    scrub.handleMinuteOfDay !== null;
+  const value = scrubbable
+    ? buildZonedValueFromMinutes(
+        zone,
+        localDateAtTransition(scrub.activeTransition!, zone) ?? "",
+        scrub.handleMinuteOfDay!,
+      )
+    : buildValuePreset(preset as ValuePreset, zone, transitions);
+
+  // The call resolves the wall time, so the [zone] and any offset the "transition"
+  // preset embeds are stripped: an offset would answer the ambiguity `disambiguation`
+  // exists to resolve.
+  const plainValue = value ? toPlainLocalDateTime(value) : "";
+  const result = plainValue
+    ? lib.convertPlainDateTimeToZoned(plainValue, zone, { disambiguation: dis })
+    : "";
+
+  // A probe can sit inside a transition's range, so classify against the transitions on
+  // its own date. A fixed preset is not assumed normal: a southern zone's "Exact
+  // transition instant" is the start of the repeated hour.
+  const { onDate, probeHour } = probeContext(plainValue, transitions, zone);
+  const classification = classifyProbeResult(result, onDate, probeHour, zone, {
+    disambiguation: dis,
+  });
+  return {
+    transitions,
+    value,
+    plainValue,
+    result,
+    onDate,
+    probeHour,
+    classification,
+  };
+}

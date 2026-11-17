@@ -63,8 +63,8 @@ import {
   dayCells,
   dayCountText,
   dwellMarks,
+  dwellFacts,
   dwellPlates,
-  explainNull,
   fitLedgerCanvas,
   formatDayLabel,
   formatDwell,
@@ -78,9 +78,9 @@ import {
   type DwellResult,
   type LedgerCanvas,
 } from "./dwell-ledger";
-import { GMT_MODULES } from "./gmt-modules";
+import { loadDwellLib, type DwellLib } from "./ledger-lib";
 import { hourDurationText, type PlateSpec } from "./ledger-widgets";
-import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { onceDestroy, type MountFn } from "./widget-mount";
 import { codeSpan } from "./widget-ui";
 
 export type { DwellLedgerArgs } from "./dwell-ledger";
@@ -326,39 +326,6 @@ function callOf(
 }
 
 // ---------------------------------------------------------------------------
-// Library
-// ---------------------------------------------------------------------------
-
-type DwellFn = (
-  entry: string,
-  exit: string,
-  zone?: string,
-) => DwellResult | null;
-
-interface Modules {
-  dwellTime: DwellFn;
-  isValidInstant: (value: string) => boolean;
-  isValidTimeZone: (value: string) => boolean;
-  isValidZonedDateTime: (value: string) => boolean;
-}
-
-async function loadModules(): Promise<Modules> {
-  const [transport, precision, zoned] = await Promise.all([
-    GMT_MODULES["transport/calculate"](),
-    GMT_MODULES["precision/validate"](),
-    GMT_MODULES["zoned/validate"](),
-  ]);
-  return {
-    dwellTime: transport["dwellTime"] as DwellFn,
-    isValidInstant: precision["isValidInstant"] as (v: string) => boolean,
-    isValidTimeZone: zoned["isValidTimeZone"] as (v: string) => boolean,
-    isValidZonedDateTime: zoned["isValidZonedDateTime"] as (
-      v: string,
-    ) => boolean,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 
@@ -376,7 +343,7 @@ function aligned(canvas: LedgerCanvas): LedgerCanvas {
   return widened.snapMinutes === canvas.snapMinutes ? widened : canvas;
 }
 
-function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
+function setupWidget(root: HTMLElement, m: DwellLib, signal: AbortSignal) {
   const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
 
   const presetEl = widgetEl.querySelector<GmtPreset>("gmt-preset")!;
@@ -488,13 +455,8 @@ function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
 
   function render(): void {
     const s = state();
-    const result = m.dwellTime(
-      s.entry,
-      s.exit,
-      s.zone === NO_ZONE ? undefined : s.zone,
-    );
-    const reason =
-      result === null ? explainNull(s.entry, s.exit, s.zone, m) : null;
+    const facts = dwellFacts(s, m);
+    const { result, reason } = facts;
     const invalid = reason === "inverted";
 
     drawRow(
@@ -530,9 +492,8 @@ function setupWidget(root: HTMLElement, m: Modules, signal: AbortSignal) {
     const compareOn = s.compareZone !== NO_ZONE;
     el("compare-row").hidden = !compareOn;
     el("compare-result").hidden = !compareOn;
-    let compareResult: DwellResult | null = null;
+    const compareResult: DwellResult | null = facts.compare?.result ?? null;
     if (compareOn) {
-      compareResult = m.dwellTime(s.entry, s.exit, s.compareZone);
       drawRow(
         "compare",
         gridZone("", s.compareZone),
@@ -736,13 +697,8 @@ export const mountDwellLedger: MountFn<DwellLedgerArgs> = async (
   signal,
 ) => {
   defineElements();
-  let modules: Modules;
-  try {
-    modules = await loadModules();
-  } catch (cause) {
-    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
-  }
+  // `loadDwellLib` throws a `WidgetLoadError`: loud, not inert (see `WidgetLoadError`).
+  const modules = await loadDwellLib();
   if (signal.aborted) return onceDestroy(() => {});
 
   applyArgs(root, args);

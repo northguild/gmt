@@ -36,6 +36,7 @@ const html = renderFhirDateCheckerTemplate("fhir-date-checker", {}).value;
   import { mountFhirDateChecker } from "../lib/fhir-date-checker-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=fhir&wa=` permalink seeds the widget with the values it names; see
@@ -49,5 +50,9 @@ const html = renderFhirDateCheckerTemplate("fhir-date-checker", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "fhir-date-checker",
+      () => import("../lib/webmcp/tools/fhir-date-checker"),
+    );
   }
 </script>

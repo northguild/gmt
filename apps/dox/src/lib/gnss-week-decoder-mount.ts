@@ -24,7 +24,6 @@
  * drag handle: the controls are typed fields, selects and two ranges (the week
  * and the time of week), each tied two ways to its typed field.
  */
-import { Temporal } from "@js-temporal/polyfill";
 import { defineElements } from "~/widgets/define";
 import {
   aside,
@@ -84,6 +83,7 @@ import {
   MODE_LABELS,
   NO_RESULT_TEXT,
   SECONDS_PER_WEEK,
+  clockNow,
   decoderHandoffs,
   isSeeded,
   lanesAria,
@@ -793,7 +793,7 @@ function setupWidget(
   function render(): void {
     showFields();
     drawSliders();
-    const read = readGnss(lib, readState(), Temporal.Now.instant().toString());
+    const read = readGnss(lib, readState(), clockNow());
     last = read;
 
     setHtml(el("plates"), plates(plateList(read.plates)));

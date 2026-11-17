@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smooth-growth gate (context/dox/reference/design-system.md, "Smooth growth").
+ * Smooth-growth gate (context/dox/reference/design-system-widgets.md, "Smooth growth").
  *
  * Measures how a tool page's height changes frame by frame, so "result regions
  * ease instead of popping" is a number and not an impression. For each tool
@@ -467,7 +467,7 @@ const PAGES = [
   root: `[data-widget="${WIDGET_OF[p.slug] ?? p.slug}"]`,
 }));
 
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: PAGES.map((p) => p.path),
 });

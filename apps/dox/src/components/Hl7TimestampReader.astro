@@ -37,6 +37,7 @@ const html = renderHl7TimestampReaderTemplate("hl7-timestamp-reader", {}).value;
   import { mountHl7TimestampReader } from "../lib/hl7-timestamp-reader-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=hl7&wa=` permalink seeds the widget with the values it names; see
@@ -50,5 +51,9 @@ const html = renderHl7TimestampReaderTemplate("hl7-timestamp-reader", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "hl7-timestamp-reader",
+      () => import("../lib/webmcp/tools/hl7-timestamp-reader"),
+    );
   }
 </script>

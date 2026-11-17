@@ -312,6 +312,73 @@ export function isIslamicEraCompatNeeded(): boolean {
 }
 
 /**
+ * True when this runtime prints a coptic date before AM 1 without its signed year and its era
+ * (defect D31, ICU-23277).
+ *
+ * Intl era/monthCode Table 2 gives the coptic calendar one era, `am`, with era years from
+ * -infinity to +infinity, and 4.1.12 makes the era year the year; test262
+ * `intl402/Temporal/PlainDate/from/non-positive-single-era-year.js` keeps coptic era year -1 as -1.
+ * ISO -000001-07-10 is therefore `-285 AM`. ICU prints `1 - year` (286) and an empty era. The
+ * probe reads that date with the era and year fields: the text must hold the year as
+ * `Intl.NumberFormat` writes -285 and the same era name as a date after AM 1 (digits, signs and
+ * spaces taken out).
+ */
+export function isCopticEraCompatNeeded(): boolean {
+  const options = { era: "short", year: "numeric" } as const;
+  const eraOf = (text: string): string =>
+    text.replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect("D31", () => {
+    const before = textAt("en-u-ca-coptic", options, [-1, 7, 10]);
+    const after = textAt("en-u-ca-coptic", options, [2000, 1, 1]);
+    const signed = new Intl.NumberFormat("en", { useGrouping: false }).format(
+      -285,
+    );
+    return !(
+      before.includes(signed) &&
+      eraOf(after) !== "" &&
+      eraOf(before) === eraOf(after)
+    );
+  });
+}
+
+/**
+ * True when this runtime changes the Islamic era in the middle of the first day of year 1 (defect
+ * D32, WebKit 331724).
+ *
+ * Intl era/monthCode Table 2 and 4.1.12: the era `ah` starts on 1 Muharram of year 1, the whole
+ * calendar day, in every zone. JavaScriptCore switches at one fixed instant (0622-07-19T07:52:58Z,
+ * a day earlier for `islamic-tbla`), so the first hours of the day print year 0 and `Before Hijra`.
+ * The probe formats the epoch day of each calendar (Calendrical Calculations, chapter 6: Friday 16
+ * July 622 Julian for the civil and umalqura calendars, Thursday for the tabular astronomical one)
+ * at its first and its last hour in UTC: both must print the same era name.
+ */
+export function isIslamicEpochEraCompatNeeded(): boolean {
+  const eraOf = (calendar: string, day: number, hour: number): string =>
+    new Intl.DateTimeFormat(`en-u-ca-${calendar}`, {
+      era: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .format(
+        Temporal.Instant.from(
+          `0622-07-${day}T${String(hour).padStart(2, "0")}:00:00Z`,
+        ).epochMilliseconds,
+      )
+      .replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect("D32", () =>
+    (
+      [
+        ["islamic-civil", 19],
+        ["islamic-tbla", 18],
+        ["islamic-umalqura", 19],
+      ] as const
+    ).some(
+      ([calendar, day]) => eraOf(calendar, day, 0) !== eraOf(calendar, day, 23),
+    ),
+  );
+}
+
+/**
  * True when this runtime does not pad a Japanese era year under `year: "2-digit"` (defect D27,
  * ICU-23620).
  *

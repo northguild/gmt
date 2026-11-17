@@ -18,7 +18,7 @@
  * from teal to ice-dim, ice caps and snow in ice).
  *
  * Imagery: NASA Earth Observatory, Blue Marble Next Generation, public domain (see
- * `scripts/prepare-globe-imagery.py` and `context/dox/built.md`, Earth imagery). Resampled and
+ * `scripts/prepare-globe-imagery.py` and `context/dox/built/tier-4-globe.md`, Earth imagery). Resampled and
  * lit here; no NASA logo.
  */
 import { readFileSync, writeFileSync } from "node:fs";

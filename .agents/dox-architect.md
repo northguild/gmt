@@ -20,10 +20,10 @@ work is scoped against what is already built.
 
 1. `context/dox/index.md` — the map. Always.
 2. `context/dox/overview.md` — architecture, decisions, tiers. Always.
-3. `context/dox/built.md` — what each tier ships, its binding rules, traps and runbooks.
+3. `context/dox/built/index.md` — the rules that bind every change, plus a map to one file per tier: what each tier ships, its binding rules, traps and runbooks.
    Read the sections the task touches.
-4. `context/dox/reference/design-system.md` and `reference/visual-design.md` — only when
-   styling or designing UI.
+4. `context/dox/reference/design-system.md` (and its `design-system-{widgets,charts,motion,chat}.md`
+   companions) and `reference/visual-design.md` — only when styling or designing UI.
 5. `context/dox/reference/verification-and-risks.md` — for reviews and definitions of done.
 6. `context/dox/ui-audit.md` — before restructuring `apps/dox/src/components/`.
 7. `context/dox/tracker.md` — when adding or closing tracked work.
@@ -73,7 +73,7 @@ work is scoped against what is already built.
 
 When the main session asks for a shortlist (the [`plan-story`](./skills/plan-story/SKILL.md)
 skill, step 5a), do not write a spec. Read the story's tracker row, its library spec index and
-the tools already in `built.md`, then return 2–4 candidate tools (`AskUserQuestion` takes at most 4 options), ranked, in 40 lines or fewer.
+the tools already in `context/dox/built/`, then return 2–4 candidate tools (`AskUserQuestion` takes at most 4 options), ranked, in 40 lines or fewer.
 For each: name, what the reader does with it, the library functions it calls, why it fits the
 story's painpoint, and rough size (small / medium / large). Prefer distinct standalone tools to
 panels bolted onto an existing one. Mark one **recommended** and say why in one line. The owner
@@ -86,13 +86,13 @@ chooses; the main session then resumes you with the choice and you write the spe
    machine uses `fnm`: `eval "$(fnm env)" && fnm use`. Record every contradiction with the
    docs so `context/dox/` gets corrected rather than drifting.
 2. **Write the execution spec** for `dox-builder`: exact files to create and modify, the
-   constraints and traps from `built.md` that apply, and a definition of done. Keep the spec to
-   150 lines or fewer; link `built.md` sections instead of copying them. For a planned story,
+   constraints and traps from `context/dox/built/` that apply, and a definition of done. Keep the spec to
+   150 lines or fewer; link `context/dox/built/` sections instead of copying them. For a planned story,
    write it as `context/dox/specs/<id>/index.md` with frontmatter `story`, `status: draft`, plus
    one slice per tool ([plan gate](./skills/plan-story/SKILL.md#6-approve-and-hand-over)).
 3. **Return the spec** to the main session. It runs `dox-builder`, then `dox-tester`, at most
    **2** builder → tester iterations ([pipeline](./skills/pipeline/SKILL.md)).
-4. **Close-out is part of the spec.** Its definition of done tells `dox-builder` to update `built.md` so it still describes what is built — present tense, the
+4. **Close-out is part of the spec.** Its definition of done tells `dox-builder` to update the matching `context/dox/built/` file so it still describes what is built — present tense, the
    decision and a one-line reason, no history. If the work is tracked, update `tracker.md` and
    run `pnpm deps:sync`.
 
@@ -100,7 +100,7 @@ chooses; the main session then resumes you with the choice and you write the spe
 
 - `pnpm run validate` stays green, including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`); `apps/dox`
   must not perturb `packages/gmt`.
-- A Dox-only change needs no changeset. Any file the work changes under `packages/` needs one, an empty one when no behaviour changes ([rule](../context/coding-standards.md#changesets)).
+- A Dox-only change needs no changeset. Any file the work changes under `packages/` needs one, an empty one when no behaviour changes ([rule](../context/coding-standards/changesets.md#changesets)).
 - No `octane` or `@octanejs/*` dependency.
 - Every tier after Tier 1 stays independently droppable; the docs work with the chat
   deleted.

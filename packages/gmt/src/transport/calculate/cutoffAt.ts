@@ -67,7 +67,9 @@ export interface CutoffOptions {
  * - **Non-business days roll as the caller says.** With `calendar`, a cut-off on a weekend or
  *   holiday moves by `roll`, as `rollDate` moves it. Every industry answers "what if it lands
  *   on a non-working day" differently, so the convention is always explicit — there is no
- *   default: `calendar` without `roll`, or `roll` without `calendar`, returns `""`. The rolled
+ *   default: no standard supplies one (ISDA 2021 §2.3.8 applies the convention "specified" and
+ *   stops there; ISO 20022 makes a non-working-day adjustment optional with no default), so
+ *   `calendar` without `roll`, or `roll` without `calendar`, returns `""`. The rolled
  *   day keeps the cut-off's local time of day. `calendar.timeZone` is not read; `timeZone` is
  *   the local frame. `"endOfMonth"` is `rollDate`'s schedule tool, not a cut-off convention.
  * - **The order is not checked.** `cutoffAt` does not check that the cut-off comes before the

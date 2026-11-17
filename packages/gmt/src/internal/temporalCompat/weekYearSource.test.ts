@@ -33,7 +33,7 @@ function found(pattern: RegExp, allowed: readonly string[]): string[] {
 }
 
 describe("week-year source rule", () => {
-  it("constructs a date formatter only in the cache, the guard, the range helpers and the probes (the D25 to D30 probes included)", () => {
+  it("constructs a date formatter only in the cache, the guard, the range helpers and the probes (the D25 to D32 probes included)", () => {
     expect(
       found(/new Intl\.DateTimeFormat\(/, [
         "src/internal/formatterCache.ts",
@@ -62,6 +62,10 @@ describe("week-year source rule", () => {
         "src/internal/weekYearGuard.ts",
         "src/internal/japaneseNumerals.ts",
         "src/internal/yearPrinting.ts",
+        // D31: the stand-in declares `formatRangeToParts` only to throw.
+        "src/internal/copticEra.ts",
+        // D32: the same, for the islamic epoch-day stand-in.
+        "src/internal/islamicEpochEra.ts",
         "src/zoned/format/formatZonedRange.ts",
       ]),
     ).toEqual([]);
@@ -86,6 +90,10 @@ describe("week-year source rule", () => {
         // The two stand-ins call the engine's own range only while no range repair is installed.
         "src/internal/weekYearGuard.ts",
         "src/internal/yearPrinting.ts",
+        // D31: the stand-in answers its range from the shifted pair through the installed `checked`.
+        "src/internal/copticEra.ts",
+        // D32: the same, from the moved pair.
+        "src/internal/islamicEpochEra.ts",
       ]),
     ).toEqual([]);
   });
@@ -94,7 +102,7 @@ describe("week-year source rule", () => {
     module             | importers
     ${"weekYearGuard"} | ${["src/internal/formatterCache.ts"]}
     ${"weekYearSynth"} | ${["src/internal/weekYearGuard.ts"]}
-    ${"yearPrinting"}  | ${["src/internal/formatterCache.ts", "src/internal/japaneseNumerals.ts"]}
+    ${"yearPrinting"}  | ${["src/internal/copticEra.ts", "src/internal/formatterCache.ts", "src/internal/islamicEpochEra.ts", "src/internal/japaneseNumerals.ts"]}
     ${"weekYearRange"} | ${["src/internal/rangeRepairs.ts", "src/internal/yearPrintingRange.ts"]}
   `(
     "imports $module only from $importers",

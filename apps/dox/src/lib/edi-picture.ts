@@ -11,6 +11,7 @@
  * as `markPositions` always was.
  */
 import { Temporal } from "@js-temporal/polyfill";
+import type { WidestGap } from "./edi-widgets";
 
 // ---------------------------------------------------------------------------
 // The layout of a code, read off the formatter's own output
@@ -646,3 +647,27 @@ export function timelineAria(
 export function lit(text: string, mask: string, group: PicGroup): PicField {
   return { text, mask, group, word: "" };
 }
+
+/** What the timeline draws. */
+export type TimelineSpec =
+  | { kind: "empty"; text: string }
+  | {
+      kind: "span";
+      /** The first day, a `PlainDate`. */
+      from: string;
+      /** The day after the last, a `PlainDate`. */
+      to: string;
+      unit: SpanUnit;
+      /** The days it covers: the caption's first line. */
+      label: string;
+      /** The pin at `from`: the moment a padding parser invents. */
+      reference: { label: string };
+    }
+  | { kind: "stated"; instant: string }
+  | {
+      kind: "marks";
+      rows: readonly TimelineInput[];
+      gap: WidestGap | null;
+      /** A comparison instant drawn as a hollow pin: the value read as UTC. Absent draws none. */
+      reference?: { instant: string; label: string } | null;
+    };

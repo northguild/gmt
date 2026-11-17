@@ -134,4 +134,4 @@ Modify:
   the Aura switch and hears Ice snap; opens the popover with the button and with the keyboard at
   a wide and a narrow window, and closes it with Escape. Nothing in the bar moves.
   `innerWidth`×`innerHeight` = the size recorded in slice 1.
-- `built.md` Sound section: the control, the fader look, the small switch, the one-popover rule.
+- `built/tier-3-sound.md`: the control, the fader look, the small switch, the one-popover rule.

@@ -48,6 +48,7 @@ const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`
   import { findWidget } from "../widgets/builders";
   import { showUnavailable } from "../lib/widget-mount";
   import { whenIdle } from "../lib/yield-to-main";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   /* Neither the mount nor its stylesheet is imported here: both load with the
      `import()` in `start`, once the stage is near the viewport. */
@@ -99,4 +100,11 @@ const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`
       start();
     }
   }
+  void offerPageTool(
+    "zoned-earth",
+    () =>
+      import("../lib/webmcp/zoned-earth-hop").then((hop) =>
+        hop.loadZonedEarthTool(),
+      ),
+  );
 </script>

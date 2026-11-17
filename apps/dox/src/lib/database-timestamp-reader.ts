@@ -16,8 +16,10 @@
 import type { DatabaseLib } from "./database-lib";
 import {
   callOf,
+  DB_PRESETS,
   formOf,
   type DbField,
+  type DbPreset,
   type DbForm,
   type ResultShape,
 } from "./database-timestamp-forms";
@@ -262,4 +264,135 @@ export function readDb(
     ];
   }
   return reading;
+}
+
+// ---------------------------------------------------------------------------
+// The widget's state, seeds and permalinks, and the sentences a reading speaks
+// ---------------------------------------------------------------------------
+
+/** What a seed names: a preset, or a form with its fields and zone. All strings. */
+export interface DatabaseTimestampReaderArgs {
+  preset?: string;
+  form?: string;
+  value?: string;
+  value2?: string;
+  value3?: string;
+  zone?: string;
+}
+
+export const CUSTOM_PRESET_ID = "custom";
+
+/** The permalink key and the field id of each of the three value slots, in order. */
+export const VALUE_KEYS = ["value", "value2", "value3"] as const;
+
+export const LOST_TEXT =
+  "The call returned its empty sentinel for this text, so there is no value.";
+
+export const INVALID_TEXT =
+  "The validator returned false: the text is not a valid value.";
+
+export const DEFAULT_PRESET: DbPreset = DB_PRESETS[0]!;
+
+export interface DatabaseReaderState {
+  formId: string;
+  values: readonly string[];
+  zone: string;
+}
+
+export function presetState(p: DbPreset): DatabaseReaderState {
+  return { formId: p.form, values: [...p.values], zone: p.zone ?? "" };
+}
+
+export function fieldValues(
+  state: DatabaseReaderState,
+  form: DbForm,
+): string[] {
+  return form.fields.map((_, i) => state.values[i] ?? "");
+}
+
+/** The preset the state equals, or the custom id. */
+export function matchPreset(state: DatabaseReaderState): string {
+  const form = formOf(state.formId);
+  if (!form) return CUSTOM_PRESET_ID;
+  const typed = fieldValues(state, form);
+  const found = DB_PRESETS.find(
+    (p) =>
+      p.form === state.formId &&
+      (p.zone ?? "") === (form.zone ? state.zone : "") &&
+      p.values.length === typed.length &&
+      p.values.every((v, i) => v === typed[i]),
+  );
+  return found?.id ?? CUSTOM_PRESET_ID;
+}
+
+/** True when the args name anything to seed the widget from. */
+export function isSeeded(
+  args: DatabaseTimestampReaderArgs | undefined,
+): boolean {
+  return (
+    args !== undefined &&
+    (typeof args.preset === "string" ||
+      (typeof args.form === "string" && formOf(args.form) !== undefined))
+  );
+}
+
+/**
+ * The state a seed describes: a preset, or a form with the fields the seed also names. A form
+ * with no values starts from its first preset, so no field opens blank unless the link says so.
+ * Once the seed names a value, a zone form's session zone is the seed's alone, blank when it
+ * names none: a preset's zone is never lent to a value it was not paired with.
+ */
+export function readArgs(
+  args: DatabaseTimestampReaderArgs,
+): DatabaseReaderState {
+  const named = DB_PRESETS.find((p) => p.id === args.preset);
+  if (named) return presetState(named);
+  const form = typeof args.form === "string" ? formOf(args.form) : undefined;
+  if (!form) return presetState(DEFAULT_PRESET);
+  const first = DB_PRESETS.find((p) => p.form === form.id);
+  const state = first
+    ? presetState(first)
+    : { formId: form.id, values: form.fields.map(() => ""), zone: "" };
+  VALUE_KEYS.forEach((key, i) => {
+    const v = args[key];
+    if (typeof v === "string" && i < form.fields.length) {
+      state.values = state.values.map((old, j) => (j === i ? v : old));
+    }
+  });
+  const ownValues = VALUE_KEYS.some((key) => typeof args[key] === "string");
+  if (form.zone && typeof args.zone === "string") state.zone = args.zone;
+  else if (form.zone && ownValues) state.zone = "";
+  return state;
+}
+
+/**
+ * The permalink keys for `state`: `preset` alone when it is exactly a preset, else the form, every
+ * field it has (even blank, so a cleared field comes back blank) and the zone of a zone form.
+ */
+export function permalinkOf(
+  state: DatabaseReaderState,
+): Record<string, string> {
+  const preset = matchPreset(state);
+  if (preset !== CUSTOM_PRESET_ID) return { preset };
+  const form = formOf(state.formId);
+  if (!form) return {};
+  const out: Record<string, string> = { form: form.id };
+  fieldValues(state, form).forEach((v, i) => {
+    out[VALUE_KEYS[i]!] = v;
+  });
+  if (form.zone) out["zone"] = state.zone;
+  return out;
+}
+
+/** True when the form's own call returned its sentinel (not a refusal, not a validator's `false`). */
+export function isLost(reading: DbReading): boolean {
+  if (reading.ok || reading.shape === "valid") return false;
+  return reading.note === undefined || reading.note === GIVE_ZONE_TEXT;
+}
+
+export function reasonOf(reading: DbReading): string {
+  if (isLost(reading)) return reading.note ?? LOST_TEXT;
+  if (reading.note !== undefined) return reading.note;
+  if (reading.shape === "valid" && !reading.valid) return INVALID_TEXT;
+  return "";
 }

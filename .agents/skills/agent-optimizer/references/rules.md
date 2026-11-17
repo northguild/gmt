@@ -54,6 +54,15 @@ A persona is a top-level `.md` in `.agents/` whose YAML frontmatter has `name`.
   `missing`, `wrong_target` (not a symlink, or points elsewhere), `dangling` (target gone) and
   `extra` (no matching source).
 
+## Leftover planning files
+
+A story's issue file, spec folder and research live only while it is open
+(`scripts/checks_leftovers.py`). Any entry in `context/domination/{issues,specs,research}`,
+`context/canary/{issues,specs}` or `context/dox/specs` named after a story whose row in the
+domination, canary or Dox tracker is `Done` is reported: by exact ID (`CORE-1.md`, `CORE-1/`)
+or by the lower-case ID plus a hyphen (`int-12-demurrage.md`, `dox-g2-hero/`). `/optimize`
+lists each as a repo-wide finding until the finalizer deletes it.
+
 ## What this skill does NOT check
 
 - Skill files (`.agents/skills/*/SKILL.md`): that is `skill-optimizer`'s job.

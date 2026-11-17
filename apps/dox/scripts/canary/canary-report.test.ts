@@ -11,7 +11,6 @@ import { join } from "node:path";
 
 import {
   ensureLabels,
-  issueHistories,
   listOpenCanaryIssues,
   main,
   parseArgs,
@@ -29,7 +28,10 @@ import {
 type Call = { args: string[]; input?: string };
 
 /** A `gh` runner that records calls; `reply` maps one call to stdout or throws. */
-function fakeGh(reply: (args: string[], input?: string) => string = () => "") {
+function fakeGh(
+  reply: (args: string[], input?: string) => string = (args) =>
+    args[0] === "issue" && args[1] === "list" ? "[]" : "",
+) {
   const calls: Call[] = [];
   const gh = (args: string[], input?: string) => {
     calls.push({ args, input });
@@ -138,70 +140,6 @@ describe("listOpenCanaryIssues", () => {
   });
 });
 
-describe("issueHistories", () => {
-  const comment = (issue: number) => ({
-    kind: "comment" as const,
-    key: "k",
-    issue,
-    body: "b",
-  });
-  const open = [
-    {
-      number: 12,
-      url: "https://github.com/northguild/gmt/issues/12",
-      body: "x",
-    },
-  ];
-
-  it("reads every page of an issue's comments, once per issue", () => {
-    const { gh, calls } = fakeGh(
-      () =>
-        '{"url":"https://github.com/northguild/gmt/issues/12#issuecomment-1","body":"one"}\n' +
-        '{"url":"https://github.com/northguild/gmt/issues/12#issuecomment-2","body":"two\\nlines"}\n',
-    );
-    const histories = issueHistories(gh, [comment(12), comment(12)], open);
-    expect(calls.map((c) => c.args)).toEqual([
-      [
-        "api",
-        "--paginate",
-        "repos/{owner}/{repo}/issues/12/comments",
-        "--jq",
-        ".[] | {url: .html_url, body: .body}",
-      ],
-    ]);
-    expect(histories.get(12)).toEqual({
-      url: "https://github.com/northguild/gmt/issues/12",
-      body: "x",
-      comments: [
-        {
-          url: "https://github.com/northguild/gmt/issues/12#issuecomment-1",
-          body: "one",
-        },
-        {
-          url: "https://github.com/northguild/gmt/issues/12#issuecomment-2",
-          body: "two\nlines",
-        },
-      ],
-    });
-  });
-
-  it("leaves out an issue whose comments cannot be read, and skips open actions", () => {
-    const { gh, calls } = fakeGh(() => {
-      throw new Error("HTTP 502");
-    });
-    const histories = issueHistories(
-      gh,
-      [
-        comment(12),
-        { kind: "open", key: "k", title: "t", labels: [], body: "b" },
-      ],
-      open,
-    );
-    expect(calls).toHaveLength(1);
-    expect(histories.size).toBe(0);
-  });
-});
-
 describe("runActions", () => {
   type Action = Parameters<typeof runActions>[1][number];
   const open: Action = {
@@ -210,6 +148,7 @@ describe("runActions", () => {
     title: "T",
     labels: ["canary", "temporal-compat"],
     body: "BODY",
+    findings: ["f"],
   };
   const comment: Action = {
     kind: "comment",
@@ -272,6 +211,118 @@ describe("runActions", () => {
       ok: false,
       error: "HTTP 502",
     });
+  });
+
+  it("rewrites an issue with its title, adds and removes labels, and the body on stdin", () => {
+    const { gh, calls } = fakeGh();
+    const edit: Action = {
+      kind: "edit",
+      key: "k",
+      issue: 41,
+      title: "T",
+      labels: ["canary", "temporal-compat"],
+      removeLabels: ["canary-dry-run"],
+      body: "BODY",
+      findings: ["f"],
+    };
+    const results = runActions(gh, [edit]);
+    expect(calls).toEqual([
+      {
+        args: [
+          "issue",
+          "edit",
+          "41",
+          "--title",
+          "T",
+          "--add-label",
+          "canary",
+          "--add-label",
+          "temporal-compat",
+          "--remove-label",
+          "canary-dry-run",
+          "--body-file",
+          "-",
+        ],
+        input: "BODY",
+      },
+    ]);
+    expect(results).toEqual([{ action: edit, ok: true, issue: 41 }]);
+  });
+
+  it("closes a clean issue as completed with the comment", () => {
+    const { gh, calls } = fakeGh();
+    const close: Action = {
+      kind: "close",
+      key: "k",
+      issue: 41,
+      reason: "clean",
+      body: "Clean.",
+    };
+    const results = runActions(gh, [close]);
+    expect(calls.map((c) => c.args)).toEqual([
+      ["issue", "close", "41", "--reason", "completed", "--comment", "Clean."],
+    ]);
+    expect(results).toEqual([{ action: close, ok: true, issue: 41 }]);
+  });
+
+  it("closes a folded issue as not planned, pointing at the issue the run opened", () => {
+    const { gh, calls } = fakeGh(
+      () => "https://github.com/northguild/gmt/issues/88\n",
+    );
+    const folded: Action = {
+      kind: "close",
+      key: "k",
+      issue: 539,
+      reason: "folded",
+    };
+    const results = runActions(gh, [open, folded]);
+    expect(calls[1].args).toEqual([
+      "issue",
+      "close",
+      "539",
+      "--reason",
+      "not planned",
+      "--comment",
+      "The canary now files one issue for each run. Its findings are in #88. Closing this issue.",
+    ]);
+    expect(results[1].ok).toBe(true);
+  });
+
+  it("points a folded issue at the issue a run rewrote", () => {
+    const { gh, calls } = fakeGh();
+    const edit: Action = {
+      kind: "edit",
+      key: "k",
+      issue: 77,
+      title: "T",
+      labels: ["canary"],
+      removeLabels: [],
+      body: "B",
+      findings: [],
+    };
+    runActions(gh, [
+      edit,
+      { kind: "close", key: "k", issue: 539, reason: "folded" },
+    ]);
+    expect(calls[1].args.at(-1)).toContain("in #77.");
+  });
+
+  it("leaves a folded issue open when the rolling issue was not filed", () => {
+    let n = 0;
+    const { gh, calls } = fakeGh(() => {
+      n += 1;
+      throw new Error("HTTP 502");
+    });
+    const results = runActions(gh, [
+      open,
+      { kind: "close", key: "k", issue: 539, reason: "folded" },
+    ]);
+    expect(n).toBe(1);
+    expect(calls).toHaveLength(1);
+    expect(results[1].ok).toBe(false);
+    expect(results[1].error).toBe(
+      "the rolling issue was not filed, so #539 stays open",
+    );
   });
 
   it("fails an open whose output holds no issue number", () => {
@@ -692,12 +743,12 @@ describe("main", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({
       kind: "open",
-      key: "dry-run/temporal-compat/removable/D2",
+      key: "dry-run/temporal-oracle",
+      findings: ["dry-run/temporal-compat/removable/D2"],
       labels: ["canary", "canary-dry-run"],
     });
-    expect(actions[0].title.startsWith("[dry run] Remove workaround D2:")).toBe(
-      true,
-    );
+    expect(actions[0].title).toBe("[dry run] Canary findings: temporal-oracle");
+    expect(actions[0].body).toContain("## [dry run] Remove workaround D2:");
   });
 
   it("--force-native-failure --print prints the native table and one dry-run action, and files nothing", () => {
@@ -719,7 +770,8 @@ describe("main", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({
       kind: "open",
-      key: "dry-run/native-suite/untagged-failure/node",
+      key: "dry-run/temporal-oracle",
+      findings: ["dry-run/native-suite/untagged-failure/node"],
       labels: ["canary", "temporal-compat", "canary-dry-run"],
     });
   });
@@ -731,7 +783,7 @@ describe("main", () => {
     expect(code).toBe(0);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
     expect(actions).toHaveLength(1);
-    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].findings).toEqual(["temporal-oracle/could-not-run"]);
     expect(actions[0].body).toContain(
       "- **native-suite-chromium**: unreadable verdict:",
     );
@@ -743,7 +795,7 @@ describe("main", () => {
     const { code, out } = run(["temporal-oracle", "--print"]);
     expect(code).toBe(0);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
-    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+    expect(actions.flatMap((a: { findings: string[] }) => a.findings)).toEqual([
       "temporal-polyfill-swap/ready",
     ]);
   });
@@ -756,7 +808,7 @@ describe("main", () => {
     expect(code).toBe(0);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
     expect(actions).toHaveLength(1);
-    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].findings).toEqual(["temporal-oracle/could-not-run"]);
     expect(actions[0].body).toContain(
       "- **temporal-polyfill-swap-firefox**: unreadable verdict:",
     );
@@ -770,7 +822,7 @@ describe("main", () => {
     expect(code).toBe(0);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
     expect(actions).toHaveLength(1);
-    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].findings).toEqual(["temporal-oracle/could-not-run"]);
     expect(actions[0].body).toContain(
       "- **temporal-compat-webkit-macos**: no verdict file: an earlier step or job failed",
     );
@@ -799,7 +851,7 @@ describe("main", () => {
     ]);
     expect(code).toBe(0);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
-    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+    expect(actions.flatMap((a: { findings: string[] }) => a.findings)).toEqual([
       "dry-run/temporal-polyfill-swap/ready",
     ]);
     expect(out).toContain("**Dry run:** --force-swap-ready");
@@ -849,8 +901,94 @@ describe("main", () => {
     writeOracleFiles();
     const { code, summary, gh } = run(["temporal-oracle"]);
     expect(code).toBe(0);
-    expect(gh.calls).toEqual([]);
+    // Only the open issues are listed: no labels to create, nothing to close.
+    expect(gh.calls.map((c) => c.args.slice(0, 2).join(" "))).toEqual([
+      "issue list",
+    ]);
     expect(summary).toContain("**Issues:** No issues filed.");
+  });
+
+  it("a clean run comments and closes the open rolling issue and the old per-finding issues", () => {
+    writeOracleFiles();
+    const gh = fakeGh((args) => {
+      if (args[0] === "issue" && args[1] === "list") {
+        return JSON.stringify([
+          {
+            number: 77,
+            body: '<!-- gmt-canary rolling="temporal-oracle" -->\nold',
+            labels: [{ name: "canary" }],
+          },
+          {
+            number: 539,
+            body: '<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nold',
+            labels: [{ name: "canary" }],
+          },
+        ]);
+      }
+      return "";
+    });
+    const { code, summary } = run(["temporal-oracle"], gh, {
+      GITHUB_RUN_ID: "5",
+      GITHUB_REPOSITORY: "northguild/gmt",
+      GITHUB_SERVER_URL: "https://github.com",
+    });
+    expect(code).toBe(0);
+    const clean =
+      "This run found nothing, so this issue is closed. A later run opens a new one if it finds something.\n\nRun: https://github.com/northguild/gmt/actions/runs/5";
+    expect(gh.calls.map((c) => c.args)).toEqual([
+      [
+        "issue",
+        "list",
+        "--label",
+        "canary",
+        "--state",
+        "open",
+        "--limit",
+        "1000",
+        "--json",
+        "number,url,body,labels",
+      ],
+      ["issue", "close", "77", "--reason", "completed", "--comment", clean],
+      ["issue", "close", "539", "--reason", "completed", "--comment", clean],
+    ]);
+    expect(summary).toContain("**Issues:** closed #77; closed #539.");
+  });
+
+  it("the first run under one issue per run opens it, then closes each old per-finding issue", () => {
+    writeOracleFiles();
+    const gh = fakeGh((args) => {
+      if (args[0] === "label") {
+        return JSON.stringify([{ name: "canary" }, { name: "canary-dry-run" }]);
+      }
+      if (args[0] === "issue" && args[1] === "list") {
+        return JSON.stringify(
+          [539, 540].map((number) => ({
+            number,
+            body: '<!-- gmt-canary key="dry-run/temporal-compat/removable/D2" -->\nold',
+            labels: [{ name: "canary" }, { name: "canary-dry-run" }],
+          })),
+        );
+      }
+      if (args[0] === "issue" && args[1] === "create") {
+        return "https://github.com/northguild/gmt/issues/544";
+      }
+      return "";
+    });
+    const { code, summary } = run(
+      ["temporal-oracle", "--force-removable=D2"],
+      gh,
+    );
+    expect(code).toBe(0);
+    const verbs = gh.calls.map((c) => c.args.slice(0, 3).join(" "));
+    expect(verbs.slice(-3)).toEqual([
+      "issue create --title",
+      "issue close 539",
+      "issue close 540",
+    ]);
+    expect(gh.calls[gh.calls.length - 1].args.at(-1)).toBe(
+      "The canary now files one issue for each run. Its findings are in #544. Closing this issue.",
+    );
+    expect(summary).toContain("closed #539; closed #540");
   });
 
   it("opens a forced finding after ensuring its labels, and writes the summary", () => {
@@ -879,10 +1017,12 @@ describe("main", () => {
     ]);
     expect(gh.calls[1].args[2]).toBe("canary-dry-run");
     expect(gh.calls[3].input?.split("\n")[0]).toBe(
-      '<!-- gmt-canary key="dry-run/temporal-compat/removable/D2" -->',
+      '<!-- gmt-canary rolling="dry-run/temporal-oracle" -->',
     );
     expect(summary).toContain("**Dry run:** --force-removable=D2");
-    expect(summary).toContain("opened #90 ([dry run] Remove workaround D2:");
+    expect(summary).toContain(
+      "opened #90 ([dry run] Canary findings: temporal-oracle)",
+    );
     // The counts are the real ones: D2 is still needed.
     expect(summary).toContain("| Removable | 0 |");
   });
@@ -897,7 +1037,7 @@ describe("main", () => {
         return JSON.stringify([
           {
             number: 12,
-            body: '<!-- gmt-canary key="dry-run/temporal-compat/removable/D2" -->\nold',
+            body: '<!-- gmt-canary rolling="dry-run/temporal-oracle" -->\nold',
             labels: [{ name: "canary" }, { name: "canary-dry-run" }],
           },
         ]);
@@ -911,7 +1051,12 @@ describe("main", () => {
     expect(code).toBe(0);
     const last = gh.calls[gh.calls.length - 1];
     expect(last.args).toEqual(["issue", "comment", "12", "--body-file", "-"]);
-    expect(summary).toContain("commented on #12");
+    expect(gh.calls[gh.calls.length - 2].args.slice(0, 3)).toEqual([
+      "issue",
+      "edit",
+      "12",
+    ]);
+    expect(summary).toContain("rewrote #12; commented on #12");
   });
 
   it("exits 2 on an unknown forced id, files nothing and still writes the summary", () => {
@@ -944,7 +1089,7 @@ describe("main", () => {
     expect(code).toBe(0);
     const create = gh.calls.find((c) => c.args[1] === "create");
     expect(create?.input?.split("\n")[0]).toBe(
-      '<!-- gmt-canary key="temporal-oracle/could-not-run" -->',
+      '<!-- gmt-canary rolling="temporal-oracle" -->',
     );
     expect(create?.input).toContain(
       "- **temporal-compat-check**: no verdict file: an earlier step or job failed",
@@ -957,7 +1102,7 @@ describe("main", () => {
     const { out } = run(["temporal-oracle", "--print"]);
     expect(out).toContain("could not run — unreadable verdict:");
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
-    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].findings).toEqual(["temporal-oracle/could-not-run"]);
     expect(actions[0].body).toContain("unreadable verdict:");
   });
 
@@ -977,7 +1122,7 @@ describe("main", () => {
     expect(err).toContain("open");
     expect(err).toContain("HTTP 403: Forbidden");
     expect(summary).toContain(
-      "failed to open ([dry run] Remove workaround D2:",
+      "failed to open ([dry run] Canary findings: temporal-oracle)",
     );
     expect(summary).toContain("| Removable | 0 |");
   });
@@ -1004,7 +1149,7 @@ describe("main", () => {
     expect(code).toBe(0);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
     expect(actions).toHaveLength(1);
-    expect(actions[0].key).toBe("temporal-oracle/could-not-run");
+    expect(actions[0].findings).toEqual(["temporal-oracle/could-not-run"]);
     expect(actions[0].body).toContain(
       "- **temporal-oracle**: unreadable verdict: EISDIR",
     );
@@ -1027,7 +1172,7 @@ describe("main", () => {
     expect(code).toBe(0);
     expect(gh.calls).toEqual([]);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
-    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+    expect(actions.flatMap((a: { findings: string[] }) => a.findings)).toEqual([
       "us-clock-watch/tz-us-zone",
     ]);
     expect(out).toContain("America/New_York");
@@ -1036,7 +1181,7 @@ describe("main", () => {
   it("a missing US clock-change verdict reads as could-not-run", () => {
     const { out } = run(["us-clock-watch", "--print"]);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
-    expect(actions.map((a: { key: string }) => a.key)).toEqual([
+    expect(actions.flatMap((a: { findings: string[] }) => a.findings)).toEqual([
       "us-clock-watch/could-not-run",
     ]);
   });
@@ -1052,7 +1197,7 @@ describe("main", () => {
     expect(code).toBe(0);
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
     expect(actions).toHaveLength(1);
-    expect(actions[0].key).toBe("leap-seconds/could-not-run");
+    expect(actions[0].findings).toEqual(["leap-seconds/could-not-run"]);
     expect(actions[0].body).toContain(
       "- **leap-seconds**: unreadable verdict: not a verdict object",
     );
@@ -1074,8 +1219,9 @@ describe("main", () => {
     );
     expect(creates).toHaveLength(1);
     expect(creates[0].input?.split("\n")[0]).toBe(
-      '<!-- gmt-canary key="leap-seconds/could-not-run" -->',
+      '<!-- gmt-canary rolling="leap-seconds" -->',
     );
+    expect(creates[0].input).toContain("## Canary leap-seconds could not run");
     expect(creates[0].args).not.toContain("canary-dry-run");
     expect(err).toContain(
       "canary-report: --force-leap-difference not applied: the leap-seconds verdict is missing or did not run",
@@ -1102,9 +1248,9 @@ describe("main", () => {
     expect(code).toBe(2);
     expect(err).toContain("--force-mismatch not applied");
     const actions = JSON.parse(out.slice(out.indexOf("[\n")));
-    expect(actions.map((a: { key: string }) => a.key)).toEqual([
-      "dry-run/temporal-compat/removable/D2",
+    expect(actions.flatMap((a: { findings: string[] }) => a.findings)).toEqual([
       "temporal-oracle/could-not-run",
+      "dry-run/temporal-compat/removable/D2",
     ]);
   });
 
@@ -1139,7 +1285,8 @@ describe("main", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({
       kind: "open",
-      key: "leap-seconds/table-difference",
+      key: "leap-seconds",
+      findings: ["leap-seconds/table-difference"],
     });
   });
 
@@ -1159,7 +1306,7 @@ describe("main", () => {
       GITHUB_RUN_ID: "555",
     });
     expect(out).toContain(
-      "Run: https://github.com/northguild/gmt/actions/runs/555",
+      "Latest run: https://github.com/northguild/gmt/actions/runs/555",
     );
   });
 
@@ -1168,7 +1315,7 @@ describe("main", () => {
     const { out } = run(["leap-seconds", "--print"], fakeGh(), {
       GITHUB_SERVER_URL: "https://github.com",
     });
-    expect(out).toContain("Run: (local run)");
+    expect(out).toContain("Latest run: (local run)");
   });
 
   it("on a branch other than main: files nothing, calls no gh and lists what it would have filed", () => {
@@ -1181,10 +1328,14 @@ describe("main", () => {
     expect(code).toBe(0);
     expect(gh.calls).toEqual([]);
     expect(summary).toContain(
-      "**Issues:** Not filed: this run is on core-108-move; issues are filed only from main. It would have filed: [dry run] Remove workaround D2:",
+      "**Issues:** Not filed: this run is on core-108-move; issues are filed only from main. It would have filed: [dry run] Canary findings: temporal-oracle.",
     );
     expect(JSON.parse(out)).toMatchObject([
-      { kind: "open", key: "dry-run/temporal-compat/removable/D2" },
+      {
+        kind: "open",
+        key: "dry-run/temporal-oracle",
+        findings: ["dry-run/temporal-compat/removable/D2"],
+      },
     ]);
   });
 
@@ -1216,7 +1367,7 @@ describe("main", () => {
     );
   });
 
-  it("a weekly run with the same rows as the open issue posts one line linking to it", () => {
+  it("a weekly run with the same findings as the open issue rewrites it and comments one line", () => {
     writeOracleFiles();
     // The body the first run opened the issue with, read back from the plan a branch run prints.
     const [first] = JSON.parse(
@@ -1224,7 +1375,6 @@ describe("main", () => {
         GITHUB_REF_NAME: "branch",
       }).out,
     );
-    const ISSUE_URL = "https://github.com/northguild/gmt/issues/12";
     const gh = fakeGh((args) => {
       if (args[0] === "label") {
         return JSON.stringify([{ name: "canary" }, { name: "canary-dry-run" }]);
@@ -1233,14 +1383,10 @@ describe("main", () => {
         return JSON.stringify([
           {
             number: 12,
-            url: ISSUE_URL,
             body: first.body,
             labels: [{ name: "canary" }, { name: "canary-dry-run" }],
           },
         ]);
-      }
-      if (args[0] === "api") {
-        return `${JSON.stringify({ url: `${ISSUE_URL}#issuecomment-1`, body: "A person's note." })}\n`;
       }
       return "";
     });
@@ -1251,7 +1397,7 @@ describe("main", () => {
     const last = gh.calls[gh.calls.length - 1];
     expect(last.args).toEqual(["issue", "comment", "12", "--body-file", "-"]);
     expect(last.input).toBe(
-      `Same as the [last full report](${ISSUE_URL}): nothing has changed.\n\nRun: (local run)`,
+      "Since the last run: 1 still there.\n\nRun: (local run)",
     );
   });
 

@@ -138,7 +138,7 @@ tab. Pressing a `<summary>` in the sidebar is a press (the ping), not a panel.
 
 ## Close-out
 
-`built.md` gains a "Sound" section under Tier 3 (engine, cue bus, unlock, settings key, voices,
+`built/tier-3-sound.md` holds the sound tier (engine, cue bus, unlock, settings key, voices,
 gate, traps) and its "Not doing" entry on audio stays. `reference/visual-design.md` § Controls
 gains the fader look. The finalizer folds Decided into `issues/DOX-G11.md` and deletes this
 folder; the audition stays in `reference/`. Tracker Status changes only at close.

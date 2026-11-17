@@ -37,6 +37,7 @@ const html = renderLeapSecondTimelineTemplate("leap-second-timeline").value;
   import { mountLeapSecondTimeline } from "../lib/leap-second-timeline-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("leapline");
@@ -47,5 +48,9 @@ const html = renderLeapSecondTimelineTemplate("leap-second-timeline").value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "leap-second-timeline",
+      () => import("../lib/webmcp/tools/leap-second-timeline"),
+    );
   }
 </script>

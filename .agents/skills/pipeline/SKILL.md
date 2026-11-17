@@ -40,7 +40,7 @@ and [§ Git — Only on an Explicit Instruction](../../../AGENTS.md#git--only-on
 | **G. Owner's spec, no story** | The owner hands over a complete spec for work with no tracker row | `tdd-dev` → `gmt-reviewer` → `finalizer` | per rule |
 | **H. Dox fix, no story** | A change in `apps/dox` with no story id | `dox-architect` → `dox-builder` → `dox-tester` | per rule |
 
-Changeset levels follow the one [changeset rule](../../../context/coding-standards.md#changesets).
+Changeset levels follow the one [changeset rule](../../../context/coding-standards/changesets.md#changesets).
 
 **The plan gate runs for category A only** — exactly when the work is a tracker story. Every
 story is planned with `/plan-story`, however small: a small story gets a small spec (an index
@@ -70,9 +70,10 @@ story id from the branch (`feature/197-mar-16-…` → `MAR-16`) and load
 For a story (category A), run `python3 .agents/skills/plan-story/scripts/plan_gate.py` first. On
 `FAIL`, stop and tell the owner to run `/plan-story`; never plan inline.
 
-A spec lives only while its story is in progress: `finalizer` folds its decisions into the issue
-file (or Dox `built.md`), rewrites inbound references and deletes it. Never cite a spec from code,
-comments or context files; cite the issue's Decisions section or the external standard.
+Planning files live only while their story is open: at close `finalizer` deletes the issue file,
+spec folder and research, moving any rule the code cannot show into a comment beside that code.
+Never cite a spec, issue file or research file from code or comments; state the reason or cite
+the external standard.
 
 ## Hand each worker the least context that works
 

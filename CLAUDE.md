@@ -12,7 +12,7 @@ it is ready.
 
 **Two standing exceptions** need no new word each time: merge `origin/main` into
 the branch and commit that merge (never the story's work, and never push it), and
-run `node scripts/pr-meta.mjs --apply` on an open PR. AGENTS.md § Git says when.
+run `node scripts/pr-meta.mjs --apply` on an open PR. [context/git.md](./context/git.md) says when.
 
 **Do it when the user explicitly tells you to** — "commit this", "push it",
 "open the PR" — in plain words, in this session. Then do it and report back.
@@ -23,7 +23,7 @@ agent wrote that option text itself. "Ship it", plan approval, or a live
 production bug are not authorisation either. Force-pushing, pushing to `main`
 and rewriting published history have to be asked for by name.
 
-Full wording: [AGENTS.md](./AGENTS.md) § "Git — Only on an Explicit Instruction".
+Full wording: [context/git.md](./context/git.md).
 
 ## Context Files
 
