@@ -8,7 +8,9 @@ Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every v
 - **No `AudioContext` while muted.** Otherwise capture-phase `pointerdown`, `pointerup`, `keydown` and `touchend` listeners on `window` create and `resume()` the context synchronously in the first activation event. Safari does not count a resume after an `await`. Creating a context anywhere else draws Chrome's suspended-context warning.
 - **Audio clock only.** Every schedule, gap and fade reads `ctx.currentTime`. `setTimeout` and `setInterval` are a delay or a scheduler tick, never a clock read (`date-ban.test.ts`). The engine plays a cue at `currentTime + 5 ms` and drops one inside its gap (30 ms; `stream` and a zoom step 60, `key` 25, `ready` 400).
 - **A suspended context takes a cue only inside a reader's gesture** (`navigator.userActivation.isActive`). A cue scheduled on a stopped clock would play late, in a burst, once it starts.
-- **The key `dox:sound`** holds `{ level: 1–11, muted, aura, track }`. Default: level 5, aura on, track `"ice"` (an unknown track reads as `"ice"`), muted only under `prefers-reduced-motion: reduce`. It is written only on a reader's choice, and once written it wins over the query. `ThemeProvider.astro` applies the same rule inline and sets `data-sound` on `<html>` before first paint; `settings.test.ts` holds that script equal to `readSound()`. Every storage access is in try/catch.
+- **Sound is opt-in.** Every visitor starts muted, whatever the system asks (reduced motion included); only the reader's own mute button or fader turns it on. No system setting or other control reads or writes the choice.
+- **The key `dox:sound`** holds `{ v: 1, level: 1–11, muted, aura, track }`. Default: muted, level 5, aura on, track `"ice"`. It fails closed: no record, corrupt JSON, another `v` (`SOUND_VERSION`) or a field of the wrong type reads as that field's default, so a bad record never turns sound on. Raise `SOUND_VERSION` when a field changes meaning. It is written only on a reader's choice. `ThemeProvider.astro` applies the same rule inline and sets `data-sound` on `<html>` before first paint; `settings.test.ts` holds that script equal to `readSound()`.
+- **A choice storage cannot keep holds for the page.** Every storage access is in try/catch; a failed write keeps the choice in memory until a write lands or another tab's does. A page restored from the back/forward cache reads the key again on `pageshow`, since it missed `storage` events while frozen.
 - **A hidden tab suspends 0.65 s later** (`HIDE_TAIL_MS`), so a link that opens a new tab is heard to the end. `navigator.audioSession.type = "ambient"` where it exists.
 - **A control that fires its own cue carries `data-cue`**, so the press hook stays out. The Expressive Code copy button is not ours, so it is excluded by selector.
 - **React stays inside `/dox`.** Chrome cues are plain DOM; `DoxChat.tsx` calls `cue()`.
@@ -67,6 +69,7 @@ Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) com
 
 ## Traps
 
+- A test that needs to hear anything saves an opted-in record first (`saveSound()` in `src/test/sound-storage.ts`); `sound-check` does the same through an init script, except in scenarios marked `sound: "default"`.
 - A test file that installs `src/test/fake-audio.ts` is isolated (`vi.stubGlobal`); tests assert on the recorded schedule, never on sound.
 - jsdom's `localStorage` queues a timer per write under fake timers, so a test asserting `vi.getTimerCount() === 0` uses `installMemoryStorage()`.
 - The leak guard fails a file that leaves a `window` or `document` listener, so each test tears `startCue()` and `createEngine()` down.

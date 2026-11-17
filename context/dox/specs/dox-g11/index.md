@@ -10,9 +10,9 @@ dox: none
 Give the site a sound world, made with the Web Audio API alone: a breath of air through cold steel when a panel
 opens or closes, a steel whisper and shing as the landing's pieces ice in and glint, a sonar ping on a button
 press, an ice-cavern aura on the landing, and cues for Dox thinking and typing and for the tools'
-controls, typing, loading, readiness and errors. Sound is **on by default**, like a film, except
-for a visitor whose system asks for reduced motion, who starts muted. Nothing plays before the
-first press or key, and that gesture brings the sound in without a jolt. A sound button
+controls, typing, loading, readiness and errors. Sound is **opt-in**: every visitor starts muted,
+whatever their system asks, and the reader turns it on in the settings panel. Once on, nothing
+plays before the first press or key, and that gesture brings the sound in without a jolt. A sound button
 in the header on every page at every width opens a popover with a mute button, an ice fader and
 an Aura switch, and the choice is kept across visits.
 Site work in `apps/dox` only: no new Dox tool or chat pill, no `packages/gmt` change, no changeset.
@@ -89,9 +89,9 @@ tab. Pressing a `<summary>` in the sidebar is a press (the ping), not a panel.
   synchronously inside the first activation event (`pointerdown`, `pointerup`, `keydown`,
   `touchend`, capture phase). Cues before unlock are dropped, never queued. The gesture's own
   cue plays; the aura fades in over 3 s. Detail: [s1 § Unlock](./s1-engine.md#unlock).
-- **Starting state.** Level 5 of 11; aura on, 12 dB under the cues. `prefers-reduced-motion:
-  reduce` starts muted; once the visitor makes any choice, the saved `dox:sound` wins over the
-  query ([s1 § Settings](./s1-engine.md#settings)).
+- **Starting state.** Muted, for every visitor; no system setting turns sound on or off. Level 5
+  of 11; aura on, 12 dB under the cues. The reader's choice is saved in a versioned `dox:sound`
+  record that fails closed ([s1 § Settings](./s1-engine.md#settings)).
 - **Off first paint.** `cue.ts` is the only module on every page's critical path; the engine and
   voices load on idle or on the first gesture; the aura loads on `/` only.
 - **Hold still.** The header's items, the sound button and the popover keep their boxes while the reader drags.

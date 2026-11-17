@@ -57,11 +57,15 @@ Modify:
 
 ## Settings
 
-- Default when nothing is saved: `{ level: 5, muted: false, aura: true }`, except that
-  `matchMedia("(prefers-reduced-motion: reduce)").matches` makes `muted: true`.
+- Default when nothing is saved: `{ level: 5, muted: true, aura: true, track: "ice" }`, for
+  every visitor. Sound is opt-in; no media query reads into it.
+- The record is `{ v: 1, … }`. No record, corrupt JSON, another `v` or a field of the wrong type
+  reads as that field's default, so a bad record never turns sound on.
 - `readSound()` and the pre-paint script apply the same rule; a test holds them equal.
-- The key is written **only** on a reader's choice (the chip, the fader, the Aura switch). Once
-  written, it wins over the media query on every later visit. Nothing writes it at load.
+- The key is written **only** on a reader's choice (the mute button, the fader, the Aura switch,
+  the track). Nothing writes it at load.
+- A write storage refuses keeps the choice for the rest of the page. A page restored from the
+  back/forward cache reads the key again on `pageshow`.
 - Every read and write is in try/catch (private windows throw); a bad value reads as the
   default; a `level` out of 1–11 clamps.
 
@@ -94,9 +98,10 @@ Modify:
 
 ## Tests
 
-- `settings.test.ts`: default with and without reduced motion (stubbed `matchMedia`); a saved
-  value beats the query; round trip; corrupt JSON; throwing storage; clamping; `storage` sync;
-  nothing is written by a read.
+- `settings.test.ts`: the muted default with and without reduced motion; a record with no
+  version or another version reads muted; round trip with `v`; corrupt JSON; throwing storage
+  (reads muted, keeps an unsaved choice for the page, drops it once a write lands); clamping;
+  `storage` sync; `pageshow` from the cache; nothing is written by a read.
 - `cue.test.ts`: no context before a gesture; the first `pointerdown` creates and resumes it
   synchronously; muted → no context and no engine import; a pre-unlock cue is dropped;
   listeners are gone once running.
@@ -111,11 +116,11 @@ Modify:
 
 ## `sound-check` (this slice's part)
 
-On `/` and `/tools/zoned-earth/`: no `AudioContext` is running before a gesture; the first
-press runs one; a button press then starts the Sonar voice once; a navigating link press
-starts nothing before unload. With reduced motion emulated and storage empty: no context is
-ever constructed and `data-sound="off"`. With `dox:sound` saved unmuted and reduced motion on:
-the press plays. A saved mute survives a reload. No console error.
+On `/` and `/tools/zoned-earth/`, with storage empty: no context is ever constructed and
+`data-sound="off"`. With sound saved on: no `AudioContext` is running before a gesture; the
+first press runs one; a button press then starts the Sonar voice once; a navigating link press
+starts nothing before unload. With sound saved on and reduced motion emulated: the press plays.
+A saved mute survives a reload. No console error.
 
 ## Definition of done
 

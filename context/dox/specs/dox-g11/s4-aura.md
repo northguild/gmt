@@ -43,9 +43,9 @@ Modify:
   restarts it after the next gesture, or at once if the context resumes.
 - Cross-document view transitions: the old page's aura is cut by unload; the new landing fades
   its own in. No attempt to carry audio across documents.
-- `a11y-media` flags infinite *animations* under reduced motion, not audio. A reduced-motion
-  visitor starts muted ([index § Decided](./index.md#decided)), so the aura is silent for them
-  until they unmute.
+- `a11y-media` flags infinite *animations* under reduced motion, not audio. Every visitor
+  starts muted ([index § Decided](./index.md#decided)), so the aura is silent until the reader
+  turns sound on.
 - Memory: one shared noise buffer and one hall impulse per context, built once by `sharedFx`.
 
 ## Tests
