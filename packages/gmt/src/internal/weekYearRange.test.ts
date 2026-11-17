@@ -1,3 +1,4 @@
+import { repairCopticEra } from "./copticEra";
 import { markRangeHandled } from "./rangeHooks";
 import { Temporal } from "./temporal";
 import {
@@ -202,13 +203,13 @@ describe("repairRangeYear: calendars the polyfill cannot project", () => {
     },
   );
 
-  // Before ISO year 1 (native Temporal: coptic year -285 and -283, printed 286 and 284 by
-  // ECMA-402's "1 - year" for a year <= 0; ethiopic era `aa` 5491 and 5493; indian -79 and -77).
-  // The polyfill cannot read coptic or ethiopic at all, so `TEMPORAL_STAND_IN` computes the years
-  // and the printed years must be accepted as the calendar years.
+  // Before ISO year 1 (native Temporal: ethiopic era `aa` 5491 and 5493). The polyfill cannot read
+  // ethiopic at all, so `TEMPORAL_STAND_IN` computes the years and the printed years must be
+  // accepted as the calendar years. Coptic has one era `am` for every year (Intl era/monthCode
+  // Table 2, 4.1.12: eraYear is year), so -285 and -283 are the answer; the engine's own "1 - year"
+  // text is D31 and `copticEra.ts` repairs it (below).
   it.each`
     calendar      | years
-    ${"coptic"}   | ${["286", "284"]}
     ${"ethiopic"} | ${["5491", "5493"]}
   `(
     "accepts the printed years $years of a $calendar range before ISO year 1",
@@ -222,6 +223,26 @@ describe("repairRangeYear: calendars the polyfill cannot project", () => {
       );
     },
   );
+
+  it("prints the signed coptic years -285 and -283 for a coptic range before ISO year 1", () => {
+    const options = { ...monthly, calendar: "coptic" };
+    const formatter = repairCopticEra(
+      new Intl.DateTimeFormat("ak", options),
+      options,
+    );
+    const text = formatRangeChecked(
+      formatter,
+      options,
+      at("-000001-07-10T12:00:00"),
+      at("+000001-07-10T12:00:00"),
+    );
+    const minus = new Intl.NumberFormat("ak", { useGrouping: false })
+      .format(-1)
+      .replace(/\p{Nd}/gu, "");
+    expect(text?.match(/\p{Nd}+/gu)).toEqual(["285", "283"]);
+    expect(text).toContain(`${minus}285`);
+    expect(text).toContain(`${minus}283`);
+  });
 
   // The polyfill throws for `indian` before ISO year 1 (V8 bug 10529), so nothing is measured
   // and ICU's own text is the answer.
@@ -238,18 +259,24 @@ describe("repairRangeYear: calendars the polyfill cannot project", () => {
 
 describe("rangeYearVerdict: real formatters", () => {
   it.each`
-    locale                | options
-    ${"en"}               | ${{ year: "numeric", month: "short", day: "numeric" }}
-    ${"de"}               | ${{ year: "numeric", month: "long" }}
-    ${"ja-u-ca-japanese"} | ${{ year: "numeric", month: "long", day: "numeric" }}
-    ${"zh-u-ca-chinese"}  | ${{ year: "numeric", month: "long", day: "numeric" }}
-    ${"kok-u-ca-ethioaa"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}
-    ${"kok-u-ca-indian"}  | ${{ year: "numeric", month: "numeric", day: "numeric" }}
-    ${"ak-u-ca-coptic"}   | ${{ year: "numeric", month: "numeric", day: "numeric" }}
-    ${"ak-u-ca-ethiopic"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}
-    ${"ak-u-ca-indian"}   | ${{ year: "numeric", month: "numeric", day: "numeric" }}
-    ${"en"}               | ${{ hour: "numeric", minute: "numeric" }}
+    locale                           | options
+    ${"en"}                          | ${{ year: "numeric", month: "short", day: "numeric" }}
+    ${"de"}                          | ${{ year: "numeric", month: "long" }}
+    ${"ja-u-ca-japanese"}            | ${{ year: "numeric", month: "long", day: "numeric" }}
+    ${"zh-u-ca-chinese"}             | ${{ year: "numeric", month: "long", day: "numeric" }}
+    ${"kok-u-ca-ethioaa"}            | ${{ year: "numeric", month: "numeric", day: "numeric" }}
+    ${"kok-u-ca-indian"}             | ${{ year: "numeric", month: "numeric", day: "numeric" }}
+    ${"ak-u-ca-coptic"}              | ${{ year: "numeric", month: "numeric", day: "numeric" }}
+    ${"ak-u-ca-ethiopic"}            | ${{ year: "numeric", month: "numeric", day: "numeric" }}
+    ${"ak-u-ca-indian"}              | ${{ year: "numeric", month: "numeric", day: "numeric" }}
+    ${"en"}                          | ${{ hour: "numeric", minute: "numeric" }}
+    ${"ar-SA-u-ca-islamic-umalqura"} | ${{ year: "numeric", month: "short", day: "numeric" }}
+    ${"en-u-ca-islamic-civil"}       | ${{ year: "numeric", month: "long" }}
+    ${"en-u-ca-islamic-tbla"}        | ${{ year: "numeric", month: "numeric", day: "numeric" }}
   `("does not flag '$locale' $options", ({ locale, options }) => {
+    // The Islamic rows hold on WebKit too: its `format` prints a year before 1 AH as `153 Before
+    // Hijra` and its `formatRange` as `-152`, a disagreement the earlier-era walk must not read as
+    // a week-year, because GMT prints no date before the Hijra (D26).
     const formatter = new Intl.DateTimeFormat(locale, { ...options, ...utc });
     expect(rangeYearVerdict(formatter, options)).toBe(false);
   });

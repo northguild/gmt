@@ -7,16 +7,19 @@ import { formatDateToParts } from "../plain/format/formatDateToParts";
 import { formatZonedDateTime } from "../zoned/format/formatZonedDateTime";
 import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { formatZonedToParts } from "../zoned/format/formatZonedToParts";
+import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
 
 /*
- * CORE-112 (D25 to D30): the years an engine prints wrongly outside the week-year.
+ * CORE-112 (D25 to D31): the years an engine prints wrongly outside the week-year.
  *
  * Every expected value comes from a specification, never from the engine's text:
  * - D25: Intl era/monthCode Table 2 as amended by tc39/proposal-intl-era-monthcode#86 (test262
  *   tc39/test262#4877): the japanese calendar uses Gregorian eras up to and including 1872-12-31
  *   and the solar Japanese eras from 1873-01-01. ISO -0001-07-10 is 2 BC, 1872-12-31 is 1872 AD,
  *   1873-01-01 is Meiji 6 (Meiji 1 is 1868 as a year count).
- * - D26: Table 2 and § 4.1.12 give `bh`; an engine with no `bh` name gives the house empty value.
+ * - D26: Table 2 and § 4.1.12 give `bh` with era year 1 - year (ISO 0600-07-10 is year -22, so `bh` 23);
+ *   an engine with no `bh` name gives the house empty value, and one that names it prints its own era text
+ *   (the library repairs only when `isIslamicEraCompatNeeded()`, so each row branches on that probe).
  * - D27: ECMA-402 FormatDateTimePattern, "2-digit": FormatNumeric with minimumIntegerDigits 2, so
  *   Reiwa 6 is 06; CLDR's ja data keeps 元年 for year 1 (owner decision).
  * - D28: ECMA-402 FormatDateTimePattern, `relatedYear`: FormatNumeric at full width, no 2-digit
@@ -378,78 +381,139 @@ const islamicCalendars = [
   "islamic-umalqura",
 ] as const;
 
+/**
+ * The era years `bh` of two ISO dates before the Hijra, which every `islamic*` calendar shares
+ * (native Temporal: ISO -000001-07-10 is year -642 and 0600-07-10 is year -22; `bh` era year is 1 - year).
+ */
+const BH_YEAR_OF_ISO_MINUS_1 = 643;
+const BH_YEAR_OF_ISO_600 = 23;
+
+/** A range with an end before the Hijra: the empty value (D26), or the engine's own non-empty text. */
+function expectBeforeHijraRange(actual: string): void {
+  if (isIslamicEraCompatNeeded()) {
+    expect(actual).toBe("");
+    return;
+  }
+  expect(actual).not.toBe("");
+}
+
+/**
+ * A date before the Hijra, as the formatters answer it: the empty value (or `[]` for parts) where
+ * the engine cannot name the `bh` era (D26), and otherwise the engine's own text, which names an era
+ * other than `AH` and, where `eraYear` is given, prints the era year 1 - year in Latin digits.
+ */
+function expectBeforeHijra(actual: string | unknown[], eraYear?: number): void {
+  if (isIslamicEraCompatNeeded()) {
+    expect(actual).toEqual(typeof actual === "string" ? "" : []);
+    return;
+  }
+  const text =
+    typeof actual === "string"
+      ? actual
+      : (actual as { value: string }[]).map((part) => part.value).join("");
+  expect(text).not.toBe("");
+  expect(text).not.toMatch(/\bAH\b/);
+  if (eraYear !== undefined) {
+    expect(text).toContain(String(eraYear));
+  }
+}
+
 describe("D26: islamic dates before the Hijra give the empty value", () => {
   it.each(islamicCalendars.map((calendar) => ({ calendar })))(
     "gives the empty value for '$calendar'",
     ({ calendar }) => {
       const locale = `en-u-ca-${calendar}`;
-      expect(formatDate("-000001-07-10", locale, eraYear)).toBe("");
-      expect(formatDate("0600-07-10", locale, eraYear)).toBe("");
-      expect(formatDateToParts("-000001-07-10", locale, eraYear)).toEqual([]);
-      expect(formatDateTime("0600-07-10T12:00:00", locale, eraYear)).toBe("");
-      expect(
-        formatDateRange("-000001-07-10", "2025-07-10", locale, eraYear),
-      ).toBe("");
-      expect(formatDateRange("2025-07-10", "0600-07-10", locale, eraYear)).toBe(
-        "",
+      expectBeforeHijra(
+        formatDate("-000001-07-10", locale, eraYear),
+        BH_YEAR_OF_ISO_MINUS_1,
       );
-      expect(
+      expectBeforeHijra(
+        formatDate("0600-07-10", locale, eraYear),
+        BH_YEAR_OF_ISO_600,
+      );
+      expectBeforeHijra(formatDateToParts("-000001-07-10", locale, eraYear));
+      expectBeforeHijra(
+        formatDateTime("0600-07-10T12:00:00", locale, eraYear),
+        BH_YEAR_OF_ISO_600,
+      );
+      expectBeforeHijraRange(
+        formatDateRange("-000001-07-10", "2025-07-10", locale, eraYear),
+      );
+      expectBeforeHijraRange(
+        formatDateRange("2025-07-10", "0600-07-10", locale, eraYear),
+      );
+      expectBeforeHijraRange(
         formatDateTimeRange(
           "0600-07-10T00:00:00",
           "2025-07-10T00:00:00",
           locale,
           eraYear,
         ),
-      ).toBe("");
-      expect(
+      );
+      expectBeforeHijra(
         formatZonedDateTime("0600-07-10T12:00:00+00:00[UTC]", locale, eraYear),
-      ).toBe("");
-      expect(
+        BH_YEAR_OF_ISO_600,
+      );
+      expectBeforeHijra(
         formatZonedToParts("0600-07-10T12:00:00+00:00[UTC]", locale, eraYear),
-      ).toEqual([]);
-      expect(
+      );
+      expectBeforeHijraRange(
         formatZonedRange(
           "0600-07-10T12:00:00+00:00[UTC]",
           "2025-07-10T12:00:00+00:00[UTC]",
           locale,
           eraYear,
         ),
-      ).toBe("");
+      );
     },
   );
 
   // Last day before the Hijra and the first day of AH 1, as native Temporal computes them
   // (`bh` era / year 0, then `ah` year 1). `islamic` resolves to `islamic-tbla` (D30), so
-  // its epoch is that row's.
+  // its epoch is that row's. The last day before the Hijra is `bh` 1.
   it.each`
     calendar              | lastBefore      | firstDay
     ${"islamic-civil"}    | ${"0622-07-18"} | ${"0622-07-19"}
     ${"islamic-tbla"}     | ${"0622-07-17"} | ${"0622-07-18"}
     ${"islamic-umalqura"} | ${"0622-07-18"} | ${"0622-07-19"}
   `(
-    "'$calendar' gives the empty value for the last day before the Hijra and 1 AH for $firstDay",
+    "'$calendar' gives the empty value for the last day before the Hijra, $lastBefore",
     ({ calendar, lastBefore, firstDay }) => {
       const locale = `en-u-ca-${calendar}`;
-      expect(formatDate(lastBefore, locale, eraYear)).toBe("");
-      expect(formatDateToParts(lastBefore, locale, eraYear)).toEqual([]);
-      expect(formatDate(firstDay, locale, eraYear)).toBe("1 AH");
-      expect(
-        formatDateToParts(firstDay, locale, eraYear).find(
-          (part) => part.type === "year",
-        ),
-      ).toEqual({ type: "year", value: "1" });
-      expect(formatDateRange(lastBefore, firstDay, locale, eraYear)).toBe("");
-      expect(formatDateRange(firstDay, "0623-07-10", locale, eraYear)).toMatch(
-        /^1\D+2 AH$/,
+      expectBeforeHijra(formatDate(lastBefore, locale, eraYear), 1);
+      expectBeforeHijra(formatDateToParts(lastBefore, locale, eraYear));
+      expectBeforeHijraRange(
+        formatDateRange(lastBefore, firstDay, locale, eraYear),
       );
-      expect(
+      expectBeforeHijraRange(
         formatZonedRange(
           `${lastBefore}T23:59:59+00:00[UTC]`,
           `${firstDay}T12:00:00+00:00[UTC]`,
           locale,
           eraYear,
         ),
-      ).toBe("");
+      );
+    },
+  );
+
+  it.each`
+    calendar              | firstDay
+    ${"islamic-civil"}    | ${"0622-07-19"}
+    ${"islamic-tbla"}     | ${"0622-07-18"}
+    ${"islamic-umalqura"} | ${"0622-07-19"}
+  `(
+    "'$calendar' prints 1 AH for the first day of the Hijra, $firstDay",
+    ({ calendar, firstDay }) => {
+      const locale = `en-u-ca-${calendar}`;
+      expect(formatDate(firstDay, locale, eraYear)).toBe("1 AH");
+      expect(
+        formatDateToParts(firstDay, locale, eraYear).find(
+          (part) => part.type === "year",
+        ),
+      ).toEqual({ type: "year", value: "1" });
+      expect(formatDateRange(firstDay, "0623-07-10", locale, eraYear)).toMatch(
+        /^1\D+2 AH$/,
+      );
     },
   );
 
@@ -459,10 +523,10 @@ describe("D26: islamic dates before the Hijra give the empty value", () => {
     ${"ar-u-ca-islamic-umalqura-nu-arab"}
     ${"th-u-ca-islamic-tbla-nu-thai"}
   `("gives the empty value before the Hijra for '$locale'", ({ locale }) => {
-    expect(formatDate("0600-07-10", locale, eraYear)).toBe("");
-    expect(formatDateToParts("0600-07-10", locale, eraYear)).toEqual([]);
-    expect(formatDateRange("0600-07-10", "0601-07-10", locale, eraYear)).toBe(
-      "",
+    expectBeforeHijra(formatDate("0600-07-10", locale, eraYear));
+    expectBeforeHijra(formatDateToParts("0600-07-10", locale, eraYear));
+    expectBeforeHijraRange(
+      formatDateRange("0600-07-10", "0601-07-10", locale, eraYear),
     );
   });
 
@@ -875,9 +939,19 @@ describe("D25, D26: the calendar option and formatCalendar reach the same repair
     ${"D25 option, last day"}  | ${() => formatDate("1872-12-31", "en", { calendar: "japanese", year: "numeric" })}                       | ${"1872 AD"}
     ${"D25 option, first day"} | ${() => formatDate("1873-01-01", "en", { calendar: "japanese", year: "numeric" })}                       | ${"6 Meiji"}
     ${"D25 formatCalendar"}    | ${() => formatCalendar("1872-12-31T12:00:00", "en-u-ca-japanese", { reference: "1873-06-01T12:00:00" })} | ${"December 31, 1872 AD at 12:00 PM"}
-    ${"D26 option, before"}    | ${() => formatDate("0600-07-10", "en", { calendar: "islamic-civil", era: "short", year: "numeric" })}    | ${""}
     ${"D26 option, after"}     | ${() => formatDate("2025-07-10", "en", { calendar: "islamic-civil", era: "short", year: "numeric" })}    | ${"1447 AH"}
   `("$label gives '$expected'", ({ call, expected }) => {
     expect(call()).toBe(expected);
+  });
+
+  it("D26 option, before gives the empty value, or the engine's own bh text where it names the era", () => {
+    expectBeforeHijra(
+      formatDate("0600-07-10", "en", {
+        calendar: "islamic-civil",
+        era: "short",
+        year: "numeric",
+      }),
+      BH_YEAR_OF_ISO_600,
+    );
   });
 });

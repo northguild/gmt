@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * CORE-81: files the canary issues. A thin shell around the pure decision in
+ * CORE-81: files the canary issue. A thin shell around the pure decision in
  * `scripts/lib/canary-issues.mjs`: it reads the verdict files a canary wrote, applies the dry-run
- * force flags, asks the planner what to do and runs that through the GitHub CLI.
+ * force flags, asks the planner what to do and runs that through the GitHub CLI. One run files one
+ * rolling issue per workflow: it opens, rewrites (with a comment) or closes it, and closes any
+ * per-finding issue left open from the earlier shape.
  *
  *   node scripts/canary-report.mjs <temporal-oracle|leap-seconds|us-clock-watch>
  *        [--force-removable=<id>] [--force-mismatch] [--force-native-failure]
@@ -18,9 +20,6 @@
  * Issues are filed only from `main`. A run on another branch (`GITHUB_REF_NAME`) calls no `gh`
  * either: the job summary lists what it would have filed, so a branch or a dry-run dispatch can
  * be checked without touching the issues that the weekly runs comment on.
- *
- * A comment whose rows match the issue's latest full report is cut to one line linking to that
- * report (`shortenRepeats`).
  *
  * Node built-ins only and no `Date`: the workflows run it with no install and no build. `gh`
  * authenticates from `GH_TOKEN`. The job summary goes to `$GITHUB_STEP_SUMMARY`, or to stdout when
@@ -38,8 +37,8 @@ import {
   ISSUE_TYPE,
   WORKFLOW_SOURCES,
   applyForce,
+  foldedComment,
   planIssueActions,
-  shortenRepeats,
 } from "./lib/canary-issues.mjs";
 import { summaryMarkdown } from "./lib/canary-summary.mjs";
 
@@ -84,7 +83,6 @@ const LABEL_SPECS = {
 /**
  * @typedef {import("./lib/canary-issues.mjs").Force} Force
  * @typedef {import("./lib/canary-issues.mjs").Action} Action
- * @typedef {import("./lib/canary-issues.mjs").IssueHistory} IssueHistory
  * @typedef {(args: string[], input?: string) => string} Gh  runs `gh` with args, returns stdout
  * @typedef {{ action: Action, ok: boolean, issue?: number, error?: string }} ActionResult
  */
@@ -191,48 +189,18 @@ export function listOpenCanaryIssues(gh) {
 }
 
 /**
- * The comments of each issue that `actions` comments on, for `shortenRepeats`. An issue whose
- * comments cannot be read is left out, so its comment goes out in full.
- * @param {Gh} gh
- * @param {Action[]} actions
- * @param {{ number: number, url: string, body: string }[]} openIssues
- * @returns {Map<number, IssueHistory>}
- */
-export function issueHistories(gh, actions, openIssues) {
-  /** @type {Map<number, IssueHistory>} */
-  const out = new Map();
-  for (const action of actions) {
-    if (action.kind !== "comment" || out.has(action.issue)) continue;
-    const issue = openIssues.find((i) => i.number === action.issue);
-    if (!issue) continue;
-    try {
-      const lines = gh([
-        "api",
-        "--paginate",
-        `repos/{owner}/{repo}/issues/${action.issue}/comments`,
-        "--jq",
-        ".[] | {url: .html_url, body: .body}",
-      ]);
-      const comments = lines
-        .split("\n")
-        .filter((line) => line.trim() !== "")
-        .map((line) => JSON.parse(line));
-      out.set(action.issue, { url: issue.url, body: issue.body, comments });
-    } catch {
-      // No history: the comment goes out in full, which is always correct.
-    }
-  }
-  return out;
-}
-
-/**
  * Runs every action in order. A failed call is recorded and the next action still runs; an action
- * already run stays done, and the next weekly run comments on it.
+ * already run stays done, and the next run plans from what is open then. A folded issue is closed
+ * with a pointer to its group's rolling issue, so it waits for that issue's number: the one just
+ * opened, or the one just rewritten. If the rolling issue was not filed, the folded issue stays
+ * open.
  * @param {Gh} gh
  * @param {Action[]} actions
  * @returns {ActionResult[]}
  */
 export function runActions(gh, actions) {
+  /** @type {Map<string, number>} */
+  const rolling = new Map();
   return actions.map((action) => {
     try {
       if (action.kind === "comment") {
@@ -240,6 +208,45 @@ export function runActions(gh, actions) {
           ["issue", "comment", String(action.issue), "--body-file", "-"],
           action.body,
         );
+        return { action, ok: true, issue: action.issue };
+      }
+      if (action.kind === "edit") {
+        gh(
+          [
+            "issue",
+            "edit",
+            String(action.issue),
+            "--title",
+            action.title,
+            ...action.labels.flatMap((label) => ["--add-label", label]),
+            "--body-file",
+            "-",
+          ],
+          action.body,
+        );
+        rolling.set(action.key, action.issue);
+        return { action, ok: true, issue: action.issue };
+      }
+      if (action.kind === "close") {
+        const target = rolling.get(action.key);
+        if (action.reason === "folded" && target === undefined) {
+          return {
+            action,
+            ok: false,
+            error: `the rolling issue was not filed, so #${action.issue} stays open`,
+          };
+        }
+        gh([
+          "issue",
+          "close",
+          String(action.issue),
+          "--reason",
+          action.reason === "clean" ? "completed" : "not planned",
+          "--comment",
+          action.reason === "clean"
+            ? action.body
+            : foldedComment(/** @type {number} */ (target)),
+        ]);
         return { action, ok: true, issue: action.issue };
       }
       const output = gh(
@@ -265,11 +272,29 @@ export function runActions(gh, actions) {
           error: `could not read the new issue number from gh's output: ${output.trim()}`,
         };
       }
+      rolling.set(action.key, Number(number));
       return { action, ok: true, issue: Number(number) };
     } catch (error) {
       return { action, ok: false, error: messageOf(error) };
     }
   });
+}
+
+/**
+ * A failed action in words, for stderr.
+ * @param {Action} action
+ */
+function describeAction(action) {
+  switch (action.kind) {
+    case "open":
+      return `open "${action.title}"`;
+    case "edit":
+      return `rewrite #${action.issue}`;
+    case "comment":
+      return `comment on #${action.issue}`;
+    default:
+      return `close #${action.issue}`;
+  }
 }
 
 /** @param {unknown} error */
@@ -424,38 +449,20 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
   let notFiledReason;
   let code = skippedCode;
   try {
-    // With no open issues every finding plans as `open`, so this names every label that could be
-    // needed; with no finding at all, no `gh` call is made.
+    // With no open issues a run that has findings plans as `open`, so this names every label that
+    // could be needed. The open issues are listed on every run: a clean run closes them.
     const labels = new Set([CANARY_LABEL]);
     const planned = planIssueActions(forced, [], context);
     for (const action of planned) {
       if (action.kind === "open") action.labels.forEach((l) => labels.add(l));
     }
-    if (planned.length === 0) {
-      results = [];
-    } else {
-      ensureLabels(gh, [...labels]);
-      const openIssues = listOpenCanaryIssues(gh);
-      const actions = planIssueActions(forced, openIssues, context);
-      results = runActions(
-        gh,
-        shortenRepeats(
-          actions,
-          issueHistories(gh, actions, openIssues),
-          runUrl,
-        ),
-      );
-      for (const { action, ok, error } of results) {
-        if (ok) continue;
-        code = 1;
-        stderr(
-          `canary-report: failed to ${
-            action.kind === "open"
-              ? `open "${action.title}"`
-              : `comment on #${action.issue}`
-          }: ${error}\n`,
-        );
-      }
+    if (planned.length > 0) ensureLabels(gh, [...labels]);
+    const openIssues = listOpenCanaryIssues(gh);
+    results = runActions(gh, planIssueActions(forced, openIssues, context));
+    for (const { action, ok, error } of results) {
+      if (ok) continue;
+      code = 1;
+      stderr(`canary-report: failed to ${describeAction(action)}: ${error}\n`);
     }
   } catch (error) {
     // Labels or the issue list failed: nothing was filed.

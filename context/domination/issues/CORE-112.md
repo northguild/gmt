@@ -45,7 +45,7 @@ regional variants, kek, ki and pt. ECMA-402 FormatDateTimePattern prints the cal
   defect. A formatter that passes is returned unchanged. A failing formatter is wrapped, and the
   wrapper prints the value the specifications give.
 - Every repair is dormant behind its own probe: on an engine that has no such defect, none of the
-  repair code runs. Each has a canary group (D23 to D30, `temporalCompat/repros.ts`,
+  repair code runs. Each has a canary group (D23 to D31, `temporalCompat/repros.ts`,
   `rangeFieldRepros.ts` and `probeRepros.ts`) and is retired by the compat check
   (`scripts/lib/workarounds.mjs`) when every engine passes it.
 - GMT owns no CLDR or calendar data: every replacement text comes from the engine's own formatters.
@@ -172,7 +172,7 @@ regional variants, kek, ki and pt. ECMA-402 FormatDateTimePattern prints the cal
 
 - Defects and measured engines: [js-temporal-polyfill-bugs.md § AF and § AG](../js-temporal-polyfill-bugs.md#af-some-languages-date-patterns-print-the-week-of-year-year-the-wrong-year-everywhere-and-a-v8-crash-in-formattoparts-engine-and-cldr).
 - Probes and repros: `packages/gmt/src/internal/temporalCompat/probeRepros.ts`, `repros.ts`
-  (`CanaryDefectId`, D23 to D30) and `rangeFieldRepros.ts`; removal steps in that folder's README
+  (`CanaryDefectId`, D23 to D31) and `rangeFieldRepros.ts`; removal steps in that folder's README
   and `scripts/lib/workarounds.mjs`.
 - Upstream filings (ICU-23327, ICU-23619 to 23625, CLDR-19873, 19912, 19913, Chromium 585635918,
   nodejs/node#67076, tc39/ecma402#1116) are in `apps/dox/src/data/upstream-filings.json`, each

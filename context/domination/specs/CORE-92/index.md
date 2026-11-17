@@ -106,7 +106,7 @@ Script tests live in `apps/dox/scripts/canary/` and run under `apps/dox/vitest.c
 | One instant a day at 12:00 UTC, to ten years past the run date, Node only | **GMT rule**, issue Scope 2. On 1.0.6 the sweep found every zone in research §4.3, in about 80 s |
 | Judge the swap against the same runtime's control pass | **GMT rule** (correction 2): a host failure is the runtime's, not the polyfill's |
 | Type errors do not decide | **GMT rule**, issue Scope 3: research §5 lists the ~238 errors as swap cleanup |
-| Swap issue on success only; comment on the open one; a run that ran but is not swap-ready files nothing | **GMT rule**, issue Scope 4 (the CORE-81 marker scheme) |
+| Swap finding on success only; rewrite the open rolling issue; a run that ran but is not swap-ready files nothing | **GMT rule**, issue Scope 4 (the CORE-81 marker scheme) |
 | A swap leg or sweep that could not run is listed in `temporal-oracle/could-not-run` | **GMT rule**, owner decision: a check that cannot run is a finding, never silence |
 | Issue marker and body limit | Existing `canary-issues.mjs` rules (GFM HTML comment block; 65,536-character body) |
 | `getNow()` may equal the frozen system time | Temporal §2.3.1 HostSystemUTCEpochNanoseconds: "the approximate current UTC date and time", and hosts may "reduce the precision of the result". No sub-millisecond part is required |

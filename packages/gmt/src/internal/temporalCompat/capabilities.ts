@@ -312,6 +312,36 @@ export function isIslamicEraCompatNeeded(): boolean {
 }
 
 /**
+ * True when this runtime prints a coptic date before AM 1 without its signed year and its era
+ * (defect D31, ICU-23277).
+ *
+ * Intl era/monthCode Table 2 gives the coptic calendar one era, `am`, with era years from
+ * -infinity to +infinity, and 4.1.12 makes the era year the year; test262
+ * `intl402/Temporal/PlainDate/from/non-positive-single-era-year.js` keeps coptic era year -1 as -1.
+ * ISO -000001-07-10 is therefore `-285 AM`. ICU prints `1 - year` (286) and an empty era. The
+ * probe reads that date with the era and year fields: the text must hold the year as
+ * `Intl.NumberFormat` writes -285 and the same era name as a date after AM 1 (digits, signs and
+ * spaces taken out).
+ */
+export function isCopticEraCompatNeeded(): boolean {
+  const options = { era: "short", year: "numeric" } as const;
+  const eraOf = (text: string): string =>
+    text.replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect("D31", () => {
+    const before = textAt("en-u-ca-coptic", options, [-1, 7, 10]);
+    const after = textAt("en-u-ca-coptic", options, [2000, 1, 1]);
+    const signed = new Intl.NumberFormat("en", { useGrouping: false }).format(
+      -285,
+    );
+    return !(
+      before.includes(signed) &&
+      eraOf(after) !== "" &&
+      eraOf(before) === eraOf(after)
+    );
+  });
+}
+
+/**
  * True when this runtime does not pad a Japanese era year under `year: "2-digit"` (defect D27,
  * ICU-23620).
  *

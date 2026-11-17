@@ -1,16 +1,26 @@
 /**
  * CORE-81: the pure decision behind the canary issues. Verdicts and the open issues go in; a list
- * of `open` / `comment` actions comes out. Nothing here reads a file, the network, the process or
- * the clock, so the whole rule set is tested offline (`apps/dox/scripts/canary/canary-issues.test.ts`).
+ * of `open` / `edit` / `comment` / `close` actions comes out. Nothing here reads a file, the
+ * network, the process or the clock, so the whole rule set is tested offline
+ * (`apps/dox/scripts/canary/canary-issues.test.ts`).
  *
- * Every canary issue carries the label `canary` and, as its body's first line, a hidden marker
- * naming the finding's key. An open `canary` issue with that marker gets a comment; otherwise a new
- * issue opens. A finding keyed by what is wrong, not by the run, is what stops a weekly run from
- * opening a second issue for a problem that is still there.
+ * One scheduled run files one issue. Each workflow keeps at most one open "rolling" issue, which
+ * carries the label `canary` and, as its body's first line, a hidden marker naming the workflow.
+ * A failing run rewrites that issue with every finding of the run, one section each, and adds a
+ * comment saying what is new, still there and gone since the last run. With no such issue open, the
+ * run opens it. A clean run closes it. A forced dry run keeps its own rolling issue, so it never
+ * touches a real one. An open issue from the earlier one-issue-per-finding shape (marker
+ * `key="..."`) is closed as folded in. Workflows never touch each other's issues.
+ *
+ * Two kinds of finding. A state finding holds while its cause does, so every run detects it again:
+ * it is rewritten each run and dropped once gone. An event finding is reported once, by the run
+ * that sees the change, and waits for a person (the US clock-change watch's federal and state
+ * lists, which hold only what is new since the carried snapshot). Events stay in the rolling issue
+ * until a person closes it: a run merges its new lines into the stored ones, and a clean run keeps
+ * the issue open while it holds any. The stored lines ride in a hidden marker.
  *
  * Imports one constant (`ENGINE_IDS`) and nothing that reads or writes.
  */
-import { createHash } from "node:crypto";
 import { ENGINE_IDS } from "./workarounds.mjs";
 
 /** Label every canary issue carries. */
@@ -114,7 +124,7 @@ const FLOOR_STEP =
 const FORCED_LEAP_LINE = "dry run: forced difference (no real row differs)";
 const FORCED_US_LINE = "dry run: forced difference (nothing real differs)";
 const US_REVIEW_STEP =
-  "Review the change. If a position changed, edit the Proposals data module under `apps/dox/src/data/` (`*-proposals.ts`) and its checked date by hand, then close this issue. Nothing else to run: the next weekly run compares with the snapshot this run carried forward, so each change is listed once, and a later change is added here as a comment while this issue is open.";
+  "Review the change. If a position changed, edit the Proposals data module under `apps/dox/src/data/` (`*-proposals.ts`) and its checked date by hand, then close this issue. A later change is added here while it stays open. Nothing else to run.";
 /** Where a federal or state list starts from: the snapshot this run compared with. */
 const usSince = (part) =>
   part.since
@@ -223,19 +233,44 @@ const FORCED_ROW = {
  * @typedef {{ removable?: string, mismatch?: boolean, nativeFailure?: boolean,
  *   leapDifference?: boolean, usClockDifference?: boolean, swapReady?: boolean }} Force
  * @typedef {{ workflow: "temporal-oracle" | "leap-seconds" | "us-clock-watch", runUrl: string }} Context
- * @typedef {{ key: string, title: string, labels: string[], body: string, comment: string }} Finding
- * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string }
- *   | { kind: "comment", key: string, issue: number, body: string }} Action
+ * @typedef {{ lead: string, items: string[], tail: string, dropped: number }} EventList
+ *   the parts of an event finding's body: the opening paragraph, the bullet lines, the closing
+ *   paragraph, and how many oldest lines were dropped to fit
+ * @typedef {{ key: string, title: string, labels: string[], body: string, event?: EventList }} Finding
+ *   `event`: set on an event finding, reported once and kept until a person closes the issue
+ * @typedef {{ number: number, body: string, labels: { name: string }[] }} OpenIssue
+ * @typedef {{ kind: "open", key: string, title: string, labels: string[], body: string,
+ *     findings: string[] }
+ *   | { kind: "edit", key: string, issue: number, title: string, labels: string[], body: string,
+ *     findings: string[] }
+ *   | { kind: "comment", key: string, issue: number, body: string }
+ *   | { kind: "close", key: string, issue: number, reason: "clean", body: string }
+ *   | { kind: "close", key: string, issue: number, reason: "folded", body?: undefined }} Action
+ *   `key`: the group, `<workflow>` or `dry-run/<workflow>`; `findings`: the keys of the findings
+ *   the issue lists
  */
 
+/** Prefix of a dry-run finding's key and of its group. */
+const DRY_PREFIX = "dry-run/";
+
 /**
- * The hidden first line of a canary issue body. It renders nothing (GFM spec 0.29-gfm §4.6, HTML
- * block start condition 2).
+ * The hidden first line of a per-finding issue body from the earlier shape; it names a finding's
+ * key. It renders nothing (GFM spec 0.29-gfm §4.6, HTML block start condition 2).
  * @param {string} key
  * @returns {string}
  */
 export function marker(key) {
   return `<!-- gmt-canary key="${key}" -->`;
+}
+
+/**
+ * The hidden first line of a rolling issue body, naming its group: a workflow, or `dry-run/` and
+ * a workflow.
+ * @param {string} group
+ * @returns {string}
+ */
+export function rollingMarker(group) {
+  return `<!-- gmt-canary rolling="${group}" -->`;
 }
 
 /**
@@ -441,7 +476,6 @@ function dryRun(real, flag, paragraphs, runUrl) {
     title: `[dry run] ${real.title}`,
     labels: [...real.labels, DRY_RUN_LABEL],
     body: withRun(`${dryRunNote(flag)}\n\n${paragraphs.join("\n\n")}`, runUrl),
-    comment: real.comment,
   };
 }
 
@@ -624,16 +658,12 @@ function removableFinding(state, check, isForced, runUrl) {
     `### Snapshot\n\n${snapshotSentence(check)}`,
     "A person removes the workaround; CI opens issues, never pull requests.",
   );
-  const comment = isForced
-    ? `${opening}\n\n${snapshotSentence(check)}`
-    : `Still removable on this run on every engine in its scope (${scopeLabels}; @js-temporal/polyfill ${polyfill}).\n\n${snapshotSentence(check)}`;
   /** @type {Finding} */
   const real = {
     key: `temporal-compat/removable/${id}`,
     title: `Remove workaround ${id}: ${summaryOf(w)}`,
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
-    comment: withRun(comment, runUrl),
   };
   if (!isForced) return real;
   return dryRun(real, `--force-removable=${id}`, paragraphs, runUrl);
@@ -706,20 +736,12 @@ function mismatchFinding(oracle, isForced, runUrl) {
     paragraphs.push(`Full list: ${oracle.report} in the run's artifact.`);
   }
   const body = withRun(paragraphs.join("\n\n"), runUrl);
-  const seen = isForced
-    ? forcedOpening
-    : `Seen again on this run: ${counts.untagged} untagged.`;
-  const commentGroups = groupsTruncated
-    ? `${groupsHeading}\n\n${groupsTable}`
-    : groupsTable;
-  const comment = withRun(`${seen}\n\n${commentGroups}`, runUrl);
   /** @type {Finding} */
   const real = {
     key: "temporal-oracle/untagged-mismatch",
     title: "Oracle: GMT differs from native Temporal on untagged rows",
     labels: [CANARY_LABEL, COMPAT_LABEL],
     body,
-    comment,
   };
   if (!isForced) return real;
   return dryRun(real, "--force-mismatch", paragraphs, runUrl);
@@ -736,7 +758,7 @@ function legLabel(v) {
 }
 
 /** GitHub's limit on an issue body or comment, in characters. */
-const BODY_LIMIT = 65_536;
+export const BODY_LIMIT = 65_536;
 /** Room kept for the run line and the paragraphs around the tables. */
 const BODY_MARGIN = 1_500;
 const FILE_CELL_CHARS = 150;
@@ -824,7 +846,6 @@ function nativeFailureFinding(v, isForced, runUrl) {
     title: `Native Temporal: GMT tests fail on ${legLabel(v)}`,
     labels: [CANARY_LABEL, COMPAT_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
-    comment: withRun(sections.join("\n\n"), runUrl),
   };
   if (!isForced) return real;
   return dryRun(real, "--force-native-failure", paragraphs, runUrl);
@@ -849,7 +870,6 @@ function nativeHostFailureFinding(ranLegs, runUrl) {
     title: `Native suite: tests fail on both engines in ${legs.map(legLabel).join(", ")}`,
     labels: [CANARY_LABEL],
     body: withRun([...sections, HOST_PARAGRAPH].join("\n\n"), runUrl),
-    comment: withRun(sections.join("\n\n"), runUrl),
   };
 }
 
@@ -872,7 +892,6 @@ function nativeControlOnlyFinding(ranLegs, runUrl) {
     title: `Native suite: tests fail only on the polyfill in ${legs.map(legLabel).join(", ")}`,
     labels: [CANARY_LABEL, COMPAT_LABEL],
     body: withRun([...sections, CONTROL_PARAGRAPH].join("\n\n"), runUrl),
-    comment: withRun(sections.join("\n\n"), runUrl),
   };
 }
 
@@ -944,7 +963,6 @@ function nativeStaleTagFinding(ranLegs, runUrl) {
     title: "Native suite: known failures no longer fail",
     labels: [CANARY_LABEL],
     body: withRun([...tables, ...steps].join("\n\n"), runUrl),
-    comment: withRun(tables.join("\n\n"), runUrl),
   };
 }
 
@@ -965,17 +983,12 @@ function leapFinding(leap, isForced, runUrl) {
     `### Differences\n\n${list}`,
     "A new row is a data edit in leapSeconds.ts plus a patch changeset; leapSeconds.test.ts checks the edit.",
   ];
-  const comment = withRun(
-    `Still differs on this run (${header}):\n\n${list}`,
-    runUrl,
-  );
   /** @type {Finding} */
   const real = {
     key: "leap-seconds/table-difference",
     title: "Leap-second table differs from the IERS table",
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
-    comment,
   };
   if (!isForced) return real;
   return dryRun(real, "--force-leap-difference", paragraphs, runUrl);
@@ -997,7 +1010,6 @@ function couldNotRunFinding(workflow, failed, runUrl) {
       `${list}\n\nThis canary reported nothing on this run; the run log says why.`,
       runUrl,
     ),
-    comment: withRun(list, runUrl),
   };
 }
 
@@ -1102,14 +1114,30 @@ function leapSecondsFindings(verdicts, runUrl) {
 }
 
 /**
+ * The paragraphs of an event finding's body.
+ * @param {EventList} event
+ * @returns {string[]}
+ */
+function eventParagraphs(event) {
+  const list = event.items.map((l) => `- ${l}`).join("\n");
+  const dropped =
+    event.dropped > 0
+      ? [
+          `Older lines dropped to fit GitHub's 65,536-character limit: ${event.dropped}.`,
+        ]
+      : [];
+  return [event.lead, `### Differences\n\n${list}`, ...dropped, event.tail];
+}
+
+/**
  * @param {string} title
  * @param {string} key
  * @param {string} subject  what the list is about, for the body's first line
  * @param {string[]} lines
  * @param {string} extra  the last paragraph
- * @param {string} lead  the comment's first line on a later run
  * @param {boolean} isForced
  * @param {string} runUrl
+ * @param {boolean} [asEvent]  a change reported once, kept until a person closes the issue
  * @returns {Finding}
  */
 function clockWatchFinding(
@@ -1118,21 +1146,21 @@ function clockWatchFinding(
   subject,
   lines,
   extra,
-  lead,
   isForced,
   runUrl,
+  asEvent = false,
 ) {
-  const list = (isForced ? [FORCED_US_LINE] : lines)
-    .map((l) => `- ${l}`)
-    .join("\n");
-  const paragraphs = [subject, `### Differences\n\n${list}`, extra];
+  const items = isForced ? [FORCED_US_LINE] : lines;
+  /** @type {EventList} */
+  const event = { lead: subject, items, tail: extra, dropped: 0 };
+  const paragraphs = eventParagraphs(event);
   /** @type {Finding} */
   const real = {
     key,
     title,
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
-    comment: withRun(`${lead}\n\n${list}`, runUrl),
+    ...(asEvent && !isForced ? { event } : {}),
   };
   if (!isForced) return real;
   return dryRun(real, "--force-us-clock-difference", paragraphs, runUrl);
@@ -1141,8 +1169,8 @@ function clockWatchFinding(
 /**
  * The findings of the US clock-change watch: one per source that differs (federal, state, tz), then
  * a could-not-run finding naming each source that failed. The sources that ran still report. A
- * federal or state list holds only what is new since the snapshot carried from the last run, so a
- * later run's comment lists new changes; a tz difference stays until the committed snapshot moves.
+ * federal or state list holds only what is new since the snapshot carried from the last run, so each
+ * is an event finding that the rolling issue keeps until a person closes it; a tz difference stays until the committed snapshot moves.
  * @param {Record<string, Verdict | null>} verdicts
  * @param {string} runUrl
  * @returns {Finding[]}
@@ -1163,9 +1191,9 @@ function usClockWatchFindings(verdicts, runUrl) {
         `The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed ${usSince(federal)}.`,
         federal.differences,
         US_REVIEW_STEP,
-        "New on this run:",
         false,
         runUrl,
+        true,
       ),
     );
   }
@@ -1177,7 +1205,6 @@ function usClockWatchFindings(verdicts, runUrl) {
         `The Congress.gov API lists a federal bill on the subject that is new, or whose latest action changed ${usSince(federal.status === "ran" ? federal : {})}.`,
         [],
         US_REVIEW_STEP,
-        "New on this run:",
         true,
         runUrl,
       ),
@@ -1191,9 +1218,9 @@ function usClockWatchFindings(verdicts, runUrl) {
         `The Open States API lists a state bill on the subject (50 states, DC and PR) that is new, or whose latest action changed ${usSince(state)}.`,
         state.differences,
         US_REVIEW_STEP,
-        "New on this run:",
         false,
         runUrl,
+        true,
       ),
     );
   }
@@ -1206,7 +1233,6 @@ function usClockWatchFindings(verdicts, runUrl) {
         `${US_TZ_PARAGRAPH}\n\n${release}`,
         tz.differences,
         "After the checker's data is updated, run `node scripts/us-clock-watch.mjs snapshot-tz --dir=<tz source folder>` and commit the snapshot.",
-        "Still differs on this run:",
         false,
         runUrl,
       ),
@@ -1435,23 +1461,18 @@ function swapFindings(verdicts, runUrl) {
   );
   const version = result.ready ? result.version : (firstRan?.version ?? "");
   const paragraphs = swapParagraphs(verdicts, version, result.ready);
-  const comment = withRun(
-    `temporal-polyfill ${version} also passes.\n\n${paragraphs.join("\n\n")}`,
-    runUrl,
-  );
   /** @type {Finding} */
   const real = {
     key: "temporal-polyfill-swap/ready",
     title: `Swap to temporal-polyfill ${version}: it passes the GMT suite and both sweeps`,
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
-    comment,
   };
   /** @type {Finding[]} */
   const out = result.ready ? [real] : [];
   if (forcedBy) {
     // The dry run is built from the ready issue, so a run that is not ready takes its own title,
-    // and every comment on an open dry-run issue opens with the real result, as the body does.
+    // and the body opens with the real result.
     const outcome = result.ready
       ? "every check passed"
       : `not ready to swap. The first check that blocks it: ${result.reason}`;
@@ -1465,10 +1486,7 @@ function swapFindings(verdicts, runUrl) {
           ...real,
           title: `Swap to temporal-polyfill ${version}: not ready, forced to preview the ready issue`,
         };
-    out.push({
-      ...dryRun(twin, "--force-swap-ready", dryParagraphs, runUrl),
-      comment: withRun(dryParagraphs.join("\n\n"), runUrl),
-    });
+    out.push(dryRun(twin, "--force-swap-ready", dryParagraphs, runUrl));
   }
   return out;
 }
@@ -1567,113 +1585,470 @@ export function findings(verdicts, context) {
 }
 
 /**
- * An open issue matches a finding when it carries the `canary` label and the first line of its
- * body, trimmed, equals the finding's marker exactly. GitHub may store bodies with CRLF.
- * @param {{ number: number, body: string, labels: { name: string }[] }} issue
- * @param {string} key
+ * The title of a group's rolling issue.
+ * @param {string} group
  */
-function matches(issue, key) {
-  if (!issue.labels.some((l) => l.name === CANARY_LABEL)) return false;
-  const first = (issue.body ?? "").split(/\r?\n/, 1)[0]?.trim();
-  return first === marker(key);
+function rollingTitle(group) {
+  return group.startsWith(DRY_PREFIX)
+    ? `[dry run] Canary findings: ${group.slice(DRY_PREFIX.length)}`
+    : `Canary findings: ${group}`;
 }
 
 /**
- * A report's fingerprint: the first 16 hex digits of the SHA-256 of a finding's comment without its
- * run line, line endings made LF. Two runs that found the same rows have the same fingerprint, so
- * every comment names its run only in that trailing `Run:` line and carries nothing else that
- * changes from run to run with the result unchanged, such as a date counted from the run date.
- * @param {string} comment  a finding's `comment`
+ * Each finding's key mapped to the workflow that files it. The swap, native-suite and compat
+ * findings come from the `temporal-oracle` workflow's sources; a could-not-run key names its workflow.
  */
-function reportDigest(comment) {
-  const text = comment.replace(/\r\n/g, "\n");
-  const run = text.lastIndexOf("\n\nRun: ");
-  return createHash("sha256")
-    .update(run >= 0 ? text.slice(0, run) : text)
-    .digest("hex")
-    .slice(0, 16);
+const KEY_WORKFLOWS = {
+  "temporal-compat": "temporal-oracle",
+  "temporal-oracle": "temporal-oracle",
+  "native-suite": "temporal-oracle",
+  "temporal-polyfill-swap": "temporal-oracle",
+  "leap-seconds": "leap-seconds",
+  "us-clock-watch": "us-clock-watch",
+};
+
+/** Keys of the event findings: reported once, kept until a person closes the issue. */
+const EVENT_KEYS = new Set(["us-clock-watch/federal", "us-clock-watch/state"]);
+
+/** The most characters the stored event lines may take in the hidden marker. */
+const EVENT_BUDGET = 24_000;
+/** The most characters one stored event line keeps. */
+const EVENT_LINE_CHARS = 2_000;
+
+/**
+ * The first line of an open canary issue's body, trimmed. GitHub may store bodies with CRLF.
+ * @param {OpenIssue} issue
+ */
+function firstLine(issue) {
+  return (issue.body ?? "").split(/\r?\n/, 1)[0]?.trim() ?? "";
+}
+
+/** @param {OpenIssue} issue */
+const isCanary = (issue) => issue.labels.some((l) => l.name === CANARY_LABEL);
+
+/**
+ * The group (`<workflow>` or `dry-run/<workflow>`) that a per-finding issue from the earlier
+ * one-issue-per-finding shape belongs to, or null when the issue is not one.
+ * @param {OpenIssue} issue
+ * @returns {string | null}
+ */
+function legacyGroup(issue) {
+  if (!isCanary(issue)) return null;
+  const key = /^<!-- gmt-canary key="(.+)" -->$/.exec(firstLine(issue))?.[1];
+  if (key === undefined) return null;
+  const dry = key.startsWith(DRY_PREFIX);
+  const workflow = /** @type {Record<string, string>} */ (KEY_WORKFLOWS)[
+    (dry ? key.slice(DRY_PREFIX.length) : key).split("/")[0] ?? ""
+  ];
+  if (workflow === undefined) return null;
+  // An event issue waits for a person, so it is never folded or closed by a run.
+  if (EVENT_KEYS.has(key)) return null;
+  return dry ? `${DRY_PREFIX}${workflow}` : workflow;
 }
 
 /**
- * The hidden line that a full canary report (an issue body or a full comment) carries, naming its
- * fingerprint. Renders nothing, like `marker`.
- * @param {string} digest
+ * The hidden line that records which findings a rolling issue lists, as `[key, title]` pairs, so the
+ * next run can say what is new, still there and gone. `<` and `>` are written as JSON escapes so a
+ * title can never close the comment.
+ * @param {Finding[]} list
  */
-export function reportMarker(digest) {
-  return `<!-- gmt-canary report="${digest}" -->`;
+function findingsMarker(list) {
+  const json = JSON.stringify(list.map((f) => [f.key, f.title]))
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e");
+  return `<!-- gmt-canary findings=${json} -->`;
 }
 
-const REPORT_MARKER = /<!-- gmt-canary report="([0-9a-f]{16})" -->/;
+/**
+ * The findings a rolling issue listed on its last run; empty when its body has no readable marker.
+ * @param {OpenIssue} issue
+ * @returns {{ key: string, title: string }[]}
+ */
+function previousFindings(issue) {
+  const json = /<!-- gmt-canary findings=(\[.*\]) -->/.exec(
+    (issue.body ?? "").replace(/\r\n/g, "\n"),
+  )?.[1];
+  if (json === undefined) return [];
+  try {
+    const pairs = JSON.parse(json);
+    return pairs.map((/** @type {[string, string]} */ [key, title]) => ({
+      key: String(key),
+      title: String(title),
+    }));
+  } catch {
+    return [];
+  }
+}
 
 /**
+ * @param {Finding[]} events
+ * @returns {string}
+ */
+function eventsMarker(events) {
+  const json = JSON.stringify(
+    events.flatMap((f) =>
+      f.event
+        ? [
+            [
+              f.key,
+              f.title,
+              f.event.lead,
+              f.event.items,
+              f.event.tail,
+              f.event.dropped,
+            ],
+          ]
+        : [],
+    ),
+  )
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e");
+  return `<!-- gmt-canary events=${json} -->`;
+}
+
+/**
+ * The event findings a rolling issue stored on its last run; empty when it has no readable marker.
+ * @param {OpenIssue} issue
+ * @returns {Finding[]}
+ */
+function previousEvents(issue) {
+  const json = /<!-- gmt-canary events=(\[.*\]) -->/.exec(
+    (issue.body ?? "").replace(/\r\n/g, "\n"),
+  )?.[1];
+  if (json === undefined) return [];
+  try {
+    return JSON.parse(json).map(
+      (
+        /** @type {[string, string, string, string[], string, number]} */ [
+          key,
+          title,
+          lead,
+          items,
+          tail,
+          dropped,
+        ],
+      ) => {
+        /** @type {EventList} */
+        const event = {
+          lead: String(lead),
+          items: items.map(String),
+          tail: String(tail),
+          dropped: Number(dropped) || 0,
+        };
+        return {
+          key: String(key),
+          title: String(title),
+          labels: [CANARY_LABEL],
+          body: eventParagraphs(event).join("\n\n"),
+          event,
+        };
+      },
+    );
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * This run's event findings merged into the ones the issue already lists. A line already listed is
+ * kept once; a new line is added after the older ones. An event only the issue lists stays as it
+ * is. The stored lines are trimmed, oldest first, until they fit `EVENT_BUDGET`.
+ * @param {Finding[]} list  this run's findings
+ * @param {Finding[]} issueEvents  the events the open rolling issues list
+ * @returns {{ list: Finding[], fresh: Set<string> }}  `fresh`: keys that gained a line this run
+ */
+function mergeEvents(list, issueEvents) {
+  const fresh = new Set();
+  /** @type {Map<string, Finding>} */
+  const old = new Map();
+  for (const f of issueEvents) {
+    const prior = old.get(f.key);
+    old.set(
+      f.key,
+      prior?.event && f.event
+        ? withEvent(f, {
+            ...f.event,
+            items: [
+              ...prior.event.items,
+              ...f.event.items.filter((i) => !prior.event?.items.includes(i)),
+            ],
+          })
+        : f,
+    );
+  }
+  const before = [...old.values()];
+  const seen = new Set();
+  const merged = list.map((f) => {
+    if (!f.event) return f;
+    seen.add(f.key);
+    const prior = old.get(f.key)?.event;
+    const items = [...(prior?.items ?? [])];
+    for (const raw of f.event.items) {
+      const item = raw.slice(0, EVENT_LINE_CHARS);
+      if (!items.includes(item)) {
+        items.push(item);
+        fresh.add(f.key);
+      }
+    }
+    return withEvent(f, { ...f.event, items, dropped: prior?.dropped ?? 0 });
+  });
+  const kept = before.filter((f) => !seen.has(f.key));
+  const all = [...merged, ...kept];
+  const events = all.flatMap((f) => (f.event ? [f.event] : []));
+  const size = () => JSON.stringify(events.map((e) => e.items)).length;
+  while (size() > EVENT_BUDGET) {
+    const biggest = events.reduce((a, b) =>
+      b.items.length > a.items.length ? b : a,
+    );
+    if (biggest.items.length <= 1) break;
+    biggest.items.shift();
+    biggest.dropped += 1;
+  }
+  return {
+    list: all.map((f) => (f.event ? withEvent(f, f.event) : f)),
+    fresh,
+  };
+}
+
+/**
+ * A finding with its body rebuilt from an event's parts.
+ * @param {Finding} f
+ * @param {EventList} event
+ * @returns {Finding}
+ */
+function withEvent(f, event) {
+  return { ...f, event, body: eventParagraphs(event).join("\n\n") };
+}
+
+/**
+ * Up to three titles, then how many more.
+ * @param {string[]} titles
+ */
+function titleList(titles) {
+  const shown = titles.slice(0, 3).join("; ");
+  return titles.length > 3 ? `${shown}; and ${titles.length - 3} more` : shown;
+}
+
+/**
+ * The one line a run's comment carries about what changed since the last run.
+ * @param {{ key: string, title: string }[]} before
+ * @param {Finding[]} now
+ * @param {Set<string>} fresh  event findings that gained a line this run, counted as new
+ */
+function changeLine(before, now, fresh) {
+  const had = new Set(before.map((f) => f.key));
+  const has = new Set(now.map((f) => f.key));
+  const added = now
+    .filter((f) => !had.has(f.key) || fresh.has(f.key))
+    .map((f) => f.title);
+  const gone = before.filter((f) => !has.has(f.key)).map((f) => f.title);
+  const still = now.length - added.length;
+  const parts = [];
+  if (added.length > 0) parts.push(`${added.length} new (${titleList(added)})`);
+  if (still > 0) parts.push(`${still} still there`);
+  if (gone.length > 0) parts.push(`${gone.length} gone (${titleList(gone)})`);
+  return `Since the last run: ${parts.join(", ")}.`;
+}
+
+/**
+ * The comment on an issue that folded into the rolling issue.
+ * @param {number} rolling  the rolling issue's number
+ * @returns {string}
+ */
+export function foldedComment(rolling) {
+  return `The canary now files one issue for each run. Its findings are in #${rolling}. Closing this issue.`;
+}
+
+/**
+ * A section cut to `max` characters at a line end, with its heading kept.
+ * @param {string} text
+ * @param {number} max
+ */
+function cutSection(text, max) {
+  const room = Math.max(0, max);
+  const head = text.slice(0, room);
+  const lineEnd = head.lastIndexOf("\n");
+  return (lineEnd > 0 ? head.slice(0, lineEnd) : head).trimEnd();
+}
+
+/**
+ * Each section's text, cut so the sections together fit `budget` characters. A section no bigger
+ * than its share stays whole and its unused room goes to the others, smallest first, so the result
+ * is the same on every run.
+ * @param {string[]} sections
+ * @param {number} budget
+ * @returns {{ texts: string[], cut: number[] }}  `cut`: indexes of the sections that were cut
+ */
+function fitSections(sections, budget) {
+  const joined = (/** @type {string[]} */ list) => list.join("\n\n").length;
+  if (joined(sections) <= budget) return { texts: sections, cut: [] };
+  const order = sections
+    .map((text, index) => ({ index, size: text.length }))
+    .sort((a, b) => a.size - b.size || a.index - b.index);
+  const texts = [...sections];
+  /** @type {number[]} */
+  const cut = [];
+  let room = budget - 2 * (sections.length - 1);
+  order.forEach(({ index, size }, i) => {
+    const share = Math.floor(room / (order.length - i));
+    if (size <= share) {
+      room -= size;
+      return;
+    }
+    texts[index] = cutSection(sections[index] ?? "", share);
+    room -= texts[index]?.length ?? 0;
+    cut.push(index);
+  });
+  return { texts, cut: cut.sort((a, b) => a - b) };
+}
+
+/**
+ * The rolling issue's body: the markers, one run link, then one section per finding. A finding's
+ * own `Run:` line is left out; sections that do not fit GitHub's limit are cut and named.
+ * @param {string} group
+ * @param {Finding[]} list
+ * @param {Context} context
+ * @returns {string}
+ */
+function rollingBody(group, list, context) {
+  const workflow = context.workflow;
+  const hasEvents = list.some((f) => f.event);
+  const head = [
+    rollingMarker(group),
+    findingsMarker(list),
+    ...(hasEvents ? [eventsMarker(list)] : []),
+    `This issue lists every finding from the latest run of the \`${workflow}\` canary. A failing run rewrites it and adds a comment. A clean run closes it.${hasEvents ? " A change that needs a person to review it stays listed, and keeps the issue open, until you close the issue." : ""}`,
+    "",
+    `Latest run: ${context.runUrl}`,
+  ].join("\n");
+  const sections = list.map(
+    (f) => `## ${f.title}\n\n${f.body.replace(/\n\nRun: [^\n]*$/, "")}`,
+  );
+  const fits = (/** @type {string[]} */ texts) =>
+    `${head}\n\n${texts.join("\n\n")}`.length <= BODY_LIMIT;
+  if (fits(sections)) return `${head}\n\n${sections.join("\n\n")}`;
+  const noteFor = (/** @type {number[]} */ cut) =>
+    `Cut to fit GitHub's 65,536-character limit: ${cut
+      .map((i) => /** @type {Finding} */ (list[i]).title)
+      .join("; ")}. The full result is in the run: ${context.runUrl}`;
+  const reserve =
+    head.length +
+    4 +
+    noteFor(list.map((_, i) => i)).length +
+    2 * sections.length;
+  const { texts, cut } = fitSections(sections, BODY_LIMIT - reserve);
+  return `${head}\n\n${noteFor(cut)}\n\n${texts.join("\n\n")}`;
+}
+
+/**
+ * The actions for one group: the real findings of a workflow, or its dry-run findings.
+ * @param {Finding[]} found  this run's findings of the group
+ * @param {string} group
+ * @param {OpenIssue[]} openIssues
+ * @param {Context} context
+ * @returns {Action[]}
+ */
+function planGroup(found, group, openIssues, context) {
+  const dry = group.startsWith(DRY_PREFIX);
+  const rolling = openIssues
+    .filter((i) => isCanary(i) && firstLine(i) === rollingMarker(group))
+    .sort((a, b) => a.number - b.number);
+  const legacy = openIssues
+    .filter((i) => legacyGroup(i) === group)
+    .sort((a, b) => a.number - b.number);
+  const [current, ...extra] = rolling;
+  const { runUrl } = context;
+  // Events the open issues already list stay until a person closes them.
+  const { list, fresh } = mergeEvents(
+    found,
+    dry ? [] : rolling.flatMap(previousEvents),
+  );
+  if (list.length === 0) {
+    // A dry-run issue is closed by a person, never by a clean run.
+    if (dry) return [];
+    return [...rolling, ...legacy].map((i) => ({
+      kind: /** @type {const} */ ("close"),
+      key: group,
+      issue: i.number,
+      reason: /** @type {const} */ ("clean"),
+      body: `This run found nothing, so this issue is closed. A later run opens a new one if it finds something.\n\nRun: ${runUrl}`,
+    }));
+  }
+  const labels = [CANARY_LABEL];
+  for (const finding of list) {
+    for (const label of finding.labels) {
+      if (!labels.includes(label)) labels.push(label);
+    }
+  }
+  const title = rollingTitle(group);
+  const body = rollingBody(group, list, context);
+  const findingKeys = list.map((f) => f.key);
+  /** @type {Action[]} */
+  const actions = current
+    ? [
+        {
+          kind: "edit",
+          key: group,
+          issue: current.number,
+          title,
+          labels,
+          body,
+          findings: findingKeys,
+        },
+        {
+          kind: "comment",
+          key: group,
+          issue: current.number,
+          body: `${changeLine(previousFindings(current), list, fresh)}\n\nRun: ${runUrl}`,
+        },
+      ]
+    : [
+        {
+          kind: "open",
+          key: group,
+          title,
+          labels,
+          body,
+          findings: findingKeys,
+        },
+      ];
+  for (const i of [...extra, ...legacy]) {
+    actions.push({
+      kind: "close",
+      key: group,
+      issue: i.number,
+      reason: "folded",
+    });
+  }
+  return actions;
+}
+
+/**
+ * One rolling issue for each group of findings: a workflow's real findings, and its dry-run
+ * findings apart from them. A group with findings opens its issue, or rewrites the open one and
+ * comments on what changed. A real group with none closes its open issue, unless the issue lists
+ * an event finding, which stays until a person closes the issue. An open issue from the
+ * earlier one-issue-per-finding shape, and any second rolling issue, is closed as folded in.
  * @param {Record<string, Verdict | null>} verdicts  after `applyForce`
- * @param {{ number: number, body: string, labels: { name: string }[] }[]} openIssues
+ * @param {OpenIssue[]} openIssues
  * @param {Context} context
  * @returns {Action[]}
  */
 export function planIssueActions(verdicts, openIssues, context) {
-  return findings(verdicts, context).map((finding) => {
-    const report = reportMarker(reportDigest(finding.comment));
-    const found = openIssues
-      .filter((issue) => matches(issue, finding.key))
-      .sort((a, b) => a.number - b.number)[0];
-    if (found) {
-      return {
-        kind: /** @type {const} */ ("comment"),
-        key: finding.key,
-        issue: found.number,
-        body: `${finding.comment}\n\n${report}`,
-      };
-    }
-    return {
-      kind: /** @type {const} */ ("open"),
-      key: finding.key,
-      title: finding.title,
-      labels: finding.labels,
-      body: `${marker(finding.key)}\n${report}\n${finding.body}`,
-    };
-  });
-}
-
-/**
- * What an open canary issue already says: its body and its comments, oldest first.
- * @typedef {{ url: string, body: string, comments: { url: string, body: string }[] }} IssueHistory
- */
-
-/**
- * The latest full report on an issue: the newest comment with a report marker, else the body when
- * it has one. A short repeat comment has no report marker, so it is never the latest report.
- * @param {IssueHistory} history
- * @returns {{ digest: string, url: string } | null}
- */
-function latestReport(history) {
-  for (const c of [...history.comments].reverse()) {
-    const m = REPORT_MARKER.exec(c.body ?? "");
-    if (m) return { digest: /** @type {string} */ (m[1]), url: c.url };
-  }
-  const m = REPORT_MARKER.exec(history.body ?? "");
-  return m ? { digest: /** @type {string} */ (m[1]), url: history.url } : null;
-}
-
-/**
- * Swaps each comment whose report matches the issue's latest full report for one line that links
- * to that report, so a weekly run that finds nothing new does not repeat the same tables. A comment
- * on an issue with no history, or whose latest report differs or has no marker, stays in full.
- * @param {Action[]} actions  from `planIssueActions`
- * @param {Map<number, IssueHistory>} histories  keyed by issue number
- * @param {string} runUrl
- * @returns {Action[]}
- */
-export function shortenRepeats(actions, histories, runUrl) {
-  return actions.map((action) => {
-    if (action.kind !== "comment") return action;
-    const history = histories.get(action.issue);
-    const digest = REPORT_MARKER.exec(action.body)?.[1];
-    const last = history ? latestReport(history) : null;
-    if (!last || last.digest !== digest) return action;
-    return {
-      ...action,
-      body: `Same as the [last full report](${last.url}): nothing has changed.\n\nRun: ${runUrl}`,
-    };
-  });
+  const all = findings(verdicts, context);
+  const isDry = (/** @type {Finding} */ f) => f.key.startsWith(DRY_PREFIX);
+  return [
+    ...planGroup(
+      all.filter((f) => !isDry(f)),
+      context.workflow,
+      openIssues,
+      context,
+    ),
+    ...planGroup(
+      all.filter(isDry),
+      `${DRY_PREFIX}${context.workflow}`,
+      openIssues,
+      context,
+    ),
+  ];
 }

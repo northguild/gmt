@@ -51,21 +51,19 @@ In `findings()`, after leap and before could-not-run, when the workflow's source
 swap sources:
 
 - `swapReady` true → one finding:
-  - key `temporal-polyfill-swap/ready` (no version, so a later passing run comments on the same
-    open issue);
+  - key `temporal-polyfill-swap/ready` (no version, so a later passing run keeps the same
+    finding in the workflow's rolling issue);
   - title `` `Swap to temporal-polyfill ${version}: it passes the GMT suite and the offset sweep` ``;
   - labels `[CANARY_LABEL]`.
 - `swapReady` false → nothing (unless forced, below).
 
-`planIssueActions` already turns a finding into "comment on the open issue with that marker",
-or "open a new one". Use it unchanged. The comment body is the same text as the issue body,
-under a first line `` `temporal-polyfill ${version} also passes.` ``. Body and comment name the
-run only in their trailing `Run: <runUrl>` line, and the sweep's end reads as a rule, not a date, so
-an unchanged report keeps its fingerprint and repeats as one line (CORE-81).
+`planIssueActions` already turns the findings into "rewrite the workflow's rolling issue and
+comment", or "open it" (CORE-81). Use it unchanged. The finding is one section of that issue, so it
+is rewritten on every run while the swap stays due, and the run comment counts it as still there.
 
 ### Body
 
-First line: `marker(key)`, as for every canary issue. Then:
+The section is `## <title>`, then:
 
 ```md
 temporal-polyfill <version>, imported from `temporal-polyfill/full/implementation`, passed every
@@ -152,7 +150,7 @@ other flags.
 | `canary-issues.test.ts` | `swapReady`: all pass → ready with version; each of conditions 1–4 failing on its own → its reason; a missing leg; versions differ; Node sweep could-not-run; `sweep.differingZones: 1` |
 | | `findings`: ready → one finding with key, title and label as specified; ran but not ready → **no** finding at all; the `WORKFLOW_SOURCES` test (line ~318) now lists the four swap sources last |
 | | could-not-run: a swap leg's could-not-run verdict → one `temporal-oracle/could-not-run` finding listing `**temporal-polyfill-swap-<leg>**: <message>`, and no swap finding; all four swap verdicts missing → the finding lists all four with `NO_VERDICT`; a swap leg and the oracle both failing → **one** finding listing both; Node ran but its sweep could not run → listed as `offset sweep: <message>`; an open issue with the could-not-run marker → `comment`, not `open` |
-| | `planIssueActions`: an open issue with the marker → `comment` naming the new version; none → `open` |
+| | `planIssueActions`: an open rolling issue → `edit` and `comment`; none → `open` |
 | | body: marker on line 1; four runtime rows; research link exact; "never pull requests" sentence; length < 65,536 |
 | | force: forced with all passing → dry-run key and title, `DRY_RUN_LABEL`; forced with WebKit failing → dry run states the real reason; no swap leg ran → skipped with reason |
 | `canary-report.test.ts` | `--force-swap-ready` parsed for `temporal-oracle`, rejected for `leap-seconds`; swap verdict files read; a corrupt swap file → an unreadable could-not-run verdict, listed in the could-not-run issue |

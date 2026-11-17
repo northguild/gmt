@@ -742,6 +742,7 @@ describe("summaryMarkdown: temporal-oracle", () => {
           title: "Remove workaround D2: summary",
           labels: ["canary"],
           body: "b",
+          findings: ["temporal-compat/removable/D2"],
         },
         ok: true,
         issue: 412,
@@ -758,6 +759,47 @@ describe("summaryMarkdown: temporal-oracle", () => {
     ]);
     expect(text.split("\n")).toContain(
       "**Issues:** opened #412 (Remove workaround D2: summary); commented on #398.",
+    );
+  });
+
+  it("a rewritten and a closed issue are listed, and a failed close names the error", () => {
+    const text = oracleSummary(clean(), {}, [
+      {
+        action: {
+          kind: "edit",
+          key: "temporal-oracle",
+          issue: 77,
+          title: "t",
+          labels: ["canary"],
+          body: "b",
+          findings: [],
+        },
+        ok: true,
+        issue: 77,
+      },
+      {
+        action: {
+          kind: "close",
+          key: "temporal-oracle",
+          issue: 539,
+          reason: "folded",
+        },
+        ok: true,
+        issue: 539,
+      },
+      {
+        action: {
+          kind: "close",
+          key: "temporal-oracle",
+          issue: 540,
+          reason: "folded",
+        },
+        ok: false,
+        error: "HTTP 502\nbad gateway",
+      },
+    ]);
+    expect(text.split("\n")).toContain(
+      "**Issues:** rewrote #77; closed #539; failed to close #540: HTTP 502 bad gateway.",
     );
   });
 

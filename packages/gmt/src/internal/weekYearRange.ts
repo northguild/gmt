@@ -1145,6 +1145,17 @@ function earlierEraProbes(
   for (const step of [
     1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584,
   ]) {
+    // No Islamic date before 1 AH is probed. GMT prints none (D26: a date or range endpoint before
+    // the Hijra gives the empty value), so a probe there cannot show whether a printed range is
+    // right. Engines also disagree on what such a date prints: V8 and SpiderMonkey print one era
+    // (`-152 AH`), so this walk finds no earlier era and builds no probe there; WebKit prints
+    // `153 Before Hijra` from `format` but `-152` from `formatRange` (D18), which would flag every
+    // Islamic formatter. Skipping the step gives WebKit the same walk as the other engines. It also
+    // keeps the polyfill from being asked for the date: `Temporal.PlainDate.from` never returns
+    // for an Islamic year before 1 AH on WebKit (bug doc § AH). D26's removal deletes this `if`.
+    if (env.calendar.startsWith("islamic") && anchor - step < 1) {
+      continue;
+    }
     let earlier: Temporal.PlainDate;
     try {
       earlier = Temporal.PlainDate.from({

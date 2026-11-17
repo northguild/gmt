@@ -47,7 +47,7 @@ None. The story adds no public function. The existing upstream page names the ru
 ## Verification
 
 - A `workflow_dispatch` run is green on Node 26, Chromium, Firefox and WebKit, and its job summary names each engine version.
-- A dry run with one forced failure opens one `[dry run]` issue through CORE-81's path; a second dry run comments on it.
+- A dry run with one forced failure fills the `[dry run]` rolling issue through CORE-81's path; a second dry run rewrites it and comments.
 - A runtime that cannot start writes `could-not-run`, which files CORE-81's could-not-run issue.
 - The upstream page names the four runtimes and links to the workflow's runs.
 - `pnpm run validate` stays green and takes no longer than before.
@@ -68,12 +68,12 @@ Stated as current rules. Where each rule is enforced is named beside it.
 - A known native failure is tagged, never skipped. The test still runs on every leg; a tag classifies its failure for the reporter, names its defect record and becomes a `stale-tag` finding once the test no longer fails that way. `TAGGED_MISMATCHES` keys oracle rows and cannot tag a test, so the story keeps its own lists.
 - A control pass on the polyfill in the same runtime separates a host failure (fails on both engines) from an engine divergence (fails only natively). A host failure is tagged by group, with an evidenced reason and a file or test pattern, never one tag per row.
 - A test that fails on the control pass alone is control-only. GMT ships the polyfill, and in each runtime the polyfill and the native engine read the same locale and time zone data, so a control-only failure is a wrong answer GMT gives that runtime's users. It has no tag: fix GMT's answer (a temporalCompat workaround for a polyfill defect).
-- Green means no untagged divergence, no untagged host failure and no control-only failure. The finding keys are `native-suite/untagged-failure/<leg>` (one issue per engine: `node`, `chromium`, `firefox`, `webkit`) and `native-suite/control-only-failure` (labels `canary`, `temporal-compat`), `native-suite/untagged-host-failure` and `native-suite/stale-tag` (label `canary`).
+- Green means no untagged divergence, no untagged host failure and no control-only failure. The finding keys are `native-suite/untagged-failure/<leg>` (one section per engine: `node`, `chromium`, `firefox`, `webkit`) and `native-suite/control-only-failure` (labels `canary`, `temporal-compat`), `native-suite/untagged-host-failure` and `native-suite/stale-tag` (label `canary`).
 - Each leg is its own verdict source, so a leg that cannot start is named in CORE-81's could-not-run issue. Dispatch input `force_native_failure` drives the dry run and reaches the shell only through `env:`.
 
 **Triage**
 
-- Ten tests fail natively on Node 26 and Chromium 153 because a one-character annotation key such as `[a=bc]` is refused: record L in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md), icu4x#8620 (fixed in icu4x#8623, not yet in an `ixdtf` release or a V8 roll). The spec allows it: `AKeyLeadingChar`, RFC 9557 section 4.1.
+- Node 26 and Chromium 153 refuse a one-character annotation key such as `[a=bc]`, which the spec allows (`AKeyLeadingChar`, RFC 9557 section 4.1): record L in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md), icu4x#8620 (fixed in icu4x#8623, not yet in an `ixdtf` release or a V8 roll). No GMT test reaches it: since CORE-113 no GMT input kind takes an elective annotation.
 - Three tests fail because `[u-ca=islamic]` is accepted: record M, boa-dev/temporal#529. `islamic` is not a Temporal calendar (Intl Era and Month Code proposal, CreateDateTimeFormat step 9; test262 `intl402/Temporal/PlainDate/from/islamic.js`).
 - Record N covers the day-rounding defect below. Records K, L and M were not used for this story because K was already taken.
 - The WebKit control pass (polyfill 0.5.1 in WebKit 26.6) failed four `diffZoned` and `intervalLengthZoned` rows that native WebKit, Node, Chromium and Firefox pass: a calendar unit between `UTC` and `Etc/UTC`, or `Asia/Calcutta` and `Asia/Kolkata`, came back `null`. The polyfill reads a non-primary time zone identifier's primary from `Intl.DateTimeFormat#resolvedOptions`, which JavaScriptCore returns as written, so the two compared unequal (record U in [js-temporal-polyfill-bugs.md](../js-temporal-polyfill-bugs.md)). Where the probe fails, GMT resolves `Etc/UTC`, `Etc/GMT` and `GMT` to `UTC` by name (ECMA-402 §6.5, every host) and asks the host's own `Temporal.ZonedDateTime#equals` for any other pair when the host has `Temporal`, gated by temporalCompat workaround D19, and ships it as a patch changeset. Safari 27 has no `Temporal`, so the IANA links stay unequal there (record U says why).

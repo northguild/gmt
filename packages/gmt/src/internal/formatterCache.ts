@@ -2,6 +2,7 @@ import { plainOptionEntries } from "./plainOptionEntries";
 import { canonicalLocaleTags } from "./resolveLocale";
 import { isIslamicCalendarResolutionCompatNeeded } from "./temporalCompat/capabilities";
 import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
+import { repairCopticEra } from "./copticEra";
 import { repairEraYearNumerals } from "./japaneseNumerals";
 import { repairYearPrinting, widenRelatedYear } from "./yearPrinting";
 
@@ -141,10 +142,13 @@ function construct(
         locale,
         options as Intl.DateTimeFormatOptions,
       );
-      return repairYearPrinting(
-        guardedDateTimeFormat(built, builtOptions),
+      return repairCopticEra(
+        repairYearPrinting(
+          guardedDateTimeFormat(built, builtOptions),
+          builtOptions,
+          (twin) => cachedFormatter("DateTimeFormat", built, twin),
+        ),
         builtOptions,
-        (twin) => cachedFormatter("DateTimeFormat", built, twin),
       );
     }
     case "NumberFormat":

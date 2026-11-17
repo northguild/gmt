@@ -441,6 +441,16 @@ function issuesLine(results, notFiledReason) {
         ? `opened #${issue} (${oneLine(action.title)})`
         : `failed to open (${oneLine(action.title)}): ${oneLine(error ?? "")}`;
     }
+    if (action.kind === "edit") {
+      return ok
+        ? `rewrote #${action.issue}`
+        : `failed to rewrite #${action.issue}: ${oneLine(error ?? "")}`;
+    }
+    if (action.kind === "close") {
+      return ok
+        ? `closed #${action.issue}`
+        : `failed to close #${action.issue}: ${oneLine(error ?? "")}`;
+    }
     return ok
       ? `commented on #${action.issue}`
       : `failed to comment on #${action.issue}: ${oneLine(error ?? "")}`;

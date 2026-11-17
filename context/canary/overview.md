@@ -10,13 +10,13 @@ in its workflow file; the page `/pulse/` shows it, with the recent runs.
 
 | Canary | Where | Checks | Finds | Retires | Story |
 | --- | --- | --- | --- | --- | --- |
-| Workaround check (Node) | `temporal-oracle.yml` job `oracle` | Each workaround's probes on Node: is the polyfill defect still there? | Opens one issue for each workaround that every engine in its scope no longer needs. | When the last workaround is gone. | [CORE-81](../domination/issues/CORE-81.md) |
-| Native oracle | `temporal-oracle.yml` job `oracle` | GMT's calendar results against Chromium's built-in Temporal. The test262 suite decides a disagreement. | Opens one issue for the mismatches no workaround accounts for. | When every engine ships Temporal and the polyfill is removed from GMT (#316). | [CORE-81](../domination/issues/CORE-81.md) |
-| Native suite | `temporal-oracle.yml` job `native-suite` | The whole library test suite on built-in Temporal and on the polyfill, in Node, Chromium, Firefox and WebKit. Each browser also runs the workaround probes. | Opens one issue per engine for a difference no workaround accounts for, one for a host that failed and one for a stale tag. | When every engine ships Temporal and the polyfill is removed from GMT (#316). | [CORE-82](../domination/issues/CORE-82.md) |
-| Polyfill swap | `temporal-oracle.yml` job `polyfill-swap` | The suite on the newest `temporal-polyfill`, beside `@js-temporal/polyfill`. The Node run also sweeps every zone's offsets and every calendar's years against Node. | Opens one issue when every run passes: the swap is due. | When the fixes GMT waits on have shipped in `temporal-polyfill` and GMT has moved to it. | [CORE-92](../domination/issues/CORE-92.md) |
+| Workaround check (Node) | `temporal-oracle.yml` job `oracle` | Each workaround's probes on Node: is the polyfill defect still there? | Lists each workaround that every engine in its scope no longer needs in the workflow's rolling issue. | When the last workaround is gone. | [CORE-81](../domination/issues/CORE-81.md) |
+| Native oracle | `temporal-oracle.yml` job `oracle` | GMT's calendar results against Chromium's built-in Temporal. The test262 suite decides a disagreement. | Lists the mismatches no workaround accounts for in the same issue. | When every engine ships Temporal and the polyfill is removed from GMT (#316). | [CORE-81](../domination/issues/CORE-81.md) |
+| Native suite | `temporal-oracle.yml` job `native-suite` | The whole library test suite on built-in Temporal and on the polyfill, in Node, Chromium, Firefox and WebKit. Each browser also runs the workaround probes. | Lists, in the same issue, a section per engine for a difference no workaround accounts for, one for a host that failed and one for a stale tag. | When every engine ships Temporal and the polyfill is removed from GMT (#316). | [CORE-82](../domination/issues/CORE-82.md) |
+| Polyfill swap | `temporal-oracle.yml` job `polyfill-swap` | The suite on the newest `temporal-polyfill`, beside `@js-temporal/polyfill`. The Node run also sweeps every zone's offsets and every calendar's years against Node. | Adds a section when every run passes: the swap is due. | When the fixes GMT waits on have shipped in `temporal-polyfill` and GMT has moved to it. | [CORE-92](../domination/issues/CORE-92.md) |
 | CLDR locale sweep | `cldr-sweep-weekly.yml` job `sweep` | Every locale and calendar in `cldr-dates-full`: week-of-year years, V8 aborts, and range text that drops, repeats or garbles a field of one date. | Fails the run when a detector misses. The job summary lists the locales that newly break and the ones fixed since the last run. | When workarounds D23, D24, D29 are gone. | [CORE-112](../domination/issues/CORE-112.md) |
-| Leap-second table | `leap-seconds.yml` job `canary` | GMT's leap-second table against the IERS `Leap_Second.dat` file, or IANA's `leap-seconds.list` when IERS is down. | Opens one issue per difference. | When the table is closed for good: IERS publishes the file format for continuous UTC. | [CORE-81](../domination/issues/CORE-81.md) |
-| US clock-change watch | `us-clock-watch.yml` job `canary` | Federal and state bills on ending the clock changes, and the time zone rules of every US zone, against the last snapshot it saw. | Opens one issue per kind (federal, state, tz) for a difference, and one for a source that could not run. | When the US clock-change checker ships, and the proposals data on the Sunshine Protection Act page is removed or replaced. | [CORE-90](../domination/issues/CORE-90.md) |
+| Leap-second table | `leap-seconds.yml` job `canary` | GMT's leap-second table against the IERS `Leap_Second.dat` file, or IANA's `leap-seconds.list` when IERS is down. | Lists each difference in its rolling issue. | When the table is closed for good: IERS publishes the file format for continuous UTC. | [CORE-81](../domination/issues/CORE-81.md) |
+| US clock-change watch | `us-clock-watch.yml` job `canary` | Federal and state bills on ending the clock changes, and the time zone rules of every US zone, against the last snapshot it saw. | Lists a section per kind (federal, state, tz) for a difference, and one for a source that could not run, in its rolling issue. | When the US clock-change checker ships, and the proposals data on the Sunshine Protection Act page is removed or replaced. | [CORE-90](../domination/issues/CORE-90.md) |
 | Runtime time zone data | `runtime-tz-canary.test.ts` | That the test machine's time zone database gives the offsets the Canada and Morocco pages state. | Fails the Dox tests with "Update Node." | When the oldest Node GMT supports ships the time zone data those pages state. | Dox epic |
 | Dox weekly gate sweep | `dox-gates-weekly.yml` job `sweep` | Every Dox page's gates in Chromium, Firefox and WebKit, in both themes. | Opens or updates `dox-gate` issues. | Stays. A page can break without a change to it, so the sweep stays while the site does. | Dox epic |
 | Daily rebuild | `deploy-dox.yml` job `deploy` | Rebuilds and deploys the site, so the upstream filing states on `/upstream/` are read again. | Fails the run when the build or the deploy fails. | Stays. The filing states change without a commit, so the page has to be rebuilt to show them. | Dox epic |
@@ -72,11 +72,11 @@ issue bodies as data the APIs returned, never in the script, the site or its tes
   seconds apart, and each try counts against the budget. A 429 is could-not-run, with no retry. A
   `check` stops itself at 45 minutes, inside the job's 60-minute timeout: whatever has not run by
   then is could-not-run, and its issue is still filed.
-- **Issues.** One per kind (federal, state, tz) for a difference, and one for a source that could
-  not run, filed by `canary-report.mjs` from `main` only. The federal and state issues ask for a
+- **Issues.** One rolling issue holds a section per kind (federal, state, tz) for a difference,
+  and one for a source that could not run, filed by `canary-report.mjs` from `main` only. The federal and state issues ask for a
   review: edit the Proposals data module by hand if a position changed, then close the issue; the
-  canary edits nothing in the repo. Their bodies say which snapshot date the list runs from, and a
-  later run comments only what is new on it. The tz issue asks for `snapshot-tz` once the checker's
+  canary edits nothing in the repo. Their bodies say which snapshot date the list runs from, and the
+  issue keeps every change a run listed until you close it, so close it after editing the data. The tz issue asks for `snapshot-tz` once the checker's
   data is updated. The `force_difference` dispatch input files a `[dry run]` federal issue.
 - **The tz issue is the signal for phase 2.** A change to a US zone's rules means a tz release
   models the clock change, so the full US clock-change checker
@@ -110,9 +110,16 @@ the ICU and time zone data Safari takes from macOS and iOS. The two differ (the 
   broken" must never fail a build, and those runs have no network.
 - **Issues only from `main`.** A run on another branch lists what it would file in the job
   summary and files nothing.
-- **One issue per finding.** A finding's key is a hidden marker on the issue's first line
-  (`scripts/lib/canary-issues.mjs`). An open `canary` issue with that marker gets a comment; a
-  repeat with nothing new is one line.
+- **One rolling issue per workflow.** A hidden marker on the issue's first line names the
+  workflow (`scripts/lib/canary-issues.mjs`). A failing run rewrites that issue with every finding
+  and comments one line: how many are new, still there or gone. With none open, it opens one. A
+  clean run comments and closes it. Old per-finding issues are closed with a link to it.
+- **State findings drop, event findings stay.** A state finding is detected again on every run
+  while its cause holds, so the rewrite drops it once gone. An event finding is reported once and
+  waits for a person: the US clock-change watch's federal and state lists, which hold only what is
+  new since the carried snapshot. The rolling issue keeps its lines in a hidden marker, each run
+  adds its new lines, and a clean run keeps the issue open while it lists any. Closing the issue
+  clears them. Older lines are dropped, and the body says so, past about 24,000 stored characters.
 - **Dry runs are labelled.** Every dispatch input that forces a finding files a `[dry run]`
   issue with the `canary-dry-run` label and changes no probe, tally or exit code.
 - **Only the report job writes.** Jobs that install the workspace and run browsers hold a

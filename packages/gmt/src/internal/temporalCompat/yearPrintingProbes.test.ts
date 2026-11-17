@@ -1,4 +1,5 @@
 import {
+  isCopticEraCompatNeeded,
   isIslamicEraCompatNeeded,
   isIslamicCalendarResolutionCompatNeeded,
   isJapaneseEraCompatNeeded,
@@ -9,11 +10,11 @@ import {
   runRepro,
   reproPasses,
 } from "./capabilities";
-import { rangeFieldCases } from "./rangeFieldRepros";
+import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 import { repros } from "./repros";
 
 /*
- * CORE-112: each shipped probe (D25 to D30) reads the same defect as its canary repros.
+ * CORE-112: each shipped probe (D25 to D31) reads the same defect as its canary repros.
  * The probe says "needed" exactly when some repro of its defect fails on this engine, so the
  * canary's verdict and the library's gate cannot disagree. The test never asserts which way: that
  * would fail the day an engine ships the fix, which is the canary's job.
@@ -28,6 +29,7 @@ describe("year printing probes agree with their repros", () => {
     ${"D28"} | ${["chineseRelatedYearFullWidth"]}                 | ${isRelatedYearWidthCompatNeeded}
     ${"D29"} | ${rangeFieldCases.map((c) => c.name)}              | ${isRangeFieldCompatNeeded}
     ${"D30"} | ${["islamicResolvesTbla", "islamicRgsaIsIgnored"]} | ${isIslamicCalendarResolutionCompatNeeded}
+    ${"D31"} | ${["copticSignedYearAndEraBeforeAm"]}              | ${isCopticEraCompatNeeded}
   `(
     "the probe for $names is true exactly when one of those $defect repros fails",
     ({ defect, names, probe }) => {
@@ -40,4 +42,15 @@ describe("year printing probes agree with their repros", () => {
       );
     },
   );
+});
+
+describe("a range case for a locale the runtime has no data for", () => {
+  it("is complete, because the runtime prints it in its fallback locale and cannot show the defect", () => {
+    vi.spyOn(Intl.DateTimeFormat, "supportedLocalesOf").mockReturnValue([]);
+    const own = rangeFieldCases.find(({ name }) => name === "yoWeekdayTwice");
+    expect(own).toBeDefined();
+    expect(
+      rangeFieldProblem(own!.locale, own!.options, own!.from, own!.to),
+    ).toBe("complete");
+  });
 });

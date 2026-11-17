@@ -13,7 +13,7 @@ GMT's seven reports and two PRs to `fullcalendar/temporal-polyfill`, found by th
 > merged 2026-09-21. Five tc39 issues (#3327–#3330, #3332) and #3335 are open with no maintainer reply (checked 2026-11-13); #3331 (J) is
 > closed as answered (the check is intended, see § J).
 > **Nothing is released**, so no GMT workaround retires: `node scripts/temporal-compat.mjs check` reports
-> 33 workarounds, 29 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § AG (D25 to D30: other wrong years in formatted text, ranges that drop or repeat a field, and two `islamic` calendar names that resolve as written, from ICU and CLDR, with ICU-23341 and ICU-23327 filed by others, the ECMA-402 wording filed as tc39/ecma402#1116, ours as ICU-23619, ICU-23620 and ICU-23621, D30 as Chromium 585635918, and D29 as CLDR-19912 (malformed interval patterns), CLDR-19913 (month forms and run-together texts in the data) and ICU-23622 (the `B` day period and the chinese and dangi `U` skeletons), all three filed 2026-11-14, then ICU-23623 (the era-only pattern choice), ICU-23624 (`hourCycle` in `ja`) and ICU-23625 (the long day period width), filed 2026-11-15), then § AF (D23, a V8 crash fixed in V8 `0426b0d1045d` and asked of Node as nodejs/node#67076, and D24, CLDR patterns with `Y`, reported by someone else as CLDR-19873, where our comment adds the rest), then § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19), a comment on tc39 #3301, and § R (D18), filed as tc39 #3338 and WebKit 331724, with § S and § T, two WebKit engine defects GMT only tags (WebKit 331725 and 331726), and § AD, a Node 26 engine defect GMT only tags, filed as nodejs/node#67457; § I (D12), fixed on `main` with nothing
+> 34 workarounds, 30 still needed, 1 guard (D10) and 3 out of scope (D17, a Firefox-only defect filed as Bugzilla 2085525, § Q; D18, a polyfill defect only JavaScriptCore shows, § R; and D19, another polyfill defect only JavaScriptCore shows, § U; a Node run cannot judge any of the three). The newest are § AG (D25 to D31: other wrong years in formatted text, ranges that drop or repeat a field, and two `islamic` calendar names that resolve as written, from ICU and CLDR, with ICU-23341 and ICU-23327 filed by others, the ECMA-402 wording filed as tc39/ecma402#1116, ours as ICU-23619, ICU-23620 and ICU-23621, D30 as Chromium 585635918, and D29 as CLDR-19912 (malformed interval patterns), CLDR-19913 (month forms and run-together texts in the data) and ICU-23622 (the `B` day period and the chinese and dangi `U` skeletons), all three filed 2026-11-14, then ICU-23623 (the era-only pattern choice), ICU-23624 (`hourCycle` in `ja`) and ICU-23625 (the long day period width), filed 2026-11-15), then § AF (D23, a V8 crash fixed in V8 `0426b0d1045d` and asked of Node as nodejs/node#67076, and D24, CLDR patterns with `Y`, reported by someone else as CLDR-19873, where our comment adds the rest), then § AC (D22), fixed on `main`, with its no-value lengths filed as tc39/proposal-temporal#3336, #3311 and #3310; before it come § AB (D21), filed as tc39 #3335, § U (D19), a comment on tc39 #3301, and § R (D18), filed as tc39 #3338 and WebKit 331724, with § S and § T, two WebKit engine defects GMT only tags (WebKit 331725 and 331726), and § AD, a Node 26 engine defect GMT only tags, filed as nodejs/node#67457; § I (D12), fixed on `main` with nothing
 > to file; § K (D13), fixed there only in part, with the rest filed as tc39 #3332; § N (D14), which arrives with the catch-up;
 > and § O (D15), filed as tc39 #3337 and not fixed on either `main`. A, B, C and D are verified on production builds of js-temporal `main` `c8f344c`.
 > See "Filed" for the list, **"TODO — after PR #253" for what to pick up next**, and "Corrections and
@@ -46,6 +46,7 @@ is 0.5.1, and the latest ICU4C release is 78.3.
 | `D28`: chinese and dangi pad the related year under `year: "2-digit"` (§ AG) | Not a polyfill fix. ICU-23621 is open: ICU's pattern generator turns `yy` into `rr` | Engines that print `relatedYear` at full width: the `D28` repro passes in every compat verdict |
 | `D29`: a range drops, repeats or garbles a field of one date (§ AG) | Not a polyfill fix, and not fixed on CLDR `main` for most causes. The malformed interval patterns are filed as [CLDR-19912](https://unicode-org.atlassian.net/browse/CLDR-19912) on 2026-11-14; the data causes are CLDR-19913 and the code causes ICU-23622, both filed 2026-11-14, and ICU-23623, ICU-23624 and ICU-23625, filed 2026-11-15 | CLDR and ICU fixes for each cause, and engines that ship them: every `D29` repro passes in every compat verdict |
 | `D30`: `islamic` and `islamic-rgsa` resolve as written (§ AG) | Not a polyfill fix. Chromium 585635918 | Engines that resolve `islamic` to `islamic-tbla` and ignore `islamic-rgsa` (WebKit 26.6 already does): both `D30` repros pass in every compat verdict |
+| `D31`: a coptic date before AM 1 prints `1 - year` and no era (§ AG) | Not a polyfill fix. [ICU-23277](https://unicode-org.atlassian.net/browse/ICU-23277) is accepted, filed by others, with the fix in [unicode-org/icu#4081](https://github.com/unicode-org/icu/pull/4081), open and not in ICU 79.1 | An ICU release with ICU-23277 in engines GMT supports: the `D31` repro passes in every engine's compat check (Firefox 147+ patches its ICU, bugzilla 2002735, and already prints `-285 AM`) |
 | `D5`: Indian calendar before ISO year 1 | js-temporal `8de299a` (PR #361; `b6c9844` on its branch) | Nothing |
 | `D6`: non-ISO `until` re-constrains the day | js-temporal `10aeb98` | `D7`. With `10aeb98` and `1c64f14` alone one Hebrew `until` by years is still wrong (Corrections, item 3). `main` since `853fc8b` also has tc39/proposal-temporal#3327 problem 1, which the `D6.cachedDay` probes catch |
 | `D7`: Hebrew `until` by years throws | js-temporal `1c64f14` (PR #361; `79fb327` on its branch) | The `CompareSurpasses` part of tc39 `196a3191` (C-D7b). js-temporal `main` took all of `196a3191` in `853fc8b`, months-loop hunk included, so it also carries tc39/proposal-temporal#3327 problem 1. On a build of `main` `c55b211`, the `D7.leapMonthEnd` row gives `P12M29D` (2026-11-15; the canary probe itself was not run) |
@@ -184,9 +185,9 @@ IANA tzdb rules, and Chromium 152/153 native Temporal as recorded in GMT's canar
 | F   | `calendarToIsoDate` overshoot assertion (tc39 #3292) is reachable, coptic/ethiopic/ethioaa month 13 | **Bug report** to tc39 only; js-temporal has not ported #3292                                                                                                                                                                                                                                                                                                          | tc39 #3329                                                                                                                  | Only as stated in the filing                                                                                                             | none: not in js-temporal, so not in GMT's runtime                                                                                         | none                                                                              |
 | H   | The calendar nudge window is never retried (`total`, `round`, `until` with a calendar `smallestUnit`) | **Review and land what is already written**: the port is ptomato's `50d66d2` in js-temporal PR #361. **No filing of our own**, and **no tc39 filing** — tc39 #3168 is already fixed there by #3172 | Comment on js #361 (2026-09-20) adding the reproducer, the scan and the before/after measurements | Yes (Chromium 153 vs 0.5.1: 2,016-row `total`, 12,960-row `round`, 9,940-row `until` scans; 16 + 15 + 15 mismatches, all `month`. `50d66d2` measured on `main` and verified to flip all three) | `D11`: the defect-4 gates in `internal/zonedDifference/nudgeWindow.ts` | `50d66d2` on `main` **and then** a release |
 | I   | A zoned string's offset written with seconds is matched by minutes, not exactly | **Release** of `23d1275` (on `main`). No new patch and no filing: `main` already has the fix | Not filed: nothing to file. The release is the one already asked for in #373 | Yes, on 0.5.1 (Node 24.21.0): both `D12` probes fail; expected values from test262 `zoneddatetime-sub-minute-offset.js`, and Chromium 153 native Temporal agrees. `main` read, not built: `lib/ecmascript.ts` has `if (offsetSecondsPart) matchMinute = false` | D12: `matchSecondsOffsetExactly` in `internal/zonedWallClock.ts` and its probe | The first release containing `23d1275` |
-| J   | `ZonedDateTime.prototype.toString` writes a string `ZonedDateTime.from` refuses when the local date is −271821-04-19 | **Spec issue** to tc39 only: `InterpretISODateTimeOffset` runs `CheckISODaysRange` on the local date before it matches a written offset. Not a polyfill bug: the polyfill and Chromium both follow the spec | tc39 #3331 (2026-10-21) | Yes: polyfill 0.5.1 (Node 24.21.0) and Chromium 153.0.8010.12 native Temporal both throw `RangeError` | None, and none is wanted: a workaround must compute the spec's answer, and this is the spec's answer. GMT's zoned reads return the sentinel; its instant readers read the string | None |
+| J   | `ZonedDateTime.prototype.toString` writes a string `ZonedDateTime.from` refuses when the local date is −271821-04-19 | **Spec issue** to tc39 only: `InterpretISODateTimeOffset` runs `CheckISODaysRange` on the local date before it matches a written offset. Not a polyfill bug: the polyfill and Chromium both follow the spec | tc39 #3331 (2026-10-21) | Yes: polyfill 0.5.1 (Node 24.21.0) and Chromium 153.0.8010.12 native Temporal both throw `RangeError` | None, and none is wanted: a workaround must compute the spec's answer, and this is the spec's answer. GMT's zoned reads return the sentinel, and its instant readers take no zone bracket | None |
 | K   | The transition search skips, or never returns from, two offset changes inside one 14-day step | **Release** of `a79c6a1` (per-zone search windows, on `main`) fixes the 0.5.1 defect for the zones it lists. **A stall remains on `main`** for `Africa/El_Aaiun` in 1976 (17-day window, three offsets, `bisect` unchanged), which needs a further fix | tc39 #3332 (2026-10-21), for the remaining stall | Yes, on 0.5.1 (Node 22.22.2, 24.21.0, 26.10.0): the `D13` probes fail; expected values from Node 26.10.0's native Temporal and `zdump -v` (tz 2026c). tc39 `main` `e8cc03f` run: the El_Aaiun calls throw the bisection assertion, and a 16-day window fixes them. js-temporal `main` read, not run | `D13`: `internal/zonedTransitionSearch.ts`, gates in `internal/zonedWallClock*.ts` | a release containing `a79c6a1` and the #3332 fix |
-| L   | A one-character annotation key (`[a=bc]`, `[x=y]`) is refused by V8's native Temporal | **Nothing to file**: fixed upstream by unicode-org/icu4x#8623 (merged 2026-10-20), waiting for an `ixdtf` release and a V8 roll | **Not filed** (report: unicode-org/icu4x#8620, closed by #8623) | Yes: Node 26.10.0 (V8 14.6.202.34-node.34) and Chromium 153.0.8010.12 throw `RangeError: Temporal error: Invalid annotation key character.`; the polyfill accepts | None: GMT already follows the spec text | None |
+| L   | A one-character annotation key (`[a=bc]`, `[x=y]`) is refused by V8's native Temporal | **Nothing to file**: fixed upstream by unicode-org/icu4x#8623 (merged 2026-10-20), waiting for an `ixdtf` release and a V8 roll | **Not filed** (report: unicode-org/icu4x#8620, closed by #8623) | Yes: Node 26.10.0 (V8 14.6.202.34-node.34) and Chromium 153.0.8010.12 throw `RangeError: Temporal error: Invalid annotation key character.`; the polyfill accepts | None: no GMT input kind takes an elective annotation (CORE-113), so GMT refuses these strings itself on every engine | None |
 | M   | `[u-ca=islamic]` is accepted by V8's native Temporal and read as `islamic-civil` | **Nothing to file**: open upstream as boa-dev/temporal#529 | **Not filed** (report: boa-dev/temporal#529, open) | Yes: Node 26.10.0 and Chromium 153.0.8010.12 return `islamic-civil`; the polyfill throws `RangeError` | None: GMT already follows the spec text | None |
 | N   | `ZonedDateTime.prototype.round` to `day` when a date starts twice (V8 throws, the polyfill answers the next day) | **Nothing to file**: the reference polyfill fix `59a51ea9d4` is in proposal-temporal, and js-temporal pulls proposal-temporal commits in order, so the port arrives with that catch-up and its one release (#373) | Not filed: nothing to file | Yes: polyfill 0.5.1 (Node 24.21.0) answers `2010-11-07T00:00:00-03:00`; Node 26.10.0 throws; Chromium 153 and tc39/ecma262#3966 answer `2010-11-06T00:00:00-03:00` | `D14`: `roundZonedDateTime` day branch in `internal/zonedWallClockOperations.ts` and its probe | The first js-temporal release containing `59a51ea9d4` |
 | O   | A `Z` string is read by wall clock under `offset: "ignore"`, not as an exact instant | **Filed as tc39 #3337** (2026-11-15). js-temporal gets it with the in-order catch-up; V8 in Node 26 and Chromium 153 is already correct. Not fixed on js-temporal `main` `c55b211` or tc39 `main` `b038883` | tc39 #3337 | Yes: polyfill 0.5.1 and native V8 in Node 24.21.0 (`--harmony-temporal`) both give `2022-07-07T23:14:07Z` for `2022-07-08T00:14:07Z[Europe/London]` with `offset: "ignore"`; the spec gives `2022-07-08T00:14:07Z` | `D15`: `zExactOptions` in `internal/zonedWallClock.ts` and its probe | A release that keeps a `Z` string exact under `ignore`, in the polyfill and in the Node floor's V8 |
@@ -2067,10 +2068,11 @@ it, although Temporal ignores an annotation it does not know.
 
 ### Effect on GMT
 
-None in the library, which reads these strings correctly on the polyfill. The native-suite runner tags the
-ten tests that pin this (`isValidDate`, `isValidDateTime`, `isValidTime`, `isValidInstant` ×2, `isValidUtc`,
-`spanNs`, `getTimeZoneOffset`, `totalDuration`, `parseCalendarDateValue`) to this section. When a V8 roll
-carries the fix the tags go stale and the runner reports it.
+None. No GMT input kind takes an elective annotation (CORE-113): plain, UTC and instant strings take
+no annotation, a zoned string takes one zone bracket and a calendar-aware string at most one `u-ca`
+annotation. GMT refuses `[a=bc]` by its own pattern before Temporal reads the string, on every engine, so
+no GMT test reaches the defect and the native-suite runner tags none. Node 26.12.1 still throws on the
+repro below.
 
 ## M. `[u-ca=islamic]` is accepted instead of refused
 
@@ -2221,8 +2223,9 @@ comment that points at tc39/proposal-temporal#3014. The champions kept the check
 
 ### Effect on GMT
 
-None in the library. Twelve tests pin the `RangeError` or the sentinel it produces
-(`zonedDateTimeFrom` ×3, `minuteRoundedOffsets` ×2, `storedOffsetValues` ×2, `convertZonedToCalendar` ×5);
+None in the library. Fourteen tests pin the `RangeError` or the sentinel it produces
+(`zonedDateTimeFrom` ×3, `minuteRoundedOffsets` ×3, `offsetInstantMinuteRounded` ×1, `storedOffsetValues` ×2,
+`convertZonedToCalendar` ×5);
 the native-suite runner tags them to this section on the Firefox leg. When Firefox changes the check the
 tags go stale and the runner reports it.
 
@@ -3033,6 +3036,21 @@ where a row says otherwise. Each is its own canary group, and the rules are in
   `islamic-rgsa` is not an available calendar. V8 keeps both and prints ICU's astronomical calendar.
   WebKit 26.6 is right (`islamic-tbla`, and `gregory` for `islamic-rgsa`). Filed as
   [Chromium 585635918](https://issues.chromium.org/issues/585635918) on 2026-11-14.
+- **D31, a coptic date before AM 1 prints `1 - year` and no era (ICU).** Intl era/monthCode Table 2 gives
+  `coptic` one era, `am`, with era years from -infinity to +infinity; § 4.1.12 makes the era year the year;
+  test262 `intl402/Temporal/PlainDate/from/non-positive-single-era-year.js` keeps coptic era year -1 as -1.
+  CLDR 48 and 49 removed the `bd` era (CLDR-18465, cldr PR #4620), but ICU 78.3 still models two eras: it
+  prints `1 - year` and an empty era name (`Epep 18, 286 ` for ISO -0001-07-10, no `era` part in
+  `formatToParts`, and the year `284` for ISO 0001-07-10). Seen on Node 26.12.1 and Chromium 153, and
+  very likely WebKit. `ethiopic` is not affected (era `aa`, years 5491 and 5493). Upstream:
+  [ICU-23277](https://unicode-org.atlassian.net/browse/ICU-23277) (accepted, filed by someone else), fix
+  [unicode-org/icu#4081](https://github.com/unicode-org/icu/pull/4081) open, not in ICU 79.1. Firefox 147+
+  patches its ICU (bugzilla 2002735) and prints `-285 AM`. Duplicate search on 2026-11-17: issues.chromium.org
+  and bugs.webkit.org hold no report of a coptic era or year before AM 1 (searches for "coptic era
+  Intl.DateTimeFormat negative year" and "coptic calendar era year before AM 1" found only unrelated
+  reports, e.g. [Chromium 40276504](https://issues.chromium.org/issues/40276504) for the japanese era
+  and [WebKit 209783](https://bugs.webkit.org/show_bug.cgi?id=209783) for non-Gregorian calendars in
+  general). GMT files nothing: ICU-23277 is the upstream report.
 
 ### What goes wrong
 
@@ -3045,6 +3063,7 @@ where a row says otherwise. Each is its own canary group, and the rules are in
 | `new Intl.DateTimeFormat("en-u-ca-chinese", { year: "2-digit", ...utc }).format(new Date("0005-07-10"))` | `05(yi-chou)` | `5(yi-chou)` | ECMA-402 FormatDateTimePattern: `relatedYear` is FormatNumeric at full width, with no 2-digit form |
 | `new Intl.DateTimeFormat("ja-u-ca-japanese-nu-arab", { year: "numeric", ...utc }).format(new Date("2024-07-10"))` | `令和6年` | `令和٦年` | ECMA-402 FormatDateTimePattern: the year is FormatNumeric in the resolved numbering system |
 | `new Intl.DateTimeFormat("yo", { year: "numeric", month: "numeric", day: "numeric", weekday: "short", ...utc }).formatRange(new Date("2024-07-10"), new Date("2024-07-11"))` | `Ọjọ́rú, 10-07-2024 – Ọjọ́bọ 11-07-2024, Ọjọ́bọ` | each date's single text, joined by the fallback `{0} – {1}` | ECMA-402 PartitionDateTimeRangePattern; UTS #35 Part 4 Interval Formats and `intervalFormatFallback` |
+| `new Intl.DateTimeFormat("en-u-ca-coptic", { era: "short", year: "numeric", month: "short", day: "numeric", ...utc }).format(new Date("-000001-07-10"))` | `Epep 18, 286 ` (no era part) | `Epep 18, -285 AM` | Intl era/monthCode Table 2 and § 4.1.12 (one era `am`, era year is year); test262 `non-positive-single-era-year.js` |
 | `new Intl.DateTimeFormat("en-u-ca-islamic", utc).resolvedOptions().calendar` | `islamic` | `islamic-tbla` | Intl era/monthCode CreateDateTimeFormat; test262 `intl402/DateTimeFormat/constructor-options-calendar-islamic-fallback.js` |
 | `new Intl.DateTimeFormat("en-u-ca-islamic-rgsa", utc).resolvedOptions().calendar` | `islamic-rgsa` | the locale's default | tc39/proposal-intl-era-monthcode#99; the same test262 file |
 
@@ -3076,5 +3095,47 @@ data.
   over a two-day range. Two instants whose field values are equal in every Table 6 row the pattern
   checks print as the single date; printed text is never compared. The detector calls only `format` and `formatRange` (D23), and its verdict is kept
   per pattern.
+- **D31:** `internal/copticEra.ts` wraps a coptic formatter that can show an era or a year. A date whose
+  Temporal coptic year is 0 or less is moved forward by whole 28-year cycles (10227 days, 1461 weeks:
+  month, day, weekday and time stay), the engine formats that date, and only the year is written, signed
+  with the locale's minus in the formatter's numbering system (`Intl.NumberFormat`). The era name and its
+  place are the engine's. A range is moved as a pair and once more; the year runs that differ between the
+  two texts are replaced. A fixed engine prints the same text.
 - **D30:** `formatterCache.ts` builds `islamic` as `islamic-tbla`, and `islamic-rgsa` with the keyword
   taken out, before every other repair.
+
+## AH. `PlainDate.from` never returns for an Islamic date before 1 AH in WebKit, and fills memory (polyfill ESM build; follows § R)
+
+### Status
+
+**Not filed.** Same cause as § R (WebKit prints a date before the Hijra as a positive year), seen from the other side: § R tracks the wrong read, this item the fields-to-ISO search that never ends. Filing waits for the owner's word on the text in "Draft". It is one of the "Fields → ISO for a year <= 0 never returns" lines in § R, now with a measured cost and a GMT trigger.
+
+### What goes wrong
+
+`Temporal.PlainDate.from({ calendar: "islamic-umalqura" | "islamic-civil", year: <= 0, monthCode, day })` runs forever in WebKit, and the page's memory grows to 10 to 13 GB until the process is killed. It was the cause of [#543](https://github.com/northguild/gmt/issues/543): the WebKit legs of the weekly canary (control pass, `GMT_TEMPORAL=polyfill`) ran out of memory in shard 1 of 8 and the runner cancelled the job. Chromium returns at once.
+
+### Repro (polyfill 0.5.1 `index.esm.js` bundled to one script, Playwright 1.63.0 WebKit, macOS and the Linux runner)
+
+| Call | WebKit | Chromium |
+| ---- | ------ | -------- |
+| `PlainDate.from({ calendar: "islamic-umalqura", year: -152, monthCode: "M06", day: 1 })` | does not return, memory grows | `0474-07-04[u-ca=islamic-umalqura]` in 0.1 ms |
+| `PlainDate.from({ calendar: "islamic-civil", year: 0, monthCode: "M06", day: 1 })` | does not return | `0621-12-25[u-ca=islamic-civil]` |
+| the same, year 1444 down to 458 | returns | returns |
+
+The same call through the `index.umd.js` build in a bare page returned in WebKit, so the report names the ESM build, which is what Vitest and bundlers load. Other calendars (hebrew, japanese, roc, buddhist, persian, gregory, islamic-tbla) return at the same years. Firefox could not be checked: Playwright's Firefox did not launch on this machine.
+
+### Effect on GMT
+
+`weekYearRange.ts` `earlierEraProbes` (D24, CORE-112) walks back from the anchor year in Fibonacci steps (1, 2, 3, 5 ... 2584), building a date at each step. For `ar-SA` (`islamic-umalqura`, anchor 1445) the step 1597 asks for year -152. Only `formatDateTimeRange.test.ts` (`ar-SA` row) reached it, and that file sits in shard 1 of 8, which is why only one WebKit shard failed. The walk skips a step when the calendar is `islamic*` and `anchor - step < 1`, so no polyfill call is made before 1 AH.
+
+That skip is not a loss of probes, and it is not specific to WebKit. Where the era text is the same before and after the Hijra (V8, SpiderMonkey: `-152 AH`) the walk finds no earlier era and builds no Islamic probe, so skipping gives WebKit the walk the other engines already have. GMT prints no Islamic date before 1 AH (D26: the date or range endpoint gives the empty value), so a probe there cannot show whether a printed range is right. Building the probes anyway was tried (the date from `calendarDateFromFields`, the shifts and adds from `calendarFieldsOf`, `calendarDateFromFields` and `calendarDateAdd`, all of which return at once in WebKit 26.6): the walk then ran, and flagged 2262 of 2850 Islamic formatters (95 locales, 5 Islamic calendars, 6 option sets; 124 with the skip), because WebKit's `format` prints `153 Before Hijra` while its `formatRange` prints `-152` for the same date, and the year check reads that as a week-year. The 2138 extra flags are false: those formatters print no week-year in any date GMT prints. The three `does not flag` rows of `weekYearRange.test.ts` (`ar-SA` umalqura, `en` civil and tbla) fail on that version in WebKit and pass with the skip.
+
+Effect on output: none. Retire the skip with D26: delete the `if` in `earlierEraProbes` when a fixed engine prints the second era (Intl era/monthCode Table 2), since the date then prints and the walk's probe becomes meaningful. A polyfill fix of this bug alone does not retire it.
+
+### Draft (not filed)
+
+> **Title:** `PlainDate.from` with an Islamic calendar and a year before 1 AH never returns in WebKit and uses all memory
+>
+> In WebKit (Playwright 1.63.0, WebKit 26.6), `Temporal.PlainDate.from({ calendar: "islamic-umalqura", year: -152, monthCode: "M06", day: 1 })` never returns and the page's memory grows to about 10 GB. `islamic-civil` with `year: 0` does the same. Chromium returns `0474-07-04[u-ca=islamic-umalqura]` in 0.1 ms. Version 0.5.1, the `index.esm.js` build.
+>
+> Cause, as far as I can tell: WebKit's `Intl.DateTimeFormat` prints a date before the Hijra as a positive year with the era `Before Hijra`. The search from fields to an ISO date steps its estimate until the printed year equals the requested one, and no date prints a year of 0 or less, so it never ends. It is the same cause as tc39/proposal-temporal#3338. Please bound the search, and read the era part as the calendar helper for other eras does.

@@ -20,7 +20,7 @@ In build order. Each part leaves `pnpm run validate` green on its own.
    - one issue per workaround that becomes removable, with its trigger and removal steps;
    - one `temporal-compat` issue for any untagged oracle mismatch, listing the rows;
    - one issue for a leap-second table difference, with the IERS header line;
-   - a comment on the matching open issue instead of a duplicate, matched by a label and a hidden marker carrying the finding key, on every run while the finding persists;
+   - a rewrite of the matching open issue instead of a duplicate, matched by a label and a hidden marker carrying the workflow, with a comment on every run while a finding persists;
    - nothing when there is no finding.
 4. **Job summary.** Every run writes still needed, removable, guard and mismatch counts to `$GITHUB_STEP_SUMMARY`.
 5. **Snapshot reminder.** A removable-workaround issue says when `pnpm compat:snapshot` is due for `apps/dox/src/data/temporal-compat.json`.
@@ -41,7 +41,7 @@ In build order. Each part leaves `pnpm run validate` green on its own.
 ## Verification
 
 - A manual `workflow_dispatch` run on today's polyfill reports D10 as `GUARD` and opens no issue.
-- A dry run with one workaround forced removable opens exactly one issue. A second run comments on it instead of opening another.
+- A dry run with one workaround forced removable opens exactly one issue. A second run rewrites it and comments instead of opening another.
 - A forced oracle mismatch opens one `temporal-compat` issue. A forced leap-second difference opens one issue.
 - The decision script's tests cover open, comment and no-op.
 - `pnpm run validate` stays green.
@@ -61,36 +61,47 @@ Current rules for the canary reporting, with the reason for each.
   when a person confirms a later release still lacks #3292.
 - **A guard or a still-needed workaround is never a finding.** Only a `removable` group opens an
   issue, and `--fail-on-removable` ignores guards.
-- **One `canary` issue per finding key, matched by a hidden marker.** The body's first line is
-  `<!-- gmt-canary key="<key>" -->`; an open `canary` issue whose first line equals it exactly
-  gets a comment, otherwise a new issue opens, and no finding means no action. Whole-line
-  equality keeps `D1` from matching `D10`, and real keys from matching `dry-run/` ones. With
-  several matches the oldest gets the comment, so the choice is deterministic. A finding whose
-  issue a person closed opens a new one. Keys: `temporal-compat/removable/<ids joined by +>`,
+- **One rolling `canary` issue per workflow, matched by a hidden marker.** The body's first line
+  is `<!-- gmt-canary rolling="<workflow>" -->` (`temporal-oracle`, `leap-seconds`,
+  `us-clock-watch`; dry runs use `dry-run/<workflow>`). A run with findings rewrites that issue's
+  title, labels and body with every finding, one section each, and adds one comment that links the
+  run and says how many findings are new, still there or gone. With no such issue open the run
+  opens it, and a person closing it means the next failing run opens a new one. A clean run
+  comments that it was clean and closes the issue. The second marker line holds the finding keys
+  (`<!-- gmt-canary findings=[...] -->`), so the comment's counts need no comment history. The
+  labels are `canary` plus every finding's label. Keys: `temporal-compat/removable/<ids joined by +>`,
   `temporal-oracle/untagged-mismatch` (also labelled `temporal-compat`), `leap-seconds/table-difference`,
   `<workflow>/could-not-run`.
-- **A finding that persists gets a comment on every run.** An open finding is pending work, and the
-  weekly comment is its reminder. Deduplicating by content would also make a second dry run do
-  nothing.
-- **A comment that repeats the latest full report is one line.** The body and every full comment
-  carry a hidden `<!-- gmt-canary report="<fingerprint>" -->` line: the first 16 hex digits of the
-  SHA-256 of the comment text without its run line. When a run's fingerprint equals the newest one
-  on the issue, the comment says nothing has changed and links to that report. A changed row, or an
-  issue with no fingerprint yet, gets the full tables. The reporter reads the comments with
-  `gh api --paginate`; if that fails, the comment goes out in full.
+- **State findings drop; event findings stay until a person closes the issue.** A state finding
+  (every kind except the two below) is detected again on every run, so the rewrite drops it once
+  gone. An event finding is reported once, by the run that sees the change: `us-clock-watch/federal`
+  and `us-clock-watch/state`, whose lists hold only what is new since the carried snapshot. The
+  issue stores their lines in a hidden `<!-- gmt-canary events=[...] -->` marker; a run merges its
+  new lines into them (a line already listed is kept once), the comment counts a finding with a
+  new line as new, and a clean run rewrites the body without the state findings and keeps the
+  issue open while any event is listed. A person closing the issue clears the events, and the next
+  run opens a fresh one. Past 24,000 stored characters the oldest lines are dropped and the body
+  says how many. An old per-finding issue with an event key waits for a person too and is never
+  folded or closed by a run.
+- **Old per-finding issues fold into the rolling one.** An open issue with a `key="..."` marker
+  is closed, with a comment naming the rolling issue, by the first run that files or closes it.
+  Extra rolling issues for the same workflow are closed the same way, lowest number kept.
+- **The body fits GitHub's limit.** When the sections together pass 65,536 characters, the largest
+  sections are cut at a line end, each keeping a fair share, and the body names the cut
+  sections and links the run, which holds the full result.
 - **Issues are filed only from `main`.** On any other `GITHUB_REF_NAME` the reporter calls no `gh`
   and the job summary lists what it would have filed. A branch dispatch tests a branch, and its
-  results must not land on the issues the weekly runs comment on.
+  results must not land on the issue the weekly runs rewrite.
 - **An issue that waits on a fix in an engine or dependency carries `waiting: upstream`.** The
-  canary keeps commenting on it, one line while nothing changes. A native-suite failure with a
+  canary keeps rewriting it while the finding persists. A native-suite failure with a
   known engine cause is tagged in `scripts/lib/native-suite-tags.mjs` instead, and its issue
   closed: the tag goes stale, with a finding, once the engine ships the fix.
-- **A canary that cannot run is a finding.** A missing verdict file or exit 2 files one
-  could-not-run issue per workflow, listing every source that did not run. A silent failure to run
+- **A canary that cannot run is a finding.** A missing verdict file or exit 2 files a
+  could-not-run finding in the workflow's issue, listing every source that did not run. A silent failure to run
   hides findings as surely as a silent pass.
 - **Dry runs dispatched from `main` file real issues under `dry-run/` keys.** A forced finding is
-  labelled `canary-dry-run`, titled `[dry run]`, and never touches a real issue; a person closes it
-  after checking. Only a real issue proves the open-then-comment path end to end. Forcing a source that
+  labelled `canary-dry-run`, titled `[dry run]`, and never touches a real issue, and a clean real run never closes it; a person closes it
+  after checking. Only a real issue proves the open-then-rewrite path end to end. Forcing a source that
   did not run is dropped with a message, so a dry run never hides a real could-not-run finding.
 - **An oracle verdict carries at most 50 untagged rows.** That keeps an issue body far below any
   size limit while naming enough rows to start. The full list stays in the dated oracle report.
@@ -119,6 +130,6 @@ Current rules for the canary reporting, with the reason for each.
 | `!cancelled()` runs after a failed job | GitHub Docs, Expressions § Status check functions |
 | Hidden marker renders nothing; `\|` escaped in a table cell | GFM spec 0.29-gfm §4.6, §4.10 |
 | Leap-second difference and header line | IERS `Leap_Second.dat` and Bulletin C |
-| Marker match, oldest first, `dry-run/` keys, 50-row cap, weekly comment, could-not-run | **GMT rule** |
+| Rolling marker, lowest number first, `dry-run/` groups, 50-row cap, weekly comment, could-not-run | **GMT rule** |
 | Report fingerprint, one-line repeat, filing only from `main`, `waiting: upstream` | **GMT rule** |
 | Reading every comment page with `gh api --paginate` | GitHub CLI manual, `gh api`; GitHub REST API, List issue comments |
