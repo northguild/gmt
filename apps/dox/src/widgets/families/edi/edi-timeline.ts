@@ -13,37 +13,12 @@ import {
   spanLayout,
   timelineAria,
   timelineLayout,
-  type SpanUnit,
-  type TimelineInput,
   type TimelineLayout,
+  type TimelineSpec,
 } from "~/lib/edi-picture";
-import { durationText, type WidestGap } from "~/lib/edi-widgets";
+import { durationText } from "~/lib/edi-widgets";
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./edi-timeline.module.css";
-
-/** What the timeline draws. */
-export type TimelineSpec =
-  | { kind: "empty"; text: string }
-  | {
-      kind: "span";
-      /** The first day, a `PlainDate`. */
-      from: string;
-      /** The day after the last, a `PlainDate`. */
-      to: string;
-      unit: SpanUnit;
-      /** The days it covers: the caption's first line. */
-      label: string;
-      /** The pin at `from`: the moment a padding parser invents. */
-      reference: { label: string };
-    }
-  | { kind: "stated"; instant: string }
-  | {
-      kind: "marks";
-      rows: readonly TimelineInput[];
-      gap: WidestGap | null;
-      /** A comparison instant drawn as a hollow pin: the value read as UTC. Absent draws none. */
-      reference?: { instant: string; label: string } | null;
-    };
 
 function plot(
   layout: TimelineLayout,

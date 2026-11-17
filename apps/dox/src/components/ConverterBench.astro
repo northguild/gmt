@@ -50,6 +50,7 @@ const html = renderConverterTemplate("converter-bench").value;
   import { mountConverterBench } from "../lib/converter-bench-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   /* One mount per instance on the page. The rail passes a real AbortSignal;
      here nothing ever unmounts, so a never-aborted controller is honest about
@@ -64,5 +65,9 @@ const html = renderConverterTemplate("converter-bench").value;
         showUnavailable(el, error),
       );
     });
+    void offerPageTool(
+      "converter-bench",
+      () => import("../lib/webmcp/tools/converter-bench"),
+    );
   }
 </script>

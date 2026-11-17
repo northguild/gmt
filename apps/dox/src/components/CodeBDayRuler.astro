@@ -38,6 +38,7 @@ const html = renderCodeBDayRulerTemplate("code-b-day-ruler", {}).value;
   import { mountCodeBDayRuler } from "../lib/code-b-day-ruler-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=dayruler&wa=` permalink seeds the widget with the values it names;
@@ -49,5 +50,9 @@ const html = renderCodeBDayRulerTemplate("code-b-day-ruler", {}).value;
         (error) => showUnavailable(el, error),
       );
     });
+    void offerPageTool(
+      "code-b-day-ruler",
+      () => import("../lib/webmcp/tools/code-b-day-ruler"),
+    );
   }
 </script>

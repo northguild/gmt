@@ -40,6 +40,7 @@ builds it.
 | 24    | DOX-G7                                      | —          | #477         | Done   |
 | 25    | DOX-G8                                      | —          | #487         | Done   |
 | 26    | DOX-G9                                      | —          | #522         | Done   |
+| 27    | DOX-G10                                     | —          | #473         | Done   |
 
 Owed verification, not work:
 

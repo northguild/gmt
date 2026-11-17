@@ -101,6 +101,17 @@ export function readZoneAt(id: string, anchorZoned: string): ZoneReading {
 }
 
 /**
+ * Readings for several zones at one instant, in the order of `ids`. The planner's redraw and its
+ * WebMCP tool both call this, so a tile and the tool's answer cannot disagree.
+ */
+export function readZonesAt(
+  ids: readonly string[],
+  anchorZoned: string,
+): ZoneReading[] {
+  return ids.map((id) => readZoneAt(id, anchorZoned));
+}
+
+/**
  * The viewer's own local date, `YYYY-MM-DD`, or `""` if the browser will not
  * name its zone.
  *

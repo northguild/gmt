@@ -31,6 +31,7 @@ const html = renderMovingFeastsTemplate("moving-feasts", {}).value;
   import { mountMovingFeasts } from "../lib/moving-feasts-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("feasts");
@@ -41,5 +42,9 @@ const html = renderMovingFeastsTemplate("moving-feasts", {}).value;
           showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "moving-feasts",
+      () => import("../lib/webmcp/tools/moving-feasts"),
+    );
   }
 </script>

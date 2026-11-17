@@ -50,6 +50,7 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 - `/api/brains` counts move and survive a reload, and the badge reads `● live`.
 - `curl -s <url>/dox/ | grep -c GEMINI` prints `0`.
 - The first deploy with the `ai` binding confirms the CI token may bind Workers AI.
+- Page tools ([tier-2-webmcp.md](tier-2-webmcp.md)), in Chrome 149 or later on `https://northguild.dev` with the trial token live or `chrome://flags/#enable-webmcp-testing` on, and the Model Context Tool Inspector open: a tool page lists exactly one tool, named as its page's `def.name`; calling it with the page's `def.example` returns `ok: true`; the landing page and a guide list none.
 
 ## Owed verification
 

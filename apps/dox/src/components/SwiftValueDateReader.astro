@@ -45,6 +45,7 @@ const html = renderSwiftValueDateReaderTemplate("swift-value-date-reader", {}).v
   import { mountSwiftValueDateReader } from "../lib/swift-value-date-reader-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=swiftdate&wa=` permalink seeds the widget with the values it names;
@@ -56,5 +57,9 @@ const html = renderSwiftValueDateReaderTemplate("swift-value-date-reader", {}).v
         (error) => showUnavailable(el, error),
       );
     });
+    void offerPageTool(
+      "swift-value-date-reader",
+      () => import("../lib/webmcp/tools/swift-value-date-reader"),
+    );
   }
 </script>

@@ -858,6 +858,23 @@ export function ladderOf(
   };
 }
 
+/** What one state reads to: the parse, the strip for a value with no offset, and the ladder. The
+ *  page's redraw and the WebMCP tool both call it, so what each shows is one computation. */
+export function hl7Facts(
+  state: Hl7State,
+  lib: Hl7Lib,
+): { read: Hl7Read; strip: Hl7Strip | null; ladder: Ladder } {
+  const read = readHl7(state, lib);
+  const applies = stripApplies(read);
+  const parsed = read.parsed;
+  const strip =
+    applies && parsed?.kind === "local"
+      ? stripOf(parsed.local, state.zones, lib)
+      : null;
+  const ladder = ladderOf(read, strip, lib);
+  return { read, strip, ladder };
+}
+
 // ---------------------------------------------------------------------------
 // Every text a region can show, for the height it reserves (`families/edi/edi-hold.ts`)
 // ---------------------------------------------------------------------------

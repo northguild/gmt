@@ -635,6 +635,30 @@ export function writeGtfs(
 }
 
 // ---------------------------------------------------------------------------
+// Facts
+// ---------------------------------------------------------------------------
+
+/** Everything one redraw asks the library: the read, its fold, and the write-back. */
+export interface GtfsFacts {
+  read: ReadResult;
+  fold: FoldResult;
+  write: WriteResult;
+}
+
+/**
+ * The three sections' results for `state`, each exactly what `readGtfs`, `foldGtfs` and
+ * `writeGtfs` return. The page's redraw and the WebMCP tool both call this one function.
+ */
+export function collectGtfsFacts(lib: RailLib, state: GtfsState): GtfsFacts {
+  const read = readGtfs(lib, state.value);
+  return {
+    read,
+    fold: foldGtfs(lib, state.value, read),
+    write: writeGtfs(lib, state.seconds, state.dayOverflow),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Calls frames
 // ---------------------------------------------------------------------------
 

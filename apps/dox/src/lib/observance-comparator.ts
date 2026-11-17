@@ -25,6 +25,7 @@ import {
 } from "./holiday-codec";
 import type { HolidayLib } from "./holiday-lib";
 import {
+  NO_SIGNAL_TEXT,
   YEAR_MAX,
   YEAR_MIN,
   normaliseWeekend,
@@ -49,6 +50,14 @@ export const MIN_COLUMNS = 2;
 export const MAX_COLUMNS = 4;
 /** The most years one matrix shows. A longer span is cut here, with a note. */
 export const MAX_YEARS = 12;
+/** What the span note says when a span is longer than `MAX_YEARS` and was cut. */
+export const CLAMP_NOTE = `More than ${MAX_YEARS} years: showing the first ${MAX_YEARS}.`;
+
+/** What the holiday note says for the 1-based holidays the library rejects. */
+export function holidayNoteOf(bad: readonly number[]): string {
+  return `${NO_SIGNAL_TEXT}: ${bad.length === 1 ? `holiday ${bad[0]} is` : `holidays ${bad.join(", ")} are`} not a date on the calendar (a month from 1 to 12 and a day that month has).`;
+}
+
 /** The zone every Comparator calendar uses: it has none of its own, and the
  *  Builder needs one on the hand-off. */
 const COMPARATOR_ZONE = "UTC";

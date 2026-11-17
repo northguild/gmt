@@ -27,6 +27,7 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 import { dateText, type PlateSpec } from "./ledger-widgets";
+import type { BillingLib } from "./ledger-lib";
 import { codeSpan } from "./widget-ui";
 
 // ---------------------------------------------------------------------------
@@ -665,7 +666,7 @@ type NullReason =
   | "agreed-before-request"
   | "out-of-range";
 
-interface NullExplanation {
+export interface NullExplanation {
   reason: NullReason;
   /** Which window, when `reason` is `missing-window` or `invalid-window`. */
   field?: WindowField;
@@ -875,4 +876,29 @@ export function dayCellLabel(item: DayStripDay): string {
 /** What a screen reader hears for a run of weeks the strip leaves out. */
 export function gapLabel(item: DayStripGap): string {
   return `${item.from} to ${item.to}: ${item.days} days not drawn`;
+}
+
+// ---------------------------------------------------------------------------
+// Facts: every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+export interface BillingFacts {
+  /** `billingTimeline(dates, windows)`, or `null`. */
+  result: BillingDeadlines | null;
+  /** Why `result` is `null`; `null` when the chain was laid out. */
+  reason: NullExplanation | null;
+}
+
+/**
+ * The library call the redraw makes, with the reason it refused when it did, both returned
+ * unchanged. The mount draws from this and the WebMCP tool answers with it, so the two cannot
+ * disagree. No DOM and no gmt import: `BillingLib` comes in from the caller.
+ */
+export function billingFacts(
+  state: BillingState,
+  lib: BillingLib,
+): BillingFacts {
+  const result = lib.billingTimeline(datesOf(state), windowsOf(state));
+  const reason = result === null ? explainNull(state, lib) : null;
+  return { result, reason };
 }

@@ -145,6 +145,21 @@ export function readAuditLine(value: string, lib: StoredTimeLib): AuditLine {
   return { value, result: lib.classifyStoredZoned(value) };
 }
 
+/** What the line cap and the character cap cut, in words; `""` when nothing was cut. */
+export function truncatedText(parsed: ParsedLines): string {
+  if (!parsed.truncated) return "";
+  const parts: string[] = [];
+  if (parsed.droppedLines > 0) {
+    parts.push(
+      `${parsed.droppedLines} more ${parsed.droppedLines === 1 ? "line" : "lines"} not read, after the first ${AUDIT_MAX_LINES}`,
+    );
+  }
+  if (parsed.cutLines) {
+    parts.push(`lines cut to ${AUDIT_MAX_CHARS} characters`);
+  }
+  return `Read ${parsed.lines.length} ${parsed.lines.length === 1 ? "line" : "lines"}: ${parts.join("; ")}.`;
+}
+
 /** Every line, read. */
 export function readAuditLines(
   lines: readonly string[],

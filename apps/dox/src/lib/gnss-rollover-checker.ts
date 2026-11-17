@@ -24,6 +24,7 @@
  * by the library's own names (`GPS-LNAV`, `GAL`, `IRN-L1NV`).
  */
 
+import { Temporal } from "@js-temporal/polyfill";
 import { runCall, type EdiCall } from "./edi-widgets";
 import { toEpochMs } from "./dwell-ledger";
 import {
@@ -727,6 +728,10 @@ function blankRead(state: RolloverState): RolloverRead {
     calls: { reading: [], counters: [] },
   };
 }
+
+/** The reader's clock as a UTC instant to the second: what `readRollover` is given as `nowIso`. */
+export const clockNow = (): string =>
+  Temporal.Now.instant().toString({ smallestUnit: "second" });
 
 /**
  * Read the library for `state`. `nowIso` is the reader's clock, a UTC instant
