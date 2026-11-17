@@ -213,7 +213,7 @@ describe("fiscalPeriodOfWeek", () => {
   };
 
   // The 53rd week lengthens period 1 or period 12, nothing else, and the caller states which
-  // (CORE-5.md, Corrections).
+  // (see `getFiscalPeriod`'s `extraWeek` option).
   // ONS (UK) 2025 is the 4-4-5 firstPeriod shape: 5,4,5 then 4,4,5 three times.
   it.each`
     pattern    | extraWeek        | expected

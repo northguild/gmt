@@ -1,6 +1,6 @@
 /**
  * The fixed text grammars of time-ordered identifiers, and the digit decoders beside them
- * (CORE-56; see "Scoped exception: identifier grammars" in `context/coding-standards.md`).
+ * (CORE-56; see "Scoped exception: identifier grammars" in `context/coding-standards/string-grammars.md`).
  *
  * UUIDs, ObjectIds, ULIDs, KSUIDs and Snowflakes carry a timestamp as digits in a fixed
  * alphabet. No `Temporal.*.from` reads any of them, so each grammar is one regex here and a

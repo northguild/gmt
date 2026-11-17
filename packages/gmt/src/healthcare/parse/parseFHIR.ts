@@ -15,11 +15,14 @@ import type { FhirDateTime } from "../../types";
  *
  * - Precision is kept, never padded: `2024-06` is a month, not 1 June.
  * - A time needs seconds and a zone (`Z` or `±hh:mm`, from `-14:00` to `+14:00`). `24:00` is refused.
- * - `Z`, `+00:00` and `-00:00` all read as `offset: "+00:00"`; `value` keeps the input's spelling.
+ * - `Z`, `+00:00` and `-00:00` all read as `offset: "+00:00"` (XSD 1.0, the source of FHIR's XML
+ *   types, gives them one meaning); `value` keeps the input's spelling.
  *   A year, month or day has `offset: ""`.
  * - A month or day that does not exist (`2023-02-29`) is `null`.
  * - A second of `60` is valid only on an inserted leap second (as `isLeapSecond`).
- * - A fraction is at most nine digits.
+ * - A fraction is at most nine digits. R4's pattern allows any length, but Temporal holds
+ *   nanoseconds and a value GMT cannot hold is not called valid (XSD 1.0 lets a processor set
+ *   such a limit if it documents it).
  * - Disambiguation: none. Every time FHIR carries has an offset, so there is no wall time to resolve.
  *
  * The matching validator is `isValidFHIR`, and the writer is `formatFHIR`.

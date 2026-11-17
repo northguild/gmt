@@ -1,6 +1,6 @@
 # Verification and risks — epic-wide
 
-> Load for reviews. What each tier ships is in [built.md](../built.md).
+> Load for reviews. What each tier ships is in [built/](../built/index.md).
 
 ## Checks that apply to any Dox change
 
@@ -32,8 +32,8 @@
   [design-system.md](design-system.md)).
 - **Where they run:** a Dox PR runs the `pr` tier on its changed pages in Chromium (the
   `dox-gates` job), and `dox-gates-weekly.yml` sweeps every page in three browsers. See
-  built.md, [Tier 2](../built.md#tier-2--widget-platform) ("The PR job") and
-  [Runbooks](../built.md#runbooks) ("The weekly gate sweep").
+  [CI jobs for Dox](../built/tier-2-gates.md#ci-jobs-for-dox) and
+  [The weekly gate sweep](../built/tier-6-ops.md#the-weekly-gate-sweep).
 - **Gate findings:** a finding's key is `gate:rule:page:target`, where the target is the element's
   identity key. A widget root without `data-widget` makes every finding under it fall back to the
   page, so one weekly issue hides several; every new widget root carries `data-widget`, a `region`
@@ -63,14 +63,14 @@
   `workflow_dispatch`. It has no path filter.
 - **Free-tier quotas move.** Gemini withdraws models from new keys without notice, and Workers
   AI's allocation is per account. Re-probe brains after provider releases (runbook in
-  `built.md`).
+  `built/tier-6-brains.md`).
 - **Stay on the Workers Free plan.** There an exhausted Workers AI allocation fails; on Workers
   Paid it bills, and nothing in code can see which plan is active.
 - **AI Elements are vendored.** Upstream fixes do not arrive on their own, and a re-sync is a
   merge. `prompt-input.tsx` carries a local change (reset deferred to success) that must survive
   it. Never run bare `npx ai-elements@latest` — it installs all 48 components.
 - **Tailwind leaking out of the island.** Any new unlayered GMT selector that matches chat
-  markup joins the collision list in `design-system.md`.
+  markup joins the collision list in `design-system-chat.md`.
 - **Astro/Starlight churn.** Pin Astro, Starlight and its markdown peer; re-check
   `src/virtual-starlight.d.ts` on every Starlight upgrade.
 - **Zone data ages.** The globe's coordinates come from tzdata, which releases several times a

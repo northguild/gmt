@@ -54,7 +54,7 @@ Two corollaries:
   decide and `"reject"` does not reject.
 - **Boundary functions take no disambiguation option at all.** `startOf*`/`endOf*` and
   everything built on them return the real boundary and ignore the option — see
-  [coding-standards § Calendar & zone semantics](../coding-standards.md#calendar--zone-semantics),
+  [coding-standards § Calendar & zone semantics](../coding-standards/calendar-and-zones.md#calendar--zone-semantics),
   which is the decision of record. The option belongs to field-setting functions only, the same
   split TC39 draws.
 
@@ -86,22 +86,12 @@ orders events globally, the offset renders them as the human on the ground saw t
 
 `offset` is `±HH:MM`, or `±HH:MM:SS` where the zone was not on a whole minute
 (`Africa/Monrovia` stood at `-00:44:30` until 1972). An offset with seconds is not a time zone
-identifier: `isValidTimeZone` rejects it and `isValidUtcOffset` accepts it. Which functions take
-it in the time zone position follows from the result:
-
-| The function's result | Its time zone position takes | An offset with seconds |
-| --- | --- | --- |
-| Has no zone in it: an instant, a plain value, a number, a boolean | Anything `isValidTimeZone` or `isValidUtcOffset` accepts, read by `internal/zoneFrame` | Read exactly |
-| Carries the zone: a zoned string, a `BusinessCalendar` | A time zone identifier only (`isValidTimeZone`) | Returns the sentinel. A written zone cannot carry seconds (RFC 9557 §4.1) |
-| Is text from `Intl.DateTimeFormat` | A time zone identifier only | Returns the sentinel. `Intl.DateTimeFormat` takes an offset to the minute (ECMA-262 `IsTimeZoneOffsetString`) |
-
-`internal/zoneFrame` places an offset with seconds on its whole-minute zone (`-00:44:30` on
-`-00:44`) and carries the seconds as a shift. So with an offset with seconds, a function that
-does arithmetic returns its sentinel within the offset's seconds (under a minute) of one end of
-the instant range: the last instant for an offset east of UTC, the first for one west. Each such
-function states the limit in its JSDoc. A function that only reads a value has no limit, and
-neither have `resolveLocal`, `classifyLocal`, `toOffsetInstant`, `getTimeZoneOffset` and
-`isBetweenUnix`.
+identifier: `isValidTimeZone` rejects it and `isValidUtcOffset` accepts it. A function whose
+result carries a zone (a zoned string, a `BusinessCalendar`) takes a time zone identifier only,
+because a written zone cannot carry seconds (RFC 9557 §4.1), and the same holds for text from
+`Intl.DateTimeFormat`, which takes an offset to the minute (ECMA-262 `IsTimeZoneOffsetString`).
+Every other function reads the offset exactly; each states any limit near the ends of the
+instant range in its JSDoc.
 
 This shape is what the interchange standards actually require:
 

@@ -83,6 +83,6 @@ the top of `scripts/optimize.py` and `scripts/checks_personas.py` in sync with i
   a human reading the entry file cannot find it otherwise.
 - Always-relevant files belong high in the routing table with an "Always" trigger; narrow files
   need a specific "when..." trigger.
-- A file over budget is a signal to split by sub-topic (as `coding-standards.md` is split from
-  `testing-standards/index.md`), not to shrink prose at the cost of clarity.
+- A file over budget is a signal to split by sub-topic (as `coding-standards/` is split into
+  `index.md` and scoped files), not to shrink prose at the cost of clarity.
 - Finished or superseded material belongs in `context/archive/`, which the audit skips.

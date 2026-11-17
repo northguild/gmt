@@ -19,13 +19,13 @@ import {
 
 export type { DataCredit, DataCreditsPlacement };
 
-/** The timezone-boundary-builder release the boundary files come from (see `built.md` § Boundary data). */
+/** The timezone-boundary-builder release the boundary files come from (see `context/dox/built/tier-4-zones.md`, "Boundary data"). */
 export const TBB_TAG = "2026e";
 
-/** The Natural Earth release the coastlines come from (see `built.md` § Boundary data). */
+/** The Natural Earth release the coastlines come from (see `context/dox/built/tier-4-zones.md`, "Boundary data"). */
 export const NE_TAG = "v5.1.2";
 
-/** The HYG v4.4 commit the star list comes from (see `built.md` § Boundary data). */
+/** The HYG v4.4 commit the star list comes from (see `context/dox/built/tier-4-zones.md`, "Boundary data"). */
 export const HYG_COMMIT = "53e3df311869e813ace5f1ad2ec4ce909f13256c";
 
 export const TZ_BOUNDARIES: DataCredit = {

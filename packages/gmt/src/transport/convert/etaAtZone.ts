@@ -5,7 +5,7 @@ import { etaAtZoneText } from "../../internal/deliverySchedule";
  *
  * Schedules are computed in UTC and displayed where the cargo lands. The zone is the caller's
  * fact: GMT does not resolve a port, airport, terminal or station code to a timezone, and
- * takes an IANA identifier instead (see the parked registries note in the epic's painpoints).
+ * takes an IANA identifier instead.
  *
  * - `arrivalUtc` is any instant `isValidInstant` accepts — `Z` or an offset, with no annotation of
  *   any kind. `targetZone` is the zone the result is rendered in.

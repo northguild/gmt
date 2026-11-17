@@ -21,7 +21,7 @@ review comments. Issues and comments filed on other people's repos. Handoff
 notes. Anything written back to a person in a session.
 
 Not code, tests, identifiers or JSDoc — those follow
-[coding-standards.md](../../../context/coding-standards.md) and
+[coding standards](../../../context/coding-standards/index.md) and
 [jsdoc-standards.md](../../../context/jsdoc-standards.md).
 
 ## How

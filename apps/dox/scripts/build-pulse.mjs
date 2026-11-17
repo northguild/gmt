@@ -163,11 +163,6 @@ export function lifeText(life) {
 
 const cell = (text) => text.replaceAll("|", "\\|").replaceAll("\n", " ");
 
-const storyCell = (story) =>
-  /^CORE-\d+$/.test(story)
-    ? `[${story}](../domination/issues/${story}.md)`
-    : `${story}: [../dox/built.md](../dox/built.md)`;
-
 /** The generated canary table, rows in list order. */
 export function overviewTable(checks = PULSE_CHECKS) {
   const rows = checks.map((c) => {
@@ -178,7 +173,7 @@ export function overviewTable(checks = PULSE_CHECKS) {
       cell(c.watches),
       cell(c.finds),
       cell(lifeText(c.life)),
-      c.story === "Dox epic" ? "Dox epic" : storyCell(c.story),
+      c.story,
     ].join(" | ")} |`;
   });
   return [

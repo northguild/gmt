@@ -69,6 +69,9 @@ function snapshotLeg(leg: unknown): unknown {
  *
  * A truck→ship→rail move spends its time two ways: moving, and sitting at a handoff. The two are
  * forecast differently and fail differently, so one opaque total hides the part a planner needs.
+ * Published schedules give the opaque total: DCSA Commercial Schedules 1.0.4 gives a route's
+ * `transitTime` as one integer of days that "includes stop-over time during transhipments and
+ * waiting time at connection points" (`PointToPoint.transitTime`).
  * `multimodalETA` schedules the legs with `scheduleDelivery` and splits the elapsed time from the
  * first departure to the ETA into the two.
  *

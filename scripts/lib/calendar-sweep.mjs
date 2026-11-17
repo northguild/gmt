@@ -7,6 +7,10 @@
  * Pure functions, no I/O, no imports, never `Date`. The caller supplies both Temporal namespaces and
  * the calendar names, so this module never loads a polyfill. The span is fixed. It does not depend
  * on the run date, so two runs on different days read the same years.
+ *
+ * Any calendar that differs blocks, whatever the cause: the lunisolar Chinese and Dangi calendars
+ * included, where the polyfill reads `Intl` data and the reference's built-in Temporal reads ICU4X.
+ * The caller's reference is the host's built-in Temporal, which is what the polyfill must match.
  */
 
 /** First day of the span, as an ISO 8601 extended-year date. */

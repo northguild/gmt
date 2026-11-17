@@ -13,7 +13,9 @@ const ANCHOR_HOURS_BEFORE_NOON = 12;
  *
  * - A GTFS time is measured from "noon minus 12 hours" of the service day. That is midnight
  *   except on a day the clocks change, so `00:00:00` on a spring-forward day is 23:00 the day
- *   before, and the result can fall on another local date.
+ *   before, and the result can fall on another local date. The reference gives no reason for noon;
+ *   it works because clocks change at night, so noon occurs once. Anchoring on local midnight
+ *   would bring back the bug the definition avoids.
  * - A time past `24:00:00` is elapsed time from that anchor, not a wall-clock move. A later
  *   clock change therefore shifts its local reading: `26:30:00` on 2024-03-09 in New York is
  *   03:30 EDT, and `25:30:00` and `26:30:00` on 2024-11-02 both read 01:30, an hour apart.

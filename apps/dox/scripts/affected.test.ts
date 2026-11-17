@@ -18,7 +18,7 @@ describe("affected: which checks a change runs", () => {
   it.each([
     {
       name: "notes in context/ run nothing",
-      changes: ["context/dox/built.md", "context/skills.md"],
+      changes: ["context/dox/built/index.md", "context/skills.md"],
       checks: [],
     },
     {

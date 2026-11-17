@@ -49,6 +49,9 @@ def findings(ao: dict, so: dict, root: Path) -> list[Finding]:
     for dup in ctx.get("near_duplicates", []):
         files = [v for v in dup.values() if isinstance(v, str)]
         out.append((rel(files[0], root) if files else REPO, f"near-duplicate: {dup}"))
+    # Repo-wide: the branch that closed the story never touched the files it left behind.
+    out += [(REPO, f"leftover: {left['file']} ({left['story']} is Done; finalizer step 10 deletes it)")
+            for left in ao.get("leftovers", [])]
     sync = ao.get("sync", {})
     for kind in ("agents", "skills"):
         for problem, names in sync.get(kind, {}).items():

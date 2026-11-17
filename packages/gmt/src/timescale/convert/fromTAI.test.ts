@@ -48,7 +48,7 @@ describe("fromTAI", () => {
     expect(fromTAI(taiString)).toBe("");
   });
 
-  // The time-scale string format (MAR-16.md, String format): extended date-time, seconds
+  // The time-scale string format (FITS 4.0 token after an extended date-time), seconds
   // required, 1-9 fraction digits after ".", one space, the token.
   it.each`
     taiString
