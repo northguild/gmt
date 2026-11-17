@@ -212,3 +212,41 @@ describe("the built WebMCP markers", () => {
     expect(stranded).toEqual([]);
   });
 });
+
+/**
+ * Whether a build has tokens depends on `WEBMCP_ORIGIN_TRIAL_TOKEN` at build time, which only the
+ * deploy sets, so these hold for a build with tokens and for one without.
+ */
+describe("the built origin-trial metas", () => {
+  const TRIAL = /<meta\s+http-equiv="origin-trial"\s+content="([^"]*)"/g;
+  const trialsIn = (file: string): string[] =>
+    [...readFileSync(file, "utf8").matchAll(TRIAL)].map(
+      (match) => match[1] as string,
+    );
+
+  it("gives every tool page the same tokens, each once, and no other page any", () => {
+    if (dist === null) return;
+    const byPage = new Map(
+      htmlFiles(site).map((file) => [
+        path.relative(site, file),
+        trialsIn(file),
+      ]),
+    );
+    const toolPages = [...byPage.keys()].filter(
+      (file) => markersIn(path.join(site, file)).length > 0,
+    );
+    expect(toolPages.length).toBeGreaterThan(0);
+    const tokens = byPage.get(toolPages[0] as string) ?? [];
+    expect(tokens.every((token) => token !== "")).toBe(true);
+    expect(new Set(tokens).size).toBe(tokens.length);
+    const differ = toolPages.filter(
+      (file) => byPage.get(file)?.join(" ") !== tokens.join(" "),
+    );
+    expect(differ).toEqual([]);
+    const tools = new Set(toolPages);
+    const stray = [...byPage].filter(
+      ([file, found]) => !tools.has(file) && found.length > 0,
+    );
+    expect(stray.map(([file]) => file)).toEqual([]);
+  });
+});

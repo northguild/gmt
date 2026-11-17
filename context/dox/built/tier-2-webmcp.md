@@ -14,13 +14,13 @@ Every tool page registers one tool that an agent in the reader's browser can lis
 - **The link is a full URL.** A run sets `link` as the site path `encodeWidgetPermalink` returns. `toModelContextTool` resolves it against `location.href`, so the agent gets a URL on the page's own origin (localhost, a preview or the live site) that it can quote or pass on. `expectParity` checks every tool's link: same origin, and `decodeWidgetPermalink` reads its query.
 - **Naming.** A name matches `^(compute|convert|decode|read|check|compare|list|find|schedule|resolve|build|measure)_[a-z0-9_]+$` and is at most 48 characters. A description is at most 1,000 characters, holds none of drag, click, slider, drawn, widget, shown or page, and no backtick, `*` or `#`. `describeTool` joins `returns`, the `when` line, the chat `args` line, each rule and `calls`; `argsSwaps` and `whenSwaps` replace a banned phrase and only when one is present.
 - **Seeds are reported.** A value the call left out and the tool filled from the page's starting value or the clock is named in `input` and in a note (`seedNote`), so the agent can see what it was answered for.
-- **The token is a constant.** `ORIGIN_TRIAL_TOKENS` in `webmcp/origin-trial.ts` is a committed list of public origin-trial tokens. Empty, no meta is emitted and the Chrome testing flag still turns WebMCP on.
+- **The token is a deploy secret.** `ORIGIN_TRIAL_TOKENS` in `webmcp/origin-trial.ts` is parsed at build time from `WEBMCP_ORIGIN_TRIAL_TOKEN` (`parseOriginTrialTokens`: split on whitespace, blanks and repeats dropped, so an old and a new token can overlap). Only the "Build apps/dox" step of `deploy-dox.yml` sets it, from the repository secret of that name, so local, pull-request and weekly-gate builds emit no origin-trial meta. It is read through `process.env`, not `astro:env`, because Vitest reaches `route-data.ts` and cannot resolve `astro:env`. Without a token, `chrome://flags/#enable-webmcp-testing` still turns WebMCP on.
 - **The globe tool loads through a hop.** `Globe.astro` also runs on the landing page, where the first-input budget is tight, so it offers `zoned-earth` through `webmcp/zoned-earth-hop.ts` (one `import()`, no static import, outside `tools/`) and the tool's preload table sits in the hop chunk and not in the Globe script. No other page needs one.
 - **Reader guide.** `guides/integration/browser-agents.mdx` explains page tools to a reader, with the Cut-off Ruler's example call and its real answer. Regenerate that answer if the tool's result shape changes.
 
 ## The gate
 
-- `coverage.test.ts` (names, descriptions, swaps, one module per page), the `parity-<group>.test.ts` files (the tool against the mounted page through `~/test/webmcp-parity`), `head.dist.test.ts` (the built head) and `scripts/webmcp.browser.test.ts` (every page in Chromium and WebKit, with a fake model context and with none).
+- `coverage.test.ts` (names, descriptions, swaps, one module per page), the `parity-<group>.test.ts` files (the tool against the mounted page through `~/test/webmcp-parity`), `origin-trial.test.ts` (the parse, and the constant read from the variable), `head.dist.test.ts` (the built head: one marker per tool page, and the same origin-trial metas on every tool page and none elsewhere, with or without a token) and `scripts/webmcp.browser.test.ts` (every page in Chromium and WebKit, with a fake model context and with none).
 - **The stylesheet guard judges the tool import only.** `head.dist.test.ts` walks a page's dynamic imports (through a hop) to the chunk that names the page and checks that import's own preload list against the sheets the page links. A mount's list is walked past: those sheets are the widget's business. It fails when it finds no tool import, so it cannot pass vacuously.
 
 ## Rules a new or edited page tool must still obey
@@ -33,4 +33,11 @@ Every tool page registers one tool that an agent in the reader's browser can lis
 
 ## Runbook: renew the origin-trial token
 
-The console emails a link before the token expires. Register `https://northguild.dev` there for the WebMCP trial, paste the new token into `ORIGIN_TRIAL_TOKENS`, and deploy. `origin-trial.test.ts` and `head.dist.test.ts` check the tag.
+No pull request is needed. The origin-trial console emails a link before the token expires.
+
+1. Register `https://northguild.dev` there for the WebMCP trial and copy the new token.
+2. Update the `WEBMCP_ORIGIN_TRIAL_TOKEN` repository secret of `northguild/gmt`. To let the old and new tokens overlap, put both in the secret, one per line, and drop the old one at the next renewal.
+3. Redeploy: run `deploy-dox.yml` from the Actions tab (`workflow_dispatch`), or wait for the next deploy.
+4. Check a live tool page's source for `<meta http-equiv="origin-trial" content="…">`, then run the page-tool checks in [tier-6-ops.md](tier-6-ops.md#after-a-deploy).
+
+`chrome://flags/#enable-webmcp-testing` turns WebMCP on without any token.
