@@ -1476,6 +1476,19 @@ for (const name of browsers) {
       }
       return out;
     };
+    /**
+     * The Low double buzzes heard: a cluster followed next by a lone note 0.11 s later. The first
+     * note can land in the same audio block as another voice (the blip of the key that caused it),
+     * so its cluster may hold more than one start.
+     */
+    const buzzes = (heard) =>
+      heard.filter(
+        (c, i) =>
+          heard[i + 1]?.size === 1 &&
+          Math.abs(heard[i + 1].at - c.at - 0.11) < 0.003,
+      ).length;
+    /** Every oscillator start in the clusters: what was heard, however it overlapped. */
+    const notes = (heard) => heard.reduce((n, c) => n + c.size, 0);
     const arm = async (page, mode) => {
       await page.addInitScript(stubWorker, mode);
       await load(page, "/dox/");
@@ -1543,7 +1556,7 @@ for (const name of browsers) {
         if (heard[0]?.size !== 3)
           bad(
             "chat-cue",
-            `the sent question played ${heard[0]?.size ?? 0} oscillators at once, wanted 3 (Enter's blip and the Sonar launch)`,
+            `the sent question played ${heard[0]?.size ?? 0} oscillators at once, wanted 3 (Enter's blip and the Sonar launch; clusters ${JSON.stringify(heard.slice(0, 4))})`,
           );
         const bells = heard.filter((c) => c.size === 5).length;
         if (bells !== 1) bad("chat-cue", `Ice bell played ${bells}x, wanted 1`);
@@ -1572,16 +1585,11 @@ for (const name of browsers) {
         await page.waitForTimeout(1500);
         const starts = await page.evaluate(readStarts);
         const heard = clustersOf(starts);
-        const pair = heard.filter(
-          (c, i) =>
-            c.size === 1 &&
-            heard[i + 1]?.size === 1 &&
-            Math.abs(heard[i + 1].at - c.at - 0.11) < 0.003,
-        );
-        if (pair.length !== 1)
+        const pair = buzzes(heard);
+        if (pair !== 1)
           bad(
             "chat-cue",
-            `a 500 played ${pair.length} Low double buzz(es), wanted 1 (clusters ${JSON.stringify(heard)})`,
+            `a 500 played ${pair} Low double buzz(es), wanted 1 (clusters ${JSON.stringify(heard)})`,
           );
         if (heard.some((c) => c.size === 5))
           bad("chat-cue", "a 500 rang the Ice bell");
@@ -1623,13 +1631,6 @@ for (const name of browsers) {
       page.evaluate(
         () => window.__sound.exps.filter(([v]) => v === 4000).length,
       );
-    const buzzes = (heard) =>
-      heard.filter(
-        (c, i) =>
-          c.size === 1 &&
-          heard[i + 1]?.size === 1 &&
-          Math.abs(heard[i + 1].at - c.at - 0.11) < 0.003,
-      ).length;
     const lockIns = (heard, starts) =>
       heard.filter(
         (c) =>
@@ -1712,10 +1713,11 @@ for (const name of browsers) {
             "tool-cue",
             `the readout falling to NO SIGNAL played ${buzzes(first)} Low double buzz(es), wanted 1 (${JSON.stringify(first)})`,
           );
-        if (first.length !== 3)
+        // Counted as notes, not clusters: the blip and the buzz's first note can start together.
+        if (notes(first) !== 3)
           bad(
             "tool-cue",
-            `one typed key and the fall played ${first.length} sounds, wanted a Data blip and the two buzzes`,
+            `one typed key and the fall played ${notes(first)} notes, wanted a Data blip and the buzz's two (${JSON.stringify(first)})`,
           );
         await page.evaluate(() => window.__sound.starts.splice(0));
         await page.keyboard.type("y", { delay: 60 });
