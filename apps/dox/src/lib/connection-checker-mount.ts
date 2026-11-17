@@ -45,12 +45,11 @@ import styles from "~/widgets/tools/connection-checker.module.css";
 import {
   CONNECTION_PRESETS,
   CUSTOM_PRESET_ID,
+  connectionFacts,
   legsOf,
   matchPreset,
-  naiveCheck,
   permalinkOf,
   readArgs,
-  verdict,
   type ConnectionCheckerArgs,
   type ConnectionState,
   type Verdict,
@@ -58,7 +57,6 @@ import {
 import { loadTransportLib } from "./transport-lib";
 import {
   TRANSPORT_ZONES,
-  diagnose,
   epochMs,
   formatSchedule,
   scheduleCallSource,
@@ -387,10 +385,7 @@ function setupWidget(
     presetEl.value = matchPreset(readState());
   }
 
-  function drawStrip(legs: ReturnType<typeof legsOf>, v: Verdict): SafeHtml {
-    const arrival = legs[0]
-      ? lib.scheduleDelivery([legs[0]])?.legTimes[0]?.arrival
-      : undefined;
+  function drawStrip(arrival: string | undefined, v: Verdict): SafeHtml {
     if (!arrival || !v.readyLocal) return blankStrip();
     const arrivalMs = epochMs(arrival);
     const readyMs = epochMs(v.readyLocal);
@@ -401,7 +396,14 @@ function setupWidget(
   function render(): void {
     const s = readState();
     const legs = legsOf(s);
-    const result = lib.scheduleDelivery(legs);
+    const {
+      result,
+      verdict: v,
+      naive,
+      arrival,
+      arrivalOutOfRange,
+      diagnosis,
+    } = connectionFacts(s, lib);
 
     const [callHtml, callPlain] = scheduleCallSource(legs);
     setHtml(
@@ -427,8 +429,6 @@ function setupWidget(
       }),
     );
 
-    const v = verdict(legs, lib);
-    const naive = naiveCheck(s);
     const disagrees =
       naive !== null &&
       ((v.kind === "made") !== naive.made || v.kind === "no-verdict");
@@ -447,7 +447,12 @@ function setupWidget(
       ? `Arrival, then handling to ready ${v.readyLocal ?? ""}, then the onward departure ${v.departureLocal ?? ""}.`
       : NBSP;
     try {
-      setHtml(el("strip"), drawStrip(legs, v));
+      if (arrivalOutOfRange) {
+        setHtml(el("strip"), rangeEdge());
+        summary = RANGE_EDGE_TEXT;
+      } else {
+        setHtml(el("strip"), drawStrip(arrival, v));
+      }
     } catch (error) {
       if (!isRangeError(error)) throw error;
       setHtml(el("strip"), rangeEdge());
@@ -456,12 +461,11 @@ function setupWidget(
     el("summary").textContent = summary;
 
     if (v.kind === "no-verdict") {
-      const diag = diagnose(legs, undefined, lib);
       setHtml(
         el("reason"),
         reasonOf(
-          diag
-            ? scheduleNullText(diag.reason, diag.leg + 1)
+          diagnosis
+            ? scheduleNullText(diagnosis.reason, diagnosis.leg + 1)
             : "The connection could not be checked.",
         ),
       );

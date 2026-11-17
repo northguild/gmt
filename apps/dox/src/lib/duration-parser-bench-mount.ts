@@ -27,7 +27,7 @@ import {
   NO_SPELLING_TEXT,
   PARSER_LABEL,
   TRY_STRINGS,
-  benchView,
+  durationFacts,
   laytimeRows,
   minuteOrMonthRows,
   permalinkOf,
@@ -363,7 +363,7 @@ function setupWidget(
 
   function render(): void {
     // Never trimmed: a leading space is a case the reader should see refused.
-    const view = benchView(lib, text.value, locale.value);
+    const view = durationFacts(readState(), lib);
 
     setHtml(part("parser"), parserBadge(view.parser));
     result.textContent = view.iso === "" ? RESULT_NO_SIGNAL : view.iso;

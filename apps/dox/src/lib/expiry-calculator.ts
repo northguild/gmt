@@ -367,6 +367,10 @@ export function platesOf(
   return pureValues(lib, units, state.start);
 }
 
+/** What the page says when Now has no result: `ttlFromNow` answered `null`. */
+export const HINT_NOW_NULL =
+  "ttlFromNow takes a whole length of zero or more, and its end needs a four-digit year. A past Expires is formatHttpDate(getUtcAgo({ days: 1 })).";
+
 /** The one `ttlFromNow` read a tick makes. `null` when the amount is refused. */
 export function readTtl(lib: ExpiryLib, state: ExpiryState): ExpiryTtl | null {
   const units = unitsOf(state);

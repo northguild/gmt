@@ -49,26 +49,23 @@ import styles from "~/widgets/tools/billing-deadlines.module.css";
 import {
   BILLING_PRESETS,
   CUSTOM_PRESET_ID,
+  billingFacts,
   billingPlates,
   callSource,
   datesOf,
   dayStrip,
-  explainNull,
   formatDeadlines,
   matchPreset,
   nullReasonText,
   readArgs,
   verdictText,
-  windowsOf,
   type BillingDeadlines,
   type BillingDeadlinesArgs,
   type BillingState,
-  type DatesArg,
-  type WindowsArg,
 } from "./billing-deadlines";
 import type { PlateSpec } from "./ledger-widgets";
-import { GMT_MODULES } from "./gmt-modules";
-import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { loadBillingLib, type BillingLib } from "./ledger-lib";
+import { onceDestroy, type MountFn } from "./widget-mount";
 import { codeSpan } from "./widget-ui";
 
 export type { BillingDeadlinesArgs } from "./billing-deadlines";
@@ -308,31 +305,6 @@ export function renderBillingDeadlinesTemplate(
 }
 
 // ---------------------------------------------------------------------------
-// Modules
-// ---------------------------------------------------------------------------
-
-type BillingTimelineFn = (
-  dates: DatesArg,
-  windows: WindowsArg,
-) => BillingDeadlines | null;
-
-interface Modules {
-  billingTimeline: BillingTimelineFn;
-  isValidDate: (value: string) => boolean;
-}
-
-async function loadModules(): Promise<Modules> {
-  const [intermodal, plainValidate] = await Promise.all([
-    GMT_MODULES["intermodal/calculate"](),
-    GMT_MODULES["plain/validate"](),
-  ]);
-  return {
-    billingTimeline: intermodal["billingTimeline"] as BillingTimelineFn,
-    isValidDate: plainValidate["isValidDate"] as (v: string) => boolean,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 
@@ -346,7 +318,7 @@ interface Controller {
 
 function setupWidget(
   root: HTMLElement,
-  m: Modules,
+  m: BillingLib,
   signal: AbortSignal,
 ): Controller {
   const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
@@ -379,10 +351,7 @@ function setupWidget(
 
   function render(): void {
     const s = readState();
-    const dates = datesOf(s);
-    const windows = windowsOf(s);
-    const result = m.billingTimeline(dates, windows);
-    const explanation = result === null ? explainNull(s, m) : null;
+    const { result, reason: explanation } = billingFacts(s, m);
 
     setHtml(el("call-slot"), callFrame(s));
     setHtml(el("output-slot"), outputOf(result));
@@ -436,13 +405,8 @@ export const mountBillingDeadlines: MountFn<BillingDeadlinesArgs> = async (
   signal,
 ) => {
   defineElements();
-  let modules: Modules;
-  try {
-    modules = await loadModules();
-  } catch (cause) {
-    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw cause instanceof WidgetLoadError ? cause : new WidgetLoadError(cause);
-  }
+  // `loadBillingLib` throws a `WidgetLoadError`: loud, not inert (see `WidgetLoadError`).
+  const modules = await loadBillingLib();
   if (signal.aborted) return onceDestroy(() => {});
 
   const controller = setupWidget(root, modules, signal);

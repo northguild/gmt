@@ -562,3 +562,30 @@ export function explainNull(
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Facts — every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+export interface CrossingFacts {
+  /** `crossingTime(entry, exit, targetZone)`, or `null`. */
+  result: Crossing | null;
+  /** Why `result` is `null`; `null` when the crossing was read. */
+  reason: ReturnType<typeof explainNull>;
+}
+
+/**
+ * The library calls the redraw makes, returned unchanged. The mount draws from this and the
+ * WebMCP tool answers with it, so the two cannot disagree.
+ */
+export function crossingFacts(
+  state: CrossingState,
+  lib: TransportLib,
+): CrossingFacts {
+  const result = lib.crossingTime(state.entry, state.exit, state.targetZone);
+  const reason =
+    result === null
+      ? explainNull(state.entry, state.exit, state.targetZone, lib)
+      : null;
+  return { result, reason };
+}

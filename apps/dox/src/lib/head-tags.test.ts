@@ -7,9 +7,11 @@ import {
   removeHead,
   TITLE_SUFFIX,
   upsertHead,
+  webmcpHeadEntries,
   type HeadEntry,
   type HeadInput,
 } from "./head-tags";
+import { WEBMCP_MARKER } from "./webmcp/offer";
 
 const SITE = "https://northguild.dev/gmt";
 
@@ -409,5 +411,51 @@ describe("removeHead", () => {
 
   it("leaves a head with no such entry as it is", () => {
     expect(removeHead([], "link", { rel: "canonical" })).toEqual([]);
+  });
+});
+
+describe("webmcpHeadEntries", () => {
+  const marker = (slug: string): HeadEntry => ({
+    tag: "meta",
+    attrs: { name: WEBMCP_MARKER, content: slug },
+  });
+  const trial = (token: string): HeadEntry => ({
+    tag: "meta",
+    attrs: { "http-equiv": "origin-trial", content: token },
+  });
+
+  it.each([
+    [0, []],
+    [1, ["one"]],
+    [2, ["one", "two"]],
+  ])("names the page and adds a meta per token (%i tokens)", (_n, tokens) => {
+    expect(webmcpHeadEntries("tools/cutoff-ruler", tokens)).toEqual([
+      marker("cutoff-ruler"),
+      ...tokens.map(trial),
+    ]);
+  });
+
+  it.each(["tools", "tools/index", "reference/zoned/addUtc", "", "guides/x"])(
+    "adds nothing on %j",
+    (id) => {
+      expect(webmcpHeadEntries(id, ["one", "two"])).toEqual([]);
+    },
+  );
+
+  it("keeps every token and replaces no other http-equiv meta once upserted", () => {
+    const refresh: HeadEntry = {
+      tag: "meta",
+      attrs: { "http-equiv": "refresh", content: "30" },
+    };
+    let head: HeadEntry[] = [refresh, marker("old")];
+    for (const entry of webmcpHeadEntries("tools/cutoff-ruler", ["a", "b"])) {
+      head = upsertHead(head, entry);
+    }
+    expect(head).toEqual([
+      refresh,
+      marker("cutoff-ruler"),
+      trial("a"),
+      trial("b"),
+    ]);
   });
 });
