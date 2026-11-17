@@ -29,7 +29,8 @@ Create (each module with a `.test.ts` beside it):
   - Level → gain: `(level / 11) * 0.6`; muted ramps to 0 over 0.05 s, then suspends the context.
   - On `gmt:cue`: look up the voice, drop it if the same cue fired less than its minimum gap
     ago on `ctx.currentTime` (default 30 ms; `stream` 60 ms, `key` 25 ms, `ready` 400 ms), else play at
-    `ctx.currentTime + 0.005`.
+    `ctx.currentTime + 0.005`, or at the previous cue's start when it read the clock less than
+    0.005 s earlier.
   - `navigator.audioSession.type = "ambient"` where the property exists (feature-detected).
   - `visibilitychange`: hidden → `ctx.suspend()`; visible → `resume()` if unlocked and not muted.
   - `destroy()`: removes every listener, stops loops, closes the context. Tests and the gate use it.

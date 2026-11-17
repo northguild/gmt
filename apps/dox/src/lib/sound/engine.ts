@@ -39,7 +39,12 @@ const HIDE_TAIL_MS = AURA_OUT_FADE * 1000 + 50;
 
 const MAX_GAIN = 0.6;
 const MUTE_RAMP = 0.05;
-/** Seconds ahead of "now" a cue starts, so its attack is not clipped. */
+/**
+ * Seconds ahead of "now" a cue starts, so its attack is not clipped. A cue that reads the clock
+ * less than this after the one before starts with it: the clock moves in audio blocks of about
+ * 2.7 ms, so two cues of one press (a key's blip and the send it makes) can read it either side of
+ * a block. Their shared start is still ahead of the clock.
+ */
 const LEAD = 0.005;
 const DEFAULT_GAP = 0.03;
 /**
@@ -103,6 +108,8 @@ export function createEngine(): Engine {
   let suspendTimer: ReturnType<typeof setTimeout> | undefined;
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
   const lastPlayed = new Map<CueName, number>();
+  /** The clock reading the latest cues start from, shared by every cue less than LEAD after it. */
+  let together = -Infinity;
   const loops = new Map<LoopName, () => void>();
   let aura: Aura | null = null;
   let auraLoading = false;
@@ -190,7 +197,8 @@ export function createEngine(): Engine {
     const last = lastPlayed.get(key);
     if (last !== undefined && now - last < (GAPS[key] ?? DEFAULT_GAP)) return;
     lastPlayed.set(key, now);
-    voice(ctx, master, now + LEAD, detail.rank ?? 0);
+    if (!(now - together < LEAD)) together = now;
+    voice(ctx, master, together + LEAD, detail.rank ?? 0);
     detail.heard = true;
   };
 

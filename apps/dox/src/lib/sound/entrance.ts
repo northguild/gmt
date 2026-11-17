@@ -6,7 +6,9 @@
  * sound plays on its animation's own `animationstart`. That covers the pieces that arm later than
  * `t0` (the globe's control stack once the globe is ready, the location card) and leaves out what
  * the CSS leaves out: a view-transition arrival's header, which does not freeze, and a page whose
- * entrance has ended. The copy is not heard: its freeze started at the first paint, before `t0`.
+ * entrance has ended. The copy is not heard: its freeze runs from the first paint, not from `t0`,
+ * so its animations are not in the list. The tagline's starts 0.12 s after that paint, which can
+ * fall either side of `t0`; going by the time would make it heard on some arrivals only.
  * Reduced motion swaps every freeze for a plain fade and drops the glints; the sounds double the
  * freeze, so the whole entrance is silent then.
  *
@@ -18,15 +20,13 @@
  */
 import { cue } from "./cue";
 
-/** The animations that freeze, sweep or pop a piece in. */
+/** The animations that freeze, sweep or pop a piece in. The copy's own (`-text`) are left out. */
 const PAINTS = new Set([
   "ng-freeze",
   "ng-freeze-pane",
-  "ng-freeze-text",
   "ng-frost",
   "ng-pop",
   "ng-sweep",
-  "ng-sweep-text",
 ]);
 
 /**

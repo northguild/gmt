@@ -128,6 +128,14 @@ describe("the entrance's sounds", () => {
     expect(cue.mock.calls.map(([name]) => name)).toEqual(["paint", "paint"]);
   });
 
+  it("is silent for the copy, even when the tagline's delayed freeze starts after `run`", () => {
+    stop = entranceSounds(root);
+    started("#title", "ng-freeze-text");
+    started("#title", "ng-sweep-text");
+    frame();
+    expect(cue).not.toHaveBeenCalled();
+  });
+
   it("leaves the chips' colour shine to their glint", () => {
     stop = entranceSounds(root);
     started("#title", "ng-shine");

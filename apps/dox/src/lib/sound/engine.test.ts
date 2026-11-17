@@ -115,6 +115,33 @@ describe("a cue", () => {
     expect(click.mock.calls[0][2]).toBeCloseTo(3.005);
   });
 
+  it("starts cues less than 5 ms apart together, even across an audio block, and later ones on their own", () => {
+    boot();
+    const key = vi.fn<Voice>();
+    VOICES.key = key;
+    ctx.advance(3);
+    cue("key");
+    ctx.advance(0.0027); // one audio block of 128 frames at 48 kHz
+    cue("click");
+    ctx.advance(0.04);
+    cue("click");
+    expect(key.mock.calls[0][2]).toBeCloseTo(3.005, 6);
+    expect(click.mock.calls[0][2]).toBeCloseTo(3.005, 6);
+    expect(click.mock.calls[1][2]).toBeCloseTo(3.0477, 6);
+  });
+
+  it("measures a cue's gap on the clock, not the shared start", () => {
+    boot();
+    const key = vi.fn<Voice>();
+    VOICES.key = key;
+    cue("click");
+    ctx.advance(0.004);
+    cue("key"); // starts with the click, 4 ms before it was asked for
+    ctx.advance(0.025);
+    cue("key"); // 25 ms after the first key: its gap has passed
+    expect(key).toHaveBeenCalledTimes(2);
+  });
+
   it("drops the same cue inside its gap and plays it after", () => {
     boot();
     cue("click");
