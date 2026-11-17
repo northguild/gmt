@@ -43,7 +43,7 @@ Rules, traps and runbooks for the site shell. Index: [index.md](index.md).
 - `scripts/deploy-smoke.mjs` checks the redirect matrix and crawl rows after each deploy.
   `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl rows against `wrangler dev`.
 - `robots.txt` is served by the landing Worker. Zone and dashboard setup is in
-  `context/domination/issues/CORE-86/runbook.md`.
+  [`context/dox/cloudflare-runbook.md`](../cloudflare-runbook.md).
 - Web Analytics: the Cloudflare beacon loads from `src/components/Head.astro` in production only.
   Automatic injection stays off, so it is never loaded twice.
 

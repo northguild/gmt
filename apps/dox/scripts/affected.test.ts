@@ -42,6 +42,16 @@ describe("affected: which checks a change runs", () => {
       checks: ["deps"],
     },
     {
+      name: "a polyfill-bugs record runs the native-suite tag test",
+      changes: ["context/domination/polyfill-bugs/h-q.md"],
+      checks: ["deps", "build:gmt", "test:dox"],
+    },
+    {
+      name: "the polyfill-bugs index runs the native-suite tag test",
+      changes: ["context/domination/js-temporal-polyfill-bugs.md"],
+      checks: ["deps", "build:gmt", "test:dox"],
+    },
+    {
       name: "CONTRIBUTING.md runs the Dox tests and the build they need",
       changes: ["CONTRIBUTING.md"],
       checks: ["build:gmt", "test:dox"],

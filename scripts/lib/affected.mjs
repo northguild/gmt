@@ -229,7 +229,7 @@ export const RULES = [
   },
   { test: /^\.github\//, checks: [] },
   {
-    test: /^context\/domination\/js-temporal-polyfill-bugs\.md$/,
+    test: /^context\/domination\/(?:js-temporal-polyfill-bugs\.md$|polyfill-bugs\/)/,
     checks: ["deps", ...SCRIPT_TESTS],
   },
   { test: /^context\/(?:domination\/|dox\/tracker\.md$)/, checks: ["deps"] },

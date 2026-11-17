@@ -39,7 +39,7 @@ Lists no single test covers (`docs-site.md` § Purpose-built widgets has the ful
 - A new industry is one entry in `industries.json`, one glyph in `INDUSTRY_ICON_PATHS` and one hub text in `industry-overview.ts`; it gets a tag when its first page ships.
 - A page takes the one industry whose own namespace it runs. A page that runs only Core functions (`timescale` included) is `core`. An industry that draws on a layer links that layer's pages from its hub's `solves` list instead of tagging them.
 - `industry-tags.test.ts` fails a page with no tag, an unknown tag, a tag outside `allowedTags`, or more than one tag. It cannot tell the owner from an industry that only draws on the layer; authoring picks the owner.
-- Cross-industry layers (`workforce`, `gnss`) are industries on the site; each user lists them in `drawsOn`. Rule: `context/coding-standards.md`, "Core namespaces, industry layers, cross-industry layers".
+- Cross-industry layers (`workforce`, `gnss`) are industries on the site; each user lists them in `drawsOn`. Rule: [`context/coding-standards/design-rules.md`](../../coding-standards/design-rules.md#plain--zoned-separation), "Core namespaces, industry layers, cross-industry layers".
 - Trap: a `core` page never links an own namespace's reference pages. The test reads `/reference/<ns>/` or an `@northguild/gmt/<ns>` import as use of that namespace. The Standards guide names EDI functions as inline code and links the EDI guide.
 
 ## Permalinks
