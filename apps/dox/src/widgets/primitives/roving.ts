@@ -11,7 +11,7 @@
  * (and focuses it when `focus` is true), `current()` the item that is the stop now. `items()` is
  * read at each key press, so a list that redraws needs no re-wiring.
  *
- * Sound (DOX-G10): each step plays `detent` (Glass tick), the step of every list in the kit. A
+ * Sound (DOX-G11): each step plays `detent` (Glass tick), the step of every list in the kit. A
  * key that lands on the item already focused (Home on the first) plays none.
  *
  * No gmt import, no DOM beyond the elements it is given.

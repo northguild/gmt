@@ -1,5 +1,5 @@
 /**
- * The arrival cues (DOX-G10): a page globe that comes into view plays the Steel horizon
+ * The arrival cues (DOX-G11): a page globe that comes into view plays the Steel horizon
  * (`appearGlobe`), and a feature map whose drawing comes into view the Sonar dawn (`appearMap`).
  *
  * Each element sounds once per page view, when a quarter of it first comes into view, and only

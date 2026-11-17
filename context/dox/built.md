@@ -3882,7 +3882,7 @@ Shared hooks come first, then the globe, then the clock-change pages.
 
 ### Sound
 
-`DOX-G10`. Web Audio only, in `src/lib/sound/`; the control, chrome cues, aura, chat and tool
+`DOX-G11`. Web Audio only, in `src/lib/sound/`; the control, chrome cues, aura, chat and tool
 cues land in later slices and hang off the bus described here.
 
 - **Modules.** `cue.ts` is the only one on every page's critical path (with `settings.ts`):

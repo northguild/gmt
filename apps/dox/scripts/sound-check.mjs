@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Sound gate: the autoplay contract, the mute rule and the press cue (DOX-G10).
+ * Sound gate: the autoplay contract, the mute rule and the press cue (DOX-G11).
  *
  * A wrapper installed before any page script logs into `window.__sound` every `AudioContext` the
  * page constructs, each state change, and each oscillator `start(t)`. A voice schedules its

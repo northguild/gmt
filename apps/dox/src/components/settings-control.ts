@@ -1,5 +1,5 @@
 /**
- * The header's settings control (DOX-G10): one gear button, last in the bar after Dox, GitHub and
+ * The header's settings control (DOX-G11): one gear button, last in the bar after Dox, GitHub and
  * Discord, that opens a popover with every reader setting. One copy, at every width. `SettingsControl.astro` renders it and the
  * test fixture renders the same markup.
  *

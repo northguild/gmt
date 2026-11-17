@@ -1,11 +1,11 @@
 ---
-story: DOX-G10
+story: DOX-G11
 issue: 515
 status: approved
 dox: none
 ---
 
-# DOX-G10 · GMT sound effects
+# DOX-G11 · GMT sound effects
 
 Give the site a sound world, made with the Web Audio API alone: a breath of air through cold steel when a panel
 opens or closes, a steel whisper and shing as the landing's pieces ice in and glint, a sonar ping on a button
@@ -140,5 +140,5 @@ tab. Pressing a `<summary>` in the sidebar is a press (the ping), not a panel.
 
 `built.md` gains a "Sound" section under Tier 3 (engine, cue bus, unlock, settings key, voices,
 gate, traps) and its "Not doing" entry on audio stays. `reference/visual-design.md` § Controls
-gains the fader look. The finalizer folds Decided into `issues/DOX-G10.md` and deletes this
+gains the fader look. The finalizer folds Decided into `issues/DOX-G11.md` and deletes this
 folder; the audition stays in `reference/`. Tracker Status changes only at close.

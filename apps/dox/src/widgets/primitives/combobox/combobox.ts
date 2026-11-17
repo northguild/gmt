@@ -17,7 +17,7 @@
  * `change` with `detail.value` when a choice is made, and `openchange` with
  * `detail.open` when the list opens or shuts, by any route.
  *
- * Sound (DOX-G10): an arrow key that moves the active option plays `detent` (Glass tick), as the
+ * Sound (DOX-G11): an arrow key that moves the active option plays `detent` (Glass tick), as the
  * listbox does; scrolling the popup ticks through the listbox itself.
  */
 import { registerEscLayer } from "~/lib/esc-layers";

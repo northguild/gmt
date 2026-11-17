@@ -3,7 +3,7 @@ import { chromium, type Browser, type Page } from "@playwright/test";
 import { build } from "esbuild";
 
 /**
- * Hearing safety for the press, zoom and arrival cues (DOX-G10). Each voice renders offline in
+ * Hearing safety for the press, zoom and arrival cues (DOX-G11). Each voice renders offline in
  * Chromium, at 48 kHz into a unity bus, and its loudest sample must stay at or under the figure
  * its audition sound measured in the same render: the port may not play louder than what the
  * owner chose by ear. The engine's ceiling still sits after the bus; this checks the voices

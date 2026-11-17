@@ -16,7 +16,7 @@
  * Events, all bubbling, with `detail`: `active` `{ index }` when the keys move the
  * active option, and `change` `{ value }` when an option is chosen.
  *
- * Sound (DOX-G10): a step through the list plays `detent` (Glass tick). A key that moves the
+ * Sound (DOX-G11): a step through the list plays `detent` (Glass tick). A key that moves the
  * active option plays one; at an end, where the key moves nothing, none. A reader's own scroll
  * (wheel, touch, scrollbar) plays one each time the top of the view passes into another row, the
  * row pitch measured from the drawn options; a scroll made for them is silent (`scrollTicks`,
