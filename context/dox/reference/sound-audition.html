@@ -1,0 +1,3568 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sound audition</title>
+    <!--
+      DOX-G10 sound audition. A planning tool, not site code: open it from disk
+      (file://) in the browser you use, pick one variant per step, and paste the
+      picks block from the last step back into the planning session. Every voice
+      is synthesised with the Web Audio API; there are no samples and no network
+      requests. Each variant's `play` (or `start`, for a loop) uses only the small
+      kit at the top of the script, so a chosen variant ports into
+      apps/dox/src/lib/sound/voices.ts as it stands. It stays after the story
+      closes, as the reference for any voice added or changed later.
+    -->
+    <style>
+      :root {
+        --void: #03080c;
+        --surface: #061018;
+        --surface-2: #0a1a24;
+        --ice: #cfeaf2;
+        --ice-dim: #98b2be;
+        --ice-bright: #f2fcff;
+        --cyan: #22d3ee;
+        --frost: #bff3fb;
+        --line: rgb(34 211 238 / 0.32);
+        --line-strong: rgb(34 211 238 / 0.7);
+        --glow: 0 0 0.6rem rgb(34 211 238 / 0.45);
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+        --bevel: 0.6rem;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(
+            ellipse at 70% -10%,
+            rgb(34 211 238 / 0.08),
+            transparent 60%
+          ),
+          var(--void);
+        color: var(--ice);
+        font: 1rem/1.5 var(--sans);
+        min-block-size: 100dvh;
+      }
+      main {
+        max-inline-size: 62rem;
+        margin-inline: auto;
+        padding: 1rem;
+      }
+      .bevel {
+        border: 1px solid var(--line);
+        border-radius: var(--bevel);
+        corner-shape: bevel;
+        background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      }
+      header.top {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.5rem;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        margin-block-end: 1rem;
+      }
+      h1 {
+        font: 600 1.05rem/1.2 var(--mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin: 0;
+      }
+      .progress {
+        font: 0.85rem var(--mono);
+        color: var(--ice-dim);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .master {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+        font: 0.8rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .master output {
+        inline-size: 3.5rem;
+        text-align: end;
+        font-variant-numeric: tabular-nums;
+        color: var(--frost);
+      }
+      input[type="range"] {
+        accent-color: var(--cyan);
+        inline-size: 9rem;
+      }
+      button {
+        font: 600 0.8rem var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ice);
+        background: var(--surface);
+        border: 1px solid var(--line-strong);
+        border-radius: 0.45rem;
+        corner-shape: bevel;
+        padding: 0.45rem 0.9rem;
+        min-block-size: 2.25rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--surface-2);
+        box-shadow: var(--glow);
+      }
+      button:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid var(--cyan);
+        outline-offset: 2px;
+      }
+      button[disabled] {
+        opacity: 0.45;
+        cursor: default;
+        box-shadow: none;
+      }
+      .step {
+        padding: 1rem 1.25rem 1.25rem;
+      }
+      .step h2 {
+        font: 600 1.3rem/1.2 var(--mono);
+        margin: 0 0 0.25rem;
+        letter-spacing: 0.04em;
+      }
+      .where {
+        color: var(--ice-dim);
+        margin: 0 0 1rem;
+        font-size: 0.9rem;
+      }
+      .variants {
+        display: grid;
+        grid-template-columns: repeat(
+          auto-fit,
+          minmax(min(100%, 13.5rem), 1fr)
+        );
+        gap: 0.75rem;
+      }
+      /* Header mock-ups are wide: one per row. */
+      .variants:has([data-mock]) {
+        grid-template-columns: 1fr;
+      }
+      .mock {
+        max-inline-size: 30rem;
+        margin-block-start: 0.6rem;
+      }
+      .variant {
+        min-inline-size: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr auto;
+        gap: 0.5rem;
+        padding: 0.85rem;
+        border: 1px solid var(--line);
+        border-radius: var(--bevel);
+        corner-shape: bevel;
+        background: var(--surface);
+      }
+      /* The pick is a full bevelled border, never a left edge. */
+      .variant:has(input[name="pick"]:checked) {
+        border-color: var(--cyan);
+        box-shadow: var(--glow);
+        background: var(--surface-2);
+      }
+      .variant h3 {
+        margin: 0;
+        font: 600 0.95rem var(--mono);
+        display: flex;
+        gap: 0.5rem;
+        align-items: baseline;
+      }
+      .letter {
+        color: var(--void);
+        background: var(--frost);
+        padding: 0 0.4rem;
+        border-radius: 0.25rem;
+        corner-shape: bevel;
+      }
+      .variant p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--ice-dim);
+      }
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .pick {
+        display: flex;
+        gap: 0.35rem;
+        align-items: center;
+        font: 0.8rem var(--mono);
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      .pick input {
+        accent-color: var(--cyan);
+        inline-size: 1rem;
+        block-size: 1rem;
+      }
+      .none {
+        margin-block-start: 0.75rem;
+      }
+      .try {
+        margin-block-start: 1rem;
+        display: grid;
+        gap: 0.35rem;
+        font-size: 0.85rem;
+        color: var(--ice-dim);
+      }
+      .try textarea,
+      .try input[type="text"] {
+        font: 0.9rem var(--mono);
+        color: var(--ice);
+        background: var(--void);
+        border: 1px solid var(--line);
+        border-radius: 0.4rem;
+        corner-shape: bevel;
+        padding: 0.5rem;
+        caret-color: var(--cyan);
+        inline-size: 100%;
+      }
+      .zoom-plays {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        gap: 0.35rem;
+      }
+      .zoom-plays button {
+        white-space: nowrap;
+      }
+      .actions:has(.zoom-plays) {
+        flex-wrap: wrap;
+        row-gap: 0.6rem;
+      }
+      .zoom-pad {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        block-size: 9rem;
+        border: 1px solid var(--line);
+        border-radius: var(--bevel);
+        corner-shape: bevel;
+        background: radial-gradient(circle at 50% 50%, var(--surface-2), var(--void) 70%);
+        touch-action: none;
+      }
+      .zoom-pad output {
+        font: 1.1rem var(--mono);
+        color: var(--ice);
+        min-inline-size: 4ch;
+        text-align: center;
+      }
+      nav.pager {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-block-end: 1rem;
+      }
+      pre.picks {
+        font: 0.85rem/1.5 var(--mono);
+        background: var(--void);
+        border: 1px solid var(--line);
+        border-radius: var(--bevel);
+        corner-shape: bevel;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        white-space: pre;
+      }
+      .note {
+        font-size: 0.85rem;
+        color: var(--ice-dim);
+      }
+
+      /* ---- Control mock-ups (step "control") ---- */
+      .mock-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        block-size: 3.4rem;
+        padding-inline: 0.75rem;
+        background: rgb(6 16 24 / 0.92);
+        border: 1px solid var(--line);
+        border-radius: 0.45rem;
+        corner-shape: bevel;
+        font: 600 0.85rem var(--mono);
+      }
+      .mock-bar .brand {
+        color: var(--ice);
+        white-space: nowrap;
+        min-inline-size: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .mock-bar > :not(.brand) {
+        flex-shrink: 0;
+      }
+      .mock-bar .brand b {
+        color: var(--cyan);
+        font-weight: 600;
+      }
+      .mock-bar .slack {
+        flex: 1;
+      }
+      .chip {
+        display: inline-grid;
+        place-items: center;
+        inline-size: 2.4rem;
+        block-size: 2.4rem;
+        padding: 0;
+        min-block-size: 0;
+      }
+      .chip svg {
+        inline-size: 1.25rem;
+        block-size: 1.25rem;
+      }
+      .chip[aria-pressed="true"] {
+        border-color: var(--frost);
+        background: var(--surface-2);
+      }
+      .chip.narrow {
+        inline-size: 1.6rem;
+      }
+      .deck {
+        margin-block-start: 0.5rem;
+        padding: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+      .sr-only {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      fieldset.dial {
+        position: relative;
+        border: 0;
+        margin: 0;
+        padding: 0;
+        --knob: 3.1rem;
+        --rx: 3.6rem;
+        --ry: 2.9rem;
+        inline-size: 9rem;
+        block-size: 5.6rem;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      fieldset.dial.mini {
+        --knob: 2.2rem;
+        inline-size: 2.4rem;
+        block-size: 2.4rem;
+      }
+      .knob {
+        position: absolute;
+        left: 50%;
+        bottom: 2.05rem;
+        inline-size: var(--knob);
+        block-size: var(--knob);
+        translate: -50% 50%;
+        rotate: var(--angle, -120deg);
+        transition: rotate 0.12s ease;
+        touch-action: none;
+        cursor: grab;
+      }
+      fieldset.dial.mini .knob {
+        bottom: 50%;
+      }
+      .knob:active {
+        cursor: grabbing;
+      }
+      .knob svg {
+        display: block;
+        inline-size: 100%;
+        block-size: 100%;
+        overflow: visible;
+      }
+      .knob .rim {
+        fill: #0b2230;
+        stroke: var(--line-strong);
+        stroke-width: 2;
+      }
+      .knob .lip {
+        fill: #02060a;
+      }
+      .knob .face {
+        stroke: rgb(207 234 242 / 0.25);
+        stroke-width: 1;
+      }
+      .knob .needle {
+        stroke: var(--frost);
+        stroke-width: 7;
+        stroke-linecap: square;
+        filter: drop-shadow(0 0 3px var(--cyan));
+      }
+      fieldset.dial:has(input:focus-visible) .knob {
+        outline: 2px solid var(--cyan);
+        outline-offset: 3px;
+      }
+      .detent {
+        position: absolute;
+        left: 50%;
+        bottom: 2.05rem;
+        transform: translate(-50%, 50%)
+          translate(calc(var(--x) * var(--rx)), calc(var(--y) * var(--ry)));
+        font: 600 0.72rem var(--mono);
+        color: var(--ice-dim);
+        cursor: pointer;
+        padding: 0 0.2rem;
+        border-radius: 0.2rem;
+        corner-shape: bevel;
+        white-space: nowrap;
+      }
+      .detent:has(input:checked) {
+        color: var(--frost);
+        background: rgb(34 211 238 / 0.14);
+        text-shadow: 0 0 0.4rem var(--cyan);
+      }
+      .detent:has(input:focus-visible) {
+        outline: 2px solid var(--cyan);
+      }
+      .level-chip {
+        display: inline-block;
+        inline-size: 3.2rem;
+        text-align: center;
+        font: 600 0.75rem var(--mono);
+        font-variant-numeric: tabular-nums;
+        color: var(--frost);
+        border: 1px solid var(--line);
+        border-radius: 0.3rem;
+        corner-shape: bevel;
+        padding: 0.1rem 0;
+        white-space: nowrap;
+      }
+      /* The ice lever: a native checkbox (role="switch") under an octagonal plate. */
+      .lever {
+        display: grid;
+        justify-items: center;
+        gap: 0.2rem;
+        font: 600 0.72rem var(--mono);
+        color: var(--ice-dim);
+        cursor: pointer;
+      }
+      .lever .plate {
+        position: relative;
+        inline-size: 2.3rem;
+        block-size: 3.1rem;
+        border: 1.5px solid var(--line-strong);
+        border-radius: 0.55rem;
+        corner-shape: bevel;
+        background: linear-gradient(160deg, #12303e, #04121a);
+      }
+      .lever .nut {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        inline-size: 1.15rem;
+        block-size: 1.15rem;
+        translate: -50% -50%;
+        border: 2px solid var(--line-strong);
+        border-radius: 0.3rem;
+        corner-shape: bevel;
+        background: #02080c;
+      }
+      .lever .bat {
+        position: absolute;
+        left: calc(50% - 0.18rem);
+        bottom: 50%;
+        inline-size: 0.36rem;
+        block-size: 1.15rem;
+        background: var(--ice-dim);
+        transform-origin: 50% 100%;
+        rotate: 180deg;
+        transition: rotate 0.14s ease;
+      }
+      .lever .bat::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: -0.35rem;
+        inline-size: 0.7rem;
+        block-size: 0.7rem;
+        translate: -50% 0;
+        border-radius: 0.18rem;
+        corner-shape: bevel;
+        background: radial-gradient(
+          circle at 35% 30%,
+          var(--ice-bright),
+          var(--cyan)
+        );
+      }
+      .lever:has(input:checked) .bat {
+        rotate: 0deg;
+      }
+      .lever:has(input:checked) .on,
+      .lever:not(:has(input:checked)) .off {
+        color: var(--frost);
+      }
+      .lever:has(input:focus-visible) .plate {
+        outline: 2px solid var(--cyan);
+        outline-offset: 3px;
+      }
+      .fader {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .fader input[type="range"] {
+        appearance: none;
+        inline-size: 7.5rem;
+        block-size: 1.5rem;
+        background:
+          repeating-linear-gradient(
+              90deg,
+              var(--line-strong) 0 1px,
+              transparent 1px calc((100% - 1px) / 11)
+            )
+            center / 100% 0.5rem no-repeat,
+          linear-gradient(var(--surface), var(--surface));
+        border: 1px solid var(--line);
+        border-radius: 0.3rem;
+        corner-shape: bevel;
+      }
+      .fader input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        inline-size: 0.8rem;
+        block-size: 1.4rem;
+        background: linear-gradient(90deg, var(--ice-bright), var(--cyan));
+        border-radius: 0.2rem;
+        corner-shape: bevel;
+        box-shadow: var(--glow);
+        cursor: grab;
+      }
+      .fader input[type="range"]::-moz-range-thumb {
+        inline-size: 0.8rem;
+        block-size: 1.4rem;
+        border: 0;
+        background: linear-gradient(90deg, var(--ice-bright), var(--cyan));
+        border-radius: 0.2rem;
+        box-shadow: var(--glow);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .knob,
+        .lever .bat {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="top bevel">
+        <h1>DOX-G10 · sound audition</h1>
+        <span class="progress" id="progress"></span>
+        <label class="master"
+          >Master
+          <input id="master" type="range" min="0" max="11" step="1" value="6" />
+          <output id="master-out" for="master">6</output>
+        </label>
+        <button type="button" id="stop-all">Stop all</button>
+      </header>
+      <nav class="pager" aria-label="Steps">
+        <button type="button" id="back">Back</button>
+        <button type="button" id="next">Next</button>
+      </nav>
+      <section class="step bevel" id="step" aria-live="polite"></section>
+      <p class="note">
+        Press a Play button first: the browser starts audio only after a click.
+        Your picks are kept in this browser while you work, so a reload loses
+        nothing.
+      </p>
+    </main>
+
+    <script>
+      "use strict";
+
+      /* ===================================================================
+       * The kit. Every voice below is built only from these helpers, so the
+       * helpers plus a chosen variant port into the Dox sound module as-is.
+       * All timing reads the audio clock (AudioContext.currentTime), never a
+       * wall clock: `t` is a time on that clock.
+       * =================================================================== */
+
+      const MAX_GAIN = 0.6;
+      const MAX_LEVEL = 11;
+      let ctx = null;
+      let master = null;
+      let level = 6;
+
+      function audio() {
+        if (!ctx) {
+          ctx = new AudioContext();
+          master = ctx.createGain();
+          master.gain.value = (level / MAX_LEVEL) * MAX_GAIN;
+          /* The safety ceiling: every sample under 0.18 passes unchanged,
+             louder ones bend towards 0.25 (−12 dBFS) and never pass it. */
+          const shaper = ctx.createWaveShaper();
+          const curve = new Float32Array(4097);
+          for (let i = 0; i < curve.length; i++) {
+            const x = (i / (curve.length - 1)) * 2 - 1;
+            const m = Math.abs(x);
+            curve[i] =
+              Math.sign(x) *
+              (m <= 0.18 ? m : 0.18 + 0.07 * Math.tanh((m - 0.18) / 0.07));
+          }
+          shaper.curve = curve;
+          master.connect(shaper).connect(ctx.destination);
+        }
+        if (ctx.state === "suspended") ctx.resume();
+        return ctx;
+      }
+
+      function setMasterLevel(next) {
+        level = Math.max(0, Math.min(MAX_LEVEL, Math.round(next)));
+        if (master && ctx) {
+          master.gain.setTargetAtTime(
+            (level / MAX_LEVEL) * MAX_GAIN,
+            ctx.currentTime,
+            0.015,
+          );
+        }
+        for (const listener of levelListeners) listener(level);
+      }
+      const levelListeners = new Set();
+
+      const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
+      const rand = (lo, hi) => lo + Math.random() * (hi - lo);
+
+      let noiseCache = null;
+      /** One second of white noise, shared by every voice. */
+      function noiseBuffer(c) {
+        if (noiseCache && noiseCache.sampleRate === c.sampleRate)
+          return noiseCache;
+        const length = c.sampleRate;
+        noiseCache = c.createBuffer(1, length, c.sampleRate);
+        const data = noiseCache.getChannelData(0);
+        for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+        return noiseCache;
+      }
+
+      /** A gain envelope: silence, a linear attack, a hold, an exponential release. */
+      function envelope(c, t, peak, attack, hold, release) {
+        const g = c.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(peak, t + attack);
+        g.gain.setValueAtTime(peak, t + attack + hold);
+        g.gain.exponentialRampToValueAtTime(
+          0.0001,
+          t + attack + hold + release,
+        );
+        return g;
+      }
+
+      function biquad(c, type, freq, q) {
+        const f = c.createBiquadFilter();
+        f.type = type;
+        f.frequency.value = freq;
+        f.Q.value = q ?? 0.7;
+        return f;
+      }
+
+      /**
+       * One oscillator note. o: { type, freq, to, detune, peak, attack, hold,
+       * release, filter: [type, freq, q] }.
+       */
+      function tone(c, out, t, o) {
+        const attack = o.attack ?? 0.004;
+        const hold = o.hold ?? 0;
+        const end = t + attack + hold + o.release;
+        const osc = c.createOscillator();
+        osc.type = o.type ?? "sine";
+        osc.frequency.setValueAtTime(o.freq, t);
+        if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, end);
+        if (o.detune) osc.detune.value = o.detune;
+        const g = envelope(c, t, o.peak, attack, hold, o.release);
+        if (o.filter) {
+          const f = biquad(c, o.filter[0], o.filter[1], o.filter[2]);
+          osc.connect(f).connect(g);
+        } else {
+          osc.connect(g);
+        }
+        g.connect(out);
+        osc.start(t);
+        osc.stop(end + 0.03);
+        return osc;
+      }
+
+      /**
+       * A burst of filtered noise. o: { type, freq, to, q, peak, attack, hold,
+       * decay }. `to` sweeps the filter over the burst.
+       */
+      function noise(c, out, t, o) {
+        const attack = o.attack ?? 0.004;
+        const hold = o.hold ?? 0;
+        const end = t + attack + hold + o.decay;
+        const src = c.createBufferSource();
+        src.buffer = noiseBuffer(c);
+        src.loop = true;
+        const f = biquad(c, o.type ?? "bandpass", o.freq, o.q ?? 1);
+        if (o.to) f.frequency.exponentialRampToValueAtTime(o.to, end);
+        const g = envelope(c, t, o.peak, attack, hold, o.decay);
+        src.connect(f).connect(g).connect(out);
+        src.start(t, Math.random() * 0.5);
+        src.stop(end + 0.03);
+      }
+
+      /**
+       * A struck metal or ice bar: inharmonic partials, the higher ones dying
+       * first. o: { freq, ratios, peak, decay, attack }.
+       */
+      function bell(c, out, t, o) {
+        o.ratios.forEach((ratio, i) => {
+          tone(c, out, t, {
+            freq: o.freq * ratio,
+            peak: o.peak / (i + 1),
+            attack: o.attack ?? 0.002,
+            release: o.decay / Math.sqrt(i + 1),
+          });
+        });
+      }
+
+      /** A dark hall: a decaying noise impulse. Returns the send. */
+      function hall(c, out, seconds, wet) {
+        const length = Math.ceil(c.sampleRate * seconds);
+        const impulse = c.createBuffer(2, length, c.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+          const d = impulse.getChannelData(ch);
+          for (let i = 0; i < length; i++)
+            d[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 3;
+        }
+        const verb = c.createConvolver();
+        verb.buffer = impulse;
+        const g = c.createGain();
+        g.gain.value = wet;
+        verb
+          .connect(biquad(c, "lowpass", 3000))
+          .connect(g)
+          .connect(out);
+        return verb;
+      }
+
+      /** A feedback echo. Returns the send. */
+      function echo(c, out, seconds, feedback, wet) {
+        const input = c.createGain();
+        const delay = c.createDelay(2);
+        delay.delayTime.value = seconds;
+        const loop = c.createGain();
+        loop.gain.value = feedback;
+        const damp = biquad(c, "lowpass", 3200);
+        const g = c.createGain();
+        g.gain.value = wet;
+        input.connect(delay).connect(damp).connect(loop).connect(delay);
+        damp.connect(g).connect(out);
+        return input;
+      }
+
+      /* Shared effects on the master bus, built once per context. */
+      const shared = new Map();
+      function sharedFx(c, key, build) {
+        if (!shared.has(key)) shared.set(key, build(c, master));
+        return shared.get(key);
+      }
+      const space = (c) =>
+        sharedFx(c, "hall", (cc, out) => hall(cc, out, 2.6, 0.5));
+      const sonarEcho = (c) =>
+        sharedFx(c, "echo", (cc, out) => echo(cc, out, 0.19, 0.38, 0.32));
+
+      /**
+       * A lookahead scheduler on the audio clock: tops up `fn(time, index)`
+       * calls for the next 0.6 s every 150 ms. `gap(index)` is the seconds to
+       * the next call. Returns a stop function.
+       */
+      function scheduler(c, gap, fn) {
+        let next = c.currentTime + 0.05;
+        let index = 0;
+        const tick = () => {
+          while (next < c.currentTime + 0.6) {
+            fn(next, index);
+            next += gap(index);
+            index += 1;
+          }
+        };
+        tick();
+        const id = setInterval(tick, 150);
+        return () => clearInterval(id);
+      }
+
+      /**
+       * Noise through a short feedback delay (a comb): the delay's
+       * resonances ring like a steel tube with no strike, and sweeping the
+       * delay moves the ring. The Steel breath's engine, made general.
+       * o: { from, to, peak, attack, release, band, feedback, lowpass, wet }.
+       */
+      function steelComb(c, out, t, o) {
+        const end = t + o.attack + o.release;
+        const src = c.createBufferSource();
+        src.buffer = noiseBuffer(c);
+        src.loop = true;
+        const pre = biquad(c, "bandpass", o.band ?? 2400, 0.5);
+        const env = envelope(c, t, o.peak, o.attack, 0, o.release);
+        const delay = c.createDelay(0.05);
+        delay.delayTime.setValueAtTime(o.from, t);
+        delay.delayTime.exponentialRampToValueAtTime(o.to, end);
+        const feedback = c.createGain();
+        feedback.gain.value = o.feedback ?? 0.8;
+        const colour = biquad(c, "lowpass", o.lowpass ?? 5500);
+        src.connect(pre).connect(env).connect(delay);
+        delay.connect(feedback).connect(delay);
+        delay.connect(colour).connect(out);
+        if (o.wet) {
+          const wet = c.createGain();
+          wet.gain.value = o.wet;
+          colour.connect(wet).connect(space(c));
+        }
+        src.start(t, Math.random() * 0.5);
+        src.stop(end + 0.05);
+      }
+
+      /* ---- Zoom helpers: a zoom voice is a gesture. `gesture(c, out)` returns
+         { step(t, dir, z), end(t) }: `dir` is +1 in, −1 out; `z` is how close
+         the camera is, 0 (whole Earth) to 1 (closest). */
+
+      /** A pitch or frequency `z` of the way from `lo` to `hi`, on a log scale. */
+      const zoomPitch = (lo, hi, z) => lo * (hi / lo) ** z;
+
+      /** A gesture that plays one short voice per step and holds nothing. */
+      function perStep(fn) {
+        return (c, out) => ({
+          step: (t, dir, z) => fn(c, out, t, dir, z),
+          end() {},
+        });
+      }
+
+      /**
+       * A gesture that holds one voice from the first step to `end`: it fades
+       * in on the first step, `set(t, z)` glides it on every step, and it fades
+       * out after the last. o: { peak, build(c, gain) -> { nodes, set } }.
+       */
+      function heldGesture(c, out, o) {
+        const g = c.createGain();
+        g.gain.value = 0;
+        g.connect(out);
+        const voice = o.build(c, g);
+        let started = false;
+        return {
+          step(t, dir, z) {
+            if (!started) {
+              started = true;
+              voice.set(t, z);
+              for (const node of voice.nodes) node.start(t);
+              g.gain.setValueAtTime(0, t);
+              g.gain.linearRampToValueAtTime(o.peak, t + 0.06);
+            } else {
+              voice.set(t, z);
+            }
+          },
+          end(t) {
+            if (!started) return;
+            g.gain.cancelScheduledValues(t);
+            g.gain.setTargetAtTime(0, t, 0.08);
+            for (const node of voice.nodes) node.stop(t + 0.6);
+            setTimeout(
+              () => g.disconnect(),
+              Math.max(0, (t - c.currentTime + 0.7) * 1000),
+            );
+          },
+        };
+      }
+
+      /* The landing's timeline, in seconds from the entrance's start, read
+         from gmt-entrance-freeze.css. PAINTS: each piece's freeze starting
+         (the title and the eyebrow together, the tagline, search, Dox, the
+         theme and sound buttons, the three hero buttons, the pager).
+         GLINTS: each glint crossing (the five header chips' shine, the hero
+         buttons' glint 1.4 s after their freeze). */
+      const PAINTS = [0, 0.12, 0.15, 0.23, 0.31, 0.39, 0.75, 0.83, 0.91, 1.15];
+      const GLINTS = [1.75, 1.91, 2.07, 2.15, 2.23, 2.31, 2.39];
+
+      /* ===================================================================
+       * The steps: one per sound event in the spec's inventory.
+       *
+       *   kind "shot"     a one-shot: play(c, out, t)
+       *   kind "loop"     a loop: start(c, bus) returns a stop function
+       *   kind "burst"    a one-shot heard as a run (typing, detents, a
+       *                   stream): play(c, out, t), and the step's `run`
+       *                   decides when it fires
+       *   kind "zoom"     a gesture: gesture(c, out) returns { step, end };
+       *                   heard as one step and as a run of eight
+       *   kind "control"  the mute and volume control mock-ups
+       * =================================================================== */
+
+      const STEPS = [
+        {
+          id: "aura",
+          title: "Home aura",
+          where:
+            "The landing page only (/), under everything, very low. Fades in on your first press or key, fades out when the tab is hidden or you leave the page.",
+          kind: "loop",
+          variants: [
+            {
+              id: "A",
+              name: "Deep drone",
+              desc: "A sub drone breathing through a slow filter, suspended pad chords, a distant beacon and sparse pings lost in a long echo.",
+              start(c, bus) {
+                const BEAT = 60 / 56;
+                const BAR = BEAT * 4;
+                const verb = hall(c, bus, 4, 0.5);
+                const far = echo(c, bus, BEAT * 0.75, 0.55, 0.45);
+                far.connect(verb);
+                const chords = [
+                  { pad: [50, 52, 57, 64], root: 26 },
+                  { pad: [46, 53, 57, 62], root: 22 },
+                  { pad: [53, 55, 60, 67], root: 29 },
+                  { pad: [48, 53, 55, 60], root: 24 },
+                ];
+                const pings = [
+                  [0, 1.5, 81],
+                  [1, 3, 76],
+                  [2, 0.5, 84],
+                  [3, 2.5, 79],
+                  [5, 1, 86],
+                  [6, 3.5, 77],
+                  [7, 2, 81],
+                ];
+                return scheduler(
+                  c,
+                  () => BAR,
+                  (t, bar) => {
+                    if (bar % 2 === 0) {
+                      const { pad, root } = chords[(bar / 2) % chords.length];
+                      const len = BAR * 2;
+                      const lp = biquad(c, "lowpass", 300, 1.5);
+                      lp.frequency.setValueAtTime(300, t);
+                      lp.frequency.linearRampToValueAtTime(
+                        1100,
+                        t + len * 0.55,
+                      );
+                      lp.frequency.linearRampToValueAtTime(350, t + len + 1);
+                      const g = c.createGain();
+                      g.gain.setValueAtTime(0, t);
+                      g.gain.linearRampToValueAtTime(0.035, t + 2.5);
+                      g.gain.setValueAtTime(0.035, t + len - 1.5);
+                      g.gain.linearRampToValueAtTime(0, t + len + 1.5);
+                      lp.connect(g).connect(bus);
+                      g.connect(verb);
+                      for (const note of pad) {
+                        for (const cents of [-8, 8]) {
+                          const o = c.createOscillator();
+                          o.type = "triangle";
+                          o.frequency.value = hz(note);
+                          o.detune.value = cents;
+                          o.connect(lp);
+                          o.start(t);
+                          o.stop(t + len + 1.6);
+                        }
+                      }
+                      const dg = c.createGain();
+                      dg.gain.setValueAtTime(0, t);
+                      dg.gain.linearRampToValueAtTime(0.14, t + 1.5);
+                      dg.gain.setValueAtTime(0.14, t + len - 0.5);
+                      dg.gain.linearRampToValueAtTime(0, t + len + 1);
+                      const dlp = biquad(c, "lowpass", 220);
+                      dlp.connect(dg).connect(bus);
+                      for (const [step, type] of [
+                        [0, "sine"],
+                        [12, "sine"],
+                        [19, "triangle"],
+                      ]) {
+                        const o = c.createOscillator();
+                        o.type = type;
+                        o.frequency.value = hz(root + step);
+                        o.connect(dlp);
+                        o.start(t);
+                        o.stop(t + len + 1.1);
+                      }
+                    }
+                    tone(c, bus, t, {
+                      freq: hz(38),
+                      to: hz(36),
+                      peak: 0.08,
+                      attack: 0.05,
+                      release: 1.2,
+                    });
+                    for (const [at, beat, note] of pings) {
+                      if (at !== bar % 8) continue;
+                      tone(c, far, t + beat * BEAT, {
+                        freq: hz(note),
+                        peak: 0.05,
+                        attack: 0.01,
+                        release: 1.8,
+                      });
+                      tone(c, verb, t + beat * BEAT, {
+                        freq: hz(note),
+                        peak: 0.03,
+                        attack: 0.01,
+                        release: 1.8,
+                      });
+                    }
+                  },
+                );
+              },
+            },
+            {
+              id: "B",
+              name: "Solar wind",
+              desc: "No notes at all: two bands of drifting noise that rise and fall like wind across a dish, over a low breathing tone.",
+              start(c, bus) {
+                const nodes = [];
+                const band = (freq, q, peak, rate, depth) => {
+                  const src = c.createBufferSource();
+                  src.buffer = noiseBuffer(c);
+                  src.loop = true;
+                  const f = biquad(c, "bandpass", freq, q);
+                  const lfo = c.createOscillator();
+                  lfo.frequency.value = rate;
+                  const d = c.createGain();
+                  d.gain.value = depth;
+                  lfo.connect(d).connect(f.frequency);
+                  const g = c.createGain();
+                  g.gain.value = peak;
+                  src.connect(f).connect(g).connect(bus);
+                  src.start();
+                  lfo.start();
+                  nodes.push(src, lfo);
+                };
+                band(320, 0.8, 0.09, 0.05, 160);
+                band(1500, 2.2, 0.035, 0.071, 700);
+                const sub = c.createOscillator();
+                sub.frequency.value = 55;
+                const sg = c.createGain();
+                sg.gain.value = 0.05;
+                const breath = c.createOscillator();
+                breath.frequency.value = 0.08;
+                const bd = c.createGain();
+                bd.gain.value = 0.03;
+                breath.connect(bd).connect(sg.gain);
+                sub.connect(sg).connect(bus);
+                sub.start();
+                breath.start();
+                nodes.push(sub, breath);
+                return () => {
+                  const end = c.currentTime + 1.6;
+                  for (const n of nodes) n.stop(end);
+                };
+              },
+            },
+            {
+              id: "C",
+              name: "Pulsar",
+              desc: "A slow sonar pulse every 2.4 s, ringing out in a dark hall, over a sub hum. Every fourth pulse answers a fifth higher.",
+              start(c, bus) {
+                const verb = hall(c, bus, 5, 0.6);
+                const hum = [
+                  [41.2, "sine", 0.06],
+                  [82.4, "triangle", 0.015],
+                ].map(([freq, type, peak]) => {
+                  const o = c.createOscillator();
+                  o.type = type;
+                  o.frequency.value = freq;
+                  const g = c.createGain();
+                  g.gain.value = peak;
+                  o.connect(biquad(c, "lowpass", 200))
+                    .connect(g)
+                    .connect(bus);
+                  o.start();
+                  return o;
+                });
+                const stopPulses = scheduler(
+                  c,
+                  () => 2.4,
+                  (t, i) => {
+                    const freq = i % 4 === 3 ? 659.3 : 440;
+                    const peak = i % 4 === 3 ? 0.025 : 0.04;
+                    tone(c, bus, t, {
+                      freq,
+                      to: freq * 0.995,
+                      peak,
+                      attack: 0.006,
+                      release: 1.6,
+                    });
+                    tone(c, verb, t, {
+                      freq,
+                      peak: peak * 1.5,
+                      attack: 0.006,
+                      release: 1.6,
+                    });
+                  },
+                );
+                return () => {
+                  stopPulses();
+                  for (const o of hum) o.stop(c.currentTime + 1.6);
+                };
+              },
+            },
+            {
+              id: "D",
+              name: "Ice cavern",
+              desc: "A high glassy cluster beating slowly against itself, a faint low drone, and a crystal glint now and then.",
+              start(c, bus) {
+                const verb = hall(c, bus, 4.5, 0.7);
+                const held = [];
+                for (const freq of [1318.5, 1975.5, 2637]) {
+                  for (const cents of [-4, 4]) {
+                    const o = c.createOscillator();
+                    o.frequency.value = freq;
+                    o.detune.value = cents;
+                    const g = c.createGain();
+                    g.gain.value = 0.004;
+                    o.connect(g).connect(verb);
+                    o.start();
+                    held.push(o);
+                  }
+                }
+                const drone = c.createOscillator();
+                drone.frequency.value = 73.4;
+                const dg = c.createGain();
+                dg.gain.value = 0.045;
+                drone.connect(dg).connect(bus);
+                drone.start();
+                held.push(drone);
+                const glints = [86, 88, 91, 93, 95, 98];
+                const stopGlints = scheduler(
+                  c,
+                  () => rand(1.6, 4),
+                  (t) => {
+                    bell(c, verb, t, {
+                      freq: hz(
+                        glints[Math.floor(Math.random() * glints.length)],
+                      ),
+                      ratios: [1, 2.76, 5.4],
+                      peak: 0.03,
+                      decay: 1.4,
+                    });
+                  },
+                );
+                return () => {
+                  stopGlints();
+                  for (const o of held) o.stop(c.currentTime + 1.6);
+                };
+              },
+            },
+          ],
+        },
+        {
+          id: "open",
+          title: "Panel opens",
+          where:
+            "A sidebar or panel sliding in: the mobile menu, the zone drawer on the landing, the /dox widget rail, the sound deck, a popover.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Blade draw",
+              desc: "A steel blade drawn from its sheath: a rising metallic scrape that ends in a bright ringing shing.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  freq: 1800,
+                  to: 8500,
+                  q: 5,
+                  peak: 0.22,
+                  attack: 0.03,
+                  decay: 0.26,
+                });
+                bell(c, out, t + 0.17, {
+                  freq: 2350,
+                  ratios: [1, 1.47, 2.09, 2.56],
+                  peak: 0.07,
+                  decay: 0.7,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Ice shard",
+              desc: "A sliver of ice struck once: a high, glassy ring with a crisp tick in front of it and a little air behind.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  type: "highpass",
+                  freq: 6000,
+                  peak: 0.12,
+                  attack: 0.001,
+                  decay: 0.03,
+                });
+                bell(c, out, t + 0.01, {
+                  freq: 3136,
+                  ratios: [1, 2.32, 4.25],
+                  peak: 0.08,
+                  decay: 0.55,
+                });
+                bell(c, space(c), t + 0.01, {
+                  freq: 3136,
+                  ratios: [1, 2.32],
+                  peak: 0.05,
+                  decay: 0.55,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Servo glide",
+              desc: "A tone sweeping up under an opening whoosh: a panel motoring out on rails.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  type: "triangle",
+                  freq: 220,
+                  to: 880,
+                  peak: 0.16,
+                  attack: 0.02,
+                  release: 0.2,
+                  filter: ["lowpass", 2400],
+                });
+                noise(c, out, t, {
+                  freq: 400,
+                  to: 3000,
+                  q: 0.8,
+                  peak: 0.1,
+                  attack: 0.04,
+                  decay: 0.2,
+                });
+              },
+            },
+            {
+              id: "D",
+              name: "Frost sheen",
+              desc: "A shimmer of detuned high tones that swells and lifts, with a breath of air: frost spreading across glass.",
+              play(c, out, t) {
+                for (const [freq, cents] of [
+                  [1760, -7],
+                  [2217, 5],
+                  [2637, -3],
+                  [3520, 8],
+                ]) {
+                  tone(c, out, t, {
+                    freq,
+                    to: freq * 1.06,
+                    detune: cents,
+                    peak: 0.025,
+                    attack: 0.12,
+                    release: 0.45,
+                  });
+                }
+                noise(c, out, t, {
+                  type: "highpass",
+                  freq: 5500,
+                  peak: 0.05,
+                  attack: 0.1,
+                  decay: 0.3,
+                });
+              },
+            },
+            {
+              id: "K",
+              name: "Steel breath",
+              desc: "A soft breath of air passing through a cold steel tube: a gentle metallic whoosh whose ring lifts as it opens. No strike, no notes.",
+              play(c, out, t) {
+                /* Air through a short feedback delay: the delay's resonances
+                   make the breath sound like it passes through a steel tube,
+                   and sweeping the delay moves that ring without any strike. */
+                const end = t + 0.14 + 0.26;
+                const src = c.createBufferSource();
+                src.buffer = noiseBuffer(c);
+                src.loop = true;
+                const pre = biquad(c, "bandpass", 2400, 0.5);
+                const env = envelope(c, t, 0.022, 0.14, 0, 0.26);
+                const delay = c.createDelay(0.05);
+                delay.delayTime.setValueAtTime(0.0018, t);
+                delay.delayTime.exponentialRampToValueAtTime(0.0009, end);
+                const feedback = c.createGain();
+                feedback.gain.value = 0.8;
+                const colour = biquad(c, "lowpass", 5500);
+                const wet = c.createGain();
+                wet.gain.value = 0.35;
+                src.connect(pre).connect(env).connect(delay);
+                delay.connect(feedback).connect(delay);
+                delay.connect(colour).connect(out);
+                colour.connect(wet).connect(space(c));
+                src.start(t, Math.random() * 0.5);
+                src.stop(end + 0.05);
+              },
+            },
+            {
+              id: "L",
+              name: "Rubbed glass",
+              desc: "A finger drawn round the rim of a frozen glass: one soft tone that swells in with no attack, a slow shimmer from two strands a hair apart, lifting slightly.",
+              play(c, out, t) {
+                for (const freq of [880, 883.5]) {
+                  tone(c, out, t, {
+                    freq,
+                    to: freq * 1.03,
+                    peak: 0.018,
+                    attack: 0.14,
+                    hold: 0.04,
+                    release: 0.3,
+                  });
+                }
+                tone(c, space(c), t, {
+                  freq: 880,
+                  peak: 0.012,
+                  attack: 0.14,
+                  release: 0.4,
+                });
+              },
+            },
+            {
+              id: "M",
+              name: "Cold draft",
+              desc: "A narrow, faintly whistling draft that swells in and stops softly, like a door opening onto ice, with the room catching its tail.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  freq: 2200,
+                  to: 4200,
+                  q: 6,
+                  peak: 0.04,
+                  attack: 0.22,
+                  decay: 0.08,
+                });
+                noise(c, space(c), t, {
+                  freq: 2600,
+                  to: 4200,
+                  q: 6,
+                  peak: 0.025,
+                  attack: 0.22,
+                  decay: 0.1,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "close",
+          title: "Panel closes",
+          where:
+            "The same panels closing: by their close button, Escape, or a press outside.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Blade sheathe",
+              desc: "Blade draw in reverse: a short ring, then the scrape falls as the blade slides home.",
+              play(c, out, t) {
+                bell(c, out, t, {
+                  freq: 2350,
+                  ratios: [1, 1.47, 2.09],
+                  peak: 0.04,
+                  decay: 0.3,
+                });
+                noise(c, out, t + 0.03, {
+                  freq: 8000,
+                  to: 1600,
+                  q: 5,
+                  peak: 0.18,
+                  attack: 0.02,
+                  decay: 0.22,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Ice settle",
+              desc: "Two glassy notes stepping down, softer than the open, as the shard settles.",
+              play(c, out, t) {
+                bell(c, out, t, {
+                  freq: 2637,
+                  ratios: [1, 2.32],
+                  peak: 0.06,
+                  decay: 0.3,
+                });
+                bell(c, out, t + 0.07, {
+                  freq: 1976,
+                  ratios: [1, 2.32],
+                  peak: 0.05,
+                  decay: 0.4,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Servo return",
+              desc: "Servo glide in reverse: the tone sweeps down and the whoosh closes.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  type: "triangle",
+                  freq: 880,
+                  to: 220,
+                  peak: 0.16,
+                  attack: 0.02,
+                  release: 0.2,
+                  filter: ["lowpass", 2400],
+                });
+                noise(c, out, t, {
+                  freq: 3000,
+                  to: 400,
+                  q: 0.8,
+                  peak: 0.1,
+                  attack: 0.04,
+                  decay: 0.2,
+                });
+              },
+            },
+            {
+              id: "D",
+              name: "Frost fade",
+              desc: "Frost sheen in reverse: the shimmer sinks and thins away.",
+              play(c, out, t) {
+                for (const [freq, cents] of [
+                  [1760, -7],
+                  [2217, 5],
+                  [2637, -3],
+                ]) {
+                  tone(c, out, t, {
+                    freq,
+                    to: freq * 0.94,
+                    detune: cents,
+                    peak: 0.022,
+                    attack: 0.03,
+                    release: 0.4,
+                  });
+                }
+                noise(c, out, t, {
+                  type: "highpass",
+                  freq: 5000,
+                  peak: 0.035,
+                  attack: 0.02,
+                  decay: 0.25,
+                });
+              },
+            },
+            {
+              id: "K",
+              name: "Steel breath",
+              desc: "Steel breath in reverse: the metallic whoosh sinks and closes, a little shorter.",
+              play(c, out, t) {
+                /* Air through a short feedback delay: the delay's resonances
+                   make the breath sound like it passes through a steel tube,
+                   and sweeping the delay moves that ring without any strike. */
+                const end = t + 0.06 + 0.24;
+                const src = c.createBufferSource();
+                src.buffer = noiseBuffer(c);
+                src.loop = true;
+                const pre = biquad(c, "bandpass", 2400, 0.5);
+                const env = envelope(c, t, 0.018, 0.06, 0, 0.24);
+                const delay = c.createDelay(0.05);
+                delay.delayTime.setValueAtTime(0.0009, t);
+                delay.delayTime.exponentialRampToValueAtTime(0.0018, end);
+                const feedback = c.createGain();
+                feedback.gain.value = 0.8;
+                const colour = biquad(c, "lowpass", 5500);
+                const wet = c.createGain();
+                wet.gain.value = 0.35;
+                src.connect(pre).connect(env).connect(delay);
+                delay.connect(feedback).connect(delay);
+                delay.connect(colour).connect(out);
+                colour.connect(wet).connect(space(c));
+                src.start(t, Math.random() * 0.5);
+                src.stop(end + 0.05);
+              },
+            },
+            {
+              id: "L",
+              name: "Rubbed glass",
+              desc: "The rubbed tone a fourth lower, easing down and fading sooner.",
+              play(c, out, t) {
+                for (const freq of [659, 661.6]) {
+                  tone(c, out, t, {
+                    freq,
+                    to: freq * 0.97,
+                    peak: 0.016,
+                    attack: 0.07,
+                    hold: 0.02,
+                    release: 0.26,
+                  });
+                }
+                tone(c, space(c), t, {
+                  freq: 659,
+                  peak: 0.01,
+                  attack: 0.07,
+                  release: 0.32,
+                });
+              },
+            },
+            {
+              id: "M",
+              name: "Cold draft",
+              desc: "The draft falling away: a soft whistle of air that sinks and fades into the room.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  freq: 4000,
+                  to: 1800,
+                  q: 6,
+                  peak: 0.032,
+                  attack: 0.03,
+                  decay: 0.3,
+                });
+                noise(c, space(c), t, {
+                  freq: 3600,
+                  to: 1800,
+                  q: 6,
+                  peak: 0.02,
+                  attack: 0.03,
+                  decay: 0.3,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "entrance",
+          title: "Button entrance",
+          where:
+            "The landing's three buttons freezing in, 80 ms apart (heard here as three), and the header chips' shine. Plays only when sound is already running when the entrance starts.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Ice chime",
+              desc: "Each button rings one high ice bar, the three climbing a chord.",
+              play(c, out, t) {
+                [96, 100, 103].forEach((note, i) => {
+                  bell(c, out, t + i * 0.08, {
+                    freq: hz(note),
+                    ratios: [1, 2.76],
+                    peak: 0.05,
+                    decay: 0.35,
+                  });
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Steel shing",
+              desc: "Each button a tiny blade flick: a fast scrape and a short steel ring.",
+              play(c, out, t) {
+                [0, 1, 2].forEach((i) => {
+                  const at = t + i * 0.08;
+                  noise(c, out, at, {
+                    freq: 4000,
+                    to: 10000,
+                    q: 4,
+                    peak: 0.12,
+                    attack: 0.01,
+                    decay: 0.08,
+                  });
+                  bell(c, out, at + 0.05, {
+                    freq: 3520 + i * 220,
+                    ratios: [1, 1.5],
+                    peak: 0.035,
+                    decay: 0.25,
+                  });
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Glass ping",
+              desc: "Soft round glass pings, each a step up a pentatonic scale, with a little room on them.",
+              play(c, out, t) {
+                [88, 91, 93].forEach((note, i) => {
+                  tone(c, out, t + i * 0.08, {
+                    freq: hz(note),
+                    peak: 0.05,
+                    attack: 0.01,
+                    release: 0.4,
+                  });
+                  tone(c, space(c), t + i * 0.08, {
+                    freq: hz(note),
+                    peak: 0.04,
+                    attack: 0.01,
+                    release: 0.4,
+                  });
+                });
+              },
+            },
+            {
+              id: "D",
+              name: "Freeze crackle",
+              desc: "Ice forming: a quick crackle of tiny grains under each button, ending on a faint ring.",
+              play(c, out, t) {
+                [0, 1, 2].forEach((b) => {
+                  const at = t + b * 0.08;
+                  for (let g = 0; g < 7; g++) {
+                    noise(c, out, at + g * rand(0.012, 0.022), {
+                      type: "highpass",
+                      freq: rand(5000, 9000),
+                      peak: rand(0.04, 0.09),
+                      attack: 0.001,
+                      decay: 0.008,
+                    });
+                  }
+                  tone(c, out, at + 0.12, {
+                    freq: hz(98 + b * 2),
+                    peak: 0.02,
+                    attack: 0.005,
+                    release: 0.3,
+                  });
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "paint",
+          title: "Landing: a swish as each piece paints in",
+          where:
+            "The landing's entrance: one soft swish as each piece starts to freeze in (the title, the tagline, search, Dox, the theme and sound buttons, the three hero buttons, the pager). Play runs the whole landing's timing: ten swishes over 1.2 s. Replaces the Freeze crackle.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Frost breath",
+              desc: "A short breath of cold air rising as the piece forms: airy, no ring.",
+              play(c, out, t) {
+                for (const at of PAINTS) {
+                  noise(c, out, t + at, {
+                    freq: rand(1300, 1600),
+                    to: rand(4400, 5200),
+                    q: 1.4,
+                    peak: 0.028,
+                    attack: 0.1,
+                    decay: 0.22,
+                  });
+                }
+              },
+            },
+            {
+              id: "B",
+              name: "Brushed stroke",
+              desc: "A soft brush drawn across frosted glass, high to low: the gentlest of the three.",
+              play(c, out, t) {
+                for (const at of PAINTS) {
+                  noise(c, out, t + at, {
+                    freq: rand(6500, 7500),
+                    to: 2500,
+                    q: 0.8,
+                    peak: 0.022,
+                    attack: 0.06,
+                    decay: 0.26,
+                  });
+                }
+              },
+            },
+            {
+              id: "C",
+              name: "Steel whisper",
+              desc: "The Steel breath you picked for panels, made tiny: a faint metallic air for each piece, so the entrance and the panels sound like one family.",
+              play(c, out, t) {
+                for (const at of PAINTS) {
+                  steelComb(c, out, t + at, {
+                    from: rand(0.0013, 0.0015),
+                    to: 0.0008,
+                    peak: 0.01,
+                    attack: 0.08,
+                    release: 0.18,
+                    feedback: 0.7,
+                    wet: 0.2,
+                  });
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: "glint",
+          title: "Landing: a shing on each glint",
+          where:
+            "The light crossing each metal sheet: the five header chips' shine, then the three hero buttons' glint (seven shings from 1.75 s; one Dox chip and one hero button land together). Play runs the whole landing: your picked swish from the step before, then this shing on each glint.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Blade glint",
+              desc: "A thin bright sweep, like light running along a knife edge. Air only, no note.",
+              play(c, out, t) {
+                voiceFor("paint")?.play(c, out, t);
+                GLINTS.forEach((at, i) => {
+                  noise(c, out, t + at, {
+                    freq: 5000 + i * 300,
+                    to: 11000 + i * 300,
+                    q: 5,
+                    peak: 0.03,
+                    attack: 0.04,
+                    decay: 0.14,
+                  });
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Steel shing",
+              desc: "A steel sheet catching the light: a quick shimmer of metal ring with no strike, each one a touch higher along the bar.",
+              play(c, out, t) {
+                voiceFor("paint")?.play(c, out, t);
+                GLINTS.forEach((at, i) => {
+                  const lift = 1 + i * 0.04;
+                  steelComb(c, out, t + at, {
+                    from: 0.00032 / lift,
+                    to: 0.00021 / lift,
+                    band: 7000,
+                    peak: 0.007,
+                    attack: 0.05,
+                    release: 0.2,
+                    feedback: 0.88,
+                    lowpass: 12000,
+                    wet: 0.15,
+                  });
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Frost sparkle",
+              desc: "Light scattering off ice: five tiny grains rising across each glint, no tone at all.",
+              play(c, out, t) {
+                voiceFor("paint")?.play(c, out, t);
+                for (const at of GLINTS) {
+                  for (let g = 0; g < 5; g++) {
+                    noise(c, out, t + at + g * 0.028, {
+                      freq: 8000 + g * 900,
+                      q: 6,
+                      peak: rand(0.025, 0.04),
+                      attack: 0.002,
+                      decay: 0.03,
+                    });
+                  }
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: "globe",
+          title: "Globe and zone press",
+          where:
+            "A press on the globe that picks a place, and a press on a time zone: a pinned clock under the globe, or a zone in the zone list. Play presses three zones. The globe's zoom, reset and find buttons keep the button ping.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Sonar lock",
+              desc: "Two soft pings a fifth apart with the sonar echo: the sonar finding its target.",
+              play(c, out, t) {
+                [0, 0.45, 0.9].forEach((at) => {
+                  [880, 1320].forEach((freq, i) => {
+                    tone(c, out, t + at + i * 0.07, {
+                      freq,
+                      peak: 0.07,
+                      attack: 0.004,
+                      release: 0.2,
+                    });
+                    tone(c, sonarEcho(c), t + at + i * 0.07, {
+                      freq,
+                      peak: 0.05,
+                      attack: 0.004,
+                      release: 0.16,
+                    });
+                  });
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Ice drop",
+              desc: "A single drop of meltwater landing: a round tone falling fast, with a little room.",
+              play(c, out, t) {
+                [0, 0.45, 0.9].forEach((at) => {
+                  tone(c, out, t + at, {
+                    freq: 1500,
+                    to: 520,
+                    peak: 0.08,
+                    attack: 0.003,
+                    release: 0.12,
+                  });
+                  tone(c, space(c), t + at, {
+                    freq: 1500,
+                    to: 520,
+                    peak: 0.05,
+                    attack: 0.003,
+                    release: 0.12,
+                  });
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "zoom",
+          title: "Globe zoom",
+          where:
+            "Zooming the globe in or out: a wheel or trackpad step, a pinch, or the + and − buttons. Zoom in rises, zoom out falls, and the pitch follows how close you are. Each card plays one step and a run of eight wheel steps; the box below zooms with your wheel.",
+          kind: "zoom",
+          variants: [
+            {
+              id: "A",
+              name: "Glass rise",
+              desc: "One Glass tick per step, pitched by how close you are: a ladder of glass that climbs as you dive in.",
+              gesture: perStep((c, out, t, dir, z) => {
+                const f = zoomPitch(1700, 3400, z);
+                tone(c, out, t, {
+                  freq: f,
+                  to: f * (dir > 0 ? 1.08 : 0.92),
+                  peak: 0.06,
+                  attack: 0.001,
+                  release: 0.014,
+                });
+                tone(c, out, t, {
+                  freq: f / 3.5,
+                  to: (f / 3.5) * (dir > 0 ? 1.1 : 0.9),
+                  peak: 0.04,
+                  attack: 0.002,
+                  release: 0.028,
+                });
+              }),
+            },
+            {
+              id: "B",
+              name: "Lens servo",
+              desc: "A soft focus-motor whirr per step: a breath of filtered air that sweeps up going in and down coming out.",
+              gesture: perStep((c, out, t, dir, z) => {
+                const f = zoomPitch(650, 1900, z);
+                noise(c, out, t, {
+                  freq: f,
+                  to: dir > 0 ? f * 1.5 : f / 1.5,
+                  q: 4,
+                  peak: 0.07,
+                  attack: 0.008,
+                  decay: 0.05,
+                });
+              }),
+            },
+            {
+              id: "C",
+              name: "Sonar range",
+              desc: "A sonar blip per step on a pentatonic ladder, with a breath of the sonar echo: the range closing in, note by note.",
+              gesture: perStep((c, out, t, dir, z) => {
+                const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+                const f = hz(69 + PENTA[Math.round(z * (PENTA.length - 1))]);
+                tone(c, out, t, {
+                  freq: f,
+                  peak: 0.05,
+                  attack: 0.003,
+                  release: 0.07,
+                });
+                tone(c, sonarEcho(c), t, {
+                  freq: f,
+                  peak: 0.02,
+                  attack: 0.003,
+                  release: 0.05,
+                });
+              }),
+            },
+            {
+              id: "D",
+              name: "Altitude glide",
+              desc: "One held, soft tone for the whole gesture whose pitch and brightness glide with the zoom; it fades out a moment after you stop.",
+              gesture(c, out) {
+                return heldGesture(c, out, {
+                  peak: 0.036,
+                  build(cc, g) {
+                    const filter = biquad(cc, "lowpass", 900, 0.9);
+                    filter.connect(g);
+                    const a = cc.createOscillator();
+                    a.type = "triangle";
+                    const b = cc.createOscillator();
+                    b.type = "sine";
+                    a.connect(filter);
+                    b.connect(filter);
+                    return {
+                      nodes: [a, b],
+                      set(t, z) {
+                        const f = zoomPitch(330, 880, z);
+                        a.frequency.setTargetAtTime(f, t, 0.04);
+                        b.frequency.setTargetAtTime(f / 2, t, 0.04);
+                        filter.frequency.setTargetAtTime(
+                          zoomPitch(900, 2600, z),
+                          t,
+                          0.05,
+                        );
+                      },
+                    };
+                  },
+                });
+              },
+            },
+            {
+              id: "E",
+              name: "Frost wind",
+              desc: "A hush of wind for the whole gesture, its band rising as you descend and falling as you climb away: air, not notes.",
+              gesture(c, out) {
+                return heldGesture(c, out, {
+                  peak: 0.09,
+                  build(cc, g) {
+                    const src = cc.createBufferSource();
+                    src.buffer = noiseBuffer(cc);
+                    src.loop = true;
+                    const band = biquad(cc, "bandpass", 500, 2.2);
+                    src.connect(band).connect(g);
+                    return {
+                      nodes: [src],
+                      set(t, z) {
+                        band.frequency.setTargetAtTime(
+                          zoomPitch(380, 1500, z),
+                          t,
+                          0.06,
+                        );
+                      },
+                    };
+                  },
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "appear",
+          title: "Map or globe appears",
+          where:
+            "A map comes into view: the globe on the landing, a clock-change map (Canada, Morocco, the US), the zone maps. Once per map, when it first shows; subtle, low and slow, under whatever else is playing.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Glacier swell",
+              desc: "A low open fifth that rises out of nothing over a second and settles into the hall: a horizon, not a fanfare.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 110,
+                  peak: 0.042,
+                  attack: 1.0,
+                  hold: 0.3,
+                  release: 2.6,
+                });
+                tone(c, out, t + 0.15, {
+                  freq: 165,
+                  peak: 0.028,
+                  attack: 1.1,
+                  hold: 0.2,
+                  release: 2.4,
+                });
+                tone(c, out, t + 0.3, {
+                  type: "triangle",
+                  freq: 220,
+                  peak: 0.02,
+                  attack: 1.2,
+                  release: 2.2,
+                  filter: ["lowpass", 600],
+                });
+                tone(c, space(c), t + 0.3, {
+                  freq: 220,
+                  peak: 0.03,
+                  attack: 1.2,
+                  release: 2.5,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Aurora bloom",
+              desc: "A stack of fifths, slightly detuned, whose filter opens like light coming over the edge of the Earth, then closes softly.",
+              play(c, out, t) {
+                const bloom = biquad(c, "lowpass", 300, 1.2);
+                bloom.frequency.setValueAtTime(300, t);
+                bloom.frequency.exponentialRampToValueAtTime(1800, t + 1.4);
+                bloom.frequency.exponentialRampToValueAtTime(700, t + 3.8);
+                bloom.connect(out);
+                const send = c.createGain();
+                send.gain.value = 0.6;
+                bloom.connect(send).connect(space(c));
+                [146.83, 220, 329.63].forEach((freq, i) => {
+                  [-6, 6].forEach((detune) => {
+                    tone(c, bloom, t + i * 0.12, {
+                      type: "triangle",
+                      freq,
+                      detune,
+                      peak: 0.022,
+                      attack: 1.1,
+                      hold: 0.3,
+                      release: 2.4,
+                    });
+                  });
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Ice cathedral",
+              desc: "Glass partials bowed instead of struck, over a deep floor: an ice hall lighting up, slow and wide.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 130.81,
+                  peak: 0.05,
+                  attack: 0.9,
+                  hold: 0.3,
+                  release: 2.6,
+                });
+                [1, 2.32, 4.25].forEach((ratio, i) => {
+                  const o = {
+                    freq: 523.25 * ratio,
+                    peak: 0.026 / (i + 1),
+                    attack: 0.6 + i * 0.2,
+                    release: 3 / Math.sqrt(i + 1),
+                  };
+                  tone(c, out, t + 0.2 + i * 0.1, o);
+                  tone(c, space(c), t + 0.2 + i * 0.1, {
+                    ...o,
+                    peak: o.peak * 0.8,
+                  });
+                });
+              },
+            },
+            {
+              id: "D",
+              name: "Sonar dawn",
+              desc: "A dark tide of air swelling up, and at its crest one deep, slow sonar ping with its echo: the sonar waking to the map.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  type: "lowpass",
+                  freq: 250,
+                  to: 1400,
+                  q: 0.7,
+                  peak: 0.035,
+                  attack: 1.2,
+                  decay: 1.8,
+                });
+                tone(c, out, t, {
+                  freq: 110,
+                  peak: 0.035,
+                  attack: 1.0,
+                  release: 2.4,
+                });
+                tone(c, out, t + 0.9, {
+                  freq: 440,
+                  peak: 0.05,
+                  attack: 0.01,
+                  release: 1.2,
+                });
+                tone(c, sonarEcho(c), t + 0.9, {
+                  freq: 440,
+                  peak: 0.035,
+                  attack: 0.01,
+                  release: 0.9,
+                });
+              },
+            },
+            {
+              id: "E",
+              name: "Steel horizon",
+              desc: "A low steel tube breathing in, its ring rising an octave as the map arrives, over a soft sub: the Steel breath, slowed and lowered.",
+              play(c, out, t) {
+                steelComb(c, out, t, {
+                  from: 1 / 110,
+                  to: 1 / 220,
+                  band: 700,
+                  peak: 0.012,
+                  attack: 1.2,
+                  release: 2.2,
+                  feedback: 0.85,
+                  lowpass: 2200,
+                  wet: 0.4,
+                });
+                tone(c, out, t + 0.2, {
+                  freq: 110,
+                  peak: 0.04,
+                  attack: 1.0,
+                  release: 2.5,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "click",
+          title: "Button press: sonar ping",
+          where:
+            "A press on a button, tab, chip, toggle or link. A link to another page pings too; the page change may cut the tail.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Sonar",
+              desc: "The classic: a clean ping with a quick echo coming back off the hull.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 1180,
+                  peak: 0.12,
+                  attack: 0.003,
+                  release: 0.32,
+                });
+                tone(c, sonarEcho(c), t, {
+                  freq: 1180,
+                  peak: 0.1,
+                  attack: 0.003,
+                  release: 0.25,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Deep sonar",
+              desc: "Lower and rounder, with a longer tail in a dark room: a submarine far down.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 620,
+                  to: 600,
+                  peak: 0.13,
+                  attack: 0.004,
+                  release: 0.55,
+                });
+                tone(c, space(c), t, {
+                  freq: 620,
+                  peak: 0.08,
+                  attack: 0.004,
+                  release: 0.5,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Blip",
+              desc: "Short and crisp, nothing ringing after it: the quietest choice for something pressed often.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 1900,
+                  to: 1500,
+                  peak: 0.1,
+                  attack: 0.002,
+                  release: 0.06,
+                });
+              },
+            },
+            {
+              id: "D",
+              name: "Ping and return",
+              desc: "A ping, then a fainter return a beat later, as if it found something out there.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 1320,
+                  peak: 0.11,
+                  attack: 0.003,
+                  release: 0.18,
+                });
+                tone(c, out, t + 0.22, {
+                  freq: 1310,
+                  peak: 0.035,
+                  attack: 0.003,
+                  release: 0.2,
+                  filter: ["lowpass", 1800],
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "toggle",
+          title: "Toggle and switch",
+          where:
+            "The theme toggle, a switch in a tool, the mute button, and the levers on the sound deck.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Lever clack",
+              desc: "A toggle snapping over: a bright click and its answering clack a beat later, over a small body.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 2600,
+                  to: 1800,
+                  peak: 0.16,
+                  attack: 0.001,
+                  release: 0.01,
+                });
+                tone(c, out, t, {
+                  freq: 320,
+                  to: 200,
+                  peak: 0.18,
+                  attack: 0.002,
+                  release: 0.03,
+                });
+                tone(c, out, t + 0.028, {
+                  freq: 2000,
+                  to: 1400,
+                  peak: 0.12,
+                  attack: 0.001,
+                  release: 0.012,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Relay",
+              desc: "A relay closing: a hard filtered tick, a low thump and a lighter second tick.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  type: "square",
+                  freq: 900,
+                  peak: 0.08,
+                  attack: 0.001,
+                  release: 0.012,
+                  filter: ["lowpass", 3000],
+                });
+                tone(c, out, t, {
+                  freq: 180,
+                  to: 120,
+                  peak: 0.16,
+                  attack: 0.002,
+                  release: 0.04,
+                });
+                tone(c, out, t + 0.04, {
+                  type: "square",
+                  freq: 1200,
+                  peak: 0.04,
+                  attack: 0.001,
+                  release: 0.01,
+                  filter: ["lowpass", 3000],
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Ice snap",
+              desc: "A thin crust of ice snapping: a hiss-click, a glassy tick and a tiny thump.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  type: "highpass",
+                  freq: 4500,
+                  peak: 0.12,
+                  attack: 0.001,
+                  decay: 0.012,
+                });
+                tone(c, out, t + 0.004, {
+                  freq: 2800,
+                  peak: 0.06,
+                  attack: 0.001,
+                  release: 0.02,
+                });
+                tone(c, out, t, {
+                  freq: 150,
+                  to: 100,
+                  peak: 0.1,
+                  attack: 0.002,
+                  release: 0.03,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "detent",
+          title: "Tool control detent",
+          where:
+            "Each step of a slider, a drag handle or a dial in a tool, and each detent of the volume dial. Heard here as a run of six; try the slider below.",
+          kind: "burst",
+          run: "detents",
+          variants: [
+            {
+              id: "A",
+              name: "Analog click",
+              desc: "A faint high tick over a low, fast-damped body: an amplifier knob, not a beep.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 1500,
+                  to: 1100,
+                  peak: 0.08,
+                  attack: 0.002,
+                  release: 0.014,
+                });
+                tone(c, out, t, {
+                  freq: 240,
+                  to: 150,
+                  peak: 0.24,
+                  attack: 0.003,
+                  release: 0.05,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Glass tick",
+              desc: "A brighter, glassier tick with only a hint of body.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 3200,
+                  to: 2600,
+                  peak: 0.07,
+                  attack: 0.001,
+                  release: 0.012,
+                });
+                tone(c, out, t, {
+                  freq: 900,
+                  to: 700,
+                  peak: 0.05,
+                  attack: 0.002,
+                  release: 0.03,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Soft notch",
+              desc: "Just the low body, very soft: felt more than heard.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 180,
+                  to: 120,
+                  peak: 0.2,
+                  attack: 0.003,
+                  release: 0.04,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "key",
+          title: "Typing",
+          where:
+            "Each key in a playground's inputs, a tool's text field and the chat composer. Never while an input method is composing (CJK). Heard here as a typed word; try the box below.",
+          kind: "burst",
+          run: "typing",
+          variants: [
+            {
+              id: "A",
+              name: "Soft key",
+              desc: "A muted keyboard tick, a little different each time.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  type: "triangle",
+                  freq: rand(1050, 1200),
+                  peak: 0.07,
+                  attack: 0.001,
+                  release: 0.014,
+                  filter: ["lowpass", 3000],
+                });
+                noise(c, out, t, {
+                  type: "highpass",
+                  freq: 3000,
+                  peak: 0.03,
+                  attack: 0.001,
+                  decay: 0.008,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Ice tap",
+              desc: "A fingertip on cold glass: a tiny high tap with a small body.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: rand(2300, 2700),
+                  peak: 0.05,
+                  attack: 0.001,
+                  release: 0.008,
+                });
+                tone(c, out, t, {
+                  freq: 420,
+                  peak: 0.06,
+                  attack: 0.002,
+                  release: 0.02,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Data blip",
+              desc: "Very quiet high blips from a pentatonic scale, like a terminal echoing keys.",
+              play(c, out, t) {
+                const notes = [93, 95, 98, 100, 102];
+                tone(c, out, t, {
+                  freq: hz(notes[Math.floor(Math.random() * notes.length)]),
+                  peak: 0.03,
+                  attack: 0.002,
+                  release: 0.03,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "send",
+          title: "Chat: message sent",
+          where: "Your question leaving the composer on /dox.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Uplink",
+              desc: "A tone and a whoosh rising together: the message goes up to the dish.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  type: "triangle",
+                  freq: 300,
+                  to: 1200,
+                  peak: 0.12,
+                  attack: 0.02,
+                  release: 0.24,
+                  filter: ["lowpass", 2600],
+                });
+                noise(c, out, t, {
+                  freq: 600,
+                  to: 4500,
+                  q: 1,
+                  peak: 0.07,
+                  attack: 0.05,
+                  decay: 0.2,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Transmit chirp",
+              desc: "Three quick rising blips: sent.",
+              play(c, out, t) {
+                [880, 1175, 1568].forEach((freq, i) => {
+                  tone(c, out, t + i * 0.045, {
+                    freq,
+                    peak: 0.08,
+                    attack: 0.002,
+                    release: 0.05,
+                  });
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Sonar launch",
+              desc: "One ping with a run of echoes receding into the distance.",
+              play(c, out, t) {
+                const far = echo(c, out, 0.12, 0.5, 0.5);
+                tone(c, out, t, {
+                  freq: 1180,
+                  peak: 0.1,
+                  attack: 0.003,
+                  release: 0.15,
+                });
+                tone(c, far, t, {
+                  freq: 1180,
+                  peak: 0.08,
+                  attack: 0.003,
+                  release: 0.12,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "thinking",
+          title: "Chat: Dox thinking",
+          where:
+            "On /dox, from the moment you send until Dox's first word arrives, while the crystal spins. Stops the instant the answer starts.",
+          kind: "loop",
+          variants: [
+            {
+              id: "A",
+              name: "Scanning sonar",
+              desc: "A soft ping every 1.4 s with its echo, like a scan sweeping for an answer.",
+              start(c, bus) {
+                const back = echo(c, bus, 0.21, 0.35, 0.35);
+                return scheduler(
+                  c,
+                  () => 1.4,
+                  (t) => {
+                    tone(c, bus, t, {
+                      freq: 900,
+                      peak: 0.06,
+                      attack: 0.004,
+                      release: 0.3,
+                    });
+                    tone(c, back, t, {
+                      freq: 900,
+                      peak: 0.05,
+                      attack: 0.004,
+                      release: 0.25,
+                    });
+                  },
+                );
+              },
+            },
+            {
+              id: "B",
+              name: "Hum pulse",
+              desc: "A low, quiet hum swelling about once a second: a machine at work.",
+              start(c, bus) {
+                const parts = [
+                  [110, 0.05],
+                  [165, 0.025],
+                ].map(([freq, peak]) => {
+                  const o = c.createOscillator();
+                  o.frequency.value = freq;
+                  const g = c.createGain();
+                  g.gain.value = peak;
+                  const lfo = c.createOscillator();
+                  lfo.frequency.value = 1.1;
+                  const d = c.createGain();
+                  d.gain.value = peak * 0.8;
+                  lfo.connect(d).connect(g.gain);
+                  o.connect(biquad(c, "lowpass", 400))
+                    .connect(g)
+                    .connect(bus);
+                  o.start();
+                  lfo.start();
+                  return [o, lfo];
+                });
+                return () => {
+                  for (const pair of parts)
+                    for (const n of pair) n.stop(c.currentTime + 0.6);
+                };
+              },
+            },
+            {
+              id: "C",
+              name: "Data trickle",
+              desc: "Sparse, very quiet high blips at random, like data coming down the line.",
+              start(c, bus) {
+                const notes = [93, 95, 98, 100, 102, 105];
+                return scheduler(
+                  c,
+                  () => rand(0.12, 0.35),
+                  (t) => {
+                    tone(c, bus, t, {
+                      freq: hz(notes[Math.floor(Math.random() * notes.length)]),
+                      peak: 0.025,
+                      attack: 0.002,
+                      release: 0.04,
+                    });
+                  },
+                );
+              },
+            },
+            {
+              id: "D",
+              name: "Orbit shimmer",
+              desc: "A slow swirl of filtered air circling the room, with a faint held fifth inside it.",
+              start(c, bus) {
+                const src = c.createBufferSource();
+                src.buffer = noiseBuffer(c);
+                src.loop = true;
+                const f = biquad(c, "bandpass", 1600, 3);
+                const lfo = c.createOscillator();
+                lfo.frequency.value = 0.5;
+                const d = c.createGain();
+                d.gain.value = 900;
+                lfo.connect(d).connect(f.frequency);
+                const g = c.createGain();
+                g.gain.value = 0.06;
+                src.connect(f).connect(g).connect(bus);
+                const tones = [440, 660].map((freq) => {
+                  const o = c.createOscillator();
+                  o.frequency.value = freq;
+                  const og = c.createGain();
+                  og.gain.value = 0.008;
+                  o.connect(og).connect(bus);
+                  o.start();
+                  return o;
+                });
+                src.start();
+                lfo.start();
+                return () => {
+                  const end = c.currentTime + 0.6;
+                  for (const n of [src, lfo, ...tones]) n.stop(end);
+                };
+              },
+            },
+          ],
+        },
+        {
+          id: "stream",
+          title: "Chat: Dox typing",
+          where:
+            "On /dox, as Dox's answer streams in: one tick per arriving chunk, never more than one every 60 ms. Heard here as two seconds of streaming.",
+          kind: "burst",
+          run: "stream",
+          variants: [
+            {
+              id: "A",
+              name: "Teletype",
+              desc: "A tiny, dry mechanical tick per chunk.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  type: "square",
+                  freq: 1500,
+                  peak: 0.03,
+                  attack: 0.001,
+                  release: 0.006,
+                  filter: ["lowpass", 2500],
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Soft chirps",
+              desc: "Small, high, slightly varied chirps: the crystal talking.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: rand(2000, 2600),
+                  peak: 0.025,
+                  attack: 0.002,
+                  release: 0.015,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Morse",
+              desc: "A short soft beep per chunk, like a signal keyed in.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 700,
+                  peak: 0.035,
+                  attack: 0.003,
+                  hold: 0.02,
+                  release: 0.01,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "done",
+          title: "Chat: answer complete",
+          where: "On /dox, when Dox's answer finishes streaming.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Two-note chime",
+              desc: "A soft fifth, low then high: done.",
+              play(c, out, t) {
+                bell(c, out, t, {
+                  freq: 1047,
+                  ratios: [1, 2.76],
+                  peak: 0.06,
+                  decay: 0.5,
+                });
+                bell(c, out, t + 0.11, {
+                  freq: 1568,
+                  ratios: [1, 2.76],
+                  peak: 0.06,
+                  decay: 0.7,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Sonar return",
+              desc: "One low, round ping with a long tail: the answer came back.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 523,
+                  peak: 0.08,
+                  attack: 0.006,
+                  release: 0.8,
+                });
+                tone(c, space(c), t, {
+                  freq: 523,
+                  peak: 0.06,
+                  attack: 0.006,
+                  release: 0.8,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Ice bell",
+              desc: "One high ice bell ringing out in the room.",
+              play(c, out, t) {
+                bell(c, out, t, {
+                  freq: 2093,
+                  ratios: [1, 2.76, 5.4],
+                  peak: 0.05,
+                  decay: 1.2,
+                });
+                bell(c, space(c), t, {
+                  freq: 2093,
+                  ratios: [1, 2.76],
+                  peak: 0.04,
+                  decay: 1.2,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "loading",
+          title: "Loading",
+          where:
+            "When a tool or a chat widget starts loading (its 'Loading …' placeholder appears). Plays once, not as a loop, because most loads finish in under half a second.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Charge",
+              desc: "A quiet tone rising, like a capacitor charging.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 200,
+                  to: 800,
+                  peak: 0.05,
+                  attack: 0.08,
+                  release: 0.32,
+                  filter: ["lowpass", 1500],
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Scan sweep",
+              desc: "A band of noise sweeping up: a scanner passing over.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  freq: 500,
+                  to: 4000,
+                  q: 2,
+                  peak: 0.07,
+                  attack: 0.08,
+                  decay: 0.4,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Spin-up",
+              desc: "A low turbine spinning up behind a heavy filter.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  type: "sawtooth",
+                  freq: 60,
+                  to: 240,
+                  peak: 0.06,
+                  attack: 0.1,
+                  release: 0.35,
+                  filter: ["lowpass", 500],
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "ready",
+          title: "Ready",
+          where:
+            "When a tool or chat widget arrives on screen (its entrance plays). Silent if the widget was already there when the page loaded.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Lock-in",
+              desc: "A detent click and a soft high ping: locked on.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 1500,
+                  to: 1100,
+                  peak: 0.07,
+                  attack: 0.002,
+                  release: 0.014,
+                });
+                tone(c, out, t, {
+                  freq: 240,
+                  to: 150,
+                  peak: 0.18,
+                  attack: 0.003,
+                  release: 0.05,
+                });
+                tone(c, out, t + 0.05, {
+                  freq: 1568,
+                  peak: 0.04,
+                  attack: 0.004,
+                  release: 0.25,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Ice settle",
+              desc: "Two glassy notes landing, the second higher.",
+              play(c, out, t) {
+                bell(c, out, t, {
+                  freq: 1976,
+                  ratios: [1, 2.32],
+                  peak: 0.045,
+                  decay: 0.3,
+                });
+                bell(c, out, t + 0.06, {
+                  freq: 2637,
+                  ratios: [1, 2.32],
+                  peak: 0.045,
+                  decay: 0.4,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Power-on thunk",
+              desc: "A soft low thump and a tick, like a panel powering on.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 90,
+                  to: 50,
+                  peak: 0.22,
+                  attack: 0.003,
+                  release: 0.12,
+                });
+                tone(c, out, t + 0.02, {
+                  freq: 2200,
+                  peak: 0.03,
+                  attack: 0.001,
+                  release: 0.02,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "error",
+          title: "Error",
+          where:
+            "A tool's readout dropping to NO SIGNAL after your input, a widget that fails to load, a chat error banner.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Static",
+              desc: "A short burst of radio static that cuts in and out: no signal.",
+              play(c, out, t) {
+                [0, 0.05, 0.11].forEach((at, i) => {
+                  noise(c, out, t + at, {
+                    freq: 1200,
+                    q: 0.9,
+                    peak: 0.1 - i * 0.02,
+                    attack: 0.002,
+                    hold: 0.025,
+                    decay: 0.02,
+                  });
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Low double buzz",
+              desc: "Two short, muffled low buzzes: not that.",
+              play(c, out, t) {
+                [0, 0.11].forEach((at) => {
+                  tone(c, out, t + at, {
+                    type: "square",
+                    freq: 110,
+                    peak: 0.07,
+                    attack: 0.004,
+                    hold: 0.05,
+                    release: 0.03,
+                    filter: ["lowpass", 600],
+                  });
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Falling blip",
+              desc: "Two blips falling by an octave: a gentle 'nope'.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 660,
+                  to: 330,
+                  peak: 0.08,
+                  attack: 0.003,
+                  release: 0.15,
+                });
+                tone(c, out, t + 0.13, {
+                  freq: 440,
+                  to: 220,
+                  peak: 0.07,
+                  attack: 0.003,
+                  release: 0.18,
+                });
+              },
+            },
+            {
+              id: "D",
+              name: "Dropout",
+              desc: "A sonar ping that breaks up into crackle part way through.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 1180,
+                  peak: 0.08,
+                  attack: 0.003,
+                  hold: 0.04,
+                  release: 0.02,
+                });
+                for (let g = 0; g < 6; g++) {
+                  noise(c, out, t + 0.06 + g * 0.022, {
+                    type: "bandpass",
+                    freq: rand(800, 2500),
+                    q: 2,
+                    peak: 0.06,
+                    attack: 0.001,
+                    decay: 0.012,
+                  });
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: "copy",
+          title: "Copied",
+          where:
+            "A copy button: code blocks, a tool's copy chip, chat answers.",
+          kind: "shot",
+          variants: [
+            {
+              id: "A",
+              name: "Double blip",
+              desc: "The same short blip twice, the second a quieter echo: a duplicate.",
+              play(c, out, t) {
+                tone(c, out, t, {
+                  freq: 880,
+                  peak: 0.1,
+                  attack: 0.004,
+                  release: 0.045,
+                });
+                tone(c, out, t + 0.07, {
+                  freq: 880,
+                  peak: 0.065,
+                  attack: 0.004,
+                  release: 0.045,
+                });
+              },
+            },
+            {
+              id: "B",
+              name: "Glass clink",
+              desc: "Two glasses touching: two quick high partials.",
+              play(c, out, t) {
+                bell(c, out, t, {
+                  freq: 2637,
+                  ratios: [1, 1.5],
+                  peak: 0.06,
+                  decay: 0.2,
+                });
+                bell(c, out, t + 0.05, {
+                  freq: 3951,
+                  ratios: [1, 1.5],
+                  peak: 0.04,
+                  decay: 0.25,
+                });
+              },
+            },
+            {
+              id: "C",
+              name: "Shutter",
+              desc: "A camera shutter: two crisp clicks, a snapshot taken.",
+              play(c, out, t) {
+                noise(c, out, t, {
+                  type: "highpass",
+                  freq: 2500,
+                  peak: 0.12,
+                  attack: 0.001,
+                  decay: 0.012,
+                });
+                noise(c, out, t + 0.035, {
+                  type: "highpass",
+                  freq: 3200,
+                  peak: 0.08,
+                  attack: 0.001,
+                  decay: 0.012,
+                });
+              },
+            },
+          ],
+        },
+        {
+          id: "control",
+          title: "Mute and volume control",
+          where:
+            "In the header of every page, at every width. These mock-ups drive this page's real master volume, so you can feel each one. The mute button keeps your level and gives it back.",
+          kind: "control",
+          variants: [
+            {
+              id: "A",
+              name: "Chip and deck",
+              desc: "A speaker chip beside the theme toggle mutes in one press. The small chevron opens a bevelled deck with an octagonal volume dial (MUTE, 1 to 11) and an Aura lever.",
+            },
+            {
+              id: "B",
+              name: "Header knob",
+              desc: "A small octagonal knob sits in the header itself: drag, scroll or use the arrow keys to turn it; the speaker chip beside it mutes. No panel to open.",
+            },
+            {
+              id: "C",
+              name: "Ice fader",
+              desc: "A short bevelled fader with eleven notches sits in the header, with the speaker chip before it to mute. Flat and quiet-looking.",
+            },
+          ],
+        },
+      ];
+
+      /* ===================================================================
+       * State and playing
+       * =================================================================== */
+
+      const STORE = "dox-g10-audition";
+      let picks = {};
+      let index = 0;
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORE) ?? "{}");
+        picks = saved.picks ?? {};
+        index = Math.min(STEPS.length, Math.max(0, saved.index ?? 0));
+      } catch {
+        picks = {};
+      }
+      /* `sound-audition.html#open` jumps straight to that step. */
+      const hashStep = STEPS.findIndex(
+        (step) => `#${step.id}` === location.hash,
+      );
+      if (hashStep !== -1) index = hashStep;
+      function save() {
+        try {
+          localStorage.setItem(STORE, JSON.stringify({ picks, index }));
+        } catch {
+          /* Private window: picks live for this visit only. */
+        }
+      }
+
+      const running = new Map(); // "step:variant" -> stop function
+
+      function stopLoop(key) {
+        const stop = running.get(key);
+        if (!stop) return;
+        running.delete(key);
+        stop();
+      }
+      function stopAll() {
+        for (const key of [...running.keys()]) stopLoop(key);
+        for (const button of document.querySelectorAll(
+          "[data-play][aria-pressed='true']",
+        )) {
+          button.setAttribute("aria-pressed", "false");
+          button.textContent = "Play";
+        }
+      }
+
+      /** Plays a loop on its own bus, which fades in, and fades out on stop. */
+      function startLoop(variant, fadeIn) {
+        const c = audio();
+        const bus = c.createGain();
+        bus.gain.setValueAtTime(0, c.currentTime);
+        bus.gain.linearRampToValueAtTime(1, c.currentTime + fadeIn);
+        bus.connect(master);
+        const inner = variant.start(c, bus);
+        return () => {
+          bus.gain.cancelScheduledValues(c.currentTime);
+          bus.gain.setTargetAtTime(0, c.currentTime, 0.25);
+          setTimeout(() => {
+            inner();
+            bus.disconnect();
+          }, 1800);
+        };
+      }
+
+      /** Fires a burst voice as a run: typing, detents or a stream. */
+      function playRun(run, variant) {
+        const c = audio();
+        let t = c.currentTime + 0.03;
+        if (run === "detents") {
+          for (let i = 0; i < 6; i++) variant.play(c, master, t + i * 0.11);
+        } else if (run === "typing") {
+          for (let i = 0; i < 11; i++) {
+            variant.play(c, master, t);
+            t += i === 4 ? 0.28 : rand(0.08, 0.17);
+          }
+        } else {
+          let last = -1;
+          const end = t + 2;
+          while (t < end) {
+            if (t - last >= 0.06) {
+              variant.play(c, master, t);
+              last = t;
+            }
+            t += rand(0.03, 0.14);
+          }
+        }
+      }
+
+      /** Plays a zoom voice as `count` wheel steps, in (dir +1) or out (−1). */
+      function playZoom(variant, dir, count) {
+        const c = audio();
+        const t0 = c.currentTime + 0.03;
+        const gesture = variant.gesture(c, master);
+        let z = dir > 0 ? 0.2 : 0.8;
+        for (let i = 0; i < count; i++) {
+          gesture.step(t0 + i * 0.075, dir, z);
+          z = Math.max(0, Math.min(1, z + dir * 0.08));
+        }
+        gesture.end(t0 + (count - 1) * 0.075 + 0.12);
+      }
+
+      function voiceFor(stepId) {
+        const step = STEPS.find((s) => s.id === stepId);
+        const pick = picks[stepId];
+        if (!step || pick === "none") return null;
+        return step.variants.find((v) => v.id === pick) ?? step.variants[0];
+      }
+      function playPicked(stepId) {
+        const v = voiceFor(stepId);
+        if (!v) return;
+        const c = audio();
+        v.play(c, master, c.currentTime + 0.005);
+      }
+
+      /* ===================================================================
+       * Rendering
+       * =================================================================== */
+
+      const stepEl = document.getElementById("step");
+      const progressEl = document.getElementById("progress");
+      const backBtn = document.getElementById("back");
+      const nextBtn = document.getElementById("next");
+
+      const SPEAKER =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w1" d="M16 9.5a3.5 3.5 0 0 1 0 5"/><path class="w2" d="M18.5 7a7 7 0 0 1 0 10"/></svg>';
+      const MUTED =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
+      const CHEVRON =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>';
+
+      /* A zoom card's buttons: one step and a run of eight, each way. */
+      const ZOOM_PLAYS = [
+        ["in1", "In"],
+        ["out1", "Out"],
+        ["in8", "In ×8"],
+        ["out8", "Out ×8"],
+      ];
+
+      function variantCard(step, v) {
+        const checked = picks[step.id] === v.id ? "checked" : "";
+        const play =
+          step.kind === "control"
+            ? ""
+            : step.kind === "zoom"
+              ? `<span class="zoom-plays">${ZOOM_PLAYS.map(
+                  ([key, label]) =>
+                    `<button type="button" data-zoom="${v.id}:${key}">${label}</button>`,
+                ).join("")}</span>`
+              : `<button type="button" data-play="${v.id}" aria-pressed="false">Play</button>`;
+        const mock =
+          step.kind === "control"
+            ? `<div class="mock" data-mock="${v.id}"></div>`
+            : "";
+        return `<article class="variant">
+          <h3><span class="letter">${v.id}</span>${v.name}</h3>
+          <div><p>${v.desc}</p>${mock}</div>
+          <div class="actions">${play}
+            <label class="pick"><input type="radio" name="pick" value="${v.id}" ${checked} />Pick ${v.id}</label>
+          </div>
+        </article>`;
+      }
+
+      function render() {
+        stopAll();
+        progressEl.textContent =
+          index < STEPS.length
+            ? `Step ${index + 1} of ${STEPS.length}`
+            : `Done · ${STEPS.length} steps`;
+        backBtn.disabled = index === 0;
+        nextBtn.disabled = index >= STEPS.length;
+        nextBtn.textContent = index === STEPS.length - 1 ? "Finish" : "Next";
+        if (index >= STEPS.length) return renderSummary();
+        const step = STEPS[index];
+        const noneChecked = picks[step.id] === "none" ? "checked" : "";
+        const tryBox =
+          step.run === "typing"
+            ? '<label class="try">Type here to hear your pick (or A):<input type="text" id="try-type" autocomplete="off" /></label>'
+            : step.run === "detents"
+              ? '<label class="try">Drag or arrow this slider to hear your pick (or A):<input type="range" id="try-detent" min="0" max="20" value="10" /></label>'
+              : step.kind === "zoom"
+                ? '<div class="try">Wheel, pinch or use the buttons over this box to zoom with your pick (or A):<div class="zoom-pad" id="try-zoom" tabindex="0" role="group" aria-label="Zoom pad"><button type="button" data-pad="1" aria-label="Zoom in">+</button><output id="try-zoom-level">50%</output><button type="button" data-pad="-1" aria-label="Zoom out">−</button></div></div>'
+                : "";
+        const none =
+          step.kind === "control"
+            ? ""
+            : `<label class="pick none"><input type="radio" name="pick" value="none" ${noneChecked} />No sound for this event</label>`;
+        stepEl.innerHTML = `<h2>${step.title}</h2>
+          <p class="where">${step.where}</p>
+          <div class="variants">${step.variants.map((v) => variantCard(step, v)).join("")}</div>
+          ${none}${tryBox}`;
+        wireStep(step);
+      }
+
+      function wireStep(step) {
+        for (const radio of stepEl.querySelectorAll('input[name="pick"]')) {
+          radio.addEventListener("change", () => {
+            picks[step.id] = radio.value;
+            save();
+          });
+        }
+        for (const button of stepEl.querySelectorAll("[data-play]")) {
+          const v = step.variants.find((x) => x.id === button.dataset.play);
+          button.addEventListener("click", () => {
+            const key = `${step.id}:${v.id}`;
+            if (step.kind === "loop") {
+              if (running.has(key)) {
+                stopLoop(key);
+                button.setAttribute("aria-pressed", "false");
+                button.textContent = "Play";
+                return;
+              }
+              stopAll();
+              running.set(key, startLoop(v, step.id === "aura" ? 3 : 0.3));
+              button.setAttribute("aria-pressed", "true");
+              button.textContent = "Stop";
+            } else if (step.kind === "burst") {
+              playRun(step.run, v);
+            } else {
+              const c = audio();
+              v.play(c, master, c.currentTime + 0.01);
+            }
+          });
+        }
+        const typing = stepEl.querySelector("#try-type");
+        typing?.addEventListener("keydown", (event) => {
+          if (event.isComposing || event.repeat) return;
+          playPicked("key");
+        });
+        const slider = stepEl.querySelector("#try-detent");
+        slider?.addEventListener("input", () => playPicked("detent"));
+        for (const button of stepEl.querySelectorAll("[data-zoom]")) {
+          const [vid, key] = button.dataset.zoom.split(":");
+          const v = step.variants.find((x) => x.id === vid);
+          button.addEventListener("click", () =>
+            playZoom(v, key.startsWith("in") ? 1 : -1, key.endsWith("8") ? 8 : 1),
+          );
+        }
+        const pad = stepEl.querySelector("#try-zoom");
+        if (pad) wireZoomPad(pad);
+        if (step.kind === "control") mountMocks();
+      }
+
+      /**
+       * The zoom pad: a wheel or trackpad over it, a pinch (ctrl+wheel), the
+       * + and − buttons or the arrow keys zoom with the picked voice. Steps
+       * closer than 60 ms merge into one, as a real wheel's would, and a
+       * gesture ends 180 ms after its last step.
+       */
+      function wireZoomPad(pad) {
+        const readout = pad.querySelector("#try-zoom-level");
+        let z = 0.5;
+        let gesture = null;
+        let last = -1;
+        let idle = 0;
+        const zoomBy = (dir) => {
+          const v = voiceFor("zoom") ?? STEPS.find((s) => s.id === "zoom").variants[0];
+          if (picks.zoom === "none") return;
+          const c = audio();
+          z = Math.max(0, Math.min(1, z + dir * 0.06));
+          readout.textContent = `${Math.round(z * 100)}%`;
+          if (!gesture) gesture = v.gesture(c, master);
+          if (c.currentTime - last >= 0.06) {
+            gesture.step(c.currentTime + 0.01, dir, z);
+            last = c.currentTime;
+          }
+          clearTimeout(idle);
+          idle = setTimeout(() => {
+            gesture?.end(c.currentTime + 0.01);
+            gesture = null;
+          }, 180);
+        };
+        pad.addEventListener(
+          "wheel",
+          (event) => {
+            event.preventDefault();
+            if (event.deltaY !== 0) zoomBy(event.deltaY < 0 ? 1 : -1);
+          },
+          { passive: false },
+        );
+        for (const button of pad.querySelectorAll("[data-pad]"))
+          button.addEventListener("click", () => zoomBy(Number(button.dataset.pad)));
+        pad.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowUp" || event.key === "+") zoomBy(1);
+          else if (event.key === "ArrowDown" || event.key === "-") zoomBy(-1);
+          else return;
+          event.preventDefault();
+        });
+      }
+
+      function renderSummary() {
+        const out = {};
+        for (const step of STEPS) out[step.id] = picks[step.id] ?? null;
+        const text = JSON.stringify(out, null, 2);
+        const missing = STEPS.filter((s) => !picks[s.id]).map((s) => s.title);
+        stepEl.innerHTML = `<h2>Your picks</h2>
+          <p class="where">Copy this block and paste it back into the planning session.${
+            missing.length ? ` Not picked yet: ${missing.join(", ")}.` : ""
+          }</p>
+          <pre class="picks" id="picks">${text}</pre>
+          <div class="actions"><button type="button" id="copy-picks">Copy picks</button>
+          <button type="button" id="restart">Start again</button></div>`;
+        document
+          .getElementById("copy-picks")
+          .addEventListener("click", async (event) => {
+            try {
+              await navigator.clipboard.writeText(text);
+              event.target.textContent = "Copied";
+            } catch {
+              const range = document.createRange();
+              range.selectNodeContents(document.getElementById("picks"));
+              const sel = getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+              event.target.textContent = "Selected: press Copy";
+            }
+            playPicked("copy");
+          });
+        document.getElementById("restart").addEventListener("click", () => {
+          index = 0;
+          save();
+          render();
+        });
+      }
+
+      /* ===================================================================
+       * Control mock-ups. Each one drives the page's master level, the way
+       * the real control drives the site's. The dial is a native radio group
+       * under a drawn octagon (arrow keys, Tab and the announcement come from
+       * the browser); the lever is a native checkbox with role="switch".
+       * =================================================================== */
+
+      const LEVELS = [
+        "MUTE",
+        ...Array.from({ length: 11 }, (_, i) => String(i + 1)),
+      ];
+      const SWEEP = 240;
+      const angleOf = (i) => -SWEEP / 2 + (i * SWEEP) / (LEVELS.length - 1);
+      let lastAudible = 6;
+
+      function octagon(r, cy) {
+        return Array.from({ length: 8 }, (_, i) => {
+          const a = ((i * 45 + 22.5) * Math.PI) / 180;
+          return `${(50 + r * Math.sin(a)).toFixed(3)},${((cy ?? 50) - r * Math.cos(a)).toFixed(3)}`;
+        }).join(" ");
+      }
+      let gradientCount = 0;
+      function knobSvg() {
+        gradientCount += 1;
+        const id = `face-${gradientCount}`;
+        return `<svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="${id}" cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="#e6f9ff"/><stop offset="45%" stop-color="#2a6070"/><stop offset="100%" stop-color="#06141c"/></radialGradient></defs>
+          <polygon class="lip" points="${octagon(48, 54)}"/><polygon class="rim" points="${octagon(48)}"/>
+          <polygon class="face" fill="url(#${id})" points="${octagon(36)}"/><line class="needle" x1="50" y1="40" x2="50" y2="14"/></svg>`;
+      }
+
+      function dialHtml(name, mini) {
+        const labels = LEVELS.map((label, i) => {
+          const rad = (angleOf(i) * Math.PI) / 180;
+          const pos = mini
+            ? ""
+            : `style="--x:${Math.sin(rad).toFixed(3)};--y:${(-Math.cos(rad)).toFixed(3)}"`;
+          const cls = mini ? "sr-only" : "detent";
+          return `<label class="${cls}" ${pos}><input class="sr-only" type="radio" name="${name}" value="${i}" />${label}</label>`;
+        }).join("");
+        return `<fieldset class="dial${mini ? " mini" : ""}"><legend class="sr-only">Volume</legend>
+          <span class="knob">${knobSvg()}</span>${labels}</fieldset>`;
+      }
+
+      function wireDial(fieldset) {
+        const knob = fieldset.querySelector(".knob");
+        const radios = [...fieldset.querySelectorAll("input")];
+        const show = (lv) => {
+          knob.style.setProperty("--angle", `${angleOf(lv)}deg`);
+          radios[lv].checked = true;
+        };
+        const set = (lv) => {
+          const next = Math.max(0, Math.min(LEVELS.length - 1, lv));
+          if (next === level) return;
+          if (next > 0) lastAudible = next;
+          setMasterLevel(next);
+          playPicked("detent");
+        };
+        for (const r of radios)
+          r.addEventListener("change", () => set(Number(r.value)));
+        // Relative drag: the knob turns by how far the pointer moves round it,
+        // so a grab never jumps the value.
+        let grab = null;
+        knob.addEventListener("pointerdown", (event) => {
+          knob.setPointerCapture(event.pointerId);
+          const box = knob.getBoundingClientRect();
+          const cx = box.left + box.width / 2;
+          const cy = box.top + box.height / 2;
+          grab = {
+            cx,
+            cy,
+            from: Math.atan2(event.clientX - cx, cy - event.clientY),
+            start: level,
+            mini: fieldset.classList.contains("mini"),
+          };
+          radios[level].focus();
+        });
+        knob.addEventListener("pointermove", (event) => {
+          if (!grab || !knob.hasPointerCapture(event.pointerId)) return;
+          let turned;
+          if (grab.mini) {
+            turned = (grab.cy - event.clientY) / 9;
+          } else {
+            const now = Math.atan2(
+              event.clientX - grab.cx,
+              grab.cy - event.clientY,
+            );
+            turned =
+              ((now - grab.from) * 180) /
+              Math.PI /
+              (SWEEP / (LEVELS.length - 1));
+          }
+          set(grab.start + Math.round(turned));
+        });
+        knob.addEventListener("pointerup", () => {
+          grab = null;
+        });
+        // Wheel: 40 units of delta make one detent; after a step the dial
+        // ignores the wheel until 180 ms of quiet, so one flick is one step.
+        let acc = 0;
+        let locked = false;
+        let quiet = 0;
+        fieldset.addEventListener(
+          "wheel",
+          (event) => {
+            event.preventDefault();
+            clearTimeout(quiet);
+            quiet = setTimeout(() => {
+              locked = false;
+              acc = 0;
+            }, 180);
+            if (locked) return;
+            acc += event.deltaY;
+            if (Math.abs(acc) < 40) return;
+            set(level - Math.sign(acc));
+            acc = 0;
+            locked = true;
+          },
+          { passive: false },
+        );
+        show(level);
+        levelListeners.add(show);
+      }
+
+      function muteChip() {
+        return `<button type="button" class="chip" data-mute aria-pressed="false" aria-label="Mute sound">${SPEAKER}</button>`;
+      }
+      function wireMute(button) {
+        const show = (lv) => {
+          button.setAttribute("aria-pressed", String(lv === 0));
+          button.innerHTML = lv === 0 ? MUTED : SPEAKER;
+        };
+        button.addEventListener("click", () => {
+          if (level === 0) {
+            setMasterLevel(lastAudible || 6);
+            playPicked("toggle");
+          } else {
+            lastAudible = level;
+            playPicked("toggle");
+            setMasterLevel(0);
+          }
+        });
+        show(level);
+        levelListeners.add(show);
+      }
+
+      function mountMocks() {
+        levelListeners.clear();
+        levelListeners.add(syncMaster);
+        const brand =
+          '<span class="brand">NorthGuild <b>/ gmt</b></span><span class="slack"></span>';
+        const a = stepEl.querySelector('[data-mock="A"]');
+        a.innerHTML = `<div class="mock-bar">${brand}${muteChip()}<button type="button" class="chip narrow" data-deck aria-expanded="false" aria-label="Sound settings">${CHEVRON}</button></div>
+          <div class="deck bevel" hidden>${dialHtml("vol-a")}
+          <label class="lever"><span class="on">AURA</span><span class="plate" aria-hidden="true"><span class="nut"></span><span class="bat"></span></span><span class="off">OFF</span>
+          <input class="sr-only" type="checkbox" role="switch" checked /></label></div>`;
+        const deckBtn = a.querySelector("[data-deck]");
+        const deck = a.querySelector(".deck");
+        deckBtn.addEventListener("click", () => {
+          const open = deck.hidden;
+          deck.hidden = !open;
+          deckBtn.setAttribute("aria-expanded", String(open));
+          playPicked(open ? "open" : "close");
+        });
+        a.querySelector(".lever input").addEventListener("change", () =>
+          playPicked("toggle"),
+        );
+        a.querySelector(".lever .plate").addEventListener("click", (event) => {
+          event.preventDefault();
+          a.querySelector(".lever input").click();
+        });
+        wireDial(a.querySelector("fieldset"));
+
+        const b = stepEl.querySelector('[data-mock="B"]');
+        b.innerHTML = `<div class="mock-bar">${brand}${muteChip()}${dialHtml("vol-b", true)}<span class="level-chip" data-level></span></div>`;
+        wireDial(b.querySelector("fieldset"));
+
+        const cMock = stepEl.querySelector('[data-mock="C"]');
+        cMock.innerHTML = `<div class="mock-bar">${brand}<span class="fader">${muteChip()}<input type="range" min="0" max="11" step="1" aria-label="Volume" /></span><span class="level-chip" data-level></span></div>`;
+        const fader = cMock.querySelector('input[type="range"]');
+        fader.addEventListener("input", () => {
+          const next = Number(fader.value);
+          if (next > 0) lastAudible = next;
+          setMasterLevel(next);
+          playPicked("detent");
+        });
+        levelListeners.add((lv) => {
+          fader.value = String(lv);
+          fader.setAttribute("aria-valuetext", lv === 0 ? "Muted" : String(lv));
+        });
+
+        for (const chip of stepEl.querySelectorAll("[data-mute]"))
+          wireMute(chip);
+        const showLevel = (lv) => {
+          for (const el of stepEl.querySelectorAll("[data-level]"))
+            el.textContent = lv === 0 ? "MUTE" : String(lv);
+        };
+        showLevel(level);
+        levelListeners.add(showLevel);
+      }
+
+      /* ===================================================================
+       * Master volume and paging
+       * =================================================================== */
+
+      const masterInput = document.getElementById("master");
+      const masterOut = document.getElementById("master-out");
+      function syncMaster(lv) {
+        masterInput.value = String(lv);
+        masterOut.textContent = lv === 0 ? "MUTE" : String(lv);
+      }
+      levelListeners.add(syncMaster);
+      masterInput.addEventListener("input", () => {
+        const next = Number(masterInput.value);
+        if (next > 0) lastAudible = next;
+        audio();
+        setMasterLevel(next);
+        playPicked("detent");
+      });
+      document.getElementById("stop-all").addEventListener("click", stopAll);
+      backBtn.addEventListener("click", () => {
+        index = Math.max(0, index - 1);
+        save();
+        render();
+      });
+      nextBtn.addEventListener("click", () => {
+        index = Math.min(STEPS.length, index + 1);
+        save();
+        render();
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) stopAll();
+      });
+      render();
+    </script>
+  </body>
+</html>

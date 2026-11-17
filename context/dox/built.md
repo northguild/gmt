@@ -1190,9 +1190,11 @@ typed in CSS. The reveal stagger is `--gmt-reveal-i`, set by `scroll-reveal.ts`.
   bright body behind still shows). In the hero the close is a pull tab on the pane: that glass,
   no border or bevel on its joining side, lapping the pane by 1px where a `mask` opens the pane's
   border for 5rem; the chevron, not the tab, is dimmed at rest (`--drawer-close-rest: 1`, ice at 88%), with a dark `drop-shadow` for 3:1 over a bright body. The drawer's text carries `--gmt-shadow-halo`. The
-  clock list there adds no fill and its cards carry void .55, which holds AA over white. On opening, the region slides in and then one
-  band of ice light crosses it from the inline-end edge, on a `::after` layer over the content
-  with no pointer events (`contain: layout` gives the layer its box); the border never changes.
+  clock list there adds no fill and its cards carry void .55, which holds AA over white. As the region slides in, and again as it slides
+  out, one band of ice light crosses it on the slide's 240 ms (`--gmt-duration-med`), as the
+  sidebar does to and from the landing. The band is on a `::after` layer over the content with no
+  pointer events (`contain: layout` gives the layer its box), named `sheen` open and `sheen-out`
+  closed so each change starts it again; the border never changes.
   No sheen under reduced motion, `forced-colors` or `prefers-contrast: more`. Neither holds an
   animation the reader cannot stop; the 0.3 s opacity fade (`--gmt-duration-fade`) stays under
   reduced motion.
@@ -3784,12 +3786,12 @@ Shared hooks come first, then the globe, then the clock-change pages.
     the right of the middle column, just before the icons, at Starlight's 22rem cap, on every
     page, as on northguild.dev. It shrinks first when the bar runs short. Below 50rem Starlight's
     search icon stays where Starlight puts it.
-  - The right-hand group reads Dox, the theme toggle, then GitHub and Discord, with no divider,
-    so Discord ends 1rem minus the buttons' 4 px margin from the edge. The NorthGuild link and
-    GitHub and Discord land on northguild.dev's pixels (mark at 16, 13; buttons 38 px at y 8,
-    Discord's right edge 12 px in), so the step between the sites changes only what lies between
-    them. The theme toggle's `starlight-theme-select` wrapper is a flex box, or the inline element
-    sets the button on the text baseline, 2 px high.
+  - The right-hand group reads the places first, nearest out: Dox (this site), then GitHub and
+    Discord (other sites); the Settings gear comes last, at the edge, since it goes nowhere and
+    acts on every page. No divider; the gear ends 1rem minus the buttons' 4 px margin from the
+    edge. The NorthGuild link, GitHub, Discord and the gear are northguild.dev's too and land on
+    its pixels (mark at 16, 13; buttons 38 px at y 8, the gear's right edge 12 px in), so the
+    step between the sites changes only what lies between them.
   - On the landing the bar is glass over the hero: `.gmt-herostage` starts at the top of the
     page (`margin-block-start: -nav height`, padding back by the same), so the sky and the globe
     layer fill the space under the bar while the copy, the Earth's frame and the drawer start
@@ -3812,12 +3814,14 @@ Shared hooks come first, then the globe, then the clock-change pages.
     (`gmt-shell.css`), so the row is 30 px centred at 27, as there.
   - **The entrance on the landing** (`gmt-entrance-freeze.css`). The NorthGuild link is on
     screen from the first paint and never animates. "/ gmt v‹version›" freezes in at t0, then
-    search (0.15 s), Dox (0.23 s) and the theme toggle (0.31 s); GitHub and Discord never hide.
-    Dox and the theme toggle freeze in 1.35 s, not 1.6 s, so each has locked before its shine.
-    The four chips shine left to right, 0.16 s apart from 1.75 s: Dox, the theme toggle, GitHub,
-    Discord. `ng-shine` brightens the icon to the frost
-    colour and shows the chip's edge while a glint crosses it. Reduced motion fades the four pieces that
-    freeze and leaves GitHub and Discord still; forced colours sweeps them. A view-transition
+    search (0.15 s) and Dox (0.23 s). GitHub, Discord and the Settings gear are on the page the
+    reader came from, so they never hide: they show from the first paint in northguild.dev's dim
+    ice and turn cyan with their shine. Dox freezes in 1.35 s, not 1.6 s, so it has locked before
+    its shine. The four chips shine left to right, 0.16 s apart from 1.75 s: Dox, GitHub,
+    Discord, the gear. `ng-shine` brightens Dox to the frost colour and `ng-shine-in` turns the
+    other three cyan, each showing the chip's edge while a glint crosses it. Reduced motion fades
+    the three pieces that freeze and tints GitHub, Discord and the gear in place; forced colours
+    sweeps the three. A view-transition
     arrival (`data-arrival="transition"`) keeps the whole bar still.
   - **The cross-site transition.** northguild.dev and Dox are one origin, so a click between them
     runs a cross-document view transition once both opt in (`@view-transition`, and
@@ -3875,6 +3879,296 @@ Shared hooks come first, then the globe, then the clock-change pages.
   `prefers-contrast: more` and `forced-colors`; the global reset handles reduced motion.
 - **Trap:** the package `build` waits on `typecheck`, so `astro sync` and `astro build` never
   race on the content-layer store.
+
+### Sound
+
+`DOX-G10`. Web Audio only, in `src/lib/sound/`; the control, chrome cues, aura, chat and tool
+cues land in later slices and hang off the bus described here.
+
+- **Modules.** `cue.ts` is the only one on every page's critical path (with `settings.ts`):
+  `cue(name, rank?)` dispatches `gmt:cue` on `document` and returns whether the engine played it
+  (the engine sets `heard` on the event's detail; dispatch is synchronous); `rank` reaches the voice
+  as its fourth argument (0 when absent). `loop(name)` dispatches `gmt:loop` and returns the
+  stop. `startCue()` (called once from `Head.astro`) arms the unlock and returns a teardown that
+  tests and the `sound-check` gate use. `engine.ts` owns the `AudioContext`'s master gain and the
+  voices; `kit.ts` holds the helpers ported from the audition (`hz`, `tone`, `noise`, `bell`, `hall`,
+  `echo`, `scheduler`, shared effects per context); `voices.ts` maps every `CueName` to a voice
+  (`null` until a slice gives it one). `src/test/fake-audio.ts` is the jsdom stand-in: tests assert
+  on the recorded schedule, never on sound.
+  The audition itself lives at [`reference/sound-audition.html`](./reference/sound-audition.html):
+  every variant of every step, playable in a browser, kept so the picks can be heard again and
+  changed. A voice's doc comment names the step and variant letter it came from.
+- **Never import the engine statically.** `cue.ts` reaches `engine.ts` through `import()` on idle
+  (`setTimeout(…, 1)` where `requestIdleCallback` is missing), only when not muted. A cue with no
+  engine listening is unheard, which drops it; nothing queues.
+- **The key.** `dox:sound` holds `{ level: 1–11, muted, aura, track }`. Default: level 5, aura on,
+  track `"ice"` (an unknown or missing track reads as `"ice"`, so a choice saved before the track
+  existed still reads), muted only under `prefers-reduced-motion: reduce`. It is written only on a reader's choice, and
+  once written it wins over the query. `ThemeProvider.astro` applies the same rule inline and sets
+  `data-sound="on" | "off"` on `<html>` before first paint; `settings.test.ts` runs that script
+  and holds it equal to `readSound()`. Every storage access is in try/catch.
+- **Unlock.** No `AudioContext` exists while muted. Otherwise capture-phase listeners on `window`
+  (`pointerdown`, `pointerup`, `keydown`, `touchend`) create and `resume()` the context
+  synchronously in the first activation event (Safari does not count a resume after an `await`),
+  and go once it runs. A reader's own unmute is a gesture and unlocks at once; another tab's waits
+  for one. After an in-site arrival (same-origin `navigation.activation.from`), unlock runs at load
+  unless `getAutoplayPolicy?.("audiocontext")` answers other than `"allowed"`; Chrome has no such
+  call, so absent counts as allowed, and where the context stays suspended (Safari) the gesture
+  listeners keep waiting with no console error. Creating a context anywhere else draws Chrome's suspended-context
+  warning.
+- **Audio clock only.** Every schedule, gap and fade reads `ctx.currentTime`; the engine plays a
+  cue at `currentTime + 5 ms` and drops one inside its gap (30 ms; `stream` 60, `key` 25, `ready`
+  400). `setInterval` is the scheduler's tick, never a clock read. Level maps to
+  `(level / 11) * 0.6`; mute ramps to 0 over 0.05 s, then suspends. A hidden tab suspends 0.65 s
+  later (`HIDE_TAIL_MS`), once the aura's fade-out and a press's ping have played, so a link that
+  opens a new tab is heard to the end; showing the tab again inside that time cancels it. A
+  suspended context takes a cue only inside a reader's gesture (`navigator.userActivation.isActive`),
+  which is starting it; without `userActivation` it takes none, since a cue scheduled on a stopped
+  clock would play late, in a burst with the rest, once it starts.
+  `navigator.audioSession.type = "ambient"` where it exists.
+- **The press hook.** A second delegated `click` listener in `src/lib/sonar.ts`, on `document` in
+  the capture phase and added after the re-ping, plays `click` (Sonar, 1180 Hz) for a link (`<a href>`,
+  `[role="link"]`, `LINK_SELECTOR`) and `press` (Deep sonar, 620 Hz, peak 0.131 on a unity bus)
+  for every other pressable: `button`, `[role="button"]`, `[role="tab"]`, `summary` or a
+  `SONAR_SELECTOR` match. The focus re-ping plays the same one for the same element. An `<a>`
+  without `href` (`NOT_A_CONTROL`) is not a control: no ping, no re-ping. Every route change is a
+  full page load, which ends the audio, so a link whose ping was heard waits for it:
+  `holdLink()` (`sound/link-hold.ts`) decides in a `window` bubble listener, after every handler,
+  and if nothing took the press (`defaultPrevented`) and it leaves this document in this tab, it
+  cancels the click and calls `location.assign(href)` once the ping and the whole of its first echo have played (333 ms,
+  `LINK_HOLD_MS`, worked out from `SONAR_PING` and `SONAR_ECHO` in `sonar-lock.ts`). The Sonar
+  ping's tail is shorter than the audition's (0.18 s and 0.14 s, not 0.32 s and 0.25 s) so leaving
+  a page does not drag.
+  Left to the browser: modifier keys or another button, a `target` other than `_self`, `download`,
+  `rel="noreferrer"` or `referrerpolicy`, a non-http(s) URL, and a hash jump within the page. A newer
+  held press replaces an older one. Muted, nothing is heard and nothing waits. Capture, because Starlight's Search button stops its
+  click from bubbling; the listener changes nothing about the event. Silent: anything in
+  `[data-cue]` (it fires its own cue) and an element carrying `data-quiet-focus` unless it is a
+  focused `SONAR_SELECTOR` control (the re-ping clears the mark there, so a real press after a
+  carousel hand-over still sounds). It reads
+  `event.composedPath()`, not `target.closest`: a control that swaps its own icon in its handler
+  detaches the clicked node.
+- **Gate.** `sound-check` (tier `pr`, all three engines, no baseline) logs `AudioContext`
+  construction, state changes and oscillator starts through an init-script wrapper, and runs four
+  scenarios per page on `/` and `/tools/zoned-earth/`: fresh, reduced motion, reduced motion with a
+  saved unmute, a saved mute across a reload. Its press target is the first button, Starlight's
+  Search; the gate closes the modal it opens with Escape.
+- **Rail gate.** `rail-stored-still` (tier `pr`, `/dox/`) saves a rail width in an init script and
+  records the rail's width every animation frame until a second after `load`; no frame may differ
+  from the final one, which must be the saved width clamped to the rail's own bounds. A double-click
+  on the separator must reset to the default and hold. The separator is a zero-width line, so the
+  gate double-clicks with the mouse at its box.
+- **The control.** Every reader setting sits behind one header button. `SettingsControl.astro`
+  renders `components/settings-control.ts`: a solid gear (Lucide `settings`, filled with an
+  even-odd hub and cropped to the 19.5 px GitHub's mark stands) last in the right group, styled
+  like the icons before it (`gmt-icon-button`), named "Settings", with `popovertarget` on one `[popover]`
+  (`role="group"`, named "Settings"). The panel reads top to bottom: a small "Dark theme" switch,
+  a hairline, the square mute button (`button`, `pressed`, `icon`, `labelHidden`) beside an
+  11-notch fader (`range`, `look: "fader"`) that fills the rest, then a small Aura switch and
+  the "Aura track" radio pair (`chips`, `kind: "radio"`, name `gmt-sound-track`): Ice cavern or
+  Deep drone. Each switch row puts its words at the start and the switch at the end, a gap
+  between; the pair is one segmented control the panel's width under a quiet extra-small legend,
+  no radio dot, the picked half in the kit's solid selected fill. The pair stays enabled with the aura off, so a pick made then holds for when it is
+  on. `lib/settings-control.ts` mounts it: `theme.ts` for the theme switch, `lib/sound/control.ts`
+  for mute, fader, Aura and the track. It replaces Starlight's `ThemeSelect` (no override, no mobile-menu
+  copy). The panel is right-aligned to the button, or centred under it where that would cross the
+  1rem window gutter (`position-try-fallbacks`). The mute button's speaker (slashed when muted) is
+  drawn in CSS from `data-sound` on `<html>`, so it is right on the first frame. The popover is a
+  top-layer panel anchored under the button (fixed insets where anchoring is missing), so nothing
+  in the bar moves. The right group shows at every width and below 50rem hides all but the
+  settings control; the header grid is northguild.dev's. Opening moves focus to the theme switch
+  (on `toggle`), and Escape returns it to the button through `esc-native.ts`.
+- **The theme.** `theme.ts` keeps Starlight's `starlight-theme` key and `data-theme` on `<html>`,
+  which `ThemeProvider.astro` sets before first paint. The switch saves a theme only while it
+  differs from the system's and removes the key when it matches, so a reader who never chose
+  follows the system live (`prefers-color-scheme` change); another tab's change follows through
+  `storage`. A press always flips the shown theme. A fader drag writes `{ level, muted: false }`; the fader plays the
+  `detent` voice (Glass tick) per changed step from `GmtRange`, the mute button and switch play
+  `toggle` (Ice snap) through `data-cue`, the theme switch too, and `watchSwitchCue()` in `sonar.ts` covers every switch
+  carrying it. The popover comes and goes with the motion every native panel shares (below). The gear carries
+  `data-ping="sonar"`, so its press plays the Sonar ping as the Dox, GitHub and Discord links
+  beside it do, and the panel plays the Steel breath in and out like any `[popover]`. Unmuting
+  defers its cue one task so the engine import it starts has landed.
+  `sound-check` adds `control <width>`, `control mute` and `control reduced`: placement last in
+  the group, the popover inside the viewport and under the button, keyboard flow, and no box
+  moves under a drag or a toggle, at 320, 390, 768 and 1440.
+- **Pills on `/dox`.** A starter pill carries `data-cue`, so the press hook is silent on it and
+  `DoxPage.pickExample` owns the sound: the press that opens the rail is the rail's `open`
+  (once, from the effect), and a press that stays on the page (a swap while a widget is open, or a
+  question the chat did not send because it is busy) plays the press ping.
+- **Chrome cues.** `open` and `close` (Steel breath, rising and sinking) come from the panel that moves, not
+  the press: `native-panels.ts` listens for `toggle` on `[popover]` (capture; `popover="manual"` is
+  skipped, as in `esc-native.ts`), `drawer.ts` and `menu-button.ts` cue in their state setter, and
+  `DoxPage.tsx` cues when the chat rail goes from none to a widget and back. `copy` (Glass clink) and
+  `error` (Low double buzz) fire from `GmtCopy` and, through `code-copy.ts`, from the Expressive Code
+  copy button. A control that fires its own cue carries `data-cue`, so the press ping stays out; the
+  code-block copy button is excluded by selector because it is not ours. The Settings panel's
+  "Dark theme" switch is a kit switch and plays `toggle` (Ice snap) like Aura.
+- **Native panel motion** (`gmt-primitives.css`, "Native panels: in and out"). Every
+  non-manual `[popover]` (Settings, Data credits, the hive's info panel) comes and goes like the
+  drawer: a fade and a slide from `--gmt-panel-from` (default `0 -0.5rem`, a drop; Data credits
+  sets the side it opens from per placement, the hive panel `0 0.5rem` since it opens above) over
+  `--gmt-duration-med` (240 ms) on `--gmt-ease-sweep`, with `@starting-style` and `display` and
+  `overlay` held by `allow-discrete` so the close fades too. A `::after` band of `--gmt-sheen`
+  crosses on open and again on close: the animation name flips between `gmt-panel-sheen` and
+  `gmt-panel-sheen-out`, so each state change restarts it. Reduced motion keeps the fade only;
+  forced colours and more contrast drop the band. Each panel plays the Steel breath through
+  `native-panels.ts`.
+- **Sidebar arrival.** `sidebar-cue.ts` writes `sessionStorage["dox:sidebar"]` (`1` shown, `0` not)
+  as each page loads or is restored from the back/forward cache, after reading it, so the flag
+  always holds the page just left; a tab's first page has none and plays nothing. "Shown" is the
+  `.sidebar-pane`'s computed box on screen (wide layout, not the closed mobile menu). A shown page
+  after an unshown one cues `open`, the reverse `close`, no change nothing; an arrival from another
+  origin, reduced motion (the view transition it doubles is off) and muted play nothing. `cue.ts`
+  holds the cue until the engine is attached and the context runs, and drops it after 1.5 s, so a
+  late gesture never plays a stale one. A `pagehide` write and `navigation.activation.from` were
+  rejected: the first is skipped by mobile browsers that kill a page, the second says where the
+  reader came from, not what that page showed. `sound-check` `sidebar arrival` clicks `/` to a
+  guide and back in Chromium with no autoplay flag.
+- **Entrance.** `entranceSounds(root)` (`lib/sound/entrance.ts`, started by `hero-entrance.ts` as it
+  sets `data-entrance="run"`, stopped when the entrance ends or aborts) listens for `animationstart`
+  on the document and plays a Steel whisper (`paint`) as a piece freezes, frosts, pops or sweeps in,
+  and a Steel shing (`glint`) as the light crosses a chip or button, each shing a rank higher (4%
+  higher pitch per rank). The stylesheet owns the timing; nothing is read or restated, so pieces that
+  arm late (the globe's control stack, the location card) are heard on their own start, and a
+  view-transition arrival's still header is silent. `ng-fade` counts only on the pager and
+  `ng-freeze-fly-left` only on the carousel's first (`data-motion="load"`) panel; the chips'
+  colour shine is the glint's. A frame's events are gathered in one `requestAnimationFrame`
+  callback: at most one whisper and one shing per frame. Reduced motion (the freeze becomes a fade)
+  and a first visit with no gesture (the engine is not running) are silent. `sound-check`
+  `entrance` reads the painted and glinted pieces' delays in the page at `run` and requires a sound
+  within 40 ms of each, with glint pitch rising.
+- **Aura.** `lib/sound/aura.ts` is the landing's aura, one of two tracks the reader picks: "Ice
+  cavern" (audition `aura` D, the default: six held sines, a 73.4 Hz drone and a glint every 1.6
+  to 4 s through `kit.scheduler`, in a 4.5 s hall) or "Deep drone" (audition `aura` A: a sub
+  drone, suspended pad chords, a beacon and pings in an echo, at 56 bpm, in a 4 s hall). Both
+  sit behind one bus at 0.25 of master (12 dB under the cues), built once per context
+  (`sharedFx`); a restart ramps the same bus. Each track plays into its own gain under the bus: a
+  change of track while it plays crossfades the two gains over 1.5 s (`AURA_RETURN_FADE`) while
+  the bus holds, and a stop drops the track's gain to 0 as the bus reaches 0, so Deep drone's
+  ringing pads do not return with the next fade in. Deep drone carries a trim (`DEEP_TRIM`, 0.09)
+  so its peak stays under Ice cavern's: rendered offline through the bus, Deep drone peaks at
+  −38.0 to −37.5 dBFS and Ice cavern at −36.6 to −35.8 dBFS. `hall()` caches its impulse per
+  context and length. `HeroSpace.astro` sets `data-aura` on `<html>`
+  with an inline script, and the engine imports `aura.ts` dynamically only where that attribute is
+  present, the Aura switch is on and sound is not muted, so no other page requests the chunk
+  (about 1.3 KB gzipped). Fades are on the audio clock: 3 s in from the gesture that attaches the
+  engine, 1.5 s in on every return (unmute, switch on, tab visible, cache restore), 0.6 s out
+  (mute, switch off, tab hidden). A hidden tab stops the aura before the context suspends, so the
+  glint interval is gone; `pagehide` cuts it at once and suspends the context (closing it would
+  strand `cue.ts`'s reference), and a `pageshow` from the cache resumes at once or on the next
+  press or key. The unmute/switch path needs no code in `control.ts`: the engine's `onSoundChange`
+  hears it, another tab's change included. `sound-check` `aura`, `aura switch inline`, `aura switch
+  popover`, `aura track` and `aura not loaded` (Chromium; `--only aura` runs just them) log the aura's sources
+  apart from voices (by its chunk name in the stack) and read its bus ramps.
+- **Chat cues.** `DoxChat.tsx` calls `cue()` and `loop()`: `send` (Sonar launch) after `sendMessage`;
+  `loop("thinking")` (Hum pulse) in an effect on `isWaiting`, so its cleanup stops it on the first
+  assistant message, a stop, an error or an unmount; `stream` (Morse) when the last assistant text
+  grows while streaming (the engine's 60 ms gap thins it); `done` (Ice bell) on `streaming` to
+  `ready` with an assistant message last; `error` in `onError`, on a `data-refusal` part and on a
+  stall. `endedEarlyRef` is set by the Stop button and the idle timer and cleared by the next send,
+  so an aborted answer never rings the bell. A restored conversation never changes status, so it is
+  silent. `fadedLoop` (`loops.ts`) puts a loop behind its own bus that swells in over 0.3 s and dims
+  over 0.15 s, then calls the voice's stop; the Hum pulse body is the audition's. `typing.ts` (started
+  by the engine, so on every page) plays `key` (Data blip) on a capture `keydown` in any text field,
+  with no opt-in: a `<textarea>`, a contenteditable element, or an `<input>` of type text, search,
+  email, url, tel or number, read from `composedPath()[0]`. Printable keys and Backspace count;
+  Enter only in a textarea or contenteditable (the composer's Enter blips under the Sonar launch; in
+  a one-line field Enter submits or picks an option, which have their own cues). Never a password
+  field (a sound per key would tell the room its length), a read-only field, `isComposing`,
+  `repeat` or a Ctrl/Meta chord. `send`'s far echo is built once per
+  context (`sharedFx`), unlike the audition's per-play one. `sound-check` `chat cues`, `chat error` and
+  `chat copy failure` stub `/api/chat` and `/api/brains` with a page `fetch` override (a streamed
+  answer, 12 chunks 40 ms apart after 700 ms) and read voices as clusters of oscillator start
+  times (the hum starts at time 0: it has no `when`).
+- **Tool cues.** Every hook is in a kit piece or shared mount code, so no tool's own file changed.
+  `gmt-handle` plays `detent` (Glass tick) in `#commit`, the path of a reader's key or drag step
+  that changed the value; `value =` from code is silent. `gmt-readout` plays `error` (Low double
+  buzz) in `#show` on live to sentinel after its first `#show`; first render, sentinel to sentinel
+  and the empty state are silent. Every text field, kit `textInput` and the playground's
+  row inputs included, plays `key` through `typing.ts` with no markup of its own. `startMountCues(signal)` (`widget-mount.ts`) arms a 150 ms `setTimeout` (a delay only)
+  for `loading` (Scan sweep), then `ready()` plays `ready` (Lock-in) and `failed()` plays `error`;
+  the timer is cleared on either and on the abort signal, and an aborted mount plays nothing.
+  `MountedWidget` (the `/dox` rail) uses it; `showUnavailable` plays `error` once. The 60 or so
+  `.astro` page shells call their mount without it: they mount at page load, before a gesture, and
+  the engine drops those cues. `sound-check` `tool cues *` read the Scan sweep as the filter's
+  exponential ramp to 4000 Hz (`log.exps`), because noise has no oscillator start.
+- **List ticks.** `gmt-listbox` plays `detent` (Glass tick) when a key moves the active option
+  (none at an end). `gmt-combobox` plays it in its `#move`; its popup is a `gmt-listbox`. `roving`
+  (`widgets/primitives/roving.ts`) plays it when a key moves the tab stop to another item, so the
+  clock-change zone lists and drawn shapes tick by key. `sound-check` `list ticks` holds the
+  listbox and combobox on `/`.
+- **Scroll ticks.** `sound/scroll-ticks.ts` `scrollTicks(scroller, {rowPitch, keys, signal})`
+  plays `detent` each time the reader's own scroll carries the top of the view into another row.
+  A `wheel`, `touchstart` or `pointerdown` on the scroller arms it; any `keydown`, a `pointerdown`
+  outside (both on the document, capture) and `quiet()` hand scrolling back to code, so a key
+  move's `scrollIntoView` or a host scrolling to a choice is silent. With `keys`, a scroll key the
+  browser scrolls the box by (not prevented, no Alt, Ctrl or Meta, not typed into a field) arms
+  it. `pitchOfRows(rows)` reads the pitch from the first row to the next row below it. No clock is
+  read. Users: `gmt-listbox` (pitch from two drawn options, so virtual rows count; setting
+  `activeIndex` calls `quiet()`), `feature-map.ts` on `zone-scroll` (Canada, Morocco and US
+  clock-change maps), `elapsed-vs-clock-mount.ts` on its list, and `ExamplesPanel` on
+  `.gmt-hive-examples-body`, the last three with `keys`. Panes (the chat rail, an artifact body,
+  the mobile menu, a carousel page, data credits, tables) do not tick.
+- **Option ping.** Focus stays on a `gmt-listbox`, so an option never gets the focus sonar ping.
+  `#choose` (a click, Enter or Space) sets `data-ping` on the chosen option instead, restarting
+  it on a second choice, and clears it on `animationend`. `listbox.module.css`
+  `gmt-option-sonar` spreads outward like the focus ping, up to 12 px, raised over its neighbours
+  (`--gmt-z-raised`); a list that shows it pads its scroll box by that much (the globe's
+  `.clocks` uses `--gmt-space-3`). It runs for `--gmt-motion-sonar-duration`, which is 0 under
+  reduced motion.
+- **Globe cue.** `globe-mount.ts` plays `locate` (Sonar lock: 880 and 1320 Hz pings 70 ms apart,
+  each with the sonar echo) through `host.lockOn` from `host.onSelect` when the reader chose a
+  place: a tap on the Earth, a zone row, a search pick. The zone a widget is seeded with is silent
+  (`seeding`), and so is a cleared choice.
+- **Zoom cue.** Each zoom step plays the Lens servo (`zoomIn` rising, `zoomOut` falling; a
+  filtered noise whir whose pitch follows the zoom, rank 0 whole Earth to 1 closest). The globe
+  engine reports a step through `onZoom`: a wheel notch, a pinch step of one notch (`PINCH_STEP`,
+  about 1.16×), the `+`/`-` keys and the zoom stack's buttons, which carry `data-cue` so they skip
+  the press ping. A step that cannot move (at a limit, or Reset at whole Earth) is silent. The
+  engine's `STEP_GAP` (60 ms, shared with `stream`) thins a trackpad's stream of small wheel
+  events to one servo per gap.
+- **Arrival cues.** `sound/appear.ts` `cueOnAppear` plays `appearGlobe` (Steel horizon) when a
+  page globe comes into view and `appearMap` (Sonar dawn) when a feature map's drawing does: once
+  per element per page view, at 25 % in view. An element in view before the reader's first gesture
+  on the page (`userActivation.hasBeenActive`) stays silent for good: it is part of the page they
+  arrived at, and a swell on the first click would sound like the click's. Reduced motion plays
+  nothing. The landing's dawn globe has no arrival cue (its paint and glint sounds cover it).
+  `APPEAR_GAP` (1.2 s, shared by both) makes a globe and a map that arrive together one sound.
+- **Peak test.** `scripts/sound-peaks.browser.test.ts` renders `press`, both servo directions at
+  both ends of the zoom, both arrival cues and `locate` in Chromium's `OfflineAudioContext`
+  (48 kHz, unity bus, 20 seeded `Math.random` runs) and fails a voice louder than the audition
+  sound the owner chose.
+- **Globe lock rings.** The chosen pin ripples one ring per ping and per echo heard, at the time it
+  sounds and as much fainter as it is quieter. `sound/sonar-lock.ts` holds the lock's numbers for
+  the voice, `sonarEcho` and the rings. `lockPulses()` counts the echoes from the feedback: each
+  pass keeps 38%, and an echo more than 36 dB under a ping (`LOCK_HEARD_DB`) is lost, so there are
+  rings at 0, 70, 190, 380 and 570 ms. `globe-lock.ts` draws them as page elements in the
+  `.lock` box under the card, so both renderers show them. `globe.ts` `lockOn` plays the sound
+  and rings together:
+  - at once when the pin is in sight (front of the Earth, inside the host, short of
+    `tooltipLimit`);
+  - otherwise once the flight brings it within 0.15 of the Earth's radius of the centre;
+  - at once if the reader drags, pinches or keys first, or the engine stops drawing
+    (`engine.onHold`, `isHeld`).
+  A new selection drops a waiting lock and stops the rings. Reduced motion keeps the sound and
+  drops the rings. `sound-check` `globe locate` waits 3.5 s for a lock that waits for its landing. Zone rows are `role="option"`, outside the press selector, so a row press is
+  not pinged too; `sound-check` `globe locate` holds that.
+- **Map lock.** On the classed maps (`feature-map.ts`: the US, Canada and Morocco checkers), the
+  reader's own press plays `locate` with the globe's beats (`LOCK_RINGS`): a row, a shape, Enter
+  or Space on one, or an inset's frame. A pin the page makes (a link, a seed, `handle.pin`) is
+  silent, and a `toggle` press that clears the pin plays `click`. The list carries `data-cue`, so
+  the press hook adds no click of its own. What the reader sees:
+  - a marker ripples rings from its point (`lockPoint`, in the label layer);
+  - a zone with no point sends copies of its city's name out from its label (`lockEchoes`), as
+    HONOLULU does;
+  - a label crowded off a small frame ripples rings from where it would sit instead.
+  The last beat's `animationend` takes the lock away. Reduced motion hides it in the style sheet,
+  and `lock` removes it at once, since no animation ends.
+- **Traps.** A test file that installs the fake audio is isolated (`vi.stubGlobal`); jsdom's
+  `localStorage` queues a timer per write under fake timers, so a test asserting
+  `vi.getTimerCount() === 0` uses `installMemoryStorage()`. The leak guard fails a file that leaves a
+  `window` or `document` listener, so each test tears `startCue()` and `createEngine()` down.
 
 ## Tier 4 · Globe and scrubber
 
@@ -4180,7 +4474,14 @@ Shared hooks come first, then the globe, then the clock-change pages.
     sky take their constants from it), `camera.ts` (projection and visibility, delegating to it and checked
     from first principles), `controller.ts` (rotation, inertia, ambient spin, pinch, fly-to — a state
     machine that takes its timestamps as arguments, so both renderers feel identical and a
-    fake clock drives it in tests), `geometry.ts`, `triangulate.ts`, `sun.ts`, `shading.ts`.
+    fake clock drives it in tests), `flight.ts` (the fly-to: a great-circle slerp whose distance
+    follows a sixth-degree curve whose speed peaks at 40% of the time, so the landing is longer
+    and softer than the start, with zero speed, acceleration and jerk at both ends; it eases out of
+    the speed the globe already has, whether a flight, a coast or the ambient spin, without passing
+    the goal. `flightMs` grows with the square root of the distance, 0.9 s for a short hop to 3 s
+    for a half-turn; a pure function of elapsed time, so any frame rate takes the same path; a
+    sideways start speed fades out by the landing; the idle countdown restarts on landing, so the
+    globe rests on the place before the ambient spin resumes), `geometry.ts`, `triangulate.ts`, `sun.ts`, `shading.ts`.
   - **Choosing a backend.** The engine asks for a device *before* touching a canvas, since
     `getContext("webgpu")` claims an element for good and the fallback needs a clean one.
     Each renderer owns its canvas; the shell swaps it and rebinds input. A null adapter, a
@@ -4654,7 +4955,9 @@ Shared hooks come first, then the globe, then the clock-change pages.
 
 - **One surface: `/dox`** (`src/pages/dox.astro`, `<DoxPage client:load />`), under the site
   header, with no page title. `noindex`, reached from the header's "Chat with Dox" button,
-  which carries `aria-current="page"` there. The header is Astro with no JavaScript, so no
+  which there keeps its look but is not a link (`ButtonLink current`: no `href`, no tab stop,
+  `aria-current="page"`, no hover chip). "gmt" in the bar does the same on the landing
+  (`SiteTitle.astro`). The header is Astro with no JavaScript, so no
   React reaches another page (WCAG 2.2 SC 3.2.3: the navigation is the same on every page).
   - There is no every-page dock: it would put React on every reference page to duplicate
     `/dox`.
@@ -4853,6 +5156,8 @@ Shared hooks come first, then the globe, then the clock-change pages.
   reset on every chunk. The Worker gives each brain its own start deadline
   (`BRAIN_START_TIMEOUT_MS`), so a walk past several slow brains reports each one and is
   not cut off by the client.
+- **Sound:** `DoxChat` plays the send, thinking, stream, done and error cues and typing in the
+  composer plays `key` like any text field; see Tier 3 § Sound "Chat cues".
 - **Warnings are not errors.** A rate limit, a refused send or a stall renders a warning
   (`chat-warning.tsx`), not a message, so it never reaches the history. `retryable` drives
   "Try again".
@@ -5366,7 +5671,10 @@ Shared hooks come first, then the globe, then the clock-change pages.
     Double-click resets it. The narrowest is the default `clamp(22rem, 34vw, 34rem)`. The widest
     is half the page body, and the transcript keeps at least 28rem. The width is one CSS
     property, `--gmt-hive-rail-width`, on `.gmt-hive-body`, so a widget swap keeps it. The
-    reader's width is kept in `localStorage` (`gmt-dox-rail-width`) and applied after mount.
+    reader's width is kept in `localStorage` (`gmt-dox-rail-width`). An inline head script in
+    `dox.astro` (`rail-prepaint.ts`) paints it on `<html>` before the first frame, so the
+    server-rendered rail does not jump at hydration; on mount `RailResizer` moves the value onto
+    the body and clears the root copy, so a double-click reset is not undone by inheritance.
     The CSS clamps it again, so a window resize needs no script. Below 60rem the rail is the
     bottom sheet and the handle is hidden.
 - **Tool prompt wording matters.** "When the question matches a `Call when` line, call that

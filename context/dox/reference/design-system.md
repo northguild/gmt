@@ -484,8 +484,8 @@ and leap-second tools list their roots in the same sheets. All of them read as o
     is teal at 10 % over a void backing at 92 %, with 4 px of blur and one bottom hairline of
     cyan at 18 % (`--gmt-header-*`). It is a dark island (`gmt-theme-dark`) on every page, in
     both themes, so page text scrolling under it never lowers its contrast. The search dialog
-    renders inside the bar and so takes the dark tokens too. `ThemeSelect` still switches the
-    page. Over the landing's sky the bar's text and icons carry `--gmt-shadow-halo`, which uses the
+    renders inside the bar and so takes the dark tokens too. The Settings panel's theme switch
+    still switches the page. Over the landing's sky the bar's text and icons carry `--gmt-shadow-halo`, which uses the
     fixed ink (`--gmt-ink-fixed`), so it is dark in the light theme too (7:1 over the Sun).
   - **The mark** is `src/assets/northguild-mark.svg`, inlined by `NorthGuildMark.astro` and
     never served by URL. Its six paths and `viewBox` are the northguild.dev mark's, verbatim.
@@ -523,7 +523,7 @@ and leap-second tools list their roots in the same sheets. All of them read as o
   - Starlight's `title` stays `@northguild/gmt` for tabs, search results and social cards.
 - `Header.astro` composes Starlight's parts via `virtual:starlight/components/*`, not
   `@astrojs/starlight/components/*.astro`. The direct path resolves Starlight's defaults and
-  silently bypasses this repo's `SocialIcons` and `ThemeSelect` overrides. Types for the virtual
+  silently bypasses this repo's `SocialIcons` override. Types for the virtual
   modules live in `src/virtual-starlight.d.ts`; re-check it on every Starlight upgrade.
 
 ## The composer control bar
