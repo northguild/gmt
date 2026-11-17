@@ -30,6 +30,29 @@
     background: var(--gmt-selected-fill);
     color: var(--gmt-selected-ink);
   }
+
+  /* The chosen option's sonar ping (listbox.ts): the focus ping, raised over the next row so
+     its ring is not painted under it. It spreads up to 12px, so a list whose options sit flush
+     with its scroll box gives them that much padding or loses the ring's edge to the clip. */
+  &[data-ping] {
+    z-index: var(--gmt-z-raised);
+    animation: gmt-option-sonar var(--gmt-motion-sonar-duration)
+      var(--gmt-easing) 1;
+  }
+}
+
+@keyframes gmt-option-sonar {
+  from {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 95%),
+      0 0 0 3px color(from var(--gmt-cyan) srgb r g b / 70%);
+  }
+
+  to {
+    box-shadow:
+      0 0 0 2px color(from var(--gmt-cyan) srgb r g b / 0%),
+      0 0 0 12px color(from var(--gmt-cyan) srgb r g b / 0%);
+  }
 }
 
 @media (forced-colors: active) {

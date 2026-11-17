@@ -48,9 +48,15 @@ import {
   labelLayer,
   labelMarkup,
   framePath,
+  lockEchoes,
+  lockPoint,
   mapDrawing,
   type FeatureIdKey,
 } from "~/widgets/families/clockcheck/zone-map";
+import { LOCK_RINGS } from "./globe-lock";
+import { cueOnAppear } from "./sound/appear";
+import { cue } from "./sound/cue";
+import { pitchOfRows, scrollTicks } from "./sound/scroll-ticks";
 import { roving } from "~/widgets/primitives/roving";
 
 /** The drawing's own coordinate box; the SVG scales to its container with `viewBox`. */
@@ -333,6 +339,13 @@ export function wireFeatureMap(
   // --- the list ------------------------------------------------------------
   // The APG roving tab stop: arrows wrap, Home and End jump, the stop follows focus and a click.
   const stop = roving(list, { items: () => buttons, signal: life });
+  // The reader's own scroll of the list ticks once per row, as the arrow keys do per step.
+  if (scroller)
+    scrollTicks(scroller, {
+      rowPitch: () => pitchOfRows(buttons),
+      keys: true,
+      signal: life,
+    });
   list.addEventListener(
     "focusin",
     (event) => {
@@ -340,6 +353,8 @@ export function wireFeatureMap(
     },
     { signal: life },
   );
+  // A press on a row plays the map's own cue (`press`), not the press hook's click.
+  list.dataset["cue"] = "";
   list.addEventListener(
     "click",
     (event) => {
@@ -354,9 +369,77 @@ export function wireFeatureMap(
     { signal: life },
   );
 
-  /** A press: pins the feature, or clears the pin when `toggle` and it is the pinned one. */
+  /**
+   * A press, the reader's own choice: pins the feature and plays the lock, as a place chosen on the
+   * globe does, or clears the pin with the press ping (a row and a shape are buttons: the Deep
+   * sonar) when `toggle` and it is the pinned one. A pin the
+   * page makes (`pin`, a link, a seed) is silent.
+   */
   function press(id: string): void {
-    pin(config.toggle === true && id === pinnedId ? null : id);
+    const clear = config.toggle === true && id === pinnedId;
+    if (!pin(clear ? null : id)) return;
+    if (clear) {
+      stopLock();
+      cue("press");
+    } else lock(id);
+  }
+
+  // --- the lock --------------------------------------------------------------
+  // The Sonar lock, seen as well as heard: rings ripple from a marker, as from the globe's pin; a
+  // zone with no point to ripple from sends copies of its city's name out, and one whose name is
+  // not shown ripples from where its name would sit. One ring or copy per ping and echo
+  // (`LOCK_RINGS`); the last one, the faintest echo, takes the lock away as it ends.
+  let lockShown: HTMLElement | null = null;
+  function stopLock(): void {
+    lockShown?.remove();
+    lockShown = null;
+  }
+  function lock(id: string): void {
+    cue("locate");
+    stopLock();
+    const marker = rings.get(id);
+    const label = labels.get(id);
+    // A label's first line is its city (`labelMarkup`). A label crowded off a small frame keeps its
+    // box but is not seen, so its echoes would not be either: it ripples from its place instead.
+    const city =
+      label && !label.hidden && label.dataset["crowded"] !== "true"
+        ? label.firstElementChild
+        : null;
+    const point: readonly [number, number] | null = marker
+      ? [Number(marker.getAttribute("cx")), Number(marker.getAttribute("cy"))]
+      : city
+        ? null
+        : labelAnchor(id);
+    let shown: HTMLElement | null = null;
+    if (layer && point) {
+      const share = (at: number, of: number): string =>
+        `${((at / of) * 100).toFixed(2)}%`;
+      shown = elementOf(
+        lockPoint({
+          ax: share(point[0], MAP_WIDTH),
+          ay: share(point[1], config.height),
+          beats: LOCK_RINGS,
+        }),
+      );
+      layer.append(shown);
+    } else if (city) {
+      shown = elementOf(lockEchoes(city.textContent ?? "", LOCK_RINGS));
+      city.append(shown);
+    }
+    if (!shown) return;
+    // Reduced motion: the style sheet shows no lock, so no animation ends to take it away.
+    if (shown.getClientRects().length === 0) {
+      shown.remove();
+      return;
+    }
+    const done = shown;
+    const end = (event: Event): void => {
+      if (event.target === done.lastElementChild && lockShown === done)
+        stopLock();
+    };
+    done.addEventListener("animationend", end, { signal: life });
+    done.addEventListener("animationcancel", end, { signal: life });
+    lockShown = done;
   }
 
   // --- hover and focus mirror between the list and the shapes ---------------
@@ -769,6 +852,8 @@ export function wireFeatureMap(
     // feature's panel is placed from the drawing at rest. The inset cards scale with the drawing
     // while the labels do not, and a transform resizes nothing: thin again once it is at rest.
     enter(svg, { signal: life, onEntered: () => thinLabels() });
+    // The drawing coming into view plays the Sonar dawn, once (`sound/appear.ts`).
+    cueOnAppear(svg, "appearMap", life);
   }
 
   /** One boundary file, or `null` when it is missing or not a collection. */

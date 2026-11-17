@@ -4,6 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { roving } from "./roving";
 
+const cue = vi.fn();
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
+beforeEach(() => cue.mockClear());
+
 function item(name: string): HTMLLIElement {
   const li = document.createElement("li");
   const button = document.createElement("button");
@@ -31,6 +35,14 @@ describe("roving", () => {
   afterEach(() => {
     controller.abort();
     document.body.replaceChildren();
+  });
+
+  it("ticks once for each step, and not for a key that stays put", async () => {
+    const user = userEvent.setup();
+    roving(list(), { items: buttons, signal: controller.signal });
+    buttons()[0]!.focus();
+    await user.keyboard("{ArrowDown}{End}{End}{ArrowDown}{Home}");
+    expect(cue.mock.calls).toEqual([["detent"], ["detent"], ["detent"]]);
   });
 
   it("puts the first item, and only it, in the tab order", () => {

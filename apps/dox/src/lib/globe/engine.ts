@@ -94,6 +94,7 @@ export async function createGlobeEngine(
     initialRotation: options.initialRotation,
     zoomRange: options.zoomRange,
     reducedMotion,
+    onZoom: (dir, closeness) => zoomCallback?.(dir, closeness),
   });
   const camera = createCamera(options.initialRotation);
 
@@ -123,7 +124,9 @@ export async function createGlobeEngine(
 
   let tapCallback: Parameters<GlobeEngine["onTap"]>[0] | null = null;
   let frameCallback: (() => void) | null = null;
+  let holdCallback: (() => void) | null = null;
   let interactCallback: ((kind: GlobeInteraction) => void) | null = null;
+  let zoomCallback: Parameters<GlobeEngine["onZoom"]>[0] | null = null;
   /** Whether the frame loop is held off because the host scrolled out of view. */
   let offscreen = false;
   /** Whether something drawn over the globe (the search dialog, the mobile menu) hides it. */
@@ -692,6 +695,7 @@ export async function createGlobeEngine(
       if (frameHandle) cancelAnimationFrame(frameHandle);
       frameHandle = 0;
       if (wakeTimer) clearTimeout(wakeTimer);
+      holdCallback?.();
       return;
     }
     // Returning after a while: treat now as the last interaction, so the globe
@@ -712,6 +716,7 @@ export async function createGlobeEngine(
       if (wakeTimer) clearTimeout(wakeTimer);
       frameHandle = 0;
       drawHandle = 0;
+      holdCallback?.();
       return;
     }
     controller.markInteraction(performanceNow());
@@ -827,8 +832,15 @@ export async function createGlobeEngine(
     onInteract(callback) {
       interactCallback = callback;
     },
+    onZoom(callback) {
+      zoomCallback = callback;
+    },
     onFrame(callback) {
       frameCallback = callback;
+    },
+    isHeld: () => destroyed || document.hidden || held(),
+    onHold(callback) {
+      holdCallback = callback;
     },
     requestRender() {
       requestDraw();
@@ -857,6 +869,7 @@ export async function createGlobeEngine(
       tapCallback = null;
       frameCallback = null;
       interactCallback = null;
+      zoomCallback = null;
     },
   };
 

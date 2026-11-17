@@ -25,6 +25,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { cue } from "~/lib/sound/cue";
 import { starterWidgetCall, type CHAT_STARTERS } from "~/lib/chat-constants";
 import { DoxChat, type DoxChatHandle } from "./DoxChat";
 import { ExamplesBar } from "./ExamplesBar";
@@ -128,7 +129,13 @@ export default function DoxPage() {
      On a phone the sheet folds away again, so closing lands on the bar. */
   const pickExample = useCallback(
     (starter: (typeof CHAT_STARTERS)[number]) => {
-      if (!chatRef.current?.send(starter.text)) return;
+      /* A pill carries `data-cue`, so the press hook leaves it to this handler. A press that
+         opens the rail is the rail's opening Steel breath (the effect below); every other press that
+         stays on the page, a swap from one widget to another or a question not sent, is a
+         button's press ping, the Deep sonar. */
+      const sent = chatRef.current?.send(starter.text) === true;
+      if (!sent || railWidgetRef.current !== null) cue("press");
+      if (!sent) return;
       focusTitleRef.current = true;
       setExamplesOpen(false);
       const call = starterWidgetCall(starter);
@@ -154,6 +161,16 @@ export default function DoxPage() {
     returnsFocus: true,
     el: railEl,
   });
+
+  /* The rail's open and close Steel breath: null to a widget opens it, a widget back to null
+     closes it, and one widget swapped for another is neither (slice 6's `ready`). The cue follows
+     the commit, so a cancelled open is silent. */
+  const railWasOpenRef = useRef(false);
+  useEffect(() => {
+    const isOpen = railWidget !== null;
+    if (isOpen !== railWasOpenRef.current) cue(isOpen ? "open" : "close");
+    railWasOpenRef.current = isOpen;
+  }, [railWidget]);
 
   /* Closing a widget returns focus: to its card when the examples panel is
      visible, otherwise (phone, conversation started, sheet folded) to the bar.
@@ -251,6 +268,7 @@ export default function DoxPage() {
                   <button
                     type="button"
                     className="gmt-hive-boundary-reload gmt-sonar-focus"
+                    data-cue=""
                     onClick={() => {
                       reset();
                       closeWidget();

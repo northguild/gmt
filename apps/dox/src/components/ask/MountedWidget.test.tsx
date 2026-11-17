@@ -12,7 +12,7 @@
  *   - **A nonsense argument must render an error state, not crash the panel.**
  */
 import { StrictMode } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WidgetLoadError } from "~/lib/widget-mount";
 import { html } from "~/widgets/builders";
@@ -24,6 +24,9 @@ import { MountedWidget } from "./MountedWidget";
 import type { AnyWidgetEntry } from "./widget-registry";
 
 installJsdomShims();
+
+const cue = vi.fn();
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
 
 const STAGE = "Stage";
 
@@ -483,5 +486,61 @@ describe("MountedWidget height easing", () => {
 
     expect(FakeObserver.observed.size).toBe(0);
     expect(screen.getByText("Result")).toBeVisible();
+  });
+});
+
+describe("MountedWidget sounds", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    cue.mockClear();
+  });
+  afterEach(() => {
+    cleanup();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  /** A widget whose mount takes `ms`, or rejects after it. */
+  const slow = (ms: number, fail = false) =>
+    spyEntry({
+      load: async () => ({
+        renderTemplate: () => html`<p>Slow</p>`,
+        mount: async () => {
+          await new Promise((resolve) => setTimeout(resolve, ms));
+          if (fail) throw new Error("boom");
+          return { destroy: () => {} };
+        },
+      }),
+    }).entry;
+
+  it("plays only Lock-in for a mount that takes 100 ms", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<MountedWidget entry={slow(100)} args={{}} idPrefix="t" />);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(cue.mock.calls).toEqual([["ready"]]);
+  });
+
+  it("plays the Scan sweep and then Lock-in for a mount that takes 300 ms", async () => {
+    render(<MountedWidget entry={slow(300)} args={{}} idPrefix="t" />);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(cue.mock.calls).toEqual([["loading"], ["ready"]]);
+  });
+
+  it("plays the Scan sweep and then the buzz for a mount that fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<MountedWidget entry={slow(300, true)} args={{}} idPrefix="t" />);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(cue.mock.calls).toEqual([["loading"], ["error"]]);
+  });
+
+  it("plays nothing, and leaves no timer, when it is removed while loading", async () => {
+    const { unmount } = render(
+      <MountedWidget entry={slow(300)} args={{}} idPrefix="t" />,
+    );
+    await vi.advanceTimersByTimeAsync(50);
+    unmount();
+    expect(vi.getTimerCount()).toBe(1); // only the mount's own 300 ms wait
+    await vi.advanceTimersByTimeAsync(400);
+    expect(cue).not.toHaveBeenCalled();
   });
 });

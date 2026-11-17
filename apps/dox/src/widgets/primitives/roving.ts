@@ -11,8 +11,13 @@
  * (and focuses it when `focus` is true), `current()` the item that is the stop now. `items()` is
  * read at each key press, so a list that redraws needs no re-wiring.
  *
+ * Sound (DOX-G10): each step plays `detent` (Glass tick), the step of every list in the kit. A
+ * key that lands on the item already focused (Home on the first) plays none.
+ *
  * No gmt import, no DOM beyond the elements it is given.
  */
+
+import { cue } from "~/lib/sound/cue";
 
 interface RovingOptions {
   /** The controls in reading order, read at each key press. */
@@ -72,7 +77,9 @@ export function roving(list: HTMLElement, options: RovingOptions): Roving {
       }
       event.preventDefault();
       const target = all[to];
-      if (target !== undefined) set(target, true);
+      if (target === undefined) return;
+      if (to !== from) cue("detent");
+      set(target, true);
     },
     { signal },
   );

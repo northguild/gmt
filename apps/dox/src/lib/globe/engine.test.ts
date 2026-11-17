@@ -477,6 +477,27 @@ describe("pauseWhile", () => {
     }
   });
 
+  it("says each time it stops drawing, and whether it is stopped now", async () => {
+    let hold: (held: boolean) => void = () => {};
+    const engine = await start(hostWithBox(), {
+      pauseWhile: (set) => {
+        hold = set;
+        return () => {};
+      },
+    });
+    const onHold = vi.fn();
+    engine.onHold(onHold);
+    expect(engine.isHeld()).toBe(false);
+    hold(true);
+    expect(engine.isHeld()).toBe(true);
+    expect(onHold).toHaveBeenCalledTimes(1);
+    hold(false);
+    expect(engine.isHeld()).toBe(false);
+    expect(onHold).toHaveBeenCalledTimes(1);
+    engine.destroy();
+    expect(engine.isHeld()).toBe(true);
+  });
+
   it("stays held until every reason has cleared", async () => {
     vi.useFakeTimers();
     let notify: IntersectionObserverCallback = () => {};

@@ -15,9 +15,20 @@
  *
  * Events, all bubbling, with `detail`: `active` `{ index }` when the keys move the
  * active option, and `change` `{ value }` when an option is chosen.
+ *
+ * Sound (DOX-G10): a step through the list plays `detent` (Glass tick). A key that moves the
+ * active option plays one; at an end, where the key moves nothing, none. A reader's own scroll
+ * (wheel, touch, scrollbar) plays one each time the top of the view passes into another row, the
+ * row pitch measured from the drawn options; a scroll made for them is silent (`scrollTicks`,
+ * `sound/scroll-ticks.ts`, which every scrolling list shares).
+ *
+ * A chosen option pings with the sonar ring of a focused control, since focus stays on the list
+ * and never reaches it.
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
+import { cue } from "~/lib/sound/cue";
+import { scrollTicks, type ScrollTicks } from "~/lib/sound/scroll-ticks";
 import { KitElement, type KitDetail } from "../base";
 import styles from "./listbox.module.css";
 
@@ -123,6 +134,8 @@ export class GmtListbox extends KitElement {
   #active = 0;
   #value = "";
   #count: number | undefined;
+  /** The ticks of the reader's own scroll; set while connected. */
+  #ticks: ScrollTicks | undefined;
 
   /** Virtual mode: the total number of options, drawn or not. */
   get count(): number {
@@ -142,6 +155,7 @@ export class GmtListbox extends KitElement {
     return this.#active;
   }
   set activeIndex(next: number) {
+    this.#ticks?.quiet();
     this.#active = Math.min(Math.max(next, 0), Math.max(this.count - 1, 0));
     this.sync();
   }
@@ -187,8 +201,20 @@ export class GmtListbox extends KitElement {
     );
   }
 
+  /** The distance from one row to the next, from the drawn options; 0 when none is laid out. */
+  #rowPitch(): number {
+    const first = this.querySelector<HTMLElement>('[role="option"]');
+    if (!first) return 0;
+    const box = first.getBoundingClientRect();
+    const index = Number(first.dataset.index);
+    const next = this.#optionAt(index + 1)?.getBoundingClientRect();
+    return next ? Math.abs(next.top - box.top) : box.height;
+  }
+
   #move(next: number): void {
     if (next === this.#active) return;
+    this.#ticks?.quiet();
+    cue("detent");
     this.#active = next;
     this.sync();
     this.dispatchEvent(
@@ -206,6 +232,8 @@ export class GmtListbox extends KitElement {
     this.#active = index;
     this.#value = value;
     this.sync();
+    const chosen = this.#optionAt(index);
+    if (chosen) ping(chosen);
     this.dispatchEvent(
       new CustomEvent<KitDetail<string>>("change", {
         bubbles: true,
@@ -222,6 +250,10 @@ export class GmtListbox extends KitElement {
     if (this.#value === "" && marked?.dataset.value !== undefined)
       this.#value = marked.dataset.value;
     this.sync();
+    this.#ticks = scrollTicks(this, {
+      rowPitch: () => this.#rowPitch(),
+      signal,
+    });
     this.addEventListener(
       "keydown",
       (event) => {
@@ -252,6 +284,21 @@ export class GmtListbox extends KitElement {
       { signal },
     );
   }
+}
+
+/**
+ * Ping a chosen option: the sonar ring a focused control shows, which an option never gets, since
+ * focus stays on the list. Starting again from the top on a second choice of the same option.
+ */
+function ping(option: HTMLElement): void {
+  option.removeAttribute("data-ping");
+  void option.offsetWidth;
+  option.setAttribute("data-ping", "");
+  option.addEventListener(
+    "animationend",
+    () => option.removeAttribute("data-ping"),
+    { once: true },
+  );
 }
 
 function isNavigationKey(key: string): boolean {

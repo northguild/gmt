@@ -44,6 +44,7 @@ import { SearchIcon } from "lucide-react";
 import { referenceRoutes } from "~/generated/reference/route-manifest";
 import { CORPUS_SUMMARY } from "~/lib/chat-constants";
 import { checkUserText } from "~/lib/chat-sanitize";
+import { cue, loop } from "~/lib/sound/cue";
 import { pageContextFromReferrer } from "~/lib/page-context";
 import { nextReset } from "~/lib/quota-resets";
 import { findResetFormat } from "~/lib/reset-formats";
@@ -234,10 +235,16 @@ export function DoxChat({
     [],
   );
 
-  const { messages, sendMessage, stop, status } = useChat({
+  const {
+    messages,
+    sendMessage,
+    stop: stopRequest,
+    status,
+  } = useChat({
     transport,
     onError: (error) => {
       setWarning(classifyChatError(error));
+      cue("error");
       onUsed?.();
     },
     onData: (part) => {
@@ -262,6 +269,7 @@ export function DoxChat({
             }),
           ),
         );
+        cue("error");
         // A refusal can follow brains being marked out on the way.
         onUsed?.();
         return;
@@ -277,7 +285,16 @@ export function DoxChat({
     },
   });
 
+  /** Set when the reader or the idle timer ends an answer early, so the Ice bell never rings for
+   * one that did not complete. Cleared by the next question. */
+  const endedEarlyRef = useRef(false);
+  const stop = useCallback(() => {
+    endedEarlyRef.current = true;
+    void stopRequest();
+  }, [stopRequest]);
+
   const onStall = useCallback(() => {
+    cue("error");
     setWarning({
       message:
         "Dox stopped responding. The answer above may be incomplete — try asking again.",
@@ -364,7 +381,9 @@ export function DoxChat({
 
       setWarning(null);
       setProgress(null);
+      endedEarlyRef.current = false;
       sendMessage({ text: checked.text });
+      cue("send");
       conversationRef.current?.scrollToBottom();
       // No re-read here. The counts arrive on the stream once a brain has
       // accepted the question (`USAGE_PART_TYPE`); a timed re-read used to
@@ -485,6 +504,40 @@ export function DoxChat({
   const isWaiting =
     status === "submitted" ||
     (status === "streaming" && messages.at(-1)?.role === "user");
+
+  /* Sound. The thinking hum runs while Dox waits, and its stop runs in the cleanup, so an
+     unmount, a stop or the first token always ends it. A restored conversation never changes
+     status, so it is silent. */
+  useEffect(() => {
+    if (!isWaiting) return;
+    return loop("thinking");
+  }, [isWaiting]);
+
+  /* One Morse beep each time the streamed answer grows; the engine's gap thins a fast stream. */
+  const lastMessage = messages.at(-1);
+  const answerLength =
+    lastMessage?.role === "assistant" ? messageText(lastMessage).length : 0;
+  const heardLengthRef = useRef(answerLength);
+  useEffect(() => {
+    if (status === "streaming" && answerLength > heardLengthRef.current)
+      cue("stream");
+    heardLengthRef.current = answerLength;
+  }, [answerLength, status]);
+
+  /* The Ice bell: a streamed answer that ran to its end. An error leaves `status` at "error",
+     and a stop sets `endedEarlyRef`, so neither rings. */
+  const previousStatusRef = useRef(status);
+  useEffect(() => {
+    const was = previousStatusRef.current;
+    previousStatusRef.current = status;
+    if (
+      was === "streaming" &&
+      status === "ready" &&
+      !endedEarlyRef.current &&
+      messages.at(-1)?.role === "assistant"
+    )
+      cue("done");
+  }, [status, messages]);
 
   return (
     // Transcript + composer only. The surrounding shell (viewport height, the

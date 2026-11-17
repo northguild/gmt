@@ -276,7 +276,9 @@
 
 .clocks {
   block-size: 24rem;
-  padding: var(--gmt-space-1);
+
+  /* Room for a chosen row's sonar ping, which spreads 12px and the scroll box would clip. */
+  padding: var(--gmt-space-3);
   scroll-behavior: smooth;
   overflow: hidden auto;
 }
@@ -367,7 +369,8 @@
     }
   }
 
-  & .tooltip {
+  & .tooltip,
+  & .lock {
     z-index: var(--gmt-z-float);
   }
 }
@@ -647,10 +650,58 @@
   visibility: hidden;
 }
 
+/* Lock ------------------------------------------------------------------
+   A chosen place's pin ripples a ring for every ping and echo of its Sonar lock (globe-lock.ts
+   sets each ring's start and brightness from the sound). Each starts on the pin's own selection
+   ring and fades as it widens. The box is the pin's point; globe.ts moves it there. */
+
+.lock {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 0;
+  block-size: 0;
+  pointer-events: none;
+  z-index: var(--gmt-z-over);
+
+  &[hidden] {
+    display: none;
+  }
+
+  & > span {
+    position: absolute;
+    inset-block-start: -8px;
+    inset-inline-start: -8px;
+    inline-size: 16px;
+    block-size: 16px;
+    border: 1.5px solid var(--gmt-globe-selected);
+    border-radius: 50%;
+    opacity: 0;
+    animation: gmt-globe-lock var(--gmt-duration-lock) var(--gmt-ease-sweep);
+    animation-delay: var(--gmt-lock-delay, 0ms);
+  }
+}
+
+@keyframes gmt-globe-lock {
+  from {
+    opacity: var(--gmt-lock-peak, 0.9);
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(3.5);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tooltip,
   .zoom {
     transition: none;
+  }
+
+  .lock {
+    display: none;
   }
 
   .clocks {

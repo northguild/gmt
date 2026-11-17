@@ -10,7 +10,11 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { smoothHeight } from "~/lib/smooth-height";
-import { WidgetLoadError, type WidgetHandle } from "~/lib/widget-mount";
+import {
+  startMountCues,
+  WidgetLoadError,
+  type WidgetHandle,
+} from "~/lib/widget-mount";
 import { loading, setHtml } from "~/widgets/builders";
 import styles from "./MountedWidget.module.css";
 import type { AnyWidgetEntry } from "./widget-registry";
@@ -53,6 +57,8 @@ export function MountedWidget({
     let cancelled = false;
 
     setError(null);
+    /* Scan sweep after 150 ms without a result, then Lock-in or the buzz. */
+    const sounds = startMountCues(controller.signal);
     /* Busy from the first frame until the mount has wired the widget: first a
        placeholder while its chunk loads, then the template, whose controls do
        nothing until the mount has loaded the library. */
@@ -70,6 +76,7 @@ export function MountedWidget({
         const problem = await entry.validate?.(args);
         if (cancelled) return;
         if (problem) {
+          sounds.failed();
           setError({ message: problem, retryable: false });
           return;
         }
@@ -90,10 +97,12 @@ export function MountedWidget({
         }
         handle = mounted;
         root.removeAttribute("aria-busy");
+        sounds.ready();
         onHandle?.(mounted);
       } catch (thrown) {
         if (cancelled) return;
         console.error("widget mount failed", thrown);
+        sounds.failed();
         /* Two kinds of failure, and only one is worth a retry. The library not
            loading (or the mount module itself failing to import) is usually a
            dropped connection; a mount that throws on its arguments will throw
