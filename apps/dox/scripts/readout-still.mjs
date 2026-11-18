@@ -64,7 +64,8 @@
  *                 handle's;
  *   textBoxes     the parts whose inline text boxes are as wide as their text:
  *                 `"codeframe"` (the call frame's `<code>` and its coloured
- *                 spans) and `"instant"` (an instant's unbreakable pieces).
+ *                 spans), `"instant"` (an instant's unbreakable pieces) and
+ *                 `"verdict"` (the verdict's title and detail words).
  *                 The frame and its `<pre>` are still measured, so a line added
  *                 or a frame resized is a move; only a span's own width is not;
  *   pointerSteps  steps in each pointer sweep (default 20). 48 steps are 30
@@ -85,6 +86,12 @@
  *                 must stay where it was; the first value is put back after;
  *                 An entry with `chips: true` names a group of radio chips (a
  *                 `group` role named by its legend) and clicks each radio in turn;
+ *   clock         a live clock to hold still. A switch that is the clock itself:
+ *                 `{ role: "switch", name, startsOn }`; `startsOn` says whether the page
+ *                 opens with it ticking. Or radios that start it, with the switch that
+ *                 pauses it: `{ radios: [on, off], pause: name }`. The script starts the
+ *                 clock, diffs three ticks against it, then pauses it and starts it
+ *                 again, diffing each, and leaves it as the page opened;
  *   value         per control, the role and name of the field the handle edits.
  *                 A ledger handle's `aria-valuenow` is its place on a canvas that
  *                 is refitted after each key, so the same number can mean
@@ -221,6 +228,7 @@ const MOVING_PART = {
 const TEXT_PART = {
   codeframe: `${gate("codeframe")} code, ${gate("codeframe")} code *`,
   instant: gate("instant"),
+  verdict: `${gate("verdict")} strong, ${gate("verdict")} span`,
 };
 const PRESET = { role: "combobox", name: "Preset" };
 /** The Trip Board's border preset, as pasted: six stops, three of them in Lisbon's zone. */
@@ -410,10 +418,10 @@ const TOOLS = [
       { role: "slider", name: "Slide the time of week", optional: true },
     ],
     track: null,
-    scope: "widget",
-    drawn: ["drawn"],
+    scope: "above",
+    drawn: ["drawn", "hold"],
     riders: true,
-    textBoxes: ["codeframe"],
+    textBoxes: ["codeframe", "verdict"],
   },
   {
     slug: "satellite-clock-converter",
@@ -422,10 +430,10 @@ const TOOLS = [
     presets: ["utc-2024", "galileo-first-instant", "beidou-reading"],
     controls: [{ role: "slider", name: "Step through the leap seconds" }],
     track: null,
-    scope: "widget",
-    drawn: ["drawn"],
+    scope: "above",
+    drawn: ["drawn", "hold"],
     riders: true,
-    textBoxes: ["codeframe"],
+    textBoxes: ["codeframe", "verdict"],
   },
   {
     slug: "gnss-rollover-checker",
@@ -437,10 +445,10 @@ const TOOLS = [
       { role: "slider", name: "Slide the date through the firmware's window" },
     ],
     track: null,
-    scope: "widget",
-    drawn: ["drawn"],
+    scope: "above",
+    drawn: ["drawn", "hold"],
     riders: true,
-    textBoxes: ["codeframe"],
+    textBoxes: ["codeframe", "verdict"],
   },
   {
     slug: "leap-second-timeline",
@@ -497,10 +505,10 @@ const TOOLS = [
     presets: ["across-2016", "twenty-four-years", "no-insertions"],
     controls: [{ role: "slider", name: "Move the end" }],
     track: null,
-    scope: "widget",
-    drawn: ["drawn"],
+    scope: "above",
+    drawn: ["drawn", "hold"],
     riders: true,
-    textBoxes: ["codeframe"],
+    textBoxes: ["codeframe", "verdict"],
   },
   {
     slug: "holiday-rule-builder",
@@ -616,12 +624,56 @@ const TOOLS = [
       },
       { role: "combobox", name: "Unit", values: "options" },
     ],
-    clock: true,
+    // Now starts it, and the "Live clock" switch pauses it.
+    clock: { radios: ["Now", "A date"], pause: "Live clock" },
     track: null,
     scope: "widget",
     drawn: ["hold"],
     riders: true,
     textBoxes: ["codeframe"],
+  },
+  {
+    // The "Drag now" slider by keyboard and pointer; the cut-off and Now are typed too. The
+    // zoneless-now preset has no window, so its slider is off and it is left out.
+    // The axis draws the bands and the now mark, so its insides move by design (`drawn`). The
+    // face, the verdict and the two outputs hold a slot each. The page opens pinned, so the
+    // "Live clock" switch starts off: the gate turns it on, diffs three ticks, then pauses and
+    // starts it again.
+    slug: "cutoff-countdown",
+    minutes: 6.0,
+    root: '[data-widget="cutoff-countdown"]',
+    presets: ["late", "on-time", "at-cutoff", "other-clock", "repeated-hour"],
+    controls: [{ role: "slider", name: "Drag now" }],
+    entries: [
+      {
+        role: "textbox",
+        name: "Cut-off",
+        values: [
+          "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
+          "2024-10-27T01:30:00+01:00[Europe/London]",
+          "x",
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Now",
+        values: [
+          "2024-06-12T17:20:00+02:00",
+          "2024-06-12T20:30:00+05:30",
+          "2024-06-12T17:20:00",
+          "x",
+          "",
+        ],
+      },
+    ],
+    clock: { role: "switch", name: "Live clock", startsOn: false },
+    track: null,
+    frame: false,
+    scope: "above",
+    drawn: ["drawn", "hold"],
+    riders: true,
+    textBoxes: ["codeframe", "verdict"],
   },
   {
     // FIN-95. No handle: the reader types a stamp or an instant, or picks an instant preset.
@@ -955,7 +1007,7 @@ const TOOLS = [
     // preset. The ruler's marks move by design. The first read preset reads and the sixth is
     // refused, so each value is typed from both.
     slug: "ptp-clock-converter",
-    minutes: 4.2,
+    minutes: 4.5,
     root: '[data-widget="ptp-clock-converter"]',
     presets: ["announced-37", "out-of-range"],
     controls: [],
@@ -999,6 +1051,9 @@ const TOOLS = [
         ],
       },
     ],
+    // The "PTP now" section ticks on its own: the switch starts on, so the base is taken while
+    // the clock runs, each tick is diffed against it, then the switch is paused and started.
+    clock: { role: "switch", name: "Live clock", startsOn: true },
     track: null,
     moving: ["cursor"],
     frame: false,
@@ -1636,25 +1691,57 @@ async function run() {
               console.log(`       ${p}`);
           }
           if (tool.clock) {
-            // The Now switch: flip it, then let the clock tick three times. The flip and each
-            // tick must leave every box where it was, including the library's null refusal.
+            // The clock: start it (unless the page opens with it ticking), let it tick three
+            // times, then pause it and start it again. Every step must leave every box where it
+            // was, including the library's null refusal. `radios` are the Expiry Calculator's
+            // "Now" and "A date", with `pause` the switch that holds Now still; otherwise the
+            // clock is a switch (the PTP Clock Converter's and the Cutoff Countdown's "Live
+            // clock"). The pause and the restart are diffed against the ticking boxes.
+            const spec = tool.clock;
             const id = `${where} ${preset} Now`;
             const result = { keyboard: 0, pointer: 0, problems: [] };
             const ctl = control(page, tool.root, PRESET);
             const base = await snapshot(page, ctl, tool);
-            const chip = page
-              .locator(tool.root)
-              .getByRole("radio", { name: "Now", exact: true });
-            await chip.evaluate((el) => el.click());
-            await settled(page, tool.root);
-            for (const p of diffSnapshots(
-              base,
-              await snapshot(page, ctl, tool),
-              false,
-            )) {
-              result.problems.push(`flip to Now: ${p}`);
+            const root = page.locator(tool.root);
+            const radios = spec.radios !== undefined;
+            const clockSwitch = radios
+              ? { role: "switch", name: spec.pause }
+              : spec;
+            const setSwitch = (on) =>
+              root
+                .getByRole(clockSwitch.role, {
+                  name: clockSwitch.name,
+                  exact: true,
+                })
+                .evaluate((el, to) => {
+                  if (el.checked !== to) el.click();
+                }, on);
+            const turn = (to) =>
+              radios
+                ? root
+                    .getByRole("radio", {
+                      name: spec.radios[to ? 0 : 1],
+                      exact: true,
+                    })
+                    .evaluate((el) => el.click())
+                : setSwitch(to);
+            const holds = async (from, label) => {
+              await settled(page, tool.root);
+              for (const p of diffSnapshots(
+                from,
+                await snapshot(page, ctl, tool),
+                false,
+              )) {
+                result.problems.push(`${label}: ${p}`);
+              }
+            };
+            if (!spec.startsOn) {
+              await turn(true);
+              await holds(base, "flip to Now");
             }
-            const flipped = await snapshot(page, ctl, tool);
+            const flipped = spec.startsOn
+              ? base
+              : await snapshot(page, ctl, tool);
             for (let tick = 1; tick <= 3; tick++) {
               await page.waitForTimeout(1050);
               for (const p of diffSnapshots(
@@ -1666,11 +1753,14 @@ async function run() {
               }
               result.keyboard++;
             }
-            await page
-              .locator(tool.root)
-              .getByRole("radio", { name: "A date", exact: true })
-              .evaluate((el) => el.click());
-            await settled(page, tool.root);
+            await setSwitch(false);
+            await holds(flipped, "pause");
+            await setSwitch(true);
+            await holds(flipped, "resume");
+            if (!spec.startsOn) {
+              await turn(false);
+              await settled(page, tool.root);
+            }
             const ok = result.problems.length === 0;
             if (!ok) failures++;
             summary.push({ id, ...result, ok });

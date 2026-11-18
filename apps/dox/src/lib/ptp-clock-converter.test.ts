@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ptpToUtc } from "@northguild/gmt/iot/convert";
+import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
+import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
 import { iotLib } from "~/test/iot-lib";
 import {
   BEFORE_1972_VERDICT,
@@ -14,6 +15,7 @@ import {
   isSeeded,
   lit,
   markStart,
+  nowFacts,
   matchReadPreset,
   matchWritePreset,
   permalinkOf,
@@ -378,4 +380,34 @@ describe("no range lives in the site", () => {
       for (const needle of forbidden) expect(text).not.toContain(needle);
     });
   }
+});
+
+describe("nowFacts", () => {
+  it("is the library's count for the instant it is given", () => {
+    const now = "2024-06-12T15:20:00.25Z";
+    const f = nowFacts(iotLib, now);
+    expect(f.utc).toBe(now);
+    expect(f.table).toBe(37);
+    expect(f.ptp).toEqual(utcToPtp(now, taiMinusUtc(now)!));
+    expect(f.ptp).toEqual({ seconds: 1718205637n, nanoseconds: 250000000 });
+    expect(f.calls).toEqual([
+      'taiMinusUtc("2024-06-12T15:20:00.25Z"); // 37',
+      'utcToPtp("2024-06-12T15:20:00.25Z", 37); // { seconds: 1718205637n, nanoseconds: 250000000 }',
+    ]);
+  });
+
+  it("makes no utcToPtp call when the table has no offset", () => {
+    const f = nowFacts(iotLib, "1971-06-01T00:00:00Z");
+    expect(f.table).toBeNull();
+    expect(f.ptp).toBeNull();
+    expect(f.calls).toEqual(['taiMinusUtc("1971-06-01T00:00:00Z"); // null']);
+  });
+
+  it("reads the most recent step as 37", () => {
+    expect(nowFacts(iotLib, "2017-01-01T00:00:00Z").table).toBe(37);
+  });
+
+  it("is sized for two lines", () => {
+    expect(callsSizer("now").lines).toBe(2);
+  });
 });

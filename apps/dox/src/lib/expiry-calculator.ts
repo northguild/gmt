@@ -435,6 +435,7 @@ export function callsSizerLine(): string {
     convertUtcToZoned: () => `${wideText.slice(0, -1)}+00:00[UTC]`,
     formatHttpDate: () => "Thu, 15 Jun 2028 12:00:00 GMT",
     getUtcIn: () => wideText,
+    getUtcNow: () => wideText,
     isValidUtc: () => true,
   } as unknown as ExpiryLib;
   const state: ExpiryState = {

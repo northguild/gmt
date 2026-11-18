@@ -5,6 +5,7 @@
 import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
 import { isValidPtpTimestamp } from "@northguild/gmt/iot/validate";
 import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+import { getUtcNow } from "@northguild/gmt/utc/get";
 import type { IotLib } from "~/lib/iot-lib";
 
 export const iotLib = {
@@ -12,4 +13,5 @@ export const iotLib = {
   utcToPtp,
   isValidPtpTimestamp,
   taiMinusUtc,
+  getUtcNow,
 } as unknown as IotLib;

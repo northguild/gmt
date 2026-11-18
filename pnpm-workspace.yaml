@@ -40,9 +40,10 @@ overrides:
 audit:
   ignore:
     # GHSA-fc5q-39xc-vjpf: picomatch through 4.0.7 can hang on a glob with a repeated
-    # single-branch extglob. No fixed version exists, so no override can clear it. Every path to
+    # single-branch extglob. GitHub withdrew the advisory on 2026-11-18, but the npm registry
+    # still reports it, and no fixed version exists for an override to pin. Every path to
     # picomatch is build and dev tooling (Astro, Vite, chokidar, anymatch) matching globs this repo
     # writes; none reaches the published package or the deployed site. Delete this entry once
-    # picomatch publishes a fixed version: `pnpm audit` without it then passes, or names the
-    # override to add.
+    # `pnpm audit` passes without it, or once picomatch publishes a fixed version: `pnpm audit`
+    # then names the override to add.
     - GHSA-fc5q-39xc-vjpf
