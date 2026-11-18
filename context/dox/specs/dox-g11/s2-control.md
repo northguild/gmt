@@ -24,7 +24,8 @@ fader notch, ported from the sound audition unchanged.
 - **Fader:** levels 1–11, 11 visible notches, starting at 5. Each notch the value crosses plays
   Glass tick. Moving it while muted unmutes at the new level ([index § Decided](./index.md#decided)).
 - **Aura switch:** labelled "Aura"; on `/` it starts and stops the aura at once (slice 4 wires
-  the live start); elsewhere it only saves the choice.
+  the live start). The aura plays on `/` only, so the switch and its track show there alone, and
+  the track only while the switch is on.
 - Every press saves `dox:sound` (slice 1 § Settings); another tab follows through `storage`.
 - GitHub, Discord and the theme toggle keep their northguild.dev pixels at every width.
 

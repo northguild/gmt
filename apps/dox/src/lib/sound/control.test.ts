@@ -130,14 +130,6 @@ describe("the sound control", () => {
     expect(saved()).toMatchObject({ track: "ice" });
   });
 
-  it("keeps the track choice open with the aura off", async () => {
-    show();
-    await userEvent.click(aura());
-    expect(track("Deep drone")).toBeEnabled();
-    await userEvent.click(track("Deep drone"));
-    expect(saved()).toMatchObject({ aura: false, track: "deep" });
-  });
-
   it("follows another tab", () => {
     show();
     saveSound({ level: 3, muted: true, aura: false, track: "deep" });

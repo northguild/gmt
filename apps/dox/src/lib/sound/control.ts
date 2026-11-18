@@ -9,8 +9,9 @@
  *   is the kit range's own.
  * - The Aura switch writes `aura`; its Ice snap is the kit switch's own (switch-cue.ts).
  * - The track radios (Ice cavern, Deep drone) write `track`; the engine crossfades a playing aura.
- *   They stay enabled with the aura off: the pick is then kept for when it is on, and a reader
- *   can choose before switching it on rather than in a fixed order.
+ * - The panel shows the Aura switch and track on the landing only, and the track only while the
+ *   switch is on (settings-control.module.css); they are wired on every page all the same, so a
+ *   change in another tab still repaints them.
  * - Nothing is written on mount. A change here or in another tab repaints them all, and keeps
  *   `data-sound` on `<html>` true to the mute, which draws the speaker.
  *

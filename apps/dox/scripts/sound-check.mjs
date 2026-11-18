@@ -747,13 +747,31 @@ for (const name of browsers) {
               "control-keys",
               `${width}: ArrowRight moved the fader ${before} to ${after}`,
             );
-          await page.keyboard.press("Tab");
-          const onAura = await page.evaluate(() => document.activeElement?.id);
-          if (onAura !== "gmt-sound-aura")
+          // The aura plays on the landing only, so only the landing's panel holds its switch and
+          // track. Elsewhere the fader is the panel's last stop, and Tab would leave it.
+          const landing = path === "/";
+          const auraShown = await page
+            .getByRole("switch", { name: "Aura" })
+            .isVisible();
+          const trackShown = await page
+            .getByRole("group", { name: "Aura track" })
+            .isVisible();
+          if (auraShown !== landing || trackShown !== landing)
             bad(
               "control-keys",
-              `${width}: Tab from the fader reached "${onAura}", not the switch`,
+              `${width}: the Aura switch ${auraShown ? "shows" : "hides"} and its track ${trackShown ? "shows" : "hides"}, wanted both ${landing ? "shown on the landing" : "hidden off the landing"}`,
             );
+          if (landing) {
+            await page.keyboard.press("Tab");
+            const onAura = await page.evaluate(
+              () => document.activeElement?.id,
+            );
+            if (onAura !== "gmt-sound-aura")
+              bad(
+                "control-keys",
+                `${width}: Tab from the fader reached "${onAura}", not the switch`,
+              );
+          }
           await page.keyboard.press("Escape");
           await page.waitForTimeout(150);
           const back = await page.evaluate(() => document.activeElement?.id);
@@ -1190,8 +1208,11 @@ for (const name of browsers) {
             await page.locator("#gmt-settings-button").click();
             await page.waitForTimeout(300);
           }
+          const trackGroup = page.getByRole("group", { name: "Aura track" });
           await toggle.uncheck();
           await page.waitForTimeout(500);
+          if (await trackGroup.isVisible())
+            bad("aura", `${label}: the track still shows with the Aura off`);
           const off = await page.evaluate(readAura);
           if (off.outs.length !== 1)
             bad(
@@ -1222,6 +1243,8 @@ for (const name of browsers) {
           }
           await toggle.check();
           await page.waitForTimeout(800);
+          if (!(await trackGroup.isVisible()))
+            bad("aura", `${label}: the track did not show with the Aura on`);
           const back = await page.evaluate(readAura);
           if (!back.ins.includes(1.5))
             bad(

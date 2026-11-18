@@ -64,7 +64,9 @@ Modify:
   page (`page.evaluate` dispatching `visibilitychange` with `document.hidden` overridden, or a
   second tab) stops scheduling: no new `start(t)` for 2 s; showing it restarts with a fade.
 - The Aura switch off then on, at ≥ 50rem inline and below 50rem in the popover: the bus fades
-  out and back in; the saved `dox:sound` holds `aura` across a reload.
+  out and back in, the track hides and shows with it; the saved `dox:sound` holds `aura` across a
+  reload.
+- On `/tools/zoned-earth/`: the panel shows no Aura switch and no track.
 - On `/guides/conversion/databases/`: the aura module is never requested.
 - LCP on `/` at 390×844, throttled: no worse than `main` + 100 ms.
 

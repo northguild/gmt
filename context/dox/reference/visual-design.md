@@ -112,7 +112,8 @@ desktop.
   optional `icon` before its label (with a gap), and lights its bevelled face when pressed. With
   `labelHidden` it is a square holding the icon alone; the label stays its name.
 - **A volume control is speaker, then fader.** In the sound popover the mute button is the speaker
-  icon on the left of the fader, which fills the row; the Aura switch sits below a hairline.
+  icon on the left of the fader, which fills the row. On the landing alone the Aura switch sits
+  below it, and the aura's track below that while the switch is on.
 - **A header popover button looks like its neighbours.** The sound button is a `gmt-icon-button`
   (the Dox button's and the theme toggle's look) that opens a top-layer popover with a full
   bevelled border, anchored under it. Its icon shows the state.

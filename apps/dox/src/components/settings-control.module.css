@@ -39,6 +39,19 @@
   }
 }
 
+/* The aura plays on the landing only (HeroSpace sets `data-aura` on <html>), so its switch and
+   track show there alone, and the track only while the switch is on. Hidden, they leave the tab
+   order and the accessibility tree. */
+.aura {
+  display: grid;
+  gap: 1.25rem;
+}
+
+:root:not([data-aura]) .aura,
+.aura:has(:where([role="switch"]:not(:checked))) .track {
+  display: none;
+}
+
 /* A switch row reads as a setting does everywhere: its words at the start, the switch at the
    end, the width of the panel between them. */
 .pop :where(label:has(> [role="switch"])) {

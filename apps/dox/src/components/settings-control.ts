@@ -12,7 +12,9 @@
  *
  * The panel reads top to bottom: the "Dark theme" switch, a hairline, then sound (the mute button
  * beside the volume fader, the Aura switch, and the aura's track: Ice cavern or Deep drone, a radio
- * pair from the kit's chips). `ThemeProvider` sets `data-theme` and
+ * pair from the kit's chips). The aura plays on the landing only, so its switch and track show
+ * only where `<html>` carries the landing's `data-aura`, and the track only while the switch is
+ * on; elsewhere the panel holds theme and volume. `ThemeProvider` sets `data-theme` and
  * `data-sound` on `<html>` before first paint; the mute button's speaker is drawn from
  * `data-sound` in CSS, so a muted visitor never sees it on. `lib/settings-control.ts` wires it.
  */
@@ -67,16 +69,18 @@ export function settingsControl(): SafeHtml {
         ${button({ id: "gmt-sound-mute", label: "Mute sound", labelHidden: true, pressed: true, cue: true, icon: raw(SPEAKER) })}
         ${range({ id: "gmt-sound-fader", label: "Volume", look: "fader", min: 1, max: 11, step: 1, value: 5, valueText: "Volume 5 of 11, muted" })}
       </div>
-      ${switchField({ id: "gmt-sound-aura", label: "Aura", size: "small", checked: true })}
-      <div class="${styles.track}">${chips({
-        legend: "Aura track",
-        kind: "radio",
-        name: "gmt-sound-track",
-        items: [
-          { value: "ice", label: "Ice cavern", checked: true },
-          { value: "deep", label: "Deep drone" },
-        ],
-      })}</div>
+      <div class="${styles.aura}">
+        ${switchField({ id: "gmt-sound-aura", label: "Aura", size: "small", checked: true })}
+        <div class="${styles.track}">${chips({
+          legend: "Aura track",
+          kind: "radio",
+          name: "gmt-sound-track",
+          items: [
+            { value: "ice", label: "Ice cavern", checked: true },
+            { value: "deep", label: "Deep drone" },
+          ],
+        })}</div>
+      </div>
     </div>
   </div>`;
 }
