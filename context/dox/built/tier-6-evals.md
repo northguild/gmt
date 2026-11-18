@@ -1,6 +1,6 @@
 # Tier 6: Dox, chat evals
 
-Part of [built/index.md](index.md). What the chat does before and after a model answers: [tier-6-chat.md](tier-6-chat.md). Brains and budget: [tier-6-brains.md](tier-6-brains.md).
+Part of [built/index.md](index.md). What the chat does before and after a model answers: [tier-6-chat.md](tier-6-chat.md). The tools a case's call is checked against: [tier-6-chat-tools.md](tier-6-chat-tools.md). Brains and budget: [tier-6-brains.md](tier-6-brains.md).
 
 ## What runs where
 

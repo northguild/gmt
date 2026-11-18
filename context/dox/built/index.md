@@ -40,7 +40,8 @@ What `apps/dox` ships, tier by tier: the rules that bind future changes, the tra
 | [tier-4-globe.md](tier-4-globe.md) | Globe engine, controls, night sky, Earth imagery, landing hero |
 | [tier-4-zones.md](tier-4-zones.md) | Zone readout, filters, scrubber, boundary data, data credits |
 | [tier-5-scenarios.md](tier-5-scenarios.md) | Scenario and mistake pages |
-| [tier-6-chat.md](tier-6-chat.md) | Dox chat: surface, retrieval, request pipeline, client, widget tools |
+| [tier-6-chat.md](tier-6-chat.md) | Dox chat: surface, retrieval, request pipeline, client |
+| [tier-6-chat-tools.md](tier-6-chat-tools.md) | Dox chat: widget tools the brain calls, their registry and validation |
 | [tier-6-brains.md](tier-6-brains.md) | Brains, budget, failover, traps |
 | [tier-6-evals.md](tier-6-evals.md) | Chat evals: cases, floors, graders, the live run and its budget |
 | [tier-6-runbooks.md](tier-6-runbooks.md) | Dev server traps, a11y gates, run the gates, Firefox route, gate baseline |
