@@ -165,7 +165,7 @@
 
   .box {
     inline-size: 100%;
-    border-block-end-color: var(--mark);
+    box-shadow: inset 0 -2px 0 var(--mark);
   }
 }
 

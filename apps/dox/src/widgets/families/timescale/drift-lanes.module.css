@@ -153,7 +153,6 @@
   inset-inline-start: 0;
   padding: 1px var(--gmt-space-1) 3px;
   border: 1px solid var(--gmt-border);
-  border-block-end-color: var(--series, var(--gmt-border-strong));
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);

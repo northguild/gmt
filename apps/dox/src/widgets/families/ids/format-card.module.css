@@ -16,7 +16,6 @@
   padding: var(--gmt-space-3);
   padding-block-end: calc(var(--gmt-space-3) + 2px);
   border: 1px solid var(--gmt-border);
-  border-block-end-color: var(--bar);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
@@ -155,7 +154,6 @@
   padding: var(--gmt-space-3);
   padding-block-end: calc(var(--gmt-space-3) + 2px);
   border: 1px solid var(--gmt-border);
-  border-block-end-color: var(--gmt-series-1);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
@@ -192,11 +190,11 @@
   }
 
   .card[data-series] {
-    border-block-end-color: Highlight;
+    border-color: Highlight;
   }
 
   .ladder {
-    border-block-end-color: Highlight;
+    border-color: Highlight;
   }
 
   .cap,

@@ -10,7 +10,6 @@
   padding: var(--gmt-space-2) var(--gmt-space-3);
   padding-block-end: calc(var(--gmt-space-2) + 1px);
   border: 1px solid var(--gmt-border);
-  border-block-end-color: var(--gmt-border-strong);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);

@@ -145,7 +145,7 @@
 }
 
 .expressive-code .frame.is-terminal:not(.has-title) pre {
-  border-block-start: 1px solid var(--gmt-border);
+  border-block-start: 1px solid var(--gmt-hairline);
   border-start-start-radius: var(--gmt-radius-lg);
   border-start-end-radius: var(--gmt-radius-lg);
 }

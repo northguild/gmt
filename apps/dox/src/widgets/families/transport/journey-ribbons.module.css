@@ -198,7 +198,6 @@
   block-size: calc(var(--badge-h) - 0.3rem);
   padding-block-end: 2px;
   border: 1px solid var(--gmt-border-strong);
-  border-block-end-color: var(--series);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);
