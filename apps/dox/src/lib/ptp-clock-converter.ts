@@ -661,7 +661,37 @@ export const roundTripText = (back: string): string =>
 // Calls frames
 // ---------------------------------------------------------------------------
 
-export type CallsSection = "read" | "check" | "write";
+export type CallsSection = "read" | "check" | "write" | "now";
+
+/** What the "PTP now" readout shows for one instant: the clock, the table's offset and the count. */
+export interface NowFacts {
+  /** The `now` argument, verbatim. */
+  utc: string;
+  /** `taiMinusUtc(now)`. */
+  table: number | null;
+  /** `utcToPtp(now, table)`; null when there is no table offset, or the library refused. */
+  ptp: { seconds: bigint; nanoseconds: number } | null;
+  /** One line per call actually made. */
+  calls: string[];
+}
+
+/**
+ * The readout's facts at `now`, which the caller reads from the clock (this function never
+ * does). The library says what the table offset is; `utcToPtp` is asked only when it has one.
+ */
+export function nowFacts(lib: IotLib, now: string): NowFacts {
+  const calls: string[] = [];
+  const table = lib.taiMinusUtc(now);
+  calls.push(`taiMinusUtc(${lit(now)}); // ${lit(table)}`);
+  if (table === null) return { utc: now, table, ptp: null, calls };
+  const written = lib.utcToPtp(now, table);
+  calls.push(`utcToPtp(${lit(now)}, ${lit(table)}); // ${lit(written)}`);
+  const ptp =
+    written === null
+      ? null
+      : { seconds: written.seconds, nanoseconds: written.nanoseconds };
+  return { utc: now, table, ptp, calls };
+}
 
 /**
  * The widest text each calls frame can print, so the frame holds one height whatever the
@@ -692,6 +722,7 @@ export function callsSizer(section: CallsSection): {
     instant: WIDEST_INSTANT,
   };
   const linesOf = (lib: IotLib): string[] => {
+    if (section === "now") return nowFacts(lib, WIDEST_INSTANT).calls;
     if (section === "write") return writePtp(lib, state).calls;
     const read = readPtp(lib, state);
     return section === "read" ? read.calls : checkOffset(lib, read).calls;

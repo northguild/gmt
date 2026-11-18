@@ -86,19 +86,17 @@ dividers), Ice (**long-form body copy**) and Signal-lost (amber, sentinel return
 
 ## Controls — the one hard engineering rule
 
-**Restyle native elements. Never rebuild them from `div`s.** Keep real `<textarea>`,
-`<button>`, `<input type="range">` and `<select>`, neutralised with `appearance: none`.
-Rebuilding loses IME composition (all CJK input), autofill, mobile keyboards, form semantics
-and screen reader support — none of which is visible while developing on a US-English
-desktop.
+**Restyle native elements. Never rebuild them from `div`s.** Keep real `<textarea>`, `<button>`,
+`<input type="range">` and `<select>`, neutralised with `appearance: none`. Rebuilding loses IME
+composition (all CJK input), autofill, mobile keyboards, form semantics and screen reader
+support — none of which is visible while developing on a US-English desktop.
 
 - **A draggable value is a faceted grip; never a flat or round thumb.** The grip is a tall
   bevelled handle with a glass fill, a coloured edge and three grip ridges. It sits in a
   bevelled glass channel filled up to it, with a value chip riding above it and labelled ends.
   It glows on hover and fills solid while held; the cursor is grab and grabbing.
   - A native range and a custom `role="slider"` handle look the same.
-  - Bevels come from `corner-shape`, never `clip-path`, which would clip the glow and the focus
-    ring.
+  - Bevels come from `corner-shape`, never `clip-path`, which would clip the glow and focus ring.
 - **Labelled fields line up.** Fields sit in a grid whose label row and control row are shared
   across the row, so a wrapped label never pushes its control out of line with its
   neighbours. "Optional" is a small chip beside the label, not words in it.
@@ -158,6 +156,8 @@ Only these things move. Anything not listed stays still.
   is the reader's own motion, so reduced motion keeps it; a fly-to snaps. The Sun and the Moon
   are on the same sky: the Moon with its phase, the Sun a near-white core with a glare that the
   contrast and transparency settings drop.
+- **Live clocks tick on the second, text only; a reader can pause each one, and reduced motion
+  starts it paused** ("PTP now"; the Cutoff Countdown and Expiry Calculator not yet: #547).
 - **Height easing through `.gmt-grow`** in tool result regions. Height only: never opacity or
   transform on a value, and never a value the reader is reading.
 

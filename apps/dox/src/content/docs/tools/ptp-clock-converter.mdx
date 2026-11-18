@@ -17,13 +17,15 @@ A PTP timestamp counts TAI, and UTC is the count minus the offset the grandmaste
 
 <Fragment slot="intro">
 
-A Precision Time Protocol (IEEE 1588) timestamp is a count of seconds and nanoseconds from 1970-01-01T00:00:00 TAI. [`ptpToUtc`](/reference/iot/convert/ptpToUtc/) turns a record and the `currentUtcOffset` into a UTC string, and gives `""` when it cannot. [`isValidPtpTimestamp`](/reference/iot/validate/isValidPtpTimestamp/) says whether the record is in range. A second section checks the announced offset against the leap-second table with [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) and draws the two on a fixed ruler, and a last section goes the other way with [`utcToPtp`](/reference/iot/convert/utcToPtp/). Everything on the page is what those calls returned.
+A Precision Time Protocol (IEEE 1588) timestamp is a count of seconds and nanoseconds from 1970-01-01T00:00:00 TAI. [`ptpToUtc`](/reference/iot/convert/ptpToUtc/) turns a record and the `currentUtcOffset` into a UTC string, and gives `""` when it cannot. [`isValidPtpTimestamp`](/reference/iot/validate/isValidPtpTimestamp/) says whether the record is in range. Section 2 checks the announced offset against the leap-second table with [`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) and draws the two on a fixed ruler, and section 3 goes the other way with [`utcToPtp`](/reference/iot/convert/utcToPtp/). Above section 1, a "PTP now" section reads your clock with [`getUtcNow`](/reference/utc/get/getUtcNow/) each second and shows the PTP count it makes now, `utcToPtp(now, taiMinusUtc(now))`; "Live clock" pauses it. Everything on the page is what those calls returned.
 
 </Fragment>
 
 <PtpClockConverter fullbleed />
 
 <Fragment slot="after">
+
+**PTP now.** TAI runs ahead of UTC by `taiMinusUtc(now)` seconds, 37 since 2017. A receiver that writes `utcToPtp(now, 0)` is 37 s behind every grandmaster. The section reads the table at your clock, so a clock set before 1972 shows NO SIGNAL.
 
 **The offset has no default.** The library does not guess one: the grandmaster announces it, and a receiver that assumes 0, or the value from last year's firmware, is wrong without any sign. That is why the offset box sits in section 1 and section 3 reads it too.
 

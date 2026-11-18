@@ -21,11 +21,12 @@
  * Generated option and member tables have their own wiring (`ref-table.ts`). The `/dox/` rail
  * is React-owned and does the same in `DoxChat.tsx`.
  *
- * Plain DOM, no framework. The state is re-read when the box or its content changes size. A box
- * a widget renders after the mount, or renders again, is picked up by a `MutationObserver` on
- * the root, so the order of the mount scripts does not matter. A box is read a second time
- * after the next frame, and when a `<details>` around it opens, because the first read of a box
- * the browser has not laid out yet can say it fits.
+ * Plain DOM, no framework. The state is re-read when the box or its content changes size, and
+ * when text or nodes inside it are replaced (a live value written in place, one level down, fires
+ * no resize entry for the box). A box a widget renders after the mount, or renders again, is
+ * picked up by a `MutationObserver` on the root, so the order of the mount scripts does not
+ * matter. A box is read a second time after the next frame, and when a `<details>` around it
+ * opens, because the first read of a box the browser has not laid out yet can say it fits.
  */
 
 /**
@@ -148,11 +149,22 @@ function boxesIn(el: Element): HTMLElement[] {
 }
 
 function onMutations(records: MutationRecord[]): void {
+  // Each box that changed is read once per callback, however many records name it (text
+  // streamed into a `<pre>` is one record per chunk).
+  const changed = new Set<HTMLElement>();
   for (const record of records) {
     // A wired box whose content was replaced: watch the new children, and re-read it now.
     const { target } = record;
     const parentBox =
       target instanceof HTMLElement && isWired(target) ? target : null;
+    // Text swapped deeper inside a wired box (a span in a plate value) changes the width of the
+    // content without a resize entry for the box, so the nearest wired box above is re-read too.
+    const owner =
+      parentBox ??
+      (target instanceof Element
+        ? target.closest<HTMLElement>(CANDIDATES)
+        : null);
+    if (owner && isWired(owner)) changed.add(owner);
     for (const node of Array.from(record.removedNodes)) {
       if (!(node instanceof Element) || node.isConnected) continue;
       resize?.unobserve(node);
@@ -163,8 +175,8 @@ function onMutations(records: MutationRecord[]): void {
       if (parentBox) resize?.observe(node);
       for (const box of boxesIn(node)) wire(box);
     }
-    if (parentBox) read(parentBox);
   }
+  for (const box of changed) if (box.isConnected) read(box);
 }
 
 let mutations: MutationObserver | undefined;

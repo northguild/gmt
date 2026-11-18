@@ -955,7 +955,7 @@ const TOOLS = [
     // preset. The ruler's marks move by design. The first read preset reads and the sixth is
     // refused, so each value is typed from both.
     slug: "ptp-clock-converter",
-    minutes: 4.2,
+    minutes: 4.5,
     root: '[data-widget="ptp-clock-converter"]',
     presets: ["announced-37", "out-of-range"],
     controls: [],
@@ -999,6 +999,9 @@ const TOOLS = [
         ],
       },
     ],
+    // The "PTP now" section ticks on its own: the switch starts on, so the base is taken while
+    // the clock runs, each tick is diffed against it, then the switch is paused and started.
+    clock: { role: "switch", name: "Live clock", startsOn: true },
     track: null,
     moving: ["cursor"],
     frame: false,
@@ -1636,25 +1639,47 @@ async function run() {
               console.log(`       ${p}`);
           }
           if (tool.clock) {
-            // The Now switch: flip it, then let the clock tick three times. The flip and each
-            // tick must leave every box where it was, including the library's null refusal.
+            // The clock: turn it on, then let it tick three times. Every step must leave every
+            // box where it was, including the library's null refusal. `true` is the Expiry
+            // Calculator's "Now" and "A date" radios; `{ role, name, startsOn }` is a switch that
+            // is already ticking (the PTP Clock Converter's "Live clock"): the base is taken
+            // while it ticks, then each tick is diffed, then it is paused and started again.
+            const spec =
+              tool.clock === true
+                ? { on: "Now", off: "A date", startsOn: false }
+                : tool.clock;
             const id = `${where} ${preset} Now`;
             const result = { keyboard: 0, pointer: 0, problems: [] };
             const ctl = control(page, tool.root, PRESET);
             const base = await snapshot(page, ctl, tool);
-            const chip = page
-              .locator(tool.root)
-              .getByRole("radio", { name: "Now", exact: true });
-            await chip.evaluate((el) => el.click());
-            await settled(page, tool.root);
-            for (const p of diffSnapshots(
-              base,
-              await snapshot(page, ctl, tool),
-              false,
-            )) {
-              result.problems.push(`flip to Now: ${p}`);
+            const root = page.locator(tool.root);
+            const turn = (to) =>
+              tool.clock === true
+                ? root
+                    .getByRole("radio", {
+                      name: to ? spec.on : spec.off,
+                      exact: true,
+                    })
+                    .evaluate((el) => el.click())
+                : root
+                    .getByRole(spec.role, { name: spec.name, exact: true })
+                    .evaluate((el, on) => {
+                      if (el.checked !== on) el.click();
+                    }, to);
+            if (!spec.startsOn) {
+              await turn(true);
+              await settled(page, tool.root);
+              for (const p of diffSnapshots(
+                base,
+                await snapshot(page, ctl, tool),
+                false,
+              )) {
+                result.problems.push(`flip to Now: ${p}`);
+              }
             }
-            const flipped = await snapshot(page, ctl, tool);
+            const flipped = spec.startsOn
+              ? base
+              : await snapshot(page, ctl, tool);
             for (let tick = 1; tick <= 3; tick++) {
               await page.waitForTimeout(1050);
               for (const p of diffSnapshots(
@@ -1666,11 +1691,26 @@ async function run() {
               }
               result.keyboard++;
             }
-            await page
-              .locator(tool.root)
-              .getByRole("radio", { name: "A date", exact: true })
-              .evaluate((el) => el.click());
+            await turn(false);
             await settled(page, tool.root);
+            if (spec.startsOn) {
+              for (const p of diffSnapshots(
+                flipped,
+                await snapshot(page, ctl, tool),
+                false,
+              )) {
+                result.problems.push(`pause: ${p}`);
+              }
+              await turn(true);
+              await settled(page, tool.root);
+              for (const p of diffSnapshots(
+                flipped,
+                await snapshot(page, ctl, tool),
+                false,
+              )) {
+                result.problems.push(`resume: ${p}`);
+              }
+            }
             const ok = result.problems.length === 0;
             if (!ok) failures++;
             summary.push({ id, ...result, ok });

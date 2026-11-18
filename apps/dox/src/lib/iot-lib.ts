@@ -4,7 +4,8 @@
  *
  * The PTP Clock Converter reads and writes with `iot/convert` (`ptpToUtc`, `utcToPtp`), asks
  * `iot/validate` whether a record is in range, and checks the announced offset against the
- * leap-second table with `timescale/calculate` (`taiMinusUtc`). Each name is picked from its
+ * leap-second table with `timescale/calculate` (`taiMinusUtc`). The "PTP now" readout reads
+ * the clock with `utc/get` (`getUtcNow`). Each name is picked from its
  * module and nothing else is read.
  *
  * A heavy module: only a tool's mount imports it. A module that fails to load, or a name it
@@ -29,19 +30,23 @@ export interface IotLib {
   ): value is PtpTimestamp | { seconds: number; nanoseconds: number };
   // timescale/calculate
   taiMinusUtc(isoString: string): number | null;
+  // utc/get
+  getUtcNow(): string;
 }
 
 export async function loadIotLib(): Promise<IotLib> {
   try {
-    const [convert, validate, calculate] = await Promise.all([
+    const [convert, validate, calculate, utcGet] = await Promise.all([
       GMT_MODULES["iot/convert"](),
       GMT_MODULES["iot/validate"](),
       GMT_MODULES["timescale/calculate"](),
+      GMT_MODULES["utc/get"](),
     ]);
     return {
       ...pickFunctions(convert, ["ptpToUtc", "utcToPtp"]),
       ...pickFunctions(validate, ["isValidPtpTimestamp"]),
       ...pickFunctions(calculate, ["taiMinusUtc"]),
+      ...pickFunctions(utcGet, ["getUtcNow"]),
     } as unknown as IotLib;
   } catch (cause) {
     throw new WidgetLoadError(cause);

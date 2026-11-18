@@ -31,6 +31,16 @@ describe("the 37 s sentences", () => {
   });
 });
 
+describe("the PTP now sentences", () => {
+  it("hold to the table", () => {
+    expect(taiMinusUtc("2017-01-01T00:00:00Z")).toBe(37);
+    expect(page).toContain("37 since 2017");
+    expect(taiMinusUtc("1971-06-01T00:00:00Z")).toBeNull();
+    expect(page).toContain("before 1972 shows NO SIGNAL");
+    expect(page).toContain("utcToPtp(now, taiMinusUtc(now))");
+  });
+});
+
 describe("the code block", () => {
   it("pastes what the library returns", () => {
     expect(page).toContain('ptpToUtc(record, 37); // "2024-01-01T00:00:00Z"');
