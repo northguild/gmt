@@ -94,6 +94,7 @@ export async function createGlobeEngine(
     initialRotation: options.initialRotation,
     zoomRange: options.zoomRange,
     reducedMotion,
+    onZoom: (dir, closeness) => zoomCallback?.(dir, closeness),
   });
   const camera = createCamera(options.initialRotation);
 
@@ -113,6 +114,8 @@ export async function createGlobeEngine(
   let centreX = 0.5;
   let centreY = 0.5;
   let framed = false;
+  /** Whether a frame has given the camera its place yet; before that it is the 1 px default. */
+  let placed = false;
 
   let frameHandle = 0;
   /** The `requestAnimationFrame` time of the last loop draw. */
@@ -123,7 +126,9 @@ export async function createGlobeEngine(
 
   let tapCallback: Parameters<GlobeEngine["onTap"]>[0] | null = null;
   let frameCallback: (() => void) | null = null;
+  let holdCallback: (() => void) | null = null;
   let interactCallback: ((kind: GlobeInteraction) => void) | null = null;
+  let zoomCallback: Parameters<GlobeEngine["onZoom"]>[0] | null = null;
   /** Whether the frame loop is held off because the host scrolled out of view. */
   let offscreen = false;
   /** Whether something drawn over the globe (the search dialog, the mobile menu) hides it. */
@@ -386,6 +391,7 @@ export async function createGlobeEngine(
     camera.radius = baseScale * controller.zoom;
     camera.centreX = centreX;
     camera.centreY = centreY;
+    placed = true;
 
     /* One instant for the whole frame. Reading the clock per call site could put
        a marker on the wrong side of the same frame's own terminator. */
@@ -692,6 +698,7 @@ export async function createGlobeEngine(
       if (frameHandle) cancelAnimationFrame(frameHandle);
       frameHandle = 0;
       if (wakeTimer) clearTimeout(wakeTimer);
+      holdCallback?.();
       return;
     }
     // Returning after a while: treat now as the last interaction, so the globe
@@ -712,6 +719,7 @@ export async function createGlobeEngine(
       if (wakeTimer) clearTimeout(wakeTimer);
       frameHandle = 0;
       drawHandle = 0;
+      holdCallback?.();
       return;
     }
     controller.markInteraction(performanceNow());
@@ -811,10 +819,15 @@ export async function createGlobeEngine(
     getZoom: () => controller.zoom,
     getRotation: () => [controller.rotation[0], controller.rotation[1]],
     project(point: LngLat) {
+      /* The camera takes its centre and radius from the first frame drawn, which a dawn entrance
+         holds back. Until then it is the default, centred on the host's top left: every point
+         would land there and read as visible, and the zone card placed by it flashed in the
+         page's corner. */
+      if (!placed) return { x: 0, y: 0, visible: false };
       return projectPoint(camera, point[0], point[1]);
     },
     unproject(x, y) {
-      return unprojectPoint(camera, x, y);
+      return placed ? unprojectPoint(camera, x, y) : null;
     },
     getCentre: () => ({
       x: camera.centreX,
@@ -827,8 +840,15 @@ export async function createGlobeEngine(
     onInteract(callback) {
       interactCallback = callback;
     },
+    onZoom(callback) {
+      zoomCallback = callback;
+    },
     onFrame(callback) {
       frameCallback = callback;
+    },
+    isHeld: () => destroyed || document.hidden || held(),
+    onHold(callback) {
+      holdCallback = callback;
     },
     requestRender() {
       requestDraw();
@@ -857,6 +877,7 @@ export async function createGlobeEngine(
       tapCallback = null;
       frameCallback = null;
       interactCallback = null;
+      zoomCallback = null;
     },
   };
 

@@ -157,6 +157,21 @@
   backdrop-filter: var(--gmt-glass-blur-saturate);
 }
 
+/* A header button for the page being shown (`ButtonLink current`) is an `<a>` with no `href`: it
+   keeps its resting look and offers nothing to press, so no pointer and no hover chip. */
+.gmt-button-link:not([href]) {
+  cursor: default;
+
+  &:hover,
+  &:focus {
+    color: var(--gmt-cyan);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}
+
 /* ---- Expressive Code copy button → unified with the code-frame copy button ----
  * Starlight renders its own copy button inside `.expressive-code .copy` with a
  * fixed DOM — `button > div` (idle bg wash), `button::before` (border ring),
@@ -374,7 +389,7 @@
   transition: filter var(--gmt-duration-fast) var(--gmt-easing);
 }
 
-.gmt-ask-dox-link:hover .gmt-dox-mark,
+.gmt-ask-dox-link[href]:hover .gmt-dox-mark,
 .gmt-ask-dox-link:focus-visible .gmt-dox-mark {
   filter: drop-shadow(0 0 7px color(from var(--gmt-cyan) srgb r g b / 75%));
 }
@@ -464,6 +479,84 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   box-shadow: var(--gmt-shadow-md);
+}
+
+/* ---- Native panels: in and out ----
+ * Every native panel (`[popover]` that is not manual: the Settings panel, the data credits, the
+ * chat's fine print) comes and goes like the sidebar to and from the landing
+ * (gmt-view-transitions.css): a short move from its button and a fade over 240 ms on the sweep
+ * curve, with one band of ice light crossing it as it moves. `native-panels.ts` plays the Steel
+ * breath with it. Closing keeps the panel shown, and in the top layer, until the fade ends.
+ * `--gmt-panel-from` is where it comes from, half a rem above by default; a panel that opens
+ * above or beside its button sets its own. `:where()` leaves every panel's own rules in charge.
+ */
+:where([popover]:not([popover="manual"])) {
+  opacity: 0;
+  translate: var(--gmt-panel-from, 0 -0.5rem);
+  transition:
+    opacity var(--gmt-duration-med) var(--gmt-ease-sweep),
+    translate var(--gmt-duration-med) var(--gmt-ease-sweep),
+    display var(--gmt-duration-med) allow-discrete,
+    overlay var(--gmt-duration-med) allow-discrete;
+
+  /* The sheen's layer, over the content and never in the way of a press. Closed, the animation
+     has another name, so each open and each close starts the band again. The band starts and
+     ends past the edges, so it rests out of sight. */
+  &::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    corner-shape: inherit;
+    content: "";
+    pointer-events: none;
+    background-image: var(--gmt-sheen);
+    background-repeat: no-repeat;
+    background-size: 250% 100%;
+    background-position: 110% 0;
+    animation: gmt-panel-sheen-out var(--gmt-duration-med) ease-in-out;
+  }
+}
+
+:where([popover]:not([popover="manual"]):popover-open) {
+  opacity: 1;
+  translate: 0 0;
+
+  @starting-style {
+    opacity: 0;
+    translate: var(--gmt-panel-from, 0 -0.5rem);
+  }
+
+  &::after {
+    animation-name: gmt-panel-sheen;
+  }
+}
+
+@keyframes gmt-panel-sheen {
+  from {
+    background-position: -10% 0;
+  }
+}
+
+@keyframes gmt-panel-sheen-out {
+  from {
+    background-position: -10% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([popover]:not([popover="manual"])) {
+    --gmt-panel-from: 0 0;
+
+    &::after {
+      animation: none;
+    }
+  }
+}
+
+@media (forced-colors: active), (prefers-contrast: more) {
+  :where([popover]:not([popover="manual"]))::after {
+    display: none;
+  }
 }
 
 /* ---- Entrance — the arrival gesture ----

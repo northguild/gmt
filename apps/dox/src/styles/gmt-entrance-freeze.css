@@ -7,7 +7,9 @@
  *   wait     the sky is drawing. The copy's freeze has started (below); the other pieces are held
  *            out of sight.
  *   run      t0 has come; every other animation below starts in the same style recalculation.
- *   static   the failsafe showed the page; nothing animates, the sky fades in once drawn.
+ *   static   the page is shown as it is: the failsafe fired, or the reader came from another page
+ *            of this site and has seen the buttons and the header (lib/arrival.ts). Nothing
+ *            animates and nothing sounds; the sky fades in once drawn.
  *   done     the entrance has ended; no rule below matches, so a card shown later does not pop.
  *
  * The copy (the eyebrow, the title and the tagline) is the page's largest text, so it is on screen
@@ -17,9 +19,9 @@
  *
  * The header continues northguild.dev's bar. The NorthGuild link and the GitHub and Discord
  * buttons sit on the same pixels there, so they are on screen from the first paint: the
- * "/ gmt" title freezes in beside the link, then search, Dox and the theme toggle, left to right.
- * Then the four chips (Dox, the theme toggle, GitHub, Discord) shine one after another. GitHub and
- * Discord start in northguild.dev's muted grey and shine into this site's cyan.
+ * "/ gmt" title freezes in beside the link, then search, Dox and the settings button, left to
+ * right. Then the four chips (Dox, settings, GitHub, Discord) shine one after another. GitHub and Discord start in northguild.dev's muted
+ * grey and shine into this site's cyan.
  *
  * `data-arrival="transition"` marks a page reached through a view transition: the header is
  * already on screen, so nothing in it moves.
@@ -122,9 +124,10 @@
   --ng-glint-after: 0.4s;
 }
 
-/* The header, left to right. The title and the controls freeze in; GitHub and Discord are already
-   there. Once the theme toggle, the last to freeze, has locked (0.31 s + 88% of the freeze), the
-   bar's four chips shine one after another: Dox, the theme toggle, GitHub, Discord. */
+/* The header, left to right. The title, search and Dox freeze in; GitHub, Discord and the settings
+   button are northguild.dev's too, so they are already there, as on the page the reader came
+   from. Once Dox, the last to freeze, has locked, the bar's four chips shine one after another
+   as they stand: Dox, GitHub, Discord, settings. */
 .header .gmt-app-title {
   --ng-delay: 0s;
 }
@@ -138,26 +141,26 @@
   --ng-chip: 0;
 }
 
-.header .theme-toggle {
-  --ng-delay: 0.31s;
-  --ng-chip: 1;
-}
-
-.header .social-icons > a[rel~="me"] {
-  --ng-chip: 2;
-}
-
-.header .social-icons > a[rel~="me"] ~ :where(a[rel~="me"]) {
+.header .gmt-settings-toggle {
   --ng-chip: 3;
 }
 
-.header :is(.gmt-ask-dox-link, .theme-toggle, .social-icons > a[rel~="me"]) {
+.header .social-icons > a[rel~="me"] {
+  --ng-chip: 1;
+}
+
+.header .social-icons > a[rel~="me"] ~ :where(a[rel~="me"]) {
+  --ng-chip: 2;
+}
+
+.header
+  :is(.gmt-ask-dox-link, .gmt-settings-toggle, .social-icons > a[rel~="me"]) {
   --ng-shine-at: calc(1.75s + var(--ng-chip) * 0.16s);
 }
 
-/* Dox and the theme toggle lock a little faster than the rest, so each freeze ends before its
-   shine starts (1.6 s and 1.76 s): one animation at a time drives a chip's colour. */
-.header :is(.gmt-ask-dox-link, .theme-toggle) {
+/* Dox locks a little faster than the rest, so its freeze has ended (at 1.58 s) before its shine
+   starts: one animation at a time drives a chip's colour. */
+.header .gmt-ask-dox-link {
   --ng-freeze-dur: 1.35s;
 }
 
@@ -171,14 +174,13 @@
   :where(
     .header .gmt-app-title,
     .header site-search button[data-open-modal],
-    .header .gmt-ask-dox-link,
-    .header .theme-toggle
+    .header .gmt-ask-dox-link
   ) {
   opacity: 0;
 }
 
-/* GitHub and Discord show from the first paint in northguild.dev's colour for them, and keep it
-   until their shine (below) turns them cyan. Their colour transition is off through the entrance:
+/* GitHub, Discord and the settings button show from the first paint in northguild.dev's colour
+   for them, and keep it until their shine (below) turns them cyan. Their colour transition is off through the entrance:
    the base colour changes at t0, and a running transition would outrank the animation's held
    first frame and flash cyan. */
 @media (forced-colors: none) {
@@ -186,13 +188,13 @@
       :not([data-arrival="transition"])
     )
     :where(.header .social-icons)
-    > a[rel~="me"] {
+    :is(a[rel~="me"], .gmt-settings-toggle) {
     transition: none;
   }
 
   :root[data-entrance="wait"]:where(:not([data-arrival="transition"]))
     :where(.header .social-icons)
-    > a[rel~="me"] {
+    :is(a[rel~="me"], .gmt-settings-toggle) {
     color: var(--gmt-ice-dim);
   }
 }
@@ -455,8 +457,7 @@
   :where(
     .header .gmt-app-title,
     .header site-search button[data-open-modal],
-    .header .gmt-ask-dox-link,
-    .header .theme-toggle
+    .header .gmt-ask-dox-link
   ) {
   animation: ng-freeze var(--ng-freeze-dur) ease var(--ng-delay) backwards;
 }
@@ -464,25 +465,25 @@
 /* ---- Frost and glint on the buttons: two pseudo-elements, each its own animation ----
    The clip keeps the glint inside the pane; its margin leaves room for a focus ring. */
 @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
-  /* The four chips' shine. GitHub and Discord have only this; Dox and the theme toggle run it after
-     their freeze, which animates neither the border nor anything past its own end. */
+  /* The four chips' shine. GitHub, Discord and the settings button have only this; Dox runs it
+     after its freeze, which animates neither the border nor anything past its own end. */
   :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
     :where(.header)
-    :is(.gmt-ask-dox-link, .theme-toggle, .social-icons > a[rel~="me"]) {
+    :is(.gmt-ask-dox-link, .gmt-settings-toggle, .social-icons > a[rel~="me"]) {
     position: relative;
     clip-path: inset(-6px);
   }
 
   :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
     :where(.header .social-icons)
-    > a[rel~="me"] {
+    :is(a[rel~="me"], .gmt-settings-toggle) {
     animation: ng-shine-in var(--ng-shine-dur) var(--ng-linear)
       calc(var(--ng-shine-at) - var(--ng-shine-lead)) backwards;
   }
 
   :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
     :where(.header)
-    :is(.gmt-ask-dox-link, .theme-toggle) {
+    .gmt-ask-dox-link {
     animation:
       ng-freeze var(--ng-freeze-dur) ease var(--ng-delay) backwards,
       ng-shine var(--ng-shine-dur) var(--ng-linear)
@@ -491,7 +492,11 @@
 
   :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
     :where(.header)
-    :is(.gmt-ask-dox-link, .theme-toggle, .social-icons > [rel~="me"])::before {
+    :is(
+      .gmt-ask-dox-link,
+      .gmt-settings-toggle,
+      .social-icons > [rel~="me"]
+    )::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -686,8 +691,7 @@
     :where(
       .header .gmt-app-title,
       .header site-search button[data-open-modal],
-      .header .gmt-ask-dox-link,
-      .header .theme-toggle
+      .header .gmt-ask-dox-link
     ) {
     animation: ng-fade var(--ng-fade-dur) var(--ng-linear) var(--ng-delay)
       backwards;
@@ -695,7 +699,7 @@
 
   :root[data-entrance="run"]:where(:not([data-arrival="transition"]))
     :where(.header .social-icons)
-    > a[rel~="me"] {
+    :is(a[rel~="me"], .gmt-settings-toggle) {
     animation: ng-tint-in var(--ng-fade-dur) var(--ng-linear)
       calc(var(--ng-shine-at) - var(--ng-shine-lead)) backwards;
   }
@@ -734,8 +738,7 @@
     :where(
       .header .gmt-app-title,
       .header site-search button[data-open-modal],
-      .header .gmt-ask-dox-link,
-      .header .theme-toggle
+      .header .gmt-ask-dox-link
     ) {
     animation: ng-sweep var(--ng-freeze-dur) var(--ng-ease) var(--ng-delay)
       backwards;

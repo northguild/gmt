@@ -284,6 +284,9 @@
   /* The night sky fading in once it is drawn (lib/hero-space.ts). */
   --gmt-duration-reveal: 0.6s;
 
+  /* One ring of the lock a chosen globe pin ripples (globe.module.css, .lock). */
+  --gmt-duration-lock: 0.72s;
+
   /* The page dissolving under an arrival from northguild.dev (gmt-view-transitions.css). */
   --gmt-duration-handoff: 0.6s;
   --gmt-easing-handoff: cubic-bezier(0.25, 0.6, 0.2, 1);
@@ -606,6 +609,7 @@
     --gmt-duration-slow: 0s;
     --gmt-duration-sweep: 0s;
     --gmt-duration-reveal: 0s;
+    --gmt-duration-lock: 0s;
     --gmt-duration-handoff: 0s;
     --gmt-motion-sonar-duration: 0s;
     --gmt-motion-sonar-loop-duration: 0s;

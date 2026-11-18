@@ -154,7 +154,7 @@ export function WidgetRail({
               >
                 {copied ? "Copied" : "Copy link to this view"}
               </button>
-              <ArtifactClose onClick={onClose} />
+              <ArtifactClose onClick={onClose} data-cue="" />
             </ArtifactActions>
           </ArtifactHeader>
           <div className="gmt-hive-artifact-body">

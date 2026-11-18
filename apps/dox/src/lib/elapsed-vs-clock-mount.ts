@@ -72,6 +72,7 @@ import {
   type RulerPiece,
 } from "./elapsed-vs-clock";
 import { onWidthChange } from "./label-fit";
+import { pitchOfRows, scrollTicks } from "./sound/scroll-ticks";
 import {
   drawMs,
   sliderDate,
@@ -429,6 +430,12 @@ function setupWidget(
     list: el("list"),
     links: el("links"),
   };
+  // The reader's scroll through the inserted seconds ticks once per line, as every list does.
+  scrollTicks(slots.list, {
+    rowPitch: () => pitchOfRows([...slots.list.children]),
+    keys: true,
+    signal,
+  });
   const groups = GROUPS.map((g) => ({
     id: g.id,
     heading: g.heading,

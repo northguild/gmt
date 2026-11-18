@@ -6,6 +6,10 @@ import { handle, handleTrack, valueAt, type GmtHandle } from "./handle";
 import { html } from "../../builders/html";
 import { renderHtml, valueNow } from "../../test-fixture";
 
+const cue = vi.fn();
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
+beforeEach(() => cue.mockClear());
+
 const single = () =>
   handleTrack(
     handle({
@@ -157,5 +161,33 @@ describe("the handle element", () => {
   it("has no axe violations", async () => {
     const fx = renderHtml(pair());
     await expectNoAxeViolations(fx.host);
+  });
+});
+
+describe("the Glass tick", () => {
+  it("plays once for each step a reader takes with the keys", async () => {
+    const user = userEvent.setup();
+    renderHtml(single());
+    const slider = screen.getByRole("slider", { name: "Cut-off" });
+    slider.focus();
+    await user.keyboard("{ArrowRight}{ArrowRight}");
+    expect(cue.mock.calls).toEqual([["detent"], ["detent"]]);
+  });
+
+  it("plays nothing when the handle cannot move", async () => {
+    const user = userEvent.setup();
+    renderHtml(single());
+    const slider = screen.getByRole("slider", { name: "Cut-off" });
+    slider.focus();
+    await user.keyboard("{End}");
+    cue.mockClear();
+    await user.keyboard("{End}{ArrowRight}");
+    expect(cue).not.toHaveBeenCalled();
+  });
+
+  it("is silent for a value set from code", () => {
+    const fx = renderHtml(single());
+    fx.element<GmtHandle>("handle").value = 80;
+    expect(cue).not.toHaveBeenCalled();
   });
 });

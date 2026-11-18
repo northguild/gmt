@@ -86,22 +86,37 @@ dividers), Ice (**long-form body copy**) and Signal-lost (amber, sentinel return
 
 ## Controls — the one hard engineering rule
 
-**Restyle native elements. Never rebuild them from `div`s.** Keep real `<textarea>`, `<button>`,
-`<input type="range">` and `<select>`, neutralised with `appearance: none`. Rebuilding loses IME
-composition (all CJK input), autofill, mobile keyboards, form semantics and screen reader
-support — none of which is visible while developing on a US-English desktop.
+**Restyle native elements. Never rebuild them from `div`s.** Keep real `<textarea>`,
+`<button>`, `<input type="range">` and `<select>`, neutralised with `appearance: none`.
+Rebuilding loses IME composition (all CJK input), autofill, mobile keyboards, form semantics
+and screen reader support — none of which is visible while developing on a US-English
+desktop.
 
 - **A draggable value is a faceted grip; never a flat or round thumb.** The grip is a tall
   bevelled handle with a glass fill, a coloured edge and three grip ridges. It sits in a
   bevelled glass channel filled up to it, with a value chip riding above it and labelled ends.
   It glows on hover and fills solid while held; the cursor is grab and grabbing.
   - A native range and a custom `role="slider"` handle look the same.
-  - Bevels come from `corner-shape`, never `clip-path`, which would clip the glow and focus ring.
+  - Bevels come from `corner-shape`, never `clip-path`, which would clip the glow and the focus
+    ring.
+  - `look: "fader"` is the compact form for a chrome control: 8rem wide, no value chip or
+    labelled ends, and one notch mark per step on the channel. Notches and fill share one
+    coordinate system (the track minus one thumb), so the fill meets the grip at every step.
 - **Labelled fields line up.** Fields sit in a grid whose label row and control row are shared
   across the row, so a wrapped label never pushes its control out of line with its
   neighbours. "Optional" is a small chip beside the label, not words in it.
 - **A boolean is a bevelled chip**, lit and marked when on, never a stock checkbox. A row of
   them (weekdays, a segmented choice) sits in one labelled group.
+  - `size: "small"` on a switch is the same bevelled track and knob at 1.75rem by 1rem, for chrome.
+- **A toggle button is lit when pressed.** `button` with `pressed` writes `aria-pressed`, takes an
+  optional `icon` before its label (with a gap), and lights its bevelled face when pressed. With
+  `labelHidden` it is a square holding the icon alone; the label stays its name.
+- **A volume control is speaker, then fader.** In the sound popover the mute button is the speaker
+  icon on the left of the fader, which fills the row. On the landing alone the Aura switch sits
+  below it, and the aura's track below that while the switch is on.
+- **A header popover button looks like its neighbours.** The sound button is a `gmt-icon-button`
+  (the Dox button's and the theme toggle's look) that opens a top-layer popover with a full
+  bevelled border, anchored under it. Its icon shows the state.
 - **A select has a chevron**, never the system arrow.
 - Scrollbars keep the chunky `::-webkit-scrollbar` treatment. Do not add `scrollbar-color`: in
   Chromium it overrides the webkit styling wholesale.

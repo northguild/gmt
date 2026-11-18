@@ -1,10 +1,10 @@
 ---
 // Override of Starlight's mobile menu footer. Below `md` the header's right-hand group is
 // hidden, so the Dox chat link would be unreachable; it sits here, before the social icons
-// and the theme select. Same link, label and current-page state as the header button.
+// and the language select. Same link, label and current-page state as the header button. The
+// theme switch is in the header's settings panel, which shows at every width.
 import LanguageSelect from "virtual:starlight/components/LanguageSelect";
 import SocialIcons from "virtual:starlight/components/SocialIcons";
-import ThemeSelect from "virtual:starlight/components/ThemeSelect";
 import ButtonLink from "./ButtonLink.astro";
 import DoxMark from "./DoxMark.astro";
 import { stripBase, withBase } from "~/lib/site";
@@ -25,7 +25,6 @@ const onDox = stripBase(Astro.url.pathname).replace(/\/$/, "") === "/dox";
     </ButtonLink>
     <SocialIcons />
   </div>
-  <ThemeSelect />
   <LanguageSelect />
 </div>
 

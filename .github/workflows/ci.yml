@@ -194,9 +194,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --no-runtime
 
-      # Any advisory in the lockfile fails the job, at pnpm's default audit level. The katex
-      # and undici overrides in pnpm-workspace.yaml are what keep this at zero today; each goes
-      # dormant once nothing asks for a version below its fix.
+      # Any advisory in the lockfile fails the job, at pnpm's default audit level. The overrides
+      # in pnpm-workspace.yaml are what keep this at zero today; each goes dormant once nothing
+      # asks for a version below its fix. An advisory with no fixed version has an `audit.ignore`
+      # entry there instead, saying why it is safe and when to delete it.
       - name: No known vulnerabilities in dependencies
         run: pnpm audit
 

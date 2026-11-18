@@ -13,6 +13,7 @@
  * server-rendered HTML into client-generated HTML and lose the pre-JS readable
  * page that every Tier 2 widget currently has.
  */
+import { cue } from "./sound/cue";
 
 /** What a mounted widget hands back to its host. */
 export interface WidgetHandle {
@@ -69,6 +70,35 @@ export class WidgetLoadError extends Error {
   }
 }
 
+/** How long a mount may take before the reader hears the Servo spin-up. */
+export const LOADING_CUE_DELAY_MS = 150;
+
+/**
+ * The sounds of one mount. After `LOADING_CUE_DELAY_MS` without a result it plays `loading`;
+ * `ready()` and `failed()` play `ready` and `error` and stop the timer. The timer is also
+ * cleared when `signal` aborts, and a settled mount that was aborted plays nothing. A delay
+ * only: it reads no clock.
+ */
+export function startMountCues(signal: AbortSignal): {
+  ready(): void;
+  failed(): void;
+} {
+  let timer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
+    timer = undefined;
+    cue("loading");
+  }, LOADING_CUE_DELAY_MS);
+  const stop = (): void => {
+    clearTimeout(timer);
+    timer = undefined;
+  };
+  signal.addEventListener("abort", stop, { once: true });
+  const settle = (name: "ready" | "error"): void => {
+    stop();
+    if (!signal.aborted) cue(name);
+  };
+  return { ready: () => settle("ready"), failed: () => settle("error") };
+}
+
 /** The class of the notice `showUnavailable` adds, and the CSS hook for it. */
 export const UNAVAILABLE_CLASS = "gmt-widget-unavailable";
 
@@ -86,6 +116,7 @@ export function showUnavailable(root: HTMLElement, error: unknown): void {
   console.error("widget failed to load", error);
   root.dataset.state = "unavailable";
   if (root.querySelector(`:scope > .${UNAVAILABLE_CLASS}`)) return;
+  cue("error");
 
   const notice = document.createElement("p");
   notice.className = UNAVAILABLE_CLASS;

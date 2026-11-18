@@ -68,6 +68,7 @@ import { enter, holdEntrance } from "./enter";
 import { withBase } from "./site";
 import { chooseZone } from "./zone-action";
 import { createSlicer, yieldToMain } from "./yield-to-main";
+import { lockRings } from "./globe-lock";
 
 export interface GlobeHost {
   /** Rotate the globe to bring a zone to centre and select it. */
@@ -85,6 +86,13 @@ export interface GlobeHost {
   getSelected: () => string | null;
   /** Called on every selection change (null when cleared). */
   onSelect: (callback: (reading: ZoneReading | null) => void) => void;
+  /**
+   * Lock on to the place just chosen: call `onStart` and ripple the rings from its pin
+   * (`globe-lock.ts`), together. A pin in sight locks at once; one out of sight locks as the globe
+   * brings it to the centre, or at once if the reader takes the globe first or it stops drawing.
+   * A new selection drops a lock still waiting, and stops one still rippling.
+   */
+  lockOn: (onStart: () => void) => void;
   /** Which backend is drawing — read by the smoke script and useful in the console. */
   getRenderer: () => "webgpu" | "canvas2d";
   /**
@@ -92,6 +100,8 @@ export interface GlobeHost {
    * Replaces any earlier callback.
    */
   onInteract: (callback: (kind: GlobeInteraction) => void) => void;
+  /** Called when the reader moves the zoom a step (see `GlobeEngine.onZoom`). Replaces any earlier callback. */
+  onZoom: (callback: (dir: 1 | -1, closeness: number) => void) => void;
   /** `[λ, φ]` in degrees as the camera has it: it looks at longitude −λ, latitude −φ. */
   getRotation: () => readonly [number, number];
   /** Where the Earth's centre sits now, in CSS pixels within the globe's host. */
@@ -144,6 +154,8 @@ export interface GlobeParts {
   tooltip: HTMLElement;
   /** The zoom cluster, armed once the globe has entered; absent when the host has none. */
   zoom: HTMLElement | null;
+  /** Where the lock's rings ripple from a chosen pin (`globe-lock.ts`); absent when the host has none. */
+  lock?: HTMLElement | null;
   /**
    * The right-most x, in host pixels, the tooltip card may reach, or null for
    * no limit. Read on every frame; a pin at or beyond it is hidden.
@@ -306,6 +318,10 @@ export async function initGlobe(
 
   // --- selection -----------------------------------------------------------
   let selectedId: string | null = null;
+  /** The rings a chosen place's pin ripples (`lockOn`). */
+  const lock = parts.lock ? lockRings(parts.lock) : null;
+  /** A lock waiting for the globe to bring its place to the centre. */
+  let pendingLock: (() => void) | null = null;
   let selectedReading: ZoneReading | null = null;
   /* The viewer's own local date, against which the tooltip measures its
      "yesterday / tomorrow" call-out. Refreshed on each tick, not captured
@@ -439,6 +455,8 @@ export async function initGlobe(
   let boundaries: Map<string, PreparedPolygon[]> | null = null;
 
   function setSelected(id: string | null): void {
+    pendingLock = null;
+    lock?.stop();
     selectedId = id;
     selectedReading = id ? readZoneNow(id) : null;
     renderTooltip();
@@ -624,10 +642,19 @@ export async function initGlobe(
       tooltip.hidden = true;
       return;
     }
+    const fresh = tooltip.hidden;
     tooltip.hidden = false;
     const at = COORDINATES_BY_ID.get(selectedId);
     const sky = at ? skyAt(at.lat, at.lng, nowMs()) : undefined;
     setHtml(tooltip, renderZoneTooltip(selectedReading, viewerDate, sky));
+    /* A card shown afresh is placed before it paints, and stays unseen until something places
+       it: a pin out of sight, or a globe that has drawn no frame yet (a dawn holds its first one
+       back), leaves it unplaced, and an unplaced card sat in the page's top left. The landing
+       reached from another page shows its card at once, so it showed there. */
+    if (fresh) {
+      tooltip.style.visibility = "hidden";
+      positionTooltip();
+    }
   }
 
   function positionTooltip(): void {
@@ -658,6 +685,7 @@ export async function initGlobe(
     tooltip.toggleAttribute("data-below", flip);
     tooltip.style.left = `${frame.left + x}px`;
     tooltip.style.top = `${frame.top + at.y + (flip ? 12 : 0)}px`;
+    tooltip.style.removeProperty("visibility");
   }
 
   /* The card's frame, in page pixels: the element it would be placed in outside the top layer. */
@@ -684,9 +712,72 @@ export async function initGlobe(
     window.addEventListener("resize", followScroll, { passive: true });
   }
 
+  // --- the lock ------------------------------------------------------------
+  /** Where the selected zone's pin is now, in host pixels, or null while it is out of sight. */
+  function selectedPin(): { x: number; y: number } | null {
+    const coordinate = selectedId ? COORDINATES_BY_ID.get(selectedId) : null;
+    if (!coordinate) return null;
+    const at = engine.project([coordinate.lng, coordinate.lat]);
+    const limit = tooltipLimit() ?? host.clientWidth;
+    const inside =
+      at.x >= 0 && at.x < limit && at.y >= 0 && at.y <= host.clientHeight;
+    return at.visible && inside ? { x: at.x, y: at.y } : null;
+  }
+
+  function startLock(onStart: () => void): void {
+    pendingLock = null;
+    onStart();
+    const at = selectedPin();
+    if (!lock || !at || reducedMotion()) return;
+    lock.place(at);
+    lock.play();
+  }
+
+  function lockOn(onStart: () => void): void {
+    const waits =
+      selectedId !== null &&
+      COORDINATES_BY_ID.has(selectedId) &&
+      selectedPin() === null &&
+      !engine.isHeld();
+    if (waits) pendingLock = onStart;
+    else startLock(onStart);
+  }
+
+  /* A lock waiting on a flight plays once the pin is within this share of the Earth's radius of
+     its centre: in the flight's long, slow landing, before it has quite stopped. */
+  const LOCK_NEAR = 0.15;
+
+  function followLock(): void {
+    const at = selectedPin();
+    if (pendingLock && at) {
+      const centre = engine.getCentre();
+      if (
+        Math.hypot(at.x - centre.x, at.y - centre.y) <=
+        LOCK_NEAR * centre.radius
+      )
+        startLock(pendingLock);
+      return;
+    }
+    lock?.place(at);
+  }
+
+  // A globe that stops drawing never lands its flight, so a waiting lock plays now.
+  engine.onHold(() => {
+    if (pendingLock) startLock(pendingLock);
+  });
+
+  let interactCallback: ((kind: GlobeInteraction) => void) | null = null;
+  engine.onInteract((kind) => {
+    // A drag, a pinch or a key ends the flight, so a waiting lock plays now. A tap chooses anew.
+    if (pendingLock && kind !== "tap" && kind !== "wheel")
+      startLock(pendingLock);
+    interactCallback?.(kind);
+  });
+
   const frameListeners: (() => void)[] = [];
   engine.onFrame(() => {
     positionTooltip();
+    followLock();
     for (const listener of frameListeners) listener();
   });
 
@@ -791,8 +882,12 @@ export async function initGlobe(
     onSelect(callback) {
       selectCallback = callback;
     },
+    lockOn,
     getRenderer: () => engine.renderer,
-    onInteract: (callback) => engine.onInteract(callback),
+    onInteract(callback) {
+      interactCallback = callback;
+    },
+    onZoom: (callback) => engine.onZoom(callback),
     getRotation: () => engine.getRotation(),
     getCentre: () => engine.getCentre(),
     onFrame: (callback) => {
@@ -807,6 +902,8 @@ export async function initGlobe(
     },
     destroy() {
       frameListeners.length = 0;
+      pendingLock = null;
+      lock?.stop();
       clearInterval(clockTimer);
       document.removeEventListener("visibilitychange", onVisibility);
       document.removeEventListener("scroll", followScroll, { capture: true });

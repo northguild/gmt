@@ -2,7 +2,8 @@
 // Override of Starlight's SocialIcons so each link is a reusable ButtonLink —
 // which routes the absolute `href` through the external-link handling
 // (target="_blank" rel="noopener noreferrer"). Starlight's default renders a
-// bare same-tab <a>.
+// bare same-tab <a>. Each takes its label as its hover tooltip too, as the Dox button and the
+// Settings gear beside them do.
 import config from 'virtual:starlight/user-config';
 import ButtonLink from './ButtonLink.astro';
 
@@ -11,6 +12,6 @@ const links = config.social ?? [];
 
 {
 	links.map(({ label, href, icon }) => (
-		<ButtonLink href={href} label={label} icon={icon} rel="me" />
+		<ButtonLink href={href} label={label} title={label} icon={icon} rel="me" />
 	))
 }

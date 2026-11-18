@@ -2,6 +2,9 @@
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
+
+const cue = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
 import { renderHtml } from "../../test-fixture";
 import { copy, COPIED_TEXT, FAILED_TEXT, type GmtCopy } from "./copy";
 
@@ -11,6 +14,26 @@ function clipboard(writeText: (text: string) => Promise<void>) {
     configurable: true,
   });
 }
+
+beforeEach(() => cue.mockClear());
+
+describe("the copy element's sound", () => {
+  it("plays the Glass clink when the copy succeeds", async () => {
+    clipboard(vi.fn().mockResolvedValue(undefined));
+    renderHtml(copy({ label: "Copy call", text: "now()" }));
+    await userEvent.click(screen.getByRole("button", { name: "Copy call" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(COPIED_TEXT);
+    expect(cue.mock.calls).toEqual([["copy"]]);
+  });
+
+  it("plays the error cue, not the clink, when the copy fails", async () => {
+    clipboard(vi.fn().mockRejectedValue(new Error("denied")));
+    renderHtml(copy({ label: "Copy call", text: "now()" }));
+    await userEvent.click(screen.getByRole("button", { name: "Copy call" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(FAILED_TEXT);
+    expect(cue.mock.calls).toEqual([["error"]]);
+  });
+});
 
 describe("the copy element", () => {
   it("copies its text and says so in the live region", async () => {
