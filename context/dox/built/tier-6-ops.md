@@ -32,7 +32,7 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 - Astro proxies `/gmt/api/...` to the Worker (`src/lib/dev-worker-proxy.ts`). The proxy key is `^/api`, not `/gmt/api`, because Astro's dev base middleware strips `/gmt` before Vite's proxy runs; `rewrite` puts the base back. `dev-worker-proxy.test.ts` starts the real `astro dev` CLI against a stub Worker and fails if Astro reorders its middleware.
 - Local chat: `pnpm dev:chat` (build, then `wrangler dev`), or `npx wrangler dev --port 8799` with `dist/` built. `.dev.vars` holds `NORTHGUILD_GMT_GEMINI_API_KEY` and `DOX_DEV_KEY` (`.dev.vars.example`).
 - Dev bypass: `npx wrangler secret put DOX_DEV_KEY` in production, the same value in `.dev.vars` locally, then visit `/gmt/api/brains?key=<secret>` once per browser. It exempts you from the visitor cap, never from the shared pool.
-- Run the chat evals against a local Worker (spends real quota): [tier-6-evals.md § Runbook](tier-6-evals.md#runbook).
+- Run the chat evals against a local Worker (spends real quota): [apps/dox/evals/README.md § Run the live evals](../../../apps/dox/evals/README.md#run-the-live-evals).
 - Refresh the Gemini list after Google ships models: `curl "https://generativelanguage.googleapis.com/v1beta/models?key=$NORTHGUILD_GMT_GEMINI_API_KEY"`, then run `eval-live.ts` on the new ids. A 429 proves a model exists as well as a 200 does; drop anything that answers 404 or 400. Leave out the `-latest` aliases (their quota bucket is unknown).
 
 ## After a deploy

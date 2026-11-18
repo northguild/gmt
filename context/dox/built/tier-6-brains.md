@@ -4,7 +4,7 @@ Part of [built/index.md](index.md). Chat surface: [tier-6-chat.md](tier-6-chat.m
 
 ## Brains and budget
 
-- `BRAINS` (`src/lib/chat-constants.ts`) is in preference order and `BRAINS[0]` is the default. Workers AI `cf-gemma-4-26b` and `cf-glm-4.7-flash` lead (badge 15 and 20 a day); Gemini `gemini-3.5-flash-lite`, `gemini-3.6-flash` and `gemini-3.5-flash` follow (about 20 a day each).
+- `BRAINS` (`src/lib/chat-constants.ts`) is in preference order and `BRAINS[0]` is the default. Workers AI `cf-gemma-4-26b` and `cf-glm-4.7-flash` lead (badge 15 and 20 a day, from measured Neuron costs: about 270 to 350 a Gemma question and 160 to 200 a GLM question, so the two badges together fit the 10,000 pool); Gemini `gemini-3.5-flash-lite`, `gemini-3.6-flash` and `gemini-3.5-flash` follow (about 20 a day each).
 - Allowances live in `BRAIN_PROVIDERS`. Gemini is per project per model and resets at midnight Pacific. Workers AI is 10,000 Neurons a day per account, shared by its brains, and resets at 00:00 UTC. Exhaustion fails rather than bills on the Free plan, so stay on Free.
 - The ledger (`worker/usage.ts`, KV `DOX_USAGE`) is advisory: it drives the badge, the provider's error is the gate. Keys bucket by the provider's day. The visitor cap is on the UTC day (`VISITOR_CAP_TIME_ZONE` in `src/lib/pt-day.ts`). Writes are best-effort; visitors are hashed IPs.
 - `VISITOR_DAILY_MAX` is 5. Recompute it whenever `BRAINS` changes.
