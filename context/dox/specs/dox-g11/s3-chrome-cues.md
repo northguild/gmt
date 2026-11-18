@@ -1,9 +1,9 @@
 # Slice 3 · Chrome cues
 
-The cues every page shares, each ported from `audition.html` unchanged:
+The cues every page shares, each ported from the sound audition unchanged:
 
-- **Steel breath** (`open` K) when a panel opens, **Steel breath in reverse** (`close` K) when it closes;
-- **Steel whisper** (`paint`) as each landing piece freezes in, **Steel shing** (`glint`) as the light
+- **Felt slide** (`open`) when a panel opens, its closing form (`close`) when it closes;
+- **Crystal dust** (`paint`) as each landing piece freezes in, **Steel shing** (`glint`) as the light
   crosses a chip or button, each shing a touch higher (they replaced the audition's Freeze crackle);
 - **Ice snap** (`toggle` C) on tool switches (slice 2's kit hook); the theme toggle plays the
   Sonar press ping like any button;
@@ -30,7 +30,9 @@ Modify:
   panels: their summary press is the ping.
 - `src/lib/hero-entrance.ts`: as it sets `run`, start `entranceSounds(root)` (below); stop it when
   the entrance ends or aborts. On a first visit `t0` comes before any gesture and the engine is not
-  running, so the entrance is silent; after an in-site arrival with sound already allowed it plays.
+  running, so the entrance is silent; after an arrival from northguild.dev with sound already allowed it
+  plays. A landing reached from another page of this site starts `static` (`arrival.ts`): no freeze
+  and no sound.
 - `src/components/ThemeSelect.astro`: no cue of its own and no `data-cue`; the press ping covers it.
 - `src/widgets/primitives/copy/*`: on `COPIED_TEXT` fire `cue("copy")`; on `FAILED_TEXT`
   fire `cue("error")` (the voice arrives in slice 5; until then the event is unheard). The copy
@@ -52,8 +54,8 @@ Modify:
 
 The entrance offsets live in `src/styles/gmt-entrance-freeze.css` and are neither read nor
 restated. `entranceSounds` listens for `animationstart` while `data-entrance="run"`: a freeze,
-frost, pop or sweep is a whisper, `ng-glint` a shing, `ng-fade` only on the pager and
-`ng-freeze-fly-left` only on the first panel. The events of one frame make one whisper and one
+frost, pop or sweep is a sparkle, `ng-glint` a shing, `ng-fade` only on the pager and
+`ng-freeze-fly-left` only on the first panel. The events of one frame make one sparkle and one
 shing at most. Reduced motion is silent.
 
 ## Rules
@@ -72,7 +74,7 @@ shing at most. Reduced motion is silent.
 - `native-panels.test.ts`: a popover `toggle` event fires `open`/`close`; listener removed by
   the abort signal in `afterEach`.
 - `code-copy.test.ts`: a code-block copy press fires `copy` and no `click`; listener aborted in `afterEach`.
-- `entrance.test.ts`: one whisper per frame; glint ranks rise; the pager and first panel heard, the
+- `entrance.test.ts`: one sparkle per frame; glint ranks rise; the pager and first panel heard, the
   sky's fade and a later page turn not; silent once done, after stop and under reduced motion.
 - `link-hold.test.ts`: same-tab links wait 350 ms; new tab, download, hash jump, no-referrer,
   modifier keys and a handled press are left to the browser; the newest of two presses wins.
@@ -81,14 +83,15 @@ shing at most. Reduced motion is silent.
 ## Gate additions (`sound-check`)
 
 - `sidebar arrival` (Chromium, no autoplay flag): a click from `/` to a guide starts a running context
-  and opening Steel breath on the guide; the Home link back starts closing Steel breath.
+  and the opening Felt slide on the guide; the Home link back starts the closing Felt slide.
 - After unlock on `/guides/conversion/databases/`: the mobile menu at 390 px plays opening
-  then closing Steel breath (button and Escape); the theme toggle plays the Sonar ping once.
-- Below 50rem, the Settings gear plays the Sonar ping and its panel the opening Steel breath;
-  Escape closing it plays the closing Steel breath.
-- On `/` after an in-site arrival in Chromium with autoplay allowed by flag: a whisper within 40 ms
-  of each painted piece's delay and a shing of each glinted one, glint pitch rising; with reduced
-  motion, none.
+  then closing Felt slide (button and Escape); the theme toggle plays the Sonar ping once.
+- Below 50rem, the Settings gear plays the Sonar ping and its panel the opening Felt slide;
+  Escape closing it plays the closing Felt slide.
+- On `/` after an arrival from northguild.dev in Chromium with autoplay allowed by flag: a sparkle
+  within 40 ms of each painted piece's delay and a shing of each glinted one, glint pitch rising;
+  with reduced motion, none. After an arrival from a guide: `static`, no button animation, no
+  sparkle and no shing.
 - On `/tools/zoned-earth/`: a copy button plays Glass clink once; on a guide, a code-block copy
   plays Glass clink once and no Sonar.
 

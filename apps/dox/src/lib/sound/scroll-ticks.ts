@@ -1,7 +1,8 @@
 /**
- * Scroll ticks: a scrolling list plays `detent` (Glass tick) each time the reader's own scroll
- * carries the top of the view into another row, so a wheel, a swipe or the scrollbar ticks
- * through the rows the way the arrow keys step through them.
+ * Scroll ticks: a scrolling list plays a list step (`listStep`, the servo tick) each time the
+ * reader's own scroll carries the top of the view into another row, so a wheel, a swipe or the
+ * scrollbar ticks through the rows the way the arrow keys step through them. The step goes down or
+ * up with the scroll and is pitched by how far down the list the view sits.
  *
  * Only the reader's own scroll ticks. A `wheel`, `touchstart` or `pointerdown` on the scroller
  * arms it. Any `keydown`, or a `pointerdown` outside the scroller (both seen on the document,
@@ -13,7 +14,7 @@
  * No clock is read: a tick is a row passed, not a time.
  */
 
-import { cue } from "./cue";
+import { listStep } from "./list-step";
 
 /** The keys a focused scroll box scrolls by natively. */
 const SCROLL_KEYS = new Set([
@@ -88,7 +89,11 @@ export function scrollTicks(
       const pitch = rowPitch();
       if (pitch <= 0) return;
       const now = Math.floor(scroller.scrollTop / pitch);
-      if (now !== row && reader) cue("detent");
+      if (now !== row && reader)
+        listStep(
+          now > row,
+          scroller.scrollTop / (scroller.scrollHeight - scroller.clientHeight),
+        );
       row = now;
     },
     { passive: true, signal },

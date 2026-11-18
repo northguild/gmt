@@ -1,5 +1,5 @@
 /**
- * The open and close Steel breath for every native `[popover]` panel (the Settings panel, the data
+ * The open and close Felt slide for every native `[popover]` panel (the Settings panel, the data
  * credits, the chat's fine print).
  *
  * One capture-phase `toggle` listener on the document: `toggle` does not bubble, but it is

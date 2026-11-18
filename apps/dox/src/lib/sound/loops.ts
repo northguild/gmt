@@ -3,9 +3,9 @@
  * over `fadeIn` and dims over `fadeOut` before the voice's stop function runs, so neither edge
  * clicks. The loop body is ported from the audition unchanged; only this wrapper is new.
  *
- * Every time is on the audio clock. The voice's own stop (the audition's, which ends its
- * oscillators 0.6 s later) is called at once: the bus is silent after `fadeOut`, well before the
- * sources end, so nothing waits on a timer.
+ * Every time is on the audio clock. The voice's own stop (the thinking loop's ends its scheduler,
+ * which has queued pings up to 0.6 s ahead) is called at once: the bus is silent after `fadeOut`,
+ * well before a queued ping would sound, so nothing waits on a timer.
  */
 import type { Loop } from "./voices";
 

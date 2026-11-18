@@ -37,6 +37,8 @@ export type CueName =
   | "toggle"
   | "copy"
   | "detent"
+  | "listNext"
+  | "listPrev"
   | "key"
   | "send"
   | "stream"

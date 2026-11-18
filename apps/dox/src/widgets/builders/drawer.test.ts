@@ -45,7 +45,7 @@ describe("the drawer's sound", () => {
     expect(cue).not.toHaveBeenCalled();
   });
 
-  it("plays the opening Steel breath on open and the closing one on the close button", async () => {
+  it("plays the opening Felt slide on open and the closing one on the close button", async () => {
     const { handle } = draw();
     handle.open();
     await userEvent.click(
@@ -54,7 +54,7 @@ describe("the drawer's sound", () => {
     expect(cue.mock.calls).toEqual([["open"], ["close"]]);
   });
 
-  it("plays the closing Steel breath once when Escape closes it", async () => {
+  it("plays the closing Felt slide once when Escape closes it", async () => {
     const { handle } = draw();
     handle.open();
     cue.mockClear();

@@ -32,9 +32,9 @@
  *   - `chrome` (slice 3, once per browser, on fixed pages): after a first press unlocks, each cue is
  *     read as a shape: the sorted start offsets of its oscillators (Glass clink 0,0,0.05,0.05; the
  *     two press pings 0,0 with their pitch, Sonar 1180 Hz for a link, Deep sonar 620 Hz for a
- *     button), and for a Steel breath, which has none, its comb's delay sweep (opening
- *     1.8 to 0.9 ms, closing 0.9 to 1.8 ms). On `/guides/conversion/databases/` at 390 px the
- *     mobile menu plays the opening then the closing breath (button, then Escape); the settings
+ *     button), and for a Felt slide, a noise swell, its low tone's fall (opening 170 to 140 Hz,
+ *     closing 150 to 120 Hz). On `/guides/conversion/databases/` at 390 px the
+ *     mobile menu plays the opening then the closing slide (button, then Escape); the settings
  *     gear plays Deep sonar and Escape nothing; at 1440 px the "Dark theme" switch plays the Ice snap once and nothing else. On
  *     `/tools/converter-bench/` a copy button plays Glass clink once; on a guide a code block's copy
  *     plays Glass clink and no Sonar.
@@ -47,25 +47,28 @@
  *     the popover crossfades (the new track's gain ramps to 1 over 1.5 s, the bus makes no new
  *     ramp) and starts its sources; `dox:sound` holds `track` across a reload, and the next gesture
  *     starts Deep drone, not Ice cavern's seven held sources. A guide never requests the aura module.
- *   - `entrance` (Chromium only, launched with autoplay allowed): arriving on `/` from a guide by
- *     an in-site link, a Steel whisper starts at each computed freeze `animation-delay` the page had
+ *   - `entrance` (Chromium only, launched with autoplay allowed): arriving on `/` from a stand-in
+ *     for northguild.dev (the origin's `/`, outside this site), a Crystal dust sparkle (tones of 5200
+ *     to 8000 Hz) starts at each computed freeze `animation-delay` the page had
  *     at `t0`, and a Steel shing at each `::before` glint delay, each shing higher than the one
- *     before (compared as offsets from the first whisper, within 40 ms on the audio clock: the
+ *     before (compared as offsets from the first sparkle, within 40 ms on the audio clock: the
  *     sounds follow `animationstart`, one frame late at most); under reduced motion with sound
- *     saved on, none.
+ *     saved on, none. Arriving from a guide by an in-site link, the landing is shown `static`:
+ *     the entrance never runs, no button animates, and nothing is heard.
  *   - `chat cues` / `chat error` / `chat copy failure` (slice 5, Chromium, `/dox/` with the Worker
  *     stubbed in the page): two typed keys play two Data blips and an IME composition none; a sent
- *     question plays Sonar launch once, the hum swells once and dims once when the first chunk
- *     arrives, Morse beeps are 60 ms or more apart on the audio clock, the Ice bell rings once; a 500
+ *     question plays Sonar launch once, the Sonar idle (587 Hz pings, read apart from the cues)
+ *     swells once, pings, and dims once when the first chunk arrives, Morse beeps are 60 ms or more apart on the audio clock, the Ice bell rings once; a 500
  *     plays one Low double buzz and no bell; a failed copy on a tool page plays the buzz.
  *   - `tool cues` (slice 6, Chromium): on `/tools/dwell-ledger/` an arrow key on a handle plays one
  *     Glass tick per step; on `/tools/cutoff-countdown/` typing plays Data blips and the readout
  *     falling to NO SIGNAL plays one Low double buzz, not again while it stays there; on a
  *     playground page typing plays a blip and IME composition none; on `/dox/` a widget opened
  *     from a stubbed answer plays Lock-in once, and with its chunk held back by `page.route`, the
- *     Scan sweep first.
- *   - `list ticks` (Chromium): on `/` the zone list's arrow keys play one Glass tick per step, and
- *     the reader's wheel plays ticks as rows pass.
+ *     Servo spin-up first (three noise bursts, the last ramping its filter to 1950 Hz).
+ *   - `list ticks` (Chromium): on `/` the zone list's arrow keys play one servo tick per step (a
+ *     noise burst, no oscillator, pitched higher further down), and the reader's wheel plays servo
+ *     ticks as rows pass.
  *   - `globe locate` (Chromium): on `/tools/zoned-earth/` a zone chosen from the globe's list plays
  *     one Sonar lock, two pings 70 ms apart with their echoes, and no press ping.
  *   - `typing everywhere` / `typing enter` (Chromium): on `/tools/gtfs-trip-board/` two keys typed
@@ -88,6 +91,7 @@
  *        [--pages /,/tools/zoned-earth/] [--list-pages]
  * Exits non-zero on any failure.
  */
+import { readFileSync } from "node:fs";
 import { launchBrowser } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
@@ -149,6 +153,8 @@ function installLog() {
     ramps: [],
     exps: [],
     combs: [],
+    // Each Felt slide's low tone as [open or close, start time]: the panels' cue.
+    slides: [],
   };
   window.__sound = log;
   Error.stackTraceLimit = 40;
@@ -193,9 +199,9 @@ function installLog() {
     log.ramps.push([value, Number((end - (this.__from ?? end)).toFixed(3))]);
     return ramp.call(this, value, end);
   };
-  // Every exponential ramp as [target, seconds from its last setValueAtTime]: the Scan sweep's
-  // filter ramps to 4000 Hz (its frequency is never set with setValueAtTime, so the span reads 0),
-  // and noise has no oscillator start to log.
+  // Every exponential ramp as [target, seconds from its last setValueAtTime]: the Servo spin-up's
+  // last burst ramps its filter to 1950 Hz (its frequency is never set with setValueAtTime, so the
+  // span reads 0), and noise has no oscillator start to log.
   const createDelay = BaseAudioContext.prototype.createDelay;
   BaseAudioContext.prototype.createDelay = function (...options) {
     const node = createDelay.apply(this, options);
@@ -209,17 +215,33 @@ function installLog() {
     // in seconds (an envelope's gain ramps to 0.0001 too, and is not one).
     if (this.__delay && this.__from !== undefined)
       log.combs.push([value, Number(this.__from.toFixed(4)), this.__fromValue]);
+    // A Felt slide's low tone falls 170 to 140 Hz opening, 150 to 120 Hz closing.
+    const slide =
+      this.__fromValue === 170 && value === 140
+        ? "open"
+        : this.__fromValue === 150 && value === 120
+          ? "close"
+          : null;
+    if (slide && this.__from !== undefined)
+      log.slides.push([slide, Number(this.__from.toFixed(4))]);
     return exp.call(this, value, end);
   };
 }
 
-/** Runs in the page: what the log holds, with the voices counted as distinct start times. */
+/**
+ * Runs in the page: what the log holds, with the voices counted as distinct start times. The
+ * landing's entrance sparkles (Crystal dust, 5200 to 8000 Hz) are left out: a piece that arms late
+ * sparkles after the first press has unlocked sound, and is no press's voice.
+ */
 function readLog() {
   const log = window.__sound;
+  const pressed = log.starts.filter(
+    (_, i) => !(log.pitches[i] >= 5200 && log.pitches[i] <= 8000),
+  );
   return {
     constructed: log.constructed,
     states: log.states,
-    voices: new Set(log.starts).size,
+    voices: new Set(pressed).size,
     sound: document.documentElement.dataset.sound ?? null,
   };
 }
@@ -335,11 +357,23 @@ const saved = (page, value) =>
   );
 
 const GUIDE = "/guides/conversion/databases/";
+/** The origin's `/`, where northguild.dev sits above this site; a fixture stands in for it. */
+const SITE_ORIGIN = new URL(base).origin;
+const NG_LANDING = readFileSync(
+  new URL("./fixtures/ng-landing.html", import.meta.url),
+  "utf8",
+);
 // Zoned Earth has no copy button; the converter bench shows one on load.
 const COPY_PAGE = "/tools/converter-bench/";
 
 /** Runs in the page: the oscillator start times logged so far. */
 const readStarts = () => window.__sound.starts.slice();
+/** Runs in the page: the start of each Crystal dust tone (`paint`), 5200 to 8000 Hz. */
+const sparkles = () =>
+  window.__sound.starts.filter((_, i) => {
+    const hz = window.__sound.pitches[i];
+    return hz >= 5200 && hz <= 8000;
+  });
 
 /** The cue a run of oscillator starts makes: sorted offsets from the first, as one string. */
 function shape(starts) {
@@ -351,29 +385,38 @@ function shape(starts) {
     .join(",");
 }
 /**
- * A Steel breath, which has no oscillator: its comb's delay sweep in ms, from start to target.
- * The panels' breaths sweep between 0.9 and 1.8 ms; the landing's whispers and shings are left out.
+ * A Felt slide, a noise swell with one low tone: read by its tone's fall (170 to 140 Hz opening,
+ * 150 to 120 Hz closing), in the order they started.
  */
-function breathOf(combs) {
-  const ms = (s) => Number((s * 1000).toFixed(2));
-  return combs
-    .filter(([to]) => to >= 0.0009)
+function slidesOf(slides) {
+  return slides
+    .slice()
     .sort((a, b) => a[1] - b[1])
-    .map(([to, , from]) => `breath ${ms(from)}->${ms(to)}`);
+    .map(([kind]) => `slide ${kind}`);
 }
+
+/** The Felt slides' low tones, which `pingOf` leaves out when it reads a press ping's pitch. */
+const SLIDE_HZ = new Set([170, 150]);
+/** The Sonar idle ping, the chat's thinking loop: read apart from the cues it runs under. */
+const IDLE_HZ = 587;
+/** Runs in the page: the oscillator starts of one pitch, or of every pitch but it (`but`). */
+const readPitch = ([hz, but]) =>
+  window.__sound.starts.filter(
+    (_, i) => (window.__sound.pitches[i] === hz) !== but,
+  );
 
 /** The two press pings' pitches: Sonar for a link, Deep sonar for a button. */
 const SONAR_HZ = 1180;
 const DEEP_SONAR_HZ = 620;
 
 const SHAPES = {
-  open: "breath 1.8->0.9",
-  close: "breath 0.9->1.8",
+  open: "slide open",
+  close: "slide close",
   // The press pings share the shape 0,0 (a tone and its echo); `pingOf` adds the pitch.
   sonar: `0,0 at ${SONAR_HZ} Hz`,
   deepSonar: `0,0 at ${DEEP_SONAR_HZ} Hz`,
-  // The Settings gear: the Sonar ping of the links beside it, and its panel's rising breath.
-  sonarOpen: `0,0 + breath 1.8->0.9 at ${SONAR_HZ} Hz`,
+  // The Settings gear: the Sonar ping of the links beside it, and its panel's Felt slide.
+  sonarOpen: `0,0 + slide open at ${SONAR_HZ} Hz`,
   toggle: "0,0.004",
   clink: "0,0,0.05,0.05",
   none: "none",
@@ -385,15 +428,18 @@ async function cueOf(page, act, waitMs = 450) {
   const counts = () =>
     page.evaluate(() => [
       window.__sound.starts.length,
-      window.__sound.combs.length,
+      window.__sound.slides.length,
     ]);
-  const [starts, combs] = await counts();
+  const [starts, slides] = await counts();
   await act();
   await page.waitForTimeout(waitMs);
   const log = await page.evaluate(() => window.__sound);
+  const slid = log.slides.slice(slides);
+  // A slide's tone is read as the slide, not as an oscillator of the shape.
+  const toned = new Set(slid.map(([, at]) => at));
   const parts = [
-    shape(log.starts.slice(starts)),
-    ...breathOf(log.combs.slice(combs)),
+    shape(log.starts.slice(starts).filter((t) => !toned.has(t))),
+    ...slidesOf(slid),
   ];
   return parts.filter((part) => part !== "none").join(" + ") || "none";
 }
@@ -402,10 +448,9 @@ async function cueOf(page, act, waitMs = 450) {
 async function pingOf(page, act, waitMs = 450) {
   const from = await page.evaluate(() => window.__sound.pitches.length);
   const got = await cueOf(page, act, waitMs);
-  const pitches = await page.evaluate(
-    (n) => window.__sound.pitches.slice(n),
-    from,
-  );
+  const pitches = (
+    await page.evaluate((n) => window.__sound.pitches.slice(n), from)
+  ).filter((hz) => !SLIDE_HZ.has(hz));
   return pitches.length ? `${got} at ${Math.min(...pitches)} Hz` : got;
 }
 
@@ -876,8 +921,8 @@ for (const name of browsers) {
         await cueOf(page, () => page.keyboard.press("Escape")),
         "close",
       );
-      // The settings popover: its gear plays the links' Sonar ping and the panel its rising
-      // breath; Escape closing it plays the sinking breath.
+      // The settings popover: its gear plays the links' Sonar ping and the panel its opening
+      // Felt slide; Escape closing it plays the closing slide.
       const settingsButton = page.locator("#gmt-settings-button");
       expectCue(
         bad,
@@ -964,11 +1009,13 @@ for (const name of browsers) {
       { scenario: "sidebar arrival" },
       async (page, bad) => {
         const home = `${new URL(base).pathname}/`;
-        // The cue is the first panel breath; the landing's whispers and shings are its entrance.
+        // The cue is the first Felt slide; the landing's sparkles and shings are its entrance.
         const cluster = async () => {
           await page.waitForTimeout(1500);
-          const combs = await page.evaluate(() => window.__sound.combs.slice());
-          return breathOf(combs)[0] ?? "none";
+          const slides = await page.evaluate(() =>
+            window.__sound.slides.slice(),
+          );
+          return slidesOf(slides)[0] ?? "none";
         };
         await load(page, "/");
         const guide = page.locator(".gmt-hero-actions a:visible").first();
@@ -983,7 +1030,7 @@ for (const name of browsers) {
             `the guide's context did not run at load (states: ${log.states.join(",") || "none"})`,
           );
         expectCue(bad, "a guide after the landing", await cluster(), "open");
-        await page.evaluate(() => window.__sound.combs.splice(0));
+        await page.evaluate(() => window.__sound.slides.splice(0));
         await page.locator(`a[href="${home}"]`).first().click();
         await page.waitForURL(`${base}/`);
         expectCue(bad, "the landing after a guide", await cluster(), "close");
@@ -1279,7 +1326,7 @@ for (const name of browsers) {
         async (page, bad) => {
           // At t0 the sequencer sets data-entrance="run"; read the computed delays then, because
           // the rules are keyed on it and stop matching once the entrance is done. Chromium has
-          // no `getAutoplayPolicy`, which the page reads as allowed after an in-site arrival.
+          // no `getAutoplayPolicy`, which the page reads as allowed after a same-origin arrival.
           await page.addInitScript(() => {
             const painted = [
               ".header .gmt-app-title",
@@ -1322,28 +1369,22 @@ for (const name of browsers) {
               attributeFilter: ["data-entrance"],
             });
           });
-          await load(page, GUIDE);
-          if (reduced) {
-            await saved(page, { level: 5, muted: false, aura: true });
-            await page.reload({ waitUntil: "load" });
-            await page.waitForTimeout(1000);
-          }
-          // An in-site arrival: a link of the site's own that goes to the landing.
-          // The guide's sidebar flag is reset so this arrival is not also the sidebar's `close`.
-          await page.evaluate(() => sessionStorage.setItem("dox:sidebar", "0"));
-          const home = page
-            .locator(`a[href="${new URL(base).pathname}/"]`)
-            .first();
-          await home.click();
+          // An arrival from northguild.dev, which shares the origin: its link to the landing.
+          await page.route(`${SITE_ORIGIN}/`, (route) =>
+            route.fulfill({
+              status: 200,
+              contentType: "text/html; charset=utf-8",
+              body: NG_LANDING,
+            }),
+          );
+          await page.goto(`${SITE_ORIGIN}/`, { waitUntil: "load" });
+          await page.locator(".ng-home").click();
           await page.waitForURL(`${base}/`);
           await page.waitForTimeout(5000);
           const combs = await page.evaluate(() => window.__sound.combs.slice());
-          // The whisper sweeps its delay to 0.8 ms, a shing to under 0.25 ms; the panels' Steel
-          // breath to 0.9 ms or more.
-          const paints = combs
-            .filter(([to]) => Math.abs(to - 0.0008) < 1e-6)
-            .map(([, at]) => at)
-            .sort((a, b) => a - b);
+          // A sparkle (Crystal dust) is two or three tones between 5200 and 8000 Hz, the first at
+          // the cue's time; a shing sweeps a comb's delay to under 0.25 ms.
+          const paints = (await page.evaluate(sparkles)).sort((a, b) => a - b);
           const glints = combs
             .filter(([to]) => to < 0.00025)
             .sort((a, b) => a[1] - b[1]);
@@ -1351,14 +1392,14 @@ for (const name of browsers) {
             if (paints.length + glints.length !== 0)
               bad(
                 "entrance",
-                `reduced motion: ${paints.length} whisper(s) and ${glints.length} shing(s), wanted none`,
+                `reduced motion: ${paints.length} sparkle tone(s) and ${glints.length} shing(s), wanted none`,
               );
             return;
           }
           const delays = await page.evaluate(() => window.__delays);
           if (!delays || delays.paint.length === 0)
             return bad("entrance", "no animated piece was read at t0");
-          if (paints.length === 0) return bad("entrance", "no whisper started");
+          if (paints.length === 0) return bad("entrance", "no sparkle started");
           const origin = paints[0] - Math.min(...delays.paint);
           /** Every expected offset, one sound within 40 ms of it. */
           const match = (label, want, got) => {
@@ -1370,7 +1411,7 @@ for (const name of browsers) {
                 );
             }
           };
-          match("whisper", delays.paint, paints);
+          match("sparkle", delays.paint, paints);
           match(
             "shing",
             delays.glint,
@@ -1383,6 +1424,55 @@ for (const name of browsers) {
         },
       );
     }
+
+    // Back on the landing from another page of the site: shown as it is, silent.
+    await scenario(
+      allowed,
+      name,
+      "/",
+      { scenario: "entrance in-site" },
+      async (page, bad) => {
+        await load(page, GUIDE);
+        // The guide's sidebar flag is reset so this arrival is not also the sidebar's `close`.
+        await page.evaluate(() => sessionStorage.setItem("dox:sidebar", "0"));
+        await page
+          .locator(`a[href="${new URL(base).pathname}/"]`)
+          .first()
+          .click();
+        await page.waitForURL(`${base}/`);
+        const animated = await page.evaluate(() =>
+          document
+            .getAnimations()
+            .filter(
+              (a) =>
+                a.effect?.target instanceof Element &&
+                a.effect.target.closest(".gmt-hero-actions"),
+            )
+            .map((a) => a.animationName ?? "?"),
+        );
+        await page.waitForTimeout(4000);
+        const state = await page.evaluate(() => ({
+          entrance: document.documentElement.dataset.entrance,
+          combs: window.__sound.combs.filter(([to]) => to < 0.00025).length,
+        }));
+        state.combs += (await page.evaluate(sparkles)).length;
+        if (state.entrance !== "static")
+          bad(
+            "entrance",
+            `in-site arrival left the landing "${state.entrance}", wanted static`,
+          );
+        if (animated.length)
+          bad(
+            "entrance",
+            `in-site arrival animated the buttons: ${animated.join(", ")}`,
+          );
+        if (state.combs)
+          bad(
+            "entrance",
+            `in-site arrival played ${state.combs} sparkle tone(s) or shing(s), wanted none`,
+          );
+      },
+    );
     await allowed.close();
   }
 
@@ -1460,13 +1550,13 @@ for (const name of browsers) {
         );
       };
     };
-    /** Runs in the page: the hum's bus ramps (in 0.3 s to 1, out 0.15 s to 0). */
+    /** Runs in the page: the thinking loop's bus ramps (in 0.3 s to 1, out 0.15 s to 0). */
     const readHum = () => ({
       ins: window.__sound.ramps.filter(([v, d]) => v === 1 && d === 0.3).length,
       outs: window.__sound.ramps.filter(([v, d]) => v === 0 && d === 0.15)
         .length,
     });
-    /** Start times grouped as voices: starts within 1 ms are one cluster. Time 0 is the hum. */
+    /** Start times grouped as voices: starts within 1 ms are one cluster. */
     const clustersOf = (starts) => {
       const out = [];
       for (const t of starts.filter((s) => s > 0).sort((a, b) => a - b)) {
@@ -1538,21 +1628,32 @@ for (const name of browsers) {
         if (waiting.ins !== 1 || waiting.outs !== 0)
           bad(
             "chat-cue",
-            `while Dox waits the hum swelled ${waiting.ins}x and dimmed ${waiting.outs}x, wanted 1 and 0`,
+            `while Dox waits the Sonar idle swelled ${waiting.ins}x and dimmed ${waiting.outs}x, wanted 1 and 0`,
           );
         await page.waitForTimeout(2200); // the answer streams and ends
         const hum = await page.evaluate(readHum);
         if (hum.ins !== 1 || hum.outs !== 1)
           bad(
             "chat-cue",
-            `across the answer the hum swelled ${hum.ins}x and dimmed ${hum.outs}x, wanted 1 and 1`,
+            `across the answer the Sonar idle swelled ${hum.ins}x and dimmed ${hum.outs}x, wanted 1 and 1`,
           );
-        const starts = await page.evaluate(readStarts);
-        if (starts.filter((s) => s === 0).length !== 4)
-          bad("chat-cue", "the hum did not start exactly once (4 sources)");
+        // The idle pings, 1.6 s apart, are read apart from the cues they run under.
+        const pings = await page.evaluate(readPitch, [IDLE_HZ, false]);
+        if (pings.length === 0)
+          bad("chat-cue", "the Sonar idle played no ping while Dox waited");
+        const starts = await page.evaluate(readPitch, [IDLE_HZ, true]);
         heard = clustersOf(starts);
-        // Enter is the last key (1 oscillator) and the Sonar launch (2) at the same instant;
-        // the Ice bell is 5 partials; every other cluster is one Morse beep.
+        // Enter is the last key (1 oscillator) and the Sonar launch (2), at one instant when the
+        // send lands in the same audio block as the key's blip. The send is a later task: on a
+        // busy machine the clock can step past the engine's 5 ms lead between them, so a blip and
+        // a launch within 11 ms (four 128-frame blocks at 48 kHz) are read as the one send.
+        if (
+          heard[0]?.size === 1 &&
+          heard[1]?.size === 2 &&
+          heard[1].at - heard[0].at < 0.011
+        )
+          heard.splice(0, 2, { at: heard[0].at, size: 3 });
+        // The Ice bell is 5 partials; every other cluster is one Morse beep.
         if (heard[0]?.size !== 3)
           bad(
             "chat-cue",
@@ -1583,7 +1684,7 @@ for (const name of browsers) {
         await page.keyboard.type("hi", { delay: 90 });
         await page.keyboard.press("Enter");
         await page.waitForTimeout(1500);
-        const starts = await page.evaluate(readStarts);
+        const starts = await page.evaluate(readPitch, [IDLE_HZ, true]);
         const heard = clustersOf(starts);
         const pair = buzzes(heard);
         if (pair !== 1)
@@ -1626,10 +1727,12 @@ for (const name of browsers) {
 
     // Slice 6: the tool cues. Chromium, one gesture to unlock, then the voices are read as clusters
     // of oscillator starts (Glass tick 2 at one time, Data blip 1, Low double buzz 1 + 1 at +0.11,
-    // Lock-in 2 at one time and 1 at +0.05) and the Scan sweep as its 4000 Hz filter ramp.
+    // Lock-in 2 at one time and 1 at +0.05) and the Servo spin-up, three noise bursts, as its last
+    // burst's filter ramp to 1950 Hz (1500 Hz, raised by 1.3).
     const sweeps = (page) =>
       page.evaluate(
-        () => window.__sound.exps.filter(([v]) => v === 4000).length,
+        () =>
+          window.__sound.exps.filter(([v]) => Math.abs(v - 1950) < 0.5).length,
       );
     const lockIns = (heard, starts) =>
       heard.filter(
@@ -1794,7 +1897,7 @@ for (const name of browsers) {
           await page.keyboard.type("hi", { delay: 60 });
           await page.keyboard.press("Enter");
           await page.waitForTimeout(held ? 2500 : 1800);
-          const starts = await page.evaluate(readStarts);
+          const starts = await page.evaluate(readPitch, [IDLE_HZ, true]);
           const heard = clustersOf(starts);
           const locks = lockIns(heard, starts);
           const sweep = await sweeps(page);
@@ -1807,7 +1910,7 @@ for (const name of browsers) {
           if (sweep !== wanted)
             bad(
               "tool-cue",
-              `the Scan sweep played ${sweep}x, wanted ${wanted}`,
+              `the Servo spin-up played ${sweep}x, wanted ${wanted}`,
             );
         },
       );
@@ -1844,7 +1947,21 @@ for (const name of browsers) {
     );
 
     // Moving through a list ticks: on the landing's zone list each arrow key that moves the active
-    // row plays one Glass tick, and the reader's wheel plays ticks as rows pass.
+    // row plays one servo tick (a noise burst, no oscillator, its filter higher the further down
+    // the list), and the reader's wheel plays servo ticks as rows pass.
+    /** Runs in the page: the noise bursts, oscillator starts and filter ramp targets so far. */
+    const readTicks = () => ({
+      noises: window.__sound.noises.length,
+      tones: window.__sound.starts.length,
+      // A burst's filter ramp is in Hz; an envelope's gain ramps to 0.0001.
+      filters: window.__sound.exps.filter(([v]) => v > 100).map(([v]) => v),
+    });
+    const clearTicks = () => {
+      window.__sound.noises.splice(0);
+      window.__sound.starts.splice(0);
+      window.__sound.exps.splice(0);
+    };
+    const rising = (hz) => hz.every((f, i) => i === 0 || f > hz[i - 1]);
     await scenario(
       browser,
       name,
@@ -1864,18 +1981,23 @@ for (const name of browsers) {
           return bad("no-target", "list ticks: the zone list is not showing");
         await list.focus();
         await page.waitForTimeout(450);
-        await page.evaluate(() => window.__sound.starts.splice(0));
+        await page.evaluate(clearTicks);
         await page.keyboard.press("ArrowDown");
         await page.waitForTimeout(100);
         await page.keyboard.press("ArrowDown");
         await page.waitForTimeout(450);
-        const keyed = clustersOf(await page.evaluate(readStarts));
-        if (keyed.length !== 2 || keyed.some((c) => c.size !== 2))
+        const keyed = await page.evaluate(readTicks);
+        if (
+          keyed.noises !== 2 ||
+          keyed.tones !== 0 ||
+          keyed.filters.length !== 2 ||
+          !rising(keyed.filters)
+        )
           bad(
             "list-tick",
-            `two arrow keys in the zone list played ${JSON.stringify(keyed)}, wanted two Glass ticks`,
+            `two arrow keys in the zone list played ${JSON.stringify(keyed)}, wanted two servo ticks rising`,
           );
-        await page.evaluate(() => window.__sound.starts.splice(0));
+        await page.evaluate(clearTicks);
         const box = await list.boundingBox();
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         for (let i = 0; i < 4; i++) {
@@ -1883,11 +2005,16 @@ for (const name of browsers) {
           await page.waitForTimeout(120);
         }
         await page.waitForTimeout(450);
-        const wheeled = clustersOf(await page.evaluate(readStarts));
-        if (wheeled.length < 2 || wheeled.some((c) => c.size !== 2))
+        const wheeled = await page.evaluate(readTicks);
+        if (
+          wheeled.noises < 2 ||
+          wheeled.tones !== 0 ||
+          wheeled.filters.length !== wheeled.noises ||
+          !rising(wheeled.filters)
+        )
           bad(
             "list-tick",
-            `wheeling the zone list played ${JSON.stringify(wheeled)}, wanted Glass ticks as rows pass`,
+            `wheeling the zone list played ${JSON.stringify(wheeled)}, wanted servo ticks rising as rows pass`,
           );
       },
     );

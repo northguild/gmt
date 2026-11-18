@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * The inline head script runs before first paint: it marks a landing load as waiting for the
- * entrance, frees the page after a failsafe, drops a carousel mark nothing took over once the
+ * entrance (or shows it at once when the reader came from this site), frees the page after a failsafe, drops a carousel mark nothing took over once the
  * document is parsed, and notes an arrival through a view transition. It runs here against a
  * stand-in window so no listener outlives a test.
  */
@@ -20,6 +20,8 @@ interface Origin {
   /** `navigation.activation.from.url`; absent where the Navigation API is. */
   activation?: string;
   referrer?: string;
+  /** The navigation timing entry's `type`: `reload` for a reload. */
+  type?: string;
 }
 
 /** A view transition stand-in that records the types added to it. */
@@ -46,6 +48,10 @@ function run(base: string, path: string, from: Origin = {}): Stand {
       from.activation === undefined
         ? undefined
         : { activation: { from: { url: from.activation } } },
+    performance: {
+      getEntriesByType: (kind: string) =>
+        kind === "navigation" ? [{ type: from.type ?? "navigate" }] : [],
+    },
     addEventListener: (name: string, listener: Listener) => {
       if (name === "pagereveal") listeners.push(listener);
       if (name === "DOMContentLoaded") onParsed.push(listener as () => void);
@@ -134,6 +140,62 @@ describe("arrivalInlineSource", () => {
     const { reveal, root } = run("/", "/install/");
     reveal({});
     expect(root.dataset["arrival"]).toBe("transition");
+  });
+});
+
+describe("the entrance by where the reader came from", () => {
+  const SITE = `${ORIGIN}/gmt`;
+
+  it("shows the landing at once when the reader came from another page of this site", () => {
+    expect(
+      run("/gmt/", "/gmt/", { activation: `${SITE}/guides/x/` }).root.dataset[
+        "entrance"
+      ],
+    ).toBe("static");
+    expect(
+      run("/gmt/", "/gmt/", { activation: SITE }).root.dataset["entrance"],
+    ).toBe("static");
+  });
+
+  it("reads the referrer where the Navigation API is missing", () => {
+    expect(
+      run("/gmt/", "/gmt/", { referrer: `${SITE}/install/` }).root.dataset[
+        "entrance"
+      ],
+    ).toBe("static");
+  });
+
+  it("runs the whole entrance from northguild.dev, from another site, or from nowhere known", () => {
+    for (const from of [
+      { activation: `${ORIGIN}/` },
+      { activation: `${ORIGIN}/gmtx/` },
+      { referrer: "https://example.com/gmt/" },
+      {},
+    ])
+      expect(run("/gmt/", "/gmt/", from).root.dataset["entrance"]).toBe("wait");
+  });
+
+  it("runs the whole entrance on a reload", () => {
+    expect(
+      run("/gmt/", "/gmt/", { activation: `${SITE}/`, type: "reload" }).root
+        .dataset["entrance"],
+    ).toBe("wait");
+  });
+
+  it("keeps the carousel mark and the arrival note when it shows the landing at once", () => {
+    const { reveal, root } = run("/gmt/", "/gmt/", {
+      activation: `${SITE}/guides/x/`,
+    });
+    expect(root.dataset["homeCarousel"]).toBe("wait");
+    reveal(null);
+    expect(root.dataset["arrival"]).toBe("load");
+  });
+
+  it("leaves a page that is not the landing alone, wherever the reader came from", () => {
+    expect(
+      run("/gmt/", "/gmt/install/", { activation: `${SITE}/guides/x/` }).root
+        .dataset["entrance"],
+    ).toBeUndefined();
   });
 });
 

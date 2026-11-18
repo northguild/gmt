@@ -16,8 +16,9 @@
  * Events, all bubbling, with `detail`: `active` `{ index }` when the keys move the
  * active option, and `change` `{ value }` when an option is chosen.
  *
- * Sound (DOX-G11): a step through the list plays `detent` (Glass tick). A key that moves the
- * active option plays one; at an end, where the key moves nothing, none. A reader's own scroll
+ * Sound (DOX-G11): a step through the list plays the list step (`sound/list-step.ts`, Servo by
+ * place), `listNext` going down and `listPrev` going up, pitched by the option it lands on. A key
+ * that moves the active option plays one; at an end, where the key moves nothing, none. A reader's own scroll
  * (wheel, touch, scrollbar) plays one each time the top of the view passes into another row, the
  * row pitch measured from the drawn options; a scroll made for them is silent (`scrollTicks`,
  * `sound/scroll-ticks.ts`, which every scrolling list shares).
@@ -27,7 +28,7 @@
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
-import { cue } from "~/lib/sound/cue";
+import { stepTo } from "~/lib/sound/list-step";
 import { scrollTicks, type ScrollTicks } from "~/lib/sound/scroll-ticks";
 import { KitElement, type KitDetail } from "../base";
 import styles from "./listbox.module.css";
@@ -214,7 +215,7 @@ export class GmtListbox extends KitElement {
   #move(next: number): void {
     if (next === this.#active) return;
     this.#ticks?.quiet();
-    cue("detent");
+    stepTo(next > this.#active, next, this.count);
     this.#active = next;
     this.sync();
     this.dispatchEvent(

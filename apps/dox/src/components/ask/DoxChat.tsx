@@ -505,7 +505,7 @@ export function DoxChat({
     status === "submitted" ||
     (status === "streaming" && messages.at(-1)?.role === "user");
 
-  /* Sound. The thinking hum runs while Dox waits, and its stop runs in the cleanup, so an
+  /* Sound. The thinking pings (Sonar idle) run while Dox waits, and its stop runs in the cleanup, so an
      unmount, a stop or the first token always ends it. A restored conversation never changes
      status, so it is silent. */
   useEffect(() => {

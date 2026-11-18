@@ -3,7 +3,7 @@
 The owner's pick: **Ice fader** (`control` C), in a popover under one header button. The popover
 holds a mute button, an 11-notch bevelled fader and a small Aura switch. Its sounds are **Ice
 snap** (`toggle` C) on the mute button and the switch, and **Glass tick** (`detent` B) on each
-fader notch, ported from `audition.html` unchanged.
+fader notch, ported from the sound audition unchanged.
 
 ## What the reader sees
 
@@ -58,7 +58,7 @@ Kit `range` gains `look?: "default" | "fader"` (APG Slider; still the native
   `change` and sets `data-cue`, so every tool switch snaps from this slice on; a programmatic
   `checked` is silent.
 - **Header button:** carries `data-ping="sonar"`, so it plays the Sonar ping like the Dox,
-  GitHub and Discord links beside it; slice 3's `native-panels.ts` plays the Steel breath as its
+  GitHub and Discord links beside it; slice 3's `native-panels.ts` plays the Felt slide as its
   popover opens and closes.
 
 ## One button, one popover
@@ -72,7 +72,7 @@ Kit `range` gains `look?: "default" | "fader"` (APG Slider; still the native
   where anchoring is missing, and `inline-size: min(16rem, 100vw - 2rem)`.
 - Being a native `auto` popover, Escape, outside press and focus return are the browser's, and
   `esc-native.ts` enrols it in the Escape order with no new code. Opening it plays the gear's
-  Sonar ping and the opening Steel breath; closing plays the closing Steel breath.
+  Sonar ping and the opening Felt slide; closing plays the closing Felt slide.
 - `control.ts` mirrors `aria-expanded` from the `toggle` event and focuses the mute button on open.
 
 ## Files

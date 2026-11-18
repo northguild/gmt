@@ -130,7 +130,7 @@ export default function DoxPage() {
   const pickExample = useCallback(
     (starter: (typeof CHAT_STARTERS)[number]) => {
       /* A pill carries `data-cue`, so the press hook leaves it to this handler. A press that
-         opens the rail is the rail's opening Steel breath (the effect below); every other press that
+         opens the rail is the rail's opening Felt slide (the effect below); every other press that
          stays on the page, a swap from one widget to another or a question not sent, is a
          button's press ping, the Deep sonar. */
       const sent = chatRef.current?.send(starter.text) === true;
@@ -162,7 +162,7 @@ export default function DoxPage() {
     el: railEl,
   });
 
-  /* The rail's open and close Steel breath: null to a widget opens it, a widget back to null
+  /* The rail's open and close Felt slide: null to a widget opens it, a widget back to null
      closes it, and one widget swapped for another is neither (slice 6's `ready`). The cue follows
      the commit, so a cancelled open is silent. */
   const railWasOpenRef = useRef(false);

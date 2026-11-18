@@ -1,7 +1,6 @@
 /**
- * The helpers every voice is built from, ported from the audition's kit
- * (context/dox/reference/sound-audition.html). Every time is a time on the audio clock,
- * `AudioContext.currentTime`: nothing here reads a wall clock.
+ * The helpers every voice is built from, ported from the sound audition's kit. Every time is a
+ * time on the audio clock, `AudioContext.currentTime`: nothing here reads a wall clock.
  *
  * Effects are shared per context: one hall, one echo and one noise buffer, built on first use.
  * The engine tells the kit which node is the master bus (`setMaster`), so a voice asks for

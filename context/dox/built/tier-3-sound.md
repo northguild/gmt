@@ -1,6 +1,6 @@
 # Tier 3: sound
 
-Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every voice is synthesised, with no samples. The picks came from [`reference/sound-audition.html`](../reference/sound-audition.html), which plays every variant of every step and stays so a pick can be heard again and changed. A voice's doc comment names the step and variant letter it came from.
+Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every voice is synthesised, with no samples. Every voice is the owner's pick from a sound audition; its doc comment names the step and variant letter it came from.
 
 ## Rules
 
@@ -21,15 +21,16 @@ Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every v
 | --- | --- | --- |
 | Link press | Sonar, 1180 Hz (`click`) | `sonar.ts`, capture `click` on `document` |
 | Any other press: button, tab, `summary` | Deep sonar, 620 Hz (`press`) | as above |
-| Panel opens or closes: any non-manual `[popover]`, the kit drawer, the mobile menu, the `/dox` rail, the sidebar on arrival | Steel breath rising or sinking (`open`, `close`) | `native-panels.ts`, `drawer.ts`, `menu-button.ts`, `DoxPage.tsx`, `sidebar-cue.ts` |
-| Landing pieces freeze in; a light crosses a chip | Steel whisper (`paint`), Steel shing (`glint`) | `entrance.ts`, on `animationstart` |
+| Panel opens or closes: any non-manual `[popover]`, the kit drawer, the mobile menu, the `/dox` rail, the sidebar on arrival | Felt slide, opening or closing: a noise swell with one low tone (`open`, `close`) | `native-panels.ts`, `drawer.ts`, `menu-button.ts`, `DoxPage.tsx`, `sidebar-cue.ts` |
+| Landing pieces freeze in; a light crosses a chip | Crystal dust, two or three high glints (`paint`), Steel shing (`glint`) | `entrance.ts`, on `animationstart`; silent on an in-site arrival |
 | Any kit switch, the mute button | Ice snap (`toggle`) | `data-cue`, `watchSwitchCue()` |
-| Fader step, handle step, list step by key or by the reader's scroll | Glass tick (`detent`) | `range`, `handle`, `listbox`, `combobox`, `roving`, `scroll-ticks.ts` |
+| Fader step, handle step | Glass tick (`detent`) | `range`, `handle` |
+| List step by key or by the reader's scroll | Servo tick, sweeping down or up and pitched by the place in the list (`listNext`, `listPrev`) | `listStep()`/`stepTo()` in `list-step.ts`, called by `listbox`, `combobox`, `roving`, `scroll-ticks.ts` |
 | Copy | Glass clink (`copy`) | `GmtCopy`, `code-copy.ts` |
 | Error: chat, `NO SIGNAL` from input, a failed load or copy | Low double buzz (`error`) | `DoxChat.tsx`, `gmt-readout`, `widget-mount.ts`, `showUnavailable` |
 | Typing in any text field | Data blip (`key`) | `typing.ts` |
-| Chat send, thinking, streaming, done | Sonar launch, Hum pulse, Morse, Ice bell | `DoxChat.tsx` |
-| Widget loading over 150 ms, then ready | Scan sweep (`loading`), Lock-in (`ready`) | `startMountCues()` in `widget-mount.ts` |
+| Chat send, thinking, streaming, done | Sonar launch, Sonar idle (a soft 587 Hz ping every 1.6 s), Morse, Ice bell | `DoxChat.tsx` |
+| Widget loading over 150 ms, then ready | Servo spin-up, three rising bursts (`loading`), Lock-in (`ready`) | `startMountCues()` in `widget-mount.ts` |
 | A place chosen on a globe or a classed map | Sonar lock (`locate`) | `globe.ts` `lockOn`, `feature-map.ts` |
 | Globe zoom step | Lens servo (`zoomIn`, `zoomOut`) | the globe engine's `onZoom` |
 | A globe or a feature map comes into view | Steel horizon (`appearGlobe`), Sonar dawn (`appearMap`) | `appear.ts` `cueOnAppear` |
@@ -51,7 +52,8 @@ Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) com
 
 - **A link waits for its ping.** Every route change is a full page load, which ends the audio. `holdLink()` (`link-hold.ts`) runs in a `window` bubble listener after every handler: if nothing took the press and it leaves this document in this tab, it cancels the click and calls `location.assign(href)` after 333 ms (`LINK_HOLD_MS`, the ping and its first echo). A modifier key, another `target`, `download`, a non-http(s) URL and a same-page hash go to the browser. Muted, nothing waits. The Sonar ping's tail is shorter than the audition's so leaving a page does not drag.
 - **The press hook reads `composedPath()`, not `target.closest`.** A control that swaps its own icon in its handler detaches the clicked node. It listens in the capture phase because Starlight's Search stops its click from bubbling.
-- **The entrance restates no timing.** `entranceSounds()` hears each `animationstart`, so pieces that arm late are heard on their own start and a view-transition arrival's still header is silent. The copy is never heard: its freeze runs from the first paint, and the tagline's 0.12 s delay can end either side of `t0`, so its animations (`ng-freeze-text`, `ng-sweep-text`) are not listened for. At most one whisper and one shing per frame; each shing a rank (4%) higher.
+- **An in-site arrival has no entrance.** A landing reached from another page of this site starts `static` (`arrival.ts`): the reader has seen the buttons, so nothing freezes in and nothing plays. A reload, another site and northguild.dev get the whole entrance; in practice it is heard on an arrival from northguild.dev, whose same-origin activation unlocks audio at load.
+- **The entrance restates no timing.** `entranceSounds()` hears each `animationstart`, so pieces that arm late are heard on their own start and a view-transition arrival's still header is silent. The copy is never heard: its freeze runs from the first paint, and the tagline's 0.12 s delay can end either side of `t0`, so its animations (`ng-freeze-text`, `ng-sweep-text`) are not listened for. At most one sparkle and one shing per frame; each shing a rank (4%) higher.
 - **Sidebar arrival** reads and then writes `sessionStorage["dox:sidebar"]` as each page loads or is restored, so the flag holds the page just left. A `pagehide` write was rejected: mobile browsers that kill a page skip it.
 - **The aura** sits behind one bus 12 dB under the cues, built once per context; each track has its own gain, so a track change crossfades over 1.5 s and Deep drone's ringing pads do not return with the next fade in. `DEEP_TRIM` keeps Deep drone's peak under Ice cavern's. `HeroSpace.astro` sets `data-aura` on `<html>`, and only there does the engine import `aura.ts` (about 1.3 KB gzipped). `pagehide` suspends the context; closing it would strand `cue.ts`'s reference.
 - **Typing** counts printable keys and Backspace, and Enter only in a textarea or contenteditable. Never a password field (the sound would tell the room its length), a read-only field, `isComposing`, `repeat` or a Ctrl/Meta chord.
@@ -73,4 +75,4 @@ Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) com
 - A test file that installs `src/test/fake-audio.ts` is isolated (`vi.stubGlobal`); tests assert on the recorded schedule, never on sound.
 - jsdom's `localStorage` queues a timer per write under fake timers, so a test asserting `vi.getTimerCount() === 0` uses `installMemoryStorage()`.
 - The leak guard fails a file that leaves a `window` or `document` listener, so each test tears `startCue()` and `createEngine()` down.
-- `sound-check` reads the Scan sweep as the filter's ramp to 4000 Hz: noise has no oscillator start.
+- `sound-check` reads a noise voice by its filter, since noise has no oscillator start: the Servo spin-up by its last burst's ramp to 1950 Hz, a list's servo tick by its burst and rising ramp target. A Felt slide is read by its low tone's fall (170 to 140 Hz opening, 150 to 120 Hz closing), a Crystal dust sparkle by tones of 5200 to 8000 Hz, and the Sonar idle by its 587 Hz pings, kept apart from the chat's cues.

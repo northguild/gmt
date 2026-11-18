@@ -13,7 +13,7 @@
  * closes first, and the press that closes the drawer returns focus to the toggle. Which
  * interaction may open it is the caller's.
  *
- * Every open and close after mount plays the opening or closing Steel breath (`lib/sound`). The close
+ * Every open and close after mount plays the opening or closing Felt slide (`lib/sound`). The close
  * button and the caller's toggle carry `data-cue`, so the press ping does not double it.
  */
 import { registerEscLayer } from "~/lib/esc-layers";

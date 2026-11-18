@@ -8,7 +8,9 @@ import { combobox, type GmtCombobox } from "./combobox";
 import { listboxRootClass } from "../listbox/listbox";
 
 const cue = vi.fn();
-vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
+vi.mock("~/lib/sound/cue", () => ({
+  cue: (...args: unknown[]) => cue(...args),
+}));
 beforeEach(() => cue.mockClear());
 
 const zones = ["Africa/Cairo", "Asia/Tokyo", "Asia/Seoul", "Europe/Paris"];
@@ -103,13 +105,17 @@ describe("the combobox element", () => {
     await expectNoAxeViolations(fx.host);
   });
 
-  it("ticks once for each arrow key that moves the active option", async () => {
+  it("steps once for each arrow key that moves the active option, by direction and place", async () => {
     draw();
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Find a zone" }));
     cue.mockClear();
     await user.keyboard("{ArrowDown}{ArrowDown}{ArrowUp}");
-    expect(cue.mock.calls).toEqual([["detent"], ["detent"], ["detent"]]);
+    expect(cue.mock.calls).toEqual([
+      ["listNext", 0],
+      ["listNext", 1 / 3],
+      ["listPrev", 0],
+    ]);
   });
 
   it("wraps up from the top and opens a shut list on ArrowDown and on Alt+ArrowDown", async () => {

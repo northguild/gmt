@@ -33,7 +33,7 @@ describe("the sounds of a mount", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("plays the Scan sweep and then Lock-in for a slower mount", () => {
+  it("plays the Servo spin-up and then Lock-in for a slower mount", () => {
     const sounds = startMountCues(controller.signal);
     vi.advanceTimersByTime(300);
     sounds.ready();
@@ -41,7 +41,7 @@ describe("the sounds of a mount", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("plays the Scan sweep and then the buzz for a mount that fails", () => {
+  it("plays the Servo spin-up and then the buzz for a mount that fails", () => {
     const sounds = startMountCues(controller.signal);
     vi.advanceTimersByTime(300);
     sounds.failed();

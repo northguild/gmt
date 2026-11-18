@@ -64,11 +64,13 @@ const GAPS: Partial<Record<CueName, number>> = {
   appearGlobe: APPEAR_GAP,
 };
 /**
- * Cues that share one gap with another, keyed by the one whose gap they use: a zoom that turns
- * round is still one run of steps, and a globe and a map arriving together are one arrival.
+ * Cues that share one gap with another, keyed by the one whose gap they use: a zoom or a list step
+ * that turns round is still one run of steps, and a globe and a map arriving together are one
+ * arrival.
  */
 const GAP_KEY: Partial<Record<CueName, CueName>> = {
   zoomOut: "zoomIn",
+  listPrev: "listNext",
   appearMap: "appearGlobe",
 };
 

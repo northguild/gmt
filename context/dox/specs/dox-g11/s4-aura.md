@@ -1,7 +1,7 @@
 # Slice 4 · Home aura
 
 The owner's pick: **Ice cavern** (`aura` D), under the landing (`/`) only. Port its `start(c, bus)`
-from `audition.html` unchanged: six held sines (1318.5, 1975.5 and 2637 Hz, each at −4 and +4
+from the sound audition unchanged: six held sines (1318.5, 1975.5 and 2637 Hz, each at −4 and +4
 cents) at gain 0.004 into a 4.5 s `hall`; a 73.4 Hz drone at 0.045; and `bell` glints every
 1.6–4 s (`rand`, `hz`, `scheduler`). It returns its own stop function.
 

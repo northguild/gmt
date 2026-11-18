@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * The chat's sound: Sonar launch when a question leaves, the Hum pulse while Dox waits for its
+ * The chat's sound: Sonar launch when a question leaves, the Sonar idle pings while Dox waits for its
  * first word, a Morse beep per streamed chunk, the Ice bell when the answer completes and the
  * Low double buzz on an error. The real `DoxChat` runs against a real AI SDK stream that the test
  * writes to by hand; `cue` and `loop` are spies, since the audio is the engine's.
@@ -93,7 +93,7 @@ afterEach(() => {
 });
 
 describe("the chat's sound", () => {
-  it("launches a sonar and starts the thinking hum once, as the question leaves", async () => {
+  it("launches a sonar and starts the thinking pings once, as the question leaves", async () => {
     const reply = answer();
     await ask(reply.response);
     await waitFor(() => expect(sound.loop.mock.calls).toEqual([["thinking"]]));
@@ -101,7 +101,7 @@ describe("the chat's sound", () => {
     expect(sound.stopThinking).not.toHaveBeenCalled();
   });
 
-  it("stops the hum at the first token, beeps per growing chunk and rings the bell once at the end", async () => {
+  it("stops the pings at the first token, beeps per growing chunk and rings the bell once at the end", async () => {
     const reply = answer();
     await ask(reply.response);
     await reply.ready();
@@ -134,7 +134,7 @@ describe("the chat's sound", () => {
     expect(sound.stopThinking).toHaveBeenCalledTimes(1);
   });
 
-  it("stops the hum when the chat unmounts while Dox is still thinking", async () => {
+  it("stops the pings when the chat unmounts while Dox is still thinking", async () => {
     const reply = answer();
     await ask(reply.response);
     await waitFor(() => expect(sound.loop).toHaveBeenCalledTimes(1));
@@ -142,7 +142,7 @@ describe("the chat's sound", () => {
     expect(sound.stopThinking).toHaveBeenCalledTimes(1);
   });
 
-  it("stops the hum and plays no bell when the reader presses Stop mid-answer", async () => {
+  it("stops the pings and plays no bell when the reader presses Stop mid-answer", async () => {
     const reply = answer();
     const user = await ask(reply.response);
     await reply.ready();

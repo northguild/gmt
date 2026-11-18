@@ -1,6 +1,6 @@
 /**
- * Every sound, one function each, ported from the audition
- * (context/dox/reference/sound-audition.html) with the picked variant's body unchanged.
+ * Every sound, one function each, ported from the sound audition with the picked variant's body
+ * unchanged.
  * `t` is a time on the audio clock; `out` is the master bus.
  */
 import type { CueName, LoopName } from "./cue";
@@ -13,6 +13,7 @@ import {
   noise,
   noiseBuffer,
   rand,
+  scheduler,
   sharedFx,
   sonarEcho,
   space,
@@ -118,6 +119,26 @@ function lensServo(dir: 1 | -1): Voice {
   };
 }
 
+/**
+ * detent E, "Servo by place": the Lens servo's notch made small, one per step down or up a list,
+ * pitched by how far down the list it is (`place`, the cue's `rank`, 0 at the top and 1 at the
+ * bottom) the way the zoom is pitched by distance, sweeping up going down (`dir` 1) and down going
+ * back up (-1).
+ */
+function listServo(dir: 1 | -1): Voice {
+  return (c, out, t, place) => {
+    const f = zoomPitch(700, 1600, place);
+    noise(c, out, t, {
+      freq: f,
+      to: dir > 0 ? f * 1.2 : f / 1.2,
+      q: 4,
+      peak: 0.04,
+      attack: 0.004,
+      decay: 0.024,
+    });
+  };
+}
+
 /** `null` is a cue no slice has given a voice yet. */
 export const VOICES: Record<CueName, Voice | null> = {
   // click A, "Sonar": a clean ping with a quick echo coming back off the hull. A press on a link.
@@ -149,39 +170,54 @@ export const VOICES: Record<CueName, Voice | null> = {
       release: 0.5,
     });
   },
-  // open K, "Steel breath": a soft breath of air passing through a cold steel tube, a gentle
-  // metallic whoosh whose ring lifts as it opens. No strike, no notes.
+  // open O, "Felt slide": a drawer on felt runners, a soft low slide rising and the faintest
+  // settle at the end.
   open(c, out, t) {
-    steelBreath(c, out, t, {
-      from: 0.0018,
-      to: 0.0009,
-      peak: 0.022,
-      attack: 0.14,
-      release: 0.26,
+    noise(c, out, t, {
+      freq: 420,
+      to: 560,
+      q: 1.4,
+      peak: 0.08,
+      attack: 0.05,
+      decay: 0.12,
+    });
+    tone(c, out, t + 0.12, {
+      freq: 170,
+      to: 140,
+      peak: 0.03,
+      attack: 0.004,
+      release: 0.06,
     });
   },
-  // close K, "Steel breath" in reverse: the metallic whoosh sinks and closes, a little shorter.
+  // close O, "Felt slide" in reverse: the slide falls and settles a little lower, a little sooner.
   close(c, out, t) {
-    steelBreath(c, out, t, {
-      from: 0.0009,
-      to: 0.0018,
-      peak: 0.018,
-      attack: 0.06,
-      release: 0.24,
+    noise(c, out, t, {
+      freq: 560,
+      to: 400,
+      q: 1.4,
+      peak: 0.07,
+      attack: 0.03,
+      decay: 0.11,
+    });
+    tone(c, out, t + 0.1, {
+      freq: 150,
+      to: 120,
+      peak: 0.03,
+      attack: 0.004,
+      release: 0.06,
     });
   },
-  // paint C, "Steel whisper": the open's Steel breath made tiny, a faint metallic air as a piece
-  // of the landing freezes in, so the entrance and the panels sound like one family.
+  // paint E, "Crystal dust": two or three tiny high specks, scattered, light catching dust as a
+  // piece of the landing freezes in.
   paint(c, out, t) {
-    steelBreath(c, out, t, {
-      from: rand(0.0013, 0.0015),
-      to: 0.0008,
-      peak: 0.01,
-      attack: 0.08,
-      release: 0.18,
-      feedback: 0.7,
-      wet: 0.2,
-    });
+    const n = Math.random() < 0.5 ? 2 : 3;
+    for (let i = 0; i < n; i++)
+      tone(c, out, t + i * rand(0.02, 0.04), {
+        freq: rand(5200, 8000),
+        peak: 0.006,
+        attack: 0.002,
+        release: 0.05,
+      });
   },
   // glint B, "Steel shing": a steel sheet catching the light, a quick shimmer of metal ring with no
   // strike. Each glint of the landing rings a touch higher than the one before (`rank`).
@@ -237,7 +273,8 @@ export const VOICES: Record<CueName, Voice | null> = {
       decay: 0.25,
     });
   },
-  // detent B, "Glass tick": a brighter, glassier tick with only a hint of body.
+  // detent B, "Glass tick": a brighter, glassier tick with only a hint of body. A slider's step
+  // and a handle's arrow; a list's step is `listNext`/`listPrev`.
   detent(c, out, t) {
     tone(c, out, t, {
       freq: 3200,
@@ -254,6 +291,8 @@ export const VOICES: Record<CueName, Voice | null> = {
       release: 0.03,
     });
   },
+  listNext: listServo(1),
+  listPrev: listServo(-1),
   // key C, "Data blip": very quiet high blips from a pentatonic scale, like a terminal echoing keys.
   key(c, out, t) {
     const notes = [93, 95, 98, 100, 102];
@@ -296,16 +335,20 @@ export const VOICES: Record<CueName, Voice | null> = {
       decay: 1.2,
     });
   },
-  // loading B, "Scan sweep": a band of noise sweeping up, a scanner passing over.
+  // loading E, "Servo spin-up": three soft notches of the globe's lens servo, climbing: something
+  // winding up.
   loading(c, out, t) {
-    noise(c, out, t, {
-      freq: 500,
-      to: 4000,
-      q: 2,
-      peak: 0.07,
-      attack: 0.08,
-      decay: 0.4,
-    });
+    for (let i = 0; i < 3; i++) {
+      const f = zoomPitch(650, 1500, i / 2);
+      noise(c, out, t + i * 0.09, {
+        freq: f,
+        to: f * 1.3,
+        q: 4,
+        peak: 0.028,
+        attack: 0.006,
+        decay: 0.04,
+      });
+    }
   },
   // ready A, "Lock-in": a detent click and a soft high ping: locked on.
   ready(c, out, t) {
@@ -422,36 +465,24 @@ export const VOICES: Record<CueName, Voice | null> = {
 
 export const LOOPS: Record<LoopName, Loop | null> = {
   aura: null,
-  // thinking B, "Hum pulse": a low, quiet hum swelling about once a second: a machine at work.
-  // The body is the audition's; `fadedLoop` puts it behind a bus that swells in over 0.3 s and
-  // dims over 0.15 s before it stops.
+  // thinking F, "Sonar idle": one very soft, low ping every 1.6 s, the sonar listening while it
+  // waits. The body is the audition's; `fadedLoop` puts it behind a bus that swells in over 0.3 s
+  // and dims over 0.15 s, and its stop ends the scheduling: a ping already queued plays into the
+  // dimmed bus.
   thinking: fadedLoop(
-    (c, bus) => {
-      const parts = [
-        [110, 0.05],
-        [165, 0.025],
-      ].map(([freq, peak]) => {
-        const o = c.createOscillator();
-        o.frequency.value = freq;
-        const g = c.createGain();
-        g.gain.value = peak;
-        const lfo = c.createOscillator();
-        lfo.frequency.value = 1.1;
-        const d = c.createGain();
-        d.gain.value = peak * 0.8;
-        lfo.connect(d).connect(g.gain);
-        o.connect(biquad(c, "lowpass", 400))
-          .connect(g)
-          .connect(bus);
-        o.start();
-        lfo.start();
-        return [o, lfo];
-      });
-      return () => {
-        for (const pair of parts)
-          for (const n of pair) n.stop(c.currentTime + 0.6);
-      };
-    },
+    (c, bus) =>
+      scheduler(
+        c,
+        () => 1.6,
+        (t) =>
+          tone(c, bus, t, {
+            freq: 587,
+            peak: 0.014,
+            attack: 0.01,
+            release: 0.45,
+            filter: ["lowpass", 1200],
+          }),
+      ),
     0.3,
     0.15,
   ),

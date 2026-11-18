@@ -1,9 +1,9 @@
 # Slice 5 · Chat cues
 
-Sound for Dox on `/dox`, each voice ported from `audition.html` unchanged:
+Sound for Dox on `/dox`, each voice ported from the sound audition unchanged:
 
 - **Sonar launch** (`send` C) when the question leaves;
-- **Hum pulse** (`thinking` B), a loop while Dox thinks;
+- **Sonar idle** (`thinking`), a loop while Dox thinks: a soft 587 Hz ping every 1.6 s;
 - **Morse** (`stream` C) per streamed chunk, **Ice bell** (`done` C) when the answer completes;
 - **Low double buzz** (`error` B) on an error, here and everywhere later slices fire `error`;
 - **Data blip** (`key` C) on the composer's keys.
@@ -48,8 +48,8 @@ Rules:
   where it types a line (a textarea or contenteditable); never while `event.isComposing` (IME),
   never on `repeat`, never with Ctrl or Meta held.
 - Create `src/lib/sound/loops.ts` + test if the thinking loop does not fit `engine.ts` cleanly:
-  Hum pulse's `start(c, bus)` (110 and 165 Hz through a 400 Hz lowpass, swelling at 1.1 Hz)
-  ported unchanged, behind a bus gain that fades in over 0.3 s and out over 0.15 s before the
+  Sonar idle's `start(c, bus)` (a 587 Hz ping every 1.6 s through a 1200 Hz lowpass, on the kit's
+  `scheduler`), behind a bus gain that fades in over 0.3 s and out over 0.15 s before the
   voice's own stop function runs.
 
 ## Tests
@@ -67,7 +67,7 @@ Rules:
 ## Gate additions (`sound-check`)
 
 On `/dox/` with the chat API stubbed by `page.route` to stream a fixed answer in 12 chunks:
-Sonar launch once; Hum pulse runs until the first chunk and then stops; Morse starts are at
+Sonar launch once; Sonar idle runs until the first chunk and then stops; Morse starts are at
 least 60 ms apart on the audio clock; Ice bell once; a 500 response plays Low double buzz and no
 Ice bell. Composer typing plays Data blip; IME composition (`compositionstart` …
 `compositionend`) plays none. A copy failure (stubbed `clipboard.writeText` rejecting) on a

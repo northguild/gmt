@@ -57,7 +57,7 @@ export function MountedWidget({
     let cancelled = false;
 
     setError(null);
-    /* Scan sweep after 150 ms without a result, then Lock-in or the buzz. */
+    /* Servo spin-up after 150 ms without a result, then Lock-in or the buzz. */
     const sounds = startMountCues(controller.signal);
     /* Busy from the first frame until the mount has wired the widget: first a
        placeholder while its chunk loads, then the template, whose controls do

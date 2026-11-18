@@ -520,13 +520,13 @@ describe("MountedWidget sounds", () => {
     expect(cue.mock.calls).toEqual([["ready"]]);
   });
 
-  it("plays the Scan sweep and then Lock-in for a mount that takes 300 ms", async () => {
+  it("plays the Servo spin-up and then Lock-in for a mount that takes 300 ms", async () => {
     render(<MountedWidget entry={slow(300)} args={{}} idPrefix="t" />);
     await vi.advanceTimersByTimeAsync(400);
     expect(cue.mock.calls).toEqual([["loading"], ["ready"]]);
   });
 
-  it("plays the Scan sweep and then the buzz for a mount that fails", async () => {
+  it("plays the Servo spin-up and then the buzz for a mount that fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     render(<MountedWidget entry={slow(300, true)} args={{}} idPrefix="t" />);
     await vi.advanceTimersByTimeAsync(400);

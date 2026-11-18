@@ -65,7 +65,7 @@ describe("the mobile menu button", () => {
     expect(page).not.toHaveAttribute("inert");
   });
 
-  it("plays the open and close Steel breath on a reader's press, and nothing on mount", async () => {
+  it("plays the open and close Felt slide on a reader's press, and nothing on mount", async () => {
     const user = userEvent.setup();
     mount();
     expect(cue).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe("the mobile menu button", () => {
     expect(cue.mock.calls).toEqual([["open"], ["close"]]);
   });
 
-  it("plays the closing Steel breath once when Escape closes it", async () => {
+  it("plays the closing Felt slide once when Escape closes it", async () => {
     const user = userEvent.setup();
     mount();
     await user.click(screen.getByRole("button", { name: "Menu" }));

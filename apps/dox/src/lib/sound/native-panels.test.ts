@@ -37,7 +37,7 @@ function toggle(name: string, newState: "open" | "closed") {
   screen.getByLabelText(name, { selector: "[popover]" }).dispatchEvent(event);
 }
 
-describe("the open and close Steel breath for native panels", () => {
+describe("the open and close Felt slide for native panels", () => {
   it("plays open and close as a popover toggles", () => {
     toggle("Auto panel", "open");
     toggle("Auto panel", "closed");

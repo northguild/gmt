@@ -1,5 +1,5 @@
 /**
- * The landing's entrance sounds: a Steel whisper (`paint`) as each piece freezes in, and a Steel
+ * The landing's entrance sounds: a Crystal dust sparkle (`paint`) as each piece freezes in, and a Steel
  * shing (`glint`) as the light crosses each metal sheet, each shing a touch higher than the last.
  *
  * The timing lives in the stylesheet (`gmt-entrance-freeze.css`) and is not restated here: each
@@ -16,7 +16,9 @@
  * of a frame are gathered and played from its animation-frame callback, which runs after them.
  *
  * Nothing plays unless the engine is running: a first visit (no gesture yet) is silent, and a
- * reader whose first press comes mid-entrance hears the rest of it from there.
+ * reader whose first press comes mid-entrance hears the rest of it from there. A landing reached
+ * from another page of this site has no entrance (`static`), so in practice it is heard on an
+ * arrival from northguild.dev, whose same-origin click lets Chrome start the audio at load.
  */
 import { cue } from "./cue";
 

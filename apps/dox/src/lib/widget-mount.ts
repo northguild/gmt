@@ -70,7 +70,7 @@ export class WidgetLoadError extends Error {
   }
 }
 
-/** How long a mount may take before the reader hears the Scan sweep. */
+/** How long a mount may take before the reader hears the Servo spin-up. */
 export const LOADING_CUE_DELAY_MS = 150;
 
 /**

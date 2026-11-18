@@ -642,10 +642,19 @@ export async function initGlobe(
       tooltip.hidden = true;
       return;
     }
+    const fresh = tooltip.hidden;
     tooltip.hidden = false;
     const at = COORDINATES_BY_ID.get(selectedId);
     const sky = at ? skyAt(at.lat, at.lng, nowMs()) : undefined;
     setHtml(tooltip, renderZoneTooltip(selectedReading, viewerDate, sky));
+    /* A card shown afresh is placed before it paints, and stays unseen until something places
+       it: a pin out of sight, or a globe that has drawn no frame yet (a dawn holds its first one
+       back), leaves it unplaced, and an unplaced card sat in the page's top left. The landing
+       reached from another page shows its card at once, so it showed there. */
+    if (fresh) {
+      tooltip.style.visibility = "hidden";
+      positionTooltip();
+    }
   }
 
   function positionTooltip(): void {
@@ -676,6 +685,7 @@ export async function initGlobe(
     tooltip.toggleAttribute("data-below", flip);
     tooltip.style.left = `${frame.left + x}px`;
     tooltip.style.top = `${frame.top + at.y + (flip ? 12 : 0)}px`;
+    tooltip.style.removeProperty("visibility");
   }
 
   /* The card's frame, in page pixels: the element it would be placed in outside the top layer. */

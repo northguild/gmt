@@ -6,7 +6,7 @@
  * The button is a native `<button popovertarget>` named "Settings", so the popover is a native
  * `[popover]`: Escape, outside press and focus return are the browser's, `esc-native.ts` enrols
  * it in the Escape order. The gear plays the Sonar ping (`data-ping="sonar"`), as Dox, GitHub and
- * Discord beside it do, and the panel the Steel breath in and out (`native-panels.ts`), with the
+ * Discord beside it do, and the panel the Felt slide in and out (`native-panels.ts`), with the
  * slide and sheen every native panel shares (gmt-primitives.css). It is a top-layer
  * panel anchored under the button, so opening it and dragging the fader move nothing in the bar.
  *

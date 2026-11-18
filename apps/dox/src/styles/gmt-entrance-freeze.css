@@ -7,7 +7,9 @@
  *   wait     the sky is drawing. The copy's freeze has started (below); the other pieces are held
  *            out of sight.
  *   run      t0 has come; every other animation below starts in the same style recalculation.
- *   static   the failsafe showed the page; nothing animates, the sky fades in once drawn.
+ *   static   the page is shown as it is: the failsafe fired, or the reader came from another page
+ *            of this site and has seen the buttons and the header (lib/arrival.ts). Nothing
+ *            animates and nothing sounds; the sky fades in once drawn.
  *   done     the entrance has ended; no rule below matches, so a card shown later does not pop.
  *
  * The copy (the eyebrow, the title and the tagline) is the page's largest text, so it is on screen

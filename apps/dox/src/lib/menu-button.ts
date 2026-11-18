@@ -7,7 +7,7 @@
  * (`MobileMenuToggle.test.ts` fails once the installed version reaches 0.42).
  *
  * The menu takes part in the site's Escape order (`esc-layers.ts`); the button gets focus back.
- * A change of state plays the opening or closing Steel breath; the button carries
+ * A change of state plays the opening or closing Felt slide; the button carries
  * `data-cue` so the press ping stays out. A resize that closes the menu closes it, so it fades.
  */
 import { registerEscLayer } from "./esc-layers";
@@ -18,7 +18,7 @@ export class MenuButton extends HTMLElement {
 
   constructor() {
     super();
-    // The open and close Steel breath play for the menu (setExpanded), not the press ping.
+    // The open and close Felt slide play for the menu (setExpanded), not the press ping.
     this.btn.setAttribute("data-cue", "");
     this.btn.addEventListener("click", () => this.toggleExpanded());
 

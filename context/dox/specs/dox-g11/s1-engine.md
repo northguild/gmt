@@ -13,7 +13,7 @@ Create (each module with a `.test.ts` beside it):
   `SOUND_KEY`. Same pattern as `dox:earth` (`src/lib/earth-look.ts`). See [Settings](#settings).
 - `src/lib/sound/cue.ts`: the only sound module on every page's critical path.
   - `type CueName` = the picks table's events (`click`, `open`, `close`, `entrance`, `toggle`,
-    `copy`, `detent`, `key`, `send`, `stream`, `done`, `loading`, `ready`, `error`), plus the loops
+    `copy`, `detent`, `listNext`, `listPrev`, `key`, `send`, `stream`, `done`, `loading`, `ready`, `error`), plus the loops
     `aura` and `thinking` started through `loop(name)`, which returns a stop function.
   - `cue(name)` dispatches `CustomEvent("gmt:cue", { detail: { name } })` on `document`. With no
     engine listening (muted, not yet loaded or not unlocked) the event is unheard: dropped.

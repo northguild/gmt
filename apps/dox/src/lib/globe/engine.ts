@@ -114,6 +114,8 @@ export async function createGlobeEngine(
   let centreX = 0.5;
   let centreY = 0.5;
   let framed = false;
+  /** Whether a frame has given the camera its place yet; before that it is the 1 px default. */
+  let placed = false;
 
   let frameHandle = 0;
   /** The `requestAnimationFrame` time of the last loop draw. */
@@ -389,6 +391,7 @@ export async function createGlobeEngine(
     camera.radius = baseScale * controller.zoom;
     camera.centreX = centreX;
     camera.centreY = centreY;
+    placed = true;
 
     /* One instant for the whole frame. Reading the clock per call site could put
        a marker on the wrong side of the same frame's own terminator. */
@@ -816,10 +819,15 @@ export async function createGlobeEngine(
     getZoom: () => controller.zoom,
     getRotation: () => [controller.rotation[0], controller.rotation[1]],
     project(point: LngLat) {
+      /* The camera takes its centre and radius from the first frame drawn, which a dawn entrance
+         holds back. Until then it is the default, centred on the host's top left: every point
+         would land there and read as visible, and the zone card placed by it flashed in the
+         page's corner. */
+      if (!placed) return { x: 0, y: 0, visible: false };
       return projectPoint(camera, point[0], point[1]);
     },
     unproject(x, y) {
-      return unprojectPoint(camera, x, y);
+      return placed ? unprojectPoint(camera, x, y) : null;
     },
     getCentre: () => ({
       x: camera.centreX,

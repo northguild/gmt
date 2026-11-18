@@ -7,8 +7,9 @@
  * which the CSS entrance animations (`gmt-entrance-freeze.css`) of the sky, the buttons, the pager,
  * the header and the location card are keyed on, so they start in the same style recalculation.
  * The copy does not wait for `t0`: its freeze starts at the first paint, so the page's largest text
- * is on screen at once. If the failsafe has shown the page already (`static`), the attribute stays
- * and only the dawn starts. It also marks `gmt-entrance-t0`, starts the globe's dawn and, once the
+ * is on screen at once. If the page is shown already (`static`: the failsafe fired, or the reader
+ * came from another page of this site, `arrival.ts`), the attribute stays and only the dawn starts,
+ * with no sound. It also marks `gmt-entrance-t0`, starts the globe's dawn and, once the
  * last animation has ended, sets `done`. A sky or globe that failed to load counts as ready: the
  * entrance never waits on something that will not come. At `t0`, after `run` is set, it also
  * starts the entrance's sounds (`sound/entrance.ts`), which follow the animations until `done`.
@@ -67,8 +68,8 @@ export function runHeroEntrance(options: HeroEntranceOptions): void {
     }
     started = true;
     clearTimeout(timer);
-    // A page the failsafe already showed stays as it is: running now would replay the freeze on
-    // copy that is on screen. The dawn still starts.
+    // A page already shown stays as it is: running now would replay the freeze on copy that is on
+    // screen. The dawn still starts.
     if (root.dataset["entrance"] !== "static") root.dataset["entrance"] = "run";
     performance.mark(ENTRANCE_MARK);
     globe.startDawn();

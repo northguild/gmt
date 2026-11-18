@@ -1,7 +1,6 @@
 /**
  * The landing's aura: one of two tracks the reader picks in the Settings panel, ported from the
- * audition's `aura` step (context/dox/reference/sound-audition.html). Loaded by the
- * engine on `/` only, so no other page fetches it.
+ * sound audition's `aura` step. Loaded by the engine on `/` only, so no other page fetches it.
  *
  * - "Ice cavern" (variant D, the default): six held glassy sines beating against each other, a
  *   faint low drone and a crystal glint every 1.6 to 4 s, all in a 4.5 s hall.

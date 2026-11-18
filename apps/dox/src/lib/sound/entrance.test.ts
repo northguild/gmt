@@ -73,12 +73,12 @@ afterEach(() => {
 });
 
 describe("the entrance's sounds", () => {
-  it("whispers as a piece freezes in, once for everything that starts in the same frame", () => {
+  it("sparkles as a piece freezes in, once for everything that starts in the same frame", () => {
     stop = entranceSounds(root);
     started("#title", "ng-freeze");
     expect(cue).not.toHaveBeenCalled();
     frame();
-    // A button's pane and its frost start together: one whisper.
+    // A button's pane and its frost start together: one sparkle.
     started("#button", "ng-freeze-pane");
     started("#button", "ng-frost");
     frame();
@@ -104,7 +104,7 @@ describe("the entrance's sounds", () => {
     ]);
   });
 
-  it("plays a whisper and a shing that land in the same frame", () => {
+  it("plays a sparkle and a shing that land in the same frame", () => {
     stop = entranceSounds(root);
     started("#title", "ng-glint");
     started("#button", "ng-pop");

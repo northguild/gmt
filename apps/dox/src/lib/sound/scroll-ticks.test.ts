@@ -5,10 +5,11 @@ import { scrolled, wheelOn } from "~/test/render-widget";
 import { pitchOfRows, scrollTicks } from "./scroll-ticks";
 
 const cue = vi.fn();
-vi.mock("./cue", () => ({ cue: (name: string) => cue(name) }));
+vi.mock("./cue", () => ({ cue: (...args: unknown[]) => cue(...args) }));
 
-/* jsdom lays nothing out and never scrolls: each row is given a 40 px box, and the reader's
-   wheel and the scroll it causes come from the kit's wheel and scroll helpers. */
+/* jsdom lays nothing out and never scrolls: each row is given a 40 px box, the region a 40 px
+   view of the 160 px list (so 120 px of scroll), and the reader's wheel and the scroll it causes
+   come from the kit's wheel and scroll helpers. */
 function draw(): { region: HTMLElement; rows: HTMLElement[] } {
   const field = document.createElement("input");
   field.setAttribute("aria-label", "Elsewhere");
@@ -27,6 +28,8 @@ function draw(): { region: HTMLElement; rows: HTMLElement[] } {
   }
   region.append(list);
   document.body.replaceChildren(field, region);
+  Object.defineProperty(region, "scrollHeight", { value: 160 });
+  Object.defineProperty(region, "clientHeight", { value: 40 });
   const rows = screen.getAllByRole("listitem");
   rows.forEach((row, i) => {
     row.getBoundingClientRect = () => new DOMRect(0, i * 40, 200, 40);
@@ -50,7 +53,7 @@ describe("scrollTicks", () => {
     document.body.replaceChildren();
   });
 
-  it("ticks once per row the reader scrolls past, and not for a scroll made for them", () => {
+  it("ticks once per row the reader scrolls past, by direction and place, and not for a scroll made for them", () => {
     const { region, rows } = draw();
     const ticks = scrollTicks(region, {
       rowPitch: () => pitchOfRows(rows),
@@ -60,7 +63,12 @@ describe("scrollTicks", () => {
     scrollTo(region, 50);
     scrollTo(region, 70);
     scrollTo(region, 85);
-    expect(cue.mock.calls).toEqual([["detent"], ["detent"]]);
+    scrollTo(region, 30);
+    expect(cue.mock.calls).toEqual([
+      ["listNext", 50 / 120],
+      ["listNext", 85 / 120],
+      ["listPrev", 30 / 120],
+    ]);
     cue.mockClear();
     ticks.quiet();
     scrollTo(region, 0);
@@ -101,7 +109,10 @@ describe("scrollTicks", () => {
     button.focus();
     await user.keyboard("{PageDown}");
     scrollTo(region, 80);
-    expect(cue.mock.calls).toEqual([["detent"], ["detent"]]);
+    expect(cue.mock.calls).toEqual([
+      ["listNext", 40 / 120],
+      ["listNext", 80 / 120],
+    ]);
     cue.mockClear();
     await user.keyboard("{ArrowUp}");
     scrollTo(region, 40);

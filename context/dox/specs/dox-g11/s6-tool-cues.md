@@ -1,7 +1,7 @@
 # Slice 6 · Tool cues
 
-Sound for the tools and playgrounds. Three new voices, ported from `audition.html` unchanged:
-**Scan sweep** (`loading` B), **Lock-in** (`ready` A) and **Sonar lock** (`locate` A). The rest are already in: **Glass tick**
+Sound for the tools and playgrounds. Three new voices, ported from the sound audition unchanged:
+**Servo spin-up** (`loading`), **Lock-in** (`ready` A) and **Sonar lock** (`locate` A). The rest are already in: **Glass tick**
 (`detent` B, slice 2), **Data blip** (`key` C) and **Low double buzz** (`error` B, slice 5).
 Every hook is in a kit piece or shared mount code, so every tool gains it at once and no tool's
 own file changes.
@@ -12,7 +12,7 @@ own file changes.
 | --- | --- | --- |
 | A slider's value changes by the reader | `detent` | already in kit `range` (slice 2) |
 | A drag handle crosses a step | `detent` | kit `handle` primitive, on each step change during a drag or arrow key |
-| A key moves a list's active option (not at an end); the reader's own scroll passes a row | `detent` | kit `listbox` (keys and scroll) and `combobox` (its arrow keys); a scroll made by code is silent |
+| A key moves a list's active option (not at an end); the reader's own scroll passes a row | `listNext` / `listPrev`, ranked by the place in the list | `list-step.ts`, called by kit `listbox` (keys and scroll), `combobox` (its arrow keys) and `roving`; a scroll made by code is silent |
 | A key in a playground or a tool's text field | `key` | `typing.ts` (slice 5) plays it for every text field; no field opts in |
 | A client mount takes longer than 150 ms | `loading` | `widget-mount.ts` and `MountedWidget.tsx`: a 150 ms `setTimeout` (a delay only) fires `loading` unless the mount resolved first |
 | A widget mounts after a reader action | `ready` | the same two places, on resolve; the engine's gap for `ready` is 400 ms, so a page of maps rings once |
@@ -32,7 +32,7 @@ Modify:
   (+ their tests).
 - `src/widgets/builders/text-input.ts` (+ test): the typing test.
 - `src/lib/widget-mount.ts` (+ test), `src/components/ask/MountedWidget.tsx` (+ test).
-- `src/lib/sound/voices.ts`: Scan sweep, Lock-in.
+- `src/lib/sound/voices.ts`: Servo spin-up, Lock-in, the list servo tick.
 - `scripts/sound-check.mjs`.
 
 ## Rules and traps
@@ -63,7 +63,9 @@ Modify:
   SIGNAL and not again while it stays there; typing plays Data blip.
 - A playground page: typing plays Data blip; IME composition plays nothing.
 - `/dox/` with a widget opened from a stubbed answer: Lock-in once; with its chunk request
-  delayed by `page.route`, Scan sweep then Lock-in.
+  delayed by `page.route`, Servo spin-up then Lock-in.
+- `/` after unlock: two arrow keys in the zone list play two servo ticks rising, no oscillator; the
+  reader's wheel plays servo ticks as rows pass.
 
 ## Definition of done
 
