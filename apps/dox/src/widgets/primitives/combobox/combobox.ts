@@ -16,8 +16,14 @@
  * `items` is the full list. `value` is the text in the box. Events, bubbling:
  * `change` with `detail.value` when a choice is made, and `openchange` with
  * `detail.open` when the list opens or shuts, by any route.
+ *
+ * Sound (DOX-G11): an arrow key that moves the active option plays the list step
+ * (`sound/list-step.ts`, Servo by place), as the listbox does: `listNext` for ArrowDown, `listPrev`
+ * for ArrowUp, pitched by the option it lands on. Scrolling the popup ticks through the listbox
+ * itself.
  */
 import { registerEscLayer } from "~/lib/esc-layers";
+import { stepTo } from "~/lib/sound/list-step";
 import { html, setHtml, type SafeHtml } from "../../builders/html";
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { KitElement, type KitDetail } from "../base";
@@ -255,7 +261,10 @@ export class GmtCombobox extends KitElement {
     if (this.#shown.length === 0) return;
     const count = this.#shown.length;
     const from = this.#active < 0 ? (step === 1 ? -1 : 0) : this.#active;
-    this.#setActive((from + step + count) % count);
+    const next = (from + step + count) % count;
+    // A step through the list ticks, as in the listbox; a list of one has nowhere to step.
+    if (next !== this.#active) stepTo(step === 1, next, count);
+    this.#setActive(next);
   }
 
   #choose(value: string): void {

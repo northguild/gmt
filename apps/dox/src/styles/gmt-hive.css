@@ -1578,6 +1578,9 @@
   font-size: var(--gmt-text-xs);
   line-height: 1.5;
   color: var(--gmt-ice-dim);
+
+  /* It opens above its button, so it rises into place (gmt-primitives.css, native panels). */
+  --gmt-panel-from: 0 0.5rem;
 }
 
 /* Above the button, from its start edge, and 12px inside the viewport; below

@@ -21,6 +21,11 @@
     --switch-accent: var(--gmt-dst-gold-ink);
   }
 
+  &[data-size="small"] {
+    gap: var(--gmt-space-1);
+    font-size: var(--gmt-text-xs);
+  }
+
   /* An author `display` beats the UA's [hidden] rule, so say it. */
   &[hidden] {
     display: none;
@@ -77,6 +82,27 @@
   &::after {
     inset-inline-start: calc(100% - 0.875rem);
   }
+}
+
+/* The small switch: a bevelled ice slot and a square bevelled knob, 1.5rem by 0.875rem. The
+   box is the same in both states, so toggling moves nothing. The size sits in `:where()`: these
+   rules come after the default track's and win by order at its weight. */
+:where(.root[data-size="small"]) .track {
+  inline-size: 1.75rem;
+  block-size: 1rem;
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+
+  &::after {
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    border-radius: var(--gmt-bevel-sm);
+    corner-shape: bevel;
+  }
+}
+
+:where(.root[data-size="small"] .input:checked) ~ .track::after {
+  inset-inline-start: calc(100% - 0.75rem);
 }
 
 .input:focus-visible ~ .track {

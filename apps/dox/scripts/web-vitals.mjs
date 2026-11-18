@@ -126,12 +126,17 @@ async function inpOf(browser, url, globe) {
   await pause();
   await page.keyboard.press("Escape");
   await pause();
-  // Theme toggle.
-  const theme = page
-    .locator("button[aria-label*='theme' i], starlight-theme-select select")
-    .first();
-  if (await theme.count()) {
-    await theme.click().catch(() => {});
+  // Theme: open Settings, flip the "Dark theme" switch, close.
+  const settings = page.locator("#gmt-settings-button");
+  if (await settings.count()) {
+    await settings.click().catch(() => {});
+    await pause();
+    await page
+      .getByRole("switch", { name: "Dark theme" })
+      .click()
+      .catch(() => {});
+    await pause();
+    await page.keyboard.press("Escape");
     await pause();
   }
   // Mobile menu at 390x844.

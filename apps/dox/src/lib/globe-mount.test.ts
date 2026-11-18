@@ -16,8 +16,12 @@ installJsdomShims();
 const calls: string[] = [];
 let selectListener: ((reading: { id: string } | null) => void) | undefined;
 let interactListener: ((kind?: string) => void) | undefined;
+let zoomListener: ((dir: 1 | -1, closeness: number) => void) | undefined;
 /* What the stand-in globe has selected: a tap picks a zone, or clears the choice, before it reports. */
 let selected: string | null = "Europe/London";
+/* Whether the stand-in's `focusZone` reports a selection, as the real one does. Off by default, so
+   the wiring tests see only the selections they make. */
+let focusSelects = false;
 let engineOptions:
   | {
       framing: (
@@ -31,6 +35,19 @@ let engineOptions:
     }
   | undefined;
 
+const cue = vi.fn();
+/** Locks the globe was asked for, each waiting for the globe to start it. */
+const locks: (() => void)[] = [];
+vi.mock("./sound/cue", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./sound/cue")>()),
+  cue: (...args: unknown[]) => cue(...args),
+}));
+
+const cueOnAppear = vi.fn();
+vi.mock("./sound/appear", () => ({
+  cueOnAppear: (...args: unknown[]) => cueOnAppear(...args),
+}));
+
 vi.mock("./globe", () => ({
   initGlobe: async (
     _surface: unknown,
@@ -42,14 +59,21 @@ vi.mock("./globe", () => ({
     return {
       getZones: () => [{ id: "Asia/Tokyo" }, { id: "Europe/London" }],
       getSelected: () => selected,
-      focusZone: (id: string) => calls.push(`focus ${id}`),
+      focusZone: (id: string) => {
+        calls.push(`focus ${id}`);
+        if (focusSelects) selectListener?.({ id });
+      },
       zoomBy: (factor: number) => calls.push(`zoomBy ${factor.toFixed(2)}`),
       setZoom: (value: number) => calls.push(`setZoom ${value}`),
       onSelect: (fn: typeof selectListener) => {
         selectListener = fn;
       },
+      lockOn: (onStart: () => void) => locks.push(onStart),
       onInteract: (fn: (kind?: string) => void) => {
         interactListener = fn;
+      },
+      onZoom: (fn: typeof zoomListener) => {
+        zoomListener = fn;
       },
       requestRender: () => calls.push("render"),
       destroy: () => calls.push("destroy"),
@@ -74,9 +98,14 @@ async function mount(
 
 beforeEach(() => {
   calls.length = 0;
+  cue.mockClear();
+  cueOnAppear.mockClear();
+  locks.length = 0;
   selectListener = undefined;
   interactListener = undefined;
+  zoomListener = undefined;
   selected = "Europe/London";
+  focusSelects = false;
   engineOptions = undefined;
   lifetime = new AbortController();
 });
@@ -113,6 +142,16 @@ describe("mountGlobe", () => {
     expect(calls).toEqual(["zoomBy 1.40", "zoomBy 0.71", "setZoom 1"]);
   });
 
+  it("plays the Lens servo for every zoom step, rising in and falling out, at the camera's closeness", async () => {
+    await mount();
+    zoomListener?.(1, 0.25);
+    zoomListener?.(-1, 0);
+    expect(cue.mock.calls).toEqual([
+      ["zoomIn", 0.25],
+      ["zoomOut", 0],
+    ]);
+  });
+
   it("follows a selection made on the globe", async () => {
     await mount();
     selectListener?.({ id: "Asia/Tokyo" });
@@ -123,6 +162,18 @@ describe("mountGlobe", () => {
     expect(screen.getByRole("combobox", { name: "Find a zone" })).toHaveValue(
       "",
     );
+  });
+
+  it("locates a place the reader chooses, and not the zone it was seeded with", async () => {
+    focusSelects = true;
+    await mount({ zone: "Asia/Tokyo" });
+    expect(cue).not.toHaveBeenCalled();
+    selectListener?.({ id: "Europe/London" });
+    selectListener?.(null);
+    expect(cue).not.toHaveBeenCalled();
+    // The sound waits for the globe's lock on the pin, and plays once it starts.
+    for (const start of locks) start();
+    expect(cue.mock.calls).toEqual([["locate"]]);
   });
 
   it("seeds the zone it was asked for and tears down", async () => {
@@ -312,6 +363,24 @@ describe("mountGlobe in space mode", () => {
   it("asks the globe to open with the dawn", async () => {
     await mount({}, { space: true });
     expect(engineOptions?.entrance).toBe("dawn");
+  });
+
+  it("leaves the landing's arrival to its dawn sounds, where a page globe plays the Steel horizon", async () => {
+    await mount({}, { space: true });
+    expect(cueOnAppear).not.toHaveBeenCalled();
+    const { handle } = await mount();
+    expect(cueOnAppear).toHaveBeenCalledExactlyOnceWith(
+      expect.any(HTMLElement),
+      "appearGlobe",
+      expect.any(AbortSignal),
+    );
+    const [, , life] = cueOnAppear.mock.calls[0] as [
+      unknown,
+      unknown,
+      AbortSignal,
+    ];
+    handle.destroy();
+    expect(life.aborted).toBe(true);
   });
 
   it("leaves the page globe without a drawer or a magnifier", async () => {

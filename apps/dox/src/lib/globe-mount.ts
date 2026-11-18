@@ -26,6 +26,8 @@ import {
 import { listbox, type GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import styles from "~/widgets/tools/globe.module.css";
 import { registerEscLayer } from "./esc-layers";
+import { cueOnAppear } from "./sound/appear";
+import { cue } from "./sound/cue";
 import { watchCover } from "./globe-cover";
 import type { GlobeHost } from "./globe";
 import { followGlobe, heroOf, offerGlobe, skyWithoutGlobe } from "./hero-space";
@@ -100,6 +102,8 @@ export function renderGlobeTemplate({
   const id = (local: string) => `${idPrefix}-${local}`;
 
   const tooltip = html`<div class="${styles.tooltip}" id="${id("tooltip")}" data-gate="globe-tooltip" hidden></div>`;
+  /* The rings a chosen pin ripples (globe-lock.ts), under the card. */
+  const lock = html`<div class="${styles.lock}" id="${id("lock")}" aria-hidden="true" hidden></div>`;
 
   const side = html`<div class="${styles.side}">
     <div class="${styles.search}">
@@ -130,9 +134,9 @@ export function renderGlobeTemplate({
   </div>`;
 
   const zoom = html`<div class="${styles.zoom}" id="${id("zoom")}" data-gate="globe-zoom" role="group" aria-label="Globe controls">
-    <button type="button" data-globe-zoom="in" aria-label="Zoom in">+</button>
-    <button type="button" data-globe-zoom="out" aria-label="Zoom out">−</button>
-    <button type="button" data-globe-zoom="reset" aria-label="Reset zoom">⊙</button>
+    <button type="button" data-globe-zoom="in" data-cue aria-label="Zoom in">+</button>
+    <button type="button" data-globe-zoom="out" data-cue aria-label="Zoom out">−</button>
+    <button type="button" data-globe-zoom="reset" data-cue aria-label="Reset zoom">⊙</button>
     ${
       space
         ? html`<button type="button" data-globe-search aria-label="Find a zone" aria-controls="${id("drawer")}" aria-expanded="false"
@@ -154,7 +158,7 @@ export function renderGlobeTemplate({
 
   const inner = space
     ? html`<div class="${styles.root}" data-space>
-        <div class="${styles.globeLayer}" id="${id("layer")}" data-gate="globe-layer">${tooltip}</div>
+        <div class="${styles.globeLayer}" id="${id("layer")}" data-gate="globe-layer">${lock}${tooltip}</div>
         <div class="${styles.hit}" id="${id("hit")}" data-gate="globe-hit"></div>
         <div class="${styles.layout}">
           <div class="${styles.frame}">
@@ -175,7 +179,7 @@ export function renderGlobeTemplate({
         <h2 class="${styles.title}">${heading}</h2>
         <div class="${styles.layout}">
           <div class="${styles.frame}">
-            <div class="${styles.stage}" id="${id("stage")}" data-gate="globe-stage">${zoom}${tooltip}</div>
+            <div class="${styles.stage}" id="${id("stage")}" data-gate="globe-stage">${lock}${zoom}${tooltip}</div>
           </div>
           ${side}
         </div>
@@ -215,6 +219,7 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
   const surface = space ? globe.part("layer") : stage;
   const clockPanel = globe.part<GmtListbox>("clocks");
   const tooltip = globe.part("tooltip");
+  const lock = globe.part("lock");
   const zoom = globe.part("zoom");
   const search = globe.el.querySelector<GmtCombobox>("gmt-combobox");
 
@@ -254,6 +259,7 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
     globe.part<HTMLElement>("filters"),
     {
       tooltip,
+      lock,
       zoom,
       engine: pause,
       ...(space
@@ -337,8 +343,23 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
   host.onSelect((reading) => {
     if (search) search.value = reading?.id ?? "";
     chosen = !seeding && reading !== null;
+    /* A place the reader chose: a tap on the Earth, a pinned clock, a zone from the search. Its
+       Sonar lock sounds as the rings ripple from its pin. */
+    if (chosen) host.lockOn(() => cue("locate"));
     card?.changed();
   });
+  /* Every zoom step the reader takes, by wheel, pinch, key or the buttons below, plays the Lens
+     servo, rising going in and falling coming out, pitched by how close the camera is. The
+     engine keeps steps 60 ms apart, so a trackpad's stream of wheel events is a run of whirrs, not
+     a buzz. The buttons are `data-cue`, so their press plays the servo and not the Deep sonar; a
+     step at a limit changes nothing and plays nothing. */
+  host.onZoom((dir, closeness) =>
+    cue(dir > 0 ? "zoomIn" : "zoomOut", closeness),
+  );
+  /* A page globe coming into view plays the Steel horizon (`sound/appear.ts`). The landing's globe
+     does not: its dawn has the entrance's own paint and glint sounds, and a swell under them would
+     muddy both. */
+  if (!space) cueOnAppear(stage, "appearGlobe", wiring.signal);
 
   for (const button of zoom.querySelectorAll<HTMLButtonElement>(
     "[data-globe-zoom]",

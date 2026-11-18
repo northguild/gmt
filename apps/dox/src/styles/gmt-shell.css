@@ -237,6 +237,11 @@ header {
   padding-block-end: calc(var(--sl-nav-pad-y) + 1px);
 }
 
+/* On the landing the name is the page itself: an `<a>` with no `href` (SiteTitle.astro). */
+.site-title:not([href]) {
+  cursor: default;
+}
+
 /* "NorthGuild / gmt v1.21.0": the app name is set in the wordmark's type and
    gmt's theme colour, so it reads as one line with the NorthGuild link. */
 .site-title {

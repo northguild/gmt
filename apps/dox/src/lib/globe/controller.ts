@@ -28,6 +28,7 @@
  */
 
 import { clampLat, shortestAngle, wrapLng } from "./camera";
+import { type Flight, planFlight } from "./flight";
 
 /** Degrees of rotation per pixel of drag, at a given sphere radius. A 90°
  *  sweep across one radius of the sphere, which is what the canvas-2D globe
@@ -54,9 +55,6 @@ const MIN_OMEGA = 0.0004;
 /** Fraction of the remaining zoom distance covered per 16 ms frame. */
 const ZOOM_EASE = 0.2;
 
-/** Fraction of the remaining fly-to rotation covered per 16 ms frame. */
-const FOCUS_EASE = 0.16;
-
 /** The fraction an ease of `perFrame` per 16 ms covers in `dt` ms, so the motion takes the same
  *  time at 60, 120 or 144 frames a second. */
 function easeOver(perFrame: number, dt: number): number {
@@ -75,6 +73,12 @@ const WHEEL_GAIN = 0.0015;
 /** Zoom factor per keyboard `+` / `-`. */
 const KEY_ZOOM_FACTOR = 1.3;
 
+/**
+ * How far a pinch zooms before it counts as a step for `onZoom`: one mouse-wheel notch (a `deltaY`
+ * of 100). A pinch moves the zoom on every pointer move, and two fingers held still jitter it.
+ */
+const PINCH_STEP = Math.exp(100 * WHEEL_GAIN);
+
 /** Degrees per arrow key press at zoom 1, scaled down as the globe zooms in. */
 const KEY_STEP_DEG = 12;
 
@@ -87,6 +91,13 @@ interface ControllerOptions {
   reducedMotion?: () => boolean;
   /** False never schedules the ambient spin, so the globe is at rest until moved. Default true. */
   ambient?: boolean;
+  /**
+   * The reader moved the zoom a step: `dir` is 1 in, -1 out, and `closeness` where the target now
+   * sits, 0 at the widest zoom to 1 at the closest, on a log scale. A wheel event, a `+` or `-`,
+   * `setZoom`, `zoomBy`, or a pinch every `PINCH_STEP`. One that hits a limit and changes nothing
+   * does not count.
+   */
+  onZoom?: (dir: 1 | -1, closeness: number) => void;
 }
 
 /** A timed flight: the camera lifts to `dipZoom` at the midpoint and comes down at the goal. */
@@ -247,6 +258,8 @@ export function createController(options: ControllerOptions): Controller {
   /** Pinch reference: pointer separation and zoom when the second finger landed. */
   let pinchStartDistance = 0;
   let pinchStartZoom = 1;
+  /** The zoom the last pinch step reported, so the next one waits for `PINCH_STEP` more. */
+  let pinchStepZoom = 1;
 
   /** Angular velocity in deg/ms, driving inertia after a drag. */
   const omega: [number, number] = [0, 0];
@@ -259,7 +272,11 @@ export function createController(options: ControllerOptions): Controller {
   let ambientDueAt: number | null = null;
   let hovered = false;
 
-  let focusGoal: [number, number] | null = null;
+  /** The fly-to under way, a pure function of the time since `flightStart`. */
+  let flight: Flight | null = null;
+  let flightStart = 0;
+  /** Rate of `[λ, φ]` at the last flight step, in deg/ms, so a retarget carries it on. */
+  const flightRate: [number, number] = [0, 0];
   let hop: HopState | null = null;
   const steerRate: SteerVector = { lng: 0, lat: 0, zoom: 0 };
 
@@ -286,6 +303,26 @@ export function createController(options: ControllerOptions): Controller {
     return Math.min(maxZoom, Math.max(minZoom, value));
   }
 
+  /** Where `value` sits between the widest and the closest zoom, 0 to 1, on a log scale. */
+  function closeness(value: number): number {
+    return maxZoom > minZoom
+      ? Math.log(value / minZoom) / Math.log(maxZoom / minZoom)
+      : 0;
+  }
+
+  /** Report a step from `from` to `to` to `onZoom`, if the zoom moved. */
+  function reportZoom(from: number, to: number): void {
+    if (Math.abs(to - from) < 1e-9) return;
+    options.onZoom?.(to > from ? 1 : -1, closeness(to));
+  }
+
+  /** Aim the zoom at `value`, clamped, as one reader step. */
+  function aimZoom(value: number): void {
+    const from = targetZoom;
+    targetZoom = clampZoom(value);
+    reportZoom(from, targetZoom);
+  }
+
   function isDragging(): boolean {
     return pointers.size > 0;
   }
@@ -307,7 +344,7 @@ export function createController(options: ControllerOptions): Controller {
       !isDragging() &&
       !hovered &&
       !inertiaActive &&
-      focusGoal === null &&
+      flight === null &&
       hop === null &&
       !steering() &&
       // Only at rest zoom: spinning a zoomed-in globe reads as a glitch.
@@ -329,6 +366,12 @@ export function createController(options: ControllerOptions): Controller {
     const ramp = AMBIENT_RAMP_MS * (u ** 3 - u ** 4 / 2);
     const cruise = Math.max(elapsed - AMBIENT_RAMP_MS, 0);
     return AMBIENT_DEG_PER_MS * (ramp + cruise);
+  }
+
+  /** The ambient spin's speed in deg/ms `elapsed` ms in: the derivative of `ambientTravel`. */
+  function ambientRate(elapsed: number): number {
+    const u = Math.min(elapsed / AMBIENT_RAMP_MS, 1);
+    return AMBIENT_DEG_PER_MS * (3 * u * u - 2 * u ** 3);
   }
 
   /** The two-finger centroid, and their separation. */
@@ -363,7 +406,7 @@ export function createController(options: ControllerOptions): Controller {
         isDragging() ||
         inertiaActive ||
         ambientActive ||
-        focusGoal !== null ||
+        flight !== null ||
         hop !== null ||
         steering() ||
         Math.abs(targetZoom - zoom) > 0.001
@@ -428,17 +471,16 @@ export function createController(options: ControllerOptions): Controller {
         rotation[0] = wrapLng(rotation[0] - steerRate.lng * seconds);
         rotation[1] = clampLat(rotation[1] - steerRate.lat * seconds);
         targetZoom = clampZoom(targetZoom + steerRate.zoom * seconds);
-      } else if (focusGoal) {
-        const ease = snap ? 1 : easeOver(FOCUS_EASE, dt);
-        rotation[0] += shortestAngle(rotation[0], focusGoal[0]) * ease;
-        rotation[1] += (focusGoal[1] - rotation[1]) * ease;
-        if (
-          Math.abs(shortestAngle(rotation[0], focusGoal[0])) < 0.1 &&
-          Math.abs(focusGoal[1] - rotation[1]) < 0.1
-        ) {
-          rotation[0] = wrapLng(focusGoal[0]);
-          rotation[1] = focusGoal[1];
-          focusGoal = null;
+      } else if (flight) {
+        const sample = flight.at(snap ? Infinity : now - flightStart);
+        rotation[0] = sample.rotation[0];
+        rotation[1] = sample.rotation[1];
+        flightRate[0] = sample.rate[0];
+        flightRate[1] = sample.rate[1];
+        if (sample.done) {
+          flight = null;
+          // The globe rests on the place it flew to before the spin takes it away again.
+          markInteraction(now);
         }
       } else if (inertiaActive) {
         rotation[0] = wrapLng(rotation[0] + omega[0] * dt);
@@ -466,7 +508,7 @@ export function createController(options: ControllerOptions): Controller {
     pointerDown(id, x, y, now): void {
       pointers.set(id, { x, y, time: now, startX: x, startY: y });
       inertiaActive = false;
-      focusGoal = null;
+      flight = null;
       cancelHop();
       cancelSteer();
       omega[0] = 0;
@@ -475,6 +517,7 @@ export function createController(options: ControllerOptions): Controller {
         gestureWasPinch = true;
         pinchStartDistance = pinchGeometry().distance;
         pinchStartZoom = targetZoom;
+        pinchStepZoom = targetZoom;
       }
       markInteraction(now);
     },
@@ -502,6 +545,12 @@ export function createController(options: ControllerOptions): Controller {
         targetZoom = clampZoom(
           (pinchStartZoom * current.distance) / pinchStartDistance,
         );
+        if (
+          Math.abs(Math.log(targetZoom / pinchStepZoom)) >= Math.log(PINCH_STEP)
+        ) {
+          reportZoom(pinchStepZoom, targetZoom);
+          pinchStepZoom = targetZoom;
+        }
         // A pinch should not leave the globe coasting when the fingers lift.
         omega[0] = 0;
         omega[1] = 0;
@@ -575,7 +624,7 @@ export function createController(options: ControllerOptions): Controller {
          lets the caller leave the event alone, so the page scrolls instead of
          the reader getting stuck on a globe that eats every wheel tick. */
       if (Math.abs(next - targetZoom) < 1e-9) return false;
-      targetZoom = next;
+      aimZoom(next);
       return true;
     },
 
@@ -596,15 +645,15 @@ export function createController(options: ControllerOptions): Controller {
           break;
         case "+":
         case "=":
-          targetZoom = clampZoom(targetZoom * KEY_ZOOM_FACTOR);
+          aimZoom(targetZoom * KEY_ZOOM_FACTOR);
           break;
         case "-":
-          targetZoom = clampZoom(targetZoom / KEY_ZOOM_FACTOR);
+          aimZoom(targetZoom / KEY_ZOOM_FACTOR);
           break;
         default:
           return false;
       }
-      focusGoal = null;
+      flight = null;
       cancelHop();
       inertiaActive = false;
       markInteraction(now);
@@ -612,26 +661,40 @@ export function createController(options: ControllerOptions): Controller {
     },
 
     setZoom(value, now): void {
-      targetZoom = clampZoom(value);
+      aimZoom(value);
       markInteraction(now);
     },
 
     zoomBy(factor, now): void {
-      targetZoom = clampZoom(targetZoom * factor);
+      aimZoom(targetZoom * factor);
       markInteraction(now);
     },
 
     flyTo(goal, now, hopOptions): void {
       cancelSteer();
       cancelHop();
+      if (hopOptions) {
+        flight = null;
+        omega[0] = 0;
+        omega[1] = 0;
+      } else {
+        // Carry on at whatever speed the globe has: a flight in progress, a
+        // coast, or the ambient spin's ramp.
+        let rate: [number, number] = [0, 0];
+        if (flight) rate = [flightRate[0], flightRate[1]];
+        else if (inertiaActive) rate = [omega[0], omega[1]];
+        else if (ambientActive) rate = [ambientRate(ambientElapsed), 0];
+        flight = planFlight(rotation, rate, goal);
+        flightStart = now;
+        flightRate[0] = rate[0];
+        flightRate[1] = rate[1];
+        omega[0] = 0;
+        omega[1] = 0;
+      }
       inertiaActive = false;
       markInteraction(now);
+      if (!hopOptions) return;
       const goalLat = clampLat(goal[1]);
-      if (!hopOptions) {
-        focusGoal = [goal[0], goalLat];
-        return;
-      }
-      focusGoal = null;
       const deltaLng = shortestAngle(rotation[0], goal[0]);
       const startZoom = zoom;
       const goalZoom = targetZoom;
@@ -652,7 +715,7 @@ export function createController(options: ControllerOptions): Controller {
       steerRate.lat = vector.lat;
       steerRate.zoom = vector.zoom;
       if (steering()) {
-        focusGoal = null;
+        flight = null;
         cancelHop();
         inertiaActive = false;
         omega[0] = 0;
@@ -679,7 +742,7 @@ export function createController(options: ControllerOptions): Controller {
         ambientActive &&
         !isDragging() &&
         !inertiaActive &&
-        focusGoal === null &&
+        flight === null &&
         hop === null &&
         !steering() &&
         Math.abs(targetZoom - zoom) <= 0.001
@@ -688,7 +751,7 @@ export function createController(options: ControllerOptions): Controller {
 
     halt(): void {
       inertiaActive = false;
-      focusGoal = null;
+      flight = null;
       cancelHop();
       cancelSteer();
       omega[0] = 0;

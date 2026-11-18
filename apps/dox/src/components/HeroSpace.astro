@@ -26,6 +26,11 @@ import milkyWay from "../assets/hero-milkyway.webp?url";
 	<canvas data-sky-layer="meteor" data-sky-canvas="meteor"></canvas>
 </div>
 
+<!-- The landing's marker: the sound engine starts the aura only where `<html>` carries it. -->
+<script is:inline>
+	document.documentElement.setAttribute("data-aura", "");
+</script>
+
 <script>
 	import { initHomeCarousel } from "../lib/home-carousel";
 	import { heroOf, startHeroEntrance, startHeroSky } from "../lib/hero-space";

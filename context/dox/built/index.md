@@ -37,6 +37,7 @@ What `apps/dox` ships, tier by tier: the rules that bind future changes, the tra
 | [tier-2-webmcp.md](tier-2-webmcp.md) | Page tools (WebMCP): marker and offer, shared facts, schemas, links, the gate, the origin-trial token |
 | [tier-2-gates.md](tier-2-gates.md) | Gates, the runner, CI jobs |
 | [tier-3-chrome.md](tier-3-chrome.md) | HUD chrome, header, landing entrance, cross-site transition |
+| [tier-3-sound.md](tier-3-sound.md) | Sound engine and cues, the settings control, native panel motion |
 | [tier-4-globe.md](tier-4-globe.md) | Globe engine, controls, night sky, Earth imagery, landing hero |
 | [tier-4-zones.md](tier-4-zones.md) | Zone readout, filters, scrubber, boundary data, data credits |
 | [tier-5-scenarios.md](tier-5-scenarios.md) | Scenario and mistake pages |

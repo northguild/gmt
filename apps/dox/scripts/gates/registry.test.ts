@@ -36,6 +36,8 @@ describe("the gate registry", () => {
       "readout-still",
       "data-credits-check",
       "esc-cascade",
+      "sound-check",
+      "rail-stored-still",
       "canada-layout-check",
       "frame-check",
       "slides-check",

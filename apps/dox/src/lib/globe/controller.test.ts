@@ -9,6 +9,7 @@
  */
 
 import { createController, hopDuration } from "./controller";
+import { FLIGHT_HALF_TURN_MS, flightMs } from "./flight";
 
 const RADIUS = 300;
 
@@ -259,12 +260,44 @@ describe("keyboard", () => {
   });
 });
 
+/** Great-circle distance between two `[λ, φ]` points, in degrees. */
+function arcDegrees(a: readonly number[], b: readonly number[]): number {
+  const r = Math.PI / 180;
+  const h =
+    Math.sin(((b[1] - a[1]) * r) / 2) ** 2 +
+    Math.cos(a[1] * r) *
+      Math.cos(b[1] * r) *
+      Math.sin(((b[0] - a[0]) * r) / 2) ** 2;
+  return (2 * Math.asin(Math.min(1, Math.sqrt(h)))) / r;
+}
+
+/** Fly from `c`'s position, stepping every `frameMs`, and return the speed (deg/ms) of each step. */
+function flightSpeeds(
+  c: ReturnType<typeof createController>,
+  from: number,
+  frameMs: number,
+  steps: number,
+): number[] {
+  const speeds: number[] = [];
+  let previous: [number, number] = [c.rotation[0], c.rotation[1]];
+  for (let i = 1; i <= steps; i++) {
+    c.step(from + i * frameMs);
+    const here: [number, number] = [c.rotation[0], c.rotation[1]];
+    speeds.push(arcDegrees(previous, here) / frameMs);
+    previous = here;
+  }
+  return speeds;
+}
+
+/** Every flight has landed by now, in ms. */
+const LONGEST = FLIGHT_HALF_TURN_MS + 100;
+
 describe("fly-to", () => {
   it("eases to the goal and stops there", () => {
     const c = make();
     c.flyTo([-139, -35], 0);
     expect(c.needsFrame()).toBe(true);
-    animate(c, 0, 2000);
+    animate(c, 0, LONGEST);
     expect(c.rotation[0]).toBeCloseTo(-139, 6);
     expect(c.rotation[1]).toBeCloseTo(-35, 6);
     expect(c.needsFrame()).toBe(false);
@@ -276,14 +309,142 @@ describe("fly-to", () => {
     c.step(16);
     expect(c.rotation[0]).toBeCloseTo(100, 6);
     expect(c.rotation[1]).toBeCloseTo(20, 6);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("speeds up from rest, peaks once, and slows to a stop at the goal", () => {
+    const c = make({ initialRotation: [0, 0] });
+    c.flyTo([120, 30], 0);
+    const speeds = flightSpeeds(c, 0, 4, LONGEST / 4);
+    const peak = Math.max(...speeds);
+    const peakAt = speeds.indexOf(peak);
+    // The first frame must not lurch: a tiny fraction of the peak speed.
+    expect(speeds[0]).toBeLessThan(peak * 0.05);
+    for (let i = 1; i <= peakAt; i++) {
+      expect(speeds[i]).toBeGreaterThanOrEqual(speeds[i - 1] - 1e-9);
+    }
+    for (let i = peakAt + 1; i < speeds.length; i++) {
+      expect(speeds[i]).toBeLessThanOrEqual(speeds[i - 1] + 1e-9);
+    }
+    // It lands softly and is finished, at the goal.
+    expect(speeds.at(-1)).toBeLessThan(peak * 0.05);
+    expect(c.needsFrame()).toBe(false);
+    expect(c.rotation[0]).toBeCloseTo(120, 6);
+    expect(c.rotation[1]).toBeCloseTo(30, 6);
+  });
+
+  it("scales the time with the distance, and never rushes", () => {
+    const lands = (degrees: number) => {
+      const c = make();
+      c.flyTo([degrees, 0], 0);
+      const ms = flightMs((degrees * Math.PI) / 180);
+      animate(c, 0, ms - 50);
+      expect(c.needsFrame()).toBe(true);
+      animate(c, ms - 50, 100);
+      expect(c.needsFrame()).toBe(false);
+      return ms;
+    };
+    const hop = lands(3);
+    const quarter = lands(90);
+    const half = lands(179);
+    expect(hop).toBeGreaterThanOrEqual(900);
+    expect(quarter).toBeGreaterThan(hop);
+    expect(half).toBeGreaterThan(quarter);
+    expect(half).toBeLessThanOrEqual(FLIGHT_HALF_TURN_MS);
+  });
+
+  it("takes longer to land than to get going", () => {
+    const c = make({ initialRotation: [0, 0] });
+    c.flyTo([120, 30], 0);
+    const speeds = flightSpeeds(c, 0, 4, LONGEST / 4);
+    const moving = speeds.filter((s) => s > 0);
+    const peakAt = moving.indexOf(Math.max(...moving));
+    expect(peakAt).toBeLessThan(moving.length * 0.45);
+  });
+
+  it("is at the same place at the same moment whatever the frame rate", () => {
+    const at = (frameMs: number) => {
+      const c = make({ initialRotation: [-20, 10] });
+      c.flyTo([150, -35], 0);
+      for (let t = frameMs; t <= 960; t += frameMs) c.step(t);
+      return [c.rotation[0], c.rotation[1]];
+    };
+    const slow = at(32); // about 30 fps
+    const normal = at(16);
+    const fast = at(8);
+    expect(normal[0]).toBeCloseTo(slow[0], 6);
+    expect(normal[1]).toBeCloseTo(slow[1], 6);
+    expect(normal[0]).toBeCloseTo(fast[0], 6);
+    expect(normal[1]).toBeCloseTo(fast[1], 6);
+    // And it has actually moved.
+    expect(Math.abs(normal[0] - -20)).toBeGreaterThan(5);
   });
 
   it("takes the short way round the seam", () => {
     const c = make({ initialRotation: [170, 0] });
     c.flyTo([-170, 0], 0);
-    // One step must move east past 180, not 340° back the other way.
-    c.step(16);
-    expect(c.rotation[0]).toBeGreaterThan(170);
+    let farthest = 0;
+    for (let t = 8; t <= LONGEST; t += 8) {
+      c.step(t);
+      // Never wanders back through the far side of the globe.
+      farthest = Math.max(farthest, arcDegrees([170, 0], c.rotation));
+      expect(Math.abs(c.rotation[0])).toBeGreaterThan(165);
+    }
+    expect(farthest).toBeLessThanOrEqual(20 + 1e-6);
+    expect(c.rotation[0]).toBeCloseTo(-170, 6);
+  });
+
+  it("follows the great circle, not a straight line in longitude and latitude", () => {
+    // From (0, 60) to (120, 60) the shortest path bulges toward the pole.
+    const c = make({ initialRotation: [0, 60] });
+    c.flyTo([120, 60], 0);
+    let highest = 60;
+    for (let t = 8; t <= LONGEST; t += 8) {
+      c.step(t);
+      highest = Math.max(highest, c.rotation[1]);
+    }
+    expect(highest).toBeGreaterThan(70);
+    expect(highest).toBeLessThanOrEqual(90);
+  });
+
+  it("keeps latitude inside the poles all the way", () => {
+    const c = make({ initialRotation: [0, 80] });
+    c.flyTo([180, 80], 0);
+    for (let t = 8; t <= LONGEST; t += 8) {
+      c.step(t);
+      expect(c.rotation[1]).toBeLessThanOrEqual(90);
+      expect(c.rotation[1]).toBeGreaterThanOrEqual(-90);
+    }
+  });
+
+  it("does not jump or change speed when retargeted, then lands on the new goal", () => {
+    const c = make();
+    c.flyTo([120, 20], 0);
+    const speeds: number[] = [];
+    let previous: [number, number] = [0, 0];
+    for (let t = 1; t <= 300; t++) {
+      c.step(t);
+      const here: [number, number] = [c.rotation[0], c.rotation[1]];
+      speeds.push(arcDegrees(previous, here));
+      previous = here;
+    }
+    c.flyTo([-100, -40], 300);
+    for (let t = 301; t <= 340; t++) {
+      c.step(t);
+      const here: [number, number] = [c.rotation[0], c.rotation[1]];
+      speeds.push(arcDegrees(previous, here));
+      previous = here;
+    }
+    // Per-millisecond travel changes by a hair from one step to the next
+    // across the whole run, including the moment of the retarget.
+    const worst = Math.max(
+      ...speeds.slice(1).map((s, i) => Math.abs(s - speeds[i])),
+    );
+    expect(worst).toBeLessThan(0.002);
+    animate(c, 340, LONGEST);
+    expect(c.rotation[0]).toBeCloseTo(-100, 6);
+    expect(c.rotation[1]).toBeCloseTo(-40, 6);
+    expect(c.needsFrame()).toBe(false);
   });
 
   it("is abandoned when the reader grabs the globe", () => {
@@ -299,8 +460,22 @@ describe("fly-to", () => {
   it("clamps a goal past the pole", () => {
     const c = make();
     c.flyTo([0, 200], 0);
-    animate(c, 0, 3000);
+    animate(c, 0, LONGEST);
     expect(c.rotation[1]).toBe(90);
+  });
+
+  it("rests on the place it flew to, then hands back to the ambient spin", () => {
+    const c = make();
+    c.markInteraction(0);
+    c.flyTo([60, 0], 0);
+    const landed = animate(c, 0, LONGEST);
+    expect(c.needsFrame()).toBe(false);
+    expect(c.nextWakeAt()).not.toBeNull();
+    // It rests on the place first, however long the flight took.
+    c.step(landed + 1000);
+    expect(c.rotation[0]).toBeCloseTo(60, 6);
+    c.step(landed + 3000);
+    expect(c.isAmbientOnly()).toBe(true);
   });
 
   it("covers the same ground in the same time at 60 and 120 frames a second", () => {
@@ -367,6 +542,56 @@ describe("zoom easing", () => {
     expect(c.targetZoom).toBe(2);
     c.zoomBy(0.001, 0);
     expect(c.targetZoom).toBe(1);
+  });
+});
+
+describe("zoom steps", () => {
+  function heard() {
+    const steps: [number, number][] = [];
+    const c = make({
+      onZoom: (dir, closeness) => steps.push([dir, closeness]),
+    });
+    return { c, steps };
+  }
+
+  it("reports each wheel, key and button step with its direction and closeness on a log scale", () => {
+    const { c, steps } = heard();
+    c.wheel(-100, 0);
+    c.key("+", 0);
+    c.zoomBy(1 / 1.4, 0);
+    c.setZoom(5, 0);
+    c.key("-", 0);
+    expect(steps.map(([dir]) => dir)).toEqual([1, 1, -1, 1, -1]);
+    // log(z) / log(5): the closest zoom is 1, the widest 0.
+    expect(steps[3][1]).toBeCloseTo(1, 9);
+    expect(steps[4][1]).toBeCloseTo(Math.log(5 / 1.3) / Math.log(5), 9);
+  });
+
+  it("reports nothing for a step at a limit that changes nothing", () => {
+    const { c, steps } = heard();
+    c.wheel(100, 0);
+    c.key("-", 0);
+    c.setZoom(1, 0);
+    c.zoomBy(0.5, 0);
+    c.setZoom(5, 0);
+    c.key("+", 0);
+    c.wheel(-100, 0);
+    expect(steps).toEqual([[1, 1]]);
+  });
+
+  it("reports a pinch once per wheel notch of zoom, so still fingers make no steps", () => {
+    const { c, steps } = heard();
+    c.pointerDown(1, 100, 100, 0);
+    c.pointerDown(2, 200, 100, 0); // 100px apart
+    c.pointerMove(2, 201, 100, 16, RADIUS); // jitter: 1%
+    c.pointerMove(2, 199, 100, 32, RADIUS);
+    expect(steps).toEqual([]);
+    c.pointerMove(2, 220, 100, 48, RADIUS); // 1.2x, past one notch (exp(0.15) ≈ 1.16)
+    c.pointerMove(2, 225, 100, 64, RADIUS); // 1.25x, under a notch since the last step
+    expect(steps.map(([dir]) => dir)).toEqual([1]);
+    c.pointerMove(2, 200, 100, 80, RADIUS); // back to 1x: a step out
+    expect(steps.map(([dir]) => dir)).toEqual([1, -1]);
+    expect(steps[1][1]).toBe(0);
   });
 });
 
