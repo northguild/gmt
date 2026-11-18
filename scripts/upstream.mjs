@@ -158,11 +158,20 @@ const HAND_WRITTEN_FIELDS = [
   "role",
   "contributionUrl",
   "outcome",
+  // The IANA zone the filing's own report names (its repro or its title), for the deck's map.
+  "zone",
 ];
 /** Fields the owner sets by hand on a listing. */
 const LISTING_HAND_WRITTEN_FIELDS = ["summary"];
 /** Fields a listing must never carry: they belong to a filing about a Temporal defect. */
-const FILING_ONLY_FIELDS = ["gmtGuard", "gmtNote", "work", "outcome", "role"];
+const FILING_ONLY_FIELDS = [
+  "gmtGuard",
+  "gmtNote",
+  "work",
+  "outcome",
+  "role",
+  "zone",
+];
 const EMPTY_HAND_WRITTEN = {
   summary: "",
   work: null,
@@ -174,6 +183,7 @@ const EMPTY_HAND_WRITTEN = {
   role: "author",
   contributionUrl: null,
   outcome: null,
+  zone: null,
 };
 
 // ---------------------------------------------------------------- gh arguments and parsing
@@ -294,6 +304,7 @@ function buildFiling(ref, hw, synced) {
     gmtGuard: hw.gmtGuard,
     gmtNote: hw.gmtNote,
     ...(hw.outcome ? { outcome: hw.outcome } : {}),
+    ...(hw.zone ? { zone: hw.zone } : {}),
     state: synced.state,
     ...Object.fromEntries(
       SYNCED_FIELDS[ref.tracker].map((k) => [k, synced[k]]),
@@ -751,7 +762,7 @@ const WORK_VALUES = ["port", "fix", "report", "release"];
 const STATE_VALUES = ["open", "closed"];
 const REVIEW_DECISIONS = ["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED"];
 /** Hand-written members a filing may carry beyond its tracker's own fields. `new` is live-only. */
-const OPTIONAL_FIELDS = ["role", "contributionUrl", "outcome"];
+const OPTIONAL_FIELDS = ["role", "contributionUrl", "outcome", "zone"];
 
 /** What a filing of `tracker` must have, and everything it may have. */
 const requiredFields = (tracker) => [

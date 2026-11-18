@@ -527,7 +527,14 @@ const TEMPORAL_REPOS = [
   "js-temporal/temporal-polyfill",
   "tc39/proposal-temporal",
 ];
-const FILING_ONLY_FIELDS = ["gmtGuard", "gmtNote", "work", "outcome", "role"];
+const FILING_ONLY_FIELDS = [
+  "gmtGuard",
+  "gmtNote",
+  "work",
+  "outcome",
+  "role",
+  "zone",
+];
 
 const listing = (
   number: number,

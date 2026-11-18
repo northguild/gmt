@@ -73,6 +73,11 @@ interface FilingBase {
   /** A `"contributor"` row's link to our own comment. `url` cannot hold it: `sync` rewrites `url`
    * from the tracker's own identity every run. */
   contributionUrl?: string | null;
+  /**
+   * The IANA zone the filing's own report names, in its title, summary or repro. Absent when it
+   * names none: the filing still counts, it just has no pin on the deck's map.
+   */
+  zone?: string;
   state: "open" | "closed";
   createdAt: string;
   updatedAt: string;
@@ -192,6 +197,7 @@ export const HAND_WRITTEN_FIELDS = [
   "role",
   "contributionUrl",
   "outcome",
+  "zone",
 ] as const;
 
 /** The fields a person writes on a listing; the same list as `LISTING_HAND_WRITTEN_FIELDS` in
