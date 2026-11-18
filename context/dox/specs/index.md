@@ -8,3 +8,4 @@ record of what is built is [built/](../built/index.md).
 In progress:
 
 - [dox-g2/](./dox-g2/index.md): DOX-G2, one entrance from northguild.dev to /gmt (header, hero, sky, entrance, tables, carousel).
+- [dox-g12/](./dox-g12/index.md): DOX-G12, evals for the Dox chat (cases, offline layer in `pnpm test`, live layer replacing the probe).

@@ -9,7 +9,7 @@ What `apps/dox` ships, tier by tier: the rules that bind future changes, the tra
 - **Generate, don't maintain.** `scripts/build-reference.ts` is the single extraction. Never re-derive pages, corpus, manifest or playground seeds by re-walking source or re-parsing MDX.
 - **Import `@northguild/gmt` at module granularity only** (`@northguild/gmt/plain/calculate`). The exports map forbids per-function paths. A namespace barrel loads every module of its namespace and the root barrel every namespace, so use neither. Any module loads the Temporal polyfill. `regex` has no module subpaths, so its namespace barrel is its narrowest import.
 - **Counts drift.** Derive them from source and assert them in tests; never hardcode them.
-- **Tests never touch the network or spend AI budget.** `src/test/no-network.mjs`, preloaded into every test worker through Vitest's `execArgv`, blocks every non-loopback connection. Fake the model (`MockLanguageModelV4`), the `AI` binding and `fetch`. Only `pnpm dev`, `pnpm dev:chat`, `scripts/probe-brains.ts` and real readers spend quota.
+- **Tests never touch the network or spend AI budget.** `src/test/no-network.mjs`, preloaded into every test worker through Vitest's `execArgv`, blocks every non-loopback connection. Fake the model (`MockLanguageModelV4`), the `AI` binding and `fetch`. Only `pnpm dev`, `pnpm dev:chat`, `scripts/eval-live.ts` and real readers spend quota.
 - **React lives only inside `/dox`.** Every other page is Astro plus plain-DOM modules.
 - **Restyle native controls; never rebuild them from `div`s.**
 - **No `:has()` on a box that holds the whole page** (`:root`, `html`, `body`, `.main-frame`, `.content-panel`) unless an attribute on `<html>` gates it first. Chrome re-styles the whole page on every DOM change inside it. Key a page-level rule on Starlight's `data-has-hero`, `data-has-sidebar` or `data-has-toc`, or put `[data-has-sidebar]` in front of the `:has()` (`dox.css`).
@@ -42,5 +42,6 @@ What `apps/dox` ships, tier by tier: the rules that bind future changes, the tra
 | [tier-5-scenarios.md](tier-5-scenarios.md) | Scenario and mistake pages |
 | [tier-6-chat.md](tier-6-chat.md) | Dox chat: surface, retrieval, request pipeline, client, widget tools |
 | [tier-6-brains.md](tier-6-brains.md) | Brains, budget, failover, traps |
+| [tier-6-evals.md](tier-6-evals.md) | Chat evals: cases, floors, graders, the live run and its budget |
 | [tier-6-runbooks.md](tier-6-runbooks.md) | Dev server traps, a11y gates, run the gates, Firefox route, gate baseline |
 | [tier-6-ops.md](tier-6-ops.md) | Weekly gate sweep, local chat, deploy checks, owed verification, Not doing |
