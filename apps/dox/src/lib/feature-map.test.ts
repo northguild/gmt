@@ -15,6 +15,17 @@ import {
   featureDeps,
 } from "./feature-map.fixture";
 
+const cue = vi.fn();
+vi.mock("./sound/cue", () => ({ cue: (name: string) => cue(name) }));
+const cueOnAppear = vi.fn();
+vi.mock("./sound/appear", () => ({
+  cueOnAppear: (...args: unknown[]) => cueOnAppear(...args),
+}));
+
+beforeEach(() => {
+  cue.mockClear();
+  cueOnAppear.mockClear();
+});
 afterEach(destroyDrawnFeatureMaps);
 
 const list = () => screen.getByRole("list", { name: "Zones" });
@@ -145,6 +156,40 @@ describe("wireFeatureMap, keyed by postal", () => {
     expect(handle.pinned()).toBeNull();
   });
 
+  it("plays the lock when the reader pins, from a row, a shape or the keyboard", async () => {
+    const { handle, user } = drawFeatureMap(featureConfig(), featureDeps());
+    await handle.ready;
+    await user.click(rowOf(/AA/));
+    expect(cue.mock.calls).toEqual([["locate"]]);
+    await user.click(
+      within(map()!).getByRole("button", { name: "Beta, daylight" }),
+    );
+    expect(cue.mock.calls).toEqual([["locate"], ["locate"]]);
+    rowOf(/AA/).focus();
+    await user.keyboard("{Enter}");
+    expect(cue.mock.calls).toEqual([["locate"], ["locate"], ["locate"]]);
+  });
+
+  it("is silent on a pin the page makes, from a link or a seed", async () => {
+    const { handle } = drawFeatureMap(featureConfig(), featureDeps());
+    await handle.ready;
+    handle.pin("AA", { user: false });
+    handle.pin("BB");
+    handle.pin(null);
+    expect(cue).not.toHaveBeenCalled();
+  });
+
+  it("plays the press ping, rather than the lock, when a toggle press clears the pin", async () => {
+    const { handle, user } = drawFeatureMap(
+      featureConfig({ toggle: true }),
+      featureDeps(),
+    );
+    await handle.ready;
+    await user.click(rowOf(/AA/));
+    await user.click(rowOf(/AA/));
+    expect(cue.mock.calls).toEqual([["locate"], ["press"]]);
+  });
+
   it("draws an overlay no one can press, hidden from assistive technology", async () => {
     const deps = featureDeps();
     const { handle } = drawFeatureMap(
@@ -175,6 +220,24 @@ describe("wireFeatureMap, keyed by postal", () => {
     );
     await handle.ready;
     expect(within(map()!).getAllByRole("button")).toHaveLength(2);
+  });
+
+  it("plays the Sonar dawn when the drawing comes into view, for the map's lifetime", async () => {
+    const { handle } = drawFeatureMap(featureConfig(), featureDeps());
+    await handle.ready;
+    expect(cueOnAppear).toHaveBeenCalledExactlyOnceWith(
+      map(),
+      "appearMap",
+      expect.any(AbortSignal),
+    );
+    const [, , life] = cueOnAppear.mock.calls[0] as [
+      unknown,
+      unknown,
+      AbortSignal,
+    ];
+    expect(life.aborted).toBe(false);
+    handle.destroy();
+    expect(life.aborted).toBe(true);
   });
 
   it("draws nothing when it is aborted mid-fetch", async () => {

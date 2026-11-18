@@ -435,6 +435,7 @@
 }
 
 .labelCity {
+  position: relative;
   font-family: var(--gmt-font-display);
   font-size: 0.75rem;
   line-height: 15px;
@@ -450,6 +451,82 @@
   line-height: 15px;
   font-variant-numeric: tabular-nums;
   color: var(--gmt-cyan-bright);
+}
+
+/* --- The lock --------------------------------------------------------------- */
+
+/* A reader's choice plays the Sonar lock (feature-map.ts `lock`), and the map shows it in time: one
+   ring or echo per ping and echo heard, each at its own delay and brightness (`--gmt-lock-delay`,
+   `--gmt-lock-peak`, from globe-lock.ts `LOCK_RINGS`). A marker ripples rings from its point, as the
+   globe's pin does; a zone with no point to ripple from sends copies of its city's name out. */
+.lockPoint {
+  position: absolute;
+  inset-inline-start: var(--ax);
+  inset-block-start: var(--ay);
+  inline-size: 0;
+  block-size: 0;
+  pointer-events: none;
+  z-index: var(--gmt-z-over);
+
+  & > span {
+    position: absolute;
+    inset-block-start: -8px;
+    inset-inline-start: -8px;
+    inline-size: 16px;
+    block-size: 16px;
+    border: 1.5px solid var(--gmt-globe-selected);
+    border-radius: 50%;
+    opacity: 0;
+    animation: gmt-zonemap-lock var(--gmt-duration-lock) var(--gmt-ease-sweep)
+      var(--gmt-lock-delay, 0ms);
+  }
+}
+
+.lockEchoes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  & > span {
+    position: absolute;
+    inset: 0;
+    color: var(--gmt-globe-selected);
+    text-shadow: none;
+    opacity: 0;
+    animation: gmt-zonemap-echo var(--gmt-duration-lock) var(--gmt-ease-sweep)
+      var(--gmt-lock-delay, 0ms);
+  }
+}
+
+@keyframes gmt-zonemap-lock {
+  from {
+    opacity: var(--gmt-lock-peak, 0.9);
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(3.5);
+  }
+}
+
+@keyframes gmt-zonemap-echo {
+  from {
+    opacity: var(--gmt-lock-peak, 0.9);
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lockPoint,
+  .lockEchoes {
+    display: none;
+  }
 }
 
 /* --- Shapes, rings and markers --------------------------------------------- */

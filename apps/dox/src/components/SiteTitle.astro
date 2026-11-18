@@ -8,13 +8,22 @@
 // (WCAG 2.2 SC 2.5.3). The styles live in gmt-shell.css.
 // `.gmt-app-title` puts the name and the smaller version on one text baseline;
 // side by side in the header's centred row, the version would float above it.
+// On the landing page the name is the page itself, so it keeps its look but is not a link: an
+// `<a>` without `href` is no link and no tab stop, and `aria-current` still says where you are.
 import { gmtVersion } from "~/generated/versions";
+import { stripBase } from "~/lib/site";
 
 const { siteTitleHref } = Astro.locals.starlightRoute;
+const onHome = stripBase(Astro.url.pathname).replace(/\/$/, "") === "";
 ---
 
 <span class="gmt-app-title">
-  <a href={siteTitleHref} class="site-title sl-flex" translate="no">
+  <a
+    href={onHome ? undefined : siteTitleHref}
+    class="site-title sl-flex"
+    translate="no"
+    aria-current={onHome ? "page" : undefined}
+  >
     <span class="gmt-app-slash" aria-hidden="true">/</span>
     <span>gmt</span>
   </a>

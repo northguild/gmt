@@ -43,6 +43,6 @@ export function dataCredits(o: DataCreditsOptions): SafeHtml {
   const rows = o.credits.map(
     (c) => html`<dt>${c.label}</dt><dd>${c.parts.map(part)}</dd>`,
   );
-  return html`<button type="button" class="${styles.button}" data-placement="${o.placement}" popovertarget="${o.id}" aria-label="Data credits" aria-expanded="false">${raw(ICON)}</button
+  return html`<button type="button" class="${styles.button}" data-placement="${o.placement}" popovertarget="${o.id}" data-cue aria-label="Data credits" aria-expanded="false">${raw(ICON)}</button
     ><div id="${o.id}" class="gmt-glass ${styles.panel}" data-placement="${o.placement}" data-credits-panel popover><dl>${rows}</dl></div>`;
 }

@@ -272,6 +272,13 @@ export interface GlobeEngine {
    */
   onInteract(callback: (kind: GlobeInteraction) => void): void;
   /**
+   * The reader moved the zoom a step: `dir` is 1 in, -1 out, `closeness` 0 at the widest zoom to 1
+   * at the closest. A wheel event, a `+` or `-`, `setZoom`, `zoomBy`, or a pinch every wheel
+   * notch's worth; a step at a limit that changes nothing does not count. Replaces any earlier
+   * callback.
+   */
+  onZoom(callback: (dir: 1 | -1, closeness: number) => void): void;
+  /**
    * `"dawn"` only: resolves once the renderer has its imagery and label atlas on the GPU, so the
    * dawn can run without decoding or uploading. Resolved at once for any other entrance.
    */
@@ -284,6 +291,10 @@ export interface GlobeEngine {
   startDawn(): Promise<void>;
   /** After every frame — where a host repositions DOM chrome such as a tooltip. */
   onFrame(callback: () => void): void;
+  /** Whether the frame loop is stopped: the tab is hidden, or the host is out of view or covered. */
+  isHeld(): boolean;
+  /** Called each time the frame loop stops for one of those reasons. Replaces any earlier callback. */
+  onHold(callback: () => void): void;
   /** Redraw once, for a change the engine cannot observe (a new theme token). */
   requestRender(): void;
   destroy(): void;

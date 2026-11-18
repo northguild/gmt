@@ -5,6 +5,11 @@
  * Space toggles it, a screen reader says "switch, on" and a form can read it. The label wraps
  * the input, so the whole row is the target. `detail` is extra text inside the name, such as a
  * count. `tone` picks the accent the track takes when on; it is a name, never a colour.
+ * `size: "small"` is the header's Aura switch: the same control with a smaller bevelled track.
+ *
+ * A reader's change plays the Ice snap: the input carries `data-cue`, and one delegated listener
+ * (`src/lib/sound/switch-cue.ts`, started by `sonar.ts` on every page) cues it. A `change` event
+ * only ever follows a reader's action, so setting `checked` from code is silent.
  */
 import { gateAttr, type GateOption } from "./gate";
 import { html, type SafeHtml } from "./html";
@@ -25,15 +30,17 @@ export interface SwitchFieldOptions extends GateOption {
   /** Decorative graphic before the label. */
   icon?: SafeHtml;
   tone?: SwitchTone;
+  size?: "default" | "small";
   describedBy?: string;
 }
 
 export function switchField(o: SwitchFieldOptions): SafeHtml {
-  return html`<label class="${styles.root}" data-tone="${o.tone ?? "cyan"}" ${gateAttr(o.gate)}
+  return html`<label class="${styles.root}" data-tone="${o.tone ?? "cyan"}" ${o.size === "small" ? html`data-size="small"` : ""} ${gateAttr(o.gate)}
     ><input
       class="${styles.input}"
       type="checkbox"
       role="switch"
+      data-cue
       ${o.id === undefined ? "" : html`id="${o.id}"`}
       ${o.name === undefined ? "" : html`name="${o.name}"`}
       ${o.value === undefined ? "" : html`value="${o.value}"`}

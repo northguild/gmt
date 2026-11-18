@@ -74,6 +74,69 @@ describe("the built header's site title", () => {
 });
 
 /**
+ * The bar's item for the page being shown keeps its look but is not a link: "gmt" on the landing
+ * and the Dox button on `/dox` are anchors with no `href` (no link role, no tab stop), marked
+ * `aria-current="page"`. Everywhere else both lead somewhere.
+ */
+describe("the built header's current-page items", () => {
+  const read = (page: string) => {
+    const root = distDirOrSkip();
+    if (root === null) return null;
+    return new DOMParser().parseFromString(
+      readFileSync(resolve(root, "gmt", page), "utf8"),
+      "text/html",
+    );
+  };
+  it.each([
+    ["index.html", "a.site-title", true],
+    ["install/index.html", "a.site-title", false],
+    ["dox/index.html", "a.site-title", false],
+    ["dox/index.html", ".header .gmt-ask-dox-link", true],
+    ["index.html", ".header .gmt-ask-dox-link", false],
+    ["install/index.html", ".header .gmt-ask-dox-link", false],
+  ])("%s %s current: %s", (page, selector, current) => {
+    const doc = read(page);
+    if (doc === null) return;
+    const item = doc.querySelector(selector);
+    expect(item).not.toBeNull();
+    expect(item!.hasAttribute("href")).toBe(!current);
+    expect(item!.getAttribute("aria-current")).toBe(current ? "page" : null);
+  });
+});
+
+/**
+ * The bar's right-hand group reads the places, nearest out, then the one control: Dox, GitHub,
+ * Discord, Settings. Every item is icon-only, so each shows its name as its hover tooltip, the
+ * same words as its accessible name.
+ */
+describe("the built header's right-hand group", () => {
+  it.each(PAGES)("%s", (page) => {
+    const root = distDirOrSkip();
+    if (root === null) return;
+    const doc = new DOMParser().parseFromString(
+      readFileSync(resolve(root, "gmt", page), "utf8"),
+      "text/html",
+    );
+    const items = [
+      ...doc.querySelectorAll<HTMLElement>(
+        ".header .social-icons > a, .header .social-icons > [data-settings-control] > button",
+      ),
+    ];
+    const name = (el: HTMLElement) =>
+      el.getAttribute("aria-label") ??
+      el.querySelector(".sr-only")?.textContent?.trim();
+    expect(items.map(name)).toEqual([
+      "Chat with Dox",
+      "GitHub",
+      "Discord",
+      "Settings",
+    ]);
+    for (const item of items)
+      expect(item.getAttribute("title")).toBe(name(item));
+  });
+});
+
+/**
  * Below `md` the header's right-hand group is hidden, so the mobile menu carries the Dox link,
  * with the header button's name. Only pages with a sidebar have a mobile menu; the landing page
  * has its own Dox button and `/dox` is the chat itself.
@@ -96,9 +159,6 @@ describe("the built mobile menu's Dox link", () => {
     const link = footer!.querySelector<HTMLAnchorElement>('a[href$="/dox/"]');
     expect(link).not.toBeNull();
     expect(link!.textContent).toContain("Chat with Dox");
-    expect(
-      footer!.querySelector("select, starlight-theme-select"),
-    ).not.toBeNull();
   });
 });
 

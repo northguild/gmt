@@ -477,6 +477,27 @@ describe("pauseWhile", () => {
     }
   });
 
+  it("says each time it stops drawing, and whether it is stopped now", async () => {
+    let hold: (held: boolean) => void = () => {};
+    const engine = await start(hostWithBox(), {
+      pauseWhile: (set) => {
+        hold = set;
+        return () => {};
+      },
+    });
+    const onHold = vi.fn();
+    engine.onHold(onHold);
+    expect(engine.isHeld()).toBe(false);
+    hold(true);
+    expect(engine.isHeld()).toBe(true);
+    expect(onHold).toHaveBeenCalledTimes(1);
+    hold(false);
+    expect(engine.isHeld()).toBe(false);
+    expect(onHold).toHaveBeenCalledTimes(1);
+    engine.destroy();
+    expect(engine.isHeld()).toBe(true);
+  });
+
   it("stays held until every reason has cleared", async () => {
     vi.useFakeTimers();
     let notify: IntersectionObserverCallback = () => {};
@@ -548,6 +569,21 @@ describe("the dawn entrance", () => {
     await start(host, { renderer: "webgpu", entrance: "dawn" });
     await vi.advanceTimersByTimeAsync(1500);
     expect(made[0]!.frames).toHaveLength(0);
+  });
+
+  it("projects nothing until a frame has placed the camera, then projects onto the sphere", async () => {
+    const host = hostWithBox();
+    const engine = await start(host, { renderer: "webgpu", entrance: "dawn" });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(engine.project([0, 0])).toEqual({ x: 0, y: 0, visible: false });
+    expect(engine.unproject(200, 150)).toBeNull();
+    const done = engine.startDawn();
+    await vi.advanceTimersByTimeAsync(2600);
+    await done;
+    const p = engine.project([0, 0]);
+    expect(p.visible).toBe(true);
+    expect(p.x).toBeGreaterThan(8);
+    expect(p.y).toBeGreaterThan(8);
   });
 
   it("draws at once, at full exposure, when the entrance is the fade", async () => {

@@ -286,7 +286,6 @@ export default defineConfig({
         MobileMenuToggle: "./src/components/MobileMenuToggle.astro",
         Footer: "./src/components/Footer.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
-        ThemeSelect: "./src/components/ThemeSelect.astro",
         Hero: "./src/components/Hero.astro",
         PageTitle: "./src/components/PageTitle.astro",
         Sidebar: "./src/components/Sidebar.astro",

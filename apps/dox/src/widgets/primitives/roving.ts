@@ -11,8 +11,15 @@
  * (and focuses it when `focus` is true), `current()` the item that is the stop now. `items()` is
  * read at each key press, so a list that redraws needs no re-wiring.
  *
+ * Sound (DOX-G11): each step plays the list step (`stepTo`, Servo by place), the step of every
+ * list in the kit: `listNext` for ArrowDown, ArrowRight and End, `listPrev` for the others, pitched
+ * by the item it lands on. A key that lands on the item already focused (Home on the first) plays
+ * none.
+ *
  * No gmt import, no DOM beyond the elements it is given.
  */
+
+import { stepTo } from "~/lib/sound/list-step";
 
 interface RovingOptions {
   /** The controls in reading order, read at each key press. */
@@ -63,16 +70,20 @@ export function roving(list: HTMLElement, options: RovingOptions): Roving {
       );
       if (from === -1 || all.length === 0) return;
       let to: number;
-      if (event.key === "Home") to = 0;
-      else if (event.key === "End") to = all.length - 1;
+      let down: boolean;
+      if (event.key === "Home") [to, down] = [0, false];
+      else if (event.key === "End") [to, down] = [all.length - 1, true];
       else {
         const step = STEP[event.key];
         if (step === undefined) return;
         to = (from + step + all.length) % all.length;
+        down = step > 0;
       }
       event.preventDefault();
       const target = all[to];
-      if (target !== undefined) set(target, true);
+      if (target === undefined) return;
+      if (to !== from) stepTo(down, to, all.length);
+      set(target, true);
     },
     { signal },
   );

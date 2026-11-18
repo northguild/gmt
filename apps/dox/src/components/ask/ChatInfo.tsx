@@ -60,6 +60,7 @@ export function ChatInfo() {
         type="button"
         className="gmt-hive-info gmt-sonar-focus"
         popoverTarget={panelId}
+        data-cue=""
         aria-label="About Dox's answers and licences"
       >
         <InfoIcon aria-hidden="true" />

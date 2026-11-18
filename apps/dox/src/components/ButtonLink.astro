@@ -9,6 +9,11 @@ import Icon from './Icon.astro';
 interface Props extends Omit<HTMLAttributes<'a'>, 'href' | 'rel'> {
 	/** Destination URL. Absolute http(s) URLs open in a new tab automatically. */
 	href: string;
+	/**
+	 * The destination is the page being shown: the button keeps its look but is not a link (no
+	 * `href`, so no link role and no tab stop) and carries `aria-current="page"`.
+	 */
+	current?: boolean;
 	/** Accessible label, rendered visually hidden — use for icon-only buttons. */
 	label?: string;
 	/** Starlight icon name rendered before the slotted content. */
@@ -20,7 +25,7 @@ interface Props extends Omit<HTMLAttributes<'a'>, 'href' | 'rel'> {
 	class?: string;
 }
 
-const { href, label, icon, external, rel, class: className, ...attrs } = Astro.props;
+const { href, current, label, icon, external, rel, class: className, ...attrs } = Astro.props;
 
 const isExternal = external ?? /^(https?:)?\/\//.test(href);
 const mergedRel =
@@ -28,10 +33,11 @@ const mergedRel =
 ---
 
 <a
-	href={href}
+	href={current ? undefined : href}
 	class:list={['gmt-icon-button', 'gmt-button-link', className]}
-	target={isExternal ? '_blank' : undefined}
-	rel={mergedRel}
+	target={isExternal && !current ? '_blank' : undefined}
+	rel={current ? undefined : mergedRel}
+	aria-current={current ? 'page' : undefined}
 	{...attrs}
 >
 	{label && <span class="sr-only">{label}</span>}

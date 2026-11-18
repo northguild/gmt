@@ -6,6 +6,10 @@ import { renderHtml } from "../../test-fixture";
 import { range } from "../range/range";
 import { readout, SENTINEL_TEXT, type GmtReadout } from "./readout";
 
+const cue = vi.fn();
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
+beforeEach(() => cue.mockClear());
+
 const pairUp = () =>
   html`${range({ id: "off", label: "Offset", min: 0, max: 10, step: 1, value: 1, valueText: "1" })}${readout({ label: "Local time", value: "09:00", samples: ["23:59:59"], announceOn: ["off"] })}`;
 
@@ -85,5 +89,38 @@ describe("the readout element", () => {
   it("has no axe violations", async () => {
     const fx = renderHtml(pairUp());
     await expectNoAxeViolations(fx.host);
+  });
+});
+
+describe("the low double buzz", () => {
+  const make = (value: string) =>
+    renderHtml(
+      readout({ label: "Local time", value, samples: ["23:59:59"] }),
+    ).element<GmtReadout>("readout");
+
+  it("plays once when a live value falls to NO SIGNAL, and not while it stays there", () => {
+    const el = make("09:00");
+    el.value = "10:00";
+    expect(cue).not.toHaveBeenCalled();
+    el.value = "";
+    el.value = "";
+    expect(cue.mock.calls).toEqual([["error"]]);
+  });
+
+  it("is silent when the first render is NO SIGNAL", () => {
+    const el = make("");
+    el.value = "";
+    expect(cue).not.toHaveBeenCalled();
+  });
+
+  it("is silent for an empty result, and plays again after a recovery", () => {
+    const el = make("09:00");
+    el.value = "10:00";
+    el.setEmpty("No overlap");
+    el.value = "";
+    expect(cue).not.toHaveBeenCalled();
+    el.value = "11:00";
+    el.value = "";
+    expect(cue.mock.calls).toEqual([["error"]]);
   });
 });
