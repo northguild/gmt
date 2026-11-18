@@ -1,0 +1,8 @@
+data: {"type":"data-retrieval","id":"retrieval","data":{"totalChunks":10,"retrievedCount":1,"chunkTitles":["a"],"chunkUrls":["/reference/a"],"brainId":"cf-gemma-4-26b"}}
+
+data: {"type":"text-delta","id":"t1","delta":"Here you go <tool_call>{\"name\":\"showGlobe\"}</tool_call>"}
+
+data: {"type":"error","errorText":"upstream hiccup"}
+
+data: [DONE]
+

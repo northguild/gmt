@@ -1,0 +1,8 @@
+data: {"type":"data-retrieval","id":"retrieval","data":{"totalChunks":10,"retrievedCount":1,"chunkTitles":["a"],"chunkUrls":["/reference/a"],"brainId":"cf-glm-4.7-flash","timings":{"usage":0,"corpus":0,"search":1,"prompt":1,"brains":0}}}
+
+data: {"type":"text-delta","id":"t1","delta":"Plain answer."}
+
+data: {"type":"data-retrieval","id":"retrieval","data":{"totalChunks":10,"retrievedCount":1,"chunkTitles":["a"],"chunkUrls":["/reference/a","/reference/b"],"brainId":"cf-glm-4.7-flash","timings":{"usage":0,"corpus":0,"search":1,"prompt":1,"brains":10,"firstToken":500,"total":900},"toolCalled":null}}
+
+data: [DONE]
+

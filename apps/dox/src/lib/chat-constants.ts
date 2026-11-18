@@ -70,7 +70,7 @@ import type { DoxToolName } from "./dox-tools";
  */
 export const BRAINS = [
   // Workers AI — chosen by live probe through the Worker
-  // (`scripts/probe-brains.ts`; results in context/dox/built/tier-6-brains.md, "Brains and
+  // (`scripts/eval-live.ts`; results in context/dox/built/tier-6-brains.md, "Brains and
   // budget"): widget calls, refusal of the absent question, link discipline,
   // time to first output and Neurons a question.
   //
@@ -86,7 +86,7 @@ export const BRAINS = [
     model: "@cf/google/gemma-4-26b-a4b-it",
     enableThinking: false,
     maxOutputTokens: 2048,
-    dailyLimit: 40,
+    dailyLimit: 15,
   },
   {
     id: "cf-glm-4.7-flash",
@@ -95,7 +95,7 @@ export const BRAINS = [
     model: "@cf/zai-org/glm-4.7-flash",
     enableThinking: false,
     maxOutputTokens: 2048,
-    dailyLimit: 40,
+    dailyLimit: 20,
   },
   // Gemini — Flash-Lite first: in the probe through the Worker it answered
   // 5 questions of 5 correctly at 2.9 s mean, against 6–10 s for the full
@@ -217,12 +217,15 @@ export interface Brain {
  *   are out — `worker/brains.ts` retires the whole provider at once rather than
  *   spending a doomed request per model to rediscover it.
  * - **It is metered in Neurons, which scale with tokens, not requests.** A Dox
- *   prompt measured 10–19k input tokens a question in the live probe of
- *   2026-10-27, nearly all of it input: Gemma 4 26B costs ~130–180 Neurons a
- *   question and GLM 4.7 Flash ~80–110. Both `dailyLimit`s are a share of the
- *   one pool — 40 of each is about 8,500–11,600 Neurons — so the badge's sum
- *   stays near what the pool actually buys rather than each claiming all of
- *   it.
+ *   prompt is 29–36k input tokens a question, nearly all of it input: a
+ *   `showGlobe` question measured 29,238 input tokens and 33 output tokens,
+ *   267 Neurons on Gemma 4 26B, on 2026-11-18, and the largest live prompt is
+ *   about a quarter bigger. That puts Gemma 4 26B at ~270–350 Neurons a
+ *   question and GLM 4.7 Flash at ~160–200. Both `dailyLimit`s are a share of
+ *   the one pool: 15 Gemma questions are 4,050–5,250 Neurons and 20 GLM
+ *   questions are 3,200–4,000, so the two badges together are 7,250–9,250
+ *   Neurons, at or under the 10,000 the pool holds, rather than each claiming
+ *   all of it.
  *
  * On the Workers **Free** plan, exceeding this fails with an error — it cannot
  * bill. That is the property that keeps Dox 100% free, and it would stop being
@@ -254,9 +257,9 @@ export function findBrain(id: string): Brain | undefined {
  *
  * Sized against the shared pool rather than picked for feel. Three Gemini
  * brains at 20 requests each is ~60 per day for *everyone*; the Workers AI pool
- * adds ~80 more, at the ~130 Neurons a question Gemma 4 26B measured. Against
- * ~140 a cap of 5 lets roughly 28 readers get a full turn before the day is
- * spent. Left at 5 until real
+ * adds ~35 more, at the ~270–350 Neurons a question Gemma 4 26B measured.
+ * Against ~95 a cap of 5 lets roughly 19 readers get a full turn before the day
+ * is spent. Left at 5 until real
  * traffic confirms that figure — a cap raised on a twenty-question probe is the
  * drift this comment warns about. Five questions is already more than a typical
  * reader asks of a documentation bot in one sitting.
