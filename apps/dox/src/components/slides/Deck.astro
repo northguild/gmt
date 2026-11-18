@@ -11,9 +11,13 @@
  *
  * Without JavaScript the page is a stacked article of every slide, build and note (`slides.css`).
  * The head script on the deck's page sets `html[data-deck="wait"]`; the mount sets `stage`.
+ *
+ * The info menu lists the credits for the space layer (the star catalogue, the Milky Way and the
+ * Earth imagery) and for whatever else the deck shows (`credits`).
  */
 import skyList from "../../assets/hero-sky.bin?url";
 import milkyWay from "../../assets/hero-milkyway.webp?url";
+import { EARTH_IMAGERY, MILKY_WAY, NIGHT_SKY, type DataCredit } from "~/lib/data-credits";
 import { KEY_TABLE } from "~/lib/slides/keys";
 import { withBase } from "~/lib/site";
 import { deckControls, deckDialogs } from "~/widgets/builders/deck-controls";
@@ -24,8 +28,11 @@ interface Props {
   slug: string;
   /** The presenter view's copy: the slides as a hidden source, with no stage, space or controls. */
   presenter?: boolean;
+  /** Credits for what the deck's slides show, listed after the space layer's own. */
+  credits?: readonly DataCredit[];
 }
-const { slug, presenter = false } = Astro.props;
+const { slug, presenter = false, credits = [] } = Astro.props;
+const allCredits = [NIGHT_SKY, MILKY_WAY, EARTH_IMAGERY, ...credits];
 const earth = withBase("/earth-blue-marble.webp");
 ---
 
@@ -58,7 +65,7 @@ const earth = withBase("/earth-blue-marble.webp");
     <div class="gmt-deck-slides"><slot /></div>
     <div class="gmt-deck-blank" data-deck-blank aria-hidden="true" hidden></div>
   </div>
-  <Fragment set:html={deckControls(KEY_TABLE).value} />
+  <Fragment set:html={deckControls(KEY_TABLE, allCredits).value} />
   <Fragment set:html={deckDialogs(KEY_TABLE).value} />
 </article>
     </>

@@ -56,7 +56,7 @@ function fixture(slides = 3): SafeHtml {
       <div data-deck-slides>${all}</div>
       <div data-deck-blank aria-hidden="true" hidden></div>
     </div>
-    ${deckControls(KEY_TABLE)}${deckDialogs(KEY_TABLE)}
+    ${deckControls(KEY_TABLE, [])}${deckDialogs(KEY_TABLE)}
   </article>`;
 }
 

@@ -5,7 +5,9 @@
  *
  * - The bar: previous, a dot for each slide and next, then an info button at the bottom right
  *   whose popover holds the overview, help, blank, fullscreen and unlock buttons, each with its key
- *   when it has one. The unlock button carries both padlocks; the mount renames it Lock once the
+ *   when it has one, and under them the credits for the sky, the Earth and anything else the deck
+ *   shows. The licences ask for the credit wherever the material is shown, and the menu is on every
+ *   slide. The unlock button carries both padlocks; the mount renames it Lock once the
  *   slides are unlocked and marks it `data-unlocked`, and the stylesheet shows the padlock that
  *   matches its name. The pager's names are the carousel's to write
  *   (`widgets/builders/carousel.ts`).
@@ -19,6 +21,7 @@
  */
 import { octicon } from "~/lib/octicons";
 import { button } from "./button";
+import { creditList, type DataCredit } from "./data-credits";
 import { html, type SafeHtml } from "./html";
 import { field } from "./layout";
 import { table } from "./table";
@@ -59,11 +62,24 @@ function tool(
   return html`<button type="button" class="gmt-deck-menu-item" id="deck-${t.action}"${key === undefined ? "" : html` aria-keyshortcuts="${key}"`}><span data-deck-tool-label>${t.label}</span>${toolEnd(t.action, key)}</button>`;
 }
 
+/** The info menu's credits, under its tools; nothing when the deck shows nothing to credit. */
+function menuCredits(credits: readonly DataCredit[]): SafeHtml {
+  if (credits.length === 0) return html``;
+  return html`<section class="gmt-deck-credits" aria-labelledby="deck-credits-title">
+          <h2 class="gmt-deck-credits-title" id="deck-credits-title">Credits</h2>
+          ${creditList(credits)}
+        </section>`;
+}
+
 /**
  * The bar under the stage. Hidden until the mount confirms the stage (`slides.css`). The key rows
  * are `lib/slides/keys.ts`'s table, so the menu's keys are the keys the deck answers to.
+ * `credits` are the sources of what the deck draws, listed in the menu under its tools.
  */
-export function deckControls(keyRows: readonly KeyActionRow[]): SafeHtml {
+export function deckControls(
+  keyRows: readonly KeyActionRow[],
+  credits: readonly DataCredit[],
+): SafeHtml {
   return html`<div class="gmt-deck-bar" data-deck-bar>
     <div class="gmt-deck-pager">
       <button type="button" class="gmt-deck-step" data-deck-step="-1" aria-label="Previous"><span aria-hidden="true">&#8249;</span></button>
@@ -75,7 +91,8 @@ export function deckControls(keyRows: readonly KeyActionRow[]): SafeHtml {
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.75v.01"></path></svg>
       </button>
       <div class="gmt-deck-menu" id="deck-menu-panel" popover>
-        ${TOOLS.map((t) => tool(t, keyRows))}
+        <div class="gmt-deck-menu-tools">${TOOLS.map((t) => tool(t, keyRows))}</div>
+        ${menuCredits(credits)}
       </div>
     </div>
     <p class="gmt-sr-only" data-deck-live role="status" aria-live="polite" aria-atomic="true"></p>

@@ -29,7 +29,6 @@ import FilingReceipt from "~/components/slides/FilingReceipt.astro";
 import JumpPages from "~/components/slides/JumpPages.astro";
 import GmtResult from "~/components/slides/GmtResult.astro";
 import Notes from "~/components/slides/Notes.astro";
-import SkyCredits from "~/components/slides/SkyCredits.astro";
 import Slide from "~/components/slides/Slide.astro";
 import TalkSchedule from "~/components/slides/TalkSchedule.astro";
 import Terminal from "~/components/slides/Terminal.astro";
@@ -80,7 +79,7 @@ const manilaSkipped = manilaJump.pages.filter((p) => p.gap).map((p) => p.date);
 const guardCount = compatGroups.filter((g) => g.state === "guard").length;
 ---
 
-<Deck slug="give-me-temporal" presenter={presenter}>
+<Deck slug="give-me-temporal" presenter={presenter} credits={[wallCredit()]}>
   <Slide id="title" title="Give Me Temporal" minutes={0.5} place="Europe/Helsinki" layout="title">
     <TalkSchedule deck={deck} />
     <Notes>
@@ -329,7 +328,6 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     <p><a href={withPageSlash(SITE_URL)}>{SITE_URL.replace("https://", "")}</a></p>
     <p><a href="https://github.com/northguild/gmt">github.com/northguild/gmt</a></p>
     <p class="gmt-deck-panel" data-seam="audience-questions">Audience questions through Dox chat: to come with the live-agents slice.</p>
-    <SkyCredits id="deck-sky-credits" extra={[wallCredit()]} />
     <Notes>
       <p>Thank the room. Questions run for {deck.qa} minutes, through Dox chat or aloud.</p>
     </Notes>

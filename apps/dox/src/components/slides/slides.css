@@ -419,6 +419,13 @@ html[data-deck] .gmt-deck-menu {
   inset: auto var(--gmt-space-4)
     calc(var(--gmt-deck-bar-size) + var(--gmt-space-2)) auto;
   min-inline-size: 13rem;
+  max-inline-size: min(24rem, calc(100vw - 2 * var(--gmt-space-4)));
+
+  /* The credits make the menu tall; on a short window it scrolls inside its bevel. */
+  max-block-size: calc(
+    100dvh - var(--gmt-deck-bar-size) - 2 * var(--gmt-space-4)
+  );
+  overflow-y: auto;
   margin: 0;
   padding: var(--gmt-space-2);
   box-sizing: border-box;
@@ -433,7 +440,48 @@ html[data-deck] .gmt-deck-menu {
 /* Only while open: a display set on the closed popover would show it. */
 html[data-deck] .gmt-deck-menu:popover-open {
   display: grid;
+  gap: var(--gmt-space-3);
+}
+
+.gmt-deck-menu-tools {
+  display: grid;
   gap: var(--gmt-space-1);
+}
+
+/* The credits sit under the tools, set apart by a full-width rule. */
+.gmt-deck-credits {
+  padding: var(--gmt-space-3) var(--gmt-space-3) var(--gmt-space-1);
+  border-block-start: 1px solid var(--gmt-border);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+
+  & dl {
+    margin: 0;
+  }
+
+  & dt {
+    color: var(--gmt-ice);
+  }
+
+  & dd {
+    margin: 0;
+  }
+
+  & dd + dt {
+    margin-block-start: var(--gmt-space-2);
+  }
+
+  & a {
+    color: var(--gmt-cyan);
+  }
+}
+
+.gmt-deck-credits-title {
+  margin: 0 0 var(--gmt-space-2);
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+  color: var(--gmt-ice-bright);
 }
 
 .gmt-deck-menu-item {

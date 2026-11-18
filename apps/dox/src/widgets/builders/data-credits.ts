@@ -37,12 +37,16 @@ function part(p: DataCredit["parts"][number]): SafeHtml | string {
   return html`<a href="${p.href}" rel="noopener">${p.text}</a>`;
 }
 
+/** The sources as a list, label then credit: the popup's body, and the slide deck's info menu's. */
+export function creditList(credits: readonly DataCredit[]): SafeHtml {
+  return html`<dl>${credits.map(
+    (c) => html`<dt>${c.label}</dt><dd>${c.parts.map(part)}</dd>`,
+  )}</dl>`;
+}
+
 /** Nothing for an empty list, so a drawing with nothing to credit gets no button. */
 export function dataCredits(o: DataCreditsOptions): SafeHtml {
   if (o.credits.length === 0) return html``;
-  const rows = o.credits.map(
-    (c) => html`<dt>${c.label}</dt><dd>${c.parts.map(part)}</dd>`,
-  );
   return html`<button type="button" class="${styles.button}" data-placement="${o.placement}" popovertarget="${o.id}" data-cue aria-label="Data credits" aria-expanded="false">${raw(ICON)}</button
-    ><div id="${o.id}" class="gmt-glass ${styles.panel}" data-placement="${o.placement}" data-credits-panel popover><dl>${rows}</dl></div>`;
+    ><div id="${o.id}" class="gmt-glass ${styles.panel}" data-placement="${o.placement}" data-credits-panel popover>${creditList(o.credits)}</div>`;
 }

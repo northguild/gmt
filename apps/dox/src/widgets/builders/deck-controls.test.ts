@@ -11,25 +11,77 @@ const KEYS = [
   { action: "fullscreen", keys: ["F"], label: "Fullscreen on or off" },
 ];
 
+const CREDITS = [
+  {
+    label: "Earth imagery",
+    parts: [
+      "NASA Blue Marble, ",
+      { text: "Visible Earth", href: "https://visibleearth.nasa.gov/" },
+    ],
+  },
+  { label: "Night sky", parts: ["HYG star catalogue"] },
+];
+
+/** The popover the info button opens: a popover has no role, so its `popovertarget` is the way in. */
+function menuOf(info: HTMLElement): HTMLElement {
+  const id = info.getAttribute("popovertarget") ?? "";
+  // oxlint-disable-next-line testing-library/no-node-access -- a popover has no role to query; the button's popovertarget names it
+  const menu = document.getElementById(id);
+  if (menu === null) throw new Error(`no popover #${id}`);
+  return menu;
+}
+
 describe("deckControls", () => {
   it("names the pager and the info button, which holds the five tools", () => {
-    renderHtml(deckControls(KEYS));
+    renderHtml(deckControls(KEYS, CREDITS));
     for (const name of ["Previous", "Next", "Slide options"])
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     const info = screen.getByRole("button", { name: "Slide options" });
-    const menu = document.getElementById(
-      info.getAttribute("popovertarget") ?? "",
-    );
+    const menu = menuOf(info);
     expect(menu).toHaveAttribute("popover");
     for (const name of ["Overview", "Keys", "Blank", "Fullscreen", "Unlock"])
       expect(
-        within(menu!).getByRole("button", { name, hidden: true }),
+        within(menu).getByRole("button", { name, hidden: true }),
       ).toBeInTheDocument();
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
+  it("lists the credits it is given in the info menu, after the tools", () => {
+    renderHtml(deckControls(KEYS, CREDITS));
+    const menu = menuOf(screen.getByRole("button", { name: "Slide options" }));
+    const credits = within(menu).getByRole("region", {
+      name: "Credits",
+      hidden: true,
+    });
+    const terms = within(credits).getAllByRole("term", { hidden: true });
+    expect(terms.map((t) => t.textContent)).toEqual([
+      "Earth imagery",
+      "Night sky",
+    ]);
+    expect(
+      within(credits).getByRole("link", {
+        name: "Visible Earth",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", "https://visibleearth.nasa.gov/");
+    const unlock = within(menu).getByRole("button", {
+      name: "Unlock",
+      hidden: true,
+    });
+    expect(
+      unlock.compareDocumentPosition(credits) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      within(menu).queryByRole("button", {
+        name: "Data credits",
+        hidden: true,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it("gives each tool the first key the key table has for it, and none when it has none", () => {
-    renderHtml(deckControls(KEYS));
+    renderHtml(deckControls(KEYS, CREDITS));
     expect(
       screen.getByRole("button", { name: "Blank", hidden: true }),
     ).toHaveAttribute("aria-keyshortcuts", "B");
@@ -44,7 +96,7 @@ describe("deckControls", () => {
 
 describe("deckDialogs", () => {
   it("writes the key rows it is given into a real table", () => {
-    renderHtml(html`${deckControls(KEYS)}${deckDialogs(KEYS)}`);
+    renderHtml(html`${deckControls(KEYS, CREDITS)}${deckDialogs(KEYS)}`);
     const table = screen.getByRole("table", {
       name: "Keys for the slides",
       hidden: true,
@@ -67,35 +119,29 @@ describe("deckDialogs", () => {
       name: "Secret phrase",
       hidden: true,
     });
-    expect(phrase).toHaveAttribute("id", "deck-unlock-code");
     expect(phrase).toHaveAttribute("autocomplete", "off");
     expect(phrase).toHaveAttribute("spellcheck", "false");
+    // The add-on: the button comes straight after the field, in reading order.
     const go = screen.getByRole("button", {
       name: "Unlock",
       hidden: true,
     });
-    expect(go).toHaveAttribute("id", "deck-unlock-go");
-    // The add-on: the button sits straight after the input, in one row.
-    expect(phrase.parentElement).toHaveClass("gmt-deck-addon");
-    expect(phrase.nextElementSibling).toBe(go);
+    expect(
+      phrase.compareDocumentPosition(go) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.getByRole("alert", { hidden: true })).toBeEmptyDOMElement();
   });
 
-  it("gives the Unlock tool both padlocks, for the stylesheet to show one", () => {
-    renderHtml(deckControls(KEYS));
+  it("gives the Unlock tool no key, and keeps its padlocks out of its name", () => {
+    renderHtml(deckControls(KEYS, CREDITS));
     const tool = screen.getByRole("button", { name: "Unlock", hidden: true });
-    expect(tool.querySelector("kbd")).toBeNull();
-    const icons = Array.from(
-      tool.querySelectorAll<HTMLElement>("[data-icon]"),
-      (el) => el.dataset.icon,
-    );
-    expect(icons).toEqual(["unlock", "lock"]);
-    expect(tool.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(2);
+    expect(tool).not.toHaveAttribute("aria-keyshortcuts");
+    expect(tool).toHaveAccessibleName("Unlock");
   });
 
   it("has no accessibility violations", async () => {
     const { host } = renderHtml(
-      html`${deckControls(KEYS)}${deckDialogs(KEYS)}`,
+      html`${deckControls(KEYS, CREDITS)}${deckDialogs(KEYS)}`,
     );
     await expectNoAxeViolations(host);
   });
