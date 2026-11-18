@@ -61,6 +61,11 @@ import {
   compareTables,
   notesMarkdown,
   tableMarkdown,
+  zoneMatrixEvidenceTable,
+  zoneMatrixFailureTable,
+  zoneMatrixKnownTable,
+  zoneMatrixSummaryTable,
+  zoneMatrixZoneTable,
   type CompareTableId,
 } from "./library-compare-tables";
 import { LISTING_COLUMNS, listingStatus } from "./upstream-status";
@@ -74,6 +79,7 @@ import {
   type CodePairView,
 } from "./migrate-view";
 import { VERDICT_LABEL } from "../data/behaviour-matrix";
+import { zoneMatrixSummary } from "../data/zone-matrix";
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
 interface JsxElement {
@@ -448,6 +454,52 @@ function renderTemporalMap(): string {
   return renderCodePairs(temporalPairs());
 }
 
+/** `<ZoneMatrix />` as the page prints it: the summary table, then a section per suite. */
+function renderZoneMatrix(): string {
+  if (!zoneMatrixSummary.ran) {
+    return "\nNo zone-matrix run is recorded yet, so no figure is shown.\n";
+  }
+  const out: string[] = [tableMarkdown(zoneMatrixSummaryTable())];
+  for (const suite of zoneMatrixSummary.suites) {
+    out.push(
+      `## ${escapeMarkdownInline(suite.name)} ${suite.version}`,
+      "",
+      `Commit \`${suite.commit}\` of [${suite.repository.replace("https://github.com/", "")}](${suite.repository}), run with \`${suite.command}\`. The project's own command is \`${suite.ownCommand}\`. Reference zone: ${escapeMarkdownInline(suite.referenceZone)} (${escapeMarkdownInline(suite.referenceSource)}).`,
+      tableMarkdown(zoneMatrixZoneTable(suite)),
+    );
+    if (suite.overridden.length) {
+      out.push(
+        `The suite sets its own zone in ${suite.overridden.map((o) => `${o.zone} on Node ${o.node}`).join("; ")}, so those runs count no failure.`,
+        "",
+      );
+    }
+    if (suite.couldNotRun.length) {
+      out.push(
+        `Could not run: ${suite.couldNotRun.map((c) => `${c.zone} on Node ${c.node} (${escapeMarkdownInline(c.reason)})`).join("; ")}.`,
+        "",
+      );
+    }
+    if (!suite.measured) {
+      out.push(
+        "No run of this suite kept the zone it was given, so it is not measured and shows no figure.",
+        "",
+      );
+    }
+    const failures = zoneMatrixFailureTable(suite);
+    if (failures.rows.length) out.push(tableMarkdown(failures));
+    const evidence = zoneMatrixEvidenceTable(suite);
+    if (evidence.rows.length) out.push(tableMarkdown(evidence));
+    const known = zoneMatrixKnownTable(suite);
+    if (known.rows.length) {
+      out.push(
+        "Counted in neither kind, with the cause of each failure:",
+        tableMarkdown(known),
+      );
+    }
+  }
+  return out.join("\n");
+}
+
 /**
  * `<BehaviourMatrix />` as the page prints it: a heading per case, its facts, then GMT's result and
  * each library's as a verdict line and a code block. Facts and notes are written by hand with
@@ -617,6 +669,7 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "BehaviourDiffs", renderBehaviourDiffs);
   out = replaceElements(out, "TemporalMap", renderTemporalMap);
   out = replaceElements(out, "BehaviourMatrix", renderBehaviourMatrix);
+  out = replaceElements(out, "ZoneMatrix", renderZoneMatrix);
 
   // `SectionHeading` is an `<h2>` around its children, so it becomes one.
   out = replaceElements(

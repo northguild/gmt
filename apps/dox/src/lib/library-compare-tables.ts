@@ -15,7 +15,14 @@ import {
   executionRatio,
   gmtLibraryComparison,
   type LibraryComparison,
+  type LibraryComparisonStats,
 } from "../data/library-comparison";
+import {
+  KIND_LABEL,
+  KNOWN_LABEL,
+  zoneMatrixSummary,
+  type SuiteSummary,
+} from "../data/zone-matrix";
 import { raw } from "~/widgets/builders/html";
 import { nobreak } from "~/widgets/builders/nobreak";
 import { escapeHtml, inlineCodeHtml } from "./inline-code-html";
@@ -57,6 +64,27 @@ const code = (text: string): Cell => ({ text, code: true });
 const NOT_RECORDED = "not recorded";
 const NOT_MEASURED = "not measured";
 
+/** Where the zone matrix is explained in full. */
+export const ZONE_MATRIX_PATH = "/compare/zone-matrix/";
+
+/**
+ * The `/compare` column: both kinds together, split in brackets, linked to the page. A suite with
+ * no zone that ran reads `not measured`, never a 0 it did not earn.
+ */
+function zoneMatrixCell(stats: LibraryComparisonStats): Cell {
+  const z = stats.zoneMatrix;
+  if (!z) return plain("not run");
+  if (!z.measured) return { text: NOT_MEASURED, href: ZONE_MATRIX_PATH };
+  const n = z.oneZone + z.wrongAnswer;
+  return {
+    text:
+      n === 0
+        ? "0"
+        : `${n} (${z.oneZone} assume one zone, ${z.wrongAnswer} wrong ${z.wrongAnswer === 1 ? "answer" : "answers"})`,
+    href: ZONE_MATRIX_PATH,
+  };
+}
+
 const capitalize = (text: string): string =>
   `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
@@ -71,6 +99,7 @@ export function overviewTable(): CompareTable {
     plain(String(gmtStats.timezones)),
     plain(String(gmtStats.locales)),
     plain("0"),
+    zoneMatrixCell(gmt.stats),
     plain("TC39 Temporal"),
     plain(capitalize(gmt.timeResolution)),
   ];
@@ -89,6 +118,7 @@ export function overviewTable(): CompareTable {
           ? NOT_MEASURED
           : String(stats.knownFailures),
       ),
+      zoneMatrixCell(stats),
       plain(library.foundation ?? ""),
       plain(capitalize(library.timeResolution)),
     ];
@@ -103,6 +133,7 @@ export function overviewTable(): CompareTable {
       "Time zones",
       "Locales",
       "Known failing tests",
+      "Fails in our zone matrix",
       "Built on",
       "Finest time unit",
     ],
@@ -151,6 +182,99 @@ export function measuredTable(): CompareTable {
       "CI configuration",
     ],
     rows: [gmtRow, ...rows],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The zone matrix page (/compare/zone-matrix/)
+// ---------------------------------------------------------------------------
+
+const NOT_RUN = "not run";
+
+/** One row per suite: the figures of each kind, then the control. A suite nothing measured reads `not measured`. */
+export function zoneMatrixSummaryTable(): CompareTable {
+  return {
+    head: [
+      "Suite",
+      "Version",
+      KIND_LABEL["one-zone"],
+      KIND_LABEL["wrong-answer"],
+      "Reference zone",
+    ],
+    rows: zoneMatrixSummary.suites.map((s) => [
+      { text: s.name, href: `#${s.id}` },
+      plain(s.version),
+      plain(s.measured ? String(s.oneZone) : NOT_MEASURED),
+      plain(s.measured ? String(s.wrongAnswer) : NOT_MEASURED),
+      plain(s.referenceZone),
+    ]),
+  };
+}
+
+/** One row per zone of one suite. A zone nothing ran in reads `not run`, never 0. */
+export function zoneMatrixZoneTable(suite: SuiteSummary): CompareTable {
+  return {
+    head: [
+      "Time zone",
+      "Tests run",
+      KIND_LABEL["one-zone"],
+      KIND_LABEL["wrong-answer"],
+    ],
+    rows: suite.zones.map((z) => [
+      plain(z.zone),
+      plain(z.ran ? String(z.tests) : NOT_RUN),
+      plain(z.ran ? String(z.oneZone) : NOT_RUN),
+      plain(z.ran ? String(z.wrongAnswer) : NOT_RUN),
+    ]),
+  };
+}
+
+/** Each counted failure of one suite: the test, its kind, the zones it fails in and why. */
+export function zoneMatrixFailureTable(suite: SuiteSummary): CompareTable {
+  return {
+    head: ["Test", "Kind", "Zones", "Why"],
+    rows: suite.failures.map((f) => [
+      code(f.id),
+      plain(KIND_LABEL[f.kind]),
+      plain(f.zones.join(", ")),
+      plain(f.reason),
+    ]),
+  };
+}
+
+/**
+ * The failures of one suite counted in neither kind: each test, where it failed (in the reference
+ * zone, or once in two runs and in which zones), the Node majors and the cause.
+ */
+export function zoneMatrixKnownTable(suite: SuiteSummary): CompareTable {
+  return {
+    head: ["Test", "Fails", "Node", "Cause"],
+    rows: suite.known.map((k) => [
+      code(k.id),
+      plain(`${KNOWN_LABEL[k.why]}, ${k.zones.join(", ")}`),
+      plain(k.nodes.join(", ")),
+      plain(k.cause),
+    ]),
+  };
+}
+
+/** The evidence for each wrong answer: the input, the zone, what Temporal gives and what the library gives. */
+export function zoneMatrixEvidenceTable(suite: SuiteSummary): CompareTable {
+  return {
+    head: ["Test", "Input", "Zone", "Temporal", "Library"],
+    rows: suite.failures.flatMap((f) =>
+      f.evidence
+        ? [
+            [
+              code(f.id),
+              code(f.evidence.input),
+              plain(f.evidence.zone),
+              code(f.evidence.temporal),
+              code(f.evidence.library),
+            ],
+          ]
+        : [],
+    ),
   };
 }
 

@@ -15,6 +15,7 @@
 
 import { gmtStats } from "./gmt-stats";
 import measurementData from "./library-measurements.json";
+import { suiteSummary } from "./zone-matrix";
 
 /**
  * What was measured about one other library, and where it came from. One entry per library in
@@ -74,6 +75,31 @@ function measured(id: string): LibraryMeasurement {
   return found;
 }
 
+/** The id the zone matrix gives a comparison entry's library. */
+const ZONE_MATRIX_ID: Record<string, string> = {
+  "@northguild/gmt": "gmt",
+  "@internationalized/date": "internationalized-date",
+};
+
+/**
+ * The zone-matrix counts of one library (`/compare/zone-matrix/`), derived from the recorded
+ * failures. Empty until the suite has been run, so a library is never shown as having none.
+ */
+export function zoneMatrixStats(
+  id: string,
+): Pick<LibraryComparisonStats, "zoneMatrix"> {
+  const summary = suiteSummary(ZONE_MATRIX_ID[id] ?? id);
+  return summary
+    ? {
+        zoneMatrix: {
+          oneZone: summary.oneZone,
+          wrongAnswer: summary.wrongAnswer,
+          measured: summary.measured,
+        },
+      }
+    : {};
+}
+
 /** The counts a comparison entry carries, read from its measurement. */
 function statsOf(m: LibraryMeasurement): LibraryComparisonStats {
   return {
@@ -88,6 +114,7 @@ function statsOf(m: LibraryMeasurement): LibraryComparisonStats {
     ...(m.knownFailures === undefined
       ? {}
       : { knownFailures: m.knownFailures }),
+    ...zoneMatrixStats(m.id),
     publicApi: m.publicApi,
   };
 }
@@ -101,6 +128,12 @@ export interface LibraryComparisonStats {
   timezones: number;
   /** Time-zone settings the library's CI re-runs its whole suite under, if any. */
   fullSuiteZones?: number;
+  /**
+   * Distinct tests of the library's own suite that fail under GMT's CI zones, by kind: the test
+   * assumes one zone, or the library gives a wrong answer. Absent until the matrix has run.
+   * `measured` is false when no zone kept the zone it was given, so the counts are not figures.
+   */
+  zoneMatrix?: { oneZone: number; wrongAnswer: number; measured: boolean };
   /** Node.js versions covered by the library's own CI matrix. */
   nodeVersions: number;
   /** Total test executions the library's own CI actually runs (tests × any TZ/Node matrix its own scripts apply). */
@@ -171,6 +204,7 @@ export const libraryComparisons: LibraryComparison[] = [
       timezones: gmtStats.timezones,
       nodeVersions: gmtStats.nodes.length,
       executions: gmtStats.executions,
+      ...zoneMatrixStats("@northguild/gmt"),
     },
   },
   {
@@ -266,7 +300,7 @@ export function competitorExecutionRange(): { min: number; max: number } {
 export function competitorStatRange(
   stat: keyof Omit<
     LibraryComparisonStats,
-    "knownFailures" | "publicApi" | "fullSuiteZones"
+    "knownFailures" | "publicApi" | "fullSuiteZones" | "zoneMatrix"
   >,
 ): { min: number; max: number } {
   const values = competitorComparisons.map((l) => l.stats[stat]);

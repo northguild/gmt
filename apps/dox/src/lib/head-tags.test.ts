@@ -365,6 +365,7 @@ describe("ogImageKey", () => {
     ["migrate/moment", "migrate/moment"],
     ["migrate", "migrate"],
     ["compare/behaviour", "compare/behaviour"],
+    ["compare/zone-matrix", "compare/zone-matrix"],
     ["changelog/1-21", "changelog/1-21"],
     ["changelog/lint-plugin", "changelog/lint-plugin"],
     ["changelog", "changelog"],
