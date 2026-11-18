@@ -11,6 +11,7 @@ export {
   type CarouselBy,
   type CarouselHandle,
   type CarouselPage,
+  type CarouselSteps,
   type CarouselWire,
 } from "./carousel";
 export {
@@ -90,6 +91,15 @@ export {
 } from "./text-input";
 export { table, type Column, type TableOptions } from "./table";
 export {
+  deckControls,
+  deckDialogs,
+  helpDialog,
+  overviewDialog,
+  overviewItems,
+  type KeyHelpRow,
+  type OverviewItem,
+} from "./deck-controls";
+export {
   toolLinks,
   type ToolLinkItem,
   type ToolLinksOptions,
@@ -106,3 +116,11 @@ export {
 } from "./timeline";
 export { verdict, type VerdictOptions, type VerdictTone } from "./verdict";
 export { zonedValue } from "./zoned-value";
+export {
+  presenterShell,
+  readinessList,
+  readinessPending,
+  PRESENTER_INITIAL,
+  PRESENTER_SAMPLES,
+  type ReadinessItem,
+} from "./presenter";
