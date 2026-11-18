@@ -2,7 +2,7 @@
 import { screen, within } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
-import { NO_RESULT, plates } from "./plates";
+import { NO_RESULT, paintPlates, plates } from "./plates";
 
 describe("plates", () => {
   it("gives each value its term, with its lines as further definitions", () => {
@@ -103,5 +103,40 @@ describe("plates", () => {
       ]),
     );
     await expectNoAxeViolations(a.host);
+  });
+});
+
+describe("paintPlates", () => {
+  const row = (value: string | null, line = "a Tuesday") => [
+    { caption: "Issue date", value, lines: [line] },
+  ];
+
+  it("writes a new value and line into the same nodes", () => {
+    const { host } = renderHtml(plates(row("2026-11-03")));
+    const held = screen.getByText("2026-11-03");
+    const line = screen.getByText("a Tuesday");
+    paintPlates(host, row("2026-11-04", "a Wednesday"));
+    expect(held).toHaveTextContent("2026-11-04");
+    expect(line).toHaveTextContent("a Wednesday");
+    expect(screen.getByText("2026-11-04")).toBe(held);
+  });
+
+  it("reads no result and blanks the line for a null value, then comes back", () => {
+    const { host } = renderHtml(plates(row("2026-11-03")));
+    paintPlates(host, row(null));
+    expect(screen.getByText(NO_RESULT)).toBeInTheDocument();
+    expect(screen.queryByText("a Tuesday")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("definition")).toHaveLength(2);
+    paintPlates(host, row("2026-11-03"));
+    expect(screen.getByText("2026-11-03")).toBeInTheDocument();
+    expect(screen.getByText("a Tuesday")).toBeInTheDocument();
+    expect(screen.queryByText(NO_RESULT)).not.toBeInTheDocument();
+  });
+
+  it("leaves the row alone past its last plate", () => {
+    const { host } = renderHtml(plates(row("2026-11-03")));
+    paintPlates(host, [...row("2026-11-04"), ...row("2026-11-05")]);
+    expect(screen.getByText("2026-11-04")).toBeInTheDocument();
+    expect(screen.queryByText("2026-11-05")).not.toBeInTheDocument();
   });
 });

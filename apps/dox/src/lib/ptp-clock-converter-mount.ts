@@ -3,10 +3,11 @@
  *
  * "PTP now" comes first: the reader's clock (`getUtcNow`), the table's offset at that instant
  * (`taiMinusUtc`) and the PTP count it makes (`utcToPtp`), drawn once a second while the "Live
- * clock" switch is on. Section 1 reads a PTP timestamp (seconds, nanoseconds and the announced `currentUtcOffset`)
- * with `ptpToUtc`, next to the same count read with the offset ignored. Section 2 checks the
- * announced offset against the leap-second table (`taiMinusUtc`) and draws both on a fixed
- * ruler. Section 3 writes a UTC instant back with `utcToPtp`, using the same offset box.
+ * clock" switch is on. Section 1 reads a PTP timestamp (seconds, nanoseconds and the announced
+ * `currentUtcOffset`) with `ptpToUtc`, next to the same count read with the offset ignored.
+ * Section 2 checks the announced offset against the leap-second table (`taiMinusUtc`) and draws
+ * both on a fixed ruler. Section 3 writes a UTC instant back with `utcToPtp`, using the same
+ * offset box.
  *
  * Built on the component kit and the holiday family: `renderPtpClockConverterTemplate` writes
  * the markup from builders only, with ids from `idScope(idPrefix)`, and `mount` finds its parts
@@ -14,8 +15,9 @@
  * "PTP now" reads the clock: once a second, aligned to the second, while its switch is on, and
  * once at mount and on each switch change when it is off. Under `prefers-reduced-motion` the
  * switch starts off, so the readout reads the clock once and holds it. The timer is cleared on
- * abort and on destroy, and the template never reads the clock. The widget holds no PTP rule: the library says what each text
- * reads as and a refusal is explained by asking it again (`ptp-clock-converter.ts`).
+ * abort and on destroy, and the template never reads the clock. The widget holds no PTP rule:
+ * the library says what each text reads as and a refusal is explained by asking it again
+ * (`ptp-clock-converter.ts`).
  *
  * `""` / `null` from the library renders as NO SIGNAL (amber). An empty box makes no call and
  * reads "nothing typed", never amber. Every region is laid out in every state and holds the
@@ -29,6 +31,7 @@ import {
   button,
   buttonRow,
   codeFrame,
+  paintCodeFrame,
   field,
   findWidget,
   hold,
@@ -49,11 +52,11 @@ import {
 import { heldText, type HeldState } from "~/widgets/families/holiday/held-text";
 import { holidayFrame } from "~/widgets/families/holiday/holiday-frame";
 import {
+  paintSignalPlates,
   SIGNAL_TEXT,
   signalPlates,
   type SignalPlate,
 } from "~/widgets/families/holiday/signal-plates";
-import type { GmtCopy } from "~/widgets/primitives/copy/copy";
 import { grow } from "~/widgets/primitives/grow/grow";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/ptp-clock-converter.module.css";
@@ -306,36 +309,6 @@ function nowList(f: NowFacts | null): SignalPlate[] {
 
 const nowPlates = (f: NowFacts | null): SafeHtml =>
   signalPlates(nowList(f), { gate: "now-plates live" });
-
-/**
- * Writes a reading into the plates already on the page: each plate's value, line and state
- * change in place and no node is replaced, so a tick never steals focus or scroll from a plate.
- */
-function paintNowPlates(slot: HTMLElement, f: NowFacts): void {
-  const plates = slot.querySelectorAll("dl > div");
-  nowList(f).forEach((p, i) => {
-    const plate = plates[i];
-    if (plate === undefined) return;
-    const lost = p.value === null;
-    plate.setAttribute("data-state", lost ? "signal" : "live");
-    const [, value, line] = Array.from(plate.children);
-    const set = (dd: Element | undefined, text: string): void => {
-      const shown = dd?.firstElementChild;
-      if (shown && shown.textContent !== text) shown.textContent = text;
-    };
-    set(value, lost ? SIGNAL_TEXT : p.value!);
-    set(line, lost ? "" : p.line);
-  });
-}
-
-/** Writes the calls into the frame already on the page: the text and the copy text, no node replaced. */
-function paintNowCalls(slot: HTMLElement, text: string): void {
-  const codeEl = slot.querySelector("code");
-  if (codeEl !== null && codeEl.textContent !== text)
-    setHtml(codeEl, html`${text}`);
-  const copyEl = slot.querySelector<GmtCopy>("gmt-copy");
-  if (copyEl !== null && copyEl.text !== text) copyEl.text = text;
-}
 
 // ---------------------------------------------------------------------------
 // Badge, verdict, round trip
@@ -667,8 +640,8 @@ function setupWidget(
   const drawNow = (): string => {
     const now = lib.getUtcNow();
     const facts = nowFacts(lib, now);
-    paintNowPlates(el("now-plates"), facts);
-    paintNowCalls(el("now-calls"), facts.calls.join("\n"));
+    paintSignalPlates(el("now-plates"), nowList(facts));
+    paintCodeFrame(el("now-calls"), facts.calls.join("\n"));
     return now;
   };
   const tickNow = (): void => {

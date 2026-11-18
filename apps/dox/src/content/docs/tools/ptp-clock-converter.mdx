@@ -25,7 +25,7 @@ A Precision Time Protocol (IEEE 1588) timestamp is a count of seconds and nanose
 
 <Fragment slot="after">
 
-**PTP now.** TAI runs ahead of UTC by `taiMinusUtc(now)` seconds, 37 since 2017. A receiver that writes `utcToPtp(now, 0)` is 37 s behind every grandmaster. The section reads the table at your clock, so a clock set before 1972 shows NO SIGNAL.
+**PTP now.** TAI runs ahead of UTC by `taiMinusUtc(now)` seconds, 37 since 2017. A device that stamps its time with `utcToPtp(now, 0)` is 37 s behind a grandmaster on the PTP timescale. The section reads the table at your clock, so a clock set before 1972 shows NO SIGNAL.
 
 **The offset has no default.** The library does not guess one: the grandmaster announces it, and a receiver that assumes 0, or the value from last year's firmware, is wrong without any sign. That is why the offset box sits in section 1 and section 3 reads it too.
 

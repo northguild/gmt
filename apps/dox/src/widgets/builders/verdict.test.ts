@@ -2,7 +2,7 @@
 import { screen } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
-import { verdict } from "./verdict";
+import { paintVerdict, verdict } from "./verdict";
 
 describe("verdict", () => {
   it("reads its title and its detail together", () => {
@@ -30,5 +30,18 @@ describe("verdict", () => {
       const r = renderHtml(verdict({ tone, title: tone, detail: "detail" }));
       await expectNoAxeViolations(r.host);
     }
+  });
+});
+
+describe("paintVerdict", () => {
+  it("writes the title and detail into the same paragraph", () => {
+    renderHtml(
+      verdict({ tone: "good", title: "On time", detail: "It lands first." }),
+    );
+    const p = screen.getByRole("paragraph");
+    paintVerdict(p, { tone: "bad", title: "Late", detail: "It lands after." });
+    expect(screen.getByRole("paragraph")).toBe(p);
+    expect(p).toHaveTextContent("Late It lands after.");
+    expect(screen.queryByText("On time")).not.toBeInTheDocument();
   });
 });

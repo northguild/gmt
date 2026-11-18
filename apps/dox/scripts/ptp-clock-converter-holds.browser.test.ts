@@ -469,9 +469,15 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
     60_000,
   );
 
-  it.each(WIDTHS)(
-    "the PTP now readout ticks and holds still at %i px",
-    async (width) => {
+  it.each`
+    width
+    ${300}
+    ${390}
+    ${1280}
+    ${1440}
+  `(
+    "the PTP now readout ticks and holds still at $width px",
+    async ({ width }: { width: number }) => {
       if (browser === undefined || server === undefined) return;
       const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
       const page = await browser.newPage({ viewport: { width, height: 900 } });
@@ -505,9 +511,15 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
     60_000,
   );
 
-  it.each(WIDTHS)(
-    "a PTP now value that overflows is a tab stop after a tick, and one that fits is not, at %i px",
-    async (width) => {
+  it.each`
+    width
+    ${300}
+    ${390}
+    ${1280}
+    ${1440}
+  `(
+    "a PTP now value that overflows is a tab stop after a tick, and one that fits is not, at $width px",
+    async ({ width }: { width: number }) => {
       if (browser === undefined || server === undefined) return;
       const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
       const page = await browser.newPage({ viewport: { width, height: 900 } });
@@ -540,9 +552,15 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
     60_000,
   );
 
-  it.each(WIDTHS)(
-    "under reduced motion the readout holds the clock it read at %i px",
-    async (width) => {
+  it.each`
+    width
+    ${300}
+    ${390}
+    ${1280}
+    ${1440}
+  `(
+    "under reduced motion the readout holds the clock it read at $width px",
+    async ({ width }: { width: number }) => {
       if (browser === undefined || server === undefined) return;
       const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
       const page = await browser.newPage({ viewport: { width, height: 900 } });

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { screen } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
-import { codeFrame } from "./code-frame";
+import { codeFrame, paintCodeFrame } from "./code-frame";
 import { html } from "./html";
 
 const markup = () =>
@@ -50,5 +50,26 @@ describe("codeFrame", () => {
   it("has no axe violations", async () => {
     const fx = renderHtml(markup());
     await expectNoAxeViolations(fx.host);
+  });
+});
+
+describe("paintCodeFrame", () => {
+  it("writes the code and the copy text in place, so focus on the copy button stays", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    const { host } = renderHtml(markup());
+    const button = screen.getByRole("button", { name: "Copy call" });
+    button.focus();
+    paintCodeFrame(host, "later()");
+    expect(screen.getByRole("group", { name: "Live call" })).toHaveTextContent(
+      "later()",
+    );
+    expect(screen.getByRole("button", { name: "Copy call" })).toBe(button);
+    expect(button).toHaveFocus();
+    await userEvent.click(button);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith("later()");
   });
 });

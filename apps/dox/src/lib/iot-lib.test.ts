@@ -33,14 +33,15 @@ describe("loadIotLib", () => {
     expect(lib.getUtcNow()).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);
   });
 
-  it.each([
-    "iot/convert",
-    "iot/validate",
-    "timescale/calculate",
-    "utc/get",
-  ] as const)(
-    "turns a rejected %s import into a WidgetLoadError",
-    async (key) => {
+  it.each`
+    key
+    ${"iot/convert"}
+    ${"iot/validate"}
+    ${"timescale/calculate"}
+    ${"utc/get"}
+  `(
+    "turns a rejected $key import into a WidgetLoadError",
+    async ({ key }: { key: keyof typeof GMT_MODULES }) => {
       const original = GMT_MODULES[key];
       GMT_MODULES[key] = () => Promise.reject(new Error("offline"));
       try {

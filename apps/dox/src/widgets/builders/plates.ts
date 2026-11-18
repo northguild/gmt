@@ -89,3 +89,35 @@ function plate(p: Plate): SafeHtml {
 export function plates(list: readonly Plate[], o: GateOption = {}): SafeHtml {
   return html`<dl class="${styles.root}" ${gateAttr(o.gate)}>${list.map(plate)}</dl>`;
 }
+
+/**
+ * Writes new values and lines into the plates `plates` already put on the page, in place. Each
+ * plate's state, value and lines change and no node is replaced, so a live readout never steals
+ * focus or scroll. The shown span is the first child of each `dd`, as `plate()` writes it. The
+ * caption is not written: it never follows the clock. `root` holds the `<dl>`; a plate with no
+ * match in the list, or a list longer than the row, is left alone.
+ */
+export function paintPlates(root: ParentNode, list: readonly Plate[]): void {
+  const row = root.querySelectorAll("dl > div");
+  list.forEach((p, i) => {
+    const el = row[i];
+    if (el === undefined) return;
+    const empty = p.value === null;
+    el.setAttribute("data-state", empty ? "empty" : "live");
+    const [, value, ...lines] = Array.from(el.children);
+    const shown = value?.firstElementChild;
+    if (shown) {
+      const text = empty ? NO_RESULT : p.value!;
+      if (shown.textContent !== text) shown.textContent = text;
+      shown.classList.toggle(
+        styles.words!,
+        !empty && (p.words ?? []).includes(p.value!),
+      );
+    }
+    p.lines.forEach((text, j) => {
+      const line = lines[j]?.firstElementChild;
+      const next = empty ? "" : text;
+      if (line && line.textContent !== next) line.textContent = next;
+    });
+  });
+}

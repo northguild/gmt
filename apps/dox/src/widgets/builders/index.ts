@@ -19,7 +19,7 @@ export {
   type ChartKeyItem,
   type ChartKeyKind,
 } from "./chart-key";
-export { codeFrame, type CodeFrameOptions } from "./code-frame";
+export { codeFrame, paintCodeFrame, type CodeFrameOptions } from "./code-frame";
 export {
   dataCredits,
   type DataCredit,
@@ -72,7 +72,7 @@ export {
 } from "./layout";
 export { findWidget, type FoundWidget } from "../root";
 export { loading, type LoadingOptions } from "./loading";
-export { plates, NO_RESULT, type Plate } from "./plates";
+export { plates, paintPlates, NO_RESULT, type Plate } from "./plates";
 export { select, type SelectOption, type SelectOptions } from "./select";
 export { selectOptions } from "./select";
 export { srOnly } from "./sr-only";
@@ -104,5 +104,10 @@ export {
   type TickOptions,
   type TimelineSeries,
 } from "./timeline";
-export { verdict, type VerdictOptions, type VerdictTone } from "./verdict";
+export {
+  verdict,
+  paintVerdict,
+  type VerdictOptions,
+  type VerdictTone,
+} from "./verdict";
 export { zonedValue } from "./zoned-value";

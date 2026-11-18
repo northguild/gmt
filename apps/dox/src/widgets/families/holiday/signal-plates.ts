@@ -58,3 +58,30 @@ export function signalPlates(
 ): SafeHtml {
   return html`<dl class="${styles.row}" ${gateAttr(o.gate)}>${list.map(plate)}</dl>`;
 }
+
+/**
+ * Writes new values and lines into the plates `signalPlates` already put on the page, in place.
+ * Each plate's state, value and line change and no node is replaced, so a live readout never
+ * steals focus or scroll from a plate. The plate's own markup stays here, next to `plate()`:
+ * the shown span is the first child of the value `dd` and of the line `dd`. `root` holds the
+ * `<dl>`; a plate with no match in the list, or a list longer than the row, is left alone.
+ */
+export function paintSignalPlates(
+  root: ParentNode,
+  list: readonly SignalPlate[],
+): void {
+  const plates = root.querySelectorAll("dl > div");
+  list.forEach((p, i) => {
+    const el = plates[i];
+    if (el === undefined) return;
+    const lost = p.value === null;
+    el.setAttribute("data-state", lost ? "signal" : "live");
+    const [, value, line] = Array.from(el.children);
+    const set = (dd: Element | undefined, text: string): void => {
+      const shown = dd?.firstElementChild;
+      if (shown && shown.textContent !== text) shown.textContent = text;
+    };
+    set(value, lost ? SIGNAL_TEXT : p.value!);
+    set(line, lost ? "" : p.line);
+  });
+}

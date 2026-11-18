@@ -43,3 +43,19 @@ export function heldText(o: HeldTextOptions): SafeHtml {
     )}</div
   >`;
 }
+
+/**
+ * Writes a new text and state into a line `heldText` already put on the page, in place, so a
+ * live readout replaces no node. `root` holds the line; the live `<p>` is the held box's first
+ * child.
+ */
+export function paintHeldText(
+  root: ParentNode,
+  text: string,
+  state: HeldState,
+): void {
+  const line = root.querySelector("p");
+  if (line === null) return;
+  line.setAttribute("data-state", state);
+  if (line.textContent !== text) line.textContent = text;
+}
