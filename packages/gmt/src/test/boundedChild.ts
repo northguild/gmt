@@ -16,8 +16,23 @@ import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { TestRunner } from "vitest";
 
 const SOURCE_ROOT = path.resolve(import.meta.dirname, "..");
+
+/** The child's wall-clock bound when the caller sets none. */
+const DEFAULT_CHILD_MS = 20_000;
+
+/** Time on top of the child's bound for spawning it and reading its output on a loaded machine. */
+const START_MARGIN_MS = 10_000;
+
+/**
+ * The Vitest timeout for a test that starts a bounded child, set through its `describe` options.
+ * Vitest's default of 5 s is shorter than the child's 20 s bound, so on a loaded machine a slow
+ * child failed the test as a Vitest timeout before it could report `timedOut`.
+ * `runInBoundedChild` refuses to start in a test whose timeout is shorter than this.
+ */
+export const BOUNDED_CHILD_TEST_TIMEOUT_MS = DEFAULT_CHILD_MS + START_MARGIN_MS;
 
 /**
  * The source file URL of each public function an expression calls as `gmt.<name>`. Importing
@@ -108,11 +123,18 @@ export interface BoundedRun {
  *
  * @param expressions e.g. `gmt.addDate("2024-01-15[u-ca=persian]", { months: 3000000 })`
  * @param options `timeoutMs` for the whole child (default 20 s), `heapMb` old-space limit (default 256)
+ * @throws when the running test's timeout is shorter than `timeoutMs` plus the start margin
  */
 export async function runInBoundedChild(
   expressions: readonly string[],
-  { timeoutMs = 20_000, heapMb = 256 } = {},
+  { timeoutMs = DEFAULT_CHILD_MS, heapMb = 256 } = {},
 ): Promise<BoundedRun> {
+  const testTimeout = TestRunner.getCurrentTest()?.timeout;
+  if (testTimeout !== undefined && testTimeout < timeoutMs + START_MARGIN_MS) {
+    throw new Error(
+      `runInBoundedChild: the test's ${testTimeout} ms timeout is shorter than the child's ${timeoutMs} ms bound plus ${START_MARGIN_MS} ms to start it; pass { timeout: BOUNDED_CHILD_TEST_TIMEOUT_MS } to the describe`,
+    );
+  }
   const modules = sourceModules(expressions);
   const script = `
 const gmt = {};
