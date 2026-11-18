@@ -49,10 +49,11 @@ rules per slide:
   `guards`.
   Notes: "One clock against the whole planet. Temporal takes the zone as data, so code can ask
   any place on Earth, and GMT is built on it."
-- **`zone-matrix`**: the matrix pins light with each suite's counts, one build per suite, GMT
-  last ([slice 4c](./s4c-zone-matrix.md)); the slide names the zones' source (`ci.yml`), the run
-  date and the two kinds in plain words, and links `/compare/zone-matrix/`. Its last build draws
-  the route arcs to the stops ahead. Notes say what each kind means, and nothing about the
+- **`experiments`, then one slide per experiment** (`gaps`, `overlaps`, `host`, `odd`): the
+  opener (`ExperimentOpener`) gives the number of cases, libraries and zones in one line; each
+  experiment slide (`ExperimentSlide`) asks its question in large type, then one bar per library
+  with its wrong count, one example and a footnote. All of it is read from `zone-probe.json`.
+  GMT stays in the list, its zero in green. Notes say what was fed in, and nothing about the
   libraries beyond the counts.
 - **`abort`, `years`, `day-off`, `manila`, `engines`**: one `FilingCard` per filing, as listed
   in the index outline; `years` has one build per place (Tehran, Tokyo) and `day-off` one per

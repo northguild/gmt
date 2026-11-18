@@ -6,8 +6,8 @@ is the current plan; the code is under `apps/dox/src/lib/slides/` and `src/compo
 
 ## Camera
 
-Flights happen at section changes only: Helsinki (title), the wall, the planet (`temporal`,
-`zone-matrix`), one held planet view through the bugs (`abort`, `years`, `day-off`, `manila`,
+Flights happen at section changes only: Helsinki (title), the wall, the planet (`temporal` and the
+experiments), one held planet view through the bugs (`abort`, `years`, `day-off`, `manila`,
 `engines`), the overview (`scoreboard`), Greenwich (`gmt`, `guards`), Helsinki (`ask-dox`,
 `page-tools`, `thanks`). The Moon build on `day-off` is the one detour and returns to the planet.
 `goTo` ignores a place the camera already holds, so consecutive `planet` slides never fly.

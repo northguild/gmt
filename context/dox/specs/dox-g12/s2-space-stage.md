@@ -84,7 +84,7 @@ returnHome(), destroy() }`.
 - Pins: one `GlobeMarker` per place-bearing slide, the current one lit. Arcs: one `GlobeArc` per
   consecutive pair of distinct places, `altitude` 0.15, drawn in the order the talk visits them;
   past legs in Teal, the leg being flown in Cyan.
-- Overview (the `O` dialog, the last build of `zone-matrix`, the `scoreboard` slide):
+- Overview (the `O` dialog and the `scoreboard` slide):
   `goTo({ kind: "overview" })`
   with every pin and arc lit; closing returns to the slide's place.
 - Free flight: W/S tilt north and south, A/D turn west and east, Q/E zoom out and in, each held
