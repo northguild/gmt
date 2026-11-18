@@ -502,10 +502,6 @@ describe("mountDeck", () => {
 
     const selected = (name: string) =>
       screen.getByRole("tab", { name, selected: true });
-    /** The deck root, which carries `data-locked` for the stylesheet to hide the pager by. */
-    const deckRoot = () =>
-      // oxlint-disable-next-line dox-test/no-class-query, testing-library/no-node-access
-      document.querySelector<HTMLElement>("[data-deck-root]");
 
     it("keeps a locked deck on its first slide by every key, the pager, the overview and the presenter", async () => {
       const { user } = await start();
