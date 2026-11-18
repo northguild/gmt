@@ -38,7 +38,10 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 function setup(
-  o: { leave?: boolean | ((el: HTMLElement, hide: () => void) => void) } = {},
+  o: {
+    leave?: boolean | ((el: HTMLElement, hide: () => void) => void);
+    reach?: () => number;
+  } = {},
 ): Setup {
   const fx = renderHtml(html`<div></div>`);
   const root = fx.first();
@@ -77,6 +80,7 @@ function setup(
     idPrefix: "c",
     now: () => clock.t,
     onSelect: (i, from, by) => steps.push([i, from, by]),
+    ...(o.reach ? { reach: o.reach } : {}),
     ...(o.leave
       ? { leave: typeof o.leave === "function" ? o.leave : () => {} }
       : {}),
@@ -179,10 +183,48 @@ describe("carousel", () => {
     expect(s.handle.index).toBe(0);
   });
 
+  it("hands focus to the page that opens quietly, until it blurs", async () => {
+    const s = setup();
+    s.intro.focus();
+    await s.user.keyboard("{ArrowRight}");
+    expect(s.about).toHaveFocus();
+    // Moved by script, so a stage that fills the screen need not ring itself on every page turn.
+    /* oxlint-disable dox-test/no-implementation-assert */
+    expect(s.about).toHaveAttribute("data-quiet-focus");
+    s.about.blur();
+    expect(s.about).not.toHaveAttribute("data-quiet-focus");
+    /* oxlint-enable dox-test/no-implementation-assert */
+  });
+
   it("puts every page in the tab order", () => {
     const s = setup();
     expect(s.intro).toHaveAttribute("tabindex", "0");
     expect(s.about).toHaveAttribute("tabindex", "0");
+  });
+
+  it("reaches no page past its reach, by any control, until the reach widens", async () => {
+    let reach = 1;
+    const s = setup({ reach: () => reach });
+    const tabs = within(s.dots).getAllByRole("tab", { hidden: true });
+    expect(tabs[1]).not.toBeVisible();
+    expect(s.next).toHaveAttribute("tabindex", "-1");
+    await s.user.click(s.next);
+    s.handle.select(1);
+    s.intro.focus();
+    await s.user.keyboard("{ArrowRight}");
+    tabs[0].focus();
+    await s.user.keyboard("{End}");
+    s.clock.t += 2000;
+    expect(wheelOn(s.intro, { deltaY: 200 })).toBe(false);
+    expect(s.handle.index).toBe(0);
+    expect(s.steps).toEqual([]);
+
+    reach = 2;
+    s.handle.refresh();
+    expect(tabs[1]).toBeVisible();
+    expect(s.next).toHaveAccessibleName("Next: About gmt");
+    await s.user.click(s.next);
+    expect(s.handle.index).toBe(1);
   });
 
   describe("the wheel", () => {
@@ -317,5 +359,156 @@ describe("carousel", () => {
         idPrefix: "z",
       }),
     ).toThrow(/at least two pages/);
+  });
+});
+
+describe("carousel steps", () => {
+  /** Three pages with 0, 2 and 1 steps, the way a deck's slides have builds. */
+  function stepped() {
+    const fx = renderHtml(html`<div></div>`);
+    const root = fx.first();
+    const pages = ["Title", "Manila", "Thanks"].map((name) =>
+      el("section", {}, html`<p>${name}</p>`),
+    );
+    const prev = el("button", { type: "button", "aria-label": "Previous" });
+    const next = el("button", { type: "button", "aria-label": "Next" });
+    const dots = el("div");
+    const live = el("p", { "aria-live": "polite" });
+    root.append(...pages, prev, next, dots, live);
+    const counts = [0, 2, 1];
+    const taken = [0, 0, 0];
+    const calls: string[] = [];
+    // Read while the carousel wires itself, before `handle` exists.
+    let at = 0;
+    const signal = new AbortController();
+    controllers.push(signal);
+    const handle = wireCarousel(root, {
+      signal: signal.signal,
+      pages: pages.map((p, i) => ({
+        el: p,
+        label: ["Title", "Manila", "Thanks"][i],
+      })),
+      prev,
+      next,
+      dots,
+      live,
+      label: "The deck",
+      idPrefix: "d",
+      steps: {
+        count: (i) => counts[i],
+        current: () => taken[at],
+        step: (delta, by) => {
+          const i = at;
+          const to = taken[i] + delta;
+          if (to < 0 || to > counts[i]) return false;
+          taken[i] = to;
+          calls.push(`${i}:${to}:${by}`);
+          return true;
+        },
+      },
+      announce: (label, i, total) => `Slide ${i + 1} of ${total}: ${label}`,
+      onSelect: (to, from) => {
+        at = to;
+        // Going back lands on the previous page with every step taken.
+        taken[to] = to < from ? counts[to] : 0;
+      },
+    });
+    return {
+      pages,
+      prev,
+      next,
+      live,
+      handle,
+      taken,
+      calls,
+      user: userEvent.setup(),
+    };
+  }
+
+  it("takes a page's steps before it changes page, in both directions", async () => {
+    const s = stepped();
+    await s.user.click(s.next);
+    expect(s.handle.index).toBe(1);
+    await s.user.click(s.next);
+    await s.user.click(s.next);
+    expect(s.handle.index).toBe(1);
+    expect(s.taken[1]).toBe(2);
+    await s.user.click(s.next);
+    expect(s.handle.index).toBe(2);
+    await s.user.click(s.prev);
+    expect(s.handle.index).toBe(1);
+    expect(s.taken[1]).toBe(2);
+    await s.user.click(s.prev);
+    await s.user.click(s.prev);
+    expect(s.handle.index).toBe(1);
+    expect(s.taken[1]).toBe(0);
+    await s.user.click(s.prev);
+    expect(s.handle.index).toBe(0);
+    expect(s.calls).toEqual([
+      "1:1:control",
+      "1:2:control",
+      "1:1:control",
+      "1:0:control",
+    ]);
+  });
+
+  it("names a button that has steps left a build, and keeps it on at the last page", async () => {
+    const s = stepped();
+    await s.user.click(s.next);
+    expect(s.next).toHaveAccessibleName("Next build");
+    expect(s.prev).toHaveAccessibleName("Previous: Title");
+    await s.user.click(s.next);
+    await s.user.click(s.next);
+    expect(s.next).toHaveAccessibleName("Next: Thanks");
+    expect(s.prev).toHaveAccessibleName("Previous build");
+    await s.user.click(s.next);
+    expect(s.handle.index).toBe(2);
+    expect(s.next).toHaveAccessibleName("Next build");
+    await s.user.click(s.next);
+    expect(s.taken[2]).toBe(1);
+    // Nothing left: the button is off, as at the end of any carousel.
+    expect(s.next).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("says the page once per page change and never per step", async () => {
+    const s = stepped();
+    expect(s.live).toBeEmptyDOMElement();
+    await s.user.click(s.next);
+    expect(s.live).toHaveTextContent("Slide 2 of 3: Manila");
+    // A step leaves the announcement as it was: the node is not rewritten.
+    const marker = document.createTextNode("kept");
+    s.live.replaceChildren(marker);
+    await s.user.click(s.next);
+    await s.user.click(s.next);
+    expect(s.live).toHaveTextContent("kept");
+    await s.user.click(s.next);
+    expect(s.live).toHaveTextContent("Slide 3 of 3: Thanks");
+  });
+
+  it("steps from the handle as the buttons do, and redraws on refresh", () => {
+    const s = stepped();
+    s.handle.step(1, "key");
+    expect(s.handle.index).toBe(1);
+    s.handle.step(1, "key");
+    expect(s.taken[1]).toBe(1);
+    expect(s.calls).toEqual(["1:1:key"]);
+    s.taken[1] = 2;
+    s.handle.refresh();
+    expect(s.next).toHaveAccessibleName("Next: Thanks");
+  });
+
+  it("leaves a carousel without steps as it was", async () => {
+    const s = setup();
+    await s.user.click(s.next);
+    s.handle.step(-1, "key");
+    expect(s.handle.index).toBe(0);
+    expect(s.steps.map((x) => x[2])).toEqual(["control", "key"]);
+  });
+
+  it("lets the page own the keys when it names no keyArea", async () => {
+    const s = stepped();
+    s.pages[0].focus();
+    await s.user.keyboard("{ArrowRight}");
+    expect(s.handle.index).toBe(0);
   });
 });

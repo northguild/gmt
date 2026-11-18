@@ -17,6 +17,11 @@
   color: var(--gmt-ice);
   cursor: pointer;
   pointer-events: auto;
+
+  /* A page past the carousel's reach has no dot. */
+  &[hidden] {
+    display: none;
+  }
 }
 
 .dot::before {
