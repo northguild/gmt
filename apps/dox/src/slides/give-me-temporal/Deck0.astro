@@ -88,7 +88,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="one-clock" title="One clock, or the planet" minutes={1.5} place="wall" layout="full">
+  <Slide id="one-clock" title="One clock, or the planet" minutes={1} place="wall" layout="full">
     <WallFigures images />
     <AgentQuote />
     <Notes>
@@ -120,7 +120,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="temporal" title="Give me Temporal" minutes={1.5} place="planet" layout="full" reveal={deck.zone}>
+  <Slide id="temporal" title="Give me Temporal" minutes={1} place="planet" layout="full" reveal={deck.zone}>
     <p>One clock against the whole planet. Temporal takes the zone as data.</p>
     <p>
       Where an engine still differs{engines.length > 0 ? `, on ${engines.join(" and ")}` : ""}, {gmtStats.functions} GMT functions
@@ -134,37 +134,37 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <ExperimentOpener place="planet">
+  <ExperimentOpener place="planet" minutes={0.5}>
     <Notes>
       <p>We stop reading other people's tests and run our own experiments: the same inputs into every library, with the right answer from the standard.</p>
     </Notes>
   </ExperimentOpener>
 
-  <ExperimentSlide experiment="gaps" place="planet">
+  <ExperimentSlide experiment="gaps" place="planet" minutes={1}>
     <Notes>
       <p>A time the clocks skip has no single answer, and Temporal says which one to give. Read the worst count and GMT's zero.</p>
     </Notes>
   </ExperimentSlide>
 
-  <ExperimentSlide experiment="overlaps" place="planet">
+  <ExperimentSlide experiment="overlaps" place="planet" minutes={1}>
     <Notes>
       <p>A time that happens twice. Temporal's default takes the earlier of the two; most of these libraries take the later one, so their answer is an hour off the standard's.</p>
     </Notes>
   </ExperimentSlide>
 
-  <ExperimentSlide experiment="host" place="planet">
+  <ExperimentSlide experiment="host" place="planet" minutes={1}>
     <Notes>
       <p>The same input, the same library, ten machines set to ten zones. Any answer that moves with the machine counts.</p>
     </Notes>
   </ExperimentSlide>
 
-  <ExperimentSlide experiment="odd" place="planet">
+  <ExperimentSlide experiment="odd" place="planet" minutes={1}>
     <Notes>
       <p>Apia skipped a whole day, Lord Howe moves its clocks by half an hour, Kathmandu sits at +05:45. The planet stays in view for the bugs ahead.</p>
     </Notes>
   </ExperimentSlide>
 
-  <Slide id="abort" title="A date pattern aborts Node" minutes={2} place="planet" lapse="abort">
+  <Slide id="abort" title="A date pattern aborts Node" minutes={1.5} place="planet" lapse="abort">
     <div class="gmt-swap">
       <div class="gmt-visual">
         <Terminal {...VISUALS.terminal} />
@@ -183,7 +183,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="years" title="Wrong years" minutes={1.5} place="planet" lapse="tehran">
+  <Slide id="years" title="Wrong years" minutes={1} place="planet" lapse="tehran">
     <div class="gmt-swap">
       <div class="gmt-visual">
         <FlapBoard {...VISUALS.counters.tehran} />
@@ -263,7 +263,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="gmt" title="GMT" minutes={2} place="greenwich">
+  <Slide id="gmt" title="GMT" minutes={1.5} place="greenwich">
     <p class="gmt-lead">{gmtStats.functions} functions with familiar names; every result below is computed by GMT.</p>
     <div class="gmt-results">
       <GmtResult module="plain/calculate" name="addDate" args={["2024-01-31", { months: 1 }]} />
@@ -305,7 +305,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="ask-dox" title="Ask Dox" minutes={1.5} place="Europe/Helsinki">
+  <Slide id="ask-dox" title="Ask Dox" minutes={1} place="Europe/Helsinki">
     <p class="gmt-deck-panel" data-seam="live-answer">The same question, live in Dox chat: to come with the live-agents slice.</p>
     <Notes>
       <p>Same question, but this agent has the whole planet's tools.</p>

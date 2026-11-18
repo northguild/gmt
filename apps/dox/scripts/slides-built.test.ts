@@ -16,7 +16,11 @@ const OUTLINE = [
   "one-clock",
   "date",
   "temporal",
-  "zone-matrix",
+  "experiments",
+  "experiment-gaps",
+  "experiment-overlaps",
+  "experiment-host",
+  "experiment-odd",
   "abort",
   "years",
   "day-off",
@@ -63,7 +67,7 @@ function slides(): Slide[] | null {
 }
 
 describe("Deck 0 in the built site", () => {
-  it("has the 16 slides, once each, in the outline's order", () => {
+  it("has the 20 slides, once each, in the outline's order", () => {
     const deck = slides();
     if (deck === null) return;
     expect(deck.map((s) => s.id)).toEqual(OUTLINE);
