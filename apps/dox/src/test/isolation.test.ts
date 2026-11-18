@@ -42,6 +42,12 @@ describe("splitTestFiles", () => {
     expect(isolated.filter((file) => shared.includes(file))).toEqual([]);
   });
 
+  it("reaches the eval tests", () => {
+    expect(TEST_GLOBS).toContain("evals/**/*.test.ts");
+    const { isolated, shared } = splitTestFiles(appDir);
+    expect([...isolated, ...shared]).toContain("evals/cases.test.ts");
+  });
+
   it("leaves the browser tests out of both groups", () => {
     const { isolated, shared } = splitTestFiles(appDir);
     const browser = globSync(BROWSER_TEST_GLOB, { cwd: appDir });
