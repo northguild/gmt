@@ -350,6 +350,8 @@ export const RULES = [
   { test: /^scripts\/licences\.mjs$/, checks: ["licences", ...SCRIPT_TESTS] },
   // The behaviour matrix runner is run by hand; the Dox tests walk and copy scripts/.
   { test: /^scripts\/behaviour-matrix\//, checks: SCRIPT_TESTS },
+  // The zone matrix runner is run by hand too; its clones live in .work/, which git ignores.
+  { test: /^scripts\/zone-matrix\//, checks: SCRIPT_TESTS },
   {
     test: /^scripts\/test-markers\.mjs$/,
     checks: ["markers", ...SCRIPT_TESTS],

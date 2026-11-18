@@ -1,0 +1,24 @@
+
+locale:ar-ly > weeks year starting sunday formatted
+    at Object.<anonymous> (/work/moment/build/qunit/test/locale/ar-ly.js:824:12)
+
+locale:ar > weeks year starting sunday formatted
+    at Object.<anonymous> (/work/moment/build/qunit/test/locale/ar.js:824:12)
+
+locale:fa > weeks year starting sunday formatted
+    at Object.<anonymous> (/work/moment/build/qunit/test/locale/fa.js:798:12)
+
+locale:ku > weeks year starting sunday formatted
+    at Object.<anonymous> (/work/moment/build/qunit/test/locale/ku.js:783:12)
+
+locale:ps > week year starts on Saturday
+    at Object.<anonymous> (/work/moment/build/qunit/test/locale/ps.js:721:12)
+
+locale:tzm-latn > weeks year starting sunday formatted
+    at Object.<anonymous> (/work/moment/build/qunit/test/locale/tzm-latn.js:786:12)
+
+locale:tzm > weeks year starting sunday formatted
+    at Object.<anonymous> (/work/moment/build/qunit/test/locale/tzm.js:786:12)
+
+week year > weeks numbers dow:6 doy:12
+    at Object.<anonymous> (/work/moment/build/qunit/test/moment/week_year.js:439:12)

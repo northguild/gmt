@@ -1,0 +1,121 @@
+{
+  "testResults": [
+    {
+      "name": "/work/luxon/test/datetime/create.test.js",
+      "status": "failed",
+      "message": "",
+      "assertionResults": [
+        {
+          "fullName": "DateTime.now has today's date",
+          "title": "DateTime.now has today's date",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.now accepts the default locale",
+          "title": "DateTime.now accepts the default locale",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.now accepts the default numbering system",
+          "title": "DateTime.now accepts the default numbering system",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.now accepts the default output calendar",
+          "title": "DateTime.now accepts the default output calendar",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.now accepts the default time zone",
+          "title": "DateTime.now accepts the default time zone",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.local() has today's date",
+          "title": "DateTime.local() has today's date",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "/work/luxon/test/datetime/tokenParse.test.js",
+      "status": "failed",
+      "message": "",
+      "assertionResults": [
+        {
+          "fullName": "DateTime.fromFormat() parses basic times",
+          "title": "DateTime.fromFormat() parses basic times",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.fromFormat() yields Invalid reason 'unparseable' for incompatible formats",
+          "title": "DateTime.fromFormat() yields Invalid reason 'unparseable' for incompatible formats",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.fromFormat() parses with variable-length input",
+          "title": "DateTime.fromFormat() parses with variable-length input",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.fromFormat() parses meridiems",
+          "title": "DateTime.fromFormat() parses meridiems",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.fromFormat() throws if you specify meridiem with 24-hour time",
+          "title": "DateTime.fromFormat() throws if you specify meridiem with 24-hour time",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime.fromFormat() makes dots optional and handles non breakable spaces",
+          "title": "DateTime.fromFormat() makes dots optional and handles non breakable spaces",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "name": "/work/luxon/test/datetime/toFormat.test.js",
+      "status": "passed",
+      "message": "",
+      "assertionResults": [
+        {
+          "fullName": "DateTime#toFormat accepts the locale from the DateTime or the options",
+          "title": "DateTime#toFormat accepts the locale from the DateTime or the options",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime#toFormat('u') returns fractional seconds",
+          "title": "DateTime#toFormat('u') returns fractional seconds",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime#toFormat('uu') returns fractional seconds as two digits",
+          "title": "DateTime#toFormat('uu') returns fractional seconds as two digits",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime#toFormat('uuu') returns fractional seconds as one digit",
+          "title": "DateTime#toFormat('uuu') returns fractional seconds as one digit",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime#toFormat('S') returns the millisecond",
+          "title": "DateTime#toFormat('S') returns the millisecond",
+          "status": "passed"
+        },
+        {
+          "fullName": "DateTime#toFormat('SSS') returns padded the millisecond",
+          "title": "DateTime#toFormat('SSS') returns padded the millisecond",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "/work/luxon/test/broken.test.js",
+      "status": "failed",
+      "message": "Cannot find module",
+      "assertionResults": []
+    }
+  ]
+}

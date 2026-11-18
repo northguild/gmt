@@ -106,5 +106,10 @@ export default defineConfig({
       files: ["scripts/behaviour-matrix/**"],
       rules: { "@northguild/gmt-oxlint/no-date-library-imports": "off" },
     },
+    {
+      // The zone matrix runs the same libraries' own test suites, which it clones outside the workspace.
+      files: ["scripts/zone-matrix/**"],
+      rules: { "@northguild/gmt-oxlint/no-date-library-imports": "off" },
+    },
   ],
 });

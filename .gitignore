@@ -90,5 +90,9 @@ memories/
 /scripts/behaviour-matrix/pnpm-lock.yaml
 /scripts/behaviour-matrix/node_modules/
 /scripts/behaviour-matrix/.cache/
+# The zone-matrix runner installs on its own too, and clones the suites it runs into .work/
+/scripts/zone-matrix/pnpm-lock.yaml
+/scripts/zone-matrix/node_modules/
+/scripts/zone-matrix/.work/
 # Verdict logs and lock
 /.verdict/
