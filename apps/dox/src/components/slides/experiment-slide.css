@@ -13,7 +13,7 @@
 html[data-deck] .gmt-slide:has(.gmt-exp-kicker) {
   padding-block: 2.5cqi;
   line-height: 1.3;
-  font-size: max(0.65rem, 1.4cqi);
+  font-size: max(0.75rem, 1.4cqi);
 }
 
 .gmt-slide:has(.gmt-exp-kicker) > .gmt-slide-body {
@@ -39,7 +39,7 @@ html[data-deck] .gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
   order: -1;
   margin: 0;
   font-family: var(--gmt-font-mono);
-  font-size: 0.9em;
+  font-size: max(0.75rem, 0.9em);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gmt-ice-dim);
@@ -134,7 +134,7 @@ html[data-deck] .gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
 }
 
 .gmt-exp-of {
-  font-size: 0.8em;
+  font-size: max(0.75rem, 0.8em);
   color: var(--gmt-ice-dim);
 }
 
@@ -157,7 +157,7 @@ html[data-deck] .gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
   box-shadow: inset 0 -2px 0 var(--gmt-cyan);
   border-radius: var(--gmt-bevel-md);
   corner-shape: bevel;
-  font-size: 0.85em;
+  font-size: max(0.75rem, 0.85em);
 }
 
 .gmt-exp-example-input {
@@ -175,7 +175,7 @@ html[data-deck] .gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
 
 .gmt-exp-foot {
   margin: auto 0 0;
-  font-size: 0.55em;
+  font-size: max(0.75rem, 0.55em);
   line-height: 1.25;
   color: var(--gmt-ice-dim);
 }

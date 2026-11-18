@@ -78,7 +78,7 @@
   border: 1px solid var(--gmt-hairline);
   padding-block: 5cqi;
   padding-inline: 6cqi;
-  font-size: max(0.5rem, 2.6cqi);
+  font-size: max(0.75rem, 2.6cqi);
   line-height: 1.4;
 
   & > section {
@@ -90,7 +90,7 @@
   & h2 {
     margin-block: 0 3cqi;
     font-family: var(--gmt-font-display);
-    font-size: max(0.5rem, 4.6cqi);
+    font-size: max(0.75rem, 4.6cqi);
     line-height: 1.15;
     color: var(--gmt-ice-bright);
   }

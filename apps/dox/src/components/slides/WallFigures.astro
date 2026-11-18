@@ -45,8 +45,7 @@ const host = (url: string): string => new URL(url).host;
           <span class="gmt-wall-caption-name">{page.name}</span>
           {page.title !== page.name && <span class="gmt-sr-only">: {page.title}.</span>}
           <span class="gmt-wall-caption-meta">
-            {page.placeholder ? "Placeholder, capture pending. " : ""}
-            {host(page.url)}, captured <time datetime={page.capturedAt}>{day(page.capturedAt)}</time>
+            {page.placeholder ? "Placeholder, capture pending. " : ""}{host(page.url)}, captured <time datetime={page.capturedAt}>{day(page.capturedAt)}</time>
           </span>
         </figcaption>
       </figure>

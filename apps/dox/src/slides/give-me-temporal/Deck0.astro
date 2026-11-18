@@ -47,7 +47,7 @@ import {
 import { filings } from "~/data/upstream-filings";
 import { findFiling } from "~/lib/slides/filing";
 import { zoneJump } from "~/lib/slides/zone-jump";
-import { SITE_URL, pageHref } from "~/lib/site";
+import { SITE_URL, pageHref, withPageSlash } from "~/lib/site";
 import { DECKS } from "~/slides/decks";
 import { wallCredit } from "~/slides/give-me-temporal/credits";
 import { REPORTS, VISUALS } from "~/slides/give-me-temporal/content";
@@ -292,12 +292,12 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
 
   <Slide id="guards" title="Tested guards, and a canary" minutes={1} place="greenwich">
     <p>
-      {compatGroups.length} known defect groups; {groupsStillNeeded} still need a workaround
-      {guardCount > 0 ? `, ${guardCount} kept on purpose` : ""}. {probeTotals.probes} probes, {probeTotals.failing} failing today.
+      {compatGroups.length} known defect groups; {groupsStillNeeded} still need a
+      workaround{guardCount > 0 ? `, ${guardCount} kept on purpose` : ""}. {probeTotals.probes} probes, {probeTotals.failing} failing today.
     </p>
     <p>
       Each guard runs against {gmtStats.timezones} zones on Node {gmtStats.nodes.join(", ")}, and a weekly canary
-      checks when one can go.
+      checks when one can go.{" "}
       <a href={pageHref("/upstream/")}>Every filing</a>
     </p>
     <Notes>
@@ -325,7 +325,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="thanks" title="Thanks" minutes={0.5} place="Europe/Helsinki" clock>
-    <p><a href={SITE_URL}>{SITE_URL.replace("https://", "")}</a></p>
+    <p><a href={withPageSlash(SITE_URL)}>{SITE_URL.replace("https://", "")}</a></p>
     <p><a href="https://github.com/northguild/gmt">github.com/northguild/gmt</a></p>
     <p class="gmt-deck-panel" data-seam="audience-questions">Audience questions through Dox chat: to come with the live-agents slice.</p>
     <SkyCredits id="deck-sky-credits" extra={[wallCredit()]} />

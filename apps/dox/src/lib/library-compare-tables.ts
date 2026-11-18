@@ -26,6 +26,7 @@ import {
 import { raw } from "~/widgets/builders/html";
 import { nobreak } from "~/widgets/builders/nobreak";
 import { escapeHtml, inlineCodeHtml } from "./inline-code-html";
+import { pageHref } from "./site";
 
 /** One table cell: plain text, optionally set in code or linked. */
 interface Cell {
@@ -65,7 +66,7 @@ const NOT_RECORDED = "not recorded";
 const NOT_MEASURED = "not measured";
 
 /** Where the zone matrix is explained in full. */
-export const ZONE_MATRIX_PATH = "/compare/zone-matrix/";
+export const ZONE_MATRIX_PATH = pageHref("/compare/zone-matrix/");
 
 /**
  * The `/compare` column: both kinds together, split in brackets, linked to the page. A suite with
