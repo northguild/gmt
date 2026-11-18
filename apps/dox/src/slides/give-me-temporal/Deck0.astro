@@ -72,6 +72,7 @@ const siblings = findFiling("tc39/proposal-temporal#3330").pairsWith;
 const engines = [
   ...new Set(compatGroups.flatMap((g) => g.engines ?? [])),
 ].map(engineLabel);
+const engineList = new Intl.ListFormat("en", { type: "conjunction" }).format(engines);
 const manilaJump = zoneJump("Asia/Manila", [1844, 1845])!;
 const manilaBefore = manilaJump.pages[0]!.date;
 const manilaAfter = manilaJump.pages.at(-1)!.date;
@@ -120,12 +121,11 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="temporal" title="Give me Temporal" minutes={1} place="planet" layout="full" reveal={deck.zone}>
-    <p>One clock against the whole planet. Temporal takes the zone as data.</p>
+  <Slide id="temporal" title="Give me Temporal" minutes={1} place="planet" reveal={deck.zone}>
+    <p>Temporal lets your code tell the time anywhere on Earth. You pass in the place, and it works out the rest.</p>
     <p>
-      Where an engine still differs{engines.length > 0 ? `, on ${engines.join(" and ")}` : ""}, {gmtStats.functions} GMT functions
-      sit on a tested guard: {groupsStillNeeded} of {compatGroups.length} known defect groups still need one,
-      measured by {probeTotals.probes} probes.
+      Browsers still get parts of it wrong. {groupsStillNeeded} of the {compatGroups.length} bugs we know of
+      still need a workaround{engines.length > 0 ? ` in ${engineList}` : ""}. GMT has one for each.
     </p>
     <Notes>
       <p>The clock turns into the Earth: its hour marks land on the meridians, the planet fades in, then the wall breaks into pins across it.</p>
@@ -292,13 +292,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
 
   <Slide id="guards" title="Tested guards, and a canary" minutes={1} place="greenwich">
     <p>
-      {compatGroups.length} known defect groups; {groupsStillNeeded} still need a
-      workaround{guardCount > 0 ? `, ${guardCount} kept on purpose` : ""}. {probeTotals.probes} probes, {probeTotals.failing} failing today.
+      We know of {compatGroups.length} bugs. {groupsStillNeeded} still need a
+      workaround{guardCount > 0 ? `, and we keep ${guardCount} more on purpose` : ""}. {probeTotals.probes} small tests watch
+      them, and {probeTotals.failing} still show a bug today.
     </p>
     <p>
-      Each guard runs against {gmtStats.timezones} zones on Node {gmtStats.nodes.join(", ")}, and a weekly canary
-      checks when one can go.{" "}
-      <a href={pageHref("/upstream/")}>Every filing</a>
+      Every workaround is tested in {gmtStats.timezones} time zones on Node {gmtStats.nodes.join(", ")}. Each week a check
+      tells us which ones we can delete.{" "}
+      <a href={pageHref("/upstream/")}>Every bug we filed</a>
     </p>
     <Notes>
       <p>A guard is a workaround with a test; the canary says when upstream has fixed the thing and the guard can be retired.</p>
