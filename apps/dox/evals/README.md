@@ -89,13 +89,16 @@ The whole live subset on the first brain in `BRAINS`:
 pnpm run evals:live --base http://localhost:8799/gmt --log /tmp/dox-wrangler.log
 ```
 
-The 12 cases cost about 2,200 to 2,400 Neurons. The run reserves 350 for each case before
-starting it and stops before it would overspend, marking the cases it did not reach as ungraded.
-So a full run needs a budget above the default of 2,500:
+Before each case the run reserves what that case cost in the committed `live-<brainId>.json`,
+or 350 Neurons when the report lacks it, and stops before it would overspend. Cases it did not
+reach are marked ungraded. The first run of a brain has no report, so give it a budget of 350
+times the number of live cases, for example `--budget 4200` for 12 cases:
 
 ```bash
-pnpm run evals:live --base http://localhost:8799/gmt --log /tmp/dox-wrangler.log --budget 2900
+pnpm run evals:live --base http://localhost:8799/gmt --log /tmp/dox-wrangler.log --budget 4200
 ```
+
+The run spends only what the answers cost, not the budget.
 
 ### Reading the result
 

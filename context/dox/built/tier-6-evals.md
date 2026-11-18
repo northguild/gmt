@@ -60,7 +60,7 @@ Before merging a change to `worker/system-prompt.ts`, `worker/core-rules.md`, th
 A question costs about 160 to 350 Neurons against 10,000 a day, and Gemini allows about 20 requests a day per model. `evals/budget.ts` holds the limits and `budget.test.ts` proves them offline.
 
 - The live layer never runs in CI or `pnpm test`.
-- A default run is `BRAINS[0]` and the live subset, under a 2,500-Neuron budget measured from the wrangler log. An answer the log cannot price counts as the worst case, 350 Neurons. The 12 live cases cost about 2,200 to 2,400 Neurons. The guard reserves 350 for each case before starting it, so a full run needs `--budget 2900`.
+- A default run is `BRAINS[0]` and the live subset, under a 2,500-Neuron budget measured from the wrangler log. An answer the log cannot price counts as the worst case, 350 Neurons. The guard reserves each case's figure from the committed report before starting it, or 350 for a case the report lacks. So the first run of a brain, with no report, needs a budget of 350 times the number of live cases (`--budget`); later runs fit the default unless the cases grew.
 - `--only <ids>` re-checks only the cases a fix touches.
 - `--brains all` prints its estimated cost and stops unless `--confirm-spend` is given.
 - Gemini requests stop at a per-model cap (`--gemini-cap`) and a reserve (`--gemini-reserve`).
