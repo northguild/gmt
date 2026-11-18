@@ -2,45 +2,11 @@ import { buildRetrievalCorpus } from "./corpus";
 import { indexFor, searchChunks } from "./search";
 import type { RetrievalChunk } from "./types";
 
-/* DOX-C1 (#137) DoD: "Retrieval returns sensible chunks for a spread of real
-   questions: a direct lookup, a task, a concept, and a near-miss." Run against
-   the real generated corpus, not a synthetic fixture — the whole point is
-   proving retrieval works on the actual corpus, not on data shaped to make it
-   look good.
-
-   This used to be `buildFunctionChunks(corpus)`, i.e. the reference half only.
-   That made every claim below a claim about 78% of what the Worker actually
-   searches: the 164 guide sections were exercised by nothing, even though the
-   "concept" question this file tests is precisely the kind whose answer lives
-   in a guide rather than in a function's docstring. */
+/* Mechanism tests against the real generated corpus (reference and guides). Whether a given
+   question finds its answer is scored by `evals/offline.test.ts` from `evals/cases.ts`. */
 const chunks: RetrievalChunk[] = buildRetrievalCorpus();
 
-describe("searchChunks — DOX-C1 DoD question spread", () => {
-  it("direct lookup: 'what does formatDate do' finds formatDate's own chunk", () => {
-    const results = searchChunks(chunks, "what does formatDate do");
-    expect(results.some((c) => c.title === "formatDate")).toBe(true);
-  });
-
-  it("task: 'convert UTC to Tokyo' finds a zoned conversion function", () => {
-    const results = searchChunks(chunks, "convert UTC to Tokyo timezone");
-    expect(
-      results.some((c) => /convert/i.test(c.title) && c.namespace === "zoned"),
-    ).toBe(true);
-  });
-
-  it("concept: 'what happens during a DST gap' surfaces DST-related chunks", () => {
-    const results = searchChunks(chunks, "what happens during a DST gap");
-    expect(results.some((c) => /dst|daylight/i.test(c.text))).toBe(true);
-  });
-
-  it("near-miss: 'addBusinessDay' (singular) still finds the plural function", () => {
-    const results = searchChunks(chunks, "addBusinessDay");
-    // Fuzzy matching should bridge singular/plural — the corpus's real name
-    // is plural (verify it exists so this test fails loudly if renamed).
-    expect(chunks.some((c) => c.title === "addBusinessDays")).toBe(true);
-    expect(results.some((c) => c.title === "addBusinessDays")).toBe(true);
-  });
-
+describe("searchChunks — result count and namespace bias", () => {
   it("returns roughly 10-20 chunks per question by default", () => {
     const results = searchChunks(chunks, "format a date for display");
     expect(results.length).toBeGreaterThan(0);
@@ -63,26 +29,6 @@ describe("searchChunks — DOX-C1 DoD question spread", () => {
     );
     expect(biasedZonedRank).toBeGreaterThanOrEqual(0);
     expect(biasedZonedRank).toBeLessThanOrEqual(unbiasedZonedRank);
-  });
-
-  it("a genuinely out-of-domain question returns few or no chunks — the honest-refusal path DOX-C2 depends on", () => {
-    // Not "parse a cron expression" — verified 2026-09-09 that one actually
-    // surfaces real, keyword-relevant parseHttpDate/parseRfc3339/parseSqlDateTime
-    // chunks (the corpus genuinely has a family of parse* functions), which
-    // is honest retrieval, not padding; DOX-C2's own DoD uses that example
-    // for the end-to-end *LLM* refusal test, where recognizing "none of
-    // these describe cron support" is the model's job, not retrieval's.
-    // This test needs zero real keyword overlap with the corpus at all.
-    // ("translate this sentence into french" is asserted in the refusal-path
-    // block below: NMEA messages are "sentences", so a few Maritime guide
-    // sections are an honest match for it, and it must stay under the bound.)
-    for (const q of [
-      "recommend a good pizza restaurant nearby",
-      "suggest a vegetarian lasagne recipe",
-    ]) {
-      const results = searchChunks(chunks, q);
-      expect(results.length).toBeLessThan(5);
-    }
   });
 });
 
@@ -153,13 +99,6 @@ describe("searchChunks — the refusal path's honesty", () => {
     "tell me a story about a dog",
   ];
 
-  for (const question of OFF_DOMAIN) {
-    it(`returns almost nothing for "${question}"`, () => {
-      const results = searchChunks(chunks, question, { limit: 100 });
-      expect(results.length).toBeLessThan(5);
-    });
-  }
-
   it("an everyday word that only occurs inside an identifier does not match on its own", () => {
     // Splitting `bestAvailable` into best + available on the index side once
     // took "best pasta recipe" from 6 chunks to 18 and "how do I bake
@@ -181,6 +120,112 @@ describe("searchChunks — the refusal path's honesty", () => {
   });
 });
 
+/* Mechanism tests on a small made-up corpus, so each pins one rule of `search.ts` and nothing
+   else moves it. */
+describe("searchChunks — sentences about something else and near-miss names", () => {
+  it("returns nothing for a sentence about something else that shares a few ordinary words", () => {
+    // "football" and "won" are in no guide; "match", "last" and "night" are.
+    expect(
+      searchChunks(chunks, "who won the football match last night"),
+    ).toEqual([]);
+    expect(searchChunks(chunks, "write a poem about autumn rain")).toEqual([]);
+  });
+
+  it("keeps the chunks of a real question whose own nouns the guides lack", () => {
+    // "boss", "wants", "his", "ferry", "parcel" are in no guide. A zone city,
+    // a clock time or a word that names gmt's functions says the question is
+    // about time, so the words nobody wrote about do not count against it.
+    for (const question of [
+      "my boss in Lagos wants a call at 9am his time, what is that for me in Singapore",
+      "my flight leaves Dubai at 23:40 and lands in Mumbai, how long is the flight really",
+      "our parcel left on Friday, how many working days until my invoice is overdue",
+      "my goat ate the hay at 23:40 while the farmer slept",
+      "the wizard asked the dragon which date it hatched",
+    ]) {
+      expect(searchChunks(chunks, question).length, question).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+
+  it("reads a zone city as a question about time zones, though it never says so", () => {
+    const top = searchChunks(
+      chunks,
+      "my boss in Lagos wants a call at 9am his time, what is that for me in Singapore",
+      { limit: 3 },
+    ).map((c) => c.id);
+    expect(
+      top.some((id) =>
+        id.startsWith(
+          "/guides/zoned-date-operations/zoned-operations/#timezone",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("puts the conversion function among the first hits when two zone cities are named", () => {
+    const ids = (q: string) => searchChunks(chunks, q).map((c) => c.id);
+    const place = ids(
+      "my colleague in Nairobi starts her shift at 6am her time, what time is that for my team in Seoul",
+    ).indexOf("zoned/convert/convertZonedToZoned");
+    expect(place).toBeGreaterThanOrEqual(0);
+    expect(place).toBeLessThan(4);
+    // One city names no conversion.
+    expect(
+      ids("her shift starts at 6am in Nairobi").indexOf(
+        "zoned/convert/convertZonedToZoned",
+      ),
+    ).toBe(-1);
+  });
+
+  it("reads one city, a day and a clock time as a question about that local time", () => {
+    const top = (question: string) =>
+      searchChunks(chunks, question)
+        .slice(0, 5)
+        .map((c) => c.id);
+    const dst = (id: string) =>
+      id.startsWith("/guides/concepts/dst-disambiguation/") ||
+      id.startsWith("/guides/how-to/check-local-time-exists/") ||
+      id.endsWith("/classifyLocal") ||
+      id.endsWith("/resolveLocal");
+    expect(
+      top("What happens to 1:30am on 27 October 2024 in London?").some(dst),
+    ).toBe(true);
+    expect(
+      top("What happens to 2:30am on 31 March 2024 in New York?").some(dst),
+    ).toBe(true);
+    // A question that says what it is about is left to its own words.
+    expect(
+      top(
+        "my flight leaves Dubai at 23:40 and lands in Mumbai, how long is the flight really",
+      ).some(dst),
+    ).toBe(false);
+    // So is a time of day with no date, and a conversion between two cities.
+    expect(top("What is 9am in Lagos?").some(dst)).toBe(false);
+  });
+
+  it("does not take a city outside the zone list for evidence", () => {
+    // Mumbai is not an IANA zone city (its zone is Asia/Kolkata), so it is
+    // an ordinary word the guides lack.
+    expect(
+      searchChunks(chunks, "who won the football match in Mumbai last night"),
+    ).toEqual([]);
+  });
+
+  it("does not gate a short query, so a typo still lands on the nearest chunk", () => {
+    expect(searchChunks(chunks, "addBusinessDayz").length).toBeGreaterThan(0);
+    expect(searchChunks(chunks, "football night").length).toBeGreaterThan(0);
+  });
+
+  it("allows two edits on a long name, not three", () => {
+    // `addBusinessDay` is three edits from `isBusinessDay`, which used to
+    // outrank `addBusinessDays`, the name it is a prefix of.
+    expect(searchChunks(chunks, "addBusinessDay")[0]?.id).toBe(
+      "plain/calculate/addBusinessDays",
+    );
+  });
+});
+
 describe("searchChunks — one index per corpus", () => {
   it("reuses the index for the same chunk array and builds a fresh one for a new array", () => {
     const same = indexFor(chunks);
@@ -195,153 +240,5 @@ describe("searchChunks — one index per corpus", () => {
     searchChunks(chunks, "unrelated warm-up query");
     const warm = searchChunks(chunks, "what happens during a DST gap");
     expect(warm.map((c) => c.id)).toEqual(cold.map((c) => c.id));
-  });
-});
-
-describe("searchChunks — camelCase names", () => {
-  it("a plain-words question finds the identifier it describes, near the top", () => {
-    // The point of splitting identifiers: "leap second" never matched the
-    // single term `isLeapSecond` before, and ranked it 45th.
-    const results = searchChunks(chunks, "is it a leap second");
-    expect(results.slice(0, 8).some((c) => c.title === "isLeapSecond")).toBe(
-      true,
-    );
-  });
-
-  it("a question that types the identifier finds its own chunk first", () => {
-    const results = searchChunks(chunks, "what does gnssWeekToUtc return");
-    expect(results[0]?.title).toBe("gnssWeekToUtc");
-  });
-});
-
-describe("searchChunks — GNSS and leap-second questions", () => {
-  it("a Galileo week and time of week finds gnssWeekToUtc", () => {
-    const results = searchChunks(
-      chunks,
-      "What UTC time is Galileo week 1024, time of week 18, era 0?",
-    );
-    expect(
-      results.some((c) => c.kind === "function" && c.title === "gnssWeekToUtc"),
-    ).toBe(true);
-  });
-
-  it("seconds across the 2016 leap second finds leapSecondsBetween or the leap-seconds guide", () => {
-    const results = searchChunks(
-      chunks,
-      "How many seconds passed across the 2016 leap second?",
-    );
-    expect(
-      results.some(
-        (c) =>
-          (c.kind === "function" && c.title === "leapSecondsBetween") ||
-          (c.kind === "guide" && c.url.includes("leap-seconds-and-tai")),
-      ),
-    ).toBe(true);
-  });
-
-  it("the next GNSS week rollover finds gnssWeekToUtc or the Maritime guide", () => {
-    const results = searchChunks(
-      chunks,
-      "When does the next GNSS week rollover happen?",
-    );
-    expect(
-      results.some(
-        (c) =>
-          (c.kind === "function" && c.title === "gnssWeekToUtc") ||
-          (c.kind === "guide" && c.url.includes("maritime-gnss-time")),
-      ),
-    ).toBe(true);
-  });
-
-  it("fiscal and workforce questions still return their chunks", () => {
-    expect(
-      searchChunks(chunks, "how do I find the fiscal quarter of a date").some(
-        (c) => c.title === "getQuarter",
-      ),
-    ).toBe(true);
-    expect(
-      searchChunks(
-        chunks,
-        "how do I check a driver's duty hours in a rolling window",
-      ).some((c) => c.title === "dutyViolations"),
-    ).toBe(true);
-  });
-
-  it("a 23:59:60 question finds the isLeapSecond function", () => {
-    const results = searchChunks(
-      chunks,
-      "Is 2016-12-31T23:59:60Z a real leap second?",
-    );
-    expect(
-      results.some((c) => c.kind === "function" && c.title === "isLeapSecond"),
-    ).toBe(true);
-  });
-
-  it("GLONASS time offset from UTC finds utcToGnss or the Maritime guide", () => {
-    const results = searchChunks(chunks, "GLONASS time offset from UTC");
-    expect(
-      results.some(
-        (c) =>
-          (c.kind === "function" && c.title === "utcToGnss") ||
-          (c.kind === "guide" && c.url.includes("maritime-gnss-time")),
-      ),
-    ).toBe(true);
-  });
-});
-
-describe("searchChunks — SWIFT value dates (FIN-96)", () => {
-  it("'which century is a SWIFT value date' finds parseSwiftDate near the top and a guide chunk", () => {
-    const results = searchChunks(chunks, "which century is a SWIFT value date");
-    expect(
-      results
-        .slice(0, 3)
-        .some((c) => c.kind === "function" && c.title === "parseSwiftDate"),
-    ).toBe(true);
-    expect(
-      results.some((c) =>
-        c.url.startsWith("/guides/industries/finance-message-timestamps/#"),
-      ),
-    ).toBe(true);
-  });
-
-  it("'write a date as YYMMDD for SWIFT' finds formatSwiftDate in the top 3", () => {
-    const results = searchChunks(chunks, "write a date as YYMMDD for SWIFT");
-    expect(
-      results
-        .slice(0, 3)
-        .some((c) => c.kind === "function" && c.title === "formatSwiftDate"),
-    ).toBe(true);
-  });
-});
-
-describe("searchChunks — GTFS stop times (RAI-99)", () => {
-  it("'GTFS time past 24:00' finds parseGtfsTime near the top and a guide chunk", () => {
-    const results = searchChunks(chunks, "GTFS time past 24:00");
-    expect(
-      results
-        .slice(0, 3)
-        .some((c) => c.kind === "function" && c.title === "parseGtfsTime"),
-    ).toBe(true);
-    expect(
-      results.some((c) =>
-        c.url.startsWith("/guides/industries/rail-gtfs-service-days/#"),
-      ),
-    ).toBe(true);
-  });
-});
-
-describe("searchChunks — PTP time (IOT-101)", () => {
-  it("'PTP timestamp to UTC' finds ptpToUtc near the top and a guide chunk", () => {
-    const results = searchChunks(chunks, "PTP timestamp to UTC");
-    expect(
-      results
-        .slice(0, 3)
-        .some((c) => c.kind === "function" && c.title === "ptpToUtc"),
-    ).toBe(true);
-    expect(
-      results.some((c) =>
-        c.url.startsWith("/guides/industries/iot-ptp-time/#"),
-      ),
-    ).toBe(true);
   });
 });
