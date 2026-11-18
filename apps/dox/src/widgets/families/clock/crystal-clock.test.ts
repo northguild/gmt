@@ -279,3 +279,50 @@ describe("the glass and its ids", () => {
     );
   });
 });
+
+describe("the 24-hour dial", () => {
+  const day = { ...base, id: "day", dial: 24 as const };
+
+  it("turns the hour hand once a day: 06:00 a quarter, 12:00 straight down, 18:00 three quarters", () => {
+    expect(handAngles(6, 0, 24).hourDeg).toBe(90);
+    expect(handAngles(12, 0, 24).hourDeg).toBe(180);
+    expect(handAngles(18, 0, 24).hourDeg).toBe(270);
+  });
+
+  it("sits the hour hand a quarter of the way past 18 at 19:30, and keeps the minute hand on an hour", () => {
+    expect(handAngles(19, 30, 24)).toEqual({ hourDeg: 292.5, minuteDeg: 180 });
+  });
+
+  it("draws 24 ticks, a long one every three hours", () => {
+    const markup = crystalClock(day).toString();
+    expect(markup.match(/data-major="true"/g)).toHaveLength(8);
+    expect(markup.match(/data-major="false"/g)).toHaveLength(16);
+  });
+
+  it("numbers every long tick 00 to 21, at the tick's own angle", () => {
+    const markup = crystalClock(day).toString();
+    const labels = [
+      ...markup.matchAll(/<text [^>]*data-numeral[^>]*>(\d\d)<\/text>/g),
+    ].map((m) => m[1]);
+    expect(labels).toEqual(["00", "03", "06", "09", "12", "15", "18", "21"]);
+    const six = markup.match(/<text [^>]*x="([\d.]+)" y="([\d.]+)"[^>]*>06</);
+    expect(Number(six![1])).toBeGreaterThan(50);
+    expect(Number(six![2])).toBeCloseTo(50, 0);
+  });
+
+  it("marks the face as a 24-hour dial and draws no numerals on the 12-hour one", () => {
+    expect(crystalClock(day).toString()).toMatch(/<svg [^>]*data-dial="24"/);
+    expect(crystalClock(base).toString()).not.toMatch(/data-numeral/);
+  });
+
+  it("draws a highlight at the 24-hour angles", () => {
+    const [d] = highlightPaths(
+      { fromHour: 6, fromMinute: 0, toHour: 7, toMinute: 0, kind: "skipped" },
+      24,
+    );
+    const [, , x1, y1, r] = numbers(d!);
+    const [ex1, ey1] = expectedPoint(r!, 90);
+    expect(x1).toBeCloseTo(ex1, 1);
+    expect(y1).toBeCloseTo(ey1, 1);
+  });
+});

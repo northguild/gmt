@@ -26,6 +26,10 @@
  * The highlight draws one affected wall-clock hour as a sector between the tick ring and
  * the centre: `skipped` a single dashed wedge, `repeated` two concentric solid arcs, so the
  * two read apart by shape before colour.
+ *
+ * `dial: 24` turns the hour hand once a day instead of twice: 00 at the top, 12 at the
+ * bottom, 24 ticks and a numeral on every third one. Without the numerals a 24-hour face
+ * would read as a 12-hour one showing the wrong time.
  */
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./crystal-clock.module.css";
@@ -47,6 +51,8 @@ const MINUTE_HAND_LENGTH = DIAL_RADIUS * 0.8;
 /** The optional second hand reaches the tick ring. */
 const SECOND_HAND_LENGTH = DIAL_RADIUS * 0.88;
 const CAP_RADIUS = 2.2;
+/** The 24-hour dial's numerals sit inside the long ticks. */
+const NUMERAL_RADIUS = DIAL_RADIUS - TICK_MAJOR_LENGTH - 5;
 
 function polar(radius: number, deg: number): [number, number] {
   const rad = ((deg - 90) * Math.PI) / 180;
@@ -77,6 +83,9 @@ function polygonPoints(radius: number): string {
 
 /** The bezel outline, and the glass pane's own silhouette, so the glass reaches every edge. */
 export const CLOCK_OUTER: string = polygonPoints(OUTER_RADIUS);
+
+/** Hours per turn of the hour hand: the usual 12, or one turn a day. */
+export type CrystalClockDial = 12 | 24;
 
 export type CrystalClockState = "normal" | "repeated" | "skipped" | "naive";
 
@@ -110,6 +119,8 @@ export interface CrystalClockOptions {
   glowable?: boolean;
   /** Draws the affected hour and folds its words into the accessible name. */
   highlight?: CrystalClockHighlight;
+  /** Hours per turn of the hour hand. Default 12. */
+  dial?: CrystalClockDial;
 }
 
 export interface HandAngles {
@@ -118,11 +129,18 @@ export interface HandAngles {
   minuteDeg: number;
 }
 
-/** The hand angles for a wall-clock reading. A 24-hour `hour` folds onto the 12-hour face. */
-export function handAngles(hour: number, minute: number): HandAngles {
-  const twelveHour = (hour % 12) + minute / 60;
+/**
+ * The hand angles for a wall-clock reading. On the 12-hour dial a 24-hour `hour` folds onto
+ * the face; on the 24-hour dial the hour hand turns once a day.
+ */
+export function handAngles(
+  hour: number,
+  minute: number,
+  dial: CrystalClockDial = 12,
+): HandAngles {
+  const onDial = (hour % dial) + minute / 60;
   return {
-    hourDeg: (twelveHour / 12) * 360,
+    hourDeg: (onDial / dial) * 360,
     minuteDeg: (minute / 60) * 360,
   };
 }
@@ -179,10 +197,13 @@ function arcOnlyPath(radius: number, fromDeg: number, toDeg: number): string {
 }
 
 /** The dial paths one highlight draws: a wedge for a skipped hour, two concentric arcs for a repeated one. */
-export function highlightPaths(highlight: CrystalClockHighlight): string[] {
+export function highlightPaths(
+  highlight: CrystalClockHighlight,
+  dial: CrystalClockDial = 12,
+): string[] {
   const { fromHour, fromMinute, toHour, toMinute, kind } = highlight;
-  const fromDeg = handAngles(fromHour, fromMinute).hourDeg;
-  const toDeg = handAngles(toHour, toMinute).hourDeg;
+  const fromDeg = handAngles(fromHour, fromMinute, dial).hourDeg;
+  const toDeg = handAngles(toHour, toMinute, dial).hourDeg;
   const radius = DIAL_RADIUS - 1;
   return kind === "skipped"
     ? [sectorOutlinePath(radius, fromDeg, toDeg)]
@@ -193,7 +214,10 @@ export function highlightPaths(highlight: CrystalClockHighlight): string[] {
 }
 
 /** The affected hour as words ("02:00-03:00 never shown") and as the dial sector(s) it draws. */
-function highlightOf(highlight: CrystalClockHighlight | undefined): {
+function highlightOf(
+  highlight: CrystalClockHighlight | undefined,
+  dial: CrystalClockDial = 12,
+): {
   markup: SafeHtml;
   label: string | undefined;
 } {
@@ -203,18 +227,19 @@ function highlightOf(highlight: CrystalClockHighlight | undefined): {
   const label =
     kind === "skipped" ? `${span} never shown` : `${span} shown twice`;
   const title = html`<title>${label}</title>`;
-  const markup = html`${highlightPaths(highlight).map(
+  const markup = html`${highlightPaths(highlight, dial).map(
     (d) =>
       html`<path d="${d}" class="${styles.highlight}" data-kind="${kind}">${title}</path>`,
   )}`;
   return { markup, label };
 }
 
-function ticks(): SafeHtml {
+/** One tick per hour; every third is long (12, 3, 6, 9, or 00, 03 … 21 on the 24-hour dial). */
+function ticks(dial: CrystalClockDial): SafeHtml {
   const parts: SafeHtml[] = [];
-  for (let i = 0; i < 12; i++) {
-    const deg = i * 30;
-    const major = i % 3 === 0; // 12, 3, 6, 9
+  for (let i = 0; i < dial; i++) {
+    const deg = (i * 360) / dial;
+    const major = i % 3 === 0;
     const outer = polar(DIAL_RADIUS, deg);
     const inner = polar(
       DIAL_RADIUS - (major ? TICK_MAJOR_LENGTH : TICK_MINOR_LENGTH),
@@ -222,6 +247,19 @@ function ticks(): SafeHtml {
     );
     parts.push(
       line(outer, inner, styles.tick!, html`data-major="${String(major)}"`),
+    );
+  }
+  return html`${parts}`;
+}
+
+/** The 24-hour dial's two-digit numerals, one inside each long tick. The 12-hour face has none. */
+function numerals(dial: CrystalClockDial): SafeHtml {
+  if (dial === 12) return html``;
+  const parts: SafeHtml[] = [];
+  for (let i = 0; i < dial; i += 3) {
+    const [x, y] = polar(NUMERAL_RADIUS, (i * 360) / dial);
+    parts.push(
+      html`<text x="${fmt(x)}" y="${fmt(y)}" font-size="6.5" class="${styles.numeral}" data-numeral>${pad2(i)}</text>`,
     );
   }
   return html`${parts}`;
@@ -260,11 +298,12 @@ export function crystalClock(opts: CrystalClockOptions): SafeHtml {
     glowable = true,
     highlight,
     second,
+    dial = 12,
   } = opts;
-  const { hourDeg, minuteDeg } = handAngles(hour, minute);
+  const { hourDeg, minuteDeg } = handAngles(hour, minute, dial);
   const hourHand = polar(HOUR_HAND_LENGTH, hourDeg);
   const minuteHand = polar(MINUTE_HAND_LENGTH, minuteDeg);
-  const { markup: highlightMarkup } = highlightOf(highlight);
+  const { markup: highlightMarkup } = highlightOf(highlight, dial);
 
   const clipId = `gmt-crystal-clip-${id}`;
   const tintId = `gmt-crystal-tint-${id}`;
@@ -279,7 +318,7 @@ export function crystalClock(opts: CrystalClockOptions): SafeHtml {
     ? html`aria-hidden="true"`
     : html`role="img" aria-label="${name}"`;
 
-  const svg = html`<svg class="${styles.clock}" data-state="${state}" data-clock-id="${id}" data-glow="false" viewBox="${CLOCK_VIEWBOX}" ${sizeAttr} ${a11y} focusable="false">
+  const svg = html`<svg class="${styles.clock}" data-state="${state}" data-clock-id="${id}" data-dial="${String(dial)}" data-glow="false" viewBox="${CLOCK_VIEWBOX}" ${sizeAttr} ${a11y} focusable="false">
     <defs>
       <clipPath id="${clipId}"><polygon points="${CLOCK_OUTER}" /></clipPath>
       <linearGradient id="${tintId}" x1="0.5" y1="0" x2="0.5" y2="1">
@@ -300,7 +339,8 @@ export function crystalClock(opts: CrystalClockOptions): SafeHtml {
     <polygon points="${CLOCK_OUTER}" class="${styles.edge}" />
     <polygon points="${CLOCK_OUTER}" class="${styles.glow}" />
     <circle cx="${CENTER_X}" cy="${CENTER_Y}" r="${DIAL_RADIUS}" class="${styles.skipRing}" />
-    ${ticks()}
+    ${ticks(dial)}
+    ${numerals(dial)}
     ${highlightMarkup}
     <g class="${styles.hands}" filter="url(#${shadowId})">
       ${line([CENTER_X, CENTER_Y], hourHand, styles.hand!, html`data-hand="hour"`)}
