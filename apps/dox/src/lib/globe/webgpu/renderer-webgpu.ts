@@ -43,7 +43,14 @@ import type {
   Rgba,
 } from "../types";
 import { greatCirclePoints } from "../geometry";
-import { CASING_CSS, LABEL_OFFSET_X, labelRingShift } from "../casing";
+import {
+  CASING_CSS,
+  LABEL_OFFSET_X,
+  LABEL_OFFSET_Y,
+  labelRingShift,
+} from "../casing";
+import type { Camera } from "../camera";
+import { layoutMarkerLabels } from "../label-layout";
 import { LABEL_MAX_ZOOM } from "../shading";
 import { acquireDevice, createCheckedShaderModule } from "./device";
 import {
@@ -77,10 +84,6 @@ const LIMB_STROKE_CSS = 1;
 
 /** How far the atmosphere glow reaches past the limb, as a multiple of R. */
 const ATMOSPHERE_REACH = 1.06;
-
-/** Where a label's box sits above its marker, in CSS pixels; `LABEL_OFFSET_X`
- *  (../casing.ts) places it to the right. */
-const LABEL_OFFSET_Y = -7;
 
 /** Floats per marker instance — see `markerShader`'s vertex inputs. */
 const MARKER_FLOATS = 14;
@@ -484,6 +487,8 @@ export async function createWebgpuRenderer(
   let atlas: LabelAtlas | null = null;
   let labelGroup: GPUBindGroup | null = null;
   let atlasLabels = "";
+  /* The view the label instances were last laid out for; see `layoutLabelInstances`. */
+  let labelLayoutKey = "";
 
   /** The loaded imagery, once it has arrived. */
   let imagery: ImageryHandle | null = null;
@@ -778,25 +783,57 @@ export async function createWebgpuRenderer(
     rebuildLabelInstances();
   }
 
+  /**
+   * A new label set clears the laid-out instances. The layout depends on the camera
+   * (labels trade places with their neighbours as the globe turns), so
+   * `drawSprites` redoes it when the view changes.
+   */
   function rebuildLabelInstances(): void {
+    labelLayoutKey = "";
+    labelInstances.count = 0;
+  }
+
+  function layoutLabelInstances(camera: Camera): void {
+    const key = [
+      camera.rotation[0],
+      camera.rotation[1],
+      camera.radius,
+      camera.centreX,
+      camera.centreY,
+      dpr,
+    ].join("|");
+    if (key === labelLayoutKey) return;
+    labelLayoutKey = key;
     if (!atlas) {
       labelInstances.count = 0;
       return;
     }
+    const rects = atlas.rects;
+    /* Widths come from the atlas: a rectangle less its halo margin on each side. */
+    const sides = layoutMarkerLabels(markers, camera, (label) => {
+      const rect = rects.get(label);
+      return rect ? rect.widthCss - rect.marginCss * 2 : 0;
+    });
     const rows: number[] = [];
-    for (const marker of markers) {
-      if (!marker.label) continue;
-      const rect = atlas.rects.get(marker.label);
-      if (!rect) continue;
+    markers.forEach((marker, index) => {
+      const side = sides[index];
+      if (!marker.label || !side) return;
+      const rect = rects.get(marker.label);
+      if (!rect) return;
       /* The atlas rectangle includes the halo margin, so the quad starts that
          far up and left of the text, which stays where it always was. A
-         ringed marker's label slides right until its halo clears the ring,
-         by whole device pixels so the glyphs still land one texel per pixel. */
-      const ringShift = Math.ceil(labelRingShift(marker.ring) * dpr) / dpr;
+         ringed marker's label slides away from the dot until its halo clears the
+         ring, by whole device pixels so the glyphs still land one texel per
+         pixel. On the left the text ends where it would have begun, and the
+         shift runs the other way. */
+      const shift = Math.ceil(labelRingShift(marker.ring) * dpr) / dpr;
+      const textWidth = rect.widthCss - rect.marginCss * 2;
       rows.push(
         marker.position[0],
         marker.position[1],
-        LABEL_OFFSET_X - rect.marginCss,
+        side === "right"
+          ? LABEL_OFFSET_X - rect.marginCss
+          : -LABEL_OFFSET_X - textWidth - rect.marginCss,
         LABEL_OFFSET_Y - rect.marginCss,
         rect.widthCss,
         rect.heightCss,
@@ -804,9 +841,9 @@ export async function createWebgpuRenderer(
         rect.v0,
         rect.u1,
         rect.v1,
-        ringShift,
+        side === "right" ? shift : -shift,
       );
-    }
+    });
     upload(
       labelInstances,
       "globe-labels",
@@ -1114,6 +1151,7 @@ export async function createWebgpuRenderer(
        same rule the canvas-2D renderer follows, so the two agree on when the
        globe stops being a labelled map and becomes an object in motion. */
     const showLabels = !frame.quiet && frame.zoom < LABEL_MAX_ZOOM;
+    if (showLabels) layoutLabelInstances(frame.camera);
     if (
       showLabels &&
       labelInstances.count > 0 &&
