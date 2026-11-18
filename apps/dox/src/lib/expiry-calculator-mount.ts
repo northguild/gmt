@@ -558,10 +558,13 @@ function setupWidget(
     speakTimer = setTimeout(speak, SPEAK_DELAY_MS);
   }
 
-  /** One reading, then the next on the second. */
+  /**
+   * One reading, then the next on the second. The wait is read from `getUtcNow`, which keeps
+   * the fraction a whole-second snapshot drops, so a tick that ran late does not push the next.
+   */
   function tick(): void {
     ttl = readTtl(lib, state);
-    timer = setTimeout(tick, msToNextSecond(takeSnapshot(lib)));
+    timer = setTimeout(tick, msToNextSecond(lib.getUtcNow()));
     paintLive();
     if (state.mode === "now" && (ttl === null) !== stripRefused) drawStrip();
   }
@@ -574,7 +577,7 @@ function setupWidget(
     stopClock();
     state.snapshot = takeSnapshot(lib);
     ttl = readTtl(lib, state);
-    if (wantsLive) timer = setTimeout(tick, msToNextSecond(state.snapshot));
+    if (wantsLive) timer = setTimeout(tick, msToNextSecond(lib.getUtcNow()));
   }
 
   /** The switch: off holds the last values, on reads the clock again. */

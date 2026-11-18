@@ -383,6 +383,30 @@ describe("the Live clock switch", () => {
     expect(liveSwitch()).toHaveFocus();
   });
 
+  it("ticks on the whole second, and a late tick does not drift", async () => {
+    const wall = () => vi.getMockedSystemTime()?.toISOString();
+    await openNow();
+    // Now was chosen at :00.250, so the first tick is due 750 ms on, at :01.000.
+    let seen = plates();
+    for (let ms = 0; plates() === seen && ms < 1100; ms += 1)
+      vi.advanceTimersByTime(1);
+    expect(wall()).toBe("2024-06-12T15:20:01.000Z");
+    // A real timer runs late. Move the wall clock 30 ms on just before the next tick fires.
+    seen = plates();
+    vi.advanceTimersByTime(999);
+    vi.setSystemTime("2024-06-12T15:20:02.029Z");
+    vi.advanceTimersByTime(1);
+    expect(plates()).not.toBe(seen);
+    expect(wall()).toBe("2024-06-12T15:20:02.030Z");
+    // The tick after it lands back on the second, at :03.000, not at :03.030.
+    seen = plates();
+    vi.advanceTimersByTime(969);
+    expect(plates()).toBe(seen);
+    vi.advanceTimersByTime(1);
+    expect(plates()).not.toBe(seen);
+    expect(wall()).toBe("2024-06-12T15:20:03.000Z");
+  });
+
   it("writes a tick in place, so focus on the copy button and the plates' nodes survive", async () => {
     const w = await openNow();
     vi.advanceTimersByTime(1000);
