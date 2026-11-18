@@ -40,7 +40,7 @@ once, then run everything below against that build.
 | `a11y-tab-walk` | pr | Deck controls bar, both dialogs, presenter buttons: add the deck and presenter to its page list |
 | `esc-cascade` | pr | Overview and help dialogs close one per Escape, focus returns to the opener |
 | `contrast-measure` | pr | Slide text over its panel at 7:1 for each slide, both colour schemes; `slides-check` steps to each slide by `#<id>` and calls the same measurement |
-| `data-credits-check` | pr | The sky and capture credits on the `thanks` slide and the index |
+| `data-credits-check` | pr | The sky credits button on the deck index; the deck's credits are a list in its info menu, covered by `deck-controls.test.ts` |
 | `head.dist.test.ts` | CI | WebMCP markers on tool pages and registry decks only |
 | `hero-space` | pr | The landing hero is unchanged after the `space-sky.ts` extraction |
 | `globe-smoke` | local (GPU) | WebGPU on the deck page: imagery, pins, arcs, a hop, the shatter, then canvas-2D parity |

@@ -7,7 +7,7 @@ every change), [visual-design.md](../../reference/visual-design.md). Data: `src/
 
 ## Goal
 
-The 16 slides of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`, using slice
+The 20 slides of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`, using slice
 1's components, slice 2's places, slice 2b's wall and slice 3's notes. Every bug on stage is a real filing read
 from `upstream-filings.json`; every gmt result is computed by gmt at build time; every count is
 derived. The talk runs 20 minutes; slide 16 holds 5 minutes of questions.
@@ -44,6 +44,9 @@ rules per slide:
   `date-ban.test.ts`). The slide has no builds: every row's code types out together as it arrives.
 - **`temporal`**: the flight through the wall and the shatter; Temporal's arrival and per-engine
   state from `temporal-compat.ts` (`engineLabel`, `stateLine`); no engine version typed by hand.
+  The text sits left of the Earth (default layout), in plain words: what Temporal does, then how
+  many known bugs still need a workaround and in which engines. The guard and probe counts are on
+  `guards`.
   Notes: "One clock against the whole planet. Temporal takes the zone as data, so code can ask
   any place on Earth, and GMT is built on it."
 - **`zone-matrix`**: the matrix pins light with each suite's counts, one build per suite, GMT
@@ -69,9 +72,8 @@ rules per slide:
   question, but this agent has the whole planet's tools."
 - **`page-tools`**: the live `check_eta_against_cutoff` call, then this deck's three tools, the
   agent prompt and `llms.txt`. Links are `withBase` page links ending in `/`.
-- **`thanks`**: the site URL, the repository, the sky data credits (HYG CC BY-SA, ESO CC BY) and
-  the wall's capture credits in the site's data-credits form, and the audience-question panel
-  (slice 4b).
+- **`thanks`**: the site URL, the repository and the audience-question panel (slice 4b). The sky
+  data credits and the wall's capture credits are in the info menu on every slide.
 
 Every slide has `<Notes>` written in plain English for the owner's review. The deck's framing,
 in the index lede and the title slide's notes, is "one clock against the whole planet": a

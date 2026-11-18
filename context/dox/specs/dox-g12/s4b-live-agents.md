@@ -85,7 +85,7 @@ Plain DOM, no React (React stays inside `/dox`). `ai`'s `DefaultChatTransport` w
   "Recorded" with the date (gmt `formatZonedDateTime`, `Europe/Helsinki`) and the brain.
 - A test checks each recording parses as UI-message chunks and has a brain and an instant.
 
-## 5 · Audience questions (slide 16)
+## 5 · Audience questions (slide 20)
 
 A kit `textInput` and a Send `button` under the slide's thanks text; Enter sends. Live only:
 on failure the panel says so in plain words and offers the three prepared questions as buttons

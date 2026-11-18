@@ -101,8 +101,9 @@ returnHome(), destroy() }`.
   ([Tier 4](../../built/tier-4-globe.md#engine-srclibglobe)).
 - Preload on the deck page only: `hero-sky.bin`, `hero-milkyway.webp` and the Earth imagery,
   through `<link rel="preload">` in the page head, so a dropped Wi-Fi after load loses nothing.
-- The sky credits (HYG CC BY-SA, ESO CC BY) sit on the `thanks` slide and the deck index, in the
-  site's data-credits form.
+- The sky credits (HYG CC BY-SA, ESO CC BY) and the Earth imagery credit sit in the deck's info
+  menu, under its tools, on every slide (`deckControls`; a deck adds its own through `Deck`'s
+  `credits`). The deck index carries them in the site's data-credits form.
 
 ## Panels on the stage
 

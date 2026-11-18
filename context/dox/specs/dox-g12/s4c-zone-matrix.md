@@ -6,8 +6,9 @@
 ## Goal
 
 Run each library's own test suite under the zones GMT's suite runs in, and report what fails,
-sorted by cause. One committed JSON feeds four readers: a new page `/compare/zone-matrix/`, a
-column in the full table on `/compare`, one line on each Migrate page, and slide 5 of Deck 0.
+sorted by cause. One committed JSON feeds three readers: a new page `/compare/zone-matrix/`, a
+column in the full table on `/compare`, and one line on each Migrate page. Deck 0 reads only its
+zone list, for the clock pins (`planet-zones.ts`); its numbers slides read `zone-probe.json`.
 Neutral throughout: versions, commands and counts, no adjectives.
 
 ## The runner: `scripts/zone-matrix/` (repo root)
@@ -128,11 +129,6 @@ an `untagged` entry or on a GMT failure, so the build stops.
   `migrate/moment`, `luxon`, `date-fns`, `dayjs` and `internationalized-date` (Spacetime has no
   Migrate page), and one line per polyfill on
   `migrate/temporal.mdx`, each linking `/compare/zone-matrix/`.
-- **Deck, slide 5 `zone-matrix`:** after the shatter, the matrix zones' pins switch from local
-  times to counts. One build per suite: each pin shows "n · m" (one-zone · wrong-answer, union
-  over Node), a panel names the suite, version and both totals, and the last build is GMT, 0
-  everywhere. `UTC` has no place, so it is a chip in the panel, not a pin. Reduced motion: no
-  pulses, labels change in place.
 
 ## Tests
 
@@ -142,10 +138,12 @@ an `untagged` entry or on a GMT failure, so the build stops.
 - `scripts/zone-matrix/*.test.mjs` (`node --test`): pin scan, report parsers on recorded
   samples, tag matching and stale-tag reporting, cell merge.
 - `library-compare-tables.test.ts`, `migrate-view.test.ts`, `head-tags.test.ts` (new page id)
-  and `mdx-jsx` twin tests extended; `slides-built.test.ts` checks slide 5's builds.
+  and `mdx-jsx` twin tests extended; `planet-zones.test.ts` holds the deck's pins to the
+  matrix zones.
 
 ## Definition of done
 
 - A full run is committed with every cell present or `couldNotRun`, no untagged failure, GMT 0.
-- The new page, the `/compare` column, the seven Migrate lines and slide 5 all read the one JSON.
+- The new page, the `/compare` column and the seven Migrate lines all read the one JSON, and the
+  deck's pins read its zone list.
 - Own tests, `pnpm dox:lint`, `pnpm dox:check` green; the owner reads the page once in full.

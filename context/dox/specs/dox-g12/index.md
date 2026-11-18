@@ -19,9 +19,9 @@ The date libraries people reach for show one clock as their site's visual: one l
 works across the whole planet at once, and the deck stages that contrast. On slide 2 a wall of
 captured library landing pages, clocks in view, hangs in orbit. Stepping to the Temporal slide
 flies through it: the panes shatter into ice, shards settle as clock pins with local times, and
-the Earth turns. Slide 5 puts numbers on it: on the zones GMT's CI runs in, how many of each
-library's own tests fail, sorted into "the test assumes one zone" and "the library gives a wrong
-answer" ([slice 4c](./s4c-zone-matrix.md)). Then every slide is pinned to a place, and the camera
+the Earth turns. The pins stand in the zones GMT's CI runs in ([slice 4c](./s4c-zone-matrix.md)).
+Slides 5 to 9 put numbers on it: the same inputs go into every library, and the standard gives
+the answer (`zone-probe.json`). Then every slide is pinned to a place, and the camera
 hops between them under the real sky, Sun and Moon. A contrast of viewpoint, never a verdict: no
 text judges a library, and their marks appear only inside the captioned snapshots.
 
@@ -55,9 +55,9 @@ One PR. Each slice lands with its own tests (`pnpm dox:test -- <files>`), `pnpm 
 | 2 | [Space stage](./s2-space-stage.md) | The Earth and real sky behind every slide; hop flights between places; WASD free flight; the route as arcs; the Moon pull-back |
 | 2b | [Ice wall](./s2b-ice-wall.md) | Captured library pages with their clocks hang in orbit; flying through shatters them into ice; shards become clock pins with local times |
 | 3 | [Presenter view](./s3-presenter.md) | Notes, next slide, elapsed against plan, pace, live-or-recorded state, readiness check |
-| 4 | [Deck 0 content](./s4-deck-0.md) | The 16 slides (ids, notes, framing); bug cards read from the filings; build-time gmt results |
+| 4 | [Deck 0 content](./s4-deck-0.md) | The 20 slides (ids, notes, framing); bug cards read from the filings; build-time gmt results |
 | 4b | [Live agents](./s4b-live-agents.md) | The deck's own page tools; a live page-tool call; Dox chat answering on stage, with recorded fallbacks |
-| 4c | [Zone matrix](./s4c-zone-matrix.md) | Library suites run under GMT's CI zones; a Compare page, a `/compare` column, Migrate lines, slide 5 |
+| 4c | [Zone matrix](./s4c-zone-matrix.md) | Library suites run under GMT's CI zones; a Compare page, a `/compare` column, Migrate lines |
 | 5 | [Close-out](./s5-close-out.md) | Full gates, the venue runbook, `built/` updated |
 | 6 | [Time, not the camera](./s6-time-not-camera.md) | One held view through the bugs; time-lapses; a visual per bug; filings as pins; the clocks return |
 
@@ -66,25 +66,30 @@ One PR. Each slice lands with its own tests (`pnpm dox:test -- <files>`), `pnpm 
 | # | id | Slide | Place | Min |
 | --- | --- | --- | --- | --- |
 | 1 | `title` | Give Me Temporal; the venue's time now | Helsinki | 0.5 |
-| 2 | `one-clock` | The ice wall: the libraries people reach for, each one clock; a recorded agent answer reaches for Moment | `wall` | 1.5 |
+| 2 | `one-clock` | The ice wall: the libraries people reach for, each one clock; a recorded agent answer reaches for Moment | `wall` | 1 |
 | 3 | `date` | `Date` is broken: rows from `date-faults.ts` | `wall` (held) | 1 |
-| 4 | `temporal` | Through the wall: one clock becomes the whole planet; Temporal and engine state | `planet` | 1.5 |
-| 5 | `zone-matrix` | Each suite's failures in GMT's CI zones, one build per suite, GMT last; then the planet held | `planet` | 1.5 |
-| 6 | `abort` | `nodejs/node#67076` with `CLDR-19873`: a recorded terminal; a locale pattern aborts Node | `planet`, lapse | 2 |
-| 7 | `years` | Wrong years: `ICU-23609`, `fullcalendar/temporal-polyfill#127`; then `ICU-23619`, `js-temporal/temporal-polyfill#368`; counters roll | `planet`, lapses | 1.5 |
-| 8 | `day-off` | `ICU-23627`; `fullcalendar/temporal-polyfill#128` (Chinese New Year 2027); calendar pages | `planet`, lapses, the Moon | 1.5 |
-| 9 | `manila` | `tc39/proposal-temporal#3330` and siblings: Manila skips 1844-12-31; the page drops out | `planet`, lapse | 1.5 |
-| 10 | `engines` | `nodejs/node#67457`: engines disagree on `until()` and `round()` | `planet`, sun | 1 |
-| 11 | `scoreboard` | Every filing as pins, by tracker and state | Overview | 0.5 |
-| 12 | `gmt` | GMT: familiar names, results computed by gmt; the clock skips 02:59 to 04:00 | Greenwich | 2 |
-| 13 | `guards` | Tested guards and the canary | Greenwich | 1 |
-| 14 | `ask-dox` | The slide 2 question again, live to Dox chat, tool calls visible | Helsinki | 1.5 |
-| 15 | `page-tools` | A live page-tool call, and this deck's own tools read by an agent | Helsinki | 1 |
-| 16 | `thanks` | Thanks; the clock shows Helsinki now; audience questions | Helsinki | 0.5 |
+| 4 | `temporal` | Through the wall: one clock becomes the whole planet; Temporal and engine state | `planet` | 1 |
+| 5 | `experiments` | The experiments: the same inputs into every library, answers from the standard; counts from `zone-probe.json` | `planet` | 0.5 |
+| 6 | `experiment-gaps` | A time the clocks skip | `planet` | 1 |
+| 7 | `experiment-overlaps` | A time that happens twice | `planet` | 1 |
+| 8 | `experiment-host` | The same input on machines set to different zones | `planet` | 1 |
+| 9 | `experiment-odd` | Apia's missing day, Lord Howe's half hour, Kathmandu's +05:45 | `planet` | 1 |
+| 10 | `abort` | `nodejs/node#67076` with `CLDR-19873`: a recorded terminal; a locale pattern aborts Node | `planet`, lapse | 1.5 |
+| 11 | `years` | Wrong years: `ICU-23609`, `fullcalendar/temporal-polyfill#127`; then `ICU-23619`, `js-temporal/temporal-polyfill#368`; counters roll | `planet`, lapses | 1 |
+| 12 | `day-off` | `ICU-23627`; `fullcalendar/temporal-polyfill#128` (Chinese New Year 2027); calendar pages | `planet`, lapses, the Moon | 1.5 |
+| 13 | `manila` | `tc39/proposal-temporal#3330` and siblings: Manila skips 1844-12-31; the page drops out | `planet`, lapse | 1.5 |
+| 14 | `engines` | `nodejs/node#67457`: engines disagree on `until()` and `round()` | `planet`, sun | 1 |
+| 15 | `scoreboard` | Every filing as pins, by tracker and state | Overview | 0.5 |
+| 16 | `gmt` | GMT: familiar names, results computed by gmt; the clock skips 02:59 to 04:00 | Greenwich | 1.5 |
+| 17 | `guards` | Tested guards and the canary | Greenwich | 1 |
+| 18 | `ask-dox` | The slide 2 question again, live to Dox chat, tool calls visible | Helsinki | 1 |
+| 19 | `page-tools` | A live page-tool call, and this deck's own tools read by an agent | Helsinki | 1 |
+| 20 | `thanks` | Thanks; the clock shows Helsinki now; audience questions | Helsinki | 0.5 |
 
-Minutes sum to 20 (a built-output test holds it); slide 16 holds 5 minutes of questions. Persian
-and Meiji share one slide, the route is slide 5's last build, and the scoreboard, guards, `years`
-and `day-off` run half a minute shorter, which leaves room for the demos and the matrix.
+Minutes sum to 20 (a built-output test holds it); slide 20 holds 5 minutes of questions. Persian
+and Meiji share one slide. The experiment slides take a minute each, so every slide that a demo or
+a build does not hold runs at a minute or less. The full zone-matrix results live on
+`/compare/zone-matrix/`, not in the deck.
 
 ## Files
 

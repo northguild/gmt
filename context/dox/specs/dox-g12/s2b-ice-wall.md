@@ -86,7 +86,7 @@ the globe's own lens. Nothing else in the engine changes for this slice.
 `PLANET_ZONES` in `places.ts`: the matrix zones read from `zone-matrix.json`
 ([slice 4c](./s4c-zone-matrix.md)) except `UTC`, which has no place, plus Helsinki, Madrid,
 Lagos, Nairobi, Tehran, Tokyo, Manila, São Paulo and Mexico City, so the pins circle the planet
-and slide 5 can reuse the matrix pins (a test holds every zone in `TZ_COORDINATES`). The
+and the experiment slides after it reuse the same pins (a test holds every zone in `TZ_COORDINATES`). The
 twelve-zone view centres the camera so twelve sit on the visible side.
 - Twelve shards, the three largest of each pane, turn at 500 ms from ballistic flight onto a
   curve towards their zone's point (`engine.project`, read each frame because the Earth turns),
