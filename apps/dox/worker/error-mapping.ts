@@ -1,10 +1,24 @@
-import { APICallError, RetryError } from "ai";
+import { APICallError, InvalidToolInputError, RetryError } from "ai";
 
 import { BrainsTimedOutError } from "./brains";
 
 export interface MappedError {
   status: number;
   body: { error: string; retryable: boolean };
+}
+
+/** An error carrying `name`, whichever realm or copy it came from. */
+function isNamed(error: unknown, name: string): boolean {
+  // The tool-output line can hold the error as its printed text.
+  if (typeof error === "string") return error.startsWith(`${name}:`);
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    ((error as { name?: unknown }).name === name ||
+      String((error as { message?: unknown }).message ?? "").startsWith(
+        `${name}:`,
+      ))
+  );
 }
 
 /** `RetryError.lastError` is the final attempt's failure; `errors` holds every
@@ -56,6 +70,25 @@ export function mapUpstreamError(rawError: unknown): MappedError {
       body: {
         error:
           "The assistant is slow to respond right now. Please try again in a moment.",
+        retryable: true,
+      },
+    };
+  }
+
+  // The model called a tool with input its schema refuses. The text is the
+  // tool-error line under the answer, so it says what did not open rather
+  // than the bare failure line.
+  // The tool-output line carries a copy of the error with the same name but no
+  // class marker, so `isInstance` alone misses it.
+  if (
+    InvalidToolInputError.isInstance(error) ||
+    isNamed(error, "AI_InvalidToolInputError")
+  ) {
+    return {
+      status: 500,
+      body: {
+        error:
+          "The assistant could not open that tool this time. Ask again, or open the tool from its page.",
         retryable: true,
       },
     };
