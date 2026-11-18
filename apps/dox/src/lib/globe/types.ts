@@ -180,10 +180,18 @@ export interface GlobeOptions {
   /** Defaults to `[1, 5]`. */
   zoomRange?: readonly [number, number];
   /**
+   * The zoom the globe opens at, so a page that frames the Earth at a set size shows it at that
+   * size from the first frame rather than easing up from the range's low end, the default.
+   */
+  initialZoom?: number;
+  /**
    * Whether to suppress ambient spin, inertia and eased transitions. Read on
    * every frame, so a preference change takes effect without a remount.
    */
   reducedMotion?: () => boolean;
+  /** False never schedules the ambient spin: the globe stays at rest and draws no frames until
+   *  moved. Default true. */
+  ambient?: boolean;
   /**
    * Where to put the sphere inside the host. Called with the host's CSS box on
    * every measure; `cx`/`cy` are the centre and `radius` the radius at zoom 1,
@@ -244,8 +252,31 @@ export interface GlobeEngine {
   setRegions(regions: readonly GlobeRegion[]): void;
   setMarkers(markers: readonly GlobeMarker[]): void;
   setArcs(arcs: readonly GlobeArc[]): void;
-  /** Rotate to `[λ, φ]`, eased unless reduced motion is on. */
-  flyTo(rotation: readonly [number, number]): void;
+  /**
+   * Rotate to `[λ, φ]`, eased unless reduced motion is on. With `hop` the flight is timed: the
+   * camera lifts to `dipZoom` at the midpoint and comes down at the goal. Reduced motion snaps.
+   */
+  flyTo(
+    rotation: readonly [number, number],
+    options?: { hop?: { durationMs: number; dipZoom: number } },
+  ): void;
+  /** Hold a camera rate (degrees per second east and north, zoom units per second) until the
+   *  next call with zeros. A drag or `flyTo` cancels it. */
+  steer(vector: { lng: number; lat: number; zoom: number }): void;
+  /** Measure the host and `framing` again now, for a host whose frame changed without a resize. */
+  refit(): void;
+  /** Where the camera is and whether it is still moving. */
+  getView(): {
+    rotation: readonly [number, number];
+    zoom: number;
+    moving: boolean;
+    /** The camera's distance from the Earth's centre, in Earth radii (the one camera, 6.61). */
+    distance: number;
+    /** The pinhole's focal length in CSS pixels. */
+    focalPx: number;
+    /** The Earth's centre on the canvas, which is the pinhole's principal point. */
+    centre: { x: number; y: number };
+  };
   setZoom(zoom: number): void;
   zoomBy(factor: number): void;
   getZoom(): number;

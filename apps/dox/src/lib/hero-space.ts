@@ -8,28 +8,15 @@
  * the globe's frames (`sky.view`, so the sky has no loop of its own) and starts the rare meteor.
  * If the globe fails to mount, `skyWithoutGlobe` draws once at the start rotation and the anchor.
  */
-import { startRotation } from "./globe-zones";
 import { runHeroEntrance } from "./hero-entrance";
-import { mountSky, type Sky, type SkyMap } from "./sky";
+import type { Sky } from "./sky";
+import {
+  drawWithoutGlobe,
+  followGlobe as followSky,
+  loadSky,
+} from "./space-sky";
 import { mountSpaceFx } from "./space-fx";
 import type { GlobeHost } from "./globe";
-
-type Clock = {
-  getUnixNow: typeof import("@northguild/gmt/unix/get").getUnixNow;
-  getSystemTimeZone: typeof import("@northguild/gmt/zoned/get").getSystemTimeZone;
-};
-
-let clock: Promise<Clock> | undefined;
-
-/* Dynamic, so the Temporal polyfill behind these two stays out of the static first-paint graph. */
-const loadClock = (): Promise<Clock> =>
-  (clock ??= Promise.all([
-    import("@northguild/gmt/unix/get"),
-    import("@northguild/gmt/zoned/get"),
-  ]).then(([unix, zoned]) => ({
-    getUnixNow: unix.getUnixNow,
-    getSystemTimeZone: zoned.getSystemTimeZone,
-  })));
 
 /** From the followGlobe call to a sky fully in: the entrance's latest start plus its fade. */
 const SKY_IN_MS = 2900;
@@ -103,31 +90,6 @@ const canvasOf = (root: HTMLElement, which: string): HTMLCanvasElement | null =>
 export const heroOf = (element: Element): HTMLElement | null =>
   element.closest<HTMLElement>('[data-gate="hero-stage"]');
 
-/** The Milky Way map's pixels, or undefined when it cannot load: the sky then draws the stars alone. */
-async function loadMilkyWay(
-  src: string | undefined,
-): Promise<SkyMap | undefined> {
-  if (!src) return undefined;
-  try {
-    const response = await fetch(src);
-    if (!response.ok) return undefined;
-    /* The map's bytes are brightness, not colour, so no colour space may change them. */
-    const image = await createImageBitmap(await response.blob(), {
-      colorSpaceConversion: "none",
-    });
-    const { width, height } = image;
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx?.drawImage(image, 0, 0);
-    image.close();
-    return ctx?.getImageData(0, 0, width, height);
-  } catch {
-    return undefined;
-  }
-}
-
 /** Fetches the star list and the Milky Way; the first draw waits for the globe (or for `skyWithoutGlobe`). */
 export function startHeroSky(root: HTMLElement): void {
   if (skies.has(root)) return;
@@ -136,48 +98,30 @@ export function startHeroSky(root: HTMLElement): void {
   const host = root.parentElement;
   const src = root.dataset["src"];
   if (!stars || !band || !host || !src) return;
-
-  const sky = (async (): Promise<Sky | null> => {
-    try {
-      const [response, milkyWay, time] = await Promise.all([
-        fetch(src),
-        loadMilkyWay(root.dataset["milkyWay"]),
-        loadClock(),
-      ]);
-      if (!response.ok) return null;
-      const data = await response.arrayBuffer();
-      const sky = mountSky({
-        stars,
-        band,
-        host,
-        data,
-        milkyWay,
-        signal: new AbortController().signal,
-        rotation: startRotation(time.getSystemTimeZone()),
-        now: time.getUnixNow,
-      });
-      return sky;
-    } catch {
-      /* A sky that cannot load leaves the plain void: the page does not depend on it. */
-      return null;
-    }
-  })();
-  skies.set(root, sky);
+  /* The landing's sky lives as long as the page, so its signal is never aborted. */
+  skies.set(
+    root,
+    loadSky({
+      stars,
+      band,
+      host,
+      src,
+      milkyWay: root.dataset["milkyWay"],
+      signal: new AbortController().signal,
+    }),
+  );
 }
 
 /** The globe could not mount: draw the sky once at the start rotation, at the anchor. */
 export async function skyWithoutGlobe(root: HTMLElement): Promise<void> {
   const hero = heroOf(root);
-  const sky = hero
-    ? await skies.get(hero.querySelector("[data-hero-sky]")!)
-    : null;
-  if (!sky || hero?.dataset["sky"] === "ready") return;
-  const time = await loadClock();
-  sky.view(startRotation(time.getSystemTimeZone()), null, time.getUnixNow());
+  const sky = hero?.querySelector<HTMLElement>("[data-hero-sky]");
+  if (!hero || !sky) return;
+  await drawWithoutGlobe(skies.get(sky), hero, new AbortController().signal);
 }
 
 /**
- * Draws the sky for the globe's first camera, makes it follow the Earth's camera and the clock, and starts the meteor. The meteor keeps clear of the copy
+ * Draws the sky for the globe's first camera (`space-sky.ts`), makes it follow the Earth's camera and the clock, and starts the meteor. The meteor keeps clear of the copy
  * column, an open zone drawer and the Earth's box.
  */
 export async function followGlobe(
@@ -189,31 +133,14 @@ export async function followGlobe(
 ): Promise<void> {
   const root = hero.querySelector<HTMLElement>("[data-hero-sky]");
   if (!root) return;
-  const sky = await skies.get(root);
+  await followSky({
+    sky: skies.get(root),
+    globe,
+    origin: hero,
+    surface,
+    signal,
+  });
   if (signal.aborted) return;
-  if (sky) {
-    const time = await loadClock();
-    if (signal.aborted) return;
-    const follow = (): void => {
-      /* The globe reports the Earth's centre in its surface's pixels; the sky wants the hero's. */
-      const origin = hero.getBoundingClientRect();
-      const box = surface.getBoundingClientRect();
-      const centre = globe.getCentre();
-      sky.view(
-        globe.getRotation(),
-        {
-          x: centre.x + box.left - origin.left,
-          y: centre.y + box.top - origin.top,
-          radius: centre.radius,
-        },
-        time.getUnixNow(),
-        globe.getZoom(),
-      );
-    };
-    /* The first draw does not wait for a globe frame. */
-    follow();
-    globe.onFrame(follow);
-  }
 
   /* The meteor waits for the sky to be revealed, and for the entrance to have brought it in. */
   if (hero.dataset["sky"] !== "ready") return;

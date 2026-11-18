@@ -37,6 +37,7 @@ import {
   unproject as unprojectPoint,
   wrapLng,
 } from "./camera";
+import { focal, P } from "./pinhole";
 import { createController, IDLE_MS, type Controller } from "./controller";
 import {
   DAWN_END_MS,
@@ -93,7 +94,11 @@ export async function createGlobeEngine(
   const controller = createController({
     initialRotation: options.initialRotation,
     zoomRange: options.zoomRange,
+    ...(options.initialZoom === undefined
+      ? {}
+      : { initialZoom: options.initialZoom }),
     reducedMotion,
+    ambient: options.ambient,
   });
   const camera = createCamera(options.initialRotation);
 
@@ -793,13 +798,27 @@ export async function createGlobeEngine(
       renderer?.setArcs(next);
       requestDraw();
     },
-    flyTo(rotation) {
+    flyTo(rotation, flight) {
       controller.flyTo(
         [wrapLng(rotation[0]), clampLat(rotation[1])],
         performanceNow(),
+        flight?.hop,
       );
       schedule();
     },
+    steer(vector) {
+      controller.steer(vector, performanceNow());
+      schedule();
+    },
+    refit: () => measure(),
+    getView: () => ({
+      rotation: [controller.rotation[0], controller.rotation[1]],
+      zoom: controller.zoom,
+      moving: controller.needsFrame(),
+      distance: P,
+      focalPx: focal(camera.radius),
+      centre: { x: camera.centreX, y: camera.centreY },
+    }),
     setZoom(zoom) {
       controller.setZoom(zoom, performanceNow());
       schedule();

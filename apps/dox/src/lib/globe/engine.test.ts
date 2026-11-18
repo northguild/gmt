@@ -196,6 +196,27 @@ describe("framing", () => {
   });
 });
 
+describe("refit", () => {
+  it("asks the framing callback again and draws the sphere where it now says", async () => {
+    const host = hostWithBox(400, 300);
+    let centred = false;
+    const engine = await start(host, {
+      framing: (w, h) => ({
+        cx: centred ? w / 2 : w * 0.75,
+        cy: h / 2,
+        radius: 80,
+      }),
+    });
+    expect(made[0]!.frames.at(-1)!.camera.centreX).toBe(300);
+    centred = true;
+    engine.refit();
+    await vi.waitFor(() =>
+      expect(made[0]!.frames.at(-1)!.camera.centreX).toBe(200),
+    );
+    expect(engine.getCentre().x).toBe(200);
+  });
+});
+
 describe("getCentre", () => {
   it("reports the silhouette radius at zoom 1 and after zooming", async () => {
     const host = hostWithBox(400, 300);
