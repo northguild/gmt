@@ -876,6 +876,7 @@ describe("the clock that becomes the Earth", () => {
         value: h,
         configurable: true,
       });
+      // oxlint-disable-next-line dox-test/no-dispatch-event -- no user action resizes the window in jsdom; the event is the input
       window.dispatchEvent(new Event("resize"));
     };
     const own = Object.getOwnPropertyDescriptor(window, "innerHeight");
@@ -891,6 +892,7 @@ describe("the clock that becomes the Earth", () => {
       windowHeight(900);
       expect(face()?.style.transform).toBe(first);
       size(1280, 600);
+      // oxlint-disable-next-line dox-test/no-dispatch-event -- no user action resizes the window in jsdom; the event is the input
       window.dispatchEvent(new Event("resize"));
       expect(face()?.style.transform).not.toBe(first);
     } finally {

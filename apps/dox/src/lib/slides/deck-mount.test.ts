@@ -554,7 +554,6 @@ describe("mountDeck", () => {
       const info = screen.getByRole("button", { name: "Slide options" });
       info.focus();
       expect(lockTool()).toHaveAccessibleName("Unlock");
-      expect(lockTool()).not.toHaveAttribute("data-unlocked");
       await user.click(lockTool());
       const dialog = screen.getByRole("dialog", { name: "Unlock the slides" });
       const code = within(dialog).getByRole("textbox", {
@@ -577,7 +576,6 @@ describe("mountDeck", () => {
       expect(window.localStorage.getItem(UNLOCK_STORAGE_KEY)).toBe("yes");
       expect(screen.getAllByRole("tab")).toHaveLength(3);
       expect(lockTool()).toHaveAccessibleName("Lock");
-      expect(lockTool()).toHaveAttribute("data-unlocked");
       await user.keyboard("{End}");
       expect(selected("Third")).toBeInTheDocument();
       await user.keyboard("o");
@@ -591,8 +589,6 @@ describe("mountDeck", () => {
     it("locks again from the menu: back to the first slide, the pager hidden and the unlock forgotten", async () => {
       window.localStorage.setItem(UNLOCK_STORAGE_KEY, "yes");
       const { user } = await start();
-      const root = deckRoot();
-      expect(root).not.toHaveAttribute("data-locked");
       await user.keyboard("{End}");
       expect(selected("Third")).toBeInTheDocument();
       expect(lockTool()).toHaveAccessibleName("Lock");
@@ -600,32 +596,27 @@ describe("mountDeck", () => {
       expect(selected("First")).toBeInTheDocument();
       expect(screen.getAllByRole("tab")).toHaveLength(1);
       expect(window.location.hash).toBe("#first");
-      expect(root).toHaveAttribute("data-locked");
       expect(window.localStorage.getItem(UNLOCK_STORAGE_KEY)).toBeNull();
       expect(live()).toBe("The slides are locked: only the first one shows");
       expect(lockTool()).toHaveAccessibleName("Unlock");
-      expect(lockTool()).not.toHaveAttribute("data-unlocked");
       await user.keyboard("{End}");
       expect(selected("First")).toBeInTheDocument();
     });
 
-    it("names the tool Unlock again, with its open padlock, when the deck is torn down", async () => {
+    it("names the tool Unlock again when the deck is torn down", async () => {
       window.localStorage.setItem(UNLOCK_STORAGE_KEY, "yes");
       await start();
-      expect(lockTool()).toHaveAttribute("data-unlocked");
+      expect(lockTool()).toHaveAccessibleName("Lock");
       handle?.destroy();
       expect(lockTool()).toHaveAccessibleName("Unlock");
-      expect(lockTool()).not.toHaveAttribute("data-unlocked");
-      expect(deckRoot()).not.toHaveAttribute("data-locked");
     });
 
     it("follows an unlock or a lock made in another tab", async () => {
       await start();
-      const root = deckRoot();
-      expect(root).toHaveAttribute("data-locked");
       const fromAnotherTab = (value: string | null) => {
         if (value === null) window.localStorage.removeItem(UNLOCK_STORAGE_KEY);
         else window.localStorage.setItem(UNLOCK_STORAGE_KEY, value);
+        // oxlint-disable-next-line dox-test/no-dispatch-event -- no user action fires another tab's storage event; the event is the input
         window.dispatchEvent(
           new StorageEvent("storage", {
             key: UNLOCK_STORAGE_KEY,
@@ -635,10 +626,8 @@ describe("mountDeck", () => {
       };
       fromAnotherTab("yes");
       expect(screen.getAllByRole("tab")).toHaveLength(3);
-      expect(root).not.toHaveAttribute("data-locked");
       fromAnotherTab(null);
       expect(screen.getAllByRole("tab")).toHaveLength(1);
-      expect(root).toHaveAttribute("data-locked");
     });
 
     it("clears a wrong phrase's alert when the dialog opens again", async () => {

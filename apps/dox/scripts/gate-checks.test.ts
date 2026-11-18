@@ -383,6 +383,7 @@ describe("every browser gate", () => {
       "hero-space-check.mjs",
       "rail-stored-still.mjs",
       "readout-still.mjs",
+      "slides-check.mjs",
       "sound-check.mjs",
       "table-fit.mjs",
       "visual-snapshot.mjs",
