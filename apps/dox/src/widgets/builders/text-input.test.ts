@@ -3,10 +3,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
+import { watchTyping } from "~/lib/sound/typing";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
 import { field, hint } from "./layout";
 import { textInput, type TextInputOptions } from "./text-input";
+
+const cue = vi.fn();
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
 
 const markup = (extra: Omit<TextInputOptions, "id" | "describedBy"> = {}) => {
   const h = hint("wk-hint", "A whole number");
@@ -101,5 +105,21 @@ describe("textInput", () => {
     );
     const block = css.match(/&:disabled \{([^}]*)\}/)?.[1] ?? "";
     expect(block).toMatch(/opacity:\s*1;/);
+  });
+});
+
+describe("textInput typing sound", () => {
+  let stop: () => void;
+  beforeEach(() => {
+    cue.mockClear();
+    stop = watchTyping();
+  });
+  afterEach(() => stop());
+
+  it("plays the Data blip for each key typed in it", async () => {
+    const user = userEvent.setup();
+    renderHtml(markup());
+    await user.type(screen.getByRole("textbox", { name: "Week" }), "23");
+    expect(cue.mock.calls).toEqual([["key"], ["key"]]);
   });
 });

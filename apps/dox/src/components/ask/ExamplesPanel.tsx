@@ -7,9 +7,10 @@
  * description. Activating one is the host's `onPick` — it sends the question
  * and opens the seeded widget, exactly as the old pills did.
  */
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { CHAT_STARTERS, startersByArea } from "~/lib/chat-constants";
 import { INDUSTRY_ICON_PATHS, industryTag } from "~/lib/industry-tags";
+import { pitchOfRows, scrollTicks } from "~/lib/sound/scroll-ticks";
 import { WIDGET_REGISTRY } from "./widget-registry";
 
 /** An area's icon, as SVG inner markup: its industry's glyph, the one the sidebar draws. */
@@ -27,6 +28,20 @@ export function ExamplesPanel({
 }) {
   const uid = useId();
   const headingId = `${uid}-examples`;
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // The reader's scroll through the cards ticks once per row of cards, as every list does.
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const life = new AbortController();
+    scrollTicks(body, {
+      rowPitch: () => pitchOfRows([...body.querySelectorAll("button")]),
+      keys: true,
+      signal: life.signal,
+    });
+    return () => life.abort();
+  }, []);
 
   return (
     <div className="gmt-hive-examples not-content">
@@ -36,7 +51,7 @@ export function ExamplesPanel({
         </h2>
         <span className="gmt-hive-examples-count">{CHAT_STARTERS.length}</span>
       </div>
-      <div className="gmt-hive-examples-body">
+      <div className="gmt-hive-examples-body" ref={bodyRef}>
         {startersByArea().map((group) => {
           const groupId = `${uid}-area-${group.area}`;
           const icon = areaIcon(group.area);
@@ -68,6 +83,7 @@ export function ExamplesPanel({
                         type="button"
                         className="gmt-hive-example gmt-sonar-focus"
                         data-starter={starter.widget}
+                        data-cue=""
                         aria-labelledby={questionId}
                         aria-describedby={chipId}
                         onClick={() => onPick(starter)}

@@ -7,11 +7,15 @@
  * which the CSS entrance animations (`gmt-entrance-freeze.css`) of the sky, the buttons, the pager,
  * the header and the location card are keyed on, so they start in the same style recalculation.
  * The copy does not wait for `t0`: its freeze starts at the first paint, so the page's largest text
- * is on screen at once. If the failsafe has shown the page already (`static`), the attribute stays
- * and only the dawn starts. It also marks `gmt-entrance-t0`, starts the globe's dawn and, once the
+ * is on screen at once. If the page is shown already (`static`: the failsafe fired, or the reader
+ * came from another page of this site, `arrival.ts`), the attribute stays and only the dawn starts,
+ * with no sound. It also marks `gmt-entrance-t0`, starts the globe's dawn and, once the
  * last animation has ended, sets `done`. A sky or globe that failed to load counts as ready: the
- * entrance never waits on something that will not come.
+ * entrance never waits on something that will not come. At `t0`, after `run` is set, it also
+ * starts the entrance's sounds (`sound/entrance.ts`), which follow the animations until `done`.
  */
+
+import { entranceSounds } from "./sound/entrance";
 
 export interface HeroEntranceOptions {
   /** Resolves when the sky has drawn for the first time. */
@@ -64,21 +68,31 @@ export function runHeroEntrance(options: HeroEntranceOptions): void {
     }
     started = true;
     clearTimeout(timer);
-    // A page the failsafe already showed stays as it is: running now would replay the freeze on
-    // copy that is on screen. The dawn still starts.
+    // A page already shown stays as it is: running now would replay the freeze on copy that is on
+    // screen. The dawn still starts.
     if (root.dataset["entrance"] !== "static") root.dataset["entrance"] = "run";
     performance.mark(ENTRANCE_MARK);
     globe.startDawn();
     // Nothing animates once the entrance has ended: a card that appears later (hidden, then
     // shown) must not play the opening pop again, so the rules keyed on `run` stop matching.
     if (root.dataset["entrance"] === "run") {
+      // A whisper as each piece freezes in and a shing on each glint, on the animations' own
+      // starts. Heard only if the engine is running; a first visit has had no gesture, so it is
+      // silent.
+      const quiet = entranceSounds(root);
       const rest = setTimeout(() => {
+        quiet();
         if (root.dataset["entrance"] === "run")
           root.dataset["entrance"] = "done";
       }, ENTRANCE_MS);
-      signal.addEventListener("abort", () => clearTimeout(rest), {
-        once: true,
-      });
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(rest);
+          quiet();
+        },
+        { once: true },
+      );
     }
   };
 

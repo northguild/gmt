@@ -4,6 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { roving } from "./roving";
 
+const cue = vi.fn();
+vi.mock("~/lib/sound/cue", () => ({
+  cue: (...args: unknown[]) => cue(...args),
+}));
+beforeEach(() => cue.mockClear());
+
 function item(name: string): HTMLLIElement {
   const li = document.createElement("li");
   const button = document.createElement("button");
@@ -31,6 +37,19 @@ describe("roving", () => {
   afterEach(() => {
     controller.abort();
     document.body.replaceChildren();
+  });
+
+  it("steps once for each move, by key direction and place, and not for a key that stays put", async () => {
+    const user = userEvent.setup();
+    roving(list(), { items: buttons, signal: controller.signal });
+    buttons()[0]!.focus();
+    await user.keyboard("{ArrowDown}{End}{End}{ArrowDown}{Home}");
+    /* The wrap from the last row to the first is still a step down: the key's direction. */
+    expect(cue.mock.calls).toEqual([
+      ["listNext", 0.5],
+      ["listNext", 1],
+      ["listNext", 0],
+    ]);
   });
 
   it("puts the first item, and only it, in the tab order", () => {

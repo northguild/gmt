@@ -7,14 +7,19 @@
  * (`MobileMenuToggle.test.ts` fails once the installed version reaches 0.42).
  *
  * The menu takes part in the site's Escape order (`esc-layers.ts`); the button gets focus back.
+ * A change of state plays the opening or closing Felt slide; the button carries
+ * `data-cue` so the press ping stays out. A resize that closes the menu closes it, so it fades.
  */
 import { registerEscLayer } from "./esc-layers";
+import { cue } from "./sound/cue";
 
 export class MenuButton extends HTMLElement {
   readonly btn = this.querySelector("button")!;
 
   constructor() {
     super();
+    // The open and close Felt slide play for the menu (setExpanded), not the press ping.
+    this.btn.setAttribute("data-cue", "");
     this.btn.addEventListener("click", () => this.toggleExpanded());
 
     // Escape closes the menu, in its turn among the page's layers.
@@ -32,12 +37,15 @@ export class MenuButton extends HTMLElement {
   }
 
   setExpanded(expanded: boolean) {
+    const changed =
+      (this.btn.getAttribute("aria-expanded") === "true") !== expanded;
     this.btn.setAttribute("aria-expanded", String(expanded));
     document.body.toggleAttribute("data-mobile-menu-expanded", expanded);
     // Trap keyboard focus inside the header and menu while it is open.
     document
       .querySelectorAll<HTMLElement>(".main-frame, .sl-skip-link")
       .forEach((el) => el.toggleAttribute("inert", expanded));
+    if (changed) cue(expanded ? "open" : "close");
   }
 
   toggleExpanded() {

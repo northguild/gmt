@@ -23,9 +23,9 @@ import {
   railWidthForKey,
   type RailBounds,
 } from "./rail-width";
+import { STORAGE_KEY, WIDTH_PROPERTY } from "./rail-prepaint";
 
-export const WIDTH_PROPERTY = "--gmt-hive-rail-width";
-export const STORAGE_KEY = "gmt-dox-rail-width";
+export { STORAGE_KEY, WIDTH_PROPERTY };
 
 function readStoredWidth(): number | undefined {
   try {
@@ -110,9 +110,14 @@ export function RailResizer({
 
   // After mount only: the server knows neither the window nor the reader's
   // stored width (#418). Re-measured on resize so the handle's value stays true.
+  // The head script already painted the stored width on `<html>`
+  // (`rail-prepaint.ts`); the body now carries the same value, so dropping
+  // the root copy changes nothing on screen, and a later reset is not undone
+  // by inheritance.
   useEffect(() => {
     const stored = readStoredWidth();
     apply(stored);
+    document.documentElement.style.removeProperty(WIDTH_PROPERTY);
     const onResize = () => setMeasured(measure());
     window.addEventListener("resize", onResize);
     return () => {

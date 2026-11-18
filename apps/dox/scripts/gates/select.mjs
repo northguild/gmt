@@ -30,7 +30,7 @@ const CHROME_COMPONENTS = new Set([
   "Header",
   "Footer",
   "ThemeProvider",
-  "ThemeSelect",
+  "SettingsControl",
   "Hero",
   "PageTitle",
   "Sidebar",

@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { expectNoAxeViolations } from "~/test/render-widget";
+import { expectNoAxeViolations, scrolled, wheelOn } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { listbox, nextIndex, type GmtListbox } from "./listbox";
+
+const cue = vi.fn();
+vi.mock("~/lib/sound/cue", () => ({
+  cue: (...args: unknown[]) => cue(...args),
+}));
+beforeEach(() => cue.mockClear());
 
 const items = [
   { value: "a", label: "Alpha" },
@@ -120,6 +126,47 @@ describe("the listbox element", () => {
     expect(list).not.toHaveAttribute("aria-activedescendant");
     await user.keyboard("{Enter}");
     expect(list.value).toBe("v99");
+  });
+
+  it("steps once for each move the keys make, by place, and not at an end", async () => {
+    draw();
+    const user = userEvent.setup();
+    await user.tab();
+    await user.keyboard("{ArrowDown}{End}{ArrowDown}{PageDown}");
+    expect(cue.mock.calls).toEqual([
+      ["listNext", 0.5],
+      ["listNext", 1],
+    ]);
+  });
+
+  it("ticks once per row the reader scrolls past, and not for a scroll made for them", () => {
+    const fx = draw();
+    const list = fx.element<GmtListbox>("listbox");
+    /* jsdom lays nothing out and never scrolls: each option is given a 40 px row, the list a
+       40 px view of 160 px (120 px of scroll), and the reader's wheel and the scroll it causes
+       come from the kit's wheel and scroll helpers. */
+    Object.defineProperty(list, "scrollHeight", { value: 160 });
+    Object.defineProperty(list, "clientHeight", { value: 40 });
+    for (const option of screen.getAllByRole("option")) {
+      const top = Number(option.dataset.index) * 40;
+      option.getBoundingClientRect = () => new DOMRect(0, top, 200, 40);
+    }
+    const scrollTo = (top: number) => {
+      list.scrollTop = top;
+      scrolled(list);
+    };
+    wheelOn(list, { deltaY: 50 });
+    scrollTo(50);
+    scrollTo(70);
+    scrollTo(85);
+    expect(cue.mock.calls).toEqual([
+      ["listNext", 50 / 120],
+      ["listNext", 85 / 120],
+    ]);
+    cue.mockClear();
+    list.activeIndex = 0;
+    scrollTo(0);
+    expect(cue).not.toHaveBeenCalled();
   });
 
   it("wires once after disconnect and connect", async () => {

@@ -87,6 +87,123 @@
   }
 }
 
+/* The header's volume fader: 11 bevelled-ice notches, a square bevelled thumb, no chip and no end
+   labels. Its box is fixed (8rem by the thumb's height), so nothing reflows while it is dragged.
+   The notches and the fill share one coordinate system, the track less one thumb, so each notch
+   sits where the thumb's centre stops. */
+.fader {
+  --fader-thumb-w: 0.875rem;
+  --fader-thumb-h: 1.5rem;
+  --fader-track-h: 0.75rem;
+  --fader-span: calc(100% - var(--fader-thumb-w) + 1px);
+
+  inline-size: 8rem;
+  padding-block-start: 0;
+
+  & .chip,
+  & .ends {
+    display: none;
+  }
+
+  & .input {
+    block-size: var(--fader-thumb-h);
+    min-block-size: var(--gmt-target-min);
+
+    &::-webkit-slider-runnable-track {
+      box-sizing: border-box;
+      block-size: var(--fader-track-h);
+      border: 1px solid var(--gmt-border);
+      border-radius: var(--gmt-bevel-sm);
+      corner-shape: bevel;
+      background-color: color-mix(in srgb, var(--gmt-ice) 14%, transparent);
+      background-image:
+        repeating-linear-gradient(
+          to right,
+          color-mix(in srgb, var(--gmt-ice) 55%, transparent) 0 1px,
+          transparent 1px calc((100% - 1px) / 10)
+        ),
+        linear-gradient(
+          to right,
+          color-mix(in srgb, var(--gmt-cyan) 55%, transparent)
+            calc(var(--gmt-range-pct, 0) * 1%),
+          transparent 0
+        );
+      background-size: var(--fader-span) 100%;
+      background-position: calc(var(--fader-thumb-w) / 2 - 0.5px) 0;
+      background-repeat: no-repeat;
+    }
+
+    &::-webkit-slider-thumb {
+      box-sizing: border-box;
+      inline-size: var(--fader-thumb-w);
+      block-size: var(--fader-thumb-h);
+      translate: 0 calc((var(--fader-track-h) - var(--fader-thumb-h)) / 2 - 1px);
+      border: 1px solid var(--gmt-border);
+      border-radius: var(--gmt-bevel-sm);
+      corner-shape: bevel;
+      background: var(--gmt-ice);
+      box-shadow: none;
+    }
+
+    &::-moz-range-track {
+      box-sizing: border-box;
+      block-size: var(--fader-track-h);
+      border: 1px solid var(--gmt-border);
+      border-radius: var(--gmt-bevel-sm);
+      corner-shape: bevel;
+      background-color: color-mix(in srgb, var(--gmt-ice) 14%, transparent);
+      background-image:
+        repeating-linear-gradient(
+          to right,
+          color-mix(in srgb, var(--gmt-ice) 55%, transparent) 0 1px,
+          transparent 1px calc((100% - 1px) / 10)
+        ),
+        linear-gradient(
+          to right,
+          color-mix(in srgb, var(--gmt-cyan) 55%, transparent)
+            calc(var(--gmt-range-pct, 0) * 1%),
+          transparent 0
+        );
+      background-size: var(--fader-span) 100%;
+      background-position: calc(var(--fader-thumb-w) / 2 - 0.5px) 0;
+      background-repeat: no-repeat;
+    }
+
+    &::-moz-range-progress {
+      background: transparent;
+    }
+
+    &::-moz-range-thumb {
+      box-sizing: border-box;
+      inline-size: var(--fader-thumb-w);
+      block-size: var(--fader-thumb-h);
+      border: 1px solid var(--gmt-border);
+      border-radius: var(--gmt-bevel-sm);
+      corner-shape: bevel;
+      background: var(--gmt-ice);
+      box-shadow: none;
+    }
+  }
+}
+
+/* Right to left, WebKit's track draws the notches and the fill from the right. The fader sits in
+   `:where()`: this rule comes after the fader's own track and wins by order at its weight. */
+:where(.fader) .input:dir(rtl)::-webkit-slider-runnable-track {
+  background-position: calc(100% - var(--fader-thumb-w) / 2 + 0.5px) 0;
+  background-image:
+    repeating-linear-gradient(
+      to left,
+      color-mix(in srgb, var(--gmt-ice) 55%, transparent) 0 1px,
+      transparent 1px calc((100% - 1px) / 10)
+    ),
+    linear-gradient(
+      to left,
+      color-mix(in srgb, var(--gmt-cyan) 55%, transparent)
+        calc(var(--gmt-range-pct, 0) * 1%),
+      transparent 0
+    );
+}
+
 .chip {
   position: absolute;
   display: inline-grid;
@@ -183,6 +300,31 @@
 
     &:disabled {
       opacity: 1;
+    }
+  }
+
+  .fader .input {
+    &::-webkit-slider-runnable-track,
+    &::-moz-range-track {
+      border-color: ButtonText;
+      background-color: ButtonFace;
+      background-image:
+        repeating-linear-gradient(
+          to right,
+          ButtonText 0 1px,
+          transparent 1px calc((100% - 1px) / 10)
+        ),
+        linear-gradient(
+          to right,
+          Highlight calc(var(--gmt-range-pct, 0) * 1%),
+          transparent 0
+        );
+    }
+
+    &::-webkit-slider-thumb,
+    &::-moz-range-thumb {
+      border-color: ButtonText;
+      background: Highlight;
     }
   }
 

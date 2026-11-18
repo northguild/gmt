@@ -10,9 +10,17 @@
  * render match. The mount reads and writes `value`, never inner nodes. The
  * element re-emits the input's `input`/`change` from itself, bubbling, with
  * `detail.value` (a number), and stops the native ones at the host.
+ *
+ * `look: "fader"` is the header's volume fader: an 11-notch bevelled track and thumb, no riding
+ * chip and no end labels (the notches are the scale), 8rem wide wherever it sits.
+ *
+ * Each reader-driven `input` event whose value differs from the last one cued plays the Glass
+ * tick, so every slider in a tool ticks on its steps. Setting `value`, `min`, `max` or `step`
+ * from code is silent: it fires no `input` event and moves the last-cued value with it.
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
+import { cue } from "~/lib/sound/cue";
 import { KitElement, num, relay } from "../base";
 import styles from "./range.module.css";
 
@@ -30,6 +38,7 @@ interface RangeOptions extends GateOption {
   /** Visible end labels, hidden when the box is narrow. */
   ends?: readonly [string, string];
   disabled?: boolean;
+  look?: "default" | "fader";
 }
 
 /** The fill position, 0 to 100, clamped. */
@@ -40,7 +49,9 @@ export function rangePct(value: number, min: number, max: number): number {
 
 export function range(o: RangeOptions): SafeHtml {
   const pct = rangePct(o.value, o.min, o.max);
-  return html`<gmt-range class="${styles.root}" ${gateAttr(o.gate)} style="--gmt-range-pct: ${pct}"
+  const root =
+    o.look === "fader" ? `${styles.root} ${styles.fader}` : styles.root;
+  return html`<gmt-range class="${root}" ${gateAttr(o.gate)} style="--gmt-range-pct: ${pct}"
     ><input
       class="${styles.input}"
       type="range"
@@ -68,6 +79,8 @@ export function range(o: RangeOptions): SafeHtml {
 
 export class GmtRange extends KitElement {
   #format: (n: number) => string = (n) => String(n);
+  /** The value the Glass tick last played for, or the one code last set. */
+  #cued = 0;
 
   get input(): HTMLInputElement | null {
     return this.querySelector<HTMLInputElement>('input[type="range"]');
@@ -81,6 +94,7 @@ export class GmtRange extends KitElement {
     const input = this.input;
     if (!input) return;
     input.value = String(next);
+    this.#cued = Number(input.value);
     this.#sync();
   }
 
@@ -123,6 +137,7 @@ export class GmtRange extends KitElement {
     // Browsers re-run the range's value sanitization when a bound changes; writing the
     // value back makes every engine (jsdom does not) clamp and snap it the same way.
     input.value = String(input.value);
+    this.#cued = Number(input.value);
     this.#sync();
   }
 
@@ -173,11 +188,19 @@ export class GmtRange extends KitElement {
         rangePct(Number(input.value), num(input.min, 0), num(input.max, 100)),
       ),
     );
+    this.#cued = Number(input.value);
     for (const type of ["input", "change"]) {
       this.addEventListener(
         type,
         (event) => {
-          if (type === "input") this.#sync();
+          if (type === "input") {
+            this.#sync();
+            const value = Number(input.value);
+            if (event.target === input && value !== this.#cued) {
+              this.#cued = value;
+              cue("detent");
+            }
+          }
           relay(this, event, input, () => Number(input.value));
         },
         { signal },

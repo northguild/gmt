@@ -10,6 +10,9 @@ import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { defineMenuButton } from "~/lib/menu-button";
 
+const cue = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
+
 /**
  * The element reads its button and nav in its constructor, as Starlight's markup supplies them.
  * Building the tree in an inert document defers the upgrade until it is attached with its children.
@@ -35,6 +38,7 @@ beforeAll(defineMenuButton);
 
 // The setup file unstubs globals after each test, so the stub is renewed before each.
 beforeEach(() => {
+  cue.mockClear();
   vi.stubGlobal("matchMedia", () => ({
     addEventListener: () => {},
     matches: false,
@@ -59,6 +63,25 @@ describe("the mobile menu button", () => {
     await user.click(button);
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(page).not.toHaveAttribute("inert");
+  });
+
+  it("plays the open and close Felt slide on a reader's press, and nothing on mount", async () => {
+    const user = userEvent.setup();
+    mount();
+    expect(cue).not.toHaveBeenCalled();
+    const button = screen.getByRole("button", { name: "Menu" });
+    await user.click(button);
+    await user.click(button);
+    expect(cue.mock.calls).toEqual([["open"], ["close"]]);
+  });
+
+  it("plays the closing Felt slide once when Escape closes it", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+    cue.mockClear();
+    await user.keyboard("{Escape}");
+    expect(cue.mock.calls).toEqual([["close"]]);
   });
 
   it("closes on Escape and returns focus to the button", async () => {

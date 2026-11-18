@@ -456,6 +456,43 @@ export function labelLayer(id: string): SafeHtml {
   return html`<div class="${styles.labels}" id="${id}" aria-hidden="true"></div>`;
 }
 
+/** One beat of a lock: when it starts and how bright it is at its brightest (`LOCK_RINGS`). */
+export interface LockBeat {
+  delayMs: number;
+  peak: number;
+}
+
+const beatStyle = (beat: LockBeat): string =>
+  `--gmt-lock-delay: ${beat.delayMs}ms; --gmt-lock-peak: ${beat.peak}`;
+
+/**
+ * The lock at a point (a marker): one ring per beat rippling out from `ax`, `ay`, shares of the
+ * frame, as the globe's pin does. It goes in the label layer.
+ */
+export function lockPoint(options: {
+  ax: string;
+  ay: string;
+  beats: readonly LockBeat[];
+}): SafeHtml {
+  return html`<div
+    class="${styles.lockPoint}"
+    aria-hidden="true"
+    style="--ax: ${options.ax}; --ay: ${options.ay}"
+  >
+    ${options.beats.map((beat) => html`<span style="${beatStyle(beat)}"></span>`)}
+  </div>`;
+}
+
+/**
+ * The lock on a label, for a zone with no point to ripple from: one copy of its city per beat,
+ * swelling out from the word and fading. It goes in the label's city line.
+ */
+export function lockEchoes(city: string, beats: readonly LockBeat[]): SafeHtml {
+  return html`<span class="${styles.lockEchoes}" aria-hidden="true"
+    >${beats.map((beat) => html`<span style="${beatStyle(beat)}">${city}</span>`)}</span
+  >`;
+}
+
 interface LabelOptions {
   zone: string;
   city: string;

@@ -2,6 +2,10 @@
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
+
+const cue = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/sound/cue", () => ({ cue: (name: string) => cue(name) }));
+
 import { html } from "./html";
 import { renderHtml } from "../test-fixture";
 import { drawer, wireDrawer, type DrawerHandle } from "./drawer";
@@ -32,6 +36,41 @@ function draw(extra = "") {
 
 const zones = (): HTMLElement =>
   screen.getByRole("region", { name: "Zone finder", hidden: true });
+
+beforeEach(() => cue.mockClear());
+
+describe("the drawer's sound", () => {
+  it("is silent on mount and plays no press ping of its own", () => {
+    draw();
+    expect(cue).not.toHaveBeenCalled();
+  });
+
+  it("plays the opening Felt slide on open and the closing one on the close button", async () => {
+    const { handle } = draw();
+    handle.open();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Close zone list" }),
+    );
+    expect(cue.mock.calls).toEqual([["open"], ["close"]]);
+  });
+
+  it("plays the closing Felt slide once when Escape closes it", async () => {
+    const { handle } = draw();
+    handle.open();
+    cue.mockClear();
+    await userEvent.keyboard("{Escape}");
+    expect(handle.expanded).toBe(false);
+    expect(cue.mock.calls).toEqual([["close"]]);
+  });
+
+  it("stays silent when open or close changes nothing", () => {
+    const { handle } = draw();
+    handle.close();
+    handle.open();
+    handle.open();
+    expect(cue.mock.calls).toEqual([["open"]]);
+  });
+});
 
 describe("drawer", () => {
   it("starts shut: the toggle says so and the region is out of the tree", () => {

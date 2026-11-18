@@ -67,6 +67,8 @@ afterAll(async () => {
 });
 
 const SHAPE = "[class*='zone-map__shape'][data-kind]";
+/** The frame a map is drawn in. */
+const MAP_FRAME = ".gmt-zone-map__map";
 const NOW = () => "2026-11-13T12:00:00Z";
 
 /** The checkers' Worker endpoints, answered by their own handlers: the static server has no Worker. */
@@ -94,14 +96,20 @@ async function answerChecks(page: Page) {
     });
 }
 
-/** Scrolls until the map module has drawn its shapes: it draws when the map comes near the view. */
+/**
+ * Brings each shown map frame into view until the map module has drawn its shapes: it draws when
+ * the frame comes near the view. Scrolling by the wheel instead could carry a slow page past the
+ * frame before the module was watching it, and then nothing drew.
+ */
 async function drawn(page: Page) {
-  for (let i = 0; i < 40; i++) {
+  // 200 rounds of 150 ms: 30 s.
+  for (let i = 0; i < 200; i++) {
     if ((await page.locator(SHAPE).count()) > 0) return;
-    await page.mouse.wheel(0, 400);
+    for (const frame of await page.locator(MAP_FRAME).all())
+      if (await frame.isVisible()) await frame.scrollIntoViewIfNeeded();
     await page.waitForTimeout(150);
   }
-  await page.locator(SHAPE).first().waitFor({ state: "attached" });
+  throw new Error("no map shape was drawn in 30 s");
 }
 
 /** The system colours where an element is drawn, by name. */
