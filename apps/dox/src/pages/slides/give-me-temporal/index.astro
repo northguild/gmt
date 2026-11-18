@@ -1,0 +1,28 @@
+---
+// Deck 0: the HelsinkiJS talk "Give Me Temporal". A StarlightPage for the same reason as
+// `src/pages/dox.astro`: `customCss` reaches a page only through it. The head script marks the
+// document before `<body>` parses, so the stage's shape is the first paint; the mount confirms
+// it (`lib/slides/deck-mount.ts`). The site header stays; fullscreen is requested on the deck
+// root alone. In the sitemap, out of the search index.
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { DECK_HEAD_SCRIPT } from "~/lib/slides/head-script";
+import Deck0 from "~/slides/give-me-temporal/Deck0.astro";
+---
+
+<StarlightPage
+  frontmatter={{
+    title: "Give Me Temporal",
+    description:
+      "Slides for the talk Give Me Temporal: one clock against the whole planet, and what GMT does about it.",
+    template: "splash",
+    pagefind: false,
+    head: [
+      {
+        tag: "script",
+        content: DECK_HEAD_SCRIPT,
+      },
+    ],
+  }}
+>
+  <Deck0 />
+</StarlightPage>

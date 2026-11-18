@@ -64,6 +64,8 @@ import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 import { gate, resolveMisses, widgetRoot } from "./lib/locate.mjs";
+import { probeWall } from "./lib/wall-probe.mjs";
+import { unlockDecks } from "./lib/slides-check-helpers.mjs";
 
 const GATE = "globe-smoke";
 
@@ -114,6 +116,10 @@ const PAGES = [
     height: 844,
   },
 ];
+
+/** The deck's route and its space layer: checked on their own, since the deck has no widget root. */
+const DECK_ROUTE = "/slides/give-me-temporal/";
+const DECK_SPACE = "[data-deck-space]";
 
 /**
  * The runner's page contract (`scripts/gates/`): `--list-pages` and `--pages` name routes. The
@@ -320,6 +326,8 @@ async function open(
     ...emulate,
   });
   await blockOffSite(page, base);
+  // The deck tour steps past the first slide, which a locked deck keeps it on.
+  await unlockDecks(page);
   const problems = [];
   const imagery = { requests: 0, statuses: [] };
   const requests = [];
@@ -596,6 +604,109 @@ async function main() {
       } else if (a && b) {
         failures.push(
           `${target.name} @${zoomLabel(zoom)}: captures differ in size`,
+        );
+      }
+    }
+  }
+
+  // --- the deck's space stage ----------------------------------------------
+  /* The deck page has no widget root, so it is checked on its own: the renderer starts, the
+     camera lands on the slide's place after a step, the layer is not blank, and the two renderers
+     agree (the WebGPU one with its imagery withheld, as above). */
+  {
+    const deck = { name: "deck", route: DECK_ROUTE, width: 1440, height: 900 };
+    const shots = {};
+    for (const renderer of ["webgpu", "canvas2d"]) {
+      const { page, problems } = await open(
+        browser,
+        base,
+        deck,
+        `?globe=${renderer}`,
+        { withholdImagery: renderer === "webgpu", waitForStage: false },
+      );
+      try {
+        await page.waitForSelector(`${DECK_SPACE}[data-globe="ready"]`, {
+          timeout: 15_000,
+        });
+        await page.keyboard.press("ArrowRight");
+        await page.waitForTimeout(500);
+        await page.waitForFunction(
+          (sel) => document.querySelector(sel)?.dataset.flight === "rest",
+          DECK_SPACE,
+          // The longest hop takes 4 s (`hopDuration` at 180°).
+          { timeout: 7000 },
+        );
+        const state = await page.evaluate((sel) => {
+          const d = document.querySelector(sel)?.dataset ?? {};
+          return {
+            renderer: d.globeRenderer ?? null,
+            rotation: d.rotation ?? "",
+            target: d.target ?? "",
+          };
+        }, DECK_SPACE);
+        check(
+          state.renderer === renderer,
+          `deck (${renderer}): expected the ${renderer} renderer, got ${state.renderer}`,
+        );
+        const rotation = state.rotation.split(" ").map(Number);
+        const goal = state.target.split(" ").map(Number);
+        check(
+          rotation.length === 2 &&
+            goal.length === 2 &&
+            Math.abs(rotation[0] - goal[0]) < 0.5 &&
+            Math.abs(rotation[1] - goal[1]) < 0.5,
+          `deck (${renderer}): the camera rests at "${state.rotation}", not "${state.target}"`,
+        );
+        for (const problem of problems)
+          failures.push(`deck (${renderer}): ${problem}`);
+        const file = path.join(OUT, `deck-${renderer}.png`);
+        const layer = page.locator(DECK_SPACE);
+        await layer.screenshot({ path: file });
+        shots[renderer] = PNG.sync.read(
+          await layer.screenshot({ type: "png" }),
+        );
+        check(
+          !isBlank(shots[renderer]),
+          `deck (${renderer}): the space layer is blank`,
+        );
+        // On the wall slide, each pane's centre as drawn matches its capture.
+        for (let i = 0; i < 6; i++) {
+          const wall = await page.evaluate(
+            (sel) => document.querySelector(sel)?.dataset.wall ?? "",
+            DECK_SPACE,
+          );
+          if (wall === "whole") break;
+          await page.keyboard.press("ArrowRight");
+          await page.waitForTimeout(400);
+        }
+        await page.waitForFunction(
+          (sel) => {
+            const d = document.querySelector(sel)?.dataset ?? {};
+            return d.wall === "whole" && d.flight === "rest";
+          },
+          DECK_SPACE,
+          { timeout: 8000 },
+        );
+        const probe = await probeWall(page, DECK_SPACE);
+        for (const problem of probe.problems)
+          failures.push(`deck (${renderer}): ${problem}`);
+      } catch (error) {
+        failures.push(
+          `deck (${renderer}): ${String(error?.message ?? error).split("\n")[0]}`,
+        );
+      }
+      await page.close();
+    }
+    if (shots.webgpu && shots.canvas2d) {
+      const ratio = diffRatio(shots.webgpu, shots.canvas2d, "deck-diff.png");
+      if (ratio === null) failures.push("deck: captures differ in size");
+      else {
+        notes.push(
+          `deck: ${(ratio * 100).toFixed(2)}% of pixels differ between renderers`,
+        );
+        check(
+          ratio <= MAX_DIFF_RATIO,
+          `deck: renderers differ on ${(ratio * 100).toFixed(2)}% of pixels (limit ${(MAX_DIFF_RATIO * 100).toFixed(0)}%)`,
         );
       }
     }

@@ -1,0 +1,73 @@
+---
+/**
+ * One deck: the `<article data-deck-root>` that holds its slides, the stage's blank layer, the
+ * controls bar and the two dialogs. It reads nothing but its slot (the slides, in order); the
+ * mount (`lib/slides/deck-mount.ts`) reads the slides, builds and notes back from the DOM, so no
+ * second list of slides exists.
+ *
+ * The space layer (`[data-deck-space]`) is the deck's first child: the real sky and, over it, the
+ * Earth that `lib/slides/stage.ts` mounts. It is decoration (`aria-hidden`), and its bytes are
+ * preloaded here, on the deck's page alone, so a dropped connection after load loses nothing.
+ *
+ * Without JavaScript the page is a stacked article of every slide, build and note (`slides.css`).
+ * The head script on the deck's page sets `html[data-deck="wait"]`; the mount sets `stage`.
+ */
+import skyList from "../../assets/hero-sky.bin?url";
+import milkyWay from "../../assets/hero-milkyway.webp?url";
+import { KEY_TABLE } from "~/lib/slides/keys";
+import { withBase } from "~/lib/site";
+import { deckControls, deckDialogs } from "~/widgets/builders/deck-controls";
+import "./slides.css";
+import "./slides-print.css";
+
+interface Props {
+  slug: string;
+  /** The presenter view's copy: the slides as a hidden source, with no stage, space or controls. */
+  presenter?: boolean;
+}
+const { slug, presenter = false } = Astro.props;
+const earth = withBase("/earth-blue-marble.webp");
+---
+
+{
+  presenter ? (
+    <div hidden data-presenter-source data-deck-slug={slug}>
+      <slot />
+    </div>
+  ) : (
+    <>
+<link rel="preload" as="fetch" href={skyList} crossorigin="anonymous" />
+<link rel="preload" as="fetch" href={milkyWay} crossorigin="anonymous" />
+<link rel="preload" as="fetch" href={earth} crossorigin="anonymous" />
+
+<article class="gmt-deck gmt-theme-dark" data-deck-root data-deck-slug={slug} aria-labelledby="_top">
+  <div
+    class="gmt-deck-space"
+    aria-hidden="true"
+    data-deck-space
+    data-sky-src={skyList}
+    data-milky-way={milkyWay}
+    data-earth={earth}
+  >
+    <div class="gmt-sky">
+      <div class="gmt-sky-band" data-sky-layer="band"><canvas data-sky-canvas="band"></canvas></div>
+      <canvas data-sky-layer="stars" data-sky-canvas="stars"></canvas>
+    </div>
+  </div>
+  <div class="gmt-deck-stage" data-deck-stage>
+    <div class="gmt-deck-slides"><slot /></div>
+    <div class="gmt-deck-blank" data-deck-blank aria-hidden="true" hidden></div>
+  </div>
+  <Fragment set:html={deckControls(KEY_TABLE).value} />
+  <Fragment set:html={deckDialogs(KEY_TABLE).value} />
+</article>
+    </>
+  )
+}
+
+<script>
+  import { mountDeck } from "~/lib/slides/deck-mount";
+
+  const root = document.querySelector<HTMLElement>("[data-deck-root]");
+  if (root) mountDeck(root, { signal: new AbortController().signal });
+</script>

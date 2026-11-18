@@ -1,0 +1,42 @@
+---
+/**
+ * "Every filing" as a legend for the planet's pins: the count that runs up while the pins light,
+ * on the split-flap tiles of the bug slides (the stage writes `[data-filing-count]` one digit per
+ * tile; the tiles are hidden from screen readers and the total sits beside them), how many filings sit at a zone and how many are listed
+ * here only, and the per-tracker and state numbers as a table, which stays for screen readers.
+ */
+import { encodeSteps, planFilingPins } from "~/lib/slides/filing-pins";
+import "./calendar-figures.css";
+import { filingGroups, filingKey, filings, filingsByState, filingsForGroup } from "~/data/upstream-filings";
+
+const plan = planFilingPins(
+  filings.map((f) => ({ key: filingKey(f), createdAt: f.createdAt, zone: f.zone })),
+);
+const digits = [...String(plan.total)];
+const byState = (state: string) => filingsByState.find((r) => r.label === state)?.count ?? 0;
+---
+
+<div class="gmt-pins" data-filing-steps={encodeSteps(plan.steps)}>
+  <p class="gmt-pins-count">
+    <span class="gmt-flap-tiles" aria-hidden="true" data-filing-count style={`--gmt-flap-n:${digits.length}`}>
+      {digits.map((d) => <span class="gmt-flap-tile" data-tile>{d}</span>)}
+    </span>
+    <span class="gmt-sr-only">{plan.total}</span> filings
+  </p>
+  <p class="gmt-pins-split">
+    {plan.pinned} sit at the zone their report names; {plan.unpinned} name none and are counted here only.
+  </p>
+  <table class="gmt-deck-table">
+    <caption>{plan.total} filings, by tracker and state</caption>
+    <thead>
+      <tr><th scope="col">Tracker</th><th scope="col">Filings</th></tr>
+    </thead>
+    <tbody>
+      {filingGroups.map((g) => (
+        <tr><th scope="row">{g.name}</th><td>{filingsForGroup(g.id).length}</td></tr>
+      ))}
+      <tr><th scope="row">Open</th><td>{byState("open")}</td></tr>
+      <tr><th scope="row">Closed</th><td>{byState("closed")}</td></tr>
+    </tbody>
+  </table>
+</div>

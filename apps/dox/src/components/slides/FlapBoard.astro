@@ -1,0 +1,47 @@
+---
+/**
+ * A split-flap board, the departure-board kind: the reproduction above two rows of flaps, the value
+ * the report expects and the value it observed. The rows roll in turn and land (`roll` in
+ * `lib/slides/bug-visuals.ts`); the flaps where the two differ light up. The values are
+ * `VISUALS.counters`, padded so their last characters line up (`flapRows`); a padding slot is drawn
+ * empty. The flaps are hidden
+ * from screen readers and each row's value sits beside them.
+ */
+import { flapRows } from "~/lib/slides/calendar-figures";
+import type { CounterEnd } from "~/slides/give-me-temporal/content";
+import "./calendar-figures.css";
+
+interface Props {
+  input: string;
+  expected: CounterEnd;
+  observed: CounterEnd;
+}
+const { input, expected, observed } = Astro.props;
+const [expectedTiles, observedTiles] = flapRows(expected.value, observed.value);
+const rows = [
+  { which: "expected", name: "Expected", ...expected, tiles: expectedTiles },
+  { which: "observed", name: "Observed", ...observed, tiles: observedTiles },
+];
+---
+
+<div class="gmt-flap" data-visual="roll" style={`--gmt-flap-n:${expectedTiles.length}`}>
+  <pre class="gmt-repro"><code>{input}</code></pre>
+  {rows.map((r) => (
+    <p class="gmt-flap-row" data-which={r.which}>
+      <span class="gmt-flap-label">
+        <strong>{r.name}</strong>
+        <span>{r.label}</span>
+      </span>
+      <span class="gmt-flap-tiles" aria-hidden="true" data-roll data-end={r.tiles.map((t) => t.ch).join("")}>
+        {r.tiles.map((t) => (
+          t.ch === " " ? (
+            <span class="gmt-flap-tile" data-tile data-blank />
+          ) : (
+            <span class="gmt-flap-tile" data-tile data-diff={t.diff ? r.which : undefined}>{t.ch}</span>
+          )
+        ))}
+      </span>
+      <span class="gmt-sr-only">: {r.value}</span>
+    </p>
+  ))}
+</div>

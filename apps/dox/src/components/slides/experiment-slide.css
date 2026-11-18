@@ -1,0 +1,181 @@
+/*
+ * The zone-probe experiment slides (`ExperimentSlide.astro`, `ExperimentOpener.astro`).
+ * Breakage is the danger colour, GMT's zero is green; the panels carry a full bevelled border and
+ * never a one-sided accent. Counts are tabular and sit in fixed columns, so nothing shifts.
+ */
+.gmt-slide:has(.gmt-exp-kicker) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+/* In the stage the whole slide is set smaller so nine rows, an example and a footnote fit. */
+html[data-deck] .gmt-slide:has(.gmt-exp-kicker) {
+  padding-block: 2.5cqi;
+  line-height: 1.3;
+  font-size: max(0.65rem, 1.4cqi);
+}
+
+.gmt-slide:has(.gmt-exp-kicker) > .gmt-slide-body {
+  display: contents;
+}
+
+/* The body is `display: contents`; its size rule would still reach the children. */
+html[data-deck] .gmt-slide:has(.gmt-exp-kicker) > .gmt-slide-body {
+  font-size: inherit;
+}
+
+.gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
+  margin-block: 0;
+  font-size: max(1.4rem, 3.2cqi);
+}
+
+html[data-deck] .gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
+  font-size: max(1.2rem, 2.6cqi);
+  line-height: 1.1;
+}
+
+.gmt-exp-kicker {
+  order: -1;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 0.9em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-exp-fed {
+  margin: 0;
+  color: var(--gmt-ice);
+}
+
+.gmt-exp-cases {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+/* One opaque plate under the rows, so the globe's pins behind the slide never show between them. */
+.gmt-exp-rows {
+  display: grid;
+  gap: 0.2em;
+  margin: 0;
+  padding: 0.2em;
+  list-style: none;
+  background: var(--gmt-surface-widget);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-exp-row {
+  display: grid;
+  grid-template-columns: 14em minmax(0, 1fr) 9em;
+  align-items: center;
+  column-gap: 1em;
+  line-height: 1.15;
+  padding: 0 0.8em;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-exp-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-exp-bar {
+  display: block;
+  block-size: 0.7em;
+  background: var(--gmt-void);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+.gmt-exp-fill {
+  display: block;
+  block-size: 100%;
+  inline-size: var(--gmt-exp-share);
+  background: var(--gmt-danger);
+}
+
+.gmt-exp-row[data-clean="true"] {
+  border-color: var(--gmt-spring);
+}
+
+/* No wrong answers, no bar: a sliver of fill drew as a stray bevelled triangle. The green 0 says it. */
+.gmt-exp-row[data-clean="true"] .gmt-exp-fill {
+  display: none;
+}
+
+.gmt-exp-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-exp-wrong {
+  font-family: var(--gmt-font-mono);
+  font-weight: 700;
+  font-size: 1.4em;
+  line-height: 1;
+  color: var(--gmt-danger-ink);
+}
+
+.gmt-exp-row[data-clean="true"] .gmt-exp-wrong {
+  color: var(--gmt-spring-ink);
+}
+
+.gmt-exp-of {
+  font-size: 0.8em;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-exp-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.gmt-exp-example {
+  display: grid;
+  gap: 0.15em;
+  margin: 0;
+  padding: 0.5em 0.8em;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+  font-size: 0.85em;
+}
+
+.gmt-exp-example-input {
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-exp-wrong-answer {
+  color: var(--gmt-danger-ink);
+}
+
+.gmt-exp-right-answer {
+  color: var(--gmt-spring-ink);
+}
+
+.gmt-exp-foot {
+  margin: auto 0 0;
+  font-size: 0.55em;
+  line-height: 1.25;
+  color: var(--gmt-ice-dim);
+}

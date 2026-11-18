@@ -1,0 +1,21 @@
+---
+/**
+ * A recorded terminal: the command types out, then the process's answer appears and the cursor
+ * stops (`lib/slides/bug-visuals.ts`). The words are the report's own (`VISUALS.terminal`); the
+ * typed copy is hidden from screen readers and the full command sits beside it.
+ */
+interface Props {
+  command: string;
+  output: string;
+  expected: string;
+}
+const { command, output, expected } = Astro.props;
+---
+
+<div class="gmt-terminal" data-visual="terminal" role="group" aria-label="Recorded terminal session">
+  <p class="gmt-terminal-line">
+    <span aria-hidden="true">$ </span><span aria-hidden="true" data-type data-text={command}>{command}</span><span class="gmt-sr-only">{command}</span><span class="gmt-terminal-cursor" aria-hidden="true"></span>
+  </p>
+  <p class="gmt-terminal-out" data-after><span>Observed</span> {output}</p>
+  <p class="gmt-terminal-expected" data-after><span>Expected</span> {expected}</p>
+</div>

@@ -1,0 +1,55 @@
+---
+/**
+ * The landing pages of the ice wall, as figures. Slide 2 carries the images (`images`): the
+ * stage reads them, draws them on the wall's canvas and keeps the `<img>` for assistive technology
+ * and for a page with no script. Slide 3 repeats the captions only, so they show while the wall
+ * hangs there too. Each caption says what the pane is: the library's name, the address and the
+ * date of the capture. The page's own `<title>` is read to screen readers only: shown, the longer
+ * ones wrapped and covered most of their pane.
+ * A library's mark appears only inside its captured snapshot; no text here judges a library.
+ */
+import { formatUtc } from "@northguild/gmt/utc/format";
+import { withBase } from "~/lib/site";
+import { WALL_PAGES } from "~/slides/give-me-temporal/wall";
+
+interface Props {
+  images?: boolean;
+}
+const { images = false } = Astro.props;
+
+const day = (iso: string): string =>
+  formatUtc(iso, "en-GB", { dateStyle: "long", timeZone: "UTC" }) || iso.slice(0, 10);
+const host = (url: string): string => new URL(url).host;
+---
+
+{
+  images &&
+    WALL_PAGES.map((page) => (
+      <link rel="preload" as="image" href={withBase(`/${page.image}`)} type="image/webp" />
+    ))
+}
+<div class="gmt-wall-figures" data-wall-figures>
+  {
+    WALL_PAGES.map((page) => (
+      <figure class="gmt-wall-figure" data-wall-pane={images ? page.id : undefined} data-clock={page.clock ? "" : undefined}>
+        {images && (
+          <img
+            src={withBase(`/${page.image}`)}
+            width="1024"
+            height="640"
+            alt={`Landing page of ${host(page.url)}, captured ${day(page.capturedAt)}`}
+            decoding="async"
+          />
+        )}
+        <figcaption class="gmt-wall-caption">
+          <span class="gmt-wall-caption-name">{page.name}</span>
+          {page.title !== page.name && <span class="gmt-sr-only">: {page.title}.</span>}
+          <span class="gmt-wall-caption-meta">
+            {page.placeholder ? "Placeholder, capture pending. " : ""}
+            {host(page.url)}, captured <time datetime={page.capturedAt}>{day(page.capturedAt)}</time>
+          </span>
+        </figcaption>
+      </figure>
+    ))
+  }
+</div>

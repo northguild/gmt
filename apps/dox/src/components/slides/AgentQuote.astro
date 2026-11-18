@@ -1,0 +1,30 @@
+---
+/**
+ * The recorded agent answer of slide 2, as a quotation with its source line. While the owner's
+ * transcript is not in `quotes/agent-moment.json`, a marked panel says it is to come: no answer is
+ * invented.
+ */
+import { Code } from "@astrojs/starlight/components";
+import { agentQuote } from "~/lib/slides/agent-quote";
+import record from "~/slides/give-me-temporal/quotes/agent-moment.json";
+
+const quote = agentQuote(record);
+---
+
+{
+  quote.ready ? (
+    <figure class="gmt-deck-panel gmt-quote" data-quote="recorded">
+      <blockquote>
+        <p>{quote.question}</p>
+        <Code code={quote.answer} lang="js" />
+      </blockquote>
+      <figcaption>
+        An agent's answer, {quote.model}, {quote.date}
+      </figcaption>
+    </figure>
+  ) : (
+    <p class="gmt-deck-panel gmt-quote" data-quote="pending">
+      Recorded agent answer: transcript to come.
+    </p>
+  )
+}

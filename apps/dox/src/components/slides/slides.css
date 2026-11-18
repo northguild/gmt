@@ -1,0 +1,1577 @@
+/*
+ * The deck: a stacked article without JavaScript, a 16:9 stage with it.
+ *
+ * The stage rules sit under `html[data-deck]`: the deck's page head script sets `wait` before the
+ * first paint (the stage's shape, the first slide) and `lib/slides/deck-mount.ts` confirms it as
+ * `stage`. Without the mark every slide, build and note reads in order.
+ *
+ * This sheet is unlayered, so it beats every `gmt.*` layer, the Starlight chrome rules included.
+ * Panels are opaque (`--gmt-surface-widget`) with a full bevelled border and a bottom accent
+ * edge. Type inside the stage is sized in `cqi`, so a slide scales with the stage and never with
+ * the window.
+ */
+
+/* ---- The article: the same dark island in both site themes ---- */
+.gmt-deck {
+  --gmt-deck-bar-size: 3.5rem;
+  --gmt-deck-bar: var(--gmt-deck-bar-size);
+  --gmt-deck-fade: 200ms;
+
+  position: relative;
+  background: var(--gmt-void);
+  color: var(--gmt-ice);
+  padding-block: var(--gmt-space-6);
+  padding-inline: var(--gmt-space-4);
+  /* stylelint-disable-next-line plugin/use-baseline -- print-color-adjust is not Baseline 2024; a browser without it may drop the void background in print, and the text stays readable on paper */
+  print-color-adjust: exact;
+}
+
+.gmt-slide {
+  padding-block: var(--gmt-space-6);
+  border-block-end: 1px solid var(--gmt-hairline);
+}
+
+.gmt-slide-title {
+  margin-block: 0 var(--gmt-space-4);
+  font-family: var(--gmt-font-display);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-slide-body > * + * {
+  margin-block-start: var(--gmt-space-3);
+}
+
+/* A panel: opaque, a full bevelled border, the accent on the bottom edge only. */
+.gmt-notes,
+.gmt-deck-panel {
+  padding: var(--gmt-space-4);
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-notes-title {
+  margin-block: 0 var(--gmt-space-2);
+  font-size: var(--gmt-text-md);
+  color: var(--gmt-ice-dim);
+}
+
+/* The bar and the blank layer are for the stage. */
+.gmt-deck-bar,
+.gmt-deck-blank {
+  display: none;
+}
+
+/* ---- The page: nothing scrolls, the deck fills the space under the header ---- */
+html[data-deck],
+html[data-deck] body {
+  block-size: 100%;
+  overflow: hidden;
+}
+
+html[data-deck] .page {
+  min-block-size: 0;
+  block-size: 100dvh;
+}
+
+html[data-deck] main {
+  padding: 0;
+  block-size: 100%;
+}
+
+html[data-deck] .content-panel {
+  padding: 0;
+  border: 0;
+}
+
+html[data-deck] .sl-container {
+  max-inline-size: none;
+  margin: 0;
+}
+
+html[data-deck] .sl-markdown-content,
+html[data-deck] .sl-markdown-content > * + * {
+  margin-block: 0;
+}
+
+/* The page's own heading names the article; the stage shows slide headings only. */
+html[data-deck] .content-panel:first-child h1 {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The footer and the licence line sit under the deck, out of the stage's way. */
+html[data-deck] footer,
+html[data-deck] .gmt-licence {
+  display: none;
+}
+
+/*
+ * ---- The stage ----
+ * The bar's row is kept before the mount shows the bar, so the stage stands where it will stay
+ * from the first paint: with one row it would sit half a bar lower, then jump.
+ */
+html[data-deck] .gmt-deck {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) var(--gmt-deck-bar);
+  align-items: center;
+  block-size: calc(100dvh - var(--sl-nav-height));
+  padding: 0;
+  overflow: hidden;
+}
+
+html[data-deck] .gmt-deck[data-fullscreen] {
+  --sl-nav-height: 0px;
+  --gmt-deck-bar: 0px;
+
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* Starlight's flow rule gives a following sibling a top margin; the stage's margin-block is 0 so it owns its own box. */
+html[data-deck] .gmt-deck-stage {
+  position: relative;
+  box-sizing: border-box;
+  inline-size: min(
+    100vw,
+    (100dvh - var(--sl-nav-height) - var(--gmt-deck-bar)) * 16 / 9
+  );
+  aspect-ratio: 16 / 9;
+  margin-block: 0;
+  margin-inline: auto;
+  container-type: size;
+  overflow: hidden;
+  background: var(--gmt-void);
+}
+
+html[data-deck] .gmt-deck-slides {
+  position: absolute;
+  inset: 0;
+}
+
+html[data-deck] .gmt-slide {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding-block: 5cqi;
+  padding-inline: 6cqi;
+  border: 0;
+  overflow: hidden;
+  font-size: max(0.75rem, 2.6cqi);
+  line-height: 1.4;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--gmt-duration-med) var(--gmt-enter-easing),
+    visibility 0s linear var(--gmt-duration-med);
+}
+
+html[data-deck] .gmt-slide[data-shown] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* Before the mount: the first slide shows, so the stage never paints empty. */
+html[data-deck="wait"] .gmt-slide {
+  opacity: 1;
+  visibility: visible;
+  transition: none;
+}
+
+/* An address that names a slide: nothing paints until the mount jumps there. */
+html[data-deck="wait-hash"] .gmt-deck-slides {
+  visibility: hidden;
+}
+
+html[data-deck="wait"] .gmt-slide ~ .gmt-slide {
+  display: none;
+}
+
+/* Rung when a reader Tabs to the slide; not when a page turn hands it focus (`data-quiet-focus`). */
+html[data-deck] .gmt-slide:focus-visible:not([data-quiet-focus]) {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: -4px;
+}
+
+html[data-deck] .gmt-slide-body {
+  font-size: max(0.8rem, 2.1cqi);
+}
+
+html[data-deck] .gmt-slide[data-layout="title"] .gmt-slide-body {
+  font-size: max(1rem, 2.6cqi);
+}
+
+html[data-deck] .gmt-slide-title {
+  font-size: max(1.25rem, 3.6cqi);
+  line-height: 1.15;
+  margin-block-end: 3cqi;
+}
+
+html[data-deck] .gmt-slide[data-layout="title"] {
+  display: grid;
+  align-content: center;
+}
+
+html[data-deck] .gmt-slide[data-layout="title"] .gmt-slide-title {
+  font-size: max(1.5rem, 7cqi);
+}
+
+/*
+ * The title's schedule card (`TalkSchedule.astro`): a calendar page with the day beside the start
+ * time. The page is the Earth clock's date window at a fixed width, centred on the slot's height.
+ */
+html[data-deck] .gmt-talk-schedule {
+  display: inline-flex;
+  gap: 2cqi;
+  align-items: center;
+  justify-self: start;
+  padding: 1.4cqi 2.4cqi 1.4cqi 1.4cqi;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+html[data-deck] .gmt-talk-page {
+  flex: none;
+  inline-size: 12cqi;
+  block-size: auto;
+  overflow: visible;
+}
+
+html[data-deck] .gmt-talk-slot {
+  display: grid;
+  align-content: center;
+  gap: 0.5cqi;
+}
+
+html[data-deck] .gmt-talk-slot p {
+  margin: 0;
+}
+
+html[data-deck] .gmt-talk-event {
+  font-family: var(--gmt-font-display);
+  font-size: max(0.9rem, 2.2cqi);
+  letter-spacing: 0.06em;
+  color: var(--gmt-cyan-bright);
+}
+
+html[data-deck] .gmt-talk-date {
+  font-size: max(0.8rem, 1.8cqi);
+  color: var(--gmt-ice);
+}
+
+html[data-deck] .gmt-talk-when {
+  font-family: var(--gmt-font-display);
+  font-size: max(1rem, 2.8cqi);
+  letter-spacing: 0.04em;
+  color: var(--gmt-ice-bright);
+}
+
+html[data-deck] .gmt-talk-zone {
+  font-size: max(0.7rem, 1.4cqi);
+  color: var(--gmt-ice-dim);
+}
+
+html[data-deck] [data-notes] {
+  display: none;
+}
+
+/* A build not yet reached keeps its place in the layout, so nothing moves when it appears. */
+html[data-deck] .gmt-build {
+  transition: opacity var(--gmt-duration-med) var(--gmt-enter-easing);
+}
+
+html[data-deck] .gmt-build[data-reached="false"] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-deck] .gmt-slide,
+  html[data-deck] .gmt-build {
+    transition-duration: var(--gmt-deck-fade);
+  }
+}
+
+/* ---- Blank ---- */
+html[data-deck="stage"] .gmt-deck-blank {
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  background: var(--gmt-void);
+}
+
+html[data-deck="stage"] .gmt-deck-blank[hidden] {
+  display: none;
+}
+
+/* ---- The bar ---- */
+html[data-deck="stage"] .gmt-deck-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-4);
+  padding-inline: var(--gmt-space-4);
+  block-size: var(--gmt-deck-bar);
+  margin-block: 0;
+  box-sizing: border-box;
+}
+
+/* The same flow rule gives every control after the first a top margin, however deep; the bar centres them itself. */
+html[data-deck="stage"] .gmt-deck-bar * {
+  margin-block: 0;
+}
+
+html[data-deck] .gmt-deck[data-fullscreen] .gmt-deck-bar {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 0;
+  block-size: var(--gmt-deck-bar-size);
+  background: var(--gmt-surface-widget);
+  opacity: 0;
+  transition: opacity var(--gmt-duration-fade) var(--gmt-easing);
+}
+
+html .gmt-deck[data-fullscreen] .gmt-deck-bar:hover,
+html .gmt-deck[data-fullscreen] .gmt-deck-bar:focus-within {
+  opacity: 1;
+}
+
+.gmt-deck-pager,
+.gmt-deck-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+/* A locked deck shows one slide, so it has no pager; its space holds the info button in place. */
+.gmt-deck[data-locked] .gmt-deck-pager {
+  visibility: hidden;
+}
+
+.gmt-deck-step {
+  appearance: none;
+  box-sizing: border-box;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice);
+  font: inherit;
+  font-size: var(--gmt-text-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gmt-deck-step:hover {
+  border-color: var(--gmt-cyan);
+}
+
+.gmt-deck-step:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
+}
+
+.gmt-deck-step[data-off] {
+  opacity: 0.4;
+}
+
+/*
+ * The info button at the bottom right, as on northguild.dev: faint until hovered, focused or open.
+ * Its popover holds the overview, keys, blank and fullscreen tools, over the bar's right end.
+ */
+.gmt-deck-info {
+  display: grid;
+  place-items: center;
+  opacity: 0.55;
+  transition: opacity var(--gmt-duration-fast) var(--gmt-easing);
+}
+
+.gmt-deck-info svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.gmt-deck-info:hover,
+.gmt-deck-info:focus-visible,
+.gmt-deck-info:has(+ .gmt-deck-menu:popover-open) {
+  opacity: 1;
+  border-color: var(--gmt-cyan);
+}
+
+html[data-deck] .gmt-deck-menu {
+  position: fixed;
+  inset: auto var(--gmt-space-4)
+    calc(var(--gmt-deck-bar-size) + var(--gmt-space-2)) auto;
+  min-inline-size: 13rem;
+  margin: 0;
+  padding: var(--gmt-space-2);
+  box-sizing: border-box;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+  color: var(--gmt-ice);
+}
+
+/* Only while open: a display set on the closed popover would show it. */
+html[data-deck] .gmt-deck-menu:popover-open {
+  display: grid;
+  gap: var(--gmt-space-1);
+}
+
+.gmt-deck-menu-item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmt-space-4);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  background: transparent;
+  color: var(--gmt-ice);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.gmt-deck-menu-item:hover {
+  border-color: var(--gmt-border);
+  background: var(--gmt-surface-2);
+}
+
+.gmt-deck-menu-item:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: -2px;
+}
+
+.gmt-deck-menu-item[aria-pressed="true"] {
+  color: var(--gmt-cyan-bright);
+}
+
+/* The Unlock tool once the slides are unlocked. */
+.gmt-deck-menu-item[hidden] {
+  display: none;
+}
+
+/* The Unlock tool's padlock, where the other tools show their key: open while the slides are
+   locked, shut once they are unlocked, so it pictures what a click does. */
+.gmt-deck-menu-icon {
+  display: inline-flex;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-deck-menu-item:not([data-unlocked]) [data-icon="lock"],
+.gmt-deck-menu-item[data-unlocked] [data-icon="unlock"] {
+  display: none;
+}
+
+/*
+ * ---- Dialogs ----
+ * Centred and of a set width: the slide text's flow margin would otherwise push a dialog to the
+ * top left, and a dialog with no width shrinks its key table to one word a line.
+ */
+html[data-deck] .gmt-deck-dialog {
+  inline-size: min(40rem, 92vw);
+  max-inline-size: none;
+  max-block-size: 86dvh;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gmt-ice);
+}
+
+.gmt-deck-dialog-frame {
+  display: grid;
+  color: var(--gmt-ice);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--gmt-space-4);
+  max-block-size: 86dvh;
+  padding: var(--gmt-space-6);
+  overflow: hidden;
+  box-sizing: border-box;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-lg);
+  corner-shape: bevel;
+}
+
+/* Only the body scrolls: the heading and the close button stay in view, inside the bevel. */
+.gmt-deck-dialog-frame > :not(.gmt-deck-dialog-title, .gmt-deck-dialog-close) {
+  min-block-size: 0;
+  overflow: auto;
+}
+
+/*
+ * A scroller clips what paints outside it, so a body that holds controls keeps room for their focus
+ * ring (up to 3px wide at a 2px offset under more contrast) and gives the same room back with a
+ * negative margin. The key table's body is its own framed table, with nothing to focus.
+ */
+.gmt-deck-dialog-frame > :is(.gmt-deck-unlock, .gmt-deck-overview) {
+  --gmt-deck-ring-room: 0.375rem;
+
+  margin: calc(-1 * var(--gmt-deck-ring-room));
+  padding: var(--gmt-deck-ring-room);
+}
+
+.gmt-deck-dialog-title {
+  margin: 0;
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-xl);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-deck-dialog-close {
+  display: flex;
+  justify-content: flex-end;
+}
+
+:is(.gmt-deck-dialog, .gmt-deck-menu) kbd {
+  padding-inline: 0.4em;
+  background: var(--gmt-code-bg);
+  color: var(--gmt-ice);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  white-space: nowrap;
+}
+
+/*
+ * The secret-phrase field with its Unlock button as an add-on: one row, one height, one shared
+ * border between them, and bevel corners on the outer ends only. A focused part rises over its
+ * neighbour so its ring is never hidden under it.
+ */
+.gmt-deck-addon {
+  display: flex;
+  align-items: stretch;
+}
+
+.gmt-deck-addon > input {
+  flex: 1 1 auto;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.gmt-deck-addon > button {
+  flex: none;
+  margin-inline-start: -1px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  corner-shape: bevel;
+}
+
+.gmt-deck-addon > :is(input, button):is(:hover, :focus-visible) {
+  position: relative;
+  z-index: 1;
+}
+
+/* The unlock dialog's alert: empty, it takes no room; a wrong phrase reads in the danger ink. */
+.gmt-deck-unlock-error {
+  color: var(--gmt-danger-ink);
+}
+
+.gmt-deck-unlock-error:empty {
+  display: none;
+}
+
+.gmt-deck-overview {
+  display: grid;
+  gap: var(--gmt-space-1);
+}
+
+/* The numbers' gutter, on top of the focus ring's room. */
+.gmt-deck-dialog-frame > .gmt-deck-overview {
+  padding-inline-start: calc(2.25rem + var(--gmt-deck-ring-room));
+}
+
+/* Top-aligned, so a title that wraps keeps its number beside its first line. */
+.gmt-deck-overview a {
+  display: inline-block;
+  vertical-align: top;
+  min-block-size: var(--gmt-target-min);
+  color: var(--gmt-ice);
+}
+
+.gmt-deck-overview a[aria-current] {
+  color: var(--gmt-cyan);
+  text-decoration-thickness: 2px;
+}
+
+.gmt-deck-minutes {
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The space layer: the sky and the Earth behind the stage ---- */
+
+/* Without the stage (no JavaScript, print) the article reads on the void alone. */
+.gmt-deck-space {
+  display: none;
+}
+
+html[data-deck] .gmt-deck-space {
+  display: block;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: auto;
+  isolation: isolate;
+
+  /* The reveal's timeline (the clock that becomes the Earth, below), inside the stage's 2.2 s. */
+  --gmt-reveal-fade: 500ms;
+  --gmt-reveal-turn: 700ms;
+  --gmt-reveal-earth-at: 300ms;
+  --gmt-reveal-earth: 1000ms;
+  --gmt-reveal-draw-at: 400ms;
+  --gmt-reveal-draw: 900ms;
+  --gmt-reveal-out-at: 1500ms;
+  --gmt-reveal-out: 700ms;
+}
+
+/*
+ * Starlight's flow rule gives an element after a sibling a top margin. The space layer's layers
+ * (the globe, the wall, the earth clock) are placed by inset and measured from the layer's corner,
+ * so they keep none: with it the wall drew a rem below its captions, and the Earth a rem low.
+ */
+html[data-deck] .gmt-deck-space > * {
+  margin: 0;
+}
+
+/* The sky layers rest hidden on the site; the deck reveals them once the sky has drawn. */
+html[data-deck] .gmt-deck-space .gmt-sky {
+  position: absolute;
+  inset: 0;
+}
+
+html[data-deck] .gmt-deck-space[data-sky="ready"] .gmt-sky-band,
+html[data-deck] .gmt-deck-space[data-sky="ready"] [data-sky-layer="stars"] {
+  opacity: 1;
+}
+
+/* The globe canvas fills the layer; the engine sizes its drawing buffer. */
+html[data-deck] .gmt-deck-space > canvas {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  animation: gmt-deck-space-in var(--gmt-duration-slow) var(--gmt-enter-easing)
+    both;
+}
+
+@keyframes gmt-deck-space-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-deck] .gmt-deck-space > canvas {
+    animation-duration: var(--gmt-deck-fade);
+  }
+}
+
+/*
+ * The stage sits over the space layer and lets pointer events through, so a drag on the void
+ * orbits the Earth; only the slide's own content takes them back.
+ */
+html[data-deck] .gmt-deck-stage,
+html[data-deck] .gmt-deck-slides,
+html[data-deck] .gmt-slide {
+  pointer-events: none;
+}
+
+html[data-deck] .gmt-slide-body > *,
+html[data-deck] .gmt-slide-title,
+html[data-deck] .gmt-deck-blank {
+  pointer-events: auto;
+}
+
+/* The Earth takes the right third; the slide's text keeps clear of it. */
+.gmt-deck[data-space] .gmt-slide:not([data-layout="full"]) {
+  padding-inline-end: 36cqi;
+}
+
+/* The stage is clear over the space layer: the Earth and the sky show round and behind the slides. */
+.gmt-deck[data-space] .gmt-deck-stage {
+  background: transparent;
+}
+
+/* ---- The ice wall: the figures behind the canvas, and the captions under it ---- */
+
+.gmt-wall-figures {
+  display: grid;
+  gap: var(--gmt-space-4);
+  margin: 0;
+}
+
+.gmt-wall-figure {
+  margin: 0;
+}
+
+.gmt-wall-figure img {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.gmt-wall-caption {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin-block-start: var(--gmt-space-2);
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-wall-caption-name {
+  color: var(--gmt-ice-bright);
+  font-weight: 600;
+}
+
+/*
+ * On the stage the canvas shows the page, so the image stays for assistive technology only. The
+ * figures are two columns down the stage's side edges, each box exactly where `paneLayout`
+ * (`lib/slides/ice-wall/frame.ts`) draws its pane: 16 wide, 1.5 in from the edge, 12 down, 1.2
+ * apart. The caption sits on its pane's lower edge, on an opaque plate with a full bevelled border
+ * and a bottom accent edge, so the centre stays clear for the title, the slide's content and the
+ * Earth.
+ */
+html[data-deck] .gmt-wall-figures {
+  position: absolute;
+  inset-inline: 1.5cqi;
+  inset-block-start: 12cqi;
+  grid-template-columns: repeat(2, 16cqi);
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  justify-content: space-between;
+  gap: 1.2cqi;
+  pointer-events: none;
+}
+
+html[data-deck] .gmt-wall-figure {
+  position: relative;
+  aspect-ratio: 16 / 10;
+}
+
+html[data-deck] .gmt-wall-figure img {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+html[data-deck] .gmt-wall-caption {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  box-sizing: border-box;
+  gap: 0;
+  margin: 0;
+  padding: 0.4cqi 0.7cqi;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  border-block-end: 2px solid var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-md);
+  font-size: max(11px, 0.9cqi);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* On a mid-size stage the plate would cover most of a pane: the page's title stays for assistive
+ * technology and the address and date remain in view. */
+@container (max-width: 1200px) {
+  html[data-deck] .gmt-wall-caption-name {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* On a stage too small to read a caption, it stays for assistive technology and the credits. */
+@container (max-width: 640px) {
+  html[data-deck] .gmt-wall-caption {
+    inset-inline-end: auto;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Slides that hang the wall keep their text in the centre, between the two columns of panes. */
+html[data-deck] .gmt-slide:has(.gmt-wall-figures) .gmt-slide-body {
+  margin-inline: 13cqi;
+}
+
+/* The wall's canvas sits over the globe, under the slides, and never takes a pointer. */
+html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
+  z-index: 2;
+  pointer-events: none;
+  animation: none;
+}
+
+/*
+ * The 24-hour clock in the Earth's place before the reveal (`lib/slides/earth-clock.ts`): over the
+ * globe, under the wall. The stage sizes and places it on the Earth's disc and sets the phase on
+ * the layer. While it shows the Earth is hidden behind it. The GMT slide's gap clock draws the same
+ * dial in a figure, so the dial's own rules below hold for both.
+ */
+.gmt-deck-space .gmt-earth-clock {
+  display: none;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.gmt-deck-space[data-earth-clock] .gmt-earth-clock {
+  display: block;
+}
+
+.gmt-earth-clock > svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+/* The enamel's sunburst, the chapter ring and the meridians are hairlines in the face's units. */
+.gmt-earth-clock [data-sunburst] line {
+  stroke: var(--gmt-ice);
+  stroke-opacity: 0.06;
+  stroke-width: 0.12;
+}
+
+.gmt-earth-clock [data-chapter] :is(circle, line) {
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 0.16;
+}
+
+.gmt-earth-clock [data-lume] {
+  fill: var(--gmt-cyan-bright);
+}
+
+:is(
+    .gmt-earth-clock :is([data-numerals], [data-legend], [data-calendar]),
+    .gmt-talk-page
+  )
+  text {
+  font-family: var(--gmt-font-display);
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: var(--gmt-ice);
+}
+
+.gmt-earth-clock [data-legend] text {
+  fill: var(--gmt-ice-dim);
+  letter-spacing: 0.12em;
+}
+
+.gmt-earth-clock [data-legend] [data-legend-mark] {
+  fill: var(--gmt-cyan);
+  letter-spacing: 0.2em;
+}
+
+.gmt-earth-clock [data-legend] [data-legend-offset] {
+  fill: var(--gmt-ice);
+  letter-spacing: 0.08em;
+}
+
+/*
+ * The hands, the date and the offset fade in together, already in place, once gmt has read the time
+ * (`data-timed`, `earth-clock.ts`); until then the dial shows no time it would have to jump from.
+ */
+.gmt-earth-clock :is([data-hands], [data-legend-offset], [data-calendar] text) {
+  transition: opacity var(--gmt-duration-slow) var(--gmt-easing);
+}
+
+.gmt-earth-clock:not([data-timed])
+  :is([data-hands], [data-legend-offset], [data-calendar] text) {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-earth-clock
+    :is([data-hands], [data-legend-offset], [data-calendar] text) {
+    transition: none;
+  }
+}
+
+/*
+ * The calendar page (`calendar-page.ts`): set into the clock's enamel as its date window, and on
+ * the title's schedule card. Its outline is a hairline at any size.
+ */
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-page] {
+  fill: var(--gmt-void);
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-strip] {
+  fill: var(--gmt-cyan);
+  fill-opacity: 0.85;
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-month] {
+  fill: var(--gmt-void);
+  letter-spacing: 0.16em;
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-day] {
+  fill: var(--gmt-ice-bright);
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-weekday] {
+  fill: var(--gmt-ice-dim);
+  letter-spacing: 0.16em;
+}
+
+.gmt-earth-clock [data-hand="second"] :is(line, circle) {
+  fill: var(--gmt-cyan);
+  stroke: var(--gmt-cyan);
+  stroke-width: 0.3;
+}
+
+.gmt-earth-clock [data-hand="second"] [data-second-tip] {
+  fill: none;
+}
+
+.gmt-earth-clock [data-cap] {
+  fill: var(--gmt-cyan);
+}
+
+.gmt-earth-clock [data-glint] {
+  fill: var(--gmt-ice-bright);
+  fill-opacity: 0.1;
+}
+
+.gmt-earth-clock [data-bezel-edge] {
+  stroke: var(--gmt-cyan);
+  stroke-opacity: 0.4;
+  stroke-width: 0.15;
+}
+
+.gmt-earth-clock [data-earth-meridians] {
+  opacity: 0;
+}
+
+.gmt-earth-clock [data-earth-meridians] line {
+  stroke: var(--gmt-cyan);
+  stroke-width: 0.25;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+[data-deck]
+  .gmt-deck-space[data-earth-clock="on"]
+  > canvas:not([data-wall-canvas]) {
+  animation: none;
+  opacity: 0;
+}
+
+/*
+ * The reveal, over the stage's `REVEAL_MS` (2.2 s): the numerals, the legend, the calendar, the
+ * chapter ring and the minute and second hands go first (the hours run clockwise and the longitudes anticlockwise,
+ * so no numeral would name its meridian); the indices turn onto the meridians; the enamel and the
+ * glass clear while the Earth fades in under them and the meridians draw in from the rim to the
+ * pole; then the indices, the bezel and the hour hand, which points along the zone's meridian, go.
+ */
+[data-deck]
+  .gmt-deck-space[data-earth-clock="morph"]
+  > canvas:not([data-wall-canvas]) {
+  /* The same animation name as the globe's own fade, so ending the phase does not restart it. */
+  animation: gmt-deck-space-in var(--gmt-reveal-earth) ease-out
+    var(--gmt-reveal-earth-at) both;
+}
+
+.gmt-deck-space[data-earth-clock="morph"] .gmt-earth-clock {
+  animation: gmt-earth-clock-out var(--gmt-reveal-out) ease-in
+    var(--gmt-reveal-out-at) both;
+}
+
+.gmt-deck-space[data-earth-clock="morph"]
+  .gmt-earth-clock
+  :is(
+    [data-numerals],
+    [data-legend],
+    [data-calendar],
+    [data-chapter],
+    [data-hand="minute"],
+    [data-hand="second"]
+  ) {
+  animation: gmt-earth-clock-out var(--gmt-reveal-fade) ease-out both;
+}
+
+.gmt-deck-space[data-earth-clock="morph"]
+  .gmt-earth-clock
+  :is([data-dial-face], [data-glass]) {
+  animation: gmt-earth-clock-out var(--gmt-reveal-earth) ease-in-out
+    var(--gmt-reveal-earth-at) both;
+}
+
+.gmt-deck-space[data-earth-clock="morph"] .gmt-earth-clock [data-turn] {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: gmt-earth-clock-turn var(--gmt-reveal-turn) ease-in-out both;
+}
+
+.gmt-deck-space[data-earth-clock="morph"] [data-earth-meridians] {
+  opacity: 1;
+}
+
+.gmt-deck-space[data-earth-clock="morph"] [data-earth-meridians] line {
+  animation: gmt-earth-clock-draw var(--gmt-reveal-draw) ease-out
+    var(--gmt-reveal-draw-at) both;
+}
+
+@keyframes gmt-earth-clock-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes gmt-earth-clock-turn {
+  to {
+    transform: rotate(var(--gmt-meridian-turn, 0deg));
+  }
+}
+
+@keyframes gmt-earth-clock-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The bar sits on its own opaque strip under the stage. */
+html[data-deck="stage"] .gmt-deck-bar {
+  position: relative;
+  background: var(--gmt-void);
+}
+
+/* Blank hides the space layer too: the blank layer is opaque, but the sky must not show round it. */
+html[data-deck="stage"] .gmt-deck[data-blank] .gmt-deck-space {
+  visibility: hidden;
+}
+
+@media print {
+  html[data-deck] .gmt-deck-space {
+    display: none;
+  }
+}
+
+/* ---- Deck 0's content: tables, filing cards, gmt results, the matrix, the quote ---- */
+
+.gmt-deck-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-deck-table caption {
+  text-align: start;
+  color: var(--gmt-ice-dim);
+  padding-block: 0 var(--gmt-space-2);
+  padding-inline: var(--gmt-space-2);
+}
+
+.gmt-deck-table th,
+.gmt-deck-table td {
+  text-align: start;
+  vertical-align: top;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border-block-end: 1px solid var(--gmt-hairline);
+}
+
+.gmt-filing-grid,
+.gmt-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--gmt-space-3);
+}
+
+.gmt-filing {
+  display: grid;
+  gap: var(--gmt-space-2);
+  align-content: start;
+  margin: 0;
+}
+
+.gmt-filing > p,
+.gmt-filing .gmt-report,
+.gmt-filing .expressive-code {
+  margin: 0;
+}
+
+.gmt-filing-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-space-2);
+}
+
+.gmt-filing-head .gmt-filing-group {
+  margin-inline-end: auto;
+}
+
+.gmt-filing-ref {
+  font-weight: 600;
+}
+
+.gmt-filing-group {
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-filing[data-state="open"] {
+  border-block-end-color: var(--gmt-cyan);
+}
+
+.gmt-filing[data-state="closed"] {
+  border-block-end-color: var(--gmt-border);
+}
+
+.gmt-report {
+  display: grid;
+  gap: var(--gmt-space-1);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-report dt {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-report dd {
+  margin: 0;
+}
+
+.gmt-result {
+  display: grid;
+  gap: var(--gmt-space-2);
+  align-content: start;
+}
+
+.gmt-result > * {
+  margin: 0;
+}
+
+.gmt-result-value {
+  display: flex;
+  gap: var(--gmt-space-2);
+  align-items: baseline;
+}
+
+.gmt-result output {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* The sentinel is the only amber. */
+.gmt-result[data-signal="lost"] {
+  border-color: var(--gmt-signal-border);
+  border-block-end-color: var(--gmt-signal-ink);
+}
+
+.gmt-result[data-signal="lost"] output {
+  color: var(--gmt-signal-ink);
+}
+
+.gmt-result-note {
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-quote {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+}
+
+/*
+ * On the stage every panel's type is set in container units, so a card holds the same share of the
+ * slide at every stage size. The cards sit in the text column, clear of the Earth, and a long line
+ * wraps inside its card.
+ */
+html[data-deck] .gmt-filing,
+html[data-deck] .gmt-result,
+html[data-deck] .gmt-quote,
+html[data-deck] .gmt-deck-table {
+  min-inline-size: 0;
+  font-size: max(0.7rem, 1.7cqi);
+  line-height: 1.3;
+}
+
+html[data-deck] .gmt-filing {
+  gap: 0.5cqi;
+  padding: 1cqi 1.4cqi;
+}
+
+html[data-deck] .gmt-filing-group,
+html[data-deck] .gmt-report,
+html[data-deck] .gmt-result-note {
+  font-size: max(0.65rem, 1.45cqi);
+}
+
+html[data-deck] .gmt-filing-title {
+  font-weight: 600;
+}
+
+html[data-deck] .gmt-filing .expressive-code,
+html[data-deck] .gmt-filing pre {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  font-size: max(0.65rem, 1.4cqi);
+}
+
+html[data-deck] .gmt-filing pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+html[data-deck] .gmt-report {
+  gap: 0.3cqi;
+}
+
+html[data-deck] .gmt-report > div {
+  display: grid;
+  grid-template-columns: 7cqi minmax(0, 1fr);
+  gap: 1cqi;
+}
+
+html[data-deck] .gmt-filing-grid,
+html[data-deck] .gmt-results {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 0.8cqi;
+}
+
+/* Three results and their lead line share one slide, so the call and the lead are set smaller. */
+html[data-deck] .gmt-result-call {
+  font-size: max(0.6rem, 1.25cqi);
+}
+
+html[data-deck] .gmt-lead {
+  font-size: max(0.8rem, 1.7cqi);
+  margin: 0;
+}
+
+/*
+ * A step that replaces the one before it: the base content and each build share one cell, and a
+ * build the mount has reached hides every earlier one, so the cell holds the tallest and nothing
+ * below it moves.
+ */
+.gmt-swap {
+  display: grid;
+}
+
+.gmt-swap > * {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+}
+
+.gmt-swap > :has(~ .gmt-build[data-reached="true"]) {
+  visibility: hidden;
+}
+
+html[data-deck] .gmt-slide-body p {
+  margin-block: 0 1cqi;
+}
+
+html[data-deck] .gmt-report dd,
+html[data-deck] .gmt-report dt,
+html[data-deck] .gmt-report > div {
+  margin: 0;
+}
+
+html[data-deck] .gmt-result {
+  gap: 0.6cqi;
+  padding: 1cqi 1.4cqi;
+}
+
+html[data-deck] .gmt-deck-table th,
+html[data-deck] .gmt-deck-table td {
+  padding: 0.3cqi 1cqi;
+}
+
+/* The caption lines up with the cells, clear of the plate's bevelled corner. */
+html[data-deck] .gmt-deck-table caption {
+  padding-inline: 1cqi;
+}
+
+/* A table whose rows all arrive with the slide: a row is unseen, typing its code, or done. */
+.gmt-deck-table tr[data-state="hidden"] {
+  visibility: hidden;
+}
+
+.gmt-deck-table tr[data-state="typing"] td + td {
+  visibility: hidden;
+}
+
+/*
+ * The typed table's three columns are a third each, so they do not grow as the code types in: the
+ * code wraps inside its column instead of widening it.
+ */
+.gmt-deck-table[data-visual="rows"] th {
+  inline-size: calc(100% / 3);
+}
+
+.gmt-deck-table[data-visual="rows"] td,
+.gmt-deck-table[data-visual="rows"] td code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.gmt-filing .gmt-repro {
+  margin: 0;
+  padding: 0.6cqi 1cqi;
+  border: 1px solid var(--gmt-border);
+  background: var(--gmt-surface-widget);
+  color: var(--gmt-ice-bright);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Over the wall, the table and the quote sit on opaque plates so the figures never show through the text. */
+html[data-deck] .gmt-deck-table {
+  inline-size: 100%;
+  font-size: max(0.65rem, 1.3cqi);
+  background: var(--gmt-surface-widget);
+  border-collapse: collapse;
+}
+
+/* Equal thirds wrap the reasons onto more lines, so the typed table sets a little smaller to fit. */
+html[data-deck] .gmt-deck-table[data-visual="rows"] {
+  font-size: max(0.6rem, 1.1cqi);
+}
+
+html[data-deck] .gmt-slide[data-layout="full"] .gmt-quote {
+  max-inline-size: 100%;
+  margin: 0;
+  padding: 0.8cqi 1.2cqi;
+}
+
+/* Starlight's flow margins would add a gap on top of the grid's own. */
+html[data-deck] .gmt-filing-grid > *,
+html[data-deck] .gmt-results > *,
+html[data-deck] .gmt-swap > * {
+  margin: 0;
+}
+
+/*
+ * ---- The bug slides' visuals ----
+ * Each shows its report's own lines as a picture, with the filing as a small receipt in the
+ * corner. Every readout reserves its box, so a rolling counter or a typing line moves nothing.
+ */
+html[data-deck] .gmt-visual {
+  display: grid;
+  gap: 1.4cqi;
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.gmt-receipts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4cqi 1.4cqi;
+}
+
+.gmt-receipt {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.8cqi;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: max(0.65rem, 1.3cqi);
+}
+
+.gmt-receipt a {
+  font-weight: 600;
+}
+
+.gmt-visual > .gmt-receipt {
+  justify-self: end;
+}
+
+.gmt-visual-note {
+  margin: 0;
+  font-size: max(0.7rem, 1.6cqi);
+  color: var(--gmt-ice);
+}
+
+.gmt-terminal,
+.gmt-column {
+  padding: 1.2cqi 1.6cqi;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-terminal {
+  display: grid;
+  gap: 0.6cqi;
+  min-block-size: 13cqi;
+  align-content: start;
+  font-family: var(--gmt-font-mono);
+  font-size: max(0.7rem, 1.6cqi);
+}
+
+.gmt-terminal p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.gmt-terminal-out {
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-terminal-expected {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-terminal-out span,
+.gmt-terminal-expected span {
+  margin-inline-end: 1cqi;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-terminal-cursor {
+  display: inline-block;
+  inline-size: 0.6em;
+  block-size: 1.05em;
+  vertical-align: text-bottom;
+  background: var(--gmt-ice);
+  animation: gmt-cursor var(--gmt-duration-sweep) steps(2, start) infinite;
+}
+
+.gmt-terminal[data-ended="true"] .gmt-terminal-cursor {
+  animation: none;
+  opacity: 0.3;
+}
+
+@keyframes gmt-cursor {
+  to {
+    visibility: hidden;
+  }
+}
+
+.gmt-columns-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2cqi;
+}
+
+.gmt-column[data-which="observed"] {
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-columns-call {
+  margin: 0;
+  font-size: max(0.7rem, 1.6cqi);
+}
+
+.gmt-columns {
+  display: grid;
+  gap: 1cqi;
+}
+
+.gmt-column {
+  min-inline-size: 0;
+}
+
+.gmt-column h3 {
+  margin: 0 0 0.6cqi;
+  font-size: max(0.7rem, 1.5cqi);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-column p {
+  margin: 0;
+  font-size: max(0.75rem, 1.8cqi);
+}
+
+.gmt-pins {
+  display: grid;
+  gap: 1cqi;
+  justify-items: start;
+}
+
+.gmt-pins p {
+  margin: 0;
+}
+
+.gmt-pins-count {
+  display: flex;
+  align-items: center;
+  gap: 1.2cqi;
+  font-size: max(1.4rem, 5cqi);
+  color: var(--gmt-ice-bright);
+}
+
+/* The count's flaps are lit like a landed row on the bug slides. */
+.gmt-pins-count .gmt-flap-tile {
+  color: var(--gmt-cyan);
+  border-color: var(--gmt-cyan);
+}
+
+.gmt-pins-split {
+  font-size: max(0.7rem, 1.6cqi);
+}
+
+/* On the stage the table stands beside the count, in the room left of the planet: under it, the
+   twelve rows ran past the stage's bottom edge. */
+html[data-deck] .gmt-pins {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  column-gap: 3cqi;
+}
+
+html[data-deck] .gmt-pins-count {
+  font-size: max(1.2rem, 4cqi);
+  white-space: nowrap;
+}
+
+html[data-deck] .gmt-pins .gmt-deck-table {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  inline-size: auto;
+  min-inline-size: 26cqi;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-terminal-cursor {
+    animation: none;
+  }
+}

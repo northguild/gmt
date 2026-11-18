@@ -1,0 +1,19 @@
+---
+/**
+ * A filing as a receipt: its reference as a link, the tracker and the state in words. It sits in the
+ * corner of a slide whose visual shows the bug; the report's own lines are in that visual. Read
+ * from `upstream-filings.json` through `filingFacts`, so an unknown key fails the build.
+ */
+import { filingFacts } from "~/lib/slides/filing";
+
+interface Props {
+  /** A `filingKey`. */
+  filing: string;
+}
+const facts = filingFacts(Astro.props.filing);
+---
+
+<p class="gmt-receipt" data-state={facts.state}>
+  <a href={facts.url}>{facts.ref}</a>
+  <span>{facts.group}, {facts.stateLabel.toLowerCase()}</span>
+</p>

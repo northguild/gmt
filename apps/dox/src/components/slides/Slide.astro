@@ -1,0 +1,50 @@
+---
+/**
+ * One slide: a headed section. The runtime reads `data-minutes` and `data-place` (where the space
+ * stage's camera goes, `lib/slides/places.ts`), `data-lapse` (the time-lapse that plays) and `data-pins` from it. Put `<Build>` and `<Notes>` in its slot.
+ * A `place` the stage cannot resolve fails the build. `layout="full"` gives the slide the whole
+ * stage and puts the Earth behind it; `title` and `default` leave the right third to the Earth.
+ * `reveal` names a zone: the slides before this one show a 24-hour clock of its wall time in the
+ * Earth's place, and this slide turns the clock into the Earth (`lib/slides/earth-clock.ts`).
+ * `clock` stands that clock in the Earth's place again on a slide past the reveal, as the close does.
+ */
+import { resolvePlace } from "~/lib/slides/places";
+import { isLapseName } from "~/lib/slides/time-lapse";
+interface Props {
+  id: string;
+  title: string;
+  minutes: number;
+  place?: string;
+  /** A time-lapse (`LAPSES` in `lib/slides/time-lapse.ts`) that plays while the slide shows. */
+  lapse?: string;
+  /** `filings` lights every upstream filing as a pin while the slide shows. */
+  pins?: "filings";
+  layout?: "title" | "default" | "full";
+  /** The zone whose clock stands in the Earth's place until this slide reveals the planet. */
+  reveal?: string;
+  /** Show the reveal's clock in the Earth's place on this slide, past the reveal. */
+  clock?: boolean;
+}
+const { id, title, minutes, place, lapse, pins, layout = "default", reveal, clock = false } = Astro.props;
+if (place) resolvePlace(place);
+if (reveal) resolvePlace(`pole:${reveal}`);
+if (lapse && !isLapseName(lapse))
+  throw new Error(`Slide "${id}" names the unknown lapse "${lapse}"`);
+---
+
+<section
+  id={id}
+  class="gmt-slide"
+  data-slide
+  data-minutes={minutes}
+  data-place={place}
+  data-lapse={lapse}
+  data-pins={pins}
+  data-reveal={reveal}
+  data-clock={clock ? "" : undefined}
+  data-layout={layout}
+  aria-labelledby={`${id}-title`}
+>
+  <h2 id={`${id}-title`} class="gmt-slide-title">{title}</h2>
+  <div class="gmt-slide-body"><slot /></div>
+</section>

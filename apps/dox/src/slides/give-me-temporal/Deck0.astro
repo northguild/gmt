@@ -1,0 +1,346 @@
+---
+/**
+ * Deck 0, "Give Me Temporal": the 16 slides of the HelsinkiJS talk, in the outline's order
+ * (`context/dox/specs/dox-g12/index.md`). Every bug on a slide is a filing read from
+ * `upstream-filings.json`, every gmt result is computed by gmt at build time, and every count is
+ * derived; the filing slides' wording lives in `content.ts`. Places are IANA zones or the stage's
+ * keywords (`lib/slides/places.ts`); the ice wall hangs on `one-clock` and `date` and breaks into
+ * clock pins on `temporal`.
+ *
+ * Two seams wait for the owner and slice 4b: the recorded agent answer on `one-clock`
+ * (`quotes/agent-moment.json`, shown as a marked panel while empty) and the live panels on
+ * `ask-dox`, `page-tools` and `thanks`. The title's schedule card reads the talk's date and slot
+ * from the registry with gmt, and says "Date to be announced" while none is fixed.
+ *
+ * `presenter` renders the same slides, builds and notes as the hidden source of the presenter view
+ * (`pages/slides/give-me-temporal/presenter.astro`).
+ */
+import AgentQuote from "~/components/slides/AgentQuote.astro";
+import Build from "~/components/slides/Build.astro";
+import Deck from "~/components/slides/Deck.astro";
+import ExperimentOpener from "~/components/slides/ExperimentOpener.astro";
+import ExperimentSlide from "~/components/slides/ExperimentSlide.astro";
+import Columns from "~/components/slides/Columns.astro";
+import FlapBoard from "~/components/slides/FlapBoard.astro";
+import MonthPage from "~/components/slides/MonthPage.astro";
+import MonthShift from "~/components/slides/MonthShift.astro";
+import FilingLegend from "~/components/slides/FilingLegend.astro";
+import FilingReceipt from "~/components/slides/FilingReceipt.astro";
+import JumpPages from "~/components/slides/JumpPages.astro";
+import GmtResult from "~/components/slides/GmtResult.astro";
+import Notes from "~/components/slides/Notes.astro";
+import SkyCredits from "~/components/slides/SkyCredits.astro";
+import Slide from "~/components/slides/Slide.astro";
+import TalkSchedule from "~/components/slides/TalkSchedule.astro";
+import Terminal from "~/components/slides/Terminal.astro";
+import WallFigures from "~/components/slides/WallFigures.astro";
+import { dateFaults } from "~/data/date-faults";
+import { gmtStats } from "~/data/gmt-stats";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+import { addUtc } from "@northguild/gmt/utc/calculate";
+import {
+  compatGroups,
+  engineLabel,
+  groupsStillNeeded,
+  probeTotals,
+} from "~/data/temporal-compat";
+import { filings } from "~/data/upstream-filings";
+import { findFiling } from "~/lib/slides/filing";
+import { zoneJump } from "~/lib/slides/zone-jump";
+import { SITE_URL, pageHref } from "~/lib/site";
+import { DECKS } from "~/slides/decks";
+import { wallCredit } from "~/slides/give-me-temporal/credits";
+import { REPORTS, VISUALS } from "~/slides/give-me-temporal/content";
+
+interface Props {
+  presenter?: boolean;
+}
+const { presenter = false } = Astro.props;
+
+const deck = DECKS.find((d) => d.slug === "give-me-temporal")!;
+const venueCity = deck.zone.split("/")[1]!.replaceAll("_", " ");
+/*
+ * The GMT slide's last call is Helsinki's skipped hour, and its builds hold the Earth's clock, the
+ * venue's, either side of it: the minute before the jump and one minute later, both gmt's answers.
+ */
+if (deck.zone !== "Europe/Helsinki")
+  throw new Error(`The GMT slide's skipped hour is Helsinki's; the venue is ${deck.zone}`);
+const gapBefore = resolveLocal("2027-03-28T02:59:00", deck.zone, { disambiguation: "reject" });
+const gapAfter = addUtc(gapBefore, { minutes: 1 });
+const homeFaults = dateFaults.filter((f) => f.home);
+const siblings = findFiling("tc39/proposal-temporal#3330").pairsWith;
+const engines = [
+  ...new Set(compatGroups.flatMap((g) => g.engines ?? [])),
+].map(engineLabel);
+const manilaJump = zoneJump("Asia/Manila", [1844, 1845])!;
+const manilaBefore = manilaJump.pages[0]!.date;
+const manilaAfter = manilaJump.pages.at(-1)!.date;
+const manilaSkipped = manilaJump.pages.filter((p) => p.gap).map((p) => p.date);
+const guardCount = compatGroups.filter((g) => g.state === "guard").length;
+---
+
+<Deck slug="give-me-temporal" presenter={presenter}>
+  <Slide id="title" title="Give Me Temporal" minutes={0.5} place="Europe/Helsinki" layout="title">
+    <TalkSchedule deck={deck} />
+    <Notes>
+      <p>Greet the room. The 24-hour clock where the Earth will be shows the venue's time, read with GMT. It stays through the next two slides: that is the one-clock view.</p>
+      <p>The talk is one idea: code usually asks one place for one local time, and the planet has many.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="one-clock" title="One clock, or the planet" minutes={1.5} place="wall" layout="full">
+    <WallFigures images />
+    <AgentQuote />
+    <Notes>
+      <p>Each of these sites shows one clock. That is the view most date code takes: one place, one local time. Hold that.</p>
+      <p>The answer under them is what an agent wrote when it was asked for the time in another city.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="date" title="Date is broken" minutes={1} place="wall" layout="full">
+    <table class="gmt-deck-table" data-visual="rows">
+      <caption>What Date gives, and why</caption>
+      <thead>
+        <tr><th scope="col">Code</th><th scope="col">Result</th><th scope="col">Why</th></tr>
+      </thead>
+      <tbody>
+        {homeFaults.map((f, i) => (
+          <tr data-row={i + 1}>
+            <td><code aria-hidden="true" data-type data-text={f.input}>{f.input}</code><code class="gmt-sr-only">{f.input}</code></td>
+            <td>{f.output}</td>
+            <td>{f.why}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <WallFigures />
+    <Notes>
+      <p>Date is the built-in answer, and it has one clock: the machine's. These rows are the same ones as on the home page.</p>
+      <p>Every row types out together as the slide arrives, then the results and the reasons appear. Step on and the wall breaks.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="temporal" title="Give me Temporal" minutes={1.5} place="planet" layout="full" reveal={deck.zone}>
+    <p>One clock against the whole planet. Temporal takes the zone as data.</p>
+    <p>
+      Where an engine still differs{engines.length > 0 ? `, on ${engines.join(" and ")}` : ""}, {gmtStats.functions} GMT functions
+      sit on a tested guard: {groupsStillNeeded} of {compatGroups.length} known defect groups still need one,
+      measured by {probeTotals.probes} probes.
+    </p>
+    <Notes>
+      <p>The clock turns into the Earth: its hour marks land on the meridians, the planet fades in, then the wall breaks into pins across it.</p>
+      <p>One clock against the whole planet. Temporal takes the zone as data, so code can ask any place on Earth, and GMT is built on it.</p>
+      <p>The counts come from the compatibility snapshot, not from this page.</p>
+    </Notes>
+  </Slide>
+
+  <ExperimentOpener place="planet">
+    <Notes>
+      <p>We stop reading other people's tests and run our own experiments: the same inputs into every library, with the right answer from the standard.</p>
+    </Notes>
+  </ExperimentOpener>
+
+  <ExperimentSlide experiment="gaps" place="planet">
+    <Notes>
+      <p>A time the clocks skip has no single answer, and Temporal says which one to give. Read the worst count and GMT's zero.</p>
+    </Notes>
+  </ExperimentSlide>
+
+  <ExperimentSlide experiment="overlaps" place="planet">
+    <Notes>
+      <p>A time that happens twice. Temporal's default takes the earlier of the two; most of these libraries take the later one, so their answer is an hour off the standard's.</p>
+    </Notes>
+  </ExperimentSlide>
+
+  <ExperimentSlide experiment="host" place="planet">
+    <Notes>
+      <p>The same input, the same library, ten machines set to ten zones. Any answer that moves with the machine counts.</p>
+    </Notes>
+  </ExperimentSlide>
+
+  <ExperimentSlide experiment="odd" place="planet">
+    <Notes>
+      <p>Apia skipped a whole day, Lord Howe moves its clocks by half an hour, Kathmandu sits at +05:45. The planet stays in view for the bugs ahead.</p>
+    </Notes>
+  </ExperimentSlide>
+
+  <Slide id="abort" title="A date pattern aborts Node" minutes={2} place="planet" lapse="abort">
+    <div class="gmt-swap">
+      <div class="gmt-visual">
+        <Terminal {...VISUALS.terminal} />
+        <FilingReceipt filing={REPORTS.abort[0].filing} />
+      </div>
+      <Build n={1}>
+        <div class="gmt-visual">
+          <Columns observedLabel="Observed" observed={REPORTS.abort[1].observed} expected={REPORTS.abort[1].expected} />
+          <FilingReceipt filing={REPORTS.abort[1].filing} />
+        </div>
+      </Build>
+    </div>
+    <Notes>
+      <p>Galicia keeps Madrid's clock, so the planet turns under it while the terminal replays the crash. The Galician pattern is one of those with the week-of-year year. The ticket on the Unicode side is ours too.</p>
+      <p>Nothing runs on stage: this is a recording of what the report says happens. Step on for the Unicode ticket behind it.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="years" title="Wrong years" minutes={1.5} place="planet" lapse="tehran">
+    <div class="gmt-swap">
+      <div class="gmt-visual">
+        <FlapBoard {...VISUALS.counters.tehran} />
+        <div class="gmt-receipts">
+          <FilingReceipt filing={REPORTS.years[1].filing} />
+          <FilingReceipt filing={REPORTS.years[0].filing} />
+        </div>
+      </div>
+      <Build n={1} lapse="tokyo">
+        <div class="gmt-visual">
+          <FlapBoard {...VISUALS.counters.tokyo} />
+          <div class="gmt-receipts">
+            <FilingReceipt filing={REPORTS.years[3].filing} />
+            <FilingReceipt filing={REPORTS.years[2].filing} />
+          </div>
+        </div>
+      </Build>
+    </div>
+    <Notes>
+      <p>The camera holds; the sun moves. Tehran first: a split-flap board lands on the date native Temporal gives, then the date the polyfill gives, a day later, from the Persian calendar's leap years. Then Tokyo, with the Japanese calendar's first era years.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="day-off" title="A day off" minutes={1.5} place="planet" lapse="kolkata">
+    <div class="gmt-swap">
+      <div class="gmt-visual">
+        <MonthShift {...VISUALS.calendars.kolkata} />
+        <FilingReceipt filing={REPORTS.dayOff[0].filing} />
+      </div>
+      <Build n={1} lapse="shanghai">
+        <div class="gmt-visual">
+          <MonthPage {...VISUALS.calendars.shanghai} />
+          <FilingReceipt filing={REPORTS.dayOff[1].filing} />
+        </div>
+      </Build>
+      <Build n={2} place="moon">
+        <p class="gmt-deck-panel">Beyond the planet: the Moon.</p>
+      </Build>
+    </div>
+    <Notes>
+      <p>Kolkata: the month's first week slides one day right, so day 1 lands a day late. Then Shanghai: February 2027 with Chinese New Year ringed on the 6th, and the polyfill's 7th ringed in red. The last step leaves the Earth for the Moon.</p>
+      <p>Owner to decide what is said at the Moon step; the slide only states where the camera goes.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="manila" title="Manila skips a day" minutes={1.5} place="planet" lapse="manila">
+    <div class="gmt-visual">
+      <JumpPages zone="Asia/Manila" years={[1844, 1845]} />
+      <p class="gmt-visual-note">
+        Manila's clocks go from {manilaBefore} to {manilaAfter}; {manilaSkipped.join(", ")} never happened there.{" "}
+        {REPORTS.manila[0].observed}
+      </p>
+      <div class="gmt-receipts">
+        <FilingReceipt filing={REPORTS.manila[0].filing} />
+        {siblings.map((key) => <FilingReceipt filing={key} />)}
+      </div>
+    </div>
+    <Notes>
+      <p>The camera holds and time runs through the end of 1844. The page for the skipped day drops out as Manila's clock crosses it. Some lookups miss that jump; the sibling fix is in the polyfill's own tracker.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="engines" title="Engines disagree" minutes={1} place="planet" lapse="sun">
+    <div class="gmt-visual">
+      <Columns call={VISUALS.engines.call} observedLabel={VISUALS.engines.observedLabel} observed={REPORTS.engines[0].observed} expected={REPORTS.engines[0].expected} />
+      <FilingReceipt filing={REPORTS.engines[0].filing} />
+    </div>
+    <Notes>
+      <p>Two engines, the same call, a different answer. The planet keeps turning: the sun reaches every engine's users in turn.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="scoreboard" title="Every filing" minutes={0.5} place="overview" pins="filings">
+    <FilingLegend />
+    <Notes>
+      <p>Every filing is on the upstream page. {filings.length} in all; the pins light in the order they were filed, at the zone each report names.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="gmt" title="GMT" minutes={2} place="greenwich">
+    <p class="gmt-lead">{gmtStats.functions} functions with familiar names; every result below is computed by GMT.</p>
+    <div class="gmt-results">
+      <GmtResult module="plain/calculate" name="addDate" args={["2024-01-31", { months: 1 }]} />
+      <GmtResult
+        module="zoned/calculate"
+        name="addZoned"
+        args={["2027-03-27T03:30:00+02:00[Europe/Helsinki]", { days: 1 }]}
+      />
+      <GmtResult
+        module="instant/convert"
+        name="resolveLocal"
+        args={["2027-03-28T03:30:00", "Europe/Helsinki", { disambiguation: "reject" }]}
+      >
+        <p class="gmt-result-note">That time does not exist in Helsinki: the clocks skip 03:00 to 04:00.</p>
+      </GmtResult>
+    </div>
+    <Build n={1} clockAt={gapBefore} />
+    <Build n={2} clockAt={gapAfter}>
+      <p class="gmt-result-note">One minute later the clocks have skipped an hour.</p>
+    </Build>
+    <Notes>
+      <p>Familiar names, and strings in and out. The last call asks for a time that never happened in Helsinki; GMT answers with a signal, not a guess.</p>
+      <p>Next: the clock takes the Earth's place at 02:59 in Helsinki on 28 March 2027. Next again: one minute later it reads 04:00, and the offset under the city goes from UTC+02:00 to UTC+03:00.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="guards" title="Tested guards, and a canary" minutes={1} place="greenwich">
+    <p>
+      {compatGroups.length} known defect groups; {groupsStillNeeded} still need a workaround
+      {guardCount > 0 ? `, ${guardCount} kept on purpose` : ""}. {probeTotals.probes} probes, {probeTotals.failing} failing today.
+    </p>
+    <p>
+      Each guard runs against {gmtStats.timezones} zones on Node {gmtStats.nodes.join(", ")}, and a weekly canary
+      checks when one can go.
+      <a href={pageHref("/upstream/")}>Every filing</a>
+    </p>
+    <Notes>
+      <p>A guard is a workaround with a test; the canary says when upstream has fixed the thing and the guard can be retired.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="ask-dox" title="Ask Dox" minutes={1.5} place="Europe/Helsinki">
+    <p class="gmt-deck-panel" data-seam="live-answer">The same question, live in Dox chat: to come with the live-agents slice.</p>
+    <Notes>
+      <p>Same question, but this agent has the whole planet's tools.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="page-tools" title="Tools on the page" minutes={1} place="Europe/Helsinki">
+    <p class="gmt-deck-panel" data-seam="page-tools">A live page-tool call and this deck's own tools: to come with the live-agents slice.</p>
+    <ul>
+      <li><a href={pageHref("/tools/cutoff-ruler/")}>Cutoff ruler</a>, with <code>check_eta_against_cutoff</code></li>
+      <li><a href={pageHref("/guides/integration/browser-agents/")}>Browser agents</a></li>
+      <li><a href={pageHref("/llms.txt")}>llms.txt</a></li>
+    </ul>
+    <Notes>
+      <p>The page's tool is called live from the browser, then the deck's own tools are read by an agent.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="thanks" title="Thanks" minutes={0.5} place="Europe/Helsinki" clock>
+    <p><a href={SITE_URL}>{SITE_URL.replace("https://", "")}</a></p>
+    <p><a href="https://github.com/northguild/gmt">github.com/northguild/gmt</a></p>
+    <p class="gmt-deck-panel" data-seam="audience-questions">Audience questions through Dox chat: to come with the live-agents slice.</p>
+    <SkyCredits id="deck-sky-credits" extra={[wallCredit()]} />
+    <Notes>
+      <p>Thank the room. Questions run for {deck.qa} minutes, through Dox chat or aloud.</p>
+    </Notes>
+  </Slide>
+</Deck>
+
+<script>
+  import { mountBugVisuals } from "~/lib/slides/bug-visuals";
+
+  // Only the deck ticks: the presenter view's copy of the slides has no clocks and plays no visuals.
+  const stop = new AbortController();
+  window.addEventListener("pagehide", () => stop.abort(), { once: true });
+  const deck = document.querySelector<HTMLElement>("[data-deck-root]");
+  if (deck?.querySelector("[data-deck-stage]")) mountBugVisuals(deck, { signal: stop.signal, win: window });
+</script>

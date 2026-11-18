@@ -1,0 +1,99 @@
+/*
+ * Print: one slide a page on the void, 16:9. Builds and panels show, the controls and the notes
+ * are left out. Printing the article without JavaScript gives the handout.
+ */
+@media print {
+  @page {
+    size: 297mm 167mm;
+    margin: 0;
+  }
+
+  .gmt-deck {
+    block-size: auto;
+    padding: 0;
+    overflow: visible;
+    background: var(--gmt-void);
+    /* stylelint-disable-next-line plugin/use-baseline -- print-color-adjust is not Baseline 2024; a browser without it may drop the void background in print, and the text stays readable on paper */
+    print-color-adjust: exact;
+  }
+
+  html[data-deck],
+  html[data-deck] body,
+  html[data-deck] .page,
+  html[data-deck] .gmt-deck {
+    block-size: auto;
+    overflow: visible;
+  }
+
+  /* The stage grid keeps a row for the bar; the bar is gone, so the row is too. */
+  html[data-deck] .gmt-deck {
+    display: block;
+  }
+
+  html[data-deck] .gmt-deck-stage,
+  html[data-deck] .gmt-deck-slides {
+    position: static;
+    inline-size: auto;
+    aspect-ratio: auto;
+    overflow: visible;
+    container-type: normal;
+  }
+
+  .gmt-slide,
+  html[data-deck] .gmt-slide,
+  html[data-deck="wait"] .gmt-slide ~ .gmt-slide {
+    display: block;
+    position: relative;
+    box-sizing: border-box;
+    block-size: 167mm;
+    inline-size: 297mm;
+    padding: 14mm 18mm;
+    overflow: hidden;
+    break-after: page;
+    break-inside: avoid;
+    opacity: 1;
+    visibility: visible;
+    transition: none;
+    font-size: 1.2rem;
+    background: var(--gmt-void);
+    /* stylelint-disable-next-line plugin/use-baseline -- print-color-adjust is not Baseline 2024; a browser without it may drop the void background in print, and the text stays readable on paper */
+    print-color-adjust: exact;
+  }
+
+  html[data-deck] .gmt-slide-title {
+    font-size: 2.1rem;
+  }
+
+  /* A locked deck prints its first slide alone, as it shows it (`lib/slides/unlock.ts`). */
+  .gmt-deck[data-locked] .gmt-slide ~ .gmt-slide {
+    display: none;
+  }
+
+  html[data-deck] .gmt-build[data-reached],
+  html[data-deck] .gmt-build[data-reached="false"] {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* The site's own header, skip link and footer are not slides: left in, they push every slide
+     across a page break. */
+  .sl-skip-link,
+  .page > .header,
+  .page footer {
+    display: none;
+  }
+
+  html[data-deck] .gmt-deck-slides {
+    visibility: visible;
+  }
+
+  .gmt-deck canvas,
+  html[data-deck] .gmt-deck-bar,
+  .gmt-deck-bar,
+  .gmt-deck-blank,
+  .gmt-deck-dialog,
+  .gmt-notes,
+  html[data-deck] [data-notes] {
+    display: none;
+  }
+}

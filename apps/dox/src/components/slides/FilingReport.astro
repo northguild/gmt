@@ -1,0 +1,27 @@
+---
+/**
+ * A `FilingCard` with its report under it: the short reproduction (plain text, so it takes the deck's own colours) where the filing carries one, and
+ * the observed and expected lines, all from `REPORTS` in `src/slides/give-me-temporal/content.ts`.
+ */
+import type { Report } from "~/slides/give-me-temporal/content";
+import FilingCard from "./FilingCard.astro";
+
+interface Props {
+  report: Report;
+}
+const { report } = Astro.props;
+---
+
+<FilingCard filing={report.filing}>
+  {report.repro && <pre class="gmt-repro"><code>{report.repro.code}</code></pre>}
+  <dl class="gmt-report">
+    <div>
+      <dt>Observed</dt>
+      <dd>{report.observed}</dd>
+    </div>
+    <div>
+      <dt>Expected</dt>
+      <dd>{report.expected}</dd>
+    </div>
+  </dl>
+</FilingCard>
