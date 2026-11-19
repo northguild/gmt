@@ -263,7 +263,7 @@ const runHere = (record, zone = "Europe/Helsinki") =>
 
 test("ES module code runs, with a function that is not exported", async () => {
   const r = await runHere({
-    code: "function reminder() { return new Date(Date.UTC(2027, 2, 28, 1, 30)).toISOString(); }\nconsole.log('chatter');",
+    code: "function reminder() { return new Date(Date.UTC(2027, 2, 28, 1, 30)).toISOString(); }\nconsole.log('chatter');", // date-ban: an agent's code under test, as text
     call: "reminder()",
   });
   assert.equal(r.runs[0].value, "2027-03-28T01:30:00.000Z");
@@ -306,7 +306,7 @@ test("a value that is not a string is written as JSON, a date as an ISO string",
   });
   assert.equal(obj.runs[0].value, '{"a":1}');
   const date = await runHere({
-    code: "export const f = () => new Date(0);",
+    code: "export const f = () => new Date(0);", // date-ban: an agent's code under test, as text
     call: "f()",
   });
   assert.equal(date.runs[0].value, "1970-01-01T00:00:00.000Z");

@@ -1741,7 +1741,7 @@ html[data-deck] .gmt-step p {
 }
 
 html[data-deck] .gmt-step .gmt-step-source {
-  font-size: max(0.6875rem, 1cqi);
+  font-size: max(0.75rem, 1cqi);
 }
 
 /* ---- Familiar names, the QR codes and the quote's parts ---- */
@@ -1793,7 +1793,7 @@ html[data-deck] .gmt-slide:has(.gmt-familiar) .gmt-slide-title {
 
 .gmt-familiar-shapes code {
   padding-block: 0;
-  font-size: 0.9em;
+  font-size: max(0.75rem, 0.9em);
 }
 
 /* The GMT call and its value share one row, so three pairs fit one slide. */

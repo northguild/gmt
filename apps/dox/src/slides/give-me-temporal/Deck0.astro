@@ -90,7 +90,7 @@ const manilaJump = zoneJump("Asia/Manila", [1844, 1845])!;
 const manilaBefore = manilaJump.pages[0]!.date;
 const manilaAfter = manilaJump.pages.at(-1)!.date;
 const manilaSkipped = manilaJump.pages.filter((p) => p.gap).map((p) => p.date);
-const guessRow = dateFaults.find((f) => f.input === 'new Date("2025-03-30T01:30")');
+const guessRow = dateFaults.find((f) => f.input === 'new Date("2025-03-30T01:30")'); // date-ban: names the fault row, never runs it
 if (!guessRow) throw new Error("The date slide's guess row is not in date-faults.ts");
 const LINKEDIN_URL = "https://www.linkedin.com/in/craigocurtis/";
 const NORTHGUILD_URL = "https://northguild.dev/";
@@ -429,13 +429,13 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     <Notes>
       <p>
         The page's own tool, <code>compute_easter_dates</code>, is called live from the browser as the slide shows,
-        for 2027: the call, both Easter Sundays, and the <a href={pageHref("/tools/moving-feasts/")}>Moving Feasts</a>
-        month grids it opens. Western Easter is 28 March, the day Helsinki's clocks go forward; Orthodox Easter
+        for 2027: the call, both Easter Sundays, and the <a href={pageHref("/tools/moving-feasts/")}>Moving Feasts</a> month
+        grids it opens. Western Easter is 28 March, the day Helsinki's clocks go forward; Orthodox Easter
         is 2 May, 35 days later.
       </p>
       <p>
-        For agents: <a href={pageHref("/guides/integration/browser-agents/")}>Browser agents</a> and
-        <a href={pageHref("/llms.txt")}>llms.txt</a>.
+        For agents: <a href={pageHref("/guides/integration/browser-agents/")}>Browser agents</a> and <a
+          href={pageHref("/llms.txt")}>llms.txt</a>.
       </p>
     </Notes>
   </Slide>
