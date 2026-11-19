@@ -13,6 +13,11 @@
  * The demo's rules (8 s budget, recording fallback, abort on leave) are the transport's
  * (`lib/slides/deck-transport.ts`); this file is layout, the question pills and the slide's life:
  * leaving the slide aborts everything and starts the chat afresh, so nothing is left running.
+ *
+ * Every mode ends in the brain bar: the brain the live questions go to, the questions left today
+ * and when they come back, so the presenter sees on any Dox slide whether to change brains. The
+ * pick is the deck's one (`lib/slides/deck-brain.ts`), kept across slides and fresh chats. When
+ * the counts cannot be read the bar says so, where /dox leaves the badge out.
  */
 import {
   startTransition,
@@ -22,13 +27,22 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import type { UIMessageChunk } from "ai";
 import { DoxChat, type DoxChatHandle } from "~/components/ask/DoxChat";
 import { ChatErrorBoundary } from "~/components/ask/ChatErrorBoundary";
 import { RailResizer } from "~/components/ask/RailResizer";
 import { WidgetRail, type RailWidget } from "~/components/ask/WidgetRail";
+import { BrainSelector } from "~/components/ask/BrainSelector";
+import { ResetClock } from "~/components/ask/ResetClock";
 import { useBrains } from "~/components/ask/use-brains";
+import { useResetClock } from "~/components/ask/use-reset-clock";
+import {
+  getDeckBrain,
+  setDeckBrain,
+  subscribeDeckBrain,
+} from "~/lib/slides/deck-brain";
 import { isSameWidget, resolveWidget } from "~/components/ask/widget-registry";
 import { isActive, onDeckState } from "~/lib/slides/deck-state";
 import {
@@ -150,11 +164,20 @@ function Chat(
     session: ReturnType<typeof createDeckSession>;
     source: SourceState | null;
     run: number;
-    withBrains: boolean;
   },
 ) {
-  const { mode, session, source, questions, recordings, withBrains } = props;
-  const brains = useBrainsIf(withBrains);
+  const { mode, session, source, questions, recordings } = props;
+  const brains = useBrains();
+  const clock = useResetClock();
+  const brainId = useSyncExternalStore(
+    subscribeDeckBrain,
+    getDeckBrain,
+    () => null,
+  );
+  const brainPick = useMemo(
+    () => ({ id: brainId, onSelect: setDeckBrain }),
+    [brainId],
+  );
   const chatRef = useRef<DoxChatHandle>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const railId = useId();
@@ -231,60 +254,84 @@ function Chat(
         : "Question";
 
   return (
-    <div className={`gmt-hive-body ${styles["body"]}`} ref={bodyRef}>
-      <ChatErrorBoundary label="transcript">
-        <DoxChat
-          ref={chatRef}
-          brains={brains.info}
-          onUsed={brains.refresh}
-          onUsage={brains.apply}
-          onWidget={showWidget}
-          createTransport={session.transport}
-          typing={mode !== "tools"}
-          modelAnswers={mode !== "tools"}
-          compact
-          aboveComposer={
-            <output className={styles["source"]} data-slot="source">
-              {sourceText(source, mode)}
-            </output>
-          }
-        />
-      </ChatErrorBoundary>
-      {/* /dox/'s own handle. The deck opens the rail at half the frame and keeps the width to
+    <>
+      <div className={`gmt-hive-body ${styles["body"]}`} ref={bodyRef}>
+        <ChatErrorBoundary label="transcript">
+          <DoxChat
+            ref={chatRef}
+            brains={brains.info}
+            onUsed={brains.refresh}
+            onUsage={brains.apply}
+            onWidget={showWidget}
+            createTransport={session.transport}
+            brainPick={brainPick}
+            brainControls={false}
+            typing={mode !== "tools"}
+            modelAnswers={mode !== "tools"}
+            compact
+            aboveComposer={
+              <output className={styles["source"]} data-slot="source">
+                {sourceText(source, mode)}
+              </output>
+            }
+          />
+        </ChatErrorBoundary>
+        {/* /dox/'s own handle. The deck opens the rail at half the frame and keeps the width to
           this showing: a drag here never changes the width /dox/ remembers. */}
-      <RailResizer
-        railId={railId}
-        container={bodyRef}
-        remember={false}
-        className={styles["resizer"]}
-      />
-      <ChatErrorBoundary label="widget rail">
-        <WidgetRail
-          widget={railWidget}
-          onClose={closeWidget}
-          onPick={() => {}}
+        <RailResizer
           railId={railId}
-          className={styles["rail"]}
-          focusTitleRef={focusTitleRef}
-          idle={{
-            label: heading,
-            content: (
-              <DeckQuestions heading={heading} items={items} onAsk={ask} />
-            ),
-          }}
+          container={bodyRef}
+          remember={false}
+          className={styles["resizer"]}
         />
-      </ChatErrorBoundary>
-    </div>
+        <ChatErrorBoundary label="widget rail">
+          <WidgetRail
+            widget={railWidget}
+            onClose={closeWidget}
+            onPick={() => {}}
+            railId={railId}
+            className={styles["rail"]}
+            focusTitleRef={focusTitleRef}
+            idle={{
+              label: heading,
+              content: (
+                <DeckQuestions heading={heading} items={items} onAsk={ask} />
+              ),
+            }}
+          />
+        </ChatErrorBoundary>
+      </div>
+      <fieldset
+        className={`gmt-hive-controls not-content ${styles["brains"]}`}
+        aria-label="Dox brain"
+        data-slot="brains"
+      >
+        {brains.status === "ready" ? (
+          <>
+            <ResetClock
+              info={brains.info}
+              selectedBrainId={brainId}
+              clock={clock}
+            />
+            <BrainSelector
+              info={brains.info}
+              selectedId={brainId}
+              onSelect={setDeckBrain}
+              clock={clock}
+            />
+          </>
+        ) : (
+          <p className={styles["brainsNote"]}>
+            {brains.status === "loading"
+              ? "Reading Dox's brains…"
+              : "Dox's brains did not answer: questions left unknown, recorded answers still play."}
+          </p>
+        )}
+      </fieldset>
+    </>
   );
 }
 
-const NO_BRAINS = {
-  info: null,
-  refresh: () => {},
-  apply: () => {},
-};
-
-/** The brains budget only where the chat goes live; the tools slide makes no request. */
 /** How long the rail's body must hold its size before the glide starts. */
 const SETTLE_MS = 200;
 
@@ -327,11 +374,6 @@ function glideToLead(host: HTMLElement): () => void {
   watch.observe(host, { childList: true, subtree: true });
   check();
   return stop;
-}
-
-function useBrainsIf(enabled: boolean) {
-  const live = useBrains();
-  return enabled ? live : NO_BRAINS;
 }
 
 export default function DeckDox(props: DeckDoxProps) {
@@ -407,7 +449,6 @@ export default function DeckDox(props: DeckDoxProps) {
         session={session}
         source={source}
         run={run}
-        withBrains={mode !== "tools"}
       />
     </div>
   );

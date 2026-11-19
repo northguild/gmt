@@ -14,7 +14,9 @@ import { parseRecording } from "~/lib/slides/replay";
 import real from "~/slides/give-me-temporal/recorded/faq-helsinki-autumn.json";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { expectNoAxeViolations } from "~/test/render-widget";
-import DeckDox from "./DeckDox";
+import type { BrainsInfo } from "~/components/ask/use-brains";
+import { getDeckBrain, setDeckBrain } from "~/lib/slides/deck-brain";
+import DeckDox, { type DeckDoxMode } from "./DeckDox";
 
 installJsdomShims();
 
@@ -31,22 +33,62 @@ const recording = {
 
 /** Every `/api/chat` call, so a test can say no request was made. */
 let chatCalls: string[];
+/** The body of every `/api/chat` call. */
+let chatBodies: { model?: string }[];
 
-function route(chat: typeof fetch) {
+const RESETS = "2027-03-28T07:00:00Z";
+const INFO: BrainsInfo = {
+  brains: [
+    {
+      id: "gemini-a",
+      label: "3.8 Flash",
+      provider: "google",
+      remaining: 20,
+      limit: 20,
+      state: "ok",
+    },
+    {
+      id: "cf-a",
+      label: "GLM 4.7 Flash",
+      provider: "workers-ai",
+      remaining: 100,
+      limit: 100,
+      state: "ok",
+    },
+  ],
+  providers: [
+    { id: "google", label: "Gemini", resetsAt: RESETS },
+    { id: "workers-ai", label: "Workers AI", resetsAt: RESETS },
+  ],
+  activeBrainId: "gemini-a",
+  visitor: {
+    used: 1,
+    limit: 5,
+    remaining: 4,
+    unlimited: false,
+    resetsAt: RESETS,
+  },
+};
+
+/** `/api/chat` answers with `chat`; `/api/brains` with `brains`, or a 404 without it. */
+function route(chat: typeof fetch, brains?: BrainsInfo) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes("/api/brains") && brains)
+      return Response.json(brains);
     if (!String(input).includes("/api/chat"))
       return new Response("{}", { status: 404 });
     chatCalls.push(String(input));
+    chatBodies.push(JSON.parse(String(init?.body ?? "{}")));
     return chat(input, init);
   });
 }
 
-function mount() {
+function mount(mode: DeckDoxMode = "audience") {
   const view = render(
     <main data-deck-root>
       <section data-slide id="thanks">
         <DeckDox
-          mode="audience"
+          mode={mode}
           demoId="thanks"
           questions={FAQ}
           recordings={[recording]}
@@ -59,9 +101,13 @@ function mount() {
 
 beforeEach(() => {
   chatCalls = [];
+  chatBodies = [];
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  act(() => setDeckBrain(null));
+});
 
 describe("DeckDox on a slide", () => {
   it("answers a ready question from its recording with no request", async () => {
@@ -91,6 +137,55 @@ describe("DeckDox on a slide", () => {
     const user = userEvent.setup();
     await user.type(screen.getByRole("textbox"), "Is 2100 a leap year?{Enter}");
     await waitFor(() => expect(chatCalls).toHaveLength(1));
+  });
+
+  it("says so in the brain bar when the brains cannot be read", async () => {
+    vi.stubGlobal("fetch", route(stalling()));
+    mount();
+    const bar = screen.getByRole("group", { name: "Dox brain" });
+    await waitFor(() =>
+      expect(bar).toHaveTextContent(
+        "Dox's brains did not answer: questions left unknown, recorded answers still play.",
+      ),
+    );
+  });
+
+  it.each<DeckDoxMode>(["answer", "audience", "tools"])(
+    "shows the brain and the questions left on the %s slide",
+    async (mode) => {
+      vi.stubGlobal("fetch", route(stalling(), INFO));
+      mount(mode);
+      const bar = screen.getByRole("group", { name: "Dox brain" });
+      await waitFor(() => expect(bar).toHaveTextContent("3.8 Flash"));
+      expect(bar).toHaveTextContent("You 4 left");
+      expect(bar).toHaveTextContent("Dox 120 today");
+      // One picker per frame: the composer's own copy stays out.
+      expect(
+        screen.getAllByRole("button", { name: /3\.8 Flash/ }),
+      ).toHaveLength(1);
+    },
+  );
+
+  it("sends to the deck's brain and keeps the pick when the slide's chat starts afresh", async () => {
+    vi.stubGlobal("fetch", route(stalling(), INFO));
+    mount();
+    const bar = screen.getByRole("group", { name: "Dox brain" });
+    const user = userEvent.setup();
+    await user.click(
+      await within(bar).findByRole("button", { name: /3\.8 Flash/ }),
+    );
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: /GLM 4\.7 Flash/ }),
+    );
+    expect(getDeckBrain()).toBe("cf-a");
+    const deck = screen.getByRole("main");
+    act(() => sendDeckState(deck, "thanks", 0));
+    act(() => sendDeckState(deck, "next", 0));
+    act(() => sendDeckState(deck, "thanks", 0));
+    await waitFor(() => expect(bar).toHaveTextContent("GLM 4.7 Flash"));
+    await user.type(screen.getByRole("textbox"), "Is 2100 a leap year?{Enter}");
+    await waitFor(() => expect(chatBodies).toHaveLength(1));
+    expect(chatBodies[0]?.model).toBe("cf-a");
   });
 
   it("aborts a live answer and clears the chat on leaving the slide", async () => {

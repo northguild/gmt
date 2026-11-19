@@ -72,3 +72,23 @@
   font-size: var(--gmt-text-sm);
   color: var(--gmt-ice-dim);
 }
+
+/* The brain bar: the composer's own picker and reset clock, under the chat and the rail on every
+   Dox slide, so the presenter reads the brain and what is left in one place. */
+.brains {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 0;
+  border-block-start: 1px solid var(--gmt-border);
+}
+
+.brainsNote {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}

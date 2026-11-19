@@ -159,6 +159,19 @@ export interface DoxChatProps {
   /** Whether an AI model writes the answers. `false` (a page tool's call, run in the page) drops
    *  the note that says models get things wrong; the default keeps it. */
   modelAnswers?: boolean;
+  /** The brain pick, when the host keeps it (the deck shares one pick across its slides and
+   *  keeps it when a slide's chat starts afresh). Without it the chat keeps its own. */
+  brainPick?: BrainPick;
+  /** Whether the composer's control bar shows the brain picker and the reset clock. `false` is
+   *  for a host that shows them itself; the default keeps them. */
+  brainControls?: boolean;
+}
+
+/** A brain pick held by the host: the reader's explicit choice, or null for whichever has
+ *  budget. */
+export interface BrainPick {
+  id: string | null;
+  onSelect: (brainId: string | null) => void;
 }
 
 export interface DoxChatHandle {
@@ -178,6 +191,8 @@ export function DoxChat({
   onEmptyChange,
   aboveComposer,
   createTransport,
+  brainPick,
+  brainControls = true,
 }: DoxChatProps = {}) {
   const [warning, setWarning] = useState<ChatWarningState | null>(null);
   /** The Worker's latest progress line while it chooses a brain; null shows
@@ -192,7 +207,9 @@ export function DoxChat({
 
   /** The reader's explicit brain choice; null means "whichever has budget".
    * Held here because the selector lives in this composer's control bar. */
-  const [selectedBrainId, setSelectedBrainId] = useState<string | null>(null);
+  const [ownBrainId, setOwnBrainId] = useState<string | null>(null);
+  const selectedBrainId = brainPick ? brainPick.id : ownBrainId;
+  const setSelectedBrainId = brainPick ? brainPick.onSelect : setOwnBrainId;
   const clock = useResetClock();
 
   /* `body` below is re-evaluated per request but the transport itself is built
@@ -740,17 +757,21 @@ export function DoxChat({
               <PromptInputFooter className="gmt-hive-composer-footer">
                 <PromptInputTools className="gmt-hive-controls">
                   <ChatInfo />
-                  <ResetClock
-                    info={brains}
-                    selectedBrainId={selectedBrainId}
-                    clock={clock}
-                  />
-                  <BrainSelector
-                    info={brains}
-                    selectedId={selectedBrainId}
-                    onSelect={setSelectedBrainId}
-                    clock={clock}
-                  />
+                  {brainControls && (
+                    <>
+                      <ResetClock
+                        info={brains}
+                        selectedBrainId={selectedBrainId}
+                        clock={clock}
+                      />
+                      <BrainSelector
+                        info={brains}
+                        selectedId={selectedBrainId}
+                        onSelect={setSelectedBrainId}
+                        clock={clock}
+                      />
+                    </>
+                  )}
                 </PromptInputTools>
                 <PromptInputSubmit
                   status={status}

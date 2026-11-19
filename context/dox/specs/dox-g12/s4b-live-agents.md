@@ -75,9 +75,11 @@ rendering, the composer, the starter pills, the tool receipts, the brain line, t
 sounds are `/dox`'s own, so Dox looks and behaves on the slide as it does on the page. The
 presenter view's copy of a slide gets a static placeholder, so it never mounts a second chat.
 
-Three optional props carry the difference; each default leaves `/dox` as it was:
+Optional props carry the difference; each default leaves `/dox` as it was:
 - `DoxChat.createTransport(brain)`: builds the chat's transport in place of `/api/chat`'s.
 - `DoxChat.typing` (default `true`): `false` leaves out the composer, for the tool slide.
+- `DoxChat.brainPick` and `DoxChat.brainControls` (default `true`): the host's brain pick, and
+  whether the composer shows its own picker and reset clock.
 - `WidgetRail.idle` and `WidgetRail.className`: what the rail holds when no widget is open, and an
   extra class for the deck's layout.
 
@@ -98,6 +100,16 @@ The deck's rules are one `ChatTransport` made by `createDeckSession`:
   the `showMovingFeasts` tool input, so the receipt and the Moving Feasts month grids open in the
   rail. No network.
 - Each source change is announced as `gmt-demo` (`announceDemo`) for the presenter.
+
+**Brain bar.** Every Dox frame, `page-tools` included, ends in one bar with `/dox`'s own
+`ResetClock` and `BrainSelector`: the brain the live questions go to, the questions left today and
+when they come back, so the presenter sees on any Dox slide whether to change brains. The
+composer's own copies are left out (`DoxChat.brainControls`), so a frame has one picker. The pick
+is the deck's one (`src/lib/slides/deck-brain.ts`, kept for the tab in `sessionStorage`), given to
+each chat through `DoxChat.brainPick`: a brain picked on one Dox slide holds on the others and when
+a slide's chat starts afresh. While `/gmt/api/brains` is being read the bar says so; when it cannot
+be read (`useBrains`' `status`) the bar says the counts are unknown and recorded answers still play,
+where `/dox` leaves the badge out.
 
 Typing in the composer never steps the deck (`keys.ts` ignores text fields). Sound follows what
 `/dox` does. `deck-dox.module.css` only sizes the frame to the stage; the chat and rail keep
@@ -154,7 +166,11 @@ even after a failed assertion. Fake timers drive the 8 s budget and the replay o
   no timers; the `local` stream; `reconnectToStream` resolves `null`.
 - `DeckDox.render.test.tsx`: a starter pill plays its recording with no `/api/chat` call and shows
   the "Recorded" line; the pills and composer are offered; a typed question reaches the network;
-  leaving the slide aborts the request and clears the chat.
+  leaving the slide aborts the request and clears the chat; the brain bar shows the brain and the
+  questions left in each mode with one picker per frame, says so when the counts cannot be read,
+  and a pick holds after the chat starts afresh and reaches the request as `model`.
+- `deck-brain.test.ts`: one change notice per new pick, kept in `sessionStorage`, and shared in the
+  page when storage is refused.
 - `DoxChat.transport.test.tsx`: a given transport is used and `/api/chat` is not; the rail shows the
   examples by default and `idle` when given. `/dox`'s own tests stay unchanged.
 - `replay.test.ts`: chunks arrive in order at their offsets; abort stops the stream.

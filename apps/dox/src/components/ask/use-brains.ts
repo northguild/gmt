@@ -18,18 +18,24 @@ import { withBase } from "~/lib/site";
 export type { BrainsInfo, BrainStatus, ProviderStatus } from "~/lib/chat-types";
 export type BrainState = BrainsInfo["brains"][number]["state"];
 
+/** Whether the counts have arrived: `unreachable` once a read has failed with none in hand. */
+export type BrainsStatus = "loading" | "ready" | "unreachable";
+
 export function useBrains() {
   const [info, setInfo] = useState<BrainsInfo | null>(null);
+  const [failed, setFailed] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       const response = await fetch(withBase("/api/brains"), {
         headers: { accept: "application/json" },
       });
-      if (!response.ok) return;
+      if (!response.ok) return setFailed(true);
       setInfo((await response.json()) as BrainsInfo);
+      setFailed(false);
     } catch {
       // Left as null — the badge disappears, the chat keeps working.
+      setFailed(true);
     }
   }, []);
 
@@ -37,5 +43,8 @@ export function useBrains() {
     void refresh();
   }, [refresh]);
 
-  return { info, refresh, apply: setInfo };
+  /* Counts already in hand stay shown after a failed re-read: they are the latest known. */
+  const status: BrainsStatus =
+    info !== null ? "ready" : failed ? "unreachable" : "loading";
+  return { info, status, refresh, apply: setInfo };
 }
