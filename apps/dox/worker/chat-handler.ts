@@ -32,7 +32,7 @@ import { fitChunks } from "./fit-chunks";
 import { selectTools } from "./select-tools";
 import { selectVocabulary, type VocabularySkill } from "./select-vocabulary";
 import { assembleSystemPrompt } from "./system-prompt";
-import { buildWorkerTools } from "./tools";
+import { buildWorkerTools, chatDocFor } from "./tools";
 import { validateChatRequest } from "./validation";
 import {
   chooseBrain,
@@ -272,9 +272,10 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         chunks: retrieved,
         vocabulary: selectVocabulary(vocabulary, retrieved),
         coreRules,
-        tools: offered.flatMap(
-          (name) => ENABLED_TOOL_DOCS.find((doc) => doc.name === name) ?? [],
-        ),
+        tools: offered.flatMap((name) => {
+          const doc = ENABLED_TOOL_DOCS.find((d) => d.name === name);
+          return doc ? chatDocFor(doc) : [];
+        }),
       });
 
       /* `ignoreIncompleteToolCalls` drops a tool part that never reached a

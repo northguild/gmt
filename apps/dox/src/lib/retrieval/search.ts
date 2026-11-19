@@ -220,6 +220,30 @@ export function indexFor(chunks: RetrievalChunk[]): Indexed {
   return indexed;
 }
 
+/* A question that names a wall-clock time on a calendar date is, near a clock
+   change, a question about whether that time exists, whatever words it uses:
+   "what happens at 03:30 on 31 October?" shares no word with the pages on gaps
+   and overlaps, so BM25 ranked recurrence, aviation and workforce pages above
+   them. Such a question therefore also searches for the words those pages use.
+   One rule for every zone and date; it names none.
+
+   The second search is a nudge, not a rival: its scores count at
+   CLOCK_CHANGE_WEIGHT, so a question that is really about something else with
+   a time in it ("how many days from 23:00 on 15 June to 01:00") keeps its own
+   pages on top and only gains the clock-change pages beside them. */
+const WALL_CLOCK_TIME = /\b\d{1,2}[:.]\d{2}\b|\b\d{1,2}\s?[ap]\.?m\b/i;
+const CALENDAR_DATE =
+  /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}\b/i;
+const CLOCK_CHANGE_WORDS = "local time exists clock change gap overlap";
+const CLOCK_CHANGE_WEIGHT = 0.5;
+
+/** The clock-change words to add to a search for `query`, or `undefined` when it names no time on a date. */
+export function clockChangeWords(query: string): string | undefined {
+  return WALL_CLOCK_TIME.test(query) && CALENDAR_DATE.test(query)
+    ? CLOCK_CHANGE_WORDS
+    : undefined;
+}
+
 /**
  * DOX-C1 (#137) — keyword/BM25 retrieval over the chunk corpus, with a
  * namespace bias (not a filter) toward the current page's context. A pure
@@ -235,12 +259,23 @@ export function searchChunks(
   const { namespace, limit = 15 } = options;
   const { index, byId } = indexFor(chunks);
 
-  const results = index.search(query, {
+  const searchOptions = {
     boostDocument: namespace
-      ? (_id, _term, stored) =>
-          stored?.namespace === namespace ? NAMESPACE_BOOST : 1
+      ? (_id: unknown, _term: string, stored?: Record<string, unknown>) =>
+          stored?.["namespace"] === namespace ? NAMESPACE_BOOST : 1
       : undefined,
-  });
+  };
+  let results = index.search(query, searchOptions);
+  const extra = clockChangeWords(query);
+  if (extra !== undefined) {
+    const scores = new Map(results.map((r) => [r.id, r.score]));
+    for (const r of index.search(extra, searchOptions)) {
+      scores.set(r.id, (scores.get(r.id) ?? 0) + CLOCK_CHANGE_WEIGHT * r.score);
+    }
+    results = [...scores]
+      .map(([id, score]) => ({ id, score }))
+      .sort((a, b) => b.score - a.score) as typeof results;
+  }
 
   return results
     .filter((r) => r.score >= MIN_RELEVANCE_SCORE)

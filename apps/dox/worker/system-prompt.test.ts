@@ -165,4 +165,34 @@ describe("assembleSystemPrompt", () => {
       expect(withTools()).toContain("There is no default widget");
     });
   });
+
+  it("will not call a local time ordinary without a tool result or a retrieved page, and lets a tool result stand as context", () => {
+    const prompt = assembleSystemPrompt({
+      routeAllowlist: [],
+      chunks: [],
+      vocabulary: "",
+      coreRules: "",
+    });
+    expect(prompt).toContain("Never tell a reader that a local time exists");
+    expect(prompt).toContain("no tool result in this conversation does");
+  });
+
+  it("lets a tool ask to be called before any text, and keeps prose first for the rest", () => {
+    const prompt = assembleSystemPrompt({
+      routeAllowlist: [],
+      chunks: [],
+      vocabulary: "",
+      coreRules: "",
+      tools: [
+        {
+          name: "showDstInspector",
+          purpose: "p",
+          when: "w, so call this tool FIRST",
+          args: "zone",
+        },
+      ],
+    });
+    expect(prompt).toContain("Write your prose answer first");
+    expect(prompt).toContain("call it FIRST");
+  });
 });

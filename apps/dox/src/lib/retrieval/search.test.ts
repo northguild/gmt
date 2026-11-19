@@ -1,5 +1,5 @@
 import { buildRetrievalCorpus } from "./corpus";
-import { indexFor, searchChunks } from "./search";
+import { clockChangeWords, indexFor, searchChunks } from "./search";
 import type { RetrievalChunk } from "./types";
 
 /* DOX-C1 (#137) DoD: "Retrieval returns sensible chunks for a spread of real
@@ -343,5 +343,28 @@ describe("searchChunks — PTP time (IOT-101)", () => {
         c.url.startsWith("/guides/industries/iot-ptp-time/#"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("searchChunks — a wall-clock time on a date", () => {
+  const dstPage = (c: RetrievalChunk) =>
+    c.url.includes("check-local-time-exists") ||
+    c.url.includes("dst-disambiguation");
+
+  it.each([
+    "What happens at 03:30 on 31 October 2027 in Helsinki?",
+    "What happens at 02:30 on 2027-03-28 in Warsaw?",
+    "Is 2:30am on March 28 a real time in Lisbon?",
+  ])(
+    "%s finds the pages on gaps and overlaps in the first five",
+    (question) => {
+      const top = searchChunks(chunks, question).slice(0, 5);
+      expect(top.some(dstPage)).toBe(true);
+    },
+  );
+
+  it("does not add clock-change words to a question with a time but no date", () => {
+    expect(clockChangeWords("what is 03:30 in Tokyo")).toBeUndefined();
+    expect(clockChangeWords("what happens on 31 October")).toBeUndefined();
   });
 });

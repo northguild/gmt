@@ -10,11 +10,12 @@
  */
 import { convertToModelMessages, type UIMessage } from "ai";
 import {
+  DOX_TOOL_DOCS,
   DOX_TOOL_NAMES,
   showCronInAZoneInput,
   showLeapDayBirthdayInput,
 } from "../src/lib/dox-tools";
-import { buildWorkerTools } from "./tools";
+import { buildWorkerTools, chatDocFor } from "./tools";
 
 /* Every defined tool, not only the offered ones: a pending tool's `execute` is
    worth testing before its widget lands, so enabling it is a one-line change
@@ -1018,5 +1019,83 @@ describe("convertToModelMessages — why the tools carry an execute", () => {
       { ignoreIncompleteToolCalls: true },
     );
     expect(shape(converted)).toEqual(["user[text]", "assistant[text]"]);
+  });
+});
+
+describe("the DST inspector's server step", () => {
+  const dst = async (input: unknown) =>
+    (await run("showDstInspector", input)) as unknown as {
+      ok: boolean;
+      transitions: { instant: string }[];
+      check?: { kind: string; facts: string[] };
+    };
+
+  it("says a time inside a spring gap does not exist", async () => {
+    const result = await dst({
+      zone: "Europe/Helsinki",
+      year: 2027,
+      local: "2027-03-28T03:30:00",
+    });
+    expect(result.check?.kind).toBe("nonexistent");
+    expect(result.check?.facts.join(" ")).toContain("does not exist");
+    expect(result.check?.facts.join(" ")).toContain(
+      "the clocks in Europe/Helsinki change from +02:00 to +03:00: when the clock reads 03:00 it moves to 04:00",
+    );
+    expect(result.transitions).toHaveLength(2);
+  });
+
+  it("says a time inside an autumn overlap happens twice, with both instants", async () => {
+    const result = await dst({
+      zone: "Europe/Helsinki",
+      year: 2027,
+      local: "2027-10-31T03:30:00",
+    });
+    expect(result.check?.kind).toBe("ambiguous");
+    const text = result.check?.facts.join(" ") ?? "";
+    expect(text).toContain("when the clock reads 04:00 it moves to 03:00");
+    expect(text).toContain("2027-10-31T00:30:00Z (offset +03:00)");
+    expect(text).toContain("2027-10-31T01:30:00Z (offset +02:00)");
+  });
+
+  it("says an ordinary time happens once", async () => {
+    const result = await dst({
+      zone: "Europe/Helsinki",
+      year: 2027,
+      local: "2027-06-01T12:00:00",
+    });
+    expect(result.check?.kind).toBe("unique");
+  });
+
+  it("says a zone with no clock change never skips a time", async () => {
+    const result = await dst({
+      zone: "Asia/Tokyo",
+      year: 2027,
+      local: "2027-03-28T03:30:00",
+    });
+    expect(result.transitions).toEqual([]);
+    expect(result.check?.kind).toBe("unique");
+  });
+
+  it("adds no check when no wall time was asked about", async () => {
+    const result = await dst({ zone: "Europe/Helsinki", year: 2027 });
+    expect(result.check).toBeUndefined();
+    expect(result.transitions).toHaveLength(2);
+  });
+});
+
+describe("chatDocFor", () => {
+  const docs = DOX_TOOL_DOCS;
+  it("tells the chat to ask the DST inspector first and to pass the wall time", () => {
+    const doc = chatDocFor(docs.find((d) => d.name === "showDstInspector")!);
+    expect(doc.when).toContain("call this tool FIRST");
+    expect(doc.args).toContain("local (");
+  });
+
+  it("leaves the page tool's own doc alone and every other tool as it is", () => {
+    const shared = docs.find((d) => d.name === "showDstInspector")!;
+    expect(shared.when).not.toContain("FIRST");
+    expect(shared.args).not.toContain("local (");
+    const globe = docs.find((d) => d.name === "showGlobe")!;
+    expect(chatDocFor(globe)).toBe(globe);
   });
 });
