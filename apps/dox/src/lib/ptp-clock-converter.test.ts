@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
 import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+import { Temporal } from "@js-temporal/polyfill";
 import { iotLib } from "~/test/iot-lib";
 import {
   BEFORE_1972_VERDICT,
@@ -130,6 +131,11 @@ describe("every read preset, against the library", () => {
       ignored: "1971-01-01T00:00:10Z",
       valid: true,
     },
+    "leap-2016": {
+      utc: "2017-01-01T00:00:00Z",
+      ignored: "2017-01-01T00:00:36Z",
+      valid: true,
+    },
   };
 
   it.each(READ_PRESETS.map((p) => p.id))(
@@ -226,6 +232,29 @@ describe("the check", () => {
     expect(differenceVerdict(40, 37).detail).toBe(
       "Every reading is 3 s earlier than UTC",
     );
+  });
+
+  it("is out either way inside the 2016 inserted second", () => {
+    const at36 = check("leap-2016");
+    expect(at36.table).toBe(37);
+    expect(at36.tableUtc).toBe("2016-12-31T23:59:59Z");
+    expect(at36.verdict).toEqual(differenceVerdict(36, 37));
+    const at37 = checkOffset(
+      iotLib,
+      readPtp(iotLib, state({ ...readPreset("leap-2016"), offset: "37" })),
+    );
+    expect(at37.table).toBe(36);
+    expect(at37.tableUtc).toBe("2017-01-01T00:00:00Z");
+    expect(at37.verdict.detail).toBe("Every reading is 1 s earlier than UTC");
+  });
+
+  it("agrees with the polyfill on both readings of the count", () => {
+    const at = (offset: bigint) =>
+      Temporal.Instant.fromEpochNanoseconds(
+        (1483228836n - offset) * 1_000_000_000n,
+      ).toString();
+    expect(at(36n)).toBe("2017-01-01T00:00:00Z");
+    expect(at(37n)).toBe("2016-12-31T23:59:59Z");
   });
 
   it("has no table value before 1972", () => {
