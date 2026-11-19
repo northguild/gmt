@@ -1,4 +1,4 @@
-import { offerPageTool, WEBMCP_MARKER } from "./offer";
+import { offerPageTool, offerPageTools, WEBMCP_MARKER } from "./offer";
 import type { ModelContextToolInit } from "./model-context";
 
 const as = <T>(value: unknown): T => value as T;
@@ -150,5 +150,61 @@ describe("offerPageTool", () => {
     );
     expect(outcome).toBe("failed");
     expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("offerPageTools", () => {
+  const SECOND: ModelContextToolInit = { ...TOOL, name: "check_other" };
+
+  it("registers each tool of one marker once, with the signal", async () => {
+    const registerTool = vi.fn();
+    const signal = new AbortController().signal;
+    const doc = documentWith("slides/a-deck", { registerTool });
+    const load = vi.fn(async () => ({ default: [TOOL, SECOND] }));
+    const first = await offerPageTools("slides/a-deck", load, {
+      doc,
+      nav: navigatorOf(),
+      signal,
+    });
+    const second = await offerPageTools("slides/a-deck", load, {
+      doc,
+      nav: navigatorOf(),
+      signal,
+    });
+    expect([first, second]).toEqual(["registered", "skipped"]);
+    expect(registerTool.mock.calls).toEqual([
+      [TOOL, { signal }],
+      [SECOND, { signal }],
+    ]);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips a marker naming another page, and loads nothing", async () => {
+    const load = vi.fn(async () => ({ default: [TOOL] }));
+    const outcome = await offerPageTools("slides/a-deck", load, {
+      doc: documentWith("tools/x", { registerTool: vi.fn() }),
+      nav: navigatorOf(),
+    });
+    expect(outcome).toBe("skipped");
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("names the tool that was refused when a later one fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const registerTool = vi.fn((tool: ModelContextToolInit) => {
+      if (tool.name === SECOND.name)
+        throw new DOMException("exists", "InvalidStateError");
+    });
+    const outcome = await offerPageTools(
+      "slides/a-deck",
+      async () => ({ default: [TOOL, SECOND] }),
+      {
+        doc: documentWith("slides/a-deck", { registerTool }),
+        nav: navigatorOf(),
+      },
+    );
+    expect(outcome).toBe("failed");
+    expect(warn.mock.calls[0]?.[0]).toContain(SECOND.name);
+    warn.mockRestore();
   });
 });

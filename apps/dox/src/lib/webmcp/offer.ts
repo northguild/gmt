@@ -1,5 +1,5 @@
 /**
- * Offer a tool page's WebMCP tool, without costing a browser that has none a byte.
+ * Offer a page's WebMCP tool or tools, without costing a browser that has none a byte.
  *
  * Every tool page's widget script ends with one call. It returns before any `import()` when the
  * page's head does not name the slug (a widget embedded on a reference page stays silent) and when
@@ -15,9 +15,9 @@ export type OfferOutcome = "registered" | "absent" | "skipped" | "failed";
 /** The slugs each document has already been offered, so a repeat call is a no-op. */
 const seen = new WeakMap<object, Set<string>>();
 
-export async function offerPageTool(
+export async function offerPageTools(
   slug: string,
-  load: () => Promise<{ default: ModelContextToolInit }>,
+  load: () => Promise<{ default: readonly ModelContextToolInit[] }>,
   options: { doc?: Document; nav?: Navigator; signal?: AbortSignal } = {},
 ): Promise<OfferOutcome> {
   const doc = options.doc ?? document;
@@ -31,11 +31,13 @@ export async function offerPageTool(
   offered.add(slug);
   let name = slug;
   try {
-    const tool = (await load()).default;
-    name = tool.name;
-    await Promise.resolve(
-      context.registerTool(tool, { signal: options.signal }),
-    );
+    const tools = (await load()).default;
+    for (const tool of tools) {
+      name = tool.name;
+      await Promise.resolve(
+        context.registerTool(tool, { signal: options.signal }),
+      );
+    }
     return "registered";
   } catch (error) {
     console.warn(
@@ -43,4 +45,17 @@ export async function offerPageTool(
     );
     return "failed";
   }
+}
+
+/** One tool page's one tool: the one-tool case of `offerPageTools`. */
+export function offerPageTool(
+  slug: string,
+  load: () => Promise<{ default: ModelContextToolInit }>,
+  options: { doc?: Document; nav?: Navigator; signal?: AbortSignal } = {},
+): Promise<OfferOutcome> {
+  return offerPageTools(
+    slug,
+    async () => ({ default: [(await load()).default] }),
+    options,
+  );
 }
