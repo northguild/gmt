@@ -48,6 +48,7 @@ import {
   type BrainProvider,
 } from "../src/lib/chat-constants";
 import type { BrainAttemptTrace } from "../src/lib/chat-types";
+import { repairToolCall } from "./repair-tool-call";
 import { toolCallMarkupMiddleware } from "./tool-call-markup";
 import type { BrainState, UsageSnapshot } from "./usage";
 
@@ -428,6 +429,9 @@ export async function openFirstWorkingBrain({
         middleware: toolCallMarkupMiddleware,
       }),
       abortSignal: abort.signal,
+      // A call whose values have the wrong type (a number for a string) is
+      // fixed without a model call before the reader is told it failed.
+      repairToolCall,
       instructions,
       messages,
       tools,
@@ -447,7 +451,7 @@ export async function openFirstWorkingBrain({
           : undefined,
       // One structured line per answered request, so real token counts — and
       // from them, real Neuron cost — can be read from `wrangler dev` or
-      // Workers Logs instead of estimated. `scripts/probe-brains.ts` parses it.
+      // Workers Logs instead of estimated. `evals/budget.ts` parses it for `scripts/eval-live.ts`.
       // Both steps' tokens, when the answer took two — see `stopWhen`.
       onFinish: ({ totalUsage }) => {
         console.log(

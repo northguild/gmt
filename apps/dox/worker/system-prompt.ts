@@ -22,6 +22,11 @@ export interface PromptSections {
   }[];
 }
 
+/** The registry's `when` without a leading "Call when" or a closing full stop, which the prompt adds itself. */
+function callWhen(when: string): string {
+  return when.replace(/^Call when\s+/i, "").replace(/\.+$/, "");
+}
+
 /**
  * DOX-C2 (#138) — pure function, no I/O, no model call: given fixed
  * sections, assembles the system prompt. Order matters: persona and scope,
@@ -93,12 +98,21 @@ export function assembleSystemPrompt(sections: PromptSections): string {
           "",
           ...tools.map(
             (tool) =>
-              `- \`${tool.name}\` — ${tool.purpose}\n  Call when ${tool.when}.\n  Arguments: ${tool.args}`,
+              `- \`${tool.name}\` — ${tool.purpose}\n  Call when ${callWhen(tool.when)}.\n  Arguments: ${tool.args}`,
           ),
           "",
           "Only pass timezone identifiers you have seen in the retrieved context or that the reader named. Never invent one.",
         ].join("\n")
       : "(no tools are registered yet)";
+
+  /* A refusal is for questions nothing here answers. A question a `Call when`
+     line describes is answered by its widget, whatever the excerpts say, and a
+     model that reads "context does not answer" first will otherwise refuse it
+     (or answer in prose and skip the call). Said last, where it is read last. */
+  const toolsClosing =
+    tools && tools.length > 0
+      ? '\n\nA question that matches a `Call when` line under "Available tools" is covered by that tool, so it is never a refusal: answer it in a sentence or two, and call that tool before you finish.'
+      : "";
 
   const allowlistBlock =
     routeAllowlist.length > 0
@@ -143,5 +157,5 @@ ${toolsBlock}
 
 ## Refusal instruction
 
-If "Retrieved context" above is empty, or does not actually answer the question, refuse: say plainly that @northguild/gmt's documentation does not cover this, and do not improvise an answer from general knowledge. Do not apologize excessively; one direct sentence is enough.`;
+If "Retrieved context" above is empty, or does not actually answer the question, refuse: say plainly that @northguild/gmt's documentation does not cover this, and do not improvise an answer from general knowledge. Do not apologize excessively; one direct sentence is enough.${toolsClosing}`;
 }

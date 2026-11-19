@@ -83,6 +83,8 @@ Full list: `context/dox/reference/verification-and-risks.md`.
   drag, to the pixel. `readout-still` measures every tool in its `TOOLS` list; check bounding
   boxes by hand only for a tool missing from that list, and report the missing entry as a gap.
 - **Chat:**
+  - The offline evals pass: `pnpm --filter @gmt/dox exec vitest run evals/`. A changed floor in
+    `evals/baseline.json` is explained in the PR, and a lowered floor is a finding.
   - An out-of-corpus question is refused, not improvised.
   - A stubbed hallucinated route renders as plain text.
   - Nonsense tool arguments, an unknown tool name and an `output-error` part each render an
@@ -90,8 +92,10 @@ Full list: `context/dox/reference/verification-and-risks.md`.
   - A brain that 429s fails over inside the request, and `/api/brains` counts move.
   - A reference page loads no React bundle.
   - No model key appears in `dist/` or in any `/api/chat` response.
-  - Live checks spend real quota: use the dev bypass (`/api/brains?key=<secret>`) and
-    `scripts/probe-brains.ts` as described in `context/dox/built/tier-6-ops.md`.
+  - Live checks spend real quota. When the diff touches a file named in
+    `context/dox/built/tier-6-evals.md` § When the live run is required, check that the PR
+    carries a fresh `evals/live-<brainId>.json` and that no case regressed. Run `evals:live`
+    only on the owner's word.
 
 ## Iteration cap
 

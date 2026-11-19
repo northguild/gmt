@@ -39,7 +39,7 @@ citation boundary: a link the model emits that is not a real page renders as pla
 | Globe            | A reusable WebGPU engine (`src/lib/globe/`) with NASA Blue Marble imagery in the dark theme, and the flat canvas-2D renderer as the fallback. Interactive and keyboard-selectable |
 | Chat stack       | AI SDK (`ai`, `@ai-sdk/react`) + 12 vendored AI Elements components; Streamdown rendering                                        |
 | React / Tailwind | Only inside the `/dox` island; Tailwind v4 without Preflight                                                                    |
-| Model            | Nine Gemini brains plus one Workers AI brain, failing over inside a request                                                     |
+| Model            | A Workers AI brain first, Gemini brains behind it, failing over inside a request                                              |
 | Grounding        | MiniSearch BM25 retrieval, a per-answer route allowlist, and a refusal instruction                                              |
 | Chat role        | Answer, cite, mount a real widget. Augments the docs; never replaces them                                                       |
 | Octane           | Not used, anywhere                                                                                                              |

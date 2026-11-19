@@ -1,0 +1,6 @@
+data: {"type":"data-retrieval","id":"retrieval","data":{"totalChunks":10,"retrievedCount":0,"chunkTitles":[],"chunkUrls":[],"brainId":"cf-gemma-4-26b"}}
+
+data: {"type":"data-refusal","data":{"status":429,"payload":{"error":"Every brain is spent for today.","retryable":false}},"transient":true}
+
+data: [DONE]
+

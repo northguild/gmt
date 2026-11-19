@@ -21,6 +21,7 @@ const GLOBAL_STUB = /vi\.stub(?:Global|Env)\(/;
 
 /** Every pattern that picks a test file, relative to the app root. Matches `vitest.config.ts`. */
 export const TEST_GLOBS = [
+  "evals/**/*.test.ts",
   "lint/**/*.test.ts",
   "scripts/**/*.test.ts",
   "src/**/*.test.ts",
@@ -36,7 +37,7 @@ export const TEST_GLOBS = [
 export const BROWSER_TEST_GLOB = "**/*.browser.test.ts";
 
 /** The directories `TEST_GLOBS` search. */
-const TEST_DIRS = ["lint", "scripts", "src", "worker"];
+const TEST_DIRS = ["evals", "lint", "scripts", "src", "worker"];
 
 /** Every `*.test.ts` and `*.test.tsx` under the test directories but the browser tests, relative to `appDir`, in path order. */
 export function listTestFiles(appDir: string): string[] {
