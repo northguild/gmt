@@ -100,6 +100,14 @@ export const READ_PRESETS: readonly ReadPreset[] = [
     nanoseconds: "0",
     offset: "10",
   },
+  {
+    id: "leap-2016",
+    label: "Inside a leap second",
+    description: "The 2016 inserted second: the check is 1 s out.",
+    seconds: "1483228836",
+    nanoseconds: "0",
+    offset: "36",
+  },
 ];
 
 export const WRITE_PRESETS: readonly WritePreset[] = [
