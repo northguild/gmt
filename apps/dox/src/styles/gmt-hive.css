@@ -823,6 +823,56 @@
   margin-block: auto;
 }
 
+/* A short host (`compact`, a slide's frame). At the site's spacing the transcript outgrows its
+   scroller, which keeps to the bottom: the hub and a turn's start scroll out of view. */
+.gmt-hive-chat[data-compact] .gmt-hive {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  gap: var(--gmt-space-4);
+}
+
+.gmt-hive-chat[data-compact] .gmt-hive-empty {
+  padding-block: var(--gmt-space-2);
+  gap: var(--gmt-space-2);
+}
+
+/* A short host's transcript is a size container, so the empty state fits the height it gets: in
+   a slide that keeps the right third for the clock the composer leaves it about 8rem, where the
+   full hub (crystal, status line and prompt) needs about 11rem and the scroller, which keeps to
+   the bottom, cut the crystal off. Below 12rem the status line goes and the crystal shrinks. */
+.gmt-hive-chat[data-compact] .gmt-hive-scroll {
+  container: gmt-hive-short / size;
+}
+
+@container gmt-hive-short (height < 12rem) {
+  .gmt-hive-chat[data-compact] .gmt-hive-empty {
+    padding-block: 0;
+  }
+
+  .gmt-hive-chat[data-compact] .gmt-hive-hub {
+    --hex: 2.75rem;
+  }
+
+  .gmt-hive-chat[data-compact] .gmt-hive-status {
+    display: none;
+  }
+}
+
+/* The deck's questions are one line; a short host's field starts at two lines' height. */
+.gmt-hive-chat[data-compact] .gmt-hive-composer textarea {
+  min-block-size: 2.5rem;
+}
+
+/* An instant or a duration in a short host's answer breaks between words, never inside itself at
+   a hyphen. */
+.gmt-hive-chat[data-compact] .gmt-hive-turn :not(pre) > code {
+  white-space: nowrap;
+}
+
+.gmt-hive-chat[data-compact] .gmt-hive-composer {
+  margin-block-start: 0;
+  padding-block: var(--gmt-space-2);
+}
+
 /* The hub is the same crystal at logo scale — one component, so the mark a
    reader meets on the empty page is literally the mark beside every answer. */
 .gmt-hive-hub {

@@ -1,0 +1,21 @@
+---
+/**
+ * The questions part: the real Dox chat with three ready questions that each play a recorded answer
+ * with no typing and no network, and the composer, whose question goes live. The ready questions
+ * stay usable when a live answer fails or is slow.
+ * The presenter's copy of the slides gets a static placeholder, so no second chat mounts there.
+ */
+import DeckDox from "./DeckDox";
+import { FAQ } from "~/lib/slides/live-demos";
+import { recordingsFor } from "~/lib/slides/recorded-files";
+
+const presenter = Astro.url.pathname.includes("/presenter/");
+---
+
+{
+  presenter ? (
+    <p class="gmt-deck-panel">The room's questions go to Dox in the live deck.</p>
+  ) : (
+    <DeckDox client:only="react" mode="audience" demoId="thanks" questions={FAQ} recordings={recordingsFor(FAQ.map((item) => item.id))} />
+  )
+}

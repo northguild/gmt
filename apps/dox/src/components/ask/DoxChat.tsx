@@ -22,6 +22,7 @@ import {
   DefaultChatTransport,
   getToolName,
   isToolUIPart,
+  type ChatTransport,
   type ToolUIPart,
   type UIMessage,
 } from "ai";
@@ -90,6 +91,7 @@ import { createLinkComponents } from "./link-components";
 import { RetrievalTrace } from "./RetrievalTrace";
 import { WidgetReceipt } from "./WidgetReceipt";
 import { useIdleTimeout } from "./use-idle-timeout";
+import { chatFetch } from "~/lib/chat-fetch";
 import { withBase } from "~/lib/site";
 
 /** Streamdown's code plugin defaults to the theme *names* `github-light` /
@@ -120,31 +122,6 @@ function retrievalTraceOf(message: UIMessage): RetrievalTraceData | undefined {
   return part && "data" in part ? (part.data as RetrievalTraceData) : undefined;
 }
 
-/** Non-OK responses carry the Worker's own `{error, retryable}` JSON, but the
- * transport throws before that body reaches `onError` — the SDK formats its own
- * message and the original payload is lost. Reading it here and attaching it to
- * `cause` is what lets the UI show the Worker's actual wording (and its
- * `retryable` flag) instead of a generic failure. */
-async function chatFetch(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> {
-  const response = await fetch(input, init);
-  if (response.ok) return response;
-
-  let payload: unknown;
-  try {
-    payload = await response.clone().json();
-  } catch {
-    payload = undefined;
-  }
-
-  const error = new Error(`Chat request failed with ${response.status}`, {
-    cause: { status: response.status, payload },
-  });
-  throw error;
-}
-
 export interface DoxChatProps {
   /** Today's budget, from `/api/brains`. Null while loading or if the endpoint
    * is unreachable — the chat stays fully usable either way. */
@@ -166,6 +143,22 @@ export interface DoxChatProps {
   onEmptyChange?: (empty: boolean) => void;
   /** Rendered first inside the composer, above the input. */
   aboveComposer?: ReactNode;
+  /**
+   * Builds the chat's transport in place of `/api/chat`'s own. `brain` reads the brain picked in
+   * the control bar. Called once, when the chat mounts. The deck's slides pass one that answers
+   * from a recording or in the page (`lib/slides/deck-transport.ts`); `/dox` passes none.
+   */
+  createTransport?: (brain: () => string | null) => ChatTransport<UIMessage>;
+  /** Whether the composer is offered. `false` is for a host that asks the questions itself (a
+   *  slide with one scripted call); the default keeps the field. */
+  typing?: boolean;
+  /** A short host (a slide's frame): the transcript, the empty state and the composer sit
+   *  tighter, so the turns and the hub stay in view where the site's spacing would scroll them
+   *  out. */
+  compact?: boolean;
+  /** Whether an AI model writes the answers. `false` (a page tool's call, run in the page) drops
+   *  the note that says models get things wrong; the default keeps it. */
+  modelAnswers?: boolean;
 }
 
 export interface DoxChatHandle {
@@ -178,9 +171,13 @@ export function DoxChat({
   onUsed,
   onUsage,
   onWidget,
+  typing = true,
+  compact = false,
+  modelAnswers = true,
   ref,
   onEmptyChange,
   aboveComposer,
+  createTransport,
 }: DoxChatProps = {}) {
   const [warning, setWarning] = useState<ChatWarningState | null>(null);
   /** The Worker's latest progress line while it chooses a brain; null shows
@@ -207,6 +204,7 @@ export function DoxChat({
 
   const transport = useMemo(
     () =>
+      createTransport?.(() => brainRef.current) ??
       new DefaultChatTransport({
         api: withBase("/api/chat"),
         /* Assembled per request rather than declared as a static `body`, because
@@ -544,7 +542,10 @@ export function DoxChat({
     // wayfinding strip, the lattice) belongs to the host — `DoxPage` for
     // `/dox`, the dock's own panel in phase 2 — so this renders identically in
     // both without knowing which one it's in.
-    <div className="gmt-ask gmt-hive-chat">
+    <div
+      className="gmt-ask gmt-hive-chat"
+      data-compact={compact ? "" : undefined}
+    >
       {/* No wrapper div around `Conversation`. `StickToBottom` renders its own
           scroll element *inside* itself and gives this root `overflow-y:
           hidden` — so an outer `overflow-y: auto` box made the page scroll
@@ -703,63 +704,65 @@ export function DoxChat({
               {comesBackAt && ` Back ${comesBackAt}.`}
             </output>
           )}
-          <PromptInput
-            onSubmit={(message, event) => {
-              event.preventDefault();
-              /* Throwing is PromptInput's documented signal for "this send did
+          {typing && (
+            <PromptInput
+              onSubmit={(message, event) => {
+                event.preventDefault();
+                /* Throwing is PromptInput's documented signal for "this send did
                  not happen, keep the composer's contents" — it is what its two
                  "Don't clear on error - user may want to retry" branches catch.
                  A reader whose paste was refused for being too long can then
                  trim it and resend, instead of losing it. */
-              if (!send(message.text ?? "")) {
-                throw new Error("send refused");
-              }
-            }}
-          >
-            <PromptInputBody>
-              {/* A real <textarea>: Enter submits, Shift+Enter inserts a
+                if (!send(message.text ?? "")) {
+                  throw new Error("send refused");
+                }
+              }}
+            >
+              <PromptInputBody>
+                {/* A real <textarea>: Enter submits, Shift+Enter inserts a
                   newline, and IME composition is guarded — all already handled
                   by PromptInputTextarea. Do not rebuild it. */}
-              <PromptInputTextarea
-                onKeyDown={onComposerKeyDown}
-                disabled={outOfBudget}
-                placeholder={
-                  outOfBudget
-                    ? "Dox is resting until the quota resets…"
-                    : "Ask about @northguild/gmt…"
-                }
-              />
-            </PromptInputBody>
-            {/* The control bar: settings on the left, the one action on the
+                <PromptInputTextarea
+                  onKeyDown={onComposerKeyDown}
+                  disabled={outOfBudget}
+                  placeholder={
+                    outOfBudget
+                      ? "Dox is resting until the quota resets…"
+                      : "Ask about @northguild/gmt…"
+                  }
+                />
+              </PromptInputBody>
+              {/* The control bar: settings on the left, the one action on the
                 right, ruled off from the text above so it reads as controls
                 rather than part of the message. The reset clock goes first,
                 hard against the left edge: its readout changes width with every
                 format, and at that edge its popover's anchor never moves. */}
-            <PromptInputFooter className="gmt-hive-composer-footer">
-              <PromptInputTools className="gmt-hive-controls">
-                <ChatInfo />
-                <ResetClock
-                  info={brains}
-                  selectedBrainId={selectedBrainId}
-                  clock={clock}
+              <PromptInputFooter className="gmt-hive-composer-footer">
+                <PromptInputTools className="gmt-hive-controls">
+                  <ChatInfo />
+                  <ResetClock
+                    info={brains}
+                    selectedBrainId={selectedBrainId}
+                    clock={clock}
+                  />
+                  <BrainSelector
+                    info={brains}
+                    selectedId={selectedBrainId}
+                    onSelect={setSelectedBrainId}
+                    clock={clock}
+                  />
+                </PromptInputTools>
+                <PromptInputSubmit
+                  status={status}
+                  onStop={stop}
+                  className="gmt-hive-submit gmt-sonar-focus"
                 />
-                <BrainSelector
-                  info={brains}
-                  selectedId={selectedBrainId}
-                  onSelect={setSelectedBrainId}
-                  clock={clock}
-                />
-              </PromptInputTools>
-              <PromptInputSubmit
-                status={status}
-                onStop={stop}
-                className="gmt-hive-submit gmt-sonar-focus"
-              />
-            </PromptInputFooter>
-          </PromptInput>
+              </PromptInputFooter>
+            </PromptInput>
+          )}
           {/* Always shown under every question on a wide screen. On a phone
               it moves into the info button's popup (ChatInfo.tsx). */}
-          <AccuracyNote className="gmt-hive-accuracy-note" />
+          {modelAnswers && <AccuracyNote className="gmt-hive-accuracy-note" />}
         </div>
       </div>
     </div>
