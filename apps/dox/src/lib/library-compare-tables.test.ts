@@ -32,6 +32,7 @@ import {
   zoneMatrixSummaryTable,
   zoneMatrixZoneTable,
 } from "./library-compare-tables";
+import { CODE_BREAK_CLASS, CODE_PIECE_CLASS } from "./code-break";
 import { renderMdxComponents } from "./mdx-jsx";
 
 describe("library-measurements.json", () => {
@@ -193,12 +194,22 @@ describe("inline code in strings that come from the data", () => {
   });
 
   it("renders a code cell and a linked cell as HTML", () => {
-    expect(cellHtml({ text: "tape ./test/**/*.test.js", code: true })).toBe(
-      "<code>tape ./test/**/*.test.js</code>",
-    );
+    expect(cellHtml({ text: "npm", code: true })).toBe("<code>npm</code>");
     expect(cellHtml({ text: "a&b", href: "https://x.test/?a=1&b=2" })).toBe(
       '<a href="https://x.test/?a=1&amp;b=2">a&amp;b</a>',
     );
+  });
+
+  /* A suite's test name is a sentence in code ("diff.test.js › DateTime#diff handles …"): held on
+     one line it ran a table 1000px past its column. It wraps at its spaces, never inside a piece. */
+  it("lets code with spaces wrap at them, in a code cell and in backticks", () => {
+    expect(cellHtml({ text: "tape ./test/**/*.test.js", code: true })).toBe(
+      `<code class="${CODE_BREAK_CLASS}"><span class="${CODE_PIECE_CLASS}">tape</span> <span class="${CODE_PIECE_CLASS}">./test/**/*.test.js</span></code>`,
+    );
+    expect(cellHtml({ text: "In `2011-12-31T00:00:00 Apia`, a & b" })).toBe(
+      `In <code class="${CODE_BREAK_CLASS}"><span class="${CODE_PIECE_CLASS}">2011-12-31T00:00:00</span> <span class="${CODE_PIECE_CLASS}">Apia</span></code>, a &amp; b`,
+    );
+    expect(cellHtml({ text: "Run `npm`" })).toBe("Run <code>npm</code>");
   });
 
   it("keeps a command in backticks in the Markdown table", () => {

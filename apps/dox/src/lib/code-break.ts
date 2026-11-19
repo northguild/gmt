@@ -113,6 +113,17 @@ export function codeBreakPieces(
     .map((part) => part.text);
 }
 
+/**
+ * `text` as a whole `<code>` element: with `gmt-codebreak` and its pieces when it has break points,
+ * plain and escaped when it has one piece. For HTML built outside Markdown (`set:html`), which the
+ * rehype step that calls `codeBreakHast` never sees.
+ */
+export function codeHtml(text: string): string {
+  return codeBreakPieces(text).length < 2
+    ? `<code>${escapeHtml(text)}</code>`
+    : `<code class="${CODE_BREAK_CLASS}">${codeBreakHtml(text)}</code>`;
+}
+
 /** Escaped HTML for `text`, each piece in a `gmt-cw` span; `text` unchanged when it has one. */
 export function codeBreakHtml(text: string): string {
   if (codeBreakPieces(text).length < 2) return escapeHtml(text);

@@ -25,6 +25,7 @@ import {
 } from "../data/zone-matrix";
 import { raw } from "~/widgets/builders/html";
 import { nobreak } from "~/widgets/builders/nobreak";
+import { codeHtml } from "./code-break";
 import { escapeHtml, inlineCodeHtml } from "./inline-code-html";
 import { pageHref } from "./site";
 
@@ -51,11 +52,23 @@ export const PROSE_TABLES: readonly CompareTableId[] = ["covers", "differs"];
 /** Tables laid out as entries (gmt-content.css): a row of short facts under a title, not columns. */
 export const ENTRY_TABLES: readonly CompareTableId[] = ["overview", "measured"];
 
+/**
+ * A cell's backtick-marked text as HTML, its code wrapping at spaces (`codeHtml`): a suite's test
+ * name is a sentence in code, and held on one line it ran its table far past the column.
+ */
+const cellTextHtml = (text: string): string =>
+  text
+    .split(/(`[^`]*`)/)
+    .map((part) =>
+      part.length > 1 && part.startsWith("`") && part.endsWith("`")
+        ? codeHtml(part.slice(1, -1))
+        : escapeHtml(part),
+    )
+    .join("");
+
 /** One table cell as HTML. */
 export function cellHtml(cell: Cell): string {
-  const inner = cell.code
-    ? `<code>${escapeHtml(cell.text)}</code>`
-    : inlineCodeHtml(cell.text);
+  const inner = cell.code ? codeHtml(cell.text) : cellTextHtml(cell.text);
   const body = cell.nobreak ? nobreak(raw(inner)).toString() : inner;
   return cell.href ? `<a href="${escapeHtml(cell.href)}">${body}</a>` : body;
 }

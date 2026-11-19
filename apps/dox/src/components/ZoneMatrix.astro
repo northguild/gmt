@@ -16,7 +16,9 @@ import { zoneMatrixSummary } from "../data/zone-matrix";
  *
  * Every figure comes from `data/zone-matrix.json`, which `scripts/zone-matrix/run.mjs` writes,
  * through `data/zone-matrix.ts` and the builders in `library-compare-tables.ts`. Static, no
- * hydration. Tables sit in the site's `.gmt-ref-table` scroll box. Before a run is recorded the
+ * hydration. Tables sit in the site's `.gmt-ref-table` scroll box; the three that list tests are
+ * entries (`data-layout="entries"`, a card per test, each cell naming its column in `data-col`),
+ * because a test's name, its input instant and its cause are each wider than a column. Before a run is recorded the
  * page says so. The Markdown twin is `renderZoneMatrix` in `src/lib/mdx-jsx.ts`.
  */
 const summary = zoneMatrixSummary;
@@ -114,7 +116,7 @@ const overview = zoneMatrixSummaryTable();
               </p>
             )}
             {failures.rows.length > 0 && (
-              <div class="gmt-ref-table" data-kind="notes">
+              <div class="gmt-ref-table" data-kind="notes" data-layout="entries">
                 <table class="gmt-compare gmt-zone-matrix">
                   <caption>{suite.name}: failing tests</caption>
                   <thead>
@@ -129,9 +131,9 @@ const overview = zoneMatrixSummaryTable();
                       <tr>
                         {row.map((cell, index) =>
                           index === 0 ? (
-                            <th scope="row" set:html={cellHtml(cell)} />
+                            <th scope="row" data-col={failures.head[index]} set:html={cellHtml(cell)} />
                           ) : (
-                            <td set:html={cellHtml(cell)} />
+                            <td data-col={failures.head[index]} set:html={cellHtml(cell)} />
                           ),
                         )}
                       </tr>
@@ -141,7 +143,7 @@ const overview = zoneMatrixSummaryTable();
               </div>
             )}
             {evidence.rows.length > 0 && (
-              <div class="gmt-ref-table" data-kind="notes">
+              <div class="gmt-ref-table" data-kind="notes" data-layout="entries">
                 <table class="gmt-compare gmt-zone-matrix">
                   <caption>{suite.name}: evidence for each wrong answer</caption>
                   <thead>
@@ -156,9 +158,9 @@ const overview = zoneMatrixSummaryTable();
                       <tr>
                         {row.map((cell, index) =>
                           index === 0 ? (
-                            <th scope="row" set:html={cellHtml(cell)} />
+                            <th scope="row" data-col={evidence.head[index]} set:html={cellHtml(cell)} />
                           ) : (
-                            <td set:html={cellHtml(cell)} />
+                            <td data-col={evidence.head[index]} set:html={cellHtml(cell)} />
                           ),
                         )}
                       </tr>
@@ -170,7 +172,7 @@ const overview = zoneMatrixSummaryTable();
             {known.rows.length > 0 && (
               <>
                 <p>Counted in neither kind, with the cause of each failure:</p>
-                <div class="gmt-ref-table" data-kind="notes">
+                <div class="gmt-ref-table" data-kind="notes" data-layout="entries">
                   <table class="gmt-compare gmt-zone-matrix">
                     <caption>{suite.name}: failures counted in neither kind</caption>
                     <thead>
@@ -185,9 +187,9 @@ const overview = zoneMatrixSummaryTable();
                         <tr>
                           {row.map((cell, index) =>
                             index === 0 ? (
-                              <th scope="row" set:html={cellHtml(cell)} />
+                              <th scope="row" data-col={known.head[index]} set:html={cellHtml(cell)} />
                             ) : (
-                              <td set:html={cellHtml(cell)} />
+                              <td data-col={known.head[index]} set:html={cellHtml(cell)} />
                             ),
                           )}
                         </tr>
