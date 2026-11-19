@@ -310,10 +310,10 @@ test("a cell that does not finish in time is killed with everything it started",
 const g = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" });
 require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(g.pid));
 setInterval(() => {}, 1000);`;
-  const started = Date.now();
+  const started = performance.now();
   const r = await spawnBounded(process.execPath, ["-e", script], {}, 1_000);
   assert.equal(r.timedOut, true);
-  assert.ok(Date.now() - started < 8_000);
+  assert.ok(performance.now() - started < 8_000);
   const grandchild = Number(readFileSync(pidFile, "utf8"));
   assert.throws(() => process.kill(grandchild, 0), { code: "ESRCH" });
 });
