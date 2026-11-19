@@ -19,6 +19,8 @@
  * signal clears. No clock is read.
  */
 
+import { FLY_KEYS, flyVector, type FlyVector } from "./stage-keys";
+
 /** What a key does. `goTo` is the digits-then-Enter row. */
 export type DeckAction =
   | "next"
@@ -38,20 +40,7 @@ export type DeckAction =
   | "zoom"
   | "home";
 
-/** A camera rate: degrees per second east and north, zoom units per second. */
-export interface FlyVector {
-  lng: number;
-  lat: number;
-  zoom: number;
-}
-
-/** Degrees per second a held direction key turns the camera, and zoom units per second Q and E give. */
-export const FLY_RATE_DEG = 60;
-export const ZOOM_RATE = 1;
-/** Shift multiplies every rate by this. */
-export const FLY_SHIFT_FACTOR = 2;
-
-export interface KeyRow {
+interface KeyRow {
   action: DeckAction;
   /** What the help dialog shows, one `<kbd>` each. */
   keys: readonly string[];
@@ -204,33 +193,6 @@ export interface DeckKeyActions {
   fly(vector: FlyVector): void;
   /** Flies back to the slide's place. */
   home(): void;
-}
-
-/** What each flight key adds to the vector, by lower-case key. */
-const FLY_KEYS: Readonly<Record<string, Partial<FlyVector>>> = {
-  w: { lat: FLY_RATE_DEG },
-  s: { lat: -FLY_RATE_DEG },
-  a: { lng: -FLY_RATE_DEG },
-  d: { lng: FLY_RATE_DEG },
-  q: { zoom: -ZOOM_RATE },
-  e: { zoom: ZOOM_RATE },
-};
-
-/** The vector of the held keys: opposite keys cancel, Shift scales it. */
-export function flyVector(
-  held: ReadonlySet<string>,
-  shift: boolean,
-): FlyVector {
-  const v: FlyVector = { lng: 0, lat: 0, zoom: 0 };
-  for (const key of held) {
-    const add = FLY_KEYS[key];
-    if (!add) continue;
-    v.lng += add.lng ?? 0;
-    v.lat += add.lat ?? 0;
-    v.zoom += add.zoom ?? 0;
-  }
-  const k = shift ? FLY_SHIFT_FACTOR : 1;
-  return { lng: v.lng * k + 0, lat: v.lat * k + 0, zoom: v.zoom * k + 0 };
 }
 
 /** Listens on `doc` until `signal` aborts. */

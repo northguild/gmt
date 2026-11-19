@@ -140,6 +140,20 @@ These bind every change.
     timers and awaited assertions to wall-clock sleeps. Never rely on file ordering or a later
     setup reset to clean up work owned by a test.
 
+16. **Reuse, never reinvent.** Follow every rule in
+    [Reuse, never reinvent](../context/dox/built/index.md#reuse-never-reinvent). The owner treats
+    copy-paste as a defect. The first slide-deck story was graded slop: markup pasted seven times,
+    a panel rule eight times, four animation loops, and feature data in `lib/`. In practice:
+    - grep for an existing piece before writing one;
+    - the second copy of anything becomes a shared piece before you go on;
+    - shared folders never import a feature's data or hard-code its content;
+    - nothing a script rebuilds gets committed;
+    - dead code goes in the same change.
+
+    If the spec tells you to copy, or puts content in a shared layer, stop and report back. Don't
+    build it as written. Your report lists every new shared piece, and every place you reused an
+    existing one.
+
 ## Process
 
 1. Read the execution spec and the `context/dox/built/` files it names.

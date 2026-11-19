@@ -1,186 +1,86 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { resolvePlace } from "../src/lib/slides/places";
+import { findSecret } from "../src/lib/slides/recording-capture";
 import { DECKS } from "../src/slides/decks";
+import { builtSlides } from "./built-deck";
 import { distDirOrSkip } from "./dist-dir";
 
 /**
- * Deck 0 as built: the repo renders no `.astro` in Vitest, so the built HTML is the test surface.
- * Needs a build; returns early without one and throws under `DOX_DIST_REQUIRED`.
+ * Every deck as built, against the rules all decks keep. A deck's own outline is its
+ * `src/slides/<slug>/built.test.ts`. Needs a build; returns early without one and throws under
+ * `DOX_DIST_REQUIRED`.
  */
 
-/** Slide ids in the outline's order (`context/dox/specs/dox-g12/index.md`). */
-const OUTLINE = [
-  "title",
-  "agent-answer",
-  "agents",
-  "one-clock",
-  "date",
-  "temporal",
-  "experiments",
-  "experiment-gaps",
-  "experiment-overlaps",
-  "experiment-host",
-  "experiment-odd",
-  "abort",
-  "years",
-  "day-off",
-  "manila",
-  "engines",
-  "scoreboard",
-  "familiar",
-  "why-not-temporal",
-  "gmt",
-  "guards",
-  "ask-dox",
-  "page-tools",
-  "qa",
-  "thanks",
-];
-
-/** The spare, after `thanks`: no minutes, reached only by a jump. */
-const SPARES = ["spare-size"];
-
-/** Bug slides, each ending on a GMT step in its last build. */
-const BUG_SLIDES = ["abort", "years", "day-off", "manila", "engines"];
-
-interface Slide {
-  id: string;
-  /** `null` on a spare, which has no `data-minutes`. */
-  minutes: number | null;
-  spare: boolean;
-  place: string | null;
-  html: string;
+/** The text files under a folder: images, fonts and models cannot hold a key worth reading. */
+function filesUnder(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true, recursive: true })
+    .filter(
+      (e) =>
+        e.isFile() && /\.(html|js|mjs|css|json|txt|xml|svg|map)$/.test(e.name),
+    )
+    .map((e) => join(e.parentPath, e.name));
 }
 
-/** The deck page's slides, read from its HTML. */
-function slides(): Slide[] | null {
-  const dist = distDirOrSkip();
-  if (dist === null) return null;
-  const page = readFileSync(
-    join(dist, "gmt", "slides", "give-me-temporal", "index.html"),
-    "utf8",
-  );
-  const found: Slide[] = [];
-  // A slide holds `<section>` panels of its own, so a slide runs from its opening tag to the next
-  // slide's (the last one to the end of the deck's slides).
-  const starts = [...page.matchAll(/<section\b([^>]*\bdata-slide\b[^>]*)>/g)];
-  for (const [i, match] of starts.entries()) {
-    const attrs = match[1] ?? "";
-    const end = starts[i + 1]?.index ?? page.length;
-    const id = /\bid="([^"]*)"/.exec(attrs)?.[1] ?? "";
-    const minutes = /data-minutes="([^"]*)"/.exec(attrs)?.[1];
-    found.push({
-      id,
-      minutes: minutes === undefined ? null : Number(minutes),
-      spare: /\bdata-spare\b/.test(attrs),
-      place: /data-place="([^"]*)"/.exec(attrs)?.[1] ?? null,
-      html: page.slice((match.index ?? 0) + match[0].length, end),
-    });
-  }
-  return found;
-}
-
-describe("Deck 0 in the built site", () => {
-  it("has the 23 slides, once each, in the outline's order, then the spare", () => {
-    const deck = slides();
-    if (deck === null) return;
-    expect(deck.map((s) => s.id)).toEqual([...OUTLINE, ...SPARES]);
-    expect(deck.filter((s) => s.spare).map((s) => s.id)).toEqual(SPARES);
+describe.each(DECKS)("the built deck $slug", (entry) => {
+  it("names each slide once", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const ids = builtSlides(dist, entry.slug).map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("gives the spares no minutes and every other slide some", () => {
-    const deck = slides();
-    if (deck === null) return;
-    for (const slide of deck)
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    for (const slide of builtSlides(dist, entry.slug))
       expect(slide.minutes === null, slide.id).toBe(slide.spare);
   });
 
-  it("runs as long as the registry says", () => {
-    const deck = slides();
-    if (deck === null) return;
-    const entry = DECKS.find((d) => d.slug === "give-me-temporal");
-    expect(entry).toBeDefined();
-    const sum = deck.reduce((total, s) => total + (s.minutes ?? 0), 0);
-    expect(sum).toBe((entry?.minutes ?? 0) + (entry?.qa ?? 0));
+  it("puts the spares after the talk's slides", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const spares = builtSlides(dist, entry.slug).map((s) => s.spare);
+    expect(spares).toEqual([...spares].sort((a, b) => Number(a) - Number(b)));
   });
 
-  it("gives every slide and build a place the stage can resolve", () => {
-    const deck = slides();
-    if (deck === null) return;
-    for (const slide of deck) {
-      const places = [
-        slide.place,
-        ...[
-          ...slide.html.matchAll(/data-build="\d+"[^>]*data-place="([^"]*)"/g),
-        ].map((m) => m[1]),
-      ];
-      for (const place of places) {
-        if (place)
-          expect(
-            () => resolvePlace(place),
-            `${slide.id}: ${place}`,
-          ).not.toThrow();
-      }
-    }
+  it("runs as long as the registry says", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const sum = builtSlides(dist, entry.slug).reduce(
+      (total, s) => total + (s.minutes ?? 0),
+      0,
+    );
+    expect(sum).toBe(entry.minutes + entry.qa);
   });
 
   it("has speaker notes on every slide", () => {
-    const deck = slides();
-    if (deck === null) return;
-    for (const slide of deck) {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    for (const slide of builtSlides(dist, entry.slug))
       expect(slide.html, slide.id).toMatch(/<aside[^>]*data-notes/);
-    }
   });
+});
 
-  it("has six captioned figures on the wall slide", () => {
-    const deck = slides();
-    if (deck === null) return;
-    const slide = deck.find((s) => s.id === "one-clock");
-    expect(slide).toBeDefined();
-    const figures = [
-      ...(slide?.html.matchAll(/<figure\b[\s\S]*?<\/figure>/g) ?? []),
-    ].filter((m) => /gmt-wall-figure"/.test(m[0]));
-    expect(figures).toHaveLength(6);
-    for (const figure of figures) expect(figure[0]).toMatch(/<figcaption/);
-  });
-
-  it("has no wall figures on the date slide, where the wall has already broken", () => {
-    const deck = slides();
-    if (deck === null) return;
-    const slide = deck.find((s) => s.id === "date");
-    expect(slide).toBeDefined();
-    expect(slide?.html).not.toMatch(/gmt-wall-figure"/);
-  });
-
-  it("ends each bug slide on a GMT step in its last build", () => {
-    const deck = slides();
-    if (deck === null) return;
-    for (const id of BUG_SLIDES) {
-      const slide = deck.find((s) => s.id === id);
-      expect(slide, id).toBeDefined();
-      const builds = [
-        ...(slide?.html.matchAll(
-          /<div class="gmt-build" data-build="(\d+)"/g,
-        ) ?? []),
-      ].map((m) => Number(m[1]));
-      const last = Math.max(...builds);
-      const at = slide?.html.indexOf(`data-build="${last}"`) ?? -1;
-      expect(at, id).toBeGreaterThan(-1);
-      expect(slide?.html.slice(at), id).toMatch(/gmt-step/);
-    }
-  });
-
-  it("has two named QR codes on the thanks slide", () => {
-    const deck = slides();
-    if (deck === null) return;
-    const slide = deck.find((s) => s.id === "thanks");
-    const codes = [
-      ...(slide?.html.matchAll(
-        /<svg\b[^>]*role="img"[^>]*aria-label="([^"]*)"/g,
-      ) ?? []),
-    ].map((m) => m[1]);
-    expect(codes).toEqual(["LinkedIn", "NorthGuild"]);
+describe("the built site and the recordings", () => {
+  it("hold no dev key", () => {
+    const dist = distDirOrSkip();
+    if (dist === null) return;
+    const secrets = ["DOX_DEV_KEY"];
+    if (process.env["DOX_DEV_KEY"]) secrets.push(process.env["DOX_DEV_KEY"]);
+    const files = [
+      ...filesUnder(dist),
+      ...DECKS.flatMap((d) =>
+        filesUnder(
+          join(import.meta.dirname, "..", "src", "slides", d.slug, "recorded"),
+        ),
+      ),
+    ];
+    const found = files.flatMap((file) => {
+      const what = findSecret(readFileSync(file, "utf8"), secrets);
+      return what === null ? [] : [`${relative(dist, file)}: ${what}`];
+    });
+    expect(found).toEqual([]);
   });
 });

@@ -1,21 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { SHOWN_ZONE } from "../../../../../scripts/zone-matrix/agent-answer.mjs";
-import answer from "~/slides/give-me-temporal/quotes/agent-answer.json";
-import runRecord from "~/slides/give-me-temporal/quotes/agent-run.json";
 import {
   agentAnswers,
   agentQuote,
   excerptOf,
   quotedAnswer,
   hashOf,
-  SHOWN,
   TRANSCRIPT_FIELDS,
   valueLabel,
+  type AgentQuoteConfig,
   type AgentQuoteRecord,
   type AgentRunFile,
   type AgentRunRecord,
   type AgentTranscript,
 } from "./agent-quote";
+
+const CONFIG: AgentQuoteConfig = {
+  shown: { node: "26", zone: "Europe/Helsinki" },
+  answerPath: "quotes/agent-answer.json",
+  runCommand: "node agent-answer.mjs",
+};
+const SHOWN = CONFIG.shown;
 
 const full: AgentQuoteRecord = {
   question: "q",
@@ -49,7 +53,7 @@ const runFor = (
 
 describe("the agent quote", () => {
   it("is ready with a matching run record, and counts distinct values", () => {
-    const quote = agentQuote(full, runFor(full));
+    const quote = agentQuote(full, runFor(full), CONFIG);
     expect(quote).toMatchObject({
       ready: true,
       shownCode: full.code,
@@ -70,7 +74,11 @@ describe("the agent quote", () => {
   it.each(TRANSCRIPT_FIELDS)(
     "shows the transcript panel while %s is empty",
     (field) => {
-      const quote = agentQuote({ ...full, [field]: "  " }, runFor(full));
+      const quote = agentQuote(
+        { ...full, [field]: "  " },
+        runFor(full),
+        CONFIG,
+      );
       expect(quote).toMatchObject({ ready: false, why: "transcript" });
       if (quote.ready) throw new Error("expected a pending quote");
       expect(quote.problem).toContain("agent-answer.json");
@@ -80,12 +88,12 @@ describe("the agent quote", () => {
   );
 
   it("keeps the question when the rest is to come", () => {
-    const quote = agentQuote({ ...full, code: "" }, null);
+    const quote = agentQuote({ ...full, code: "" }, null, CONFIG);
     expect(quote).toMatchObject({ ready: false, question: "q" });
   });
 
   it.each([null, undefined])("says the run record is missing for %s", (run) => {
-    const quote = agentQuote(full, run);
+    const quote = agentQuote(full, run, CONFIG);
     expect(quote).toMatchObject({ ready: false, why: "run" });
     if (quote.ready) throw new Error("expected a pending quote");
     expect(quote.problem).toContain("is missing");
@@ -93,14 +101,20 @@ describe("the agent quote", () => {
   });
 
   it("says the run record is out of date when the code changed", () => {
-    const quote = agentQuote({ ...full, code: "changed" }, runFor(full));
+    const quote = agentQuote(
+      { ...full, code: "changed" },
+      runFor(full),
+      CONFIG,
+    );
     expect(quote).toMatchObject({ ready: false, why: "run" });
     if (quote.ready) throw new Error("expected a pending quote");
     expect(quote.problem).toContain("out of date");
   });
 
   it("says the run record is out of date when the call changed", () => {
-    expect(agentQuote({ ...full, call: "g()" }, runFor(full))).toMatchObject({
+    expect(
+      agentQuote({ ...full, call: "g()" }, runFor(full), CONFIG),
+    ).toMatchObject({
       ready: false,
       why: "run",
     });
@@ -111,7 +125,7 @@ describe("the agent quote", () => {
     run.runs = run.runs.filter(
       (r) => r.zone !== SHOWN.zone || r.node !== SHOWN.node,
     );
-    const quote = agentQuote(full, run);
+    const quote = agentQuote(full, run, CONFIG);
     expect(quote).toMatchObject({ ready: false, why: "run" });
     if (quote.ready) throw new Error("expected a pending quote");
     expect(quote.problem).toContain(`Node ${SHOWN.node}`);
@@ -127,13 +141,14 @@ describe("the agent quote", () => {
         ],
       },
       runFor(full),
+      CONFIG,
     );
     expect(quote).toMatchObject({
       ready: true,
       shownCode: "one\n// …\nthree\nfour",
     });
     expect(
-      agentQuote({ ...full, excerpt: [[2, 9]] }, runFor(full)),
+      agentQuote({ ...full, excerpt: [[2, 9]] }, runFor(full), CONFIG),
     ).toMatchObject({
       ready: false,
     });
@@ -156,7 +171,7 @@ describe("several answers", () => {
     );
 
   it("lists every answer in file order, each with its model and quote", () => {
-    const all = agentAnswers(transcript, runsFor(transcript));
+    const all = agentAnswers(transcript, runsFor(transcript), CONFIG);
     expect(all.map((a) => [a.id, a.model, a.quote.ready])).toEqual([
       ["one", "First", true],
       ["two", "Second", true],
@@ -165,17 +180,19 @@ describe("several answers", () => {
   });
 
   it("quotes the answer `quoted` names", () => {
-    expect(quotedAnswer(transcript, runsFor(transcript))).toMatchObject({
-      ready: true,
-      model: "Second",
-      code: "x\ny",
-    });
+    expect(quotedAnswer(transcript, runsFor(transcript), CONFIG)).toMatchObject(
+      {
+        ready: true,
+        model: "Second",
+        code: "x\ny",
+      },
+    );
   });
 
   it("names the answer whose run record is missing", () => {
     const runs = runsFor(transcript);
     delete runs["one"];
-    const [one, two] = agentAnswers(transcript, runs);
+    const [one, two] = agentAnswers(transcript, runs, CONFIG);
     expect(two!.quote.ready).toBe(true);
     if (one!.quote.ready) throw new Error("expected a pending quote");
     expect(one!.quote.problem).toContain('Answer "one"');
@@ -187,7 +204,7 @@ describe("several answers", () => {
       { ...transcript, quoted: "three" },
       { ...transcript, answers: [] },
     ]) {
-      const quote = quotedAnswer(t, runsFor(transcript));
+      const quote = quotedAnswer(t, runsFor(transcript), CONFIG);
       expect(quote).toMatchObject({
         ready: false,
         why: "transcript",
@@ -224,52 +241,5 @@ describe("valueLabel", () => {
   it("shows a value, or what was thrown", () => {
     expect(valueLabel("x")).toBe("x");
     expect(valueLabel({ threw: "RangeError: y" })).toBe("Threw RangeError: y");
-  });
-});
-
-describe("the committed records", () => {
-  it("hold the transcript fields and the question the owner asked", () => {
-    expect(Object.keys(answer).sort()).toEqual([
-      "answers",
-      "question",
-      "quoted",
-    ]);
-    const fields = TRANSCRIPT_FIELDS.filter((f) => f !== "question");
-    for (const a of answer.answers)
-      expect(
-        Object.keys(a)
-          .filter((k) => k !== "excerpt")
-          .sort(),
-      ).toEqual(["id", ...fields].sort());
-    expect(answer.question).toBe(
-      "Write a JavaScript function that sets a reminder for 03:30 on 28 March 2027, Helsinki time, and returns the time as a UTC ISO string.",
-    );
-  });
-
-  it("keep one run record per answer, of the run record's shape", () => {
-    expect(Object.keys(runRecord)).toEqual(answer.answers.map((a) => a.id));
-    for (const record of Object.values(runRecord))
-      expect(Object.keys(record).sort()).toEqual([
-        "command",
-        "instant",
-        "libraries",
-        "runs",
-        "sha256",
-      ]);
-  });
-
-  it("are ready: every answer is filled and its run record is current", () => {
-    for (const { id, quote } of agentAnswers(
-      answer as AgentTranscript,
-      runRecord as AgentRunFile,
-    ))
-      expect(quote.ready ? "ready" : quote.problem, id).toBe("ready");
-    expect(
-      quotedAnswer(answer as AgentTranscript, runRecord as AgentRunFile).ready,
-    ).toBe(true);
-  });
-
-  it("show a zone the script runs in, whatever the CI matrix lists", () => {
-    expect(SHOWN.zone).toBe(SHOWN_ZONE);
   });
 });

@@ -7,9 +7,10 @@
  * can read it without importing the data file, and `runCount` plays it.
  */
 
+import { play, type Frames } from "./frames";
 import { ROLL_MS } from "./type-out";
 
-export interface FilingInput {
+interface FilingInput {
   key: string;
   createdAt: string;
   zone?: string | undefined;
@@ -21,7 +22,7 @@ export interface FilingStep {
   zone: string | null;
 }
 
-export interface FilingPinPlan {
+interface FilingPinPlan {
   total: number;
   pinned: number;
   unpinned: number;
@@ -73,11 +74,6 @@ export function decodeSteps(text: string): FilingStep[] {
 /** How long the count runs on stage: as long as a split-flap row takes to land (`ROLL_MS`). */
 export const COUNT_MS = ROLL_MS;
 
-interface Frames {
-  requestAnimationFrame(callback: (stamp: number) => void): number;
-  cancelAnimationFrame(handle: number): void;
-}
-
 /**
  * Plays the count: `onStep(n)` for n = 0 up to `total`, evenly over `COUNT_MS`. With `reduced` it
  * calls once with `total`. Returns a function that stops it.
@@ -92,27 +88,11 @@ export function runCount(o: {
     o.onStep(o.total);
     return () => {};
   }
-  let handle = 0;
-  let start: number | null = null;
-  let stopped = false;
   let shown = -1;
-  const step = (stamp: number): void => {
-    if (stopped) return;
-    start ??= stamp;
-    const t = Math.min(1, (stamp - start) / COUNT_MS);
-    const n = Math.floor(t * o.total);
-    const next = t >= 1 ? o.total : n;
-    if (next !== shown) {
-      shown = next;
-      o.onStep(next);
-    }
-    if (t < 1) handle = o.win.requestAnimationFrame(step);
-  };
-  o.onStep(0);
-  shown = 0;
-  handle = o.win.requestAnimationFrame(step);
-  return () => {
-    stopped = true;
-    o.win.cancelAnimationFrame(handle);
-  };
+  return play(o.win, COUNT_MS, (t) => {
+    const next = t >= 1 ? o.total : Math.floor(t * o.total);
+    if (next === shown) return;
+    shown = next;
+    o.onStep(next);
+  });
 }

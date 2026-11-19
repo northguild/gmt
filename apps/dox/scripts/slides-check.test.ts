@@ -39,8 +39,8 @@ describe("DECK_UNLOCK", () => {
 });
 
 describe("deckRoutes", () => {
-  it("lists a route per deck folder, sorted, without the presenter", () => {
-    expect(deckRoutes(["b-deck", "presenter", "a-deck"])).toEqual([
+  it("lists a route per deck folder, sorted", () => {
+    expect(deckRoutes(["b-deck", "a-deck"])).toEqual([
       "/slides/a-deck/",
       "/slides/b-deck/",
     ]);

@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * The two hooks the deck's slides use: `DoxChat`'s `createTransport` replaces `/api/chat`, and
+ * The two hooks the deck's slides use: `DoxChat`'s `host.createTransport` replaces `/api/chat`, and
  * `WidgetRail`'s `idle` replaces the examples. With neither passed, `/dox` is as it was.
  */
 import { createRef } from "react";
@@ -17,7 +17,7 @@ installJsdomShims();
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("DoxChat createTransport", () => {
+describe("DoxChat host.createTransport", () => {
   it("sends the question through the transport it is given, not to /api/chat", async () => {
     const fetchSpy = vi.fn(
       async (..._args: unknown[]) => new Response("{}", { status: 404 }),
@@ -26,26 +26,28 @@ describe("DoxChat createTransport", () => {
     const seen: string[] = [];
     render(
       <DoxChat
-        createTransport={() => ({
-          sendMessages: async ({ messages }) => {
-            seen.push(String(messages.length));
-            return new ReadableStream<UIMessageChunk>({
-              start(out) {
-                out.enqueue({ type: "start" });
-                out.enqueue({ type: "text-start", id: "t" });
-                out.enqueue({
-                  type: "text-delta",
-                  id: "t",
-                  delta: "From the deck.",
-                });
-                out.enqueue({ type: "text-end", id: "t" });
-                out.enqueue({ type: "finish" });
-                out.close();
-              },
-            });
-          },
-          reconnectToStream: async () => null,
-        })}
+        host={{
+          createTransport: () => ({
+            sendMessages: async ({ messages }) => {
+              seen.push(String(messages.length));
+              return new ReadableStream<UIMessageChunk>({
+                start(out) {
+                  out.enqueue({ type: "start" });
+                  out.enqueue({ type: "text-start", id: "t" });
+                  out.enqueue({
+                    type: "text-delta",
+                    id: "t",
+                    delta: "From the deck.",
+                  });
+                  out.enqueue({ type: "text-end", id: "t" });
+                  out.enqueue({ type: "finish" });
+                  out.close();
+                },
+              });
+            },
+            reconnectToStream: async () => null,
+          }),
+        }}
       />,
     );
     await userEvent.setup().type(screen.getByRole("textbox"), "Hello{Enter}");

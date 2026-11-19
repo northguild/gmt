@@ -25,7 +25,7 @@ const EYE = 7;
 /** The share of the side the logo hole aims for. */
 const HOLE_SHARE = 0.3;
 
-export interface QrModel {
+interface QrModel {
   /** Modules on a side, without the quiet zone. */
   size: number;
   /** The view box's side: the modules plus the quiet zone on both sides. */

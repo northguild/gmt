@@ -1,0 +1,23 @@
+---
+/**
+ * A bug slide's picture with its filings as receipts in the corner. The slot is the picture; one
+ * receipt sits straight in the grid, two or more are wrapped in a row of their own. Each receipt is
+ * a `filingKey` that `FilingReceipt` reads, so an unknown key fails the build.
+ */
+import FilingReceipt from "./FilingReceipt.astro";
+
+interface Props {
+  receipts?: readonly string[];
+}
+const { receipts = [] } = Astro.props;
+---
+
+<div class="gmt-visual">
+  <slot />
+  {receipts.length === 1 && <FilingReceipt filing={receipts[0]!} />}
+  {receipts.length > 1 && (
+    <div class="gmt-receipts">
+      {receipts.map((key) => <FilingReceipt filing={key} />)}
+    </div>
+  )}
+</div>

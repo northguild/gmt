@@ -400,7 +400,8 @@ describe("mountPresenter", () => {
         ).toBeEnabled(),
       );
       const list = screen.getByRole("list");
-      expect(within(list).getAllByRole("listitem")).toHaveLength(9);
+      // The test deck has no runtime, so no file list of its own beside the eight every deck has.
+      expect(within(list).getAllByRole("listitem")).toHaveLength(8);
       expect(within(list).getByText("WebGPU")).toBeInTheDocument();
       expect(within(list).getAllByText(/^Failed/).length).toBeGreaterThan(0);
     });

@@ -8,16 +8,18 @@
  * alone. A failure never blocks anything: the checklist informs the presenter and stops there.
  *
  * What it reads:
- * - the deck's own page, fetched once: its `<link rel="preload">` list, the wall's images and the
- *   recordings named by `[data-recording-src]` (slice 4b adds those), each fetched in turn;
+ * - the deck's own page, fetched once: its `<link rel="preload">` list, the extra file lists the
+ *   deck's stage data names (`assetRows`, such as a wall's images) and the recordings named by
+ *   `[data-recording-src]`, each fetched in turn;
  * - the fonts (`document.fonts.check`) and the gmt modules the deck imports (the dynamic imports);
  * - what the deck window reports over the channel: its renderer, reduced motion and fullscreen;
  * - Dox chat: `GET /api/brains` answers, the venue laptop is `unlimited`, and a brain has
  *   allowance left. A failure there says the demos will play their recordings.
  */
+import type { AssetRow } from "./stage-data";
 import type { DeckEnv } from "./sync";
 
-export type ReadinessStatus = "ok" | "failed";
+type ReadinessStatus = "ok" | "failed";
 
 export interface ReadinessRow {
   id: string;
@@ -28,31 +30,41 @@ export interface ReadinessRow {
   text: string;
 }
 
-/** The rows, in the order the page lists them. */
-export const ROW_ORDER = [
-  "preloads",
-  "fonts",
-  "modules",
-  "wall",
+type RowId = string;
+
+/** The checks every deck has, before and after the deck's own file lists. */
+const FIRST_ROWS = ["preloads", "fonts", "modules"] as const;
+const LAST_ROWS = [
   "recordings",
   "renderer",
   "motion",
   "fullscreen",
   "chat",
 ] as const;
-export type RowId = (typeof ROW_ORDER)[number];
 
-export const ROW_LABELS: Readonly<Record<RowId, string>> = {
+const BASE_LABELS: Readonly<Record<string, string>> = {
   preloads: "Preloaded files",
   fonts: "Fonts",
   modules: "gmt modules",
-  wall: "Wall images",
   recordings: "Demo recordings",
   renderer: "Deck renderer",
   motion: "Deck motion",
   fullscreen: "Deck fullscreen",
   chat: "Dox chat",
 };
+
+/** The rows, in the order the page lists them: the deck's own file lists sit after the modules. */
+export function rowOrder(assetRows: readonly AssetRow[] = []): RowId[] {
+  return [...FIRST_ROWS, ...assetRows.map((r) => r.id), ...LAST_ROWS];
+}
+
+/** What the page calls a row. */
+export function rowLabel(
+  id: RowId,
+  assetRows: readonly AssetRow[] = [],
+): string {
+  return assetRows.find((r) => r.id === id)?.label ?? BASE_LABELS[id] ?? id;
+}
 
 const RETRY = "retry on venue Wi-Fi";
 
@@ -73,6 +85,8 @@ export interface ReadinessOptions {
     | null;
   /** The gmt modules the deck imports: each loader's promise settles when the module resolves. */
   modules: readonly { name: string; load: () => Promise<unknown> }[];
+  /** The deck's own file lists (its stage data's `assetRows`), read after the preloads. */
+  assetRows?: readonly AssetRow[];
   /** Called as each row settles, so the page can fill in as results arrive. */
   onRow?: (row: ReadinessRow) => void;
 }
@@ -81,9 +95,10 @@ const row = (
   id: RowId,
   status: ReadinessStatus,
   text: string,
+  label: string = rowLabel(id),
 ): ReadinessRow => ({
   id,
-  label: ROW_LABELS[id],
+  label,
   status,
   text,
 });
@@ -106,8 +121,9 @@ async function fileRow(
   urls: readonly string[],
   signal: AbortSignal,
   none: string,
+  label?: string,
 ): Promise<ReadinessRow> {
-  if (urls.length === 0) return row(id, "ok", none);
+  if (urls.length === 0) return row(id, "ok", none, label);
   const results = await Promise.all(
     urls.map(async (url) => ({ url, ok: await reachable(url, signal) })),
   );
@@ -117,11 +133,13 @@ async function fileRow(
       id,
       "ok",
       `Loaded: ${urls.length} ${urls.length === 1 ? "file" : "files"}`,
+      label,
     );
   return row(
     id,
     "failed",
     `Failed: ${RETRY}. ${failed.length} of ${urls.length} did not load: ${failed.join(", ")}`,
+    label,
   );
 }
 
@@ -135,15 +153,20 @@ function fileName(url: string): string {
   }
 }
 
-/** What the deck's page lists: its preloads, wall images and recordings, as absolute addresses. */
-export interface DeckAssets {
+/** What the deck's page lists, as absolute addresses: its preloads, each extra row's files by row id. */
+interface DeckAssets {
   preloads: string[];
-  wall: string[];
+  /** The files each of the deck's `assetRows` lists, by row id. */
+  rows: Record<string, string[]>;
   recordings: string[];
 }
 
 /** Reads the asset lists out of the deck page's markup. Never throws: bad markup lists nothing. */
-export function readDeckAssets(markup: string, deckUrl: string): DeckAssets {
+export function readDeckAssets(
+  markup: string,
+  deckUrl: string,
+  assetRows: readonly AssetRow[] = [],
+): DeckAssets {
   const doc = new DOMParser().parseFromString(markup, "text/html");
   const absolute = (value: string | null): string | null => {
     if (!value) return null;
@@ -160,14 +183,16 @@ export function readDeckAssets(markup: string, deckUrl: string): DeckAssets {
         .filter((u): u is string => u !== null),
     ),
   ];
-  const wall = list("[data-wall-pane] img", "src");
+  const rows = Object.fromEntries(
+    assetRows.map((r) => [r.id, list(r.selector, r.attribute)]),
+  );
   const recordings = list("[data-recording-src]", "data-recording-src");
   // A file is fetched once however many lists name it.
-  const claimed = new Set([...wall, ...recordings]);
+  const claimed = new Set([...Object.values(rows).flat(), ...recordings]);
   const preloads = list('link[rel="preload"]', "href").filter(
     (u) => !claimed.has(u),
   );
-  return { preloads, wall, recordings };
+  return { preloads, rows, recordings };
 }
 
 /** The Dox chat row from what `/api/brains` answered. */
@@ -319,6 +344,7 @@ export async function runReadiness(
   o: ReadinessOptions,
 ): Promise<ReadinessRow[]> {
   const rows = new Map<RowId, ReadinessRow>();
+  const extra = o.assetRows ?? [];
   const done = (r: ReadinessRow): void => {
     rows.set(r.id as RowId, r);
     o.onRow?.(r);
@@ -334,14 +360,14 @@ export async function runReadiness(
         signal: o.signal,
       });
       if (response.ok)
-        assets = readDeckAssets(await response.text(), o.deckUrl);
+        assets = readDeckAssets(await response.text(), o.deckUrl, extra);
     } catch {
       assets = null;
     }
     if (!assets) {
       const text = `Failed: the deck page did not load; ${RETRY}`;
-      for (const id of ["preloads", "wall", "recordings"] as const)
-        done(row(id, "failed", text));
+      for (const id of ["preloads", ...extra.map((r) => r.id), "recordings"])
+        done(row(id, "failed", text, rowLabel(id, extra)));
       return;
     }
     const found = assets;
@@ -349,7 +375,11 @@ export async function runReadiness(
       fileRow("preloads", found.preloads, o.signal, "Nothing to load").then(
         done,
       ),
-      fileRow("wall", found.wall, o.signal, "No wall images listed").then(done),
+      ...extra.map((r) =>
+        fileRow(r.id, found.rows[r.id] ?? [], o.signal, r.none, r.label).then(
+          done,
+        ),
+      ),
       fileRow(
         "recordings",
         found.recordings,
@@ -366,7 +396,9 @@ export async function runReadiness(
     brainsRow(o.brainsUrl, o.signal).then(done),
   ]);
 
-  return ROW_ORDER.map(
-    (id) => rows.get(id) ?? row(id, "failed", `Failed: not checked; ${RETRY}`),
+  return rowOrder(extra).map(
+    (id) =>
+      rows.get(id) ??
+      row(id, "failed", `Failed: not checked; ${RETRY}`, rowLabel(id, extra)),
   );
 }

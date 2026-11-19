@@ -11,9 +11,9 @@
  */
 
 /** The widest the rail may grow, as a share of the page body. */
-export const RAIL_MAX_SHARE = 0.5;
+const RAIL_MAX_SHARE = 0.5;
 /** The transcript never gets narrower than this while the rail grows. */
-export const CHAT_MIN_REM = 28;
+const CHAT_MIN_REM = 28;
 
 /** One arrow press, and one with Shift held. */
 export const KEY_STEP_PX = 16;

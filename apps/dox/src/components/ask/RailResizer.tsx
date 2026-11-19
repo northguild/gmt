@@ -99,7 +99,8 @@ export function RailResizer({
     const bodyWidth = found.body.getBoundingClientRect().width;
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     // The CSS states the narrowest width (`--gmt-hive-rail-min`); the computed value is in pixels.
-    const minWidth = parseFloat(getComputedStyle(found.rail).minInlineSize) || 0;
+    const minWidth =
+      parseFloat(getComputedStyle(found.rail).minInlineSize) || 0;
     return {
       width: found.rail.getBoundingClientRect().width,
       bounds: railBounds({ minWidth, bodyWidth, rem }),

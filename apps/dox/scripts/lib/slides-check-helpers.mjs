@@ -23,13 +23,10 @@ export function unlockDecks(target) {
   }, DECK_UNLOCK);
 }
 
-/** The site path of each deck, from the folder names under `src/pages/slides/` (the index and the
- * presenter view are not decks). */
+/** The site path of each deck, from the folder names under the built `slides/` (each deck's
+ * presenter view sits inside its own folder). */
 export function deckRoutes(folders) {
-  return folders
-    .filter((name) => name !== "presenter")
-    .sort()
-    .map((name) => `/slides/${name}/`);
+  return [...folders].sort().map((name) => `/slides/${name}/`);
 }
 
 /**
@@ -82,7 +79,7 @@ export function isSixteenByNine(box, tolerance = 1.5) {
 }
 
 /** The budget for frames while the camera flies: the median, and the worst frame, in ms. */
-export const FRAME_BUDGET = { median: 17.5, worst: 34 };
+const FRAME_BUDGET = { median: 17.5, worst: 34 };
 
 /** A `"lng lat"` pair as numbers, or null when it is not one. */
 export function parsePair(text) {
@@ -156,7 +153,7 @@ export function colourDistance(a, b) {
 }
 
 /** How far a drawn pane may be from its capture, per channel (0 to 255). */
-export const WALL_COLOUR_TOLERANCE = 48;
+const WALL_COLOUR_TOLERANCE = 48;
 
 /**
  * The panes whose drawn centre does not match their capture. Each pair is `{ id, drawn, capture }`
@@ -180,7 +177,7 @@ export function wallMismatches(pairs, tolerance = WALL_COLOUR_TOLERANCE) {
 }
 
 /** How far, in CSS pixels, a pane may be drawn from the centre of its caption's figure. */
-export const PANE_PLACE_TOLERANCE = 1;
+const PANE_PLACE_TOLERANCE = 1;
 
 /**
  * The panes drawn away from their captions. `ids` names each pane; `drawn` is each pane's centre

@@ -15,6 +15,8 @@
  * Tags are added only after reading a failing test and its zone. None is added from a guess, so
  * the map grows with real runs.
  */
+import { ciZones } from "./matrix.mjs";
+
 const APIA_WEEK = {
   kind: "wrong-answer",
   reason:
@@ -29,17 +31,8 @@ const APIA_WEEK = {
   },
 };
 
-const NOT_NEW_YORK = [
-  "UTC",
-  "Pacific/Niue",
-  "Europe/London",
-  "Asia/Kolkata",
-  "Asia/Kathmandu",
-  "Asia/Shanghai",
-  "Australia/Lord_Howe",
-  "Pacific/Chatham",
-  "Pacific/Apia",
-];
+/** Every zone of the CI matrix but the reference zone, which is where these tests pass. */
+const NOT_NEW_YORK = ciZones().filter((z) => z !== "America/New_York");
 
 export const TAGS = {
   "moment@2.31.0 | locale/ar-ly.js › locale:ar-ly > weeks year starting sunday formatted":

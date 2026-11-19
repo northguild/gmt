@@ -16,6 +16,7 @@
  * the glide settles on it as it runs.
  */
 import { DAY_MS } from "~/lib/globe/sun";
+import { play, type Frames } from "./frames";
 import { ease } from "./time-lapse";
 
 /**
@@ -44,11 +45,6 @@ export function glideOffset(startMs: number, t: number): number {
   return Math.round(days * left) * DAY_MS + hours * left || 0;
 }
 
-interface Frames {
-  requestAnimationFrame(callback: (stamp: number) => void): number;
-  cancelAnimationFrame(handle: number): void;
-}
-
 /**
  * Plays a glide from `startMs` off the timeline, calling `onFrame` with the offset on every
  * animation frame until it is 0. Returns a function that stops it. The browser's frame stamp
@@ -59,20 +55,5 @@ export function runSunGlide(o: {
   win: Frames;
   onFrame: (offsetMs: number) => void;
 }): () => void {
-  let handle = 0;
-  let start: number | null = null;
-  let stopped = false;
-  const step = (stamp: number): void => {
-    if (stopped) return;
-    start ??= stamp;
-    const t = Math.min(1, (stamp - start) / SUN_GLIDE_MS);
-    o.onFrame(glideOffset(o.startMs, t));
-    if (t < 1) handle = o.win.requestAnimationFrame(step);
-  };
-  o.onFrame(o.startMs);
-  handle = o.win.requestAnimationFrame(step);
-  return () => {
-    stopped = true;
-    o.win.cancelAnimationFrame(handle);
-  };
+  return play(o.win, SUN_GLIDE_MS, (t) => o.onFrame(glideOffset(o.startMs, t)));
 }

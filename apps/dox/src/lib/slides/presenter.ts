@@ -29,8 +29,10 @@ import {
 } from "~/widgets/builders/presenter";
 import { defineElements } from "~/widgets/define";
 import type { GmtReadout } from "~/widgets/primitives/readout/readout";
+import { loadDeckRuntime } from "~/slides/deck-runtime";
 import { createDeck, type DeckSlide } from "./deck";
 import { mountKeys } from "./keys";
+import type { AssetRow } from "./stage-data";
 import {
   elapsedMs,
   formatClock,
@@ -42,8 +44,8 @@ import {
   type PaceSide,
 } from "./pace";
 import {
-  ROW_LABELS,
-  ROW_ORDER,
+  rowLabel,
+  rowOrder,
   runReadiness,
   type ReadinessRow,
 } from "./readiness";
@@ -421,13 +423,22 @@ export function mountPresenter(
   // ---- Readiness ----
   let check: AbortController | null = null;
   const found = new Map<string, ReadinessRow>();
+  /** The deck's own file lists, from its runtime; known before the first check starts. */
+  let assetRows: readonly AssetRow[] = [];
+  const runtimeLoaded = loadDeckRuntime(o.slug).then(
+    (runtime) => {
+      assetRows = runtime?.stage.assetRows ?? [];
+    },
+    () => {},
+  );
   const paintRows = (): void => {
-    const done = ROW_ORDER.filter((id) => found.has(id)).map(
-      (id) => found.get(id) as ReadinessRow,
-    );
-    const waiting = ROW_ORDER.filter((id) => !found.has(id)).map(
-      (id) => ROW_LABELS[id],
-    );
+    const order = rowOrder(assetRows);
+    const done = order
+      .filter((id) => found.has(id))
+      .map((id) => found.get(id) as ReadinessRow);
+    const waiting = order
+      .filter((id) => !found.has(id))
+      .map((id) => rowLabel(id, assetRows));
     setHtml(rows, html`${readinessList(done)}${readinessPending(waiting)}`);
   };
   const runCheck = (): void => {
@@ -438,35 +449,42 @@ export function mountPresenter(
     paintRows();
     checkButton.disabled = true;
     const live = (): boolean => !run.signal.aborted && !signal.aborted;
-    void runReadiness({
-      signal: AbortSignal.any([signal, run.signal]),
-      deckUrl: o.deckUrl,
-      brainsUrl: o.brainsUrl,
-      env,
-      fonts: ["1em Michroma"],
-      fontSet: doc.fonts ?? null,
-      modules: [
-        { name: "unix/get", load: () => import("@northguild/gmt/unix/get") },
-        { name: "zoned/get", load: () => import("@northguild/gmt/zoned/get") },
-        {
-          name: "zoned/format",
-          load: () => import("@northguild/gmt/zoned/format"),
-        },
-      ],
-      onRow(row) {
-        if (!live()) return;
-        found.set(row.id, row);
-        paintRows();
-      },
-    }).then((all) => {
+    void runtimeLoaded.then(() => {
       if (!live()) return;
-      checkButton.disabled = false;
-      const failed = all.filter((r) => r.status === "failed").length;
-      checkNote =
-        failed === 0
-          ? "Readiness check finished: everything is ready"
-          : `Readiness check finished: ${failed} ${failed === 1 ? "item" : "items"} failed`;
-      speak();
+      return runReadiness({
+        signal: AbortSignal.any([signal, run.signal]),
+        assetRows,
+        deckUrl: o.deckUrl,
+        brainsUrl: o.brainsUrl,
+        env,
+        fonts: ["1em Michroma"],
+        fontSet: doc.fonts ?? null,
+        modules: [
+          { name: "unix/get", load: () => import("@northguild/gmt/unix/get") },
+          {
+            name: "zoned/get",
+            load: () => import("@northguild/gmt/zoned/get"),
+          },
+          {
+            name: "zoned/format",
+            load: () => import("@northguild/gmt/zoned/format"),
+          },
+        ],
+        onRow(row) {
+          if (!live()) return;
+          found.set(row.id, row);
+          paintRows();
+        },
+      }).then((all) => {
+        if (!live()) return;
+        checkButton.disabled = false;
+        const failed = all.filter((r) => r.status === "failed").length;
+        checkNote =
+          failed === 0
+            ? "Readiness check finished: everything is ready"
+            : `Readiness check finished: ${failed} ${failed === 1 ? "item" : "items"} failed`;
+        speak();
+      });
     });
   };
   checkButton.addEventListener("click", runCheck, { signal });

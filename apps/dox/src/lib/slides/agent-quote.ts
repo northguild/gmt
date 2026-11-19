@@ -69,14 +69,15 @@ export const TRANSCRIPT_FIELDS = [
   "call",
 ] as const;
 
-/** The Node major and zone whose value the slide shows. */
-export const SHOWN = { node: "26", zone: "Europe/Helsinki" } as const;
-
-/** Where the transcript is kept and the command that records its run, for messages. */
-export const ANSWER_PATH =
-  "apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json";
-export const RUN_COMMAND =
-  "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs";
+/** What a deck says about its agent run: the cell the slide shows, and where its files live. */
+export interface AgentQuoteConfig {
+  /** The Node major and zone whose value the slide shows. */
+  shown: { node: string; zone: string };
+  /** Where the transcript is kept, for messages. */
+  answerPath: string;
+  /** The command that records the run, for messages. */
+  runCommand: string;
+}
 
 export type AgentQuote =
   | {
@@ -92,7 +93,7 @@ export type AgentQuote =
       ready: true;
       /** The code the slide shows: `excerpt` applied. */
       shownCode: string;
-      /** The run on `SHOWN.node` at `SHOWN.zone`. */
+      /** The run on the configured Node major and zone. */
       shown: AgentRun;
       /** How many lines the agent's code has. */
       lines: number;
@@ -135,7 +136,9 @@ const sameValue = (a: RunValue, b: RunValue): boolean =>
 export function agentQuote(
   record: AgentQuoteRecord,
   run: AgentRunRecord | null | undefined,
+  config: AgentQuoteConfig,
 ): AgentQuote {
+  const { shown: cell, answerPath, runCommand } = config;
   const question = filled(record.question) ? record.question : "";
   const empty = TRANSCRIPT_FIELDS.filter((f) => !filled(record[f]));
   if (empty.length > 0)
@@ -143,14 +146,14 @@ export function agentQuote(
       ready: false,
       why: "transcript",
       question,
-      problem: `${ANSWER_PATH} has empty fields: ${empty.join(", ")}. Fill them from the owner's transcript, then run: ${RUN_COMMAND}`,
+      problem: `${answerPath} has empty fields: ${empty.join(", ")}. Fill them from the owner's transcript, then run: ${runCommand}`,
     };
 
   const stale = (reason: string): AgentQuote => ({
     ready: false,
     why: "run",
     question,
-    problem: `The run record for ${ANSWER_PATH} ${reason}. Run: ${RUN_COMMAND}`,
+    problem: `The run record for ${answerPath} ${reason}. Run: ${runCommand}`,
   });
   if (
     !run ||
@@ -162,11 +165,11 @@ export function agentQuote(
   if (run.sha256 !== hashOf(record.code, record.call))
     return stale("is out of date: the code or the call changed");
   const shown = run.runs.find(
-    (r) => r.node === SHOWN.node && r.zone === SHOWN.zone,
+    (r) => r.node === cell.node && r.zone === cell.zone,
   );
   if (!shown)
     return stale(
-      `is out of date: it has no run on Node ${SHOWN.node} at ${SHOWN.zone}`,
+      `is out of date: it has no run on Node ${cell.node} at ${cell.zone}`,
     );
   const shownCode = excerptOf(record.code, record.excerpt);
   if (shownCode === undefined)
@@ -174,7 +177,7 @@ export function agentQuote(
       ready: false,
       why: "transcript",
       question,
-      problem: `${ANSWER_PATH} has an excerpt that is not whole line ranges inside the ${record.code.split("\n").length} lines of the code. Fix it.`,
+      problem: `${answerPath} has an excerpt that is not whole line ranges inside the ${record.code.split("\n").length} lines of the code. Fix it.`,
     };
 
   const distinct = run.runs.reduce<RunValue[]>(
@@ -202,12 +205,16 @@ export const valueLabel = (value: RunValue): string =>
   typeof value === "string" ? value : `Threw ${value.threw}`;
 
 /** A transcript that cannot name its answers: the panel and the problem `slides-check` prints. */
-function unreadable(question: string, why: string): AgentQuote {
+function unreadable(
+  question: string,
+  why: string,
+  { answerPath, runCommand }: AgentQuoteConfig,
+): AgentQuote {
   return {
     ready: false,
     why: "transcript",
     question,
-    problem: `${ANSWER_PATH} ${why} Fix it, then run: ${RUN_COMMAND}`,
+    problem: `${answerPath} ${why} Fix it, then run: ${runCommand}`,
   };
 }
 
@@ -215,11 +222,12 @@ function unreadable(question: string, why: string): AgentQuote {
 export function agentAnswers(
   transcript: AgentTranscript,
   runs: AgentRunFile | null | undefined,
+  config: AgentQuoteConfig,
 ): { id: string; model: string; quote: AgentQuote }[] {
   const question = filled(transcript.question) ? transcript.question : "";
   const answers = Array.isArray(transcript.answers) ? transcript.answers : [];
   return answers.map(({ id, ...answer }) => {
-    const quote = agentQuote({ ...answer, question }, runs?.[id]);
+    const quote = agentQuote({ ...answer, question }, runs?.[id], config);
     return {
       id,
       model: answer.model,
@@ -234,15 +242,17 @@ export function agentAnswers(
 export function quotedAnswer(
   transcript: AgentTranscript,
   runs: AgentRunFile | null | undefined,
+  config: AgentQuoteConfig,
 ): AgentQuote {
   const question = filled(transcript.question) ? transcript.question : "";
-  const all = agentAnswers(transcript, runs);
-  if (all.length === 0) return unreadable(question, "has no answers.");
+  const all = agentAnswers(transcript, runs, config);
+  if (all.length === 0) return unreadable(question, "has no answers.", config);
   const quoted = all.find((a) => a.id === transcript.quoted);
   if (!quoted)
     return unreadable(
       question,
       `has quoted ${JSON.stringify(transcript.quoted)}, which names no answer.`,
+      config,
     );
   return quoted.quote;
 }

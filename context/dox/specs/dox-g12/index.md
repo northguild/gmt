@@ -79,6 +79,7 @@ phases with disjoint file ownership.
 | 5 | [Close-out](./s5-close-out.md) | Full gates, the venue runbook, `built/` updated |
 | 6 | [Time, not the camera](./s6-time-not-camera.md) | One held view through the bugs; time-lapses; a visual per bug; filings as pins; the clocks return; the new moon over Shanghai |
 | 7 | [The running question](./s7-running-question.md) | The agents' code run by script; guesses; a GMT step per bug; `familiar`; QR codes; spare slides; the builder phases |
+| 8 | [Reusable blocks](./s8-reusable-blocks.md) | Nothing new: the next deck is a folder plus a row in `decks.ts`, `deck-runtime.ts` and `deck-pages.ts`, built from shared components, one animation loop and per-deck data |
 
 ## Deck 0 outline (20 minutes)
 

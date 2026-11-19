@@ -2,10 +2,10 @@
  * The places a slide can name, and the camera each one means.
  *
  * `Slide`'s `place` prop is a string. `resolvePlace` turns it into one of seven kinds, and a string
- * it cannot turn is a build error (`Slide.astro` calls it while rendering), never a silent default:
+ * it cannot turn is an error, never a silent default (each deck's `stage-data.test.ts` resolves every place its slides name):
  *
  * - an IANA zone name (it holds a `/`, or is `UTC`), looked up in `TZ_COORDINATES`;
- * - a point with no zone of its own, listed below with its coordinates and a cited source;
+ * - a point with no zone of its own, set by the deck (`setPoints`) with its coordinates and a cited source;
  * - the keywords `moon`, `overview`, `wall` and `planet`;
  * - `pole:<zone>`, the North Pole seen from straight above, turned so the zone lies under the hour
  *   hand of a 24-hour clock showing the zone's wall time (`poleLng`).
@@ -35,31 +35,23 @@ export type Place =
   | { kind: "pole"; zone: string; lng: number; lat: number };
 
 /** A place with no time zone of its own. The source sits beside the coordinates. */
-interface PointEntry {
+export interface PointEntry {
   lng: number;
   lat: number;
   label: string;
   source: string;
 }
 
-/** Places a zone name cannot stand for. Keys are the strings a slide writes. */
-export const POINTS: Readonly<Record<string, PointEntry>> = {
-  galicia: {
-    // Santiago de Compostela, the capital of Galicia.
-    lng: -8.5448,
-    lat: 42.8782,
-    label: "Galicia",
-    source: "GeoNames 3109642, Santiago de Compostela: 42.8782 N, 8.5448 W",
-  },
-  greenwich: {
-    // The Airy transit circle, which marked the Prime Meridian of 1884.
-    lng: 0,
-    lat: 51.4772,
-    label: "Greenwich",
-    source:
-      "Royal Museums Greenwich, the Airy Transit Circle: 51 deg 28 min 38 sec N, longitude 0",
-  },
-};
+/**
+ * The deck's own named places, keyed by the strings a slide writes. They belong to the deck (its
+ * `stage-data.ts`), which hands them over with `setPoints`; the camera reads whatever is set.
+ */
+let points: Readonly<Record<string, PointEntry>> = {};
+
+/** Replaces the deck's named places. */
+export function setPoints(next: Readonly<Record<string, PointEntry>>): void {
+  points = next;
+}
 
 const KEYWORDS = ["moon", "overview", "wall", "planet"] as const;
 
@@ -85,7 +77,7 @@ export function resolvePlace(place: string): Place {
     const { lng, lat } = zoneEntry(zone);
     return { kind: "pole", zone, lng, lat };
   }
-  const point = Object.hasOwn(POINTS, name) ? POINTS[name] : undefined;
+  const point = Object.hasOwn(points, name) ? points[name] : undefined;
   if (point) return { kind: "point", ...point };
   if ((KEYWORDS as readonly string[]).includes(name))
     return { kind: name as (typeof KEYWORDS)[number] };
@@ -95,7 +87,7 @@ export function resolvePlace(place: string): Place {
   }
   throw new Error(
     `Unknown slide place "${name}": use an IANA zone name, ${POLE}<zone>, or one of ${[
-      ...Object.keys(POINTS),
+      ...Object.keys(points),
       ...KEYWORDS,
     ].join(", ")}`,
   );
@@ -116,34 +108,10 @@ export const labelOf = (
     : (place.zone.split("/").pop() ?? place.zone).replaceAll("_", " ");
 
 /**
- * The zones the `planet` camera centres on and the ice wall's shards land on: the zones GMT's CI
- * runs in (the zone-matrix data, slice 4c, is their owner) less UTC, which has no place on the
- * map, and nine more spread over the sunlit and night sides so the Earth reads as a whole planet.
- * `planet-zones.ts` calls `setPlanetZones` with the zone matrix's own zones when the stage mounts,
- * and this default is what the camera uses until then.
+ * The zones the `planet` camera centres on and the ice wall's shards land on. The deck names them
+ * (`stage-data.ts`); until it does the camera falls back to the pins of the route.
  */
-export const PLANET_ZONES: readonly string[] = [
-  "Pacific/Niue",
-  "America/New_York",
-  "Europe/London",
-  "Asia/Kolkata",
-  "Asia/Kathmandu",
-  "Asia/Shanghai",
-  "Australia/Lord_Howe",
-  "Pacific/Chatham",
-  "Pacific/Apia",
-  "Europe/Helsinki",
-  "Europe/Madrid",
-  "Africa/Lagos",
-  "Africa/Nairobi",
-  "Asia/Tehran",
-  "Asia/Tokyo",
-  "Asia/Manila",
-  "America/Sao_Paulo",
-  "America/Mexico_City",
-];
-
-let planetZones: readonly string[] = PLANET_ZONES;
+let planetZones: readonly string[] = [];
 
 /** Replaces the `planet` zones. An unknown zone throws, so a typo in the data cannot pass quietly. */
 export function setPlanetZones(zones: readonly string[]): void {
@@ -157,7 +125,7 @@ export function setPlanetZones(zones: readonly string[]): void {
 export const getPlanetZones = (): readonly string[] => planetZones;
 
 /** The pins of the planet zones, as `[lng, lat]`. */
-export function planetPins(): PlacePoint[] {
+function planetPins(): PlacePoint[] {
   return planetZones.flatMap((id) => {
     const zone = COORDINATES_BY_ID.get(id);
     return zone ? [[zone.lng, zone.lat] as PlacePoint] : [];
@@ -215,7 +183,7 @@ export function arcDegrees(a: PlacePoint, b: PlacePoint): number {
 }
 
 /** The point the mean of several points sits over: a vector mean, so the date line is no seam. */
-export function meanPoint(points: readonly PlacePoint[]): PlacePoint {
+function meanPoint(points: readonly PlacePoint[]): PlacePoint {
   if (points.length === 0) return [0, 0];
   let x = 0;
   let y = 0;
@@ -252,7 +220,7 @@ const wrap = (lng: number): number => ((((lng + 180) % 360) + 360) % 360) - 180;
  * The 24 hour marks fall on meridians 15 degrees apart, but the hours run clockwise and the
  * longitudes anticlockwise, so the clock's numerals do not name the meridians under them.
  */
-export function poleLng(lng: number, minutes: number | null): number {
+function poleLng(lng: number, minutes: number | null): number {
   const alpha = minutes === null ? 180 : minutes / 4;
   return wrap(lng - 180 + alpha);
 }

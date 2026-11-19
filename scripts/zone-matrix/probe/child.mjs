@@ -3,6 +3,8 @@
  * Prints one JSON object: the cases that broke (the wrong text, or the error) and the ones the
  * library cannot say. A case that passed is not listed.
  *
+ * It reads `.work/cases.json`, which `run.mjs` writes before it starts a child.
+ *
  *   TZ=Pacific/Apia node probe/child.mjs <adapter id>
  */
 import { readFileSync } from "node:fs";
@@ -11,7 +13,7 @@ import { Unsupported } from "./adapter-util.mjs";
 const id = process.argv[2];
 const adapter = (await import(`./adapters/${id}.mjs`)).default;
 const { experiments } = JSON.parse(
-  readFileSync(new URL("./cases.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../.work/cases.json", import.meta.url), "utf8"),
 );
 
 const broken = {};

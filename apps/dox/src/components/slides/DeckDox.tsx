@@ -1,12 +1,12 @@
 /**
  * The deck's live Dox: the real chat (`DoxChat`) and widget rail (`WidgetRail`), sized to fit a
- * slide, in place of a look-alike. Three slides use it, by `mode`:
+ * slide, in place of a look-alike. A slide uses it in one of three `mode`s:
  *
- *  - `answer` (`ask-dox`): one ready question, the running one, answered live with its recording
+ *  - `answer`: one ready question, the running one, answered live with its recording
  *    as the fallback, and the composer for any other.
  *  - `audience` (the questions part): three FAQ pills that play recordings with no network, and
  *    the composer, whose question goes live.
- *  - `tools` (`page-tools`): no composer; Moving Feasts' page tool finds both 2027 Easters in
+ *  - `tools`: no composer; Moving Feasts' page tool finds both Easters of the deck's year in
  *    this page when the slide's build is reached, and the receipt and the month grids appear as
  *    they do on /dox.
  *
@@ -30,7 +30,11 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { UIMessageChunk } from "ai";
-import { DoxChat, type DoxChatHandle } from "~/components/ask/DoxChat";
+import {
+  DoxChat,
+  type ChatHost,
+  type DoxChatHandle,
+} from "~/components/ask/DoxChat";
 import { ChatErrorBoundary } from "~/components/ask/ChatErrorBoundary";
 import { RailResizer } from "~/components/ask/RailResizer";
 import { WidgetRail, type RailWidget } from "~/components/ask/WidgetRail";
@@ -50,9 +54,11 @@ import {
   createDeckSession,
   type SourceState,
 } from "~/lib/slides/deck-transport";
-import type { FaqQuestion } from "~/lib/slides/live-demos";
+import type { DeckToolScript, FaqQuestion } from "~/lib/slides/live-data";
+import { prefersReducedMotion } from "~/lib/reduced-motion";
 import type { Recording } from "~/lib/slides/replay";
 import styles from "./deck-dox.module.css";
+import "./deck-dox-chat.css";
 
 export type DeckDoxMode = "answer" | "audience" | "tools";
 
@@ -64,22 +70,28 @@ export interface DeckDoxProps {
   questions: readonly FaqQuestion[];
   /** The recordings that exist, by id; a question without one says so when asked. */
   recordings: readonly Recording[];
+  /** The page the Worker is told a question comes from (`DeckLiveData.pageContext`). */
+  pageContext: string;
+  /** The deck's venue zone (`DeckEntry.zone`): a recording's date is read in it. */
+  zone: string;
+  /** The `tools` mode's scripted call: its question and the year the tool is called for. */
+  tool?: DeckToolScript;
 }
-
-/** The tools slide's one question. */
-const TOOL_QUESTION = "When is Easter in 2027? Ask this page.";
 
 const TOOL_ID = "call-1";
 
 /** The page-tool answer as chunks: the call, the two Easters, then the widget call, which opens
  *  the month grids for the call's year. */
-function toolStream(signal: AbortSignal): ReadableStream<UIMessageChunk> {
+function toolStream(
+  year: number,
+  signal: AbortSignal,
+): ReadableStream<UIMessageChunk> {
   return new ReadableStream<UIMessageChunk>({
     async start(out) {
       try {
         const { pageToolRequest, runPageToolCall } =
           await import("~/lib/slides/page-tool-call");
-        const request = pageToolRequest();
+        const request = pageToolRequest(year);
         out.enqueue({ type: "start" });
         out.enqueue({ type: "text-start", id: "call" });
         out.enqueue({
@@ -88,7 +100,7 @@ function toolStream(signal: AbortSignal): ReadableStream<UIMessageChunk> {
           delta: `Calling \`${request.name}\` on this page.\n`,
         });
         out.enqueue({ type: "text-end", id: "call" });
-        const { text } = await runPageToolCall(signal);
+        const { text, widget } = await runPageToolCall(year, signal);
         if (signal.aborted) return out.close();
         out.enqueue({ type: "text-start", id: "answer" });
         out.enqueue({
@@ -100,8 +112,8 @@ function toolStream(signal: AbortSignal): ReadableStream<UIMessageChunk> {
         out.enqueue({
           type: "tool-input-available",
           toolCallId: TOOL_ID,
-          toolName: "showMovingFeasts",
-          input: request.arguments,
+          toolName: widget.toolName,
+          input: widget.input,
         });
         out.enqueue({ type: "finish" });
         out.close();
@@ -166,7 +178,7 @@ function Chat(
     run: number;
   },
 ) {
-  const { mode, session, source, questions, recordings } = props;
+  const { mode, session, source, questions, recordings, tool } = props;
   const brains = useBrains();
   const clock = useResetClock();
   const brainId = useSyncExternalStore(
@@ -177,6 +189,16 @@ function Chat(
   const brainPick = useMemo(
     () => ({ id: brainId, onSelect: setDeckBrain }),
     [brainId],
+  );
+  const host = useMemo<ChatHost>(
+    () => ({
+      createTransport: session.transport,
+      brainPick,
+      brainControls: false,
+      typing: mode !== "tools",
+      modelAnswers: mode !== "tools",
+    }),
+    [session, brainPick, mode],
   );
   const chatRef = useRef<DoxChatHandle>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -213,7 +235,7 @@ function Chat(
     (id: string) => {
       const item =
         mode === "tools"
-          ? { id: TOOL_ID, text: TOOL_QUESTION }
+          ? tool && { id: TOOL_ID, text: tool.question }
           : questions.find((q) => q.id === id);
       if (!item) return;
       const text = "question" in item ? item.question : item.text;
@@ -221,7 +243,7 @@ function Chat(
       session.plan({ recording, recordedOnly: mode === "audience" });
       if (chatRef.current?.send(text) !== true) session.plan(null);
     },
-    [mode, questions, recordings, session],
+    [mode, questions, recordings, session, tool],
   );
 
   /* The tools slide runs its one call when the slide's build is reached. */
@@ -241,9 +263,11 @@ function Chat(
   const items = useMemo(
     () =>
       mode === "tools"
-        ? [{ id: TOOL_ID, text: TOOL_QUESTION }]
+        ? tool
+          ? [{ id: TOOL_ID, text: tool.question }]
+          : []
         : questions.map((q) => ({ id: q.id, text: q.question })),
-    [mode, questions],
+    [mode, questions, tool],
   );
 
   const heading =
@@ -263,12 +287,7 @@ function Chat(
             onUsed={brains.refresh}
             onUsage={brains.apply}
             onWidget={showWidget}
-            createTransport={session.transport}
-            brainPick={brainPick}
-            brainControls={false}
-            typing={mode !== "tools"}
-            modelAnswers={mode !== "tools"}
-            compact
+            host={host}
             aboveComposer={
               <output className={styles["source"]} data-slot="source">
                 {sourceText(source, mode)}
@@ -354,8 +373,10 @@ function glideToLead(host: HTMLElement): () => void {
       scroller.getBoundingClientRect().top;
     if (scroller.scrollHeight - scroller.clientHeight < top) return;
     stop();
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scroller.scrollTo({ top, behavior: still ? "instant" : "smooth" });
+    scroller.scrollTo({
+      top,
+      behavior: prefersReducedMotion() ? "instant" : "smooth",
+    });
   };
   const check = (): void => {
     // The body's height comes from its children, which grow as the widget draws.
@@ -377,7 +398,7 @@ function glideToLead(host: HTMLElement): () => void {
 }
 
 export default function DeckDox(props: DeckDoxProps) {
-  const { mode, demoId } = props;
+  const { mode, demoId, pageContext, zone, tool } = props;
   const rootRef = useRef<HTMLDivElement>(null);
   const [source, setSource] = useState<SourceState | null>(null);
   /* Bumped on leaving the slide: a new session and a fresh chat, nothing left running. */
@@ -399,7 +420,11 @@ export default function DeckDox(props: DeckDoxProps) {
               state ? { id: demoId, source: state.source } : null,
             );
         },
-        ...(mode === "tools" ? { local: toolStream } : {}),
+        pageContext,
+        zone,
+        ...(mode === "tools" && tool
+          ? { local: (signal: AbortSignal) => toolStream(tool.year, signal) }
+          : {}),
       }),
     // A new round is a new session; the demo and its mode never change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -440,6 +465,7 @@ export default function DeckDox(props: DeckDoxProps) {
     <div
       ref={rootRef}
       className={`gmt-ask ${styles["frame"]}`}
+      data-deck-dox=""
       data-mode={mode}
       data-demo-id={demoId}
     >

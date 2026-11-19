@@ -15,12 +15,13 @@ page. No globe yet: the stage sits on `--gmt-void`.
 
 - `src/pages/slides/index.astro`: a StarlightPage (`template: "splash"`) listing each deck from
   `src/slides/decks.ts` as a card: title, event, date, length, a link. Indexed and searchable.
-- `src/pages/slides/give-me-temporal/index.astro`: a StarlightPage built like `src/pages/dox.astro`
+- `src/pages/slides/[slug]/index.astro`: one StarlightPage for every deck, built like `src/pages/dox.astro`
   (head script sets `data-deck` on `html`, CSS hides sidebar, TOC and footer; `pagefind: false`).
   The site header stays in browse mode; fullscreen is requested on the deck root, so the header
-  is not in it.
+  is not in it. `getStaticPaths` reads `DECKS`; `src/slides/deck-pages.ts` maps each slug to its
+  deck component, so a second deck adds no page file.
 - `src/slides/decks.ts`: `{ slug, label, title, event, date, minutes, qa }[]`. The date is a
-  `PlainDate` string. A test asserts every slug has a page and every page a registry entry.
+  `PlainDate` string. A test asserts every slug has a deck component row and a folder, and back.
 - `astro.config.mjs`: the sitemap filter also drops any path ending `/presenter/` (slice 3 adds it).
 
 ## Components (`src/components/slides/`)
@@ -150,7 +151,7 @@ Register it in `scripts/gates/registry.mjs` at tier `pr`; it runs in the CI leg 
   `expectNoAxeViolations`; `destroy()` and `abort()` run in `afterEach`. `requestFullscreen` is stubbed with `vi.stubGlobal`,
   which moves that file to the `isolated` project
   ([Test isolation](../../built/tier-2-platform.md#test-isolation)).
-- `decks.test.ts`: every registry slug has a page file under `src/pages/slides/` and back.
+- `decks.test.ts`: every registry slug has a row in `deck-pages.ts` and a folder under `src/slides/`, and back.
 - `slides-check.test.ts`: the gate's pure helpers.
 
 ## Definition of done

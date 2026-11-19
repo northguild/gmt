@@ -610,9 +610,11 @@ async function main() {
   }
 
   // --- the deck's space stage ----------------------------------------------
-  /* The deck page has no widget root, so it is checked on its own: the renderer starts, the
-     camera lands on the slide's place after a step, the layer is not blank, and the two renderers
-     agree (the WebGPU one with its imagery withheld, as above). */
+  /* The deck page has no widget root, so it is checked on its own: the renderer starts, the layer
+     is not blank, the two renderers agree (the WebGPU one with its imagery withheld, as above), and
+     the wall's panes are drawn where their captures are. `slides-check` probes the wall on the
+     canvas-2D renderer only, so the WebGPU probe lives here; where the camera rests is the
+     same on both and stays `slides-check`'s. */
   {
     const deck = { name: "deck", route: DECK_ROUTE, width: 1440, height: 900 };
     const shots = {};
@@ -636,26 +638,13 @@ async function main() {
           // The longest hop takes 4 s (`hopDuration` at 180°).
           { timeout: 7000 },
         );
-        const state = await page.evaluate((sel) => {
-          const d = document.querySelector(sel)?.dataset ?? {};
-          return {
-            renderer: d.globeRenderer ?? null,
-            rotation: d.rotation ?? "",
-            target: d.target ?? "",
-          };
-        }, DECK_SPACE);
-        check(
-          state.renderer === renderer,
-          `deck (${renderer}): expected the ${renderer} renderer, got ${state.renderer}`,
+        const started = await page.evaluate(
+          (sel) => document.querySelector(sel)?.dataset.globeRenderer ?? null,
+          DECK_SPACE,
         );
-        const rotation = state.rotation.split(" ").map(Number);
-        const goal = state.target.split(" ").map(Number);
         check(
-          rotation.length === 2 &&
-            goal.length === 2 &&
-            Math.abs(rotation[0] - goal[0]) < 0.5 &&
-            Math.abs(rotation[1] - goal[1]) < 0.5,
-          `deck (${renderer}): the camera rests at "${state.rotation}", not "${state.target}"`,
+          started === renderer,
+          `deck (${renderer}): expected the ${renderer} renderer, got ${started}`,
         );
         for (const problem of problems)
           failures.push(`deck (${renderer}): ${problem}`);

@@ -26,7 +26,7 @@ export interface DeckSlide {
   spare?: boolean;
 }
 
-export interface DeckState {
+interface DeckPosition {
   slide: number;
   build: number;
 }
@@ -34,7 +34,7 @@ export interface DeckState {
 export interface Deck {
   readonly slides: readonly DeckSlide[];
   /** A copy: changing it changes nothing. */
-  readonly state: DeckState;
+  readonly state: DeckPosition;
   /** How many slides, from the first, can be shown. */
   readonly reach: number;
   /** The slide Next (`1`) or Prev (`-1`) reaches from slide `from`, or `null` at an end. */
@@ -69,7 +69,7 @@ const clamp = (n: number, lo: number, hi: number): number =>
 export function parseHash(
   hash: string,
   slides: readonly DeckSlide[],
-): DeckState {
+): DeckPosition {
   const body = hash.startsWith("#") ? hash.slice(1) : hash;
   const cut = body.indexOf("/");
   const rawId = cut === -1 ? body : body.slice(0, cut);
@@ -88,7 +88,7 @@ export function parseHash(
 
 /** The fragment for a state: `#id` at build 0, else `#id/n`. */
 export function formatHash(
-  state: DeckState,
+  state: DeckPosition,
   slides: readonly DeckSlide[],
 ): string {
   const s = slides[clamp(state.slide, 0, slides.length - 1)];
@@ -100,7 +100,7 @@ export function formatHash(
 /** `reach` defaults to every slide. */
 export function createDeck(
   input: readonly DeckSlide[],
-  start?: DeckState,
+  start?: DeckPosition,
   reach?: number,
 ): Deck {
   if (input.length === 0) throw new Error("a deck needs at least one slide");

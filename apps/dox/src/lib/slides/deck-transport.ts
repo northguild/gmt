@@ -31,7 +31,6 @@ import {
   USAGE_PART_TYPE,
 } from "~/lib/chat-types";
 import { withBase } from "~/lib/site";
-import { DECK_PAGE_CONTEXT } from "./live-demos";
 import { formatRecordedLabel, replayStream, type Recording } from "./replay";
 import type { DemoSource, DemoState } from "./sync";
 
@@ -54,6 +53,10 @@ export interface DeckPlan {
 }
 
 export interface DeckSessionOptions {
+  /** The page the Worker is told a question comes from (`DeckLiveData.pageContext`). */
+  pageContext: string;
+  /** The deck's venue zone (`DeckEntry.zone`): a recording's date is read in it. */
+  zone: string;
   /** Told where each answer comes from, and `null` when the demo ends. */
   onSource: (state: SourceState | null) => void;
   /** The request, for a test; defaults to the page's `fetch`. */
@@ -114,7 +117,7 @@ export function createDeckSession(o: DeckSessionOptions): DeckSession {
       out: ReadableStreamDefaultController<UIMessageChunk>,
       signal: AbortSignal,
     ): Promise<void> {
-      const label = await formatRecordedLabel(recording);
+      const label = await formatRecordedLabel(recording, o.zone);
       if (signal.aborted) return;
       o.onSource({ source: "recorded", label });
       const reader = replayStream(recording, signal).getReader();
@@ -168,7 +171,7 @@ export function createDeckSession(o: DeckSessionOptions): DeckSession {
             return {
               body: {
                 messages: sendableHistory(messages),
-                pageContext: DECK_PAGE_CONTEXT,
+                pageContext: o.pageContext,
                 ...(model ? { model } : {}),
               },
             };

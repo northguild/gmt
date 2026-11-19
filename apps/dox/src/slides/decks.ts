@@ -1,7 +1,7 @@
 /**
  * The registry of decks: one row for each talk under `/slides/`. The index page lists these rows,
- * and `decks.test.ts` holds that every slug has a page and every page a row. Delete this file and
- * `src/pages/slides/` together and the site builds without decks.
+ * and `decks.test.ts` holds that every slug has a deck component in `deck-pages.ts`. Delete this
+ * file and `src/pages/slides/` together and the site builds without decks.
  */
 import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned/convert";
 import {
@@ -15,6 +15,8 @@ export interface DeckEntry {
   /** The short tag on the index card ("Deck 0"). */
   label: string;
   title: string;
+  /** The page's meta description, one sentence. */
+  description: string;
   event: string;
   /**
    * The talk's start as a zoned date-time string in `zone`
@@ -51,6 +53,8 @@ export const DECKS: readonly DeckEntry[] = [
     slug: "give-me-temporal",
     label: "Deck 0",
     title: "Give Me Temporal",
+    description:
+      "Slides for the talk Give Me Temporal: one clock against the whole planet, and what GMT does about it.",
     event: "HelsinkiJS",
     start: TALK_START,
     zone: HELSINKI,

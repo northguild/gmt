@@ -4,6 +4,7 @@
  * instant (`convertUtcToZoned`) on a build that stops it, as the GMT slide does either side of a
  * skipped hour.
  */
+import { loadDeckGmt } from "./gmt-loader";
 
 /** A wall time as hour, minute and second, with gmt's zoned string it was read from. */
 export interface WallTime {
@@ -38,15 +39,12 @@ function wallTime(zoned: string): WallTime | null {
 /** The zone's clock once gmt has loaded, or `null` when it cannot load. */
 export async function loadClock(zone: string): Promise<Clock | null> {
   try {
-    const [unix, zoned, utc] = await Promise.all([
-      import("@northguild/gmt/unix/get"),
-      import("@northguild/gmt/zoned/get"),
-      import("@northguild/gmt/utc/convert"),
-    ]);
+    const { unixGet, zonedGet, utcConvert } = await loadDeckGmt();
     return {
-      read: () => wallTime(zoned.getZonedNow(zone, { smallestUnit: "second" })),
-      at: (instant) => wallTime(utc.convertUtcToZoned(instant, zone)),
-      untilNextSecond: () => 1000 - (unix.getUnixNow() % 1000) + 20,
+      read: () =>
+        wallTime(zonedGet.getZonedNow(zone, { smallestUnit: "second" })),
+      at: (instant) => wallTime(utcConvert.convertUtcToZoned(instant, zone)),
+      untilNextSecond: () => 1000 - (unixGet.getUnixNow() % 1000) + 20,
     };
   } catch {
     return null;

@@ -1,5 +1,5 @@
 /**
- * The ice wall's pixel probe, shared by `slides-check.mjs` (canvas-2D) and `globe-smoke.mjs` (GPU).
+ * The ice wall's pixel probe, used by `slides-check.mjs`.
  *
  * With the wall hanging whole, the centre of each pane on screen must match the centre of its
  * capture. A WebGPU canvas cannot be read back from the page, so the screen side is a screenshot

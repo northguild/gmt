@@ -11,9 +11,9 @@ Each file belongs to exactly one phase. Paths are under `apps/dox/` unless they 
 | --- | --- | --- |
 | **R** · agent run, familiar data | now | `scripts/zone-matrix/agent-answer.mjs`, `agent-answer.test.mjs`, `familiar.test.mjs`, `README.md` (its section); `src/slides/give-me-temporal/quotes/` (`agent-answer.json` replaces `agent-moment.json`; `agent-run.json`); `src/slides/give-me-temporal/familiar.json`; `src/lib/slides/agent-quote.ts` + test; `src/components/slides/{AgentQuote,AgentTable}.astro` |
 | **U** · upstream data | now | `scripts/upstream.mjs`, `scripts/lib/upstream-trackers.mjs`, `src/data/upstream-filings.{json,ts,test.ts}`, `src/lib/upstream-badges.{ts,test.ts}` |
-| **C** · live agents ([4b](./s4b-live-agents.md)) | now | `src/lib/slides/{deck-tools/,page-tool-call,deck-transport,replay}.ts` + tests; `src/components/slides/{LiveAnswer,PageToolCall,AudienceQuestions}.astro`, `DeckDox.tsx` and `deck-dox.module.css`; `src/lib/webmcp/offer.ts`, `src/lib/head-tags.ts`, `src/lib/webmcp/head.dist.test.ts`; `src/pages/slides/give-me-temporal/index.astro`; `scripts/record-deck-answers.ts`; `src/slides/give-me-temporal/recorded/`; `guides/integration/browser-agents.mdx` |
-| **A** · Moon and sky ([6](./s6-time-not-camera.md#the-new-moon-over-shanghai)) | after the spin and view-transition builder | `src/lib/space-sky.ts`, `src/lib/slides/{stage,places,time-lapse}.ts` + tests, `src/slides/give-me-temporal/{content.ts,content.test.ts,new-moon.json}`, `src/components/slides/NewMoonPanel.astro`; in `Deck0.astro` only `day-off`'s build 2 and its notes |
-| **B** · deck structure | after A, R, U and C | the rest of `Deck0.astro`; `src/components/slides/{Slide,GmtStep,FamiliarPair,QrCode,ExperimentSlide}.astro`, `slides.css`, `slides-print.css`, `experiment-slide.css`; `src/lib/slides/{deck,deck-mount,bug-visuals,qr}.ts` + tests; `src/widgets/builders/deck-controls.ts` + test; `scripts/slides-built.test.ts`, `scripts/slides-check.mjs`; `apps/dox/package.json` and `pnpm-lock.yaml` (`lean-qr`); `presenter.ts` if the spares need it |
+| **C** · live agents ([4b](./s4b-live-agents.md)) | now | `src/lib/slides/{deck-tools/,page-tool-call,deck-transport,replay}.ts` + tests; `src/components/slides/DeckLive.astro`, `DeckDox.tsx`, `deck-dox.module.css` and `deck-dox-chat.css`; `src/lib/slides/live-data.ts`, `src/slides/give-me-temporal/{live-data,recorded}.ts`; `src/lib/webmcp/offer.ts`, `src/lib/head-tags.ts`, `src/lib/webmcp/head.dist.test.ts`; `src/slides/give-me-temporal/Deck0.astro`'s script; `scripts/record-deck-answers.ts`; `src/slides/give-me-temporal/recorded/`; `guides/integration/browser-agents.mdx` |
+| **A** · Moon and sky ([6](./s6-time-not-camera.md#the-new-moon-over-shanghai)) | after the spin and view-transition builder | `src/lib/space-sky.ts`, `src/lib/slides/{stage,places,time-lapse}.ts` + tests, `src/slides/give-me-temporal/{content.ts,content.test.ts,new-moon.json}`, `src/slides/give-me-temporal/components/NewMoonPanel.astro`; in `Deck0.astro` only `day-off`'s build 2 and its notes |
+| **B** · deck structure | after A, R, U and C | the rest of `Deck0.astro`; `src/components/slides/{Slide,GmtStep,FamiliarPair,QrCode}.astro`, `slides.css`, `slides-print.css`; `src/slides/give-me-temporal/components/{ExperimentSlide.astro,experiment-slide.css}`; `src/lib/slides/{deck,deck-mount,bug-visuals,qr}.ts` + tests; `src/widgets/builders/deck-controls.ts` + test; `scripts/slides-built.test.ts`, `src/slides/give-me-temporal/built.test.ts`, `scripts/slides-check.mjs`; `apps/dox/package.json` and `pnpm-lock.yaml` (`lean-qr`); `presenter.ts` if the spares need it |
 
 R, U and C share no file with the builder now changing `stage.ts`, `deck-mount.ts` and `slides.css`
 (the Earth's slow spin and the view transitions, [slice 2](./s2-space-stage.md)), so they run
@@ -127,9 +127,10 @@ is aborted or destroyed in `afterEach`; fake timers, `vi.getTimerCount()` 0 at t
   `agent-quote.test.ts` for ready, empty, missing record, stale hash, the quoted answer and an
   answer whose record is missing; `familiar.test.mjs`.
 - **U:** the badge and check rules above.
-- **B:** `slides-built.test.ts`: the outline of 25 ids then the spare, main minutes sum to
-  25, spares have no `data-minutes`, each bug slide's last build holds a GMT step, `qa` holds the audience panel, `thanks` has two
-  QR images with names. `deck.test.ts` (End, Next on `thanks`, Next from a spare), `deck-controls.test.ts` (two
+- **B:** `src/slides/give-me-temporal/built.test.ts`: the outline of 25 ids then the spare,
+  each bug slide's last build holds a GMT step, `thanks` has two QR images with names.
+  `scripts/slides-built.test.ts`: main minutes sum to 25, spares have no `data-minutes`.
+  `slides-check.mjs`: `qa` holds the audience panel. `deck.test.ts` (End, Next on `thanks`, Next from a spare), `deck-controls.test.ts` (two
   lists), `qr.test.ts` (deterministic, `viewBox` is modules + 8). `slides-check.mjs` adds the
   transcript gate, C's checks ([4b](./s4b-live-agents.md#tests)) and A's Moon check.
 

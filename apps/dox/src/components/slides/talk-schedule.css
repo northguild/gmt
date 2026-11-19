@@ -1,0 +1,53 @@
+/*
+ * The title's schedule card (`TalkSchedule.astro`): a calendar page with the day beside the start
+ * time. The page is the Earth clock's date window at a fixed width, centred on the slot's height;
+ * its drawing rules are in `earth-clock.css`. The card's panel look is the shared one in `slides.css`.
+ */
+html[data-deck] .gmt-talk-schedule {
+  display: inline-flex;
+  gap: 2cqi;
+  align-items: center;
+  justify-self: start;
+  padding: 1.4cqi 2.4cqi 1.4cqi 1.4cqi;
+}
+
+html[data-deck] .gmt-talk-page {
+  flex: none;
+  inline-size: 12cqi;
+  block-size: auto;
+  overflow: visible;
+}
+
+html[data-deck] .gmt-talk-slot {
+  display: grid;
+  align-content: center;
+  gap: 0.5cqi;
+}
+
+html[data-deck] .gmt-talk-slot p {
+  margin: 0;
+}
+
+html[data-deck] .gmt-talk-event {
+  font-family: var(--gmt-font-display);
+  font-size: max(0.9rem, 2.2cqi);
+  letter-spacing: 0.06em;
+  color: var(--gmt-cyan-bright);
+}
+
+html[data-deck] .gmt-talk-date {
+  font-size: max(0.8rem, 1.8cqi);
+  color: var(--gmt-ice);
+}
+
+html[data-deck] .gmt-talk-when {
+  font-family: var(--gmt-font-display);
+  font-size: max(1rem, 2.8cqi);
+  letter-spacing: 0.04em;
+  color: var(--gmt-ice-bright);
+}
+
+html[data-deck] .gmt-talk-zone {
+  font-size: var(--gmt-deck-text-md);
+  color: var(--gmt-ice-dim);
+}

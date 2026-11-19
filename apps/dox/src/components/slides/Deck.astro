@@ -21,7 +21,12 @@ import { EARTH_IMAGERY, MILKY_WAY, NIGHT_SKY, type DataCredit } from "~/lib/data
 import { KEY_TABLE } from "~/lib/slides/keys";
 import { withBase } from "~/lib/site";
 import { deckControls, deckDialogs } from "~/widgets/builders/deck-controls";
+// One place sets the order of the deck's sheets: the generic one first, then what a deck draws.
 import "./slides.css";
+import "./earth-clock.css";
+import "./talk-schedule.css";
+import "./deck-table.css";
+import "./bug-visuals.css";
 import "./slides-print.css";
 
 interface Props {

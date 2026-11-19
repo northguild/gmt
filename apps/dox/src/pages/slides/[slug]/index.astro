@@ -1,0 +1,54 @@
+---
+// One deck, at `/slides/<slug>/`: a page for each row of the registry (`src/slides/decks.ts`), the
+// deck component from `src/slides/deck-pages.ts`. A StarlightPage for the same reason as
+// `src/pages/dox.astro`: `customCss` reaches a page only through it. The head script marks the
+// document before `<body>` parses, so the stage's shape is the first paint; the mount confirms
+// it (`lib/slides/deck-mount.ts`). The site header stays; fullscreen is requested on the deck
+// root alone. In the sitemap, out of the search index. The marker meta and the script below offer
+// the deck's own WebMCP tools (`lib/slides/deck-tools`); the presenter page carries neither.
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { deckWebmcpHeadEntries } from "~/lib/head-tags";
+import { DECK_HEAD_SCRIPT } from "~/lib/slides/head-script";
+import { ORIGIN_TRIAL_TOKENS } from "~/lib/webmcp/origin-trial";
+import { deckComponent } from "~/slides/deck-pages";
+import { DECKS, type DeckEntry } from "~/slides/decks";
+
+export function getStaticPaths() {
+  return DECKS.map((deck) => ({ params: { slug: deck.slug }, props: { deck } }));
+}
+
+interface Props {
+  deck: DeckEntry;
+}
+const { deck } = Astro.props;
+const Deck = deckComponent(deck.slug);
+---
+
+<StarlightPage
+  frontmatter={{
+    title: deck.title,
+    description: deck.description,
+    template: "splash",
+    pagefind: false,
+    head: [
+      {
+        tag: "script",
+        content: DECK_HEAD_SCRIPT,
+      },
+      ...deckWebmcpHeadEntries(deck.slug, ORIGIN_TRIAL_TOKENS),
+    ],
+  }}
+>
+  <Deck />
+</StarlightPage>
+
+<script>
+  import { offerPageTools } from "~/lib/webmcp/offer";
+
+  const slug = document.querySelector<HTMLElement>("[data-deck-root]")?.dataset.deckSlug;
+  if (slug)
+    void offerPageTools(
+      `slides/${slug}`,
+      () => import("~/lib/slides/deck-tools"),
+    );
+</script>

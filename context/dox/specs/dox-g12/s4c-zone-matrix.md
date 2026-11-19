@@ -8,7 +8,8 @@
 Run each library's own test suite under the zones GMT's suite runs in, and report what fails,
 sorted by cause. One committed JSON feeds three readers: a new page `/compare/zone-matrix/`, a
 column in the full table on `/compare`, and one line on each Migrate page. Deck 0 reads only its
-zone list, for the clock pins (`planet-zones.ts`); its numbers slides read `zone-probe.json`.
+zone list, for the clock pins (`planetZones` in `src/slides/give-me-temporal/stage-data.ts`);
+its numbers slides read `zone-probe.json`.
 Neutral throughout: versions, commands and counts, no adjectives.
 
 ## The runner: `scripts/zone-matrix/` (repo root)
@@ -138,8 +139,8 @@ an `untagged` entry or on a GMT failure, so the build stops.
 - `scripts/zone-matrix/*.test.mjs` (`node --test`): pin scan, report parsers on recorded
   samples, tag matching and stale-tag reporting, cell merge.
 - `library-compare-tables.test.ts`, `migrate-view.test.ts`, `head-tags.test.ts` (new page id)
-  and `mdx-jsx` twin tests extended; `planet-zones.test.ts` holds the deck's pins to the
-  matrix zones.
+  and `mdx-jsx` twin tests extended; `src/slides/give-me-temporal/stage-data.test.ts` holds the
+  deck's pins to the matrix zones.
 
 ## Definition of done
 

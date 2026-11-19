@@ -1,20 +1,14 @@
 /**
  * Tests of the zone probe. Run: `node --test` in `scripts/zone-matrix`.
  *
- * - the case file: both Temporals give the stored answer for every case, and nothing was dropped;
+ * - the cases, built fresh: both Temporals give the answer for every case, and nothing was dropped;
  * - `summarise`: how wrong, everywhere, some-zones, unsupported and Node agreement are counted;
  * - a sample of adapters, run under the machine zone of this process;
  * - the cache key: it changes each time a dirty `packages/gmt` file is edited again.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -24,42 +18,28 @@ import { buildCases } from "./build-cases.mjs";
 import { gmtFingerprint } from "./fingerprint.mjs";
 import { temporalOps } from "./temporal-ops.mjs";
 
-const stored = JSON.parse(
-  readFileSync(new URL("./cases.json", import.meta.url), "utf8"),
-);
+// The cases are built fresh on every run; no file of them is kept.
+const stored = buildCases(globalThis.Temporal ?? Polyfill);
 const allCases = stored.experiments.flatMap((e) => e.cases);
 
-test("cases.json: nothing dropped, ids unique, every experiment has cases", () => {
+test("cases: nothing dropped, ids unique, every experiment has cases", () => {
   assert.deepEqual(stored.dropped, []);
   assert.equal(new Set(allCases.map((c) => c.id)).size, allCases.length);
   assert.ok(stored.experiments.length >= 3 && stored.experiments.length <= 4);
   for (const e of stored.experiments) assert.ok(e.cases.length > 0, e.id);
 });
 
-test("cases.json: the polyfill and native Temporal both give every stored answer", () => {
+test("cases: the polyfill and native Temporal both give every answer", () => {
   for (const [name, T] of [
     ["polyfill", Polyfill],
     ["native", globalThis.Temporal],
   ]) {
-    if (!T) continue; // Node before 26 has no Temporal; the polyfill run still covers the file.
+    if (!T) continue; // Node before 26 has no Temporal; the polyfill run still covers the cases.
     const ops = temporalOps(T);
     for (const c of allCases)
       assert.equal(ops[c.op](c.args), c.expected, `${name} ${c.id}`);
   }
 });
-
-test(
-  "cases.json is what build-cases computes now",
-  { skip: !globalThis.Temporal },
-  () => {
-    const rebuilt = buildCases(globalThis.Temporal);
-    assert.deepEqual(rebuilt.dropped, []);
-    assert.deepEqual(
-      rebuilt.experiments.map((e) => [e.id, e.cases.length]),
-      stored.experiments.map((e) => [e.id, e.cases.length]),
-    );
-  },
-);
 
 const cell = (broken = {}, unsupported = {}) => ({ broken, unsupported });
 test("summarise counts wrong, everywhere, some zones, unsupported and node agreement", () => {

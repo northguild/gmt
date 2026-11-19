@@ -128,12 +128,12 @@ export function replayStream(
 }
 
 /**
- * `Recorded 16 December 2026, Gemma 4 26B`: the date in the talk's zone, read with gmt. An
- * instant gmt refuses gives the label without a date, never a blank.
+ * `Recorded 16 December 2026, Gemma 4 26B`: the date in the talk's zone (the deck's venue zone,
+ * `DeckEntry.zone`), read with gmt. An instant gmt refuses gives the label without a date, never a blank.
  */
 export async function formatRecordedLabel(
   recording: Pick<Recording, "instant" | "brain">,
-  zone = "Europe/Helsinki",
+  zone: string,
 ): Promise<string> {
   const { formatUtc } = await import("@northguild/gmt/utc/format");
   const date = formatUtc(recording.instant, "en-GB", {
@@ -143,4 +143,21 @@ export async function formatRecordedLabel(
   return date === ""
     ? `Recorded, ${recording.brain.label}`
     : `Recorded ${date}, ${recording.brain.label}`;
+}
+
+/**
+ * The recordings among `files` (a deck's `recorded/*.json`, read at build time) that parse and
+ * have one of `ids`, in file order. A missing recording is left out and the slide says "Recording
+ * to come" when its question is asked; one that does not parse is left out too.
+ */
+export function selectRecordings(
+  files: readonly unknown[],
+  ids: readonly string[],
+): Recording[] {
+  const out: Recording[] = [];
+  for (const value of files) {
+    const recording = parseRecording(value);
+    if (recording && ids.includes(recording.id)) out.push(recording);
+  }
+  return out;
 }

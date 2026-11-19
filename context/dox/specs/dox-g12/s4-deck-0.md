@@ -113,11 +113,14 @@ bottom edge only. No left-only stripe on any card, step, pair or code block.
 
 ## Tests
 
-- `scripts/slides-built.test.ts` reads the built deck through `distDirOrSkip()`: ids unique and
-  in outline order, the spare last; main minutes sum to the registry's 20 plus its 5 of `qa`; every `data-place`
-  resolves; every slide has notes; six wall figures with captions; no wall on `date`.
-- `filing-card.test.ts`, `gmt-result.test.ts`, `decks.test.ts` as built; the new pieces' tests
-  are in [slice 7](./s7-running-question.md#tests-and-checks).
+- `scripts/slides-built.test.ts` reads every registered deck as built through `distDirOrSkip()`:
+  ids unique, spares last and without minutes, main minutes sum to the registry's `minutes` plus
+  `qa`, every slide has notes. `src/slides/give-me-temporal/built.test.ts` holds Deck 0's own:
+  the outline order, six wall figures with captions, no wall on `date`.
+- A place, reveal zone or lapse a slide names that the deck's stage data lacks fails the build
+  (`checkStageNames` in `Slide.astro` and `Build.astro`).
+- `gmt-result.test.ts`, `decks.test.ts` as built; the new pieces' tests are in
+  [slice 7](./s7-running-question.md#tests-and-checks).
 
 ## Definition of done
 

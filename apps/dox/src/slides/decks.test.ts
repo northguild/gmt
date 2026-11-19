@@ -1,21 +1,31 @@
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { NO_STAGE_DATA } from "~/lib/slides/stage-data";
+import { deckStage, loadDeckRuntime, RUNTIME_SLUGS } from "./deck-runtime";
 import { DECKS, deckDate, deckSchedule } from "./decks";
 
-const pages = fileURLToPath(new URL("../pages/slides/", import.meta.url));
-const dirs = readdirSync(pages).filter((n) =>
-  statSync(`${pages}${n}`).isDirectory(),
-);
+const here = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 describe("deck registry", () => {
-  it("has a page for every slug", () => {
-    for (const { slug } of DECKS)
-      expect(readdirSync(`${pages}${slug}`)).toContain("index.astro");
+  it("serves every slug from the one [slug] page pair", () => {
+    expect(existsSync(here("../pages/slides/[slug]/index.astro"))).toBe(true);
+    expect(existsSync(here("../pages/slides/[slug]/presenter.astro"))).toBe(
+      true,
+    );
   });
 
-  it("has a registry row for every deck page", () => {
-    expect(dirs.toSorted()).toEqual(DECKS.map((d) => d.slug).toSorted());
+  it("has a deck component row and a folder for every slug", () => {
+    const pages = readFileSync(here("./deck-pages.ts"), "utf8");
+    for (const { slug } of DECKS) {
+      expect(pages).toContain(`"${slug}": `);
+      expect(existsSync(here(`./${slug}/`))).toBe(true);
+    }
+  });
+
+  it("keeps a runtime row only for a registered deck", () => {
+    const slugs = DECKS.map((d) => d.slug);
+    for (const slug of RUNTIME_SLUGS) expect(slugs).toContain(slug);
   });
 
   it("keeps slugs and labels unique and the question time inside the talk", () => {
@@ -83,5 +93,17 @@ describe("deck registry", () => {
 describe("Deck 0's start", () => {
   it("is 18:00 on 16 December 2026 in Helsinki, with the offset gmt gives", () => {
     expect(DECKS[0]!.start).toBe("2026-12-16T18:00:00+02:00[Europe/Helsinki]");
+  });
+});
+
+describe("deckStage", () => {
+  it("gives a deck's slides its stage data, and none to a deck without a runtime", async () => {
+    for (const slug of RUNTIME_SLUGS)
+      expect(await deckStage(slug)).toBe((await loadDeckRuntime(slug))!.stage);
+    expect(await deckStage("no-such-deck")).toBe(NO_STAGE_DATA);
+  });
+
+  it("fails outside a deck page", async () => {
+    await expect(deckStage(undefined)).rejects.toThrow(/deck page/);
   });
 });

@@ -3,6 +3,7 @@
  * event stream, one that never answers, and the recording that goes with it.
  */
 import type { UIMessageChunk } from "ai";
+import type { RetrievalTraceData } from "~/lib/chat-types";
 import type { Recording } from "~/lib/slides/replay";
 
 export function textChunks(text: string, brain = "gemma"): UIMessageChunk[] {
@@ -11,12 +12,14 @@ export function textChunks(text: string, brain = "gemma"): UIMessageChunk[] {
     {
       type: "data-retrieval",
       data: {
+        totalChunks: 1,
+        retrievedCount: 1,
+        chunkTitles: ["Leap seconds"],
+        chunkUrls: [],
         brainId: brain,
         brainLabel: "Gemma 4 26B",
-        retrievedCount: 1,
-        chunkUrls: [],
-      },
-    } as unknown as UIMessageChunk,
+      } satisfies RetrievalTraceData,
+    },
     { type: "text-start", id: "t" },
     { type: "text-delta", id: "t", delta: text },
     { type: "text-end", id: "t" },

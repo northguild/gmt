@@ -44,6 +44,15 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 - `git diff --stat packages/gmt` is empty, or a changeset exists.
 - `node scripts/verdict.mjs run dox test` (and `check`, `lint`).
 - No `octane` or `@octanejs/*` dependency; no hardcoded version literal in the site.
+- **Reuse** ([rules](../context/dox/built/index.md#reuse-never-reinvent)). The check is FAIL when
+  any of these holds in the branch's added lines (`git diff origin/main`):
+  - a block of markup, CSS declarations or a function body appears twice;
+  - a shared folder imports a feature's data folder;
+  - a feature's literal content (a zone, a year, a question) sits in a shared file;
+  - a committed file is one a script rebuilds;
+  - an export is read only by its own file.
+
+  Name each finding with file and line.
 
 ## Surface gates — apply what the work touches
 

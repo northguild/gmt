@@ -1,20 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { PLANET_ZONES } from "./places";
 import { clockLabel, nearestZones, WALL_PINS } from "./clocks";
+
+/** Eighteen zones spread round the planet: more than the wall has shards for. */
+const ZONES = [
+  "Pacific/Niue",
+  "America/New_York",
+  "Europe/London",
+  "Asia/Kolkata",
+  "Asia/Kathmandu",
+  "Asia/Shanghai",
+  "Australia/Lord_Howe",
+  "Pacific/Chatham",
+  "Pacific/Apia",
+  "Europe/Helsinki",
+  "Europe/Madrid",
+  "Africa/Lagos",
+  "Africa/Nairobi",
+  "Asia/Tehran",
+  "Asia/Tokyo",
+  "Asia/Manila",
+  "America/Sao_Paulo",
+  "America/Mexico_City",
+];
 
 describe("nearestZones", () => {
   it("returns the nearest zones first", () => {
-    expect(nearestZones(PLANET_ZONES, [139.69, 35.69], 2)).toEqual([
+    expect(nearestZones(ZONES, [139.69, 35.69], 2)).toEqual([
       "Asia/Tokyo",
       "Asia/Shanghai",
     ]);
   });
 
   it("has twelve to give for the wall", () => {
-    expect(nearestZones(PLANET_ZONES, [0, 0], WALL_PINS)).toHaveLength(
-      WALL_PINS,
-    );
-    expect(new Set(PLANET_ZONES).size).toBe(PLANET_ZONES.length);
+    expect(nearestZones(ZONES, [0, 0], WALL_PINS)).toHaveLength(WALL_PINS);
+    expect(new Set(ZONES).size).toBe(ZONES.length);
   });
 });
 

@@ -34,14 +34,6 @@
     }
   }
 
-  /* The 24-hour dial's numerals; their size is the `font-size` attribute, in viewBox units, so they scale with the face. */
-  .numeral {
-    font-family: var(--gmt-font-mono);
-    fill: var(--gmt-ice-dim);
-    text-anchor: middle;
-    dominant-baseline: central;
-  }
-
   /* `--gmt-cyan-ink` is the text-safe cyan: raw cyan misses the 7:1 floor on the light theme. */
   .hand {
     stroke: var(--gmt-cyan-ink);

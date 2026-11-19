@@ -1,0 +1,335 @@
+/*
+ * The pieces of a bug slide: the visual with its filing receipt, the terminal, the columns, the
+ * pins' count, the GMT step, the GMT result and a step that replaces the one before it.
+ */
+
+.gmt-result {
+  display: grid;
+  gap: var(--gmt-space-2);
+  align-content: start;
+}
+
+.gmt-result > * {
+  margin: 0;
+}
+
+.gmt-result-value {
+  display: flex;
+  gap: var(--gmt-space-2);
+  align-items: baseline;
+}
+
+.gmt-result output {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* The sentinel is the only amber. */
+.gmt-result[data-signal="lost"] {
+  border-color: var(--gmt-signal-border);
+  border-block-end-color: var(--gmt-signal-ink);
+}
+
+.gmt-result[data-signal="lost"] output {
+  color: var(--gmt-signal-ink);
+}
+
+.gmt-result-note {
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The stage sets a result's type in container units and keeps it in the text column. */
+html[data-deck] .gmt-result {
+  min-inline-size: 0;
+  gap: 0.6cqi;
+  padding: 1cqi 1.4cqi;
+  font-size: max(0.75rem, 1.7cqi);
+  line-height: 1.3;
+}
+
+html[data-deck] .gmt-result-note {
+  font-size: max(0.75rem, 1.45cqi);
+}
+
+/* Three results and their lead line share one slide, so the call and the lead are set smaller. */
+html[data-deck] .gmt-result-call {
+  font-size: max(0.75rem, 1.25cqi);
+}
+
+/*
+ * A step that replaces the one before it: the base content and each build share one cell, and a
+ * build the mount has reached hides every earlier one, so the cell holds the tallest and nothing
+ * below it moves.
+ */
+.gmt-swap {
+  display: grid;
+}
+
+.gmt-swap > * {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+}
+
+.gmt-swap > :has(~ .gmt-build[data-reached="true"]) {
+  visibility: hidden;
+}
+
+/* Starlight's flow margins would add a gap on top of the grid's own. */
+html[data-deck] .gmt-swap > * {
+  margin: 0;
+}
+
+/*
+ * ---- The bug slides' visuals ----
+ * Each shows its report's own lines as a picture, with the filing as a small receipt in the
+ * corner. Every readout reserves its box, so a rolling counter or a typing line moves nothing.
+ */
+html[data-deck] .gmt-visual {
+  display: grid;
+  gap: 1.4cqi;
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.gmt-receipts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4cqi 1.4cqi;
+}
+
+.gmt-receipt {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.8cqi;
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: max(0.75rem, 1.3cqi);
+}
+
+.gmt-receipt a {
+  font-weight: 600;
+}
+
+.gmt-visual > .gmt-receipt {
+  justify-self: end;
+}
+
+.gmt-visual-note {
+  margin: 0;
+  font-size: var(--gmt-deck-text-lg);
+  color: var(--gmt-ice);
+}
+
+/* Both are `gmt-deck-panel`s (`slides.css`); the padding is their own. */
+.gmt-terminal,
+.gmt-column {
+  padding: 1.2cqi 1.6cqi;
+}
+
+.gmt-terminal {
+  display: grid;
+  gap: 0.6cqi;
+  min-block-size: 13cqi;
+  align-content: start;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-deck-text-lg);
+}
+
+.gmt-terminal p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.gmt-terminal-out {
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-terminal-expected {
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-terminal-out span,
+.gmt-terminal-expected span {
+  margin-inline-end: 1cqi;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-terminal-cursor {
+  display: inline-block;
+  inline-size: 0.6em;
+  block-size: 1.05em;
+  vertical-align: text-bottom;
+  background: var(--gmt-ice);
+  animation: gmt-cursor var(--gmt-duration-sweep) steps(2, start) infinite;
+}
+
+.gmt-terminal[data-ended="true"] .gmt-terminal-cursor {
+  animation: none;
+  opacity: 0.3;
+}
+
+@keyframes gmt-cursor {
+  to {
+    visibility: hidden;
+  }
+}
+
+.gmt-columns-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2cqi;
+}
+
+.gmt-column[data-which="observed"] {
+  border-color: var(--gmt-border-strong);
+}
+
+.gmt-columns-call {
+  margin: 0;
+  font-size: var(--gmt-deck-text-lg);
+}
+
+.gmt-columns {
+  display: grid;
+  gap: 1cqi;
+}
+
+.gmt-column {
+  min-inline-size: 0;
+}
+
+.gmt-column h3 {
+  margin: 0 0 0.6cqi;
+  font-size: max(0.75rem, 1.5cqi);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-column p {
+  margin: 0;
+  font-size: max(0.75rem, 1.8cqi);
+}
+
+.gmt-pins {
+  display: grid;
+  gap: 1cqi;
+  justify-items: start;
+}
+
+.gmt-pins p {
+  margin: 0;
+}
+
+.gmt-pins-count {
+  display: flex;
+  align-items: center;
+  gap: 1.2cqi;
+  font-size: max(1.4rem, 5cqi);
+  color: var(--gmt-ice-bright);
+}
+
+/* The count's flaps are lit like a landed row on the bug slides. */
+.gmt-pins-count .gmt-flap-tile {
+  color: var(--gmt-cyan);
+  border-color: var(--gmt-cyan);
+}
+
+.gmt-pins-split {
+  font-size: var(--gmt-deck-text-lg);
+}
+
+/* On the stage the table stands beside the count, in the room left of the planet: under it, the
+   twelve rows ran past the stage's bottom edge. */
+html[data-deck] .gmt-pins {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  column-gap: 3cqi;
+}
+
+html[data-deck] .gmt-pins-count {
+  font-size: max(1.2rem, 4cqi);
+  white-space: nowrap;
+}
+
+html[data-deck] .gmt-pins .gmt-deck-table {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  inline-size: auto;
+  min-inline-size: 26cqi;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmt-terminal-cursor {
+    animation: none;
+  }
+}
+
+/* ---- The GMT step: what GMT does with the same input, the last build of a bug slide ---- */
+
+html[data-deck] .gmt-step {
+  gap: 0.6cqi;
+  font-size: max(0.75rem, 1.25cqi);
+  line-height: 1.25;
+}
+
+.gmt-step > *,
+html[data-deck] .gmt-step p {
+  margin: 0;
+}
+
+.gmt-step-head {
+  font-family: var(--gmt-font-display);
+  font-size: max(0.875rem, 1.5cqi);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-step-rows {
+  display: grid;
+  gap: 0.6cqi;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A `gmt-deck-panel` (`slides.css`). */
+.gmt-step-row {
+  display: grid;
+  gap: 0.2cqi;
+  padding: 0.6cqi 1cqi;
+}
+
+/* A filing GMT has no workaround for gets the plain edge, never the accent. */
+.gmt-step-row[data-unguarded] {
+  box-shadow: none;
+}
+
+.gmt-step-line,
+.gmt-step-detail {
+  margin: 0;
+}
+
+.gmt-step-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6cqi 1cqi;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.gmt-step-badge {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-step-detail,
+.gmt-step-source {
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+}
+
+html[data-deck] .gmt-step .gmt-step-source {
+  font-size: max(0.75rem, 1cqi);
+}

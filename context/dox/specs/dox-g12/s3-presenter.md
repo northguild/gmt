@@ -14,9 +14,9 @@ Either window takes the clicker; the deck window owns the state.
 
 ## Route
 
-`src/pages/slides/give-me-temporal/presenter.astro`: a StarlightPage built like the deck page,
+`src/pages/slides/[slug]/presenter.astro`: one StarlightPage for every deck, built like the deck page,
 `pagefind: false`, `<meta name="robots" content="noindex">`, dropped by the sitemap filter added
-in slice 1. It renders the same deck content (`Deck0.astro`) in presenter layout: slides are not
+in slice 1. It renders the same deck component (`Deck0.astro` for this deck) in presenter layout: slides are not
 staged, no globe or sky mounts, notes are shown. `T` on the deck opens it with
 `window.open(withBase("/slides/give-me-temporal/presenter/"), "gmt-presenter")`; it can also be
 opened by URL on its own.

@@ -1,23 +1,26 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   EARTH_HALF_ANGLE_DEG,
   MOON_OFFSET_DEG,
-  PLANET_ZONES,
-  POINTS,
   getPlanetZones,
   isGeographic,
   labelOf,
-  meanPoint,
   moonCameraPoint,
   pointFor,
   resolvePlace,
   rotationFor,
   setPlanetZones,
+  setPoints,
   zoomFor,
 } from "./places";
+import { STAGE } from "~/slides/give-me-temporal/stage-data";
 import { moonRaDec, siderealDeg, toUnit } from "~/lib/sky-math";
 import { createCamera, project } from "~/lib/globe/camera";
+
+// The named places come from the deck's own data; the library holds none.
+beforeAll(() => setPoints(STAGE.points));
+afterAll(() => setPoints({}));
 
 /** A fixed instant, 2027-02-06 (the Chinese New Year the deck's day-off slide is about), noon UTC. */
 const INSTANT = Temporal.Instant.from("2027-02-06T12:00:00Z").epochMilliseconds;
@@ -64,7 +67,7 @@ describe("resolvePlace", () => {
   });
 
   it("resolves every point, and each one cites a source", () => {
-    for (const [name, entry] of Object.entries(POINTS)) {
+    for (const [name, entry] of Object.entries(STAGE.points)) {
       expect(entry.source.length).toBeGreaterThan(10);
       expect(resolvePlace(name)).toMatchObject({
         kind: "point",
@@ -108,11 +111,12 @@ describe("rotationFor", () => {
   });
 
   it("takes the short way over the date line for the mean", () => {
-    const [lng] = meanPoint([
+    const pins: [number, number][] = [
       [170, 0],
       [-170, 0],
-    ]);
-    expect(Math.abs(lng)).toBeCloseTo(180, 6);
+    ];
+    const [lam] = rotationFor(resolvePlace("overview"), { ...ctx, pins });
+    expect(Math.abs(lam)).toBeCloseTo(180, 6);
   });
 
   it("centres the planet on the planet zones, and takes a new list", () => {
@@ -127,11 +131,6 @@ describe("rotationFor", () => {
     } finally {
       setPlanetZones(before);
     }
-  });
-
-  it("keeps every default planet zone in the coordinate table", () => {
-    for (const zone of PLANET_ZONES)
-      expect(resolvePlace(zone)).toMatchObject({ kind: "zone", zone });
   });
 
   it("zooms out for the views that show more than a place", () => {

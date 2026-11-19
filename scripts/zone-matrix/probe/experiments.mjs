@@ -6,20 +6,7 @@
  * is `{ op, args, input, group }`; `input` is the line a person reads.
  */
 import { Temporal } from "@js-temporal/polyfill";
-
-/** The ten zones of the `gmt-matrix` job in ci.yml; `run.mjs` reads the live list and checks it. */
-export const CI_ZONES_FOR_BUILD = [
-  "Pacific/Niue",
-  "America/New_York",
-  "UTC",
-  "Europe/London",
-  "Asia/Kolkata",
-  "Asia/Kathmandu",
-  "Asia/Shanghai",
-  "Australia/Lord_Howe",
-  "Pacific/Chatham",
-  "Pacific/Apia",
-];
+import { ciZones } from "../matrix.mjs";
 
 const text = (pdt) => pdt.toString({ smallestUnit: "second" });
 
@@ -106,7 +93,7 @@ function hostCases() {
       cases.push(c);
     }
   };
-  for (const zone of CI_ZONES_FOR_BUILD) {
+  for (const zone of ciZones()) {
     for (const t of transitions(zone, 1986, 2030)) {
       if (t.after <= t.before) continue;
       const walls = holeWalls(t);

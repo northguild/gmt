@@ -16,13 +16,13 @@ export const CALENDAR_PAGE = {
 } as const;
 
 /** A line of the page's text: where its centre sits and how tall it is. */
-export interface PageText {
+interface PageText {
   x: string;
   y: string;
   size: string;
 }
 
-export interface CalendarPageShape {
+interface CalendarPageShape {
   /** The page outline, an octagon of `polygon` points. */
   page: string;
   /** The month strip across the top, bevelled at its two top corners. */

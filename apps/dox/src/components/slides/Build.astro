@@ -1,26 +1,24 @@
 ---
 /**
  * Content shown at build `n` (1-based) of its slide. A `place` moves the space stage's camera when
- * the build appears; one the stage cannot resolve fails the build. A `clockAt` stands the reveal's
- * clock in the Earth's place from this build, its hands held at that UTC instant; the highest
- * reached build that holds it wins, and an instant gmt rejects fails the build. Without JavaScript
- * every build is visible.
+ * the build appears; a place or lapse the deck's stage data cannot resolve fails the build. A
+ * `clockAt` stands the reveal's clock in the Earth's place from this build, its hands held at that
+ * UTC instant; the highest reached build that holds it wins, and an instant gmt rejects fails the
+ * build. Without JavaScript every build is visible.
  */
 import { isValidUtc } from "@northguild/gmt/utc/validate";
-import { resolvePlace } from "~/lib/slides/places";
-import { isLapseName } from "~/lib/slides/time-lapse";
+import { checkStageNames } from "~/lib/slides/stage-data";
+import { deckStage } from "~/slides/deck-runtime";
 interface Props {
   n: number;
   place?: string;
-  /** A time-lapse that plays from this build on (`LAPSES` in `lib/slides/time-lapse.ts`). */
+  /** A time-lapse that plays from this build on (one of the deck's `lapses`). */
   lapse?: string;
   /** A UTC instant (`…Z`) to hold the Earth's clock at from this build. */
   clockAt?: string;
 }
 const { n, place, lapse, clockAt } = Astro.props;
-if (place) resolvePlace(place);
-if (lapse && !isLapseName(lapse))
-  throw new Error(`Build ${n} names the unknown lapse "${lapse}"`);
+checkStageNames(await deckStage(Astro.params.slug), { place, lapse }, `Build ${n}`);
 if (clockAt !== undefined && !isValidUtc(clockAt))
   throw new Error(`Build ${n} holds the clock at "${clockAt}", which is not a UTC instant`);
 ---

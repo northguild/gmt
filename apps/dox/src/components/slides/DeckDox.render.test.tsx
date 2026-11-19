@@ -7,11 +7,9 @@
  */
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { FAQ } from "~/lib/slides/live-demos";
 import { sendDeckState } from "~/test/deck-events";
-import { stalling } from "~/test/chat-stream";
-import { parseRecording } from "~/lib/slides/replay";
-import real from "~/slides/give-me-temporal/recorded/faq-helsinki-autumn.json";
+import { recordingOf, stalling } from "~/test/chat-stream";
+import type { DeckToolScript, FaqQuestion } from "~/lib/slides/live-data";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import type { BrainsInfo } from "~/components/ask/use-brains";
@@ -20,15 +18,26 @@ import DeckDox, { type DeckDoxMode } from "./DeckDox";
 
 installJsdomShims();
 
-const [first] = FAQ;
-if (!first) throw new Error("the FAQ is empty");
-/* The real recording of the first question, with its offsets squeezed to zero so it plays at once. */
-const parsed = parseRecording(real);
-if (!parsed || parsed.id !== first.id)
-  throw new Error("no recording for the first question");
+/* A deck's live data, made up here: the component is shared, so its test reads no deck's folder. */
+const FAQ: FaqQuestion[] = [
+  { id: "faq-one", question: "What is a leap second?" },
+  { id: "faq-two", question: "Which day did a country skip?" },
+  { id: "faq-three", question: "How do I add a month to 31 January?" },
+];
+const first = FAQ[0]!;
+const TOOL: DeckToolScript = {
+  question: "When is Easter in 2027? Ask this page.",
+  year: 2027,
+};
+/* The first question's recording, with its offsets squeezed to zero so it plays at once. */
+const recorded = recordingOf(
+  first.id,
+  "A leap second is one second added to UTC.",
+);
 const recording = {
-  ...parsed,
-  chunks: parsed.chunks.map((c) => ({ ...c, at: 0 })),
+  ...recorded,
+  question: first.question,
+  chunks: recorded.chunks.map((c) => ({ ...c, at: 0 })),
 };
 
 /** Every `/api/chat` call, so a test can say no request was made. */
@@ -92,6 +101,9 @@ function mount(mode: DeckDoxMode = "audience") {
           demoId="thanks"
           questions={FAQ}
           recordings={[recording]}
+          pageContext="/slides/test-deck/"
+          zone="Europe/Helsinki"
+          tool={TOOL}
         />
       </section>
     </main>,
@@ -118,7 +130,7 @@ describe("DeckDox on a slide", () => {
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
     expect(chatCalls).toEqual([]);
     expect(screen.getByRole("status")).toHaveTextContent(
-      /Recorded .*3\.5 Flash-Lite/,
+      /Recorded .*Gemma 4 26B/,
     );
     await expectNoAxeViolations(container);
   });

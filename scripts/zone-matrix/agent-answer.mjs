@@ -32,6 +32,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readMatrix } from "./matrix.mjs";
+import { fnmArgs } from "./node-runner.mjs";
 import { formatJson } from "../lib/format-json.mjs";
 import { loadGmt } from "../lib/gmt.mjs";
 import { versionOf } from "./probe/versions.mjs";
@@ -220,12 +221,7 @@ export function spawnBounded(command, args, env, timeoutMs) {
 
 /** Runs `node` of one major under `fnm`, in this folder, with extra environment. */
 export const onNode = (major, args, env) =>
-  spawnBounded(
-    "fnm",
-    ["exec", `--using=${major}`, "--", "node", ...args],
-    env,
-    CELL_TIMEOUT_MS,
-  );
+  spawnBounded("fnm", fnmArgs(major, "node", args), env, CELL_TIMEOUT_MS);
 
 /**
  * Runs the transcript in every cell and returns the run record. Throws `Stop` when it cannot start.

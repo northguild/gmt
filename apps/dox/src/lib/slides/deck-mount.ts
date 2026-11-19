@@ -39,7 +39,8 @@ import { overviewItems } from "~/widgets/builders/deck-controls";
 import { setHtml } from "~/widgets/builders/html";
 import { createDeck, formatHash, parseHash, type DeckSlide } from "./deck";
 import { mountKeys } from "./keys";
-import { mountSpaceStage, type SpaceStage } from "./stage";
+import type { SpaceStage } from "./stage";
+import { mountDeckStage } from "./stage-deferred";
 import {
   mountDeckSync,
   PRESENTER_WINDOW,
@@ -155,7 +156,7 @@ export function mountDeck(
     readUnlocked(win) ? slides.length : 1,
   );
 
-  const space = (o.space ?? mountSpaceStage)(root, { signal });
+  const space = (o.space ?? mountDeckStage)(root, { signal });
 
   /** Where the camera belongs now: the highest reached build that names a place, else the slide's. */
   const flyToState = (hop: boolean): void => {

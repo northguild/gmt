@@ -3,6 +3,7 @@ import {
   formatRecordedLabel,
   parseRecording,
   replayStream,
+  selectRecordings,
   type Recording,
 } from "./replay";
 
@@ -128,18 +129,31 @@ describe("parseRecording", () => {
   });
 });
 
+describe("selectRecordings", () => {
+  it("keeps the parsed recordings with a wanted id, in file order", () => {
+    const other = { ...recording, id: "other" };
+    const files = [other, { not: "a recording" }, recording];
+    expect(selectRecordings(files, ["demo"])).toEqual([recording]);
+    expect(selectRecordings(files, ["other", "demo"])).toEqual([
+      other,
+      recording,
+    ]);
+    expect(selectRecordings(files, [])).toEqual([]);
+  });
+});
+
 describe("formatRecordedLabel", () => {
   it("says Recorded, the date in the talk's zone and the brain", async () => {
-    expect(await formatRecordedLabel(recording)).toBe(
+    expect(await formatRecordedLabel(recording, "Europe/Helsinki")).toBe(
       "Recorded 10 December 2026, Gemma 4 26B",
     );
   });
 
   it("keeps the brain when the instant is not a date", async () => {
-    const label = await formatRecordedLabel({
-      ...recording,
-      instant: "not a date",
-    });
+    const label = await formatRecordedLabel(
+      { ...recording, instant: "not a date" },
+      "Europe/Helsinki",
+    );
     expect(label).toBe("Recorded, Gemma 4 26B");
   });
 });

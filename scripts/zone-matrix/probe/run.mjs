@@ -6,7 +6,8 @@
  *
  * This is not the own-suite runner beside it (`../run.mjs`), which runs each library's own tests;
  * it shares only that runner's matrix reader, cache and `fnm exec` approach. The expected answers
- * are in `cases.json` (see `build-cases.mjs`): the Temporal specification, never a library under test.
+ * are built at the start of every run (see `build-cases.mjs`) from the Temporal specification, never
+ * a library under test, and written to `.work/cases.json` for the child processes to read.
  *
  *   cd scripts/zone-matrix && pnpm install --ignore-workspace
  *   fnm exec --using=26 -- node probe/run.mjs --plan
@@ -15,18 +16,25 @@
  * Flags: `--adapter <id>`, `--zone <iana>`, `--node <major>` (each repeatable) narrow the run and
  * skip the record; `--record <path>` writes elsewhere; `--parallel <n>` (default 6).
  */
-import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readCached, writeCached } from "../cache.mjs";
 import { readMatrix } from "../matrix.mjs";
+import {
+  StepError,
+  nodeInfoOf,
+  onNode,
+  parseFlags,
+  pool,
+  stop,
+} from "../node-runner.mjs";
 import { formatJson } from "../../lib/format-json.mjs";
 import { loadGmt } from "../../lib/gmt.mjs";
 import { gmtFingerprint } from "./fingerprint.mjs";
 import { summarise } from "./aggregate.mjs";
-import { buildCases } from "./build-cases.mjs";
+import { casesFile, writeCases } from "./build-cases.mjs";
 import { versionOf } from "./versions.mjs";
 
 const HERE = fileURLToPath(new URL(".", import.meta.url));
@@ -46,30 +54,12 @@ const ADAPTERS = [
   "js-temporal",
 ];
 
-const stop = (code, message) => {
-  console.error(message);
-  process.exit(code);
-};
-
 function flags(argv) {
-  const out = {
-    adapter: [],
-    zone: [],
-    node: [],
-    plan: false,
-    parallel: 6,
-    record: DEFAULT_RECORD,
-  };
-  for (let i = 0; i < argv.length; i += 1) {
-    const a = argv[i];
-    if (a === "--plan") out.plan = true;
-    else if (["--adapter", "--zone", "--node"].includes(a))
-      out[a.slice(2)].push(argv[++i]);
-    else if (a === "--parallel") out.parallel = Number(argv[++i]);
-    else if (a === "--record") out.record = argv[++i];
-    else stop(2, `unknown flag ${a}`);
-  }
-  return out;
+  return parseFlags(argv, {
+    lists: ["adapter", "zone", "node"],
+    numbers: { parallel: 6 },
+    strings: { record: DEFAULT_RECORD },
+  });
 }
 
 const sha = (...parts) => {
@@ -87,56 +77,6 @@ const harnessHash = (id) =>
       "temporal-ops.mjs",
     ].map((f) => readFileSync(join(HERE, f))),
   ).slice(0, 16);
-
-function sh(cmd, args) {
-  const r = spawnSync(cmd, args, { encoding: "utf8" });
-  if (r.status !== 0) stop(1, `${cmd} ${args.join(" ")} failed: ${r.stderr}`);
-  return r.stdout.trim();
-}
-
-const nodeInfoOf = (major) => {
-  const [version, tzdata] = sh("fnm", [
-    "exec",
-    `--using=${major}`,
-    "--",
-    "node",
-    "-p",
-    "process.version + ' ' + process.versions.tz",
-  ]).split(" ");
-  return { version, tzdata };
-};
-
-function onNode(major, args, env) {
-  return new Promise((resolve) => {
-    const child = spawn(
-      "fnm",
-      ["exec", `--using=${major}`, "--", "node", ...args],
-      { cwd: HERE, env: { ...process.env, ...env } },
-    );
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
-    child.on("error", (error) =>
-      resolve({ code: 127, stdout, stderr: String(error) }),
-    );
-  });
-}
-
-async function pool(jobs, limit) {
-  const out = Array.from({ length: jobs.length });
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(limit, jobs.length) }, async () => {
-      while (next < jobs.length) {
-        const i = next++;
-        out[i] = await jobs[i]();
-      }
-    }),
-  );
-  return out;
-}
 
 async function main() {
   const f = flags(process.argv.slice(2));
@@ -157,14 +97,8 @@ async function main() {
     if (!ADAPTERS.includes(a)) stop(2, `unknown adapter ${a}`);
   const partial = f.adapter.length || f.zone.length || f.node.length;
 
-  const casesText = readFileSync(join(HERE, "cases.json"), "utf8");
-  const cases = JSON.parse(casesText);
-  const fresh = buildCases(globalThis.Temporal);
-  if (JSON.stringify(fresh.experiments) !== JSON.stringify(cases.experiments))
-    stop(
-      1,
-      "cases.json is out of date: run `node probe/build-cases.mjs` on Node 26.",
-    );
+  const cases = casesFile(globalThis.Temporal);
+  const casesText = writeCases(cases);
 
   console.error(
     `${adapters.length} adapters x ${zones.length} zones x Node ${nodes.join(", ")} = ${adapters.length * zones.length * nodes.length} runs`,
@@ -174,7 +108,13 @@ async function main() {
   const started = process.hrtime.bigint();
   const casesHash = sha(casesText).slice(0, 16);
   const gmtKey = adapters.includes("gmt") ? gmtFingerprint(ROOT) : "";
-  const info = Object.fromEntries(nodes.map((n) => [n, nodeInfoOf(n)]));
+  let info;
+  try {
+    info = Object.fromEntries(nodes.map((n) => [n, nodeInfoOf(n)]));
+  } catch (error) {
+    if (!(error instanceof StepError)) throw error;
+    stop(1, error.message);
+  }
   const runs = Object.fromEntries(nodes.map((n) => [n, {}]));
   let fromCache = 0;
   let ran = 0;
@@ -200,7 +140,10 @@ async function main() {
           let run = readCached(CACHE, parts);
           if (run) fromCache += 1;
           else {
-            const r = await onNode(node, ["child.mjs", id], { TZ: zone });
+            const r = await onNode(node, "node", ["child.mjs", id], {
+              cwd: HERE,
+              env: { TZ: zone },
+            });
             let result;
             try {
               result = JSON.parse(r.stdout.trim().split("\n").pop());

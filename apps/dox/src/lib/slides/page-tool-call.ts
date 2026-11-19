@@ -1,22 +1,15 @@
 /**
  * The deck's live page-tool call: Moving Feasts' `compute_easter_dates`, run in the deck's page the
- * way a browser agent's call runs it, for 2027. `execute` is the tool's own (the one
- * `offerPageTools` hands the browser), so the answer is the full JSON an agent would read: the
- * input the page filled in, both Easters, the feasts, the notes and the link. No network: the
- * library loads from the site's own chunks.
- *
- * 2027 because the two calendars split widely that year, and Gregorian Easter, 28 March, is the
- * day Helsinki's clocks go forward, the running question's date. The year is a fixed date in the
- * talk, not a window that ages.
+ * way a browser agent's call runs it, for the year the deck names (`DeckLiveData.tool`). `execute`
+ * is the tool's own (the one `offerPageTools` hands the browser), so the answer is the full JSON an
+ * agent would read: the input the page filled in, both Easters, the feasts, the notes and the link.
+ * No network: the library loads from the site's own chunks.
  *
  * The slide shows less than the agent reads: the call, then the two Easter Sundays and the days
  * between them (`answerText`). The month grids the call opens beside the chat show the rest.
  */
 import tool from "~/lib/webmcp/tools/moving-feasts";
 import type { PageToolResult } from "~/lib/webmcp/model-context";
-
-/** The talk's year: Gregorian Easter falls on the day of the running question. */
-export const DECK_YEAR = 2027;
 
 export interface PageToolCall {
   /** What the agent sends: the tool's name and its arguments. */
@@ -25,6 +18,8 @@ export interface PageToolCall {
   answer: PageToolResult<unknown>;
   /** The answer as the slide's chat shows it (`answerText`). */
   text: string;
+  /** The widget the call opens beside the chat: its tool name and input. */
+  widget: { toolName: string; input: { year: number } };
 }
 
 /** The part of the tool's result the slide reads. */
@@ -38,14 +33,10 @@ interface EasterAnswer {
   };
 }
 
-/** The call as JSON text, two-space indented, for a code block. */
-export const jsonText = (value: unknown): string =>
-  JSON.stringify(value, null, 2);
-
 /** What the call sends, before it runs. */
-export const pageToolRequest = (): PageToolCall["call"] => ({
+export const pageToolRequest = (year: number): PageToolCall["call"] => ({
   name: tool.name,
-  arguments: { year: DECK_YEAR },
+  arguments: { year },
 });
 
 /**
@@ -53,13 +44,19 @@ export const pageToolRequest = (): PageToolCall["call"] => ({
  * does; the caller owns the controller.
  */
 export async function runPageToolCall(
+  year: number,
   signal: AbortSignal,
 ): Promise<PageToolCall> {
   signal.throwIfAborted();
-  const call = pageToolRequest();
+  const call = pageToolRequest(year);
   const answer = await tool.execute(call.arguments, { signal });
   signal.throwIfAborted();
-  return { call, answer, text: answerText(answer) };
+  return {
+    call,
+    answer,
+    text: answerText(answer),
+    widget: { toolName: "showMovingFeasts", input: call.arguments },
+  };
 }
 
 const dateOrNone = (date: string | null): string =>

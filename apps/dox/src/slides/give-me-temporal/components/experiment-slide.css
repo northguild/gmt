@@ -1,0 +1,177 @@
+/*
+ * The zone-probe experiment slides (`ExperimentSlide.astro`, `ExperimentOpener.astro`).
+ * Breakage is the danger colour, GMT's zero is green; the example is a `gmt-deck-panel`
+ * (`slides.css`), a full bevelled border and never a one-sided accent. Counts are tabular and sit
+ * in fixed columns, so nothing shifts.
+ */
+.gmt-slide[data-layout="experiment"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+/* In the stage the whole slide is set smaller so nine rows, an example and a footnote fit. */
+html[data-deck] .gmt-slide[data-layout="experiment"] {
+  padding-block: 2cqi;
+  line-height: 1.3;
+  font-size: max(0.75rem, 1.15cqi);
+}
+
+.gmt-slide[data-layout="experiment"] > .gmt-slide-body {
+  display: contents;
+}
+
+/* The body is `display: contents`; its size rule would still reach the children. */
+html[data-deck] .gmt-slide[data-layout="experiment"] > .gmt-slide-body {
+  font-size: inherit;
+}
+
+.gmt-slide[data-layout="experiment"] .gmt-slide-title {
+  margin-block: 0;
+  font-size: max(1.4rem, 3.2cqi);
+}
+
+html[data-deck] .gmt-slide[data-layout="experiment"] .gmt-slide-title {
+  font-size: max(1.2rem, 2.4cqi);
+  line-height: 1.1;
+}
+
+/* A guessing slide holds the answer in one build; it keeps the column and the footnote's place. */
+.gmt-slide[data-layout="experiment"] > .gmt-slide-body > .gmt-build {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5em;
+  min-block-size: 0;
+}
+
+.gmt-exp-kicker {
+  order: -1;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: max(0.75rem, 0.9em);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-exp-fed {
+  margin: 0;
+  color: var(--gmt-ice);
+}
+
+.gmt-exp-cases {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+/* One opaque plate under the rows, so the globe's pins behind the slide never show between them. */
+.gmt-exp-rows {
+  display: grid;
+  gap: 0.2em;
+  margin: 0;
+  padding: 0.2em;
+  list-style: none;
+  background: var(--gmt-surface-widget);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-exp-row {
+  display: grid;
+  grid-template-columns: 14em minmax(0, 1fr) 9em;
+  align-items: center;
+  column-gap: 1em;
+  line-height: 1.15;
+  padding: 0 0.8em;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-exp-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-exp-bar {
+  display: block;
+  block-size: 0.7em;
+  background: var(--gmt-void);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+.gmt-exp-fill {
+  display: block;
+  block-size: 100%;
+  inline-size: var(--gmt-exp-share);
+  background: var(--gmt-danger);
+}
+
+.gmt-exp-row[data-clean="true"] {
+  border-color: var(--gmt-spring);
+}
+
+/* No wrong answers, no bar: a sliver of fill drew as a stray bevelled triangle. The green 0 says it. */
+.gmt-exp-row[data-clean="true"] .gmt-exp-fill {
+  display: none;
+}
+
+.gmt-exp-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-exp-wrong {
+  font-family: var(--gmt-font-mono);
+  font-weight: 700;
+  font-size: 1.4em;
+  line-height: 1;
+  color: var(--gmt-danger-ink);
+}
+
+.gmt-exp-row[data-clean="true"] .gmt-exp-wrong {
+  color: var(--gmt-spring-ink);
+}
+
+.gmt-exp-of {
+  font-size: max(0.75rem, 0.8em);
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-exp-example {
+  display: grid;
+  gap: 0.15em;
+  margin: 0;
+  padding: 0.5em 0.8em;
+  font-size: max(0.75rem, 0.85em);
+}
+
+.gmt-exp-example-input {
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-exp-wrong-answer {
+  color: var(--gmt-danger-ink);
+}
+
+.gmt-exp-right-answer {
+  color: var(--gmt-spring-ink);
+}
+
+.gmt-exp-foot {
+  margin: auto 0 0;
+  font-size: max(0.75rem, 0.55em);
+  line-height: 1.25;
+  color: var(--gmt-ice-dim);
+}

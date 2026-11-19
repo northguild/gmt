@@ -47,8 +47,8 @@ The tools run in the deck page, so `read_deck_slide` reads the slide's section f
 - **Kit addition:** `offerPageTools(slug, load)` in `webmcp/offer.ts`, where `load` resolves to
   a list of tools; `offerPageTool` becomes its one-tool case. One marker, one slug, three tools.
   Each tool is registered with the page's abort signal.
-  The deck page's own script (`src/pages/slides/give-me-temporal/index.astro`) offers them; the
-  presenter page does not.
+  The deck's own script (`src/slides/give-me-temporal/Deck0.astro`) offers them on the deck page;
+  the presenter page does not.
 - **Head:** `deckWebmcpHeadEntries(slug, tokens)` in `src/lib/head-tags.ts` emits the
   `gmt-webmcp` marker (content `slides/give-me-temporal`) and the origin-trial metas for the deck
   page only; the presenter page gets none. `head.dist.test.ts` allows markers on `tools/<slug>`
@@ -58,27 +58,32 @@ The tools run in the deck page, so `read_deck_slide` reads the slide's section f
 
 ## 2 · The live page-tool call: `src/lib/slides/page-tool-call.ts`
 
-Imports the tool from `src/lib/webmcp/tools/moving-feasts.ts` and calls its own `execute` with
-`{ year: 2027 }` (`DECK_YEAR`), the path an agent's call takes. 2027 because Gregorian Easter,
-28 March, is the day Helsinki's clocks go forward, the running question's date. `answerText` turns
+Imports the tool from `src/lib/webmcp/tools/moving-feasts.ts` and calls its own `execute` with the
+year the deck names (`tool.year` in its `live-data.ts`; Deck 0 asks for 2027), the path an agent's
+call takes. 2027 because Gregorian Easter, 28 March, is the day Helsinki's clocks go forward, the
+running question's date. `answerText` turns
 the answer into the chat's text: the year, both Easter Sundays and the days between them. The
-panel is `PageToolCall.astro`: the Dox chat in `tools` mode, which runs the call when the slide
+panel is `DeckLive.astro` in `tools` mode: the Dox chat, which runs the call when the slide
 shows, with no network. The presenter's copy gets a static placeholder, so no second chat mounts.
 
 ## 3 · The Dox frame: `DeckDox.tsx` and `src/lib/slides/deck-transport.ts`
 
 The three Dox parts of the deck (`ask-dox`, the questions part and `page-tools`) are the real Dox
-chat, not a copy: `LiveAnswer.astro`, `AudienceQuestions.astro` and `PageToolCall.astro` each
-render one `DeckDox` island (`client:only="react"`), which composes `DoxChat`, `WidgetRail`,
+chat, not a copy: `DeckLive.astro` renders one `DeckDox` island for each, by `mode` (`answer`,
+`audience`, `tools`), with the deck's `DeckLiveData` (`src/lib/slides/live-data.ts`: page context,
+questions, recordings, the tool call) and its venue zone as props, so a second deck passes its own
+data and writes no panel. Each island (`client:only="react"`), which composes `DoxChat`, `WidgetRail`,
 `WidgetReceipt`/`MountedWidget` (through the rail), `useBrains` and `ChatErrorBoundary`. Message
 rendering, the composer, the starter pills, the tool receipts, the brain line, the Dox mark and the
 sounds are `/dox`'s own, so Dox looks and behaves on the slide as it does on the page. The
 presenter view's copy of a slide gets a static placeholder, so it never mounts a second chat.
 
-Optional props carry the difference; each default leaves `/dox` as it was:
-- `DoxChat.createTransport(brain)`: builds the chat's transport in place of `/api/chat`'s.
-- `DoxChat.typing` (default `true`): `false` leaves out the composer, for the tool slide.
-- `DoxChat.brainPick` and `DoxChat.brainControls` (default `true`): the host's brain pick, and
+One optional prop carries the difference, `DoxChat.host` (`ChatHost`); without it `/dox` is as it
+was:
+- `host.createTransport(brain)`: builds the chat's transport in place of `/api/chat`'s.
+- `host.typing` (default `true`): `false` leaves out the composer, for the tool slide.
+- `host.modelAnswers` (default `true`): `false` drops the note that models get things wrong.
+- `host.brainPick` and `host.brainControls` (default `true`): the host's brain pick, and
   whether the composer shows its own picker and reset clock.
 - `WidgetRail.idle` and `WidgetRail.className`: what the rail holds when no widget is open, and an
   extra class for the deck's layout.
@@ -104,35 +109,38 @@ The deck's rules are one `ChatTransport` made by `createDeckSession`:
 **Brain bar.** Every Dox frame, `page-tools` included, ends in one bar with `/dox`'s own
 `ResetClock` and `BrainSelector`: the brain the live questions go to, the questions left today and
 when they come back, so the presenter sees on any Dox slide whether to change brains. The
-composer's own copies are left out (`DoxChat.brainControls`), so a frame has one picker. The pick
+composer's own copies are left out (`host.brainControls`), so a frame has one picker. The pick
 is the deck's one (`src/lib/slides/deck-brain.ts`, kept for the tab in `sessionStorage`), given to
-each chat through `DoxChat.brainPick`: a brain picked on one Dox slide holds on the others and when
+each chat through `host.brainPick`: a brain picked on one Dox slide holds on the others and when
 a slide's chat starts afresh. While `/gmt/api/brains` is being read the bar says so; when it cannot
 be read (`useBrains`' `status`) the bar says the counts are unknown and recorded answers still play,
 where `/dox` leaves the badge out.
 
 Typing in the composer never steps the deck (`keys.ts` ignores text fields). Sound follows what
-`/dox` does. `deck-dox.module.css` only sizes the frame to the stage; the chat and rail keep
-their own styles.
+`/dox` does. `deck-dox.module.css` only sizes the frame to the stage, and `deck-dox-chat.css`, scoped
+by `[data-deck-dox]`, holds the few chat rules the frame changes; the chat and rail keep their own
+styles.
 
 ## 4 · Recordings: `scripts/record-deck-answers.ts` and `replay.ts`
 
-- The script (run by hand with Node's type stripping, against production or `wrangler dev`) sends
+- The script (run by hand with `--deck <slug>`, against production or `wrangler dev`) sends
   each prepared question, stores the raw UI-message chunks with their offsets in ms from the
-  first byte, the brain and the instant (gmt `getUtcNow`), to
-  `src/slides/give-me-temporal/recorded/<id>.json`. It reads `DOX_DEV_KEY` from the environment
+  first byte, the brain and the instant (gmt `getUtcNow`), to `<id>.json` in the deck's
+  `recordedDir` (`src/slides/give-me-temporal/recorded/` for Deck 0). The questions come from the
+  deck's `live-data.ts`, the same list the slides read. It reads `DOX_DEV_KEY` from the environment
   and sends it only as the `dox_dev` cookie it gets back from `/gmt/api/brains?key=`; the key is
   never written to a file.
 - Recordings: `ask-dox` (the running question) and three prepared audience questions; the owner
   picks the three.
 - `replay.ts` turns a recording back into a `ReadableStream` of the same chunks at the same
   offsets, fed to the same reader, so live and recorded render through one path. The label reads
-  "Recorded" with the date (gmt `formatZonedDateTime`, `Europe/Helsinki`) and the brain.
+  "Recorded" with the date (gmt `formatZonedDateTime`, in the deck's venue zone, `DeckEntry.zone`)
+  and the brain.
 - A test checks each recording parses as UI-message chunks and has a brain and an instant.
 
 ## 5 · Audience questions (the questions part)
 
-`AudienceQuestions.astro` is the same Dox frame in `audience` mode. The composer is the real one:
+`DeckLive.astro` in `audience` mode is the same Dox frame. The composer is the real one:
 the room's typed question goes live. The three prepared questions are starter pills in the rail
 that play their recordings with no network. On a failed live answer with no recording, the chat
 shows `/dox`'s own error and the pills stay available.

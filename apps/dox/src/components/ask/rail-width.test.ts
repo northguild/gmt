@@ -11,26 +11,25 @@ const REM = 16;
 describe("railBounds", () => {
   it("takes the rail's own measured minimum as the narrowest", () => {
     // The site's clamp(22rem, 34vw, 34rem) at 1440 px is 489.6 px.
-    expect(railBounds({ minWidth: 489.6, bodyWidth: 1440, rem: REM })).toEqual(
-      {
-        min: 489.6,
-        max: 720,
-      },
-    );
+    expect(railBounds({ minWidth: 489.6, bodyWidth: 1440, rem: REM })).toEqual({
+      min: 489.6,
+      max: 720,
+    });
   });
 
   it("lets the rail reach half the page", () => {
-    expect(
-      railBounds({ minWidth: 544, bodyWidth: 2560, rem: REM }).max,
-    ).toBe(1280);
+    expect(railBounds({ minWidth: 544, bodyWidth: 2560, rem: REM }).max).toBe(
+      1280,
+    );
   });
 
   it("keeps 28rem for the transcript when half the page would leave less", () => {
     // 20 px text on a 1100 px window: half the page is 550, but the transcript
     // needs 28 × 20 = 560, so the rail stops at 1100 - 560 = 540.
-    expect(
-      railBounds({ minWidth: 440, bodyWidth: 1100, rem: 20 }),
-    ).toEqual({ min: 440, max: 540 });
+    expect(railBounds({ minWidth: 440, bodyWidth: 1100, rem: 20 })).toEqual({
+      min: 440,
+      max: 540,
+    });
   });
 
   it("never sets the widest below the narrowest on a small window", () => {

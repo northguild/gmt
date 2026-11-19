@@ -146,12 +146,6 @@ export function newMoonFacts() {
  * drifts from its report fails a test. A slide never runs the code it shows.
  */
 
-/** A split-flap row's end value: who gave it (or the words before the number), and the number as the report writes it. */
-export interface CounterEnd {
-  label: string;
-  value: string;
-}
-
 export const VISUALS = {
   /** `nodejs/node#67076`: the recorded command and what the process did. */
   terminal: {

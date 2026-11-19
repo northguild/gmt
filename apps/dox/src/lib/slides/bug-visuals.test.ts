@@ -3,7 +3,7 @@ import { screen } from "@testing-library/dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { html, setHtml } from "~/widgets/builders";
-import { mountBugVisuals, pageState } from "./bug-visuals";
+import { mountBugVisuals } from "./bug-visuals";
 import { writeDeckState } from "./deck-state";
 import {
   dataOf,
@@ -20,10 +20,14 @@ installJsdomShims();
 let abort: AbortController;
 let root: HTMLElement;
 
+/** A `matchMedia` that answers every query with `matches`. */
+const media = (matches: boolean) =>
+  (() => ({ matches })) as unknown as Window["matchMedia"];
+
 const win = {
   requestAnimationFrame: () => 0,
   cancelAnimationFrame: () => {},
-  matchMedia: () => ({ matches: true }),
+  matchMedia: media(true),
 };
 
 const go = (id: string, build: number): void => sendDeckState(root, id, build);
@@ -80,20 +84,6 @@ afterEach(() => {
 const pages = (): Array<string | undefined> =>
   pickAll(root, "[data-page]").map((p) => dataOf(p, "state"));
 
-describe("a page's state", () => {
-  const gap = { date: "1844-12-31", gap: true };
-  it("drops a date the zone never had once the clock is past it", () => {
-    expect(pageState(gap, "1844-12-30")).toBe("future");
-    expect(pageState(gap, "1845-01-01")).toBe("dropped");
-    expect(pageState({ date: "1844-12-30", gap: false }, "1845-01-01")).toBe(
-      "past",
-    );
-    expect(pageState({ date: "1845-01-01", gap: false }, "1845-01-01")).toBe(
-      "current",
-    );
-  });
-});
-
 describe("a table whose rows all arrive with the slide", () => {
   const typed = (): string[] =>
     pickAll(root, "code[aria-hidden]").map((c) => textOf(c));
@@ -125,7 +115,7 @@ describe("a table whose rows all arrive with the slide", () => {
       win: {
         requestAnimationFrame: (cb) => frames.push(cb),
         cancelAnimationFrame: () => {},
-        matchMedia: () => ({ matches: false }),
+        matchMedia: media(false),
       },
     });
     go("date", 0);

@@ -1,0 +1,70 @@
+---
+/**
+ * Every recorded answer to the running question, one row each: the agent, how long its code is and
+ * what it imports, what it returned on Node 26 in Helsinki, and how many different values its runs
+ * held. The answers are the owner's transcript (`quotes/agent-answer.json`); the values come from
+ * running each answer's code (`quotes/agent-run.json`, written by `scripts/zone-matrix/agent-answer.mjs`).
+ * While any answer is missing or stale its row says so in a marked cell, and `slides-check` fails.
+ */
+import {
+  agentAnswers,
+  valueLabel,
+  type AgentRunFile,
+  type AgentTranscript,
+} from "~/lib/slides/agent-quote";
+import answer from "../quotes/agent-answer.json";
+import runRecord from "../quotes/agent-run.json";
+import { LIVE } from "../live-data";
+
+const { shown } = LIVE.agentRun;
+const rows = agentAnswers(
+  answer as AgentTranscript,
+  runRecord as AgentRunFile,
+  LIVE.agentRun,
+);
+const libraryList = (libraries: Record<string, string>) => {
+  const names = Object.entries(libraries).map(([name, version]) => `${name} ${version}`);
+  return names.length === 0 ? "no imports" : names.join(", ");
+};
+---
+
+<table class="gmt-deck-table gmt-agent-table">
+  <caption>The same question, asked of {rows.length} agents</caption>
+  <thead>
+    <tr>
+      <th scope="col">Agent</th>
+      <th scope="col">Code</th>
+      <th scope="col">Node {shown.node}, Helsinki</th>
+      <th scope="col">Values</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      rows.map(({ model, quote }) =>
+        quote.ready ? (
+          <tr>
+            <th scope="row">{model}</th>
+            <td>
+              {quote.lines} lines, {libraryList(quote.libraries)}
+            </td>
+            <td>
+              <output>{valueLabel(quote.shown.value)}</output>
+            </td>
+            <td>
+              {quote.distinct} across {quote.runs} runs
+            </td>
+          </tr>
+        ) : (
+          <tr>
+            <th scope="row">{model}</th>
+            <td colspan="3" class="gmt-quote" data-quote="pending">
+              {quote.why === "transcript"
+                ? "Recorded agent answer: transcript to come."
+                : "Recorded agent answer: run record out of date."}
+            </td>
+          </tr>
+        ),
+      )
+    }
+  </tbody>
+</table>

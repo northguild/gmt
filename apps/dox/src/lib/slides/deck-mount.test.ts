@@ -8,7 +8,7 @@ import { screen, within } from "@testing-library/dom";
 import { announceDemo, deckRoot, recordDeckStates } from "~/test/deck-events";
 import { expectNoAxeViolations, renderWidget } from "~/test/render-widget";
 import { installDialogFullscreenShims } from "~/test/dialog-fullscreen-shims";
-import { installJsdomShims } from "~/test/jsdom-shims";
+import { installJsdomShims, stubReducedMotion } from "~/test/jsdom-shims";
 import { html, type SafeHtml } from "~/widgets/builders/html";
 import { deckControls, deckDialogs } from "~/widgets/builders/deck-controls";
 import { KEY_TABLE } from "./keys";
@@ -508,18 +508,14 @@ describe("mountDeck", () => {
     });
 
     it("cuts under reduced motion", async () => {
-      const query = window.matchMedia;
-      window.matchMedia = ((q: string) => ({
-        ...query(q),
-        matches: q.includes("prefers-reduced-motion"),
-      })) as typeof window.matchMedia;
+      const undo = stubReducedMotion(true);
       try {
         const { user } = await start();
         await user.keyboard("{ArrowRight}");
         expect(document.startViewTransition).not.toHaveBeenCalled();
         expect(live()).toBe("Slide 2 of 3: Second");
       } finally {
-        window.matchMedia = query;
+        undo();
       }
     });
   });

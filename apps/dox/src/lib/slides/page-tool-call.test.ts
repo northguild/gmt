@@ -2,19 +2,15 @@
  * @vitest-environment jsdom
  *
  * The deck's live page-tool call runs the tool's own `execute`, which makes its link absolute
- * against `location`. The year is fixed (2027), so its two Easters are fixed dates.
+ * against `location`. The year is the deck's (2027 here), so its two Easters are fixed dates.
  */
-import {
-  DECK_YEAR,
-  answerText,
-  jsonText,
-  pageToolRequest,
-  runPageToolCall,
-} from "./page-tool-call";
+import { answerText, pageToolRequest, runPageToolCall } from "./page-tool-call";
+
+const DECK_YEAR = 2027;
 
 describe("the live page-tool call", () => {
   it("sends Moving Feasts' tool name and the talk's year, nothing else", () => {
-    expect(pageToolRequest()).toEqual({
+    expect(pageToolRequest(DECK_YEAR)).toEqual({
       name: "compute_easter_dates",
       arguments: { year: 2027 },
     });
@@ -23,7 +19,10 @@ describe("the live page-tool call", () => {
   it("answers with both Easters an agent would read, and the call's own input", async () => {
     const controller = new AbortController();
     try {
-      const { call, answer } = await runPageToolCall(controller.signal);
+      const { call, answer } = await runPageToolCall(
+        DECK_YEAR,
+        controller.signal,
+      );
       expect(call.name).toBe("compute_easter_dates");
       expect(answer.ok).toBe(true);
       if (!answer.ok) return;
@@ -37,7 +36,6 @@ describe("the live page-tool call", () => {
           side: "Julian after Gregorian",
         },
       });
-      expect(() => JSON.parse(jsonText(answer))).not.toThrow();
     } finally {
       controller.abort();
     }
@@ -46,7 +44,10 @@ describe("the live page-tool call", () => {
   it("names the year once, then the two Sundays and the gap, and leaves the notes to the JSON", async () => {
     const controller = new AbortController();
     try {
-      const { answer, text } = await runPageToolCall(controller.signal);
+      const { answer, text } = await runPageToolCall(
+        DECK_YEAR,
+        controller.signal,
+      );
       if (!answer.ok) throw new Error("the call was refused");
       expect(text).toBe(answerText(answer));
       expect(text).toBe(
@@ -104,6 +105,8 @@ describe("the live page-tool call", () => {
     const controller = new AbortController();
     const reason = new Error("left the slide");
     controller.abort(reason);
-    await expect(runPageToolCall(controller.signal)).rejects.toBe(reason);
+    await expect(runPageToolCall(DECK_YEAR, controller.signal)).rejects.toBe(
+      reason,
+    );
   });
 });

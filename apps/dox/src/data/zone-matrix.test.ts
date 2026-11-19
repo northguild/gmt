@@ -3,13 +3,13 @@ import { join } from "node:path";
 import { parse } from "yaml";
 
 import { libraryMeasurements } from "./library-comparison";
-import snapshot from "./zone-matrix.json";
 import {
   SUITE_ORDER,
   assertRecord,
   summarize,
   tagKey,
   zoneMatrixLine,
+  zoneMatrixRecord,
   zoneMatrixSummary,
   type Cell,
   type SuiteRecord,
@@ -17,7 +17,7 @@ import {
 } from "./zone-matrix";
 
 const REPO = join(__dirname, "../../../..");
-const record = snapshot as unknown as ZoneMatrixRecord;
+const record = zoneMatrixRecord;
 
 const cell = (
   node: string,

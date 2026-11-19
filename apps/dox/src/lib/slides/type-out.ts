@@ -7,40 +7,12 @@
  * copy `aria-hidden`, so a screen reader never hears half a line.
  */
 
-export interface Frames {
-  requestAnimationFrame(callback: (stamp: number) => void): number;
-  cancelAnimationFrame(handle: number): void;
-}
+import { play, type Frames } from "./frames";
 
 /** Milliseconds per typed character. */
 export const CHAR_MS = 38;
 /** How long a counter spins before it lands. */
 export const ROLL_MS = 1400;
-
-function play(
-  win: Frames,
-  durationMs: number,
-  draw: (t: number) => void,
-  done: () => void,
-): () => void {
-  let handle = 0;
-  let start: number | null = null;
-  let stopped = false;
-  const step = (stamp: number): void => {
-    if (stopped) return;
-    start ??= stamp;
-    const t = Math.min(1, (stamp - start) / durationMs);
-    draw(t);
-    if (t < 1) handle = win.requestAnimationFrame(step);
-    else done();
-  };
-  draw(0);
-  handle = win.requestAnimationFrame(step);
-  return () => {
-    stopped = true;
-    win.cancelAnimationFrame(handle);
-  };
-}
 
 /** Types `text` into `el`, then calls `done`. */
 export function typeOut(o: {

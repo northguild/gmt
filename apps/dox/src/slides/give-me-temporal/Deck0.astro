@@ -19,33 +19,34 @@
  * jump (the overview, an address, the link in `qa`'s notes); Next from it returns to `qa`.
  *
  * `presenter` renders the same slides, builds and notes as the hidden source of the presenter view
- * (`pages/slides/give-me-temporal/presenter.astro`).
+ * (`pages/slides/[slug]/presenter.astro`).
  */
-import AgentQuote from "~/components/slides/AgentQuote.astro";
-import AgentTable from "~/components/slides/AgentTable.astro";
+import AgentQuote from "./components/AgentQuote.astro";
+import AgentTable from "./components/AgentTable.astro";
 import Build from "~/components/slides/Build.astro";
 import Deck from "~/components/slides/Deck.astro";
-import ExperimentOpener from "~/components/slides/ExperimentOpener.astro";
-import ExperimentSlide from "~/components/slides/ExperimentSlide.astro";
+import ExperimentOpener from "./components/ExperimentOpener.astro";
+import ExperimentSlide from "./components/ExperimentSlide.astro";
 import Columns from "~/components/slides/Columns.astro";
-import AudienceQuestions from "~/components/slides/AudienceQuestions.astro";
 import FamiliarPair from "~/components/slides/FamiliarPair.astro";
 import GmtStep from "~/components/slides/GmtStep.astro";
-import LiveAnswer from "~/components/slides/LiveAnswer.astro";
-import PageToolCall from "~/components/slides/PageToolCall.astro";
+import DeckLive from "~/components/slides/DeckLive.astro";
+import Icon from "~/components/Icon.astro";
 import QrCode from "~/components/slides/QrCode.astro";
 import FlapBoard from "~/components/slides/FlapBoard.astro";
 import MonthPage from "~/components/slides/MonthPage.astro";
 import MonthShift from "~/components/slides/MonthShift.astro";
 import FilingLegend from "~/components/slides/FilingLegend.astro";
-import FilingReceipt from "~/components/slides/FilingReceipt.astro";
 import JumpPages from "~/components/slides/JumpPages.astro";
 import GmtResult from "~/components/slides/GmtResult.astro";
 import Notes from "~/components/slides/Notes.astro";
 import Slide from "~/components/slides/Slide.astro";
+import Swap from "~/components/slides/Swap.astro";
+import Visual from "~/components/slides/Visual.astro";
+import DeckTable from "~/components/slides/DeckTable.astro";
 import TalkSchedule from "~/components/slides/TalkSchedule.astro";
 import Terminal from "~/components/slides/Terminal.astro";
-import WallFigures from "~/components/slides/WallFigures.astro";
+import WallFigures from "./components/WallFigures.astro";
 import { dateFaults } from "~/data/date-faults";
 import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "~/lib/bundle-size";
 import bundleReport from "~/generated/bundle-size.json";
@@ -66,7 +67,11 @@ import { pageHref } from "~/lib/site";
 import { DECKS } from "~/slides/decks";
 import { wallCredit } from "~/slides/give-me-temporal/credits";
 import { REPORTS, VISUALS } from "~/slides/give-me-temporal/content";
-import NewMoonPanel from "~/components/slides/NewMoonPanel.astro";
+import NewMoonPanel from "./components/NewMoonPanel.astro";
+import { LIVE } from "./live-data";
+import { RECORDED } from "./recorded";
+import "./agent-quote.css";
+import "./deck0.css";
 
 interface Props {
   presenter?: boolean;
@@ -74,6 +79,8 @@ interface Props {
 const { presenter = false } = Astro.props;
 
 const deck = DECKS.find((d) => d.slug === "give-me-temporal")!;
+/** What every live panel needs: the deck's questions, recordings and venue zone, and which view it is in. */
+const live = { live: LIVE, recorded: RECORDED, zone: deck.zone, presenter };
 /*
  * The GMT slide's last call is Helsinki's skipped hour, and its builds hold the Earth's clock, the
  * venue's, either side of it: the minute before the jump and one minute later, both gmt's answers.
@@ -94,9 +101,12 @@ const manilaAfter = manilaJump.pages.at(-1)!.date;
 const manilaSkipped = manilaJump.pages.filter((p) => p.gap).map((p) => p.date);
 const guessRow = dateFaults.find((f) => f.input === 'new Date("2025-03-30T01:30")'); // date-ban: names the fault row, never runs it
 if (!guessRow) throw new Error("The date slide's guess row is not in date-faults.ts");
-const LINKEDIN_URL = "https://www.linkedin.com/in/craigocurtis/";
-const NORTHGUILD_URL = "https://northguild.dev/";
-const GITHUB_USER = "craig-o-curtis";
+// The thanks slide's three links, in one place.
+const LINKS = {
+  linkedin: "https://www.linkedin.com/in/craigocurtis/",
+  northguild: "https://northguild.dev/",
+  githubUser: "craig-o-curtis",
+};
 const sizeRows = bundleRows()
   .filter((r) => ["polyfill", "isValidDate", "formatDate", "root"].includes(r.name))
   .sort(
@@ -138,7 +148,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="one-clock" title="One clock for the whole planet" minutes={0.25} place="wall">
+  <Slide id="one-clock" title="One clock for the whole planet" minutes={0.25} place="wall" layout="wall">
     <WallFigures images />
     <Notes>
       <p>Each of these sites shows one clock. That is the view most date code takes, and the view the agents took: one place, one local time. Hold that.</p>
@@ -147,30 +157,24 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="date" title="Date is broken" minutes={1} place="planet">
-    <table class="gmt-deck-table" data-visual="rows">
-      <caption>What Date gives, and why</caption>
-      <thead>
-        <tr><th scope="col">Code</th><th scope="col">Result</th><th scope="col">Why</th></tr>
-      </thead>
-      <tbody>
-        {homeFaults.map((f, i) => (
-          <tr data-row={i + 1}>
-            <td><code aria-hidden="true" data-type data-text={f.input}>{f.input}</code><span class="gmt-sr-only">{f.input}</span></td>
-            {f === guessRow ? (
-              <>
-                <td><Build n={1}>{f.output}</Build></td>
-                <td><Build n={1}>{f.why}</Build></td>
-              </>
-            ) : (
-              <>
-                <td>{f.output}</td>
-                <td>{f.why}</td>
-              </>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DeckTable caption="What Date gives, and why" columns={["Code", "Result", "Why"]} visual="rows">
+      {homeFaults.map((f, i) => (
+        <tr data-row={i + 1}>
+          <td><code aria-hidden="true" data-type data-text={f.input}>{f.input}</code><span class="gmt-sr-only">{f.input}</span></td>
+          {f === guessRow ? (
+            <>
+              <td><Build n={1}>{f.output}</Build></td>
+              <td><Build n={1}>{f.why}</Build></td>
+            </>
+          ) : (
+            <>
+              <td>{f.output}</td>
+              <td>{f.why}</td>
+            </>
+          )}
+        </tr>
+      ))}
+    </DeckTable>
     <Notes>
       <p>The wall breaks as this slide arrives. Wait for the shards to clear.</p>
       <p>Then the table appears. Date is the built-in answer, and it has one clock: the machine's. These rows are the same ones as on the home page.</p>
@@ -224,16 +228,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </ExperimentSlide>
 
   <Slide id="abort" title="A date pattern aborts Node" minutes={1.25} place="planet" lapse="abort">
-    <div class="gmt-swap">
-      <div class="gmt-visual">
+    <Swap>
+      <Visual receipts={[REPORTS.abort[0].filing]}>
         <Terminal {...VISUALS.terminal} />
-        <FilingReceipt filing={REPORTS.abort[0].filing} />
-      </div>
+      </Visual>
       <Build n={1}>
-        <div class="gmt-visual">
+        <Visual receipts={[REPORTS.abort[1].filing]}>
           <Columns observedLabel="Observed" observed={REPORTS.abort[1].observed} expected={REPORTS.abort[1].expected} />
-          <FilingReceipt filing={REPORTS.abort[1].filing} />
-        </div>
+        </Visual>
       </Build>
       <Build n={2}>
         <GmtStep
@@ -241,7 +243,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
           call={{ module: "plain/format", name: "formatDateToParts", args: ["1970-01-01", "gd", { year: "numeric", month: "short" }] }}
         />
       </Build>
-    </div>
+    </Swap>
     <Notes>
       <p>Galicia keeps Madrid's clock, so the planet turns under it while the terminal replays the crash. The Galician pattern is one of those with the week-of-year year. The ticket on the Unicode side is ours too.</p>
       <p>Nothing runs on stage: this is a recording of what the report says happens. Step on for the Unicode ticket behind it, then for what GMT does with the same date.</p>
@@ -249,22 +251,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="years" title="Wrong years" minutes={1.25} place="planet" lapse="tehran">
-    <div class="gmt-swap">
-      <div class="gmt-visual">
+    <Swap>
+      <Visual receipts={[REPORTS.years[1].filing, REPORTS.years[0].filing]}>
         <FlapBoard {...VISUALS.counters.tehran} />
-        <div class="gmt-receipts">
-          <FilingReceipt filing={REPORTS.years[1].filing} />
-          <FilingReceipt filing={REPORTS.years[0].filing} />
-        </div>
-      </div>
+      </Visual>
       <Build n={1} lapse="tokyo">
-        <div class="gmt-visual">
+        <Visual receipts={[REPORTS.years[3].filing, REPORTS.years[2].filing]}>
           <FlapBoard {...VISUALS.counters.tokyo} />
-          <div class="gmt-receipts">
-            <FilingReceipt filing={REPORTS.years[3].filing} />
-            <FilingReceipt filing={REPORTS.years[2].filing} />
-          </div>
-        </div>
+        </Visual>
       </Build>
       <Build n={2}>
         <GmtStep
@@ -272,23 +266,21 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
           call={{ module: "plain/format", name: "formatDate", args: ["1870-03-01", "en-u-ca-japanese", { era: "short", year: "numeric" }] }}
         />
       </Build>
-    </div>
+    </Swap>
     <Notes>
       <p>The camera holds; the sun moves. Tehran first: a split-flap board lands on the date native Temporal gives, then the date the polyfill gives, a day later, from the Persian calendar's leap years. Then Tokyo, with the Japanese calendar's first era years.</p>
     </Notes>
   </Slide>
 
   <Slide id="day-off" title="A day off" minutes={1.25} place="planet" lapse="kolkata">
-    <div class="gmt-swap">
-      <div class="gmt-visual">
+    <Swap>
+      <Visual receipts={[REPORTS.dayOff[0].filing]}>
         <MonthShift {...VISUALS.calendars.kolkata} />
-        <FilingReceipt filing={REPORTS.dayOff[0].filing} />
-      </div>
+      </Visual>
       <Build n={1} lapse="shanghai">
-        <div class="gmt-visual">
+        <Visual receipts={[REPORTS.dayOff[1].filing]}>
           <MonthPage {...VISUALS.calendars.shanghai} />
-          <FilingReceipt filing={REPORTS.dayOff[1].filing} />
-        </div>
+        </Visual>
       </Build>
       <Build n={2} place="moon" lapse="newmoon">
         <NewMoonPanel />
@@ -299,7 +291,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
           call={{ module: "calendar/rules", name: "holidayDates", args: [{ name: "Spring Festival", kind: "calendarFixed", calendar: "chinese", monthCode: "M01", day: 1 }, 2027] }}
         />
       </Build>
-    </div>
+    </Swap>
     <Notes>
       <p>Kolkata: the month's first week slides one day right, so day 1 lands a day late. Then Shanghai: February 2027 with Chinese New Year ringed on the 6th, and the polyfill's 7th ringed in red. The last step leaves the Earth for the Moon, and the sun runs up to the new moon over Shanghai. The last step comes back to the Earth and says what GMT does about it.</p>
       <p>Four minutes from midnight. Two calculations five minutes apart disagree about which day the year starts.</p>
@@ -307,43 +299,38 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="manila" title="Manila skips a day" minutes={1.25} place="planet" lapse="manila">
-    <div class="gmt-swap">
-    <div class="gmt-visual">
-      <JumpPages zone="Asia/Manila" years={[1844, 1845]} />
-      <p class="gmt-visual-note">
-        Manila's clocks go from {manilaBefore} to {manilaAfter}; {manilaSkipped.join(", ")} never happened there.{" "}
-        {REPORTS.manila[0].observed}
-      </p>
-      <div class="gmt-receipts">
-        <FilingReceipt filing={REPORTS.manila[0].filing} />
-        {siblings.map((key) => <FilingReceipt filing={key} />)}
-      </div>
-    </div>
-    <Build n={1}>
-      <GmtStep
-        filings={["tc39/proposal-temporal#3330"]}
-        call={{ module: "instant/convert", name: "resolveLocal", args: ["1844-12-31T12:00:00", "Asia/Manila", { disambiguation: "reject" }] }}
-      />
-    </Build>
-    </div>
+    <Swap>
+      <Visual receipts={[REPORTS.manila[0].filing, ...siblings]}>
+        <JumpPages zone="Asia/Manila" years={[1844, 1845]} />
+        <p class="gmt-visual-note">
+          Manila's clocks go from {manilaBefore} to {manilaAfter}; {manilaSkipped.join(", ")} never happened there.{" "}
+          {REPORTS.manila[0].observed}
+        </p>
+      </Visual>
+      <Build n={1}>
+        <GmtStep
+          filings={["tc39/proposal-temporal#3330"]}
+          call={{ module: "instant/convert", name: "resolveLocal", args: ["1844-12-31T12:00:00", "Asia/Manila", { disambiguation: "reject" }] }}
+        />
+      </Build>
+    </Swap>
     <Notes>
       <p>The camera holds and time runs through the end of 1844. The page for the skipped day drops out as Manila's clock crosses it. Some lookups miss that jump; the sibling fix is in the polyfill's own tracker.</p>
     </Notes>
   </Slide>
 
   <Slide id="engines" title="Engines disagree" minutes={1} place="planet" lapse="sun">
-    <div class="gmt-swap">
-    <div class="gmt-visual">
-      <Columns call={VISUALS.engines.call} observedLabel={VISUALS.engines.observedLabel} observed={REPORTS.engines[0].observed} expected={REPORTS.engines[0].expected} />
-      <FilingReceipt filing={REPORTS.engines[0].filing} />
-    </div>
-    <Build n={1}>
-      <GmtStep
-        filings={["nodejs/node#67457"]}
-        call={{ module: "plain/calculate", name: "diffDateAsDuration", args: ["2000-01-01", "2001-01-01", "years", { smallestUnit: "months", roundingMode: "halfExpand" }] }}
-      />
-    </Build>
-    </div>
+    <Swap>
+      <Visual receipts={[REPORTS.engines[0].filing]}>
+        <Columns call={VISUALS.engines.call} observedLabel={VISUALS.engines.observedLabel} observed={REPORTS.engines[0].observed} expected={REPORTS.engines[0].expected} />
+      </Visual>
+      <Build n={1}>
+        <GmtStep
+          filings={["nodejs/node#67457"]}
+          call={{ module: "plain/calculate", name: "diffDateAsDuration", args: ["2000-01-01", "2001-01-01", "years", { smallestUnit: "months", roundingMode: "halfExpand" }] }}
+        />
+      </Build>
+    </Swap>
     <Notes>
       <p>Two engines, the same call, a different answer. The planet keeps turning: the sun reaches every engine's users in turn.</p>
     </Notes>
@@ -356,7 +343,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="familiar" title="Names you already know" minutes={1} place="greenwich">
+  <Slide id="familiar" title="Names you already know" minutes={1} place="greenwich" layout="familiar">
     <div class="gmt-filing-grid">
       {familiar.map((pair) => <FamiliarPair pair={pair} />)}
     </div>
@@ -434,14 +421,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="ask-dox" title="Ask Dox" minutes={1.5} place="Europe/Helsinki" layout="full">
-    <LiveAnswer />
+    <DeckLive mode="answer" slide="ask-dox" {...live} />
     <Notes>
       <p>Same question, but this agent has the whole planet's tools.</p>
     </Notes>
   </Slide>
 
   <Slide id="page-tools" title="Tools on the page" minutes={1.25} place="Europe/Helsinki" layout="full">
-    <PageToolCall />
+    <DeckLive mode="tools" slide="page-tools" {...live} />
     <Notes>
       <p>
         The page's own tool, <code>compute_easter_dates</code>, is called live from the browser as the slide shows,
@@ -457,7 +444,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="qa" title="Q&D: Questions and Dox" minutes={deck.qa} place="Europe/Helsinki" layout="full">
-    <AudienceQuestions />
+    <DeckLive mode="audience" slide="qa" {...live} />
     <Notes>
       <p>Questions run for {deck.qa} minutes, through Dox chat or aloud.</p>
       <p>
@@ -469,13 +456,13 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
 
   <Slide id="thanks" title="Thanks" minutes={0} place="Europe/Helsinki" clock>
     <div class="gmt-qr-row">
-      <QrCode url={LINKEDIN_URL} label="LinkedIn" logo="linkedin" />
-      <QrCode url={NORTHGUILD_URL} label="NorthGuild" logo="northguild" />
+      <QrCode url={LINKS.linkedin} label="LinkedIn" logo="linkedin" />
+      <QrCode url={LINKS.northguild} label="NorthGuild" logo="northguild" />
     </div>
     <p class="gmt-qr-github">
-      <a href={`https://github.com/${GITHUB_USER}`}>
-        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z" /></svg>
-        <span><span class="gmt-sr-only">GitHub: </span>{GITHUB_USER}</span>
+      <a href={`https://github.com/${LINKS.githubUser}`}>
+        <Icon name="github" />
+        <span><span class="gmt-sr-only">GitHub: </span>{LINKS.githubUser}</span>
       </a>
     </p>
     <Notes>
@@ -484,27 +471,21 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="spare-size" title="How big is it?" spare place="greenwich">
-    <table class="gmt-deck-table">
-      <caption>Measured {measuredOn} with Node {bundleReport.node.replace(/^v/, "")} and esbuild {bundleReport.esbuild}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Name</th>
-          {BUNDLE_COLUMNS.slice(1, 3).map((c) => <th scope="col">{c}</th>)}
-        </tr>
-      </thead>
-      <tbody>
-        {sizeRows.map((r) => {
-          const cells = bundleCells(r);
-          return (
-            <tr>
-              <th scope="row">{sizeLabel(r.name)}</th>
-              <td>{cells[1]}</td>
-              <td>{cells[2]}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <DeckTable
+      caption={`Measured ${measuredOn} with Node ${bundleReport.node.replace(/^v/, "")} and esbuild ${bundleReport.esbuild}`}
+      columns={["Name", ...BUNDLE_COLUMNS.slice(1, 3)]}
+    >
+      {sizeRows.map((r) => {
+        const cells = bundleCells(r);
+        return (
+          <tr>
+            <th scope="row">{sizeLabel(r.name)}</th>
+            <td>{cells[1]}</td>
+            <td>{cells[2]}</td>
+          </tr>
+        );
+      })}
+    </DeckTable>
     <p><a href={pageHref("/bundle-size/")}>Every size, and how it was measured</a></p>
     <Notes>
       <p>A spare for questions. One function costs a few kilobytes; the whole package is the last row.</p>

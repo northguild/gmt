@@ -21,7 +21,6 @@
  * the script exit 1 after the record is written. Node majors are switched with
  * `fnm exec`. See README.md.
  */
-import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -42,7 +41,17 @@ import { buildCell, combineRuns, mergeCells, needsRerun } from "./cells.mjs";
 import { CAUSES, causeProblems, matchCauses } from "./causes.mjs";
 import { stepCommand } from "./install.mjs";
 import { readMatrix } from "./matrix.mjs";
+import { compactRecord, expandRecord } from "./record-shape.mjs";
 import { parseReport } from "./parsers.mjs";
+import {
+  StepError,
+  nodeInfoOf,
+  onNode,
+  parseFlags,
+  pool,
+  sh,
+  stop,
+} from "./node-runner.mjs";
 import { overrideOf, scanPins } from "./pins.mjs";
 import { SUITES } from "./suites.mjs";
 import { TAGS, matchTags, staleTags, tagProblems } from "./tags.mjs";
@@ -63,84 +72,15 @@ const PROBE_HASH = createHash("sha256")
   .slice(0, 16);
 const installOf = (suite) => JSON.stringify(suite.install);
 
-const stop = (code, message) => {
-  console.error(message);
-  process.exit(code);
-};
-
 function flags(argv) {
-  const out = {
-    suite: [],
-    zone: [],
-    node: [],
-    plan: false,
-    parallel: 2,
-    workers: 2,
-  };
-  for (let i = 0; i < argv.length; i += 1) {
-    const a = argv[i];
-    if (a === "--plan") out.plan = true;
-    else if (["--suite", "--zone", "--node"].includes(a))
-      out[a.slice(2)].push(argv[++i]);
-    else if (a === "--parallel") out.parallel = Number(argv[++i]);
-    else if (a === "--workers") out.workers = Number(argv[++i]);
-    else stop(2, `unknown flag ${a}`);
-  }
+  const out = parseFlags(argv, {
+    lists: ["suite", "zone", "node"],
+    numbers: { parallel: 2, workers: 2 },
+  });
   if (!(out.parallel >= 1) || !(out.workers >= 1))
     stop(2, "--parallel and --workers need a number >= 1");
   return out;
 }
-
-class StepError extends Error {}
-
-function sh(cmd, args, options = {}) {
-  const r = spawnSync(cmd, args, {
-    encoding: "utf8",
-    maxBuffer: 1 << 28,
-    ...options,
-  });
-  if (r.status !== 0) {
-    throw new StepError(
-      `${cmd} ${args.join(" ")} failed (${r.status})\n${(r.stderr ?? "").slice(-600)}${(r.stdout ?? "").slice(-300)}`,
-    );
-  }
-  return r.stdout.trim();
-}
-
-/** Runs a command on the given Node major. Resolves with the exit code and both streams. */
-function onNode(major, cmd, args, { cwd, env }) {
-  return new Promise((resolve) => {
-    const child = spawn(
-      "fnm",
-      ["exec", `--using=${major}`, "--", cmd, ...args],
-      {
-        cwd,
-        env: { ...process.env, ...env },
-      },
-    );
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
-    child.on("error", (error) =>
-      resolve({ code: 127, stdout, stderr: String(error) }),
-    );
-  });
-}
-
-/** The full version and the time-zone data (`process.versions.tz`) of a Node major. */
-const nodeInfoOf = (major) => {
-  const [version, tzdata] = sh("fnm", [
-    "exec",
-    `--using=${major}`,
-    "--",
-    "node",
-    "-p",
-    "process.version + ' ' + process.versions.tz",
-  ]).split(" ");
-  return { version, tzdata };
-};
 
 /** Clones the pinned commit and checks it; returns the checkout directory. */
 function checkout(suite) {
@@ -281,21 +221,6 @@ async function execOnce(suite, dir, major, zone, workers) {
   }
 }
 
-/** Runs `jobs` (functions returning promises) with at most `limit` at once. */
-async function pool(jobs, limit) {
-  const results = new Array(jobs.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(limit, jobs.length) }, async () => {
-      while (next < jobs.length) {
-        const i = next++;
-        results[i] = await jobs[i]();
-      }
-    }),
-  );
-  return results;
-}
-
 function gmtState() {
   const version = JSON.parse(
     readFileSync(join(ROOT, "packages/gmt/package.json"), "utf8"),
@@ -311,7 +236,7 @@ function gmtState() {
 function loadRecord() {
   if (!existsSync(RECORD))
     return { matrix: null, tags: {}, untagged: [], suites: [] };
-  return JSON.parse(readFileSync(RECORD, "utf8"));
+  return expandRecord(JSON.parse(readFileSync(RECORD, "utf8")));
 }
 
 /** Sorts every recorded failure by the tag map. Returns the tags in use and what has none. */
@@ -503,7 +428,11 @@ async function main() {
   const explained = explain(record);
   record.causes = explained.causes;
   record.uncaused = explained.uncaused;
-  writeFileSync(RECORD, formatJson(record));
+  try {
+    writeFileSync(RECORD, formatJson(compactRecord(record)));
+  } catch (error) {
+    stop(1, `${error.message}\nThe record was not written.`);
+  }
 
   const versions = new Set(record.suites.map((s) => `${s.id}@${s.version}`));
   const stale = staleTags(TAGS, used).filter((k) =>

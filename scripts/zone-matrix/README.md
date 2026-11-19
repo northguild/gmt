@@ -124,8 +124,27 @@ record's hash matches the code and the call; otherwise its panel or row is marke
 `familiar.test.mjs` runs each Moment, date-fns and Day.js shape in `familiar.json` against the
 pinned versions, so no shape on the "Names you already know" slide is one the library rejects.
 
+## The record's shape
+
+`apps/dox/src/data/zone-matrix.json` is stored compactly by `record-shape.mjs`: the Node release and
+tzdata once per major, each distinct tag and cause once, and per suite a table of the test ids it
+names that every list of failures indexes into. `run.mjs` and `zone-matrix.ts` read it back into
+one cell per suite, Node and zone. Two releases of one Node major cannot sit in one record: run
+every suite again on the newer release (the cache keeps the cells already run).
+
+## The zone probe
+
+`probe/run.mjs` feeds every library the same questions in each zone and Node major and writes
+`apps/dox/src/data/zone-probe.json`. It builds its cases from the Temporal specification at the
+start of every run and writes them to `.work/cases.json` for its child processes. No file of cases
+is kept in git. `fnm exec --using=26 -- node probe/build-cases.mjs` writes the same file by hand.
+The cache key holds a hash of the cases, so a changed question runs the cells again.
+
+`node-runner.mjs` holds what the three runners share: the flags, `fnm exec`, the Node info and the
+work pool.
+
 ## Tests
 
 ```sh
-pnpm test    # node --test: parsers, pins, tags, causes, cells, the cache key, the matrix reader, the agent-answer runner and the familiar shapes
+pnpm test    # node --test: parsers, pins, tags, causes, cells, the cache key, the record shape, the probe, the matrix reader, the agent-answer runner and the familiar shapes
 ```

@@ -1,10 +1,12 @@
 ---
 /**
  * One slide: a headed section. The runtime reads `data-minutes` and `data-place` (where the space
- * stage's camera goes, `lib/slides/places.ts`), `data-lapse` (the time-lapse that plays) and `data-pins` from it. Put `<Build>` and `<Notes>` in its slot.
- * A `place` the stage cannot resolve fails the build. The Earth or the clock sits in the right
- * third, so a slide's content fits the left two thirds. A `full` slide takes the whole page: the
- * Earth fades out while it shows, and the camera still flies to its place for the next slide.
+ * stage's camera goes, `lib/slides/places.ts`), `data-lapse` (the time-lapse that plays) and
+ * `data-pins` from it. Put `<Build>` and `<Notes>` in its slot. A `place`, `reveal` or `lapse` the
+ * deck's stage data (`src/slides/<slug>/stage-data.ts`) cannot resolve fails the build. The Earth
+ * or the clock sits in the right third, so a slide's content fits the left two thirds. A `full`
+ * slide takes the whole page: the Earth fades out while it shows, and the camera still flies to its
+ * place for the next slide.
  * `reveal` names a zone: the slides before this one show a 24-hour clock of its wall time in the
  * Earth's place, and this slide turns the clock into the Earth (`lib/slides/earth-clock.ts`).
  * `clock` stands that clock in the Earth's place again on a slide past the reveal, as the close does.
@@ -13,8 +15,8 @@
  * plan leaves it out, and it comes after `thanks` (`lib/slides/deck.ts`).
  * `spin` turns the Earth slowly while the slide shows, at the home globe's idle rate (`lib/slides/stage.ts`).
  */
-import { resolvePlace } from "~/lib/slides/places";
-import { isLapseName } from "~/lib/slides/time-lapse";
+import { checkStageNames } from "~/lib/slides/stage-data";
+import { deckStage } from "~/slides/deck-runtime";
 interface Props {
   id: string;
   title: string;
@@ -23,11 +25,15 @@ interface Props {
   /** A spare: after the talk, for questions. */
   spare?: boolean;
   place?: string;
-  /** A time-lapse (`LAPSES` in `lib/slides/time-lapse.ts`) that plays while the slide shows. */
+  /** A time-lapse (one of the deck's `lapses`, `src/slides/<slug>/stage-data.ts`) that plays while the slide shows. */
   lapse?: string;
   /** `filings` lights every upstream filing as a pin while the slide shows. */
   pins?: "filings";
-  layout?: "title" | "default" | "full";
+  /**
+   * `title` and `full` are the generic layouts. Any other name is a deck's own: the slide carries it
+   * as `data-layout`, and the deck's sheet styles `.gmt-slide[data-layout="<name>"]`.
+   */
+  layout?: "title" | "default" | "full" | (string & {});
   /** The zone whose clock stands in the Earth's place until this slide reveals the planet. */
   reveal?: string;
   /** Show the reveal's clock in the Earth's place on this slide, past the reveal. */
@@ -40,10 +46,7 @@ if (spare && minutes !== undefined)
   throw new Error(`Slide "${id}" is a spare and takes no minutes`);
 if (!spare && minutes === undefined)
   throw new Error(`Slide "${id}" is a main slide and needs its minutes`);
-if (place) resolvePlace(place);
-if (reveal) resolvePlace(`pole:${reveal}`);
-if (lapse && !isLapseName(lapse))
-  throw new Error(`Slide "${id}" names the unknown lapse "${lapse}"`);
+checkStageNames(await deckStage(Astro.params.slug), { place, reveal, lapse }, `Slide "${id}"`);
 ---
 
 <section

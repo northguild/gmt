@@ -69,6 +69,25 @@ work is scoped against what is already built.
   file. Prefer controlled clocks and awaited state changes over real-time sleeps; if real time is
   necessary, explain why and ensure teardown runs even when an assertion fails.
 
+## Reuse is planned, not hoped for
+
+The owner rejected the first slide-deck story as slop. It was 61K lines with the same markup pasted
+seven times, four copies of one animation loop, Deck 0 hard-coded into the shared layer, and a
+26K-line cache committed. Every spec now prevents that up front, under
+[Reuse, never reinvent](../context/dox/built/index.md#reuse-never-reinvent):
+
+- **A "Reuse" section in every spec.** It lists the existing pieces the work uses, by path. It
+  lists each new shared piece, with its home and its one-line interface. It names the layer of
+  every new file: shared, or the feature's own folder.
+- **The second-instance test.** Write down what a second deck, tool or page of the same family
+  would add. If the answer is anything beyond a content folder and a registry row, the design is
+  wrong: move the generic part into the shared layer now.
+- **Content is data.** Questions, zones, years, places and paths go in the feature's folder, and
+  reach shared code as props or through a registry.
+- **Multi-slice stories carry a duplication pass in each slice's definition of done.** It runs
+  rule 10's size check, and a tester line that greps for the repeated patterns the slice was
+  most likely to copy.
+
 ## Shortlist mode — Dox tools for a realm story
 
 When the main session asks for a shortlist (the [`plan-story`](./skills/plan-story/SKILL.md)

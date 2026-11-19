@@ -17,12 +17,14 @@
  *   showing.
  */
 import { isActive, onDeckState, type DeckState } from "./deck-state";
-import { rollText, showText, typeOut, type Frames } from "./type-out";
+import type { Frames } from "./frames";
+import { prefersReducedMotion } from "~/lib/reduced-motion";
+import { rollText, showText, typeOut } from "./type-out";
 
-export type PageState = "past" | "current" | "dropped" | "future";
+type PageState = "past" | "current" | "dropped" | "future";
 
 /** The state of a page when the zone's local date is `now`. ISO dates compare as text. */
-export function pageState(
+function pageState(
   page: { date: string; gap: boolean },
   now: string,
 ): PageState {
@@ -31,16 +33,142 @@ export function pageState(
   return page.gap ? "dropped" : "past";
 }
 
-type Win = Frames & {
-  matchMedia?: (query: string) => { matches: boolean };
+type Win = Frames & Partial<Pick<Window, "matchMedia">>;
+
+/** What a visual's `play` is given. */
+interface PlayContext {
+  win: Win;
+  reduced: boolean;
+}
+
+/** One kind of visual: how it goes back to its start, and how it plays (returns what stops it). */
+interface VisualKind {
+  reset(el: HTMLElement): void;
+  play(el: HTMLElement, ctx: PlayContext): () => void;
+}
+
+const all = <T extends HTMLElement>(el: HTMLElement, selector: string): T[] =>
+  Array.from(el.querySelectorAll<T>(selector));
+
+const clearTyped = (el: HTMLElement): void => {
+  for (const t of all(el, "[data-type]")) t.textContent = "";
 };
+
+/** A terminal types its line, then shows what comes after. */
+const terminal: VisualKind = {
+  reset(el) {
+    clearTyped(el);
+    for (const a of all(el, "[data-after]")) a.hidden = true;
+  },
+  play(el, ctx) {
+    const line = el.querySelector<HTMLElement>("[data-type]");
+    const finish = (): void => {
+      for (const a of all(el, "[data-after]")) a.hidden = false;
+      el.dataset["ended"] = "true";
+    };
+    delete el.dataset["ended"];
+    if (!line) {
+      finish();
+      return () => {};
+    }
+    return typeOut({
+      el: line,
+      text: line.dataset["text"] ?? "",
+      win: ctx.win,
+      reduced: ctx.reduced,
+      done: finish,
+    });
+  },
+};
+
+/** A roll lands each of its counters in turn. */
+const roll: VisualKind = {
+  reset(el) {
+    for (const r of all(el, "[data-roll]")) {
+      showText(r, "");
+      delete r.dataset["landed"];
+    }
+  },
+  play(el, ctx) {
+    const rolls = all(el, "[data-roll]");
+    let stop = (): void => {};
+    const next = (i: number): void => {
+      const r = rolls[i];
+      if (!r) return;
+      stop = rollText({
+        el: r,
+        end: r.dataset["end"] ?? "",
+        win: ctx.win,
+        reduced: ctx.reduced,
+        done: () => {
+          r.dataset["landed"] = "true";
+          next(i + 1);
+        },
+      });
+    };
+    next(0);
+    return () => stop();
+  },
+};
+
+/** Pages flip in CSS on `data-active`; with a zone, the lapse's dates set each page's state. */
+const pages: VisualKind = {
+  reset(el) {
+    for (const p of all(el, "[data-page]")) p.dataset["state"] = "future";
+  },
+  play: () => () => {},
+};
+
+/** A table's rows all type their code at once, each marked done as it lands. */
+const rows: VisualKind = {
+  reset(el) {
+    clearTyped(el);
+    for (const row of all(el, "[data-row]")) row.dataset["state"] = "hidden";
+  },
+  play(el, ctx) {
+    const typing = all(el, "[data-row]").map((row) => {
+      row.dataset["state"] = "typing";
+      const code = row.querySelector<HTMLElement>("[data-type]");
+      const done = (): void => {
+        row.dataset["state"] = "done";
+      };
+      if (!code) {
+        done();
+        return () => {};
+      }
+      return typeOut({
+        el: code,
+        text: code.dataset["text"] ?? "",
+        win: ctx.win,
+        reduced: ctx.reduced,
+        done,
+      });
+    });
+    return () => {
+      for (const stop of typing) stop();
+    };
+  },
+};
+
+/** The kinds, by `data-visual`. A kind not listed is armed and marked active and does nothing more. */
+const KINDS: Readonly<Record<string, VisualKind>> = {
+  terminal,
+  roll,
+  pages,
+  rows,
+};
+
+const NONE: VisualKind = { reset: () => {}, play: () => () => {} };
+
+const kindOf = (el: HTMLElement): VisualKind =>
+  Object.hasOwn(KINDS, el.dataset["visual"] ?? "")
+    ? KINDS[el.dataset["visual"]!]!
+    : NONE;
 
 export function mountBugVisuals(
   root: HTMLElement,
   o: { signal: AbortSignal; win: Win },
 ): void {
-  const reduced = (): boolean =>
-    o.win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   const stops = new Map<HTMLElement, () => void>();
   const visuals = Array.from(
     root.querySelectorAll<HTMLElement>("[data-visual]"),
@@ -51,89 +179,18 @@ export function mountBugVisuals(
     stops.delete(el);
     delete el.dataset["active"];
     el.dataset["armed"] = "true";
-    for (const t of el.querySelectorAll<HTMLElement>("[data-type]"))
-      t.textContent = "";
-    for (const a of el.querySelectorAll<HTMLElement>("[data-after]"))
-      a.hidden = true;
-    for (const r of el.querySelectorAll<HTMLElement>("[data-roll]")) {
-      showText(r, "");
-      delete r.dataset["landed"];
-    }
-    for (const p of el.querySelectorAll<HTMLElement>("[data-page]"))
-      p.dataset["state"] = "future";
-    for (const row of el.querySelectorAll<HTMLElement>("[data-row]"))
-      row.dataset["state"] = "hidden";
+    kindOf(el).reset(el);
   };
 
   const play = (el: HTMLElement): void => {
-    const kind = el.dataset["visual"];
     el.dataset["active"] = "true";
-    const isReduced = reduced();
-    if (kind === "terminal") {
-      const line = el.querySelector<HTMLElement>("[data-type]");
-      const finish = (): void => {
-        for (const a of el.querySelectorAll<HTMLElement>("[data-after]"))
-          a.hidden = false;
-        el.dataset["ended"] = "true";
-      };
-      delete el.dataset["ended"];
-      if (line)
-        stops.set(
-          el,
-          typeOut({
-            el: line,
-            text: line.dataset["text"] ?? "",
-            win: o.win,
-            reduced: isReduced,
-            done: finish,
-          }),
-        );
-      else finish();
-    } else if (kind === "roll") {
-      const rolls = Array.from(el.querySelectorAll<HTMLElement>("[data-roll]"));
-      let stop = (): void => {};
-      stops.set(el, () => stop());
-      const next = (i: number): void => {
-        const r = rolls[i];
-        if (!r) return;
-        stop = rollText({
-          el: r,
-          end: r.dataset["end"] ?? "",
-          win: o.win,
-          reduced: isReduced,
-          done: () => {
-            r.dataset["landed"] = "true";
-            next(i + 1);
-          },
-        });
-      };
-      next(0);
-    } else if (kind === "rows") {
-      const typing = Array.from(
-        el.querySelectorAll<HTMLElement>("[data-row]"),
-        (row) => {
-          row.dataset["state"] = "typing";
-          const code = row.querySelector<HTMLElement>("[data-type]");
-          const done = (): void => {
-            row.dataset["state"] = "done";
-          };
-          if (!code) {
-            done();
-            return () => {};
-          }
-          return typeOut({
-            el: code,
-            text: code.dataset["text"] ?? "",
-            win: o.win,
-            reduced: isReduced,
-            done,
-          });
-        },
-      );
-      stops.set(el, () => {
-        for (const stop of typing) stop();
-      });
-    }
+    stops.set(
+      el,
+      kindOf(el).play(el, {
+        win: o.win,
+        reduced: prefersReducedMotion(o.win),
+      }),
+    );
   };
 
   const setActive = (el: HTMLElement, on: boolean): void => {

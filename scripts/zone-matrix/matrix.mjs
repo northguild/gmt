@@ -29,3 +29,12 @@ export function matrixOf(text) {
 export function readMatrix(path) {
   return matrixOf(readFileSync(path, "utf8"));
 }
+
+/** The repo's own ci.yml, the one place the zones and Node majors are written. */
+export const CI_YML = new URL(
+  "../../.github/workflows/ci.yml",
+  import.meta.url,
+);
+
+/** The zones of the `gmt-matrix` job, read from the repo's ci.yml. */
+export const ciZones = () => readMatrix(CI_YML).zones;

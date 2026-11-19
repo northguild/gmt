@@ -3,7 +3,7 @@
  * and Node versions of GMT's CI job, and every failure sorted into one of two kinds.
  *
  * `./zone-matrix.json` is written by `scripts/zone-matrix/run.mjs`, which a person runs by hand
- * (the suites live outside the workspace). Nothing here stores a count: every figure below is
+ * (the suites live outside the workspace), in the compact shape `record-shape.mjs` describes. Nothing here stores a count: every figure below is
  * derived from the failures the runner recorded and the tags that sort them, the same rule
  * `behaviour-matrix.ts` follows. A failure counted in neither kind (one that also fails in the
  * reference zone, or one that failed in only one of a cell's two runs) is listed with its cause.
@@ -13,6 +13,7 @@
  *
  * Slide 5 of Deck 0 reads `zoneMatrixSummary()`.
  */
+import { expandRecord } from "../../../../scripts/zone-matrix/record-shape.mjs";
 import snapshot from "./zone-matrix.json";
 
 export const KINDS = ["one-zone", "wrong-answer"] as const;
@@ -315,7 +316,11 @@ export interface ZoneMatrixSummary {
   suites: SuiteSummary[];
 }
 
-function summarise(record: ZoneMatrixRecord, suite: SuiteRecord): SuiteSummary {
+/** One suite as the pages read it. */
+function summariseSuite(
+  record: ZoneMatrixRecord,
+  suite: SuiteRecord,
+): SuiteSummary {
   const zones = record.matrix.zones.map((zone): ZoneSummary => {
     const cells = suite.cells.filter((c) => c.zone === zone);
     return {
@@ -414,7 +419,7 @@ export function summarize(record: ZoneMatrixRecord): ZoneMatrixSummary {
       (a, b) =>
         SUITE_ORDER.indexOf(a.id as never) - SUITE_ORDER.indexOf(b.id as never),
     )
-    .map((s) => summarise(record, s));
+    .map((s) => summariseSuite(record, s));
   const dates = suites
     .flatMap((s) => (s.ranOn.from ? [s.ranOn.from, s.ranOn.to] : []))
     .sort();
@@ -429,7 +434,14 @@ export function summarize(record: ZoneMatrixRecord): ZoneMatrixSummary {
   };
 }
 
-const record = snapshot as unknown as ZoneMatrixRecord;
+/**
+ * The record in full: one cell per suite, Node and zone. The file stores it compactly (see
+ * `scripts/zone-matrix/record-shape.mjs`), so this is where it is read back.
+ */
+export const zoneMatrixRecord = expandRecord(
+  snapshot,
+) as unknown as ZoneMatrixRecord;
+const record = zoneMatrixRecord;
 
 /** What the pages and slide 5 read. Throws at import on a record `assertRecord` rejects. */
 export const zoneMatrixSummary: ZoneMatrixSummary = summarize(record);

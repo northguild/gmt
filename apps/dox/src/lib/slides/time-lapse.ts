@@ -13,9 +13,11 @@
  * and at the speed the sun is going (`LapseCarry`), so a step never sends the sun back to now to
  * sweep the same day again. Its window is still a whole day, so every pin still flips once.
  */
-import newMoon from "~/slides/give-me-temporal/new-moon.json";
+import { play, type Frames } from "./frames";
+import type { DeckGmt } from "./gmt-loader";
+import { firstTransition } from "./transition-ms";
 
-/** A named lapse: the zones whose pins carry dates, and the window. */
+/** A lapse: the zones whose pins carry dates, and the window. */
 export interface LapseDef {
   zones: readonly string[];
   /** A window centred on this zone's transition in these local years, instead of the next 24 hours. */
@@ -25,34 +27,6 @@ export interface LapseDef {
   /** How long the lapse takes on stage; `LAPSE_MS` when absent. */
   durationMs?: number;
 }
-
-/** The lapses a slide or build may name with `lapse`. */
-export const LAPSES = {
-  /** Galicia keeps Madrid's clock. */
-  abort: { zones: ["Europe/Madrid"] },
-  tehran: { zones: ["Asia/Tehran"] },
-  tokyo: { zones: ["Asia/Tokyo"] },
-  kolkata: { zones: ["Asia/Kolkata"] },
-  shanghai: { zones: ["Asia/Shanghai"] },
-  /** Manila's calendar jump at the end of 1844, found in the zone's data. */
-  manila: {
-    zones: ["Asia/Manila"],
-    around: { zone: "Asia/Manila", years: [1844, 1845] },
-  },
-  /** The sun runs the two hours up to February 2027's new moon, Shanghai's clock stopping on it. */
-  newmoon: {
-    zones: ["Asia/Shanghai"],
-    endsAt: { utc: newMoon.utc, hours: 2 },
-    durationMs: 8000,
-  },
-  /** The sun alone, no zone dated. */
-  sun: { zones: [] },
-} as const satisfies Record<string, LapseDef>;
-
-export type LapseName = keyof typeof LAPSES;
-
-export const isLapseName = (name: string): name is LapseName =>
-  Object.hasOwn(LAPSES, name);
 
 /** How long a day-long lapse takes on stage: slow enough to read as time passing. */
 export const LAPSE_MS = 24000;
@@ -73,38 +47,23 @@ export interface LapseTools {
   jumpMs(zone: string, years: readonly number[]): number | null;
 }
 
-export async function loadLapseTools(): Promise<LapseTools> {
-  const [get, unix, zonedGet, zonedConvert, calc, utcConvert] =
-    await Promise.all([
-      import("@northguild/gmt/unix/get"),
-      import("@northguild/gmt/unix/convert"),
-      import("@northguild/gmt/zoned/get"),
-      import("@northguild/gmt/zoned/convert"),
-      import("@northguild/gmt/unix/calculate"),
-      import("@northguild/gmt/utc/convert"),
-    ]);
+export function lapseToolsFrom(gmt: DeckGmt): LapseTools {
   return {
-    nowMs: () => get.getUnixNow(),
-    addHours: (ms, hours) => calc.addUnix(ms, { hours }),
-    stamp: (zone, ms) => unix.convertUnixToZoned(ms, zone).slice(0, 16),
-    utcMs: (iso) => utcConvert.convertUtcToUnix(iso),
-    jumpMs(zone, years) {
-      for (const year of years) {
-        const first = zonedGet.getDstTransitions(zone, year)[0];
-        if (!first) continue;
-        // A transition's instant ends in `Z`; the converter reads the offset form.
-        const ms = zonedConvert.convertZonedToUnix(
-          first.instant.replace(/Z$/, "+00:00[UTC]"),
-        );
-        if (ms !== null) return ms;
-      }
-      return null;
-    },
+    nowMs: () => gmt.unixGet.getUnixNow(),
+    addHours: (ms, hours) => gmt.unixCalculate.addUnix(ms, { hours }),
+    stamp: (zone, ms) =>
+      gmt.unixConvert.convertUnixToZoned(ms, zone).slice(0, 16),
+    utcMs: (iso) => gmt.utcConvert.convertUtcToUnix(iso),
+    jumpMs: (zone, years) =>
+      firstTransition(zone, years, {
+        getDstTransitions: gmt.zonedGet.getDstTransitions,
+        convertZonedToUnix: gmt.zonedConvert.convertZonedToUnix,
+      })?.ms ?? null,
   };
 }
 
-export interface LapsePlan {
-  name: LapseName;
+interface LapsePlan {
+  name: string;
   zones: readonly string[];
   fromMs: number;
   toMs: number;
@@ -114,28 +73,25 @@ export interface LapsePlan {
 }
 
 /** Where a day-long lapse that follows another takes over: the instant on screen and its speed. */
-export interface LapseCarry {
+interface LapseCarry {
   ms: number;
   /** Sun milliseconds per stage millisecond. */
   rate: number;
 }
 
 /** Whether a lapse runs a day from now, rather than a window fixed in history. */
-export const isDayLong = (name: LapseName): boolean => {
-  const def: LapseDef = LAPSES[name];
-  return !def.endsAt && !def.around;
-};
+export const isDayLong = (def: LapseDef): boolean => !def.endsAt && !def.around;
 
 /**
  * The window for a lapse, or `null` when gmt cannot give one (a zone with no recorded jump). A
  * day-long lapse given `carry` starts there instead of now.
  */
 export function planLapse(
-  name: LapseName,
+  name: string,
+  def: LapseDef,
   tools: LapseTools,
   carry: LapseCarry | null = null,
 ): LapsePlan | null {
-  const def: LapseDef = LAPSES[name];
   const base = {
     name,
     zones: def.zones,
@@ -209,13 +165,8 @@ export function rateAt(plan: LapsePlan, t: number): number {
 }
 
 /** The instant a lapse stops on, or `null` when it has no fixed end (or gmt rejects it). */
-export const lapseEndMs = (
-  name: LapseName,
-  tools: LapseTools,
-): number | null => {
-  const def: LapseDef = LAPSES[name];
-  return def.endsAt ? tools.utcMs(def.endsAt.utc) : null;
-};
+export const lapseEndMs = (def: LapseDef, tools: LapseTools): number | null =>
+  def.endsAt ? tools.utcMs(def.endsAt.utc) : null;
 
 /** What a frame of a lapse says. */
 export interface LapseFrame {
@@ -254,11 +205,6 @@ export function lapseLabel(city: string, stamp: string): string {
 export const dateOf = (stamp: string): string =>
   /^\d{4}-\d\d-\d\d/.test(stamp) ? stamp.slice(0, 10) : "";
 
-interface Frames {
-  requestAnimationFrame(callback: (stamp: number) => void): number;
-  cancelAnimationFrame(handle: number): void;
-}
-
 /**
  * Plays a plan, one frame per animation frame, and calls `onFrame` for each. With `reduced` it
  * calls once with the end state. Returns a function that stops it. The browser's frame stamp
@@ -275,21 +221,8 @@ export function runLapse(o: {
     o.onFrame(frameAt(o.plan, o.tools, 1));
     return () => {};
   }
-  let handle = 0;
-  let start: number | null = null;
-  let stopped = false;
-  const step = (stamp: number): void => {
-    if (stopped) return;
-    start ??= stamp;
-    const t = Math.min(1, (stamp - start) / o.plan.durationMs);
-    o.onFrame(frameAt(o.plan, o.tools, t));
-    if (t < 1) handle = o.win.requestAnimationFrame(step);
-  };
   // The first frame shows the start, so a new lapse never opens on the last one's end.
-  o.onFrame(frameAt(o.plan, o.tools, 0));
-  handle = o.win.requestAnimationFrame(step);
-  return () => {
-    stopped = true;
-    o.win.cancelAnimationFrame(handle);
-  };
+  return play(o.win, o.plan.durationMs, (t) =>
+    o.onFrame(frameAt(o.plan, o.tools, t)),
+  );
 }

@@ -1,0 +1,73 @@
+/*
+ * The question, the agent's code and its result as quotes (`components/AgentQuote.astro`,
+ * `AgentTable.astro`). Imported by `Deck0.astro`.
+ */
+
+.gmt-quote {
+  margin: 0;
+  font-size: var(--gmt-text-sm);
+}
+
+/* On the stage a quote's type is set in container units, in the text column. */
+html[data-deck] .gmt-quote {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  padding: 0.8cqi 1.2cqi;
+  font-size: max(0.75rem, 1.7cqi);
+  line-height: 1.3;
+}
+
+html[data-deck] .gmt-quote .expressive-code {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  font-size: var(--gmt-deck-text-md);
+}
+
+/*
+ * The answer slide stacks the question, the agent's code and its result in the text column, so it
+ * sets a size smaller than the other panels, and the code sits straight in the quote's panel.
+ */
+html[data-deck]
+  :is([data-quote="question"], [data-quote="recorded"], [data-quote="result"]) {
+  font-size: var(--gmt-deck-text-md);
+}
+
+html[data-deck] [data-quote="recorded"] blockquote {
+  padding: 0;
+  border: 0;
+}
+
+/* Expressive Code sizes its block from its own variables; the stage sets them in container units,
+   with the panel's tighter lines, so the question, the code and the result share the column. */
+html[data-deck] [data-quote="recorded"] .expressive-code {
+  --ec-codeFontSize: max(0.75rem, 1.25cqi);
+  --ec-codeLineHt: 1.35;
+  --ec-codePadBlk: 0.6cqi;
+  --ec-codePadInl: 1cqi;
+}
+
+html[data-deck] [data-quote="recorded"] figcaption {
+  margin-block-start: 0.6cqi;
+}
+
+html[data-deck] .gmt-slide-body [data-quote="result"] p {
+  margin-block: 0;
+}
+
+html[data-deck] .gmt-slide-body [data-quote="result"] p + p {
+  margin-block-start: 0.3cqi;
+}
+
+.gmt-quote[data-quote="question"] {
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-quote[data-quote="result"] output {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gmt-quote[data-quote="result"] p {
+  margin: 0;
+}

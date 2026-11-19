@@ -12,7 +12,7 @@
 import type { DeckAction } from "./keys";
 
 /** Which renderer the deck window's globe is on, as the deck reports it. */
-export type DeckRenderer = "webgpu" | "canvas2d" | "sky" | "pending";
+type DeckRenderer = "webgpu" | "canvas2d" | "sky" | "pending";
 
 /** What the readiness check reads from the deck window besides its place in the talk. */
 export interface DeckEnv {
@@ -36,7 +36,7 @@ export interface StateMessage {
 }
 
 /** The actions a presenter may ask of the deck window. Fullscreen needs the deck's own click. */
-export const STEP_ACTIONS = [
+const STEP_ACTIONS = [
   "next",
   "prev",
   "nextSlide",
@@ -146,7 +146,7 @@ export function parseMessage(data: unknown): SyncMessage | null {
   }
 }
 
-export interface SyncChannel {
+interface SyncChannel {
   post(message: SyncMessage): void;
 }
 

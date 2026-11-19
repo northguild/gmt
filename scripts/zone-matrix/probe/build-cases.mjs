@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds `cases.json`: every case of every experiment with its expected answer.
+ * Builds the cases: every case of every experiment with its expected answer.
  *
  * The answer comes from the Temporal specification, asked twice: `@js-temporal/polyfill` and the
  * Temporal built into Node 26. A case is kept only when both give the same string; the others are
@@ -9,11 +9,14 @@
  *   cd scripts/zone-matrix && pnpm install --ignore-workspace
  *   fnm exec --using=26 -- node probe/build-cases.mjs
  */
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { Temporal as Polyfill } from "@js-temporal/polyfill";
 import { EXPERIMENTS } from "./experiments.mjs";
 import { versionOf } from "./versions.mjs";
 import { temporalOps } from "./temporal-ops.mjs";
+
+/** Where `run.mjs` writes the cases for `child.mjs`; the folder is ignored by git. */
+export const CASES_PATH = new URL("../.work/cases.json", import.meta.url);
 
 const answer = (ops, c) => {
   try {
@@ -63,15 +66,10 @@ export function buildCases(native) {
   return { experiments, dropped };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  if (typeof globalThis.Temporal === "undefined") {
-    console.error(
-      "Run this on Node 26: its built-in Temporal is the second opinion.",
-    );
-    process.exit(2);
-  }
-  const { experiments, dropped } = buildCases(globalThis.Temporal);
-  const out = {
+/** The cases with who answered them: what `child.mjs` reads. */
+export function casesFile(native) {
+  const { experiments, dropped } = buildCases(native);
+  return {
     answeredBy: {
       polyfill: versionOf("@js-temporal/polyfill"),
       native: process.version,
@@ -80,11 +78,28 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     experiments,
     dropped,
   };
-  writeFileSync(
-    new URL("./cases.json", import.meta.url),
-    `${JSON.stringify(out)}\n`,
-  );
-  for (const e of experiments) console.log(`${e.id}: ${e.cases.length} cases`);
-  console.log(`dropped (the two Temporals disagree): ${dropped.length}`);
-  for (const d of dropped.slice(0, 20)) console.log(" ", JSON.stringify(d));
+}
+
+/** Writes the cases file under `.work/` and returns its text, which keys the probe's cache. */
+export function writeCases(cases) {
+  const text = `${JSON.stringify(cases)}\n`;
+  mkdirSync(new URL(".", CASES_PATH), { recursive: true });
+  writeFileSync(CASES_PATH, text);
+  return text;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  if (typeof globalThis.Temporal === "undefined") {
+    console.error(
+      "Run this on Node 26: its built-in Temporal is the second opinion.",
+    );
+    process.exit(2);
+  }
+  const cases = casesFile(globalThis.Temporal);
+  writeCases(cases);
+  for (const e of cases.experiments)
+    console.log(`${e.id}: ${e.cases.length} cases`);
+  console.log(`dropped (the two Temporals disagree): ${cases.dropped.length}`);
+  for (const d of cases.dropped.slice(0, 20))
+    console.log(" ", JSON.stringify(d));
 }

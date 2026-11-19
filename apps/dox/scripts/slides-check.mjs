@@ -53,7 +53,8 @@ import {
 const GATE = "slides-check";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(HERE, "..", "dist");
-const PAGES_DIR = path.join(HERE, "..", "src", "pages", "slides");
+// One folder per deck, `src/slides/<slug>/` (`decks.test.ts` keeps it in step with `DECKS`).
+const DECKS_DIR = path.join(HERE, "..", "src", "slides");
 const SIZES = [
   { width: 1280, height: 720 },
   { width: 1920, height: 1080 },
@@ -63,7 +64,7 @@ const ENGINES = ["chromium", "firefox", "webkit"];
 const STAGE = "[data-deck-stage]";
 
 const routes = deckRoutes(
-  readdirSync(PAGES_DIR, { withFileTypes: true })
+  readdirSync(DECKS_DIR, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name),
 );
@@ -719,34 +720,16 @@ async function checkArticle(browserName, browser, pagePath, size) {
 }
 
 const TALK = "/slides/give-me-temporal/";
-const RECORDED = path.join(
-  HERE,
-  "..",
-  "src",
-  "slides",
-  "give-me-temporal",
-  "recorded",
-);
 const TRANSCRIPT_FILE =
   "apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json";
 const TRANSCRIPT_COMMAND =
   "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs";
 
-/** Every file under a folder, for the secret grep. */
-function filesUnder(dir) {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory()
-      ? filesUnder(path.join(dir, e.name))
-      : [path.join(dir, e.name)],
-  );
-}
-
 /**
  * What only Deck 0 promises: the owner's transcript is in, the live demos play recordings and say
- * so, the page tool shows both JSON panels, the deck page registers its three tools, the spares
- * come after `thanks` and outside the pace plan, the Moon build sits on `day-off`, and no dev
- * secret reached `dist/` or the recordings. Runs once, at the first size.
+ * so, the page tool shows both JSON panels, the deck page registers its three tools and the Moon
+ * build sits on `day-off`. Runs once, at the first size. The slide order, the spares and the dev
+ * key in `dist/` and the recordings are read once from the built files by `slides-built.test.ts`.
  */
 async function checkDeckContent(browserName, browser, pagePath, size) {
   const at = (rule, message) =>
@@ -783,41 +766,27 @@ async function checkDeckContent(browserName, browser, pagePath, size) {
         `${name} is not ready: fill ${TRANSCRIPT_FILE}, then record the run with \`${TRANSCRIPT_COMMAND}\``,
       );
 
-    const order = await page.evaluate(() =>
-      [...document.querySelectorAll("[data-slide]")].map((s) => ({
-        id: s.id,
-        spare: s.hasAttribute("data-spare"),
-        minutes: s.getAttribute("data-minutes"),
-      })),
-    );
-    const lastMain = order.filter((s) => !s.spare).at(-1);
-    const firstSpare = order.findIndex((s) => s.spare);
-    const qa = order.findIndex((s) => s.id === "qa");
-    if (lastMain?.id !== "thanks")
-      at("spare-order", "`thanks` is not the last main slide");
-    if (qa < 0 || order[qa + 1]?.id !== "thanks")
-      at("spare-order", "`qa` does not come right before `thanks`");
-    if (firstSpare < 0 || order.slice(0, firstSpare).some((s) => s.spare))
-      at("spare-order", "the spare slides do not follow `thanks`");
-    for (const s of order.filter((o) => o.spare))
-      if (s.minutes !== null)
-        at("spare-minutes", `spare slide ${s.id} sits in the pace plan`);
-    if (order.slice(firstSpare).some((s) => !s.spare))
-      at("spare-order", "a main slide comes after a spare slide");
-
     const moon = await page
       .locator('#day-off [data-build][data-place="moon"]')
       .count();
     if (moon === 0)
       at("moon-step", "day-off has no build that carries the Moon place");
 
-    // Offline, every live demo plays its recording and says so.
-    for (const id of ["ask-dox", "qa"]) {
-      await page.evaluate((i) => {
-        document.getElementById(i)?.scrollIntoView();
+    // Offline, every live demo plays its recording and says so. A Dox slide plays only what the
+    // presenter asks, so the gate goes to the slide by its deep link and clicks its first ready
+    // question, as the presenter does.
+    const goTo = (id) =>
+      page.evaluate((i) => {
+        location.hash = `#${i}`;
       }, id);
+    for (const id of ["ask-dox", "qa"]) {
+      await goTo(id);
       const source = page.locator(`#${id} [data-slot="source"]`).first();
       try {
+        await page
+          .locator(`#${id} .gmt-hive-example`)
+          .first()
+          .click({ timeout: 15000 });
         await source.waitFor({ state: "attached", timeout: 15000 });
         await page.waitForFunction(
           (el) => /Recorded/.test(el?.textContent ?? ""),
@@ -833,9 +802,7 @@ async function checkDeckContent(browserName, browser, pagePath, size) {
     }
 
     // The page tool runs as the slide shows: Dox's turn lists both Easters, and the receipt opens the grids.
-    await page.evaluate(() => {
-      document.getElementById("page-tools")?.scrollIntoView();
-    });
+    await goTo("page-tools");
     try {
       await page.waitForFunction(
         () => {
@@ -872,25 +839,6 @@ async function checkDeckContent(browserName, browser, pagePath, size) {
     );
   } finally {
     await context.close().catch(() => {});
-  }
-
-  const secrets = ["DOX_DEV_KEY"];
-  if (process.env.DOX_DEV_KEY) secrets.push(process.env.DOX_DEV_KEY);
-  for (const file of [...filesUnder(DIST), ...filesUnder(RECORDED)]) {
-    let text;
-    try {
-      text = readFileSync(file, "utf8");
-    } catch {
-      continue;
-    }
-    for (const secret of secrets)
-      if (text.includes(secret)) {
-        at(
-          "dev-secret",
-          `${path.relative(path.join(HERE, ".."), file)} holds ${secret === "DOX_DEV_KEY" ? "the name DOX_DEV_KEY" : "the dev key's value"}`,
-        );
-        break;
-      }
   }
 }
 

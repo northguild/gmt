@@ -1,0 +1,87 @@
+/*
+ * `DeckTable.astro`: a table on the stage, set on an opaque plate so the figures behind it never show
+ * through the text. A row of a typed table is unseen, typing its code, or done (`data-state`).
+ */
+.gmt-deck-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--gmt-text-sm);
+}
+
+.gmt-deck-table caption {
+  text-align: start;
+  color: var(--gmt-ice-dim);
+  padding-block: 0 var(--gmt-space-2);
+  padding-inline: var(--gmt-space-2);
+}
+
+.gmt-deck-table th,
+.gmt-deck-table td {
+  text-align: start;
+  vertical-align: top;
+  padding: var(--gmt-space-1) var(--gmt-space-2);
+  border-block-end: 1px solid var(--gmt-hairline);
+}
+
+/* On the stage the type is set in container units, and the plate is opaque. */
+html[data-deck] .gmt-deck-table {
+  inline-size: 100%;
+  min-inline-size: 0;
+  font-size: max(0.75rem, 1.3cqi);
+  line-height: 1.3;
+  background: var(--gmt-surface-widget);
+  border-collapse: collapse;
+}
+
+html[data-deck] .gmt-deck-table th,
+html[data-deck] .gmt-deck-table td {
+  padding: 0.3cqi 1cqi;
+}
+
+/* The caption lines up with the cells, clear of the plate's bevelled corner. */
+html[data-deck] .gmt-deck-table caption {
+  padding-inline: 1cqi;
+}
+
+/* A table whose rows all arrive with the slide: a row is unseen, typing its code, or done. */
+.gmt-deck-table tr[data-state="hidden"] {
+  visibility: hidden;
+}
+
+.gmt-deck-table tr[data-state="typing"] td + td {
+  visibility: hidden;
+}
+
+/*
+ * The typed table's columns are fixed, so they do not grow as the code types in: the code wraps
+ * inside its column instead of widening it.
+ */
+.gmt-deck-table[data-visual="rows"] {
+  table-layout: fixed;
+}
+
+/* The code and the reason get the room; the result is short. */
+.gmt-deck-table[data-visual="rows"] th:first-child {
+  inline-size: 40%;
+}
+
+.gmt-deck-table[data-visual="rows"] th:last-child {
+  inline-size: 38%;
+}
+
+.gmt-deck-table[data-visual="rows"] td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* A line of code breaks between its words, never inside a string. */
+.gmt-deck-table[data-visual="rows"] td code {
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+/* The typed table sets a little smaller so its five rows fit the left two thirds. */
+html[data-deck] .gmt-deck-table[data-visual="rows"] {
+  font-size: var(--gmt-deck-text-sm);
+}

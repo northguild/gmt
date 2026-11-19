@@ -143,6 +143,13 @@ export interface DoxChatProps {
   onEmptyChange?: (empty: boolean) => void;
   /** Rendered first inside the composer, above the input. */
   aboveComposer?: ReactNode;
+  /** What a host that embeds the chat in something else (the deck's slides) changes. `/dox`
+   *  passes none, and the chat is as it was. */
+  host?: ChatHost;
+}
+
+/** The ways an embedding host (a slide's frame) differs from `/dox`; every field is optional. */
+export interface ChatHost {
   /**
    * Builds the chat's transport in place of `/api/chat`'s own. `brain` reads the brain picked in
    * the control bar. Called once, when the chat mounts. The deck's slides pass one that answers
@@ -152,10 +159,6 @@ export interface DoxChatProps {
   /** Whether the composer is offered. `false` is for a host that asks the questions itself (a
    *  slide with one scripted call); the default keeps the field. */
   typing?: boolean;
-  /** A short host (a slide's frame): the transcript, the empty state and the composer sit
-   *  tighter, so the turns and the hub stay in view where the site's spacing would scroll them
-   *  out. */
-  compact?: boolean;
   /** Whether an AI model writes the answers. `false` (a page tool's call, run in the page) drops
    *  the note that says models get things wrong; the default keeps it. */
   modelAnswers?: boolean;
@@ -169,7 +172,7 @@ export interface DoxChatProps {
 
 /** A brain pick held by the host: the reader's explicit choice, or null for whichever has
  *  budget. */
-export interface BrainPick {
+interface BrainPick {
   id: string | null;
   onSelect: (brainId: string | null) => void;
 }
@@ -184,16 +187,18 @@ export function DoxChat({
   onUsed,
   onUsage,
   onWidget,
-  typing = true,
-  compact = false,
-  modelAnswers = true,
   ref,
   onEmptyChange,
   aboveComposer,
-  createTransport,
-  brainPick,
-  brainControls = true,
+  host,
 }: DoxChatProps = {}) {
+  const {
+    createTransport,
+    typing = true,
+    modelAnswers = true,
+    brainPick,
+    brainControls = true,
+  } = host ?? {};
   const [warning, setWarning] = useState<ChatWarningState | null>(null);
   /** The Worker's latest progress line while it chooses a brain; null shows
    * the default "Searching corpus…". */
@@ -559,10 +564,7 @@ export function DoxChat({
     // wayfinding strip, the lattice) belongs to the host — `DoxPage` for
     // `/dox`, the dock's own panel in phase 2 — so this renders identically in
     // both without knowing which one it's in.
-    <div
-      className="gmt-ask gmt-hive-chat"
-      data-compact={compact ? "" : undefined}
-    >
+    <div className="gmt-ask gmt-hive-chat">
       {/* No wrapper div around `Conversation`. `StickToBottom` renders its own
           scroll element *inside* itself and gives this root `overflow-y:
           hidden` — so an outer `overflow-y: auto` box made the page scroll

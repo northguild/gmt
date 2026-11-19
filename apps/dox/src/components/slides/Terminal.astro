@@ -12,7 +12,7 @@ interface Props {
 const { command, output, expected } = Astro.props;
 ---
 
-<div class="gmt-terminal" data-visual="terminal" role="group" aria-label="Recorded terminal session">
+<div class="gmt-terminal gmt-deck-panel" data-visual="terminal" role="group" aria-label="Recorded terminal session">
   <p class="gmt-terminal-line">
     <span aria-hidden="true">$ </span><span aria-hidden="true" data-type data-text={command}>{command}</span><span class="gmt-sr-only">{command}</span><span class="gmt-terminal-cursor" aria-hidden="true"></span>
   </p>

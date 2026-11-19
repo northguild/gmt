@@ -29,7 +29,6 @@ export {
   CLOCK_OUTER,
   CLOCK_VIEWBOX,
   handAngles,
-  type CrystalClockDial,
   type CrystalClockHighlight,
   type CrystalClockOptions,
   type CrystalClockState,
@@ -51,7 +50,7 @@ export function updateCrystalClock(
     setHtml(host, html`${crystalClock(opts)}`);
     return;
   }
-  const { hourDeg, minuteDeg } = handAngles(opts.hour, opts.minute, opts.dial);
+  const { hourDeg, minuteDeg } = handAngles(opts.hour, opts.minute);
   const aim = (kind: "hour" | "minute", deg: number) => {
     const hand = svg.querySelector(`[data-hand="${kind}"]`);
     if (hand === null) return;

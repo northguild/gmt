@@ -8,13 +8,10 @@ import { arcDegrees, labelOf, resolvePlace, type PlacePoint } from "./places";
 /** How many shards become pins. */
 export const WALL_PINS = 12;
 
-type ZonedNow = (zone: string, options?: { smallestUnit?: "minute" }) => string;
-
-let zoned: Promise<ZonedNow> | undefined;
-
-/** gmt's `getZonedNow`, imported on first use, so the polyfill behind it stays off first paint. */
-export const loadZonedNow = (): Promise<ZonedNow> =>
-  (zoned ??= import("@northguild/gmt/zoned/get").then((m) => m.getZonedNow));
+export type ZonedNow = (
+  zone: string,
+  options?: { smallestUnit?: "minute" },
+) => string;
 
 /** The `count` zones nearest a point on the Earth, nearest first. Ties keep the list's order. */
 export function nearestZones(

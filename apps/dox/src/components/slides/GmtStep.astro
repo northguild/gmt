@@ -46,7 +46,7 @@ const { node, icu } = process.versions;
   <ul class="gmt-step-rows">
     {
       rows.map((r) => (
-        <li class="gmt-step-row" data-unguarded={r.unguarded ? "" : undefined}>
+        <li class="gmt-step-row gmt-deck-panel" data-unguarded={r.unguarded ? "" : undefined}>
           <p class="gmt-step-line">
             <a href={r.url}>{r.ref}</a>
             <span class="gmt-step-badge">{r.badge.text}</span>

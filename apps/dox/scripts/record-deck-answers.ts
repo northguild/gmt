@@ -1,10 +1,11 @@
 /**
- * Records Dox's answers for Deck 0 (DOX-G12, #548): the running question on `ask-dox` and the three
- * ready questions of the audience FAQ on `thanks`. The deck plays each one back with no network
- * when the live answer is slow or fails (`src/lib/slides/replay.ts`).
+ * Records Dox's answers for one deck (DOX-G12, #548): its running question and the ready questions
+ * of its audience panel, both read from the deck's `src/slides/<slug>/live-data.ts` (`LIVE`). The
+ * deck plays each one back with no network when the live answer is slow or fails
+ * (`src/lib/slides/replay.ts`).
  *
  * Each question goes to the Worker's `/gmt/api/chat` once, as the deck sends it, and the raw
- * event stream is saved with its timing under `src/slides/give-me-temporal/recorded/<id>.json`.
+ * event stream is saved with its timing under the deck's `recordedDir`, as `<id>.json`.
  * It prints the brain that answered, the gmt tools the model called and the answer's text, so a
  * wrong or tool-less answer is seen before it is committed. **It spends real quota**: on
  * `wrangler dev` every call draws on the account's Neurons, like `probe-brains.ts`. Run it once.
@@ -15,22 +16,17 @@
  *
  * Usage, from apps/dox, with the Worker running (`--base` defaults to `wrangler dev`):
  *
- *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts
- *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts --only faq-samoa-skip
+ *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts --deck give-me-temporal
+ *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts --deck give-me-temporal --only faq-samoa-skip
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { getUtcNow } from "@northguild/gmt/utc/get";
 import { createCapture, findSecret } from "../src/lib/slides/recording-capture";
-import {
-  DECK_PAGE_CONTEXT,
-  FALLBACK_RUNNING_QUESTION,
-  FAQ,
-  RECORDED_DIR,
-  RUNNING_QUESTION_ID,
-} from "../src/lib/slides/live-demos";
+import type { DeckLiveData } from "../src/lib/slides/live-data";
+import { DECKS } from "../src/slides/decks";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, "..");
@@ -38,10 +34,23 @@ const appRoot = resolve(here, "..");
 const { values } = parseArgs({
   options: {
     base: { type: "string", default: "http://localhost:8787/gmt" },
+    deck: { type: "string" },
     only: { type: "string" },
     model: { type: "string" },
   },
 });
+
+const slug = values.deck;
+if (!DECKS.some((deck) => deck.slug === slug)) {
+  console.error(
+    `Name the deck with --deck, one of: ${DECKS.map((deck) => deck.slug).join(", ")}.`,
+  );
+  process.exit(1);
+}
+// Every deck keeps its live panels' questions in its own folder (`src/slides/<slug>/live-data.ts`).
+const { LIVE } = (await import(`../src/slides/${slug}/live-data.ts`)) as {
+  LIVE: DeckLiveData;
+};
 
 const key = process.env["DOX_DEV_KEY"];
 if (!key) {
@@ -51,20 +60,6 @@ if (!key) {
   process.exit(1);
 }
 const base = values.base!.replace(/\/$/, "");
-
-/** The running question as the slide shows it: the owner's transcript, or the fallback. */
-function runningQuestion(): string {
-  const file = resolve(
-    appRoot,
-    "src/slides/give-me-temporal/quotes/agent-answer.json",
-  );
-  const question = (
-    JSON.parse(readFileSync(file, "utf8")) as { question?: string }
-  ).question;
-  return typeof question === "string" && question.trim() !== ""
-    ? question
-    : FALLBACK_RUNNING_QUESTION;
-}
 
 async function devCookie(): Promise<string> {
   // `/gmt/api/*` is never a static asset, so it always reaches the Worker's `?key=` check.
@@ -94,7 +89,7 @@ async function record(id: string, question: string, cookie: string) {
           parts: [{ type: "text", text: question }],
         },
       ],
-      pageContext: DECK_PAGE_CONTEXT,
+      pageContext: LIVE.pageContext,
       ...(values.model ? { model: values.model } : {}),
     }),
   });
@@ -127,10 +122,9 @@ async function record(id: string, question: string, cookie: string) {
   };
 }
 
-const jobs = [
-  { id: RUNNING_QUESTION_ID, question: runningQuestion() },
-  ...FAQ.map((item) => ({ id: item.id, question: item.question })),
-].filter((job) => values.only === undefined || job.id === values.only);
+const jobs = [LIVE.running, ...LIVE.faq].filter(
+  (job) => values.only === undefined || job.id === values.only,
+);
 
 if (jobs.length === 0) {
   console.error(`No question has the id ${values.only}.`);
@@ -138,7 +132,7 @@ if (jobs.length === 0) {
 }
 
 const cookie = await devCookie();
-const outDir = resolve(appRoot, RECORDED_DIR);
+const outDir = resolve(appRoot, LIVE.recordedDir);
 mkdirSync(outDir, { recursive: true });
 
 for (const job of jobs) {

@@ -7,7 +7,7 @@ import { addDate, getDaysInMonth } from "@northguild/gmt/plain/calculate";
 import { formatDate } from "@northguild/gmt/plain/format";
 import { parseDayOfWeekFromDate } from "@northguild/gmt/plain/parse";
 
-export interface MonthGrid {
+interface MonthGrid {
   /** "February 2027". */
   title: string;
   /** The month's name alone, "February". */
@@ -49,7 +49,7 @@ export function monthGrid(yearMonth: string): MonthGrid {
   };
 }
 
-export interface Leaf {
+interface Leaf {
   /** "Dec 1844". */
   head: string;
   /** "30". */
@@ -67,7 +67,7 @@ export function leaf(date: string): Leaf {
   return { head, day, weekday };
 }
 
-export interface FlapTile {
+interface FlapTile {
   ch: string;
   /** The two rows show different characters here. */
   diff: boolean;

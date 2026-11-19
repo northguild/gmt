@@ -33,6 +33,8 @@ function open(
   } = {},
 ) {
   session = createDeckSession({
+    pageContext: "/slides/some-deck/",
+    zone: "Europe/Helsinki",
     fetch: doFetch,
     onSource: (state) => sources.push(state),
     ...extra,
@@ -82,7 +84,7 @@ const withUsage: Recording = {
 
 /* The label loads the library once; do it before time is faked so the replay starts at once. */
 beforeAll(async () => {
-  await formatRecordedLabel(recording);
+  await formatRecordedLabel(recording, "Europe/Helsinki");
 });
 
 beforeEach(() => {
@@ -140,7 +142,7 @@ describe("a typed question", () => {
     const transport = open(doFetch);
     await played(await send(transport), 100);
     const body = JSON.parse(String(doFetch.mock.calls[0]?.[1]?.body));
-    expect(body.pageContext).toBe("/slides/give-me-temporal/");
+    expect(body.pageContext).toBe("/slides/some-deck/");
     expect(body.model).toBe("gemma");
   });
 });

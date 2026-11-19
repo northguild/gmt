@@ -1,0 +1,120 @@
+/* `QrCode.astro`: the code on its plate and the address under it. */
+
+.gmt-qr {
+  display: grid;
+  gap: 0.8cqi;
+  justify-items: center;
+  margin: 0;
+  font-size: var(--gmt-deck-text-sm);
+}
+
+/*
+ * The plate is the box's own opaque background, so the stars and the planet never show through the
+ * quiet zone. Ice modules on the surface (dark on light in the light theme) and cyan eyes and logo,
+ * each at least 7:1 on the plate. The glow is on the outer `<svg>`, so its length is CSS pixels and
+ * not modules.
+ */
+.gmt-qr-code {
+  inline-size: 30cqb;
+  min-inline-size: 8rem;
+  aspect-ratio: 1;
+  background: var(--gmt-surface);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+}
+
+.gmt-qr-code > svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  filter: drop-shadow(0 0 1.5px color(from var(--gmt-cyan) srgb r g b / 40%));
+}
+
+.gmt-qr-modules {
+  fill: var(--gmt-ice);
+}
+
+.gmt-qr-eyes,
+.gmt-qr-logo[data-logo="linkedin"] path {
+  fill: var(--gmt-cyan-ink);
+}
+
+/* The NorthGuild shield: the header mark's shape, drawn bolder at this size. */
+.gmt-qr-logo :is(.ng-mark-pt, .ng-mark-pb, .ng-mark-st, .ng-mark-sb) {
+  stop-color: var(--gmt-cyan-ink);
+}
+
+.gmt-qr-logo .ng-mark-pt {
+  stop-opacity: 0.22;
+}
+
+.gmt-qr-logo .ng-mark-pb {
+  stop-opacity: 0.06;
+}
+
+.gmt-qr-logo .ng-mark-st {
+  stop-opacity: 0.14;
+}
+
+.gmt-qr-logo .ng-mark-sb {
+  stop-opacity: 0;
+}
+
+.gmt-qr-logo :is(.ng-mark-edge, .ng-mark-ridge, .ng-mark-glyph) {
+  fill: none;
+  stroke: var(--gmt-cyan-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gmt-qr-logo .ng-mark-edge {
+  stroke-width: 44;
+}
+
+.gmt-qr-logo .ng-mark-ridge {
+  stroke-width: 28;
+  stroke-opacity: 0.7;
+}
+
+.gmt-qr-logo .ng-mark-glyph {
+  stroke-width: 64;
+}
+
+/* Forced colours leave SVG paint alone, so the code takes the system pair here. */
+@media (forced-colors: active) {
+  .gmt-qr-code {
+    forced-color-adjust: none;
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .gmt-qr-code > svg {
+    filter: none;
+  }
+
+  .gmt-qr-modules,
+  .gmt-qr-eyes,
+  .gmt-qr-logo[data-logo="linkedin"] path {
+    fill: CanvasText;
+  }
+
+  .gmt-qr-logo :is(.ng-mark-pane, .ng-mark-sheen) {
+    fill: none;
+  }
+
+  .gmt-qr-logo :is(.ng-mark-edge, .ng-mark-ridge, .ng-mark-glyph) {
+    stroke: CanvasText;
+  }
+}
+
+.gmt-qr figcaption {
+  display: grid;
+  justify-items: center;
+  gap: 0.2cqi;
+}
+
+/* An address is one word to the reader: it never breaks inside, so the caption shows it whole. */
+.gmt-qr figcaption a {
+  white-space: nowrap;
+}

@@ -9,7 +9,7 @@
  */
 
 /** The secret phrase: the library's package name. */
-export const UNLOCK_PHRASE = "@northguild/gmt";
+const UNLOCK_PHRASE = "@northguild/gmt";
 
 /**
  * The local-storage entry, and its value, that mark the slides unlocked. The deck gates set them

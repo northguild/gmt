@@ -6,6 +6,7 @@
  * here only, and the per-tracker and state numbers as a table, which stays for screen readers.
  */
 import { encodeSteps, planFilingPins } from "~/lib/slides/filing-pins";
+import DeckTable from "./DeckTable.astro";
 import "./calendar-figures.css";
 import { filingGroups, filingKey, filings, filingsByState, filingsForGroup } from "~/data/upstream-filings";
 
@@ -26,17 +27,11 @@ const byState = (state: string) => filingsByState.find((r) => r.label === state)
   <p class="gmt-pins-split">
     {plan.pinned} sit at the zone their report names; {plan.unpinned} name none and are counted here only.
   </p>
-  <table class="gmt-deck-table">
-    <caption>{plan.total} filings, by tracker and state</caption>
-    <thead>
-      <tr><th scope="col">Tracker</th><th scope="col">Filings</th></tr>
-    </thead>
-    <tbody>
-      {filingGroups.map((g) => (
-        <tr><th scope="row">{g.name}</th><td>{filingsForGroup(g.id).length}</td></tr>
-      ))}
-      <tr><th scope="row">Open</th><td>{byState("open")}</td></tr>
-      <tr><th scope="row">Closed</th><td>{byState("closed")}</td></tr>
-    </tbody>
-  </table>
+  <DeckTable caption={`${plan.total} filings, by tracker and state`} columns={["Tracker", "Filings"]}>
+    {filingGroups.map((g) => (
+      <tr><th scope="row">{g.name}</th><td>{filingsForGroup(g.id).length}</td></tr>
+    ))}
+    <tr><th scope="row">Open</th><td>{byState("open")}</td></tr>
+    <tr><th scope="row">Closed</th><td>{byState("closed")}</td></tr>
+  </DeckTable>
 </div>

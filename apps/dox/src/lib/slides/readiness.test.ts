@@ -2,11 +2,23 @@
 import {
   chatRow,
   readDeckAssets,
-  ROW_ORDER,
+  rowOrder,
   runReadiness,
   type ReadinessOptions,
   type ReadinessRow,
 } from "./readiness";
+import type { AssetRow } from "./stage-data";
+
+/** A deck's own file list, as its stage data would name it. */
+const WALL: readonly AssetRow[] = [
+  {
+    id: "wall",
+    label: "Wall images",
+    selector: "[data-wall-pane] img",
+    attribute: "src",
+    none: "No wall images listed",
+  },
+];
 
 const DECK = "https://example.test/gmt/slides/talk/";
 const DECK_HTML = `<!doctype html><head>
@@ -72,6 +84,7 @@ function options(over: Partial<ReadinessOptions> = {}): ReadinessOptions {
     env: { renderer: "webgpu", reducedMotion: false, fullscreen: true },
     fonts: ["1em Michroma"],
     fontSet: { check: () => true },
+    assetRows: WALL,
     modules: [{ name: "unix/get", load: async () => ({}) }],
     ...over,
   };
@@ -82,8 +95,8 @@ const byId = (rows: readonly ReadinessRow[], id: string) =>
 
 describe("readDeckAssets", () => {
   it("lists preloads, wall images and recordings once each, as absolute addresses", () => {
-    const assets = readDeckAssets(DECK_HTML, DECK);
-    expect(assets.wall).toEqual([
+    const assets = readDeckAssets(DECK_HTML, DECK, WALL);
+    expect(assets.rows["wall"]).toEqual([
       "https://example.test/gmt/slides/talk/wall/a.webp",
       "https://example.test/gmt/slides/talk/wall/b.webp",
     ]);
@@ -97,9 +110,9 @@ describe("readDeckAssets", () => {
   });
 
   it("lists nothing for markup with nothing in it", () => {
-    expect(readDeckAssets("", DECK)).toEqual({
+    expect(readDeckAssets("", DECK, WALL)).toEqual({
       preloads: [],
-      wall: [],
+      rows: { wall: [] },
       recordings: [],
     });
   });
@@ -135,9 +148,9 @@ describe("runReadiness", () => {
     const rows = await runReadiness(
       options({ onRow: (r) => heard.push(r.id) }),
     );
-    expect(rows.map((r) => r.id)).toEqual([...ROW_ORDER]);
+    expect(rows.map((r) => r.id)).toEqual(rowOrder(WALL));
     expect(rows.filter((r) => r.status === "failed")).toEqual([]);
-    expect(heard.sort()).toEqual([...ROW_ORDER].sort());
+    expect(heard.sort()).toEqual(rowOrder(WALL).sort());
     expect(byId(rows, "wall").text).toBe("Loaded: 2 files");
     expect(byId(rows, "renderer").text).toBe("WebGPU");
     for (const call of calls.filter((c) => !c.url.endsWith("/api/brains")))
@@ -253,5 +266,14 @@ describe("runReadiness", () => {
       }),
     );
     expect(byId(rows, "fonts").text).toContain("1em Michroma");
+  });
+});
+
+describe("a deck with no file lists of its own", () => {
+  it("has no wall row, and the page's images are not read", async () => {
+    stubFetch(ALL_OK);
+    const rows = await runReadiness(options({ assetRows: [] }));
+    expect(rows.map((r) => r.id)).toEqual(rowOrder());
+    expect(rows.some((r) => r.id === "wall")).toBe(false);
   });
 });

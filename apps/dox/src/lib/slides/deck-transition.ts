@@ -19,7 +19,7 @@
  *   a held key does not flicker between a transition and a cut.
  */
 
-export type DeckDirection = "forward" | "back";
+type DeckDirection = "forward" | "back";
 
 export interface DeckTransition {
   /**
@@ -29,7 +29,7 @@ export interface DeckTransition {
   run(commit: () => void, direction?: DeckDirection): void;
 }
 
-export interface DeckTransitionEnv {
+interface DeckTransitionEnv {
   doc: Document;
   signal: AbortSignal;
   /** Whether the visitor asked for reduced motion, read at each change. */

@@ -8,7 +8,7 @@
  * from screen readers and each row's value sits beside them.
  */
 import { flapRows } from "~/lib/slides/calendar-figures";
-import type { CounterEnd } from "~/slides/give-me-temporal/content";
+import type { CounterEnd } from "./types";
 import "./calendar-figures.css";
 
 interface Props {
@@ -25,7 +25,7 @@ const rows = [
 ---
 
 <div class="gmt-flap" data-visual="roll" style={`--gmt-flap-n:${expectedTiles.length}`}>
-  <pre class="gmt-repro"><code>{input}</code></pre>
+  <pre><code>{input}</code></pre>
   {rows.map((r) => (
     <p class="gmt-flap-row" data-which={r.which}>
       <span class="gmt-flap-label">

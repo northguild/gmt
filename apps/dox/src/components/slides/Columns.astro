@@ -15,11 +15,11 @@ const { call, observedLabel, observed, expected } = Astro.props;
 <div class="gmt-columns">
   {call && <p class="gmt-columns-call">The same call: <code>{call}</code></p>}
   <div class="gmt-columns-pair">
-    <div class="gmt-column" data-which="observed">
+    <div class="gmt-column gmt-deck-panel" data-which="observed">
       <h3>{observedLabel}</h3>
       <p>{observed}</p>
     </div>
-    <div class="gmt-column" data-which="expected">
+    <div class="gmt-column gmt-deck-panel" data-which="expected">
       <h3>Expected</h3>
       <p>{expected}</p>
     </div>

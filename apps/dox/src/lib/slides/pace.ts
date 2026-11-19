@@ -7,7 +7,7 @@
  * positive number is time in hand.
  */
 
-export interface PlanSlide {
+interface PlanSlide {
   /** The slide's planned minutes, or `null` when it names none. */
   minutes: number | null;
 }
@@ -50,7 +50,7 @@ export function pace(plannedMs: number, elapsed: number): Pace {
 }
 
 /** How the pace reads: spring while ahead or on pace, plain a little behind, a warning past a minute. */
-export type PaceTone = "spring" | "plain" | "signal";
+type PaceTone = "spring" | "plain" | "signal";
 
 export function paceTone(p: Pace): PaceTone {
   if (p.side !== "behind") return "spring";

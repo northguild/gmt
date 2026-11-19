@@ -1,6 +1,6 @@
 /**
  * The deck's lookup of one upstream filing by its key (`nodejs/node#67076`, `ICU-23609`), for
- * `FilingCard.astro`. An unknown key throws, so a filing renamed or removed from
+ * `FilingReceipt.astro`. An unknown key throws, so a filing renamed or removed from
  * `upstream-filings.json` fails the build instead of leaving a slide with a hole in it.
  */
 import {
@@ -25,7 +25,7 @@ export function findFiling(
 }
 
 /** What a card prints for a filing, every part read from the data. */
-export interface FilingFacts {
+interface FilingFacts {
   key: string;
   ref: string;
   group: string;

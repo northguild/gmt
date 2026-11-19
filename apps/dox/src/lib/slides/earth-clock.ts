@@ -16,8 +16,8 @@
  * with the zone's weekday, day and month, all read by gmt from the same zoned string as the hands.
  * The hour hand stops short of the numerals so the hour it points at stays legible.
  *
- * A build can hold the hands at an instant (`hold`): the GMT slide stands the clock in the Earth's
- * place again at the minute before Helsinki's clocks skip, then the minute after.
+ * A build can hold the hands at an instant (`hold`), so a slide can stand the clock in the Earth's
+ * place at the minute before a zone's clocks skip, then the minute after.
  *
  * Until gmt has read the time the dial has no hands and the date window and offset are blank: a
  * dial that showed a time it did not know would jump when the time came. The first time read sets
@@ -31,7 +31,7 @@ import { CALENDAR_PAGE, calendarPage } from "./calendar-page";
 import { shatter } from "./clock-shatter";
 import { loadClock } from "./title-clock";
 
-export type EarthClockPhase = "on" | "shatter" | "off";
+type EarthClockPhase = "on" | "shatter" | "off";
 
 export interface EarthClock {
   /** Sets the dial on the Earth's disc: its centre and rim radius in the layer's pixels. */
@@ -199,7 +199,7 @@ function calendar(): SafeHtml {
 }
 
 /** What the dial writes for a zone's date and offset, read from gmt's zoned string. */
-export interface DialDate {
+interface DialDate {
   month: string;
   day: string;
   weekday: string;
@@ -272,7 +272,7 @@ function face(city: string): SafeHtml {
 }
 
 /** A wall time as the hands show it. */
-export interface DialTime {
+interface DialTime {
   hour: number;
   minute: number;
   second: number;
