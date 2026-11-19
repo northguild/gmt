@@ -31,11 +31,12 @@ const AURA_FIRST_FADE = 3;
 const AURA_RETURN_FADE = 1.5;
 const AURA_OUT_FADE = 0.6;
 /**
- * How long a hidden tab keeps sounding before its context sleeps, in ms: the aura's fade-out ends,
- * and so does a press's Sonar ping with its first echo (0.45 s). A link that opens a new tab hides
- * this one at once, and its ping is heard to the end.
+ * How long a hidden tab keeps sounding before its context sleeps, in ms: the aura's fade-out
+ * ends, and so does a press's Distant sonar, which rings on in its space for about a second. A link
+ * that opens a new tab hides this one at once, and its ping is heard to the end; a tail cut short
+ * would play its rest on the way back.
  */
-const HIDE_TAIL_MS = AURA_OUT_FADE * 1000 + 50;
+export const HIDE_TAIL_MS = 1200;
 
 const MAX_GAIN = 0.6;
 const MUTE_RAMP = 0.05;

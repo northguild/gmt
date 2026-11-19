@@ -18,7 +18,7 @@ function clipboard(writeText: (text: string) => Promise<void>) {
 beforeEach(() => cue.mockClear());
 
 describe("the copy element's sound", () => {
-  it("plays the Glass clink when the copy succeeds", async () => {
+  it("plays the press ping when the copy succeeds", async () => {
     clipboard(vi.fn().mockResolvedValue(undefined));
     renderHtml(copy({ label: "Copy call", text: "now()" }));
     await userEvent.click(screen.getByRole("button", { name: "Copy call" }));

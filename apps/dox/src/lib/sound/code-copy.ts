@@ -1,5 +1,5 @@
 /**
- * The Glass clink for Starlight's code-block copy button.
+ * The press ping (the Distant sonar) for Starlight's code-block copy button.
  *
  * Expressive Code's markup is not ours, so the cue is one delegated `click` listener on
  * `.expressive-code .copy button`. A press there is a copy, so slice 1's press hook leaves it

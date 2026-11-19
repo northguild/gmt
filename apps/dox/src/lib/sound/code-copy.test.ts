@@ -29,7 +29,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("the Glass clink for a code block's copy", () => {
+describe("the press ping for a code block's copy", () => {
   it("plays copy, and only copy, when the button is pressed", async () => {
     await userEvent.click(screen.getByRole("button", { name: "Copy code" }));
     expect(cue.mock.calls).toEqual([["copy"]]);

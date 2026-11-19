@@ -4,7 +4,7 @@
  * The /dox rail's open and close Felt slide: null to a widget opens it, a widget back to null
  * closes it, and one widget swapped for another is neither. A pill carries `data-cue`, so the press
  * hook is silent on it: a press that opens the rail plays `open` once, and a swap plays a button's
- * press ping, the Deep sonar.
+ * press ping, the Distant sonar.
  */
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

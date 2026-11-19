@@ -6,7 +6,7 @@
  * the failure) goes to a polite live region this element owns, so it is spoken and
  * is never the only signal: the icon and colour change too. A missing Clipboard
  * API and a rejected write both end in "Copy failed", not silence. The message
- * clears after 1.5 s. A success plays the Glass clink and a failure the Low double buzz; the
+ * clears after 1.5 s. A success plays the press ping (the Distant sonar) and a failure the Low double buzz; the
  * button carries `data-cue` so the press ping stays out. With `reveal`, for text shown nowhere else on the page (a share
  * link), a failure also shows the text, and it stays until the next click, so it can be
  * selected and copied by hand.
