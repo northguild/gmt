@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { drawWithoutGlobe, followGlobe, loadSky } from "./space-sky";
 import type { Sky } from "./sky";
+import { skyHost } from "~/test/sky-host";
 
 /* The sky itself is tested in sky.test.ts; here it is a recorder that marks its host ready on its first view, as the real one does. */
 const views: {
@@ -45,11 +46,7 @@ beforeEach(() => {
   views.length = 0;
   maps.length = 0;
   controller = new AbortController();
-  host = document.createElement("div");
-  stars = document.createElement("canvas");
-  band = document.createElement("canvas");
-  host.append(band, stars);
-  document.body.append(host);
+  ({ host, stars, band } = skyHost());
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
@@ -65,6 +62,14 @@ afterEach(() => {
   host.remove();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+/** A globe whose camera holds still; each frame callback it is given lands in `frames`. */
+const globeAt = (frames: (() => void)[]) => ({
+  getRotation: () => [10, 20] as const,
+  getCentre: () => ({ x: 100, y: 200, radius: 300 }),
+  getZoom: () => 2,
+  onFrame: (callback: () => void) => frames.push(callback),
 });
 
 describe("the sky", () => {
@@ -95,12 +100,7 @@ describe("the sky", () => {
     const surface = document.createElement("div");
     const drawn = await followGlobe({
       sky,
-      globe: {
-        getRotation: () => [10, 20],
-        getCentre: () => ({ x: 100, y: 200, radius: 300 }),
-        getZoom: () => 2,
-        onFrame: (callback) => frames.push(callback),
-      },
+      globe: globeAt(frames),
       origin: host,
       surface,
       signal: controller.signal,
@@ -114,6 +114,24 @@ describe("the sky", () => {
     controller.abort();
     frames[0]?.();
     expect(views).toHaveLength(2);
+  });
+
+  it("measures nothing on a frame when the globe's surface is the origin itself", async () => {
+    const measure = vi.spyOn(host, "getBoundingClientRect");
+    const frames: (() => void)[] = [];
+    await followGlobe({
+      sky: loadSky(inputs()),
+      globe: globeAt(frames),
+      origin: host,
+      surface: host,
+      signal: controller.signal,
+    });
+    frames[0]?.();
+    expect(views.map((v) => v.centre)).toEqual([
+      { x: 100, y: 200, radius: 300 },
+      { x: 100, y: 200, radius: 300 },
+    ]);
+    expect(measure).not.toHaveBeenCalled();
   });
 
   it("shows the instant its caller gives, and gmt's now without one", async () => {

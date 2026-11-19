@@ -30,7 +30,7 @@ export const loadClock = (): Promise<Clock> =>
   })));
 
 /** What a sky needs from the page that owns it. */
-export interface SkyInputs {
+interface SkyInputs {
   /** The two canvases and the element that carries `data-sky="ready"`. */
   stars: HTMLCanvasElement;
   band: HTMLCanvasElement;
@@ -42,7 +42,7 @@ export interface SkyInputs {
 }
 
 /** The part of a globe the sky follows. */
-export interface SkyGlobe {
+interface SkyGlobe {
   getRotation(): readonly [number, number];
   getZoom(): number;
   getCentre(): { x: number; y: number; radius: number };
@@ -50,7 +50,7 @@ export interface SkyGlobe {
 }
 
 /** The Milky Way map's pixels, or undefined when it cannot load: the sky then draws the stars alone. */
-export async function loadMilkyWay(
+async function loadMilkyWay(
   src: string | undefined,
 ): Promise<SkyMap | undefined> {
   if (!src) return undefined;
@@ -136,16 +136,24 @@ export async function followGlobe(parts: {
   if (!sky || signal.aborted) return false;
   const time = await loadClock();
   if (signal.aborted) return false;
-  const follow = (): void => {
-    if (signal.aborted) return;
+  /* The surface's offset in the origin's pixels. One element (the deck's stage) is no offset, so
+     nothing is measured: a measure on a globe frame forces any layout the page has pending, such as
+     a slide's panel just shown, into that frame. */
+  const offset = (): { x: number; y: number } => {
+    if (origin === surface) return { x: 0, y: 0 };
     const from = origin.getBoundingClientRect();
     const box = surface.getBoundingClientRect();
+    return { x: box.left - from.left, y: box.top - from.top };
+  };
+  const follow = (): void => {
+    if (signal.aborted) return;
+    const shift = offset();
     const centre = globe.getCentre();
     sky.view(
       globe.getRotation(),
       {
-        x: centre.x + box.left - from.left,
-        y: centre.y + box.top - from.top,
+        x: centre.x + shift.x,
+        y: centre.y + shift.y,
         radius: centre.radius,
       },
       (parts.instant ?? time.getUnixNow)(),

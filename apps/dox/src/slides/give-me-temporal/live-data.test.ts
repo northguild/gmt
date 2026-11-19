@@ -47,8 +47,10 @@ describe("the committed records", () => {
         "command",
         "instant",
         "libraries",
-        "runs",
+        "nodes",
         "sha256",
+        "values",
+        "zones",
       ]);
   });
 

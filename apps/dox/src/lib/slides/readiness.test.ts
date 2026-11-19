@@ -1,12 +1,8 @@
 // @vitest-environment jsdom
-import {
-  chatRow,
-  readDeckAssets,
-  rowOrder,
-  runReadiness,
-  type ReadinessOptions,
-  type ReadinessRow,
-} from "./readiness";
+import { runReadiness, type ReadinessOptions } from "./readiness";
+import { chatRow } from "./readiness-chat";
+import { readDeckAssets } from "./readiness-files";
+import { rowOrder, type ReadinessRow } from "./readiness-rows";
 import type { AssetRow } from "./stage-data";
 
 /** A deck's own file list, as its stage data would name it. */

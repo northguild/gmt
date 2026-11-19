@@ -23,7 +23,7 @@ import {
 } from "./shards";
 import type { Cell, Point } from "./voronoi";
 
-export const PANE_ASPECT = 10 / 16;
+const PANE_ASPECT = 10 / 16;
 /** A point this close to the camera, as a fraction of the focal length, is not drawn. */
 const NEAR_PLANE = 0.05;
 
@@ -34,7 +34,7 @@ export interface Lens {
   focalPx: number;
 }
 
-export interface PaneRect {
+interface PaneRect {
   /** Top-left from the wall's centre, pixels at `z = 1`; y down. */
   x: number;
   y: number;
@@ -103,7 +103,7 @@ export interface Drawable {
   cracks?: { strength: number; edges: number[][] };
 }
 
-export interface FrameInput {
+interface FrameInput {
   lens: Lens;
   /** The wall's depth: 1 at rest, smaller is nearer. */
   z: number;

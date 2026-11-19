@@ -205,14 +205,14 @@ test("every zone and Node of the matrix gets a run record", async () => {
   assert.equal(record.command, COMMAND);
   assert.equal(record.instant, "2026-11-19T00:00:00Z");
   assert.deepEqual(record.libraries, { luxon: "v-luxon" });
-  assert.equal(record.runs.length, 4);
-  assert.deepEqual(record.runs[0], {
+  assert.equal(record.values.flat().length, 4);
+  assert.deepEqual(record.nodes[0], {
     node: "24",
-    nodeVersion: "v24.0.0",
+    version: "v24.0.0",
     tzdata: "2026b",
-    zone: "Europe/Helsinki",
-    value: "24:Europe/Helsinki",
   });
+  assert.equal(record.zones[0], "Europe/Helsinki");
+  assert.equal(record.values[0][0], "24:Europe/Helsinki");
 });
 
 test("runs the zone the slide shows on every Node major, when the CI matrix lacks it", async () => {
@@ -223,16 +223,14 @@ test("runs the zone the slide shows on every Node major, when the CI matrix lack
     workDir: workDir(),
   });
   assert.deepEqual(
-    record.runs.map((r) => `${r.node} ${r.zone}`),
-    [
-      "24 UTC",
-      "24 Pacific/Niue",
-      `24 ${SHOWN_ZONE}`,
-      "26 UTC",
-      "26 Pacific/Niue",
-      `26 ${SHOWN_ZONE}`,
-    ],
+    record.nodes.map((n) => n.node),
+    ["24", "26"],
   );
+  assert.deepEqual(record.zones, ["UTC", "Pacific/Niue", SHOWN_ZONE]);
+  assert.deepEqual(record.values, [
+    ["24:UTC", "24:Pacific/Niue", `24:${SHOWN_ZONE}`],
+    ["26:UTC", "26:Pacific/Niue", `26:${SHOWN_ZONE}`],
+  ]);
 });
 
 test("does not run the shown zone twice when the CI matrix has it", async () => {
@@ -241,7 +239,32 @@ test("does not run the shown zone twice when the CI matrix has it", async () => 
     run: fakeCell((node, zone) => `${node}:${zone}`),
     workDir: workDir(),
   });
-  assert.equal(record.runs.filter((r) => r.zone === SHOWN_ZONE).length, 2);
+  assert.equal(record.zones.filter((z) => z === SHOWN_ZONE).length, 1);
+  assert.equal(record.values.flat().length, 4);
+});
+
+test("a Node major whose version or tzdata changes between zones stops the run", async () => {
+  let cell = 0;
+  await assert.rejects(
+    runAnswer({
+      ...base,
+      run: async (node, _args, env) => ({
+        code: 0,
+        stderr: "",
+        stdout: `@@agent-answer@@ ${JSON.stringify({
+          node: `v${node}.0.0`,
+          tzdata: cell++ === 1 ? "2026c" : "2026b",
+          zone: env.TZ,
+          value: "v",
+        })}\n`,
+      }),
+      workDir: workDir(),
+    }),
+    (error) =>
+      error instanceof Stop &&
+      error.code === 1 &&
+      /with tzdata 2026c, not v24\.0\.0 with 2026b/.test(error.message),
+  );
 });
 
 test("a cell that ran in another zone stops the run", async () => {
@@ -299,7 +322,7 @@ test("the runner exits once it has the value, even with the code's timer still p
     code: "export const f = () => { setTimeout(() => {}, 2 ** 31 - 1); return 'armed'; };",
     call: "f()",
   });
-  assert.equal(r.runs[0].value, "armed");
+  assert.equal(r.values[0][0], "armed");
 });
 
 test("a cell that does not finish in time is killed with everything it started", async () => {
@@ -368,7 +391,7 @@ test("every answer is run, under the shared question, and recorded by its id", a
   assert.deepEqual(seen, ["one", "two"]);
   assert.equal(file.one.sha256, hashOf(transcript.answers[0].code, "f()"));
   assert.equal(file.two.sha256, hashOf(transcript.answers[1].code, "g()"));
-  assert.equal(file.two.runs.length, 4);
+  assert.equal(file.two.values.flat().length, 4);
 });
 
 test("a transcript whose answers cannot be told apart, or whose quoted answer is missing, stops with exit 2", async () => {
@@ -426,8 +449,8 @@ test("ES module code runs, with a function that is not exported", async () => {
     code: "function reminder() { return new Date(Date.UTC(2027, 2, 28, 1, 30)).toISOString(); }\nconsole.log('chatter');", // date-ban: an agent's code under test, as text
     call: "reminder()",
   });
-  assert.equal(r.runs[0].value, "2027-03-28T01:30:00.000Z");
-  assert.equal(r.runs[0].zone, "Europe/Helsinki");
+  assert.equal(r.values[0][0], "2027-03-28T01:30:00.000Z");
+  assert.equal(r.zones[0], "Europe/Helsinki");
 });
 
 test("CommonJS code runs, and its own requires resolve", async () => {
@@ -435,7 +458,7 @@ test("CommonJS code runs, and its own requires resolve", async () => {
     code: "const { join } = require('node:path');\nmodule.exports = { f: () => join('a', 'b') };",
     call: "module.exports.f()",
   });
-  assert.equal(r.runs[0].value, join("a", "b"));
+  assert.equal(r.values[0][0], join("a", "b"));
 });
 
 test("a promise is awaited", async () => {
@@ -443,7 +466,7 @@ test("a promise is awaited", async () => {
     code: "export const f = () => new Promise((done) => setTimeout(() => done('late'), 5));",
     call: "f()",
   });
-  assert.equal(r.runs[0].value, "late");
+  assert.equal(r.values[0][0], "late");
 });
 
 test("a throw is recorded, and so is a load error", async () => {
@@ -451,12 +474,12 @@ test("a throw is recorded, and so is a load error", async () => {
     code: "export const f = () => { throw new RangeError('no such time'); };",
     call: "f()",
   });
-  assert.deepEqual(thrown.runs[0].value, { threw: "RangeError: no such time" });
+  assert.deepEqual(thrown.values[0][0], { threw: "RangeError: no such time" });
   const broken = await runHere({
     code: "throw new TypeError('at load');",
     call: "1",
   });
-  assert.deepEqual(broken.runs[0].value, { threw: "TypeError: at load" });
+  assert.deepEqual(broken.values[0][0], { threw: "TypeError: at load" });
 });
 
 test("a value that is not a string is written as JSON, a date as an ISO string", async () => {
@@ -464,19 +487,19 @@ test("a value that is not a string is written as JSON, a date as an ISO string",
     code: "export const f = () => ({ a: 1 });",
     call: "f()",
   });
-  assert.equal(obj.runs[0].value, '{"a":1}');
+  assert.equal(obj.values[0][0], '{"a":1}');
   const date = await runHere({
     code: "export const f = () => new Date(0);", // date-ban: an agent's code under test, as text
     call: "f()",
   });
-  assert.equal(date.runs[0].value, "1970-01-01T00:00:00.000Z");
+  assert.equal(date.values[0][0], "1970-01-01T00:00:00.000Z");
 });
 
 test("the zone of the cell is the zone the code sees", async () => {
   const code =
     "export const f = () => Intl.DateTimeFormat().resolvedOptions().timeZone;";
   const r = await runHere({ code, call: "f()" }, "Pacific/Niue");
-  assert.equal(r.runs[0].value, "Pacific/Niue");
+  assert.equal(r.values[0][0], "Pacific/Niue");
 });
 
 test("a pinned library resolves from this folder's node_modules", async () => {
@@ -484,6 +507,6 @@ test("a pinned library resolves from this folder's node_modules", async () => {
     code: "import { DateTime } from 'luxon';\nexport const f = () => DateTime.fromISO('2027-03-28T03:30:00', { zone: 'Europe/Helsinki' }).toUTC().toISO();",
     call: "f()",
   });
-  assert.equal(typeof r.runs[0].value, "string");
+  assert.equal(typeof r.values[0][0], "string");
   assert.deepEqual(r.libraries, { luxon: "v-luxon" });
 });

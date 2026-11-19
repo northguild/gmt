@@ -6,8 +6,8 @@ import {
   fullSuiteZoneClauses,
   libraryMeasurements,
 } from "../data/library-comparison";
+import { cellHtml, tableMarkdown } from "./compare-table";
 import {
-  cellHtml,
   compareTables,
   notesHtml,
   PROSE_TABLES,
@@ -17,21 +17,16 @@ import {
   measurementNotes,
   notesMarkdown,
   overviewTable,
-  tableMarkdown,
 } from "./library-compare-tables";
-import {
-  summarize,
-  tagKey,
-  zoneMatrixSummary,
-  type ZoneMatrixRecord,
-} from "../data/zone-matrix";
+import { summarize, zoneMatrixSummary } from "../data/zone-matrix";
+import { tagKey, type ZoneMatrixRecord } from "../data/zone-matrix-record";
 import {
   zoneMatrixEvidenceTable,
   zoneMatrixFailureTable,
   zoneMatrixKnownTable,
   zoneMatrixSummaryTable,
   zoneMatrixZoneTable,
-} from "./library-compare-tables";
+} from "./zone-matrix-tables";
 import { CODE_BREAK_CLASS, CODE_PIECE_CLASS } from "./code-break";
 import { renderMdxComponents } from "./mdx-jsx";
 

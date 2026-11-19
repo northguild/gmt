@@ -4,238 +4,76 @@
     "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs",
     "instant": "2026-11-19T13:27:36.259853468Z",
     "libraries": {},
-    "runs": [
+    "nodes": [
       {
         "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": "2027-03-28T00:30:00.000Z"
+        "version": "v22.23.5",
+        "tzdata": "2026e"
       },
       {
         "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": "2027-03-28T00:30:00.000Z"
+        "version": "v24.22.3",
+        "tzdata": "2026e"
       },
       {
         "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": "2027-03-28T00:30:00.000Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": "2027-03-28T00:30:00.000Z"
+        "version": "v26.13.1",
+        "tzdata": "2026e"
       }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z"
+      ],
+      [
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z"
+      ],
+      [
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z"
+      ]
     ]
   },
   "mistral-fast": {
@@ -243,238 +81,76 @@
     "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs",
     "instant": "2026-11-19T13:27:38.470856259Z",
     "libraries": {},
-    "runs": [
+    "nodes": [
       {
         "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": "2027-03-28T14:30:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": "2027-03-28T07:30:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": "2027-03-28T03:30:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": "2027-03-28T02:30:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": "2027-03-27T22:00:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": "2027-03-27T21:45:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": "2027-03-27T19:30:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": "2027-03-27T16:30:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": "2027-03-27T13:45:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": "2027-03-27T14:30:00Z"
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": "2027-03-28T01:30:00Z"
+        "version": "v22.23.5",
+        "tzdata": "2026e"
       },
       {
         "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": "2027-03-28T14:30:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": "2027-03-28T07:30:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": "2027-03-28T03:30:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": "2027-03-28T02:30:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": "2027-03-27T22:00:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": "2027-03-27T21:45:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": "2027-03-27T19:30:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": "2027-03-27T16:30:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": "2027-03-27T13:45:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": "2027-03-27T14:30:00Z"
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": "2027-03-28T01:30:00Z"
+        "version": "v24.22.3",
+        "tzdata": "2026e"
       },
       {
         "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": "2027-03-28T14:30:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": "2027-03-28T07:30:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": "2027-03-28T03:30:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": "2027-03-28T02:30:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": "2027-03-27T22:00:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": "2027-03-27T21:45:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": "2027-03-27T19:30:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": "2027-03-27T16:30:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": "2027-03-27T13:45:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": "2027-03-27T14:30:00Z"
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": "2027-03-28T01:30:00Z"
+        "version": "v26.13.1",
+        "tzdata": "2026e"
       }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28T14:30:00Z",
+        "2027-03-28T07:30:00Z",
+        "2027-03-28T03:30:00Z",
+        "2027-03-28T02:30:00Z",
+        "2027-03-27T22:00:00Z",
+        "2027-03-27T21:45:00Z",
+        "2027-03-27T19:30:00Z",
+        "2027-03-27T16:30:00Z",
+        "2027-03-27T13:45:00Z",
+        "2027-03-27T14:30:00Z",
+        "2027-03-28T01:30:00Z"
+      ],
+      [
+        "2027-03-28T14:30:00Z",
+        "2027-03-28T07:30:00Z",
+        "2027-03-28T03:30:00Z",
+        "2027-03-28T02:30:00Z",
+        "2027-03-27T22:00:00Z",
+        "2027-03-27T21:45:00Z",
+        "2027-03-27T19:30:00Z",
+        "2027-03-27T16:30:00Z",
+        "2027-03-27T13:45:00Z",
+        "2027-03-27T14:30:00Z",
+        "2027-03-28T01:30:00Z"
+      ],
+      [
+        "2027-03-28T14:30:00Z",
+        "2027-03-28T07:30:00Z",
+        "2027-03-28T03:30:00Z",
+        "2027-03-28T02:30:00Z",
+        "2027-03-27T22:00:00Z",
+        "2027-03-27T21:45:00Z",
+        "2027-03-27T19:30:00Z",
+        "2027-03-27T16:30:00Z",
+        "2027-03-27T13:45:00Z",
+        "2027-03-27T14:30:00Z",
+        "2027-03-28T01:30:00Z"
+      ]
     ]
   },
   "chatgpt-think": {
@@ -484,304 +160,142 @@
     "libraries": {
       "@js-temporal/polyfill": "0.5.1"
     },
-    "runs": [
+    "nodes": [
       {
         "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
+        "version": "v22.23.5",
+        "tzdata": "2026e"
       },
       {
         "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
+        "version": "v24.22.3",
+        "tzdata": "2026e"
       },
       {
         "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": {
-          "threw": "RangeError: multiple instants found"
-        }
+        "version": "v26.13.1",
+        "tzdata": "2026e"
       }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        }
+      ],
+      [
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        }
+      ],
+      [
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        }
+      ]
     ]
   },
   "gemini-auto": {
@@ -789,304 +303,142 @@
     "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs",
     "instant": "2026-11-19T13:27:43.691861457Z",
     "libraries": {},
-    "runs": [
+    "nodes": [
       {
         "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "22",
-        "nodeVersion": "v22.23.5",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
+        "version": "v22.23.5",
+        "tzdata": "2026e"
       },
       {
         "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "24",
-        "nodeVersion": "v24.22.3",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
+        "version": "v24.22.3",
+        "tzdata": "2026e"
       },
       {
         "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Niue",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "America/New_York",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "UTC",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/London",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kolkata",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Kathmandu",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Asia/Shanghai",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Australia/Lord_Howe",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Chatham",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Pacific/Apia",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
-      },
-      {
-        "node": "26",
-        "nodeVersion": "v26.13.1",
-        "tzdata": "2026e",
-        "zone": "Europe/Helsinki",
-        "value": {
-          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
-        }
+        "version": "v26.13.1",
+        "tzdata": "2026e"
       }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        }
+      ],
+      [
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        }
+      ],
+      [
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        }
+      ]
     ]
   }
 }

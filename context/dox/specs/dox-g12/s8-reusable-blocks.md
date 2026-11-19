@@ -17,24 +17,8 @@ defect found on the way is fixed here and named in the report.
 
 ## The building blocks
 
-| Block | Home | What a deck gets |
-| --- | --- | --- |
-| Deck page | `src/pages/slides/[slug]/index.astro`, `presenter.astro` | One route for every deck, driven by `DECKS`; title, description, head entries and page tools from the `DeckEntry` |
-| Deck, Slide, Build, Notes | `src/components/slides/` | The stage, pinned places, builds and speaker notes; per-slide layouts by `layout`, never by `:has()` on a child |
-| Visual, Swap, GmtStep | `src/components/slides/` | The bug-slide pattern: a visual with its filing receipts, swapped for the GMT step on the next build |
-| DeckTable | `src/components/slides/` | One table with an optional guess column and a build per cell; `BundleSize.astro` shares it |
-| DeckLive | `src/components/slides/` | One live panel (answer, questions, page tool) taking its data as props; presenter flag from the deck |
-| Deck runtime | `src/slides/deck-runtime.ts` + `src/slides/<slug>/runtime.ts` | The deck's stage data (places, lapses, pins, readiness rows) and live data (questions, recordings, tool question), loaded by slug |
-| `play` / `Frames` | `src/lib/slides/frames.ts` | The one animation loop: typing, counters, lapses, the Sun glide, the filings count |
-| Reduced motion | `src/lib/reduced-motion.ts` | `prefersReducedMotion` |
-| Visual registry | `src/lib/slides/bug-visuals.ts` | One `{ reset, play }` entry per `data-visual` kind |
-| Stage features | `src/lib/slides/stage*.ts` | The camera core (`stage.ts`) plus opt-in `stage-reveal`, `stage-lapse` and `stage-filings`; `stage-keys` for the fly keys, `stage-deferred` for what loads after first paint |
-| Stage data checks | `src/lib/slides/stage-data.ts`, `deckStage` in `src/slides/deck-runtime.ts` | `checkStageNames`: a place, reveal zone or lapse a slide names that its own deck lacks fails the build |
-| gmt loading, DST jumps | `src/lib/slides/gmt-loader.ts`, `transition-ms.ts` | One lazy gmt import after first paint; one "first offset change in these years" |
-| Built-deck reader | `scripts/built-deck.ts` | `builtSlides(dist, slug)` for a deck's own `built.test.ts`; `slides-built.test.ts` runs the shared rules over every deck |
-| Zone-matrix runner | `scripts/zone-matrix/node-runner.mjs`, `record-shape.mjs` | One way to run a Node version; one compact record shape and its reader |
-| Deck sheet | `src/components/slides/slides.css` | Stage, slide, layouts, builds, bar, pager, menu, dialogs, print; text-size tokens; one panel rule |
-| QR code, credits | `src/components/slides/` | As built |
+The catalogue of shared blocks, with each one's home and what a deck gets from it, is
+[Slice 8b · The block catalogue](./s8b-block-catalogue.md).
 
 ## What the audit found, and the fix
 
@@ -73,6 +57,11 @@ defect found on the way is fixed here and named in the report.
 - The 24-hour crystal-clock dial has no caller: remove it, and restore the 12-hour widget as on
   `main`.
 - Exports used only in their own file lose `export`.
+- Modules past 400 lines split into a core and feature files: the stage, the ice wall, the earth
+  clock, the deck mount, the presenter, the readiness checks, `DeckDox.tsx`, `slides-check.mjs`,
+  the zone-matrix runner and the comparison tables.
+- Each stage test file builds the same mocked stage by hand: one harness and one fixture deck in
+  `src/test/`.
 
 ### Live agents and chat
 
@@ -96,6 +85,11 @@ defect found on the way is fixed here and named in the report.
   of the old file. Merge `summarise` and `summarize`.
 - The two runners duplicate six helpers, and a third spawns Node itself: one `node-runner.mjs`.
 - The CI zones are written out twice: read them from `ci.yml`.
+- `agent-run.json` repeats each Node major's version and tzdata in every cell: one grid of
+  `nodes` × `zones` with a value per cell, and the recorder stops when a major's version or tzdata
+  changes between zones.
+- The GNSS counter and line tables carry two near-identical sheets: one `gnss-table.module.css`.
+- Every browser gate parses its own options and starts its own server: `scripts/lib/gate-cli.mjs`.
 - `slides-check.mjs` repeats the secret scan and the spare checks from `slides-built.test.ts`,
   and `globe-smoke.mjs` repeats the camera and wall checks from `slides-check.mjs`: each check
   keeps one home. Fix the stale "23 slides" label.
@@ -105,13 +99,13 @@ defect found on the way is fixed here and named in the report.
 The four phases run at the same time. Each file belongs to one phase. A change one phase needs in
 another phase's file goes to the lead, who applies it once all four are done.
 
-| Phase | Owns |
-| --- | --- |
-| **B1** · authoring and styles | `src/components/slides/**` except B3's files; `src/slides/**` except the runtime, stage-data, live-data, `quotes/` and `recorded/`; `src/pages/slides/**`; `src/widgets/builders/{deck-controls,presenter}*`; `BundleSize.astro`, `Icon.astro`, `octicons.ts`, `gmt-primitives.css` |
-| **B2** · runtime and visuals | `src/lib/slides/**` except B3's files; `lib/slides/stage-data.ts`; `give-me-temporal/stage-data.ts`; `frames.ts`, `reduced-motion.ts`; `src/test/jsdom-shims.ts` and new fixtures; the crystal clock; `lib/globe/**`, `space-sky.ts`, `hero-space.ts` |
+| Phase                         | Owns                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **B1** · authoring and styles | `src/components/slides/**` except B3's files; `src/slides/**` except the runtime, stage-data, live-data, `quotes/` and `recorded/`; `src/pages/slides/**`; `src/widgets/builders/{deck-controls,presenter}*`; `BundleSize.astro`, `Icon.astro`, `octicons.ts`, `gmt-primitives.css`                                                                                                                                                                                                                                 |
+| **B2** · runtime and visuals  | `src/lib/slides/**` except B3's files; `lib/slides/stage-data.ts`; `give-me-temporal/stage-data.ts`; `frames.ts`, `reduced-motion.ts`; `src/test/jsdom-shims.ts` and new fixtures; the crystal clock; `lib/globe/**`, `space-sky.ts`, `hero-space.ts`                                                                                                                                                                                                                                                               |
 | **B3** · live agents and chat | `AgentQuote`, `AgentTable`, `LiveAnswer`, `AudienceQuestions`, `PageToolCall`, `DeckDox.tsx` and its sheet; `lib/slides/{agent-quote,live-demos,page-tool-call,recorded-files,replay,recording-capture,deck-transport,deck-brain}`, `deck-tools/**`; `lib/slides/live-data.ts`, `give-me-temporal/live-data.ts`; `quotes/`, `recorded/`; `components/ask/**`, `chat-fetch.ts`, `webmcp/offer.ts`, `gmt-hive.css`; `src/test/{chat-stream,deck-events,dialog-fullscreen-shims}.ts`; `scripts/record-deck-answers.ts` |
-| **B4** · scripts and data | `scripts/zone-matrix/**`; `src/data/zone-matrix.*`, `zone-probe.*`; `scripts/{slides-check,globe-smoke,capture-wall}*`, `slides-built.test.ts`, `scripts/lib/{slides-check-helpers,wall-probe}.mjs`; the `.gitignore` zone-matrix entry |
-| **Lead** | `src/slides/deck-runtime.ts`, `give-me-temporal/runtime.ts`; the cross-phase edits (`Slide.astro` and `Build.astro` checks, `Deck0.astro` imports for `DeckLive` and the agent components, the `[data-quote]` sheet import); this spec folder |
+| **B4** · scripts and data     | `scripts/zone-matrix/**`; `src/data/zone-matrix.*`, `zone-probe.*`; `scripts/{slides-check,globe-smoke,capture-wall}*`, `slides-built.test.ts`, `scripts/lib/{slides-check-helpers,wall-probe}.mjs`; the `.gitignore` zone-matrix entry                                                                                                                                                                                                                                                                             |
+| **Lead**                      | `src/slides/deck-runtime.ts`, `give-me-temporal/runtime.ts`; the cross-phase edits (`Slide.astro` and `Build.astro` checks, `Deck0.astro` imports for `DeckLive` and the agent components, the `[data-quote]` sheet import); this spec folder                                                                                                                                                                                                                                                                       |
 
 ## Checked and kept
 
@@ -128,6 +122,14 @@ another phase's file goes to the lead, who applies it once all four are done.
 - `AudienceQuestions` passing `demoId="thanks"` on `qa` was a defect: `DeckLive` takes the slide
   id it sits on.
 - `onReducedMotionChange` had no caller and is deleted.
+- Each Dox slide's chat read Dox's counts on its own, so a question on one slide left the others
+  showing the old count. `use-brains.ts` now holds one copy per page: every chat shows the same
+  counts, and overlapping reads share one request. `globe-smoke` answers `/api/brains` itself,
+  since the served `dist/` has no Worker.
+- Folding the panel sizes into `--gmt-deck-text-sm`, `-md` and `-lg` defined each token as itself.
+  That cycle voids every use, so the answer and familiar-names slides overflowed the stage.
+  `css-validity.test.ts` now scans every sheet under `src/` for a custom property that reads
+  itself.
 
 ## Left out of this slice
 
@@ -139,13 +141,14 @@ rather than changed here:
 - The widget sweep from border colour to inset box-shadow in 22 places.
 - The `packages/gmt` test-timeout fix.
 - The commits that ride along on the branch without belonging to the deck.
-- Trimming `agent-run.json`, running the zone-matrix `node:test` files in CI, and one shared
-  option helper across the gates.
+- Running the zone-matrix `node:test` files in CI.
 - The other 118 `cqi` values beyond the text-size tokens.
 
 ## Done when
 
 - Every finding above is fixed or listed with a reason.
+- `node .agents/skills/ui-standards/scripts/run.mjs` prints PASS; each `ui-standards-ok:` line says why
+  its rule cannot apply.
 - `pnpm dox:test`, `pnpm dox:lint` and `pnpm dox:check` pass across the whole app, and the
   zone-matrix `node:test` suite passes.
 - After the one Dox build, run once at the end, `slides-check`, `globe-smoke`,

@@ -37,7 +37,7 @@ const TOOLS = [
 ] as const;
 
 /** A row of the deck's key table, as the menu reads it. */
-export interface KeyActionRow {
+interface KeyActionRow {
   action: string;
   keys: readonly string[];
 }
@@ -176,7 +176,7 @@ export function overviewItems(items: readonly OverviewItem[]): SafeHtml {
  * is the field's add-on, joined to the input's end (`.gmt-deck-addon` in `slides.css`). The phrase
  * is typed on the projected screen, so it shows as dots.
  */
-export function unlockDialog(): SafeHtml {
+function unlockDialog(): SafeHtml {
   return dialog(
     "unlock",
     "Unlock the slides",

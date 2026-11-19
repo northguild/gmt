@@ -20,7 +20,7 @@ import {
   getTimeZoneOffset,
 } from "@northguild/gmt/zoned/get";
 
-export interface LocalTimeFacts {
+interface LocalTimeFacts {
   /** The library's word for the wall time: it happens once, twice, or not at all. */
   kind: "unique" | "ambiguous" | "nonexistent";
   /** One plain sentence per fact, each safe to repeat to the reader. */

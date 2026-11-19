@@ -37,6 +37,11 @@ export const CHECKS = [
   { id: "docs-check", run: "pnpm dox:docs-check" },
   { id: "bundle-size", run: "node scripts/bundle-size.mjs check" },
   {
+    // The Dox lines the branch adds, against Reuse, never reinvent (context/dox/built/index.md).
+    id: "ui-standards",
+    run: "node .agents/skills/ui-standards/scripts/run.mjs",
+  },
+  {
     id: "build:gmt-oxlint",
     run: "pnpm --filter @northguild/gmt-oxlint run build",
   },
@@ -149,6 +154,7 @@ const GMT_LIB = allBut(
 const DOX_APP = [
   "markers",
   "docs-check",
+  "ui-standards",
   "dox-pages",
   "build:dox",
   "api-surface",
@@ -218,6 +224,11 @@ export const RULES = [
   { test: /^(?:[^/]+\/)?LICENSE$/, checks: ["licences"] },
   { test: /^packages\/[^/]+\/LICENSE$/, checks: ["licences"], listed: ALL },
 
+  // The ui-standards checker is a script under .agents, so a change to it runs it.
+  {
+    test: /^\.agents\/skills\/ui-standards\/scripts\//,
+    checks: ["ui-standards"],
+  },
   // Notes for people and agents, and the changesets (CI checks those on every run).
   {
     test: /^(?:\.agents|\.claude|\.vscode|\.changeset)\//,

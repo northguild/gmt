@@ -7,20 +7,14 @@
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 import { KEY_TABLE } from "~/lib/slides/keys";
 import { withBase } from "~/lib/site";
-import { deckComponent } from "~/slides/deck-pages";
-import { DECKS, type DeckEntry } from "~/slides/decks";
+import { deckRoutes, type DeckRoute } from "~/slides/deck-pages";
 import { deckDialogs } from "~/widgets/builders/deck-controls";
 import { presenterShell } from "~/widgets/builders/presenter";
 
-export function getStaticPaths() {
-  return DECKS.map((deck) => ({ params: { slug: deck.slug }, props: { deck } }));
-}
+export const getStaticPaths = deckRoutes;
 
-interface Props {
-  deck: DeckEntry;
-}
-const { deck } = Astro.props;
-const Deck = deckComponent(deck.slug);
+type Props = DeckRoute;
+const { deck, Deck } = Astro.props;
 const slug = deck.slug;
 ---
 

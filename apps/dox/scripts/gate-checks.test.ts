@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -352,11 +352,23 @@ describe("blockOffSite", () => {
 
 describe("every browser gate", () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
+  const familyFiles = (dir: string): string[] =>
+    existsSync(dir)
+      ? readdirSync(dir)
+          .filter((file) => file.endsWith(".mjs"))
+          .map((file) => path.join(dir, file))
+      : [];
   const gates = readdirSync(here)
     .filter((file) => file.endsWith(".mjs"))
     .map((file) => ({
       file,
-      source: readFileSync(path.join(here, file), "utf8"),
+      // A gate split into check families keeps them in `lib/<gate>/`; they open its pages.
+      source: [
+        readFileSync(path.join(here, file), "utf8"),
+        ...familyFiles(path.join(here, "lib", file.replace(/\.mjs$/, ""))).map(
+          (family) => readFileSync(family, "utf8"),
+        ),
+      ].join("\n"),
     }))
     // A gate loads pages of the built site. A script that draws its own markup
     // in a browser (the favicon build) loads none.

@@ -16,8 +16,8 @@
  *
  * Usage, from apps/dox, with the Worker running (`--base` defaults to `wrangler dev`):
  *
- *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts --deck give-me-temporal
- *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts --deck give-me-temporal --only faq-samoa-skip
+ *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts --deck <slug>
+ *   DOX_DEV_KEY=... npx tsx scripts/record-deck-answers.ts --deck <slug> --only faq-samoa-skip
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

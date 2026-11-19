@@ -248,6 +248,12 @@ jobs:
         if: contains(fromJSON(env.CHECKS), 'pulse')
         run: node apps/dox/scripts/build-pulse.mjs --check
 
+      # The Dox lines this pull request adds, against Reuse, never reinvent
+      # (context/dox/built/index.md). On a push to main the branch point is HEAD, so it passes.
+      - name: Dox changes reuse the shared blocks
+        if: contains(fromJSON(env.CHECKS), 'ui-standards')
+        run: node .agents/skills/ui-standards/scripts/run.mjs
+
       # Some content pages are generated, not committed: `guides/concepts/dst-disambiguation.md`
       # (copied from the canonical `docs/dst-disambiguation.md`), the `changelog/` pages (built
       # from each package's CHANGELOG.md), `scenarios/index.mdx`, `tools/index.mdx` and the

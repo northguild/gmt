@@ -3,21 +3,29 @@
  * and Node versions of GMT's CI job, and every failure sorted into one of two kinds.
  *
  * `./zone-matrix.json` is written by `scripts/zone-matrix/run.mjs`, which a person runs by hand
- * (the suites live outside the workspace), in the compact shape `record-shape.mjs` describes. Nothing here stores a count: every figure below is
- * derived from the failures the runner recorded and the tags that sort them, the same rule
- * `behaviour-matrix.ts` follows. A failure counted in neither kind (one that also fails in the
- * reference zone, or one that failed in only one of a cell's two runs) is listed with its cause.
- * `assertRecord` throws on a record that has an untagged failure, such a failure with no cause,
- * any GMT failure (GMT is the control, so a failure there is a GMT bug), or a shape the runner
- * does not write, so a hand edit or a bad run fails the build instead of rendering a number.
+ * (the suites live outside the workspace), in the compact shape `record-shape.mjs` describes.
+ * `zone-matrix-record.ts` holds its types and `assertRecord`. Nothing here stores a count: every
+ * figure below is derived from the failures the runner recorded and the tags that sort them, the
+ * same rule `behaviour-matrix.ts` follows. A failure counted in neither kind (one that also fails in
+ * the reference zone, or one that failed in only one of a cell's two runs) is listed with its cause.
  *
  * Slide 5 of Deck 0 reads `zoneMatrixSummary()`.
  */
 import { expandRecord } from "../../../../scripts/zone-matrix/record-shape.mjs";
+import {
+  assertRecord,
+  causeOf,
+  tagOf,
+  SUITE_ORDER,
+  uncounted,
+  type Cell,
+  type Kind,
+  type KnownWhy,
+  type SuiteRecord,
+  type Tag,
+  type ZoneMatrixRecord,
+} from "./zone-matrix-record";
 import snapshot from "./zone-matrix.json";
-
-export const KINDS = ["one-zone", "wrong-answer"] as const;
-export type Kind = (typeof KINDS)[number];
 
 /** The words each kind is shown as. */
 export const KIND_LABEL: Record<Kind, string> = {
@@ -25,202 +33,13 @@ export const KIND_LABEL: Record<Kind, string> = {
   "wrong-answer": "The library gives a wrong answer",
 };
 
-export interface Tag {
-  kind: Kind;
-  reason: string;
-  /** The zones the tag covers. Absent means every zone. */
-  zones?: string[];
-  /** Present on a `wrong-answer` tag. */
-  evidence?: { input: string; zone: string; temporal: string; library: string };
-}
-
-export interface Cell {
-  node: string;
-  nodeVersion: string;
-  /** The Node's time-zone data (`process.versions.tz`), e.g. `2026e`. */
-  tzdata: string;
-  tz: string;
-  zone: string;
-  ranOn: string;
-  tests: number;
-  /** Failing test ids that do not fail in the suite's reference zone. */
-  failed: string[];
-  /** Failing ids that also fail in the reference zone: known, counted in neither kind. */
-  alsoFailsAtReference: string[];
-  /** Ids that failed in only one of the cell's two runs: counted in neither kind. */
-  unstable: string[];
-  overriddenBy?: { file: string | null; line: number | null; zone: string };
-  couldNotRun?: string;
-}
-
-export interface SuiteRecord {
-  id: string;
-  name: string;
-  version: string;
-  repository: string;
-  commit: string;
-  command: string;
-  ownCommand: string;
-  reference: {
-    zone: string;
-    source: string;
-    runs: {
-      node: string;
-      nodeVersion: string;
-      tzdata: string;
-      tests: number;
-      failed: string[];
-      /** Ids that failed in only one of the reference zone's two runs. */
-      unstable: string[];
-      couldNotRun?: string;
-    }[];
-  };
-  pins: { file: string; line: number; text: string }[];
-  cells: Cell[];
-}
-
-/** Why a failure counted in neither kind happens, stated as a fact, from `causes.mjs`. */
-export interface Cause {
-  cause: string;
-  /** The Node majors it covers. Absent means every one. */
-  nodes?: string[];
-}
-
-export interface ZoneMatrixRecord {
-  matrix: { ci: string; zones: string[]; node: string[] };
-  tags: Record<string, Tag>;
-  untagged: string[];
-  /** Keyed as `tags` is: the cause of each reference-zone and unstable failure. */
-  causes: Record<string, Cause>;
-  /** Reference-zone and unstable failures the runner found no cause for. Must be empty. */
-  uncaused: string[];
-  suites: SuiteRecord[];
-}
-
-/** The order the pages list suites in: the libraries as `/compare` has them, then GMT, the control. */
-export const SUITE_ORDER = [
-  "internationalized-date",
-  "luxon",
-  "date-fns",
-  "moment",
-  "dayjs",
-  "spacetime",
-  "js-temporal",
-  "temporal-polyfill",
-  "gmt",
-] as const;
-
-export const tagKey = (
-  suite: { id: string; version: string },
-  id: string,
-): string => `${suite.id}@${suite.version} | ${id}`;
-
-/** Throws on anything the pages must not show. */
-export function assertRecord(record: ZoneMatrixRecord): void {
-  if (record.untagged.length > 0) {
-    throw new Error(
-      `zone-matrix.json has untagged failures: ${record.untagged.join("; ")}. Tag them in scripts/zone-matrix/tags.mjs and run again.`,
-    );
-  }
-  if (!Array.isArray(record.uncaused) || !record.causes) {
-    throw new Error(
-      "zone-matrix.json has no causes or uncaused list: it was not written by the current run.mjs. Run again.",
-    );
-  }
-  if (record.uncaused.length > 0) {
-    throw new Error(
-      `zone-matrix.json has failures counted in neither kind with no cause: ${record.uncaused.join("; ")}. State each in scripts/zone-matrix/causes.mjs and run again.`,
-    );
-  }
-  for (const suite of record.suites) {
-    if (!(SUITE_ORDER as readonly string[]).includes(suite.id)) {
-      throw new Error(`zone-matrix.json has an unknown suite ${suite.id}`);
-    }
-    for (const row of uncounted(suite)) {
-      if (suite.id === "gmt") {
-        throw new Error(
-          `GMT, the control, fails ${row.id} on Node ${row.node}: that is a GMT bug, not a result.`,
-        );
-      }
-      if (!causeOf(record, suite, row.id, row.node)) {
-        throw new Error(
-          `${tagKey(suite, row.id)} has no cause on Node ${row.node}`,
-        );
-      }
-    }
-    for (const cell of suite.cells) {
-      if (suite.id === "gmt" && cell.failed.length > 0) {
-        throw new Error(
-          `GMT, the control, fails in ${cell.zone} on Node ${cell.node}: that is a GMT bug, not a result.`,
-        );
-      }
-      for (const id of cell.failed) {
-        if (!tagOf(record, suite, id, cell.zone)) {
-          throw new Error(
-            `${tagKey(suite, id)} has no tag in zone ${cell.zone}`,
-          );
-        }
-      }
-    }
-  }
-}
-
-/** Every failure counted in neither kind, once per place it was seen. */
-function uncounted(suite: SuiteRecord): {
-  id: string;
-  why: KnownWhy;
-  node: string;
-  zone: string;
-}[] {
-  const rows: { id: string; why: KnownWhy; node: string; zone: string }[] = [];
-  const zone = suite.reference.zone;
-  for (const run of suite.reference.runs) {
-    for (const id of run.failed)
-      rows.push({ id, why: "reference", node: run.node, zone });
-    for (const id of run.unstable)
-      rows.push({ id, why: "unstable", node: run.node, zone });
-  }
-  for (const cell of suite.cells) {
-    for (const id of cell.alsoFailsAtReference)
-      rows.push({ id, why: "reference", node: cell.node, zone });
-    for (const id of cell.unstable)
-      rows.push({ id, why: "unstable", node: cell.node, zone: cell.zone });
-  }
-  return rows;
-}
-
-function causeOf(
-  record: ZoneMatrixRecord,
-  suite: SuiteRecord,
-  id: string,
-  node: string,
-): Cause | undefined {
-  const cause = record.causes[tagKey(suite, id)];
-  return cause && (!cause.nodes || cause.nodes.includes(node))
-    ? cause
-    : undefined;
-}
-
-function tagOf(
-  record: ZoneMatrixRecord,
-  suite: SuiteRecord,
-  id: string,
-  zone: string,
-): Tag | undefined {
-  const tag = record.tags[tagKey(suite, id)];
-  return tag && (!tag.zones || tag.zones.includes(zone)) ? tag : undefined;
-}
-
-export interface Counts {
+interface Counts {
   oneZone: number;
   wrongAnswer: number;
 }
 
-/** Both kinds together. */
-export const total = (c: Counts): number => c.oneZone + c.wrongAnswer;
-
 /** Distinct failing tests of each kind over the cells given (one test counts once). */
-export function countsOf(
+function countsOf(
   record: ZoneMatrixRecord,
   suite: SuiteRecord,
   cells: readonly Cell[],
@@ -241,16 +60,13 @@ export function countsOf(
   };
 }
 
-/** Why a failure is counted in neither kind. */
-export type KnownWhy = "reference" | "unstable";
-
 /** The words each reason is shown as, before its zones. */
 export const KNOWN_LABEL: Record<KnownWhy, string> = {
   reference: "in the reference zone",
   unstable: "failed once in two runs",
 };
 
-export interface ZoneSummary extends Counts {
+interface ZoneSummary extends Counts {
   zone: string;
   /** The most tests any Node version ran in this zone. */
   tests: number;
@@ -307,7 +123,7 @@ export interface SuiteSummary extends Counts {
   nodes: string[];
 }
 
-export interface ZoneMatrixSummary {
+interface ZoneMatrixSummary {
   /** False until a run is recorded. Every page then says so instead of showing a count. */
   ran: boolean;
   zones: string[];
@@ -451,7 +267,7 @@ export const suiteSummary = (id: string): SuiteSummary | undefined =>
   zoneMatrixSummary.suites.find((s) => s.id === id);
 
 /** The two kinds as one short phrase: `3 tests that assume one zone, 5 wrong answers`. */
-export function countsPhrase(c: Counts): string {
+function countsPhrase(c: Counts): string {
   const one = `${c.oneZone} ${c.oneZone === 1 ? "test assumes" : "tests assume"} one zone`;
   const wrong = `${c.wrongAnswer} wrong ${c.wrongAnswer === 1 ? "answer" : "answers"}`;
   return `${one}, ${wrong}`;

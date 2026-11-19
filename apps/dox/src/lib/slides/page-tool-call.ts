@@ -11,7 +11,7 @@
 import tool from "~/lib/webmcp/tools/moving-feasts";
 import type { PageToolResult } from "~/lib/webmcp/model-context";
 
-export interface PageToolCall {
+interface PageToolCall {
   /** What the agent sends: the tool's name and its arguments. */
   call: { name: string; arguments: { year: number } };
   /** What it gets back. */

@@ -64,6 +64,10 @@ These rules bind the architect's spec and the builder's code alike.
 10. **Watch the size.** When a story's diff passes about 10,000 added lines, or a slice adds more
     than its spec planned, stop and run a duplication pass (rules 1 to 9) before the next slice.
 
+The [`ui-standards`](../../../.agents/skills/ui-standards/SKILL.md) check holds the lines a branch
+adds to what a script can see of rules 2 to 8; `validate` and CI run it on every `apps/dox`
+change.
+
 ## Map
 
 | File | Holds |

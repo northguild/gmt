@@ -32,7 +32,7 @@ interface CalendarPageShape {
   weekday: PageText;
 }
 
-const coord = (n: number): string => String(Number(n.toFixed(3)));
+export const coord = (n: number): string => String(Number(n.toFixed(3)));
 const points = (list: readonly (readonly [number, number])[]): string =>
   list.map(([px, py]) => `${coord(px)},${coord(py)}`).join(" ");
 

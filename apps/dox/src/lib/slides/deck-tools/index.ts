@@ -19,7 +19,7 @@ import type {
 } from "~/lib/webmcp/model-context";
 
 /** The most text `read_deck_slide` returns for one slide. */
-export const SLIDE_TEXT_LIMIT = 6000;
+const SLIDE_TEXT_LIMIT = 6000;
 
 export const DECK_TOOL_NAMES = [
   "list_deck_slides",

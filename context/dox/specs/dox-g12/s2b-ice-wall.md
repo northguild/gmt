@@ -16,13 +16,17 @@ their marks appear only inside the captured, captioned snapshots, never as the d
 
 ## Captures: `scripts/capture-wall.ts`
 
-Run by hand with Node's type stripping, never in CI; its output is committed, like `hero-sky.bin`.
-- Entries, in wall order: `momentjs.com`, `moment.github.io/luxon/#/`, `date-fns.org`,
+Run by hand from `apps/dox` with `pnpm exec tsx scripts/capture-wall.ts --deck <slug>`, never in
+CI; its output is committed, like `hero-sky.bin`. The deck lists its panes in
+`src/slides/<slug>/wall-pages.json` as `{ id, label, url, clock, clip? }`, so the script holds no
+deck's pages.
+
+- Deck 0's entries, in wall order: `momentjs.com`, `moment.github.io/luxon/#/`, `date-fns.org`,
   `day.js.org`, `spacetime.how`, `react-aria.adobe.com/internationalized/date/`. Each has a `clip` rectangle the owner sets so the site's clock emblem sits inside
   the frame. Playwright Chromium at 1280×800, DPR 1, `prefers-color-scheme` left as the site serves.
 - `sharp` writes `public/slides/give-me-temporal/wall/<id>.webp` at 1024×640, quality 80 (budget
   ≤ 90 kB each). `src/slides/give-me-temporal/wall.json` gets `{ id, title, url, capturedAt,
-  image, clock }`: `title` from the page's `<title>`, `capturedAt` an instant from gmt
+image, clock }`: `title` from the page's `<title>`, `capturedAt` an instant from gmt
   `getUtcNow` (`@northguild/gmt/utc/get`), `clock` the owner's yes or no after looking at the
   frame. Nothing in the JSON is typed by hand except `clock`.
 - **No clock:** if a captured page shows no clock in its mark (Spacetime and @internationalized/date show none), the pane still hangs in the wall with
@@ -58,7 +62,7 @@ the globe's own lens. Nothing else in the engine changes for this slice.
   1400 ms. Pinned shards (below) follow a second phase. Because the pose is a pure function of
   `t`, a replay is exact and a reset is `t0 = null`.
 - `wall.ts`: `mountIceWall(layer, { engine, panes, signal })` returns `{ setDepth(z), breakAll(now),
-  breakAt(x, y, now), reset(), destroy() }`. `onState` reports `whole`, `approach`,
+breakAt(x, y, now), reset(), destroy() }`. `onState` reports `whole`, `approach`,
   `breaking`, `gone` or `hidden`. The wall sits in camera space, six 16:10 panes in a three by two grid
   (6 to 64 across, 12 down, gap 1.2, in stage-width percent), perpendicular to the view axis, the right
   third left clear for the clock; it never moves with a globe hop.
@@ -94,6 +98,7 @@ the globe's own lens. Nothing else in the engine changes for this slice.
 Lagos, Nairobi, Tehran, Tokyo, Manila, São Paulo and Mexico City, so the pins circle the planet
 and the experiment slides after it reuse the same pins (a test holds every zone in `TZ_COORDINATES`). The
 twelve-zone view centres the camera so twelve sit on the visible side.
+
 - Twelve shards, the three largest of each pane, turn at 500 ms from ballistic flight onto a
   curve towards their zone's point (`engine.project`, read each frame because the Earth turns),
   shrink into a dot and hand over to the zone's `GlobeMarker` on arrival (by 1400 ms).

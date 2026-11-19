@@ -8,6 +8,7 @@
 /* oxlint-disable dox-test/no-implementation-assert */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadDeckRuntime } from "~/slides/deck-runtime";
+import { FIXTURE_STAGE } from "~/test/deck-stage-fixture";
 import { NO_STAGE_DATA } from "./stage-data";
 import { mountDeckStage } from "./stage-deferred";
 import { mountSpaceStage, type SpaceStage } from "./stage";
@@ -23,6 +24,14 @@ const fake = (): SpaceStage => ({
 });
 
 vi.mock("./stage", () => ({ mountSpaceStage: vi.fn() }));
+
+// The registry knows one made-up deck, so no real deck is named here.
+const TEST_DECK = "test-deck";
+vi.mock("~/slides/deck-runtime", () => ({
+  loadDeckRuntime: vi.fn(async (slug: string) =>
+    slug === TEST_DECK ? { stage: FIXTURE_STAGE } : null,
+  ),
+}));
 
 let abort: AbortController | undefined;
 afterEach(() => {
@@ -42,16 +51,16 @@ describe("mountDeckStage", () => {
     const real = fake();
     vi.mocked(mountSpaceStage).mockReturnValue(real);
     abort = new AbortController();
-    const stage = mountDeckStage(rootFor("give-me-temporal"), {
+    const stage = mountDeckStage(rootFor(TEST_DECK), {
       signal: abort.signal,
     });
     stage.goTo("Asia/Tokyo", { hop: true });
-    stage.lapse("tokyo");
+    stage.lapse("plain");
     expect(real.goTo).not.toHaveBeenCalled();
-    await vi.waitFor(() => expect(real.lapse).toHaveBeenCalledWith("tokyo"));
+    await vi.waitFor(() => expect(real.lapse).toHaveBeenCalledWith("plain"));
     expect(real.goTo).toHaveBeenCalledWith("Asia/Tokyo", { hop: true });
     const data = vi.mocked(mountSpaceStage).mock.calls[0]![1].data;
-    expect(Object.keys(data.lapses)).toContain("tokyo");
+    expect(Object.keys(data.lapses)).toContain("plain");
     stage.overview(true);
     expect(real.overview).toHaveBeenCalledWith(true);
   });
@@ -68,13 +77,13 @@ describe("mountDeckStage", () => {
 
   it("never mounts the stage when the deck is gone before its data arrives", async () => {
     abort = new AbortController();
-    const stage = mountDeckStage(rootFor("give-me-temporal"), {
+    const stage = mountDeckStage(rootFor(TEST_DECK), {
       signal: abort.signal,
     });
     abort.abort();
     stage.destroy();
     // The same load the stage waits on, then the turn its answer takes to arrive.
-    await loadDeckRuntime("give-me-temporal");
+    await loadDeckRuntime(TEST_DECK);
     await Promise.resolve();
     expect(mountSpaceStage).not.toHaveBeenCalled();
   });

@@ -21,7 +21,7 @@ import { LABEL_OFFSET_X, labelRingShift } from "./casing";
 import type { GlobeMarker } from "./types";
 
 /** Which side of its dot a label sits on; the layout gives `null` for a label it hides. */
-export type LabelSide = "right" | "left";
+type LabelSide = "right" | "left";
 
 /** Extra clear space kept round every label box and dot, in CSS pixels. */
 const LABEL_CLEARANCE = 1;

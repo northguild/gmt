@@ -148,7 +148,8 @@ These bind every change.
     - the second copy of anything becomes a shared piece before you go on;
     - shared folders never import a feature's data or hard-code its content;
     - nothing a script rebuilds gets committed;
-    - dead code goes in the same change.
+    - dead code goes in the same change;
+    - a slice is done only when [`ui-standards`](./skills/ui-standards/SKILL.md) prints PASS.
 
     If the spec tells you to copy, or puts content in a shared layer, stop and report back. Don't
     build it as written. Your report lists every new shared piece, and every place you reused an

@@ -42,7 +42,7 @@ export function labelFont(host: HTMLElement): string {
 }
 
 /** The Dox globe's colours, read from the site's CSS custom properties. */
-export interface DoxTheme extends GlobeTheme {
+interface DoxTheme extends GlobeTheme {
   markerPrimary: Rgba;
   markerOther: Rgba;
   markerNightPrimary: Rgba;

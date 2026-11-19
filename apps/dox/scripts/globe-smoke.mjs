@@ -63,6 +63,7 @@ import { PNG } from "pngjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { allDeckRoutes } from "./lib/deck-folders.mjs";
 import { gate, resolveMisses, widgetRoot } from "./lib/locate.mjs";
 import { probeWall } from "./lib/wall-probe.mjs";
 import { unlockDecks } from "./lib/slides-check-helpers.mjs";
@@ -117,9 +118,23 @@ const PAGES = [
   },
 ];
 
-/** The deck's route and its space layer: checked on their own, since the deck has no widget root. */
-const DECK_ROUTE = "/slides/give-me-temporal/";
+/** The first deck's route (the stage is the shared engine's) and its space layer: checked on their own, since the deck has no widget root. */
+const DECK_ROUTE = allDeckRoutes()[0];
 const DECK_SPACE = "[data-deck-space]";
+/** What `/api/brains` answers on the served `dist/` (`BrainsInfo` in `src/lib/chat-types.ts`). */
+const NO_BRAINS = {
+  brains: [],
+  providers: [],
+  activeBrainId: null,
+  visitor: {
+    used: 0,
+    limit: 5,
+    remaining: 5,
+    unlimited: false,
+    // The UTC midnight after `FIXED_INSTANT`, when the questions refill.
+    resetsAt: "2026-03-21T00:00:00Z",
+  },
+};
 
 /**
  * The runner's page contract (`scripts/gates/`): `--list-pages` and `--pages` name routes. The
@@ -351,6 +366,11 @@ async function open(
   if (withholdImagery) {
     await page.route(`**${IMAGERY_PATH}`, (request) => request.abort());
   }
+  /* `dist/` is served without the Worker. A deck's Dox slides read Dox's counts on load: they get
+     a day with no brains and no questions asked, not a 404 the console would report. */
+  await page.route("**/gmt/api/brains", (request) =>
+    request.fulfill({ json: NO_BRAINS }),
+  );
   if (theme) {
     await page.addInitScript((value) => {
       localStorage.setItem("starlight-theme", value);

@@ -11,7 +11,7 @@
  */
 import snapshot from "./zone-probe.json";
 
-export interface ProbeExample {
+interface ProbeExample {
   /** What was fed in, in words. */
   input: string;
   /** The library's answer. */
@@ -22,7 +22,7 @@ export interface ProbeExample {
   zones: string[] | "every";
 }
 
-export interface ProbeLibraryResult {
+interface ProbeLibraryResult {
   library: string;
   total: number;
   /** Cases answered wrongly under at least one host zone. */
@@ -36,7 +36,7 @@ export interface ProbeLibraryResult {
   nodesAgree: boolean;
 }
 
-export interface ProbeExperiment {
+interface ProbeExperiment {
   id: string;
   number: number;
   title: string;
@@ -46,7 +46,7 @@ export interface ProbeExperiment {
   perLibrary: ProbeLibraryResult[];
 }
 
-export interface ProbeLibrary {
+interface ProbeLibrary {
   id: string;
   name: string;
   version: string;

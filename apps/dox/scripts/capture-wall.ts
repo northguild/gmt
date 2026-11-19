@@ -1,36 +1,53 @@
 #!/usr/bin/env tsx
 /**
- * Captures the six landing pages that hang in the deck's ice wall (slice 2b of DOX-G12).
+ * Captures the landing pages that hang in a deck's ice wall (slice 2b of DOX-G12). The deck lists
+ * them in `src/slides/<slug>/wall-pages.json`: `{ id, label, url, clock, clip? }` each.
  *
- * Run it from `apps/dox`:  `pnpm exec tsx scripts/capture-wall.ts`
+ * Run it from `apps/dox`:  `pnpm exec tsx scripts/capture-wall.ts --deck <slug>`
  * Re-run with `--placeholder` to write labelled stand-in panes (no network), which is what ships
  * when a site is unreachable: a stand-in says so on its face and in `wall.json`, and never
  * passes for a capture.
  *
  * For each page it opens a 1280 x 800 window at a device pixel ratio of 1, waits for the page to
  * settle, and writes a 1024 x 640 WebP (quality 80, held under 90 kB) to
- * `public/slides/give-me-temporal/wall/<id>.webp`. The page's address, the capture's date and
- * whether the page shows a live clock are written to `src/slides/give-me-temporal/wall.json`,
+ * `public/slides/<slug>/wall/<id>.webp`. The page's address, the capture's date and
+ * whether the page shows a live clock are written to `src/slides/<slug>/wall.json`,
  * which the deck's figures and captions read. The date comes from gmt (`getUtcNow`).
  *
  * `title` is the page's own `<title>`, read from the page; a stand-in, or a page with an empty
- * `<title>`, carries the label in `PAGES`.
+ * `<title>`, carries the label in `wall-pages.json`.
  * `clip` is optional and the owner's: a rectangle of the window to keep, set once the capture has
  * been looked at, so a site's clock emblem sits inside the frame.
  *
- * `clock` is an input, not something measured: it is true in `PAGES` for a page whose capture
+ * `clock` is an input, not something measured: it is true in `wall-pages.json` for a page whose capture
  * shows a clock in its mark (Moment.js's clock face, Luxon's dial), and the deck's caption says so.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { chromium } from "@playwright/test";
 import sharp from "sharp";
 import { getUtcNow } from "@northguild/gmt/utc/get";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const imageDir = resolve(root, "public/slides/give-me-temporal/wall");
-const dataFile = resolve(root, "src/slides/give-me-temporal/wall.json");
+
+const { values } = parseArgs({
+  options: { deck: { type: "string" }, placeholder: { type: "boolean" } },
+});
+const slug = values.deck;
+if (
+  !slug ||
+  !existsSync(resolve(root, "src/slides", slug, "wall-pages.json"))
+) {
+  console.error(
+    "Usage: pnpm exec tsx scripts/capture-wall.ts --deck <slug> [--placeholder]\n" +
+      "The deck lists its pages in src/slides/<slug>/wall-pages.json.",
+  );
+  process.exit(1);
+}
+const imageDir = resolve(root, "public/slides", slug, "wall");
+const dataFile = resolve(root, "src/slides", slug, "wall.json");
 
 const MAX_BYTES = 90 * 1024;
 
@@ -56,41 +73,12 @@ interface Rendered {
   title: string | null;
 }
 
-const PAGES: readonly Page[] = [
-  {
-    id: "moment",
-    label: "Moment.js",
-    url: "https://momentjs.com/",
-    clock: true,
-  },
-  {
-    id: "luxon",
-    label: "Luxon",
-    url: "https://moment.github.io/luxon/",
-    clock: true,
-  },
-  {
-    id: "date-fns",
-    label: "date-fns",
-    url: "https://date-fns.org/",
-    clock: true,
-  },
-  { id: "dayjs", label: "Day.js", url: "https://day.js.org/", clock: true },
-  {
-    id: "spacetime",
-    label: "Spacetime",
-    url: "https://spacetime.how/",
-    clock: false,
-  },
-  {
-    id: "internationalized-date",
-    label: "@internationalized/date",
-    url: "https://react-aria.adobe.com/internationalized/date/",
-    clock: false,
-  },
-];
+/** The deck's pages: what `wall-pages.json` lists. */
+const PAGES = JSON.parse(
+  readFileSync(resolve(root, "src/slides", slug, "wall-pages.json"), "utf8"),
+) as readonly Page[];
 
-const placeholderMode = process.argv.includes("--placeholder");
+const placeholderMode = values.placeholder === true;
 
 async function render(
   page: Page,
@@ -170,7 +158,7 @@ async function main(): Promise<void> {
         title: rendered.title ?? page.label,
         url: page.url,
         capturedAt,
-        image: `slides/give-me-temporal/wall/${page.id}.webp`,
+        image: `slides/${slug}/wall/${page.id}.webp`,
         clock: page.clock,
         ...(placeholder ? { placeholder: true } : {}),
       });

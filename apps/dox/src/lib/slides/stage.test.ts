@@ -9,23 +9,26 @@
  * on the calls it makes to the (faked) engine.
  */
 /* oxlint-disable dox-test/no-markup-read, dox-test/no-implementation-assert, dox-test/no-class-query, testing-library/no-node-access */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims, stubReducedMotion } from "~/test/jsdom-shims";
 import {
   control,
   engine,
   fixture,
   made,
-  readyEngine,
-  resetFakes,
+  stageHarness,
   skyCalls,
   walls,
   type FakeEngine,
   type FakeWall,
 } from "~/test/stage-fixture";
-import { STAGE } from "~/slides/give-me-temporal/stage-data";
+import {
+  FIXTURE_PLANET_ZONES,
+  FIXTURE_STAGE as STAGE,
+} from "~/test/deck-stage-fixture";
 import { getPlanetZones } from "./places";
-import { mountSpaceStage, readStops, legsOf, type SpaceStage } from "./stage";
+import { mountSpaceStage } from "./stage";
+import { legsOf, readStops } from "./stage-route";
 
 installJsdomShims();
 
@@ -48,28 +51,13 @@ vi.mock("~/lib/space-sky", async () =>
   (await import("~/test/stage-fixture")).skyMock(),
 );
 
-let abort: AbortController;
-let root: HTMLElement;
-let stage: SpaceStage | undefined;
-const ready = (): Promise<FakeEngine> => readyEngine(root);
-
-beforeEach(() => {
-  resetFakes();
-  abort = new AbortController();
-  root = fixture();
-});
-
-afterEach(() => {
-  stage?.destroy();
-  stage = undefined;
-  abort.abort();
-  root.remove();
-  vi.restoreAllMocks();
-});
+const h = stageHarness((root, signal) =>
+  mountSpaceStage(root, { signal, data: STAGE }),
+);
 
 describe("the route", () => {
   it("lists the places slides and builds name, in order, geographic ones only", () => {
-    const stops = readStops(root);
+    const stops = readStops(h.root);
     expect(stops.map((s) => [s.key, s.slide, s.build])).toEqual([
       ["Europe/Helsinki", 0, 0],
       ["Asia/Tokyo", 1, 0],
@@ -82,15 +70,15 @@ describe("the route", () => {
     const again = document.createElement("section");
     again.setAttribute("data-slide", "");
     again.dataset["place"] = "Asia/Manila";
-    root.querySelector("[data-deck-stage]")!.append(again);
-    expect(legsOf(readStops(root))).toHaveLength(2);
+    h.root.querySelector("[data-deck-stage]")!.append(again);
+    expect(legsOf(readStops(h.root))).toHaveLength(2);
   });
 });
 
 describe("the globe", () => {
   it("starts the engine with a still, capped, hidden-aware configuration", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
+    h.mount();
+    const fake = await h.ready();
     expect(fake.options).toMatchObject({
       ambient: false,
       maxDpr: 1.5,
@@ -98,16 +86,16 @@ describe("the globe", () => {
       imageryUrl: "/earth.webp",
     });
     expect(fake.options["pauseWhenHidden"]).toBe(
-      root.querySelector("[data-deck-space]"),
+      h.root.querySelector("[data-deck-space]"),
     );
     expect(fake.options["sunInstant"]).toEqual(expect.any(Function));
-    expect(root).toHaveAttribute("data-space");
+    expect(h.root).toHaveAttribute("data-space");
   });
 
   it("keeps the canvas out of the tab order and the accessibility tree", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    await ready();
-    const canvas = root.querySelector<HTMLCanvasElement>(
+    h.mount();
+    await h.ready();
+    const canvas = h.root.querySelector<HTMLCanvasElement>(
       "[data-deck-space] > canvas",
     )!;
     expect(canvas).not.toHaveAttribute("tabindex");
@@ -116,57 +104,57 @@ describe("the globe", () => {
   });
 
   it("flies a hop to a new place, and a plain ease with no hop asked for", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.mount();
+    const fake = await h.ready();
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
     const [rotation, flight] = fake.flyTo.mock.calls.at(-1)!;
     expect(rotation[0]).toBeCloseTo(-139.74, 1);
     expect(flight.hop.durationMs).toBeGreaterThanOrEqual(2000);
     expect(flight.hop.durationMs).toBeLessThanOrEqual(4000);
-    stage.goTo("Asia/Manila", { at: { slide: 1, build: 1 } });
+    h.stage.goTo("Asia/Manila", { at: { slide: 1, build: 1 } });
     expect(fake.flyTo.mock.calls.at(-1)).toHaveLength(1);
   });
 
   it("does nothing when asked for the place it already holds", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.mount();
+    const fake = await h.ready();
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
     const calls = fake.flyTo.mock.calls.length;
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
     expect(fake.flyTo.mock.calls).toHaveLength(calls);
   });
 
   it("returns to the slide's place after free flight, and a step does the same", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.mount();
+    const fake = await h.ready();
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
     const calls = fake.flyTo.mock.calls.length;
-    stage.returnHome();
+    h.stage.returnHome();
     expect(fake.flyTo.mock.calls).toHaveLength(calls);
-    stage.steer({ lng: 60, lat: 0, zoom: 0 });
-    stage.steer({ lng: 0, lat: 0, zoom: 0 });
-    stage.returnHome();
+    h.stage.steer({ lng: 60, lat: 0, zoom: 0 });
+    h.stage.steer({ lng: 0, lat: 0, zoom: 0 });
+    h.stage.returnHome();
     expect(fake.flyTo.mock.calls).toHaveLength(calls + 1);
-    stage.steer({ lng: 0, lat: 60, zoom: 0 });
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.steer({ lng: 0, lat: 60, zoom: 0 });
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
     expect(fake.flyTo.mock.calls).toHaveLength(calls + 2);
   });
 
   it("returns after a drag", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.mount();
+    const fake = await h.ready();
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
     const calls = fake.flyTo.mock.calls.length;
     fake.interact();
-    stage.returnHome();
+    h.stage.returnHome();
     expect(fake.flyTo.mock.calls).toHaveLength(calls + 1);
   });
 
   it("passes a held rate to the engine and stops it on zeros", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.steer({ lng: 60, lat: 0, zoom: 1 });
-    stage.steer({ lng: 0, lat: 0, zoom: 0 });
+    h.mount();
+    const fake = await h.ready();
+    h.stage.steer({ lng: 60, lat: 0, zoom: 1 });
+    h.stage.steer({ lng: 0, lat: 0, zoom: 0 });
     expect(fake.steer.mock.calls).toEqual([
       [{ lng: 60, lat: 0, zoom: 1 }],
       [{ lng: 0, lat: 0, zoom: 0 }],
@@ -174,9 +162,9 @@ describe("the globe", () => {
   });
 
   it("publishes whether the camera moves, and where it rests, after each frame", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    const space = root.querySelector<HTMLElement>("[data-deck-space]")!;
+    h.mount();
+    const fake = await h.ready();
+    const space = h.root.querySelector<HTMLElement>("[data-deck-space]")!;
     fake.getView.mockReturnValue({
       rotation: [-24.9, -60.2],
       zoom: 1,
@@ -200,16 +188,16 @@ describe("the globe", () => {
   });
 
   it("lights every pin and arc in the overview, and goes back after", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.mount();
+    const fake = await h.ready();
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
     expect(
       fake.setMarkers.mock.calls
         .at(-1)![0]
         .filter((m: { label?: string }) => m.label),
     ).toHaveLength(1);
     expect(fake.setArcs.mock.calls.at(-1)![0]).toHaveLength(1);
-    stage.overview(true);
+    h.stage.overview(true);
     expect(
       fake.setMarkers.mock.calls
         .at(-1)![0]
@@ -217,21 +205,21 @@ describe("the globe", () => {
     ).toHaveLength(3);
     expect(fake.setArcs.mock.calls.at(-1)![0]).toHaveLength(2);
     const calls = fake.flyTo.mock.calls.length;
-    stage.overview(false);
+    h.stage.overview(false);
     expect(fake.flyTo.mock.calls).toHaveLength(calls + 1);
     expect(fake.setArcs.mock.calls.at(-1)![0]).toHaveLength(1);
   });
 
   it("frames the Earth in the right third on every slide, whatever the slide", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
+    h.mount();
+    const fake = await h.ready();
     const framing = fake.options["framing"] as (
       w: number,
       h: number,
     ) => { cx: number; cy: number; radius: number };
     const before = framing(1200, 600);
-    stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
-    stage.goTo("wall", { hop: true, at: { slide: 2, build: 0 } });
+    h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.goTo("wall", { hop: true, at: { slide: 2, build: 0 } });
     expect(framing(1200, 600)).toEqual(before);
     // Five sixths across: the middle of the right third.
     expect(before.cx).toBe(1000);
@@ -242,9 +230,9 @@ describe("the globe", () => {
   it("flies a cut under reduced motion", async () => {
     const undo = stubReducedMotion(true);
     try {
-      stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-      const fake = await ready();
-      stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
+      h.mount();
+      const fake = await h.ready();
+      h.stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
       expect(fake.flyTo.mock.calls.at(-1)).toHaveLength(1);
     } finally {
       undo();
@@ -252,11 +240,11 @@ describe("the globe", () => {
   });
 
   it("destroys the engine with the stage", async () => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.destroy();
+    h.mount();
+    const fake = await h.ready();
+    h.stage.destroy();
     expect(fake.destroy).toHaveBeenCalledTimes(1);
-    expect(root).not.toHaveAttribute("data-space");
+    expect(h.root).not.toHaveAttribute("data-space");
   });
 
   it("destroys an engine that arrives after the stage is gone", async () => {
@@ -266,13 +254,13 @@ describe("the globe", () => {
     });
     const { createGlobeEngine } = await import("~/lib/globe/engine");
     vi.mocked(createGlobeEngine).mockClear();
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
+    h.mount();
     await vi.waitFor(() => expect(createGlobeEngine).toHaveBeenCalled());
-    stage.destroy();
+    h.stage.destroy();
     release();
     await vi.waitFor(() => expect(made).toHaveLength(1));
     await vi.waitFor(() => expect(engine().destroy).toHaveBeenCalledTimes(1));
-    expect(root.querySelector("[data-deck-space]")).not.toHaveAttribute(
+    expect(h.root.querySelector("[data-deck-space]")).not.toHaveAttribute(
       "data-globe",
     );
   });
@@ -281,26 +269,26 @@ describe("the globe", () => {
 describe("when the globe cannot start", () => {
   it("draws the sky once without it and throws nothing", async () => {
     control.fail = true;
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
+    h.mount();
     await vi.waitFor(() => expect(skyCalls.drawWithout).toBe(1));
-    expect(root.querySelector("[data-deck-space]")).toHaveAttribute(
+    expect(h.root.querySelector("[data-deck-space]")).toHaveAttribute(
       "data-globe",
       "none",
     );
     expect(skyCalls.follow).toBe(0);
     expect(() => {
-      stage!.goTo("Asia/Tokyo", { hop: true });
-      stage!.steer({ lng: 1, lat: 0, zoom: 0 });
-      stage!.returnHome();
-      stage!.overview(true);
+      h.stage.goTo("Asia/Tokyo", { hop: true });
+      h.stage.steer({ lng: 1, lat: 0, zoom: 0 });
+      h.stage.returnHome();
+      h.stage.overview(true);
     }).not.toThrow();
   });
 
   it("does nothing without a space layer", () => {
-    root.querySelector("[data-deck-space]")!.remove();
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    expect(() => stage!.goTo("Asia/Tokyo")).not.toThrow();
-    expect(root).not.toHaveAttribute("data-space");
+    h.root.querySelector("[data-deck-space]")!.remove();
+    h.mount();
+    expect(() => h.stage.goTo("Asia/Tokyo")).not.toThrow();
+    expect(h.root).not.toHaveAttribute("data-space");
   });
 });
 
@@ -329,49 +317,47 @@ describe("the ice wall", () => {
       .filter((id: string) => id.startsWith("clock-"));
 
   const setUpWall = async (): Promise<{ fake: FakeEngine; wall: FakeWall }> => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
+    h.mount();
+    const fake = await h.ready();
     await vi.waitFor(() => expect(walls).toHaveLength(1));
     return { fake, wall: walls[0]! };
   };
 
   beforeEach(() => {
-    root.remove();
-    root = wallFixture();
+    h.useDeck(wallFixture());
     HTMLImageElement.prototype.decode = async () => {};
   });
 
   it("is not mounted for a deck with no panes", async () => {
-    root.remove();
-    root = fixture();
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    await ready();
+    h.useDeck(fixture());
+    h.mount();
+    await h.ready();
     expect(walls).toHaveLength(0);
   });
 
   it("hangs on a wall slide and shows no clocks", async () => {
     const { fake, wall } = await setUpWall();
-    stage!.goTo("wall", { hop: true, at: { slide: 0, build: 0 } });
+    h.stage.goTo("wall", { hop: true, at: { slide: 0, build: 0 } });
     expect(wall.show).toHaveBeenCalled();
     expect(clockIds(fake)).toEqual([]);
   });
 
   it("breaks into one shard for each planet zone, up to twelve, when the talk steps on", async () => {
     const { wall } = await setUpWall();
-    stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
-    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
+    h.stage.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
     expect(wall.flyThrough).toHaveBeenCalledTimes(1);
     const zones = wall.flyThrough.mock.calls[0]![0] as string[];
     const planet = getPlanetZones().length;
-    expect(planet).toBe(10);
+    expect(planet).toBe(FIXTURE_PLANET_ZONES.length);
     expect(zones).toHaveLength(Math.min(12, planet));
     expect(new Set(zones).size).toBe(zones.length);
   });
 
   it("lights a clock with the local time as each shard lands, and the rest at the break", async () => {
     const { fake, wall } = await setUpWall();
-    stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
-    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
+    h.stage.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
     const zones = wall.flyThrough.mock.calls[0]![0] as string[];
     wall.options["onBreak"]!();
     expect(clockIds(fake)).toHaveLength(getPlanetZones().length - zones.length);
@@ -384,27 +370,27 @@ describe("the ice wall", () => {
   });
 
   it("lights every clock at once on a deep link to the planet", async () => {
-    root
+    h.root
       .querySelectorAll("[data-slide]")[0]!
       .setAttribute("data-place", "planet");
     const { fake, wall } = await setUpWall();
-    stage!.goTo("planet", { hop: false, at: { slide: 0, build: 0 } });
+    h.stage.goTo("planet", { hop: false, at: { slide: 0, build: 0 } });
     expect(wall.hide).toHaveBeenCalled();
     expect(clockIds(fake)).toHaveLength(getPlanetZones().length);
   });
 
   it("brings the wall back whole when the talk steps back from the planet", async () => {
     const { fake, wall } = await setUpWall();
-    stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
-    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
-    stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
+    h.stage.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
     expect(wall.restore).toHaveBeenCalledTimes(1);
     expect(clockIds(fake)).toEqual([]);
   });
 
   it("matches the wall's depth to the camera's zoom while it hangs", async () => {
     const { fake, wall } = await setUpWall();
-    stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
+    h.stage.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
     fake.getView.mockReturnValue({
       rotation: [0, 0],
       zoom: 0.4,
@@ -416,7 +402,7 @@ describe("the ice wall", () => {
 
   it("destroys the wall with the stage", async () => {
     const { wall } = await setUpWall();
-    stage!.destroy();
+    h.stage.destroy();
     expect(wall.destroy).toHaveBeenCalledTimes(1);
   });
 });
@@ -439,17 +425,16 @@ function spinFixture(): HTMLElement {
 describe("the Earth's spin", () => {
   const at = (slide: number) => ({ hop: true, at: { slide, build: 0 } });
   const spinSpace = (): HTMLElement =>
-    root.querySelector<HTMLElement>("[data-deck-space]")!;
+    h.root.querySelector<HTMLElement>("[data-deck-space]")!;
 
   beforeEach(() => {
-    root.remove();
-    root = spinFixture();
+    h.useDeck(spinFixture());
   });
 
   const start = async (): Promise<FakeEngine> => {
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
-    stage.goTo("Europe/Helsinki", at(0));
+    h.mount();
+    const fake = await h.ready();
+    h.stage.goTo("Europe/Helsinki", at(0));
     return fake;
   };
 
@@ -457,7 +442,7 @@ describe("the Earth's spin", () => {
     const fake = await start();
     expect(fake.setSpin).not.toHaveBeenCalled();
     expect(spinSpace()).not.toHaveAttribute("data-spin");
-    stage!.goTo("planet", at(1));
+    h.stage.goTo("planet", at(1));
     fake.frame();
     expect(fake.setSpin).toHaveBeenLastCalledWith(true);
     expect(spinSpace()).toHaveAttribute("data-spin", "on");
@@ -465,11 +450,11 @@ describe("the Earth's spin", () => {
 
   it("keeps the spin and the camera still between two spin slides on the same place", async () => {
     const fake = await start();
-    stage!.goTo("planet", at(1));
+    h.stage.goTo("planet", at(1));
     fake.frame();
     fake.spinActive = true;
     const flights = fake.flyTo.mock.calls.length;
-    stage!.goTo("planet", at(2));
+    h.stage.goTo("planet", at(2));
     fake.frame();
     expect(fake.flyTo.mock.calls.length).toBe(flights);
     expect(fake.setSpin).toHaveBeenCalledTimes(1);
@@ -477,11 +462,11 @@ describe("the Earth's spin", () => {
 
   it("hands the turning Earth straight to the flight back, at its own speed and with no dip", async () => {
     const fake = await start();
-    stage!.goTo("planet", at(2));
+    h.stage.goTo("planet", at(2));
     fake.frame();
     fake.spinActive = true;
     const flights = fake.flyTo.mock.calls.length;
-    stage!.goTo("Europe/Helsinki", at(0));
+    h.stage.goTo("Europe/Helsinki", at(0));
     expect(fake.setSpin).toHaveBeenLastCalledWith(false);
     // At once, and with no hop: the controller carries the spin's speed into the flight.
     expect(fake.flyTo.mock.calls.length).toBe(flights + 1);
@@ -492,19 +477,19 @@ describe("the Earth's spin", () => {
 
   it("flies back at once when the Earth was not spinning yet", async () => {
     const fake = await start();
-    stage!.goTo("planet", at(1));
+    h.stage.goTo("planet", at(1));
     const flights = fake.flyTo.mock.calls.length;
-    stage!.goTo("Europe/Helsinki", at(0));
+    h.stage.goTo("Europe/Helsinki", at(0));
     expect(fake.flyTo.mock.calls.length).toBe(flights + 1);
   });
 
   it("turns again when the talk steps back onto a spin slide", async () => {
     const fake = await start();
-    stage!.goTo("planet", at(2));
+    h.stage.goTo("planet", at(2));
     fake.frame();
     fake.spinActive = true;
-    stage!.goTo("planet", at(3));
-    stage!.goTo("planet", at(2));
+    h.stage.goTo("planet", at(3));
+    h.stage.goTo("planet", at(2));
     fake.frame();
     expect(fake.setSpin).toHaveBeenLastCalledWith(true);
     expect(spinSpace()).toHaveAttribute("data-spin", "on");
@@ -514,7 +499,7 @@ describe("the Earth's spin", () => {
     const undo = stubReducedMotion(true);
     try {
       const fake = await start();
-      stage!.goTo("planet", at(1));
+      h.stage.goTo("planet", at(1));
       fake.frame();
       expect(fake.setSpin).not.toHaveBeenCalled();
       expect(spinSpace()).not.toHaveAttribute("data-spin");
@@ -525,28 +510,27 @@ describe("the Earth's spin", () => {
 
   it("does not spin in the overview, and goes on after it", async () => {
     const fake = await start();
-    stage!.goTo("planet", at(1));
+    h.stage.goTo("planet", at(1));
     fake.frame();
-    stage!.overview(true);
+    h.stage.overview(true);
     fake.frame();
     expect(fake.setSpin).toHaveBeenLastCalledWith(false);
-    stage!.overview(false);
+    h.stage.overview(false);
     fake.frame();
     expect(fake.setSpin).toHaveBeenLastCalledWith(true);
   });
 
   it("starts only after the wall has broken", async () => {
-    root.remove();
-    root = wallFixture();
-    root.querySelectorAll("[data-slide]")[2]!.setAttribute("data-spin", "");
+    h.useDeck(wallFixture());
+    h.root.querySelectorAll("[data-slide]")[2]!.setAttribute("data-spin", "");
     HTMLImageElement.prototype.decode = async () => {};
-    stage = mountSpaceStage(root, { signal: abort.signal, data: STAGE });
-    const fake = await ready();
+    h.mount();
+    const fake = await h.ready();
     await vi.waitFor(() => expect(walls).toHaveLength(1));
     const wall = walls[0]!;
-    stage.goTo("wall", at(1));
+    h.stage.goTo("wall", at(1));
     wall.options["onState"]!("whole");
-    stage.goTo("planet", at(2));
+    h.stage.goTo("planet", at(2));
     wall.options["onState"]!("approach");
     wall.options["onState"]!("breaking");
     fake.frame();

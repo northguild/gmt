@@ -17,6 +17,7 @@
 import type { GlobeEngine, GlobeFraming } from "~/lib/globe/types";
 import { prefersReducedMotion } from "~/lib/reduced-motion";
 import { SHATTER_MS } from "./clock-shatter";
+import { builtAttribute } from "./stage-builds";
 import { mountEarthClock, type EarthClock } from "./earth-clock";
 import {
   labelOf,
@@ -104,22 +105,8 @@ export function createReveal(d: RevealDeps): StageReveal {
    * The UTC instant the slide's builds hold the clock at: the highest reached build's
    * `data-clock-at`, or `null` when no reached build holds it.
    */
-  const heldAt = (): string | null => {
-    let held: string | null = null;
-    let highest = 0;
-    const builds =
-      d.slideEls[d.homeSlide()]?.querySelectorAll<HTMLElement>(
-        "[data-build][data-clock-at]",
-      ) ?? [];
-    for (const b of builds) {
-      const n = Number(b.dataset["build"]);
-      if (n <= d.homeBuild() && n > highest) {
-        highest = n;
-        held = b.dataset["clockAt"] ?? null;
-      }
-    }
-    return held;
-  };
+  const heldAt = (): string | null =>
+    builtAttribute(d.slideEls[d.homeSlide()], "clock-at", d.homeBuild());
 
   const shown = (): boolean =>
     clock !== null &&

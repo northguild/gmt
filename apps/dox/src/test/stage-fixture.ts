@@ -5,7 +5,7 @@
  * three-slide deck they run over. A test file keeps its own `root`, `abort` and `stage`.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import { expect, vi } from "vitest";
+import { afterEach, beforeEach, expect, vi } from "vitest";
 
 export const NOW = Temporal.Instant.from(
   "2027-02-06T12:00:00Z",
@@ -245,4 +245,64 @@ export function resetFakes(): void {
   control.hold = undefined;
   skyCalls.drawWithout = 0;
   skyCalls.follow = 0;
+}
+
+/**
+ * The stage tests' one lifecycle. Before each test: the fakes cleared and a fresh fixture deck.
+ * After it: the stage destroyed, its signal aborted, the deck removed and every spy restored.
+ * `mount` puts the stage on the deck with `mountOn` and keeps it for the clean-up.
+ */
+export function stageHarness<S extends { destroy(): void }>(
+  mountOn: (root: HTMLElement, signal: AbortSignal) => S,
+): {
+  readonly root: HTMLElement;
+  readonly signal: AbortSignal;
+  /** The stage `mount` put up in this test. */
+  readonly stage: S;
+  mount(): S;
+  /** Swaps the fixture deck for another, before the stage is mounted. */
+  useDeck(deck: HTMLElement): void;
+  ready(): Promise<FakeEngine>;
+} {
+  let abort = new AbortController();
+  let deck: HTMLElement | null = null;
+  let stage: S | undefined;
+  const root = (): HTMLElement => {
+    if (!deck) throw new Error("the stage harness runs inside a test");
+    return deck;
+  };
+  beforeEach(() => {
+    resetFakes();
+    abort = new AbortController();
+    deck = fixture();
+  });
+  afterEach(() => {
+    stage?.destroy();
+    stage = undefined;
+    abort.abort();
+    deck?.remove();
+    deck = null;
+    vi.restoreAllMocks();
+  });
+  return {
+    get root() {
+      return root();
+    },
+    get signal() {
+      return abort.signal;
+    },
+    get stage() {
+      if (!stage) throw new Error("no stage is mounted in this test");
+      return stage;
+    },
+    mount() {
+      stage = mountOn(root(), abort.signal);
+      return stage;
+    },
+    useDeck(next) {
+      deck?.remove();
+      deck = next;
+    },
+    ready: () => readyEngine(root()),
+  };
 }

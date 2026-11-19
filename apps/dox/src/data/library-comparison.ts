@@ -85,7 +85,7 @@ const ZONE_MATRIX_ID: Record<string, string> = {
  * The zone-matrix counts of one library (`/compare/zone-matrix/`), derived from the recorded
  * failures. Empty until the suite has been run, so a library is never shown as having none.
  */
-export function zoneMatrixStats(
+function zoneMatrixStats(
   id: string,
 ): Pick<LibraryComparisonStats, "zoneMatrix"> {
   const summary = suiteSummary(ZONE_MATRIX_ID[id] ?? id);

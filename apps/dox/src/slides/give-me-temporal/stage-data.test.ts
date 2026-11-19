@@ -39,6 +39,30 @@ describe("Deck 0's stage data", () => {
         expect(resolvePlace(zone)).toMatchObject({ kind: "zone" });
   });
 
+  it("resolves each of its points, with a source", () => {
+    applyStageData(STAGE);
+    expect(Object.keys(STAGE.points).sort()).toEqual(["galicia", "greenwich"]);
+    for (const [name, entry] of Object.entries(STAGE.points)) {
+      expect(entry.source.length).toBeGreaterThan(10);
+      expect(resolvePlace(name)).toMatchObject({
+        kind: "point",
+        label: entry.label,
+      });
+    }
+  });
+
+  it("puts Galicia at Santiago de Compostela and Greenwich on the prime meridian", () => {
+    expect(STAGE.points["galicia"]).toMatchObject({
+      lng: -8.5448,
+      lat: 42.8782,
+      label: "Galicia",
+    });
+    expect(STAGE.points["greenwich"]).toMatchObject({
+      lng: 0,
+      label: "Greenwich",
+    });
+  });
+
   it("lists the wall's images for the readiness check", () => {
     expect(STAGE.assetRows.map((r) => r.id)).toEqual(["wall"]);
     expect(sources.join("")).toContain("data-wall-pane");

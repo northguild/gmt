@@ -15,11 +15,14 @@
  * a slide or a build names, as pins and as arcs between the pins in the order the talk visits
  * them. Time comes from gmt, imported after first paint (`gmt-loader.ts`).
  *
- * This file is the core every deck gets: the sky, the globe, the camera, the pins and arcs, the
- * ice wall and the clock pins it leaves. Three features are opt-in modules the core drives and a
- * deck uses by what its slides carry: the time-lapses (`stage-lapse.ts`, `data-lapse`), the
- * opening clock and reveal (`stage-reveal.ts`, `data-reveal`) and the filing pins
- * (`stage-filings.ts`, `data-pins="filings"`). A page without them never runs them.
+ * This file is the core every deck gets: it reads the route, keeps the camera's place, and drives
+ * the parts. The sky and the globe come up in `stage-boot.ts`, the camera is `stage-camera.ts`, the
+ * pins and arcs are drawn by `stage-markers.ts` from the route (`stage-route.ts`), and the ice
+ * wall and the clock pins it leaves are `stage-wall.ts` and `stage-clocks.ts`. Four features are
+ * opt-in modules a deck uses by what its slides carry: the time-lapses (`stage-lapse.ts`,
+ * `data-lapse`), the opening clock and reveal (`stage-reveal.ts`, `data-reveal`), the filing pins
+ * (`stage-filings.ts`, `data-pins="filings"`) and the idle turn (`stage-spin.ts`, `data-spin`). A
+ * page without them never runs them.
  *
  * A slide with `data-spin` turns the Earth at the home globe's idle rate and ramp (`setSpin`), once
  * the clock is gone and the wall has broken. Leaving it, the flight to the next slide's place
@@ -31,53 +34,22 @@
  * the arriving slide's text waits for it to end, then fades in. The clock's shards stay in the
  * right third, so the text fades in while they fly.
  */
-import type {
-  GlobeArc,
-  GlobeEngine,
-  GlobeFraming,
-  GlobeMarker,
-  Rgba,
-} from "~/lib/globe/types";
-import { hopDuration } from "~/lib/globe/controller";
-import {
-  labelFont,
-  parseColour,
-  readTheme,
-  rendererOverride,
-} from "~/lib/globe/globe-theme";
-import {
-  drawWithoutGlobe,
-  followGlobe,
-  loadClock,
-  loadSky,
-} from "~/lib/space-sky";
 import { prefersReducedMotion } from "~/lib/reduced-motion";
-import { mountIceWall, type IceWall, type WallState } from "./ice-wall/wall";
-import { clockLabel, nearestZones, WALL_PINS, type ZonedNow } from "./clocks";
-import { loadDeckGmt } from "./gmt-loader";
-import {
-  arcDegrees,
-  getPlanetZones,
-  isGeographic,
-  labelOf,
-  pointFor,
-  resolvePlace,
-  rotationFor,
-  zoomFor,
-  type Place,
-  type PlacePoint,
-} from "./places";
+import type { PlacePoint } from "./places";
+import { createClockPins } from "./stage-clocks";
+import { builtAttribute } from "./stage-builds";
+import { bootStage } from "./stage-boot";
+import { createFlight, framingOf, publishView } from "./stage-camera";
 import { createFilings } from "./stage-filings";
 import { createLapse } from "./stage-lapse";
+import { drawRoute } from "./stage-markers";
+import { createMoves } from "./stage-moves";
 import { createReveal } from "./stage-reveal";
+import { legsOf, lngLat, pinsOf, readStops } from "./stage-route";
+import { createSpin } from "./stage-spin";
 import { applyStageData, type DeckStageData } from "./stage-data";
-import { lapseLabel, lapseToolsFrom } from "./time-lapse";
-
-interface StageAt {
-  /** Zero-based slide and how many of its builds are shown. */
-  slide: number;
-  build: number;
-}
+import { newStageState, targetOf, type StageAt } from "./stage-state";
+import { createStageWall } from "./stage-wall";
 
 export interface SpaceStage {
   /**
@@ -103,110 +75,6 @@ export interface SpaceStage {
   destroy(): void;
 }
 
-/** One place a slide or a build names, in the order the talk visits them. */
-interface Stop {
-  key: string;
-  place: Extract<Place, { kind: "zone" | "point" }>;
-  slide: number;
-  build: number;
-}
-
-const HOP_DIP_ZOOM = 0.6;
-/** A move shorter than this many degrees is not worth a flight. */
-const MIN_HOP_DEG = 1;
-const ARC_ALTITUDE = 0.15;
-
-/** How often the clock pins' labels are read again, milliseconds. */
-const CLOCK_REFRESH_MS = 20000;
-
-const keyOf = (place: Stop["place"]): string =>
-  place.kind === "zone" ? place.zone : place.label;
-
-/** Every geographic place the page names, slides and builds, in document order. */
-export function readStops(root: HTMLElement): Stop[] {
-  const stops: Stop[] = [];
-  const add = (raw: string | undefined, slide: number, build: number): void => {
-    if (!raw) return;
-    let place: Place;
-    try {
-      place = resolvePlace(raw);
-    } catch {
-      // The deck's own test resolves every place its slides name; nothing to show here.
-      return;
-    }
-    if (isGeographic(place))
-      stops.push({ key: keyOf(place), place, slide, build });
-  };
-  root.querySelectorAll<HTMLElement>("[data-slide]").forEach((el, i) => {
-    add(el.dataset["place"], i, 0);
-    el.querySelectorAll<HTMLElement>("[data-build]").forEach((b) =>
-      add(b.dataset["place"], i, Number(b.dataset["build"]) || 1),
-    );
-  });
-  return stops;
-}
-
-/** Whether a stop has been reached at a position in the deck. */
-const reached = (stop: Stop, at: StageAt): boolean =>
-  stop.slide < at.slide || (stop.slide === at.slide && stop.build <= at.build);
-
-interface Leg {
-  from: Stop["place"];
-  to: Stop["place"];
-  /** The stop that ends the leg. */
-  end: Stop;
-}
-
-/** The arcs: one per pair of consecutive stops at different places. */
-export function legsOf(stops: readonly Stop[]): Leg[] {
-  const legs: Leg[] = [];
-  for (let i = 1; i < stops.length; i += 1) {
-    const prev = stops[i - 1]!;
-    const stop = stops[i]!;
-    if (prev.key !== stop.key)
-      legs.push({ from: prev.place, to: stop.place, end: stop });
-  }
-  return legs;
-}
-
-const lngLat = (place: Stop["place"]): PlacePoint => [place.lng, place.lat];
-
-/**
- * Writes the camera's state on the space layer, on a change only: `data-flight` is `moving` or
- * `rest`, and `data-rotation` is the settled `lng lat` in degrees (`data-target`, set when a
- * flight starts, is the `lng lat` it is bound for; `moving` covers the clock's reveal too). The
- * deck's gate reads them
- * (`scripts/slides-check.mjs`) to see that a flight lands on its slide's place and stops asking
- * for frames.
- */
-function publishView(
-  host: HTMLElement,
-  globe: GlobeEngine,
-  holding: boolean,
-): void {
-  const view = globe.getView();
-  // The reveal before a flight counts as moving: the camera is not on its place yet.
-  const flight = view.moving || holding ? "moving" : "rest";
-  if (host.dataset["flight"] !== flight) host.dataset["flight"] = flight;
-  // A spinning Earth is not on any place, so there is no settled rotation to publish.
-  if (view.moving || globe.isSpinning()) return;
-  const rotation = `${(-view.rotation[0]).toFixed(2)} ${(-view.rotation[1]).toFixed(2)}`;
-  if (host.dataset["rotation"] !== rotation)
-    host.dataset["rotation"] = rotation;
-}
-
-/** Keeps a canvas out of the tab order and the accessibility tree: the slides are the content. */
-function hardenCanvases(host: HTMLElement): void {
-  for (const canvas of host.querySelectorAll<HTMLCanvasElement>(
-    ":scope > canvas",
-  )) {
-    canvas.removeAttribute("tabindex");
-    canvas.removeAttribute("role");
-    canvas.removeAttribute("aria-label");
-    canvas.setAttribute("aria-hidden", "true");
-  }
-}
-
 /** Mounts the stage under the deck's root. Never throws; with no space layer it does nothing. */
 export function mountSpaceStage(
   root: HTMLElement,
@@ -223,490 +91,122 @@ export function mountSpaceStage(
   );
   const stops = readStops(root);
   const legs = legsOf(stops);
-  /* The pins: one per distinct place, in the order first visited. */
-  const pins = new Map<string, Stop["place"]>();
-  for (const stop of stops)
-    if (!pins.has(stop.key)) pins.set(stop.key, stop.place);
+  const pins = pinsOf(stops);
   const pinPoints: PlacePoint[] = Array.from(pins.values(), lngLat);
-
-  let engine: GlobeEngine | null = null;
-  let lastRaw = "";
-  let steering = false;
-  let now: () => number = () => 0;
-  let home: Place = { kind: "overview" };
-  let homeAt: StageAt = { slide: 0, build: 0 };
-  let overviewOpen = false;
-  /** Whether the camera was last sent to `home` and nothing has moved it since. */
-  let commanded = false;
-  let colours: { cyan: Rgba; teal: Rgba } | null = null;
-  let theme: ReturnType<typeof readTheme> | null = null;
-  let wall: IceWall | null = null;
-  /** The kind of place the wall and the clocks were last arranged for. */
-  let shownKind: Place["kind"] | null = null;
-  /** Zones that carry a clock pin, with the label each shows. */
-  const clockOn = new Set<string>();
-  const clockLabels = new Map<string, string>();
-  let zonedNow: ZonedNow | null = null;
-  let clockTimer = 0;
-  /** Whether the engine was last asked to spin the Earth. */
-  let spinning = false;
-  /** The Earth has turned off its place since the camera last flew to it. */
-  let offPlace = false;
-  /** The wall's last published state, which decides with the reveal whether the slide's text waits. */
-  let wallState: WallState = "hidden";
-  /** Whether a place was asked for yet: the first is where the deck opens, which is no reveal. */
-  let visited = false;
+  const s = newStageState();
 
   const reduced = (): boolean => prefersReducedMotion(win ?? {});
+  const framing = framingOf(stageEl);
+  const draw = (): void => {
+    if (!s.engine || !s.theme || !s.colours) return;
+    const { markers, arcs } = drawRoute({
+      target: targetOf(s),
+      homeAt: s.homeAt,
+      stops,
+      legs,
+      pins,
+      theme: s.theme,
+      colours: s.colours,
+      clocks,
+      lapse: {
+        zones: sun.zones(),
+        stamps: sun.stamps(),
+        playing: sun.active() !== null,
+      },
+      filings: filings.counts(),
+    });
+    s.engine.setMarkers(markers);
+    s.engine.setArcs(arcs);
+  };
+  /** What the camera needs to place a place: the lapse's Moon, the pins to centre on, the clocks. */
+  const context = () => ({
+    instantMs: sun.moonInstant(
+      builtAttribute(slideEls[s.homeAt.slide], "lapse", s.homeAt.build) ??
+        slideEls[s.homeAt.slide]?.dataset["lapse"] ??
+        null,
+    ),
+    pins: [...pinPoints, ...filings.points],
+    wallMinutes: clocks.wallMinutes,
+  });
 
   const sun = createLapse({
     root,
     host,
     win,
     defs: o.data.lapses,
-    now: () => now(),
-    engine: () => engine,
-    draw: () => draw(),
+    now: () => s.now(),
+    engine: () => s.engine,
+    draw,
   });
-  const filings = createFilings({ root, host, win, draw: () => draw() });
+  const filings = createFilings({ root, host, win, draw });
+  const clocks = createClockPins({
+    host,
+    win,
+    zonedNow: () => s.zonedNow,
+    lapsePlaying: () => sun.active() !== null,
+    draw,
+  });
+  const wall = createStageWall({
+    state: s,
+    root,
+    host,
+    stageEl,
+    signal,
+    reduced,
+    clocks,
+    context,
+    draw,
+  });
+  const spin = createSpin({
+    state: s,
+    host,
+    slideEls,
+    reduced,
+    clockUp: () => reveal.shown() || reveal.running(),
+    wallKind: wall.kind,
+    wallState: wall.state,
+  });
+  const fly = createFlight({
+    state: s,
+    host,
+    reduced,
+    aimed: () => reveal.aimed(),
+    context,
+    draw,
+  });
   const reveal = createReveal({
     host,
     win,
     signal,
     slideEls,
-    homeSlide: () => homeAt.slide,
-    homeBuild: () => homeAt.build,
-    engine: () => engine,
-    framing: (w, h) => framing(w, h),
-    target: () => target(),
-    home: () => home,
-    overviewOpen: () => overviewOpen,
-    context: () => context(),
-    arrange: (kind) => arrange(kind),
-    fly: (hop) => fly(hop),
-    draw: () => draw(),
+    homeSlide: () => s.homeAt.slide,
+    homeBuild: () => s.homeAt.build,
+    engine: () => s.engine,
+    framing,
+    target: () => targetOf(s),
+    home: () => s.home,
+    overviewOpen: () => s.overviewOpen,
+    context,
+    arrange: wall.arrange,
+    fly,
+    draw,
     commanded: () => {
-      commanded = true;
+      s.commanded = true;
     },
-    syncBusy: () => syncBusy(),
-    syncSpin: () => syncSpin(),
-  });
-  const shownSun = (): number => sun.shownSun();
-
-  const target = (): Place => (overviewOpen ? { kind: "overview" } : home);
-
-  /** Where the camera looks: over the pole while the clock shows, else the target. */
-  const aimed = (): Place => reveal.aimed();
-
-  const lit = (): "all" | "current" =>
-    target().kind === "overview" ? "all" : "current";
-
-  /** Pins and arcs for the camera's place and position in the deck. */
-  function draw(): void {
-    if (!engine || !theme || !colours) return;
-    const place = target();
-    const all = lit() === "all";
-    const reachedStops = stops.filter((s) => reached(s, homeAt));
-    const current = isGeographic(place) ? keyOf(place) : undefined;
-    const markers: GlobeMarker[] = [];
-    for (const [key, p] of pins) {
-      if (clockOn.has(key)) continue;
-      const on = all || key === current;
-      markers.push({
-        id: `pin-${key}`,
-        position: lngLat(p),
-        radius: on ? 6 : 3.5,
-        color: on ? theme.markerPrimary : theme.markerOther,
-        ...(on ? { label: labelOf(p) } : {}),
-        ...(key === current
-          ? { ring: { radius: 11, width: 1.5, color: theme.markerPrimary } }
-          : {}),
-      });
-    }
-    const dated = new Set(sun.zones());
-    for (const zone of new Set([...clockOn, ...dated])) {
-      const place = resolvePlace(zone);
-      if (!isGeographic(place)) continue;
-      if (dated.has(zone)) {
-        // A zone the lapse dates: its own local date and time, ringed, so the flip is the picture.
-        markers.push({
-          id: `clock-${zone}`,
-          position: lngLat(place),
-          radius: 7,
-          color: theme.markerPrimary,
-          label: lapseLabel(labelOf(place), sun.stamps()[zone] ?? ""),
-          ring: { radius: 12, width: 1.5, color: theme.markerPrimary },
-        });
-      } else if (sun.active() !== null) {
-        // The other clocks hold still as dots while time moves, so the dated pins read alone.
-        markers.push({
-          id: `clock-${zone}`,
-          position: lngLat(place),
-          radius: 3.5,
-          color: theme.markerOther,
-        });
-      } else {
-        markers.push({
-          id: `clock-${zone}`,
-          position: lngLat(place),
-          radius: 6,
-          color: theme.markerPrimary,
-          label: clockLabels.get(zone) ?? labelOf(place),
-        });
-      }
-    }
-    for (const [zone, count] of filings.counts()) {
-      const place = resolvePlace(zone);
-      if (!isGeographic(place)) continue;
-      markers.push({
-        id: `filing-${zone}`,
-        position: lngLat(place),
-        radius: 5 + Math.min(count, 4),
-        color: theme.markerPrimary,
-        label: `${labelOf(place)} ${count}`,
-      });
-    }
-    const flown = legs.filter((l) => reachedStops.includes(l.end));
-    const arcs: GlobeArc[] = [];
-    legs.forEach((leg, i) => {
-      const isFlown = flown.includes(leg);
-      if (!all && !isFlown) return;
-      const isCurrent = isFlown && flown[flown.length - 1] === leg;
-      arcs.push({
-        id: `leg-${i}`,
-        from: lngLat(leg.from),
-        to: lngLat(leg.to),
-        color: all || isCurrent ? colours!.cyan : colours!.teal,
-        width: 2,
-        altitude: ARC_ALTITUDE,
-      });
-    });
-    engine.setMarkers(markers);
-    engine.setArcs(arcs);
-  }
-
-  /** A zone's wall time as minutes since its midnight, read by gmt; `null` until gmt is in. */
-  const wallMinutes = (zone: string): number | null => {
-    const m = zonedNow ? /T(\d{2}):(\d{2})/.exec(zonedNow(zone)) : null;
-    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
-  };
-  /**
-   * The lapse the slide's reached builds name: the highest build's `data-lapse`, else the slide's.
-   * Read from the page, as the deck's own step does, because the camera flies before the deck
-   * tells the stage the lapse.
-   */
-  const slideLapse = (): string | null => {
-    const slide = slideEls[homeAt.slide];
-    let name = slide?.dataset["lapse"] ?? null;
-    let highest = 0;
-    for (const b of slide?.querySelectorAll<HTMLElement>(
-      "[data-build][data-lapse]",
-    ) ?? []) {
-      const n = Number(b.dataset["build"]);
-      if (n <= homeAt.build && n > highest) {
-        highest = n;
-        name = b.dataset["lapse"] ?? null;
-      }
-    }
-    return name;
-  };
-  const context = () => ({
-    instantMs: sun.moonInstant(slideLapse()),
-    pins: [...pinPoints, ...filings.points],
-    wallMinutes,
+    syncBusy: wall.syncBusy,
+    syncSpin: spin.sync,
   });
 
-  /**
-   * Tells the deck whether motion that crosses the slides' text is running: the wall's approach and
-   * shatter, or the clock turning into the Earth. The deck root carries `data-stage-busy` while it
-   * is; the arriving slide's text stays hidden (`slides.css`) and the visuals hold their start
-   * (`bug-visuals.ts`) until the root says `gmt-stage-idle`. Under reduced motion nothing waits.
-   */
-  function syncBusy(): void {
-    const busy =
-      !reduced() && (wallState === "approach" || wallState === "breaking");
-    if (busy === root.hasAttribute("data-stage-busy")) return;
-    if (busy) {
-      root.setAttribute("data-stage-busy", "");
-      return;
-    }
-    root.removeAttribute("data-stage-busy");
-    root.dispatchEvent(new CustomEvent("gmt-stage-idle"));
-  }
-
-  /** Sends the camera to the place it should look at. */
-  function fly(hop: boolean): void {
-    if (!engine) return;
-    offPlace = false;
-    const place = aimed();
-    const rotation = rotationFor(place, context());
-    const view = engine.getView();
-    const here: PlacePoint = [-view.rotation[0], -view.rotation[1]];
-    const goal = pointFor(place, context());
-    const arc = arcDegrees(here, goal);
-    // The slide's zoom even over the pole, so the clock is the size the Earth will be.
-    engine.setZoom(zoomFor(target()));
-    if (host)
-      host.dataset["target"] = `${goal[0].toFixed(2)} ${goal[1].toFixed(2)}`;
-    // A turning Earth flies on at its own speed: a hop would stop it dead and dip the camera.
-    if (hop && arc >= MIN_HOP_DEG && !reduced() && !engine.isSpinning()) {
-      engine.flyTo(rotation, {
-        hop: { durationMs: hopDuration(arc), dipZoom: HOP_DIP_ZOOM },
-      });
-    } else {
-      engine.flyTo(rotation);
-    }
-    commanded = true;
-    draw();
-  }
-
-  const framing = (w: number, h: number): GlobeFraming => {
-    const sx = stageEl?.offsetLeft ?? 0;
-    const sy = stageEl?.offsetTop ?? 0;
-    const sw = stageEl?.clientWidth || w;
-    const sh = stageEl?.clientHeight || h;
-    // Zoom 1 fills the right third of the stage, on every slide: the clock and the Earth never
-    // move sideways, and the slides' content fits the two thirds on the left.
-    return {
-      cx: sx + (sw * 5) / 6,
-      cy: sy + sh / 2,
-      radius: Math.min(0.42 * sh, 0.15 * sw),
-    };
-  };
-
-  /** Reads every lit clock's local time again, and draws when a label changed. */
-  function refreshClocks(): void {
-    if (!zonedNow || sun.active() !== null) return;
-    let changed = false;
-    for (const zone of clockOn) {
-      const label = clockLabel(zone, zonedNow);
-      if (clockLabels.get(zone) !== label) {
-        clockLabels.set(zone, label);
-        changed = true;
-      }
-    }
-    if (changed) draw();
-  }
-
-  /** Publishes how many clock pins are lit, for the deck's gate. */
-  function publishClocks(): void {
-    if (host) host.dataset["clocks"] = String(clockOn.size);
-  }
-
-  function lightClock(zone: string): void {
-    if (clockOn.has(zone)) return;
-    clockOn.add(zone);
-    publishClocks();
-    if (!clockTimer && win)
-      clockTimer = win.setInterval(refreshClocks, CLOCK_REFRESH_MS);
-    refreshClocks();
-    draw();
-  }
-
-  function clearClocks(): void {
-    clockOn.clear();
-    publishClocks();
-    clockLabels.clear();
-    if (clockTimer) win?.clearInterval(clockTimer);
-    clockTimer = 0;
-  }
-
-  /** The twelve zones nearest the planet camera's point become the shards' pins. */
-  function shardZones(): string[] {
-    const zones = getPlanetZones();
-    const from = pointFor({ kind: "planet" }, context());
-    return nearestZones(zones, from, WALL_PINS);
-  }
-
-  /** Whether the slide on show turns the Earth (`data-spin`): not in the overview, not while steered. */
-  const slideSpins = (): boolean =>
-    slideEls[homeAt.slide]?.hasAttribute("data-spin") === true &&
-    !reduced() &&
-    !overviewOpen &&
-    !steering;
-
-  /**
-   * Keeps the engine's spin in step with the slide. The Earth turns at the home globe's own idle
-   * rate and ramp (`GlobeEngine.setSpin`), once the clock is gone and the wall has broken. Leaving
-   * a spin slide releases it, and the flight to the next place (`fly`) carries the turn on, so the
-   * Earth is never stopped or snapped back. Published as `data-spin` for the deck's gate. Called
-   * on every frame and from every change of slide.
-   */
-  function syncSpin(): void {
-    if (!engine) return;
-    const wanted = slideSpins();
-    const turning =
-      wanted &&
-      !reveal.shown() &&
-      !reveal.running() &&
-      shownKind !== "wall" &&
-      (wallState === "gone" || wallState === "hidden");
-    if (turning !== spinning) {
-      spinning = turning;
-      engine.setSpin(turning);
-    }
-    if (host) {
-      if (wanted) host.dataset["spin"] = "on";
-      else delete host.dataset["spin"];
-    }
-    if (engine.isSpinning()) offPlace = true;
-  }
-
-  /** Arranges the wall and the clocks for a change of place kind. */
-  function arrange(next: Place["kind"]): void {
-    const prev = shownKind;
-    if (!wall || prev === next) return;
-    shownKind = next;
-    if (next === "wall") {
-      clearClocks();
-      if (prev === "planet") wall.restore();
-      else wall.show(zoomFor({ kind: "wall" }) / (engine?.getZoom() || 1));
-      draw();
-    } else if (next === "planet") {
-      if (prev === "wall") {
-        clearClocks();
-        wall.flyThrough(shardZones());
-      } else {
-        wall.hide();
-        for (const zone of getPlanetZones()) lightClock(zone);
-      }
-    } else {
-      wall.hide();
-      clearClocks();
-      draw();
-    }
-  }
-
-  async function mountWall(globe: GlobeEngine): Promise<void> {
-    const images = Array.from(
-      root.querySelectorAll<HTMLImageElement>("[data-wall-pane] img"),
-    );
-    if (!host || !theme || images.length === 0) return;
-    try {
-      await Promise.all(images.map((image) => image.decode()));
-    } catch {
-      return;
-    }
-    if (signal.aborted) return;
-    wall = mountIceWall({
-      layer: host,
-      engine: globe,
-      panes: images.map((image) => {
-        const card = image.closest<HTMLElement>("[data-wall-pane]");
-        return {
-          id: card?.dataset["wallPane"] ?? image.src,
-          image,
-          ...(card ? { card } : {}),
-        };
-      }),
-      ice: theme.label,
-      stageWidth: () => stageEl?.clientWidth ?? 0,
-      signal,
-      reduced,
-      target: (zone) => {
-        const place = resolvePlace(zone);
-        if (!isGeographic(place)) return null;
-        const at = globe.project(lngLat(place));
-        return [at.x, at.y];
-      },
-      onPin: lightClock,
-      onState: (state) => {
-        wallState = state;
-        syncBusy();
-      },
-      // Where each pane's centre is and how wide a pane is, for the gate's pixel check
-      // (`scripts/slides-check.mjs`), published on every whole draw, a resize's included.
-      onDrawn: () => {
-        if (!wall || !host) return;
-        const centres = wall
-          .paneCentres()
-          .map((c) => `${c[0].toFixed(1)},${c[1].toFixed(1)}`)
-          .join(" ");
-        if (host.dataset["wallCentres"] !== centres)
-          host.dataset["wallCentres"] = centres;
-        const paneWidth = wall.paneWidth().toFixed(1);
-        if (host.dataset["wallPaneWidth"] !== paneWidth)
-          host.dataset["wallPaneWidth"] = paneWidth;
-      },
-      onBreak: () => {
-        // The twelve shards light their own pins as they land; the rest are lit now and come
-        // round as the Earth turns.
-        const shards = new Set(shardZones());
-        for (const zone of getPlanetZones())
-          if (!shards.has(zone)) lightClock(zone);
-      },
-    });
-    refreshClocks();
-    arrange(target().kind);
-  }
-
+  const moves = createMoves({
+    state: s,
+    reveal,
+    wall,
+    spinWanted: spin.wanted,
+    fly,
+    draw,
+  });
   const handle: SpaceStage = {
-    goTo(raw, options) {
-      let next: Place;
-      try {
-        next = resolvePlace(raw);
-      } catch {
-        return;
-      }
-      const before = homeAt;
-      // A build that stands the clock up or lets it go moves the camera though the place is the same.
-      const shownBefore = reveal.shown();
-      const samePlace = raw === lastRaw;
-      const first = !visited;
-      visited = true;
-      lastRaw = raw;
-      home = next;
-      if (options?.at) homeAt = options.at;
-      // A spinning slide has no place to hold, so the camera's last command stays good for it.
-      const same =
-        samePlace &&
-        !overviewOpen &&
-        (commanded || slideSpins()) &&
-        !steering &&
-        reveal.shown() === shownBefore &&
-        (!(offPlace || engine?.isSpinning()) || slideSpins());
-      const hop = options?.hop ?? false;
-      // A reveal still running is overtaken: the camera is not on its place yet.
-      const overtaken = reveal.cancel();
-      // Past the reveal onto a slide that keeps the clock (a jump to the close), the clock stays.
-      if (
-        !first &&
-        !overtaken &&
-        before.slide < reveal.at &&
-        homeAt.slide >= reveal.at &&
-        !reveal.shown()
-      ) {
-        // Leaving the wall by a jump still breaks it, with the reveal running over it.
-        if (shownKind === "wall") arrange(next.kind);
-        reveal.start(hop);
-        return;
-      }
-      arrange(next.kind);
-      reveal.show();
-      if (same && !overtaken) {
-        draw();
-        return;
-      }
-      fly(hop);
-    },
-    overview(open) {
-      if (open === overviewOpen) return;
-      overviewOpen = open;
-      // The overview shows the Earth: a reveal running ends at once, and the wall breaks.
-      if (reveal.cancel()) arrange(home.kind);
-      reveal.show();
-      fly(true);
-    },
-    steer(vector) {
-      const moving = vector.lng !== 0 || vector.lat !== 0 || vector.zoom !== 0;
-      steering = moving;
-      if (moving) commanded = false;
-      engine?.steer(vector);
-    },
-    returnHome() {
-      if ((commanded || slideSpins()) && !steering) return;
-      fly(true);
-    },
+    ...moves,
     lapse: sun.set,
     pinFilings: filings.set,
     destroy: () => own.abort(),
@@ -715,145 +215,38 @@ export function mountSpaceStage(
   if (!host || signal.aborted) return handle;
 
   root.setAttribute("data-space", "");
-
   reveal.mount();
-
-  const stars = host.querySelector<HTMLCanvasElement>(
-    '[data-sky-canvas="stars"]',
-  );
-  const band = host.querySelector<HTMLCanvasElement>(
-    '[data-sky-canvas="band"]',
-  );
-  const sky =
-    stars && band && host.dataset["skySrc"]
-      ? loadSky({
-          stars,
-          band,
-          host,
-          src: host.dataset["skySrc"],
-          milkyWay: host.dataset["milkyWay"],
-          signal,
-        })
-      : Promise.resolve(null);
-
-  const watcher =
-    typeof MutationObserver === "function"
-      ? new MutationObserver(() => hardenCanvases(host))
-      : null;
-
-  async function boot(): Promise<void> {
-    if (!host) return;
-    let created: GlobeEngine | null = null;
-    try {
-      // The wall time is read before the camera is placed: over the pole the zone sits under the hand.
-      const [time, gmt] = await Promise.all([
-        loadClock(),
-        loadDeckGmt().catch(() => null),
-      ]);
-      if (signal.aborted) return;
-      now = time.getUnixNow;
-      if (gmt) {
-        zonedNow ??= gmt.zonedGet.getZonedNow;
-        // The camera's first aim may be the Moon at a lapse's end, so the tools are in before it.
-        sun.setTools(lapseToolsFrom(gmt));
-      }
-      sun.apply();
-      const { createGlobeEngine } = await import("~/lib/globe/engine");
-      if (signal.aborted) return;
-      theme = readTheme(host);
-      const style = getComputedStyle(host);
-      const token = (name: string, fallback: Rgba): Rgba =>
-        parseColour(style.getPropertyValue(name).trim()) ?? fallback;
-      colours = {
-        cyan: token("--gmt-cyan", theme.markerPrimary),
-        teal: token("--gmt-teal", theme.markerOther),
-      };
-      watcher?.observe(host, { childList: true });
-      created = await createGlobeEngine(host, {
-        renderer: rendererOverride(),
-        sunInstant: shownSun,
-        theme,
-        labelFont: labelFont(host),
-        ariaLabel: "The Earth and the night sky behind the slides",
-        initialRotation: rotationFor(aimed(), context()),
-        zoomRange: [0.5, 4],
-        // The slide's zoom from the first frame, so the clock over the Earth keeps its size.
-        initialZoom: zoomFor(target()),
-        reducedMotion: reduced,
-        ambient: false,
-        maxDpr: 1.5,
-        pauseWhenHidden: host,
-        framing,
-        ...(stageEl ? { framingWatch: [stageEl] } : {}),
-        ...(host.dataset["earth"] ? { imageryUrl: host.dataset["earth"] } : {}),
-      });
-    } catch {
-      created = null;
-    }
-    if (signal.aborted) {
-      created?.destroy();
-      return;
-    }
-    if (!created) {
-      host.dataset["globe"] = "none";
-      void drawWithoutGlobe(sky, host, signal);
-      return;
-    }
-    engine = created;
-    hardenCanvases(host);
-    created.onInteract(() => {
-      commanded = false;
-    });
-    host.dataset["globe"] = "ready";
-    fly(false);
-    // The engine has one frame slot and the sky's follow loop needs it, so the stage owns the slot
-    // and runs the loop from it, then publishes the camera's state (`publishView`).
-    let follow: (() => void) | null = null;
-    const globe = created;
-    globe.onFrame(() => {
-      follow?.();
+  void bootStage({
+    state: s,
+    host,
+    stageEl,
+    signal,
+    reduced,
+    framing,
+    aimed: reveal.aimed,
+    context,
+    sun,
+    wall,
+    fly,
+    frame: (globe) => {
       reveal.fit();
-      syncSpin();
+      spin.sync();
       publishView(host, globe, reveal.running());
-      if (!wall) return;
-      const view = globe.getView();
-      if (shownKind === "wall")
-        wall.setDepth(zoomFor({ kind: "wall" }) / (view.zoom || 1));
-    });
-    void mountWall(globe);
-    void followGlobe({
-      sky,
-      globe: {
-        getRotation: () => globe.getRotation(),
-        getZoom: () => globe.getZoom(),
-        getCentre: () => globe.getCentre(),
-        onFrame: (callback) => {
-          follow = callback;
-        },
-      },
-      origin: host,
-      surface: host,
-      signal,
-      // The Sun, the Moon and the stars follow a running lapse and the glide between slides.
-      instant: shownSun,
-    });
-  }
-
-  void boot();
+      wall.follow(globe);
+    },
+  });
 
   signal.addEventListener(
     "abort",
     () => {
-      watcher?.disconnect();
       sun.stop();
       filings.stop();
       reveal.cancel();
       root.removeAttribute("data-stage-busy");
-      clearClocks();
-      wall?.destroy();
-      wall = null;
-      engine?.destroy();
-      engine = null;
+      clocks.clear();
+      wall.destroy();
+      s.engine?.destroy();
+      s.engine = null;
       root.removeAttribute("data-space");
       delete host.dataset["globe"];
     },

@@ -26,7 +26,7 @@ export interface AgentQuoteRecord {
 }
 
 /** One agent's answer as the transcript keeps it: the question is the transcript's own. */
-export interface AgentAnswer extends Omit<AgentQuoteRecord, "question"> {
+interface AgentAnswer extends Omit<AgentQuoteRecord, "question"> {
   /** Lower-case words joined by hyphens, the key of its run record. */
   id: string;
 }
@@ -39,11 +39,11 @@ export interface AgentTranscript {
 }
 
 /** What the run of one cell returned: the value as text, or the error it threw. */
-export type RunValue = string | { threw: string };
+type RunValue = string | { threw: string };
 
-export interface AgentRun {
+/** One cell of the run: the Node major, the zone and what the code returned there. */
+interface AgentRun {
   node: string;
-  tzdata: string;
   zone: string;
   value: RunValue;
 }
@@ -53,7 +53,12 @@ export interface AgentRunRecord {
   command: string;
   instant: string;
   libraries: Record<string, string>;
-  runs: AgentRun[];
+  /** Each Node major the code ran on, with its exact version and tzdata. */
+  nodes: { node: string; version: string; tzdata: string }[];
+  /** The zones each Node major ran in, in order. */
+  zones: string[];
+  /** `values[i][j]`: what the code returned on `nodes[i]` in `zones[j]`. */
+  values: RunValue[][];
 }
 
 /** The run record file: one record per answer id. */
@@ -158,15 +163,28 @@ export function agentQuote(
   if (
     !run ||
     !filled(run.sha256) ||
-    !Array.isArray(run.runs) ||
-    run.runs.length === 0
+    !Array.isArray(run.nodes) ||
+    !Array.isArray(run.zones) ||
+    run.nodes.length === 0 ||
+    run.zones.length === 0
   )
     return stale("is missing");
+  if (
+    !Array.isArray(run.values) ||
+    run.values.length !== run.nodes.length ||
+    run.values.some(
+      (row) => !Array.isArray(row) || row.length !== run.zones.length,
+    )
+  )
+    return stale("is not a grid of one value per Node major and zone");
   if (run.sha256 !== hashOf(record.code, record.call))
     return stale("is out of date: the code or the call changed");
-  const shown = run.runs.find(
-    (r) => r.node === cell.node && r.zone === cell.zone,
-  );
+  const row = run.nodes.findIndex((n) => n.node === cell.node);
+  const column = run.zones.indexOf(cell.zone);
+  const shown: AgentRun | undefined =
+    row < 0 || column < 0
+      ? undefined
+      : { node: cell.node, zone: cell.zone, value: run.values[row]![column]! };
   if (!shown)
     return stale(
       `is out of date: it has no run on Node ${cell.node} at ${cell.zone}`,
@@ -180,9 +198,10 @@ export function agentQuote(
       problem: `${answerPath} has an excerpt that is not whole line ranges inside the ${record.code.split("\n").length} lines of the code. Fix it.`,
     };
 
-  const distinct = run.runs.reduce<RunValue[]>(
-    (seen, r) =>
-      seen.some((v) => sameValue(v, r.value)) ? seen : [...seen, r.value],
+  const cells = run.values.flat();
+  const distinct = cells.reduce<RunValue[]>(
+    (seen, value) =>
+      seen.some((v) => sameValue(v, value)) ? seen : [...seen, value],
     [],
   ).length;
   return {
@@ -192,9 +211,9 @@ export function agentQuote(
     shown,
     lines: record.code.split("\n").length,
     distinct,
-    runs: run.runs.length,
-    zones: new Set(run.runs.map((r) => r.zone)).size,
-    nodes: new Set(run.runs.map((r) => r.node)).size,
+    runs: cells.length,
+    zones: run.zones.length,
+    nodes: run.nodes.length,
     instant: run.instant,
     libraries: run.libraries,
   };

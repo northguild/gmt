@@ -81,7 +81,7 @@ export function deckDate(entry: DeckEntry): string {
 }
 
 /** A talk as a calendar day and a start time, for the title slide's schedule card. */
-export interface DeckSchedule {
+interface DeckSchedule {
   weekday: string;
   day: string;
   month: string;

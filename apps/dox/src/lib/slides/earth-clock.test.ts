@@ -13,7 +13,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { formatZonedToParts } from "@northguild/gmt/zoned/format";
-import { dialDate, handAngles, mountEarthClock } from "./earth-clock";
+import { dialDate, handAngles } from "./earth-clock-face";
+import { mountEarthClock } from "./earth-clock";
 import { SHARD_COUNT } from "./clock-shatter";
 
 installJsdomShims();

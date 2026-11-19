@@ -101,14 +101,14 @@ interface ControllerOptions {
 }
 
 /** A timed flight: the camera lifts to `dipZoom` at the midpoint and comes down at the goal. */
-export interface HopOptions {
+interface HopOptions {
   durationMs: number;
   dipZoom: number;
 }
 
 /** A continuous camera rate: degrees per second east and north of the view centre, and zoom
  *  units per second (positive zooms in). */
-export interface SteerVector {
+interface SteerVector {
   lng: number;
   lat: number;
   zoom: number;

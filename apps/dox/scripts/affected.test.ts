@@ -181,6 +181,7 @@ describe("affected: which checks a change runs", () => {
         "format",
         "markers",
         "docs-check",
+        "ui-standards",
         "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",

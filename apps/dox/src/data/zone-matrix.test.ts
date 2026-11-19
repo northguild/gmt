@@ -4,17 +4,19 @@ import { parse } from "yaml";
 
 import { libraryMeasurements } from "./library-comparison";
 import {
-  SUITE_ORDER,
-  assertRecord,
   summarize,
-  tagKey,
   zoneMatrixLine,
   zoneMatrixRecord,
   zoneMatrixSummary,
+} from "./zone-matrix";
+import {
+  SUITE_ORDER,
+  assertRecord,
+  tagKey,
   type Cell,
   type SuiteRecord,
   type ZoneMatrixRecord,
-} from "./zone-matrix";
+} from "./zone-matrix-record";
 
 const REPO = join(__dirname, "../../../..");
 const record = zoneMatrixRecord;

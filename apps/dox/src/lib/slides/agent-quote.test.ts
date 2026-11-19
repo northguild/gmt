@@ -38,16 +38,14 @@ const runFor = (
   command: "c",
   instant: "2026-11-19T00:00:00Z",
   libraries: { luxon: "3.7.2" },
-  runs: [
-    { node: "24", tzdata: "t", zone: SHOWN.zone, value: "other" },
-    { node: SHOWN.node, tzdata: "t", zone: SHOWN.zone, value },
-    {
-      node: SHOWN.node,
-      tzdata: "t",
-      zone: "Pacific/Niue",
-      value: { threw: "Error: x" },
-    },
-    { node: SHOWN.node, tzdata: "t", zone: "UTC", value },
+  nodes: [
+    { node: "24", version: "v24.0.0", tzdata: "t" },
+    { node: SHOWN.node, version: `v${SHOWN.node}.0.0`, tzdata: "t" },
+  ],
+  zones: [SHOWN.zone, "Pacific/Niue"],
+  values: [
+    ["other", "other"],
+    [value, { threw: "Error: x" }],
   ],
 });
 
@@ -60,7 +58,7 @@ describe("the agent quote", () => {
       lines: 4,
       distinct: 3,
       runs: 4,
-      zones: 3,
+      zones: 2,
       nodes: 2,
       shown: {
         node: SHOWN.node,
@@ -122,13 +120,21 @@ describe("the agent quote", () => {
 
   it("says the run record is out of date when it lacks the shown run", () => {
     const run = runFor(full);
-    run.runs = run.runs.filter(
-      (r) => r.zone !== SHOWN.zone || r.node !== SHOWN.node,
-    );
+    run.nodes = run.nodes.slice(0, 1);
+    run.values = run.values.slice(0, 1);
     const quote = agentQuote(full, run, CONFIG);
     expect(quote).toMatchObject({ ready: false, why: "run" });
     if (quote.ready) throw new Error("expected a pending quote");
     expect(quote.problem).toContain(`Node ${SHOWN.node}`);
+  });
+
+  it("says the run record is not a grid when a Node major lacks a zone's value", () => {
+    const run = runFor(full);
+    run.values[1] = run.values[1]!.slice(0, 1);
+    const quote = agentQuote(full, run, CONFIG);
+    expect(quote).toMatchObject({ ready: false, why: "run" });
+    if (quote.ready) throw new Error("expected a pending quote");
+    expect(quote.problem).toContain("not a grid");
   });
 
   it("applies the excerpt, and refuses ranges outside the code", () => {

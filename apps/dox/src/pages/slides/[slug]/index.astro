@@ -10,18 +10,12 @@ import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 import { deckWebmcpHeadEntries } from "~/lib/head-tags";
 import { DECK_HEAD_SCRIPT } from "~/lib/slides/head-script";
 import { ORIGIN_TRIAL_TOKENS } from "~/lib/webmcp/origin-trial";
-import { deckComponent } from "~/slides/deck-pages";
-import { DECKS, type DeckEntry } from "~/slides/decks";
+import { deckRoutes, type DeckRoute } from "~/slides/deck-pages";
 
-export function getStaticPaths() {
-  return DECKS.map((deck) => ({ params: { slug: deck.slug }, props: { deck } }));
-}
+export const getStaticPaths = deckRoutes;
 
-interface Props {
-  deck: DeckEntry;
-}
-const { deck } = Astro.props;
-const Deck = deckComponent(deck.slug);
+type Props = DeckRoute;
+const { deck, Deck } = Astro.props;
 ---
 
 <StarlightPage

@@ -12,8 +12,8 @@
  */
 import { mulberry32, type Cell, type Point } from "./voronoi";
 
-export const DECAY_MS = 600;
-export const FADE_START_MS = 700;
+const DECAY_MS = 600;
+const FADE_START_MS = 700;
 export const FADE_END_MS = 1400;
 /** A pinned shard leaves its ballistic path at this moment. */
 export const PIN_START_MS = 500;
@@ -23,7 +23,6 @@ export const PIN_FIRST_MS = 900;
 /** The reduced-motion break: cracks over the whole pane, then the pane fades. */
 export const CRACK_MS = 150;
 export const CRACK_FADE_MS = 200;
-export const REDUCED_END_MS = CRACK_MS + CRACK_FADE_MS;
 
 export interface ShardPose {
   /** Displacement of the cell's centre, in pane widths: right, down, towards the camera. */
@@ -96,7 +95,7 @@ export function crackPose(t: number): { cracks: number; opacity: number } {
   };
 }
 
-export interface PinnedPose {
+interface PinnedPose {
   x: number;
   y: number;
   /** 1 at the pinning moment, down to a dot at arrival. */

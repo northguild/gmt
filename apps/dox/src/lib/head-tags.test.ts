@@ -464,10 +464,10 @@ describe("webmcpHeadEntries", () => {
 
 describe("deckWebmcpHeadEntries", () => {
   it("names the deck and adds a meta per token", () => {
-    expect(deckWebmcpHeadEntries("give-me-temporal", ["one", "two"])).toEqual([
+    expect(deckWebmcpHeadEntries("sample-deck", ["one", "two"])).toEqual([
       {
         tag: "meta",
-        attrs: { name: WEBMCP_MARKER, content: "slides/give-me-temporal" },
+        attrs: { name: WEBMCP_MARKER, content: "slides/sample-deck" },
       },
       { tag: "meta", attrs: { "http-equiv": "origin-trial", content: "one" } },
       { tag: "meta", attrs: { "http-equiv": "origin-trial", content: "two" } },

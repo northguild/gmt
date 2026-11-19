@@ -48,7 +48,7 @@ function cell(
 
 export function presenterShell(): SafeHtml {
   return html`<div class="${styles.root} gmt-theme-dark" data-presenter>
-    <section class="${styles.panel} ${styles.current}" aria-labelledby="pv-current-title">
+    <section class="gmt-deck-panel ${styles.panel} ${styles.current}" aria-labelledby="pv-current-title">
       <h2 id="pv-current-title" class="${styles.heading}">Current slide</h2>
       <div class="${styles.frame}"><div class="${styles.stage}" data-pv-stage></div></div>
       <p class="${styles.position}" data-pv-position></p>
@@ -56,16 +56,16 @@ export function presenterShell(): SafeHtml {
         ${buttonRow(html`${button({ id: "pv-prev", label: "Previous" })}${button({ id: "pv-next", label: "Next" })}${button({ id: "pv-blank", label: "Blank" })}`)}
       </div>
     </section>
-    <section class="${styles.panel} ${styles.upNext}" aria-labelledby="pv-next-title">
+    <section class="gmt-deck-panel ${styles.panel} ${styles.upNext}" aria-labelledby="pv-next-title">
       <h2 id="pv-next-title" class="${styles.heading}">Next slide</h2>
       <p class="${styles.nextTitle}" data-pv-next-title></p>
       <p class="${styles.nextBuild}" data-pv-next-build></p>
     </section>
-    <section class="${styles.panel} ${styles.notes}" aria-labelledby="pv-notes-title">
+    <section class="gmt-deck-panel ${styles.panel} ${styles.notes}" aria-labelledby="pv-notes-title">
       <h2 id="pv-notes-title" class="${styles.heading}">Speaker notes</h2>
       <div class="${styles.notesBody}" data-pv-notes></div>
     </section>
-    <section class="${styles.panel} ${styles.bar}" aria-labelledby="pv-clock-title">
+    <section class="gmt-deck-panel ${styles.panel} ${styles.bar}" aria-labelledby="pv-clock-title">
       <h2 id="pv-clock-title" class="${styles.heading}">Clock</h2>
       <div class="${styles.readouts}">
         ${cell("elapsed", "Elapsed")}${cell("pace", "Pace", "spring")}${cell("time", "Local time")}${cell("demo", "Demo")}
@@ -76,7 +76,7 @@ export function presenterShell(): SafeHtml {
       </div>
       <p class="${styles.status}" data-pv-status role="status" aria-live="polite"></p>
     </section>
-    <section class="${styles.panel} ${styles.check}" aria-labelledby="pv-check-title">
+    <section class="gmt-deck-panel ${styles.panel} ${styles.check}" aria-labelledby="pv-check-title">
       <h2 id="pv-check-title" class="${styles.heading}">Ready to present?</h2>
       <ul class="${styles.rows}" data-pv-readiness></ul>
       <div class="${styles.nav}">${button({ id: "pv-check", label: "Check again" })}</div>

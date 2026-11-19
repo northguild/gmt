@@ -21,9 +21,9 @@
   --gmt-deck-fade: 200ms;
 
   /* The three small sizes of a panel's text on the stage, in container units. */
-  --gmt-deck-text-sm: var(--gmt-deck-text-sm);
-  --gmt-deck-text-md: var(--gmt-deck-text-md);
-  --gmt-deck-text-lg: var(--gmt-deck-text-lg);
+  --gmt-deck-text-sm: max(0.75rem, 1.1cqi);
+  --gmt-deck-text-md: max(0.75rem, 1.4cqi);
+  --gmt-deck-text-lg: max(0.75rem, 1.6cqi);
 
   position: relative;
   background: var(--gmt-void);
@@ -47,26 +47,6 @@
 
 .gmt-slide-body > * + * {
   margin-block-start: var(--gmt-space-3);
-}
-
-/*
- * A panel: opaque, a full bevelled border, the accent on the bottom edge only. The padding is each
- * panel's own: `:where` gives the default no weight, so any panel's own padding wins.
- */
-.gmt-notes,
-.gmt-deck-panel,
-.gmt-deck-menu,
-.gmt-deck-dialog-frame,
-html[data-deck] .gmt-talk-schedule {
-  background: var(--gmt-surface-widget);
-  border: 1px solid var(--gmt-border);
-  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
-  border-radius: var(--gmt-bevel-md);
-  corner-shape: bevel;
-}
-
-:where(.gmt-notes, .gmt-deck-panel) {
-  padding: var(--gmt-space-4);
 }
 
 .gmt-notes-title {
@@ -386,6 +366,7 @@ html .gmt-deck[data-fullscreen] .gmt-deck-bar:focus-within {
 
 .gmt-deck-info:hover,
 .gmt-deck-info:focus-visible,
+/* ui-standards-ok: a state, not a layout: the button stays lit while its menu is open. */
 .gmt-deck-info:has(+ .gmt-deck-menu:popover-open) {
   opacity: 1;
   border-color: var(--gmt-cyan);
@@ -745,7 +726,7 @@ html[data-deck] .gmt-deck-space > canvas:not([data-wall-canvas]) {
   transition: opacity var(--gmt-duration-slow) var(--gmt-enter-easing);
 }
 
-:where(.gmt-deck:has(.gmt-slide[data-layout="full"][data-shown]))
+:where(.gmt-deck[data-shown-layout="full"])
   .gmt-deck-space
   > canvas:not([data-wall-canvas]) {
   opacity: 0;

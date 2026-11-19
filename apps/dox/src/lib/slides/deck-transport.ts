@@ -45,14 +45,14 @@ export interface SourceState {
 }
 
 /** What the next question is: a recording that plays with no network, or the live call. */
-export interface DeckPlan {
+interface DeckPlan {
   /** The answer to play, or `null` while none is recorded. */
   recording: Recording | null;
   /** Skip the live call and play `recording`: a ready question. */
   recordedOnly: boolean;
 }
 
-export interface DeckSessionOptions {
+interface DeckSessionOptions {
   /** The page the Worker is told a question comes from (`DeckLiveData.pageContext`). */
   pageContext: string;
   /** The deck's venue zone (`DeckEntry.zone`): a recording's date is read in it. */

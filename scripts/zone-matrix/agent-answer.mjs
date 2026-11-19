@@ -7,7 +7,9 @@
  * The owner commits the transcripts to `apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json`:
  * the shared `question`, `quoted` (the id of the answer the `agent-answer` slide quotes) and `answers`, each with
  * `id`, `model`, `date`, `answer`, `code`, `call` and an optional `excerpt`. This script writes
- * `agent-run.json` beside it, one record per answer id. The slides read both through
+ * `agent-run.json` beside it, one record per answer id: the Node majors it ran on (each with its
+ * exact version and tzdata), the zones, and `values[i][j]`, what the code returned on Node
+ * `nodes[i]` in zone `zones[j]`. The slides read both through
  * `lib/slides/agent-quote.ts`; a record is current only while its `sha256` matches the code and the
  * call.
  *
@@ -268,8 +270,10 @@ export async function runAnswer({
   const zones = matrix.zones.includes(SHOWN_ZONE)
     ? matrix.zones
     : [...matrix.zones, SHOWN_ZONE];
-  const runs = [];
+  const nodes = [];
+  const values = [];
   for (const node of matrix.node) {
+    const row = [];
     for (const zone of zones) {
       const r = await run(node, [runner], { TZ: zone });
       if (r.timedOut)
@@ -285,21 +289,28 @@ export async function runAnswer({
         );
       if (zoneName(result.zone) !== zoneName(zone))
         throw new Stop(1, `Node ${node} ran in ${result.zone}, not ${zone}`);
-      runs.push({
-        node,
-        nodeVersion: result.node,
-        tzdata: result.tzdata,
-        zone,
-        value: result.value,
-      });
+      const seen = { node, version: result.node, tzdata: result.tzdata };
+      if (row.length === 0) nodes.push(seen);
+      else if (
+        nodes.at(-1).version !== seen.version ||
+        nodes.at(-1).tzdata !== seen.tzdata
+      )
+        throw new Stop(
+          1,
+          `Node ${node} in ${zone} was ${seen.version} with tzdata ${seen.tzdata}, not ${nodes.at(-1).version} with ${nodes.at(-1).tzdata} as in ${zones[0]}`,
+        );
+      row.push(result.value);
     }
+    values.push(row);
   }
   return {
     sha256: hashOf(record.code, record.call),
     command: COMMAND,
     instant: now(),
     libraries: Object.fromEntries(packages.map((p) => [p, version(p)])),
-    runs,
+    nodes,
+    zones,
+    values,
   };
 }
 
@@ -404,9 +415,10 @@ async function main() {
     });
     writeFileSync(RUN_FILE, formatJson(file));
     for (const [id, result] of Object.entries(file)) {
-      const values = new Set(result.runs.map((r) => JSON.stringify(r.value)));
+      const cells = result.values.flat();
+      const values = new Set(cells.map((v) => JSON.stringify(v)));
       console.error(
-        `${id}: ${result.runs.length} runs, ${values.size} distinct value${values.size === 1 ? "" : "s"}`,
+        `${id}: ${cells.length} runs, ${values.size} distinct value${values.size === 1 ? "" : "s"}`,
       );
     }
     console.error(`Wrote ${RUN_FILE}`);

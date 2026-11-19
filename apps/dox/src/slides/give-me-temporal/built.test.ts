@@ -102,4 +102,21 @@ describe("Deck 0 in the built site", () => {
     ].map((m) => m[1]);
     expect(codes).toEqual(["LinkedIn", "NorthGuild"]);
   });
+
+  it("has every quoted agent answer filled", () => {
+    const slides = deck();
+    if (slides === null) return;
+    const pending = slides.filter((s) => /data-quote="pending"/.test(s.html));
+    // Fill `src/slides/give-me-temporal/quotes/agent-answer.json`, then record the run with
+    // `cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs`.
+    expect(pending.map((s) => s.id)).toEqual([]);
+  });
+
+  it("has a build on day-off that carries the Moon place", () => {
+    const slides = deck();
+    if (slides === null) return;
+    expect(builtSlide(slides, "day-off").html).toMatch(
+      /<[^>]*\bdata-build\b[^>]*\bdata-place="moon"|<[^>]*\bdata-place="moon"[^>]*\bdata-build\b/,
+    );
+  });
 });

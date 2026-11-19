@@ -134,9 +134,10 @@ Story closer. Called after `tdd-dev` (and optionally `tester`) complete. Produce
    epic's Definition of Done. It runs the same checks as `pnpm run validate`: every check that
    reads a file the branch changed, against `origin/main`, one row each; `--full` runs them all.
    Do not report a story closed on a run that stopped early.
-   If `deps check` or `stats check` fails, fix it here; both print the command that
-   resolves them, and both exist because a checklist item asking someone to verify a
-   number by eye does not work.
+   On an `apps/dox/` story it runs [`ui-standards`](./skills/ui-standards/SKILL.md); a FAIL is a
+   defect as in step 8: hand each finding back for `dox-builder`, and add no `ui-standards-ok:`.
+   If `deps check` or `stats check` fails, fix it here; both print the command that resolves
+   them, and both exist because a checklist item asking someone to verify a number by eye fails.
 
    One trap worth knowing: when a tracker's column layout is wrong, `deps.mjs` now throws
    naming the file and the expected header. Restore the column — do **not** reach for

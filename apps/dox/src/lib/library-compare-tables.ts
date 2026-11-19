@@ -17,32 +17,15 @@ import {
   type LibraryComparison,
   type LibraryComparisonStats,
 } from "../data/library-comparison";
+import { inlineCodeHtml, escapeHtml } from "./inline-code-html";
 import {
-  KIND_LABEL,
-  KNOWN_LABEL,
-  zoneMatrixSummary,
-  type SuiteSummary,
-} from "../data/zone-matrix";
-import { raw } from "~/widgets/builders/html";
-import { nobreak } from "~/widgets/builders/nobreak";
-import { codeHtml } from "./code-break";
-import { escapeHtml, inlineCodeHtml } from "./inline-code-html";
+  NOT_MEASURED,
+  code,
+  plain,
+  type Cell,
+  type CompareTable,
+} from "./compare-table";
 import { pageHref } from "./site";
-
-/** One table cell: plain text, optionally set in code or linked. */
-interface Cell {
-  text: string;
-  code?: boolean;
-  href?: string;
-  /** Never break inside the text (a date wraps after its hyphen otherwise). */
-  nobreak?: boolean;
-}
-
-interface CompareTable {
-  head: string[];
-  /** The first cell of every row is its row header. */
-  rows: Cell[][];
-}
 
 export type CompareTableId = "overview" | "measured" | "differs" | "covers";
 
@@ -52,34 +35,10 @@ export const PROSE_TABLES: readonly CompareTableId[] = ["covers", "differs"];
 /** Tables laid out as entries (gmt-content.css): a row of short facts under a title, not columns. */
 export const ENTRY_TABLES: readonly CompareTableId[] = ["overview", "measured"];
 
-/**
- * A cell's backtick-marked text as HTML, its code wrapping at spaces (`codeHtml`): a suite's test
- * name is a sentence in code, and held on one line it ran its table far past the column.
- */
-const cellTextHtml = (text: string): string =>
-  text
-    .split(/(`[^`]*`)/)
-    .map((part) =>
-      part.length > 1 && part.startsWith("`") && part.endsWith("`")
-        ? codeHtml(part.slice(1, -1))
-        : escapeHtml(part),
-    )
-    .join("");
-
-/** One table cell as HTML. */
-export function cellHtml(cell: Cell): string {
-  const inner = cell.code ? codeHtml(cell.text) : cellTextHtml(cell.text);
-  const body = cell.nobreak ? nobreak(raw(inner)).toString() : inner;
-  return cell.href ? `<a href="${escapeHtml(cell.href)}">${body}</a>` : body;
-}
-
-const plain = (text: string): Cell => ({ text });
-const code = (text: string): Cell => ({ text, code: true });
 const NOT_RECORDED = "not recorded";
-const NOT_MEASURED = "not measured";
 
 /** Where the zone matrix is explained in full. */
-export const ZONE_MATRIX_PATH = pageHref("/compare/zone-matrix/");
+const ZONE_MATRIX_PATH = pageHref("/compare/zone-matrix/");
 
 /**
  * The `/compare` column: both kinds together, split in brackets, linked to the page. A suite with
@@ -196,99 +155,6 @@ export function measuredTable(): CompareTable {
       "CI configuration",
     ],
     rows: [gmtRow, ...rows],
-  };
-}
-
-// ---------------------------------------------------------------------------
-// The zone matrix page (/compare/zone-matrix/)
-// ---------------------------------------------------------------------------
-
-const NOT_RUN = "not run";
-
-/** One row per suite: the figures of each kind, then the control. A suite nothing measured reads `not measured`. */
-export function zoneMatrixSummaryTable(): CompareTable {
-  return {
-    head: [
-      "Suite",
-      "Version",
-      KIND_LABEL["one-zone"],
-      KIND_LABEL["wrong-answer"],
-      "Reference zone",
-    ],
-    rows: zoneMatrixSummary.suites.map((s) => [
-      { text: s.name, href: `#${s.id}` },
-      plain(s.version),
-      plain(s.measured ? String(s.oneZone) : NOT_MEASURED),
-      plain(s.measured ? String(s.wrongAnswer) : NOT_MEASURED),
-      plain(s.referenceZone),
-    ]),
-  };
-}
-
-/** One row per zone of one suite. A zone nothing ran in reads `not run`, never 0. */
-export function zoneMatrixZoneTable(suite: SuiteSummary): CompareTable {
-  return {
-    head: [
-      "Time zone",
-      "Tests run",
-      KIND_LABEL["one-zone"],
-      KIND_LABEL["wrong-answer"],
-    ],
-    rows: suite.zones.map((z) => [
-      plain(z.zone),
-      plain(z.ran ? String(z.tests) : NOT_RUN),
-      plain(z.ran ? String(z.oneZone) : NOT_RUN),
-      plain(z.ran ? String(z.wrongAnswer) : NOT_RUN),
-    ]),
-  };
-}
-
-/** Each counted failure of one suite: the test, its kind, the zones it fails in and why. */
-export function zoneMatrixFailureTable(suite: SuiteSummary): CompareTable {
-  return {
-    head: ["Test", "Kind", "Zones", "Why"],
-    rows: suite.failures.map((f) => [
-      code(f.id),
-      plain(KIND_LABEL[f.kind]),
-      plain(f.zones.join(", ")),
-      plain(f.reason),
-    ]),
-  };
-}
-
-/**
- * The failures of one suite counted in neither kind: each test, where it failed (in the reference
- * zone, or once in two runs and in which zones), the Node majors and the cause.
- */
-export function zoneMatrixKnownTable(suite: SuiteSummary): CompareTable {
-  return {
-    head: ["Test", "Fails", "Node", "Cause"],
-    rows: suite.known.map((k) => [
-      code(k.id),
-      plain(`${KNOWN_LABEL[k.why]}, ${k.zones.join(", ")}`),
-      plain(k.nodes.join(", ")),
-      plain(k.cause),
-    ]),
-  };
-}
-
-/** The evidence for each wrong answer: the input, the zone, what Temporal gives and what the library gives. */
-export function zoneMatrixEvidenceTable(suite: SuiteSummary): CompareTable {
-  return {
-    head: ["Test", "Input", "Zone", "Temporal", "Library"],
-    rows: suite.failures.flatMap((f) =>
-      f.evidence
-        ? [
-            [
-              code(f.id),
-              code(f.evidence.input),
-              plain(f.evidence.zone),
-              code(f.evidence.temporal),
-              code(f.evidence.library),
-            ],
-          ]
-        : [],
-    ),
   };
 }
 
@@ -445,28 +311,6 @@ export function measurementNotes(): { name: string; note: string }[] {
       throw new Error(`${library.id} has no measurement`);
     return { name: library.displayName, note: library.measurement.note };
   });
-}
-
-// ---------------------------------------------------------------------------
-// Markdown, for the text surfaces
-// ---------------------------------------------------------------------------
-
-const escapeCell = (text: string): string => text.replace(/\|/g, "\\|");
-
-function cellMarkdown(cell: Cell): string {
-  const text = cell.code ? `\`${cell.text}\`` : escapeCell(cell.text);
-  return cell.href ? `[${text}](${cell.href})` : text;
-}
-
-/** A table as a Markdown pipe table. */
-export function tableMarkdown(table: CompareTable): string {
-  return [
-    "",
-    `| ${table.head.join(" | ")} |`,
-    `| ${table.head.map(() => "---").join(" | ")} |`,
-    ...table.rows.map((row) => `| ${row.map(cellMarkdown).join(" | ")} |`),
-    "",
-  ].join("\n");
 }
 
 /** The notes list as HTML list items. */

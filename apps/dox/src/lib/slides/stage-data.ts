@@ -52,7 +52,7 @@ export function applyStageData(data: DeckStageData): void {
 }
 
 /** What a `<Slide>` or `<Build>` names for the stage. */
-export interface StageNames {
+interface StageNames {
   /** Where the camera goes: a zone, a keyword or one of the deck's points. */
   place?: string | undefined;
   /** The zone whose clock stands in the Earth's place until the reveal. */

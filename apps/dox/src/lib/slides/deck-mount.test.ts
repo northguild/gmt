@@ -269,6 +269,19 @@ describe("mountDeck", () => {
     ).toBeInTheDocument();
   });
 
+  it("names the shown slide's layout on the deck root", async () => {
+    const { user } = await start();
+    // The layout is the slide component's attribute; the fixture's slides set none.
+    // oxlint-disable-next-line testing-library/no-node-access
+    document.getElementById("third")?.setAttribute("data-layout", "full");
+    const root = deckRoot();
+    expect(root.dataset.shownLayout).toBe("");
+    await user.keyboard("{End}");
+    expect(root.dataset.shownLayout).toBe("full");
+    await user.keyboard("{Home}");
+    expect(root.dataset.shownLayout).toBe("");
+  });
+
   it("blanks the stage, says so, and a step key brings it back without moving", async () => {
     const { user } = await start();
     await user.keyboard("b");

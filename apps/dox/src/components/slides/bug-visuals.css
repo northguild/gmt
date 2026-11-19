@@ -71,6 +71,7 @@ html[data-deck] .gmt-result-call {
   min-inline-size: 0;
 }
 
+/* ui-standards-ok: a state, not a layout: a picture hides once a later build has been reached. */
 .gmt-swap > :has(~ .gmt-build[data-reached="true"]) {
   visibility: hidden;
 }

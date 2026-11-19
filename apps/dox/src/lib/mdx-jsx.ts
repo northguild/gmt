@@ -57,17 +57,19 @@ import {
   listings,
   unaffectingGmt,
 } from "../data/upstream-filings";
+import { tableMarkdown } from "./compare-table";
 import {
   compareTables,
   notesMarkdown,
-  tableMarkdown,
+  type CompareTableId,
+} from "./library-compare-tables";
+import {
   zoneMatrixEvidenceTable,
   zoneMatrixFailureTable,
   zoneMatrixKnownTable,
   zoneMatrixSummaryTable,
   zoneMatrixZoneTable,
-  type CompareTableId,
-} from "./library-compare-tables";
+} from "./zone-matrix-tables";
 import { LISTING_COLUMNS, listingStatus } from "./upstream-status";
 import {
   asDate,

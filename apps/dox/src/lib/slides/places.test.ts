@@ -14,7 +14,7 @@ import {
   setPoints,
   zoomFor,
 } from "./places";
-import { STAGE } from "~/slides/give-me-temporal/stage-data";
+import { FIXTURE_STAGE as STAGE } from "~/test/deck-stage-fixture";
 import { moonRaDec, siderealDeg, toUnit } from "~/lib/sky-math";
 import { createCamera, project } from "~/lib/globe/camera";
 
@@ -22,7 +22,7 @@ import { createCamera, project } from "~/lib/globe/camera";
 beforeAll(() => setPoints(STAGE.points));
 afterAll(() => setPoints({}));
 
-/** A fixed instant, 2027-02-06 (the Chinese New Year the deck's day-off slide is about), noon UTC. */
+/** A fixed instant, 2027-02-06, noon UTC. */
 const INSTANT = Temporal.Instant.from("2027-02-06T12:00:00Z").epochMilliseconds;
 const ctx = { instantMs: INSTANT, pins: [] as [number, number][] };
 
@@ -78,18 +78,16 @@ describe("resolvePlace", () => {
 
   it("names a place for a pin", () => {
     const zone = resolvePlace("Asia/Kolkata");
-    const point = resolvePlace("galicia");
+    const point = resolvePlace("outpost");
     if (zone.kind !== "zone" || point.kind !== "point") throw new Error("kind");
     expect(labelOf(zone)).toBe("Kolkata");
-    expect(labelOf(point)).toBe("Galicia");
+    expect(labelOf(point)).toBe("Outpost");
   });
 });
 
 describe("rotationFor", () => {
   it("negates longitude and latitude for a zone and a point", () => {
-    expect(rotationFor(resolvePlace("galicia"), ctx)).toEqual([
-      8.5448, -42.8782,
-    ]);
+    expect(rotationFor(resolvePlace("outpost"), ctx)).toEqual([20, -40]);
     const [lam, phi] = rotationFor(resolvePlace("Asia/Tokyo"), ctx);
     expect(lam).toBeCloseTo(-139.74, 1);
     expect(phi).toBeCloseTo(-35.65, 1);
