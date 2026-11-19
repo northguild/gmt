@@ -1382,8 +1382,12 @@ html[data-deck] .gmt-why {
   }
 }
 
-/* The slide's own paragraphs; the Dox chat a slide holds keeps its own spacing. */
-html[data-deck] .gmt-slide-body p:not(.gmt-ask p) {
+/*
+ * The slide's own paragraphs; the Dox chat a slide holds keeps its own spacing. `:where` keeps the
+ * chat out without adding weight, so a component's own paragraph margins (`.gmt-step p` and the
+ * rest, which come later at the same weight) still win.
+ */
+html[data-deck] .gmt-slide-body p:not(:where(.gmt-ask p)) {
   margin-block: 0 1cqi;
 }
 
@@ -1478,7 +1482,8 @@ html[data-deck] .gmt-quote {
 /* Starlight's flow margins would add a gap on top of the grid's own. */
 html[data-deck] .gmt-filing-grid > *,
 html[data-deck] .gmt-results > *,
-html[data-deck] .gmt-swap > * {
+html[data-deck] .gmt-swap > *,
+html[data-deck] .gmt-familiar > * {
   margin: 0;
 }
 
