@@ -1,14 +1,14 @@
 ---
 name: gmt-healthcare
 description: >
-  HL7 v2 and FHIR R4 date-times in @northguild/gmt/healthcare — parseHL7 reads
-  a DTM, or a TS with its degree of precision, as an instant, a local time with
-  no offset, a partial value or the null value; formatHL7 writes an ISO 8601
-  value as a DTM; isValidHL7 checks one. An HL7 time with no offset is the
-  sender's local time, never UTC. parseFHIR, isValidFHIR and formatFHIR read,
-  check and write a FHIR date, dateTime or instant, keeping the precision; a
-  FHIR time with no zone is invalid. Reads the docs site (llms.txt) and the
-  installed package's JSDoc; a routing pointer.
+  HL7 v2 and FHIR R4 date-times in @northguild/gmt/healthcare — parseHL7 reads a
+  DTM, or a TS with its degree of precision, as an instant, a local time with no
+  offset, a partial value or the null value; formatHL7 writes an ISO 8601 value
+  as a DTM; isValidHL7 checks one. An HL7 time with no offset is the sender's
+  local time, never UTC. parseFHIR, isValidFHIR and formatFHIR read, check and
+  write a FHIR date, dateTime or instant, keeping the precision; a FHIR time
+  with no zone is invalid. Reads the docs site (llms.txt) and the installed
+  package's JSDoc; a routing pointer.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/healthcare-clinical-timestamps.mdx'
   - 'northguild/gmt:packages/gmt/src/healthcare/index.ts'
@@ -17,7 +17,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.21.0'
+  library_version: '1.22.0'
 ---
 
 # GMT Healthcare

@@ -8,14 +8,13 @@ description: >
   Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS
   leap-second table (taiMinusUtc, leapSecondsBetween, nextLeapSecond,
   isLeapSecond, toTAI, fromTAI, toTai64n, fromTai64n, toTT, fromTT, toTCG,
-  fromTCG, tcgMinusTt), Julian Date, Modified Julian Date and J2000
-  seconds (toJulianDate, toModifiedJulianDate, toJ2000Seconds and their
-  from and Parts forms), CCSDS ASCII time codes A and B (parseCcsdsAscii*,
-  formatCcsdsAscii*), and lint package selection (ESLint,
-  Biome, Oxlint). GNSS time is in gmt-gnss. Reads the docs site (llms.txt and each
-  page's .md twin) and the installed package's JSDoc for API details, and the
-  lint-package READMEs for lint setup; this skill is a routing pointer, not an
-  API dump.
+  fromTCG, tcgMinusTt), Julian Date, Modified Julian Date and J2000 seconds
+  (toJulianDate, toModifiedJulianDate, toJ2000Seconds and their from and Parts
+  forms), CCSDS ASCII time codes A and B (parseCcsdsAscii*, formatCcsdsAscii*),
+  and lint package selection (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss.
+  Reads the docs site (llms.txt and each page's .md twin) and the installed
+  package's JSDoc for API details, and the lint-package READMEs for lint setup;
+  this skill is a routing pointer, not an API dump.
 sources:
   - "northguild/gmt:apps/dox/src/content/docs/install.mdx"
   - "northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integratio\
@@ -37,7 +36,7 @@ sources:
 metadata:
   type: composition
   library: "@northguild/gmt"
-  library_version: "1.21.0"
+  library_version: "1.22.0"
 ---
 
 # GMT Integration

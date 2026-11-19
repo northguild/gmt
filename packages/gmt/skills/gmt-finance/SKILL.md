@@ -7,9 +7,9 @@ description: >
   second 60 only on a real leap second), formatFixUtcTimestamp (cut, never
   rounded, at a counterparty's precision) and isValidFixUtcTimestamp; and the
   SWIFT MT value date (YYMMDD): parseSwiftDate, formatSwiftDate and
-  isValidSwiftDate, in the century SWIFT's own rule gives. Reads
-  the docs site (llms.txt) and the installed package's JSDoc; a routing
-  pointer, not an API dump.
+  isValidSwiftDate, in the century SWIFT's own rule gives. Reads the docs site
+  (llms.txt) and the installed package's JSDoc; a routing pointer, not an API
+  dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/finance-message-timestamps.mdx'
   - 'northguild/gmt:packages/gmt/src/finance/format/index.ts'
@@ -19,7 +19,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.21.0'
+  library_version: '1.22.0'
 ---
 
 # GMT Finance
