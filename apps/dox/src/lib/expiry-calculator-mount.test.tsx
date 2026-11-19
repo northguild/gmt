@@ -242,6 +242,205 @@ describe("Now", () => {
   });
 });
 
+describe("the Live clock switch", () => {
+  const AT = "2024-06-12T15:20:00.250Z";
+  // The widget under test, so a failing test still tears its timer down before the fake clock.
+  let widget: RenderedWidget | null = null;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(AT);
+  });
+
+  afterEach(() => {
+    widget?.destroy();
+    widget = null;
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  const liveSwitch = () => screen.getByRole("switch", { name: "Live clock" });
+  const hint = () => screen.getByRole("note", { name: "About the start" });
+  const plates = () =>
+    screen
+      .getAllByRole("definition")
+      .map((d) => d.textContent)
+      .join("|");
+
+  /**
+   * user-event and the mount's own module load wait on `setTimeout`, and the timer is fake
+   * here: `settle` runs what is due and yields a real turn until the work is done.
+   */
+  async function settle<T>(work: Promise<T>): Promise<T> {
+    let done = false;
+    const tracked = work.finally(() => {
+      done = true;
+    });
+    while (!done) {
+      await vi.advanceTimersByTimeAsync(1);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    return tracked;
+  }
+
+  async function openNow(): Promise<RenderedWidget> {
+    widget = await settle(mount());
+    await settle(widget.user.click(nowChip()));
+    return widget;
+  }
+
+  /** Lets the status's settle timer fire, so a count shows only the clock's own timer. */
+  const flushSpeech = () => vi.advanceTimersByTime(600);
+
+  const reducedMotion = () =>
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes("reduce"),
+          media: query,
+          addEventListener() {},
+          removeEventListener() {},
+        }) as unknown as MediaQueryList,
+    );
+
+  it("is off and unavailable under A date, where nothing ticks", async () => {
+    widget = await settle(mount());
+    expect(liveSwitch()).not.toBeChecked();
+    expect(liveSwitch()).toBeDisabled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("is on and available under Now, and the plates tick on the second", async () => {
+    await openNow();
+    expect(liveSwitch()).toBeChecked();
+    expect(liveSwitch()).toBeEnabled();
+    // Opening and clicking move the fake clock a few milliseconds, so find the first tick,
+    // then every later one is exactly a second on.
+    let seen = plates();
+    let waited = 0;
+    while (plates() === seen && waited < 1100) {
+      vi.advanceTimersByTime(1);
+      waited += 1;
+    }
+    expect(waited).toBeLessThan(1000);
+    seen = plates();
+    vi.advanceTimersByTime(999);
+    expect(plates()).toBe(seen);
+    vi.advanceTimersByTime(1);
+    expect(plates()).not.toBe(seen);
+  });
+
+  it("pauses on the last values and resumes from the clock", async () => {
+    const w = await openNow();
+    vi.advanceTimersByTime(2000);
+    await settle(w.user.click(liveSwitch()));
+    expect(liveSwitch()).not.toBeChecked();
+    expect(hint()).toHaveTextContent(/paused on the last reading/);
+    const held = plates();
+    vi.advanceTimersByTime(3000);
+    expect(plates()).toBe(held);
+    expect(vi.getTimerCount()).toBe(0);
+    await settle(w.user.click(liveSwitch()));
+    expect(liveSwitch()).toBeChecked();
+    expect(hint()).toHaveTextContent(/^Now is your clock, live\./);
+    expect(plates()).not.toBe(held);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it("keeps the pause when the reader goes to A date and back", async () => {
+    const w = await openNow();
+    await settle(w.user.click(liveSwitch()));
+    await settle(w.user.click(dateChip()));
+    expect(liveSwitch()).not.toBeChecked();
+    expect(liveSwitch()).toBeDisabled();
+    await settle(w.user.click(nowChip()));
+    expect(liveSwitch()).not.toBeChecked();
+    expect(liveSwitch()).toBeEnabled();
+    flushSpeech();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("under reduced motion reads the clock once and holds it", async () => {
+    reducedMotion();
+    const w = await openNow();
+    expect(liveSwitch()).not.toBeChecked();
+    expect(count("ttlFromNow")).toBeGreaterThan(0);
+    const held = plates();
+    flushSpeech();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(3000);
+    expect(plates()).toBe(held);
+    await settle(w.user.click(liveSwitch()));
+    expect(liveSwitch()).toBeChecked();
+    expect(plates()).not.toBe(held);
+  });
+
+  it("keeps focus on the switch through a tick", async () => {
+    await openNow();
+    liveSwitch().focus();
+    vi.advanceTimersByTime(1000);
+    expect(liveSwitch()).toBeInTheDocument();
+    expect(liveSwitch()).toHaveFocus();
+  });
+
+  it("ticks on the whole second, and a late tick does not drift", async () => {
+    const wall = () => vi.getMockedSystemTime()?.toISOString();
+    await openNow();
+    // Now was chosen at :00.250, so the first tick is due 750 ms on, at :01.000.
+    let seen = plates();
+    for (let ms = 0; plates() === seen && ms < 1100; ms += 1)
+      vi.advanceTimersByTime(1);
+    expect(wall()).toBe("2024-06-12T15:20:01.000Z");
+    // A real timer runs late. Move the wall clock 30 ms on just before the next tick fires.
+    seen = plates();
+    vi.advanceTimersByTime(999);
+    vi.setSystemTime("2024-06-12T15:20:02.029Z");
+    vi.advanceTimersByTime(1);
+    expect(plates()).not.toBe(seen);
+    expect(wall()).toBe("2024-06-12T15:20:02.030Z");
+    // The tick after it lands back on the second, at :03.000, not at :03.030.
+    seen = plates();
+    vi.advanceTimersByTime(969);
+    expect(plates()).toBe(seen);
+    vi.advanceTimersByTime(1);
+    expect(plates()).not.toBe(seen);
+    expect(wall()).toBe("2024-06-12T15:20:03.000Z");
+  });
+
+  it("writes a tick in place, so focus on the copy button and the plates' nodes survive", async () => {
+    const w = await openNow();
+    vi.advanceTimersByTime(1000);
+    const copy = within(w.root).getByRole("button", { name: "Copy calls" });
+    const values = screen.getAllByRole("definition");
+    const shown = plates();
+    copy.focus();
+    vi.advanceTimersByTime(1000);
+    expect(plates()).not.toBe(shown);
+    expect(copy).toHaveFocus();
+    expect(within(w.root).getByRole("button", { name: "Copy calls" })).toBe(
+      copy,
+    );
+    expect(screen.getAllByRole("definition")).toEqual(values);
+    screen.getAllByRole("definition").forEach((dd, i) => {
+      expect(dd).toBe(values[i]);
+    });
+  });
+
+  it("leaves no timer after the mount is destroyed", async () => {
+    const w = await openNow();
+    flushSpeech();
+    expect(vi.getTimerCount()).toBe(1);
+    w.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("has no accessibility violations while it ticks", async () => {
+    const w = await openNow();
+    vi.advanceTimersByTime(1000);
+    await settle(expectNoAxeViolations(w.root));
+  });
+});
+
 describe("the permalink", () => {
   it("round-trips a typed length and start", async () => {
     const rendered = await mount({

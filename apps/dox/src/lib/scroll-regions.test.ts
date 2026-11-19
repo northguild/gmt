@@ -188,6 +188,28 @@ describe("mountScrollRegions", () => {
     ).toBeInTheDocument();
   });
 
+  it("re-reads a wired value whose text is replaced one level down, and drops the stop when it fits again", async () => {
+    const shown = el("span", {}, "");
+    const dd = el("dd", { "data-scrolls": "" }, shown);
+    document.body.replaceChildren(
+      el("dl", {}, el("div", {}, el("dt", {}, "UTC now"), dd)),
+    );
+    size(dd, 100);
+    mountScrollRegions(document);
+    const value = screen.getByRole("definition");
+    expect(value).not.toHaveAttribute("tabindex");
+
+    size(dd, 300);
+    shown.textContent = "2024-06-30T12:00:00.000000001Z";
+    await settle();
+    expect(value).toHaveAttribute("tabindex", "0");
+
+    size(dd, 100);
+    shown.textContent = "";
+    await settle();
+    expect(value).not.toHaveAttribute("tabindex");
+  });
+
   it("labels a box whose first read said it fits, once the browser has laid it out", async () => {
     const widget = el("section", { "aria-label": "Widget" });
     document.body.replaceChildren(widget);

@@ -46,3 +46,16 @@ export function codeFrame(o: CodeFrameOptions): SafeHtml {
     ></div
   >`;
 }
+
+/**
+ * Writes new plain text into a code frame `codeFrame` already put on the page: the `<code>` text
+ * and the copy button's text, in place. The frame is never replaced, so focus on the copy button
+ * or the scrolling `<pre>` survives a live readout's tick. `root` holds the frame.
+ */
+export function paintCodeFrame(root: ParentNode, text: string): void {
+  const codeEl = root.querySelector("code");
+  if (codeEl !== null && codeEl.textContent !== text) codeEl.textContent = text;
+  const copyEl = root.querySelector("gmt-copy");
+  if (copyEl !== null && copyEl.getAttribute("text") !== text)
+    copyEl.setAttribute("text", text);
+}

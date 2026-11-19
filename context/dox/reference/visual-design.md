@@ -171,6 +171,9 @@ Only these things move. Anything not listed stays still.
   is the reader's own motion, so reduced motion keeps it; a fly-to snaps. The Sun and the Moon
   are on the same sky: the Moon with its phase, the Sun a near-white core with a glare that the
   contrast and transparency settings drop.
+- **Live clocks tick on the second, text only; a reader can pause each one, and reduced motion
+  starts it paused** (the PTP "PTP now" readout, the Cutoff Countdown and the
+  Expiry Calculator, each with a "Live clock" switch).
 - **Height easing through `.gmt-grow`** in tool result regions. Height only: never opacity or
   transform on a value, and never a value the reader is reading.
 

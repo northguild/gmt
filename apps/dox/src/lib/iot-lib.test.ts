@@ -5,7 +5,13 @@ import { GMT_MODULES } from "./gmt-modules";
 import { loadIotLib } from "./iot-lib";
 import { WidgetLoadError } from "./widget-mount";
 
-const NAMES = ["ptpToUtc", "utcToPtp", "isValidPtpTimestamp", "taiMinusUtc"];
+const NAMES = [
+  "ptpToUtc",
+  "utcToPtp",
+  "isValidPtpTimestamp",
+  "taiMinusUtc",
+  "getUtcNow",
+];
 
 describe("loadIotLib", () => {
   it("hands back every function the tools call, and nothing else", async () => {
@@ -24,11 +30,18 @@ describe("loadIotLib", () => {
       "2024-01-01T00:00:00Z",
     );
     expect(lib.taiMinusUtc("2024-01-01T00:00:00Z")).toBe(37);
+    expect(lib.getUtcNow()).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);
   });
 
-  it.each(["iot/convert", "iot/validate", "timescale/calculate"] as const)(
-    "turns a rejected %s import into a WidgetLoadError",
-    async (key) => {
+  it.each`
+    key
+    ${"iot/convert"}
+    ${"iot/validate"}
+    ${"timescale/calculate"}
+    ${"utc/get"}
+  `(
+    "turns a rejected $key import into a WidgetLoadError",
+    async ({ key }: { key: keyof typeof GMT_MODULES }) => {
       const original = GMT_MODULES[key];
       GMT_MODULES[key] = () => Promise.reject(new Error("offline"));
       try {
