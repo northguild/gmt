@@ -8,4 +8,3 @@ record of what is built is [built/](../built/index.md).
 In progress:
 
 - [dox-g2/](./dox-g2/index.md): DOX-G2, one entrance from northguild.dev to /gmt (header, hero, sky, entrance, tables, carousel).
-- [dox-g13/](./dox-g13/index.md): DOX-G13, a PTP Clock Converter preset inside the 2016-12-31 leap second.

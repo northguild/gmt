@@ -52,7 +52,7 @@ describe("the leap-second sentences", () => {
     expect(ptpToUtc(leap, 37)).toBe("2016-12-31T23:59:59Z");
     expect(taiMinusUtc("2016-12-31T23:59:59Z")).toBe(36);
     expect(page).toContain(
-      "Inside the second inserted at the end of 2016 it is out either way.",
+      "Inside the second inserted at the end of 2016 it is out either way, even at 36, the offset a grandmaster still announces until that second ends.",
     );
     expect(page).toContain(
       "The count 1483228836 read with 36 is 2017-01-01T00:00:00Z, where the table says 37, and read with 37 it is 2016-12-31T23:59:59Z, where the table says 36.",

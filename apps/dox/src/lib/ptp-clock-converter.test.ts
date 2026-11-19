@@ -238,7 +238,11 @@ describe("the check", () => {
     const at36 = check("leap-2016");
     expect(at36.table).toBe(37);
     expect(at36.tableUtc).toBe("2016-12-31T23:59:59Z");
-    expect(at36.verdict).toEqual(differenceVerdict(36, 37));
+    expect(at36.verdict).toEqual({
+      tone: "bad",
+      title: "Offset differs from the table by 1 s",
+      detail: "Every reading is 1 s later than UTC",
+    });
     const at37 = checkOffset(
       iotLib,
       readPtp(iotLib, state({ ...readPreset("leap-2016"), offset: "37" })),
