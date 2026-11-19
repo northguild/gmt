@@ -7,12 +7,18 @@
  * stale, a marked panel says so and the build carries on: `slides-check` is what fails. No answer is
  * invented.
  *
+ * The agent's code is the site's own code block (Starlight's `Code`, the site's syntax colours),
+ * as every example on the guides is, in its dark theme on the dark stage (`DeckCode`); the one-line
+ * calls elsewhere in the deck stay inline `code`.
+ *
  * `part` picks what shows, so the slide can reveal it a build at a time: `question`, `answer` (the
  * agent's code, and its source line with the guess prompt) or `result` (the value the code returned, how
  * many values the runs held, and the Helsinki line). Without `part` those three show. `prose` is the
  * agent's text around its code, for the speaker notes: on the slide it would give the guess away and
  * push the code off the stage.
  */
+import { Code } from "@astrojs/starlight/components";
+import DeckCode from "./DeckCode.astro";
 import { classifyLocal } from "@northguild/gmt/instant/convert";
 import {
   quotedAnswer,
@@ -52,7 +58,9 @@ const neverHappens =
       {show("answer") && (
         <figure class="gmt-deck-panel gmt-quote" data-quote="recorded">
           <blockquote>
-            <pre class="gmt-repro"><code>{quote.shownCode}</code></pre>
+            <DeckCode>
+              <Code code={quote.shownCode} lang="js" wrap />
+            </DeckCode>
           </blockquote>
           <figcaption>
             {quote.model}, {quote.date}. What does it return?

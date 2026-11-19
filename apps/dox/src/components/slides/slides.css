@@ -1315,14 +1315,13 @@ html[data-deck] .gmt-filing-title {
 
 html[data-deck] .gmt-filing .expressive-code,
 html[data-deck] .gmt-filing pre,
-html[data-deck] .gmt-quote pre {
+html[data-deck] .gmt-quote .expressive-code {
   min-inline-size: 0;
   max-inline-size: 100%;
   font-size: max(0.75rem, 1.4cqi);
 }
 
-html[data-deck] .gmt-filing pre,
-html[data-deck] .gmt-quote pre {
+html[data-deck] .gmt-filing pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1452,8 +1451,7 @@ html[data-deck] .gmt-deck-table caption {
   word-break: keep-all;
 }
 
-.gmt-filing .gmt-repro,
-.gmt-quote .gmt-repro {
+.gmt-filing .gmt-repro {
   margin: 0;
   padding: 0.6cqi 1cqi;
   border: 1px solid var(--gmt-border);
@@ -1496,8 +1494,13 @@ html[data-deck] [data-quote="recorded"] blockquote {
   border: 0;
 }
 
-html[data-deck] [data-quote="recorded"] pre {
-  font-size: max(0.75rem, 1.25cqi);
+/* Expressive Code sizes its block from its own variables; the stage sets them in container units,
+   with the panel's tighter lines, so the question, the code and the result share the column. */
+html[data-deck] [data-quote="recorded"] .expressive-code {
+  --ec-codeFontSize: max(0.75rem, 1.25cqi);
+  --ec-codeLineHt: 1.35;
+  --ec-codePadBlk: 0.6cqi;
+  --ec-codePadInl: 1cqi;
 }
 
 html[data-deck] [data-quote="recorded"] figcaption {

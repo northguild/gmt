@@ -30,7 +30,7 @@ places; no national default, no law, no business wording, no text that judges a 
   with samples, so the arriving time moves nothing.
 - **`agent-answer`** ("Ask an agent"): `AgentQuote`, the answer the transcript's `quoted` names.
   Build 0: the question, as the owner asked it. Build 1: the agent's code (its `excerpt` when
-  set), the model and date as the source line, and "What does it return?" (a guess). Build 2: the
+  set) in the site's own code block, dark on the dark stage (`DeckCode`), the model and date as the source line, and "What does it return?" (a guess). Build 2: the
   call and the value the code returned on Node 26 at `TZ=Europe/Helsinki`, the count of distinct
   values across its runs, zones and Node majors, and the line "That time never happens in
   Helsinki", shown only when `classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki")`
