@@ -141,7 +141,7 @@ const dstInspectorCall = showDstInspectorInput.extend({
  * (`webmcp/tools/dst-inspector.ts` builds its description from the shared doc).
  */
 const DST_CALL_FIRST =
-  ". Whether a zone skips or repeats a time depends on its own rules for that year, which you cannot know from memory, so call this tool FIRST, with no text before it, and write the answer from its result";
+  ", or sends a question or a coding request that names a wall-clock time on a date in a zone, even when it does not mention a clock change. Whether a zone skips or repeats a time depends on its own rules for that year, which you cannot know from memory, so call this tool FIRST, with no text before it, and write the answer from its result";
 const DST_LOCAL_ARG =
   "local (the wall time asked about, as a zoneless ISO date-time such as 2027-03-28T03:30:00; the result says whether that time exists, happens twice or happens once, and gives the instants), ";
 

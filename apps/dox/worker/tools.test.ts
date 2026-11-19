@@ -1088,6 +1088,9 @@ describe("chatDocFor", () => {
   it("tells the chat to ask the DST inspector first and to pass the wall time", () => {
     const doc = chatDocFor(docs.find((d) => d.name === "showDstInspector")!);
     expect(doc.when).toContain("call this tool FIRST");
+    expect(doc.when).toContain(
+      "a question or a coding request that names a wall-clock time on a date in a zone",
+    );
     expect(doc.args).toContain("local (");
   });
 

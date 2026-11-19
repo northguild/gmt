@@ -32,6 +32,15 @@ function reading(zone: string, instant: string): string {
   return `${instant} (offset ${getTimeZoneOffset(zone, instant)})`;
 }
 
+/**
+ * What the zone's clocks show at an instant, as a person reads it, with the date first when it is
+ * not the date of the wall time asked about (a skipped day).
+ */
+function shown(zone: string, instant: string, local: string): string {
+  const plain = convertUtcToPlainDateTime(instant, { timeZone: zone });
+  return clockReading(plain, plain.slice(0, 10) !== local.slice(0, 10));
+}
+
 const ONE_DAY_MS = 86_400_000;
 
 /**
@@ -107,12 +116,18 @@ export function localTimeFacts(
     };
   }
   if (kind === "nonexistent") {
+    // Read with the offset in force before the change, the wall time lands after the gap (the
+    // later instant); read with the offset after it, before the gap (the earlier instant). So the
+    // earlier instant carries the before-change offset, and the later one the after-change offset.
+    const before = getTimeZoneOffset(zone, earlier);
+    const after = getTimeZoneOffset(zone, later);
     return {
       kind,
       facts: [
         `${local} does not exist in ${zone}: the clocks skip it, so no instant has that wall time.`,
         ...clockChangeFact(zone, local, earlier),
-        `Read as the clock before the change it is ${reading(zone, earlier)}; read as the clock after the change it is ${reading(zone, later)}.`,
+        `Read with the offset from before the change (${before}), it is ${later}, when the clocks there show ${shown(zone, later, local)}; read with the offset from after the change (${after}), it is ${earlier}, when they show ${shown(zone, earlier, local)}.`,
+        `GMT's default disambiguation, "compatible", gives the later instant, ${later}, as Temporal does; "later" gives the same, "earlier" gives ${earlier}, and "reject" gives "".`,
       ],
     };
   }
@@ -122,6 +137,7 @@ export function localTimeFacts(
       `${local} in ${zone} happens twice: the clocks go back over it, so the wall time is shown two times.`,
       ...clockChangeFact(zone, local, earlier),
       `The first time is ${reading(zone, earlier)}; the second time is ${reading(zone, later)}.`,
+      `GMT's default disambiguation, "compatible", gives the first, ${earlier}, as Temporal does; "earlier" gives the same, "later" gives ${later}, and "reject" gives "".`,
     ],
   };
 }
