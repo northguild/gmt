@@ -8,6 +8,7 @@ import {
   type BrowserType,
   type Page,
 } from "@playwright/test";
+import { READ_PRESETS, WRITE_PRESETS } from "../src/lib/ptp-clock-presets";
 import { distDirOrSkip } from "./dist-dir";
 import { serveStatic } from "./lib/static-server.mjs";
 
@@ -318,6 +319,9 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
             );
         const readIds = await optionsOf(readPreset);
         const writeIds = await optionsOf(writePreset);
+        // "every preset" means the list in source, so one missing from the select fails
+        expect(readIds).toEqual(READ_PRESETS.map((p) => p.id));
+        expect(writeIds).toEqual(WRITE_PRESETS.map((p) => p.id));
 
         const steps: [string, () => Promise<void>][] = [
           ...readIds.map((id): [string, () => Promise<void>] => [

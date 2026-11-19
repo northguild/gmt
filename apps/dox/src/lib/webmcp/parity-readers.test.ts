@@ -226,6 +226,11 @@ const at = <T>(list: readonly T[], i: number): T => {
   if (item === undefined) throw new Error(`no preset ${i}`);
   return item;
 };
+const byId = <T extends { id: string }>(list: readonly T[], id: string): T => {
+  const item = list.find((p) => p.id === id);
+  if (item === undefined) throw new Error(`no preset ${id}`);
+  return item;
+};
 
 function lastOf(fn: unknown): unknown {
   const last = spy(fn).mock.results.at(-1);
@@ -635,10 +640,10 @@ const cases: Case[] = [
       instant: "2024-06-15T12:00:00Z",
     },
     refused: {
-      seconds: at(PTP_READ_PRESETS, 4).seconds,
+      seconds: byId(PTP_READ_PRESETS, "unset-clock").seconds,
       nanoseconds: "0",
       offset: "37",
-      instant: at(PTP_WRITE_PRESETS, 2).instant,
+      instant: byId(PTP_WRITE_PRESETS, "before-1970").instant,
     },
     invalid: { seconds: "1704067237" },
   },
@@ -646,7 +651,7 @@ const cases: Case[] = [
     ...ptp,
     label: "to read only",
     example: {
-      seconds: at(PTP_READ_PRESETS, 0).seconds,
+      seconds: byId(PTP_READ_PRESETS, "announced-37").seconds,
       nanoseconds: "0",
       offset: "37",
     },
@@ -656,7 +661,7 @@ const cases: Case[] = [
       offset: "36",
     },
     refused: {
-      seconds: at(PTP_READ_PRESETS, 5).seconds,
+      seconds: byId(PTP_READ_PRESETS, "out-of-range").seconds,
       nanoseconds: "0",
       offset: "37",
     },
@@ -665,9 +670,12 @@ const cases: Case[] = [
   {
     ...ptp,
     label: "to write only",
-    example: { instant: at(PTP_WRITE_PRESETS, 0).instant },
+    example: { instant: byId(PTP_WRITE_PRESETS, "utc-offset-instant").instant },
     second: { instant: "2016-06-30T12:00:00Z", offset: "36" },
-    refused: { instant: at(PTP_WRITE_PRESETS, 1).instant, offset: "37" },
+    refused: {
+      instant: byId(PTP_WRITE_PRESETS, "leap-second").instant,
+      offset: "37",
+    },
     own: [NEEDS_ALL_THREE, offsetDefaultNote("37")],
     invalid: { offset: "37" },
   },

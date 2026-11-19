@@ -31,7 +31,7 @@ A Precision Time Protocol (IEEE 1588) timestamp is a count of seconds and nanose
 
 **Two flags the library does not read.** A grandmaster also announces `currentUtcOffsetValid` and `ptpTimescale`. The library reads neither, so the tool has no switch for them: a receiver checks both before it trusts the offset. The guide, [IoT: PTP time](/guides/industries/iot-ptp-time/), says how.
 
-**The check.** The table plate is `taiMinusUtc` at the announced reading, so it can be one second out within a second of a step. At 2024-01-01T00:00:00Z it is 37, and an announced offset of 36 shows as 1 s apart on the ruler. The ruler runs from 0 to 40 s and never rescales; an offset outside it is drawn at the edge and named "off the ruler".
+**The check.** The table plate is `taiMinusUtc` at the announced reading, so it can be one second out within a second of a step. At 2024-01-01T00:00:00Z it is 37, and an announced offset of 36 shows as 1 s apart on the ruler. Inside the second inserted at the end of 2016 it is out either way, even at 36, the offset a grandmaster still announces until that second ends. The count 1483228836 read with 36 is 2017-01-01T00:00:00Z, where the table says 37, and read with 37 it is 2016-12-31T23:59:59Z, where the table says 36. The ruler runs from 0 to 40 s and never rescales; an offset outside it is drawn at the edge and named "off the ruler".
 
 **Refusals.** The library gives no reason, so the tool asks again. If the record is out of range, that is the reason. If a known-good record with the same offset is refused, the offset is. If the record read at offset 0 is refused too, the count is past the last instant the library can write. Otherwise the count is smaller than the offset, which in practice is a clock that was never set. Section 3 names a leap second or a time before 1970 only when the text is exactly the preset that shows it.
 
@@ -50,7 +50,7 @@ utcToPtp("2024-01-01T02:00:00+02:00", 37); // { seconds: 1704067237n, nanosecond
 utcToPtp("2016-12-31T23:59:60Z", 37); // null
 ```
 
-**Worth trying:** [a stale offset of 36](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22stale-36%22%7D) is 1 s out; [offset 0](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22announced-0%22%7D) is 37 s out; and [a clock that was never set](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22unset-clock%22%7D) is refused.
+**Worth trying:** [a stale offset of 36](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22stale-36%22%7D) is 1 s out; [offset 0](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22announced-0%22%7D) is 37 s out; [a count inside the 2016 leap second](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22leap-2016%22%7D) is 1 s out at 36, and [the same count at 37](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22seconds%22%3A%221483228836%22%2C%22nanoseconds%22%3A%220%22%2C%22offset%22%3A%2237%22%7D) is 1 s out the other way; and [a clock that was never set](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22unset-clock%22%7D) is refused.
 
 </Fragment>
 
