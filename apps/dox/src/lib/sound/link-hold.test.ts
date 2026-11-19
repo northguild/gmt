@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { screen } from "@testing-library/dom";
+import { configure, getConfig, screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { raw, setHtml } from "~/widgets/builders";
@@ -11,6 +11,13 @@ const go = vi.fn();
 /** Whether each press was held, read after the hold has decided. */
 let held: boolean[] = [];
 let user: ReturnType<typeof userEvent.setup>;
+/**
+ * Testing Library's `asyncWrapper` before this file's tests. Once a file in the shared worker
+ * has loaded React Testing Library, the wrapper waits on a `setTimeout(0)` that Vitest's fake
+ * timers never fire, so every `user.click` here would hang (`src/test/react-cleanup.ts`). Each
+ * test runs with the plain wrapper and puts this one back after.
+ */
+let wrapper: ReturnType<typeof getConfig>["asyncWrapper"];
 
 /**
  * As the press cue does: every link press, once its ping is heard, is handed over in capture. A
@@ -32,6 +39,8 @@ const onPress = (event: MouseEvent) => {
 };
 
 beforeEach(() => {
+  wrapper = getConfig().asyncWrapper;
+  configure({ asyncWrapper: (run) => run() });
   vi.useFakeTimers();
   go.mockClear();
   held = [];
@@ -57,6 +66,7 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.runOnlyPendingTimers();
   vi.useRealTimers();
+  configure({ asyncWrapper: wrapper });
 });
 
 describe("a link's press waits for its ping", () => {
