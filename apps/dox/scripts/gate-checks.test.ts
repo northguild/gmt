@@ -381,6 +381,7 @@ describe("every browser gate", () => {
       "globe-smoke.mjs",
       "grow-measure.mjs",
       "hero-space-check.mjs",
+      "plate-fit.mjs",
       "rail-stored-still.mjs",
       "readout-still.mjs",
       "sound-check.mjs",

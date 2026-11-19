@@ -15,26 +15,9 @@ const pick = (query: string, messages: UIMessage[] = []) =>
 
 const CORE = CHAT_STARTERS.slice(0, CORE_TOOL_COUNT).map((s) => s.widget);
 
+// Whether a question gets its tool is scored by `evals/offline.test.ts` (`tools.offered`);
+// these tests pin the mechanism.
 describe("selectTools", () => {
-  // The starters are the questions these widgets exist for. A starter whose
-  // own widget is not offered can never get it from the model.
-  it.each(CHAT_STARTERS.map((starter) => [starter.widget, starter.text]))(
-    "offers %s for its own chat starter",
-    (widget, text) => {
-      expect(pick(text)).toContain(widget);
-    },
-  );
-
-  it("offers the FHIR Date Checker for questions that name FHIR, not only its starter", () => {
-    for (const q of [
-      "Is 2024-06 a valid FHIR date?",
-      "Why does a FHIR dateTime need seconds and an offset?",
-      "How do I write a FHIR instant at day precision?",
-    ]) {
-      expect(pick(q), q).toContain("showFhirDateChecker");
-    }
-  });
-
   it("always offers the core tools, first", () => {
     expect(pick("recommend a pizza restaurant").slice(0, CORE.length)).toEqual(
       CORE,
@@ -92,5 +75,31 @@ describe("selectTools", () => {
       },
     ];
     expect(pick("and in Tokyo?", history)).not.toContain("somethingElse");
+  });
+
+  it("reads a reader's noun as the tool's verb: parser finds parse, uuid finds UUIDv7", () => {
+    // "parser" meets the tool's "parse" through the -er stem.
+    expect(
+      pick("When a setting says 1m, how will a parser read it?"),
+    ).toContain("showDurationParserBench");
+    expect(pick("which instant is in this uuid")).toContain(
+      "showIdTimestampDecoder",
+    );
+  });
+
+  it("weighs a function the search ranked high the same against a long question as a short one", () => {
+    // The question names no word of the dwell tool, so only the retrieved
+    // `dwellTime` can offer it. Its full-text matches score in the hundreds
+    // for a question this long, and once drowned that retrieved function.
+    const dwell = corpus.filter((c) => c.id.endsWith("/dwellTime"));
+    expect(dwell).toHaveLength(1);
+    const long =
+      "leap second TAI GNSS week rollover satellite cron schedule recurrence business day holiday calendar FHIR instant offset DST gap overlap spring forward fall back ambiguous skipped wall clock local time zone";
+    for (const query of ["how long", long]) {
+      expect(
+        selectTools({ query, retrieved: dwell, messages: [] }),
+        query,
+      ).toContain("showDwellLedger");
+    }
   });
 });

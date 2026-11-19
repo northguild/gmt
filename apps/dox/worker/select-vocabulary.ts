@@ -1,7 +1,7 @@
 /**
  * Which SKILL.md vocabulary to put in front of the model for one question.
  *
- * The eight consumer skills come to ~100 KB — over half of every prompt, and
+ * The consumer skills together come to well over 100 KB — over half of every prompt, and
  * most of the reason a question took Gemini seconds to start answering. A
  * question about demurrage does not need the GNSS week rules, so the prompt
  * now carries only the skills the retrieved context points at.
@@ -25,6 +25,7 @@
  * it) and "References" (links Dox may not use — see the linking rules) are
  * dropped.
  */
+import { ZONE_CONVERSION_ID } from "../src/lib/retrieval/search";
 import type { RetrievalChunk } from "../src/lib/retrieval/types";
 
 /** Roughly 4,000 tokens. Big enough for any one skill's rules after
@@ -115,16 +116,36 @@ function covers(skill: VocabularySkill, chunk: RetrievalChunk): boolean {
   return skill.pages.some((page) => chunk.url.startsWith(page));
 }
 
+/** The function a question naming two zone cities is asking about: it is a
+ * conversion between zones whatever else the sentence says. Only the skills
+ * that cover it are voted for. */
+export const ZONE_CONVERSION_ANCHOR: RetrievalChunk = {
+  id: ZONE_CONVERSION_ID,
+  kind: "function",
+  url: "/reference/zoned/convert/convertZonedToZoned",
+  namespace: "zoned",
+  title: "convertZonedToZoned",
+  text: "",
+};
+
 /**
- * The vocabulary for one question, best-matching skill first, or `""` when no
- * retrieved chunk belongs to any skill.
+ * The skills for one question, best-matching first, or none when no retrieved
+ * chunk belongs to any skill.
  */
-export function selectVocabulary(
+export function chooseSkills(
   skills: readonly VocabularySkill[],
   retrieved: readonly RetrievalChunk[],
   budget: number = VOCABULARY_BUDGET_CHARS,
-): string {
+  anchors: readonly RetrievalChunk[] = [],
+): VocabularySkill[] {
   const scores = new Map<VocabularySkill, number>();
+  // Evidence from outside the ranking, each as a vote of the top hit's weight.
+  for (const chunk of anchors) {
+    const claimants = skills.filter((skill) => covers(skill, chunk));
+    for (const skill of claimants) {
+      scores.set(skill, (scores.get(skill) ?? 0) + 1 / claimants.length);
+    }
+  }
   retrieved.slice(0, VOTING_DEPTH).forEach((chunk, rank) => {
     const claimants = skills.filter((skill) => covers(skill, chunk));
     for (const skill of claimants) {
@@ -151,5 +172,10 @@ export function selectVocabulary(
     chosen.push(skill);
     used += skill.body.length;
   }
+  return chosen;
+}
+
+/** The chosen skills as the prompt carries them. */
+export function joinSkills(chosen: readonly VocabularySkill[]): string {
   return chosen.map((skill) => skill.body).join("\n\n---\n\n");
 }

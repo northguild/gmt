@@ -1,6 +1,6 @@
 /**
  * A link's press waits for its ping. Every route change on this site is a full page load, which
- * ends the page's audio, so a link that leaves the page in this tab would cut its Sonar ping short.
+ * ends the page's audio, so a link that leaves the page in this tab would cut its press ping short.
  * When the ping was heard, the navigation is held for the ping and its first echo, then made.
  *
  * Only a plain press is held: a link another handler has taken (`preventDefault`), a press with a
@@ -9,16 +9,11 @@
  * opens a new tab needs no hold: the engine lets a hidden tab's sound finish (`engine.ts`).
  */
 
-import { SONAR_ECHO, SONAR_PING } from "./sonar-lock";
-
 /**
- * How long a held link waits, in ms: the ping and the whole of its first echo, which starts one
- * echo delay in and rings for the ping's send to the echo. The later echoes are quieter by the
- * echo's feedback each time and are left to the page's end.
+ * How long a held link waits, in ms: the Distant sonar (`voices.ts`) and the swell of its space,
+ * heard out before the page goes. The same as northguild.dev's.
  */
-export const LINK_HOLD_MS = Math.ceil(
-  (SONAR_ECHO.seconds + SONAR_PING.attack + SONAR_PING.echoRelease) * 1000,
-);
+export const LINK_HOLD_MS = 600;
 
 let waiting: (() => void) | undefined;
 let pending: ReturnType<typeof setTimeout> | undefined;

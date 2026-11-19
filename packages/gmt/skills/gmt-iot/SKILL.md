@@ -2,13 +2,12 @@
 name: gmt-iot
 description: >
   Precision Time Protocol (PTP) timestamps in @northguild/gmt/iot — the
-  timestamp counts TAI, not UTC, and the receiver subtracts the
-  currentUtcOffset its grandmaster announces: ptpToUtc, utcToPtp,
-  isValidPtpTimestamp and the PtpTimestamp type { seconds, nanoseconds }.
-  Skipping the offset leaves sensor data 37 seconds ahead of every other clock
-  with no error. The offset is required and has no default. Reads the docs
-  site (llms.txt) and the installed package's JSDoc; a routing pointer, not an
-  API dump.
+  timestamp counts TAI, not UTC, and the receiver subtracts the currentUtcOffset
+  its grandmaster announces: ptpToUtc, utcToPtp, isValidPtpTimestamp and the
+  PtpTimestamp type { seconds, nanoseconds }. Skipping the offset leaves sensor
+  data 37 seconds ahead of every other clock with no error. The offset is
+  required and has no default. Reads the docs site (llms.txt) and the installed
+  package's JSDoc; a routing pointer, not an API dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/iot-ptp-time.mdx'
   - 'northguild/gmt:packages/gmt/src/iot/convert/index.ts'
@@ -17,7 +16,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.21.0'
+  library_version: '1.22.0'
 ---
 
 # GMT IoT

@@ -17,7 +17,7 @@ import { build } from "esbuild";
 
 /** The audition's measured peaks, rounded up to four places. */
 const CASES: { cue: string; rank: number; sound: string; peak: number }[] = [
-  { cue: "press", rank: 0, sound: "Deep sonar", peak: 0.1308 },
+  { cue: "press", rank: 0, sound: "Distant sonar", peak: 0.0126 },
   {
     cue: "zoomIn",
     rank: 0,

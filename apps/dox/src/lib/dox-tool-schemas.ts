@@ -1607,14 +1607,14 @@ export const DOX_TOOL_DOCS: {
     name: "showTimetableReader",
     purpose:
       "A transport timetable's printed local departure times read as exact instants through scheduleDelivery's startTimeZone, marking a time the clock shows twice (the earlier instant) or never (the later instant).",
-    when: "the reader asks which instant a printed timetable or schedule departure time means, especially on a night the clocks change",
+    when: "the reader asks which instant a printed timetable, schedule or listed service departure time means, such as a service listed at 02:30, especially on a night the clocks change",
     args: "startTimeZone (IANA id the timetable is printed in), departures (1 to 4 wall times as printed, e.g. 2024-10-27T02:30:00, with no offset), offsets (optional, one per departure, to pick a pass), duration (the run time, ISO 8601 time units), timeZone (IANA id where it arrives)",
   },
   {
     name: "showCrossingClock",
     purpose:
       "A crossing — a canal transit, a strait passage, a border queue — timed by crossingTime: the exact elapsed hours, with the entry and exit read on the clock of the zone that administers it.",
-    when: "the reader asks how long a crossing, transit or passage between two logged times really took, or what the entry and exit read on one zone's clock, especially across a DST change",
+    when: "the reader asks how long a crossing, transit or passage between two logged times really took, how long someone who entered at one time and left at another actually spent, or what the entry and exit read on one zone's clock, especially across a DST change",
     args: "entry, exit (ISO date-times; a plain 2024-03-10T00:00 is read as wall time in targetZone), targetZone (IANA id of the clock the crossing is read on)",
   },
   {
@@ -1635,7 +1635,7 @@ export const DOX_TOOL_DOCS: {
     name: "showCutoffCountdown",
     purpose:
       "A cut-off compared with a moment by isPastCutoff and timeToCutoff: the time left, or how late as a negative duration, with the cut-off counted as passed at the deadline itself.",
-    when: "the reader asks whether a cut-off or deadline has passed at a given time, or how much time is left or how late they are",
+    when: "the reader asks whether a cut-off, deadline or gate-in that closed has passed at a given time, or how much time is left or how late they are",
     args: "cutoff (a zoned date-time as cutoffAt writes it: an offset, then the zone name in brackets, e.g. 2024-06-12T17:00:00+02:00[Europe/Amsterdam]), now (optional instant, Z or an offset, with no zone name after it; omit it to use the reader's own clock), timeZone (IANA id of the clock both are shown on)",
   },
   {
@@ -1747,7 +1747,7 @@ export const DOX_TOOL_DOCS: {
     name: "showStoredTimeAudit",
     purpose:
       "Check stored RFC 9557 strings that carry both an offset and a zone, show whether each still names one instant under this browser's time zone rules, and every reading it allows when it does not",
-    when: "Call when the reader asks why a stored zoned time no longer parses or resolves, whether a stored offset still matches its zone, what happens to stored future events after a time zone rule change, or how Temporal's `offset` option reads such a string",
+    when: "Call when the reader asks to audit saved or stored zoned values and what is wrong with them, why a stored zoned time no longer parses or resolves, whether a stored offset still matches its zone, what happens to stored future events after a time zone rule change, or how Temporal's `offset` option reads such a string",
     args: "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",
   },
   {

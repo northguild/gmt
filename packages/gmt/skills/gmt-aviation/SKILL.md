@@ -2,14 +2,14 @@
 name: gmt-aviation
 description: >
   Aviation message times in @northguild/gmt/aviation — the IATA SSIM date
-  (DDMMMYY, e.g. 01JAN26): parseSsimDate, formatSsimDate, isValidSsimDate;
-  the METAR report-time group (YYGGggZ, e.g. 251200Z): parseMetarTime and
+  (DDMMMYY, e.g. 01JAN26): parseSsimDate, formatSsimDate, isValidSsimDate; the
+  METAR report-time group (YYGGggZ, e.g. 251200Z): parseMetarTime and
   isValidMetarTime; and NOTAM item B) and C) validity (YYMMDDHHMM, EST, PERM):
-  parseNotamValidity and isValidNotamValidity. The SSIM month is a fixed
-  English letter code that never goes through Intl, the century is the
-  caller's through a required yearWindow, and a METAR time needs a reference
-  instant. Reads the docs site (llms.txt) and the installed package's JSDoc;
-  a routing pointer, not an API dump.
+  parseNotamValidity and isValidNotamValidity. The SSIM month is a fixed English
+  letter code that never goes through Intl, the century is the caller's through
+  a required yearWindow, and a METAR time needs a reference instant. Reads the
+  docs site (llms.txt) and the installed package's JSDoc; a routing pointer, not
+  an API dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/aviation-message-times.mdx'
   - 'northguild/gmt:packages/gmt/src/aviation/format/index.ts'
@@ -20,7 +20,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.21.0'
+  library_version: '1.22.0'
 ---
 
 # GMT Aviation
