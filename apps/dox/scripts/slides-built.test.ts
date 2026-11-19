@@ -13,6 +13,8 @@ import { distDirOrSkip } from "./dist-dir";
 /** Slide ids in the outline's order (`context/dox/specs/dox-g12/index.md`). */
 const OUTLINE = [
   "title",
+  "agent-answer",
+  "agents",
   "one-clock",
   "date",
   "temporal",
@@ -132,7 +134,7 @@ describe("Deck 0 in the built site", () => {
     }
   });
 
-  it("has six captioned figures on slide 2", () => {
+  it("has six captioned figures on the wall slide", () => {
     const deck = slides();
     if (deck === null) return;
     const slide = deck.find((s) => s.id === "one-clock");

@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
- * Runs the code an agent wrote for the running question of Deck 0 ("Give Me Temporal") in every
- * zone and Node major of the `gmt-matrix` job, and records what it returned.
+ * Runs the code each agent wrote for the running question of Deck 0 ("Give Me Temporal") in every
+ * zone and Node major of the `gmt-matrix` job, and in Helsinki, the zone the slide shows, and
+ * records what it returned.
  *
- * The owner commits the transcript to `apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json`
- * (`question`, `model`, `date`, `answer`, `code`, `call`, optional `excerpt`). This script writes
- * `agent-run.json` beside it. The slide reads both through `lib/slides/agent-quote.ts`; the record
- * is current only while its `sha256` matches the code and the call.
+ * The owner commits the transcripts to `apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json`:
+ * the shared `question`, `quoted` (the id of the answer the `agent-answer` slide quotes) and `answers`, each with
+ * `id`, `model`, `date`, `answer`, `code`, `call` and an optional `excerpt`. This script writes
+ * `agent-run.json` beside it, one record per answer id. The slides read both through
+ * `lib/slides/agent-quote.ts`; a record is current only while its `sha256` matches the code and the
+ * call.
  *
  *   cd scripts/zone-matrix
  *   fnm exec --using=26 -- node agent-answer.mjs
@@ -18,7 +21,9 @@
  * The code and a small runner are written to `.work/agent-answer/` (ignored by git). The code runs
  * as ES module or CommonJS, whichever it is written as, and `call` is evaluated in the module's own
  * scope, so a function that is not exported can be called. A promise is awaited. A throw is
- * recorded as `{ threw: "<name>: <message>" }`.
+ * recorded as `{ threw: "<name>: <message>" }`. The runner exits as soon as it has the value, so a
+ * timer the code leaves armed does not hold it, and a cell that has not finished after
+ * `CELL_TIMEOUT_MS` is killed with every process it started.
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -42,8 +47,20 @@ const WORK = join(HERE, ".work", "agent-answer");
 export const COMMAND =
   "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs";
 
-/** The transcript fields the owner fills in. `excerpt` is optional. */
+/**
+ * The zone whose run the slide shows (`SHOWN.zone` in `apps/dox/src/lib/slides/agent-quote.ts`).
+ * The question names it, so every Node major runs in it even when the CI matrix does not list it.
+ */
+export const SHOWN_ZONE = "Europe/Helsinki";
+
+/** The transcript fields each answer needs, with the shared question. `excerpt` is optional. */
 export const FIELDS = ["question", "model", "date", "answer", "code", "call"];
+
+/** How an answer is named in `quoted` and in the run record. */
+const ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** How long one cell may take before it is killed. */
+export const CELL_TIMEOUT_MS = 60_000;
 
 /** The line the runner prints before its JSON result, so the code's own output cannot be mistaken for it. */
 const MARK = "@@agent-answer@@";
@@ -117,15 +134,17 @@ export function entryOf(code, call) {
 
 /** The runner every cell executes: loads the entry, calls it, prints one marked JSON line. */
 export function runnerSource(entryFile) {
-  return `const reply = (result) =>
-  console.log(
+  return `const reply = (result, done) =>
+  process.stdout.write(
     ${JSON.stringify(`\n${MARK} `)} +
       JSON.stringify({
         node: process.version,
         tzdata: process.versions.tz,
         zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...result,
-      }),
+      }) +
+      "\\n",
+    done,
   );
 const text = (value) => {
   if (typeof value === "string") return value;
@@ -133,12 +152,15 @@ const text = (value) => {
     return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString();
   return JSON.stringify(value) ?? String(value);
 };
+let result;
 try {
   await import(${JSON.stringify(pathToFileURL(entryFile).href)});
-  reply({ value: text(await globalThis.__agentCall()) });
+  result = { value: text(await globalThis.__agentCall()) };
 } catch (error) {
-  reply({ value: { threw: \`\${error?.name ?? "Error"}: \${error?.message ?? error}\` } });
+  result = { value: { threw: \`\${error?.name ?? "Error"}: \${error?.message ?? error}\` } };
 }
+// Exit once the line is written: a timer the code left armed must not hold the cell open.
+reply(result, () => process.exit(0));
 `;
 }
 
@@ -160,24 +182,50 @@ export function resultOf(stdout) {
 const zoneName = (zone) =>
   new Intl.DateTimeFormat("en", { timeZone: zone }).resolvedOptions().timeZone;
 
-/** Runs `node` of one major under `fnm`, in this folder, with extra environment. */
-export function onNode(major, args, env) {
+/**
+ * Runs a command in this folder with extra environment, and kills it after `timeoutMs` with every
+ * process it started. The command leads a process group of its own, so a process it starts (as
+ * `fnm exec` starts `node`) dies with it.
+ */
+export function spawnBounded(command, args, env, timeoutMs) {
   return new Promise((resolve) => {
-    const child = spawn(
-      "fnm",
-      ["exec", `--using=${major}`, "--", "node", ...args],
-      { cwd: HERE, env: { ...process.env, ...env } },
-    );
+    const child = spawn(command, args, {
+      cwd: HERE,
+      env: { ...process.env, ...env },
+      detached: true,
+    });
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        process.kill(-child.pid, "SIGKILL");
+      } catch {
+        // The group has already ended.
+      }
+    }, timeoutMs);
     child.stdout.on("data", (d) => (stdout += d));
     child.stderr.on("data", (d) => (stderr += d));
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
-    child.on("error", (error) =>
-      resolve({ code: 127, stdout, stderr: String(error) }),
-    );
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({ code, stdout, stderr, timedOut });
+    });
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      resolve({ code: 127, stdout, stderr: String(error), timedOut });
+    });
   });
 }
+
+/** Runs `node` of one major under `fnm`, in this folder, with extra environment. */
+export const onNode = (major, args, env) =>
+  spawnBounded(
+    "fnm",
+    ["exec", `--using=${major}`, "--", "node", ...args],
+    env,
+    CELL_TIMEOUT_MS,
+  );
 
 /**
  * Runs the transcript in every cell and returns the run record. Throws `Stop` when it cannot start.
@@ -185,7 +233,7 @@ export function onNode(major, args, env) {
  * @param {object} options
  * @param {Record<string, string>} options.record the transcript
  * @param {Record<string, string>} options.pinned the packages pinned in `package.json`
- * @param {{ zones: string[]; node: string[] }} options.matrix the CI matrix
+ * @param {{ zones: string[]; node: string[] }} options.matrix the CI matrix; `SHOWN_ZONE` is added when it lacks it
  * @param {typeof onNode} options.run how a cell is run
  * @param {() => string} options.now the current instant, from gmt
  * @param {(name: string) => string} options.version the installed version of a package
@@ -221,10 +269,18 @@ export async function runAnswer({
   writeFileSync(entry, entryOf(record.code, record.call));
   writeFileSync(runner, runnerSource(entry));
 
+  const zones = matrix.zones.includes(SHOWN_ZONE)
+    ? matrix.zones
+    : [...matrix.zones, SHOWN_ZONE];
   const runs = [];
   for (const node of matrix.node) {
-    for (const zone of matrix.zones) {
+    for (const zone of zones) {
       const r = await run(node, [runner], { TZ: zone });
+      if (r.timedOut)
+        throw new Stop(
+          1,
+          `Node ${node} in ${zone} did not finish within ${CELL_TIMEOUT_MS / 1000} s, so it was stopped.`,
+        );
       const result = resultOf(r.stdout);
       if (!result)
         throw new Stop(
@@ -251,21 +307,81 @@ export async function runAnswer({
   };
 }
 
+/**
+ * The answers of a transcript file, each with the shared question, in file order. Throws `Stop`
+ * (exit 2) when the file cannot be run: no question, no answers, an id that is malformed or
+ * repeated, a `quoted` that names no answer, or an answer with an empty field.
+ */
+export function answersOf(transcript) {
+  const stop = (message) => new Stop(2, `${ANSWER_FILE}: ${message}`);
+  if (
+    typeof transcript?.question !== "string" ||
+    transcript.question.trim() === ""
+  )
+    throw stop("the question is empty. Fill it from the owner's transcript.");
+  const answers = transcript.answers;
+  if (!Array.isArray(answers) || answers.length === 0)
+    throw stop("there are no answers. Add one per agent asked.");
+  const ids = new Set();
+  for (const answer of answers) {
+    if (typeof answer?.id !== "string" || !ID.test(answer.id))
+      throw stop(
+        `the answer id ${JSON.stringify(answer?.id)} is not lower-case words joined by hyphens.`,
+      );
+    if (ids.has(answer.id)) throw stop(`the id "${answer.id}" is used twice.`);
+    ids.add(answer.id);
+  }
+  if (!ids.has(transcript.quoted))
+    throw stop(
+      `quoted is ${JSON.stringify(transcript.quoted)}, which names no answer.`,
+    );
+  return answers.map((answer) => {
+    const record = { ...answer, question: transcript.question };
+    const empty = emptyFields(record);
+    if (empty.length > 0)
+      throw stop(
+        `the answer "${answer.id}" has empty fields: ${empty.join(", ")}. Fill them from the owner's transcript.`,
+      );
+    return record;
+  });
+}
+
+/**
+ * Runs every answer of the transcript and returns the run record file: one `runAnswer` record per
+ * answer id, in file order. Checks the whole transcript before the first cell runs.
+ *
+ * @param {object} options as `runAnswer`, with `transcript` in place of `record`
+ * @param {(id: string) => void} [options.onAnswer] told before each answer runs
+ */
+export async function runAll({ transcript, onAnswer, workDir, ...options }) {
+  const answers = answersOf(transcript);
+  const file = {};
+  for (const record of answers) {
+    onAnswer?.(record.id);
+    file[record.id] = await runAnswer({
+      ...options,
+      record,
+      workDir: join(workDir, record.id),
+    });
+  }
+  return file;
+}
+
 async function main() {
-  let record;
+  let transcript;
   try {
-    record = JSON.parse(readFileSync(ANSWER_FILE, "utf8"));
+    transcript = JSON.parse(readFileSync(ANSWER_FILE, "utf8"));
   } catch (error) {
     console.error(`Cannot read ${ANSWER_FILE}: ${error.message}`);
     process.exit(2);
   }
   // Check the transcript before anything else, so an empty file stops here without needing a build.
-  const empty = emptyFields(record);
-  if (empty.length > 0) {
-    console.error(
-      `${ANSWER_FILE} has empty fields: ${empty.join(", ")}. Fill them from the owner's transcript.`,
-    );
-    process.exit(2);
+  try {
+    answersOf(transcript);
+  } catch (error) {
+    if (!(error instanceof Stop)) throw error;
+    console.error(error.message);
+    process.exit(error.code);
   }
   if (typeof globalThis.Temporal === "undefined") {
     console.error(
@@ -280,20 +396,24 @@ async function main() {
   const matrix = readMatrix(join(ROOT, ".github/workflows/ci.yml"));
   rmSync(WORK, { recursive: true, force: true });
   try {
-    const result = await runAnswer({
-      record,
+    const file = await runAll({
+      transcript,
       pinned,
       matrix,
       run: onNode,
       now: () => gmt.getUtcNow(),
       version: versionOf,
       workDir: WORK,
+      onAnswer: (id) => console.error(`Running ${id}…`),
     });
-    writeFileSync(RUN_FILE, formatJson(result));
-    const values = new Set(result.runs.map((r) => JSON.stringify(r.value)));
-    console.error(
-      `${result.runs.length} runs, ${values.size} distinct value${values.size === 1 ? "" : "s"}; wrote ${RUN_FILE}`,
-    );
+    writeFileSync(RUN_FILE, formatJson(file));
+    for (const [id, result] of Object.entries(file)) {
+      const values = new Set(result.runs.map((r) => JSON.stringify(r.value)));
+      console.error(
+        `${id}: ${result.runs.length} runs, ${values.size} distinct value${values.size === 1 ? "" : "s"}`,
+      );
+    }
+    console.error(`Wrote ${RUN_FILE}`);
   } catch (error) {
     if (!(error instanceof Stop)) throw error;
     console.error(error.message);

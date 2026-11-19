@@ -1,28 +1,36 @@
 ---
 /**
- * The agent's answer on `one-clock`, as a quotation with its source line. The question is the owner's
- * (`quotes/agent-answer.json`); the value comes from running the agent's code
- * (`quotes/agent-run.json`, written by `scripts/zone-matrix/agent-answer.mjs`). While the transcript
- * or the run record is missing or stale, a marked panel says so and the build carries on:
- * `slides-check` is what fails. No answer is invented.
+ * The quoted agent answer on `agent-answer`, as a quotation with its source line. The transcript is
+ * the owner's (`quotes/agent-answer.json`, whose `quoted` names the answer shown); the value comes
+ * from running that answer's code (`quotes/agent-run.json`, written by
+ * `scripts/zone-matrix/agent-answer.mjs`). While the transcript or the run record is missing or
+ * stale, a marked panel says so and the build carries on: `slides-check` is what fails. No answer is
+ * invented.
  *
  * `part` picks what shows, so the slide can reveal it a build at a time: `question`, `answer` (the
- * agent's prose, its code, the source line and the guess prompt) or `result` (the value the code
- * returned, how many values the runs held, and the Helsinki line). Without `part` all three show.
+ * agent's code, and its source line with the guess prompt) or `result` (the value the code returned, how
+ * many values the runs held, and the Helsinki line). Without `part` those three show. `prose` is the
+ * agent's text around its code, for the speaker notes: on the slide it would give the guess away and
+ * push the code off the stage.
  */
-import { Code } from "@astrojs/starlight/components";
 import { classifyLocal } from "@northguild/gmt/instant/convert";
-import { agentQuote, valueLabel } from "~/lib/slides/agent-quote";
+import {
+  quotedAnswer,
+  valueLabel,
+  type AgentRunFile,
+  type AgentTranscript,
+} from "~/lib/slides/agent-quote";
 import answer from "~/slides/give-me-temporal/quotes/agent-answer.json";
 import runRecord from "~/slides/give-me-temporal/quotes/agent-run.json";
 
 interface Props {
-  part?: "question" | "answer" | "result";
+  part?: "question" | "answer" | "result" | "prose";
 }
 const { part } = Astro.props;
-const show = (name: string) => part === undefined || part === name;
+const show = (name: string) =>
+  part === name || (part === undefined && name !== "prose");
 
-const quote = agentQuote(answer, runRecord);
+const quote = quotedAnswer(answer as AgentTranscript, runRecord as AgentRunFile);
 // The line is shown only while GMT agrees that the time falls in a gap.
 const neverHappens =
   classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki") === "nonexistent";
@@ -36,16 +44,19 @@ const neverHappens =
           {quote.question}
         </p>
       )}
+      {show("prose") && (
+        <p>
+          {quote.model}'s text around its code: “{quote.answer}”
+        </p>
+      )}
       {show("answer") && (
         <figure class="gmt-deck-panel gmt-quote" data-quote="recorded">
           <blockquote>
-            <p>{quote.answer}</p>
-            <Code code={quote.shownCode} lang="js" />
+            <pre class="gmt-repro"><code>{quote.shownCode}</code></pre>
           </blockquote>
           <figcaption>
-            An agent's answer, {quote.model}, {quote.date}
+            {quote.model}, {quote.date}. What does it return?
           </figcaption>
-          <p>What does it return?</p>
         </figure>
       )}
       {show("result") && (
@@ -57,8 +68,8 @@ const neverHappens =
             <output>{valueLabel(quote.shown.value)}</output>
           </p>
           <p>
-            {quote.distinct} distinct {quote.distinct === 1 ? "value" : "values"} across {quote.runs} runs
-            (every zone and Node major of the CI matrix).
+            {quote.distinct} distinct {quote.distinct === 1 ? "value" : "values"} across {quote.runs} runs:{" "}
+            {quote.zones} zones on {quote.nodes} Node majors.
           </p>
           {neverHappens && <p>That time never happens in Helsinki.</p>}
         </div>
@@ -71,7 +82,7 @@ const neverHappens =
           {quote.question}
         </p>
       )}
-      {(show("answer") || show("result")) && part !== "question" && (
+      {(show("answer") || show("result")) && (
         <p class="gmt-deck-panel gmt-quote" data-quote="pending">
           {quote.why === "transcript"
             ? "Recorded agent answer: transcript to come."

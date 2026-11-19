@@ -1314,13 +1314,15 @@ html[data-deck] .gmt-filing-title {
 }
 
 html[data-deck] .gmt-filing .expressive-code,
-html[data-deck] .gmt-filing pre {
+html[data-deck] .gmt-filing pre,
+html[data-deck] .gmt-quote pre {
   min-inline-size: 0;
   max-inline-size: 100%;
   font-size: max(0.75rem, 1.4cqi);
 }
 
-html[data-deck] .gmt-filing pre {
+html[data-deck] .gmt-filing pre,
+html[data-deck] .gmt-quote pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1450,7 +1452,8 @@ html[data-deck] .gmt-deck-table caption {
   word-break: keep-all;
 }
 
-.gmt-filing .gmt-repro {
+.gmt-filing .gmt-repro,
+.gmt-quote .gmt-repro {
   margin: 0;
   padding: 0.6cqi 1cqi;
   border: 1px solid var(--gmt-border);
@@ -1477,6 +1480,36 @@ html[data-deck] .gmt-quote {
   max-inline-size: 100%;
   margin: 0;
   padding: 0.8cqi 1.2cqi;
+}
+
+/*
+ * The answer slide stacks the question, the agent's code and its result in the text column, so it
+ * sets a size smaller than the other panels, and the code sits straight in the quote's panel.
+ */
+html[data-deck]
+  :is([data-quote="question"], [data-quote="recorded"], [data-quote="result"]) {
+  font-size: max(0.75rem, 1.4cqi);
+}
+
+html[data-deck] [data-quote="recorded"] blockquote {
+  padding: 0;
+  border: 0;
+}
+
+html[data-deck] [data-quote="recorded"] pre {
+  font-size: max(0.75rem, 1.25cqi);
+}
+
+html[data-deck] [data-quote="recorded"] figcaption {
+  margin-block-start: 0.6cqi;
+}
+
+html[data-deck] .gmt-slide-body [data-quote="result"] p {
+  margin-block: 0;
+}
+
+html[data-deck] .gmt-slide-body [data-quote="result"] p + p {
+  margin-block-start: 0.3cqi;
 }
 
 /* Starlight's flow margins would add a gap on top of the grid's own. */

@@ -94,18 +94,19 @@ stores none.
 
 ## The agent's answer
 
-`agent-answer.mjs` runs the code an agent wrote for the running question of Deck 0 in every zone and
-Node major of the `gmt-matrix` job, and records what it returned. It reads the owner's transcript,
-`apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json` (`question`, `model`, `date`,
-`answer`, `code`, `call`, and an optional `excerpt` of line ranges), and writes `agent-run.json`
-beside it.
+`agent-answer.mjs` runs the code each agent wrote for the running question of Deck 0 in every zone
+and Node major of the `gmt-matrix` job, and in `Europe/Helsinki`, and records what it returned. It
+reads the owner's transcript, `apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json`: the
+shared `question`, `quoted` (the id of the answer the deck quotes) and `answers`, each with `id`,
+`model`, `date`, `answer`, `code`, `call` and an optional `excerpt` of line ranges. It writes
+`agent-run.json` beside it, one record per answer id.
 
 ```sh
 cd scripts/zone-matrix
 fnm exec --using=26 -- node agent-answer.mjs
 ```
 
-- Exit 2 with the file path when a transcript field is empty.
+- Exit 2 with the file path when a field of any answer is empty.
 - Exit 2 naming the package when the code imports one that is not pinned in `package.json`, with the
   `pnpm add --ignore-workspace --save-exact <package>` command that pins it. Any library the agent
   picked can be added that way.
@@ -115,9 +116,10 @@ fnm exec --using=26 -- node agent-answer.mjs
 - `agent-run.json` holds a `sha256` of the code and the call, the command, the instant (from GMT),
   the installed version of each library, and one `{ node, tzdata, zone, value }` per run.
 
-The slide shows the run on Node 26 at `Europe/Helsinki` and the number of distinct values. It is
-current only while the record's hash matches the code and the call; otherwise it shows a marked
-panel and `slides-check` fails naming the file and the command.
+The slides show each answer's run on Node 26 at `Europe/Helsinki` and its number of distinct
+values: `agent-answer` the quoted one, `agents` every one. An answer is current only while its
+record's hash matches the code and the call; otherwise its panel or row is marked and
+`slides-check` fails naming the answer, the file and the command.
 
 `familiar.test.mjs` runs each Moment, date-fns and Day.js shape in `familiar.json` against the
 pinned versions, so no shape on the "Names you already know" slide is one the library rejects.

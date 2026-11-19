@@ -1,18 +1,19 @@
 ---
 /**
- * Deck 0, "Give Me Temporal": the 23 slides of the HelsinkiJS talk and its spare, in the outline's order
+ * Deck 0, "Give Me Temporal": the 25 slides of the HelsinkiJS talk and its spare, in the outline's order
  * (`context/dox/specs/dox-g12/index.md`). Every bug on a slide is a filing read from
  * `upstream-filings.json`, every gmt result is computed by gmt at build time, and every count is
  * derived; the filing slides' wording lives in `content.ts`. Places are IANA zones or the stage's
  * keywords (`lib/slides/places.ts`); the ice wall hangs on `one-clock`, breaks when the talk steps to
  * `date`, and the clock turns into the Earth on `temporal`, in the same right-third spot throughout.
  *
- * The running question's answer on `one-clock` is the owner's transcript
- * (`quotes/agent-answer.json`) with the value from running its code (`quotes/agent-run.json`); a
- * marked panel stands in while either is missing and `slides-check` fails. `ask-dox`, `page-tools`
+ * The running question's answers are the owner's transcript (`quotes/agent-answer.json`), each with
+ * the value from running its code (`quotes/agent-run.json`): `agent-answer` quotes the one the
+ * transcript names and `agents` lists them all. A marked panel stands in while any is missing or
+ * stale and `slides-check` fails. `ask-dox`, `page-tools`
  * and `qa` hold the live panels. The title's schedule card reads the talk's date and slot from
  * the registry with gmt, and says "Date to be announced" while none is fixed. Three pauses ask the
- * room for a guess (`one-clock`, `date`, `experiment-gaps`); each bug slide ends on a GMT step.
+ * room for a guess (`agent-answer`, `date`, `experiment-gaps`); each bug slide ends on a GMT step.
  * `qa` takes the questions (the audience panel) and `thanks`, the QR codes, is the last slide:
  * Next there goes nowhere. The spare sits after it, takes no minutes and is reached only by a
  * jump (the overview, an address, the link in `qa`'s notes); Next from it returns to `qa`.
@@ -21,6 +22,7 @@
  * (`pages/slides/give-me-temporal/presenter.astro`).
  */
 import AgentQuote from "~/components/slides/AgentQuote.astro";
+import AgentTable from "~/components/slides/AgentTable.astro";
 import Build from "~/components/slides/Build.astro";
 import Deck from "~/components/slides/Deck.astro";
 import ExperimentOpener from "~/components/slides/ExperimentOpener.astro";
@@ -112,20 +114,34 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   <Slide id="title" title="Give Me Temporal" minutes={0.5} place="Europe/Helsinki" layout="title">
     <TalkSchedule deck={deck} />
     <Notes>
-      <p>Greet the room. The 24-hour clock where the Earth will be shows the venue's time, read with GMT. It stays through the next two slides: that is the one-clock view.</p>
+      <p>Greet the room. The 24-hour clock where the Earth will be shows the venue's time, read with GMT. It stays through the next three slides: that is the one-clock view.</p>
       <p>The talk is one idea: code usually asks one place for one local time, and the planet has many.</p>
     </Notes>
   </Slide>
 
-  <Slide id="one-clock" title="One clock, or the planet" minutes={1.25} place="wall">
-    <WallFigures images />
+  <Slide id="agent-answer" title="Ask an agent" minutes={0.75} place="Europe/Helsinki">
     <AgentQuote part="question" />
     <Build n={1}><AgentQuote part="answer" /></Build>
     <Build n={2}><AgentQuote part="result" /></Build>
     <Notes>
-      <p>Each of these sites shows one clock. That is the view most date code takes: one place, one local time. Hold that.</p>
-      <p>The question is the one an agent was asked. Step on for its answer.</p>
+      <p>This is the question an agent was asked: one wall-clock time, on one date, in the city we are in. Step on for its answer.</p>
       <p>Guess: what does that code return? Ask the room, take two or three answers, then step on. The next step shows what it returned, on every machine we ran it on.</p>
+      <AgentQuote part="prose" />
+    </Notes>
+  </Slide>
+
+  <Slide id="agents" title="What the agents returned" minutes={0.25} place="Europe/Helsinki">
+    <AgentTable />
+    <Notes>
+      <p>The same question went to three more agents. Each row is what its code did when we ran it: one wrong time, one right-looking time that changes with the machine, and two that throw, one of them with a message that names the wrong problem.</p>
+      <p>Only one of them says the plain fact, that 03:30 on that night never happens in Helsinki, and it says it by throwing.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="one-clock" title="One clock for the whole planet" minutes={0.25} place="wall">
+    <WallFigures images />
+    <Notes>
+      <p>Each of these sites shows one clock. That is the view most date code takes, and the view the agents took: one place, one local time. Hold that.</p>
       <p>The clock stays on the right. Step on and the wall breaks.</p>
     </Notes>
   </Slide>

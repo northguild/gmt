@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 
 /**
- * The agent's answer on `one-clock`: the owner's transcript (`quotes/agent-answer.json`) and the
- * record of running its code (`quotes/agent-run.json`, written by
- * `scripts/zone-matrix/agent-answer.mjs`). The slide is `ready` only when every transcript field is
- * set, the run record exists, its hash matches the code and the call, and it holds the run the slide
- * shows. Anything less is a marked panel that says what is missing, so the dev server and the build
- * keep working and `slides-check` can fail with the file and the command. No answer is invented.
+ * The agents' answers to the running question: the owner's transcript (`quotes/agent-answer.json`,
+ * one question and an answer per agent asked, `quoted` naming the one the deck quotes) and the
+ * record of running each answer's code (`quotes/agent-run.json`, written by
+ * `scripts/zone-matrix/agent-answer.mjs`, one record per answer id). An answer is `ready` only when
+ * every transcript field is set, its run record exists, the hash matches the code and the call, and
+ * it holds the run the slide shows. Anything less is a marked panel that says what is missing, so
+ * the dev server and the build keep working and `slides-check` can fail with the file and the
+ * command. No answer is invented.
  */
 export interface AgentQuoteRecord {
   question: string;
@@ -21,6 +23,19 @@ export interface AgentQuoteRecord {
   call: string;
   /** Line ranges (1-based, inclusive) of `code` the slide shows when the code is long. */
   excerpt?: [number, number][];
+}
+
+/** One agent's answer as the transcript keeps it: the question is the transcript's own. */
+export interface AgentAnswer extends Omit<AgentQuoteRecord, "question"> {
+  /** Lower-case words joined by hyphens, the key of its run record. */
+  id: string;
+}
+
+export interface AgentTranscript {
+  question: string;
+  /** The id of the answer the deck quotes. */
+  quoted: string;
+  answers: AgentAnswer[];
 }
 
 /** What the run of one cell returned: the value as text, or the error it threw. */
@@ -40,6 +55,9 @@ export interface AgentRunRecord {
   libraries: Record<string, string>;
   runs: AgentRun[];
 }
+
+/** The run record file: one record per answer id. */
+export type AgentRunFile = Record<string, AgentRunRecord>;
 
 /** The transcript fields that must be set, in the order `agent-answer.mjs` reports them. */
 export const TRANSCRIPT_FIELDS = [
@@ -76,9 +94,14 @@ export type AgentQuote =
       shownCode: string;
       /** The run on `SHOWN.node` at `SHOWN.zone`. */
       shown: AgentRun;
+      /** How many lines the agent's code has. */
+      lines: number;
       /** How many different values the runs hold, and how many runs there are. */
       distinct: number;
       runs: number;
+      /** How many zones and Node majors the runs cover. */
+      zones: number;
+      nodes: number;
       instant: string;
       libraries: Record<string, string>;
     } & AgentQuoteRecord);
@@ -164,8 +187,11 @@ export function agentQuote(
     ...record,
     shownCode,
     shown,
+    lines: record.code.split("\n").length,
     distinct,
     runs: run.runs.length,
+    zones: new Set(run.runs.map((r) => r.zone)).size,
+    nodes: new Set(run.runs.map((r) => r.node)).size,
     instant: run.instant,
     libraries: run.libraries,
   };
@@ -174,3 +200,49 @@ export function agentQuote(
 /** The text of a run's value: the value itself, or what it threw. */
 export const valueLabel = (value: RunValue): string =>
   typeof value === "string" ? value : `Threw ${value.threw}`;
+
+/** A transcript that cannot name its answers: the panel and the problem `slides-check` prints. */
+function unreadable(question: string, why: string): AgentQuote {
+  return {
+    ready: false,
+    why: "transcript",
+    question,
+    problem: `${ANSWER_PATH} ${why} Fix it, then run: ${RUN_COMMAND}`,
+  };
+}
+
+/** Every answer of the transcript, in file order, each with its model and its quote. */
+export function agentAnswers(
+  transcript: AgentTranscript,
+  runs: AgentRunFile | null | undefined,
+): { id: string; model: string; quote: AgentQuote }[] {
+  const question = filled(transcript.question) ? transcript.question : "";
+  const answers = Array.isArray(transcript.answers) ? transcript.answers : [];
+  return answers.map(({ id, ...answer }) => {
+    const quote = agentQuote({ ...answer, question }, runs?.[id]);
+    return {
+      id,
+      model: answer.model,
+      quote: quote.ready
+        ? quote
+        : { ...quote, problem: `Answer "${id}": ${quote.problem}` },
+    };
+  });
+}
+
+/** The answer the deck quotes, the one `quoted` names. */
+export function quotedAnswer(
+  transcript: AgentTranscript,
+  runs: AgentRunFile | null | undefined,
+): AgentQuote {
+  const question = filled(transcript.question) ? transcript.question : "";
+  const all = agentAnswers(transcript, runs);
+  if (all.length === 0) return unreadable(question, "has no answers.");
+  const quoted = all.find((a) => a.id === transcript.quoted);
+  if (!quoted)
+    return unreadable(
+      question,
+      `has quoted ${JSON.stringify(transcript.quoted)}, which names no answer.`,
+    );
+  return quoted.quote;
+}

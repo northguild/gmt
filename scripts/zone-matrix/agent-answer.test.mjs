@@ -11,7 +11,7 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -25,7 +25,10 @@ import {
   packagesOf,
   pinCommand,
   resultOf,
+  runAll,
   runAnswer,
+  SHOWN_ZONE,
+  spawnBounded,
   specifiersOf,
 } from "./agent-answer.mjs";
 
@@ -212,6 +215,35 @@ test("every zone and Node of the matrix gets a run record", async () => {
   });
 });
 
+test("runs the zone the slide shows on every Node major, when the CI matrix lacks it", async () => {
+  const record = await runAnswer({
+    ...base,
+    matrix: { zones: ["UTC", "Pacific/Niue"], node: ["24", "26"] },
+    run: fakeCell((node, zone) => `${node}:${zone}`),
+    workDir: workDir(),
+  });
+  assert.deepEqual(
+    record.runs.map((r) => `${r.node} ${r.zone}`),
+    [
+      "24 UTC",
+      "24 Pacific/Niue",
+      `24 ${SHOWN_ZONE}`,
+      "26 UTC",
+      "26 Pacific/Niue",
+      `26 ${SHOWN_ZONE}`,
+    ],
+  );
+});
+
+test("does not run the shown zone twice when the CI matrix has it", async () => {
+  const record = await runAnswer({
+    ...base,
+    run: fakeCell((node, zone) => `${node}:${zone}`),
+    workDir: workDir(),
+  });
+  assert.equal(record.runs.filter((r) => r.zone === SHOWN_ZONE).length, 2);
+});
+
 test("a cell that ran in another zone stops the run", async () => {
   await assert.rejects(
     runAnswer({
@@ -244,7 +276,7 @@ test("a cell with no result stops the run with its error output", async () => {
   );
 });
 
-/** Runs the real runner once, on this Node, in one zone. */
+/** Runs the real runner once, on this Node, in one zone. A runner that does not exit fails the test, not hangs it. */
 const runHere = (record, zone = "Europe/Helsinki") =>
   runAnswer({
     ...base,
@@ -255,11 +287,139 @@ const runHere = (record, zone = "Europe/Helsinki") =>
         cwd: HERE,
         env: { ...process.env, ...env },
         encoding: "utf8",
+        timeout: 10_000,
       });
       return { code: r.status, stdout: r.stdout, stderr: r.stderr };
     },
     workDir: workDir(),
   });
+
+test("the runner exits once it has the value, even with the code's timer still pending", async () => {
+  const r = await runHere({
+    code: "export const f = () => { setTimeout(() => {}, 2 ** 31 - 1); return 'armed'; };",
+    call: "f()",
+  });
+  assert.equal(r.runs[0].value, "armed");
+});
+
+test("a cell that does not finish in time is killed with everything it started", async () => {
+  const dir = workDir();
+  const pidFile = join(dir, "grandchild.pid");
+  // The child starts a grandchild that never ends, as `fnm exec` starts `node`.
+  const script = `const { spawn } = require("node:child_process");
+const g = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" });
+require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(g.pid));
+setInterval(() => {}, 1000);`;
+  const started = Date.now();
+  const r = await spawnBounded(process.execPath, ["-e", script], {}, 1_000);
+  assert.equal(r.timedOut, true);
+  assert.ok(Date.now() - started < 8_000);
+  const grandchild = Number(readFileSync(pidFile, "utf8"));
+  assert.throws(() => process.kill(grandchild, 0), { code: "ESRCH" });
+});
+
+test("a cell that timed out stops the run and says so", async () => {
+  await assert.rejects(
+    runAnswer({
+      ...base,
+      run: async () => ({ code: null, stdout: "", stderr: "", timedOut: true }),
+      workDir: workDir(),
+    }),
+    (error) =>
+      error instanceof Stop &&
+      error.code === 1 &&
+      /did not finish within/.test(error.message),
+  );
+});
+
+const transcript = {
+  question: "q",
+  quoted: "two",
+  answers: [
+    {
+      id: "one",
+      model: "m1",
+      date: "d",
+      answer: "a",
+      code: "export const f = () => 'one';",
+      call: "f()",
+    },
+    {
+      id: "two",
+      model: "m2",
+      date: "d",
+      answer: "a",
+      code: "export const g = () => 'two';",
+      call: "g()",
+    },
+  ],
+};
+
+test("every answer is run, under the shared question, and recorded by its id", async () => {
+  const seen = [];
+  const file = await runAll({
+    ...base,
+    transcript,
+    run: fakeCell((node, zone) => `${node}:${zone}`),
+    workDir: workDir(),
+    onAnswer: (id) => seen.push(id),
+  });
+  assert.deepEqual(Object.keys(file), ["one", "two"]);
+  assert.deepEqual(seen, ["one", "two"]);
+  assert.equal(file.one.sha256, hashOf(transcript.answers[0].code, "f()"));
+  assert.equal(file.two.sha256, hashOf(transcript.answers[1].code, "g()"));
+  assert.equal(file.two.runs.length, 4);
+});
+
+test("a transcript whose answers cannot be told apart, or whose quoted answer is missing, stops with exit 2", async () => {
+  const bad = [
+    [{ ...transcript, question: " " }, /question/],
+    [{ ...transcript, answers: [] }, /no answers/],
+    [
+      {
+        ...transcript,
+        answers: [
+          transcript.answers[0],
+          { ...transcript.answers[1], id: "one" },
+        ],
+      },
+      /"one" is used twice/,
+    ],
+    [
+      {
+        ...transcript,
+        answers: [{ ...transcript.answers[0], id: "Not An Id" }],
+        quoted: "Not An Id",
+      },
+      /id/,
+    ],
+    [{ ...transcript, quoted: "three" }, /quoted.*"three"/],
+    [
+      {
+        ...transcript,
+        answers: [
+          transcript.answers[0],
+          { ...transcript.answers[1], call: "" },
+        ],
+      },
+      /"two".*call/,
+    ],
+  ];
+  for (const [t, message] of bad)
+    await assert.rejects(
+      runAll({
+        ...base,
+        transcript: t,
+        run: () => assert.fail("no cell may run"),
+        workDir: workDir(),
+      }),
+      (error) =>
+        error instanceof Stop &&
+        error.code === 2 &&
+        error.message.includes("agent-answer.json") &&
+        message.test(error.message),
+    );
+});
 
 test("ES module code runs, with a function that is not exported", async () => {
   const r = await runHere({
