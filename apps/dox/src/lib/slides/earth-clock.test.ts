@@ -225,8 +225,11 @@ describe("the Earth's clock", () => {
   it("publishes the disc's centre on the layer, for the Earth to grow from", () => {
     const clock = mount();
     clock.fit({ x: 500, y: 300, radius: 160 });
+    // The two properties are the contract with the Earth's `transform-origin`, which jsdom does not run.
+    /* oxlint-disable dox-test/no-house-class */
     expect(host.style.getPropertyValue("--gmt-earth-x")).toBe("500px");
     expect(host.style.getPropertyValue("--gmt-earth-y")).toBe("300px");
+    /* oxlint-enable dox-test/no-house-class */
   });
 
   it("breaks into copies of the dial on shatter, and sweeps them away when it ends", () => {

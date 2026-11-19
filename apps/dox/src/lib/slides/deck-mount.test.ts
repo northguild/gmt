@@ -232,6 +232,8 @@ describe("mountDeck", () => {
     const { user } = await start();
     const first = screen.getByRole("tabpanel", { name: /^First/ });
     first.focus();
+    // The mark is the contract with the slide's focus-ring CSS, which jsdom does not run.
+    /* oxlint-disable dox-test/no-implementation-assert */
     expect(first).toHaveAttribute("data-quiet-focus");
     first.blur();
     expect(first).not.toHaveAttribute("data-quiet-focus");
@@ -243,6 +245,7 @@ describe("mountDeck", () => {
     await user.tab();
     expect(first).toHaveFocus();
     expect(first).not.toHaveAttribute("data-quiet-focus");
+    /* oxlint-enable dox-test/no-implementation-assert */
     anchor.remove();
   });
 
