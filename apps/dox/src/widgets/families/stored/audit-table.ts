@@ -13,6 +13,7 @@
  */
 import { html, type SafeHtml } from "../../builders/html";
 import { srOnly } from "../../builders/sr-only";
+import { keepTokens } from "../../builders/tokens";
 import { zonedValue } from "../../builders/zoned-value";
 import styles from "./audit-table.module.css";
 
@@ -102,7 +103,7 @@ function readings(row: AuditRow): SafeHtml {
     row.kind === null
       ? ""
       : html`<ul class="${styles.tokens}" role="list">${pair}${row.tokens.map((t) => token(t.name, t.value))}</ul>`
-  }<p class="${styles.sentence}">${row.sentence}</p>`;
+  }<p class="${styles.sentence}">${keepTokens(row.sentence)}</p>`;
 }
 
 function kindCell(row: AuditRow): SafeHtml {
@@ -132,7 +133,7 @@ function rowHtml(row: AuditRow, group: string): SafeHtml {
 }
 
 export function auditTable(o: AuditTableOptions): SafeHtml {
-  return html`<div class="${styles.box}"
+  return html`<div class="${styles.box}" role="region" aria-label="${o.caption}" tabindex="0"
     ><table class="${styles.table}" role="table"
       ><caption>${srOnly(o.caption)}</caption
       ><thead role="rowgroup"

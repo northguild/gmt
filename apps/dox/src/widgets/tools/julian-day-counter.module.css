@@ -217,10 +217,12 @@
       font-weight: 600;
     }
 
+    /* A value is one token (an instant, a day number): it keeps one line, and a table wider than
+       its box scrolls. A hyphen or a colon is a break point, and a split date is a split word. */
     & .cell span,
     & .mono {
-      white-space: normal;
-      overflow-wrap: anywhere;
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
   }
 }
@@ -239,7 +241,8 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 .cell * {
@@ -256,7 +259,7 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .contents {

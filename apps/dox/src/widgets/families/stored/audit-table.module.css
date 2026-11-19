@@ -6,6 +6,12 @@
   container-type: inline-size;
   min-inline-size: 0;
   max-inline-size: 100%;
+  overflow-x: auto;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
 }
 
 .table {
@@ -24,7 +30,10 @@
     text-align: start;
     vertical-align: top;
     white-space: normal;
-    overflow-wrap: anywhere;
+
+    /* A cell breaks between words, never inside one: `overflow-wrap: anywhere` lets a column's
+       narrowest width fall to one letter. A table wider than the box scrolls in `.box`. */
+    overflow-wrap: normal;
     border-block-end: 1px solid var(--gmt-hairline);
   }
 

@@ -6,7 +6,12 @@
   min-inline-size: 12ch;
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+
+  /* A member's value sits in a table cell. It is one token (an ISO instant, an offset): it stays
+     on one line, since a hyphen or a colon is a break point and a split date is a split word.
+     A table wider than its box scrolls in the kit's wrapper. */
+  white-space: nowrap;
+  overflow-wrap: normal;
 
   /* A member the value does not state, or no result at all, is quieter than a value. */
   &[data-state="absent"],

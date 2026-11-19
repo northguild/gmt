@@ -119,6 +119,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A value is one token (an instant, a day number): a hyphen or a colon is not a place to break.
+   The kit's `.cell code` sets `white-space: normal`, so this has to be the more specific rule. */
+.wrap .cell {
+  white-space: nowrap;
+}
+
 .cell * {
   line-height: inherit;
 }
@@ -212,10 +218,11 @@
       font-weight: 600;
     }
 
+    /* A value is one token: it stays whole and the table scrolls sideways, never splits. */
     & .cell span,
     & .mono {
-      white-space: normal;
-      overflow-wrap: anywhere;
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
   }
 }

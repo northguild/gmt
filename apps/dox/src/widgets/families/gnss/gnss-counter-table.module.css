@@ -38,7 +38,10 @@
     text-align: start;
     vertical-align: baseline;
     white-space: normal;
-    overflow-wrap: anywhere;
+
+    /* A cell breaks between words, never inside one: `overflow-wrap: anywhere` lets a column's
+       narrowest width fall to one letter. A table wider than the box scrolls in `.box`. */
+    overflow-wrap: normal;
   }
 
   /* Clear of the bevelled corners. */

@@ -85,8 +85,6 @@
     display: block;
     min-inline-size: 0;
     min-block-size: 2lh;
-    white-space: normal;
-    overflow-wrap: anywhere;
   }
 }
 

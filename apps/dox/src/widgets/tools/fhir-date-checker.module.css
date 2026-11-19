@@ -73,7 +73,11 @@
   display: block;
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+
+  /* A member's value is one token (an instant, an offset): a hyphen or a colon is a break point,
+     and a split date is a split word. It keeps one line, and a table wider than its box scrolls. */
+  white-space: nowrap;
+  overflow-wrap: normal;
 
   & [data-state="absent"],
   & [data-state="none"] {
@@ -215,8 +219,10 @@
       display: block;
       min-inline-size: 0;
       min-block-size: 1lh;
-      white-space: normal;
-      overflow-wrap: anywhere;
+
+      /* A written value is one ISO token: it stays whole and the table scrolls sideways. */
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
   }
 

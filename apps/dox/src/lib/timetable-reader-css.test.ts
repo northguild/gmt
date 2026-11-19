@@ -16,10 +16,10 @@ function rule(selector: string): string {
 }
 
 describe("timetable-reader time cells", () => {
-  it("lets the full zoned value wrap so the four time columns fit a narrow table", () => {
+  it("keeps the full zoned value on one line, so a hyphen or colon never splits it", () => {
     const body = rule(".timeFull");
-    expect(body).toContain("white-space: normal");
-    expect(body).toContain("overflow-wrap: anywhere");
+    expect(body).toContain("white-space: nowrap");
+    expect(body).toContain("overflow-wrap: normal");
   });
 
   it("wraps the NO SIGNAL chip at its space inside a hold cell, so it never overflows the value column", () => {

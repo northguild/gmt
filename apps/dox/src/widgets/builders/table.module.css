@@ -45,16 +45,17 @@
   border-block-end: 1px solid var(--gmt-hairline);
   vertical-align: top;
 
-  /* A long identifier or header breaks inside the box instead of widening the table past it. A
-     numeric cell keeps its figures together (`.numeric`). */
-  overflow-wrap: anywhere;
+  /* A cell breaks between words, never inside one. `overflow-wrap: anywhere` let a column's
+     narrowest width fall to one letter, and the layout took it: a narrow rail printed `Local
+     Date` a letter a line. A table wider than its box scrolls sideways in `.wrap`. A numeric
+     cell keeps its figures together (`.numeric`). */
+  overflow-wrap: normal;
 }
 
 /* The content sheet keeps a table's code on one line (`white-space: nowrap`), so a long result
-   widens the table past its box. Inside a cell it wraps like the rest of the cell. */
+   widens the table past its box. Inside a cell it wraps between words like the rest. */
 .cell code {
   white-space: normal;
-  overflow-wrap: anywhere;
 }
 
 .head {

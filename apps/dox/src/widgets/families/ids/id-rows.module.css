@@ -61,7 +61,8 @@
   white-space: normal;
 }
 
-/* An identifier has no break points, so a call and a returned value break anywhere. */
+/* An identifier is one word: a call and a returned value wrap between words and never inside
+   one. A long one widens its cell, and `.wrap` scrolls sideways. */
 .text {
   margin: 0;
   padding: 0;
@@ -69,7 +70,12 @@
   color: inherit;
   font: inherit;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+
+  /* A token (a string, a number, a name) stays on one line; the call wraps between them. */
+  & span {
+    white-space: nowrap;
+  }
 }
 
 .formatCell {
@@ -84,9 +90,13 @@
   color: inherit;
   font: inherit;
 
-  /* The content sheet keeps a table's code on one line; a call here wraps, as the cell does. */
+  /* The content sheet keeps a table's code on one line; a call here wraps between words, as the cell does. */
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+
+  & span {
+    white-space: nowrap;
+  }
 }
 
 .format,

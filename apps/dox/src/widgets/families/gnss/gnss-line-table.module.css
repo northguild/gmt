@@ -39,7 +39,10 @@
     text-align: start;
     vertical-align: baseline;
     white-space: normal;
-    overflow-wrap: anywhere;
+
+    /* A cell breaks between words, never inside one: `overflow-wrap: anywhere` lets a column's
+       narrowest width fall to one letter. A table wider than the box scrolls in `.box`. */
+    overflow-wrap: normal;
   }
 
   /* Clear of the bevelled corners. */
@@ -76,10 +79,14 @@
   }
 }
 
+/* The two lines inside a cell keep their words whole too. */
 .line {
   display: block;
   min-inline-size: 0;
-  overflow-wrap: anywhere;
+
+  /* The line is one ISO token: a hyphen or a colon would be a break point. */
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 /* The note keeps two lines of height: "written as 2024-01-01T00:00:37" wraps in a narrow
@@ -88,7 +95,7 @@
   display: block;
   min-inline-size: 0;
   min-block-size: 2lh;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   color: var(--gmt-ice);
   font-size: 0.8125rem;
 }

@@ -421,12 +421,17 @@
   border: 2px solid var(--gmt-ice);
 }
 
-/* The table's first and second cells: a line and a tag line that always keeps its height. */
+/* The table's first and second cells: a line and a tag line that always keeps its height. A cell
+   breaks between words, never inside one: `anywhere` lets a column's narrowest width fall to one
+   letter, and a table wider than its box scrolls in the kit's wrapper. */
 .cellLine,
 .cellTag {
   display: block;
   min-inline-size: 0;
-  overflow-wrap: anywhere;
+
+  /* A line is one ISO or offset token: a hyphen or a colon would be a break point. */
+  white-space: nowrap;
+  overflow-wrap: normal;
   font-variant-numeric: tabular-nums;
 }
 

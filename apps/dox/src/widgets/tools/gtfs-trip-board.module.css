@@ -139,35 +139,31 @@
   container: trip-board / inline-size;
   min-inline-size: 0;
 
-  /* The cells hold the widest zone name, one 32-character piece. It breaks anywhere when the
-     column is narrower than the piece, and the ghost breaks the same way. */
+  /* The cells hold the widest zone name, one 32-character piece. A name is never broken: the
+     column is as wide as the name, and a board wider than its box scrolls sideways. */
   & td,
   & th {
     font-size: var(--gmt-text-xs);
   }
 
   & td span,
-  & th span {
-    overflow-wrap: anywhere;
-  }
-
+  & th span,
   & td [data-sample]::before {
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
 }
 
-/* The kit keeps each piece of a zoned value on one line. The zone piece (32 characters for the
-   widest zone) is wider than a stacked cell at 300 px, so here a piece may wrap, and only
-   when it does not fit; the break points between pieces stay the kit's. */
+/* The kit keeps each piece of a zoned value on one line. A piece may wrap between words, never
+   inside one; the break points between pieces stay the kit's. */
 .zoned > span {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
-/* A word in a cell wraps at the cell; a plate's word stays on one line. */
+/* A word in a cell wraps between words at the cell; a plate's word stays on one line. */
 .board .word {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .line {
@@ -181,14 +177,17 @@
   color: var(--gmt-ice);
   font-family: var(--gmt-font-mono);
   font-weight: 600;
-  overflow-wrap: anywhere;
+
+  /* A stop id has hyphens in it: a hyphen is a break point, and a split id is a split word. */
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 .zone {
   display: block;
   color: var(--gmt-ice-dim);
   font-size: var(--gmt-text-xs);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .instant {
@@ -196,7 +195,10 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+
+  /* An instant is one token: it keeps one line. */
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 .notes {
