@@ -132,7 +132,7 @@ export default function DoxPage() {
       /* A pill carries `data-cue`, so the press hook leaves it to this handler. A press that
          opens the rail is the rail's opening Felt slide (the effect below); every other press that
          stays on the page, a swap from one widget to another or a question not sent, is a
-         button's press ping, the Deep sonar. */
+         button's press ping, the Distant sonar. */
       const sent = chatRef.current?.send(starter.text) === true;
       if (!sent || railWidgetRef.current !== null) cue("press");
       if (!sent) return;

@@ -10,7 +10,7 @@ import {
 } from "../../test/fake-audio";
 import { installJsdomShims } from "../../test/jsdom-shims";
 import { cue } from "./cue";
-import { createEngine, type Engine } from "./engine";
+import { createEngine, HIDE_TAIL_MS, type Engine } from "./engine";
 import { saveSound } from "~/test/sound-storage";
 import { writeSound } from "./settings";
 import { VOICES, type Voice } from "./voices";
@@ -299,7 +299,7 @@ describe("visibility", () => {
     boot();
     setVisibility("hidden");
     // A link that opened a new tab hid this one: its ping and the aura's fade play out first.
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(HIDE_TAIL_MS - 50);
     expect(ctx.calls).not.toContain("suspend");
     vi.advanceTimersByTime(50);
     expect(ctx.calls).toContain("suspend");
@@ -416,7 +416,7 @@ describe("the landing's aura", () => {
     ctx.advance(5);
     setVisibility("hidden");
     expect(ramps(auraBus()!).at(-1)).toEqual([0, 5.6]);
-    vi.advanceTimersByTime(650);
+    vi.advanceTimersByTime(HIDE_TAIL_MS);
     expect(ctx.calls).toContain("suspend");
     setVisibility("visible");
     await loaded();

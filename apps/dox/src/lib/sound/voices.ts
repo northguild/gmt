@@ -20,7 +20,7 @@ import {
   tone,
 } from "./kit";
 import { fadedLoop } from "./loops";
-import { LOCK_PINGS, SONAR_PING } from "./sonar-lock";
+import { LOCK_PINGS } from "./sonar-lock";
 
 /**
  * `rank` is the cue's place in a run of like cues, 0 for the first (`cue(name, rank)`); a voice
@@ -139,37 +139,36 @@ function listServo(dir: 1 | -1): Voice {
   };
 }
 
+/**
+ * The press ping, "Distant sonar" (press I in northguild.dev's sound audition,
+ * `context/reference/huginn-sound-audition.html` there): a ping heard from far off through the
+ * water, almost all space and very little of the ping itself. Every press plays it, as on
+ * northguild.dev: a link (`click`), any other control (`press`) and a copy (`copy`). It rings in the
+ * shared space for about a second, so `link-hold.ts` and the engine's `HIDE_TAIL_MS` wait for it.
+ */
+export const DISTANT_SONAR = {
+  freq: 1050,
+  peak: 0.012,
+  attack: 0.01,
+  release: 0.35,
+  /** The send into the shared space: more than the ping itself, so it is mostly room. */
+  wet: 1.2,
+} as const;
+
+function distantSonar(c: AudioContext, out: AudioNode, t: number): void {
+  const { wet, ...note } = DISTANT_SONAR;
+  tone(c, out, t, note);
+  const send = c.createGain();
+  send.gain.value = wet;
+  send.connect(space(c));
+  tone(c, send, t, note);
+}
+
 /** `null` is a cue no slice has given a voice yet. */
 export const VOICES: Record<CueName, Voice | null> = {
-  // click A, "Sonar": a clean ping with a quick echo coming back off the hull. A press on a link.
-  // Its tail is shorter than the audition's (`SONAR_PING`), so a link leaves the page sooner.
-  click(c, out, t) {
-    const { freq, peak, echoPeak, attack, release, echoRelease } = SONAR_PING;
-    tone(c, out, t, { freq, peak, attack, release });
-    tone(c, sonarEcho(c), t, {
-      freq,
-      peak: echoPeak,
-      attack,
-      release: echoRelease,
-    });
-  },
-  // click B, "Deep sonar": lower and rounder, with a longer tail in a dark room, a submarine far
-  // down. A press on a button, tab or other control that acts on the page.
-  press(c, out, t) {
-    tone(c, out, t, {
-      freq: 620,
-      to: 600,
-      peak: 0.13,
-      attack: 0.004,
-      release: 0.55,
-    });
-    tone(c, space(c), t, {
-      freq: 620,
-      peak: 0.08,
-      attack: 0.004,
-      release: 0.5,
-    });
-  },
+  // A press on a link, on any other control, and a copy: all the Distant sonar.
+  click: distantSonar,
+  press: distantSonar,
   // open O, "Felt slide": a drawer on felt runners, a soft low slide rising and the faintest
   // settle at the end.
   open(c, out, t) {
@@ -258,21 +257,7 @@ export const VOICES: Record<CueName, Voice | null> = {
       release: 0.03,
     });
   },
-  // copy B, "Glass clink": two glasses touching: two quick high partials.
-  copy(c, out, t) {
-    bell(c, out, t, {
-      freq: 2637,
-      ratios: [1, 1.5],
-      peak: 0.06,
-      decay: 0.2,
-    });
-    bell(c, out, t + 0.05, {
-      freq: 3951,
-      ratios: [1, 1.5],
-      peak: 0.04,
-      decay: 0.25,
-    });
-  },
+  copy: distantSonar,
   // detent B, "Glass tick": a brighter, glassier tick with only a hint of body. A slider's step
   // and a handle's arrow; a list's step is `listNext`/`listPrev`.
   detent(c, out, t) {

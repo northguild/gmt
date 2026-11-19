@@ -43,9 +43,9 @@ const PRESS_SELECTOR = [
 ].join(",");
 
 /**
- * A press that plays the Sonar ping: a link, which goes somewhere, and a button marked
+ * A press cued as a link (`click`): a link, which goes somewhere, and a button marked
  * `data-ping="sonar"` (the header's Settings gear, which sits among the header's links and sounds
- * like them). Every other press plays the Deep sonar.
+ * like them). Every other press is cued as `press`. Both play the Distant sonar (`voices.ts`).
  */
 const LINK_SELECTOR = 'a[href], [role="link"], [data-ping="sonar"]';
 
@@ -91,8 +91,8 @@ function isQuietHandOver(el: HTMLElement): boolean {
 }
 
 /**
- * The press cue. Focused or not, a press on a link plays the Sonar ping (`click`), and a press on
- * any other control the Deep sonar (`press`). A second press on a focused control, which re-pings
+ * The press cue. Focused or not, a press on a link is cued `click`, and a press on
+ * any other control `press`, both the Distant sonar. A second press on a focused control, which re-pings
  * its ring, plays its kind's cue again. A link that goes to another page in this tab waits for
  * its ping before it goes (`sound/link-hold.ts`). Three presses stay silent: a control that fires
  * a cue of its own (`data-cue`, or a code block's copy button), a quiet focus hand-over, which is

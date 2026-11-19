@@ -351,7 +351,7 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
   /* Every zoom step the reader takes, by wheel, pinch, key or the buttons below, plays the Lens
      servo, rising going in and falling coming out, pitched by how close the camera is. The
      engine keeps steps 60 ms apart, so a trackpad's stream of wheel events is a run of whirrs, not
-     a buzz. The buttons are `data-cue`, so their press plays the servo and not the Deep sonar; a
+     a buzz. The buttons are `data-cue`, so their press plays the servo and not the press ping; a
      step at a limit changes nothing and plays nothing. */
   host.onZoom((dir, closeness) =>
     cue(dir > 0 ? "zoomIn" : "zoomOut", closeness),
