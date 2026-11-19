@@ -14,6 +14,11 @@
   --series: var(--gmt-series-1);
 
   display: grid;
+
+  /* One track as wide as the plate, never as wide as its widest unbroken text. An implicit auto
+     track grows to that text, and every line that can wrap then lays out in the grown track and
+     runs past the plate's edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.25rem;
   align-content: start;
   min-inline-size: 0;

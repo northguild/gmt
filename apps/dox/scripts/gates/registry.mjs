@@ -198,6 +198,15 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "plate-fit",
+    script: "plate-fit.mjs",
+    tier: "weekly",
+    browsers: ENGINES,
+    fullBrowsers: null,
+    themes: true,
+    needs: null,
+  },
+  {
     id: "hero-space",
     script: "hero-space-check.mjs",
     tier: "local",

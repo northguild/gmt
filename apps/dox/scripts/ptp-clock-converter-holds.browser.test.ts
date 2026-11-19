@@ -518,7 +518,7 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
     ${1280}
     ${1440}
   `(
-    "a PTP now value that overflows is a tab stop after a tick, and one that fits is not, at $width px",
+    "a PTP now value wraps, so none scrolls and a value that did would be a tab stop, at $width px",
     async ({ width }: { width: number }) => {
       if (browser === undefined || server === undefined) return;
       const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
@@ -544,7 +544,8 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
         for (const v of values) {
           expect(v.tabindex).toBe(v.sideways || v.upDown ? "0" : null);
         }
-        if (width === 390) expect(values.some((v) => v.sideways)).toBe(true);
+        // A value wraps anywhere in its plate (`plate-fit`), so none scrolls sideways.
+        expect(values.some((v) => v.sideways)).toBe(false);
       } finally {
         await page.close();
       }
