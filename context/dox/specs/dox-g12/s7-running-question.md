@@ -107,7 +107,7 @@ gets about 4.8 px; both codes decode at half that size.
 ## Spare slides
 
 `Slide` gains `spare`; a spare with `minutes`, or a main slide without, throws at build. Spares
-render `data-spare` and no `data-minutes`. A `qa` slide ("Questions", with the audience panel) comes
+render `data-spare` and no `data-minutes`. A `qa` slide ("Q&D: Questions and Dox", with the audience panel) comes
 right before `thanks`, and `thanks` is the last main slide. In `deck.ts`, End and `last()` go to
 `thanks`, Next from `thanks` goes nowhere, and Next never lands on a spare: a spare is reached by
 a jump (the slide list, a deep link, or a link in `qa`'s notes), and Next from a spare returns to

@@ -90,7 +90,7 @@ places; no national default, no law, no business wording, no text that judges a 
   time that never happened is moved rather than refused, and engines and polyfills disagree (the
   filing count and `gmtStats.timezones`). Notes link to `/upstream/`, `/pulse/` and issue #316.
   Facts only.
-- **`qa`** ("Questions"): the audience-question panel (slice 4b); the notes say questions run
+- **`qa`** ("Q&D: Questions and Dox"): the audience-question panel (slice 4b); the notes say questions run
   through Dox chat or aloud and link to the spare.
 - **`thanks`**: two `QrCode`s, labelled "LinkedIn" (`https://www.linkedin.com/in/craigocurtis/`)
   and "NorthGuild" (`https://northguild.dev/`); the site and repository links as text. It is the last
