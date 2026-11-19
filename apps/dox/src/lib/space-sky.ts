@@ -128,6 +128,8 @@ export async function followGlobe(parts: {
   origin: HTMLElement;
   surface: HTMLElement;
   signal: AbortSignal;
+  /** The instant the sky shows, epoch milliseconds; gmt's `getUnixNow` when absent. */
+  instant?: () => number;
 }): Promise<boolean> {
   const { globe, origin, surface, signal } = parts;
   const sky = await parts.sky;
@@ -146,7 +148,7 @@ export async function followGlobe(parts: {
         y: centre.y + box.top - from.top,
         radius: centre.radius,
       },
-      time.getUnixNow(),
+      (parts.instant ?? time.getUnixNow)(),
       globe.getZoom(),
     );
   };

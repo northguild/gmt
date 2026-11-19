@@ -160,7 +160,13 @@ const readSlides = (page) =>
     [...document.querySelectorAll("[data-slide]")].map((s) => ({
       id: s.id,
       title: s.querySelector("h2")?.textContent?.trim() ?? "",
-      builds: s.querySelectorAll("[data-build]").length,
+      // As the deck counts them: builds that share a number reveal together, one step.
+      builds: Math.max(
+        0,
+        ...[...s.querySelectorAll("[data-build]")].map(
+          (b) => Number(b.getAttribute("data-build")) || 1,
+        ),
+      ),
       place: s.dataset.place ?? "",
     })),
   );
@@ -317,9 +323,16 @@ async function checkStage(browserName, browser, pagePath, size) {
       await settle(page);
       const got = await page.evaluate(() => ({
         id: document.querySelector("[data-slide][data-shown]")?.id ?? null,
-        reached: [
-          ...document.querySelectorAll("[data-slide][data-shown] [data-build]"),
-        ].filter((b) => b.getAttribute("data-reached") !== "false").length,
+        reached: Math.max(
+          0,
+          ...[
+            ...document.querySelectorAll(
+              "[data-slide][data-shown] [data-build]",
+            ),
+          ]
+            .filter((b) => b.getAttribute("data-reached") !== "false")
+            .map((b) => Number(b.getAttribute("data-build")) || 1),
+        ),
       }));
       if (got.id !== slides[state.slide].id || got.reached !== state.build)
         at(
@@ -343,13 +356,16 @@ async function checkStage(browserName, browser, pagePath, size) {
   }
 }
 
-/** The longest hop takes 4 s (`hopDuration` at 180°); a flight still moving after this is slow. */
-const SETTLE_MS = 5000;
+/**
+ * The longest hop takes 4 s (`hopDuration` at 180°), and a turning Earth eases down for 2 s
+ * (`AMBIENT_RAMP_MS`) before the camera flies back; a flight still moving after both is slow.
+ */
+const SETTLE_MS = 7000;
 const REST_WATCH_MS = 500;
 const PLACE_TOLERANCE_DEG = 0.5;
 const SPACE = "[data-deck-space]";
-/** The shatter, the shards' settling and the Earth's turn all finish inside this. */
-const TURN_SETTLE_MS = 16000;
+/** The shatter and the shards' settling finish inside this. */
+const WALL_SETTLE_MS = 16000;
 /** The Earth carries one clock pin per zone the matrix runs in, up to twelve. */
 const WALL_PINS = Math.min(
   12,
@@ -438,6 +454,7 @@ async function checkSpace(browserName, browser, pagePath, size) {
           flight: d.flight ?? "",
           rotation: d.rotation ?? "",
           target: d.target ?? "",
+          spin: d.spin ?? "",
         };
       }, SPACE);
     const restOnPlace = async (label, target) => {
@@ -456,6 +473,8 @@ async function checkSpace(browserName, browser, pagePath, size) {
         return false;
       }
       const s = await state();
+      // A slide that turns the Earth has no place to rest on: the camera never stops there.
+      if (s.spin === "on") return true;
       const rotation = parsePair(s.rotation);
       const goal = parsePair(s.target);
       if (!rotation || !goal) {
@@ -488,26 +507,22 @@ async function checkSpace(browserName, browser, pagePath, size) {
       const label = `slide "${slides[step.slide].title}" build ${step.build}`;
       const wallDone = await page.evaluate((sel) => {
         const d = document.querySelector(sel)?.dataset ?? {};
-        return { wall: d.wall ?? "", turn: d.turn ?? "" };
+        return { wall: d.wall ?? "" };
       }, SPACE);
-      if (
-        wallDone.wall === "approach" ||
-        wallDone.wall === "breaking" ||
-        wallDone.turn
-      ) {
+      if (wallDone.wall === "approach" || wallDone.wall === "breaking") {
         try {
           await page.waitForFunction(
             (sel) => {
               const d = document.querySelector(sel)?.dataset ?? {};
-              return d.wall !== "approach" && d.wall !== "breaking" && !d.turn;
+              return d.wall !== "approach" && d.wall !== "breaking";
             },
             SPACE,
-            { timeout: TURN_SETTLE_MS },
+            { timeout: WALL_SETTLE_MS },
           );
         } catch {
           at(
             "wall-slow",
-            `at ${label} the wall or the Earth's turn was still running after ${TURN_SETTLE_MS} ms`,
+            `at ${label} the wall was still breaking after ${WALL_SETTLE_MS} ms`,
           );
         }
         const pins = await page.evaluate(
@@ -657,6 +672,175 @@ async function checkArticle(browserName, browser, pagePath, size) {
   }
 }
 
+const TALK = "/slides/give-me-temporal/";
+const RECORDED = path.join(
+  HERE,
+  "..",
+  "src",
+  "slides",
+  "give-me-temporal",
+  "recorded",
+);
+const TRANSCRIPT_FILE =
+  "apps/dox/src/slides/give-me-temporal/quotes/agent-answer.json";
+const TRANSCRIPT_COMMAND =
+  "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs";
+
+/** Every file under a folder, for the secret grep. */
+function filesUnder(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory()
+      ? filesUnder(path.join(dir, e.name))
+      : [path.join(dir, e.name)],
+  );
+}
+
+/**
+ * What only Deck 0 promises: the owner's transcript is in, the live demos play recordings and say
+ * so, the page tool shows both JSON panels, the deck page registers its three tools, the spares
+ * come after `thanks` and outside the pace plan, the Moon build sits on `day-off`, and no dev
+ * secret reached `dist/` or the recordings. Runs once, at the first size.
+ */
+async function checkDeckContent(browserName, browser, pagePath, size) {
+  const at = (rule, message) =>
+    report(browserName, size.width, pagePath, rule, "deck", message);
+  const context = await browser.newContext({ viewport: size });
+  try {
+    await blockOffSite(context, base);
+    await unlockDecks(context);
+    await context.addInitScript(() => {
+      window.__registeredTools = [];
+      Object.defineProperty(navigator, "modelContext", {
+        configurable: true,
+        value: {
+          registerTool(tool) {
+            window.__registeredTools.push(tool?.name);
+          },
+        },
+      });
+    });
+    const page = await context.newPage();
+    await page.goto(`${base}${pagePath}?globe=canvas2d`, { waitUntil: "load" });
+
+    const pending = await page.locator('[data-quote="pending"]').count();
+    if (pending > 0)
+      at(
+        "transcript-missing",
+        `the agent's answer is not ready: fill ${TRANSCRIPT_FILE}, then record the run with \`${TRANSCRIPT_COMMAND}\``,
+      );
+
+    const order = await page.evaluate(() =>
+      [...document.querySelectorAll("[data-slide]")].map((s) => ({
+        id: s.id,
+        spare: s.hasAttribute("data-spare"),
+        minutes: s.getAttribute("data-minutes"),
+      })),
+    );
+    const lastMain = order.filter((s) => !s.spare).at(-1);
+    const firstSpare = order.findIndex((s) => s.spare);
+    const qa = order.findIndex((s) => s.id === "qa");
+    if (lastMain?.id !== "thanks")
+      at("spare-order", "`thanks` is not the last main slide");
+    if (qa < 0 || order[qa + 1]?.id !== "thanks")
+      at("spare-order", "`qa` does not come right before `thanks`");
+    if (firstSpare < 0 || order.slice(0, firstSpare).some((s) => s.spare))
+      at("spare-order", "the spare slides do not follow `thanks`");
+    for (const s of order.filter((o) => o.spare))
+      if (s.minutes !== null)
+        at("spare-minutes", `spare slide ${s.id} sits in the pace plan`);
+    if (order.slice(firstSpare).some((s) => !s.spare))
+      at("spare-order", "a main slide comes after a spare slide");
+
+    const moon = await page
+      .locator('#day-off [data-build][data-place="moon"]')
+      .count();
+    if (moon === 0)
+      at("moon-step", "day-off has no build that carries the Moon place");
+
+    // Offline, every live demo plays its recording and says so.
+    for (const id of ["ask-dox", "qa"]) {
+      await page.evaluate((i) => {
+        document.getElementById(i)?.scrollIntoView();
+      }, id);
+      const source = page.locator(`#${id} [data-slot="source"]`).first();
+      try {
+        await source.waitFor({ state: "attached", timeout: 15000 });
+        await page.waitForFunction(
+          (el) => /Recorded/.test(el?.textContent ?? ""),
+          await source.elementHandle(),
+          { timeout: 15000 },
+        );
+      } catch {
+        at(
+          "live-recorded",
+          `${id} does not show "Recorded" with the network cut`,
+        );
+      }
+    }
+
+    // The page tool runs as the slide shows: Dox's turn lists both Easters, and the receipt opens the grids.
+    await page.evaluate(() => {
+      document.getElementById("page-tools")?.scrollIntoView();
+    });
+    try {
+      await page.waitForFunction(
+        () => {
+          const slide = document.getElementById("page-tools");
+          const turn = slide?.querySelector(
+            '.gmt-hive-turn[data-role="assistant"]',
+          );
+          return (
+            /Julian:\s*\d{4}-\d{2}-\d{2}/.test(turn?.textContent ?? "") &&
+            slide?.querySelector(".gmt-hive-receipt") !== null
+          );
+        },
+        undefined,
+        { timeout: 15000 },
+      );
+    } catch {
+      at(
+        "page-tools-answer",
+        "page-tools shows no Easter dates or no receipt from the page tool",
+      );
+    }
+
+    const tools = await page.evaluate(() => window.__registeredTools ?? []);
+    if (tools.length !== 3)
+      at(
+        "page-tools-registered",
+        `the deck page registered ${tools.length} tool(s), not 3: ${JSON.stringify(tools)}`,
+      );
+    measured += 1;
+  } catch (error) {
+    at(
+      "check-crashed",
+      `the deck content check crashed: ${String(error?.message ?? error).split("\n")[0]}`,
+    );
+  } finally {
+    await context.close().catch(() => {});
+  }
+
+  const secrets = ["DOX_DEV_KEY"];
+  if (process.env.DOX_DEV_KEY) secrets.push(process.env.DOX_DEV_KEY);
+  for (const file of [...filesUnder(DIST), ...filesUnder(RECORDED)]) {
+    let text;
+    try {
+      text = readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    for (const secret of secrets)
+      if (text.includes(secret)) {
+        at(
+          "dev-secret",
+          `${path.relative(path.join(HERE, ".."), file)} holds ${secret === "DOX_DEV_KEY" ? "the name DOX_DEV_KEY" : "the dev key's value"}`,
+        );
+        break;
+      }
+  }
+}
+
 for (const browserName of browsers) {
   const browser = await launchBrowser(browserName);
   for (const pagePath of pages) {
@@ -665,6 +849,8 @@ for (const browserName of browsers) {
       await checkArticle(browserName, browser, pagePath, size);
     }
     await checkSpace(browserName, browser, pagePath, SIZES[0]);
+    if (pagePath === TALK)
+      await checkDeckContent(browserName, browser, pagePath, SIZES[0]);
   }
   await browser.close();
 }

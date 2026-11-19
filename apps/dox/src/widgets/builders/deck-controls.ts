@@ -143,12 +143,17 @@ export function helpDialog(keyRows: readonly KeyHelpRow[]): SafeHtml {
   );
 }
 
-/** The overview dialog: its list is filled by the mount. */
+/**
+ * The overview dialog: its lists are filled by the mount, the talk's slides first and then, under
+ * their own heading, the spares (shown only once one is in reach).
+ */
 export function overviewDialog(): SafeHtml {
   return dialog(
     "overview",
     "Slides",
-    html`<ol class="gmt-deck-overview" data-deck-overview></ol>`,
+    html`<ol class="gmt-deck-overview" data-deck-overview></ol>
+      <h3 class="gmt-deck-overview-heading" data-deck-overview-spares hidden>Spare slides, for questions</h3>
+      <ol class="gmt-deck-overview" data-deck-overview-spare hidden></ol>`,
   );
 }
 
@@ -168,7 +173,8 @@ export function overviewItems(items: readonly OverviewItem[]): SafeHtml {
 
 /**
  * The unlock dialog: the secret phrase that opens every slide after the first. The Unlock button
- * is the field's add-on, joined to the input's end (`.gmt-deck-addon` in `slides.css`).
+ * is the field's add-on, joined to the input's end (`.gmt-deck-addon` in `slides.css`). The phrase
+ * is typed on the projected screen, so it shows as dots.
  */
 export function unlockDialog(): SafeHtml {
   return dialog(
@@ -184,6 +190,7 @@ export function unlockDialog(): SafeHtml {
             autocomplete: "off",
             spellcheck: false,
             maxLength: 64,
+            masked: true,
           })}${button({ id: "deck-unlock-go", label: "Unlock" })}</div>`,
       })}
       <p class="gmt-deck-unlock-error" id="deck-unlock-error" role="alert" data-deck-unlock-error></p>

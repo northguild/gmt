@@ -263,6 +263,15 @@ export interface GlobeEngine {
   /** Hold a camera rate (degrees per second east and north, zoom units per second) until the
    *  next call with zeros. A drag or `flyTo` cancels it. */
   steer(vector: { lng: number; lat: number; zoom: number }): void;
+  /**
+   * Turn the globe, or ease it to a stop, with the idle spin's own rate and ramp. It begins at
+   * once at any zoom (no idle wait) once no flight or drag holds the camera. Off eases the speed
+   * down on the same ramp. Reduced motion never spins. `getView().moving` stays false while only
+   * this spin moves the globe.
+   */
+  setSpin(on: boolean): void;
+  /** True from the moment a requested spin starts until its ramp down has ended. */
+  isSpinning(): boolean;
   /** Measure the host and `framing` again now, for a host whose frame changed without a resize. */
   refit(): void;
   /** Where the camera is and whether it is still moving. */

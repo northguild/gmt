@@ -181,11 +181,11 @@ html[data-deck] .gmt-slide[data-shown] {
 }
 
 /*
- * Text waits for the stage's motion. While the wall breaks or the clock turns into the Earth, the
- * arriving slide's title and content stay hidden (`data-stage-busy`, set by `lib/slides/stage.ts`),
- * then fade in once the root drops the attribute. The delay is a quarter longer than a page fade,
- * and both are zero under reduced motion. The body is `display: contents` on the experiment
- * slides, so its children carry the fade.
+ * Text waits for the stage's motion. While the wall breaks, the arriving slide's title and content
+ * stay hidden (`data-stage-busy`, set by `lib/slides/stage.ts`), then fade in once the root drops
+ * the attribute. The delay is a quarter longer than a page fade, and both are zero under reduced
+ * motion. The body is `display: contents` on the experiment slides, so its children carry the
+ * fade.
  */
 html[data-deck] .gmt-slide > .gmt-slide-title,
 html[data-deck] .gmt-slide > .gmt-slide-body,
@@ -597,7 +597,8 @@ html[data-deck] .gmt-deck-dialog {
  * ring (up to 3px wide at a 2px offset under more contrast) and gives the same room back with a
  * negative margin. The key table's body is its own framed table, with nothing to focus.
  */
-.gmt-deck-dialog-frame > :is(.gmt-deck-unlock, .gmt-deck-overview) {
+.gmt-deck-dialog-frame
+  > :is(.gmt-deck-unlock, .gmt-deck-overview, .gmt-deck-overview-heading) {
   --gmt-deck-ring-room: 0.375rem;
 
   margin: calc(-1 * var(--gmt-deck-ring-room));
@@ -671,6 +672,12 @@ html[data-deck] .gmt-deck-dialog {
   gap: var(--gmt-space-1);
 }
 
+.gmt-deck-overview-heading {
+  margin-block: var(--gmt-space-3) 0;
+  font-size: var(--gmt-text-md);
+  color: var(--gmt-ice-dim);
+}
+
 /* The numbers' gutter, on top of the focus ring's room. */
 .gmt-deck-dialog-frame > .gmt-deck-overview {
   padding-inline-start: calc(2.25rem + var(--gmt-deck-ring-room));
@@ -710,15 +717,12 @@ html[data-deck] .gmt-deck-space {
   pointer-events: auto;
   isolation: isolate;
 
-  /* The reveal's timeline (the clock that becomes the Earth, below), inside the stage's 2.2 s. */
-  --gmt-reveal-fade: 500ms;
-  --gmt-reveal-turn: 700ms;
-  --gmt-reveal-earth-at: 300ms;
-  --gmt-reveal-earth: 1000ms;
-  --gmt-reveal-draw-at: 400ms;
-  --gmt-reveal-draw: 900ms;
-  --gmt-reveal-out-at: 1500ms;
-  --gmt-reveal-out: 700ms;
+  /*
+   * The Earth coming up behind the breaking clock (below), inside the shatter's 1.54 s: it starts
+   * as the shards leave and is whole while the last of them fade.
+   */
+  --gmt-emerge-at: 160ms;
+  --gmt-emerge: 1100ms;
 }
 
 /*
@@ -782,6 +786,27 @@ html[data-deck] .gmt-deck-blank {
 /* The Earth, or the clock in its place, takes the right third of every slide; the content keeps clear of it. */
 .gmt-deck[data-space] .gmt-slide {
   padding-inline-end: 36cqi;
+}
+
+/* A full slide takes the whole page: the Earth fades out while it shows, and the sky stays. */
+.gmt-deck[data-space] .gmt-slide[data-layout="full"] {
+  padding-inline-end: 6cqi;
+}
+
+html[data-deck] .gmt-deck-space > canvas:not([data-wall-canvas]) {
+  transition: opacity var(--gmt-duration-slow) var(--gmt-enter-easing);
+}
+
+:where(.gmt-deck:has(.gmt-slide[data-layout="full"][data-shown]))
+  .gmt-deck-space
+  > canvas:not([data-wall-canvas]) {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-deck] .gmt-deck-space > canvas:not([data-wall-canvas]) {
+    transition-duration: var(--gmt-deck-fade);
+  }
 }
 
 /* The stage is clear over the space layer: the Earth and the sky show round and behind the slides. */
@@ -1053,17 +1078,6 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
   stroke-width: 0.15;
 }
 
-.gmt-earth-clock [data-earth-meridians] {
-  opacity: 0;
-}
-
-.gmt-earth-clock [data-earth-meridians] line {
-  stroke: var(--gmt-cyan);
-  stroke-width: 0.25;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
-
 [data-deck]
   .gmt-deck-space[data-earth-clock="on"]
   > canvas:not([data-wall-canvas]) {
@@ -1072,75 +1086,59 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
 }
 
 /*
- * The reveal, over the stage's `REVEAL_MS` (2.2 s): the numerals, the legend, the calendar, the
- * chapter ring and the minute and second hands go first (the hours run clockwise and the longitudes anticlockwise,
- * so no numeral would name its meridian); the indices turn onto the meridians; the enamel and the
- * glass clear while the Earth fades in under them and the meridians draw in from the rim to the
- * pole; then the indices, the bezel and the hour hand, which points along the zone's meridian, go.
+ * The break (`lib/slides/clock-shatter.ts`, over the stage's `REVEAL_MS`): the dial hides and its
+ * shards, copies of it clipped to their cells, crack and fly; the Web Animations API moves them.
+ * Behind them the Earth, already turned to its place, fades in and grows from nine tenths of its
+ * size about its own centre (`--gmt-earth-x`, `--gmt-earth-y`, set with the clock's fit), so it
+ * comes up from behind the clock at the clock's size.
  */
 [data-deck]
-  .gmt-deck-space[data-earth-clock="morph"]
+  .gmt-deck-space[data-earth-clock="shatter"]
   > canvas:not([data-wall-canvas]) {
-  /* The same animation name as the globe's own fade, so ending the phase does not restart it. */
-  animation: gmt-deck-space-in var(--gmt-reveal-earth) ease-out
-    var(--gmt-reveal-earth-at) both;
+  transform-origin: var(--gmt-earth-x, 50%) var(--gmt-earth-y, 50%);
+
+  /* The globe's own fade first, by name, so ending the phase does not restart it. */
+  animation:
+    gmt-deck-space-in var(--gmt-emerge) ease-out var(--gmt-emerge-at) both,
+    gmt-earth-emerge var(--gmt-emerge) cubic-bezier(0.2, 0.7, 0.2, 1)
+      var(--gmt-emerge-at) both;
 }
 
-.gmt-deck-space[data-earth-clock="morph"] .gmt-earth-clock {
-  animation: gmt-earth-clock-out var(--gmt-reveal-out) ease-in
-    var(--gmt-reveal-out-at) both;
+.gmt-deck-space[data-earth-clock="shatter"] .gmt-earth-clock > svg {
+  visibility: hidden;
 }
 
-.gmt-deck-space[data-earth-clock="morph"]
-  .gmt-earth-clock
-  :is(
-    [data-numerals],
-    [data-legend],
-    [data-calendar],
-    [data-chapter],
-    [data-hand="minute"],
-    [data-hand="second"]
-  ) {
-  animation: gmt-earth-clock-out var(--gmt-reveal-fade) ease-out both;
+.gmt-earth-clock [data-shards],
+.gmt-earth-clock [data-shard] {
+  position: absolute;
+  inset: 0;
 }
 
-.gmt-deck-space[data-earth-clock="morph"]
-  .gmt-earth-clock
-  :is([data-dial-face], [data-glass]) {
-  animation: gmt-earth-clock-out var(--gmt-reveal-earth) ease-in-out
-    var(--gmt-reveal-earth-at) both;
+.gmt-earth-clock [data-shard] {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
-.gmt-deck-space[data-earth-clock="morph"] .gmt-earth-clock [data-turn] {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-  animation: gmt-earth-clock-turn var(--gmt-reveal-turn) ease-in-out both;
+.gmt-earth-clock [data-shard] > svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
 }
 
-.gmt-deck-space[data-earth-clock="morph"] [data-earth-meridians] {
-  opacity: 1;
+.gmt-earth-clock [data-crack] polygon {
+  fill: none;
+  stroke: var(--gmt-cyan-bright);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: bevel;
 }
 
-.gmt-deck-space[data-earth-clock="morph"] [data-earth-meridians] line {
-  animation: gmt-earth-clock-draw var(--gmt-reveal-draw) ease-out
-    var(--gmt-reveal-draw-at) both;
-}
-
-@keyframes gmt-earth-clock-out {
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes gmt-earth-clock-turn {
-  to {
-    transform: rotate(var(--gmt-meridian-turn, 0deg));
-  }
-}
-
-@keyframes gmt-earth-clock-draw {
-  to {
-    stroke-dashoffset: 0;
+@keyframes gmt-earth-emerge {
+  from {
+    scale: 0.9;
   }
 }
 
@@ -1372,7 +1370,20 @@ html[data-deck] .gmt-lead {
   visibility: hidden;
 }
 
-html[data-deck] .gmt-slide-body p {
+/* `why-not-temporal`: three numbered points under a lead line, set a step under the body so
+   the three fit above the controls with room to spare. */
+html[data-deck] .gmt-why {
+  margin-block: 1.2cqi 0;
+  padding-inline-start: 1.4em;
+  font-size: max(0.8rem, 1.85cqi);
+
+  & li + li {
+    margin-block-start: 1cqi;
+  }
+}
+
+/* The slide's own paragraphs; the Dox chat a slide holds keeps its own spacing. */
+html[data-deck] .gmt-slide-body p:not(.gmt-ask p) {
   margin-block: 0 1cqi;
 }
 
@@ -1416,17 +1427,23 @@ html[data-deck] .gmt-deck-table caption {
 
 /* The code and the reason get the room; the result is short. */
 .gmt-deck-table[data-visual="rows"] th:first-child {
-  inline-size: 30%;
+  inline-size: 40%;
 }
 
 .gmt-deck-table[data-visual="rows"] th:last-child {
-  inline-size: 46%;
+  inline-size: 38%;
 }
 
-.gmt-deck-table[data-visual="rows"] td,
-.gmt-deck-table[data-visual="rows"] td code {
+.gmt-deck-table[data-visual="rows"] td {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+/* A line of code breaks between its words, never inside a string. */
+.gmt-deck-table[data-visual="rows"] td code {
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .gmt-filing .gmt-repro {
@@ -1653,5 +1670,392 @@ html[data-deck] .gmt-pins .gmt-deck-table {
 @media (prefers-reduced-motion: reduce) {
   .gmt-terminal-cursor {
     animation: none;
+  }
+}
+
+/* ---- The GMT step: what GMT does with the same input, the last build of a bug slide ---- */
+
+html[data-deck] .gmt-step {
+  gap: 0.6cqi;
+  font-size: max(0.75rem, 1.25cqi);
+  line-height: 1.25;
+}
+
+.gmt-step > *,
+html[data-deck] .gmt-step p {
+  margin: 0;
+}
+
+.gmt-step-head {
+  font-family: var(--gmt-font-display);
+  font-size: max(0.875rem, 1.5cqi);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-step-rows {
+  display: grid;
+  gap: 0.6cqi;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-step-row {
+  display: grid;
+  gap: 0.2cqi;
+  padding: 0.6cqi 1cqi;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+/* A filing GMT has no workaround for gets the plain edge, never the accent. */
+.gmt-step-row[data-unguarded] {
+  box-shadow: none;
+}
+
+.gmt-step-line,
+.gmt-step-detail {
+  margin: 0;
+}
+
+.gmt-step-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6cqi 1cqi;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.gmt-step-badge {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-step-detail,
+.gmt-step-source {
+  color: var(--gmt-ice-dim);
+  overflow-wrap: anywhere;
+}
+
+html[data-deck] .gmt-step .gmt-step-source {
+  font-size: max(0.6875rem, 1cqi);
+}
+
+/* ---- Familiar names, the QR codes and the quote's parts ---- */
+
+html[data-deck] .gmt-familiar {
+  display: grid;
+  gap: 0.35cqi;
+  min-inline-size: 0;
+  font-size: max(0.75rem, 1.4cqi);
+  line-height: 1.2;
+  padding: 0.6cqi 1.2cqi;
+}
+
+.gmt-familiar-job {
+  margin: 0;
+  font-size: max(0.875rem, 1.6cqi);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-familiar-shapes {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15cqi 1.2cqi;
+  align-items: baseline;
+  margin: 0;
+}
+
+html[data-deck] .gmt-familiar-shapes dt {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+}
+
+/* Three pairs share one slide, so its title is set to one line in the two thirds. */
+html[data-deck] .gmt-slide:has(.gmt-familiar) .gmt-slide-title {
+  font-size: max(1.25rem, 3.1cqi);
+  margin-block-end: 1.5cqi;
+}
+
+.gmt-familiar-shapes dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.gmt-familiar-shapes dt,
+.gmt-familiar-shapes dd,
+.gmt-familiar-shapes code {
+  line-height: 1.2;
+}
+
+.gmt-familiar-shapes code {
+  padding-block: 0;
+  font-size: 0.9em;
+}
+
+/* The GMT call and its value share one row, so three pairs fit one slide. */
+html[data-deck] .gmt-familiar .gmt-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2cqi 1.2cqi;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.3cqi 1cqi;
+}
+
+html[data-deck] .gmt-familiar .gmt-result > * {
+  margin: 0;
+}
+
+.gmt-qr {
+  display: grid;
+  gap: 0.8cqi;
+  justify-items: center;
+  margin: 0;
+  font-size: max(0.75rem, 1.1cqi);
+}
+
+/*
+ * The plate is the box's own opaque background, so the stars and the planet never show through the
+ * quiet zone. Ice modules on the surface (dark on light in the light theme) and cyan eyes and logo,
+ * each at least 7:1 on the plate. The glow is on the outer `<svg>`, so its length is CSS pixels and
+ * not modules.
+ */
+.gmt-qr-code {
+  inline-size: 30cqb;
+  min-inline-size: 8rem;
+  aspect-ratio: 1;
+  background: var(--gmt-surface);
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+}
+
+.gmt-qr-code > svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  filter: drop-shadow(0 0 1.5px color(from var(--gmt-cyan) srgb r g b / 40%));
+}
+
+.gmt-qr-modules {
+  fill: var(--gmt-ice);
+}
+
+.gmt-qr-eyes,
+.gmt-qr-logo[data-logo="linkedin"] path {
+  fill: var(--gmt-cyan-ink);
+}
+
+/* The NorthGuild shield: the header mark's shape, drawn bolder at this size. */
+.gmt-qr-logo :is(.ng-mark-pt, .ng-mark-pb, .ng-mark-st, .ng-mark-sb) {
+  stop-color: var(--gmt-cyan-ink);
+}
+
+.gmt-qr-logo .ng-mark-pt {
+  stop-opacity: 0.22;
+}
+
+.gmt-qr-logo .ng-mark-pb {
+  stop-opacity: 0.06;
+}
+
+.gmt-qr-logo .ng-mark-st {
+  stop-opacity: 0.14;
+}
+
+.gmt-qr-logo .ng-mark-sb {
+  stop-opacity: 0;
+}
+
+.gmt-qr-logo :is(.ng-mark-edge, .ng-mark-ridge, .ng-mark-glyph) {
+  fill: none;
+  stroke: var(--gmt-cyan-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gmt-qr-logo .ng-mark-edge {
+  stroke-width: 44;
+}
+
+.gmt-qr-logo .ng-mark-ridge {
+  stroke-width: 28;
+  stroke-opacity: 0.7;
+}
+
+.gmt-qr-logo .ng-mark-glyph {
+  stroke-width: 64;
+}
+
+/* Forced colours leave SVG paint alone, so the code takes the system pair here. */
+@media (forced-colors: active) {
+  .gmt-qr-code {
+    forced-color-adjust: none;
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .gmt-qr-code > svg {
+    filter: none;
+  }
+
+  .gmt-qr-modules,
+  .gmt-qr-eyes,
+  .gmt-qr-logo[data-logo="linkedin"] path {
+    fill: CanvasText;
+  }
+
+  .gmt-qr-logo :is(.ng-mark-pane, .ng-mark-sheen) {
+    fill: none;
+  }
+
+  .gmt-qr-logo :is(.ng-mark-edge, .ng-mark-ridge, .ng-mark-glyph) {
+    stroke: CanvasText;
+  }
+}
+
+.gmt-qr figcaption {
+  display: grid;
+  justify-items: center;
+  gap: 0.2cqi;
+}
+
+/* An address is one word to the reader: it never breaks inside, so the caption shows it whole. */
+.gmt-qr figcaption a {
+  white-space: nowrap;
+}
+
+.gmt-quote[data-quote="question"] {
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-quote[data-quote="result"] output {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gmt-quote[data-quote="result"] p {
+  margin: 0;
+}
+
+.gmt-qr-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3cqi;
+  align-items: start;
+  margin-block-end: 3cqi;
+}
+
+.gmt-qr-row > .gmt-qr {
+  min-inline-size: 0;
+  max-inline-size: 48%;
+}
+
+/* The GitHub name, a line of its own under the codes: the mark and the name, the captions' size. */
+html[data-deck] .gmt-qr-github {
+  font-size: max(0.75rem, 1.1cqi);
+
+  & a {
+    display: inline-flex;
+    gap: 0.5em;
+    align-items: center;
+  }
+
+  & svg {
+    inline-size: 1.25em;
+    block-size: 1.25em;
+    fill: currentcolor;
+  }
+}
+
+/* ---- A slide change as a view transition ---- */
+
+/*
+ * `lib/slides/deck-transition.ts` sets `data-deck-vt` on the root for the length of a change
+ * between two slides. The leaving slide fades out, quickly and plainly. The arriving slide is not
+ * animated as a picture: its new view is the live page, where its text freezes in the way the
+ * landing page's copy does (below). Reduced motion zeroes the durations and the opt-in is not
+ * made, so there it is a cut.
+ *
+ * The space layer and the bar get names of their own and no animation, so the sky, the Earth, the
+ * clock and the pager never fade, ghost or move: only the new picture of each is shown, and the
+ * canvases stay live. Groups stack in the order of the page, so leaving the bar in the root would
+ * put the space layer over it.
+ */
+html[data-deck-vt] .gmt-deck-space {
+  view-transition-name: deck-space;
+}
+
+html[data-deck-vt] .gmt-deck-bar {
+  view-transition-name: deck-bar;
+}
+
+html[data-deck-vt] .gmt-slide[data-shown] {
+  view-transition-name: deck-slide;
+}
+
+html[data-deck-vt] .gmt-slide {
+  transition: none;
+}
+
+/* Clicks reach the page, not the pictures, so a quick second press is never swallowed. */
+html[data-deck-vt]::view-transition {
+  pointer-events: none;
+}
+
+html[data-deck-vt]::view-transition-old(root),
+::view-transition-old(deck-space),
+::view-transition-old(deck-bar) {
+  display: none;
+}
+
+html[data-deck-vt]::view-transition-new(root),
+::view-transition-group(deck-space),
+::view-transition-new(deck-space),
+::view-transition-group(deck-bar),
+::view-transition-new(deck-bar),
+::view-transition-group(deck-slide),
+::view-transition-new(deck-slide) {
+  animation: none;
+}
+
+::view-transition-old(deck-slide),
+::view-transition-new(deck-slide) {
+  mix-blend-mode: normal;
+}
+
+/* The landing page's carousel fades a panel out the same way (`gmt-entrance-freeze.css`). */
+::view-transition-old(deck-slide) {
+  animation: ng-fade-out var(--ng-panel-out-dur) var(--ng-linear) both;
+}
+
+/*
+ * The text freezes in, as the landing page's copy does: the title and then the content show in
+ * frost at half strength, and a front crosses them and locks them solid (`ng-freeze-text` in
+ * `gmt-entrance-freeze.css`, the same keyframes and timings). It starts as the slide is shown, or,
+ * when the stage is still moving (`data-stage-busy`), as soon as the motion ends. The sky, the
+ * Earth and the clock are not touched. A build shown later keeps its own reveal.
+ */
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .gmt-deck:not([data-stage-busy])
+    :where(.gmt-slide[data-shown])
+    > .gmt-slide-title {
+    --ng-delay: 0s;
+
+    animation: ng-freeze-text var(--ng-freeze-dur) ease var(--ng-delay)
+      backwards;
+  }
+
+  .gmt-deck:not([data-stage-busy])
+    :where(.gmt-slide[data-shown] > .gmt-slide-body)
+    > * {
+    --ng-delay: 0.12s;
+
+    animation: ng-freeze-text var(--ng-freeze-dur) ease var(--ng-delay)
+      backwards;
   }
 }

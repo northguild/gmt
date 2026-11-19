@@ -2,30 +2,44 @@
 /**
  * One slide: a headed section. The runtime reads `data-minutes` and `data-place` (where the space
  * stage's camera goes, `lib/slides/places.ts`), `data-lapse` (the time-lapse that plays) and `data-pins` from it. Put `<Build>` and `<Notes>` in its slot.
- * A `place` the stage cannot resolve fails the build. The Earth or the clock always
- * sits in the right third, so a slide's content fits the left two thirds.
+ * A `place` the stage cannot resolve fails the build. The Earth or the clock sits in the right
+ * third, so a slide's content fits the left two thirds. A `full` slide takes the whole page: the
+ * Earth fades out while it shows, and the camera still flies to its place for the next slide.
  * `reveal` names a zone: the slides before this one show a 24-hour clock of its wall time in the
  * Earth's place, and this slide turns the clock into the Earth (`lib/slides/earth-clock.ts`).
  * `clock` stands that clock in the Earth's place again on a slide past the reveal, as the close does.
+ * A `spare` slide is held back for questions: it takes no `minutes`, a main slide must take them, and
+ * either mistake fails the build. A spare renders `data-spare` and no `data-minutes`, so the pace
+ * plan leaves it out, and it comes after `thanks` (`lib/slides/deck.ts`).
+ * `spin` turns the Earth slowly while the slide shows, at the home globe's idle rate (`lib/slides/stage.ts`).
  */
 import { resolvePlace } from "~/lib/slides/places";
 import { isLapseName } from "~/lib/slides/time-lapse";
 interface Props {
   id: string;
   title: string;
-  minutes: number;
+  /** The slide's planned minutes; a main slide has them, a spare has none. */
+  minutes?: number;
+  /** A spare: after the talk, for questions. */
+  spare?: boolean;
   place?: string;
   /** A time-lapse (`LAPSES` in `lib/slides/time-lapse.ts`) that plays while the slide shows. */
   lapse?: string;
   /** `filings` lights every upstream filing as a pin while the slide shows. */
   pins?: "filings";
-  layout?: "title" | "default";
+  layout?: "title" | "default" | "full";
   /** The zone whose clock stands in the Earth's place until this slide reveals the planet. */
   reveal?: string;
   /** Show the reveal's clock in the Earth's place on this slide, past the reveal. */
   clock?: boolean;
+  /** Turn the Earth while the slide shows. */
+  spin?: boolean;
 }
-const { id, title, minutes, place, lapse, pins, layout = "default", reveal, clock = false } = Astro.props;
+const { id, title, minutes, spare = false, place, lapse, pins, layout = "default", reveal, clock = false, spin = false } = Astro.props;
+if (spare && minutes !== undefined)
+  throw new Error(`Slide "${id}" is a spare and takes no minutes`);
+if (!spare && minutes === undefined)
+  throw new Error(`Slide "${id}" is a main slide and needs its minutes`);
 if (place) resolvePlace(place);
 if (reveal) resolvePlace(`pole:${reveal}`);
 if (lapse && !isLapseName(lapse))
@@ -36,12 +50,14 @@ if (lapse && !isLapseName(lapse))
   id={id}
   class="gmt-slide"
   data-slide
-  data-minutes={minutes}
+  data-minutes={spare ? undefined : minutes}
+  data-spare={spare ? "" : undefined}
   data-place={place}
   data-lapse={lapse}
   data-pins={pins}
   data-reveal={reveal}
   data-clock={clock ? "" : undefined}
+  data-spin={spin ? "" : undefined}
   data-layout={layout}
   aria-labelledby={`${id}-title`}
 >

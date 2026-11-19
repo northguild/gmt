@@ -7,12 +7,10 @@
  * only the dial's glow.
  *
  * The phase is published on the space layer as `data-earth-clock` for the stylesheet
- * (`slides.css`): `on` hides the globe behind the clock; `morph` turns the hour indices onto the
- * meridians (`--gmt-meridian-turn`, from `meridianTurn`), clears the enamel and the glass so the
- * Earth fades in under them, draws the meridians in from the rim to the pole, then fades the rest;
- * with no phase the clock is gone. The numerals go first: on the Earth seen from above the hours
- * run clockwise and the longitudes anticlockwise, so a numeral would not name the meridian under
- * it. The hour hand stays to the end: the camera is turned so it points along the zone's meridian.
+ * (`slides.css`): `on` hides the globe behind the clock; `shatter` breaks the dial into shards that
+ * fly away (`clock-shatter.ts`) while the Earth, already in its place, comes up from behind them;
+ * with no phase the clock is gone. The layer also carries the disc's centre (`--gmt-earth-x`,
+ * `--gmt-earth-y`), so the Earth grows from where the clock stood.
  *
  * The dial says whose time it is: the city and its UTC offset under the mark, and a calendar window
  * with the zone's weekday, day and month, all read by gmt from the same zoned string as the hands.
@@ -30,21 +28,19 @@
 import type { formatZonedToParts as FormatZonedToParts } from "@northguild/gmt/zoned/format";
 import { html, setHtml, type SafeHtml } from "~/widgets/builders";
 import { CALENDAR_PAGE, calendarPage } from "./calendar-page";
+import { shatter } from "./clock-shatter";
 import { loadClock } from "./title-clock";
 
-export type EarthClockPhase = "on" | "morph" | "off";
+export type EarthClockPhase = "on" | "shatter" | "off";
 
 export interface EarthClock {
   /** Sets the dial on the Earth's disc: its centre and rim radius in the layer's pixels. */
   fit(disc: { x: number; y: number; radius: number }): void;
-  /** Shows the clock, turns it into the Earth (`turn` degrees clockwise onto the meridians), or ends it. */
-  set(phase: EarthClockPhase, turn?: number): void;
+  /** Shows the clock, breaks it away from in front of the Earth, or ends it. */
+  set(phase: EarthClockPhase): void;
   /** Stops the hands at a UTC instant (`…Z`), the zone's wall time then; `null` ticks the time now again. */
   hold(utc: string | null): void;
 }
-
-/** The custom property the stylesheet turns the hour indices and meridians by. */
-export const MERIDIAN_TURN_VAR = "--gmt-meridian-turn";
 
 /** The dial's rim radius in the face's 100-unit box: the Earth's rim. */
 const RIM = 40;
@@ -121,7 +117,7 @@ function defs(): SafeHtml {
   </defs>`;
 }
 
-/** The enamel, the sunburst over it and the depth at its edge: what clears for the Earth. */
+/** The enamel, the sunburst over it and the depth at its edge. */
 function dial(): SafeHtml {
   const rays = Array.from({ length: RAYS }, (_, k) => {
     const [x1, y1] = at(4, (k * 360) / RAYS);
@@ -152,8 +148,8 @@ function chapter(): SafeHtml {
 }
 
 /**
- * The 24 applied hour indices, steel with a lume inlay, and the 24 meridians under them, in one
- * group the reveal turns. Every second hour's index is longer; the four cardinal hours are doubled.
+ * The 24 applied hour indices, steel with a lume inlay. Every second hour's index is longer; the
+ * four cardinal hours are doubled.
  */
 function indices(): SafeHtml {
   const marks = Array.from({ length: HOURS }, (_, h) => {
@@ -167,14 +163,7 @@ function indices(): SafeHtml {
         <polygon data-lume points="${bar(d, r0 + 0.9, 31.8, 0.5, 0.7)}" />`,
     );
   });
-  const meridians = Array.from({ length: HOURS }, (_, k) => {
-    const [x, y] = at(RIM, (k * 360) / HOURS);
-    return html`<line x1="${x}" y1="${y}" x2="50" y2="50" pathLength="1" data-meridian />`;
-  });
-  return html`<g data-turn>
-    <g data-earth-meridians>${meridians}</g>
-    <g data-indices filter="url(#earth-clock-shadow)">${marks}</g>
-  </g>`;
+  return html`<g data-indices filter="url(#earth-clock-shadow)">${marks}</g>`;
 }
 
 /** The even hours' numerals, set inside the long indices. */
@@ -374,6 +363,13 @@ export function mountEarthClock(
     tick();
   });
 
+  /** The shards while the clock breaks; `null` otherwise. */
+  let shards: HTMLElement | null = null;
+  const sweep = (): void => {
+    shards?.remove();
+    shards = null;
+  };
+
   let fitted = "";
   const clock: EarthClock = {
     fit({ x, y, radius }) {
@@ -384,11 +380,19 @@ export function mountEarthClock(
       el.style.width = `${size}px`;
       el.style.height = `${size}px`;
       el.style.transform = `translate(${x - size / 2}px, ${y - size / 2}px)`;
+      layer.style.setProperty("--gmt-earth-x", `${x}px`);
+      layer.style.setProperty("--gmt-earth-y", `${y}px`);
     },
-    set(phase, turn = 0) {
+    set(phase) {
+      if (phase !== "shatter") sweep();
       if (phase === "off") delete layer.dataset["earthClock"];
       else layer.dataset["earthClock"] = phase;
-      el.style.setProperty(MERIDIAN_TURN_VAR, `${turn}deg`);
+      const face = el.querySelector("svg");
+      if (phase !== "shatter" || shards || !face) return;
+      shards = layer.ownerDocument.createElement("div");
+      shards.setAttribute("data-shards", "");
+      el.append(shards);
+      shatter(face, shards);
     },
     hold(utc) {
       if (utc === held) return;
@@ -400,6 +404,7 @@ export function mountEarthClock(
     "abort",
     () => {
       clearTimeout(timer);
+      sweep();
       el.remove();
       delete layer.dataset["earthClock"];
     },

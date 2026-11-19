@@ -1,30 +1,83 @@
 ---
 /**
- * The recorded agent answer of slide 2, as a quotation with its source line. While the owner's
- * transcript is not in `quotes/agent-moment.json`, a marked panel says it is to come: no answer is
- * invented.
+ * The agent's answer on `one-clock`, as a quotation with its source line. The question is the owner's
+ * (`quotes/agent-answer.json`); the value comes from running the agent's code
+ * (`quotes/agent-run.json`, written by `scripts/zone-matrix/agent-answer.mjs`). While the transcript
+ * or the run record is missing or stale, a marked panel says so and the build carries on:
+ * `slides-check` is what fails. No answer is invented.
+ *
+ * `part` picks what shows, so the slide can reveal it a build at a time: `question`, `answer` (the
+ * agent's prose, its code, the source line and the guess prompt) or `result` (the value the code
+ * returned, how many values the runs held, and the Helsinki line). Without `part` all three show.
  */
 import { Code } from "@astrojs/starlight/components";
-import { agentQuote } from "~/lib/slides/agent-quote";
-import record from "~/slides/give-me-temporal/quotes/agent-moment.json";
+import { classifyLocal } from "@northguild/gmt/instant/convert";
+import { agentQuote, valueLabel } from "~/lib/slides/agent-quote";
+import answer from "~/slides/give-me-temporal/quotes/agent-answer.json";
+import runRecord from "~/slides/give-me-temporal/quotes/agent-run.json";
 
-const quote = agentQuote(record);
+interface Props {
+  part?: "question" | "answer" | "result";
+}
+const { part } = Astro.props;
+const show = (name: string) => part === undefined || part === name;
+
+const quote = agentQuote(answer, runRecord);
+// The line is shown only while GMT agrees that the time falls in a gap.
+const neverHappens =
+  classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki") === "nonexistent";
 ---
 
 {
   quote.ready ? (
-    <figure class="gmt-deck-panel gmt-quote" data-quote="recorded">
-      <blockquote>
-        <p>{quote.question}</p>
-        <Code code={quote.answer} lang="js" />
-      </blockquote>
-      <figcaption>
-        An agent's answer, {quote.model}, {quote.date}
-      </figcaption>
-    </figure>
+    <>
+      {show("question") && (
+        <p class="gmt-deck-panel gmt-quote" data-quote="question">
+          {quote.question}
+        </p>
+      )}
+      {show("answer") && (
+        <figure class="gmt-deck-panel gmt-quote" data-quote="recorded">
+          <blockquote>
+            <p>{quote.answer}</p>
+            <Code code={quote.shownCode} lang="js" />
+          </blockquote>
+          <figcaption>
+            An agent's answer, {quote.model}, {quote.date}
+          </figcaption>
+          <p>What does it return?</p>
+        </figure>
+      )}
+      {show("result") && (
+        <div class="gmt-deck-panel gmt-quote" data-quote="result">
+          <p>
+            <code>{quote.call}</code> on Node {quote.shown.node} at {quote.shown.zone}:
+          </p>
+          <p>
+            <output>{valueLabel(quote.shown.value)}</output>
+          </p>
+          <p>
+            {quote.distinct} distinct {quote.distinct === 1 ? "value" : "values"} across {quote.runs} runs
+            (every zone and Node major of the CI matrix).
+          </p>
+          {neverHappens && <p>That time never happens in Helsinki.</p>}
+        </div>
+      )}
+    </>
   ) : (
-    <p class="gmt-deck-panel gmt-quote" data-quote="pending">
-      Recorded agent answer: transcript to come.
-    </p>
+    <>
+      {show("question") && quote.question !== "" && (
+        <p class="gmt-deck-panel gmt-quote" data-quote="question">
+          {quote.question}
+        </p>
+      )}
+      {(show("answer") || show("result")) && part !== "question" && (
+        <p class="gmt-deck-panel gmt-quote" data-quote="pending">
+          {quote.why === "transcript"
+            ? "Recorded agent answer: transcript to come."
+            : "Recorded agent answer: run record out of date."}
+        </p>
+      )}
+    </>
   )
 }

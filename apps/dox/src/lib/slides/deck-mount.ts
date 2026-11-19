@@ -29,7 +29,12 @@
  * live or from its recording; the presenter shows it.
  */
 import { writeDeckState } from "./deck-state";
-import { wireCarousel, type CarouselBy } from "~/widgets/builders/carousel";
+import { createDeckTransition } from "./deck-transition";
+import {
+  markQuietFocus,
+  wireCarousel,
+  type CarouselBy,
+} from "~/widgets/builders/carousel";
 import { overviewItems } from "~/widgets/builders/deck-controls";
 import { setHtml } from "~/widgets/builders/html";
 import { createDeck, formatHash, parseHash, type DeckSlide } from "./deck";
@@ -67,6 +72,8 @@ interface Part {
   id: string;
   title: string;
   minutes: number | null;
+  /** A spare, for questions after `thanks`: no minutes, reached by Next from the last slide. */
+  spare: boolean;
   builds: { el: HTMLElement; n: number }[];
 }
 
@@ -83,6 +90,7 @@ function readParts(root: HTMLElement): Part[] {
         title: heading?.textContent?.trim() || el.id,
         minutes:
           Number.isFinite(minutes) && el.dataset.minutes ? minutes : null,
+        spare: el.hasAttribute("data-spare"),
         builds: Array.from(
           el.querySelectorAll<HTMLElement>("[data-build]"),
         ).map((b) => ({ el: b, n: Number(b.dataset.build) || 1 })),
@@ -132,7 +140,15 @@ export function mountDeck(
   const slides: DeckSlide[] = parts.map((p) => ({
     id: p.id,
     builds: p.builds.reduce((max, b) => Math.max(max, b.n), 0),
+    spare: p.spare,
   }));
+  const mainCount = parts.filter((p) => !p.spare).length;
+  const spareCount = parts.length - mainCount;
+  /** "Slide 3 of 21: title" for a main slide, "Spare 1 of 2: title" for a spare. */
+  const textFor = (i: number): string =>
+    parts[i].spare
+      ? `Spare ${i + 1 - mainCount} of ${spareCount}: ${parts[i].title}`
+      : `Slide ${i + 1} of ${mainCount}: ${parts[i].title}`;
   const deck = createDeck(
     slides,
     parseHash(win.location.hash, slides),
@@ -191,8 +207,7 @@ export function mountDeck(
   };
 
   const slideText = (): string => {
-    const { slide } = deck.state;
-    return `Slide ${slide + 1} of ${parts.length}: ${parts[slide].title}`;
+    return textFor(deck.state.slide);
   };
 
   const setBlank = (on: boolean): void => {
@@ -204,9 +219,18 @@ export function mountDeck(
     live.textContent = on ? "Screen blanked" : slideText();
   };
 
+  /** The change of slide as a view transition; a build or a cut runs through it too, in order. */
+  const visual = createDeckTransition({
+    doc,
+    signal,
+    reduced: () =>
+      win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
+    covered: () => dialogs.some((d) => d.open),
+  });
+
   const carousel = wireCarousel(stage, {
     signal,
-    pages: parts.map((p) => ({ el: p.el, label: p.title })),
+    pages: parts.map((p) => ({ el: p.el, label: p.title, spare: p.spare })),
     prev,
     next,
     dots,
@@ -215,25 +239,31 @@ export function mountDeck(
     idPrefix: "deck",
     start: deck.state.slide,
     reach: () => deck.reach,
+    neighbour: (from, delta) => deck.neighbour(from, delta),
     steps: {
       count: (i) => slides[i].builds,
       current: () => deck.state.build,
       step: (delta) => {
         const changed = deck.stepBuild(delta);
-        if (changed) {
-          showBuilds();
-          writeHash();
-          flyToState(true);
-          publish();
-        }
+        // A build is no transition, but it keeps its place in line behind a slide change.
+        if (changed)
+          visual.run(() => {
+            showBuilds();
+            writeHash();
+            flyToState(true);
+            publish();
+          });
         return changed;
       },
     },
-    announce: (_label, i, total) =>
-      `Slide ${i + 1} of ${total}: ${parts[i].title}`,
-    onSelect: (index, previous, by: CarouselBy) => {
+    announce: (_label, i) => textFor(i),
+    // The deck's state moves at once; the page follows inside the transition.
+    transition: (commit, { from, to, by }) => {
+      if (by !== "api") deck.goTo(to, to < from ? "all" : 0);
+      visual.run(commit, to > from ? "forward" : "back");
+    },
+    onSelect: (_index, _previous, by: CarouselBy) => {
       if (by === "api") return;
-      deck.goTo(index, index < previous ? "all" : 0);
       showBuilds();
       writeHash();
       flyToState(true);
@@ -244,11 +274,13 @@ export function mountDeck(
   /** Moves the page to the deck's state after the controller changed it. */
   const apply = (): void => {
     carousel.select(deck.state.slide, "api");
-    showBuilds();
-    carousel.refresh();
-    writeHash();
-    flyToState(true);
-    publish();
+    visual.run(() => {
+      showBuilds();
+      carousel.refresh();
+      writeHash();
+      flyToState(true);
+      publish();
+    });
   };
 
   /** A move: any move first brings a blanked stage back, and goes no further. */
@@ -270,17 +302,27 @@ export function mountDeck(
   const help = dialogOf("help");
   const unlock = dialogOf("unlock");
   const list = overview?.querySelector<HTMLElement>("[data-deck-overview]");
+  const spareSection = overview?.querySelector<HTMLElement>(
+    "[data-deck-overview-spares]",
+  );
+  const spareList = overview?.querySelector<HTMLElement>(
+    "[data-deck-overview-spare]",
+  );
   /** The overview lists the slides in reach. */
   const fillOverview = (): void => {
-    if (list)
-      setHtml(
-        list,
-        overviewItems(
-          parts
-            .slice(0, deck.reach)
-            .map((p) => ({ id: p.id, title: p.title, minutes: p.minutes })),
-        ),
-      );
+    const reached = parts.slice(0, deck.reach).map((p) => ({
+      id: p.id,
+      title: p.title,
+      minutes: p.minutes,
+      spare: p.spare,
+    }));
+    if (list) setHtml(list, overviewItems(reached.filter((p) => !p.spare)));
+    const spares = reached.filter((p) => p.spare);
+    if (spareList) {
+      setHtml(spareList, overviewItems(spares));
+      spareList.hidden = spares.length === 0;
+    }
+    if (spareSection) spareSection.hidden = spares.length === 0;
   };
   fillOverview();
 
@@ -574,6 +616,26 @@ export function mountDeck(
     },
   });
 
+  // A slide rings only when the reader Tabs to it. Focus that comes any other way is quiet until
+  // the slide loses it: the browser focuses the slide an address names, after this mount has run.
+  let tabbing = false;
+  doc.addEventListener(
+    "keydown",
+    (event) => {
+      tabbing = event.key === "Tab";
+    },
+    { capture: true, signal },
+  );
+  doc.addEventListener(
+    "focusin",
+    (event) => {
+      const slide = parts.find((p) => p.el === event.target)?.el;
+      if (slide && !tabbing) markQuietFocus(slide);
+      tabbing = false;
+    },
+    { capture: true, signal },
+  );
+
   // The address read back: a link or the owner's own edit of the fragment.
   win.addEventListener(
     "hashchange",
@@ -606,6 +668,16 @@ export function mountDeck(
       for (const d of dialogs) if (d.open) d.close();
     },
     { once: true },
+  );
+
+  /** The live panels announce their demo on the deck root: `{ id, source }`, or `null` when it ends. */
+  root.addEventListener(
+    "gmt-demo",
+    (e) => {
+      demo = (e as CustomEvent<DemoState>).detail ?? null;
+      publish();
+    },
+    { signal },
   );
 
   return {

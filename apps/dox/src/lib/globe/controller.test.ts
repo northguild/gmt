@@ -939,6 +939,123 @@ describe("ambient: false", () => {
   });
 });
 
+describe("requested spin", () => {
+  /** Degrees turned by each 16ms frame over `ms`, from `from`. */
+  function frames(
+    c: ReturnType<typeof createController>,
+    from: number,
+    ms: number,
+  ): number[] {
+    const out: number[] = [];
+    for (let now = from; now < from + ms; now += 16) {
+      const before = c.rotation[0];
+      c.step(now);
+      let d = c.rotation[0] - before;
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      out.push(d);
+    }
+    return out;
+  }
+
+  it("starts at once, with no idle wait, even though ambient is off and the zoom is not at rest", () => {
+    const c = make({ ambient: false, initialZoom: 3 });
+    c.setSpin(true);
+    expect(c.needsFrame()).toBe(true);
+    const turned = frames(c, 0, 1000);
+    expect(turned.at(-1)).toBeGreaterThan(0);
+    expect(c.isSpinning()).toBe(true);
+  });
+
+  it("uses the idle spin's own rate and ramp", () => {
+    const requested = make({ ambient: false });
+    requested.setSpin(true);
+    const idle = make();
+    idle.markInteraction(0);
+    const a = frames(requested, 0, 4000);
+    // The idle spin starts at 2500, after the countdown; its first frame is a 16ms step too.
+    const b = frames(idle, 2500, 4000);
+    expect(a.length).toBe(b.length);
+    a.forEach((d, i) => expect(d).toBeCloseTo(b[i]!, 9));
+    expect(a.at(-1)).toBeCloseTo(0.032, 9);
+  });
+
+  it("does not count as the globe moving to a place", () => {
+    const c = make({ ambient: false });
+    c.setSpin(true);
+    frames(c, 0, 200);
+    expect(c.isSpinOnly()).toBe(true);
+    c.flyTo([100, 0], 200);
+    expect(c.isSpinOnly()).toBe(false);
+  });
+
+  it("eases down on the same ramp when released, and never stops short", () => {
+    const c = make({ ambient: false });
+    c.setSpin(true);
+    frames(c, 0, 5000);
+    c.setSpin(false);
+    // 5008 keeps the frames 16ms apart: the last cruise frame was at 4992.
+    const down = frames(c, 5008, 3000);
+    for (let i = 1; i < down.length; i++) {
+      // The speed only falls, by a sliver a frame: no snap to zero.
+      expect(down[i]!).toBeLessThanOrEqual(down[i - 1]! + 1e-12);
+      expect(down[i - 1]! - down[i]!).toBeLessThan(0.032 / 50);
+    }
+    expect(down[0]).toBeCloseTo(0.032, 2);
+    expect(c.isSpinning()).toBe(false);
+    expect(c.needsFrame()).toBe(false);
+    const rest = c.rotation[0];
+    frames(c, 8016, 500);
+    expect(c.rotation[0]).toBe(rest);
+  });
+
+  it("flows into a flight sent as it is released, at its own speed, with no jolt or dip", () => {
+    const c = make({ ambient: false, initialZoom: 2 });
+    c.setSpin(true);
+    const cruise = frames(c, 0, 5000);
+    c.setSpin(false);
+    // Behind the turn: the flight carries the spin on, then settles back onto the goal.
+    const goal = c.rotation[0] - 40;
+    c.flyTo([goal, 0], 5008);
+    const flight = frames(c, 5024, flightMs((40 * Math.PI) / 180) + 400);
+    // From the spin's own last frame on, no frame's turn differs from the one before by as much
+    // as the spin's whole speed: it eases through zero and back, never stopping dead.
+    const turns = [cruise.at(-1)!, ...flight];
+    for (let i = 1; i < turns.length; i++) {
+      expect(Math.abs(turns[i]! - turns[i - 1]!)).toBeLessThan(cruise.at(-1)!);
+    }
+    expect(flight[0]).toBeGreaterThan(0.9 * cruise.at(-1)!);
+    expect(c.rotation[0]).toBeCloseTo(goal, 6);
+    expect(c.zoom).toBe(2);
+    expect(c.isSpinning()).toBe(false);
+  });
+
+  it("stays off under reduced motion", () => {
+    const c = make({ ambient: false, reducedMotion: () => true });
+    c.setSpin(true);
+    expect(frames(c, 0, 500).every((d) => d === 0)).toBe(true);
+    expect(c.isSpinning()).toBe(false);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("waits for a flight to land, then starts from rest", () => {
+    const c = make({ ambient: false });
+    c.flyTo([60, 0], 0);
+    c.setSpin(true);
+    expect(c.isSpinning()).toBe(false);
+    animate(c, 0, flightMs(Math.PI / 3) + 400);
+    expect(c.isSpinning()).toBe(true);
+  });
+
+  it("keeps turning while the pointer rests on the globe", () => {
+    const c = make({ ambient: false });
+    c.setSpin(true);
+    frames(c, 0, 400);
+    c.setHovered(true, 400);
+    expect(c.isSpinning()).toBe(true);
+  });
+});
+
 describe("hop", () => {
   const HOP = { durationMs: 1000, dipZoom: 0.6 };
 

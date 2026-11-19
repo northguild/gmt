@@ -48,6 +48,11 @@ export interface CarouselPage {
   el: HTMLElement;
   /** The page's name: its dot's name, the buttons' and what the live region says. */
   label: string;
+  /**
+   * A spare: held back for questions, after the pages of the main run. Its dot carries `data-spare`
+   * and a gap before the first spare, and it is counted apart ("spare 1 of 2").
+   */
+  spare?: boolean;
 }
 
 /** What moved the carousel. */
@@ -94,6 +99,11 @@ export interface CarouselWire {
    * wheel reaches it. Defaults to every page. Call `refresh` when it changes.
    */
   reach?: () => number;
+  /**
+   * The page the buttons, keys and wheel reach from `index` going `delta`, or `null` for none.
+   * Defaults to the next page in the row; the dots' arrow keys always move to the next dot.
+   */
+  neighbour?: (index: number, delta: 1 | -1) => number | null;
   /** What `live` says when a page opens. Defaults to "<label>, <n> of <total>". */
   announce?: (label: string, index: number, total: number) => string;
   /** The clock, in milliseconds. Defaults to `performance.now`. */
@@ -108,6 +118,16 @@ export interface CarouselWire {
    * Without it the page hides at once. `hide` does nothing if the page has opened again.
    */
   leave?: (el: HTMLElement, hide: () => void) => void;
+  /**
+   * Called with the whole change of page (the new page shown, the old one hidden, `onSelect`, the
+   * buttons and the live region) so the caller can run it later or inside a view transition. It must
+   * run `commit` exactly once. The shown index is already the new one when it is called; without it
+   * the change runs at once.
+   */
+  transition?: (
+    commit: () => void,
+    change: { from: number; to: number; by: CarouselBy },
+  ) => void;
 }
 
 export interface CarouselHandle {
@@ -137,27 +157,35 @@ const TEXT_FIELD = "input, textarea, select, [contenteditable]";
 
 /** The dots: one tab per page, the `current` one selected. */
 export function carouselDots(
-  pages: readonly { id: string; label: string }[],
+  pages: readonly { id: string; label: string; spare?: boolean }[],
   current: number,
 ): SafeHtml {
   return html`${pages.map(
     (p, i) =>
-      html`<button type="button" role="tab" class="${styles.dot}" data-dot="${String(i)}"
+      html`<button type="button" role="tab" class="${styles.dot}" data-dot="${String(i)}"${p.spare ? html` data-spare` : ""}${p.spare && !pages[i - 1]?.spare ? html` data-spare-first` : ""}
         aria-label="${p.label}" aria-controls="${p.id}" aria-selected="${String(i === current)}"
         tabindex="${i === current ? "0" : "-1"}"></button>`,
   )}`;
 }
 
-/** Whether `el`, or a box it sits in inside `area`, scrolls sideways. */
-/** Focus moved by script: `data-quiet-focus` until `el` blurs, so its CSS can hold back the ring. */
-function quietFocus(el: HTMLElement): void {
+/**
+ * Focus the reader did not move: `data-quiet-focus` on `el` until it blurs, so its CSS can hold
+ * back the ring.
+ */
+export function markQuietFocus(el: HTMLElement): void {
   el.setAttribute("data-quiet-focus", "");
   el.addEventListener("blur", () => el.removeAttribute("data-quiet-focus"), {
     once: true,
   });
+}
+
+/** Focus moved by script, quietly (`markQuietFocus`). */
+function quietFocus(el: HTMLElement): void {
+  markQuietFocus(el);
   el.focus({ preventScroll: true });
 }
 
+/** Whether `el`, or a box it sits in inside `area`, scrolls sideways. */
 function scrollsSideways(el: Element, area: Element): boolean {
   for (let n: Element | null = el; n && n !== area; n = n.parentElement) {
     if (n.scrollWidth <= n.clientWidth) continue;
@@ -177,6 +205,12 @@ export function wireCarousel(
   const now = o.now ?? (() => performance.now());
   const doc = root.ownerDocument;
   const total = pages.length;
+  const spares = pages.filter((p) => p.spare).length;
+  /** "3 of 21" for a main page, "spare 1 of 2" for a spare. */
+  const position = (i: number): string =>
+    pages[i].spare
+      ? `spare ${i - (total - spares) + 1} of ${spares}`
+      : `${i + 1} of ${total - spares}`;
 
   // What the wire changes, so destroying it puts the page back as it was.
   const kept = pages.map((p) => ({
@@ -192,10 +226,15 @@ export function wireCarousel(
     if (!p.el.id) p.el.id = `${o.idPrefix}-page-${i + 1}`;
     p.el.setAttribute("role", "tabpanel");
     p.el.setAttribute("aria-roledescription", "slide");
-    p.el.setAttribute("aria-label", `${p.label}, ${i + 1} of ${total}`);
+    p.el.setAttribute("aria-label", `${p.label}, ${position(i)}`);
     p.el.tabIndex = 0;
   });
 
+  /** The page a step goes to from `from`, or -1. */
+  const around = (from: number, delta: 1 | -1): number => {
+    const to = o.neighbour ? o.neighbour(from, delta) : from + delta;
+    return to === null || to < 0 || to > end() ? -1 : to;
+  };
   /** The last page that can open now. */
   const end = (): number =>
     Math.max(0, Math.min(total, Math.trunc(o.reach?.() ?? total)) - 1);
@@ -205,7 +244,7 @@ export function wireCarousel(
   setHtml(
     dots,
     carouselDots(
-      pages.map((p) => ({ id: p.el.id, label: p.label })),
+      pages.map((p) => ({ id: p.el.id, label: p.label, spare: p.spare })),
       index,
     ),
   );
@@ -230,10 +269,10 @@ export function wireCarousel(
     const taken = steps?.current() ?? 0;
     const left = steps ? steps.count(index) - taken : 0;
     for (const [button, n, word, inPage] of [
-      [prev, index - 1, "Previous", taken > 0],
-      [next, index + 1, "Next", left > 0],
+      [prev, around(index, -1), "Previous", taken > 0],
+      [next, around(index, 1), "Next", left > 0],
     ] as const) {
-      const target = n <= end() ? pages[n] : undefined;
+      const target = n >= 0 ? pages[n] : undefined;
       button.toggleAttribute("data-off", target === undefined && !inPage);
       if (inPage) {
         button.removeAttribute("tabindex");
@@ -264,7 +303,7 @@ export function wireCarousel(
     if (announce)
       live.textContent =
         o.announce?.(pages[index].label, index, total) ??
-        `${pages[index].label}, ${index + 1} of ${total}`;
+        `${pages[index].label}, ${position(index)}`;
   };
 
   const select = (target: number, by: CarouselBy = "api"): void => {
@@ -272,27 +311,34 @@ export function wireCarousel(
     if (to === index) return;
     const from = index;
     index = to;
-    const leaving = pages[from].el;
-    const held = leaving.contains(doc.activeElement);
-    closing[to]++;
-    show(pages[to].el);
-    leaving.inert = true;
-    const token = ++closing[from];
-    const hide = (): void => {
-      if (closing[from] === token) hideNow(leaving);
+    const commit = (): void => {
+      const leaving = pages[from].el;
+      const held = leaving.contains(doc.activeElement);
+      closing[to]++;
+      show(pages[to].el);
+      leaving.inert = true;
+      const token = ++closing[from];
+      const hide = (): void => {
+        if (closing[from] === token) hideNow(leaving);
+      };
+      if (o.leave) o.leave(leaving, hide);
+      else hide();
+      // `onSelect` first: a caller with `steps` sets the new page's steps there, and the buttons
+      // are named from them.
+      o.onSelect?.(to, from, by);
+      refresh(true);
+      if (held) quietFocus(pages[to].el);
     };
-    if (o.leave) o.leave(leaving, hide);
-    else hide();
-    // `onSelect` first: a caller with `steps` sets the new page's steps there, and the buttons
-    // are named from them.
-    o.onSelect?.(to, from, by);
-    refresh(true);
-    if (held) quietFocus(pages[to].el);
+    if (o.transition) o.transition(commit, { from, to, by });
+    else commit();
   };
 
   const step = (delta: 1 | -1, by: CarouselBy = "api"): void => {
     if (steps?.step(delta, by)) refresh(false);
-    else select(index + delta, by);
+    else {
+      const to = around(index, delta);
+      if (to !== -1) select(to, by);
+    }
   };
 
   prev.addEventListener("click", () => step(-1, "control"), { signal });
@@ -402,8 +448,8 @@ export function wireCarousel(
           acc = 0;
           armed = atEdge ? dir : 0;
         }
-        const to = index + dir;
-        if (armed !== dir || !atEdge || to < 0 || to > end()) {
+        const to = around(index, dir > 0 ? 1 : -1);
+        if (armed !== dir || !atEdge || to === -1) {
           acc = 0;
           if (!atEdge || armed !== dir) armed = 0;
           return;

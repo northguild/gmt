@@ -409,7 +409,8 @@ export async function createGlobeEngine(
       subsolar: [solar.lng, solar.lat],
       zoom: controller.zoom,
       quiet: controller.isQuiet(),
-      moving: controller.needsFrame(),
+      // A requested spin turns the globe without being a flight, so it is not "moving".
+      moving: controller.needsFrame() && !controller.isSpinOnly(),
       exposure:
         dawning() && renderer?.kind !== "canvas2d"
           ? dawnExposure(now - (dawnStart as number))
@@ -818,11 +819,17 @@ export async function createGlobeEngine(
       controller.steer(vector, performanceNow());
       schedule();
     },
+    setSpin(on) {
+      controller.setSpin(on);
+      schedule();
+    },
+    isSpinning: () => controller.isSpinning(),
     refit: () => measure(),
     getView: () => ({
       rotation: [controller.rotation[0], controller.rotation[1]],
       zoom: controller.zoom,
-      moving: controller.needsFrame(),
+      // A requested spin turns the globe without being a flight, so it is not "moving".
+      moving: controller.needsFrame() && !controller.isSpinOnly(),
       distance: P,
       focalPx: focal(camera.radius),
       centre: { x: camera.centreX, y: camera.centreY },

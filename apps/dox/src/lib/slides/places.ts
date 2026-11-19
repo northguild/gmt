@@ -257,18 +257,6 @@ export function poleLng(lng: number, minutes: number | null): number {
   return wrap(lng - 180 + alpha);
 }
 
-/**
- * The clockwise turn, in degrees, that carries a 24-hour dial's hour marks onto the meridians
- * under them when the camera looks down on the North Pole from longitude `cameraLng`. Meridian
- * `m` sits `180 + cameraLng - m` degrees clockwise from the top, so every meridian a multiple of
- * 15 degrees round is `cameraLng` past a mark, modulo 15. The shorter way round is taken: the
- * turn lies in -7.5 up to 7.5.
- */
-export function meridianTurn(cameraLng: number): number {
-  const ahead = ((cameraLng % 15) + 15) % 15;
-  return ahead > 7.5 ? ahead - 15 : ahead;
-}
-
 /** The point on the Earth the camera looks down on for a place. */
 export function pointFor(place: Place, ctx: PlaceContext): PlacePoint {
   switch (place.kind) {

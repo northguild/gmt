@@ -1,0 +1,41 @@
+---
+/**
+ * One job, shown the way three libraries people know write it, and the GMT call for it with its
+ * result (`GmtResult`: the code and the value come from one source, computed at build time). The
+ * other shapes are code text from `familiar.json`; there is no verdict on them.
+ */
+import GmtResult from "./GmtResult.astro";
+
+interface Props {
+  pair: {
+    job: string;
+    moment: string;
+    dateFns: string;
+    dayjs: string;
+    gmt: { module: string; name: string; args: readonly unknown[] };
+  };
+}
+const { pair } = Astro.props;
+const shapes = [
+  ["Moment", pair.moment],
+  ["date-fns", pair.dateFns],
+  ["Day.js", pair.dayjs],
+] as const;
+---
+
+<div class="gmt-deck-panel gmt-familiar">
+  <h3 class="gmt-familiar-job">{pair.job}</h3>
+  <dl class="gmt-familiar-shapes">
+    {
+      shapes.map(([name, code]) => (
+        <>
+          <dt>{name}</dt>
+          <dd>
+            <code>{code}</code>
+          </dd>
+        </>
+      ))
+    }
+  </dl>
+  <GmtResult module={pair.gmt.module} name={pair.gmt.name} args={pair.gmt.args} />
+</div>

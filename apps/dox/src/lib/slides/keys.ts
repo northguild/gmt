@@ -165,6 +165,8 @@ const OWN_KEYS = [
   ...["textbox", "combobox", "slider", "spinbutton", "listbox"].map(
     (role) => `[role=${role}]`,
   ),
+  // A focusable separator is a splitter, which its arrow keys move (the Dox rail's handle).
+  "[role=separator][tabindex]",
 ].join(", ");
 /** Space and Enter on these are the control's own click. */
 const CLICKABLE = "button, a[href], summary";

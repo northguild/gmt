@@ -262,6 +262,7 @@ describe("deck keys", () => {
         <label>Notes <textarea></textarea></label>
         <label>Pick <select><option>a</option></select></label>
         <div role="slider" tabindex="0" aria-label="Volume" aria-valuenow="1"></div>
+        <div role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize" aria-valuenow="1"></div>
       </div>`,
     );
     for (const el of [
@@ -269,6 +270,7 @@ describe("deck keys", () => {
       screen.getByRole("textbox", { name: "Notes" }),
       screen.getByRole("combobox", { name: "Pick" }),
       screen.getByRole("slider", { name: "Volume" }),
+      screen.getByRole("separator", { name: "Resize" }),
     ]) {
       await user.click(el);
       await user.keyboard("n{ArrowRight}f");

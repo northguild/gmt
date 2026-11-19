@@ -1,0 +1,64 @@
+---
+/**
+ * A QR code with a logo in its middle, and the address under it. The one `url` makes the code and
+ * prints the text, so they cannot differ. The code takes the deck's colours (ice modules and cyan
+ * eyes on the surface, dark on light in the light theme) and is at least 30% of the stage's
+ * height. `logo` says whose code it is: the LinkedIn logo or the NorthGuild shield.
+ */
+import { LINKEDIN_LOGO, qrModel } from "~/lib/slides/qr";
+import { MARK_VIEW_BOX, markInner, nextMarkInstance } from "~/lib/ng-mark";
+
+interface Props {
+  url: string;
+  label: string;
+  logo: "linkedin" | "northguild";
+}
+const { url, label, logo } = Astro.props;
+const { extent, modules, eyes, hole } = qrModel(url);
+
+/** The logo sits in the hole with half a module of plate around it. */
+const pad = 0.5;
+const box = { x: hole.x + pad, y: hole.y + pad, side: hole.side - 2 * pad };
+const markInstance = logo === "northguild" ? nextMarkInstance(Astro.request) : 0;
+---
+
+<figure class="gmt-qr">
+  <div class="gmt-qr-code">
+    <svg viewBox={`0 0 ${extent} ${extent}`} role="img" aria-label={label}>
+      <path class="gmt-qr-modules" d={modules} />
+      <path class="gmt-qr-eyes" d={eyes} fill-rule="evenodd" />
+      {
+        logo === "linkedin" ? (
+          <svg
+            class="gmt-qr-logo"
+            data-logo="linkedin"
+            x={box.x}
+            y={box.y}
+            width={box.side}
+            height={box.side}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d={LINKEDIN_LOGO} />
+          </svg>
+        ) : (
+          <svg
+            class="gmt-qr-logo"
+            data-logo="northguild"
+            x={box.x}
+            y={box.y}
+            width={box.side}
+            height={box.side}
+            viewBox={MARK_VIEW_BOX}
+            aria-hidden="true"
+            set:html={markInner(markInstance)}
+          />
+        )
+      }
+    </svg>
+  </div>
+  <figcaption>
+    <strong>{label}</strong>
+    <a href={url}>{url.replace(/^https:\/\/(www\.)?/, "").replace(/\/$/, "")}</a>
+  </figcaption>
+</figure>

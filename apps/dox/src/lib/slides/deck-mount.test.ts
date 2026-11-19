@@ -5,7 +5,7 @@
  * controls and dialogs the page renders (`deck-controls.ts`).
  */
 import { screen, within } from "@testing-library/dom";
-import { deckRoot, recordDeckStates } from "~/test/deck-events";
+import { announceDemo, deckRoot, recordDeckStates } from "~/test/deck-events";
 import { expectNoAxeViolations, renderWidget } from "~/test/render-widget";
 import { installDialogFullscreenShims } from "~/test/dialog-fullscreen-shims";
 import { installJsdomShims } from "~/test/jsdom-shims";
@@ -33,7 +33,15 @@ function slide(
   </section>`;
 }
 
-function fixture(slides = 3): SafeHtml {
+/** A spare slide: no minutes, after the talk's last slide. */
+function spare(id: string, title: string): SafeHtml {
+  return html`<section id="${id}" data-slide data-spare aria-labelledby="${id}-title">
+    <h2 id="${id}-title">${title}</h2>
+    <p>${title} words</p>
+  </section>`;
+}
+
+function fixture(slides = 3, spares = 0): SafeHtml {
   const all = [
     slide("first", "First", 1, html`<p>Opening words</p>`, "Europe/Helsinki"),
     slide(
@@ -50,7 +58,14 @@ function fixture(slides = 3): SafeHtml {
       1,
       html`<div data-build="1"><p>Last build</p></div>`,
     ),
-  ].slice(0, slides);
+  ]
+    .slice(0, slides)
+    .concat(
+      [spare("extra-a", "Extra A"), spare("extra-b", "Extra B")].slice(
+        0,
+        spares,
+      ),
+    );
   return html`<article data-deck-root data-deck-slug="test-deck">
     <div data-deck-stage>
       <div data-deck-slides>${all}</div>
@@ -65,10 +80,13 @@ let session: Awaited<ReturnType<typeof renderWidget>> | undefined;
 let handle: DeckHandle | null = null;
 let space: { [K in keyof SpaceStage]: ReturnType<typeof vi.fn> };
 
-async function start(slides = 3): Promise<NonNullable<typeof session>> {
+async function start(
+  slides = 3,
+  spares = 0,
+): Promise<NonNullable<typeof session>> {
   session = await renderWidget(
     {
-      renderTemplate: () => fixture(slides),
+      renderTemplate: () => fixture(slides, spares),
       mount: async (root, _args, signal) => {
         // The mount's own root, which has no role to find it by.
         // oxlint-disable-next-line dox-test/no-class-query, testing-library/no-node-access
@@ -210,6 +228,24 @@ describe("mountDeck", () => {
     ).toBeInTheDocument();
   });
 
+  it("rings a slide the reader Tabs to, not one the address or a script focuses", async () => {
+    const { user } = await start();
+    const first = screen.getByRole("tabpanel", { name: /^First/ });
+    first.focus();
+    expect(first).toHaveAttribute("data-quiet-focus");
+    first.blur();
+    expect(first).not.toHaveAttribute("data-quiet-focus");
+    // Tab from just before the slide onto it.
+    const anchor = document.createElement("button");
+    anchor.textContent = "Before";
+    first.before(anchor);
+    anchor.focus();
+    await user.tab();
+    expect(first).toHaveFocus();
+    expect(first).not.toHaveAttribute("data-quiet-focus");
+    anchor.remove();
+  });
+
   it("goes to the first, last and numbered slide and by whole slides", async () => {
     const { user } = await start();
     await user.keyboard("{Shift>}{ArrowRight}{/Shift}");
@@ -293,6 +329,53 @@ describe("mountDeck", () => {
     expect(window.location.hash).toBe("#second");
   });
 
+  describe("spare slides", () => {
+    it("counts the talk's slides apart from the spares in the live text", async () => {
+      const { user } = await start(3, 2);
+      await user.keyboard("{End}");
+      expect(
+        screen.getByRole("tab", { name: "Third", selected: true }),
+      ).toBeInTheDocument();
+      expect(live()).toBe("Slide 3 of 3: Third");
+      await user.keyboard("{ArrowRight}");
+      expect(live()).toBe("Slide 3 of 3: Third");
+      await user.click(screen.getByRole("tab", { name: /Extra A/ }));
+      expect(live()).toBe("Spare 1 of 2: Extra A");
+      await user.click(screen.getByRole("tab", { name: /Extra B/ }));
+      expect(live()).toBe("Spare 2 of 2: Extra B");
+      await user.click(screen.getByRole("article"));
+      await user.keyboard("{PageDown}");
+      await vi.waitFor(() => expect(live()).toBe("Slide 2 of 3: Second"));
+    });
+
+    it("lists the spares under their own heading in the overview", async () => {
+      const { user } = await start(3, 2);
+      await user.keyboard("o");
+      const dialog = screen.getByRole("dialog", { name: "Slides" });
+      expect(
+        within(dialog).getByRole("heading", {
+          name: "Spare slides, for questions",
+        }),
+      ).toBeVisible();
+      const [main, extras] = within(dialog).getAllByRole("list");
+      expect(
+        within(main!)
+          .getAllByRole("listitem")
+          .map((li) => li.textContent),
+      ).toEqual(["First 1 min", "Second 2 min", "Third 1 min"]);
+      expect(
+        within(extras!)
+          .getAllByRole("listitem")
+          .map((li) => li.textContent),
+      ).toEqual(["Extra A", "Extra B"]);
+    });
+
+    it("keeps the spares' heading hidden when a deck has none", async () => {
+      await start(3, 0);
+      expect(screen.getByText("Spare slides, for questions")).not.toBeVisible();
+    });
+  });
+
   it("leaves the keys to an open dialog", async () => {
     const { user } = await start();
     await user.keyboard("?");
@@ -340,6 +423,102 @@ describe("mountDeck", () => {
     expect(
       screen.queryByRole("region", { name: "Slides" }),
     ).not.toBeInTheDocument();
+  });
+
+  describe("the slide transition", () => {
+    /** The browser's view transition, held until the test lets the update run. */
+    let updates: (() => void)[];
+    let types: string[][];
+
+    beforeEach(() => {
+      updates = [];
+      types = [];
+      (document as { startViewTransition?: unknown }).startViewTransition =
+        vi.fn((o: { update: () => void; types: string[] }) => {
+          updates.push(o.update);
+          types.push(o.types);
+          return {
+            finished: new Promise<void>(() => {}),
+            skipTransition: vi.fn(),
+          };
+        });
+    });
+
+    afterEach(() => {
+      delete (document as { startViewTransition?: unknown })
+        .startViewTransition;
+      document.documentElement.removeAttribute("data-deck-vt");
+    });
+
+    it("does not play on the first mount, and a deep link opens at once", async () => {
+      window.history.replaceState(null, "", "/#third");
+      await start();
+      expect(document.startViewTransition).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("tab", { name: "Third", selected: true }),
+      ).toBeInTheDocument();
+    });
+
+    it("moves the page to the next slide inside a forward transition", async () => {
+      const { user } = await start();
+      await user.keyboard("{ArrowRight}");
+      expect(types).toEqual([["forward"]]);
+      // The browser has not run the update: the page still shows the old slide.
+      expect(live()).not.toBe("Slide 2 of 3: Second");
+      updates[0]();
+      expect(live()).toBe("Slide 2 of 3: Second");
+      expect(window.location.hash).toBe("#second");
+      expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
+        hop: true,
+        at: { slide: 1, build: 0 },
+      });
+    });
+
+    it("plays a step back as a back transition", async () => {
+      window.history.replaceState(null, "", "/#second");
+      const { user } = await start();
+      await user.keyboard("{ArrowLeft}");
+      expect(types).toEqual([["back"]]);
+      updates[0]();
+      expect(
+        screen.getByRole("tab", { name: "First", selected: true }),
+      ).toBeInTheDocument();
+    });
+
+    it("does not transition a build", async () => {
+      window.history.replaceState(null, "", "/#second");
+      const { user } = await start();
+      await user.keyboard("{ArrowRight}");
+      expect(document.startViewTransition).not.toHaveBeenCalled();
+      expect(revealed("Build one")).toBe(true);
+    });
+
+    it("keeps a fast second press in line behind the first and starts one transition", async () => {
+      const { user } = await start();
+      await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+      expect(document.startViewTransition).toHaveBeenCalledTimes(1);
+      updates[0]();
+      // Slide two, then its two builds: nothing was lost.
+      expect(live()).toBe("Slide 2 of 3: Second");
+      expect(revealed("Build one")).toBe(true);
+      expect(revealed("Build two")).toBe(true);
+    });
+
+    it("cuts under reduced motion", async () => {
+      const query = window.matchMedia;
+      window.matchMedia = ((q: string) => ({
+        ...query(q),
+        matches: q.includes("prefers-reduced-motion"),
+      })) as typeof window.matchMedia;
+      try {
+        const { user } = await start();
+        await user.keyboard("{ArrowRight}");
+        expect(document.startViewTransition).not.toHaveBeenCalled();
+        expect(live()).toBe("Slide 2 of 3: Second");
+      } finally {
+        window.matchMedia = query;
+      }
+    });
   });
 
   describe("space stage", () => {
@@ -477,6 +656,17 @@ describe("mountDeck", () => {
       );
     });
 
+    it("takes a demo the live panels announce on the deck root, and its end", async () => {
+      await start();
+      const p = presenter();
+      announceDemo(deckRoot(), { id: "ask", source: "live" });
+      await vi.waitFor(() =>
+        expect(p.last()).toMatchObject({ demo: { id: "ask", source: "live" } }),
+      );
+      announceDemo(deckRoot(), null);
+      await vi.waitFor(() => expect(p.last()).toMatchObject({ demo: null }));
+    });
+
     it("opens the presenter view in its own named window with T", async () => {
       const { user } = await start();
       const open = vi.spyOn(window, "open").mockReturnValue(null);
@@ -552,9 +742,7 @@ describe("mountDeck", () => {
       expect(lockTool()).toHaveAccessibleName("Unlock");
       await user.click(lockTool());
       const dialog = screen.getByRole("dialog", { name: "Unlock the slides" });
-      const code = within(dialog).getByRole("textbox", {
-        name: "Secret phrase",
-      });
+      const code = within(dialog).getByLabelText("Secret phrase");
       expect(code).toHaveFocus();
       await user.type(code, "letmein");
       await user.click(within(dialog).getByRole("button", { name: "Unlock" }));
@@ -631,9 +819,7 @@ describe("mountDeck", () => {
       const tool = lockTool();
       await user.click(tool);
       const dialog = screen.getByRole("dialog", { name: "Unlock the slides" });
-      const code = within(dialog).getByRole("textbox", {
-        name: "Secret phrase",
-      });
+      const code = within(dialog).getByLabelText("Secret phrase");
       await user.type(code, "nope{Enter}");
       await user.click(within(dialog).getByRole("button", { name: "Close" }));
       await user.click(tool);

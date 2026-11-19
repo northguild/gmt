@@ -41,6 +41,7 @@ function setup(
   o: {
     leave?: boolean | ((el: HTMLElement, hide: () => void) => void);
     reach?: () => number;
+    transition?: NonNullable<Parameters<typeof wireCarousel>[1]["transition"]>;
   } = {},
 ): Setup {
   const fx = renderHtml(html`<div></div>`);
@@ -81,6 +82,7 @@ function setup(
     now: () => clock.t,
     onSelect: (i, from, by) => steps.push([i, from, by]),
     ...(o.reach ? { reach: o.reach } : {}),
+    ...(o.transition ? { transition: o.transition } : {}),
     ...(o.leave
       ? { leave: typeof o.leave === "function" ? o.leave : () => {} }
       : {}),
@@ -329,6 +331,26 @@ describe("carousel", () => {
     expect(s.intro.inert).toBe(false);
   });
 
+  it("hands the whole change of page to `transition` and runs it when told", () => {
+    const held: (() => void)[] = [];
+    const changes: { from: number; to: number; by: CarouselBy }[] = [];
+    const s = setup({
+      transition: (commit, change) => {
+        changes.push(change);
+        held.push(commit);
+      },
+    });
+    s.handle.select(1, "key");
+    expect(changes).toEqual([{ from: 0, to: 1, by: "key" }]);
+    // The index is the new one at once; the page and `onSelect` wait for the commit.
+    expect(s.handle.index).toBe(1);
+    expect(shown(s.about)).toBe(false);
+    expect(s.steps).toEqual([]);
+    held[0]();
+    expect(shown(s.about)).toBe(true);
+    expect(s.steps).toEqual([[1, 0, "key"]]);
+  });
+
   it("drops the quiet focus mark when destroyed", async () => {
     const s = setup();
     s.next.focus();
@@ -337,6 +359,75 @@ describe("carousel", () => {
     s.signal.abort();
     // oxlint-disable-next-line dox-test/no-implementation-assert
     expect(s.prev).not.toHaveAttribute("data-quiet-focus");
+  });
+
+  it("counts spare pages apart from the main run", async () => {
+    const root = renderHtml(html`<div></div>`).first();
+    const main = el("section");
+    const spare = el("section");
+    const prev = el("button", { type: "button", "aria-label": "Previous" });
+    const next = el("button", { type: "button", "aria-label": "Next" });
+    const dots = el("div");
+    const live = el("p", { "aria-live": "polite" });
+    root.append(main, spare, prev, next, dots, live);
+    const c = new AbortController();
+    controllers.push(c);
+    wireCarousel(root, {
+      signal: c.signal,
+      pages: [
+        { el: main, label: "Thanks" },
+        { el: spare, label: "How big is it?", spare: true },
+      ],
+      prev,
+      next,
+      dots,
+      live,
+      keyArea: root,
+      label: "Slides",
+      idPrefix: "s",
+    });
+    expect(main).toHaveAttribute("aria-label", "Thanks, 1 of 1");
+    expect(spare).toHaveAttribute("aria-label", "How big is it?, spare 1 of 1");
+    await userEvent.setup().click(next);
+    expect(live).toHaveTextContent("How big is it?, spare 1 of 1");
+  });
+
+  it("follows the neighbour a caller names, and has no next button where it names none", async () => {
+    const root = renderHtml(html`<div></div>`).first();
+    const [a, b, spare] = [el("section"), el("section"), el("section")];
+    const prev = el("button", { type: "button", "aria-label": "Previous" });
+    const next = el("button", { type: "button", "aria-label": "Next" });
+    const dots = el("div");
+    const live = el("p", { "aria-live": "polite" });
+    root.append(a, b, spare, prev, next, dots, live);
+    const c = new AbortController();
+    controllers.push(c);
+    wireCarousel(root, {
+      signal: c.signal,
+      pages: [
+        { el: a, label: "Questions" },
+        { el: b, label: "Thanks" },
+        { el: spare, label: "Spare", spare: true },
+      ],
+      prev,
+      next,
+      dots,
+      live,
+      keyArea: root,
+      label: "Slides",
+      idPrefix: "n",
+      // Next stops at the last main page; Next from the spare returns to the first.
+      neighbour: (i, delta) =>
+        delta === 1 ? (i === 0 ? 1 : i === 2 ? 0 : null) : i > 0 ? i - 1 : null,
+    });
+    const user = userEvent.setup();
+    await user.click(next);
+    expect(live).toHaveTextContent("Thanks, 2 of 2");
+    await user.click(next);
+    expect(live).toHaveTextContent("Thanks, 2 of 2");
+    await user.click(screen.getByRole("tab", { name: "Spare" }));
+    await user.click(next);
+    expect(live).toHaveTextContent("Questions, 1 of 2");
   });
 
   it("refuses fewer than two pages", () => {

@@ -24,6 +24,11 @@
   }
 }
 
+/* The spares come after a gap, so the row reads as the talk and then its spares. */
+.dot[data-spare-first] {
+  margin-inline-start: 0.75rem;
+}
+
 .dot::before {
   /* The corner cut, the ring's width, and the inner outline's cut (the outer cut less the
      ring's width times tan 22.5deg, so the ring is as wide on the cuts as on the sides). */

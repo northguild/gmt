@@ -92,6 +92,7 @@ interface Part {
   id: string;
   title: string;
   minutes: number | null;
+  spare: boolean;
   builds: HTMLElement[];
   buildCount: number;
 }
@@ -109,6 +110,7 @@ function readParts(source: HTMLElement): Part[] {
         title: el.querySelector("h2")?.textContent?.trim() || el.id,
         minutes:
           Number.isFinite(minutes) && el.dataset["minutes"] ? minutes : null,
+        spare: el.hasAttribute("data-spare"),
         builds,
         buildCount: builds.reduce(
           (max, b) => Math.max(max, Number(b.dataset["build"]) || 1),
@@ -222,6 +224,7 @@ export function mountPresenter(
   const slides: DeckSlide[] = parts.map((p) => ({
     id: p.id,
     builds: p.buildCount,
+    spare: p.spare,
   }));
   const local = createDeck(slides);
   const planSlides = parts.map((p) => ({ minutes: p.minutes }));
@@ -517,13 +520,25 @@ export function mountPresenter(
   const help = dialogOf("help");
   const list =
     overview?.querySelector<HTMLElement>("[data-deck-overview]") ?? null;
-  if (list)
-    setHtml(
-      list,
-      overviewItems(
-        parts.map((p) => ({ id: p.id, title: p.title, minutes: p.minutes })),
-      ),
+  const spareSection = overview?.querySelector<HTMLElement>(
+    "[data-deck-overview-spares]",
+  );
+  const spareList = overview?.querySelector<HTMLElement>(
+    "[data-deck-overview-spare]",
+  );
+  const items = (spare: boolean) =>
+    overviewItems(
+      parts
+        .filter((p) => p.spare === spare)
+        .map((p) => ({ id: p.id, title: p.title, minutes: p.minutes })),
     );
+  if (list) setHtml(list, items(false));
+  const hasSpares = parts.some((p) => p.spare);
+  if (spareList) {
+    setHtml(spareList, items(true));
+    spareList.hidden = !hasSpares;
+  }
+  if (spareSection) spareSection.hidden = !hasSpares;
   let opener: HTMLElement | null = null;
   const open = (d: HTMLDialogElement | null): void => {
     if (!d || d.open) return;

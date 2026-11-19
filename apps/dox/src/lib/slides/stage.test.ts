@@ -15,11 +15,10 @@ import { pick, recordLapses, textOf } from "~/test/deck-events";
 import { Temporal } from "@js-temporal/polyfill";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
-import { MERIDIAN_TURN_VAR } from "./earth-clock";
 import { loadLapseTools } from "./time-lapse";
 import {
   getPlanetZones,
-  meridianTurn,
+  moonCameraPoint,
   pointFor,
   resolvePlace,
   rotationFor,
@@ -42,6 +41,10 @@ interface FakeEngine {
   options: Record<string, unknown>;
   flyTo: ReturnType<typeof vi.fn>;
   steer: ReturnType<typeof vi.fn>;
+  setSpin: ReturnType<typeof vi.fn>;
+  isSpinning: ReturnType<typeof vi.fn>;
+  /** What `isSpinning` answers: set it to stand for the ramp still running or over. */
+  spinActive: boolean;
   setZoom: ReturnType<typeof vi.fn>;
   setMarkers: ReturnType<typeof vi.fn>;
   setArcs: ReturnType<typeof vi.fn>;
@@ -79,6 +82,9 @@ vi.mock("~/lib/globe/engine", () => ({
         options,
         flyTo: vi.fn(),
         steer: vi.fn(),
+        setSpin: vi.fn(),
+        isSpinning: vi.fn(() => engine.spinActive),
+        spinActive: false,
         setZoom: vi.fn(),
         setMarkers: vi.fn(),
         setArcs: vi.fn(),
@@ -222,12 +228,16 @@ let stage: SpaceStage | undefined;
 
 const engine = (): FakeEngine => made[made.length - 1]!;
 
+/** The first globe test pays for the stage's cold dynamic imports, which can take past
+ *  `waitFor`'s one-second default when the whole suite runs at once. */
 async function ready(): Promise<FakeEngine> {
-  await vi.waitFor(() =>
-    expect(root.querySelector("[data-deck-space]")).toHaveAttribute(
-      "data-globe",
-      "ready",
-    ),
+  await vi.waitFor(
+    () =>
+      expect(root.querySelector("[data-deck-space]")).toHaveAttribute(
+        "data-globe",
+        "ready",
+      ),
+    { timeout: 5000 },
   );
   return engine();
 }
@@ -484,6 +494,108 @@ describe("the globe", () => {
       }
     });
 
+    it("aims the Moon at the instant the slide's lapse stops on", async () => {
+      root.querySelector("[data-deck-stage]")!.insertAdjacentHTML(
+        "beforeend",
+        `<section data-slide data-place="planet"><h2>Four</h2>
+          <div data-build="2" data-place="moon" data-lapse="newmoon">m</div></section>`,
+      );
+      stage = mountSpaceStage(root, { signal: abort.signal });
+      const fake = await ready();
+      const end = Temporal.Instant.from(
+        "2027-02-06T15:56:00Z",
+      ).epochMilliseconds;
+      stage.goTo("moon", { at: { slide: 3, build: 2 } });
+      const aimed = fake.flyTo.mock.calls.at(-1)![0] as [number, number];
+      const point = moonCameraPoint(end);
+      expect(aimed[0]).toBeCloseTo(-point[0], 6);
+      expect(aimed[1]).toBeCloseTo(-point[1], 6);
+    });
+
+    it("glides the sun back to now when the lapse ends, never cutting", async () => {
+      await loadLapseTools();
+      const frames: ((stamp: number) => void)[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+        frames.push(cb);
+        return frames.length;
+      });
+      stage = mountSpaceStage(root, { signal: abort.signal });
+      const fake = await ready();
+      const sun = fake.options["sunInstant"] as () => number;
+      await vi.waitFor(() => {
+        stage!.lapse("newmoon");
+        expect(root.querySelector("[data-deck-space]")).toHaveAttribute(
+          "data-lapse",
+          "newmoon",
+        );
+      });
+      // The sun glides from now into the lapse, then the lapse plays to the new moon and holds.
+      expect(sun()).toBe(NOW);
+      const play = (until: number): void => {
+        for (let stamp = 16; frames.length > 0 && stamp <= until; stamp += 16)
+          frames.splice(0).forEach((cb) => cb(stamp));
+      };
+      play(10_000);
+      const held = sun();
+      expect(held).toBe(
+        Temporal.Instant.from("2027-02-06T15:56:00Z").epochMilliseconds,
+      );
+      stage.lapse(null);
+      // The first frame stands where the lapse left the sun, then the sun eases back to now.
+      expect(sun()).toBe(held);
+      play(1000);
+      expect(sun()).not.toBe(held);
+      expect(sun()).not.toBe(NOW);
+      play(10_000);
+      expect(sun()).toBe(NOW);
+    });
+
+    it("carries the sun on into the next day-long lapse, forward or back, never back to now", async () => {
+      await loadLapseTools();
+      const frames: ((stamp: number) => void)[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+        frames.push(cb);
+        return frames.length;
+      });
+      stage = mountSpaceStage(root, { signal: abort.signal });
+      const fake = await ready();
+      const sun = fake.options["sunInstant"] as () => number;
+      let stamp = 0;
+      const play = (forMs: number): void => {
+        const until = stamp + forMs;
+        while (frames.length > 0 && stamp < until) {
+          stamp += 16;
+          frames.splice(0).forEach((cb) => cb(stamp));
+        }
+      };
+      await vi.waitFor(() => {
+        stage!.lapse("tehran");
+        expect(root.querySelector("[data-deck-space]")).toHaveAttribute(
+          "data-lapse",
+          "tehran",
+        );
+      });
+      // The glide from the test's fixed now onto gmt's settles first.
+      play(2_000);
+      const start = sun();
+      // A step part way through: the next lapse starts where the sun stands, still moving on.
+      play(6_000);
+      const before = sun();
+      expect(before).toBeGreaterThan(start);
+      stage.lapse("tokyo");
+      expect(sun()).toBe(before);
+      play(48);
+      const next = sun();
+      expect(next).toBeGreaterThan(before);
+      // Back again: Tehran's day carries on from there too.
+      play(4_000);
+      const back = sun();
+      stage.lapse("tehran");
+      expect(sun()).toBe(back);
+      play(48);
+      expect(sun()).toBeGreaterThan(back);
+    });
+
     it("ignores a lapse name it does not know", async () => {
       stage = mountSpaceStage(root, { signal: abort.signal });
       const fake = await ready();
@@ -661,48 +773,6 @@ describe("the ice wall", () => {
     expect(label).toMatch(/ 23:30$/);
   });
 
-  it("turns the Earth once after the break, then holds the place again", async () => {
-    const { fake, wall } = await setUpWall();
-    stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
-    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
-    const timeouts: [() => void, number][] = [];
-    vi.spyOn(window, "setTimeout").mockImplementation(((
-      cb: () => void,
-      ms: number,
-    ) => {
-      timeouts.push([cb, ms]);
-      return timeouts.length;
-    }) as unknown as typeof window.setTimeout);
-    wall.options["onBreak"]!();
-    fake.frame();
-    expect(fake.steer).toHaveBeenCalledWith({ lng: 30, lat: 0, zoom: 0 });
-    const turn = timeouts.find(([, ms]) => ms === 12000)!;
-    const flights = fake.flyTo.mock.calls.length;
-    turn[0]();
-    expect(fake.steer).toHaveBeenLastCalledWith({ lng: 0, lat: 0, zoom: 0 });
-    expect(fake.flyTo.mock.calls.length).toBe(flights + 1);
-  });
-
-  it("does not turn the Earth under reduced motion", async () => {
-    const original = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: query.includes("reduce"),
-      media: query,
-      addEventListener() {},
-      removeEventListener() {},
-    })) as unknown as typeof window.matchMedia;
-    try {
-      const { fake, wall } = await setUpWall();
-      stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
-      stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
-      wall.options["onBreak"]!();
-      fake.frame();
-      expect(fake.steer).not.toHaveBeenCalled();
-    } finally {
-      window.matchMedia = original;
-    }
-  });
-
   it("lights every clock at once on a deep link to the planet", async () => {
     root
       .querySelectorAll("[data-slide]")[0]!
@@ -757,7 +827,7 @@ function revealFixture(): HTMLElement {
         <figure data-wall-pane="moment"><img alt="Moment" src="/a.webp"></figure>
       </section>
       <section data-slide data-place="planet"><h2>Three</h2></section>
-      <section data-slide data-place="planet" data-reveal="Europe/Helsinki"><h2>Four</h2></section>
+      <section data-slide data-place="planet" data-reveal="Europe/Helsinki" data-spin><h2>Four</h2></section>
       <section data-slide data-place="Europe/Helsinki" data-clock><h2>Five</h2></section>
       <section data-slide data-place="greenwich"><h2>Six</h2>
         <div data-build="2" data-clock-at="2027-03-28T01:00:00Z"></div>
@@ -937,17 +1007,15 @@ describe("the clock that becomes the Earth", () => {
     expect(timeouts.some(([, ms]) => ms === REVEAL_MS)).toBe(false);
   });
 
-  it("turns the clock into the Earth on the reveal, after the break, and flies to the planet", async () => {
+  it("shatters the clock on the reveal, the Earth already turned to the planet behind it", async () => {
     const { fake, wall } = await setUp();
     const planet = planetPoint();
     toDate();
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
-    expect(space()).toHaveAttribute("data-earth-clock", "morph");
-    expect(face()!.style.getPropertyValue(MERIDIAN_TURN_VAR)).toBe(
-      `${meridianTurn(poleLng)}deg`,
-    );
-    expectRotation(aimedAt(fake), poleRotation);
+    expect(space()).toHaveAttribute("data-earth-clock", "shatter");
+    // The Earth turns while the clock still hides it, so it emerges in place and never swings.
+    expectRotation(aimedAt(fake), [-planet[0], -planet[1]]);
     fake.frame();
     expect(space()).toHaveAttribute("data-flight", "moving");
     expect(space()).toHaveAttribute(
@@ -962,37 +1030,45 @@ describe("the clock that becomes the Earth", () => {
     expect(fake.flyTo.mock.calls.at(-1)![1]).toBeUndefined();
   });
 
-  it("holds the turn back until the clock is gone, then begins it", async () => {
+  it("holds the spin back until the clock is gone, then begins it", async () => {
     const { fake, wall } = await setUp();
     toDate();
     wall.options["onBreak"]!();
-    expect(space()).not.toHaveAttribute("data-turn");
+    wall.options["onState"]!("gone");
+    fake.frame();
+    expect(fake.setSpin).not.toHaveBeenCalled();
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
-    // The reveal publishes the turn: the gate waits on it from here.
-    expect(space()).toHaveAttribute("data-turn", "on");
+    // The clock is still turning into the Earth.
     fake.frame();
+    expect(fake.setSpin).not.toHaveBeenCalled();
     runReveal();
-    expect(space()).not.toHaveAttribute("data-earth-clock");
+    fake.frame();
+    expect(fake.setSpin).toHaveBeenLastCalledWith(true);
+    expect(space()).toHaveAttribute("data-spin", "on");
   });
 
-  it("stops the turn and owes it again when the talk steps back to the clock", async () => {
+  it("stops the spin when the talk steps back to the clock, and turns again on the way forward", async () => {
     const { fake, wall } = await setUp();
     toDate();
     wall.options["onBreak"]!();
+    wall.options["onState"]!("gone");
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
     runReveal();
     fake.frame();
-    expect(space()).toHaveAttribute("data-turn", "on");
+    expect(space()).toHaveAttribute("data-spin", "on");
     stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
-    expect(space()).not.toHaveAttribute("data-turn");
-    expect(fake.steer).toHaveBeenLastCalledWith({ lng: 0, lat: 0, zoom: 0 });
+    expect(space()).not.toHaveAttribute("data-spin");
+    expect(fake.setSpin).toHaveBeenLastCalledWith(false);
+    timeouts.length = 0;
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
-    expect(space()).toHaveAttribute("data-turn", "on");
+    runReveal();
+    fake.frame();
+    expect(fake.setSpin).toHaveBeenLastCalledWith(true);
   });
 
-  it("is busy while the wall breaks and while the clock turns, and idle after", async () => {
+  it("is busy while the wall breaks and idle after, and the clock's shards hold no text back", async () => {
     const { wall } = await setUp();
     const idle = vi.fn();
     // oxlint-disable-next-line dox-test/no-house-class -- the event's name, not a class
@@ -1008,10 +1084,10 @@ describe("the clock that becomes the Earth", () => {
     expect(idle).toHaveBeenCalledTimes(1);
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
-    expect(busy()).toBe(true);
+    expect(busy()).toBe(false);
     runReveal();
     expect(busy()).toBe(false);
-    expect(idle).toHaveBeenCalledTimes(2);
+    expect(idle).toHaveBeenCalledTimes(1);
   });
 
   it("is never busy under reduced motion", async () => {
@@ -1052,7 +1128,7 @@ describe("the clock that becomes the Earth", () => {
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
     expect(wall.flyThrough).toHaveBeenCalledTimes(1);
-    expect(space()).toHaveAttribute("data-earth-clock", "morph");
+    expect(space()).toHaveAttribute("data-earth-clock", "shatter");
   });
 
   it("brings the clock back when the talk steps back before the reveal", async () => {
@@ -1168,5 +1244,147 @@ describe("the clock that becomes the Earth", () => {
     await ready();
     expect(face()).toBeNull();
     expect(space()).not.toHaveAttribute("data-earth-clock");
+  });
+});
+
+/** Helsinki, then three planet slides that turn the Earth, then one that holds a place. */
+function spinFixture(): HTMLElement {
+  const spinRoot = document.createElement("article");
+  spinRoot.innerHTML = `
+    <div data-deck-space data-sky-src="/sky.bin" data-earth="/earth.webp"></div>
+    <div data-deck-stage>
+      <section data-slide data-place="Europe/Helsinki"><h2>One</h2></section>
+      <section data-slide data-place="planet" data-spin><h2>Two</h2></section>
+      <section data-slide data-place="planet" data-spin><h2>Three</h2></section>
+      <section data-slide data-place="planet"><h2>Four</h2></section>
+    </div>`;
+  document.body.append(spinRoot);
+  return spinRoot;
+}
+
+describe("the Earth's spin", () => {
+  const at = (slide: number) => ({ hop: true, at: { slide, build: 0 } });
+  const spinSpace = (): HTMLElement =>
+    root.querySelector<HTMLElement>("[data-deck-space]")!;
+
+  beforeEach(() => {
+    root.remove();
+    root = spinFixture();
+  });
+
+  const start = async (): Promise<FakeEngine> => {
+    stage = mountSpaceStage(root, { signal: abort.signal });
+    const fake = await ready();
+    stage.goTo("Europe/Helsinki", at(0));
+    return fake;
+  };
+
+  it("asks the engine to spin on a spin slide, and publishes it", async () => {
+    const fake = await start();
+    expect(fake.setSpin).not.toHaveBeenCalled();
+    expect(spinSpace()).not.toHaveAttribute("data-spin");
+    stage!.goTo("planet", at(1));
+    fake.frame();
+    expect(fake.setSpin).toHaveBeenLastCalledWith(true);
+    expect(spinSpace()).toHaveAttribute("data-spin", "on");
+  });
+
+  it("keeps the spin and the camera still between two spin slides on the same place", async () => {
+    const fake = await start();
+    stage!.goTo("planet", at(1));
+    fake.frame();
+    fake.spinActive = true;
+    const flights = fake.flyTo.mock.calls.length;
+    stage!.goTo("planet", at(2));
+    fake.frame();
+    expect(fake.flyTo.mock.calls.length).toBe(flights);
+    expect(fake.setSpin).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands the turning Earth straight to the flight back, at its own speed and with no dip", async () => {
+    const fake = await start();
+    stage!.goTo("planet", at(2));
+    fake.frame();
+    fake.spinActive = true;
+    const flights = fake.flyTo.mock.calls.length;
+    stage!.goTo("Europe/Helsinki", at(0));
+    expect(fake.setSpin).toHaveBeenLastCalledWith(false);
+    // At once, and with no hop: the controller carries the spin's speed into the flight.
+    expect(fake.flyTo.mock.calls.length).toBe(flights + 1);
+    expect(fake.flyTo.mock.calls.at(-1)).toHaveLength(1);
+    fake.frame();
+    expect(spinSpace()).not.toHaveAttribute("data-spin");
+  });
+
+  it("flies back at once when the Earth was not spinning yet", async () => {
+    const fake = await start();
+    stage!.goTo("planet", at(1));
+    const flights = fake.flyTo.mock.calls.length;
+    stage!.goTo("Europe/Helsinki", at(0));
+    expect(fake.flyTo.mock.calls.length).toBe(flights + 1);
+  });
+
+  it("turns again when the talk steps back onto a spin slide", async () => {
+    const fake = await start();
+    stage!.goTo("planet", at(2));
+    fake.frame();
+    fake.spinActive = true;
+    stage!.goTo("planet", at(3));
+    stage!.goTo("planet", at(2));
+    fake.frame();
+    expect(fake.setSpin).toHaveBeenLastCalledWith(true);
+    expect(spinSpace()).toHaveAttribute("data-spin", "on");
+  });
+
+  it("does not spin under reduced motion", async () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes("reduce"),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof window.matchMedia;
+    try {
+      const fake = await start();
+      stage!.goTo("planet", at(1));
+      fake.frame();
+      expect(fake.setSpin).not.toHaveBeenCalled();
+      expect(spinSpace()).not.toHaveAttribute("data-spin");
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it("does not spin in the overview, and goes on after it", async () => {
+    const fake = await start();
+    stage!.goTo("planet", at(1));
+    fake.frame();
+    stage!.overview(true);
+    fake.frame();
+    expect(fake.setSpin).toHaveBeenLastCalledWith(false);
+    stage!.overview(false);
+    fake.frame();
+    expect(fake.setSpin).toHaveBeenLastCalledWith(true);
+  });
+
+  it("starts only after the wall has broken", async () => {
+    root.remove();
+    root = wallFixture();
+    root.querySelectorAll("[data-slide]")[2]!.setAttribute("data-spin", "");
+    HTMLImageElement.prototype.decode = async () => {};
+    stage = mountSpaceStage(root, { signal: abort.signal });
+    const fake = await ready();
+    await vi.waitFor(() => expect(walls).toHaveLength(1));
+    const wall = walls[0]!;
+    stage.goTo("wall", at(1));
+    wall.options["onState"]!("whole");
+    stage.goTo("planet", at(2));
+    wall.options["onState"]!("approach");
+    wall.options["onState"]!("breaking");
+    fake.frame();
+    expect(fake.setSpin).not.toHaveBeenCalled();
+    wall.options["onState"]!("gone");
+    fake.frame();
+    expect(fake.setSpin).toHaveBeenLastCalledWith(true);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { monthGrid } from "~/lib/slides/calendar-figures";
-import { REPORTS, VISUALS } from "./content";
+import { REPORTS, SOURCES, VISUALS, newMoonFacts } from "./content";
 
 describe("what the bug slides draw", () => {
   it("shows the recorded command and the observed line of its report", () => {
@@ -54,5 +54,60 @@ describe("what the bug slides draw", () => {
     expect(REPORTS.engines[0].observed).toContain(
       VISUALS.engines.observedLabel,
     );
+  });
+});
+
+describe("the new moon over Shanghai", () => {
+  const record = SOURCES.newMoon2027;
+
+  it("holds the figures the Naval Observatory's API returned", () => {
+    expect(record.url).toBe(
+      "https://aa.usno.navy.mil/api/moon/phases/year?year=2027",
+    );
+    expect(record.apiVersion).toBe("4.0.1");
+    expect(record.retrieved).toBe("2026-11-19");
+    expect(record.timeScale).toBe("UT");
+    expect(record.phase).toEqual({
+      year: 2027,
+      month: 2,
+      day: 6,
+      phase: "New Moon",
+      time: "15:56",
+    });
+  });
+
+  it("states the instant as the record's own date and time", () => {
+    expect(record.utc).toBe("2027-02-06T15:56:00Z");
+  });
+
+  it("reads Shanghai's clock four minutes before midnight, from gmt", () => {
+    const facts = newMoonFacts();
+    expect(facts.localTime).toBe("23:56");
+    expect(facts.localDay).toBe("6 February");
+    expect(facts.minutesToMidnight).toBe(4);
+    expect(facts.utcDay).toBe("6 February 2027");
+    expect(facts.utcTime).toBe(record.phase.time);
+  });
+
+  it("states the month rule and its clock in the Observatory's own words", () => {
+    const hko = SOURCES.chineseMonth;
+    expect(hko.url).toBe(
+      "https://www.hko.gov.hk/en/Observatorys-Blog/101741/Which-day-is-the-Tuen-Ng-Festival-for-this-year-2013",
+    );
+    expect(hko.quotes[0]).toBe(
+      'Each month in the lunar calendar starts with a "New Moon"',
+    );
+    expect(hko.quotes[1]).toContain("(UTC) plus eight hours");
+    expect(hko.offset).toBe("+08:00");
+    expect(newMoonFacts().calendarClock).toBe("UTC+8");
+  });
+
+  it("puts Shanghai on the calendar's clock at the new moon, from gmt", () => {
+    expect(newMoonFacts().zoneOffset).toBe(SOURCES.chineseMonth.offset);
+  });
+
+  it("makes no claim about what the timing causes", () => {
+    const text = JSON.stringify(newMoonFacts());
+    expect(text).not.toMatch(/caus|because|bug/i);
   });
 });

@@ -3,7 +3,11 @@ import { drawWithoutGlobe, followGlobe, loadSky } from "./space-sky";
 import type { Sky } from "./sky";
 
 /* The sky itself is tested in sky.test.ts; here it is a recorder that marks its host ready on its first view, as the real one does. */
-const views: { rotation: readonly [number, number]; centre: unknown }[] = [];
+const views: {
+  rotation: readonly [number, number];
+  centre: unknown;
+  instant: unknown;
+}[] = [];
 /** The Milky Way map each mounted sky was given. */
 const maps: unknown[] = [];
 vi.mock("./sky", () => ({
@@ -11,8 +15,12 @@ vi.mock("./sky", () => ({
     maps.push(milkyWay);
     return {
       ready: Promise.resolve(),
-      view: (rotation: readonly [number, number], centre: unknown) => {
-        views.push({ rotation, centre });
+      view: (
+        rotation: readonly [number, number],
+        centre: unknown,
+        instant: unknown,
+      ) => {
+        views.push({ rotation, centre, instant });
         host.dataset["sky"] = "ready";
       },
     };
@@ -106,6 +114,32 @@ describe("the sky", () => {
     controller.abort();
     frames[0]?.();
     expect(views).toHaveLength(2);
+  });
+
+  it("shows the instant its caller gives, and gmt's now without one", async () => {
+    const globe = {
+      getRotation: () => [0, 0] as const,
+      getCentre: () => ({ x: 0, y: 0, radius: 1 }),
+      getZoom: () => 1,
+      onFrame: () => {},
+    };
+    await followGlobe({
+      sky: loadSky(inputs()),
+      globe,
+      origin: host,
+      surface: host,
+      signal: controller.signal,
+      instant: () => 1_800_000_000_000,
+    });
+    expect(views.at(-1)?.instant).toBe(1_800_000_000_000);
+    await followGlobe({
+      sky: loadSky(inputs()),
+      globe,
+      origin: host,
+      surface: host,
+      signal: controller.signal,
+    });
+    expect(views.at(-1)?.instant).toBeGreaterThan(1_700_000_000_000);
   });
 
   it("is not followed when there is no sky", async () => {

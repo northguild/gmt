@@ -8,13 +8,22 @@
  * file does no offset arithmetic of its own. The window is 24 hours from now, or, for a zone's
  * recorded jump, the hours round the jump gmt finds in that zone's own data. The sun is the same
  * at both ends of a day-long window, so one lapse ends where the next one begins.
+ *
+ * A day-long lapse that follows another, forward or back, carries on from the instant on screen
+ * and at the speed the sun is going (`LapseCarry`), so a step never sends the sun back to now to
+ * sweep the same day again. Its window is still a whole day, so every pin still flips once.
  */
+import newMoon from "~/slides/give-me-temporal/new-moon.json";
 
 /** A named lapse: the zones whose pins carry dates, and the window. */
 export interface LapseDef {
   zones: readonly string[];
   /** A window centred on this zone's transition in these local years, instead of the next 24 hours. */
   around?: { zone: string; years: readonly number[] };
+  /** A window of `hours` that stops on this UTC instant, instead of the next 24 hours. */
+  endsAt?: { utc: string; hours: number };
+  /** How long the lapse takes on stage; `LAPSE_MS` when absent. */
+  durationMs?: number;
 }
 
 /** The lapses a slide or build may name with `lapse`. */
@@ -29,6 +38,12 @@ export const LAPSES = {
   manila: {
     zones: ["Asia/Manila"],
     around: { zone: "Asia/Manila", years: [1844, 1845] },
+  },
+  /** The sun runs the two hours up to February 2027's new moon, Shanghai's clock stopping on it. */
+  newmoon: {
+    zones: ["Asia/Shanghai"],
+    endsAt: { utc: newMoon.utc, hours: 2 },
+    durationMs: 8000,
   },
   /** The sun alone, no zone dated. */
   sun: { zones: [] },
@@ -52,22 +67,27 @@ export interface LapseTools {
   addHours(ms: number, hours: number): number | null;
   /** The zone's wall time at `ms` as `YYYY-MM-DDTHH:MM`, or `""` for a zone gmt does not know. */
   stamp(zone: string, ms: number): string;
+  /** The epoch milliseconds of a UTC instant (`…Z`), or `null` for one gmt rejects. */
+  utcMs(iso: string): number | null;
   /** The epoch milliseconds of the zone's first offset change in any of these local years. */
   jumpMs(zone: string, years: readonly number[]): number | null;
 }
 
 export async function loadLapseTools(): Promise<LapseTools> {
-  const [get, unix, zonedGet, zonedConvert, calc] = await Promise.all([
-    import("@northguild/gmt/unix/get"),
-    import("@northguild/gmt/unix/convert"),
-    import("@northguild/gmt/zoned/get"),
-    import("@northguild/gmt/zoned/convert"),
-    import("@northguild/gmt/unix/calculate"),
-  ]);
+  const [get, unix, zonedGet, zonedConvert, calc, utcConvert] =
+    await Promise.all([
+      import("@northguild/gmt/unix/get"),
+      import("@northguild/gmt/unix/convert"),
+      import("@northguild/gmt/zoned/get"),
+      import("@northguild/gmt/zoned/convert"),
+      import("@northguild/gmt/unix/calculate"),
+      import("@northguild/gmt/utc/convert"),
+    ]);
   return {
     nowMs: () => get.getUnixNow(),
     addHours: (ms, hours) => calc.addUnix(ms, { hours }),
     stamp: (zone, ms) => unix.convertUnixToZoned(ms, zone).slice(0, 16),
+    utcMs: (iso) => utcConvert.convertUtcToUnix(iso),
     jumpMs(zone, years) {
       for (const year of years) {
         const first = zonedGet.getDstTransitions(zone, year)[0];
@@ -89,19 +109,44 @@ export interface LapsePlan {
   fromMs: number;
   toMs: number;
   durationMs: number;
+  /** The sun's speed at the start, in sun milliseconds per stage millisecond; 0 starts at rest. */
+  startRate?: number;
 }
 
-/** The window for a lapse, or `null` when gmt cannot give one (a zone with no recorded jump). */
+/** Where a day-long lapse that follows another takes over: the instant on screen and its speed. */
+export interface LapseCarry {
+  ms: number;
+  /** Sun milliseconds per stage millisecond. */
+  rate: number;
+}
+
+/** Whether a lapse runs a day from now, rather than a window fixed in history. */
+export const isDayLong = (name: LapseName): boolean => {
+  const def: LapseDef = LAPSES[name];
+  return !def.endsAt && !def.around;
+};
+
+/**
+ * The window for a lapse, or `null` when gmt cannot give one (a zone with no recorded jump). A
+ * day-long lapse given `carry` starts there instead of now.
+ */
 export function planLapse(
   name: LapseName,
   tools: LapseTools,
+  carry: LapseCarry | null = null,
 ): LapsePlan | null {
   const def: LapseDef = LAPSES[name];
   const base = {
     name,
     zones: def.zones,
-    durationMs: LAPSE_MS,
+    durationMs: def.durationMs ?? LAPSE_MS,
   };
+  if (def.endsAt) {
+    const to = tools.utcMs(def.endsAt.utc);
+    if (to === null) return null;
+    const from = tools.addHours(to, -def.endsAt.hours);
+    return from === null ? null : { ...base, fromMs: from, toMs: to };
+  }
   if (def.around) {
     const jump = tools.jumpMs(def.around.zone, def.around.years);
     if (jump === null) return null;
@@ -111,22 +156,72 @@ export function planLapse(
       ? null
       : { ...base, fromMs: from, toMs: to };
   }
-  const from = tools.nowMs();
+  const from = carry?.ms ?? tools.nowMs();
   const to = tools.addHours(from, 24);
-  return to === null ? null : { ...base, fromMs: from, toMs: to };
+  if (to === null) return null;
+  const rate = Math.max(0, carry?.rate ?? 0);
+  return rate > 0
+    ? { ...base, fromMs: from, toMs: to, startRate: rate }
+    : { ...base, fromMs: from, toMs: to };
 }
 
 /** Eases in and out, so the sun starts and stops without a jolt. */
 export const ease = (t: number): number =>
   0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, t)));
 
+/**
+ * The largest start slope (in the window's span per duration) the curve takes: above about 2.4 it
+ * would run backwards near the end. A carried sun is at most π/2 of that.
+ */
+const MAX_START_SLOPE = 2;
+
+/** The start slope of a plan, as a share of its span per its duration. */
+const startSlope = (plan: LapsePlan): number => {
+  const span = plan.toMs - plan.fromMs;
+  if (!plan.startRate || span <= 0) return 0;
+  return Math.min(MAX_START_SLOPE, (plan.startRate * plan.durationMs) / span);
+};
+
+/**
+ * Progress along the window at `t`: the ease, plus a term that sets the start's speed and fades
+ * to nothing at both ends (the Hermite basis `t(1-t)²`), so a carried sun neither stops nor jumps.
+ */
+const progressAt = (slope: number, t: number): number => {
+  const c = Math.min(1, Math.max(0, t));
+  return ease(c) + slope * c * (1 - c) ** 2;
+};
+
 /** The instant at progress `t` (0 to 1) of a plan. */
 export const instantAt = (plan: LapsePlan, t: number): number =>
-  Math.round(plan.fromMs + (plan.toMs - plan.fromMs) * ease(t));
+  Math.round(
+    plan.fromMs + (plan.toMs - plan.fromMs) * progressAt(startSlope(plan), t),
+  );
+
+/** The sun's speed at progress `t` of a plan, in sun milliseconds per stage millisecond. */
+export function rateAt(plan: LapsePlan, t: number): number {
+  if (t <= 0 && plan.startRate) return plan.startRate;
+  if (t >= 1 || plan.durationMs <= 0) return 0;
+  const c = Math.max(0, t);
+  const slope =
+    (Math.PI / 2) * Math.sin(Math.PI * c) +
+    startSlope(plan) * (1 - c) * (1 - 3 * c);
+  return ((plan.toMs - plan.fromMs) * slope) / plan.durationMs;
+}
+
+/** The instant a lapse stops on, or `null` when it has no fixed end (or gmt rejects it). */
+export const lapseEndMs = (
+  name: LapseName,
+  tools: LapseTools,
+): number | null => {
+  const def: LapseDef = LAPSES[name];
+  return def.endsAt ? tools.utcMs(def.endsAt.utc) : null;
+};
 
 /** What a frame of a lapse says. */
 export interface LapseFrame {
   ms: number;
+  /** The sun's speed, in sun milliseconds per stage millisecond: 0 once the lapse is done. */
+  rate: number;
   /** Each lapse zone's wall time as `YYYY-MM-DDTHH:MM`. */
   stamps: Readonly<Record<string, string>>;
   done: boolean;
@@ -140,6 +235,7 @@ export function frameAt(
   const ms = instantAt(plan, t);
   return {
     ms,
+    rate: rateAt(plan, t),
     stamps: Object.fromEntries(
       plan.zones.map((zone) => [zone, tools.stamp(zone, ms)]),
     ),

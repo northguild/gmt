@@ -70,3 +70,11 @@ export const recordLapses = (
 export const recordDeckStates = (
   root: HTMLElement,
 ): Array<{ id: string; build: number }> => recordEvents(root, "gmt-deck-state");
+
+/** What a live panel does when its demo starts or ends: `gmt-demo` on the deck root. */
+export function announceDemo(
+  root: Element,
+  detail: { id: string; source: "live" | "recorded" } | null,
+): void {
+  root.dispatchEvent(new CustomEvent("gmt-demo", { detail }));
+}

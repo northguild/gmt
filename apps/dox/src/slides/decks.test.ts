@@ -79,3 +79,9 @@ describe("deck registry", () => {
         );
   });
 });
+
+describe("Deck 0's start", () => {
+  it("is 18:00 on 16 December 2026 in Helsinki, with the offset gmt gives", () => {
+    expect(DECKS[0]!.start).toBe("2026-12-16T18:00:00+02:00[Europe/Helsinki]");
+  });
+});

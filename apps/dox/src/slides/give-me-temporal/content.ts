@@ -4,6 +4,12 @@
  * carries one. Nothing runs on stage, and no bug is described beyond what its filing says.
  */
 
+import { addDate, diffDateTime } from "@northguild/gmt/plain/calculate";
+import { formatDate } from "@northguild/gmt/plain/format";
+import { convertUtcToZoned } from "@northguild/gmt/utc/convert";
+import chineseMonth from "./chinese-month.json";
+import newMoon from "./new-moon.json";
+
 export interface Report {
   /** A `filingKey`. */
   filing: string;
@@ -88,6 +94,51 @@ export const REPORTS = {
     },
   ],
 } as const satisfies Record<string, readonly Report[]>;
+
+/**
+ * Cited primary sources. A figure on a slide comes from its filing or from a record here;
+ * `content.test.ts` holds each cited value to the filing's text or to the record's field.
+ */
+export const SOURCES = {
+  /** What the U.S. Naval Observatory's API returned for the 2027 phases of the Moon. */
+  newMoon2027: newMoon,
+  /** The Hong Kong Observatory on how a Chinese calendar month starts, and on which clock. */
+  chineseMonth,
+} as const;
+
+/** What the new-moon panel says, worked out by gmt from the source records. */
+export function newMoonFacts() {
+  const record = SOURCES.newMoon2027;
+  const zone = "Asia/Shanghai";
+  const zoned = convertUtcToZoned(record.utc, zone);
+  const local = zoned.slice(0, 16);
+  const date = local.slice(0, 10);
+  const midnight = `${addDate(date, { days: 1 })}T00:00:00`;
+  const minutes = diffDateTime(`${local}:00`, midnight, "minutes");
+  const { year, month, day, time } = record.phase;
+  const utcDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return {
+    zone,
+    utcDay: formatDate(utcDate, "en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+    utcTime: time,
+    localTime: local.slice(11),
+    localDay: formatDate(date, "en-GB", { day: "numeric", month: "long" }),
+    minutesToMidnight: minutes,
+    source: record.source,
+    url: record.url,
+    timeScale: record.timeScale,
+    /** Shanghai's UTC offset at the new moon, as gmt gives it. */
+    zoneOffset: zoned.slice(19, 25),
+    /** The calendar's clock, as the Observatory states it ("UTC plus eight hours"). */
+    calendarClock: `UTC+${Number(SOURCES.chineseMonth.offset.slice(1, 3))}`,
+    calendarSource: SOURCES.chineseMonth.source,
+    calendarUrl: SOURCES.chineseMonth.url,
+  };
+}
 
 /**
  * What each bug slide draws, written from its report's own observed and expected lines and from

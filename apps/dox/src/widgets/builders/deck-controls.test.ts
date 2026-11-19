@@ -115,10 +115,10 @@ describe("deckDialogs", () => {
     expect(
       screen.getByRole("heading", { name: "Unlock the slides", hidden: true }),
     ).toBeInTheDocument();
-    const phrase = screen.getByRole("textbox", {
-      name: "Secret phrase",
-      hidden: true,
-    });
+    // A password field has no role: it is found by its label. It shows dots, not the phrase,
+    // because the phrase is typed on the projected screen.
+    const phrase = screen.getByLabelText("Secret phrase");
+    expect(phrase).toHaveAttribute("type", "password");
     expect(phrase).toHaveAttribute("autocomplete", "off");
     expect(phrase).toHaveAttribute("spellcheck", "false");
     // The add-on: the button comes straight after the field, in reading order.
@@ -130,6 +130,15 @@ describe("deckDialogs", () => {
       phrase.compareDocumentPosition(go) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.getByRole("alert", { hidden: true })).toBeEmptyDOMElement();
+  });
+
+  it("keeps a second, hidden list for the spare slides under its own heading", () => {
+    renderHtml(deckDialogs(KEYS));
+    // Hidden, the heading has no accessible name yet: find it by its text.
+    const heading = screen.getByText("Spare slides, for questions");
+    expect(heading).not.toBeVisible();
+    // The talk's slides and the spares are two lists.
+    expect(screen.getAllByRole("list", { hidden: true })).toHaveLength(2);
   });
 
   it("gives the Unlock tool no key, and keeps its padlocks out of its name", () => {

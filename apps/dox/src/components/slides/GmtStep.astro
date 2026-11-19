@@ -1,0 +1,66 @@
+---
+/**
+ * The last build of a bug slide: what GMT does with the same input. For each filing it shows what
+ * the filing's own data says GMT does: the guard (`gmtGuard`, with the probe and failing counts of
+ * its compat group), the note as written (`gmtNote`) or, for a filing marked `gmtUnguarded`, that
+ * GMT has no workaround. A filing GMT has no workaround for never gets a check mark. `call` is one
+ * gmt call, shown through `GmtResult` as code and value from one source. The step ends with where
+ * the numbers came from: GMT's version and the Node and ICU this site was built with.
+ */
+import { compatGroups } from "~/data/temporal-compat";
+import { filingRef } from "~/data/upstream-filings";
+import { gmtVersion } from "~/generated/versions";
+import { inlineCodeHtml } from "~/lib/inline-code-html";
+import { findFiling } from "~/lib/slides/filing";
+import { gmtBadge } from "~/lib/upstream-badges";
+import GmtResult from "./GmtResult.astro";
+
+interface Props {
+  /** `filingKey`s, in the order they are read out. */
+  filings: readonly string[];
+  /** One gmt call: a key of `GMT_MODULES`, the function's name and its arguments. */
+  call?: { module: string; name: string; args: readonly unknown[] };
+}
+const { filings: keys, call } = Astro.props;
+
+const rows = keys.map((key) => {
+  const f = findFiling(key);
+  const group = f.gmtGuard
+    ? compatGroups.find((g) => g.defects.includes(f.gmtGuard!))
+    : undefined;
+  return {
+    ref: filingRef(f),
+    url: f.url,
+    badge: gmtBadge(f),
+    guard: f.gmtGuard,
+    group,
+    note: f.gmtGuard ? null : f.gmtNote,
+    unguarded: f.gmtUnguarded === true,
+  };
+});
+const { node, icu } = process.versions;
+---
+
+<div class="gmt-visual gmt-step">
+  <p class="gmt-step-head">GMT</p>
+  <ul class="gmt-step-rows">
+    {
+      rows.map((r) => (
+        <li class="gmt-step-row" data-unguarded={r.unguarded ? "" : undefined}>
+          <p class="gmt-step-line">
+            <a href={r.url}>{r.ref}</a>
+            <span class="gmt-step-badge">{r.badge.text}</span>
+          </p>
+          {r.guard && r.group && (
+            <p class="gmt-step-detail">
+              {r.group.probes} small tests watch it; {r.group.failing} still show the bug today.
+            </p>
+          )}
+          {r.note && <p class="gmt-step-detail" set:html={inlineCodeHtml(r.note)} />}
+        </li>
+      ))
+    }
+  </ul>
+  {call && <GmtResult module={call.module} name={call.name} args={call.args} />}
+  <p class="gmt-step-source">GMT {gmtVersion}, built on Node {node} with ICU {icu}.</p>
+</div>

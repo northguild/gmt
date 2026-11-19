@@ -3,9 +3,12 @@
 // `src/pages/dox.astro`: `customCss` reaches a page only through it. The head script marks the
 // document before `<body>` parses, so the stage's shape is the first paint; the mount confirms
 // it (`lib/slides/deck-mount.ts`). The site header stays; fullscreen is requested on the deck
-// root alone. In the sitemap, out of the search index.
+// root alone. In the sitemap, out of the search index. The marker meta and the script below offer
+// the deck's own WebMCP tools (`lib/slides/deck-tools`); the presenter page carries neither.
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { deckWebmcpHeadEntries } from "~/lib/head-tags";
 import { DECK_HEAD_SCRIPT } from "~/lib/slides/head-script";
+import { ORIGIN_TRIAL_TOKENS } from "~/lib/webmcp/origin-trial";
 import Deck0 from "~/slides/give-me-temporal/Deck0.astro";
 ---
 
@@ -21,8 +24,18 @@ import Deck0 from "~/slides/give-me-temporal/Deck0.astro";
         tag: "script",
         content: DECK_HEAD_SCRIPT,
       },
+      ...deckWebmcpHeadEntries("give-me-temporal", ORIGIN_TRIAL_TOKENS),
     ],
   }}
 >
   <Deck0 />
 </StarlightPage>
+
+<script>
+  import { offerPageTools } from "~/lib/webmcp/offer";
+
+  void offerPageTools(
+    "slides/give-me-temporal",
+    () => import("~/lib/slides/deck-tools"),
+  );
+</script>

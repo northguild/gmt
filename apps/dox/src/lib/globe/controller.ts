@@ -231,6 +231,17 @@ export interface Controller {
   markInteraction(now: number): void;
   /** True while the ambient spin is the only thing moving the globe: no drag, coast, fly-to or zoom ease. */
   isAmbientOnly(): boolean;
+  /**
+   * A host that wants the globe turning, with no idle wait and at any zoom, asks for the spin here.
+   * It is the same spin the idle globe gets (the same rate, the same smoothstep ramp in), and it
+   * waits for a flight, a hop, a drag or a steer to end. Turning it off eases the speed down on the
+   * same ramp, so the globe never stops short. Reduced motion never spins.
+   */
+  setSpin(on: boolean): void;
+  /** True from the moment the requested spin starts until its ramp down has ended. */
+  isSpinning(): boolean;
+  /** True while only a requested spin (building, cruising or easing down) moves the globe. */
+  isSpinOnly(): boolean;
   /** True while dragging or coasting — the cue for dimming grid lines and
    *  hiding labels, which is how the canvas-2D globe reads too. */
   isQuiet(): boolean;
@@ -270,6 +281,10 @@ export function createController(options: ControllerOptions): Controller {
   let ambientElapsed = 0;
   /** When the ambient spin becomes due, or null while it is off the table. */
   let ambientDueAt: number | null = null;
+  /** A host asked for the spin (`setSpin`), whatever the idle rules say. */
+  let spinWanted = false;
+  /** The running spin was asked for, so it ignores the idle rules and eases down when released. */
+  let spinOwned = false;
   let hovered = false;
 
   /** The fly-to under way, a pure function of the time since `flightStart`. */
@@ -335,7 +350,19 @@ export function createController(options: ControllerOptions): Controller {
    */
   function markInteraction(now: number): void {
     ambientActive = false;
+    spinOwned = false;
     ambientDueAt = reducedMotion() || !ambientAllowed ? null : now + IDLE_MS;
+  }
+
+  /** Whether nothing else holds the camera, so a requested spin can begin. */
+  function spinFree(): boolean {
+    return (
+      !isDragging() &&
+      !inertiaActive &&
+      flight === null &&
+      hop === null &&
+      !steering()
+    );
   }
 
   /** Whether the globe is settled enough for the ambient spin to take over. */
@@ -406,6 +433,7 @@ export function createController(options: ControllerOptions): Controller {
         isDragging() ||
         inertiaActive ||
         ambientActive ||
+        (spinWanted && !reducedMotion()) ||
         flight !== null ||
         hop !== null ||
         steering() ||
@@ -427,7 +455,15 @@ export function createController(options: ControllerOptions): Controller {
       // The preference can change under a running spin or a pending one.
       if (snap) {
         ambientActive = false;
+        spinOwned = false;
         ambientDueAt = null;
+      }
+
+      // A requested spin starts as soon as the camera is free, on the idle spin's own ramp.
+      if (spinWanted && !snap && !ambientActive && spinFree()) {
+        ambientActive = true;
+        spinOwned = true;
+        ambientElapsed = 0;
       }
 
       // Due to spin, and nothing in the way.
@@ -495,10 +531,22 @@ export function createController(options: ControllerOptions): Controller {
         }
       } else if (ambientActive) {
         const turned = ambientTravel(ambientElapsed);
-        ambientElapsed += dt;
-        rotation[0] = wrapLng(
-          rotation[0] + ambientTravel(ambientElapsed) - turned,
-        );
+        if (spinOwned && !spinWanted) {
+          // Released: run the ramp backwards, so the speed eases to zero the way it eased in.
+          ambientElapsed = Math.max(ambientElapsed - dt, 0);
+          rotation[0] = wrapLng(
+            rotation[0] + turned - ambientTravel(ambientElapsed),
+          );
+          if (ambientElapsed === 0) {
+            ambientActive = false;
+            spinOwned = false;
+          }
+        } else {
+          ambientElapsed += dt;
+          rotation[0] = wrapLng(
+            rotation[0] + ambientTravel(ambientElapsed) - turned,
+          );
+        }
       }
 
       // Idle again once nothing is animating, so the next wake is scheduled.
@@ -728,7 +776,7 @@ export function createController(options: ControllerOptions): Controller {
       hovered = value;
       // Leaving restarts the countdown; arriving simply holds it off.
       if (!value) markInteraction(now);
-      else ambientActive = false;
+      else if (!spinOwned) ambientActive = false;
     },
 
     markInteraction,
@@ -747,6 +795,23 @@ export function createController(options: ControllerOptions): Controller {
         !steering() &&
         Math.abs(targetZoom - zoom) <= 0.001
       );
+    },
+
+    setSpin(on): void {
+      if (on === spinWanted) return;
+      spinWanted = on;
+      // The ramp down starts from the cruise end of the ramp, not from however long it has cruised.
+      if (!on && spinOwned) {
+        ambientElapsed = Math.min(ambientElapsed, AMBIENT_RAMP_MS);
+      }
+    },
+
+    isSpinning(): boolean {
+      return spinOwned && ambientActive;
+    },
+
+    isSpinOnly(): boolean {
+      return spinOwned && controller.isAmbientOnly();
     },
 
     halt(): void {

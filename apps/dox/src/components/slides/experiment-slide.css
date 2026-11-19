@@ -35,6 +35,15 @@ html[data-deck] .gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
   line-height: 1.1;
 }
 
+/* A guessing slide holds the answer in one build; it keeps the column and the footnote's place. */
+.gmt-slide:has(.gmt-exp-kicker) > .gmt-slide-body > .gmt-build {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5em;
+  min-block-size: 0;
+}
+
 .gmt-exp-kicker {
   order: -1;
   margin: 0;

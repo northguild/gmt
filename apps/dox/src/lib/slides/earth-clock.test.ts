@@ -13,12 +13,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { formatZonedToParts } from "@northguild/gmt/zoned/format";
-import {
-  MERIDIAN_TURN_VAR,
-  dialDate,
-  handAngles,
-  mountEarthClock,
-} from "./earth-clock";
+import { dialDate, handAngles, mountEarthClock } from "./earth-clock";
+import { SHARD_COUNT } from "./clock-shatter";
 
 installJsdomShims();
 
@@ -220,31 +216,37 @@ describe("the Earth's clock", () => {
     expect(host).not.toHaveAttribute("data-earth-clock");
     clock.set("on");
     expect(host).toHaveAttribute("data-earth-clock", "on");
-    clock.set("morph", 6.25);
-    expect(host).toHaveAttribute("data-earth-clock", "morph");
-    expect(face()!.style.getPropertyValue(MERIDIAN_TURN_VAR)).toBe("6.25deg");
+    clock.set("shatter");
+    expect(host).toHaveAttribute("data-earth-clock", "shatter");
     clock.set("off");
     expect(host).not.toHaveAttribute("data-earth-clock");
   });
 
-  it("draws 24 meridians from the rim to the pole, one under each hour index", () => {
-    mount();
-    const lines = Array.from(
-      host.querySelectorAll<SVGLineElement>("[data-meridian]"),
-    );
-    expect(lines).toHaveLength(24);
-    for (const line of lines) {
-      const rim = Math.hypot(
-        Number(line.getAttribute("x1")) - 50,
-        Number(line.getAttribute("y1")) - 50,
-      );
-      expect(rim).toBeCloseTo(40, 1);
-      expect(line).toHaveAttribute("x2", "50");
-      expect(line).toHaveAttribute("y2", "50");
+  it("publishes the disc's centre on the layer, for the Earth to grow from", () => {
+    const clock = mount();
+    clock.fit({ x: 500, y: 300, radius: 160 });
+    expect(host.style.getPropertyValue("--gmt-earth-x")).toBe("500px");
+    expect(host.style.getPropertyValue("--gmt-earth-y")).toBe("300px");
+  });
+
+  it("breaks into copies of the dial on shatter, and sweeps them away when it ends", () => {
+    const clock = mount();
+    clock.set("on");
+    clock.set("shatter");
+    const shards = host.querySelectorAll("[data-shard]");
+    expect(shards).toHaveLength(SHARD_COUNT);
+    for (const shard of shards) {
+      // Each copy drops its gradients, which stay with the dial the copies point at.
+      expect(shard.querySelector("[data-hands]")).not.toBeNull();
+      expect(shard.querySelector("defs")).toBeNull();
     }
-    // The first meridian runs straight up from the pole, under the 00 index.
-    expect(lines[0]).toHaveAttribute("x1", "50");
-    expect(lines[0]).toHaveAttribute("y1", "10");
+    clock.set("shatter");
+    expect(host.querySelectorAll("[data-shard]")).toHaveLength(SHARD_COUNT);
+    clock.set("off");
+    expect(host.querySelectorAll("[data-shard]")).toHaveLength(0);
+    clock.set("shatter");
+    abort.abort();
+    expect(host.querySelectorAll("[data-shard]")).toHaveLength(0);
   });
 
   it("takes itself and its phase away when the signal aborts", () => {

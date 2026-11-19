@@ -3,6 +3,7 @@
  * and `decks.test.ts` holds that every slug has a page and every page a row. Delete this file and
  * `src/pages/slides/` together and the site builds without decks.
  */
+import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned/convert";
 import {
   formatZonedDateTime,
   formatZonedToParts,
@@ -31,14 +32,28 @@ export interface DeckEntry {
   qa: number;
 }
 
+/**
+ * Deck 0's start, 18:00 on 16 December 2026 in Helsinki, made by gmt from the wall time and the
+ * zone, so its offset is gmt's answer and nobody writes it by hand.
+ */
+const HELSINKI = "Europe/Helsinki";
+const TALK_START = convertPlainDateTimeToZoned(
+  "2026-12-16T18:00:00",
+  HELSINKI,
+  {
+    smallestUnit: "seconds",
+  },
+);
+if (TALK_START === "") throw new Error("gmt rejected Deck 0's start time");
+
 export const DECKS: readonly DeckEntry[] = [
   {
     slug: "give-me-temporal",
     label: "Deck 0",
     title: "Give Me Temporal",
     event: "HelsinkiJS",
-    start: "2026-12-16T18:00:00+02:00[Europe/Helsinki]",
-    zone: "Europe/Helsinki",
+    start: TALK_START,
+    zone: HELSINKI,
     locale: "fi",
     minutes: 20,
     qa: 5,

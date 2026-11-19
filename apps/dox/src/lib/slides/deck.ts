@@ -11,7 +11,10 @@
  *
  * The reach is how many slides, from the first, can be shown: a locked deck reaches only its first
  * slide (`deck-mount.ts` keeps the lock). Every move stays inside it, and a move to a slide past it
- * changes nothing; `last` is the last slide in reach.
+ * changes nothing; `last` is the last main slide in reach. Spare slides sit after the main run but
+ * are not part of it: Next never lands on one, and Next from the last main slide goes nowhere. A
+ * jump (the overview, an address, `goTo`) reaches a spare; Next from a spare returns to the main
+ * slide before the last, where the talk takes questions.
  */
 
 export interface DeckSlide {
@@ -19,6 +22,8 @@ export interface DeckSlide {
   id: string;
   /** How many builds the slide has. */
   builds: number;
+  /** A spare slide: after the talk, reached only by a jump, never by Next or End. */
+  spare?: boolean;
 }
 
 export interface DeckState {
@@ -32,6 +37,8 @@ export interface Deck {
   readonly state: DeckState;
   /** How many slides, from the first, can be shown. */
   readonly reach: number;
+  /** The slide Next (`1`) or Prev (`-1`) reaches from slide `from`, or `null` at an end. */
+  neighbour(from: number, delta: 1 | -1): number | null;
   /** Sets the reach (clamped to 1 and the deck); a shown slide past it gives way to the first. */
   setReach(reach: number): void;
   /** The next build, else the next slide at build 0. */
@@ -100,13 +107,33 @@ export function createDeck(
   const slides = input.map((s) => ({
     id: s.id,
     builds: Math.max(0, Math.trunc(s.builds)),
+    spare: s.spare === true,
   }));
   const whole = (n: number): number => (Number.isNaN(n) ? 0 : Math.trunc(n));
   const reachOf = (n: number | undefined): number =>
     n === undefined ? slides.length : clamp(whole(n), 1, slides.length);
   let reached = reachOf(reach);
-  /** The last slide in reach. */
+  /** The last slide in reach, spares included. */
   let last = reached - 1;
+  /** The last main slide in reach: where End goes. */
+  const mainEnd = (): number => {
+    for (let i = last; i > 0; i--) if (!slides[i]!.spare) return i;
+    return 0;
+  };
+  /** Where Next from a spare goes: the main slide before the last (the questions). */
+  const returnTo = (): number => Math.max(0, mainEnd() - 1);
+  /** The slide Next reaches from the last build, or -1. */
+  const forward = (from: number = slide): number => {
+    if (slides[from]!.spare) return returnTo();
+    return from < mainEnd() ? from + 1 : -1;
+  };
+  /** The slide Prev reaches from the first build: a spare's neighbour is the spare before it. */
+  const backward = (from: number = slide): number => {
+    if (from === 0) return -1;
+    return slides[from]!.spare && !slides[from - 1]!.spare
+      ? returnTo()
+      : from - 1;
+  };
   let slide = 0;
   let build = 0;
 
@@ -137,19 +164,31 @@ export function createDeck(
       last = reached - 1;
       if (slide > last) set(0, 0);
     },
-    next: () =>
-      build < slides[slide]!.builds
-        ? set(slide, build + 1)
-        : slide < last && set(slide + 1, 0),
-    prev: () =>
-      build > 0
-        ? set(slide, build - 1)
-        : slide > 0 && set(slide - 1, slides[slide - 1]!.builds),
+    next: () => {
+      if (build < slides[slide]!.builds) return set(slide, build + 1);
+      const to = forward();
+      return to !== -1 && set(to, 0);
+    },
+    prev: () => {
+      if (build > 0) return set(slide, build - 1);
+      const to = backward();
+      return to !== -1 && set(to, slides[to]!.builds);
+    },
     stepBuild: (delta) => set(slide, build + delta),
-    nextSlide: () => slide < last && set(slide + 1, 0),
-    prevSlide: () => slide > 0 && set(slide - 1, 0),
+    neighbour: (from, delta) => {
+      const to = delta === 1 ? forward(from) : backward(from);
+      return to === -1 ? null : to;
+    },
+    nextSlide: () => {
+      const to = forward();
+      return to !== -1 && set(to, 0);
+    },
+    prevSlide: () => {
+      const to = backward();
+      return to !== -1 && set(to, 0);
+    },
     first: () => set(0, 0),
-    last: () => set(last, 0),
+    last: () => set(mainEnd(), 0),
     goTo: (index, wanted = 0) => set(index, at(wanted)),
     goToId(id, wanted = 0) {
       const index = slides.findIndex((s) => s.id === id);

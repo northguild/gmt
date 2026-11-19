@@ -224,3 +224,52 @@ describe("reach", () => {
     expect(deck.state).toEqual(at(0, 0));
   });
 });
+
+describe("spare slides", () => {
+  const WITH_SPARES: DeckSlide[] = [
+    { id: "title", builds: 0 },
+    { id: "qa", builds: 0 },
+    { id: "thanks", builds: 1 },
+    { id: "spare-a", builds: 0, spare: true },
+    { id: "spare-b", builds: 2, spare: true },
+  ];
+
+  it("ends on the last main slide, not on a spare", () => {
+    const deck = createDeck(WITH_SPARES);
+    expect(deck.last()).toBe(true);
+    expect(deck.state).toEqual(at(2, 0));
+    expect(deck.last()).toBe(false);
+  });
+
+  it("never lands on a spare by next: the last main slide is the end", () => {
+    const deck = createDeck(WITH_SPARES, at(2, 1));
+    expect(deck.next()).toBe(false);
+    expect(deck.nextSlide()).toBe(false);
+    expect(deck.state).toEqual(at(2, 1));
+  });
+
+  it("opens a spare by id and by address", () => {
+    const deck = createDeck(WITH_SPARES);
+    expect(deck.goToId("spare-b")).toBe(true);
+    expect(deck.state).toEqual(at(4, 0));
+    expect(deck.goToHash("#spare-a")).toBe(true);
+    expect(deck.state).toEqual(at(3, 0));
+  });
+
+  it("steps a spare's builds, then next returns to the questions", () => {
+    const deck = createDeck(WITH_SPARES, at(4, 0));
+    expect(deck.next()).toBe(true);
+    expect(deck.next()).toBe(true);
+    expect(deck.state).toEqual(at(4, 2));
+    expect(deck.next()).toBe(true);
+    expect(deck.state).toEqual(at(1, 0));
+  });
+
+  it("goes back from a spare to the one before it, and from the first spare to the questions", () => {
+    const deck = createDeck(WITH_SPARES, at(4, 0));
+    expect(deck.prev()).toBe(true);
+    expect(deck.state).toEqual(at(3, 0));
+    expect(deck.prev()).toBe(true);
+    expect(deck.state).toEqual(at(1, 0));
+  });
+});

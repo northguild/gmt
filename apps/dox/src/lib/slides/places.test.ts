@@ -9,7 +9,6 @@ import {
   isGeographic,
   labelOf,
   meanPoint,
-  meridianTurn,
   moonCameraPoint,
   pointFor,
   resolvePlace,
@@ -143,6 +142,13 @@ describe("rotationFor", () => {
 });
 
 describe("the Moon", () => {
+  it("is placed at the instant the context gives", () => {
+    const later = INSTANT + 3 * 86_400_000;
+    expect(
+      pointFor(resolvePlace("moon"), { ...ctx, instantMs: later }),
+    ).toEqual(moonCameraPoint(later));
+  });
+
   it("looks from the antipode of the sublunar point, turned by the offset", () => {
     const { ra, dec } = moonRaDec(INSTANT);
     const sublunar: [number, number] = [ra - siderealDeg(INSTANT), dec];
@@ -241,30 +247,6 @@ describe("the pole over a zone's clock", () => {
     const rotation = rotationFor(place, ctx);
     expect(screenAngle(rotation, L, 60)).toBeCloseTo(180, 2);
   });
-
-  it.each([0, 6 * 60, 13 * 60 + 17, 23 * 60 + 45])(
-    "turns the hour marks onto the meridians by at most half a mark, at %i minutes",
-    (minutes) => {
-      const place = resolvePlace("pole:Europe/Helsinki");
-      const point = pointFor(place, { ...ctx, wallMinutes: () => minutes });
-      const turn = meridianTurn(point[0]);
-      expect(Math.abs(turn)).toBeLessThanOrEqual(7.5);
-      const rotation = rotationFor(place, {
-        ...ctx,
-        wallMinutes: () => minutes,
-      });
-      const meridians = Array.from({ length: 24 }, (_, k) =>
-        screenAngle(rotation, 15 * k, 45),
-      );
-      for (let mark = 0; mark < 24; mark += 1) {
-        const at = mark * 15 + turn;
-        const nearest = Math.min(
-          ...meridians.map((m) => Math.abs(((m - at + 540) % 360) - 180)),
-        );
-        expect(nearest).toBeLessThan(0.01);
-      }
-    },
-  );
 
   it("draws the 24 hour marks over meridians 15 degrees apart", () => {
     const place = resolvePlace("pole:Europe/Helsinki");
