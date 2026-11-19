@@ -4,13 +4,12 @@
  * Mirrors the rail's CSS in `gmt-hive.css` (`.gmt-hive-rail`), which clamps the
  * width on its own so a window resize never needs this code:
  *
- * - **Narrowest** is the rail's default, `clamp(22rem, 34vw, 34rem)`.
+ * - **Narrowest** is the rail's own `min-inline-size`, measured: the site's
+ *   `clamp(22rem, 34vw, 34rem)`, or a host's own (the slide deck's frame).
  * - **Widest** is half the page, but never so wide that the transcript keeps
- *   less than `CHAT_MIN_REM`. On a window too small for both, the default wins.
+ *   less than `CHAT_MIN_REM`. On a window too small for both, the narrowest wins.
  */
 
-/** The rail's default width: `clamp(22rem, 34vw, 34rem)`. */
-const RAIL_MIN = { floorRem: 22, viewportShare: 0.34, ceilRem: 34 };
 /** The widest the rail may grow, as a share of the page body. */
 export const RAIL_MAX_SHARE = 0.5;
 /** The transcript never gets narrower than this while the rail grows. */
@@ -25,20 +24,18 @@ export interface RailBounds {
   max: number;
 }
 
-/** The rail's narrowest and widest widths in pixels. */
+/** The rail's narrowest and widest widths in pixels, from its measured minimum. */
 export function railBounds({
-  viewportWidth,
+  minWidth,
   bodyWidth,
   rem,
 }: {
-  viewportWidth: number;
+  /** The rail's computed `min-inline-size`, in pixels. */
+  minWidth: number;
   bodyWidth: number;
   rem: number;
 }): RailBounds {
-  const min = Math.min(
-    Math.max(RAIL_MIN.floorRem * rem, viewportWidth * RAIL_MIN.viewportShare),
-    RAIL_MIN.ceilRem * rem,
-  );
+  const min = minWidth;
   const max = Math.max(
     min,
     Math.min(bodyWidth * RAIL_MAX_SHARE, bodyWidth - CHAT_MIN_REM * rem),
