@@ -150,6 +150,30 @@ describe("workBadge and roleBadge", () => {
 });
 
 describe("gmtBadge", () => {
+  it("says GMT has no workaround, with no check icon, for an unguarded filing", () => {
+    const badge = gmtBadge({
+      kind: "issue",
+      gmtGuard: null,
+      gmtNote: "GMT has no workaround for this.",
+      gmtUnguarded: true,
+      pairsWith: [],
+    });
+    expect(badge.text).toBe("No GMT workaround");
+    expect(badge.tone).toBe("neutral");
+    expect(badge.icon).toBeUndefined();
+  });
+
+  it("never calls a filing with a gmtNote and no guard unaffected when it is unguarded", () => {
+    const badge = gmtBadge({
+      kind: "issue",
+      gmtGuard: null,
+      gmtNote: "n/a to GMT",
+      gmtUnguarded: true,
+      pairsWith: [],
+    });
+    expect(badge.text).not.toBe("Not affected");
+  });
+
   it.each`
     kind       | gmtGuard | gmtNote         | pairsWith                          | text                    | tone
     ${"issue"} | ${"D11"} | ${null}         | ${[]}                              | ${"Guarded · D11"}      | ${"purple"}

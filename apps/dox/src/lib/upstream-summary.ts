@@ -14,6 +14,7 @@ import {
   handledInGmt,
   totalFilings,
   unaffectingGmt,
+  unguardedInGmt,
 } from "../data/upstream-filings";
 // The package root, not `@northguild/gmt/utc`: `astro.config.mjs` aliases `@northguild/gmt` to the
 // `dist` directory, and a Vite string alias matches as a prefix, so a subpath import becomes a bare
@@ -33,6 +34,15 @@ export const coverageClause: string =
   covered === totalFilings
     ? "GMT already gives you the correct answer for every one of them"
     : `GMT already gives you the correct answer for ${covered} of them`;
+
+/**
+ * A closing sentence for the filings a GMT user can still meet because GMT has no workaround for
+ * them (`gmtUnguarded`), or nothing while there are none.
+ */
+export const unguardedClause: string =
+  unguardedInGmt === 0
+    ? ""
+    : ` For ${unguardedInGmt === 1 ? "one" : unguardedInGmt} more, GMT has no workaround.`;
 
 /** "" unless the live refresh failed and the page fell back to the committed snapshot. */
 export const sourceClause: string =

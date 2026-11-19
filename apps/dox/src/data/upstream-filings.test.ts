@@ -26,6 +26,7 @@ import {
   TRACKERS,
   TRACKED_REPOS,
   unaffectingGmt,
+  unguardedInGmt,
   type GitHubFiling,
   type UpstreamFiling,
   type UpstreamListing,
@@ -148,7 +149,27 @@ describe("upstream filings", () => {
         true,
       );
     }
-    expect(handledInGmt + unaffectingGmt).toBe(totalFilings);
+    expect(handledInGmt + unaffectingGmt + unguardedInGmt).toBe(totalFilings);
+  });
+
+  it("marks a filing gmtUnguarded only with a gmtNote that says GMT has no workaround", () => {
+    for (const f of filings) {
+      if (f.gmtUnguarded) {
+        expect(f.gmtGuard, filingKey(f)).toBeNull();
+        expect(f.gmtNote, filingKey(f)).toMatch(/GMT has no workaround|WebKit/);
+      } else {
+        // No other note may claim there is no workaround: it would read "Not affected".
+        expect(f.gmtNote ?? "", filingKey(f)).not.toMatch(
+          /GMT has no workaround/i,
+        );
+      }
+    }
+  });
+
+  it("marks the Indian-calendar ICU and WebKit filings unguarded", () => {
+    const byKey = new Map(filings.map((f) => [filingKey(f), f]));
+    expect(byKey.get("ICU-23627")?.gmtUnguarded).toBe(true);
+    expect(byKey.get("bugs.webkit.org#331726")?.gmtUnguarded).toBe(true);
   });
 
   it("separates the filings we opened from the ones we only contributed to", () => {
@@ -705,6 +726,40 @@ describe("scripts/upstream.mjs check", () => {
 
   it("passes on the committed file", () => {
     expect(run(committed).ok).toBe(true);
+  });
+
+  it("fails on a listing that carries gmtUnguarded", () => {
+    const bad = { ...committed.listings[0], gmtUnguarded: true };
+    const result = run(withListings([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("gmtUnguarded");
+  });
+
+  const withOnly = (filings: Record<string, unknown>[]) => ({
+    ...committed,
+    filings,
+  });
+  const unguarded = (committed.filings as Record<string, unknown>[]).find(
+    (f) => f.gmtUnguarded === true,
+  )!;
+
+  it("accepts gmtUnguarded beside a gmtNote", () => {
+    expect(unguarded).toBeDefined();
+    expect(run(withOnly([unguarded])).ok).toBe(true);
+  });
+
+  it("fails on gmtUnguarded without a gmtNote", () => {
+    const bad = { ...unguarded, gmtNote: null, gmtGuard: "D1" };
+    const result = run(withOnly([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("gmtUnguarded needs a gmtNote");
+  });
+
+  it("fails on gmtUnguarded that is not true", () => {
+    const bad = { ...unguarded, gmtUnguarded: false };
+    const result = run(withOnly([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("gmtUnguarded is written only as true");
   });
 
   it("fails on a listing that carries gmtGuard", () => {

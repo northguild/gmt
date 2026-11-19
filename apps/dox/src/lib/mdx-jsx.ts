@@ -69,7 +69,12 @@ import {
   type CompareTableId,
 } from "./library-compare-tables";
 import { LISTING_COLUMNS, listingStatus } from "./upstream-status";
-import { asDate, contributionClause, coverageClause } from "./upstream-summary";
+import {
+  asDate,
+  contributionClause,
+  coverageClause,
+  unguardedClause,
+} from "./upstream-summary";
 import {
   diffPairs,
   libraryProp,
@@ -536,7 +541,7 @@ function renderBehaviourMatrix(): string {
  * with it (CORE-8 review, #253).
  */
 function renderUpstreamTracker(): string {
-  return `\n**So far we have sent ${filedByUs} reports and fixes to Temporal and the projects it builds on, ${filedPrs} of them as ready-to-merge code changes${contributionClause}. ${coverageClause}: ${handledInGmt} through its own built-in fix, and ${unaffectingGmt} because the bug is in code GMT doesn't use.**\n`;
+  return `\n**So far we have sent ${filedByUs} reports and fixes to Temporal and the projects it builds on, ${filedPrs} of them as ready-to-merge code changes${contributionClause}. ${coverageClause}: ${handledInGmt} through its own built-in fix, and ${unaffectingGmt} because the bug is in code GMT doesn't use.${unguardedClause}**\n`;
 }
 
 /**

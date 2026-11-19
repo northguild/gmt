@@ -55,6 +55,12 @@ interface FilingBase {
    * `gmtGuard` and `gmtNote` is set (`scripts/upstream.mjs check` enforces it). */
   gmtNote: string | null;
   /**
+   * Set (as `true`) when `gmtNote` says GMT has no workaround: the bug reaches a GMT user, so the
+   * page must not call the filing "Not affected". Absent otherwise. Allowed only with a `gmtNote`
+   * (`scripts/upstream.mjs check` enforces it).
+   */
+  gmtUnguarded?: true;
+  /**
    * Whether we opened this filing or only contributed to someone else's.
    *
    * Absent means `"author"`, so the filings we opened need no field. A `"contributor"` row is a
@@ -194,6 +200,7 @@ export const HAND_WRITTEN_FIELDS = [
   "dependsOn",
   "gmtGuard",
   "gmtNote",
+  "gmtUnguarded",
   "role",
   "contributionUrl",
   "outcome",
@@ -495,7 +502,12 @@ export const handledInGmt: number = filings.filter(
 
 /** Filings whose defect is in code GMT doesn't use, so they don't affect GMT. */
 export const unaffectingGmt: number = filings.filter(
-  (f) => f.gmtGuard === null && f.gmtNote !== null,
+  (f) => f.gmtGuard === null && f.gmtNote !== null && !f.gmtUnguarded,
+).length;
+
+/** Filings whose defect reaches a GMT user and that no GMT workaround covers. */
+export const unguardedInGmt: number = filings.filter(
+  (f) => f.gmtUnguarded === true,
 ).length;
 
 const isOurs = (f: UpstreamFiling): boolean => f.role !== "contributor";
