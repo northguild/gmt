@@ -23,10 +23,16 @@
  * where the Earth appears. Before it a 24-hour clock of the zone's wall time stands in the Earth's
  * place (`earth-clock.ts`) and the camera waits over the North Pole, turned so the zone lies under
  * the hour hand (a `pole:<zone>` place), at the slide's own zoom so the clock takes the Earth's
- * size. Stepping onto the reveal turns the clock into the Earth over `REVEAL_MS` (the hour marks
- * onto the meridians, the meridians drawn in, the Earth faded in under them); then the wall breaks
- * and the camera flies on. Under reduced motion, on a deep link past it, or with no globe, the
- * clock is simply gone. The overview always shows the Earth.
+ * size. The wall breaks on the first slide of the planet place, over the clock: the shards fly to
+ * their zones' points on the Earth behind it and light their pins there. Stepping onto the reveal
+ * then turns the clock into the Earth over `REVEAL_MS` (the hour marks onto the meridians, the
+ * meridians drawn in, the Earth faded in under them) and the camera flies on; the Earth's turn
+ * after the break waits until the reveal is over. Under reduced motion, on a deep link past it, or
+ * with no globe, the clock is simply gone. The overview always shows the Earth.
+ *
+ * The Earth and the clock sit in the right third on every slide and never move sideways. Motion
+ * that would cross the slides' text (the wall's break, the reveal) shows as `data-stage-busy` on
+ * the deck root: the arriving slide's text waits for it to end, then fades in.
  */
 import type {
   GlobeArc,
@@ -49,7 +55,7 @@ import {
   loadSky,
 } from "~/lib/space-sky";
 import { mountEarthClock, type EarthClock } from "./earth-clock";
-import { mountIceWall, type IceWall } from "./ice-wall/wall";
+import { mountIceWall, type IceWall, type WallState } from "./ice-wall/wall";
 import { wirePlanetZones } from "./planet-zones";
 import { showText } from "./type-out";
 import { clockLabel, loadZonedNow, nearestZones, WALL_PINS } from "./clocks";
@@ -125,8 +131,6 @@ const HOP_DIP_ZOOM = 0.6;
 /** A move shorter than this many degrees is not worth a flight. */
 const MIN_HOP_DEG = 1;
 const ARC_ALTITUDE = 0.15;
-
-const LAYOUT_FULL = "full";
 
 /** The Earth turns once while the shards land: 360 degrees at this rate, then back to the place. */
 const TURN_DEG_PER_S = 30;
@@ -274,7 +278,6 @@ export function mountSpaceStage(
   let overviewOpen = false;
   /** Whether the camera was last sent to `home` and nothing has moved it since. */
   let commanded = false;
-  let centred = false;
   let colours: { cyan: Rgba; teal: Rgba } | null = null;
   let theme: ReturnType<typeof readTheme> | null = null;
   let wall: IceWall | null = null;
@@ -287,8 +290,11 @@ export function mountSpaceStage(
     | ((zone: string, o?: { smallestUnit?: "minute" }) => string)
     | null = null;
   let clockTimer = 0;
+  /** The wall broke and the Earth owes a turn: it waits while the clock shows or a reveal runs. */
   let turnPending = false;
   let turnTimer = 0;
+  /** The wall's last published state, which decides with the reveal whether the slide's text waits. */
+  let wallState: WallState = "hidden";
   /** The clock in the Earth's place before the reveal; `null` in a deck with none. */
   let earthClock: EarthClock | null = null;
   /** The timer of the clock turning into the Earth; 0 when no reveal runs. */
@@ -465,11 +471,33 @@ export function mountSpaceStage(
     wallMinutes,
   });
 
+  /**
+   * Tells the deck whether motion that crosses the slides' text is running: the wall's approach and
+   * shatter, or the clock turning into the Earth. The deck root carries `data-stage-busy` while it
+   * is; the arriving slide's text stays hidden (`slides.css`) and the visuals hold their start
+   * (`bug-visuals.ts`) until the root says `gmt-stage-idle`. Under reduced motion nothing waits.
+   */
+  function syncBusy(): void {
+    const busy =
+      !reduced() &&
+      (revealTimer !== 0 ||
+        wallState === "approach" ||
+        wallState === "breaking");
+    if (busy === root.hasAttribute("data-stage-busy")) return;
+    if (busy) {
+      root.setAttribute("data-stage-busy", "");
+      return;
+    }
+    root.removeAttribute("data-stage-busy");
+    root.dispatchEvent(new CustomEvent("gmt-stage-idle"));
+  }
+
   /** Stops a reveal that is running; says whether one was. */
   function cancelReveal(): boolean {
     if (!revealTimer) return false;
     win?.clearTimeout(revealTimer);
     revealTimer = 0;
+    syncBusy();
     return true;
   }
 
@@ -519,7 +547,22 @@ export function mountSpaceStage(
   function showClock(): void {
     earthClock?.hold(heldAt());
     earthClock?.set(clockShown() ? "on" : "off");
+    if (clockShown()) holdTurn();
     fitClock();
+  }
+
+  /**
+   * The clock is back over the Earth (the talk stepped back before the reveal): the turn stops
+   * where it is and is owed again, and the gate no longer waits on it. The next reveal replays it.
+   */
+  function holdTurn(): void {
+    if (turnTimer) {
+      win?.clearTimeout(turnTimer);
+      turnTimer = 0;
+      engine?.steer({ lng: 0, lat: 0, zoom: 0 });
+      turnPending = true;
+    }
+    publishTurn(false);
   }
 
   /**
@@ -535,6 +578,8 @@ export function mountSpaceStage(
       fly(hop);
       return;
     }
+    // A break that fired while the clock showed owes its turn from here, once the Earth is in.
+    if (turnPending) publishTurn(true);
     const ctx = context();
     engine.setZoom(zoomFor(target()));
     engine.flyTo(rotationFor(pole, ctx));
@@ -551,9 +596,12 @@ export function mountSpaceStage(
       revealTimer = 0;
       earthClock?.set("off");
       arrange(home.kind);
-      fly(hop);
+      // A plain turn of the camera, with no zoom dip: the Earth keeps the clock's size.
+      fly(false);
+      syncBusy();
     }, REVEAL_MS);
     revealTimer = id;
+    syncBusy();
   }
 
   const framing = (w: number, h: number): GlobeFraming => {
@@ -561,18 +609,13 @@ export function mountSpaceStage(
     const sy = stageEl?.offsetTop ?? 0;
     const sw = stageEl?.clientWidth || w;
     const sh = stageEl?.clientHeight || h;
-    // Zoom 1 fills the right third of the stage, and the middle of it behind a full-width slide.
-    return centred
-      ? {
-          cx: sx + sw / 2,
-          cy: sy + sh / 2,
-          radius: Math.min(0.42 * sh, 0.3 * sw),
-        }
-      : {
-          cx: sx + (sw * 5) / 6,
-          cy: sy + sh / 2,
-          radius: Math.min(0.42 * sh, 0.15 * sw),
-        };
+    // Zoom 1 fills the right third of the stage, on every slide: the clock and the Earth never
+    // move sideways, and the slides' content fits the two thirds on the left.
+    return {
+      cx: sx + (sw * 5) / 6,
+      cy: sy + sh / 2,
+      radius: Math.min(0.42 * sh, 0.15 * sw),
+    };
   };
 
   /** Reads every lit clock's local time again, and draws when a label changed. */
@@ -704,15 +747,19 @@ export function mountSpaceStage(
         return [at.x, at.y];
       },
       onPin: lightClock,
+      onState: (state) => {
+        wallState = state;
+        syncBusy();
+      },
       onBreak: () => {
         // The twelve shards light their own pins as they land; the rest are lit now and come
-        // round during the turn.
+        // round during the turn. The turn waits while the clock shows: the Earth is behind it.
         const shards = new Set(shardZones());
         for (const zone of getPlanetZones())
           if (!shards.has(zone)) lightClock(zone);
         if (!reduced()) {
           turnPending = true;
-          publishTurn(true);
+          if (!clockShown()) publishTurn(true);
         }
       },
     });
@@ -870,11 +917,6 @@ export function mountSpaceStage(
       const hop = options?.hop ?? false;
       // A reveal still running is overtaken: the camera is not on its place yet.
       const overtaken = cancelReveal();
-      const full = slideEls[homeAt.slide]?.dataset["layout"] === LAYOUT_FULL;
-      if (full !== centred) {
-        centred = full;
-        engine?.refit();
-      }
       // Past the reveal onto a slide that keeps the clock (a jump to the close), the clock stays.
       if (
         !first &&
@@ -883,6 +925,8 @@ export function mountSpaceStage(
         homeAt.slide >= revealAt &&
         !clockShown()
       ) {
+        // Leaving the wall by a jump still breaks it, with the reveal running over it.
+        if (shownKind === "wall") arrange(next.kind);
         reveal(hop);
         return;
       }
@@ -1044,7 +1088,9 @@ export function mountSpaceStage(
       const view = globe.getView();
       if (shownKind === "wall")
         wall.setDepth(zoomFor({ kind: "wall" }) / (view.zoom || 1));
-      if (turnPending && !view.moving) beginTurn();
+      // The Earth turns only once it shows: not under the clock, nor while the clock turns into it.
+      if (turnPending && !view.moving && !revealTimer && !clockShown())
+        beginTurn();
       if (wall.state === "whole") {
         // Where each pane's centre is and how wide a pane is, for the gate's pixel check (`scripts/slides-check.mjs`).
         const centres = wall
@@ -1085,6 +1131,7 @@ export function mountSpaceStage(
       stopFilings();
       stopTurn();
       cancelReveal();
+      root.removeAttribute("data-stage-busy");
       clearClocks();
       wall?.destroy();
       wall = null;

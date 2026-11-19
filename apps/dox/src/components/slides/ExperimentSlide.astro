@@ -27,7 +27,7 @@ const total = view.cases.toLocaleString("en");
 const example = view.example;
 ---
 
-<Slide id={id ?? `experiment-${view.id}`} title={view.question} minutes={minutes} place={place} layout="full">
+<Slide id={id ?? `experiment-${view.id}`} title={view.question} minutes={minutes} place={place}>
   <p class="gmt-exp-kicker">Experiment {view.number}</p>
   <p class="gmt-exp-fed">{view.fed} <span class="gmt-exp-cases">{total} cases.</span></p>
   <ul class="gmt-exp-rows" aria-label="Wrong answers per library">

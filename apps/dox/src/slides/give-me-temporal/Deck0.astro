@@ -4,8 +4,8 @@
  * (`context/dox/specs/dox-g12/index.md`). Every bug on a slide is a filing read from
  * `upstream-filings.json`, every gmt result is computed by gmt at build time, and every count is
  * derived; the filing slides' wording lives in `content.ts`. Places are IANA zones or the stage's
- * keywords (`lib/slides/places.ts`); the ice wall hangs on `one-clock` and `date` and breaks into
- * clock pins on `temporal`.
+ * keywords (`lib/slides/places.ts`); the ice wall hangs on `one-clock`, breaks when the talk steps to
+ * `date`, and the clock turns into the Earth on `temporal`, in the same right-third spot throughout.
  *
  * Two seams wait for the owner and slice 4b: the recorded agent answer on `one-clock`
  * (`quotes/agent-moment.json`, shown as a marked panel while empty) and the live panels on
@@ -88,16 +88,17 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="one-clock" title="One clock, or the planet" minutes={1} place="wall" layout="full">
+  <Slide id="one-clock" title="One clock, or the planet" minutes={1} place="wall">
     <WallFigures images />
     <AgentQuote />
     <Notes>
       <p>Each of these sites shows one clock. That is the view most date code takes: one place, one local time. Hold that.</p>
       <p>The answer under them is what an agent wrote when it was asked for the time in another city.</p>
+      <p>The clock stays on the right. Step on and the wall breaks.</p>
     </Notes>
   </Slide>
 
-  <Slide id="date" title="Date is broken" minutes={1} place="wall" layout="full">
+  <Slide id="date" title="Date is broken" minutes={1} place="planet">
     <table class="gmt-deck-table" data-visual="rows">
       <caption>What Date gives, and why</caption>
       <thead>
@@ -113,10 +114,10 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
         ))}
       </tbody>
     </table>
-    <WallFigures />
     <Notes>
-      <p>Date is the built-in answer, and it has one clock: the machine's. These rows are the same ones as on the home page.</p>
-      <p>Every row types out together as the slide arrives, then the results and the reasons appear. Step on and the wall breaks.</p>
+      <p>The wall breaks as this slide arrives. Wait for the shards to clear.</p>
+      <p>Then the table appears. Date is the built-in answer, and it has one clock: the machine's. These rows are the same ones as on the home page.</p>
+      <p>Every row types out together, then the results and the reasons appear.</p>
     </Notes>
   </Slide>
 
@@ -127,7 +128,8 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
       still need a workaround{engines.length > 0 ? ` in ${engineList}` : ""}. GMT has one for each.
     </p>
     <Notes>
-      <p>The clock turns into the Earth: its hour marks land on the meridians, the planet fades in, then the wall breaks into pins across it.</p>
+      <p>The clock turns into the Earth where it stands. Its hour marks land on the meridians and the planet fades in.</p>
+      <p>The words appear when the turn ends. The pins from the broken wall are already on the planet.</p>
       <p>One clock against the whole planet. Temporal takes the zone as data, so code can ask any place on Earth, and GMT is built on it.</p>
       <p>The counts come from the compatibility snapshot, not from this page.</p>
     </Notes>

@@ -180,6 +180,28 @@ html[data-deck] .gmt-slide[data-shown] {
   transition-delay: 0s;
 }
 
+/*
+ * Text waits for the stage's motion. While the wall breaks or the clock turns into the Earth, the
+ * arriving slide's title and content stay hidden (`data-stage-busy`, set by `lib/slides/stage.ts`),
+ * then fade in once the root drops the attribute. The delay is a quarter longer than a page fade,
+ * and both are zero under reduced motion. The body is `display: contents` on the experiment
+ * slides, so its children carry the fade.
+ */
+html[data-deck] .gmt-slide > .gmt-slide-title,
+html[data-deck] .gmt-slide > .gmt-slide-body,
+html[data-deck] .gmt-slide > .gmt-slide-body > * {
+  transition: opacity calc(var(--gmt-duration-med) * 1.25)
+    var(--gmt-enter-easing);
+}
+
+[data-stage-busy] .gmt-slide[data-shown] > .gmt-slide-title,
+[data-stage-busy] .gmt-slide[data-shown] > .gmt-slide-body,
+[data-stage-busy] .gmt-slide[data-shown] > .gmt-slide-body > * {
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+
 /* Before the mount: the first slide shows, so the stage never paints empty. */
 html[data-deck="wait"] .gmt-slide {
   opacity: 1;
@@ -757,8 +779,8 @@ html[data-deck] .gmt-deck-blank {
   pointer-events: auto;
 }
 
-/* The Earth takes the right third; the slide's text keeps clear of it. */
-.gmt-deck[data-space] .gmt-slide:not([data-layout="full"]) {
+/* The Earth, or the clock in its place, takes the right third of every slide; the content keeps clear of it. */
+.gmt-deck[data-space] .gmt-slide {
   padding-inline-end: 36cqi;
 }
 
@@ -799,20 +821,16 @@ html[data-deck] .gmt-deck-blank {
 
 /*
  * On the stage the canvas shows the page, so the image stays for assistive technology only. The
- * figures are two columns down the stage's side edges, each box exactly where `paneLayout`
- * (`lib/slides/ice-wall/frame.ts`) draws its pane: 16 wide, 1.5 in from the edge, 12 down, 1.2
- * apart. The caption sits on its pane's lower edge, on an opaque plate with a full bevelled border
- * and a bottom accent edge, so the centre stays clear for the title, the slide's content and the
- * Earth.
+ * figures are a grid of three columns by two rows in the left two thirds, each box exactly where
+ * `paneLayout` (`lib/slides/ice-wall/frame.ts`) draws its pane: from 6 in to 64 across, 12 down,
+ * 1.2 apart. The caption sits on its pane's lower edge, on an opaque plate with a full bevelled
+ * border and a bottom accent edge, so the right third stays clear for the clock.
  */
 html[data-deck] .gmt-wall-figures {
   position: absolute;
-  inset-inline: 1.5cqi;
+  inset-inline: 6cqi 36cqi;
   inset-block-start: 12cqi;
-  grid-template-columns: repeat(2, 16cqi);
-  grid-template-rows: repeat(3, auto);
-  grid-auto-flow: column;
-  justify-content: space-between;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.2cqi;
   pointer-events: none;
 }
@@ -875,9 +893,14 @@ html[data-deck] .gmt-wall-caption {
   }
 }
 
-/* Slides that hang the wall keep their text in the centre, between the two columns of panes. */
+/* Its title is set to fit one line in the two thirds, so it never runs down onto the panes. */
+html[data-deck] .gmt-slide:has(.gmt-wall-figures) .gmt-slide-title {
+  font-size: max(1.25rem, 3.1cqi);
+}
+
+/* The slide that hangs the wall keeps its text under the grid of panes, which ends 36.4 down. */
 html[data-deck] .gmt-slide:has(.gmt-wall-figures) .gmt-slide-body {
-  margin-inline: 13cqi;
+  padding-block-start: 25.4cqi;
 }
 
 /* The wall's canvas sits over the globe, under the slides, and never takes a pointer. */
@@ -1384,11 +1407,20 @@ html[data-deck] .gmt-deck-table caption {
 }
 
 /*
- * The typed table's three columns are a third each, so they do not grow as the code types in: the
- * code wraps inside its column instead of widening it.
+ * The typed table's columns are fixed, so they do not grow as the code types in: the code wraps
+ * inside its column instead of widening it.
  */
-.gmt-deck-table[data-visual="rows"] th {
-  inline-size: calc(100% / 3);
+.gmt-deck-table[data-visual="rows"] {
+  table-layout: fixed;
+}
+
+/* The code and the reason get the room; the result is short. */
+.gmt-deck-table[data-visual="rows"] th:first-child {
+  inline-size: 30%;
+}
+
+.gmt-deck-table[data-visual="rows"] th:last-child {
+  inline-size: 46%;
 }
 
 .gmt-deck-table[data-visual="rows"] td,
@@ -1415,12 +1447,12 @@ html[data-deck] .gmt-deck-table {
   border-collapse: collapse;
 }
 
-/* Equal thirds wrap the reasons onto more lines, so the typed table sets a little smaller to fit. */
+/* The typed table sets a little smaller so its five rows fit the left two thirds. */
 html[data-deck] .gmt-deck-table[data-visual="rows"] {
   font-size: max(0.75rem, 1.1cqi);
 }
 
-html[data-deck] .gmt-slide[data-layout="full"] .gmt-quote {
+html[data-deck] .gmt-quote {
   max-inline-size: 100%;
   margin: 0;
   padding: 0.8cqi 1.2cqi;

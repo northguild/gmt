@@ -37,10 +37,11 @@ import {
 /** Shards per pane. */
 export const SHARDS_PER_PANE = 24;
 /**
- * The depth the approach ends at, as a fraction of the wall's rest distance. The panes hang down the
- * stage's side edges, so a deeper approach would carry them off the screen before they break.
+ * The depth the approach ends at, as a fraction of the wall's rest distance. The panes hang in the
+ * left two thirds of the stage and grow away from the Earth's centre as the wall comes near; at this
+ * depth the left column's edge is still on the screen, and a deeper approach would carry it off.
  */
-export const BREAK_DEPTH = 0.85;
+export const BREAK_DEPTH = 0.93;
 /** How long the camera takes to fly in, milliseconds. */
 export const APPROACH_MS = 900;
 
@@ -67,6 +68,8 @@ export interface WallOptions {
   onPin?: (zone: string) => void;
   /** The panes broke. */
   onBreak?: () => void;
+  /** The wall's state changed. */
+  onState?: (state: WallState) => void;
 }
 
 export interface IceWall {
@@ -137,6 +140,7 @@ export function mountIceWall(o: WallOptions): IceWall {
   const setState = (next: WallState): void => {
     state = next;
     o.layer.dataset["wall"] = next;
+    o.onState?.(next);
   };
 
   let stageWidth = 0;

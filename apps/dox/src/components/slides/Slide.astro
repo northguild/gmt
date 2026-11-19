@@ -2,8 +2,8 @@
 /**
  * One slide: a headed section. The runtime reads `data-minutes` and `data-place` (where the space
  * stage's camera goes, `lib/slides/places.ts`), `data-lapse` (the time-lapse that plays) and `data-pins` from it. Put `<Build>` and `<Notes>` in its slot.
- * A `place` the stage cannot resolve fails the build. `layout="full"` gives the slide the whole
- * stage and puts the Earth behind it; `title` and `default` leave the right third to the Earth.
+ * A `place` the stage cannot resolve fails the build. The Earth or the clock always
+ * sits in the right third, so a slide's content fits the left two thirds.
  * `reveal` names a zone: the slides before this one show a 24-hour clock of its wall time in the
  * Earth's place, and this slide turns the clock into the Earth (`lib/slides/earth-clock.ts`).
  * `clock` stands that clock in the Earth's place again on a slide past the reveal, as the close does.
@@ -19,7 +19,7 @@ interface Props {
   lapse?: string;
   /** `filings` lights every upstream filing as a pin while the slide shows. */
   pins?: "filings";
-  layout?: "title" | "default" | "full";
+  layout?: "title" | "default";
   /** The zone whose clock stands in the Earth's place until this slide reveals the planet. */
   reveal?: string;
   /** Show the reveal's clock in the Earth's place on this slide, past the reveal. */

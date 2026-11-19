@@ -11,6 +11,7 @@ import {
   pickAll,
   sendDeckState,
   sendLapse,
+  sendStageBusy,
   textOf,
 } from "~/test/deck-events";
 
@@ -132,6 +133,29 @@ describe("a table whose rows all arrive with the slide", () => {
     for (const f of frames.splice(0)) f(0);
     for (const f of frames.splice(0)) f(38 * 3);
     expect(typed()).toEqual(["fir", "sec"]);
+  });
+});
+
+describe("a table that arrives while the stage's motion runs", () => {
+  const typed = (): string[] =>
+    pickAll(root, "code[aria-hidden]").map((c) => textOf(c));
+
+  it("starts only once the stage is idle, then shows every row", () => {
+    mountBugVisuals(root, { signal: abort.signal, win });
+    sendStageBusy(root, true);
+    go("date", 0);
+    expect(typed()).toEqual(["", ""]);
+    sendStageBusy(root, false);
+    expect(typed()).toEqual(["first(row)", "second(row)"]);
+  });
+
+  it("does not start for a slide the deck has left before the stage is idle", () => {
+    mountBugVisuals(root, { signal: abort.signal, win });
+    sendStageBusy(root, true);
+    go("date", 0);
+    go("years", 0);
+    sendStageBusy(root, false);
+    expect(typed()).toEqual(["", ""]);
   });
 });
 

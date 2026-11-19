@@ -30,33 +30,39 @@ describe("paneLayout", () => {
   const left = (r: (typeof rects)[number]) => r.x + 480;
   const top = (r: (typeof rects)[number]) => r.y + cy;
 
-  it("hangs three panes down each side edge, clear of the centre", () => {
+  it("hangs the panes in the left two thirds, clear of the Earth's third", () => {
     expect(rects).toHaveLength(6);
-    for (const r of rects.slice(0, 3)) expect(left(r)).toBe(rects[0]!.x + 480);
-    for (const r of rects.slice(3)) expect(left(r)).toBe(left(rects[3]!));
-    expect(left(rects[0]!)).toBeGreaterThan(0);
-    expect(left(rects[3]!) + rects[3]!.w).toBeLessThan(width);
-    const leftEdge = left(rects[0]!) + rects[0]!.w;
-    const rightEdge = left(rects[3]!);
-    expect(rightEdge - leftEdge).toBeGreaterThan(width * 0.55);
+    for (const r of rects) {
+      expect(left(r)).toBeGreaterThanOrEqual(width * 0.06 - 1e-9);
+      expect(left(r) + r.w).toBeLessThanOrEqual(width * 0.64 + 1e-9);
+    }
   });
 
-  it("stacks each column top to bottom without touching, the columns level", () => {
-    for (const [a, b] of [
-      [0, 1],
-      [1, 2],
-      [3, 4],
-      [4, 5],
-    ] as const)
-      expect(rects[a]!.y + rects[a]!.h).toBeLessThan(rects[b]!.y);
-    for (let i = 0; i < 3; i += 1)
-      expect(rects[i]!.y).toBeCloseTo(rects[i + 3]!.y, 9);
+  it("lays three columns and two rows, filling each row left to right", () => {
+    expect(new Set(rects.map((r) => left(r))).size).toBe(3);
+    for (const i of [0, 1, 2]) {
+      expect(rects[i + 3]!.x).toBeCloseTo(rects[i]!.x, 9);
+      expect(rects[i]!.y).toBeCloseTo(rects[0]!.y, 9);
+      expect(rects[i + 3]!.y).toBeCloseTo(rects[3]!.y, 9);
+    }
+    expect(left(rects[0]!)).toBeLessThan(left(rects[1]!));
+    expect(left(rects[1]!)).toBeLessThan(left(rects[2]!));
+    expect(rects[0]!.y + rects[0]!.h).toBeLessThan(rects[3]!.y);
+    expect(left(rects[0]!) + rects[0]!.w).toBeLessThan(left(rects[1]!));
   });
 
-  it("keeps the columns under the title and inside the stage, each pane wide enough to read", () => {
+  it("keeps the grid under the title and inside the stage, each pane the same 16:10 size", () => {
     expect(top(rects[0]!)).toBeGreaterThanOrEqual(width * 0.12 - 1e-9);
-    expect(top(rects[2]!) + rects[2]!.h).toBeLessThan((width * 9) / 16);
-    expect(rects[0]!.w).toBeGreaterThanOrEqual(width * 0.16 - 1e-9);
+    expect(top(rects[5]!) + rects[5]!.h).toBeLessThan((width * 9) / 16);
+    for (const r of rects) {
+      expect(r.w).toBeCloseTo(rects[0]!.w, 9);
+      expect(r.h / r.w).toBeCloseTo(0.625, 9);
+    }
+  });
+
+  it("leaves room for the agent's answer under the last row", () => {
+    const bottom = top(rects[5]!) + rects[5]!.h;
+    expect((width * 9) / 16 - bottom).toBeGreaterThan(width * 0.15);
   });
 
   it("follows the lens centre, so a pane stays where the stage puts it", () => {
@@ -65,9 +71,11 @@ describe("paneLayout", () => {
     expect(moved[0]!.x + 500).toBeCloseTo(left(rects[0]!), 9);
   });
 
-  it("splits an uneven count with the left column the longer", () => {
+  it("fills a short last row from the left", () => {
     const five = paneLayout(5, width, cy, 480);
-    expect(five.filter((r) => r.x < 0)).toHaveLength(3);
+    expect(five).toHaveLength(5);
+    expect(five[3]!.x).toBeCloseTo(five[0]!.x, 9);
+    expect(five[4]!.x).toBeCloseTo(five[1]!.x, 9);
   });
 });
 

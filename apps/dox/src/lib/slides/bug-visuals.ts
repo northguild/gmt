@@ -144,9 +144,26 @@ export function mountBugVisuals(
   };
 
   for (const el of visuals) reset(el);
-  onDeckState(root, o.signal, (state: DeckState) => {
-    for (const el of visuals) setActive(el, isActive(el, state));
-  });
+  let last: DeckState | null = null;
+  // While the stage's motion crosses the slides, a visual that arrives waits; the slide's text
+  // waits too (`slides.css`), so the type-out starts when the words appear, not behind the motion.
+  const busy = (): boolean => root.hasAttribute("data-stage-busy");
+  const apply = (state: DeckState): void => {
+    last = state;
+    for (const el of visuals) {
+      const on = isActive(el, state);
+      if (on && el.dataset["active"] !== "true" && busy()) continue;
+      setActive(el, on);
+    }
+  };
+  onDeckState(root, o.signal, apply);
+  root.addEventListener(
+    "gmt-stage-idle",
+    () => {
+      if (last) apply(last);
+    },
+    { signal: o.signal },
+  );
 
   root.addEventListener(
     "gmt-lapse",

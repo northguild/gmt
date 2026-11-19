@@ -207,7 +207,7 @@ function fixture(): HTMLElement {
     </div>
     <div data-deck-stage>
       <section data-slide data-place="Europe/Helsinki"><h2>One</h2></section>
-      <section data-slide data-place="Asia/Tokyo" data-layout="full"><h2>Two</h2>
+      <section data-slide data-place="Asia/Tokyo"><h2>Two</h2>
         <div data-build="1" data-place="Asia/Manila">b</div>
       </section>
       <section data-slide data-place="wall"><h2>Three</h2></section>
@@ -406,13 +406,21 @@ describe("the globe", () => {
     expect(fake.setArcs.mock.calls.at(-1)![0]).toHaveLength(1);
   });
 
-  it("measures the Earth again when a slide's layout changes where it sits", async () => {
+  it("frames the Earth in the right third on every slide, whatever the slide", async () => {
     stage = mountSpaceStage(root, { signal: abort.signal });
     const fake = await ready();
+    const framing = fake.options["framing"] as (
+      w: number,
+      h: number,
+    ) => { cx: number; cy: number; radius: number };
+    const before = framing(1200, 600);
     stage.goTo("Asia/Tokyo", { hop: true, at: { slide: 1, build: 0 } });
-    expect(fake.refit).toHaveBeenCalledTimes(1);
     stage.goTo("wall", { hop: true, at: { slide: 2, build: 0 } });
-    expect(fake.refit).toHaveBeenCalledTimes(2);
+    expect(framing(1200, 600)).toEqual(before);
+    // Five sixths across: the middle of the right third.
+    expect(before.cx).toBe(1000);
+    expect(before.cy).toBe(300);
+    expect(fake.refit).not.toHaveBeenCalled();
   });
 
   it("flies a cut under reduced motion", async () => {
@@ -580,12 +588,12 @@ function wallFixture(): HTMLElement {
   wallRoot.innerHTML = `
     <div data-deck-space data-sky-src="/sky.bin" data-earth="/earth.webp"></div>
     <div data-deck-stage>
-      <section data-slide data-place="wall" data-layout="full">
+      <section data-slide data-place="wall">
         <figure data-wall-pane="moment"><img alt="Moment" src="/a.webp"></figure>
         <figure data-wall-pane="luxon"><img alt="Luxon" src="/b.webp"></figure>
       </section>
-      <section data-slide data-place="wall" data-layout="full"><h2>Two</h2></section>
-      <section data-slide data-place="planet" data-layout="full"><h2>Three</h2></section>
+      <section data-slide data-place="wall"><h2>Two</h2></section>
+      <section data-slide data-place="planet"><h2>Three</h2></section>
     </div>`;
   document.body.append(wallRoot);
   return wallRoot;
@@ -734,8 +742,9 @@ describe("the ice wall", () => {
 });
 
 /**
- * The talk's opening: the title and two wall slides show a 24-hour clock where the Earth would
- * be, and the fourth slide reveals the planet. Slide 2 hangs the wall. The fifth, the close, asks
+ * The talk's opening: the title, a wall slide and a planet slide show a 24-hour clock where the
+ * Earth would be, and the fourth slide reveals the planet. Slide 2 hangs the wall and slide 3
+ * breaks it over the clock. The fifth, the close, asks
  * for the clock again. The sixth's builds hold it either side of Helsinki's skipped hour.
  */
 function revealFixture(): HTMLElement {
@@ -744,11 +753,11 @@ function revealFixture(): HTMLElement {
     <div data-deck-space data-sky-src="/sky.bin" data-earth="/earth.webp"></div>
     <div data-deck-stage>
       <section data-slide data-place="Europe/Helsinki" data-layout="title"><h2>One</h2></section>
-      <section data-slide data-place="wall" data-layout="full">
+      <section data-slide data-place="wall">
         <figure data-wall-pane="moment"><img alt="Moment" src="/a.webp"></figure>
       </section>
-      <section data-slide data-place="wall" data-layout="full"><h2>Three</h2></section>
-      <section data-slide data-place="planet" data-layout="full" data-reveal="Europe/Helsinki"><h2>Four</h2></section>
+      <section data-slide data-place="planet"><h2>Three</h2></section>
+      <section data-slide data-place="planet" data-reveal="Europe/Helsinki"><h2>Four</h2></section>
       <section data-slide data-place="Europe/Helsinki" data-clock><h2>Five</h2></section>
       <section data-slide data-place="greenwich"><h2>Six</h2>
         <div data-build="2" data-clock-at="2027-03-28T01:00:00Z"></div>
@@ -824,11 +833,16 @@ describe("the clock that becomes the Earth", () => {
     return { fake, wall: walls[0]! };
   };
 
-  /** Steps from the title to the last slide before the reveal. */
+  /** Steps from the title to the wall slide. */
   const toWall = (): void => {
     stage!.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
-    stage!.goTo("wall", { hop: true, at: { slide: 2, build: 0 } });
   };
+  /** Steps on to the slide after the wall, still before the reveal: the wall breaks here. */
+  const toDate = (): void => {
+    toWall();
+    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
+  };
+  const busy = (): boolean => root.hasAttribute("data-stage-busy");
 
   beforeEach(() => {
     root.remove();
@@ -841,6 +855,8 @@ describe("the clock that becomes the Earth", () => {
     expect(face()).not.toBeNull();
     expect(space()).toHaveAttribute("data-earth-clock", "on");
     toWall();
+    expect(space()).toHaveAttribute("data-earth-clock", "on");
+    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
     expect(space()).toHaveAttribute("data-earth-clock", "on");
   });
 
@@ -910,17 +926,27 @@ describe("the clock that becomes the Earth", () => {
     });
   });
 
-  it("turns the clock into the Earth on the reveal, then breaks the wall and flies to the planet", async () => {
+  it("breaks the wall over the clock when the talk leaves the wall, before the Earth shows", async () => {
+    const { fake, wall } = await setUp();
+    toWall();
+    holdTimeouts();
+    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
+    expect(wall.flyThrough).toHaveBeenCalledTimes(1);
+    expect(space()).toHaveAttribute("data-earth-clock", "on");
+    expectRotation(aimedAt(fake), poleRotation);
+    expect(timeouts.some(([, ms]) => ms === REVEAL_MS)).toBe(false);
+  });
+
+  it("turns the clock into the Earth on the reveal, after the break, and flies to the planet", async () => {
     const { fake, wall } = await setUp();
     const planet = planetPoint();
-    toWall();
+    toDate();
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
     expect(space()).toHaveAttribute("data-earth-clock", "morph");
     expect(face()!.style.getPropertyValue(MERIDIAN_TURN_VAR)).toBe(
       `${meridianTurn(poleLng)}deg`,
     );
-    expect(wall.flyThrough).not.toHaveBeenCalled();
     expectRotation(aimedAt(fake), poleRotation);
     fake.frame();
     expect(space()).toHaveAttribute("data-flight", "moving");
@@ -932,7 +958,75 @@ describe("the clock that becomes the Earth", () => {
     expect(space()).not.toHaveAttribute("data-earth-clock");
     expect(wall.flyThrough).toHaveBeenCalledTimes(1);
     expectRotation(aimedAt(fake), [-planet[0], -planet[1]]);
-    expect(fake.flyTo.mock.calls.at(-1)![1]).toHaveProperty("hop");
+    // No zoom dip: the Earth keeps the size the clock had.
+    expect(fake.flyTo.mock.calls.at(-1)![1]).toBeUndefined();
+  });
+
+  it("holds the turn back until the clock is gone, then begins it", async () => {
+    const { fake, wall } = await setUp();
+    toDate();
+    wall.options["onBreak"]!();
+    expect(space()).not.toHaveAttribute("data-turn");
+    holdTimeouts();
+    stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+    // The reveal publishes the turn: the gate waits on it from here.
+    expect(space()).toHaveAttribute("data-turn", "on");
+    fake.frame();
+    runReveal();
+    expect(space()).not.toHaveAttribute("data-earth-clock");
+  });
+
+  it("stops the turn and owes it again when the talk steps back to the clock", async () => {
+    const { fake, wall } = await setUp();
+    toDate();
+    wall.options["onBreak"]!();
+    holdTimeouts();
+    stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+    runReveal();
+    fake.frame();
+    expect(space()).toHaveAttribute("data-turn", "on");
+    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
+    expect(space()).not.toHaveAttribute("data-turn");
+    expect(fake.steer).toHaveBeenLastCalledWith({ lng: 0, lat: 0, zoom: 0 });
+    stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+    expect(space()).toHaveAttribute("data-turn", "on");
+  });
+
+  it("is busy while the wall breaks and while the clock turns, and idle after", async () => {
+    const { wall } = await setUp();
+    const idle = vi.fn();
+    // oxlint-disable-next-line dox-test/no-house-class -- the event's name, not a class
+    root.addEventListener("gmt-stage-idle", idle);
+    toDate();
+    expect(busy()).toBe(false);
+    wall.options["onState"]!("approach");
+    expect(busy()).toBe(true);
+    wall.options["onState"]!("breaking");
+    expect(busy()).toBe(true);
+    wall.options["onState"]!("gone");
+    expect(busy()).toBe(false);
+    expect(idle).toHaveBeenCalledTimes(1);
+    holdTimeouts();
+    stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+    expect(busy()).toBe(true);
+    runReveal();
+    expect(busy()).toBe(false);
+    expect(idle).toHaveBeenCalledTimes(2);
+  });
+
+  it("is never busy under reduced motion", async () => {
+    const undo = reduce();
+    try {
+      const { wall } = await setUp();
+      toDate();
+      wall.options["onState"]!("approach");
+      expect(busy()).toBe(false);
+      holdTimeouts();
+      stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+      expect(busy()).toBe(false);
+    } finally {
+      undo();
+    }
   });
 
   it("cuts from the clock to the Earth under reduced motion", async () => {
@@ -940,7 +1034,7 @@ describe("the clock that becomes the Earth", () => {
     try {
       const { fake, wall } = await setUp();
       const planet = planetPoint();
-      toWall();
+      toDate();
       holdTimeouts();
       stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
       expect(space()).not.toHaveAttribute("data-earth-clock");
@@ -952,13 +1046,22 @@ describe("the clock that becomes the Earth", () => {
     }
   });
 
-  it("brings the clock back when the talk steps back before the reveal", async () => {
-    const { fake } = await setUp();
+  it("breaks the wall at a jump straight past the date slide, with the reveal over it", async () => {
+    const { wall } = await setUp();
     toWall();
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+    expect(wall.flyThrough).toHaveBeenCalledTimes(1);
+    expect(space()).toHaveAttribute("data-earth-clock", "morph");
+  });
+
+  it("brings the clock back when the talk steps back before the reveal", async () => {
+    const { fake } = await setUp();
+    toDate();
+    holdTimeouts();
+    stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
     runReveal();
-    stage!.goTo("wall", { hop: true, at: { slide: 2, build: 0 } });
+    stage!.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
     expect(space()).toHaveAttribute("data-earth-clock", "on");
     expectRotation(aimedAt(fake), poleRotation);
   });
@@ -1013,7 +1116,7 @@ describe("the clock that becomes the Earth", () => {
 
   it("finishes the reveal at once when the overview opens during it", async () => {
     const { wall } = await setUp();
-    toWall();
+    toDate();
     holdTimeouts();
     stage!.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
     stage!.overview(true);
@@ -1053,7 +1156,7 @@ describe("the clock that becomes the Earth", () => {
     expect(space()).toHaveAttribute("data-earth-clock", "on");
     // The right third of a 1024 by 768 space layer at zoom 1: a rim of 153.6 pixels.
     expect(face()).toHaveStyle({ width: "384px" });
-    toWall();
+    stage.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
     stage.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
     expect(space()).not.toHaveAttribute("data-earth-clock");
   });

@@ -17,6 +17,16 @@ export function sendDeckState(
   );
 }
 
+/** Marks the stage busy, or says it is idle again, as the stage does around its motion. */
+export function sendStageBusy(root: HTMLElement, busy: boolean): void {
+  if (busy) {
+    root.setAttribute("data-stage-busy", "");
+    return;
+  }
+  root.removeAttribute("data-stage-busy");
+  root.dispatchEvent(new CustomEvent("gmt-stage-idle"));
+}
+
 /** Announces a lapse frame, as the stage does. */
 export function sendLapse(root: HTMLElement, detail: object): void {
   root.dispatchEvent(new CustomEvent("gmt-lapse", { detail }));

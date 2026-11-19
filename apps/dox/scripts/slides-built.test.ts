@@ -121,4 +121,12 @@ describe("Deck 0 in the built site", () => {
     expect(figures).toHaveLength(6);
     for (const figure of figures) expect(figure[0]).toMatch(/<figcaption/);
   });
+
+  it("has no wall figures on the date slide, where the wall has already broken", () => {
+    const deck = slides();
+    if (deck === null) return;
+    const slide = deck.find((s) => s.id === "date");
+    expect(slide).toBeDefined();
+    expect(slide?.html).not.toMatch(/gmt-wall-figure"/);
+  });
 });

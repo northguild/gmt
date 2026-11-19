@@ -42,14 +42,21 @@ export interface PaneRect {
   h: number;
 }
 
+/** The grid's columns, and where it sits on the stage, in stage units (the stage is 100 wide). */
+const PANE_COLUMNS = 3;
+const GRID_LEFT = 6;
+const GRID_WIDTH = 58;
+const GRID_TOP = 12;
+const GRID_GAP = 1.2;
+
 /**
- * The panes of a stage `width` pixels wide, as two columns down the stage's side edges, clear of
- * the centre where the title, the slide's content and the Earth show. The first half of the panes
- * go down the left edge, the rest down the right. Rectangles are measured from the wall's centre
- * (the lens centre), so `cx` and `cy` are the lens centre's place on the stage, in pixels from the stage's top left.
- * Every figure is in stage units: a pane is 16 wide, the columns sit 1.5 in from the edges and
- * start 12 below the top (under the slide's title), and the DOM captions use the same numbers
- * (`slides.css`, `.gmt-wall-figures`).
+ * The panes of a stage `width` pixels wide, as a grid of three columns in the left two thirds of
+ * the stage: the slide's content box, clear of the Earth in the right third. The first row starts
+ * 12 units below the top (under the slide's title) and the slide's other content, the agent's
+ * answer, sits under the last row. Panes fill the rows left to right. Rectangles are measured from
+ * the wall's centre (the lens centre), so `cx` and `cy` are the lens centre's place on the stage, in
+ * pixels from the stage's top left. Every figure is in stage units, and the DOM captions use the
+ * same numbers (`slides.css`, `.gmt-wall-figures`).
  */
 export function paneLayout(
   count: number,
@@ -58,20 +65,15 @@ export function paneLayout(
   cx: number = width / 2,
 ): PaneRect[] {
   const unit = width / 100;
-  const w = 16 * unit;
+  const gap = GRID_GAP * unit;
+  const w = (GRID_WIDTH * unit - (PANE_COLUMNS - 1) * gap) / PANE_COLUMNS;
   const h = w * PANE_ASPECT;
-  const gap = 1.2 * unit;
-  const perColumn = Math.ceil(count / 2);
-  return Array.from({ length: count }, (_, i) => {
-    const column = Math.floor(i / perColumn);
-    const row = i % perColumn;
-    return {
-      x: (column === 0 ? 1.5 : 82.5) * unit - cx,
-      y: 12 * unit + row * (h + gap) - cy,
-      w,
-      h,
-    };
-  });
+  return Array.from({ length: count }, (_, i) => ({
+    x: GRID_LEFT * unit + (i % PANE_COLUMNS) * (w + gap) - cx,
+    y: GRID_TOP * unit + Math.floor(i / PANE_COLUMNS) * (h + gap) - cy,
+    w,
+    h,
+  }));
 }
 
 export interface PaneModel {

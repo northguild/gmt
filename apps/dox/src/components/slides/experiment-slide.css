@@ -11,9 +11,9 @@
 
 /* In the stage the whole slide is set smaller so nine rows, an example and a footnote fit. */
 html[data-deck] .gmt-slide:has(.gmt-exp-kicker) {
-  padding-block: 2.5cqi;
+  padding-block: 2cqi;
   line-height: 1.3;
-  font-size: max(0.75rem, 1.4cqi);
+  font-size: max(0.75rem, 1.15cqi);
 }
 
 .gmt-slide:has(.gmt-exp-kicker) > .gmt-slide-body {
@@ -31,7 +31,7 @@ html[data-deck] .gmt-slide:has(.gmt-exp-kicker) > .gmt-slide-body {
 }
 
 html[data-deck] .gmt-slide:has(.gmt-exp-kicker) .gmt-slide-title {
-  font-size: max(1.2rem, 2.6cqi);
+  font-size: max(1.2rem, 2.4cqi);
   line-height: 1.1;
 }
 

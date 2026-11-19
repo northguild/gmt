@@ -166,22 +166,21 @@ describe("a wall at rest", () => {
     expect(queue).toHaveLength(0);
   });
 
-  it("reports where each pane's centre is, down the left edge then down the right", () => {
+  it("reports where each pane's centre is, three across then two down, left to right", () => {
     const centres = mount().paneCentres();
     expect(centres).toHaveLength(6);
-    expect(centres[0]![0]).toBeCloseTo(centres[2]![0], 6);
-    expect(centres[0]![1]).toBeLessThan(centres[1]![1]);
-    expect(centres[1]![1]).toBeLessThan(centres[2]![1]);
-    expect(centres[0]![1]).toBeCloseTo(centres[3]![1], 6);
-    expect(centres[0]![0]).toBeLessThan(480);
-    expect(centres[3]![0]).toBeGreaterThan(480);
+    expect(centres[0]![0]).toBeCloseTo(centres[3]![0], 6);
+    expect(centres[0]![0]).toBeLessThan(centres[1]![0]);
+    expect(centres[1]![0]).toBeLessThan(centres[2]![0]);
+    expect(centres[0]![1]).toBeCloseTo(centres[2]![1], 6);
+    expect(centres[0]![1]).toBeLessThan(centres[3]![1]);
   });
 
   it("reports a pane's width, which fits between two neighbouring centres", () => {
     const wall = mount();
     const centres = wall.paneCentres();
     expect(wall.paneWidth()).toBeGreaterThan(0);
-    expect(wall.paneWidth()).toBeLessThan(centres[3]![0] - centres[0]![0]);
+    expect(wall.paneWidth()).toBeLessThan(centres[1]![0] - centres[0]![0]);
   });
 });
 
