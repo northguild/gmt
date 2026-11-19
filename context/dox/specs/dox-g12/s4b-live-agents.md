@@ -1,5 +1,8 @@
 # Slice 4b · Live agents: the deck's tools, a page-tool call, Dox chat on stage
 
+Built in phase C of [slice 7](./s7-running-question.md#phases-and-file-ownership); phase B places
+the three panels on their slides.
+
 [Index](./index.md) · Binding rules: [Tier 2 · WebMCP](../../built/tier-2-webmcp.md#rules-a-new-or-edited-page-tool-must-still-obey),
 [Tier 6 · Chat](../../built/tier-6-chat.md#request-pipeline-workerindexts-workerchat-handlerts),
 [Tier 6 · Brains](../../built/tier-6-brains.md#brains-and-budget).
@@ -8,18 +11,21 @@
 
 Four demos, each with a committed fallback, so the talk never depends on the venue's network:
 
-1. **Agent bookend.** Slide 2 quotes a real agent answer that reaches for Moment.js (the owner's
-   transcript, committed). Slide 14 sends the same question to `POST /gmt/api/chat` live, and
-   the answer streams in with its gmt tool calls shown.
+1. **Agent bookend.** Slide 2 (`one-clock`) shows the owner's committed transcript: an agent with
+   no GMT answers the running question, and its code is run by script
+   ([slice 7](./s7-running-question.md#the-agents-answer-run-by-script)). Slide 19 (`ask-dox`)
+   sends the same question, word for word from `quotes/agent-answer.json`, to `POST /gmt/api/chat`
+   live, in the real Dox chat, and the answer streams in with its gmt tool calls shown.
 2. **The deck's own page tools.** Three read-only WebMCP tools an agent in the browser can call.
-3. **A live page-tool call.** Slide 15 runs the Cut-off Ruler's `check_eta_against_cutoff`
+3. **A live page-tool call.** Slide 20 (`page-tools`) runs the Cut-off Ruler's `check_eta_against_cutoff`
    in the page, through the same facts function the tool uses, and shows the JSON call and
    answer. No network.
-4. **Audience questions.** Slide 16 takes questions typed by the presenter into Dox chat.
+4. **Audience questions.** The questions part takes questions typed by the presenter into the Dox chat, with three ready questions.
 
 Every network call has a recording made by a script from a real answer. It plays when the live
 call fails or gives no output in 8 s, labelled "Recorded <date>, <brain>". The presenter view
-shows Live or Recorded ([slice 3](./s3-presenter.md)).
+shows Live or Recorded ([slice 3](./s3-presenter.md)): each demo dispatches `gmt-demo` on the deck
+root with a `DemoState` (`sync.ts`), and `deck-mount.ts` passes it to its `setDemo` seam (phase B).
 
 ## 1 · Deck tools: `src/lib/slides/deck-tools/`
 
@@ -31,7 +37,7 @@ backticks, `*` and `#`; `annotations: { readOnlyHint: true }`; a JSON Schema inp
 
 | Name | Input | Returns |
 | --- | --- | --- |
-| `list_deck_slides` | none | `{ deck, slides: [{ n, id, title, place, minutes }] }` from the registry |
+| `list_deck_slides` | none | `{ deck, slides: [{ n, id, title, place, minutes, spare }] }`; a spare has `minutes: null` |
 | `read_deck_slide` | `{ id }` (enum of slide ids) | the slide's title, text, build count and filing keys |
 | `read_upstream_filing` | `{ key }` (enum of the deck's filing keys) | the filing record from `upstream-filings.ts` |
 
@@ -41,6 +47,8 @@ The tools run in the deck page, so `read_deck_slide` reads the slide's section f
 - **Kit addition:** `offerPageTools(slug, load)` in `webmcp/offer.ts`, where `load` resolves to
   a list of tools; `offerPageTool` becomes its one-tool case. One marker, one slug, three tools.
   Each tool is registered with the page's abort signal.
+  The deck page's own script (`src/pages/slides/give-me-temporal/index.astro`) offers them; the
+  presenter page does not.
 - **Head:** `deckWebmcpHeadEntries(slug, tokens)` in `src/lib/head-tags.ts` emits the
   `gmt-webmcp` marker (content `slides/give-me-temporal`) and the origin-trial metas for the deck
   page only; the presenter page gets none. `head.dist.test.ts` allows markers on `tools/<slug>`
@@ -54,22 +62,45 @@ Imports `def` from `src/lib/webmcp/tools/cutoff-ruler.ts` and calls `def.run(def
 signal)`, the path an agent's call takes. The slide shows two panels: the call as JSON (name and
 `def.example`) and the answer as JSON, both in Starlight `<Code>` style blocks built with
 `textContent`. The chunk is preloaded on the deck page; the call runs on the build step that
-reveals it. A slide-14 agent may call it too; slide 15 needs no network either way.
+reveals it. An agent on `ask-dox` may call it too; `page-tools` needs no network either way. The panel is
+`PageToolCall.astro`.
 
-## 3 · Live chat: `src/lib/slides/live-chat.ts`
+## 3 · The Dox frame: `DeckDox.tsx` and `src/lib/slides/deck-transport.ts`
 
-Plain DOM, no React (React stays inside `/dox`). `ai`'s `DefaultChatTransport` with
-`api: "/gmt/api/chat"` and `prepareSendMessagesRequest` returning `{ messages, pageContext:
-"/slides/give-me-temporal/" }`; the stream is read with `readUIMessageStream`.
-- **Rendering** into a `LiveAnswer.astro` panel: text parts as text nodes, fenced code as
-  `<pre><code>` (no `innerHTML`, no Markdown library); each tool part as a row with its name and
-  input JSON, then its output when it arrives; the brain from the retrieval trace part
-  (`RETRIEVAL_PART_ID`) as a `badge`. `data-status` updates a status line; `data-usage` is
-  ignored; `data-refusal` shows its text as a refusal and counts as a failure for the fallback.
-- **Budget:** 8 s to first output, measured on the gmt clock; past it, or on an HTTP error or
-  refusal, the live request is aborted and the recording plays in its place, with the label.
-  A late live answer is dropped, never mixed in.
-- **One request at a time;** a second press while one runs is ignored. Leaving the slide aborts.
+The three Dox parts of the deck (`ask-dox`, the questions part and `page-tools`) are the real Dox
+chat, not a copy: `LiveAnswer.astro`, `AudienceQuestions.astro` and `PageToolCall.astro` each
+render one `DeckDox` island (`client:only="react"`), which composes `DoxChat`, `WidgetRail`,
+`WidgetReceipt`/`MountedWidget` (through the rail), `useBrains` and `ChatErrorBoundary`. Message
+rendering, the composer, the starter pills, the tool receipts, the brain line, the Dox mark and the
+sounds are `/dox`'s own, so Dox looks and behaves on the slide as it does on the page. The
+presenter view's copy of a slide gets a static placeholder, so it never mounts a second chat.
+
+Three optional props carry the difference; each default leaves `/dox` as it was:
+- `DoxChat.createTransport(brain)`: builds the chat's transport in place of `/api/chat`'s.
+- `DoxChat.typing` (default `true`): `false` leaves out the composer, for the tool slide.
+- `WidgetRail.idle` and `WidgetRail.className`: what the rail holds when no widget is open, and an
+  extra class for the deck's layout.
+
+The deck's rules are one `ChatTransport` made by `createDeckSession`:
+- A question typed in the composer goes live, to `POST /gmt/api/chat`, through `DefaultChatTransport`
+  with the deck's page context and the picked brain.
+- 8 s to the first output (text or tool chunks). Past it, or on an HTTP error, a refusal or a
+  stream error before any output, the live request is aborted and the question's recording plays,
+  labelled "Recorded <date>, <brain>". A late live chunk is dropped. Without a recording the
+  failure reaches the chat as the error `/dox` shows. Once output has reached the chat, a later
+  stream error is the chat's own, because a message already on screen cannot be taken back.
+- The ready questions (the starter pills) play their recordings with no network and no typing.
+  `data-usage` chunks are dropped from a recording so it never overwrites the brains budget.
+- One request at a time: the chat refuses a second send while busy.
+- Leaving the slide (`gmt-deck-state`) or the page aborts every request and replay and gives the
+  chat a fresh session, so nothing stays running.
+- The page-tool slide answers from the page: its `local` stream streams the call, the answer and
+  the `showCutoffRuler` tool input, so the receipt and the Cut-off Ruler open in the rail. No network.
+- Each source change is announced as `gmt-demo` (`announceDemo`) for the presenter.
+
+Typing in the composer never steps the deck (`keys.ts` ignores text fields). Sound follows what
+`/dox` does. `deck-dox.module.css` only sizes the frame to the stage; the chat and rail keep
+their own styles.
 
 ## 4 · Recordings: `scripts/record-deck-answers.ts` and `replay.ts`
 
@@ -79,17 +110,19 @@ Plain DOM, no React (React stays inside `/dox`). `ai`'s `DefaultChatTransport` w
   `src/slides/give-me-temporal/recorded/<id>.json`. It reads `DOX_DEV_KEY` from the environment
   and sends it only as the `dox_dev` cookie it gets back from `/gmt/api/brains?key=`; the key is
   never written to a file.
-- Recordings: `ask-dox` (the slide 2 question) and three prepared audience questions.
+- Recordings: `ask-dox` (the running question) and three prepared audience questions; the owner
+  picks the three.
 - `replay.ts` turns a recording back into a `ReadableStream` of the same chunks at the same
   offsets, fed to the same reader, so live and recorded render through one path. The label reads
   "Recorded" with the date (gmt `formatZonedDateTime`, `Europe/Helsinki`) and the brain.
 - A test checks each recording parses as UI-message chunks and has a brain and an instant.
 
-## 5 · Audience questions (slide 20)
+## 5 · Audience questions (the questions part)
 
-A kit `textInput` and a Send `button` under the slide's thanks text; Enter sends. Live only:
-on failure the panel says so in plain words and offers the three prepared questions as buttons
-that play their recordings. Keys typed in the field never step the deck (slice 1's key rules).
+`AudienceQuestions.astro` is the same Dox frame in `audience` mode. The composer is the real one:
+the room's typed question goes live. The three prepared questions are starter pills in the rail
+that play their recordings with no network. On a failed live answer with no recording, the chat
+shows `/dox`'s own error and the pills stay available.
 
 ## Quota and secrets
 
@@ -106,24 +139,31 @@ that play their recordings. Keys typed in the field never step the deck (slice 1
 ## Tests
 
 All in the `isolated` Vitest project. `fetch` is stubbed with `vi.stubGlobal` and restored with
-`vi.unstubAllGlobals()` in `afterEach`; each test aborts its controller and the panel is
-destroyed in `afterEach`, even after a failed assertion. Fake timers drive the 8 s budget and
-the replay offsets (`vi.advanceTimersByTimeAsync`), and `vi.getTimerCount()` is 0 at the end.
+`vi.unstubAllGlobals()` in `afterEach`; each test aborts its session and unmounts in `afterEach`,
+even after a failed assertion. Fake timers drive the 8 s budget and the replay offsets
+(`vi.advanceTimersByTimeAsync`), and `vi.getTimerCount()` is 0 at the end.
 - `deck-tools.test.ts`: names and descriptions obey the rules (reuse the page-tool rule
   helpers), schemas reject extra keys, unknown ids resolve to `{ error }`, `readOnlyHint` set.
 - `offer.test.ts` extended: `offerPageTools` registers each tool once per document.
 - `page-tool-call.test.ts`: the call returns `def`'s own example result shape; aborting stops it.
-- `live-chat.test.ts`: streamed text and tool parts render as text nodes; a refusal, an HTTP 429,
-  a stall past 8 s and a network error each switch to the recording with the label; a late live
-  chunk after the switch is dropped.
+- `deck-transport.test.ts`: a ready question plays its recording with no fetch and no usage chunks;
+  a typed question goes live with the page context and brain; a 429, a refusal, an unreachable
+  network and a stall past 8 s each play the recording; a late live chunk is dropped; with no
+  recording the error reaches the chat; abort (the request, a replay, the chat's own signal) leaves
+  no timers; the `local` stream; `reconnectToStream` resolves `null`.
+- `DeckDox.render.test.tsx`: a starter pill plays its recording with no `/api/chat` call and shows
+  the "Recorded" line; the pills and composer are offered; a typed question reaches the network;
+  leaving the slide aborts the request and clears the chat.
+- `DoxChat.transport.test.tsx`: a given transport is used and `/api/chat` is not; the rail shows the
+  examples by default and `idle` when given. `/dox`'s own tests stay unchanged.
 - `replay.test.ts`: chunks arrive in order at their offsets; abort stops the stream.
-- `slides-check.mjs`: on the built site, slide 14 and 16 play recordings and show "Recorded";
-  slide 15 shows both JSON panels; the deck page registers three tools with a stub
-  `navigator.modelContext`.
+- `slides-check.mjs` (phase B adds these): on the built site, `ask-dox` and the questions part play
+  recordings and show "Recorded"; `page-tools` shows the receipt and the Cut-off Ruler; the deck
+  page registers three tools with a stub `navigator.modelContext`.
 
 ## Definition of done
 
-- On production with the cookie set, slides 14 to 16 answer live and the presenter shows Live; with
+- On production with the cookie set, the Dox slides answer live and the presenter shows Live; with
   the network cut, every demo plays its recording, labelled, and the presenter shows Recorded.
 - No secret in `dist/` or the committed recordings: the gate greps both for `DOX_DEV_KEY` and,
   when the variable is set locally, its value.

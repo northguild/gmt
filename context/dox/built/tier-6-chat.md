@@ -4,7 +4,7 @@ Part of [built/index.md](index.md). Brains, budget, traps: [tier-6-brains.md](ti
 
 ## Shape
 
-- One surface: `/dox` (`src/pages/dox.astro`, `<DoxPage client:load />`), `noindex`, reached from the header's "Chat with Dox" button (`aria-current="page"` there). The header is Astro with no JavaScript, so no React reaches another page (WCAG 2.2 SC 3.2.3). There is no every-page dock. Page context follows through the referrer.
+- One surface: `/dox` (`src/pages/dox.astro`, `<DoxPage client:load />`), `noindex`, reached from the header's "Chat with Dox" button (`aria-current="page"` there). The header is Astro with no JavaScript, so no React reaches another page except the deck's Dox frame (WCAG 2.2 SC 3.2.3). There is no every-page dock. Page context follows through the referrer.
 - Stack: the AI SDK (`ai`, `@ai-sdk/react` `useChat`) and vendored AI Elements in `src/components/ai-elements/`. Install one with `npx ai-elements@latest add <name>` (bare `npx ai-elements@latest` installs all 48). The CLI rewrites imports from `components.json`, so the repo keeps its `~/` alias and has no `@/`. Streamdown renders replies; code blocks keep copy and drop download.
 - `message.tsx` imports `katex/dist/katex.min.css` so it loads with the island only. Without it formulas render twice and `\sqrt` svgs overflow.
 - Tailwind v4 exists only in the island (`reference/design-system.md`).

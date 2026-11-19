@@ -13,7 +13,7 @@ Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every v
 - **A choice storage cannot keep holds for the page.** Every storage access is in try/catch; a failed write keeps the choice in memory until a write lands or another tab's does. A page restored from the back/forward cache reads the key again on `pageshow`, since it missed `storage` events while frozen.
 - **A hidden tab suspends 0.65 s later** (`HIDE_TAIL_MS`), so a link that opens a new tab is heard to the end. `navigator.audioSession.type = "ambient"` where it exists.
 - **A control that fires its own cue carries `data-cue`**, so the press hook stays out. The Expressive Code copy button is not ours, so it is excluded by selector.
-- **React stays inside `/dox`.** Chrome cues are plain DOM; `DoxChat.tsx` calls `cue()`.
+- **React stays inside `/dox` and the deck's Dox frame.** Chrome cues are plain DOM; `DoxChat.tsx` calls `cue()`.
 
 ## Who plays what
 

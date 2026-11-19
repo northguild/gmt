@@ -92,10 +92,45 @@ returnHome(), destroy() }`.
   which flies back to the slide's place with a hop. Shift doubles the rate. Slice 1's keys module
   routes these keys here.
 
+## The Earth's spin
+
+- A slide with the `spin` prop (`Slide`, `ExperimentOpener`, `ExperimentSlide`; on `temporal` and
+  the opener, gaps, overlaps, host and odd experiment slides) sets `data-spin` on its section. The
+  stage then calls the engine's `setSpin(on)`, and the deck root carries `data-spin="on"` while
+  the Earth turns. `isSpinning()` reads it back.
+- The spin uses the globe controller's own ambient rate and ramp (0.002°/ms, a 2 s smoothstep), so
+  it turns as slowly as the `/gmt/` home globe. It starts only once the ice wall is gone or hidden.
+- From `abort` on, the spin eases down on the same ramp, then the camera flies to the slide's
+  place; it never snaps. Stepping back onto a spin slide starts it again.
+- Reduced motion: no spin. `returnHome()` does nothing on a spin slide, and `getView().moving`
+  ignores the spin. `slides-check` waits on `data-spin` (`WALL_SETTLE_MS`, `SETTLE_MS` 7000).
+
+## The slide change: `src/lib/slides/deck-transition.ts`
+
+- A step to another slide runs inside `document.startViewTransition({ update, types })`, with type
+  `forward` or `back` from the slide indexes (a hash change or an overview jump included). The
+  deck state moves at once; only the visible commit (the slide shown, its builds, the camera, the
+  pager and the live region) runs in `update`. `carousel.ts` takes it as its `transition` option,
+  wired in `deck-mount.ts`.
+- No transition for: a build within a slide, a browser without `startViewTransition`, reduced
+  motion, an open dialog, the first mount or a deep link.
+- Bursts: a commit that arrives before `update` runs joins it, in order, so no press is lost. A
+  press during a running transition skips it and cuts. A press within 300 ms of the last starts
+  none, so a held key never flickers between a transition and a cut.
+- The look (`slides.css`): the leaving slide fades out (`ng-fade-out`, `--ng-panel-out-dur`). The
+  arriving slide is not animated as a picture; its title, then its content, freeze in on the live
+  page with the landing page copy's `ng-freeze-text` (frost at half strength, a front that locks
+  them solid; delays 0 s and 0.12 s). The freeze starts when the slide is shown, or when
+  `data-stage-busy` clears, so text never freezes in under moving ice. The sky, the Earth and the
+  clock never animate: the names `deck-space`, `deck-bar` and `deck-slide` exist only while
+  `data-deck-vt` is on the root, and the space and the bar show only their new picture.
+  `::view-transition` takes no pointer events. Under reduced motion or forced colours there is no
+  freeze and the change is a cut.
+
 ## Fallbacks and venue hardening
 
 - Canvas-2D renders the same pins, arcs and flights; the WebGPU-only imagery is absent there.
-- Reduced motion: every `goTo` snaps, the slide change is a fade, no meteor; drag and free flight
+- Reduced motion: every `goTo` snaps, the slide change is a cut, no meteor; drag and free flight
   stay because they are the presenter's own motion.
 - No frames at rest: after a flight settles the engine stops requesting frames
   ([Tier 4](../../built/tier-4-globe.md#engine-srclibglobe)).

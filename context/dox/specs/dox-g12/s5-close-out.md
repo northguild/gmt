@@ -9,11 +9,17 @@
 Run every gate once over the finished deck, write the venue runbook, and leave `context/dox/`
 describing what is built. Slices 1–4c ran only their own tests, lint and checks.
 
-## The merge waits on four inputs
+## The merge waits on the owner's inputs
 
-1. The talk's date and start time (Europe/Helsinki) replacing `OWNER-TO-SUPPLY` in
-   `decks.ts`; `slides-check` fails until then.
-2. The slide 2 agent transcript in `quotes/agent-moment.json`, captured by the owner.
+The talk's date and start time are set in `decks.ts` (2026-12-16 18:00 Europe/Helsinki). Still to
+come, each failing `slides-check` until it lands:
+
+1. The agent transcript in `quotes/agent-answer.json`: the question word for word, the model, the
+   date, the prose answer and the code, plus the `call` that runs it. Then the run record from
+   `scripts/zone-matrix/agent-answer.mjs`, committed as `quotes/agent-run.json` with a matching
+   hash ([slice 7](./s7-running-question.md#the-agents-answer-run-by-script)).
+2. The recordings from `scripts/record-deck-answers.ts`: `ask-dox` and the three audience
+   questions the owner picks ([slice 4b](./s4b-live-agents.md)).
 3. The wall captures (`node scripts/capture-wall.ts`, run from `apps/dox`), with each `clip` set and
    `clock` checked by the owner.
 4. A full zone-matrix run committed with no untagged failure and GMT at zero; any GMT failure is
@@ -35,7 +41,7 @@ once, then run everything below against that build.
 | Gate | Tier | What it proves for the deck |
 | --- | --- | --- |
 | `pnpm run validate` | CI | Lint, types, tests, the CI timezone matrix untouched |
-| `slides-check` (new) | pr, leg "other" | Steps, builds, deep links, stage fit at three sizes, no stage move while stepping, flight settles on its place, no frames at rest, frame budget, no-JS order, print breaks, presenter readout boxes still; the shatter's frame budget, reset on stepping back and pins lit; recorded demos labelled, both JSON panels, three deck tools registered; no talk-start placeholder; no dev secret in `dist/` or recordings |
+| `slides-check` (new) | pr, leg "other" | Steps, builds, deep links, stage fit at three sizes, no stage move while stepping, flight settles on its place, no frames at rest, frame budget, no-JS order, print breaks, presenter readout boxes still; the shatter's frame budget, reset on stepping back and pins lit; recorded demos labelled, both JSON panels, three deck tools registered; the transcript and run record present and matching; spares after `thanks` and out of the pace plan; the Moon step lands; no dev secret in `dist/` or recordings |
 | `a11y-axe` | pr | The three deck routes and `/compare/zone-matrix/` (it reads every built page) |
 | `a11y-tab-walk` | pr | Deck controls bar, both dialogs, presenter buttons: add the deck and presenter to its page list |
 | `esc-cascade` | pr | Overview and help dialogs close one per Escape, focus returns to the opener |
@@ -63,6 +69,8 @@ Firefox or WebKit finding from the weekly sweep is fixed in the product, never w
    after load, and there they play their recordings, labelled.
 4. Projector: mirror off, deck window on the projector in fullscreen (F or F5), presenter on the
    laptop (T). Pair the clicker; press each of its buttons once with the help dialog open.
+   From the back of the room, scan both QR codes on `thanks` with a phone. After `thanks`, Next
+   reaches the two spare slides; End returns to `thanks`.
 5. If the GPU stutters, reload with `?globe=canvas2d`; if the globe fails, the slides still read
    on the void. Reduced motion in the OS turns every flight into a cut.
 6. Spare: print the deck to PDF from the article view (one slide a page) and keep it on a stick.
@@ -73,10 +81,13 @@ Firefox or WebKit finding from the weekly sweep is fixed in the product, never w
   and URL scheme, the registry, the `Deck`/`Slide`/`Build`/`Notes` components and the one-source
   rule (the runtime reads the DOM), the key table and where it lives (`keys.ts`), the presenter
   sync contract, the no-JS and print forms, the panel rule, and the traps found while building
-  (F5 reload, Space on a focused button, the presenter being out of the sitemap).
-- **`built/tier-4-globe.md`**: `ambient: false`, `flyTo` with `hop`, `steer`, `getView`,
+  (F5 reload, Space on a focused button, the presenter being out of the sitemap); spare slides;
+  the agent-answer runner and its run record; the QR codes from `lean-qr`; `GmtStep`.
+- **`built/tier-4-globe.md`**: `followGlobe`'s `instant`, the `newmoon` lapse with `endsAt`; `ambient: false`, `flyTo` with `hop`, `steer`, `getView`,
   `globe-theme.ts`, `space-sky.ts`; the deck page as the fourth globe host; the ice wall layer
   (Voronoi shards, pure poses, both renderers) and the clock pins.
+- **`built/tier-0-1-generator.md` § Upstream and Pulse**: `gmtUnguarded` and the "No GMT
+  workaround" badge.
 - **`built/tier-2-webmcp.md`**: deck tools built without `definePageTool`, `offerPageTools`, the
   deck head marker.
 - **`built/tier-6-chat.md`**: the deck's plain-DOM chat client, the 8 s budget and recorded

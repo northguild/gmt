@@ -52,7 +52,7 @@ work is scoped against what is already built.
   (`@northguild/gmt/plain/calculate`); a namespace barrel loads every module of its namespace
   (`regex`, which has no module subpaths, is the one exception).
 - **Counts drift.** Derive them from source; never trust a number in the docs.
-- **React stays inside `/dox`.** Every other page is Astro plus plain-DOM modules.
+- **React stays inside `/dox` and the deck's Dox frame** (`DeckDox`, on the Give Me Temporal slides). Every other page is Astro plus plain-DOM modules.
 - **Maximal chrome, disciplined content surface.** Judge UI by reading a long page, never by a
   screenshot.
 - **No left-border-only cards.** A card, callout, row or result block never carries a coloured

@@ -70,7 +70,7 @@ These bind every change.
    untracked.
 
 6. **Widgets are an Astro shell, a pure `renderTemplate` built from the kit, and a `mount`.**
-   The `/dox` chat (`client:load`) is the only React island; the same markup server-renders on
+   The `/dox` chat (`client:load`) and the deck's Dox frame (`DeckDox`, `client:only`) are the only React islands; the same markup server-renders on
    a docs page and mounts in the chat rail.
    - Markup comes only from `src/widgets/builders` and the `src/widgets/primitives` elements.
    - A missing piece is added to the kit, with a test, and never typed inline.
