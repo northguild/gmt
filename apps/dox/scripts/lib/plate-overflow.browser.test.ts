@@ -46,12 +46,20 @@ describe("measurePlates", () => {
   });
 
   it("allows 1.5 px past the padding edge and no more", async () => {
-    // A 200 px plate with 1 px borders: the padding edge is at 199 px. Fourteen monospace
-    // characters of 12 px are 168 px wide and start at 11 px plus the offset.
+    // A 200 px plate with 1 px borders: the padding edge is at 199 px, and the text starts at
+    // 11 px plus the offset. Glyph widths differ by machine font, so the run is measured first and
+    // the offset puts its right edge a set distance past the padding edge.
     const text = (offset: number) =>
       `<dd style="margin:0 0 0 ${offset}px;font:20px monospace;white-space:nowrap">mmmmmmmmmmmmmm</dd>`;
-    expect((await platesOf(text(21))).found).toEqual([]);
-    expect((await platesOf(text(23))).found).toHaveLength(1);
+    await platesOf(text(0));
+    const width = await page.evaluate(() => {
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelector("dd")!);
+      return range.getBoundingClientRect().width;
+    });
+    const past = (px: number) => text(188 - width + px);
+    expect((await platesOf(past(1.25))).found).toEqual([]);
+    expect((await platesOf(past(1.75))).found).toHaveLength(1);
   });
 
   it("skips screen-reader-only, aria-hidden and visibility-hidden text", async () => {
