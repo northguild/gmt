@@ -200,9 +200,10 @@
     transform var(--gmt-duration-slow) var(--gmt-easing);
 }
 
+/* The observed day grows into its cell from inside it, so while it waits it never reaches past the cell. */
 .gmt-month[data-armed] td[data-mark="observed"] .gmt-month-day {
   opacity: 0;
-  transform: scale(1.8);
+  transform: scale(0.5);
 }
 
 .gmt-month[data-active="true"] td[data-mark="observed"] .gmt-month-day {

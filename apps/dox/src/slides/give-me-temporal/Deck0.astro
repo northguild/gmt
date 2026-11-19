@@ -139,7 +139,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
       <tbody>
         {homeFaults.map((f, i) => (
           <tr data-row={i + 1}>
-            <td><code aria-hidden="true" data-type data-text={f.input}>{f.input}</code><code class="gmt-sr-only">{f.input}</code></td>
+            <td><code aria-hidden="true" data-type data-text={f.input}>{f.input}</code><span class="gmt-sr-only">{f.input}</span></td>
             {f === guessRow ? (
               <>
                 <td><Build n={1}>{f.output}</Build></td>
