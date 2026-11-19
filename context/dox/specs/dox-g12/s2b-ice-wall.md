@@ -5,11 +5,12 @@
 
 ## Goal
 
-The talk's spine in one move. On slides 2 and 3 a wall of six captured landing pages (Moment.js,
-Luxon, date-fns, Day.js, Spacetime, @internationalized/date), each as captured, hangs in orbit between the camera
-and the Earth. Stepping to slide 4 flies the camera through it: the panes shatter into ice shards,
-twelve of them fly out and settle as clock pins on twelve zones, and the Earth turns once beneath,
-every pin labelled with its local time. One clock becomes the whole planet. The wall is
+The talk's spine in one move. On slide 2 a wall of six captured landing pages (Moment.js,
+Luxon, date-fns, Day.js, Spacetime, @internationalized/date), each as captured, hangs in a three by two
+grid in the left two thirds, with the clock in the right third. Stepping to slide 3 breaks it: the panes
+shatter into ice shards, and twelve of them fly out and settle as clock pins on twelve zones. Stepping to
+slide 4 turns the clock into the Earth where it stands, and the Earth turns once beneath, every pin
+labelled with its local time. One clock becomes the whole planet. The wall is
 presented neutrally, as the libraries people reach for; no text on the slide judges them, and
 their marks appear only inside the captured, captioned snapshots, never as the deck's own art.
 
@@ -35,7 +36,8 @@ Run by hand with Node's type stripping, never in CI; its output is committed, li
 Slide 2's section holds a `<figure>` per pane: the same `.webp` as an `<img>` with alt text
 ("Landing page of momentjs.com, captured 2026-…") and a `<figcaption>` with the URL and the
 capture date (gmt `formatZonedDateTime`, date only). This is the no-JS and print form, and on the
-stage the captions sit in one row under the wall, in pane order. The 3D wall is drawn on its own
+stage each caption sits on its own pane, in pane order. The slide's title sits above the
+grid and the agent answer below it. The 3D wall is drawn on its own
 `aria-hidden` canvas; the figures are the accessible content.
 
 ## Kit addition: `getView()` on the engine
@@ -56,8 +58,10 @@ the globe's own lens. Nothing else in the engine changes for this slice.
   1400 ms. Pinned shards (below) follow a second phase. Because the pose is a pure function of
   `t`, a replay is exact and a reset is `t0 = null`.
 - `wall.ts`: `mountIceWall(layer, { engine, panes, signal })` returns `{ setDepth(z), breakAll(now),
-  breakAt(x, y, now), reset(), destroy() }`. The wall sits in camera space, three 16:10
-  panes down each side edge, perpendicular to the view axis, the centre left clear; it never moves with a globe hop.
+  breakAt(x, y, now), reset(), destroy() }`. `onState` reports `whole`, `approach`,
+  `breaking`, `gone` or `hidden`. The wall sits in camera space, six 16:10 panes in a three by two grid
+  (6 to 64 across, 12 down, gap 1.2, in stage-width percent), perpendicular to the view axis, the right
+  third left clear for the clock; it never moves with a globe hop.
 - **WebGPU** when the globe runs on WebGPU: one pipeline drawing instanced thin prisms, the pane's
   texture on the front face, a frost tint and a fresnel edge highlight in the ice colours of the
   DOX-G2 freeze (`--gmt-ice`, the frost token), no blur. **Canvas-2D** otherwise and under
@@ -70,16 +74,18 @@ the globe's own lens. Nothing else in the engine changes for this slice.
 
 ## Triggers and reset
 
-- **Step to slide 4:** the hop from the wall's place to the twelve-zone view drives `setDepth`
-  from the wall's resting depth to the near plane over the hop; at the moment the camera reaches
-  the wall, `breakAll(now)`.
-- **Free flight on slides 2 and 3:** E and Q move the wall nearer and farther along with the
-  zoom. When the wall passes the break depth, the pane under the screen centre breaks alone
-  (`breakAt`); the others stay until slide 4.
-- **Reset:** the wall's state is `{ [pane]: t0 | null }`, derived from the deck state. Entering
-  slide 2 or 3 from either side resets every pane to whole. From slide 5 on, or by a deep link to
-  `#temporal`, the wall is not drawn and the pins are already lit. Stepping back from 4 to 3
-  flies back out and the wall stands whole again.
+- **Step to slide 3:** the wall flies in to the break depth (0.93) and breaks over the clock; the
+  stage reports itself busy (`data-stage-busy` on the deck root) until the shards are gone, then
+  fires `gmt-stage-idle`. The slide's text and the rows' type-out wait for that signal and then fade
+  in over about 300 ms. A jump past slide 3 breaks the wall at the jump.
+- **Step to slide 4:** the clock turns into the Earth in place, at the same spot and size (no zoom
+  dip). The Earth's one turn starts only once the clock is gone, and the slide's text enters after
+  the reveal.
+- **Free flight:** E and Q change only the wall's depth; no pane breaks on its own.
+- **Reset:** the wall's state is derived from the deck state. Entering slide 2 from either side
+  resets every pane to whole. From slide 5 on, or by a deep link to `#date` or `#temporal`, the wall is
+  not drawn and nothing waits. Stepping back from 4 to 3 returns the clock and owes the turn again;
+  stepping back from 3 to 2 stands the wall whole again.
 
 ## One clock becomes many: the pins
 
@@ -103,8 +109,8 @@ twelve-zone view centres the camera so twelve sit on the visible side.
 ## Reduced motion
 
 No flying shards and no turn. On slide 4 the cell edges draw as ice-white cracks over the
-panes for 150 ms, the wall fades over 200 ms, and every pin appears lit at once. Free
-flight still breaks a pane, the same way.
+panes for 150 ms, the wall fades over 200 ms, and every pin appears lit at once. Nothing waits under
+reduced motion: the text shows at once.
 
 ## Tests
 
@@ -123,8 +129,9 @@ flight still breaks a pane, the same way.
 
 ## Definition of done
 
-- Slide 2 shows six captioned panes (three down each side edge, each caption on its own pane, the centre clear; the clocks in view where a page has one);
-  slide 4 breaks them on the clicker, and the pins settle with local times on both renderers.
+- Slide 2 shows six captioned panes (three by two in the left two thirds, each caption on its own pane;
+  the clocks in view where a page has one); slide 3 breaks them on the clicker, and the pins settle
+  with local times on both renderers.
 - Back and forward replay the shatter exactly; deep links land in the right state.
 - Notes on slides 2 and 4 carry the line "one clock against the whole planet".
 - Own tests, `pnpm dox:lint` and `pnpm dox:check` green; the owner's listening pass.

@@ -76,7 +76,7 @@ returnHome(), destroy() }`.
   is never focusable, so its own arrow-key handling never runs. Drag orbits.
 - Globe options: `renderer` from `rendererOverride()` (`?globe=webgpu|canvas2d`), `ambient: false`,
   `maxDpr: 1.5`, `pauseWhenHidden: true`, `framing` that keeps the Earth in the stage's right
-  third at zoom 1 and centred behind a `layout="full"` slide, `imageryUrl` as on the landing,
+  third at zoom 1 on every slide (the content fits the left two thirds, so nothing moves sideways), `imageryUrl` as on the landing,
   `sunInstant` and the sky clock from gmt `unix/get` (dynamic import, after first paint).
 - Mount order: slide text paints first (SSR); then the sky, then the globe; the stage never waits
   for either. If the globe fails both renderers, `space-sky.ts` draws the sky once without it; if

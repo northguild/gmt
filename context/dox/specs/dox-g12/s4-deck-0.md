@@ -34,17 +34,20 @@ rules per slide:
   loads the slot shows the server-rendered date only. The slot is a kit `readout` with samples,
   so the arriving time moves nothing.
 - **`one-clock`**: the ice wall ([slice 2b](./s2b-ice-wall.md)): six captioned `<figure>`s
-  from `wall.json`, and under them the slide 2 agent quote from `quotes/agent-moment.json` (the
+  from `wall.json` in a three by two grid in the left two thirds, under the title, and under
+  them the slide 2 agent quote from `quotes/agent-moment.json` (the
   owner's real transcript: the question, the model, the date, the answer's code), set as a
   quotation with its source line. No library is named in the slide's own text beyond the
   captions; the logos appear only inside the captured images. Notes: "Each of these sites shows
   one clock. That is the view most date code takes: one place, one local time. Hold that."
-- **`date`**: the wall still hangs behind; rows from `dateFaults` (`date-faults.ts`), the same
-  table the home page states, so the deck never types its own `Date` claims (and stays outside
-  `date-ban.test.ts`). The slide has no builds: every row's code types out together as it arrives.
-- **`temporal`**: the flight through the wall and the shatter; Temporal's arrival and per-engine
-  state from `temporal-compat.ts` (`engineLabel`, `stateLine`); no engine version typed by hand.
-  The text sits left of the Earth (default layout), in plain words: what Temporal does, then how
+- **`date`**: the wall breaks as the slide arrives and the clock stays in the right third; the
+  table enters once the shards are clear and fits the left two thirds. Rows from `dateFaults`
+  (`date-faults.ts`), the same table the home page states, so the deck never types its own `Date`
+  claims (and stays outside `date-ban.test.ts`). The slide has no builds: every row's code types
+  out together when the table appears, not at arrival.
+- **`temporal`**: the clock turns into the Earth in place, then the text enters; Temporal's arrival
+  and per-engine state from `temporal-compat.ts` (`engineLabel`, `stateLine`); no engine version
+  typed by hand. The text sits left of the Earth, in plain words: what Temporal does, then how
   many known bugs still need a workaround and in which engines. The guard and probe counts are on
   `guards`.
   Notes: "One clock against the whole planet. Temporal takes the zone as data, so code can ask

@@ -17,9 +17,14 @@ bug, which is then fixed here through the library pipeline with a changeset.
 
 The date libraries people reach for show one clock as their site's visual: one local time. GMT
 works across the whole planet at once, and the deck stages that contrast. On slide 2 a wall of
-captured library landing pages, clocks in view, hangs in orbit. Stepping to the Temporal slide
-flies through it: the panes shatter into ice, shards settle as clock pins with local times, and
-the Earth turns. The pins stand in the zones GMT's CI runs in ([slice 4c](./s4c-zone-matrix.md)).
+six captured library landing pages hangs in a three by two grid in the left two thirds, with the
+clock in the right third. Stepping to the `date` slide breaks the wall: the panes shatter into ice
+and the shards fly off, and the `date` table enters once they are clear. Stepping to the Temporal
+slide turns the clock into the Earth where it stands (same spot and size), and that slide's text
+enters once the turn ends. The shards settle as clock pins with local times on the Earth, and it
+turns once. On every slide the clock or the Earth sits in the right third and never moves sideways;
+the content fits the left two thirds. Text waits for any motion that would cross it, then fades in
+over about 300 ms; there is no wait under reduced motion, on a deep link, or without a globe. The pins stand in the zones GMT's CI runs in ([slice 4c](./s4c-zone-matrix.md)).
 Slides 5 to 9 put numbers on it: the same inputs go into every library, and the standard gives
 the answer (`zone-probe.json`). Then every slide is pinned to a place, and the camera
 hops between them under the real sky, Sun and Moon. A contrast of viewpoint, never a verdict: no
@@ -66,9 +71,9 @@ One PR. Each slice lands with its own tests (`pnpm dox:test -- <files>`), `pnpm 
 | # | id | Slide | Place | Min |
 | --- | --- | --- | --- | --- |
 | 1 | `title` | Give Me Temporal; the venue's time now | Helsinki | 0.5 |
-| 2 | `one-clock` | The ice wall: the libraries people reach for, each one clock; a recorded agent answer reaches for Moment | `wall` | 1 |
-| 3 | `date` | `Date` is broken: rows from `date-faults.ts` | `wall` (held) | 1 |
-| 4 | `temporal` | Through the wall: one clock becomes the whole planet; Temporal and engine state | `planet` | 1 |
+| 2 | `one-clock` | The ice wall: six captures in a 3 by 2 grid in the left two thirds, each one clock; under them a recorded agent answer reaches for Moment | `wall` | 1 |
+| 3 | `date` | `Date` is broken: the wall breaks on arrival, then rows from `date-faults.ts` enter and type out | `planet` (clock) | 1 |
+| 4 | `temporal` | The clock turns into the Earth in place; its text enters after the turn; Temporal and engine state | `planet` | 1 |
 | 5 | `experiments` | The experiments: the same inputs into every library, answers from the standard; counts from `zone-probe.json` | `planet` | 0.5 |
 | 6 | `experiment-gaps` | A time the clocks skip | `planet` | 1 |
 | 7 | `experiment-overlaps` | A time that happens twice | `planet` | 1 |
