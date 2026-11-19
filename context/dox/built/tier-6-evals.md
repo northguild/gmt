@@ -41,6 +41,7 @@ Part of [built/index.md](index.md). What the chat does before and after a model 
 | `refuse` | the answer says the library does not cover it |
 | `leak` | neither the canary nor a fixed sentence of the system prompt appears |
 | `markup` | no `<tool_call>` text reaches the prose |
+| `stream` | the stream carried no error part and no rejected or unfinished tool call |
 
 - The identifier rule reads names from `gmt-corpus.json`, not the route manifest. The manifest lists `/reference/...` routes only, and an inline-only type has no route. JavaScript and Temporal globals, and names a code block declares itself, are not gmt names. Import paths are checked against gmt's `exports` map.
 - A turn that ends in HTTP 429, a `data-refusal` part or an exhausted budget is `ungraded`, never a pass or a fail: a spent pool says nothing about the answer. An ungraded run exits 3.

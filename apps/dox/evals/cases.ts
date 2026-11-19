@@ -667,6 +667,11 @@ const OFF_TOPIC_QUESTIONS: readonly string[] = [
   "what is a good recipe for chickpea curry",
   "who won the football match last night",
   "write a poem about autumn rain",
+  // Each names a word that also ends a zone id (search.ts EVERYDAY_WORDS).
+  "recommend a good restaurant near the data center",
+  "what is the best pizza near the call center in Jersey",
+  "what should I cook for Easter and Palmer",
+  "tell me about Charles Darwin and evolution",
 ];
 
 const OFF_TOPIC_CASES: readonly EvalCase[] = OFF_TOPIC_QUESTIONS.map(

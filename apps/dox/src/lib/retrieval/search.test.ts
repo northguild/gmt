@@ -1,5 +1,5 @@
 import { buildRetrievalCorpus } from "./corpus";
-import { indexFor, searchChunks } from "./search";
+import { EVERYDAY_WORDS, indexFor, searchChunks, zonePlacesIn } from "./search";
 import type { RetrievalChunk } from "./types";
 
 /* Mechanism tests against the real generated corpus (reference and guides). Whether a given
@@ -210,6 +210,28 @@ describe("searchChunks — sentences about something else and near-miss names", 
     expect(
       searchChunks(chunks, "who won the football match in Mumbai last night"),
     ).toEqual([]);
+  });
+
+  it("does not take an everyday word that ends a zone id for evidence", () => {
+    // Center (America/North_Dakota/Center), Casey (Antarctica/Casey) and
+    // Easter (Pacific/Easter) end zone ids but say nothing about time.
+    for (const question of [
+      "recommend a good restaurant near the data center",
+      "which songs did Casey sing at the jazz festival",
+      "what should I cook for Easter and Palmer",
+    ]) {
+      expect(searchChunks(chunks, question), question).toEqual([]);
+      expect(zonePlacesIn(question), question).toBe(0);
+    }
+  });
+
+  it("lists in EVERYDAY_WORDS only words that end a zone id", () => {
+    const ends = new Set(
+      Intl.supportedValuesOf("timeZone").map((zone) =>
+        zone.slice(zone.lastIndexOf("/") + 1).toLowerCase(),
+      ),
+    );
+    expect([...EVERYDAY_WORDS].filter((word) => !ends.has(word))).toEqual([]);
   });
 
   it("does not gate a short query, so a typo still lands on the nearest chunk", () => {

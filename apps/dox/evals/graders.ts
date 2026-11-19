@@ -22,6 +22,7 @@ export const CHECK_NAMES = [
   "refuse",
   "leak",
   "markup",
+  "stream",
 ] as const;
 
 export type CheckName = (typeof CHECK_NAMES)[number];
@@ -271,6 +272,9 @@ export async function grade(
       );
   }
   notes.push(...record.toolErrors, ...record.errors);
+  // An error part or a failed tool call is a fault the reader sees, even when
+  // what text did arrive passes every other check.
+  checks.stream = record.errors.length === 0 && record.toolErrors.length === 0;
 
   if (call) {
     let ok = true;

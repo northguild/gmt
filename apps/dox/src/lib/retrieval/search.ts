@@ -180,8 +180,10 @@ const MIN_RELEVANCE_SCORE = 8;
    "night" and "last"), and a few weak hits are enough to put a context in
    front of the model. What it lacks is the rest of its words: the guides
    have no "football" and no "won". So a question of MIN_GATED_TERMS or more
-   topic terms that has UNKNOWN_SHARE or more of them matching no chunk at all
-   is about something else, and finds nothing.
+   topic terms with any of them matching no chunk at all is about something
+   else, and finds nothing. One unknown word is enough: the guides use so
+   many everyday words ("tell", "about", "movies", "recommend") that "who is
+   Casey Affleck and what movies did he make" has one unknown word in six.
 
    A real question can lack words too: a reader's city or noun is not in the
    guides ("Mumbai", "ferry", "parcel") and says nothing against the
@@ -191,7 +193,9 @@ const MIN_RELEVANCE_SCORE = 8;
      function names ("time", "date", "week", "interval", "offset"), which the
      corpus supplies and nobody lists by hand;
    - a place that is an IANA time zone city ("Lagos", "Singapore", "Seoul";
-     Mumbai is not one, its zone is Asia/Kolkata);
+     Mumbai is not one, its zone is Asia/Kolkata), except the EVERYDAY_WORDS
+     that also end a zone id: "data center" (America/North_Dakota/Center) or
+     "Casey Affleck" (Antarctica/Casey) is not a question about time;
    - a clock or calendar token ("23:40", "2024-06-14", "9am").
    Such a question is never gated, whatever else it says. A question with
    none of them and with words nobody wrote about is not about time.
@@ -221,14 +225,13 @@ const MIN_RELEVANCE_SCORE = 8;
    matches. A long, legitimate question (a container's dwell, with a
    terminal, a city, a month and a time) spreads its words over many chunks,
    so no chunk covers much of it, and the right ones were cut. Also dropped:
-   the unknown share on its own, which returned nothing for "my boss in Lagos
-   wants a call at 9am his time, what is that for me in Singapore" because
-   "boss", "wants" and "his" are in no guide.
+   the unknown words on their own, with no evidence, which returned nothing
+   for "my boss in Lagos wants a call at 9am his time, what is that for me in
+   Singapore" because "boss", "wants" and "his" are in no guide.
 
    Numbers, times and ids are what the reader brings, not a topic the guides
    could be missing, so they are not counted as unknown. */
 const MIN_GATED_TERMS = 3;
-const UNKNOWN_SHARE = 0.25;
 const MIN_NAME_USES = 5;
 const MIN_EVIDENCE_LENGTH = 4;
 const ZONE_WORD = "timezone";
@@ -280,8 +283,39 @@ function nameWordsOf(chunks: RetrievalChunk[]): Set<string> {
   );
 }
 
+/** Last parts of zone ids that are, far more often, an English word or a
+ * person's name: a question using one is no more about time than any other.
+ * The cities a reader asks the time of stay places, even where they are also
+ * names ("Phoenix", "Lima", "Hobart"); a real question naming one of these
+ * also names a second city or a clock time, which is evidence enough. */
+export const EVERYDAY_WORDS: ReadonlySet<string> = new Set([
+  "beulah",
+  "canary",
+  "casey",
+  "center",
+  "christmas",
+  "darwin",
+  "davis",
+  "dawson",
+  "easter",
+  "guernsey",
+  "jersey",
+  "knox",
+  "midway",
+  "oral",
+  "palmer",
+  "regina",
+  "resolute",
+  "reunion",
+  "stanley",
+  "troll",
+  "wake",
+  "wallis",
+]);
+
 /** Single-word IANA zone cities in lower case, and the multi-word ones with
- * a space ("new york"). Empty where the runtime cannot list zones. */
+ * a space ("new york"), less EVERYDAY_WORDS. Empty where the runtime cannot
+ * list zones. */
 const ZONE_PLACES: { words: Set<string>; phrases: string[] } = (() => {
   const words = new Set<string>();
   const phrases: string[] = [];
@@ -290,7 +324,11 @@ const ZONE_PLACES: { words: Set<string>; phrases: string[] } = (() => {
       const place = zone.slice(zone.lastIndexOf("/") + 1).toLowerCase();
       const spaced = place.replaceAll("_", " ");
       if (spaced.includes(" ")) phrases.push(spaced);
-      else if (place.length >= MIN_EVIDENCE_LENGTH) words.add(place);
+      else if (
+        place.length >= MIN_EVIDENCE_LENGTH &&
+        !EVERYDAY_WORDS.has(place)
+      )
+        words.add(place);
     }
   } catch {
     // A runtime without the list simply has fewer places to recognise.
@@ -472,7 +510,7 @@ export function searchChunks(
       (term) =>
         index.search(term, { prefix: true, fuzzy: fuzzyFor }).length === 0,
     );
-    if (unknown.length / terms.length >= UNKNOWN_SHARE) return [];
+    if (unknown.length > 0) return [];
   }
 
   const hits = results

@@ -237,9 +237,28 @@ describe("grade", () => {
       context,
     );
     expect(verdict.checks.tool).toBe(false);
+    expect(verdict.checks.stream).toBe(false);
     expect(verdict.notes.join(" ")).toContain(
       "Invalid input for tool showGlobe",
     );
+  });
+
+  it("stream: fails an error part, though the empty answer passes every other check", async () => {
+    // The injection case checks only what the answer says, and an empty
+    // answer says nothing wrong.
+    const injection = CASES.find(
+      (c) => c.id === "injection-print-instructions",
+    )!;
+    const quiet: TurnRecord = { ...goodRecord(), answer: "", toolCalls: [] };
+    const clean = await grade(injection, quiet, context);
+    expect(clean.status).toBe("pass");
+    const broken = await grade(
+      injection,
+      { ...quiet, errors: ["upstream hiccup"] },
+      context,
+    );
+    expect(broken.checks.stream).toBe(false);
+    expect(broken.status).toBe("fail");
   });
 
   it("is ungraded on a 429, any non-200 status, and a data-refusal part", async () => {
