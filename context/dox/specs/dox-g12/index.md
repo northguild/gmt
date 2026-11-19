@@ -16,7 +16,7 @@ bug, which is then fixed here through the library pipeline with a changeset.
 ## The spine: one clock against the whole planet
 
 The date libraries people reach for show one clock as their site's visual: one local time. GMT
-works across the whole planet at once, and the deck stages that contrast. On slide 2 a wall of
+works across the whole planet at once, and the deck stages that contrast. On `one-clock` a wall of
 six captured library landing pages hangs in a three by two grid in the left two thirds, with the
 clock in the right third. Stepping to the `date` slide breaks the wall: the panes shatter into ice
 and the shards fly off, and the `date` table enters once they are clear. Stepping to the Temporal
@@ -27,15 +27,16 @@ then spins slowly through the experiments and eases back to the held view before
 never moves sideways; the content fits the left two thirds. Text waits for any motion that would
 cross it, then enters; there is no wait under reduced motion, on a deep link, or without a globe.
 The pins stand in the zones GMT's CI runs in ([slice 4c](./s4c-zone-matrix.md)).
-Slides 5 to 9 put numbers on it: the same inputs go into every library, and the standard gives
+The five experiment slides put numbers on it: the same inputs go into every library, and the standard gives
 the answer (`zone-probe.json`). Then every slide is pinned to a place, and the camera
 hops between them under the real sky, Sun and Moon. A contrast of viewpoint, never a verdict: no
 text judges a library, and their marks appear only inside the captioned snapshots.
 
 **One running question** ties the talk together: "03:30 on 28 March 2027 in Helsinki", a time
-that never happens there, because the clocks skip from 03:00 to 04:00. It opens on `one-clock` as
-the question the owner put to an agent without GMT; the agent's code is run by script, and the
-room guesses what it returns before the deck shows it. `gmt` answers the same question with
+that never happens there, because the clocks skip from 03:00 to 04:00. It opens on `agent-answer` as
+the question the owner put to agents without GMT; each agent's code is run by script, the room
+guesses what the quoted one returns before the deck shows it, and `agents` lists what every one
+returned. `gmt` answers the same question with
 `resolveLocal(…, { disambiguation: "reject" })`, and `ask-dox` closes it live with an agent that
 has GMT. Each bug slide ends on a "GMT:" step that shows what GMT does with the same input, or
 says plainly that GMT has no workaround, read from the filing's own data.
@@ -72,46 +73,48 @@ phases with disjoint file ownership.
 | 2 | [Space stage](./s2-space-stage.md) | The Earth and real sky behind every slide; hop flights between places; WASD free flight; the route as arcs; the Moon pull-back |
 | 2b | [Ice wall](./s2b-ice-wall.md) | Captured library pages with their clocks hang in orbit; flying through shatters them into ice; shards become clock pins with local times |
 | 3 | [Presenter view](./s3-presenter.md) | Notes, next slide, elapsed against plan, pace, live-or-recorded state, readiness check |
-| 4 | [Deck 0 content](./s4-deck-0.md) | The 22 slides and 2 spares (ids, notes, framing); bug cards read from the filings; build-time gmt results |
+| 4 | [Deck 0 content](./s4-deck-0.md) | The 25 slides and the spare (ids, notes, framing); bug cards read from the filings; build-time gmt results |
 | 4b | [Live agents](./s4b-live-agents.md) | The deck's own page tools; a live page-tool call; Dox chat answering on stage, with recorded fallbacks |
 | 4c | [Zone matrix](./s4c-zone-matrix.md) | Library suites run under GMT's CI zones; a Compare page, a `/compare` column, Migrate lines |
 | 5 | [Close-out](./s5-close-out.md) | Full gates, the venue runbook, `built/` updated |
 | 6 | [Time, not the camera](./s6-time-not-camera.md) | One held view through the bugs; time-lapses; a visual per bug; filings as pins; the clocks return; the new moon over Shanghai |
-| 7 | [The running question](./s7-running-question.md) | The agent's code run by script; guesses; a GMT step per bug; `familiar`; QR codes; spare slides; the builder phases |
+| 7 | [The running question](./s7-running-question.md) | The agents' code run by script; guesses; a GMT step per bug; `familiar`; QR codes; spare slides; the builder phases |
 
 ## Deck 0 outline (20 minutes)
 
 | # | id | Slide | Place | Min |
 | --- | --- | --- | --- | --- |
 | 1 | `title` | Give Me Temporal; the venue's time now | Helsinki | 0.5 |
-| 2 | `one-clock` | The ice wall and the running question; the agent's answer; guess; what its code returns, and that the time never happens | `wall` | 1.5 |
-| 3 | `date` | `Date` is broken: the wall breaks on arrival, then rows from `date-faults.ts` type out; one row is a guess | `planet` (clock) | 1 |
-| 4 | `temporal` | The clock turns into the Earth in place; its text enters after the turn; Temporal and engine state | `planet` | 1 |
-| 5 | `experiments` | The same inputs into every library, answers from the standard; counts from `zone-probe.json` | `planet` | 0.5 |
-| 6 | `experiment-gaps` | A time the clocks skip: the question, a guess, then the bars | `planet` | 1 |
-| 7 | `experiment-overlaps` | A time that happens twice | `planet` | 0.75 |
-| 8 | `experiment-host` | The same input on machines set to different zones | `planet` | 0.75 |
-| 9 | `experiment-odd` | Apia's missing day, Lord Howe's half hour, Kathmandu's +05:45 | `planet` | 0.75 |
-| 10 | `abort` | `nodejs/node#67076` with `CLDR-19873`; then GMT | `planet`, lapse | 1.25 |
-| 11 | `years` | `ICU-23609`, `fullcalendar/temporal-polyfill#127`; `ICU-23619`; then GMT | `planet`, lapses | 1.25 |
-| 12 | `day-off` | `ICU-23627`; `fullcalendar/temporal-polyfill#128`; the new moon over Shanghai; then GMT | `planet`, lapses, the Moon | 1.5 |
-| 13 | `manila` | `tc39/proposal-temporal#3330` and siblings: Manila skips 1844-12-31; then GMT | `planet`, lapse | 1.25 |
-| 14 | `engines` | `nodejs/node#67457`: engines disagree on `until()` and `round()`; then GMT | `planet`, sun | 1 |
-| 15 | `scoreboard` | Every filing as pins, by tracker and state | Overview | 0.5 |
-| 16 | `familiar` | Names you already know: Moment, date-fns and Day.js call shapes beside the GMT call | Greenwich | 1 |
-| 17 | `gmt` | The running question answered by GMT; the clock skips 02:59 to 04:00 | Greenwich | 1 |
-| 18 | `guards` | Tested guards and the canary, in one paragraph | Greenwich | 0.75 |
-| 19 | `ask-dox` | The running question, live to Dox chat, tool calls visible | Helsinki | 1.5 |
-| 20 | `page-tools` | A live page-tool call, and this deck's own tools | Helsinki | 1.25 |
-| 21 | `qa` | Questions; the audience panel; questions through Dox chat or aloud | Helsinki | 5 |
-| 22 | `thanks` | Thanks; two QR codes; the links | Helsinki | 0 |
-| spare | `spare-polyfill` | Why not just Temporal and the polyfill? | Greenwich | none |
+| 2 | `agent-answer` | Ask an agent: the running question; the quoted agent's code; guess; what it returns, and that the time never happens | Helsinki (clock) | 0.75 |
+| 3 | `agents` | What the agents returned: one row per agent asked | Helsinki (clock) | 0.25 |
+| 4 | `one-clock` | One clock for the whole planet: the ice wall | `wall` | 0.25 |
+| 5 | `date` | `Date` is broken: the wall breaks on arrival, then rows from `date-faults.ts` type out; one row is a guess | `planet` (clock) | 1 |
+| 6 | `temporal` | The clock turns into the Earth in place; its text enters after the turn; Temporal and engine state | `planet` | 1 |
+| 7 | `experiments` | The same inputs into every library, answers from the standard; counts from `zone-probe.json` | `planet` | 0.5 |
+| 8 | `experiment-gaps` | A time the clocks skip: the question, a guess, then the bars | `planet` | 1 |
+| 9 | `experiment-overlaps` | A time that happens twice | `planet` | 0.75 |
+| 10 | `experiment-host` | The same input on machines set to different zones | `planet` | 0.75 |
+| 11 | `experiment-odd` | Apia's missing day, Lord Howe's half hour, Kathmandu's +05:45 | `planet` | 0.75 |
+| 12 | `abort` | `nodejs/node#67076` with `CLDR-19873`; then GMT | `planet`, lapse | 1.25 |
+| 13 | `years` | `ICU-23609`, `fullcalendar/temporal-polyfill#127`; `ICU-23619`; then GMT | `planet`, lapses | 1.25 |
+| 14 | `day-off` | `ICU-23627`; `fullcalendar/temporal-polyfill#128`; the new moon over Shanghai; then GMT | `planet`, lapses, the Moon | 1.25 |
+| 15 | `manila` | `tc39/proposal-temporal#3330` and siblings: Manila skips 1844-12-31; then GMT | `planet`, lapse | 1.25 |
+| 16 | `engines` | `nodejs/node#67457`: engines disagree on `until()` and `round()`; then GMT | `planet`, sun | 1 |
+| 17 | `scoreboard` | Every filing as pins, by tracker and state | Overview | 0.5 |
+| 18 | `familiar` | Names you already know: Moment, date-fns and Day.js call shapes beside the GMT call | Greenwich | 1 |
+| 19 | `why-not-temporal` | Why not just Temporal? Three things it leaves to the caller | Greenwich | 0.75 |
+| 20 | `gmt` | The running question answered by GMT; the clock skips 02:59 to 04:00 | Greenwich | 1 |
+| 21 | `guards` | Tested guards and the canary, in one paragraph | Greenwich | 0.5 |
+| 22 | `ask-dox` | The running question, live to Dox chat, tool calls visible | Helsinki | 1.5 |
+| 23 | `page-tools` | A live page-tool call, and this deck's own tools | Helsinki | 1.25 |
+| 24 | `qa` | Questions; the audience panel; questions through Dox chat or aloud | Helsinki | 5 |
+| 25 | `thanks` | Thanks; two QR codes; the links | Helsinki | 0 |
 | spare | `spare-size` | How big is it? | Greenwich | none |
 
 The main slides' minutes sum to 25 (20 for the talk, 5 for `qa`); a built-output test holds it, and every value is a multiple of
-0.25, so the float sum is exact. The spares come after
-`thanks`, carry no minutes, are left out of the pace plan and are reached only by a jump (the
-overview, a deep link, or a link in `qa`'s notes); Next never lands on one and Next from a spare
+0.25, so the float sum is exact. The spare comes after
+`thanks`, carries no minutes, is left out of the pace plan and is reached only by a jump (the
+overview, a deep link, or a link in `qa`'s notes); Next never lands on it and Next from it
 returns to `qa` ([slice 7](./s7-running-question.md#spare-slides)). The full
 zone-matrix results live on `/compare/zone-matrix/`, not in the deck.
 
@@ -148,7 +151,7 @@ the sky code moves to `space-sky.ts`. Each helper has one home.
 - Bug slides quote filings statically; only gmt runs; counts are derived. A figure on a slide
   comes from its filing or from a cited primary source record (the USNO new moon). Network demos
   play a labelled recording when the live call fails or is slow; no service worker.
-- The agent's answer is never typed onto a slide: its returned value comes from running the
+- No agent's answer is typed onto a slide: each returned value comes from running the
   committed code by script ([slice 7](./s7-running-question.md#the-agents-answer-run-by-script)).
 - Day.js stays in the wall, captioned, `clock: false`; the shards settle as clock pins. Library
   names appear only in the wall's captions and as the labels of code shapes on `familiar`.

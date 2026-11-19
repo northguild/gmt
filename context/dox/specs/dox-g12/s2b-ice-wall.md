@@ -5,11 +5,11 @@
 
 ## Goal
 
-The talk's spine in one move. On slide 2 a wall of six captured landing pages (Moment.js,
+The talk's spine in one move. On `one-clock` a wall of six captured landing pages (Moment.js,
 Luxon, date-fns, Day.js, Spacetime, @internationalized/date), each as captured, hangs in a three by two
-grid in the left two thirds, with the clock in the right third. Stepping to slide 3 breaks it: the panes
+grid in the left two thirds, with the clock in the right third. Stepping to `date` breaks it: the panes
 shatter into ice shards, and twelve of them fly out and settle as clock pins on twelve zones. Stepping to
-slide 4 turns the clock into the Earth where it stands, and the Earth turns once beneath, every pin
+`temporal` turns the clock into the Earth where it stands, and the Earth turns once beneath, every pin
 labelled with its local time. One clock becomes the whole planet. The wall is
 presented neutrally, as the libraries people reach for; no text on the slide judges them, and
 their marks appear only inside the captured, captioned snapshots, never as the deck's own art.
@@ -33,7 +33,7 @@ Run by hand with Node's type stripping, never in CI; its output is committed, li
 
 ## In the slide
 
-Slide 2's section holds a `<figure>` per pane: the same `.webp` as an `<img>` with alt text
+`one-clock`'s section holds a `<figure>` per pane: the same `.webp` as an `<img>` with alt text
 ("Landing page of momentjs.com, captured 2026-…") and a `<figcaption>` with the URL and the
 capture date (gmt `formatZonedDateTime`, date only). This is the no-JS and print form, and on the
 stage each caption sits on its own pane, in pane order. The slide's title sits above the
@@ -74,18 +74,18 @@ the globe's own lens. Nothing else in the engine changes for this slice.
 
 ## Triggers and reset
 
-- **Step to slide 3:** the wall flies in to the break depth (0.93) and breaks over the clock; the
+- **Step to `date`:** the wall flies in to the break depth (0.93) and breaks over the clock; the
   stage reports itself busy (`data-stage-busy` on the deck root) until the shards are gone, then
   fires `gmt-stage-idle`. The slide's text and the rows' type-out wait for that signal and then fade
-  in over about 300 ms. A jump past slide 3 breaks the wall at the jump.
-- **Step to slide 4:** the clock turns into the Earth in place, at the same spot and size (no zoom
+  in over about 300 ms. A jump past `date` breaks the wall at the jump.
+- **Step to `temporal`:** the clock turns into the Earth in place, at the same spot and size (no zoom
   dip). The Earth's one turn starts only once the clock is gone, and the slide's text enters after
   the reveal.
 - **Free flight:** E and Q change only the wall's depth; no pane breaks on its own.
-- **Reset:** the wall's state is derived from the deck state. Entering slide 2 from either side
-  resets every pane to whole. From slide 5 on, or by a deep link to `#date` or `#temporal`, the wall is
-  not drawn and nothing waits. Stepping back from 4 to 3 returns the clock and owes the turn again;
-  stepping back from 3 to 2 stands the wall whole again.
+- **Reset:** the wall's state is derived from the deck state. Entering `one-clock` from either side
+  resets every pane to whole. From `experiments` on, or by a deep link to `#date` or `#temporal`, the wall is
+  not drawn and nothing waits. Stepping back from `temporal` to `date` returns the clock and owes the turn again;
+  stepping back from `date` to `one-clock` stands the wall whole again.
 
 ## One clock becomes many: the pins
 
@@ -108,7 +108,7 @@ twelve-zone view centres the camera so twelve sit on the visible side.
 
 ## Reduced motion
 
-No flying shards and no turn. On slide 4 the cell edges draw as ice-white cracks over the
+No flying shards and no turn. On `date` the cell edges draw as ice-white cracks over the
 panes for 150 ms, the wall fades over 200 ms, and every pin appears lit at once. Nothing waits under
 reduced motion: the text shows at once.
 
@@ -123,15 +123,16 @@ reduced motion: the text shows at once.
   animation-frame callback left after destroy; break, reset and deep-link states follow the deck
   state; reduced motion takes the crack-and-fade path.
 - `slides-check.mjs` (canvas-2D): the shatter's frames stay within budget (median ≤ 17.5 ms, none
-  over 34 ms); after 1.5 s no shard is drawn and twelve markers are lit; stepping back to slide 3
+  over 34 ms); after 1.5 s no shard is drawn and twelve markers are lit; stepping back to `one-clock`
   shows the whole wall (a pixel probe at each pane centre matches its capture).
 - `globe-smoke.mjs` (local, GPU): the same on WebGPU.
 
 ## Definition of done
 
-- Slide 2 shows six captioned panes (three by two in the left two thirds, each caption on its own pane;
-  the clocks in view where a page has one); slide 3 breaks them on the clicker, and the pins settle
+- `one-clock` shows six captioned panes (three by two in the left two thirds, each caption on its own pane;
+  the clocks in view where a page has one); `date` breaks them on the clicker, and the pins settle
   with local times on both renderers.
 - Back and forward replay the shatter exactly; deep links land in the right state.
-- Notes on slides 2 and 4 carry the line "one clock against the whole planet".
+- `one-clock`'s title is "One clock for the whole planet", and `temporal`'s notes carry the line
+  "One clock against the whole planet".
 - Own tests, `pnpm dox:lint` and `pnpm dox:check` green; the owner's listening pass.

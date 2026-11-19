@@ -14,15 +14,11 @@ describing what is built. Slices 1–4c ran only their own tests, lint and check
 The talk's date and start time are set in `decks.ts` (2026-12-16 18:00 Europe/Helsinki). Still to
 come, each failing `slides-check` until it lands:
 
-1. The agent transcript in `quotes/agent-answer.json`: the question word for word, the model, the
-   date, the prose answer and the code, plus the `call` that runs it. Then the run record from
-   `scripts/zone-matrix/agent-answer.mjs`, committed as `quotes/agent-run.json` with a matching
-   hash ([slice 7](./s7-running-question.md#the-agents-answer-run-by-script)).
-2. The recordings from `scripts/record-deck-answers.ts`: `ask-dox` and the three audience
+1. The recordings from `scripts/record-deck-answers.ts`: `ask-dox` and the three audience
    questions the owner picks ([slice 4b](./s4b-live-agents.md)).
-3. The wall captures (`node scripts/capture-wall.ts`, run from `apps/dox`), with each `clip` set and
+2. The wall captures (`node scripts/capture-wall.ts`, run from `apps/dox`), with each `clip` set and
    `clock` checked by the owner.
-4. A full zone-matrix run committed with no untagged failure and GMT at zero; any GMT failure is
+3. A full zone-matrix run committed with no untagged failure and GMT at zero; any GMT failure is
    fixed first through the library pipeline, with a changeset.
 
 The `wrong-answer` tags awaiting the upstream filing flow are listed in the PR description; each

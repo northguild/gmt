@@ -28,8 +28,8 @@ loads.
   phase; the slide text never depends on it.
 - `{ kind: "overview" }`: zoom 1, the camera over the mean of every pinned place, every pin and
   arc lit.
-- `{ kind: "wall" }` (slides 2 and 3): the overview camera with the ice wall in front
-  ([slice 2b](./s2b-ice-wall.md)); `{ kind: "planet" }` (slides 4 and 5): the camera centred on
+- `{ kind: "wall" }` (`one-clock`): the overview camera with the ice wall in front
+  ([slice 2b](./s2b-ice-wall.md)); `{ kind: "planet" }` (`date` on): the camera centred on
   the `PLANET_ZONES` pins, the matrix zones among them ([slice 4c](./s4c-zone-matrix.md)).
 - Rotation for a point is `[-lng, -lat]` ([`GlobeOptions.initialRotation`](../../built/tier-4-globe.md#engine-srclibglobe)).
 - Tests: every place used by every deck resolves; antipode maths against a fixed instant from

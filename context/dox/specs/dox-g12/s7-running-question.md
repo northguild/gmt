@@ -9,7 +9,7 @@ Each file belongs to exactly one phase. Paths are under `apps/dox/` unless they 
 
 | Phase | Starts | Owns |
 | --- | --- | --- |
-| **R** · agent run, familiar data | now | `scripts/zone-matrix/agent-answer.mjs`, `agent-answer.test.mjs`, `familiar.test.mjs`, `README.md` (its section); `src/slides/give-me-temporal/quotes/` (`agent-answer.json` replaces `agent-moment.json`; `agent-run.json`); `src/slides/give-me-temporal/familiar.json`; `src/lib/slides/agent-quote.ts` + test; `src/components/slides/AgentQuote.astro` |
+| **R** · agent run, familiar data | now | `scripts/zone-matrix/agent-answer.mjs`, `agent-answer.test.mjs`, `familiar.test.mjs`, `README.md` (its section); `src/slides/give-me-temporal/quotes/` (`agent-answer.json` replaces `agent-moment.json`; `agent-run.json`); `src/slides/give-me-temporal/familiar.json`; `src/lib/slides/agent-quote.ts` + test; `src/components/slides/{AgentQuote,AgentTable}.astro` |
 | **U** · upstream data | now | `scripts/upstream.mjs`, `scripts/lib/upstream-trackers.mjs`, `src/data/upstream-filings.{json,ts,test.ts}`, `src/lib/upstream-badges.{ts,test.ts}` |
 | **C** · live agents ([4b](./s4b-live-agents.md)) | now | `src/lib/slides/{deck-tools/,page-tool-call,deck-transport,replay}.ts` + tests; `src/components/slides/{LiveAnswer,PageToolCall,AudienceQuestions}.astro`, `DeckDox.tsx` and `deck-dox.module.css`; `src/lib/webmcp/offer.ts`, `src/lib/head-tags.ts`, `src/lib/webmcp/head.dist.test.ts`; `src/pages/slides/give-me-temporal/index.astro`; `scripts/record-deck-answers.ts`; `src/slides/give-me-temporal/recorded/`; `guides/integration/browser-agents.mdx` |
 | **A** · Moon and sky ([6](./s6-time-not-camera.md#the-new-moon-over-shanghai)) | after the spin and view-transition builder | `src/lib/space-sky.ts`, `src/lib/slides/{stage,places,time-lapse}.ts` + tests, `src/slides/give-me-temporal/{content.ts,content.test.ts,new-moon.json}`, `src/components/slides/NewMoonPanel.astro`; in `Deck0.astro` only `day-off`'s build 2 and its notes |
@@ -24,15 +24,19 @@ state by dispatching `gmt-demo` (detail: `DemoState` from `sync.ts`) on the deck
 
 ## The agent's answer, run by script
 
-The owner asks an agent with no GMT, word for word: "Write a JavaScript function that sets a
+The owner asks agents with no GMT, word for word: "Write a JavaScript function that sets a
 reminder for 03:30 on 28 March 2027, Helsinki time, and returns the time as a UTC ISO string."
-He commits `quotes/agent-answer.json`: `question`, `model`, `date`, `answer` (the prose),
-`code` (the module as written), `call` (the expression that calls it, for example
+The transcript, `quotes/agent-answer.json`, holds the shared `question`, `quoted` (the id of the
+answer `agent-answer` quotes) and `answers`, one per agent asked: `id`, `model`, `date`, `answer`
+(the prose), `code` (the module as written), `call` (the expression that calls it, for example
 `setReminder()`), and optional `excerpt` (line ranges the slide shows when the code is long).
+It holds four: ChatGPT and Mistral in their fast modes, ChatGPT Think and Gemini on auto; the
+deck quotes Mistral's.
 
 `scripts/zone-matrix/agent-answer.mjs` (run by hand: `cd scripts/zone-matrix && fnm exec
 --using=26 -- node agent-answer.mjs`) reuses the zone-matrix harness and its pinned `node_modules`:
-- Reads the transcript; stops with exit 2 and the file path when any field is empty.
+- Reads the transcript; stops with exit 2 and the file path when any field of any answer is
+  empty. Every answer below runs in turn.
 - Finds every `import`/`require` specifier in `code`, maps each to its package name and stops with
   exit 2 naming the package when it is not pinned in `scripts/zone-matrix/package.json`, with the
   command that pins it exactly. Any library the agent picks can be added that way.
@@ -40,19 +44,23 @@ He commits `quotes/agent-answer.json`: `question`, `model`, `date`, `answer` (th
   CJS as the code needs, and runs `call` on every zone and Node major of the `gmt-matrix` job
   (`readMatrix`, `onNode` with `TZ`, the probe's pattern). A promise is awaited; a throw is
   recorded as `{ threw: "<name>: <message>" }`.
-- Writes `quotes/agent-run.json`: `sha256` of `code` + `call`, the command, the instant (gmt
-  `getUtcNow`), the library versions (`versionOf`), and per run `{ node, tzdata, zone, value }`.
+- Writes `quotes/agent-run.json`, one record per answer id: `sha256` of `code` + `call`, the
+  command, the instant (gmt `getUtcNow`), the library versions (`versionOf`), and per run
+  `{ node, tzdata, zone, value }`. The runs include `Europe/Helsinki`, the zone the slides show,
+  whatever the CI matrix lists.
 
-The deck reads both through `agent-quote.ts`: `ready` only when every transcript field is set, the
-record exists and its hash matches. Otherwise the slide shows a marked "transcript to come" or
-"run record out of date" panel, so the dev server keeps building, and `slides-check` fails naming
-the file and the command. The slide shows the value from Node 26 at `TZ=Europe/Helsinki`, and a
-line with the number of distinct values across all runs.
+The deck reads both through `agent-quote.ts`: an answer is `ready` only when every transcript
+field is set, its record exists, its hash matches and it holds the run on Node 26 at
+`TZ=Europe/Helsinki`. Otherwise its panel or row shows a marked "transcript to come" or "run record
+out of date", so the dev server keeps building, and `slides-check` fails naming the answer, the
+file and the command. `quotedAnswer` gives `agent-answer` the quoted one; `agentAnswers` gives
+`agents` every one, in file order. Each shows the value from Node 26 at `TZ=Europe/Helsinki` and
+the number of distinct values across its runs.
 
 ## Guesses
 
 Three plain pauses: the question shows, the answer comes on the next step, and the notes say
-"Ask the room, take two or three answers, then step on." `one-clock` build 1 (what does the code
+"Ask the room, take two or three answers, then step on." `agent-answer` build 1 (what does the code
 return?); on `date`, the row whose input is `new Date("2025-03-30T01:30")`, found by input in
 `dateFaults` (a missing row fails the build), with its result and reason in build 1; on
 `experiment-gaps`, `ExperimentSlide`'s new `guess` prop moves the bars, example and foot into
@@ -103,9 +111,9 @@ render `data-spare` and no `data-minutes`. A `qa` slide ("Questions", with the a
 right before `thanks`, and `thanks` is the last main slide. In `deck.ts`, End and `last()` go to
 `thanks`, Next from `thanks` goes nowhere, and Next never lands on a spare: a spare is reached by
 a jump (the slide list, a deep link, or a link in `qa`'s notes), and Next from a spare returns to
-`qa`. The live region says "Slide n of 22: title" or "Spare n of 2: title". The overview gets a second list, "Spare slides, for questions"; spare dots carry
+`qa`. The live region says "Slide n of 25: title" or "Spare n of 1: title". The overview gets a second list, "Spare slides, for questions"; spare dots carry
 `data-spare` with a gap before them. The pace plan stays at 25 minutes (20 for the talk, 5 for `qa`) on a spare, and print puts
-the spares after `thanks`.
+the spare after `thanks`.
 
 ## Tests and checks
 
@@ -115,10 +123,11 @@ role, label and text; no `dispatchEvent`, class or `data-` selectors, markup rea
 asserts; nothing added to `legacy-test-files.mjs`) and `pnpm dox:check`. Every mount a test starts
 is aborted or destroyed in `afterEach`; fake timers, `vi.getTimerCount()` 0 at the end.
 - **R:** the runner on fixture transcripts (empty field, unpinned package, CJS, ESM, async,
-  throw) without spawning Node for every zone (inject `onNode`); `agent-quote.test.ts` for
-  ready, empty, missing record and stale hash; `familiar.test.mjs`.
+  throw, several answers) without spawning Node for every zone (inject `onNode`);
+  `agent-quote.test.ts` for ready, empty, missing record, stale hash, the quoted answer and an
+  answer whose record is missing; `familiar.test.mjs`.
 - **U:** the badge and check rules above.
-- **B:** `slides-built.test.ts`: the outline of 22 ids then the two spares, main minutes sum to
+- **B:** `slides-built.test.ts`: the outline of 25 ids then the spare, main minutes sum to
   25, spares have no `data-minutes`, each bug slide's last build holds a GMT step, `qa` holds the audience panel, `thanks` has two
   QR images with names. `deck.test.ts` (End, Next on `thanks`, Next from a spare), `deck-controls.test.ts` (two
   lists), `qr.test.ts` (deterministic, `viewBox` is modules + 8). `slides-check.mjs` adds the
@@ -130,12 +139,12 @@ On the owner's dev server, `http://localhost:4401/gmt/slides/give-me-temporal/`,
 restarted (an agent's own server uses a port from 4410 to 4450), at 1440×900, 1280×720 and
 1920×1080: step every slide and build of the phase; nothing overflows the left two thirds; a
 revealed answer moves nothing (bounding boxes before and after); the GMT steps and the QR codes
-fit; the Moon step lands with the Shanghai pin in view. B also walks the spares and the overview,
+fit; the Moon step lands with the Shanghai pin in view. B also walks the spare and the overview,
 and scans both QR codes with a phone from 3 m off a 1280×720 screen.
 
 ## Definition of done
 
-- The deck plays end to end in 25 minutes (20 and 5 for questions) on the presenter timer, spares after `thanks`.
+- The deck plays end to end in 25 minutes (20 and 5 for questions) on the presenter timer, the spare after `thanks`.
 - No value on a slide is typed by hand: each comes from gmt, the filings, the compat data, the run
   record or a cited source record.
 - Own tests, `pnpm dox:lint`, `pnpm dox:check` green per phase; the owner's listening pass per

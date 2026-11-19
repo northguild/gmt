@@ -11,15 +11,15 @@ the three panels on their slides.
 
 Four demos, each with a committed fallback, so the talk never depends on the venue's network:
 
-1. **Agent bookend.** Slide 2 (`one-clock`) shows the owner's committed transcript: an agent with
-   no GMT answers the running question, and its code is run by script
-   ([slice 7](./s7-running-question.md#the-agents-answer-run-by-script)). Slide 19 (`ask-dox`)
+1. **Agent bookend.** `agent-answer` and `agents` show the owner's committed transcript: agents
+   with no GMT answer the running question, and their code is run by script
+   ([slice 7](./s7-running-question.md#the-agents-answer-run-by-script)). `ask-dox`
    sends the same question, word for word from `quotes/agent-answer.json`, to `POST /gmt/api/chat`
    live, in the real Dox chat, and the answer streams in with its gmt tool calls shown.
 2. **The deck's own page tools.** Three read-only WebMCP tools an agent in the browser can call.
-3. **A live page-tool call.** Slide 20 (`page-tools`) runs the Cut-off Ruler's `check_eta_against_cutoff`
-   in the page, through the same facts function the tool uses, and shows the JSON call and
-   answer. No network.
+3. **A live page-tool call.** `page-tools` runs Moving Feasts' `compute_easter_dates` for 2027
+   in the page, through the tool's own `execute`, and shows the call and both Easter Sundays in
+   the Dox chat. No network.
 4. **Audience questions.** The questions part takes questions typed by the presenter into the Dox chat, with three ready questions.
 
 Every network call has a recording made by a script from a real answer. It plays when the live
@@ -58,12 +58,12 @@ The tools run in the deck page, so `read_deck_slide` reads the slide's section f
 
 ## 2 · The live page-tool call: `src/lib/slides/page-tool-call.ts`
 
-Imports `def` from `src/lib/webmcp/tools/cutoff-ruler.ts` and calls `def.run(def.example,
-signal)`, the path an agent's call takes. The slide shows two panels: the call as JSON (name and
-`def.example`) and the answer as JSON, both in Starlight `<Code>` style blocks built with
-`textContent`. The chunk is preloaded on the deck page; the call runs on the build step that
-reveals it. An agent on `ask-dox` may call it too; `page-tools` needs no network either way. The panel is
-`PageToolCall.astro`.
+Imports the tool from `src/lib/webmcp/tools/moving-feasts.ts` and calls its own `execute` with
+`{ year: 2027 }` (`DECK_YEAR`), the path an agent's call takes. 2027 because Gregorian Easter,
+28 March, is the day Helsinki's clocks go forward, the running question's date. `answerText` turns
+the answer into the chat's text: the year, both Easter Sundays and the days between them. The
+panel is `PageToolCall.astro`: the Dox chat in `tools` mode, which runs the call when the slide
+shows, with no network. The presenter's copy gets a static placeholder, so no second chat mounts.
 
 ## 3 · The Dox frame: `DeckDox.tsx` and `src/lib/slides/deck-transport.ts`
 
@@ -95,7 +95,8 @@ The deck's rules are one `ChatTransport` made by `createDeckSession`:
 - Leaving the slide (`gmt-deck-state`) or the page aborts every request and replay and gives the
   chat a fresh session, so nothing stays running.
 - The page-tool slide answers from the page: its `local` stream streams the call, the answer and
-  the `showCutoffRuler` tool input, so the receipt and the Cut-off Ruler open in the rail. No network.
+  the `showMovingFeasts` tool input, so the receipt and the Moving Feasts month grids open in the
+  rail. No network.
 - Each source change is announced as `gmt-demo` (`announceDemo`) for the presenter.
 
 Typing in the composer never steps the deck (`keys.ts` ignores text fields). Sound follows what
@@ -158,7 +159,7 @@ even after a failed assertion. Fake timers drive the 8 s budget and the replay o
   examples by default and `idle` when given. `/dox`'s own tests stay unchanged.
 - `replay.test.ts`: chunks arrive in order at their offsets; abort stops the stream.
 - `slides-check.mjs` (phase B adds these): on the built site, `ask-dox` and the questions part play
-  recordings and show "Recorded"; `page-tools` shows the receipt and the Cut-off Ruler; the deck
+  recordings and show "Recorded"; `page-tools` shows both Easter dates and the receipt; the deck
   page registers three tools with a stub `navigator.modelContext`.
 
 ## Definition of done

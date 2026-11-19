@@ -8,7 +8,7 @@ New pieces and the builder phases: [slice 7](./s7-running-question.md).
 
 ## Goal
 
-The 22 slides and 2 spares of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`,
+The 25 slides and the spare of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`,
 using slice 1's components, slice 2's places, slice 2b's wall and slice 3's notes. Every bug on
 stage is a real filing read from `upstream-filings.json`; every gmt result is computed by gmt at
 build time; every count is derived. The talk runs 20 minutes; `qa` holds 5 of questions.
@@ -28,14 +28,20 @@ places; no national default, no law, no business wording, no text that judges a 
 
 - **`title`**: the event and date, and the venue's local time now from gmt in a kit `readout`
   with samples, so the arriving time moves nothing.
-- **`one-clock`**: the ice wall ([slice 2b](./s2b-ice-wall.md)) and, under it, `AgentQuote`.
-  Build 0: the question, as the owner asked it. Build 1: the agent's prose and code (its
-  `excerpt` when set), the model and date as the source line, and "What does it return?" (a
-  guess). Build 2: the value the code returned on Node 26 at `TZ=Europe/Helsinki`, the count of
-  distinct values across the run record, and the line "That time never happens in Helsinki", shown
-  only when `classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki")` (`instant/convert`) returns
-  `"nonexistent"` at build time; it does today. Notes: "Each of these sites shows one clock. That
-  is the view most date code takes: one place, one local time. Hold that."
+- **`agent-answer`** ("Ask an agent"): `AgentQuote`, the answer the transcript's `quoted` names.
+  Build 0: the question, as the owner asked it. Build 1: the agent's code (its `excerpt` when
+  set), the model and date as the source line, and "What does it return?" (a guess). Build 2: the
+  call and the value the code returned on Node 26 at `TZ=Europe/Helsinki`, the count of distinct
+  values across its runs, zones and Node majors, and the line "That time never happens in
+  Helsinki", shown only when `classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki")`
+  (`instant/convert`) returns `"nonexistent"` at build time; it does today. The agent's prose goes
+  to the notes (`part="prose"`): on the slide it would give the guess away.
+- **`agents`** ("What the agents returned"): `AgentTable`, one row per answer in file order: the
+  model, the code's line count and imported libraries, the value on Node 26 in Helsinki, and the
+  distinct values across its runs. An answer not ready fills its row with the marked cell.
+- **`one-clock`** ("One clock for the whole planet"): the ice wall ([slice 2b](./s2b-ice-wall.md)).
+  Notes: "Each of these sites shows one clock. That is the view most date code takes, and the view
+  the agents took: one place, one local time. Hold that."
 - **`date`**: the wall breaks as the slide arrives; the table enters once the shards are clear.
   Rows from `dateFaults`; every row's code types out together. The guess row is
   `new Date("2025-03-30T01:30")`: its result and reason wait for build 1.
@@ -80,15 +86,15 @@ places; no national default, no law, no business wording, no text that judges a 
 - **`guards`**: one paragraph from `compatGroups`, `groupsStillNeeded`, `probeTotals` and
   `gmtStats`, and the link to every filing. The bug slides already showed guards at work.
 - **`ask-dox`**, **`page-tools`**: [slice 4b](./s4b-live-agents.md).
+- **`why-not-temporal`** ("Why not just Temporal?"): three plain points: bad input throws, a
+  time that never happened is moved rather than refused, and engines and polyfills disagree (the
+  filing count and `gmtStats.timezones`). Notes link to `/upstream/`, `/pulse/` and issue #316.
+  Facts only.
 - **`qa`** ("Questions"): the audience-question panel (slice 4b); the notes say questions run
-  through Dox chat or aloud and link to both spares.
+  through Dox chat or aloud and link to the spare.
 - **`thanks`**: two `QrCode`s, labelled "LinkedIn" (`https://www.linkedin.com/in/craigocurtis/`)
   and "NorthGuild" (`https://northguild.dev/`); the site and repository links as text. It is the last
   main slide. Each URL is one constant used for the code and the text.
-- **`spare-polyfill`** ("Why not just Temporal and the polyfill?"): the compat counts
-  (`compatGroups.length`, `groupsStillNeeded`, `probeTotals`, the engines named in
-  `compatGroups`) and one line that GMT carries the guards and the canary says when each can go;
-  links to `/upstream/`, `/pulse/` and issue #316. Facts only.
 - **`spare-size`** ("How big is it?"): four rows of `bundleRows()` (`@js-temporal/polyfill`,
   `isValidDate`, `formatDate`, `@northguild/gmt`) through `bundleCells`, with the measurement's
   date, Node and esbuild from `bundle-size.json`, and a link to `/bundle-size/`.
@@ -108,7 +114,7 @@ bottom edge only. No left-only stripe on any card, step, pair or code block.
 ## Tests
 
 - `scripts/slides-built.test.ts` reads the built deck through `distDirOrSkip()`: ids unique and
-  in outline order, spares last; main minutes sum to the registry's 20; every `data-place`
+  in outline order, the spare last; main minutes sum to the registry's 20 plus its 5 of `qa`; every `data-place`
   resolves; every slide has notes; six wall figures with captions; no wall on `date`.
 - `filing-card.test.ts`, `gmt-result.test.ts`, `decks.test.ts` as built; the new pieces' tests
   are in [slice 7](./s7-running-question.md#tests-and-checks).
