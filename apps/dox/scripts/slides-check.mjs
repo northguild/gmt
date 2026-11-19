@@ -168,17 +168,30 @@ const readSlides = (page) =>
         ),
       ),
       place: s.dataset.place ?? "",
+      spare: s.hasAttribute("data-spare"),
     })),
   );
 
-/** The boxes of the shown slide's visible elements that fall outside the stage. */
+/**
+ * The boxes of the shown slide's visible elements that fall outside the stage. What sits in a box
+ * that scrolls (a chat's answer, a tool's panel) is reached by scrolling it, so the box stands for
+ * it: the box itself is checked.
+ */
 const escapees = (page, stage) =>
   page.evaluate((outer) => {
     const out = [];
     const shown = document.querySelector("[data-slide][data-shown]");
     if (!shown) return ["no slide is shown"];
+    const scrolls = (el) => {
+      for (let a = el.parentElement; a && a !== shown; a = a.parentElement) {
+        const { overflowX, overflowY } = getComputedStyle(a);
+        if ([overflowX, overflowY].some((o) => o === "auto" || o === "scroll"))
+          return true;
+      }
+      return false;
+    };
     for (const el of shown.querySelectorAll("*")) {
-      if (el.closest("[data-notes]")) continue;
+      if (el.closest("[data-notes]") || scrolls(el)) continue;
       const cs = getComputedStyle(el);
       if (cs.visibility === "hidden" || cs.display === "none") continue;
       const r = el.getBoundingClientRect();
@@ -233,8 +246,10 @@ async function checkStage(browserName, browser, pagePath, size) {
       const el = document.querySelector(".gmt-deck-bar");
       if (!el) return null;
       const r = el.getBoundingClientRect();
+      // A closed menu's items have no box: only the controls on screen count.
       const off = [...el.querySelectorAll("button")].filter((b) => {
         const c = b.getBoundingClientRect();
+        if (c.width === 0 || c.height === 0) return false;
         return c.top < r.top - 0.5 || c.bottom > r.bottom + 0.5;
       }).length;
       return { bottom: r.bottom, off };
@@ -248,8 +263,10 @@ async function checkStage(browserName, browser, pagePath, size) {
     else if (bar.off > 0)
       at("bar-clipped", `${bar.off} control(s) in the bar sit outside it`);
 
-    // Forward: next steps alone, from the first slide.
-    const walk = forwardWalk(slides);
+    // Forward: next steps alone, from the first slide. The spares sit after `thanks` and only a
+    // jump reaches them, so the steps walk the main slides; the deep links below reach the spares.
+    const main = slides.filter((s) => !s.spare);
+    const walk = forwardWalk(main);
     const hashOf = () => page.evaluate(() => location.hash);
     await page.keyboard.press("Home");
     await settle(page);
@@ -258,8 +275,8 @@ async function checkStage(browserName, browser, pagePath, size) {
         await page.keyboard.press("ArrowRight");
         await settle(page);
       }
-      const label = `slide "${slides[state.slide].title}" build ${state.build}`;
-      const target = `deck › slide "${slides[state.slide].title}"`;
+      const label = `slide "${main[state.slide].title}" build ${state.build}`;
+      const target = `deck › slide "${main[state.slide].title}"`;
       const got = await hashOf();
       const wantHash = i === 0 ? [state.hash, ""] : [state.hash];
       if (!wantHash.includes(got))
@@ -299,7 +316,7 @@ async function checkStage(browserName, browser, pagePath, size) {
       at("step-past-end", "a next step on the last slide moved the deck");
 
     // Backward: previous steps alone.
-    for (const [i, state] of backwardWalk(slides).entries()) {
+    for (const [i, state] of backwardWalk(main).entries()) {
       if (i > 0) {
         await page.keyboard.press("ArrowLeft");
         await settle(page);
@@ -307,17 +324,17 @@ async function checkStage(browserName, browser, pagePath, size) {
       const got = await hashOf();
       if (
         got !== state.hash &&
-        !(state.hash === `#${slides[0].id}` && got === "")
+        !(state.hash === `#${main[0].id}` && got === "")
       )
         at(
           "step-lost",
-          `stepping back to slide "${slides[state.slide].title}" build ${state.build}: the address is "${got}", not "${state.hash}"`,
-          `deck › slide "${slides[state.slide].title}"`,
+          `stepping back to slide "${main[state.slide].title}" build ${state.build}: the address is "${got}", not "${state.hash}"`,
+          `deck › slide "${main[state.slide].title}"`,
         );
     }
 
-    // Deep links: every state opens directly.
-    for (const state of walk) {
+    // Deep links: every state opens directly, the spares' too.
+    for (const state of forwardWalk(slides)) {
       await page.goto(`${url}${state.hash}`, { waitUntil: "load" });
       await page.waitForSelector('html[data-deck="stage"]');
       await settle(page);
@@ -338,6 +355,15 @@ async function checkStage(browserName, browser, pagePath, size) {
         at(
           "deep-link",
           `${state.hash} opened slide "${got.id}" with ${got.reached} build(s), not "${slides[state.slide].id}" with ${state.build}`,
+          `deck › slide "${slides[state.slide].title}"`,
+        );
+      // The steps above saw every main slide; a spare is seen here.
+      if (!slides[state.slide].spare) continue;
+      const strays = await escapees(page, await stageBox(page));
+      if (strays.length)
+        at(
+          "content-outside-stage",
+          `at slide "${slides[state.slide].title}" build ${state.build}: ${strays.slice(0, 3).join("; ")}${strays.length > 3 ? ` and ${strays.length - 3} more` : ""}`,
           `deck › slide "${slides[state.slide].title}"`,
         );
     }
@@ -499,12 +525,14 @@ async function checkSpace(browserName, browser, pagePath, size) {
     await settle(page);
     await restOnPlace("the first slide", "deck");
     await page.evaluate(START_TIMING, SPACE);
-    for (const [i, step] of forwardWalk(slides).entries()) {
+    // Next steps reach the main slides only; the spares are a jump away.
+    const main = slides.filter((s) => !s.spare);
+    for (const [i, step] of forwardWalk(main).entries()) {
       if (i > 0) {
         await page.keyboard.press("ArrowRight");
         await settle(page);
       }
-      const label = `slide "${slides[step.slide].title}" build ${step.build}`;
+      const label = `slide "${main[step.slide].title}" build ${step.build}`;
       const wallDone = await page.evaluate((sel) => {
         const d = document.querySelector(sel)?.dataset ?? {};
         return { wall: d.wall ?? "" };
@@ -535,7 +563,7 @@ async function checkSpace(browserName, browser, pagePath, size) {
             `at ${label} ${pins} clock pin(s) were lit, under ${WALL_PINS}`,
           );
       }
-      await restOnPlace(label, `deck › slide "${slides[step.slide].title}"`);
+      await restOnPlace(label, `deck › slide "${main[step.slide].title}"`);
     }
     // Going back to the wall, from the last slide, puts it whole again.
     const wallSlide = slides.find((s) => s.place === "wall");
@@ -571,6 +599,24 @@ async function checkSpace(browserName, browser, pagePath, size) {
     const probe = await probeWall(page, SPACE);
     for (const problem of probe.problems)
       at("wall-pane-mismatch", `after stepping back to the wall, ${problem}`);
+
+    // Zooming the page out to half size doubles the viewport in CSS pixels: the cards reflow, and
+    // each pane must still hang on its card.
+    await page.setViewportSize({
+      width: size.width * 2,
+      height: size.height * 2,
+    });
+    await settle(page);
+    await frames(page);
+    const zoomed = await probeWall(page, SPACE);
+    for (const problem of zoomed.problems)
+      at(
+        "wall-pane-mismatch",
+        `after the page was zoomed out to half size on the wall, ${problem}`,
+      );
+    await page.setViewportSize(size);
+    await settle(page);
+    await frames(page);
 
     // At rest, the stage asks for no frame at all.
     await page.waitForTimeout(REST_WATCH_MS);
@@ -723,11 +769,18 @@ async function checkDeckContent(browserName, browser, pagePath, size) {
     const page = await context.newPage();
     await page.goto(`${base}${pagePath}?globe=canvas2d`, { waitUntil: "load" });
 
-    const pending = await page.locator('[data-quote="pending"]').count();
-    if (pending > 0)
+    // A pending row on `agents` is headed by its model; the panel on `agent-answer` is the quoted one.
+    const pending = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-quote="pending"]')].map(
+        (el) =>
+          el.closest("tr")?.querySelector("th")?.textContent?.trim() ??
+          "the quoted answer",
+      ),
+    );
+    for (const name of new Set(pending))
       at(
         "transcript-missing",
-        `the agent's answer is not ready: fill ${TRANSCRIPT_FILE}, then record the run with \`${TRANSCRIPT_COMMAND}\``,
+        `${name} is not ready: fill ${TRANSCRIPT_FILE}, then record the run with \`${TRANSCRIPT_COMMAND}\``,
       );
 
     const order = await page.evaluate(() =>

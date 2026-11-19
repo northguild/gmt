@@ -184,6 +184,92 @@ describe("a wall at rest", () => {
   });
 });
 
+describe("a wall with cards", () => {
+  /** Six cards in a 3 x 2 grid, each 200 x 125, placed in the layer's pixels. */
+  const cards = (left: number, top: number) =>
+    sources().map((source, i) => {
+      const card = document.createElement("figure");
+      const box = {
+        x: left + (i % 3) * 210,
+        y: top + Math.floor(i / 3) * 135,
+        w: 200,
+        h: 125,
+      };
+      card.getBoundingClientRect = () =>
+        DOMRect.fromRect({ x: box.x, y: box.y, width: box.w, height: box.h });
+      layer.append(card);
+      return { ...source, card, box };
+    });
+
+  const mountOver = (panes: ReturnType<typeof cards>): IceWall => {
+    wall = mountIceWall({
+      layer,
+      engine,
+      panes,
+      ice: [0.7, 0.9, 1, 1],
+      signal: abort.signal,
+      reduced: () => reduced,
+      target: () => [480, 270],
+    });
+    return wall;
+  };
+
+  const centresOf = (panes: ReturnType<typeof cards>) =>
+    panes.map(({ box }) => [box.x + box.w / 2, box.y + box.h / 2]);
+
+  it("hangs each pane on its card, whatever the depth", () => {
+    const panes = cards(40, 90);
+    const wall = mountOver(panes);
+    for (const depth of [1, 0.8, 1.3]) {
+      wall.show(depth);
+      wall.paneCentres().forEach((centre, i) => {
+        expect(centre[0]).toBeCloseTo(centresOf(panes)[i]![0]!, 6);
+        expect(centre[1]).toBeCloseTo(centresOf(panes)[i]![1]!, 6);
+      });
+      expect(wall.paneWidth()).toBeCloseTo(200, 6);
+    }
+  });
+
+  it("follows its cards when they move, as after a zoom", () => {
+    const panes = cards(40, 90);
+    const wall = mountOver(panes);
+    wall.show(1);
+    for (const { box } of panes) {
+      box.x = box.x * 2 + 10;
+      box.y = box.y * 2 + 5;
+      box.w = 400;
+      box.h = 250;
+    }
+    wall.setDepth(0.9);
+    wall.paneCentres().forEach((centre, i) => {
+      expect(centre[0]).toBeCloseTo(centresOf(panes)[i]![0]!, 6);
+      expect(centre[1]).toBeCloseTo(centresOf(panes)[i]![1]!, 6);
+    });
+    expect(wall.paneWidth()).toBeCloseTo(400, 6);
+  });
+
+  it("says when it is drawn whole, and not while it breaks", () => {
+    const drawnWhole = vi.fn();
+    wall = mountIceWall({
+      layer,
+      engine,
+      panes: cards(40, 90),
+      ice: [0.7, 0.9, 1, 1],
+      signal: abort.signal,
+      reduced: () => reduced,
+      target: () => [480, 270],
+      onDrawn: drawnWhole,
+    });
+    wall.show(1);
+    expect(drawnWhole).toHaveBeenCalledTimes(1);
+    wall.setDepth(0.9);
+    expect(drawnWhole).toHaveBeenCalledTimes(2);
+    wall.breakAll(ZONES);
+    for (let t = 0; t < 3000; t += 16) frame(t);
+    expect(drawnWhole).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("the break", () => {
   it("shatters the panes, lands every pin once, and ends at rest", () => {
     mount().show();

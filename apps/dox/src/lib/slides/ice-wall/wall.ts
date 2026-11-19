@@ -50,6 +50,12 @@ export type WallState = "whole" | "approach" | "breaking" | "gone" | "hidden";
 export interface WallSource {
   id: string;
   image: HTMLImageElement | ImageBitmap | HTMLCanvasElement;
+  /**
+   * The card on the page that the pane hangs over. While the wall is whole each pane is drawn on
+   * its card's box, at any depth, so a resize or a browser zoom cannot part them. Without cards the
+   * panes take the stage grid (`paneLayout`).
+   */
+  card?: HTMLElement;
 }
 
 export interface WallOptions {
@@ -70,6 +76,8 @@ export interface WallOptions {
   onBreak?: () => void;
   /** The wall's state changed. */
   onState?: (state: WallState) => void;
+  /** The wall was drawn whole, so `paneCentres` and `paneWidth` may have changed. */
+  onDrawn?: () => void;
 }
 
 export interface IceWall {
@@ -157,9 +165,46 @@ export function mountIceWall(o: WallOptions): IceWall {
     return { x: 0, y: 0, w: stageWidth };
   };
 
-  /** Puts each pane's rectangle where the stage wants it, measured from the lens centre. */
+  const cards = o.panes.map((p) => p.card ?? null);
+
+  /** Each card's box in the layer's pixels, or `null` unless every pane has a card with a size. */
+  const cardBoxes = ():
+    | { x: number; y: number; w: number; h: number }[]
+    | null => {
+    if (cards.some((card) => card === null)) return null;
+    const lr = o.layer.getBoundingClientRect();
+    const boxes = cards.map((card) => {
+      const r = card!.getBoundingClientRect();
+      return {
+        x: r.left - lr.left,
+        y: r.top - lr.top,
+        w: r.width,
+        h: r.height,
+      };
+    });
+    return boxes.every((b) => b.w > 0 && b.h > 0) ? boxes : null;
+  };
+
+  /**
+   * Puts each pane's rectangle where it hangs, measured from the lens centre at the wall's depth:
+   * over its card when the panes have cards, so it lands on the card's box on screen, and on the
+   * stage grid otherwise.
+   */
   const place = (): void => {
     const { centre } = o.engine.getView();
+    const boxes = cardBoxes();
+    if (boxes) {
+      models.forEach((m, i) => {
+        const b = boxes[i]!;
+        m.rect = {
+          x: (b.x - centre.x) * depth,
+          y: (b.y - centre.y) * depth,
+          w: b.w * depth,
+          h: b.h * depth,
+        };
+      });
+      return;
+    }
     const box = stageBox();
     const rects = paneLayout(
       models.length,
@@ -238,8 +283,9 @@ export function mountIceWall(o: WallOptions): IceWall {
       draw(null);
       return null;
     }
-    /* The panes hang on the stage, so they follow it, and the lens centre, if either moves. A break holds the geometry it started with. */
-    if (state !== "breaking") place();
+    /* The panes hang on their cards, so they follow them, and the lens centre, if either moves. The
+       approach and the break hold the geometry the wall had when they started. */
+    if (state === "whole") place();
     const out = buildFrame({
       lens: lens(),
       z: depth,
@@ -253,6 +299,7 @@ export function mountIceWall(o: WallOptions): IceWall {
       target: o.target,
     });
     draw(out);
+    if (state === "whole") o.onDrawn?.();
     return out;
   };
 
@@ -418,6 +465,14 @@ export function mountIceWall(o: WallOptions): IceWall {
       ? new ResizeObserver(() => resize())
       : null;
   observer?.observe(o.layer);
+  // A card can change size while the layer does not (a font loads, the slide reflows).
+  const cardObserver =
+    typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => {
+          if (state === "whole") render(null);
+        })
+      : null;
+  for (const card of cards) if (card) cardObserver?.observe(card);
   layout();
   setState("hidden");
   void makeRenderer();
@@ -503,6 +558,7 @@ export function mountIceWall(o: WallOptions): IceWall {
       destroyed = true;
       cancelLoop();
       observer?.disconnect();
+      cardObserver?.disconnect();
       unlisten?.();
       unlisten = null;
       renderer?.destroy();

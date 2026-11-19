@@ -768,12 +768,14 @@ export function mountSpaceStage(
     wall = mountIceWall({
       layer: host,
       engine: globe,
-      panes: images.map((image) => ({
-        id:
-          image.closest<HTMLElement>("[data-wall-pane]")?.dataset["wallPane"] ??
-          image.src,
-        image,
-      })),
+      panes: images.map((image) => {
+        const card = image.closest<HTMLElement>("[data-wall-pane]");
+        return {
+          id: card?.dataset["wallPane"] ?? image.src,
+          image,
+          ...(card ? { card } : {}),
+        };
+      }),
       ice: theme.label,
       stageWidth: () => stageEl?.clientWidth ?? 0,
       signal,
@@ -788,6 +790,20 @@ export function mountSpaceStage(
       onState: (state) => {
         wallState = state;
         syncBusy();
+      },
+      // Where each pane's centre is and how wide a pane is, for the gate's pixel check
+      // (`scripts/slides-check.mjs`), published on every whole draw, a resize's included.
+      onDrawn: () => {
+        if (!wall || !host) return;
+        const centres = wall
+          .paneCentres()
+          .map((c) => `${c[0].toFixed(1)},${c[1].toFixed(1)}`)
+          .join(" ");
+        if (host.dataset["wallCentres"] !== centres)
+          host.dataset["wallCentres"] = centres;
+        const paneWidth = wall.paneWidth().toFixed(1);
+        if (host.dataset["wallPaneWidth"] !== paneWidth)
+          host.dataset["wallPaneWidth"] = paneWidth;
       },
       onBreak: () => {
         // The twelve shards light their own pins as they land; the rest are lit now and come
@@ -863,9 +879,7 @@ export function mountSpaceStage(
     const from = shownSun();
     // A day-long lapse after a day-long lapse carries on from the sun on screen, at its speed.
     const carry =
-      activeLapse !== null &&
-      isLapseName(activeLapse) &&
-      isDayLong(activeLapse)
+      activeLapse !== null && isLapseName(activeLapse) && isDayLong(activeLapse)
         ? { ms: from, rate: sunOffset === 0 ? sunRate : 0 }
         : null;
     stopLapse();
@@ -1164,18 +1178,6 @@ export function mountSpaceStage(
       const view = globe.getView();
       if (shownKind === "wall")
         wall.setDepth(zoomFor({ kind: "wall" }) / (view.zoom || 1));
-      if (wall.state === "whole") {
-        // Where each pane's centre is and how wide a pane is, for the gate's pixel check (`scripts/slides-check.mjs`).
-        const centres = wall
-          .paneCentres()
-          .map((c) => `${c[0].toFixed(1)},${c[1].toFixed(1)}`)
-          .join(" ");
-        if (host.dataset["wallCentres"] !== centres)
-          host.dataset["wallCentres"] = centres;
-        const paneWidth = wall.paneWidth().toFixed(1);
-        if (host.dataset["wallPaneWidth"] !== paneWidth)
-          host.dataset["wallPaneWidth"] = paneWidth;
-      }
     });
     void mountWall(globe);
     void followGlobe({
