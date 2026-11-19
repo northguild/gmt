@@ -56,7 +56,7 @@ describe("the press cue", () => {
     ["a tab", () => screen.getByRole("tab", { name: "Tab" })],
     ["a summary", () => screen.getByText("Group")],
     ["the inside of a pinged control", () => screen.getByText("Inner")],
-  ])("plays the Deep sonar for %s", async (_name, find) => {
+  ])("plays the press ping for %s", async (_name, find) => {
     await user.click(find());
     expect(cue).toHaveBeenCalledExactlyOnceWith("press");
   });
@@ -71,7 +71,7 @@ describe("the press cue", () => {
       "a button marked to sound like the links around it",
       () => screen.getByRole("button", { name: "Among links" }),
     ],
-  ])("plays the Sonar ping for %s", async (_name, find) => {
+  ])("plays the press ping for %s, as a link", async (_name, find) => {
     await user.click(find());
     expect(cue).toHaveBeenCalledExactlyOnceWith("click");
   });
@@ -90,7 +90,7 @@ describe("the press cue", () => {
     }
   });
 
-  it("plays the Sonar ping for a link that goes to another page", async () => {
+  it("plays the press ping for a link that goes to another page", async () => {
     const link = screen.getByRole("link", { name: "Away" });
     // jsdom cannot navigate; cancelling keeps the test on this page and leaves the press as it was.
     link.addEventListener("click", (event) => event.preventDefault());

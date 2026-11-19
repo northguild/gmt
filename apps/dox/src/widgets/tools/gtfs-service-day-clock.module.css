@@ -76,6 +76,10 @@
 
 .plate {
   display: flex;
+
+  /* The value goes under its caption when the two do not fit one line: the widest zone name is
+     one unbreakable piece. */
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--gmt-space-3);
@@ -148,6 +152,16 @@
   @container (inline-size < 30rem) {
     font-size: var(--gmt-text-xs);
     text-align: start;
+  }
+
+  /* At the narrowest the zone name (one 32-character piece the kit keeps whole) may break inside
+     the piece, in WebKit's wider monospace face, rather than run past the plate. The ghost is a
+     sibling inside the same cell and breaks the same way. */
+  @container (inline-size < 20rem) {
+    & span {
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
   }
 
   .plate[data-state="signal"] & {

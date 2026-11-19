@@ -43,6 +43,11 @@ export const CORE_TOOL_COUNT = 5;
 /** How many tools the question itself picks, beyond the core ones. */
 export const MATCHED_TOOL_COUNT = 3;
 
+/** What a retrieved function that a tool names is worth, at rank 1, against
+ *  the best full-text match's 1. Naming a function the search ranked high is
+ *  stronger evidence than sharing words with a description. */
+const RETRIEVAL_WEIGHT = 2;
+
 /** How many retrieved chunks lend their function names to the ranking. */
 const RETRIEVAL_SIGNAL_DEPTH = 8;
 
@@ -73,7 +78,7 @@ function processTerm(term: string): string | false {
     return false;
   }
   return lower
-    .replace(/(ures|ure|als|al|ing|ed|es|s|e)$/, "")
+    .replace(/(ures|ure|als|al|ers|er|ing|ed|es|s|e)$/, "")
     .replace(/(.)\1$/, "$1");
 }
 
@@ -82,6 +87,7 @@ interface ToolEntry {
   nameWords: string;
   purpose: string;
   when: string;
+  args: string;
   /** Purpose and arguments together: where a tool names the functions it
    *  shows, which the retrieval bonus matches against. */
   mentions: string;
@@ -99,15 +105,17 @@ function toolIndex(): MiniSearch<ToolEntry> {
     nameWords: nameWords(doc.name),
     purpose: doc.purpose,
     when: doc.when,
+    args: doc.args,
     mentions: `${doc.purpose} ${doc.args}`,
   }));
   index = new MiniSearch<ToolEntry>({
     idField: "name",
-    fields: ["nameWords", "purpose", "when"],
+    fields: ["nameWords", "purpose", "when", "args"],
     tokenize: (text) => text.split(/[\n\r\p{Z}\p{P}]+/u).filter(Boolean),
     processTerm,
     searchOptions: {
-      boost: { nameWords: 2, when: 2 },
+      boost: { nameWords: 2, when: 2, args: 0.5 },
+      prefix: (term) => term.length >= 4,
       // Typos in longer words only; a fuzzy "time" matches half the registry.
       fuzzy: (term) => (term.length >= 6 ? 0.2 : 0),
     },
@@ -152,25 +160,7 @@ export function selectTools({
   retrieved: readonly RetrievalChunk[];
   messages: readonly UIMessage[];
 }): DoxToolName[] {
-  const search = toolIndex();
-  const scores = new Map<DoxToolName, number>();
-
-  for (const hit of search.search(query)) {
-    scores.set(hit.id as DoxToolName, hit.score);
-  }
-
-  retrieved.slice(0, RETRIEVAL_SIGNAL_DEPTH).forEach((chunk, rank) => {
-    if (chunk.kind !== "function") return;
-    const fn = functionName(chunk);
-    // Short names ("add", "now") appear inside too many descriptions to mean
-    // anything.
-    if (fn.length <= 4) return;
-    for (const entry of entries) {
-      if (entry.mentions.includes(fn)) {
-        scores.set(entry.name, (scores.get(entry.name) ?? 0) + 10 / (rank + 1));
-      }
-    }
-  });
+  const scores = scoreTools(query, retrieved);
 
   const core = CHAT_STARTERS.slice(0, CORE_TOOL_COUNT).map(
     (starter) => starter.widget,
@@ -182,4 +172,40 @@ export function selectTools({
     .map(([name]) => name);
 
   return [...new Set([...core, ...matched, ...toolsInHistory(messages)])];
+}
+
+/** Every tool the question or its retrieved functions point at, with its score. */
+export function scoreTools(
+  query: string,
+  retrieved: readonly RetrievalChunk[],
+): Map<DoxToolName, number> {
+  const search = toolIndex();
+  const scores = new Map<DoxToolName, number>();
+
+  // The full-text score has no fixed scale: a long question with many shared
+  // words scores in the hundreds, a short one in the tens. Divided by the best,
+  // it is a share of the best match, so the retrieval bonus below weighs the
+  // same against a long question as a short one.
+  const hits = search.search(query);
+  const best = hits[0]?.score ?? 0;
+  for (const hit of hits) {
+    scores.set(hit.id as DoxToolName, hit.score / best);
+  }
+
+  retrieved.slice(0, RETRIEVAL_SIGNAL_DEPTH).forEach((chunk, rank) => {
+    if (chunk.kind !== "function") return;
+    const fn = functionName(chunk);
+    // Short names ("add", "now") appear inside too many descriptions to mean
+    // anything.
+    if (fn.length <= 4) return;
+    for (const entry of entries) {
+      if (entry.mentions.includes(fn)) {
+        scores.set(
+          entry.name,
+          (scores.get(entry.name) ?? 0) + RETRIEVAL_WEIGHT / (rank + 1),
+        );
+      }
+    }
+  });
+  return scores;
 }

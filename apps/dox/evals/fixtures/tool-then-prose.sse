@@ -1,0 +1,32 @@
+data: {"type":"start"}
+
+data: {"type":"data-retrieval","id":"retrieval","data":{"totalChunks":1500,"retrievedCount":2,"chunkTitles":["convertZonedToZoned","Converting types"],"chunkUrls":["/reference/zoned/convert/convertZonedToZoned","/guides/conversion/converting-types/#between-timezones"],"brainId":"cf-gemma-4-26b","brainLabel":"Gemma 4 26B","timings":{"usage":1,"corpus":2,"search":30,"prompt":4,"brains":0}}}
+
+data: {"type":"start-step"}
+
+data: {"type":"tool-input-start","toolCallId":"call-1","toolName":"showConverterBench"}
+
+data: {"type":"tool-input-available","toolCallId":"call-1","toolName":"showConverterBench","input":{"value":"2024-03-15T14:30:00+11:00[Australia/Sydney]","from":"Australia/Sydney","to":"Asia/Tokyo"}}
+
+data: {"type":"tool-output-available","toolCallId":"call-1","output":{"ok":true}}
+
+data: {"type":"finish-step"}
+
+data: {"type":"start-step"}
+
+data: {"type":"text-start","id":"t1"}
+
+data: {"type":"text-delta","id":"t1","delta":"That is 12:30 in Tokyo. "}
+
+data: {"type":"text-delta","id":"t1","delta":"See [convertZonedToZoned](/gmt/reference/zoned/convert/convertZonedToZoned)."}
+
+data: {"type":"text-end","id":"t1"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"data-retrieval","id":"retrieval","data":{"totalChunks":1500,"retrievedCount":2,"chunkTitles":["convertZonedToZoned","Converting types"],"chunkUrls":["/reference/zoned/convert/convertZonedToZoned","/guides/conversion/converting-types/#between-timezones"],"brainId":"cf-gemma-4-26b","brainLabel":"Gemma 4 26B","timings":{"usage":1,"corpus":2,"search":30,"prompt":4,"brains":900,"firstToken":1210,"total":3480},"toolCalled":"showConverterBench"}}
+
+data: {"type":"finish"}
+
+data: [DONE]
+

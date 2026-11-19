@@ -37,6 +37,13 @@ export const def = definePageTool({
   rules: [
     "values must hold at least one character that is not whitespace; a blank list is refused",
   ],
+  // The chat line gains a clause for retrieval; the description keeps to its length limit without it.
+  whenSwaps: [
+    [
+      "asks to audit saved or stored zoned values and what is wrong with them, why a stored",
+      "asks why a stored",
+    ],
+  ],
   argsSwaps: [
     [
       "values: the reader's strings exactly as given, one per line, each with an offset or `Z` and a bracketed zone; never invent or correct one. line: optional, which line to draw",

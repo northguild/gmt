@@ -250,6 +250,7 @@ const LIVE_PAGES = new Set([
   "/",
   "/tools/zoned-earth/",
   "/tools/zone-planner/",
+  "/tools/ptp-clock-converter/",
 ]);
 
 /* `--resolve-only`: each page answers 200, the live pages carry `live` and the stage a canvas mask
@@ -344,7 +345,8 @@ const LIVE_CLOCK_SELECTORS = [
   /* Every region whose text or drawing is a function of the wall clock carries the `live` token
      of `data-gate` (the clock rows, the globe tooltip's time and date, a zone's DST badge and
      offset, and everything the Zone Planner draws from its reference time: the datetime field,
-     each pinned clock, the readout, the jump status and the marks on the slider track). The row
+     each pinned clock, the readout, the jump status and the marks on the slider track, and the
+     PTP Clock Converter's now plates and calls). The row
      that holds a clock's three texts is masked as well as the texts, because the masks follow each
      text's own box, whose width changes with the text ("Today" against "Tomorrow"), so the edges
      of the smaller boxes differ between captures; the row is a fixed width. */

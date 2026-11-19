@@ -17,6 +17,8 @@
     "check": "pnpm run generate && astro sync && astro check",
     "typecheck": "pnpm run check",
     "test": "pnpm run generate && vitest run",
+    "evals:live": "tsx scripts/eval-live.ts",
+    "evals:baseline": "pnpm run generate && EVALS_WRITE_BASELINE=1 vitest run evals/offline.test.ts",
     "test:dist": "node scripts/dist-tests.mjs",
     "lint": "oxlint && stylelint \"src/**/*.{css,astro}\"",
     "reference:export": "tsx ./scripts/export-reference.ts",

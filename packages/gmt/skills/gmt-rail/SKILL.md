@@ -3,12 +3,12 @@ name: gmt-rail
 description: >
   GTFS Schedule times in @northguild/gmt/rail — the stop_times value that runs
   past midnight (25:35:00): parseGtfsTime, formatGtfsTime, isValidGtfsTime,
-  gtfsToInstant (service date, GTFS time and agency zone to an instant) and
-  the GtfsTime type { seconds, dayOverflow }. The days past the service day are
-  kept apart from the time of day, so 25:35:00 reads as 1:35 with one day of
-  overflow and writes back as 25:35:00, never 01:35:00. Hours run 0 to 999.
-  Reads the docs site (llms.txt) and the installed package's JSDoc; a routing
-  pointer, not an API dump.
+  gtfsToInstant (service date, GTFS time and agency zone to an instant) and the
+  GtfsTime type { seconds, dayOverflow }. The days past the service day are kept
+  apart from the time of day, so 25:35:00 reads as 1:35 with one day of overflow
+  and writes back as 25:35:00, never 01:35:00. Hours run 0 to 999. Reads the
+  docs site (llms.txt) and the installed package's JSDoc; a routing pointer, not
+  an API dump.
 sources:
   - 'northguild/gmt:apps/dox/src/content/docs/guides/industries/rail-gtfs-service-days.mdx'
   - 'northguild/gmt:packages/gmt/src/rail/convert/index.ts'
@@ -19,7 +19,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.21.0'
+  library_version: '1.22.0'
 ---
 
 # GMT Rail

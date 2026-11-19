@@ -1,16 +1,23 @@
 /**
  * The PTP Clock Converter widget (IOT-101), mountable on its tool page and in the chat rail.
  *
- * Section 1 reads a PTP timestamp (seconds, nanoseconds and the announced `currentUtcOffset`)
- * with `ptpToUtc`, next to the same count read with the offset ignored. Section 2 checks the
- * announced offset against the leap-second table (`taiMinusUtc`) and draws both on a fixed
- * ruler. Section 3 writes a UTC instant back with `utcToPtp`, using the same offset box.
+ * "PTP now" comes first: the reader's clock (`getUtcNow`), the table's offset at that instant
+ * (`taiMinusUtc`) and the PTP count it makes (`utcToPtp`), drawn once a second while the "Live
+ * clock" switch is on. Section 1 reads a PTP timestamp (seconds, nanoseconds and the announced
+ * `currentUtcOffset`) with `ptpToUtc`, next to the same count read with the offset ignored.
+ * Section 2 checks the announced offset against the leap-second table (`taiMinusUtc`) and draws
+ * both on a fixed ruler. Section 3 writes a UTC instant back with `utcToPtp`, using the same
+ * offset box.
  *
  * Built on the component kit and the holiday family: `renderPtpClockConverterTemplate` writes
  * the markup from builders only, with ids from `idScope(idPrefix)`, and `mount` finds its parts
- * by those ids. Every listener is delegated on the widget with the mount's `signal`; no timer
- * runs and no clock is read. The widget holds no PTP rule: the library says what each text
- * reads as and a refusal is explained by asking it again (`ptp-clock-converter.ts`).
+ * by those ids. Every listener is delegated on the widget with the mount's `signal`. Only
+ * "PTP now" reads the clock: once a second, aligned to the second, while its switch is on, and
+ * once at mount and on each switch change when it is off. Under `prefers-reduced-motion` the
+ * switch starts off, so the readout reads the clock once and holds it. The timer is cleared on
+ * abort and on destroy, and the template never reads the clock. The widget holds no PTP rule:
+ * the library says what each text reads as and a refusal is explained by asking it again
+ * (`ptp-clock-converter.ts`).
  *
  * `""` / `null` from the library renders as NO SIGNAL (amber). An empty box makes no call and
  * reads "nothing typed", never amber. Every region is laid out in every state and holds the
@@ -24,6 +31,7 @@ import {
   button,
   buttonRow,
   codeFrame,
+  paintCodeFrame,
   field,
   findWidget,
   hold,
@@ -34,6 +42,7 @@ import {
   section,
   setHtml,
   srOnly,
+  switchField,
   textInput,
   tick,
   verdict,
@@ -43,6 +52,7 @@ import {
 import { heldText, type HeldState } from "~/widgets/families/holiday/held-text";
 import { holidayFrame } from "~/widgets/families/holiday/holiday-frame";
 import {
+  paintSignalPlates,
   SIGNAL_TEXT,
   signalPlates,
   type SignalPlate,
@@ -70,6 +80,7 @@ import {
   badgeText,
   callsSizer,
   checkOffset,
+  nowFacts,
   isSeeded,
   markStart,
   matchReadPreset,
@@ -83,6 +94,7 @@ import {
   writePtp,
   type CallsSection,
   type CheckResult,
+  type NowFacts,
   type PtpClockArgs,
   type PtpState,
   type ReadReasonKey,
@@ -92,6 +104,7 @@ import {
   type WriteResult,
 } from "./ptp-clock-converter";
 import { WIDEST_INSTANT, WIDEST_SECONDS_TEXT } from "./ptp-clock-presets";
+import { msToNextSecond } from "./clock-change-common";
 import { loadIotLib, type IotLib } from "./iot-lib";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 
@@ -101,6 +114,7 @@ const WIDGET_NAME = "ptp-clock-converter";
 const USE_READ_LABEL = "Use the reading above";
 
 const SECTION_LABELS: Record<CallsSection, string> = {
+  now: "PTP now",
   read: "the read",
   check: "the check",
   write: "the write",
@@ -251,6 +265,51 @@ function writePlates(w: WriteResult): SafeHtml {
   return signalPlates(list, { gate: "write-plates" });
 }
 
+/**
+ * The "PTP now" plates. `null` is the server render, before any clock was read: the plates are
+ * blank, never NO SIGNAL. A null `table` or `ptp` is the library's answer and shows NO SIGNAL.
+ */
+function nowList(f: NowFacts | null): SignalPlate[] {
+  return [
+    {
+      caption: "UTC now",
+      value: f === null ? "" : orSignal(f.utc),
+      line: "getUtcNow",
+      lineSamples: ["getUtcNow"],
+      series: 1,
+      samples: [WIDEST_INSTANT],
+    },
+    {
+      caption: "TAI − UTC",
+      value: f === null ? "" : f.table === null ? null : `${f.table} s`,
+      line: "taiMinusUtc",
+      lineSamples: ["taiMinusUtc"],
+      series: 2,
+      samples: ["88 s"],
+    },
+    {
+      caption: "PTP seconds",
+      value: f === null ? "" : f.ptp === null ? null : `${f.ptp.seconds}n`,
+      line: "utcToPtp",
+      lineSamples: ["utcToPtp"],
+      series: 1,
+      samples: [`${WIDEST_SECONDS_TEXT}n`],
+    },
+    {
+      caption: "PTP nanoseconds",
+      value:
+        f === null ? "" : f.ptp === null ? null : String(f.ptp.nanoseconds),
+      line: "utcToPtp",
+      lineSamples: ["utcToPtp"],
+      series: 2,
+      samples: NANOS_SAMPLES,
+    },
+  ];
+}
+
+const nowPlates = (f: NowFacts | null): SafeHtml =>
+  signalPlates(nowList(f), { gate: "now-plates live" });
+
 // ---------------------------------------------------------------------------
 // Badge, verdict, round trip
 // ---------------------------------------------------------------------------
@@ -348,15 +407,20 @@ const SIZERS: Record<CallsSection, { lines: number; widest: string }> = {
   read: callsSizer("read"),
   check: callsSizer("check"),
   write: callsSizer("write"),
+  now: callsSizer("now"),
 };
 
-function callsOf(which: CallsSection, text: string): SafeHtml {
+function callsOf(
+  which: CallsSection,
+  text: string,
+  gate = "codeframe",
+): SafeHtml {
   return codeFrame({
     label: `Calls made for ${SECTION_LABELS[which]}`,
     copyLabel: `Copy the calls for ${SECTION_LABELS[which]}`,
     copyText: text,
     code: html`${text}`,
-    gate: "codeframe",
+    gate,
     // The widest reading prints every call; the frame holds that many lines.
     minLines: SIZERS[which].lines,
     // The widest line, hidden, so the frame scrolls (or not) the same way in every state.
@@ -364,9 +428,9 @@ function callsOf(which: CallsSection, text: string): SafeHtml {
   });
 }
 
-function callsSlot(id: string, which: CallsSection): SafeHtml {
+function callsSlot(id: string, which: CallsSection, gate?: string): SafeHtml {
   return grow(
-    html`<div class="${styles.slot}" id="${id}">${callsOf(which, "")}</div>`,
+    html`<div class="${styles.slot}" id="${id}">${callsOf(which, "", gate)}</div>`,
   );
 }
 
@@ -448,6 +512,16 @@ export function renderPtpClockConverterTemplate(
         }),
     });
 
+  const now = section(
+    { id: id("now"), heading: "PTP now", level: 3 },
+    html`<p class="${styles.note}">Your clock, read with getUtcNow, and the PTP count it makes with the table's offset.</p>${switchField(
+      { id: id("live"), label: "Live clock", checked: true, gate: "hold" },
+    )}${holidayFrame(
+      html`<div class="${styles.slot}" id="${id("now-plates")}">${nowPlates(null)}</div>`,
+      { gate: "now-plates live" },
+    )}${callsSlot(id("now-calls"), "now", "codeframe live")}`,
+  );
+
   const read = section(
     { id: id("read"), heading: "1. Read a PTP timestamp", level: 3 },
     html`<div class="${styles.controls}"><div class="${styles.wide}">${preset({
@@ -518,7 +592,7 @@ export function renderPtpClockConverterTemplate(
 
   return widget(
     { name: WIDGET_NAME, label: "PTP Clock Converter", scope: idPrefix },
-    html`${read}${check}${write}`,
+    html`${now}${read}${check}${write}`,
   );
 }
 
@@ -531,7 +605,11 @@ interface Controller {
   apply(state: PtpState): void;
   render(): void;
   syncPresets(): void;
+  /** Stops the "PTP now" ticker. */
+  stopNow(): void;
 }
+
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 function setupWidget(
   root: HTMLElement,
@@ -549,6 +627,32 @@ function setupWidget(
   const instantEl = el<HTMLInputElement>("instant");
   const useEl = el<HTMLButtonElement>("use-read");
   let reading: ReadResult = blankRead;
+
+  // "PTP now": the reader's clock, once a second while the switch is on.
+  const liveEl = el<HTMLInputElement>("live");
+  const media =
+    typeof matchMedia === "function" ? matchMedia(REDUCED_MOTION) : null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const stopNow = (): void => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+  };
+  const drawNow = (): string => {
+    const now = lib.getUtcNow();
+    const facts = nowFacts(lib, now);
+    paintSignalPlates(el("now-plates"), nowList(facts));
+    paintCodeFrame(el("now-calls"), facts.calls.join("\n"));
+    return now;
+  };
+  const tickNow = (): void => {
+    const now = drawNow();
+    timer = setTimeout(tickNow, msToNextSecond(now));
+  };
+  const syncNow = (): void => {
+    stopNow();
+    if (liveEl.checked) tickNow();
+    else drawNow();
+  };
 
   const readState = (): PtpState => ({
     seconds: secondsEl.value,
@@ -650,10 +754,23 @@ function setupWidget(
     { signal },
   );
 
+  liveEl.checked = !(media?.matches ?? false);
+  syncNow();
+  liveEl.addEventListener("change", syncNow, { signal });
+  media?.addEventListener(
+    "change",
+    () => {
+      liveEl.checked = !media.matches;
+      syncNow();
+    },
+    { signal },
+  );
+  signal.addEventListener("abort", stopNow, { once: true });
+
   syncPresets();
   render();
 
-  return { readState, apply, render, syncPresets };
+  return { readState, apply, render, syncPresets, stopNow };
 }
 
 export const mountPtpClockConverter: MountFn<PtpClockArgs> = async (
@@ -679,7 +796,7 @@ export const mountPtpClockConverter: MountFn<PtpClockArgs> = async (
   }
 
   return onceDestroy(
-    () => {},
+    () => controller.stopNow(),
     () => permalinkOf(controller.readState()),
   );
 };

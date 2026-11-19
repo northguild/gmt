@@ -1,4 +1,4 @@
-import { APICallError, RetryError } from "ai";
+import { APICallError, InvalidToolInputError, RetryError } from "ai";
 import { mapUpstreamError } from "./error-mapping";
 
 /** A real captured quota body, trimmed. The `quotaId` is what the daily-vs-
@@ -94,6 +94,37 @@ describe("mapUpstreamError", () => {
     expect(result.status).toBe(500);
     expect(result.body.error).toBe(
       "Something went wrong answering that question.",
+    );
+  });
+
+  it("says the tool did not open when the model's call fails its schema", () => {
+    // `starter-showGnssWeekDecoder` showed the reader a bare failure line here.
+    const result = mapUpstreamError(
+      new InvalidToolInputError({
+        toolName: "showGnssWeekDecoder",
+        toolInput: "{}",
+        cause: new Error("rolloverEra: expected string"),
+      }),
+    );
+    expect(result.body.error).toMatch(/could not open that tool/);
+    expect(result.body.error).not.toContain("Something went wrong");
+    expect(JSON.stringify(result)).not.toContain("rolloverEra");
+    expect(result.body.retryable).toBe(true);
+  });
+
+  it("maps the copy of that error on the tool's output line the same way", () => {
+    const copy = new Error("Invalid input for tool showGnssWeekDecoder");
+    copy.name = "AI_InvalidToolInputError";
+    expect(mapUpstreamError(copy).body.error).toMatch(
+      /could not open that tool/,
+    );
+  });
+
+  it("maps the same error when it arrives as its printed text", () => {
+    const printed =
+      "AI_InvalidToolInputError: Invalid input for tool showGnssWeekDecoder";
+    expect(mapUpstreamError(printed).body.error).toMatch(
+      /could not open that tool/,
     );
   });
 });

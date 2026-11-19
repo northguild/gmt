@@ -11,7 +11,7 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 - On every Dox story, `dox-tester` runs the same command without `--all` on the pages the branch changes, in three browsers, and quotes the result. The PR job checks those pages in Chromium only.
 - Legs: `pnpm --filter dox gates --all --tier weekly --browsers <b> --themes dark,light --retries 1 --shard i/n --deadline 80`, `timeout-minutes: 90`, `fail-fast: false`. `--shard` splits each gate's pages, so every leg of a browser runs every gate on its share: round-robin by name, and `readout-still` by its measured minutes, so its heavy tools never share a leg. `--deadline 80` leaves 10 minutes for the summary and the upload, so a leg that runs long files `out-of-time` instead of being killed with nothing. The upload carries the gate logs (`*.log`) beside `summary.json` and the findings.
   - Under `--all`, Chromium gets every page of every gate. WebKit and Firefox get every page of `grow-measure`, `readout-still`, `data-credits-check` and `canada-layout-check`, plus the six-page sample of the three a11y gates (`fullBrowsers`). `contrast-measure` is Chromium-only. The two clock-still gates have one page each (shard 1 only).
-  - Layout: chromium 6 legs, webkit 4, firefox 4 (14). Chromium keeps each leg under about 40 local minutes; five legs leave no margin under the deadline at twice the time. In WebKit, `readout-still` alone is 119 local minutes over 29 tools, from under 1 to 16; dealt over 4 legs each carries 29 to 30, and the other gates add about 20, so about 50 local per leg and about 74 on a runner at 1.45 times. Firefox is dealt the same way and runs faster. Record the slowest real leg here after the first runs.
+  - Layout: chromium 6 legs, webkit 4, firefox 4 (14). Chromium keeps each leg under about 40 local minutes; five legs leave no margin under the deadline at twice the time. In WebKit, `readout-still` alone is 119 local minutes over 29 tools, from under 1 to 16; dealt over 4 legs each carries 29 to 30, and the other gates add about 20, so about 50 local per leg and about 74 on a runner at 1.45 times. Firefox is dealt the same way and runs faster. `plate-fit` (all 56 tool pages, 81 widths) takes about 1.5 local minutes a theme in WebKit and in Chromium, so 3 for both themes, dealt over each browser's legs: under 1 local minute a WebKit leg (about 1.1 on a runner), which leaves the leg counts as they are. Record the slowest real leg here after the first runs.
 - Report: job `report` (`issues: write`) downloads the newest `dox-gates-<leg>-<run id>` artifact of each leg (`summary.json`, `*.ndjson`) and runs `apps/dox/scripts/gates/file-issues.mjs --legs <all fourteen>` (`ci-legs.test.ts` checks the list against the matrix).
   - Only `FAIL` rows file; `FLAKY` is listed in the step summary.
   - The key is `<gate>:<rule>:<page>:<target>`. The target is the element's identity key (tier 2, "Element identity"), never a class or an `nth` position. Browsers, widths and themes are not in the key, so one issue tables every place a finding was seen.
@@ -32,18 +32,8 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 - Astro proxies `/gmt/api/...` to the Worker (`src/lib/dev-worker-proxy.ts`). The proxy key is `^/api`, not `/gmt/api`, because Astro's dev base middleware strips `/gmt` before Vite's proxy runs; `rewrite` puts the base back. `dev-worker-proxy.test.ts` starts the real `astro dev` CLI against a stub Worker and fails if Astro reorders its middleware.
 - Local chat: `pnpm dev:chat` (build, then `wrangler dev`), or `npx wrangler dev --port 8799` with `dist/` built. `.dev.vars` holds `NORTHGUILD_GMT_GEMINI_API_KEY` and `DOX_DEV_KEY` (`.dev.vars.example`).
 - Dev bypass: `npx wrangler secret put DOX_DEV_KEY` in production, the same value in `.dev.vars` locally, then visit `/gmt/api/brains?key=<secret>` once per browser. It exempts you from the visitor cap, never from the shared pool.
-- Probe brains (spends real quota):
-
-  ```bash
-  cd apps/dox
-  npx wrangler dev --port 8799 --var DOX_DEV_KEY:probe --var NORTHGUILD_GMT_GEMINI_API_KEY: \
-    > /tmp/dox-wrangler.log 2>&1 &
-  npx tsx scripts/probe-brains.ts --base http://localhost:8799/gmt \
-    --log /tmp/dox-wrangler.log --out /tmp/probe.json   # --brains <ids> --attempts <n>
-  ```
-
-  Emptying the Gemini key stops a failing Workers AI brain falling back onto Gemini. The probe accepts only ids in `BRAINS`. A Workers AI probe over the standard starters: `--starters 4 --brains cf-gemma-4-26b,cf-glm-4.7-flash`.
-- Refresh the Gemini list after Google ships models: `curl "https://generativelanguage.googleapis.com/v1beta/models?key=$NORTHGUILD_GMT_GEMINI_API_KEY"`, then probe. A 429 proves a model exists as well as a 200 does; drop anything that answers 404 or 400. Leave out the `-latest` aliases (their quota bucket is unknown).
+- Run the chat evals against a local Worker (spends real quota): [apps/dox/evals/README.md § Run the live evals](../../../apps/dox/evals/README.md#run-the-live-evals).
+- Refresh the Gemini list after Google ships models: `curl "https://generativelanguage.googleapis.com/v1beta/models?key=$NORTHGUILD_GMT_GEMINI_API_KEY"`, then run `eval-live.ts` on the new ids. A 429 proves a model exists as well as a 200 does; drop anything that answers 404 or 400. Leave out the `-latest` aliases (their quota bucket is unknown).
 
 ## After a deploy
 
@@ -55,7 +45,7 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 
 ## Owed verification
 
-- The Firefox and WebKit legs of `grow-measure`, `readout-still`, `data-credits-check`, `canada-clock-still`, `canada-stored-still`, `canada-layout-check`, `a11y-axe`, `a11y-tab-walk` and `a11y-media`, on a machine where Firefox launches.
+- The Firefox and WebKit legs of `grow-measure`, `readout-still`, `data-credits-check`, `canada-clock-still`, `canada-stored-still`, `canada-layout-check`, `plate-fit`, `a11y-axe`, `a11y-tab-walk` and `a11y-media`, on a machine where Firefox launches.
 - The runner's `--baseline` path for `html-diff` and `visual-diff` end to end on a real base tree.
 - `html-diff` and `visual:diff` after the interval visualizer's `data-role="axis"` attribute, against a baseline from the commit before it.
 - The tier 3 keyboard-only, reduced-preference and Firefox/Safari pass.

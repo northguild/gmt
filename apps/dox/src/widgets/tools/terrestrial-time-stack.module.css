@@ -27,21 +27,22 @@
   min-inline-size: 0;
 }
 
-/* Four plates on four equal tracks, two by two below 36rem. A track does not move with its
-   content, so a reading never reflows the row. */
+/* A value and its unit never wrap, so a track has to be as wide as the widest reading at the
+   largest value size: `176.427468382 s` at 2rem is about 21rem with the plate's padding. One
+   column below two of those, two columns below four. A track does not move with its content, so
+   a reading never reflows the row. */
 .platesSlot {
   min-inline-size: 0;
 
   & dl {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
 
-    @container (inline-size < 36rem) {
+    @container (inline-size >= 43rem) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    /* A value and its unit do not wrap, so a plate has to be as wide as the widest reading. */
-    @container (inline-size < 20rem) {
-      grid-template-columns: minmax(0, 1fr);
+    @container (inline-size >= 86rem) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 }

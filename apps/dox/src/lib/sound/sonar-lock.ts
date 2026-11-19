@@ -7,21 +7,6 @@
 /** The sonar echo: its delay in seconds, the share of each repeat the next keeps, and its level out. */
 export const SONAR_ECHO = { seconds: 0.19, feedback: 0.38, wet: 0.32 } as const;
 
-/**
- * The Sonar ping a link press plays (`voices.ts` `click`): the ping itself and a quieter copy sent
- * to the echo, each dying away over its `release` in seconds. Shorter than the audition's 0.32 s
- * and 0.25 s at the owner's ask, so leaving a page by a link does not wait on a long tail.
- * `link-hold.ts` reads it to hold a link exactly as long as the ping and its first echo.
- */
-export const SONAR_PING = {
-  freq: 1180,
-  peak: 0.12,
-  echoPeak: 0.1,
-  attack: 0.003,
-  release: 0.18,
-  echoRelease: 0.14,
-} as const;
-
 /** The lock's two pings, a fifth apart and `gap` seconds apart, each with a quieter send to the echo. */
 export const LOCK_PINGS = {
   freqs: [880, 1320],

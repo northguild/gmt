@@ -11,7 +11,7 @@ Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every v
 - **Sound is opt-in.** Every visitor starts muted, whatever the system asks (reduced motion included); only the reader's own mute button or fader turns it on. No system setting or other control reads or writes the choice.
 - **The key `dox:sound`** holds `{ v: 1, level: 1–11, muted, aura, track }`. Default: muted, level 5, aura on, track `"ice"`. It fails closed: no record, corrupt JSON, another `v` (`SOUND_VERSION`) or a field of the wrong type reads as that field's default, so a bad record never turns sound on. Raise `SOUND_VERSION` when a field changes meaning. It is written only on a reader's choice. `ThemeProvider.astro` applies the same rule inline and sets `data-sound` on `<html>` before first paint; `settings.test.ts` holds that script equal to `readSound()`.
 - **A choice storage cannot keep holds for the page.** Every storage access is in try/catch; a failed write keeps the choice in memory until a write lands or another tab's does. A page restored from the back/forward cache reads the key again on `pageshow`, since it missed `storage` events while frozen.
-- **A hidden tab suspends 0.65 s later** (`HIDE_TAIL_MS`), so a link that opens a new tab is heard to the end. `navigator.audioSession.type = "ambient"` where it exists.
+- **A hidden tab suspends 1.2 s later** (`HIDE_TAIL_MS`), so a link that opens a new tab is heard to the end of its ping, which rings on in its space. `navigator.audioSession.type = "ambient"` where it exists.
 - **A control that fires its own cue carries `data-cue`**, so the press hook stays out. The Expressive Code copy button is not ours, so it is excluded by selector.
 - **React stays inside `/dox` and the deck's Dox frame.** Chrome cues are plain DOM; `DoxChat.tsx` calls `cue()`.
 
@@ -19,14 +19,14 @@ Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every v
 
 | Event | Voice (`CueName`) | Hook |
 | --- | --- | --- |
-| Link press | Sonar, 1180 Hz (`click`) | `sonar.ts`, capture `click` on `document` |
-| Any other press: button, tab, `summary` | Deep sonar, 620 Hz (`press`) | as above |
+| Link press | Distant sonar, 1050 Hz (`click`) | `sonar.ts`, capture `click` on `document` |
+| Any other press: button, tab, `summary` | Distant sonar, the same (`press`) | as above |
 | Panel opens or closes: any non-manual `[popover]`, the kit drawer, the mobile menu, the `/dox` rail, the sidebar on arrival | Felt slide, opening or closing: a noise swell with one low tone (`open`, `close`) | `native-panels.ts`, `drawer.ts`, `menu-button.ts`, `DoxPage.tsx`, `sidebar-cue.ts` |
 | Landing pieces freeze in; a light crosses a chip | Crystal dust, two or three high glints (`paint`), Steel shing (`glint`) | `entrance.ts`, on `animationstart`; silent on an in-site arrival |
 | Any kit switch, the mute button | Ice snap (`toggle`) | `data-cue`, `watchSwitchCue()` |
 | Fader step, handle step | Glass tick (`detent`) | `range`, `handle` |
 | List step by key or by the reader's scroll | Servo tick, sweeping down or up and pitched by the place in the list (`listNext`, `listPrev`) | `listStep()`/`stepTo()` in `list-step.ts`, called by `listbox`, `combobox`, `roving`, `scroll-ticks.ts` |
-| Copy | Glass clink (`copy`) | `GmtCopy`, `code-copy.ts` |
+| Copy | Distant sonar, the same (`copy`) | `GmtCopy`, `code-copy.ts` |
 | Error: chat, `NO SIGNAL` from input, a failed load or copy | Low double buzz (`error`) | `DoxChat.tsx`, `gmt-readout`, `widget-mount.ts`, `showUnavailable` |
 | Typing in any text field | Data blip (`key`) | `typing.ts` |
 | Chat send, thinking, streaming, done | Sonar launch, Sonar idle (a soft 587 Hz ping every 1.6 s), Morse, Ice bell | `DoxChat.tsx` |
@@ -50,7 +50,7 @@ Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) com
 
 ## Behaviour code cannot show
 
-- **A link waits for its ping.** Every route change is a full page load, which ends the audio. `holdLink()` (`link-hold.ts`) runs in a `window` bubble listener after every handler: if nothing took the press and it leaves this document in this tab, it cancels the click and calls `location.assign(href)` after 333 ms (`LINK_HOLD_MS`, the ping and its first echo). A modifier key, another `target`, `download`, a non-http(s) URL and a same-page hash go to the browser. Muted, nothing waits. The Sonar ping's tail is shorter than the audition's so leaving a page does not drag.
+- **A link waits for its ping.** Every route change is a full page load, which ends the audio. `holdLink()` (`link-hold.ts`) runs in a `window` bubble listener after every handler: if nothing took the press and it leaves this document in this tab, it cancels the click and calls `location.assign(href)` after 600 ms (`LINK_HOLD_MS`, the ping and the swell of its space). A modifier key, another `target`, `download`, a non-http(s) URL and a same-page hash go to the browser. Muted, nothing waits.
 - **The press hook reads `composedPath()`, not `target.closest`.** A control that swaps its own icon in its handler detaches the clicked node. It listens in the capture phase because Starlight's Search stops its click from bubbling.
 - **An in-site arrival has no entrance.** A landing reached from another page of this site starts `static` (`arrival.ts`): the reader has seen the buttons, so nothing freezes in and nothing plays. A reload, another site and northguild.dev get the whole entrance; in practice it is heard on an arrival from northguild.dev, whose same-origin activation unlocks audio at load.
 - **The entrance restates no timing.** `entranceSounds()` hears each `animationstart`, so pieces that arm late are heard on their own start and a view-transition arrival's still header is silent. The copy is never heard: its freeze runs from the first paint, and the tagline's 0.12 s delay can end either side of `t0`, so its animations (`ng-freeze-text`, `ng-sweep-text`) are not listened for. At most one sparkle and one shing per frame; each shing a rank (4%) higher.

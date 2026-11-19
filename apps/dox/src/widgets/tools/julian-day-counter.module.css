@@ -28,16 +28,17 @@
   min-inline-size: 0;
 }
 
-/* Two plates a row, one below 24rem. A track does not move with its content, so a reading never
-   reflows the row. */
+/* One number per plate never wraps, and the widest has eighteen digits (`-883655957.9260122`),
+   about 24rem with the plate's padding at the largest value size. Two plates a row from twice
+   that, one below. A track does not move with its content, so a reading never reflows the row. */
 .platesSlot {
   min-inline-size: 0;
 
   & dl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
 
-    @container stage (inline-size < 24rem) {
-      grid-template-columns: minmax(0, 1fr);
+    @container stage (inline-size >= 49rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 }

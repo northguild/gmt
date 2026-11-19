@@ -66,7 +66,6 @@ import {
   type DstTransition,
   type ProbeClassification,
   type TickerWindow,
-  type ValuePreset,
 } from "./dst-inspector";
 import { onceDestroy, type MountFn } from "./widget-mount";
 import { loadDstLib } from "./zones-lib";

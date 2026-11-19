@@ -57,12 +57,15 @@
   min-inline-size: 0;
 }
 
-/* A readout is sized to fit its pane on one line, widest sample included: the kit's plate
-   value is larger and wraps anywhere once the pane is narrower than the sample. */
+/* A readout wraps anywhere once the pane is narrower than its widest sample (the 25-character
+   label, a nanosecond instant). The samples share the value's cell, so the plate holds the
+   height of the longest wrap. */
 .stage dd,
 .writer dd {
   font-size: var(--gmt-text-lg);
-  overflow-wrap: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 /* The hint holds a line's height whether or not it says anything, so the table below never

@@ -30,16 +30,15 @@
  *     turns sound on and starts a voice. Hold still: the header items' boxes and the button's stay put
  *     (0.5 px) while a drag sweeps the fader 1 to 11 to 1 and the mute button toggles.
  *   - `chrome` (slice 3, once per browser, on fixed pages): after a first press unlocks, each cue is
- *     read as a shape: the sorted start offsets of its oscillators (Glass clink 0,0,0.05,0.05; the
- *     two press pings 0,0 with their pitch, Sonar 1180 Hz for a link, Deep sonar 620 Hz for a
- *     button), and for a Felt slide, a noise swell, its low tone's fall (opening 170 to 140 Hz,
+ *     read as a shape: the sorted start offsets of its oscillators (the press ping, the Distant
+ *     sonar, 0,0 at 1050 Hz for a link, a button and a copy alike), and for a Felt slide, a noise swell, its low tone's fall (opening 170 to 140 Hz,
  *     closing 150 to 120 Hz). On `/guides/conversion/databases/` at 390 px the
  *     mobile menu plays the opening then the closing slide (button, then Escape); the settings
- *     gear plays Deep sonar and Escape nothing; at 1440 px the "Dark theme" switch plays the Ice snap once and nothing else. On
- *     `/tools/converter-bench/` a copy button plays Glass clink once; on a guide a code block's copy
- *     plays Glass clink and no Sonar.
+ *     gear plays the press ping and Escape nothing; at 1440 px the "Dark theme" switch plays the Ice snap once and nothing else. On
+ *     `/tools/converter-bench/` a copy button plays the press ping once; on a guide a code block's
+ *     copy plays it once, not twice.
  *   - `link hold` (every browser, a guide): after unlock, a press on a link to another page plays one
- *     voice, the Sonar ping, and is held: 200 ms later the URL is unchanged, then it goes there.
+ *     voice, the press ping, and is held: 200 ms later the URL is unchanged, then it goes there.
  *   - `aura` (slice 4, Chromium, `/`): no aura source before a gesture; after one, seven held sources
  *     and a bus ramp to 0.25 over 3 s; hiding the page fades it out over 0.6 s and starts nothing for
  *     2 s; showing it ramps back over 1.5 s. The Aura switch (in the settings popover, at 1440 and 390)
@@ -144,7 +143,7 @@ function installLog() {
     constructed: 0,
     states: [],
     starts: [],
-    // Each logged start's pitch in Hz, with its own count: Sonar and Deep sonar share a shape.
+    // Each logged start's pitch in Hz, with its own count: the press ping is read by its pitch.
     pitches: [],
     // Each noise burst's start time (a buffer source, never the aura's): a Lens servo step has no
     // oscillator.
@@ -405,20 +404,19 @@ const readPitch = ([hz, but]) =>
     (_, i) => (window.__sound.pitches[i] === hz) !== but,
   );
 
-/** The two press pings' pitches: Sonar for a link, Deep sonar for a button. */
-const SONAR_HZ = 1180;
-const DEEP_SONAR_HZ = 620;
+/** The press ping's pitch: every press, a link, a button or a copy, plays the Distant sonar. */
+const PING_HZ = 1050;
 
 const SHAPES = {
   open: "slide open",
   close: "slide close",
-  // The press pings share the shape 0,0 (a tone and its echo); `pingOf` adds the pitch.
-  sonar: `0,0 at ${SONAR_HZ} Hz`,
-  deepSonar: `0,0 at ${DEEP_SONAR_HZ} Hz`,
-  // The Settings gear: the Sonar ping of the links beside it, and its panel's Felt slide.
-  sonarOpen: `0,0 + slide open at ${SONAR_HZ} Hz`,
+  // The press ping is a tone and its send to the space, together: 0,0; `pingOf` adds the pitch.
+  ping: `0,0 at ${PING_HZ} Hz`,
+  // The Settings gear: the ping of the links beside it, and its panel's Felt slide.
+  pingOpen: `0,0 + slide open at ${PING_HZ} Hz`,
   toggle: "0,0.004",
-  clink: "0,0,0.05,0.05",
+  // A copy plays the press ping too, read without its pitch.
+  copy: "0,0",
   none: "none",
 };
 
@@ -444,7 +442,7 @@ async function cueOf(page, act, waitMs = 450) {
   return parts.filter((part) => part !== "none").join(" + ") || "none";
 }
 
-/** `cueOf` with the lowest pitch that started, which tells Sonar from Deep sonar. */
+/** `cueOf` with the lowest pitch that started, which tells the press ping from other voices. */
 async function pingOf(page, act, waitMs = 450) {
   const from = await page.evaluate(() => window.__sound.pitches.length);
   const got = await cueOf(page, act, waitMs);
@@ -939,14 +937,14 @@ for (const name of browsers) {
         await cueOf(page, () => page.keyboard.press("Escape")),
         "close",
       );
-      // The settings popover: its gear plays the links' Sonar ping and the panel its opening
+      // The settings popover: its gear plays the links' press ping and the panel its opening
       // Felt slide; Escape closing it plays the closing slide.
       const settingsButton = page.locator("#gmt-settings-button");
       expectCue(
         bad,
         "the settings button opens the popover",
         await pingOf(page, () => settingsButton.click()),
-        "sonarOpen",
+        "pingOpen",
       );
       expectCue(
         bad,
@@ -989,7 +987,7 @@ for (const name of browsers) {
         bad,
         "a code block's copy",
         await cueOf(page, () => block.locator(".copy button").click()),
-        "clink",
+        "copy",
       );
     },
   );
@@ -1013,7 +1011,7 @@ for (const name of browsers) {
         bad,
         "a copy button",
         await cueOf(page, () => copy.click()),
-        "clink",
+        "copy",
       );
     },
   );
@@ -1100,11 +1098,11 @@ for (const name of browsers) {
         }),
         pitchesBefore,
       );
-      // A link plays the Sonar ping, not the buttons' Deep sonar.
-      if (held.pitches.length && Math.min(...held.pitches) !== SONAR_HZ)
+      // A link plays the press ping.
+      if (held.pitches.length && Math.min(...held.pitches) !== PING_HZ)
         bad(
           "link-hold",
-          `the press on a link played ${Math.min(...held.pitches)} Hz, wanted Sonar's ${SONAR_HZ} Hz`,
+          `the press on a link played ${Math.min(...held.pitches)} Hz, wanted the ping's ${PING_HZ} Hz`,
         );
       if (held.held !== true)
         bad("link-hold", "the press on a link to another page was not held");
@@ -2111,7 +2109,7 @@ for (const name of browsers) {
 
     // The globe's zoom plays one Lens servo step (a noise burst, no oscillator) per wheel notch,
     // key or button press, at most one every 60 ms through a trackpad's stream, and its buttons
-    // play the servo instead of the Deep sonar.
+    // play the servo instead of the press ping.
     await scenario(
       browser,
       name,

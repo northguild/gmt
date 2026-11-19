@@ -17,6 +17,20 @@ const TOOLS: LanguageModelV4CallOptions["tools"] = [
   },
   {
     type: "function",
+    name: "showGnssWeekDecoder",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mode: { type: "string", enum: ["broadcast", "rinex", "utc"] },
+        counter: { type: "string" },
+        week: { type: "integer" },
+        timeOfWeekSeconds: { type: "number" },
+        rolloverEra: { type: "string" },
+      },
+    },
+  },
+  {
+    type: "function",
     name: "showConverterBench",
     inputSchema: {
       type: "object",
@@ -206,5 +220,79 @@ describe("toolCallMarkupMiddleware", () => {
   it("releases a held `<` when the block ends", async () => {
     const out = await run(textStep("3 <"));
     expect(textOf(out)).toBe("3 <");
+  });
+
+  describe("Gemma's call syntax", () => {
+    // Recorded from `starter-showGnssWeekDecoder`, 2026-11-18.
+    const GEMMA_CALL =
+      '<|tool_call>call:showGnssWeekDecoder{mode:<|"|>broadcast<|"|>,counter:<|"|>GAL<|"|>,rolloverEra:<|"|>0<|"|>,timeOfWeekSeconds:18,week:1024}<tool_call|>';
+
+    it("turns it into a real call typed by the schema, and shows no markup", async () => {
+      const out = await run(textStep(GEMMA_CALL));
+      expect(textOf(out)).toBe("");
+      expect(callsOf(out)).toEqual([
+        {
+          toolName: "showGnssWeekDecoder",
+          input: {
+            mode: "broadcast",
+            counter: "GAL",
+            rolloverEra: "0",
+            timeOfWeekSeconds: 18,
+            week: 1024,
+          },
+        },
+      ]);
+      expect(finishOf(out)).toBe("tool-calls");
+    });
+
+    it("reads a call split across deltas and keeps the prose around it", async () => {
+      const out = await run(
+        textStep(
+          "Week 1024 in era 0. <|tool",
+          '_call>call:showGlobe{zone:<|"|>Asia/To',
+          'kyo<|"|>}<tool_call',
+          "|> Done.",
+        ),
+      );
+      expect(textOf(out)).toBe("Week 1024 in era 0.  Done.");
+      expect(callsOf(out)).toEqual([
+        { toolName: "showGlobe", input: { zone: "Asia/Tokyo" } },
+      ]);
+    });
+
+    it("gives a bare number the text its schema wants", async () => {
+      const numeric = await run(
+        textStep(
+          "<|tool_call>call:showGnssWeekDecoder{rolloverEra:0}<tool_call|>",
+        ),
+      );
+      expect(callsOf(numeric)).toEqual([
+        { toolName: "showGnssWeekDecoder", input: { rolloverEra: "0" } },
+      ]);
+    });
+
+    it("only drops it when no tool is on offer, as in the prose step", async () => {
+      const out = await run(textStep(`Here. ${GEMMA_CALL}`), []);
+      expect(textOf(out)).toBe("Here. ");
+      expect(callsOf(out)).toEqual([]);
+    });
+
+    it("drops one it cannot read", async () => {
+      const out = await run(
+        textStep(
+          '<|tool_call>call:showGlobe{zone:<|"|>Asia/Tokyo}<tool_call|>',
+        ),
+      );
+      expect(textOf(out)).toBe("");
+      expect(callsOf(out)).toEqual([]);
+    });
+
+    it("drops an unclosed one at the end of the block", async () => {
+      const out = await run(
+        textStep('Done. <|tool_call>call:showGlobe{zone:<|"|>As'),
+      );
+      expect(textOf(out)).toBe("Done. ");
+      expect(callsOf(out)).toEqual([]);
+    });
   });
 });

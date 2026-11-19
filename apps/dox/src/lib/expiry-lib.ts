@@ -4,8 +4,8 @@
  *
  * `durationFromUnits`, `totalDuration` and `ttlFromNow` live in `duration/calculate`;
  * `addUnix` in `unix/calculate`; `addUtc` in `utc/calculate`; `convertUtcToUnix` and
- * `convertUtcToZoned` in `utc/convert`; `formatHttpDate` in `utc/format`; `getUtcIn` in
- * `utc/get`; `isValidUtc` in `utc/validate`. Each name is picked from its module and nothing
+ * `convertUtcToZoned` in `utc/convert`; `formatHttpDate` in `utc/format`; `getUtcIn` and
+ * `getUtcNow` in `utc/get`; `isValidUtc` in `utc/validate`. Each name is picked from its module and nothing
  * else is read.
  *
  * A heavy module: only the tool's mount imports it. A module that fails to load, or a name it
@@ -57,6 +57,7 @@ export interface ExpiryLib {
   formatHttpDate(value: string): string;
   // utc/get
   getUtcIn(units: Record<string, number>): string;
+  getUtcNow(): string;
   // utc/validate
   isValidUtc(value: unknown): boolean;
 }
@@ -90,7 +91,7 @@ export async function loadExpiryLib(): Promise<ExpiryLib> {
       ...pickFunctions(utcCalc, ["addUtc"]),
       ...pickFunctions(utcConvert, ["convertUtcToUnix", "convertUtcToZoned"]),
       ...pickFunctions(utcFormat, ["formatHttpDate"]),
-      ...pickFunctions(utcGet, ["getUtcIn"]),
+      ...pickFunctions(utcGet, ["getUtcIn", "getUtcNow"]),
       ...pickFunctions(utcValid, ["isValidUtc"]),
     } as unknown as ExpiryLib;
   } catch (cause) {

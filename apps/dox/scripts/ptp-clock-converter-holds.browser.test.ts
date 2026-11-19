@@ -43,6 +43,7 @@ const GATES = [
   "write-plates",
   "frame",
   "codeframe",
+  "now-plates",
 ];
 
 /** The values `readout-still` types into each box. */
@@ -157,6 +158,118 @@ const snapshot = (page: Page): Promise<Snapshot> =>
     return { boxes, edges, paragraphs };
   }, GATES);
 
+/** 2024-06-12T15:20:00.250Z, in epoch milliseconds (a native Date is banned here). */
+const MOUNT_INSTANT = 1718205600250;
+/** 1971-06-01T00:00:00Z: before the leap-second table starts. */
+const BEFORE_1972 = "1971-06-01T00:00:00Z";
+
+/**
+ * The value of the plate with this caption, inside the "PTP now" frame only. The caption is
+ * matched exactly, so section 3's "Seconds" is never "PTP seconds".
+ */
+const plate = (page: Page, caption: string): Promise<string> =>
+  page.evaluate((c) => {
+    const frame = document.querySelector(
+      "[data-widget='ptp-clock-converter'] [data-gate~='now-plates']",
+    );
+    for (const row of frame?.querySelectorAll("dl > div") ?? []) {
+      const [dt, dd] = Array.from(row.children);
+      if (dt?.textContent?.trim() === c)
+        return dd?.firstElementChild?.textContent ?? "";
+    }
+    throw new Error(`no plate "${c}" in the PTP now frame`);
+  }, caption);
+
+/**
+ * Opens the page on a clock that stands still at the mount instant: `install` before the page
+ * runs, `pauseAt` so the clock stops there, and `goto` after both, so nothing depends on how long
+ * the load took. Time moves only when a test calls `runFor`. The page's animation frames are
+ * paused with the clock, so the mount is awaited on the plates and not on `settle`.
+ */
+async function openOnClock(
+  page: Page,
+  base: string,
+  at: number | "fixed",
+  fixed?: string,
+): Promise<void> {
+  if (at === "fixed") {
+    await page.clock.install({ time: fixed! });
+    await page.clock.setFixedTime(fixed!);
+  } else {
+    await page.clock.install({ time: at - 5000 });
+    await page.clock.pauseAt(at);
+  }
+  await page.goto(`${base}/tools/ptp-clock-converter/`);
+  await page
+    .getByRole("switch", { name: "Live clock" })
+    .waitFor({ state: "visible" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector(
+          "[data-widget='ptp-clock-converter'] [data-gate~='now-plates'] dd",
+        )?.firstElementChild?.textContent ?? ""
+      ).length > 0,
+    undefined,
+    { polling: 50 },
+  );
+}
+
+/** The PTP nanoseconds plate is the fraction of the UTC plate, padded to nine digits. */
+async function expectNanosOfUtc(page: Page): Promise<void> {
+  const fraction = /\.(\d+)Z$/.exec(await plate(page, "UTC now"))?.[1] ?? "";
+  expect(await plate(page, "PTP nanoseconds")).toBe(
+    String(Number(fraction.padEnd(9, "0"))),
+  );
+}
+
+/** What moved between two snapshots: boxes and plate edges beyond EPSILON, paragraph heights. */
+function diffBoxes(first: Snapshot, now: Snapshot, label: string): string[] {
+  const moved: string[] = [];
+  expect(
+    now.boxes.map((b) => b.key),
+    `boxes on ${label}`,
+  ).toEqual(first.boxes.map((b) => b.key));
+  now.boxes.forEach((b, i) => {
+    const was = first.boxes[i]!;
+    if (
+      Math.abs(b.width - was.width) > EPSILON ||
+      Math.abs(b.height - was.height) > EPSILON
+    ) {
+      moved.push(
+        `${label} ${b.key}: ${was.width}x${was.height} -> ${b.width}x${b.height}`,
+      );
+    }
+  });
+  now.edges.forEach((edge, i) => {
+    const was = first.edges[i];
+    const [, a] = (was ?? "").split(": ");
+    const [, b] = edge.split(": ");
+    const [al, ar] = (a ?? "").split("..").map(Number);
+    const [bl, br] = (b ?? "").split("..").map(Number);
+    if (
+      Math.abs((bl ?? 0) - (al ?? 0)) > EPSILON ||
+      Math.abs((br ?? 0) - (ar ?? 0)) > EPSILON
+    ) {
+      moved.push(`${label} ${edge} (was ${a})`);
+    }
+  });
+  expect(now.paragraphs.length, `paragraphs on ${label}`).toBe(
+    first.paragraphs.length,
+  );
+  now.paragraphs.forEach((h, i) => {
+    const was = first.paragraphs[i]!;
+    if (Math.abs(h - was) > EPSILON) {
+      moved.push(`${label} paragraph ${i}: ${was} -> ${h}`);
+    }
+  });
+  return moved;
+}
+
+/** The two snapshots hold the same boxes, plate edges and paragraph heights. */
+const expectSameBoxes = (first: Snapshot, now: Snapshot, label: string): void =>
+  expect(diffBoxes(first, now, label)).toEqual([]);
+
 describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
   let browser: Browser | undefined;
 
@@ -266,43 +379,7 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
             expect(now.boxes.length).toBeGreaterThan(8);
             continue;
           }
-          expect(
-            now.boxes.map((b) => b.key),
-            `boxes on ${label}`,
-          ).toEqual(first.boxes.map((b) => b.key));
-          now.boxes.forEach((b, i) => {
-            const was = first!.boxes[i]!;
-            if (
-              Math.abs(b.width - was.width) > EPSILON ||
-              Math.abs(b.height - was.height) > EPSILON
-            ) {
-              moved.push(
-                `${label} ${b.key}: ${was.width}x${was.height} -> ${b.width}x${b.height}`,
-              );
-            }
-          });
-          now.edges.forEach((edge, i) => {
-            const was = first!.edges[i];
-            const [, a] = (was ?? "").split(": ");
-            const [, b] = edge.split(": ");
-            const [al, ar] = (a ?? "").split("..").map(Number);
-            const [bl, br] = (b ?? "").split("..").map(Number);
-            if (
-              Math.abs((bl ?? 0) - (al ?? 0)) > EPSILON ||
-              Math.abs((br ?? 0) - (ar ?? 0)) > EPSILON
-            ) {
-              moved.push(`${label} ${edge} (was ${a})`);
-            }
-          });
-          expect(now.paragraphs.length, `paragraphs on ${label}`).toBe(
-            first.paragraphs.length,
-          );
-          now.paragraphs.forEach((h, i) => {
-            const was = first!.paragraphs[i]!;
-            if (Math.abs(h - was) > EPSILON) {
-              moved.push(`${label} paragraph ${i}: ${was} -> ${h}`);
-            }
-          });
+          moved.push(...diffBoxes(first, now, label));
         }
         expect(moved).toEqual([]);
       } finally {
@@ -391,4 +468,143 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
     },
     60_000,
   );
+
+  it.each`
+    width
+    ${300}
+    ${390}
+    ${1280}
+    ${1440}
+  `(
+    "the PTP now readout ticks and holds still at $width px",
+    async ({ width }: { width: number }) => {
+      if (browser === undefined || server === undefined) return;
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      try {
+        await openOnClock(page, base, MOUNT_INSTANT);
+        expect(await plate(page, "UTC now")).toMatch(
+          /^2024-06-12T15:20:00\.250\d{0,6}Z$/,
+        );
+        expect(await plate(page, "PTP seconds")).toBe("1718205637n");
+        await expectNanosOfUtc(page);
+        const base0 = await snapshot(page);
+        for (const n of [1, 2, 3]) {
+          await page.clock.runFor(1000);
+          expect(await plate(page, "UTC now")).toMatch(
+            new RegExp(`^2024-06-12T15:20:0${n}(\\.000\\d{0,6})?Z$`),
+          );
+          expect(await plate(page, "PTP seconds")).toBe(`${1718205637 + n}n`);
+          await expectNanosOfUtc(page);
+          expectSameBoxes(base0, await snapshot(page), `tick ${n}`);
+        }
+        await page.getByRole("switch", { name: "Live clock" }).click();
+        expectSameBoxes(base0, await snapshot(page), "paused");
+        const held = await plate(page, "UTC now");
+        await page.clock.runFor(3000);
+        expect(await plate(page, "UTC now")).toBe(held);
+        expectSameBoxes(base0, await snapshot(page), "paused, 3 s later");
+      } finally {
+        await page.close();
+      }
+    },
+    60_000,
+  );
+
+  it.each`
+    width
+    ${300}
+    ${390}
+    ${1280}
+    ${1440}
+  `(
+    "a PTP now value wraps, so none scrolls and a value that did would be a tab stop, at $width px",
+    async ({ width }: { width: number }) => {
+      if (browser === undefined || server === undefined) return;
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      try {
+        await openOnClock(page, base, MOUNT_INSTANT);
+        await page.clock.runFor(1000);
+        const values = await page.evaluate(() =>
+          Array.from(
+            document.querySelectorAll<HTMLElement>(
+              "[data-widget='ptp-clock-converter'] [data-gate~='now-plates'] dd[data-scrolls]",
+            ),
+            (dd) => ({
+              sideways: dd.scrollWidth > dd.clientWidth + 1,
+              // WebKit lays the hidden samples out 20 px taller than the value, which the
+              // module counts as overflow too (the value's overflow-y is hidden).
+              upDown: dd.scrollHeight > dd.clientHeight + 1,
+              tabindex: dd.getAttribute("tabindex"),
+            }),
+          ),
+        );
+        expect(values.length).toBeGreaterThan(0);
+        for (const v of values) {
+          expect(v.tabindex).toBe(v.sideways || v.upDown ? "0" : null);
+        }
+        // A value wraps anywhere in its plate (`plate-fit`), so none scrolls sideways.
+        expect(values.some((v) => v.sideways)).toBe(false);
+      } finally {
+        await page.close();
+      }
+    },
+    60_000,
+  );
+
+  it.each`
+    width
+    ${300}
+    ${390}
+    ${1280}
+    ${1440}
+  `(
+    "under reduced motion the readout holds the clock it read at $width px",
+    async ({ width }: { width: number }) => {
+      if (browser === undefined || server === undefined) return;
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      try {
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await openOnClock(page, base, MOUNT_INSTANT);
+        const read = await plate(page, "UTC now");
+        expect(read).toMatch(/^2024-06-12T15:20:00\.250\d{0,6}Z$/);
+        expect(await plate(page, "PTP seconds")).toBe("1718205637n");
+        await expectNanosOfUtc(page);
+        await expect(
+          page.getByRole("switch", { name: "Live clock" }).isChecked(),
+        ).resolves.toBe(false);
+        await page.clock.runFor(3000);
+        expect(await plate(page, "UTC now")).toBe(read);
+      } finally {
+        await page.close();
+      }
+    },
+    60_000,
+  );
+
+  it("shows NO SIGNAL for a clock before 1972 and reserves no new width at 1280 px", async () => {
+    if (browser === undefined || server === undefined) return;
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/gmt`;
+    const viewport = { width: 1280, height: 900 };
+    const live = await browser.newPage({ viewport });
+    let first: Snapshot;
+    try {
+      await openOnClock(live, base, MOUNT_INSTANT);
+      first = await snapshot(live);
+    } finally {
+      await live.close();
+    }
+    const page = await browser.newPage({ viewport });
+    try {
+      await openOnClock(page, base, "fixed", BEFORE_1972);
+      for (const caption of ["TAI − UTC", "PTP seconds", "PTP nanoseconds"]) {
+        expect(await plate(page, caption)).toBe("⟨ NO SIGNAL ⟩");
+      }
+      expectSameBoxes(first, await snapshot(page), "1971");
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
 });

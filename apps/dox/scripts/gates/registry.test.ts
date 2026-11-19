@@ -50,6 +50,7 @@ describe("the gate registry", () => {
       "canada-clock-still",
       "canada-stored-still",
       "table-fit",
+      "plate-fit",
     ]);
     expect(at("local")).toHaveLength(GATES.length);
   });
@@ -74,10 +75,11 @@ describe("the gate registry", () => {
   });
 });
 
-// `a11y-tab-walk` lists a subset of the built pages and `table-fit` lists the built pages that hold
-// a table, so without `dist` each exits 2 before it reads a flag: its list fails, and its
-// unknown-page case passes for the wrong reason.
-const LISTS_FROM_DIST = new Set(["a11y-tab-walk", "table-fit"]);
+// `a11y-tab-walk` lists a subset of the built pages, `table-fit` lists the built pages that hold a
+// table and `plate-fit` lists the built tool pages, so
+// without `dist` each exits 2 before it reads a flag: its list fails, and its unknown-page case
+// passes for the wrong reason.
+const LISTS_FROM_DIST = new Set(["a11y-tab-walk", "table-fit", "plate-fit"]);
 
 // Each gate answers the page contract without a browser: a JSON list of site paths, and an unknown
 // page is a usage error (exit 2), so a typo never passes as an empty run.

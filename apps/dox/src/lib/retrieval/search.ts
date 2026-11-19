@@ -88,8 +88,16 @@ const PARTS_BOOST = 0.25;
    "addBusinessDay" still finds the plural "addBusinessDays". */
 const MIN_FUZZY_LENGTH = 6;
 
+/* At most this many edits, however long the term. A fifth of a long
+   identifier is three or four edits, which reaches a different function:
+   `addBusinessDay` (three edits from `isBusinessDay`) ranked that neighbour
+   above `addBusinessDays`, the name it is a prefix of. */
+const MAX_FUZZY_EDITS = 2;
+
 function fuzzyFor(term: string): number {
-  return term.length >= MIN_FUZZY_LENGTH ? 0.2 : 0;
+  return term.length >= MIN_FUZZY_LENGTH
+    ? Math.min(MAX_FUZZY_EDITS, Math.round(term.length * 0.2))
+    : 0;
 }
 
 function tokenizeQuery(text: string): string[] {
@@ -167,6 +175,248 @@ function processTerm(term: string): string | false {
    noise from the index. */
 const MIN_RELEVANCE_SCORE = 8;
 
+/* A sentence about something else still shares a few ordinary words with
+   the guides ("who won the football match last night" meets "match",
+   "night" and "last"), and a few weak hits are enough to put a context in
+   front of the model. What it lacks is the rest of its words: the guides
+   have no "football" and no "won". So a question of MIN_GATED_TERMS or more
+   topic terms with any of them matching no chunk at all is about something
+   else, and finds nothing. One unknown word is enough: the guides use so
+   many everyday words ("tell", "about", "movies", "recommend") that "who is
+   Casey Affleck and what movies did he make" has one unknown word in six.
+
+   A real question can lack words too: a reader's city or noun is not in the
+   guides ("Mumbai", "ferry", "parcel") and says nothing against the
+   question. So the gate applies only to a question with no on-topic
+   evidence of its own. Evidence is any one of
+   - a word that names gmt's functions: a word in at least MIN_NAME_USES
+     function names ("time", "date", "week", "interval", "offset"), which the
+     corpus supplies and nobody lists by hand;
+   - a place that is an IANA time zone city ("Lagos", "Singapore", "Seoul";
+     Mumbai is not one, its zone is Asia/Kolkata), except the EVERYDAY_WORDS
+     that also end a zone id: "data center" (America/North_Dakota/Center) or
+     "Casey Affleck" (Antarctica/Casey) is not a question about time;
+   - a clock or calendar token ("23:40", "2024-06-14", "9am").
+   Such a question is never gated, whatever else it says. A question with
+   none of them and with words nobody wrote about is not about time.
+
+   A zone city also says what the question is about when it never uses the
+   word: "what is 9am in Lagos for me in Singapore" is a conversion between
+   two zones, and shares no word with `convertZonedToZoned` or the guide on
+   timezones. The search therefore adds ZONE_WORD to such a question.
+
+   One zone city, a time of day and a date, and little else ("What happens to
+   1:30am on 27 October 2024 in London?"), is a third kind of question: what
+   that wall-clock time is in that zone on that day. It never says "daylight"
+   or "ambiguous" either, and its numbers, month and city match the worked
+   examples of the cron and scheduling guides, which then fill the context
+   and pull the model to a cron tool. The search therefore adds
+   LOCAL_TIME_WORDS, the words of the guides that say whether a local time
+   exists, repeats or is skipped. "Little else" is at most MAX_OTHER_TERMS
+   terms beyond the city, the month or weekday and the time: "my flight leaves
+   Dubai at 23:40 and lands in Mumbai" has the same shape and says what it is
+   about, so it is left to its own words. Two cities stay a conversion.
+
+   Shorter queries are never gated: a typed name or a two-word lookup has no
+   sentence around it to tell, and a typo there should still land on the
+   nearest function.
+
+   Tried and dropped: gating each chunk by the share of the query's weight it
+   matches. A long, legitimate question (a container's dwell, with a
+   terminal, a city, a month and a time) spreads its words over many chunks,
+   so no chunk covers much of it, and the right ones were cut. Also dropped:
+   the unknown words on their own, with no evidence, which returned nothing
+   for "my boss in Lagos wants a call at 9am his time, what is that for me in
+   Singapore" because "boss", "wants" and "his" are in no guide.
+
+   Numbers, times and ids are what the reader brings, not a topic the guides
+   could be missing, so they are not counted as unknown. */
+const MIN_GATED_TERMS = 3;
+const MIN_NAME_USES = 5;
+const MIN_EVIDENCE_LENGTH = 4;
+const ZONE_WORD = "timezone";
+const LOCAL_TIME_WORDS = "ambiguous nonexistent daylight disambiguation";
+const MAX_OTHER_TERMS = 2;
+
+/** The function that converts between two zones, and where it ranks for a
+ * question that names two zone cities. */
+export const ZONE_CONVERSION_ID = "zoned/convert/convertZonedToZoned";
+const ZONE_CONVERSION_RANK = 3;
+
+const CLOCK_TOKEN =
+  /\b\d{1,2}:\d{2}\b|\b\d{4}-\d{2}(?:-\d{2}|-?w\d{2})?\b|\b\d{1,2}\s?[ap]\.?m\b/i;
+
+/** A time of day: a clock reading or an am/pm hour, with no date alone. */
+const TIME_OF_DAY = /\b\d{1,2}:\d{2}\b|\b\d{1,2}\s?[ap]\.?m\b/i;
+
+/** A date as digits, or a day of the month before a month name. */
+const CALENDAR_DATE = /\b\d{4}-\d{2}-\d{2}\b/;
+
+/** The distinct topic terms of `query`, folded as the index folds them. */
+function topicTerms(query: string): string[] {
+  const terms = new Set<string>();
+  for (const raw of tokenizeQuery(query)) {
+    const term = processTerm(raw);
+    if (term && !/^\p{Nd}/u.test(term)) terms.add(term);
+  }
+  return [...terms];
+}
+
+/** The words that name gmt's functions, in at least MIN_NAME_USES of them. */
+function nameWordsOf(chunks: RetrievalChunk[]): Set<string> {
+  const uses = new Map<string, number>();
+  for (const chunk of chunks) {
+    if (chunk.id.startsWith("/")) continue;
+    const words = new Set(identifierWords(chunk.title));
+    if (tokenizeQuery(chunk.title).length === 1) {
+      for (const word of tokenizeQuery(chunk.title)) words.add(word);
+    }
+    for (const word of words) {
+      const lower = word.toLowerCase();
+      if (lower.length >= MIN_EVIDENCE_LENGTH && !/^\p{Nd}/u.test(lower)) {
+        uses.set(lower, (uses.get(lower) ?? 0) + 1);
+      }
+    }
+  }
+  return new Set(
+    [...uses].filter(([, n]) => n >= MIN_NAME_USES).map(([word]) => word),
+  );
+}
+
+/** Last parts of zone ids that are, far more often, an English word or a
+ * person's name: a question using one is no more about time than any other.
+ * The cities a reader asks the time of stay places, even where they are also
+ * names ("Phoenix", "Lima", "Hobart"); a real question naming one of these
+ * also names a second city or a clock time, which is evidence enough. */
+export const EVERYDAY_WORDS: ReadonlySet<string> = new Set([
+  "beulah",
+  "canary",
+  "casey",
+  "center",
+  "christmas",
+  "darwin",
+  "davis",
+  "dawson",
+  "easter",
+  "guernsey",
+  "jersey",
+  "knox",
+  "midway",
+  "oral",
+  "palmer",
+  "regina",
+  "resolute",
+  "reunion",
+  "stanley",
+  "troll",
+  "wake",
+  "wallis",
+]);
+
+/** Single-word IANA zone cities in lower case, and the multi-word ones with
+ * a space ("new york"), less EVERYDAY_WORDS. Empty where the runtime cannot
+ * list zones. */
+const ZONE_PLACES: { words: Set<string>; phrases: string[] } = (() => {
+  const words = new Set<string>();
+  const phrases: string[] = [];
+  try {
+    for (const zone of Intl.supportedValuesOf("timeZone")) {
+      const place = zone.slice(zone.lastIndexOf("/") + 1).toLowerCase();
+      const spaced = place.replaceAll("_", " ");
+      if (spaced.includes(" ")) phrases.push(spaced);
+      else if (
+        place.length >= MIN_EVIDENCE_LENGTH &&
+        !EVERYDAY_WORDS.has(place)
+      )
+        words.add(place);
+    }
+  } catch {
+    // A runtime without the list simply has fewer places to recognise.
+  }
+  return { words, phrases };
+})();
+
+/** How many distinct IANA time zone cities the terms name. */
+function zonePlaceCount(terms: string[]): number {
+  const named = new Set(terms.filter((term) => ZONE_PLACES.words.has(term)));
+  const spaced = ` ${terms.join(" ")} `;
+  for (const phrase of ZONE_PLACES.phrases) {
+    if (spaced.includes(` ${phrase} `)) named.add(phrase);
+  }
+  return named.size;
+}
+
+/** How many distinct IANA time zone cities `query` names ("Lagos", "New York"). */
+export function zonePlacesIn(query: string): number {
+  return zonePlaceCount(topicTerms(query));
+}
+
+/** Whether the query names an IANA time zone city. */
+function namesZonePlace(terms: string[]): boolean {
+  return zonePlaceCount(terms) > 0;
+}
+
+/** The month and weekday names, long and short, as the reader types them. */
+const JANUARY_2024 = 1_704_067_200_000;
+const DAY = 86_400_000;
+const DATE_WORDS: Set<string> = (() => {
+  const words = new Set<string>();
+  const format = (options: Intl.DateTimeFormatOptions, count: number) => {
+    for (let n = 0; n < count; n++) {
+      // Milliseconds since the epoch: 1 January 2024 (a Monday) plus n days,
+      // or plus the middle of month n, which no time zone can move to a
+      // neighbouring month.
+      const days = "weekday" in options ? n : 15 + 30.5 * n;
+      const date = JANUARY_2024 + days * DAY;
+      words.add(
+        new Intl.DateTimeFormat("en", { ...options, timeZone: "UTC" })
+          .format(date)
+          .toLowerCase()
+          .replace(".", ""),
+      );
+    }
+  };
+  format({ month: "long" }, 12);
+  format({ month: "short" }, 12);
+  format({ weekday: "long" }, 7);
+  format({ weekday: "short" }, 7);
+  return words;
+})();
+
+/** Whether `query` names one zone city, a time of day and a date and says
+ * little else: a question about what that clock reading is there. */
+function asksLocalTime(query: string, terms: string[]): boolean {
+  if (zonePlaceCount(terms) !== 1 || !TIME_OF_DAY.test(query)) return false;
+  if (!CALENDAR_DATE.test(query) && !terms.some((t) => DATE_WORDS.has(t))) {
+    return false;
+  }
+  const spaced = ` ${terms.join(" ")} `;
+  const inPhrase = ZONE_PLACES.phrases
+    .filter((phrase) => spaced.includes(` ${phrase} `))
+    .flatMap((phrase) => phrase.split(" "));
+  const others = terms.filter(
+    (term) =>
+      !ZONE_PLACES.words.has(term) &&
+      !inPhrase.includes(term) &&
+      !DATE_WORDS.has(term),
+  );
+  return others.length <= MAX_OTHER_TERMS;
+}
+
+/** Whether `query` carries evidence that it is about time at all. */
+function hasTopicEvidence(
+  query: string,
+  terms: string[],
+  nameWords: Set<string>,
+): boolean {
+  if (CLOCK_TOKEN.test(query) || namesZonePlace(terms)) return true;
+  return terms.some((term) => {
+    if (term.length < MIN_EVIDENCE_LENGTH) return false;
+    for (const word of nameWords) if (term.startsWith(word)) return true;
+    return false;
+  });
+}
+
 function buildIndex(chunks: RetrievalChunk[]): MiniSearch<RetrievalChunk> {
   const index = new MiniSearch<RetrievalChunk>({
     idField: "id",
@@ -193,6 +443,7 @@ function buildIndex(chunks: RetrievalChunk[]): MiniSearch<RetrievalChunk> {
 }
 
 interface Indexed {
+  nameWords: Set<string>;
   index: MiniSearch<RetrievalChunk>;
   byId: Map<string, RetrievalChunk>;
 }
@@ -212,36 +463,13 @@ export function indexFor(chunks: RetrievalChunk[]): Indexed {
   let indexed = INDEXES.get(chunks);
   if (!indexed) {
     indexed = {
+      nameWords: nameWordsOf(chunks),
       index: buildIndex(chunks),
       byId: new Map(chunks.map((c) => [c.id, c])),
     };
     INDEXES.set(chunks, indexed);
   }
   return indexed;
-}
-
-/* A question that names a wall-clock time on a calendar date is, near a clock
-   change, a question about whether that time exists, whatever words it uses:
-   "what happens at 03:30 on 31 October?" shares no word with the pages on gaps
-   and overlaps, so BM25 ranked recurrence, aviation and workforce pages above
-   them. Such a question therefore also searches for the words those pages use.
-   One rule for every zone and date; it names none.
-
-   The second search is a nudge, not a rival: its scores count at
-   CLOCK_CHANGE_WEIGHT, so a question that is really about something else with
-   a time in it ("how many days from 23:00 on 15 June to 01:00") keeps its own
-   pages on top and only gains the clock-change pages beside them. */
-const WALL_CLOCK_TIME = /\b\d{1,2}[:.]\d{2}\b|\b\d{1,2}\s?[ap]\.?m\b/i;
-const CALENDAR_DATE =
-  /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}\b/i;
-const CLOCK_CHANGE_WORDS = "local time exists clock change gap overlap";
-const CLOCK_CHANGE_WEIGHT = 0.5;
-
-/** The clock-change words to add to a search for `query`, or `undefined` when it names no time on a date. */
-export function clockChangeWords(query: string): string | undefined {
-  return WALL_CLOCK_TIME.test(query) && CALENDAR_DATE.test(query)
-    ? CLOCK_CHANGE_WORDS
-    : undefined;
 }
 
 /**
@@ -257,29 +485,47 @@ export function searchChunks(
   options: SearchOptions = {},
 ): RetrievalChunk[] {
   const { namespace, limit = 15 } = options;
-  const { index, byId } = indexFor(chunks);
+  const { index, byId, nameWords } = indexFor(chunks);
 
-  const searchOptions = {
+  const terms = topicTerms(query);
+  // A city says the question is about a zone even when it never says "zone":
+  // "what is 9am in Lagos for me in Singapore" is a conversion between two.
+  let searched = namesZonePlace(terms) ? `${query} ${ZONE_WORD}` : query;
+  // A reader who only names a clock reading, a day and a place is asking what
+  // that reading is there: it may not exist, or happen twice.
+  if (asksLocalTime(query, terms)) searched += ` ${LOCAL_TIME_WORDS}`;
+
+  const results = index.search(searched, {
     boostDocument: namespace
-      ? (_id: unknown, _term: string, stored?: Record<string, unknown>) =>
-          stored?.["namespace"] === namespace ? NAMESPACE_BOOST : 1
+      ? (_id, _term, stored) =>
+          stored?.namespace === namespace ? NAMESPACE_BOOST : 1
       : undefined,
-  };
-  let results = index.search(query, searchOptions);
-  const extra = clockChangeWords(query);
-  if (extra !== undefined) {
-    const scores = new Map(results.map((r) => [r.id, r.score]));
-    for (const r of index.search(extra, searchOptions)) {
-      scores.set(r.id, (scores.get(r.id) ?? 0) + CLOCK_CHANGE_WEIGHT * r.score);
-    }
-    results = [...scores]
-      .map(([id, score]) => ({ id, score }))
-      .sort((a, b) => b.score - a.score) as typeof results;
+  });
+
+  if (
+    terms.length >= MIN_GATED_TERMS &&
+    !hasTopicEvidence(query, terms, nameWords)
+  ) {
+    const unknown = terms.filter(
+      (term) =>
+        index.search(term, { prefix: true, fuzzy: fuzzyFor }).length === 0,
+    );
+    if (unknown.length > 0) return [];
   }
 
-  return results
+  const hits = results
     .filter((r) => r.score >= MIN_RELEVANCE_SCORE)
-    .slice(0, limit)
     .map((r) => byId.get(r.id))
     .filter((c): c is RetrievalChunk => c !== undefined);
+
+  // Two zone cities make it a conversion between zones, whatever else the
+  // sentence says ("shift", "free", "hours" pull in guides about those): the
+  // conversion function is always among the first few.
+  const anchor = byId.get(ZONE_CONVERSION_ID);
+  if (anchor && hits.length > 0 && zonePlaceCount(terms) >= 2) {
+    const rest = hits.filter((chunk) => chunk.id !== anchor.id);
+    rest.splice(ZONE_CONVERSION_RANK, 0, anchor);
+    return rest.slice(0, limit);
+  }
+  return hits.slice(0, limit);
 }

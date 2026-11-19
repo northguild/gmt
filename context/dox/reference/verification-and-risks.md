@@ -27,6 +27,11 @@
   scrolls sideways at 1440 px, or holds a cell whose content spills out of it at 1440 or 390 px. It is a weekly gate in three browsers. In CI it is the `dox-tables` check,
   run in Chromium as four `dox-table-fit` shards on the `dox-site` artifact, on every Dox change and
   every `packages/gmt/src` change, and always over every table page.
+- **Plates fit:** `plate-fit` (`scripts/plate-fit.mjs`) fails when text in a readout plate, or the
+  widest reading a plate reserves room for, runs past the plate's edge at any width from 320 to
+  1920 px on any built tool page. A weekly gate in three browsers and both themes. A tool's column
+  count and breakpoints are sized to its widest reading across its whole input range, and a value
+  that may be wider than its plate wraps instead of scrolling.
 - **Visual gates** after any CSS or widget-markup change: `visual:diff` and
   `scripts/html-diff.mjs`, through `pnpm --filter dox gates --baseline <base apps/dox>` (see
   [design-system.md](design-system.md)).
@@ -43,6 +48,8 @@
   `data-role`. Renaming a control's label or removing a hook shows as a `--resolve-only` miss
   naming the locator.
 - **Chat:**
+  - The offline evals pass: `pnpm --filter @gmt/dox exec vitest run evals/`. A changed floor in
+    `evals/baseline.json` is explained in the PR, and a lowered floor is a finding.
   - An out-of-corpus question is **refused, not improvised**.
   - A hallucinated route renders as **plain text**, never a broken link.
   - Nonsense tool arguments, an unknown tool name and an `output-error` part each render an
@@ -51,6 +58,10 @@
   - A reference page loads **no React bundle** (network panel).
   - Tailwind Preflight is absent from the build.
   - No model key appears in `dist/` or in any `/api/chat` response.
+  - Live checks spend real quota. When the diff touches a file named in
+    `built/tier-6-evals.md` § When the live run is required, check that the PR carries a fresh
+    `evals/live-<brainId>.json` and that no case regressed. Run `evals:live` only on the
+    owner's word.
 - **Bundle:** the Worker stays under Cloudflare's 3 MB compressed limit
   (`wrangler deploy --dry-run`).
 
@@ -62,8 +73,8 @@
   `main`, which Release does on every push. It also runs daily at 06:00 UTC and from a manual
   `workflow_dispatch`. It has no path filter.
 - **Free-tier quotas move.** Gemini withdraws models from new keys without notice, and Workers
-  AI's allocation is per account. Re-probe brains after provider releases (runbook in
-  `built/tier-6-brains.md`).
+  AI's allocation is per account. Re-run `eval-live.ts --brains all` after provider releases (runbook in
+  `built/tier-6-evals.md`).
 - **Stay on the Workers Free plan.** There an exhausted Workers AI allocation fails; on Workers
   Paid it bills, and nothing in code can see which plan is active.
 - **AI Elements are vendored.** Upstream fixes do not arrive on their own, and a re-sync is a

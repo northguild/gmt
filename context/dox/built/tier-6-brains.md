@@ -4,7 +4,7 @@ Part of [built/index.md](index.md). Chat surface: [tier-6-chat.md](tier-6-chat.m
 
 ## Brains and budget
 
-- `BRAINS` (`src/lib/chat-constants.ts`) is in preference order and `BRAINS[0]` is the default. Workers AI `cf-gemma-4-26b` and `cf-glm-4.7-flash` lead (badge 40 a day each); Gemini `gemini-3.5-flash-lite`, `gemini-3.6-flash` and `gemini-3.5-flash` follow (about 20 a day each).
+- `BRAINS` (`src/lib/chat-constants.ts`) is in preference order and `BRAINS[0]` is the default. Workers AI `cf-gemma-4-26b` and `cf-glm-4.7-flash` lead (badge 15 and 20 a day, from measured Neuron costs: about 270 to 350 a Gemma question and 160 to 200 a GLM question, so the two badges together fit the 10,000 pool); Gemini `gemini-3.5-flash-lite`, `gemini-3.6-flash` and `gemini-3.5-flash` follow (about 20 a day each).
 - Allowances live in `BRAIN_PROVIDERS`. Gemini is per project per model and resets at midnight Pacific. Workers AI is 10,000 Neurons a day per account, shared by its brains, and resets at 00:00 UTC. Exhaustion fails rather than bills on the Free plan, so stay on Free.
 - The ledger (`worker/usage.ts`, KV `DOX_USAGE`) is advisory: it drives the badge, the provider's error is the gate. Keys bucket by the provider's day. The visitor cap is on the UTC day (`VISITOR_CAP_TIME_ZONE` in `src/lib/pt-day.ts`). Writes are best-effort; visitors are hashed IPs.
 - `VISITOR_DAILY_MAX` is 5. Recompute it whenever `BRAINS` changes.
@@ -15,7 +15,7 @@ Part of [built/index.md](index.md). Chat surface: [tier-6-chat.md](tier-6-chat.m
   - A slow brain is skipped with outcome `slow` (`BRAIN_START_TIMEOUT_MS`: Gemini 15 s, Workers AI 20 s). `BrainsTimedOutError` becomes a retryable `503` through `mapUpstreamError`.
   - Workers AI allocation exhaustion (`3036`, or the unmapped `4006`) retires every Workers AI brain. A capacity `429` (`3040`) is transient and marks nothing.
   - `isTransientOverload` (`503`, `529`) moves on with outcome `busy` and writes nothing. A `500` stops at the first brain.
-- Thinking is off on every brain. Gemini `thinkingLevel` is `"low"`, passed as `providerOptions.google.thinkingConfig`; a brain that stops calling its widget under low moves to medium. Workers AI sends `enableThinking: false` as `chat_template_kwargs` (`worker/workers-ai-settings.ts`); `reasoning_effort` does not work. Confirm with `probe-brains.ts` after any change.
+- Thinking is off on every brain. Gemini `thinkingLevel` is `"low"`, passed as `providerOptions.google.thinkingConfig`; a brain that stops calling its widget under low moves to medium. Workers AI sends `enableThinking: false` as `chat_template_kwargs` (`worker/workers-ai-settings.ts`); `reasoning_effort` does not work. Confirm with `eval-live.ts --brains <id>` after any change ([tier-6-evals.md](tier-6-evals.md)).
 - Workers AI wiring: `workers-ai-provider@4` over the `AI` binding (`remote: true`); `worker/index.ts` offers only configured brains; `maxOutputTokens: 2048` per brain. Every answer logs a `dox-usage` line.
 - Probe results: kept gemma-4-26b-a4b-it and glm-4.7-flash. Dropped llama-3.3-70b and mistral-small-3.1 (`workers-ai-provider@4.0.0` duplicates deltas; re-probe when fixed), gpt-oss-120b, qwen3.8-27b and nemotron-3-120b (about 600 Neurons a prompt) and paid-plan models (error `5035`).
 - A local `wrangler dev` spends the Neurons of the logged-in account.

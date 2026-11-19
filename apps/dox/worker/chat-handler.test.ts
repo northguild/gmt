@@ -692,6 +692,93 @@ describe("createChatHandler", () => {
     });
   });
 
+  /* `starter-showGnssWeekDecoder` (evals/cases.ts), live 2026-11-18 on Gemma 4:
+     the call failed validation, the prose step then wrote the call as text,
+     and the reader saw raw markup and a bare failure line. */
+  describe("a decoder call the model typed loosely", () => {
+    const question =
+      "A receiver reports Galileo week 1024, 18 seconds in, first era: what UTC time is that?";
+    const usage = {
+      inputTokens: {
+        total: 10,
+        noCache: 10,
+        cacheRead: undefined,
+        cacheWrite: undefined,
+      },
+      outputTokens: { total: 10, text: 0, reasoning: undefined },
+    };
+    const call = (
+      input: Record<string, unknown>,
+    ): LanguageModelV4StreamPart[] => [
+      { type: "stream-start", warnings: [] },
+      {
+        type: "tool-call",
+        toolCallId: "call-1",
+        toolName: "showGnssWeekDecoder",
+        input: JSON.stringify(input),
+      },
+      {
+        type: "finish",
+        finishReason: { unified: "tool-calls", raw: undefined },
+        usage,
+      },
+    ];
+    const GOOD = {
+      mode: "broadcast",
+      counter: "GAL",
+      week: 1024,
+      timeOfWeekSeconds: 18,
+      rolloverEra: "0",
+    };
+    const ask = async (
+      first: LanguageModelV4StreamPart[],
+      later = "Era 0.",
+    ) => {
+      let calls = 0;
+      const model = new MockLanguageModelV4({
+        doStream: async () => ({
+          stream: convertArrayToReadableStream(
+            calls++ === 0 ? first : textStreamParts(later),
+          ),
+        }),
+      });
+      const handler = makeHandler({
+        resolveModel: singleBrain(model),
+        searchChunksImpl: () => SAMPLE_CHUNKS,
+      });
+      const response = await handler(
+        chatRequest({ messages: [userMessage(question)] }),
+      );
+      return response.text();
+    };
+
+    it("opens the widget when the era came back as a number", async () => {
+      const body = await ask(call({ ...GOOD, rolloverEra: 0 }));
+      expect(partsOfType(body, "tool-input-error")).toEqual([]);
+      const [opened] = partsOfType(body, "tool-input-available");
+      expect(opened.input).toEqual(GOOD);
+    });
+
+    it("opens the widget when the model wrote Gemma's call as text, and shows no markup", async () => {
+      const written =
+        '<|tool_call>call:showGnssWeekDecoder{mode:<|"|>broadcast<|"|>,counter:<|"|>GAL<|"|>,rolloverEra:<|"|>0<|"|>,timeOfWeekSeconds:18,week:1024}<tool_call|>';
+      const body = await ask(textStreamParts(written));
+      expect(body).not.toContain("tool_call");
+      expect(body).not.toContain("<|");
+      const [opened] = partsOfType(body, "tool-input-available");
+      expect(opened.input).toEqual(GOOD);
+      expect(body).toContain("Era 0.");
+    });
+
+    it("never shows the bare failure line for a call that cannot be repaired", async () => {
+      const body = await ask(call({ ...GOOD, week: "soon" }));
+      const errors = partsOfType(body, "tool-input-error");
+      expect(errors).toHaveLength(1);
+      expect(String(errors[0].errorText)).toMatch(/could not open that tool/);
+      expect(body).not.toContain("Something went wrong");
+    });
+  });
+
   it("logs one dox-timing line per answered request", async () => {
     const logged: string[] = [];
     const spy = vi.spyOn(console, "log").mockImplementation((...args) => {

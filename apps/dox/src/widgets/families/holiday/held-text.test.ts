@@ -2,7 +2,7 @@
 import { screen } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
-import { heldText } from "./held-text";
+import { heldText, paintHeldText } from "./held-text";
 
 describe("heldText", () => {
   it("announces the live text", () => {
@@ -49,5 +49,22 @@ describe("heldText", () => {
       heldText({ text: "x", state: "note", sizers: ["x"], live: true }),
     );
     await expectNoAxeViolations(host);
+  });
+});
+
+describe("paintHeldText", () => {
+  it("writes the text into the same line", () => {
+    const { host } = renderHtml(
+      heldText({
+        text: "One",
+        state: "note",
+        sizers: ["One", "Two"],
+        label: "Hint",
+      }),
+    );
+    const line = screen.getByRole("note", { name: "Hint" });
+    paintHeldText(host, "Two", "sentinel");
+    expect(screen.getByRole("note", { name: "Hint" })).toBe(line);
+    expect(line).toHaveTextContent("Two");
   });
 });

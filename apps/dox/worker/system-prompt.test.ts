@@ -153,6 +153,47 @@ describe("assembleSystemPrompt", () => {
       expect(prompt).toContain("Write your prose answer first");
     });
 
+    it("keeps a matching question out of the refusal, in the last section", () => {
+      // `fault-converter-no-call` (evals/cases.ts): the model read "context does
+      // not answer" and refused a conversion the converter widget exists for.
+      const prompt = withTools();
+      const refusal = prompt.slice(prompt.indexOf("## Refusal instruction"));
+      expect(refusal).toContain("is covered by that tool");
+      expect(refusal).toContain("never a refusal");
+    });
+
+    it("leaves the refusal alone when no tool is offered", () => {
+      const prompt = assembleSystemPrompt({
+        routeAllowlist: [],
+        chunks: [],
+        vocabulary: "",
+        coreRules: "CORE_RULES_MARKER",
+      });
+      expect(prompt).not.toContain("never a refusal");
+    });
+
+    it("writes `Call when` once, whatever the registry entry starts or ends with", () => {
+      const prompt = assembleSystemPrompt({
+        routeAllowlist: [],
+        chunks: [],
+        vocabulary: "",
+        coreRules: "CORE_RULES_MARKER",
+        tools: [
+          {
+            name: "showCronInAZone",
+            purpose: "A cron line.",
+            when: "Call when the reader asks about a cron job. Pass the line as given.",
+            args: "line",
+          },
+        ],
+      });
+      expect(prompt).toContain(
+        "Call when the reader asks about a cron job. Pass the line as given.\n",
+      );
+      expect(prompt).not.toContain("Call when Call when");
+      expect(prompt).not.toContain("given..");
+    });
+
     it("still caps a turn at one widget", () => {
       expect(withTools()).toContain("At most one tool per answer");
     });
