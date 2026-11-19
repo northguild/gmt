@@ -61,15 +61,17 @@
     }
   }
 
-  /* A value that scrolls (a fraction makes an instant 22 to 30 characters) shows its track in
-     every state, so where scrollbars take room (WebKit) no plate grows when one starts to scroll. */
+  /* A value wraps anywhere, so the widest instant (`+275760-09-12T23:59:59.999999999Z`, 33
+     characters) and a nineteen-digit count stay inside the plate. The reserved samples share the
+     value's cell, so the plate holds the height of the longest wrap. */
   & [data-series] dd {
-    overflow-x: scroll;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
-  /* In two columns an instant (20 characters) must fit a half-width plate, or the value scrolls
-     and WebKit's scrollbar makes that plate taller than one that does not. The size follows the
-     slot: a character is about 0.62 of the size wide. */
+  /* In two columns an instant (20 characters) fits a half-width plate on one line, or the value
+     wraps. The size follows the slot: a character is about 0.62 of the size wide. */
   @container slot (inline-size >= 36rem) {
     & [data-series] {
       --value-live: clamp(0.75rem, (50cqi - 3.25rem) / 12.6, 2rem);

@@ -50,12 +50,21 @@
     min-block-size: calc(1.15 * var(--value-live));
   }
 
+  /* A value wraps anywhere instead of scrolling, so the longest instant stays inside its plate.
+     The reserved samples share the value's cell, so the plate holds the height of the longest
+     wrap. */
+  & [data-series] dd {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
   /* The longest instant, +275760-09-13T00:00:00Z, must fit a plate without the value scrolling.
      A narrow slot sets the plates' value a size smaller, down to 12px; the ghosts use the same
      size, so a plate still holds its width. The sentinel takes the live size here, so a plate
      going from a date to NO SIGNAL keeps its height; the call line under the value stays at its
      own size, or its height would change with the state. A value with nanoseconds is wider than
-     the plate at 320px: it scrolls sideways (`signal-plates.module.css`). */
+     the plate at 320px: it wraps anywhere, below. */
   @container slot (inline-size < 40rem) {
     & [data-series] {
       --value-live: clamp(0.75rem, (100cqi - 2.5rem) / 21, 1rem);

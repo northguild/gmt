@@ -45,7 +45,7 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 
 ## Owed verification
 
-- The Firefox and WebKit legs of `grow-measure`, `readout-still`, `data-credits-check`, `canada-clock-still`, `canada-stored-still`, `canada-layout-check`, `a11y-axe`, `a11y-tab-walk` and `a11y-media`, on a machine where Firefox launches.
+- The Firefox and WebKit legs of `grow-measure`, `readout-still`, `data-credits-check`, `canada-clock-still`, `canada-stored-still`, `canada-layout-check`, `plate-fit`, `a11y-axe`, `a11y-tab-walk` and `a11y-media`, on a machine where Firefox launches.
 - The runner's `--baseline` path for `html-diff` and `visual-diff` end to end on a real base tree.
 - `html-diff` and `visual:diff` after the interval visualizer's `data-role="axis"` attribute, against a baseline from the commit before it.
 - The tier 3 keyboard-only, reduced-preference and Firefox/Safari pass.

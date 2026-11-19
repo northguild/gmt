@@ -117,6 +117,8 @@ const lanesFor = (scale: Scale): string[] => [
 
 const SAMPLE_UTC = "8888-88-88T88:88:88.888888888Z";
 const SAMPLE_VALUE = "8888888 + 0.8888888888888888";
+/** Until the library is read: the widest one-number plate (`-883655957.9260122`). */
+const SAMPLE_NUMBER = "8888888.8888888888";
 const SAMPLE_CALL = `toJulianDateParts("${SAMPLE_UTC}", "UTC")`;
 
 /** What the mount learns from the library about the widest things a reading prints. */
@@ -145,7 +147,8 @@ const PLATE_ROLES = FORMS.map((f) => `hero-${f}`);
 
 function plateSamples(role: string, samples: Samples): string[] {
   const read = samples.values[role] ?? [];
-  return [NO_RESULT, ...(read.length > 0 ? read : [SAMPLE_VALUE])];
+  const unread = role === "hero-parts" ? SAMPLE_VALUE : SAMPLE_NUMBER;
+  return [NO_RESULT, ...(read.length > 0 ? read : [unread])];
 }
 
 /** Every sentence the tool can say in place of an answer. */
@@ -168,7 +171,8 @@ function plateList(read: CounterRead | null, samples: Samples): Plate[] {
       caption: FORM_NAMES[form],
       value: s?.value ?? null,
       lines,
-      unbroken: true,
+      // The two-part form is two numbers and a plus sign: it wraps where one number does not.
+      unbroken: form !== "parts",
       lineSamples:
         held.length > 0
           ? held

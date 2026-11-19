@@ -119,11 +119,13 @@
   visibility: hidden;
 }
 
-/* A written code holds still: figures tabulated, never wrapped. */
+/* A written code is tabulated and wraps anywhere once the plate is narrower than the widest
+   code (`2016-12-31T23:59:60.123456789Z`). The reserved widest code shares the cell, so the
+   plate holds the height of the longest wrap. */
 .code {
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* The sentinel's word inside a written code's plate. */

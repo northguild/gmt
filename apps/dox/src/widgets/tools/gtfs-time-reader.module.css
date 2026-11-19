@@ -51,6 +51,15 @@
     }
   }
 
+  /* A value wraps anywhere instead of scrolling, so a wide face (WebKit's monospace) never takes
+     it past the plate. The reserved samples share the value's cell, so the plate holds the
+     height of the longest wrap. */
+  & [data-series] dd {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
   & [data-gate="hero"],
   & [data-gate="write-plates"] {
     display: grid;
