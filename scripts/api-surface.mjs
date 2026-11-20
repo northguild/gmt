@@ -106,7 +106,7 @@
  * site section (`/guides/…`, `/tools/…`) in every documentation file; and, on docs-site pages, every
  * Markdown or `href` target that is root-relative or relative — the latter resolved against the
  * page's own trailing-slash URL, as a browser does. `/reference/…` links are the reference-link
- * check's.
+ * check's. `/api/…` names a Worker route (`apps/dox/worker/index.ts`), not a page, so it is skipped.
  */
 
 import { spawnSync } from "node:child_process";
@@ -957,6 +957,8 @@ function checkSiteLinks(file, text) {
       "$1",
     );
     if (route === "/reference" || route.startsWith("/reference/")) continue;
+    // A Worker route (the MCP endpoint), answered before the assets: no page to find.
+    if (route.startsWith("/api/")) continue;
     siteLinksChecked++;
     if (!siteRoutes.has(route))
       siteLinks.push({

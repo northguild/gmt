@@ -13,6 +13,8 @@ import { getUnixNow } from "@northguild/gmt/unix/get";
 import { handleCanadaClockChange } from "./canada-clock-change";
 import { handleSunshineProtectionAct } from "./sunshine-protection-act";
 import { handleMoroccoClockChange } from "./morocco-clock-change";
+import { handleMcp } from "./mcp";
+import { INDUSTRY_TAG_IDS } from "../src/lib/industry-tags";
 import { createChatHandler } from "./chat-handler";
 import { CORE_RULES_CONTENT } from "./core-rules";
 import {
@@ -189,6 +191,19 @@ async function routeApi(
   }
   if (path === "/api/sunshine-protection-act") {
     return handleSunshineProtectionAct(request, env);
+  }
+
+  // No trailing slash: wrangler.jsonc's `!/gmt/*/` sends any path ending in `/` to the assets, which
+  // answer a POST with 405 before the Worker runs, and a negative pattern always wins.
+  const mcp = /^\/api\/mcp(?:\/([^/]+))?$/.exec(path);
+  if (mcp) {
+    const scope = mcp[1];
+    if (scope === undefined) return handleMcp(request, "all");
+    if (INDUSTRY_TAG_IDS.includes(scope)) return handleMcp(request, scope);
+    return Response.json(
+      { error: "unknown-scope", scopes: [...INDUSTRY_TAG_IDS] },
+      { status: 404 },
+    );
   }
 
   if (path !== "/api/chat") return undefined;

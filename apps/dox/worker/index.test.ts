@@ -478,6 +478,39 @@ describe("worker entry — northguild.dev/gmt (matrix rows 19-25, 34)", () => {
   });
 });
 
+describe("worker entry — /gmt/api/mcp (DOX-G14)", () => {
+  it.each([
+    ["/gmt/api/mcp", 405],
+    ["/gmt/api/mcp/transport", 405],
+    ["/gmt/api/mcp/nope", 404],
+  ])(
+    "%s is the MCP route, not an asset (GET answers %i)",
+    async (path, status) => {
+      const assets = assetsBinding();
+      const response = await worker.fetch(
+        nd(path),
+        makeEnv({ ASSETS: assets.binding }),
+      );
+      expect(response.status).toBe(status);
+      expect(assets.calls).toHaveLength(0);
+    },
+  );
+
+  // Live, the assets answer a path ending in `/` before the Worker runs (wrangler.jsonc), so the
+  // Worker never claims one either.
+  it.each(["/gmt/api/mcp/", "/gmt/api/mcp/transport/"])(
+    "%s is not the MCP route",
+    async (path) => {
+      const assets = assetsBinding();
+      await worker.fetch(
+        nd(path, { method: "POST", body: "{}" }),
+        makeEnv({ ASSETS: assets.binding }),
+      );
+      expect(assets.calls).toHaveLength(1);
+    },
+  );
+});
+
 describe("corpusFetcher — where the retrieval corpus is read from", () => {
   it("reads through the assets binding when no dev origin is set", async () => {
     const assets = assetsBinding();

@@ -14,7 +14,7 @@
  * Run as: tsx apps/dox/scripts/build-tool-index.ts
  */
 
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -123,3 +123,23 @@ if (previous === source) {
   writeFileSync(indexPath, source);
   console.log(`[tools] wrote index.mdx with ${tools.length} tools`);
 }
+
+// The MCP scopes read each tool page's industries from here, so the frontmatter is parsed once.
+const industriesPath = resolve(
+  appRoot,
+  "src",
+  "generated",
+  "tool-industries.json",
+);
+const industriesJson = `${JSON.stringify(
+  Object.fromEntries(
+    tools
+      .filter((tool) => tool.directory === "tools")
+      .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0))
+      .map((tool) => [tool.slug, tool.industries]),
+  ),
+  null,
+  2,
+)}\n`;
+mkdirSync(dirname(industriesPath), { recursive: true });
+writeFileSync(industriesPath, industriesJson);

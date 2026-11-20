@@ -4,8 +4,9 @@
  * `offer.ts` ships in every tool page's entry chunk, so it reaches `model-context.ts` and nothing
  * else. The rest of `webmcp/**` runs only when a browser offers WebMCP; it must stay free of the
  * chat's SDK and of widget code. `lib/widget-mount.ts` is allowed: it holds the shared
- * `WidgetLoadError` and imports nothing. A `.module.css` is banned because `pruneWidgetCss` counts a
- * preload chunk that names a widget's classes as a use.
+ * `WidgetLoadError`, and its one import, `./sound/cue`, has no effect at module scope. A
+ * `.module.css` is banned because `pruneWidgetCss` counts a preload chunk that names a widget's
+ * classes as a use.
  */
 import path from "node:path";
 import {
