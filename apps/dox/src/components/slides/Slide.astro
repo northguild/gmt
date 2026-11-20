@@ -10,6 +10,8 @@
  * `reveal` names a zone: the slides before this one show a 24-hour clock of its wall time in the
  * Earth's place, and this slide turns the clock into the Earth (`lib/slides/earth-clock.ts`).
  * `clock` stands that clock in the Earth's place again on a slide past the reveal, as the close does.
+ * `plainClock` leaves the GMT mark, the city and the offset off the clock while the slide shows: the
+ * clock of a machine that knows no place, for the slides about `Date`.
  * A `spare` slide is held back for questions: it takes no `minutes`, a main slide must take them, and
  * either mistake fails the build. A spare renders `data-spare` and no `data-minutes`, so the pace
  * plan leaves it out, and it comes after `thanks` (`lib/slides/deck.ts`).
@@ -38,10 +40,12 @@ interface Props {
   reveal?: string;
   /** Show the reveal's clock in the Earth's place on this slide, past the reveal. */
   clock?: boolean;
+  /** Show the clock without its GMT mark, city and offset. */
+  plainClock?: boolean;
   /** Turn the Earth while the slide shows. */
   spin?: boolean;
 }
-const { id, title, minutes, spare = false, place, lapse, pins, layout = "default", reveal, clock = false, spin = false } = Astro.props;
+const { id, title, minutes, spare = false, place, lapse, pins, layout = "default", reveal, clock = false, plainClock = false, spin = false } = Astro.props;
 if (spare && minutes !== undefined)
   throw new Error(`Slide "${id}" is a spare and takes no minutes`);
 if (!spare && minutes === undefined)
@@ -60,6 +64,7 @@ checkStageNames(await deckStage(Astro.params.slug), { place, reveal, lapse }, `S
   data-pins={pins}
   data-reveal={reveal}
   data-clock={clock ? "" : undefined}
+  data-plain-clock={plainClock ? "" : undefined}
   data-spin={spin ? "" : undefined}
   data-layout={layout}
   aria-labelledby={`${id}-title`}

@@ -253,6 +253,23 @@ describe("the Earth's clock", () => {
     expect(host.querySelectorAll("[data-shard]")).toHaveLength(0);
   });
 
+  it("leaves the mark, the city and the offset off a plain dial, keeps the calendar, and puts them back", async () => {
+    const clock = mount();
+    await vi.waitFor(() => expect(face()).toHaveTextContent("UTC+02:00"));
+    clock.plain(true);
+    expect(face()).toHaveAttribute("data-plain");
+    expect(host.querySelector("[data-legend]")).toHaveTextContent("HELSINKI");
+    expect(host.querySelector("[data-calendar-day]")).toHaveTextContent("16");
+    clock.set("on");
+    clock.set("shatter");
+    // The shards are copies inside the plain clock, so they break plain too.
+    expect(
+      host.querySelector("[data-plain] [data-shard] [data-legend]"),
+    ).not.toBeNull();
+    clock.plain(false);
+    expect(face()).not.toHaveAttribute("data-plain");
+  });
+
   it("takes itself and its phase away when the signal aborts", () => {
     const clock = mount();
     clock.set("on");

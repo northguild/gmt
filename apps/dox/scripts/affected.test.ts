@@ -225,6 +225,11 @@ describe("affected: which checks a change runs", () => {
       ],
     },
     {
+      name: "the zone matrix runner runs its own tests and the Dox tests, which copy scripts/",
+      changes: [{ path: "scripts/zone-matrix/cells.mjs", status: "M" }],
+      checks: ["format", "build:gmt", "test:dox", "test:zone-matrix"],
+    },
+    {
       name: "a deleted script skips the format check",
       changes: [{ path: "scripts/deps.mjs", status: "D" }],
       checks: ["deps", "build:gmt", "test:dox"],

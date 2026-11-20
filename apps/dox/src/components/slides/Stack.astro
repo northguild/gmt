@@ -1,0 +1,11 @@
+---
+/**
+ * A step that adds to the one before it: the base content and each `Build` inside stand in one
+ * column, each build under the last. When the column runs past the slide's foot, it slides up so
+ * the newest reached piece is whole (`lib/slides/build-stack.ts`), and what leaves the top fades
+ * under the stack's edge. `Swap` is the other kind of step, the one that replaces. Without
+ * JavaScript, and in print, the whole column shows.
+ */
+---
+
+<div class="gmt-stack" data-stack><div class="gmt-stack-track" data-stack-track><slot /></div></div>

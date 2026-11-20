@@ -34,7 +34,8 @@ import {
   type ToolLinkItem,
 } from "~/widgets/builders";
 import { callOutput } from "~/widgets/families/gnss/call-output";
-import { callLines, outputOf } from "~/widgets/families/ids/call-lines";
+import { callLines } from "~/widgets/families/gnss/call-lines";
+import { outputOf } from "~/widgets/families/ids/call-lines";
 import {
   formatCard,
   precisionLadder,
@@ -83,7 +84,7 @@ import {
 } from "./column-timestamp-bridge";
 import { loadColumnBridgeLib, type ColumnBridgeLib } from "./column-bridge-lib";
 import type { EdiCall } from "./edi-widgets";
-import { callArgs } from "./call-args";
+import { cellCallArgs } from "./call-args";
 import { withBase } from "./site";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { codeSpan } from "./widget-ui";
@@ -157,7 +158,7 @@ const MESSAGE_TEXTS = [
 /** The validator line a card prints: the call and what it returned. */
 function validatorHtml(call: EdiCall): SafeHtml {
   return raw(
-    `${codeSpan("fn", call.fn)}(${callArgs(call.args)[0]}) → ${String(call.result)}`,
+    `${codeSpan("fn", call.fn)}(${cellCallArgs(call.args)[0]}) → ${String(call.result)}`,
   );
 }
 

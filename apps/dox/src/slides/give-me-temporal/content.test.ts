@@ -140,7 +140,7 @@ describe("what each GMT step expects", () => {
     );
   });
 
-  it("gets every expected value, except the Chinese date the polyfill cannot give yet", async () => {
+  it("gets every expected value, except the Chinese date GMT refuses on every host", async () => {
     const outcomes = Object.fromEntries(
       await Promise.all(
         Object.entries(GMT_CALLS).map(async ([slide, calls]) => [
@@ -152,9 +152,8 @@ describe("what each GMT step expects", () => {
     expect(outcomes).toEqual({
       abort: ["right", "right"],
       years: ["right", "right"],
-      // js-temporal/temporal-polyfill#360: @js-temporal/polyfill throws on every Chinese date
-      // under ICU 78, so GMT gives its sentinel. When GMT gets the date right, this turns right
-      // and the day-off step's note comes out.
+      // Runtimes put Chinese New Year 2027 on 6 or 7 February, so GMT returns its empty value for
+      // a Chinese date on every host: no date, not a wrong one. The day-off step's note says so.
       dayOff: ["lost"],
       manila: ["right", "right", "right"],
       engines: ["right"],

@@ -68,7 +68,7 @@ import {
 } from "~/widgets/primitives/handle/handle";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/punctuality-board.module.css";
-import { callArgs } from "./call-args";
+import { frameCallArgs } from "./call-args";
 import { onWidthChange, thinTickLabels } from "./label-fit";
 import {
   PUNCTUALITY_PRESETS,
@@ -837,7 +837,7 @@ function setupWidget(
       ...(s.compareOn ? [{ tolerance: toleranceB(s), rate: facts.rateB }] : []),
     ];
     const built = callList.map((c) => {
-      const [argsHtml, plain] = callArgs([pairs, c.tolerance]);
+      const [argsHtml, plain] = frameCallArgs([pairs, c.tolerance]);
       return {
         html: `${codeSpan("fn", "punctualityRate")}(${argsHtml})`,
         plain: `punctualityRate(${plain})`,

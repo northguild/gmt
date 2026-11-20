@@ -67,7 +67,7 @@ function revealFixture(): HTMLElement {
       <section data-slide data-place="wall">
         <figure data-wall-pane="moment"><img alt="Moment" src="/a.webp"></figure>
       </section>
-      <section data-slide data-place="planet"><h2>Three</h2></section>
+      <section data-slide data-place="planet" data-plain-clock><h2>Three</h2></section>
       <section data-slide data-place="planet" data-reveal="Europe/Helsinki" data-spin><h2>Four</h2></section>
       <section data-slide data-place="Europe/Helsinki" data-clock><h2>Five</h2></section>
       <section data-slide data-place="meridian"><h2>Six</h2>
@@ -157,6 +157,23 @@ describe("the clock that becomes the Earth", () => {
     expect(space()).toHaveAttribute("data-earth-clock", "on");
     h.stage.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
     expect(space()).toHaveAttribute("data-earth-clock", "on");
+  });
+
+  it("shows the clock plain on a slide that asks for it, and breaks it plain on the reveal", async () => {
+    await setUp();
+    expect(face()).not.toHaveAttribute("data-plain");
+    toDate();
+    expect(face()).toHaveAttribute("data-plain");
+    h.stage.goTo("wall", { hop: true, at: { slide: 1, build: 0 } });
+    expect(face()).not.toHaveAttribute("data-plain");
+    h.stage.goTo("planet", { hop: true, at: { slide: 2, build: 0 } });
+    holdTimeouts();
+    h.stage.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+    expect(space()).toHaveAttribute("data-earth-clock", "shatter");
+    expect(face()).toHaveAttribute("data-plain");
+    runReveal();
+    h.stage.goTo("Europe/Helsinki", { hop: true, at: { slide: 4, build: 0 } });
+    expect(face()).not.toHaveAttribute("data-plain");
   });
 
   it("holds the camera over the North Pole with the zone under the hour hand, at the slide's zoom", async () => {

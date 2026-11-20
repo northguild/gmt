@@ -1,6 +1,6 @@
 /*
  * The pieces of a bug slide: the visual with its filing receipts, the recorded run every slide shows
- * code in, the pins' count, and a step that replaces the one before it.
+ * code in, the pins' count, a step that replaces the one before it, and one that adds to it.
  */
 
 /*
@@ -28,13 +28,61 @@ html[data-deck] .gmt-swap > * {
 }
 
 /*
+ * A step that adds to the one before it: each build stands under the last in one column, and once
+ * the column runs past the slide's foot it slides up by `--gmt-stack-shift`
+ * (`lib/slides/build-stack.ts`) so the newest piece is whole. The stack clips its top edge, and
+ * the pieces leaving it fade there while the column is shifted; one more than half gone
+ * (`data-stack-gone`) fades out whole.
+ */
+html[data-deck] .gmt-stack {
+  overflow: clip;
+  max-block-size: var(--gmt-stack-room, none);
+}
+
+html[data-deck] .gmt-stack[data-shifted] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000000 var(--gmt-deck-space-2xl)
+  );
+}
+
+/* The track is its pieces' offset parent: the shift is measured from its top. */
+html[data-deck] .gmt-stack-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-deck-space-xl);
+  transform: translateY(var(--gmt-stack-shift, 0));
+  transition: transform var(--gmt-duration-slow) var(--gmt-enter-easing);
+}
+
+html[data-deck] .gmt-stack-track > * {
+  min-inline-size: 0;
+  margin: 0;
+  transition: opacity var(--gmt-duration-med) var(--gmt-enter-easing);
+}
+
+html[data-deck] .gmt-stack-track > [data-stack-gone] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-deck] .gmt-stack-track,
+  html[data-deck] .gmt-stack-track > * {
+    transition-duration: var(--gmt-deck-fade);
+  }
+}
+
+/*
  * ---- The bug slides' visuals ----
  * Each shows its report's own lines as a picture, with the filing as a small receipt in the
  * corner. Every readout reserves its box, so a rolling counter or a typing line moves nothing.
  */
 html[data-deck] .gmt-visual {
   display: grid;
-  gap: 1.4cqi;
+  gap: var(--gmt-deck-space-lg);
   align-content: start;
   min-inline-size: 0;
 }
@@ -43,14 +91,14 @@ html[data-deck] .gmt-visual {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0.4cqi 1.4cqi;
+  gap: var(--gmt-deck-space-xs) var(--gmt-deck-space-lg);
 }
 
 .gmt-receipt {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  gap: 0.8cqi;
+  gap: var(--gmt-deck-space-md);
   margin: 0;
   color: var(--gmt-ice-dim);
   font-size: max(0.75rem, 1.3cqi);
@@ -72,7 +120,7 @@ html[data-deck] .gmt-visual {
 
 .gmt-pins {
   display: grid;
-  gap: 1cqi;
+  gap: var(--gmt-deck-space-md);
   justify-items: start;
 }
 
@@ -83,7 +131,7 @@ html[data-deck] .gmt-visual {
 .gmt-pins-count {
   display: flex;
   align-items: center;
-  gap: 1.2cqi;
+  gap: var(--gmt-deck-space-lg);
   font-size: max(1.4rem, 5cqi);
   color: var(--gmt-ice-bright);
 }
@@ -104,7 +152,7 @@ html[data-deck] .gmt-pins {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto 1fr;
   align-items: start;
-  column-gap: 3cqi;
+  column-gap: var(--gmt-deck-space-2xl);
 }
 
 html[data-deck] .gmt-pins-count {
@@ -127,10 +175,11 @@ html[data-deck] .gmt-pins .gmt-deck-table {
  */
 html[data-deck] .gmt-run {
   display: grid;
-  gap: 0.3cqi;
+  gap: var(--gmt-deck-space-xs);
   align-content: start;
   min-inline-size: 0;
-  padding: 0.6cqi 1.6cqi 0.8cqi;
+  padding: var(--gmt-deck-space-sm) var(--gmt-deck-space-xl)
+    var(--gmt-deck-space-md);
   font-size: var(--gmt-deck-text-lg);
   line-height: 1.35;
 }
@@ -149,7 +198,7 @@ html[data-deck] .gmt-familiar-run > p {
 }
 
 .gmt-run-head {
-  padding-block-end: 0.5cqi;
+  padding-block-end: var(--gmt-deck-space-xs);
   border-block-end: 1px solid var(--gmt-border);
   font-size: var(--gmt-deck-text-sm);
   color: var(--gmt-ice-dim);
@@ -181,7 +230,7 @@ html[data-deck] .gmt-familiar-run > p {
 .gmt-run-outcome {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2cqi 4ch;
+  gap: var(--gmt-deck-space-2xs) 4ch;
   padding-inline-start: 2ch;
 }
 
@@ -211,14 +260,14 @@ html[data-deck] .gmt-run-outcome > p {
 
 /* A step's rows sit together; the next prompt starts a step of its own. */
 html[data-deck] .gmt-run-outcome + :is(.gmt-run-line, .gmt-run-code) {
-  margin-block-start: 0.4cqi;
+  margin-block-start: var(--gmt-deck-space-xs);
 }
 
 /* A run's code block takes the panel's text size and a thin pad, so a step of code, result and
    expected value stays a few lines tall. */
 html[data-deck] .gmt-run-code .gmt-deck-code {
   --ec-codeFontSize: var(--gmt-deck-text-md);
-  --ec-codePadBlk: 0.3cqi;
+  --ec-codePadBlk: var(--gmt-deck-space-xs);
 }
 
 .gmt-run-label {
@@ -242,7 +291,7 @@ html[data-deck] .gmt-run-code .gmt-deck-code {
 }
 
 .gmt-run-note {
-  padding-block-start: 0.5cqi;
+  padding-block-start: var(--gmt-deck-space-xs);
   border-block-start: 1px solid var(--gmt-border);
   color: var(--gmt-ice-dim);
 }

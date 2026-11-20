@@ -41,7 +41,7 @@ describe("Deck 0's stage data", () => {
 
   it("resolves each of its points, with a source", () => {
     applyStageData(STAGE);
-    expect(Object.keys(STAGE.points).sort()).toEqual(["galicia", "greenwich"]);
+    expect(Object.keys(STAGE.points).sort()).toEqual(["greenwich"]);
     for (const [name, entry] of Object.entries(STAGE.points)) {
       expect(entry.source.length).toBeGreaterThan(10);
       expect(resolvePlace(name)).toMatchObject({
@@ -51,12 +51,7 @@ describe("Deck 0's stage data", () => {
     }
   });
 
-  it("puts Galicia at Santiago de Compostela and Greenwich on the prime meridian", () => {
-    expect(STAGE.points["galicia"]).toMatchObject({
-      lng: -8.5448,
-      lat: 42.8782,
-      label: "Galicia",
-    });
+  it("puts Greenwich on the prime meridian", () => {
     expect(STAGE.points["greenwich"]).toMatchObject({
       lng: 0,
       label: "Greenwich",

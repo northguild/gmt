@@ -14,7 +14,9 @@
  *
  * The dial says whose time it is: the city and its UTC offset under the mark, and a calendar window
  * with the zone's weekday, day and month, all read by gmt from the same zoned string as the hands.
- * The hour hand stops short of the numerals so the hour it points at stays legible.
+ * The hour hand stops short of the numerals so the hour it points at stays legible. A plain dial
+ * (`plain`, `data-plain` on the clock) leaves the mark, the city and the offset off, and keeps the
+ * calendar window: the clock of a machine that knows no place, for the slides about `Date`.
  *
  * The face is drawn in `earth-clock-face.ts`. A build can hold the hands at an instant (`hold`), so
  * a slide can stand the clock in the Earth's place at the minute before a zone's clocks skip, then
@@ -39,6 +41,8 @@ export interface EarthClock {
   set(phase: EarthClockPhase): void;
   /** Stops the hands at a UTC instant (`…Z`), the zone's wall time then; `null` ticks the time now again. */
   hold(utc: string | null): void;
+  /** Leaves the GMT mark, the city and the offset off the dial, or puts them back. */
+  plain(on: boolean): void;
 }
 
 /** Puts the clock in `layer` (the deck's space layer). Aborting `signal` takes it away. */
@@ -112,6 +116,9 @@ export function mountEarthClock(
       if (utc === held) return;
       held = utc;
       redraw?.();
+    },
+    plain(on) {
+      el.toggleAttribute("data-plain", on);
     },
   };
   o.signal.addEventListener(

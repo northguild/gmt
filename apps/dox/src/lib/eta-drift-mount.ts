@@ -70,7 +70,7 @@ import {
   type DriftState,
   type EtaDriftArgs,
 } from "./eta-drift";
-import { callArgs } from "./call-args";
+import { frameCallArgs } from "./call-args";
 import { onWidthChange, thinTickLabels } from "./label-fit";
 import { loadPunctualityLib } from "./punctuality-lib";
 import {
@@ -877,7 +877,7 @@ function setupWidget(
       fn: string,
       callList: readonly unknown[],
     ): SafeHtml => {
-      const [argsHtml, plain] = callArgs(callList);
+      const [argsHtml, plain] = frameCallArgs(callList);
       return codeFrame({
         label,
         copyLabel,

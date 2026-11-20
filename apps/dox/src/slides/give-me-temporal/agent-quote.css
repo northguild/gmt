@@ -13,7 +13,7 @@ html[data-deck] .gmt-quote {
   min-inline-size: 0;
   max-inline-size: 100%;
   margin: 0;
-  padding: 0.8cqi 1.2cqi;
+  padding: var(--gmt-deck-space-md) var(--gmt-deck-space-lg);
   font-size: max(0.75rem, 1.7cqi);
   line-height: 1.3;
 }
@@ -45,7 +45,7 @@ html[data-deck] [data-quote="recorded"] .expressive-code {
 }
 
 html[data-deck] [data-quote="recorded"] figcaption {
-  margin-block-start: 0.6cqi;
+  margin-block-start: var(--gmt-deck-space-sm);
 }
 
 html[data-deck] .gmt-slide-body [data-quote="result"] p {
@@ -53,7 +53,7 @@ html[data-deck] .gmt-slide-body [data-quote="result"] p {
 }
 
 html[data-deck] .gmt-slide-body [data-quote="result"] p + p {
-  margin-block-start: 0.3cqi;
+  margin-block-start: var(--gmt-deck-space-xs);
 }
 
 .gmt-quote[data-quote="question"] {

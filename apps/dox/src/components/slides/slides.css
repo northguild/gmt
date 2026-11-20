@@ -20,11 +20,6 @@
   --gmt-deck-bar: var(--gmt-deck-bar-size);
   --gmt-deck-fade: 200ms;
 
-  /* The three small sizes of a panel's text on the stage, in container units. */
-  --gmt-deck-text-sm: max(0.75rem, 1.1cqi);
-  --gmt-deck-text-md: max(0.75rem, 1.4cqi);
-  --gmt-deck-text-lg: max(0.75rem, 1.6cqi);
-
   /* A wrong result and the right value, wherever the deck shows them: red and green, the way a
      test runner prints a failed assertion (`RunLabel`, the flaps, the calendar marks). */
   --gmt-deck-wrong: var(--gmt-danger);
@@ -165,8 +160,8 @@ html[data-deck] .gmt-slide {
   position: absolute;
   inset: 0;
   box-sizing: border-box;
-  padding-block: 5cqi;
-  padding-inline: 6cqi;
+  padding-block: var(--gmt-deck-pad-block);
+  padding-inline: var(--gmt-deck-pad-inline);
   border: 0;
   overflow: hidden;
   font-size: max(0.75rem, 2.6cqi);
@@ -239,7 +234,7 @@ html[data-deck] .gmt-slide[data-layout="title"] .gmt-slide-body {
 html[data-deck] .gmt-slide-title {
   font-size: max(1.25rem, 3.6cqi);
   line-height: 1.15;
-  margin-block-end: 3cqi;
+  margin-block-end: var(--gmt-deck-space-2xl);
 }
 
 html[data-deck] .gmt-slide[data-layout="title"] {
@@ -719,23 +714,29 @@ html[data-deck] .gmt-deck-blank {
   pointer-events: auto;
 }
 
-/* The Earth, or the clock in its place, takes the right third of every slide; the content keeps clear of it. */
-.gmt-deck[data-space] .gmt-slide {
-  padding-inline-end: 36cqi;
+/* The Earth, or the clock in its place, takes the right third of every slide; the content keeps
+   clear of it. The room is kept from the first paint: the head script sets `html[data-deck]`
+   before the page draws, and the stage (`data-space`) mounts later, so keying the room on the
+   stage drew the content at full width and then squeezed it. */
+html[data-deck] .gmt-deck .gmt-slide {
+  padding-inline-end: var(--gmt-deck-clock-room);
 }
 
-/* A full slide takes the whole page: the Earth fades out while it shows, and the sky stays. */
-.gmt-deck[data-space] .gmt-slide[data-layout="full"] {
-  padding-inline-end: 6cqi;
+/* A full slide takes the whole page: the Earth, or the clock in its place, fades out while it
+   shows, and the sky stays. */
+html[data-deck] .gmt-deck .gmt-slide[data-layout="full"] {
+  padding-inline-end: var(--gmt-deck-pad-inline);
 }
 
-html[data-deck] .gmt-deck-space > canvas:not([data-wall-canvas]) {
+html[data-deck]
+  .gmt-deck-space
+  > :is(canvas:not([data-wall-canvas]), .gmt-earth-clock) {
   transition: opacity var(--gmt-duration-slow) var(--gmt-enter-easing);
 }
 
 :where(.gmt-deck[data-shown-layout="full"])
   .gmt-deck-space
-  > canvas:not([data-wall-canvas]) {
+  > :is(canvas:not([data-wall-canvas]), .gmt-earth-clock) {
   opacity: 0;
 }
 
@@ -773,7 +774,7 @@ html[data-deck="stage"] .gmt-deck[data-blank] .gmt-deck-space {
  * rest, which come later at the same weight) still win.
  */
 html[data-deck] .gmt-slide-body p:not(:where(.gmt-ask p)) {
-  margin-block: 0 1cqi;
+  margin-block: 0 var(--gmt-deck-space-md);
 }
 
 /* ---- A slide change as a view transition ---- */
@@ -871,8 +872,8 @@ html[data-deck-vt]::view-transition-new(root),
 html[data-deck] .gmt-deck-code {
   --ec-codeFontSize: var(--gmt-deck-text-lg);
   --ec-codeLineHt: 1.35;
-  --ec-codePadBlk: 0.6cqi;
-  --ec-codePadInl: 1cqi;
+  --ec-codePadBlk: var(--gmt-deck-space-sm);
+  --ec-codePadInl: var(--gmt-deck-space-md);
 
   min-inline-size: 0;
   max-inline-size: 100%;

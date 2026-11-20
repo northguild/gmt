@@ -9,19 +9,19 @@
 
 .gmt-flap {
   display: grid;
-  gap: 1.2cqi;
+  gap: var(--gmt-deck-space-lg);
 }
 
 .gmt-flap-row {
   display: grid;
-  gap: 0.5cqi;
+  gap: var(--gmt-deck-space-xs);
   margin: 0;
 }
 
 .gmt-flap-label {
   display: flex;
   flex-wrap: wrap;
-  gap: 1cqi;
+  gap: var(--gmt-deck-space-md);
   align-items: baseline;
   font-size: var(--gmt-deck-text-md);
   color: var(--gmt-ice-dim);
@@ -30,7 +30,7 @@
 .gmt-flap-tiles {
   display: grid;
   grid-template-columns: repeat(var(--gmt-flap-n), minmax(0, 5.4cqi));
-  gap: 0.4cqi;
+  gap: var(--gmt-deck-space-xs);
 }
 
 .gmt-flap-tile {
@@ -104,10 +104,10 @@
 
 .gmt-month {
   display: grid;
-  gap: 1cqi;
+  gap: var(--gmt-deck-space-md);
   justify-self: start;
   margin: 0;
-  padding: 1.2cqi 1.6cqi;
+  padding: var(--gmt-deck-space-lg) var(--gmt-deck-space-xl);
   background: var(--gmt-surface-widget);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-bevel-md);
@@ -124,12 +124,12 @@
   border: 0;
   border-radius: 0;
   border-collapse: separate;
-  border-spacing: 0.4cqi;
+  border-spacing: var(--gmt-deck-space-xs);
   font-family: var(--gmt-font-mono);
 }
 
 .gmt-month-page caption {
-  padding-block-end: 0.6cqi;
+  padding-block-end: var(--gmt-deck-space-sm);
   font-family: var(--gmt-font-display);
   font-size: max(0.9rem, 2.4cqi);
   text-align: start;
@@ -199,7 +199,7 @@
 .gmt-month-key {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6cqi 2cqi;
+  gap: var(--gmt-deck-space-sm) var(--gmt-deck-space-xl);
   font-size: var(--gmt-deck-text-md);
   color: var(--gmt-ice-dim);
 }
@@ -214,10 +214,10 @@
 /* A week shifted one day late */
 
 .gmt-shift {
-  --gmt-shift-gap: 0.6cqi;
+  --gmt-shift-gap: var(--gmt-deck-space-sm);
 
   display: grid;
-  gap: 1.2cqi;
+  gap: var(--gmt-deck-space-lg);
   margin: 0;
 }
 
@@ -228,7 +228,7 @@
 .gmt-shift-row {
   display: grid;
   grid-template-columns: 11ch minmax(0, 1fr);
-  gap: 1cqi;
+  gap: var(--gmt-deck-space-md);
   align-items: center;
 }
 
@@ -293,7 +293,7 @@
 .gmt-jump {
   display: grid;
   grid-template-columns: repeat(var(--gmt-jump-n), minmax(0, 1fr));
-  gap: 1.6cqi;
+  gap: var(--gmt-deck-space-xl);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -301,9 +301,9 @@
 
 .gmt-leaf {
   display: grid;
-  gap: 0.4cqi;
+  gap: var(--gmt-deck-space-xs);
   justify-items: center;
-  padding-block-end: 1.2cqi;
+  padding-block-end: var(--gmt-deck-space-lg);
   overflow: hidden;
   background: var(--gmt-surface-widget);
   border: 1px solid var(--gmt-border);
@@ -318,7 +318,7 @@
 
 .gmt-leaf-head {
   justify-self: stretch;
-  padding: 0.6cqi;
+  padding: var(--gmt-deck-space-sm);
   font-family: var(--gmt-font-display);
   font-size: max(0.75rem, 1.5cqi);
   letter-spacing: 0.08em;

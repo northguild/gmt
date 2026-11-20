@@ -35,12 +35,12 @@ html[data-deck] .gmt-deck-table {
 
 html[data-deck] .gmt-deck-table th,
 html[data-deck] .gmt-deck-table td {
-  padding: 0.3cqi 1cqi;
+  padding: var(--gmt-deck-space-xs) var(--gmt-deck-space-md);
 }
 
 /* The caption lines up with the cells, clear of the plate's bevelled corner. */
 html[data-deck] .gmt-deck-table caption {
-  padding-inline: 1cqi;
+  padding-inline: var(--gmt-deck-space-md);
 }
 
 /*

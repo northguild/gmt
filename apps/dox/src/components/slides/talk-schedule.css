@@ -5,10 +5,11 @@
  */
 html[data-deck] .gmt-talk-schedule {
   display: inline-flex;
-  gap: 2cqi;
+  gap: var(--gmt-deck-space-xl);
   align-items: center;
   justify-self: start;
-  padding: 1.4cqi 2.4cqi 1.4cqi 1.4cqi;
+  padding: var(--gmt-deck-space-lg) var(--gmt-deck-space-xl)
+    var(--gmt-deck-space-lg) var(--gmt-deck-space-lg);
 }
 
 html[data-deck] .gmt-talk-page {
@@ -21,7 +22,7 @@ html[data-deck] .gmt-talk-page {
 html[data-deck] .gmt-talk-slot {
   display: grid;
   align-content: center;
-  gap: 0.5cqi;
+  gap: var(--gmt-deck-space-xs);
 }
 
 html[data-deck] .gmt-talk-slot p {

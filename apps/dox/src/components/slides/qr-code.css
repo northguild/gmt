@@ -2,7 +2,7 @@
 
 .gmt-qr {
   display: grid;
-  gap: 0.8cqi;
+  gap: var(--gmt-deck-space-md);
   justify-items: center;
   margin: 0;
   font-size: var(--gmt-deck-text-sm);
@@ -111,7 +111,7 @@
 .gmt-qr figcaption {
   display: grid;
   justify-items: center;
-  gap: 0.2cqi;
+  gap: var(--gmt-deck-space-2xs);
 }
 
 /* An address is one word to the reader: it never breaks inside, so the caption shows it whole. */

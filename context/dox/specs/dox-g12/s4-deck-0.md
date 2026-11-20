@@ -44,15 +44,16 @@ places; no national default, no law, no business wording, no text that judges a 
   the machine's clock, which is why the agents failed. Two of the home page's rows from `dateFaults`
   follow, the ones no other slide shows: months counted from 0, and `setDate` changing a `Date` in
   place. No builds.
-- **`kinds`** ("Date takes anything"): a `full` slide, so the clock steps aside while the grid
-  takes the whole width. A five-line `nextDay` over
-  `Date` (`date-kinds.json`), then, in a `Swap` so each step replaces the last, on build 1, `RunGrid`: one row per kind of time passed in (a
-  date, a local time, a UTC time, an offset, a zone, a `Date` object), one column per zone (New
-  York, UTC, Kolkata, Helsinki), each cell what Node 26 returned there, from
-  `date-kinds-run.json` (`scripts/zone-matrix/date-kinds.mjs`), red or green against
-  2027-03-28, with the count of distinct results under it. Build 2 is GMT's run of
-  `GMT_CALLS.kinds`. `kinds.ts` builds the grid once; `content.test.ts` fails while a run record is
-  stale. Notes end: "Every library that keeps a Date inside inherits this grid."
+- **`kinds`** ("Date takes anything"): the plain clock (calendar and 24-hour dial, no city,
+  zone or offset) stays, and the slide is a `Stack`, so each step adds under the last and the
+  column slides up to keep the newest whole. A five-line `nextDay` over `Date` (`date-kinds.json`);
+  build 1 adds `RunGrid`: one row per kind of time passed in (a date, a local time, a UTC time, an
+  offset, a zone, a `Date` object), one column per zone (UTC, Kolkata, Helsinki), each cell what
+  Node 26 returned there, from `date-kinds-run.json` (`scripts/zone-matrix/date-kinds.mjs`), red or
+  green against 2027-03-28. Build 2 adds the count of distinct results across every zone and Node
+  version, then GMT's run of `GMT_CALLS.kinds`. `kinds.ts` builds the grid once;
+  `content.test.ts` fails while a run record is stale. Notes end: "Every library that keeps a Date
+  inside inherits this grid."
 - **`one-clock`** ("The web shows one clock"): the ice wall ([slice 2b](./s2b-ice-wall.md)).
   Notes: "Each of these sites shows one clock. That is the view most date code takes, and the view
   the agents took: one place, one local time. Hold that." The wall breaks as the talk steps on.

@@ -2,12 +2,13 @@
  * callLines and outputOf: the two halves of a GNSS tool's "what the library returns" section.
  *
  * `callLines` turns the calls a reading made into the code frame's highlighted lines and the
- * plain text its copy button copies. `outputOf` turns the same calls into the lines of a
+ * plain text its copy button copies; a frame scrolls, so the lines have no break points.
+ * `cellCall` draws one call for a table cell that wraps, with break points. `outputOf` turns the same calls into the lines of a
  * `callOutput`: one result for each call in the order they were made. A failed reading
  * replaces only the calls that gave `null` or `""` with NO SIGNAL; when none did, or every
  * one did, the pane is the whole-pane NO SIGNAL.
  */
-import { callArgs } from "~/lib/call-args";
+import { cellCallArgs, frameCallArgs } from "~/lib/call-args";
 import { formatValue } from "~/lib/punctuality-widgets";
 import { NO_SIGNAL_LINE } from "~/lib/edi-render";
 import type { EdiCall } from "~/lib/edi-widgets";
@@ -22,7 +23,7 @@ interface CallLines {
 
 export function callLines(calls: readonly EdiCall[]): CallLines {
   const lines = calls.map((c) => {
-    const [argsHtml, plain] = callArgs(c.args);
+    const [argsHtml, plain] = frameCallArgs(c.args);
     return {
       html: `${codeSpan("fn", c.fn)}(${argsHtml})`,
       plain: `${c.fn}(${plain})`,
@@ -32,6 +33,11 @@ export function callLines(calls: readonly EdiCall[]): CallLines {
     code: raw(lines.map((l) => l.html).join("\n")),
     plain: lines.map((l) => l.plain).join("\n"),
   };
+}
+
+/** One call for a table cell that wraps: it breaks after `(` and each `, `, dates kept whole. */
+export function cellCall(call: EdiCall): SafeHtml {
+  return raw(`${codeSpan("fn", call.fn)}(${cellCallArgs(call.args)[0]})`);
 }
 
 /**
@@ -53,7 +59,7 @@ export function distinctCalls(calls: Iterable<EdiCall>): EdiCall[] {
  * the widest. A plain-text ghost would break at its hyphens and spaces instead.
  */
 export function callGhosts(calls: readonly EdiCall[]): SafeHtml[] {
-  return calls.map((call) => callLines([call]).code);
+  return calls.map(cellCall);
 }
 
 const refused = (call: EdiCall): boolean =>

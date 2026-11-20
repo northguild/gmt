@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   LAPSE_MS,
+  MAX_SUN_RATE,
   dateOf,
   ease,
   frameAt,
@@ -38,7 +39,23 @@ describe("planning a lapse", () => {
     const plan = plan_("open", tools)!;
     expect(plan.fromMs).toBe(1_000 * HOUR);
     expect(plan.toMs - plan.fromMs).toBe(24 * HOUR);
-    expect(plan.durationMs).toBe(LAPSE_MS);
+    // A day at the home globe's pace: its top speed, in the middle, is the cap.
+    expect(plan.durationMs).toBeGreaterThan(LAPSE_MS);
+    expect(rateAt(plan, 0.5)).toBeCloseTo(MAX_SUN_RATE, 6);
+  });
+
+  it("is never faster than the home globe turns", () => {
+    // A day turns the Earth once; the home globe takes 3 minutes a turn.
+    expect(MAX_SUN_RATE).toBe(480);
+    for (const name of Object.keys(LAPSES) as Array<keyof typeof LAPSES>) {
+      const plan = plan_(name, tools);
+      if (!plan) continue;
+      for (let i = 0; i <= 100; i++) {
+        expect(rateAt(plan, i / 100)).toBeLessThanOrEqual(
+          MAX_SUN_RATE * (1 + 1e-9),
+        );
+      }
+    }
   });
 
   it("centres the window on the zone's own jump", () => {
@@ -57,7 +74,7 @@ describe("planning a lapse", () => {
 });
 
 describe("a day-long lapse after another", () => {
-  const carry = { ms: 1_010 * HOUR, rate: 2_000 };
+  const carry = { ms: 1_010 * HOUR, rate: 300 };
 
   it("starts on the instant on screen, a whole day long", () => {
     const plan = plan_("plain", tools, carry)!;
@@ -69,11 +86,16 @@ describe("a day-long lapse after another", () => {
 
   it("starts at the speed the sun was going, and ends at rest", () => {
     const plan = plan_("plain", tools, carry)!;
-    expect(rateAt(plan, 0)).toBe(2_000);
+    expect(rateAt(plan, 0)).toBe(300);
     // The first sixtieth of a second moves the sun on at about that speed, not from a stop.
-    const first = instantAt(plan, 1 / 60 / (LAPSE_MS / 1_000));
-    expect((first - plan.fromMs) / (1_000 / 60)).toBeCloseTo(2_000, -2);
+    const first = instantAt(plan, 1 / 60 / (plan.durationMs / 1_000));
+    expect((first - plan.fromMs) / (1_000 / 60)).toBeCloseTo(300, -1);
     expect(rateAt(plan, 1)).toBe(0);
+  });
+
+  it("carries a faster sun on at the home globe's pace, no faster", () => {
+    const plan = plan_("plain", tools, { ms: carry.ms, rate: 2_000 })!;
+    expect(rateAt(plan, 0)).toBe(MAX_SUN_RATE);
   });
 
   it("never runs the sun backwards, even from the fastest carry", () => {
@@ -110,7 +132,11 @@ describe("the lapse that ends on an instant", () => {
     const plan = plan_("ends", tools)!;
     expect(plan.toMs).toBe(2_000 * HOUR);
     expect(plan.toMs - plan.fromMs).toBe(2 * HOUR);
-    expect(plan.durationMs).toBe(8000);
+    // Two hours at the home globe's pace, not the def's 8 seconds.
+    expect(plan.durationMs).toBeCloseTo(
+      (2 * HOUR * Math.PI) / 2 / MAX_SUN_RATE,
+      6,
+    );
     expect(lapseEndMs(LAPSES.ends, tools)).toBe(2_000 * HOUR);
     expect(lapseEndMs(LAPSES.open, tools)).toBeNull();
   });
@@ -199,10 +225,10 @@ describe("running a lapse", () => {
     });
     expect(ms[0]).toBe(plan.fromMs);
     callbacks.shift()!(100);
-    callbacks.shift()!(100 + LAPSE_MS / 2);
+    callbacks.shift()!(100 + plan.durationMs / 2);
     expect(ms.at(-1)).toBeGreaterThan(plan.fromMs);
     expect(ms.at(-1)).toBeLessThan(plan.toMs);
-    callbacks.shift()!(100 + LAPSE_MS);
+    callbacks.shift()!(100 + plan.durationMs);
     expect(frames.at(-1)).toBe(true);
     expect(callbacks).toHaveLength(0);
     stop();

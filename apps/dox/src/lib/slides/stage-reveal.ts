@@ -13,6 +13,9 @@
  * Under reduced motion, on a deep link past it, or with no globe, the clock is simply gone.
  * The overview always shows the Earth.
  *
+ * A slide may ask for the clock plain (`data-plain-clock`): no GMT mark, city or offset, the dial
+ * of a machine that knows no place, for the slides about `Date`. When the clock breaks away from a
+ * plain slide, its shards are plain too.
  * A slide may ask for the clock again (`data-clock`, the close), and a build may hold it at an
  * instant (`data-clock-at`, a skipped hour). While the deck is locked (`data-locked` on the deck
  * root) the clock stands at the talk's start (`data-deck-preview-at`), the preview for adverts;
@@ -148,6 +151,9 @@ export function createReveal(d: RevealDeps): StageReveal {
   }
 
   function show(): void {
+    clock?.plain(
+      d.slideEls[d.homeSlide()]?.dataset["plainClock"] !== undefined,
+    );
     clock?.hold(heldAt() ?? previewAt());
     clock?.set(shown() ? "on" : "off");
     fit();

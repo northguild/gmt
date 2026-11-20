@@ -46,6 +46,7 @@ import JumpPages from "~/components/slides/JumpPages.astro";
 import GmtRun from "~/components/slides/GmtRun.astro";
 import Notes from "~/components/slides/Notes.astro";
 import Slide from "~/components/slides/Slide.astro";
+import Stack from "~/components/slides/Stack.astro";
 import Swap from "~/components/slides/Swap.astro";
 import Visual from "~/components/slides/Visual.astro";
 import DeckTable from "~/components/slides/DeckTable.astro";
@@ -153,7 +154,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="date" title="Date only knows this machine" minutes={0.5} place="Europe/Helsinki">
+  <Slide id="date" title="Date only knows this machine" minutes={0.5} place="Europe/Helsinki" plainClock>
     <DeckTable caption="What Date gives, and why" columns={["Code", "Result", "Why"]} layout="code">
       {dateRows.map((f) => (
         <tr>
@@ -169,22 +170,21 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="kinds" title="Date takes anything" minutes={0.5} place="Europe/Helsinki" layout="full">
-    <Swap>
+  <Slide id="kinds" title="Date takes anything" minutes={0.5} place="Europe/Helsinki" plainClock>
+    <Stack>
       <DeckCode>
         <Code code={KINDS.file.code} lang="js" />
       </DeckCode>
       <Build n={1}>
-        <RunGrid grid={kinds} caption={`nextDay on Node ${KINDS.node}: each should give ${KINDS.file.want}`}>
-          {kinds.ready && (
-            <p>{kinds.distinct} different results from one function, in {kinds.zones} zones on Node {kinds.nodes.join(", ")}.</p>
-          )}
-        </RunGrid>
+        <RunGrid grid={kinds} caption={`nextDay on Node ${KINDS.node}: each should give ${KINDS.file.want}`} />
       </Build>
       <Build n={2}>
+        {kinds.ready && (
+          <p>{kinds.distinct} different results from one function, in {kinds.zones} zones on Node {kinds.nodes.join(", ")}.</p>
+        )}
         <GmtRun calls={GMT_CALLS.kinds} />
       </Build>
-    </Swap>
+    </Stack>
     <Notes>
       <p>Five lines that look right: take a date, add a day, print the date. Date accepts every kind of time you can hand it, and never says which kind it took. Step on for what it returned.</p>
       <p>Each row is one kind of input; each column, the machine's time zone. A date alone is read as UTC, and comes out right. With a time, or as a Date object, it is read on the machine's clock, and anywhere east of UTC it comes out a day early. With an offset it is a day early on every machine, and with a zone name it throws.</p>
@@ -193,7 +193,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="one-clock" title="The web shows one clock" minutes={0.25} place="wall" layout="wall">
+  <Slide id="one-clock" title="The web shows one clock" minutes={0.25} place="wall" layout="wall" plainClock>
     <WallFigures images />
     <Notes>
       <p>Each of these sites shows one clock. That is the view most date code takes, and the view the agents took: one place, one local time. Hold that.</p>
@@ -244,7 +244,9 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   <Slide id="abort" title="A date pattern aborts Node" minutes={1.25} place="planet" lapse="abort">
     <Swap>
       <Visual receipts={[REPORTS.abort[0].filing]}>
-        <CodeRun {...VISUALS.runs.crash} />
+        <CodeRun {...VISUALS.runs.crash}>
+          <p class="gmt-run-note" data-after><code>gd</code> is the language tag for Scottish Gaelic.</p>
+        </CodeRun>
       </Visual>
       <Build n={1}>
         <Visual receipts={[REPORTS.abort[1].filing]}>
@@ -259,7 +261,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
       </Build>
     </Swap>
     <Notes>
-      <p>Galicia keeps Madrid's clock, so the planet turns under it while the run replays the crash. The Galician pattern is one of those with the week-of-year year. The ticket on the Unicode side is ours too.</p>
+      <p><code>gd</code> is Scottish Gaelic. Scotland keeps London's clock, so the planet turns under it while the run replays the crash. The Gaelic date pattern is one of those that print the week-of-year year. The ticket on the Unicode side is ours too.</p>
       <p>Nothing runs on stage: this is a recording of what the report says happens. Step on for the Unicode ticket behind it, then for GMT's own code on the same date: green is what GMT returns, red what Intl gives.</p>
     </Notes>
   </Slide>
@@ -306,14 +308,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
           calls={GMT_CALLS.dayOff}
         >
           <p class="gmt-run-note" data-after>
-            GMT has no answer here yet: @js-temporal/polyfill, which GMT runs on, throws on every
-            Chinese date under ICU 78 (js-temporal/temporal-polyfill#360). No date, not a wrong one.
+            GMT gives no date here: runtimes put this New Year on 6 or 7 February, so GMT returns
+            its empty value for a Chinese date on every host. No date, not a wrong one.
           </p>
         </GmtStep>
       </Build>
     </Swap>
     <Notes>
-      <p>Kolkata: the month's first week slides one day right, so day 1 lands a day late. Then Shanghai: February 2027 with Chinese New Year ringed on the 6th, and the polyfill's 7th ringed in red. The last step leaves the Earth for the Moon, and the sun runs up to the new moon over Shanghai. The last step comes back to the Earth with GMT's own code: its result, and in red the date temporal-polyfill gives. Today GMT has no answer for a Chinese date on this Node; say so.</p>
+      <p>Kolkata: the month's first week slides one day right, so day 1 lands a day late. Then Shanghai: February 2027 with Chinese New Year ringed on the 6th, and the polyfill's 7th ringed in red. The last step leaves the Earth for the Moon, and the sun runs up to the new moon over Shanghai. The last step comes back to the Earth with GMT's own code: its result, and in red the date temporal-polyfill gives. GMT returns no Chinese date on any host, because the runtimes disagree on the day; say so.</p>
       <p>Four minutes from midnight. Two calculations five minutes apart disagree about which day the year starts.</p>
     </Notes>
   </Slide>

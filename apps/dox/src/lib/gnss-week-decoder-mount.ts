@@ -34,7 +34,6 @@ import {
   html,
   idScope,
   plates,
-  raw,
   section,
   select,
   setHtml,
@@ -104,11 +103,10 @@ import {
 import { BEFORE_FIRST_WEEK_NOTE, counterSystem } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
 import type { EdiCall } from "./edi-widgets";
-import { callArgs } from "./call-args";
+import { callLines } from "~/widgets/families/gnss/call-lines";
 import { formatValue } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { handoffHref } from "./widget-permalink";
-import { codeSpan } from "./widget-ui";
 
 export type { GnssWeekDecoderArgs } from "./gnss-week-decoder";
 
@@ -354,23 +352,6 @@ function lanesEmpty(read: GnssRead | null): SafeHtml {
   return text === ""
     ? html``
     : html`<p class="${styles.lanesEmpty}" data-lost="${String(lost)}">${text}</p>`;
-}
-
-function callLines(calls: readonly EdiCall[]): {
-  code: SafeHtml;
-  plain: string;
-} {
-  const lines = calls.map((c) => {
-    const [argsHtml, plain] = callArgs(c.args);
-    return {
-      html: `${codeSpan("fn", c.fn)}(${argsHtml})`,
-      plain: `${c.fn}(${plain})`,
-    };
-  });
-  return {
-    code: raw(lines.map((l) => l.html).join("\n")),
-    plain: lines.map((l) => l.plain).join("\n"),
-  };
 }
 
 const refused = (call: EdiCall): boolean =>

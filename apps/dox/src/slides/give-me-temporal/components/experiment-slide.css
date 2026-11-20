@@ -12,7 +12,7 @@
 
 /* In the stage the whole slide is set smaller so nine rows, an example and a footnote fit. */
 html[data-deck] .gmt-slide[data-layout="experiment"] {
-  padding-block: 2cqi;
+  padding-block: var(--gmt-deck-space-xl);
   line-height: 1.3;
   font-size: max(0.75rem, 1.15cqi);
 }

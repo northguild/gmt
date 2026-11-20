@@ -53,8 +53,9 @@ export const readSlides = (page) =>
 
 /**
  * The boxes of the shown slide's visible elements that fall outside the stage. What sits in a box
- * that scrolls (a chat's answer, a tool's panel) is reached by scrolling it, so the box stands for
- * it: the box itself is checked.
+ * that scrolls (a chat's answer, a tool's panel) is reached by scrolling it, and what overruns a
+ * box that clips (a build stack, `Stack.astro`) is never drawn, so the box stands for it: the box
+ * itself is checked.
  */
 export const escapees = (page, stage) =>
   page.evaluate((outer) => {
@@ -64,7 +65,11 @@ export const escapees = (page, stage) =>
     const scrolls = (el) => {
       for (let a = el.parentElement; a && a !== shown; a = a.parentElement) {
         const { overflowX, overflowY } = getComputedStyle(a);
-        if ([overflowX, overflowY].some((o) => o === "auto" || o === "scroll"))
+        if (
+          [overflowX, overflowY].some((o) =>
+            ["auto", "scroll", "hidden", "clip"].includes(o),
+          )
+        )
           return true;
       }
       return false;

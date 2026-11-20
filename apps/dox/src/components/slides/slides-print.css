@@ -75,6 +75,17 @@
     visibility: visible;
   }
 
+  /* A stack prints its whole column, unshifted. */
+  html[data-deck] .gmt-stack {
+    overflow: visible;
+    max-block-size: none;
+    mask-image: none;
+  }
+
+  html[data-deck] .gmt-stack-track {
+    transform: none;
+  }
+
   /* The site's own header, skip link and footer are not slides: left in, they push every slide
      across a page break. */
   .sl-skip-link,

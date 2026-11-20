@@ -7,7 +7,8 @@
  * - `deck-stage-follow.ts`: tells the space stage where the camera belongs;
  * - `deck-dialogs.ts`: the overview, the keys and the unlock dialog;
  * - `deck-lock.ts`, `deck-blank.ts`, `deck-fullscreen.ts`: the menu's tools;
- * - `deck-presenter-link.ts`: the presenter window.
+ * - `deck-presenter-link.ts`: the presenter window;
+ * - `build-stack.ts`: slides a stack of builds up so the newest is whole.
  *
  * `html[data-deck]` is `wait` (or `wait-hash`) from the head script until this mount runs, then `stage`. Without
  * JavaScript the mark is never set and the page is a stacked article (`slides.css`).
@@ -23,6 +24,7 @@
  * Seam for the live agents (slice 4b): `setDemo` publishes which demo runs and whether it plays
  * live or from its recording; the presenter shows it.
  */
+import { mountBuildStacks } from "./build-stack";
 import { createDeck, parseHash } from "./deck";
 import { mountDeckBlank } from "./deck-blank";
 import { mountDeckDialogs } from "./deck-dialogs";
@@ -209,6 +211,7 @@ export function mountDeck(
     },
   });
 
+  mountBuildStacks(root, { signal, win });
   nav.start();
   flyToState(false);
   html.dataset[MARK] = "stage";

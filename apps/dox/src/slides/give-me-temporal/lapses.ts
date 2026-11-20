@@ -7,8 +7,8 @@ import type { LapseDef } from "~/lib/slides/time-lapse";
 import newMoon from "./new-moon.json";
 
 export const LAPSES = {
-  /** Galicia keeps Madrid's clock. */
-  abort: { zones: ["Europe/Madrid"] },
+  /** `gd`, the abort slide's language, is Scottish Gaelic: Scotland keeps London's clock. */
+  abort: { zones: ["Europe/London"] },
   tehran: { zones: ["Asia/Tehran"] },
   tokyo: { zones: ["Asia/Tokyo"] },
   kolkata: { zones: ["Asia/Kolkata"] },

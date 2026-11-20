@@ -141,7 +141,7 @@ describe("the globe's time and pins", () => {
       const { play, sun } = await heldLapse("ends");
       // The sun glides from now into the lapse, then the lapse plays to its end and holds.
       expect(sun()).toBe(NOW);
-      play(10_000);
+      play(30_000);
       const held = sun();
       expect(held).toBe(
         Temporal.Instant.from("2027-02-06T15:56:00Z").epochMilliseconds,

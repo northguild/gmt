@@ -69,7 +69,7 @@ import {
   type TimelineScale,
   type ZonedInterval,
 } from "./interval-visualizer";
-import { callArgs } from "./call-args";
+import { frameCallArgs } from "./call-args";
 import { onceDestroy, type MountFn } from "./widget-mount";
 import { loadIntervalLib } from "./zones-lib";
 import { codeSpan } from "./widget-ui";
@@ -235,7 +235,7 @@ function callFrameOf(
   op: IntervalOperationInfo,
   values: readonly [string, string, string, string],
 ): SafeHtml {
-  const [argsHtml, plain] = callArgs(values);
+  const [argsHtml, plain] = frameCallArgs(values);
   return codeFrame({
     label: `${op.label} call`,
     copyLabel: `Copy ${op.fnName} call`,

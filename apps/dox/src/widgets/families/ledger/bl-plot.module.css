@@ -81,7 +81,7 @@
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);
-  box-shadow: inset 0 -2px 0 var(--series);
+  box-shadow: inset 0 var(--gmt-under-edge) 0 var(--series);
   font-style: normal;
   line-height: 1.2;
   color: var(--gmt-ice);

@@ -67,6 +67,19 @@
 }
 
 /*
+ * A plain dial (`data-plain`, `earth-clock.ts`) fades the GMT mark, the city and the offset out and
+ * keeps the calendar: the clock of a machine that knows no place. Its shards are copies inside the
+ * clock, so they break plain too.
+ */
+.gmt-earth-clock [data-legend] {
+  transition: opacity var(--gmt-duration-slow) var(--gmt-easing);
+}
+
+.gmt-earth-clock[data-plain] [data-legend] {
+  opacity: 0;
+}
+
+/*
  * The hands, the date and the offset fade in together, already in place, once gmt has read the time
  * (`data-timed`, `earth-clock.ts`); until then the dial shows no time it would have to jump from.
  */

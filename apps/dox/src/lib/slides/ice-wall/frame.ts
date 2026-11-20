@@ -56,7 +56,7 @@ const GRID_GAP = 1.2;
  * answer, sits under the last row. Panes fill the rows left to right. Rectangles are measured from
  * the wall's centre (the lens centre), so `cx` and `cy` are the lens centre's place on the stage, in
  * pixels from the stage's top left. Every figure is in stage units, and the DOM captions use the
- * same numbers (`slides.css`, `.gmt-wall-figures`).
+ * same numbers (`deck0.css`, `--gmt-wall-panes-*` and `.gmt-wall-figures`).
  */
 export function paneLayout(
   count: number,

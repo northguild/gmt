@@ -45,6 +45,7 @@ import {
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import {
   callGhosts,
+  cellCall,
   callLines,
   distinctCalls,
   outputOf,
@@ -273,7 +274,7 @@ function heldInstant(text: string, ghosts: readonly string[]): SafeHtml {
 
 function callCell(row: ScaleRow, samples: Samples): SafeHtml {
   const call: EdiCall | null = row.call;
-  const live = call === null ? html`${NBSP}` : callLines([call]).code;
+  const live = call === null ? html`${NBSP}` : cellCall(call);
   const ghosts: Ghost[] = callGhosts(samples.calls);
   // The call's tokens are text boxes as wide as their text, so a row with a call and a row
   // without one still count the same elements: the wrapper names them for the gates.

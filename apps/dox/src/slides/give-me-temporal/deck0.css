@@ -41,12 +41,18 @@
  * 1.2 apart. The caption sits on its pane's lower edge, on an opaque plate with a full bevelled
  * border and a bottom accent edge, so the right third stays clear for the clock.
  */
+html[data-deck] .gmt-slide[data-layout="wall"] {
+  /* Where `paneLayout` puts the panes: their top, and their bottom less the slide's own padding. */
+  --gmt-wall-panes-top: 12cqi;
+  --gmt-wall-panes-clear: 25.4cqi;
+}
+
 html[data-deck] .gmt-wall-figures {
   position: absolute;
-  inset-inline: 6cqi 36cqi;
-  inset-block-start: 12cqi;
+  inset-inline: var(--gmt-deck-pad-inline) var(--gmt-deck-clock-room);
+  inset-block-start: var(--gmt-wall-panes-top);
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.2cqi;
+  gap: var(--gmt-deck-space-lg);
   pointer-events: none;
 }
 
@@ -71,12 +77,12 @@ html[data-deck] .gmt-wall-caption {
   box-sizing: border-box;
   gap: 0;
   margin: 0;
-  padding: 0.4cqi 0.7cqi;
+  padding: var(--gmt-deck-space-xs) var(--gmt-deck-space-sm);
   background: var(--gmt-surface-widget);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-bevel-md);
   corner-shape: bevel;
-  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  box-shadow: inset 0 var(--gmt-under-edge) 0 var(--gmt-cyan);
   font-size: max(0.75rem, 0.9cqi);
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -116,7 +122,7 @@ html[data-deck] .gmt-slide[data-layout="wall"] .gmt-slide-title {
 
 /* The slide that hangs the wall keeps its text under the grid of panes, which ends 36.4 down. */
 html[data-deck] .gmt-slide[data-layout="wall"] .gmt-slide-body {
-  padding-block-start: 25.4cqi;
+  padding-block-start: var(--gmt-wall-panes-clear);
 }
 
 /* The wall's canvas sits over the globe, under the slides, and never takes a pointer. */
@@ -135,7 +141,7 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
 html[data-deck] .gmt-filing-grid {
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
-  gap: 0.8cqi;
+  gap: var(--gmt-deck-space-md);
 }
 
 /* Starlight's flow margins would add a gap on top of the grid's own. */
@@ -152,12 +158,12 @@ html[data-deck] .gmt-lead {
 /* `why-not-temporal`: three numbered points under a lead line, set a step under the body so
    the three fit above the controls with room to spare. */
 html[data-deck] .gmt-why {
-  margin-block: 1.2cqi 0;
+  margin-block: var(--gmt-deck-space-lg) 0;
   padding-inline-start: 1.4em;
   font-size: max(0.8rem, 1.85cqi);
 
   & li + li {
-    margin-block-start: 1cqi;
+    margin-block-start: var(--gmt-deck-space-md);
   }
 }
 
@@ -165,11 +171,11 @@ html[data-deck] .gmt-why {
 
 html[data-deck] .gmt-familiar {
   display: grid;
-  gap: 0.35cqi;
+  gap: var(--gmt-deck-space-xs);
   min-inline-size: 0;
   font-size: var(--gmt-deck-text-md);
   line-height: 1.2;
-  padding: 0.6cqi 1.2cqi;
+  padding: var(--gmt-deck-space-sm) var(--gmt-deck-space-lg);
 }
 
 .gmt-familiar-job {
@@ -181,7 +187,7 @@ html[data-deck] .gmt-familiar {
 .gmt-familiar-shapes {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.15cqi 1.2cqi;
+  gap: var(--gmt-deck-space-2xs) var(--gmt-deck-space-lg);
   align-items: baseline;
   margin: 0;
 }
@@ -194,7 +200,7 @@ html[data-deck] .gmt-familiar-shapes dt {
 /* Three pairs share one slide, so its title is set to one line in the two thirds. */
 html[data-deck] .gmt-slide[data-layout="familiar"] .gmt-slide-title {
   font-size: max(1.25rem, 3.1cqi);
-  margin-block-end: 1.5cqi;
+  margin-block-end: var(--gmt-deck-space-lg);
 }
 
 .gmt-familiar-shapes dd {
@@ -217,10 +223,10 @@ html[data-deck] .gmt-slide[data-layout="familiar"] .gmt-slide-title {
 html[data-deck] .gmt-familiar-run {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2cqi 2ch;
+  gap: var(--gmt-deck-space-2xs) 2ch;
   align-items: baseline;
   justify-content: space-between;
-  padding-block-start: 0.35cqi;
+  padding-block-start: var(--gmt-deck-space-xs);
   border-block-start: 1px solid var(--gmt-border);
 }
 
@@ -237,9 +243,9 @@ html[data-deck] .gmt-familiar-run .gmt-run-result {
 .gmt-qr-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 3cqi;
+  gap: var(--gmt-deck-space-2xl);
   align-items: start;
-  margin-block-end: 3cqi;
+  margin-block-end: var(--gmt-deck-space-2xl);
 }
 
 .gmt-qr-row > .gmt-qr {

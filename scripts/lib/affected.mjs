@@ -130,6 +130,13 @@ export const CHECKS = [
     needs: ["build:gmt"],
   },
   { id: "test:gmt", run: "pnpm --filter @northguild/gmt run test" },
+  {
+    // The zone matrix runner's own node:test files. It is a separate package with its own
+    // lockfile and Node 26 floor (scripts/zone-matrix/package.json); one test imports date-fns,
+    // so it installs first. In CI the `zone-matrix` job runs it.
+    id: "test:zone-matrix",
+    run: "pnpm --dir scripts/zone-matrix install --frozen-lockfile && pnpm --dir scripts/zone-matrix test",
+  },
 ];
 
 const ALL = CHECKS.map((c) => c.id);
@@ -361,8 +368,12 @@ export const RULES = [
   { test: /^scripts\/licences\.mjs$/, checks: ["licences", ...SCRIPT_TESTS] },
   // The behaviour matrix runner is run by hand; the Dox tests walk and copy scripts/.
   { test: /^scripts\/behaviour-matrix\//, checks: SCRIPT_TESTS },
-  // The zone matrix runner is run by hand too; its clones live in .work/, which git ignores.
-  { test: /^scripts\/zone-matrix\//, checks: SCRIPT_TESTS },
+  // The zone matrix runner is run by hand; its clones live in .work/, which git ignores. Its
+  // own tests run only when it changes.
+  {
+    test: /^scripts\/zone-matrix\//,
+    checks: ["test:zone-matrix", ...SCRIPT_TESTS],
+  },
   {
     test: /^scripts\/test-markers\.mjs$/,
     checks: ["markers", ...SCRIPT_TESTS],

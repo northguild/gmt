@@ -8,13 +8,6 @@ import { LAPSES } from "./lapses";
 
 export const STAGE: DeckStageData = {
   points: {
-    galicia: {
-      // Santiago de Compostela, the capital of Galicia.
-      lng: -8.5448,
-      lat: 42.8782,
-      label: "Galicia",
-      source: "GeoNames 3109642, Santiago de Compostela: 42.8782 N, 8.5448 W",
-    },
     greenwich: {
       // The Airy transit circle, which marked the Prime Meridian of 1884.
       lng: 0,

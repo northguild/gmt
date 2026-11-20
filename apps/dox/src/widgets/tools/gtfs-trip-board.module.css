@@ -255,12 +255,35 @@
     text-align: start;
   }
 
+  /* Every part of a cell (a value and its UTC instant, a line, its stop and zone) stacks in the
+     value column; only the label takes the first. */
+  .board th > *,
+  .board td > * {
+    grid-column: 2;
+  }
+
   .board th::before,
   .board td::before {
     content: attr(data-col);
     color: var(--gmt-ice-dim);
     font-weight: 600;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+  }
+}
+
+/* On a phone the value column beside the label is narrower than a whole zone piece
+   (`Buenos_Aires]`), and nothing breaks inside a word, so the label goes above its value. A held
+   value sizes nothing (`hold`), so the switch is by the board's width. */
+@container trip-board (inline-size < 24rem) {
+  .board th,
+  .board td {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--gmt-space-1);
+  }
+
+  .board th > *,
+  .board td > * {
+    grid-column: 1;
   }
 }
 

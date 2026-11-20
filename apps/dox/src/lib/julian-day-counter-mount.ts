@@ -50,6 +50,7 @@ import {
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import {
   callGhosts,
+  cellCall,
   callLines,
   distinctCalls,
   outputOf,
@@ -205,7 +206,7 @@ function heldInstant(text: string, ghosts: readonly string[]): SafeHtml {
 }
 
 function callCell(row: FormRow, samples: Samples): SafeHtml {
-  const live = row.call === null ? html`${NBSP}` : callLines([row.call]).code;
+  const live = row.call === null ? html`${NBSP}` : cellCall(row.call);
   const ghosts: Ghost[] = callGhosts(samples.calls);
   return hold(
     html`<span class="${styles.wrap}" data-gate="codeframe"><code class="${styles.cell}">${live}</code></span>`,

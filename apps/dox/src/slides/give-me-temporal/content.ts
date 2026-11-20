@@ -23,6 +23,7 @@ export interface Report {
 }
 
 export const REPORTS = {
+  /** Both runs format in `gd`, the BCP 47 language tag for Scottish Gaelic. */
   abort: [
     {
       filing: "nodejs/node#67076",
@@ -240,7 +241,10 @@ export const VISUALS = {
   },
 } as const;
 
-/** The Gaelic run's options: the date in the Unicode ticket's run, as a year and a short month. */
+/**
+ * The Gaelic run's options: the date in the Unicode ticket's run, in `gd` (Scottish Gaelic), as a
+ * year and a short month.
+ */
 const gaelic = [
   "2024-12-30",
   "gd",

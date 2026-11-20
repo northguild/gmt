@@ -71,8 +71,8 @@
   overflow: hidden;
   background: var(--gmt-void);
   border: 1px solid var(--gmt-hairline);
-  padding-block: 5cqi;
-  padding-inline: 6cqi;
+  padding-block: var(--gmt-deck-pad-block);
+  padding-inline: var(--gmt-deck-pad-inline);
   font-size: max(0.75rem, 2.6cqi);
   line-height: 1.4;
 
@@ -83,7 +83,7 @@
   }
 
   & h2 {
-    margin-block: 0 3cqi;
+    margin-block: 0 var(--gmt-deck-space-2xl);
     font-family: var(--gmt-font-display);
     font-size: max(0.75rem, 4.6cqi);
     line-height: 1.15;

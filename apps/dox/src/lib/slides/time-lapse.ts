@@ -13,6 +13,7 @@
  * and at the speed the sun is going (`LapseCarry`), so a step never sends the sun back to now to
  * sweep the same day again. Its window is still a whole day, so every pin still flips once.
  */
+import { AMBIENT_DEG_PER_MS } from "../globe/controller";
 import { play, type Frames } from "./frames";
 import type { DeckGmt } from "./gmt-loader";
 import { firstTransition } from "./transition-ms";
@@ -24,12 +25,27 @@ export interface LapseDef {
   around?: { zone: string; years: readonly number[] };
   /** A window of `hours` that stops on this UTC instant, instead of the next 24 hours. */
   endsAt?: { utc: string; hours: number };
-  /** How long the lapse takes on stage; `LAPSE_MS` when absent. */
+  /** How long the lapse takes on stage at least; `LAPSE_MS` when absent. */
   durationMs?: number;
 }
 
-/** How long a day-long lapse takes on stage: slow enough to read as time passing. */
+/** How long a day-long lapse takes on stage at least; `MAX_SUN_RATE` stretches it further. */
 export const LAPSE_MS = 24000;
+
+/**
+ * The fastest the sun may go, in sun milliseconds per stage milliseconds: the sun crosses the sky
+ * no faster than the home globe turns when idle (`AMBIENT_DEG_PER_MS`, a turn in 3 minutes). The
+ * sun goes 360 degrees in a day, so this is a day in 3 minutes, 480 times real time.
+ */
+export const MAX_SUN_RATE = AMBIENT_DEG_PER_MS / (360 / 86_400_000);
+
+/**
+ * How long a window of `spanMs` takes: the def's time, or longer where the curve's top speed
+ * (`π/2` of the span per duration, at the middle) would pass `MAX_SUN_RATE`. A carried start goes
+ * no faster than that top speed (its slope stays under π/2 of the span), so the cap holds there too.
+ */
+const durationFor = (def: LapseDef, spanMs: number): number =>
+  Math.max(def.durationMs ?? LAPSE_MS, (spanMs * Math.PI) / 2 / MAX_SUN_RATE);
 /** The hours either side of a recorded jump that a window holds. */
 const JUMP_WINDOW_HOURS = 18;
 
@@ -92,33 +108,33 @@ export function planLapse(
   tools: LapseTools,
   carry: LapseCarry | null = null,
 ): LapsePlan | null {
-  const base = {
+  const window = (fromMs: number, toMs: number) => ({
     name,
     zones: def.zones,
-    durationMs: def.durationMs ?? LAPSE_MS,
-  };
+    fromMs,
+    toMs,
+    durationMs: durationFor(def, toMs - fromMs),
+  });
   if (def.endsAt) {
     const to = tools.utcMs(def.endsAt.utc);
     if (to === null) return null;
     const from = tools.addHours(to, -def.endsAt.hours);
-    return from === null ? null : { ...base, fromMs: from, toMs: to };
+    return from === null ? null : window(from, to);
   }
   if (def.around) {
     const jump = tools.jumpMs(def.around.zone, def.around.years);
     if (jump === null) return null;
     const from = tools.addHours(jump, -JUMP_WINDOW_HOURS);
     const to = tools.addHours(jump, JUMP_WINDOW_HOURS);
-    return from === null || to === null
-      ? null
-      : { ...base, fromMs: from, toMs: to };
+    return from === null || to === null ? null : window(from, to);
   }
   const from = carry?.ms ?? tools.nowMs();
   const to = tools.addHours(from, 24);
   if (to === null) return null;
   const rate = Math.max(0, carry?.rate ?? 0);
   return rate > 0
-    ? { ...base, fromMs: from, toMs: to, startRate: rate }
-    : { ...base, fromMs: from, toMs: to };
+    ? { ...window(from, to), startRate: Math.min(rate, MAX_SUN_RATE) }
+    : window(from, to);
 }
 
 /** Eases in and out, so the sun starts and stops without a jolt. */
