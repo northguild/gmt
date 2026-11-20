@@ -10,11 +10,7 @@
 import { z } from "zod";
 import { DOX_TOOL_DOCS, type DoxToolName } from "../dox-tool-schemas";
 import { WidgetLoadError } from "../widget-mount";
-import type {
-  ModelContextToolInit,
-  PageToolResult,
-  PageToolRun,
-} from "./model-context";
+import type { ModelContextToolInit, PageToolRun } from "./model-context";
 
 export type { PageToolResult, PageToolRun } from "./model-context";
 
@@ -102,88 +98,54 @@ export function describeTool(def: PageToolDef): string {
   ].join(" ");
 }
 
-/** What both surfaces list: WebMCP's `registerTool` and the MCP server's `tools/list`. */
-export function toolListing(def: PageToolDef) {
+export function toModelContextTool(def: PageToolDef): ModelContextToolInit {
+  const name = def.name;
   return {
-    name: def.name,
+    name,
     title: def.title,
     description: describeTool(def),
     inputSchema: z.toJSONSchema(def.input, { io: "input" }),
-    annotations: { readOnlyHint: true as const },
-  };
-}
-
-export interface ExecutePageToolOptions {
-  signal?: AbortSignal;
-  /** The URL a run's site-path link resolves against: the page's own `location.href`, or the live site. */
-  base: string;
-  /** Fail loudly on a result that does not survive a JSON round trip (dev and test). */
-  checkJson?: boolean;
-}
-
-/**
- * The one run path: parse the input, run the page's pure functions, resolve a JSON-safe result. A
- * refusal resolves too, because the browser hides a rejection's message from the model. Reads no
- * browser global, so the MCP server on the Worker calls it as the page tool does.
- */
-export async function executePageTool(
-  def: PageToolDef,
-  input: unknown,
-  options: ExecutePageToolOptions,
-): Promise<PageToolResult<unknown>> {
-  const name = def.name;
-  const parsed = def.input.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      tool: name,
-      error: "invalid-input",
-      issues: parsed.error.issues.map((issue) => ({
-        path: issue.path.join("."),
-        message: issue.message,
-      })),
-    };
-  }
-  const signal = options.signal ?? new AbortController().signal;
-  let run: PageToolRun<unknown>;
-  try {
-    run = await def.run(parsed.data, signal);
-  } catch (error) {
-    if (signal.aborted) throw signal.reason;
-    if (error instanceof WidgetLoadError) {
-      return {
-        ok: false,
-        tool: name,
-        error: "unavailable",
-        message: error.message,
-      };
-    }
-    throw error;
-  }
-  if (signal.aborted) throw signal.reason;
-  if (options.checkJson) assertJsonSafe(name, run);
-  // A run's link is a site path. The agent may quote it in a chat or hand it to another
-  // tool, so it leaves as a full URL on the caller's own origin: localhost, a preview or the
-  // live site.
-  const answer =
-    run.link === undefined
-      ? run
-      : { ...run, link: new URL(run.link, options.base).href };
-  return { ok: true, tool: name, ...answer };
-}
-
-export function toModelContextTool(def: PageToolDef): ModelContextToolInit {
-  return {
-    ...toolListing(def),
-    execute: (input, options) =>
-      executePageTool(def, input, {
-        signal: options?.signal,
-        // Read only when a run has a link to resolve, as before the run path moved out.
-        get base() {
-          return location.href;
-        },
-        checkJson: import.meta.env.DEV,
-      }),
+    annotations: { readOnlyHint: true },
+    async execute(input, options) {
+      const parsed = def.input.safeParse(input);
+      if (!parsed.success) {
+        return {
+          ok: false,
+          tool: name,
+          error: "invalid-input",
+          issues: parsed.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        };
+      }
+      const signal = options?.signal ?? new AbortController().signal;
+      let run: PageToolRun<unknown>;
+      try {
+        run = await def.run(parsed.data, signal);
+      } catch (error) {
+        if (signal.aborted) throw signal.reason;
+        if (error instanceof WidgetLoadError) {
+          return {
+            ok: false,
+            tool: name,
+            error: "unavailable",
+            message: error.message,
+          };
+        }
+        throw error;
+      }
+      if (signal.aborted) throw signal.reason;
+      if (import.meta.env.DEV) assertJsonSafe(name, run);
+      // A run's link is a site path. The agent may quote it in a chat or hand it to another
+      // tool, so it leaves as a full URL on the page's own origin: localhost, a preview or the
+      // live site.
+      const answer =
+        run.link === undefined
+          ? run
+          : { ...run, link: new URL(run.link, location.href).href };
+      return { ok: true, tool: name, ...answer };
+    },
   };
 }
 

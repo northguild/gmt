@@ -17,7 +17,7 @@
  * is 1 with a table of failures when the last attempt still fails. It does not roll back.
  *
  * `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl-hygiene rows (`_headers` and the 404
- * page) and the MCP rows against a local `wrangler dev` that serves the built `dist`. The redirect rows need the
+ * page) against a local `wrangler dev` that serves the built `dist`. The redirect rows need the
  * live hosts and are skipped.
  */
 import { readFileSync } from "node:fs";
@@ -217,111 +217,6 @@ async function crawlRows() {
     ],
   });
   return rows;
-}
-
-/** `text/event-stream` bodies carry one `event: message` whose `data:` is the JSON-RPC answer. */
-function parseMcp(res) {
-  const text = res.type.includes("text/event-stream")
-    ? res.body
-        .split("\n")
-        .filter((line) => line.startsWith("data:"))
-        .map((line) => line.slice(5).trim())
-        .join("")
-    : res.body;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * The rows for the MCP endpoint (`worker/mcp.ts`). The expected tools come from the built
- * `src/generated/mcp-tools.json`, so nothing is copied by hand. A 2025-era request is answered
- * as one SSE message, so a row reads either form. A 5xx on the call row usually means the
- * Worker ran out of CPU (Cloudflare error 1102). No trailing slash: assets answer that with 405.
- */
-function mcpRows() {
-  const tools = JSON.parse(
-    readFileSync(
-      new URL("../src/generated/mcp-tools.json", import.meta.url),
-      "utf8",
-    ),
-  );
-  const headers = {
-    accept: "application/json, text/event-stream",
-    "content-type": "application/json",
-    "mcp-protocol-version": "2025-06-18",
-  };
-  const rpc = (id, method, params) =>
-    JSON.stringify({ jsonrpc: "2.0", id, method, params });
-  const url = `${ND}/gmt/api/mcp`;
-  const listRow = (label, path, expected) => ({
-    label,
-    url: `${url}${path}`,
-    method: "POST",
-    headers,
-    body: rpc(1, "tools/list", {}),
-    steps: [
-      {
-        status: 200,
-        check: (res) => {
-          const names = parseMcp(res)?.result?.tools?.map((t) => t.name);
-          if (!names)
-            return `no tools in the answer: ${res.body.slice(0, 120)}`;
-          const want = expected.map((t) => t.name).sort();
-          return JSON.stringify([...names].sort()) === JSON.stringify(want)
-            ? undefined
-            : `${names.length} tools listed, expected ${want.length}`;
-        },
-      },
-    ],
-  });
-  const eta = tools.find((t) => t.name === "check_eta_against_cutoff");
-  return [
-    listRow("mcp tools/list, every tool", "", tools),
-    listRow(
-      "mcp tools/list, transport scope",
-      "/transport",
-      tools.filter((t) => t.industries.includes("transport")),
-    ),
-    {
-      label: "mcp tools/call check_eta_against_cutoff",
-      url,
-      method: "POST",
-      headers,
-      body: rpc(2, "tools/call", {
-        name: "check_eta_against_cutoff",
-        arguments: eta?.example,
-      }),
-      steps: [
-        {
-          status: 200,
-          check: (res) => {
-            const result = parseMcp(res)?.result;
-            if (!result) return `no result: ${res.body.slice(0, 120)}`;
-            if (result.isError !== false) return "isError is not false";
-            if (result.structuredContent?.ok !== true)
-              return "structuredContent.ok is not true";
-            const link = result.structuredContent.link;
-            return typeof link === "string" &&
-              link.startsWith("https://northguild.dev/gmt/tools/cutoff-ruler/")
-              ? undefined
-              : `link is ${link}`;
-          },
-        },
-      ],
-    },
-    { label: "mcp GET is 405", url, steps: [{ status: 405 }] },
-    {
-      label: "mcp unknown scope is 404",
-      url: `${url}/nope`,
-      method: "POST",
-      headers,
-      body: rpc(3, "tools/list", {}),
-      steps: [{ status: 404 }],
-    },
-  ];
 }
 
 async function buildRows() {
@@ -927,7 +822,7 @@ async function buildRows() {
       },
     ],
   });
-  return [...rows, ...(await crawlRows()), ...mcpRows()];
+  return [...rows, ...(await crawlRows())];
 }
 
 async function attempt() {
@@ -935,7 +830,7 @@ async function attempt() {
      files). A dropped one is a failed attempt, retried like a failed row, not a crash. */
   let rows;
   try {
-    rows = LOCAL ? [...(await crawlRows()), ...mcpRows()] : await buildRows();
+    rows = LOCAL ? await crawlRows() : await buildRows();
   } catch (error) {
     return [
       {

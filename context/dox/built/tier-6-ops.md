@@ -42,17 +42,6 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 - `curl -s <url>/dox/ | grep -c GEMINI` prints `0`.
 - The first deploy with the `ai` binding confirms the CI token may bind Workers AI.
 - Page tools ([tier-2-webmcp.md](tier-2-webmcp.md)), in Chrome 149 or later on `https://northguild.dev` with the trial token live or `chrome://flags/#enable-webmcp-testing` on, and the Model Context Tool Inspector open: a tool page lists exactly one tool, named as its page's `def.name`; calling it with the page's `def.example` returns `ok: true`; the landing page and a guide list none.
-- Chat apps ([tier-2-webmcp.md](tier-2-webmcp.md#chat-apps-mcp)): `deploy-smoke.mjs` runs `mcpRows` after the deploy (`tools/list` for every tool and for the `transport` scope, one `tools/call`, a 405 and a 404), and it needs `src/generated/mcp-tools.json` from the build. By hand: add `https://northguild.dev/gmt/api/mcp` to Claude as a custom connector (no sign-in), check it lists the tools, and make one call.
-
-## Runbook: rate-limit the MCP endpoint
-
-An owner action, done once in the Cloudflare dashboard. The Worker's own limit counts in each instance only ([tier-2-webmcp.md](tier-2-webmcp.md#chat-apps-mcp)), so this rule is the cap that holds everywhere.
-
-1. Open Security, WAF, Rate limiting rules and add one rule.
-2. Match a URI path that starts with `/gmt/api/mcp`.
-3. Count by IP address, allow 100 requests in 10 seconds, and block for 10 seconds.
-4. Before saving, check the Free plan's current limits on the period, the counting characteristics and the number of rules in the dashboard.
-5. To see how much of the 100,000 daily requests MCP uses, open the Workers dashboard's request graph.
 
 ## Owed verification
 
@@ -69,4 +58,3 @@ An owner action, done once in the Cloudflare dashboard. The Worker's own limit c
 - Site: TypeDoc; Octane; Nextra; a custom domain; per-page OG images; a second discovery page beside the guides index; a feedback loop.
 - Motion and 3D: a boot sequence, scanlines or grain; a full-bleed 3D globe behind panels (the globe stays an object on the page: the landing hero, `/tools/zoned-earth/` and the `/dox` rail); a photoreal Earth (the look is a grid globe).
 - Audio and voice: a synced voice visualizer. No browser exposes `speechSynthesis` output to Web Audio ([WebAudio#1764](https://github.com/WebAudio/web-audio-api/issues/1764), [mediacapture-main#654](https://github.com/w3c/mediacapture-main/issues/654)).
-- MCP: an npm stdio package (the code from `apps/dox` is `UNLICENSED`, and a package needs a licence decision first); MCP Apps widgets and `ui://` resources (the Cut-off Ruler is the pilot to try later); sign-in (the tools are public and read-only, so a sign-in only adds a wall).
