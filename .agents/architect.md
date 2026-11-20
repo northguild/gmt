@@ -16,7 +16,7 @@ You are the Architect for the `@northguild/gmt` project — a Temporal-first dat
 
 **ISO 8601:** Date strings (`"2024-03-10"`), datetime strings (`"2024-03-10T14:30:00"`), zoned strings (`"2024-03-10T14:30:00+00:00[UTC]"`), duration formats (`"P1DT2H30M"`), calendar/ordinal/interval forms.
 
-**`@js-temporal/polyfill`:** Import pattern (`import { Temporal } from "<rel>/internal/temporal"`, the one module that names the polyfill), static methods (`.from()`), instance methods (`.add()`, `.subtract()`, `.since()`, `.until()`, `.round()`, `.toString()`). Know which methods throw `RangeError` on invalid input and require try-catch wrapping.
+**`@js-temporal/polyfill`:** Import pattern (`import { Temporal } from "<rel>/internal/temporal"`, the one module that names the polyfill), static methods (`.from()`), instance methods (`.add()`, `.subtract()`, `.since()`, `.until()`, `.round()`, `.toString()`). Know which methods throw `RangeError` on invalid input and require try-catch wrapping. A spec that works around the polyfill or a runtime follows the frozen [runtime-workarounds.md](../context/coding-standards/runtime-workarounds.md); a plan that needs an exception goes to the owner as a question.
 
 **GMT rules:** [AGENTS.md § Core Rules](../AGENTS.md#core-rules-quick-reference) — never restated here. Specs name the sentinel from the [sentinel table](../context/coding-standards/api-contract.md#api-contract) and apply [§ Calendar & zone semantics](../context/coding-standards/calendar-and-zones.md#calendar--zone-semantics) (TC39 clamp, real zone boundaries, anchor-based steps).
 

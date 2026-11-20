@@ -1,13 +1,10 @@
 import { plainOptionEntries } from "./plainOptionEntries";
-import { writtenLocaleTags } from "./resolveLocale";
+import { canonicalLocaleTags } from "./resolveLocale";
 import { isIslamicCalendarResolutionCompatNeeded } from "./temporalCompat/capabilities";
 import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
 import { repairCopticEra } from "./copticEra";
 import { repairIslamicEpochEra } from "./islamicEpochEra";
 import { refuseLunisolarDate } from "./lunisolarRefusal";
-import { refuseDisputedDefaultCalendar } from "./defaultCalendarRefusal";
-import { withNamedCalendar } from "./namedCalendar";
-import { isRefusedZoneName } from "./refusedZoneNames";
 import { repairEraYearNumerals } from "./japaneseNumerals";
 import { repairYearPrinting, widenRelatedYear } from "./yearPrinting";
 
@@ -137,11 +134,10 @@ function islamicResolved(
 }
 
 /**
- * @param locale the caller's tags as written (`canonicalLocale`)
- * @param refuseDates whether a chinese or dangi date formatter (compat D33), or one in a disputed
- * default calendar (compat D37), throws. The argument check passes `false`: it builds from the
- * caller's own options, which a time-only function completes later (`formatTime`), so only the
- * formatter a function formats with is refused.
+ * @param refuseDates whether a chinese or dangi date formatter (compat D33) throws. The argument
+ * check passes `false`: it builds from the caller's own options, which a time-only function
+ * completes later (`formatTime`), so only the formatter a function formats with is refused. So
+ * does a formatter whose date parts are thrown away (`joinDateTimeConnector`).
  */
 function construct(
   kind: FormatterKind,
@@ -151,29 +147,14 @@ function construct(
 ): object {
   switch (kind) {
     case "DateTimeFormat": {
-      // D35: nine zone names hosts disagree on are refused before anything is built.
-      const { timeZone } = options as Intl.DateTimeFormatOptions;
-      if (typeof timeZone === "string" && isRefusedZoneName(timeZone)) {
-        throw new RangeError(`time zone ${timeZone} is not supported`);
-      }
-      // The caller's `-u-ca-` keyword is passed as the `calendar` option, so a host without data
-      // for the language keeps it (`namedCalendar.ts`).
       const [built, builtOptions] = islamicResolved(
         locale,
-        withNamedCalendar(locale, options as Intl.DateTimeFormatOptions),
+        options as Intl.DateTimeFormatOptions,
       );
-      // D33: a chinese or dangi date is refused before any repair runs; D37: so is a date in a
-      // default calendar hosts disagree on, read from the tags as the caller wrote them.
+      // D33: a chinese or dangi date is refused before any repair runs, where the runtime's probe fails.
       const guarded = guardedDateTimeFormat(built, builtOptions);
       if (refuseDates) {
         refuseLunisolarDate(guarded);
-        refuseDisputedDefaultCalendar(
-          guarded,
-          locale,
-          typeof builtOptions.calendar === "string"
-            ? builtOptions.calendar
-            : undefined,
-        );
       }
       return repairIslamicEpochEra(
         repairCopticEra(
@@ -216,7 +197,7 @@ function hasZoneString(entries: [string, unknown][]): boolean {
 
 /**
  * The cache key for these arguments, or `null` when they must be constructed fresh. The
- * locale is already read (see `canonicalLocale`).
+ * locale is already canonical (see `canonicalLocale`).
  *
  * @param zoneRequired whether the options must carry a `timeZone` string: a `DateTimeFormat`
  * without one answers from the process default zone, which can change.
@@ -238,22 +219,18 @@ function cacheKey(
 }
 
 /**
- * The locale list as the caller wrote it: an array is read once, here, so the key, the D37 check
- * and the constructor see the same strings even when the array is a Proxy that answers each read
- * differently. Its tags are checked through `Intl.getCanonicalLocales` (ECMA-402
- * CanonicalizeLocaleList), so a bad list throws before the options are read, as in the
- * constructors, but kept as written: hosts canonicalize aliases differently, and D37 reads the
- * written form. A value that is not `undefined`, a string or an array throws `TypeError`, which
- * every caller turns into its sentinel. So does a list with an entry that is not a string.
+ * The locale list as `Intl` canonicalizes it (ECMA-402 CanonicalizeLocaleList): an array is read
+ * once, here, through `Intl.getCanonicalLocales`, so the key and the constructor see the same
+ * strings even when the array is a Proxy that answers each read differently, and a bad list
+ * throws before the options are read, as in the constructors. A value that is not `undefined`,
+ * a string or an array throws `TypeError`, which every caller turns into its sentinel. So does a list with an
+ * entry that is not a string.
  */
 function canonicalLocale(locale: FormatterLocale): FormatterLocale {
   // A string stays as it is: its canonical form is the constructor's to read.
-  if (typeof locale === "string" || locale === undefined) {
-    return locale;
-  }
-  const written = writtenLocaleTags(locale);
-  Intl.getCanonicalLocales(written);
-  return written;
+  return typeof locale === "string" || locale === undefined
+    ? locale
+    : canonicalLocaleTags(locale);
 }
 
 /**
@@ -269,6 +246,8 @@ function canonicalLocale(locale: FormatterLocale): FormatterLocale {
  * @param kind which `Intl` formatter class to build
  * @param locale BCP 47 locale or locales, or `undefined` for the runtime default
  * @param options the formatter's options, built by GMT code
+ * @param refuseDates whether a date formatter is refused where compat D33 refuses it;
+ * `false` only for a formatter whose date parts the caller throws away (`joinDateTimeConnector`)
  * @returns the formatter
  *
  * @example cachedFormatter("DateTimeFormat", "en-GB", { timeZone: "UTC" }).format(0) // "01/01/1970"
@@ -279,11 +258,17 @@ export function cachedFormatter<K extends FormatterKind>(
   kind: K,
   locale: FormatterLocale,
   options: object,
+  refuseDates = true,
 ): InstanceType<(typeof Intl)[K]> {
   locale = canonicalLocale(locale);
-  const key = cacheKey(kind, locale, options, kind === "DateTimeFormat");
+  const cacheable = cacheKey(kind, locale, options, kind === "DateTimeFormat");
+  // A formatter built without the date refusals is kept apart from the refusing one.
+  const key =
+    cacheable === null || refuseDates ? cacheable : `${cacheable}!dates`;
   if (key === null) {
-    return construct(kind, locale, options) as InstanceType<(typeof Intl)[K]>;
+    return construct(kind, locale, options, refuseDates) as InstanceType<
+      (typeof Intl)[K]
+    >;
   }
   forgetIfReplaced(kind);
   let byKey = formatters.get(kind);
@@ -291,7 +276,7 @@ export function cachedFormatter<K extends FormatterKind>(
   if (hit !== undefined) {
     return hit as InstanceType<(typeof Intl)[K]>;
   }
-  const built = construct(kind, locale, options);
+  const built = construct(kind, locale, options, refuseDates);
   if (byKey === undefined) {
     byKey = new Map();
     formatters.set(kind, byKey);

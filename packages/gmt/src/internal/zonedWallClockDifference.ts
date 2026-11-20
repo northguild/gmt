@@ -4,8 +4,8 @@ import type { ResolvedRelativeTo } from "./resolveDurationRelativeTo";
 import {
   isCalendarArithmeticCompatNeeded,
   isNudgeWindowCompatNeeded,
+  timeZoneEquals,
 } from "./temporalCompat";
-import { zoneNamesEqual } from "./zoneNamesEqual";
 import { zonedDateTimeFrom } from "./zonedWallClock";
 import {
   compareAtLimit,
@@ -119,10 +119,10 @@ const CALENDAR_DIFFERENCE_UNITS: ReadonlySet<string> = new Set([
 
 /**
  * Whether Temporal's DifferenceTemporalZonedDateTime would reject `largestUnit` for this pair: a
- * calendar unit (day or larger) between two different time zones, because "day lengths can vary
- * between time zones due to DST". Two zones are one by name only (`zoneNamesEqual`): `UTC` equals
- * `Etc/UTC`, while a link and its target (`Asia/Calcutta` and `Asia/Kolkata`) are two zones on
- * every host, which departs from TimeZoneEquals for links only (GMT rule).
+ * calendar unit (day or larger) between two different time zones (TimeZoneEquals is false), because
+ * "day lengths can vary between time zones due to DST". TimeZoneEquals compares primary
+ * identifiers, so `UTC` equals `Etc/UTC` and `Asia/Calcutta` equals `Asia/Kolkata`
+ * (`timeZoneEquals`, temporalCompat D19).
  *
  * @param one the start
  * @param two the end
@@ -135,7 +135,7 @@ export function isCalendarDifferenceAcrossZones(
   largestUnit: string,
 ): boolean {
   if (!CALENDAR_DIFFERENCE_UNITS.has(largestUnit)) return false;
-  return !zoneNamesEqual(one, two);
+  return !timeZoneEquals(one, two);
 }
 
 /**
@@ -153,12 +153,6 @@ export function zonedUntil(
   two: Temporal.ZonedDateTime,
   options: ZonedDifferenceOptions = {},
 ): Temporal.Duration {
-  // The polyfill runs TimeZoneEquals for a calendar `largestUnit` and throws where it is false, and
-  // on a host that cannot resolve a name's primary it is false for `UTC` and `Etc/UTC`. A pair GMT
-  // calls one zone by name is rebound to `one`'s identifier, so every path below agrees with it.
-  if (one.timeZoneId !== two.timeZoneId && zoneNamesEqual(one, two)) {
-    two = two.withTimeZone(one.timeZoneId);
-  }
   const settings = roundingSettings(
     options.largestUnit,
     options.smallestUnit,
@@ -166,9 +160,9 @@ export function zonedUntil(
     options.roundingIncrement,
     options.roundingMode ?? "trunc",
   );
-  // The name comparison runs at most once per call, and only after the cheaper conditions need it.
+  // TimeZoneEquals runs at most once per call, and only after the cheaper conditions need it.
   let sameZone: boolean | undefined;
-  const inSameZone = (): boolean => (sameZone ??= zoneNamesEqual(one, two));
+  const inSameZone = (): boolean => (sameZone ??= timeZoneEquals(one, two));
 
   if (
     settings !== null &&

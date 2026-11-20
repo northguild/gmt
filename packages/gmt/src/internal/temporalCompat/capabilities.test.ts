@@ -2,9 +2,11 @@ import {
   anyReproFails,
   isCalendarArithmeticCompatNeeded,
   isDefectPresent,
+  isLunisolarTextCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
   isNudgeOriginCompatNeeded,
+  isTimeZoneEqualsCompatNeeded,
   reproPasses,
   runRepro,
 } from "./capabilities";
@@ -381,7 +383,7 @@ describe("isCalendarArithmeticCompatNeeded", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D1-D8, D10-D18, D22) is the type the shipped probes can ask about; the canary-only
+  // DefectId (D1-D8, D10-D19, D22) is the type the shipped probes can ask about; the canary-only
   // groups are ZonedDefectId (zoned.*) and BoundedWorkDefectId (D9, D21).
   const probeDefects = new Set([
     "D1",
@@ -401,6 +403,7 @@ describe("repro split", () => {
     "D16",
     "D17",
     "D18",
+    "D19",
     "D22",
   ]);
 
@@ -576,6 +579,33 @@ describe("D18 Islamic era probe", () => {
   });
 });
 
+// D19: ECMA-402 §6.5 fixes "UTC" as a primary time zone identifier and "Etc/UTC" as a non-primary
+// one that resolves to it, and ECMA-262 TimeZoneEquals compares primary identifiers, so the two
+// are one zone on every host. The polyfill reads a non-primary identifier's primary from
+// `Intl.DateTimeFormat#resolvedOptions`, which JavaScriptCore (WebKit 26.6) returns as written.
+describe("D19 time zone equals probe", () => {
+  it("expects Etc/UTC to equal UTC", () => {
+    expect(findRepro("D19", "iso8601", "etcUtcEqualsUtc")?.expected).toBe(
+      "true",
+    );
+  });
+
+  it("returns true or false", () => {
+    expect(runRepro(findRepro("D19", "iso8601", "etcUtcEqualsUtc")!)).toMatch(
+      /^(true|false)$/,
+    );
+  });
+
+  it("reads the recorded WebKit 26.6 output as the defect", () => {
+    const repro = findRepro("D19", "iso8601", "etcUtcEqualsUtc")!;
+    expect(reproPasses(repro, "false")).toBe(false);
+  });
+
+  it("answers the same on a second call", () => {
+    expect(isTimeZoneEqualsCompatNeeded()).toBe(isTimeZoneEqualsCompatNeeded());
+  });
+});
+
 // D22: TC39 ComputeNudgeWindow takes the window's start from the origin's own exact time when no unit
 // has been added (tc39/proposal-temporal #3148, #3149; tc39/ecma262#3759 commit 1f4e6717ef23 for the
 // condition), and DifferenceZonedDateTime subtracts the exact times when both fall on one local date
@@ -698,5 +728,48 @@ describe("D22 repeated-hour origin probe", () => {
 
   it("answers the same on a second call", () => {
     expect(isNudgeOriginCompatNeeded()).toBe(isNudgeOriginCompatNeeded());
+  });
+});
+
+describe("D33 lunisolar text probe", () => {
+  // The probe reads the same four chinese and two dangi rows as the D33 repros (Intl era/monthCode
+  // section 1.1 Table 1), so it is needed for a calendar exactly when one of that calendar's repros
+  // fails on this host. The probe's own answer is never pinned: the canary reports the fix.
+  it.each`
+    calendar
+    ${"chinese"}
+    ${"dangi"}
+  `(
+    "is needed for $calendar exactly when a D33 text repro of $calendar fails",
+    ({ calendar }: { calendar: "chinese" | "dangi" }) => {
+      const rows = repros.filter(
+        (repro) => repro.defect === "D33" && repro.calendar === calendar,
+      );
+      expect(rows.length).toBeGreaterThan(0);
+      expect(isLunisolarTextCompatNeeded(calendar)).toBe(
+        rows.some((repro) => runRepro(repro) !== repro.expected),
+      );
+    },
+  );
+
+  it.each`
+    calendar     | count
+    ${"chinese"} | ${4}
+    ${"dangi"}   | ${2}
+  `(
+    "has $count text repros for $calendar and no fields or reverse repros",
+    ({ calendar, count }: { calendar: string; count: number }) => {
+      const rows = repros.filter(
+        (repro) => repro.defect === "D33" && repro.calendar === calendar,
+      );
+      expect(rows).toHaveLength(count);
+      expect(rows.every((repro) => repro.name.endsWith("Text"))).toBe(true);
+    },
+  );
+
+  it("answers the same on a second call", () => {
+    expect(isLunisolarTextCompatNeeded("dangi")).toBe(
+      isLunisolarTextCompatNeeded("dangi"),
+    );
   });
 });

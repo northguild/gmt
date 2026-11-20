@@ -7,13 +7,11 @@ import { isZoneId } from "../../internal/inputChecks";
  * - Uses the `timeZoneLike` regex to check the identifier's shape: Temporal's
  *   `TimeZoneIdentifier` grammar (§13.31).
  * - Accepts every IANA Zone and Link name the runtime accepts, including single-component names
- *   (`UTC`, `Japan`, `Zulu`, `GMT+0`), in any letter case (ECMA-402 matches
+ *   (`UTC`, `Japan`, `Zulu`, `EST5EDT`, `GMT+0`), in any letter case (ECMA-402 matches
  *   identifiers ASCII-case-insensitively, so `utc` is as valid as `america/new_york`).
  * - Accepts an offset identifier (`UTCOffset[~SubMinutePrecision]`): `"+05:00"`, `"+0530"`,
  *   `"-08"`, hour `00`–`23`, no seconds. Temporal and `Intl.DateTimeFormat` accept the same ones.
  * - Returns false for invalid timezone formats.
- * - Nine names hosts disagree on (`EST5EDT`, `CST6CDT`, `MST7MDT`, `PST8PDT`, `CET`, `EET`, `MET`,
- *   `WET`, `Factory`) are invalid on every host, in any letter case.
  * - Compatibility: earlier releases required a `/` in every name except `UTC` and `GMT`. To keep
  *   that narrower rule, also require `timeZone.includes("/")` or `"UTC"`/`"GMT"`.
  * - A stored offset with seconds (`-00:44:30`) is false here and true for `isValidUtcOffset`. To
@@ -33,7 +31,6 @@ import { isZoneId } from "../../internal/inputChecks";
  * @example isValidTimeZone("+05:00") // true (an offset identifier)
  * @example isValidTimeZone("+05:00:00") // false (no seconds in an offset identifier)
  * @example isValidTimeZone("-00:44:30") // false (a stored offset with seconds; `isValidUtcOffset` accepts it)
- * @example isValidTimeZone("EST5EDT") // false (refused on every host, D35)
  * @example "Japan".includes("/") // false (the earlier slash-only rule)
  * @example isValidTimeZone(null) // false
  */

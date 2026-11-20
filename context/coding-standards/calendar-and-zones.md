@@ -95,7 +95,3 @@ function (all since 1.16.0). Tie-breaks and empty-interval edges follow the `int
   instant. JSDoc never describes a shared endpoint as belonging to both pieces.
 - **A `Date` interval excludes its `end` day.** "The last day of the period" is passed as the next
   day: `addDate(end, { days: 1 })`.
-
-### 9. Zone equality is by name
-
-Two zoned values are in one zone when their identifiers are the same ignoring ASCII case, or both are one of ECMA-402 §6.5.1's UTC names (`UTC`, `Etc/UTC`, `Etc/GMT`, `GMT`). A Link and its Zone (`Asia/Calcutta`, `Asia/Kolkata`) are two zones. Use `internal/zoneNamesEqual.ts`. Never ask Temporal or the host whether two names are one zone: no API gives a Link's primary identifier on every host, and GMT owns no link data.

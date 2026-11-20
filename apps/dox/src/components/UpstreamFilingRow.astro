@@ -8,7 +8,7 @@
  * fields, so no status is typed by hand. The cells carry no `data-col`: the card is a header, a
  * body and a meta line, not label/value pairs.
  */
-import { filingRef, guardIds, type UpstreamFiling } from "../data/upstream-filings";
+import { filingRef, type UpstreamFiling } from "../data/upstream-filings";
 import { inlineCodeHtml } from "../lib/inline-code-html";
 import { octicon } from "../lib/octicons";
 import {
@@ -45,7 +45,7 @@ const note = stateNote(filing);
 const title = filing.title.replace(/^Polyfill: /, "");
 
 /** Shown only when no workaround covers the defect, so the two never contradict each other. */
-const gmtNote = guardIds(filing).length > 0 ? null : filing.gmtNote;
+const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
 ---
 
 <tr data-tone={state.tone}>

@@ -40,6 +40,7 @@ Leave finished work **unstaged**. Never stage, commit, branch, push or open a PR
 11. **One changeset rule:** [Changesets](./context/coding-standards/changesets.md#changesets). `major` is never used.
 12. **Zero known bugs.** Fix a defect and its whole class in the same story; ship no `it.fails`, skip or known-defect note. `node scripts/test-markers.mjs check` is a backstop, not the definition: [Zero known bugs](./context/testing-standards/references/index.md#zero-known-bugs).
 13. **Plain English** for anything a person reads (ISO 24495-1:2023): the [`plain-english` skill](./.agents/skills/plain-english/SKILL.md).
+14. **Runtime workarounds follow one frozen approach:** fix to the standard's answer, dormant unless a probe fails, no output change on removal, no GMT copy of CLDR or ICU data. Never change it or add an exception without the owner's word naming the file: [runtime-workarounds](./context/coding-standards/runtime-workarounds.md).
 
 ## Sessions and Agents
 

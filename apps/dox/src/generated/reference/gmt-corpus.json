@@ -10377,10 +10377,6 @@
       {
         "call": "formatDate(\"2024-02-03\", [\"fr-FR\", \"en-US\"], { year: \"numeric\", month: \"2-digit\", day: \"2-digit\" })",
         "result": "\"03/02/2024\" (the first listed locale)"
-      },
-      {
-        "call": "formatDate(\"2027-02-06\", \"zh-u-ca-chinese\")",
-        "result": "\"\" — hosts print different Chinese dates (compat D33)"
       }
     ]
   },
@@ -10545,10 +10541,6 @@
       {
         "call": "formatDateTimeToParts(\"2024-02-03T14:30:45\", [\"fr-FR\", \"en-US\"], { dateStyle: \"medium\", timeStyle: \"short\" })",
         "result": "parts of \"3 févr. 2024, 14:30\""
-      },
-      {
-        "call": "formatDateTimeToParts(\"2027-02-06T10:00:00\", \"zh-u-ca-chinese\")",
-        "result": "[] — hosts print different Chinese dates (compat D33)"
       }
     ]
   },
@@ -10590,10 +10582,6 @@
       {
         "call": "formatDateToParts(\"2024-02-03\", [\"fr-FR\", \"en-US\"])",
         "result": "[{ type: \"day\", value: \"03\" }, { type: \"literal\", value: \"/\" }, …]"
-      },
-      {
-        "call": "formatDateToParts(\"2027-02-06\", \"zh-u-ca-chinese\")",
-        "result": "[] — hosts print different Chinese dates (compat D33)"
       }
     ]
   },
@@ -30782,10 +30770,6 @@
         "result": "true (GMT is another identifier of UTC)"
       },
       {
-        "call": "areZonedEqual(\"2024-01-01T05:30:00+05:30[Asia/Calcutta]\", \"2024-01-01T05:30:00+05:30[Asia/Kolkata]\")",
-        "result": "false (a link and its target are two names)"
-      },
-      {
         "call": "areZonedEqual(\"2024-01-01T12:00:00+01:00[Europe/Berlin]\", \"2024-01-01T20:00:00+09:00[Asia/Tokyo]\")",
         "result": "false (the same instant in two zones)"
       },
@@ -31743,10 +31727,6 @@
       {
         "call": "formatZonedToParts(\"2024-02-03T14:30:00+02:00[Africa/Johannesburg]\", \"ar-EG\", null as never)",
         "result": "[] (null options, as ECMA-402 rejects them)"
-      },
-      {
-        "call": "formatZonedToParts(\"2027-02-06T10:00:00+00:00[UTC]\", \"zh-u-ca-chinese\")",
-        "result": "[] — hosts print different Chinese dates (compat D33)"
       }
     ]
   },
@@ -33827,10 +33807,6 @@
       {
         "call": "isValidTimeZone(\"-00:44:30\")",
         "result": "false (a stored offset with seconds; `isValidUtcOffset` accepts it)"
-      },
-      {
-        "call": "isValidTimeZone(\"EST5EDT\")",
-        "result": "false (refused on every host, D35)"
       },
       {
         "call": "\"Japan\".includes(\"/\")",

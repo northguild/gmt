@@ -12,7 +12,7 @@ describe("getTimeZoneOffset", () => {
     ${"Pacific/Chatham"}  | ${"2024-07-15T00:00:00Z"} | ${"+12:45"}
     ${"UTC"}              | ${"2024-07-15T00:00:00Z"} | ${"+00:00"}
     ${"Japan"}            | ${"2024-01-01T00:00:00Z"} | ${"+09:00"}
-    ${"EST"}              | ${"2024-07-15T12:00:00Z"} | ${"-05:00"}
+    ${"EST5EDT"}          | ${"2024-07-15T12:00:00Z"} | ${"-04:00"}
     ${"Zulu"}             | ${"2024-07-15T12:00:00Z"} | ${"+00:00"}
     ${"utc"}              | ${"2024-07-15T12:00:00Z"} | ${"+00:00"}
   `(
@@ -39,9 +39,6 @@ describe("getTimeZoneOffset", () => {
   it.each`
     timeZone       | label
     ${"Not/AZone"} | ${"'Not/AZone'"}
-    ${"EST5EDT"}   | ${"'EST5EDT' (refused, D35)"}
-    ${"est5edt"}   | ${"'est5edt' (refused, D35)"}
-    ${"Factory"}   | ${"'Factory' (refused, D35)"}
     ${""}          | ${"''"}
     ${null}        | ${"null"}
     ${undefined}   | ${"undefined"}

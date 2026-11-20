@@ -4,8 +4,6 @@ import {
   localeDateTimeRangeInputByLocale,
   MustTestLocales,
   oneOfIcu,
-  arSAGregorian,
-  fixtureLocale,
 } from "../../test";
 import { hostPlainRangeText } from "../../test/hostIntl";
 import { formatDateTimeRange } from "./formatDateTimeRange";
@@ -47,9 +45,9 @@ describe("formatDateTimeRange", () => {
     ${MustTestLocales.jaJP} | ${{ dateStyle: "long", timeStyle: "long" }}
     ${MustTestLocales.jaJP} | ${{ dateStyle: "short", timeStyle: "short" }}
     ${MustTestLocales.jaJP} | ${{ hour: "numeric", minute: "numeric" }}
-    ${arSAGregorian}        | ${{ dateStyle: "long", timeStyle: "long" }}
-    ${arSAGregorian}        | ${{ dateStyle: "short", timeStyle: "short" }}
-    ${arSAGregorian}        | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.arSA} | ${{ hour: "numeric", minute: "numeric" }}
     ${MustTestLocales.heIL} | ${{ dateStyle: "long", timeStyle: "long" }}
     ${MustTestLocales.heIL} | ${{ dateStyle: "short", timeStyle: "short" }}
     ${MustTestLocales.heIL} | ${{ hour: "numeric", minute: "numeric" }}
@@ -62,7 +60,8 @@ describe("formatDateTimeRange", () => {
   `(
     "formats a valid datetime range for locale $locale with options $options in the host's wording",
     ({ locale, options }) => {
-      const { start, end } = rangeByLocale[fixtureLocale(locale)];
+      const { start, end } =
+        rangeByLocale[locale as keyof typeof rangeByLocale];
       expect(formatDateTimeRange(start, end, locale, options)).toBe(
         hostPlainRangeText(locale, options, start, end),
       );
@@ -99,7 +98,8 @@ describe("formatDateTimeRange", () => {
   `(
     "formats a valid datetime range for locale $locale with options $options, day period in the host's wording",
     ({ locale, options }) => {
-      const { start, end } = rangeByLocale[fixtureLocale(locale)];
+      const { start, end } =
+        rangeByLocale[locale as keyof typeof rangeByLocale];
       expect(formatDateTimeRange(start, end, locale, options)).toBe(
         hostPlainRangeText(locale, options, start, end),
       );

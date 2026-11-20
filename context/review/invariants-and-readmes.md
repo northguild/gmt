@@ -51,7 +51,9 @@ Also binding:
 ## Reviewing a `temporalCompat` change
 
 A workaround for a runtime defect is the one place GMT deliberately diverges from what the
-installed polyfill does, so it carries its own contract.
+installed polyfill does, so it carries its own contract. The approach is frozen in
+[runtime-workarounds.md](../coding-standards/runtime-workarounds.md); a diff that changes it or
+adds an exception without the owner's word naming that file fails review.
 [internal/temporalCompat/README.md](../../packages/gmt/src/internal/temporalCompat/README.md) is
 the rulebook; a new or changed workaround passes only when all of this holds:
 

@@ -6,26 +6,26 @@ import { isZoneId } from "./inputChecks";
 export type LocalesArgument = string | string[];
 
 /**
- * The tags of a `locale` argument as the caller wrote them, read as the types say: an omitted
- * locale, a string, or an array whose every entry is a primitive string. `Intl.getCanonicalLocales`
- * would convert a boxed `String` or an object with a `toString` into a tag, and read a hole as
- * `"undefined"`, so each entry is checked first. The array is read once, so the check and every
- * later reader see the same strings even for a Proxy. The tags are not checked for well-formedness.
+ * The canonical tags of a `locale` argument, read as the types say: an omitted locale, a string,
+ * or an array whose every entry is a primitive string. `Intl.getCanonicalLocales` would convert a
+ * boxed `String` or an object with a `toString` into a tag, and read a hole as `"undefined"`, so
+ * each entry is checked first. The array is read once, so the check and the canonical list see
+ * the same strings even for a Proxy.
  *
  * @param locales raw locale argument from caller input
- * @returns the tags as written (`[]` for an omitted locale or an empty list)
+ * @returns the canonical tags (`[]` for an omitted locale or an empty list)
  * @throws TypeError for a value that is not `undefined`, a string or an array of strings
  *
- * @example writtenLocaleTags("EN-gb") // ["EN-gb"]
- * @example writtenLocaleTags(["de-DE", , "en"]) // ["de-DE", "en"]
- * @example writtenLocaleTags([new String("de-DE")]) // throws TypeError
+ * @example canonicalLocaleTags("EN-gb") // ["en-GB"]
+ * @example canonicalLocaleTags(["de-DE", "en"]) // ["de-DE", "en"]
+ * @example canonicalLocaleTags([new String("de-DE")]) // throws TypeError
  */
-export function writtenLocaleTags(locales: unknown): string[] {
+export function canonicalLocaleTags(locales: unknown): string[] {
   if (locales === undefined) {
     return [];
   }
   if (typeof locales === "string") {
-    return [locales];
+    return Intl.getCanonicalLocales(locales);
   }
   if (!Array.isArray(locales)) {
     throw new TypeError("locale must be a string or an array of strings");
@@ -41,24 +41,7 @@ export function writtenLocaleTags(locales: unknown): string[] {
   if (!entries.every((entry) => typeof entry === "string")) {
     throw new TypeError("every locale must be a string");
   }
-  return entries as string[];
-}
-
-/**
- * The canonical tags of a `locale` argument (ECMA-402 CanonicalizeLocaleList), read once through
- * `writtenLocaleTags`.
- *
- * @param locales raw locale argument from caller input
- * @returns the canonical tags (`[]` for an omitted locale or an empty list)
- * @throws TypeError for a value that is not `undefined`, a string or an array of strings
- * @throws RangeError for a tag that is not well formed
- *
- * @example canonicalLocaleTags("EN-gb") // ["en-GB"]
- * @example canonicalLocaleTags(["de-DE", "en"]) // ["de-DE", "en"]
- * @example canonicalLocaleTags([new String("de-DE")]) // throws TypeError
- */
-export function canonicalLocaleTags(locales: unknown): string[] {
-  return Intl.getCanonicalLocales(writtenLocaleTags(locales));
+  return Intl.getCanonicalLocales(entries as string[]);
 }
 
 /**

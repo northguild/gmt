@@ -1,7 +1,6 @@
 import { normalizeDateTime } from "../../internal";
 import { hostRangeText } from "../../test/hostIntl";
 import {
-  arSAGregorian,
   expectDateTimeEqual,
   localeZonedRangeInputByLocale,
   MustTestLocales,
@@ -284,9 +283,9 @@ describe("formatZonedRange", () => {
     ${rangeByLocale[MustTestLocales.arSA].start} | ${rangeByLocale[MustTestLocales.arSA].end} | ${{ dateStyle: "short", timeStyle: "short" }}                          | ${"٣/٢/٢٠٢٤، ٢:٣٠–٤:٤٦ م"}
     ${rangeByLocale[MustTestLocales.arSA].start} | ${rangeByLocale[MustTestLocales.arSA].end} | ${{ hour: "numeric", minute: "numeric", timeZoneName: "shortOffset" }} | ${"٢:٣٠–٤:٤٦ م غرينتش+٣"}
   `(
-    "formats valid zoned datetime range for ar-SA-u-ca-gregory with $options",
+    "formats valid zoned datetime range for ar-SA with $options",
     ({ from, to, options, expected }) => {
-      expect(formatZonedRange(from, to, arSAGregorian, options)).toBe(
+      expect(formatZonedRange(from, to, MustTestLocales.arSA, options)).toBe(
         normalizeDateTime(expected),
       );
     },
@@ -595,13 +594,15 @@ describe("formatZonedRange across an IANA link pair", () => {
   const hourMinute = { hour: "numeric", minute: "numeric" } as const;
 
   it.each`
-    from                                          | to                                           | zone1              | zone2
-    ${"2024-01-01T10:00:00+02:00[Europe/Kiev]"}   | ${"2024-01-01T12:00:00+02:00[Europe/Kyiv]"}  | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}
-    ${"2024-01-01T15:30:00+05:30[Asia/Calcutta]"} | ${"2024-01-01T17:30:00+05:30[Asia/Kolkata]"} | ${"Asia/Calcutta"} | ${"Asia/Kolkata"}
+    from                                          | to                                           | zone1              | zone2             | expected
+    ${"2024-01-01T10:00:00+02:00[Europe/Kiev]"}   | ${"2024-01-01T12:00:00+02:00[Europe/Kyiv]"}  | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}  | ${"10:00 AM – 12:00 PM"}
+    ${"2024-01-01T15:30:00+05:30[Asia/Calcutta]"} | ${"2024-01-01T17:30:00+05:30[Asia/Kolkata]"} | ${"Asia/Calcutta"} | ${"Asia/Kolkata"} | ${"3:30 – 5:30 PM"}
   `(
-    "is '' for $zone1 and $zone2: a Link and its Zone are two zones (GMT rule)",
-    ({ from, to }: Record<string, string>) => {
-      expect(formatZonedRange(from, to, "en-US", hourMinute)).toBe("");
+    "formats $zone1 to $zone2 as one zone: a Link and its Zone",
+    ({ from, to, expected }: Record<string, string>) => {
+      expect(formatZonedRange(from, to, "en-US", hourMinute)).toBe(
+        normalizeDateTime(expected),
+      );
     },
   );
 

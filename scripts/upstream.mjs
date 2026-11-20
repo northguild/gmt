@@ -100,7 +100,6 @@ import {
   bugzillaCommentsUrl,
   bugzillaHistoryUrl,
   chromiumIssueUrl,
-  guardIds,
   JIRA_HEADERS,
   identityOf,
   isJiraKey,
@@ -958,17 +957,10 @@ function checkGuard(f, label, guards, report) {
       `${label} — needs exactly one of gmtGuard (the GMT workaround that covers it) or gmtNote (why it does not affect GMT)`,
     );
   }
-  if (Array.isArray(f.gmtGuard) && f.gmtGuard.length < 2) {
+  if (f.gmtGuard !== null && !guards.has(f.gmtGuard)) {
     report.problems.push(
-      `${label} — gmtGuard is a list of ${f.gmtGuard.length}; write one id as a string`,
+      `${label} — gmtGuard "${f.gmtGuard}" is not a group in ${REPROS}`,
     );
-  }
-  for (const id of guardIds(f)) {
-    if (!guards.has(id)) {
-      report.problems.push(
-        `${label} — gmtGuard "${id}" is not a group in ${REPROS}`,
-      );
-    }
   }
 }
 

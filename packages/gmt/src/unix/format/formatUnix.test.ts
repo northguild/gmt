@@ -1,8 +1,4 @@
-import {
-  expectDateTimeEqual,
-  MustTestLocales,
-  arSAGregorian,
-} from "../../test";
+import { expectDateTimeEqual, MustTestLocales } from "../../test";
 import { systemTimeZone } from "../../internal/resolveLocale";
 import { formatUnix } from "./formatUnix";
 
@@ -60,7 +56,7 @@ describe("formatUnix", () => {
       ${MustTestLocales.zhTW} | ${"2024年2月29日 凌晨12:00"}
       ${MustTestLocales.jaJP} | ${"2024/02/29 0:00"}
       ${MustTestLocales.koKR} | ${"2024. 2. 29. 오전 12:00"}
-      ${arSAGregorian}        | ${"٢٩/٠٢/٢٠٢٤، ١٢:٠٠ ص"}
+      ${MustTestLocales.arSA} | ${"٢٩/٠٢/٢٠٢٤، ١٢:٠٠ ص"}
       ${MustTestLocales.heIL} | ${"29 בפבר׳ 2024, 0:00"}
       ${MustTestLocales.ruRU} | ${"29 февр. 2024 г., 00:00"}
       ${MustTestLocales.trTR} | ${"29 Şub 2024 00:00"}

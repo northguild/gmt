@@ -15,7 +15,7 @@ import type { OffsetInstant } from "./toOffsetInstant";
  *   two things that cannot both be true, and the whole point of carrying both fields is that
  *   a contradiction between them is visible.
  * - `timeZone` accepts every identifier Temporal does, as `toOffsetInstant`'s bracket does —
- *   including the single-component IANA names (`Japan`, `Zulu`). A `timeZone` that is really
+ *   including the single-component IANA names (`EST5EDT`, `Zulu`). A `timeZone` that is really
  *   an offset (`"-04:00"`, or the `"-0400"`/`"+05"` spellings Temporal canonicalises to one)
  *   returns `""`: it names no place, and no pair `toOffsetInstant` produces carries one.
  * - `offset` is canonicalised, so `"+05:45:00"` renders as `+05:45` and `"-00:00"` as

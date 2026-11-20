@@ -16,7 +16,6 @@ import {
   filingsByRepo,
   filingsByState,
   filingsWithMaintainerResponse,
-  guardIds,
   guardsAddressed,
   handledInGmt,
   HAND_WRITTEN_FIELDS,
@@ -133,10 +132,11 @@ describe("upstream filings", () => {
 
   it("every gmtGuard exists in repros.ts, or is null", () => {
     for (const f of filings) {
-      for (const id of guardIds(f)) {
-        expect(knownGuards.has(id), `${filingKey(f)} gmtGuard "${id}"`).toBe(
-          true,
-        );
+      if (f.gmtGuard !== null) {
+        expect(
+          knownGuards.has(f.gmtGuard),
+          `${filingKey(f)} gmtGuard "${f.gmtGuard}"`,
+        ).toBe(true);
       }
     }
   });
@@ -197,15 +197,6 @@ describe("upstream filings", () => {
     expect(filing).toBeDefined();
     expect(filing?.role).toBe("contributor");
     expect(String(filing?.contributionUrl)).toContain("#issuecomment-");
-  });
-
-  it.each`
-    gmtGuard        | ids
-    ${null}         | ${[]}
-    ${"D1"}         | ${["D1"]}
-    ${["D1", "D6"]} | ${["D1", "D6"]}
-  `("guardIds of gmtGuard=$gmtGuard is $ids", ({ gmtGuard, ids }) => {
-    expect(guardIds({ gmtGuard })).toEqual(ids);
   });
 
   it("lists guardsAddressed sorted and deduplicated", () => {
@@ -707,29 +698,6 @@ describe("scripts/upstream.mjs check", () => {
 
   it("passes on the committed file", () => {
     expect(run(committed).ok).toBe(true);
-  });
-
-  const guarded = (gmtGuard: unknown) => {
-    const row = (committed.filings as Record<string, unknown>[]).find(
-      (f) => f.gmtNote === null && typeof f.gmtGuard === "string",
-    )!;
-    return withFilings({ ...row, gmtGuard });
-  };
-
-  it("passes on a gmtGuard list of known groups", () => {
-    expect(run(guarded(["D1", "D6"])).ok).toBe(true);
-  });
-
-  it("fails on a gmtGuard list with an unknown group", () => {
-    const result = run(guarded(["D1", "D999"]));
-    expect(result.ok).toBe(false);
-    expect(result.output).toContain("D999");
-  });
-
-  it("fails on a gmtGuard list of one id", () => {
-    const result = run(guarded(["D1"]));
-    expect(result.ok).toBe(false);
-    expect(result.output).toContain("write one id as a string");
   });
 
   it("fails on a listing that carries gmtGuard", () => {

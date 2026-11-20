@@ -17,9 +17,16 @@ import {
  * - Each part is `{ type, value }` where `type` can be:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"hour"`, `"minute"`, `"second"`, `"fractionalSecond"`, `"dayPeriod"`, `"literal"`.
- * - A `chinese` or `dangi` calendar returns `[]` for any format with a year, month, day or era:
- *   hosts print different dates for them (compat D33). A format with only a time or weekday field
- *   still returns its parts.
+ * - A lunisolar calendar adds two more: `zh-u-ca-chinese` and `ko-u-ca-dangi` emit
+ *   `"relatedYear"` (the Gregorian year the cycle falls in) and `"yearName"` (the sexagenary
+ *   cycle name) in place of, or beside, `"year"`. Code that looks up a `"year"` part must handle
+ *   their absence. This holds on a runtime that prints the observatory's Chinese or Dangi dates
+ *   (see the next item).
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `[]` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own parts. A format with only a time or weekday
+ *   field always returns its parts.
  * - The caller should iterate the array as returned; reassembling in a fixed
  *   order reintroduces exactly the bug `formatToParts` exists to avoid.
  * - With no date/time field and no `dateStyle`/`timeStyle`, year, month, day,
@@ -57,7 +64,6 @@ import {
  * @example formatZonedToParts("2024-02-29T12:00:00+00:00[UTC]", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "PM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "UTC" }] — the pre-1.16.0 parts
  * @example formatDateTimeToParts("invalid") // []
  * @example formatDateTimeToParts("2024-02-03T14:30:45", ["fr-FR", "en-US"], { dateStyle: "medium", timeStyle: "short" }) // parts of "3 févr. 2024, 14:30"
- * @example formatDateTimeToParts("2027-02-06T10:00:00", "zh-u-ca-chinese") // [] — hosts print different Chinese dates (compat D33)
  */
 export function formatDateTimeToParts(
   value: string,

@@ -5,7 +5,6 @@ import { formatDateTimeRange } from "../plain/format/formatDateTimeRange";
 import { formatDateToParts } from "../plain/format/formatDateToParts";
 import { formatZonedDateTime } from "../zoned/format/formatZonedDateTime";
 import { formatZonedRange } from "../zoned/format/formatZonedRange";
-import { hostRangeWithYears } from "../test/hostIntl";
 import { normalizeDateTime } from "./normalizeDateTime";
 import { Temporal } from "./temporal";
 
@@ -25,8 +24,9 @@ const numberFormat = (locale: string, value: number, digits = 1): string =>
     minimumIntegerDigits: digits,
   }).format(value);
 
-const eraOf = (locale: string): string =>
-  new Intl.DateTimeFormat(locale, { era: "short", timeZone: "UTC" })
+/** The host's name for the era AM in a locale: the era of 2000-01-01, coptic 1716. */
+const eraOf = (locale: string, era: "short" | "long" = "short"): string =>
+  new Intl.DateTimeFormat(locale, { era, timeZone: "UTC" })
     .formatToParts(
       convertUtcToUnix("2000-01-01T00:00:00Z", { epochUnit: "milliseconds" }) ??
         0,
@@ -150,14 +150,7 @@ describe("D31: a coptic date before AM 1 prints its signed year and the era", ()
   });
 });
 
-/**
- * A range in the host's wording with the years the calendar gives. A host whose range pattern
- * carries the year in the wrong sign (Node prints 284 for -283) or no era is not the value: the
- * years are written in (`hostRangeWithYears`, from the host's `formatRange` text, never its
- * `formatRangeToParts`, which aborts on V8 without 0426b0d1045d for some kok ranges; D23), and
- * everything else (the order, the separators, the digits) is the host's. The era name is the
- * engine's, so it is left out of both sides.
- */
+/** A text without its era name, which is the engine's wording, not the value. */
 const withoutEra = (text: string, era: string): string =>
   normalizeDateTime(text.replaceAll(era, "")).replace(/\s+/g, " ").trim();
 
@@ -198,23 +191,6 @@ describe("D31: a coptic range with an end before AM 1 prints the signed years", 
     },
   );
 
-  it.each`
-    from            | to              | years
-    ${"0001-01-01"} | ${"0001-12-31"} | ${[-283, -282]}
-  `(
-    "formatDateRange gives the years $years in the host's kok wording from $from to $to",
-    ({ from, to, years }) => {
-      const kok = "kok-u-ca-coptic";
-      const text = formatDateRange(from, to, kok, numeric);
-      expect(withoutEra(text, eraOf(kok))).toBe(
-        withoutEra(
-          hostRangeWithYears(kok, numeric, from, to, years),
-          eraOf(kok),
-        ),
-      );
-    },
-  );
-
   // The host's own kok range for these two dates aborts on V8 without 0426b0d1045d (every Node
   // line; D23), so its wording cannot be asked for. The numbers are the date's (27 Dec of year 0 and 13 Jan of year 1, with the era
   // dropped); their order and padding are the host's, so they are compared as a set of numbers.
@@ -240,7 +216,8 @@ describe("D31: a coptic range with an end before AM 1 prints the signed years", 
  * (0284-08-29T07:52:58Z), not at the start of the calendar day. Intl era/monthCode Table 2 gives
  * `coptic` the one era `am`, and 4.1.12 reads the era from the calendar date, so every instant of
  * 1 Tout AM 1 (ISO 0284-08-29) prints `AM`. The texts below are written out: the month, day and
- * year are the date's, the era is the engine's name for AM in the locale.
+ * year are the date's, the era is the host's name for AM in the locale (`AM`, or `ERA1` where its
+ * ICU data has no English coptic era names), read from a later date.
  */
 describe("D34: every instant of 1 Tout AM 1 prints the era AM", () => {
   const era = eraOf("en-u-ca-coptic");
@@ -249,13 +226,13 @@ describe("D34: every instant of 1 Tout AM 1 prints the era AM", () => {
 
   it.each`
     locale              | expected
-    ${"en-u-ca-coptic"} | ${"Tout 1, 1 AM"}
-    ${"de-u-ca-coptic"} | ${"1. Thout 1 AM"}
+    ${"en-u-ca-coptic"} | ${"Tout 1, 1"}
+    ${"de-u-ca-coptic"} | ${"1. Thout 1"}
   `(
-    "formatDate prints '$expected' for 0284-08-29 in '$locale'",
+    "formatDate prints '$expected' and the era AM for 0284-08-29 in '$locale'",
     ({ locale, expected }) => {
       expect(formatDate("0284-08-29", locale, full)).toBe(
-        normalizeDateTime(expected),
+        normalizeDateTime(`${expected} ${eraOf(locale)}`),
       );
       expect(
         formatDateToParts("0284-08-29", locale, full).find(
@@ -293,6 +270,65 @@ describe("D34: every instant of 1 Tout AM 1 prints the era AM", () => {
     },
   );
 
+  // JavaScriptCore compares the instant, not the date, so east of +16:07:02 local 1 Tout 2 AM 1 is
+  // still before 0284-08-29T07:52:58Z. The era is `am` for every date of year 1 (4.1.12).
+  it.each`
+    wallClock                | offset
+    ${"0284-08-30T00:30:00"} | ${"+20:00"}
+    ${"0284-08-30T07:00:00"} | ${"+20:00"}
+    ${"0284-08-30T00:30:00"} | ${"+23:59"}
+  `(
+    "formatZonedDateTime prints Tout 2, 1 and the era AM for local $wallClock at $offset",
+    ({ wallClock, offset }) => {
+      expect(
+        formatZonedDateTime(
+          `${wallClock}${offset}[${offset}]`,
+          "en-u-ca-coptic",
+          full,
+        ),
+      ).toBe(`Tout 2, 1 ${era}`);
+    },
+  );
+
+  // The mirror case: west of -07:52:58, local 0284-08-28 (year 0) can be an instant after the
+  // engine's fixed constant, where JavaScriptCore reads year 1. The date decides the era.
+  it.each`
+    wallClock                | offset
+    ${"0284-08-28T20:00:00"} | ${"-12:00"}
+    ${"0284-08-28T23:59:00"} | ${"-23:59"}
+    ${"0284-08-28T10:00:00"} | ${"-08:00"}
+  `(
+    "formatZonedDateTime prints Nasie 5, 0 and the era AM for local $wallClock at $offset",
+    ({ wallClock, offset }) => {
+      expect(
+        formatZonedDateTime(
+          `${wallClock}${offset}[${offset}]`,
+          "en-u-ca-coptic",
+          full,
+        ),
+      ).toBe(`Nasie 5, 0 ${era}`);
+    },
+  );
+
+  it.each`
+    offset
+    ${"-12:00"}
+    ${"-23:59"}
+    ${"+20:00"}
+  `(
+    "formatZonedRange across 1 Tout AM 1 at $offset prints what UTC prints for the same dates",
+    ({ offset }) => {
+      const range = (suffix: string): string =>
+        formatZonedRange(
+          `0284-08-28T20:00:00${suffix}`,
+          `0284-08-30T20:00:00${suffix}`,
+          "en-u-ca-coptic",
+          full,
+        );
+      expect(range(`${offset}[${offset}]`)).toBe(range("+00:00[UTC]"));
+    },
+  );
+
   it("prints year 0 of the day before AM 1 at 23:30 in Honolulu, with the era", () => {
     expect(
       formatZonedDateTime(
@@ -305,12 +341,12 @@ describe("D34: every instant of 1 Tout AM 1 prints the era AM", () => {
 
   it.each`
     start                 | end                   | expected
-    ${"0284-08-29T00:00"} | ${"0284-09-10T00:00"} | ${"Tout 1 – 13, 1 AM"}
-    ${"0284-08-29T00:30"} | ${"0284-09-10T00:00"} | ${"Tout 1 – 13, 1 AM"}
+    ${"0284-08-29T00:00"} | ${"0284-09-10T00:00"} | ${"Tout 1 – 13, 1"}
+    ${"0284-08-29T00:30"} | ${"0284-09-10T00:00"} | ${"Tout 1 – 13, 1"}
   `(
-    "the ranges from $start to $end print '$expected' with the era once",
+    "the ranges from $start to $end print '$expected' with the era AM once",
     ({ start, end, expected }) => {
-      const text = normalizeDateTime(expected);
+      const text = normalizeDateTime(`${expected} ${era}`);
       expect(
         formatDateRange(
           start.slice(0, 10),
@@ -341,7 +377,9 @@ describe("D34: every instant of 1 Tout AM 1 prints the era AM", () => {
         ...full,
         era: "long",
       }),
-    ).toBe(normalizeDateTime("Tout 1 – 13, 1 Anno Martyrum"));
+    ).toBe(
+      normalizeDateTime(`Tout 1 – 13, 1 ${eraOf("en-u-ca-coptic", "long")}`),
+    );
   });
 
   it("names the era of 0284-08-29 in Arabic as it names the era of a later date", () => {
@@ -354,13 +392,16 @@ describe("D34: every instant of 1 Tout AM 1 prints the era AM", () => {
 
   it.each`
     iso             | expected
-    ${"0284-08-30"} | ${"Tout 2, 1 AM"}
-    ${"2024-07-10"} | ${"Epep 3, 1740 AM"}
-  `("leaves $iso to the engine: '$expected'", ({ iso, expected }) => {
-    expect(formatDate(iso, "en-u-ca-coptic", full)).toBe(
-      normalizeDateTime(expected),
-    );
-  });
+    ${"0284-08-30"} | ${"Tout 2, 1"}
+    ${"2024-07-10"} | ${"Epep 3, 1740"}
+  `(
+    "leaves $iso to the engine: '$expected' and the era AM",
+    ({ iso, expected }) => {
+      expect(formatDate(iso, "en-u-ca-coptic", full)).toBe(
+        normalizeDateTime(`${expected} ${era}`),
+      );
+    },
+  );
 });
 
 /*
@@ -369,17 +410,18 @@ describe("D34: every instant of 1 Tout AM 1 prints the era AM", () => {
  * is repaired by D31's cycles, so a range across 1 Tout AM 1 prints the era once, after the end.
  */
 describe("D34: a range across 1 Tout AM 1 prints the era once", () => {
+  const era = eraOf("en-u-ca-coptic");
   const zoned = (wallClock: string, timeZone: string): string =>
     Temporal.PlainDateTime.from(wallClock).toZonedDateTime(timeZone).toString();
 
   it.each`
     from               | to              | expected
-    ${"0284-08-28"}    | ${"0284-08-30"} | ${"Nasie 5, 0 – Tout 2, 1 AM"}
-    ${"-000001-07-10"} | ${"0300-01-01"} | ${"Epep 18, -285 – Toba 5, 16 AM"}
+    ${"0284-08-28"}    | ${"0284-08-30"} | ${"Nasie 5, 0 – Tout 2, 1"}
+    ${"-000001-07-10"} | ${"0300-01-01"} | ${"Epep 18, -285 – Toba 5, 16"}
   `(
-    "formatDateRange, formatDateTimeRange and formatZonedRange print '$expected' from $from to $to",
+    "formatDateRange, formatDateTimeRange and formatZonedRange print '$expected' and the era AM from $from to $to",
     ({ from, to, expected }) => {
-      const text = normalizeDateTime(expected);
+      const text = normalizeDateTime(`${expected} ${era}`);
       expect(formatDateRange(from, to, "en-u-ca-coptic", full)).toBe(text);
       expect(
         formatDateTimeRange(

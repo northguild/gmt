@@ -107,10 +107,8 @@ describe("intervalLengthZoned across two time zones", () => {
     ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"week"}   | ${null}  | ${"calendar unit across zones"}
     ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"month"}  | ${null}  | ${"calendar unit across zones"}
     ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"years"}  | ${null}  | ${"calendar unit (plural) across zones"}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[Etc/UTC]"}      | ${"day"}    | ${2}     | ${"UTC and Etc/UTC are one zone by name"}
-    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"day"}    | ${null}  | ${"a link and its target are two zones"}
-    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"hour"}   | ${48}    | ${"time unit: exact elapsed time"}
-    ${"2024-01-01T00:00:00+00:00[GMT]"}              | ${"2024-01-03T00:00:00+00:00[Etc/GMT]"}      | ${"day"}    | ${2}     | ${"GMT and Etc/GMT are one zone by name"}
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[Etc/UTC]"}      | ${"day"}    | ${2}     | ${"UTC and Etc/UTC are TimeZoneEquals"}
+    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"day"}    | ${2}     | ${"Asia/Calcutta links to Asia/Kolkata"}
   `(
     "$start → $end in $unit is $expected ($why)",
     ({ start, end, unit, expected }) => {

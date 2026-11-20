@@ -8,6 +8,7 @@ import { normalizeDateTime } from "./normalizeDateTime";
 import { cachedFormatter } from "./formatterCache";
 import { Temporal } from "./temporal";
 import { utcMs } from "../test/utcMs";
+import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
 
 /*
  * CORE-112, D30: `islamic` and `islamic-rgsa` resolve to calendars no engine should use.
@@ -86,8 +87,15 @@ describe("D30: islamic resolves to islamic-tbla", () => {
   });
 
   it("takes the Hijra of islamic-tbla (Table 1: 0622-07-18) for '0622-07-17': the day before is before the Hijra", () => {
-    // D26, on every host: a date before the Hijra has no printable year, so the empty value.
-    expect(formatDate("0622-07-17", "en-u-ca-islamic", eraDate)).toBe("");
+    const text = formatDate("0622-07-17", "en-u-ca-islamic", eraDate);
+    // D26: the empty value where the engine cannot name `bh`, and otherwise the engine's own text,
+    // which is not the 1 AH of the next day.
+    if (isIslamicEraCompatNeeded()) {
+      expect(text).toBe("");
+    } else {
+      expect(text).not.toBe("");
+      expect(text).not.toMatch(/\bAH\b/);
+    }
   });
 
   it("takes the Hijra of islamic-tbla (Table 1: 0622-07-18) for '0622-07-18': day 1 of year 1", () => {

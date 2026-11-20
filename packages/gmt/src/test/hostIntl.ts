@@ -3,38 +3,27 @@ import { Temporal } from "../internal/temporal";
 import { utcMs } from "./utcMs";
 
 /*
- * The host's own wording for a value the library formats. Compat README rule 7: the value a call
- * returns (the date, the number, the year, the era) is the same on every host, and the wording
- * (month and weekday names, abbreviations, word order, separators, zone names) is the host's CLDR
- * and ICU data, which differs between engines. A row asserts the value exactly and takes the
- * wording from what `Intl.DateTimeFormat` prints for the same input on the host that runs it,
- * with the library's normalisation of spaces, dashes and bidi marks.
+ * The host's own wording for a value the library formats. The text comes from the host's own
+ * `Intl.DateTimeFormat`; a workaround fixes a value to the standard only where its probe fails on
+ * that host. A row asserts the value exactly (the date, the number, the year, the era) and takes
+ * the wording (month and weekday names, abbreviations, word order, separators, zone names) from
+ * what `Intl.DateTimeFormat` prints for the same input on the host that runs it, with the
+ * library's normalisation of spaces, dashes and bidi marks.
  */
 
 type Options = Intl.DateTimeFormatOptions;
 
 /**
- * The host's formatter for a locale tag, with the tag's `-u-ca-` keyword passed again as the
- * `calendar` option. ECMA-402 ResolveLocale drops every `-u-` keyword when the host has no data
- * for the language and falls back to its default locale (Chromium has none for `my`, `gl` or
- * `fur`), and the `calendar` option survives that fallback. The library passes the calendar the
- * same way, so the host's text is for the calendar the caller named.
+ * The host's formatter for a locale and options, as the library builds it. ECMA-402 ResolveLocale
+ * drops every `-u-` keyword when the host has no data for the language and falls back to its
+ * default locale (Chromium has none for `my`, `gl` or `fur`), so the host's text is the text the
+ * library returns.
  */
 export function hostFormatter(
   locale: string | readonly string[],
   options: Options,
 ): Intl.DateTimeFormat {
-  const tag =
-    typeof locale === "string"
-      ? locale
-      : Intl.DateTimeFormat.supportedLocalesOf(locale)[0];
-  const calendar =
-    options.calendar ??
-    (tag === undefined ? undefined : new Intl.Locale(tag).calendar);
-  return new Intl.DateTimeFormat(
-    locale,
-    calendar === undefined ? options : { ...options, calendar },
-  );
+  return new Intl.DateTimeFormat(locale, options);
 }
 
 /** The epoch milliseconds and the zone of a zoned date-time string. */
@@ -193,39 +182,21 @@ function utcMidnight(isoDate: string): number {
 }
 
 /**
- * The host's range text between two calendar dates, printed in UTC, with the year of each end
- * written as the calendar gives it. The order, the separators, the era and the digits are the
- * host's wording (compat README rule 7); the year is the value. A host with a defect prints the
- * week-year (one more or one less), the ISO year (for `japanese` and `roc`) or `1 - year` with no
- * sign (coptic before AM 1, D31) in its place, so each end's printed year is the first run of
- * digits, at or after the previous end's, that holds one of those candidates, and it is replaced
- * by the year passed. A match never starts or ends inside a longer run of digits, and a minus
- * sign right after a digit is a separator, not a sign, so `18-11-286` holds 286 and never -286.
+ * `text` with each end's printed year replaced by the year the calendar gives it. A host with a
+ * defect prints the week-year (one more or one less), the ISO year (for `japanese` and `roc`) or
+ * `1 - year` with no sign (coptic before AM 1, D31) in its place, so each end's printed year is
+ * the first run of digits, at or after the previous end's, that holds one of those candidates.
+ * A match never starts or ends inside a longer run of digits, and a minus sign right after a
+ * digit is a separator, not a sign, so `18-11-286` holds 286 and never -286.
  */
-export function hostRangeWithYears(
-  locale: string,
-  options: Options,
-  fromIso: string,
-  toIso: string,
-  years: readonly [number, number],
+function withYearsWritten(
+  text: string,
+  ends: readonly { year: number; iso: number }[],
+  written: (value: number) => string,
 ): string {
-  const formatter = hostFormatter(locale, { ...options, timeZone: "UTC" });
-  const resolved = formatter.resolvedOptions();
-  const numbers = new Intl.NumberFormat(resolved.locale, {
-    numberingSystem: resolved.numberingSystem,
-    useGrouping: false,
-  });
-  const written = (value: number): string =>
-    normalizeDateTime(numbers.format(value));
-  const isoYears = [fromIso, toIso].map(
-    (iso) => Temporal.PlainDate.from(iso).year,
-  );
-  let text = normalizeDateTime(
-    formatter.formatRange(utcMidnight(fromIso), utcMidnight(toIso)),
-  );
+  let result = text;
   let cursor = 0;
-  years.forEach((year, end) => {
-    const iso = isoYears[end] ?? year;
+  for (const { year, iso } of ends) {
     const candidates = [
       year,
       year - 1,
@@ -242,18 +213,113 @@ export function hostRangeWithYears(
         "gu",
       );
       pattern.lastIndex = cursor;
-      const match = pattern.exec(text);
+      const match = pattern.exec(result);
       if (match !== null && (best === undefined || match.index < best.at)) {
         best = { at: match.index, length: match[0].length };
       }
     }
-    if (best === undefined) return;
+    if (best === undefined) continue;
     const replacement = written(year);
-    text =
-      text.slice(0, best.at) + replacement + text.slice(best.at + best.length);
+    result =
+      result.slice(0, best.at) +
+      replacement +
+      result.slice(best.at + best.length);
     cursor = best.at + replacement.length;
+  }
+  return result;
+}
+
+/** The host's formatter for UTC, and how it writes a number in its numbering system. */
+function yearWriter(
+  locale: string,
+  options: Options,
+): {
+  formatter: Intl.DateTimeFormat;
+  written: (value: number) => string;
+} {
+  const formatter = hostFormatter(locale, { ...options, timeZone: "UTC" });
+  const resolved = formatter.resolvedOptions();
+  const numbers = new Intl.NumberFormat(resolved.locale, {
+    numberingSystem: resolved.numberingSystem,
+    useGrouping: false,
   });
-  return text;
+  return {
+    formatter,
+    written: (value) => normalizeDateTime(numbers.format(value)),
+  };
+}
+
+/**
+ * The host's range text between two calendar dates, printed in UTC, with the year of each end
+ * written as the calendar gives it. The order, the separators, the era and the digits are the
+ * host's own wording; the year is the value.
+ */
+export function hostRangeWithYears(
+  locale: string,
+  options: Options,
+  fromIso: string,
+  toIso: string,
+  years: readonly [number, number],
+): string {
+  const { formatter, written } = yearWriter(locale, options);
+  const isoYears = [fromIso, toIso].map(
+    (iso) => Temporal.PlainDate.from(iso).year,
+  );
+  return withYearsWritten(
+    normalizeDateTime(
+      formatter.formatRange(utcMidnight(fromIso), utcMidnight(toIso)),
+    ),
+    years.map((year, end) => ({ year, iso: isoYears[end] ?? year })),
+    written,
+  );
+}
+
+/**
+ * The host's two single dates, each with its year written as the calendar gives it, joined by the
+ * locale fallback's ASCII dash (UTS #35 `{0} - {1}`). This is ECMA-402's `[[Default]]` range for a
+ * host whose own range pattern drops, repeats or garbles a field of one date (D29): the text a
+ * range prints when the host's own range cannot be used.
+ */
+export function hostJoinedWithYears(
+  locale: string,
+  options: Options,
+  fromIso: string,
+  toIso: string,
+  years: readonly [number, number],
+): string {
+  const { formatter, written } = yearWriter(locale, options);
+  return [fromIso, toIso]
+    .map((iso, end) =>
+      withYearsWritten(
+        normalizeDateTime(formatter.format(utcMidnight(iso))),
+        [
+          {
+            year: years[end] ?? 0,
+            iso: Temporal.PlainDate.from(iso).year,
+          },
+        ],
+        written,
+      ),
+    )
+    .join(" - ");
+}
+
+/**
+ * The host's short era name at a calendar date: its era-and-year text without the year. A number
+ * inside a word stays, because an era is a name (UTS #35 Part 4 §8, `G`): ICU data without a
+ * locale's coptic era names prints the placeholder `ERA1`. Which era a host names before coptic
+ * AM 1 differs (D31: `ERA0`, or none), so a test strips it from the host's text and checks the
+ * library's era on its own.
+ */
+export function hostEraAt(locale: string, isoDate: string): string {
+  const text = hostFormatter(locale, {
+    era: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(utcMidnight(isoDate));
+  return normalizeDateTime(
+    text.replace(/(?<!\p{L})\p{Nd}+(?!\p{L})/gu, ""),
+  ).trim();
 }
 
 /**

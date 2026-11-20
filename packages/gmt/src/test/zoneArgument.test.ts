@@ -17,7 +17,7 @@
 import baselineJson from "./zoneArgumentBaseline.json";
 import { Temporal } from "../internal/temporal";
 import * as gmt from "../index";
-import { battleTestTimeZones, refusedZoneNames } from "./timeZoneMatrix";
+import { battleTestTimeZones } from "./timeZoneMatrix";
 import {
   asRecorded,
   BASELINE_AT,
@@ -678,43 +678,6 @@ describe("an offset the library returns goes back in", () => {
 
       expect(gmt.convertUtcToPlainDateTime(at, { timeZone: offset })).toBe(
         local,
-      );
-    },
-  );
-});
-
-describe("D35: a refused zone name is not a zone on any host", () => {
-  const refused = [...refusedZoneNames, "est5edt", "cet", "factory"];
-  const zonelessRows = ZONELESS_RESULT_FUNCTIONS.flatMap((name) =>
-    refused.map((zone) => ({ name, zone })),
-  );
-  const identifierRows = IDENTIFIER_ONLY_FUNCTIONS.flatMap((name) =>
-    refused.map((zone) => ({ name, zone })),
-  );
-
-  it("covers every function with every refused spelling", () => {
-    expect(zonelessRows).toHaveLength(85 * 12);
-    expect(identifierRows).toHaveLength(30 * 12);
-  });
-
-  it.each(zonelessRows)(
-    "$name returns for '$zone' what it returns for 'Not/AZone'",
-    ({ name, zone }) => {
-      pinClock(BASELINE_AT);
-      const call = zoneArgumentCalls(gmt, BASELINE_AT)[name];
-
-      expect(resultsOf(call, zone)).toEqual(resultsOf(call, "Not/AZone"));
-    },
-  );
-
-  it.each(identifierRows)(
-    "$name returns for '$zone' what it returns for 'Not/AZone'",
-    ({ name, zone }) => {
-      pinClock(BASELINE_AT);
-      const call = zoneIdentifierCalls(gmt, BASELINE_AT)[name];
-
-      expect(asRecorded(call.run(zone))).toEqual(
-        asRecorded(call.run("Not/AZone")),
       );
     },
   );

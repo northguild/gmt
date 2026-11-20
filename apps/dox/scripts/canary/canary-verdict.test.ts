@@ -328,22 +328,6 @@ describe("oracleVerdict", () => {
 });
 
 describe("couldNotRunVerdict", () => {
-  it("is the source, the status and the message, so the swap check can add a D33 sweep that ran", () => {
-    const d33 = {
-      check: "missing",
-      sweep: { status: "ran", calendars: 2, differingCalendars: 2 },
-    };
-    expect({
-      ...couldNotRunVerdict("temporal-polyfill-swap-node", "x"),
-      d33,
-    }).toEqual({
-      source: "temporal-polyfill-swap-node",
-      status: "could-not-run",
-      message: "x",
-      d33,
-    });
-  });
-
   it("is the source, the status and the message", () => {
     expect(couldNotRunVerdict("temporal-oracle", "no Temporal")).toEqual({
       source: "temporal-oracle",
@@ -583,7 +567,6 @@ describe("polyfillSwapVerdict", () => {
     failing: [{ file: "a.test.ts", test: "t", message: "boom" }],
     sweep: null,
     calendarSweep: null,
-    d33: { check: "still needed" as const, sweep: null },
   };
 
   it("has the shape and key order the reporter reads", () => {
@@ -600,21 +583,12 @@ describe("polyfillSwapVerdict", () => {
       "failingTruncated",
       "sweep",
       "calendarSweep",
-      "d33",
     ]);
     expect(polyfillSwapVerdict(input)).toMatchObject({
       source: "temporal-polyfill-swap-node",
       status: "ran",
       failingTruncated: false,
     });
-  });
-
-  it("carries d33 unchanged", () => {
-    const d33 = {
-      check: "removable" as const,
-      sweep: { status: "ran" as const, calendars: 2, differingCalendars: 0 },
-    };
-    expect(polyfillSwapVerdict({ ...input, d33 }).d33).toEqual(d33);
   });
 
   it.each`

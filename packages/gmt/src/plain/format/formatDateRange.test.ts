@@ -4,8 +4,6 @@ import {
   localeDateRangeInputByLocale,
   MustTestLocales,
   oneOfIcu,
-  arSAGregorian,
-  fixtureLocale,
 } from "../../test";
 import { hostPlainRangeText } from "../../test/hostIntl";
 import { formatDateRange } from "./formatDateRange";
@@ -39,8 +37,8 @@ describe("formatDateRange", () => {
     ${MustTestLocales.jaJP} | ${{ dateStyle: "short" }}
     ${MustTestLocales.koKR} | ${{ dateStyle: "long" }}
     ${MustTestLocales.koKR} | ${{ dateStyle: "short" }}
-    ${arSAGregorian}        | ${{ dateStyle: "long" }}
-    ${arSAGregorian}        | ${{ dateStyle: "short" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "short" }}
     ${MustTestLocales.heIL} | ${{ dateStyle: "long" }}
     ${MustTestLocales.heIL} | ${{ dateStyle: "short" }}
     ${MustTestLocales.ruRU} | ${{ dateStyle: "long" }}
@@ -50,7 +48,8 @@ describe("formatDateRange", () => {
   `(
     "formats a valid date range for locale $locale with options $options in the host's wording",
     ({ locale, options }) => {
-      const { start, end } = rangeByLocale[fixtureLocale(locale)];
+      const { start, end } =
+        rangeByLocale[locale as keyof typeof rangeByLocale];
       expect(formatDateRange(start, end, locale, options)).toBe(
         hostPlainRangeText(locale, options, start, end),
       );

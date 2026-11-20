@@ -1,8 +1,9 @@
 import { clearFormatterCache } from "../../internal/formatterCache";
-import { MustTestLocales, arSAGregorian } from "../../test";
+import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { countIntlConstructions } from "../../test/countIntlConstructions";
 import { hostDateText } from "../../test/hostIntl";
+import { isLunisolarTextCompatNeeded } from "../../internal/temporalCompat/capabilities";
 import { formatDate } from "./formatDate";
 
 describe("formatDate", () => {
@@ -304,9 +305,11 @@ describe("formatDate", () => {
     ${"2024-02-03"} | ${{ year: "2-digit", month: "numeric", day: "numeric" }} | ${"٣/٢/٢٤"}               | ${"year 2-digit, month numeric, day numeric"}
     ${"2024-02-03"} | ${{ year: "2-digit", month: "2-digit", day: "2-digit" }} | ${"٠٣/٠٢/٢٤"}             | ${"year 2-digit, month 2-digit, day 2-digit"}
   `(
-    "formats valid date $value for ar-SA-u-ca-gregory with options $label to $expected",
+    "formats valid date $value for ar-SA with options $label to $expected",
     ({ value, options, expected }) => {
-      expect(formatDate(value, arSAGregorian, options)).toEqual(expected);
+      expect(formatDate(value, MustTestLocales.arSA, options)).toEqual(
+        expected,
+      );
     },
   );
 
@@ -381,17 +384,17 @@ describe("formatDate", () => {
   // kept, `timeZoneName` is not inherited, and a `timeStyle` is a TypeError.
   // Expected values: native Intl.DateTimeFormat at UTC with the adjusted options.
   it.each`
-    locale                   | options                                                | expected                  | reason
-    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long" }}                  | ${"令和6年2月"}           | ${"requested long month kept"}
-    ${"ja-JP"}               | ${{ month: "long", day: "numeric" }}                   | ${"2月3日"}               | ${"requested long month kept"}
-    ${"ja-JP-u-ca-japanese"} | ${{ year: "2-digit", month: "short", day: "numeric" }} | ${"令和06年2月3日"}       | ${"requested short month kept, 2-digit era year padded (D27)"}
-    ${"en-US-u-ca-chinese"}  | ${{ year: "numeric", month: "long" }}                  | ${""}                     | ${"chinese is refused on every host (D33)"}
-    ${"en-US"}               | ${{ era: "long" }}                                     | ${"2/3/2024 Anno Domini"} | ${"era alone gets the date defaults"}
-    ${"en-US"}               | ${{ timeZoneName: "long" }}                            | ${"2/3/2024"}             | ${"timeZoneName is not inherited, defaults apply"}
-    ${"en-US"}               | ${{ dateStyle: "short", timeStyle: "short" }}          | ${""}                     | ${"timeStyle on a PlainDate is a TypeError"}
-    ${"en-US"}               | ${{ timeStyle: "short" }}                              | ${""}                     | ${"timeStyle on a PlainDate is a TypeError"}
-    ${"en-US"}               | ${{ dateStyle: "short" }}                              | ${"2/3/24"}               | ${"only the style that applies gives the pre-1.16.0 text"}
-    ${"en-US"}               | ${{ hour: "numeric" }}                                 | ${""}                     | ${"only time fields: no PlainDate format"}
+    locale                   | options                                                | expected                                                                                                                              | reason
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "numeric", month: "long" }}                  | ${"令和6年2月"}                                                                                                                       | ${"requested long month kept"}
+    ${"ja-JP"}               | ${{ month: "long", day: "numeric" }}                   | ${"2月3日"}                                                                                                                           | ${"requested long month kept"}
+    ${"ja-JP-u-ca-japanese"} | ${{ year: "2-digit", month: "short", day: "numeric" }} | ${"令和06年2月3日"}                                                                                                                   | ${"requested short month kept, 2-digit era year padded (D27)"}
+    ${"en-US-u-ca-chinese"}  | ${{ year: "numeric", month: "long" }}                  | ${isLunisolarTextCompatNeeded("chinese") ? "" : hostDateText("en-US-u-ca-chinese", { year: "numeric", month: "long" }, "2024-02-03")} | ${"chinese is refused where the D33 probe fails, the host's text where it passes"}
+    ${"en-US"}               | ${{ era: "long" }}                                     | ${"2/3/2024 Anno Domini"}                                                                                                             | ${"era alone gets the date defaults"}
+    ${"en-US"}               | ${{ timeZoneName: "long" }}                            | ${"2/3/2024"}                                                                                                                         | ${"timeZoneName is not inherited, defaults apply"}
+    ${"en-US"}               | ${{ dateStyle: "short", timeStyle: "short" }}          | ${""}                                                                                                                                 | ${"timeStyle on a PlainDate is a TypeError"}
+    ${"en-US"}               | ${{ timeStyle: "short" }}                              | ${""}                                                                                                                                 | ${"timeStyle on a PlainDate is a TypeError"}
+    ${"en-US"}               | ${{ dateStyle: "short" }}                              | ${"2/3/24"}                                                                                                                           | ${"only the style that applies gives the pre-1.16.0 text"}
+    ${"en-US"}               | ${{ hour: "numeric" }}                                 | ${""}                                                                                                                                 | ${"only time fields: no PlainDate format"}
   `(
     "formats 2024-02-03 in $locale with $options to '$expected' ($reason)",
     ({ locale, options, expected }) => {

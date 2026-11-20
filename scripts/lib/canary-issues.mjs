@@ -197,10 +197,9 @@ const FORCED_ROW = {
  *   forced?: { difference: true },
  * }} UsClockWatchVerdict
  * @typedef {{ source: string, status: "could-not-run", message: string,
- *   sweep?: SwapVerdict["sweep"], calendarSweep?: SwapVerdict["calendarSweep"],
- *   d33?: SwapVerdict["d33"] }} CouldNotRunVerdict
- *   `sweep`, `calendarSweep` and `d33`: the offset, calendar and Chinese-and-Dangi sweeps of a
- *   swap Node leg that stopped after they ran
+ *   sweep?: SwapVerdict["sweep"], calendarSweep?: SwapVerdict["calendarSweep"] }} CouldNotRunVerdict
+ *   `sweep` and `calendarSweep`: the offset and calendar sweeps of a swap Node leg that stopped
+ *   after they ran
  * @typedef {{ file: string, test: string, message: string }} NativeFailure
  * @typedef {{
  *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit" | "webkit-macos", engine: string,
@@ -234,10 +233,6 @@ const FORCED_ROW = {
  *                                        example: string }[],
  *                           [field: string]: unknown }
  *        | { status: "could-not-run", message: string },
- *   d33: { check: "removable" | "still needed" | "missing",
- *          sweep: null | { status: "ran", calendars: number, differingCalendars: number,
- *                          [field: string]: unknown }
- *               | { status: "could-not-run", message: string } },
  *   forced?: { swapReady: true },
  * }} SwapVerdict
  * @typedef {{ removable?: string, mismatch?: boolean, nativeFailure?: boolean,
@@ -1385,47 +1380,6 @@ function swapRuntimeName(leg, v) {
 }
 
 /**
- * Whether the swap would retire compat D33 (Chinese and Dangi dates): "removable" only when every
- * swap leg ran, every leg's `d33.check` is "removable", and the Node leg's `d33.sweep` ran, counted
- * its calendars and found none differing from the built-in Temporal. Fail closed: a missing or
- * malformed field is "still needed". It never decides `swapReady`: GMT refuses both calendars on
- * every host.
- * @param {Record<string, Verdict | null | undefined>} verdicts
- * @returns {{ state: "removable" | "still needed", failing: number, legs: number,
- *            differing: number | null, calendars: number | null }}
- */
-export function d33SwapState(verdicts) {
-  const ran = SWAP_SOURCES.map((source) => verdictOf(verdicts, source));
-  const legs = ran.length;
-  const failing = ran.filter(
-    (v) =>
-      v?.status !== "ran" ||
-      /** @type {SwapVerdict} */ (v).d33?.check !== "removable",
-  ).length;
-  const node = ran[SWAP_LEGS.indexOf("node")];
-  const sweep =
-    node?.status === "ran"
-      ? /** @type {SwapVerdict} */ (node).d33?.sweep
-      : null;
-  const counted = sweep?.status === "ran" ? sweep : null;
-  const differing =
-    counted && Number.isInteger(counted.differingCalendars)
-      ? counted.differingCalendars
-      : null;
-  const calendars =
-    counted && Number.isInteger(counted.calendars) ? counted.calendars : null;
-  const removable =
-    failing === 0 && differing === 0 && calendars !== null && calendars > 0;
-  return {
-    state: removable ? "removable" : "still needed",
-    failing,
-    legs,
-    differing,
-    calendars,
-  };
-}
-
-/**
  * The swap issue's paragraphs, built from whichever legs ran. `ready` is false only in a forced dry
  * run, whose text must not claim a pass the run did not have.
  * @param {Record<string, Verdict | null | undefined>} verdicts
@@ -1474,19 +1428,6 @@ function swapParagraphs(verdicts, version, ready) {
         ? `Calendar sweep: every one of ${calendarSweep.calendars} calendars matches the built-in Temporal on the first day, months and days of each year ${span}.`
         : `Calendar sweep: ${calendarSweep.differingCalendars} of ${calendarSweep.calendars} calendars differ from the built-in Temporal in some year ${span}.`;
   }
-  const d33 = d33SwapState(verdicts);
-  const d33Sweep =
-    node?.status === "ran"
-      ? /** @type {SwapVerdict} */ (node).d33?.sweep
-      : null;
-  const d33Span =
-    d33Sweep?.status === "ran"
-      ? `from ${String(d33Sweep.from)} to ${String(d33Sweep.through)}`
-      : "in every year the sweep reads";
-  const d33Line =
-    d33.state === "removable"
-      ? `Chinese and Dangi: every leg passes the D33 repros and both calendars match the built-in Temporal ${d33Span}. D33 can be retired with this swap (README § Removal steps 33).`
-      : `Chinese and Dangi: D33 stays. ${d33.failing} of ${d33.legs} legs fail a D33 repro; the calendar sweep finds ${d33.differing ?? "an unknown number"} of ${d33.calendars ?? "an unknown number"} calendars differ from the built-in Temporal. GMT refuses both calendars on every host, so this does not block the swap.`;
   return [
     `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, ${ready ? "passed every check" : "was checked"} on this run.`,
     table(
@@ -1501,7 +1442,6 @@ function swapParagraphs(verdicts, version, ready) {
     ),
     sweepLine,
     calendarLine,
-    d33Line,
     `What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}). Type errors are not checked here; § 5 lists them.`,
     "A person makes the swap. CI opens issues, never pull requests.",
   ];

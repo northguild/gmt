@@ -81,10 +81,13 @@ new Temporal.ZonedDateTime(0n, "Etc/UTC").equals(new Temporal.ZonedDateTime(0n, 
 new Temporal.ZonedDateTime(0n, "Asia/Calcutta").equals(new Temporal.ZonedDateTime(0n, "Asia/Kolkata")); // false; expected true
 ```
 
-**Workaround.** None. GMT compares zones by name (`internal/zoneNamesEqual.ts`): the same name in any ASCII letter case, or
-two names ECMA-402 resolves to UTC (`UTC`, `Etc/UTC`, `Etc/GMT`, `GMT`). A link and its zone are two zones on every host, so the
-answer does not depend on how a runtime canonicalizes zone names. `zonedUntil` rebinds the second value to the first one's name
-when they are equal by this rule, so the polyfill never throws for a calendar `largestUnit`.
+**Workaround.** `D19` (`temporalCompat/timeZoneEquals.ts`, probe `isTimeZoneEqualsCompatNeeded`), scoped to WebKit
+(`engines: ["webkit"]` in `scripts/lib/workarounds.mjs`; the Node, Chromium and Firefox checks report it out of scope).
+Where the probe fails GMT resolves `Etc/UTC`, `Etc/GMT` and `GMT` to `UTC` by name, and for any other pair asks the host's
+own `Temporal.ZonedDateTime#equals` when `globalThis.Temporal` exists (WebKit 26.6). On a host without `Temporal`
+(Safari 27) the IANA links stay two zones: resolving a link needs the IANA link data, which GMT does not own.
+The comparisons `areZonedEqual`, `areZonedEqualBy`, `formatZonedRange`, `mapZonedDatesInRange` and `diffZoned*` all go
+through `timeZoneEquals`.
 
 **Upstream.** tc39 [#3301](https://github.com/tc39/proposal-temporal/issues/3301), reported by someone else; our
 [comment](https://github.com/tc39/proposal-temporal/issues/3301#issuecomment-6892556793) adds the WebKit cases.

@@ -200,12 +200,12 @@ describe("toOffsetInstant", () => {
   );
 
   it.each`
-    value                                            | expected
-    ${"2024-07-15T12:00:00-04:00[US/Eastern]"}       | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "US/Eastern" }}
-    ${"2024-07-15T12:00:00-04:00[America/New_York]"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }}
-    ${"2024-07-15T12:00:00Z[Zulu]"}                  | ${{ instant: "2024-07-15T12:00:00Z", offset: "+00:00", timeZone: "Zulu" }}
-    ${"2024-07-15T12:00:00-05:00[Etc/GMT+5]"}        | ${{ instant: "2024-07-15T17:00:00Z", offset: "-05:00", timeZone: "Etc/GMT+5" }}
-    ${"2024-07-15T12:00:00+05:30[Asia/Calcutta]"}    | ${{ instant: "2024-07-15T06:30:00Z", offset: "+05:30", timeZone: "Asia/Calcutta" }}
+    value                                         | expected
+    ${"2024-07-15T12:00:00-04:00[US/Eastern]"}    | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "US/Eastern" }}
+    ${"2024-07-15T12:00:00-04:00[EST5EDT]"}       | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "EST5EDT" }}
+    ${"2024-07-15T12:00:00Z[Zulu]"}               | ${{ instant: "2024-07-15T12:00:00Z", offset: "+00:00", timeZone: "Zulu" }}
+    ${"2024-07-15T12:00:00-05:00[Etc/GMT+5]"}     | ${{ instant: "2024-07-15T17:00:00Z", offset: "-05:00", timeZone: "Etc/GMT+5" }}
+    ${"2024-07-15T12:00:00+05:30[Asia/Calcutta]"} | ${{ instant: "2024-07-15T06:30:00Z", offset: "+05:30", timeZone: "Asia/Calcutta" }}
   `(
     "keeps $value's bracketed identifier as written, alias or not",
     ({ value, expected }) => {
@@ -214,12 +214,12 @@ describe("toOffsetInstant", () => {
   );
 
   // Temporal §14.6.2: every IANA Zone and Link name is a valid zone argument, slash-less or not.
-  // America/New_York follows US rules, so July is EDT, -04:00; Zulu links to Etc/UTC.
+  // EST5EDT follows US rules (tzdb `backward`), so July is EDT, -04:00; Zulu links to Etc/UTC.
   it.each`
-    timeZone              | expected                                                                               | description
-    ${"America/New_York"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "America/New_York" }} | ${"a slashed IANA zone"}
-    ${"Zulu"}             | ${{ instant: "2024-07-15T16:00:00Z", offset: "+00:00", timeZone: "Zulu" }}             | ${"a slash-less IANA alias"}
-    ${"Japan"}            | ${{ instant: "2024-07-15T16:00:00Z", offset: "+09:00", timeZone: "Japan" }}            | ${"a slash-less IANA link to Asia/Tokyo"}
+    timeZone     | expected                                                                      | description
+    ${"EST5EDT"} | ${{ instant: "2024-07-15T16:00:00Z", offset: "-04:00", timeZone: "EST5EDT" }} | ${"a slash-less IANA zone"}
+    ${"Zulu"}    | ${{ instant: "2024-07-15T16:00:00Z", offset: "+00:00", timeZone: "Zulu" }}    | ${"a slash-less IANA alias"}
+    ${"Japan"}   | ${{ instant: "2024-07-15T16:00:00Z", offset: "+09:00", timeZone: "Japan" }}   | ${"a slash-less IANA link to Asia/Tokyo"}
   `(
     "reads the offset in the timeZone argument $timeZone ($description)",
     ({ timeZone, expected }) => {
@@ -252,23 +252,6 @@ describe("toOffsetInstant", () => {
     expect(pair).not.toBeNull();
     expect(toOffsetInstant(fromOffsetInstant(pair as never))).toEqual(pair);
   });
-
-  // D35: nine zone names hosts disagree on are no zone on any host, in a bracket or as the argument.
-  it.each`
-    value                                   | timeZone
-    ${"2024-07-15T12:00:00-04:00[EST5EDT]"} | ${undefined}
-    ${"2024-07-15T12:00:00-04:00[est5edt]"} | ${undefined}
-    ${"2024-07-15T12:00:00+02:00[CET]"}     | ${undefined}
-    ${"2024-07-15T12:00:00+00:00[Factory]"} | ${undefined}
-    ${"2024-07-15T16:00:00Z"}               | ${"EST5EDT"}
-    ${"2024-07-15T16:00:00Z"}               | ${"cet"}
-    ${"2024-07-15T16:00:00Z"}               | ${"Factory"}
-  `(
-    "returns null for the refused zone in $value with timeZone $timeZone",
-    ({ value, timeZone }) => {
-      expect(toOffsetInstant(value, timeZone)).toBeNull();
-    },
-  );
 
   // A zoned string is the body plus at most the zone bracket: an elective or calendar annotation
   // after it is rejected, as is a critical one.

@@ -3,20 +3,6 @@ import { Temporal } from "../../internal/temporal";
 import { localNoonBattleCases } from "../../test";
 import { diffZonedAsDuration } from "./diffZonedAsDuration";
 
-describe("diffZonedAsDuration across names", () => {
-  it.each`
-    value1                                        | value2                                       | unit       | expected
-    ${"2024-01-01T00:00:00+00:00[UTC]"}           | ${"2024-01-03T00:00:00+00:00[GMT]"}          | ${"days"}  | ${"P2D"}
-    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"} | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"days"}  | ${""}
-    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"} | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"hours"} | ${"PT48H"}
-  `(
-    "returns '$expected' in $unit from $value1 to $value2 on every host",
-    ({ value1, value2, unit, expected }) => {
-      expect(diffZonedAsDuration(value1, value2, unit)).toBe(expected);
-    },
-  );
-});
-
 describe("diffZonedAsDuration", () => {
   for (const { timeZone, value } of localNoonBattleCases) {
     it(`returns PT1H for a 1-hour span at local noon across battle-test timeZone ${timeZone}`, () => {

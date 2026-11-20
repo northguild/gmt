@@ -4,8 +4,8 @@ import { normalizeDateTime } from "../internal/normalizeDateTime";
 import { Temporal } from "../internal/temporal";
 
 /*
- * Chinese and Dangi dates are refused by the public functions on every host (compat D33), so the
- * repairs that stay in place for the day D33 retires (D28, and the chinese and dangi parts of D29)
+ * Chinese and Dangi dates are refused by the public functions where the D33 probe fails, so the
+ * repairs that stay in place (D28, and the chinese and dangi parts of D29)
  * are reached through the formatter the public functions build from, `guardedDateTimeFormat`.
  */
 

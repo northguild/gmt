@@ -23,7 +23,7 @@ import { guardedRange } from "../test/lunisolarGuarded";
  */
 
 /*
- * Compat README rule 7: the dates, the years and the calendar are values and stay written out; the
+ * The dates, the years and the calendar are values and stay written out; the
  * wording of a locale (its weekday names, its day-period words, its digits) is the host's, so the
  * rows below that depend on it take it from the host's own `Intl.DateTimeFormat`. A host without
  * the data for a locale prints its fallback wording (English on a Chromium build that lacks `yo`),
@@ -131,7 +131,7 @@ describe("D29: a broken range prints as the two single dates joined by the local
 
   // The same pattern, a month apart: the range drops the related year of both dates on every
   // engine (native `Sixth Month jia-chen – Seventh Month jia-chen`), the class `M`, not `y`. The
-  // public range functions refuse chinese (compat D33), so the guarded formatter is read.
+  // public range functions refuse chinese where the D33 probe fails, so the guarded formatter is read.
   it("formatRangeRepaired of chinese months apart holds the related year of both dates", () => {
     expect(
       guardedRange(
@@ -349,8 +349,8 @@ describe("D29: a range that runs two fields of one date together is the two sing
   });
 });
 
-// The public range functions refuse chinese and dangi (compat D33); the repair stays for the day
-// D33 retires, so these rows read the guarded formatter.
+// The public range functions refuse chinese and dangi where the D33 probe fails, so these rows
+// read the guarded formatter.
 describe("D29: a chinese or dangi range that runs two fields together is the two singles", () => {
   const dateOptions = {
     year: "numeric",

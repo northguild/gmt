@@ -5,30 +5,6 @@ import { getLocaleEndOfWeek } from "./getLocaleEndOfWeek";
 import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getLocaleEndOfWeek", () => {
-  // zh-CN and is-IS: a region whose first day some runtime does not read as CLDR does (compat D36),
-  // so every runtime returns the sentinel.
-  it.each`
-    locale
-    ${MustTestLocales.zhCN}
-    ${MustTestLocales.isIS}
-  `(
-    "returns the sentinel for $locale, whose first day runtimes dispute",
-    ({ locale }) => {
-      expect(getLocaleEndOfWeek("2024-02-29", locale)).toBe("");
-    },
-  );
-
-  // `-u-fw-` names the first day (UTS #35 key fw), so the answer needs no runtime data.
-  it.each`
-    locale              | expected
-    ${"zh-CN-u-fw-mon"} | ${"2024-03-03"}
-    ${"zh-CN-u-fw-sun"} | ${"2024-03-02"}
-  `(
-    "returns $expected for Thursday 2024-02-29 in $locale",
-    ({ locale, expected }) => {
-      expect(getLocaleEndOfWeek("2024-02-29", locale)).toBe(expected);
-    },
-  );
   it.each`
     value           | locale                  | expected
     ${"2024-02-25"} | ${MustTestLocales.enUS} | ${"2024-03-02"}
@@ -64,6 +40,7 @@ describe("getLocaleEndOfWeek", () => {
     ${MustTestLocales.itIT} | ${"2024-03-03"}
     ${MustTestLocales.ptPT} | ${"2024-03-02"}
     ${MustTestLocales.svSE} | ${"2024-03-03"}
+    ${MustTestLocales.zhCN} | ${"2024-03-03"}
     ${MustTestLocales.zhTW} | ${"2024-03-02"}
     ${MustTestLocales.jaJP} | ${"2024-03-02"}
     ${MustTestLocales.koKR} | ${"2024-03-02"}
@@ -77,6 +54,14 @@ describe("getLocaleEndOfWeek", () => {
       expect(getLocaleEndOfWeek("2024-02-29", locale)).toBe(expected);
     },
   );
+
+  it("returns the correct end-of-week for is-IS regardless of its CLDR-version-dependent firstDay", () => {
+    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
+    const expected = firstDay === 1 ? "2024-03-03" : "2024-03-02";
+    expect(getLocaleEndOfWeek("2024-02-29", MustTestLocales.isIS)).toBe(
+      expected,
+    );
+  });
 
   it.each`
     value

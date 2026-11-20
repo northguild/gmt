@@ -37,7 +37,7 @@ function expectedYear(
 
 /**
  * The host's own text for the date with its year replaced by the calendar year. The month names,
- * the order, the separators and the hour cycle are the host's wording (compat README rule 7); the
+ * the order, the separators and the hour cycle are the host's own wording; the
  * year is the value, so it is the one derived above and never the host's own. A host with the
  * defect prints the week-year (the next or the previous year, and for `japanese` or `roc` the
  * Gregorian year), so the host's year is found among those candidates and swapped. The host's
@@ -135,9 +135,10 @@ describe("single date, week-year patterns", () => {
     );
     // The month's name comes from a format of the month alone, which has no week-year.
     const month = normalizeDateTime(
-      new Intl.DateTimeFormat("gd", { month: "short", timeZone: "UTC" }).format(
-        utcMs("2024-12-30T00:00:00Z"),
-      ),
+      new Intl.DateTimeFormat("gd", {
+        month: "short",
+        timeZone: "UTC",
+      }).format(utcMs("2024-12-30T00:00:00Z")),
     );
     expect(text.startsWith(month)).toBe(true);
     expect(formatDateToParts("2024-12-30", "gd", options)).toEqual([

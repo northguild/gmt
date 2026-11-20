@@ -237,9 +237,7 @@ export function nativeSuiteVerdict({
  * passes on the control in the same runtime; the verdict keeps the first 50, each message cut to 300
  * characters, and says when it cut. `counts.failed` is the full number. `both` and `fixed` are
  * counts only: their rows stay in the uploaded Vitest reports. `sweep` (the offset sweep) and
- * `calendarSweep` (the calendar sweep, CORE-110) are `null` off Node. `d33` (compat D33): `check` is
- * whether the swap pass's Chinese and Dangi repros pass on every leg, and `sweep` the Node leg's
- * sweep of those two calendars, which `calendarSweep` leaves out (`null` off Node).
+ * `calendarSweep` (the calendar sweep, CORE-110) are `null` off Node.
  * `entryLoaded` is whether the swap pass's own check passed: the seam's `Temporal` was the swap
  * entry's object. Without it the counts say nothing about `temporal-polyfill`.
  *
@@ -253,10 +251,7 @@ export function nativeSuiteVerdict({
  *           sweep: null | { status: "ran", [field: string]: unknown }
  *                | { status: "could-not-run", message: string },
  *           calendarSweep: null | { status: "ran", [field: string]: unknown }
- *                | { status: "could-not-run", message: string },
- *           d33: { check: "removable" | "still needed" | "missing",
- *                  sweep: null | { status: "ran", [field: string]: unknown }
- *                       | { status: "could-not-run", message: string } } }} input
+ *                | { status: "could-not-run", message: string } }} input
  */
 export function polyfillSwapVerdict({
   leg,
@@ -268,7 +263,6 @@ export function polyfillSwapVerdict({
   failing,
   sweep,
   calendarSweep,
-  d33,
 }) {
   return {
     source: `temporal-polyfill-swap-${leg}`,
@@ -289,7 +283,6 @@ export function polyfillSwapVerdict({
     failingTruncated: failing.length > UNTAGGED_ROWS_IN_VERDICT,
     sweep,
     calendarSweep,
-    d33,
   };
 }
 
@@ -337,8 +330,7 @@ export function usClockWatchVerdict({ federal, state, tz }) {
 /**
  * What a command that exited 2 leaves behind: a canary that cannot run is a finding, not a silence.
  *
- * The swap check adds `sweep`, `calendarSweep` and `d33` (check "missing") to a Node leg that stopped
- * after those sweeps ran.
+ * The swap check adds `sweep` and `calendarSweep` to a Node leg that stopped after those sweeps ran.
  *
  * @returns {{ source: string, status: "could-not-run", message: string }}
  */

@@ -5,7 +5,6 @@ import {
   expectOneOfIcu,
   MustTestLocales,
   oneOfIcu,
-  arSAGregorian,
 } from "../../test";
 import { hostDateTimeText } from "../../test/hostIntl";
 import { mockTemporalPlainDateTimeFromThrow } from "../../test/mocks";
@@ -19,12 +18,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for en-US with $label in the host's wording",
     ({ value, options }) => {
@@ -41,12 +40,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for en-GB with $label in the host's wording",
     ({ value, options }) => {
@@ -85,12 +84,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for fr-FR with $label in the host's wording",
     ({ value, options }) => {
@@ -165,11 +164,11 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for pt-PT with $label in the host's wording",
     ({ value, options }) => {
@@ -205,12 +204,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for sv-SE with $label in the host's wording",
     ({ value, options }) => {
@@ -227,12 +226,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for is-IS with $label in the host's wording",
     ({ value, options }) => {
@@ -249,12 +248,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for zh-CN with $label in the host's wording",
     ({ value, options }) => {
@@ -308,12 +307,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for ja-JP with $label in the host's wording",
     ({ value, options }) => {
@@ -330,12 +329,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for ko-KR with $label in the host's wording",
     ({ value, options }) => {
@@ -352,17 +351,17 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for ar-SA-u-ca-gregory with $label in the host's wording",
+    "formats valid datetime $value for ar-SA with $label in the host's wording",
     ({ value, options }) => {
-      expect(formatDateTime(value, arSAGregorian, options)).toBe(
-        hostDateTimeText(arSAGregorian, options, value),
+      expect(formatDateTime(value, MustTestLocales.arSA, options)).toBe(
+        hostDateTimeText(MustTestLocales.arSA, options, value),
       );
     },
   );
@@ -374,12 +373,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for he-IL with $label in the host's wording",
     ({ value, options }) => {
@@ -418,12 +417,12 @@ describe("formatDateTime", () => {
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
     ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"year numeric, month long, day numeric, hour numeric, minute numeric, second numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"year numeric, month short, day numeric, hour numeric, minute numeric"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"year numeric, month 2-digit, day 2-digit, hour 2-digit, minute 2-digit, second 2-digit, hour12 true"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"year numeric, month numeric, day numeric, hour numeric, minute numeric, second numeric, hour12 false"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
     "formats valid datetime $value for tr-TR with $label in the host's wording",
     ({ value, options }) => {

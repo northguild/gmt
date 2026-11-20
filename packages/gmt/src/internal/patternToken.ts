@@ -1,7 +1,7 @@
 import { type LocalesArgument, resolveLocale } from "./resolveLocale";
 import { twoDigitYear } from "./twoDigitYear";
 import { readYearWindowOption, resolveYearWindow } from "./yearWindowStart";
-import { eraNamesFor, isoWeekdayNamesFor, meridiemsFor } from "./localeNames";
+import { eraNamesFor, meridiemsFor, weekdayNamesFor } from "./localeNames";
 import { localeMonthNames } from "./localeMonthNames";
 
 /**
@@ -391,7 +391,7 @@ function compilePattern(
     }
 
     if (spec.kind === "weekdayShort" || spec.kind === "weekdayLong") {
-      const names = isoWeekdayNamesFor(
+      const names = weekdayNamesFor(
         locale,
         spec.kind === "weekdayLong" ? "long" : "short",
       );

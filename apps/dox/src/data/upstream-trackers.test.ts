@@ -4,7 +4,6 @@ import {
   bugzillaCommentsUrl,
   bugzillaHistoryUrl,
   chromiumIssueUrl,
-  guardIds as guardIdsScript,
   identityOf,
   isJiraKey,
   jiraDiscoveryUrl,
@@ -18,7 +17,6 @@ import {
   SYNCED_FIELDS,
   urlOf,
 } from "../../../../scripts/lib/upstream-trackers.mjs";
-import { guardIds } from "./upstream-filings";
 
 // The readers take a recorded response as text and know nothing of the network, so each test
 // feeds one a trimmed copy of what the tracker returned (Jira on 2026-11-14, Chromium's page
@@ -410,19 +408,4 @@ describe("Bugzilla", () => {
       ),
     ).toThrow(/unexpected response shape/);
   });
-});
-
-describe("guardIds", () => {
-  it.each`
-    gmtGuard        | ids
-    ${null}         | ${[]}
-    ${"D1"}         | ${["D1"]}
-    ${["D1", "D6"]} | ${["D1", "D6"]}
-  `(
-    "the script twin agrees with the data module for $gmtGuard",
-    ({ gmtGuard, ids }) => {
-      expect(guardIdsScript({ gmtGuard })).toEqual(ids);
-      expect(guardIds({ gmtGuard })).toEqual(ids);
-    },
-  );
 });

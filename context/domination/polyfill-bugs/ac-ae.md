@@ -104,8 +104,6 @@ Chromium 153, Firefox 155 and Node 26 accept them; `EST`, `MST` and `HST` work. 
 `CET`, `EET`, `MET` and `WET`; macOS accepts them. Filed as [WebKit 330688](https://bugs.webkit.org/show_bug.cgi?id=330688); on GitHub's macOS 26 runner WebKit accepts
 all four, so on the Mac the refusal comes with macOS 27.
 
-GMT refuses all nine names on every host (compat D35).
-
 The cause seems to be `isValidTimeZoneNameFromICUTimeZone` in WebKit's `Source/JavaScriptCore/runtime/IntlObject.cpp`,
 which drops every name without a `/` except `UTC` and `GMT`, on the assumption that ICU has already resolved such names
 through backward links. A name with no slash then works only when the host's time zone data makes it a link to a name

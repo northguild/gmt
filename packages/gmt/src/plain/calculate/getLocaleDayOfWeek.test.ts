@@ -5,31 +5,6 @@ import { getLocaleDayOfWeek } from "./getLocaleDayOfWeek";
 import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getLocaleDayOfWeek", () => {
-  // zh-CN and is-IS: a region whose first day some runtime does not read as CLDR does (compat D36),
-  // so every runtime returns the sentinel.
-  it.each`
-    locale
-    ${MustTestLocales.zhCN}
-    ${MustTestLocales.isIS}
-  `(
-    "returns the sentinel for $locale, whose first day runtimes dispute",
-    ({ locale }) => {
-      expect(getLocaleDayOfWeek("2024-02-26", locale)).toBeNull();
-    },
-  );
-
-  // `-u-fw-` names the first day (UTS #35 key fw), so the answer needs no runtime data.
-  it.each`
-    locale              | expected
-    ${"zh-CN-u-fw-mon"} | ${0}
-    ${"zh-CN-u-fw-sun"} | ${1}
-    ${"is-IS-u-fw-sat"} | ${2}
-  `(
-    "returns $expected for Monday 2024-02-26 in $locale",
-    ({ locale, expected }) => {
-      expect(getLocaleDayOfWeek("2024-02-26", locale)).toBe(expected);
-    },
-  );
   // Full week boundary coverage for en-US: compute expected dynamically so
   // the test stays correct regardless of the runtime's weekInfo data.
   it.each`
@@ -105,6 +80,8 @@ describe("getLocaleDayOfWeek", () => {
     ${MustTestLocales.itIT}
     ${MustTestLocales.ptPT}
     ${MustTestLocales.svSE}
+    ${MustTestLocales.isIS}
+    ${MustTestLocales.zhCN}
     ${MustTestLocales.zhTW}
     ${MustTestLocales.jaJP}
     ${MustTestLocales.koKR}

@@ -168,6 +168,7 @@ describe("groupResults", () => {
     expect(states.D10).toBe("guard");
     expect(states.D17).toBe("out-of-scope");
     expect(states.D18).toBe("out-of-scope");
+    expect(states.D19).toBe("out-of-scope");
     expect(states.D32).toBe("out-of-scope");
     expect(states.D34).toBe("out-of-scope");
     expect(
@@ -177,6 +178,7 @@ describe("groupResults", () => {
             id !== "D10" &&
             id !== "D17" &&
             id !== "D18" &&
+            id !== "D19" &&
             id !== "D32" &&
             id !== "D34",
         )
@@ -195,11 +197,13 @@ describe("groupResults", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.webkit);
     expect(groupOf(groups, "D17").state).toBe("out-of-scope");
     expect(groupOf(groups, "D18").state).toBe("removable");
+    expect(groupOf(groups, "D19").state).toBe("removable");
   });
 
   it("on Firefox the WebKit-only groups are out of scope", () => {
     const groups = groupResults(everyProbe(), "0.5.1", ENGINE_IDS.firefox);
     expect(groupOf(groups, "D18").state).toBe("out-of-scope");
+    expect(groupOf(groups, "D19").state).toBe("out-of-scope");
   });
 
   it("one failing probe makes its group still needed, on any engine", () => {
@@ -348,7 +352,7 @@ describe("runBrowserCompat with a fake browser", () => {
       state: "out-of-scope",
       engines: ["v8"],
     });
-    expect(verdict.workarounds.find((w) => w.id === "D18")).toMatchObject({
+    expect(verdict.workarounds.find((w) => w.id === "D19")).toMatchObject({
       state: "removable",
       engines: ["webkit"],
     });

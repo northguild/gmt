@@ -36,6 +36,11 @@ import { showsEraOrYear, toMilliseconds } from "./yearPrinting";
 /** The ISO date of 1 Tout AM 1: coptic year 1, month 1, day 1 (Calendrical Calculations, chapter 4). */
 const EPOCH_DAY = "0284-08-29";
 
+/** The instant JavaScriptCore changes the coptic era at (WebKit bug 331724): 0284-08-29T07:52:58Z. */
+const ENGINE_ERA_SWITCH_MS = Temporal.Instant.from(
+  "0284-08-29T07:52:58Z",
+).epochMilliseconds;
+
 /** The days in 28 coptic years: 1461 whole weeks, so a weekday survives the shift. */
 const CYCLE_DAYS = 10227;
 
@@ -96,13 +101,21 @@ function valueOf(run: string, table: readonly string[]): number {
   return value;
 }
 
-/** Whether an instant's local date is 1 Tout AM 1, which D34 can print in the wrong era. */
+/**
+ * Whether D34 can print an instant of coptic year 1 in the wrong era: its local date is 1 Tout AM 1,
+ * or it is a later date of year 1 that is still before the engine's fixed instant (a zone east of
+ * +16:07:02 reaches 1 Tout 2 AM 1 before 0284-08-29T07:52:58Z).
+ */
 function isEpochDay(ms: number, timeZone: string): boolean {
   try {
-    return Temporal.Instant.fromEpochMilliseconds(ms)
+    const date = Temporal.Instant.fromEpochMilliseconds(ms)
       .toZonedDateTimeISO(timeZone)
-      .toPlainDate()
-      .equals(EPOCH_DAY);
+      .toPlainDate();
+    return (
+      date.equals(EPOCH_DAY) ||
+      (ms < ENGINE_ERA_SWITCH_MS &&
+        Temporal.PlainDate.compare(date, EPOCH_DAY) > 0)
+    );
   } catch {
     return false;
   }

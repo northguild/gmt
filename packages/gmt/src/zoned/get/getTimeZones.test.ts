@@ -1,4 +1,3 @@
-import { refusedZoneNames } from "../../test";
 import { isValidTimeZone } from "../validate";
 import { getTimeZones } from "./getTimeZones";
 
@@ -15,15 +14,6 @@ describe("getTimeZones", () => {
     const invalid = timeZones.filter((tz) => !isValidTimeZone(tz));
     expect(invalid).toHaveLength(0);
   });
-
-  it.each(refusedZoneNames.map((name) => ({ name })))(
-    "does not list the refused name $name",
-    ({ name }) => {
-      expect(getTimeZones().map((zone) => zone.toLowerCase())).not.toContain(
-        name.toLowerCase(),
-      );
-    },
-  );
 
   it("returns an empty array when Intl.supportedValuesOf throws", () => {
     const supportedValuesOfSpy = vi

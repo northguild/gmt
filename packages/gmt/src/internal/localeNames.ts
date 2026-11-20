@@ -104,9 +104,8 @@ export function meridiemsFor(locale: string | string[]): string[] {
   });
 }
 
-// The weekday names of one locale in ISO order (Monday first), whatever its first day. Names
-// do not depend on week data, so a parser that matches names reads them here.
-export function isoWeekdayNamesFor(
+// The names of one locale; see the public function of the same name.
+export function weekdayNamesFor(
   locale: string | string[],
   style: LocaleNameStyle = "long",
 ): string[] {
@@ -114,8 +113,13 @@ export function isoWeekdayNamesFor(
     const resolvedLocale = resolveRequiredLocale(locale);
     if (resolvedLocale === null) return [];
 
+    const firstDay = getLocaleFirstDayOfWeek(resolvedLocale);
+    if (firstDay === null) return [];
+
     try {
       const resolved = widthOf(style);
+      // Build the names in ISO order (Monday-first), then rotate so the
+      // locale's first day of week sits at index 0.
       // One formatter for the seven dates: a PlainDate formats its own wall-clock fields, and
       // the same date's UTC midnight in a `timeZone: "UTC"` formatter shows the same fields.
       const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
@@ -131,7 +135,9 @@ export function isoWeekdayNamesFor(
           formatter.format(date.toZonedDateTime("UTC").epochMilliseconds),
         );
       }
-      return isoOrder;
+      return isoOrder
+        .slice(firstDay - 1)
+        .concat(isoOrder.slice(0, firstDay - 1));
     } catch {
       return [];
     }
@@ -140,16 +146,4 @@ export function isoWeekdayNamesFor(
     // argument is invalid input, not an exception.
     return [];
   }
-}
-
-// The names of one locale, rotated to its first day; see the public function of the same name.
-export function weekdayNamesFor(
-  locale: string | string[],
-  style: LocaleNameStyle = "long",
-): string[] {
-  const firstDay = getLocaleFirstDayOfWeek(locale);
-  if (firstDay === null) return [];
-  const isoOrder = isoWeekdayNamesFor(locale, style);
-  if (isoOrder.length !== 7) return [];
-  return isoOrder.slice(firstDay - 1).concat(isoOrder.slice(0, firstDay - 1));
 }

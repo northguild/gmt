@@ -58,32 +58,6 @@ function referenceWeeks(
 }
 
 describe("getWeeksInLocaleWeekYear", () => {
-  // zh-CN and is-IS: a region whose first day some runtime does not read as CLDR does (compat D36),
-  // so every runtime returns the sentinel.
-  it.each`
-    locale
-    ${MustTestLocales.zhCN}
-    ${MustTestLocales.isIS}
-  `(
-    "returns the sentinel for $locale, whose first day runtimes dispute",
-    ({ locale }) => {
-      expect(getWeeksInLocaleWeekYear("2022-06-15", locale)).toBeNull();
-    },
-  );
-
-  // `-u-fw-` names the first day (UTS #35 key fw), so the answer needs no runtime data.
-  it.each`
-    locale              | expected
-    ${"zh-CN-u-fw-sun"} | ${53}
-    ${"zh-CN-u-fw-mon"} | ${52}
-  `(
-    "returns $expected for 2022-06-15 in $locale with minimalDays 1",
-    ({ locale, expected }) => {
-      expect(
-        getWeeksInLocaleWeekYear("2022-06-15", locale, { minimalDays: 1 }),
-      ).toBe(expected);
-    },
-  );
   it.each`
     locale
     ${MustTestLocales.enUS}
@@ -94,6 +68,7 @@ describe("getWeeksInLocaleWeekYear", () => {
     ${MustTestLocales.itIT}
     ${MustTestLocales.ptPT}
     ${MustTestLocales.svSE}
+    ${MustTestLocales.zhCN}
     ${MustTestLocales.zhTW}
     ${MustTestLocales.jaJP}
     ${MustTestLocales.koKR}

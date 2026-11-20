@@ -1,5 +1,6 @@
 import { Temporal } from "./temporal";
 import {
+  isIslamicEraCompatNeeded,
   isJapaneseEraCompatNeeded,
   isJapaneseTwoDigitYearCompatNeeded,
   isRelatedYearWidthCompatNeeded,
@@ -11,7 +12,7 @@ import { digitSetOf, digitsOf } from "./weekYearText";
 /*
  * CORE-112, defects D25 to D32: years an engine prints wrongly outside the week-year.
  *
- * Each repair, except D26, is dormant behind one cached engine probe (`temporalCompat/capabilities.ts`), and a
+ * Each repair is dormant behind one cached engine probe (`temporalCompat/capabilities.ts`), and a
  * formatter is wrapped only when its probe fails and the formatter can show the defect, so a fixed
  * engine runs no per-format work. One wrapper holds D25, D26 and D27 (each needs the date of the
  * call, and a formatter has one calendar, so at most two apply); D28 is a change of the options a
@@ -24,10 +25,8 @@ import { digitSetOf, digitsOf } from "./weekYearText";
  *   tc39/test262#4877) uses the Gregorian eras up to and including 1872-12-31. Those dates format
  *   through a `calendar: "gregory"` twin.
  * - D26 (ICU-23327): an islamic calendar prints a date before the Hijra as a negative year; the
- *   specification gives the era `bh`, which most engines cannot name and GMT owns no era names to
- *   write, so the date has no host-independent printable year and the house empty value answers
- *   (`""`, or `[]` for parts) on every host, WebKit included. No probe decides it (README rule 2
- *   exception); `isIslamicEraCompatNeeded()` is the retirement signal only.
+ *   specification gives the era `bh`, which this engine cannot name, so the date has no printable
+ *   year and the house empty value answers (`""`, or `[]` for parts).
  * - D27 (ICU-23620): `year: "2-digit"` in `ja` japanese leaves the era year unpadded, and its
  *   `jpanyear` numbering ignores `nu`. ECMA-402 FormatDateTimePattern pads it to two digits and
  *   prints it in the resolved numbering system (FormatNumeric); year 1 stays 元 (owner decision).
@@ -141,7 +140,7 @@ function eraSeatOf(
 
 /**
  * The formatter itself, or a wrapper that repairs the years of D25, D26 and D27 where the engine
- * prints them wrongly (D26 on every host).
+ * prints them wrongly.
  *
  * @param formatter the formatter the week-year guard returned
  * @param callerOptions the options it was built with
@@ -167,7 +166,9 @@ export function repairYearPrinting(
   const era =
     japanese && showsEraOrYear(callerOptions) && isJapaneseEraCompatNeeded();
   const islamic =
-    calendar.startsWith("islamic") && showsEraOrYear(callerOptions);
+    calendar.startsWith("islamic") &&
+    showsEraOrYear(callerOptions) &&
+    isIslamicEraCompatNeeded();
   const pad =
     japanese &&
     callerOptions.year === "2-digit" &&

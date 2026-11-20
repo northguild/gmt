@@ -15,8 +15,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   calendarSweep,
-  D33_CHECK,
-  d33Check,
   ENTRY_CHECK,
   entryLoaded,
   main,
@@ -301,7 +299,7 @@ describe("polyfill-swap judging", () => {
       failingTruncated: false,
     });
     expect(s.out()).toBe(
-      "polyfill-swap: node temporal-polyfill 1.0.7: 0 swap-only failures of 2 tests; sweep: 0 zones differ; calendar sweep: 0 calendars differ; D33 missing\n",
+      "polyfill-swap: node temporal-polyfill 1.0.7: 0 swap-only failures of 2 tests; sweep: 0 zones differ; calendar sweep: 0 calendars differ\n",
     );
   });
 
@@ -540,7 +538,7 @@ describe("polyfill-swap calendar sweep", () => {
       calendars: 16,
       differingCalendars: 0,
     });
-    expect(s.calendarSwept()).toBe(2);
+    expect(s.calendarSwept()).toBe(1);
   });
 
   it("gets the swap entry", async () => {
@@ -556,12 +554,7 @@ describe("polyfill-swap calendar sweep", () => {
         },
       }),
     );
-    const entry = { Temporal: { fake: "entry" } };
-    const all = Intl.supportedValuesOf("calendar");
-    expect(seen).toEqual([
-      [entry, all.filter((c) => c !== "chinese" && c !== "dangi")],
-      [entry, all.filter((c) => c === "chinese" || c === "dangi")],
-    ]);
+    expect(seen).toEqual([[{ Temporal: { fake: "entry" } }]]);
   });
 
   it("finds 3 calendars: the line and the verdict carry the number", async () => {
@@ -745,10 +738,6 @@ describe("polyfill-swap sweep and legs", () => {
         status: "ran",
         differingCalendars: 0,
       }),
-      d33: {
-        check: "missing",
-        sweep: expect.objectContaining({ status: "ran" }),
-      },
     });
     let out = "";
     await main(["summary", "node"], {
@@ -763,7 +752,6 @@ describe("polyfill-swap sweep and legs", () => {
         `could not run: ${limit}`,
         "Offset sweep: 0 zones differ from Intl, 1970-01-01 to 2036-11-04, 418 zones, tz 2026e.",
         "Calendar sweep: 0 calendars differ from Node's built-in Temporal, -003000-01-01 to +005000-12-31, 16 calendars.",
-        "D33 (Chinese and Dangi): 0 of 16 calendars differ from Node's built-in Temporal.",
         "",
       ].join("\n"),
     );
@@ -982,121 +970,6 @@ describe("polyfill-swap runtime", () => {
       vitest,
       playwright: null,
       browser: null,
-    });
-  });
-});
-
-describe("polyfill-swap D33 check", () => {
-  const d33Suite = (title: string | null, status = "passed") => ({
-    name: `/work/gmt/packages/gmt/${D33_CHECK.file}`,
-    status: "passed",
-    message: "",
-    assertionResults:
-      title === null
-        ? []
-        : [{ fullName: title, title, status, failureMessages: [] }],
-  });
-
-  it.each`
-    label                             | title             | status       | expected
-    ${"the pass title passed"}        | ${D33_CHECK.pass} | ${"passed"}  | ${"removable"}
-    ${"the fail title passed"}        | ${D33_CHECK.fail} | ${"passed"}  | ${"still needed"}
-    ${"the pass title failed"}        | ${D33_CHECK.pass} | ${"failed"}  | ${"missing"}
-    ${"the fail title was skipped"}   | ${D33_CHECK.fail} | ${"skipped"} | ${"missing"}
-    ${"neither title is in the file"} | ${"another test"} | ${"passed"}  | ${"missing"}
-    ${"the file has no tests"}        | ${null}           | ${"passed"}  | ${"missing"}
-  `("d33Check says '$expected' when $label", ({ title, status, expected }) => {
-    expect(d33Check({ testResults: [d33Suite(title, status)] })).toBe(expected);
-  });
-
-  it("d33Check says 'missing' for a report without the file, and ignores the same title in another file", () => {
-    expect(d33Check({ testResults: [] })).toBe("missing");
-    expect(
-      d33Check({
-        testResults: [
-          {
-            ...d33Suite(D33_CHECK.pass),
-            name: "/work/gmt/packages/gmt/src/test/other.test.ts",
-          },
-        ],
-      }),
-    ).toBe("missing");
-  });
-
-  it.each`
-    title             | check
-    ${D33_CHECK.pass} | ${"removable"}
-    ${D33_CHECK.fail} | ${"still needed"}
-  `(
-    "the verdict of a node leg carries d33.check '$check' for a swap report with '$title'",
-    async ({ title, check }) => {
-      const s = setup();
-      const withD33 = (r: unknown) => ({
-        ...(r as { testResults: unknown[] }),
-        testResults: [
-          ...(r as { testResults: unknown[] }).testResults,
-          ENTRY_PASSES,
-          d33Suite(title),
-        ],
-      });
-      const code = await main(
-        ["node", "--version=1.0.7"],
-        s.io({
-          control: withD33(one("passed")),
-          swap: withD33(one("passed")),
-          bare: true,
-        }),
-      );
-      expect(code).toBe(0);
-      expect(s.verdict("node").d33).toMatchObject({
-        check,
-        sweep: { status: "ran", differingCalendars: 0 },
-      });
-      expect(s.out()).toContain(`; D33 ${check}\n`);
-      expect(s.verdict("node").failing).toEqual([]);
-    },
-  );
-
-  it("a D33 sweep that throws records could-not-run and the leg still writes a verdict", async () => {
-    const s = setup();
-    let calls = 0;
-    const code = await main(
-      ["node", "--version=1.0.7"],
-      s.io(
-        { control: one("passed"), swap: one("passed") },
-        {
-          calendarSweep: () => {
-            calls += 1;
-            if (calls === 2) throw new Error("no chinese calendar");
-            return { status: "ran", differingCalendars: 0, calendars: 16 };
-          },
-        },
-      ),
-    );
-    expect(code).toBe(0);
-    expect(s.verdict("node").d33.sweep).toEqual({
-      status: "could-not-run",
-      message: "no chinese calendar",
-    });
-    expect(s.verdict("node").calendarSweep).toMatchObject({ status: "ran" });
-    let out = "";
-    await main(["summary", "node"], {
-      root: s.root,
-      stdout: (t) => (out += t),
-      stderr: () => {},
-    });
-    expect(out).toContain("D33 sweep could not run: no chinese calendar");
-  });
-
-  it("a browser leg carries the check and no D33 sweep", async () => {
-    const s = setup();
-    await main(
-      ["chromium", "--version=1.0.7"],
-      s.io({ control: one("passed"), swap: one("passed") }),
-    );
-    expect(s.verdict("chromium").d33).toEqual({
-      check: "missing",
-      sweep: null,
     });
   });
 });

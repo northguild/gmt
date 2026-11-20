@@ -4,15 +4,13 @@ import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
-import { zoneNamesEqual } from "../../internal/zoneNamesEqual";
+import { timeZoneEquals } from "../../internal/temporalCompat";
 import { repairRangeParts } from "../../internal/repairRangeParts";
 import {
   ensureRangeHooks,
   formatRangeChecked,
 } from "../../internal/rangeRepairs";
 import { rangeFieldsText } from "../../internal/rangeFields";
-import { withNamedCalendar } from "../../internal/namedCalendar";
-import { writtenLocaleTags } from "../../internal/resolveLocale";
 import { repairRangeText } from "../../internal/repairRangeText";
 import {
   isRangeDayPeriodCompatNeeded,
@@ -30,18 +28,13 @@ const MAX_OWN_FORMATTERS = 32;
 
 /**
  * The engine's own formatter for these arguments, built once and kept while `Intl.DateTimeFormat`
- * is the constructor that built it. The caller's `-u-ca-` keyword is passed as the `calendar`
- * option, as for every cached formatter (`namedCalendar.ts`).
+ * is the constructor that built it.
  */
 function ownFormatter(
   locale: string | string[] | undefined,
   options: Intl.DateTimeFormatOptions,
 ): Intl.DateTimeFormat {
-  const tags =
-    typeof locale === "string" || locale === undefined
-      ? locale
-      : writtenLocaleTags(locale);
-  const key = JSON.stringify([tags, options]);
+  const key = JSON.stringify([locale, options]);
   const hit = ownFormatters.get(key);
   if (hit !== undefined && hit.constructor === Intl.DateTimeFormat) {
     return hit;
@@ -49,7 +42,7 @@ function ownFormatter(
   if (ownFormatters.size >= MAX_OWN_FORMATTERS) {
     ownFormatters.clear();
   }
-  const built = new Intl.DateTimeFormat(tags, withNamedCalendar(tags, options));
+  const built = new Intl.DateTimeFormat(locale, options);
   ownFormatters.set(key, built);
   return built;
 }
@@ -222,9 +215,9 @@ function zonedRangeText(
 /**
  * Format a zoned datetime range using the Temporal Intl.DateTimeFormat formatRange API.
  *
- * - Both datetimes must have the same time zone: the same name in any letter case, or two of `UTC`,
- *   `Etc/UTC`, `Etc/GMT` and `GMT` (ECMA-402 §6.5.1). An IANA link and its target (`Europe/Kiev` and
- *   `Europe/Kyiv`) are two zones on every host: no runtime API gives a link's target on every host.
+ * - Both datetimes must have the same time zone: identifiers of one zone count as the same
+ *   (`UTC` and `Etc/UTC` on every host; an IANA link such as `Europe/Kiev` and `Europe/Kyiv` where
+ *   the host resolves it, which Safari 27 without `Temporal` does not).
  * - Formats both instants as Temporal's ECMA-402 Instant format does, through the runtime's
  *   `Intl.DateTimeFormat#formatRange` in the endpoints' zone: the requested fields and widths are
  *   kept, and with no date or time field (`era` alone included) the date and time are the
@@ -244,8 +237,8 @@ function zonedRangeText(
  *   otherwise), and no-break, narrow and thin spaces become U+0020.
  * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it (a string or number
  *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
- * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
- *   hosts print different dates for them (compat D33). A format with only a time or weekday field
+ * - On a runtime whose D33 probe fails, a `chinese` or `dangi` calendar returns `""` for any
+ *   format with a year, month, day or era (compat D33). A format with only a time or weekday field
  *   still returns its text.
  *
  * @param from zoned ISO 8601 datetime string (range start)
@@ -282,7 +275,7 @@ export function formatZonedRange(
       return "";
     }
 
-    if (!zoneNamesEqual(zdt1, zdt2)) {
+    if (!timeZoneEquals(zdt1, zdt2)) {
       return "";
     }
 

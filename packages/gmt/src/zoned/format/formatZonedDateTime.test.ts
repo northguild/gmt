@@ -7,7 +7,6 @@ import {
   MustTestLocales,
   oneOfIcu,
   sameInstantBattleCases,
-  arSAGregorian,
 } from "../../test";
 import { formatZonedDateTime } from "./formatZonedDateTime";
 
@@ -261,7 +260,10 @@ describe("formatZonedDateTime", () => {
       formatZonedDateTime(
         valueByLocale[MustTestLocales.isIS],
         MustTestLocales.isIS,
-        { dateStyle: "long", timeStyle: "long" },
+        {
+          dateStyle: "long",
+          timeStyle: "long",
+        },
       ),
       oneOfIcu(
         normalizeDateTime("3. febrúar 2024 kl. 14:30:45 GMT"),
@@ -396,9 +398,9 @@ describe("formatZonedDateTime", () => {
     ${valueByLocale[MustTestLocales.arSA]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"٠٣/٠٢/٢٠٢٤، ٠٢:٣٠:٤٥ م"}
     ${valueByLocale[MustTestLocales.arSA]} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"٣/٢/٢٠٢٤، ١٤:٣٠:٤٥"}
   `(
-    "formats valid zoned datetime $value for ar-SA-u-ca-gregory with options $options to $expected",
+    "formats valid zoned datetime $value for ar-SA with options $options to $expected",
     ({ value, options, expected }) => {
-      expect(formatZonedDateTime(value, arSAGregorian, options)).toBe(
+      expect(formatZonedDateTime(value, MustTestLocales.arSA, options)).toBe(
         normalizeDateTime(expected),
       );
     },
@@ -511,9 +513,7 @@ describe("formatZonedDateTime", () => {
   for (const locale of Object.values(MustTestLocales)) {
     it(`smoke: formats zoned datetime for locale ${locale} in its canonical timeZone`, () => {
       const value = localeZonedDateTimeInputByLocale[locale];
-      // ar-SA names the calendar: its default one differs between hosts (compat D37).
-      const tag = locale === MustTestLocales.arSA ? arSAGregorian : locale;
-      expect(formatZonedDateTime(value, tag)).not.toBe("");
+      expect(formatZonedDateTime(value, locale)).not.toBe("");
     });
   }
 

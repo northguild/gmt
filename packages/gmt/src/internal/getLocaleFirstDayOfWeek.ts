@@ -9,8 +9,6 @@ import type { LocalesArgument } from "./resolveLocale";
  *
  * - Returns `null` if `locale` is not a well-formed BCP 47 tag; a well-formed tag with no
  *   locale data does not throw, so it does not return `null` either.
- * - Returns `null` for a region whose first day some runtime does not read as CLDR does (compat D36),
- *   unless the tag names the first day with `-u-fw-`.
  * - Falls back to `1` (Monday, matching GMT's existing ISO default in
  *   `startOfDate`/`startOfZoned`) if the runtime exposes no week data or
  *   none for the given locale.
@@ -20,7 +18,6 @@ export function getLocaleFirstDayOfWeek(
 ): number | null {
   try {
     const weekInfo = localeWeekInfo(locale);
-    if (weekInfo?.firstDay === null) return null;
     if (!weekInfo || typeof weekInfo.firstDay !== "number") {
       return 1;
     }

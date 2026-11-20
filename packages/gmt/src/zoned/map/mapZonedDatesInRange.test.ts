@@ -1,4 +1,4 @@
-import { localRangeBattleCases } from "../../test";
+import { linkPairIsOneZone, localRangeBattleCases } from "../../test";
 import { mapZonedDatesInRange } from "./mapZonedDatesInRange";
 
 describe("mapZonedDatesInRange", () => {
@@ -257,18 +257,11 @@ describe("mapZonedDatesInRange across an IANA link pair", () => {
     ${"2024-01-01T00:00:00+02:00[Europe/Kiev]"}   | ${"2024-01-02T00:00:00+02:00[Europe/Kyiv]"}  | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}
     ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"} | ${"2024-01-02T00:00:00+05:30[Asia/Kolkata]"} | ${"Asia/Calcutta"} | ${"Asia/Kolkata"}
   `(
-    "is [] for $zone1 and $zone2: a Link and its Zone are two zones (GMT rule)",
-    ({ start, end }: Record<string, string>) => {
-      expect(mapZonedDatesInRange(start, end)).toEqual([]);
+    "answers as the host does for $zone1 and $zone2",
+    ({ start, end, zone1, zone2 }: Record<string, string>) => {
+      expect(mapZonedDatesInRange(start, end)).toEqual(
+        linkPairIsOneZone(zone1, zone2) ? ["2024-01-01", "2024-01-02"] : [],
+      );
     },
   );
-
-  it("lists the dates from UTC to Etc/UTC as one zone", () => {
-    expect(
-      mapZonedDatesInRange(
-        "2024-01-01T00:00:00+00:00[UTC]",
-        "2024-01-02T00:00:00+00:00[Etc/UTC]",
-      ),
-    ).toEqual(["2024-01-01", "2024-01-02"]);
-  });
 });

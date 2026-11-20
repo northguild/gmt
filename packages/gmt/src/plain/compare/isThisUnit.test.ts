@@ -2,28 +2,12 @@ import type { MockedFunction } from "vitest";
 import { MustTestLocales } from "../../test";
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { systemTimeZone } from "../../internal/resolveLocale";
+import { getLocaleStartOfWeek } from "../calculate/getLocaleStartOfWeek";
 import { isThisUnit } from "./isThisUnit";
 
 vi.mock("../../internal/resolveLocale", { spy: true });
 
 describe("isThisUnit", () => {
-  // is-IS: CLDR 48 says Sunday-first, so a working read would say true here; the first day is a
-  // region some runtime does not read as CLDR does (compat D36), so every runtime says false.
-  it("returns false for a locale-scoped week in is-IS, whose first day runtimes dispute", () => {
-    expect(isThisUnit("2024-02-25", "week", MustTestLocales.isIS)).toBe(false);
-  });
-
-  // `-u-fw-` names the first day (UTS #35 key fw), so the answer needs no runtime data.
-  it.each`
-    locale              | expected
-    ${"is-IS-u-fw-sun"} | ${true}
-    ${"is-IS-u-fw-mon"} | ${false}
-  `(
-    "returns $expected for 2024-02-25 against 2024-02-29 in $locale",
-    ({ locale, expected }) => {
-      expect(isThisUnit("2024-02-25", "week", locale)).toBe(expected);
-    },
-  );
   let timeZoneSpy: MockedFunction<typeof systemTimeZone>;
 
   beforeEach(() => {
@@ -69,6 +53,7 @@ describe("isThisUnit", () => {
     ${MustTestLocales.itIT} | ${false}
     ${MustTestLocales.ptPT} | ${true}
     ${MustTestLocales.svSE} | ${false}
+    ${MustTestLocales.zhCN} | ${false}
     ${MustTestLocales.zhTW} | ${true}
     ${MustTestLocales.jaJP} | ${true}
     ${MustTestLocales.koKR} | ${true}
@@ -85,6 +70,20 @@ describe("isThisUnit", () => {
       expect(isThisUnit("2024-02-25", "week", locale)).toBe(expected);
     },
   );
+
+  it("returns the correct locale-aware week result for is-IS regardless of its CLDR-version-dependent firstDay", () => {
+    const startOfTodayWeek = getLocaleStartOfWeek(
+      "2024-02-29",
+      MustTestLocales.isIS,
+    );
+    const startOfValueWeek = getLocaleStartOfWeek(
+      "2024-02-25",
+      MustTestLocales.isIS,
+    );
+    expect(isThisUnit("2024-02-25", "week", MustTestLocales.isIS)).toBe(
+      startOfTodayWeek === startOfValueWeek,
+    );
+  });
 
   it("returns false for a locale-scoped week when locale is invalid", () => {
     expect(isThisUnit("2024-02-25", "week", "not-a-locale-!!")).toBe(false);

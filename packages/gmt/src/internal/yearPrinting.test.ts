@@ -8,6 +8,7 @@ import { formatZonedDateTime } from "../zoned/format/formatZonedDateTime";
 import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { formatZonedToParts } from "../zoned/format/formatZonedToParts";
 import { expectOneOfIcu, oneOfIcu } from "../test/icuVariants";
+import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
 import {
   guardedFormat,
   guardedParts,
@@ -23,8 +24,8 @@ import {
  *   and the solar Japanese eras from 1873-01-01. ISO -0001-07-10 is 2 BC, 1872-12-31 is 1872 AD,
  *   1873-01-01 is Meiji 6 (Meiji 1 is 1868 as a year count).
  * - D26: Table 2 and § 4.1.12 give `bh` with era year 1 - year (ISO 0600-07-10 is year -22, so `bh` 23);
- *   no host-independent text exists without GMT owning era names, so every host gives the house
- *   empty value (owner's rule).
+ *   an engine with no `bh` name gives the house empty value, and one that names it prints its own era text
+ *   (the library repairs only when `isIslamicEraCompatNeeded()`, so each row branches on that probe).
  * - D27: ECMA-402 FormatDateTimePattern, "2-digit": FormatNumeric with minimumIntegerDigits 2, so
  *   Reiwa 6 is 06; CLDR's ja data keeps 元年 for year 1 (owner decision).
  * - D28: ECMA-402 FormatDateTimePattern, `relatedYear`: FormatNumeric at full width, no 2-digit
@@ -36,7 +37,7 @@ const eraYear = { era: "short", year: "numeric" } as const;
 
 /*
  * Where a host writes the era (`1872 AD` or `AD 1872`, `6 Meiji` or `Meiji 6`) and what joins the
- * date to the time (`, 10:00` or ` at 10:00`) is the host's wording (compat README rule 7). The
+ * date to the time (`, 10:00` or ` at 10:00`) is the host's own wording. The
  * era, the year and the date are the value and are written out, so each expected text is one of
  * the placements a host uses, never a loose pattern.
  */
@@ -444,18 +445,41 @@ const islamicCalendars = [
   "islamic-umalqura",
 ] as const;
 
-/** A range with an end before the Hijra: the empty value on every host (D26). */
+/**
+ * The era years `bh` of two ISO dates before the Hijra, which every `islamic*` calendar shares
+ * (native Temporal: ISO -000001-07-10 is year -642 and 0600-07-10 is year -22; `bh` era year is 1 - year).
+ */
+const BH_YEAR_OF_ISO_MINUS_1 = 643;
+const BH_YEAR_OF_ISO_600 = 23;
+
+/** A range with an end before the Hijra: the empty value (D26), or the engine's own non-empty text. */
 function expectBeforeHijraRange(actual: string): void {
-  expect(actual).toBe("");
+  if (isIslamicEraCompatNeeded()) {
+    expect(actual).toBe("");
+    return;
+  }
+  expect(actual).not.toBe("");
 }
 
 /**
- * A date before the Hijra, as the formatters answer it: the empty value (or `[]` for parts) on
- * every host (D26). WebKit names the era `Before Hijra`, which is right, but no other engine can
- * match it without GMT owning era names, so the answer is the one every host can give.
+ * A date before the Hijra, as the formatters answer it: the empty value (or `[]` for parts) where
+ * the engine cannot name the `bh` era (D26), and otherwise the engine's own text, which names an era
+ * other than `AH` and, where `eraYear` is given, prints the era year 1 - year in Latin digits.
  */
-function expectBeforeHijra(actual: string | unknown[]): void {
-  expect(actual).toEqual(typeof actual === "string" ? "" : []);
+function expectBeforeHijra(actual: string | unknown[], eraYear?: number): void {
+  if (isIslamicEraCompatNeeded()) {
+    expect(actual).toEqual(typeof actual === "string" ? "" : []);
+    return;
+  }
+  const text =
+    typeof actual === "string"
+      ? actual
+      : (actual as { value: string }[]).map((part) => part.value).join("");
+  expect(text).not.toBe("");
+  expect(text).not.toMatch(/\bAH\b/);
+  if (eraYear !== undefined) {
+    expect(text).toContain(String(eraYear));
+  }
 }
 
 describe("D26: islamic dates before the Hijra give the empty value", () => {
@@ -463,10 +487,19 @@ describe("D26: islamic dates before the Hijra give the empty value", () => {
     "gives the empty value for '$calendar'",
     ({ calendar }) => {
       const locale = `en-u-ca-${calendar}`;
-      expectBeforeHijra(formatDate("-000001-07-10", locale, eraYear));
-      expectBeforeHijra(formatDate("0600-07-10", locale, eraYear));
+      expectBeforeHijra(
+        formatDate("-000001-07-10", locale, eraYear),
+        BH_YEAR_OF_ISO_MINUS_1,
+      );
+      expectBeforeHijra(
+        formatDate("0600-07-10", locale, eraYear),
+        BH_YEAR_OF_ISO_600,
+      );
       expectBeforeHijra(formatDateToParts("-000001-07-10", locale, eraYear));
-      expectBeforeHijra(formatDateTime("0600-07-10T12:00:00", locale, eraYear));
+      expectBeforeHijra(
+        formatDateTime("0600-07-10T12:00:00", locale, eraYear),
+        BH_YEAR_OF_ISO_600,
+      );
       expectBeforeHijraRange(
         formatDateRange("-000001-07-10", "2025-07-10", locale, eraYear),
       );
@@ -483,6 +516,7 @@ describe("D26: islamic dates before the Hijra give the empty value", () => {
       );
       expectBeforeHijra(
         formatZonedDateTime("0600-07-10T12:00:00+00:00[UTC]", locale, eraYear),
+        BH_YEAR_OF_ISO_600,
       );
       expectBeforeHijra(
         formatZonedToParts("0600-07-10T12:00:00+00:00[UTC]", locale, eraYear),
@@ -510,7 +544,7 @@ describe("D26: islamic dates before the Hijra give the empty value", () => {
     "'$calendar' gives the empty value for the last day before the Hijra, $lastBefore",
     ({ calendar, lastBefore, firstDay }) => {
       const locale = `en-u-ca-${calendar}`;
-      expectBeforeHijra(formatDate(lastBefore, locale, eraYear));
+      expectBeforeHijra(formatDate(lastBefore, locale, eraYear), 1);
       expectBeforeHijra(formatDateToParts(lastBefore, locale, eraYear));
       expectBeforeHijraRange(
         formatDateRange(lastBefore, firstDay, locale, eraYear),
@@ -795,8 +829,8 @@ describe("D27: ja japanese prints the era year in the formatter's numbering syst
   });
 });
 
-// The public functions refuse chinese and dangi on every host (compat D33), so these rows read the
-// guarded formatter the repair is built into. They keep the repair correct for the day D33 retires.
+// The public functions refuse chinese and dangi where the D33 probe fails, so these rows read the
+// guarded formatter the repair is built into, which runs the same on every host.
 describe("D28: chinese and dangi related year at full width under year 2-digit", () => {
   // The related year is the Temporal `year` of the date in that calendar (native Temporal:
   // ISO 0005-07-10 is 5, -0001-07-10 is -1, 0099 is 99, 0100 is 100, 2024-07-10 is 2024).
@@ -958,13 +992,14 @@ describe("D25, D26: the calendar option and formatCalendar reach the same repair
     expectOneOfIcu(call(), placements(expected));
   });
 
-  it("D26 option, before gives the empty value", () => {
+  it("D26 option, before gives the empty value, or the engine's own bh text where it names the era", () => {
     expectBeforeHijra(
       formatDate("0600-07-10", "en", {
         calendar: "islamic-civil",
         era: "short",
         year: "numeric",
       }),
+      BH_YEAR_OF_ISO_600,
     );
   });
 });

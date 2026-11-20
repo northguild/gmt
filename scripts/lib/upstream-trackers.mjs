@@ -47,16 +47,6 @@ export const COMMON_FIELDS = [
   "state",
 ];
 
-/** The canary group ids a filing's `gmtGuard` names: none, one, or the whole list. A twin of
- * `guardIds` in `apps/dox/src/data/upstream-filings.ts` (scripts may not import TypeScript);
- * `upstream-trackers.test.ts` checks that both agree. */
-export const guardIds = (f) =>
-  f.gmtGuard === null
-    ? []
-    : typeof f.gmtGuard === "string"
-      ? [f.gmtGuard]
-      : [...f.gmtGuard];
-
 /** The identity fields of each tracker. */
 export const IDENTITY_FIELDS = {
   github: ["repo", "number", "kind"],

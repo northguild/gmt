@@ -32,42 +32,6 @@ const zonesRolledForward = new Set([
 ]);
 
 describe("getLocaleZonedStartOfWeek", () => {
-  // zh-CN and is-IS: a region whose first day some runtime does not read as CLDR does (compat D36),
-  // so every runtime returns the sentinel.
-  it.each`
-    locale
-    ${MustTestLocales.zhCN}
-    ${MustTestLocales.isIS}
-  `(
-    "returns the sentinel for $locale, whose first day runtimes dispute",
-    ({ locale }) => {
-      expect(
-        getLocaleZonedStartOfWeek(
-          localeZonedDateTimeInputByLocale[
-            locale as keyof typeof localeZonedDateTimeInputByLocale
-          ],
-          locale,
-        ),
-      ).toBe("");
-    },
-  );
-
-  // `-u-fw-` names the first day (UTS #35 key fw). The zh-CN fixture is Saturday 2024-02-03.
-  it.each`
-    locale              | expected
-    ${"zh-CN-u-fw-mon"} | ${"2024-01-29T00:00:00+08:00[Asia/Shanghai]"}
-    ${"zh-CN-u-fw-sun"} | ${"2024-01-28T00:00:00+08:00[Asia/Shanghai]"}
-  `(
-    "returns $expected for the zh-CN fixture in $locale",
-    ({ locale, expected }) => {
-      expect(
-        getLocaleZonedStartOfWeek(
-          localeZonedDateTimeInputByLocale[MustTestLocales.zhCN],
-          locale,
-        ),
-      ).toBe(expected);
-    },
-  );
   // Full week coverage for a Sunday-first locale (en-US, firstDay 7), fixed at UTC.
   it.each`
     value                               | expected
@@ -148,6 +112,7 @@ describe("getLocaleZonedStartOfWeek", () => {
     ${MustTestLocales.itIT} | ${"2024-01-29T00:00:00+01:00[Europe/Rome]"}
     ${MustTestLocales.ptPT} | ${"2024-01-28T00:00:00+00:00[Europe/Lisbon]"}
     ${MustTestLocales.svSE} | ${"2024-01-29T00:00:00+01:00[Europe/Stockholm]"}
+    ${MustTestLocales.zhCN} | ${"2024-01-29T00:00:00+08:00[Asia/Shanghai]"}
     ${MustTestLocales.zhTW} | ${"2024-01-28T00:00:00+08:00[Asia/Taipei]"}
     ${MustTestLocales.jaJP} | ${"2024-01-28T00:00:00+09:00[Asia/Tokyo]"}
     ${MustTestLocales.koKR} | ${"2024-01-28T00:00:00+09:00[Asia/Seoul]"}
@@ -168,6 +133,20 @@ describe("getLocaleZonedStartOfWeek", () => {
       ).toBe(expected);
     },
   );
+
+  it("returns the correct start-of-week for is-IS regardless of its CLDR-version-dependent firstDay", () => {
+    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
+    const expected =
+      firstDay === 1
+        ? "2024-01-29T00:00:00+00:00[Atlantic/Reykjavik]"
+        : "2024-01-28T00:00:00+00:00[Atlantic/Reykjavik]";
+    expect(
+      getLocaleZonedStartOfWeek(
+        localeZonedDateTimeInputByLocale[MustTestLocales.isIS],
+        MustTestLocales.isIS,
+      ),
+    ).toBe(expected);
+  });
 
   it.each`
     value

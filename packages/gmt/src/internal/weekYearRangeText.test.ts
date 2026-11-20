@@ -1,10 +1,14 @@
 import { formatDateRange } from "../plain/format/formatDateRange";
 import { formatDateTimeRange } from "../plain/format/formatDateTimeRange";
 import { runInBoundedChild } from "../test/boundedChild";
-import { hostFormatter, hostRangeWithYears } from "../test/hostIntl";
+import {
+  hostEraAt,
+  hostFormatter,
+  hostJoinedWithYears,
+  hostRangeWithYears,
+} from "../test/hostIntl";
 import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { normalizeDateTime } from "./normalizeDateTime";
-import { utcMs } from "../test/utcMs";
 
 /*
  * CORE-112 (D24): a range prints the calendar year at each end, never the week-year.
@@ -17,9 +21,14 @@ import { utcMs } from "../test/utcMs";
  *   - kok-Deva coptic, 2029-09-09 and 2029-09-10: Coptic 1745 AM (year 1745 runs from
  *     2028-09-11 to 2029-09-10); month 13, so the polyfill cannot derive it (defect F).
  * The years are the value; the layout, separators, digits and era text are the host's wording
- * (compat README rule 7), so the expected text is the host's own range with these years written
+ * (read from the host's own `Intl`), so the expected text is the host's own range with these years written
  * in (`hostRangeWithYears`). The en dash is written as `-`, as GMT normalizes every formatted
  * string.
+ *
+ * A host whose range fails the D29 field check (Firefox's `my` buddhist range prints no era and
+ * another day width at its end, while its single prints the week-year) gets ECMA-402's
+ * `[[Default]]` from D29: its two singles, each with the calendar year, joined by the fallback
+ * (`hostJoinedWithYears`). Either text is the host's text for the same two years.
  */
 describe("range, week-year patterns", () => {
   const numeric = {
@@ -40,24 +49,27 @@ describe("range, week-year patterns", () => {
   `(
     "formatDateRange and formatDateTimeRange print the calendar year for $label ('$locale', $from to $to)",
     ({ locale, options, from, to, years }) => {
-      const expected = hostRangeWithYears(locale, options, from, to, years);
-      expect(formatDateRange(from, to, locale, options)).toBe(expected);
-      expect(
+      const expected = [
+        hostRangeWithYears(locale, options, from, to, years),
+        hostJoinedWithYears(locale, options, from, to, years),
+      ];
+      expect(expected).toContain(formatDateRange(from, to, locale, options));
+      expect(expected).toContain(
         formatDateTimeRange(
           `${from}T00:00:00`,
           `${to}T00:00:00`,
           locale,
           options,
         ),
-      ).toBe(expected);
-      expect(
+      );
+      expect(expected).toContain(
         formatZonedRange(
           `${from}T00:00:00+00:00[UTC]`,
           `${to}T00:00:00+00:00[UTC]`,
           locale,
           options,
         ),
-      ).toBe(expected);
+      );
     },
   );
 
@@ -111,17 +123,16 @@ describe("range, calendar year before ISO year 1", () => {
     day: "numeric",
   } as const;
 
-  /** The host's short era name for a positive year of the locale's calendar. */
-  const eraName = (locale: string): string => {
-    const text = hostFormatter(locale, {
-      era: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(utcMs("2029-01-01T00:00:00Z"));
-    return normalizeDateTime(text.replace(/\p{Nd}+/gu, ""));
-  };
+  // The era of every coptic year is AM (Intl era/monthCode Table 2), named as the host names it in
+  // a positive year. Before AM 1 the host's own range names another era or none (D31), and not
+  // always the one its `format` names for the same date: ICU data without kok coptic era names
+  // prints `Anno Martyrum` from `format` and `ERA0` from `formatRange`. So every word leaves the
+  // host's range (the dates are numeric), the library's era leaves its text, and that era is
+  // counted on its own.
   const withoutEra = (text: string, era: string): string =>
     normalizeDateTime(text.replaceAll(era, ""));
+  const withoutWords = (text: string): string =>
+    normalizeDateTime(text.replace(/[\p{L}\p{M}][\p{L}\p{M}\p{Nd}]*/gu, ""));
 
   it.each`
     locale                    | from               | to                 | years           | era      | label
@@ -139,7 +150,7 @@ describe("range, calendar year before ISO year 1", () => {
     "the three range functions print the calendar year for $label ('$locale', $from to $to)",
     ({ locale, from, to, years, era }) => {
       const expected = hostRangeWithYears(locale, numeric, from, to, years);
-      const name = era ? eraName(locale) : "";
+      const name = era ? hostEraAt(locale, "2029-01-01") : "";
       const texts = [
         formatDateRange(from, to, locale, numeric),
         formatDateTimeRange(
@@ -160,7 +171,7 @@ describe("range, calendar year before ISO year 1", () => {
           expect(text).toBe(expected);
           continue;
         }
-        expect(withoutEra(text, name)).toBe(withoutEra(expected, name));
+        expect(withoutEra(text, name)).toBe(withoutWords(expected));
         expect(text.split(name).length - 1).toBe(1);
       }
     },

@@ -18,13 +18,6 @@ export const MustTestLocales = {
   trTR: "tr-TR",
 } as const;
 
-/**
- * `ar-SA` with the Gregorian calendar named. Hosts give `ar-SA` different default calendars
- * (Gregorian or Umm al-Qura), so a date for `ar-SA` with no calendar named is the sentinel on every
- * host (compat D37); rows that check its Arabic text name the calendar.
- */
-export const arSAGregorian = `${MustTestLocales.arSA}-u-ca-gregory`;
-
 const LocaleToIanaTimezone = {
   [MustTestLocales.enUS]: "America/New_York",
   [MustTestLocales.enGB]: "Europe/London",
@@ -46,14 +39,6 @@ const LocaleToIanaTimezone = {
 } as const;
 
 type LocaleKey = keyof typeof LocaleToIanaTimezone;
-
-/**
- * The fixture key of a test locale: its language, script and region without the `-u-` keywords,
- * so `ar-SA-u-ca-gregory` reads the `ar-SA` fixtures.
- */
-export function fixtureLocale(locale: string): LocaleKey {
-  return new Intl.Locale(locale).baseName as LocaleKey;
-}
 
 export const localeZonedDateTimeInputByLocale: Record<LocaleKey, string> = {
   [MustTestLocales.enUS]: "2024-02-03T14:30:45-05:00[America/New_York]",

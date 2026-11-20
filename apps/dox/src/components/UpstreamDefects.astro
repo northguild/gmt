@@ -9,12 +9,12 @@
  * overflows, so the arrow keys reach the columns that are off screen. Styles are in `gmt-content-tables.css`.
  */
 import { compatGroups } from "../data/temporal-compat";
-import { filings, guardIds } from "../data/upstream-filings";
+import { filings } from "../data/upstream-filings";
 import UpstreamDefectRow from "./UpstreamDefectRow.astro";
 
 /** The filings that name any of a group's canary ids, in the order the tracker lists them. */
 const filingsFor = (defects: readonly string[]) =>
-  filings.filter((f) => guardIds(f).some((id) => defects.includes(id)));
+  filings.filter((f) => f.gmtGuard && defects.includes(f.gmtGuard));
 ---
 
 <div class="gmt-ref-table" data-kind="content" data-label="Bugs GMT works around">

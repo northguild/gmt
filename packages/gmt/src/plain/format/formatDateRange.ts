@@ -27,9 +27,11 @@ import {
  *   other non-object — a string, a number, a boolean — formats with the defaults, as
  *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
  *   carries no recognised option. Only `null` and `undefined` are special-cased.
- * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
- *   hosts print different dates for them (compat D33). A format with only a time or weekday field
- *   still returns its text.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param start ISO PlainDate string (range start)
  * @param end ISO PlainDate string (range end)

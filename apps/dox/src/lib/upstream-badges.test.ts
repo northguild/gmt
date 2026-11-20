@@ -151,13 +151,12 @@ describe("workBadge and roleBadge", () => {
 
 describe("gmtBadge", () => {
   it.each`
-    kind       | gmtGuard        | gmtNote         | pairsWith                          | text                    | tone
-    ${"issue"} | ${"D11"}        | ${null}         | ${[]}                              | ${"Guarded · D11"}      | ${"purple"}
-    ${"issue"} | ${["D1", "D6"]} | ${null}         | ${[]}                              | ${"Guarded · D1 + D6"}  | ${"purple"}
-    ${"issue"} | ${null}         | ${"n/a to GMT"} | ${[]}                              | ${"Not affected"}       | ${"spring"}
-    ${"pr"}    | ${null}         | ${null}         | ${[]}                              | ${"Fix filed upstream"} | ${"neutral"}
-    ${"issue"} | ${null}         | ${null}         | ${["tc39/proposal-temporal#3327"]} | ${"Fix filed upstream"} | ${"neutral"}
-    ${"issue"} | ${null}         | ${null}         | ${[]}                              | ${"Reported upstream"}  | ${"neutral"}
+    kind       | gmtGuard | gmtNote         | pairsWith                          | text                    | tone
+    ${"issue"} | ${"D11"} | ${null}         | ${[]}                              | ${"Guarded · D11"}      | ${"purple"}
+    ${"issue"} | ${null}  | ${"n/a to GMT"} | ${[]}                              | ${"Not affected"}       | ${"spring"}
+    ${"pr"}    | ${null}  | ${null}         | ${[]}                              | ${"Fix filed upstream"} | ${"neutral"}
+    ${"issue"} | ${null}  | ${null}         | ${["tc39/proposal-temporal#3327"]} | ${"Fix filed upstream"} | ${"neutral"}
+    ${"issue"} | ${null}  | ${null}         | ${[]}                              | ${"Reported upstream"}  | ${"neutral"}
   `(
     "$kind guard=$gmtGuard note=$gmtNote is $text",
     ({ kind, gmtGuard, gmtNote, pairsWith, text, tone }) => {

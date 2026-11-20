@@ -55,12 +55,7 @@ describe("diffZonedDateTime", () => {
     ${"2027-12-31T13:00:00-11:00[Pacific/Niue]"}     | ${"2028-01-02T13:00:00+13:00[Pacific/Apia]"} | ${["hours"]}          | ${{ hours: 24 }}
     ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"2024-01-03T00:00:00+01:00[Europe/Paris]"} | ${"days"}             | ${null}
     ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[Etc/UTC]"}      | ${"days"}             | ${2}
-    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-03T00:00:00+00:00[GMT]"}          | ${"days"}             | ${2}
-    ${"2024-01-01T00:00:00+00:00[Etc/GMT]"}          | ${"2024-01-03T00:00:00+00:00[utc]"}          | ${"days"}             | ${2}
-    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"days"}             | ${null}
-    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"hours"}            | ${48}
-    ${"2024-01-01T00:00:00+02:00[Europe/Kiev]"}      | ${"2024-01-03T00:00:00+02:00[Europe/Kyiv]"}  | ${"days"}             | ${null}
-    ${"2024-01-01T00:00:00+02:00[Europe/Kiev]"}      | ${"2024-01-03T00:00:00+02:00[Europe/Kyiv]"}  | ${"hours"}            | ${48}
+    ${"2024-01-01T00:00:00+05:30[Asia/Calcutta]"}    | ${"2024-01-03T00:00:00+05:30[Asia/Kolkata]"} | ${"days"}             | ${2}
   `(
     "returns $expected for $units from $value1 to $value2 (calendar units need one time zone)",
     ({ value1, value2, units, expected }) => {

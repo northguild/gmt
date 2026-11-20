@@ -28,8 +28,13 @@ const ms = (date: string): number =>
 const at = (dateTime: string): number =>
   Temporal.ZonedDateTime.from(`${dateTime}+00:00[UTC]`).epochMilliseconds;
 
-/** The digit runs of a text, in order. */
-const digits = (text: string | null): string[] => text?.match(/\d+/g) ?? [];
+/**
+ * The numbers of a text, in order. A digit run inside a word is part of a name, not a number: an
+ * era is a name (UTS #35 Part 4 §8, `G`), and ICU data without a locale's coptic or ethiopic era
+ * names prints the placeholder `ERA1` ("1740 ERA1").
+ */
+const digits = (text: string | null): string[] =>
+  text?.match(/(?<!\p{L})\p{Nd}+(?!\p{L})/gu) ?? [];
 
 /**
  * An English formatter whose range text has every digit run rewritten by `rewrite`: the engine's
@@ -239,7 +244,7 @@ describe("repairRangeYear: calendars the polyfill cannot project", () => {
     const minus = new Intl.NumberFormat("ak", { useGrouping: false })
       .format(-1)
       .replace(/\p{Nd}/gu, "");
-    expect(text?.match(/\p{Nd}+/gu)).toEqual(["285", "283"]);
+    expect(digits(text)).toEqual(["285", "283"]);
     expect(text).toContain(`${minus}285`);
     expect(text).toContain(`${minus}283`);
   });
@@ -276,7 +281,7 @@ describe("rangeYearVerdict: real formatters", () => {
   `("does not flag '$locale' $options", ({ locale, options }) => {
     // The Islamic rows hold on WebKit too: its `format` prints a year before 1 AH as `153 Before
     // Hijra` and its `formatRange` as `-152`, a disagreement the earlier-era walk must not read as
-    // a week-year, because GMT prints no date before the Hijra on any host (D26).
+    // a week-year, because GMT prints no date before the Hijra (D26).
     const formatter = new Intl.DateTimeFormat(locale, { ...options, ...utc });
     expect(rangeYearVerdict(formatter, options)).toBe(false);
   });
@@ -307,9 +312,12 @@ describe("rangeYearVerdict: real formatters", () => {
   } as const;
 
   /**
-   * Whether the host's range text for the calendar's witness leaves out a year: the start's year
-   * must be a run of digits, and the end's a later run (both ends print their year in these
-   * patterns, even when it is the same).
+   * Whether the host prints another year than the calendar's in the calendar's witness: in its
+   * range text, the start's year must be a run of digits and the end's a later run (both ends
+   * print their year in these patterns, even when it is the same); and in its single text of the
+   * start, because a range whose ends print alike is the start's single (ECMA-402
+   * PartitionDateTimeRangePattern), so a host whose single prints the week-year or the ISO year
+   * (Firefox, `my` buddhist: `BE 30/12/2034`) prints it in every such range too.
    */
   const hostPrintsAnotherYear = (formatter: Intl.DateTimeFormat): boolean => {
     const { calendar, locale, numberingSystem } = formatter.resolvedOptions();
@@ -318,14 +326,16 @@ describe("rangeYearVerdict: real formatters", () => {
       numberingSystem,
       useGrouping: false,
     });
+    const holds = (run: string, forms: readonly number[]): boolean =>
+      forms.some((year) => run === written.format(Math.abs(year)));
+    const single = formatter.format(ms(from)).match(/\p{Nd}+/gu) ?? [];
+    if (!single.some((run) => holds(run, years[0]))) return true;
     const runs =
       formatter.formatRange(ms(from), ms(to)).match(/\p{Nd}+/gu) ?? [];
     let next = 0;
     for (const forms of years) {
       const found = runs.findIndex(
-        (run, index) =>
-          index >= next &&
-          forms.some((year) => run === written.format(Math.abs(year))),
+        (run, index) => index >= next && holds(run, forms),
       );
       if (found < 0) return true;
       next = found + 1;

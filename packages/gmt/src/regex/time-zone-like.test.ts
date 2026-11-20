@@ -1,4 +1,4 @@
-import { ianaSingleComponentTimeZones, refusedZoneNames } from "../test";
+import { ianaSingleComponentTimeZones } from "../test";
 import { timeZoneLike } from "./time-zone-like";
 
 describe("regex/timeZoneLike", () => {
@@ -17,12 +17,8 @@ describe("regex/timeZoneLike", () => {
 
   // Temporal §13.31 TimeZoneIANAName: one or more `/`-separated components, each a
   // TZLeadingChar (Alpha . _) followed by TZChars (TZLeadingChar, DecimalDigit, - +).
-  it.each(
-    [...ianaSingleComponentTimeZones, ...refusedZoneNames].map((value) => ({
-      value,
-    })),
-  )(
-    "matches the single-component IANA name $value (shape only)",
+  it.each(ianaSingleComponentTimeZones.map((value) => ({ value })))(
+    "matches the single-component IANA name $value",
     ({ value }) => {
       expect(timeZoneLike.test(value)).toBe(true);
     },

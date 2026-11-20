@@ -8,10 +8,9 @@
  * the calendar names, so this module never loads a polyfill. The span is fixed. It does not depend
  * on the run date, so two runs on different days read the same years.
  *
- * Any calendar that differs blocks, whatever the cause. The swap check sweeps chinese and dangi
- * separately while compat D33 holds: GMT refuses both on every host, so their sweep reports whether
- * the swap retires D33 and never blocks the swap. The caller's reference is the host's built-in
- * Temporal, which is what the polyfill must match.
+ * Any calendar that differs blocks, whatever the cause: the lunisolar Chinese and Dangi calendars
+ * included, where the polyfill reads `Intl` data and the reference's built-in Temporal reads ICU4X.
+ * The caller's reference is the host's built-in Temporal, which is what the polyfill must match.
  */
 
 /** First day of the span, as an ISO 8601 extended-year date. */

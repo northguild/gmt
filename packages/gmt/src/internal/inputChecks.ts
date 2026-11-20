@@ -1,7 +1,6 @@
 import { Temporal } from "./temporal";
 import { durationFrom } from "./durationFrom";
 import { isRememberedZone, rememberZone } from "./validatedZones";
-import { isRefusedZoneName } from "./refusedZoneNames";
 import { leapSecond } from "../regex/leap-second";
 import {
   plainDate,
@@ -29,16 +28,11 @@ import {
  *
  * @example isZoneId("Europe/London") // true
  * @example isZoneId("Not/AZone") // false
- * @example isZoneId("EST5EDT") // false (refused on every host, D35)
  */
 export function isZoneId(timeZone: unknown): boolean {
   // Temporal also reads a ZonedDateTime as a zone identifier; a value that is not a string is
   // not an identifier.
   if (typeof timeZone !== "string") {
-    return false;
-  }
-  // D35: nine names hosts disagree on are not zones on any host.
-  if (isRefusedZoneName(timeZone)) {
     return false;
   }
   if (isRememberedZone(timeZone)) {

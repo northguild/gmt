@@ -1,15 +1,15 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
 import { zonedDateTimeOf } from "../../internal/zonedWallClock";
-import { zoneNamesEqual } from "../../internal/zoneNamesEqual";
+import { timeZoneEquals } from "../../internal/temporalCompat";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
  * Return an array of plain ISO date strings covering the inclusive date range between two zoned datetimes.
  *
- * - Both datetimes must have the same time zone: the same name in any letter case, or two of `UTC`,
- *   `Etc/UTC`, `Etc/GMT` and `GMT` (ECMA-402 §6.5.1). An IANA link and its target (`Europe/Kiev` and
- *   `Europe/Kyiv`) are two zones on every host: no runtime API gives a link's target on every host.
+ * - Both datetimes must have the same time zone: identifiers of one zone count as the same
+ *   (`UTC` and `Etc/UTC` on every host; an IANA link such as `Europe/Kiev` and `Europe/Kyiv` where
+ *   the host resolves it, which Safari 27 without `Temporal` does not).
  * - Returns [] for invalid inputs, mismatched timezones, start > end, or invalid step.
  * - A range holding more dates than `options.maxPieces` returns `[]` without generating any.
  * - An explicit `undefined` `stepDays` is the default step, so `(start, end, undefined, options)`
@@ -73,7 +73,7 @@ export function mapZonedDatesInRange(
     }
 
     try {
-      if (!zoneNamesEqual(start, end)) {
+      if (!timeZoneEquals(start, end)) {
         return [];
       }
 

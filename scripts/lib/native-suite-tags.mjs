@@ -386,6 +386,38 @@ export const KNOWN_HOST_FAILURES = [
     test: /\bManila\b|Antarctica\/Casey/,
   },
   {
+    // Evidence, WebKit 26.6 (Playwright's Linux build on ubuntu-24.04; also the Mac build on macOS 27.0.1,
+    // and Safari there): `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" })` throws `RangeError: invalid
+    // time zone: EST5EDT`, and `Temporal.ZonedDateTime.from("2024-07-15T12:00:00-04:00[EST5EDT]")` throws
+    // `RangeError` too; the same for CST6CDT, MST7MDT and PST8PDT. Node 26.12.1, Chromium 153 and
+    // Firefox 155 accept all four. IANA's `backward` file (tzdb 2026e) defines them as zones
+    // (`Zone EST5EDT -5:00 USback E%sT`, and the same for CST6CDT, MST7MDT and PST8PDT), and ECMA-402
+    // § 6.5 makes each Zone of the IANA Time Zone Database a primary time zone identifier.
+    // Filed as https://bugs.webkit.org/show_bug.cgi?id=330688. The Mac leg's runner (macos-26-arm64,
+    // macOS 26.7.2) accepts all four, so the group names the Linux leg only; a Mac runner on macOS 27
+    // fails these rows untagged, and the group then needs `webkit-macos` again.
+    id: "webkit-posix-zone-ids",
+    legs: ["webkit"],
+    reason:
+      "Linux WebKit refuses the tzdb legacy zone ids CST6CDT, EST5EDT, MST7MDT and PST8PDT as invalid time zones, so the rows that pass them through fail.",
+    file: /\/(isValidTimeZone|toOffsetInstant|fromOffsetInstant|getTimeZoneOffset)\.test\.ts$/,
+    test: /\b(CST6CDT|EST5EDT|MST7MDT|PST8PDT)\b/,
+  },
+  {
+    // Evidence, Playwright's Linux WebKit 26.6, both engines: `new Intl.DateTimeFormat("en", { timeZone:
+    // "CET" })` and `Temporal.ZonedDateTime.from("...[CET]")` throw `RangeError: invalid time zone: CET`,
+    // and the same for EET, MET and WET; tzdb 2024b made these ids links in `backward`. Mac WebKit 26.6
+    // accepts CET, EET, MET, WET, EST, MST and HST in Intl and Temporal (its refusals are the four POSIX
+    // ids of `webkit-posix-zone-ids`). Node 26.12.1 accepts all of them (CET resolves to Europe/Brussels), as do
+    // Chromium 153 and Firefox 155.
+    id: "webkit-legacy-zone-ids",
+    legs: ["webkit"],
+    reason:
+      "Linux WebKit refuses the tzdb legacy zone ids CET, EET, MET and WET as invalid time zones, so the rows that pass them through fail.",
+    file: /\/(isValidTimeZone|toOffsetInstant|fromOffsetInstant|getTimeZoneOffset)\.test\.ts$/,
+    test: /\b(CET|EET|MET|WET)\b/,
+  },
+  {
     // Evidence, WebKit 26.6 (Mac and Playwright Linux alike), both engines:
     // `new Intl.DateTimeFormat("ar-SA").resolvedOptions().calendar` is "islamic-umalqura" and
     // `{ dateStyle: "long" }` prints 2024-02-03 as "٢٢ رجب، ١٤٤٥ هـ". Node 26.12.1 (CLDR 48), Chromium 153

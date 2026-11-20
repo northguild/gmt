@@ -1,10 +1,6 @@
 import { normalizeDateTime } from "../../internal";
 import { Temporal } from "../../internal/temporal";
-import {
-  MustTestLocales,
-  expectDateTimeEqual,
-  arSAGregorian,
-} from "../../test";
+import { MustTestLocales, expectDateTimeEqual } from "../../test";
 import { mockTemporalNowPlainDateTimeISOThrow } from "../../test/mocks";
 import { formatCalendar } from "./formatCalendar";
 
@@ -97,7 +93,7 @@ describe("formatCalendar", () => {
       ${MustTestLocales.zhTW} | ${"明天 下午2:30"}
       ${MustTestLocales.jaJP} | ${"明日 14:30"}
       ${MustTestLocales.koKR} | ${"내일 오후 2:30"}
-      ${arSAGregorian}        | ${"غدًا في ٢:٣٠ م"}
+      ${MustTestLocales.arSA} | ${"غدًا في ٢:٣٠ م"}
       ${MustTestLocales.heIL} | ${"מחר בשעה 14:30"}
       ${MustTestLocales.ruRU} | ${"завтра в 14:30"}
       ${MustTestLocales.trTR} | ${"yarın 14:30"}
@@ -113,7 +109,7 @@ describe("formatCalendar", () => {
       ${MustTestLocales.enUS} | ${"March 22, 2024 at 2:30 PM"}
       ${MustTestLocales.deDE} | ${"22. März 2024 um 14:30"}
       ${MustTestLocales.frFR} | ${"22 mars 2024 à 14:30"}
-      ${arSAGregorian}        | ${"٢٢ مارس ٢٠٢٤ في ٢:٣٠ م"}
+      ${MustTestLocales.arSA} | ${"٢٢ مارس ٢٠٢٤ في ٢:٣٠ م"}
       ${MustTestLocales.ruRU} | ${"22 марта 2024 г. в 14:30"}
       ${MustTestLocales.trTR} | ${"22 Mart 2024 14:30"}
     `(
@@ -141,7 +137,7 @@ describe("formatCalendar", () => {
       ${MustTestLocales.itIT} | ${"alle ore"}
       ${MustTestLocales.ptPT} | ${"às"}
       ${MustTestLocales.svSE} | ${"kl."}
-      ${arSAGregorian}        | ${"في"}
+      ${MustTestLocales.arSA} | ${"في"}
       ${MustTestLocales.heIL} | ${"בשעה"}
       ${MustTestLocales.ruRU} | ${"в"}
     `(

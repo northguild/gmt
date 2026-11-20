@@ -10,6 +10,7 @@ import { formatZonedDateTime } from "../zoned/format/formatZonedDateTime";
 import { formatZonedRange } from "../zoned/format/formatZonedRange";
 import { formatZonedToParts } from "../zoned/format/formatZonedToParts";
 import { Temporal } from "./temporal";
+import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
 
 /*
  * CORE-112, defect D32: JavaScriptCore chooses the Islamic era from the instant, at one fixed
@@ -67,9 +68,21 @@ function expectFirstDay(parts: Parts, locale: string): void {
   expect(valueOf(parts, "era")).toBe(modernEra(locale));
 }
 
-/** The parts of the last day of year 0: the empty value on every host (D26). */
-function expectLastDay(parts: Parts): void {
-  expect(parts).toEqual([]);
+/**
+ * The parts of the last day of year 0: the empty value where the engine has no name for the era
+ * (D26), and otherwise 12 Dhu al-Hijjah of the era year 1 (`bh` year n is year 1 - n) in an era
+ * other than the modern one.
+ */
+function expectLastDay(parts: Parts, locale: string, day: string): void {
+  if (isIslamicEraCompatNeeded()) {
+    expect(parts).toEqual([]);
+    return;
+  }
+  expect(valueOf(parts, "year")).toBe("1");
+  expect(valueOf(parts, "month")).toBe("12");
+  expect(valueOf(parts, "day")).toBe(day);
+  expect(valueOf(parts, "era")).not.toBe(modernEra(locale));
+  expect(valueOf(parts, "era")).not.toBe("");
 }
 
 /** The ISO text of a wall-clock time in a zone, written as GMT reads a zoned date-time. */
@@ -144,15 +157,15 @@ describe("D32: 1 Muharram of year 1 prints year 1 in the era AH", () => {
   );
 
   it.each`
-    calendar              | lastBefore      | timeZone              | wallClock
-    ${"islamic-civil"}    | ${"0622-07-18"} | ${"Pacific/Honolulu"} | ${"T22:00:00"}
-    ${"islamic-civil"}    | ${"0622-07-18"} | ${"Pacific/Honolulu"} | ${"T12:00:00"}
-    ${"islamic-tbla"}     | ${"0622-07-17"} | ${"Pacific/Honolulu"} | ${"T23:59:59"}
-    ${"islamic-umalqura"} | ${"0622-07-18"} | ${"Pacific/Honolulu"} | ${"T23:00:00"}
-    ${"islamic-civil"}    | ${"0622-07-18"} | ${"Asia/Tokyo"}       | ${"T23:59:59"}
+    calendar              | lastBefore      | timeZone              | wallClock      | day
+    ${"islamic-civil"}    | ${"0622-07-18"} | ${"Pacific/Honolulu"} | ${"T22:00:00"} | ${"29"}
+    ${"islamic-civil"}    | ${"0622-07-18"} | ${"Pacific/Honolulu"} | ${"T12:00:00"} | ${"29"}
+    ${"islamic-tbla"}     | ${"0622-07-17"} | ${"Pacific/Honolulu"} | ${"T23:59:59"} | ${"29"}
+    ${"islamic-umalqura"} | ${"0622-07-18"} | ${"Pacific/Honolulu"} | ${"T23:00:00"} | ${"29"}
+    ${"islamic-civil"}    | ${"0622-07-18"} | ${"Asia/Tokyo"}       | ${"T23:59:59"} | ${"29"}
   `(
-    "formatZonedToParts of '$calendar' in '$timeZone' gives the empty value for local $lastBefore $wallClock",
-    ({ calendar, lastBefore, timeZone, wallClock }) => {
+    "formatZonedToParts of '$calendar' in '$timeZone' gives the pre-Hijra value for local $lastBefore $wallClock",
+    ({ calendar, lastBefore, timeZone, wallClock, day }) => {
       const locale = `en-u-ca-${calendar}`;
       expectLastDay(
         formatZonedToParts(
@@ -160,6 +173,8 @@ describe("D32: 1 Muharram of year 1 prints year 1 in the era AH", () => {
           locale,
           fields,
         ),
+        locale,
+        day,
       );
     },
   );
@@ -234,6 +249,74 @@ describe("D32: 1 Muharram of year 1 prints year 1 in the era AH", () => {
   });
 });
 
+// JavaScriptCore compares the instant, not the date, so in a fixed offset east of +16:07:02 local
+// 2 Muharram of year 1 is still before the engine's switch instant. The era is `ah` for every date
+// of year 1 (Intl era/monthCode Table 2, 4.1.12).
+describe("D32: the second day of year 1 prints year 1 in the era AH in a zone far east", () => {
+  const long = {
+    era: "short",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  } as const;
+
+  it.each`
+    calendar              | wallClock                | offset
+    ${"islamic-civil"}    | ${"0622-07-20T00:30:00"} | ${"+20:00"}
+    ${"islamic-civil"}    | ${"0622-07-20T00:30:00"} | ${"+23:59"}
+    ${"islamic-umalqura"} | ${"0622-07-20T00:30:00"} | ${"+20:00"}
+    ${"islamic-tbla"}     | ${"0622-07-19T00:30:00"} | ${"+20:00"}
+    ${"islamic-tbla"}     | ${"0622-07-19T00:30:00"} | ${"+23:59"}
+  `(
+    "formatZonedDateTime of '$calendar' prints Muharram 2, 1 and the era AH for local $wallClock at $offset",
+    ({ calendar, wallClock, offset }) => {
+      const locale = `en-u-ca-${calendar}`;
+      expect(
+        formatZonedDateTime(`${wallClock}${offset}[${offset}]`, locale, long),
+      ).toBe(`Muharram 2, 1 ${modernEra(locale)}`);
+    },
+  );
+
+  // The mirror guard: two days before the Hijra in the far west is year 0 on every host, the same
+  // text UTC prints for that date.
+  it.each`
+    calendar              | wallClock
+    ${"islamic-civil"}    | ${"0622-07-17T23:00:00"}
+    ${"islamic-tbla"}     | ${"0622-07-16T23:00:00"}
+    ${"islamic-umalqura"} | ${"0622-07-17T23:00:00"}
+  `(
+    "formatZonedDateTime of '$calendar' at -23:59 prints what UTC prints for local $wallClock",
+    ({ calendar, wallClock }) => {
+      const locale = `en-u-ca-${calendar}`;
+      expect(
+        formatZonedDateTime(`${wallClock}-23:59[-23:59]`, locale, long),
+      ).toBe(formatZonedDateTime(`${wallClock}+00:00[UTC]`, locale, long));
+    },
+  );
+
+  it.each`
+    calendar              | offset
+    ${"islamic-civil"}    | ${"+20:00"}
+    ${"islamic-civil"}    | ${"+23:59"}
+    ${"islamic-tbla"}     | ${"+20:00"}
+    ${"islamic-umalqura"} | ${"+23:59"}
+  `(
+    "formatZonedRange of '$calendar' from year 1 day 2 to day 4 at $offset prints what UTC prints for the same dates",
+    ({ calendar, offset }) => {
+      const locale = `en-u-ca-${calendar}`;
+      const day = (n: number): string => `0622-07-${19 + n}`;
+      const range = (suffix: string): string =>
+        formatZonedRange(
+          `${day(calendar === "islamic-tbla" ? 0 : 1)}T00:30:00${suffix}`,
+          `${day(calendar === "islamic-tbla" ? 2 : 3)}T20:00:00${suffix}`,
+          locale,
+          fields,
+        );
+      expect(range(`${offset}[${offset}]`)).toBe(range("+00:00[UTC]"));
+    },
+  );
+});
+
 describe("D32: ranges on and around the first day of year 1", () => {
   const years = (text: string): string[] => text.match(/\d+/g) ?? [];
 
@@ -265,11 +348,17 @@ describe("D32: ranges on and around the first day of year 1", () => {
   );
 
   it.each(epochs)(
-    "formatDateRange of '$calendar' from the last day of year 0 to $first gives the empty value",
+    "formatDateRange of '$calendar' from the last day of year 0 to $first gives the pre-Hijra value or two dates",
     ({ calendar, lastBefore, first }) => {
       const locale = `en-u-ca-${calendar}`;
       const text = formatDateRange(lastBefore, first, locale, fields);
-      expect(text).toBe("");
+      if (isIslamicEraCompatNeeded()) {
+        expect(text).toBe("");
+        return;
+      }
+      expect(text.endsWith(`1/1/1 ${modernEra(locale)}`)).toBe(true);
+      expect(text.startsWith("12/")).toBe(true);
+      expect(years(text)).toEqual(["12", "29", "1", "1", "1", "1"]);
     },
   );
 
@@ -300,7 +389,7 @@ describe("D32: ranges on and around the first day of year 1", () => {
     ${"islamic-tbla"}     | ${"0622-07-17"} | ${"0622-07-18"} | ${"Pacific/Honolulu"}
     ${"islamic-umalqura"} | ${"0622-07-18"} | ${"0622-07-19"} | ${"Pacific/Honolulu"}
   `(
-    "formatZonedRange of '$calendar' in '$timeZone' from local $lastBefore evening to $first gives the empty value",
+    "formatZonedRange of '$calendar' in '$timeZone' from local $lastBefore evening to $first gives the pre-Hijra value or two dates",
     ({ calendar, lastBefore, first, timeZone }) => {
       const locale = `en-u-ca-${calendar}`;
       const text = formatZonedRange(
@@ -309,7 +398,13 @@ describe("D32: ranges on and around the first day of year 1", () => {
         locale,
         fields,
       );
-      expect(text).toBe("");
+      if (isIslamicEraCompatNeeded()) {
+        expect(text).toBe("");
+        return;
+      }
+      expect(text.endsWith(`1/1/1 ${modernEra(locale)}`)).toBe(true);
+      expect(text.startsWith("12/29/1 ")).toBe(true);
+      expect(text).not.toMatch(/\b0\b/);
     },
   );
 

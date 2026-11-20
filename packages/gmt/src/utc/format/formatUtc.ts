@@ -49,9 +49,11 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
  *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
  *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
  *   Node, throw a RangeError exception"). Pass the IANA name.
- * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
- *   hosts print different dates for them (compat D33). A format with only a time or weekday field
- *   still returns its text.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value UTC ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)

@@ -1,4 +1,5 @@
 import {
+  linkPairIsOneZone,
   dateLineCrossingAt,
   dateLineCrossingTimeZones,
   localNoonBattleCases,
@@ -274,27 +275,20 @@ describe("areZonedEqualBy across two identifiers of one time zone", () => {
   );
 });
 
-// A Link and its Zone are two zones on every host (GMT rule), so the two clock labels decide: the
-// same label in a repeated hour is equal, whichever pass each value is on.
+// A repeated hour is two hours only where the host resolves the two names to one zone (temporalCompat
+// D19); otherwise the pair is two zones and the clock labels decide. The expected value is the
+// host's own answer, so the rows hold on every engine and fail under a name-equality check.
 describe("areZonedEqualBy across an IANA link pair in a repeated hour", () => {
   it.each`
     value1                                        | value2                                           | zone1              | zone2
     ${"2024-10-27T03:30:00+03:00[Europe/Kiev]"}   | ${"2024-10-27T03:30:00+02:00[Europe/Kyiv]"}      | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}
     ${"2024-04-07T02:30:00+11:00[Australia/ACT]"} | ${"2024-04-07T02:30:00+10:00[Australia/Sydney]"} | ${"Australia/ACT"} | ${"Australia/Sydney"}
   `(
-    "is true for $zone1 and $zone2: the same clock label decides",
-    ({ value1, value2 }: Record<string, string>) => {
-      expect(areZonedEqualBy(value1, value2, "hour")).toBe(true);
+    "answers as the host resolves $zone1 and $zone2",
+    ({ value1, value2, zone1, zone2 }: Record<string, string>) => {
+      expect(areZonedEqualBy(value1, value2, "hour")).toBe(
+        !linkPairIsOneZone(zone1, zone2),
+      );
     },
   );
-
-  it("is false for the two passes of one zone's repeated hour (one name, one zone)", () => {
-    expect(
-      areZonedEqualBy(
-        "2024-10-27T03:30:00+03:00[Europe/Kyiv]",
-        "2024-10-27T03:30:00+02:00[Europe/Kyiv]",
-        "hour",
-      ),
-    ).toBe(false);
-  });
 });

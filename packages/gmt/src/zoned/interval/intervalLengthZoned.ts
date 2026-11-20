@@ -18,7 +18,7 @@ import { calendarZonedIntervalOf } from "../../internal/intervalChecks";
  * - Uses `Temporal.Duration.prototype.total` with `relativeTo` set to `start`, so the result is
  *   DST-aware: dividing a spring-forward day's length in hours returns `23`, not `24`.
  * - Returns `0` for a zero-length interval (`start === end`).
- * - Two values in different time zones (by name: `UTC` equals `Etc/UTC`, but a link and its target, `Asia/Calcutta` and `Asia/Kolkata`, are two zones) can
+ * - Two values in different time zones (by TC39 TimeZoneEquals, so `UTC` equals `Etc/UTC`) can
  *   only be measured in time units: a calendar unit (day, week, month, year) returns null, as
  *   Temporal's `until` throws, because day lengths differ between zones.
  * - Compatibility: before 1.16.0 a calendar unit across two zones returned a number. To measure

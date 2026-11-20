@@ -1,15 +1,11 @@
 import { normalizeDateTime } from "../../internal";
-import {
-  expectDateTimeEqual,
-  MustTestLocales,
-  arSAGregorian,
-} from "../../test";
+import { expectDateTimeEqual, MustTestLocales } from "../../test";
 import { hostDateText, numericPartValues } from "../../test/hostIntl";
 import { formatDateToParts } from "./formatDateToParts";
 
 describe("formatDateToParts", () => {
   describe("17-locale matrix — default options", () => {
-    // The parts join to the host's text (its wording, compat README rule 7; the bidi marks the
+    // The parts join to the host's text (its own wording; the bidi marks the
     // parts keep are compared as the text normalises them) and carry the value:
     // 2024-02-03.
     it.each`
@@ -27,7 +23,7 @@ describe("formatDateToParts", () => {
       ${MustTestLocales.zhTW}
       ${MustTestLocales.jaJP}
       ${MustTestLocales.koKR}
-      ${arSAGregorian}
+      ${MustTestLocales.arSA}
       ${MustTestLocales.heIL}
       ${MustTestLocales.ruRU}
       ${MustTestLocales.trTR}
@@ -66,7 +62,7 @@ describe("formatDateToParts", () => {
   describe("RTL locales", () => {
     it.each`
       locale                  | description
-      ${arSAGregorian}        | ${"ar-SA-u-ca-gregory"}
+      ${MustTestLocales.arSA} | ${"ar-SA"}
       ${MustTestLocales.heIL} | ${"he-IL"}
     `(
       "returns string-valued parts for RTL locale $description",

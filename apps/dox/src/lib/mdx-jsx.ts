@@ -20,10 +20,7 @@ import {
   runsRead as pulseRunsRead,
   type PulseLife,
 } from "../data/pulse";
-import {
-  filingRef as pulseFilingRef,
-  guardIds,
-} from "../data/upstream-filings";
+import { filingRef as pulseFilingRef } from "../data/upstream-filings";
 import {
   beats as pulseBeats,
   beatsCaption,
@@ -361,7 +358,7 @@ export const escapeMarkdownInline = (text: string): string =>
 function renderUpstreamDefects(): string {
   const rows = compatGroups.map((group) => {
     const sent = filings
-      .filter((f) => guardIds(f).some((id) => group.defects.includes(id)))
+      .filter((f) => f.gmtGuard && group.defects.includes(f.gmtGuard))
       .map((f) => `[${filingRef(f)}](${f.contributionUrl ?? f.url})`)
       .join(", ");
     const { badge, count } = stateLine(group);

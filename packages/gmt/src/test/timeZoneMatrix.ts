@@ -86,15 +86,18 @@ export const validOnlyBattleTestTimeZones = [
 ] as const;
 
 /**
- * Every single-component (slash-less) Zone and Link name in IANA tzdb 2026d's `backward` file
- * that every host accepts. Temporal §14.6.2 requires every IANA Zone and Link name to be
- * accepted, and its `TimeZoneIANAName` grammar allows a single component (`TZLeadingChar :::
- * Alpha . _`, with `TZChar` adding digits, `-` and `+`), so none of these may be refused on
- * shape. The nine names hosts disagree on are in `refusedZoneNames`.
+ * Every single-component (slash-less) Zone and Link name in IANA tzdb 2026d's `backward` file.
+ * Temporal §14.6.2 requires every IANA Zone and Link name to be accepted, and its
+ * `TimeZoneIANAName` grammar allows a single component (`TZLeadingChar ::: Alpha . _`, with
+ * `TZChar` adding digits, `-` and `+`), so none of these may be refused on shape.
  */
 export const ianaSingleComponentTimeZones = [
+  "CET",
+  "CST6CDT",
   "Cuba",
+  "EET",
   "EST",
+  "EST5EDT",
   "Egypt",
   "Eire",
   "GB",
@@ -112,11 +115,14 @@ export const ianaSingleComponentTimeZones = [
   "Japan",
   "Kwajalein",
   "Libya",
+  "MET",
   "MST",
+  "MST7MDT",
   "NZ",
   "NZ-CHAT",
   "Navajo",
   "PRC",
+  "PST8PDT",
   "Poland",
   "Portugal",
   "ROC",
@@ -127,6 +133,7 @@ export const ianaSingleComponentTimeZones = [
   "UTC",
   "Universal",
   "W-SU",
+  "WET",
   "Zulu",
 ] as const;
 
@@ -416,21 +423,3 @@ export function mockSystemTimeZone(
     resolvedOptionsSpy.mockRestore();
   };
 }
-
-/**
- * The nine zone names GMT refuses on every host (compat D35). Hosts accept or refuse them by
- * engine and OS version, and tzdata versions give them different data (tzdb `backward` and
- * `factory`); ECMA-402 §6.5.1 lists every Zone and Link as available, so this departs from it.
- * Each is a valid `TimeZoneIANAName` by shape, so the regex still matches them.
- */
-export const refusedZoneNames = [
-  "CET",
-  "CST6CDT",
-  "EET",
-  "EST5EDT",
-  "MET",
-  "MST7MDT",
-  "PST8PDT",
-  "WET",
-  "Factory",
-] as const;
