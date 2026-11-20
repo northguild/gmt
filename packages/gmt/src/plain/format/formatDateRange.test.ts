@@ -4,53 +4,55 @@ import {
   localeDateRangeInputByLocale,
   MustTestLocales,
   oneOfIcu,
+  arSAGregorian,
+  fixtureLocale,
 } from "../../test";
+import { hostPlainRangeText } from "../../test/hostIntl";
 import { formatDateRange } from "./formatDateRange";
 
 describe("formatDateRange", () => {
   const rangeByLocale = localeDateRangeInputByLocale;
 
   it.each`
-    locale                  | options                   | expected
-    ${MustTestLocales.enUS} | ${{ dateStyle: "long" }}  | ${"February 3 – 5, 2024"}
-    ${MustTestLocales.enUS} | ${{ dateStyle: "short" }} | ${"2/3/24 – 2/5/24"}
-    ${MustTestLocales.enGB} | ${{ dateStyle: "short" }} | ${"03/02/2024 – 05/02/2024"}
-    ${MustTestLocales.deDE} | ${{ dateStyle: "long" }}  | ${"3.–5. Februar 2024"}
-    ${MustTestLocales.deDE} | ${{ dateStyle: "short" }} | ${"03.–05.02.24"}
-    ${MustTestLocales.frFR} | ${{ dateStyle: "long" }}  | ${"3–5 février 2024"}
-    ${MustTestLocales.frFR} | ${{ dateStyle: "short" }} | ${"03/02/2024 – 05/02/2024"}
-    ${MustTestLocales.esES} | ${{ dateStyle: "long" }}  | ${"3–5 de febrero de 2024"}
-    ${MustTestLocales.esES} | ${{ dateStyle: "short" }} | ${"3/2/24 – 5/2/24"}
-    ${MustTestLocales.itIT} | ${{ dateStyle: "long" }}  | ${"03–05 febbraio 2024"}
-    ${MustTestLocales.itIT} | ${{ dateStyle: "short" }} | ${"03/02/24 – 05/02/24"}
-    ${MustTestLocales.ptPT} | ${{ dateStyle: "long" }}  | ${"3–5 de fevereiro de 2024"}
-    ${MustTestLocales.ptPT} | ${{ dateStyle: "short" }} | ${"03/02/24 – 05/02/24"}
-    ${MustTestLocales.svSE} | ${{ dateStyle: "long" }}  | ${"3–5 februari 2024"}
-    ${MustTestLocales.isIS} | ${{ dateStyle: "long" }}  | ${"3.–5. febrúar 2024"}
-    ${MustTestLocales.isIS} | ${{ dateStyle: "short" }} | ${"3.2.2024 – 5.2.2024"}
-    ${MustTestLocales.zhCN} | ${{ dateStyle: "long" }}  | ${"2024/2/3 – 2024/2/5"}
-    ${MustTestLocales.zhCN} | ${{ dateStyle: "short" }} | ${"2024/2/3 – 2024/2/5"}
-    ${MustTestLocales.zhTW} | ${{ dateStyle: "long" }}  | ${"2024/2/3至2024/2/5"}
-    ${MustTestLocales.zhTW} | ${{ dateStyle: "short" }} | ${"2024/2/3至2024/2/5"}
-    ${MustTestLocales.jaJP} | ${{ dateStyle: "long" }}  | ${"2024/02/03～2024/02/05"}
-    ${MustTestLocales.jaJP} | ${{ dateStyle: "short" }} | ${"2024/02/03～2024/02/05"}
-    ${MustTestLocales.koKR} | ${{ dateStyle: "long" }}  | ${"2024년 2월 3일~5일"}
-    ${MustTestLocales.koKR} | ${{ dateStyle: "short" }} | ${"24. 2. 3. ~ 24. 2. 5."}
-    ${MustTestLocales.arSA} | ${{ dateStyle: "long" }}  | ${"٣–٥ فبراير ٢٠٢٤"}
-    ${MustTestLocales.arSA} | ${{ dateStyle: "short" }} | ${"٣‏/٢‏/٢٠٢٤ – ٥‏/٢‏/٢٠٢٤"}
-    ${MustTestLocales.heIL} | ${{ dateStyle: "long" }}  | ${"3–5 בפברואר 2024"}
-    ${MustTestLocales.heIL} | ${{ dateStyle: "short" }} | ${"03.2.2024 – 05.2.2024"}
-    ${MustTestLocales.ruRU} | ${{ dateStyle: "long" }}  | ${"3–5 февраля 2024 г."}
-    ${MustTestLocales.ruRU} | ${{ dateStyle: "short" }} | ${"03.02.2024–05.02.2024"}
-    ${MustTestLocales.trTR} | ${{ dateStyle: "long" }}  | ${"3–5 Şubat 2024"}
-    ${MustTestLocales.trTR} | ${{ dateStyle: "short" }} | ${"03.02.2024 – 05.02.2024"}
+    locale                  | options
+    ${MustTestLocales.enUS} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.enUS} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.enGB} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.deDE} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.deDE} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.frFR} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.frFR} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.esES} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.esES} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.itIT} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.itIT} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.ptPT} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.ptPT} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.svSE} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.isIS} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.isIS} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.zhCN} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.zhCN} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.zhTW} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.zhTW} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.jaJP} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.jaJP} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.koKR} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.koKR} | ${{ dateStyle: "short" }}
+    ${arSAGregorian}        | ${{ dateStyle: "long" }}
+    ${arSAGregorian}        | ${{ dateStyle: "short" }}
+    ${MustTestLocales.heIL} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.heIL} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.ruRU} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.ruRU} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.trTR} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.trTR} | ${{ dateStyle: "short" }}
   `(
-    "formats a valid date range for locale $locale with options $options",
-    ({ locale, options, expected }) => {
-      const { start, end } =
-        rangeByLocale[locale as keyof typeof rangeByLocale];
+    "formats a valid date range for locale $locale with options $options in the host's wording",
+    ({ locale, options }) => {
+      const { start, end } = rangeByLocale[fixtureLocale(locale)];
       expect(formatDateRange(start, end, locale, options)).toBe(
-        normalizeDateTime(expected),
+        hostPlainRangeText(locale, options, start, end),
       );
     },
   );

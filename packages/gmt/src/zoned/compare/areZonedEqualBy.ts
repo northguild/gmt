@@ -7,7 +7,7 @@ import { isDateTimeUnitName } from "../../internal/unitNames";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { isOptionsArgument } from "../../internal/isObject";
-import { timeZoneEquals } from "../../internal/temporalCompat";
+import { zoneNamesEqual } from "../../internal/zoneNamesEqual";
 
 /**
  * Compare two zoned ISO datetime strings for equality at a given unit.
@@ -22,8 +22,8 @@ import { timeZoneEquals } from "../../internal/temporalCompat";
  *   zone transition shortened is still its own unit: in `Pacific/Chatham` on its 2024
  *   spring-forward, 03:50 and 04:05 are different hours, because the 03:00 hour lasted only
  *   from 03:45 to 04:00.
- * - Two values in the same time zone (two identifiers of one zone, such as `UTC` and `Etc/UTC`, count as
- *   one) are equal only when their bucket starts are the same
+ * - Two values in the same time zone (two names of one zone by name, such as `UTC` and `Etc/UTC`, count as
+ *   one; an IANA link and its target are two zones) are equal only when their bucket starts are the same
  *   instant, as in `areUnixEqualBy`: both passes of London's repeated 01:00 on its 2024
  *   fall-back read the same wall clock but are different hours. Values in different zones are
  *   compared by their buckets' local labels, since their instants never line up.
@@ -95,7 +95,7 @@ export function areZonedEqualBy(
       const zoned2 = zonedDateTimeFrom(start2);
 
       // Same zone: one real bucket is one instant, so a repeated wall clock is not a match.
-      if (timeZoneEquals(zoned1, zoned2)) {
+      if (zoneNamesEqual(zoned1, zoned2)) {
         return (
           Temporal.Instant.compare(zoned1.toInstant(), zoned2.toInstant()) === 0
         );

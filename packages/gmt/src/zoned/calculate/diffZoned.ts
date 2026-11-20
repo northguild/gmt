@@ -24,7 +24,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  * - Follows Temporal's DifferenceZonedDateTime: calendar units (days, weeks, months, years) are
  *   measured on the zone's own wall clock, so a 23-hour DST day is 1 day and a month from Jan 31
  *   follows the local date; time units (hours and smaller) are exact elapsed time.
- * - Two values in different time zones (by TC39 TimeZoneEquals, so `UTC` equals `Etc/UTC`) can
+ * - Two values in different time zones (by name: `UTC` equals `Etc/UTC`, but a link and its target, `Asia/Calcutta` and `Asia/Kolkata`, are two zones) can
  *   only be differenced in time units: a calendar largest unit returns null, because day lengths
  *   differ between zones.
  * - Compatibility: before 1.16.0 both values were converted to UTC first, so calendar units were

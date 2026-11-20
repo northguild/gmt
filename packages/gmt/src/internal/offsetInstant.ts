@@ -2,6 +2,7 @@
 // `toOffsetInstant` reads it through the barrel.
 import type { OffsetInstant } from "../instant/convert/toOffsetInstant";
 import { utcOffset } from "../regex/utc-offset";
+import { isRefusedZoneName } from "./refusedZoneNames";
 import type { Hl7Precision } from "../types/hl7";
 import { parseInstantNanoseconds } from "./instantNanoseconds";
 import {
@@ -269,7 +270,10 @@ export function writeOffsetInstant(value: OffsetInstant): string {
         // offsets too and only Temporal knows that.
         const zoned = instant.toZonedDateTimeISO(value.timeZone);
 
-        if (utcOffset.test(zoned.timeZoneId)) {
+        if (
+          utcOffset.test(zoned.timeZoneId) ||
+          isRefusedZoneName(zoned.timeZoneId)
+        ) {
           return "";
         }
 

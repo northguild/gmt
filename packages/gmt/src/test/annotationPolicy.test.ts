@@ -288,3 +288,54 @@ describe("a zoned reader takes one zone bracket and nothing after it", () => {
     },
   );
 });
+
+/**
+ * D35: a zone bracket naming one of the nine refused names is a bracket naming no zone, so it
+ * gives what `[Not/AZone]` gives, in whichever argument it stands.
+ */
+describe("a refused zone name in a bracket reads as a zone that does not exist", () => {
+  const REFUSED_BRACKETS = [
+    "[EST5EDT]",
+    "[est5edt]",
+    "[CET]",
+    "[Factory]",
+    "[!PST8PDT]",
+  ];
+  const ZONED_BASES = [
+    "2024-02-29T12:34:56+02:00",
+    "2024-02-29T12:34:56",
+    "2024-07-15T12:00:00-04:00",
+  ];
+
+  it.each(Object.keys(SPACES).map((namespace) => ({ namespace })))(
+    "$namespace: no refused zone bracket gives a different answer from [Not/AZone]",
+    ({ namespace }) => {
+      const leaks: string[] = [];
+      for (const [name, fn] of Object.entries(SPACES[namespace]!)) {
+        if (typeof fn !== "function" || /^[A-Z]/.test(name)) continue;
+        if (takesNoInput(fn as never)) continue;
+        for (const base of ZONED_BASES) {
+          for (const bracket of REFUSED_BRACKETS) {
+            const missing = bracket.startsWith("[!")
+              ? "[!Not/AZone]"
+              : "[Not/AZone]";
+            for (const build of [
+              (value: string) => [value],
+              (value: string) => [value, "UTC"],
+              (value: string) => ["2024-02-29T12:00:00Z", value],
+              (value: string) => [value, value],
+            ]) {
+              const answer = run(fn as never, build(base + bracket));
+              if (answer !== run(fn as never, build(base + missing))) {
+                leaks.push(
+                  `${name}(${base}${bracket}) => ${answer.slice(0, 40)}`,
+                );
+              }
+            }
+          }
+        }
+      }
+      expect(leaks).toEqual([]);
+    },
+  );
+});

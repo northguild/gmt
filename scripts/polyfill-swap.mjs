@@ -55,6 +55,22 @@ export const ENTRY_CHECK = {
   file: "src/test/swapEntry.test.ts",
   test: "the swap pass runs GMT on the swap entry's own Temporal object",
 };
+/**
+ * The test in the swap pass that says whether the Chinese and Dangi dates the swap's Temporal and
+ * this host give are the proposal's (packages/gmt/src/test/lunisolarRefused.test.ts, compat D33).
+ * Both titles pass: the test reports, and GMT refuses both calendars either way.
+ */
+export const D33_CHECK = {
+  file: "src/test/lunisolarRefused.test.ts",
+  pass: "every D33 repro passes on this Temporal and this host",
+  fail: "a D33 repro fails on this Temporal and this host",
+};
+/**
+ * The calendars GMT refuses on every host (`LUNISOLAR_CALENDARS` in
+ * packages/gmt/src/internal/lunisolarRefusal.ts; scripts never import from `src`). The calendar
+ * sweep reads them apart from the rest while compat D33 holds.
+ */
+const LUNISOLAR = ["chinese", "dangi"];
 const USAGE =
   "Usage: node scripts/polyfill-swap.mjs <node|chromium|firefox|webkit> --version=<x.y.z>\n" +
   "       node scripts/polyfill-swap.mjs summary <node|chromium|firefox|webkit>";
@@ -73,7 +89,7 @@ const messageOf = (error) =>
  *   runtime: (leg: Leg) => Promise<Runtime>,
  *   loadEntry: (root: string) => Promise<{ Temporal?: unknown }>,
  *   sweep: (entry: any, today: SweepDate) => object,
- *   calendarSweep: (entry: any) => object,
+ *   calendarSweep: (entry: any, calendars?: string[]) => object,
  *   today: () => SweepDate,
  * }} Deps
  */
@@ -100,6 +116,27 @@ export function entryLoaded(report) {
           r.fullName === ENTRY_CHECK.test && r.status === "passed",
       ),
   );
+}
+
+/**
+ * Whether the Chinese and Dangi dates are right on the swap's Temporal and this host, from the swap
+ * pass's report: "removable" when `D33_CHECK.pass` passed, "still needed" when `D33_CHECK.fail`
+ * passed, "missing" when the report has neither (a failed or absent test).
+ * @param {{ testResults: any[] }} report
+ * @returns {"removable" | "still needed" | "missing"}
+ */
+export function d33Check(report) {
+  const passed = (/** @type {string} */ title) =>
+    report.testResults.some(
+      (/** @type {any} */ file) =>
+        String(file.name ?? "").endsWith(`/${D33_CHECK.file}`) &&
+        (file.assertionResults ?? []).some(
+          (/** @type {any} */ r) =>
+            r.fullName === title && r.status === "passed",
+        ),
+    );
+  if (passed(D33_CHECK.pass)) return "removable";
+  return passed(D33_CHECK.fail) ? "still needed" : "missing";
 }
 
 /**
@@ -198,7 +235,7 @@ const realDeps = {
   runtime,
   loadEntry,
   sweep: (entry, today) => sweep(entry, today),
-  calendarSweep: (entry) => calendarSweep(entry),
+  calendarSweep: (entry, calendars) => calendarSweep(entry, calendars),
   today: () => globalThis.Temporal.Now.plainDateISO("UTC"),
 };
 
@@ -267,6 +304,18 @@ function summary(root, leg, stdout) {
   } else if (cal) {
     lines.push(`Calendar sweep could not run: ${cal.message}`);
   }
+  const d33 = v?.d33;
+  // A leg that could not run has no swap-pass check; only its sweep is reported.
+  const checkText = v?.status === "ran" ? `${d33?.check}; ` : "";
+  if (d33?.sweep?.status === "ran") {
+    lines.push(
+      `D33 (Chinese and Dangi): ${checkText}${d33.sweep.differingCalendars} of ${d33.sweep.calendars} calendars differ from Node's built-in Temporal.`,
+    );
+  } else if (d33?.sweep) {
+    lines.push(`D33 sweep could not run: ${d33.sweep.message}`);
+  } else if (d33) {
+    lines.push(`D33 (Chinese and Dangi): ${d33.check}.`);
+  }
   stdout(`${lines.join("\n")}\n`);
 }
 
@@ -309,6 +358,9 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
         ...(calendarSweepResult === null
           ? {}
           : { calendarSweep: calendarSweepResult }),
+        ...(d33SweepResult === null
+          ? {}
+          : { d33: { check: "missing", sweep: d33SweepResult } }),
       },
       "polyfill-swap",
     );
@@ -322,6 +374,8 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
   let sweepResult = null;
   /** @type {object | null} */
   let calendarSweepResult = null;
+  /** @type {object | null} */
+  let d33SweepResult = null;
   /** @type {ReturnType<typeof runBoth>} */
   let passes;
   try {
@@ -341,10 +395,27 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
       } catch (error) {
         sweepResult = { status: "could-not-run", message: messageOf(error) };
       }
+      // Chinese and Dangi are swept apart: GMT refuses them (D33), so their sweep says whether
+      // the swap retires D33 and never blocks it. Each sweep has its own try/catch.
+      const all = Intl.supportedValuesOf("calendar");
       try {
-        calendarSweepResult = d.calendarSweep(entry);
+        calendarSweepResult = d.calendarSweep(
+          entry,
+          all.filter((c) => !LUNISOLAR.includes(c)),
+        );
       } catch (error) {
         calendarSweepResult = {
+          status: "could-not-run",
+          message: messageOf(error),
+        };
+      }
+      try {
+        d33SweepResult = d.calendarSweep(
+          entry,
+          all.filter((c) => LUNISOLAR.includes(c)),
+        );
+      } catch (error) {
+        d33SweepResult = {
           status: "could-not-run",
           message: messageOf(error),
         };
@@ -403,6 +474,10 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
       failing,
       sweep: leg === "node" ? sweepResult : null,
       calendarSweep: leg === "node" ? calendarSweepResult : null,
+      d33: {
+        check: d33Check(passes.swap),
+        sweep: leg === "node" ? d33SweepResult : null,
+      },
     }),
     "polyfill-swap",
   );
@@ -414,8 +489,9 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
     calendarSweepResult && "differingCalendars" in calendarSweepResult
       ? `; calendar sweep: ${calendarSweepResult.differingCalendars} calendars differ`
       : "";
+  const d33Note = `; D33 ${d33Check(passes.swap)}`;
   stdout(
-    `polyfill-swap: ${leg} temporal-polyfill ${version}: ${counts.failed} swap-only failures of ${counts.tests} tests${sweepNote}${calendarNote}\n`,
+    `polyfill-swap: ${leg} temporal-polyfill ${version}: ${counts.failed} swap-only failures of ${counts.tests} tests${sweepNote}${calendarNote}${d33Note}\n`,
   );
   return 0;
 }

@@ -191,19 +191,6 @@ export function isRangeDayPeriodCompatNeeded(): boolean {
   return isDefectPresent("D17", "iso8601");
 }
 
-/**
- * True when this runtime's `ZonedDateTime#equals` answers false for two identifiers of one time
- * zone (defect D19).
- *
- * ECMA-262 TimeZoneEquals compares the two [[PrimaryIdentifier]]s, and ECMA-402 §6.5 fixes
- * `"UTC"` as primary and `"Etc/UTC"` as a non-primary identifier that resolves to it. The polyfill
- * finds a non-primary identifier's primary through `Intl.DateTimeFormat#resolvedOptions`, which
- * JavaScriptCore returns as written, so `Etc/UTC` and `UTC` compare unequal there.
- */
-export function isTimeZoneEqualsCompatNeeded(): boolean {
-  return isDefectPresent("D19", "iso8601");
-}
-
 /** Defects that make the runtime's calendar arithmetic or reads differ from the spec. */
 const ARITHMETIC_DEFECTS: readonly DefectId[] = [
   "D1",
@@ -297,6 +284,9 @@ export function isJapaneseEraCompatNeeded(): boolean {
  * Intl era/monthCode Table 2 and § 4.1.12 give the `bh` era, and test262
  * `intl402/DateTimeFormat/prototype/formatToParts/era.js` requires ISO 600 and 2025 to print
  * different era names. The probe compares the text with its digits and signs taken out.
+ *
+ * Canary and retirement signal only: `repairYearPrinting` refuses a date before the Hijra on every
+ * host (D26), so this probe changes no output.
  */
 export function isIslamicEraCompatNeeded(): boolean {
   const eraOf = (date: readonly [number, number, number]): string =>
@@ -376,6 +366,33 @@ export function isIslamicEpochEraCompatNeeded(): boolean {
       ([calendar, day]) => eraOf(calendar, day, 0) !== eraOf(calendar, day, 23),
     ),
   );
+}
+
+/**
+ * True when this runtime changes the Coptic era in the middle of 1 Tout AM 1 (defect D34, WebKit
+ * 331724; fixed by WebKit/WebKit#81144).
+ *
+ * Intl era/monthCode Table 2 gives `coptic` one era, `am`, for every year, and 4.1.12 reads the era
+ * from the calendar date, which has no time: every instant of one local day prints one era.
+ * JavaScriptCore compares the instant with a fixed constant (0284-08-29T07:52:58Z), so the first
+ * hours of ISO 0284-08-29 print `Anno Martyrum`. The probe formats ISO 0284-08-29 at 00:00 and
+ * 23:00 UTC with `en-u-ca-coptic`, `{ era: "short", year: "numeric", timeZone: "UTC" }`: both must
+ * print the same era name (digits, signs and spaces taken out).
+ */
+export function isCopticEpochEraCompatNeeded(): boolean {
+  const eraAt = (hour: number): string =>
+    new Intl.DateTimeFormat("en-u-ca-coptic", {
+      era: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .format(
+        Temporal.Instant.from(
+          `0284-08-29T${String(hour).padStart(2, "0")}:00:00Z`,
+        ).epochMilliseconds,
+      )
+      .replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect("D34", () => eraAt(0) !== eraAt(23));
 }
 
 /**

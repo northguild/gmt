@@ -54,6 +54,9 @@ const ABS_DAY_THRESHOLD = 6;
  *   use `formatRelativeDateTime` for elapsed-time displays ("in 1 day").
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
+ * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
+ *   hosts print different dates for them (compat D33). A format with only a time or weekday field
+ *   still returns its text.
  *
  * @param value ISO PlainDateTime string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)

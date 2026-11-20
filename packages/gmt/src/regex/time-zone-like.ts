@@ -9,7 +9,7 @@
  *   offsets (ECMA-262 `IsTimeZoneOffsetString`, which ECMA-402 calls).
  * - An IANA name (`TimeZoneIANAName`): one or more `/`-separated components. Each starts with a
  *   letter, `.` or `_` (`TZLeadingChar`) and continues with letters, digits, `.`, `_`, `-` or `+`
- *   (`TZChar`). So single-component names match (`UTC`, `Japan`, `Zulu`, `EST5EDT`, `GMT+0`,
+ *   (`TZChar`). So single-component names match (`UTC`, `Japan`, `Zulu`, `GMT+0`,
  *   `NZ-CHAT`), as do `Area/Location` names at any depth (`America/Argentina/Buenos_Aires`,
  *   `Etc/GMT+5`). Temporal must accept every Zone and Link name in the IANA database, and tzdb's
  *   `backward` file has more than forty slash-less ones.

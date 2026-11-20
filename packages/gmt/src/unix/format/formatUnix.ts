@@ -58,6 +58,9 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
  *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
  *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
  *   Node, throw a RangeError exception"). Pass the IANA name.
+ * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
+ *   hosts print different dates for them (compat D33). A format with only a time or weekday field
+ *   still returns its text.
  *
  * @param value unix epoch value to format (string or number, per `epochUnit`)
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)

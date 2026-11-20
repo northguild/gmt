@@ -23,6 +23,9 @@ import { zonedDateTimeOf } from "../../internal/zonedWallClock";
  *   `formatUtc` with its `timeZone` option.
  * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it (a string or number
  *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
+ * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
+ *   hosts print different dates for them (compat D33). A format with only a time or weekday field
+ *   still returns its text.
  *
  * @param value zoned ISO 8601 datetime string
  * @param locale optional locale tag (e.g. "en-GB", "ja-JP"), or a preference list of tags (ECMA-402)

@@ -1,6 +1,7 @@
 import { arrives, NON_STRINGS } from "../../test/nonStrings";
 import {
   ianaSingleComponentTimeZones,
+  refusedZoneNames,
   utcMs,
   validOnlyBattleTestTimeZones,
 } from "../../test";
@@ -27,6 +28,15 @@ describe("isValidTimeZone", () => {
         () => new Intl.DateTimeFormat("en-US", { timeZone }),
       ).not.toThrow();
       expect(isValidTimeZone(timeZone)).toBe(true);
+    },
+  );
+
+  // D35: hosts accept or refuse these by engine and OS version, so every host refuses them.
+  it.each(refusedZoneNames.map((timeZone) => ({ timeZone })))(
+    "returns false for the refused name $timeZone on every host",
+    ({ timeZone }) => {
+      expect(isValidTimeZone(timeZone)).toBe(false);
+      expect(isValidTimeZone(timeZone.toLowerCase())).toBe(false);
     },
   );
 

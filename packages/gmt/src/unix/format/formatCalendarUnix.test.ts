@@ -4,6 +4,7 @@ import {
   battleTestTimeZones,
   expectDateTimeEqual,
   utcMs,
+  arSAGregorian,
 } from "../../test";
 import { mockTemporalNowInstantThrow } from "../../test/mocks";
 import {
@@ -140,7 +141,7 @@ describe("formatCalendarUnix", () => {
       ${MustTestLocales.zhTW} | ${"明天 下午2:30"}
       ${MustTestLocales.jaJP} | ${"明日 14:30"}
       ${MustTestLocales.koKR} | ${"내일 오후 2:30"}
-      ${MustTestLocales.arSA} | ${"غدًا في ٢:٣٠ م"}
+      ${arSAGregorian}        | ${"غدًا في ٢:٣٠ م"}
       ${MustTestLocales.heIL} | ${"מחר בשעה 14:30"}
       ${MustTestLocales.ruRU} | ${"завтра в 14:30"}
       ${MustTestLocales.trTR} | ${"yarın 14:30"}

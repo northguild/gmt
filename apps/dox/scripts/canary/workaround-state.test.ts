@@ -149,3 +149,27 @@ describe("the guards declared in scripts/lib/workarounds.mjs", () => {
     });
   });
 });
+
+describe("the D33 group in scripts/lib/workarounds.mjs", () => {
+  const d33 = WORKAROUNDS.find((w) => w.defects.join() === "D33")!;
+
+  it("is read on every engine: it names no engines, so every leg's verdict counts", () => {
+    expect(d33).toBeDefined();
+    expect(d33).not.toHaveProperty("engines");
+  });
+
+  it.each`
+    engine       | probes | failing | state
+    ${"v8"}      | ${32}  | ${32}   | ${"still-needed"}
+    ${"firefox"} | ${32}  | ${32}   | ${"still-needed"}
+    ${"v8"}      | ${32}  | ${0}    | ${"removable"}
+    ${"webkit"}  | ${32}  | ${0}    | ${"removable"}
+  `(
+    "is $state on '$engine' with $failing of $probes repros failing",
+    ({ engine, probes, failing, state }) => {
+      expect(
+        workaroundState({ ...d33, probes, failing }, "0.5.1", engine),
+      ).toEqual({ state, guardLapsed: false });
+    },
+  );
+});

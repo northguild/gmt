@@ -9,6 +9,43 @@ import { getLocaleZonedDayOfWeek } from "./getLocaleZonedDayOfWeek";
 import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getLocaleZonedDayOfWeek", () => {
+  // zh-CN and is-IS: a region whose first day some runtime does not read as CLDR does (compat D36),
+  // so every runtime returns the sentinel.
+  it.each`
+    locale
+    ${MustTestLocales.zhCN}
+    ${MustTestLocales.isIS}
+  `(
+    "returns the sentinel for $locale, whose first day runtimes dispute",
+    ({ locale }) => {
+      expect(
+        getLocaleZonedDayOfWeek(
+          localeZonedDateTimeInputByLocale[
+            locale as keyof typeof localeZonedDateTimeInputByLocale
+          ],
+          locale,
+        ),
+      ).toBeNull();
+    },
+  );
+
+  // `-u-fw-` names the first day (UTS #35 key fw), so the answer needs no runtime data. The zh-CN
+  // fixture is a Saturday.
+  it.each`
+    locale              | expected
+    ${"zh-CN-u-fw-mon"} | ${5}
+    ${"zh-CN-u-fw-sun"} | ${6}
+  `(
+    "returns $expected for the zh-CN fixture in $locale",
+    ({ locale, expected }) => {
+      expect(
+        getLocaleZonedDayOfWeek(
+          localeZonedDateTimeInputByLocale[MustTestLocales.zhCN],
+          locale,
+        ),
+      ).toBe(expected);
+    },
+  );
   // Full week boundary coverage for en-US (firstDay 7), fixed at UTC.
   it.each`
     value                               | expected
@@ -89,8 +126,6 @@ describe("getLocaleZonedDayOfWeek", () => {
     ${MustTestLocales.itIT}
     ${MustTestLocales.ptPT}
     ${MustTestLocales.svSE}
-    ${MustTestLocales.isIS}
-    ${MustTestLocales.zhCN}
     ${MustTestLocales.zhTW}
     ${MustTestLocales.jaJP}
     ${MustTestLocales.koKR}

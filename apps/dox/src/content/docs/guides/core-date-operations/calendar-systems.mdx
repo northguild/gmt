@@ -43,6 +43,8 @@ Temporal's `withCalendar` does (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`,
 `[u-ca=HEBREW]` reads as `hebrew`). The canonical id is always the one written.
 `gregorian`, `taiwan` and `islamic-tabular` are not calendar ids and return the sentinel.
 `chinese`, `dangi`, `islamic` and `islamic-rgsa` are not supported.
+A format function given a `chinese` or `dangi` locale or `calendar` option returns its empty value for any date
+field, because runtimes print different dates for these calendars. A time or a weekday alone still prints.
 
 ## How annotations are read
 

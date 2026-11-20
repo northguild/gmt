@@ -98,7 +98,9 @@ import {
   TRACKERS,
   bugzillaBugUrl,
   bugzillaCommentsUrl,
+  bugzillaHistoryUrl,
   chromiumIssueUrl,
+  guardIds,
   JIRA_HEADERS,
   identityOf,
   isJiraKey,
@@ -440,11 +442,16 @@ async function fetchSyncedAsync(ref, days, timeout) {
         days,
       );
     case "bugzilla": {
-      const [bug, comments] = await Promise.all([
+      const [bug, comments, history] = await Promise.all([
         httpGet(bugzillaBugUrl(ref.host, ref.id), timeout),
         httpGet(bugzillaCommentsUrl(ref.host, ref.id), timeout),
+        httpGet(bugzillaHistoryUrl(ref.host, ref.id), timeout),
       ]);
-      return parseBugzilla(bug, comments, ref.host, ref.id, days);
+      const ourComment = /#c(\d+)$/.exec(ref.contributionUrl ?? "")?.[1];
+      return parseBugzilla(bug, comments, ref.host, ref.id, days, {
+        history,
+        ourComment: ourComment === undefined ? null : Number(ourComment),
+      });
     }
     default:
       throw new Error(`unknown tracker "${ref.tracker}"`);
@@ -951,10 +958,17 @@ function checkGuard(f, label, guards, report) {
       `${label} — needs exactly one of gmtGuard (the GMT workaround that covers it) or gmtNote (why it does not affect GMT)`,
     );
   }
-  if (f.gmtGuard !== null && !guards.has(f.gmtGuard)) {
+  if (Array.isArray(f.gmtGuard) && f.gmtGuard.length < 2) {
     report.problems.push(
-      `${label} — gmtGuard "${f.gmtGuard}" is not a group in ${REPROS}`,
+      `${label} — gmtGuard is a list of ${f.gmtGuard.length}; write one id as a string`,
     );
+  }
+  for (const id of guardIds(f)) {
+    if (!guards.has(id)) {
+      report.problems.push(
+        `${label} — gmtGuard "${id}" is not a group in ${REPROS}`,
+      );
+    }
   }
 }
 

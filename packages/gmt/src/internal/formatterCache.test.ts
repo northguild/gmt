@@ -9,6 +9,32 @@ describe("cachedFormatter", () => {
     clearFormatterCache();
   });
 
+  // Compat D33: a chinese or dangi date is refused on every host, and a refusal is not cached.
+  it.each`
+    locale               | options
+    ${"en-u-ca-chinese"} | ${{ timeZone: "UTC" }}
+    ${"en-u-ca-dangi"}   | ${{ timeZone: "UTC" }}
+    ${"en"}              | ${{ timeZone: "UTC", calendar: "chinese", dateStyle: "short" }}
+  `(
+    "throws a RangeError for $locale with $options on every call",
+    ({ locale, options }: { locale: string; options: object }) => {
+      expect(() => cachedFormatter("DateTimeFormat", locale, options)).toThrow(
+        RangeError,
+      );
+      expect(() => cachedFormatter("DateTimeFormat", locale, options)).toThrow(
+        RangeError,
+      );
+    },
+  );
+
+  // The argument check validates the caller's options only: a time-only function completes them
+  // afterwards, and the formatter it formats with is the one refused.
+  it("does not refuse a chinese date formatter when only the arguments are checked", () => {
+    expect(() =>
+      checkFormatterArguments("DateTimeFormat", "en-u-ca-chinese", {}),
+    ).not.toThrow();
+  });
+
   it("returns the same formatter for the same plain arguments", () => {
     const options = { dateStyle: "long", timeZone: "UTC" } as const;
     expect(cachedFormatter("DateTimeFormat", "en-GB", options)).toBe(

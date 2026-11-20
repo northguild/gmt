@@ -3,7 +3,7 @@ import { Temporal } from "../temporal";
 /*
  * Upstream repros for each `@js-temporal/polyfill` calendar defect GMT works around, with the
  * spec-correct answer. This file holds the repros the shipped capability probes read (D1-D8,
- * D10-D19 and D22); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
+ * D10-D18 and D22); `repros.ts` holds the canary-only groups and the full table. It imports ONLY the
  * polyfill, through `../temporal` (no other GMT module), so a canary script can load its compiled
  * copy straight from `dist`.
  *
@@ -31,7 +31,6 @@ export type DefectId =
   | "D16"
   | "D17"
   | "D18"
-  | "D19"
   | "D22";
 
 export interface ProbeRepro {
@@ -49,7 +48,7 @@ const MAX_ISO = "+275760-09-13";
 const MIN_ISO = "-271821-04-19";
 
 /** `year|monthCode|day` of an ISO date read in `calendar`. */
-function readFields(iso: string, calendar: string): string {
+export function readFields(iso: string, calendar: string): string {
   const date = Temporal.PlainDate.from(iso).withCalendar(calendar);
   return `${date.year}|${date.monthCode}|${date.day}`;
 }
@@ -814,33 +813,6 @@ const d18Repros: readonly ProbeRepro[] = [
 ];
 
 /**
- * D19 (`internal/zonedWallClockDifference.ts`): `ZonedDateTime#equals` answers false for two
- * identifiers of one zone on a host whose `Intl.DateTimeFormat#resolvedOptions` returns the
- * identifier as written. The polyfill's `GetAvailableNamedTimeZoneIdentifier` finds the primary
- * identifier in `Intl.supportedValuesOf("timeZone")` or, for a non-primary one, takes
- * `resolvedOptions().timeZone`. ECMA-402 §6.5 (Time Zone Identifiers) says "UTC" is primary and
- * "Etc/UTC" is a non-primary identifier that resolves to "UTC", and TimeZoneEquals compares the
- * primary identifiers, so `Etc/UTC` equals `UTC` on every host. JavaScriptCore (WebKit 26.6, Safari
- * 27) keeps the identifier as written (the Time Zone Canonicalization proposal), so the polyfill
- * compares `Etc/UTC` with `UTC` there and answers false. V8 and SpiderMonkey return the primary
- * identifier. The repro names the one pair the specification fixes, so it owns no time zone data.
- */
-const d19Repros: readonly ProbeRepro[] = [
-  {
-    defect: "D19",
-    calendar: "iso8601",
-    name: "etcUtcEqualsUtc",
-    expected: "true",
-    run: () =>
-      String(
-        new Temporal.ZonedDateTime(0n, "Etc/UTC").equals(
-          new Temporal.ZonedDateTime(0n, "UTC"),
-        ),
-      ),
-  },
-];
-
-/**
  * D22 (`internal/zonedDifference/nudgeOrigin.ts`): a zoned `relativeTo` or start in either pass of a
  * repeated hour is mismeasured. TC39 `ComputeNudgeWindow` takes the window's start from the origin's
  * own exact time when no unit has been added (tc39/proposal-temporal#3148 for `total`, #3149 for
@@ -1007,7 +979,6 @@ export const probeReproGroups = {
   d16: d16Repros,
   d17: d17Repros,
   d18: d18Repros,
-  d19: d19Repros,
   d22: d22Repros,
   d6: d6Repros,
   d7: [d7Repro, d7LeapMonthEndRepro],

@@ -58,7 +58,6 @@ const subMinuteOffsetCases = [
  * `timeZoneLike` regex requires a slash. `toOffsetInstant` keeps them, so this must too.
  */
 const aliasZoneCases = [
-  { timeZone: "EST5EDT", value: "2024-07-15T12:00:00-04:00[EST5EDT]" },
   { timeZone: "Zulu", value: "2024-07-15T12:00:00+00:00[Zulu]" },
   { timeZone: "US/Eastern", value: "2024-07-15T12:00:00-04:00[US/Eastern]" },
   {
@@ -294,6 +293,19 @@ describe("fromOffsetInstant", () => {
       }),
     ).toBe("");
   });
+
+  it.each(["EST5EDT", "est5edt", "CET", "Factory"])(
+    "returns '' for the refused zone %s",
+    (timeZone) => {
+      expect(
+        fromOffsetInstant({
+          instant: "2024-07-15T16:00:00Z",
+          offset: "-04:00",
+          timeZone,
+        }),
+      ).toBe("");
+    },
+  );
 
   it.each(aliasZoneCases)(
     "round-trips the alias zone $timeZone, which toOffsetInstant also keeps as written",

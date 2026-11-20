@@ -46,6 +46,8 @@ describe("week-year source rule", () => {
         "src/internal/weekYearSynth.ts",
         "src/internal/weekYearText.ts",
         "src/internal/resolveLocale.ts",
+        // D37 reads a tag's default calendar from a formatter with no options; it never formats.
+        "src/internal/defaultCalendarRefusal.ts",
         "src/internal/temporalCompat/capabilities.ts",
         "src/internal/temporalCompat/probeRepros.ts",
         "src/internal/temporalCompat/repros.ts",

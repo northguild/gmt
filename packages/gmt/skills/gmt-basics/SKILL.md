@@ -192,7 +192,8 @@ input before you act on it.
   Only the `timescale/`, `gnss/` and `finance/` functions accept a second 60, and only a
   listed one; see the `gmt-integration`, `gmt-gnss` and `gmt-finance` skills.
 - `isValidTimeZone` accepts every IANA name, including single-component links
-  such as `Japan`, `Zulu` and `EST5EDT`, and ignores case. It also accepts
+  such as `Japan` and `Zulu`, and ignores case, except nine names hosts
+  disagree on, which are invalid everywhere (`EST5EDT`, `CST6CDT`, `MST7MDT`, `PST8PDT`, `CET`, `EET`, `MET`, `WET` and `Factory`). It also accepts
   offset zone ids such as `"+05:00"`, as Temporal does.
 - `isLeapYear` and `getWeekNumber` take a `PlainDate` only: a date-time returns
   `false`/`null`. Pass `value.slice(0, 10)` for a date-time's date.

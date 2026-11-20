@@ -25,6 +25,9 @@ import {
  *   other non-object — a string, a number, a boolean — formats with the defaults, as
  *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
  *   carries no recognised option. Only `null` and `undefined` are special-cased.
+ * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
+ *   hosts print different dates for them (compat D33). A format with only a time or weekday field
+ *   still returns its text.
  *
  * @param value ISO PlainDate string
  * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)
@@ -40,6 +43,7 @@ import {
  * @example formatDate("2024-02-03", "en-GB", { dateStyle: "short" }) // "03/02/2024" — the pre-1.16.0 text
  * @example formatDate("invalid") // ""
  * @example formatDate("2024-02-03", ["fr-FR", "en-US"], { year: "numeric", month: "2-digit", day: "2-digit" }) // "03/02/2024" (the first listed locale)
+ * @example formatDate("2027-02-06", "zh-u-ca-chinese") // "" — hosts print different Chinese dates (compat D33)
  */
 export function formatDate(
   value: string,

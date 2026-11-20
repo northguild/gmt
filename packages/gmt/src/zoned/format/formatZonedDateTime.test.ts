@@ -7,6 +7,7 @@ import {
   MustTestLocales,
   oneOfIcu,
   sameInstantBattleCases,
+  arSAGregorian,
 } from "../../test";
 import { formatZonedDateTime } from "./formatZonedDateTime";
 
@@ -395,9 +396,9 @@ describe("formatZonedDateTime", () => {
     ${valueByLocale[MustTestLocales.arSA]} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"٠٣/٠٢/٢٠٢٤، ٠٢:٣٠:٤٥ م"}
     ${valueByLocale[MustTestLocales.arSA]} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"٣/٢/٢٠٢٤، ١٤:٣٠:٤٥"}
   `(
-    "formats valid zoned datetime $value for ar-SA with options $options to $expected",
+    "formats valid zoned datetime $value for ar-SA-u-ca-gregory with options $options to $expected",
     ({ value, options, expected }) => {
-      expect(formatZonedDateTime(value, MustTestLocales.arSA, options)).toBe(
+      expect(formatZonedDateTime(value, arSAGregorian, options)).toBe(
         normalizeDateTime(expected),
       );
     },
@@ -510,7 +511,9 @@ describe("formatZonedDateTime", () => {
   for (const locale of Object.values(MustTestLocales)) {
     it(`smoke: formats zoned datetime for locale ${locale} in its canonical timeZone`, () => {
       const value = localeZonedDateTimeInputByLocale[locale];
-      expect(formatZonedDateTime(value, locale)).not.toBe("");
+      // ar-SA names the calendar: its default one differs between hosts (compat D37).
+      const tag = locale === MustTestLocales.arSA ? arSAGregorian : locale;
+      expect(formatZonedDateTime(value, tag)).not.toBe("");
     });
   }
 

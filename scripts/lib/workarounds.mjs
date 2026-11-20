@@ -164,7 +164,7 @@ export const WORKAROUNDS = [
     title:
       "D13 — two offset changes inside one 14-day transition search step are skipped, or stall the search for ever (zonedWallClock.ts defect 5)",
     trigger:
-      "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (not filed)",
+      "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (tc39/proposal-temporal#3332). The pairs that 0.5.1 skips inside one 14-day step (America/Boa_Vista, Europe/Riga) need no report: a79c6a1 fixes them.",
     steps: [
       "Delete internal/zonedTransitionSearch.ts (its per-zone transition memo goes with it) and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
       "Delete isMidnightSkipped, the D13 terms of needsOwnStartOfDaySearch and needsOwnDayBoundsSearch in internal/zonedWallClock.ts, isTransitionSearchCompatNeeded in capabilities.ts and its export in index.ts, and the D13 repros with withBoundedOffsetReads.",
@@ -236,22 +236,6 @@ export const WORKAROUNDS = [
     ],
   },
   {
-    defects: ["D19"],
-    // A polyfill defect that shows only on an engine whose Intl.DateTimeFormat keeps a time zone
-    // identifier as written: JavaScriptCore today. V8 and SpiderMonkey return the primary
-    // identifier, so the probe passes there whatever the polyfill does.
-    engines: ["webkit"],
-    title:
-      "D19 — ZonedDateTime#equals answers false for two identifiers of one zone where resolvedOptions keeps the identifier (JavaScriptCore)",
-    trigger:
-      "a js-temporal release whose TimeZoneEquals finds the primary identifier on a host whose Intl.DateTimeFormat#resolvedOptions returns the identifier as written, so the D19 probe (Etc/UTC equals UTC, ECMA-402 §6.5) passes in the WebKit the native suite runs: the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts, Linux and macOS) reports it. WebKit is the only engine in D19's scope; this check runs on Node, where D19 is out of scope and never removable",
-    steps: [
-      "Delete timeZoneEquals.ts, its exports in index.ts, isTimeZoneEqualsCompatNeeded in capabilities.ts and the D19 repros; isCalendarDifferenceAcrossZones (internal/zonedWallClockDifference.ts) compares with new Temporal.ZonedDateTime(0n, id).equals(...) again.",
-      "Keep every diffZoned and intervalLengthZoned row: the values are TimeZoneEquals answers and hold either way.",
-      `Full wording: ${COMPAT_README} § Removal steps 19.`,
-    ],
-  },
-  {
     defects: ["D21"],
     title:
       "D21 — Temporal.Now reads one millisecond early after a clock before 1970 (temporalCompat/clock.ts)",
@@ -316,11 +300,13 @@ export const WORKAROUNDS = [
     defects: ["D26"],
     title:
       "D26 — an islamic calendar prints a negative year before the Hijra (internal/yearPrinting.ts)",
+    // Every engine, no `engines` key: GMT prints no date before the Hijra on any host, so one
+    // engine passing proves nothing.
     trigger:
-      "every engine's compat verdict passes the D26 repro: en-u-ca-islamic-civil prints a different era text for ISO 600-07-10 and 2025-07-10",
+      "every engine's compat verdict (Node, chromium, firefox, webkit, webkit-macos) passes the D26 repro: en-u-ca-islamic-civil prints a different era text for ISO 600-07-10 and 2025-07-10. Every engine, not one: a WebKit pass alone keeps D26",
     steps: [
-      "Delete the Hijra branch of repairYearPrinting in yearPrinting.ts (beforeHijra, the islamic flag), isIslamicEraCompatNeeded in capabilities.ts and the D26 repro in repros.ts. guardedDateTimeFormat in formatterCache.ts stays while D18 does.",
-      "Keep the D26 rows except those that assert the empty value, which a fixed engine replaces with the era's text.",
+      "Delete the Hijra branch of repairYearPrinting in yearPrinting.ts (beforeHijra and the islamic flag), the islamic* skip in earlierEraProbes (weekYearRange.ts), isIslamicEraCompatNeeded in capabilities.ts and the D26 repro in repros.ts. guardedDateTimeFormat in formatterCache.ts stays while D18 does.",
+      "Turn the empty-value rows of yearPrinting.test.ts, islamicCalendarResolution.test.ts and islamicEpochEra.test.ts into the era text the fixed engines print (bh, era year 1 − year); keep the other D26 rows.",
       `Full wording: ${COMPAT_README} § Removal steps 26.`,
     ],
   },
@@ -396,6 +382,73 @@ export const WORKAROUNDS = [
       "Delete internal/islamicEpochEra.ts, its call in construct (formatterCache.ts), its call in localFieldsOf (rangeFieldValues.ts), isIslamicEpochEraCompatNeeded in capabilities.ts and the D32 repro in repros.ts.",
       "Keep every row of islamicEpochEra.test.ts: the epoch day and the era are Intl era/monthCode Table 2's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 32.`,
+    ],
+  },
+  {
+    defects: ["D33"],
+    // Every engine: the defect is host disagreement, so one engine passing proves nothing.
+    title:
+      "D33 — Chinese and Dangi dates differ by host; GMT refuses them on every host (internal/lunisolarRefusal.ts)",
+    trigger:
+      "every engine's compat verdict (Node, chromium, firefox, webkit, webkit-macos) passes every D33 repro: the fields rows (the Temporal dependency's dates) and the text rows (the host's Intl.DateTimeFormat) give the Purple Mountain Observatory and KASI dates, so 2027-02-06 is the Chinese New Year and 2027-02-07 the Dangi one on every host (Intl era/monthCode §1.1 Table 1)",
+    steps: [
+      "A minor changeset, not a cleanup: add chinese and dangi to calendarSystems (internal/calendarSystemIds.ts) and CalendarSystem (types/calendar-system.ts), with the D33 repro values as public test rows.",
+      "Delete internal/lunisolarRefusal.ts and its call in construct (formatterCache.ts), the D33 repros in repros.ts, D33_CHECK and the Chinese and Dangi sweep in scripts/polyfill-swap.mjs.",
+      "Turn the sentinel rows of lunisolarRefused.test.ts into value rows, and move the D28 and chinese D29 rows back to the public functions.",
+      `Full wording: ${COMPAT_README} § Removal steps 33.`,
+    ],
+  },
+  {
+    defects: ["D34"],
+    // JavaScriptCore only: on any other engine the probe passes because the defect is not there.
+    engines: ["webkit"],
+    title:
+      "D34 — the Coptic era changes in the middle of 1 Tout AM 1 (internal/copticEra.ts)",
+    trigger:
+      "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D34 repro: en-u-ca-coptic prints the same era at the first and the last hour of ISO 0284-08-29 in UTC (WebKit/WebKit#81144, bug 331724)",
+    steps: [
+      "Delete isCopticEpochEraCompatNeeded in capabilities.ts, its term in repairCopticEra's activation and atRisk (copticEra.ts), copticEpochTwin, copticFieldTwin and its call in localFieldsOf (rangeFieldValues.ts), and the D34 repro in repros.ts.",
+      "Keep every D34 row of copticEra.test.ts: the era is Intl era/monthCode Table 2's and holds either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 34.`,
+    ],
+  },
+  {
+    defects: ["D35"],
+    // Every engine: the defect is host disagreement, so one engine passing proves nothing.
+    title:
+      "D35 — nine zone names hosts disagree on; GMT refuses them on every host (internal/refusedZoneNames.ts)",
+    trigger:
+      "every engine's compat check passes every D35 repro (pnpm compat and the chromium, firefox, webkit and webkit-macos legs): each of CST6CDT, EST5EDT, MST7MDT, PST8PDT, CET, EET, MET, WET and Factory is accepted by both Intl and Temporal. Differences in a name's data between tzdata versions do not keep D35. Upstream: WebKit 330688",
+    steps: [
+      "A minor changeset, not a cleanup. Delete internal/refusedZoneNames.ts, its calls (isZoneId, zoneFrame, normalizeZoneFrame, timeZoneIdOf, zonedDateTimeFrom, zonedDateTimeOf, construct, getTimeZones, writeOffsetInstant), the D35 repros and the D35 id in repros.ts, and this entry.",
+      "Move the nine names back into ianaSingleComponentTimeZones (test/timeZoneMatrix.ts); the sentinel rows become value rows.",
+      `Full wording: ${COMPAT_README} § Removal steps 35.`,
+    ],
+  },
+  {
+    defects: ["D36"],
+    // Every engine: the defect is host disagreement, so one engine passing proves nothing.
+    title:
+      "D36 — week data hosts disagree on; GMT refuses it on every host (internal/weekDataRefusal.ts), including the languages whose likely region differs between WebKit builds",
+    trigger:
+      "every engine's compat check passes every D36 repro (pnpm compat and the chromium, firefox, webkit and webkit-macos legs): und-AE, und-BD, und-CN, und-DZ, und-IS, und-JO and und-MM return CLDR 48's first day and weekend, and und-BU has region MM",
+    steps: [
+      "A minor changeset, not a cleanup. Delete internal/weekDataRefusal.ts and its test, the refusal branches in internal/localeWeekInfo.ts, the null handling in getLocaleFirstDayOfWeek, getLocaleWeekendDays and weekdayNamesFor (internal/localeNames.ts), the D36 repros and the D36 id in repros.ts, and this entry.",
+      "The refused rows of the week readers become value rows.",
+      `Full wording: ${COMPAT_README} § Removal steps 36.`,
+    ],
+  },
+  {
+    defects: ["D37"],
+    // Every engine: the defect is host disagreement, so one engine passing proves nothing.
+    title:
+      "D37 — default calendars hosts disagree on; GMT refuses a date in them on every host unless a calendar is named (internal/defaultCalendarRefusal.ts)",
+    trigger:
+      "every engine's compat check passes every D37 repro (pnpm compat and the chromium, firefox, webkit and webkit-macos legs): one tag for each key of internal/defaultCalendarRefusal.ts, such as ar-SA, en-TH, ps and uz-004, resolves the default calendar ICU 78 with CLDR 48 gives",
+    steps: [
+      "A minor changeset, not a cleanup. Delete internal/defaultCalendarRefusal.ts and its test, its call in construct (internal/formatterCache.ts), the refusal rows of src/test/defaultCalendarRefused.test.ts, the D37 repros and the D37 id in repros.ts, and this entry. Keep internal/namedCalendar.ts: passing the -u-ca- keyword as the calendar option is ECMA-402 behaviour.",
+      "The refused rows become value rows.",
+      `Full wording: ${COMPAT_README} § Removal steps 37.`,
     ],
   },
   {

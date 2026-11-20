@@ -47,6 +47,16 @@ export const COMMON_FIELDS = [
   "state",
 ];
 
+/** The canary group ids a filing's `gmtGuard` names: none, one, or the whole list. A twin of
+ * `guardIds` in `apps/dox/src/data/upstream-filings.ts` (scripts may not import TypeScript);
+ * `upstream-trackers.test.ts` checks that both agree. */
+export const guardIds = (f) =>
+  f.gmtGuard === null
+    ? []
+    : typeof f.gmtGuard === "string"
+      ? [f.gmtGuard]
+      : [...f.gmtGuard];
+
 /** The identity fields of each tracker. */
 export const IDENTITY_FIELDS = {
   github: ["repo", "number", "kind"],
@@ -207,7 +217,8 @@ export function parseJira(raw, key, days) {
   const resolution = f.resolution?.name ?? null;
   const closed = resolution !== null || f.status.statusCategory?.key === "done";
   return {
-    title: f.summary,
+    // A summary pasted into Jira can keep a trailing newline; the title is one line of text.
+    title: f.summary.trim(),
     url: urlOf({ tracker: "jira", key }),
     state: closed ? "closed" : "open",
     status: f.status.name,
@@ -283,14 +294,49 @@ export const bugzillaBugUrl = (host, id) =>
   `https://${host}/rest/bug/${id}?include_fields=${BUG_FIELDS}`;
 export const bugzillaCommentsUrl = (host, id) =>
   `https://${host}/rest/bug/${id}/comment`;
+export const bugzillaHistoryUrl = (host, id) =>
+  `https://${host}/rest/bug/${id}/history`;
+
+const CLOSED_STATUSES = new Set(["RESOLVED", "VERIFIED", "CLOSED"]);
+
+/** When a bug last moved to a closed status, from its history response; `null` if never. */
+function lastClosedAt(historyRaw) {
+  const history = JSON.parse(historyRaw).bugs?.[0]?.history ?? [];
+  let when = null;
+  for (const entry of history) {
+    const closes = entry.changes?.some(
+      (c) => c.field_name === "status" && CLOSED_STATUSES.has(c.added),
+    );
+    if (closes) when = entry.when;
+  }
+  return when;
+}
 
 /**
  * The synced fields of one Bugzilla bug, from its bug and comment responses.
  *
- * Bugzilla files the description as comment 0, so it is not a reply. A reply is a comment by
- * anyone but the bug's reporter: we only track bugs we reported there, so the reporter is us.
+ * Bugzilla files the description as comment 0, so it is not a reply. A maintainer's reply is a
+ * comment by anyone but us: the reporter on a bug we filed, or whoever wrote `ourComment` (the
+ * comment number in a contributor row's `contributionUrl`) on a bug someone else filed.
+ *
+ * bugs.webkit.org does not send `cf_last_resolved`, and its `last_change_time` moves with every
+ * comment, so the closing day comes from `history` (the bug's history response) when given.
+ *
+ * @param {string} bugRaw
+ * @param {string} commentsRaw
+ * @param {string} host
+ * @param {number} id
+ * @param {{ fromIso: (iso: string) => string }} days
+ * @param {{ history?: string | null, ourComment?: number | null }} [options]
  */
-export function parseBugzilla(bugRaw, commentsRaw, host, id, days) {
+export function parseBugzilla(
+  bugRaw,
+  commentsRaw,
+  host,
+  id,
+  days,
+  { history = null, ourComment = null } = {},
+) {
   const bug = JSON.parse(bugRaw).bugs?.[0];
   const list = JSON.parse(commentsRaw).bugs?.[String(id)]?.comments;
   if (
@@ -301,7 +347,15 @@ export function parseBugzilla(bugRaw, commentsRaw, host, id, days) {
     throw new Error(`Bugzilla ${host}#${id}: unexpected response shape`);
   }
   const replies = list.filter((c) => c.count > 0);
+  const us =
+    ourComment === null
+      ? bug.creator
+      : (list.find((c) => c.count === ourComment)?.creator ?? bug.creator);
   const closed = bug.is_open === false;
+  const closedAt =
+    bug.cf_last_resolved ??
+    (history === null ? null : lastClosedAt(history)) ??
+    bug.last_change_time;
   return {
     title: bug.summary,
     url: urlOf({ tracker: "bugzilla", host, id }),
@@ -309,11 +363,9 @@ export function parseBugzilla(bugRaw, commentsRaw, host, id, days) {
     status: bug.status,
     resolution: bug.resolution || null,
     comments: replies.length,
-    maintainerComments: replies.filter((c) => c.creator !== bug.creator).length,
+    maintainerComments: replies.filter((c) => c.creator !== us).length,
     createdAt: days.fromIso(bug.creation_time),
     updatedAt: days.fromIso(bug.last_change_time),
-    closedAt: closed
-      ? days.fromIso(bug.cf_last_resolved ?? bug.last_change_time)
-      : null,
+    closedAt: closed ? days.fromIso(closedAt) : null,
   };
 }

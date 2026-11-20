@@ -1,9 +1,13 @@
 import { plainOptionEntries } from "./plainOptionEntries";
-import { canonicalLocaleTags } from "./resolveLocale";
+import { writtenLocaleTags } from "./resolveLocale";
 import { isIslamicCalendarResolutionCompatNeeded } from "./temporalCompat/capabilities";
 import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
 import { repairCopticEra } from "./copticEra";
 import { repairIslamicEpochEra } from "./islamicEpochEra";
+import { refuseLunisolarDate } from "./lunisolarRefusal";
+import { refuseDisputedDefaultCalendar } from "./defaultCalendarRefusal";
+import { withNamedCalendar } from "./namedCalendar";
+import { isRefusedZoneName } from "./refusedZoneNames";
 import { repairEraYearNumerals } from "./japaneseNumerals";
 import { repairYearPrinting, widenRelatedYear } from "./yearPrinting";
 
@@ -132,23 +136,49 @@ function islamicResolved(
   return [rebuilt, nextOptions];
 }
 
+/**
+ * @param locale the caller's tags as written (`canonicalLocale`)
+ * @param refuseDates whether a chinese or dangi date formatter (compat D33), or one in a disputed
+ * default calendar (compat D37), throws. The argument check passes `false`: it builds from the
+ * caller's own options, which a time-only function completes later (`formatTime`), so only the
+ * formatter a function formats with is refused.
+ */
 function construct(
   kind: FormatterKind,
   locale: FormatterLocale,
   options: object,
+  refuseDates = true,
 ): object {
   switch (kind) {
     case "DateTimeFormat": {
+      // D35: nine zone names hosts disagree on are refused before anything is built.
+      const { timeZone } = options as Intl.DateTimeFormatOptions;
+      if (typeof timeZone === "string" && isRefusedZoneName(timeZone)) {
+        throw new RangeError(`time zone ${timeZone} is not supported`);
+      }
+      // The caller's `-u-ca-` keyword is passed as the `calendar` option, so a host without data
+      // for the language keeps it (`namedCalendar.ts`).
       const [built, builtOptions] = islamicResolved(
         locale,
-        options as Intl.DateTimeFormatOptions,
+        withNamedCalendar(locale, options as Intl.DateTimeFormatOptions),
       );
+      // D33: a chinese or dangi date is refused before any repair runs; D37: so is a date in a
+      // default calendar hosts disagree on, read from the tags as the caller wrote them.
+      const guarded = guardedDateTimeFormat(built, builtOptions);
+      if (refuseDates) {
+        refuseLunisolarDate(guarded);
+        refuseDisputedDefaultCalendar(
+          guarded,
+          locale,
+          typeof builtOptions.calendar === "string"
+            ? builtOptions.calendar
+            : undefined,
+        );
+      }
       return repairIslamicEpochEra(
         repairCopticEra(
-          repairYearPrinting(
-            guardedDateTimeFormat(built, builtOptions),
-            builtOptions,
-            (twin) => cachedFormatter("DateTimeFormat", built, twin),
+          repairYearPrinting(guarded, builtOptions, (twin) =>
+            cachedFormatter("DateTimeFormat", built, twin),
           ),
           builtOptions,
         ),
@@ -186,7 +216,7 @@ function hasZoneString(entries: [string, unknown][]): boolean {
 
 /**
  * The cache key for these arguments, or `null` when they must be constructed fresh. The
- * locale is already canonical (see `canonicalLocale`).
+ * locale is already read (see `canonicalLocale`).
  *
  * @param zoneRequired whether the options must carry a `timeZone` string: a `DateTimeFormat`
  * without one answers from the process default zone, which can change.
@@ -208,18 +238,22 @@ function cacheKey(
 }
 
 /**
- * The locale list as `Intl` canonicalizes it (ECMA-402 CanonicalizeLocaleList): an array is read
- * once, here, through `Intl.getCanonicalLocales`, so the key and the constructor see the same
- * strings even when the array is a Proxy that answers each read differently, and a bad list
- * throws before the options are read, as in the constructors. A value that is not `undefined`,
- * a string or an array throws `TypeError`, which every caller turns into its sentinel. So does a list with an
- * entry that is not a string.
+ * The locale list as the caller wrote it: an array is read once, here, so the key, the D37 check
+ * and the constructor see the same strings even when the array is a Proxy that answers each read
+ * differently. Its tags are checked through `Intl.getCanonicalLocales` (ECMA-402
+ * CanonicalizeLocaleList), so a bad list throws before the options are read, as in the
+ * constructors, but kept as written: hosts canonicalize aliases differently, and D37 reads the
+ * written form. A value that is not `undefined`, a string or an array throws `TypeError`, which
+ * every caller turns into its sentinel. So does a list with an entry that is not a string.
  */
 function canonicalLocale(locale: FormatterLocale): FormatterLocale {
   // A string stays as it is: its canonical form is the constructor's to read.
-  return typeof locale === "string" || locale === undefined
-    ? locale
-    : canonicalLocaleTags(locale);
+  if (typeof locale === "string" || locale === undefined) {
+    return locale;
+  }
+  const written = writtenLocaleTags(locale);
+  Intl.getCanonicalLocales(written);
+  return written;
 }
 
 /**
@@ -289,7 +323,7 @@ export function checkFormatterArguments(
   locale = canonicalLocale(locale);
   const key = cacheKey(kind, locale, options, false);
   if (key === null) {
-    construct(kind, locale, options);
+    construct(kind, locale, options, false);
     return;
   }
   forgetIfReplaced(kind);
@@ -297,7 +331,7 @@ export function checkFormatterArguments(
   if (seen?.has(key)) {
     return;
   }
-  construct(kind, locale, options);
+  construct(kind, locale, options, false);
   if (seen === undefined) {
     seen = new Set();
     checked.set(kind, seen);

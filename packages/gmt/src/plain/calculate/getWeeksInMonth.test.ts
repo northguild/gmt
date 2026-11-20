@@ -1,9 +1,32 @@
 import { MustTestLocales } from "../../test";
 import { mockTemporalPlainDateFromThrow } from "../../test/mocks";
 import { getWeeksInMonth } from "./getWeeksInMonth";
-import { runtimeWeekInfo } from "../../test/runtimeWeekInfo";
 
 describe("getWeeksInMonth", () => {
+  // zh-CN and is-IS: a region whose first day some runtime does not read as CLDR does (compat D36),
+  // so every runtime returns the sentinel.
+  it.each`
+    locale
+    ${MustTestLocales.zhCN}
+    ${MustTestLocales.isIS}
+  `(
+    "returns the sentinel for $locale, whose first day runtimes dispute",
+    ({ locale }) => {
+      expect(getWeeksInMonth("2026-02-15", locale)).toBeNull();
+    },
+  );
+
+  // `-u-fw-` names the first day (UTS #35 key fw), so the answer needs no runtime data.
+  it.each`
+    locale              | expected
+    ${"zh-CN-u-fw-mon"} | ${5}
+    ${"zh-CN-u-fw-sun"} | ${4}
+  `(
+    "returns $expected week-rows for 2026-02-15 in $locale",
+    ({ locale, expected }) => {
+      expect(getWeeksInMonth("2026-02-15", locale)).toBe(expected);
+    },
+  );
   // The same month spans a different number of week-rows depending on
   // locale (whether the week starts Sunday or Monday).
   it.each`
@@ -33,7 +56,6 @@ describe("getWeeksInMonth", () => {
     ${MustTestLocales.itIT} | ${5}
     ${MustTestLocales.ptPT} | ${4}
     ${MustTestLocales.svSE} | ${5}
-    ${MustTestLocales.zhCN} | ${5}
     ${MustTestLocales.zhTW} | ${4}
     ${MustTestLocales.jaJP} | ${4}
     ${MustTestLocales.koKR} | ${4}
@@ -47,12 +69,6 @@ describe("getWeeksInMonth", () => {
       expect(getWeeksInMonth("2026-02-15", locale)).toBe(expected);
     },
   );
-
-  it("returns the correct week-row count for is-IS regardless of its CLDR-version-dependent firstDay", () => {
-    const firstDay = runtimeWeekInfo(MustTestLocales.isIS).firstDay;
-    const expected = firstDay === 1 ? 5 : 4;
-    expect(getWeeksInMonth("2026-02-15", MustTestLocales.isIS)).toBe(expected);
-  });
 
   it.each`
     value

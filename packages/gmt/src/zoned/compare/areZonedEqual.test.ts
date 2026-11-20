@@ -1,4 +1,4 @@
-import { linkPairIsOneZone, sameInstantBattleCases } from "../../test";
+import { sameInstantBattleCases } from "../../test";
 import { areZonedEqual } from "./areZonedEqual";
 
 describe("areZonedEqual", () => {
@@ -99,19 +99,32 @@ describe("areZonedEqual compares the instant, the time zone and the calendar", (
   );
 });
 
-// An IANA link is one zone with its target only where the host can resolve it (temporalCompat D19):
-// the expected value is the host's own answer, so the rows hold on every engine.
+// A Link and its Zone are two zones on every host (GMT rule): no API names a Link's primary
+// identifier on every host, and GMT owns no link data. The same instant is still not equal.
 describe("areZonedEqual across an IANA link pair", () => {
   it.each`
-    value1                                        | value2                                       | zone1              | zone2
-    ${"2024-01-01T00:00:00+02:00[Europe/Kiev]"}   | ${"2024-01-01T00:00:00+02:00[Europe/Kyiv]"}  | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}
-    ${"2024-01-01T05:30:00+05:30[Asia/Calcutta]"} | ${"2024-01-01T05:30:00+05:30[Asia/Kolkata]"} | ${"Asia/Calcutta"} | ${"Asia/Kolkata"}
+    value1                                        | value2                                           | zone1              | zone2
+    ${"2024-01-01T00:00:00+02:00[Europe/Kiev]"}   | ${"2024-01-01T00:00:00+02:00[Europe/Kyiv]"}      | ${"Europe/Kiev"}   | ${"Europe/Kyiv"}
+    ${"2024-01-01T05:30:00+05:30[Asia/Calcutta]"} | ${"2024-01-01T05:30:00+05:30[Asia/Kolkata]"}     | ${"Asia/Calcutta"} | ${"Asia/Kolkata"}
+    ${"2024-01-01T00:00:00-05:00[US/Eastern]"}    | ${"2024-01-01T00:00:00-05:00[America/New_York]"} | ${"US/Eastern"}    | ${"America/New_York"}
   `(
-    "matches the host's answer for $zone1 and $zone2 at one instant",
-    ({ value1, value2, zone1, zone2 }: Record<string, string>) => {
-      expect(areZonedEqual(value1, value2)).toBe(
-        linkPairIsOneZone(zone1, zone2),
-      );
+    "is false for $zone1 and $zone2 at one instant, both ways round",
+    ({ value1, value2 }: Record<string, string>) => {
+      expect(areZonedEqual(value1, value2)).toBe(false);
+      expect(areZonedEqual(value2, value1)).toBe(false);
+    },
+  );
+
+  it.each`
+    value1                                           | value2
+    ${"2024-01-01T00:00:00+00:00[UTC]"}              | ${"2024-01-01T00:00:00+00:00[Etc/UTC]"}
+    ${"2024-01-01T00:00:00+00:00[Etc/GMT]"}          | ${"2024-01-01T00:00:00+00:00[GMT]"}
+    ${"2024-01-01T00:00:00-05:00[america/new_york]"} | ${"2024-01-01T00:00:00-05:00[America/New_York]"}
+  `(
+    "is true for the names '$value1' and '$value2', which are one zone by name",
+    ({ value1, value2 }: Record<string, string>) => {
+      expect(areZonedEqual(value1, value2)).toBe(true);
+      expect(areZonedEqual(value2, value1)).toBe(true);
     },
   );
 });

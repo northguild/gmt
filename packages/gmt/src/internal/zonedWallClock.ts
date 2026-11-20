@@ -12,6 +12,7 @@ import {
 } from "./temporalCompat";
 import { stringOptionOrDefault } from "./typedOptions";
 import { hasSecond60Field } from "./inputChecks";
+import { isRefusedZoneName } from "./refusedZoneNames";
 import { hasZonedDateTimeShape } from "./isoStringBody";
 
 /*
@@ -640,9 +641,21 @@ function validateFromOptions(options: ZonedFromOptions | undefined): void {
   Temporal.ZonedDateTime.from(UTC_REFERENCE, options);
 }
 
-/** A zone id as Temporal canonicalizes it, from an identifier or any RFC 9557 string. */
+/**
+ * A zone id as Temporal canonicalizes it, from an identifier or any RFC 9557 string. Throws
+ * `RangeError` for a name GMT refuses on every host (compat D35).
+ */
 export function timeZoneIdOf(timeZoneLike: string): string {
-  return UTC_REFERENCE.withTimeZone(timeZoneLike).timeZoneId;
+  const timeZoneId = UTC_REFERENCE.withTimeZone(timeZoneLike).timeZoneId;
+  return refuseZoneName(timeZoneId);
+}
+
+/** The zone id, or a `RangeError` when it is one of the nine names refused on every host (D35). */
+function refuseZoneName(timeZoneId: string): string {
+  if (isRefusedZoneName(timeZoneId)) {
+    throw new RangeError(`time zone ${timeZoneId} is not supported`);
+  }
+  return timeZoneId;
 }
 
 /** Offset nanoseconds of a UTC offset string (`"+10:00"`, `"-04:56:02"`), parsed by Temporal. */
@@ -856,9 +869,20 @@ function zExactOptions(
  *
  * @param item RFC 9557 zoned string or ZonedDateTime-like property bag
  * @param callerOptions Temporal `disambiguation` / `offset` / `overflow`
- * @returns the resolved Temporal.ZonedDateTime; throws where TC39 Temporal throws
+ * @returns the resolved Temporal.ZonedDateTime; throws where TC39 Temporal throws, and for one of
+ *   the nine zone names GMT refuses on every host (compat D35)
  */
 export function zonedDateTimeFrom(
+  item: string | Temporal.ZonedDateTimeLike,
+  callerOptions?: ZonedFromOptions,
+): Temporal.ZonedDateTime {
+  const zoned = zonedDateTimeFromUnrefused(item, callerOptions);
+  refuseZoneName(zoned.timeZoneId);
+  return zoned;
+}
+
+/** `zonedDateTimeFrom` before the D35 check. */
+function zonedDateTimeFromUnrefused(
   item: string | Temporal.ZonedDateTimeLike,
   callerOptions?: ZonedFromOptions,
 ): Temporal.ZonedDateTime {

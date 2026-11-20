@@ -2,7 +2,7 @@ import {
   eraNamesFor,
   meridiemsFor,
   monthNamesFor,
-  weekdayNamesFor,
+  isoWeekdayNamesFor,
 } from "./localeNames";
 import { MustTestLocales } from "../test/localeMatrix";
 import {
@@ -207,7 +207,7 @@ describe("parseValueWithPattern", () => {
       ({ token, locale }: { token: string; locale: undefined | [] }) => {
         const spies = [
           vi.mocked(monthNamesFor),
-          vi.mocked(weekdayNamesFor),
+          vi.mocked(isoWeekdayNamesFor),
           vi.mocked(meridiemsFor),
           vi.mocked(eraNamesFor),
         ];

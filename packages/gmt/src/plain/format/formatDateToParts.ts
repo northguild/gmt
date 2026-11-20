@@ -17,10 +17,9 @@ import {
  * - Each part is `{ type, value }` where `type` is one of:
  *   `"era"`, `"year"`, `"relatedYear"`, `"yearName"`, `"month"`, `"day"`, `"weekday"`,
  *   `"literal"`.
- * - A lunisolar calendar adds two more: `zh-u-ca-chinese` and `ko-u-ca-dangi` emit
- *   `"relatedYear"` (the Gregorian year the cycle falls in) and `"yearName"` (the sexagenary
- *   cycle name) in place of, or beside, `"year"`. Code that looks up a `"year"` part must handle
- *   their absence.
+ * - A `chinese` or `dangi` calendar returns `[]` for any format with a year, month, day or era:
+ *   hosts print different dates for them (compat D33). A format with only a time or weekday field
+ *   still returns its parts.
  * - The caller should iterate the array as returned; reassembling in a fixed
  *   order reintroduces exactly the bug `formatToParts` exists to avoid.
  * - A PlainDate has no time or zone, so no `hour`/`minute`/`second`/`dayPeriod`/`timeZoneName`
@@ -52,6 +51,7 @@ import {
  * @example formatZonedToParts("2024-02-29T00:00:00+00:00[UTC]", "en-US", { timeStyle: "long" }) // [{ type: "hour", value: "12" }, { type: "literal", value: ":" }, { type: "minute", value: "00" }, { type: "literal", value: ":" }, { type: "second", value: "00" }, { type: "literal", value: "\u202f" }, { type: "dayPeriod", value: "AM" }, { type: "literal", value: " " }, { type: "timeZoneName", value: "UTC" }] — the pre-1.16.0 parts
  * @example formatDateToParts("invalid") // []
  * @example formatDateToParts("2024-02-03", ["fr-FR", "en-US"]) // [{ type: "day", value: "03" }, { type: "literal", value: "/" }, …]
+ * @example formatDateToParts("2027-02-06", "zh-u-ca-chinese") // [] — hosts print different Chinese dates (compat D33)
  */
 export function formatDateToParts(
   value: string,

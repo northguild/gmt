@@ -182,7 +182,8 @@ converting between time zones, or doing arithmetic that must respect DST.
     distinct local dates the overlap touches: a deleted day is not counted, and a
     fall-back into the previous date counts that date.
 13. **Zone names and leap seconds.** Every IANA name is a zone, including
-    single-component links (`Japan`, `Zulu`, `EST5EDT`), in any case.
+    single-component links (`Japan`, `Zulu`), in any case, except nine names
+    hosts disagree on, invalid everywhere (`EST5EDT`, `CST6CDT`, `MST7MDT`, `PST8PDT`, `CET`, `EET`, `MET`, `WET` and `Factory`).
     `toOffsetInstant` returns IANA casing (`"asia/kolkata"` gives
     `"Asia/Kolkata"`). `:60` is invalid in every spelling (`T`, `t`, space,
     basic format) and every zoned function returns its sentinel for it rather

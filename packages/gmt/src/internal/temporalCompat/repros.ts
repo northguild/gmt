@@ -3,13 +3,14 @@ import {
   type DefectId,
   type ProbeRepro,
   probeReproGroups,
+  readFields,
 } from "./probeRepros";
 import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 
 /*
  * Every upstream repro for each `@js-temporal/polyfill` defect GMT works around, with the
  * spec-correct answer: the probe groups from `probeRepros.ts` plus the canary-only groups below
- * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D32). No shipped module imports this file: a repro the
+ * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D37). No shipped module imports this file: a repro the
  * shipped probes do not read lives here, so it never reaches a bundle. It imports ONLY the
  * polyfill (through `../temporal`) and `probeRepros.ts`, so a canary script can load its compiled copy straight from
  * `dist` and report which workarounds are still needed.
@@ -53,7 +54,12 @@ export type BoundedWorkDefectId = "D9" | "D21";
  * (`formatterCache.ts`): `islamic` and `islamic-rgsa` resolve as Intl era/monthCode says. D31
  * (`copticEra.ts`): the coptic calendar prints `1 - year` and no era before AM 1 (ICU-23277). D32
  * (`islamicEpochEra.ts`): JavaScriptCore changes the Islamic era in the middle of the first day of year 1
- * (WebKit 331724).
+ * (WebKit 331724). D34 (`copticEra.ts`): JavaScriptCore changes the Coptic era in the middle of 1 Tout AM 1
+ * (WebKit 331724). D33
+ * (`lunisolarRefusal.ts`): hosts print different Chinese and Dangi dates, and the dependency reads
+ * them from the host. D35 (`refusedZoneNames.ts`): hosts accept different zone names. D36 (`weekDataRefusal.ts`): hosts
+ * report different week data for a few regions and deprecated region codes. D37
+ * (`defaultCalendarRefusal.ts`): hosts give a few locales different default calendars.
  */
 export type CanaryDefectId =
   | "D23"
@@ -65,7 +71,12 @@ export type CanaryDefectId =
   | "D29"
   | "D30"
   | "D31"
-  | "D32";
+  | "D32"
+  | "D33"
+  | "D34"
+  | "D35"
+  | "D36"
+  | "D37";
 
 export interface Repro extends Omit<ProbeRepro, "defect"> {
   defect: DefectId | ZonedDefectId | BoundedWorkDefectId | CanaryDefectId;
@@ -653,6 +664,27 @@ const yearPrintingRepros: readonly Repro[] = [
     },
   },
   {
+    defect: "D34",
+    calendar: "iso8601",
+    name: "copticEraOnEpochDay",
+    expected: "one era",
+    run: () => {
+      const eraAt = (hour: number) =>
+        new Intl.DateTimeFormat("en-u-ca-coptic", {
+          era: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+          .format(
+            Temporal.Instant.from(
+              `0284-08-29T${String(hour).padStart(2, "0")}:00:00Z`,
+            ).epochMilliseconds,
+          )
+          .replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+      return eraAt(0) === eraAt(23) ? "one era" : "two eras";
+    },
+  },
+  {
     defect: "D27",
     calendar: "iso8601",
     name: "jaJapaneseTwoDigitEraYear",
@@ -711,12 +743,232 @@ const rangeFieldRepros: readonly Repro[] = rangeFieldCases.map((c) => ({
   run: () => rangeFieldProblem(c.locale, c.options, c.from, c.to),
 }));
 
+/**
+ * D33: known Chinese and Dangi answers, in three groups. The values are the Intl era/monthCode
+ * proposal's (section 1.1 Table 1: `chinese` follows Purple Mountain Observatory data, `dangi`
+ * Korea Astronomy and Space Science Institute data; Table 3 names the leap month codes). Chinese
+ * rows are checked against the Hong Kong Observatory Gregorian-Lunar Calendar Conversion Table
+ * (computed to GB/T 33661-2017), Dangi rows against the KASI lunar-solar conversion service, and
+ * every row against native Temporal (ICU4X). Fields rows (`year|monthCode|day` of an ISO date) and
+ * reverse rows (the ISO date of fields) are the dependency's answer; text rows (`relatedYear|day`
+ * of a UTC-noon instant, month text left out because ICU 78 prints `6bis` and `Mo12` where older
+ * ICU prints `6` and `12`) are the host's `Intl.DateTimeFormat`. Retiring D33 needs all three right.
+ */
+const d33FieldsRows: readonly [string, string, string, string][] = [
+  ["chineseNewYear2027Eve", "chinese", "2027-02-05", "2026|M12|29"],
+  ["chineseNewYear2027", "chinese", "2027-02-06", "2027|M01|1"],
+  ["chineseLastDay2029", "chinese", "2030-02-02", "2029|M12|30"],
+  ["chineseNewYear2030", "chinese", "2030-02-03", "2030|M01|1"],
+  ["chineseNinthMonthEnd2018", "chinese", "2018-11-07", "2018|M09|30"],
+  ["chineseTenthMonth2018", "chinese", "2018-11-08", "2018|M10|1"],
+  ["chineseLeapSixth2025", "chinese", "2025-07-25", "2025|M06L|1"],
+  ["chineseSixthEnd2025", "chinese", "2025-07-24", "2025|M06|30"],
+  ["chineseSeventh2025", "chinese", "2025-08-23", "2025|M07|1"],
+  ["chineseLeapSecond2023", "chinese", "2023-03-22", "2023|M02L|1"],
+  ["chineseThird2023", "chinese", "2023-04-20", "2023|M03|1"],
+  ["dangiSecond2017", "dangi", "2017-02-26", "2017|M02|1"],
+  ["dangiLastDay2026", "dangi", "2027-02-06", "2026|M12|30"],
+  ["dangiNewYear2027", "dangi", "2027-02-07", "2027|M01|1"],
+  ["dangiNewYear2030", "dangi", "2030-02-03", "2030|M01|1"],
+  ["dangiLeapSixth2025", "dangi", "2025-07-25", "2025|M06L|1"],
+  ["dangiLeapSecond2023", "dangi", "2023-03-22", "2023|M02L|1"],
+  ["dangiThird2023", "dangi", "2023-04-20", "2023|M03|1"],
+];
+
+const d33ReverseRows: readonly [string, string, number, string, string][] = [
+  ["chineseFrom2027M01", "chinese", 2027, "M01", "2027-02-06"],
+  ["chineseFrom2030M01", "chinese", 2030, "M01", "2030-02-03"],
+  ["chineseFrom2025M06L", "chinese", 2025, "M06L", "2025-07-25"],
+  ["chineseFrom2023M02L", "chinese", 2023, "M02L", "2023-03-22"],
+  ["dangiFrom2027M01", "dangi", 2027, "M01", "2027-02-07"],
+  ["dangiFrom2030M01", "dangi", 2030, "M01", "2030-02-03"],
+  ["dangiFrom2025M06L", "dangi", 2025, "M06L", "2025-07-25"],
+  ["dangiFrom2023M02L", "dangi", 2023, "M02L", "2023-03-22"],
+];
+
+const d33TextRows: readonly [string, string, string, string][] = [
+  ["chineseNewYear2027Text", "chinese", "2027-02-06", "2027|1"],
+  ["chineseLastDay2029Text", "chinese", "2030-02-02", "2029|30"],
+  ["chineseNewYear2030Text", "chinese", "2030-02-03", "2030|1"],
+  ["chineseNinthMonthEnd2018Text", "chinese", "2018-11-07", "2018|30"],
+  ["dangiSecond2017Text", "dangi", "2017-02-26", "2017|1"],
+  ["dangiNewYear2027Text", "dangi", "2027-02-07", "2027|1"],
+];
+
+/** The related year (the year when none is printed) and day of a UTC-noon date in `calendar`. */
+function printedRelatedYearAndDay(calendar: string, iso: string): string {
+  const [year, month, day] = [
+    Number(iso.slice(0, 4)),
+    Number(iso.slice(5, 7)),
+    Number(iso.slice(8, 10)),
+  ];
+  const parts = new Intl.DateTimeFormat(`en-u-ca-${calendar}`, {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    timeZone: "UTC",
+  }).formatToParts(noonMs(year, month, day));
+  const value = (type: string): string | undefined =>
+    parts.find((part) => part.type === type)?.value;
+  return `${value("relatedYear") ?? value("year")}|${value("day")}`;
+}
+
+const d33Repros: readonly Repro[] = [
+  ...d33FieldsRows.map(([name, calendar, iso, expected]): Repro => ({
+    defect: "D33",
+    calendar,
+    name,
+    expected,
+    run: () => readFields(iso, calendar),
+  })),
+  ...d33ReverseRows.map(
+    ([name, calendar, year, monthCode, expected]): Repro => ({
+      defect: "D33",
+      calendar,
+      name,
+      expected,
+      run: () =>
+        Temporal.PlainDate.from(
+          { calendar, year, monthCode, day: 1 },
+          { overflow: "reject" },
+        )
+          .withCalendar("iso8601")
+          .toString(),
+    }),
+  ),
+  ...d33TextRows.map(([name, calendar, iso, expected]): Repro => ({
+    defect: "D33",
+    calendar,
+    name,
+    expected,
+    run: () => printedRelatedYearAndDay(calendar, iso),
+  })),
+];
+
+/**
+ * D35: the nine zone names hosts accept or refuse by engine and OS version (tzdb `backward` and
+ * `factory`; ECMA-402 §6.5.1 lists every Zone and Link as available). A name passes when both
+ * `Intl.DateTimeFormat` and `Temporal.ZonedDateTime.from` accept it. GMT refuses all nine on every
+ * host, so retiring D35 needs every engine to accept every name. Measured: Node 22/24/26 and
+ * Chromium accept all nine except `Factory` on Node; Linux WebKit refuses all nine, and Safari on
+ * macOS 27 refuses the System V four and `Factory`.
+ */
+const d35Repros: readonly Repro[] = [
+  "CST6CDT",
+  "EST5EDT",
+  "MST7MDT",
+  "PST8PDT",
+  "CET",
+  "EET",
+  "MET",
+  "WET",
+  "Factory",
+].map((timeZone) => ({
+  defect: "D35",
+  calendar: "iso8601",
+  name: `zoneName${timeZone}`,
+  expected: "accepted",
+  run: () => {
+    new Intl.DateTimeFormat("en", { timeZone });
+    Temporal.ZonedDateTime.from(`2024-07-15T12:00:00[${timeZone}]`);
+    return "accepted";
+  },
+}));
+
+/**
+ * D36: week data for the regions hosts report differently. The values are CLDR 48 `weekData`
+ * (UTS #35 Part 4 § 4, read from Node 24/26 on ICU 78): first day as an ISO weekday (1 is Monday),
+ * then the weekend days. macOS Safari reads the system's older copy (CN, JO, DZ first day; DZ and
+ * BD weekend), and Safari on Linux an older one still (AE and IS first day). `und-BU` is the
+ * deprecated Burma code: UTS #35 Part 1 § 3.2.1 (`territoryAlias`) makes it `MM`, and WebKit builds
+ * outside Apple's own (Playwright WebKit) keep `BU` in `Intl.Locale#region` while every other host
+ * canonicalizes it. GMT owns no CLDR
+ * data, so it refuses these regions on every host and the repros only decide when D36 can retire.
+ */
+function weekInfoText(tag: string): string {
+  const locale = new Intl.Locale(tag);
+  const info = locale.getWeekInfo?.() ?? locale.weekInfo;
+  return info ? `${info.firstDay}|${(info.weekend ?? []).join(",")}` : "none";
+}
+
+const d36Repros: readonly Repro[] = [
+  ["AE", "1|6,7"],
+  ["BD", "7|6,7"],
+  ["CN", "1|6,7"],
+  ["DZ", "6|5,6"],
+  ["IS", "7|6,7"],
+  ["JO", "6|5,6"],
+  ["MM", "7|6,7"],
+]
+  .map(([region, expected]): Repro => ({
+    defect: "D36",
+    calendar: "iso8601",
+    name: `weekInfo${region}`,
+    expected,
+    run: () => weekInfoText(`und-${region}`),
+  }))
+  .concat([
+    {
+      defect: "D36",
+      calendar: "iso8601",
+      name: "regionBU",
+      expected: "MM",
+      run: () => new Intl.Locale("und-BU").region ?? "none",
+    },
+  ]);
+
+/**
+ * D37: the default calendar of the locales hosts give differently (ECMA-402 CreateDateTimeFormat
+ * takes it from the locale data when no calendar is named). The expected values are what ICU 78
+ * with CLDR 48 gives (Node 22, 24 and 26): Safari keeps `en-SA` and `en-TH` and gives them the
+ * region's Islamic or Buddhist calendar, Chromium has no data for `lrc`, `mzn`, `ps` or `shn` and
+ * falls back to its default locale, and Safari keeps language and region aliases such as `pbu` or
+ * `004` as written. One tag per key of `internal/defaultCalendarRefusal.ts`. GMT owns no calendar
+ * preference data, so it refuses these tags on every host and the repros only decide when D37 can
+ * retire.
+ */
+const d37Repros: readonly Repro[] = [
+  ["drw", "persian"],
+  ["lrc", "persian"],
+  ["mzn", "persian"],
+  ["pbu", "persian"],
+  ["per", "persian"],
+  ["pes", "persian"],
+  ["prs", "persian"],
+  ["ps", "persian"],
+  ["pus", "persian"],
+  ["tnf", "persian"],
+  ["uzn-Arab", "persian"],
+  ["ar-SA", "gregory"],
+  ["ara-SA", "gregory"],
+  ["ckb-364", "persian"],
+  ["en-SA", "gregory"],
+  ["en-TH", "gregory"],
+  ["eng-SA", "gregory"],
+  ["eng-TH", "gregory"],
+  ["shn-764", "buddhist"],
+  ["shn-TH", "buddhist"],
+  ["uz-004", "persian"],
+  ["uzn-004", "persian"],
+  ["uzn-AF", "persian"],
+].map(([tag, expected]): Repro => ({
+  defect: "D37",
+  calendar: "iso8601",
+  name: `defaultCalendar ${tag}`,
+  expected,
+  run: () => new Intl.DateTimeFormat(tag).resolvedOptions().calendar,
+}));
+
 export const repros: readonly Repro[] = [
   ...d21Repros,
   ...d23Repros,
   ...d24Repros,
   ...yearPrintingRepros,
   ...rangeFieldRepros,
+  ...d33Repros,
+  ...d35Repros,
+  ...d36Repros,
+  ...d37Repros,
   ...d9Repros,
   ...zonedARepros,
   ...zonedBRepros,
@@ -733,7 +985,6 @@ export const repros: readonly Repro[] = [
   ...probeReproGroups.d16,
   ...probeReproGroups.d17,
   ...probeReproGroups.d18,
-  ...probeReproGroups.d19,
   ...probeReproGroups.d22,
   ...probeReproGroups.d6,
   ...probeReproGroups.d7,

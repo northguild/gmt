@@ -5,7 +5,7 @@ import type { CalendarSystem } from "../types";
  * Every `CalendarSystem`, by canonical calendar id: the CLDR `common/bcp47/calendar.xml` type,
  * which is also what Temporal's `CanonicalizeCalendar` returns and what RFC 9557's `[u-ca=<id>]`
  * carries. `"iso8601"` plus the Intl Era and Month Code proposal's `table-calendar-types` rows
- * GMT supports (not `"chinese"` or `"dangi"`).
+ * GMT supports (not `"chinese"` or `"dangi"`: hosts print different dates for them, compat D33).
  */
 export const calendarSystems: readonly CalendarSystem[] = [
   "iso8601",

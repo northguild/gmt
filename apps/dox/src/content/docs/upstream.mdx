@@ -91,9 +91,10 @@ Node's built-in Temporal, and sent a fix for each:
 - **Chinese and Dangi.** It reads these calendars from `Intl.DateTimeFormat`, which disagrees with
   the built-in Temporal in some years. It puts Chinese New Year 2027 on 7 February, not 6 February.
   We reported it as [#128](https://github.com/fullcalendar/temporal-polyfill/issues/128) and sent the fix as [#132](https://github.com/fullcalendar/temporal-polyfill/pull/132).
+  GMT does not print these calendars on any runtime until every runtime agrees, so this does not block the switch.
 - **Zone names that are links.** It treats a link name such as `Asia/Calcutta` as a different
   zone from `Asia/Kolkata`. FullCalendar's report of this, [#118](https://github.com/fullcalendar/temporal-polyfill/issues/118) (not ours), was
-  closed as a known limitation. GMT's own probe sees it in WebKit as `Etc/UTC` not equal to `UTC`.
+  closed as a known limitation. GMT now treats a link and its target as two zones on every runtime, so this matches GMT's own rule.
 
 So for now GMT stays on `@js-temporal/polyfill`. Every week, GMT runs its whole test suite on the newest
 `temporal-polyfill` release in Node and three browsers. It checks every zone's offsets against
@@ -191,7 +192,8 @@ The built-in engines have a few bugs of their own. We report each one we find. T
   before about 4800 BCE. The report to WebKit is pending.
 - [WebKit bug 330688](https://bugs.webkit.org/show_bug.cgi?id=330688): WebKit on Linux, and
   Safari on macOS 27, reject the time zone ids `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT`,
-  which the time zone database still defines.
+  which the time zone database still defines. GMT treats these names, and `CET`, `EET`,
+  `MET`, `WET` and `Factory`, as invalid on every runtime.
 - [`ICU-23609`](https://unicode-org.atlassian.net/browse/ICU-23609): ICU 75 and later, which WebKit on macOS uses for calendar arithmetic, counts
   every Persian year before year 0 (621 CE) as a leap year. Adding a month to the 30th of Bahman,
   the 11th month, in such a year then throws instead of giving the 29th of Esfand. We also

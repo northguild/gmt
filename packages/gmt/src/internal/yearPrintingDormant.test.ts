@@ -19,8 +19,8 @@ const probes = vi.hoisted(() => ({ needed: true }));
 vi.mock("./temporalCompat/capabilities", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   isJapaneseEraCompatNeeded: () => probes.needed,
-  isIslamicEraCompatNeeded: () => probes.needed,
   isCopticEraCompatNeeded: () => probes.needed,
+  isCopticEpochEraCompatNeeded: () => probes.needed,
   isIslamicEpochEraCompatNeeded: () => probes.needed,
   isJapaneseTwoDigitYearCompatNeeded: () => probes.needed,
   isJapaneseNumberingSystemCompatNeeded: () => probes.needed,
@@ -36,13 +36,8 @@ describe("year printing is dormant on a fixed engine", () => {
   it.each`
     locale                        | options     | label
     ${"en-u-ca-japanese"}         | ${era}      | ${"D25 japanese"}
-    ${"en-u-ca-islamic-civil"}    | ${era}      | ${"D26 islamic-civil"}
-    ${"en-u-ca-islamic-umalqura"} | ${era}      | ${"D26 islamic-umalqura"}
     ${"ja-u-ca-japanese"}         | ${twoDigit} | ${"D27 ja japanese"}
-    ${"en-u-ca-chinese"}          | ${twoDigit} | ${"D28 chinese"}
-    ${"en-u-ca-dangi"}            | ${twoDigit} | ${"D28 dangi"}
     ${"en-u-ca-coptic"}           | ${era}      | ${"D31 coptic"}
-    ${"en-u-ca-islamic-tbla"}     | ${era}      | ${"D32 islamic-tbla"}
     ${"ja-u-ca-japanese-nu-arab"} | ${era}      | ${"D27 ja japanese nu-arab"}
   `(
     "returns the engine's own formatter for $label when its probe passes",
@@ -54,10 +49,25 @@ describe("year printing is dormant on a fixed engine", () => {
     },
   );
 
+  // The public functions refuse chinese and dangi (compat D33), so the repair's own formatter is read.
+  it.each`
+    locale               | options     | label
+    ${"en-u-ca-chinese"} | ${twoDigit} | ${"D28 chinese"}
+    ${"en-u-ca-dangi"}   | ${twoDigit} | ${"D28 dangi"}
+  `(
+    "returns the engine's own formatter for $label when its probe passes",
+    async ({ locale, options }) => {
+      probes.needed = false;
+      const { guardedDateTimeFormat } = await freshCache();
+      expect(guardedDateTimeFormat(locale, options)).toBeInstanceOf(
+        Intl.DateTimeFormat,
+      );
+    },
+  );
+
   it.each`
     locale                        | options     | label
     ${"en-u-ca-japanese"}         | ${era}      | ${"D25 japanese"}
-    ${"en-u-ca-islamic-civil"}    | ${era}      | ${"D26 islamic-civil"}
     ${"ja-u-ca-japanese"}         | ${twoDigit} | ${"D27 ja japanese"}
     ${"ja-u-ca-japanese-nu-arab"} | ${era}      | ${"D27 ja japanese nu-arab"}
     ${"en-u-ca-coptic"}           | ${era}      | ${"D31 coptic"}
@@ -91,6 +101,32 @@ describe("year printing is dormant on a fixed engine", () => {
   );
 });
 
+describe("D26 holds with its probe passing", () => {
+  it.each`
+    date            | expectedEmpty
+    ${"0600-07-10"} | ${true}
+    ${"2025-07-10"} | ${false}
+  `(
+    "formatDate of '$date' in islamic-civil is empty only before the Hijra: $expectedEmpty",
+    async ({ date, expectedEmpty }) => {
+      probes.needed = false;
+      vi.resetModules();
+      const { formatDate } = await import("../plain/format/formatDate");
+      const locale = "en-u-ca-islamic-civil";
+      const options = { era: "short", year: "numeric" } as const;
+      const engine = new Intl.DateTimeFormat(locale, {
+        ...options,
+        timeZone: "UTC",
+      }).format(
+        Temporal.PlainDate.from(date).toZonedDateTime("UTC").epochMilliseconds,
+      );
+      expect(formatDate(date, locale, options)).toBe(
+        expectedEmpty ? "" : engine,
+      );
+    },
+  );
+});
+
 describe("every public format function is the engine's own on a fixed engine", () => {
   // Midnight UTC, as the library formats a plain date; the oracle is the engine's formatter built
   // with the same locale and options, so a fixed engine gives the same text from the library.
@@ -98,16 +134,13 @@ describe("every public format function is the engine's own on a fixed engine", (
     Temporal.PlainDate.from(iso).toZonedDateTime("UTC").epochMilliseconds;
 
   it.each`
-    locale                        | options                                  | start              | end
-    ${"en-u-ca-japanese"}         | ${{ era: "short", year: "numeric" }}     | ${"-000001-07-10"} | ${"1872-12-31"}
-    ${"ja-u-ca-japanese"}         | ${{ era: "short", year: "numeric" }}     | ${"1868-10-23"}    | ${"1873-01-01"}
-    ${"en-u-ca-islamic-civil"}    | ${{ era: "short", year: "numeric" }}     | ${"0600-07-10"}    | ${"2025-07-10"}
-    ${"en-u-ca-islamic-umalqura"} | ${{ era: "short", year: "numeric" }}     | ${"-000001-07-10"} | ${"0622-07-19"}
-    ${"ja-u-ca-japanese"}         | ${{ year: "2-digit" }}                   | ${"2019-04-30"}    | ${"2020-05-01"}
-    ${"en-u-ca-chinese"}          | ${{ year: "2-digit", month: "2-digit" }} | ${"0005-07-10"}    | ${"0006-07-10"}
-    ${"en-u-ca-dangi"}            | ${{ year: "2-digit" }}                   | ${"-000001-07-10"} | ${"0005-07-10"}
-    ${"en-u-ca-coptic"}           | ${{ era: "short", year: "numeric" }}     | ${"-000001-07-10"} | ${"0001-07-10"}
-    ${"en-u-ca-islamic-tbla"}     | ${{ era: "short", year: "numeric" }}     | ${"0622-07-17"}    | ${"0622-07-18"}
+    locale                    | options                              | start              | end
+    ${"en-u-ca-japanese"}     | ${{ era: "short", year: "numeric" }} | ${"-000001-07-10"} | ${"1872-12-31"}
+    ${"ja-u-ca-japanese"}     | ${{ era: "short", year: "numeric" }} | ${"1868-10-23"}    | ${"1873-01-01"}
+    ${"ja-u-ca-japanese"}     | ${{ year: "2-digit" }}               | ${"2019-04-30"}    | ${"2020-05-01"}
+    ${"en-u-ca-coptic"}       | ${{ era: "short", year: "numeric" }} | ${"-000001-07-10"} | ${"0001-07-10"}
+    ${"en-u-ca-coptic"}       | ${{ era: "short", year: "numeric" }} | ${"0284-08-29"}    | ${"0284-09-10"}
+    ${"en-u-ca-islamic-tbla"} | ${{ era: "short", year: "numeric" }} | ${"0622-07-18"}    | ${"0622-07-19"}
   `(
     "formatDate, its parts and the three ranges equal the engine for '$locale' $options at $start to $end",
     async ({ locale, options, start, end }) => {
@@ -161,6 +194,36 @@ describe("every public format function is the engine's own on a fixed engine", (
       );
     },
     30_000,
+  );
+});
+
+describe("the guarded formatter is the engine's own on a fixed engine for chinese and dangi", () => {
+  const midnight = (iso: string): number =>
+    Temporal.PlainDate.from(iso).toZonedDateTime("UTC").epochMilliseconds;
+
+  it.each`
+    locale               | options                                  | start              | end
+    ${"en-u-ca-chinese"} | ${{ year: "2-digit", month: "2-digit" }} | ${"0005-07-10"}    | ${"0006-07-10"}
+    ${"en-u-ca-dangi"}   | ${{ year: "2-digit" }}                   | ${"-000001-07-10"} | ${"0005-07-10"}
+  `(
+    "formatDate, its parts and the three ranges equal the engine for '$locale' $options at $start to $end",
+    async ({ locale, options, start, end }) => {
+      probes.needed = false;
+      const { guardedDateTimeFormat } = await freshCache();
+      const engine = new Intl.DateTimeFormat(locale, {
+        ...options,
+        timeZone: "UTC",
+      });
+      const guarded = guardedDateTimeFormat(locale, {
+        ...options,
+        timeZone: "UTC",
+      });
+      const a = midnight(start);
+      const b = midnight(end);
+      expect(guarded.format(a)).toBe(engine.format(a));
+      expect(guarded.formatToParts(a)).toEqual(engine.formatToParts(a));
+      expect(guarded.formatRange(a, b)).toBe(engine.formatRange(a, b));
+    },
   );
 });
 

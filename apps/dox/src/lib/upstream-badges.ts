@@ -10,7 +10,11 @@
  * `upstream-badges.test.ts`.
  */
 import { stateLine, type CompatGroup } from "~/data/temporal-compat";
-import type { GitHubFiling, UpstreamFiling } from "~/data/upstream-filings";
+import {
+  guardIds,
+  type GitHubFiling,
+  type UpstreamFiling,
+} from "~/data/upstream-filings";
 import { badge } from "../widgets/builders/badge";
 import type { SafeHtml } from "../widgets/builders/html";
 import type { OcticonName } from "./octicons";
@@ -123,8 +127,13 @@ export function workBadge(work: UpstreamFiling["work"]): BadgeSpec | null {
 /** What a GMT user gets today. A guard names the GMT workaround that already returns the
  * correct answer on every polyfill version; one with neither is fixed upstream only. */
 export function gmtBadge(f: InGmtFields): BadgeSpec {
-  if (f.gmtGuard) {
-    return { text: `Guarded · ${f.gmtGuard}`, tone: "purple", icon: "shield" };
+  const ids = guardIds(f);
+  if (ids.length > 0) {
+    return {
+      text: `Guarded · ${ids.join(" + ")}`,
+      tone: "purple",
+      icon: "shield",
+    };
   }
   if (f.gmtNote) return { text: "Not affected", tone: "spring", icon: "check" };
   const fixFiled = f.kind === "pr" || f.pairsWith.length > 0;

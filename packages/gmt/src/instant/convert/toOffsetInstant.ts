@@ -56,12 +56,12 @@ export interface OffsetInstant {
  * - A bracketed *offset* time zone (Temporal's own `[-04:00]` shape) yields no `timeZone`
  *   field. It names no place, so filling the field with it would claim GMT knows where the
  *   event happened when all it has is the offset it already stores. Every other bracketed
- *   identifier Temporal accepts is kept, including the single-component IANA names (`EST5EDT`,
+ *   identifier Temporal accepts is kept, including the single-component IANA names (`Japan`,
  *   `Zulu`), in its IANA casing.
  * - `timeZone` names the zone the offset is read in, and is how a UTC-only feed gets a pair with a
  *   local offset. It also overrides a zone bracketed in the string — the instant is unchanged
  *   either way, only the local rendering differs. Any IANA Zone or Link name is accepted,
- *   single-component ones (`Japan`, `Zulu`, `EST5EDT`) included, and so is a UTC offset: a time
+ *   single-component ones (`Japan`, `Zulu`) included, and so is a UTC offset: a time
  *   zone identifier (`+05:30`, `+0530`, `-08`) or a stored offset (`±HH:MM[:SS]`, what
  *   `getTimeZoneOffset` returns). An offset (`"-05:00"`, `"-00:44:30"`) sets the pair's offset and,
  *   like a bracketed offset zone, yields no `timeZone` field.

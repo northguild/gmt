@@ -9,6 +9,7 @@ import type { LocalesArgument } from "./resolveLocale";
  *
  * - Returns `null` if `locale` is not a well-formed BCP 47 tag; a well-formed tag with no
  *   locale data does not throw, so it does not return `null` either.
+ * - Returns `null` for a region whose weekend some runtime does not read as CLDR does (compat D36).
  * - Falls back to Saturday/Sunday (`[6, 7]`) if the runtime exposes no week
  *   data or none for the given locale.
  */
@@ -17,6 +18,7 @@ export function getLocaleWeekendDays(
 ): Set<number> | null {
   try {
     const weekInfo = localeWeekInfo(locale);
+    if (weekInfo?.weekend === null) return null;
     if (!weekInfo || !Array.isArray(weekInfo.weekend)) {
       return new Set([6, 7]);
     }

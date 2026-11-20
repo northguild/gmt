@@ -49,8 +49,10 @@ interface FilingBase {
   /** `"owner/repo#number"` filings this one depends on. */
   dependsOn: readonly string[];
   /** The `packages/gmt/src/internal/temporalCompat/repros.ts` canary group this
-   * filing would let GMT retire, or `null` when no GMT workaround covers the defect. */
-  gmtGuard: string | null;
+   * filing would let GMT retire, or `null` when no GMT workaround covers the defect.
+   * A filing that several groups cover lists them (`["D1", "D6"]`); a list holds two or more
+   * ids, and a single id stays a string. Read it with `guardIds`, never by hand. */
+  gmtGuard: string | readonly string[] | null;
   /** Why the defect doesn't affect GMT, when no workaround is needed. Exactly one of
    * `gmtGuard` and `gmtNote` is set (`scripts/upstream.mjs check` enforces it). */
   gmtNote: string | null;
@@ -470,14 +472,20 @@ export const filingsWithMaintainerResponse: number = filings.filter(
   (f) => (f.maintainerComments ?? 0) > 0,
 ).length;
 
+/** The canary group ids a filing's `gmtGuard` names: none, one, or the whole list. */
+export const guardIds = (f: Pick<UpstreamFiling, "gmtGuard">): string[] =>
+  f.gmtGuard === null
+    ? []
+    : typeof f.gmtGuard === "string"
+      ? [f.gmtGuard]
+      : [...f.gmtGuard];
+
 /** Every distinct non-null `gmtGuard` a filing names — the GMT canary groups
  * these filings would collectively let `pnpm compat` retire, deduplicated
  * because more than one filing can target the same group (#369 and #370 both
  * target `D1`). */
 export const guardsAddressed: readonly string[] = [
-  ...new Set(
-    filings.map((f) => f.gmtGuard).filter((g): g is string => g !== null),
-  ),
+  ...new Set(filings.flatMap(guardIds)),
 ].sort();
 
 export const totalFilings: number = filings.length;

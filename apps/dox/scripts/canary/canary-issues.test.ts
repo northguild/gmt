@@ -7,6 +7,7 @@ import {
   SWAP_SOURCES,
   WORKFLOW_SOURCES,
   applyForce,
+  d33SwapState,
   compatStates,
   findings,
   foldedComment,
@@ -309,6 +310,18 @@ const calendarSweep = (differingCalendars = 0) => ({
   differingTruncated: false,
 });
 
+/** The sweep of Chinese and Dangi, kept apart from the calendar sweep while compat D33 holds. */
+const d33Sweep = (differingCalendars = 0) => ({
+  status: "ran" as const,
+  from: "-003000-01-01",
+  through: "+005000-12-31",
+  calendars: 2,
+  years: 16_000,
+  differingCalendars,
+  differing: [],
+  differingTruncated: false,
+});
+
 interface SwapOptions {
   version?: string;
   failed?: number;
@@ -317,6 +330,8 @@ interface SwapOptions {
   sweep?: unknown;
   calendarSweep?: unknown;
   entryLoaded?: unknown;
+  d33Check?: unknown;
+  d33Sweep?: unknown;
 }
 
 /** A swap-leg verdict that ran. Only the Node leg carries a sweep. */
@@ -351,6 +366,15 @@ const swapLeg = (leg: SwapLeg, options: SwapOptions = {}) => {
     failingTruncated: false,
     sweep: leg === "node" ? sweep : null,
     calendarSweep: leg === "node" ? calendars : null,
+    d33: {
+      check: options.d33Check ?? "removable",
+      sweep:
+        leg === "node"
+          ? "d33Sweep" in options
+            ? options.d33Sweep
+            : d33Sweep()
+          : null,
+    },
   };
 };
 
@@ -1980,6 +2004,55 @@ describe("swapReady", () => {
   });
 });
 
+describe("d33SwapState", () => {
+  const state = (swap: unknown) => d33SwapState(swap as never).state;
+
+  it("is removable when every leg passes and the Chinese and Dangi sweep finds no difference", () => {
+    expect(d33SwapState(cleanSwap() as never)).toEqual({
+      state: "removable",
+      failing: 0,
+      legs: 4,
+      differing: 0,
+      calendars: 2,
+    });
+  });
+
+  it.each`
+    label                                      | swap                                                                                      | expected
+    ${"one leg's check is 'still needed'"}     | ${cleanSwap({ webkit: { d33Check: "still needed" } })}                                    | ${"still needed"}
+    ${"one leg's check is 'missing'"}          | ${cleanSwap({ chromium: { d33Check: "missing" } })}                                       | ${"still needed"}
+    ${"the Node sweep finds a difference"}     | ${cleanSwap({ node: { d33Sweep: d33Sweep(1) } })}                                         | ${"still needed"}
+    ${"the Node sweep could not run"}          | ${cleanSwap({ node: { d33Sweep: { status: "could-not-run", message: "no Temporal" } } })} | ${"still needed"}
+    ${"the Node sweep is null"}                | ${cleanSwap({ node: { d33Sweep: null } })}                                                | ${"still needed"}
+    ${"the Node sweep counted no calendar"}    | ${cleanSwap({ node: { d33Sweep: { ...d33Sweep(), calendars: 0 } } })}                     | ${"still needed"}
+    ${"the Node difference count is a string"} | ${cleanSwap({ node: { d33Sweep: { ...d33Sweep(), differingCalendars: "0" } } })}          | ${"still needed"}
+  `("is '$expected' when $label", ({ swap, expected }) => {
+    expect(state(swap)).toBe(expected);
+  });
+
+  it("is 'still needed' when a leg has no d33 field or did not run", () => {
+    const missing = cleanSwap() as Record<string, Record<string, unknown>>;
+    delete missing["temporal-polyfill-swap-firefox"].d33;
+    expect(state(missing)).toBe("still needed");
+    const gone = cleanSwap() as Record<string, unknown>;
+    delete gone["temporal-polyfill-swap-webkit"];
+    expect(state(gone)).toBe("still needed");
+  });
+
+  it("swapReady ignores d33: a swap with every check 'still needed' is ready", () => {
+    expect(
+      swapReady(
+        cleanSwap({
+          node: { d33Check: "still needed", d33Sweep: d33Sweep(2) },
+          chromium: { d33Check: "still needed" },
+          firefox: { d33Check: "still needed" },
+          webkit: { d33Check: "missing" },
+        }) as never,
+      ),
+    ).toEqual({ ready: true, version: "1.0.7" });
+  });
+});
+
 describe("swap findings", () => {
   const READY_TITLE =
     "Swap to temporal-polyfill 1.0.7: it passes the GMT suite and both sweeps";
@@ -2019,6 +2092,19 @@ describe("swap findings", () => {
     expect(swapPlan(cleanSwap({ node: { sweep: swapSweep(3) } }))).toEqual([]);
   });
 
+  it("a ready swap that leaves D33 on still opens the issue, and the body says D33 stays", () => {
+    const [action] = swapPlan(
+      cleanSwap({
+        node: { d33Check: "still needed", d33Sweep: d33Sweep(2) },
+        chromium: { d33Check: "still needed" },
+      }),
+    );
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body.split("\n")).toContain(
+      "Chinese and Dangi: D33 stays. 2 of 4 legs fail a D33 repro; the calendar sweep finds 2 of 2 calendars differ from the built-in Temporal. GMT refuses both calendars on every host, so this does not block the swap.",
+    );
+  });
+
   it("opens a new issue when the open canary issue has another marker", () => {
     const actions = swapPlan(cleanSwap(), [
       issue(
@@ -2049,6 +2135,8 @@ describe("swap findings", () => {
         "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to ten years past the run date (tz 2026e).",
         "",
         "Calendar sweep: every one of 16 calendars matches the built-in Temporal on the first day, months and days of each year from -003000-01-01 to +005000-12-31.",
+        "",
+        "Chinese and Dangi: every leg passes the D33 repros and both calendars match the built-in Temporal from -003000-01-01 to +005000-12-31. D33 can be retired with this swap (README § Removal steps 33).",
         "",
         "What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md). Type errors are not checked here; § 5 lists them.",
         "",

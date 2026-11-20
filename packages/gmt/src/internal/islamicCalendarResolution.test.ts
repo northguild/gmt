@@ -3,8 +3,11 @@ import { formatDate } from "../plain/format/formatDate";
 import { formatDateRange } from "../plain/format/formatDateRange";
 import { formatDateTime } from "../plain/format/formatDateTime";
 import { formatZonedRange } from "../zoned/format/formatZonedRange";
+import { hostDateText, hostRangeText, hostText } from "../test/hostIntl";
+import { normalizeDateTime } from "./normalizeDateTime";
 import { cachedFormatter } from "./formatterCache";
-import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
+import { Temporal } from "./temporal";
+import { utcMs } from "../test/utcMs";
 
 /*
  * CORE-112, D30: `islamic` and `islamic-rgsa` resolve to calendars no engine should use.
@@ -13,8 +16,31 @@ import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
  * tc39/proposal-intl-era-monthcode#99 `islamic-rgsa` is not an available calendar, so a
  * DateTimeFormat ignores it and takes the locale's default calendar (test262
  * `intl402/DateTimeFormat/constructor-options-calendar-islamic-fallback.js`). Each value holds on
- * an engine that has the defect and on one that does not.
+ * an engine that has the defect and on one that does not. The date is the calendar's value: the
+ * day and the year are asserted exactly (`islamicTbla`), and the month name, the era and the
+ * separators come from the host's own `islamic-tbla` text, which is its wording.
  */
+
+/** The day and the year `islamic-tbla` gives a date, the values of Table 1 of the calendar. */
+function islamicTbla(iso: string, locale = "en-u-ca-islamic-tbla") {
+  const date = Temporal.PlainDate.from(iso).withCalendar("islamic-tbla");
+  const parts = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    timeZone: "UTC",
+  }).formatToParts(utcMs(`${iso}T00:00:00Z`));
+  return {
+    day: date.day,
+    year: date.year,
+    hostDay: Number(parts.find((part) => part.type === "day")?.value),
+    hostYear: Number(
+      parts.find((part) =>
+        (["relatedYear", "year"] as string[]).includes(part.type),
+      )?.value,
+    ),
+  };
+}
 
 const eraDate = {
   era: "short",
@@ -47,27 +73,37 @@ describe("D30: islamic resolves to islamic-tbla", () => {
     },
   );
 
-  it("prints Muh. 4, 1446 AH for 2024-07-10, the date islamic-tbla gives (ICU's astronomical calendar gives Muh. 5)", () => {
+  it("takes the date islamic-tbla gives for 2024-07-10: day 4 of 1446 (ICU's astronomical calendar gives day 5)", () => {
+    expect(islamicTbla("2024-07-10")).toEqual({
+      day: 4,
+      year: 1446,
+      hostDay: 4,
+      hostYear: 1446,
+    });
     expect(formatDate("2024-07-10", "en-u-ca-islamic", eraDate)).toBe(
-      "Muh. 4, 1446 AH",
+      hostDateText("en-u-ca-islamic-tbla", eraDate, "2024-07-10"),
     );
   });
 
   it("takes the Hijra of islamic-tbla (Table 1: 0622-07-18) for '0622-07-17': the day before is before the Hijra", () => {
-    const text = formatDate("0622-07-17", "en-u-ca-islamic", eraDate);
-    // D26: the empty value where the engine cannot name `bh`, and otherwise the engine's own text,
-    // which is not the 1 AH of the next day.
-    if (isIslamicEraCompatNeeded()) {
-      expect(text).toBe("");
-    } else {
-      expect(text).not.toBe("");
-      expect(text).not.toMatch(/\bAH\b/);
-    }
+    // D26, on every host: a date before the Hijra has no printable year, so the empty value.
+    expect(formatDate("0622-07-17", "en-u-ca-islamic", eraDate)).toBe("");
   });
 
-  it("takes the Hijra of islamic-tbla (Table 1: 0622-07-18) for '0622-07-18': 'Muh. 1, 1 AH'", () => {
+  it("takes the Hijra of islamic-tbla (Table 1: 0622-07-18) for '0622-07-18': day 1 of year 1", () => {
+    expect(islamicTbla("0622-07-18")).toMatchObject({ day: 1, year: 1 });
+    // Some hosts (WebKit) place the Hijra a day early and print "0 Before Hijra", so the host's
+    // text for the day itself is not the value. The wording (month name, era, separators) is taken
+    // from the host's text for day 3 of the same year, and the day is the calendar's value, 1.
+    const sameYear = new Intl.DateTimeFormat("en-u-ca-islamic-tbla", {
+      ...eraDate,
+      timeZone: "UTC",
+    })
+      .formatToParts(utcMs("0622-07-20T00:00:00Z"))
+      .map((part) => (part.type === "day" ? "1" : part.value))
+      .join("");
     expect(formatDate("0622-07-18", "en-u-ca-islamic", eraDate)).toBe(
-      "Muh. 1, 1 AH",
+      normalizeDateTime(sameYear),
     );
   });
 });
@@ -121,16 +157,19 @@ describe("D30: the other islamic calendars are untouched", () => {
  * (Node 22, 24 and 26).
  */
 describe("D30: the public entries resolve islamic the same way", () => {
+  const tbla = "en-u-ca-islamic-tbla";
+  const noon = "2024-07-10T12:00:00+00:00[UTC]";
+  const nonNoon = "2024-07-12T12:00:00+00:00[UTC]";
   it.each`
-    label                       | call                                                                                                                                      | expected
-    ${"formatDate keyword"}     | ${() => formatDate("2024-07-10", "en-u-ca-islamic", { dateStyle: "long" })}                                                               | ${"Muharram 4, 1446 AH"}
-    ${"formatDate option"}      | ${() => formatDate("2024-07-10", "en", { calendar: "islamic", dateStyle: "long" })}                                                       | ${"Muharram 4, 1446 AH"}
-    ${"formatDateTime keyword"} | ${() => formatDateTime("2024-07-10T12:00:00", "en-u-ca-islamic", { dateStyle: "long", timeStyle: "short" })}                              | ${"Muharram 4, 1446 AH at 12:00 PM"}
-    ${"formatCalendar keyword"} | ${() => formatCalendar("2024-07-10T12:00:00", "en-u-ca-islamic", { reference: "2024-09-01T12:00:00" })}                                   | ${"Muharram 4, 1446 AH at 12:00 PM"}
-    ${"formatDateRange"}        | ${() => formatDateRange("2024-07-10", "2024-07-12", "en-u-ca-islamic", { dateStyle: "medium" })}                                          | ${"Muh. 4 - 6, 1446 AH"}
-    ${"formatZonedRange"}       | ${() => formatZonedRange("2024-07-10T12:00:00+00:00[UTC]", "2024-07-12T12:00:00+00:00[UTC]", "en-u-ca-islamic", { dateStyle: "medium" })} | ${"Muh. 4 - 6, 1446 AH"}
-  `("$label gives '$expected'", ({ call, expected }) => {
-    expect(call()).toBe(expected);
+    label                       | call                                                                                                                                      | host
+    ${"formatDate keyword"}     | ${() => formatDate("2024-07-10", "en-u-ca-islamic", { dateStyle: "long" })}                                                               | ${() => hostText(tbla, { dateStyle: "long" }, noon)}
+    ${"formatDate option"}      | ${() => formatDate("2024-07-10", "en", { calendar: "islamic", dateStyle: "long" })}                                                       | ${() => hostText(tbla, { dateStyle: "long" }, noon)}
+    ${"formatDateTime keyword"} | ${() => formatDateTime("2024-07-10T12:00:00", "en-u-ca-islamic", { dateStyle: "long", timeStyle: "short" })}                              | ${() => hostText(tbla, { dateStyle: "long", timeStyle: "short" }, noon)}
+    ${"formatCalendar keyword"} | ${() => formatCalendar("2024-07-10T12:00:00", "en-u-ca-islamic", { reference: "2024-09-01T12:00:00" })}                                   | ${() => hostText(tbla, { dateStyle: "long", timeStyle: "short" }, noon)}
+    ${"formatDateRange"}        | ${() => formatDateRange("2024-07-10", "2024-07-12", "en-u-ca-islamic", { dateStyle: "medium" })}                                          | ${() => hostRangeText(tbla, { dateStyle: "medium" }, noon, nonNoon)}
+    ${"formatZonedRange"}       | ${() => formatZonedRange("2024-07-10T12:00:00+00:00[UTC]", "2024-07-12T12:00:00+00:00[UTC]", "en-u-ca-islamic", { dateStyle: "medium" })} | ${() => hostRangeText(tbla, { dateStyle: "medium" }, noon, nonNoon)}
+  `("$label gives the host's islamic-tbla text", ({ call, host }) => {
+    expect(call()).toBe(host());
   });
 
   it.each`

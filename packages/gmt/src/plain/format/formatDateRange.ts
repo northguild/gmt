@@ -27,6 +27,9 @@ import {
  *   other non-object — a string, a number, a boolean — formats with the defaults, as
  *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
  *   carries no recognised option. Only `null` and `undefined` are special-cased.
+ * - A `chinese` or `dangi` calendar returns `""` for any format with a year, month, day or era:
+ *   hosts print different dates for them (compat D33). A format with only a time or weekday field
+ *   still returns its text.
  *
  * @param start ISO PlainDate string (range start)
  * @param end ISO PlainDate string (range end)
