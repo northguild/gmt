@@ -3,6 +3,8 @@
  * (`steer`) and the way home. They read and write the stage's shared state and drive the reveal, the
  * wall and the flight; none of them draws or flies by itself.
  */
+import type { WallState } from "./ice-wall/wall";
+import { CLEAR_MS } from "./ice-wall/wall-run";
 import { resolvePlace, type Place } from "./places";
 import type { StageAt, StageState } from "./stage-state";
 
@@ -13,9 +15,13 @@ interface MovesDeps {
     shown(): boolean;
     show(): void;
     cancel(): boolean;
-    start(hop: boolean): void;
+    start(hop: boolean, afterMs?: number): void;
   };
-  wall: { kind(): Place["kind"] | null; arrange(kind: Place["kind"]): void };
+  wall: {
+    kind(): Place["kind"] | null;
+    state(): WallState;
+    arrange(kind: Place["kind"]): void;
+  };
   spinWanted(): boolean;
   fly(hop: boolean): void;
   draw(): void;
@@ -69,9 +75,11 @@ export function createMoves(d: MovesDeps): StageMoves {
         s.homeAt.slide >= reveal.at &&
         !reveal.shown()
       ) {
-        // Leaving the wall by a jump still breaks it, with the reveal running over it.
+        // Leaving the wall, by a step or a jump, breaks it first; the clock behind it shatters
+        // into the Earth once the wall's last shard has faded.
         if (wall.kind() === "wall") wall.arrange(next.kind);
-        reveal.start(hop);
+        const breaking = ["approach", "breaking"].includes(wall.state());
+        reveal.start(hop, breaking ? CLEAR_MS : 0);
         return;
       }
       wall.arrange(next.kind);

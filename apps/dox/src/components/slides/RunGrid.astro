@@ -1,0 +1,45 @@
+---
+/**
+ * A slide's run grid (`lib/slides/run-grid.ts`) as a deck table: one row per call, the kind as
+ * the row header and the call under it, one column per zone, each cell what the code returned
+ * there, red or green against the value every call should give. While a run record is missing or
+ * stale, a marked panel says why and the build carries on: the deck's content test is what fails.
+ * The slot is a line under the table.
+ */
+import type { RunGrid } from "~/lib/slides/run-grid";
+import DeckTable from "./DeckTable.astro";
+
+interface Props {
+  grid: RunGrid;
+  caption: string;
+}
+const { grid, caption } = Astro.props;
+---
+
+{
+  grid.ready ? (
+    <>
+      <DeckTable caption={caption} columns={["Input", ...grid.places]}>
+        {grid.rows.map((row) => (
+          <tr>
+            <th scope="row">
+              {row.kind}
+              <br />
+              <code>{row.call}</code>
+            </th>
+            {row.cells.map((cell) => (
+              <td data-outcome={cell.outcome}>
+                <output>{cell.label}</output>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </DeckTable>
+      <slot />
+    </>
+  ) : (
+    <p class="gmt-deck-panel" data-run="stale">
+      {grid.problem}
+    </p>
+  )
+}

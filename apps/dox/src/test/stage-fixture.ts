@@ -144,15 +144,27 @@ export const gmtLoaderMock = (
 };
 
 /**
- * The Earth's clock ticks through the venue clock, whose own test is `title-clock.test.ts`. Here it
- * has no time now, so the hands move only for an instant a build holds them at.
+ * The Earth's clock ticks through the venue clock, whose own test is `title-clock.test.ts`. Here its
+ * time now is 23:30, and it knows the instants a build holds it at and the talk's start that a
+ * locked deck holds it at.
  */
 /** The factory for `vi.mock("./title-clock")`. */
 export const titleClockMock = () => ({
   loadClock: async () => ({
-    read: () => null,
+    read: () => ({
+      hour: 23,
+      minute: 30,
+      second: 0,
+      zoned: "2026-11-20T23:30:00+02:00[Europe/Helsinki]",
+    }),
     at: (utc: string) =>
       ({
+        "2026-12-16T16:00:00Z": {
+          hour: 18,
+          minute: 0,
+          second: 0,
+          zoned: "2026-12-16T18:00:00+02:00[Europe/Helsinki]",
+        },
         "2027-03-28T00:59:00Z": {
           hour: 2,
           minute: 59,

@@ -1,19 +1,30 @@
 ---
 /**
- * A filing as a receipt: its reference as a link, the tracker and the state in words. It sits in the
- * corner of a slide whose visual shows the bug; the report's own lines are in that visual. Read
- * from `upstream-filings.json` through `filingFacts`, so an unknown key fails the build.
+ * A filing as a receipt: its reference as a link and, by `show`, either the tracker and its state
+ * in words or what GMT does about it (`gmtBadge`). It sits in the corner of a slide whose visual
+ * shows the bug. Read from `upstream-filings.json`, so an unknown key fails the build.
  */
-import { filingFacts } from "~/lib/slides/filing";
+import Link from "~/components/Link.astro";
+import { filingFacts, findFiling } from "~/lib/slides/filing";
+import { gmtBadge } from "~/lib/upstream-badges";
+
+/** `tracker`: the tracker and the filing's state. `gmt`: what GMT does about the bug. */
+export type ReceiptShows = "tracker" | "gmt";
 
 interface Props {
   /** A `filingKey`. */
   filing: string;
+  show: ReceiptShows;
 }
-const facts = filingFacts(Astro.props.filing);
+const { filing, show } = Astro.props;
+const facts = filingFacts(filing);
+const says =
+  show === "gmt"
+    ? gmtBadge(findFiling(filing)).text
+    : `${facts.group}, ${facts.stateLabel.toLowerCase()}`;
 ---
 
 <p class="gmt-receipt" data-state={facts.state}>
-  <a class="gmt-filing-ref" href={facts.url}>{facts.ref}</a>
-  <span>{facts.group}, {facts.stateLabel.toLowerCase()}</span>
+  <Link class="gmt-filing-ref" href={facts.url}>{facts.ref}</Link>
+  <span>{says}</span>
 </p>

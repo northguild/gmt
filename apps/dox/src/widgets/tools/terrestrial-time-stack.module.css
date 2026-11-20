@@ -120,12 +120,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A value is one token (an instant, a day number): a hyphen or a colon is not a place to break.
-   The kit's `.cell code` sets `white-space: normal`, so this has to be the more specific rule. */
-.wrap .cell {
-  white-space: nowrap;
-}
-
 .cell * {
   line-height: inherit;
 }
@@ -161,8 +155,7 @@
   }
 }
 
-/* Under 46rem the four rows become labelled blocks: each cell names its column from the
-   `data-col` the table wrote, and the header row is read by the labels instead. */
+/* Under 46rem the kit table (`stack`) turns its four rows into labelled blocks. */
 .scales {
   container-type: inline-size;
   min-inline-size: 0;
@@ -176,54 +169,6 @@
     & th,
     & td {
       padding-inline: var(--gmt-space-1);
-    }
-  }
-
-  @container (inline-size < 46rem) {
-    & table,
-    & caption,
-    & tbody,
-    & tr,
-    & th,
-    & td {
-      display: block;
-      inline-size: 100%;
-    }
-
-    & thead {
-      position: absolute;
-      inline-size: 1px;
-      block-size: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
-
-    & tr {
-      padding-block: var(--gmt-space-2);
-      border-block-end: 1px solid var(--gmt-hairline);
-    }
-
-    & th,
-    & td {
-      display: grid;
-      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
-      gap: var(--gmt-space-2);
-      border-block-end: 0;
-      text-align: start;
-    }
-
-    & th::before,
-    & td::before {
-      content: attr(data-col);
-      color: var(--gmt-ice-dim);
-      font-weight: 600;
-    }
-
-    /* A value is one token: it stays whole and the table scrolls sideways, never splits. */
-    & .cell span,
-    & .mono {
-      white-space: nowrap;
-      overflow-wrap: normal;
     }
   }
 }

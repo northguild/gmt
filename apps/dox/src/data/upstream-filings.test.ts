@@ -166,10 +166,19 @@ describe("upstream filings", () => {
     }
   });
 
-  it("marks the Indian-calendar ICU and WebKit filings unguarded", () => {
+  it("marks the ICU and WebKit calendar filings as not reaching GMT, which runs only the polyfill's Temporal", () => {
     const byKey = new Map(filings.map((f) => [filingKey(f), f]));
-    expect(byKey.get("ICU-23627")?.gmtUnguarded).toBe(true);
-    expect(byKey.get("bugs.webkit.org#331726")?.gmtUnguarded).toBe(true);
+    for (const key of [
+      "ICU-23609",
+      "ICU-23626",
+      "ICU-23627",
+      "bugs.webkit.org#331725",
+      "bugs.webkit.org#331726",
+    ]) {
+      const f = byKey.get(key);
+      expect(f?.gmtUnguarded, key).toBeUndefined();
+      expect(f?.gmtNote, key).toContain("@js-temporal/polyfill");
+    }
   });
 
   it("separates the filings we opened from the ones we only contributed to", () => {

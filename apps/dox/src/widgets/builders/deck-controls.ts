@@ -26,6 +26,7 @@ import { html, type SafeHtml } from "./html";
 import { field } from "./layout";
 import { table } from "./table";
 import { textInput } from "./text-input";
+import { link } from "./link";
 
 /** The info menu's tools: the button id is `deck-<action>`, and its key is that action's first. */
 const TOOLS = [
@@ -167,7 +168,7 @@ export interface OverviewItem {
 export function overviewItems(items: readonly OverviewItem[]): SafeHtml {
   return html`${items.map(
     (item) =>
-      html`<li><a href="#${item.id}" data-deck-goto="${item.id}">${item.title}</a>${item.minutes === null ? "" : html` <span class="gmt-deck-minutes">${item.minutes} min</span>`}</li>`,
+      html`<li>${link({ href: `#${item.id}`, body: item.title, attrs: html`data-deck-goto="${item.id}"` })}${item.minutes === null ? "" : html` <span class="gmt-deck-minutes">${item.minutes} min</span>`}</li>`,
   )}`;
 }
 

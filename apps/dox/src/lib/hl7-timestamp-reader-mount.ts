@@ -156,6 +156,7 @@ function ladderTable(id: (local: string) => string, third: string): SafeHtml {
     rowHeader: "precision",
     layout: "fixed",
     widths: ["16%", null, null],
+    stack: true,
     columns: [
       { key: "precision", header: "Precision", align: "start", numeric: false },
       { key: "sent", header: "As sent", align: "start", numeric: true },

@@ -5,6 +5,7 @@
  * eyes on the surface, dark on light in the light theme) and is at least 30% of the stage's
  * height. `logo` says whose code it is: the LinkedIn logo or the NorthGuild shield.
  */
+import Link from "~/components/Link.astro";
 import { LINKEDIN_LOGO, qrModel } from "~/lib/slides/qr";
 import { MARK_VIEW_BOX, markInner, nextMarkInstance } from "~/lib/ng-mark";
 import "./qr-code.css";
@@ -60,6 +61,6 @@ const markInstance = logo === "northguild" ? nextMarkInstance(Astro.request) : 0
   </div>
   <figcaption>
     <strong>{label}</strong>
-    <a href={url}>{url.replace(/^https:\/\/(www\.)?/, "").replace(/\/$/, "")}</a>
+    <Link href={url}>{url.replace(/^https:\/\/(www\.)?/, "").replace(/\/$/, "")}</Link>
   </figcaption>
 </figure>

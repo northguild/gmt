@@ -14,6 +14,7 @@
  */
 import { html, raw, type SafeHtml } from "./html";
 import styles from "./data-credits.module.css";
+import { link } from "./link";
 
 export interface DataCredit {
   readonly label: string;
@@ -34,7 +35,7 @@ const ICON =
 
 function part(p: DataCredit["parts"][number]): SafeHtml | string {
   if (typeof p === "string") return p;
-  return html`<a href="${p.href}" rel="noopener">${p.text}</a>`;
+  return link({ href: p.href, body: p.text });
 }
 
 /** The sources as a list, label then credit: the popup's body, and the slide deck's info menu's. */

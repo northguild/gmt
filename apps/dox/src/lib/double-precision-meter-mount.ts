@@ -84,6 +84,7 @@ import {
 import { INTEGER_UTC_FROM } from "./timescale-widgets";
 import { loadDayCountLib, type DayCountLib } from "./timescale-lib";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { link } from "~/widgets/builders/link";
 
 export type { DoublePrecisionMeterArgs } from "./double-precision-meter";
 
@@ -338,7 +339,7 @@ export function renderDoublePrecisionMeterTemplate(
         label: "Show the samples",
         children: html`<div class="${styles.forms}" id="${id("table")}">${samplesTable(null)}</div>`,
       })}
-      <p class="${styles.note}">Measured: the worst of four fixed times of day in each sampled year. A value you type can drift more or less, but never more than the bound in <a href="${withBase(NOTE_LINK)}">the function's documentation</a>.</p>`,
+      <p class="${styles.note}">Measured: the worst of four fixed times of day in each sampled year. A value you type can drift more or less, but never more than the bound in ${link({ href: withBase(NOTE_LINK), body: "the function's documentation" })}.</p>`,
   );
 
   return widget(

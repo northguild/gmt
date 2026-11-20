@@ -4,6 +4,7 @@
  * refresh when GitHub is reachable, the committed snapshot otherwise. Nothing is fetched in the
  * browser. Sentences come from `lib/upstream-summary.ts`, styles in `gmt-content-tables.css`.
  */
+import Link from "~/components/Link.astro";
 import { filingGroups, filingsForGroup } from "../data/upstream-filings";
 import { UPSTREAM_COLUMNS as COLUMNS } from "../lib/upstream-status";
 import { asDate } from "../lib/upstream-summary";
@@ -19,7 +20,7 @@ import UpstreamTrackerSummary from "./UpstreamTrackerSummary.astro";
   filingGroups.map((group) => (
     <section class="gmt-upstream-repo">
       <h3>
-        <a href={group.href}>{group.name}</a>
+        <Link href={group.href}>{group.name}</Link>
       </h3>
       <div class="gmt-ref-table" data-kind="content" data-layout="entries" data-label={`Filings: ${group.name}`}>
       <table class="gmt-upstream-table">

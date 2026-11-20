@@ -883,10 +883,8 @@
   display: block;
   margin-block-start: 2px;
 
-  /* The whole value is one token: a hyphen or a colon is a break point, and a split date is a
-     split word. It keeps one line, and a table narrower than the value scrolls sideways in its
-     box. */
-  white-space: nowrap;
+  /* The value breaks only where `zonedValue` puts a break point (after the `T`, before the offset,
+     before the `[`, after a `/`), so a date is never split and the table never scrolls. */
   overflow-wrap: normal;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);

@@ -8,11 +8,15 @@
  * slide's own zoom so the clock takes the Earth's size. Stepping onto the reveal breaks the clock
  * away over `REVEAL_MS` (`clock-shatter.ts`): behind it the camera has already turned to the
  * slide's place, and the Earth comes up there from behind the shards, at the clock's centre and
- * size. Under reduced motion, on a deep link past it, or with no globe, the clock is simply gone.
+ * size. Leaving the wall onto the reveal breaks the wall in front of it first, and the clock
+ * shatters once the wall's shards have cleared (`afterMs`).
+ * Under reduced motion, on a deep link past it, or with no globe, the clock is simply gone.
  * The overview always shows the Earth.
  *
  * A slide may ask for the clock again (`data-clock`, the close), and a build may hold it at an
- * instant (`data-clock-at`, a skipped hour).
+ * instant (`data-clock-at`, a skipped hour). While the deck is locked (`data-locked` on the deck
+ * root) the clock stands at the talk's start (`data-deck-preview-at`), the preview for adverts;
+ * unlocking sets it ticking the time now.
  */
 import type { GlobeEngine, GlobeFraming } from "~/lib/globe/types";
 import { prefersReducedMotion } from "~/lib/reduced-motion";
@@ -84,8 +88,8 @@ interface StageReveal {
   show(): void;
   /** Sets the clock over the Earth's disc. */
   fit(): void;
-  /** Breaks the clock away from in front of the Earth. */
-  start(hop: boolean): void;
+  /** Breaks the clock away from in front of the Earth, after `afterMs` (a wall still breaking). */
+  start(hop: boolean, afterMs?: number): void;
   /** Stops a reveal that is running; says whether one was. */
   cancel(): boolean;
   /** Mounts the clock under the space layer; call once the layer is known. */
@@ -107,6 +111,13 @@ export function createReveal(d: RevealDeps): StageReveal {
    */
   const heldAt = (): string | null =>
     builtAttribute(d.slideEls[d.homeSlide()], "clock-at", d.homeBuild());
+
+  const root = host?.closest<HTMLElement>("[data-deck-root]") ?? null;
+  /** The talk's start while the deck is locked; `null` when unlocked or the deck has no date. */
+  const previewAt = (): string | null =>
+    root?.hasAttribute("data-locked")
+      ? (root.dataset["deckPreviewAt"] ?? null)
+      : null;
 
   const shown = (): boolean =>
     clock !== null &&
@@ -137,7 +148,7 @@ export function createReveal(d: RevealDeps): StageReveal {
   }
 
   function show(): void {
-    clock?.hold(heldAt());
+    clock?.hold(heldAt() ?? previewAt());
     clock?.set(shown() ? "on" : "off");
     fit();
     d.syncSpin();
@@ -154,11 +165,12 @@ export function createReveal(d: RevealDeps): StageReveal {
   /**
    * While the clock still hides the Earth, the camera turns straight to the slide's place (a hop
    * of one millisecond with no dip lands on the next frame), so the Earth comes up behind the
-   * shards where it will stay and nothing moves after. After `REVEAL_MS` the clock is gone and the
-   * wall is arranged. Under reduced motion, with no globe or no window to time it, the clock goes
-   * at once.
+   * shards where it will stay and nothing moves after. The clock stands whole for `afterMs`, while
+   * the wall in front of it breaks, then shatters; `REVEAL_MS` later the clock is gone and the wall
+   * is arranged. Under reduced motion, with no globe or no window to time it, the clock goes at
+   * once.
    */
-  function start(hop: boolean): void {
+  function start(hop: boolean, afterMs = 0): void {
     const engine = d.engine();
     if (
       !engine ||
@@ -180,7 +192,6 @@ export function createReveal(d: RevealDeps): StageReveal {
     engine.flyTo(rotationFor(target, ctx), {
       hop: { durationMs: 1, dipZoom: zoom },
     });
-    clock.set("shatter");
     const goal = pointFor(target, ctx);
     if (host) {
       host.dataset["target"] = `${goal[0].toFixed(2)} ${goal[1].toFixed(2)}`;
@@ -188,15 +199,19 @@ export function createReveal(d: RevealDeps): StageReveal {
     }
     d.commanded();
     d.draw();
-    const id = win.setTimeout(() => {
-      if (timer !== id) return;
+    const end = (): void => {
       timer = 0;
       clock?.set("off");
       d.arrange(d.home().kind);
       d.fly(false);
       d.syncBusy();
-    }, REVEAL_MS);
-    timer = id;
+    };
+    const shatter = (): void => {
+      clock?.set("shatter");
+      timer = win.setTimeout(end, REVEAL_MS);
+    };
+    if (afterMs > 0) timer = win.setTimeout(shatter, afterMs);
+    else shatter();
     d.syncBusy();
   }
 
@@ -216,6 +231,14 @@ export function createReveal(d: RevealDeps): StageReveal {
         zone: pole.zone,
         city: labelOf({ ...pole, kind: "zone" }),
       });
+      // Locking or unlocking switches the clock between the talk's start and the time now.
+      if (root && typeof MutationObserver === "function") {
+        const lock = new MutationObserver(show);
+        lock.observe(root, { attributeFilter: ["data-locked"] });
+        d.signal.addEventListener("abort", () => lock.disconnect(), {
+          once: true,
+        });
+      }
       // Until the globe is up nothing else moves the clock when the window changes size.
       win?.addEventListener(
         "resize",

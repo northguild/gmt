@@ -39,27 +39,38 @@ places; no national default, no law, no business wording, no text that judges a 
 - **`agents`** ("What the agents returned"): `AgentTable`, one row per answer in file order: the
   model, the code's line count and imported libraries, the value on Node 26 in Helsinki, and the
   distinct values across its runs. An answer not ready fills its row with the marked cell.
-- **`one-clock`** ("One clock for the whole planet"): the ice wall ([slice 2b](./s2b-ice-wall.md)).
+- **`date`** ("Date only knows this machine"): the venue's clock still shows, and nothing animates. The
+  first row is the agents' question asked of `Date` (`AGENTS_FAULT` in `content.ts`): it knows only
+  the machine's clock, which is why the agents failed. Two of the home page's rows from `dateFaults`
+  follow, the ones no other slide shows: months counted from 0, and `setDate` changing a `Date` in
+  place. No builds.
+- **`kinds`** ("Date takes anything"): the venue's clock still shows. A five-line `nextDay` over
+  `Date` (`date-kinds.json`), then, in a `Swap` so each step replaces the last, on build 1, `RunGrid`: one row per kind of time passed in (a
+  date, a local time, a UTC time, an offset, a zone, a `Date` object), one column per zone (Niue,
+  New York, UTC, Kolkata, Helsinki), each cell what Node 26 returned there, from
+  `date-kinds-run.json` (`scripts/zone-matrix/date-kinds.mjs`), red or green against
+  2027-03-28, with the count of distinct results under it. Build 2 is GMT's run of
+  `GMT_CALLS.kinds`. `kinds.ts` builds the grid once; `content.test.ts` fails while a run record is
+  stale. Notes end: "Every library that keeps a Date inside inherits this grid."
+- **`one-clock`** ("The web shows one clock"): the ice wall ([slice 2b](./s2b-ice-wall.md)).
   Notes: "Each of these sites shows one clock. That is the view most date code takes, and the view
-  the agents took: one place, one local time. Hold that."
-- **`date`**: the wall breaks as the slide arrives; the table enters once the shards are clear.
-  Rows from `dateFaults`; every row's code types out together. The guess row is
-  `new Date("2025-03-30T01:30")`: its result and reason wait for build 1.
-- **`temporal`**: Temporal's arrival and per-engine state from `temporal-compat.ts`
-  (`engineLabel`, `stateLine`), in plain words, left of the Earth.
+  the agents took: one place, one local time. Hold that." The wall breaks as the talk steps on.
+- **`temporal`** ("Give me Temporal"): the wall breaks, then the clock behind it shatters into the
+  Earth as the wall's last shards fade. The text: "One clock against the whole planet. Temporal lets your code tell the time anywhere
+  on Earth: you pass in the place, and it works out the rest." No bug counts and no GMT; those
+  belong to `guards`.
 - **`experiments`, then `gaps`, `overlaps`, `host`, `odd`**: `ExperimentOpener` and
   `ExperimentSlide`, read from `zone-probe.json`; GMT stays in the list, its zero in green.
-  `experiment-gaps` takes `guess`: the question first, the bars on build 1.
 - **Bug slides**: the visuals and receipts of [slice 6](./s6-time-not-camera.md#a-visual-per-bug),
   then one last build with `GmtStep` ([slice 7](./s7-running-question.md#the-gmt-step-on-each-bug-slide)).
-  Each call below was run on Node 22 and 26 (ICU 78.3) with these results:
+  Each call below was run on Node 26 (ICU 78.3) with these results; a slide's calls share one `GmtRun`:
 
   | Slide | Filings | GMT call (module) | Result |
   | --- | --- | --- | --- |
-  | `abort` | `nodejs/node#67076` (D23), `CLDR-19873` (D24) | `formatDateToParts("1970-01-01", "gd", { year: "numeric", month: "short" })` (`plain/format`) | month `Faoi`, year `1970` |
-  | `years` | `ICU-23609`, `fullcalendar/temporal-polyfill#127` (notes), `ICU-23619` (D25) | `formatDate("1870-03-01", "en-u-ca-japanese", { era: "short", year: "numeric" })` (`plain/format`) | `1870 AD` |
-  | `day-off` | `ICU-23627`, `WebKit 331726` (no workaround), `fullcalendar/temporal-polyfill#128` (note) | `holidayDates({ name: "Spring Festival", kind: "calendarFixed", calendar: "chinese", monthCode: "M01", day: 1 }, 2027)` (`calendar/rules`) | `[]`, shown as NO SIGNAL |
-  | `manila` | `tc39/proposal-temporal#3330` (zoned.E) | `resolveLocal("1844-12-31T12:00:00", "Asia/Manila", { disambiguation: "reject" })` (`instant/convert`) | `""`, shown as NO SIGNAL |
+  | `abort` | `nodejs/node#67076` (D23), `CLDR-19873` (D24) | `formatDateToParts("2024-12-30", "gd", { year: "numeric", month: "short" })` (`plain/format`), the date the Unicode ticket's run prints in 2025 | month `Dùbh`, year `2024` |
+  | `years` | `ICU-23609`, `fullcalendar/temporal-polyfill#127` (notes), `ICU-23619` (D25) | `formatDate("2124-03-20", "en-u-ca-persian", { year: "numeric", month: "long", day: "numeric" })`, then `formatDate("1870-03-01", "en-u-ca-japanese", { era: "short", year: "numeric" })` (`plain/format`) | `Farvardin 1, 1503 AP`, then `1870 AD` |
+  | `day-off` | `ICU-23627`, `WebKit 331726` (no workaround), `fullcalendar/temporal-polyfill#128` (note) | `holidayDates({ name: "Spring Festival", kind: "calendarFixed", calendar: "chinese", monthCode: "M01", day: 1 }, 2027)` (`calendar/rules`) | `[]`, marked lost, with a note that GMT has no answer yet: `@js-temporal/polyfill` throws on every Chinese date under ICU 78 (js-temporal/temporal-polyfill#360) |
+  | `manila` | `tc39/proposal-temporal#3330` (zoned.E) | `resolveLocal("1844-12-30T12:00:00", …reject)`, `classifyLocal("1844-12-31T12:00:00", "Asia/Manila")`, `resolveLocal("1845-01-01T12:00:00", …reject)` (`instant/convert`) | `1844-12-31T03:56:08Z`, `nonexistent`, `1845-01-01T03:56:08Z`: two local days a day apart in UTC |
   | `engines` | `nodejs/node#67457` (note) | `diffDateAsDuration("2000-01-01", "2001-01-01", "years", { smallestUnit: "months", roundingMode: "halfExpand" })` (`plain/calculate`) | `P1Y` |
 
   On `day-off` the step says what the data says and no more: GMT has no workaround for the
@@ -67,7 +78,7 @@ places; no national default, no law, no business wording, no text that judges a 
   the #128 note, which names the weekly swap check. No reason for the empty result is given
   beyond the note. Notes for the GMT steps say what GMT did, never that a library is wrong.
 - **`scoreboard`**: `FilingLegend` with the filings as pins ([slice 6](./s6-time-not-camera.md#filings-as-pins)).
-- **`familiar`** ("Names you already know"): three `FamiliarPair`s from `familiar.json`:
+- **`familiar`** ("Names you already know"), after `gmt`: three `FamiliarPair`s from `familiar.json`:
 
   | Job | Moment / date-fns / Day.js shape | GMT call | Result |
   | --- | --- | --- | --- |
@@ -79,16 +90,16 @@ places; no national default, no law, no business wording, no text that judges a 
   checked against each library's docs and by R's harness test. A contrast of shape: notes say
   "Same jobs, same kind of names; strings in, strings out." No verdict.
 - **`gmt`**: the running question, answered: `resolveLocal("2027-03-28T03:30:00",
-  "Europe/Helsinki", { disambiguation: "reject" })` through `GmtResult` (NO SIGNAL), then
-  `classifyLocal` on the same input (`"nonexistent"`). Build 1 and 2 keep the crystal clock at
+  "Europe/Helsinki", { disambiguation: "reject" })` (NO SIGNAL), then `classifyLocal` on the
+  same input (`"nonexistent"`), both in one `GmtRun`. Build 1 and 2 keep the crystal clock at
   02:59, then 04:00 ([slice 6](./s6-time-not-camera.md#the-crystal-clock)). The `addDate`
   result moves to `familiar`; the `addZoned` one is dropped.
 - **`guards`**: one paragraph from `compatGroups`, `groupsStillNeeded`, `probeTotals` and
   `gmtStats`, and the link to every filing. The bug slides already showed guards at work.
 - **`ask-dox`**, **`page-tools`**: [slice 4b](./s4b-live-agents.md).
 - **`why-not-temporal`** ("Why not just Temporal?"): three plain points: bad input throws, a
-  time that never happened is moved rather than refused, and engines and polyfills disagree (the
-  filing count and `gmtStats.timezones`). Notes link to `/upstream/`, `/pulse/` and issue #316.
+  time that never happened is moved rather than refused, and engines and polyfills disagree (GMT
+  guards the bugs still open, tested in `gmtStats.timezones` zones; no bug count). Notes link to `/upstream/`, `/pulse/` and issue #316.
   Facts only.
 - **`qa`** ("Q&D: Questions and Dox"): the audience-question panel (slice 4b); the notes say questions run
   through Dox chat or aloud and link to the spare.
@@ -99,12 +110,33 @@ places; no national default, no law, no business wording, no text that judges a 
   `isValidDate`, `formatDate`, `@northguild/gmt`) through `bundleCells`, with the measurement's
   date, Node and esbuild from `bundle-size.json`, and a link to `/bundle-size/`.
 
-## `GmtResult.astro`
+## The run panel
 
-Props: `module` (a key of `GMT_MODULES`), `name`, `args`. It renders `callText` and awaits
-`callGmt` at build time, so the code shown and the value shown come from one source. A sentinel
-(`""`, `null`, `false`, `[]`) renders as `⟨ NO SIGNAL — invalid input ⟩` in Signal-lost amber
-([Colour](../../reference/visual-design.md#colour)). Module barrels only.
+`CodeRun.astro` is every snippet on stage, laid out the way a test runner prints a run: a runtime
+heading, then each step's code and one outcome row. A shell command (`$`) is a terminal: it types
+out after its prompt. A JavaScript call (`>`) sits in the site's own code block (`DeckCode`, the
+Starlight `Code` block in its dark theme), as every example on the guides does. The outcome row
+holds the **Result** (the lines the step printed) and, beside a result that is not right, the
+**Expected** value (the step's `want`); a right result has no Expected row, since it would repeat
+the result. The values share one line while they fit and wrap when not, their labels one width so
+a wrapped value starts in the same column.
+
+`RunLabel.astro` labels every value: "✗ Result" in red for a bug, "✓ Expected" in green for the
+right value, "✓ Result" in green for a right result, and "∅ Result" for a sentinel (`""`, `null`,
+`false`, `[]`), printed as it is in Signal-lost amber
+([Colour](../../reference/visual-design.md#colour)). A run can name who gave its results in place
+of "Result" (`by`). Red and green are the deck's pair (`--gmt-deck-wrong`, `--gmt-deck-right` in
+`slides.css`); the split-flap rows and the calendar figures (`MonthShift`, `MonthPage`) take the
+same labels and colours.
+
+`GmtRun.astro` builds the steps from gmt calls (`module`, a key of `GMT_MODULES`, `name`, `args`)
+through `gmtSteps`, which awaits `callGmt` at build time, so the code shown and the value shown
+come from one source. Module barrels only. Its first block opens with the calls' imports from
+`@northguild/gmt/<module>` (`importText`), so nobody has to guess whose code it is, and its results
+read "✓ GMT". A call's `bug` (who gives it, and the value or words from its filing) prints in red
+beside GMT's result, as "✗ temporal-polyfill", "✗ Intl", "✗ Temporal" or "✗ Node 26": the slide says what
+GMT returns and what the filed bug gives for the same input. `content.test.ts` holds every `bug`
+to its report.
 
 ## Panels
 
@@ -116,10 +148,11 @@ bottom edge only. No left-only stripe on any card, step, pair or code block.
 - `scripts/slides-built.test.ts` reads every registered deck as built through `distDirOrSkip()`:
   ids unique, spares last and without minutes, main minutes sum to the registry's `minutes` plus
   `qa`, every slide has notes. `src/slides/give-me-temporal/built.test.ts` holds Deck 0's own:
-  the outline order, six wall figures with captions, no wall on `date`.
+  the outline order, six wall figures with captions, and `date`'s table opening on the agents'
+  question with no wall figures.
 - A place, reveal zone or lapse a slide names that the deck's stage data lacks fails the build
   (`checkStageNames` in `Slide.astro` and `Build.astro`).
-- `gmt-result.test.ts`, `decks.test.ts` as built; the new pieces' tests are in
+- `gmt-call.test.ts`, `decks.test.ts` as built; the new pieces' tests are in
   [slice 7](./s7-running-question.md#tests-and-checks).
 
 ## Definition of done

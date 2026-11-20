@@ -1,6 +1,6 @@
 /*
  * `DeckTable.astro`: a table on the stage, set on an opaque plate so the figures behind it never show
- * through the text. A row of a typed table is unseen, typing its code, or done (`data-state`).
+ * through the text.
  */
 .gmt-deck-table {
   inline-size: 100%;
@@ -43,45 +43,36 @@ html[data-deck] .gmt-deck-table caption {
   padding-inline: 1cqi;
 }
 
-/* A table whose rows all arrive with the slide: a row is unseen, typing its code, or done. */
-.gmt-deck-table tr[data-state="hidden"] {
-  visibility: hidden;
-}
-
-.gmt-deck-table tr[data-state="typing"] td + td {
-  visibility: hidden;
-}
-
 /*
- * The typed table's columns are fixed, so they do not grow as the code types in: the code wraps
- * inside its column instead of widening it.
+ * A code table's columns are fixed: the code wraps inside its column instead of widening it, so the
+ * reason keeps its room.
  */
-.gmt-deck-table[data-visual="rows"] {
+.gmt-deck-table[data-layout="code"] {
   table-layout: fixed;
 }
 
 /* The code and the reason get the room; the result is short. */
-.gmt-deck-table[data-visual="rows"] th:first-child {
+.gmt-deck-table[data-layout="code"] th:first-child {
   inline-size: 40%;
 }
 
-.gmt-deck-table[data-visual="rows"] th:last-child {
+.gmt-deck-table[data-layout="code"] th:last-child {
   inline-size: 38%;
 }
 
-.gmt-deck-table[data-visual="rows"] td {
+.gmt-deck-table[data-layout="code"] td {
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
 /* A line of code breaks between its words, never inside a string. */
-.gmt-deck-table[data-visual="rows"] td code {
+.gmt-deck-table[data-layout="code"] td code {
   white-space: normal;
   overflow-wrap: normal;
   word-break: keep-all;
 }
 
-/* The typed table sets a little smaller so its five rows fit the left two thirds. */
-html[data-deck] .gmt-deck-table[data-visual="rows"] {
+/* A code table sets a little smaller so its rows fit the left two thirds. */
+html[data-deck] .gmt-deck-table[data-layout="code"] {
   font-size: var(--gmt-deck-text-sm);
 }

@@ -10,7 +10,8 @@
  * state.
  */
 import type { EdiCall } from "~/lib/edi-widgets";
-import { callArgs, formatValue } from "~/lib/punctuality-widgets";
+import { callArgs } from "~/lib/call-args";
+import { formatValue } from "~/lib/punctuality-widgets";
 import { codeSpan } from "~/lib/widget-ui";
 import { raw, type SafeHtml } from "../../builders/html";
 import { CALL_OUTPUT_LOST, type CallOutputLine } from "../gnss/call-output";

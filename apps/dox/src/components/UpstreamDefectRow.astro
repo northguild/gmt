@@ -9,6 +9,7 @@
  * anyone typed. A `guard` row passes its probes by design, so it says "Kept on purpose" and
  * prints the reason the snapshot recorded, with each GitHub reference as a short link.
  */
+import Link from "~/components/Link.astro";
 import type { CompatGroup } from "../data/temporal-compat";
 import {
   groupLabel,
@@ -42,7 +43,7 @@ const { count } = stateLine(group);
     {group.state === "guard" && group.guard && (
       <p class="gmt-defects-reason">
         {reasonParts(group.guard.reason).map((part) =>
-          "href" in part ? <a href={part.href}>{part.text}</a> : part.text,
+          "href" in part ? <Link href={part.href}>{part.text}</Link> : part.text,
         )}
       </p>
     )}
@@ -54,7 +55,7 @@ const { count } = stateLine(group);
       <ul class="gmt-defects-refs">
         {filings.map((f) => (
           <li>
-            <a href={f.contributionUrl ?? f.url}>{filingRef(f)}</a>
+            <Link href={f.contributionUrl ?? f.url}>{filingRef(f)}</Link>
           </li>
         ))}
       </ul>

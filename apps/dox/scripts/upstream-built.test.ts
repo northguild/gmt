@@ -44,9 +44,10 @@ describe("the built /upstream/ page", () => {
         /<span class="gmt-sr-only"[^>]*>(Pull request|Issue):<\/span>/.exec(
           head,
         )?.[1];
-      const isPr = /class="gmt-upstream-ref" href="[^"]*\/pull\/\d+"/.test(
-        head,
-      );
+      // The reference's own tag, whatever order the link writes its attributes in.
+      const ref =
+        /<a [^>]*class="gmt-upstream-ref"[^>]*>/.exec(head)?.[0] ?? "";
+      const isPr = /href="[^"]*\/pull\/\d+"/.test(ref);
       expect(kind).toBe(isPr ? "Pull request" : "Issue");
     }
   });

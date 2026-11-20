@@ -29,7 +29,7 @@ loads.
 - `{ kind: "overview" }`: zoom 1, the camera over the mean of every pinned place, every pin and
   arc lit.
 - `{ kind: "wall" }` (`one-clock`): the overview camera with the ice wall in front
-  ([slice 2b](./s2b-ice-wall.md)); `{ kind: "planet" }` (`date` on): the camera centred on
+  ([slice 2b](./s2b-ice-wall.md)); `{ kind: "planet" }` (`temporal` on): the camera centred on
   the `PLANET_ZONES` pins, the matrix zones among them ([slice 4c](./s4c-zone-matrix.md)).
 - Rotation for a point is `[-lng, -lat]` ([`GlobeOptions.initialRotation`](../../built/tier-4-globe.md#engine-srclibglobe)).
 - Tests: every place used by every deck resolves; antipode maths against a fixed instant from

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { callGmt, callText, isSentinel, valueText } from "./gmt-call";
+import {
+  callGmt,
+  callText,
+  codeText,
+  gmtSteps,
+  importText,
+  isSentinel,
+} from "./gmt-call";
 
 describe("callGmt", () => {
   it("returns the value gmt computes", async () => {
@@ -43,7 +50,7 @@ describe("isSentinel", () => {
 });
 
 describe("callText", () => {
-  it("shows the call with its arguments, as written", () => {
+  it("shows a short call on one line and fills a long one with whole arguments", () => {
     expect(callText("addDate", ["2024-01-31", { months: 1 }])).toBe(
       'addDate("2024-01-31", { months: 1 })',
     );
@@ -54,14 +61,116 @@ describe("callText", () => {
         { disambiguation: "reject" },
       ]),
     ).toBe(
-      'resolveLocal("2027-03-28T03:30:00", "Europe/Helsinki", { disambiguation: "reject" })',
+      [
+        'resolveLocal("2027-03-28T03:30:00",',
+        '  "Europe/Helsinki", { disambiguation: "reject" })',
+      ].join("\n"),
+    );
+    const rule = {
+      name: "Spring Festival",
+      kind: "calendarFixed",
+      calendar: "chinese",
+      monthCode: "M01",
+      day: 1,
+    };
+    expect(callText("holidayDates", [rule, 2027])).toBe(
+      `holidayDates(${codeText(rule)},\n  2027)`,
     );
   });
 });
 
-describe("valueText", () => {
-  it("prints a string as itself and anything else as JSON", () => {
-    expect(valueText("2024-02-29")).toBe("2024-02-29");
-    expect(valueText(["a"])).toBe('["a"]');
+describe("importText", () => {
+  it("imports each module's functions once, in the order the calls use them, its from on a line of its own when wide", () => {
+    const call = (module: string, name: string) => ({ module, name, args: [] });
+    expect(
+      importText([
+        call("instant/convert", "resolveLocal"),
+        call("instant/convert", "classifyLocal"),
+        call("instant/convert", "resolveLocal"),
+        call("utc/get", "now"),
+      ]),
+    ).toBe(
+      [
+        "import { resolveLocal, classifyLocal }",
+        '  from "@northguild/gmt/instant/convert";',
+        'import { now } from "@northguild/gmt/utc/get";',
+      ].join("\n"),
+    );
+  });
+});
+
+describe("codeText", () => {
+  it("prints a value as code, a string quoted", () => {
+    expect(codeText("2024-02-29")).toBe('"2024-02-29"');
+    expect(codeText("")).toBe('""');
+    expect(codeText([])).toBe("[]");
+    expect(codeText([{ type: "year", value: "2024" }])).toBe(
+      '[ { type: "year", value: "2024" } ]',
+    );
+  });
+});
+
+describe("gmtSteps", () => {
+  it("gives each call with the value gmt returned, the sentinel marked lost", async () => {
+    expect(
+      await gmtSteps([
+        {
+          module: "plain/calculate",
+          name: "addDate",
+          args: ["2024-01-31", { months: 1 }],
+        },
+        {
+          module: "instant/convert",
+          name: "resolveLocal",
+          args: [
+            "2027-03-28T03:30:00",
+            "Europe/Helsinki",
+            { disambiguation: "reject" },
+          ],
+        },
+      ]),
+    ).toEqual([
+      {
+        code: 'addDate("2024-01-31", { months: 1 })',
+        out: ['"2024-02-29"'],
+        outcome: "right",
+      },
+      {
+        code: callText("resolveLocal", [
+          "2027-03-28T03:30:00",
+          "Europe/Helsinki",
+          { disambiguation: "reject" },
+        ]),
+        out: ['""'],
+        outcome: "lost",
+      },
+    ]);
+  });
+
+  it("holds a value to its want: right when it prints the same, wrong when not, lost for the sentinel", async () => {
+    const add = {
+      module: "plain/calculate",
+      name: "addDate",
+      args: ["2024-01-31", { months: 1 }],
+    } as const;
+    const steps = await gmtSteps([
+      { ...add, want: "2024-02-29" },
+      { ...add, want: "2024-03-02" },
+      {
+        module: "instant/convert",
+        name: "resolveLocal",
+        args: [
+          "2027-03-28T03:30:00",
+          "Europe/Helsinki",
+          { disambiguation: "reject" },
+        ],
+        want: "2027-03-28T01:30:00Z",
+      },
+    ]);
+    expect(steps.map((s) => [s.outcome, s.want])).toEqual([
+      ["right", '"2024-02-29"'],
+      ["wrong", '"2024-03-02"'],
+      ["lost", '"2027-03-28T01:30:00Z"'],
+    ]);
   });
 });

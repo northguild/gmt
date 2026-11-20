@@ -175,57 +175,6 @@
       padding-inline: var(--gmt-space-1);
     }
   }
-
-  /* Under 46rem the four rows become labelled blocks: each cell names its column from the
-     `data-col` the table wrote, and the header row is read by the labels instead. */
-  @container forms (inline-size < 46rem) {
-    & table,
-    & caption,
-    & tbody,
-    & tr,
-    & th,
-    & td {
-      display: block;
-      inline-size: 100%;
-    }
-
-    & thead {
-      position: absolute;
-      inline-size: 1px;
-      block-size: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
-
-    & tr {
-      padding-block: var(--gmt-space-2);
-      border-block-end: 1px solid var(--gmt-hairline);
-    }
-
-    & th,
-    & td {
-      display: grid;
-      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
-      gap: var(--gmt-space-2);
-      border-block-end: 0;
-      text-align: start;
-    }
-
-    & th::before,
-    & td::before {
-      content: attr(data-col);
-      color: var(--gmt-ice-dim);
-      font-weight: 600;
-    }
-
-    /* A value is one token (an instant, a day number): it keeps one line, and a table wider than
-       its box scrolls. A hyphen or a colon is a break point, and a split date is a split word. */
-    & .cell span,
-    & .mono {
-      white-space: nowrap;
-      overflow-wrap: normal;
-    }
-  }
 }
 
 .formName {
@@ -242,8 +191,6 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow-wrap: normal;
 }
 
 .cell * {

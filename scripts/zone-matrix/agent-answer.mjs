@@ -26,6 +26,9 @@
  * recorded as `{ threw: "<name>: <message>" }`. The runner exits as soon as it has the value, so a
  * timer the code leaves armed does not hold it, and a cell that has not finished after
  * `CELL_TIMEOUT_MS` is killed with every process it started.
+ *
+ * `runCode`, `cellOptions` and `recordRuns` run any code the deck shows as run, so
+ * `date-kinds.mjs` records the `kinds` slide's Date chain with the same runner and record shape.
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -226,33 +229,35 @@ export const onNode = (major, args, env) =>
   spawnBounded("fnm", fnmArgs(major, "node", args), env, CELL_TIMEOUT_MS);
 
 /**
- * Runs the transcript in every cell and returns the run record. Throws `Stop` when it cannot start.
+ * Runs `code` and `call` on every Node major in every zone, and returns the run record. Any code
+ * the deck shows as run uses this, so each record has one shape. Throws `Stop` when it cannot
+ * start or a cell fails.
  *
  * @param {object} options
- * @param {Record<string, string>} options.record the transcript
+ * @param {string} options.code the module, as the slide shows it
+ * @param {string} options.call the expression that calls it
+ * @param {string} options.command the command that writes the record, kept in it
+ * @param {string[]} options.zones the zones each Node major runs in, in order
+ * @param {string[]} options.node the Node majors
  * @param {Record<string, string>} options.pinned the packages pinned in `package.json`
- * @param {{ zones: string[]; node: string[] }} options.matrix the CI matrix; `SHOWN_ZONE` is added when it lacks it
  * @param {typeof onNode} options.run how a cell is run
  * @param {() => string} options.now the current instant, from gmt
  * @param {(name: string) => string} options.version the installed version of a package
  * @param {string} options.workDir where the code and the runner are written
  */
-export async function runAnswer({
-  record,
+export async function runCode({
+  code,
+  call,
+  command,
+  zones,
+  node: majors,
   pinned,
-  matrix,
   run,
   now,
   version,
   workDir,
 }) {
-  const empty = emptyFields(record);
-  if (empty.length > 0)
-    throw new Stop(
-      2,
-      `${ANSWER_FILE} has empty fields: ${empty.join(", ")}. Fill them from the owner's transcript.`,
-    );
-  const packages = packagesOf(record.code);
+  const packages = packagesOf(code);
   for (const name of packages)
     if (!(name in pinned))
       throw new Stop(
@@ -260,19 +265,16 @@ export async function runAnswer({
         `The code imports "${name}", which is not pinned in scripts/zone-matrix/package.json. Pin it with:\n  ${pinCommand(name)}`,
       );
 
-  const entryName = kindOf(record.code) === "cjs" ? "answer.cjs" : "answer.mjs";
+  const entryName = kindOf(code) === "cjs" ? "answer.cjs" : "answer.mjs";
   const entry = join(workDir, entryName);
   const runner = join(workDir, "run.mjs");
   mkdirSync(workDir, { recursive: true });
-  writeFileSync(entry, entryOf(record.code, record.call));
+  writeFileSync(entry, entryOf(code, call));
   writeFileSync(runner, runnerSource(entry));
 
-  const zones = matrix.zones.includes(SHOWN_ZONE)
-    ? matrix.zones
-    : [...matrix.zones, SHOWN_ZONE];
   const nodes = [];
   const values = [];
-  for (const node of matrix.node) {
+  for (const node of majors) {
     const row = [];
     for (const zone of zones) {
       const r = await run(node, [runner], { TZ: zone });
@@ -304,14 +306,44 @@ export async function runAnswer({
     values.push(row);
   }
   return {
-    sha256: hashOf(record.code, record.call),
-    command: COMMAND,
+    sha256: hashOf(code, call),
+    command,
     instant: now(),
     libraries: Object.fromEntries(packages.map((p) => [p, version(p)])),
     nodes,
     zones,
     values,
   };
+}
+
+/** The CI matrix's zones, with `SHOWN_ZONE` added at the end when the matrix lacks it. */
+export const withShownZone = (zones) =>
+  zones.includes(SHOWN_ZONE) ? zones : [...zones, SHOWN_ZONE];
+
+/**
+ * Runs one agent's answer in every cell and returns the run record. Throws `Stop` when it cannot
+ * start.
+ *
+ * @param {object} options
+ * @param {Record<string, string>} options.record the transcript
+ * @param {{ zones: string[]; node: string[] }} options.matrix the CI matrix; `SHOWN_ZONE` is added when it lacks it
+ * @param {Omit<Parameters<typeof runCode>[0], "code" | "call" | "command" | "zones" | "node">} options the rest, as `runCode`
+ */
+export async function runAnswer({ record, matrix, ...options }) {
+  const empty = emptyFields(record);
+  if (empty.length > 0)
+    throw new Stop(
+      2,
+      `${ANSWER_FILE} has empty fields: ${empty.join(", ")}. Fill them from the owner's transcript.`,
+    );
+  return runCode({
+    ...options,
+    code: record.code,
+    call: record.call,
+    command: COMMAND,
+    zones: withShownZone(matrix.zones),
+    node: matrix.node,
+  });
 }
 
 /**
@@ -374,6 +406,57 @@ export async function runAll({ transcript, onAnswer, workDir, ...options }) {
   return file;
 }
 
+/**
+ * What every recorded run needs from this machine: the pinned packages, the CI matrix, the cell
+ * runner, the clock (from gmt) and the installed versions. Exits 2 when not on Node 26, which the
+ * clock needs.
+ *
+ * @param {string} script the script's file name, for the message
+ */
+export async function cellOptions(script) {
+  if (typeof globalThis.Temporal === "undefined") {
+    console.error(
+      `Run this on Node 26 (fnm exec --using=26 -- node ${script}).`,
+    );
+    process.exit(2);
+  }
+  const gmt = await loadGmt();
+  return {
+    pinned: JSON.parse(readFileSync(join(HERE, "package.json"), "utf8"))
+      .dependencies,
+    matrix: readMatrix(join(ROOT, ".github/workflows/ci.yml")),
+    run: onNode,
+    now: () => gmt.getUtcNow(),
+    version: versionOf,
+  };
+}
+
+/**
+ * Writes the run records `produce` returns to `path`, one per id, and prints each id's run count
+ * and distinct values. A `Stop` prints its message and exits with its code.
+ *
+ * @param {string} path the run record file
+ * @param {() => Promise<Record<string, Awaited<ReturnType<typeof runCode>>>>} produce
+ */
+export async function recordRuns(path, produce) {
+  try {
+    const file = await produce();
+    writeFileSync(path, formatJson(file));
+    for (const [id, result] of Object.entries(file)) {
+      const cells = result.values.flat();
+      const values = new Set(cells.map((v) => JSON.stringify(v)));
+      console.error(
+        `${id}: ${cells.length} runs, ${values.size} distinct value${values.size === 1 ? "" : "s"}`,
+      );
+    }
+    console.error(`Wrote ${path}`);
+  } catch (error) {
+    if (!(error instanceof Stop)) throw error;
+    console.error(error.message);
+    process.exit(error.code);
+  }
+}
+
 async function main() {
   let transcript;
   try {
@@ -390,43 +473,16 @@ async function main() {
     console.error(error.message);
     process.exit(error.code);
   }
-  if (typeof globalThis.Temporal === "undefined") {
-    console.error(
-      "Run this on Node 26 (fnm exec --using=26 -- node agent-answer.mjs).",
-    );
-    process.exit(2);
-  }
-  const gmt = await loadGmt();
-  const pinned = JSON.parse(
-    readFileSync(join(HERE, "package.json"), "utf8"),
-  ).dependencies;
-  const matrix = readMatrix(join(ROOT, ".github/workflows/ci.yml"));
+  const options = await cellOptions("agent-answer.mjs");
   rmSync(WORK, { recursive: true, force: true });
-  try {
-    const file = await runAll({
+  await recordRuns(RUN_FILE, () =>
+    runAll({
+      ...options,
       transcript,
-      pinned,
-      matrix,
-      run: onNode,
-      now: () => gmt.getUtcNow(),
-      version: versionOf,
       workDir: WORK,
       onAnswer: (id) => console.error(`Running ${id}…`),
-    });
-    writeFileSync(RUN_FILE, formatJson(file));
-    for (const [id, result] of Object.entries(file)) {
-      const cells = result.values.flat();
-      const values = new Set(cells.map((v) => JSON.stringify(v)));
-      console.error(
-        `${id}: ${cells.length} runs, ${values.size} distinct value${values.size === 1 ? "" : "s"}`,
-      );
-    }
-    console.error(`Wrote ${RUN_FILE}`);
-  } catch (error) {
-    if (!(error instanceof Stop)) throw error;
-    console.error(error.message);
-    process.exit(error.code);
-  }
+    }),
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)

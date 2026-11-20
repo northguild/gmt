@@ -32,6 +32,20 @@ const win = {
 
 const go = (id: string, build: number): void => sendDeckState(root, id, build);
 
+/** Mounts with motion allowed; returns the frame callbacks the visuals asked for, to run by hand. */
+const mountWithMotion = (): Array<(stamp: number) => void> => {
+  const frames: Array<(stamp: number) => void> = [];
+  mountBugVisuals(root, {
+    signal: abort.signal,
+    win: {
+      requestAnimationFrame: (cb) => frames.push(cb),
+      cancelAnimationFrame: () => {},
+      matchMedia: media(false),
+    },
+  });
+  return frames;
+};
+
 beforeEach(() => {
   abort = new AbortController();
   root = document.createElement("div");
@@ -39,30 +53,16 @@ beforeEach(() => {
     root,
     html`
       <section data-slide id="abort">
-        <div data-visual="terminal">
+        <div data-visual="run">
           <span data-type data-text="node -e boom"></span>
           <p data-after>Node stops the whole process.</p>
         </div>
       </section>
       <section data-slide id="years">
-        <div data-visual="roll">
+        <div data-visual="run">
           <span data-roll data-end="2124-03-20"></span>
           <span data-roll data-end="2124-03-21"></span>
         </div>
-      </section>
-      <section data-slide id="date">
-        <table data-visual="rows">
-          <tbody>
-            <tr data-row="1">
-              <td><code aria-hidden="true" data-type data-text="first(row)">first(row)</code><code>first(row)</code></td>
-              <td>epoch</td>
-            </tr>
-            <tr data-row="2">
-              <td><code aria-hidden="true" data-type data-text="second(row)">second(row)</code><code>second(row)</code></td>
-              <td>now</td>
-            </tr>
-          </tbody>
-        </table>
       </section>
       <section data-slide id="manila">
         <ol data-visual="pages" data-zone="Asia/Manila">
@@ -84,68 +84,25 @@ afterEach(() => {
 const pages = (): Array<string | undefined> =>
   pickAll(root, "[data-page]").map((p) => dataOf(p, "state"));
 
-describe("a table whose rows all arrive with the slide", () => {
-  const typed = (): string[] =>
-    pickAll(root, "code[aria-hidden]").map((c) => textOf(c));
-  const states = (): Array<string | undefined> =>
-    pickAll(root, "[data-row]").map((r) => dataOf(r, "state"));
+describe("a visual that arrives while the stage's motion runs", () => {
+  const typed = (): string => textOf(pick(root, "#abort [data-type]"));
 
-  it("shows no row before the slide, then every row at once on arrival", () => {
-    mountBugVisuals(root, { signal: abort.signal, win });
-    go("years", 0);
-    expect(typed()).toEqual(["", ""]);
-    expect(states()).toEqual(["hidden", "hidden"]);
-    go("date", 0);
-    expect(typed()).toEqual(["first(row)", "second(row)"]);
-    expect(states()).toEqual(["done", "done"]);
-  });
-
-  it("clears every row on leaving", () => {
-    mountBugVisuals(root, { signal: abort.signal, win });
-    go("date", 0);
-    go("years", 0);
-    expect(typed()).toEqual(["", ""]);
-    expect(states()).toEqual(["hidden", "hidden"]);
-  });
-
-  it("types every row out together when motion is allowed", () => {
-    const frames: Array<(stamp: number) => void> = [];
-    mountBugVisuals(root, {
-      signal: abort.signal,
-      win: {
-        requestAnimationFrame: (cb) => frames.push(cb),
-        cancelAnimationFrame: () => {},
-        matchMedia: media(false),
-      },
-    });
-    go("date", 0);
-    expect(states()).toEqual(["typing", "typing"]);
-    for (const f of frames.splice(0)) f(0);
-    for (const f of frames.splice(0)) f(38 * 3);
-    expect(typed()).toEqual(["fir", "sec"]);
-  });
-});
-
-describe("a table that arrives while the stage's motion runs", () => {
-  const typed = (): string[] =>
-    pickAll(root, "code[aria-hidden]").map((c) => textOf(c));
-
-  it("starts only once the stage is idle, then shows every row", () => {
+  it("starts only once the stage is idle, then plays", () => {
     mountBugVisuals(root, { signal: abort.signal, win });
     sendStageBusy(root, true);
-    go("date", 0);
-    expect(typed()).toEqual(["", ""]);
+    go("abort", 0);
+    expect(typed()).toBe("");
     sendStageBusy(root, false);
-    expect(typed()).toEqual(["first(row)", "second(row)"]);
+    expect(typed()).toBe("node -e boom");
   });
 
   it("does not start for a slide the deck has left before the stage is idle", () => {
     mountBugVisuals(root, { signal: abort.signal, win });
     sendStageBusy(root, true);
-    go("date", 0);
+    go("abort", 0);
     go("years", 0);
     sendStageBusy(root, false);
-    expect(typed()).toEqual(["", ""]);
+    expect(typed()).toBe("");
   });
 });
 
@@ -169,6 +126,29 @@ describe("the bug visuals", () => {
       "2124-03-20",
       "2124-03-21",
     ]);
+  });
+
+  it("types the code before its answer shows, and lands each roll in turn", () => {
+    const frames = mountWithMotion();
+    const flush = (until: () => boolean): void => {
+      for (let stamp = 0; !until() && frames.length > 0; stamp += 1000)
+        for (const f of frames.splice(0)) f(stamp);
+    };
+    const answer = screen.getByText("Node stops the whole process.");
+    const run = pick(root, "#abort [data-visual]")!;
+    go("abort", 0);
+    expect(dataOf(pick(run, "[data-type]"), "typing")).toBe("true");
+    expect(answer).not.toBeVisible();
+    flush(() => dataOf(run, "ended") === "true");
+    expect(textOf(pick(run, "[data-type]"))).toBe("node -e boom");
+    expect(answer).toBeVisible();
+
+    go("years", 0);
+    const rolls = pickAll(root, "#years [data-roll]");
+    flush(() => dataOf(rolls[0]!, "landed") === "true");
+    expect(rolls.map((r) => dataOf(r, "landed"))).toEqual(["true", undefined]);
+    flush(() => dataOf(rolls[1]!, "landed") === "true");
+    expect(rolls.map((r) => textOf(r))).toEqual(["2124-03-20", "2124-03-21"]);
   });
 
   it("lands both counters on their values", () => {

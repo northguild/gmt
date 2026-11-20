@@ -57,19 +57,21 @@ file and the command. `quotedAnswer` gives `agent-answer` the quoted one; `agent
 `agents` every one, in file order. Each shows the value from Node 26 at `TZ=Europe/Helsinki` and
 the number of distinct values across its runs.
 
-## Guesses
+## The guess
 
-Three plain pauses: the question shows, the answer comes on the next step, and the notes say
-"Ask the room, take two or three answers, then step on." `agent-answer` build 1 (what does the code
-return?); on `date`, the row whose input is `new Date("2025-03-30T01:30")`, found by input in
-`dateFaults` (a missing row fails the build), with its result and reason in build 1; on
-`experiment-gaps`, `ExperimentSlide`'s new `guess` prop moves the bars, example and foot into
-build 1. Hidden answers keep their space, so nothing moves when they appear.
+One plain pause, on `agent-answer`: the question shows, the answer comes on the next step (build 1:
+what does the code return?), and the notes say "Ask the room, take two or three answers, then step
+on." Every other slide gets to the point: `date` shows each row whole and `experiment-gaps` shows
+its bars at once.
 
 ## The GMT step on each bug slide
 
 `GmtStep.astro` is the last build of `abort`, `years`, `day-off`, `manila` and `engines`. Props:
-`filings` (keys) and an optional `call` (`module`, `name`, `args`) rendered like `GmtResult`.
+`filings` (keys) and `calls` (each `module`, `name`, `args`, `want` and the filed `bug`), run at
+build time and shown in the same run panel as the bug's own reproduction (`GmtRun`), with any note
+in its slot. The run opens with the gmt imports and labels each result "✓ GMT", with the filed
+bug's value in red beside it ([The run panel](./s4-deck-0.md#the-run-panel)), so the step says
+what GMT solves and what is buggy.
 For each filing it shows the guard (`gmtGuard`, with that compat group's probe and failing
 counts from `temporal-compat.ts`) or the `gmtNote` as written through `inlineCodeHtml`. A
 filing U marks `gmtUnguarded` reads "GMT has no workaround", never a check mark. The step ends
@@ -84,7 +86,7 @@ calls and filings per slide are in [slice 4](./s4-deck-0.md#slides).
 ## Familiar
 
 `FamiliarPair.astro` renders each entry of `familiar.json`: the job in words, the Moment, date-fns
-and Day.js shapes as code text (no results), and the GMT call through `GmtResult`. R's
+and Day.js shapes as code text (no results), and the GMT call as a run line (`RunLines`). R's
 `familiar.test.mjs` runs each shape against the libraries pinned in the harness and asserts it
 does not throw, so no shape on stage is wrong.
 

@@ -1,0 +1,22 @@
+---
+/**
+ * A recorded run, the one panel every bug slide shows code in: what ran it, the lines (`RunLines`:
+ * code, result, expected), and an optional figure or note in the slot (a split-flap board's rows).
+ * It is a `run` visual, so it plays as its slide and build are reached. A report's run is written
+ * from its filing (`content.ts`); GMT's is computed at build time (`GmtRun`).
+ */
+import RunLines from "./RunLines.astro";
+import type { Run } from "./types";
+
+type Props = Run & {
+  /** Who gave the results, in place of "Result" on their label (`RunLines`). */
+  by?: string;
+};
+const { runtime, prompt, steps, by } = Astro.props;
+---
+
+<div class="gmt-run gmt-deck-panel" data-visual="run" role="group" aria-label={`Run on ${runtime}`}>
+  <p class="gmt-run-head">{runtime}</p>
+  <RunLines prompt={prompt} steps={steps} by={by} />
+  <slot />
+</div>

@@ -43,7 +43,12 @@ import {
   type SafeHtml,
 } from "~/widgets/builders";
 import { callOutput } from "~/widgets/families/gnss/call-output";
-import { callLines, outputOf } from "~/widgets/families/gnss/call-lines";
+import {
+  callGhosts,
+  callLines,
+  distinctCalls,
+  outputOf,
+} from "~/widgets/families/gnss/call-lines";
 import {
   scaleStack,
   type PatternIds,
@@ -121,7 +126,12 @@ const SAMPLE_UTC = "8888-88-88T88:88:88Z";
 /** Until the library is read: the width of a TT − UTC value, and of the widest seconds a plate prints. */
 const SAMPLE_GAP_SECONDS = "88.888 s";
 const SAMPLE_SECONDS = "888.888888888 s";
-const SAMPLE_CALL = `toTCG("${SAMPLE_UTC}")`;
+const SAMPLE_CALL_ARGS: EdiCall = {
+  fn: "toTCG",
+  args: [SAMPLE_UTC],
+  result: null,
+};
+const SAMPLE_CALL = callLines([SAMPLE_CALL_ARGS]).plain;
 /**
  * The widest line the code frame can hold. The frame scrolls sideways when a line is wider than
  * the pane, and a scroll bar that takes room only after the library loads would move the page, so
@@ -134,7 +144,8 @@ const SAMPLE_WIDEST_LINE =
 interface Samples {
   labels: readonly string[];
   backs: readonly string[];
-  calls: readonly string[];
+  /** The calls a row can show; a ghost is drawn from each, so it breaks as the live call does. */
+  calls: readonly EdiCall[];
   /** Every line the code frame can hold. */
   lines: readonly string[];
   values: Readonly<Record<string, readonly string[]>>;
@@ -143,7 +154,7 @@ interface Samples {
 const TEMPLATE_SAMPLES: Samples = {
   labels: [SAMPLE_LABEL, SAMPLE_LABEL_WHOLE],
   backs: [SAMPLE_UTC],
-  calls: [SAMPLE_CALL],
+  calls: [SAMPLE_CALL_ARGS],
   lines: [SAMPLE_CALL, SAMPLE_WIDEST_LINE],
   values: {},
 };
@@ -263,7 +274,7 @@ function heldInstant(text: string, ghosts: readonly string[]): SafeHtml {
 function callCell(row: ScaleRow, samples: Samples): SafeHtml {
   const call: EdiCall | null = row.call;
   const live = call === null ? html`${NBSP}` : callLines([call]).code;
-  const ghosts: Ghost[] = [...new Set(samples.calls)];
+  const ghosts: Ghost[] = callGhosts(samples.calls);
   // The call's tokens are text boxes as wide as their text, so a row with a call and a row
   // without one still count the same elements: the wrapper names them for the gates.
   return hold(
@@ -306,8 +317,7 @@ function tableOf(read: StackRead | null, samples: Samples): SafeHtml {
     rowHeader: "Scale",
     layout: "fixed",
     widths: ["15%", "30%", "34%", "21%"],
-    labelCells: true,
-    roles: true,
+    stack: true,
   });
 }
 
@@ -470,7 +480,7 @@ function samplesOf(lib: TimescaleLib): Samples {
   ];
   const labels = new Set<string>();
   const backs = new Set<string>();
-  const calls = new Set<string>();
+  const calls: EdiCall[] = [SAMPLE_CALL_ARGS];
   const lines = new Set<string>();
   const values: Record<string, Set<string>> = {};
   for (const state of states) {
@@ -480,7 +490,7 @@ function samplesOf(lib: TimescaleLib): Samples {
       labels.add(row.label);
       backs.add(row.back);
       if (row.call !== null) {
-        calls.add(callLines([row.call]).plain);
+        calls.push(row.call);
       }
     }
     callLines(read.calls)
@@ -494,7 +504,7 @@ function samplesOf(lib: TimescaleLib): Samples {
   return {
     labels: [SAMPLE_LABEL, SAMPLE_LABEL_WHOLE, ...labels],
     backs: [SAMPLE_UTC, ...backs],
-    calls: [SAMPLE_CALL, ...calls],
+    calls: distinctCalls(calls),
     lines: [SAMPLE_CALL, ...lines],
     values: Object.fromEntries(
       PLATE_ROLES.map((role) => [role, [...(values[role] ?? [])]]),

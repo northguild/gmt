@@ -39,6 +39,11 @@
 
 .gmt-code-str {
   color: var(--gmt-syntax-str);
+
+  /* A string with no date, time or offset in it (a run of junk) has no seam: it breaks anywhere
+     as a last resort. A date inside a string is held whole by its own no-wrap piece
+     (builders/code-string.ts), which this does not reach. */
+  overflow-wrap: anywhere;
 }
 
 .gmt-code-num {

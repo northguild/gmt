@@ -25,4 +25,20 @@ describe("keepTokens", () => {
     renderHtml(html`<p>${keepTokens("Occurs twice")}</p>`);
     expect(screen.getByText("Occurs twice")).toBeVisible();
   });
+
+  it("lets an instant break after its T and holds a date whole", () => {
+    const fx = renderHtml(
+      html`<p>${keepTokens("change at 2026-10-25T01:00:00Z on 2026-10-25")}</p>`,
+    );
+    expect(
+      (
+        keepTokens("change at 2026-10-25T01:00:00Z on 2026-10-25")
+          .toString()
+          .match(/<wbr \/>/g) ?? []
+      ).length,
+    ).toBe(1);
+    expect(fx.host).toHaveTextContent(
+      "change at 2026-10-25T01:00:00Z on 2026-10-25",
+    );
+  });
 });

@@ -7,10 +7,10 @@
 
 The talk's spine in one move. On `one-clock` a wall of six captured landing pages (Moment.js,
 Luxon, date-fns, Day.js, Spacetime, @internationalized/date), each as captured, hangs in a three by two
-grid in the left two thirds, with the clock in the right third. Stepping to `date` breaks it: the panes
-shatter into ice shards, and twelve of them fly out and settle as clock pins on twelve zones. Stepping to
-`temporal` turns the clock into the Earth where it stands, and the Earth turns once beneath, every pin
-labelled with its local time. One clock becomes the whole planet. The wall is
+grid in the left two thirds, with the clock in the right third. Stepping to `temporal` breaks it: the
+panes shatter into ice shards, and twelve of them fly out and settle as clock pins on twelve zones, while
+as the last of them fade the clock behind shatters and the Earth comes up where it stood, and the Earth turns once beneath,
+every pin labelled with its local time. One clock becomes the whole planet. The wall is
 presented neutrally, as the libraries people reach for; no text on the slide judges them, and
 their marks appear only inside the captured, captioned snapshots, never as the deck's own art.
 
@@ -78,18 +78,17 @@ breakAt(x, y, now), reset(), destroy() }`. `onState` reports `whole`, `approach`
 
 ## Triggers and reset
 
-- **Step to `date`:** the wall flies in to the break depth (0.93) and breaks over the clock; the
+- **Step to `temporal`:** the wall flies in to the break depth (0.93) and breaks over the clock; the
   stage reports itself busy (`data-stage-busy` on the deck root) until the shards are gone, then
-  fires `gmt-stage-idle`. The slide's text and the rows' type-out wait for that signal and then fade
-  in over about 300 ms. A jump past `date` breaks the wall at the jump.
-- **Step to `temporal`:** the clock turns into the Earth in place, at the same spot and size (no zoom
-  dip). The Earth's one turn starts only once the clock is gone, and the slide's text enters after
-  the reveal.
+  fires `gmt-stage-idle`. The slide's text waits for that signal and then fades in over about
+  300 ms. Once the wall's last shard has faded (`CLEAR_MS`) the clock behind it shatters
+  (`clock-shatter.ts`, `REVEAL_MS`) and the Earth comes up in place, at the same spot and size (no zoom dip). The Earth's one turn starts only
+  once the clock is gone. A jump past `one-clock` breaks the wall at the jump.
 - **Free flight:** E and Q change only the wall's depth; no pane breaks on its own.
 - **Reset:** the wall's state is derived from the deck state. Entering `one-clock` from either side
-  resets every pane to whole. From `experiments` on, or by a deep link to `#date` or `#temporal`, the wall is
-  not drawn and nothing waits. Stepping back from `temporal` to `date` returns the clock and owes the turn again;
-  stepping back from `date` to `one-clock` stands the wall whole again.
+  resets every pane to whole. Before `one-clock`, from `temporal` on, or by a deep link to `#temporal`, the
+  wall is not drawn and nothing waits. Stepping back from `temporal` to `one-clock` returns the clock,
+  stands the wall whole again and owes the reveal again.
 
 ## One clock becomes many: the pins
 
@@ -113,7 +112,7 @@ twelve-zone view centres the camera so twelve sit on the visible side.
 
 ## Reduced motion
 
-No flying shards and no turn. On `date` the cell edges draw as ice-white cracks over the
+No flying shards and no turn. On `temporal` the cell edges draw as ice-white cracks over the
 panes for 150 ms, the wall fades over 200 ms, and every pin appears lit at once. Nothing waits under
 reduced motion: the text shows at once.
 
@@ -135,9 +134,9 @@ reduced motion: the text shows at once.
 ## Definition of done
 
 - `one-clock` shows six captioned panes (three by two in the left two thirds, each caption on its own pane;
-  the clocks in view where a page has one); `date` breaks them on the clicker, and the pins settle
+  the clocks in view where a page has one); `temporal` breaks them on the clicker, and the pins settle
   with local times on both renderers.
 - Back and forward replay the shatter exactly; deep links land in the right state.
-- `one-clock`'s title is "One clock for the whole planet", and `temporal`'s notes carry the line
+- `one-clock`'s title is "The web shows one clock", and `temporal`'s text carries the line
   "One clock against the whole planet".
 - Own tests, `pnpm dox:lint` and `pnpm dox:check` green; the owner's listening pass.

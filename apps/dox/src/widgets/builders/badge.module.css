@@ -45,8 +45,19 @@
     flex: none;
   }
 
+  /* A wrapping badge is a block of text: in a flex row each word and each held date would be its
+     own item and none of them could wrap. As an inline box the text breaks at its spaces and at the
+     break points `keepTokens` puts in it. */
   &[data-wrap="true"] {
+    display: inline-block;
+    max-inline-size: 100%;
     white-space: normal;
+
+    & > svg {
+      display: inline-block;
+      margin-inline-end: 0.3125rem;
+      vertical-align: -0.15em;
+    }
   }
 
   &[data-dim="true"] {

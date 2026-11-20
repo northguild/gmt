@@ -28,7 +28,7 @@ import {
   type PicHalf,
 } from "./edi-picture";
 import { callResultsText } from "./edi-render";
-import { callArgs } from "./punctuality-widgets";
+import { callArgsPlain } from "./punctuality-widgets";
 import {
   LONGEST_ZONE,
   NO_RESULT_TEXT,
@@ -925,7 +925,7 @@ export function hl7Texts() {
     },
   };
   const callText = (list: readonly EdiCall[]): string =>
-    list.map((c) => `${c.fn}(${callArgs(c.args)[1]})`).join("\n");
+    list.map((c) => `${c.fn}(${callArgsPlain(c.args)})`).join("\n");
   return {
     descriptions: HL7_PRESETS.map((p) => p.description),
     stripNotes: [

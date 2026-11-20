@@ -74,9 +74,9 @@
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
 
-  /* A member's value is one token (an instant, an offset): a hyphen or a colon is a break point,
-     and a split date is a split word. It keeps one line, and a table wider than its box scrolls. */
-  white-space: nowrap;
+  /* A member's value is written by `valueText`: its dates stay whole and it breaks only at a `T`,
+     an offset or a `[`, or at the spaces of a sentence. */
+  white-space: normal;
   overflow-wrap: normal;
 
   & [data-state="absent"],
@@ -220,7 +220,8 @@
       min-inline-size: 0;
       min-block-size: 1lh;
 
-      /* A written value is one ISO token: it stays whole and the table scrolls sideways. */
+      /* A written value is one ISO token and stays whole. The cell takes the whole line under its
+         name, which is as wide as the value (`--w`). */
       white-space: nowrap;
       overflow-wrap: normal;
     }

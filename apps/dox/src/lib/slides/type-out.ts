@@ -9,8 +9,8 @@
 
 import { play, type Frames } from "./frames";
 
-/** Milliseconds per typed character. */
-export const CHAR_MS = 38;
+/** Milliseconds per typed character: about 45 a second, quick enough that the stage never waits on it. */
+export const CHAR_MS = 22;
 /** How long a counter spins before it lands. */
 export const ROLL_MS = 1400;
 

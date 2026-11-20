@@ -46,11 +46,11 @@ Each visual uses only its report's own observed and expected text (`REPORTS`, `V
 
 | Slide | Visual |
 | --- | --- |
-| `abort` | A terminal types the recorded command, then shows the process's answer and the cursor stops; build 1 is two columns (observed, expected) for the Unicode ticket |
-| `years` | Two counters roll side by side to the expected and the observed year: Tehran, then (build 1) the Japanese era and year |
+| `abort` | A run panel types the recorded command, then shows the process's answer; build 1 is the Unicode ticket's own run, with what it printed and the expected line |
+| `years` | A run panel types the polyfill call, then a split-flap board lands the expected and the observed value: Tehran, then (build 1) the Japanese era and year |
 | `day-off` | Two calendar pages a day apart, expected and observed: Kolkata, then (build 1) Shanghai; build 2 is the new moon over Shanghai |
 | `manila` | The calendar pages round the jump, one dropping out as the pin's date crosses it; the filing and its siblings as receipts |
-| `engines` | Two columns for the same call: Node 26's answer and the expected one |
+| `engines` | A run panel for the filing's call on Node 26: what it printed and the expected line |
 
 `bug-visuals.ts` plays them: `type-out.ts` types a line and rolls digits on frame stamps. Text that
 animates keeps a full `.gmt-sr-only` copy and marks the animated copy `aria-hidden`, so a screen
@@ -120,9 +120,8 @@ names `place="planet"`.
 
 ## The Date table types out
 
-On `date`, every row's code types out together once the table appears; the slide has one build,
-for the guess. The table is `data-visual="rows"`, each row `data-row="n"`. The guess row (input
-`new Date("2025-03-30T01:30")`) keeps its result and reason hidden, with their space reserved,
-until build 1. The animated code is `aria-hidden` and a `.gmt-sr-only` copy holds the whole text.
+On `date`, every row's code types out together once the table appears, each with its result and
+reason; the slide has no builds. The table is `data-visual="rows"`, each row `data-row="n"`. The
+animated code is `aria-hidden` and a `.gmt-sr-only` copy holds the whole text.
 Reduced motion shows each row whole; without script every row shows. The caption has the same
 inline padding as the cells, so its first letter clears the plate's bevelled corner.

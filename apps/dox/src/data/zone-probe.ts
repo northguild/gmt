@@ -73,7 +73,7 @@ export interface ProbeRow {
   share: number;
 }
 
-export interface ExperimentView {
+interface ExperimentView {
   id: string;
   number: number;
   title: string;

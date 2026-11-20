@@ -16,12 +16,13 @@ bug, which is then fixed here through the library pipeline with a changeset.
 ## The spine: one clock against the whole planet
 
 The date libraries people reach for show one clock as their site's visual: one local time. GMT
-works across the whole planet at once, and the deck stages that contrast. On `one-clock` a wall of
-six captured library landing pages hangs in a three by two grid in the left two thirds, with the
-clock in the right third. Stepping to the `date` slide breaks the wall: the panes shatter into ice
-and the shards fly off, and the `date` table enters once they are clear. Stepping to the Temporal
-slide turns the clock into the Earth where it stands (same spot and size), and that slide's text
-enters once the turn ends. The shards settle as clock pins with local times on the Earth, which
+works across the whole planet at once, and the deck stages that contrast. The `date` table shows
+the built-in answer with the venue's clock beside it: Date only knows the machine's clock. On
+`one-clock` a wall of six captured library landing pages hangs in a three by two grid in the left
+two thirds, with the clock in the right third. Stepping to the Temporal slide breaks the wall: the
+panes shatter into ice and the shards fly off; as the last of them fade, the clock behind shatters
+and the Earth comes up where it stood (same spot and size), and that slide's text enters once the shards are
+clear. The wall's shards settle as clock pins with local times on the Earth, which
 then spins slowly through the experiments and eases back to the held view before the bugs
 ([slice 2](./s2-space-stage.md)). On every slide the clock or the Earth sits in the right third and
 never moves sideways; the content fits the left two thirds. Text waits for any motion that would
@@ -78,7 +79,7 @@ phases with disjoint file ownership.
 | 4c | [Zone matrix](./s4c-zone-matrix.md) | Library suites run under GMT's CI zones; a Compare page, a `/compare` column, Migrate lines |
 | 5 | [Close-out](./s5-close-out.md) | Full gates, the venue runbook, `built/` updated |
 | 6 | [Time, not the camera](./s6-time-not-camera.md) | One held view through the bugs; time-lapses; a visual per bug; filings as pins; the clocks return; the new moon over Shanghai |
-| 7 | [The running question](./s7-running-question.md) | The agents' code run by script; guesses; a GMT step per bug; `familiar`; QR codes; spare slides; the builder phases |
+| 7 | [The running question](./s7-running-question.md) | The agents' code run by script; the guess; a GMT step per bug; `familiar`; QR codes; spare slides; the builder phases |
 | 8 | [Reusable blocks](./s8-reusable-blocks.md) | Nothing new: the next deck is a folder plus a row in `decks.ts`, `deck-runtime.ts` and `deck-pages.ts`, built from shared components, one animation loop and per-deck data |
 | 8b | [The block catalogue](./s8b-block-catalogue.md) | Each shared block's home and what a deck gets from it |
 
@@ -89,28 +90,29 @@ phases with disjoint file ownership.
 | 1 | `title` | Give Me Temporal; the venue's time now | Helsinki | 0.5 |
 | 2 | `agent-answer` | Ask an agent: the running question; the quoted agent's code; guess; what it returns, and that the time never happens | Helsinki (clock) | 0.75 |
 | 3 | `agents` | What the agents returned: one row per agent asked | Helsinki (clock) | 0.25 |
-| 4 | `one-clock` | One clock for the whole planet: the ice wall | `wall` | 0.25 |
-| 5 | `date` | `Date` is broken: the wall breaks on arrival, then rows from `date-faults.ts` type out; one row is a guess | `planet` (clock) | 1 |
-| 6 | `temporal` | The clock turns into the Earth in place; its text enters after the turn; Temporal and engine state | `planet` | 1 |
-| 7 | `experiments` | The same inputs into every library, answers from the standard; counts from `zone-probe.json` | `planet` | 0.5 |
-| 8 | `experiment-gaps` | A time the clocks skip: the question, a guess, then the bars | `planet` | 1 |
-| 9 | `experiment-overlaps` | A time that happens twice | `planet` | 0.75 |
-| 10 | `experiment-host` | The same input on machines set to different zones | `planet` | 0.75 |
-| 11 | `experiment-odd` | Apia's missing day, Lord Howe's half hour, Kathmandu's +05:45 | `planet` | 0.75 |
-| 12 | `abort` | `nodejs/node#67076` with `CLDR-19873`; then GMT | `planet`, lapse | 1.25 |
-| 13 | `years` | `ICU-23609`, `fullcalendar/temporal-polyfill#127`; `ICU-23619`; then GMT | `planet`, lapses | 1.25 |
-| 14 | `day-off` | `ICU-23627`; `fullcalendar/temporal-polyfill#128`; the new moon over Shanghai; then GMT | `planet`, lapses, the Moon | 1.25 |
-| 15 | `manila` | `tc39/proposal-temporal#3330` and siblings: Manila skips 1844-12-31; then GMT | `planet`, lapse | 1.25 |
-| 16 | `engines` | `nodejs/node#67457`: engines disagree on `until()` and `round()`; then GMT | `planet`, sun | 1 |
-| 17 | `scoreboard` | Every filing as pins, by tracker and state | Overview | 0.5 |
-| 18 | `familiar` | Names you already know: Moment, date-fns and Day.js call shapes beside the GMT call | Greenwich | 1 |
+| 4 | `date` | `Date` only knows this machine: the agents' question as the first row, then the two home-page rows from `date-faults.ts` no other slide shows | Helsinki (clock) | 0.5 |
+| 5 | `kinds` | `Date` takes anything: one `nextDay` over `Date`, called with six kinds of time, in five zones (`RunGrid`); then GMT's `addDate` | Helsinki (clock) | 0.5 |
+| 6 | `one-clock` | The web shows one clock: the ice wall | `wall` | 0.25 |
+| 7 | `temporal` | The wall breaks, then the clock shatters into the Earth in place; its text enters once the shards clear; what Temporal is, with no bug counts and no GMT | `planet` | 1 |
+| 8 | `experiments` | The same inputs into every library, answers from the standard; counts from `zone-probe.json` | `planet` | 0.5 |
+| 9 | `experiment-gaps` | A time the clocks skip: the question and the bars | `planet` | 1 |
+| 10 | `experiment-overlaps` | A time that happens twice | `planet` | 0.75 |
+| 11 | `experiment-host` | The same input on machines set to different zones | `planet` | 0.75 |
+| 12 | `experiment-odd` | Apia's missing day, Lord Howe's half hour, Kathmandu's +05:45 | `planet` | 0.75 |
+| 13 | `abort` | `nodejs/node#67076` with `CLDR-19873`; then GMT | `planet`, lapse | 1.25 |
+| 14 | `years` | `ICU-23609`, `fullcalendar/temporal-polyfill#127`; `ICU-23619`; then GMT | `planet`, lapses | 1.25 |
+| 15 | `day-off` | `ICU-23627`; `fullcalendar/temporal-polyfill#128`; the new moon over Shanghai; then GMT | `planet`, lapses, the Moon | 1.25 |
+| 16 | `manila` | `tc39/proposal-temporal#3330` and siblings: Manila skips 1844-12-31; then GMT | `planet`, lapse | 1.25 |
+| 17 | `engines` | `nodejs/node#67457`: engines disagree on `until()` and `round()`; then GMT | `planet`, sun | 1 |
+| 18 | `scoreboard` | Every filing as pins, by tracker and state | Overview | 0.5 |
 | 19 | `why-not-temporal` | Why not just Temporal? Three things it leaves to the caller | Greenwich | 0.75 |
 | 20 | `gmt` | The running question answered by GMT; the clock skips 02:59 to 04:00 | Greenwich | 1 |
-| 21 | `guards` | Tested guards and the canary, in one paragraph | Greenwich | 0.5 |
-| 22 | `ask-dox` | The running question, live to Dox chat, tool calls visible | Helsinki | 1.5 |
-| 23 | `page-tools` | A live page-tool call, and this deck's own tools | Helsinki | 1.25 |
-| 24 | `qa` | Questions; the audience panel; questions through Dox chat or aloud | Helsinki | 5 |
-| 25 | `thanks` | Thanks; two QR codes; the links | Helsinki | 0 |
+| 21 | `familiar` | Names you already know: Moment, date-fns and Day.js call shapes beside the GMT call | Greenwich | 1 |
+| 22 | `guards` | Tested guards and the canary, in one paragraph | Greenwich | 0.5 |
+| 23 | `ask-dox` | The running question, live to Dox chat, tool calls visible | Helsinki | 1.5 |
+| 24 | `page-tools` | A live page-tool call, and this deck's own tools | Helsinki | 1.25 |
+| 25 | `qa` | Questions; the audience panel; questions through Dox chat or aloud | Helsinki | 5 |
+| 26 | `thanks` | Thanks; two QR codes; the links | Helsinki | 0 |
 | spare | `spare-size` | How big is it? | Greenwich | none |
 
 The main slides' minutes sum to 25 (20 for the talk, 5 for `qa`); a built-output test holds it, and every value is a multiple of

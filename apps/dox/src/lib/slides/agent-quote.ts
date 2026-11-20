@@ -39,7 +39,7 @@ export interface AgentTranscript {
 }
 
 /** What the run of one cell returned: the value as text, or the error it threw. */
-type RunValue = string | { threw: string };
+export type RunValue = string | { threw: string };
 
 /** One cell of the run: the Node major, the zone and what the code returned there. */
 interface AgentRun {
@@ -135,8 +135,40 @@ export function excerptOf(
   return parts.join("\n// …\n");
 }
 
-const sameValue = (a: RunValue, b: RunValue): boolean =>
+export const sameValue = (a: RunValue, b: RunValue): boolean =>
   JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Why a run record cannot be read for this code and call, as the end of a sentence that starts
+ * "The run record …": missing, not a grid of one value per Node major and zone, or made for other
+ * code. `undefined` when it can be read.
+ */
+export function runProblem(
+  run: AgentRunRecord | null | undefined,
+  code: string,
+  call: string,
+): string | undefined {
+  if (
+    !run ||
+    !filled(run.sha256) ||
+    !Array.isArray(run.nodes) ||
+    !Array.isArray(run.zones) ||
+    run.nodes.length === 0 ||
+    run.zones.length === 0
+  )
+    return "is missing";
+  if (
+    !Array.isArray(run.values) ||
+    run.values.length !== run.nodes.length ||
+    run.values.some(
+      (row) => !Array.isArray(row) || row.length !== run.zones.length,
+    )
+  )
+    return "is not a grid of one value per Node major and zone";
+  if (run.sha256 !== hashOf(code, call))
+    return "is out of date: the code or the call changed";
+  return undefined;
+}
 
 export function agentQuote(
   record: AgentQuoteRecord,
@@ -160,25 +192,8 @@ export function agentQuote(
     question,
     problem: `The run record for ${answerPath} ${reason}. Run: ${runCommand}`,
   });
-  if (
-    !run ||
-    !filled(run.sha256) ||
-    !Array.isArray(run.nodes) ||
-    !Array.isArray(run.zones) ||
-    run.nodes.length === 0 ||
-    run.zones.length === 0
-  )
-    return stale("is missing");
-  if (
-    !Array.isArray(run.values) ||
-    run.values.length !== run.nodes.length ||
-    run.values.some(
-      (row) => !Array.isArray(row) || row.length !== run.zones.length,
-    )
-  )
-    return stale("is not a grid of one value per Node major and zone");
-  if (run.sha256 !== hashOf(record.code, record.call))
-    return stale("is out of date: the code or the call changed");
+  const problem = runProblem(run, record.code, record.call);
+  if (problem !== undefined || !run) return stale(problem ?? "is missing");
   const row = run.nodes.findIndex((n) => n.node === cell.node);
   const column = run.zones.indexOf(cell.zone);
   const shown: AgentRun | undefined =

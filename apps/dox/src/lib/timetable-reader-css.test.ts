@@ -16,9 +16,9 @@ function rule(selector: string): string {
 }
 
 describe("timetable-reader time cells", () => {
-  it("keeps the full zoned value on one line, so a hyphen or colon never splits it", () => {
+  it("breaks the full zoned value only at the pieces zonedValue sets, so a hyphen or colon never splits it", () => {
     const body = rule(".timeFull");
-    expect(body).toContain("white-space: nowrap");
+    expect(body).not.toContain("white-space: nowrap");
     expect(body).toContain("overflow-wrap: normal");
   });
 

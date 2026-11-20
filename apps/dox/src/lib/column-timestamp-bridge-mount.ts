@@ -83,7 +83,7 @@ import {
 } from "./column-timestamp-bridge";
 import { loadColumnBridgeLib, type ColumnBridgeLib } from "./column-bridge-lib";
 import type { EdiCall } from "./edi-widgets";
-import { callArgs } from "./punctuality-widgets";
+import { callArgs } from "./call-args";
 import { withBase } from "./site";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { codeSpan } from "./widget-ui";

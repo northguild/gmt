@@ -7,13 +7,17 @@
 import { addDate, diffDateTime } from "@northguild/gmt/plain/calculate";
 import { formatDate } from "@northguild/gmt/plain/format";
 import { convertUtcToZoned } from "@northguild/gmt/utc/convert";
+import type { GmtCall } from "~/components/slides/types";
+import type { Fault } from "~/data/date-faults";
+import { codeText } from "~/lib/slides/gmt-call";
 import chineseMonth from "./chinese-month.json";
 import newMoon from "./new-moon.json";
 
 export interface Report {
   /** A `filingKey`. */
   filing: string;
-  repro?: { code: string };
+  /** The filing's reproduction: its code and, where the filing records them, what it printed and what it should print. */
+  repro?: { code: string; output?: readonly string[]; want?: string };
   observed: string;
   expected: string;
 }
@@ -24,12 +28,18 @@ export const REPORTS = {
       filing: "nodejs/node#67076",
       repro: {
         code: `node -e "new Intl.DateTimeFormat('gd',{year:'numeric',month:'short',timeZone:'UTC'}).formatToParts(0)"`,
+        output: ["#", "# Fatal error in , line 0", "# unreachable code", "#"],
       },
       observed: "Node stops the whole process.",
       expected: "The parts of a formatted date.",
     },
     {
       filing: "CLDR-19873",
+      repro: {
+        code: `node -p "new Intl.DateTimeFormat('gd',{year:'numeric',month:'short',timeZone:'UTC'}).format(Date.UTC(2024,11,30))"`, // date-ban: the filing's own command, quoted as text; never run
+        output: ["Dùbh 2025"],
+        want: "Dùbh 2024",
+      },
       observed:
         "Some languages' date patterns print the week-of-year year where the calendar year belongs.",
       expected: "The calendar year.",
@@ -88,6 +98,11 @@ export const REPORTS = {
   engines: [
     {
       filing: "nodejs/node#67457",
+      repro: {
+        code: `Temporal.PlainDate.from("2000-01-01").until("2001-01-01", { largestUnit: "years", smallestUnit: "months", roundingMode: "halfExpand" }).toString()`,
+        output: ['"P1Y1M"'],
+        want: '"P1Y"',
+      },
       observed:
         "Node 26 adds one smallestUnit when until() or round() gives a whole number of years, months or weeks.",
       expected: "The whole number, with nothing added.",
@@ -147,22 +162,60 @@ export function newMoonFacts() {
  */
 
 export const VISUALS = {
-  /** `nodejs/node#67076`: the recorded command and what the process did. */
-  terminal: {
-    command: REPORTS.abort[0].repro.code,
-    output: REPORTS.abort[0].observed,
-    expected: REPORTS.abort[0].expected,
+  /** Recorded runs (`CodeRun`): each filing's reproduction, its result, and the value expected. */
+  runs: {
+    /** `nodejs/node#67076`: the command, and the process stopping. */
+    crash: {
+      runtime: "Node",
+      prompt: "$",
+      steps: [
+        {
+          code: REPORTS.abort[0].repro.code,
+          out: REPORTS.abort[0].repro.output,
+          outcome: "wrong",
+          want: REPORTS.abort[0].expected,
+        },
+      ],
+    },
+    /** `CLDR-19873`: 30 December 2024 in Scottish Gaelic, printed in the next year. */
+    weekYear: {
+      runtime: "Node",
+      prompt: "$",
+      steps: [
+        {
+          code: REPORTS.abort[1].repro.code,
+          out: REPORTS.abort[1].repro.output,
+          outcome: "wrong",
+          want: REPORTS.abort[1].repro.want,
+        },
+      ],
+    },
+    /** `nodejs/node#67457`: a whole year, rounded to months, gains one. */
+    engines: {
+      runtime: "Node 26",
+      prompt: ">",
+      steps: [
+        {
+          code: REPORTS.engines[0].repro.code,
+          out: REPORTS.engines[0].repro.output,
+          outcome: "wrong",
+          want: REPORTS.engines[0].repro.want,
+        },
+      ],
+    },
   },
   /** A split-flap board per build, its rows landing on the expected and the observed value. */
   counters: {
     /** `fullcalendar/temporal-polyfill#127`, the Persian date. */
     tehran: {
+      runtime: "fullcalendar temporal-polyfill",
       input: REPORTS.years[1].repro.code,
       expected: { label: "native Temporal", value: "2124-03-20" },
       observed: { label: "the polyfill", value: "2124-03-21" },
     },
     /** `js-temporal/temporal-polyfill#368`, the Japanese era. */
     tokyo: {
+      runtime: "@js-temporal/polyfill",
       input: REPORTS.years[3].repro.code,
       expected: { label: "Era ce, year", value: "1870" },
       observed: { label: "Era meiji, year", value: "3" },
@@ -173,21 +226,165 @@ export const VISUALS = {
     /** `ICU-23627`: a month that starts one day late (MonthShift). */
     kolkata: {
       heading: "First day of an Indian-calendar month",
-      expected: { label: "Expected", day: 1 },
-      observed: { label: "Observed", day: 2 },
+      expected: { day: 1 },
+      observed: { day: 2 },
       caption: "one day late",
     },
     /** `fullcalendar/temporal-polyfill#128`: Chinese New Year 2027 (MonthPage). */
     shanghai: {
       month: "2027-02",
-      expected: { label: "Expected", day: 6 },
-      observed: { label: "Observed", day: 7 },
+      expected: { day: 6 },
+      observed: { day: 7 },
       caption: "Chinese New Year",
     },
   },
-  /** `nodejs/node#67457`: the one call both engines are asked. */
-  engines: {
-    call: "until() or round()",
-    observedLabel: "Node 26",
-  },
 } as const;
+
+/** The Gaelic run's options: the date in the Unicode ticket's run, as a year and a short month. */
+const gaelic = [
+  "2024-12-30",
+  "gd",
+  { year: "numeric", month: "short" },
+] as const;
+
+/**
+ * The first row of the `date` slide: the agents' own question (03:30 in Helsinki on 28 March 2027)
+ * asked of the built-in tool, which knows only the machine's clock. The home page's rows follow it.
+ */
+export const AGENTS_FAULT: Fault = {
+  input: 'new Date("2027-03-28T03:30")', // date-ban: the agents' question, quoted as text; never run
+  output: "04:30 on a Helsinki machine — no error",
+  why: "Date cannot be told Helsinki: it reads the time on the machine's clock. That 03:30 never happens in Helsinki, so a machine set there quietly moves it to 04:30, and any other machine gives another answer.",
+};
+
+/**
+ * What each bug slide's GMT step runs, on the same input as the filing, and the value each call
+ * should give: the filing's own expected value where it states one, else the cited rule (tzdb for
+ * Manila). The `want` marks GMT's result right or wrong, and `bug` is what the filed bug gives for
+ * the same input, printed in red beside it, in its filing's own value or words. `content.test.ts`
+ * holds each `want` and each `bug` to its report, and each result to its `want`.
+ */
+export const GMT_CALLS = {
+  abort: [
+    {
+      module: "plain/format",
+      name: "formatDate",
+      args: gaelic,
+      want: REPORTS.abort[1].repro.want,
+      bug: { by: "Intl", gives: codeText(REPORTS.abort[1].repro.output[0]) },
+    },
+    {
+      module: "plain/format",
+      name: "formatDateToParts",
+      args: gaelic,
+      want: [
+        { type: "month", value: "Dùbh" },
+        { type: "literal", value: " " },
+        { type: "year", value: "2024" },
+      ],
+      bug: { by: "Intl", gives: REPORTS.abort[0].observed },
+    },
+  ],
+  years: [
+    {
+      module: "plain/format",
+      name: "formatDate",
+      args: [
+        "2124-03-20",
+        "en-u-ca-persian",
+        { year: "numeric", month: "long", day: "numeric" },
+      ],
+      want: "Farvardin 1, 1503 AP",
+      bug: {
+        by: "temporal-polyfill",
+        gives: "Farvardin 1, 1503 AP is 2124-03-21.",
+      },
+    },
+    {
+      module: "plain/format",
+      name: "formatDate",
+      args: [
+        "1870-03-01",
+        "en-u-ca-japanese",
+        { era: "short", year: "numeric" },
+      ],
+      want: "1870 AD",
+      bug: { by: "Temporal", gives: REPORTS.years[3].observed },
+    },
+  ],
+  dayOff: [
+    {
+      module: "calendar/rules",
+      name: "holidayDates",
+      args: [
+        {
+          name: "Spring Festival",
+          kind: "calendarFixed",
+          calendar: "chinese",
+          monthCode: "M01",
+          day: 1,
+        },
+        2027,
+      ],
+      want: ["2027-02-06"],
+      bug: { by: "temporal-polyfill", gives: REPORTS.dayOff[1].observed },
+    },
+  ],
+  manila: [
+    {
+      module: "instant/convert",
+      name: "resolveLocal",
+      args: [
+        "1844-12-30T12:00:00",
+        "Asia/Manila",
+        { disambiguation: "reject" },
+      ],
+      want: "1844-12-31T03:56:08Z",
+    },
+    {
+      module: "instant/convert",
+      name: "classifyLocal",
+      args: ["1844-12-31T12:00:00", "Asia/Manila"],
+      want: "nonexistent",
+      bug: {
+        by: "Temporal",
+        gives: "Lookups before 1847 miss this skipped day.",
+      },
+    },
+    {
+      module: "instant/convert",
+      name: "resolveLocal",
+      args: [
+        "1845-01-01T12:00:00",
+        "Asia/Manila",
+        { disambiguation: "reject" },
+      ],
+      want: "1845-01-01T03:56:08Z",
+    },
+  ],
+  engines: [
+    {
+      module: "plain/calculate",
+      name: "diffDateAsDuration",
+      args: [
+        "2000-01-01",
+        "2001-01-01",
+        "years",
+        { smallestUnit: "months", roundingMode: "halfExpand" },
+      ],
+      want: "P1Y",
+      bug: { by: "Node 26", gives: REPORTS.engines[0].repro.output[0] },
+    },
+  ],
+  // The kinds slide's day after 27 March 2027, the date the grid's calls name; `bug` is the value
+  // `nextDay` gave for a local time east of UTC (`date-kinds-run.json`).
+  kinds: [
+    {
+      module: "plain/calculate",
+      name: "addDate",
+      args: ["2027-03-27", { days: 1 }],
+      want: "2027-03-28",
+      bug: { by: "Date", gives: "2027-03-27" },
+    },
+  ],
+} as const satisfies Record<string, readonly GmtCall[]>;

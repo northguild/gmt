@@ -8,6 +8,7 @@
  * page's Markdown twin. Items are split by a hairline, not boxed: each code frame is already a
  * frame. The two frames sit side by side when the column is wide and stack when it is narrow.
  */
+import Link from "~/components/Link.astro";
 import { Code } from "@astrojs/starlight/components";
 import { codeSpans, type CodePairView } from "../lib/migrate-view";
 import { pageHref } from "../lib/site";
@@ -57,7 +58,7 @@ const href = (url: string): string => (url.startsWith("/") ? pageHref(url) : url
                   {group.links.map((link, index) => (
                     <>
                       {index > 0 && ", "}
-                      <a href={href(link.href)}>{link.code ? <code>{link.text}</code> : link.text}</a>
+                      <Link href={href(link.href)}>{link.code ? <code>{link.text}</code> : link.text}</Link>
                     </>
                   ))}
                 </span>

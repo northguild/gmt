@@ -5,6 +5,7 @@
  * Which state the wall is in is `wall.ts`'s; this moves it from one to the next.
  */
 import type { FrameOutput } from "./frame";
+import { FADE_END_MS } from "./shards";
 import type { WallState } from "./wall";
 
 /** The depth the approach ends at, as a fraction of the wall's rest distance. The panes hang in the
@@ -14,6 +15,8 @@ import type { WallState } from "./wall";
 const BREAK_DEPTH = 0.93;
 /** How long the camera takes to fly in, milliseconds. */
 const APPROACH_MS = 900;
+/** How long a flight through takes until the last shard has faded, milliseconds: the approach, then the break. */
+export const CLEAR_MS = APPROACH_MS + FADE_END_MS;
 
 interface RunDeps {
   win: Window | null;

@@ -126,15 +126,13 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
   animation: none;
 }
 
-.gmt-filing-grid,
-.gmt-results {
+.gmt-filing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: var(--gmt-space-3);
 }
 
-html[data-deck] .gmt-filing-grid,
-html[data-deck] .gmt-results {
+html[data-deck] .gmt-filing-grid {
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 0.8cqi;
@@ -142,7 +140,6 @@ html[data-deck] .gmt-results {
 
 /* Starlight's flow margins would add a gap on top of the grid's own. */
 html[data-deck] .gmt-filing-grid > *,
-html[data-deck] .gmt-results > *,
 html[data-deck] .gmt-familiar > * {
   margin: 0;
 }
@@ -217,17 +214,24 @@ html[data-deck] .gmt-slide[data-layout="familiar"] .gmt-slide-title {
 }
 
 /* The GMT call and its value share one row, so three pairs fit one slide. */
-html[data-deck] .gmt-familiar .gmt-result {
+html[data-deck] .gmt-familiar-run {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2cqi 1.2cqi;
+  gap: 0.2cqi 2ch;
   align-items: baseline;
   justify-content: space-between;
-  padding: 0.3cqi 1cqi;
+  padding-block-start: 0.35cqi;
+  border-block-start: 1px solid var(--gmt-border);
 }
 
-html[data-deck] .gmt-familiar .gmt-result > * {
-  margin: 0;
+/* The result sits straight after the code, its label only as wide as its word, so call and value
+   share the row. */
+html[data-deck] .gmt-familiar-run .gmt-run-outcome {
+  padding-inline-start: 0;
+}
+
+html[data-deck] .gmt-familiar-run .gmt-run-result {
+  grid-template-columns: max-content minmax(0, auto);
 }
 
 .gmt-qr-row {

@@ -42,7 +42,7 @@ import {
 import { grow } from "~/widgets/primitives/grow/grow";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/id-timestamp-decoder.module.css";
-import { callArgs } from "./punctuality-widgets";
+import { callArgs } from "./call-args";
 import {
   BAD_LAYOUT_TEXT,
   CUSTOM_PRESET_ID,

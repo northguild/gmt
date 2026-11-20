@@ -1,10 +1,11 @@
 ---
 /**
- * A month as a wall-calendar page, laid out by gmt (`monthGrid`): the day the report expects ringed
- * in cyan, the day it observed ringed in red. The observed ring lands after the page is shown (CSS,
+ * A month as a wall-calendar page, laid out by gmt (`monthGrid`): the day the report observed (its
+ * result) ringed in red, the day it expects ringed in green, keyed as a run's rows are (`RunLabel`). The observed ring lands after the page is shown (CSS,
  * keyed by the `data-active` that `lib/slides/bug-visuals.ts` sets); without script both show.
  */
 import { monthGrid } from "~/lib/slides/calendar-figures";
+import RunLabel from "./RunLabel.astro";
 import "./calendar-figures.css";
 
 interface Props {
@@ -42,7 +43,7 @@ const mark = (day: number | null): string | undefined =>
     </tbody>
   </table>
   <figcaption class="gmt-month-key">
-    <span data-key="expected">Expected: {caption} on {expected.day} {grid.month}</span>
-    <span data-key="observed">Observed: {observed.day} {grid.month}</span>
+    <span data-key="observed"><RunLabel outcome="wrong" /> {caption} on {observed.day} {grid.month}</span>
+    <span data-key="expected"><RunLabel outcome="expected" /> {caption} on {expected.day} {grid.month}</span>
   </figcaption>
 </figure>

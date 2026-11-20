@@ -5,6 +5,7 @@
  * Its own component because the three lists are the same shape and differ only in their label:
  * building them here turns what were three nested `.map()`s inside a conditional into one loop.
  */
+import Link from "~/components/Link.astro";
 import { shortRef } from "../data/temporal-compat";
 import type { UpstreamFiling } from "../data/upstream-filings";
 
@@ -38,7 +39,7 @@ const links = [
     <p class="gmt-upstream-links">
       {links.map((link) => (
         <span>
-          {link.relation}: <a href={link.href}>{link.label}</a>{" "}
+          {link.relation}: <Link href={link.href}>{link.label}</Link>{" "}
         </span>
       ))}
     </p>

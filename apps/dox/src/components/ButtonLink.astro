@@ -1,5 +1,6 @@
 ---
 import type { HTMLAttributes } from 'astro/types';
+import { linkTarget } from '~/lib/external-link';
 import Icon from './Icon.astro';
 
 // Extends the anchor's own attributes so callers can pass `title`, `data-*`,
@@ -7,7 +8,7 @@ import Icon from './Icon.astro';
 // forwarded at runtime, but which a closed `Props` interface rejected at
 // type-check time (caught when the header button added a tooltip).
 interface Props extends Omit<HTMLAttributes<'a'>, 'href' | 'rel'> {
-	/** Destination URL. Absolute http(s) URLs open in a new tab automatically. */
+	/** Destination URL. An external one opens in a new tab (`linkTarget`). */
 	href: string;
 	/**
 	 * The destination is the page being shown: the button keeps its look but is not a link (no
@@ -18,25 +19,20 @@ interface Props extends Omit<HTMLAttributes<'a'>, 'href' | 'rel'> {
 	label?: string;
 	/** Starlight icon name rendered before the slotted content. */
 	icon?: string;
-	/** Force new-tab behaviour on/off; auto-detected from `href` otherwise. */
-	external?: boolean;
 	/** Extra `rel` tokens; `noopener noreferrer` is appended when external. */
 	rel?: string;
 	class?: string;
 }
 
-const { href, current, label, icon, external, rel, class: className, ...attrs } = Astro.props;
-
-const isExternal = external ?? /^(https?:)?\/\//.test(href);
-const mergedRel =
-	[rel, isExternal ? 'noopener noreferrer' : null].filter(Boolean).join(' ') || undefined;
+const { href, current, label, icon, rel, class: className, ...attrs } = Astro.props;
+const opens = linkTarget(current ? undefined : href, rel);
 ---
 
 <a
 	href={current ? undefined : href}
 	class:list={['gmt-icon-button', 'gmt-button-link', className]}
-	target={isExternal && !current ? '_blank' : undefined}
-	rel={current ? undefined : mergedRel}
+	target={opens.target}
+	rel={current ? undefined : opens.rel}
 	aria-current={current ? 'page' : undefined}
 	{...attrs}
 >

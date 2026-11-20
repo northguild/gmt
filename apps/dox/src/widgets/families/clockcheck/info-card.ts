@@ -10,6 +10,7 @@ import { codeFrame } from "../../builders/code-frame";
 import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./info-card.module.css";
+import { link } from "~/widgets/builders/link";
 
 const infoIcon = (): SafeHtml =>
   html`<svg
@@ -112,9 +113,7 @@ export function minimumsCard(idPrefix: string, text: MinimumsText): SafeHtml {
   const rows = text.rows.map((row) => {
     const sources = row.sources.map(
       (s, i) =>
-        html`${i > 0 ? ", " : ""}<a href="${s.href}" rel="noopener noreferrer"
-          >${s.label}</a
-        >`,
+        html`${i > 0 ? ", " : ""}${link({ href: s.href, body: s.label })}`,
     );
     return html`<li>
       <strong>${row.name}</strong>

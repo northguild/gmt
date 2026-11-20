@@ -26,7 +26,7 @@
 
 import { CURATED_TIMEZONES } from "./curated-timezones";
 
-export { callArgs, formatValue } from "./punctuality-widgets";
+export { callArgsPlain, formatValue } from "./punctuality-widgets";
 export { zoneOptionsHtml } from "./transport-widgets";
 
 // ---------------------------------------------------------------------------

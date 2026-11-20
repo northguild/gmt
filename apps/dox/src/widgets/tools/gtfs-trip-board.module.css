@@ -139,8 +139,8 @@
   container: trip-board / inline-size;
   min-inline-size: 0;
 
-  /* The cells hold the widest zone name, one 32-character piece. A name is never broken: the
-     column is as wide as the name, and a board wider than its box scrolls sideways. */
+  /* The cells hold the widest zone name, one 32-character piece. A zone name breaks after a
+     slash and a stop id after a hyphen (`identifier`, `zonedValue`); nothing breaks inside a word. */
   & td,
   & th {
     font-size: var(--gmt-text-xs);
@@ -178,8 +178,7 @@
   font-family: var(--gmt-font-mono);
   font-weight: 600;
 
-  /* A stop id has hyphens in it: a hyphen is a break point, and a split id is a split word. */
-  white-space: nowrap;
+  /* A stop id breaks only where `identifier` puts a break point (after a hyphen). */
   overflow-wrap: normal;
 }
 
@@ -196,8 +195,7 @@
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
 
-  /* An instant is one token: it keeps one line. */
-  white-space: nowrap;
+  /* An instant breaks only where `zonedValue` puts a break point (after its `T`). */
   overflow-wrap: normal;
 }
 

@@ -25,6 +25,13 @@
   --gmt-deck-text-md: max(0.75rem, 1.4cqi);
   --gmt-deck-text-lg: max(0.75rem, 1.6cqi);
 
+  /* A wrong result and the right value, wherever the deck shows them: red and green, the way a
+     test runner prints a failed assertion (`RunLabel`, the flaps, the calendar marks). */
+  --gmt-deck-wrong: var(--gmt-danger);
+  --gmt-deck-wrong-ink: var(--gmt-danger-ink);
+  --gmt-deck-right: var(--gmt-spring);
+  --gmt-deck-right-ink: var(--gmt-spring-ink);
+
   position: relative;
   background: var(--gmt-void);
   color: var(--gmt-ice);
@@ -762,7 +769,7 @@ html[data-deck="stage"] .gmt-deck[data-blank] .gmt-deck-space {
 
 /*
  * The slide's own paragraphs; the Dox chat a slide holds keeps its own spacing. `:where` keeps the
- * chat out without adding weight, so a component's own paragraph margins (`.gmt-step p` and the
+ * chat out without adding weight, so a component's own paragraph margins (`.gmt-run > p` and the
  * rest, which come later at the same weight) still win.
  */
 html[data-deck] .gmt-slide-body p:not(:where(.gmt-ask p)) {
@@ -855,4 +862,18 @@ html[data-deck-vt]::view-transition-new(root),
     animation: ng-freeze-text var(--ng-freeze-dur) ease var(--ng-delay)
       backwards;
   }
+}
+
+/*
+ * A code block on the stage (`DeckCode`): Expressive Code sizes its block from its own variables,
+ * so the stage sets them in container units, with a panel's tighter lines.
+ */
+html[data-deck] .gmt-deck-code {
+  --ec-codeFontSize: var(--gmt-deck-text-lg);
+  --ec-codeLineHt: 1.35;
+  --ec-codePadBlk: 0.6cqi;
+  --ec-codePadInl: 1cqi;
+
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }

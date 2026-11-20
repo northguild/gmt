@@ -104,7 +104,8 @@ import {
 import { BEFORE_FIRST_WEEK_NOTE, counterSystem } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
 import type { EdiCall } from "./edi-widgets";
-import { callArgs, formatValue } from "./punctuality-widgets";
+import { callArgs } from "./call-args";
+import { formatValue } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { handoffHref } from "./widget-permalink";
 import { codeSpan } from "./widget-ui";

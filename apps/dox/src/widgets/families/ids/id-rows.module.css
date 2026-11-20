@@ -61,8 +61,9 @@
   white-space: normal;
 }
 
-/* An identifier is one word: a call and a returned value wrap between words and never inside
-   one. A long one widens its cell, and `.wrap` scrolls sideways. */
+/* An identifier is one word: a call wraps at its seams (the `<wbr>` after its `(` and its commas)
+   and a returned value between words, and neither breaks inside a date or an id. A string of
+   junk with no seam breaks anywhere as a last resort (`.gmt-code-str`). */
 .text {
   margin: 0;
   padding: 0;
@@ -71,11 +72,6 @@
   font: inherit;
   white-space: normal;
   overflow-wrap: normal;
-
-  /* A token (a string, a number, a name) stays on one line; the call wraps between them. */
-  & span {
-    white-space: nowrap;
-  }
 }
 
 .formatCell {
@@ -90,13 +86,9 @@
   color: inherit;
   font: inherit;
 
-  /* The content sheet keeps a table's code on one line; a call here wraps between words, as the cell does. */
+  /* The content sheet keeps a table's code on one line; a call here wraps at its seams, as the cell does. */
   white-space: normal;
   overflow-wrap: normal;
-
-  & span {
-    white-space: nowrap;
-  }
 }
 
 .format,

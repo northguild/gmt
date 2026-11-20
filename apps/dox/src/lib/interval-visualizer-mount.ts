@@ -69,7 +69,7 @@ import {
   type TimelineScale,
   type ZonedInterval,
 } from "./interval-visualizer";
-import { callArgs } from "./punctuality-widgets";
+import { callArgs } from "./call-args";
 import { onceDestroy, type MountFn } from "./widget-mount";
 import { loadIntervalLib } from "./zones-lib";
 import { codeSpan } from "./widget-ui";

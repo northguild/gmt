@@ -3,7 +3,7 @@
 .piece {
   white-space: nowrap;
 
-  /* A word piece wraps between words and never inside one; a row that is too wide scrolls in its box. */
+  /* A word piece wraps between words and never inside one; the pieces are the break points. */
   &[data-word] {
     white-space: normal;
     overflow-wrap: normal;

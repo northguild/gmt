@@ -57,6 +57,7 @@ export {
 export { idScope } from "./ids";
 export { nobreak } from "./nobreak";
 export { instant } from "./instant";
+export { link, type LinkOptions } from "./link";
 export {
   card,
   type CardOptions,

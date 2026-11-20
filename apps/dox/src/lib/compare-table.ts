@@ -7,6 +7,7 @@ import { raw } from "~/widgets/builders/html";
 import { nobreak } from "~/widgets/builders/nobreak";
 import { codeHtml } from "./code-break";
 import { escapeHtml } from "./inline-code-html";
+import { link } from "~/widgets/builders/link";
 
 /** One table cell: plain text, optionally set in code or linked. */
 export interface Cell {
@@ -41,7 +42,7 @@ const cellTextHtml = (text: string): string =>
 export function cellHtml(cell: Cell): string {
   const inner = cell.code ? codeHtml(cell.text) : cellTextHtml(cell.text);
   const body = cell.nobreak ? nobreak(raw(inner)).toString() : inner;
-  return cell.href ? `<a href="${escapeHtml(cell.href)}">${body}</a>` : body;
+  return cell.href ? link({ href: cell.href, body: raw(body) }).value : body;
 }
 
 export const plain = (text: string): Cell => ({ text });

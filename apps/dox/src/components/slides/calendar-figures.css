@@ -1,8 +1,8 @@
 /*
- * The bug slides' clock and calendar figures: the split-flap board (FlapBoard), the month page
+ * The bug slides' clock and calendar figures: the split-flap rows (FlapBoard), the month page
  * (MonthPage), the shifted week (MonthShift) and the tear-off leaves (JumpPages). The script that
- * plays them is `lib/slides/bug-visuals.ts`; `data-armed` is its mark, so without script every
- * figure shows its end state.
+ * plays them is `lib/slides/bug-visuals.ts`; `data-armed` is its mark (for the flaps, on the run
+ * that holds them), so without script every figure shows its end state.
  */
 
 /* Split-flap board */
@@ -10,14 +10,6 @@
 .gmt-flap {
   display: grid;
   gap: 1.2cqi;
-}
-
-.gmt-flap pre {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: max(0.75rem, 1.35cqi);
-  color: var(--gmt-ice-dim);
 }
 
 .gmt-flap-row {
@@ -33,17 +25,6 @@
   align-items: baseline;
   font-size: var(--gmt-deck-text-md);
   color: var(--gmt-ice-dim);
-}
-
-.gmt-flap-label strong {
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gmt-ice-bright);
-}
-
-.gmt-flap-row[data-which="observed"] .gmt-flap-label strong {
-  color: var(--gmt-danger-ink);
 }
 
 .gmt-flap-tiles {
@@ -95,17 +76,18 @@
 }
 
 /* A flap that differs between the rows, lit once its row lands (or at once without script). */
-.gmt-flap:not([data-armed]) [data-diff="expected"],
+.gmt-run:not([data-armed]) > .gmt-flap [data-diff="expected"],
 [data-landed] > [data-diff="expected"] {
-  color: var(--gmt-cyan);
-  border-color: var(--gmt-cyan);
+  color: var(--gmt-deck-right-ink);
+  border-color: var(--gmt-deck-right);
 }
 
-.gmt-flap:not([data-armed]) [data-diff="observed"],
+.gmt-run:not([data-armed]) > .gmt-flap [data-diff="observed"],
 [data-landed] > [data-diff="observed"] {
-  color: var(--gmt-danger-ink);
-  border-color: var(--gmt-danger);
-  box-shadow: 0 0 1.2cqi color-mix(in oklab, var(--gmt-danger), transparent 55%);
+  color: var(--gmt-deck-wrong-ink);
+  border-color: var(--gmt-deck-wrong);
+  box-shadow: 0 0 1.2cqi
+    color-mix(in oklab, var(--gmt-deck-wrong), transparent 55%);
 }
 
 [data-landed] > .gmt-flap-tile[data-diff] {
@@ -186,15 +168,17 @@
 }
 
 .gmt-month-page td[data-mark="expected"] .gmt-month-day {
-  color: var(--gmt-ice-bright);
-  border-color: var(--gmt-cyan);
-  box-shadow: 0 0 1cqi color-mix(in oklab, var(--gmt-cyan), transparent 55%);
+  color: var(--gmt-deck-right-ink);
+  border-color: var(--gmt-deck-right);
+  box-shadow: 0 0 1cqi
+    color-mix(in oklab, var(--gmt-deck-right), transparent 55%);
 }
 
 .gmt-month-page td[data-mark="observed"] .gmt-month-day {
-  color: var(--gmt-danger-ink);
-  border-color: var(--gmt-danger);
-  box-shadow: 0 0 1cqi color-mix(in oklab, var(--gmt-danger), transparent 55%);
+  color: var(--gmt-deck-wrong-ink);
+  border-color: var(--gmt-deck-wrong);
+  box-shadow: 0 0 1cqi
+    color-mix(in oklab, var(--gmt-deck-wrong), transparent 55%);
   transition:
     opacity var(--gmt-duration-slow) var(--gmt-easing),
     transform var(--gmt-duration-slow) var(--gmt-easing);
@@ -220,19 +204,11 @@
   color: var(--gmt-ice-dim);
 }
 
-.gmt-month-key span::before {
-  display: inline-block;
-  inline-size: 0.8em;
-  block-size: 0.8em;
-  margin-inline-end: 0.5em;
-  content: "";
-  border: 2px solid var(--gmt-cyan);
-  border-radius: 2px;
-  corner-shape: bevel;
-}
-
-.gmt-month-key [data-key="observed"]::before {
-  border-color: var(--gmt-danger);
+/* Each key line is labelled as a run's rows are (`RunLabel`), its value after the label. */
+.gmt-month-key > span {
+  display: inline-flex;
+  gap: 1ch;
+  align-items: baseline;
 }
 
 /* A week shifted one day late */
@@ -258,14 +234,6 @@
 
 .gmt-shift-label {
   font-size: var(--gmt-deck-text-md);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gmt-ice-bright);
-}
-
-.gmt-shift-row[data-which="observed"] .gmt-shift-label {
-  color: var(--gmt-danger-ink);
 }
 
 .gmt-shift-days {
@@ -292,13 +260,13 @@
 }
 
 .gmt-shift-row[data-which="expected"] li[data-first] {
-  color: var(--gmt-ice-bright);
-  border: 2px solid var(--gmt-cyan);
+  color: var(--gmt-deck-right-ink);
+  border: 2px solid var(--gmt-deck-right);
 }
 
 .gmt-shift-row[data-which="observed"] li[data-first] {
-  color: var(--gmt-danger-ink);
-  border: 2px solid var(--gmt-danger);
+  color: var(--gmt-deck-wrong-ink);
+  border: 2px solid var(--gmt-deck-wrong);
 }
 
 .gmt-shift-days li[data-ghost] {

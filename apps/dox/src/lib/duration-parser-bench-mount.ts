@@ -77,6 +77,7 @@ import {
 import { defineElements } from "~/widgets/define";
 import { grow } from "~/widgets/primitives/grow/grow";
 import styles from "~/widgets/tools/duration-parser-bench.module.css";
+import { link } from "~/widgets/builders/link";
 
 export type { DurationParserBenchArgs } from "./duration-parser-bench";
 export {
@@ -276,8 +277,7 @@ export function renderDurationParserBenchTemplate(
       ${grow(html`<div id="${id("minute")}">${minuteTable([])}</div>`)}
       ${grow(html`<div id="${id("laytime")}">${laytimeTable([])}</div>`)}
       <p class="${styles.laytimeNote}">
-        <a href="${BIMCO_URL}" rel="noopener">${LAYTIME_NOTE.link}</a
-        >${raw(inlineCodeHtml(LAYTIME_NOTE.rest))}
+        ${link({ href: BIMCO_URL, body: LAYTIME_NOTE.link })}${raw(inlineCodeHtml(LAYTIME_NOTE.rest))}
       </p>
     </div>`,
   );

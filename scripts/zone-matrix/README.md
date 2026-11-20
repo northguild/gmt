@@ -124,6 +124,23 @@ record's hash matches the code and the call; otherwise its panel or row is marke
 `familiar.test.mjs` runs each Moment, date-fns and Day.js shape in `familiar.json` against the
 pinned versions, so no shape on the "Names you already know" slide is one the library rejects.
 
+## The kinds of a date
+
+`date-kinds.mjs` runs the `Date` chain of Deck 0's `kinds` slide with each kind of input (a date, a
+local time, a UTC time, a time with an offset, a time with a zone, a `Date` object) in the same zones
+and Node majors as the agent's answer, with the same runner. It reads
+`apps/dox/src/slides/give-me-temporal/date-kinds.json` (`code`, `want` and `kinds`, each with `id`,
+`kind` and `call`) and writes `date-kinds-run.json` beside it, one record per kind id.
+
+```sh
+cd scripts/zone-matrix
+fnm exec --using=26 -- node date-kinds.mjs
+```
+
+Exit 2 when the file has no code or no kinds, or a kind's id is malformed or repeated, or it has no
+call. A kind is current only while its record's hash matches the code and its call; otherwise the
+slide marks the grid and `slides-check` fails naming the file and the command.
+
 ## The record's shape
 
 `apps/dox/src/data/zone-matrix.json` is stored compactly by `record-shape.mjs`: the Node release and
@@ -146,5 +163,5 @@ work pool.
 ## Tests
 
 ```sh
-pnpm test    # node --test: parsers, pins, tags, causes, cells, the cache key, the record shape, the probe, the matrix reader, the agent-answer runner and the familiar shapes
+pnpm test    # node --test: parsers, pins, tags, causes, cells, the cache key, the record shape, the probe, the matrix reader, the agent-answer and date-kinds runners and the familiar shapes
 ```

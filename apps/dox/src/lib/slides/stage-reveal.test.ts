@@ -24,6 +24,7 @@ import {
 import { FIXTURE_STAGE as STAGE } from "~/test/deck-stage-fixture";
 import { pointFor, resolvePlace, rotationFor } from "./places";
 import { mountSpaceStage } from "./stage";
+import { CLEAR_MS } from "./ice-wall/wall-run";
 import { REVEAL_MS } from "./stage-reveal";
 
 installJsdomShims();
@@ -359,6 +360,26 @@ describe("the clock that becomes the Earth", () => {
     expect(space()).toHaveAttribute("data-earth-clock", "shatter");
   });
 
+  it("breaks the wall first on the step past it, then shatters the clock once the wall's shards have faded", async () => {
+    const { wall } = await setUp();
+    toWall();
+    holdTimeouts();
+    wall.flyThrough.mockImplementation(() =>
+      wall.options["onState"]!("approach"),
+    );
+    h.stage.goTo("planet", { hop: true, at: { slide: 3, build: 0 } });
+    expect(wall.flyThrough).toHaveBeenCalledTimes(1);
+    // The clock stands whole while the wall in front of it breaks.
+    expect(space()).toHaveAttribute("data-earth-clock", "on");
+    const waiting = timeouts.find(([, ms]) => ms === CLEAR_MS);
+    expect(waiting).toBeDefined();
+    expect(timeouts.some(([, ms]) => ms === REVEAL_MS)).toBe(false);
+    waiting![0]();
+    expect(space()).toHaveAttribute("data-earth-clock", "shatter");
+    runReveal();
+    expect(space()).not.toHaveAttribute("data-earth-clock");
+  });
+
   it("brings the clock back when the talk steps back before the reveal", async () => {
     const { fake } = await setUp();
     toDate();
@@ -408,6 +429,29 @@ describe("the clock that becomes the Earth", () => {
     expect(space()).not.toHaveAttribute("data-earth-clock");
     // The place is the same, but the camera leaves the pole for it.
     expectRotation(aimedAt(fake), rotationFor(resolvePlace("meridian"), ctx));
+  });
+
+  it("stands the clock at the talk's start while the deck is locked, and ticks the time now once unlocked", async () => {
+    h.root.setAttribute("data-deck-root", "");
+    h.root.setAttribute("data-deck-preview-at", "2026-12-16T16:00:00Z");
+    h.root.setAttribute("data-locked", "");
+    await setUp();
+    const hour = (): Element | null =>
+      h.root.querySelector('[data-earth-clock-face] [data-hand="hour"]');
+    // 18:00 in Helsinki is 1080 minutes into the day, at a quarter of a degree a minute.
+    await vi.waitFor(() =>
+      expect(hour()).toHaveAttribute("transform", "rotate(270 50 50)"),
+    );
+    expect(face()).toHaveTextContent("16");
+    h.root.removeAttribute("data-locked");
+    // The faked clock reads 23:30 now.
+    await vi.waitFor(() =>
+      expect(hour()).toHaveAttribute("transform", "rotate(352.5 50 50)"),
+    );
+    h.root.setAttribute("data-locked", "");
+    await vi.waitFor(() =>
+      expect(hour()).toHaveAttribute("transform", "rotate(270 50 50)"),
+    );
   });
 
   it("shows the Earth in the overview and the clock again after it", async () => {

@@ -48,11 +48,17 @@ import {
   type SafeHtml,
 } from "~/widgets/builders";
 import { callOutput } from "~/widgets/families/gnss/call-output";
-import { callLines, outputOf } from "~/widgets/families/gnss/call-lines";
+import {
+  callGhosts,
+  callLines,
+  distinctCalls,
+  outputOf,
+} from "~/widgets/families/gnss/call-lines";
 import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
 import { grow } from "~/widgets/primitives/grow/grow";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/julian-day-counter.module.css";
+import type { EdiCall } from "./edi-widgets";
 import { FORMS, LAST_INSTANT, SCALES, type Scale } from "./day-count-widgets";
 import {
   COUNTER_PRESETS,
@@ -119,7 +125,12 @@ const SAMPLE_UTC = "8888-88-88T88:88:88.888888888Z";
 const SAMPLE_VALUE = "8888888 + 0.8888888888888888";
 /** Until the library is read: the widest one-number plate (`-883655957.9260122`). */
 const SAMPLE_NUMBER = "8888888.8888888888";
-const SAMPLE_CALL = `toJulianDateParts("${SAMPLE_UTC}", "UTC")`;
+const SAMPLE_CALL_ARGS: EdiCall = {
+  fn: "toJulianDateParts",
+  args: [SAMPLE_UTC, "UTC"],
+  result: null,
+};
+const SAMPLE_CALL = callLines([SAMPLE_CALL_ARGS]).plain;
 
 /** What the mount learns from the library about the widest things a reading prints. */
 interface Samples {
@@ -129,7 +140,8 @@ interface Samples {
   backs: readonly string[];
   shifts: readonly string[];
   cells: readonly string[];
-  calls: readonly string[];
+  /** The calls a row can show; a ghost is drawn from each, so it breaks as the live call does. */
+  calls: readonly EdiCall[];
   codeLines: readonly string[];
 }
 
@@ -139,7 +151,7 @@ const TEMPLATE_SAMPLES: Samples = {
   backs: [SAMPLE_UTC],
   shifts: ["+88.888 µs"],
   cells: [SAMPLE_VALUE],
-  calls: [SAMPLE_CALL],
+  calls: [SAMPLE_CALL_ARGS],
   codeLines: [SAMPLE_CALL],
 };
 
@@ -194,7 +206,7 @@ function heldInstant(text: string, ghosts: readonly string[]): SafeHtml {
 
 function callCell(row: FormRow, samples: Samples): SafeHtml {
   const live = row.call === null ? html`${NBSP}` : callLines([row.call]).code;
-  const ghosts: Ghost[] = [...new Set(samples.calls)];
+  const ghosts: Ghost[] = callGhosts(samples.calls);
   return hold(
     html`<span class="${styles.wrap}" data-gate="codeframe"><code class="${styles.cell}">${live}</code></span>`,
     ghosts,
@@ -246,8 +258,7 @@ function tableOf(read: CounterRead | null, samples: Samples): SafeHtml {
     rowHeader: "Form",
     layout: "fixed",
     widths: ["14%", "29%", "21%", "22%", "14%"],
-    labelCells: true,
-    roles: true,
+    stack: true,
   });
 }
 
@@ -458,7 +469,7 @@ function samplesOf(lib: DayCountLib): Samples {
   const backs = new Set<string>();
   const shifts = new Set<string>();
   const cells = new Set<string>();
-  const calls = new Set<string>();
+  const calls: EdiCall[] = [SAMPLE_CALL_ARGS];
   const codeLines = new Set<string>();
   for (const state of states) {
     const read = readCounter(lib, state);
@@ -467,7 +478,7 @@ function samplesOf(lib: DayCountLib): Samples {
       backs.add(row.back);
       shifts.add(row.shift);
       cells.add(row.value);
-      if (row.call !== null) calls.add(callLines([row.call]).plain);
+      if (row.call !== null) calls.push(row.call);
     }
     callLines(read.calls)
       .plain.split("\n")
@@ -492,7 +503,7 @@ function samplesOf(lib: DayCountLib): Samples {
     backs: [SAMPLE_UTC, ...backs],
     shifts: [...TEMPLATE_SAMPLES.shifts, ...shifts],
     cells: [...cells],
-    calls: [SAMPLE_CALL, ...calls],
+    calls: distinctCalls(calls),
     codeLines: [SAMPLE_CALL, ...codeLines],
   };
 }

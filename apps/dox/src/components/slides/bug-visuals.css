@@ -1,61 +1,7 @@
 /*
- * The pieces of a bug slide: the visual with its filing receipt, the terminal, the columns, the
- * pins' count, the GMT step, the GMT result and a step that replaces the one before it.
+ * The pieces of a bug slide: the visual with its filing receipts, the recorded run every slide shows
+ * code in, the pins' count, and a step that replaces the one before it.
  */
-
-.gmt-result {
-  display: grid;
-  gap: var(--gmt-space-2);
-  align-content: start;
-}
-
-.gmt-result > * {
-  margin: 0;
-}
-
-.gmt-result-value {
-  display: flex;
-  gap: var(--gmt-space-2);
-  align-items: baseline;
-}
-
-.gmt-result output {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-/* The sentinel is the only amber. */
-.gmt-result[data-signal="lost"] {
-  border-color: var(--gmt-signal-border);
-  border-block-end-color: var(--gmt-signal-ink);
-}
-
-.gmt-result[data-signal="lost"] output {
-  color: var(--gmt-signal-ink);
-}
-
-.gmt-result-note {
-  color: var(--gmt-ice-dim);
-  font-size: var(--gmt-text-sm);
-}
-
-/* The stage sets a result's type in container units and keeps it in the text column. */
-html[data-deck] .gmt-result {
-  min-inline-size: 0;
-  gap: 0.6cqi;
-  padding: 1cqi 1.4cqi;
-  font-size: max(0.75rem, 1.7cqi);
-  line-height: 1.3;
-}
-
-html[data-deck] .gmt-result-note {
-  font-size: max(0.75rem, 1.45cqi);
-}
-
-/* Three results and their lead line share one slide, so the call and the lead are set smaller. */
-html[data-deck] .gmt-result-call {
-  font-size: max(0.75rem, 1.25cqi);
-}
 
 /*
  * A step that replaces the one before it: the base content and each build share one cell, and a
@@ -124,95 +70,6 @@ html[data-deck] .gmt-visual {
   color: var(--gmt-ice);
 }
 
-/* Both are `gmt-deck-panel`s (`slides.css`); the padding is their own. */
-.gmt-terminal,
-.gmt-column {
-  padding: 1.2cqi 1.6cqi;
-}
-
-.gmt-terminal {
-  display: grid;
-  gap: 0.6cqi;
-  min-block-size: 13cqi;
-  align-content: start;
-  font-family: var(--gmt-font-mono);
-  font-size: var(--gmt-deck-text-lg);
-}
-
-.gmt-terminal p {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.gmt-terminal-out {
-  color: var(--gmt-ice-bright);
-}
-
-.gmt-terminal-expected {
-  color: var(--gmt-ice-dim);
-}
-
-.gmt-terminal-out span,
-.gmt-terminal-expected span {
-  margin-inline-end: 1cqi;
-  color: var(--gmt-ice-dim);
-}
-
-.gmt-terminal-cursor {
-  display: inline-block;
-  inline-size: 0.6em;
-  block-size: 1.05em;
-  vertical-align: text-bottom;
-  background: var(--gmt-ice);
-  animation: gmt-cursor var(--gmt-duration-sweep) steps(2, start) infinite;
-}
-
-.gmt-terminal[data-ended="true"] .gmt-terminal-cursor {
-  animation: none;
-  opacity: 0.3;
-}
-
-@keyframes gmt-cursor {
-  to {
-    visibility: hidden;
-  }
-}
-
-.gmt-columns-pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.2cqi;
-}
-
-.gmt-column[data-which="observed"] {
-  border-color: var(--gmt-border-strong);
-}
-
-.gmt-columns-call {
-  margin: 0;
-  font-size: var(--gmt-deck-text-lg);
-}
-
-.gmt-columns {
-  display: grid;
-  gap: 1cqi;
-}
-
-.gmt-column {
-  min-inline-size: 0;
-}
-
-.gmt-column h3 {
-  margin: 0 0 0.6cqi;
-  font-size: max(0.75rem, 1.5cqi);
-  color: var(--gmt-ice-dim);
-}
-
-.gmt-column p {
-  margin: 0;
-  font-size: max(0.75rem, 1.8cqi);
-}
-
 .gmt-pins {
   display: grid;
   gap: 1cqi;
@@ -262,75 +119,162 @@ html[data-deck] .gmt-pins .gmt-deck-table {
   min-inline-size: 26cqi;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .gmt-terminal-cursor {
-    animation: none;
-  }
-}
-
-/* ---- The GMT step: what GMT does with the same input, the last build of a bug slide ---- */
-
-html[data-deck] .gmt-step {
-  gap: 0.6cqi;
-  font-size: max(0.75rem, 1.25cqi);
-  line-height: 1.25;
-}
-
-.gmt-step > *,
-html[data-deck] .gmt-step p {
-  margin: 0;
-}
-
-.gmt-step-head {
-  font-family: var(--gmt-font-display);
-  font-size: max(0.875rem, 1.5cqi);
-  color: var(--gmt-ice-bright);
-}
-
-.gmt-step-rows {
+/*
+ * ---- A recorded run (`CodeRun`): the one panel every slide shows code in ----
+ * A header naming what ran it, then each step as a test runner prints it: the code, its result, and
+ * beside a wrong result the value expected (beside GMT's result, the filed bug's value). Wrong is red, right green (the deck's
+ * pair in `slides.css`), gmt's sentinel amber (the only amber).
+ */
+html[data-deck] .gmt-run {
   display: grid;
-  gap: 0.6cqi;
+  gap: 0.3cqi;
+  align-content: start;
+  min-inline-size: 0;
+  padding: 0.6cqi 1.6cqi 0.8cqi;
+  font-size: var(--gmt-deck-text-lg);
+  line-height: 1.35;
+}
+
+/* The deck's paragraph margin (`slides.css`, same weight, earlier) gives way to the panel's gap. */
+html[data-deck] .gmt-run > p,
+html[data-deck] .gmt-familiar-run > p {
   margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* A `gmt-deck-panel` (`slides.css`). */
-.gmt-step-row {
-  display: grid;
-  gap: 0.2cqi;
-  padding: 0.6cqi 1cqi;
-}
-
-/* A filing GMT has no workaround for gets the plain edge, never the accent. */
-.gmt-step-row[data-unguarded] {
-  box-shadow: none;
-}
-
-.gmt-step-line,
-.gmt-step-detail {
-  margin: 0;
-}
-
-.gmt-step-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6cqi 1cqi;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.gmt-step-badge {
-  color: var(--gmt-ice-dim);
-  white-space: nowrap;
-}
-
-.gmt-step-detail,
-.gmt-step-source {
-  color: var(--gmt-ice-dim);
   overflow-wrap: anywhere;
 }
 
-html[data-deck] .gmt-step .gmt-step-source {
-  font-size: max(0.75rem, 1cqi);
+/* A line waiting its turn keeps its box, so the lines below it never move. */
+.gmt-run [data-after][hidden] {
+  display: block;
+  visibility: hidden;
+}
+
+.gmt-run-head {
+  padding-block-end: 0.5cqi;
+  border-block-end: 1px solid var(--gmt-border);
+  font-size: var(--gmt-deck-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* A wrapped line of code hangs under its first character, clear of the prompt. */
+.gmt-run-line {
+  padding-inline-start: 2ch;
+  text-indent: -2ch;
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-run-prompt {
+  display: inline-block;
+  inline-size: 2ch;
+  text-indent: 0;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-run-line code {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+/* A step's result and its expected value share one row while they fit, and wrap when not. */
+.gmt-run-outcome {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2cqi 4ch;
+  padding-inline-start: 2ch;
+}
+
+/* The deck's flow margins give way to the panel's own gap. */
+html[data-deck] .gmt-run-outcome,
+html[data-deck] .gmt-run-outcome > p {
+  margin: 0;
+}
+
+/* One label width, so a value wrapped under another starts in the same column; a longer label
+   (a package name) widens its own row rather than running into the value. */
+.gmt-run-result {
+  display: grid;
+  grid-template-columns: minmax(11ch, max-content) minmax(0, auto);
+  column-gap: 1ch;
+  min-inline-size: 0;
+}
+
+.gmt-run .gmt-run-result[hidden] {
+  display: grid;
+}
+
+.gmt-run-value {
+  display: grid;
+  min-inline-size: 0;
+}
+
+/* A step's rows sit together; the next prompt starts a step of its own. */
+html[data-deck] .gmt-run-outcome + :is(.gmt-run-line, .gmt-run-code) {
+  margin-block-start: 0.4cqi;
+}
+
+/* A run's code block takes the panel's text size and a thin pad, so a step of code, result and
+   expected value stays a few lines tall. */
+html[data-deck] .gmt-run-code .gmt-deck-code {
+  --ec-codeFontSize: var(--gmt-deck-text-md);
+  --ec-codePadBlk: 0.3cqi;
+}
+
+.gmt-run-label {
+  display: inline-flex;
+  gap: 1ch;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gmt-deck [data-outcome="wrong"] {
+  color: var(--gmt-deck-wrong-ink);
+}
+
+.gmt-deck [data-outcome="right"],
+.gmt-deck [data-outcome="expected"] {
+  color: var(--gmt-deck-right-ink);
+}
+
+.gmt-deck [data-outcome="lost"] {
+  color: var(--gmt-signal-ink);
+}
+
+.gmt-run-note {
+  padding-block-start: 0.5cqi;
+  border-block-start: 1px solid var(--gmt-border);
+  color: var(--gmt-ice-dim);
+}
+
+/* The note is prose, not output: a step smaller. */
+.gmt-run-note {
+  font-size: var(--gmt-deck-text-md);
+}
+
+/* The cursor shows on the line that is typing, and nowhere once the run is through. */
+.gmt-run-cursor {
+  display: inline-block;
+  inline-size: 0.6em;
+  block-size: 1.05em;
+  vertical-align: text-bottom;
+  visibility: hidden;
+  background: var(--gmt-ice);
+}
+
+[data-typing] + .gmt-run-cursor {
+  visibility: visible;
+  animation: gmt-cursor var(--gmt-duration-sweep) steps(2, start) infinite;
+}
+
+@keyframes gmt-cursor {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-typing] + .gmt-run-cursor {
+    animation: none;
+  }
 }

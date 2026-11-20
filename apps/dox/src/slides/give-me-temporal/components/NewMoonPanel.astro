@@ -4,6 +4,7 @@
  * U.S. Naval Observatory's record (`new-moon.json`) and worked out with gmt at build time
  * (`newMoonFacts`); nothing is typed in. It states the facts and draws no conclusion from them.
  */
+import Link from "~/components/Link.astro";
 import { newMoonFacts } from "~/slides/give-me-temporal/content";
 
 const f = newMoonFacts();
@@ -19,7 +20,7 @@ const f = newMoonFacts();
     Shanghai's.
   </p>
   <p class="gmt-newmoon-source">
-    Sources: <a href={f.url}>{f.source}</a>; <a href={f.calendarUrl}>{f.calendarSource}</a>.
+    Sources: <Link href={f.url}>{f.source}</Link>; <Link href={f.calendarUrl}>{f.calendarSource}</Link>.
   </p>
 </div>
 

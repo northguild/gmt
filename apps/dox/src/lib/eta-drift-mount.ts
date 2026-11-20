@@ -70,12 +70,12 @@ import {
   type DriftState,
   type EtaDriftArgs,
 } from "./eta-drift";
+import { callArgs } from "./call-args";
 import { onWidthChange, thinTickLabels } from "./label-fit";
 import { loadPunctualityLib } from "./punctuality-lib";
 import {
   SETTLE_MS,
   TIMESTAMP_CLASSES,
-  callArgs,
   epochMs,
   formatValue,
   isoToMinutes,

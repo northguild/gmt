@@ -188,10 +188,10 @@ describe("inline code in strings that come from the data", () => {
     expect(notesMarkdown()).toContain("`main`");
   });
 
-  it("renders a code cell and a linked cell as HTML", () => {
+  it("renders a code cell and a linked cell as HTML, an external link opening in a new tab", () => {
     expect(cellHtml({ text: "npm", code: true })).toBe("<code>npm</code>");
     expect(cellHtml({ text: "a&b", href: "https://x.test/?a=1&b=2" })).toBe(
-      '<a href="https://x.test/?a=1&amp;b=2">a&amp;b</a>',
+      '<a href="https://x.test/?a=1&amp;b=2" target="_blank" rel="noopener noreferrer">a&amp;b</a>',
     );
   });
 

@@ -1,4 +1,5 @@
 ---
+import Link from "~/components/Link.astro";
 import { cellHtml } from "../lib/compare-table";
 import {
   zoneMatrixEvidenceTable,
@@ -71,7 +72,7 @@ const overview = zoneMatrixSummaryTable();
               {suite.name} {suite.version}
             </h2>
             <p>
-              Commit <code>{suite.commit}</code> of <a href={suite.repository}>{suite.repository.replace("https://github.com/", "")}</a>,
+              Commit <code>{suite.commit}</code> of <Link href={suite.repository}>{suite.repository.replace("https://github.com/", "")}</Link>,
               run with <code>{suite.command}</code>. The project's own command is <code>{suite.ownCommand}</code>.
               Reference zone: {suite.referenceZone} ({suite.referenceSource}).
             </p>

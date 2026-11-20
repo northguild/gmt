@@ -16,8 +16,9 @@ const OUTLINE = [
   "title",
   "agent-answer",
   "agents",
-  "one-clock",
   "date",
+  "kinds",
+  "one-clock",
   "temporal",
   "experiments",
   "experiment-gaps",
@@ -30,9 +31,9 @@ const OUTLINE = [
   "manila",
   "engines",
   "scoreboard",
-  "familiar",
   "why-not-temporal",
   "gmt",
+  "familiar",
   "guards",
   "ask-dox",
   "page-tools",
@@ -72,10 +73,14 @@ describe("Deck 0 in the built site", () => {
     for (const figure of figures) expect(figure[0]).toMatch(/<figcaption/);
   });
 
-  it("has no wall figures on the date slide, where the wall has already broken", () => {
+  it("opens the date slide's table on the agents' question, with no wall figures before the wall", () => {
     const slides = deck();
     if (slides === null) return;
-    expect(builtSlide(slides, "date").html).not.toMatch(/gmt-wall-figure"/);
+    const { html } = builtSlide(slides, "date");
+    expect(html).not.toMatch(/gmt-wall-figure"/);
+    const firstRow =
+      html.match(/<tbody[^>]*>\s*<tr[^>]*>([\s\S]*?)<\/tr>/)?.[1] ?? "";
+    expect(firstRow).toContain("2027-03-28T03:30");
   });
 
   it("ends each bug slide on a GMT step in its last build", () => {

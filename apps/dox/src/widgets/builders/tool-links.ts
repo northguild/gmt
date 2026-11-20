@@ -8,6 +8,7 @@
  */
 import { html, type SafeHtml } from "./html";
 import styles from "./tool-links.module.css";
+import { link } from "./link";
 
 export interface ToolLinkItem {
   text: string;
@@ -23,10 +24,8 @@ export interface ToolLinksOptions {
 
 export function toolLinks(o: ToolLinksOptions): SafeHtml {
   return html`<div class="${styles.root}" role="group" aria-label="${o.label}"
-    >${o.links.map((link) =>
-      link.href === undefined
-        ? html`<a class="${styles.link}" aria-disabled="true">${link.text}</a>`
-        : html`<a class="${styles.link}" href="${link.href}">${link.text}</a>`,
+    >${o.links.map((item) =>
+      link({ href: item.href, class: styles.link, body: item.text }),
     )}</div
   >`;
 }

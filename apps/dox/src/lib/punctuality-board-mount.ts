@@ -68,6 +68,7 @@ import {
 } from "~/widgets/primitives/handle/handle";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/punctuality-board.module.css";
+import { callArgs } from "./call-args";
 import { onWidthChange, thinTickLabels } from "./label-fit";
 import {
   PUNCTUALITY_PRESETS,
@@ -93,7 +94,6 @@ import {
   PUNCTUALITY_LABELS,
   SETTLE_MS,
   WIDEST_AXIS_MINUTES,
-  callArgs,
   formatValue,
   isoToMinutes,
   minutesToIso,
