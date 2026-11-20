@@ -1,8 +1,9 @@
 /**
  * The `kinds` slide's grid: one five-line `nextDay` over `Date`, called with each kind of time a
  * caller might pass (`date-kinds.json`), run by `scripts/zone-matrix/date-kinds.mjs` on Node 22, 24
- * and 26 in every zone it lists (`date-kinds-run.json`). The slide shows Node 26 in five of them:
- * east of UTC, a local time comes out a day early.
+ * and 26 in every zone it lists (`date-kinds-run.json`). The slide shows Node 26 in four of them,
+ * two west of or on UTC and two east of it: east of UTC, a local time comes out a day early. Four
+ * zone columns and the longest call fill the slide's whole width, so the slide is `full`.
  */
 import type { AgentRunRecord } from "~/lib/slides/agent-quote";
 import {
@@ -15,13 +16,7 @@ import runs from "./date-kinds-run.json";
 
 const CONFIG: RunGridConfig = {
   node: "26",
-  zones: [
-    "Pacific/Niue",
-    "America/New_York",
-    "UTC",
-    "Asia/Kolkata",
-    "Europe/Helsinki",
-  ],
+  zones: ["America/New_York", "UTC", "Asia/Kolkata", "Europe/Helsinki"],
   path: "apps/dox/src/slides/give-me-temporal/date-kinds-run.json",
   command:
     "cd scripts/zone-matrix && fnm exec --using=26 -- node date-kinds.mjs",
