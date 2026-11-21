@@ -449,7 +449,7 @@ describe("the clock that becomes the Earth", () => {
 
   it("stands the clock at the talk's start while the deck is locked, and ticks the time now once unlocked", async () => {
     h.root.setAttribute("data-deck-root", "");
-    h.root.setAttribute("data-deck-preview-at", "2026-12-16T16:00:00Z");
+    h.root.setAttribute("data-deck-preview-at", "2026-12-15T16:00:00Z");
     h.root.setAttribute("data-locked", "");
     await setUp();
     const hour = (): Element | null =>
@@ -458,7 +458,7 @@ describe("the clock that becomes the Earth", () => {
     await vi.waitFor(() =>
       expect(hour()).toHaveAttribute("transform", "rotate(270 50 50)"),
     );
-    expect(face()).toHaveTextContent("16");
+    expect(face()).toHaveTextContent("15");
     h.root.removeAttribute("data-locked");
     // The faked clock reads 23:30 now.
     await vi.waitFor(() =>

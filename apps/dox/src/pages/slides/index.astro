@@ -5,7 +5,7 @@ import Link from "~/components/Link.astro";
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 import SkyCredits from "~/components/slides/SkyCredits.astro";
 import "~/components/slides/deck-panel.css";
-import { DECKS, deckDate } from "~/slides/decks";
+import { DECKS, deckDate, deckSchedule, venueAddress, venueMapUrl } from "~/slides/decks";
 import { withBase } from "~/lib/site";
 ---
 
@@ -18,20 +18,28 @@ import { withBase } from "~/lib/site";
 >
   <ul class="gmt-deck-index">
     {
-      DECKS.map((deck) => (
+      DECKS.map((deck) => {
+        const doors = deckSchedule(deck)?.doors;
+        return (
         <li class="gmt-deck-card gmt-deck-panel">
           <p class="gmt-deck-card-label">{deck.label}</p>
           <h2 class="gmt-deck-card-title">
             <Link href={withBase(`/slides/${deck.slug}/`)}>{deck.title}</Link>
           </h2>
           <p>
-            {deck.event}, {deckDate(deck)}
+            {deck.event}, {deckDate(deck)}{doors && <>. Doors open {doors.time}.</>}
           </p>
+          {deck.venue && (
+            <p>
+              <Link href={venueMapUrl(deck.venue)}>{deck.venue.name}</Link>, {venueAddress(deck.venue)}
+            </p>
+          )}
           <p>
             {deck.minutes} minutes, then {deck.qa} for questions
           </p>
         </li>
-      ))
+      );
+      })
     }
   </ul>
   <p>The decks show the real night sky and the Earth; their sources:</p>

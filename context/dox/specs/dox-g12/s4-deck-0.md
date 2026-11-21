@@ -20,9 +20,15 @@ in a competing library are shown from our own probe and are never filed upstream
 ## Registry entry
 
 `src/slides/decks.ts` holds `{ slug: "give-me-temporal", label: "Deck 0", title: "Give Me
-Temporal", event: "HelsinkiJS", start: "2026-12-16T18:00:00+02:00[Europe/Helsinki]", minutes: 22,
-qa: 5, zone: "Europe/Helsinki", locale: "fi" }`. The index page and the title slide render the
-date with gmt from `start` and `zone`; a `null` start reads "Date to be announced".
+Temporal", event: "HelsinkiJS", start: "2026-12-15T18:00:00+02:00[Europe/Helsinki]", doors:
+"2026-12-15T17:30:00+02:00[Europe/Helsinki]", venue: { name: "Kisko Labs, Trooli", street:
+"Panimokatu 2A", floor: "6th floor", city: "00580 Helsinki" }, minutes: 22, qa: 5, zone:
+"Europe/Helsinki", locale: "fi" }`. gmt makes `start` and `doors` from the wall time and the zone.
+
+The index page and the title slide render the date and start with gmt in `zone`. A `null` start
+reads "Date to be announced". Both pages also show the doors time, read in `zone`, and the venue.
+The venue's name links to a Google Maps search for its street address. A `null` doors or venue
+leaves that line out.
 
 ## Slides
 

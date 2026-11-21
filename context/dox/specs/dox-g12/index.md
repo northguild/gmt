@@ -170,7 +170,7 @@ the sky code moves to `space-sky.ts`. Each helper has one home.
 - Zone matrix: nine suites (the six on `/compare`, both polyfills, GMT run locally in the same
   harness as the control), no Test262, no CI workflow; `/compare` gains the column "Fails in our
   zone matrix". Every figure carries version, commit, Node, zone, date and command.
-- The talk starts 2026-12-16 18:00 Europe/Helsinki (`decks.ts`). The merge waits on the owner's
+- The talk starts 2026-12-15 18:00 Europe/Helsinki (`decks.ts`). The merge waits on the owner's
   inputs listed in [slice 5](./s5-close-out.md#the-merge-waits-on-the-owners-inputs).
 
 ## Docs drift found while planning

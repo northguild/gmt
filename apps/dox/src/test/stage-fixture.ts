@@ -158,11 +158,11 @@ export const titleClockMock = () => ({
     }),
     at: (utc: string) =>
       ({
-        "2026-12-16T16:00:00Z": {
+        "2026-12-15T16:00:00Z": {
           hour: 18,
           minute: 0,
           second: 0,
-          zoned: "2026-12-16T18:00:00+02:00[Europe/Helsinki]",
+          zoned: "2026-12-15T18:00:00+02:00[Europe/Helsinki]",
         },
         "2027-03-28T00:59:00Z": {
           hour: 2,
