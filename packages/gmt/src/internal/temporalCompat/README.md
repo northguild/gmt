@@ -367,10 +367,12 @@ In every case the fix must be in the release that becomes GMT's `@js-temporal/po
    `scripts/lib/workarounds.mjs` and `WHAT_BREAKS.D24`. `internal/plainOptionEntries.ts` stays:
    `formatterCache.ts` reads it too. Keep every row of `internal/weekYearSingle.test.ts`,
    `internal/weekYearAbort.test.ts` and `zoned/format/formatZonedRangeWeekYear.test.ts`: the values
-   are ECMA-402's and hold either way. `weekYearRange.ts` also carries two polyfill stand-ins that
-   go with it: `coptic` and `ethiopic` are read through `ethioaa` (the polyfill 0.5.1 throws "Era
-   am ... was not matched by any era" for every date in those two; the years differ by a fixed
-   5776 and 5500, Calendrical Calculations ch. 4), and a range the polyfill cannot project (`indian`
+   are ECMA-402's and hold either way. The week-year files also carry two polyfill stand-ins that
+   go with them: `coptic` and `ethiopic` are read through `ethioaa` (`computationCalendarId` and
+   `computationYearBias` in `internal/calendarSystemIds.ts`, used by `weekYearText.ts`'s
+   `anchorYear` and `dateIn` and by `weekYearRange.ts`; the polyfill 0.5.1 throws "Era am ... was
+   not matched by any era" for every date in those two; the years differ by a fixed 5776 and 5500,
+   Calendrical Calculations ch. 4), and in `weekYearRange.ts` a range the polyfill cannot project (`indian`
    before ISO year 1, V8 bug 10529) keeps ICU's text. Retire both when the polyfill reads those
    calendars.
 25. **D25:** delete the era branch of `repairYearPrinting` in `internal/yearPrinting.ts` (`beforeEras`, the Gregorian twin and the `era` flag), `isJapaneseEraCompatNeeded` in `capabilities.ts`, `internal/yearPrintingRange.ts`'s era branches (`eraTwinRange`, `spliceEra`, `joinedSingles`, `laterPair`; the file itself when step 27 is done too) and `internal/rangeFallback.ts` if step 29 is done, the `D25` repros in `repros.ts` (and `"D25"` in `CanaryDefectId`), the D25 entry in `scripts/lib/workarounds.mjs` and `WHAT_BREAKS.D25` in `apps/dox/src/data/temporal-compat.ts`. Keep every `D25` row in `internal/yearPrinting.test.ts`: the values are the proposal's and hold either way.

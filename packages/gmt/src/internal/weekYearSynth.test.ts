@@ -19,6 +19,7 @@ const analysis: WeekYearAnalysis = {
   styles: [],
   labels: [],
   count: 0,
+  mask: (text) => text,
 };
 
 const resolved = {

@@ -64,3 +64,12 @@ export function computationCalendarId(calendar: CalendarSystem): string {
     ? "ethioaa"
     : calendar;
 }
+
+/**
+ * What a `CalendarSystem`'s year is short of the year of the calendar it computes in: 5776 for
+ * `"coptic"` and 5500 for `"ethiopic"` against `"ethioaa"`, 0 for every other. The three share
+ * months, days and leap rule (Calendrical Calculations, chapter 4; test262 `extreme-dates.js`).
+ */
+export function computationYearBias(calendar: CalendarSystem): number {
+  return calendar === "coptic" ? 5776 : calendar === "ethiopic" ? 5500 : 0;
+}
