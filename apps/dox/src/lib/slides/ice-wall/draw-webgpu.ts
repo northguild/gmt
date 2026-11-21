@@ -6,7 +6,9 @@
  * texture. The fragment shader samples the pane, tints a shard with the frost and lights its rim
  * in the ice colour (the rim is `edge = 0`, the fan's centre `edge = 1`, so the highlight is the
  * edge falloff across the shard, strongest at the border: a fresnel look without a normal). A
- * whole pane has no tint and no rim, so its pixels are the capture's.
+ * whole pane has no tint and no rim, so its pixels are the capture's. Under reduced motion a
+ * whole pane carries its cracks (`Drawable.cracks`): each cell outline goes in as thin quads with
+ * `tint = 2`, which the shader paints in the plain ice colour, as `draw-canvas2d.ts` strokes them.
  *
  * The device is the globe's shared one (`globe/webgpu/device.ts`), taken before the canvas
  * exists, as that file says.
@@ -18,6 +20,10 @@ const FLOATS = 7;
 const MAX_VERTICES = 16384;
 const FROST = 0.14;
 const RIM = 0.75;
+/** `draw-canvas2d.ts` strokes a crack 1 CSS pixel wide. */
+const CRACK_HALF_WIDTH = 0.5;
+/** The `tint` that marks a crack quad. */
+const CRACK = 2;
 
 const SHADER = /* wgsl */ `
 struct Uniforms {
@@ -50,10 +56,14 @@ fn vs(@location(0) p : vec2f, @location(1) uv : vec2f, @location(2) attrs : vec3
 
 @fragment
 fn fs(i : Out) -> @location(0) vec4f {
+  // Sampled before any branch: WGSL wants textureSample in uniform control flow.
   let texel = textureSample(atlas, samp, i.uv).rgb;
-  let rim = (1.0 - clamp(i.edge, 0.0, 1.0)) * i.tint;
-  var colour = mix(texel, u.ice.rgb, i.tint * ${FROST});
+  let crack = step(1.5, i.tint);
+  let tint = i.tint * (1.0 - crack);
+  let rim = (1.0 - clamp(i.edge, 0.0, 1.0)) * tint;
+  var colour = mix(texel, u.ice.rgb, tint * ${FROST});
   colour = colour + u.ice.rgb * rim * ${RIM};
+  colour = mix(colour, u.ice.rgb, crack);
   let a = i.alpha;
   return vec4f(min(colour, vec3f(1.0)) * a, a);
 }
@@ -246,6 +256,39 @@ export async function createWebgpuRenderer(
     return n;
   };
 
+  /** Writes each closed outline in `edges` as 1-pixel quads, and returns the new vertex count. */
+  const crackLines = (
+    edges: readonly (readonly number[])[],
+    alpha: number,
+    n: number,
+  ): number => {
+    for (const pts of edges) {
+      const k = pts.length / 2;
+      for (let i = 0; i < k; i += 1) {
+        if (n + 6 > MAX_VERTICES) return n;
+        const j = (i + 1) % k;
+        const ax = pts[i * 2]!;
+        const ay = pts[i * 2 + 1]!;
+        const bx = pts[j * 2]!;
+        const by = pts[j * 2 + 1]!;
+        const len = Math.hypot(bx - ax, by - ay);
+        if (len === 0) continue;
+        const nx = ((ay - by) / len) * CRACK_HALF_WIDTH;
+        const ny = ((bx - ax) / len) * CRACK_HALF_WIDTH;
+        const corner = (x: number, y: number): void => {
+          n = push(n, x, y, 0, 0, alpha, 0, CRACK);
+        };
+        corner(ax + nx, ay + ny);
+        corner(bx + nx, by + ny);
+        corner(bx - nx, by - ny);
+        corner(ax + nx, ay + ny);
+        corner(bx - nx, by - ny);
+        corner(ax - nx, ay - ny);
+      }
+    }
+    return n;
+  };
+
   const pass = (n: number): void => {
     const encoder = device.createCommandEncoder();
     const view = context.getCurrentTexture().createView();
@@ -284,6 +327,8 @@ export async function createWebgpuRenderer(
       for (const d of drawables) {
         if (d.alpha <= 0) continue;
         n = fan(d, n, d.cell < 0);
+        if (d.cracks)
+          n = crackLines(d.cracks.edges, d.alpha * d.cracks.strength, n);
       }
       if (n > 0)
         device.queue.writeBuffer(vertices, 0, data.buffer, 0, n * FLOATS * 4);

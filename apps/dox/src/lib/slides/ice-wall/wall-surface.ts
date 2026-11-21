@@ -115,7 +115,8 @@ export function createWallSurface(d: SurfaceDeps): WallSurface {
   } | null> {
     try {
       const gpu = await acquireDevice(fallBack);
-      if (d.signal.aborted) {
+      // `destroy()` or the deck's abort can land during either await; nothing made then is kept.
+      if (destroyed || d.signal.aborted) {
         gpu.release();
         return null;
       }
@@ -124,7 +125,8 @@ export function createWallSurface(d: SurfaceDeps): WallSurface {
         { canvas: used, panes: d.panes, ice: d.ice },
         { device: gpu.device, format: gpu.canvasFormat },
       );
-      if (!made) {
+      if (!made || destroyed || d.signal.aborted) {
+        made?.destroy();
         gpu.release();
         return null;
       }
@@ -143,7 +145,7 @@ export function createWallSurface(d: SurfaceDeps): WallSurface {
 
   async function make(): Promise<void> {
     const gpu = d.engine.renderer === "webgpu" ? await webgpu() : null;
-    if (d.signal.aborted) return;
+    if (destroyed || d.signal.aborted) return;
     const chosen = gpu ?? canvas2d();
     if (!chosen.made) return;
     install(chosen.made, chosen.used);

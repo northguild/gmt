@@ -9,6 +9,7 @@
 import type { GlobeEngine } from "~/lib/globe/types";
 import type { Drawable } from "./frame";
 import { acquireDevice } from "~/lib/globe/webgpu/device";
+import { createWebgpuRenderer } from "./draw-webgpu";
 import { mountIceWall, type IceWall } from "./wall";
 
 const drawn: Drawable[][] = [];
@@ -33,7 +34,9 @@ const gpuFake = {
   draw: vi.fn(),
   destroy: vi.fn(),
 };
-vi.mock("./draw-webgpu", () => ({ createWebgpuRenderer: async () => gpuFake }));
+vi.mock("./draw-webgpu", () => ({
+  createWebgpuRenderer: vi.fn(async () => gpuFake),
+}));
 
 const ZONES = [
   "Asia/Tokyo",
@@ -420,5 +423,36 @@ describe("a WebGPU wall whose device fails", () => {
     lose();
     expect(wall!.renderer).toBe("canvas2d");
     expect(fake.draw).toHaveBeenCalled();
+  });
+});
+
+describe("a WebGPU wall destroyed while its renderer is still being made", () => {
+  it("releases the renderer and the device once they arrive, and adds no canvas", async () => {
+    const release = vi.fn();
+    vi.mocked(acquireDevice).mockImplementationOnce((async () => ({
+      device: { addEventListener: vi.fn(), removeEventListener: vi.fn() },
+      canvasFormat: "bgra8unorm",
+      release,
+    })) as unknown as typeof acquireDevice);
+    let made!: (r: typeof gpuFake) => void;
+    vi.mocked(createWebgpuRenderer).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          made = resolve as (r: typeof gpuFake) => void;
+        }) as ReturnType<typeof createWebgpuRenderer>,
+    );
+    gpuFake.destroy.mockClear();
+    (engine as { renderer: string }).renderer = "webgpu";
+    try {
+      mount().show();
+      await vi.waitFor(() => expect(createWebgpuRenderer).toHaveBeenCalled());
+    } finally {
+      (engine as { renderer: string }).renderer = "canvas2d";
+    }
+    wall!.destroy();
+    made(gpuFake);
+    await vi.waitFor(() => expect(release).toHaveBeenCalled());
+    expect(gpuFake.destroy).toHaveBeenCalled();
+    expect(layer.querySelectorAll("canvas")).toHaveLength(0);
   });
 });
