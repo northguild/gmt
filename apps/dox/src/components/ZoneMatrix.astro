@@ -1,0 +1,208 @@
+---
+import Link from "~/components/Link.astro";
+import { cellHtml } from "../lib/compare-table";
+import {
+  zoneMatrixEvidenceTable,
+  zoneMatrixFailureTable,
+  zoneMatrixKnownTable,
+  zoneMatrixSummaryTable,
+  zoneMatrixZoneTable,
+} from "../lib/zone-matrix-tables";
+import { zoneMatrixSummary } from "../data/zone-matrix";
+
+/**
+ * The zone matrix in full: a summary table, then a section per suite with its figures per zone,
+ * the counted failures, the evidence for each wrong answer, and the failures counted in neither
+ * kind with their causes.
+ *
+ * Every figure comes from `data/zone-matrix.json`, which `scripts/zone-matrix/run.mjs` writes,
+ * through `data/zone-matrix.ts` and the builders in `library-compare-tables.ts`. Static, no
+ * hydration. Tables sit in the site's `.gmt-ref-table` scroll box; the three that list tests are
+ * entries (`data-layout="entries"`, a card per test, each cell naming its column in `data-col`),
+ * because a test's name, its input instant and its cause are each wider than a column. Before a run is recorded the
+ * page says so. The Markdown twin is `renderZoneMatrix` in `src/lib/mdx-jsx.ts`.
+ */
+const summary = zoneMatrixSummary;
+const overview = zoneMatrixSummaryTable();
+---
+
+{
+  !summary.ran && (
+    <p>No zone-matrix run is recorded yet, so no figure is shown.</p>
+  )
+}
+
+{
+  summary.ran && (
+    <>
+      <div class="gmt-ref-table" data-kind="notes">
+        <table class="gmt-compare gmt-zone-matrix">
+          <caption>Failures by suite, in GMT's CI time zones</caption>
+          <thead>
+            <tr>
+              {overview.head.map((label) => (
+                <th scope="col">{label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {overview.rows.map((row) => (
+              <tr>
+                {row.map((cell, index) =>
+                  index === 0 ? (
+                    <th scope="row" set:html={cellHtml(cell)} />
+                  ) : (
+                    <td set:html={cellHtml(cell)} />
+                  ),
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {summary.suites.map((suite) => {
+        const zones = zoneMatrixZoneTable(suite);
+        const failures = zoneMatrixFailureTable(suite);
+        const evidence = zoneMatrixEvidenceTable(suite);
+        const known = zoneMatrixKnownTable(suite);
+        return (
+          <section class="gmt-zone-matrix-suite">
+            <h2 id={suite.id}>
+              {suite.name} {suite.version}
+            </h2>
+            <p>
+              Commit <code>{suite.commit}</code> of <Link href={suite.repository}>{suite.repository.replace("https://github.com/", "")}</Link>,
+              run with <code>{suite.command}</code>. The project's own command is <code>{suite.ownCommand}</code>.
+              Reference zone: {suite.referenceZone} ({suite.referenceSource}).
+            </p>
+            <div class="gmt-ref-table" data-kind="notes">
+              <table class="gmt-compare gmt-zone-matrix">
+                <caption>{suite.name} by time zone</caption>
+                <thead>
+                  <tr>
+                    {zones.head.map((label) => (
+                      <th scope="col">{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {zones.rows.map((row) => (
+                    <tr>
+                      {row.map((cell, index) =>
+                        index === 0 ? (
+                          <th scope="row" set:html={cellHtml(cell)} />
+                        ) : (
+                          <td set:html={cellHtml(cell)} />
+                        ),
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {suite.overridden.length > 0 && (
+              <p>
+                The suite sets its own zone in {suite.overridden.map((o) => `${o.zone} on Node ${o.node}`).join("; ")}, so those runs count no failure.
+              </p>
+            )}
+            {suite.couldNotRun.length > 0 && (
+              <p>
+                Could not run: {suite.couldNotRun.map((c) => `${c.zone} on Node ${c.node} (${c.reason})`).join("; ")}.
+              </p>
+            )}
+            {!suite.measured && (
+              <p>
+                No run of this suite kept the zone it was given, so it is not measured and shows no figure.
+              </p>
+            )}
+            {failures.rows.length > 0 && (
+              <div class="gmt-ref-table" data-kind="notes" data-layout="entries">
+                <table class="gmt-compare gmt-zone-matrix">
+                  <caption>{suite.name}: failing tests</caption>
+                  <thead>
+                    <tr>
+                      {failures.head.map((label) => (
+                        <th scope="col">{label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {failures.rows.map((row) => (
+                      <tr>
+                        {row.map((cell, index) =>
+                          index === 0 ? (
+                            <th scope="row" data-col={failures.head[index]} set:html={cellHtml(cell)} />
+                          ) : (
+                            <td data-col={failures.head[index]} set:html={cellHtml(cell)} />
+                          ),
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {evidence.rows.length > 0 && (
+              <div class="gmt-ref-table" data-kind="notes" data-layout="entries">
+                <table class="gmt-compare gmt-zone-matrix">
+                  <caption>{suite.name}: evidence for each wrong answer</caption>
+                  <thead>
+                    <tr>
+                      {evidence.head.map((label) => (
+                        <th scope="col">{label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {evidence.rows.map((row) => (
+                      <tr>
+                        {row.map((cell, index) =>
+                          index === 0 ? (
+                            <th scope="row" data-col={evidence.head[index]} set:html={cellHtml(cell)} />
+                          ) : (
+                            <td data-col={evidence.head[index]} set:html={cellHtml(cell)} />
+                          ),
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {known.rows.length > 0 && (
+              <>
+                <p>Counted in neither kind, with the cause of each failure:</p>
+                <div class="gmt-ref-table" data-kind="notes" data-layout="entries">
+                  <table class="gmt-compare gmt-zone-matrix">
+                    <caption>{suite.name}: failures counted in neither kind</caption>
+                    <thead>
+                      <tr>
+                        {known.head.map((label) => (
+                          <th scope="col">{label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {known.rows.map((row) => (
+                        <tr>
+                          {row.map((cell, index) =>
+                            index === 0 ? (
+                              <th scope="row" data-col={known.head[index]} set:html={cellHtml(cell)} />
+                            ) : (
+                              <td data-col={known.head[index]} set:html={cellHtml(cell)} />
+                            ),
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </section>
+        );
+      })}
+    </>
+  )
+}

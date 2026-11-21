@@ -1,0 +1,15 @@
+Date.since(simple, simple)
+  Before Leap Day
+    < 2020-01-03 : 2020-02-15 (years)>
+      ☑ (2020-02-15).subtract(P1M12D) => 2020-01-03
+      ☑ (2020-02-15).add(-P1M12D) => 2020-01-03
+      ☑ (2020-01-03).subtract(-P1M12D) => 2020-02-15
+      ☒ (2020-02-15).add(P1M12D) => 2020-03-27
+        assertion: equal
+        expected: 2020-03-27
+        actual: 2020-03-28
+        location: test/date.mjs:10:5
+   0 ☒ failed
+   0 ❀ skipped
+   0 ☐ to-do
+

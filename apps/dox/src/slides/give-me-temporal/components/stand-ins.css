@@ -1,0 +1,74 @@
+/*
+ * The `stand-ins` slide (`StandIns.astro`): three panels side by side in the left two thirds, the
+ * closing line under them. The panels are the deck's own `gmt-deck-panel`: a full bevelled border,
+ * never a one-sided accent. A measured fault reads in the danger colour.
+ */
+.gmt-stand-ins {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gmt-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-stand-in {
+  display: grid;
+  align-content: start;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.gmt-stand-in-name {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: 1em;
+  overflow-wrap: anywhere;
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-stand-in-kind,
+.gmt-stand-in-lines {
+  margin: 0;
+}
+
+.gmt-stand-in-lines {
+  display: grid;
+  gap: var(--gmt-space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.gmt-stand-in-wrong {
+  color: var(--gmt-danger-ink);
+  font-weight: 700;
+}
+
+.gmt-stand-ins-closing {
+  margin: var(--gmt-space-4) 0 0;
+  color: var(--gmt-ice-bright);
+}
+
+html[data-deck] .gmt-stand-ins {
+  gap: var(--gmt-deck-space-md);
+  font-size: max(0.8rem, 1.45cqi);
+  line-height: 1.3;
+}
+
+html[data-deck] .gmt-stand-in {
+  gap: var(--gmt-deck-space-sm);
+  padding: var(--gmt-deck-space-md);
+}
+
+html[data-deck] .gmt-stand-ins-closing {
+  padding-block-start: var(--gmt-deck-space-lg);
+  font-size: max(0.9rem, 1.7cqi);
+}
+
+/* The presenter's and print copies on a narrow page stack the panels; the stage keeps three. */
+@media (width <= 40rem) {
+  html:not([data-deck]) .gmt-stand-ins {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { imageHash, versionImageUrls } from "./og-image-version";
 
 const SITE = "https://northguild.dev/gmt";

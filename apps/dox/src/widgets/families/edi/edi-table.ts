@@ -12,6 +12,7 @@ import { EDI_ZONES } from "~/lib/edi-widgets";
 import { html, setHtml, type SafeHtml } from "../../builders/html";
 import { select } from "../../builders/select";
 import { srOnly } from "../../builders/sr-only";
+import { valueText } from "../../builders/value-text";
 import { swatch, type SwatchSeries } from "../../builders/swatch";
 import { table } from "../../builders/table";
 import styles from "./edi-table.module.css";
@@ -54,13 +55,13 @@ export function memberTable(o: {
   });
 }
 
-/** Writes one member cell. */
+/** Writes one member cell: its dates stay whole and a long value breaks only at its seams. */
 export function setMember(
   cell: HTMLElement,
   text: string,
   state: MemberState,
 ): void {
-  cell.textContent = text;
+  setHtml(cell, valueText(text));
   cell.dataset["state"] = state;
 }
 

@@ -296,6 +296,26 @@ export function webmcpHeadEntries(
   ];
 }
 
+/**
+ * The same marker and origin-trial metas for a deck's page, which carries its own head (a deck is
+ * not a content-collection route). `slug` is the deck's registry slug and the marker's content is
+ * `slides/<slug>`, so `offerPageTools` offers the deck's tools on that page and the presenter page,
+ * which gets none, offers nothing.
+ */
+export function deckWebmcpHeadEntries(
+  slug: string,
+  tokens: readonly string[],
+): HeadEntry[] {
+  if (slug === "" || slug.includes("/")) return [];
+  return [
+    { tag: "meta", attrs: { name: "gmt-webmcp", content: `slides/${slug}` } },
+    ...tokens.map((token): HeadEntry => ({
+      tag: "meta",
+      attrs: { "http-equiv": "origin-trial", content: token },
+    })),
+  ];
+}
+
 /** The key two entries share when one replaces the other, or undefined when an entry is only added. */
 function replaceKey(entry: HeadEntry): string | undefined {
   const attrs = entry.attrs ?? {};

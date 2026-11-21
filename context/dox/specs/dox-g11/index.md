@@ -96,7 +96,7 @@ tab. Pressing a `<summary>` in the sidebar is a press (the ping), not a panel.
   voices load on idle or on the first gesture; the aura loads on `/` only.
 - **Hold still.** The header's items, the sound button and the popover keep their boxes while the reader drags.
 - **No left-border accents; bevelled 45° corners** on the track, thumb, mute button and popover.
-- **React stays inside `/dox`.** Chrome cues are plain DOM; `DoxChat.tsx` calls `cue()`.
+- **React stays inside `/dox` and the deck's Dox frame.** Chrome cues are plain DOM; `DoxChat.tsx` calls `cue()`.
 
 ## Performance budget
 

@@ -1,0 +1,27 @@
+---
+/**
+ * GMT's run: each call and the value it gave, computed at build time (`gmtSteps`), so the code and
+ * the value come from one source. The first block opens with the calls' imports from
+ * `@northguild/gmt` (`importText`), so the run reads as GMT's code, and each result is labelled
+ * GMT, with the filed bug's value beside it where the call names one. The header names GMT's
+ * version and the Node and ICU this site was built with. A sentinel prints as itself, marked lost.
+ * The slot is a note under the lines.
+ */
+import { gmtVersion } from "~/generated/versions";
+import { gmtSteps, importText } from "~/lib/slides/gmt-call";
+import CodeRun from "./CodeRun.astro";
+import type { GmtCall } from "./types";
+
+interface Props {
+  calls: readonly GmtCall[];
+}
+const { calls } = Astro.props;
+const steps = (await gmtSteps(calls)).map((s, i) =>
+  i === 0 ? { ...s, code: `${importText(calls)}\n${s.code}` } : s,
+);
+const { node, icu } = process.versions;
+---
+
+<CodeRun runtime={`GMT ${gmtVersion} on Node ${node}, ICU ${icu}`} prompt=">" steps={steps} by="GMT">
+  <slot />
+</CodeRun>

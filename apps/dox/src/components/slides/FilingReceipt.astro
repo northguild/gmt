@@ -1,0 +1,30 @@
+---
+/**
+ * A filing as a receipt: its reference as a link and, by `show`, either the tracker and its state
+ * in words or what GMT does about it (`gmtBadge`). It sits in the corner of a slide whose visual
+ * shows the bug. Read from `upstream-filings.json`, so an unknown key fails the build.
+ */
+import Link from "~/components/Link.astro";
+import { filingFacts, findFiling } from "~/lib/slides/filing";
+import { gmtBadge } from "~/lib/upstream-badges";
+
+/** `tracker`: the tracker and the filing's state. `gmt`: what GMT does about the bug. */
+export type ReceiptShows = "tracker" | "gmt";
+
+interface Props {
+  /** A `filingKey`. */
+  filing: string;
+  show: ReceiptShows;
+}
+const { filing, show } = Astro.props;
+const facts = filingFacts(filing);
+const says =
+  show === "gmt"
+    ? gmtBadge(findFiling(filing)).text
+    : `${facts.group}, ${facts.stateLabel.toLowerCase()}`;
+---
+
+<p class="gmt-receipt" data-state={facts.state}>
+  <Link class="gmt-filing-ref" href={facts.url}>{facts.ref}</Link>
+  <span>{says}</span>
+</p>

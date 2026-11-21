@@ -33,16 +33,20 @@
   line-height: 1.5;
 }
 
-/* A table cell wraps inside its column, whatever the table's own no-wrap rule says. */
+/* A table cell wraps between words inside its column, whatever the table's own no-wrap rule
+   says, and never inside a word. A value that holds a date breaks only at the
+   break points `valueText` puts in it. */
 .text {
   display: block;
   min-inline-size: 0;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
+/* An instant with its zone is one token: it keeps one line, and the table scrolls. */
 .sub {
   display: block;
+  white-space: nowrap;
   color: var(--gmt-ice-dim);
   font-size: var(--gmt-text-xs);
 }

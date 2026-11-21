@@ -3,7 +3,6 @@
  */
 import { configure, getConfig, screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { raw, setHtml } from "~/widgets/builders";
 import { holdLink, LINK_HOLD_MS } from "./link-hold";
 

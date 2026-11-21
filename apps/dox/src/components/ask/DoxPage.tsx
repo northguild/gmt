@@ -17,14 +17,7 @@
  * the open sheet folds it from the start. CSS makes that call (gmt-hive.css),
  * so the server-rendered page is already right and nothing snaps shut on load.
  */
-import {
-  startTransition,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { cue } from "~/lib/sound/cue";
 import { starterWidgetCall, type CHAT_STARTERS } from "~/lib/chat-constants";
 import { DoxChat, type DoxChatHandle } from "./DoxChat";
@@ -35,8 +28,8 @@ import { useBrains } from "./use-brains";
 import { useEscLayer } from "./use-esc-layer";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { RailResizer } from "./RailResizer";
-import { WidgetRail, type RailWidget } from "./WidgetRail";
-import { isSameWidget, resolveWidget } from "./widget-registry";
+import { WidgetRail } from "./WidgetRail";
+import { useRailWidget } from "./use-rail-widget";
 
 /** Which Worker this page is talking to.
  *
@@ -66,10 +59,8 @@ export default function DoxPage() {
 
   /* The rail's state lives here rather than in `DoxChat`: it is this host's
      chrome, and the dock will lay widgets out its own way. One at a time. */
-  const [railWidget, setRailWidget] = useState<RailWidget | null>(null);
-  /* Read by `showWidget`, which is stable (no deps) and so cannot see state. */
-  const railWidgetRef = useRef<RailWidget | null>(null);
-  railWidgetRef.current = railWidget;
+  const rail = useRailWidget();
+  const { railWidget, openRef: railWidgetRef } = rail;
 
   const railId = useId();
   const chatRef = useRef<DoxChatHandle>(null);
@@ -88,41 +79,20 @@ export default function DoxPage() {
     [],
   );
 
+  /* A widget that does not open (an unknown tool, input that fails the schema,
+     or the one already open) asks for no focus: the receipt in the transcript
+     has already said so. */
   const showWidget = useCallback(
     (toolCallId: string, toolName: string, input: unknown) => {
-      /* The single dispatch point. An unknown tool name or input that fails the
-         schema resolves to a reason, and the rail simply never opens — the
-         receipt in the transcript has already said so. */
-      const resolved = resolveWidget(toolName, input);
-      if (!resolved.ok) {
+      if (!rail.showWidget(toolCallId, toolName, input))
         focusTitleRef.current = false;
-        return;
-      }
-      /* A starter pill seeds its widget on click; the model's own call for the
-         same widget and the same arguments must not remount it (and reset
-         anything the reader has already dragged). */
-      if (isSameWidget(railWidgetRef.current, resolved.entry, resolved.args)) {
-        focusTitleRef.current = false;
-        return;
-      }
-      /* In a transition so the rail's <ViewTransition> slides it in (and the
-         previous widget out); a plain setState would swap it with no motion. */
-      startTransition(() => {
-        setRailWidget({
-          toolCallId,
-          toolName,
-          entry: resolved.entry,
-          args: resolved.args,
-        });
-      });
     },
-    [],
+    [rail.showWidget],
   );
 
   const closeWidget = useCallback(() => {
-    closedToolRef.current = railWidgetRef.current?.toolName ?? null;
-    startTransition(() => setRailWidget(null));
-  }, []);
+    closedToolRef.current = rail.closeWidget();
+  }, [rail.closeWidget]);
 
   /* A card does exactly what a pill did: send the question, and only if it
      went, open the seeded widget. Focus follows the card to the widget title.

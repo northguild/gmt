@@ -13,7 +13,7 @@
  */
 import { html, raw, type SafeHtml } from "../../builders/html";
 import { srOnly } from "../../builders/sr-only";
-import styles from "./gnss-line-table.module.css";
+import styles from "./gnss-table.module.css";
 
 interface LineCell {
   text: string;
@@ -50,7 +50,7 @@ const BLANK_LINE_CELL: LineCell = { text: "", sub: "" };
 export function gnssLineTable(o: GnssLineTableOptions): SafeHtml {
   const [first = "", ...rest] = o.columns;
   return html`<div class="${styles.box}" role="region" aria-label="${o.caption}" tabindex="0"
-    ><table class="${styles.table}" role="table"
+    ><table class="${styles.table} ${styles.lines}" role="table"
       ><caption>${srOnly(o.caption)}</caption
       ><thead role="rowgroup"
         ><tr role="row">${o.columns.map(

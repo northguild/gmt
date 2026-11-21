@@ -23,7 +23,12 @@
  */
 import { Temporal } from "@js-temporal/polyfill";
 import type { PicField, PicHalf } from "./edi-picture";
-import { callArgs, formatValue, runCall, type EdiCall } from "./edi-widgets";
+import {
+  callArgsPlain,
+  formatValue,
+  runCall,
+  type EdiCall,
+} from "./edi-widgets";
 import type { EpcisLib } from "./edi-lib";
 
 export const CUSTOM_PRESET_ID = "custom";
@@ -711,7 +716,7 @@ const WIDEST_WRITTEN: EpcisWritten = {
 };
 
 const callText = (fn: string, ...args: unknown[]): string =>
-  `${fn}(${callArgs(args)[1]})`;
+  `${fn}(${callArgsPlain(args)})`;
 
 /** The texts each EPCIS Event Reader region can show. The text functions above
  *  run over a result of each shape; nothing here calls the library. */

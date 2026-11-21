@@ -1,0 +1,40 @@
+---
+/**
+ * The first week of a month twice, the row the report observed (its result) above the row it
+ * expects, labelled as a run's rows are (`RunLabel`): the result row slides one day to the right
+ * once the slide is shown, so its day 1 lands a day late
+ * and the last day of the month before takes the first cell (CSS, keyed by the `data-active` that
+ * `lib/slides/bug-visuals.ts` sets). Without script both rows show where they end.
+ */
+import RunLabel from "./RunLabel.astro";
+import "./calendar-figures.css";
+
+interface Props {
+  heading: string;
+  caption: string;
+  expected: { day: number };
+  observed: { day: number };
+}
+const { heading, caption, expected, observed } = Astro.props;
+const late = observed.day - expected.day;
+const days = Array.from({ length: 7 }, (_, i) => i + 1);
+---
+
+<figure class="gmt-shift" data-visual="pages" style={`--gmt-shift-late:${late}`}>
+  <figcaption class="gmt-shift-heading">{heading}: {caption}</figcaption>
+  <div class="gmt-shift-row" data-which="observed">
+    <span class="gmt-shift-label"><RunLabel outcome="wrong" /></span>
+    <ol class="gmt-shift-days">
+      {Array.from({ length: late }, () => (
+        <li data-ghost="true" aria-label="still the month before">…</li>
+      ))}
+      {days.slice(0, 7 - late).map((d) => <li data-first={d === 1 ? "true" : undefined}>{d}</li>)}
+    </ol>
+  </div>
+  <div class="gmt-shift-row" data-which="expected">
+    <span class="gmt-shift-label"><RunLabel outcome="expected" /></span>
+    <ol class="gmt-shift-days">
+      {days.map((d) => <li data-first={d === 1 ? "true" : undefined}>{d}</li>)}
+    </ol>
+  </div>
+</figure>

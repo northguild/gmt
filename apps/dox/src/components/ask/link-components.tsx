@@ -13,6 +13,7 @@
  */
 import type { ReactNode } from "react";
 import { resolveHref } from "./resolve-href";
+import { Link } from "./Link";
 
 /** Origins a model-emitted link may point at off-site. GitHub is where the
  *  package, its issues and its source actually live; everything else degrades. */
@@ -43,10 +44,15 @@ export function createLinkComponents({
     a: ({
       href,
       children,
+      // Streamdown sets its own `target` and `rel` on every link; where a link opens is `Link`'s call.
+      target: _target,
+      rel: _rel,
       ...props
     }: {
       href?: string;
       children?: ReactNode;
+      target?: string;
+      rel?: string;
     }) => {
       const resolved = resolveHref(href ?? "", {
         knownRoutes,
@@ -55,16 +61,10 @@ export function createLinkComponents({
       });
       if (resolved.kind === "link") {
         // An allowlisted off-site link opens in a new tab, so the chat stays open behind it.
-        const external = /^https?:\/\//.test(resolved.href);
         return (
-          <a
-            href={resolved.href}
-            {...props}
-            target={external ? "_blank" : undefined}
-            rel={external ? "noopener noreferrer" : undefined}
-          >
+          <Link href={resolved.href} {...props}>
             {children}
-          </a>
+          </Link>
         );
       }
       // A hallucinated link degrades to its own text — never a 404.

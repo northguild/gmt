@@ -1,0 +1,10 @@
+---
+/**
+ * A step that replaces the one before it: on the mounted deck the base content and each `Build`
+ * inside share one grid cell, and a build the mount has reached hides every earlier one
+ * (`bug-visuals.css`), so the cell holds the tallest and nothing below it moves. The handout
+ * (no JavaScript) and print show every step, one under another.
+ */
+---
+
+<div class="gmt-swap"><slot /></div>

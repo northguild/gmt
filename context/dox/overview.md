@@ -11,7 +11,7 @@ be dropped without losing the docs, and deleting the chat leaves every other pag
 ## Architecture
 
 The site is `apps/dox/` (Astro 7 + Starlight, a real multi-page site). `worker/` holds `/api/chat`
-and `/api/brains`, where the model keys live. `src/pages/dox.astro` is the chat, the only React island.
+and `/api/brains`, where the model keys live. `src/pages/dox.astro` is the chat. The other React island is the deck's Dox frame (`DeckDox`), on the Give Me Temporal slides only.
 
 **One deployment.** A single Cloudflare Worker, `gmt-dox`, serves the built site through an
 `assets` binding and handles `/api/*` in the same isolate: same origin, no CORS, one pipeline.

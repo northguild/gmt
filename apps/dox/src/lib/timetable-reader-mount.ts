@@ -54,6 +54,8 @@ import { paintCalls } from "~/widgets/families/cutoff/paint-calls";
 import { paintOutput } from "~/widgets/families/cutoff/paint-output";
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import { badge } from "~/widgets/builders/badge";
+import { valueText } from "~/widgets/builders/value-text";
+import { zonedValue } from "~/widgets/builders/zoned-value";
 import { grow } from "~/widgets/primitives/grow/grow";
 import {
   handle,
@@ -120,6 +122,7 @@ import { loadTimetableLib } from "./transport-lib";
 import { formatSchedule } from "./transport-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { withBase } from "./site";
+import { link } from "~/widgets/builders/link";
 
 export type { TimetableReaderArgs } from "./timetable-reader";
 
@@ -174,17 +177,12 @@ const lost = (): SafeHtml =>
  *  beneath it. */
 function timeCell(iso: string): SafeHtml {
   const short = arrivalChipText(iso, iso.slice(0, 10));
-  const zone = iso.indexOf("[");
-  const full =
-    zone < 0
-      ? html`${iso}`
-      : html`${iso.slice(0, zone)}<wbr />${iso.slice(zone)}`;
-  return html`<span class="${styles.time}">${short}</span><span class="${styles.timeFull}">${full}</span>`;
+  return html`<span class="${styles.time}">${short}</span><span class="${styles.timeFull}">${zonedValue(iso)}</span>`;
 }
 
 function timeSizer(zone: string): SafeHtml {
   const { short } = shapeOf.time(zone);
-  return html`<span class="${styles.sizerBox}" aria-hidden="true"><span class="${styles.time} ${styles.sizer}" data-t="${short}"></span><span class="${styles.timeFull} ${styles.sizer}" data-t="${`0000-00-00T00:00:00+00:00\u200b[${zone}]`}"></span></span>`;
+  return html`<span class="${styles.sizerBox}" aria-hidden="true"><span class="${styles.time} ${styles.sizer}" data-t="${short}"></span><span class="${styles.timeFull}">${zonedValue(`0000-00-00T00:00:00+00:00[${zone}]`)}</span></span>`;
 }
 
 function startState(args: TimetableReaderArgs): TimetableState {
@@ -328,7 +326,7 @@ export function renderTimetableReaderTemplate(
       </div>
       <div class="${styles.pane}">
         ${grow(html`<div class="${styles.rowsSlot}" id="${id("rows-slot")}">${rowsTable([], s.timeZone, s.startTimeZone)}</div>`)}
-        <p class="${styles.note}">For the general rule behind a repeated or skipped hour, see the <a href="${withBase("/tools/dst-inspector/")}">DST Inspector</a>.</p>
+        <p class="${styles.note}">For the general rule behind a repeated or skipped hour, see the ${link({ href: withBase("/tools/dst-inspector/"), body: "DST Inspector" })}.</p>
       </div>
     </div></div>`,
   );
@@ -406,7 +404,7 @@ function rowsTable(
     rowHeader: "printed",
     labelCells: true,
     rows: rows.map((r) => ({
-      printed: html`<span class="${styles.printed}" data-series="${r.n}">${swatch({ series: r.n as SwatchSeries })}<span class="${styles.rownum}">${r.n}</span><span class="${styles.printedText}">${r.departure + r.offset}</span></span>`,
+      printed: html`<span class="${styles.printed}" data-series="${r.n}">${swatch({ series: r.n as SwatchSeries })}<span class="${styles.rownum}">${r.n}</span><span class="${styles.printedText}">${valueText(r.departure + r.offset)}</span></span>`,
       leaves: cell(r.leaves, startZone),
       note: hold(
         sizer(shapeOf.note(), styles.noteSizer!),

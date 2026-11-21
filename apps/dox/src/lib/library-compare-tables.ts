@@ -15,25 +15,17 @@ import {
   executionRatio,
   gmtLibraryComparison,
   type LibraryComparison,
+  type LibraryComparisonStats,
 } from "../data/library-comparison";
-import { raw } from "~/widgets/builders/html";
-import { nobreak } from "~/widgets/builders/nobreak";
-import { escapeHtml, inlineCodeHtml } from "./inline-code-html";
-
-/** One table cell: plain text, optionally set in code or linked. */
-interface Cell {
-  text: string;
-  code?: boolean;
-  href?: string;
-  /** Never break inside the text (a date wraps after its hyphen otherwise). */
-  nobreak?: boolean;
-}
-
-interface CompareTable {
-  head: string[];
-  /** The first cell of every row is its row header. */
-  rows: Cell[][];
-}
+import { inlineCodeHtml, escapeHtml } from "./inline-code-html";
+import {
+  NOT_MEASURED,
+  code,
+  plain,
+  type Cell,
+  type CompareTable,
+} from "./compare-table";
+import { pageHref } from "./site";
 
 export type CompareTableId = "overview" | "measured" | "differs" | "covers";
 
@@ -43,19 +35,28 @@ export const PROSE_TABLES: readonly CompareTableId[] = ["covers", "differs"];
 /** Tables laid out as entries (gmt-content.css): a row of short facts under a title, not columns. */
 export const ENTRY_TABLES: readonly CompareTableId[] = ["overview", "measured"];
 
-/** One table cell as HTML. */
-export function cellHtml(cell: Cell): string {
-  const inner = cell.code
-    ? `<code>${escapeHtml(cell.text)}</code>`
-    : inlineCodeHtml(cell.text);
-  const body = cell.nobreak ? nobreak(raw(inner)).toString() : inner;
-  return cell.href ? `<a href="${escapeHtml(cell.href)}">${body}</a>` : body;
-}
-
-const plain = (text: string): Cell => ({ text });
-const code = (text: string): Cell => ({ text, code: true });
 const NOT_RECORDED = "not recorded";
-const NOT_MEASURED = "not measured";
+
+/** Where the zone matrix is explained in full. */
+const ZONE_MATRIX_PATH = pageHref("/compare/zone-matrix/");
+
+/**
+ * The `/compare` column: both kinds together, split in brackets, linked to the page. A suite with
+ * no zone that ran reads `not measured`, never a 0 it did not earn.
+ */
+function zoneMatrixCell(stats: LibraryComparisonStats): Cell {
+  const z = stats.zoneMatrix;
+  if (!z) return plain("not run");
+  if (!z.measured) return { text: NOT_MEASURED, href: ZONE_MATRIX_PATH };
+  const n = z.oneZone + z.wrongAnswer;
+  return {
+    text:
+      n === 0
+        ? "0"
+        : `${n} (${z.oneZone} assume one zone, ${z.wrongAnswer} wrong ${z.wrongAnswer === 1 ? "answer" : "answers"})`,
+    href: ZONE_MATRIX_PATH,
+  };
+}
 
 const capitalize = (text: string): string =>
   `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -71,6 +72,7 @@ export function overviewTable(): CompareTable {
     plain(String(gmtStats.timezones)),
     plain(String(gmtStats.locales)),
     plain("0"),
+    zoneMatrixCell(gmt.stats),
     plain("TC39 Temporal"),
     plain(capitalize(gmt.timeResolution)),
   ];
@@ -89,6 +91,7 @@ export function overviewTable(): CompareTable {
           ? NOT_MEASURED
           : String(stats.knownFailures),
       ),
+      zoneMatrixCell(stats),
       plain(library.foundation ?? ""),
       plain(capitalize(library.timeResolution)),
     ];
@@ -103,6 +106,7 @@ export function overviewTable(): CompareTable {
       "Time zones",
       "Locales",
       "Known failing tests",
+      "Fails in our zone matrix",
       "Built on",
       "Finest time unit",
     ],
@@ -307,28 +311,6 @@ export function measurementNotes(): { name: string; note: string }[] {
       throw new Error(`${library.id} has no measurement`);
     return { name: library.displayName, note: library.measurement.note };
   });
-}
-
-// ---------------------------------------------------------------------------
-// Markdown, for the text surfaces
-// ---------------------------------------------------------------------------
-
-const escapeCell = (text: string): string => text.replace(/\|/g, "\\|");
-
-function cellMarkdown(cell: Cell): string {
-  const text = cell.code ? `\`${cell.text}\`` : escapeCell(cell.text);
-  return cell.href ? `[${text}](${cell.href})` : text;
-}
-
-/** A table as a Markdown pipe table. */
-export function tableMarkdown(table: CompareTable): string {
-  return [
-    "",
-    `| ${table.head.join(" | ")} |`,
-    `| ${table.head.map(() => "---").join(" | ")} |`,
-    ...table.rows.map((row) => `| ${row.map(cellMarkdown).join(" | ")} |`),
-    "",
-  ].join("\n");
 }
 
 /** The notes list as HTML list items. */

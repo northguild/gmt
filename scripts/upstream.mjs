@@ -23,7 +23,7 @@
  *
  * Each filing has two kinds of field:
  *
- *   hand-written  `summary`, `work`, `pairsWith`, `closes`, `dependsOn`, `gmtGuard` — the owner's
+ *   hand-written  `summary`, `work`, `pairsWith`, `closes`, `dependsOn`, `gmtGuard`, `gmtNote`, `gmtUnguarded` — the owner's
  *                 own judgement about what a filing says and what GMT workaround it would retire.
  *                 Neither `sync` nor `refresh` ever overwrites these — they always come from the
  *                 committed file; a filing that file doesn't have yet gets them empty, for a
@@ -153,17 +153,29 @@ const HAND_WRITTEN_FIELDS = [
   "dependsOn",
   "gmtGuard",
   "gmtNote",
+  // `gmtUnguarded` is written only as `true`, beside a `gmtNote` that says GMT has no workaround.
+  "gmtUnguarded",
   // `role` and `contributionUrl` are hand-written too: discovery searches by author, so a filing
   // someone else opened is only ever here because a human added it, and a sync that dropped these
   // would silently turn a maintainer's PR into one of ours.
   "role",
   "contributionUrl",
   "outcome",
+  // The IANA zone the filing's own report names (its repro or its title), for the deck's map.
+  "zone",
 ];
 /** Fields the owner sets by hand on a listing. */
 const LISTING_HAND_WRITTEN_FIELDS = ["summary"];
 /** Fields a listing must never carry: they belong to a filing about a Temporal defect. */
-const FILING_ONLY_FIELDS = ["gmtGuard", "gmtNote", "work", "outcome", "role"];
+const FILING_ONLY_FIELDS = [
+  "gmtGuard",
+  "gmtNote",
+  "gmtUnguarded",
+  "work",
+  "outcome",
+  "role",
+  "zone",
+];
 const EMPTY_HAND_WRITTEN = {
   summary: "",
   work: null,
@@ -172,9 +184,11 @@ const EMPTY_HAND_WRITTEN = {
   dependsOn: [],
   gmtGuard: null,
   gmtNote: null,
+  gmtUnguarded: false,
   role: "author",
   contributionUrl: null,
   outcome: null,
+  zone: null,
 };
 
 // ---------------------------------------------------------------- gh arguments and parsing
@@ -294,7 +308,9 @@ function buildFiling(ref, hw, synced) {
     dependsOn: hw.dependsOn,
     gmtGuard: hw.gmtGuard,
     gmtNote: hw.gmtNote,
+    ...(hw.gmtUnguarded ? { gmtUnguarded: true } : {}),
     ...(hw.outcome ? { outcome: hw.outcome } : {}),
+    ...(hw.zone ? { zone: hw.zone } : {}),
     state: synced.state,
     ...Object.fromEntries(
       SYNCED_FIELDS[ref.tracker].map((k) => [k, synced[k]]),
@@ -757,7 +773,13 @@ const WORK_VALUES = ["port", "fix", "report", "release"];
 const STATE_VALUES = ["open", "closed"];
 const REVIEW_DECISIONS = ["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED"];
 /** Hand-written members a filing may carry beyond its tracker's own fields. `new` is live-only. */
-const OPTIONAL_FIELDS = ["role", "contributionUrl", "outcome"];
+const OPTIONAL_FIELDS = [
+  "gmtUnguarded",
+  "role",
+  "contributionUrl",
+  "outcome",
+  "zone",
+];
 
 /** What a filing of `tracker` must have, and everything it may have. */
 const requiredFields = (tracker) => [
@@ -1020,6 +1042,20 @@ const ROLE_RULES = [
   },
 ];
 
+/** `gmtUnguarded` marks a note that says GMT has no workaround, so it needs that note. */
+const UNGUARDED_RULES = [
+  {
+    applies: (f) => f.gmtUnguarded !== undefined && f.gmtUnguarded !== true,
+    message: (_f, label) =>
+      `${label} — gmtUnguarded is written only as true, or left out`,
+  },
+  {
+    applies: (f) => f.gmtUnguarded === true && f.gmtNote === null,
+    message: (_f, label) =>
+      `${label} — gmtUnguarded needs a gmtNote saying why GMT has no workaround`,
+  },
+];
+
 /** Runs a rule table, reporting the message of every rule that applies. */
 function applyRules(rules, f, label, report) {
   for (const rule of rules) {
@@ -1029,6 +1065,10 @@ function applyRules(rules, f, label, report) {
 
 function checkOutcome(f, label, report) {
   applyRules(OUTCOME_RULES, f, label, report);
+}
+
+function checkUnguarded(f, label, report) {
+  applyRules(UNGUARDED_RULES, f, label, report);
 }
 
 function checkRole(f, label, report) {
@@ -1059,6 +1099,7 @@ function checkFiling(f, { guards, seen, report, gmt }) {
   checkCounts(f, label, report);
   checkGuard(f, label, guards, report);
   checkRole(f, label, report);
+  checkUnguarded(f, label, report);
   checkOutcome(f, label, report);
   checkDates(f, label, report, gmt);
   if (f.summary === "") report.warnings.push(`${label} — empty summary`);

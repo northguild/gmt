@@ -1,0 +1,20 @@
+---
+/**
+ * A code block on the stage: the site's own (Starlight's `Code`, passed as the slot) in its dark
+ * theme. The stage is dark whatever the site's theme (`gmt-theme-dark` on the deck), and Expressive
+ * Code takes its theme from the page's `data-theme` unless the block names its own, so the block
+ * names the dark one. A block that is not Expressive Code's fails the build: a light block on the
+ * dark stage would not read. The block carries `gmt-deck-code`, which sizes it on the stage
+ * (`slides.css`).
+ */
+const html = await Astro.slots.render("default");
+const OPEN = '<div class="expressive-code';
+if (!html.includes(OPEN))
+  throw new Error("DeckCode: the slot holds no Expressive Code block");
+const dark = html.replace(
+  OPEN,
+  '<div data-theme="dark" class="gmt-deck-code expressive-code',
+);
+---
+
+<Fragment set:html={dark} />

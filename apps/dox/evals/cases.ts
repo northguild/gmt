@@ -801,6 +801,20 @@ const FAULT_CASES: readonly EvalCase[] = [
     live: true,
     provider: "google",
   },
+  {
+    id: "fault-code-skipped-time",
+    kind: "fault",
+    question:
+      "Write a JavaScript function that sets a reminder for 03:30 on 28 March 2027, Helsinki time, and returns the time as a UTC ISO string.",
+    tool: "showDstInspector",
+    input: {
+      zone: "Europe/Helsinki",
+      year: 2027,
+      local: "2027-03-28T03:30:00",
+    },
+    match: ["zone"],
+    live: true,
+  },
 ];
 
 export const CASES: readonly EvalCase[] = [

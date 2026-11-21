@@ -10,6 +10,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { distDirOrSkip } from "../../../scripts/dist-dir";
+import { DECKS } from "../../slides/decks";
 
 const dist = distDirOrSkip();
 const site = path.join(dist ?? "", "gmt");
@@ -174,13 +175,37 @@ describe("the built WebMCP markers", () => {
     expect(wrong).toEqual([]);
   });
 
+  it("puts one marker, naming the deck, on each registry deck page and none on its presenter page", () => {
+    if (dist === null) return;
+    const wrong = DECKS.flatMap((deck) => {
+      const dir = path.join(site, "slides", deck.slug);
+      const main = markersIn(path.join(dir, "index.html"));
+      const presenter = markersIn(path.join(dir, "presenter", "index.html"));
+      return main.length === 1 &&
+        main[0] === `slides/${deck.slug}` &&
+        presenter.length === 0
+        ? []
+        : [
+            `${deck.slug}: ${main.join(",") || "none"} / ${presenter.join(",") || "none"}`,
+          ];
+    });
+    expect(wrong).toEqual([]);
+  });
+
   it("puts a marker on no other page", () => {
     if (dist === null) return;
     const toolPages = new Set(
       pages.map((slug) => path.join(toolsDir, slug, "index.html")),
     );
+    // A registry deck's own page (not its presenter page) carries one marker, `slides/<slug>`.
+    const deckPages = new Set(
+      DECKS.map((deck) => path.join(site, "slides", deck.slug, "index.html")),
+    );
     const stray = htmlFiles(site).filter(
-      (file) => !toolPages.has(file) && markersIn(file).length > 0,
+      (file) =>
+        !toolPages.has(file) &&
+        !deckPages.has(file) &&
+        markersIn(file).length > 0,
     );
     expect(stray.map((file) => path.relative(site, file))).toEqual([]);
   });

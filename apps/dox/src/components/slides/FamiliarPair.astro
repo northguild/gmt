@@ -1,0 +1,47 @@
+---
+/**
+ * One job, shown the way three libraries people know write it, and the GMT call for it with its
+ * result, in the lines every run on the deck uses (`RunLines`, from `gmtSteps`: the code and the
+ * value come from one source, computed at build time). The other shapes are code text from
+ * `familiar.json`; there is no verdict on them.
+ */
+import { gmtSteps } from "~/lib/slides/gmt-call";
+import RunLines from "./RunLines.astro";
+import type { GmtCall } from "./types";
+
+interface Props {
+  pair: {
+    job: string;
+    moment: string;
+    dateFns: string;
+    dayjs: string;
+    gmt: GmtCall;
+  };
+}
+const { pair } = Astro.props;
+const shapes = [
+  ["Moment", pair.moment],
+  ["date-fns", pair.dateFns],
+  ["Day.js", pair.dayjs],
+] as const;
+const steps = await gmtSteps([pair.gmt]);
+---
+
+<div class="gmt-deck-panel gmt-familiar">
+  <h3 class="gmt-familiar-job">{pair.job}</h3>
+  <dl class="gmt-familiar-shapes">
+    {
+      shapes.map(([name, code]) => (
+        <>
+          <dt>{name}</dt>
+          <dd>
+            <code>{code}</code>
+          </dd>
+        </>
+      ))
+    }
+  </dl>
+  <div class="gmt-familiar-run">
+    <RunLines prompt=">" steps={steps} by="GMT" />
+  </div>
+</div>

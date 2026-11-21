@@ -8,6 +8,7 @@ import {
   TITLE_SUFFIX,
   upsertHead,
   webmcpHeadEntries,
+  deckWebmcpHeadEntries,
   type HeadEntry,
   type HeadInput,
 } from "./head-tags";
@@ -365,6 +366,7 @@ describe("ogImageKey", () => {
     ["migrate/moment", "migrate/moment"],
     ["migrate", "migrate"],
     ["compare/behaviour", "compare/behaviour"],
+    ["compare/zone-matrix", "compare/zone-matrix"],
     ["changelog/1-21", "changelog/1-21"],
     ["changelog/lint-plugin", "changelog/lint-plugin"],
     ["changelog", "changelog"],
@@ -457,5 +459,22 @@ describe("webmcpHeadEntries", () => {
       trial("a"),
       trial("b"),
     ]);
+  });
+});
+
+describe("deckWebmcpHeadEntries", () => {
+  it("names the deck and adds a meta per token", () => {
+    expect(deckWebmcpHeadEntries("sample-deck", ["one", "two"])).toEqual([
+      {
+        tag: "meta",
+        attrs: { name: WEBMCP_MARKER, content: "slides/sample-deck" },
+      },
+      { tag: "meta", attrs: { "http-equiv": "origin-trial", content: "one" } },
+      { tag: "meta", attrs: { "http-equiv": "origin-trial", content: "two" } },
+    ]);
+  });
+
+  it.each(["", "a/b"])("adds nothing for the slug %j", (slug) => {
+    expect(deckWebmcpHeadEntries(slug, ["one"])).toEqual([]);
   });
 });

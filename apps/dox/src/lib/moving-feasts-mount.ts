@@ -296,7 +296,9 @@ export function renderMovingFeastsTemplate(
       name: id("offsets"),
       items: offsetItems(state),
     })}</div></div>${holidayFrame(
-      html`<div class="${styles.plates}" aria-hidden="true">${grow(
+      /* `data-rail-lead`: the answer a host that opens this tool to show it scrolls to first
+         (the deck's page-tools slide), past the controls. */
+      html`<div class="${styles.plates}" aria-hidden="true" data-rail-lead>${grow(
         html`<div class="${styles.slot}" id="${id("plates")}">${blankPlates}</div>`,
       )}</div
         ><p role="status" aria-label="Easter summary" id="${id("year-sentence")}">${srOnly("")}</p

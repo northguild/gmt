@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { workerTextMatchesPage } from "./text-parity";
 
 /** A 2D context that records its pixels as the text it was asked to draw. */

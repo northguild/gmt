@@ -63,7 +63,7 @@
     background: var(--gmt-fill-strong);
   }
 
-  /* A head keeps its words whole: the kit's `overflow-wrap: anywhere` is lifted here. */
+  /* A head keeps its words whole: no wrap inside a word, no hyphenation. */
   & table thead th {
     vertical-align: bottom;
     color: var(--gmt-ice);

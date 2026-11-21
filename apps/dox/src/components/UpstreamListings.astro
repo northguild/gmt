@@ -7,6 +7,7 @@
  * the tracker's (state icon, title, `repo#number`, state badge), so a phone gets one stacked card
  * per submission. Styles are `gmt-content-tables.css`, shared with the tracker.
  */
+import Link from "~/components/Link.astro";
 import { shortRef } from "../data/temporal-compat";
 import { listings } from "../data/upstream-filings";
 import { octicon } from "../lib/octicons";
@@ -34,7 +35,7 @@ const COLUMNS = ["Submission", "Details", "Activity"] as const;
                   <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
                   <span class="gmt-sr-only">{l.kind === "issue" ? "Issue" : "Pull request"}:</span>
                   <strong class="gmt-upstream-title">{l.title}</strong>
-                  <a class="gmt-upstream-ref" href={l.url}>{shortRef(l.repo, l.number)}</a>
+                  <Link class="gmt-upstream-ref" href={l.url}>{shortRef(l.repo, l.number)}</Link>
                   <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
                 </td>
                 <td class="gmt-upstream-body">

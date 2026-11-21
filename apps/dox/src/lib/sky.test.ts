@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { decodeStars, mountSky, type Sky, type SkyMap } from "./sky";
 import { G } from "./globe/pinhole";
+import { skyHost } from "~/test/sky-host";
 import {
   SUN_RADIUS,
   moonFromCamera,
@@ -209,11 +210,7 @@ const mount = (): Sky => {
 beforeEach(() => {
   vi.useFakeTimers();
   controller = new AbortController();
-  host = document.createElement("div");
-  stars = document.createElement("canvas");
-  band = document.createElement("canvas");
-  host.append(band, stars);
-  document.body.append(host);
+  ({ host, stars, band } = skyHost());
   size = { width: 1440, height: 844 };
   clock = T0;
   hidden = false;

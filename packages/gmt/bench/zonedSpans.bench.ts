@@ -1,5 +1,4 @@
 import { Temporal } from "../src/internal/temporal";
-import { describe } from "vitest";
 import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { dwellTime } from "../src/transport";
 import {

@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { chargeableDays } from "../src/intermodal";
 import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import {

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { stripFrontmatter } from "./page-markdown";
 import { pageEntries, pageIndustries } from "./page-industries";
 

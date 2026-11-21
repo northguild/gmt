@@ -12,6 +12,11 @@
  */
 import { LIBRARY_IDS, checkedLine, matrix } from "../data/behaviour-matrix";
 import {
+  zoneMatrixLine,
+  zoneMatrixRange,
+  zoneMatrixSummary,
+} from "../data/zone-matrix";
+import {
   combinedCompetitorExecutions,
   competitorComparisons,
   competitorExecutionRange,
@@ -61,8 +66,20 @@ export function pageExpressionValues(): Record<string, string> {
     LIBRARY_IDS.map((id) => [`checkedLine("${id}")`, checkedLine(id)]),
   );
 
+  // The zone-matrix line each Migrate page carries, one per library and per polyfill.
+  const zoneMatrixLines = Object.fromEntries(
+    [...LIBRARY_IDS, "js-temporal", "temporal-polyfill"].map((id) => [
+      `zoneMatrixLine("${id}")`,
+      zoneMatrixLine(id),
+    ]),
+  );
+
   return {
     ...checkedLines,
+    ...zoneMatrixLines,
+    "zoneMatrix.zones.length": String(zoneMatrixSummary.zones.length),
+    'zoneMatrix.nodes.join(", ")': zoneMatrixSummary.nodes.join(", "),
+    zoneMatrixRange,
     "matrix.measuredOn": matrix.measuredOn,
     "matrix.runtime.node": matrix.runtime.node,
     'matrix.runtime.hostZones.join(", ")': matrix.runtime.hostZones.join(", "),

@@ -30,7 +30,6 @@ import {
 } from "./cutoff-widgets";
 import { instantAtOffset, OFFSET_SOURCE, wallReader } from "./exact-offset";
 import { placeLabel } from "./label-fit";
-import { codeSpan } from "./widget-ui";
 
 export {
   TRANSPORT_ZONES,
@@ -355,7 +354,11 @@ function keyOrderFor(obj: Record<string, unknown>): readonly string[] {
  * brackets. An absent (`undefined`) key is omitted; an unknown key keeps its
  * insertion order after the known ones, never dropped.
  */
-function renderValue(value: unknown, str: (s: string) => string): string {
+export function renderValue(
+  value: unknown,
+  str: (s: string) => string,
+  sep = ", ",
+): string {
   if (value === null) return "null";
   if (typeof value === "string") return str(value);
   if (typeof value === "number" || typeof value === "boolean") {
@@ -367,7 +370,7 @@ function renderValue(value: unknown, str: (s: string) => string): string {
     return `new Uint8Array([${[...value].join(", ")}])`;
   }
   if (Array.isArray(value)) {
-    return `[${value.map((v) => renderValue(v, str)).join(", ")}]`;
+    return `[${value.map((v) => renderValue(v, str, sep)).join(sep)}]`;
   }
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
@@ -375,8 +378,8 @@ function renderValue(value: unknown, str: (s: string) => string): string {
     const rest = Object.keys(obj).filter((k) => !known.includes(k));
     const entries = [...known, ...rest]
       .filter((k) => obj[k] !== undefined)
-      .map((k) => `${k}: ${renderValue(obj[k], str)}`);
-    return entries.length === 0 ? "{ }" : `{ ${entries.join(", ")} }`;
+      .map((k) => `${k}: ${renderValue(obj[k], str, sep)}`);
+    return entries.length === 0 ? "{ }" : `{ ${entries.join(sep)} }`;
   }
   return String(value);
 }
@@ -386,13 +389,9 @@ export function formatValue(value: unknown): string {
   return renderValue(value, (s) => JSON.stringify(s));
 }
 
-/** `[html, plain]` for `renderCallLine`: the arguments of a real call. */
-export function callArgs(args: readonly unknown[]): [string, string] {
-  const htmlStr = (s: string) => codeSpan("str", JSON.stringify(s));
-  return [
-    args.map((a) => renderValue(a, htmlStr)).join(", "),
-    args.map((a) => renderValue(a, (s) => JSON.stringify(s))).join(", "),
-  ];
+/** The text of a real call's arguments, as a copy button copies it. */
+export function callArgsPlain(args: readonly unknown[]): string {
+  return args.map((a) => renderValue(a, (s) => JSON.stringify(s))).join(", ");
 }
 
 // ---------------------------------------------------------------------------

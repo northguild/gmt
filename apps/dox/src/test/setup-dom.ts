@@ -15,7 +15,6 @@
  * harmless: the second run finds nothing mounted.
  */
 import type * as JestDomMatchers from "@testing-library/jest-dom/matchers";
-import { afterEach, vi } from "vitest";
 import { watchLeaks } from "./leak-guard";
 
 afterEach(() => {
@@ -27,7 +26,6 @@ afterEach(() => {
 watchLeaks();
 
 if (typeof document !== "undefined") {
-  const { expect } = await import("vitest");
   // The package types the module with `export =`, so a dynamic import's type gains a
   // `default` member the runtime module does not have. The type-only import names the
   // matcher set itself.

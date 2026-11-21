@@ -3,6 +3,7 @@ import {
   codeBreakHast,
   codeBreakHtml,
   codeBreakPieces,
+  codeHtml,
 } from "./code-break";
 
 describe("codeBreakPieces", () => {
@@ -150,5 +151,22 @@ describe("codeBreakPieces with calls", () => {
     expect(codeBreakPieces('isLeapSecond("2024-06-15T12:34:60Z")')).toEqual([
       'isLeapSecond("2024-06-15T12:34:60Z")',
     ]);
+  });
+});
+
+describe("codeHtml with calls", () => {
+  it("marks a call it breaks so it may wrap, and leaves one without a break point whole", () => {
+    const html = codeHtml('nextDay("2027-03-27T00:00")', { calls: true });
+    expect(html).toMatch(/^<code class="gmt-codebreak">/);
+    expect(html.match(new RegExp(CODE_PIECE_CLASS, "g"))).toHaveLength(3);
+    expect(codeHtml("nextDay()", { calls: true })).toBe(
+      "<code>nextDay()</code>",
+    );
+  });
+
+  it("breaks no call unless asked", () => {
+    expect(codeHtml('nextDay("2027-03-27T00:00")')).toBe(
+      "<code>nextDay(&quot;2027-03-27T00:00&quot;)</code>",
+    );
   });
 });

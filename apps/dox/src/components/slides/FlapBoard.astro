@@ -1,0 +1,52 @@
+---
+/**
+ * A split-flap board, the departure-board kind, in a recorded run: the reproduction types out, then
+ * two rows of flaps roll in turn and land (`run` in `lib/slides/bug-visuals.ts`), the result the
+ * report observed and the value it expects, labelled as a run's rows are (`RunLabel`); the flaps
+ * where the two differ light up red and green. The values are
+ * `VISUALS.counters`, padded so their last characters line up (`flapRows`); a padding slot is drawn
+ * empty. The flaps are hidden from screen readers and each row's value sits beside them.
+ */
+import { flapRows } from "~/lib/slides/calendar-figures";
+import CodeRun from "./CodeRun.astro";
+import RunLabel from "./RunLabel.astro";
+import type { CounterEnd } from "./types";
+import "./calendar-figures.css";
+
+interface Props {
+  /** What the report ran the reproduction on. */
+  runtime: string;
+  input: string;
+  expected: CounterEnd;
+  observed: CounterEnd;
+}
+const { runtime, input, expected, observed } = Astro.props;
+const [expectedTiles, observedTiles] = flapRows(expected.value, observed.value);
+const rows = [
+  { which: "observed", outcome: "wrong", ...observed, tiles: observedTiles },
+  { which: "expected", outcome: "expected", ...expected, tiles: expectedTiles },
+] as const;
+---
+
+<CodeRun runtime={runtime} prompt=">" steps={[{ code: input, out: [], outcome: "wrong" }]}>
+  <div class="gmt-flap" style={`--gmt-flap-n:${expectedTiles.length}`}>
+    {rows.map((r) => (
+      <p class="gmt-flap-row" data-which={r.which}>
+        <span class="gmt-flap-label">
+          <RunLabel outcome={r.outcome} />
+          <span>{r.label}</span>
+        </span>
+        <span class="gmt-flap-tiles" aria-hidden="true" data-roll data-end={r.tiles.map((t) => t.ch).join("")}>
+          {r.tiles.map((t) => (
+            t.ch === " " ? (
+              <span class="gmt-flap-tile" data-tile data-blank />
+            ) : (
+              <span class="gmt-flap-tile" data-tile data-diff={t.diff ? r.which : undefined}>{t.ch}</span>
+            )
+          ))}
+        </span>
+        <span class="gmt-sr-only">: {r.value}</span>
+      </p>
+    ))}
+  </div>
+</CodeRun>

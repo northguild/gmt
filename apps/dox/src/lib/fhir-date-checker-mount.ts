@@ -43,6 +43,7 @@ import {
   outputOf,
 } from "~/widgets/families/edi/edi-call";
 import { hold, holdText } from "~/widgets/families/edi/edi-hold";
+import { valueText } from "~/widgets/builders/value-text";
 import { setMember } from "~/widgets/families/edi/edi-table";
 import {
   ediTimeline,
@@ -164,9 +165,7 @@ function membersTable(
       value: html`<div class="${styles.member}">${hold({
         id: id(`member-${r.key}`),
         content: html`${NO_RESULT_TEXT}`,
-        ghosts: [NO_RESULT_TEXT, ...(samples[r.key] ?? [])].map(
-          (g) => html`${g}`,
-        ),
+        ghosts: [NO_RESULT_TEXT, ...(samples[r.key] ?? [])].map(valueText),
       })}</div>`,
     })),
   });

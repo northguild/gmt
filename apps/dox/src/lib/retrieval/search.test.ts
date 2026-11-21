@@ -264,3 +264,21 @@ describe("searchChunks — one index per corpus", () => {
     expect(warm.map((c) => c.id)).toEqual(cold.map((c) => c.id));
   });
 });
+
+describe("searchChunks — a wall-clock time on a date", () => {
+  const dstPage = (c: RetrievalChunk) =>
+    c.url.includes("check-local-time-exists") ||
+    c.url.includes("dst-disambiguation");
+
+  it.each([
+    "What happens at 03:30 on 31 October 2027 in Helsinki?",
+    "What happens at 02:30 on 2027-03-28 in Warsaw?",
+    "Is 2:30am on March 28 a real time in Lisbon?",
+  ])(
+    "%s finds the pages on gaps and overlaps in the first five",
+    (question) => {
+      const top = searchChunks(chunks, question).slice(0, 5);
+      expect(top.some(dstPage)).toBe(true);
+    },
+  );
+});

@@ -7,8 +7,11 @@ industries: [core]
 import BehaviourDiffs from "../../../components/BehaviourDiffs.astro";
 import MigrationMap from "../../../components/MigrationMap.astro";
 import { checkedLine } from "../../../data/behaviour-matrix";
+import { zoneMatrixLine } from "../../../data/zone-matrix";
 
 {checkedLine("moment")}
+
+[{zoneMatrixLine("moment")}](/compare/zone-matrix/)
 
 [Migrate to Temporal with GMT](/migrate/) explains the one change that applies to every call below: GMT takes strings in and gives strings out.
 

@@ -6,6 +6,12 @@
 .box {
   min-inline-size: 0;
   max-inline-size: 100%;
+  overflow-x: auto;
+
+  &:focus-visible {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
 }
 
 .table {
@@ -99,7 +105,8 @@
   gap: var(--gmt-space-2);
 
   & code {
-    overflow-wrap: anywhere;
+    /* A cell keeps its words whole; a long value widens the table and `.box` scrolls. */
+    overflow-wrap: normal;
     background: none;
     color: var(--gmt-ice);
     font-size: 0.75rem;
@@ -143,7 +150,7 @@
 
   & dd {
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
 
   & code {

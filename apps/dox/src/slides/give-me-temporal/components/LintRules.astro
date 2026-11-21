@@ -1,0 +1,27 @@
+---
+/**
+ * Our three lint packages and the rules they enforce: `@northguild/gmt-oxlint`'s rules, each with
+ * the description the rule itself carries (`LINT_RULES`).
+ */
+import DeckTable from "~/components/slides/DeckTable.astro";
+import { LINT_RULES } from "~/lib/slides/lint-rules";
+---
+
+<p class="gmt-lead">Three packages ban <code>Date</code>, one for each linter:</p>
+<ul class="gmt-lead">
+  <li><code>@northguild/gmt-oxlint</code></li>
+  <li><code>@northguild/gmt-eslint</code></li>
+  <li><code>@northguild/gmt-biome</code></li>
+</ul>
+<DeckTable caption={`${LINT_RULES.length} rules, every one an error`} columns={["Rule", "What it bans"]}>
+  {
+    LINT_RULES.map(({ rule, description }) => (
+      <tr>
+        <th scope="row">
+          <code>{rule}</code>
+        </th>
+        <td>{description}</td>
+      </tr>
+    ))
+  }
+</DeckTable>

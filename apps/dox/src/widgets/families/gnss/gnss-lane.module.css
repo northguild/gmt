@@ -14,7 +14,7 @@
 
   /* A lane that begins after a gap is set off by a dashed top edge. */
   &[data-gap="true"] {
-    border-block-start: 1px dashed var(--gmt-border-strong);
+    border-block-start-style: dashed;
   }
 
   /* The reading's own lane: a full border and a tint. */

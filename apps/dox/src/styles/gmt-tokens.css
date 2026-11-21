@@ -361,9 +361,45 @@
   --gmt-bevel-md: 10px;
   --gmt-bevel-sm: 6px;
 
+  /* ---- Under-edges ----
+   * A panel's accent is drawn on its bottom edge as an inset shadow, so a bevelled box keeps one
+   * border width and colour on every side (`bevel-border-widths.test.ts`). These are the shadow's
+   * offsets, negative so the shadow sits on the bottom:
+   * `box-shadow: inset 0 var(--gmt-under-edge) 0 <colour>`. A box whose old border took layout
+   * room adds the width back to its end padding: `calc(<padding> - var(--gmt-under-edge))`.
+   * Not colours, so not per theme. */
+  --gmt-under-edge-hair: -1px;
+  --gmt-under-edge: -2px;
+  --gmt-under-edge-bold: -3px;
+
   /* ---- Control dimensions ----
    * The width of a drag handle. Not a colour, so it does not change per theme. */
   --gmt-handle-w: 14px;
+
+  /* ---- Deck scale ----
+   * A slide's sizes, in container units (`cqi`), so a slide scales with its stage and never with
+   * the window. A custom property keeps its `cqi` as written, so each resolves against the stage
+   * that uses it: the deck's, or the presenter view's preview of the same slide. */
+
+  /* The three small sizes of a panel's text on the stage. */
+  --gmt-deck-text-sm: max(0.75rem, 1.1cqi);
+  --gmt-deck-text-md: max(0.75rem, 1.4cqi);
+  --gmt-deck-text-lg: max(0.75rem, 1.6cqi);
+
+  /* Gaps, padding and margins inside a slide, smallest to largest. */
+  --gmt-deck-space-2xs: 0.2cqi;
+  --gmt-deck-space-xs: 0.4cqi;
+  --gmt-deck-space-sm: 0.6cqi;
+  --gmt-deck-space-md: 1cqi;
+  --gmt-deck-space-lg: 1.2cqi;
+  --gmt-deck-space-xl: 2cqi;
+  --gmt-deck-space-2xl: 3cqi;
+
+  /* The slide's frame: its padding, and the room on the end side kept clear for the Earth and
+     its clock. */
+  --gmt-deck-pad-block: 5cqi;
+  --gmt-deck-pad-inline: 6cqi;
+  --gmt-deck-clock-room: 36cqi;
 
   /* ---- Type scale ----
    * Consolidates the font-sizes widget sheets had been inventing independently

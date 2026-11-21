@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
 
 const css = readFileSync(
   join(import.meta.dirname, "../widgets/tools/timetable-reader.module.css"),
@@ -16,10 +15,10 @@ function rule(selector: string): string {
 }
 
 describe("timetable-reader time cells", () => {
-  it("lets the full zoned value wrap so the four time columns fit a narrow table", () => {
+  it("breaks the full zoned value only at the pieces zonedValue sets, so a hyphen or colon never splits it", () => {
     const body = rule(".timeFull");
-    expect(body).toContain("white-space: normal");
-    expect(body).toContain("overflow-wrap: anywhere");
+    expect(body).not.toContain("white-space: nowrap");
+    expect(body).toContain("overflow-wrap: normal");
   });
 
   it("wraps the NO SIGNAL chip at its space inside a hold cell, so it never overflows the value column", () => {

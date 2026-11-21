@@ -44,6 +44,10 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 - `git diff --stat packages/gmt` is empty, or a changeset exists.
 - `node scripts/verdict.mjs run dox test` (and `check`, `lint`).
 - No `octane` or `@octanejs/*` dependency; no hardcoded version literal in the site.
+- **Reuse** ([rules](../context/dox/built/index.md#reuse-never-reinvent)):
+  `node .agents/skills/ui-standards/scripts/run.mjs` prints PASS. Report each FAIL finding with
+  its file and line, and read every `ui-standards-ok:` reason the branch adds; a reason that does
+  not say why the rule cannot apply is a FAIL too.
 
 ## Surface gates — apply what the work touches
 

@@ -1,4 +1,4 @@
-import { type BenchRunOptions, test } from "vitest";
+import type { BenchRunOptions } from "vitest";
 import { Temporal } from "../src/internal/temporal";
 import type {
   BusinessCalendar,

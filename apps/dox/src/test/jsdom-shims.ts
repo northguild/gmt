@@ -86,3 +86,27 @@ export function installJsdomShims(): void {
       clearTimeout(id)) as typeof globalThis.cancelAnimationFrame;
   }
 }
+
+/**
+ * Makes `window.matchMedia` answer the reduced-motion query with `matches` (every other query
+ * keeps its answer) and returns the function that puts the old one back. Call it in a test or
+ * a `beforeEach`, and undo it in a `finally` or an `afterEach`.
+ */
+export function stubReducedMotion(matches: boolean): () => void {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => {
+    const base = original?.call(window, query);
+    return {
+      ...base,
+      media: query,
+      matches: query.includes("prefers-reduced-motion")
+        ? matches
+        : (base?.matches ?? false),
+      addEventListener() {},
+      removeEventListener() {},
+    };
+  }) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}

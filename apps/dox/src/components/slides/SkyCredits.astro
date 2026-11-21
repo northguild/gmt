@@ -1,0 +1,37 @@
+---
+/**
+ * The credits for the sky and the Earth behind a deck: the star catalogue, the Milky Way
+ * panorama and the Earth imagery, in the site's data-credits form (an info button and its popup).
+ * The deck index carries it: the licences ask for the credit wherever the material is shown. A deck
+ * lists the same credits in its own info menu (`Deck.astro`). `id` is unique per page.
+ *
+ * It uses the `corner` button, the bevelled glass square the maps use: the `stack` form takes its
+ * look from the globe's control stack, which a slide does not have. The wrapper is the button's
+ * positioning box, so the button sits where the wrapper is and its popup opens above it.
+ */
+import {
+  EARTH_IMAGERY,
+  MILKY_WAY,
+  NIGHT_SKY,
+  renderDataCreditsHtml,
+} from "~/lib/data-credits";
+import "./sky-credits.css";
+
+interface Props {
+  id: string;
+}
+const { id } = Astro.props;
+const credits = renderDataCreditsHtml([NIGHT_SKY, MILKY_WAY, EARTH_IMAGERY], {
+  id,
+  placement: "corner",
+});
+---
+
+<div class="gmt-sky-credits" set:html={credits} />
+
+<script>
+  import { watchDataCredits } from "~/lib/data-credits";
+
+  watchDataCredits();
+</script>
+

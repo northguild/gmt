@@ -1,0 +1,162 @@
+{
+  "id": "faq-samoa-skip",
+  "question": "Which day did Samoa skip, and why?",
+  "brain": {
+    "id": "gemini-3.5-flash-lite",
+    "label": "3.5 Flash-Lite"
+  },
+  "instant": "2026-11-19T07:40:17.140013708Z",
+  "chunks": [
+    {
+      "at": 0,
+      "chunk": {
+        "type": "data-status",
+        "data": {
+          "text": "Asking 3.5 Flash-Lite…"
+        },
+        "transient": true
+      }
+    },
+    {
+      "at": 3386,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 5,
+          "chunkTitles": [
+            "Rail: GTFS Service Days › From a record to an instant",
+            "Why GMT? › The bug is the `Date` object",
+            "DST Disambiguation › Which function do I actually need?",
+            "Helping fix Temporal › Why this polyfill",
+            "Time zones and DST in JavaScript: which date library handles them › What each library needs and returns"
+          ],
+          "chunkUrls": [
+            "/guides/industries/rail-gtfs-service-days/#from-a-record-to-an-instant",
+            "/why-gmt/#the-bug-is-the-date-object",
+            "/guides/concepts/dst-disambiguation/#which-function-do-i-actually-need",
+            "/upstream/#why-this-polyfill",
+            "/guides/how-to/time-zones-and-dst-in-javascript/#what-each-library-needs-and-returns"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 16,
+            "corpus": 1,
+            "search": 1,
+            "prompt": 0,
+            "brains": 3381
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3381,
+              "outcome": "answered"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "at": 3386,
+      "chunk": {
+        "type": "start",
+        "messageId": "WXCXUGIjihM6VV37"
+      }
+    },
+    {
+      "at": 3386,
+      "chunk": {
+        "type": "start-step"
+      }
+    },
+    {
+      "at": 3386,
+      "chunk": {
+        "type": "text-start",
+        "id": "0"
+      }
+    },
+    {
+      "at": 3386,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "Samoa skipped the whole of 30 December 2011"
+      }
+    },
+    {
+      "at": 3387,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " when it moved across the date line."
+      }
+    },
+    {
+      "at": 3397,
+      "chunk": {
+        "type": "text-end",
+        "id": "0"
+      }
+    },
+    {
+      "at": 3398,
+      "chunk": {
+        "type": "finish-step"
+      }
+    },
+    {
+      "at": 3398,
+      "chunk": {
+        "type": "finish",
+        "finishReason": "stop"
+      }
+    },
+    {
+      "at": 3398,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 5,
+          "chunkTitles": [
+            "Rail: GTFS Service Days › From a record to an instant",
+            "Why GMT? › The bug is the `Date` object",
+            "DST Disambiguation › Which function do I actually need?",
+            "Helping fix Temporal › Why this polyfill",
+            "Time zones and DST in JavaScript: which date library handles them › What each library needs and returns"
+          ],
+          "chunkUrls": [
+            "/guides/industries/rail-gtfs-service-days/#from-a-record-to-an-instant",
+            "/why-gmt/#the-bug-is-the-date-object",
+            "/guides/concepts/dst-disambiguation/#which-function-do-i-actually-need",
+            "/upstream/#why-this-polyfill",
+            "/guides/how-to/time-zones-and-dst-in-javascript/#what-each-library-needs-and-returns"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 16,
+            "corpus": 1,
+            "search": 1,
+            "prompt": 0,
+            "brains": 3381,
+            "firstToken": 3402,
+            "total": 3420
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3381,
+              "outcome": "answered"
+            }
+          ],
+          "toolCalled": null
+        }
+      }
+    }
+  ]
+}

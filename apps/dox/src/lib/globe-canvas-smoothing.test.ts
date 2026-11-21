@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
 
 const css = readFileSync(
   join(import.meta.dirname, "../widgets/tools/globe.module.css"),

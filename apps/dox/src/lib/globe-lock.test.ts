@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LOCK_RINGS, lockRings, type LockRings } from "./globe-lock";
 
 let el: HTMLElement;
