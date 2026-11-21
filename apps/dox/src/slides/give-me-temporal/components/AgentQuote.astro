@@ -91,9 +91,8 @@ const gap = jump?.date === ASKED.local.slice(0, 10) ? jump : null;
             </p>
           )}
           <p>
-            On a machine set to {cityOf(quote.shown.zone)}
-            {quote.nodesAgree ? "" : ` on Node ${quote.shown.node}`} it returns{" "}
-            <output>{valueLabel(quote.shown.value)}</output>
+            On a machine set to {`${cityOf(quote.shown.zone)}${quote.nodesAgree ? "" : ` on Node ${quote.shown.node}`}`} it
+            returns <output>{valueLabel(quote.shown.value)}</output>
           </p>
           <p>{zoneSpread(quote)} machine time zones.</p>
         </div>

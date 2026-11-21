@@ -4,6 +4,7 @@
  * Words and numbers come from `moment.ts`; the bars are the shared `BarRows` in its neutral tone,
  * since a download count is not a wrong answer.
  */
+import Link from "~/components/Link.astro";
 import BarRows from "~/components/slides/BarRows.astro";
 import { CLOSING, DOWNLOADS, downloadBars, NEWS_URL, QUOTES } from "../moment";
 import "./moment.css";
@@ -21,7 +22,7 @@ const bars = downloadBars();
           ))}
         </blockquote>
         <figcaption>
-          <a href={NEWS_URL}>{quote.by}</a>
+          <Link href={NEWS_URL}>{quote.by}</Link>
         </figcaption>
       </figure>
     ))

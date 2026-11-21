@@ -51,8 +51,7 @@ const sizes = [
           <span class="gmt-bars-value">{row.value}</span>
           {row.note !== undefined && (
             <span class="gmt-bars-note">
-              {noteLead !== undefined && <span class="gmt-sr-only">{noteLead}</span>}
-              {row.note}
+              {noteLead !== undefined && <span class="gmt-sr-only">{`${noteLead} `}</span>}{row.note}
             </span>
           )}
         </span>
