@@ -542,14 +542,30 @@ html[data-deck] .gmt-deck-dialog {
 /*
  * A scroller clips what paints outside it, so a body that holds controls keeps room for their focus
  * ring (up to 3px wide at a 2px offset under more contrast) and gives the same room back with a
- * negative margin. The key table's body is its own framed table, with nothing to focus.
+ * negative margin. The keys body holds its switch.
  */
 .gmt-deck-dialog-frame
-  > :is(.gmt-deck-unlock, .gmt-deck-overview, .gmt-deck-overview-heading) {
+  > :is(
+    .gmt-deck-unlock,
+    .gmt-deck-overview,
+    .gmt-deck-overview-heading,
+    .gmt-deck-keys
+  ) {
   --gmt-deck-ring-room: 0.375rem;
 
   margin: calc(-1 * var(--gmt-deck-ring-room));
   padding: var(--gmt-deck-ring-room);
+}
+
+/* The keys body: the table, then the switch and its note, one under another. */
+.gmt-deck-keys {
+  display: grid;
+  gap: var(--gmt-space-3);
+  align-content: start;
+}
+
+.gmt-deck-keys > p {
+  margin: 0;
 }
 
 .gmt-deck-dialog-title {

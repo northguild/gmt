@@ -15,10 +15,19 @@
  * change, and releasing a key, losing the window's focus or aborting the signal lets it go. A
  * release is read even while a dialog is open, so a held key can never stay stuck. R flies home.
  *
+ * Single-character keys (letters, digits, punctuation) can be turned off with the keys dialog's
+ * switch (`character-keys.ts`, WCAG 2.1.4). Off, they reach the page untouched; the arrows,
+ * PageUp and PageDown, Home, End, Space, Enter, Backspace and F5 still work.
+ *
  * Time: the digit buffer ("1", "2", Enter) forgets itself after `DIGIT_BUFFER_MS` on a timer the
  * signal clears. No clock is read.
  */
 
+import {
+  characterKeysOn,
+  isCharacterKey,
+  mountCharacterKeysSwitch,
+} from "./character-keys";
 import { FLY_KEYS, flyVector, type FlyVector } from "./stage-keys";
 
 /** What a key does. `goTo` is the digits-then-Enter row. */
@@ -195,7 +204,7 @@ export interface DeckKeyActions {
   home(): void;
 }
 
-/** Listens on `doc` until `signal` aborts. */
+/** Listens on `doc` until `signal` aborts, and wires the keys dialog's switch if `doc` has one. */
 export function mountKeys(
   doc: Document,
   o: { signal: AbortSignal; actions: DeckKeyActions },
@@ -211,6 +220,7 @@ export function mountKeys(
     timer = undefined;
   };
   signal.addEventListener("abort", clearDigits, { once: true });
+  mountCharacterKeysSwitch(doc, signal);
 
   const run = (action: DeckAction): void => {
     switch (action) {
@@ -275,6 +285,10 @@ export function mountKeys(
     "keydown",
     (event) => {
       if (ignored(event)) return;
+      if (isCharacterKey(event) && !characterKeysOn()) {
+        if (digits !== "") clearDigits();
+        return;
+      }
       const flight = event.key.toLowerCase();
       if (event.key === "Shift") {
         syncFlight(true);

@@ -3,11 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { screen } from "@testing-library/dom";
 import { html } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
+import { helpDialog } from "~/widgets/builders/deck-controls";
+import { CHARACTER_KEYS_KEY } from "./character-keys";
 import { KEY_TABLE, mountKeys, type DeckKeyActions } from "./keys";
 
 const controllers: AbortController[] = [];
 afterEach(() => {
   for (const c of controllers.splice(0)) c.abort();
+  localStorage.clear();
 });
 
 function setup() {
@@ -309,6 +312,65 @@ describe("deck keys", () => {
     ctl.abort();
     await user.keyboard("{ArrowRight}");
     expect(actions.step).not.toHaveBeenCalled();
+  });
+
+  describe("with the letter, digit and symbol keys turned off (WCAG 2.1.4)", () => {
+    it("leaves every single-character key to the page, and keeps the others", async () => {
+      localStorage.setItem(CHARACTER_KEYS_KEY, "off");
+      const { actions, user } = setup();
+      const seen: boolean[] = [];
+      const ctl = new AbortController();
+      controllers.push(ctl);
+      document.addEventListener(
+        "keydown",
+        (e) => seen.push(e.defaultPrevented),
+        {
+          signal: ctl.signal,
+        },
+      );
+      await user.keyboard("npo?b.ftr{w>}{/w}q12{Enter}");
+      expect(actions.step).toHaveBeenCalledExactlyOnceWith(1);
+      expect(seen.slice(0, -1).every((prevented) => !prevented)).toBe(true);
+      for (const [name, fn] of Object.entries(actions))
+        if (name !== "step") expect(fn).not.toHaveBeenCalled();
+      await user.keyboard("{ArrowRight}{ArrowLeft}{PageDown}{Home}{End} ");
+      expect(actions.step).toHaveBeenCalledTimes(5);
+      expect(actions.first).toHaveBeenCalledOnce();
+      expect(actions.last).toHaveBeenCalledOnce();
+    });
+
+    it("turns them off and on from the keys dialog's switch, and remembers the choice", async () => {
+      renderHtml(helpDialog(KEY_TABLE));
+      const { actions, user } = setup();
+      // The dialog is closed, as the deck mounts it; the switch is found through it.
+      const toggle = screen.getByRole("switch", {
+        name: "Letter, digit and symbol keys",
+        hidden: true,
+      });
+      expect(toggle).toBeChecked();
+      await user.click(toggle);
+      expect(localStorage.getItem(CHARACTER_KEYS_KEY)).toBe("off");
+      toggle.blur();
+      await user.keyboard("f");
+      expect(actions.fullscreen).not.toHaveBeenCalled();
+      await user.click(toggle);
+      expect(localStorage.getItem(CHARACTER_KEYS_KEY)).toBeNull();
+      toggle.blur();
+      await user.keyboard("f");
+      expect(actions.fullscreen).toHaveBeenCalledOnce();
+    });
+
+    it("shows a stored off on the switch when the deck mounts", () => {
+      localStorage.setItem(CHARACTER_KEYS_KEY, "off");
+      renderHtml(helpDialog(KEY_TABLE));
+      setup();
+      expect(
+        screen.getByRole("switch", {
+          name: "Letter, digit and symbol keys",
+          hidden: true,
+        }),
+      ).not.toBeChecked();
+    });
   });
 
   it("lists each action once in the table the help dialog renders", () => {

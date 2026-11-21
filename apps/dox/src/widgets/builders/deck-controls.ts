@@ -12,7 +12,7 @@
  *   matches its name. The pager's names are the carousel's to write
  *   (`widgets/builders/carousel.ts`).
  * - The help dialog: the key table (`lib/slides/keys.ts` passes it) as a real table, so it never
- *   drifts from the keys.
+ *   drifts from the keys, and the switch for the letter, digit and symbol keys.
  * - The overview dialog: an empty list the mount fills from the slides on the page, with
  *   `overviewItems`.
  * - The unlock dialog: a secret-phrase field with its Unlock button joined to its end, and an alert
@@ -24,7 +24,9 @@ import { button } from "./button";
 import { creditList, type DataCredit } from "./data-credits";
 import { html, type SafeHtml } from "./html";
 import { field } from "./layout";
+import { switchField } from "./switch-field";
 import { table } from "./table";
+import { CHARACTER_KEYS_SWITCH_ID } from "~/lib/slides/character-keys";
 import { textInput } from "./text-input";
 import { link } from "./link";
 
@@ -122,7 +124,10 @@ export interface KeyHelpRow {
   label: string;
 }
 
-/** The help dialog: every key the deck answers to. */
+/**
+ * The help dialog: every key the deck answers to, then the switch that turns the single-character
+ * keys off (`lib/slides/character-keys.ts`, WCAG 2.1.4), in one body so the frame keeps its rows.
+ */
 export function helpDialog(keyRows: readonly KeyHelpRow[]): SafeHtml {
   const rows = keyRows.map((row) => ({
     keys: html`${row.keys.map(
@@ -133,14 +138,22 @@ export function helpDialog(keyRows: readonly KeyHelpRow[]): SafeHtml {
   return dialog(
     "help",
     "Keys",
-    table({
+    html`<div class="gmt-deck-keys">${table({
       caption: "Keys for the slides",
       columns: [
         { key: "keys", header: "Key", align: "start", numeric: false },
         { key: "does", header: "What it does", align: "start", numeric: false },
       ],
       rows,
-    }),
+    })}${switchField({
+      id: CHARACTER_KEYS_SWITCH_ID,
+      label: "Letter, digit and symbol keys",
+      checked: true,
+      describedBy: `${CHARACTER_KEYS_SWITCH_ID}-note`,
+    })}<p id="${CHARACTER_KEYS_SWITCH_ID}-note">
+      Off, only the arrows, Page Up, Page Down, Home, End, Space, Enter and Backspace work, and the
+      buttons do the rest. The choice is remembered.
+    </p></div>`,
   );
 }
 
