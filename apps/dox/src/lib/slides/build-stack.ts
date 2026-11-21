@@ -17,10 +17,16 @@ function room(stack: HTMLElement, win: Window): number {
   const slide = stack.closest<HTMLElement>("[data-slide]");
   if (!slide) return Number.POSITIVE_INFINITY;
   const foot = Number.parseFloat(win.getComputedStyle(slide).paddingBlockEnd);
+  const box = slide.getBoundingClientRect();
+  // The boxes are drawn pixels and the pieces' offsets are layout pixels; a scaled stage (a phone,
+  // `slides-phone.css`) makes them differ, so the room is turned back into layout pixels.
+  const scale =
+    slide.offsetHeight > 0 && box.height > 0
+      ? box.height / slide.offsetHeight
+      : 1;
   return (
-    slide.getBoundingClientRect().bottom -
-    (Number.isFinite(foot) ? foot : 0) -
-    stack.getBoundingClientRect().top
+    (box.bottom - stack.getBoundingClientRect().top) / scale -
+    (Number.isFinite(foot) ? foot : 0)
   );
 }
 

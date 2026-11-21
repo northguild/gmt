@@ -35,6 +35,7 @@ import "./talk-schedule.css";
 import "./deck-table.css";
 import "./bug-visuals.css";
 import "./slides-print.css";
+import "./slides-phone.css";
 
 interface Props {
   slug: string;
@@ -81,6 +82,7 @@ const previewAt = start === null ? undefined : convertZonedToUtc(start) || undef
     <div class="gmt-deck-slides"><slot /></div>
     <div class="gmt-deck-blank" data-deck-blank aria-hidden="true" hidden></div>
   </div>
+  <p class="gmt-deck-turn">Turn your phone sideways, or widen the window, to see the slides.</p>
   <Fragment set:html={deckControls(KEY_TABLE, allCredits).value} />
   <Fragment set:html={deckDialogs(KEY_TABLE).value} />
 </article>

@@ -1,0 +1,103 @@
+/*
+ * The deck on a phone: landscape only.
+ *
+ * Held sideways (a landscape window under 500px tall), the deck takes the whole window: the site
+ * header goes, and the bar stands as a column on the right, so the stage gets the window's full
+ * height: 693x390 at 844x390. The slides' type has floors in `rem` that would bind at that size,
+ * so the stage is laid out at 1024x576 and scaled down, and every slide lays out as it does at
+ * 1024x768. The pager dots go too; the menu's overview jumps to any slide.
+ *
+ * Held upright (a portrait window under 600px wide), the stage would be a strip a third of the
+ * window tall, so the deck shows only a line asking the reader to turn the phone or widen the
+ * window. The page without JavaScript (no `html[data-deck]`) keeps its stacked slides.
+ */
+
+.gmt-deck-turn {
+  display: none;
+}
+
+@media (orientation: portrait) and (width <= 37.5rem) {
+  html[data-deck] .gmt-deck > :not(.gmt-deck-turn) {
+    display: none;
+  }
+
+  html[data-deck] .gmt-deck {
+    display: grid;
+    place-items: center;
+    padding: var(--gmt-space-6);
+  }
+
+  html[data-deck] .gmt-deck-turn {
+    display: block;
+    margin: 0;
+    max-inline-size: 20rem;
+    font-size: var(--gmt-text-lg);
+    text-align: center;
+    color: var(--gmt-ice);
+  }
+}
+
+@media (orientation: landscape) and (height <= 31.25rem) {
+  html[data-deck] {
+    --sl-nav-height: 0px;
+  }
+
+  html[data-deck] .header {
+    display: none;
+  }
+
+  html[data-deck] .gmt-deck,
+  html[data-deck] .gmt-deck[data-fullscreen] {
+    --gmt-deck-bar: 0px;
+
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) var(--gmt-deck-bar-size);
+    block-size: 100dvh;
+  }
+
+  /* The stage is laid out at 1024x576, where every slide fits, and scaled to the room left of the
+     bar. A transform, not `zoom`: WebKit resolves `cqi` under `zoom` against the zoomed box. */
+  html[data-deck] .gmt-deck-stage {
+    --gmt-phone-stage: min(100vw - var(--gmt-deck-bar-size), 100dvh * 16 / 9);
+
+    grid-column: 1;
+    grid-row: 1;
+    place-self: start;
+    inline-size: 1024px;
+    margin: 0;
+    transform-origin: 0 0;
+    translate: calc(
+        (100vw - var(--gmt-deck-bar-size) - var(--gmt-phone-stage)) / 2
+      )
+      calc((100dvh - var(--gmt-phone-stage) * 9 / 16) / 2);
+    scale: tan(atan2(var(--gmt-phone-stage), 1024px));
+  }
+
+  html[data-deck="stage"] .gmt-deck-bar,
+  html[data-deck="stage"] .gmt-deck[data-fullscreen] .gmt-deck-bar {
+    grid-column: 2;
+    position: relative;
+    inset: auto;
+    flex-direction: column;
+    padding-inline: 0;
+    padding-block: var(--gmt-space-2);
+    inline-size: var(--gmt-deck-bar-size);
+    block-size: 100%;
+    opacity: 1;
+  }
+
+  html[data-deck] .gmt-deck-pager {
+    flex-direction: column;
+  }
+
+  html[data-deck] .gmt-deck-dots {
+    display: none;
+  }
+
+  /* The menu opens left of the bar, from the window's top. */
+  html[data-deck] .gmt-deck-menu {
+    inset: var(--gmt-space-2)
+      calc(var(--gmt-deck-bar-size) + var(--gmt-space-2)) auto auto;
+    max-block-size: calc(100dvh - 2 * var(--gmt-space-2));
+  }
+}

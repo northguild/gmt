@@ -3,7 +3,8 @@
  * Slide-deck gate: the deck shell, measured on the built site (`context/dox/specs/dox-g12`).
  *
  * Each deck route under `/slides/` is loaded with `?globe=canvas2d` (so CI needs no GPU) at
- * 1280x720, 1920x1080 and 1024x768, and checked:
+ * 1280x720, 1920x1080 and 1024x768, and at two phones held sideways, 844x390 and 667x375
+ * (`slides-phone.css`), and checked:
  *
  * - every slide is reachable from the first by next steps alone, and back by previous steps, and
  *   each step lands on the slide and build the address names;
@@ -44,6 +45,8 @@ const SIZES = [
   { width: 1280, height: 720 },
   { width: 1920, height: 1080 },
   { width: 1024, height: 768 },
+  { width: 844, height: 390 },
+  { width: 667, height: 375 },
 ];
 
 const routes = allDeckRoutes(DECKS_DIR);

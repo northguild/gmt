@@ -104,6 +104,12 @@ Clickers send PageUp/PageDown, F5 or Shift+F5, Escape and `.` or B; the table co
   slide scales with the stage and never with the window. One slide shows at a time; the rest are
   `hidden` by the carousel. The stage carries `gmt-theme-dark` in both site themes, as the hero
   does; the `/slides/` index follows the site theme.
+- Phones are landscape only (`slides-phone.css`). Held sideways (under 500px tall), the site
+  header goes, the bar stands as a column on the right without its dots, and the stage is laid out
+  at 1024×576 and scaled with a transform to the room left of the bar, so every slide lays out as
+  it does at 1024×768. Held upright (under 600px wide), the deck shows only a line asking the
+  reader to turn the phone or widen the window. Script that places things by the stage reads its
+  drawn box (`getBoundingClientRect`), not its offsets.
 - A build not yet reached is `visibility: hidden` plus `inert`, so layout does not move when it
   appears ([layout stability](../../reference/visual-design.md#layout-stability)).
 - Panels: opaque `--gmt-surface-widget`, full bevelled border (`corner-shape: bevel`), accent
@@ -128,7 +134,7 @@ Clickers send PageUp/PageDown, F5 or Shift+F5, Escape and `.` or B; the table co
 
 A page gate on the [page contract](../../built/tier-2-gates.md#gates) (`--list-pages` returns
 every deck route, `--pages`, `--base`; `recordFinding` with element identity keys). Pages run with
-`?globe=canvas2d` so CI needs no GPU. Checks, at 1280×720, 1920×1080 and 1024×768:
+`?globe=canvas2d` so CI needs no GPU. Checks, at 1280×720, 1920×1080, 1024×768 and two phones held sideways, 844×390 and 667×375:
 - every slide reachable from the first by next steps alone, and back by previous steps;
 - `#<id>/<n>` lands on that slide and build;
 - no slide's content box leaves the stage box; no horizontal page scroll;

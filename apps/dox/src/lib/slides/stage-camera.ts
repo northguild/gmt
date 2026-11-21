@@ -20,14 +20,20 @@ const HOP_DIP_ZOOM = 0.6;
 /** A move shorter than this many degrees is not worth a flight. */
 const MIN_HOP_DEG = 1;
 
-/** The Earth's place in the stage: the right third on every layout, whatever the zoom. */
+/**
+ * The Earth's place in the stage: the right third on every layout, whatever the zoom. The stage is
+ * read as drawn, from its box against the deck's: a phone lays the stage out at 1024px and scales
+ * it with a transform (`slides-phone.css`), where its offsets and client sizes are the unscaled ones.
+ */
 export const framingOf =
   (stageEl: HTMLElement | null) =>
   (w: number, h: number): GlobeFraming => {
-    const sx = stageEl?.offsetLeft ?? 0;
-    const sy = stageEl?.offsetTop ?? 0;
-    const sw = stageEl?.clientWidth || w;
-    const sh = stageEl?.clientHeight || h;
+    const box = stageEl?.getBoundingClientRect();
+    const deck = stageEl?.offsetParent?.getBoundingClientRect();
+    const sx = box && deck ? box.left - deck.left : 0;
+    const sy = box && deck ? box.top - deck.top : 0;
+    const sw = box?.width || w;
+    const sh = box?.height || h;
     // Zoom 1 fills the right third of the stage, on every slide: the clock and the Earth never
     // move sideways, and the slides' content fits the two thirds on the left.
     return {

@@ -77,3 +77,9 @@ html[data-deck] .gmt-slide-body [data-quote="result"] .gmt-quote-gap {
 .gmt-quote[data-quote="result"] p {
   margin: 0;
 }
+
+/* The agents' table holds four answers and their thrown messages, so it sets at the code tables'
+   size (`deck-table.css`) and keeps the slide's bottom margin. */
+html[data-deck] .gmt-agent-table {
+  font-size: var(--gmt-deck-text-sm);
+}
