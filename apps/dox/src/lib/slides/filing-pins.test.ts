@@ -85,4 +85,22 @@ describe("the real filings", () => {
       true,
     );
   });
+
+  it("pins each filing at the zone its own data names, and counts the rest unpinned", () => {
+    const byKey = new Map(filings.map((f) => [filingKey(f), f]));
+    for (const step of plan.steps)
+      expect(step.zone).toBe(byKey.get(step.key)?.zone ?? null);
+    const named = filings.filter((f) => (f.zone ?? null) !== null).length;
+    expect([plan.pinned, plan.unpinned]).toEqual([
+      named,
+      filings.length - named,
+    ]);
+  });
+
+  it("plays the filings oldest first", () => {
+    const dates = plan.steps.map(
+      (s) => filings.find((f) => filingKey(f) === s.key)!.createdAt,
+    );
+    expect(dates).toEqual([...dates].sort());
+  });
 });

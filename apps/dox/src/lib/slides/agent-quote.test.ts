@@ -20,6 +20,9 @@ const CONFIG: AgentQuoteConfig = {
   runCommand: "node agent-answer.mjs",
 };
 const SHOWN = CONFIG.shown;
+const RUN = "node agent-answer.mjs";
+const stale = (reason: string): string =>
+  `The run record for quotes/agent-answer.json ${reason}. Run: ${RUN}`;
 
 const full: AgentQuoteRecord = {
   question: "q",
@@ -88,11 +91,12 @@ describe("the agent quote", () => {
         runFor(full),
         CONFIG,
       );
-      expect(quote).toMatchObject({ ready: false, why: "transcript" });
-      if (quote.ready) throw new Error("expected a pending quote");
-      expect(quote.problem).toContain("agent-answer.json");
-      expect(quote.problem).toContain(field);
-      expect(quote.problem).toContain("node agent-answer.mjs");
+      expect(quote).toEqual({
+        ready: false,
+        why: "transcript",
+        question: field === "question" ? "" : "q",
+        problem: `quotes/agent-answer.json has empty fields: ${field}. Fill them from the owner's transcript, then run: ${RUN}`,
+      });
     },
   );
 
@@ -103,10 +107,12 @@ describe("the agent quote", () => {
 
   it.each([null, undefined])("says the run record is missing for %s", (run) => {
     const quote = agentQuote(full, run, CONFIG);
-    expect(quote).toMatchObject({ ready: false, why: "run" });
-    if (quote.ready) throw new Error("expected a pending quote");
-    expect(quote.problem).toContain("is missing");
-    expect(quote.problem).toContain("node agent-answer.mjs");
+    expect(quote).toEqual({
+      ready: false,
+      why: "run",
+      question: "q",
+      problem: stale("is missing"),
+    });
   });
 
   it("says the run record is out of date when the code changed", () => {
@@ -115,9 +121,11 @@ describe("the agent quote", () => {
       runFor(full),
       CONFIG,
     );
-    expect(quote).toMatchObject({ ready: false, why: "run" });
-    if (quote.ready) throw new Error("expected a pending quote");
-    expect(quote.problem).toContain("out of date");
+    expect(quote).toMatchObject({
+      ready: false,
+      why: "run",
+      problem: stale("is out of date: the code or the call changed"),
+    });
   });
 
   it("says the run record is out of date when the call changed", () => {
@@ -126,6 +134,7 @@ describe("the agent quote", () => {
     ).toMatchObject({
       ready: false,
       why: "run",
+      problem: stale("is out of date: the code or the call changed"),
     });
   });
 
@@ -134,18 +143,24 @@ describe("the agent quote", () => {
     run.nodes = run.nodes.slice(0, 1);
     run.values = run.values.slice(0, 1);
     const quote = agentQuote(full, run, CONFIG);
-    expect(quote).toMatchObject({ ready: false, why: "run" });
-    if (quote.ready) throw new Error("expected a pending quote");
-    expect(quote.problem).toContain(`Node ${SHOWN.node}`);
+    expect(quote).toMatchObject({
+      ready: false,
+      why: "run",
+      problem: stale(
+        `is out of date: it has no run on Node ${SHOWN.node} at ${SHOWN.zone}`,
+      ),
+    });
   });
 
   it("says the run record is not a grid when a Node major lacks a zone's value", () => {
     const run = runFor(full);
     run.values[1] = run.values[1]!.slice(0, 1);
     const quote = agentQuote(full, run, CONFIG);
-    expect(quote).toMatchObject({ ready: false, why: "run" });
-    if (quote.ready) throw new Error("expected a pending quote");
-    expect(quote.problem).toContain("not a grid");
+    expect(quote).toMatchObject({
+      ready: false,
+      why: "run",
+      problem: stale("is not a grid of one value per Node major and zone"),
+    });
   });
 
   it("applies the excerpt, and refuses ranges outside the code", () => {
@@ -212,8 +227,7 @@ describe("several answers", () => {
     const [one, two] = agentAnswers(transcript, runs, CONFIG);
     expect(two!.quote.ready).toBe(true);
     if (one!.quote.ready) throw new Error("expected a pending quote");
-    expect(one!.quote.problem).toContain('Answer "one"');
-    expect(one!.quote.problem).toContain("is missing");
+    expect(one!.quote.problem).toBe(`Answer "one": ${stale("is missing")}`);
   });
 
   it("is not ready when `quoted` names no answer, or there are none", () => {
