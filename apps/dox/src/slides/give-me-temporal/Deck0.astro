@@ -99,6 +99,7 @@ if (deck.zone !== "Europe/Helsinki")
   throw new Error(`The GMT slide's skipped hour is Helsinki's; the venue is ${deck.zone}`);
 const gapBefore = resolveLocal("2027-03-28T02:59:00", deck.zone, { disambiguation: "reject" });
 const gapAfter = addUtc(gapBefore, { minutes: 1 });
+const NEW_DATE = "new Date()"; // date-ban: the lint slide's notes name the call the rules ban
 // The agents' row, then the home page's rows no other slide shows: the kinds slide runs a bare
 // date on machines in five zones, and the agents' row is the skipped hour. A row the home page
 // drops fails the build.
@@ -499,7 +500,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     <LintRules />
     <Notes>
       <p><strong>On screen:</strong> GMT's lint rules.</p>
-      <p><strong>Say:</strong> "Our lint rules are strict on purpose. Every rule is an error, not a warning. They ban the name <code>Date</code> itself, not only <code>new Date()</code>. They also ban every import of a library built on Date. Oxlint and ESLint get all seven rules. Biome gets every rule except the ban on the name Date."</p>
+      <p><strong>Say:</strong> "Our lint rules are strict on purpose. Every rule is an error, not a warning. They ban the name <code>Date</code> itself, not only <code>{NEW_DATE}</code>. They also ban every import of a library built on Date. Oxlint and ESLint get all seven rules. Biome gets every rule except the ban on the name Date."</p>
     </Notes>
   </Slide>
 
