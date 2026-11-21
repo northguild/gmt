@@ -1,0 +1,95 @@
+/*
+ * `BarRows.astro`: a plate of bar rows. Each row is a full bevelled border, never a one-sided
+ * accent. Values are tabular and sit in fixed columns, so nothing shifts. The tone is `data-tone`;
+ * `clean` (in the danger tone) is `data-clean`.
+ */
+.gmt-bars {
+  --gmt-bars-name: 14em;
+  --gmt-bars-value: 9em;
+
+  display: grid;
+  gap: 0.2em;
+  margin: 0;
+  padding: 0.2em;
+  list-style: none;
+  background: var(--gmt-surface-widget);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-bars[data-tone="danger"] {
+  --gmt-bars-fill: var(--gmt-danger);
+  --gmt-bars-ink: var(--gmt-danger-ink);
+}
+
+.gmt-bars[data-tone="neutral"] {
+  --gmt-bars-fill: var(--gmt-cyan);
+  --gmt-bars-ink: var(--gmt-ice-bright);
+}
+
+.gmt-bars-row {
+  display: grid;
+  grid-template-columns: var(--gmt-bars-name) minmax(0, 1fr) var(
+      --gmt-bars-value
+    );
+  align-items: center;
+  column-gap: 1em;
+  line-height: 1.15;
+  padding: 0 0.8em;
+  background: var(--gmt-surface-widget);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.gmt-bars-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-bars-bar {
+  display: block;
+  block-size: 0.7em;
+  background: var(--gmt-void);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+.gmt-bars-fill {
+  display: block;
+  block-size: 100%;
+  inline-size: var(--gmt-bars-share);
+  background: var(--gmt-bars-fill);
+}
+
+/* Nothing wrong: the row's border and value turn green, and it has no bar (`BarRows.astro`). */
+.gmt-bars-row[data-clean="true"] {
+  --gmt-bars-ink: var(--gmt-spring-ink);
+
+  border-color: var(--gmt-spring);
+}
+
+.gmt-bars-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-bars-value {
+  font-family: var(--gmt-font-mono);
+  font-weight: 700;
+  font-size: 1.4em;
+  line-height: 1;
+  color: var(--gmt-bars-ink);
+}
+
+.gmt-bars-note {
+  font-size: max(0.75rem, 0.8em);
+  color: var(--gmt-ice-dim);
+}
