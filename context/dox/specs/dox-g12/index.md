@@ -116,7 +116,7 @@ phases with disjoint file ownership.
 | 22 | `gmt` | The running question answered by GMT; the clock skips 02:59 to 04:00 | Greenwich | 1 |
 | 23 | `familiar` | Names you already know: Moment, date-fns and Day.js call shapes beside the GMT call | Greenwich | 1 |
 | 24 | `guards` | Tested guards and the canary, in one paragraph | Greenwich | 0.5 |
-| 25 | `lint` | Lint that bans Date: `@northguild/gmt-oxlint` run on every agent answer at build time, the errors per agent, the rules by name | Greenwich | 0.5 |
+| 25 | `lint` | Lint that bans Date: the three lint packages, then each rule and what it bans | Greenwich | 0.5 |
 | 26 | `ask-dox` | The running question, live to Dox chat, tool calls visible | Helsinki | 1.5 |
 | 27 | `page-tools` | A live page-tool call, and this deck's own tools | Helsinki | 1.25 |
 | 28 | `qa` | Questions; the audience panel; questions through Dox chat or aloud | Helsinki | 5 |

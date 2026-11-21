@@ -135,14 +135,11 @@ places; no national default, no law, no business wording, no text that judges a 
   result moves to `familiar`; the `addZoned` one is dropped.
 - **`guards`**: one paragraph from `compatGroups`, `groupsStillNeeded`, `probeTotals` and
   `gmtStats`, and the link to every filing. The bug slides already showed guards at work.
-- **`lint`** ("Lint that bans Date"): `AgentLint` lints every answer in `quotes/agent-answer.json`
-  with oxlint and `@northguild/gmt-oxlint`'s recommended config when the page is built
-  (`lintCode` in `lib/slides/agent-lint.ts`; nothing is recorded). One `DeckTable` row per agent:
-  each rule it broke and the lines (`byRule`), or "None". The lead counts the answers that fail;
-  the caption names the oxlint and plugin versions. Build 1 swaps in a second `DeckTable`: the
+- **`lint`** ("Lint that bans Date"): `LintRules` names `@northguild/gmt-oxlint`,
+  `@northguild/gmt-eslint` and `@northguild/gmt-biome`, then one `DeckTable` of the oxlint
   plugin's rules in `recommendedConfig` order, each with its own `meta.docs.description`
-  (`LINT_RULES`). The notes name `@northguild/gmt-eslint` (the same bans) and `@northguild/gmt-biome`
-  (all but `no-date-global`). The plugin loads from its `dist`, so `build:dox` and `test:dox` need
+  (`LINT_RULES` in `lib/slides/lint-rules.ts`). The notes say Biome has all but
+  `no-date-global`. The plugin loads from its `dist`, so `build:dox` and `test:dox` need
   `build:gmt-oxlint`.
 - **`ask-dox`**, **`page-tools`**: [slice 4b](./s4b-live-agents.md).
 - **`why-not-temporal`** ("Why not just Temporal?"): three plain points: bad input throws, a

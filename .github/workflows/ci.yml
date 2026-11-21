@@ -349,7 +349,7 @@ jobs:
       - name: Build @northguild/gmt
         run: pnpm --filter @northguild/gmt run build
 
-      # Deck 0's `lint` slide runs the plugin's dist on the agents' answers.
+      # Deck 0's `lint` slide reads the plugin's rules from its dist.
       - name: Build @northguild/gmt-oxlint
         run: pnpm --filter @northguild/gmt-oxlint run build
 
@@ -846,7 +846,7 @@ jobs:
         if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'test:dox') && steps.cache-gmt-dist.outputs.cache-hit != 'true'
         run: pnpm --filter @northguild/gmt run build
 
-      # `lib/slides/agent-lint.test.ts` runs the plugin's dist.
+      # `lib/slides/lint-rules.test.ts` reads the plugin's dist.
       - name: Build @northguild/gmt-oxlint
         if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'test:dox')
         run: pnpm --filter @northguild/gmt-oxlint run build

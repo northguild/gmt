@@ -62,7 +62,7 @@ export const CHECKS = [
   {
     id: "build:dox",
     run: "pnpm --filter @gmt/dox run build",
-    // Deck 0's `lint` slide runs the plugin's dist on the agents' answers.
+    // Deck 0's `lint` slide reads the plugin's rules from its dist.
     needs: ["build:gmt", "build:gmt-oxlint"],
   },
   { id: "stats", run: "node scripts/stats.mjs check", needs: ["build:gmt"] },
@@ -129,7 +129,7 @@ export const CHECKS = [
   {
     id: "test:dox",
     run: "pnpm --filter @gmt/dox run test",
-    // `lib/slides/agent-lint.test.ts` runs the plugin's dist.
+    // `lib/slides/lint-rules.test.ts` reads the plugin's dist.
     needs: ["build:gmt", "build:gmt-oxlint"],
   },
   { id: "test:gmt", run: "pnpm --filter @northguild/gmt run test" },
@@ -188,7 +188,7 @@ const DOX_CONTENT = [
 
 /**
  * The lint plugin: its own build, checks and tests, the two lints that load it, and the Dox build
- * and tests, whose Deck 0 `lint` slide runs it.
+ * and tests, whose Deck 0 `lint` slide reads its rules.
  */
 const OXLINT = [
   ...every(

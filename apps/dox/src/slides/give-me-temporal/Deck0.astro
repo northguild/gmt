@@ -28,7 +28,7 @@
  * (`pages/slides/[slug]/presenter.astro`).
  */
 import Link from "~/components/Link.astro";
-import AgentLint from "./components/AgentLint.astro";
+import LintRules from "./components/LintRules.astro";
 import AgentQuote from "./components/AgentQuote.astro";
 import AgentTable from "./components/AgentTable.astro";
 import { Code } from "@astrojs/starlight/components";
@@ -473,21 +473,11 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   </Slide>
 
   <Slide id="lint" title="Lint that bans Date" minutes={0.5} place="greenwich">
-    <AgentLint />
+    <LintRules />
     <Notes>
-      <p>
-        Our lint is strict on purpose. It bans the name <code>Date</code> itself, not only <code>new Date</code>, and
-        every import of a library built on it.
-      </p>
-      <p>
-        It even fails the answer that used Temporal: one <code>Date.now()</code> to time the reminder. The answer it
-        passes never calls <code>Date</code>; it types a UTC time in, and lint has nothing to check.
-      </p>
-      <p>
-        Next: the rules, every one an error. ESLint users get the same bans from
-        <code>@northguild/gmt-eslint</code>; Biome users get all but the bare-name ban from
-        <code>@northguild/gmt-biome</code>.
-      </p>
+      <p>Our lint is strict on purpose: every rule is an error.</p>
+      <p>It bans the name <code>Date</code> itself, not only its constructor, and every import of a library built on it.</p>
+      <p>Oxlint and ESLint get all seven. Biome gets all but the bare-name ban.</p>
     </Notes>
   </Slide>
 
