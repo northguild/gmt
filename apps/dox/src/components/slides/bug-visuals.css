@@ -4,27 +4,26 @@
  */
 
 /*
- * A step that replaces the one before it: the base content and each build share one cell, and a
- * build the mount has reached hides every earlier one, so the cell holds the tallest and nothing
- * below it moves.
+ * A step that replaces the one before it: on the deck's stage the base content and each build share
+ * one cell, and a build the mount has reached hides every earlier one, so the cell holds the
+ * tallest and nothing below it moves. Without `html[data-deck]` (JavaScript off: the page is the
+ * handout) and in print (`slides-print.css`) the steps stand one under another instead.
  */
-.gmt-swap {
+html[data-deck] .gmt-swap {
   display: grid;
 }
 
-.gmt-swap > * {
+html[data-deck] .gmt-swap > * {
   grid-area: 1 / 1;
   min-inline-size: 0;
+
+  /* Starlight's flow margins would add a gap on top of the grid's own. */
+  margin: 0;
 }
 
 /* ui-standards-ok: a state, not a layout: a picture hides once a later build has been reached. */
-.gmt-swap > :has(~ .gmt-build[data-reached="true"]) {
+html[data-deck] .gmt-swap > :has(~ .gmt-build[data-reached="true"]) {
   visibility: hidden;
-}
-
-/* Starlight's flow margins would add a gap on top of the grid's own. */
-html[data-deck] .gmt-swap > * {
-  margin: 0;
 }
 
 /*

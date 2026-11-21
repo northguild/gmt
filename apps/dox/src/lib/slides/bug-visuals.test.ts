@@ -180,6 +180,13 @@ describe("the bug visuals", () => {
     expect(pages()).toEqual(["past", "dropped", "current"]);
   });
 
+  it("takes a lapse that lands before its slide's state (reduced motion jumps in one event)", () => {
+    mountBugVisuals(root, { signal: abort.signal, win });
+    sendLapse(root, { dates: { "Asia/Manila": "1845-01-01" } });
+    go("manila", 0);
+    expect(pages()).toEqual(["past", "dropped", "current"]);
+  });
+
   it("ignores a lapse for a visual that is not on screen", () => {
     mountBugVisuals(root, { signal: abort.signal, win });
     go("abort", 0);

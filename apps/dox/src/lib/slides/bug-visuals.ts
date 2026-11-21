@@ -148,8 +148,23 @@ export function mountBugVisuals(
     kindOf(el).reset(el);
   };
 
+  // The latest `gmt-lapse` dates, by zone. Under reduced motion the lapse lands in one event, and
+  // it can come before the deck state that turns a visual on; the visual takes them when it plays.
+  let dates: Readonly<Record<string, string>> = {};
+  const stamp = (el: HTMLElement): void => {
+    const zone = el.dataset["zone"];
+    const now = zone ? dates[zone] : undefined;
+    if (!now || el.dataset["active"] !== "true") return;
+    for (const p of el.querySelectorAll<HTMLElement>("[data-page]"))
+      p.dataset["state"] = pageState(
+        { date: p.dataset["date"] ?? "", gap: p.dataset["gap"] === "true" },
+        now,
+      );
+  };
+
   const play = (el: HTMLElement): void => {
     el.dataset["active"] = "true";
+    stamp(el);
     stops.set(
       el,
       kindOf(el).play(el, {
@@ -191,19 +206,11 @@ export function mountBugVisuals(
   root.addEventListener(
     "gmt-lapse",
     (event) => {
-      const dates = (event as CustomEvent<{ dates?: Record<string, string> }>)
+      const next = (event as CustomEvent<{ dates?: Record<string, string> }>)
         .detail?.dates;
-      if (!dates) return;
-      for (const el of visuals) {
-        const zone = el.dataset["zone"];
-        const now = zone ? dates[zone] : undefined;
-        if (!now || el.dataset["active"] !== "true") continue;
-        for (const p of el.querySelectorAll<HTMLElement>("[data-page]"))
-          p.dataset["state"] = pageState(
-            { date: p.dataset["date"] ?? "", gap: p.dataset["gap"] === "true" },
-            now,
-          );
-      }
+      if (!next) return;
+      dates = next;
+      for (const el of visuals) stamp(el);
     },
     { signal: o.signal },
   );

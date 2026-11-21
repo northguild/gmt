@@ -75,6 +75,20 @@
     visibility: visible;
   }
 
+  /* A swap prints every step, one under another, as the handout shows them (`bug-visuals.css`). */
+  html[data-deck] .gmt-swap {
+    display: flow-root;
+  }
+
+  html[data-deck] .gmt-swap > * + * {
+    margin-block-start: 4mm;
+  }
+
+  /* ui-standards-ok: a state, not a layout: the screen's hidden earlier step shows again. */
+  html[data-deck] .gmt-swap > :has(~ .gmt-build[data-reached]) {
+    visibility: visible;
+  }
+
   /* A stack prints its whole column, unshifted. */
   html[data-deck] .gmt-stack {
     overflow: visible;
