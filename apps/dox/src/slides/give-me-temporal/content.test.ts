@@ -139,7 +139,7 @@ describe("what each GMT step expects", () => {
     );
   });
 
-  it("gets every expected value, except the Chinese date GMT refuses on every host", async () => {
+  it("gets every expected value, except the Chinese holiday GMT's calendar functions do not take", async () => {
     const outcomes = Object.fromEntries(
       await Promise.all(
         Object.entries(GMT_CALLS).map(async ([slide, calls]) => [
@@ -151,8 +151,8 @@ describe("what each GMT step expects", () => {
     expect(outcomes).toEqual({
       abort: ["right", "right"],
       years: ["right", "right"],
-      // Runtimes put Chinese New Year 2027 on 6 or 7 February, so GMT returns its empty value for
-      // a Chinese date on every host: no date, not a wrong one. The day-off step's note says so.
+      // GMT's calendar functions do not take the Chinese calendar, so `holidayDates` returns its
+      // empty value on every host: no date, not a wrong one. The day-off step's note says so.
       dayOff: ["lost"],
       manila: ["right", "right", "right"],
       engines: ["right"],

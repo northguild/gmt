@@ -342,14 +342,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
           calls={GMT_CALLS.dayOff}
         >
           <p class="gmt-run-note" data-after>
-            GMT gives no date here: runtimes put this New Year on 6 or 7 February, so GMT returns
-            its empty value for a Chinese date on every host. No date, not a wrong one.
+            GMT gives no date here: its calendar functions do not take the Chinese calendar, so this
+            call returns its empty value on every host. No date, not a wrong one.
           </p>
         </GmtStep>
       </Build>
     </Swap>
     <Notes>
-      <p>Kolkata: the month's first week slides one day right, so day 1 lands a day late. Then Shanghai: February 2027 with Chinese New Year ringed on the 6th, and the polyfill's 7th ringed in red. The last step leaves the Earth for the Moon, and the sun runs up to the new moon over Shanghai. The last step comes back to the Earth with GMT's own code: its result, and in red the date temporal-polyfill gives. GMT returns no Chinese date on any host, because the runtimes disagree on the day; say so.</p>
+      <p>Kolkata: the month's first week slides one day right, so day 1 lands a day late. Then Shanghai: February 2027 with Chinese New Year ringed on the 6th, and the polyfill's 7th ringed in red. The last step leaves the Earth for the Moon, and the sun runs up to the new moon over Shanghai. The last step comes back to the Earth with GMT's own code: its result, and in red the date temporal-polyfill gives. This call returns no date on any host: GMT's calendar functions do not take the Chinese calendar. Its format functions print a Chinese date only on a runtime that agrees with the Purple Mountain Observatory, and the empty value anywhere else; say so.</p>
       <p>Four minutes from midnight. Two calculations five minutes apart disagree about which day the year starts.</p>
     </Notes>
   </Slide>

@@ -108,14 +108,17 @@ places; no national default, no law, no business wording, no text that judges a 
   | --- | --- | --- | --- |
   | `abort` | `nodejs/node#67076` (D23), `CLDR-19873` (D24) | `formatDateToParts("2024-12-30", "gd", { year: "numeric", month: "short" })` (`plain/format`), the date the Unicode ticket's run prints in 2025 | month `Dùbh`, year `2024` |
   | `years` | `ICU-23609`, `fullcalendar/temporal-polyfill#127` (notes), `ICU-23619` (D25) | `formatDate("2124-03-20", "en-u-ca-persian", { year: "numeric", month: "long", day: "numeric" })`, then `formatDate("1870-03-01", "en-u-ca-japanese", { era: "short", year: "numeric" })` (`plain/format`) | `Farvardin 1, 1503 AP`, then `1870 AD` |
-  | `day-off` | `ICU-23627`, `WebKit 331726` (no workaround), `fullcalendar/temporal-polyfill#128` (note) | `holidayDates({ name: "Spring Festival", kind: "calendarFixed", calendar: "chinese", monthCode: "M01", day: 1 }, 2027)` (`calendar/rules`) | `[]`, marked lost, with a note that GMT has no answer yet: `@js-temporal/polyfill` throws on every Chinese date under ICU 78 (js-temporal/temporal-polyfill#360) |
+  | `day-off` | `ICU-23627`, `WebKit 331726` (no workaround), `fullcalendar/temporal-polyfill#128` (note) | `holidayDates({ name: "Spring Festival", kind: "calendarFixed", calendar: "chinese", monthCode: "M01", day: 1 }, 2027)` (`calendar/rules`) | `[]`, marked lost, with a note that GMT's calendar functions do not take the Chinese calendar, so the call gives no date on any host |
   | `manila` | `tc39/proposal-temporal#3330` (zoned.E) | `resolveLocal("1844-12-30T12:00:00", …reject)`, `classifyLocal("1844-12-31T12:00:00", "Asia/Manila")`, `resolveLocal("1845-01-01T12:00:00", …reject)` (`instant/convert`) | `1844-12-31T03:56:08Z`, `nonexistent`, `1845-01-01T03:56:08Z`: two local days a day apart in UTC |
   | `engines` | `nodejs/node#67457` (note) | `diffDateAsDuration("2000-01-01", "2001-01-01", "years", { smallestUnit: "months", roundingMode: "halfExpand" })` (`plain/calculate`) | `P1Y` |
 
   On `day-off` the step says what the data says and no more: GMT has no workaround for the
   Kolkata bug (the two notes as written), and for Chinese dates the call returns nothing, beside
-  the #128 note, which names the weekly swap check. No reason for the empty result is given
-  beyond the note. Notes for the GMT steps say what GMT did, never that a library is wrong.
+  the #128 note, which names the weekly swap check. The note gives the reason the code states:
+  `CalendarSystem` leaves out `chinese` and `dangi`. The speaker notes add that GMT's format
+  functions print a Chinese date only on a runtime that agrees with the Purple Mountain
+  Observatory, and the empty value elsewhere. Notes for the GMT steps say what GMT did, never
+  that a library is wrong.
 - **`scoreboard`**: `FilingLegend` with the filings as pins ([slice 6](./s6-time-not-camera.md#filings-as-pins)).
 - **`familiar`** ("Names you already know"), after `gmt`: three `FamiliarPair`s from `familiar.json`:
 
