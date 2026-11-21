@@ -893,6 +893,24 @@ jobs:
         with:
           node-version: 26
           check-latest: true
+          cache: pnpm
+
+      # The adapters test runs GMT from packages/gmt/dist (`probe/adapters/gmt.mjs`), which imports
+      # its dependencies from the workspace, so the install always runs and the build only when
+      # build-lint's cached dist for Node 26 and these sources is missing.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - name: Cache @northguild/gmt dist
+        id: cache-gmt-dist
+        uses: actions/cache@v6
+        with:
+          path: packages/gmt/dist
+          key: gmt-dist-26-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
+
+      - name: Build @northguild/gmt
+        if: steps.cache-gmt-dist.outputs.cache-hit != 'true'
+        run: pnpm --filter @northguild/gmt run build
 
       - name: The zone matrix runner passes its own tests
         if: contains(fromJSON(env.CHECKS), 'test:zone-matrix')
