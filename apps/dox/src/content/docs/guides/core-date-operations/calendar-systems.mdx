@@ -45,7 +45,7 @@ Temporal's `withCalendar` does (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`,
 `chinese`, `dangi`, `islamic` and `islamic-rgsa` are not supported.
 On a runtime that prints a Chinese or Dangi date the observatory does not (the Purple Mountain Observatory for
 Chinese, KASI for Dangi), a format function given a `chinese` or `dangi` locale or `calendar` option returns its
-empty value for any date field. A time or a weekday alone still prints. A runtime that prints the observatory's date keeps its own text.
+empty value for any date field. A weekday alone still prints, and so does a time alone for a value that has a time. A runtime that prints the observatory's date keeps its own text.
 
 ## How annotations are read
 

@@ -28,7 +28,7 @@ import {
  * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
  *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
  *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
- *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   that prints the observatory's date keeps its own text. A format with only a weekday
  *   field always returns its text.
  *
  * @param value ISO PlainDate string
