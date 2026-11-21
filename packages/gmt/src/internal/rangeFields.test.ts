@@ -1,7 +1,13 @@
 import { formatDateRange } from "../plain/format/formatDateRange";
 import { formatDateTimeRange } from "../plain/format/formatDateTimeRange";
 import { formatZonedRange } from "../zoned/format/formatZonedRange";
-import { expectOneOfIcu, oneOfIcu } from "../test/icuVariants";
+import {
+  hostDateText,
+  hostPlainRangeText,
+  hostRangeText,
+  hostText,
+} from "../test/hostIntl";
+import { guardedRange } from "../test/lunisolarGuarded";
 
 /*
  * CORE-112, D29: a range that drops, repeats or garbles a field of one date.
@@ -16,12 +22,37 @@ import { expectOneOfIcu, oneOfIcu } from "../test/icuVariants";
  * does not, as a fixed engine prints a range that already holds every field.
  */
 
+/*
+ * The dates, the years and the calendar are values and stay written out; the
+ * wording of a locale (its weekday names, its day-period words, its digits) is the host's, so the
+ * rows below that depend on it take it from the host's own `Intl.DateTimeFormat`. A host without
+ * the data for a locale prints its fallback wording (English on a Chromium build that lacks `yo`),
+ * which is the same dates in other words.
+ */
+const utc = (iso: string): string => `${iso}T00:00:00+00:00[UTC]`;
+const utcTime = (wallClock: string): string => `${wallClock}+00:00[UTC]`;
+/** The host's two singles joined by the locale fallback's ASCII dash (UTS #35 `{0} - {1}`). */
+const joinedDates = (
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  from: string,
+  to: string,
+): string =>
+  `${hostDateText(locale, options, from)} - ${hostDateText(locale, options, to)}`;
+const joinedTimes = (
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  from: string,
+  to: string,
+): string =>
+  `${hostText(locale, options, utcTime(from))} - ${hostText(locale, options, utcTime(to))}`;
+/** A range with the dash's spacing taken out: whether the dash has spaces is the host's wording. */
+const tight = (text: string): string => text.replace(/\s*-\s*/g, "-");
+
 describe("D29: a broken range prints as the two single dates joined by the locale's fallback", () => {
   it.each`
-    locale               | options                                                                    | from            | to              | expected                                                  | cause
-    ${"en-u-ca-chinese"} | ${{ year: "numeric", month: "long" }}                                      | ${"2024-07-10"} | ${"2025-07-10"} | ${"Sixth Month 2024(jia-chen) - Sixth Month 2025(yi-si)"} | ${"chinese drops the related year"}
-    ${"fur-u-ca-hebrew"} | ${{ year: "numeric", month: "narrow" }}                                    | ${"2024-07-10"} | ${"2025-07-10"} | ${"11 5784 - 11 5785"}                                    | ${"hebrew prints the end's month with another value"}
-    ${"yo"}              | ${{ year: "numeric", month: "numeric", day: "numeric", weekday: "short" }} | ${"2024-07-10"} | ${"2024-07-11"} | ${"10/7/2024, Ọjọ́rú - 11/7/2024, Ọjọ́bọ"}                  | ${"the end's weekday is printed twice"}
+    locale               | options                                 | from            | to              | expected               | cause
+    ${"fur-u-ca-hebrew"} | ${{ year: "numeric", month: "narrow" }} | ${"2024-07-10"} | ${"2025-07-10"} | ${"11 5784 - 11 5785"} | ${"hebrew prints the end's month with another value"}
   `(
     "formatDateRange of '$locale' with $options holds both dates whole ($cause)",
     ({ locale, options, from, to, expected }) => {
@@ -29,14 +60,32 @@ describe("D29: a broken range prints as the two single dates joined by the local
     },
   );
 
+  it("formatDateRange of 'yo' holds both dates whole (the end's weekday is printed twice)", () => {
+    const options = {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+    } as const;
+    expect(formatDateRange("2024-07-10", "2024-07-11", "yo", options)).toBe(
+      joinedDates("yo", options, "2024-07-10", "2024-07-11"),
+    );
+  });
+
   it("formatDateTimeRange of 'hi' keeps the day period of both times", () => {
-    expect(
-      formatDateTimeRange("2024-05-15T13:25:00", "2024-05-15T16:40:00", "hi", {
-        hour: "numeric",
-        minute: "numeric",
-        dayPeriod: "long",
-      }),
-    ).toBe("दोपहर 1:25 - शाम 4:40");
+    const options = {
+      hour: "numeric",
+      minute: "numeric",
+      dayPeriod: "long",
+    } as const;
+    const from = "2024-05-15T13:25:00";
+    const to = "2024-05-15T16:40:00";
+    // The two singles, or the host's own range where it already holds both periods (WebKit
+    // writes the period in the range in a shorter form than in a single).
+    expect([
+      joinedTimes("hi", options, from, to),
+      hostRangeText("hi", options, utcTime(from), utcTime(to)),
+    ]).toContain(formatDateTimeRange(from, to, "hi", options));
   });
 
   it("formatZonedRange of 'yo' is the same text from the same two dates", () => {
@@ -47,66 +96,95 @@ describe("D29: a broken range prints as the two single dates joined by the local
         "yo",
         { year: "numeric", month: "numeric", day: "numeric", weekday: "short" },
       ),
-    ).toBe("10/7/2024, Ọjọ́rú - 11/7/2024, Ọjọ́bọ");
-  });
-
-  it("formatZonedRange of 'yo' with a zone name and a day period is that text too", () => {
-    // ICU 77 (Node 22) writes the hour of 'yo' as `12h`, ICU 78 as `12`: the single's own text.
-    expectOneOfIcu(
-      formatZonedRange(
-        "2024-07-10T12:00:00+00:00[UTC]",
-        "2024-07-11T12:00:00+00:00[UTC]",
+    ).toBe(
+      joinedDates(
         "yo",
-        {
-          weekday: "short",
-          day: "numeric",
-          month: "numeric",
-          year: "numeric",
-          hour: "numeric",
-          dayPeriod: "long",
-          timeZoneName: "long",
-        },
-      ),
-      oneOfIcu(
-        "10/7/2024, Ọjọ́rú, 12h Àpapọ̀ Àkókò Àgbáyé - 11/7/2024, Ọjọ́bọ, 12h Àpapọ̀ Àkókò Àgbáyé",
-        "10/7/2024, Ọjọ́rú, 12 Àpapọ̀ Àkókò Àgbáyé - 11/7/2024, Ọjọ́bọ, 12 Àpapọ̀ Àkókò Àgbáyé",
+        { year: "numeric", month: "numeric", day: "numeric", weekday: "short" },
+        "2024-07-10",
+        "2024-07-11",
       ),
     );
   });
 
-  // The same pattern, a month apart: the range drops the related year of both dates on every
-  // engine (native `Sixth Month jia-chen – Seventh Month jia-chen`), the class `M`, not `y`.
-  it.each`
-    label                    | call
-    ${"formatDateRange"}     | ${() => formatDateRange("2024-07-10", "2024-08-10", "en-u-ca-chinese", { year: "numeric", month: "long" })}
-    ${"formatDateTimeRange"} | ${() => formatDateTimeRange("2024-07-10T00:00:00", "2024-08-10T00:00:00", "en-u-ca-chinese", { year: "numeric", month: "long" })}
-    ${"formatZonedRange"}    | ${() => formatZonedRange("2024-07-10T00:00:00+00:00[UTC]", "2024-08-10T00:00:00+00:00[UTC]", "en-u-ca-chinese", { year: "numeric", month: "long" })}
-  `(
-    "$label of chinese months apart holds the related year of both dates",
-    ({ call }) => {
-      expect(call()).toBe(
-        "Sixth Month 2024(jia-chen) - Seventh Month 2024(jia-chen)",
-      );
-    },
-  );
-
-  it("formatDateRange of chinese inside one month is the one single (the dates print alike)", () => {
+  it("formatZonedRange of 'yo' with a zone name and a day period is that text too", () => {
+    // ICU 77 (Node 22) writes the hour of 'yo' as `12h`, ICU 78 as `12`: the single's own text.
+    const options = {
+      weekday: "short",
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      dayPeriod: "long",
+      timeZoneName: "long",
+    } as const;
     expect(
-      formatDateRange("2024-07-10", "2024-07-12", "en-u-ca-chinese", {
-        year: "numeric",
-        month: "long",
-      }),
+      formatZonedRange(
+        "2024-07-10T12:00:00+00:00[UTC]",
+        "2024-07-11T12:00:00+00:00[UTC]",
+        "yo",
+        options,
+      ),
+    ).toBe(
+      joinedTimes("yo", options, "2024-07-10T12:00:00", "2024-07-11T12:00:00"),
+    );
+  });
+
+  // The same pattern, a month apart: the range drops the related year of both dates on every
+  // engine (native `Sixth Month jia-chen – Seventh Month jia-chen`), the class `M`, not `y`. The
+  // public range functions refuse chinese where the D33 probe fails, so the guarded formatter is read.
+  it("formatRangeRepaired of chinese months apart holds the related year of both dates", () => {
+    expect(
+      guardedRange(
+        "en-u-ca-chinese",
+        { year: "numeric", month: "long" },
+        "2024-07-10",
+        "2024-08-10",
+      ),
+    ).toBe("Sixth Month 2024(jia-chen) - Seventh Month 2024(jia-chen)");
+  });
+
+  it("formatRangeRepaired of chinese a year apart holds the related year of both dates", () => {
+    expect(
+      guardedRange(
+        "en-u-ca-chinese",
+        { year: "numeric", month: "long" },
+        "2024-07-10",
+        "2025-07-10",
+      ),
+    ).toBe("Sixth Month 2024(jia-chen) - Sixth Month 2025(yi-si)");
+  });
+
+  it("formatRangeRepaired of chinese inside one month is the one single (the dates print alike)", () => {
+    expect(
+      guardedRange(
+        "en-u-ca-chinese",
+        { year: "numeric", month: "long" },
+        "2024-07-10",
+        "2024-07-12",
+      ),
     ).toBe("Sixth Month 2024(jia-chen)");
   });
 
   it("formatDateRange of fur-hebrew months apart keeps the year written once", () => {
     // The two dates share the year, which the engine writes once after both months (UTS #35 Part 4).
-    expect(
-      formatDateRange("2024-07-10", "2024-08-20", "fur-u-ca-hebrew", {
-        year: "numeric",
-        month: "narrow",
-      }),
-    ).toBe("11 - 12/5784");
+    // The separators are the host's: a host with no `fur` data falls back to its default locale
+    // (ECMA-402 ResolveLocale) and joins the year with a space, not a slash.
+    const options = { year: "numeric", month: "narrow" } as const;
+    const text = formatDateRange(
+      "2024-07-10",
+      "2024-08-20",
+      "fur-u-ca-hebrew",
+      options,
+    );
+    expect(text).toBe(
+      hostPlainRangeText(
+        "fur-u-ca-hebrew",
+        options,
+        "2024-07-10",
+        "2024-08-20",
+      ),
+    );
+    expect(text.match(/\d+/g)).toEqual(["11", "12", "5784"]);
   });
 });
 
@@ -127,26 +205,31 @@ describe("D29: a flagged pattern keeps the engine's range for a class it prints 
   const hi = { hour: "numeric", minute: "numeric", dayPeriod: "long" } as const;
 
   it.each`
-    locale  | options | from            | to              | expected                                     | shape
-    ${"yo"} | ${yo}   | ${"2024-07-10"} | ${"2024-07-10"} | ${"10/7/2024, Ọjọ́rú"}                        | ${"one date twice prints one single"}
-    ${"yo"} | ${yo}   | ${"2024-07-10"} | ${"2025-07-10"} | ${"2024-07-10, Ọjọ́rú - 2025-07-10, Ọjọ́bọ"}   | ${"years apart"}
-    ${"yo"} | ${yo}   | ${"2024-07-10"} | ${"2024-08-10"} | ${"2024-07-10, Ọjọ́rú - 2024-08-10, Àbámẹ́ta"} | ${"months apart"}
+    from            | to              | shape
+    ${"2024-07-10"} | ${"2024-07-10"} | ${"one date twice prints one single"}
+    ${"2024-07-10"} | ${"2025-07-10"} | ${"years apart"}
+    ${"2024-07-10"} | ${"2024-08-10"} | ${"months apart"}
   `(
-    "formatDateRange of '$locale' $shape is '$expected'",
-    ({ locale, options, from, to, expected }) => {
-      expect(formatDateRange(from, to, locale, options)).toBe(expected);
+    "formatDateRange of 'yo' $shape ($from to $to) is the host's range",
+    ({ from, to }) => {
+      expect(formatDateRange(from, to, "yo", yo)).toBe(
+        hostRangeText("yo", yo, utc(from), utc(to)),
+      );
     },
   );
 
+  // Whether the dash of `1:25-1:40` has spaces, and the word for the period, are the host's.
   it.each`
-    from                     | to                       | expected                 | shape
-    ${"2024-05-15T13:25:00"} | ${"2024-05-15T13:25:00"} | ${"दोपहर 1:25"}          | ${"one time twice prints one single"}
-    ${"2024-05-15T13:25:00"} | ${"2024-05-15T13:40:00"} | ${"दोपहर 1:25-1:40"}     | ${"minutes apart"}
-    ${"2024-05-15T09:25:00"} | ${"2024-05-15T16:40:00"} | ${"सुबह 9:25 - शाम 4:40"} | ${"day periods apart"}
+    from                     | to                       | shape
+    ${"2024-05-15T13:25:00"} | ${"2024-05-15T13:25:00"} | ${"one time twice prints one single"}
+    ${"2024-05-15T13:25:00"} | ${"2024-05-15T13:40:00"} | ${"minutes apart"}
+    ${"2024-05-15T09:25:00"} | ${"2024-05-15T16:40:00"} | ${"day periods apart"}
   `(
-    "formatDateTimeRange of 'hi' $shape is '$expected'",
-    ({ from, to, expected }) => {
-      expect(formatDateTimeRange(from, to, "hi", hi)).toBe(expected);
+    "formatDateTimeRange of 'hi' $shape ($from to $to) is the host's range",
+    ({ from, to }) => {
+      expect(tight(formatDateTimeRange(from, to, "hi", hi))).toBe(
+        tight(hostRangeText("hi", hi, utcTime(from), utcTime(to))),
+      );
     },
   );
 });
@@ -172,8 +255,6 @@ describe("D29: the flexible day period is its own class of range", () => {
 
   it.each`
     locale  | options  | from                     | to                       | expected                                         | shape
-    ${"hi"} | ${long}  | ${"2024-05-15T13:25:00"} | ${"2024-05-15T14:40:00"} | ${"दोपहर 1:25-2:40"}                             | ${"one day period, Hour pattern kept (native `दोपहर 1:25–2:40`)"}
-    ${"bn"} | ${long}  | ${"2024-05-15T13:25:00"} | ${"2024-05-15T14:40:00"} | ${"১:২৫ - ২:৪০ দুপুর"}                             | ${"one day period, Hour pattern kept (native `১:২৫–২:৪০ দুপুর`)"}
     ${"en"} | ${short} | ${"2024-05-15T13:25:00"} | ${"2024-05-15T14:40:00"} | ${"1:25 - 2:40 in the afternoon"}                | ${"one day period, Hour pattern kept"}
     ${"en"} | ${short} | ${"2024-05-15T13:25:00"} | ${"2024-05-15T18:40:00"} | ${"1:25 in the afternoon - 6:40 in the evening"} | ${"afternoon to evening in one PM half drops the start's period natively"}
     ${"am"} | ${long}  | ${"2024-05-15T12:10:00"} | ${"2024-05-15T18:45:00"} | ${"ከሰዓት 12:10 - በምሽት 6:45"}                      | ${"two periods in one PM half"}
@@ -182,6 +263,23 @@ describe("D29: the flexible day period is its own class of range", () => {
     "formatDateTimeRange of '$locale' with $options from '$from' to '$to' has $shape",
     ({ locale, options, from, to, expected }) => {
       expect(formatDateTimeRange(from, to, locale, options)).toBe(expected);
+    },
+  );
+
+  // One day period, the Hour pattern kept (native `दोपहर 1:25–2:40`, `১:২৫–২:৪০ দুপুর`). The
+  // period's word, the digits and the dash's spacing are the host's wording.
+  it.each`
+    locale
+    ${"hi"}
+    ${"bn"}
+  `(
+    "formatDateTimeRange of '$locale' with one day period keeps the Hour pattern, in the host's wording",
+    ({ locale }) => {
+      const from = "2024-05-15T13:25:00";
+      const to = "2024-05-15T14:40:00";
+      expect(tight(formatDateTimeRange(from, to, locale, long))).toBe(
+        tight(hostRangeText(locale, long, utcTime(from), utcTime(to))),
+      );
     },
   );
 });
@@ -232,16 +330,46 @@ describe("D29: a range that runs two fields of one date together is the two sing
 
   it.each`
     locale                    | options                                                                    | expected
-    ${"ja-u-ca-chinese"}      | ${dateOptions}                                                             | ${"甲辰年5月10日(土)～乙巳年5月20日(日)"}
-    ${"ja-u-ca-dangi"}        | ${dateOptions}                                                             | ${"甲辰年5月10日(土)～乙巳年5月20日(日)"}
-    ${"ja-u-ca-chinese"}      | ${{ ...dateOptions, year: "2-digit" }}                                     | ${"甲辰年5月10日(土)～乙巳年5月20日(日)"}
-    ${"brx"}                  | ${{ ...dateOptions, era: "short" }}                                        | ${"ए.दि 2024-06-15, सनि - ए.दि 2025-06-15, रबि"}
     ${"zh-u-ca-iso8601"}      | ${{ weekday: "narrow", year: "numeric", month: "narrow", day: "numeric" }} | ${"2024 6 15, 六 - 2025 6 15, 日"}
     ${"zh-Hans-u-ca-iso8601"} | ${{ weekday: "narrow", year: "numeric", month: "narrow", day: "numeric" }} | ${"2024 6 15, 六 - 2025 6 15, 日"}
   `(
     "formatDateRange of '$locale' with $options is '$expected'",
     ({ locale, options, expected }) => {
       expect(formatDateRange(from, to, locale, options)).toBe(expected);
+    },
+  );
+
+  it("formatDateRange of 'brx' with an era is the two singles in the host's wording", () => {
+    const options = { ...dateOptions, era: "short" } as const;
+    // The singles, or the host's own range where it already prints both dates whole.
+    expect([
+      joinedDates("brx", options, from, to),
+      hostRangeText("brx", options, utc(from), utc(to)),
+    ]).toContain(formatDateRange(from, to, "brx", options));
+  });
+});
+
+// The public range functions refuse chinese and dangi where the D33 probe fails, so these rows
+// read the guarded formatter.
+describe("D29: a chinese or dangi range that runs two fields together is the two singles", () => {
+  const dateOptions = {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+  } as const;
+
+  it.each`
+    locale               | options                                | expected
+    ${"ja-u-ca-chinese"} | ${dateOptions}                         | ${"甲辰年5月10日(土)～乙巳年5月20日(日)"}
+    ${"ja-u-ca-dangi"}   | ${dateOptions}                         | ${"甲辰年5月10日(土)～乙巳年5月20日(日)"}
+    ${"ja-u-ca-chinese"} | ${{ ...dateOptions, year: "2-digit" }} | ${"甲辰年5月10日(土)～乙巳年5月20日(日)"}
+  `(
+    "formatRangeRepaired of '$locale' with $options is '$expected'",
+    ({ locale, options, expected }) => {
+      expect(guardedRange(locale, options, "2024-06-15", "2025-06-15")).toBe(
+        expected,
+      );
     },
   );
 });

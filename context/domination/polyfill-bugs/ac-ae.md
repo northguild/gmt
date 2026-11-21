@@ -100,6 +100,13 @@ icu-support list). Fix: go back to `floorDivide`, or use a flooring modulo `((y 
 
 WebKit 26.6 rejects `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT` (`Intl.DateTimeFormat` and `Temporal.ZonedDateTime`
 throw `RangeError`), although the time zone database 2026e defines them as zones and ECMA-402 §6.5 requires them.
-Chromium 153, Firefox 155 and Node 26 accept them; the other legacy ids (`CET`, `EET`, `MET`, `WET`, `EST`, `MST`, `HST`)
-work. Filed as [WebKit 330688](https://bugs.webkit.org/show_bug.cgi?id=330688); on GitHub's macOS 26 runner WebKit accepts
+Chromium 153, Firefox 155 and Node 26 accept them; `EST`, `MST` and `HST` work. On Linux WebKit 26.6 also rejects
+`CET`, `EET`, `MET` and `WET`; macOS accepts them. Filed as [WebKit 330688](https://bugs.webkit.org/show_bug.cgi?id=330688); on GitHub's macOS 26 runner WebKit accepts
 all four, so on the Mac the refusal comes with macOS 27.
+
+The cause seems to be `isValidTimeZoneNameFromICUTimeZone` in WebKit's `Source/JavaScriptCore/runtime/IntlObject.cpp`,
+which drops every name without a `/` except `UTC` and `GMT`, on the assumption that ICU has already resolved such names
+through backward links. A name with no slash then works only when the host's time zone data makes it a link to a name
+with a slash. That fits what we see: tzdb 2024b made the System V names links, and macOS 26 accepts them; tzdb 2026d made
+`EST5EDT`, `CST6CDT`, `MST7MDT` and `PST8PDT` zones again, and macOS 27 refuses them. test262 covers the four names in
+`test/intl402/Temporal/ZonedDateTime/iana-legacy-names.js`; `JSTests/test262/expectations.yaml` does not list it.

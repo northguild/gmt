@@ -1,7 +1,10 @@
 import { formatDate } from "../plain/format/formatDate";
 import { formatDateTimeToParts } from "../plain/format/formatDateTimeToParts";
 import { formatDateToParts } from "../plain/format/formatDateToParts";
+import { hostFormatter } from "../test/hostIntl";
+import { normalizeDateTime } from "./normalizeDateTime";
 import { Temporal } from "./temporal";
+import { utcMs } from "../test/utcMs";
 
 /*
  * CORE-112 (D23, D24): a single date prints the calendar year, never the week-year.
@@ -22,7 +25,7 @@ function expectedYear(
 ): string {
   const date = Temporal.PlainDate.from(iso).withCalendar(calendar);
   const year = hasEra ? (date.eraYear ?? date.year) : date.year;
-  const numberingSystem = new Intl.DateTimeFormat(locale).resolvedOptions()
+  const numberingSystem = hostFormatter(locale, {}).resolvedOptions()
     .numberingSystem;
   const digits = new Intl.NumberFormat(locale, {
     numberingSystem,
@@ -32,31 +35,84 @@ function expectedYear(
   return width === "2-digit" ? [...digits].slice(-2).join("") : digits;
 }
 
+/**
+ * The host's own text for the date with its year replaced by the calendar year. The month names,
+ * the order, the separators and the hour cycle are the host's own wording; the
+ * year is the value, so it is the one derived above and never the host's own. A host with the
+ * defect prints the week-year (the next or the previous year, and for `japanese` or `roc` the
+ * Gregorian year), so the host's year is found among those candidates and swapped. The host's
+ * `formatToParts` is not used: on these patterns it aborts on V8 without 0426b0d1045d (every Node
+ * line; D23).
+ */
+function hostTextWithYear(
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  wallClock: string,
+  calendar: string,
+  width: "numeric" | "2-digit",
+  year: string,
+): string {
+  const text = normalizeDateTime(
+    hostFormatter(locale, { ...options, timeZone: "UTC" }).format(
+      utcMs(`${wallClock}Z`),
+    ),
+  );
+  if (text.includes(year)) return text;
+  const date = Temporal.PlainDate.from(wallClock.slice(0, 10));
+  const own = date.withCalendar(calendar);
+  const numberingSystem = hostFormatter(locale, {}).resolvedOptions()
+    .numberingSystem;
+  const digits = (value: number): string => {
+    const written = new Intl.NumberFormat(locale, {
+      numberingSystem,
+      useGrouping: false,
+      minimumIntegerDigits: width === "2-digit" ? 2 : 1,
+    }).format(value);
+    return width === "2-digit" ? [...written].slice(-2).join("") : written;
+  };
+  const candidates = [own.year, own.eraYear ?? own.year, date.year].flatMap(
+    (value) => [value + 1, value - 1, value],
+  );
+  for (const candidate of candidates) {
+    const written = digits(candidate);
+    if (text.includes(written)) return text.replace(written, year);
+  }
+  return text;
+}
+
 describe("single date, week-year patterns", () => {
   it.each`
-    locale                | options                                                                                  | iso             | calendar      | width        | hasEra   | expected                             | label
-    ${"gd"}               | ${{ year: "numeric", month: "short" }}                                                   | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"Dùbh 2024"}                       | ${"gd month short, year-end"}
-    ${"gd"}               | ${{ year: "numeric", month: "short" }}                                                   | ${"2027-01-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"Faoi 2027"}                       | ${"gd month short, year-start"}
-    ${"gd"}               | ${{ year: "numeric", month: "short" }}                                                   | ${"2025-07-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"Iuch 2025"}                       | ${"gd month short, mid-year control"}
-    ${"ksh"}              | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"2024-12"}                         | ${"ksh numeric, year-end"}
-    ${"ksh"}              | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2027-01-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"2027-01"}                         | ${"ksh numeric, year-start"}
-    ${"ksh"}              | ${{ year: "2-digit", month: "2-digit" }}                                                 | ${"2024-12-30"} | ${"gregory"}  | ${"2-digit"} | ${false} | ${"24-12"}                           | ${"ksh 2-digit, year-end"}
-    ${"sc"}               | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"12/2024"}                         | ${"sc numeric, year-end"}
-    ${"sc"}               | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2027-01-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"01/2027"}                         | ${"sc numeric, year-start"}
-    ${"te-u-ca-buddhist"} | ${{ year: "numeric", month: "long" }}                                                    | ${"2026-07-01"} | ${"buddhist"} | ${"numeric"} | ${false} | ${"జులై 2569"}                        | ${"te buddhist, mid-year"}
-    ${"te-u-ca-buddhist"} | ${{ year: "numeric", month: "long" }}                                                    | ${"2026-12-31"} | ${"buddhist"} | ${"numeric"} | ${false} | ${"డిసెంబర్ 2569"}                      | ${"te buddhist, year-end"}
-    ${"my-u-ca-japanese"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}                                 | ${"2026-07-01"} | ${"japanese"} | ${"numeric"} | ${true}  | ${"R ၀၁/၀၇/၈"}                       | ${"my japanese numeric"}
-    ${"my-u-ca-japanese"} | ${{ year: "2-digit", month: "2-digit", day: "2-digit" }}                                 | ${"2026-07-01"} | ${"japanese"} | ${"2-digit"} | ${true}  | ${"R ၀၁/၀၇/၀၈"}                      | ${"my japanese 2-digit"}
-    ${"my-u-ca-japanese"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}                                 | ${"2024-12-30"} | ${"japanese"} | ${"numeric"} | ${true}  | ${"R ၃၀/၁၂/၆"}                       | ${"my japanese year-end"}
-    ${"my-u-ca-buddhist"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}                                 | ${"2026-07-01"} | ${"buddhist"} | ${"numeric"} | ${true}  | ${"BE ၀၁/၀၇/၂၅၆၉"}                   | ${"my buddhist numeric"}
-    ${"de-CH"}            | ${{ era: "short", year: "numeric", month: "numeric", day: "numeric", weekday: "short" }} | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${true}  | ${"Mo., 12.30.2024 n. Chr."}         | ${"de-CH era short, month and day as CLDR orders them"}
-    ${"gl-u-ca-hebrew"}   | ${{ dateStyle: "full" }}                                                                 | ${"2026-09-12"} | ${"hebrew"}   | ${"numeric"} | ${false} | ${"sábado, 1 de Tishri de 5787 AM"}  | ${"gl hebrew dateStyle full, 1 Tishri"}
-    ${"gl-u-ca-hebrew"}   | ${{ dateStyle: "full" }}                                                                 | ${"2026-09-13"} | ${"hebrew"}   | ${"numeric"} | ${false} | ${"domingo, 2 de Tishri de 5787 AM"} | ${"gl hebrew dateStyle full, 2 Tishri"}
-    ${"gl-u-ca-roc"}      | ${{ dateStyle: "full" }}                                                                 | ${"2026-07-01"} | ${"roc"}      | ${"numeric"} | ${true}  | ${"mércores, 1 de xullo de 115 ROC"} | ${"gl roc dateStyle full, unpadded"}
+    locale                | options                                                                                  | iso             | calendar      | width        | hasEra   | label
+    ${"gd"}               | ${{ year: "numeric", month: "short" }}                                                   | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"gd month short, year-end"}
+    ${"gd"}               | ${{ year: "numeric", month: "short" }}                                                   | ${"2027-01-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"gd month short, year-start"}
+    ${"gd"}               | ${{ year: "numeric", month: "short" }}                                                   | ${"2025-07-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"gd month short, mid-year control"}
+    ${"ksh"}              | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"ksh numeric, year-end"}
+    ${"ksh"}              | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2027-01-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"ksh numeric, year-start"}
+    ${"ksh"}              | ${{ year: "2-digit", month: "2-digit" }}                                                 | ${"2024-12-30"} | ${"gregory"}  | ${"2-digit"} | ${false} | ${"ksh 2-digit, year-end"}
+    ${"sc"}               | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"sc numeric, year-end"}
+    ${"sc"}               | ${{ year: "numeric", month: "numeric" }}                                                 | ${"2027-01-01"} | ${"gregory"}  | ${"numeric"} | ${false} | ${"sc numeric, year-start"}
+    ${"te-u-ca-buddhist"} | ${{ year: "numeric", month: "long" }}                                                    | ${"2026-07-01"} | ${"buddhist"} | ${"numeric"} | ${false} | ${"te buddhist, mid-year"}
+    ${"te-u-ca-buddhist"} | ${{ year: "numeric", month: "long" }}                                                    | ${"2026-12-31"} | ${"buddhist"} | ${"numeric"} | ${false} | ${"te buddhist, year-end"}
+    ${"my-u-ca-japanese"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}                                 | ${"2026-07-01"} | ${"japanese"} | ${"numeric"} | ${true}  | ${"my japanese numeric"}
+    ${"my-u-ca-japanese"} | ${{ year: "2-digit", month: "2-digit", day: "2-digit" }}                                 | ${"2026-07-01"} | ${"japanese"} | ${"2-digit"} | ${true}  | ${"my japanese 2-digit"}
+    ${"my-u-ca-japanese"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}                                 | ${"2024-12-30"} | ${"japanese"} | ${"numeric"} | ${true}  | ${"my japanese year-end"}
+    ${"my-u-ca-buddhist"} | ${{ year: "numeric", month: "numeric", day: "numeric" }}                                 | ${"2026-07-01"} | ${"buddhist"} | ${"numeric"} | ${true}  | ${"my buddhist numeric"}
+    ${"de-CH"}            | ${{ era: "short", year: "numeric", month: "numeric", day: "numeric", weekday: "short" }} | ${"2024-12-30"} | ${"gregory"}  | ${"numeric"} | ${true}  | ${"de-CH era short, month and day as CLDR orders them"}
+    ${"gl-u-ca-hebrew"}   | ${{ dateStyle: "full" }}                                                                 | ${"2026-09-12"} | ${"hebrew"}   | ${"numeric"} | ${false} | ${"gl hebrew dateStyle full, 1 Tishri"}
+    ${"gl-u-ca-hebrew"}   | ${{ dateStyle: "full" }}                                                                 | ${"2026-09-13"} | ${"hebrew"}   | ${"numeric"} | ${false} | ${"gl hebrew dateStyle full, 2 Tishri"}
+    ${"gl-u-ca-roc"}      | ${{ dateStyle: "full" }}                                                                 | ${"2026-07-01"} | ${"roc"}      | ${"numeric"} | ${true}  | ${"gl roc dateStyle full, unpadded"}
   `(
-    "formatDate and formatDateToParts print the calendar year for $label ('$locale', $iso)",
-    ({ locale, options, iso, calendar, width, hasEra, expected }) => {
+    "formatDate and formatDateToParts print the calendar year for $label ('$locale', $iso) in the host's wording",
+    ({ locale, options, iso, calendar, width, hasEra }) => {
       const year = expectedYear(iso, locale, calendar, width, hasEra);
+      const expected = hostTextWithYear(
+        locale,
+        options,
+        `${iso}T00:00:00`,
+        calendar,
+        width,
+        year,
+      );
       expect(formatDate(iso, locale, options)).toBe(expected);
       const parts = formatDateToParts(iso, locale, options);
       expect(parts.map((part) => part.value).join("")).toBe(expected);
@@ -68,14 +124,26 @@ describe("single date, week-year patterns", () => {
   );
 
   it("splits a gd month and year into month, literal and year parts", () => {
-    expect(
-      formatDateToParts("2024-12-30", "gd", {
-        year: "numeric",
+    const options = { year: "numeric", month: "short" } as const;
+    const text = hostTextWithYear(
+      "gd",
+      options,
+      "2024-12-30T00:00:00",
+      "gregory",
+      "numeric",
+      "2024",
+    );
+    // The month's name comes from a format of the month alone, which has no week-year.
+    const month = normalizeDateTime(
+      new Intl.DateTimeFormat("gd", {
         month: "short",
-      }),
-    ).toEqual([
-      { type: "month", value: "Dùbh" },
-      { type: "literal", value: " " },
+        timeZone: "UTC",
+      }).format(utcMs("2024-12-30T00:00:00Z")),
+    );
+    expect(text.startsWith(month)).toBe(true);
+    expect(formatDateToParts("2024-12-30", "gd", options)).toEqual([
+      { type: "month", value: month },
+      { type: "literal", value: text.slice(month.length, -4) },
       { type: "year", value: "2024" },
     ]);
   });
@@ -88,8 +156,19 @@ describe("single date, week-year patterns", () => {
       minute: "numeric",
     } as const;
     const parts = formatDateTimeToParts("2024-12-30T14:05:00", "gd", options);
-    expect(parts.map((part) => part.value).join("")).toBe("Dùbh 2024, 14:05");
-    expect(parts.map((part) => part.type)).toEqual([
+    expect(parts.map((part) => part.value).join("")).toBe(
+      hostTextWithYear(
+        "gd",
+        options,
+        "2024-12-30T14:05:00",
+        "gregory",
+        "numeric",
+        "2024",
+      ),
+    );
+    // The hour cycle is the host's: a 12-hour host adds a literal and the day period.
+    const types = parts.map((part) => part.type);
+    expect(types.slice(0, 7)).toEqual([
       "month",
       "literal",
       "year",
@@ -98,6 +177,7 @@ describe("single date, week-year patterns", () => {
       "literal",
       "minute",
     ]);
+    expect([[], ["literal", "dayPeriod"]]).toContainEqual(types.slice(7));
   });
 
   it.each`
@@ -106,7 +186,6 @@ describe("single date, week-year patterns", () => {
     ${"de"}               | ${{ year: "numeric", month: "long" }}
     ${"fr"}               | ${{ year: "numeric", month: "long" }}
     ${"ja-u-ca-japanese"} | ${{ year: "numeric", month: "long" }}
-    ${"zh-u-ca-chinese"}  | ${{ year: "numeric", month: "long" }}
     ${"en"}               | ${{ dateStyle: "full" }}
   `(
     "leaves '$locale' $options alone: the parts join to the text",

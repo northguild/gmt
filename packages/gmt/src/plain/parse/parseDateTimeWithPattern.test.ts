@@ -5,8 +5,15 @@ import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { getLocaleEraNames } from "../locale/getLocaleEraNames";
 import { getLocaleMeridiems } from "../locale/getLocaleMeridiems";
 import { getLocaleMonthNames } from "../locale/getLocaleMonthNames";
-import { getLocaleWeekdayNames } from "../locale/getLocaleWeekdayNames";
 import { parseDateTimeWithPattern } from "./parseDateTimeWithPattern";
+import { utcMs } from "../../test/utcMs";
+
+// A weekday name straight from `Intl`, so these rows do not depend on a locale's first day (a
+// region whose week data runtimes dispute has none, but its names still parse).
+const mondayName = (locale: string, weekday: "long" | "short"): string =>
+  new Intl.DateTimeFormat(locale, { weekday, timeZone: "UTC" }).format(
+    utcMs("2024-01-15T00:00:00Z"),
+  );
 
 describe("parseDateTimeWithPattern", () => {
   describe("combined numeric date + time tokens", () => {
@@ -135,7 +142,7 @@ describe("parseDateTimeWithPattern", () => {
       "resolves month name + weekday (consumed) + meridiem + era together for $locale",
       ({ locale }) => {
         const month = getLocaleMonthNames(locale, "long")[2]; // March
-        const weekday = getLocaleWeekdayNames(locale, "long")[0];
+        const weekday = mondayName(locale, "long");
         const [am, pm] = getLocaleMeridiems(locale);
         const [, ceLong] = getLocaleEraNames(locale, "long");
         const [, ceShort] = getLocaleEraNames(locale, "short");
@@ -159,7 +166,7 @@ describe("parseDateTimeWithPattern", () => {
         // Era-short (GG) alongside a short month/weekday, proving GG
         // resolves the same way GGGG does above (not just the long form).
         const monthShort = getLocaleMonthNames(locale, "short")[2];
-        const weekdayShort = getLocaleWeekdayNames(locale, "short")[0];
+        const weekdayShort = mondayName(locale, "short");
         expect(
           parseDateTimeWithPattern(
             `${weekdayShort}, ${monthShort} 15, 2024 02:30 ${pm} ${ceShort}`,

@@ -88,7 +88,7 @@
     {
       "defects": ["D13"],
       "title": "D13 — two offset changes inside one 14-day transition search step are skipped, or stall the search for ever (zonedWallClock.ts defect 5)",
-      "trigger": "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (not filed)",
+      "trigger": "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (tc39/proposal-temporal#3332). The pairs that 0.5.1 skips inside one 14-day step (America/Boa_Vista, Europe/Riga) need no report: a79c6a1 fixes them.",
       "probes": 8,
       "failing": 6,
       "state": "still-needed"
@@ -237,6 +237,23 @@
       "defects": ["D32"],
       "title": "D32 — the Islamic era changes in the middle of 1 Muharram of year 1 (internal/islamicEpochEra.ts)",
       "trigger": "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D32 repro: islamic-civil, islamic-tbla and islamic-umalqura print the same era at the first and the last hour of their epoch day in UTC (WebKit 331724)",
+      "probes": 1,
+      "failing": 0,
+      "state": "out-of-scope",
+      "engines": ["webkit"]
+    },
+    {
+      "defects": ["D33"],
+      "title": "D33 — Chinese and Dangi dates differ by host; a runtime whose probe fails returns the sentinel for a chinese or dangi date format (internal/lunisolarRefusal.ts)",
+      "trigger": "every engine's compat verdict (Node, chromium, firefox, webkit, webkit-macos) passes every D33 text repro: the host's Intl.DateTimeFormat gives the Purple Mountain Observatory and KASI dates, so 2027-02-06 is the Chinese New Year and 2027-02-07 the Dangi one on every host (Intl era/monthCode §1.1 Table 1)",
+      "probes": 6,
+      "failing": 5,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D34"],
+      "title": "D34 — the Coptic era changes in the middle of 1 Tout AM 1 (internal/copticEra.ts)",
+      "trigger": "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D34 repro: en-u-ca-coptic prints the same era at the first and the last hour of ISO 0284-08-29 in UTC (WebKit/WebKit#81144, bug 331724)",
       "probes": 1,
       "failing": 0,
       "state": "out-of-scope",

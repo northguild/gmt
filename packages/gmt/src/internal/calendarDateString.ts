@@ -35,7 +35,8 @@ export const temporalStringLeapSecond =
  * - `Temporal.PlainDate.from` canonicalizes the calendar id (`HEBREW` → `hebrew`, `islamicc` →
  *   `islamic-civil`, `ethiopic-amete-alem` → `ethioaa`).
  * - The calendar must be a `CalendarSystem`. Temporal also knows `chinese`, `dangi`, `islamic` and
- *   `islamic-rgsa`, which GMT does not support.
+ *   `islamic-rgsa`, which GMT does not support (`chinese` and `dangi`: hosts print different dates,
+ *   compat D33).
  * - The result computes in `computationCalendarId(calendar)`: `"ethiopic"` and `"coptic"` are read
  *   in `"ethioaa"`, so callers that write a string back take the calendar from
  *   `calendarSystemOfDateValue(value)`, not from `date.calendarId`.

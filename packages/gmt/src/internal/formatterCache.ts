@@ -4,6 +4,7 @@ import { isIslamicCalendarResolutionCompatNeeded } from "./temporalCompat/capabi
 import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
 import { repairCopticEra } from "./copticEra";
 import { repairIslamicEpochEra } from "./islamicEpochEra";
+import { refuseLunisolarDate } from "./lunisolarRefusal";
 import { repairEraYearNumerals } from "./japaneseNumerals";
 import { repairYearPrinting, widenRelatedYear } from "./yearPrinting";
 
@@ -132,10 +133,17 @@ function islamicResolved(
   return [rebuilt, nextOptions];
 }
 
+/**
+ * @param refuseDates whether a chinese or dangi date formatter (compat D33) throws. The argument
+ * check passes `false`: it builds from the caller's own options, which a time-only function
+ * completes later (`formatTime`), so only the formatter a function formats with is refused. So
+ * does a formatter whose date parts are thrown away (`joinDateTimeConnector`).
+ */
 function construct(
   kind: FormatterKind,
   locale: FormatterLocale,
   options: object,
+  refuseDates = true,
 ): object {
   switch (kind) {
     case "DateTimeFormat": {
@@ -143,12 +151,15 @@ function construct(
         locale,
         options as Intl.DateTimeFormatOptions,
       );
+      // D33: a chinese or dangi date is refused before any repair runs, where the runtime's probe fails.
+      const guarded = guardedDateTimeFormat(built, builtOptions);
+      if (refuseDates) {
+        refuseLunisolarDate(guarded);
+      }
       return repairIslamicEpochEra(
         repairCopticEra(
-          repairYearPrinting(
-            guardedDateTimeFormat(built, builtOptions),
-            builtOptions,
-            (twin) => cachedFormatter("DateTimeFormat", built, twin),
+          repairYearPrinting(guarded, builtOptions, (twin) =>
+            cachedFormatter("DateTimeFormat", built, twin),
           ),
           builtOptions,
         ),
@@ -235,6 +246,8 @@ function canonicalLocale(locale: FormatterLocale): FormatterLocale {
  * @param kind which `Intl` formatter class to build
  * @param locale BCP 47 locale or locales, or `undefined` for the runtime default
  * @param options the formatter's options, built by GMT code
+ * @param refuseDates whether a date formatter is refused where compat D33 refuses it;
+ * `false` only for a formatter whose date parts the caller throws away (`joinDateTimeConnector`)
  * @returns the formatter
  *
  * @example cachedFormatter("DateTimeFormat", "en-GB", { timeZone: "UTC" }).format(0) // "01/01/1970"
@@ -245,11 +258,17 @@ export function cachedFormatter<K extends FormatterKind>(
   kind: K,
   locale: FormatterLocale,
   options: object,
+  refuseDates = true,
 ): InstanceType<(typeof Intl)[K]> {
   locale = canonicalLocale(locale);
-  const key = cacheKey(kind, locale, options, kind === "DateTimeFormat");
+  const cacheable = cacheKey(kind, locale, options, kind === "DateTimeFormat");
+  // A formatter built without the date refusals is kept apart from the refusing one.
+  const key =
+    cacheable === null || refuseDates ? cacheable : `${cacheable}!dates`;
   if (key === null) {
-    return construct(kind, locale, options) as InstanceType<(typeof Intl)[K]>;
+    return construct(kind, locale, options, refuseDates) as InstanceType<
+      (typeof Intl)[K]
+    >;
   }
   forgetIfReplaced(kind);
   let byKey = formatters.get(kind);
@@ -257,7 +276,7 @@ export function cachedFormatter<K extends FormatterKind>(
   if (hit !== undefined) {
     return hit as InstanceType<(typeof Intl)[K]>;
   }
-  const built = construct(kind, locale, options);
+  const built = construct(kind, locale, options, refuseDates);
   if (byKey === undefined) {
     byKey = new Map();
     formatters.set(kind, byKey);
@@ -289,7 +308,7 @@ export function checkFormatterArguments(
   locale = canonicalLocale(locale);
   const key = cacheKey(kind, locale, options, false);
   if (key === null) {
-    construct(kind, locale, options);
+    construct(kind, locale, options, false);
     return;
   }
   forgetIfReplaced(kind);
@@ -297,7 +316,7 @@ export function checkFormatterArguments(
   if (seen?.has(key)) {
     return;
   }
-  construct(kind, locale, options);
+  construct(kind, locale, options, false);
   if (seen === undefined) {
     seen = new Set();
     checked.set(kind, seen);

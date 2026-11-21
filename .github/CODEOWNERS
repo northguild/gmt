@@ -1,0 +1,6 @@
+# Frozen: only the owner approves a change to these.
+/context/coding-standards/runtime-workarounds.md  @craig-o-curtis
+/scripts/frozen.mjs                               @craig-o-curtis
+/.claude/settings.json                            @craig-o-curtis
+/.github/workflows/ci.yml                         @craig-o-curtis
+/.github/CODEOWNERS                               @craig-o-curtis

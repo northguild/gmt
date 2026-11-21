@@ -170,6 +170,7 @@ describe("groupResults", () => {
     expect(states.D18).toBe("out-of-scope");
     expect(states.D19).toBe("out-of-scope");
     expect(states.D32).toBe("out-of-scope");
+    expect(states.D34).toBe("out-of-scope");
     expect(
       Object.entries(states)
         .filter(
@@ -178,7 +179,8 @@ describe("groupResults", () => {
             id !== "D17" &&
             id !== "D18" &&
             id !== "D19" &&
-            id !== "D32",
+            id !== "D32" &&
+            id !== "D34",
         )
         .every(([, state]) => state === "removable"),
     ).toBe(true);

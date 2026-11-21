@@ -63,7 +63,9 @@ unstaged and report it ready; the user decides when it is committed.
   `packages/gmt/src/internal/temporalCompat/README.md`: a repro in `repros.ts` that imports
   only the polyfill, a lazy memoised probe in `capabilities.ts`, dormant when the probe passes,
   computing the spec's answer so removal changes no output, and a removal trigger naming the
-  upstream commit that retires it.
+  upstream commit that retires it. The approach is frozen:
+  [runtime-workarounds.md](../context/coding-standards/runtime-workarounds.md). A fix that
+  cannot follow it stops and goes back to the main session.
 
 ## Performance shape
 

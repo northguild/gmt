@@ -112,6 +112,7 @@ first uses it.
 | 59  | CORE-111 | Core       | Public functions call internal cores,<br>never another public function                                   | —          | #508  | —       | Done    |
 | 60  | CORE-112 | Core       | Some languages' date patterns crash<br>Node and print the wrong year                                     | —          | #524  | —       | Done    |
 | 61  | CORE-113 | Core       | Validators and readers accept text<br>after a valid date or time                                         | —          | #528  | —       | Done    |
+| 62  | CORE-114 | Core       | The same call gives different values<br>on different runtimes                                            | —          | #560  | —       | Done    |
 
 ---
 

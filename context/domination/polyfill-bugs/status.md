@@ -42,6 +42,7 @@ nothing below is released. "Nothing" in the last column means only a release is 
 | `D30`: `islamic` and `islamic-rgsa` resolve as written (§ AG) | None. Chromium 585635918 | Engines that resolve `islamic` to `islamic-tbla` (WebKit 26.6 already does) |
 | `D31`: a coptic year before AM 1 prints `1 − year` and no era (§ AG) | [unicode-org/icu#4081](https://github.com/unicode-org/icu/pull/4081), open, not in ICU 79.1. ICU-23277 (not ours) | An ICU release with ICU-23277 in the engines GMT supports (Firefox 147+ patches its ICU, Bugzilla 2002735) |
 | `D32`: the Islamic era changes in the middle of 1 Muharram of year 1 in WebKit (§ R, § AG) | None. WebKit 331724 | A WebKit that switches the era at the start of the day |
+| `D34`: the Coptic era changes in the middle of 1 Tout AM 1 in WebKit (§ AG) | WebKit/WebKit#81144 | A WebKit that switches the era at the start of the day |
 
 To check, without cloning anything:
 

@@ -379,6 +379,85 @@ export function isIslamicEpochEraCompatNeeded(): boolean {
 }
 
 /**
+ * True when this runtime changes the Coptic era in the middle of 1 Tout AM 1 (defect D34, WebKit
+ * 331724; fixed by WebKit/WebKit#81144).
+ *
+ * Intl era/monthCode Table 2 gives `coptic` one era, `am`, for every year, and 4.1.12 reads the era
+ * from the calendar date, which has no time: every instant of one local day prints one era.
+ * JavaScriptCore compares the instant with a fixed constant (0284-08-29T07:52:58Z), so the first
+ * hours of ISO 0284-08-29 print `Anno Martyrum`. The probe formats ISO 0284-08-29 at 00:00 and
+ * 23:00 UTC with `en-u-ca-coptic`, `{ era: "short", year: "numeric", timeZone: "UTC" }`: both must
+ * print the same era name (digits, signs and spaces taken out).
+ */
+export function isCopticEpochEraCompatNeeded(): boolean {
+  const eraAt = (hour: number): string =>
+    new Intl.DateTimeFormat("en-u-ca-coptic", {
+      era: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .format(
+        Temporal.Instant.from(
+          `0284-08-29T${String(hour).padStart(2, "0")}:00:00Z`,
+        ).epochMilliseconds,
+      )
+      .replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+  return engineDefect("D34", () => eraAt(0) !== eraAt(23));
+}
+
+/**
+ * True when this runtime prints a wrong Chinese or Dangi date for `calendar` (defect D33).
+ *
+ * Intl era/monthCode section 1.1 Table 1 bases `chinese` on Purple Mountain Observatory data and
+ * `dangi` on KASI data. The probe formats UTC-noon instants in `en-u-ca-<calendar>` with numeric
+ * year, month and day and compares the related year (the year part when there is none) and the
+ * day with the Hong Kong Observatory conversion table (computed to GB/T 33661-2017, years 2018,
+ * 2027, 2029 and 2030) for `chinese` and the KASI lunar-solar conversion service for `dangi`;
+ * native Temporal (V8 with ICU4X) gives the same on every row. Month text is left out: ICU 78
+ * prints `6bis` and `Mo12` where older ICU prints `6` and `12`.
+ *
+ * @param calendar the calendar to probe
+ * @returns `true` when any row of that calendar differs
+ *
+ * @example isLunisolarTextCompatNeeded("chinese") // true on Node 22, 24 and 26 (ICU 78.3)
+ * @example isLunisolarTextCompatNeeded("dangi") // false on a host that prints KASI's dates
+ */
+export function isLunisolarTextCompatNeeded(
+  calendar: "chinese" | "dangi",
+): boolean {
+  const rows: readonly (readonly [string, string])[] =
+    calendar === "chinese"
+      ? [
+          ["2027-02-06", "2027|1"],
+          ["2030-02-02", "2029|30"],
+          ["2030-02-03", "2030|1"],
+          ["2018-11-07", "2018|30"],
+        ]
+      : [
+          ["2017-02-26", "2017|1"],
+          ["2027-02-07", "2027|1"],
+        ];
+  return engineDefect(`D33:${calendar}`, () => {
+    const formatter = new Intl.DateTimeFormat(`en-u-ca-${calendar}`, {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+    return rows.some(([iso, expected]) => {
+      const parts = formatter.formatToParts(
+        Temporal.Instant.from(`${iso}T12:00:00Z`).epochMilliseconds,
+      );
+      const value = (type: string): string | undefined =>
+        parts.find((part) => part.type === type)?.value;
+      return (
+        `${value("relatedYear") ?? value("year")}|${value("day")}` !== expected
+      );
+    });
+  });
+}
+
+/**
  * True when this runtime does not pad a Japanese era year under `year: "2-digit"` (defect D27,
  * ICU-23620).
  *

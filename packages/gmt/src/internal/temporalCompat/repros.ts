@@ -9,7 +9,7 @@ import { rangeFieldCases, rangeFieldProblem } from "./rangeFieldRepros";
 /*
  * Every upstream repro for each `@js-temporal/polyfill` defect GMT works around, with the
  * spec-correct answer: the probe groups from `probeRepros.ts` plus the canary-only groups below
- * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D32). No shipped module imports this file: a repro the
+ * (zoned.A, zoned.B, zoned.D, zoned.E, D9, D21 and D23 to D34). No shipped module imports this file: a repro the
  * shipped probes do not read lives here, so it never reaches a bundle. It imports ONLY the
  * polyfill (through `../temporal`) and `probeRepros.ts`, so a canary script can load its compiled copy straight from
  * `dist` and report which workarounds are still needed.
@@ -53,7 +53,10 @@ export type BoundedWorkDefectId = "D9" | "D21";
  * (`formatterCache.ts`): `islamic` and `islamic-rgsa` resolve as Intl era/monthCode says. D31
  * (`copticEra.ts`): the coptic calendar prints `1 - year` and no era before AM 1 (ICU-23277). D32
  * (`islamicEpochEra.ts`): JavaScriptCore changes the Islamic era in the middle of the first day of year 1
- * (WebKit 331724).
+ * (WebKit 331724). D34 (`copticEra.ts`): JavaScriptCore changes the Coptic era in the middle of 1 Tout AM 1
+ * (WebKit 331724). D33
+ * (`lunisolarRefusal.ts`): hosts print different Chinese and Dangi dates, and the dependency reads
+ * them from the host.
  */
 export type CanaryDefectId =
   | "D23"
@@ -65,7 +68,9 @@ export type CanaryDefectId =
   | "D29"
   | "D30"
   | "D31"
-  | "D32";
+  | "D32"
+  | "D33"
+  | "D34";
 
 export interface Repro extends Omit<ProbeRepro, "defect"> {
   defect: DefectId | ZonedDefectId | BoundedWorkDefectId | CanaryDefectId;
@@ -653,6 +658,27 @@ const yearPrintingRepros: readonly Repro[] = [
     },
   },
   {
+    defect: "D34",
+    calendar: "iso8601",
+    name: "copticEraOnEpochDay",
+    expected: "one era",
+    run: () => {
+      const eraAt = (hour: number) =>
+        new Intl.DateTimeFormat("en-u-ca-coptic", {
+          era: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+          .format(
+            Temporal.Instant.from(
+              `0284-08-29T${String(hour).padStart(2, "0")}:00:00Z`,
+            ).epochMilliseconds,
+          )
+          .replace(/[\p{Nd}\p{Pd}\p{Z}−]/gu, "");
+      return eraAt(0) === eraAt(23) ? "one era" : "two eras";
+    },
+  },
+  {
     defect: "D27",
     calendar: "iso8601",
     name: "jaJapaneseTwoDigitEraYear",
@@ -711,12 +737,60 @@ const rangeFieldRepros: readonly Repro[] = rangeFieldCases.map((c) => ({
   run: () => rangeFieldProblem(c.locale, c.options, c.from, c.to),
 }));
 
+/**
+ * D33: known Chinese and Dangi text answers, the host's `Intl.DateTimeFormat` (`relatedYear|day` of a
+ * UTC-noon instant; month text is left out because ICU 78 prints `6bis` and `Mo12` where older ICU
+ * prints `6` and `12`). The values are the Intl era/monthCode proposal's (section 1.1 Table 1:
+ * `chinese` follows Purple Mountain Observatory data, `dangi` Korea Astronomy and Space Science
+ * Institute data). Chinese rows are checked against the Hong Kong Observatory Gregorian-Lunar
+ * Calendar Conversion Table (computed to GB/T 33661-2017), Dangi rows against the KASI lunar-solar
+ * conversion service, and every row against native Temporal (ICU4X). `isLunisolarTextCompatNeeded`
+ * (`capabilities.ts`) reads the same rows.
+ */
+const d33TextRows: readonly [string, string, string, string][] = [
+  ["chineseNewYear2027Text", "chinese", "2027-02-06", "2027|1"],
+  ["chineseLastDay2029Text", "chinese", "2030-02-02", "2029|30"],
+  ["chineseNewYear2030Text", "chinese", "2030-02-03", "2030|1"],
+  ["chineseNinthMonthEnd2018Text", "chinese", "2018-11-07", "2018|30"],
+  ["dangiSecond2017Text", "dangi", "2017-02-26", "2017|1"],
+  ["dangiNewYear2027Text", "dangi", "2027-02-07", "2027|1"],
+];
+
+/** The related year (the year when none is printed) and day of a UTC-noon date in `calendar`. */
+function printedRelatedYearAndDay(calendar: string, iso: string): string {
+  const [year, month, day] = [
+    Number(iso.slice(0, 4)),
+    Number(iso.slice(5, 7)),
+    Number(iso.slice(8, 10)),
+  ];
+  const parts = new Intl.DateTimeFormat(`en-u-ca-${calendar}`, {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    timeZone: "UTC",
+  }).formatToParts(noonMs(year, month, day));
+  const value = (type: string): string | undefined =>
+    parts.find((part) => part.type === type)?.value;
+  return `${value("relatedYear") ?? value("year")}|${value("day")}`;
+}
+
+const d33Repros: readonly Repro[] = [
+  ...d33TextRows.map(([name, calendar, iso, expected]): Repro => ({
+    defect: "D33",
+    calendar,
+    name,
+    expected,
+    run: () => printedRelatedYearAndDay(calendar, iso),
+  })),
+];
+
 export const repros: readonly Repro[] = [
   ...d21Repros,
   ...d23Repros,
   ...d24Repros,
   ...yearPrintingRepros,
   ...rangeFieldRepros,
+  ...d33Repros,
   ...d9Repros,
   ...zonedARepros,
   ...zonedBRepros,

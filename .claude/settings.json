@@ -8,5 +8,20 @@
     "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000",
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
     "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for n in \"$(command -v node)\" \"$HOME/.local/share/fnm/aliases/default/bin/node\" \"$HOME/Library/Application Support/fnm/aliases/default/bin/node\" \"$HOME/.volta/bin/node\" /opt/homebrew/bin/node /usr/local/bin/node; do [ -x \"$n\" ] && exec \"$n\" \"$CLAUDE_PROJECT_DIR/scripts/frozen.mjs\" hook; done; echo 'BLOCKED: the frozen-file guard found no node to run, so the call is blocked.' >&2; exit 2",
+            "timeout": 15,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
   }
 }

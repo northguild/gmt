@@ -164,7 +164,7 @@ export const WORKAROUNDS = [
     title:
       "D13 — two offset changes inside one 14-day transition search step are skipped, or stall the search for ever (zonedWallClock.ts defect 5)",
     trigger:
-      "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (not filed)",
+      "a js-temporal release on which EVERY D13 probe returns the spec value, the stall.* probes within 20,000 offset reads. a79c6a1 (per-zone search windows, on main, in no release) alone is not enough: its 17-day window for Africa/El_Aaiun holds three offsets in April 1976, so stall.nextElAaiun fails there (tc39/proposal-temporal#3332). The pairs that 0.5.1 skips inside one 14-day step (America/Boa_Vista, Europe/Riga) need no report: a79c6a1 fixes them.",
     steps: [
       "Delete internal/zonedTransitionSearch.ts (its per-zone transition memo goes with it) and the isTransitionSearchCompatNeeded branches of zonedNextTransition and zonedPreviousTransition in internal/zonedWallClockOperations.ts; they return the polyfill path, filtered by the caller's limit.",
       "Delete isMidnightSkipped, the D13 terms of needsOwnStartOfDaySearch and needsOwnDayBoundsSearch in internal/zonedWallClock.ts, isTransitionSearchCompatNeeded in capabilities.ts and its export in index.ts, and the D13 repros with withBoundedOffsetReads.",
@@ -396,6 +396,33 @@ export const WORKAROUNDS = [
       "Delete internal/islamicEpochEra.ts, its call in construct (formatterCache.ts), its call in localFieldsOf (rangeFieldValues.ts), isIslamicEpochEraCompatNeeded in capabilities.ts and the D32 repro in repros.ts.",
       "Keep every row of islamicEpochEra.test.ts: the epoch day and the era are Intl era/monthCode Table 2's and hold either way.",
       `Full wording: ${COMPAT_README} § Removal steps 32.`,
+    ],
+  },
+  {
+    defects: ["D33"],
+    // Every engine: the defect is host disagreement, so one engine passing proves nothing.
+    title:
+      "D33 — Chinese and Dangi dates differ by host; a runtime whose probe fails returns the sentinel for a chinese or dangi date format (internal/lunisolarRefusal.ts)",
+    trigger:
+      "every engine's compat verdict (Node, chromium, firefox, webkit, webkit-macos) passes every D33 text repro: the host's Intl.DateTimeFormat gives the Purple Mountain Observatory and KASI dates, so 2027-02-06 is the Chinese New Year and 2027-02-07 the Dangi one on every host (Intl era/monthCode §1.1 Table 1)",
+    steps: [
+      "Delete isLunisolarTextCompatNeeded in capabilities.ts, internal/lunisolarRefusal.ts, internal/printsDateField.ts, refuseDates and the !dates cache-key suffix, test/lunisolarGuarded.ts and the D33 repros in repros.ts; rows then read host text.",
+      "Adding chinese and dangi to CalendarSystem is a separate, later minor.",
+      `Full wording: ${COMPAT_README} § Removal steps 33.`,
+    ],
+  },
+  {
+    defects: ["D34"],
+    // JavaScriptCore only: on any other engine the probe passes because the defect is not there.
+    engines: ["webkit"],
+    title:
+      "D34 — the Coptic era changes in the middle of 1 Tout AM 1 (internal/copticEra.ts)",
+    trigger:
+      "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D34 repro: en-u-ca-coptic prints the same era at the first and the last hour of ISO 0284-08-29 in UTC (WebKit/WebKit#81144, bug 331724)",
+    steps: [
+      "Delete isCopticEpochEraCompatNeeded in capabilities.ts, its term in repairCopticEra's activation and atRisk (copticEra.ts), copticEpochTwin, copticFieldTwin and its call in localFieldsOf (rangeFieldValues.ts), and the D34 repro in repros.ts.",
+      "Keep every D34 row of copticEra.test.ts: the era is Intl era/monthCode Table 2's and holds either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 34.`,
     ],
   },
   {

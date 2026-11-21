@@ -249,6 +249,74 @@ describe("D32: 1 Muharram of year 1 prints year 1 in the era AH", () => {
   });
 });
 
+// JavaScriptCore compares the instant, not the date, so in a fixed offset east of +16:07:02 local
+// 2 Muharram of year 1 is still before the engine's switch instant. The era is `ah` for every date
+// of year 1 (Intl era/monthCode Table 2, 4.1.12).
+describe("D32: the second day of year 1 prints year 1 in the era AH in a zone far east", () => {
+  const long = {
+    era: "short",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  } as const;
+
+  it.each`
+    calendar              | wallClock                | offset
+    ${"islamic-civil"}    | ${"0622-07-20T00:30:00"} | ${"+20:00"}
+    ${"islamic-civil"}    | ${"0622-07-20T00:30:00"} | ${"+23:59"}
+    ${"islamic-umalqura"} | ${"0622-07-20T00:30:00"} | ${"+20:00"}
+    ${"islamic-tbla"}     | ${"0622-07-19T00:30:00"} | ${"+20:00"}
+    ${"islamic-tbla"}     | ${"0622-07-19T00:30:00"} | ${"+23:59"}
+  `(
+    "formatZonedDateTime of '$calendar' prints Muharram 2, 1 and the era AH for local $wallClock at $offset",
+    ({ calendar, wallClock, offset }) => {
+      const locale = `en-u-ca-${calendar}`;
+      expect(
+        formatZonedDateTime(`${wallClock}${offset}[${offset}]`, locale, long),
+      ).toBe(`Muharram 2, 1 ${modernEra(locale)}`);
+    },
+  );
+
+  // The mirror guard: two days before the Hijra in the far west is year 0 on every host, the same
+  // text UTC prints for that date.
+  it.each`
+    calendar              | wallClock
+    ${"islamic-civil"}    | ${"0622-07-17T23:00:00"}
+    ${"islamic-tbla"}     | ${"0622-07-16T23:00:00"}
+    ${"islamic-umalqura"} | ${"0622-07-17T23:00:00"}
+  `(
+    "formatZonedDateTime of '$calendar' at -23:59 prints what UTC prints for local $wallClock",
+    ({ calendar, wallClock }) => {
+      const locale = `en-u-ca-${calendar}`;
+      expect(
+        formatZonedDateTime(`${wallClock}-23:59[-23:59]`, locale, long),
+      ).toBe(formatZonedDateTime(`${wallClock}+00:00[UTC]`, locale, long));
+    },
+  );
+
+  it.each`
+    calendar              | offset
+    ${"islamic-civil"}    | ${"+20:00"}
+    ${"islamic-civil"}    | ${"+23:59"}
+    ${"islamic-tbla"}     | ${"+20:00"}
+    ${"islamic-umalqura"} | ${"+23:59"}
+  `(
+    "formatZonedRange of '$calendar' from year 1 day 2 to day 4 at $offset prints what UTC prints for the same dates",
+    ({ calendar, offset }) => {
+      const locale = `en-u-ca-${calendar}`;
+      const day = (n: number): string => `0622-07-${19 + n}`;
+      const range = (suffix: string): string =>
+        formatZonedRange(
+          `${day(calendar === "islamic-tbla" ? 0 : 1)}T00:30:00${suffix}`,
+          `${day(calendar === "islamic-tbla" ? 2 : 3)}T20:00:00${suffix}`,
+          locale,
+          fields,
+        );
+      expect(range(`${offset}[${offset}]`)).toBe(range("+00:00[UTC]"));
+    },
+  );
+});
+
 describe("D32: ranges on and around the first day of year 1", () => {
   const years = (text: string): string[] => text.match(/\d+/g) ?? [];
 

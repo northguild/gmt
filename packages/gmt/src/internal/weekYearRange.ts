@@ -6,6 +6,7 @@ import {
   digitRuns as textDigitRuns,
   digitsOf,
   referenceFor,
+  withoutYear,
 } from "./weekYearText";
 
 /*
@@ -258,8 +259,13 @@ function eraText(ms: number, env: Env): string {
   return text;
 }
 
-const maskEra = (text: string): string =>
-  [...text].filter((c) => !ANY_DIGIT.test(c) && !isSignish(c)).join("");
+/**
+ * The era in an era-and-year text: the year and any sign removed. A digit inside a word stays, as
+ * it is part of the era's name (UTS #35 Part 4 §8, `G`), so the placeholder eras `ERA0` and `ERA1`
+ * that ICU data without coptic or ethiopic era names prints are two eras, not one.
+ */
+const maskEra = (text: string, env: Env): string =>
+  [...withoutYear(text, env.digits)].filter((c) => !isSignish(c)).join("");
 
 /** ICU's calendar year at `ms`, the source the single repair uses. */
 function refYear(ms: number, env: Env): RefYear {
@@ -1168,7 +1174,9 @@ function earlierEraProbes(
       continue;
     }
     const start = atDate(earlier, env);
-    if (maskEra(eraText(start, env)) === maskEra(eraText(here, env))) {
+    if (
+      maskEra(eraText(start, env), env) === maskEra(eraText(here, env), env)
+    ) {
       continue;
     }
     const across = picked.flatMap((key): Probe[] => {

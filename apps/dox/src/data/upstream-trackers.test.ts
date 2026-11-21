@@ -2,6 +2,7 @@ import * as gmt from "@northguild/gmt";
 import {
   bugzillaBugUrl,
   bugzillaCommentsUrl,
+  bugzillaHistoryUrl,
   chromiumIssueUrl,
   identityOf,
   isJiraKey,
@@ -177,6 +178,19 @@ describe("Jira", () => {
     });
   });
 
+  it("drops the white space a pasted summary carries around its title", () => {
+    const parsed = parseJira(
+      jiraIssue({
+        summary: "Bangladesh (BD) weekend should be Friday–Saturday\n",
+      }),
+      "ICU-23609",
+      days,
+    );
+    expect(parsed.title).toBe(
+      "Bangladesh (BD) weekend should be Friday–Saturday",
+    );
+  });
+
   it("refuses a response for another issue or of another shape", () => {
     expect(() => parseJira(jiraIssue(), "ICU-1", days)).toThrow(/unexpected/);
     expect(() => parseJira("{}", "ICU-23609", days)).toThrow(/unexpected/);
@@ -275,6 +289,9 @@ describe("Bugzilla", () => {
     expect(bugzillaCommentsUrl("bugzilla.mozilla.org", 2085525)).toBe(
       "https://bugzilla.mozilla.org/rest/bug/2085525/comment",
     );
+    expect(bugzillaHistoryUrl("bugs.webkit.org", 221878)).toBe(
+      "https://bugs.webkit.org/rest/bug/221878/history",
+    );
   });
 
   it("does not count the description, and counts replies by others as maintainers'", () => {
@@ -321,6 +338,63 @@ describe("Bugzilla", () => {
       closedAt: "2026-11-12",
       comments: 0,
     });
+  });
+
+  it("reads the closing day from the history when the host does not send cf_last_resolved", () => {
+    const history = JSON.stringify({
+      bugs: [
+        {
+          id: 330688,
+          history: [
+            {
+              when: "2021-03-30T23:25:10Z",
+              changes: [
+                { field_name: "status", removed: "NEW", added: "RESOLVED" },
+              ],
+            },
+            {
+              when: "2026-11-20T10:08:17Z",
+              changes: [{ field_name: "cc", removed: "", added: "someone" }],
+            },
+          ],
+        },
+      ],
+    });
+    const parsed = parseBugzilla(
+      bugzillaBug({
+        status: "RESOLVED",
+        resolution: "WONTFIX",
+        is_open: false,
+        last_change_time: "2026-11-20T10:08:17Z",
+      }),
+      bugzillaComments(["owner@example.test"]),
+      "bugs.webkit.org",
+      330688,
+      days,
+      { history },
+    );
+    expect(parsed).toMatchObject({
+      closedAt: "2021-03-30",
+      updatedAt: "2026-11-20",
+    });
+  });
+
+  it("on a bug someone else reported, counts every reply but ours as a maintainer's", () => {
+    const parsed = parseBugzilla(
+      bugzillaBug({ creator: "reporter@example.test" }),
+      bugzillaComments([
+        "reporter@example.test",
+        "reporter@example.test",
+        "us@example.test",
+        "triager@example.test",
+        "reporter@example.test",
+      ]),
+      "bugs.webkit.org",
+      330688,
+      days,
+      { ourComment: 2 },
+    );
+    expect(parsed).toMatchObject({ comments: 4, maintainerComments: 3 });
   });
 
   it("refuses a response for another bug", () => {

@@ -30,6 +30,7 @@
  * marks a check only CI runs.
  */
 export const CHECKS = [
+  { id: "frozen", run: "node scripts/frozen.mjs check" },
   { id: "format", run: "pnpm exec oxfmt --check" },
   { id: "deps", run: "node scripts/deps.mjs check" },
   { id: "markers", run: "node scripts/test-markers.mjs check" },
@@ -217,6 +218,13 @@ export const RULES = [
   { test: /^apps\/LICENSE$/, checks: ["licences"], listed: ["markers"] },
   { test: /^(?:[^/]+\/)?LICENSE$/, checks: ["licences"] },
   { test: /^packages\/[^/]+\/LICENSE$/, checks: ["licences"], listed: ALL },
+
+  // The frozen files, their guard and the settings that load its hook. CI runs the frozen check on
+  // every change as well, in the always-run job that decides the checks.
+  {
+    test: /^(?:context\/coding-standards\/runtime-workarounds\.md|scripts\/frozen\.mjs|\.claude\/settings(?:\.local)?\.json)$/,
+    checks: ["frozen", ...SCRIPT_TESTS],
+  },
 
   // Notes for people and agents, and the changesets (CI checks those on every run).
   {

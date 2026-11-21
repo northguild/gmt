@@ -237,6 +237,9 @@ function zonedRangeText(
  *   otherwise), and no-break, narrow and thin spaces become U+0020.
  * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it (a string or number
  *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
+ * - On a runtime whose D33 probe fails, a `chinese` or `dangi` calendar returns `""` for any
+ *   format with a year, month, day or era (compat D33). A format with only a time or weekday field
+ *   still returns its text.
  *
  * @param from zoned ISO 8601 datetime string (range start)
  * @param to zoned ISO 8601 datetime string (range end)

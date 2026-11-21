@@ -6,6 +6,7 @@
  * Shared by D25 (`yearPrintingRange.ts`) and D29 (`rangeFields.ts`); imports nothing from either.
  */
 
+import { copticFieldTwin } from "./copticEra";
 import { epochTwin } from "./islamicEpochEra";
 
 /** At most this many cached readers; past it the map clears (a cost of one rebuild each). */
@@ -60,13 +61,20 @@ export function localFieldsOf(
   }
   // D32: an islamic date on the epoch day or the day before is read at its twin, so its era is the
   // true one and its year is year 1 (era year 1 of `bh` is year 0).
-  const twin = epochTwin(ms, resolved.calendar, resolved.timeZone);
+  // D34: a coptic date on 1 Tout AM 1 is read at its twin the same way, so its era is `am`.
+  // D31: so is a coptic date of year 0 or earlier, whose era a defective engine names wrongly.
+  const islamic = epochTwin(ms, resolved.calendar, resolved.timeZone);
+  const coptic =
+    islamic === null && resolved.calendar === "coptic"
+      ? copticFieldTwin(ms, resolved.timeZone)
+      : null;
+  const twin = islamic ?? coptic;
   const fields: Record<string, string> = {};
   for (const part of reader.formatToParts(twin === null ? ms : twin.ms)) {
     fields[part.type] = (fields[part.type] ?? "") + part.value;
   }
   if (twin !== null) {
-    fields["year"] = "1";
+    fields["year"] = String(coptic === null ? 1 : coptic.year);
   }
   return fields;
 }
