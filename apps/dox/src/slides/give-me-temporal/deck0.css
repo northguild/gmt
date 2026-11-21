@@ -34,9 +34,22 @@
   font-weight: 600;
 }
 
+/* The measured count of wrong answers: the experiment slides' danger colour, kept on one line. */
+.gmt-wall-caption-wrong {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gmt-wall-caption-wrong-count {
+  color: var(--gmt-danger-ink);
+  font-family: var(--gmt-font-mono);
+  font-weight: 700;
+}
+
 /*
  * On the stage the canvas shows the page, so the image stays for assistive technology only. The
- * figures are a grid of three columns by two rows in the left two thirds, each box exactly where
+ * figures are a grid of three columns, filled row by row (five panes make two rows), in the left two thirds, each box exactly where
  * `paneLayout` (`lib/slides/ice-wall/frame.ts`) draws its pane: from 6 in to 64 across, 12 down,
  * 1.2 apart. The caption sits on its pane's lower edge, on an opaque plate with a full bevelled
  * border and a bottom accent edge, so the right third stays clear for the clock.

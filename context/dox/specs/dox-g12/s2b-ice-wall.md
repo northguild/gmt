@@ -5,9 +5,10 @@
 
 ## Goal
 
-The talk's spine in one move. On `one-clock` a wall of six captured landing pages (Moment.js,
-Luxon, date-fns, Day.js, Spacetime, @internationalized/date), each as captured, hangs in a three by two
-grid in the left two thirds, with the clock in the right third. Stepping to `temporal` breaks it: the
+The talk's spine in one move. On `one-clock` a wall of five captured landing pages (Moment.js,
+Luxon, date-fns, Day.js, Spacetime), the Date-based libraries, each as captured, hangs in a grid of three
+columns filled row by row (three, then two) in the left two thirds, each caption carrying that library's
+measured wrong count, with the clock in the right third. Stepping to `temporal` breaks it: the
 panes shatter into ice shards, and twelve of them fly out and settle as clock pins on twelve zones, while
 as the last of them fade the clock behind shatters and the Earth comes up where it stood, and the Earth turns once beneath,
 every pin labelled with its local time. One clock becomes the whole planet. The wall is
@@ -22,14 +23,14 @@ CI; its output is committed, like `hero-sky.bin`. The deck lists its panes in
 deck's pages.
 
 - Deck 0's entries, in wall order: `momentjs.com`, `moment.github.io/luxon/#/`, `date-fns.org`,
-  `day.js.org`, `spacetime.how`, `react-aria.adobe.com/internationalized/date/`. Each has a `clip` rectangle the owner sets so the site's clock emblem sits inside
+  `day.js.org`, `spacetime.how`. Each has a `clip` rectangle the owner sets so the site's clock emblem sits inside
   the frame. Playwright Chromium at 1280×800, DPR 1, `prefers-color-scheme` left as the site serves.
 - `sharp` writes `public/slides/give-me-temporal/wall/<id>.webp` at 1024×640, quality 80 (budget
   ≤ 90 kB each). `src/slides/give-me-temporal/wall.json` gets `{ id, title, url, capturedAt,
 image, clock }`: `title` from the page's `<title>`, `capturedAt` an instant from gmt
   `getUtcNow` (`@northguild/gmt/utc/get`), `clock` the owner's yes or no after looking at the
   frame. Nothing in the JSON is typed by hand except `clock`.
-- **No clock:** if a captured page shows no clock in its mark (Spacetime and @internationalized/date show none), the pane still hangs in the wall with
+- **No clock:** if a captured page shows no clock in its mark (Spacetime shows none), the pane still hangs in the wall with
   `clock: false`, and the notes speak of the clocks on the others. The script never draws a
   clock onto a capture.
 - A test (`wall.test.ts`) reads `wall.json`: every image exists and is within budget, every
@@ -63,7 +64,7 @@ the globe's own lens. Nothing else in the engine changes for this slice.
   `t`, a replay is exact and a reset is `t0 = null`.
 - `wall.ts`: `mountIceWall(layer, { engine, panes, signal })` returns `{ setDepth(z), breakAll(now),
 breakAt(x, y, now), reset(), destroy() }`. `onState` reports `whole`, `approach`,
-  `breaking`, `gone` or `hidden`. The wall sits in camera space, six 16:10 panes in a three by two grid
+  `breaking`, `gone` or `hidden`. The wall sits in camera space, five 16:10 panes in three columns, filled row by row
   (6 to 64 across, 12 down, gap 1.2, in stage-width percent), perpendicular to the view axis, the right
   third left clear for the clock; it never moves with a globe hop.
 - **WebGPU** when the globe runs on WebGPU: one pipeline drawing instanced thin prisms, the pane's
@@ -95,7 +96,7 @@ breakAt(x, y, now), reset(), destroy() }`. `onState` reports `whole`, `approach`
 `PLANET_ZONES` in `places.ts`: the matrix zones read from `zone-matrix.json`
 ([slice 4c](./s4c-zone-matrix.md)) except `UTC`, which has no place, plus Helsinki, Madrid,
 Lagos, Nairobi, Tehran, Tokyo, Manila, São Paulo and Mexico City, so the pins circle the planet
-and the experiment slides after it reuse the same pins (a test holds every zone in `TZ_COORDINATES`). The
+and the slides after it reuse the same pins (a test holds every zone in `TZ_COORDINATES`). The
 twelve-zone view centres the camera so twelve sit on the visible side.
 
 - Twelve shards, the three largest of each pane, turn at 500 ms from ballistic flight onto a
@@ -133,7 +134,7 @@ reduced motion: the text shows at once.
 
 ## Definition of done
 
-- `one-clock` shows six captioned panes (three by two in the left two thirds, each caption on its own pane;
+- `one-clock` shows five captioned panes (three columns, filled row by row, in the left two thirds, each caption on its own pane and ending "N wrong of 2,944";
   the clocks in view where a page has one); `temporal` breaks them on the clicker, and the pins settle
   with local times on both renderers.
 - Back and forward replay the shatter exactly; deep links land in the right state.

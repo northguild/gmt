@@ -6,9 +6,13 @@
  * hangs there too. Each caption says what the pane is: the library's name, the address and the
  * date of the capture. The page's own `<title>` is read to screen readers only: shown, the longer
  * ones wrapped and covered most of their pane.
+ * Each caption also says how many answers the library got wrong in the four zone experiments
+ * (`data/zone-probe.json`, read by the wall id, which is the probe's library id): a measured count,
+ * in the danger colour, and no judgement. A pane the probe does not know fails the build.
  * A library's mark appears only inside its captured snapshot; no text here judges a library.
  */
 import { formatUtc } from "@northguild/gmt/utc/format";
+import { libraryTotals } from "~/data/zone-probe";
 import { withBase } from "~/lib/site";
 import { WALL_PAGES } from "~/slides/give-me-temporal/wall";
 
@@ -19,6 +23,12 @@ const { images = false } = Astro.props;
 
 const day = (iso: string): string =>
   formatUtc(iso, "en-GB", { dateStyle: "long", timeZone: "UTC" }) || iso.slice(0, 10);
+const totals = new Map(libraryTotals().map((t) => [t.id, t]));
+const totalOf = (id: string) => {
+  const total = totals.get(id);
+  if (!total) throw new Error(`WallFigures: the zone probe has no library "${id}"`);
+  return total;
+};
 const host = (url: string): string => new URL(url).host;
 ---
 
@@ -44,6 +54,9 @@ const host = (url: string): string => new URL(url).host;
         <figcaption class="gmt-wall-caption">
           <span class="gmt-wall-caption-name">{page.name}</span>
           {page.title !== page.name && <span class="gmt-sr-only">: {page.title}.</span>}
+          <span class="gmt-wall-caption-wrong">
+            <span class="gmt-wall-caption-wrong-count">{totalOf(page.id).wrong.toLocaleString("en")}</span> wrong of {totalOf(page.id).total.toLocaleString("en")}
+          </span>
           <span class="gmt-wall-caption-meta">
             {page.placeholder ? "Placeholder, capture pending. " : ""}{host(page.url)}, captured <time datetime={page.capturedAt}>{day(page.capturedAt)}</time>
           </span>

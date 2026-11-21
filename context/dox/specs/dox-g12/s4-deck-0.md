@@ -8,21 +8,25 @@ New pieces and the builder phases: [slice 7](./s7-running-question.md).
 
 ## Goal
 
-The 25 slides and the spare of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`,
+The 28 slides and the spare of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`,
 using slice 1's components, slice 2's places, slice 2b's wall and slice 3's notes. Every bug on
 stage is a real filing read from `upstream-filings.json`; every gmt result is computed by gmt at
-build time; every count is derived. The talk runs 20 minutes; `qa` holds 5 of questions.
+build time; every count is derived. The talk runs 21.5 minutes; `qa` holds 5 of questions.
+
+The deck says a library is wrong with a measured count, never an adjective: a number from the zone
+probe (`zone-probe.json`), the calendar probe (`intl-date-calendars.json`) or our own filings. Bugs
+in a competing library are shown from our own probe and are never filed upstream.
 
 ## Registry entry
 
 `src/slides/decks.ts` holds `{ slug: "give-me-temporal", label: "Deck 0", title: "Give Me
-Temporal", event: "HelsinkiJS", start: "2026-12-16T18:00:00+02:00[Europe/Helsinki]", minutes: 20,
+Temporal", event: "HelsinkiJS", start: "2026-12-16T18:00:00+02:00[Europe/Helsinki]", minutes: 21.5,
 qa: 5, zone: "Europe/Helsinki", locale: "fi" }`. The index page and the title slide render the
 date with gmt from `start` and `zone`; a `null` start reads "Date to be announced".
 
 ## Slides
 
-The outline, places and minutes are in [the index](./index.md#deck-0-outline-20-minutes). Every
+The outline, places and minutes are in [the index](./index.md#deck-0-outline-215-minutes). Every
 slide has `<Notes>` in plain English for the owner's review. Examples use Helsinki, Tokyo and other
 places; no national default, no law, no business wording, no text that judges a library.
 
@@ -39,6 +43,17 @@ places; no national default, no law, no business wording, no text that judges a 
 - **`agents`** ("What the agents returned"): `AgentTable`, one row per answer in file order: the
   model, the code's line count and imported libraries, the value on Node 26 in Helsinki, and the
   distinct values across its runs. An answer not ready fills its row with the marked cell.
+- **`moment`** ("Agents learned from Moment"): agents are trained on Moment.js, whose own maintainers
+  call it legacy. Two quotes, verbatim from https://momentjs.com/news/ and linked to it: "Moment.js
+  maintainers, 2020" ("In most cases, you should not choose Moment for new projects.") and "Moment.js
+  maintainers, 17 August 2026" ("Weekly downloads have more than tripled since our previous update."
+  and "we believe most of this new growth is connected to agentic use"). Under them, `BarRows` (the
+  neutral tone) of Moment's npm downloads per calendar year from 2019, the running year marked "so
+  far", rounded to whole millions and then billions (`moment.ts`) from `moment-downloads.json`, which
+  `scripts/zone-matrix/npm-downloads.mjs` writes with the source and the capture date. The closing
+  line: "Agents write the library its own maintainers call legacy, and it keeps a Date inside." Same
+  place and clock as `agents`. Notes say the agents in the table did not import Moment; the slide is
+  about what agents are trained on.
 - **`date`** ("Date only knows this machine"): the venue's clock still shows, and nothing animates. The
   first row is the agents' question asked of `Date` (`AGENTS_FAULT` in `content.ts`): it knows only
   the machine's clock, which is why the agents failed. Two of the home page's rows from `dateFaults`
@@ -54,15 +69,30 @@ places; no national default, no law, no business wording, no text that judges a 
   version, then GMT's run of `GMT_CALLS.kinds`. `kinds.ts` builds the grid once;
   `content.test.ts` fails while a run record is stale. Notes end: "Every library that keeps a Date
   inside inherits this grid."
+- **`stand-ins`** ("Until Temporal is everywhere"): on the Earth, right after `temporal`. Three
+  `gmt-deck-panel` columns and a closing line, every number derived (`stand-ins.ts`).
+  `@internationalized/date`: "Its own classes, shaped like Temporal's", then the Persian, Japanese
+  and Chinese faults from `intl-date-calendars.json` (`scripts/zone-matrix/intl-date-calendars.mjs`,
+  run on Node 26 against native Temporal; our own probe, never filed). `temporal-polyfill` and
+  `@js-temporal/polyfill`: "The standard's API", with the reports and fixes counted from our filings
+  (a fix we sent is a PR from us, never a contributor's). Closing line: all three pass the four zone
+  experiments, calendars are where they break. The slide never says "reinventing the wheel"; the
+  speaker may.
+- **`experiments`, then `gaps`, `overlaps`, `host`, `odd`**: `ExperimentOpener` and
+  `ExperimentSlide`, read from `zone-probe.json`; GMT stays in the list, its zero in green. They
+  follow `kinds` and come before the wall, on the venue's zone (Helsinki) with the plain clock, and
+  draw their bars with the shared `BarRows`.
 - **`one-clock`** ("The web shows one clock"): the ice wall ([slice 2b](./s2b-ice-wall.md)).
   Notes: "Each of these sites shows one clock. That is the view most date code takes, and the view
-  the agents took: one place, one local time. Hold that." The wall breaks as the talk steps on.
+  the agents took: one place, one local time. Hold that." The wall shows the five Date-based
+  libraries (Moment.js, Luxon, date-fns, Day.js, Spacetime), and each caption reads "N wrong of
+  2,944", that library's total over the four experiments (`libraryTotals` in `data/zone-probe.ts`).
+  The wall breaks as the talk steps on.
 - **`temporal`** ("Give me Temporal"): the wall breaks, then the clock behind it shatters into the
   Earth as the wall's last shards fade. The text: "One clock against the whole planet. Temporal lets your code tell the time anywhere
   on Earth: you pass in the place, and it works out the rest." No bug counts and no GMT; those
   belong to `guards`.
-- **`experiments`, then `gaps`, `overlaps`, `host`, `odd`**: `ExperimentOpener` and
-  `ExperimentSlide`, read from `zone-probe.json`; GMT stays in the list, its zero in green.
+
 - **Bug slides**: the visuals and receipts of [slice 6](./s6-time-not-camera.md#a-visual-per-bug),
   then one last build with `GmtStep` ([slice 7](./s7-running-question.md#the-gmt-step-on-each-bug-slide)).
   Each call below was run on Node 26 (ICU 78.3) with these results; a slide's calls share one `GmtRun`:
@@ -150,7 +180,7 @@ bottom edge only. No left-only stripe on any card, step, pair or code block.
 - `scripts/slides-built.test.ts` reads every registered deck as built through `distDirOrSkip()`:
   ids unique, spares last and without minutes, main minutes sum to the registry's `minutes` plus
   `qa`, every slide has notes. `src/slides/give-me-temporal/built.test.ts` holds Deck 0's own:
-  the outline order, six wall figures with captions, and `date`'s table opening on the agents'
+  the outline order, five wall figures with captions and their measured counts, the stand-ins and the `moment` slide's content, and `date`'s table opening on the agents'
   question with no wall figures.
 - A place, reveal zone or lapse a slide names that the deck's stage data lacks fails the build
   (`checkStageNames` in `Slide.astro` and `Build.astro`).

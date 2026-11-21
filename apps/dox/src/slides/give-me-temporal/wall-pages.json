@@ -28,11 +28,5 @@
     "label": "Spacetime",
     "url": "https://spacetime.how/",
     "clock": false
-  },
-  {
-    "id": "internationalized-date",
-    "label": "@internationalized/date",
-    "url": "https://react-aria.adobe.com/internationalized/date/",
-    "clock": false
   }
 ]

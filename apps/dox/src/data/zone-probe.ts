@@ -176,3 +176,29 @@ export function probeFootnote(record: ProbeRecord = zoneProbe): string {
   const { polyfill, native, tzdata } = record.answeredBy;
   return `Run ${record.runDate}. Right answers: Temporal specification, checked on @js-temporal/polyfill ${polyfill} and Node ${native}, tz data ${tzdata}. Tested: ${versions}.`;
 }
+
+/** One library's wrong answers over every experiment, out of every case it was fed. */
+interface LibraryTotal {
+  id: string;
+  name: string;
+  wrong: number;
+  total: number;
+}
+
+/** Every library's totals across the experiments, in the record's order. Nothing is stored: sums. */
+export function libraryTotals(record: ProbeRecord = zoneProbe): LibraryTotal[] {
+  return record.libraries.map((library) => {
+    const rows = record.experiments.map((e) => {
+      const row = e.perLibrary.find((r) => r.library === library.id);
+      if (!row)
+        throw new Error(`zone-probe: ${e.id} has no result for ${library.id}`);
+      return row;
+    });
+    return {
+      id: library.id,
+      name: library.name,
+      wrong: rows.reduce((sum, r) => sum + r.wrong, 0),
+      total: rows.reduce((sum, r) => sum + r.total, 0),
+    };
+  });
+}

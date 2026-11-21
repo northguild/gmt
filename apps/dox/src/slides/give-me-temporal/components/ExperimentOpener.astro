@@ -12,15 +12,15 @@ interface Props {
   id?: string;
   minutes: number;
   place?: string;
-  spin?: boolean;
+  plainClock?: boolean;
 }
 
-const { id = "experiments", minutes, place, spin } = Astro.props;
+const { id = "experiments", minutes, place, plainClock } = Astro.props;
 const cases = zoneProbe.experiments.reduce((sum, e) => sum + e.cases, 0);
 const libraries = zoneProbe.libraries.length;
 ---
 
-<Slide id={id} title="Experiments: we fed every library the same inputs" minutes={minutes} place={place} spin={spin}>
+<Slide id={id} title="Experiments: we fed every library the same inputs" minutes={minutes} place={place} plainClock={plainClock}>
   <p class="gmt-exp-fed">
     {zoneProbe.experiments.length} questions, {cases.toLocaleString("en")} inputs, {libraries} libraries,
     each run on a machine set to {zoneProbe.zones.length} different time zones. The right answers

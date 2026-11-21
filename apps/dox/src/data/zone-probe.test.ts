@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertRecord,
   experimentViews,
+  libraryTotals,
   probeFootnote,
   zoneProbe,
   type ProbeRecord,
@@ -82,5 +83,23 @@ describe("assertRecord", () => {
     const missing = clone();
     missing.experiments[0]!.perLibrary.pop();
     expect(() => assertRecord(missing)).toThrow(/no result/);
+  });
+});
+
+describe("the library totals", () => {
+  it("add every experiment's wrong count and cases, and keep GMT at zero", () => {
+    const totals = libraryTotals();
+    const cases = zoneProbe.experiments.reduce((sum, e) => sum + e.cases, 0);
+    expect(totals.map((t) => t.id)).toEqual(
+      zoneProbe.libraries.map((l) => l.id),
+    );
+    for (const t of totals) {
+      expect(t.total).toBe(cases);
+      const byExperiment = experimentViews().map(
+        (v) => v.rows.find((r) => r.id === t.id)!.wrong,
+      );
+      expect(t.wrong).toBe(byExperiment.reduce((a, b) => a + b, 0));
+    }
+    expect(totals.find((t) => t.id === "gmt")?.wrong).toBe(0);
   });
 });

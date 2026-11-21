@@ -1,12 +1,16 @@
 ---
 /**
- * Deck 0, "Give Me Temporal": the 25 slides of the HelsinkiJS talk and its spare, in the outline's order
+ * Deck 0, "Give Me Temporal": the 28 slides of the HelsinkiJS talk and its spare, in the outline's order
  * (`context/dox/specs/dox-g12/index.md`). Every bug on a slide is a filing read from
  * `upstream-filings.json`, every gmt result is computed by gmt at build time, and every count is
  * derived; the filing slides' wording lives in `content.ts`. Places are IANA zones or the stage's
  * keywords (`lib/slides/places.ts`); the venue's clock stands in the Earth's place until the talk
  * steps from the ice wall on `one-clock` to `temporal`: the wall breaks, and the clock shatters into
- * the Earth in the same right-third spot.
+ * the Earth in the same right-third spot. So the four zone experiments, which come after `kinds`
+ * and before the wall, sit on the venue's zone with the plain clock; the wall's panes are the five
+ * Date-based libraries, each with its measured total from the same experiments. `stand-ins` follows
+ * `temporal` on the Earth: the three libraries that stand in for Temporal, from our own probe and
+ * filings. `moment` follows `agents`: the maintainers' own words and npm's yearly download counts.
  *
  * The running question's answers are the owner's transcript (`quotes/agent-answer.json`), each with
  * the value from running its code (`quotes/agent-run.json`): `agent-answer` quotes the one the
@@ -51,6 +55,8 @@ import Swap from "~/components/slides/Swap.astro";
 import Visual from "~/components/slides/Visual.astro";
 import DeckTable from "~/components/slides/DeckTable.astro";
 import TalkSchedule from "~/components/slides/TalkSchedule.astro";
+import MomentSlide from "./components/MomentSlide.astro";
+import StandIns from "./components/StandIns.astro";
 import WallFigures from "./components/WallFigures.astro";
 import { dateFaults } from "~/data/date-faults";
 import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "~/lib/bundle-size";
@@ -161,6 +167,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
+  <Slide id="moment" title="Agents learned from Moment" minutes={0.75} place="Europe/Helsinki" layout="moment">
+    <MomentSlide />
+    <Notes>
+      <p>The agents in the table did not import Moment. This slide is about what agents are trained on: Moment.js is everywhere in the code they learned from.</p>
+      <p>Its own maintainers call it legacy and say not to choose it for new projects. Its downloads have tripled, and they put the growth down to agentic use. Read their words and npm's counts; nothing else on the slide is opinion.</p>
+    </Notes>
+  </Slide>
+
   <Slide id="date" title="Date only knows this machine" minutes={0.5} place="Europe/Helsinki" plainClock>
     <DeckTable caption="What Date gives, and why" columns={["Code", "Result", "Why"]} layout="code">
       {dateRows.map((f) => (
@@ -200,10 +214,42 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
+  <ExperimentOpener place="Europe/Helsinki" minutes={0.5} plainClock>
+    <Notes>
+      <p>We stop reading other people's tests and run our own experiments: the same inputs into every library, with the right answer from the standard.</p>
+      <p>Four questions, every library, ten machines set to ten zones. Each bar is a count of wrong answers; read the counts, not the names. The wall that follows carries each library's total.</p>
+    </Notes>
+  </ExperimentOpener>
+
+  <ExperimentSlide experiment="gaps" place="Europe/Helsinki" minutes={1} plainClock>
+    <Notes>
+      <p>This is the agents' question: a time the clocks skip.</p>
+      <p>A time the clocks skip has no single answer, and Temporal says which one to give. Read the worst count and GMT's zero.</p>
+    </Notes>
+  </ExperimentSlide>
+
+  <ExperimentSlide experiment="overlaps" place="Europe/Helsinki" minutes={0.75} plainClock>
+    <Notes>
+      <p>A time that happens twice. Temporal's default takes the earlier of the two; most of these libraries take the later one, so their answer is an hour off the standard's.</p>
+    </Notes>
+  </ExperimentSlide>
+
+  <ExperimentSlide experiment="host" place="Europe/Helsinki" minutes={0.75} plainClock>
+    <Notes>
+      <p>The same input, the same library, ten machines set to ten zones. Any answer that moves with the machine counts.</p>
+    </Notes>
+  </ExperimentSlide>
+
+  <ExperimentSlide experiment="odd" place="Europe/Helsinki" minutes={0.75} plainClock>
+    <Notes>
+      <p>Apia skipped a whole day, Lord Howe moves its clocks by half an hour, Kathmandu sits at +05:45. These are the last of the four questions; the wall is next.</p>
+    </Notes>
+  </ExperimentSlide>
+
   <Slide id="one-clock" title="The web shows one clock" minutes={0.25} place="wall" layout="wall" plainClock>
     <WallFigures images />
     <Notes>
-      <p>Each of these sites shows one clock. That is the view most date code takes, and the view the agents took: one place, one local time. Hold that.</p>
+      <p>Each of these sites shows one clock. That is the view most date code takes, and the view the agents took: one place, one local time. Under each pane is that library's total from the four experiments, wrong answers out of every input: counts we measured, read straight from the record.</p>
       <p>The clock stays on the right. Step on: the wall breaks, then the clock behind it shatters into the Earth.</p>
     </Notes>
   </Slide>
@@ -217,36 +263,14 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <ExperimentOpener place="planet" minutes={0.5} spin>
+  <Slide id="stand-ins" title="Until Temporal is everywhere" minutes={0.75} place="planet" spin>
+    <StandIns />
     <Notes>
-      <p>We stop reading other people's tests and run our own experiments: the same inputs into every library, with the right answer from the standard.</p>
+      <p>Three libraries stand in for Temporal until it ships everywhere. @internationalized/date is a second API in its own classes, shaped like Temporal's. The other two are polyfills of the standard's own API.</p>
+      <p>The @internationalized/date numbers are measured by our own probe, on Node 26, against native Temporal: Persian new year for 3,000 years, every day of the Japanese calendar's first years, and the Chinese calendar it quietly swaps for the Gregorian. The run is recorded in the repository, so every figure is reproducible. It is fine to say aloud that this reinvents the wheel; the slide leaves that word off.</p>
+      <p>The two polyfill counts are our own filings, read from the upstream page. All three pass the four zone experiments you just saw; the calendars are where they break.</p>
     </Notes>
-  </ExperimentOpener>
-
-  <ExperimentSlide experiment="gaps" place="planet" minutes={1} spin>
-    <Notes>
-      <p>This is the agents' question: a time the clocks skip.</p>
-      <p>A time the clocks skip has no single answer, and Temporal says which one to give. Read the worst count and GMT's zero.</p>
-    </Notes>
-  </ExperimentSlide>
-
-  <ExperimentSlide experiment="overlaps" place="planet" minutes={0.75} spin>
-    <Notes>
-      <p>A time that happens twice. Temporal's default takes the earlier of the two; most of these libraries take the later one, so their answer is an hour off the standard's.</p>
-    </Notes>
-  </ExperimentSlide>
-
-  <ExperimentSlide experiment="host" place="planet" minutes={0.75} spin>
-    <Notes>
-      <p>The same input, the same library, ten machines set to ten zones. Any answer that moves with the machine counts.</p>
-    </Notes>
-  </ExperimentSlide>
-
-  <ExperimentSlide experiment="odd" place="planet" minutes={0.75} spin>
-    <Notes>
-      <p>Apia skipped a whole day, Lord Howe moves its clocks by half an hour, Kathmandu sits at +05:45. The planet stays in view for the bugs ahead.</p>
-    </Notes>
-  </ExperimentSlide>
+  </Slide>
 
   <Slide id="abort" title="A date pattern aborts Node" minutes={1.25} place="planet" lapse="abort">
     <Swap>

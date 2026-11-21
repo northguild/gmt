@@ -1,0 +1,30 @@
+---
+/**
+ * The `stand-ins` slide's body: one `gmt-deck-panel` per library (`stand-ins.ts`) in three columns,
+ * then the closing line. A measured fault is a `wrong` part, in the danger colour. The columns are
+ * a list, so a screen reader hears three items, each led by the library's name.
+ */
+import { STAND_INS } from "../stand-ins";
+import "./stand-ins.css";
+---
+
+<ul class="gmt-stand-ins">
+  {
+    STAND_INS.columns.map((column) => (
+      <li class="gmt-deck-panel gmt-stand-in">
+        <h3 class="gmt-stand-in-name">{column.name}</h3>
+        <p class="gmt-stand-in-kind">{column.kind}</p>
+        <ul class="gmt-stand-in-lines">
+          {column.lines.map((line) => (
+            <li>
+              {line.map((part) =>
+                part.wrong ? <span class="gmt-stand-in-wrong">{part.text}</span> : part.text,
+              )}
+            </li>
+          ))}
+        </ul>
+      </li>
+    ))
+  }
+</ul>
+<p class="gmt-stand-ins-closing">{STAND_INS.closing}</p>

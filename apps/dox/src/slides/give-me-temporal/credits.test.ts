@@ -32,12 +32,11 @@ describe("the wall capture credit", () => {
     ).toHaveLength(2);
   });
 
-  it("lists every capture of the wall, the two newest included", () => {
+  it("lists every capture of the wall, the newest included", () => {
     const hosts = wallCredit().parts.flatMap((p) =>
       typeof p === "string" ? [] : [p.text],
     );
     expect(hosts).toHaveLength(WALL_PAGES.length);
     expect(hosts).toContain("spacetime.how");
-    expect(hosts).toContain("react-aria.adobe.com");
   });
 });

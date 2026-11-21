@@ -1,0 +1,34 @@
+---
+/**
+ * The body of `moment`: the maintainers' two quotes, the yearly download bars and the closing line.
+ * Words and numbers come from `moment.ts`; the bars are the shared `BarRows` in its neutral tone,
+ * since a download count is not a wrong answer.
+ */
+import BarRows from "~/components/slides/BarRows.astro";
+import { CLOSING, DOWNLOADS, downloadBars, NEWS_URL, QUOTES } from "../moment";
+import "./moment.css";
+
+const bars = downloadBars();
+---
+
+<div class="gmt-moment-quotes">
+  {
+    QUOTES.map((quote) => (
+      <figure class="gmt-deck-panel gmt-quote" data-quote="source">
+        <blockquote>
+          {quote.quoted.map((text) => (
+            <p>“{text}”</p>
+          ))}
+        </blockquote>
+        <figcaption>
+          <a href={NEWS_URL}>{quote.by}</a>
+        </figcaption>
+      </figure>
+    ))
+  }
+</div>
+<BarRows label={`Moment.js downloads from npm per year`} rows={bars} tone="neutral" nameWidth="4em" valueWidth="15em" />
+<p class="gmt-moment-source">
+  Downloads of <code>{DOWNLOADS.package}</code> from npm, per calendar year, as of {DOWNLOADS.capturedOn}.
+</p>
+<p class="gmt-moment-closing">{CLOSING}</p>

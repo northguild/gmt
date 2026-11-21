@@ -43,14 +43,5 @@
     "capturedAt": "2026-11-18T09:37:22.281642265Z",
     "image": "slides/give-me-temporal/wall/spacetime.webp",
     "clock": false
-  },
-  {
-    "id": "internationalized-date",
-    "name": "@internationalized/date",
-    "title": "Internationalized Date | React Aria",
-    "url": "https://react-aria.adobe.com/internationalized/date/",
-    "capturedAt": "2026-11-18T09:37:22.281642265Z",
-    "image": "slides/give-me-temporal/wall/internationalized-date.webp",
-    "clock": false
   }
 ]

@@ -2,20 +2,22 @@ import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Temporal } from "@js-temporal/polyfill";
+import { libraryTotals } from "~/data/zone-probe";
 import { WALL_PAGES } from "./wall";
 
 const publicDir = resolve(import.meta.dirname, "../../../public");
 
 describe("the wall's captures", () => {
-  it("are the six libraries", () => {
+  it("are the five Date-based libraries, each one the zone probe measured", () => {
     expect(WALL_PAGES.map((p) => p.id)).toEqual([
       "moment",
       "luxon",
       "date-fns",
       "dayjs",
       "spacetime",
-      "internationalized-date",
     ]);
+    const measured = libraryTotals().map((t) => t.id);
+    for (const page of WALL_PAGES) expect(measured).toContain(page.id);
   });
 
   it("each has an https address, an instant and an image under budget", () => {
@@ -42,7 +44,6 @@ describe("the wall's captures", () => {
       "date-fns",
       "Day.js",
       "Spacetime",
-      "@internationalized/date",
     ]);
   });
 

@@ -114,7 +114,7 @@ right before `thanks`, and `thanks` is the last main slide. In `deck.ts`, End an
 `thanks`, Next from `thanks` goes nowhere, and Next never lands on a spare: a spare is reached by
 a jump (the slide list, a deep link, or a link in `qa`'s notes), and Next from a spare returns to
 `qa`. The live region says "Slide n of 25: title" or "Spare n of 1: title". The overview gets a second list, "Spare slides, for questions"; spare dots carry
-`data-spare` with a gap before them. The pace plan stays at 25 minutes (20 for the talk, 5 for `qa`) on a spare, and print puts
+`data-spare` with a gap before them. The pace plan stays at 26.5 minutes (21.5 for the talk, 5 for `qa`) on a spare, and print puts
 the spare after `thanks`.
 
 ## Tests and checks

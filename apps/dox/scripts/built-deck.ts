@@ -11,6 +11,8 @@ interface BuiltSlide {
   /** `null` on a spare, which has no `data-minutes`. */
   minutes: number | null;
   spare: boolean;
+  /** The place the stage shows, or `null` when the slide names none. */
+  place: string | null;
   /** The slide's markup, from its opening tag to the next slide's. */
   html: string;
 }
@@ -32,6 +34,7 @@ export function builtSlides(dist: string, slug: string): BuiltSlide[] {
       id: /\bid="([^"]*)"/.exec(attrs)?.[1] ?? "",
       minutes: minutes === undefined ? null : Number(minutes),
       spare: /\bdata-spare\b/.test(attrs),
+      place: /data-place="([^"]*)"/.exec(attrs)?.[1] ?? null,
       html: page.slice((match.index ?? 0) + match[0].length, end),
     };
   });

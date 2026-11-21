@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { builtSlide, builtSlides } from "../../../scripts/built-deck";
 import { distDirOrSkip } from "../../../scripts/dist-dir";
+import { libraryTotals } from "~/data/zone-probe";
+import { CLOSING, QUOTES, downloadBars } from "./moment";
+import { STAND_INS } from "./stand-ins";
+import { WALL_PAGES } from "./wall";
 
 /**
  * Deck 0 as built: its outline and the slides whose content the talk depends on. The rules every
@@ -16,15 +20,17 @@ const OUTLINE = [
   "title",
   "agent-answer",
   "agents",
+  "moment",
   "date",
   "kinds",
-  "one-clock",
-  "temporal",
   "experiments",
   "experiment-gaps",
   "experiment-overlaps",
   "experiment-host",
   "experiment-odd",
+  "one-clock",
+  "temporal",
+  "stand-ins",
   "abort",
   "years",
   "day-off",
@@ -61,7 +67,7 @@ describe("Deck 0 in the built site", () => {
     expect(slides.filter((s) => s.spare).map((s) => s.id)).toEqual(SPARES);
   });
 
-  it("has six captioned figures on the wall slide", () => {
+  it("has a captioned figure for each wall page, each with its measured count", () => {
     const slides = deck();
     if (slides === null) return;
     const figures = [
@@ -69,8 +75,56 @@ describe("Deck 0 in the built site", () => {
         /<figure\b[\s\S]*?<\/figure>/g,
       ),
     ].filter((m) => /gmt-wall-figure"/.test(m[0]));
-    expect(figures).toHaveLength(6);
-    for (const figure of figures) expect(figure[0]).toMatch(/<figcaption/);
+    expect(figures).toHaveLength(WALL_PAGES.length);
+    const totals = new Map(libraryTotals().map((t) => [t.id, t]));
+    WALL_PAGES.forEach((page, i) => {
+      const { wrong, total } = totals.get(page.id)!;
+      expect(figures[i]![0]).toMatch(/<figcaption/);
+      expect(
+        figures[i]![0].replace(/<[^>]*>/g, " ").replace(/\s+/g, " "),
+      ).toContain(
+        `${wrong.toLocaleString("en")} wrong of ${total.toLocaleString("en")}`,
+      );
+    });
+  });
+
+  it("puts the zone experiments before the wall, on the venue's zone", () => {
+    const slides = deck();
+    if (slides === null) return;
+    const ids = slides.map((s) => s.id);
+    expect(ids.indexOf("experiment-odd")).toBeLessThan(
+      ids.indexOf("one-clock"),
+    );
+    expect(builtSlide(slides, "experiment-gaps").place).toBe("Europe/Helsinki");
+  });
+
+  it("shows the maintainers' quotes, a bar per recorded year and the closing line", () => {
+    const slides = deck();
+    if (slides === null) return;
+    const text = builtSlide(slides, "moment")
+      .html.replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ");
+    for (const quote of QUOTES) {
+      expect(text).toContain(quote.by);
+      for (const said of quote.quoted) expect(text).toContain(said);
+    }
+    for (const bar of downloadBars()) expect(text).toContain(bar.value);
+    expect(text).toContain(CLOSING);
+  });
+
+  it("shows the three stand-ins with their derived counts", () => {
+    const slides = deck();
+    if (slides === null) return;
+    const text = builtSlide(slides, "stand-ins")
+      .html.replace(/<[^>]*>/g, "")
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, " ");
+    for (const { name, lines } of STAND_INS.columns) {
+      expect(text).toContain(name);
+      for (const line of lines)
+        expect(text).toContain(line.map((p) => p.text).join(""));
+    }
+    expect(text).toContain(STAND_INS.closing);
   });
 
   it("opens the date slide's table on the agents' question, with no wall figures before the wall", () => {
