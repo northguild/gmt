@@ -107,6 +107,13 @@ const manilaJump = zoneJump("Asia/Manila", [1844, 1845])!;
 const manilaBefore = manilaJump.pages[0]!.date;
 const manilaAfter = manilaJump.pages.at(-1)!.date;
 const manilaSkipped = manilaJump.pages.filter((p) => p.gap).map((p) => p.date);
+// The thanks slide's title: one word per language, each with its tag.
+const THANKS = [
+  { text: "Thanks", lang: "en" },
+  { text: "Kiitos", lang: "fi" },
+  { text: "Takk", lang: "nb" },
+  { text: "谢谢", lang: "zh-Hans" },
+];
 // The thanks slide's three links, in one place.
 const LINKS = {
   linkedin: "https://www.linkedin.com/in/craigocurtis/",
@@ -472,7 +479,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="thanks" title="Thanks" minutes={0} place="Europe/Helsinki" clock>
+  <Slide id="thanks" title={THANKS} minutes={0} place="Europe/Helsinki" clock>
     <div class="gmt-qr-row">
       <QrCode url={LINKS.linkedin} label="LinkedIn" logo="linkedin" />
       <QrCode url={LINKS.northguild} label="NorthGuild" logo="northguild" />
@@ -483,8 +490,10 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
         <span><span class="gmt-sr-only">GitHub: </span>{LINKS.githubUser}</span>
       </Link>
     </p>
+    <p class="gmt-qr-hire">Open to my next role. If your team could use this kind of work, let's talk.</p>
     <Notes>
       <p>Thank the room. The last slide: the two codes and the GitHub name.</p>
+      <p>Close on the line under the codes, said plainly: I'm open to my next role. If your team could use this kind of work, let's talk. The LinkedIn code is the quickest way to reach me.</p>
     </Notes>
   </Slide>
 

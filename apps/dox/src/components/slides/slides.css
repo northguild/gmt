@@ -237,6 +237,22 @@ html[data-deck] .gmt-slide-title {
   margin-block-end: var(--gmt-deck-space-2xl);
 }
 
+/* A title in several languages wraps between its words, never inside one (谢谢 is two). It runs
+   longer than a one-word title, so it is set a step smaller to keep one line on a slide. */
+.gmt-slide-title > [lang] {
+  white-space: nowrap;
+}
+
+html[data-deck] .gmt-slide-title[data-langs] {
+  font-size: max(1.25rem, 3.2cqi);
+}
+
+/* Chinese comes from a system face, not the display face; its light weight matches the display
+   face's thin strokes, where the title's 600 drew it heavy. */
+.gmt-slide-title > :lang(zh) {
+  font-weight: 300;
+}
+
 html[data-deck] .gmt-slide[data-layout="title"] {
   display: grid;
   align-content: center;

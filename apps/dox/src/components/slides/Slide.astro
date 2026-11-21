@@ -16,12 +16,20 @@
  * either mistake fails the build. A spare renders `data-spare` and no `data-minutes`, so the pace
  * plan leaves it out, and it comes after `thanks` (`lib/slides/deck.ts`).
  * `spin` turns the Earth slowly while the slide shows, at the home globe's idle rate (`lib/slides/stage.ts`).
+ * A `title` in several languages is a list of words, each with its language tag, so a screen reader
+ * says each one in its own language. They are joined by a middle dot, which the reader skips; the
+ * heading's text, which the deck's labels read, keeps it.
  */
 import { checkStageNames } from "~/lib/slides/stage-data";
 import { deckStage } from "~/slides/deck-runtime";
+/** One word of a title in several languages, and its BCP 47 language tag. */
+interface TitleWord {
+  text: string;
+  lang: string;
+}
 interface Props {
   id: string;
-  title: string;
+  title: string | readonly TitleWord[];
   /** The slide's planned minutes; a main slide has them, a spare has none. */
   minutes?: number;
   /** A spare: after the talk, for questions. */
@@ -69,6 +77,19 @@ checkStageNames(await deckStage(Astro.params.slug), { place, reveal, lapse }, `S
   data-layout={layout}
   aria-labelledby={`${id}-title`}
 >
-  <h2 id={`${id}-title`} class="gmt-slide-title">{title}</h2>
+  <h2
+    id={`${id}-title`}
+    class="gmt-slide-title"
+    data-langs={typeof title === "string" ? undefined : ""}
+  >
+    {typeof title === "string"
+      ? title
+      : title.map((word, i) => (
+          <>
+            {i > 0 && <>{" "}<span aria-hidden="true">·</span>{" "}</>}
+            <span lang={word.lang}>{word.text}</span>
+          </>
+        ))}
+  </h2>
   <div class="gmt-slide-body"><slot /></div>
 </section>

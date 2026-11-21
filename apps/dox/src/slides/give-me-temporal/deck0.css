@@ -269,3 +269,9 @@ html[data-deck] .gmt-qr-github {
     fill: currentcolor;
   }
 }
+
+/* The closing line under the GitHub name: the captions' size, in the dim ice of the deck's quiet text. */
+html[data-deck] .gmt-qr-hire {
+  font-size: var(--gmt-deck-text-sm);
+  color: var(--gmt-ice-dim);
+}
