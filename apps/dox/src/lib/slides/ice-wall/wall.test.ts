@@ -6,7 +6,6 @@
  * sequence of states, the frames asked for, the pins that land and the clean-up.
  */
 /* oxlint-disable dox-test/no-markup-read, dox-test/no-implementation-assert, dox-test/no-class-query, testing-library/no-node-access */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GlobeEngine } from "~/lib/globe/types";
 import type { Drawable } from "./frame";
 import { acquireDevice } from "~/lib/globe/webgpu/device";

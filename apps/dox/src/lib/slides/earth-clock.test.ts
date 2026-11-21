@@ -10,7 +10,6 @@
  * phase it publishes on the layer for the stylesheet, so those hooks are what is asserted.
  */
 /* oxlint-disable dox-test/no-markup-read, dox-test/no-implementation-assert, dox-test/no-class-query, testing-library/no-node-access */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { formatZonedToParts } from "@northguild/gmt/zoned/format";
 import { dialDate, handAngles } from "./earth-clock-face";

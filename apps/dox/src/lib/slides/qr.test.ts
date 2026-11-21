@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { MAX_VERSION, QUIET_ZONE, qrModel } from "./qr";
 
 const NORTHGUILD = "https://northguild.dev/";

@@ -2,7 +2,6 @@
  * Sentences the database, identifier, cron, expiry, duration, holiday and date tools say and their
  * pages never show: what a call that leaves a value out, reads the clock, or is cut short is told.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CLAMP_NOTE, holidayNoteOf, MAX_YEARS } from "../observance-comparator";
 import {
   HOST_NOTE_TEXT,

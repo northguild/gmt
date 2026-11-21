@@ -2,7 +2,6 @@
  * Reading the venue's time for the Earth clock, over gmt faked by hand: the zoned string and the
  * unix milliseconds are fixed, so the reading is exact. A held instant is read by gmt itself.
  */
-import { describe, expect, it, vi } from "vitest";
 import { loadClock } from "./title-clock";
 
 const clock = vi.hoisted(() => ({ ms: 1_800_000_030_250, time: "18:42:30" }));

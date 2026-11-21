@@ -9,7 +9,6 @@
  * on the calls it makes to the (faked) engine.
  */
 /* oxlint-disable dox-test/no-markup-read, dox-test/no-implementation-assert, dox-test/no-class-query, testing-library/no-node-access */
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims, stubReducedMotion } from "~/test/jsdom-shims";
 import {
   control,

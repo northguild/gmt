@@ -1,6 +1,5 @@
 /** @vitest-environment jsdom */
 import { screen } from "@testing-library/dom";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { html, setHtml } from "~/widgets/builders";
 import { mountBugVisuals } from "./bug-visuals";

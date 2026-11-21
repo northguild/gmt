@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { monthGrid } from "~/lib/slides/calendar-figures";
 import { codeText, gmtSteps } from "~/lib/slides/gmt-call";
 import { GMT_CALLS, REPORTS, SOURCES, VISUALS, newMoonFacts } from "./content";

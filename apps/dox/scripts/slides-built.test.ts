@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { describe, expect, it } from "vitest";
 import { findSecret } from "../src/lib/slides/recording-capture";
 import { DECKS } from "../src/slides/decks";
 import { builtSlides } from "./built-deck";

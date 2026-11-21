@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { clockJump, zoneJump } from "./zone-jump";
 
 describe("a zone's recorded jump", () => {

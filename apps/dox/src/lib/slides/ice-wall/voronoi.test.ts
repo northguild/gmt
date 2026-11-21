@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { cells, hashSeed, type Cell } from "./voronoi";
 
 const SEEDS = ["momentjs", "luxon", "date-fns", "dayjs"].map(hashSeed);

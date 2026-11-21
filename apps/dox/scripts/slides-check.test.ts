@@ -1,27 +1,26 @@
-import { describe, expect, it } from "vitest";
-import {
-  angularDistance,
-  backwardWalk,
-  deckRoutes,
-  forwardWalk,
-  frameStats,
-  colourDistance,
-  frameVerdict,
-  meanColour,
-  parseCentres,
-  paneOffsets,
-  marginedLayers,
-  wallMismatches,
-  insideBox,
-  isSixteenByNine,
-  parsePair,
-  sameBox,
-  DECK_UNLOCK,
-} from "./lib/slides-check-helpers.mjs";
 import {
   UNLOCK_STORAGE_KEY,
   UNLOCK_STORAGE_VALUE,
 } from "../src/lib/slides/unlock";
+import {
+  angularDistance,
+  backwardWalk,
+  colourDistance,
+  DECK_UNLOCK,
+  deckRoutes,
+  forwardWalk,
+  frameStats,
+  frameVerdict,
+  insideBox,
+  isSixteenByNine,
+  marginedLayers,
+  meanColour,
+  paneOffsets,
+  parseCentres,
+  parsePair,
+  sameBox,
+  wallMismatches,
+} from "./lib/slides-check-helpers.mjs";
 
 const SLIDES = [
   { id: "title", builds: 0 },

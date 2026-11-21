@@ -5,7 +5,6 @@
  * three-slide deck they run over. A test file keeps its own `root`, `abort` and `stage`.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import { afterEach, beforeEach, expect, vi } from "vitest";
 
 export const NOW = Temporal.Instant.from(
   "2027-02-06T12:00:00Z",

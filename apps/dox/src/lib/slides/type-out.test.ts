@@ -1,6 +1,5 @@
 /** @vitest-environment jsdom */
 import { textOf } from "~/test/deck-events";
-import { describe, expect, it, vi } from "vitest";
 import { CHAR_MS, ROLL_MS, rollText, rolled, typeOut } from "./type-out";
 
 function frames() {

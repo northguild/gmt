@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { FADE_END_MS } from "./ice-wall/shards";
 import {
   CRACK_HOLD_MS,

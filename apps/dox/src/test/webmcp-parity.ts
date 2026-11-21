@@ -9,7 +9,6 @@
  *
  * Import it only from a `@vitest-environment jsdom` file.
  */
-import { expect } from "vitest";
 import type { AnyWidgetEntry } from "~/components/ask/widget-registry";
 import type {
   ModelContextLike,

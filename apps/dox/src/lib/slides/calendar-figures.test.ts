@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { flapRows, leaf, monthGrid } from "./calendar-figures";
 
 describe("monthGrid", () => {

@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
 import { NO_STAGE_DATA } from "~/lib/slides/stage-data";
 import { deckStage, loadDeckRuntime, RUNTIME_SLUGS } from "./deck-runtime";
 import { DECKS, deckDate, deckSchedule } from "./decks";

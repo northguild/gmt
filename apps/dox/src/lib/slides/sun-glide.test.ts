@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { describe, expect, it } from "vitest";
 import { DAY_MS, subsolarPoint } from "~/lib/globe/sun";
 import {
   SUN_GLIDE_MS,

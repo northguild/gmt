@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeAudioContext, installFakeAudio } from "../../test/fake-audio";
 import { fadedLoop } from "./loops";
 

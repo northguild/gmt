@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   CRACK_FADE_MS,
   CRACK_MS,

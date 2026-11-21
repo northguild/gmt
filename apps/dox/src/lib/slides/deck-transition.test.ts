@@ -9,7 +9,6 @@
  * Nothing here is perceivable on its own: the manager only gates a browser API and orders the
  * page's changes, so its contract is the calls it makes and the order commits run in.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BURST_MS,
   createDeckTransition,

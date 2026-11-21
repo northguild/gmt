@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { wallCredit } from "./credits";
 import { WALL_PAGES, type WallPage } from "./wall";
 

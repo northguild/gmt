@@ -9,7 +9,6 @@
  * `installFakeAudio()` puts the fake on `globalThis.AudioContext` with `vi.stubGlobal`, which the
  * shared setup undoes after each test, and returns the contexts the code under test created.
  */
-import { vi } from "vitest";
 
 export interface ParamCall {
   method: string;

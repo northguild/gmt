@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   SPAN_FROM,
   SPAN_THROUGH,

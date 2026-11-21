@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { hashOf, type AgentRunRecord, type RunValue } from "./agent-quote";
 import {
   cellLabel,

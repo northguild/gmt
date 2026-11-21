@@ -6,7 +6,6 @@
  * document is parsed, and notes an arrival through a view transition. It runs here against a
  * stand-in window so no listener outlives a test.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ARRIVAL_FAILSAFE_MS,
   VIEW_TRANSITION_OPT_IN,

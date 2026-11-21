@@ -3,7 +3,6 @@
  * A stack slides its column up as builds are reached. The column in every case is three 200px
  * pieces 20px apart (0, 220, 440): the code, then builds 1 and 2.
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { dataOf, pick, pickAll, sendDeckState } from "~/test/deck-events";
 import { html, setHtml } from "~/widgets/builders";
 import { mountBuildStacks, stackShift } from "./build-stack";

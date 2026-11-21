@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { clockLabel, nearestZones, WALL_PINS } from "./clocks";
 
 /** Eighteen zones spread round the planet: more than the wall has shards for. */

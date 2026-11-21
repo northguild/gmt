@@ -6,7 +6,6 @@
  * and in what order the early calls reach it.
  */
 /* oxlint-disable dox-test/no-implementation-assert */
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadDeckRuntime } from "~/slides/deck-runtime";
 import { FIXTURE_STAGE } from "~/test/deck-stage-fixture";
 import { NO_STAGE_DATA } from "./stage-data";

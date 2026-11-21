@@ -1,6 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
 import { zoneMatrixSummary } from "~/data/zone-matrix";
 import { resolvePlace, setPlanetZones, setPoints } from "~/lib/slides/places";
 import { applyStageData } from "~/lib/slides/stage-data";

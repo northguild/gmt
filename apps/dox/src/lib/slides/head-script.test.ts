@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
 import { DECK_HEAD_SCRIPT } from "./head-script.ts";
 
 afterEach(() => {

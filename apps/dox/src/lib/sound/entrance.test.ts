@@ -2,7 +2,6 @@
  * @vitest-environment jsdom
  */
 /* oxlint-disable dox-test/no-house-class -- the pager is told from the sky's layers by the page's own class, so the fixture must carry it */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { raw, setHtml } from "~/widgets/builders";
 
 const cue = vi.fn();

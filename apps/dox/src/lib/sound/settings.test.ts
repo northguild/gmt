@@ -3,7 +3,6 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "../../test/jsdom-shims";
 import {
   onSoundChange,

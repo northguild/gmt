@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { builtSlide, builtSlides } from "../../../scripts/built-deck";
 import { distDirOrSkip } from "../../../scripts/dist-dir";
 import { libraryTotals } from "~/data/zone-probe";

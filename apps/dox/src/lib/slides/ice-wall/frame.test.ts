@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { buildFrame, paneLayout, projectWall, type PaneModel } from "./frame";
 import { cells } from "./voronoi";
 

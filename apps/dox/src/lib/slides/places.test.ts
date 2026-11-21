@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   EARTH_HALF_ANGLE_DEG,
   MOON_OFFSET_DEG,

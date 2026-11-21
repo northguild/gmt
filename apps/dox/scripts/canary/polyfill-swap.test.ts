@@ -11,8 +11,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Temporal as PolyfillTemporal } from "@js-temporal/polyfill";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { passSetup } from "../../../../scripts/native-suite.mjs";
 import {
   calendarSweep,
   ENTRY_CHECK,
@@ -21,7 +21,6 @@ import {
   runtime,
   sweep,
 } from "../../../../scripts/polyfill-swap.mjs";
-import { passSetup } from "../../../../scripts/native-suite.mjs";
 
 /**
  * The swap runner's command (`main`) with the Vitest runs, the sweep and the package replaced.

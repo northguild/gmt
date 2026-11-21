@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
-import { beforeEach, vi } from "vitest";
 import { expectNoAxeViolations, setRange } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { GmtRange, range, rangePct } from "./range";

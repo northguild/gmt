@@ -9,7 +9,6 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { DoxChat } from "./DoxChat";
 
