@@ -1,5 +1,8 @@
 import type { CalendarSystem } from "../types";
-import { computationCalendarId } from "./calendarSystemIds";
+import {
+  computationCalendarId,
+  computationYearBias,
+} from "./calendarSystemIds";
 import { isRangeHandled } from "./rangeHooks";
 import { Temporal } from "./temporal";
 import {
@@ -32,19 +35,6 @@ const ANY_DIGIT = /\p{Nd}/u;
 const MINUS = new Set(["-", "−", "‐", "‑", "‒", "–", "﹣", "－"]);
 const BIDI = new Set(["‎", "‏", "؜"]);
 const RELATED = new Set(["chinese", "dangi"]);
-
-/**
- * The polyfill (0.5.1) throws "Era am ... was not matched by any era" for every `coptic` and
- * `ethiopic` date, so their dates are computed in `ethioaa`, which it handles. The three calendars
- * have the same twelve 30-day months, five or six epagomenal days and leap rule; they differ only
- * in the year number. The Ethiopian (Amete Mihret) year is the Amete Alem year less 5500, and the
- * Coptic year is the Ethiopian year less 276 (Calendrical Calculations, chapter 4; the CLDR/ICU
- * calendars of the same names). Only the year number is converted; ICU still prints the text.
- */
-const YEAR_BIAS: Readonly<Record<string, number>> = {
-  coptic: 5776,
-  ethiopic: 5500,
-};
 
 /** A digit run with its value (in the formatter's numbering system) and code point count. */
 interface Run {
@@ -153,7 +143,7 @@ function envOf(formatter: Intl.DateTimeFormat): Env {
     weekday,
     calendar,
     temporalCalendar: computationCalendarId(calendar as CalendarSystem),
-    yearBias: YEAR_BIAS[calendar] ?? 0,
+    yearBias: computationYearBias(calendar as CalendarSystem),
     timeZone,
     numberingSystem,
     digits: new Set(digitList),
