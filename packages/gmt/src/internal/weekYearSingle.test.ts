@@ -145,6 +145,8 @@ describe("single date, week-year patterns", () => {
     ${"luy-u-ca-indian"}   | ${{ year: "numeric", month: "short", day: "numeric", weekday: "short" }}                 | ${"2027-01-01"} | ${"indian"}   | ${"numeric"} | ${false} | ${"luy indian weekday name without a digit"}
     ${"sg-u-ca-hebrew"}    | ${{ year: "numeric", month: "short", day: "numeric", weekday: "short" }}                 | ${"2024-12-30"} | ${"hebrew"}   | ${"numeric"} | ${false} | ${"sg hebrew weekday name with a digit"}
     ${"sg-u-ca-hebrew"}    | ${{ year: "numeric", month: "short", day: "numeric", weekday: "short" }}                 | ${"2027-01-01"} | ${"hebrew"}   | ${"numeric"} | ${false} | ${"sg hebrew weekday name without a digit"}
+    ${"ksb-u-ca-indian"}   | ${{ year: "numeric", month: "short", day: "numeric", weekday: "narrow" }}                | ${"2025-03-22"} | ${"indian"}   | ${"numeric"} | ${false} | ${"ksb narrow weekday 1 on day 1"}
+    ${"ksb-u-ca-indian"}   | ${{ year: "numeric", month: "short", day: "numeric", weekday: "narrow" }}                | ${"2025-03-24"} | ${"indian"}   | ${"numeric"} | ${false} | ${"ksb narrow weekday 3 on day 3"}
   `(
     "formatDate and formatDateToParts print the calendar year for $label ('$locale', $iso) in the host's wording",
     ({ locale, options, iso, calendar, width, hasEra }) => {
@@ -225,26 +227,29 @@ describe("single date, week-year patterns", () => {
   });
 
   it.each`
-    locale               | iso
-    ${"lg"}              | ${"2027-01-01"}
-    ${"lg"}              | ${"2024-12-29"}
-    ${"luy-u-ca-indian"} | ${"2024-12-30"}
-    ${"luy-u-ca-indian"} | ${"2027-01-01"}
-    ${"sg-u-ca-hebrew"}  | ${"2024-12-30"}
-    ${"sg-u-ca-hebrew"}  | ${"2027-01-01"}
+    locale               | iso             | width
+    ${"lg"}              | ${"2027-01-01"} | ${"short"}
+    ${"lg"}              | ${"2024-12-29"} | ${"short"}
+    ${"luy-u-ca-indian"} | ${"2024-12-30"} | ${"short"}
+    ${"luy-u-ca-indian"} | ${"2027-01-01"} | ${"short"}
+    ${"sg-u-ca-hebrew"}  | ${"2024-12-30"} | ${"short"}
+    ${"sg-u-ca-hebrew"}  | ${"2027-01-01"} | ${"short"}
+    ${"ksb-u-ca-indian"} | ${"2025-03-22"} | ${"narrow"}
+    ${"ksb-u-ca-indian"} | ${"2025-08-23"} | ${"narrow"}
   `(
-    "keeps a '$locale' weekday name whole on $iso, whether or not it holds a digit",
-    ({ locale, iso }) => {
+    "keeps a '$locale' $width weekday name whole on $iso, whether or not it holds a digit",
+    ({ locale, iso, width }) => {
       // lg `Lw5` beside `Sab`: the digit belongs to the name, so the day and the year stay apart.
+      // ksb narrow `1` on Chaitra 1: the weekday and the day print the same digit, each its own part.
       const options = {
         year: "numeric",
         month: "short",
         day: "numeric",
-        weekday: "short",
+        weekday: width,
       } as const;
       const weekday = normalizeDateTime(
         new Intl.DateTimeFormat(locale, {
-          weekday: "short",
+          weekday: width,
           timeZone: "UTC",
         }).format(utcMs(`${iso}T00:00:00Z`)),
       );

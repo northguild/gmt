@@ -360,11 +360,19 @@ export function createNameMask(
       isDigit,
     );
     let out = text;
-    for (const { key, value } of varying.size === 0
+    // Twins of one field print it once: ksb narrow weekday `1` from two twins on Chaitra 1 is one
+    // name, and the day's `1` stays.
+    const hidden = new Set<string>();
+    for (const { type, key, value } of varying.size === 0
       ? []
       : candidatesFrom(twins, ms)) {
+      const name = `${type}:${value}`;
+      if (!varying.has(key) || hidden.has(name)) {
+        continue;
+      }
+      hidden.add(name);
       for (
-        let at = varying.has(key) ? out.indexOf(value) : -1;
+        let at = out.indexOf(value);
         at >= 0;
         at = out.indexOf(value, at + 1)
       ) {
@@ -373,12 +381,12 @@ export function createNameMask(
           !isDigit(/.$/u.exec(out.slice(0, at))?.[0] ?? "") &&
           !isDigit(/^./u.exec(out.slice(end))?.[0] ?? "")
         ) {
-          const hidden = [...value]
+          const masked = [...value]
             .map((character) =>
               isDigit(character) ? "_".repeat(character.length) : character,
             )
             .join("");
-          out = out.slice(0, at) + hidden + out.slice(end);
+          out = out.slice(0, at) + masked + out.slice(end);
           break;
         }
       }
