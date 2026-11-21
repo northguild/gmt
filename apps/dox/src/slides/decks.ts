@@ -42,7 +42,7 @@ export interface DeckEntry {
 }
 
 /** The building a talk is in. */
-export interface Venue {
+interface Venue {
   /** The host and the building ("Kisko Labs, Trooli"). */
   name: string;
   street: string;
