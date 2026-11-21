@@ -1,3 +1,5 @@
+import type { CalendarSystem } from "../types";
+import { computationCalendarId } from "./calendarSystemIds";
 import { Temporal } from "./temporal";
 
 /*
@@ -169,19 +171,31 @@ export function withoutYear(text: string, digits: ReadonlySet<string>): string {
   return rest;
 }
 
-/** The calendar year of a mid-year date, the anchor every probe date is counted from. */
+/**
+ * The calendar year of a mid-year date, the anchor every probe date is counted from. The year is
+ * the computation calendar's (`ethioaa` for `coptic` and `ethiopic`, `computationCalendarId`): the
+ * polyfill (0.5.1) throws "Era am ... was not matched by any era" for every `coptic` and
+ * `ethiopic` date. Probe years are only counted from it and passed to `dateIn`, never printed.
+ */
 export function anchorYear(calendar: string): number {
-  return Temporal.PlainDate.from("2024-07-01").withCalendar(calendar).year;
+  return Temporal.PlainDate.from("2024-07-01").withCalendar(
+    computationCalendarId(calendar as CalendarSystem),
+  ).year;
 }
 
-/** The date `month` / `day` of `year` in a calendar. */
+/** The date `month` / `day` of `year` in a calendar, `year` counted as `anchorYear` counts it. */
 export function dateIn(
   calendar: string,
   year: number,
   month: number,
   day: number,
 ): Temporal.PlainDate {
-  return Temporal.PlainDate.from({ calendar, year, month, day });
+  return Temporal.PlainDate.from({
+    calendar: computationCalendarId(calendar as CalendarSystem),
+    year,
+    month,
+    day,
+  });
 }
 
 /**
@@ -254,6 +268,8 @@ export interface WeekYearAnalysis {
   readonly labels: readonly RunLabel[];
   /** The digit run count of the formatter's text. */
   readonly count: number;
+  /** The text with the digits of names that hold them on some dates only hidden (`createNameMask`). */
+  readonly mask: (text: string, ms: number) => string;
 }
 
 /** The style of a year run read at mid-year, against the reference's year `year` there. */
@@ -299,11 +315,13 @@ const PERTURBED_FIELDS = [
 /**
  * Read a formatter's digit runs once: which hold the year, how each is written, and what field
  * every other one holds. Only `format` is called, on the formatter itself, in its zone and with its
- * time fields. `null` when the run count changes between probe dates.
+ * time fields, and its text read through `mask`. `null` when the run count changes between probe
+ * dates.
  */
 export function analyse(
   format: (ms: number) => string,
   resolved: Intl.ResolvedDateTimeFormatOptions,
+  mask: (text: string, ms: number) => string,
 ): WeekYearAnalysis | null {
   const calendar = resolved.calendar;
   const timeZone = resolved.timeZone;
@@ -312,24 +330,25 @@ export function analyse(
   const reference = referenceFor(calendar, numberingSystem, timeZone);
   const zoned = (date: Temporal.PlainDate) =>
     date.toZonedDateTime({ timeZone, plainTime: "10:20:30.456" });
+  const runsOf = (ms: number) => digitRuns(mask(format(ms), ms), digits);
   const runsAt = (date: Temporal.PlainDate) =>
-    digitRuns(format(zoned(date).epochMilliseconds), digits);
+    runsOf(zoned(date).epochMilliseconds);
   const yearRuns = yearRunIndexes(calendar, runsAt);
   if (yearRuns === null) {
     return null;
   }
   const first = anchorYear(calendar);
   const midYear = zoned(dateIn(calendar, first, 6, 1)).epochMilliseconds;
-  const midRuns = digitRuns(format(midYear), digits);
+  const midRuns = runsOf(midYear);
   const midYearText = referenceYear(reference, midYear);
   const styles = yearRuns.map((index) =>
     styleOf(midRuns[index]?.text ?? "", midYearText),
   );
   const start = zoned(dateIn(calendar, first, 1, 15));
-  const base = digitRuns(format(start.epochMilliseconds), digits);
+  const base = runsOf(start.epochMilliseconds);
   const moved = PERTURBED_FIELDS.map(([field, amount]) => ({
     field,
-    runs: digitRuns(format(start.add(amount).epochMilliseconds), digits),
+    runs: runsOf(start.add(amount).epochMilliseconds),
   }));
   const labels = base.map((run, index): RunLabel => {
     if (yearRuns.includes(index)) {
@@ -358,6 +377,7 @@ export function analyse(
     styles,
     labels,
     count: base.length,
+    mask,
   };
 }
 
@@ -404,7 +424,7 @@ export function repairText(
   text: string,
   ms: number,
 ): RepairedText | null {
-  const runs = digitRuns(text, analysis.digits);
+  const runs = digitRuns(analysis.mask(text, ms), analysis.digits);
   if (runs.length !== analysis.count) {
     return null;
   }

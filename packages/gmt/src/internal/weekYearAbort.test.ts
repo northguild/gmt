@@ -10,15 +10,16 @@ import { runInBoundedChild } from "../test/boundedChild";
  */
 describe("public functions on week-year patterns do not abort the process (D23)", () => {
   it.each`
-    expression                                                                                                                           | label
-    ${'gmt.formatCalendar("2026-07-01T10:00:00", "gl-u-ca-hebrew", { reference: "2026-07-01T09:00:00" })'}                               | ${"formatCalendar gl hebrew"}
-    ${'gmt.formatCalendar("2026-07-01T10:00:00", "gl-u-ca-buddhist", { reference: "2026-07-01T09:00:00" })'}                             | ${"formatCalendar gl buddhist"}
-    ${'gmt.formatCalendar("2026-07-01T10:00:00", "gl-u-ca-roc", { reference: "2026-07-01T09:00:00" })'}                                  | ${"formatCalendar gl roc"}
-    ${'gmt.formatDateToParts("2024-12-30", "gd", { year: "numeric", month: "short" })'}                                                  | ${"formatDateToParts gd month short"}
-    ${'gmt.formatDateToParts("2026-09-12", "gl-u-ca-hebrew", { dateStyle: "full" })'}                                                    | ${"formatDateToParts gl hebrew dateStyle full"}
-    ${'gmt.formatDateToParts("2026-07-01", "my-u-ca-japanese", { year: "numeric", month: "numeric", day: "numeric" })'}                  | ${"formatDateToParts my japanese"}
-    ${'gmt.formatDateTimeToParts("2024-12-30T14:05:00", "gd", { year: "numeric", month: "short", hour: "numeric", minute: "numeric" })'} | ${"formatDateTimeToParts gd with time"}
-    ${'gmt.formatYearMonth("2026-10", "gl", { dateStyle: "full" })'}                                                                     | ${"formatYearMonth gl dateStyle full"}
+    expression                                                                                                                                                              | label
+    ${'gmt.formatCalendar("2026-07-01T10:00:00", "gl-u-ca-hebrew", { reference: "2026-07-01T09:00:00" })'}                                                                  | ${"formatCalendar gl hebrew"}
+    ${'gmt.formatCalendar("2026-07-01T10:00:00", "gl-u-ca-buddhist", { reference: "2026-07-01T09:00:00" })'}                                                                | ${"formatCalendar gl buddhist"}
+    ${'gmt.formatCalendar("2026-07-01T10:00:00", "gl-u-ca-roc", { reference: "2026-07-01T09:00:00" })'}                                                                     | ${"formatCalendar gl roc"}
+    ${'gmt.formatDateToParts("2024-12-30", "gd", { year: "numeric", month: "short" })'}                                                                                     | ${"formatDateToParts gd month short"}
+    ${'gmt.formatDateToParts("2026-09-12", "gl-u-ca-hebrew", { dateStyle: "full" })'}                                                                                       | ${"formatDateToParts gl hebrew dateStyle full"}
+    ${'gmt.formatDateToParts("2026-07-01", "my-u-ca-japanese", { year: "numeric", month: "numeric", day: "numeric" })'}                                                     | ${"formatDateToParts my japanese"}
+    ${'gmt.formatDateTimeToParts("2024-12-30T14:05:00", "gd", { year: "numeric", month: "short", hour: "numeric", minute: "numeric" })'}                                    | ${"formatDateTimeToParts gd with time"}
+    ${'gmt.formatYearMonth("2026-10", "gl", { dateStyle: "full" })'}                                                                                                        | ${"formatYearMonth gl dateStyle full"}
+    ${'gmt.formatZonedToParts("2026-12-27T09:30:00+06:30[Asia/Yangon]", "my-u-ca-buddhist", { year: "numeric", month: "numeric", day: "numeric", timeZoneName: "short" })'} | ${"formatZonedToParts my buddhist with a zone name"}
   `("returns from $label", async ({ expression }) => {
     const run = await runInBoundedChild([expression]);
     expect(

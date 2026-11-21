@@ -1,6 +1,8 @@
-import { Temporal } from "./temporal";
 import {
+  anchorYear,
+  dateIn,
   digitRuns,
+  digitSetOf,
   type RepairedText,
   type WeekYearAnalysis,
 } from "./weekYearText";
@@ -28,6 +30,7 @@ const TIME_KEYS = [
 ] as const;
 
 const LETTER = /\p{L}|\p{M}/u;
+const DIGIT = /\p{Nd}/u;
 /** Part types a twin supplies by digit run, not by text. */
 const NUMERIC_TYPES = new Set([
   "literal",
@@ -123,6 +126,12 @@ function timeTwinOptions(
   }
   if (hourCycle !== undefined) {
     time.hourCycle = hourCycle as Intl.DateTimeFormatOptions["hourCycle"];
+  }
+  if (TIME_KEYS.slice(0, 5).every((key) => time[key] === undefined)) {
+    // A zone name alone gets the default year, month and day (ECMA-402 ToDateTimeOptions), and
+    // that year can be `Y`, which unfixed V8 resolves without `year`: a month and a day keep it out.
+    time.month = "numeric";
+    time.day = "numeric";
   }
   return time;
 }
@@ -287,13 +296,105 @@ function widenRun(
   return null;
 }
 
+/**
+ * The keys of the twin fields whose names hold a digit on some dates and none on others: lg `Lw3`
+ * beside `Sab`, an Islamic month `Jum. 2` beside `Rajab`, he `Adar 1` beside `Tevet`. Read over a
+ * week and over every month of three years, which hold a Hebrew and a Chinese leap month.
+ */
+function varyingNames(
+  twins: readonly Twin[],
+  calendar: string,
+  timeZone: string,
+  isDigit: (character: string) => boolean,
+): Set<string> {
+  const anchor = anchorYear(calendar);
+  const start = dateIn(calendar, anchor, 1, 15);
+  const dates = [1, 2, 3, 4, 5, 6].map((days) => start.add({ days }));
+  for (let year = anchor; year < anchor + 3; year++) {
+    const months = dateIn(calendar, year, 1, 15).monthsInYear;
+    for (let month = 1; month <= months; month++) {
+      dates.push(dateIn(calendar, year, month, 15));
+    }
+  }
+  const withDigit = new Map<string, boolean>();
+  const varying = new Set<string>();
+  for (const date of dates) {
+    const ms = date.toZonedDateTime({
+      timeZone,
+      plainTime: "12:00",
+    }).epochMilliseconds;
+    for (const { key, value, numeric } of candidatesFrom(twins, ms)) {
+      const has = [...value].some(isDigit);
+      if (!numeric && withDigit.get(key) === !has) {
+        varying.add(key);
+      }
+      withDigit.set(key, has);
+    }
+  }
+  return varying;
+}
+
+/**
+ * A formatter's text at a time value with the digits of each name in `varyingNames` hidden, the
+ * length kept: its digit runs are then the same on every date, which `analyse` and `repairText`
+ * need. A name is found where no digit touches it (ksb narrow weekday `3` beside a day `13`).
+ *
+ * @param options the options the formatter was built with
+ * @param resolved its resolved options
+ */
+export function createNameMask(
+  options: Intl.DateTimeFormatOptions,
+  resolved: Intl.ResolvedDateTimeFormatOptions,
+): (text: string, ms: number) => string {
+  const digits = digitSetOf(resolved.numberingSystem);
+  const isDigit = (character: string) =>
+    digits.has(character) || DIGIT.test(character);
+  let twins: Twin[] | undefined;
+  let varying: Set<string> | undefined;
+  return (text, ms) => {
+    twins ??= buildTwins(options, resolved);
+    varying ??= varyingNames(
+      twins,
+      resolved.calendar,
+      resolved.timeZone,
+      isDigit,
+    );
+    let out = text;
+    for (const { key, value } of varying.size === 0
+      ? []
+      : candidatesFrom(twins, ms)) {
+      for (
+        let at = varying.has(key) ? out.indexOf(value) : -1;
+        at >= 0;
+        at = out.indexOf(value, at + 1)
+      ) {
+        const end = at + value.length;
+        if (
+          !isDigit(/.$/u.exec(out.slice(0, at))?.[0] ?? "") &&
+          !isDigit(/^./u.exec(out.slice(end))?.[0] ?? "")
+        ) {
+          const hidden = [...value]
+            .map((character) =>
+              isDigit(character) ? "_".repeat(character.length) : character,
+            )
+            .join("");
+          out = out.slice(0, at) + hidden + out.slice(end);
+          break;
+        }
+      }
+    }
+    return out;
+  };
+}
+
 /** The repaired text cut at its numeric runs, and the numeric parts between. */
 function spansOf(
   analysis: WeekYearAnalysis,
   repaired: RepairedText,
   candidates: readonly Candidate[],
+  ms: number,
 ): Spans | null {
-  const runs = digitRuns(repaired.text, analysis.digits);
+  const runs = digitRuns(analysis.mask(repaired.text, ms), analysis.digits);
   if (runs.length !== analysis.count) {
     return null;
   }
@@ -335,12 +436,7 @@ function templateMs(
   anchor: number,
   [month, day, time]: (typeof TEMPLATE_DATES)[number],
 ): number {
-  return Temporal.PlainDate.from({
-    calendar: analysis.calendar,
-    year: anchor,
-    month,
-    day,
-  } as Temporal.PlainDateLike).toZonedDateTime({
+  return dateIn(analysis.calendar, anchor, month, day).toZonedDateTime({
     timeZone: analysis.timeZone,
     plainTime: time,
   }).epochMilliseconds;
@@ -450,7 +546,9 @@ export function createPartsSynth(
 
   const spansAt = (ms: number, candidates: Candidate[]): Spans | null => {
     const repaired = repair(ms);
-    return repaired === null ? null : spansOf(analysis, repaired, candidates);
+    return repaired === null
+      ? null
+      : spansOf(analysis, repaired, candidates, ms);
   };
 
   const templateOf = (): Field[][] | null => {
@@ -458,9 +556,7 @@ export function createPartsSynth(
       return plan;
     }
     plan = null;
-    const anchor = Temporal.PlainDate.from("2024-07-01").withCalendar(
-      analysis.calendar,
-    ).year;
+    const anchor = anchorYear(analysis.calendar);
     for (const date of TEMPLATE_DATES) {
       const ms = templateMs(analysis, anchor, date);
       const candidates = candidatesAt(ms);

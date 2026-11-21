@@ -3,7 +3,7 @@ import { plainOptionEntries } from "./plainOptionEntries";
 import { Temporal } from "./temporal";
 import { nowInstant } from "./temporalCompat/clock";
 import { forgetRanges, markRangeHandled, rangeHooks } from "./rangeHooks";
-import { createPartsSynth } from "./weekYearSynth";
+import { createNameMask, createPartsSynth } from "./weekYearSynth";
 import {
   analyse,
   anchorYear,
@@ -225,7 +225,11 @@ function guarded(
 ): Intl.DateTimeFormat {
   let analysis: WeekYearAnalysis | null | undefined;
   const read = (): WeekYearAnalysis | null => {
-    analysis ??= analyse((ms) => native.format(ms), resolved);
+    analysis ??= analyse(
+      (ms) => native.format(ms),
+      resolved,
+      createNameMask(options, resolved),
+    );
     return analysis;
   };
   const repaired = (ms: number): RepairedText | null => {
