@@ -343,6 +343,10 @@ jobs:
       - name: Build @northguild/gmt
         run: pnpm --filter @northguild/gmt run build
 
+      # Deck 0's `lint` slide runs the plugin's dist on the agents' answers.
+      - name: Build @northguild/gmt-oxlint
+        run: pnpm --filter @northguild/gmt-oxlint run build
+
       # Its own `generate` step writes every generated page, so no separate dox-pages step.
       - name: Build the dox site
         run: pnpm --filter dox run build
@@ -835,6 +839,11 @@ jobs:
       - name: Build @northguild/gmt
         if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'test:dox') && steps.cache-gmt-dist.outputs.cache-hit != 'true'
         run: pnpm --filter @northguild/gmt run build
+
+      # `lib/slides/agent-lint.test.ts` runs the plugin's dist.
+      - name: Build @northguild/gmt-oxlint
+        if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'test:dox')
+        run: pnpm --filter @northguild/gmt-oxlint run build
 
       # The dox and gmt-oxlint suites the change needs. gmt has its own TZ matrix (gmt-matrix job).
       - name: Run tests (dox, gmt-oxlint)

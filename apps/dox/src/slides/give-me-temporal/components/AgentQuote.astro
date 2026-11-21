@@ -12,17 +12,22 @@
  * calls elsewhere in the deck stay inline `code`.
  *
  * `part` picks what shows, so the slide can reveal it a build at a time: `question`, `answer` (the
- * agent's code, and its source line with the guess prompt) or `result` (the value the code returned, how
- * many values the runs held, and the Helsinki line). Without `part` those three show. `prose` is the
+ * agent's code, and its source line with the guess prompt) or `result` (first, called out, the hour
+ * Helsinki's clocks skip and that the asked time is in it; then the value the code returned on a
+ * machine set to Helsinki, and how many different answers the machine's time zone gave). Without
+ * `part` those three show. `prose` is the
  * agent's text around its code, for the speaker notes: on the slide it would give the guess away and
  * push the code off the stage.
  */
 import { Code } from "@astrojs/starlight/components";
 import DeckCode from "~/components/slides/DeckCode.astro";
 import { classifyLocal } from "@northguild/gmt/instant/convert";
+import { cityOf } from "~/lib/clock-change-common";
+import { clockJump } from "~/lib/slides/zone-jump";
 import {
   quotedAnswer,
   valueLabel,
+  zoneSpread,
   type AgentRunFile,
   type AgentTranscript,
 } from "~/lib/slides/agent-quote";
@@ -42,9 +47,14 @@ const quote = quotedAnswer(
   runRecord as AgentRunFile,
   LIVE.agentRun,
 );
-// The line is shown only while GMT agrees that the time falls in a gap.
-const neverHappens =
-  classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki") === "nonexistent";
+// The question's local time and zone. The called-out line shows only while GMT agrees the time falls
+// in a gap, and names the hour the clocks skip that night, read from the zone's own data.
+const ASKED = { local: "2027-03-28T03:30:00", zone: "Europe/Helsinki" };
+const jump =
+  classifyLocal(ASKED.local, ASKED.zone) === "nonexistent"
+    ? clockJump(ASKED.zone, [Number(ASKED.local.slice(0, 4))])
+    : null;
+const gap = jump?.date === ASKED.local.slice(0, 10) ? jump : null;
 ---
 
 {
@@ -74,17 +84,18 @@ const neverHappens =
       )}
       {show("result") && (
         <div class="gmt-deck-panel gmt-quote" data-quote="result">
+          {gap && (
+            <p class="gmt-quote-gap">
+              That night the clocks jump from {gap.from} to {gap.to}: {ASKED.local.slice(11, 16)} never
+              happens in {cityOf(ASKED.zone)}.
+            </p>
+          )}
           <p>
-            <code>{quote.call}</code> on Node {quote.shown.node} at {quote.shown.zone}:
-          </p>
-          <p>
+            On a machine set to {cityOf(quote.shown.zone)}
+            {quote.nodesAgree ? "" : ` on Node ${quote.shown.node}`} it returns{" "}
             <output>{valueLabel(quote.shown.value)}</output>
           </p>
-          <p>
-            {quote.distinct} distinct {quote.distinct === 1 ? "value" : "values"} across {quote.runs} runs:{" "}
-            {quote.zones} zones on {quote.nodes} Node majors.
-          </p>
-          {neverHappens && <p>That time never happens in Helsinki.</p>}
+          <p>{zoneSpread(quote)} machine time zones.</p>
         </div>
       )}
     </>

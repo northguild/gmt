@@ -60,6 +60,15 @@ html[data-deck] .gmt-slide-body [data-quote="result"] p + p {
   color: var(--gmt-ice-bright);
 }
 
+/* The plain fact the guess missed, called out above the value: larger, in the deck's wrong ink. */
+html[data-deck] .gmt-slide-body [data-quote="result"] .gmt-quote-gap {
+  margin-block-end: var(--gmt-deck-space-sm);
+  font-size: 1.35em;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--gmt-deck-wrong-ink);
+}
+
 .gmt-quote[data-quote="result"] output {
   font-weight: 600;
   overflow-wrap: anywhere;

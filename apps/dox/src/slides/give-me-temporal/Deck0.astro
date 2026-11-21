@@ -1,13 +1,14 @@
 ---
 /**
- * Deck 0, "Give Me Temporal": the 28 slides of the HelsinkiJS talk and its spare, in the outline's order
+ * Deck 0, "Give Me Temporal": the 29 slides of the HelsinkiJS talk and its spare, in the outline's order
  * (`context/dox/specs/dox-g12/index.md`). Every bug on a slide is a filing read from
  * `upstream-filings.json`, every gmt result is computed by gmt at build time, and every count is
  * derived; the filing slides' wording lives in `content.ts`. Places are IANA zones or the stage's
  * keywords (`lib/slides/places.ts`); the venue's clock stands in the Earth's place until the talk
  * steps from the ice wall on `one-clock` to `temporal`: the wall breaks, and the clock shatters into
- * the Earth in the same right-third spot. So the four zone experiments, which come after `kinds`
- * and before the wall, sit on the venue's zone with the plain clock; the wall's panes are the five
+ * the Earth in the same right-third spot. Every slide from `agent-answer` to the wall, the four zone
+ * experiments among them, sits on the venue's zone with the plain clock; the full clock (the GMT
+ * mark, the city and the offset) comes back on `gmt`'s first build; the wall's panes are the five
  * Date-based libraries, each with its measured total from the same experiments. `stand-ins` follows
  * `temporal` on the Earth: the three libraries that stand in for Temporal, from our own probe and
  * filings. `moment` follows `agents`: the maintainers' own words and npm's yearly download counts.
@@ -27,6 +28,7 @@
  * (`pages/slides/[slug]/presenter.astro`).
  */
 import Link from "~/components/Link.astro";
+import AgentLint from "./components/AgentLint.astro";
 import AgentQuote from "./components/AgentQuote.astro";
 import AgentTable from "./components/AgentTable.astro";
 import { Code } from "@astrojs/starlight/components";
@@ -148,26 +150,27 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </Notes>
   </Slide>
 
-  <Slide id="agent-answer" title="Ask an agent" minutes={0.75} place="Europe/Helsinki">
+  <Slide id="agent-answer" title="Ask an agent" minutes={0.75} place="Europe/Helsinki" plainClock>
     <AgentQuote part="question" />
     <Build n={1}><AgentQuote part="answer" /></Build>
     <Build n={2}><AgentQuote part="result" /></Build>
     <Notes>
       <p>This is the question an agent was asked: one wall-clock time, on one date, in the city we are in. Step on for its answer.</p>
-      <p>Guess: what does that code return? Ask the room, take two or three answers, then step on. The next step shows what it returned, on every machine we ran it on.</p>
+      <p>Guess: what does that code return? Ask the room, take two or three answers, then step on.</p>
+      <p>The next step leads with the plain fact: that night Helsinki's clocks jump an hour, so the time asked for never happens. The code returns a time anyway, and on a machine set to Helsinki it is not the one its own comment promises. Then the bigger bug: the code never reads Helsinki at all, so every machine time zone we ran it in gave its own answer.</p>
       <AgentQuote part="prose" />
     </Notes>
   </Slide>
 
-  <Slide id="agents" title="What the agents returned" minutes={0.25} place="Europe/Helsinki">
+  <Slide id="agents" title="What the agents returned" minutes={0.25} place="Europe/Helsinki" plainClock>
     <AgentTable />
     <Notes>
-      <p>The same question went to three more agents. Each row is what its code did when we ran it: one wrong time, one right-looking time that changes with the machine, and two that throw, one of them with a message that names the wrong problem.</p>
+      <p>The same question went to three more agents. Each row is what its code did when we ran it on a machine set to Helsinki, and the last column what changed when we set the machine to other time zones: one wrong time, one right-looking time that changes with the machine, and two that throw, one of them with a message that names the wrong problem.</p>
       <p>Only one of them says the plain fact, that 03:30 on that night never happens in Helsinki, and it says it by throwing.</p>
     </Notes>
   </Slide>
 
-  <Slide id="moment" title="Agents learned from Moment" minutes={0.75} place="Europe/Helsinki" layout="moment">
+  <Slide id="moment" title="Agents learned from Moment" minutes={0.75} place="Europe/Helsinki" layout="moment" plainClock>
     <MomentSlide />
     <Notes>
       <p>The agents in the table did not import Moment. This slide is about what agents are trained on: Moment.js is everywhere in the code they learned from.</p>
@@ -466,6 +469,25 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
     </p>
     <Notes>
       <p>A guard is a workaround with a test; the canary says when upstream has fixed the thing and the guard can be retired.</p>
+    </Notes>
+  </Slide>
+
+  <Slide id="lint" title="Lint that bans Date" minutes={0.5} place="greenwich">
+    <AgentLint />
+    <Notes>
+      <p>
+        Our lint is strict on purpose. It bans the name <code>Date</code> itself, not only <code>new Date</code>, and
+        every import of a library built on it.
+      </p>
+      <p>
+        It even fails the answer that used Temporal: one <code>Date.now()</code> to time the reminder. The answer it
+        passes never calls <code>Date</code>; it types a UTC time in, and lint has nothing to check.
+      </p>
+      <p>
+        Next: the rules, every one an error. ESLint users get the same bans from
+        <code>@northguild/gmt-eslint</code>; Biome users get all but the bare-name ban from
+        <code>@northguild/gmt-biome</code>.
+      </p>
     </Notes>
   </Slide>
 

@@ -1,0 +1,60 @@
+---
+/**
+ * Our lint on the agents' answers: every answer in the owner's transcript (`quotes/agent-answer.json`)
+ * linted with `@northguild/gmt-oxlint` when the page is built (`lintCode`), one row per agent with
+ * each rule it broke and the lines. Build 1 swaps the table for the plugin's rules, each with the
+ * description the rule itself carries.
+ */
+import Build from "~/components/slides/Build.astro";
+import DeckTable from "~/components/slides/DeckTable.astro";
+import Swap from "~/components/slides/Swap.astro";
+import { LINT_RULES, LINT_VERSIONS, byRule, lintCode } from "~/lib/slides/agent-lint";
+import answer from "../quotes/agent-answer.json";
+
+const found = lintCode(answer.answers);
+const rows = answer.answers.map(({ id, model }) => ({ model, rules: byRule(found.get(id) ?? []) }));
+const failing = rows.filter((row) => row.rules.length > 0).length;
+const linesLabel = (lines: number[]) => `${lines.length === 1 ? "line" : "lines"} ${lines.join(", ")}`;
+---
+
+<p class="gmt-lead">
+  Our lint bans <code>Date</code> outright. On the agents' answers it fails {failing} of {rows.length}.
+</p>
+<Swap>
+  <DeckTable
+    caption={`oxlint ${LINT_VERSIONS.oxlint} with @northguild/gmt-oxlint ${LINT_VERSIONS.plugin}`}
+    columns={["Agent", "Errors"]}
+  >
+    {
+      rows.map(({ model, rules }) => (
+        <tr>
+          <th scope="row">{model}</th>
+          <td>
+            {rules.length === 0
+              ? "None"
+              : rules.map(({ rule, lines }, i) => (
+                  <>
+                    {i > 0 && ", "}
+                    <code>{rule}</code> ({linesLabel(lines)})
+                  </>
+                ))}
+          </td>
+        </tr>
+      ))
+    }
+  </DeckTable>
+  <Build n={1}>
+    <DeckTable caption={`${LINT_RULES.length} rules, every one an error`} columns={["Rule", "What it bans"]}>
+      {
+        LINT_RULES.map(({ rule, description }) => (
+          <tr>
+            <th scope="row">
+              <code>{rule}</code>
+            </th>
+            <td>{description}</td>
+          </tr>
+        ))
+      }
+    </DeckTable>
+  </Build>
+</Swap>

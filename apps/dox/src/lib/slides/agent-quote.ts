@@ -108,6 +108,8 @@ export type AgentQuote =
       /** How many zones and Node majors the runs cover. */
       zones: number;
       nodes: number;
+      /** True when every zone gave each Node major the same value. */
+      nodesAgree: boolean;
       instant: string;
       libraries: Record<string, string>;
     } & AgentQuoteRecord);
@@ -229,9 +231,28 @@ export function agentQuote(
     runs: cells.length,
     zones: run.zones.length,
     nodes: run.nodes.length,
+    nodesAgree: run.zones.every((_, j) =>
+      run.values.every((row) => sameValue(row[j]!, run.values[0]![j]!)),
+    ),
     instant: run.instant,
     libraries: run.libraries,
   };
+}
+
+/**
+ * How much the answer moved with the machine's time zone, short enough for a table cell under
+ * "Machine time zones": "Same answer in all 11", or "11 different answers in 11".
+ */
+export function zoneSpread({
+  distinct,
+  zones,
+}: {
+  distinct: number;
+  zones: number;
+}): string {
+  return distinct === 1
+    ? `Same answer in all ${zones}`
+    : `${distinct} different answers in ${zones}`;
 }
 
 /** The text of a run's value: the value itself, or what it threw. */

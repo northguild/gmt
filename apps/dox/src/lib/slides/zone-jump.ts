@@ -4,7 +4,7 @@
  * after. Every date is read from gmt at build time (the zone's own transition, then its local date
  * a second either side of it), so nothing here is typed in. A jump that moves the date by one day or less has no gap pages.
  */
-import { addDate } from "@northguild/gmt/plain/calculate";
+import { addDate, addTime } from "@northguild/gmt/plain/calculate";
 import { convertUnixToZoned } from "@northguild/gmt/unix/convert";
 import { convertZonedToUnix } from "@northguild/gmt/zoned/convert";
 import { getDstTransitions } from "@northguild/gmt/zoned/get";
@@ -45,4 +45,27 @@ export function zoneJump(
     pages.push({ date: d, gap: true });
   pages.push({ date: after, gap: false });
   return { zone, instant: jump.instant, pages };
+}
+
+/**
+ * The hour a zone's clocks skip at its first offset change in any of `years`: the local date, the
+ * wall time the clocks leave (a second after the last one shown) and the one they land on, `HH:MM`.
+ * `null` for a zone with no change in those years.
+ */
+export function clockJump(
+  zone: string,
+  years: readonly number[],
+): { date: string; from: string; to: string } | null {
+  const jump = firstTransition(zone, years, {
+    getDstTransitions,
+    convertZonedToUnix,
+  });
+  if (!jump) return null;
+  const last = convertUnixToZoned(jump.ms - 1000, zone);
+  const landed = convertUnixToZoned(jump.ms, zone);
+  return {
+    date: landed.slice(0, 10),
+    from: addTime(last.slice(11, 19), { seconds: 1 }).slice(0, 5),
+    to: landed.slice(11, 16),
+  };
 }

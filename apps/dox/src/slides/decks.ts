@@ -59,7 +59,7 @@ export const DECKS: readonly DeckEntry[] = [
     start: TALK_START,
     zone: HELSINKI,
     locale: "fi",
-    minutes: 21.5,
+    minutes: 22,
     qa: 5,
   },
 ];

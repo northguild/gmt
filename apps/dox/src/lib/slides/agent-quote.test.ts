@@ -7,6 +7,7 @@ import {
   hashOf,
   TRANSCRIPT_FIELDS,
   valueLabel,
+  zoneSpread,
   type AgentQuoteConfig,
   type AgentQuoteRecord,
   type AgentRunFile,
@@ -60,12 +61,23 @@ describe("the agent quote", () => {
       runs: 4,
       zones: 2,
       nodes: 2,
+      nodesAgree: false,
       shown: {
         node: SHOWN.node,
         zone: SHOWN.zone,
         value: "2027-03-28T00:30:00.000Z",
       },
       libraries: { luxon: "3.7.2" },
+    });
+  });
+
+  it("says the Node majors agree when every zone gave each of them the same value", () => {
+    const run = runFor(full);
+    const agreeing = { ...run, values: [run.values[1]!, run.values[1]!] };
+    expect(agentQuote(full, agreeing, CONFIG)).toMatchObject({
+      ready: true,
+      distinct: 2,
+      nodesAgree: true,
     });
   });
 
@@ -247,5 +259,19 @@ describe("valueLabel", () => {
   it("shows a value, or what was thrown", () => {
     expect(valueLabel("x")).toBe("x");
     expect(valueLabel({ threw: "RangeError: y" })).toBe("Threw RangeError: y");
+  });
+});
+
+describe("how the machine's time zone changes an answer", () => {
+  it("says so when every zone gave the same answer", () => {
+    expect(zoneSpread({ distinct: 1, zones: 11 })).toBe(
+      "Same answer in all 11",
+    );
+  });
+
+  it("counts the answers when the zones disagree", () => {
+    expect(zoneSpread({ distinct: 11, zones: 11 })).toBe(
+      "11 different answers in 11",
+    );
   });
 });

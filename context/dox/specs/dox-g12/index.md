@@ -8,7 +8,7 @@ dox: none
 # DOX-G12 · Slide decks and Deck 0, "Give Me Temporal"
 
 A `/slides/` area that holds the site's talks, and its first deck: the HelsinkiJS talk "Give Me
-Temporal", 21.5 minutes plus 5 of questions. The deck is a 16:9 stage in front of the landing's
+Temporal", 22 minutes plus 5 of questions. The deck is a 16:9 stage in front of the landing's
 space scene. Site work in `apps/dox`, plus a by-hand runner in `scripts/zone-matrix/`: no new
 Dox tool or chat pill, and no `packages/gmt` change unless the zone-matrix control finds a GMT
 bug, which is then fixed here through the library pipeline with a changeset.
@@ -79,7 +79,7 @@ phases with disjoint file ownership.
 | 2 | [Space stage](./s2-space-stage.md) | The Earth and real sky behind every slide; hop flights between places; WASD free flight; the route as arcs; the Moon pull-back |
 | 2b | [Ice wall](./s2b-ice-wall.md) | Captured library pages with their clocks hang in orbit; flying through shatters them into ice; shards become clock pins with local times |
 | 3 | [Presenter view](./s3-presenter.md) | Notes, next slide, elapsed against plan, pace, live-or-recorded state, readiness check |
-| 4 | [Deck 0 content](./s4-deck-0.md) | The 28 slides and the spare (ids, notes, framing); bug cards read from the filings; build-time gmt results |
+| 4 | [Deck 0 content](./s4-deck-0.md) | The 29 slides and the spare (ids, notes, framing); bug cards read from the filings; build-time gmt results |
 | 4b | [Live agents](./s4b-live-agents.md) | The deck's own page tools; a live page-tool call; Dox chat answering on stage, with recorded fallbacks |
 | 4c | [Zone matrix](./s4c-zone-matrix.md) | Library suites run under GMT's CI zones; a Compare page, a `/compare` column, Migrate lines |
 | 5 | [Close-out](./s5-close-out.md) | Full gates, the venue runbook, `built/` updated |
@@ -88,16 +88,16 @@ phases with disjoint file ownership.
 | 8 | [Reusable blocks](./s8-reusable-blocks.md) | Nothing new: the next deck is a folder plus a row in `decks.ts`, `deck-runtime.ts` and `deck-pages.ts`, built from shared components, one animation loop and per-deck data |
 | 8b | [The block catalogue](./s8b-block-catalogue.md) | Each shared block's home and what a deck gets from it |
 
-## Deck 0 outline (21.5 minutes)
+## Deck 0 outline (22 minutes)
 
 | # | id | Slide | Place | Min |
 | --- | --- | --- | --- | --- |
 | 1 | `title` | Give Me Temporal; the venue's time now | Helsinki | 0.5 |
-| 2 | `agent-answer` | Ask an agent: the running question; the quoted agent's code; guess; what it returns, and that the time never happens | Helsinki (clock) | 0.75 |
-| 3 | `agents` | What the agents returned: one row per agent asked | Helsinki (clock) | 0.25 |
-| 4 | `moment` | Agents learned from Moment: the maintainers' 2020 and 2026 words, verbatim; Moment's npm downloads per year (`moment-downloads.json`); the closing line | Helsinki | 0.75 |
-| 5 | `date` | `Date` only knows this machine: the agents' question as the first row, then the two home-page rows from `date-faults.ts` no other slide shows | Helsinki (clock) | 0.5 |
-| 6 | `kinds` | `Date` takes anything: one `nextDay` over `Date`, called with six kinds of time, in five zones (`RunGrid`); then GMT's `addDate` | Helsinki (clock) | 0.5 |
+| 2 | `agent-answer` | Ask an agent: the running question; the quoted agent's code; guess; what it returns, and that the time never happens | Helsinki (plain clock) | 0.75 |
+| 3 | `agents` | What the agents returned: one row per agent asked | Helsinki (plain clock) | 0.25 |
+| 4 | `moment` | Agents learned from Moment: the maintainers' 2020 and 2026 words, verbatim; Moment's npm downloads per year (`moment-downloads.json`); the closing line | Helsinki (plain clock) | 0.75 |
+| 5 | `date` | `Date` only knows this machine: the agents' question as the first row, then the two home-page rows from `date-faults.ts` no other slide shows | Helsinki (plain clock) | 0.5 |
+| 6 | `kinds` | `Date` takes anything: one `nextDay` over `Date`, called with six kinds of time, in five zones (`RunGrid`); then GMT's `addDate` | Helsinki (plain clock) | 0.5 |
 | 7 | `experiments` | The same inputs into every library, answers from the standard; counts from `zone-probe.json` | Helsinki (plain clock) | 0.5 |
 | 8 | `experiment-gaps` | A time the clocks skip: the question and the bars | Helsinki (plain clock) | 1 |
 | 9 | `experiment-overlaps` | A time that happens twice | Helsinki (plain clock) | 0.75 |
@@ -116,13 +116,14 @@ phases with disjoint file ownership.
 | 22 | `gmt` | The running question answered by GMT; the clock skips 02:59 to 04:00 | Greenwich | 1 |
 | 23 | `familiar` | Names you already know: Moment, date-fns and Day.js call shapes beside the GMT call | Greenwich | 1 |
 | 24 | `guards` | Tested guards and the canary, in one paragraph | Greenwich | 0.5 |
-| 25 | `ask-dox` | The running question, live to Dox chat, tool calls visible | Helsinki | 1.5 |
-| 26 | `page-tools` | A live page-tool call, and this deck's own tools | Helsinki | 1.25 |
-| 27 | `qa` | Questions; the audience panel; questions through Dox chat or aloud | Helsinki | 5 |
-| 28 | `thanks` | Thanks; two QR codes; the links | Helsinki | 0 |
+| 25 | `lint` | Lint that bans Date: `@northguild/gmt-oxlint` run on every agent answer at build time, the errors per agent, the rules by name | Greenwich | 0.5 |
+| 26 | `ask-dox` | The running question, live to Dox chat, tool calls visible | Helsinki | 1.5 |
+| 27 | `page-tools` | A live page-tool call, and this deck's own tools | Helsinki | 1.25 |
+| 28 | `qa` | Questions; the audience panel; questions through Dox chat or aloud | Helsinki | 5 |
+| 29 | `thanks` | Thanks; two QR codes; the links | Helsinki | 0 |
 | spare | `spare-size` | How big is it? | Greenwich | none |
 
-The main slides' minutes sum to 26.5 (21.5 for the talk, 5 for `qa`); a built-output test holds it, and every value is a multiple of
+The main slides' minutes sum to 27 (22 for the talk, 5 for `qa`); a built-output test holds it, and every value is a multiple of
 0.25, so the float sum is exact. The spare comes after
 `thanks`, carries no minutes, is left out of the pace plan and is reached only by a jump (the
 overview, a deep link, or a link in `qa`'s notes); Next never lands on it and Next from it

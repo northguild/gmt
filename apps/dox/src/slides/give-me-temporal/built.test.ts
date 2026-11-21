@@ -41,6 +41,7 @@ const OUTLINE = [
   "gmt",
   "familiar",
   "guards",
+  "lint",
   "ask-dox",
   "page-tools",
   "qa",

@@ -1,14 +1,15 @@
 ---
 /**
  * Every recorded answer to the running question, one row each: the agent, how long its code is and
- * what it imports, what it returned on Node 26 in Helsinki, and how many different values its runs
- * held. The answers are the owner's transcript (`quotes/agent-answer.json`); the values come from
+ * what it imports, what it returned on Node 26 in Helsinki, and how many different answers the
+ * machine's time zone gave (`zoneSpread`). The answers are the owner's transcript (`quotes/agent-answer.json`); the values come from
  * running each answer's code (`quotes/agent-run.json`, written by `scripts/zone-matrix/agent-answer.mjs`).
  * While any answer is missing or stale its row says so in a marked cell, and `slides-check` fails.
  */
 import {
   agentAnswers,
   valueLabel,
+  zoneSpread,
   type AgentRunFile,
   type AgentTranscript,
 } from "~/lib/slides/agent-quote";
@@ -35,7 +36,7 @@ const libraryList = (libraries: Record<string, string>) => {
       <th scope="col">Agent</th>
       <th scope="col">Code</th>
       <th scope="col">Node {shown.node}, Helsinki</th>
-      <th scope="col">Values</th>
+      <th scope="col">Machine time zones</th>
     </tr>
   </thead>
   <tbody>
@@ -51,7 +52,7 @@ const libraryList = (libraries: Record<string, string>) => {
               <output>{valueLabel(quote.shown.value)}</output>
             </td>
             <td>
-              {quote.distinct} across {quote.runs} runs
+              {zoneSpread(quote)}
             </td>
           </tr>
         ) : (

@@ -8,10 +8,10 @@ New pieces and the builder phases: [slice 7](./s7-running-question.md).
 
 ## Goal
 
-The 28 slides and the spare of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`,
+The 29 slides and the spare of the HelsinkiJS talk, in `src/slides/give-me-temporal/Deck0.astro`,
 using slice 1's components, slice 2's places, slice 2b's wall and slice 3's notes. Every bug on
 stage is a real filing read from `upstream-filings.json`; every gmt result is computed by gmt at
-build time; every count is derived. The talk runs 21.5 minutes; `qa` holds 5 of questions.
+build time; every count is derived. The talk runs 22 minutes; `qa` holds 5 of questions.
 
 The deck says a library is wrong with a measured count, never an adjective: a number from the zone
 probe (`zone-probe.json`), the calendar probe (`intl-date-calendars.json`) or our own filings. Bugs
@@ -20,7 +20,7 @@ in a competing library are shown from our own probe and are never filed upstream
 ## Registry entry
 
 `src/slides/decks.ts` holds `{ slug: "give-me-temporal", label: "Deck 0", title: "Give Me
-Temporal", event: "HelsinkiJS", start: "2026-12-16T18:00:00+02:00[Europe/Helsinki]", minutes: 21.5,
+Temporal", event: "HelsinkiJS", start: "2026-12-16T18:00:00+02:00[Europe/Helsinki]", minutes: 22,
 qa: 5, zone: "Europe/Helsinki", locale: "fi" }`. The index page and the title slide render the
 date with gmt from `start` and `zone`; a `null` start reads "Date to be announced".
 
@@ -32,17 +32,24 @@ places; no national default, no law, no business wording, no text that judges a 
 
 - **`title`**: the event and date, and the venue's local time now from gmt in a kit `readout`
   with samples, so the arriving time moves nothing.
+- **The clock from `agent-answer` to the wall:** every slide from `agent-answer` to `one-clock`
+  sets `plainClock` (calendar and 24-hour dial, no GMT mark, city or offset). Only `title` shows the
+  full clock before the shatter; it comes back on `gmt`'s first build (`clockAt`).
 - **`agent-answer`** ("Ask an agent"): `AgentQuote`, the answer the transcript's `quoted` names.
   Build 0: the question, as the owner asked it. Build 1: the agent's code (its `excerpt` when
-  set) in the site's own code block, dark on the dark stage (`DeckCode`), the model and date as the source line, and "What does it return?" (a guess). Build 2: the
-  call and the value the code returned on Node 26 at `TZ=Europe/Helsinki`, the count of distinct
-  values across its runs, zones and Node majors, and the line "That time never happens in
-  Helsinki", shown only when `classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki")`
-  (`instant/convert`) returns `"nonexistent"` at build time; it does today. The agent's prose goes
+  set) in the site's own code block, dark on the dark stage (`DeckCode`), the model and date as the source line, and "What does it return?" (a guess). Build 2
+  leads with the plain fact, called out large in the wrong ink: "That night the clocks jump from
+  03:00 to 04:00: 03:30 never happens in Helsinki", shown only when
+  `classifyLocal("2027-03-28T03:30:00", "Europe/Helsinki")` (`instant/convert`) returns
+  `"nonexistent"` at build time (it does today), with the two clock times read from the zone by
+  `clockJump` (`lib/slides/zone-jump.ts`). Then "On a machine set to Helsinki it returns" and the
+  value from Node 26 at `TZ=Europe/Helsinki` (naming the Node major only when the majors disagree),
+  then `zoneSpread` and "machine time zones": "11 different answers in 11 machine time zones". The agent's prose goes
   to the notes (`part="prose"`): on the slide it would give the guess away.
 - **`agents`** ("What the agents returned"): `AgentTable`, one row per answer in file order: the
-  model, the code's line count and imported libraries, the value on Node 26 in Helsinki, and the
-  distinct values across its runs. An answer not ready fills its row with the marked cell.
+  model, the code's line count and imported libraries, the value on Node 26 in Helsinki, and under
+  "Machine time zones" the `zoneSpread` of its runs ("Same answer in all 11", "11 different
+  answers in 11"). An answer not ready fills its row with the marked cell.
 - **`moment`** ("Agents learned from Moment"): agents are trained on Moment.js, whose own maintainers
   call it legacy. Two quotes, verbatim from https://momentjs.com/news/ and linked to it: "Moment.js
   maintainers, 2020" ("In most cases, you should not choose Moment for new projects.") and "Moment.js
@@ -128,6 +135,15 @@ places; no national default, no law, no business wording, no text that judges a 
   result moves to `familiar`; the `addZoned` one is dropped.
 - **`guards`**: one paragraph from `compatGroups`, `groupsStillNeeded`, `probeTotals` and
   `gmtStats`, and the link to every filing. The bug slides already showed guards at work.
+- **`lint`** ("Lint that bans Date"): `AgentLint` lints every answer in `quotes/agent-answer.json`
+  with oxlint and `@northguild/gmt-oxlint`'s recommended config when the page is built
+  (`lintCode` in `lib/slides/agent-lint.ts`; nothing is recorded). One `DeckTable` row per agent:
+  each rule it broke and the lines (`byRule`), or "None". The lead counts the answers that fail;
+  the caption names the oxlint and plugin versions. Build 1 swaps in a second `DeckTable`: the
+  plugin's rules in `recommendedConfig` order, each with its own `meta.docs.description`
+  (`LINT_RULES`). The notes name `@northguild/gmt-eslint` (the same bans) and `@northguild/gmt-biome`
+  (all but `no-date-global`). The plugin loads from its `dist`, so `build:dox` and `test:dox` need
+  `build:gmt-oxlint`.
 - **`ask-dox`**, **`page-tools`**: [slice 4b](./s4b-live-agents.md).
 - **`why-not-temporal`** ("Why not just Temporal?"): three plain points: bad input throws, a
   time that never happened is moved rather than refused, and engines and polyfills disagree (GMT
