@@ -42,7 +42,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.23.0'
+  library_version: '1.23.1'
 ---
 
 # GMT Arithmetic
