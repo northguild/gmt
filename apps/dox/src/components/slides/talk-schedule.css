@@ -1,6 +1,6 @@
 /*
  * The title's schedule card (`TalkSchedule.astro`): a calendar page with the day beside the start
- * time. The page is the Earth clock's date window at a fixed width, centred on the slot's height;
+ * time, the doors time, the zone and the venue. The page is the Earth clock's date window at a fixed width, centred on the slot's height;
  * its drawing rules are in `earth-clock.css`. The card's panel look is the shared one in `slides.css`.
  */
 html[data-deck] .gmt-talk-schedule {
@@ -25,7 +25,7 @@ html[data-deck] .gmt-talk-slot {
   gap: var(--gmt-deck-space-xs);
 }
 
-html[data-deck] .gmt-talk-slot p {
+html[data-deck] .gmt-talk-slot :is(p, address) {
   margin: 0;
 }
 
@@ -41,14 +41,33 @@ html[data-deck] .gmt-talk-date {
   color: var(--gmt-ice);
 }
 
+/* The start is the card's headline: the largest line. */
 html[data-deck] .gmt-talk-when {
+  padding-block-start: var(--gmt-deck-space-xs);
   font-family: var(--gmt-font-display);
-  font-size: max(1rem, 2.8cqi);
+  font-size: max(1.6rem, 5cqi);
+  line-height: 1;
   letter-spacing: 0.04em;
   color: var(--gmt-ice-bright);
+}
+
+html[data-deck] .gmt-talk-doors {
+  font-size: var(--gmt-deck-text-md);
+  color: var(--gmt-ice);
 }
 
 html[data-deck] .gmt-talk-zone {
   font-size: var(--gmt-deck-text-md);
   color: var(--gmt-ice-dim);
+}
+
+html[data-deck] .gmt-talk-venue {
+  padding-block-start: var(--gmt-deck-space-sm);
+  font-size: var(--gmt-deck-text-md);
+  font-style: normal;
+  color: var(--gmt-ice);
+}
+
+html[data-deck] .gmt-talk-venue a {
+  color: var(--gmt-cyan-bright);
 }

@@ -20,10 +20,17 @@ export interface DeckEntry {
   event: string;
   /**
    * The talk's start as a zoned date-time string in `zone`
-   * (`2026-12-16T18:00:00+02:00[Europe/Helsinki]`), or `null` while no date is fixed. Every page
+   * (`2026-12-15T18:00:00+02:00[Europe/Helsinki]`), or `null` while no date is fixed. Every page
    * then says "Date to be announced".
    */
   start: string | null;
+  /**
+   * When the doors open, in the same form as `start`, or `null` when the event names no time.
+   * The card shows it small, under the start.
+   */
+  doors: string | null;
+  /** Where the talk is, or `null` while no venue is fixed. */
+  venue: Venue | null;
   /** The IANA zone of the venue: the title slide's clock and `start` are read in it. */
   zone: string;
   /** The venue's locale tag, for its clock. */
@@ -34,19 +41,47 @@ export interface DeckEntry {
   qa: number;
 }
 
+/** The building a talk is in. */
+export interface Venue {
+  /** The host and the building ("Kisko Labs, Trooli"). */
+  name: string;
+  street: string;
+  /** Which floor, as the event states it ("6th floor"). */
+  floor: string;
+  /** The postcode and city ("00580 Helsinki"). */
+  city: string;
+}
+
+/** The venue's address on one line, floor included. */
+export function venueAddress(venue: Venue): string {
+  return `${venue.street}, ${venue.floor}, ${venue.city}`;
+}
+
 /**
- * Deck 0's start, 18:00 on 16 December 2026 in Helsinki, made by gmt from the wall time and the
- * zone, so its offset is gmt's answer and nobody writes it by hand.
+ * A Google Maps search for the venue's street address, in the documented Maps URLs form
+ * (`/maps/search/?api=1&query=`). The floor is left out: Maps does not know it.
+ */
+export function venueMapUrl(venue: Venue): string {
+  const query = encodeURIComponent(`${venue.street}, ${venue.city}`);
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+/**
+ * Deck 0's times on 15 December 2026 in Helsinki: doors at 17:30, talks from 18:00. Each is made by
+ * gmt from the wall time and the zone, so its offset is gmt's answer and nobody writes it by hand.
  */
 const HELSINKI = "Europe/Helsinki";
-const TALK_START = convertPlainDateTimeToZoned(
-  "2026-12-16T18:00:00",
-  HELSINKI,
-  {
-    smallestUnit: "seconds",
-  },
-);
-if (TALK_START === "") throw new Error("gmt rejected Deck 0's start time");
+function helsinkiAt(wallTime: string): string {
+  const zoned = convertPlainDateTimeToZoned(
+    `2026-12-15T${wallTime}`,
+    HELSINKI,
+    {
+      smallestUnit: "seconds",
+    },
+  );
+  if (zoned === "") throw new Error(`gmt rejected Deck 0's time ${wallTime}`);
+  return zoned;
+}
 
 export const DECKS: readonly DeckEntry[] = [
   {
@@ -56,7 +91,14 @@ export const DECKS: readonly DeckEntry[] = [
     description:
       "Slides for the talk Give Me Temporal: one clock against the whole planet, and what GMT does about it.",
     event: "HelsinkiJS",
-    start: TALK_START,
+    start: helsinkiAt("18:00:00"),
+    doors: helsinkiAt("17:30:00"),
+    venue: {
+      name: "Kisko Labs, Trooli",
+      street: "Panimokatu 2A",
+      floor: "6th floor",
+      city: "00580 Helsinki",
+    },
     zone: HELSINKI,
     locale: "fi",
     minutes: 22,
@@ -91,6 +133,8 @@ interface DeckSchedule {
   monthShort: string;
   /** The start time, `HH:MM` in the venue's zone. */
   start: string;
+  /** When the doors open, `HH:MM` and as an HTML date-time string, or `null` when not stated. */
+  doors: { time: string; datetime: string } | null;
   zone: string;
   /** The venue's offset from UTC at the start, `UTC+02:00`. */
   offset: string;
@@ -127,10 +171,26 @@ export function deckSchedule(entry: DeckEntry): DeckSchedule | null {
     start: formatZonedDateTime(entry.start, "en-GB", { timeStyle: "short" }),
   };
   if (offset === undefined || Object.values(schedule).includes("")) return null;
+  const doors =
+    entry.doors === null
+      ? null
+      : {
+          time: formatZonedDateTime(entry.doors, "en-GB", {
+            timeStyle: "short",
+          }),
+          datetime: htmlDateTime(entry.doors),
+        };
+  if (doors?.time === "") return null;
   return {
     ...schedule,
+    doors,
     zone: entry.zone,
     offset: `UTC${offset}`,
-    datetime: entry.start.slice(0, entry.start.indexOf("[")),
+    datetime: htmlDateTime(entry.start),
   };
+}
+
+/** A zoned date-time string without its bracketed zone: a valid HTML date-time string. */
+function htmlDateTime(zoned: string): string {
+  return zoned.slice(0, zoned.indexOf("["));
 }

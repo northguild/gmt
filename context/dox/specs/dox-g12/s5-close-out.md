@@ -11,7 +11,7 @@ describing what is built. Slices 1–4c ran only their own tests, lint and check
 
 ## The merge waits on the owner's inputs
 
-The talk's date and start time are set in `decks.ts` (2026-12-16 18:00 Europe/Helsinki). Still to
+The talk's date and start time are set in `decks.ts` (2026-12-15 18:00 Europe/Helsinki). Still to
 come, each failing `slides-check` until it lands:
 
 1. The recordings from `scripts/record-deck-answers.ts`: `ask-dox` and the three audience

@@ -128,7 +128,7 @@ export function replayStream(
 }
 
 /**
- * `Recorded 16 December 2026, Gemma 4 26B`: the date in the talk's zone (the deck's venue zone,
+ * `Recorded 15 December 2026, Gemma 4 26B`: the date in the talk's zone (the deck's venue zone,
  * `DeckEntry.zone`), read with gmt. An instant gmt refuses gives the label without a date, never a blank.
  */
 export async function formatRecordedLabel(

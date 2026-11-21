@@ -50,7 +50,7 @@ beforeEach(() => {
     hour: 18,
     minute: 43,
     second: 20,
-    zoned: "2026-12-16T18:43:20+02:00[Europe/Helsinki]",
+    zoned: "2026-12-15T18:43:20+02:00[Europe/Helsinki]",
   };
   abort = new AbortController();
   host = document.createElement("div");
@@ -165,9 +165,9 @@ describe("the Earth's clock", () => {
     mount();
     await vi.waitFor(() => expect(face()).toHaveTextContent("UTC+02:00"));
     const text = (hook: string) => host.querySelector(`[${hook}]`);
-    expect(text("data-calendar-day")).toHaveTextContent("16");
+    expect(text("data-calendar-day")).toHaveTextContent("15");
     expect(text("data-calendar-month")).toHaveTextContent("DEC");
-    expect(text("data-calendar-weekday")).toHaveTextContent("WED");
+    expect(text("data-calendar-weekday")).toHaveTextContent("TUE");
   });
 
   it("reads the date from the zoned string, not from UTC", () => {
@@ -258,7 +258,7 @@ describe("the Earth's clock", () => {
     clock.plain(true);
     expect(face()).toHaveAttribute("data-plain");
     expect(host.querySelector("[data-legend]")).toHaveTextContent("HELSINKI");
-    expect(host.querySelector("[data-calendar-day]")).toHaveTextContent("16");
+    expect(host.querySelector("[data-calendar-day]")).toHaveTextContent("15");
     clock.set("on");
     clock.set("shatter");
     // The shards are copies inside the plain clock, so they break plain too.

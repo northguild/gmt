@@ -2,7 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { NO_STAGE_DATA } from "~/lib/slides/stage-data";
 import { deckStage, loadDeckRuntime, RUNTIME_SLUGS } from "./deck-runtime";
-import { DECKS, deckDate, deckSchedule } from "./decks";
+import {
+  DECKS,
+  deckDate,
+  deckSchedule,
+  venueAddress,
+  venueMapUrl,
+} from "./decks";
 
 const here = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
@@ -52,25 +58,53 @@ describe("deck registry", () => {
     );
   });
 
-  it("holds the Deck 0 talk at 18:00 on 16 December 2026, Helsinki time", () => {
+  it("holds the Deck 0 talk at 18:00 on 15 December 2026, Helsinki time", () => {
     expect(deckDate(DECKS[0])).toBe(
-      "16 December 2026 at 18:00, Europe/Helsinki time",
+      "15 December 2026 at 18:00, Europe/Helsinki time",
     );
   });
 
   it("lays out the Deck 0 talk as a calendar day and a start time, read by gmt", () => {
     expect(deckSchedule(DECKS[0])).toEqual({
-      weekday: "Wednesday",
-      day: "16",
+      weekday: "Tuesday",
+      day: "15",
       month: "December",
       year: "2026",
-      weekdayShort: "Wed",
+      weekdayShort: "Tue",
       monthShort: "Dec",
       start: "18:00",
+      doors: { time: "17:30", datetime: "2026-12-15T17:30:00+02:00" },
       zone: "Europe/Helsinki",
       offset: "UTC+02:00",
-      datetime: "2026-12-16T18:00:00+02:00",
+      datetime: "2026-12-15T18:00:00+02:00",
     });
+  });
+
+  it("has no doors line when the event names no doors time", () => {
+    expect(deckSchedule({ ...DECKS[0], doors: null })?.doors).toBeNull();
+  });
+
+  it("has no schedule when the doors time is not valid", () => {
+    expect(deckSchedule({ ...DECKS[0], doors: "2026-12-15T17:30" })).toBeNull();
+  });
+
+  it("opens the doors before the talk starts, on the same day", () => {
+    for (const d of DECKS)
+      if (d.start !== null && d.doors !== null) {
+        expect(d.doors.slice(0, 10)).toBe(d.start.slice(0, 10));
+        expect(d.doors < d.start).toBe(true);
+      }
+  });
+
+  it("gives the Deck 0 venue's address and a Google Maps link to its street address", () => {
+    const venue = DECKS[0].venue!;
+    expect(venue.name).toBe("Kisko Labs, Trooli");
+    expect(venueAddress(venue)).toBe(
+      "Panimokatu 2A, 6th floor, 00580 Helsinki",
+    );
+    expect(venueMapUrl(venue)).toBe(
+      "https://www.google.com/maps/search/?api=1&query=Panimokatu%202A%2C%2000580%20Helsinki",
+    );
   });
 
   it("has no schedule while the date is not fixed or not valid", () => {
@@ -90,8 +124,8 @@ describe("deck registry", () => {
 });
 
 describe("Deck 0's start", () => {
-  it("is 18:00 on 16 December 2026 in Helsinki, with the offset gmt gives", () => {
-    expect(DECKS[0]!.start).toBe("2026-12-16T18:00:00+02:00[Europe/Helsinki]");
+  it("is 18:00 on 15 December 2026 in Helsinki, with the offset gmt gives", () => {
+    expect(DECKS[0]!.start).toBe("2026-12-15T18:00:00+02:00[Europe/Helsinki]");
   });
 });
 

@@ -40,7 +40,7 @@ export const FIRST_OUTPUT_MS = 8000;
 /** Where the answer on screen comes from, for the line above the composer. */
 export interface SourceState {
   source: DemoSource;
-  /** The recorded line, "Recorded 16 December 2026, Gemma"; absent for Live and Waiting. */
+  /** The recorded line, "Recorded 15 December 2026, Gemma"; absent for Live and Waiting. */
   label?: string;
 }
 

@@ -20,7 +20,7 @@ in a competing library are shown from our own probe and are never filed upstream
 ## Registry entry
 
 `src/slides/decks.ts` holds `{ slug: "give-me-temporal", label: "Deck 0", title: "Give Me
-Temporal", event: "HelsinkiJS", start: "2026-12-16T18:00:00+02:00[Europe/Helsinki]", minutes: 22,
+Temporal", event: "HelsinkiJS", start: "2026-12-15T18:00:00+02:00[Europe/Helsinki]", minutes: 22,
 qa: 5, zone: "Europe/Helsinki", locale: "fi" }`. The index page and the title slide render the
 date with gmt from `start` and `zone`; a `null` start reads "Date to be announced".
 
