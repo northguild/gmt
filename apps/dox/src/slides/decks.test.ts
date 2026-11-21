@@ -1,5 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { isBeforeZoned } from "@northguild/gmt/zoned/compare";
+import {
+  convertZonedToPlainDateTime,
+  convertZonedToZoned,
+} from "@northguild/gmt/zoned/convert";
 import { NO_STAGE_DATA } from "~/lib/slides/stage-data";
 import { deckStage, loadDeckRuntime, RUNTIME_SLUGS } from "./deck-runtime";
 import {
@@ -88,12 +93,26 @@ describe("deck registry", () => {
     expect(deckSchedule({ ...DECKS[0], doors: "2026-12-15T17:30" })).toBeNull();
   });
 
-  it("opens the doors before the talk starts, on the same day", () => {
+  it("opens the doors before the talk starts, on the same day in the venue's zone", () => {
     for (const d of DECKS)
       if (d.start !== null && d.doors !== null) {
-        expect(d.doors.slice(0, 10)).toBe(d.start.slice(0, 10));
-        expect(d.doors < d.start).toBe(true);
+        expect(isBeforeZoned(d.doors, d.start)).toBe(true);
+        const day = (zoned: string) =>
+          convertZonedToPlainDateTime(convertZonedToZoned(zoned, d.zone)).slice(
+            0,
+            10,
+          );
+        expect(day(d.doors)).toBe(day(d.start!));
       }
+  });
+
+  it("shows a doors time written in another zone at the venue's wall time", () => {
+    expect(
+      deckSchedule({
+        ...DECKS[0],
+        doors: "2026-12-15T16:30:00+01:00[Europe/Paris]",
+      })?.doors,
+    ).toEqual({ time: "17:30", datetime: "2026-12-15T17:30:00+02:00" });
   });
 
   it("gives the Deck 0 venue's address and a Google Maps link to its street address", () => {

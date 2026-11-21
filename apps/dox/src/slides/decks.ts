@@ -3,7 +3,10 @@
  * and `decks.test.ts` holds that every slug has a deck component in `deck-pages.ts`. Delete this
  * file and `src/pages/slides/` together and the site builds without decks.
  */
-import { convertPlainDateTimeToZoned } from "@northguild/gmt/zoned/convert";
+import {
+  convertPlainDateTimeToZoned,
+  convertZonedToZoned,
+} from "@northguild/gmt/zoned/convert";
 import {
   formatZonedDateTime,
   formatZonedToParts,
@@ -26,7 +29,7 @@ export interface DeckEntry {
   start: string | null;
   /**
    * When the doors open, in the same form as `start`, or `null` when the event names no time.
-   * The card shows it small, under the start.
+   * The card shows it small, under the start, read in `zone`.
    */
   doors: string | null;
   /** Where the talk is, or `null` while no venue is fixed. */
@@ -171,14 +174,17 @@ export function deckSchedule(entry: DeckEntry): DeckSchedule | null {
     start: formatZonedDateTime(entry.start, "en-GB", { timeStyle: "short" }),
   };
   if (offset === undefined || Object.values(schedule).includes("")) return null;
+  // The doors time is read in the venue's zone, as the start is, whatever zone it was written in.
+  const doorsAtVenue =
+    entry.doors === null ? null : convertZonedToZoned(entry.doors, entry.zone);
   const doors =
-    entry.doors === null
+    doorsAtVenue === null
       ? null
       : {
-          time: formatZonedDateTime(entry.doors, "en-GB", {
+          time: formatZonedDateTime(doorsAtVenue, "en-GB", {
             timeStyle: "short",
           }),
-          datetime: htmlDateTime(entry.doors),
+          datetime: htmlDateTime(doorsAtVenue),
         };
   if (doors?.time === "") return null;
   return {
