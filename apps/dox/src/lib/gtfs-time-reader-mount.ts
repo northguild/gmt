@@ -95,6 +95,7 @@ import {
 import { loadRailLib, type RailLib } from "./rail-lib";
 import { withBase } from "./site";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { link } from "~/widgets/builders/link";
 
 export type { GtfsTimeReaderArgs } from "./gtfs-time-reader";
 
@@ -478,7 +479,7 @@ export function renderGtfsTimeReaderTemplate(
     )}<div class="${styles.clock}" id="${id("clock-note")}">${
       hint(
         id("clock-note-text"),
-        html`${CLOCK_NOTE_LEAD}<a href="${withBase(CLOCK_NOTE_FN_HREF)}"><code>${CLOCK_NOTE_FN}</code></a>${CLOCK_NOTE_MID}<a href="${withBase(CLOCK_NOTE_CLOCK_HREF)}">${CLOCK_NOTE_CLOCK}</a>${CLOCK_NOTE_TAIL}`,
+        html`${CLOCK_NOTE_LEAD}${link({ href: withBase(CLOCK_NOTE_FN_HREF), body: html`<code>${CLOCK_NOTE_FN}</code>` })}${CLOCK_NOTE_MID}${link({ href: withBase(CLOCK_NOTE_CLOCK_HREF), body: CLOCK_NOTE_CLOCK })}${CLOCK_NOTE_TAIL}`,
       ).html
     }</div>${callsSlot(id("read-calls"), "read")}`,
   );

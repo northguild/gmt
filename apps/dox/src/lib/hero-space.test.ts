@@ -14,24 +14,19 @@ const views: {
   centre: unknown;
   zoom: number | undefined;
 }[] = [];
-/** The Milky Way map each mounted sky was given. */
-const maps: unknown[] = [];
 vi.mock("./sky", () => ({
-  mountSky: ({ host, milkyWay }: { host: HTMLElement; milkyWay?: unknown }) => (
-    maps.push(milkyWay),
-    {
-      ready: Promise.resolve(),
-      view: (
-        rotation: readonly [number, number],
-        centre: unknown,
-        _instantMs: number,
-        zoom?: number,
-      ) => {
-        views.push({ rotation, centre, zoom });
-        host.dataset["sky"] = "ready";
-      },
-    }
-  ),
+  mountSky: ({ host }: { host: HTMLElement }) => ({
+    ready: Promise.resolve(),
+    view: (
+      rotation: readonly [number, number],
+      centre: unknown,
+      _instantMs: number,
+      zoom?: number,
+    ) => {
+      views.push({ rotation, centre, zoom });
+      host.dataset["sky"] = "ready";
+    },
+  }),
 }));
 const meteors: number[] = [];
 vi.mock("./space-fx", () => ({
@@ -55,7 +50,6 @@ const globe = (frames: (() => void)[]): GlobeHost =>
 beforeEach(() => {
   views.length = 0;
   meteors.length = 0;
-  maps.length = 0;
   controller = new AbortController();
   hero = document.createElement("div");
   hero.dataset["gate"] = "hero-stage";
@@ -127,55 +121,6 @@ describe("the hero's sky", () => {
     await skyWithoutGlobe(hero);
     expect(views).toHaveLength(1);
   });
-});
-
-describe("the hero's Milky Way", () => {
-  const pixels = { width: 2, height: 1, data: new Uint8ClampedArray(8) };
-
-  /** A browser that decodes the map to `pixels`, or fails at `failAt`. */
-  function decoder(failAt?: "fetch" | "decode") {
-    const closed = vi.fn();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => ({
-        ok: !(failAt === "fetch" && url === "/milkyway.webp"),
-        arrayBuffer: async () => new ArrayBuffer(0),
-        blob: async () => new Blob(),
-      })),
-    );
-    vi.stubGlobal(
-      "createImageBitmap",
-      vi.fn(async () => {
-        if (failAt === "decode") throw new Error("cannot decode");
-        return { width: 2, height: 1, close: closed };
-      }),
-    );
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-      drawImage: () => {},
-      getImageData: () => pixels,
-    } as never);
-    return closed;
-  }
-
-  it("is fetched with the stars, decoded to its pixels and handed to the sky", async () => {
-    const closed = decoder();
-    startHeroSky(sky());
-    await skyWithoutGlobe(hero);
-    expect(fetch).toHaveBeenCalledWith("/milkyway.webp");
-    expect(maps).toEqual([pixels]);
-    expect(closed).toHaveBeenCalled();
-  });
-
-  it.each(["fetch", "decode"] as const)(
-    "is left out when its %s fails, and the stars are still drawn",
-    async (failAt) => {
-      decoder(failAt);
-      startHeroSky(sky());
-      await skyWithoutGlobe(hero);
-      expect(maps).toEqual([undefined]);
-      expect(views).toHaveLength(1);
-    },
-  );
 });
 
 describe("the hero's entrance", () => {

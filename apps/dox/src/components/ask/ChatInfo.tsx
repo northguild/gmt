@@ -17,6 +17,7 @@ import {
   LICENCE_SUMMARY,
   LICENCE_URL,
 } from "~/lib/licence";
+import { Link } from "./Link";
 
 /** A fixed locale, so the server render and the browser agree on the digits. */
 const GMT_TEST_COUNT = new Intl.NumberFormat("en-US").format(gmtStats.tests);
@@ -35,7 +36,7 @@ export function AccuracyNote({ className }: { className?: string }) {
 export function LicenceNote({ className }: { className?: string }) {
   return (
     <p className={className}>
-      {LICENCE_LEAD} <a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
+      {LICENCE_LEAD} <Link href={LICENCE_URL}>{LICENCE_LINK_TEXT}</Link>.
     </p>
   );
 }
@@ -46,7 +47,7 @@ export function LicenceDisclosure({ className }: { className?: string }) {
     <details className={`gmt-licence${className ? ` ${className}` : ""}`}>
       <summary>{LICENCE_SUMMARY}</summary>
       <p>
-        {LICENCE_LEAD} <a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
+        {LICENCE_LEAD} <Link href={LICENCE_URL}>{LICENCE_LINK_TEXT}</Link>.
       </p>
     </details>
   );

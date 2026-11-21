@@ -3,7 +3,6 @@
  */
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installJsdomShims } from "~/test/jsdom-shims";
 import { setRange } from "~/test/render-widget";
 import {

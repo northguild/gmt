@@ -8,7 +8,7 @@
  * wheel that reports when it has hit a zoom limit so the page can scroll.
  */
 
-import { createController } from "./controller";
+import { createController, hopDuration } from "./controller";
 import { FLIGHT_HALF_TURN_MS, flightMs } from "./flight";
 
 const RADIUS = 300;
@@ -477,6 +477,30 @@ describe("fly-to", () => {
     c.step(landed + 3000);
     expect(c.isAmbientOnly()).toBe(true);
   });
+
+  it("covers the same ground in the same time at 60 and 120 frames a second", () => {
+    const at60 = make({ ambient: false });
+    const at120 = make({ ambient: false });
+    at60.flyTo([-90, 0], 0);
+    at120.flyTo([-90, 0], 0);
+    at60.setZoom(3, 0);
+    at120.setZoom(3, 0);
+    for (let now = 16; now <= 160; now += 16) at60.step(now);
+    // A controller's first step counts as one 16 ms frame, so both start at 16 and end at 160.
+    for (let now = 16; now <= 160; now += 8) at120.step(now);
+    expect(at120.rotation[0]).toBeCloseTo(at60.rotation[0], 6);
+    expect(at120.zoom).toBeCloseTo(at60.zoom, 6);
+  });
+});
+
+describe("hopDuration", () => {
+  it("takes 2 s up to 30 degrees and grows to 4 s at 180", () => {
+    expect(hopDuration(5)).toBe(2000);
+    expect(hopDuration(30)).toBe(2000);
+    expect(hopDuration(105)).toBe(3000);
+    expect(hopDuration(180)).toBe(4000);
+    expect(hopDuration(270)).toBe(4000);
+  });
 });
 
 describe("zoom easing", () => {
@@ -496,6 +520,20 @@ describe("zoom easing", () => {
     c.setZoom(3, 0);
     c.step(16);
     expect(c.zoom).toBeCloseTo(3, 6);
+  });
+
+  it("opens at the initial zoom, already there, so nothing eases up from the range's low end", () => {
+    const c = make({ initialZoom: 2.5 });
+    expect(c.zoom).toBe(2.5);
+    expect(c.targetZoom).toBe(2.5);
+    animate(c, 0, 500);
+    expect(c.zoom).toBe(2.5);
+  });
+
+  it("clamps the initial zoom to the range, and opens at its low end without one", () => {
+    expect(make({ initialZoom: 9 }).zoom).toBe(5);
+    expect(make({ initialZoom: 0.1 }).zoom).toBe(1);
+    expect(make().zoom).toBe(1);
   });
 
   it("clamps to the configured range", () => {
@@ -881,5 +919,251 @@ describe("gesture commit", () => {
 
   it("returns null for a pointer it never saw", () => {
     expect(make().pointerMove(9, 5, 5, 16, RADIUS)).toBeNull();
+  });
+});
+
+describe("ambient: false", () => {
+  it("never sets a due time, so the globe stays at rest", () => {
+    const c = make({ ambient: false });
+    c.markInteraction(0);
+    expect(c.nextWakeAt()).toBeNull();
+    animate(c, 0, 10_000);
+    expect(c.rotation[0]).toBe(0);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("still schedules the spin by default", () => {
+    const c = make();
+    c.markInteraction(0);
+    expect(c.nextWakeAt()).not.toBeNull();
+  });
+});
+
+describe("requested spin", () => {
+  /** Degrees turned by each 16ms frame over `ms`, from `from`. */
+  function frames(
+    c: ReturnType<typeof createController>,
+    from: number,
+    ms: number,
+  ): number[] {
+    const out: number[] = [];
+    for (let now = from; now < from + ms; now += 16) {
+      const before = c.rotation[0];
+      c.step(now);
+      let d = c.rotation[0] - before;
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      out.push(d);
+    }
+    return out;
+  }
+
+  it("starts at once, with no idle wait, even though ambient is off and the zoom is not at rest", () => {
+    const c = make({ ambient: false, initialZoom: 3 });
+    c.setSpin(true);
+    expect(c.needsFrame()).toBe(true);
+    const turned = frames(c, 0, 1000);
+    expect(turned.at(-1)).toBeGreaterThan(0);
+    expect(c.isSpinning()).toBe(true);
+  });
+
+  it("uses the idle spin's own rate and ramp", () => {
+    const requested = make({ ambient: false });
+    requested.setSpin(true);
+    const idle = make();
+    idle.markInteraction(0);
+    const a = frames(requested, 0, 4000);
+    // The idle spin starts at 2500, after the countdown; its first frame is a 16ms step too.
+    const b = frames(idle, 2500, 4000);
+    expect(a.length).toBe(b.length);
+    a.forEach((d, i) => expect(d).toBeCloseTo(b[i]!, 9));
+    expect(a.at(-1)).toBeCloseTo(0.032, 9);
+  });
+
+  it("does not count as the globe moving to a place", () => {
+    const c = make({ ambient: false });
+    c.setSpin(true);
+    frames(c, 0, 200);
+    expect(c.isSpinOnly()).toBe(true);
+    c.flyTo([100, 0], 200);
+    expect(c.isSpinOnly()).toBe(false);
+  });
+
+  it("eases down on the same ramp when released, and never stops short", () => {
+    const c = make({ ambient: false });
+    c.setSpin(true);
+    frames(c, 0, 5000);
+    c.setSpin(false);
+    // 5008 keeps the frames 16ms apart: the last cruise frame was at 4992.
+    const down = frames(c, 5008, 3000);
+    for (let i = 1; i < down.length; i++) {
+      // The speed only falls, by a sliver a frame: no snap to zero.
+      expect(down[i]!).toBeLessThanOrEqual(down[i - 1]! + 1e-12);
+      expect(down[i - 1]! - down[i]!).toBeLessThan(0.032 / 50);
+    }
+    expect(down[0]).toBeCloseTo(0.032, 2);
+    expect(c.isSpinning()).toBe(false);
+    expect(c.needsFrame()).toBe(false);
+    const rest = c.rotation[0];
+    frames(c, 8016, 500);
+    expect(c.rotation[0]).toBe(rest);
+  });
+
+  it("flows into a flight sent as it is released, at its own speed, with no jolt or dip", () => {
+    const c = make({ ambient: false, initialZoom: 2 });
+    c.setSpin(true);
+    const cruise = frames(c, 0, 5000);
+    c.setSpin(false);
+    // Behind the turn: the flight carries the spin on, then settles back onto the goal.
+    const goal = c.rotation[0] - 40;
+    c.flyTo([goal, 0], 5008);
+    const flight = frames(c, 5024, flightMs((40 * Math.PI) / 180) + 400);
+    // From the spin's own last frame on, no frame's turn differs from the one before by as much
+    // as the spin's whole speed: it eases through zero and back, never stopping dead.
+    const turns = [cruise.at(-1)!, ...flight];
+    for (let i = 1; i < turns.length; i++) {
+      expect(Math.abs(turns[i]! - turns[i - 1]!)).toBeLessThan(cruise.at(-1)!);
+    }
+    expect(flight[0]).toBeGreaterThan(0.9 * cruise.at(-1)!);
+    expect(c.rotation[0]).toBeCloseTo(goal, 6);
+    expect(c.zoom).toBe(2);
+    expect(c.isSpinning()).toBe(false);
+  });
+
+  it("stays off under reduced motion", () => {
+    const c = make({ ambient: false, reducedMotion: () => true });
+    c.setSpin(true);
+    expect(frames(c, 0, 500).every((d) => d === 0)).toBe(true);
+    expect(c.isSpinning()).toBe(false);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("waits for a flight to land, then starts from rest", () => {
+    const c = make({ ambient: false });
+    c.flyTo([60, 0], 0);
+    c.setSpin(true);
+    expect(c.isSpinning()).toBe(false);
+    animate(c, 0, flightMs(Math.PI / 3) + 400);
+    expect(c.isSpinning()).toBe(true);
+  });
+
+  it("keeps turning while the pointer rests on the globe", () => {
+    const c = make({ ambient: false });
+    c.setSpin(true);
+    frames(c, 0, 400);
+    c.setHovered(true, 400);
+    expect(c.isSpinning()).toBe(true);
+  });
+});
+
+describe("hop", () => {
+  const HOP = { durationMs: 1000, dipZoom: 0.6 };
+
+  it("reaches its goal at exactly durationMs and then rests", () => {
+    const c = make({ zoomRange: [0.5, 5] });
+    c.setZoom(1, 0);
+    animate(c, 0, 1000);
+    c.flyTo([-100, -40], 1000, HOP);
+    expect(c.needsFrame()).toBe(true);
+    c.step(1500);
+    expect(c.rotation[0]).not.toBeCloseTo(-100, 3);
+    c.step(2000);
+    expect(c.rotation[0]).toBeCloseTo(-100, 9);
+    expect(c.rotation[1]).toBeCloseTo(-40, 9);
+    expect(c.zoom).toBe(1);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("dips lowest at the midpoint and comes back to the goal zoom", () => {
+    const c = make({ zoomRange: [0.5, 5] });
+    c.setZoom(1, 0);
+    animate(c, 0, 1000);
+    c.flyTo([-100, 0], 2000, HOP);
+    const zooms: number[] = [];
+    for (let t = 2000; t <= 3000; t += 100) {
+      c.step(t);
+      zooms.push(c.zoom);
+    }
+    const lowest = Math.min(...zooms);
+    expect(zooms.indexOf(lowest)).toBe(5);
+    expect(lowest).toBeCloseTo(0.6, 9);
+    expect(zooms.at(-1)).toBe(1);
+  });
+
+  it("takes the short way round the seam", () => {
+    const c = make({ initialRotation: [170, 0] });
+    c.flyTo([-170, 0], 0, HOP);
+    c.step(400);
+    expect(c.rotation[0]).toBeGreaterThan(170);
+  });
+
+  it("snaps under reduced motion", () => {
+    const c = make({ reducedMotion: () => true });
+    c.flyTo([100, 20], 0, HOP);
+    c.step(16);
+    expect(c.rotation[0]).toBeCloseTo(100, 9);
+    expect(c.rotation[1]).toBeCloseTo(20, 9);
+    expect(c.zoom).toBe(1);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("is abandoned when the reader grabs the globe", () => {
+    const c = make();
+    c.flyTo([-100, 0], 0, HOP);
+    c.step(300);
+    c.pointerDown(1, 10, 10, 320);
+    const grabbed = c.rotation[0];
+    c.step(900);
+    expect(c.rotation[0]).toBeCloseTo(grabbed, 9);
+  });
+});
+
+describe("steer", () => {
+  it("moves at its rate on the stepped clock and stops on zeros", () => {
+    const c = make({ ambient: false });
+    c.steer({ lng: 60, lat: 0, zoom: 0 }, 0);
+    expect(c.needsFrame()).toBe(true);
+    const now = animate(c, 0, 1000);
+    // East at 60 deg/s for ~1 s: the view centre moved east, so rotation fell by about 60.
+    expect(c.rotation[0]).toBeCloseTo(-60, 0);
+    c.steer({ lng: 0, lat: 0, zoom: 0 }, now);
+    const stopped = c.rotation[0];
+    animate(c, now, 500);
+    expect(c.rotation[0]).toBeCloseTo(stopped, 9);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("clamps latitude and zoom", () => {
+    const c = make({ ambient: false });
+    c.steer({ lng: 0, lat: 90, zoom: 3 }, 0);
+    animate(c, 0, 5000);
+    expect(c.rotation[1]).toBe(-90);
+    expect(c.targetZoom).toBe(5);
+  });
+
+  it("is cancelled by a drag and by a fly-to", () => {
+    const c = make({ ambient: false });
+    c.steer({ lng: 60, lat: 0, zoom: 0 }, 0);
+    c.step(16);
+    c.pointerDown(1, 5, 5, 32);
+    const grabbed = c.rotation[0];
+    c.step(500);
+    expect(c.rotation[0]).toBeCloseTo(grabbed, 9);
+
+    const d = make({ ambient: false });
+    d.steer({ lng: 60, lat: 0, zoom: 0 }, 0);
+    d.flyTo([10, 10], 16, { durationMs: 900, dipZoom: 1 });
+    d.step(1000);
+    expect(d.rotation[0]).toBeCloseTo(10, 9);
+  });
+
+  it("hops are cancelled by steering", () => {
+    const c = make({ ambient: false });
+    c.flyTo([-100, 0], 0, { durationMs: 1000, dipZoom: 1 });
+    c.step(100);
+    c.steer({ lng: 0, lat: 30, zoom: 0 }, 100);
+    const at = c.rotation[0];
+    c.step(400);
+    expect(c.rotation[0]).toBeCloseTo(at, 9);
   });
 });

@@ -26,6 +26,12 @@ declare const Worker: new (
 ) => BrowserWorker;
 
 /**
+ * See `boundedChild.ts`. The browser legs already give every test this timeout (`testTimeout` in
+ * `vitest.browser.config.ts`): the worker's 10 s bound plus its first, cold load of GMT.
+ */
+export const BOUNDED_CHILD_TEST_TIMEOUT_MS = 30_000;
+
+/**
  * See `boundedChild.ts`. The default `timeoutMs` (10 s) plus a cold load stays under the browser
  * test timeout (`vitest.browser.config.ts`), so a hang reports `timedOut` instead of a Vitest
  * timeout.

@@ -8,6 +8,7 @@
  * fields, so no status is typed by hand. The cells carry no `data-col`: the card is a header, a
  * body and a meta line, not label/value pairs.
  */
+import Link from "~/components/Link.astro";
 import { filingRef, type UpstreamFiling } from "../data/upstream-filings";
 import { inlineCodeHtml } from "../lib/inline-code-html";
 import { octicon } from "../lib/octicons";
@@ -53,7 +54,7 @@ const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
     <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
     <span class="gmt-sr-only">{filing.tracker === "github" && filing.kind === "pr" ? "Pull request:" : "Issue:"}</span>
     <strong class="gmt-upstream-title" set:html={inlineCodeHtml(title)} />
-    <a class="gmt-upstream-ref" href={filing.url}>{filingRef(filing)}</a>
+    <Link class="gmt-upstream-ref" href={filing.url}>{filingRef(filing)}</Link>
     <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
   </td>
   <td class="gmt-upstream-body">
@@ -93,7 +94,7 @@ const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
     {filing.role === "contributor" && (
       <span class="gmt-upstream-fact">
         <span set:html={octicon("link")} />
-        <a href={filing.contributionUrl ?? filing.url}>we added evidence</a>
+        <Link href={filing.contributionUrl ?? filing.url}>we added evidence</Link>
       </span>
     )}
   </td>

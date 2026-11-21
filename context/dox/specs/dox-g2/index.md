@@ -62,7 +62,7 @@ Modify:
 
 ## Kit pieces
 
-The landing is Astro plus plain-DOM modules; React stays inside `/dox`. The design is our own:
+The landing is Astro plus plain-DOM modules; React stays inside `/dox` and the deck's Dox frame. The design is our own:
 nothing is copied, ported or relicensed from another NorthGuild codebase.
 
 - **Globe:** `renderGlobeTemplate` and `createGlobe` gain opt-in options (`space`, `framing`, `hitArea`,

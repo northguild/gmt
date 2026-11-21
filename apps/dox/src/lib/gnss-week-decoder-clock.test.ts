@@ -1,4 +1,3 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clockNow } from "./gnss-week-decoder";
 
 describe("the week decoder's clock", () => {

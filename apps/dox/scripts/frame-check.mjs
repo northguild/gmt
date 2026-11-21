@@ -22,14 +22,14 @@
  * Without `--base` it serves `dist` itself on a free port. Exit 0 pass, 1 any finding, 2 usage or a
  * missing build.
  */
-import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { launchBrowser } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
-import { serveStatic } from "./lib/static-server.mjs";
+import { gateBase, gateBrowsers, gateOptions } from "./lib/gate-cli.mjs";
+import { frames } from "./lib/page-frames.mjs";
 
 const GATE = "frame-check";
 const CHECKS = {
@@ -42,7 +42,6 @@ const WIDTHS = [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
 ];
-const ENGINES = ["chromium", "firefox", "webkit"];
 const DIST = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -56,50 +55,10 @@ const pages =
     pages: Object.keys(CHECKS),
     argv: args,
   })) ?? Object.keys(CHECKS);
-const opt = (name, fallback) => {
-  const i = args.indexOf(`--${name}`);
-  return i >= 0 && args[i + 1] && !args[i + 1].startsWith("--")
-    ? args[i + 1]
-    : fallback;
-};
-const FLAGS = new Set(["--base", "--browsers", "--pages"]);
-const unknownFlag = args.find((a) => a.startsWith("--") && !FLAGS.has(a));
-if (unknownFlag) {
-  console.error(
-    `${GATE}: unknown option ${unknownFlag} (${[...FLAGS].join(", ")})`,
-  );
-  process.exit(2);
-}
-const browsers = opt("browsers", "chromium").split(",").filter(Boolean);
-for (const name of browsers) {
-  if (!ENGINES.includes(name)) {
-    console.error(`${GATE}: unknown browser "${name}" (${ENGINES.join(", ")})`);
-    process.exit(2);
-  }
-}
+const opt = gateOptions(GATE, args, ["--base", "--browsers", "--pages"]);
+const browsers = gateBrowsers(GATE, opt);
 
-let server = null;
-let base = opt("base", "");
-if (base === "") {
-  if (!existsSync(path.join(DIST, "gmt", "index.html"))) {
-    console.error(
-      `${GATE}: apps/dox/dist/gmt/index.html is missing; build the site first.`,
-    );
-    process.exit(2);
-  }
-  server = await serveStatic(DIST, 0);
-  base = `http://127.0.0.1:${server.address().port}/gmt`;
-}
-base = base.replace(/\/$/, "");
-
-/** Two frames, so a click's restyle has landed before the read. */
-const frames = (page) =>
-  page.evaluate(
-    () =>
-      new Promise((done) =>
-        requestAnimationFrame(() => requestAnimationFrame(done)),
-      ),
-  );
+const { base, server } = await gateBase(GATE, opt, DIST);
 
 /** What is wrong with the code frame under each tab of the page. */
 async function tabFrameProblems(page) {

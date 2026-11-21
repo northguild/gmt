@@ -24,6 +24,12 @@ export const LABEL_HALO_CSS = 2;
 /** Where a label's text starts, right of its marker's centre, in CSS pixels. */
 export const LABEL_OFFSET_X = 6;
 
+/**
+ * Where the top of a label's text box sits above its marker's centre, in CSS
+ * pixels (negative is up). Both renderers and the label layout use it.
+ */
+export const LABEL_OFFSET_Y = -7;
+
 /** Space left between a selection ring and the halo of its label, in CSS pixels. */
 export const LABEL_RING_GAP_CSS = 1;
 

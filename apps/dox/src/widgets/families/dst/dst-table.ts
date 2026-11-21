@@ -33,9 +33,9 @@ type Key = "type" | "date" | "hour" | "instant" | "offset";
 
 const COLUMNS: readonly Column<Key>[] = [
   { key: "type", header: "Type", align: "start", numeric: false },
-  { key: "date", header: "Local Date", align: "start", numeric: false },
+  { key: "date", header: "Local Date", align: "start", numeric: true },
   { key: "hour", header: "Local Hour", align: "start", numeric: true },
-  { key: "instant", header: "UTC Instant", align: "start", numeric: false },
+  { key: "instant", header: "UTC Instant", align: "start", numeric: true },
   {
     key: "offset",
     header: "Offset Before → After",

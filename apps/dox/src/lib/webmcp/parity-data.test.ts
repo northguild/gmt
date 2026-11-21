@@ -17,7 +17,7 @@ import type { RenderedWidget } from "~/test/render-widget";
 import { expectParity, fakeModelContext } from "~/test/webmcp-parity";
 import { CARDS, readBridge } from "../column-timestamp-bridge";
 import { BRIDGE_PRESETS } from "../column-timestamp-bridge-presets";
-import { callArgs, formatValue } from "../punctuality-widgets";
+import { callArgsPlain, formatValue } from "../punctuality-widgets";
 import {
   CRON_PRESETS,
   cronView,
@@ -254,7 +254,7 @@ const bridgeFacts = (args: Args) =>
     ([r]) => {
       const reading = r as ReturnType<typeof readBridge>;
       const text = (c: { fn: string; args: unknown[] }) =>
-        `${c.fn}(${callArgs(c.args)[1]})`;
+        `${c.fn}(${callArgsPlain(c.args)})`;
       const hero = reading.hero;
       return {
         mode: reading.mode,

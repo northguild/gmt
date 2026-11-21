@@ -51,6 +51,9 @@ How to read the columns:
 - **Known failing tests** counts tests that fail on the library's own default branch.
   "Not measured" means the figure was not taken. Failures caused by the measuring machine
   are not counted here; see the notes below.
+- **Fails in our zone matrix** counts the tests of the library's own suite that fail when
+  it runs in the time zones GMT's CI uses, split into tests that assume one zone and wrong
+  answers. See [the zone matrix](/compare/zone-matrix/).
 
 ## How these were measured
 

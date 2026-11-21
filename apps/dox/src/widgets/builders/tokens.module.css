@@ -1,0 +1,5 @@
+/* tokens: a date, time or offset inside a sentence stays on one line. */
+
+.token {
+  white-space: nowrap;
+}

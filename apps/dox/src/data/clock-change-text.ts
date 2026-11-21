@@ -8,6 +8,9 @@
  * component tag into `.md`, `llms-full.txt` and the retrieval chunks (see `mdx-jsx.ts`).
  */
 
+import { html } from "~/widgets/builders/html";
+import { link } from "~/widgets/builders/link";
+
 /**
  * A run of text: plain, code, or a link to an anchor on the same page.
  */
@@ -72,8 +75,11 @@ export function partsHtml(
           : "strong" in part
             ? `<strong>${escapeText(part.strong)}</strong>`
             : "fn" in part
-              ? `<a href="${escapeText(resolveHref(part.href))}"><code>${escapeText(part.fn)}</code></a>`
-              : `<a href="${escapeText(resolveHref(part.href))}">${escapeText(part.link)}</a>`,
+              ? link({
+                  href: resolveHref(part.href),
+                  body: html`<code>${part.fn}</code>`,
+                }).value
+              : link({ href: resolveHref(part.href), body: part.link }).value,
     )
     .join("");
 }

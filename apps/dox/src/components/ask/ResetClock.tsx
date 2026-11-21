@@ -48,6 +48,7 @@ import type { BrainsInfo } from "./use-brains";
 import { useEscLayer } from "./use-esc-layer";
 import type { ResetClockState } from "./use-reset-clock";
 import { pageHref } from "~/lib/site";
+import { Link } from "./Link";
 
 export function ResetClock({
   info,
@@ -190,16 +191,15 @@ export function ResetClock({
 
         {/* A new tab on purpose: navigating this one would throw away the
             conversation. */}
-        <a
+        <Link
           className="gmt-hive-clock-call gmt-sonar-focus"
           href={pageHref(preset.route)}
-          target="_blank"
-          rel="noopener"
+          isExternal
         >
           <code>{preset.call(ctx)}</code>
           <span aria-hidden="true"> ↗</span>
           <span className="sr-only"> (opens the reference in a new tab)</span>
-        </a>
+        </Link>
       </PopoverContent>
     </Popover>
   );

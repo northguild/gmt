@@ -17,6 +17,16 @@
   color: var(--gmt-ice);
   cursor: pointer;
   pointer-events: auto;
+
+  /* A page past the carousel's reach has no dot. */
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* The spares come after a gap, so the row reads as the talk and then its spares. */
+.dot[data-spare-first] {
+  margin-inline-start: 0.75rem;
 }
 
 .dot::before {

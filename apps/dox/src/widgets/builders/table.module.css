@@ -45,16 +45,18 @@
   border-block-end: 1px solid var(--gmt-hairline);
   vertical-align: top;
 
-  /* A long identifier or header breaks inside the box instead of widening the table past it. A
-     numeric cell keeps its figures together (`.numeric`). */
-  overflow-wrap: anywhere;
+  /* A cell breaks between words, never inside one. `overflow-wrap: anywhere` let a column's
+     narrowest width fall to one letter, and the layout took it: a narrow rail printed `Local
+     Date` a letter a line. A value with a date in it is written with its own
+     break points (`valueText`, `zonedValue`). A numeric
+     cell keeps its figures together (`.numeric`). */
+  overflow-wrap: normal;
 }
 
 /* The content sheet keeps a table's code on one line (`white-space: nowrap`), so a long result
-   widens the table past its box. Inside a cell it wraps like the rest of the cell. */
+   widens the table past its box. Inside a cell it wraps between words like the rest. */
 .cell code {
   white-space: normal;
-  overflow-wrap: anywhere;
 }
 
 .head {
@@ -85,6 +87,51 @@
   .head,
   .cell {
     padding-inline: 0.5rem;
+  }
+}
+
+/* `stack`: under 46rem of box each row is a labelled block (the column's name, then the value), so
+   no column is squeezed below a word and nothing scrolls. */
+@container (inline-size < 46rem) {
+  .stacked {
+    & .table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: 0.375rem;
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(4rem, 6rem) minmax(0, 1fr);
+      gap: 0.5rem;
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
   }
 }
 

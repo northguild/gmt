@@ -1,5 +1,6 @@
 "use client";
 
+import { Link, type LinkProps } from "~/components/ask/Link";
 import {
   Collapsible,
   CollapsibleContent,
@@ -57,21 +58,14 @@ export const SourcesContent = ({
   />
 );
 
-export type SourceProps = ComponentProps<"a">;
-
-export const Source = ({ href, title, children, ...props }: SourceProps) => (
-  <a
-    className="flex items-center gap-2"
-    href={href}
-    rel="noreferrer"
-    target="_blank"
-    {...props}
-  >
+// LOCAL MODIFICATION (GMT): the site's `Link` sets `target` and `rel` (`lib/external-link`).
+export const Source = ({ href, title, children, ...props }: LinkProps) => (
+  <Link className="flex items-center gap-2" href={href} {...props}>
     {children ?? (
       <>
         <BookIcon className="h-4 w-4" />
         <span className="block font-medium">{title}</span>
       </>
     )}
-  </a>
+  </Link>
 );

@@ -2,7 +2,6 @@
  * Three sentences the tools say and the pages never show: what a call that gives the tool nothing
  * to read, a `digits` with no instant, or half a span is told.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import ccsds, {
   DIGITS_NEED_AN_INSTANT,
   NEEDS_A_FIELD,

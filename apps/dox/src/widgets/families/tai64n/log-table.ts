@@ -56,7 +56,7 @@ type Key = "line" | "label" | "utc" | "offset" | "message";
 const COLUMNS: readonly Column<Key>[] = [
   { key: "line", header: "Line", align: "start", numeric: false },
   { key: "label", header: "Label", align: "start", numeric: false },
-  { key: "utc", header: "UTC instant", align: "start", numeric: false },
+  { key: "utc", header: "UTC instant", align: "start", numeric: true },
   { key: "offset", header: "TAI − UTC", align: "end", numeric: true },
   { key: "message", header: "Message", align: "start", numeric: false },
 ];

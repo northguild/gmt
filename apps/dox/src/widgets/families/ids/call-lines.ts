@@ -1,38 +1,15 @@
 /**
- * callLines and outputOf: the "calls made" and "what the calls returned" halves of an
- * identifier tool.
+ * outputOf: the "what the calls returned" half of an identifier tool. The "calls made" half is the
+ * shared `callLines` (`../gnss/call-lines`).
  *
- * `callLines` turns the calls a reading made into the code frame's highlighted lines and the
- * plain text its copy button copies. `outputOf` turns the same calls into the lines of a
- * `callOutput`, one result for each call in the order they were made. When some calls were
- * refused (`null` or `""`) and some were not, each refused call reads NO SIGNAL on its own
- * line; when none was refused the whole pane does, and when all were the pane is the lost
- * state.
+ * `outputOf` turns the calls a reading made into the lines of a `callOutput`, one result for each
+ * call in the order they were made. When some calls were refused (`null` or `""`) and some were
+ * not, each refused call reads NO SIGNAL on its own line; when none was refused the whole pane
+ * does, and when all were the pane is the lost state.
  */
 import type { EdiCall } from "~/lib/edi-widgets";
-import { callArgs, formatValue } from "~/lib/punctuality-widgets";
-import { codeSpan } from "~/lib/widget-ui";
-import { raw, type SafeHtml } from "../../builders/html";
+import { formatValue } from "~/lib/punctuality-widgets";
 import { CALL_OUTPUT_LOST, type CallOutputLine } from "../gnss/call-output";
-
-interface CallLines {
-  code: SafeHtml;
-  plain: string;
-}
-
-export function callLines(calls: readonly EdiCall[]): CallLines {
-  const lines = calls.map((c) => {
-    const [argsHtml, plain] = callArgs(c.args);
-    return {
-      html: `${codeSpan("fn", c.fn)}(${argsHtml})`,
-      plain: `${c.fn}(${plain})`,
-    };
-  });
-  return {
-    code: raw(lines.map((l) => l.html).join("\n")),
-    plain: lines.map((l) => l.plain).join("\n"),
-  };
-}
 
 const refused = (call: EdiCall): boolean =>
   call.result === null || call.result === "";

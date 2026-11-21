@@ -1,7 +1,8 @@
-/* gnssLineTable: a fixed-layout table of two-line cells that fills its box. A block table
-   keeps its rows as wide as their content, and the content-table rule squeezes the first
-   column to its padding, so the table sets its own layout. The box is the container the
-   stacked layout queries, because a table cannot be its own. */
+/* gnssCounterTable and gnssLineTable: a fixed-layout table that fills its box. A block table
+   keeps its rows as wide as their content, and the content-table rule squeezes the first column
+   to its padding, so the table sets its own layout. The box is the container the stacked layout
+   queries, because a table cannot be its own. `.lines` marks the line table, whose cells hold
+   two lines (`.line` and `.sub`). */
 
 .box {
   container-type: inline-size;
@@ -39,7 +40,10 @@
     text-align: start;
     vertical-align: baseline;
     white-space: normal;
-    overflow-wrap: anywhere;
+
+    /* A cell breaks between words, never inside one: `overflow-wrap: anywhere` lets a column's
+       narrowest width fall to one letter. A table wider than the box scrolls in `.box`. */
+    overflow-wrap: normal;
   }
 
   /* Clear of the bevelled corners. */
@@ -63,7 +67,7 @@
     border-block-end: 0;
   }
 
-  /* The reading's own row: a tint and a hatch, with its words in the note beside them. */
+  /* The reading's own row: a tint and a hatch, with its words beside them. */
   & tbody tr[data-reading="true"] :is(th, td) {
     background-color: color-mix(in srgb, var(--gmt-series-1) 10%, transparent);
     background-image: repeating-linear-gradient(
@@ -76,10 +80,14 @@
   }
 }
 
+/* The two lines inside a cell keep their words whole too. */
 .line {
   display: block;
   min-inline-size: 0;
-  overflow-wrap: anywhere;
+
+  /* The line is one ISO token: a hyphen or a colon would be a break point. */
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 /* The note keeps two lines of height: "written as 2024-01-01T00:00:37" wraps in a narrow
@@ -88,13 +96,14 @@
   display: block;
   min-inline-size: 0;
   min-block-size: 2lh;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   color: var(--gmt-ice);
   font-size: 0.8125rem;
 }
 
 /* Under a narrow box the table becomes stacked rows: the header row is read but not drawn,
-   and each cell shows its column's name from `data-label` beside a column of its two lines. */
+   and each cell shows its column's name from `data-label`; in the line table, beside a column of
+   its two lines. */
 @container (inline-size < 34rem) {
   .table,
   .table tbody,
@@ -120,15 +129,27 @@
   }
 
   .table tbody :is(th, td) {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
     border-block-end: 0;
+    text-align: end;
 
     &::before {
       content: attr(data-label);
-      grid-row: 1 / span 2;
       color: var(--gmt-ice-dim);
+      text-align: start;
+    }
+  }
+
+  .lines tbody :is(th, td) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0 0.75rem;
+    text-align: start;
+
+    &::before {
+      grid-row: 1 / span 2;
     }
   }
 

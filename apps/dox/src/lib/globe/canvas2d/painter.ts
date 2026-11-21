@@ -21,6 +21,7 @@ import { geoGraticule10, geoPath, type GeoPermissibleObjects } from "d3-geo";
 import { feature } from "topojson-client";
 import land110m from "world-atlas/land-110m.json";
 import { isVisible } from "../camera";
+import { layoutMarkerLabels } from "../label-layout";
 import { createPinholeProjection, setProjectionCamera } from "./pinhole-raw";
 import {
   CASING_CSS,
@@ -411,6 +412,18 @@ export function createPainter(options: PainterOptions): Painter {
     ctx.stroke();
   }
 
+  /** Text width of a label in the label font, cached per text. */
+  const labelWidths = new Map<string, number>();
+  function measureLabel(label: string): number {
+    let width = labelWidths.get(label);
+    if (width === undefined) {
+      ctx.font = labelFont;
+      width = Math.ceil(ctx.measureText(label).width);
+      labelWidths.set(label, width);
+    }
+    return width;
+  }
+
   function drawMarkers(
     frame: FrameState,
     subsolar: readonly [number, number],
@@ -419,7 +432,13 @@ export function createPainter(options: PainterOptions): Painter {
     const point: [number, number] = [0, 0];
     const subsolarVec = unit(subsolar[0], subsolar[1]);
 
-    for (const marker of markers) {
+    /* Which labels are drawn, and on which side of their dot (../label-layout.ts). */
+    const sides =
+      !quiet && frame.zoom < LABEL_MAX_ZOOM
+        ? layoutMarkerLabels(markers, frame.camera, measureLabel)
+        : null;
+
+    for (const [index, marker] of markers.entries()) {
       if (!isVisible(frame.camera, marker.position[0], marker.position[1]))
         continue;
       const markerVec = unit(marker.position[0], marker.position[1]);
@@ -456,10 +475,13 @@ export function createPainter(options: PainterOptions): Painter {
         ctx.stroke();
       }
 
-      if (marker.label && !quiet && frame.zoom < LABEL_MAX_ZOOM) {
+      const side = sides?.[index];
+      if (marker.label && side) {
         /* Over its halo, and clear of a selection ring the halo would hide. */
-        const x = at[0] + LABEL_OFFSET_X + labelRingShift(marker.ring);
+        const gap = LABEL_OFFSET_X + labelRingShift(marker.ring);
+        const x = side === "right" ? at[0] + gap : at[0] - gap;
         ctx.font = labelFont;
+        ctx.textAlign = side === "right" ? "left" : "right";
         ctx.lineJoin = "round";
         ctx.lineWidth = LABEL_HALO_CSS * 2;
         ctx.strokeStyle = css(theme.casing);
@@ -467,6 +489,7 @@ export function createPainter(options: PainterOptions): Painter {
         ctx.lineJoin = "miter";
         ctx.fillStyle = css(theme.label);
         ctx.fillText(marker.label, x, at[1] + 3);
+        ctx.textAlign = "left";
       }
     }
   }

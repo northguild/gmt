@@ -11,7 +11,6 @@
  * once per worker. A listener added with `once` or an `AbortSignal` removes itself, so it is
  * not recorded.
  */
-import { afterAll, beforeAll } from "vitest";
 
 interface ListenerRecord {
   target: EventTarget;

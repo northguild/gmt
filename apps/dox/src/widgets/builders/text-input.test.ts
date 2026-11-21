@@ -47,6 +47,12 @@ describe("textInput", () => {
     expect(box).toHaveAttribute("placeholder", "e.g. 2300");
   });
 
+  it("shows a masked value as dots, and stays a text field otherwise", () => {
+    renderHtml(markup({ masked: true }));
+    expect(screen.getByLabelText("Week")).toHaveAttribute("type", "password");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
   it("takes no more characters than its maxLength", async () => {
     renderHtml(markup({ maxLength: 4 }));
     const box = screen.getByRole("textbox", { name: "Week" });

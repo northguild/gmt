@@ -95,11 +95,11 @@ import {
   type DepartureState,
   type RailWindow,
 } from "./departure-board";
+import { frameCallArgs } from "./call-args";
 import { onWidthChange, thinTickLabels } from "./label-fit";
 import { loadPunctualityLib } from "./punctuality-lib";
 import {
   SETTLE_MS,
-  callArgs,
   epochMs,
   minuteTicks,
   placeLabels,
@@ -829,7 +829,7 @@ function setupWidget(
       callList: readonly unknown[],
       gate?: string,
     ): SafeHtml => {
-      const [argsHtml, plain] = callArgs(callList);
+      const [argsHtml, plain] = frameCallArgs(callList);
       return codeFrame({
         label,
         copyLabel,

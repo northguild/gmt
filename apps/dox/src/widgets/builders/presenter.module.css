@@ -1,0 +1,210 @@
+/* The presenter view. Panels are opaque with a full bevelled border and a bottom accent edge.
+   Tokens only. The readout bar is pinned to opposite edges and keeps its size while it ticks. */
+
+.root {
+  display: grid;
+  gap: var(--gmt-space-4);
+  padding: var(--gmt-space-4);
+  background: var(--gmt-void);
+  color: var(--gmt-ice);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "current"
+    "notes"
+    "next"
+    "bar"
+    "check";
+
+  @media (width >= 64rem) {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas:
+      "current notes"
+      "next notes"
+      "check bar";
+    align-items: start;
+  }
+}
+
+/* The look is the deck's own panel (`gmt-deck-panel`, components/slides/deck-panel.css). */
+.panel {
+  box-sizing: border-box;
+  min-inline-size: 0;
+}
+
+.current {
+  grid-area: current;
+}
+
+.upNext {
+  grid-area: next;
+}
+
+.notes {
+  grid-area: notes;
+}
+
+.bar {
+  grid-area: bar;
+}
+
+.check {
+  grid-area: check;
+}
+
+.heading {
+  margin-block: 0 var(--gmt-space-3);
+  font-size: var(--gmt-text-md);
+  font-weight: 600;
+  color: var(--gmt-ice-dim);
+}
+
+/* The slide at stage proportions: 16:9, type in cqi so it scales with the frame. */
+.frame {
+  container-type: inline-size;
+  inline-size: 100%;
+}
+
+.stage {
+  box-sizing: border-box;
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--gmt-void);
+  border: 1px solid var(--gmt-hairline);
+  padding-block: var(--gmt-deck-pad-block);
+  padding-inline: var(--gmt-deck-pad-inline);
+  font-size: max(0.75rem, 2.6cqi);
+  line-height: 1.4;
+
+  & > section {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  & h2 {
+    margin-block: 0 var(--gmt-deck-space-2xl);
+    font-family: var(--gmt-font-display);
+    font-size: max(0.75rem, 4.6cqi);
+    line-height: 1.15;
+    color: var(--gmt-ice-bright);
+  }
+
+  & [data-reached="false"] {
+    visibility: hidden;
+  }
+}
+
+.position {
+  margin-block: var(--gmt-space-3) 0;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+.nav {
+  margin-block-start: var(--gmt-space-3);
+}
+
+.nextTitle {
+  margin-block: 0;
+  font-family: var(--gmt-font-display);
+  font-size: var(--gmt-text-lg);
+  color: var(--gmt-ice-bright);
+}
+
+.nextBuild {
+  margin-block: var(--gmt-space-2) 0;
+  color: var(--gmt-ice);
+}
+
+.notesBody {
+  font-size: var(--gmt-text-lg);
+  line-height: 1.6;
+  color: var(--gmt-ice);
+
+  & > * + * {
+    margin-block-start: var(--gmt-space-3);
+  }
+}
+
+/* The bar: four cells pinned to opposite edges. Each readout reserves its widest sample. */
+.readouts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--gmt-space-3);
+}
+
+.cell {
+  display: grid;
+  gap: var(--gmt-space-1);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cellLabel {
+  font-size: var(--gmt-text-xs);
+  color: var(--gmt-ice-dim);
+}
+
+.cell[data-tone="spring"] gmt-readout {
+  color: var(--gmt-spring-ink);
+}
+
+.cell[data-tone="signal"] gmt-readout {
+  border-color: var(--gmt-signal-border);
+  color: var(--gmt-signal-ink);
+}
+
+.plan {
+  margin-block: var(--gmt-space-3) 0;
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-ice-dim);
+}
+
+.status {
+  margin-block: var(--gmt-space-3) 0;
+  min-block-size: 1.5em;
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice);
+}
+
+/* Readiness: one bevelled row each, the result in words. */
+.rows {
+  display: grid;
+  gap: var(--gmt-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(0, 3fr);
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-bevel-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-widget);
+}
+
+.row[data-status="failed"] {
+  border-color: var(--gmt-signal-border);
+}
+
+.rowLabel {
+  color: var(--gmt-ice-dim);
+}
+
+.rowText {
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  .panel,
+  .row {
+    border-color: CanvasText;
+  }
+}

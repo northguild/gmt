@@ -73,7 +73,11 @@
   display: block;
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+
+  /* A member's value is written by `valueText`: its dates stay whole and it breaks only at a `T`,
+     an offset or a `[`, or at the spaces of a sentence. */
+  white-space: normal;
+  overflow-wrap: normal;
 
   & [data-state="absent"],
   & [data-state="none"] {
@@ -215,8 +219,11 @@
       display: block;
       min-inline-size: 0;
       min-block-size: 1lh;
-      white-space: normal;
-      overflow-wrap: anywhere;
+
+      /* A written value is one ISO token and stays whole. The cell takes the whole line under its
+         name, which is as wide as the value (`--w`). */
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
   }
 

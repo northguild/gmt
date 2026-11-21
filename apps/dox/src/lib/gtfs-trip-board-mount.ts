@@ -36,6 +36,7 @@ import {
   zonedValue,
   type SafeHtml,
 } from "~/widgets/builders";
+import { identifier } from "~/widgets/builders/identifier";
 import { textArea } from "~/widgets/families/ledger/text-area";
 import { SIGNAL_TEXT } from "~/widgets/families/holiday/signal-plates";
 import { grow } from "~/widgets/primitives/grow/grow";
@@ -124,8 +125,8 @@ const timeCellOf = (c: TimeCell): SafeHtml =>
   html`${held(shown(c.state, c.text), READING_GHOSTS)}${held(
     c.instant === ""
       ? html``
-      : html`<span class="${styles.instant}">${c.instant}</span>`,
-    [GHOST_UTC],
+      : html`<span class="${styles.instant}">${zonedValue(c.instant)}</span>`,
+    [html`<span class="${styles.instant}">${zonedValue(GHOST_UTC)}</span>`],
   )}`;
 
 const wrongBadge = (b: NonNullable<WrongCell["badge"]>): SafeHtml =>
@@ -179,8 +180,8 @@ function legCellOf(c: LegCell): SafeHtml {
 
 function stopCellOf(r: StopRow): SafeHtml {
   return html`<span class="${styles.line}">Line ${r.line}</span
-    ><span class="${styles.stop}">${r.stopId === "" ? NOT_READ : r.stopId}</span
-    ><span class="${styles.zone}">${r.zoneNote}</span>`;
+    ><span class="${styles.stop}">${identifier(r.stopId === "" ? NOT_READ : r.stopId)}</span
+    ><span class="${styles.zone}">${identifier(r.zoneNote)}</span>`;
 }
 
 // ---------------------------------------------------------------------------

@@ -297,10 +297,16 @@ export default defineConfig({
       ],
     }),
     // After starlight(): Starlight adds its own sitemap only when none is configured. /dox/ is
-    // the chat shell and has `noindex`, so it is not listed. `lastmod` is the date in the page's
+    // the chat shell and has `noindex`, and a deck's presenter view (`/presenter/`) is `noindex` too,
+    // so neither is listed. `lastmod` is the date in the page's
     // footer, read from the built HTML (`src/lib/sitemap-lastmod.ts`).
     sitemap({
-      filter: (page) => new URL(page).pathname !== withBase("/dox/"),
+      filter: (page) => {
+        const { pathname } = new URL(page);
+        return (
+          pathname !== withBase("/dox/") && !pathname.endsWith("/presenter/")
+        );
+      },
       serialize: (item) => sitemapLastmod(OUT_DIR, item),
     }),
   ],

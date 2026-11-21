@@ -6,7 +6,12 @@
   min-inline-size: 12ch;
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+
+  /* A member's value sits in a table cell. `setMember` writes it with its dates held whole and a
+     break only at a `T`, an offset or a `[` (`valueText`), so it wraps there and nowhere inside a
+     date or a word. */
+  white-space: normal;
+  overflow-wrap: normal;
 
   /* A member the value does not state, or no result at all, is quieter than a value. */
   &[data-state="absent"],

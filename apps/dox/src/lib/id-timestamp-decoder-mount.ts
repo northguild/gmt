@@ -32,7 +32,8 @@ import {
   type ToolLinkItem,
 } from "~/widgets/builders";
 import { callOutput } from "~/widgets/families/gnss/call-output";
-import { callLines, outputOf } from "~/widgets/families/ids/call-lines";
+import { callLines } from "~/widgets/families/gnss/call-lines";
+import { outputOf } from "~/widgets/families/ids/call-lines";
 import { idRows, type IdRowView } from "~/widgets/families/ids/id-rows";
 import {
   instantHero,
@@ -42,7 +43,7 @@ import {
 import { grow } from "~/widgets/primitives/grow/grow";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/id-timestamp-decoder.module.css";
-import { callArgs } from "./punctuality-widgets";
+import { cellCallArgs } from "./call-args";
 import {
   BAD_LAYOUT_TEXT,
   CUSTOM_PRESET_ID,
@@ -109,7 +110,7 @@ const LONGEST_ID = "x".repeat(ID_MAX_CHARS);
 
 /** The call a row prints, as the call frame prints it. */
 function callHtml(fn: string, args: readonly unknown[]): SafeHtml {
-  return raw(`${codeSpan("fn", fn)}(${callArgs(args)[0]})`);
+  return raw(`${codeSpan("fn", fn)}(${cellCallArgs(args)[0]})`);
 }
 
 /** The longest call a row prints: the Snowflake call, with all three layout keys. */

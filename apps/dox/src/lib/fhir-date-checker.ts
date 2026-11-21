@@ -28,7 +28,7 @@ import {
   type EdiCall,
 } from "./edi-widgets";
 import type { FhirLib } from "./fhir-lib";
-import { callArgs } from "./punctuality-widgets";
+import { callArgsPlain } from "./punctuality-widgets";
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -594,7 +594,7 @@ export function fhirTexts() {
     { fn: "isLeapSecond", args: [LONGEST_VALUE], result: false },
   ];
   const callText = (list: readonly EdiCall[]): string =>
-    list.map((c) => `${c.fn}(${callArgs(c.args)[1]})`).join("\n");
+    list.map((c) => `${c.fn}(${callArgsPlain(c.args)})`).join("\n");
   const longestList = precisionList(FHIR_PRECISIONS);
   return {
     descriptions: FHIR_PRESETS.map((p) => p.description),

@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cueOnAppear } from "./appear";
 
 const cue = vi.fn();

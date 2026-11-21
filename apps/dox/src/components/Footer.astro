@@ -6,6 +6,7 @@
 // Without it, Chrome paints a reference page (~200 KB, most of it sidebar) in
 // pieces as it streams in — header first, then sidebar, then content — which
 // reads as the sidebar and content flashing on every route change.
+import Link from "~/components/Link.astro";
 import Default from '@astrojs/starlight/components/Footer.astro';
 import { displayFaceInlineSource } from '~/lib/display-face';
 import {
@@ -29,7 +30,7 @@ const onLanding = Astro.locals.starlightRoute.id === '';
 		<summary>{LICENCE_SUMMARY}</summary>
 		<p>
 			{LICENCE_LEAD}{" "}
-			<a href={LICENCE_URL}>{LICENCE_LINK_TEXT}</a>.
+			<Link href={LICENCE_URL}>{LICENCE_LINK_TEXT}</Link>.
 		</p>
 	</details>
 )}

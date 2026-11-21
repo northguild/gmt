@@ -25,6 +25,7 @@ import { REGION_KEY, classPhrase } from "./clock-change-tense";
 import type { Moment, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
 import { withBase } from "./site";
+import { link } from "~/widgets/builders/link";
 
 /**
  * The two zones that stop changing their clocks, from tzdb 2026c (`africa`: `Zone
@@ -209,7 +210,7 @@ export function moroccoVerdict(where: VerdictPlace): VerdictText {
       ". It shows them an hour ahead for most of the year, and right only in the weeks the old rules gave +00:00.",
     more: [
       "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
-      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="${developersHref(where)}">What to do</a> in Key points.`,
+      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under ${link({ href: developersHref(where), body: "What to do" })} in Key points.`,
     ],
     unknown: "Your browser cannot read these zones.",
     blindNote:

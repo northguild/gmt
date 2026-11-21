@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { lockPulses } from "./sonar-lock";
 
 describe("the Sonar lock's pulses", () => {

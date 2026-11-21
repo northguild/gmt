@@ -1,6 +1,9 @@
 import { formatDateRange } from "../plain/format/formatDateRange";
 import { formatDateTimeRange } from "../plain/format/formatDateTimeRange";
-import { runInBoundedChild } from "../test/boundedChild";
+import {
+  BOUNDED_CHILD_TEST_TIMEOUT_MS,
+  runInBoundedChild,
+} from "../test/boundedChild";
 import {
   hostEraAt,
   hostFormatter,
@@ -30,78 +33,82 @@ import { normalizeDateTime } from "./normalizeDateTime";
  * `[[Default]]` from D29: its two singles, each with the calendar year, joined by the fallback
  * (`hostJoinedWithYears`). Either text is the host's text for the same two years.
  */
-describe("range, week-year patterns", () => {
-  const numeric = {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  } as const;
-  const weekdayShort = { ...numeric, weekday: "short" } as const;
-  const withEra = { era: "short", ...weekdayShort } as const;
+describe(
+  "range, week-year patterns",
+  { timeout: BOUNDED_CHILD_TEST_TIMEOUT_MS },
+  () => {
+    const numeric = {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    } as const;
+    const weekdayShort = { ...numeric, weekday: "short" } as const;
+    const withEra = { era: "short", ...weekdayShort } as const;
 
-  it.each`
-    locale                    | options         | from            | to              | years           | label
-    ${"kok-u-ca-japanese"}    | ${numeric}      | ${"2018-12-27"} | ${"2019-12-27"} | ${[30, 1]}      | ${"kok japanese, Heisei to Reiwa"}
-    ${"my-u-ca-buddhist"}     | ${numeric}      | ${"2026-12-27"} | ${"2027-01-03"} | ${[2569, 2570]} | ${"my buddhist, over New Year"}
-    ${"kok-u-ca-roc"}         | ${weekdayShort} | ${"2024-07-10"} | ${"2024-07-12"} | ${[113, 113]}   | ${"kok roc, option set 12"}
-    ${"kok-u-ca-roc"}         | ${withEra}      | ${"2024-07-10"} | ${"2024-07-12"} | ${[113, 113]}   | ${"kok roc, option set 19"}
-    ${"kok-Deva-u-ca-coptic"} | ${numeric}      | ${"2029-09-09"} | ${"2029-09-10"} | ${[1745, 1745]} | ${"kok-Deva coptic, control"}
-  `(
-    "formatDateRange and formatDateTimeRange print the calendar year for $label ('$locale', $from to $to)",
-    ({ locale, options, from, to, years }) => {
-      const expected = [
-        hostRangeWithYears(locale, options, from, to, years),
-        hostJoinedWithYears(locale, options, from, to, years),
-      ];
-      expect(expected).toContain(formatDateRange(from, to, locale, options));
-      expect(expected).toContain(
-        formatDateTimeRange(
-          `${from}T00:00:00`,
-          `${to}T00:00:00`,
-          locale,
-          options,
-        ),
-      );
-      expect(expected).toContain(
-        formatZonedRange(
-          `${from}T00:00:00+00:00[UTC]`,
-          `${to}T00:00:00+00:00[UTC]`,
-          locale,
-          options,
-        ),
-      );
-    },
-  );
+    it.each`
+      locale                    | options         | from            | to              | years           | label
+      ${"kok-u-ca-japanese"}    | ${numeric}      | ${"2018-12-27"} | ${"2019-12-27"} | ${[30, 1]}      | ${"kok japanese, Heisei to Reiwa"}
+      ${"my-u-ca-buddhist"}     | ${numeric}      | ${"2026-12-27"} | ${"2027-01-03"} | ${[2569, 2570]} | ${"my buddhist, over New Year"}
+      ${"kok-u-ca-roc"}         | ${weekdayShort} | ${"2024-07-10"} | ${"2024-07-12"} | ${[113, 113]}   | ${"kok roc, option set 12"}
+      ${"kok-u-ca-roc"}         | ${withEra}      | ${"2024-07-10"} | ${"2024-07-12"} | ${[113, 113]}   | ${"kok roc, option set 19"}
+      ${"kok-Deva-u-ca-coptic"} | ${numeric}      | ${"2029-09-09"} | ${"2029-09-10"} | ${[1745, 1745]} | ${"kok-Deva coptic, control"}
+    `(
+      "formatDateRange and formatDateTimeRange print the calendar year for $label ('$locale', $from to $to)",
+      ({ locale, options, from, to, years }) => {
+        const expected = [
+          hostRangeWithYears(locale, options, from, to, years),
+          hostJoinedWithYears(locale, options, from, to, years),
+        ];
+        expect(expected).toContain(formatDateRange(from, to, locale, options));
+        expect(expected).toContain(
+          formatDateTimeRange(
+            `${from}T00:00:00`,
+            `${to}T00:00:00`,
+            locale,
+            options,
+          ),
+        );
+        expect(expected).toContain(
+          formatZonedRange(
+            `${from}T00:00:00+00:00[UTC]`,
+            `${to}T00:00:00+00:00[UTC]`,
+            locale,
+            options,
+          ),
+        );
+      },
+    );
 
-  it("formatZonedRange prints the calendar year beside a zone name, in a child process", async () => {
-    const from = "2026-12-27T09:30:00+06:30[Asia/Yangon]";
-    const to = "2027-01-03T09:30:00+06:30[Asia/Yangon]";
-    const options =
-      '{ year: "numeric", month: "numeric", day: "numeric", timeZoneName: "short" }';
-    const run = await runInBoundedChild([
-      `gmt.formatZonedRange("${from}", "${to}", "my-u-ca-buddhist", ${options})`,
-    ]);
-    expect(
-      { timedOut: run.timedOut, crashed: run.crashed },
-      run.stderr,
-    ).toEqual({ timedOut: false, crashed: false });
-    // The years in the formatter's numbering system: Burmese digits where the host has `my` data.
-    const { locale, numberingSystem } = hostFormatter(
-      "my-u-ca-buddhist",
-      {},
-    ).resolvedOptions();
-    const written = (year: number): string =>
-      new Intl.NumberFormat(locale, {
-        numberingSystem,
-        useGrouping: false,
-      }).format(year);
-    const range = String(run.calls[0]?.value);
-    expect(range).toContain(written(2569));
-    expect(range).toContain(written(2570));
-    expect(range).not.toContain(written(2026));
-    expect(range).not.toContain(written(2027));
-  });
-});
+    it("formatZonedRange prints the calendar year beside a zone name, in a child process", async () => {
+      const from = "2026-12-27T09:30:00+06:30[Asia/Yangon]";
+      const to = "2027-01-03T09:30:00+06:30[Asia/Yangon]";
+      const options =
+        '{ year: "numeric", month: "numeric", day: "numeric", timeZoneName: "short" }';
+      const run = await runInBoundedChild([
+        `gmt.formatZonedRange("${from}", "${to}", "my-u-ca-buddhist", ${options})`,
+      ]);
+      expect(
+        { timedOut: run.timedOut, crashed: run.crashed },
+        run.stderr,
+      ).toEqual({ timedOut: false, crashed: false });
+      // The years in the formatter's numbering system: Burmese digits where the host has `my` data.
+      const { locale, numberingSystem } = hostFormatter(
+        "my-u-ca-buddhist",
+        {},
+      ).resolvedOptions();
+      const written = (year: number): string =>
+        new Intl.NumberFormat(locale, {
+          numberingSystem,
+          useGrouping: false,
+        }).format(year);
+      const range = String(run.calls[0]?.value);
+      expect(range).toContain(written(2569));
+      expect(range).toContain(written(2570));
+      expect(range).not.toContain(written(2026));
+      expect(range).not.toContain(written(2027));
+    });
+  },
+);
 
 /*
  * Slice 3c before ISO year 1, in the calendars the polyfill cannot project directly (`TEMPORAL_STAND_IN`

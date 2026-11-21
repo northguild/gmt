@@ -38,8 +38,8 @@ export interface CodeBreakOptions {
    * of them, after the `T` between an ISO date and its time, and before a `[` that opens a zone or
    * calendar annotation (`...+10:00[Australia/`), so a long call wraps between its name and its
    * arguments, between arguments, and inside the instants it holds. `fn()` and `1,000` never
-   * break. Off by default: only the changelog page, whose release
-   * notes hold tables of calls too wide for any column, turns it on.
+   * break. Off by default: the changelog page, whose release notes hold tables of calls too wide
+   * for any column, turns it on, and so does a slide's run grid, whose calls sit beside the clock.
    */
   calls?: boolean;
 }
@@ -113,10 +113,24 @@ export function codeBreakPieces(
     .map((part) => part.text);
 }
 
+/**
+ * `text` as a whole `<code>` element: with `gmt-codebreak` and its pieces when it has break points,
+ * plain and escaped when it has one piece. For HTML built outside Markdown (`set:html`), which the
+ * rehype step that calls `codeBreakHast` never sees.
+ */
+export function codeHtml(text: string, options: CodeBreakOptions = {}): string {
+  return codeBreakPieces(text, options).length < 2
+    ? `<code>${escapeHtml(text)}</code>`
+    : `<code class="${CODE_BREAK_CLASS}">${codeBreakHtml(text, options)}</code>`;
+}
+
 /** Escaped HTML for `text`, each piece in a `gmt-cw` span; `text` unchanged when it has one. */
-export function codeBreakHtml(text: string): string {
-  if (codeBreakPieces(text).length < 2) return escapeHtml(text);
-  return parts(text)
+export function codeBreakHtml(
+  text: string,
+  options: CodeBreakOptions = {},
+): string {
+  if (codeBreakPieces(text, options).length < 2) return escapeHtml(text);
+  return parts(text, options)
     .map((part) =>
       part.kind === "space"
         ? part.text

@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { addOperatingTime, operatingTimeBetween } from "../src/calendar";
 import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { bench, londonSchedule, utcMidnight } from "./fixtures";

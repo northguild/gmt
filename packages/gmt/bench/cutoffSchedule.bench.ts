@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { cutoffSchedule } from "../src/transport";
 import { bench } from "./fixtures";
 

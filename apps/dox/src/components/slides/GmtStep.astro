@@ -1,0 +1,21 @@
+---
+/**
+ * The last build of a bug slide: what GMT does with the same input. GMT's run (`GmtRun`) with each
+ * filing as a receipt that says what GMT does about it (`gmtBadge`: guarded, not affected, or no
+ * workaround). The slot is a note under the run.
+ */
+import GmtRun from "./GmtRun.astro";
+import type { GmtCall } from "./types";
+import Visual from "./Visual.astro";
+
+interface Props {
+  /** `filingKey`s, in the order they are read out. */
+  filings: readonly string[];
+  calls: readonly GmtCall[];
+}
+const { filings, calls } = Astro.props;
+---
+
+<Visual class="gmt-step" receipts={filings} show="gmt">
+  <GmtRun calls={calls}><slot /></GmtRun>
+</Visual>

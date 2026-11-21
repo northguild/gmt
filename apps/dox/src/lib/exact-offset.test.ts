@@ -4,7 +4,6 @@
  */
 import { Temporal } from "@js-temporal/polyfill";
 import { toOffsetInstant } from "@northguild/gmt/instant/convert";
-import { describe, expect, it } from "vitest";
 import {
   exactOffsetText,
   instantAtOffset,

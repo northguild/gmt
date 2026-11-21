@@ -8,7 +8,7 @@ Sound for Dox on `/dox`, each voice ported from the sound audition unchanged:
 - **Low double buzz** (`error` B) on an error, here and everywhere later slices fire `error`;
 - **Data blip** (`key` C) on the composer's keys.
 
-React stays inside `/dox`; the component calls `cue()` and `loop()` from `src/lib/sound/cue.ts`,
+React stays inside `/dox` and the deck's Dox frame; the component calls `cue()` and `loop()` from `src/lib/sound/cue.ts`,
 which has no React import.
 
 ## Hooks in `src/components/ask/DoxChat.tsx`

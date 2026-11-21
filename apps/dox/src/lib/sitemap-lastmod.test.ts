@@ -1,7 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { builtPage, footerDate, sitemapLastmod } from "./sitemap-lastmod";
 
 const DATE = "2026-10-19T05:35:38.000Z";

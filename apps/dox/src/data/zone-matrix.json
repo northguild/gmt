@@ -1,0 +1,1582 @@
+{
+  "matrix": {
+    "ci": ".github/workflows/ci.yml",
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia"
+    ],
+    "node": ["22", "24", "26"]
+  },
+  "nodes": {
+    "22": {
+      "nodeVersion": "v22.23.5",
+      "tzdata": "2026e"
+    },
+    "24": {
+      "nodeVersion": "v24.22.3",
+      "tzdata": "2026e"
+    },
+    "26": {
+      "nodeVersion": "v26.13.1",
+      "tzdata": "2026e"
+    }
+  },
+  "tagDefs": [
+    {
+      "kind": "wrong-answer",
+      "reason": "Week 1 of 2012 starts on Saturday 31 December 2011; in Pacific/Apia, which skipped 30 December 2011, the day of year comes out as 364 and the week as 52.",
+      "zones": ["Pacific/Apia"],
+      "evidence": {
+        "input": "moment([2011, 11, 31]) with week { dow: 6, doy: 12 }",
+        "zone": "Pacific/Apia",
+        "temporal": "2011-12-31T00:00:00+14:00[Pacific/Apia]: dayOfYear 365; the Saturday-first week 2011-12-31..2012-01-06 holds 1 January, so week 1",
+        "library": "dayOfYear 364, week 52"
+      }
+    },
+    {
+      "kind": "one-zone",
+      "reason": "Expects 1 + 24/25 days because 4 November 2018 lasts 25 hours in America/New_York; in other zones that day lasts 24 hours and the value matches Temporal.",
+      "zones": [
+        "UTC",
+        "Pacific/Niue",
+        "Europe/London",
+        "Asia/Kolkata",
+        "Asia/Kathmandu",
+        "Asia/Shanghai",
+        "Australia/Lord_Howe",
+        "Pacific/Chatham",
+        "Pacific/Apia"
+      ]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "Expects 2999 hours, which holds where one spring-forward hour falls in the span (America/New_York); in other zones the hour count matches Temporal.",
+      "zones": [
+        "UTC",
+        "Pacific/Niue",
+        "Asia/Kolkata",
+        "Asia/Kathmandu",
+        "Asia/Shanghai",
+        "Australia/Lord_Howe",
+        "Pacific/Chatham",
+        "Pacific/Apia"
+      ]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "Expects the America/New_York day, hour and offset (-300) of the parsed instant.",
+      "zones": [
+        "UTC",
+        "Pacific/Niue",
+        "Europe/London",
+        "Asia/Kolkata",
+        "Asia/Kathmandu",
+        "Asia/Shanghai",
+        "Australia/Lord_Howe",
+        "Pacific/Chatham",
+        "Pacific/Apia"
+      ]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "Expects the America/New_York day, hour, offset and zone name of the parsed instant.",
+      "zones": [
+        "UTC",
+        "Pacific/Niue",
+        "Europe/London",
+        "Asia/Kolkata",
+        "Asia/Kathmandu",
+        "Asia/Shanghai",
+        "Australia/Lord_Howe",
+        "Pacific/Chatham",
+        "Pacific/Apia"
+      ]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "Expects the host zone's names to be Eastern Daylight Time and EDT.",
+      "zones": [
+        "UTC",
+        "Pacific/Niue",
+        "Europe/London",
+        "Asia/Kolkata",
+        "Asia/Kathmandu",
+        "Asia/Shanghai",
+        "Australia/Lord_Howe",
+        "Pacific/Chatham",
+        "Pacific/Apia"
+      ]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "Expects the host zone to be America/New_York.",
+      "zones": [
+        "UTC",
+        "Pacific/Niue",
+        "Europe/London",
+        "Asia/Kolkata",
+        "Asia/Kathmandu",
+        "Asia/Shanghai",
+        "Australia/Lord_Howe",
+        "Pacific/Chatham",
+        "Pacific/Apia"
+      ]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "Expects the host zone name America/New_York.",
+      "zones": [
+        "UTC",
+        "Pacific/Niue",
+        "Europe/London",
+        "Asia/Kolkata",
+        "Asia/Kathmandu",
+        "Asia/Shanghai",
+        "Australia/Lord_Howe",
+        "Pacific/Chatham",
+        "Pacific/Apia"
+      ]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "The test instant 2011-07-31T14:48Z is already 1 August at offsets of +09:12 or more; the result matches Temporal for that local date.",
+      "zones": ["Australia/Lord_Howe", "Pacific/Chatham"]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "The test's now, 2015-01-15T14:21Z, is already Friday 16 January at offsets of +09:39 or more, so the calendar labels name other days; each matches Temporal's day count.",
+      "zones": ["Australia/Lord_Howe", "Pacific/Chatham", "Pacific/Apia"]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "The test starts from 2015-01-01T00:00Z, which is 31 December 2014 at negative offsets; the result matches Temporal for that local date.",
+      "zones": ["America/New_York", "Pacific/Niue"]
+    },
+    {
+      "kind": "one-zone",
+      "reason": "The test formats the Unix epoch, 1970-01-01T00:00Z, which is still 1969 at negative offsets; the year printed matches Temporal.",
+      "zones": ["America/New_York", "Pacific/Apia", "Pacific/Niue"]
+    }
+  ],
+  "causeDefs": [
+    {
+      "cause": "From V8 13.6 (Node 24), `Intl.Locale.prototype.getWeekInfo()` returns no `minimalDays`, so Luxon uses its fallback of 4 (src/impl/locale.js:80-84); the en-US test expects 1.",
+      "nodes": ["24", "26"]
+    },
+    {
+      "cause": "ICU 78.3 (CLDR 48) names the Ethiopic era `AM`; the test expects `ERA1`."
+    },
+    {
+      "cause": "V8 14.6 (Node 26) formats with U+0020 before AM or PM where the test expects U+202F.",
+      "nodes": ["26"]
+    },
+    {
+      "cause": "On Node 22 and 24 (V8 12.4, 13.6) the es-ES day period is `p.` U+202F `m.`; the parser matches U+0020 or U+00A0 between its parts (src/impl/tokenParser.js:15-16).",
+      "nodes": ["22", "24"]
+    },
+    {
+      "cause": "ICU 78.3 (CLDR 48) gives the Thai day period as `PM`; the test parses `หลังเที่ยง`, so `rawMatches` is null."
+    },
+    {
+      "cause": "For the repeated wall time 2012-11-04 01:00 in America/New_York, Day.js gives offset -05:00 and the test expects moment-timezone 0.5.31's -04:00, in every host zone."
+    },
+    {
+      "cause": "On Node 26 the function API uses the built-in Temporal (src/funcApi/plainDate.ts:316), whose `total()` is rounded once; the test compares it with the polyfill's class implementation, which rounds twice and differs in the last bit (25/7 weeks: 3.5714285714285716 against 3.571428571428571; 424/365 years: 1.1616438356164382 against 1.1616438356164385).",
+      "nodes": ["26"]
+    },
+    {
+      "cause": "The test expects the last Africa/Casablanca transition before 2100-07-01 at 2087-05-11T02:00Z; with tzdata 2026e the last one is 2026-09-20T01:00Z."
+    }
+  ],
+  "untagged": [],
+  "uncaused": [],
+  "suites": [
+    {
+      "id": "moment",
+      "name": "Moment.js",
+      "version": "2.31.0",
+      "repository": "https://github.com/moment/moment",
+      "commit": "15b45d48a176312e8f34143c5a800090abf4787f",
+      "command": "TZ=<zone> node scripts/test.js",
+      "ownCommand": "npm test",
+      "ids": [
+        "locale/ar-ly.js › locale:ar-ly > weeks year starting sunday formatted",
+        "locale/ar.js › locale:ar > weeks year starting sunday formatted",
+        "locale/fa.js › locale:fa > weeks year starting sunday formatted",
+        "locale/ku.js › locale:ku > weeks year starting sunday formatted",
+        "locale/ps.js › locale:ps > week year starts on Saturday",
+        "locale/tzm-latn.js › locale:tzm-latn > weeks year starting sunday formatted",
+        "locale/tzm.js › locale:tzm > weeks year starting sunday formatted",
+        "moment/week_year.js › week year > weeks numbers dow:6 doy:12"
+      ],
+      "tags": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0
+      },
+      "causes": {},
+      "reference": {
+        "zone": "UTC",
+        "source": "none: the project's CI sets no zone, so UTC",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 3943
+          },
+          {
+            "node": "24",
+            "tests": 3943
+          },
+          {
+            "node": "26",
+            "tests": 3943
+          }
+        ]
+      },
+      "pins": [
+        {
+          "file": ".github/workflows/timezones.yml",
+          "line": 27,
+          "text": "TZ: ${{ matrix.timezone }}"
+        }
+      ],
+      "cells": {
+        "22": {
+          "tests": 3943,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {
+              "failed": [0, 1, 2, 3, 4, 5, 6, 7]
+            },
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "24": {
+          "tests": 3943,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {
+              "failed": [0, 1, 2, 3, 4, 5, 6, 7]
+            },
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "26": {
+          "tests": 3943,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {
+              "failed": [0, 1, 2, 3, 4, 5, 6, 7]
+            },
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "luxon",
+      "name": "Luxon",
+      "version": "3.7.2",
+      "repository": "https://github.com/moment/luxon",
+      "commit": "4262a38ded7762e22608a9feb9f117b40d338ced",
+      "command": "TZ=<zone> jest --json --maxWorkers=2",
+      "ownCommand": "npm test",
+      "ids": [
+        "test/datetime/create.test.js › DateTime.fromObject() w/localWeekYears handles skew with Gregorian years",
+        "test/datetime/create.test.js › DateTime.fromObject() w/locale weeks handles fully specified dates",
+        "test/datetime/diff.test.js › DateTime#diff handles fractional days as fractions of those specific days",
+        "test/datetime/diff.test.js › DateTime#diff is precise for lower order units",
+        "test/datetime/format.test.js › DateTime#toLocaleString can override the dateTime's output calendar",
+        "test/datetime/format.test.js › DateTime#toLocaleString uses locale-appropriate time formats",
+        "test/datetime/format.test.js › DateTime#toLocaleString() does the best it can with unsupported fixed-offset zone when showing the zone",
+        "test/datetime/format.test.js › DateTime#toLocaleString() does the best it can with unsupported fixed-offset zone with timeStyle full",
+        "test/datetime/format.test.js › DateTime#toLocaleString() shows things in the right custom zone",
+        "test/datetime/format.test.js › DateTime#toLocaleString() shows things in the right custom zone when showing the zone",
+        "test/datetime/format.test.js › DateTime#toLocaleString() shows things in the right custom zone with timeStyle full",
+        "test/datetime/format.test.js › DateTime#toLocaleString() shows things with UTC if fixed-offset zone with 0 offset is used",
+        "test/datetime/localeWeek.test.js › weeksInLocalWeekYear 2022 should have 53 weeks in en-US",
+        "test/datetime/set.test.js › DateTime#set({ localWeekNumber }) sets the date to the same weekday of the target weekNumber (en-US)",
+        "test/datetime/set.test.js › DateTime#set({ localWeekYear }) sets the date to the same weekNumber/weekday of the target weekYear (en-US)",
+        "test/datetime/toFormat.test.js › DateTime#toFormat('t') returns a short time representation",
+        "test/datetime/toFormat.test.js › DateTime#toFormat('tt') returns a medium time representation",
+        "test/datetime/tokenParse.test.js › DateTime.format() uses local zone when setZone is false and offset in input",
+        "test/datetime/tokenParse.test.js › DateTime.format() uses local zone when setZone is false and zone id in input",
+        "test/datetime/tokenParse.test.js › DateTime.fromFormat() makes dots optional and handles non breakable spaces",
+        "test/datetime/tokenParse.test.js › DateTime.fromFormatExplain() parses localized string with numberingSystem correctly",
+        "test/datetime/zone.test.js › The local zone does local stuff",
+        "test/info/localeWeek.test.js › Info.getMinimumDaysInFirstWeek reports the correct value",
+        "test/info/localeWeek.test.js › Info.getStartOfWeek honors the default locale",
+        "test/info/zones.test.js › Info.normalizeZone converts local to system Zone",
+        "test/interval/format.test.js › Interval#toLocaleString can override the start DateTime's output calendar",
+        "test/interval/format.test.js › Interval#toLocaleString does the best it can with unsupported fixed-offset zone when showing the zone",
+        "test/interval/format.test.js › Interval#toLocaleString shows things in the right IANA zone",
+        "test/interval/format.test.js › Interval#toLocaleString shows things in the right fixed-offset zone",
+        "test/interval/format.test.js › Interval#toLocaleString shows things in the right fixed-offset zone when showing the zone",
+        "test/interval/format.test.js › Interval#toLocaleString shows things with UTC if fixed-offset with 0 offset is used",
+        "test/interval/format.test.js › Interval#toLocaleString uses locale-appropriate time formats",
+        "test/zones/local.test.js › SystemZone.instance provides valid ..."
+      ],
+      "tags": {
+        "2": 1,
+        "3": 2,
+        "17": 3,
+        "18": 4,
+        "21": 5,
+        "24": 6,
+        "32": 7
+      },
+      "causes": {
+        "0": 0,
+        "1": 0,
+        "4": 1,
+        "5": 2,
+        "6": 2,
+        "7": 2,
+        "8": 2,
+        "9": 2,
+        "10": 2,
+        "11": 2,
+        "12": 0,
+        "13": 0,
+        "14": 0,
+        "15": 2,
+        "16": 2,
+        "19": 3,
+        "20": 4,
+        "22": 0,
+        "23": 0,
+        "25": 1,
+        "26": 2,
+        "27": 2,
+        "28": 2,
+        "29": 2,
+        "30": 2,
+        "31": 2
+      },
+      "reference": {
+        "zone": "America/New_York",
+        "source": ".github/workflows/test.yml: TZ: America/New_York",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 1152,
+            "failed": [4, 19, 20, 25]
+          },
+          {
+            "node": "24",
+            "tests": 1152,
+            "failed": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+          },
+          {
+            "node": "26",
+            "tests": 1152,
+            "failed": [
+              0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+              25, 26, 27, 28, 29, 30, 31
+            ]
+          }
+        ]
+      },
+      "pins": [
+        {
+          "file": ".github/workflows/test.yml",
+          "line": 16,
+          "text": "TZ: America/New_York"
+        }
+      ],
+      "cells": {
+        "22": {
+          "tests": 1152,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Asia/Kathmandu": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Asia/Kolkata": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Asia/Shanghai": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Australia/Lord_Howe": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Europe/London": {
+              "failed": [2, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Pacific/Apia": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Pacific/Chatham": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "Pacific/Niue": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            },
+            "UTC": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [4, 19, 20, 25]
+            }
+          }
+        },
+        "24": {
+          "tests": 1152,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Asia/Kathmandu": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Asia/Kolkata": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Asia/Shanghai": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Australia/Lord_Howe": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Europe/London": {
+              "failed": [2, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Pacific/Apia": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Pacific/Chatham": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "Pacific/Niue": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            },
+            "UTC": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [0, 1, 4, 12, 13, 14, 19, 20, 22, 23, 25]
+            }
+          }
+        },
+        "26": {
+          "tests": 1152,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Asia/Kathmandu": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Asia/Kolkata": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Asia/Shanghai": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Australia/Lord_Howe": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Europe/London": {
+              "failed": [2, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Pacific/Apia": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Pacific/Chatham": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "Pacific/Niue": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            },
+            "UTC": {
+              "failed": [2, 3, 17, 18, 21, 24, 32],
+              "alsoFailsAtReference": [
+                0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 22, 23,
+                25, 26, 27, 28, 29, 30, 31
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "date-fns",
+      "name": "date-fns",
+      "version": "4.4.0",
+      "repository": "https://github.com/date-fns/date-fns",
+      "commit": "cd53d2538cfa318404eff7ade6449b49bf34562e",
+      "command": "TZ=<zone> vitest run --project main --reporter=json --maxWorkers=2",
+      "ownCommand": "pnpm test",
+      "ids": [],
+      "tags": {},
+      "causes": {},
+      "reference": {
+        "zone": "UTC",
+        "source": "none: the project's CI sets no zone, so UTC",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 3148
+          },
+          {
+            "node": "24",
+            "tests": 3148
+          },
+          {
+            "node": "26",
+            "tests": 3148
+          }
+        ]
+      },
+      "pins": [
+        {
+          "file": "pkgs/core/examples/cdn/package.json",
+          "line": 16,
+          "text": "\"test-basic\": \"test $(env TZ=UTC node ./basic.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/cdn/package.json",
+          "line": 17,
+          "text": "\"test-fp\": \"test $(env TZ=UTC node ./fp.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/cdn/package.json",
+          "line": 18,
+          "text": "\"test-locale\": \"test $(env TZ=UTC node ./locale.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/cdn/package.json",
+          "line": 19,
+          "text": "\"test-locales\": \"test $(env TZ=UTC node ./locales.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/cdn/package.json",
+          "line": 20,
+          "text": "\"test-legacy\": \"test $(env TZ=UTC node ./legacy.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/cdn/package.json",
+          "line": 21,
+          "text": "\"test-legacy-strict\": \"test $(env TZ=UTC node ./legacyStrict.js) = true\""
+        },
+        {
+          "file": "pkgs/core/examples/lodash-fp/package.json",
+          "line": 13,
+          "text": "\"test\": \"test $(env TZ=UTC node ./dist/example.js) = true\""
+        },
+        {
+          "file": "pkgs/core/examples/node-esm/package.json",
+          "line": 13,
+          "text": "\"test-example\": \"test $(env TZ=UTC node ./example.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/node-esm/package.json",
+          "line": 14,
+          "text": "\"test-fp\": \"test $(env TZ=UTC node ./fp.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/node-esm/package.json",
+          "line": 15,
+          "text": "\"test-misc\": \"test $(env TZ=UTC node ./misc.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/rollup/package.json",
+          "line": 15,
+          "text": "\"test-example\": \"test $(env TZ=UTC node ./dist/example.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/rollup/package.json",
+          "line": 16,
+          "text": "\"test-fp\": \"test $(env TZ=UTC node ./dist/fp.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/rollup/package.json",
+          "line": 17,
+          "text": "\"test-misc\": \"test $(env TZ=UTC node ./dist/misc.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/rollup/package.json",
+          "line": 18,
+          "text": "\"test-constants\": \"test $(env TZ=UTC node ./dist/constants.js) = true\""
+        },
+        {
+          "file": "pkgs/core/examples/typescript/package.json",
+          "line": 13,
+          "text": "\"test-example\": \"test $(env TZ=UTC node ./dist/example.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/typescript/package.json",
+          "line": 14,
+          "text": "\"test-fp\": \"test $(env TZ=UTC node ./dist/fp.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/typescript/package.json",
+          "line": 15,
+          "text": "\"test-misc\": \"test $(env TZ=UTC node ./dist/misc.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/webpack/package.json",
+          "line": 14,
+          "text": "\"test-example\": \"test $(env TZ=UTC node ./dist/example.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/webpack/package.json",
+          "line": 15,
+          "text": "\"test-fp\": \"test $(env TZ=UTC node ./dist/fp.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/webpack/package.json",
+          "line": 16,
+          "text": "\"test-misc\": \"test $(env TZ=UTC node ./dist/misc.js) = true\","
+        },
+        {
+          "file": "pkgs/core/examples/webpack/package.json",
+          "line": 17,
+          "text": "\"test-constants\": \"test $(env TZ=UTC node ./dist/constants.js) = true\""
+        },
+        {
+          "file": "pkgs/core/package.json",
+          "line": 8172,
+          "text": "\"locale-snapshots\": \"env TZ=utc tsx --tsconfig scripts/tsconfig.json -- ./scripts/build/localeSnapshots/index.ts\","
+        },
+        {
+          "file": "pkgs/core/test/dst/addBusinessDays/basic.ts",
+          "line": 7,
+          "text": "throw new Error(\"The test must be run with TZ=America/Santiago\");"
+        },
+        {
+          "file": "pkgs/core/test/dst/eachDayOfInterval/basic.ts",
+          "line": 7,
+          "text": "throw new Error(\"The test must be run with TZ=Asia/Damascus\");"
+        },
+        {
+          "file": "pkgs/core/test/dst/formatDistanceStrict/cairo.ts",
+          "line": 7,
+          "text": "throw new Error(\"The test must be run with TZ=Africa/Cairo\");"
+        },
+        {
+          "file": "pkgs/core/test/dst/formatDistanceStrict/melbourne.ts",
+          "line": 8,
+          "text": "throw new Error(\"The test must be run with TZ=Australia/Melbourne\");"
+        },
+        {
+          "file": "pkgs/core/test/dst/parseISO/basic.ts",
+          "line": 7,
+          "text": "throw new Error(\"The test must be run with TZ=America/Sao_Paulo\");"
+        },
+        {
+          "file": "pkgs/core/test/dst/parseISO/samoa.ts",
+          "line": 7,
+          "text": "throw new Error(\"The test must be run with TZ=Pacific/Apia\");"
+        },
+        {
+          "file": "pkgs/core/test/dst/parseISO/sydney.ts",
+          "line": 7,
+          "text": "throw new Error(\"The test must be run with TZ=Australia/Sydney\");"
+        },
+        {
+          "file": "pkgs/core/test/formatISO/india.ts",
+          "line": 5,
+          "text": "throw new Error(\"The test must be run with TZ=Asia/Kolkata\");"
+        },
+        {
+          "file": "pkgs/core/test/formatRFC3339/australia.ts",
+          "line": 9,
+          "text": "throw new Error(\"The test must be run with TZ=Australia/Eucla (UTC+08:45)\");"
+        },
+        {
+          "file": "pkgs/core/test/formatRFC3339/india.ts",
+          "line": 9,
+          "text": "throw new Error(\"The test must be run with TZ=Asia/Kolkata\");"
+        },
+        {
+          "file": "pkgs/core/test/formatRFC3339/newfoundland.ts",
+          "line": 10,
+          "text": "\"The test must be run with TZ=America/St_Johns (UTC-02:30 or UTC-03:30)\","
+        },
+        {
+          "file": "pkgs/core/test/formatRFC3339/newzealand.ts",
+          "line": 10,
+          "text": "\"The test must be run with TZ=Pacific/Chatham (UTC+12:45 or UTC+13:45)\","
+        },
+        {
+          "file": "pkgs/core/test/formatRFC3339/poland.ts",
+          "line": 9,
+          "text": "\"The test must be run with TZ=Europe/Warsaw (UTC+02:00 or UTC+01:00)\","
+        },
+        {
+          "file": "pkgs/dev/src/test/tz.ts",
+          "line": 413,
+          "text": "})`VITEST_MAX_WORKERS=1 TZ=${timeZone} pnpm vitest run ${testsPath}`.quiet();"
+        },
+        {
+          "file": "pkgs/dev/src/test/tz.ts",
+          "line": 445,
+          "text": "`- ${timeZone} (\\`TZ=${timeZone} pnpm vitest run ${testsPath}\\`)`,"
+        },
+        {
+          "file": "pkgs/tz/src/tests.ts",
+          "line": 11,
+          "text": "// When ran with TZ=America/New_York, the NY dates land on the DST hour"
+        },
+        {
+          "file": "pkgs/tz/src/tests.ts",
+          "line": 15,
+          "text": "// When ran with TZ=America/Los_Angeles where the DST is on the same time,"
+        },
+        {
+          "file": "pkgs/utc/package.json",
+          "line": 75,
+          "text": "\"test\": \"env TZ=Asia/Kolkata vitest\","
+        }
+      ],
+      "cells": {
+        "22": {
+          "tests": 3166,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {
+              "tests": 3148
+            },
+            "Asia/Kolkata": {
+              "tests": 3148
+            },
+            "Asia/Shanghai": {
+              "tests": 3148
+            },
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {
+              "tests": 3148
+            },
+            "UTC": {
+              "tests": 3148
+            }
+          }
+        },
+        "24": {
+          "tests": 3166,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {
+              "tests": 3148
+            },
+            "Asia/Kolkata": {
+              "tests": 3148
+            },
+            "Asia/Shanghai": {
+              "tests": 3148
+            },
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {
+              "tests": 3148
+            },
+            "UTC": {
+              "tests": 3148
+            }
+          }
+        },
+        "26": {
+          "tests": 3166,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {
+              "tests": 3148
+            },
+            "Asia/Kolkata": {
+              "tests": 3148
+            },
+            "Asia/Shanghai": {
+              "tests": 3148
+            },
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {
+              "tests": 3148
+            },
+            "UTC": {
+              "tests": 3148
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dayjs",
+      "name": "Day.js",
+      "version": "1.11.23",
+      "repository": "https://github.com/iamkun/dayjs",
+      "commit": "4549b8d03307891143e8a50d39fcdab1f16f77cf",
+      "command": "TZ=<zone> jest --json --coverage=false --maxWorkers=2",
+      "ownCommand": "npm test",
+      "ids": [
+        "test/get-set.test.js › Set Month and Year in last day of month",
+        "test/plugin/calendar.test.js › ReferenceTime",
+        "test/plugin/dayOfYear.test.js › DayOfYear set",
+        "test/plugin/localizedFormat.test.js › Should not interpolate characters inside square brackets",
+        "test/plugin/pluralGetSet.test.js › Set Month and Year in last day of month",
+        "test/plugin/timezone.test.js › DST edge cases vs moment parses the fall-back overlap the same way as moment"
+      ],
+      "tags": {
+        "0": 8,
+        "1": 9,
+        "2": 10,
+        "3": 11,
+        "4": 8
+      },
+      "causes": {
+        "5": 5
+      },
+      "reference": {
+        "zone": "UTC",
+        "source": "none: the project's CI sets no zone, so UTC",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 794,
+            "failed": [5]
+          },
+          {
+            "node": "24",
+            "tests": 794,
+            "failed": [5]
+          },
+          {
+            "node": "26",
+            "tests": 794,
+            "failed": [5]
+          }
+        ]
+      },
+      "pins": [
+        {
+          "file": "package.json",
+          "line": 8,
+          "text": "\"test\": \"cross-env TZ=Pacific/Auckland npm run test-tz && cross-env TZ=Europe/London npm run test-tz && cross-env TZ=America/Whitehorse npm run test-tz && npm run test-tz && cross-env TZ=Europe/Paris "
+        }
+      ],
+      "cells": {
+        "22": {
+          "tests": 794,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "failed": [2, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Kathmandu": {
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Kolkata": {
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Shanghai": {
+              "alsoFailsAtReference": [5]
+            },
+            "Australia/Lord_Howe": {
+              "failed": [0, 1, 4],
+              "alsoFailsAtReference": [5]
+            },
+            "Europe/London": {
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Apia": {
+              "failed": [1, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Chatham": {
+              "failed": [0, 1, 4],
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Niue": {
+              "failed": [2, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "UTC": {
+              "alsoFailsAtReference": [5]
+            }
+          }
+        },
+        "24": {
+          "tests": 794,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "failed": [2, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Kathmandu": {
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Kolkata": {
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Shanghai": {
+              "alsoFailsAtReference": [5]
+            },
+            "Australia/Lord_Howe": {
+              "failed": [0, 1, 4],
+              "alsoFailsAtReference": [5]
+            },
+            "Europe/London": {
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Apia": {
+              "failed": [1, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Chatham": {
+              "failed": [0, 1, 4],
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Niue": {
+              "failed": [2, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "UTC": {
+              "alsoFailsAtReference": [5]
+            }
+          }
+        },
+        "26": {
+          "tests": 794,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "failed": [2, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Kathmandu": {
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Kolkata": {
+              "alsoFailsAtReference": [5]
+            },
+            "Asia/Shanghai": {
+              "alsoFailsAtReference": [5]
+            },
+            "Australia/Lord_Howe": {
+              "failed": [0, 1, 4],
+              "alsoFailsAtReference": [5]
+            },
+            "Europe/London": {
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Apia": {
+              "failed": [1, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Chatham": {
+              "failed": [0, 1, 4],
+              "alsoFailsAtReference": [5]
+            },
+            "Pacific/Niue": {
+              "failed": [2, 3],
+              "alsoFailsAtReference": [5]
+            },
+            "UTC": {
+              "alsoFailsAtReference": [5]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "spacetime",
+      "name": "Spacetime",
+      "version": "7.17.1",
+      "repository": "https://github.com/spencermountain/spacetime",
+      "commit": "35fbb59fda93f3686f6faee0f1e40e297950a5a8",
+      "command": "TZ=<zone> node --import tsx tests/_lib/run.ts tests",
+      "ownCommand": "npm test",
+      "ids": [],
+      "tags": {},
+      "causes": {},
+      "reference": {
+        "zone": "UTC",
+        "source": "none: the project's CI sets no zone, so UTC",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 8697
+          },
+          {
+            "node": "24",
+            "tests": 8697
+          },
+          {
+            "node": "26",
+            "tests": 8910
+          }
+        ]
+      },
+      "pins": [
+        {
+          "file": "scripts/test-sweep.js",
+          "line": 56,
+          "text": "const label = tz ? `${fakeDate}  TZ=${tz}` : fakeDate"
+        },
+        {
+          "file": "scripts/tz/lib.js",
+          "line": 29,
+          "text": "if (!/^TZ=\".*\"$/.test(lines.shift() || '')) {throw new Error('Missing zdump TZ header')}"
+        }
+      ],
+      "cells": {
+        "22": {
+          "tests": 8697,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "24": {
+          "tests": 8697,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "26": {
+          "tests": 8910,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "internationalized-date",
+      "name": "@internationalized/date",
+      "version": "3.12.4",
+      "repository": "https://github.com/adobe/react-spectrum",
+      "commit": "f56660b234bd588751c9f35b85d6fe6e17e45ccf",
+      "command": "TZ=<zone> jest packages/@internationalized/date/tests/ --json --maxWorkers=2",
+      "ownCommand": "yarn jest packages/@internationalized/date",
+      "ids": [],
+      "tags": {},
+      "causes": {},
+      "reference": {
+        "zone": "UTC",
+        "source": "none: the project's CI sets no zone, so UTC",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 386
+          },
+          {
+            "node": "24",
+            "tests": 386
+          },
+          {
+            "node": "26",
+            "tests": 386
+          }
+        ]
+      },
+      "pins": [],
+      "cells": {
+        "22": {
+          "tests": 386,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "24": {
+          "tests": 386,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "26": {
+          "tests": 386,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "js-temporal",
+      "name": "@js-temporal/polyfill",
+      "version": "0.5.1",
+      "repository": "https://github.com/js-temporal/temporal-polyfill",
+      "commit": "f3c07e503632ddf7ff918066f2eb30a9dcfa06ff",
+      "command": "TZ=<zone> node --no-warnings --loader ./test/resolve.source.mjs ./test/all.mjs",
+      "ownCommand": "npm test",
+      "ids": [],
+      "tags": {},
+      "causes": {},
+      "reference": {
+        "zone": "UTC",
+        "source": "none: the project's CI sets no zone, so UTC",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 3417
+          },
+          {
+            "node": "24",
+            "tests": 4904
+          },
+          {
+            "node": "26",
+            "tests": 4904
+          }
+        ]
+      },
+      "pins": [],
+      "cells": {
+        "22": {
+          "tests": 4904,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {
+              "tests": 3417
+            }
+          }
+        },
+        "24": {
+          "tests": 4904,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {
+              "tests": 4630
+            },
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "26": {
+          "tests": 4904,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "temporal-polyfill",
+      "name": "temporal-polyfill",
+      "version": "1.0.8",
+      "repository": "https://github.com/fullcalendar/temporal-polyfill",
+      "commit": "cc7bffcc6c5d6b447210588630226ceef8e704e2",
+      "command": "TZ=<zone> vitest run --reporter=json (polyfill/)",
+      "ownCommand": "pnpm test",
+      "ids": [
+        "src/funcApi/parity/diffUnzoned.test.ts ›  PlainDate diff parity 'constructs a fractional week in the s…'",
+        "src/funcApi/parity/diffUnzoned.test.ts ›  PlainYearMonth diff parity $s ignores reference ISO days",
+        "src/internal/timeZoneImpl.test.ts ›  queryTimeZone finds the previous transition from far in the future in Africa/Casablanca"
+      ],
+      "tags": {},
+      "causes": {
+        "0": 6,
+        "1": 6,
+        "2": 7
+      },
+      "reference": {
+        "zone": "America/New_York",
+        "source": ".github/workflows/ci.yml: TZ: \"America/New_York\"",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 1824,
+            "failed": [2]
+          },
+          {
+            "node": "24",
+            "tests": 1824,
+            "failed": [2]
+          },
+          {
+            "node": "26",
+            "tests": 1790,
+            "failed": [0, 1, 2]
+          }
+        ]
+      },
+      "pins": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "line": 10,
+          "text": "TZ: \"America/New_York\""
+        }
+      ],
+      "cells": {
+        "22": {
+          "tests": 1824,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "alsoFailsAtReference": [2]
+            },
+            "Asia/Kathmandu": {
+              "alsoFailsAtReference": [2]
+            },
+            "Asia/Kolkata": {
+              "alsoFailsAtReference": [2]
+            },
+            "Asia/Shanghai": {
+              "alsoFailsAtReference": [2]
+            },
+            "Australia/Lord_Howe": {
+              "alsoFailsAtReference": [2]
+            },
+            "Europe/London": {
+              "alsoFailsAtReference": [2]
+            },
+            "Pacific/Apia": {
+              "alsoFailsAtReference": [2]
+            },
+            "Pacific/Chatham": {
+              "alsoFailsAtReference": [2]
+            },
+            "Pacific/Niue": {
+              "alsoFailsAtReference": [2]
+            },
+            "UTC": {
+              "alsoFailsAtReference": [2]
+            }
+          }
+        },
+        "24": {
+          "tests": 1824,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "alsoFailsAtReference": [2]
+            },
+            "Asia/Kathmandu": {
+              "alsoFailsAtReference": [2]
+            },
+            "Asia/Kolkata": {
+              "alsoFailsAtReference": [2]
+            },
+            "Asia/Shanghai": {
+              "alsoFailsAtReference": [2]
+            },
+            "Australia/Lord_Howe": {
+              "alsoFailsAtReference": [2]
+            },
+            "Europe/London": {
+              "alsoFailsAtReference": [2]
+            },
+            "Pacific/Apia": {
+              "alsoFailsAtReference": [2]
+            },
+            "Pacific/Chatham": {
+              "alsoFailsAtReference": [2]
+            },
+            "Pacific/Niue": {
+              "alsoFailsAtReference": [2]
+            },
+            "UTC": {
+              "alsoFailsAtReference": [2]
+            }
+          }
+        },
+        "26": {
+          "tests": 1790,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Asia/Kathmandu": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Asia/Kolkata": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Asia/Shanghai": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Australia/Lord_Howe": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Europe/London": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Pacific/Apia": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Pacific/Chatham": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "Pacific/Niue": {
+              "alsoFailsAtReference": [0, 1, 2]
+            },
+            "UTC": {
+              "alsoFailsAtReference": [0, 1, 2]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "gmt",
+      "name": "GMT",
+      "version": "1.21.0",
+      "repository": "https://github.com/northguild/gmt",
+      "commit": "c7c78ba2ef433f74e971fb51eba9b413dbee69f2+dirty",
+      "command": "TZ=<zone> vitest run --config packages/gmt/vitest.config.ts --reporter=json",
+      "ownCommand": "pnpm -w exec vitest run --config packages/gmt/vitest.config.ts",
+      "ids": [],
+      "tags": {},
+      "causes": {},
+      "reference": {
+        "zone": "UTC",
+        "source": "none: the project's CI sets no zone, so UTC",
+        "runs": [
+          {
+            "node": "22",
+            "tests": 77845
+          },
+          {
+            "node": "24",
+            "tests": 77845
+          },
+          {
+            "node": "26",
+            "tests": 77845
+          }
+        ]
+      },
+      "pins": [],
+      "cells": {
+        "22": {
+          "tests": 77845,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "24": {
+          "tests": 77845,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        },
+        "26": {
+          "tests": 77845,
+          "ranOn": "2026-11-18",
+          "zones": {
+            "America/New_York": {},
+            "Asia/Kathmandu": {},
+            "Asia/Kolkata": {},
+            "Asia/Shanghai": {},
+            "Australia/Lord_Howe": {},
+            "Europe/London": {},
+            "Pacific/Apia": {},
+            "Pacific/Chatham": {},
+            "Pacific/Niue": {},
+            "UTC": {}
+          }
+        }
+      }
+    }
+  ]
+}

@@ -28,7 +28,10 @@ const SKIP_DIRS = new Set([
 const SOURCE = /\.(?:[cm]?[jt]sx?)$/;
 const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
 
-/** Markers that disable, focus or invert a test, in any test file. */
+/**
+ * Markers that disable, focus or invert a test, in any test file. The x- and f-prefixed forms are
+ * globals, so a method of the same name (`clock.fit(...)`) is not one.
+ */
 const TEST_MARKERS = [
   {
     label: "disabled, focused or expected-to-fail test",
@@ -37,11 +40,11 @@ const TEST_MARKERS = [
   },
   {
     label: "x-prefixed (disabled) test",
-    pattern: /\bx(?:it|test|describe)\s*\(/,
+    pattern: /(?<![.$\w])x(?:it|test|describe)\s*\(/,
   },
   {
     label: "f-prefixed (focused) test",
-    pattern: /\bf(?:it|describe)\s*\(/,
+    pattern: /(?<![.$\w])f(?:it|describe)\s*\(/,
   },
 ];
 

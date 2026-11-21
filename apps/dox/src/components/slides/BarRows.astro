@@ -1,0 +1,61 @@
+---
+/**
+ * One bar per row: a name, a bar as long as its `share` of the longest, a large value and a small
+ * note beside it. The experiment slides draw their wrong counts with it and `moment` its downloads;
+ * the caller gives the rows and the tone, and nothing here knows either. In the `danger` tone the
+ * bars and values are the danger colour and a `clean` row turns green with no bar (its share is 0); in the `neutral`
+ * tone nothing is judged. `noteLead` is read aloud before each note and not shown ("wrong", for
+ * "of 736").
+ */
+import "./bar-rows.css";
+
+export interface BarRow {
+  name: string;
+  /** The bar's length, 0 to 1. */
+  share: number;
+  value: string;
+  note?: string;
+  /** In the danger tone, a row with nothing wrong. */
+  clean?: boolean;
+}
+
+interface Props {
+  label: string;
+  rows: readonly BarRow[];
+  tone?: "danger" | "neutral";
+  noteLead?: string;
+  /** The name column's width, as a CSS length. */
+  nameWidth?: string;
+  /** The value column's width, as a CSS length. */
+  valueWidth?: string;
+}
+
+const { label, rows, tone = "danger", noteLead, nameWidth, valueWidth } = Astro.props;
+const sizes = [
+  nameWidth && `--gmt-bars-name:${nameWidth}`,
+  valueWidth && `--gmt-bars-value:${valueWidth}`,
+]
+  .filter(Boolean)
+  .join(";");
+---
+
+<ul class="gmt-bars" aria-label={label} data-tone={tone} style={sizes || undefined}>
+  {
+    rows.map((row) => (
+      <li class="gmt-bars-row" data-clean={String(row.clean === true)}>
+        <span class="gmt-bars-name">{row.name}</span>
+        <span class="gmt-bars-bar" aria-hidden="true">
+          <span class="gmt-bars-fill" style={`--gmt-bars-share:${((row.clean === true ? 0 : row.share) * 100).toFixed(2)}%`} />
+        </span>
+        <span class="gmt-bars-count">
+          <span class="gmt-bars-value">{row.value}</span>
+          {row.note !== undefined && (
+            <span class="gmt-bars-note">
+              {noteLead !== undefined && <span class="gmt-sr-only">{`${noteLead} `}</span>}{row.note}
+            </span>
+          )}
+        </span>
+      </li>
+    ))
+  }
+</ul>

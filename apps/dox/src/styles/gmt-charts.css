@@ -139,7 +139,7 @@
 .gmt-chart-toggle-button[aria-pressed="true"] {
   color: var(--gmt-ice);
   background: color-mix(in srgb, var(--gmt-cyan) 18%, transparent);
-  box-shadow: inset 0 -2px 0 var(--gmt-cyan);
+  box-shadow: inset 0 var(--gmt-under-edge) 0 var(--gmt-cyan);
 }
 
 .gmt-chart-toggle-button:focus-visible {

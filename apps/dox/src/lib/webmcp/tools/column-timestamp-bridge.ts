@@ -15,7 +15,7 @@ import {
 } from "../../column-timestamp-bridge";
 import { BRIDGE_PRESETS } from "../../column-timestamp-bridge-presets";
 import { showColumnTimestampBridgeInput } from "../../dox-tool-schemas";
-import { callArgs, formatValue } from "../../punctuality-widgets";
+import { callArgsPlain, formatValue } from "../../punctuality-widgets";
 import { encodeWidgetPermalink } from "../../widget-permalink";
 import { jsonSafe } from "../json-safe";
 import { loadLibFor } from "../load-lib";
@@ -69,7 +69,7 @@ export const def = definePageTool({
     const state: BridgeState = readArgs(args);
     const reading = readBridge(lib, state);
     const text = (c: { fn: string; args: unknown[] }) =>
-      `${c.fn}(${callArgs(c.args)[1]})`;
+      `${c.fn}(${callArgsPlain(c.args)})`;
 
     const notes: string[] = [];
     if (state.mode === "encode" && args.unit === undefined) {

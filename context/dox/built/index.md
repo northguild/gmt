@@ -24,7 +24,49 @@ What `apps/dox` ships, tier by tier: the rules that bind future changes, the tra
 - **Verdicts are words and patterns.** Early, late, on time, open, closed and moved are never amber, green or red. Amber is `NO SIGNAL` alone. A series colour goes on a mark, stem, edge, swatch or border, never on text (the `-ink` tokens measure only 5.7 to 6.7:1 on a light surface). Every text label inside a chart sits on an opaque plate (a chip or header strip on `--gmt-surface`, text in `--gmt-ice` or `--gmt-ice-dim`), never on a gradient, hatch, glow or line. Glow is a shadow on a mark, never on text. No `backdrop-filter` inside a chart.
 - **A holiday tool draws which rule closed which day with library calls on rule prefixes (`attributeRules`), and takes closed days only from the full calendar.** Calling the library on the rules before each one gives that rule's own dates without a shift computed on the site. This binds every later tool that draws a built calendar.
 - **A tool page registers a tool, and its tool calls the facts function its mount calls.** Each page under `src/content/docs/tools/` has one WebMCP tool in `src/lib/webmcp/tools/<slug>.ts`, offered from the widget component's `<script>`. The tool module imports no mount and no CSS, so a missing facts function is extracted into the page's pure module first, and the mount then calls it too ([tier-2-webmcp.md](tier-2-webmcp.md)).
+- **Reuse, never reinvent.** See [Reuse, never reinvent](#reuse-never-reinvent). The owner treats a breach as a defect, not as style.
 - **Helpers follow the zero-bug house rules.** No catch-all helper: split by kind with narrow unions and return one shape. No constant that ages: no fixed year window, century pivot, era count or "current era". A preset's dates carry their year, and the eras to draw come from the library at the reader's today.
+
+## Reuse, never reinvent
+
+A feature is built from the site's shared pieces, and a second feature of its kind (a second deck,
+tool or page of a family) is a folder of content plus a registry row. It never copies the first.
+These rules bind the architect's spec and the builder's code alike.
+
+1. **Search before you write.** Before you add a component, helper, CSS rule, test stub or script
+   function, grep `apps/dox/src` and `apps/dox/scripts` for one that already does the job, and use
+   it. Look for a component (`Icon.astro`, `BundleSize.astro`), a primitive class (`.gmt-sr-only`,
+   `.gmt-icon-button`, a panel class), a token, or a test helper in `src/test/`. If it nearly fits,
+   extend it.
+2. **The second copy is the extraction.** If you write the same markup, rule, loop or function a
+   second time, stop and give it one home first: a component, a shared class or `:is()` list, a
+   token, or a helper with a test. Never leave two copies, let alone three.
+3. **Shared layers hold no content.** `src/lib/**`, `src/components/**`, `src/widgets/**`,
+   `src/styles/**` and `src/pages/**` never import a feature's data folder. They never hard-code a
+   feature's question, zone, year, place, path or copy, and they never sniff the URL to learn which
+   feature they are serving. Content lives in the feature's folder and comes in as props,
+   arguments or a slug-keyed registry.
+4. **Pages are routes, not copies.** Two pages that differ only by a slug are one `[slug]` route
+   fed by a registry.
+5. **One sheet, one layer.** A shared sheet holds only the shared layer. Feature rules live
+   beside the feature's own components. A layout is chosen by an attribute the component sets,
+   never by `:has()` on the child it happens to hold.
+6. **Split by feature, not by accident.** A module of more than about 400 lines, or one closure
+   of more than about 150 lines, is split into a core and opt-in features behind a small
+   interface. A dispatcher over kinds is a registry of small objects, not an if/else chain.
+7. **Derived files are not committed.** Anything a script rebuilds every run is written to a
+   gitignored work folder. A committed data file states each fact once: no constant repeated on
+   every row, and no id list repeated per cell.
+8. **Dead code leaves in the same change.** This covers an unused component, option, branch or
+   dial, and an `export` that only its own file reads.
+9. **One check, one home.** Gates, browser checks and tests never repeat each other's
+   assertions. A label that states a count is derived from the count.
+10. **Watch the size.** When a story's diff passes about 10,000 added lines, or a slice adds more
+    than its spec planned, stop and run a duplication pass (rules 1 to 9) before the next slice.
+
+The [`ui-standards`](../../../.agents/skills/ui-standards/SKILL.md) check holds the lines a branch
+adds to what a script can see of rules 2 to 8; `validate` and CI run it on every `apps/dox`
+change.
 
 ## Map
 

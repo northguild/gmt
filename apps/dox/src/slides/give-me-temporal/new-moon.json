@@ -1,0 +1,15 @@
+{
+  "source": "U.S. Naval Observatory, Astronomical Applications Department: Phases of the Moon, year 2027",
+  "url": "https://aa.usno.navy.mil/api/moon/phases/year?year=2027",
+  "apiVersion": "4.0.1",
+  "retrieved": "2026-11-19",
+  "timeScale": "UT",
+  "phase": {
+    "year": 2027,
+    "month": 2,
+    "day": 6,
+    "phase": "New Moon",
+    "time": "15:56"
+  },
+  "utc": "2027-02-06T15:56:00Z"
+}

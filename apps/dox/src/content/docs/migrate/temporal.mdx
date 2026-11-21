@@ -5,6 +5,7 @@ industries: [core]
 ---
 
 import TemporalMap from "../../../components/TemporalMap.astro";
+import { zoneMatrixLine } from "../../../data/zone-matrix";
 
 GMT is built on `@js-temporal/polyfill`, so it runs on a runtime that has no native Temporal. This page lists where Temporal is native and which GMT function matches each Temporal call.
 
@@ -21,6 +22,11 @@ Checked 2026-10-26, from the MDN browser compatibility data.
 | Bun | 1.4.0 |
 | Safari on macOS | Technology Preview only |
 | Safari on iOS | not supported |
+
+The two polyfills' own test suites, run in the time zones GMT's CI uses:
+
+- [{zoneMatrixLine("js-temporal")}](/compare/zone-matrix/)
+- [{zoneMatrixLine("temporal-polyfill")}](/compare/zone-matrix/)
 
 ## Status of the specification
 

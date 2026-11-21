@@ -12,13 +12,13 @@ import {
   handledInGmt,
   unaffectingGmt,
 } from "../data/upstream-filings";
-import { contributionClause, coverageClause } from "../lib/upstream-summary";
+import { contributionClause, coverageClause, unguardedClause } from "../lib/upstream-summary";
 ---
 
 <p>
   <strong>
     So far we have sent {filedByUs} reports and fixes to Temporal and the projects it builds on, {filedPrs} of them as
     ready-to-merge code changes{contributionClause}. {coverageClause}: {handledInGmt} through its own
-    built-in fix, and {unaffectingGmt} because the bug is in code GMT doesn't use.
+    built-in fix, and {unaffectingGmt} because the bug is in code GMT doesn't use.{unguardedClause}
   </strong>
 </p>

@@ -99,6 +99,7 @@ import {
   type UsListItem,
 } from "~/widgets/families/clockcheck/us-map";
 import { EMPTY, viewSwitch } from "~/widgets/families/clockcheck/zone-map";
+import { link } from "~/widgets/builders/link";
 
 const NAME = "sunshine-protection-act";
 
@@ -417,7 +418,7 @@ export function renderSunshineProtectionActTemplate({
               AGE_WORDS_HELD.map(nationalLine),
             )}
               <p>
-                <a href="${SOURCES_URL}" rel="noopener noreferrer">Sources</a>
+                ${link({ href: SOURCES_URL, body: "Sources" })}
               </p>`,
             gate: "national",
           })}${infoCard({

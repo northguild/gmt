@@ -114,9 +114,12 @@ Rules, traps and runbooks for the site shell. Index: [index.md](index.md).
   lines inside its `<div>` are required (CommonMark type 6 block).
 - Headings are demoted (column-0 `###` to `####`, indented to `#####`); the generator fails on
   headings that slug alike, a stray `## `, or raw HTML outside code. The date is never in a heading.
-- Wide call tables use `{ calls: true }` break points in `code-break.ts`. No
-  `overflow-wrap: anywhere` (it printed `tru` / `e`). Astro caches rendered Markdown in
-  `node_modules/.astro/data-store.json`: delete it after changing a rehype plugin.
+- Wide call tables use `{ calls: true }` break points in `code-break.ts`. Astro caches rendered
+  Markdown in `node_modules/.astro/data-store.json`: delete it after changing a rehype plugin.
+- **Every table on the site wraps between words only** (`overflow-wrap: normal`): changelog pages,
+  content tables and widget tables alike. `overflow-wrap: anywhere` broke inside words (`tru` /
+  `e`, a `Local Date` head one letter a line). A long code value gets its own break points
+  instead: `<wbr>` seams from `code-break.ts`, `codeString` and `cellCallArgs`.
 - The two content rules *GMT tracks no law* and *International authority first* do not apply to
   the verbatim body; the generated intro and plate follow them.
 - `api-surface.mjs` skips `content/docs/changelog/`. `llms-full.txt` and retrieval chunks leave

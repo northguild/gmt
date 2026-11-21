@@ -393,15 +393,20 @@ if (!opts.noBuild && (!opts.plan || needsBuild)) {
   const buildStart = performance.now();
   const log = path.join(GATES_DIR, "build.log");
   rmSync(log, { force: true });
-  if (!existsSync(path.join(ROOT, "packages/gmt/dist"))) {
-    const code = await run("pnpm", ["--filter", "@northguild/gmt", "build"], {
+  // The site reads the library's dist, and Deck 0's `lint` slide runs the lint plugin's.
+  for (const [name, dir] of [
+    ["@northguild/gmt", "packages/gmt/dist"],
+    ["@northguild/gmt-oxlint", "packages/gmt-oxlint/dist"],
+  ]) {
+    if (existsSync(path.join(ROOT, dir))) continue;
+    const code = await run("pnpm", ["--filter", name, "build"], {
       cwd: ROOT,
       log,
     });
     if (code !== 0) {
       bail(
         2,
-        `gates: the library build failed (${path.relative(DOX, log)})\n${logTail(log, 15).join("\n")}`,
+        `gates: the ${name} build failed (${path.relative(DOX, log)})\n${logTail(log, 15).join("\n")}`,
       );
     }
   }
