@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { addBusinessDays, businessDaysBetween } from "../src/calendar";
 import { addDaysTo, bench, businessCalendar, holidays480 } from "./fixtures";
 

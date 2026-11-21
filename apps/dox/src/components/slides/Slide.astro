@@ -1,0 +1,95 @@
+---
+/**
+ * One slide: a headed section. The runtime reads `data-minutes` and `data-place` (where the space
+ * stage's camera goes, `lib/slides/places.ts`), `data-lapse` (the time-lapse that plays) and
+ * `data-pins` from it. Put `<Build>` and `<Notes>` in its slot. A `place`, `reveal` or `lapse` the
+ * deck's stage data (`src/slides/<slug>/stage-data.ts`) cannot resolve fails the build. The Earth
+ * or the clock sits in the right third, so a slide's content fits the left two thirds. A `full`
+ * slide takes the whole page: the Earth fades out while it shows, and the camera still flies to its
+ * place for the next slide.
+ * `reveal` names a zone: the slides before this one show a 24-hour clock of its wall time in the
+ * Earth's place, and this slide turns the clock into the Earth (`lib/slides/earth-clock.ts`).
+ * `clock` stands that clock in the Earth's place again on a slide past the reveal, as the close does.
+ * `plainClock` leaves the GMT mark, the city and the offset off the clock while the slide shows: the
+ * clock of a machine that knows no place, for the slides about `Date`.
+ * A `spare` slide is held back for questions: it takes no `minutes`, a main slide must take them, and
+ * either mistake fails the build. A spare renders `data-spare` and no `data-minutes`, so the pace
+ * plan leaves it out, and it comes after `thanks` (`lib/slides/deck.ts`).
+ * `spin` turns the Earth slowly while the slide shows, at the home globe's idle rate (`lib/slides/stage.ts`).
+ * A `title` in several languages is a list of words, each with its language tag, so a screen reader
+ * says each one in its own language. They are joined by a middle dot, which the reader skips; the
+ * heading's text, which the deck's labels read, keeps it.
+ */
+import { checkStageNames } from "~/lib/slides/stage-data";
+import { deckStage } from "~/slides/deck-runtime";
+/** One word of a title in several languages, and its BCP 47 language tag. */
+interface TitleWord {
+  text: string;
+  lang: string;
+}
+interface Props {
+  id: string;
+  title: string | readonly TitleWord[];
+  /** The slide's planned minutes; a main slide has them, a spare has none. */
+  minutes?: number;
+  /** A spare: after the talk, for questions. */
+  spare?: boolean;
+  place?: string;
+  /** A time-lapse (one of the deck's `lapses`, `src/slides/<slug>/stage-data.ts`) that plays while the slide shows. */
+  lapse?: string;
+  /** `filings` lights every upstream filing as a pin while the slide shows. */
+  pins?: "filings";
+  /**
+   * `title` and `full` are the generic layouts. Any other name is a deck's own: the slide carries it
+   * as `data-layout`, and the deck's sheet styles `.gmt-slide[data-layout="<name>"]`.
+   */
+  layout?: "title" | "default" | "full" | (string & {});
+  /** The zone whose clock stands in the Earth's place until this slide reveals the planet. */
+  reveal?: string;
+  /** Show the reveal's clock in the Earth's place on this slide, past the reveal. */
+  clock?: boolean;
+  /** Show the clock without its GMT mark, city and offset. */
+  plainClock?: boolean;
+  /** Turn the Earth while the slide shows. */
+  spin?: boolean;
+}
+const { id, title, minutes, spare = false, place, lapse, pins, layout = "default", reveal, clock = false, plainClock = false, spin = false } = Astro.props;
+if (spare && minutes !== undefined)
+  throw new Error(`Slide "${id}" is a spare and takes no minutes`);
+if (!spare && minutes === undefined)
+  throw new Error(`Slide "${id}" is a main slide and needs its minutes`);
+checkStageNames(await deckStage(Astro.params.slug), { place, reveal, lapse }, `Slide "${id}"`);
+---
+
+<section
+  id={id}
+  class="gmt-slide"
+  data-slide
+  data-minutes={spare ? undefined : minutes}
+  data-spare={spare ? "" : undefined}
+  data-place={place}
+  data-lapse={lapse}
+  data-pins={pins}
+  data-reveal={reveal}
+  data-clock={clock ? "" : undefined}
+  data-plain-clock={plainClock ? "" : undefined}
+  data-spin={spin ? "" : undefined}
+  data-layout={layout}
+  aria-labelledby={`${id}-title`}
+>
+  <h2
+    id={`${id}-title`}
+    class="gmt-slide-title"
+    data-langs={typeof title === "string" ? undefined : ""}
+  >
+    {typeof title === "string"
+      ? title
+      : title.map((word, i) => (
+          <>
+            {i > 0 && <>{" "}<span aria-hidden="true">·</span>{" "}</>}
+            <span lang={word.lang}>{word.text}</span>
+          </>
+        ))}
+  </h2>
+  <div class="gmt-slide-body"><slot /></div>
+</section>

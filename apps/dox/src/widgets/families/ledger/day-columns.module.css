@@ -107,7 +107,7 @@
     color-mix(in srgb, var(--series) 12%, transparent)
   );
   box-shadow:
-    inset 0 -3px 0 var(--series),
+    inset 0 var(--gmt-under-edge-bold) 0 var(--series),
     inset 0 1px 0 var(--gmt-highlight);
 }
 

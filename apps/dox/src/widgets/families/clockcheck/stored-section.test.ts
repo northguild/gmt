@@ -68,6 +68,6 @@ describe("storedSection", () => {
     const hint = /id="test-stored-lines-hint">([\s\S]*?)<\/p>/.exec(
       storedSection(config).toString(),
     );
-    expect(hint?.[1]?.match(/<wbr/g)).toHaveLength(3);
+    expect(hint?.[1]?.match(/<wbr/g)).toHaveLength(4);
   });
 });

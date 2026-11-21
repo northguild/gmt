@@ -115,6 +115,7 @@ import { createRequire } from "node:module";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { inspect } from "node:util";
+import { allDeckRoutes } from "../apps/dox/scripts/lib/deck-folders.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CORPUS = join(ROOT, "apps/dox/src/generated/reference/gmt-corpus.json");
@@ -896,10 +897,15 @@ for (const rel of filesUnder(DOX_CONTENT)) {
   if (twin !== "index") siteRoutes.add(`/${twin}.md`);
 }
 for (const rel of filesUnder("apps/dox/src/pages")) {
-  if (rel.includes("[")) continue; // dynamic: its routes are the `.md` twins above
+  if (rel.includes("[")) continue; // dynamic: the `.md` twins above and the decks below
   siteRoutes.add(
     `/${rel.replace(/\.(astro|mdx?|ts|js)$/, "").replace(/(^|\/)index$/, "")}`,
   );
+}
+// src/pages/slides/[slug]/: a deck and its presenter view for each deck folder.
+for (const route of allDeckRoutes()) {
+  siteRoutes.add(route.replace(/\/$/, ""));
+  siteRoutes.add(`${route}presenter`);
 }
 for (const rel of filesUnder("apps/dox/public")) siteRoutes.add(`/${rel}`);
 const siteSections = new Set(

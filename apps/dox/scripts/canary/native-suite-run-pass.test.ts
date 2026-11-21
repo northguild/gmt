@@ -2,8 +2,6 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-
 const spawned = vi.hoisted(
   () => [] as { args: string[]; env: Record<string, string | undefined> }[],
 );

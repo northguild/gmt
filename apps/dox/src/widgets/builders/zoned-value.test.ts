@@ -9,12 +9,13 @@ describe("zonedValue", () => {
   it("breaks after the T, before the offset and before the [", () => {
     const fx = renderHtml(zonedValue(VALUE));
     const pieces = [...fx.host.childNodes].map((n) => n.textContent);
-    expect(fx.host.querySelectorAll("wbr")).toHaveLength(3);
+    expect(fx.host.querySelectorAll("wbr")).toHaveLength(4);
     expect(pieces.filter((t) => t !== "")).toEqual([
       "2026-11-16T",
       "09:00:00",
       "+01:00",
-      "[Africa/Casablanca]",
+      "[Africa/",
+      "Casablanca]",
     ]);
   });
 
@@ -33,7 +34,14 @@ describe("zonedValue", () => {
     const fx = renderHtml(
       zonedValue("2026-11-16T09:00:00-08:00[America/Vancouver]"),
     );
-    expect(fx.host.querySelectorAll("wbr")).toHaveLength(3);
+    expect(fx.host.querySelectorAll("wbr")).toHaveLength(4);
+  });
+
+  it("breaks a zone name after each slash", () => {
+    const fx = renderHtml(
+      zonedValue("2026-03-08T08:00:00-03:00[America/Argentina/Buenos_Aires]"),
+    );
+    expect(fx.host.querySelectorAll("wbr")).toHaveLength(5);
   });
 
   it("has no accessibility violations", async () => {

@@ -5,7 +5,7 @@
  */
 import { Temporal } from "@js-temporal/polyfill";
 import {
-  callArgs,
+  callArgsPlain,
   epochMs,
   formatValue,
   isoToMinutes,
@@ -294,26 +294,9 @@ describe("formatValue", () => {
   });
 });
 
-describe("callArgs", () => {
-  it("prints a pairs array and a tolerance as the JSDoc does", () => {
-    const [html, plain] = callArgs([
-      [
-        {
-          actual: "2024-06-14T09:15:00+01:00[Europe/London]",
-          planned: "2024-06-14T09:00:00+01:00[Europe/London]",
-        },
-      ],
-      { early: undefined, late: "PT15M" },
-    ]);
-    expect(plain).toBe(
-      '[{ planned: "2024-06-14T09:00:00+01:00[Europe/London]", actual: "2024-06-14T09:15:00+01:00[Europe/London]" }], { late: "PT15M" }',
-    );
-    expect(html).toMatch(/<span[^>]*>"2024-06-14T09:00/);
-    expect(html.replace(/<[^>]+>/g, "")).toBe(plain.replace(/&/g, "&amp;"));
-  });
-
+describe("callArgsPlain", () => {
   it("prints a string argument and an options object", () => {
-    const [, plain] = callArgs([
+    const plain = callArgsPlain([
       "2024-06-15T06:12:00Z",
       { minimumConnection: "PT10M" },
     ]);

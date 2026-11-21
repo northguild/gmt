@@ -1,0 +1,212 @@
+/*
+ * The 24-hour clock in the Earth's place before the reveal (`lib/slides/earth-clock.ts`): over the
+ * globe, under the wall. The stage sizes and places it on the Earth's disc and sets the phase on
+ * the layer. While it shows the Earth is hidden behind it. The GMT slide's gap clock draws the same
+ * dial in a figure, so the dial's own rules below hold for both.
+ */
+.gmt-deck-space .gmt-earth-clock {
+  display: none;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.gmt-deck-space[data-earth-clock] .gmt-earth-clock {
+  display: block;
+}
+
+.gmt-earth-clock > svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+/* The enamel's sunburst, the chapter ring and the meridians are hairlines in the face's units. */
+.gmt-earth-clock [data-sunburst] line {
+  stroke: var(--gmt-ice);
+  stroke-opacity: 0.06;
+  stroke-width: 0.12;
+}
+
+.gmt-earth-clock [data-chapter] :is(circle, line) {
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 0.16;
+}
+
+.gmt-earth-clock [data-lume] {
+  fill: var(--gmt-cyan-bright);
+}
+
+:is(
+    .gmt-earth-clock :is([data-numerals], [data-legend], [data-calendar]),
+    .gmt-talk-page
+  )
+  text {
+  font-family: var(--gmt-font-display);
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: var(--gmt-ice);
+}
+
+.gmt-earth-clock [data-legend] text {
+  fill: var(--gmt-ice-dim);
+  letter-spacing: 0.12em;
+}
+
+.gmt-earth-clock [data-legend] [data-legend-mark] {
+  fill: var(--gmt-cyan);
+  letter-spacing: 0.2em;
+}
+
+.gmt-earth-clock [data-legend] [data-legend-offset] {
+  fill: var(--gmt-ice);
+  letter-spacing: 0.08em;
+}
+
+/*
+ * A plain dial (`data-plain`, `earth-clock.ts`) fades the GMT mark, the city and the offset out and
+ * keeps the calendar: the clock of a machine that knows no place. Its shards are copies inside the
+ * clock, so they break plain too.
+ */
+.gmt-earth-clock [data-legend] {
+  transition: opacity var(--gmt-duration-slow) var(--gmt-easing);
+}
+
+.gmt-earth-clock[data-plain] [data-legend] {
+  opacity: 0;
+}
+
+/*
+ * The hands, the date and the offset fade in together, already in place, once gmt has read the time
+ * (`data-timed`, `earth-clock.ts`); until then the dial shows no time it would have to jump from.
+ */
+.gmt-earth-clock :is([data-hands], [data-legend-offset], [data-calendar] text) {
+  transition: opacity var(--gmt-duration-slow) var(--gmt-easing);
+}
+
+.gmt-earth-clock:not([data-timed])
+  :is([data-hands], [data-legend-offset], [data-calendar] text) {
+  opacity: 0;
+}
+
+/*
+ * The calendar page (`calendar-page.ts`): set into the clock's enamel as its date window, and on
+ * the title's schedule card (`talk-schedule.css`). Its outline is a hairline at any size.
+ */
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-page] {
+  fill: var(--gmt-void);
+  stroke: var(--gmt-ice-dim);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-strip] {
+  fill: var(--gmt-cyan);
+  fill-opacity: 0.85;
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-month] {
+  fill: var(--gmt-void);
+  letter-spacing: 0.16em;
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-day] {
+  fill: var(--gmt-ice-bright);
+}
+
+:is(.gmt-earth-clock [data-calendar], .gmt-talk-page) [data-calendar-weekday] {
+  fill: var(--gmt-ice-dim);
+  letter-spacing: 0.16em;
+}
+
+.gmt-earth-clock [data-hand="second"] :is(line, circle) {
+  fill: var(--gmt-cyan);
+  stroke: var(--gmt-cyan);
+  stroke-width: 0.3;
+}
+
+.gmt-earth-clock [data-hand="second"] [data-second-tip] {
+  fill: none;
+}
+
+.gmt-earth-clock [data-cap] {
+  fill: var(--gmt-cyan);
+}
+
+.gmt-earth-clock [data-glint] {
+  fill: var(--gmt-ice-bright);
+  fill-opacity: 0.1;
+}
+
+.gmt-earth-clock [data-bezel-edge] {
+  stroke: var(--gmt-cyan);
+  stroke-opacity: 0.4;
+  stroke-width: 0.15;
+}
+
+[data-deck]
+  .gmt-deck-space[data-earth-clock="on"]
+  > canvas:not([data-wall-canvas]) {
+  animation: none;
+  opacity: 0;
+}
+
+/*
+ * The break (`lib/slides/clock-shatter.ts`, over the stage's `REVEAL_MS`): the dial hides and its
+ * shards, copies of it clipped to their cells, crack and fly; the Web Animations API moves them.
+ * Behind them the Earth, already turned to its place, fades in and grows from nine tenths of its
+ * size about its own centre (`--gmt-earth-x`, `--gmt-earth-y`, set with the clock's fit), so it
+ * comes up from behind the clock at the clock's size.
+ */
+[data-deck]
+  .gmt-deck-space[data-earth-clock="shatter"]
+  > canvas:not([data-wall-canvas]) {
+  transform-origin: var(--gmt-earth-x, 50%) var(--gmt-earth-y, 50%);
+
+  /* The globe's own fade first, by name, so ending the phase does not restart it. */
+  animation:
+    gmt-deck-space-in var(--gmt-emerge) ease-out var(--gmt-emerge-at) both,
+    gmt-earth-emerge var(--gmt-emerge) cubic-bezier(0.2, 0.7, 0.2, 1)
+      var(--gmt-emerge-at) both;
+}
+
+.gmt-deck-space[data-earth-clock="shatter"] .gmt-earth-clock > svg {
+  visibility: hidden;
+}
+
+.gmt-earth-clock [data-shards],
+.gmt-earth-clock [data-shard] {
+  position: absolute;
+  inset: 0;
+}
+
+.gmt-earth-clock [data-shard] {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.gmt-earth-clock [data-shard] > svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.gmt-earth-clock [data-crack] polygon {
+  fill: none;
+  stroke: var(--gmt-cyan-bright);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: bevel;
+}
+
+@keyframes gmt-earth-emerge {
+  from {
+    scale: 0.9;
+  }
+}

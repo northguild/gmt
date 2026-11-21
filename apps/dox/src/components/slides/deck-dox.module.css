@@ -1,0 +1,94 @@
+/*
+ * The deck's Dox frame. The chat and the rail are the real ones (gmt-hive.css, chat.css); this
+ * only sizes them to the stage. The stage is a size container, so the frame takes a share of its
+ * height in `cqb`.
+ *
+ * The frame sets its own text size and line height: the slide's scale with the stage (`cqi`), and
+ * the chat inherits them, so a question in the chat would grow with the slide. The chat reads at
+ * the size it has on the site.
+ */
+.frame {
+  --gmt-hive-cover-licence: 0px;
+
+  container: deck-dox / inline-size;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 74cqb;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  overflow: hidden;
+  font-size: 1rem;
+  line-height: var(--sl-line-height);
+  background: var(--gmt-void);
+  color: var(--gmt-ice);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+
+/* The rail opens at half the frame, the widest /dox/'s handle lets it grow, so a widget's table
+   reads without squeezing. The handle (`RailResizer`) drags it back to the narrowest, which
+   follows the frame, not the window: the site's (`34vw`) leaves the chat too narrow for a
+   reading on one line. */
+.rail {
+  --gmt-hive-rail-min: clamp(24rem, 36cqi, 28rem);
+
+  flex-basis: var(--gmt-hive-rail-width, 50%);
+}
+
+/* A narrow frame (a slide that keeps the right third for the Earth) puts the rail under the chat
+   instead of beside it. */
+@container deck-dox (width < 56rem) {
+  .body {
+    flex-direction: column;
+  }
+
+  .rail {
+    flex: 0 0 auto;
+    max-block-size: 30%;
+    min-inline-size: 0;
+    max-inline-size: none;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--gmt-border);
+  }
+
+  /* Under the chat, the rail has no edge to drag. */
+  .resizer {
+    display: none;
+  }
+}
+
+/* The source line keeps its row while empty, so nothing moves when the answer begins. */
+.source {
+  margin: 0;
+  min-block-size: 1.5em;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* The brain bar: the composer's own picker and reset clock, under the chat and the rail on every
+   Dox slide, so the presenter reads the brain and what is left in one place. */
+.brains {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 0;
+  border-block-start: 1px solid var(--gmt-border);
+}
+
+.brainsNote {
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-ice-dim);
+}

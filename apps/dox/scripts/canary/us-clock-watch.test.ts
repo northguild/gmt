@@ -11,8 +11,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-
 import {
   LIMITS,
   SUBJECT_TERMS,

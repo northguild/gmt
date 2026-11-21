@@ -21,7 +21,11 @@
     "@vitest/browser-playwright",
   ],
   // The behaviour-matrix runner has its own package.json and lockfile outside the workspace.
-  "ignorePatterns": ["oxlint.config.js", "scripts/behaviour-matrix/**"],
+  "ignorePatterns": [
+    "oxlint.config.js",
+    "scripts/behaviour-matrix/**",
+    "scripts/zone-matrix/**",
+  ],
   "ignoreUnresolvedImports": ["./packages/gmt-oxlint/dist/index.js"],
   "ignoreExports": [
     {

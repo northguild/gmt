@@ -1,0 +1,117 @@
+---
+/**
+ * The quoted agent answer on `agent-answer`, as a quotation with its source line. The transcript is
+ * the owner's (`quotes/agent-answer.json`, whose `quoted` names the answer shown); the value comes
+ * from running that answer's code (`quotes/agent-run.json`, written by
+ * `scripts/zone-matrix/agent-answer.mjs`). While the transcript or the run record is missing or
+ * stale, a marked panel says so and the build carries on: `slides-check` is what fails. No answer is
+ * invented.
+ *
+ * The agent's code is the site's own code block (Starlight's `Code`, the site's syntax colours),
+ * as every example on the guides is, in its dark theme on the dark stage (`DeckCode`); the one-line
+ * calls elsewhere in the deck stay inline `code`.
+ *
+ * `part` picks what shows, so the slide can reveal it a build at a time: `question`, `answer` (the
+ * agent's code, and its source line with the guess prompt) or `result` (first, called out, the hour
+ * Helsinki's clocks skip and that the asked time is in it; then the value the code returned on a
+ * machine set to Helsinki, and how many different answers the machine's time zone gave). Without
+ * `part` those three show. `prose` is the
+ * agent's text around its code, for the speaker notes: on the slide it would give the guess away and
+ * push the code off the stage.
+ */
+import { Code } from "@astrojs/starlight/components";
+import DeckCode from "~/components/slides/DeckCode.astro";
+import { classifyLocal } from "@northguild/gmt/instant/convert";
+import { cityOf } from "~/lib/clock-change-common";
+import { clockJump } from "~/lib/slides/zone-jump";
+import {
+  quotedAnswer,
+  valueLabel,
+  zoneSpread,
+  type AgentRunFile,
+  type AgentTranscript,
+} from "~/lib/slides/agent-quote";
+import answer from "../quotes/agent-answer.json";
+import runRecord from "../quotes/agent-run.json";
+import { LIVE } from "../live-data";
+
+interface Props {
+  part?: "question" | "answer" | "result" | "prose";
+}
+const { part } = Astro.props;
+const show = (name: string) =>
+  part === name || (part === undefined && name !== "prose");
+
+const quote = quotedAnswer(
+  answer as AgentTranscript,
+  runRecord as AgentRunFile,
+  LIVE.agentRun,
+);
+// The question's local time and zone. The called-out line shows only while GMT agrees the time falls
+// in a gap, and names the hour the clocks skip that night, read from the zone's own data.
+const ASKED = { local: "2027-03-28T03:30:00", zone: "Europe/Helsinki" };
+const jump =
+  classifyLocal(ASKED.local, ASKED.zone) === "nonexistent"
+    ? clockJump(ASKED.zone, [Number(ASKED.local.slice(0, 4))])
+    : null;
+const gap = jump?.date === ASKED.local.slice(0, 10) ? jump : null;
+---
+
+{
+  quote.ready ? (
+    <>
+      {show("question") && (
+        <p class="gmt-deck-panel gmt-quote" data-quote="question">
+          {quote.question}
+        </p>
+      )}
+      {show("prose") && (
+        <p>
+          {quote.model}'s text around its code: “{quote.answer}”
+        </p>
+      )}
+      {show("answer") && (
+        <figure class="gmt-deck-panel gmt-quote" data-quote="recorded">
+          <blockquote>
+            <DeckCode>
+              <Code code={quote.shownCode} lang="js" wrap />
+            </DeckCode>
+          </blockquote>
+          <figcaption>
+            {quote.model}, {quote.date}. What does it return?
+          </figcaption>
+        </figure>
+      )}
+      {show("result") && (
+        <div class="gmt-deck-panel gmt-quote" data-quote="result">
+          {gap && (
+            <p class="gmt-quote-gap">
+              That night the clocks jump from {gap.from} to {gap.to}: {ASKED.local.slice(11, 16)} never
+              happens in {cityOf(ASKED.zone)}.
+            </p>
+          )}
+          <p>
+            On a machine set to {`${cityOf(quote.shown.zone)}${quote.nodesAgree ? "" : ` on Node ${quote.shown.node}`}`} it
+            returns <output>{valueLabel(quote.shown.value)}</output>
+          </p>
+          <p>{zoneSpread(quote)} machine time zones.</p>
+        </div>
+      )}
+    </>
+  ) : (
+    <>
+      {show("question") && quote.question !== "" && (
+        <p class="gmt-deck-panel gmt-quote" data-quote="question">
+          {quote.question}
+        </p>
+      )}
+      {(show("answer") || show("result")) && (
+        <p class="gmt-deck-panel gmt-quote" data-quote="pending">
+          {quote.why === "transcript"
+            ? "Recorded agent answer: transcript to come."
+            : "Recorded agent answer: run record out of date."}
+        </p>
+      )}
+    </>
+  )
+}

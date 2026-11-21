@@ -87,6 +87,7 @@ export {
 import { withBase } from "./site";
 import { codeSpan } from "./widget-ui";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { link } from "~/widgets/builders/link";
 
 const WIDGET_NAME = "database-timestamp-reader";
 const MAX_FIELDS = 3;
@@ -329,7 +330,7 @@ function elsewhereOf(): SafeHtml {
   return html`<div class="${styles.elsewhere}"><p class="${styles.elsewhereTitle}">Forms that live elsewhere</p
     ><ul class="${styles.elsewhereList}">${DB_ELSEWHERE.map(
       (e) =>
-        html`<li><a href="${withBase(e.href)}">${e.database}: ${e.form}</a></li>`,
+        html`<li>${link({ href: withBase(e.href), body: `${e.database}: ${e.form}` })}</li>`,
     )}</ul></div>`;
 }
 

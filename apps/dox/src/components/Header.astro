@@ -19,6 +19,7 @@
 // NorthGuild link, the `<ButtonLink>` in `right-group`, the order of the
 // group, the settings control and the search box's place at the right are ours; the social
 // icons are Starlight's.
+import Link from "~/components/Link.astro";
 import config from "virtual:starlight/user-config";
 
 import LanguageSelect from "virtual:starlight/components/LanguageSelect";
@@ -44,10 +45,16 @@ const shouldRenderSearch =
     {/* Same site, one level up, so a plain same-tab link, not `ButtonLink`
         (which opens an absolute URL in a new tab and draws a chip). */}
     {/* The name starts with the visible text (WCAG 2.2 SC 2.5.3). */}
-    <a href={LANDING_URL} class="gmt-ng-link gmt-sonar-focus" aria-label="NorthGuild home">
+    {/* The one external link that stays in the tab: the two sites share this bar, so it reads as home. */}
+    <Link
+      href={LANDING_URL}
+      isExternal={false}
+      class="gmt-ng-link gmt-sonar-focus"
+      aria-label="NorthGuild home"
+    >
       <NorthGuildMark />
       <span class="gmt-ng-wordmark">NorthGuild</span>
-    </a>
+    </Link>
     <SiteTitle />
   </div>
   <div class="sl-flex print:hidden search-slot">

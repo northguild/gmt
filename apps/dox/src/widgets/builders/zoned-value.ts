@@ -1,7 +1,8 @@
 /**
  * zonedValue: a stored zoned time written so it breaks where a person would break it.
  *
- * The value breaks only after the `T`, before the offset and before the `[`. Each stretch is its
+ * The value breaks only after the `T`, before the offset, before the `[` and after each `/` of the
+ * zone name (`America/` / `Argentina/` / `Buenos_Aires]`, which a browser does not break). Each stretch is its
  * own no-wrap piece with a `<wbr>` between, outside the no-wrap element: WebKit and Firefox do not
  * break at a `<wbr>` inside `white-space: nowrap`, and Chromium does. No character is added, so the
  * text is the value as given.
@@ -16,7 +17,11 @@ export function zonedValue(value: string): SafeHtml {
   const off = /(?<=\d)(?=[+-]\d{2}:\d{2})/.exec(value);
   if (off) cuts.push(off.index);
   const br = value.indexOf("[");
-  if (br >= 0) cuts.push(br);
+  if (br >= 0) {
+    cuts.push(br);
+    for (let i = value.indexOf("/", br); i >= 0; i = value.indexOf("/", i + 1))
+      cuts.push(i + 1);
+  }
   cuts.sort((x, y) => x - y);
   const parts: string[] = [];
   let from = 0;

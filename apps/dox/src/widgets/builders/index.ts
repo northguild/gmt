@@ -11,6 +11,7 @@ export {
   type CarouselBy,
   type CarouselHandle,
   type CarouselPage,
+  type CarouselSteps,
   type CarouselWire,
 } from "./carousel";
 export {
@@ -56,6 +57,7 @@ export {
 export { idScope } from "./ids";
 export { nobreak } from "./nobreak";
 export { instant } from "./instant";
+export { link, type LinkOptions } from "./link";
 export {
   card,
   type CardOptions,
@@ -90,6 +92,15 @@ export {
 } from "./text-input";
 export { table, type Column, type TableOptions } from "./table";
 export {
+  deckControls,
+  deckDialogs,
+  helpDialog,
+  overviewDialog,
+  overviewItems,
+  type KeyHelpRow,
+  type OverviewItem,
+} from "./deck-controls";
+export {
   toolLinks,
   type ToolLinkItem,
   type ToolLinksOptions,
@@ -111,3 +122,11 @@ export {
   type VerdictTone,
 } from "./verdict";
 export { zonedValue } from "./zoned-value";
+export {
+  presenterShell,
+  readinessList,
+  readinessPending,
+  PRESENTER_INITIAL,
+  PRESENTER_SAMPLES,
+  type ReadinessItem,
+} from "./presenter";

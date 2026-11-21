@@ -1,0 +1,20 @@
+---
+/**
+ * The site's link: an `<a>` whose `target` and `rel` come from `linkTarget`, so an external link
+ * opens in a new tab and nothing else does. Every other attribute passes through. Components write
+ * this rather than a bare `<a>`; `link-homes.test.ts` holds them to it.
+ */
+import type { HTMLAttributes } from "astro/types";
+import { linkTarget } from "~/lib/external-link";
+
+interface Props extends Omit<HTMLAttributes<"a">, "href" | "rel" | "target"> {
+  href: string;
+  rel?: string;
+  /** Opens in a new tab when true. Defaults from the `href`: an absolute or `//` URL. */
+  isExternal?: boolean;
+}
+const { href, rel, isExternal, ...attrs } = Astro.props;
+const opens = linkTarget(href, rel, isExternal);
+---
+
+<a href={href} {...attrs} target={opens.target} rel={opens.rel}><slot /></a>

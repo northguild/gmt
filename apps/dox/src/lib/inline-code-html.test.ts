@@ -15,4 +15,13 @@ describe("inlineCodeHtml", () => {
       "<code>m</code> is a minute; a lone ` stays",
     );
   });
+
+  it("gives a camelCase name in code a break at each seam, and no other code", () => {
+    expect(inlineCodeHtml("read with `parseDuration`")).toBe(
+      "read with <code>parse<wbr>Duration</code>",
+    );
+    expect(inlineCodeHtml("`toJ2000Seconds` and `P1M` and `a.b()`")).toBe(
+      "<code>to<wbr>J2000<wbr>Seconds</code> and <code>P1M</code> and <code>a.b()</code>",
+    );
+  });
 });

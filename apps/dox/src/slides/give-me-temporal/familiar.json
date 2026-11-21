@@ -1,0 +1,38 @@
+[
+  {
+    "id": "add-month",
+    "job": "Add a month to 31 January",
+    "moment": "moment(\"2027-01-31\").add(1, \"month\")",
+    "dateFns": "addMonths(new Date(2027, 0, 31), 1)",
+    "dayjs": "dayjs(\"2027-01-31\").add(1, \"month\")",
+    "gmt": {
+      "module": "plain/calculate",
+      "name": "addDate",
+      "args": ["2027-01-31", { "months": 1 }]
+    }
+  },
+  {
+    "id": "days-between",
+    "job": "Days between two dates",
+    "moment": "moment(\"2027-03-28\").diff(\"2027-01-01\", \"days\")",
+    "dateFns": "differenceInCalendarDays(new Date(2027, 2, 28), new Date(2027, 0, 1))",
+    "dayjs": "dayjs(\"2027-03-28\").diff(\"2027-01-01\", \"day\")",
+    "gmt": {
+      "module": "plain/calculate",
+      "name": "diffDate",
+      "args": ["2027-01-01", "2027-03-28", "days"]
+    }
+  },
+  {
+    "id": "start-of-month",
+    "job": "Start of the month",
+    "moment": "moment(\"2027-03-28\").startOf(\"month\")",
+    "dateFns": "startOfMonth(new Date(2027, 2, 28))",
+    "dayjs": "dayjs(\"2027-03-28\").startOf(\"month\")",
+    "gmt": {
+      "module": "plain/calculate",
+      "name": "startOfDate",
+      "args": ["2027-03-28", "month"]
+    }
+  }
+]

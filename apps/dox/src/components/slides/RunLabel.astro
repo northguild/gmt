@@ -1,0 +1,28 @@
+---
+/**
+ * The label a result carries on stage, in a test runner's words: "✗ Result" in red for the bug a
+ * report shows, "✓ Expected" in green for the right value, "✓ Result" in green for a right result,
+ * and "∅ Result" in Signal-lost amber for gmt's sentinel. Runs (`RunLines`), the split-flap rows and
+ * the calendar figures all label their values with it, so wrong and right read the same everywhere.
+ * `word` names who gave the value in place of "Result": "✓ GMT", or "✗ Polyfill" for a filed bug.
+ */
+import type { RunStep } from "./types";
+
+interface Props {
+  outcome: RunStep["outcome"] | "expected";
+  word?: string;
+}
+const { outcome, word: by } = Astro.props;
+const LABELS = {
+  wrong: { mark: "✗", word: "Result", say: "wrong" },
+  right: { mark: "✓", word: "Result", say: "right" },
+  lost: { mark: "∅", word: "Result", say: "no value" },
+  expected: { mark: "✓", word: "Expected", say: "right" },
+} as const;
+const { mark, say } = LABELS[outcome];
+const word = by ?? LABELS[outcome].word;
+---
+
+<span class="gmt-run-label" data-outcome={outcome}>
+  <span aria-hidden="true">{mark}</span><span>{word}<span class="gmt-sr-only">, {say}:</span></span>
+</span>

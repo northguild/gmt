@@ -8,20 +8,25 @@ import { RailResizer, STORAGE_KEY, WIDTH_PROPERTY } from "./RailResizer";
 installJsdomShims();
 
 /* jsdom has no layout, so the body and rail report the width their CSS would
-   give them: the rail's width var when set, otherwise the default. A 1440 px
-   page gives bounds of 489.6 to 720 px (`rail-width.test.ts`). */
+   give them: the rail's width var when set, otherwise the default. The rail
+   states its narrowest width as the site's CSS does at 1440 px (34vw, 489.6 px),
+   so the bounds are 489.6 to 720 px (`rail-width.test.ts`). */
 const BODY_WIDTH = 1440;
 const DEFAULT_WIDTH = 489.6;
 const MAX_WIDTH = 720;
 const BODY_LABEL = "Page body";
 
 /** The parent that renders the resizer and hands it the container by ref. */
-function Page() {
+function Page({ remember }: { remember?: boolean }) {
   const body = useRef<HTMLDivElement>(null);
   return (
     <section ref={body} aria-label={BODY_LABEL}>
-      <RailResizer railId="rail" container={body} />
-      <aside id="rail" aria-label="Widget rail" />
+      <RailResizer railId="rail" container={body} remember={remember} />
+      <aside
+        id="rail"
+        aria-label="Widget rail"
+        style={{ minInlineSize: `${DEFAULT_WIDTH}px` }}
+      />
     </section>
   );
 }
@@ -57,8 +62,8 @@ function handleAt(now: number): HTMLElement {
   });
 }
 
-function renderResizer() {
-  render(<Page />);
+function renderResizer(remember?: boolean) {
+  render(<Page remember={remember} />);
   return {
     handle: screen.getByRole("separator", { name: "Resize the widget panel" }),
     body: screen.getByRole("region", { name: BODY_LABEL }),
@@ -168,6 +173,18 @@ describe("RailResizer", () => {
 
     expect(handleAt(590)).toBeInTheDocument();
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe("590");
+  });
+
+  it("neither reads nor writes the stored width for a host that sets its own", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "600");
+    const user = userEvent.setup();
+    const { handle } = renderResizer(false);
+    expect(handleAt(490)).toBeInTheDocument();
+    await user.tab();
+    expect(handle).toHaveFocus();
+    await user.keyboard("{ArrowLeft}");
+    expect(handleAt(506)).toBeInTheDocument();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("600");
   });
 
   it("resets to the default width on double-click", async () => {

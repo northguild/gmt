@@ -41,6 +41,9 @@
  * input before mounting. This is advice to the model; that is the boundary.
  */
 import { isValidTimeZone } from "@northguild/gmt/zoned/validate";
+import { getDstTransitions } from "@northguild/gmt/zoned/get";
+import { localTimeFacts } from "./local-time-facts";
+import { z } from "zod";
 import { tool, type InferUITools, type UIDataTypes, type UIMessage } from "ai";
 import {
   DOX_TOOL_DOCS,
@@ -114,6 +117,49 @@ import moroccoZones from "../src/lib/morocco-region-zones.json";
 import usZones from "../src/lib/us-region-zones.json";
 import { STATE_CODES } from "../src/data/sunshine-protection-act-proposals";
 
+/**
+ * The DST inspector's call as the model makes it: the widget's own arguments plus the wall time
+ * the reader asked about. The widget never sees `local` (the browser parses the call with the
+ * shared schema, which drops it); only this server step reads it, to ask the library whether the
+ * time exists (`local-time-facts.ts`).
+ */
+const dstInspectorCall = showDstInspectorInput.extend({
+  local: z
+    .string()
+    .min(10)
+    .max(32)
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/,
+      "must be a zoneless ISO date-time, e.g. 2027-03-28T03:30:00",
+    )
+    .optional(),
+});
+
+/**
+ * What the chat is told about `local` and about calling this tool first, added to the shared doc
+ * only here: the page tool and the widget have no such argument, so their text must not carry it
+ * (`webmcp/tools/dst-inspector.ts` builds its description from the shared doc).
+ */
+const DST_CALL_FIRST =
+  ", or sends a question or a coding request that names a wall-clock time on a date in a zone, even when it does not mention a clock change. Whether a zone skips or repeats a time depends on its own rules for that year, which you cannot know from memory, so call this tool FIRST, with no text before it, and write the answer from its result";
+const DST_LOCAL_ARG =
+  "local (the wall time asked about, as a zoneless ISO date-time such as 2027-03-28T03:30:00; the result says whether that time exists, happens twice or happens once, and gives the instants), ";
+
+/**
+ * A tool's doc as the chat prompt prints it: the shared doc, plus the chat-only pieces above for
+ * the DST inspector. Every other tool is returned as it is.
+ */
+export function chatDocFor<
+  T extends { name: string; when: string; args: string },
+>(doc: T): T {
+  if (doc.name !== "showDstInspector") return doc;
+  return {
+    ...doc,
+    when: `${doc.when}${DST_CALL_FIRST}`,
+    args: doc.args.replace("year (1900-2100), ", (m) => `${m}${DST_LOCAL_ARG}`),
+  };
+}
+
 const docFor = (name: string) =>
   DOX_TOOL_DOCS.find((d) => d.name === name)?.purpose ?? name;
 
@@ -162,14 +208,34 @@ export function buildWorkerTools(
 
     showDstInspector: tool({
       description: docFor("showDstInspector"),
-      inputSchema: showDstInspectorInput,
-      execute: ({ zone }) =>
-        isValidTimeZone(zone)
-          ? accept("dst-inspector")
-          : reject(
-              "dst-inspector",
-              `"${zone}" is not an IANA time zone this runtime knows.`,
-            ),
+      inputSchema: dstInspectorCall,
+      execute: ({ zone, year, local }) => {
+        if (!isValidTimeZone(zone)) {
+          return reject(
+            "dst-inspector",
+            `"${zone}" is not an IANA time zone this runtime knows.`,
+          );
+        }
+        const transitions = getDstTransitions(zone, year);
+        const check =
+          local === undefined ? undefined : localTimeFacts(local, zone);
+        return {
+          ...accept("dst-inspector"),
+          /* The library's own answer, for the model to read before it writes.
+             `transitions` is empty for a zone with no clock change that year. */
+          transitions,
+          ...(local === undefined
+            ? {}
+            : {
+                check: check ?? {
+                  kind: "unreadable" as const,
+                  facts: [
+                    `The library could not place ${local} in ${zone}; say so rather than guessing.`,
+                  ],
+                },
+              }),
+        };
+      },
     }),
 
     showIntervalVisualizer: tool({

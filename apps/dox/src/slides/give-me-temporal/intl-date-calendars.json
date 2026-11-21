@@ -1,0 +1,54 @@
+{
+  "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node intl-date-calendars.mjs",
+  "node": "v26.12.1",
+  "library": "@internationalized/date",
+  "version": "3.12.4",
+  "reference": "native Temporal",
+  "sourceSha256": "ba6ba16a00e217be733ba695095121d74a2fec1b1b951c23ec260000c5ded788",
+  "persian": {
+    "years": 3000,
+    "differ": 78,
+    "first": {
+      "year": 1503,
+      "gives": "2124-03-21",
+      "expected": "2124-03-20"
+    }
+  },
+  "japanese": {
+    "from": "1868-01-01",
+    "to": "1873-12-31",
+    "days": 2192,
+    "differ": 1827,
+    "first": {
+      "date": "1868-01-01",
+      "gives": {
+        "era": "meiji",
+        "year": 1
+      },
+      "expected": {
+        "era": "ce",
+        "year": 1868
+      }
+    },
+    "last": {
+      "date": "1872-12-31",
+      "gives": {
+        "era": "meiji",
+        "year": 5
+      },
+      "expected": {
+        "era": "ce",
+        "year": 1872
+      }
+    }
+  },
+  "chinese": {
+    "asked": "chinese",
+    "gotIdentifier": "gregory"
+  },
+  "indian": {
+    "years": 2000,
+    "months": 24000,
+    "differ": 0
+  }
+}

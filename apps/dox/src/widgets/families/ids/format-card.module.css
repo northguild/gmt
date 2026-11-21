@@ -16,11 +16,10 @@
   padding: var(--gmt-space-3);
   padding-block-end: calc(var(--gmt-space-3) + 2px);
   border: 1px solid var(--gmt-border);
-  border-block-end-color: var(--bar);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
-  box-shadow: inset 0 -2px 0 var(--bar);
+  box-shadow: inset 0 var(--gmt-under-edge) 0 var(--bar);
   color: var(--gmt-ice);
 
   &[data-series="1"] {
@@ -155,11 +154,10 @@
   padding: var(--gmt-space-3);
   padding-block-end: calc(var(--gmt-space-3) + 2px);
   border: 1px solid var(--gmt-border);
-  border-block-end-color: var(--gmt-series-1);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
-  box-shadow: inset 0 -2px 0 var(--gmt-series-1);
+  box-shadow: inset 0 var(--gmt-under-edge) 0 var(--gmt-series-1);
 }
 
 /* The label and the value start at the top, not on a baseline. The value is a hold, and before
@@ -192,11 +190,11 @@
   }
 
   .card[data-series] {
-    border-block-end-color: Highlight;
+    border-color: Highlight;
   }
 
   .ladder {
-    border-block-end-color: Highlight;
+    border-color: Highlight;
   }
 
   .cap,

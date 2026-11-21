@@ -254,6 +254,12 @@ jobs:
         if: contains(fromJSON(env.CHECKS), 'pulse')
         run: node apps/dox/scripts/build-pulse.mjs --check
 
+      # The Dox lines this pull request adds, against Reuse, never reinvent
+      # (context/dox/built/index.md). On a push to main the branch point is HEAD, so it passes.
+      - name: Dox changes reuse the shared blocks
+        if: contains(fromJSON(env.CHECKS), 'ui-standards')
+        run: node .agents/skills/ui-standards/scripts/run.mjs
+
       # Some content pages are generated, not committed: `guides/concepts/dst-disambiguation.md`
       # (copied from the canonical `docs/dst-disambiguation.md`), the `changelog/` pages (built
       # from each package's CHANGELOG.md), `scenarios/index.mdx`, `tools/index.mdx` and the
@@ -342,6 +348,10 @@ jobs:
 
       - name: Build @northguild/gmt
         run: pnpm --filter @northguild/gmt run build
+
+      # Deck 0's `lint` slide reads the plugin's rules from its dist.
+      - name: Build @northguild/gmt-oxlint
+        run: pnpm --filter @northguild/gmt-oxlint run build
 
       # Its own `generate` step writes every generated page, so no separate dox-pages step.
       - name: Build the dox site
@@ -836,6 +846,11 @@ jobs:
         if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'test:dox') && steps.cache-gmt-dist.outputs.cache-hit != 'true'
         run: pnpm --filter @northguild/gmt run build
 
+      # `lib/slides/lint-rules.test.ts` reads the plugin's dist.
+      - name: Build @northguild/gmt-oxlint
+        if: env.ACTIVE == 'true' && contains(fromJSON(env.CHECKS), 'test:dox')
+        run: pnpm --filter @northguild/gmt-oxlint run build
+
       # The dox and gmt-oxlint suites the change needs. gmt has its own TZ matrix (gmt-matrix job).
       - name: Run tests (dox, gmt-oxlint)
         if: env.ACTIVE == 'true'
@@ -859,6 +874,47 @@ jobs:
         with:
           name: test-artifacts-${{ matrix.node-version }}
           path: artifact
+
+  # The zone matrix runner's tests (scripts/zone-matrix/), only when the runner changes. It is
+  # its own package on Node 26, with its own lockfile.
+  zone-matrix:
+    name: Zone matrix runner tests
+    runs-on: ubuntu-latest
+    needs: determine-affected
+    if: contains(fromJSON(needs.determine-affected.outputs.checks), 'test:zone-matrix')
+    env:
+      CHECKS: ${{ needs.determine-affected.outputs.checks }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          check-latest: true
+          cache: pnpm
+
+      # The adapters test runs GMT from packages/gmt/dist (`probe/adapters/gmt.mjs`), which imports
+      # its dependencies from the workspace, so the install always runs and the build only when
+      # build-lint's cached dist for Node 26 and these sources is missing.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - name: Cache @northguild/gmt dist
+        id: cache-gmt-dist
+        uses: actions/cache@v6
+        with:
+          path: packages/gmt/dist
+          key: gmt-dist-26-${{ hashFiles('packages/gmt/src/**', 'packages/gmt/tsconfig*.json', 'packages/gmt/tsdown.config.ts', 'packages/gmt/package.json', 'pnpm-lock.yaml') }}
+
+      - name: Build @northguild/gmt
+        if: steps.cache-gmt-dist.outputs.cache-hit != 'true'
+        run: pnpm --filter @northguild/gmt run build
+
+      - name: The zone matrix runner passes its own tests
+        if: contains(fromJSON(env.CHECKS), 'test:zone-matrix')
+        run: pnpm --dir scripts/zone-matrix install --frozen-lockfile && pnpm --dir scripts/zone-matrix test
 
   gmt-matrix:
     name: GMT TZ Tests — Node ${{ matrix.node-version }} / ${{ matrix.timezone }}

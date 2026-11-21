@@ -68,7 +68,7 @@
     color(from var(--series) srgb r g b / 34%),
     color(from var(--series) srgb r g b / 12%)
   );
-  box-shadow: inset 0 -3px 0 var(--series);
+  box-shadow: inset 0 var(--gmt-under-edge-bold) 0 var(--series);
 }
 
 /* A midnight: a hairline across the track, and the time at its foot. */

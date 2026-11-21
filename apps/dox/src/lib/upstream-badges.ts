@@ -1,7 +1,7 @@
 /**
  * The badges an /upstream/ card shows, worked out from a filing's own fields. Nothing here is a
  * hand-kept status: the state badge reads `kind`, `state`, `draft` and `mergedAt`, the review chip
- * reads `reviewDecision`, and the In GMT chip reads `gmtGuard` and `gmtNote`. A badge always
+ * reads `reviewDecision`, and the In GMT chip reads `gmtGuard`, `gmtNote` and `gmtUnguarded`. A badge always
  * carries a word that names the state, so its colour and icon are never the only signal.
  *
  * The state badge follows GitHub's own states and icons, in the site's tones: green for open,
@@ -39,7 +39,7 @@ type StateFields =
 type ReviewFields = StateFields;
 type InGmtFields = Pick<
   UpstreamFiling,
-  "gmtGuard" | "gmtNote" | "pairsWith"
+  "gmtGuard" | "gmtNote" | "gmtUnguarded" | "pairsWith"
 > & {
   kind?: "pr" | "issue";
 };
@@ -125,6 +125,10 @@ export function workBadge(work: UpstreamFiling["work"]): BadgeSpec | null {
 export function gmtBadge(f: InGmtFields): BadgeSpec {
   if (f.gmtGuard) {
     return { text: `Guarded · ${f.gmtGuard}`, tone: "purple", icon: "shield" };
+  }
+  // The bug reaches a GMT user: no check icon, and never the word "affected" negated.
+  if (f.gmtUnguarded && f.gmtNote) {
+    return { text: "No GMT workaround", tone: "neutral" };
   }
   if (f.gmtNote) return { text: "Not affected", tone: "spring", icon: "check" };
   const fixFiled = f.kind === "pr" || f.pairsWith.length > 0;

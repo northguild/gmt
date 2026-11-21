@@ -44,6 +44,7 @@ import { srOnly } from "../../builders/sr-only";
 import { table } from "../../builders/table";
 import { lane, mark } from "../../builders/timeline";
 import styles from "./pulse.module.css";
+import { link } from "~/widgets/builders/link";
 
 /** Where a workflow's runs are listed. */
 const workflowUrl = (file: string): string =>
@@ -188,7 +189,7 @@ function lifeSentence(life: PulseLife): SafeHtml {
           ? ""
           : html` Waiting on ${waited.map(
               (f, i) =>
-                html`${i === 0 ? "" : " "}<a href="${f.url}">${filingRef(f)}</a>`,
+                html`${i === 0 ? "" : " "}${link({ href: f.url, body: filingRef(f) })}`,
             )}.`
       }`;
     }
@@ -266,7 +267,7 @@ export function renderCard(card: PulseCard): SafeHtml {
       >${card.checkIds.map((cid) => renderCheck(checkById(cid), id))}</div
     >${
       scheduled
-        ? html`<p class="${styles.more}"><a href="${workflowUrl(card.file)}">All runs on GitHub ↗</a></p>`
+        ? html`<p class="${styles.more}">${link({ href: workflowUrl(card.file), body: "All runs on GitHub ↗" })}</p>`
         : ""
     }</article
   >`;

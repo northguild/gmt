@@ -1,0 +1,63 @@
+---
+// `/slides/`: the site's talks, one card each from the registry (`src/slides/decks.ts`).
+// Indexed and in the sitemap; it follows the site theme.
+import Link from "~/components/Link.astro";
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import SkyCredits from "~/components/slides/SkyCredits.astro";
+import "~/components/slides/deck-panel.css";
+import { DECKS, deckDate } from "~/slides/decks";
+import { withBase } from "~/lib/site";
+---
+
+<StarlightPage
+  frontmatter={{
+    title: "Slides",
+    description: "Talks about GMT, as slides you can step through, read or print.",
+    template: "splash",
+  }}
+>
+  <ul class="gmt-deck-index">
+    {
+      DECKS.map((deck) => (
+        <li class="gmt-deck-card gmt-deck-panel">
+          <p class="gmt-deck-card-label">{deck.label}</p>
+          <h2 class="gmt-deck-card-title">
+            <Link href={withBase(`/slides/${deck.slug}/`)}>{deck.title}</Link>
+          </h2>
+          <p>
+            {deck.event}, {deckDate(deck)}
+          </p>
+          <p>
+            {deck.minutes} minutes, then {deck.qa} for questions
+          </p>
+        </li>
+      ))
+    }
+  </ul>
+  <p>The decks show the real night sky and the Earth; their sources:</p>
+  <SkyCredits id="deck-index-credits" />
+</StarlightPage>
+
+<style is:global>
+  .gmt-deck-index {
+    display: grid;
+    gap: var(--gmt-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gmt-deck-card {
+    margin: 0;
+  }
+
+  .gmt-deck-card-label {
+    margin: 0;
+    color: var(--gmt-ice-dim);
+    font-size: var(--gmt-text-sm);
+  }
+
+  .gmt-deck-card-title {
+    margin-block: var(--gmt-space-1) var(--gmt-space-2);
+  }
+</style>

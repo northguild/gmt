@@ -1,0 +1,22 @@
+---
+/**
+ * A deck's table: a caption, one column-header row and the slot as the body rows. The rows stay with
+ * the slide, because each deck decides what a cell holds (code, a `Build`, a row header).
+ * `layout="code"` fixes the columns for a table whose first column is code, so a long call wraps in
+ * its column instead of widening it.
+ */
+interface Props {
+  caption: string;
+  columns: readonly string[];
+  layout?: "code";
+}
+const { caption, columns, layout } = Astro.props;
+---
+
+<table class="gmt-deck-table" data-layout={layout}>
+  <caption>{caption}</caption>
+  <thead>
+    <tr>{columns.map((c) => <th scope="col">{c}</th>)}</tr>
+  </thead>
+  <tbody><slot /></tbody>
+</table>

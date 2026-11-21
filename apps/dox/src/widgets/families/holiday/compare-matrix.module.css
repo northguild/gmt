@@ -258,9 +258,10 @@
     font-size: var(--gmt-text-xs);
   }
 
+  /* A holiday name wraps between words in its card, never inside one. */
   .hol {
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
 }
 

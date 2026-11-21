@@ -2,7 +2,6 @@
  * The inline script that loads the display font before the first paint. It runs here against a
  * stand-in document whose stylesheets hold plain rule objects, since no test DOM loads fonts.
  */
-import { describe, expect, it } from "vitest";
 import { DISPLAY_FAMILY, displayFaceInlineSource } from "./display-face";
 
 /** A face the script adds to the stand-in font set. */

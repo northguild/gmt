@@ -63,7 +63,8 @@
 }
 
 /* A ladder cell reserves the width of the longest value it can hold, so a coarser or finer
-   answer never moves a column edge; a value never wraps. */
+   answer never moves a column edge; a value never wraps. Under 46rem the kit table stacks its rows
+   (`stack`), so two columns of 24 characters never have to share a phone. */
 .ladderCell {
   display: inline-block;
   min-inline-size: var(--w);
@@ -75,18 +76,6 @@
   &[data-state="none"],
   &[data-state="hint"] {
     color: var(--gmt-ice-dim);
-  }
-}
-
-/* Two columns of 24 characters do not fit a phone. Below this width a value breaks inside its
-   cell, and the cell holds two lines whatever it shows, so nothing moves as the value changes. */
-@media (width <= 36rem) {
-  .ladderCell {
-    display: block;
-    min-inline-size: 0;
-    min-block-size: 2lh;
-    white-space: normal;
-    overflow-wrap: anywhere;
   }
 }
 

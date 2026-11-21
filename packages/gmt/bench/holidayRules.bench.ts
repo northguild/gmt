@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { buildBusinessCalendar } from "../src/calendar/rules";
 import type { BusinessCalendarSpec, HolidayRule } from "../src/types";
 import { bench } from "./fixtures";

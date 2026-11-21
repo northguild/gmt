@@ -1,0 +1,310 @@
+{
+  "id": "faq-helsinki-autumn",
+  "question": "What happens at 03:30 on 31 October 2027 in Helsinki?",
+  "brain": {
+    "id": "gemini-3.5-flash-lite",
+    "label": "3.5 Flash-Lite"
+  },
+  "instant": "2026-11-19T07:40:13.708009302Z",
+  "chunks": [
+    {
+      "at": 0,
+      "chunk": {
+        "type": "data-status",
+        "data": {
+          "text": "Asking 3.5 Flash-Lite…"
+        },
+        "transient": true
+      }
+    },
+    {
+      "at": 3257,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 8,
+          "chunkTitles": [
+            "Recurrence Rules and Cron Lines in a Zone › Two rules for the night the clocks change",
+            "Recurrence Rules and Cron Lines in a Zone › When the rule lands in a clock change",
+            "Check whether a local time exists on a DST day",
+            "DST Disambiguation › Which function do I actually need?",
+            "Convert a time between time zones › From a wall-clock time",
+            "Time zones and DST in JavaScript: which date library handles them › Worked example: Berlin on 2024-03-31",
+            "Check whether a local time exists on a DST day › Resolve it with a rule",
+            "Check whether a local time exists on a DST day › Other zones"
+          ],
+          "chunkUrls": [
+            "/guides/zoned-date-operations/recurrence-and-cron/#two-rules-for-the-night-the-clocks-change",
+            "/guides/zoned-date-operations/recurrence-and-cron/#when-the-rule-lands-in-a-clock-change",
+            "/guides/how-to/check-local-time-exists/",
+            "/guides/concepts/dst-disambiguation/#which-function-do-i-actually-need",
+            "/guides/how-to/convert-between-time-zones/#from-a-wall-clock-time",
+            "/guides/how-to/time-zones-and-dst-in-javascript/#worked-example-berlin-on-2024-03-31",
+            "/guides/how-to/check-local-time-exists/#resolve-it-with-a-rule",
+            "/guides/how-to/check-local-time-exists/#other-zones"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 9,
+            "corpus": 0,
+            "search": 4,
+            "prompt": 0,
+            "brains": 3248
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3248,
+              "outcome": "answered"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "at": 3264,
+      "chunk": {
+        "type": "start",
+        "messageId": "Wn0uFratNPDvn8J2"
+      }
+    },
+    {
+      "at": 3265,
+      "chunk": {
+        "type": "start-step"
+      }
+    },
+    {
+      "at": 3265,
+      "chunk": {
+        "type": "tool-input-start",
+        "toolCallId": "call_15138573253169546859",
+        "toolName": "showDstInspector",
+        "providerMetadata": {
+          "google": {
+            "thoughtSignature": "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"
+          }
+        }
+      }
+    },
+    {
+      "at": 3265,
+      "chunk": {
+        "type": "tool-input-delta",
+        "toolCallId": "call_15138573253169546859",
+        "inputTextDelta": "{\"zone\":\"Europe/Helsinki\",\"preset\":\"overlap\",\"local\":\"2027-10-31T03:30:00\",\"year\":2027}"
+      }
+    },
+    {
+      "at": 3265,
+      "chunk": {
+        "type": "tool-input-available",
+        "toolCallId": "call_15138573253169546859",
+        "toolName": "showDstInspector",
+        "input": {
+          "zone": "Europe/Helsinki",
+          "year": 2027,
+          "preset": "overlap",
+          "local": "2027-10-31T03:30:00"
+        },
+        "providerMetadata": {
+          "google": {
+            "thoughtSignature": "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"
+          }
+        }
+      }
+    },
+    {
+      "at": 3265,
+      "chunk": {
+        "type": "tool-output-available",
+        "toolCallId": "call_15138573253169546859",
+        "output": {
+          "ok": true,
+          "widget": "dst-inspector",
+          "transitions": [
+            {
+              "instant": "2027-03-28T01:00:00Z",
+              "offsetBefore": "+02:00",
+              "offsetAfter": "+03:00"
+            },
+            {
+              "instant": "2027-10-31T01:00:00Z",
+              "offsetBefore": "+03:00",
+              "offsetAfter": "+02:00"
+            }
+          ],
+          "check": {
+            "kind": "ambiguous",
+            "facts": [
+              "2027-10-31T03:30:00 in Europe/Helsinki happens TWICE: the clocks go back over it, so the wall time is shown two times.",
+              "On 2027-10-31 the clocks in Europe/Helsinki change from +03:00 to +02:00: when the clock reads 04:00 it moves to 03:00.",
+              "The first time is 2027-10-31T00:30:00Z (offset +03:00); the second time is 2027-10-31T01:30:00Z (offset +02:00)."
+            ]
+          }
+        },
+        "providerMetadata": {
+          "google": {
+            "thoughtSignature": "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"
+          }
+        }
+      }
+    },
+    {
+      "at": 3265,
+      "chunk": {
+        "type": "finish-step"
+      }
+    },
+    {
+      "at": 4013,
+      "chunk": {
+        "type": "start-step"
+      }
+    },
+    {
+      "at": 4013,
+      "chunk": {
+        "type": "text-start",
+        "id": "0"
+      }
+    },
+    {
+      "at": 4013,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "On "
+      }
+    },
+    {
+      "at": 4019,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "31 October 2027, the clocks in Helsinki go back from +03:"
+      }
+    },
+    {
+      "at": 4064,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "00 to +02:00 at 04:00 local time (moving back to 0"
+      }
+    },
+    {
+      "at": 4147,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "3:00). Because of this fall-back change, 03:30 happens twice (it is ambiguous):\n\n1."
+      }
+    },
+    {
+      "at": 4193,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " The first time it occurs at `2027-10-31T00:30:0"
+      }
+    },
+    {
+      "at": 4261,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "0Z` with the +03:00 offset.\n2. The second time it occurs at `2"
+      }
+    },
+    {
+      "at": 4313,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "027-10-31T01:30:00Z` with the +0"
+      }
+    },
+    {
+      "at": 4370,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "2:00 offset."
+      }
+    },
+    {
+      "at": 4378,
+      "chunk": {
+        "type": "text-end",
+        "id": "0"
+      }
+    },
+    {
+      "at": 4378,
+      "chunk": {
+        "type": "finish-step"
+      }
+    },
+    {
+      "at": 4378,
+      "chunk": {
+        "type": "finish",
+        "finishReason": "stop"
+      }
+    },
+    {
+      "at": 4378,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 8,
+          "chunkTitles": [
+            "Recurrence Rules and Cron Lines in a Zone › Two rules for the night the clocks change",
+            "Recurrence Rules and Cron Lines in a Zone › When the rule lands in a clock change",
+            "Check whether a local time exists on a DST day",
+            "DST Disambiguation › Which function do I actually need?",
+            "Convert a time between time zones › From a wall-clock time",
+            "Time zones and DST in JavaScript: which date library handles them › Worked example: Berlin on 2024-03-31",
+            "Check whether a local time exists on a DST day › Resolve it with a rule",
+            "Check whether a local time exists on a DST day › Other zones"
+          ],
+          "chunkUrls": [
+            "/guides/zoned-date-operations/recurrence-and-cron/#two-rules-for-the-night-the-clocks-change",
+            "/guides/zoned-date-operations/recurrence-and-cron/#when-the-rule-lands-in-a-clock-change",
+            "/guides/how-to/check-local-time-exists/",
+            "/guides/concepts/dst-disambiguation/#which-function-do-i-actually-need",
+            "/guides/how-to/convert-between-time-zones/#from-a-wall-clock-time",
+            "/guides/how-to/time-zones-and-dst-in-javascript/#worked-example-berlin-on-2024-03-31",
+            "/guides/how-to/check-local-time-exists/#resolve-it-with-a-rule",
+            "/guides/how-to/check-local-time-exists/#other-zones"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 9,
+            "corpus": 0,
+            "search": 4,
+            "prompt": 0,
+            "brains": 3248,
+            "firstToken": 3267,
+            "total": 4397
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3248,
+              "outcome": "answered"
+            }
+          ],
+          "toolCalled": "showDstInspector"
+        }
+      }
+    }
+  ]
+}

@@ -62,8 +62,14 @@ function builtPages(dist: string): Page[] {
 
 const isHome = (page: Page): boolean => page.route === "";
 
-/** The pages built from the docs collection; `/dox/` is an Astro page of its own. */
-const isDocsPage = (page: Page): boolean => page.route !== "dox";
+/**
+ * The pages built from the docs collection. `/dox/`, `/slides/` and every deck under it (the deck
+ * and its presenter view) are Astro pages of their own.
+ */
+const isDocsPage = (page: Page): boolean =>
+  page.route !== "dox" &&
+  page.route !== "slides" &&
+  !page.route.startsWith("slides/");
 
 /** Tracked files. A source with no commit yet (a new page) is absent, and has no date to check. */
 const tracked = new Set(

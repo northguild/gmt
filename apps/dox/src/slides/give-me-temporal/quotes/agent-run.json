@@ -1,0 +1,444 @@
+{
+  "chatgpt-fast": {
+    "sha256": "f2e9445abae681764dbeb42001c38db33a9c3e3026096d8773d5fc2313ed05ca",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs",
+    "instant": "2026-11-19T13:27:36.259853468Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z"
+      ],
+      [
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z"
+      ],
+      [
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z",
+        "2027-03-28T00:30:00.000Z"
+      ]
+    ]
+  },
+  "mistral-fast": {
+    "sha256": "0923fdcbc566ba82b66eb110f235865290cb4f3b2faff0cbe319a9b0b182702f",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs",
+    "instant": "2026-11-19T13:27:38.470856259Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28T14:30:00Z",
+        "2027-03-28T07:30:00Z",
+        "2027-03-28T03:30:00Z",
+        "2027-03-28T02:30:00Z",
+        "2027-03-27T22:00:00Z",
+        "2027-03-27T21:45:00Z",
+        "2027-03-27T19:30:00Z",
+        "2027-03-27T16:30:00Z",
+        "2027-03-27T13:45:00Z",
+        "2027-03-27T14:30:00Z",
+        "2027-03-28T01:30:00Z"
+      ],
+      [
+        "2027-03-28T14:30:00Z",
+        "2027-03-28T07:30:00Z",
+        "2027-03-28T03:30:00Z",
+        "2027-03-28T02:30:00Z",
+        "2027-03-27T22:00:00Z",
+        "2027-03-27T21:45:00Z",
+        "2027-03-27T19:30:00Z",
+        "2027-03-27T16:30:00Z",
+        "2027-03-27T13:45:00Z",
+        "2027-03-27T14:30:00Z",
+        "2027-03-28T01:30:00Z"
+      ],
+      [
+        "2027-03-28T14:30:00Z",
+        "2027-03-28T07:30:00Z",
+        "2027-03-28T03:30:00Z",
+        "2027-03-28T02:30:00Z",
+        "2027-03-27T22:00:00Z",
+        "2027-03-27T21:45:00Z",
+        "2027-03-27T19:30:00Z",
+        "2027-03-27T16:30:00Z",
+        "2027-03-27T13:45:00Z",
+        "2027-03-27T14:30:00Z",
+        "2027-03-28T01:30:00Z"
+      ]
+    ]
+  },
+  "chatgpt-think": {
+    "sha256": "29f2a1be402c25ee45afc7100ff1a0993a9f7ff8fb09748c22720f3d3bba00cb",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs",
+    "instant": "2026-11-19T13:27:41.45785847Z",
+    "libraries": {
+      "@js-temporal/polyfill": "0.5.1"
+    },
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        }
+      ],
+      [
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        }
+      ],
+      [
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        },
+        {
+          "threw": "RangeError: multiple instants found"
+        }
+      ]
+    ]
+  },
+  "gemini-auto": {
+    "sha256": "f16947152938ae2a7a20da77aa38c9bb03335ee855f7db615940d36fce5d1464",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node agent-answer.mjs",
+    "instant": "2026-11-19T13:27:43.691861457Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        }
+      ],
+      [
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        }
+      ],
+      [
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        },
+        {
+          "threw": "Error: Non-existent local time 2027-03-28 03:30 in Europe/Helsinki (likely a DST spring-forward gap)."
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,738 @@
+{
+  "runDate": "2026-11-18",
+  "answeredBy": {
+    "polyfill": "0.5.1",
+    "native": "v26.13.1",
+    "tzdata": "2026e"
+  },
+  "nodes": [
+    {
+      "major": "22",
+      "version": "v22.23.5",
+      "tzdata": "2026e"
+    },
+    {
+      "major": "24",
+      "version": "v24.22.3",
+      "tzdata": "2026e"
+    },
+    {
+      "major": "26",
+      "version": "v26.13.1",
+      "tzdata": "2026e"
+    }
+  ],
+  "zones": [
+    "Pacific/Niue",
+    "America/New_York",
+    "UTC",
+    "Europe/London",
+    "Asia/Kolkata",
+    "Asia/Kathmandu",
+    "Asia/Shanghai",
+    "Australia/Lord_Howe",
+    "Pacific/Chatham",
+    "Pacific/Apia"
+  ],
+  "libraries": [
+    {
+      "id": "gmt",
+      "name": "GMT",
+      "version": "1.21.0"
+    },
+    {
+      "id": "moment",
+      "name": "Moment.js",
+      "version": "2.31.0 + moment-timezone 0.6.6"
+    },
+    {
+      "id": "luxon",
+      "name": "Luxon",
+      "version": "3.7.2"
+    },
+    {
+      "id": "dayjs",
+      "name": "Day.js",
+      "version": "1.11.23"
+    },
+    {
+      "id": "date-fns",
+      "name": "date-fns",
+      "version": "4.4.0 + @date-fns/tz 1.5.0"
+    },
+    {
+      "id": "spacetime",
+      "name": "Spacetime",
+      "version": "7.17.1"
+    },
+    {
+      "id": "internationalized-date",
+      "name": "@internationalized/date",
+      "version": "3.12.4"
+    },
+    {
+      "id": "temporal-polyfill",
+      "name": "temporal-polyfill",
+      "version": "1.0.8"
+    },
+    {
+      "id": "js-temporal",
+      "name": "@js-temporal/polyfill",
+      "version": "0.5.1"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "gaps",
+      "number": 1,
+      "title": "Clocks jump forward",
+      "question": "What time is a wall-clock time that never happens?",
+      "fed": "Times inside the hour (or day) that spring-forward clocks skip, in 8 zones, 2000 to 2030.",
+      "cases": 651,
+      "perLibrary": [
+        {
+          "library": "gmt",
+          "total": 651,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "moment",
+          "total": 651,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "luxon",
+          "total": 651,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "dayjs",
+          "total": 651,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "date-fns",
+          "total": 651,
+          "wrong": 174,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 174,
+          "unsupported": 0,
+          "example": {
+            "input": "Europe/Helsinki 2000-03-26 03:00",
+            "answer": "2000-03-26T00:00:00Z",
+            "expected": "2000-03-26T01:00:00Z",
+            "zones": ["Europe/London"]
+          },
+          "nodeCounts": {
+            "22": 174,
+            "24": 174,
+            "26": 174
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "spacetime",
+          "total": 651,
+          "wrong": 368,
+          "wrongEverywhere": 368,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": {
+            "input": "America/New_York 2000-04-02 02:00",
+            "answer": "2000-04-02T06:00:00Z",
+            "expected": "2000-04-02T07:00:00Z",
+            "zones": "every"
+          },
+          "nodeCounts": {
+            "22": 368,
+            "24": 368,
+            "26": 368
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "internationalized-date",
+          "total": 651,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "temporal-polyfill",
+          "total": 651,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "js-temporal",
+          "total": 651,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        }
+      ]
+    },
+    {
+      "id": "overlaps",
+      "number": 2,
+      "title": "Clocks fall back",
+      "question": "Which moment is a wall-clock time that happens twice?",
+      "fed": "Times inside the hour that fall-back clocks repeat, in 8 zones, 2000 to 2030.",
+      "cases": 648,
+      "perLibrary": [
+        {
+          "library": "gmt",
+          "total": 648,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "moment",
+          "total": 648,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "luxon",
+          "total": 648,
+          "wrong": 366,
+          "wrongEverywhere": 366,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": {
+            "input": "America/New_York 2000-10-29 01:00",
+            "answer": "2000-10-29T06:00:00Z",
+            "expected": "2000-10-29T05:00:00Z",
+            "zones": "every"
+          },
+          "nodeCounts": {
+            "22": 366,
+            "24": 366,
+            "26": 366
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "dayjs",
+          "total": 648,
+          "wrong": 408,
+          "wrongEverywhere": 366,
+          "wrongSomeZones": 42,
+          "unsupported": 0,
+          "example": {
+            "input": "America/New_York 2000-10-29 01:00",
+            "answer": "2000-10-29T06:00:00Z",
+            "expected": "2000-10-29T05:00:00Z",
+            "zones": "every"
+          },
+          "nodeCounts": {
+            "22": 408,
+            "24": 408,
+            "26": 408
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "date-fns",
+          "total": 648,
+          "wrong": 648,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 648,
+          "unsupported": 0,
+          "example": {
+            "input": "America/New_York 2000-10-29 01:00",
+            "answer": "2000-10-29T06:00:00Z",
+            "expected": "2000-10-29T05:00:00Z",
+            "zones": ["Pacific/Niue", "Pacific/Apia"]
+          },
+          "nodeCounts": {
+            "22": 648,
+            "24": 648,
+            "26": 648
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "spacetime",
+          "total": 648,
+          "wrong": 423,
+          "wrongEverywhere": 423,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": {
+            "input": "America/New_York 2007-11-04 01:00",
+            "answer": "2007-11-04T06:00:00Z",
+            "expected": "2007-11-04T05:00:00Z",
+            "zones": "every"
+          },
+          "nodeCounts": {
+            "22": 423,
+            "24": 423,
+            "26": 423
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "internationalized-date",
+          "total": 648,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "temporal-polyfill",
+          "total": 648,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "js-temporal",
+          "total": 648,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "number": 3,
+      "title": "Your laptop's zone changes the answer",
+      "question": "Does the answer change with the zone of the machine?",
+      "fed": "Dates and times with no zone, read back on 10 different machine zone settings.",
+      "cases": 479,
+      "perLibrary": [
+        {
+          "library": "gmt",
+          "total": 479,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "moment",
+          "total": 479,
+          "wrong": 399,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 399,
+          "unsupported": 0,
+          "example": {
+            "input": "time 1986-04-27 02:00",
+            "answer": "1986-04-27T03:00:00",
+            "expected": "1986-04-27T02:00:00",
+            "zones": ["America/New_York"]
+          },
+          "nodeCounts": {
+            "22": 399,
+            "24": 399,
+            "26": 399
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "luxon",
+          "total": 479,
+          "wrong": 399,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 399,
+          "unsupported": 0,
+          "example": {
+            "input": "time 1986-04-27 02:00",
+            "answer": "1986-04-27T03:00:00",
+            "expected": "1986-04-27T02:00:00",
+            "zones": ["America/New_York"]
+          },
+          "nodeCounts": {
+            "22": 399,
+            "24": 399,
+            "26": 399
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "dayjs",
+          "total": 479,
+          "wrong": 399,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 399,
+          "unsupported": 0,
+          "example": {
+            "input": "time 1986-04-27 02:00",
+            "answer": "1986-04-27T03:00:00",
+            "expected": "1986-04-27T02:00:00",
+            "zones": ["America/New_York"]
+          },
+          "nodeCounts": {
+            "22": 399,
+            "24": 399,
+            "26": 399
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "date-fns",
+          "total": 479,
+          "wrong": 399,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 399,
+          "unsupported": 0,
+          "example": {
+            "input": "time 1986-04-27 02:00",
+            "answer": "1986-04-27T03:00:00",
+            "expected": "1986-04-27T02:00:00",
+            "zones": ["America/New_York"]
+          },
+          "nodeCounts": {
+            "22": 399,
+            "24": 399,
+            "26": 399
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "spacetime",
+          "total": 479,
+          "wrong": 42,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 42,
+          "unsupported": 0,
+          "example": {
+            "input": "time 2009-03-08 02:00",
+            "answer": "2009-03-08T01:00:00",
+            "expected": "2009-03-08T02:00:00",
+            "zones": ["America/New_York"]
+          },
+          "nodeCounts": {
+            "22": 42,
+            "24": 42,
+            "26": 42
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "internationalized-date",
+          "total": 479,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "temporal-polyfill",
+          "total": 479,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "js-temporal",
+          "total": 479,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        }
+      ]
+    },
+    {
+      "id": "odd",
+      "number": 4,
+      "title": "Odd zones",
+      "question": "Does it get the clock right where the rules are unusual?",
+      "fed": "Apia (skipped 30 Dec 2011), Lord Howe (30-minute DST), Kathmandu (+05:45), Chatham (+12:45) and more.",
+      "cases": 1166,
+      "perLibrary": [
+        {
+          "library": "gmt",
+          "total": 1166,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "moment",
+          "total": 1166,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "luxon",
+          "total": 1166,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "dayjs",
+          "total": 1166,
+          "wrong": 385,
+          "wrongEverywhere": 91,
+          "wrongSomeZones": 294,
+          "unsupported": 0,
+          "example": {
+            "input": "Pacific/Apia 2010-09-25 12:00 + 1 day",
+            "answer": "2010-09-26T12:00:00-11:00",
+            "expected": "2010-09-26T12:00:00-10:00",
+            "zones": "every"
+          },
+          "nodeCounts": {
+            "22": 385,
+            "24": 385,
+            "26": 385
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "date-fns",
+          "total": 1166,
+          "wrong": 22,
+          "wrongEverywhere": 5,
+          "wrongSomeZones": 17,
+          "unsupported": 0,
+          "example": {
+            "input": "Asia/Manila 1844-12-31 12:00 (skipped)",
+            "answer": "1845-01-01T03:55:16Z",
+            "expected": "1845-01-01T03:56:08Z",
+            "zones": "every"
+          },
+          "nodeCounts": {
+            "22": 22,
+            "24": 22,
+            "26": 22
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "spacetime",
+          "total": 1166,
+          "wrong": 380,
+          "wrongEverywhere": 380,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": {
+            "input": "Pacific/Apia at 2010-09-26 10:59:59Z",
+            "answer": "2010-09-26T23:59:59+13:00",
+            "expected": "2010-09-25T23:59:59-11:00",
+            "zones": "every"
+          },
+          "nodeCounts": {
+            "22": 380,
+            "24": 380,
+            "26": 380
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "internationalized-date",
+          "total": 1166,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "temporal-polyfill",
+          "total": 1166,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        },
+        {
+          "library": "js-temporal",
+          "total": 1166,
+          "wrong": 0,
+          "wrongEverywhere": 0,
+          "wrongSomeZones": 0,
+          "unsupported": 0,
+          "example": null,
+          "nodeCounts": {
+            "22": 0,
+            "24": 0,
+            "26": 0
+          },
+          "nodesAgree": true
+        }
+      ]
+    }
+  ],
+  "dropped": 0,
+  "seconds": 39.2
+}

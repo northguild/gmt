@@ -11,6 +11,7 @@ import { withBase } from "~/lib/site";
 import { html, raw, type SafeHtml } from "../../builders/html";
 import { gateAttr } from "../../builders/gate";
 import styles from "./help-card.module.css";
+import { link } from "~/widgets/builders/link";
 
 /** A path on this site goes under the site's base; an absolute address is left as written. */
 const resolve = (value: string): string =>
@@ -55,9 +56,11 @@ export function helpCard(idPrefix: string, card: HelpCard): SafeHtml {
     </ul>
     <p class="${styles.cta}">
       <span>${card.cta.lead}</span>
-      <a class="${styles.button}" href="${resolve(card.cta.href)}"
-        >${card.cta.link} <span aria-hidden="true">↓</span></a
-      >
+      ${link({
+        href: resolve(card.cta.href),
+        class: styles.button,
+        body: html`${card.cta.link} <span aria-hidden="true">↓</span>`,
+      })}
     </p>
   </section>`;
 }

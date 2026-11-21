@@ -124,7 +124,7 @@ export function rowMoved(
 }
 
 export function storedTable(o: StoredTableOptions): SafeHtml {
-  return html`<div class="${styles.box}" ${gateAttr("stored-table")}
+  return html`<div class="${styles.box}" role="region" aria-label="Saved events, checked" tabindex="0" ${gateAttr("stored-table")}
     ><table class="${styles.table}"
       ><caption class="${styles.caption}">Saved events, checked</caption
       ><thead

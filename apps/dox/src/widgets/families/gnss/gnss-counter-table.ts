@@ -13,7 +13,7 @@
  */
 import { html, raw, type SafeHtml } from "../../builders/html";
 import { srOnly } from "../../builders/sr-only";
-import styles from "./gnss-counter-table.module.css";
+import styles from "./gnss-table.module.css";
 
 interface GnssCounterRow {
   /** The counter or system. */

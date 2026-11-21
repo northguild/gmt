@@ -29,15 +29,19 @@
  * Exit 0 pass, 1 any finding or nothing measured, 2 usage or a missing build.
  */
 import { launchBrowser } from "./lib/browser-launch.mjs";
-import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { blockOffSite } from "./gate-checks.mjs";
-import { applyPageContract, shardOf } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 import { settle } from "./lib/a11y-sweep.mjs";
 import { measurePlates } from "./lib/plate-overflow.mjs";
-import { serveStatic } from "./lib/static-server.mjs";
+import {
+  gateBase,
+  gateBrowsers,
+  gateOptions,
+  gatePages,
+  usageError,
+} from "./lib/gate-cli.mjs";
 import { listToolPages } from "./lib/tool-pages.mjs";
 
 const GATE = "plate-fit";
@@ -45,7 +49,6 @@ const HEIGHT = 900;
 const AT_A_TIME = 4;
 /* A readiness condition, not a budget: a CI runner loads a heavy tool page slowly. */
 const LOAD_TIMEOUT = 120_000;
-const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
 const DIST = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -53,13 +56,7 @@ const DIST = path.join(
 );
 
 const args = process.argv.slice(2);
-const opt = (name, fallback) => {
-  const i = args.indexOf(`--${name}`);
-  return i >= 0 && args[i + 1] && !args[i + 1].startsWith("--")
-    ? args[i + 1]
-    : fallback;
-};
-const FLAGS = new Set([
+const opt = gateOptions(GATE, args, [
   "--base",
   "--browsers",
   "--theme",
@@ -70,57 +67,16 @@ const FLAGS = new Set([
   "--list-pages",
   "--shard",
 ]);
-const unknownFlag = args.find((a) => a.startsWith("--") && !FLAGS.has(a));
-if (unknownFlag) {
-  console.error(
-    `${GATE}: unknown option ${unknownFlag} (${[...FLAGS].join(", ")})`,
-  );
-  process.exit(2);
-}
 
-if (!existsSync(path.join(DIST, "gmt", "index.html"))) {
-  console.error(
-    `${GATE}: apps/dox/dist/gmt/index.html is missing; build the site first.`,
-  );
-  process.exit(2);
-}
-
-const all = listToolPages(DIST);
-const selected = await applyPageContract({
-  gate: GATE,
-  pages: all,
-  argv: args,
-});
-let shard = null;
-if (args.includes("--shard")) {
-  const m = /^(\d+)\/(\d+)$/.exec(opt("shard", ""));
-  if (!m || Number(m[1]) < 1 || Number(m[1]) > Number(m[2])) {
-    console.error(`${GATE}: --shard needs <i>/<n> with 1 <= i <= n, e.g. 1/3`);
-    process.exit(2);
-  }
-  shard = { i: Number(m[1]), n: Number(m[2]) };
-}
-const pages = shard ? shardOf(selected ?? all, shard) : (selected ?? all);
-const browsers = opt("browsers", "chromium").split(",").filter(Boolean);
-for (const name of browsers) {
-  if (!LAUNCHERS[name]) {
-    console.error(
-      `${GATE}: unknown browser "${name}" (chromium, webkit, firefox)`,
-    );
-    process.exit(2);
-  }
-}
+const pages = await gatePages(GATE, args, opt, DIST, listToolPages);
+const browsers = gateBrowsers(GATE, opt);
 const theme = opt("theme", "dark");
-if (theme !== "dark" && theme !== "light") {
-  console.error(`${GATE}: --theme takes dark or light`);
-  process.exit(2);
-}
+if (theme !== "dark" && theme !== "light")
+  usageError(GATE, `--theme takes dark or light`);
 const number = (name, fallback, min) => {
   const n = Number(opt(name, String(fallback)));
-  if (!Number.isInteger(n) || n < min) {
-    console.error(`${GATE}: --${name} takes a whole number of at least ${min}`);
-    process.exit(2);
-  }
+  if (!Number.isInteger(n) || n < min)
+    usageError(GATE, `--${name} takes a whole number of at least ${min}`);
   return n;
 };
 const from = number("from", 320, 200);
@@ -130,13 +86,7 @@ const widths = [];
 for (let w = from; w <= to; w += step) widths.push(w);
 if (widths.at(-1) !== to) widths.push(to);
 
-let server = null;
-let base = opt("base", "");
-if (base === "") {
-  server = await serveStatic(DIST, 0);
-  base = `http://127.0.0.1:${server.address().port}/gmt`;
-}
-base = base.replace(/\/$/, "");
+const { base, server } = await gateBase(GATE, opt, DIST);
 
 /**
  * After a resize: two frames, then every eased region at rest (`[data-growing]`), capped at 3 s.

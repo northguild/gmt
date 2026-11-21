@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { clearLabels, nudgeInto } from "./zone-map-labels";
 
 const box = (left: number, top: number, width = 100, height = 30) => ({

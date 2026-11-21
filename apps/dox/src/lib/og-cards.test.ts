@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { ogImageKey } from "./head-tags";
 import { SITE_CARD_LINE, ogCards, ogImageAlt } from "./og-cards";
 

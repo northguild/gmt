@@ -38,6 +38,11 @@ export const CHECKS = [
   { id: "docs-check", run: "pnpm dox:docs-check" },
   { id: "bundle-size", run: "node scripts/bundle-size.mjs check" },
   {
+    // The Dox lines the branch adds, against Reuse, never reinvent (context/dox/built/index.md).
+    id: "ui-standards",
+    run: "node .agents/skills/ui-standards/scripts/run.mjs",
+  },
+  {
     id: "build:gmt-oxlint",
     run: "pnpm --filter @northguild/gmt-oxlint run build",
   },
@@ -57,7 +62,8 @@ export const CHECKS = [
   {
     id: "build:dox",
     run: "pnpm --filter @gmt/dox run build",
-    needs: ["build:gmt"],
+    // Deck 0's `lint` slide reads the plugin's rules from its dist.
+    needs: ["build:gmt", "build:gmt-oxlint"],
   },
   { id: "stats", run: "node scripts/stats.mjs check", needs: ["build:gmt"] },
   {
@@ -123,9 +129,17 @@ export const CHECKS = [
   {
     id: "test:dox",
     run: "pnpm --filter @gmt/dox run test",
-    needs: ["build:gmt"],
+    // `lib/slides/lint-rules.test.ts` reads the plugin's dist.
+    needs: ["build:gmt", "build:gmt-oxlint"],
   },
   { id: "test:gmt", run: "pnpm --filter @northguild/gmt run test" },
+  {
+    // The zone matrix runner's own node:test files. It is a separate package with its own
+    // lockfile and Node 26 floor (scripts/zone-matrix/package.json); one test imports date-fns,
+    // so it installs first. In CI the `zone-matrix` job runs it.
+    id: "test:zone-matrix",
+    run: "pnpm --dir scripts/zone-matrix install --frozen-lockfile && pnpm --dir scripts/zone-matrix test",
+  },
 ];
 
 const ALL = CHECKS.map((c) => c.id);
@@ -150,6 +164,7 @@ const GMT_LIB = allBut(
 const DOX_APP = [
   "markers",
   "docs-check",
+  "ui-standards",
   "dox-pages",
   "build:dox",
   "api-surface",
@@ -171,7 +186,10 @@ const DOX_CONTENT = [
   "test:dox",
 ];
 
-/** The lint plugin: its own build, checks and tests, and the two lints that load it. */
+/**
+ * The lint plugin: its own build, checks and tests, the two lints that load it, and the Dox build
+ * and tests, whose Deck 0 `lint` slide reads its rules.
+ */
 const OXLINT = [
   ...every(
     "build:gmt-oxlint",
@@ -179,6 +197,11 @@ const OXLINT = [
     "test:gmt-oxlint",
     "lint:",
   ),
+  "build:dox",
+  "dox-dist",
+  "dox-tables",
+  "typecheck:dox",
+  "test:dox",
   "markers",
 ];
 
@@ -218,6 +241,12 @@ export const RULES = [
   { test: /^apps\/LICENSE$/, checks: ["licences"], listed: ["markers"] },
   { test: /^(?:[^/]+\/)?LICENSE$/, checks: ["licences"] },
   { test: /^packages\/[^/]+\/LICENSE$/, checks: ["licences"], listed: ALL },
+
+  // The ui-standards checker is a script under .agents, so a change to it runs it.
+  {
+    test: /^\.agents\/skills\/ui-standards\/scripts\//,
+    checks: ["ui-standards"],
+  },
 
   // The frozen files, their guard and the settings that load its hook. CI runs the frozen check on
   // every change as well, in the always-run job that decides the checks.
@@ -358,6 +387,12 @@ export const RULES = [
   { test: /^scripts\/licences\.mjs$/, checks: ["licences", ...SCRIPT_TESTS] },
   // The behaviour matrix runner is run by hand; the Dox tests walk and copy scripts/.
   { test: /^scripts\/behaviour-matrix\//, checks: SCRIPT_TESTS },
+  // The zone matrix runner is run by hand; its clones live in .work/, which git ignores. Its
+  // own tests run only when it changes.
+  {
+    test: /^scripts\/zone-matrix\//,
+    checks: ["test:zone-matrix", ...SCRIPT_TESTS],
+  },
   {
     test: /^scripts\/test-markers\.mjs$/,
     checks: ["markers", ...SCRIPT_TESTS],

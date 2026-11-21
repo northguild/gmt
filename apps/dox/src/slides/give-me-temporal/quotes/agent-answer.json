@@ -1,0 +1,43 @@
+{
+  "question": "Write a JavaScript function that sets a reminder for 03:30 on 28 March 2027, Helsinki time, and returns the time as a UTC ISO string.",
+  "quoted": "mistral-fast",
+  "answers": [
+    {
+      "id": "chatgpt-fast",
+      "model": "ChatGPT, Fast",
+      "date": "2026-11-19",
+      "answer": "On 28 March 2027 at 03:30 Helsinki time, daylight saving time will be in effect (EEST, UTC+3). The corresponding UTC time is 2027-03-28T00:30:00.000Z. Here is a JavaScript function using the Europe/Helsinki IANA time zone:",
+      "code": "function setReminder() {\n  const localTime = \"2027-03-28T03:30:00\";\n\n  const utcTime = \"2027-03-28T00:30:00.000Z\";\n\n  // Return the reminder time as a UTC ISO string\n  return utcTime;\n}\n\nconsole.log(setReminder());\n// \"2027-03-28T00:30:00.000Z\"",
+      "call": "setReminder()"
+    },
+    {
+      "id": "mistral-fast",
+      "model": "Mistral, Fast",
+      "date": "2026-11-19",
+      "answer": "Result: 2027-03-28T00:30:00Z\nOne important caveat: 28 March 2027 is when Finland switches to summer time. At 03:00 local, clocks move forward to 04:00, so a \"03:30 Helsinki time\" reminder physically cannot occur. JavaScript normalizes the invalid local time to 04:30 EEST, which is 00:30 UTC (winter offset would have made it 01:30 UTC). You may want to pick 03:30 before the switch (e.g., 27 March) or 03:30 as standard EET time (01:30 UTC), which would need 2027-03-28T01:30:00Z explicitly.",
+      "code": "function getReminderUTC() {\n  // Note: 28 March 2027 is the DST transition day in Helsinki.\n  // Clocks jump from 03:00 to 04:00 EET -> EEST, so 03:30 local\n  // does not exist. JS Date resolves it to 04:30 EEST (UTC +3).\n  const d = new Date('2027-03-28T03:30:00'); // parsed as local time\n  const reminderUTC = d.toISOString().replace('.000Z', 'Z');\n\n  // In a real app, schedule here, e.g. setTimeout for short delays:\n  const delay = d.getTime() - Date.now();\n  if (delay > 0 && delay < 2147483647) {\n    setTimeout(() => console.log('Reminder!'), delay);\n  }\n  return reminderUTC;\n}\n\nconsole.log(getReminderUTC()); // 2027-03-28T00:30:00Z",
+      "call": "getReminderUTC()",
+      "excerpt": [
+        [1, 1],
+        [5, 6],
+        [13, 16]
+      ]
+    },
+    {
+      "id": "chatgpt-think",
+      "model": "ChatGPT, Think",
+      "date": "2026-11-19",
+      "answer": "There is a daylight-saving-time issue: in Helsinki, clocks jump from 03:00 to 04:00 on 28 March 2027. Therefore, 03:30 does not exist on that date. The safest approach is to make the function reject nonexistent local times rather than silently schedule the reminder at a different time.",
+      "code": "import { Temporal } from \"@js-temporal/polyfill\";\n\nfunction setHelsinkiReminder(onReminder) {\n  const reminder = Temporal.ZonedDateTime.from(\n    {\n      timeZone: \"Europe/Helsinki\",\n      year: 2027,\n      month: 3,\n      day: 28,\n      hour: 3,\n      minute: 30\n    },\n    { disambiguation: \"reject\" }\n  );\n\n  const utcISO = reminder.toInstant().toString();\n  const maxDelay = 2147483647;\n\n  function schedule() {\n    const delay = reminder.epochMilliseconds - Date.now();\n\n    if (delay <= 0) {\n      onReminder(utcISO);\n      return;\n    }\n\n    setTimeout(schedule, Math.min(delay, maxDelay));\n  }\n\n  schedule();\n  return utcISO;\n}",
+      "call": "setHelsinkiReminder()"
+    },
+    {
+      "id": "gemini-auto",
+      "model": "Gemini, auto",
+      "date": "2026-11-19",
+      "answer": "There is a DST catch with that timestamp: on Sunday, 28 March 2027, clocks in Helsinki (Europe/Helsinki) spring forward at 03:00 to 04:00 (from EET / UTC+2 to EEST / UTC+3). That makes 03:30 on 28 March 2027 in Helsinki a non-existent local time (inside the 03:00–03:59 gap). Because JavaScript's built-in Date does not throw on non-existent wall-clock times—and naive offset math can silently shift the time to 02:30 or 04:30 local time—a reliable function should verify that the formatted local time in Europe/Helsinki matches the requested time.",
+      "code": "function reminderToUtcIso({ year, month, day, hour, minute, timeZone = \"Europe/Helsinki\" }) {\n  // Start with a UTC guess using the requested fields, then iteratively align with the target time zone\n  let utcMs = Date.UTC(year, month - 1, day, hour, minute, 0, 0);\n\n  const formatter = new Intl.DateTimeFormat(\"en-CA\", {\n    timeZone,\n    year: \"numeric\",\n    month: \"2-digit\",\n    day: \"2-digit\",\n    hour: \"2-digit\",\n    minute: \"2-digit\",\n    second: \"2-digit\",\n    hour12: false,\n  });\n\n  const getZonedParts = (ms) => {\n    const parts = Object.fromEntries(\n      formatter.formatToParts(new Date(ms))\n        .filter((p) => p.type !== \"literal\")\n        .map((p) => [p.type, Number(p.value)])\n    );\n    // Normalize midnight \"24\" if ever produced by an implementation\n    const normalizedHour = parts.hour === 24 ? 0 : parts.hour;\n    return { ...parts, hour: normalizedHour };\n  };\n\n  // Two passes handle standard and DST offset shifts cleanly\n  for (let i = 0; i < 2; i++) {\n    const actual = getZonedParts(utcMs);\n    const actualAsUtc = Date.UTC(\n      actual.year,\n      actual.month - 1,\n      actual.day,\n      actual.hour,\n      actual.minute,\n      actual.second\n    );\n    const desiredAsUtc = Date.UTC(year, month - 1, day, hour, minute, 0);\n    utcMs += desiredAsUtc - actualAsUtc;\n  }\n\n  // Verify the resulting instant actually formats to the requested local wall-clock time\n  const verified = getZonedParts(utcMs);\n  const matches =\n    verified.year === year &&\n    verified.month === month &&\n    verified.day === day &&\n    verified.hour === hour &&\n    verified.minute === minute;\n\n  if (!matches) {\n    throw new Error(\n      `Non-existent local time ${year}-${String(month).padStart(2, \"0\")}-${String(day).padStart(2, \"0\")} ` +\n      `${String(hour).padStart(2, \"0\")}:${String(minute).padStart(2, \"0\")} in ${timeZone} (likely a DST spring-forward gap).`\n    );\n  }\n\n  return new Date(utcMs).toISOString();\n}\n\nfunction setReminderUtcIso() {\n  return reminderToUtcIso({\n    year: 2027,\n    month: 3,\n    day: 28,\n    hour: 3,\n    minute: 30,\n    timeZone: \"Europe/Helsinki\",\n  });\n}\n\n// Throws because 03:30 does not exist in Europe/Helsinki on 2027-03-28:\n// setReminderUtcIso();",
+      "call": "setReminderUtcIso()"
+    }
+  ]
+}

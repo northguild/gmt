@@ -27,7 +27,14 @@
  * picked up by a `MutationObserver` on the root, so the order of the mount scripts does not
  * matter. A box is read a second time after the next frame, and when a `<details>` around it
  * opens, because the first read of a box the browser has not laid out yet can say it fits.
+ *
+ * Reading a box's size makes the browser lay the page out, and a write between two reads makes it
+ * do so again. So every pass reads all its boxes first and then writes, and a box a mutation
+ * names is read after the next paint, when the layout is already done, never inside the change
+ * that made it (a slide change or a typed line would otherwise pay for a layout of its own).
  */
+
+import { play } from "./slides/frames";
 
 /**
  * `[data-scrolls]` is a box a widget lets scroll sideways when its text is wider than it: a
@@ -60,9 +67,19 @@ function namedTable(table: HTMLTableElement, owned: Set<string>): boolean {
   );
 }
 
-function update(el: HTMLElement): void {
-  const sideways = el.scrollWidth > el.clientWidth + SLACK_PX;
-  const upDown = el.scrollHeight > el.clientHeight + SLACK_PX;
+interface Overflow {
+  sideways: boolean;
+  upDown: boolean;
+}
+
+function measure(el: HTMLElement): Overflow {
+  return {
+    sideways: el.scrollWidth > el.clientWidth + SLACK_PX,
+    upDown: el.scrollHeight > el.clientHeight + SLACK_PX,
+  };
+}
+
+function apply(el: HTMLElement, { sideways, upDown }: Overflow): void {
   const owned = new Set(
     (el.dataset.scrollRegion ?? "").split(" ").filter(Boolean),
   );
@@ -90,6 +107,14 @@ function update(el: HTMLElement): void {
   el.dataset.scrollRegion = [...owned].join(" ");
 }
 
+/** Reads every box, then writes every box, so the page is laid out once for the lot. */
+function update(boxes: Iterable<HTMLElement>): void {
+  const read = [...boxes]
+    .filter((box) => box.isConnected)
+    .map((box) => [box, measure(box)] as const);
+  for (const [box, overflow] of read) apply(box, overflow);
+}
+
 /** One observer for every box, made on first use; null where the browser has none. */
 let resize: ResizeObserver | null | undefined;
 
@@ -99,41 +124,63 @@ function resizeObserver(): ResizeObserver | null {
       typeof ResizeObserver === "undefined"
         ? null
         : new ResizeObserver((entries) => {
+            const boxes = new Set<HTMLElement>();
             for (const entry of entries) {
               const box = entry.target.closest<HTMLElement>(CANDIDATES);
-              if (box) update(box);
+              if (box) boxes.add(box);
             }
+            update(boxes);
           });
   }
   return resize;
 }
 
+/** The boxes waiting for the read after the next paint. */
+const pending = new Set<HTMLElement>();
+
 /**
- * Reads the box now, and again after the next frame. A box inserted inside a closed
+ * Reads `boxes` after the next paint: the frame's layout is done by then, so the read costs
+ * none of its own. With no frames to wait for, it reads on the next task.
+ */
+function readAfterPaint(boxes: Iterable<HTMLElement>): void {
+  const first = pending.size === 0;
+  for (const box of boxes) pending.add(box);
+  if (!first || pending.size === 0) return;
+  const flush = () =>
+    setTimeout(() => {
+      const due = [...pending];
+      pending.clear();
+      update(due);
+    }, 0);
+  // One frame on the shared loop: `play` with no duration finishes on the next frame stamp.
+  if (typeof requestAnimationFrame === "undefined") flush();
+  else play(window, 0, () => {}, flush);
+}
+
+/**
+ * Reads the boxes now, and again after the next paint. A box inserted inside a closed
  * `<details>` (or any subtree the browser has not laid out yet) can report a content width of 0
  * on its first read, and the box does not resize afterwards, so no observer would report it.
  * The second read is after the browser has laid the box out.
  */
-function read(box: HTMLElement): void {
-  update(box);
-  if (typeof requestAnimationFrame === "undefined") return;
-  requestAnimationFrame(() => {
-    if (box.isConnected) update(box);
-  });
+function read(boxes: HTMLElement[]): void {
+  update(boxes);
+  readAfterPaint(boxes);
 }
 
 function isWired(box: HTMLElement): boolean {
   return "scrollRegionWired" in box.dataset;
 }
 
-function wire(box: HTMLElement): void {
-  if (isWired(box)) return;
+/** Starts watching `box`; true when it was not watched before. */
+function wire(box: HTMLElement): boolean {
+  if (isWired(box)) return false;
   box.dataset.scrollRegionWired = "";
   const observer = resizeObserver();
   observer?.observe(box);
   // Content that grows without the box resizing (a table body filled after mount).
   for (const child of Array.from(box.children)) observer?.observe(child);
-  read(box);
+  return true;
 }
 
 function unwire(box: HTMLElement): void {
@@ -173,10 +220,10 @@ function onMutations(records: MutationRecord[]): void {
     for (const node of Array.from(record.addedNodes)) {
       if (!(node instanceof Element) || !node.isConnected) continue;
       if (parentBox) resize?.observe(node);
-      for (const box of boxesIn(node)) wire(box);
+      for (const box of boxesIn(node)) if (wire(box)) changed.add(box);
     }
   }
-  for (const box of changed) if (box.isConnected) read(box);
+  readAfterPaint(changed);
 }
 
 let mutations: MutationObserver | undefined;
@@ -188,7 +235,7 @@ const toggled = new WeakSet<object>();
  * call twice.
  */
 export function mountScrollRegions(root: ParentNode = document): void {
-  for (const box of root.querySelectorAll<HTMLElement>(CANDIDATES)) wire(box);
+  read(Array.from(root.querySelectorAll<HTMLElement>(CANDIDATES)).filter(wire));
   if (typeof MutationObserver === "undefined") return;
   mutations ??= new MutationObserver(onMutations);
   mutations.observe(root, { childList: true, subtree: true });
@@ -200,7 +247,7 @@ export function mountScrollRegions(root: ParentNode = document): void {
       "toggle",
       (event) => {
         if (!(event.target instanceof Element)) return;
-        for (const box of boxesIn(event.target)) if (isWired(box)) read(box);
+        read(boxesIn(event.target).filter(isWired));
       },
       true,
     );

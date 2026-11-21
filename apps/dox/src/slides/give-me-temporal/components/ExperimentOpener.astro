@@ -1,0 +1,31 @@
+---
+/**
+ * The section opener ahead of the experiment slides: what the experiments are, in one line, with
+ * the number of cases, libraries and zones read from `data/zone-probe.json`. The default slot takes
+ * the slide's notes.
+ */
+import { zoneProbe } from "~/data/zone-probe";
+import Slide from "~/components/slides/Slide.astro";
+import "./experiment-slide.css";
+
+interface Props {
+  id?: string;
+  minutes: number;
+  place?: string;
+  plainClock?: boolean;
+}
+
+const { id = "experiments", minutes, place, plainClock } = Astro.props;
+const cases = zoneProbe.experiments.reduce((sum, e) => sum + e.cases, 0);
+const libraries = zoneProbe.libraries.length;
+---
+
+<Slide id={id} title="Experiments: we fed every library the same inputs" minutes={minutes} place={place} plainClock={plainClock}>
+  <p class="gmt-exp-fed">
+    {zoneProbe.experiments.length} questions, {cases.toLocaleString("en")} inputs, {libraries} libraries,
+    each run on a machine set to {zoneProbe.zones.length} different time zones. The right answers
+    come from the Temporal specification and the tz database, never from a library.
+  </p>
+  <p class="gmt-exp-foot">{`Run ${zoneProbe.runDate}.`}</p>
+  <slot />
+</Slide>

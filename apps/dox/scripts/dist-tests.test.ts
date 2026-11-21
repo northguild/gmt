@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { distTestFiles, isDistTest } from "./dist-tests.mjs";
 
 describe("isDistTest", () => {

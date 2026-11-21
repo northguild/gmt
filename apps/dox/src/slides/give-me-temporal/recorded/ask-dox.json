@@ -1,0 +1,301 @@
+{
+  "id": "ask-dox",
+  "question": "Write a JavaScript function that sets a reminder for 03:30 on 28 March 2027, Helsinki time, and returns the time as a UTC ISO string.",
+  "brain": {
+    "id": "gemini-3.5-flash-lite",
+    "label": "3.5 Flash-Lite"
+  },
+  "instant": "2026-11-19T07:40:09.302004661Z",
+  "chunks": [
+    {
+      "at": 0,
+      "chunk": {
+        "type": "data-status",
+        "data": {
+          "text": "Asking 3.5 Flash-Lite…"
+        },
+        "transient": true
+      }
+    },
+    {
+      "at": 3059,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 6,
+          "chunkTitles": [
+            "DST Disambiguation › Which function do I actually need?",
+            "Parsing › Extract a component from an ISO string",
+            "Durations › A length of time counted from now",
+            "diffZonedAsDuration",
+            "Getting Current Date / Time › Count a length of time from now",
+            "diffUtcAsDuration"
+          ],
+          "chunkUrls": [
+            "/guides/concepts/dst-disambiguation/#which-function-do-i-actually-need",
+            "/guides/core-date-operations/parsing/#extract-a-component-from-an-iso-string",
+            "/guides/core-date-operations/durations/#a-length-of-time-counted-from-now",
+            "/reference/zoned/calculate/diffZonedAsDuration",
+            "/guides/core-date-operations/get-current/#count-a-length-of-time-from-now",
+            "/reference/utc/calculate/diffUtcAsDuration"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 27,
+            "corpus": 36,
+            "search": 217,
+            "prompt": 0,
+            "brains": 3064
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3064,
+              "outcome": "answered"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "at": 3074,
+      "chunk": {
+        "type": "start",
+        "messageId": "P1DeXQdwJwMHLndG"
+      }
+    },
+    {
+      "at": 3074,
+      "chunk": {
+        "type": "start-step"
+      }
+    },
+    {
+      "at": 3075,
+      "chunk": {
+        "type": "tool-input-start",
+        "toolCallId": "call_73221695762399560",
+        "toolName": "showDstInspector",
+        "providerMetadata": {
+          "google": {
+            "thoughtSignature": "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"
+          }
+        }
+      }
+    },
+    {
+      "at": 3075,
+      "chunk": {
+        "type": "tool-input-delta",
+        "toolCallId": "call_73221695762399560",
+        "inputTextDelta": "{\"year\":2027,\"local\":\"2027-03-28T03:30:00\",\"zone\":\"Europe/Helsinki\"}"
+      }
+    },
+    {
+      "at": 3075,
+      "chunk": {
+        "type": "tool-input-available",
+        "toolCallId": "call_73221695762399560",
+        "toolName": "showDstInspector",
+        "input": {
+          "zone": "Europe/Helsinki",
+          "year": 2027,
+          "local": "2027-03-28T03:30:00"
+        },
+        "providerMetadata": {
+          "google": {
+            "thoughtSignature": "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"
+          }
+        }
+      }
+    },
+    {
+      "at": 3075,
+      "chunk": {
+        "type": "tool-output-available",
+        "toolCallId": "call_73221695762399560",
+        "output": {
+          "ok": true,
+          "widget": "dst-inspector",
+          "transitions": [
+            {
+              "instant": "2027-03-28T01:00:00Z",
+              "offsetBefore": "+02:00",
+              "offsetAfter": "+03:00"
+            },
+            {
+              "instant": "2027-10-31T01:00:00Z",
+              "offsetBefore": "+03:00",
+              "offsetAfter": "+02:00"
+            }
+          ],
+          "check": {
+            "kind": "nonexistent",
+            "facts": [
+              "2027-03-28T03:30:00 does NOT exist in Europe/Helsinki: the clocks skip it, so no instant has that wall time.",
+              "On 2027-03-28 the clocks in Europe/Helsinki change from +02:00 to +03:00: when the clock reads 03:00 it moves to 04:00.",
+              "Read as the clock before the change it is 2027-03-28T00:30:00Z (offset +02:00); read as the clock after the change it is 2027-03-28T01:30:00Z (offset +03:00)."
+            ]
+          }
+        },
+        "providerMetadata": {
+          "google": {
+            "thoughtSignature": "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"
+          }
+        }
+      }
+    },
+    {
+      "at": 3075,
+      "chunk": {
+        "type": "finish-step"
+      }
+    },
+    {
+      "at": 3863,
+      "chunk": {
+        "type": "start-step"
+      }
+    },
+    {
+      "at": 3864,
+      "chunk": {
+        "type": "text-start",
+        "id": "0"
+      }
+    },
+    {
+      "at": 3864,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "```typescript"
+      }
+    },
+    {
+      "at": 3864,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "\nimport { convertPlainDateTimeToZoned, convertZonedToUtc } from"
+      }
+    },
+    {
+      "at": 3913,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " \"@northguild/gmt\";\n\nfunction getHelsinkiReminder() {\n  // 03:30 on"
+      }
+    },
+    {
+      "at": 4010,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " 28 March 2027 in Europe/Helsinki does not exist due to a spring-forward gap"
+      }
+    },
+    {
+      "at": 4058,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": ".\n  // Using disambiguation: \"compatible\" resolves it forward.\n  const zoned = convertPlainDateTimeToZoned"
+      }
+    },
+    {
+      "at": 4107,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "(\n    \"2027-03-28T03:30:00\",\n"
+      }
+    },
+    {
+      "at": 4163,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "    \"Europe/Helsinki\",\n    { disambiguation: \"compatible\" }\n  );\n  return"
+      }
+    },
+    {
+      "at": 4233,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " convertZonedToUtc(zoned);\n}\n```"
+      }
+    },
+    {
+      "at": 4248,
+      "chunk": {
+        "type": "text-end",
+        "id": "0"
+      }
+    },
+    {
+      "at": 4248,
+      "chunk": {
+        "type": "finish-step"
+      }
+    },
+    {
+      "at": 4248,
+      "chunk": {
+        "type": "finish",
+        "finishReason": "stop"
+      }
+    },
+    {
+      "at": 4248,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 6,
+          "chunkTitles": [
+            "DST Disambiguation › Which function do I actually need?",
+            "Parsing › Extract a component from an ISO string",
+            "Durations › A length of time counted from now",
+            "diffZonedAsDuration",
+            "Getting Current Date / Time › Count a length of time from now",
+            "diffUtcAsDuration"
+          ],
+          "chunkUrls": [
+            "/guides/concepts/dst-disambiguation/#which-function-do-i-actually-need",
+            "/guides/core-date-operations/parsing/#extract-a-component-from-an-iso-string",
+            "/guides/core-date-operations/durations/#a-length-of-time-counted-from-now",
+            "/reference/zoned/calculate/diffZonedAsDuration",
+            "/guides/core-date-operations/get-current/#count-a-length-of-time-from-now",
+            "/reference/utc/calculate/diffUtcAsDuration"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 27,
+            "corpus": 36,
+            "search": 217,
+            "prompt": 0,
+            "brains": 3064,
+            "firstToken": 3363,
+            "total": 4560
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3064,
+              "outcome": "answered"
+            }
+          ],
+          "toolCalled": "showDstInspector"
+        }
+      }
+    }
+  ]
+}

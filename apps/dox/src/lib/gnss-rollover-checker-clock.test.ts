@@ -1,4 +1,3 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clockNow } from "./gnss-rollover-checker";
 
 describe("the rollover checker's clock", () => {

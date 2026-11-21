@@ -2,7 +2,6 @@
  * @vitest-environment jsdom
  */
 import { screen, within } from "@testing-library/dom";
-import { describe, expect, it } from "vitest";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../../test-fixture";
 import { areas, cards } from "~/data/pulse";

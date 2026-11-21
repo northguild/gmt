@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sounds = vi.fn((_root: HTMLElement) => () => {});
 vi.mock("./sound/entrance", () => ({

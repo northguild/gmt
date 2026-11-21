@@ -196,22 +196,26 @@ describe("the built site keeps the /gmt base", () => {
       // The 404 page is exempt only when it has no header at all.
       if (basename(file) === "404.html" && !/class="header"/.test(html))
         continue;
+      // The header's home link is the one named `NorthGuild home`; a page may also link to
+      // northguild.dev in its text (the deck's QR caption), which is not the home link.
       const anchors = [
         ...html.matchAll(
           /<a\b[^>]*\shref="https:\/\/northguild\.dev\/"[^>]*>([\s\S]*?)<\/a>/g,
         ),
-      ];
+      ].filter(([tag]) =>
+        /\saria-label="NorthGuild home"/.test(
+          tag.slice(0, tag.indexOf(">") + 1),
+        ),
+      );
       const fail = (why: string) =>
         failures.push({ file, value: "https://northguild.dev/", where: why });
       if (anchors.length !== 1) {
-        fail(`${anchors.length} NorthGuild anchors, expected 1`);
+        fail(`${anchors.length} NorthGuild home links, expected 1`);
         continue;
       }
       const [tag, inner] = [anchors[0][0], anchors[0][1]];
       const open = tag.slice(0, tag.indexOf(">") + 1);
       if (/\starget=/.test(open)) fail("opens in a new tab");
-      if (!/\saria-label="NorthGuild home"/.test(open))
-        fail("no NorthGuild home name");
       const svg = /<svg\b[^>]*aria-hidden="true"[^>]*>([\s\S]*?)<\/svg>/.exec(
         inner,
       );

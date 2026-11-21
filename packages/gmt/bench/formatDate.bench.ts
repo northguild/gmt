@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { clearFormatterCache } from "../src/internal/formatterCache";
 import { formatDate, getLocaleMonthNames } from "../src/plain";
 import { bench } from "./fixtures";

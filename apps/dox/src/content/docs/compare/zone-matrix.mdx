@@ -1,0 +1,29 @@
+---
+title: Library test suites across time zones
+description: Each date library's own tests, and GMT's, run under the time zones GMT's CI uses, with every failure sorted into a test that assumes one zone or a wrong answer.
+industries: [core]
+---
+
+import ZoneMatrix from "../../../components/ZoneMatrix.astro";
+import { zoneMatrixSummary as zoneMatrix, zoneMatrixRange } from "../../../data/zone-matrix";
+
+GMT runs its whole test suite in {zoneMatrix.zones.length} time zones on Node {zoneMatrix.nodes.join(", ")}. This page runs the test suite of each library on [the comparison](/compare/) in the same zones, with the same Node versions, and counts the tests that fail. The suites were run {zoneMatrixRange}. GMT's own suite is run the same way, as the control.
+
+Each failing test is sorted into one of two kinds:
+
+- **The test assumes one zone.** The test holds an expectation that is true in one host zone only, so it fails in another zone whatever the library does.
+- **The library gives a wrong answer.** The test's expectation is right in every zone, and the library gives a different answer in this one. The row names the input, the zone, what Temporal gives and what the library gives.
+
+Two sorts of failure are counted in neither kind: a test that also fails in the suite's reference zone, and a test that failed in only one of two runs. Each suite's section lists them with the Node versions and the cause.
+
+## How it was measured
+
+A person runs `pnpm matrix` in `scripts/zone-matrix/`. The runner reads the zones and Node versions from the `gmt-matrix` job in `.github/workflows/ci.yml`, so they cannot differ from the ones GMT's CI runs. For each suite it fetches the pinned commit, checks the commit, installs the dependencies from the suite's own lockfile and starts the test runner directly, once for each Node version and zone, with the `TZ` environment variable set.
+
+Some suites pin a zone in their own scripts or CI. The runner starts the test runner itself, so a pin in a script or a CI file does not apply. A suite that sets the zone in its test code can override the one it was given. A probe loaded into every test process records the zone the process starts with and the zone it ends with. If a process changes its zone after it starts, or no process starts in the zone asked for, the run is shown as overridden and counts no failure. A child process that a test starts with its own `TZ` is not an override. A suite with no run that kept its zone is shown as not measured, never as 0. Each suite's section lists the zone pins the runner found in the suite's files.
+
+Each suite is also run once per Node version in its reference zone: the zone its own CI runs in, or UTC where its CI sets none. A test that fails there is a known failure of the suite on that machine. A run with a failing test is run a second time, and a test that fails in only one of the two runs is listed as failing once in two runs. Every other failure is sorted by hand into one of the two kinds, with a one-line reason. A failure that is not sorted, or a known or once-in-two-runs failure with no stated cause, stops the run. The version, commit, Node version, time-zone data version, date and command of every figure are in the record.
+
+A test is counted once per suite and kind, however many zones and Node versions it fails in. The figures count tests, which differ in size between suites, so they do not rank the libraries.
+
+<ZoneMatrix />

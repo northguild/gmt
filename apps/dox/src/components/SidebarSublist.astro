@@ -23,6 +23,7 @@
  * Keep it in step with `@astrojs/starlight/components/SidebarSublist.astro` on a Starlight
  * upgrade.
  */
+import { linkTarget } from '~/lib/external-link';
 import { Badge, Icon } from '@astrojs/starlight/components';
 import type { StarlightRouteData } from '@astrojs/starlight/route-data';
 import SidebarRestorePoint from '@astrojs/starlight/components/SidebarRestorePoint.astro';
@@ -78,6 +79,7 @@ const industryIcon = (id: unknown): string | undefined => {
 						aria-current={entry.isCurrent ? 'page' : undefined}
 						class:list={[{ large: !nested }, entry.attrs.class]}
 						{...entry.attrs}
+						{...linkTarget(entry.href, entry.attrs.rel ?? undefined)}
 					>
 						{industryIcon(entry.attrs['data-gmt-industry-link']) && (
 							<svg
