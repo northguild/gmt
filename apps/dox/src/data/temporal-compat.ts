@@ -276,6 +276,8 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D30: "Dates in the calendars named islamic and islamic-rgsa, which Node and Chrome print with an astronomical Islamic calendar the standard no longer offers. GMT uses islamic-tbla for islamic, and the language's default calendar for islamic-rgsa",
   D31: "Coptic calendar dates before the year 1 AM (ISO 284-08-29), which Node and Chrome print as a positive year counted backwards, such as 286 for the year -285, with no era. GMT prints the signed year and the era name",
   D32: "Islamic calendar dates on the first day of the year 1 AH (ISO 0622-07-19, and 0622-07-18 for islamic-tbla), which Safari prints for its first hours as the year 0 Before Hijra, and, west of UTC, the last hours of the day before as AH. GMT prints year 1 AH for the whole day",
+  D33: "Chinese and Korean (Dangi) calendar dates on a runtime that prints them differently from the Purple Mountain Observatory (Chinese) or KASI (Dangi) date, such as Node and Chrome, which put the Chinese New Year 2027 on 7 February where the observatory has 6 February. GMT has no calendar data of its own, so on such a runtime a Chinese or Dangi date format returns its empty value. A runtime that prints the observatory date keeps its own text",
+  D34: "Coptic calendar dates on the first day of the year 1 AM (ISO 284-08-29), which Safari prints for its first hours with the long era name Anno Martyrum, and ranges across that day, which Safari prints with the era twice. GMT prints AM for the whole day",
   "zoned.A":
     "Zoned times within a day of the earliest or latest instant Temporal supports",
   "zoned.B":

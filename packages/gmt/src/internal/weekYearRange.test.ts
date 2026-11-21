@@ -28,8 +28,13 @@ const ms = (date: string): number =>
 const at = (dateTime: string): number =>
   Temporal.ZonedDateTime.from(`${dateTime}+00:00[UTC]`).epochMilliseconds;
 
-/** The digit runs of a text, in order. */
-const digits = (text: string | null): string[] => text?.match(/\d+/g) ?? [];
+/**
+ * The numbers of a text, in order. A digit run inside a word is part of a name, not a number: an
+ * era is a name (UTS #35 Part 4 §8, `G`), and ICU data without a locale's coptic or ethiopic era
+ * names prints the placeholder `ERA1` ("1740 ERA1").
+ */
+const digits = (text: string | null): string[] =>
+  text?.match(/(?<!\p{L})\p{Nd}+(?!\p{L})/gu) ?? [];
 
 /**
  * An English formatter whose range text has every digit run rewritten by `rewrite`: the engine's
@@ -239,7 +244,7 @@ describe("repairRangeYear: calendars the polyfill cannot project", () => {
     const minus = new Intl.NumberFormat("ak", { useGrouping: false })
       .format(-1)
       .replace(/\p{Nd}/gu, "");
-    expect(text?.match(/\p{Nd}+/gu)).toEqual(["285", "283"]);
+    expect(digits(text)).toEqual(["285", "283"]);
     expect(text).toContain(`${minus}285`);
     expect(text).toContain(`${minus}283`);
   });
@@ -281,6 +286,63 @@ describe("rangeYearVerdict: real formatters", () => {
     expect(rangeYearVerdict(formatter, options)).toBe(false);
   });
 
+  /*
+   * Whether a real formatter is flagged is the host's data: Node's ICU prints a week-year in these
+   * range patterns, while Chromium's `kok` data does not, and Chromium has no `my` data, so it
+   * falls back to `en-US` (ECMA-402 ResolveLocale) and keeps only the `calendar` option. So each
+   * row names a witness range where the defect shows when the host has it, with the years the
+   * calendar gives each end (any one of the forms listed: the era year ICU prints for an era
+   * before AM 1, or the signed year), and the verdict must be true exactly when the host's text
+   * for that witness leaves out a year:
+   *   - kok japanese, 2016-06-01 is Heisei 28 (2016 - 1988) and 2034-12-31 is Reiwa 16
+   *     (2034 - 2018), across the era change.
+   *   - kok coptic, ISO -0560-01-21 is coptic -844 (ICU's era before AM 1 prints 845, 1 - year)
+   *     and ISO 2034-09-10 is coptic 1750, month 13 (1751 starts on 2034-09-11).
+   *   - kok ethiopic, the same dates: Amete Alem 4932 (year -568, as 5501 AA is 1 AM) and
+   *     2026 AM, month 13 (Ethiopic is coptic + 276).
+   *   - my buddhist, 2034-12-30 and 2034-12-31 are BE 2577 (2034 + 543).
+   *   - kok roc, the same dates are ROC 123 (2034 - 1911).
+   */
+  const witnesses = {
+    japanese: ["2016-06-01", "2034-12-31", [[28], [16]]],
+    coptic: ["-000560-01-21", "2034-09-10", [[845, -844], [1750]]],
+    ethiopic: ["-000560-01-21", "2034-09-10", [[4932, -568], [2026]]],
+    buddhist: ["2034-12-30", "2034-12-31", [[2577], [2577]]],
+    roc: ["2034-12-30", "2034-12-31", [[123], [123]]],
+  } as const;
+
+  /**
+   * Whether the host prints another year than the calendar's in the calendar's witness: in its
+   * range text, the start's year must be a run of digits and the end's a later run (both ends
+   * print their year in these patterns, even when it is the same); and in its single text of the
+   * start, because a range whose ends print alike is the start's single (ECMA-402
+   * PartitionDateTimeRangePattern), so a host whose single prints the week-year or the ISO year
+   * (Firefox, `my` buddhist: `BE 30/12/2034`) prints it in every such range too.
+   */
+  const hostPrintsAnotherYear = (formatter: Intl.DateTimeFormat): boolean => {
+    const { calendar, locale, numberingSystem } = formatter.resolvedOptions();
+    const [from, to, years] = witnesses[calendar as keyof typeof witnesses];
+    const written = new Intl.NumberFormat(locale, {
+      numberingSystem,
+      useGrouping: false,
+    });
+    const holds = (run: string, forms: readonly number[]): boolean =>
+      forms.some((year) => run === written.format(Math.abs(year)));
+    const single = formatter.format(ms(from)).match(/\p{Nd}+/gu) ?? [];
+    if (!single.some((run) => holds(run, years[0]))) return true;
+    const runs =
+      formatter.formatRange(ms(from), ms(to)).match(/\p{Nd}+/gu) ?? [];
+    let next = 0;
+    for (const forms of years) {
+      const found = runs.findIndex(
+        (run, index) => index >= next && holds(run, forms),
+      );
+      if (found < 0) return true;
+      next = found + 1;
+    }
+    return false;
+  };
+
   it.each`
     locale                    | options
     ${"kok-u-ca-japanese"}    | ${{ year: "numeric", month: "numeric", day: "numeric" }}
@@ -290,10 +352,19 @@ describe("rangeYearVerdict: real formatters", () => {
     ${"my-u-ca-buddhist"}     | ${{ year: "numeric", month: "numeric", day: "numeric" }}
     ${"kok-u-ca-roc"}         | ${{ year: "numeric", month: "numeric", day: "numeric", weekday: "short" }}
     ${"kok-u-ca-roc"}         | ${{ era: "short", year: "numeric", month: "numeric", day: "numeric", weekday: "short" }}
-  `("flags '$locale' $options", ({ locale, options }) => {
-    const formatter = new Intl.DateTimeFormat(locale, { ...options, ...utc });
-    expect(rangeYearVerdict(formatter, options)).toBe(true);
-  });
+  `(
+    "flags '$locale' $options exactly when the host prints another year in its witness range",
+    ({ locale, options }) => {
+      const formatter = new Intl.DateTimeFormat(locale, {
+        ...options,
+        ...utc,
+        calendar: new Intl.Locale(locale).calendar,
+      });
+      expect(rangeYearVerdict(formatter, options)).toBe(
+        hostPrintsAnotherYear(formatter),
+      );
+    },
+  );
 });
 
 describe("rangeYearVerdict: laziness", () => {

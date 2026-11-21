@@ -130,10 +130,43 @@ export function referenceFor(
   return reference;
 }
 
+const LETTER = /\p{L}/u;
+
+/**
+ * The digit runs of `text` that can be its year. `text` is always root (`und`) text, from
+ * `referenceFor` or the range check's era formatter (`weekYearRange.ts`). Root data can add an
+ * era to the year, and the era is a name (UTS #35 Part 4 §8, `G`): ICU data without coptic or
+ * ethiopic era names prints the placeholder `ERA0` or `ERA1` ("1740 ERA1"). No current host does
+ * (Node 26.12.1 prints `1740 AM`, `7516 AA`, and `6 Reiwa` for the japanese calendar). So when
+ * there is more than one run, a run inside a word is part of a name; a lone run is the year even
+ * beside a letter.
+ */
+function yearRunsOf(text: string, digits: ReadonlySet<string>): DigitRun[] {
+  const runs = digitRuns(text, digits);
+  if (runs.length <= 1) {
+    return runs;
+  }
+  const free = runs.filter(
+    (run) =>
+      !LETTER.test(text.slice(0, run.start).slice(-1)) &&
+      !LETTER.test(text.slice(run.end, run.end + 1)),
+  );
+  return free.length > 0 ? free : runs;
+}
+
 /** The calendar year the reference prints at `ms`, or `null` when it prints no single number. */
 export function referenceYear(reference: Reference, ms: number): string | null {
-  const runs = digitRuns(reference.format.format(ms), reference.digits);
+  const runs = yearRunsOf(reference.format.format(ms), reference.digits);
   return runs.length === 1 ? (runs[0]?.text ?? null) : null;
+}
+
+/** An era-and-year text with its year removed, so two eras compare by name alone. */
+export function withoutYear(text: string, digits: ReadonlySet<string>): string {
+  let rest = text;
+  for (const run of yearRunsOf(text, digits).reverse()) {
+    rest = rest.slice(0, run.start) + rest.slice(run.end);
+  }
+  return rest;
 }
 
 /** The calendar year of a mid-year date, the anchor every probe date is counted from. */

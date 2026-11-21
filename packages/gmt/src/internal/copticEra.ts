@@ -1,6 +1,9 @@
 import { markRangeHandled, rangeHooks } from "./rangeHooks";
 import { Temporal } from "./temporal";
-import { isCopticEraCompatNeeded } from "./temporalCompat/capabilities";
+import {
+  isCopticEpochEraCompatNeeded,
+  isCopticEraCompatNeeded,
+} from "./temporalCompat/capabilities";
 import { digitRuns, digitSetOf, digitsOf, type DigitRun } from "./weekYearText";
 import { showsEraOrYear, toMilliseconds } from "./yearPrinting";
 
@@ -21,7 +24,22 @@ import { showsEraOrYear, toMilliseconds } from "./yearPrinting";
  * same way: the shifted range and the range one cycle later differ only in their year runs, which
  * are then replaced. A fixed engine prints the same text, so deleting this file, its hook in
  * `formatterCache.ts` and the probe retires the workaround without changing an output.
+ *
+ * Defect D34 (WebKit 331724, fixed by WebKit/WebKit#81144) has a second source for the same
+ * repair. 4.1.12 reads the era from the calendar date, so every instant of 1 Tout AM 1 (ISO
+ * 0284-08-29) prints the era `am`. JavaScriptCore compares the instant with a fixed constant
+ * (0284-08-29T07:52:58Z) and prints `Anno Martyrum` for the first hours of the day. The repair is
+ * dormant behind `isCopticEpochEraCompatNeeded()`: an instant whose local date is that day is
+ * moved by the same cycles, the engine names the era, and the year is written back as 1.
  */
+
+/** The ISO date of 1 Tout AM 1: coptic year 1, month 1, day 1 (Calendrical Calculations, chapter 4). */
+const EPOCH_DAY = "0284-08-29";
+
+/** The instant JavaScriptCore changes the coptic era at (WebKit bug 331724): 0284-08-29T07:52:58Z. */
+const ENGINE_ERA_SWITCH_MS = Temporal.Instant.from(
+  "0284-08-29T07:52:58Z",
+).epochMilliseconds;
 
 /** The days in 28 coptic years: 1461 whole weeks, so a weekday survives the shift. */
 const CYCLE_DAYS = 10227;
@@ -81,6 +99,86 @@ function valueOf(run: string, table: readonly string[]): number {
     value = value * 10 + Math.max(0, table.indexOf(character));
   }
   return value;
+}
+
+/**
+ * Whether D34 can print an instant of coptic year 1 in the wrong era: its local date is 1 Tout AM 1,
+ * or it is a later date of year 1 that is still before the engine's fixed instant (a zone east of
+ * +16:07:02 reaches 1 Tout 2 AM 1 before 0284-08-29T07:52:58Z).
+ */
+function isEpochDay(ms: number, timeZone: string): boolean {
+  try {
+    const date = Temporal.Instant.fromEpochMilliseconds(ms)
+      .toZonedDateTimeISO(timeZone)
+      .toPlainDate();
+    return (
+      date.equals(EPOCH_DAY) ||
+      (ms < ENGINE_ERA_SWITCH_MS &&
+        Temporal.PlainDate.compare(date, EPOCH_DAY) > 0)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether the engine can print an instant in the wrong era: its year is 0 or less while D31 holds,
+ * or its local date is 1 Tout AM 1 while D34 holds.
+ */
+function atRisk(
+  ms: number,
+  timeZone: string,
+  year: number,
+  signed: boolean,
+): boolean {
+  return (
+    (signed && year <= 0) ||
+    (year === 1 && isCopticEpochEraCompatNeeded() && isEpochDay(ms, timeZone))
+  );
+}
+
+/**
+ * The instant a coptic date on 1 Tout AM 1 is read at instead, with its true year (1), or `null`:
+ * the engine has no D34, the local date is not that day, or no same-time twin exists. The twin is
+ * one or more whole 28-year cycles later, so the engine names the era `am` and prints the same
+ * month, day, weekday and time.
+ *
+ * @example copticEpochTwin(Date.UTC(284, 7, 29), "UTC") // { ms: 36 cycles later, year: 1 } on WebKit, null elsewhere
+ */
+export function copticEpochTwin(
+  ms: number,
+  timeZone: string,
+): { readonly ms: number; readonly year: number } | null {
+  if (!isCopticEpochEraCompatNeeded() || !isEpochDay(ms, timeZone)) {
+    return null;
+  }
+  const moved = shiftedBy(ms, timeZone, cyclesFor(1));
+  return moved === null ? null : { ms: moved, year: 1 };
+}
+
+/**
+ * The instant the D29 field reader reads a coptic instant at instead, with its true year, or
+ * `null` when the engine's own reading is right. An instant on 1 Tout AM 1 is read at its D34 twin
+ * (year 1); while D31 holds, an instant whose coptic year is 0 or less is read one or more cycles
+ * later, so the engine names the era `am` where it would name the wrong one (D31), and the year is
+ * the true, signed one.
+ *
+ * @example copticFieldTwin(Date.UTC(284, 7, 28), "UTC") // { ms: 36 cycles later, year: 0 } while D31 holds, null elsewhere
+ */
+export function copticFieldTwin(
+  ms: number,
+  timeZone: string,
+): { readonly ms: number; readonly year: number } | null {
+  const epoch = copticEpochTwin(ms, timeZone);
+  if (epoch !== null || !isCopticEraCompatNeeded()) {
+    return epoch;
+  }
+  const year = copticYearAt(ms, timeZone);
+  if (year === null || year > 0) {
+    return null;
+  }
+  const moved = shiftedBy(ms, timeZone, cyclesFor(year));
+  return moved === null ? null : { ms: moved, year };
 }
 
 /** One endpoint of a range: its instant, its coptic year, and whether that year is before AM 1. */
@@ -200,10 +298,11 @@ export function repairCopticEra(
   } catch {
     return formatter;
   }
+  const signed = isCopticEraCompatNeeded();
   if (
     resolved.calendar !== "coptic" ||
     !showsEraOrYear(callerOptions) ||
-    !isCopticEraCompatNeeded()
+    !(signed || isCopticEpochEraCompatNeeded())
   ) {
     return formatter;
   }
@@ -221,7 +320,9 @@ export function repairCopticEra(
 
   const endpointOf = (ms: number): Endpoint | null => {
     const year = copticYearAt(ms, timeZone);
-    return year === null ? null : { ms, year, before: year <= 0 };
+    return year === null
+      ? null
+      : { ms, year, before: atRisk(ms, timeZone, year, signed) };
   };
 
   /** A coptic year as ECMA-402 FormatNumeric writes it: signed, `2-digit` the last two digits. */

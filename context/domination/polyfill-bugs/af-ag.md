@@ -16,8 +16,10 @@ cause, guarded as two groups:
    patterns.
 2. **D23, the crash (V8).** V8 has no case for `UDAT_YEAR_WOY_FIELD`, so `formatToParts` and `formatRangeToParts` reach
    `UNREACHABLE()` and stop the process (SIGTRAP, exit 133, uncatchable). `format` and `formatRange` do not crash. Fixed by V8
-   `0426b0d1045d` (Chromium 158). Every installed Node aborts: 22.22.2, 24.19.0, 24.21.0, 26.8.2, 26.10.0, 26.12.1, 26.13.0
-   (CLDR 48.0). The same V8 drops `year` from `resolvedOptions()` for such a pattern; the fix keeps it, which is the signal
+   `0426b0d1045d` (Chromium 158). Every installed Node aborts: 20.20.2, 22.22.2, 22.23.5, 24.19.0, 24.21.0, 24.22.3,
+   26.8.2, 26.10.0, 26.12.1, 26.13.0, 26.13.1 (CLDR 48.0). A range pattern with `Y` only on one side triggers it too: kok
+   generic `GyMd` (greatest difference `G`) is `d-M-y GGGGG – d-M-Y GGGGG`, so a `kok-u-ca-coptic` range across years 0
+   and 1 AM aborts while ranges inside one era do not. No public GMT call reaches it (43 calls tried on 26.13.1). The same V8 drops `year` from `resolvedOptions()` for such a pattern; the fix keeps it, which is the signal
    GMT reads.
 
 Not a polyfill defect: the polyfill's `toLocaleString` and GMT both format through the host's `Intl.DateTimeFormat`.
@@ -108,6 +110,13 @@ replacement text is the engine's own; GMT owns no era, numbering, pattern or cal
   Hijra`, and west of UTC the last hours of year 0 print `AH`. Table 2 starts `ah` on the whole day. *Workaround:*
   `internal/islamicEpochEra.ts` moves an epoch-day or day-before instant by whole 210-year cycles (74,417 days, 10,631
   weeks), lets the engine name the era, and writes only the year (1). Delete it when the WebKit probe passes.
+- **D34, Coptic epoch day (WebKit 331724, § AG).** JavaScriptCore changes the Coptic era at the fixed instant
+  0284-08-29T07:52:58Z (local midnight in America/Los_Angeles), so the first hours of 1 Tout AM 1 print `Anno Martyrum`
+  and the D29 field reader sees a different era for the day. Table 2 gives `coptic` one era and § 4.1.12 reads it from
+  the date. WebKit/WebKit#81144 (bug 331724, open) already fixes the epoch-day case and tests it, so GMT files nothing.
+  *Workaround:* `internal/copticEra.ts` moves an epoch-day instant by whole 28-year cycles (10,227 days), lets the
+  engine name the era, and writes only the year (1); `localFieldsOf` reads the same twin. Delete it when the WebKit
+  probe passes.
 
 Not defects: indian `-79 Śaka` and persian `-622 AP` at ISO year −1. Table 2 gives each calendar one era with a signed era
 year, and native Temporal gives `eraYear` −79 and −622 on all three engines. ECMA-402 FormatDateTimePattern's "value ≤ 0,

@@ -1,69 +1,69 @@
 import { normalizeDateTime } from "../../internal";
 import {
-  expectDateTimeEqual,
   expectOneOfIcu,
   localeDateTimeRangeInputByLocale,
   MustTestLocales,
   oneOfIcu,
 } from "../../test";
+import { hostPlainRangeText } from "../../test/hostIntl";
 import { formatDateTimeRange } from "./formatDateTimeRange";
 
 describe("formatDateTimeRange", () => {
   const rangeByLocale = localeDateTimeRangeInputByLocale;
 
   it.each`
-    locale                  | options                                       | expected
-    ${MustTestLocales.enUS} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"February 3, 2024, 2:30:45 PM – 4:46:15 PM"}
-    ${MustTestLocales.enUS} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"2/3/24, 2:30 – 4:46 PM"}
-    ${MustTestLocales.enUS} | ${{ hour: "numeric", minute: "numeric" }}     | ${"2:30 – 4:46 PM"}
-    ${MustTestLocales.enGB} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 February 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.enGB} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"03/02/2024, 14:30–16:46"}
-    ${MustTestLocales.enGB} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.deDE} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3. Februar 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.deDE} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"03.02.24, 14:30–16:46 Uhr"}
-    ${MustTestLocales.deDE} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46 Uhr"}
-    ${MustTestLocales.frFR} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 février 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.frFR} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"03/02/2024, 14:30 – 16:46"}
-    ${MustTestLocales.frFR} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30 – 16:46"}
-    ${MustTestLocales.esES} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 de febrero de 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.esES} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"3/2/24, 14:30–16:46"}
-    ${MustTestLocales.esES} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.itIT} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 febbraio 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.itIT} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"03/02/24, 14:30–16:46"}
-    ${MustTestLocales.itIT} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.ptPT} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 de fevereiro de 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.ptPT} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"03/02/24, 14:30 – 16:46"}
-    ${MustTestLocales.ptPT} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30 – 16:46"}
-    ${MustTestLocales.svSE} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"2024-02-03 14:30–16:46"}
-    ${MustTestLocales.svSE} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.isIS} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3. febrúar 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.isIS} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"3.2.2024, 14:30–16:46"}
-    ${MustTestLocales.isIS} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.zhCN} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"2024/2/3 14:30:45 – 16:46:15"}
-    ${MustTestLocales.zhCN} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"2024/2/3 14:30–16:46"}
-    ${MustTestLocales.zhCN} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.jaJP} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"2024/2/3 14:30:45～16:46:15"}
-    ${MustTestLocales.jaJP} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"2024/02/03 14時30分～16時46分"}
-    ${MustTestLocales.jaJP} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14時30分～16時46分"}
-    ${MustTestLocales.arSA} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"٣ فبراير ٢٠٢٤، ٢:٣٠:٤٥ م – ٤:٤٦:١٥ م"}
-    ${MustTestLocales.arSA} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"٣‏/٢‏/٢٠٢٤، ٢:٣٠–٤:٤٦ م"}
-    ${MustTestLocales.arSA} | ${{ hour: "numeric", minute: "numeric" }}     | ${"٢:٣٠–٤:٤٦ م"}
-    ${MustTestLocales.heIL} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 בפברואר 2024, 14:30:45 – 16:46:15"}
-    ${MustTestLocales.heIL} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"3.2.2024, 14:30–16:46"}
-    ${MustTestLocales.heIL} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.ruRU} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 февраля 2024 г., 14:30:45 – 16:46:15"}
-    ${MustTestLocales.ruRU} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"03.02.2024, 14:30–16:46"}
-    ${MustTestLocales.ruRU} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
-    ${MustTestLocales.trTR} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"3 Şubat 2024 14:30:45 – 16:46:15"}
-    ${MustTestLocales.trTR} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"3.02.2024 14:30–16:46"}
-    ${MustTestLocales.trTR} | ${{ hour: "numeric", minute: "numeric" }}     | ${"14:30–16:46"}
+    locale                  | options
+    ${MustTestLocales.enUS} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.enUS} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.enUS} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.enGB} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.enGB} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.enGB} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.deDE} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.deDE} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.deDE} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.frFR} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.frFR} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.frFR} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.esES} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.esES} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.esES} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.itIT} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.itIT} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.itIT} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.ptPT} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.ptPT} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.ptPT} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.svSE} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.svSE} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.isIS} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.isIS} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.isIS} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.zhCN} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.zhCN} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.zhCN} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.jaJP} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.jaJP} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.jaJP} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.arSA} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.heIL} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.heIL} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.heIL} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.ruRU} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.ruRU} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.ruRU} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.trTR} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.trTR} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.trTR} | ${{ hour: "numeric", minute: "numeric" }}
   `(
-    "formats a valid datetime range for locale $locale with options $options",
-    ({ locale, options, expected }) => {
+    "formats a valid datetime range for locale $locale with options $options in the host's wording",
+    ({ locale, options }) => {
       const { start, end } =
         rangeByLocale[locale as keyof typeof rangeByLocale];
       expect(formatDateTimeRange(start, end, locale, options)).toBe(
-        normalizeDateTime(expected),
+        hostPlainRangeText(locale, options, start, end),
       );
     },
   );
@@ -86,24 +86,22 @@ describe("formatDateTimeRange", () => {
     );
   });
 
-  // zh-TW and ko-KR render a day-period marker (下午/오후) that some ICU
-  // builds render as ASCII "PM" instead — see icuVariants.ts.
+  // zh-TW and ko-KR: the day period (下午/오후, or "PM" in some ICU builds) is the host's wording.
   it.each`
-    locale                  | options                                       | expected
-    ${MustTestLocales.zhTW} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"2024/2/3 下午2:30:45 – 下午4:46:15"}
-    ${MustTestLocales.zhTW} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"2024/2/3 下午2:30–4:46"}
-    ${MustTestLocales.zhTW} | ${{ hour: "numeric", minute: "numeric" }}     | ${"下午2:30至4:46"}
-    ${MustTestLocales.koKR} | ${{ dateStyle: "long", timeStyle: "long" }}   | ${"2024년 2월 3일 오후 2:30:45 ~ 오후 4:46:15"}
-    ${MustTestLocales.koKR} | ${{ dateStyle: "short", timeStyle: "short" }} | ${"24. 2. 3. 오후 2:30~4:46"}
-    ${MustTestLocales.koKR} | ${{ hour: "numeric", minute: "numeric" }}     | ${"오후 2:30~4:46"}
+    locale                  | options
+    ${MustTestLocales.zhTW} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.zhTW} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.zhTW} | ${{ hour: "numeric", minute: "numeric" }}
+    ${MustTestLocales.koKR} | ${{ dateStyle: "long", timeStyle: "long" }}
+    ${MustTestLocales.koKR} | ${{ dateStyle: "short", timeStyle: "short" }}
+    ${MustTestLocales.koKR} | ${{ hour: "numeric", minute: "numeric" }}
   `(
-    "formats a valid datetime range for locale $locale with options $options (day-period tolerant)",
-    ({ locale, options, expected }) => {
+    "formats a valid datetime range for locale $locale with options $options, day period in the host's wording",
+    ({ locale, options }) => {
       const { start, end } =
         rangeByLocale[locale as keyof typeof rangeByLocale];
-      expectDateTimeEqual(
-        formatDateTimeRange(start, end, locale, options),
-        normalizeDateTime(expected),
+      expect(formatDateTimeRange(start, end, locale, options)).toBe(
+        hostPlainRangeText(locale, options, start, end),
       );
     },
   );

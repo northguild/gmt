@@ -66,6 +66,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The runtime-workaround rule is frozen: only the owner changes it (scripts/frozen.mjs). The
+      # step sits in this job because the job is a required check that runs on every pull request
+      # and push, whatever the change touches. The runner's own Node: built-in modules only.
+      - name: Frozen files match their pins
+        run: node scripts/frozen.mjs check
+
       - id: detect
         env:
           GH_TOKEN: ${{ github.token }}

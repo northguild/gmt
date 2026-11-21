@@ -260,7 +260,10 @@ describe("formatZonedDateTime", () => {
       formatZonedDateTime(
         valueByLocale[MustTestLocales.isIS],
         MustTestLocales.isIS,
-        { dateStyle: "long", timeStyle: "long" },
+        {
+          dateStyle: "long",
+          timeStyle: "long",
+        },
       ),
       oneOfIcu(
         normalizeDateTime("3. febrúar 2024 kl. 14:30:45 GMT"),

@@ -14,8 +14,9 @@ import { showsEraOrYear, toMilliseconds } from "./yearPrinting";
  * year 0 in the era `Before Hijra`, and in a zone west of UTC the last hours of year 0 print `AH`.
  *
  * The repair is dormant behind `isIslamicEpochEraCompatNeeded()`. An islamic formatter that can
- * show an era or a year is wrapped; an instant whose local date is the epoch day or the day before
- * is moved by whole 210-year cycles at the same wall-clock time (7 tabular cycles of 30 years are
+ * show an era or a year is wrapped; an instant whose local date is the epoch day or the day before,
+ * or a later date of year 1 still before the engine's switch instant (a fixed offset east of
+ * +16:07:02), is moved by whole 210-year cycles at the same wall-clock time (7 tabular cycles of 30 years are
  * 74417 days, exactly 10631 weeks, so month, day, weekday and time all stay). A date on or after
  * the Hijra moves forward and a date before it moves backward, so the engine itself names the era
  * AH or `Before Hijra` and prints the pattern; only the year is written here, as 1 (year 0 is era
@@ -43,6 +44,20 @@ const EPOCH_DAY: Readonly<Record<string, string>> = {
   "islamic-civil": "0622-07-19",
   "islamic-tbla": "0622-07-18",
   "islamic-umalqura": "0622-07-19",
+};
+
+/**
+ * The instant JavaScriptCore changes the era at (WebKit bug 331724), per calendar: 07:52:58Z on the
+ * epoch day. A later date of year 1 before it (a fixed offset east of +16:07:02) is still read as
+ * year 0.
+ */
+const ENGINE_ERA_SWITCH_MS: Readonly<Record<string, number>> = {
+  "islamic-civil": Temporal.Instant.from("0622-07-19T07:52:58Z")
+    .epochMilliseconds,
+  "islamic-tbla": Temporal.Instant.from("0622-07-18T07:52:58Z")
+    .epochMilliseconds,
+  "islamic-umalqura": Temporal.Instant.from("0622-07-19T07:52:58Z")
+    .epochMilliseconds,
 };
 
 /** The cycle counts tried for a range, so a far end cannot print the year a moved end prints. */
@@ -156,9 +171,19 @@ function kindOf(days: number | null): -1 | 0 | 1 {
   return days < 0 && days >= -YEAR_DAYS ? -1 : 0;
 }
 
-/** Whether a day is one JavaScriptCore can print with the wrong era: the epoch day or the day before. */
-function isAtRisk(days: number | null): boolean {
-  return days === 0 || days === -1;
+/**
+ * Whether an instant is one JavaScriptCore can print with the wrong era: its local date is the
+ * epoch day or the day before, or a later date of year 1 whose instant is before the engine's
+ * switch.
+ */
+function isAtRisk(days: number | null, ms: number, calendar: string): boolean {
+  return (
+    days === 0 ||
+    days === -1 ||
+    (days !== null &&
+      days > 0 &&
+      ms < (ENGINE_ERA_SWITCH_MS[calendar] ?? Number.NEGATIVE_INFINITY))
+  );
 }
 
 /**
@@ -178,7 +203,7 @@ export function epochTwin(
     return null;
   }
   const days = daysSinceEpoch(ms, timeZone, Temporal.PlainDate.from(epochText));
-  if (!isAtRisk(days)) {
+  if (!isAtRisk(days, ms, calendar)) {
     return null;
   }
   const side = kindOf(days) === 1 ? 1 : -1;
@@ -229,7 +254,7 @@ export function repairIslamicEpochEra(
 
   const partsOf = (ms: number): Intl.DateTimeFormatPart[] => {
     const days = daysSinceEpoch(ms, timeZone, epoch);
-    if (!isAtRisk(days)) {
+    if (!isAtRisk(days, ms, resolved.calendar)) {
       return formatter.formatToParts(ms);
     }
     const moved = shiftedBy(ms, timeZone, kindOf(days));
@@ -256,7 +281,9 @@ export function repairIslamicEpochEra(
   const repairedRange = (start: number, end: number): string => {
     const ends = [start, end] as const;
     const days = ends.map((ms) => daysSinceEpoch(ms, timeZone, epoch));
-    if (!days.some(isAtRisk)) {
+    if (
+      !days.some((day, at) => isAtRisk(day, ends[at] ?? 0, resolved.calendar))
+    ) {
       return rangeOf(start, end);
     }
     const kinds = days.map(kindOf);

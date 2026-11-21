@@ -98,6 +98,7 @@ import {
   TRACKERS,
   bugzillaBugUrl,
   bugzillaCommentsUrl,
+  bugzillaHistoryUrl,
   chromiumIssueUrl,
   JIRA_HEADERS,
   identityOf,
@@ -456,11 +457,16 @@ async function fetchSyncedAsync(ref, days, timeout) {
         days,
       );
     case "bugzilla": {
-      const [bug, comments] = await Promise.all([
+      const [bug, comments, history] = await Promise.all([
         httpGet(bugzillaBugUrl(ref.host, ref.id), timeout),
         httpGet(bugzillaCommentsUrl(ref.host, ref.id), timeout),
+        httpGet(bugzillaHistoryUrl(ref.host, ref.id), timeout),
       ]);
-      return parseBugzilla(bug, comments, ref.host, ref.id, days);
+      const ourComment = /#c(\d+)$/.exec(ref.contributionUrl ?? "")?.[1];
+      return parseBugzilla(bug, comments, ref.host, ref.id, days, {
+        history,
+        ourComment: ourComment === undefined ? null : Number(ourComment),
+      });
     }
     default:
       throw new Error(`unknown tracker "${ref.tracker}"`);
