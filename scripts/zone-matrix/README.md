@@ -10,8 +10,9 @@ Nine suites: Moment, Luxon, date-fns, Day.js, Spacetime, `@internationalized/dat
 tree in the same harness. It must fail nothing.
 
 This folder is not part of the pnpm workspace. It has its own `package.json` with exact versions.
-Its `pnpm-lock.yaml`, `node_modules` and the `.work/` clones are ignored by git. The JSON record is
-what is kept, and only a run by hand writes it.
+Its `pnpm-lock.yaml` is committed, so CI installs the same versions with `--frozen-lockfile`.
+Its `node_modules` and the `.work/` clones are ignored by git. The JSON record is what is kept,
+and only a run by hand writes it.
 
 ## Run
 

@@ -29,35 +29,51 @@ const pieces = (track: HTMLElement): HTMLElement[] =>
     (c): c is HTMLElement => c instanceof HTMLElement,
   );
 
-/** Where the newest reached piece ends, from the column's top (unmoved by the shift). */
-function reachedEnd(track: HTMLElement): number {
-  const last = pieces(track)
-    .filter((c) => c.dataset["reached"] !== "false")
-    .at(-1);
-  return last ? last.offsetTop + last.offsetHeight : 0;
+/** One piece of the column: its top from the column's top, its height, and whether it is reached. */
+interface StackPiece {
+  readonly top: number;
+  readonly height: number;
+  readonly reached: boolean;
 }
 
 /** Whether less than half of `piece` is left under the top edge once the column is up `shift`. */
-const gone = (piece: HTMLElement, shift: number): boolean =>
-  piece.offsetTop + piece.offsetHeight - shift < piece.offsetHeight / 2;
+const gone = (piece: StackPiece, shift: number): boolean =>
+  piece.top + piece.height - shift < piece.height / 2;
 
 /**
- * The column goes up just far enough for the newest reached piece to end at the foot; when that
- * leaves a piece more than half gone, it goes on up to the first piece still shown, so no empty
- * band is left where the faded ones were.
+ * How far the column goes up with `room` px under its top edge, and which pieces fade out. It goes
+ * up just far enough for the newest reached piece to end at the foot; when that leaves a piece
+ * more than half gone, it goes on up to the first piece still shown, so no empty band is left
+ * where the faded ones were.
  */
+export function stackShift(
+  column: readonly StackPiece[],
+  room: number,
+): { shift: number; gone: boolean[] } {
+  const last = column.filter((piece) => piece.reached).at(-1);
+  const least = Math.max(0, (last ? last.top + last.height : 0) - room);
+  const kept = column.find((piece) => !gone(piece, least));
+  const shift = Math.max(least, kept?.top ?? 0);
+  return { shift, gone: column.map((piece) => gone(piece, shift)) };
+}
+
+/** Reads the column off the page, moves it, and marks what has left the top. */
 function settle(stack: HTMLElement, track: HTMLElement, win: Window): void {
   const space = room(stack, win);
   if (Number.isFinite(space))
     stack.style.setProperty("--gmt-stack-room", `${space}px`);
-  const least = Math.max(0, reachedEnd(track) - space);
-  const kept = pieces(track).find((piece) => !gone(piece, least));
-  const shift = Math.max(least, kept?.offsetTop ?? 0);
+  const els = pieces(track);
+  const { shift, gone: faded } = stackShift(
+    els.map((el) => ({
+      top: el.offsetTop,
+      height: el.offsetHeight,
+      reached: el.dataset["reached"] !== "false",
+    })),
+    space,
+  );
   track.style.setProperty("--gmt-stack-shift", `${-shift}px`);
   stack.toggleAttribute("data-shifted", shift > 0);
-  for (const piece of pieces(track)) {
-    piece.toggleAttribute("data-stack-gone", gone(piece, shift));
-  }
+  els.forEach((el, i) => el.toggleAttribute("data-stack-gone", faded[i]!));
 }
 
 /** Slides each stack under `root` to its reached builds, until `signal` aborts. */

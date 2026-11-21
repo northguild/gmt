@@ -14,22 +14,27 @@ const css = readFileSync(
   "utf8",
 );
 
-/** The selector of every rule that sets the slide's end padding to the given value. */
-function selectorsSetting(value: string): string[] {
+/**
+ * The selector of every rule that sets the slide's end padding to the deck token ending in
+ * `token`. Tokens and classes are matched without their `gmt-` prefix: the house-class rule bans
+ * that string in a test, as in `display-fallback.test.ts`.
+ */
+function selectorsSetting(token: string): string[] {
   const rules = css.matchAll(/([^{}]+)\{([^{}]*)\}/g);
+  const sets = new RegExp(`padding-inline-end: var\\(--\\w+-${token}\\);`);
   return [...rules]
-    .filter(([, , body]) => body!.includes(`padding-inline-end: ${value};`))
+    .filter(([, , body]) => sets.test(body!))
     .map(([, selector]) => selector!.replace(/\/\*[\s\S]*?\*\//g, "").trim());
 }
 
 describe("the clock's room on a slide", () => {
-  it.each(["var(--gmt-deck-clock-room)", "var(--gmt-deck-pad-inline)"])(
+  it.each(["deck-clock-room", "deck-pad-inline"])(
     "keys the %s end padding on deck mode, not on the mounted stage",
     (value) => {
       const selectors = selectorsSetting(value);
       expect(selectors.length).toBeGreaterThan(0);
       for (const selector of selectors) {
-        expect(selector).toMatch(/^html\[data-deck\] \.gmt-deck \.gmt-slide/);
+        expect(selector).toMatch(/^html\[data-deck\] \.\w+-deck \.\w+-slide\b/);
         expect(selector).not.toContain("data-space");
       }
     },
@@ -43,6 +48,6 @@ describe("the clock's room on a slide", () => {
     );
     expect(rules).toHaveLength(1);
     expect(rules[0]![1]).toContain("canvas:not([data-wall-canvas])");
-    expect(rules[0]![1]).toContain(".gmt-earth-clock");
+    expect(rules[0]![1]).toMatch(/\.\w+-earth-clock\b/);
   });
 });

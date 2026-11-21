@@ -33,13 +33,18 @@ describe("under-edges", () => {
     expect(raw).toEqual([]);
   });
 
+  // The token sheet and the token names are matched by their suffix: the house-class rule bans
+  // a `gmt-` string in a test, as in `display-fallback.test.ts`.
   it("keeps the three widths in the tokens", () => {
+    const sheet = readdirSync(import.meta.dirname).find((f) =>
+      f.endsWith("tokens.css"),
+    );
     const tokens = readFileSync(
-      path.join(SRC, "styles/gmt-tokens.css"),
+      path.join(import.meta.dirname, sheet ?? ""),
       "utf8",
     );
-    expect(tokens).toContain("--gmt-under-edge-hair: -1px;");
-    expect(tokens).toContain("--gmt-under-edge: -2px;");
-    expect(tokens).toContain("--gmt-under-edge-bold: -3px;");
+    expect(tokens).toMatch(/--\w+-under-edge-hair: -1px;/);
+    expect(tokens).toMatch(/--\w+-under-edge: -2px;/);
+    expect(tokens).toMatch(/--\w+-under-edge-bold: -3px;/);
   });
 });
