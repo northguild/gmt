@@ -20,9 +20,10 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  *   the clock never closes.
  * - Holidays and overrides apply as in `operatingIntervals`.
  * - `isoString` is an instant: an offset (`Z`, `±HH:MM`) is required.
- * - Returns `""` on invalid input: an invalid instant or `OperatingSchedule`, a `within` that is
- *   not a non-negative ISO duration, a `disambiguation` that is not one of the four values, and
- *   a search that would go more than 10,000 local dates past the input's date.
+ * - Returns `""` on invalid input: an invalid instant, an `OperatingSchedule` that
+ *   `isValidOperatingSchedule` refuses, a `within` that is not a non-negative ISO duration, a
+ *   `disambiguation` that is not one of the four values, and a search that would go more than
+ *   10,000 local dates past the input's date.
  * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
  *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
  *   offset's seconds (under a minute) of the last instant Temporal supports

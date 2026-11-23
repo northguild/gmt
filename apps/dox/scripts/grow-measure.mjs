@@ -359,6 +359,16 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "operating-schedule-checker",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "opening-hours-board",
+    preset: PRESET,
+    drag: { role: "slider", name: "From" },
+  },
+  {
     slug: "holiday-rule-builder",
     preset: PRESET,
     drag: { role: "spinbutton", name: "Year" },

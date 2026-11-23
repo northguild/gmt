@@ -176,6 +176,14 @@ import {
   renderPtpClockConverterTemplate,
 } from "./ptp-clock-converter-mount";
 import {
+  mountOpeningHoursBoard,
+  renderOpeningHoursBoardTemplate,
+} from "./opening-hours-board-mount";
+import {
+  mountScheduleChecker,
+  renderScheduleCheckerTemplate,
+} from "./schedule-checker-mount";
+import {
   mountTerrestrialTimeStack,
   renderTerrestrialTimeStackTemplate,
 } from "./terrestrial-time-stack-mount";
@@ -429,6 +437,16 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "ptp clock converter",
     () => renderPtpClockConverterTemplate("test"),
     mountPtpClockConverter as MountFn<never>,
+  ],
+  [
+    "operating schedule checker",
+    () => renderScheduleCheckerTemplate("test", {}),
+    mountScheduleChecker as MountFn<never>,
+  ],
+  [
+    "opening hours board",
+    () => renderOpeningHoursBoardTemplate("test", {}),
+    mountOpeningHoursBoard as MountFn<never>,
   ],
   [
     "terrestrial time stack",

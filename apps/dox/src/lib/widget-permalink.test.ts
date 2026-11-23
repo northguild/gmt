@@ -1,4 +1,5 @@
 import { showHolidayRuleBuilderInput } from "./dox-tools";
+import { SCHEDULE_TEXT_MAX } from "./schedule-text-max";
 import {
   PRESETS as SERVICE_DAY_PRESETS,
   permalinkOf as serviceDayPermalinkOf,
@@ -471,6 +472,21 @@ describe("widget permalinks", () => {
     };
     expect(seedOf("x".repeat(2000))).toEqual({ stopTimes: "x".repeat(2000) });
     expect(seedOf("x".repeat(2001))).not.toHaveProperty("stopTimes");
+  });
+
+  it("keeps an Operating Schedule Checker paste of 8,000 characters and drops one of 8,001", () => {
+    const seedOf = (schedule: string) => {
+      const url = encodeWidgetPermalink("schedule", { schedule });
+      expect(url).toContain("/tools/operating-schedule-checker/");
+      return seedFromLocation("schedule", url.slice(url.indexOf("?")));
+    };
+    expect(seedOf("x".repeat(SCHEDULE_TEXT_MAX))).toEqual({
+      schedule: "x".repeat(SCHEDULE_TEXT_MAX),
+    });
+    expect(seedOf("x".repeat(SCHEDULE_TEXT_MAX + 1))).not.toHaveProperty(
+      "schedule",
+    );
+    expect(SCHEDULE_TEXT_MAX).toBe(8000);
   });
 
   it("opens a PTP Clock Converter link on the state it names, even a cleared one", () => {

@@ -327,6 +327,14 @@ export const REWORDINGS: Record<DoxToolName, readonly [string, string]> = {
     "A PTP timestamp reads 1704067237 seconds with a currentUtcOffset of 37 and no nanoseconds. Which UTC time is it?",
     "Convert PTP seconds 1704067237, offset 37, nanoseconds 0 to UTC.",
   ],
+  showScheduleChecker: [
+    "operatingIntervals returns [] for my Kolkata opening hours. Is the schedule closed, or does isValidOperatingSchedule refuse it?",
+    "Why does my opening-hours schedule return no open hours in August 2024?",
+  ],
+  showOpeningHoursBoard: [
+    "A Tokyo support desk is open 09:00 to 18:00 on weekdays. A ticket arrives on Friday at 17:30 and the reply is due in 8 open hours. When is it due?",
+    "How much open time is there between Friday 17:30 and Monday 12:00 for a 09:00 to 18:00 weekday desk in Tokyo?",
+  ],
 };
 
 /** Starters that go through the live layer, one per kind of widget. */

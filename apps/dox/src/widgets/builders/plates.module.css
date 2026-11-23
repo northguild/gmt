@@ -85,6 +85,10 @@
   font-size: clamp(0.75rem, 0.72rem + 0.15vw, 0.875rem);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+
+  /* A caption that is a function name (`isValidOperatingSchedule`) has no break point. It wraps
+     anywhere in a narrow plate, like the value below it, and does not run past the plate. */
+  overflow-wrap: anywhere;
 }
 
 .value {

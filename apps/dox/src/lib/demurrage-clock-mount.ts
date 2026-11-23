@@ -49,7 +49,7 @@ import {
   type RailEventView,
 } from "~/widgets/families/ledger/clock-plot";
 import { dayColumns } from "~/widgets/families/ledger/day-columns";
-import { handoffLink } from "~/widgets/families/ledger/handoff-link";
+import { handoffRow } from "~/widgets/families/ledger/handoff-link";
 import {
   axisTicks,
   ledgerAxis,
@@ -341,11 +341,10 @@ export function renderDemurrageClockTemplate(
       { gate: "frame" },
     )}<p role="status" aria-label="Reading summary" id="${id("summary")}">${srOnly("")}</p>${grow(
       html`<div id="${id("reason")}"></div>`,
-    )}<div class="${styles.handoff}">${handoffLink({
+    )}${handoffRow({
       id: id("handoff"),
       label: "Count the days in the Free Time Ledger",
-      describedBy: id("handoff-hint"),
-    })}<p class="${styles.hint}" id="${id("handoff-hint")}"></p></div>`,
+    })}`,
   );
 
   const returns = section(

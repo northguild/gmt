@@ -3,7 +3,7 @@
  * `button` is a `<button>`, which cannot navigate. With no `href` the link is disabled: it
  * keeps its place, drops its link role and says `aria-disabled`, and the hint beside it says why.
  */
-import type { SafeHtml } from "../../builders/html";
+import { html, type SafeHtml } from "../../builders/html";
 import { link } from "../../builders/link";
 import styles from "./handoff-link.module.css";
 
@@ -22,4 +22,17 @@ export function handoffLink(o: HandoffLinkOptions): SafeHtml {
     describedBy: o.describedBy,
     body: o.label,
   });
+}
+
+/**
+ * The link and its hint on one row, which wraps on a narrow column. The hint is `<id>-hint`,
+ * written by the mount, and describes the link, so a disabled link says why.
+ */
+export function handoffRow(
+  o: Omit<HandoffLinkOptions, "describedBy">,
+): SafeHtml {
+  return html`<div class="${styles.row}">${handoffLink({
+    ...o,
+    describedBy: `${o.id}-hint`,
+  })}<p class="${styles.hint}" id="${o.id}-hint"></p></div>`;
 }

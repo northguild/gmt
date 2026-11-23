@@ -307,6 +307,18 @@ export async function expectNoAxeViolations(
   );
 }
 
+/** Replaces a box's text with `value` the way a person pastes it; an empty value only clears. */
+export async function pasteInto(
+  w: Pick<RenderedWidget, "user">,
+  box: HTMLElement,
+  value: string,
+): Promise<void> {
+  await w.user.clear(box);
+  if (value === "") return;
+  await w.user.click(box);
+  await w.user.paste(value);
+}
+
 /** Awaits every widget loader still in flight, then pending microtasks and one timer turn. */
 export async function flushWidget(): Promise<void> {
   while (pending.size > 0) await Promise.allSettled(pending);

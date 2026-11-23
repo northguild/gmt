@@ -49,7 +49,7 @@ import {
   ledgerLane,
   ledgerLegend,
 } from "~/widgets/families/ledger/ledger-lane";
-import { textArea } from "~/widgets/families/ledger/text-area";
+import { textArea } from "~/widgets/builders/text-area";
 import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
 import { grow } from "~/widgets/primitives/grow/grow";
 import { handle, type GmtHandle } from "~/widgets/primitives/handle/handle";
@@ -88,12 +88,8 @@ import {
   type LedgerState,
   type TermsArg,
 } from "./free-time-ledger";
-import {
-  layoutWidth,
-  onWidthChange,
-  placeLabel,
-  thinTickLabels,
-} from "./label-fit";
+import { onWidthChange, thinTickLabels } from "./label-fit";
+import { placeGate } from "./ledger-gate";
 import type { PlateSpec } from "./ledger-widgets";
 import { loadFreeTimeLib, type FreeTimeLib } from "./ledger-lib";
 import { onceDestroy, type MountFn } from "./widget-mount";
@@ -610,22 +606,14 @@ function setupWidget(
       gate.hidden = true;
       return;
     }
-    gate.hidden = false;
-    const pct = canvas.toPercent(ms);
-    gate.style.setProperty("--gmt-gate-at", String(pct));
-    const chip = el("expiry-chip");
     const local = zone === null ? "" : formatLocal(ms, zone);
-    chip.textContent = local === "" ? "expires" : `expires ${local}`;
-    gate.dataset["edge"] = "start";
-    if (trackEl.clientWidth > 0) {
-      const side = placeLabel({
-        atPx: (pct / 100) * trackEl.clientWidth,
-        labelPx: layoutWidth(chip),
-        trackPx: trackEl.clientWidth,
-        offsetPx: 10,
-      });
-      gate.dataset["edge"] = side;
-    }
+    placeGate(
+      gate,
+      el("expiry-chip"),
+      trackEl,
+      canvas.toPercent(ms),
+      local === "" ? "expires" : `expires ${local}`,
+    );
   }
 
   function drawBar(startMs: number, endMs: number, invalid: boolean): void {

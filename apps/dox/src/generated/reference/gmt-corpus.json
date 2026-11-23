@@ -1436,6 +1436,55 @@
     ]
   },
   {
+    "url": "/reference/calendar/validate/isValidOperatingSchedule",
+    "page": "/reference/calendar/validate/isValidOperatingSchedule",
+    "name": "isValidOperatingSchedule",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidOperatingSchedule(schedule: unknown): schedule is OperatingSchedule",
+    "description": "Return true when `schedule` is an `OperatingSchedule` the operating-hours functions accept.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidOperatingSchedule.ts",
+    "examples": [
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"Europe/Paris\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "true"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: { 5: [{ from: \"23:00\", to: \"06:00\" }] }, holidays: [\"2024-11-20\"], overrides: [{ date: \"2024-11-19\", windows: [] }] })",
+        "result": "true — a window past midnight, a holiday and an override"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"-00:44:30\", weekly: {} })",
+        "result": "true — valid, closed every day"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: { 8: [] } })",
+        "result": "false — 8 is not an ISO weekday"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"24:00\" }] } })",
+        "result": "false — 24:00 is not a plain time"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: {}, holidays: [\"2024-05-15[u-ca=iso8601]\"] })",
+        "result": "false — a plain date takes no annotation"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: {}, overrides: [{ date: \"2024-06-10\", windows: [] }, { date: \"+002024-06-10\", windows: [] }] })",
+        "result": "false — two overrides for one date"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"Invalid/Zone\", weekly: {} })",
+        "result": "false"
+      },
+      {
+        "call": "isValidOperatingSchedule(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/validate/isValidRollConvention",
     "page": "/reference/calendar/validate/isValidRollConvention",
     "name": "isValidRollConvention",
@@ -23656,7 +23705,7 @@
       },
       {
         "name": "holidays",
-        "description": "The local dates that are closed, as ISO PlainDate strings. A `BusinessCalendar` can be passed directly: its `holidays` are read, and its `weekend` and `timeZone` are not, because `weekly` already says which weekdays open and `timeZone` above is the zone."
+        "description": "The local dates that are closed, as ISO PlainDate strings. A `BusinessCalendar` can be passed directly: only its `holidays` are read, because `weekly` already says which weekdays open and `timeZone` above is the zone. The calendar must itself pass `isValidBusinessCalendar`, so a bad `weekend` or `timeZone` refuses the schedule."
       },
       {
         "name": "overrides",

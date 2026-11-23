@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/dom";
-import { html } from "../../builders/html";
+import { html } from "./html";
 import { expectNoAxeViolations } from "~/test/render-widget";
-import { renderHtml } from "../../test-fixture";
+import { renderHtml } from "../test-fixture";
 import { textArea } from "./text-area";
 
 describe("textArea", () => {
@@ -21,6 +21,16 @@ describe("textArea", () => {
     expect(box).toHaveAttribute("spellcheck", "false");
     expect(box).toHaveAttribute("autocomplete", "off");
     expect(box).toHaveAttribute("autocapitalize", "off");
+  });
+
+  it("caps what can be typed when it is given a length", () => {
+    renderHtml(
+      html`<label for="t">Schedule</label>${textArea({ id: "t", maxLength: 8000 })}`,
+    );
+    expect(screen.getByRole("textbox", { name: "Schedule" })).toHaveAttribute(
+      "maxlength",
+      "8000",
+    );
   });
 
   it("escapes its value", () => {

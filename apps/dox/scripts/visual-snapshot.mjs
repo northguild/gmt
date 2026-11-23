@@ -190,6 +190,11 @@ const PAGES = [
     path: "/tools/gtfs-trip-board/",
   },
   { slug: "tool-ptp-clock-converter", path: "/tools/ptp-clock-converter/" },
+  {
+    slug: "tool-operating-schedule-checker",
+    path: "/tools/operating-schedule-checker/",
+  },
+  { slug: "tool-opening-hours-board", path: "/tools/opening-hours-board/" },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",

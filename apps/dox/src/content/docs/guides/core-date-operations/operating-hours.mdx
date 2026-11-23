@@ -23,11 +23,14 @@ The seven functions are
 [`operatingTimeBetween`](/reference/calendar/hours/operatingTimeBetween),
 [`addOperatingTime`](/reference/calendar/hours/addOperatingTime) and
 [`recurringWindows`](/reference/calendar/hours/recurringWindows).
+[`isValidOperatingSchedule`](/reference/calendar/validate/isValidOperatingSchedule) checks a
+schedule before you use it.
 
 ```typescript
 import {
   addOperatingTime,
   isOpenAt,
+  isValidOperatingSchedule,
   nextCloseAt,
   nextOpenAt,
   operatingIntervals,
@@ -96,10 +99,33 @@ nonexistent edge could change the answer, and ignores one that cannot. See
 Holidays and overrides are ISO dates in the schedule's zone.
 
 A `BusinessCalendar` can be passed as `holidays`. Its `holidays` are read and its `weekend`
-is not, because `weekly` already says which weekdays open.
+is not, because `weekly` already says which weekdays open. The calendar must still pass
+`isValidBusinessCalendar`.
 
 A date the zone deleted (`Pacific/Apia`, 2011-12-30) has no windows. An override wins over a
 holiday on the same date, and `windows: []` closes a date.
+
+### A refused schedule is not a closed one
+
+`operatingIntervals` returns `[]` for a schedule that is closed throughout the range, and
+also for one it refuses. `isOpenAt` returns `false` for both. All six functions share one
+schedule check, so `isValidOperatingSchedule` tells the two apart: `true` exactly when they
+accept the schedule.
+
+```typescript
+const week = { start: "2024-06-10T00:00:00Z", end: "2024-06-17T00:00:00Z" };
+const closed = { timeZone: "Europe/London", weekly: {} };
+const typo = { timeZone: "Europe/London", weekly: { 8: [{ from: "09:00", to: "17:00" }] } };
+
+operatingIntervals(closed, week); // []
+isValidOperatingSchedule(closed); // true — closed every day
+
+operatingIntervals(typo, week); // []
+isValidOperatingSchedule(typo); // false — 8 is not an ISO weekday
+```
+
+Try it in the [Operating Schedule Checker](/tools/operating-schedule-checker/); the
+[Opening Hours Board](/tools/opening-hours-board/) shows all six functions on one week.
 
 ### Open time is elapsed time
 
@@ -141,3 +167,5 @@ and curfews. Monthly and yearly RFC 5545 rules are out of scope.
 - [Business Calendars and Roll Conventions](../business-calendars/): whole working days and holidays
 - [DST Disambiguation](/guides/concepts/dst-disambiguation/): the four strategies behind every window edge
 - [Interval Basics](/guides/intervals/interval-basics/): the intervals `operatingIntervals` returns
+- [Operating Schedule Checker](/tools/operating-schedule-checker/): paste a schedule and see whether it is refused, closed or open
+- [Opening Hours Board](/tools/opening-hours-board/): edit a schedule and read all six operating functions on one week

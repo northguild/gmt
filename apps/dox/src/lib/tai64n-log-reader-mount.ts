@@ -32,7 +32,7 @@ import {
 } from "~/widgets/builders";
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import { callLines, outputOf } from "~/widgets/families/gnss/call-lines";
-import { textArea } from "~/widgets/families/ledger/text-area";
+import { textArea } from "~/widgets/builders/text-area";
 import {
   logTable,
   LINE_NO_SIGNAL,
@@ -50,7 +50,6 @@ import {
   INSERTED_BADGE,
   INSTANT_MAX_CHARS,
   LATE_SENTENCE_WIDEST,
-  LOG_MAX_LINES,
   NO_LABEL_BADGE,
   NO_LABEL_SENTENCE,
   NO_LINE_SENTENCE,
@@ -89,8 +88,8 @@ const CALLS_LABEL = "Calls made";
 const OUTPUT_LABEL = "What the calls returned";
 const LINKS_LABEL = "Open this line in another tool";
 const PICK_HINT = "Pick a line to see its details.";
-/** The paste box is at least this many rows high, and at most `LOG_MAX_LINES`. */
-const MIN_ROWS = 2;
+/** The paste box is always this many rows high; more lines scroll inside it, so no preset or keystroke moves the page. */
+const LOG_ROWS = 6;
 /** The widest label the writer shows, and how many lines the code frame holds. */
 const LABEL_SAMPLE = `@${"0".repeat(24)}`;
 const CALL_LINES = 4;
@@ -242,12 +241,6 @@ function tableOf(rows: readonly LogRow[], group: string): SafeHtml {
   });
 }
 
-/** The paste box is as high as its lines, up to the most the tool reads. */
-function rowsFor(text: string): number {
-  const lines = text.split("\n").length;
-  return Math.min(LOG_MAX_LINES, Math.max(MIN_ROWS, lines));
-}
-
 function rowOf(r: ReadLine, selected: boolean): LogRow {
   return {
     n: r.n,
@@ -305,7 +298,7 @@ export function renderTai64nLogReaderTemplate(
         textArea({
           id: cid,
           value: state.values,
-          rows: rowsFor(state.values),
+          rows: LOG_ROWS,
           describedBy,
         }),
     })}`,
@@ -423,7 +416,6 @@ function setupWidget(
 
   function apply(state: LogState): void {
     valuesEl.value = state.values;
-    valuesEl.rows = rowsFor(state.values);
     instantEl.value = state.instant;
     selected = state.line;
   }
@@ -434,7 +426,6 @@ function setupWidget(
       if (e.target === valuesEl) {
         // The picked line stays picked while the list still has it; `render` falls back to
         // the default line when the text no longer reaches that far.
-        valuesEl.rows = rowsFor(valuesEl.value);
         syncPreset();
         render();
       } else if (e.target === instantEl) {
@@ -452,7 +443,6 @@ function setupWidget(
         const chosen = TAI64N_PRESETS.find((p) => p.id === presetEl.value);
         if (!chosen) return;
         valuesEl.value = chosen.lines.join("\n");
-        valuesEl.rows = rowsFor(valuesEl.value);
         selected = chosen.selected;
         syncPreset();
         render();

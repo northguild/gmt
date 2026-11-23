@@ -57,6 +57,15 @@
   &[data-gate-row="true"] {
     --gate-h: var(--gmt-ledger-gate-h);
   }
+
+  /* `layoutGates` counts the chip rows the visible gates need. */
+  &[data-gate-row="true"][data-gate-rows="2"] {
+    --gate-h: calc(2 * var(--gmt-ledger-gate-h));
+  }
+
+  &[data-gate-row="true"][data-gate-rows="3"] {
+    --gate-h: calc(3 * var(--gmt-ledger-gate-h));
+  }
 }
 
 .days {
@@ -164,21 +173,21 @@
 }
 
 .gateChip {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 10px;
-  padding: 0 var(--gmt-space-2);
-  border: 1px solid var(--gmt-border-strong);
-  border-radius: var(--gmt-radius-sm);
-  background: var(--gmt-surface);
-  color: var(--gmt-ice);
-  font-family: var(--gmt-font-mono);
-  font-size: var(--gmt-text-xs);
-  white-space: nowrap;
+  /* stylelint-disable-next-line property-no-unknown -- CSS Modules `composes` */
+  composes: gate from "./ledger-chip.module.css";
+  translate: calc(var(--gmt-chip-shift, 0) * 1px) 0;
 }
 
 .gate[data-edge="end"] .gateChip {
   inset-inline: auto 10px;
+}
+
+.gate[data-row="1"] .gateChip {
+  inset-block-start: var(--gmt-ledger-gate-h);
+}
+
+.gate[data-row="2"] .gateChip {
+  inset-block-start: calc(2 * var(--gmt-ledger-gate-h));
 }
 
 /* The axis and the legend start at the track's x. A label never wraps: `thinTickLabels` drops the

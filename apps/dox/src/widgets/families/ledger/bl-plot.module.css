@@ -167,17 +167,8 @@
 }
 
 .chip {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 10px;
-  padding: 0 var(--gmt-space-2);
-  border: 1px solid var(--gmt-border-strong);
-  border-radius: var(--gmt-radius-sm);
-  background: var(--gmt-surface);
-  color: var(--gmt-ice);
-  font-family: var(--gmt-font-mono);
-  font-size: var(--gmt-text-xs);
-  white-space: nowrap;
+  /* stylelint-disable-next-line property-no-unknown -- CSS Modules `composes` */
+  composes: gate from "./ledger-chip.module.css";
 }
 
 .gate[data-edge="end"] .chip {

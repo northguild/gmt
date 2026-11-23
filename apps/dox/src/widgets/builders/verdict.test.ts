@@ -26,7 +26,7 @@ describe("verdict", () => {
   });
 
   it("has no axe violations in any tone", async () => {
-    for (const tone of ["neutral", "good", "bad"] as const) {
+    for (const tone of ["neutral", "good", "bad", "sentinel"] as const) {
       const r = renderHtml(verdict({ tone, title: tone, detail: "detail" }));
       await expectNoAxeViolations(r.host);
     }

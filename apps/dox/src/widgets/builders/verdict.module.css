@@ -26,6 +26,10 @@
   &[data-tone="bad"] {
     --gmt-verdict-edge: var(--gmt-danger);
   }
+
+  &[data-tone="sentinel"] {
+    --gmt-verdict-edge: var(--gmt-signal-border);
+  }
 }
 
 .title {
@@ -42,7 +46,8 @@
     background: Canvas;
     color: CanvasText;
 
-    &[data-tone="bad"] {
+    &[data-tone="bad"],
+    &[data-tone="sentinel"] {
       border-style: double;
     }
   }

@@ -1,0 +1,45 @@
+---
+title: Operating Schedule Checker
+description: Paste an operating schedule as JSON and an interval, and see whether the library refuses it, finds it closed or finds it open, and which parts it refuses.
+industries: [core]
+---
+
+import ScheduleChecker from "../../../components/ScheduleChecker.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="operating schedules">
+
+<Fragment slot="keypoint">
+
+`[]` from `operatingIntervals` can mean closed or refused. A schedule that is closed all through the interval and a schedule the library refuses give the same empty list, so the list alone cannot tell you which one you have. `isValidOperatingSchedule` can.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+An operating schedule is a zone, weekly windows, closed dates and one-off overrides. [`isValidOperatingSchedule`](/reference/calendar/validate/isValidOperatingSchedule/) says whether the library takes one, and [`operatingIntervals`](/reference/calendar/hours/operatingIntervals/) returns the instants it is open inside an interval. The [operating hours guide](/guides/core-date-operations/operating-hours/) has the rules.
+
+Paste a schedule as JSON and type an interval, or pick a preset. The answer is one of three: refused, closed in the interval or open in it. When the library refuses the schedule, the page asks it again about one part at a time and lists the parts it refuses on their own.
+
+</Fragment>
+
+<ScheduleChecker fullbleed />
+
+<Fragment slot="after">
+
+**Refused is not closed.** A schedule with no open hours in the interval is a correct answer, and the tool says "closed" in plain words. A schedule the library refuses is a different thing: it shows `NO SIGNAL`, and the calls under it show `operatingIntervals` returning `[]` all the same.
+
+**Parts.** The page does not know the rules. It builds a schedule of one part from your own values and asks `isValidOperatingSchedule` about it. A part the library refuses is named by its path, such as `weekly["8"]`. Two overrides for one date are refused only together, so no single part is named for them.
+
+**Text.** The schedule is passed to the library exactly as typed, and the only reading the page does is `JSON.parse`. Text that is not JSON is the text box's own error, not a verdict, because the library never saw it.
+
+```ts
+isValidOperatingSchedule({ timeZone: "UTC", weekly: { 8: [] } }); // false
+operatingIntervals({ timeZone: "UTC", weekly: { 8: [] } }, { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" }); // []
+```
+
+**Reference:** [`isValidOperatingSchedule`](/reference/calendar/validate/isValidOperatingSchedule/), [`operatingIntervals`](/reference/calendar/hours/operatingIntervals/) and [`operatingTimeBetween`](/reference/calendar/hours/operatingTimeBetween/).
+
+</Fragment>
+
+</ToolLayout>
