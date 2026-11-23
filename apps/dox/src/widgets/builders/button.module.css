@@ -5,6 +5,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+
+  /* On a docs page the article's flow rule gives every sibling after the first a top margin. In a
+     row that stretches its items, the first button then stands taller than the rest; the row's gap
+     is the only space between them. */
+  & > * {
+    margin-block: 0;
+  }
 }
 
 .button {

@@ -137,7 +137,7 @@
 }
 
 .gmt-month-page th {
-  font-size: max(0.75rem, 1.2cqi);
+  font-size: var(--gmt-deck-text-sm);
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;

@@ -28,6 +28,7 @@ import { mountBuildStacks } from "./build-stack";
 import { createDeck, parseHash } from "./deck";
 import { mountDeckBlank } from "./deck-blank";
 import { mountDeckDialogs } from "./deck-dialogs";
+import { mountDeckGuide } from "./deck-guide";
 import { mountDeckFullscreen } from "./deck-fullscreen";
 import { mountDeckLock } from "./deck-lock";
 import { createDeckMoves } from "./deck-moves";
@@ -98,6 +99,10 @@ export function mountDeck(
     button: root.querySelector<HTMLButtonElement>("#deck-blank"),
     live,
     restored: () => textFor(deck.state.slide),
+  });
+  const guide = mountDeckGuide({
+    el: root.querySelector<HTMLElement>("[data-deck-guide]"),
+    signal,
   });
   const fullscreen = mountDeckFullscreen({
     root,
@@ -201,6 +206,7 @@ export function mountDeck(
       ...moves,
       overview: () => dialogs.open("overview"),
       help: () => dialogs.open("help"),
+      guide: guide.toggle,
       fullscreen: fullscreen.toggle,
       present: () => {
         blank.set(false);

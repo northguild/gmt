@@ -6,3 +6,7 @@
  */
 export const DECK_HEAD_SCRIPT =
   "document.documentElement.setAttribute('data-deck',location.hash.length>1?'wait-hash':'wait')";
+
+/** The presenter page's: it marks `html[data-presenter]`, so the page's title band can go from the first paint. */
+export const PRESENTER_HEAD_SCRIPT =
+  "document.documentElement.setAttribute('data-presenter','')";

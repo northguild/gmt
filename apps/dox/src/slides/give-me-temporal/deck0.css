@@ -54,13 +54,13 @@
  * 1.2 apart. The caption sits on its pane's lower edge, on an opaque plate with a full bevelled
  * border and a bottom accent edge, so the right third stays clear for the clock.
  */
-html[data-deck] .gmt-slide[data-layout="wall"] {
+:is(html[data-deck], [data-slide-stage]) .gmt-slide[data-layout="wall"] {
   /* Where `paneLayout` puts the panes: their top, and their bottom less the slide's own padding. */
   --gmt-wall-panes-top: 12cqi;
   --gmt-wall-panes-clear: 25.4cqi;
 }
 
-html[data-deck] .gmt-wall-figures {
+:is(html[data-deck], [data-slide-stage]) .gmt-wall-figures {
   position: absolute;
   inset-inline: var(--gmt-deck-pad-inline) var(--gmt-deck-clock-room);
   inset-block-start: var(--gmt-wall-panes-top);
@@ -69,12 +69,12 @@ html[data-deck] .gmt-wall-figures {
   pointer-events: none;
 }
 
-html[data-deck] .gmt-wall-figure {
+:is(html[data-deck], [data-slide-stage]) .gmt-wall-figure {
   position: relative;
   aspect-ratio: 16 / 10;
 }
 
-html[data-deck] .gmt-wall-figure img {
+:is(html[data-deck], [data-slide-stage]) .gmt-wall-figure img {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -83,7 +83,7 @@ html[data-deck] .gmt-wall-figure img {
   clip-path: inset(50%);
 }
 
-html[data-deck] .gmt-wall-caption {
+:is(html[data-deck], [data-slide-stage]) .gmt-wall-caption {
   position: absolute;
   inset-inline: 0;
   inset-block-end: 0;
@@ -96,7 +96,7 @@ html[data-deck] .gmt-wall-caption {
   border-radius: var(--gmt-bevel-md);
   corner-shape: bevel;
   box-shadow: inset 0 var(--gmt-under-edge) 0 var(--gmt-cyan);
-  font-size: max(0.75rem, 0.9cqi);
+  font-size: var(--gmt-deck-text-sm);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -104,7 +104,7 @@ html[data-deck] .gmt-wall-caption {
 /* On a mid-size stage the plate would cover most of a pane: the page's title stays for assistive
  * technology and the address and date remain in view. */
 @container (max-width: 1200px) {
-  html[data-deck] .gmt-wall-caption-name {
+  :is(html[data-deck], [data-slide-stage]) .gmt-wall-caption-name {
     position: absolute;
     inline-size: 1px;
     block-size: 1px;
@@ -116,7 +116,7 @@ html[data-deck] .gmt-wall-caption {
 
 /* On a stage too small to read a caption, it stays for assistive technology and the credits. */
 @container (max-width: 640px) {
-  html[data-deck] .gmt-wall-caption {
+  :is(html[data-deck], [data-slide-stage]) .gmt-wall-caption {
     inset-inline-end: auto;
     inline-size: 1px;
     block-size: 1px;
@@ -129,12 +129,16 @@ html[data-deck] .gmt-wall-caption {
 }
 
 /* Its title is set to fit one line in the two thirds, so it never runs down onto the panes. */
-html[data-deck] .gmt-slide[data-layout="wall"] .gmt-slide-title {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="wall"]
+  .gmt-slide-title {
   font-size: max(1.25rem, 3.1cqi);
 }
 
 /* The slide that hangs the wall keeps its text under the grid of panes, which ends 36.4 down. */
-html[data-deck] .gmt-slide[data-layout="wall"] .gmt-slide-body {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="wall"]
+  .gmt-slide-body {
   padding-block-start: var(--gmt-wall-panes-clear);
 }
 
@@ -151,26 +155,26 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
   gap: var(--gmt-space-3);
 }
 
-html[data-deck] .gmt-filing-grid {
+:is(html[data-deck], [data-slide-stage]) .gmt-filing-grid {
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: var(--gmt-deck-space-md);
 }
 
 /* Starlight's flow margins would add a gap on top of the grid's own. */
-html[data-deck] .gmt-filing-grid > *,
-html[data-deck] .gmt-familiar > * {
+:is(html[data-deck], [data-slide-stage]) .gmt-filing-grid > *,
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar > * {
   margin: 0;
 }
 
-html[data-deck] .gmt-lead {
+:is(html[data-deck], [data-slide-stage]) .gmt-lead {
   font-size: max(0.8rem, 1.7cqi);
   margin: 0;
 }
 
 /* `why-not-temporal`: three numbered points under a lead line, set a step under the body so
    the three fit above the controls with room to spare. */
-html[data-deck] .gmt-why {
+:is(html[data-deck], [data-slide-stage]) .gmt-why {
   margin-block: var(--gmt-deck-space-lg) 0;
   padding-inline-start: 1.4em;
   font-size: max(0.8rem, 1.85cqi);
@@ -182,7 +186,7 @@ html[data-deck] .gmt-why {
 
 /* ---- Familiar names, the QR codes and the quote's parts ---- */
 
-html[data-deck] .gmt-familiar {
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar {
   display: grid;
   gap: var(--gmt-deck-space-xs);
   min-inline-size: 0;
@@ -205,13 +209,15 @@ html[data-deck] .gmt-familiar {
   margin: 0;
 }
 
-html[data-deck] .gmt-familiar-shapes dt {
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar-shapes dt {
   margin: 0;
   color: var(--gmt-ice-dim);
 }
 
 /* Three pairs share one slide, so its title is set to one line in the two thirds. */
-html[data-deck] .gmt-slide[data-layout="familiar"] .gmt-slide-title {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="familiar"]
+  .gmt-slide-title {
   font-size: max(1.25rem, 3.1cqi);
   margin-block-end: var(--gmt-deck-space-lg);
 }
@@ -233,7 +239,7 @@ html[data-deck] .gmt-slide[data-layout="familiar"] .gmt-slide-title {
 }
 
 /* The GMT call and its value share one row, so three pairs fit one slide. */
-html[data-deck] .gmt-familiar-run {
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar-run {
   display: flex;
   flex-wrap: wrap;
   gap: var(--gmt-deck-space-2xs) 2ch;
@@ -245,11 +251,11 @@ html[data-deck] .gmt-familiar-run {
 
 /* The result sits straight after the code, its label only as wide as its word, so call and value
    share the row. */
-html[data-deck] .gmt-familiar-run .gmt-run-outcome {
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar-run .gmt-run-outcome {
   padding-inline-start: 0;
 }
 
-html[data-deck] .gmt-familiar-run .gmt-run-result {
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar-run .gmt-run-result {
   grid-template-columns: max-content minmax(0, auto);
 }
 
@@ -267,7 +273,7 @@ html[data-deck] .gmt-familiar-run .gmt-run-result {
 }
 
 /* The GitHub name, a line of its own under the codes: the mark and the name, the captions' size. */
-html[data-deck] .gmt-qr-github {
+:is(html[data-deck], [data-slide-stage]) .gmt-qr-github {
   font-size: var(--gmt-deck-text-sm);
 
   & a {
@@ -284,7 +290,7 @@ html[data-deck] .gmt-qr-github {
 }
 
 /* The closing line under the GitHub name: the captions' size, in the dim ice of the deck's quiet text. */
-html[data-deck] .gmt-qr-hire {
+:is(html[data-deck], [data-slide-stage]) .gmt-qr-hire {
   font-size: var(--gmt-deck-text-sm);
   color: var(--gmt-ice-dim);
 }

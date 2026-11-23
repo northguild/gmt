@@ -3,25 +3,28 @@
 
 .root {
   display: grid;
-  gap: var(--gmt-space-4);
-  padding: var(--gmt-space-4);
+  gap: var(--gmt-space-3);
+  padding: var(--gmt-space-3);
   background: var(--gmt-void);
   color: var(--gmt-ice);
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "current"
-    "notes"
     "next"
+    "notes"
     "bar"
     "check";
 
+  /* One screen: the two previews and the notes above, the clock and the readiness list across the
+     bottom. The notes and the list scroll inside their panels, the page never does. */
   @media (width >= 64rem) {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    grid-template-areas:
-      "current notes"
-      "next notes"
-      "check bar";
-    align-items: start;
+    box-sizing: border-box;
+    block-size: calc(100dvh - var(--sl-nav-height));
+    grid-template:
+      "current next" auto
+      "current notes" minmax(0, 1fr)
+      "bar check" auto
+      / minmax(0, 3fr) minmax(0, 2fr);
   }
 }
 
@@ -29,26 +32,83 @@
 .panel {
   box-sizing: border-box;
   min-inline-size: 0;
+
+  /* The article's flow rule gives every sibling after the first a top margin; a grid cell has none. */
+  margin: 0;
+  padding: var(--gmt-space-3);
 }
 
 .current {
   grid-area: current;
-}
 
-.upNext {
-  grid-area: next;
+  /* Where the columns sit side by side the position line and the nav row share one line under the
+     preview, so the preview gets the height. */
+  @media (width >= 64rem) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: center;
+
+    & > .heading,
+    & > .stageBox {
+      grid-column: 1 / -1;
+    }
+
+    & > .position,
+    & > .nav {
+      margin-block: var(--gmt-space-3) 0;
+    }
+  }
 }
 
 .notes {
   grid-area: notes;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-block-size: 0;
 }
 
 .bar {
   grid-area: bar;
+
+  /* The four readouts take a line, the plan and the status sit beside the clock's buttons. */
+  @media (width >= 64rem) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    column-gap: var(--gmt-space-4);
+
+    & > .heading,
+    & > .readouts {
+      grid-column: 1 / -1;
+    }
+
+    & > .nav {
+      grid-column: 2;
+      grid-row: 3 / span 2;
+      align-self: center;
+      margin-block: var(--gmt-space-2) 0;
+    }
+
+    & > .plan,
+    & > .status {
+      grid-column: 1;
+      margin-block: var(--gmt-space-2) 0;
+    }
+  }
 }
 
 .check {
   grid-area: check;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-block-size: 0;
+
+  /* Side by side, the clock sets the height of the bottom row and the list scrolls inside what it
+     is given, so a longer list never grows the row. */
+  @media (width >= 64rem) {
+    contain: size;
+  }
 }
 
 .heading {
@@ -58,41 +118,75 @@
   color: var(--gmt-ice-dim);
 }
 
-/* The slide at stage proportions: 16:9, type in cqi so it scales with the frame. */
+/* A slide at stage proportions. The preview inside is laid out at the room's 1920x1080 and
+   scaled to this width (`.gmt-stage-fit`, components/slides/slides.css), so it is the stage as
+   the room sees it. */
 .frame {
-  container-type: inline-size;
-  inline-size: 100%;
-}
-
-.stage {
   box-sizing: border-box;
   position: relative;
+  margin: 0;
+  container-type: inline-size;
+  inline-size: 100%;
   aspect-ratio: 16 / 9;
-  overflow: hidden;
+  overflow: clip;
   background: var(--gmt-void);
   border: 1px solid var(--gmt-hairline);
-  padding-block: var(--gmt-deck-pad-block);
-  padding-inline: var(--gmt-deck-pad-inline);
-  font-size: max(0.75rem, 2.6cqi);
-  line-height: 1.4;
 
-  & > section {
+  & > [data-slide-stage] {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    container-type: size;
+    overflow: clip;
+    background: var(--gmt-void);
+  }
+
+  /* The end of the deck: no slide to show, so the frame holds a plate. */
+  & > [data-plate] {
     margin: 0;
-    padding: 0;
-    border: 0;
+    block-size: 100%;
   }
 
-  & h2 {
-    margin-block: 0 var(--gmt-deck-space-2xl);
-    font-family: var(--gmt-font-display);
-    font-size: max(0.75rem, 4.6cqi);
-    line-height: 1.15;
-    color: var(--gmt-ice-bright);
-  }
+  /* A stand-in for a piece a preview cannot draw: the piece's own box, named. */
+  & [data-plate] {
+    position: relative;
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--gmt-border);
+    border-radius: var(--gmt-bevel-md);
+    corner-shape: bevel;
+    background: var(--gmt-surface-widget);
+    color: var(--gmt-ice-dim);
+    font-size: 1.5rem;
+    text-align: center;
 
-  & [data-reached="false"] {
-    visibility: hidden;
+    & > span {
+      grid-area: 1 / 1;
+    }
   }
+}
+
+/* The room the preview may use. Side by side, the box takes the height the panel has left and the
+   preview is the largest 16:9 that fits it, so the one screen never needs a scroll. */
+.stageBox {
+  margin: 0;
+
+  @media (width >= 64rem) {
+    container-type: size;
+    align-self: stretch;
+    min-block-size: 0;
+  }
+}
+
+.currentFrame {
+  @media (width >= 64rem) {
+    inline-size: min(100cqi, 100cqb * 16 / 9);
+  }
+}
+
+.upNext {
+  grid-area: next;
 }
 
 .position {
@@ -105,19 +199,21 @@
   margin-block-start: var(--gmt-space-3);
 }
 
-.nextTitle {
-  margin-block: 0;
-  font-family: var(--gmt-font-display);
-  font-size: var(--gmt-text-lg);
-  color: var(--gmt-ice-bright);
-}
-
-.nextBuild {
-  margin-block: var(--gmt-space-2) 0;
+.nextLabel {
+  margin-block: 0 var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
   color: var(--gmt-ice);
+
+  /* One line, whatever the next slide is called: a wrapped title would move the panel under it. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .notesBody {
+  min-block-size: 0;
+  margin: 0;
+  overflow-y: auto;
   font-size: var(--gmt-text-lg);
   line-height: 1.6;
   color: var(--gmt-ice);
@@ -129,6 +225,7 @@
 
 /* The bar: four cells pinned to opposite edges. Each readout reserves its widest sample. */
 .readouts {
+  margin: 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -136,7 +233,9 @@
 }
 
 .cell {
+  margin: 0;
   display: grid;
+  align-content: start;
   gap: var(--gmt-space-1);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -165,13 +264,18 @@
 
 .status {
   margin-block: var(--gmt-space-3) 0;
-  min-block-size: 1.5em;
+
+  /* Three lines, held: a message that wraps would grow the bar and move the panels above it. */
+  block-size: 4.5em;
+  overflow-y: auto;
   font-size: var(--gmt-text-sm);
   color: var(--gmt-ice);
 }
 
 /* Readiness: one bevelled row each, the result in words. */
 .rows {
+  min-block-size: 0;
+  overflow-y: auto;
   display: grid;
   gap: var(--gmt-space-2);
   margin: 0;
@@ -207,4 +311,12 @@
   .row {
     border-color: CanvasText;
   }
+}
+
+/* A panel that scrolls is a Tab stop, so the keyboard can reach what overflows. */
+.notesBody:focus-visible,
+.rows:focus-visible,
+.status:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 2px;
 }

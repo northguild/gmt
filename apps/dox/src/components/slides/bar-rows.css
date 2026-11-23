@@ -93,3 +93,7 @@
   font-size: max(0.75rem, 0.8em);
   color: var(--gmt-ice-dim);
 }
+
+:is(html[data-deck], [data-slide-stage]) .gmt-bars-note {
+  font-size: var(--gmt-deck-text-sm);
+}

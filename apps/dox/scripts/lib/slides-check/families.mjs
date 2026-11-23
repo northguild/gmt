@@ -9,8 +9,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { DECKS_DIR } from "../deck-folders.mjs";
 import { checkArticle } from "./article-check.mjs";
+import { checkPresenter } from "./presenter-check.mjs";
 import { checkSpace } from "./space-check.mjs";
 import { checkStage } from "./stage-check.mjs";
+import { checkTextFloor } from "./text-floor.mjs";
 
 /**
  * A deck's own browser check, `src/slides/<slug>/deck-check.mjs`, when it has one: what only that
@@ -37,5 +39,7 @@ export const FAMILIES = [
   { id: "stage", sizes: "each", run: checkStage },
   { id: "article", sizes: "each", run: checkArticle },
   { id: "space", sizes: "first", run: checkSpace },
+  { id: "presenter", sizes: "first", run: checkPresenter },
+  { id: "text-floor", sizes: "first", run: checkTextFloor },
   { id: "deck", sizes: "first", run: checkDeck },
 ];

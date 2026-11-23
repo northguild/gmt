@@ -24,7 +24,7 @@
 }
 
 /* On the stage the type is set in container units, and the plate is opaque. */
-html[data-deck] .gmt-deck-table {
+:is(html[data-deck], [data-slide-stage]) .gmt-deck-table {
   inline-size: 100%;
   min-inline-size: 0;
   font-size: max(0.75rem, 1.3cqi);
@@ -33,13 +33,13 @@ html[data-deck] .gmt-deck-table {
   border-collapse: collapse;
 }
 
-html[data-deck] .gmt-deck-table th,
-html[data-deck] .gmt-deck-table td {
+:is(html[data-deck], [data-slide-stage]) .gmt-deck-table th,
+:is(html[data-deck], [data-slide-stage]) .gmt-deck-table td {
   padding: var(--gmt-deck-space-xs) var(--gmt-deck-space-md);
 }
 
 /* The caption lines up with the cells, clear of the plate's bevelled corner. */
-html[data-deck] .gmt-deck-table caption {
+:is(html[data-deck], [data-slide-stage]) .gmt-deck-table caption {
   padding-inline: var(--gmt-deck-space-md);
 }
 
@@ -73,6 +73,6 @@ html[data-deck] .gmt-deck-table caption {
 }
 
 /* A code table sets a little smaller so its rows fit the left two thirds. */
-html[data-deck] .gmt-deck-table[data-layout="code"] {
+:is(html[data-deck], [data-slide-stage]) .gmt-deck-table[data-layout="code"] {
   font-size: var(--gmt-deck-text-sm);
 }

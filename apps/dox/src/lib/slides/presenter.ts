@@ -103,7 +103,7 @@ export function mountPresenter(
     begun: () => current().slide > 0 || current().build > 0,
     say,
   });
-  const showSlide = createSlideView(parts, els);
+  const showSlide = createSlideView(parts, els, signal);
 
   const render = (): void => {
     const { slide, build } = current();
@@ -239,6 +239,7 @@ export function mountPresenter(
       overview: () => dialogs.open("overview"),
       help: () => dialogs.open("help"),
       blank: () => step("blank"),
+      guide: deckOnly,
       fullscreen: deckOnly,
       present: deckOnly,
       presenter: () => say("This is the presenter view"),

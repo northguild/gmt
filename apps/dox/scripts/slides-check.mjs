@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Slide-deck gate: the deck shell, measured on the built site (`context/dox/specs/dox-g12`).
+ * Slide-deck gate: the deck shell, measured on the built site (`context/dox/built/slides.md`, Gates).
  *
  * Each deck route under `/slides/` is loaded with `?globe=canvas2d` (so CI needs no GPU) at
  * 1280x720, 1920x1080 and 1024x768, and at two phones held sideways, 844x390 and 667x375

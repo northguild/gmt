@@ -12,7 +12,7 @@ import { WALL_PAGES } from "./wall";
  */
 
 /**
- * Slide ids in the outline's order (`context/dox/specs/dox-g12/index.md`). The order also holds
+ * Slide ids in the order of the talk's outline (Deck 0, `context/dox/built/slides.md`). The order also holds
  * that `qa` comes right before `thanks`, which is the last slide of the talk, and the spares after.
  */
 const OUTLINE = [

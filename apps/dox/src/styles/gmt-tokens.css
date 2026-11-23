@@ -381,8 +381,11 @@
    * the window. A custom property keeps its `cqi` as written, so each resolves against the stage
    * that uses it: the deck's, or the presenter view's preview of the same slide. */
 
-  /* The three small sizes of a panel's text on the stage. */
-  --gmt-deck-text-sm: max(0.75rem, 1.1cqi);
+  /* The three small sizes of a panel's text on the stage. `sm` is the floor for text the room
+     reads (1.25cqi, about 2 m on a 60-inch TV); `fine` is for fine print only, marked
+     `data-fine-print` where it is rendered. The text-floor gate holds both numbers. */
+  --gmt-deck-text-sm: max(0.75rem, 1.25cqi);
+  --gmt-deck-text-fine: max(0.75rem, 1cqi);
   --gmt-deck-text-md: max(0.75rem, 1.4cqi);
   --gmt-deck-text-lg: max(0.75rem, 1.6cqi);
 
@@ -400,6 +403,14 @@
   --gmt-deck-pad-block: 5cqi;
   --gmt-deck-pad-inline: 6cqi;
   --gmt-deck-clock-room: 36cqi;
+
+  /* What a TV may crop (EBU R95): the guide draws these two insets, and the text-floor gate holds
+     the text to the title-safe one (5% of each dimension). */
+  --gmt-deck-safe-action: 3.5%;
+  --gmt-deck-safe-title: 5%;
+
+  /* The title-safe inset as block padding, for a dense slide that cannot take the full pad. */
+  --gmt-deck-pad-safe: 5cqb;
 
   /* ---- Type scale ----
    * Consolidates the font-sizes widget sheets had been inventing independently

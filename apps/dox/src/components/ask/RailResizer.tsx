@@ -53,6 +53,14 @@ function storeWidth(width: number | undefined): void {
  * replaces this as soon as the page mounts. */
 const SERVER_VALUE = { min: 352, now: 352, max: 704 };
 
+/** How much a transform scales `el` as drawn (a slide's fit box): 1 where nothing scales it. The
+ * layout width is rounded to a pixel, so a drawn ratio within 1% of 1 is no scaling. */
+const drawnScale = (el: HTMLElement) => {
+  const ratio =
+    el.offsetWidth > 0 ? el.getBoundingClientRect().width / el.offsetWidth : 1;
+  return Math.abs(ratio - 1) < 0.01 ? 1 : ratio;
+};
+
 interface Measured {
   width: number;
   bounds: RailBounds;
@@ -82,7 +90,11 @@ export function RailResizer({
   );
   const handleRef = useRef<HTMLDivElement>(null);
   const [measured, setMeasured] = useState<Measured | null>(null);
-  const drag = useRef<{ startX: number; startWidth: number } | null>(null);
+  const drag = useRef<{
+    startX: number;
+    startWidth: number;
+    scale: number;
+  } | null>(null);
   const frame = useRef(0);
   /** The width the last pointer move asked for, until its frame is drawn. */
   const pending = useRef<number | undefined>(undefined);
@@ -96,13 +108,15 @@ export function RailResizer({
   const measure = useCallback((): Measured | null => {
     const found = elements();
     if (!found) return null;
-    const bodyWidth = found.body.getBoundingClientRect().width;
+    // Layout pixels, the ones the width property is set in: a scaled host draws them larger or smaller.
+    const scale = drawnScale(found.body);
+    const bodyWidth = found.body.getBoundingClientRect().width / scale;
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     // The CSS states the narrowest width (`--gmt-hive-rail-min`); the computed value is in pixels.
     const minWidth =
       parseFloat(getComputedStyle(found.rail).minInlineSize) || 0;
     return {
-      width: found.rail.getBoundingClientRect().width,
+      width: found.rail.getBoundingClientRect().width / scale,
       bounds: railBounds({ minWidth, bodyWidth, rem }),
       bodyWidth,
     };
@@ -149,7 +163,12 @@ export function RailResizer({
     if (!current) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { startX: event.clientX, startWidth: current.width };
+    const body = elements()?.body;
+    drag.current = {
+      startX: event.clientX,
+      startWidth: current.width,
+      scale: body ? drawnScale(body) : 1,
+    };
     elements()?.body.setAttribute("data-resizing", "");
     event.currentTarget.setAttribute("data-resizing", "");
   };
@@ -158,7 +177,8 @@ export function RailResizer({
     const start = drag.current;
     if (!start) return;
     // The rail is on the right: moving the pointer left widens it.
-    const width = start.startWidth + (start.startX - event.clientX);
+    const width =
+      start.startWidth + (start.startX - event.clientX) / start.scale;
     pending.current = width;
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {

@@ -165,12 +165,12 @@ afterEach(() => {
 });
 
 describe("mountPresenter", () => {
-  it("shows the first slide, the next slide's title and first build, and the notes", async () => {
+  it("shows the first slide, what Next shows and the notes", async () => {
     await start();
     expect(screen.getByText("Slide 1 of 3: First")).toBeInTheDocument();
     expect(shown("Greet the room.")).toBeInTheDocument();
+    expect(screen.getByText("Next: slide 2 of 3, Second")).toBeInTheDocument();
     expect(shown("Second")).toBeInTheDocument();
-    expect(shown("Build one")).toBeInTheDocument();
   });
 
   it("holds the first values until the clock starts", async () => {
@@ -193,20 +193,23 @@ describe("mountPresenter", () => {
       screen.getByText("Slide 2 of 3: Second, build 1 of 2"),
     ).toBeInTheDocument();
     expect(shown("Explain the second slide.")).toBeInTheDocument();
-    expect(shown("Third")).toBeInTheDocument();
+    expect(screen.getByText("Next: build 2 of 2")).toBeInTheDocument();
   });
 
   it("hides the builds not reached yet from the slide copy", async () => {
     const { user } = await start();
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByRole("button", { name: "Next" }));
-    const stage = shown("Build one");
-    // oxlint-disable-next-line testing-library/no-node-access, dox-test/no-class-query
-    expect(stage.closest<HTMLElement>("[data-build]")?.inert).toBe(false);
-    // oxlint-disable-next-line testing-library/no-node-access, dox-test/no-class-query
-    expect(shown("Build two").closest<HTMLElement>("[data-build]")?.inert).toBe(
-      true,
+    // The next preview holds the same slide at its next build, so look in the current slide's panel.
+    const current = within(
+      screen.getByRole("region", { name: "Current slide" }),
     );
+    /* oxlint-disable testing-library/no-node-access, dox-test/no-class-query -- a build's state is on its wrapper, which has no role */
+    const build = (text: string) =>
+      current.getByText(text).closest<HTMLElement>("[data-build]");
+    expect(build("Build one")?.inert).toBe(false);
+    expect(build("Build two")?.inert).toBe(true);
+    /* oxlint-enable testing-library/no-node-access, dox-test/no-class-query */
   });
 
   it("renders the deck's state, and posts a step instead of moving on its own", async () => {

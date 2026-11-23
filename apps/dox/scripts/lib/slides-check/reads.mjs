@@ -13,6 +13,24 @@ export const findingAt =
   (rule, message, target = "page") =>
     report(browserName, size.width, pagePath, rule, target, message);
 
+/**
+ * Whether `el` draws: no ancestor up to `slide` is `display: none`, `visibility: hidden` or fully
+ * transparent, and it has a box. It runs in the page, so a check passes `String(visible)` in and rebuilds
+ * it there with `new Function(`return (${source})`)()`.
+ */
+export const visible = (el, slide) => {
+  for (let e = el; e && e !== slide.parentElement; e = e.parentElement) {
+    const cs = getComputedStyle(e);
+    if (
+      cs.display === "none" ||
+      cs.visibility === "hidden" ||
+      cs.opacity === "0"
+    )
+      return false;
+  }
+  return el.getClientRects().length > 0;
+};
+
 /** Waits out the slide fade, so a read sees the settled stage. */
 export const settle = async (page) => {
   await frames(page);

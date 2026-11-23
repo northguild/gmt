@@ -56,6 +56,16 @@
   white-space: nowrap;
 }
 
+/* On the stage a table's code and its column heads follow the cell (`deck-table.css`), so they
+   scale with the stage instead of holding the site's 12 px. */
+:is(html[data-deck], [data-slide-stage])
+  .gmt-deck-table
+  :is(th, td)
+  :is(code, .gmt-cw),
+:is(html[data-deck], [data-slide-stage]) .gmt-deck-table th {
+  font-size: inherit;
+}
+
 /* thead background handled by gmt-glass.css (translucent + backdrop-filter) */
 .sl-markdown-content th {
   color: var(--gmt-cyan-ink);

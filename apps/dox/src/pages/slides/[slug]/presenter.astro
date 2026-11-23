@@ -3,8 +3,10 @@
 // while the deck runs on the projector (`lib/slides/presenter.ts`). Same slides as the deck,
 // rendered as a hidden source the mount copies from. `noindex`, out of the search index, and out
 // of the sitemap (the filter in `astro.config.mjs` drops every `/presenter/` page). The deck
-// opens it with `T`.
+// opens it with `T`. The head script marks `html[data-presenter]`, which takes the page's title
+// band away (`components/slides/slides.css`); the site header stays.
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { PRESENTER_HEAD_SCRIPT } from "~/lib/slides/head-script";
 import { KEY_TABLE } from "~/lib/slides/keys";
 import { withBase } from "~/lib/site";
 import { deckRoutes, type DeckRoute } from "~/slides/deck-pages";
@@ -24,7 +26,10 @@ const slug = deck.slug;
     description: `The presenter's window for the talk ${deck.title}: notes, the next slide, the clock and a readiness check.`,
     template: "splash",
     pagefind: false,
-    head: [{ tag: "meta", attrs: { name: "robots", content: "noindex" } }],
+    head: [
+      { tag: "meta", attrs: { name: "robots", content: "noindex" } },
+      { tag: "script", content: PRESENTER_HEAD_SCRIPT },
+    ],
   }}
 >
   <Deck presenter />

@@ -33,7 +33,9 @@ describe("the clock's room on a slide", () => {
       const selectors = selectorsSetting(value);
       expect(selectors.length).toBeGreaterThan(0);
       for (const selector of selectors) {
-        expect(selector).toMatch(/^html\[data-deck\] \.\w+-deck \.\w+-slide\b/);
+        expect(selector).toMatch(
+          /^(html\[data-deck\] \.\w+-deck|:is\(html\[data-deck\] \.\w+-deck, \[data-slide-stage\]\))\s+\.\w+-slide\b/,
+        );
         expect(selector).not.toContain("data-space");
       }
     },
