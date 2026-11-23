@@ -15,6 +15,8 @@
 export type ScheduleProbe =
   /** The whole value is accepted. */
   | { kind: "accepted" }
+  /** The value is not an object (`null`, a number, a string or a list), so it has no parts. */
+  | { kind: "not-an-object" }
   /** The zone is refused. Nothing else is probed without a zone. */
   | { kind: "zone-refused" }
   /** One or more parts are refused on their own, as JSON paths such as `weekly["8"]`. */
@@ -80,7 +82,7 @@ export function probeScheduleParts(
   isValid: Validator,
 ): ScheduleProbe {
   if (isValid(value)) return { kind: "accepted" };
-  if (!isPlainObject(value)) return { kind: "refused-together" };
+  if (!isPlainObject(value)) return { kind: "not-an-object" };
   const zone = value["timeZone"];
   if (!isValid({ timeZone: zone, weekly: {} })) return { kind: "zone-refused" };
   const parts = [

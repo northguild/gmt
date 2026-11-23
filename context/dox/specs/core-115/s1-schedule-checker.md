@@ -32,7 +32,8 @@ type ScheduleProbe =
   | { kind: "accepted" }
   | { kind: "zone-refused" }                      // nothing else is probed without a zone
   | { kind: "parts-refused"; parts: readonly string[] } // JSON paths, e.g. 'weekly["8"]', 'holidays[2]'
-  | { kind: "refused-together" };                 // no part is refused alone
+  | { kind: "refused-together" }                 // no part is refused alone
+  | { kind: "not-an-object" };                    // null, a number, a string or a list: no parts to read
 ```
 
 This is the PTP tool's rule, "ask the library again"
@@ -41,7 +42,9 @@ probe is `isValid` on a schedule of one part, built from the reader's own values
 no rule of its own.
 
 1. `isValid(value)` is true: `accepted`.
-2. `value` is `null` or not an object, so no part can be read: `refused-together`.
+2. `value` is `null` or not an object, so no part can be read: `not-an-object`. It has its own
+   sentence, "A schedule is an object with a `timeZone` and a `weekly`.", shown by `refusedLines` in
+   the page and in the chat tool.
 3. `isValid({ timeZone: value.timeZone, weekly: {} })` is false: `zone-refused`. (`weekly: {}` is
    a valid schedule that is closed every day; decision 1 of the library spec.)
 4. For `weekly`, when it is not a plain object, probe `{ timeZone, weekly: value.weekly }`, and a

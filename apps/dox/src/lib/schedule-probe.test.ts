@@ -126,7 +126,7 @@ describe("the other kinds", () => {
     expect(probe(JSON.parse(text))).toEqual({ kind: "refused-together" });
   });
 
-  it.each([null, 7, "text", []])("cannot read parts of %j", (value) => {
-    expect(probe(value)).toEqual({ kind: "refused-together" });
+  it.each([null, 7, "text", []])("has no parts to read in %j", (value) => {
+    expect(probe(value)).toEqual({ kind: "not-an-object" });
   });
 });

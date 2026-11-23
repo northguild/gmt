@@ -17,6 +17,7 @@ import {
   verdictOf,
   type CheckerState,
 } from "./schedule-checker";
+import { probeScheduleParts } from "./schedule-probe";
 
 let lib: HoursLib;
 beforeAll(async () => {
@@ -120,6 +121,21 @@ describe("every preset against the real library", () => {
     if (together.kind !== "refused") throw new Error("expected refused");
     expect(refusedLines(together.probe).join(" ")).toMatch(/for example/);
   });
+});
+
+describe("a value that is not an object", () => {
+  it.each([null, 7, "text", []])(
+    "says what a schedule is for %j, and never that every part is accepted",
+    (value) => {
+      const text = refusedLines(
+        probeScheduleParts(value, lib.isValidOperatingSchedule),
+      ).join(" ");
+      expect(text).toBe(
+        "A schedule is an object with a `timeZone` and a `weekly`.",
+      );
+      expect(text).not.toMatch(/accepted on its own/);
+    },
+  );
 });
 
 describe("state", () => {

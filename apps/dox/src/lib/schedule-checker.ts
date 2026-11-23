@@ -59,6 +59,8 @@ export function refusedLines(probe: ScheduleProbe): string[] {
   switch (probe.kind) {
     case "accepted":
       return [];
+    case "not-an-object":
+      return ["A schedule is an object with a `timeZone` and a `weekly`."];
     case "zone-refused":
       return [
         "The zone is refused. The other parts are checked once it is accepted.",
