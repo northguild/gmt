@@ -65,9 +65,8 @@ export type { ScheduleCheckerArgs } from "./schedule-checker";
 const WIDGET_NAME = "operating-schedule-checker";
 const CALLS_LABEL = "Calls made";
 const PARTS_LABEL = "Parts the library refuses on their own";
-/** The paste box is at least this many rows high, and at most `MAX_ROWS`. */
-const MIN_ROWS = 6;
-const MAX_ROWS = 16;
+/** The paste box is always this many rows high; a longer schedule scrolls inside it, so no preset or keystroke moves the page. */
+const SCHEDULE_ROWS = 10;
 /** The most calls a reading makes, and the widest line one prints, so the frame never resizes. */
 const CALL_LINES = 4;
 const CALL_SAMPLE = "x".repeat(240);
@@ -141,11 +140,6 @@ function callsOf(facts: CheckerFacts | null): SafeHtml {
   });
 }
 
-/** The paste box is as high as its lines, within bounds. */
-function rowsFor(text: string): number {
-  return Math.min(MAX_ROWS, Math.max(MIN_ROWS, text.split("\n").length));
-}
-
 /** The text area's own error line. It holds its place, so the text appearing moves nothing. */
 function errorHint(id: string): { id: string; html: SafeHtml } {
   return { id, html: hold(hint(id, "").html, [NOT_JSON_TEXT]) };
@@ -190,7 +184,7 @@ export function renderScheduleCheckerTemplate(
         textArea({
           id: cid,
           value: state.schedule,
-          rows: rowsFor(state.schedule),
+          rows: SCHEDULE_ROWS,
           maxLength: SCHEDULE_TEXT_MAX,
           describedBy,
         }),
@@ -291,7 +285,6 @@ function setupWidget(
 
   function apply(state: CheckerState): void {
     scheduleEl.value = state.schedule;
-    scheduleEl.rows = rowsFor(state.schedule);
     startEl.value = state.start;
     endEl.value = state.end;
   }
@@ -300,7 +293,6 @@ function setupWidget(
     "input",
     (e) => {
       if (e.target === scheduleEl) {
-        scheduleEl.rows = rowsFor(scheduleEl.value);
         syncPreset();
         render();
       } else if (e.target === startEl || e.target === endEl) {

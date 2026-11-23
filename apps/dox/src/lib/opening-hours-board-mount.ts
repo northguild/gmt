@@ -9,8 +9,8 @@
  *
  * `mount` draws from real calls (`boardFacts`) and computes no value. The two handles are the
  * typed From and To boxes' drag equivalent: they write the box and the box moves them. No timer,
- * observer or live clock; the gate chips are placed against the track's width when a reading is
- * drawn. The markup is in `opening-hours-board-template.ts`, the editor's in
+ * live clock; the gate chips and the axis are fitted to the track's width when a reading is
+ * drawn, and again when the track's width changes (`onWidthChange`). The markup is in `opening-hours-board-template.ts`, the editor's in
  * `opening-hours-editor-mount.ts`.
  */
 import { defineElements } from "~/widgets/define";
@@ -28,7 +28,8 @@ import {
   type LedgerCanvas,
 } from "./dwell-ledger";
 import { loadHoursLib, type HoursLib } from "./hours-lib";
-import { placeGate } from "./ledger-gate";
+import { onWidthChange, thinTickLabels } from "./label-fit";
+import { layoutGates, placeGate } from "./ledger-gate";
 import {
   BOARD_SNAP_MINUTES,
   barsOf,
@@ -79,6 +80,8 @@ interface Controller {
   render(): void;
   syncPreset(): void;
   note(text: string): void;
+  /** Stops watching the track's width. */
+  dispose(): void;
 }
 
 const NO_DAYS = { toPercent: () => 0 };
@@ -125,28 +128,30 @@ function setupWidget(
       [fromHandle, fromEl.value],
       [toHandle, toEl.value],
     ] as const;
-    for (const [h, text] of pairs) {
-      const ms = week === null ? Number.NaN : toEpochMs(text);
-      if (week !== null) {
-        const spanMs = Math.max(1, week.endMs - week.startMs);
-        const step = ((BOARD_SNAP_MINUTES * 60000) / spanMs) * HANDLE_MAX;
+    if (week !== null) {
+      const spanMs = Math.max(1, week.endMs - week.startMs);
+      const step = ((BOARD_SNAP_MINUTES * 60000) / spanMs) * HANDLE_MAX;
+      for (const [h] of pairs) {
         h.setAttribute("step", String(step));
         h.setAttribute("large-step", String(step * 4));
       }
+      const at = (text: string, empty: number): number => {
+        const pct = week.toPercent(toEpochMs(text));
+        return Number.isNaN(pct) ? empty : pct * (HANDLE_MAX / 100);
+      };
+      // Widen the end first, so the start is never held back by the old end.
+      if (held !== toHandle) toHandle.value = HANDLE_MAX;
+      if (held !== fromHandle) fromHandle.value = at(fromEl.value, 0);
+      if (held !== toHandle) toHandle.value = at(toEl.value, HANDLE_MAX);
+    }
+    // After the values: a handle whose value moves rewrites its own `aria-valuetext` as a number.
+    for (const [h, text] of pairs) {
+      const ms = week === null ? Number.NaN : toEpochMs(text);
       h.setAttribute(
         "aria-valuetext",
         Number.isNaN(ms) ? "not a time in this week" : formatLocal(ms, zone),
       );
     }
-    if (week === null) return;
-    const at = (text: string, empty: number): number => {
-      const pct = week.toPercent(toEpochMs(text));
-      return Number.isNaN(pct) ? empty : pct * (HANDLE_MAX / 100);
-    };
-    // Widen the end first, so the start is never held back by the old end.
-    if (held !== toHandle) toHandle.value = HANDLE_MAX;
-    if (held !== fromHandle) fromHandle.value = at(fromEl.value, 0);
-    if (held !== toHandle) toHandle.value = at(toEl.value, HANDLE_MAX);
   }
 
   function drawLane(
@@ -159,10 +164,13 @@ function setupWidget(
       canvas === null ? [] : dayCells(canvas, zone, Number.NaN, Number.NaN);
     setHtml(el("lane-cells"), dayColumns(cells, canvas ?? NO_DAYS, {}));
     el("lane-label").textContent = canvas === null ? "" : zone;
+    const axis = el("axis");
     setHtml(
-      el("axis"),
+      axis,
       axisTicks(canvas === null ? ["", "", ""] : axisLabels(canvas, zone)),
     );
+    // On a narrow track the three times would touch: drop the ones that do.
+    thinTickLabels(axis, "span");
     const bars =
       canvas === null || facts.kind === "refused"
         ? []
@@ -193,6 +201,8 @@ function setupWidget(
           ? reading.deadline.instant
           : null,
     };
+    // Hide all first, so a gate left over from the last draw never takes a chip row.
+    for (const g of GATES) el(`gate-${g.key}`).hidden = true;
     for (const g of GATES) {
       const gate = el(`gate-${g.key}`);
       const at =
@@ -209,6 +219,7 @@ function setupWidget(
           `${g.label} ${at.text}`,
         );
     }
+    layoutGates(trackEl);
     drawHandles(zone, held);
   }
 
@@ -295,7 +306,12 @@ function setupWidget(
     { signal },
   );
 
+  /* The chips and the axis are fitted to the track's measured width, so a width change
+     (rotation, the chat rail opening) draws again. */
+  const stopWidth = onWidthChange(trackEl, () => render());
+
   return {
+    dispose: stopWidth,
     readState,
     apply,
     render: () => {
@@ -330,7 +346,7 @@ export const mountOpeningHoursBoard: MountFn<BoardArgs> = async (
   widgetCtl.render();
 
   return onceDestroy(
-    () => {},
+    () => widgetCtl.dispose(),
     () => {
       const state = widgetCtl.readState();
       return permalinkOf(

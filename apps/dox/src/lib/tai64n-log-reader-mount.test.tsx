@@ -146,18 +146,18 @@ describe("a preset", () => {
 });
 
 describe("the paste box", () => {
-  it("is as high as its lines, up to twelve", async () => {
+  it("keeps its height whatever it holds, so the page below never moves", async () => {
     const w = await open();
-    expect(box()).toHaveAttribute("rows", "3");
+    const before = box().getAttribute("rows") ?? "";
     await paste(
       w,
       Array.from({ length: 20 }, () => "@40000000659200a500000000 x").join(
         "\n",
       ),
     );
-    expect(box()).toHaveAttribute("rows", "12");
+    expect(box()).toHaveAttribute("rows", before);
     await paste(w, "@40000000659200a500000000 x");
-    expect(box()).toHaveAttribute("rows", "2");
+    expect(box()).toHaveAttribute("rows", before);
   });
 
   it("keeps the picked line while the list still has it", async () => {

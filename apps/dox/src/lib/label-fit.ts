@@ -63,6 +63,75 @@ export function placeLabel(o: PlaceOptions): "start" | "end" {
   return "start";
 }
 
+interface ChipIn {
+  /** x of the chip's marker, in px from the track's left. */
+  atPx: number;
+  widthPx: number;
+}
+
+interface ChipOut {
+  edge: "start" | "end";
+  /** 0 is the row nearest the days; a chip that would touch an earlier one drops to the next. */
+  row: number;
+  /** Px to move the chip along the track so it stays inside it. */
+  shiftPx: number;
+}
+
+/**
+ * Where each chip of a shared track goes: the side of its marker (`placeLabel`), then a shift that
+ * keeps it inside the track, then the first row where it clears every chip already there. Results
+ * are in input order; rows are given out left to right so the layout does not depend on it.
+ */
+export function stackChips(
+  chips: readonly ChipIn[],
+  trackPx: number,
+  offsetPx = 6,
+  gap = 4,
+): ChipOut[] {
+  const out: ChipOut[] = chips.map((c) => {
+    const edge = placeLabel({
+      atPx: c.atPx,
+      labelPx: c.widthPx,
+      trackPx,
+      offsetPx,
+    });
+    const left =
+      edge === "start" ? c.atPx + offsetPx : c.atPx - offsetPx - c.widthPx;
+    const clamped = Math.min(
+      Math.max(left, 0),
+      Math.max(0, trackPx - c.widthPx),
+    );
+    return { edge, row: 0, shiftPx: clamped - left };
+  });
+  const spans = chips.map((c, i) => {
+    const o = out[i]!;
+    const left =
+      (o.edge === "start" ? c.atPx + offsetPx : c.atPx - offsetPx - c.widthPx) +
+      o.shiftPx;
+    return { left, right: left + c.widthPx };
+  });
+  const placed: { span: Span; row: number }[] = [];
+  const order = spans
+    .map((_, i) => i)
+    .sort((a, b) => spans[a]!.left - spans[b]!.left);
+  for (const i of order) {
+    const span = spans[i]!;
+    let row = 0;
+    while (
+      placed.some(
+        (p) =>
+          p.row === row &&
+          span.left < p.span.right + gap &&
+          span.right + gap > p.span.left,
+      )
+    )
+      row += 1;
+    placed.push({ span, row });
+    out[i]!.row = row;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // DOM helpers (measure, then toggle). Both skip an element with no layout, so
 // jsdom and a hidden widget keep every label.

@@ -102,6 +102,21 @@ describe("each verdict", () => {
     );
   });
 
+  it.each(["null", "7", '"text"', "[]"])(
+    "says what a schedule is when the text is %s",
+    async (text) => {
+      const w = await open();
+      await pasteInto(w, scheduleBox(), text);
+      const parts = screen.getByRole("list", {
+        name: "Parts the library refuses on their own",
+      });
+      expect(parts).toHaveTextContent(
+        "A schedule is an object with a `timeZone` and a `weekly`.",
+      );
+      expect(parts).not.toHaveTextContent(/accepted on its own/);
+    },
+  );
+
   it("shows NO SIGNAL only for a refusal, never for closed", async () => {
     const w = await open();
     await w.user.selectOptions(preset(), "johannesburg-holidays");

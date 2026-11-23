@@ -3,6 +3,7 @@ import {
   layoutWidth,
   onWidthChange,
   placeLabel,
+  stackChips,
   thinSpans,
   thinTickLabels,
 } from "./label-fit";
@@ -193,5 +194,45 @@ describe("thinTickLabels while an entrance scales the row", () => {
     const scaled = row(0.92, 200, [0, 170], 40);
     thinTickLabels(scaled.el, "[data-tick]");
     expect(scaled.ticks.map((t) => t.hidden)).toEqual([false, true]);
+  });
+});
+
+describe("stackChips", () => {
+  it("keeps a lone chip on row 0 beside its marker", () => {
+    expect(stackChips([{ atPx: 20, widthPx: 100 }], 400, 10)).toEqual([
+      { edge: "start", row: 0, shiftPx: 0 },
+    ]);
+  });
+
+  it("drops a chip that would touch an earlier one to the next row", () => {
+    const [a, b] = stackChips(
+      [
+        { atPx: 100, widthPx: 180 },
+        { atPx: 95, widthPx: 180 },
+      ],
+      800,
+      10,
+    );
+    expect([a!.row, b!.row].sort()).toEqual([0, 1]);
+  });
+
+  it("keeps two chips that clear each other on one row", () => {
+    const rows = stackChips(
+      [
+        { atPx: 0, widthPx: 100 },
+        { atPx: 300, widthPx: 100 },
+      ],
+      800,
+      10,
+    ).map((c) => c.row);
+    expect(rows).toEqual([0, 0]);
+  });
+
+  it("moves a chip that fits neither side back inside the track", () => {
+    const [c] = stackChips([{ atPx: 150, widthPx: 200 }], 300, 10);
+    expect(c!.shiftPx).toBeLessThan(0);
+    const left = (c!.edge === "start" ? 160 : -60) + c!.shiftPx;
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(left + 200).toBeLessThanOrEqual(300);
   });
 });

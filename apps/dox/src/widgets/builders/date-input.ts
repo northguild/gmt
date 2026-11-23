@@ -5,10 +5,13 @@
  * control. This writes the native one and takes the text input's look, so the two sit in one
  * grid as a pair. The browser's own picker, keyboard model and locale format are kept. A value
  * the control refuses (`2024-02-30`) leaves it empty; the mount keeps the refused string.
+ *
+ * Its focus ring is drawn on `:focus-within`: in WebKit the focused node is one of the control's
+ * inner day, month or year fields, so `:focus-visible` never matches the input itself.
  */
 import { gateAttr, type GateOption } from "./gate";
 import { html, type SafeHtml } from "./html";
-import styles from "./text-input.module.css";
+import styles from "./date-input.module.css";
 
 interface DateInputOptions extends GateOption {
   /** The control's id; the field's `<label for>` points at it. */
