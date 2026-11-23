@@ -507,6 +507,11 @@ export function zoneArgumentCalls(
       lib.operatingTimeBetween(at, later(72), businessHours(zone)),
     ),
 
+    // calendar/validate
+    isValidOperatingSchedule: flag(POINT, (zone) =>
+      lib.isValidOperatingSchedule(businessHours(zone)),
+    ),
+
     // intermodal
     freeTimeExpiry: nullable(WEEK, (zone) =>
       lib.freeTimeExpiry(at, 3, {

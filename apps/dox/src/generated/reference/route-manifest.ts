@@ -50,6 +50,7 @@ export const referenceRoutes: RouteManifest = new Set([
   "/reference/calendar/validate/isValidFiscalPattern",
   "/reference/calendar/validate/isValidFiscalYearLabel",
   "/reference/calendar/validate/isValidHolidayRule",
+  "/reference/calendar/validate/isValidOperatingSchedule",
   "/reference/calendar/validate/isValidRollConvention",
   "/reference/calendar/validate/isValidZoneBucketUnit",
   "/reference/duration",
