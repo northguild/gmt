@@ -89,6 +89,8 @@ import {
   showGtfsServiceDayClockInput,
   showGtfsTripBoardInput,
   showPtpClockConverterInput,
+  showScheduleCheckerInput,
+  showOpeningHoursBoardInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showStoredTimeAuditInput,
@@ -778,6 +780,16 @@ export function buildWorkerTools(
       description: docFor("showPtpClockConverter"),
       inputSchema: showPtpClockConverterInput,
       execute: () => accept("ptp-clock-converter"),
+    }),
+    showScheduleChecker: tool({
+      description: docFor("showScheduleChecker"),
+      inputSchema: showScheduleCheckerInput,
+      execute: () => accept("operating-schedule-checker"),
+    }),
+    showOpeningHoursBoard: tool({
+      description: docFor("showOpeningHoursBoard"),
+      inputSchema: showOpeningHoursBoardInput,
+      execute: () => accept("opening-hours-board"),
     }),
     showTerrestrialTimeStack: tool({
       description: docFor("showTerrestrialTimeStack"),

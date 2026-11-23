@@ -100,6 +100,8 @@
 }
 
 .label {
+  /* stylelint-disable-next-line property-no-unknown -- CSS Modules `composes` */
+  composes: root from "./ledger-chip.module.css";
   position: absolute;
   inset-block-start: var(--gmt-space-1);
   inset-inline-start: var(--gmt-space-1);
@@ -108,13 +110,7 @@
   text-overflow: ellipsis;
   box-sizing: border-box;
   padding: 2px var(--gmt-space-2);
-  border: 1px solid var(--series);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  background: var(--gmt-surface);
-  color: var(--gmt-ice);
-  font-family: var(--gmt-font-mono);
-  font-size: var(--gmt-text-xs);
+  border-color: var(--series);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -161,19 +157,14 @@
 
 /* The reason a clock is null: a chip with a short sentence, which may wrap on a narrow plot. */
 .why {
+  /* stylelint-disable-next-line property-no-unknown -- CSS Modules `composes` */
+  composes: root from "./ledger-chip.module.css";
   position: absolute;
   inset-block-end: var(--gmt-space-1);
   inset-inline-start: var(--gmt-space-1);
   max-inline-size: calc(100% - 2 * var(--gmt-space-1));
   box-sizing: border-box;
   padding: 2px var(--gmt-space-2);
-  border: 1px solid var(--gmt-border-strong);
-  border-radius: var(--gmt-radius-sm);
-  corner-shape: bevel;
-  background: var(--gmt-surface);
-  color: var(--gmt-ice);
-  font-family: var(--gmt-font-mono);
-  font-size: var(--gmt-text-xs);
   line-height: 1.2;
   white-space: normal;
 }

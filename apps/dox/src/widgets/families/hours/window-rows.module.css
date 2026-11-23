@@ -1,0 +1,71 @@
+/* windowRows: one weekday's or override's windows. Tokens only. A refused group or window
+   gets a full bevelled border in the signal tone and a tinted fill, never a left edge alone. */
+
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  min-inline-size: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface-2);
+
+  &[data-refused] {
+    border-color: var(--gmt-signal-border);
+    background: color-mix(
+      in srgb,
+      var(--gmt-signal-border) 10%,
+      var(--gmt-surface-2)
+    );
+  }
+}
+
+.title {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-weight: 700;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  align-items: end;
+  gap: 0.5rem;
+  min-inline-size: 0;
+  padding: 0.375rem;
+  border: 1px solid transparent;
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+
+  &[data-refused] {
+    border-color: var(--gmt-signal-border);
+    background: color-mix(
+      in srgb,
+      var(--gmt-signal-border) 10%,
+      var(--gmt-surface-2)
+    );
+  }
+}
+
+.marker {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--gmt-signal-ink);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+}
+
+@media (forced-colors: active) {
+  .root,
+  .row {
+    border-color: ButtonText;
+    background: Canvas;
+
+    &[data-refused] {
+      border-style: double;
+      border-color: CanvasText;
+    }
+  }
+}

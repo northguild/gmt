@@ -19,6 +19,7 @@ import {
   GNSS_WEEK_COUNTERS,
   RINEX_WEEK_SYSTEMS,
 } from "./gnss-names";
+import { SCHEDULE_TEXT_MAX } from "./schedule-text-max";
 
 /**
  * The shape of an IANA zone identifier — `Area/Location`, optionally with a
@@ -869,6 +870,68 @@ export const showPtpClockConverterInput = z
     },
   );
 
+/**
+ * An `OperatingSchedule` as the reader typed it, JSON text and nothing else. Shared by every
+ * chat tool that reads a schedule; the cap is the permalink's, so a link and a call agree.
+ */
+export const operatingScheduleTextSchema = z
+  .string()
+  .min(1)
+  .max(SCHEDULE_TEXT_MAX);
+
+/**
+ * Operating Schedule Checker (CORE-115). The interval is never defaulted: a blank start or end
+ * means the tool asks for one. `preset` ids are the presets file's, a test keeps them equal.
+ */
+export const showScheduleCheckerInput = z
+  .object({
+    schedule: operatingScheduleTextSchema.optional(),
+    start: z.string().max(64).optional(),
+    end: z.string().max(64).optional(),
+    preset: z
+      .enum([
+        "tokyo-desk",
+        "johannesburg-holidays",
+        "london-weekday-8",
+        "kolkata-annotated-holiday",
+        "sao-paulo-two-overrides",
+        "sydney-night-curfew",
+      ])
+      .optional(),
+  })
+  .refine((a) => a.schedule !== undefined || a.preset !== undefined, {
+    message: "Give the schedule's JSON to check, or a preset.",
+  });
+
+/**
+ * Opening Hours Board (CORE-115). Nothing is defaulted: a blank instant, week, duration or horizon
+ * means the tool asks for one. `preset` ids are the Board's presets, a test keeps them equal.
+ */
+export const showOpeningHoursBoardInput = z
+  .object({
+    schedule: operatingScheduleTextSchema.optional(),
+    from: z.string().max(64).optional(),
+    to: z.string().max(64).optional(),
+    weekOf: z.string().max(64).optional(),
+    duration: z.string().max(64).optional(),
+    within: z.string().max(64).optional(),
+    disambiguation: z
+      .enum(["compatible", "earlier", "later", "reject"])
+      .optional(),
+    preset: z
+      .enum([
+        "tokyo-desk",
+        "johannesburg-holidays",
+        "kolkata-annotated-holiday",
+        "sao-paulo-two-overrides",
+        "sydney-night-curfew",
+      ])
+      .optional(),
+  })
+  .refine((a) => a.schedule !== undefined || a.preset !== undefined, {
+    message: "Give the schedule's JSON, or a preset.",
+  });
+
 /** Typed as the library's `IsoWeekday`, so a parsed shift is a `HolidayRule` shift. */
 const isoWeekdaySchema = z
   .number()
@@ -1531,7 +1594,9 @@ export type DoxToolName =
   | "showUsSunshineProtectionAct"
   | "showGtfsServiceDayClock"
   | "showGtfsTripBoard"
-  | "showPtpClockConverter";
+  | "showPtpClockConverter"
+  | "showScheduleChecker"
+  | "showOpeningHoursBoard";
 
 /** Prompt copy, kept beside the schemas so the two cannot drift. */
 export const DOX_TOOL_DOCS: {
@@ -1953,6 +2018,20 @@ export const DOX_TOOL_DOCS: {
     when: "the reader asks about a whole trip, or whether a stop's stop_timezone differs from the agency's, which stops a wrong zone moves and by how much, how long a leg really takes across a zone border or a clock change, or what a trip's times mean as instants",
     args: "stopTimes (the CSV exactly as given, at most 2,000 characters; it needs a header line naming stop_id, arrival_time and departure_time, and may name stop_timezone), date (YYYYMMDD or YYYY-MM-DD as given), zone (agency_timezone as given), or preset. Never resolve a stop or an agency to a zone; ask for stop_timezone and agency_timezone.",
   },
+  {
+    name: "showScheduleChecker",
+    purpose:
+      "Reads an OperatingSchedule pasted as JSON and an interval, and says whether the schedule is refused, closed in the interval or open in it. Shows isValidOperatingSchedule beside operatingIntervals, which gives [] for a closed schedule and for a refused one, and names the parts the library refuses on their own. Open time comes from operatingTimeBetween.",
+    when: "the reader asks whether an opening-hours schedule is closed or broken, why a schedule returns no hours, why operatingIntervals returns [], whether isValidOperatingSchedule accepts a schedule, or which part of a schedule is refused",
+    args: "schedule (the schedule's JSON exactly as given, at most 8,000 characters), start and end (the interval, as given, never defaulted; ask when missing), or preset. Never repair the JSON or pick a zone.",
+  },
+  {
+    name: "showOpeningHoursBoard",
+    purpose:
+      "Edits an OperatingSchedule and draws one local week of its open intervals with two instant handles. Reads isOpenAt, nextOpenAt, nextCloseAt, operatingTimeBetween and addOperatingTime for the instants, and operatingIntervals as the bars. A refused schedule shows Schedule refused across every readout, marks the refused rows and links to the Operating Schedule Checker.",
+    when: "the reader asks about open hours, when a desk or shop opens or closes, an SLA counted in open hours, open time between two instants, or names isOpenAt, nextOpenAt, nextCloseAt, operatingTimeBetween, addOperatingTime or operatingIntervals",
+    args: "schedule (JSON exactly as given, at most 8,000 characters) or preset; from, to, weekOf, duration (open time to add) and within (a horizon), as given; disambiguation. Never default an instant, repair the JSON or pick a zone.",
+  },
 ];
 
 /**
@@ -2033,6 +2112,8 @@ export const ENABLED_TOOL_NAMES = [
   "showGtfsServiceDayClock",
   "showGtfsTripBoard",
   "showPtpClockConverter",
+  "showScheduleChecker",
+  "showOpeningHoursBoard",
 ] as const satisfies readonly DoxToolName[];
 
 /** Prompt copy for the offered tools only. */

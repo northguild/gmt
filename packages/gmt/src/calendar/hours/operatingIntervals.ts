@@ -20,12 +20,13 @@ import type { Disambiguation, Interval, OperatingSchedule } from "../../types";
  * - The result is clipped to `range` (half-open), sorted, and merged where windows overlap or
  *   touch. Endpoints are UTC instants ending in `Z`, except a clipped edge, which is `range`'s
  *   own string.
- * - `[]` is both a legitimate result (closed throughout, or an empty `range`) and the sentinel.
+ * - `[]` is both a legitimate result (closed throughout, or an empty `range`) and the sentinel;
+ *   `isValidOperatingSchedule` tells a closed schedule from an invalid one.
  * - Returns `[]` when `schedule` is not a valid `OperatingSchedule` (a weekday key other than
  *   `"1"`–`"7"`, a malformed window, an invalid zone, holiday or override date, or two overrides
- *   for one date), when `range` is not a valid `Interval`, when `disambiguation` is not one of
- *   the four values, and when the range spans more than 10,000 local dates (about 27 years)
- *   counted from the date `range.start` falls on.
+ *   for one date; `isValidOperatingSchedule` lists every rule), when `range` is not a valid
+ *   `Interval`, when `disambiguation` is not one of the four values, and when the range spans more
+ *   than 10,000 local dates (about 27 years) counted from the date `range.start` falls on.
  * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
  *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
  *   offset's seconds (under a minute) of the first instant Temporal supports

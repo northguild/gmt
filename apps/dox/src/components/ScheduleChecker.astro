@@ -1,0 +1,59 @@
+---
+/**
+ * Operating Schedule Checker widget (CORE-115).
+ *
+ * A pasted `OperatingSchedule` and an interval: `isValidOperatingSchedule` says whether the
+ * library takes the schedule, `operatingIntervals` says what it is open for, and the page names the
+ * parts the library refuses on their own.
+ *
+ * **The markup and the wiring both live in `lib/schedule-checker-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderScheduleCheckerTemplate } from "../lib/schedule-checker-mount";
+
+/**
+ * `fullbleed` lets the page say the widget may use the whole main pane; see
+ * DtmDecoder.astro for the marker it adds and why it sits on a wrapper.
+ */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderScheduleCheckerTemplate("operating-schedule-checker", {}).value;
+---
+
+{
+  fullbleed ? (
+    /* ui-standards-ok: the shell every tool page uses; a shared shell component is a cross-tool change */
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountScheduleChecker } from "../lib/schedule-checker-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=schedule&wa=` permalink seeds the widget with the values it names; see
+       lib/widget-permalink.ts. Absent or malformed, the widget opens on its
+       first preset. */
+    const seed = seedFromLocation("schedule");
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="operating-schedule-checker"]')
+      .forEach((el) => {
+        mountScheduleChecker(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+    void offerPageTool(
+      "operating-schedule-checker",
+      () => import("../lib/webmcp/tools/operating-schedule-checker"),
+    );
+  }
+</script>

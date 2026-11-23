@@ -778,6 +778,8 @@ export function renderMdxComponents(body: string): string {
     "GtfsServiceDayClock",
     "GtfsTripBoard",
     "PtpClockConverter",
+    "ScheduleChecker",
+    "OpeningHoursBoard",
     "HolidayRuleBuilder",
     "ObservanceComparator",
     "MovingFeasts",

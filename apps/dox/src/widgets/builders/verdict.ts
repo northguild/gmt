@@ -10,7 +10,8 @@
 import { html, type SafeHtml } from "./html";
 import styles from "./verdict.module.css";
 
-export type VerdictTone = "neutral" | "good" | "bad";
+/** `sentinel` is the signal-lost state for text a validator refused: amber, and nothing else's. */
+export type VerdictTone = "neutral" | "good" | "bad" | "sentinel";
 
 export interface VerdictOptions {
   tone: VerdictTone;

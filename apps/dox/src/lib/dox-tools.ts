@@ -66,6 +66,8 @@ import {
   showMovingFeastsInput,
   showObservanceComparatorInput,
   showPtpClockConverterInput,
+  showScheduleCheckerInput,
+  showOpeningHoursBoardInput,
   showPunctualityBoardInput,
   showReportTimeResolverInput,
   showSatelliteClockConverterInput,
@@ -323,6 +325,14 @@ export const DOX_TOOLS = {
   showPtpClockConverter: tool({
     description: DOX_TOOL_DOCS[57].purpose,
     inputSchema: showPtpClockConverterInput,
+  }),
+  showScheduleChecker: tool({
+    description: DOX_TOOL_DOCS[59].purpose,
+    inputSchema: showScheduleCheckerInput,
+  }),
+  showOpeningHoursBoard: tool({
+    description: DOX_TOOL_DOCS[60].purpose,
+    inputSchema: showOpeningHoursBoardInput,
   }),
 } as const;
 

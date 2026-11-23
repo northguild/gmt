@@ -17,9 +17,9 @@ import type { Disambiguation, OperatingSchedule } from "../../types";
  * - `isoString` is an instant: an offset (`Z`, `±HH:MM`) is required, and a bracketed zone
  *   never supplies the zone — the schedule's own zone reads the windows. Only its instant is
  *   read, a minute-rounded offset as the bracketed zone's real one (see `isValidInstant`).
- * - Returns `false` on invalid input: an invalid instant or `OperatingSchedule`, or a
- *   `disambiguation` that is not one of the four values. Check the schedule with
- *   `operatingIntervals` when "closed" and "invalid" must be told apart.
+ * - Returns `false` on invalid input: an invalid instant, an `OperatingSchedule` that
+ *   `isValidOperatingSchedule` refuses, or a `disambiguation` that is not one of the four values.
+ *   `isValidOperatingSchedule` tells a closed schedule from an invalid one.
  * - **Limit at an offset with seconds.** The instant is placed in the offset's whole-minute zone,
  *   moved by its seconds, and the moved instant must be inside Temporal's range. So within the
  *   offset's seconds (under a minute) of the first instant Temporal supports

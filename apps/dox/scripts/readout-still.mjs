@@ -329,6 +329,35 @@ const TOOLS = [
     pointerSteps: 48,
   },
   {
+    // CORE-115. The From and To handles drag along the week lane; the readouts hold still
+    // by design (ghosts), the bars and gates move.
+    slug: "opening-hours-board",
+    minutes: 5,
+    root: '[data-widget="opening-hours-board"]',
+    presets: [
+      "tokyo-desk",
+      "johannesburg-holidays",
+      "kolkata-annotated-holiday",
+      "sao-paulo-two-overrides",
+      "sydney-night-curfew",
+    ],
+    controls: [
+      {
+        role: "slider",
+        name: "From",
+        value: { role: "textbox", name: "From (instant)" },
+      },
+      {
+        role: "slider",
+        name: "To",
+        value: { role: "textbox", name: "To (instant)" },
+      },
+    ],
+    track: "track",
+    drawn: ["drawn"],
+    maxKeys: 60,
+  },
+  {
     slug: "free-time-ledger",
     minutes: 10.1,
     root: '[data-widget="free-time-ledger"]',

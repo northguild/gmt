@@ -6,3 +6,4 @@ export * from "./isValidFiscalYearLabel";
 export * from "./isValidRollConvention";
 export * from "./isValidZoneBucketUnit";
 export * from "./isValidHolidayRule";
+export * from "./isValidOperatingSchedule";

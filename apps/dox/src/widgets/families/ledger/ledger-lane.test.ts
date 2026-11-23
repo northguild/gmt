@@ -62,3 +62,30 @@ describe("ledgerLane", () => {
     await expectNoAxeViolations(host);
   });
 });
+
+describe("ledgerBar", () => {
+  it("lets several named bars share one track, each found by its words", () => {
+    renderHtml(
+      ledgerLane(
+        { id: "b", label: "Zone", daysLabel: "Local days" },
+        html`${ledgerBar({ id: "b1", from: 10, to: 20, label: "Open Mon 09:00 to 18:00 local" })}${ledgerBar({ id: "b2", from: 40, to: 50, label: "Open Tue 09:00 to 18:00 local" })}`,
+      ),
+    );
+    const bars = screen.getAllByRole("img");
+    expect(bars.map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Open Mon 09:00 to 18:00 local",
+      "Open Tue 09:00 to 18:00 local",
+    ]);
+    expect(bars[0]).toBeVisible();
+  });
+
+  it("keeps the one hidden bar the mount places, which is no image", () => {
+    renderHtml(
+      ledgerLane(
+        { id: "b", label: "Zone", daysLabel: "Local days" },
+        ledgerBar({ id: "b1" }),
+      ),
+    );
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+});

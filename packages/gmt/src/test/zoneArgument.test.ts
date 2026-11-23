@@ -7,7 +7,7 @@
  * `TimeZoneIdentifier ::: UTCOffset[~SubMinutePrecision] | TimeZoneIANAName`, §13.31). So:
  *
  * - A function whose result names no zone reads, in its time zone position, every string
- *   `isValidTimeZone` or `isValidUtcOffset` accepts. There are 85, each run here by name.
+ *   `isValidTimeZone` or `isValidUtcOffset` accepts. There are 86, each run here by name.
  * - A function that writes the zone into its result, or hands it to `Intl.DateTimeFormat`, takes
  *   a time zone identifier only and returns its sentinel for an offset with seconds. There are 30.
  *
@@ -32,7 +32,7 @@ import {
   type ZoneReach,
 } from "./zoneArgumentCalls";
 
-/** The 85 functions whose result has no zone in it, by namespace. */
+/** The 86 functions whose result has no zone in it, by namespace. */
 const ZONELESS_RESULT_FUNCTIONS: readonly string[] = [
   // instant/convert
   "resolveLocal",
@@ -131,6 +131,8 @@ const ZONELESS_RESULT_FUNCTIONS: readonly string[] = [
   "nextOpenAt",
   "operatingIntervals",
   "operatingTimeBetween",
+  // calendar/validate
+  "isValidOperatingSchedule",
   // intermodal
   "freeTimeExpiry",
   "chargeableDays",
@@ -212,9 +214,9 @@ function isSentinel(call: { sentinel: unknown }, result: unknown): boolean {
 }
 
 describe("the call table", () => {
-  it("runs each of the 85 functions with a zoneless result, by name", () => {
-    expect(ZONELESS_RESULT_FUNCTIONS).toHaveLength(85);
-    expect(new Set(ZONELESS_RESULT_FUNCTIONS).size).toBe(85);
+  it("runs each of the 86 functions with a zoneless result, by name", () => {
+    expect(ZONELESS_RESULT_FUNCTIONS).toHaveLength(86);
+    expect(new Set(ZONELESS_RESULT_FUNCTIONS).size).toBe(86);
     expect(Object.keys(zoneArgumentCalls(gmt, BASELINE_AT)).toSorted()).toEqual(
       ZONELESS_RESULT_FUNCTIONS.toSorted(),
     );
@@ -252,8 +254,8 @@ describe("every input that worked before returns what it returned before", () =>
     expect(Object.keys(baseline.functions).toSorted()).toEqual(
       ZONELESS_RESULT_FUNCTIONS.toSorted(),
     );
-    // 85 functions x (20 battle-test zones + 27 further spellings and invalid values).
-    expect(rows).toHaveLength(85 * 47);
+    // 86 functions x (20 battle-test zones + 27 further spellings and invalid values).
+    expect(rows).toHaveLength(86 * 47);
   });
 
   it.each(rows)(
@@ -273,8 +275,8 @@ describe("Oracle A: a whole-minute offset spelled with seconds is the offset wit
     { name, withSeconds: "-00:00:00", identifier: "+00:00" },
   ]);
 
-  it("has two rows for each of the 85 functions", () => {
-    expect(rows).toHaveLength(170);
+  it("has two rows for each of the 86 functions", () => {
+    expect(rows).toHaveLength(172);
   });
 
   it.each(rows)(
@@ -404,15 +406,15 @@ describe("Oracle B: a zone's stored offset gives what the zone gives", () => {
     const perReach = (reach: ZoneReach): number =>
       ZONELESS_RESULT_FUNCTIONS.filter((name) => table[name].reach === reach)
         .length;
-    // How many of the 85 read the instant alone, then a day, a week, a month, a quarter and a
+    // How many of the 86 read the instant alone, then a day, a week, a month, a quarter and a
     // year around it.
-    expect(reaches.map(perReach)).toEqual([51, 5, 14, 11, 2, 2]);
-    // 19 zone-years x 85 functions, less the spans left out above: St_Johns 1925 and Havana 1925
+    expect(reaches.map(perReach)).toEqual([52, 5, 14, 11, 2, 2]);
+    // 19 zone-years x 86 functions, less the spans left out above: St_Johns 1925 and Havana 1925
     // (2 each), St_Johns 1935 and New_York 2024 (4 each), Paramaribo 1935 (the 34 that read
     // beyond the instant).
     expect(cells).toHaveLength(19);
-    expect(rows).toHaveLength(19 * 85 - 2 - 2 - 4 - 4 - 34);
-    expect(rows).toHaveLength(1569);
+    expect(rows).toHaveLength(19 * 86 - 2 - 2 - 4 - 4 - 34);
+    expect(rows).toHaveLength(1588);
   });
 
   it.each(rows)(
@@ -488,7 +490,7 @@ describe("the accepted set is what isValidTimeZone or isValidUtcOffset accepts",
   it("covers every function whose result can show it", () => {
     expect(unobservable).toEqual(["getDstTransitions", "hasDaylightSaving"]);
     expect(candidates).toHaveLength(30);
-    expect(rows).toHaveLength(83 * 30);
+    expect(rows).toHaveLength(84 * 30);
   });
 
   it.each(rows)(

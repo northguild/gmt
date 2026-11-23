@@ -45,6 +45,8 @@ export type OperatingOverride = {
  *
  * This is deliberately a weekly pattern with dated exceptions, not an RFC 5545 recurrence rule:
  * there is no monthly or yearly recurrence.
+ *
+ * Narrow a candidate with `isValidOperatingSchedule`.
  */
 export type OperatingSchedule = {
   /**
@@ -60,8 +62,9 @@ export type OperatingSchedule = {
   weekly: Partial<Record<IsoWeekday, LocalWindow[]>>;
   /**
    * The local dates that are closed, as ISO PlainDate strings. A `BusinessCalendar` can be passed
-   * directly: its `holidays` are read, and its `weekend` and `timeZone` are not, because `weekly`
-   * already says which weekdays open and `timeZone` above is the zone.
+   * directly: only its `holidays` are read, because `weekly` already says which weekdays open and
+   * `timeZone` above is the zone. The calendar must itself pass `isValidBusinessCalendar`, so a bad
+   * `weekend` or `timeZone` refuses the schedule.
    *
    * @defaultValue None. No date is closed as a holiday.
    */

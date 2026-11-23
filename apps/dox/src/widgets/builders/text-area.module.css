@@ -1,0 +1,11 @@
+/* textArea: a native multi-line field. It takes the kit text input's whole look (border, bevel,
+   focus ring, placeholder, disabled, forced colours) and changes only the height and the resize
+   handle. The composed sheet loads first, so these two rules win at equal specificity. */
+
+.root {
+  /* stylelint-disable-next-line property-no-unknown -- CSS Modules `composes` */
+  composes: root from "./text-input.module.css";
+  min-block-size: 2.6rem;
+  resize: vertical;
+  transition: none;
+}

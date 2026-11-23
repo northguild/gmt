@@ -32,6 +32,7 @@
  * fixed object literal. See `widget-registry.ts`.
  */
 
+import { SCHEDULE_TEXT_MAX } from "./schedule-text-max";
 import { withBase } from "./site";
 
 export type WidgetKind =
@@ -93,6 +94,8 @@ export type WidgetKind =
   | "gtfsday"
   | "gtfstrip"
   | "ptpclock"
+  | "schedule"
+  | "hours"
   | "sunshineact";
 
 /**
@@ -168,6 +171,8 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   gtfsday: "/tools/gtfs-service-day-clock/",
   gtfstrip: "/tools/gtfs-trip-board/",
   ptpclock: "/tools/ptp-clock-converter/",
+  schedule: "/tools/operating-schedule-checker/",
+  hours: "/tools/opening-hours-board/",
   ttstack: "/tools/terrestrial-time-stack/",
   jdcount: "/tools/julian-day-counter/",
   dpmeter: "/tools/double-precision-meter/",
@@ -242,6 +247,8 @@ const LONG_STRING_KEYS: Readonly<Record<string, number>> = {
   // A trip's stop_times.txt rows (the GTFS Trip Board): 12 rows of up to 150 characters, and the
   // reader and the chat schema refuse a paste over 2,000.
   stopTimes: 2000,
+  // An OperatingSchedule's JSON text (the Operating Schedule Checker): the chat schema's own bound.
+  schedule: SCHEDULE_TEXT_MAX,
 };
 
 /**
