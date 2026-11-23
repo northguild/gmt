@@ -80,7 +80,9 @@ export async function applyPageContract({
  * One shard of a list, sorted. The shards of one list cover it exactly once. `shard` is `{ i, n }`
  * with `1 <= i <= n`, or null for the whole sorted list.
  *
- * Without `costs`, shard `i` is every entry whose sorted index is `i - 1` modulo `n`. With `costs`
+ * Without `costs`, shard `i` is every entry whose sorted index plus `offset` is `i - 1` modulo `n`.
+ * The runner passes a gate's `registry.mjs` index as `offset`, so the one-page gates, which all
+ * have sorted index 0, start on different shards instead of crowding the first. With `costs`
  * (each entry's measured minutes), the entries are dealt costliest first, ties by name, each to the
  * shard with the least time so far (the lowest-numbered on a tie), so no shard carries the heavy
  * pages together and one added page moves only the pages dealt after it. An entry with no positive
@@ -89,13 +91,14 @@ export async function applyPageContract({
  * @param {string[]} list
  * @param {{ i: number, n: number } | null | undefined} shard
  * @param {Record<string, number>} [costs]
+ * @param {number} [offset] Ignored with `costs`.
  * @returns {string[]}
  */
-export function shardOf(list, shard, costs) {
+export function shardOf(list, shard, costs, offset = 0) {
   const sorted = [...list].sort();
   if (!shard) return sorted;
   if (costs === undefined)
-    return sorted.filter((_, idx) => idx % shard.n === shard.i - 1);
+    return sorted.filter((_, idx) => (idx + offset) % shard.n === shard.i - 1);
   const unmeasured = sorted.filter(
     (page) => !Object.hasOwn(costs, page) || !(costs[page] > 0),
   );

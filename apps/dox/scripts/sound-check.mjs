@@ -95,6 +95,7 @@ import { launchBrowser } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { sinkless } from "./lib/sound-scope.mjs";
 
 const GATE = "sound-check";
 const PAGES = ["/", "/tools/zoned-earth/"];
@@ -125,6 +126,7 @@ for (const name of browsers) {
 const failures = [];
 let measured = 0;
 const fail = (rule, browser, path, message) => {
+  if (sinkless(rule, browser, process.env)) return;
   failures.push(`${browser} ${path}: ${message}`);
   console.error(`  ! ${rule} · ${browser} ${path}: ${message}`);
   recordFinding({

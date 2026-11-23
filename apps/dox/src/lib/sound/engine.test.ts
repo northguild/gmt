@@ -246,6 +246,21 @@ describe("a cue", () => {
     expect(click).toHaveBeenCalledOnce();
   });
 
+  it("plays the press's own cue on a context WebKit has interrupted, which a gesture resumes", () => {
+    // WebKit reports "interrupted" for a moment while the press that created the context starts it.
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      userActivation: { isActive: true },
+    });
+    saveSound();
+    engine = createEngine();
+    ctx = new FakeAudioContext();
+    ctx.become("interrupted");
+    engine.attach(ctx as unknown as AudioContext);
+    cue("click");
+    expect(click).toHaveBeenCalledOnce();
+  });
+
   it("drops a cue on a suspended context where the browser has no userActivation", () => {
     saveSound();
     engine = createEngine();

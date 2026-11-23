@@ -65,7 +65,7 @@ Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) com
 
 ## Gates
 
-- `sound-check` (tier `pr`, three engines) logs `AudioContext` construction, state changes and oscillator starts through an init script. Its scenarios cover unlock, reduced motion, the control's placement and stillness at 320 to 1440 px, chrome cues, the entrance, the aura, chat (with `/api/chat` stubbed), tool cues, list ticks and the globe lock. `--only <name>` runs a subset.
+- `sound-check` (tier `pr`, three engines) logs `AudioContext` construction, state changes and oscillator starts through an init script. Its scenarios cover unlock, reduced motion, the control's placement and stillness at 320 to 1440 px, chrome cues, the entrance, the aura, chat (with `/api/chat` stubbed), tool cues, list ticks and the globe lock. `--only <name>` runs a subset. The rules that need running audio (`unlock`, `click`, `link`, `link-hold`, `chrome-cue`, `control-pop`, `control-still`) run on every engine on a Mac and on Chromium only when `CI=true`, because CI's Linux Firefox and WebKit have no audio sink and a context there never runs (`RUNNING_AUDIO` and `sinkless` in `scripts/lib/sound-scope.mjs`, tested by `sound-scope.test.ts`). The mute and no-autoplay rules hold on every engine in CI. The local WebKit run stands in for Safari.
 - `rail-stored-still` (tier `pr`, `/dox/`) holds the saved rail width still from the first frame (`rail-prepaint.ts` paints it on `<html>` before hydration) and a double-click reset.
 - `sound-peaks.browser.test.ts` renders the new voices in Chromium's `OfflineAudioContext` (20 seeded runs) and fails a voice louder than the audition sound the owner chose.
 
@@ -74,5 +74,7 @@ Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) com
 - A test that needs to hear anything saves an opted-in record first (`saveSound()` in `src/test/sound-storage.ts`); `sound-check` does the same through an init script, except in scenarios marked `sound: "default"`.
 - A test file that installs `src/test/fake-audio.ts` is isolated (`vi.stubGlobal`); tests assert on the recorded schedule, never on sound.
 - jsdom's `localStorage` queues a timer per write under fake timers, so a test asserting `vi.getTimerCount() === 0` uses `installMemoryStorage()`.
+- WebKit reports an `AudioContext` as `interrupted` for the moment the press that created it is starting it. `live()` in `engine.ts` treats `interrupted` like `suspended`: a gesture plays its own cue. Without that, a saved unmute played no voice on its first press in Safari.
+- `control-keys` fails on macOS WebKit, whose Tab skips buttons. It is a result of this Mac's browser, not of the site, so a local WebKit run of `sound-check` reports it and every other rule passes. Do not weaken the rule for it.
 - The leak guard fails a file that leaves a `window` or `document` listener, so each test tears `startCue()` and `createEngine()` down.
 - `sound-check` reads a noise voice by its filter, since noise has no oscillator start: the Servo spin-up by its last burst's ramp to 1950 Hz, a list's servo tick by its burst and rising ramp target. A Felt slide is read by its low tone's fall (170 to 140 Hz opening, 150 to 120 Hz closing), a Crystal dust sparkle by tones of 5200 to 8000 Hz, and the Sonar idle by its 587 Hz pings, kept apart from the chat's cues.

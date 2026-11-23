@@ -9,7 +9,9 @@
  * rebuilds the strip, with the current zones, only when that name changes.
  */
 import { EDI_ZONES } from "~/lib/edi-widgets";
+import { gateAttr } from "../../builders/gate";
 import { html, setHtml, type SafeHtml } from "../../builders/html";
+import { instant } from "../../builders/instant";
 import { select } from "../../builders/select";
 import { srOnly } from "../../builders/sr-only";
 import { valueText } from "../../builders/value-text";
@@ -40,17 +42,21 @@ export function memberTable(o: {
   /** Prefix for each row's cell id, such as `member`; the cell is `member-<key>`. */
   prefix: string;
   rows: readonly MemberRowSpec[];
+  /** True when a value can run to a second line in a narrow column: each cell then keeps both. */
+  wraps?: boolean;
 }): SafeHtml {
   return table({
     caption: o.caption,
     rowHeader: "name",
+    layout: "fixed",
+    widths: ["34%", null],
     columns: [
       { key: "name", header: "Member", align: "start", numeric: false },
       { key: "value", header: "Value", align: "start", numeric: false },
     ],
     rows: o.rows.map((r) => ({
       name: r.label,
-      value: html`<span class="${styles.member}" id="${o.id(`${o.prefix}-${r.key}`)}" data-state="none">${NO_MEMBER}</span>`,
+      value: html`<span class="${styles.member}" ${gateAttr("drawn")} ${o.wraps ? html`data-wraps` : ""} id="${o.id(`${o.prefix}-${r.key}`)}" data-state="none">${NO_MEMBER}</span>`,
     })),
   });
 }
@@ -74,8 +80,18 @@ interface ZoneStripOptions {
   /** The four chosen zones, `""` for none. */
   zones: readonly string[];
   disabled: boolean;
-  /** The widths, in characters, the instant and third cells reserve. */
-  widths: { instant: number; third: number };
+  /**
+   * The widths, in characters, the instant and third cells reserve. `thirdLines` is set when the
+   * third column can hold a value wider than `third`: the cell then keeps that width and that many
+   * lines, and the value breaks between the pieces of an `instant`, so a longer one never moves it.
+   */
+  widths: {
+    instant: number;
+    third: number;
+    thirdLines?: number;
+    /** The offset cell's width: 6 (`-04:00`) unless a zone's local mean time shows seconds. */
+    offset?: number;
+  };
 }
 
 const SERIES: readonly SwatchSeries[] = [1, 2, 3, 4];
@@ -92,8 +108,10 @@ function zoneOptions(selected: string): { value: string; label: string }[] {
   ];
 }
 
-function cell(id: string, width: number): SafeHtml {
-  return html`<span class="${styles.cell}" id="${id}" style="--w:${width}ch">${NBSP}</span>`;
+function cell(id: string, width: number, lines = 1): SafeHtml {
+  const wraps = lines > 1 ? html`data-wraps` : "";
+  const held = lines > 1 ? instant(NBSP) : NBSP;
+  return html`<span class="${styles.cell}" id="${id}" ${wraps} ${gateAttr("drawn")} style="--w:${width}ch;--lines:${lines}">${held}</span>`;
 }
 
 /** The strip: row number, zone choice, the instant, its offset and the third column. */
@@ -120,8 +138,8 @@ export function zoneStrip(o: ZoneStripOptions): SafeHtml {
           },
         )}`,
         instant: cell(o.id(`instant-${n}`), o.widths.instant),
-        offset: cell(o.id(`offset-${n}`), 6),
-        third: cell(o.id(`third-${n}`), o.widths.third),
+        offset: cell(o.id(`offset-${n}`), o.widths.offset ?? 6),
+        third: cell(o.id(`third-${n}`), o.widths.third, o.widths.thirdLines),
       };
     }),
   });
@@ -137,5 +155,7 @@ export function setStripCell(
     setHtml(cellEl, html`<span class="${styles.lost}">${text}</span>`);
     return;
   }
-  cellEl.textContent = text === "" ? NBSP : text;
+  const shown = text === "" ? NBSP : text;
+  if (cellEl.hasAttribute("data-wraps")) setHtml(cellEl, instant(shown));
+  else cellEl.textContent = shown;
 }

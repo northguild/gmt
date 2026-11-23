@@ -96,7 +96,8 @@ type ActivationNavigator = Navigator & {
  */
 function live(c: AudioContext): boolean {
   if (c.state === "running") return true;
-  if (c.state !== "suspended") return false;
+  // WebKit reports "interrupted" for the moment a press is starting a context, as it does a call.
+  if (c.state !== "suspended" && c.state !== "interrupted") return false;
   return (navigator as ActivationNavigator).userActivation?.isActive ?? false;
 }
 

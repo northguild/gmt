@@ -7,8 +7,11 @@
  * height. `verdictBadge` says what the receiver reports in words, with an icon and a pattern
  * that differ for right, early and late, so colour is never the only signal.
  *
+ * The badge's text is the `verdict` part the readout-still gate reads as a text box.
+ *
  * Neither is amber: the signal-lost state is not theirs to draw.
  */
+import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import { srOnly } from "../../builders/sr-only";
 import type { Countdown } from "~/lib/gnss-rollover-checker";
@@ -65,7 +68,7 @@ const icon = (shown: boolean, path: string): SafeHtml =>
   >`;
 
 export function verdictBadge(o: VerdictBadgeOptions): SafeHtml {
-  return html`<p class="${styles.badge}" data-verdict="${o.verdict}"
+  return html`<p class="${styles.badge}" data-verdict="${o.verdict}" ${gateAttr("verdict")}
     >${icon(o.verdict === "right", "M3 8.5 6.5 12 13 4.5")}${icon(o.verdict === "early", "M8 3 3 8l5 5M13 3 8 8l5 5")}${icon(o.verdict === "late", "m8 3 5 5-5 5M3 3l5 5-5 5")}<span class="${styles.badgeText}">${o.text === "" ? NBSP : o.text}</span></p
   >`;
 }

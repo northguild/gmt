@@ -9,8 +9,10 @@ name: Dox gates weekly
 # issue for a synthetic finding, to prove the filing path without a real failure.
 #
 # Legs: --shard i/n splits each gate's page list so the legs of one browser share the work: by name,
-# round-robin, or for a gate whose pages differ a lot in run time (readout-still) by each page's
-# measured minutes, so the heavy tools never share a leg. The shard counts are sized from measured
+# round-robin starting at the gate's registry index (so the one-page gates spread over the legs), or
+# for a gate whose pages differ a lot in run time (readout-still) by each page's measured minutes,
+# so the heavy tools never share a leg. 8 Chromium, 5 Firefox and 5 WebKit legs leave about 20
+# minutes of headroom under the 80-minute deadline. The shard counts are sized from measured
 # local times (context/dox/built/tier-6-ops.md, "The weekly gate sweep"). Adding or removing a leg
 # means changing the matrix and the LEGS list of the report job, which names every leg so one that
 # crashed without uploading is still filed.
@@ -52,20 +54,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { leg: chromium-1, browser: chromium, shard: "1/6" }
-          - { leg: chromium-2, browser: chromium, shard: "2/6" }
-          - { leg: chromium-3, browser: chromium, shard: "3/6" }
-          - { leg: chromium-4, browser: chromium, shard: "4/6" }
-          - { leg: chromium-5, browser: chromium, shard: "5/6" }
-          - { leg: chromium-6, browser: chromium, shard: "6/6" }
-          - { leg: webkit-1, browser: webkit, shard: "1/4" }
-          - { leg: webkit-2, browser: webkit, shard: "2/4" }
-          - { leg: webkit-3, browser: webkit, shard: "3/4" }
-          - { leg: webkit-4, browser: webkit, shard: "4/4" }
-          - { leg: firefox-1, browser: firefox, shard: "1/4" }
-          - { leg: firefox-2, browser: firefox, shard: "2/4" }
-          - { leg: firefox-3, browser: firefox, shard: "3/4" }
-          - { leg: firefox-4, browser: firefox, shard: "4/4" }
+          - { leg: chromium-1, browser: chromium, shard: "1/8" }
+          - { leg: chromium-2, browser: chromium, shard: "2/8" }
+          - { leg: chromium-3, browser: chromium, shard: "3/8" }
+          - { leg: chromium-4, browser: chromium, shard: "4/8" }
+          - { leg: chromium-5, browser: chromium, shard: "5/8" }
+          - { leg: chromium-6, browser: chromium, shard: "6/8" }
+          - { leg: chromium-7, browser: chromium, shard: "7/8" }
+          - { leg: chromium-8, browser: chromium, shard: "8/8" }
+          - { leg: firefox-1, browser: firefox, shard: "1/5" }
+          - { leg: firefox-2, browser: firefox, shard: "2/5" }
+          - { leg: firefox-3, browser: firefox, shard: "3/5" }
+          - { leg: firefox-4, browser: firefox, shard: "4/5" }
+          - { leg: firefox-5, browser: firefox, shard: "5/5" }
+          - { leg: webkit-1, browser: webkit, shard: "1/5" }
+          - { leg: webkit-2, browser: webkit, shard: "2/5" }
+          - { leg: webkit-3, browser: webkit, shard: "3/5" }
+          - { leg: webkit-4, browser: webkit, shard: "4/5" }
+          - { leg: webkit-5, browser: webkit, shard: "5/5" }
     steps:
       - uses: actions/checkout@v7
         with:
@@ -186,7 +192,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           FORCE_FINDING: ${{ inputs.force_finding }}
           # Every leg of the sweep job's matrix.
-          LEGS: chromium-1,chromium-2,chromium-3,chromium-4,chromium-5,chromium-6,webkit-1,webkit-2,webkit-3,webkit-4,firefox-1,firefox-2,firefox-3,firefox-4
+          LEGS: chromium-1,chromium-2,chromium-3,chromium-4,chromium-5,chromium-6,chromium-7,chromium-8,firefox-1,firefox-2,firefox-3,firefox-4,firefox-5,webkit-1,webkit-2,webkit-3,webkit-4,webkit-5
         run: |
           args=(--legs "$LEGS")
           if [ "$FORCE_FINDING" = "true" ]; then args+=(--dry-run-finding); fi
