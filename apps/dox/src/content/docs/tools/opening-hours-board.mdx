@@ -1,0 +1,38 @@
+---
+title: Opening Hours Board
+description: Edit an opening-hours schedule, see one local week of open intervals, drag two instants and read what the six operating functions return for them.
+industries: [core]
+---
+
+import OpeningHoursBoard from "../../../components/OpeningHoursBoard.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="operating schedules">
+
+<Fragment slot="keypoint">
+
+Closed and refused are different answers. A schedule with no open hours returns `[]` and `false`, and so does a schedule the library refuses. The board shows "Schedule refused" for the second and plain words for the first.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+An operating schedule is a zone, weekly windows, closed dates and one-off overrides. The board draws one local week of what it is open for ([`operatingIntervals`](/reference/calendar/hours/operatingIntervals/)) and answers five questions about the two instants you set: [`isOpenAt`](/reference/calendar/hours/isOpenAt/), [`nextOpenAt`](/reference/calendar/hours/nextOpenAt/), [`nextCloseAt`](/reference/calendar/hours/nextCloseAt/), [`operatingTimeBetween`](/reference/calendar/hours/operatingTimeBetween/) and [`addOperatingTime`](/reference/calendar/hours/addOperatingTime/). The [operating hours guide](/guides/core-date-operations/operating-hours/) has the rules.
+
+Edit the windows, holidays and overrides, or pick a preset, and drag the From and To handles or type the instants. When the library refuses the schedule, every readout says so and the refused rows are marked. To paste a schedule as JSON instead, use the [Operating Schedule Checker](/tools/operating-schedule-checker/).
+
+</Fragment>
+
+<OpeningHoursBoard fullbleed />
+
+<Fragment slot="after">
+
+**Refused is not closed.** `[]` from `operatingIntervals` and `false` from `isOpenAt` come back for a closed schedule and for a refused one. The board asks `isValidOperatingSchedule` first, so you can tell which you have.
+
+**Text.** Zones, windows and dates are passed to the library exactly as typed. The board repairs nothing, so a bad zone or date is refused by the library and marked on its row.
+
+**Reference:** [`operatingIntervals`](/reference/calendar/hours/operatingIntervals/), [`isOpenAt`](/reference/calendar/hours/isOpenAt/), [`nextOpenAt`](/reference/calendar/hours/nextOpenAt/), [`nextCloseAt`](/reference/calendar/hours/nextCloseAt/), [`operatingTimeBetween`](/reference/calendar/hours/operatingTimeBetween/) and [`addOperatingTime`](/reference/calendar/hours/addOperatingTime/).
+
+</Fragment>
+
+</ToolLayout>

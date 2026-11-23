@@ -1,0 +1,59 @@
+---
+/**
+ * Opening Hours Board widget (CORE-115).
+ *
+ * An editable `OperatingSchedule`, one local week of its open intervals and two instant handles.
+ * It reads `isOpenAt`, `nextOpenAt`, `nextCloseAt`, `operatingTimeBetween` and `addOperatingTime`
+ * for them, and draws `operatingIntervals` as the bars.
+ *
+ * **The markup and the wiring both live in `lib/opening-hours-board-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderOpeningHoursBoardTemplate } from "../lib/opening-hours-board-mount";
+
+/**
+ * `fullbleed` lets the page say the widget may use the whole main pane; see
+ * DtmDecoder.astro for the marker it adds and why it sits on a wrapper.
+ */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderOpeningHoursBoardTemplate("opening-hours-board", {}).value;
+---
+
+{
+  fullbleed ? (
+    /* ui-standards-ok: the shell every tool page uses; a shared shell component is a cross-tool change */
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountOpeningHoursBoard } from "../lib/opening-hours-board-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=hours&wa=` permalink seeds the widget with the values it names; see
+       lib/widget-permalink.ts. Absent or malformed, the widget opens on its
+       first preset. */
+    const seed = seedFromLocation("hours");
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="opening-hours-board"]')
+      .forEach((el) => {
+        mountOpeningHoursBoard(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+    void offerPageTool(
+      "opening-hours-board",
+      () => import("../lib/webmcp/tools/opening-hours-board"),
+    );
+  }
+</script>

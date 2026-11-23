@@ -231,6 +231,14 @@ const PAGES = [
     widget: "ptp-clock-converter",
   },
   {
+    path: "tools/operating-schedule-checker",
+    widget: "operating-schedule-checker",
+  },
+  {
+    path: "tools/opening-hours-board",
+    widget: "opening-hours-board",
+  },
+  {
     path: "tools/holiday-rule-builder",
     widget: "holiday-rule-builder",
   },

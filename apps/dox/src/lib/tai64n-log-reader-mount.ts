@@ -32,7 +32,7 @@ import {
 } from "~/widgets/builders";
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import { callLines, outputOf } from "~/widgets/families/gnss/call-lines";
-import { textArea } from "~/widgets/families/ledger/text-area";
+import { textArea } from "~/widgets/builders/text-area";
 import {
   logTable,
   LINE_NO_SIGNAL,

@@ -90,6 +90,8 @@ export {
   type TextInputMode,
   type TextInputOptions,
 } from "./text-input";
+export { dateInput } from "./date-input";
+export { textArea } from "./text-area";
 export { table, type Column, type TableOptions } from "./table";
 export {
   deckControls,

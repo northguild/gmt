@@ -42,7 +42,7 @@ import {
 import { defineElements } from "~/widgets/define";
 import { callOutput } from "~/widgets/families/gnss/call-output";
 import { callLines, outputOf } from "~/widgets/families/gnss/call-lines";
-import { dateInput } from "~/widgets/families/ledger/date-input";
+import { dateInput } from "~/widgets/builders/date-input";
 import { blPlot } from "~/widgets/families/ledger/bl-plot";
 import { dayColumns } from "~/widgets/families/ledger/day-columns";
 import {

@@ -37,7 +37,7 @@ import {
   type SafeHtml,
 } from "~/widgets/builders";
 import { identifier } from "~/widgets/builders/identifier";
-import { textArea } from "~/widgets/families/ledger/text-area";
+import { textArea } from "~/widgets/builders/text-area";
 import { SIGNAL_TEXT } from "~/widgets/families/holiday/signal-plates";
 import { grow } from "~/widgets/primitives/grow/grow";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";

@@ -98,6 +98,8 @@ import type { GtfsTimeReaderArgs } from "~/lib/gtfs-time-reader-mount";
 import type { GtfsServiceDayClockArgs } from "~/lib/gtfs-service-day-clock-mount";
 import type { GtfsTripBoardArgs } from "~/lib/gtfs-trip-board-mount";
 import type { PtpClockArgs } from "~/lib/ptp-clock-converter-mount";
+import type { ScheduleCheckerArgs } from "~/lib/schedule-checker";
+import type { BoardArgs } from "~/lib/opening-hours-board-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
@@ -153,6 +155,8 @@ import {
   showGtfsServiceDayClockInput,
   showGtfsTripBoardInput,
   showPtpClockConverterInput,
+  showScheduleCheckerInput,
+  showOpeningHoursBoardInput,
   showUsSunshineProtectionActInput,
   showTerrestrialTimeStackInput,
   showDwellLedgerInput,
@@ -1243,6 +1247,60 @@ const ptpClockEntry = defineWidget<PtpClockArgs>({
     })),
 });
 
+const scheduleCheckerEntry = defineWidget<ScheduleCheckerArgs>({
+  title: "Operating Schedule Checker",
+  kind: "schedule",
+  parse: (input) => {
+    const result = showScheduleCheckerInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { schedule, start, end, preset } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(schedule === undefined ? {} : { schedule }),
+        ...(start === undefined ? {} : { start }),
+        ...(end === undefined ? {} : { end }),
+        ...(preset === undefined ? {} : { preset }),
+      },
+    };
+  },
+  /* No `validate`: a schedule the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/schedule-checker-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderScheduleCheckerTemplate(idPrefix, args),
+      mount: m.mountScheduleChecker,
+    })),
+});
+
+// ui-standards-ok: one registry row per tool; the parse and load shape is the registry's own
+const openingHoursBoardEntry = defineWidget<BoardArgs>({
+  title: "Opening Hours Board",
+  kind: "hours",
+  parse: (input) => {
+    const result = showOpeningHoursBoardInput.safeParse(input);
+    // ui-standards-ok: the registry row shape every tool uses; parse and load are per tool
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* No `validate`: a schedule the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/opening-hours-board-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderOpeningHoursBoardTemplate(idPrefix, args),
+      mount: m.mountOpeningHoursBoard,
+    })),
+});
+
 const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
   title: "Terrestrial Time Stack",
   kind: "ttstack",
@@ -1799,6 +1857,8 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showGtfsServiceDayClock: gtfsServiceDayEntry,
   showGtfsTripBoard: gtfsTripBoardEntry,
   showPtpClockConverter: ptpClockEntry,
+  showScheduleChecker: scheduleCheckerEntry,
+  showOpeningHoursBoard: openingHoursBoardEntry,
   showUsSunshineProtectionAct: sunshineActEntry,
   showTerrestrialTimeStack: ttStackEntry,
   showJulianDayCounter: julianDayCounterEntry,

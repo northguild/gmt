@@ -6,9 +6,9 @@
  * grid as a pair. The browser's own picker, keyboard model and locale format are kept. A value
  * the control refuses (`2024-02-30`) leaves it empty; the mount keeps the refused string.
  */
-import { gateAttr, type GateOption } from "../../builders/gate";
-import { html, type SafeHtml } from "../../builders/html";
-import styles from "../../builders/text-input.module.css";
+import { gateAttr, type GateOption } from "./gate";
+import { html, type SafeHtml } from "./html";
+import styles from "./text-input.module.css";
 
 interface DateInputOptions extends GateOption {
   /** The control's id; the field's `<label for>` points at it. */

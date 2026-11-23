@@ -202,9 +202,11 @@ function snapMinutesFor(spanMs: number): number {
 export function createLedgerCanvas(
   startMs: number,
   endMs: number,
+  /** A snap of the tool's own, in minutes. Left out, it follows the span. */
+  snapOverride?: number,
 ): LedgerCanvas {
   const spanMs = Math.max(1, endMs - startMs);
-  const snapMinutes = snapMinutesFor(spanMs);
+  const snapMinutes = snapOverride ?? snapMinutesFor(spanMs);
   const snapMs = snapMinutes * MINUTE_MS;
   const clamp = (ms: number) => Math.max(startMs, Math.min(endMs, ms));
   return {

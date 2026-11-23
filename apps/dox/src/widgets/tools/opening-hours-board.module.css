@@ -1,0 +1,59 @@
+/*
+ * Opening Hours Board: what only this tool needs. The sections, preset, fields, verdict, plates,
+ * hold, handles and code frame are the kit's; the frame, lane, days, bar, gate, axis and legend
+ * are the ledger family's; the window rows are the hours family's. This sheet lays out the
+ * editor's groups and the week's bars.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone.
+ */
+
+/* The seven weekday groups sit in a grid that wraps on a narrow column. */
+.days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group's slot is the wrapper the mount redraws on Add and Remove. */
+.slot {
+  min-inline-size: 0;
+}
+
+.overrides {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* One override: its date, its windows and its Remove button, in a full bevelled border. */
+.override {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+  background: color-mix(in srgb, var(--gmt-cyan) 8%, var(--gmt-surface-widget));
+  border: 1px solid var(--gmt-border);
+  padding: var(--gmt-space-3);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
+/* The week's bars are children of the track; the container adds no box of its own. */
+.bars {
+  display: contents;
+}
+
+@media (forced-colors: active) {
+  .override {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .override {
+    border-color: var(--gmt-ice);
+  }
+}

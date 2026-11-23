@@ -991,6 +991,22 @@ export const CHAT_STARTERS: readonly {
     area: "iot",
     args: { seconds: "1704067237", nanoseconds: "0", offset: "37" },
   },
+  {
+    text: "Our Kolkata office schedule gives no open hours at all. Is it closed, or is the schedule broken?",
+    widget: "showScheduleChecker",
+    area: "core",
+    args: { preset: "kolkata-annotated-holiday" },
+  },
+  {
+    text: "A Tokyo desk is open 09:00–18:00 on weekdays. A ticket lands Friday 17:30. When is an 8-open-hour reply due?",
+    widget: "showOpeningHoursBoard",
+    area: "core",
+    args: {
+      preset: "tokyo-desk",
+      from: "2024-06-14T17:30:00+09:00",
+      duration: "PT8H",
+    },
+  },
 ];
 
 /** The rail call a starter card makes on click: a stable id per starter, so a
