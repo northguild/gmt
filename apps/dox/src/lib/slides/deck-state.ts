@@ -4,6 +4,8 @@
  * mount (a deep link opens mid-deck) and again on each event.
  */
 
+import { afterFrames } from "./frames";
+
 export interface DeckState {
   /** The slide's id, as in the URL hash. */
   id: string;
@@ -52,7 +54,7 @@ export function isActive(el: HTMLElement, state: DeckState): boolean {
 }
 
 /** The longest `whenStageRests` waits: a camera that never rests still lets the work run. */
-export const REST_WAIT_MS = 6000;
+const REST_WAIT_MS = 6000;
 
 /**
  * Runs `fn` once the deck's space stage is at rest (`data-flight="rest"`, `stage-camera.ts`), so
@@ -88,11 +90,14 @@ export function whenStageRests(
     watch.disconnect();
     win.clearTimeout(cap);
   });
-  win.requestAnimationFrame(() =>
-    win.requestAnimationFrame(() => {
-      if (done || signal.aborted) return;
+  afterFrames(
+    win,
+    2,
+    () => {
+      if (done) return;
       if (host.dataset["flight"] !== "moving") run();
       else watch.observe(host, { attributeFilter: ["data-flight"] });
-    }),
+    },
+    signal,
   );
 }

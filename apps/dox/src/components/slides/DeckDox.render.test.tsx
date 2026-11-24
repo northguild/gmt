@@ -112,6 +112,23 @@ function mount(mode: DeckDoxMode = "audience") {
   return view;
 }
 
+/** Mounts the deck's Dox, asks it a question and leaves the answer streaming; says once it aborts. */
+async function askAndStall(): Promise<{ aborted: boolean }> {
+  const answer = { aborted: false };
+  vi.stubGlobal(
+    "fetch",
+    route(async (input, init) => {
+      init?.signal?.addEventListener("abort", () => (answer.aborted = true));
+      return stalling()(input, init);
+    }),
+  );
+  mount();
+  const user = userEvent.setup();
+  await user.type(screen.getByRole("textbox"), "Is 2100 a leap year?{Enter}");
+  await waitFor(() => expect(chatCalls).toHaveLength(1));
+  return answer;
+}
+
 beforeEach(() => {
   chatCalls = [];
   chatBodies = [];
@@ -202,22 +219,11 @@ describe("DeckDox on a slide", () => {
   });
 
   it("aborts a live answer and clears the chat on leaving the slide", async () => {
-    let aborted = false;
-    vi.stubGlobal(
-      "fetch",
-      route(async (_input, init) => {
-        init?.signal?.addEventListener("abort", () => (aborted = true));
-        return stalling()(_input, init);
-      }),
-    );
-    mount();
-    const user = userEvent.setup();
-    await user.type(screen.getByRole("textbox"), "Is 2100 a leap year?{Enter}");
-    await waitFor(() => expect(chatCalls).toHaveLength(1));
+    const answer = await askAndStall();
     const deck = screen.getByRole("main");
     act(() => sendDeckState(deck, "thanks", 0));
     act(() => sendDeckState(deck, "next", 0));
-    await waitFor(() => expect(aborted).toBe(true));
+    await waitFor(() => expect(answer.aborted).toBe(true));
     await waitFor(() =>
       expect(
         screen.queryByText("Is 2100 a leap year?"),
@@ -226,24 +232,13 @@ describe("DeckDox on a slide", () => {
   });
 
   it("aborts at once on leaving, and clears the chat only once the camera rests", async () => {
-    let aborted = false;
-    vi.stubGlobal(
-      "fetch",
-      route(async (_input, init) => {
-        init?.signal?.addEventListener("abort", () => (aborted = true));
-        return stalling()(_input, init);
-      }),
-    );
-    mount();
-    const user = userEvent.setup();
-    await user.type(screen.getByRole("textbox"), "Is 2100 a leap year?{Enter}");
-    await waitFor(() => expect(chatCalls).toHaveLength(1));
+    const answer = await askAndStall();
     const space = screen.getByTestId("space");
     const deck = screen.getByRole("main");
     act(() => sendDeckState(deck, "thanks", 0));
     space.dataset["flight"] = "moving";
     act(() => sendDeckState(deck, "next", 0));
-    await waitFor(() => expect(aborted).toBe(true));
+    await waitFor(() => expect(answer.aborted).toBe(true));
     // The flight is on: the old chat stays until it lands, so its remount takes no flight frame.
     await new Promise((r) => setTimeout(r, 100));
     expect(screen.getByText("Is 2100 a leap year?")).toBeInTheDocument();

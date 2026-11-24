@@ -102,7 +102,7 @@ describe("rolling a counter", () => {
     callbacks.shift()!(0);
     callbacks.shift()!(ROLL_MS / 2);
     for (const tile of Array.from(el.children).slice(0, 3))
-      expect(tile.textContent).toMatch(/^\d$/);
+      expect(tile).toHaveTextContent(/^\d$/);
     callbacks.shift()!(ROLL_MS);
     expect(Array.from(el.children, (t) => t.textContent)).toEqual([
       " ",

@@ -40,7 +40,7 @@ const num = (n: number): string => String(Number(n.toFixed(4)));
 const pct = (n: number): string => `${num(n * 100)}%`;
 
 /** A cell's bounding box, as shares of the dial's box. */
-export interface ShardBox {
+interface ShardBox {
   x: number;
   y: number;
   w: number;

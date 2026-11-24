@@ -21,10 +21,12 @@
   --gmt-fit-w: 1280px;
   --gmt-fit-h: calc(var(--gmt-fit-w) * 0.74 * 9 / 16);
   --gmt-hive-cover-licence: 0px;
+
   /* The frame is opaque, so a glass blur inside it blurs a flat fill and shows nothing, but it is
      redrawn on every frame of the camera's flight past it: the composer's alone broke
      `frame-budget` at 1280x720. The token swap is the one `gmt-a11y.css` makes for reduced
-     transparency. */
+     transparency.
+     ui-standards-ok: gmt-a11y.css swaps these under a media query on the root, and CSS has no one rule that also holds them on this frame whatever the media */
   --gmt-glass-blur: none;
   --gmt-glass-blur-saturate: none;
   --gmt-glass-blur-half: none;

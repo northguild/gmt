@@ -22,6 +22,8 @@
  *   flight started with them stutters at its start (`frame-budget` in `slides-check`).
  */
 
+import { afterFrames } from "./frames";
+
 type DeckDirection = "forward" | "back";
 
 export interface DeckTransition {
@@ -50,7 +52,7 @@ interface DeckTransitionEnv {
 export const BURST_MS = 300;
 
 /** Painted frames after a transition is ready before `afterSwap` runs: the capture's, then the first. */
-export const SWAP_FRAMES = 2;
+const SWAP_FRAMES = 2;
 
 /** The attribute the page's names for the transition hang on; set only while one plays. */
 export const TRANSITION_ATTR = "data-deck-vt";
@@ -150,12 +152,7 @@ export function createDeckTransition(env: DeckTransitionEnv): DeckTransition {
       fn();
       return;
     }
-    const later = (left: number): void => {
-      if (signal.aborted) return;
-      if (left === 0) fn();
-      else win.requestAnimationFrame(() => later(left - 1));
-    };
-    const go = (): void => later(SWAP_FRAMES);
+    const go = (): void => afterFrames(win, SWAP_FRAMES, fn, signal);
     own.ready.then(go, go);
   };
 

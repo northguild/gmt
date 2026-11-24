@@ -1,6 +1,7 @@
 import { monthGrid } from "~/lib/slides/calendar-figures";
 import { codeText, gmtSteps } from "~/lib/slides/gmt-call";
-import { GMT_CALLS, REPORTS, SOURCES, VISUALS, newMoonFacts } from "./content";
+import { GMT_CALLS, SOURCES, VISUALS, newMoonFacts } from "./content";
+import { REPORTS } from "./reports";
 import { KINDS } from "./kinds";
 
 describe("what the bug slides draw", () => {
