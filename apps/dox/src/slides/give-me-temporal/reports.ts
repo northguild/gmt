@@ -48,10 +48,7 @@ export const REPORTS = {
       filing: "fullcalendar/temporal-polyfill#127",
       repro: {
         code: `Temporal.PlainDate.from({
-  calendar: "persian",
-  year: 1503,
-  monthCode: "M01",
-  day: 1
+  calendar: "persian", year: 1503, monthCode: "M01", day: 1
 })`,
       },
       observed: "2124-03-21 in the polyfill.",
