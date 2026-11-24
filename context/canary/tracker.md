@@ -36,3 +36,7 @@ Canary issues fixed with no story of their own:
   probes skip Islamic years before 1 AH, where the polyfill never returns in WebKit); D31 prints
   a coptic year before AM 1 signed; D32 prints the first day of 1 AH as 1 AH in WebKit; the en
   noon range keeps both day periods.
+- #574 tags follow the Linux WebKit leg to Ubuntu 26.04 (ICU 78.2) and the Mac runner's newer
+  time zone data; Chromium's missing locales lg, luy, sg and ksb grouped; groups made stale by
+  the CORE-114 host-wording tests removed; two tests take the host's wording or GMT's corrected
+  Islamic year.

@@ -73,14 +73,15 @@ this section on the Node leg; the tags go stale when a Node release carries `tem
 **Upstream.** [nodejs/node#67457](https://github.com/nodejs/node/issues/67457) asks v26.x to move to `temporal_rs` 0.2.4 or
 later, or to take boa-dev/temporal#723 alone.
 
-## AE. ICU4C 75+ counts every Persian year before year 0 as a leap year (macOS WebKit, engine)
+## AE. ICU4C 75+ counts every Persian year before year 0 as a leap year (WebKit, engine)
 
 **Defect.** ICU4C commit `d43d216feb` (ICU-22633, in 75-1 and later) rewrote `PersianCalendar::isLeapYear` from
 `ClockMath::floorDivide(25*year+11, 33, &remainder); return remainder < 8;` to `int64_t y = year*25LL+11LL; return (y % 33L < 8);`.
 C++ `%` rounds toward zero, so for every year −1 and earlier the remainder is zero or negative and the year counts as
 leap. macOS WebKit (system ICU) reports 272,441 of 272,441 years from −272441 to −1 as leap; the correct count is 66,046.
 Esfand (`M12`) then has 30 days in a common year, so adding a month to the 30th of `M11` throws instead of constraining to
-29, and `daysInMonth` disagrees with `from(… day: 30, { overflow: "reject" })`. Linux WebKit, Chromium and Node are right.
+29, and `daysInMonth` disagrees with `from(… day: 30, { overflow: "reject" })`. Linux WebKit on Ubuntu 26.04 (system
+ICU 78.2) has the same defect. Chromium and Node are right.
 No test262 file covers a negative Persian year; the expected values come from the specification.
 
 ```js
@@ -88,25 +89,27 @@ Temporal.PlainDate.from({ calendar: "persian", year: -722, monthCode: "M11", day
 // macOS WebKit 26.6: RangeError; expected: day constrained to the 29th of Esfand
 ```
 
-**GMT.** Only GMT on macOS WebKit's own `Temporal` sees it: `addDate` and `subtractDate` return the sentinel `''` where the
+**GMT.** Only GMT on WebKit's own `Temporal` sees it: `addDate` and `subtractDate` return the sentinel `''` where the
 engine throws (rows `plain/calculate/addDate.test.ts` `xscan persian min[327]` and the `subtractDate` twin, tagged to this
-section). The raw polyfill throws on those rows in every engine through `D1`, which GMT's workaround covers. If the Linux
-runner's ICU moves to 75 or later, the Playwright `webkit` leg starts failing the same rows and the tags need that leg.
+section on both WebKit legs). The raw polyfill throws on those rows in every engine through `D1`, which GMT's workaround
+covers.
 
 **Upstream.** [ICU-23609](https://unicode-org.atlassian.net/browse/ICU-23609) (filed on the ICU Jira and to the
 icu-support list). Fix: go back to `floorDivide`, or use a flooring modulo `((y % 33) + 33) % 33 < 8`.
 
 ### POSIX zone ids: WebKit bug 330688
 
-WebKit 26.6 rejects `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT` (`Intl.DateTimeFormat` and `Temporal.ZonedDateTime`
-throw `RangeError`), although the time zone database 2026e defines them as zones and ECMA-402 §6.5 requires them.
-Chromium 153, Firefox 155 and Node 26 accept them; `EST`, `MST` and `HST` work. On Linux WebKit 26.6 also rejects
-`CET`, `EET`, `MET` and `WET`; macOS accepts them. Filed as [WebKit 330688](https://bugs.webkit.org/show_bug.cgi?id=330688); on GitHub's macOS 26 runner WebKit accepts
-all four, so on the Mac the refusal comes with macOS 27.
+WebKit on macOS rejects `CST6CDT`, `EST5EDT`, `MST7MDT` and `PST8PDT` (`Intl.DateTimeFormat` and
+`Temporal.ZonedDateTime` throw `RangeError`), although the time zone database 2026e defines them as zones and ECMA-402
+§6.5 requires them. Chromium 153, Firefox 155 and Node 26 accept them; `EST`, `MST` and `HST` work. Filed as
+[WebKit 330688](https://bugs.webkit.org/show_bug.cgi?id=330688). macOS 27 refuses them, and so does GitHub's macOS 26
+runner from image 20261117 on. Playwright's Linux WebKit on Ubuntu 26.04 (system ICU 78.2) accepts them, and accepts
+`CET`, `EET`, `MET` and `WET` too, which it refused on Ubuntu 24.04 (ICU 74.2).
 
 The cause seems to be `isValidTimeZoneNameFromICUTimeZone` in WebKit's `Source/JavaScriptCore/runtime/IntlObject.cpp`,
 which drops every name without a `/` except `UTC` and `GMT`, on the assumption that ICU has already resolved such names
 through backward links. A name with no slash then works only when the host's time zone data makes it a link to a name
-with a slash. That fits what we see: tzdb 2024b made the System V names links, and macOS 26 accepts them; tzdb 2026d made
-`EST5EDT`, `CST6CDT`, `MST7MDT` and `PST8PDT` zones again, and macOS 27 refuses them. test262 covers the four names in
+with a slash. That fits what we see: tzdb 2024b made the System V names links, and ICU 78.2's data still has them as
+links; tzdb 2026d made `EST5EDT`, `CST6CDT`, `MST7MDT` and `PST8PDT` zones again, and macOS data from 2026d on refuses
+them. test262 covers the four names in
 `test/intl402/Temporal/ZonedDateTime/iana-legacy-names.js`; `JSTests/test262/expectations.yaml` does not list it.
