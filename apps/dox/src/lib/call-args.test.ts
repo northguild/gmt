@@ -55,6 +55,16 @@ describe("cellCallArgs", () => {
     expect(html.match(/<wbr \/>/g)).toHaveLength(2);
   });
 
+  it("lets a hyphenated ID break after each hyphen and keeps its text", () => {
+    const id = "017F22E2-79B0-7CC3-98C4-DC0C0C07398F";
+    const [html, plain] = cellCallArgs([id]);
+    expect(text(html)).toBe(`"${id}"`);
+    expect(plain).toBe(`"${id}"`);
+    // The leading seam, then one after each of the four hyphens.
+    expect(html.match(/<wbr \/>/g)).toHaveLength(5);
+    expect(html).toContain("017F22E2-<wbr />79B0-<wbr />");
+  });
+
   it("prints no arguments as nothing", () => {
     expect(cellCallArgs([])).toEqual(["", ""]);
   });

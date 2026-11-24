@@ -49,8 +49,19 @@ describe("launchBrowser", () => {
     const options = { args: ["--x"] };
     await launchBrowser("firefox", options, { engines, env: {} });
     expect(engines.firefox.launch).toHaveBeenCalledTimes(1);
-    expect(engines.firefox.launch).toHaveBeenCalledWith(options);
+    expect(engines.firefox.launch).toHaveBeenCalledWith({
+      handleSIGTERM: false,
+      ...options,
+    });
     expect(engines.firefox.connect).not.toHaveBeenCalled();
+  });
+
+  it("leaves SIGTERM to the process, so a runner's deadline stop ends the gate", async () => {
+    const engines = fakeEngines();
+    await launchBrowser("chromium", {}, { engines, env: {} });
+    expect(engines.chromium.launch).toHaveBeenCalledWith({
+      handleSIGTERM: false,
+    });
   });
 
   it("connects Firefox to the endpoint when the variable is set", async () => {

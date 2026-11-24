@@ -17,15 +17,22 @@ interface ReservedTextOptions extends GateOption {
   state?: ReservedState;
   /** Every text this slot can say, to reserve the widest and tallest. */
   samples: readonly string[];
+  /**
+   * Writes a text as markup that can break, such as `instant`. The live text and every sample go
+   * through it, so the held cell wraps where a plate does and keeps the tallest sample's height.
+   */
+  format?: (text: string) => SafeHtml;
 }
 
 export function reservedText(o: ReservedTextOptions): SafeHtml {
   const state = o.state ?? "live";
-  return html`<span class="${styles.held}" ${gateAttr(o.gate)}
-    ><span class="${styles.shown}" data-state="${state}">${o.text}</span
+  const write = o.format ?? ((text: string) => html`${text}`);
+  const held = o.format ? `${styles.held} ${styles.wraps}` : styles.held;
+  return html`<span class="${held}" ${gateAttr(o.gate)}
+    ><span class="${styles.shown}" data-state="${state}">${write(o.text)}</span
     >${[...new Set(o.samples)].map(
       (sample) =>
-        html`<span class="${styles.ghost}" aria-hidden="true" data-pagefind-ignore>${sample}</span>`,
+        html`<span class="${styles.ghost}" aria-hidden="true" data-pagefind-ignore>${write(sample)}</span>`,
     )}</span
   >`;
 }

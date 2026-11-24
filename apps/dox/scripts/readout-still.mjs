@@ -434,7 +434,8 @@ const TOOLS = [
   },
   /* The GNSS and leap-second tools (MAR-16). Their frame is the `frame` part;
      what moves with the value by design is what they draw: the lanes, the
-     bars, the strip, the timeline and the rulers, and a hold's live wrapper.
+     bars, the strip, the timeline and the rulers, and, in the rollover checker alone (the one GNSS
+     tool that draws a `hold`), a hold's live wrapper.
      The ring's laps, hand and hub are drawn (they sit in `lanes`); the plates,
      the legend, the tables and the call frame are measured. */
   {
@@ -448,9 +449,9 @@ const TOOLS = [
     ],
     track: null,
     scope: "above",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     riders: true,
-    textBoxes: ["codeframe", "verdict"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "satellite-clock-converter",
@@ -460,9 +461,9 @@ const TOOLS = [
     controls: [{ role: "slider", name: "Step through the leap seconds" }],
     track: null,
     scope: "above",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     riders: true,
-    textBoxes: ["codeframe", "verdict"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "gnss-rollover-checker",
@@ -535,9 +536,9 @@ const TOOLS = [
     controls: [{ role: "slider", name: "Move the end" }],
     track: null,
     scope: "above",
-    drawn: ["drawn", "hold"],
+    drawn: ["drawn"],
     riders: true,
-    textBoxes: ["codeframe", "verdict"],
+    textBoxes: ["codeframe"],
   },
   {
     slug: "holiday-rule-builder",
@@ -659,7 +660,7 @@ const TOOLS = [
     scope: "widget",
     drawn: ["hold"],
     riders: true,
-    textBoxes: ["codeframe"],
+    textBoxes: ["codeframe", "instant"],
   },
   {
     // The "Drag now" slider by keyboard and pointer; the cut-off and Now are typed too. The
@@ -750,6 +751,42 @@ const TOOLS = [
     // wrapper is left out, and the hold that reserves the space is measured.
     drawn: ["hold"],
     textBoxes: ["instant"],
+  },
+  {
+    // X12 time elements. No handle: the reader types the date, the time and the time code, picks a
+    // preset or a zone. The strip's third column holds an instant with an offset, up to
+    // `1900-06-15T14:30:00.12+05:21:10` (31 characters) for a zone's local mean time: the cell keeps
+    // two lines at 23 characters, so the longest value must not move it. The first date is a
+    // year-1900 one for that reason, and the first preset carries hundredths of a second.
+    slug: "x12-time-reader",
+    minutes: 6.0,
+    root: '[data-widget="x12-time-reader"]',
+    presets: ["hundredths", "status-et"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Date (373) (optional)",
+        values: ["19000615", "20240615", "20240115", "99999999", "abc", ""],
+      },
+      {
+        role: "textbox",
+        name: "Time (337) (optional)",
+        values: ["14300012", "1430", "143000", "2560", "x", ""],
+      },
+      {
+        role: "textbox",
+        name: "Time code (623) (optional)",
+        values: ["ET", "ED", "UTC", "ZZZZZZZZ", ""],
+      },
+      { role: "combobox", name: "Zone 1", values: "options" },
+      { role: "combobox", name: "DTP preset", values: "options" },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["drawn", "hold"],
+    textBoxes: ["codeframe", "instant"],
   },
   {
     // SPA-52. No handle: the reader types a code or an instant, picks a preset or clicks a digit chip.

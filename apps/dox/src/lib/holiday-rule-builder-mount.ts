@@ -20,6 +20,7 @@ import { defineElements } from "~/widgets/define";
 import {
   button,
   codeFrame,
+  paintCodeFrame,
   field,
   fieldGrid,
   findWidget,
@@ -638,6 +639,8 @@ function setupWidget(
   /** A smaller answer found while the reader is in the widget; it waits for them to leave. */
   let ruleCallPending: typeof ruleCallReserve | null = null;
   let ruleCallText = "";
+  /** The reserve the frame on the page was drawn with; the same lines and width mean its text can change in place. */
+  let ruleCallDrawn: typeof ruleCallReserve | null = null;
   let ruleCallJob: ReturnType<typeof setTimeout> | undefined;
   signal.addEventListener("abort", () => clearTimeout(ruleCallJob), {
     once: true,
@@ -753,10 +756,7 @@ function setupWidget(
     );
     setHtml(el("output"), outputOf("sentinel", NO_SIGNAL_TEXT));
     ruleCallText = "";
-    setHtml(
-      el("rule-calls"),
-      callFrame("Rule calls", "Copy rule calls", "", ruleCallReserve),
-    );
+    drawRuleCalls("");
     setToolLink(ledgerLink, null);
     setHtml(
       el("hint"),
@@ -903,9 +903,29 @@ function setupWidget(
   function redrawRuleCalls(): void {
     const frame = el("rule-calls");
     if (frame.contains(document.activeElement)) return;
+    ruleCallDrawn = null;
+    drawRuleCalls(ruleCallText);
+  }
+
+  /**
+   * Puts the text in the rule-call frame. The frame is drawn again only when its reserve changes;
+   * otherwise the text is written in place, so the scroll region the page gave the frame (its
+   * role, name and tab stop) is not taken away and given back on every keystroke.
+   */
+  function drawRuleCalls(text: string): void {
+    const frame = el("rule-calls");
+    if (
+      ruleCallDrawn?.lines === ruleCallReserve.lines &&
+      ruleCallDrawn.widest === ruleCallReserve.widest &&
+      frame.querySelector("code")
+    ) {
+      paintCodeFrame(frame, text);
+      return;
+    }
+    ruleCallDrawn = ruleCallReserve;
     setHtml(
       frame,
-      callFrame("Rule calls", "Copy rule calls", ruleCallText, ruleCallReserve),
+      callFrame("Rule calls", "Copy rule calls", text, ruleCallReserve),
     );
   }
 
@@ -945,10 +965,7 @@ function setupWidget(
     ).join("\n");
     reserveRuleCalls(rules, year);
     ruleCallText = lines;
-    setHtml(
-      el("rule-calls"),
-      callFrame("Rule calls", "Copy rule calls", lines, ruleCallReserve),
-    );
+    drawRuleCalls(lines);
     const handoff = ledgerHandoff(full, state.zone, state.weekend);
     setToolLink(ledgerLink, handoff.href);
     setHtml(

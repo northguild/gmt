@@ -138,13 +138,6 @@
       font-weight: 600;
     }
 
-    /* A held value is an instant, one token: it keeps one line (a hyphen or a colon is a break
-       point, and a split date is a split word), and a table wider than its box scrolls. */
-    & .cell span {
-      white-space: nowrap;
-      overflow-wrap: normal;
-    }
-
     /* The verdict is words: it wraps at its spaces, and the widest sample still fixes its height. */
     & .verdictCell span {
       white-space: normal;

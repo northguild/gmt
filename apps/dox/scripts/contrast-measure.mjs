@@ -432,18 +432,28 @@ function collect() {
   }
   // Disabled fields: the dashed border, measured on its own box edges.
   const borders = [];
-  for (const e of document.querySelectorAll(
+  for (const field of document.querySelectorAll(
     "input:disabled:not([type=range]), select:disabled, textarea:disabled",
   )) {
-    if (hiddenChain(e) || tiny(e)) continue;
+    if (hiddenChain(field) || tiny(field)) continue;
+    // A switchField's native input is drawn at opacity 0 over its track (the aria-hidden span
+    // after it); the track is the edge a reader sees, so that is what is measured. Any other
+    // transparent field is measured on itself.
+    const track = field.nextElementSibling;
+    const e =
+      field.matches('input[role="switch"]') &&
+      opacityOf(field) === 0 &&
+      track?.matches('[aria-hidden="true"]')
+        ? track
+        : field;
     const b = e.getBoundingClientRect();
     if (b.width < 2) continue;
     const cs = getComputedStyle(e);
     const w = parseFloat(cs.borderTopWidth) || 1;
     borders.push({
-      kind: `border ${label(e)}`,
-      target: label(e),
-      selector: window.__gmtCssPath(e),
+      kind: `border ${label(field)}`,
+      target: label(field),
+      selector: window.__gmtCssPath(field),
       color: rgba(cs.borderTopColor),
       style: cs.borderTopStyle,
       chrome: isChrome(e),

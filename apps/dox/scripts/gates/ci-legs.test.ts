@@ -72,6 +72,19 @@ describe("the Dox gates legs in ci.yml", () => {
 });
 
 describe("the weekly sweep legs", () => {
+  // Measured minutes per engine (tier-6-ops, "The weekly gate sweep") divided by these counts leave
+  // about 20 minutes of headroom under the 80-minute deadline.
+  it("run 8 Chromium, 5 Firefox and 5 WebKit legs", () => {
+    const matrix = (weekly.jobs.sweep?.strategy?.matrix?.include ??
+      []) as unknown as { browser: string }[];
+    const count = (browser: string) =>
+      matrix.filter((m) => m.browser === browser).length;
+    expect([count("chromium"), count("firefox"), count("webkit")]).toEqual([
+      8, 5, 5,
+    ]);
+    expect(matrix).toHaveLength(18);
+  });
+
   it("stop their runner at least 5 minutes inside the job's timeout", () => {
     const sweep = weekly.jobs.sweep;
     const run = sweep?.steps?.find((s) => s.run?.includes("gates --all"))?.run;

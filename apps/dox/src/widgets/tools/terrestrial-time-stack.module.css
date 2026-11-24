@@ -134,7 +134,6 @@
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .scale {

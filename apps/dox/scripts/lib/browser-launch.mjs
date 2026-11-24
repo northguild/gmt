@@ -44,7 +44,11 @@ export async function launchBrowser(name, options = {}, inject = {}) {
     );
   }
   const endpoint = name === "firefox" ? firefoxEndpoint(inject.env) : null;
-  if (endpoint === null) return engine.launch(options);
+  // Playwright's default SIGTERM handler closes the browsers and leaves the process running, so a
+  // runner that stops a gate at its deadline would watch it go on to record every page as a crash.
+  // Without it SIGTERM ends the gate, as the runner means it to.
+  if (endpoint === null)
+    return engine.launch({ handleSIGTERM: false, ...options });
   const browser = await engine.connect(endpoint, {
     exposeNetwork: LOOPBACK,
     timeout: 30_000,

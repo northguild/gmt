@@ -27,6 +27,7 @@ import {
   hint,
   html,
   idScope,
+  instant,
   paintCodeFrame,
   paintPlates,
   paintVerdict,
@@ -222,12 +223,17 @@ function noteBlock(text: string): SafeHtml {
   });
 }
 
-function cell(text: string | null, samples: readonly string[]): SafeHtml {
+function cell(
+  text: string | null,
+  samples: readonly string[],
+  format?: (text: string) => SafeHtml,
+): SafeHtml {
   return html`<span class="${styles.cell}"
     >${reservedText({
       text: text ?? NO_RESULT_TEXT,
       state: text === null ? "off" : "live",
       samples: [...samples, NO_RESULT_TEXT],
+      format,
     })}</span
   >`;
 }
@@ -249,8 +255,8 @@ const COLUMNS = [
 function rowOf(row: StripRow): Record<ColumnKey, SafeHtml> {
   const differs = row.word.startsWith("Short") || row.word.startsWith("Long");
   return {
-    start: cell(row.start, [WIDEST_TIME]),
-    ends: cell(row.ends, [WIDEST_TIME]),
+    start: cell(row.start, [WIDEST_TIME], instant),
+    ends: cell(row.ends, [WIDEST_TIME], instant),
     seconds: cell(row.seconds === null ? null : String(row.seconds), [
       WIDEST_SECONDS,
     ]),

@@ -78,7 +78,7 @@ export class FakeNode {
   }
 }
 
-export type FakeState = "suspended" | "running" | "closed";
+export type FakeState = "suspended" | "interrupted" | "running" | "closed";
 
 export class FakeAudioContext {
   static instances: FakeAudioContext[] = [];

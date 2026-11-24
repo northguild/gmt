@@ -1,5 +1,6 @@
-/* The members table and the zone strip. A cell reserves the width of its longest value in `ch`
-   (`--w`), so a longer answer never widens its column; a value never wraps. */
+/* The members table and the zone strip. A strip cell reserves the width of its longest value in
+   `ch` (`--w`), so a longer answer never widens its column. A value breaks only where its table
+   says it can (`data-wraps`), and then only between the pieces of a date or an instant. */
 
 .member {
   display: inline-block;
@@ -12,6 +13,16 @@
      date or a word. */
   white-space: normal;
   overflow-wrap: normal;
+
+  /* A table whose values can break (`data-wraps`): in a narrow column a long value takes a second
+     line, so the cell keeps both and a value that fits on one never moves the row below it. */
+  &[data-wraps] {
+    display: block;
+
+    @container (inline-size < 40rem) {
+      min-block-size: 2lh;
+    }
+  }
 
   /* A member the value does not state, or no result at all, is quieter than a value. */
   &[data-state="absent"],
@@ -26,6 +37,15 @@
   font-family: var(--gmt-font-mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+
+  /* A cell whose value can be wider than its column: it keeps the column's width and a fixed
+     number of lines, and the value breaks between the pieces of an `instant`. */
+  &[data-wraps] {
+    inline-size: var(--w);
+    min-block-size: calc(var(--lines) * 1lh);
+    vertical-align: top;
+    white-space: normal;
+  }
 }
 
 .number {
