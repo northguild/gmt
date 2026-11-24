@@ -64,7 +64,6 @@
   background: var(--gmt-void);
 }
 
-
 /* A flap that differs between the rows, lit once its row lands (or at once without script). */
 .gmt-run:not([data-armed]) > .gmt-flap [data-diff="expected"],
 [data-landed] > [data-diff="expected"] {
