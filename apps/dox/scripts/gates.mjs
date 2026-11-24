@@ -23,15 +23,14 @@
  * gates and their tiers are data in `gates/registry.mjs`, the selection is `gates/select.mjs`.
  * Time is measured with `performance.now()` because the date-ban scans this folder.
  */
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
-  closeSync,
   existsSync,
   mkdirSync,
-  openSync,
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
@@ -47,6 +46,13 @@ import {
   TIERS,
 } from "./gates/registry.mjs";
 import { formatGatesScreen } from "./gates/screen.mjs";
+import {
+  afterRetry,
+  readReport,
+  retryFits,
+  runCommand,
+  TIMED_OUT,
+} from "./gates/run-command.mjs";
 import { emptyRunOutcome, isRelevant, selectPages } from "./gates/select.mjs";
 import { appendStepSummary } from "./gates/step-summary.mjs";
 import { serveStatic } from "./lib/static-server.mjs";
@@ -60,8 +66,6 @@ const DIST = path.join(DOX, "dist");
 const KNOWN_BROWSERS = ["chromium", "webkit", "firefox"];
 const KNOWN_THEMES = ["dark", "light"];
 const GATE_TIMEOUT_MS = 90 * 60_000;
-/** Exit code `run` reports for a child it stopped at the timeout. */
-const TIMED_OUT = 124;
 
 const t0 = performance.now();
 const elapsed = () => performance.now() - t0;
@@ -343,38 +347,15 @@ if (opts.plan) {
 
 mkdirSync(GATES_DIR, { recursive: true });
 
-/**
- * Runs a command with its output in a log; resolves its exit code, or `TIMED_OUT` when it was
- * stopped after `limitMs`.
- */
-function run(command, args, { cwd, env, log, limitMs = GATE_TIMEOUT_MS }) {
-  return new Promise((resolve) => {
-    const fd = openSync(log, "a");
-    const p = spawn(command, args, {
-      cwd,
-      env: { ...process.env, FORCE_COLOR: "0", ...env },
-      stdio: ["ignore", fd, fd],
-    });
-    child = p;
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      p.kill("SIGTERM");
-    }, limitMs);
-    p.on("close", (code, signal) => {
-      clearTimeout(timer);
-      closeSync(fd);
-      child = null;
-      resolve(timedOut ? TIMED_OUT : (code ?? (signal ? 1 : 0)));
-    });
-    p.on("error", () => {
-      clearTimeout(timer);
-      closeSync(fd);
-      child = null;
-      resolve(2);
-    });
+/** `runCommand`, with the runner's `child` kept for `cleanup`. */
+const run = (command, args, options) =>
+  runCommand(command, args, {
+    limitMs: GATE_TIMEOUT_MS,
+    ...options,
+    onSpawn: (p) => {
+      child = p;
+    },
   });
-}
 
 let buildRow = {
   id: "build",
@@ -481,7 +462,8 @@ function groupsFor(gate) {
       ? []
       : opts.browsers.filter((b) => gate.browsers.includes(b));
   const costs = opts.shard ? pageCosts(gate) : undefined;
-  const keep = (list) => shardOf(list, opts.shard, costs);
+  const offset = GATES.indexOf(gate);
+  const keep = (list) => shardOf(list, opts.shard, costs, offset);
   if (gate.browsers.length > 0 && browsers.length === 0)
     return { groups: [], dropped, reason: "browser" };
   if (opts.all && gate.fullBrowsers) {
@@ -589,24 +571,6 @@ const BASE_URL = `http://127.0.0.1:${server.address().port}/gmt`;
 
 // --- running --------------------------------------------------------------------------------
 
-/** What one invocation of a gate script wrote under `GATE_REPORT`. */
-function readReport(file) {
-  const findings = [];
-  let measured = null;
-  if (existsSync(file)) {
-    for (const line of readFileSync(file, "utf8").split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        const entry = JSON.parse(line);
-        if (entry.kind === "finding") findings.push(entry);
-        else if (entry.kind === "measured")
-          measured = (measured ?? 0) + entry.n;
-      } catch {}
-    }
-  }
-  return { findings, measured };
-}
-
 /** The commands for one (group, theme) of a gate; the first non-zero exit ends the invocation. */
 function stepsFor(gate, group, theme, pages) {
   const script = path.join(SCRIPTS, gate.script);
@@ -648,6 +612,10 @@ async function invoke(gate, group, theme, pages, tag, attempt) {
   if (attempt === 0) rmSync(log, { force: true });
   writeFileSync(log, `\n--- attempt ${attempt + 1} ---\n`, { flag: "a" });
   let code = 0;
+  // At the limit the gate is sent SIGTERM and may run on for a moment, recording every page it
+  // never checked as a crash. Only what the report held at that moment counts.
+  let upTo;
+  const attemptStart = performance.now();
   for (const step of stepsFor(gate, group, theme, pages)) {
     const args = [...step.args];
     if (step.base === "baseline") {
@@ -660,10 +628,13 @@ async function invoke(gate, group, theme, pages, tag, attempt) {
       env: { GATE_REPORT: report },
       log,
       limitMs: Math.min(GATE_TIMEOUT_MS, Math.max(0, timeLeft())),
+      onLimit: () => {
+        upTo = existsSync(report) ? statSync(report).size : 0;
+      },
     });
     if (code !== 0) break;
   }
-  const { findings, measured } = readReport(report);
+  const { findings, measured } = readReport(report, { upTo });
   let status = "PASS";
   if (code === 2) status = "ERROR";
   else if (code !== 0 || findings.length > 0) status = "FAIL";
@@ -674,7 +645,18 @@ async function invoke(gate, group, theme, pages, tag, attempt) {
     code === 0 &&
     findings.length === 0 &&
     (measured === null || measured === 0);
-  return { status, code, findings, measured, empty, timedOut, outOfTime, log };
+  const durationMs = performance.now() - attemptStart;
+  return {
+    status,
+    code,
+    findings,
+    measured,
+    empty,
+    timedOut,
+    outOfTime,
+    log,
+    durationMs,
+  };
 }
 
 const rows = [buildRow];
@@ -739,12 +721,13 @@ for (const entry of todo) {
         .join("-");
       let pages = group.pages;
       let result = await invoke(gate, group, theme, pages, tag, 0);
+      const firstAttemptMs = result.durationMs;
       for (
         let retry = 1;
         retry <= opts.retries &&
         result.status === "FAIL" &&
         !result.timedOut &&
-        timeLeft() > 0;
+        retryFits(timeLeft(), firstAttemptMs);
         retry++
       ) {
         const failing = [
@@ -752,10 +735,10 @@ for (const entry of todo) {
         ].filter((p) => pages.includes(p));
         if (failing.length > 0) pages = failing;
         const again = await invoke(gate, group, theme, pages, tag, retry);
-        if (again.status === "PASS") {
-          retriedOnce = true;
-          result = { ...again, retried: true };
-        } else result = again;
+        const next = afterRetry(result, again);
+        result = next.result;
+        if (next.flaky) retriedOnce = true;
+        if (next.stop) break;
       }
       lastLog = result.log;
       if (result.status === "ERROR") usageError = true;

@@ -110,7 +110,17 @@
   outline-offset: 2px;
 }
 
-.input:disabled ~ .track,
+/* A disabled switch is a dashed track in the muted ink, as a disabled field is, so its edge and
+   its thumb still read against the page at 3:1; its words are dimmed. */
+.input:disabled ~ .track {
+  border-style: dashed;
+  border-color: var(--gmt-ice-dim);
+}
+
+:where(.input:disabled) ~ .track::after {
+  background: var(--gmt-ice-dim);
+}
+
 .input:disabled ~ .text {
   opacity: 0.6;
 }

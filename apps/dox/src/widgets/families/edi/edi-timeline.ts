@@ -17,6 +17,7 @@ import {
   type TimelineSpec,
 } from "~/lib/edi-picture";
 import { durationText } from "~/lib/edi-widgets";
+import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./edi-timeline.module.css";
 
@@ -121,5 +122,5 @@ export function timelineContent(spec: TimelineSpec): SafeHtml {
 
 /** The timeline's slot: the mount writes `timelineContent` into the element with this id. */
 export function ediTimeline(o: { id: string; spec: TimelineSpec }): SafeHtml {
-  return html`<div id="${o.id}">${timelineContent(o.spec)}</div>`;
+  return html`<div id="${o.id}" ${gateAttr("drawn")}>${timelineContent(o.spec)}</div>`;
 }

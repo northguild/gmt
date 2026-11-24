@@ -27,6 +27,24 @@ describe("shardOf", () => {
     );
   });
 
+  it("starts the round-robin at the offset, so one-page gates land on different shards", () => {
+    const one = ["/only/"];
+    const landed = [0, 1, 2, 3, 4].map((offset) =>
+      [1, 2, 3, 4].find(
+        (i) => shardOf(one, { i, n: 4 }, undefined, offset).length,
+      ),
+    );
+    expect(landed).toEqual([1, 2, 3, 4, 1]);
+  });
+
+  it("still covers the list exactly once with an offset", () => {
+    const shards = [1, 2, 3, 4].map((i) =>
+      shardOf(PAGES, { i, n: 4 }, undefined, 7),
+    );
+    expect(shards.flat().sort()).toEqual([...PAGES].sort());
+    expect(new Set(shards.flat()).size).toBe(PAGES.length);
+  });
+
   it("does not change the list it is given", () => {
     const copy = [...PAGES];
     shardOf(PAGES, { i: 3, n: 4 });

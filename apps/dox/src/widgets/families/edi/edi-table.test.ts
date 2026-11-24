@@ -39,6 +39,32 @@ describe("memberTable", () => {
     await expectNoAxeViolations(host);
   });
 
+  it("changes the table's layout only when its values wrap", () => {
+    /* oxlint-disable testing-library/no-node-access, dox-test/no-class-query -- the column widths,
+       the wrap mark and the gate mark have no role, text or name; only the markup shows them */
+    const rows = [{ key: "kind", label: "Kind" }];
+    const plain = renderHtml(
+      memberTable({ id, caption: "Plain", prefix: "member", rows }),
+    ).host;
+    expect(plain.querySelector("colgroup")).toBeNull();
+    expect(plain.querySelector("[data-wraps]")).toBeNull();
+    expect(plain.querySelector('[data-gate="drawn"]')).toBeNull();
+
+    const wrapping = renderHtml(
+      memberTable({
+        id,
+        caption: "Wrapping",
+        prefix: "member",
+        rows,
+        wraps: true,
+      }),
+    ).host;
+    expect(wrapping.querySelector('col[width="34%"]')).not.toBeNull();
+    expect(wrapping.querySelector("[data-wraps]")).not.toBeNull();
+    expect(wrapping.querySelector('[data-gate="drawn"]')).not.toBeNull();
+    /* oxlint-enable testing-library/no-node-access, dox-test/no-class-query */
+  });
+
   it("shows what setMember writes", () => {
     renderHtml(
       memberTable({
