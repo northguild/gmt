@@ -1,5 +1,7 @@
 import { fileURLToPath } from "node:url";
 
+import { DECKS } from "../../src/slides/decks";
+
 import { buildPages, importsOf, sitePathOf } from "./graph.mjs";
 import {
   CAP,
@@ -275,18 +277,17 @@ describe("isRelevant", () => {
 });
 
 describe("the deck routes in the graph", () => {
+  // The first registered deck stands for them all: a shared test never spells a deck's slug.
+  const slug = DECKS[0]!.slug;
+
   it("are pages, each reaching its own deck's files", () => {
     const root = fileURLToPath(new URL("../../../../", import.meta.url));
     const pages = buildPages(root, {
-      "apps/dox/src/pages/slides/[slug]/index.astro": [
-        "/slides/give-me-temporal/",
-      ],
+      "apps/dox/src/pages/slides/[slug]/index.astro": [`/slides/${slug}/`],
     });
-    const deck = pages.find((p) => p.path === "/slides/give-me-temporal/");
+    const deck = pages.find((p) => p.path === `/slides/${slug}/`);
     expect(deck?.file).toBe("apps/dox/src/pages/slides/[slug]/index.astro");
-    expect(deck?.closure).toContain(
-      "apps/dox/src/slides/give-me-temporal/content.ts",
-    );
+    expect(deck?.closure).toContain(`apps/dox/src/slides/${slug}/content.ts`);
     expect(deck?.closure).toContain(
       "apps/dox/src/components/slides/slides.css",
     );
@@ -295,7 +296,7 @@ describe("the deck routes in the graph", () => {
   it("are left out without their paths, as any dynamic route is", () => {
     const root = fileURLToPath(new URL("../../../../", import.meta.url));
     expect(
-      buildPages(root).some((p) => p.path.startsWith("/slides/give-me")),
+      buildPages(root).some((p) => p.path.startsWith(`/slides/${slug}/`)),
     ).toBe(false);
   });
 });
