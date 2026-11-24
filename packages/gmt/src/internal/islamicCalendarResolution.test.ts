@@ -9,6 +9,7 @@ import { cachedFormatter } from "./formatterCache";
 import { Temporal } from "./temporal";
 import { utcMs } from "../test/utcMs";
 import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
+import { calendarFieldsOf } from "./temporalCompat";
 
 /*
  * CORE-112, D30: `islamic` and `islamic-rgsa` resolve to calendars no engine should use.
@@ -22,9 +23,13 @@ import { isIslamicEraCompatNeeded } from "./temporalCompat/capabilities";
  * separators come from the host's own `islamic-tbla` text, which is its wording.
  */
 
-/** The day and the year `islamic-tbla` gives a date, the values of Table 1 of the calendar. */
+/**
+ * The day and the year `islamic-tbla` gives a date, the values of Table 1 of the calendar, read
+ * through GMT's calendar-field read: on WebKit the polyfill reads 1 Muharram of year 1 as year 0
+ * (D18), and GMT corrects it there.
+ */
 function islamicTbla(iso: string, locale = "en-u-ca-islamic-tbla") {
-  const date = Temporal.PlainDate.from(iso).withCalendar("islamic-tbla");
+  const date = calendarFieldsOf(Temporal.PlainDate.from(iso), "islamic-tbla");
   const parts = new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "numeric",
