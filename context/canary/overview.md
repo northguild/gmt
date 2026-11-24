@@ -99,7 +99,7 @@ covers them.
 | Node, Deno, Cloudflare Workers                                 | V8                                                            | `node`                   |
 
 The `webkit` leg runs Playwright's WebKit on Ubuntu, which takes its ICU and time zone data from
-the runner's `libicu74`. The `webkit-macos` leg runs the same browser on a macOS runner, which uses
+the runner's system ICU (`libicu78` on `ubuntu-latest`, Ubuntu 26.04). The `webkit-macos` leg runs the same browser on a macOS runner, which uses
 the ICU and time zone data Safari takes from macOS and iOS. The two differ (the tags in
 `scripts/lib/native-suite-tags.mjs` record where), so each leg tests the data it names.
 

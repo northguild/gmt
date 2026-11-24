@@ -58,6 +58,7 @@ import {
   roundTime,
   scheduleDelivery,
 } from "../index";
+import { hostText } from "./hostIntl";
 
 /** The values a string-typed member must not accept, each one something `ToString` would read. */
 function notStrings(text: string): unknown[] {
@@ -124,7 +125,12 @@ const STRING_ROWS: Row[] = [
     family: "Intl DateTimeFormat option",
     member: "timeZoneName",
     valid: "short",
-    expected: "10 CEST",
+    // The hour's wording is the host's: ICU 78.2's en-GB prints "10h CEST", Node's ICU 78.3 "10 CEST".
+    expected: hostText(
+      "en-GB",
+      { hour: "numeric", timeZoneName: "short" },
+      "2024-06-15T10:30:00+02:00[Europe/Berlin]",
+    ),
     sentinel: "",
     run: (v) =>
       formatZonedDateTime("2024-06-15T10:30:00+02:00[Europe/Berlin]", "en-GB", {
