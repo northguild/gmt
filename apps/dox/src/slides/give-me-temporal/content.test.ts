@@ -116,7 +116,8 @@ describe("what each GMT step expects", () => {
   it("expects the Persian date native Temporal gives, and the Gregorian era for 1870", () => {
     const [persian, japanese] = GMT_CALLS.years;
     expect(REPORTS.years[1].expected).toContain(persian.args[0]);
-    expect(REPORTS.years[1].repro.code).toContain(
+    // The code is broken over lines to fit the stage, so compare it on one line.
+    expect(REPORTS.years[1].repro.code.replace(/\s+/g, " ")).toContain(
       'year: 1503, monthCode: "M01", day: 1',
     );
     expect(persian.want).toBe("Farvardin 1, 1503 AP");

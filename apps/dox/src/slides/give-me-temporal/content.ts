@@ -56,7 +56,12 @@ export const REPORTS = {
     {
       filing: "fullcalendar/temporal-polyfill#127",
       repro: {
-        code: `Temporal.PlainDate.from({ calendar: "persian", year: 1503, monthCode: "M01", day: 1 })`,
+        code: `Temporal.PlainDate.from({
+  calendar: "persian",
+  year: 1503,
+  monthCode: "M01",
+  day: 1
+})`,
       },
       observed: "2124-03-21 in the polyfill.",
       expected: "2124-03-20, as native Temporal gives.",
@@ -100,7 +105,13 @@ export const REPORTS = {
     {
       filing: "nodejs/node#67457",
       repro: {
-        code: `Temporal.PlainDate.from("2000-01-01").until("2001-01-01", { largestUnit: "years", smallestUnit: "months", roundingMode: "halfExpand" }).toString()`,
+        code: `Temporal.PlainDate.from("2000-01-01")
+  .until("2001-01-01", {
+    largestUnit: "years",
+    smallestUnit: "months",
+    roundingMode: "halfExpand"
+  })
+  .toString()`,
         output: ['"P1Y1M"'],
         want: '"P1Y"',
       },

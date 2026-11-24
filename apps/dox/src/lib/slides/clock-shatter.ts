@@ -9,6 +9,11 @@
  * exactly as they stood, and the Web Animations API moves it on the compositor: one transform and
  * one opacity per shard, sampled from `shardPose`, with nothing to draw per frame. The keyframes
  * are pure (`shardKeyframes`), so the same break plays every time.
+ *
+ * A copy keeps only the parts of the dial that reach its cell (`leafBoxes`), in a box that is its
+ * cell's box, not the dial's (`shardBox`). Twenty whole copies were 6,000 elements, styled on the
+ * break's first frame and again on the next, when the wall's state changes on the layer above:
+ * 30 ms each at 1280x720, over `frame-budget`.
  */
 import { FADE_END_MS, shardPose } from "./ice-wall/shards";
 import { cells, hashSeed, type Cell } from "./ice-wall/voronoi";
@@ -34,9 +39,94 @@ export const shatterCells = (): Cell[] => cells(SEED, SHARD_COUNT);
 const num = (n: number): string => String(Number(n.toFixed(4)));
 const pct = (n: number): string => `${num(n * 100)}%`;
 
-/** A cell as a CSS `clip-path`, in percentages of the dial's box. */
+/** A cell's bounding box, as shares of the dial's box. */
+export interface ShardBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The smallest box round `cell`: a shard's box, so its layer holds that cell's pixels only. */
+export function shardBox(cell: Cell): ShardBox {
+  const xs = cell.poly.map(([x]) => x);
+  const ys = cell.poly.map(([, y]) => y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+/** A cell as a CSS `clip-path`, in percentages of its own box (`shardBox`). */
 export function shardClip(cell: Cell): string {
-  return `polygon(${cell.poly.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(", ")})`;
+  const b = shardBox(cell);
+  return `polygon(${cell.poly.map(([x, y]) => `${pct((x - b.x) / b.w)} ${pct((y - b.y) / b.h)}`).join(", ")})`;
+}
+
+/** How far past its cell's box a part may reach and still be kept: its shadow and its stroke. */
+const KEEP_MARGIN = 0.02;
+
+/** A part of the dial with no element inside it, by its place among the dial's elements. */
+interface Leaf {
+  index: number;
+  box: ShardBox;
+}
+
+/**
+ * Where a square drawing sits in a `w` by `h` box, centred and fitted (the `<svg>` default):
+ * its left and top and its side, in pixels.
+ */
+export function drawnSquare(w: number, h: number): [number, number, number] {
+  const side = Math.min(w, h);
+  return [(w - side) / 2, (h - side) / 2, side];
+}
+
+/**
+ * The dial's parts that draw, each with its box as shares of `into`'s box, where the copies draw
+ * the dial: measured on the dial, as shares of its drawing, then placed in the copy's. None when
+ * either has no size (not laid out), so every copy is kept whole.
+ */
+function leafBoxes(dial: SVGSVGElement, into: HTMLElement): Leaf[] {
+  const from = dial.getBoundingClientRect();
+  const to = into.getBoundingClientRect();
+  if (!from.width || !from.height || !to.width || !to.height) return [];
+  const [fx, fy, fs] = drawnSquare(from.width, from.height);
+  const [tx, ty, ts] = drawnSquare(to.width, to.height);
+  const leaves: Leaf[] = [];
+  dial.querySelectorAll("*").forEach((el, index) => {
+    if (el.childElementCount > 0 || el.closest("defs")) return;
+    const r = el.getBoundingClientRect();
+    const u = (r.left - from.left - fx) / fs;
+    const v = (r.top - from.top - fy) / fs;
+    leaves.push({
+      index,
+      box: {
+        x: (tx + u * ts) / to.width,
+        y: (ty + v * ts) / to.height,
+        w: (r.width / fs) * (ts / to.width),
+        h: (r.height / fs) * (ts / to.height),
+      },
+    });
+  });
+  return leaves;
+}
+
+/** Whether a part's box reaches a shard's box, give or take `KEEP_MARGIN`. */
+export function reaches(part: ShardBox, shard: ShardBox): boolean {
+  const m = KEEP_MARGIN;
+  return (
+    part.x - m < shard.x + shard.w &&
+    part.x + part.w + m > shard.x &&
+    part.y - m < shard.y + shard.h &&
+    part.y + part.h + m > shard.y
+  );
+}
+
+/** Lays `el` out at the dial's size and place inside a shard whose box is `b`. */
+function placeInShard(el: SVGSVGElement, b: ShardBox): void {
+  el.style.left = pct(-b.x / b.w);
+  el.style.top = pct(-b.y / b.h);
+  el.style.width = pct(1 / b.w);
+  el.style.height = pct(1 / b.h);
 }
 
 /**
@@ -66,14 +156,26 @@ export function shatter(dial: SVGSVGElement, into: HTMLElement): void {
   const doc = into.ownerDocument;
   const size = into.getBoundingClientRect().width;
   into.style.perspective = `${num(size * PERSPECTIVE)}px`;
+  const leaves = leafBoxes(dial, into);
   for (const cell of shatterCells()) {
+    const box = shardBox(cell);
     const shard = doc.createElement("div");
     shard.setAttribute("data-shard", "");
+    shard.style.left = pct(box.x);
+    shard.style.top = pct(box.y);
+    shard.style.width = pct(box.w);
+    shard.style.height = pct(box.h);
     shard.style.clipPath = shardClip(cell);
-    shard.style.transformOrigin = `${pct(cell.centroid[0])} ${pct(cell.centroid[1])}`;
+    shard.style.transformOrigin = `${pct((cell.centroid[0] - box.x) / box.w)} ${pct((cell.centroid[1] - box.y) / box.h)}`;
     const copy = dial.cloneNode(true) as SVGSVGElement;
+    const parts = copy.querySelectorAll("*");
+    for (const leaf of leaves)
+      if (!reaches(leaf.box, box)) parts[leaf.index]?.remove();
     copy.querySelector("defs")?.remove();
-    shard.append(copy, crack(doc, cell));
+    const edge = crack(doc, cell);
+    placeInShard(copy, box);
+    placeInShard(edge, box);
+    shard.append(copy, edge);
     into.append(shard);
     if (typeof shard.animate !== "function") continue;
     shard.animate(shardKeyframes(cell, size), {

@@ -1,3 +1,4 @@
+import { drawnScale } from "~/lib/drawn-scale";
 import { prefersReducedMotion } from "~/lib/reduced-motion";
 
 /** How long the rail's body must hold its size before the glide starts. */
@@ -18,7 +19,7 @@ export function glideToLead(host: HTMLElement): () => void {
     if (!scroller || !lead) return;
     /* The chat is drawn scaled (`gmt-stage-fit`): rects are in drawn px, scrollTop in layout px. */
     const box = scroller.getBoundingClientRect();
-    const scale = box.height / scroller.offsetHeight || 1;
+    const scale = drawnScale(scroller, "block");
     const top =
       scroller.scrollTop + (lead.getBoundingClientRect().top - box.top) / scale;
     if (scroller.scrollHeight - scroller.clientHeight < top) return;

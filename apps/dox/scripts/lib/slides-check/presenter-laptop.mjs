@@ -1,6 +1,6 @@
 /**
  * The presenter family's laptop check, once per laptop size: the page does not scroll, the frames
- * are wide enough, the three nav buttons are one height, and the readouts, frames and nav row stay
+ * are wide enough, the notes show at least three lines, the three nav buttons are one height, and the readouts, frames and nav row stay
  * still while each readout shows each of its samples and three slides are stepped.
  */
 import { frames } from "../page-frames.mjs";
@@ -49,6 +49,13 @@ export async function checkLaptop({ context, base, pagePath, laptop, at }) {
         .width,
       next: document.querySelector("[data-pv-next]").getBoundingClientRect()
         .width,
+      notes: (() => {
+        const el = document.querySelector("[data-pv-notes]");
+        return {
+          height: el.getBoundingClientRect().height,
+          line: parseFloat(getComputedStyle(el).lineHeight),
+        };
+      })(),
       buttons: ["#pv-prev", "#pv-next", "#pv-blank"].map(
         (id) => document.querySelector(id).getBoundingClientRect().height,
       ),
@@ -69,6 +76,12 @@ export async function checkLaptop({ context, base, pagePath, laptop, at }) {
       at(
         "presenter-frame",
         `the next frame is ${Math.round(shape.next)} px wide, under ${laptop.next}`,
+        target,
+      );
+    if (shape.notes.height < 3 * shape.notes.line)
+      at(
+        "presenter-notes",
+        `the notes show ${Math.round(shape.notes.height)} px, under three ${Math.round(shape.notes.line)} px lines`,
         target,
       );
     if (Math.max(...shape.buttons) - Math.min(...shape.buttons) > 0.5)

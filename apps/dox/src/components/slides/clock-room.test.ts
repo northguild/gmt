@@ -27,7 +27,7 @@ function selectorsSetting(token: string): string[] {
 }
 
 describe("the clock's room on a slide", () => {
-  it.each(["deck-clock-room", "deck-pad-inline"])(
+  it.each(["deck-clock-room", "deck-pad-start"])(
     "keys the %s end padding on deck mode, not on the mounted stage",
     (value) => {
       const selectors = selectorsSetting(value);

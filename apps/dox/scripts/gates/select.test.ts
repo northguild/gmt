@@ -177,6 +177,39 @@ describe("selectPages", () => {
     expect(plan.pages.length).toBeLessThanOrEqual(CAP);
   });
 
+  it("keeps a page for each gate the diff reached, past the cap", () => {
+    const many = Array.from({ length: 30 }, (_, i) =>
+      page(`/p/${String(i).padStart(2, "0")}/`, [HELPER]),
+    );
+    const deck = page("/slides/deck/", [HELPER]);
+    const universe = [...pages.slice(0, 3), ...many, deck];
+    const plan = selectPages({
+      changed: [HELPER],
+      pages: universe,
+      sample: SAMPLE,
+      gatePages: { "slides-check": ["/slides/deck/", "/slides/other/"] },
+    });
+    expect(plan.capped?.from).toBe(34);
+    expect(plan.pages).toContain("/slides/deck/");
+    expect(plan.reasons["/slides/deck/"]).toContain(
+      "cap: kept for slides-check",
+    );
+  });
+
+  it("adds nothing for a gate whose pages the diff did not reach", () => {
+    const many = Array.from({ length: 30 }, (_, i) =>
+      page(`/p/${String(i).padStart(2, "0")}/`, [HELPER]),
+    );
+    const plan = selectPages({
+      changed: [HELPER],
+      pages: [...pages.slice(0, 3), ...many, page("/slides/deck/")],
+      sample: SAMPLE,
+      gatePages: { "slides-check": ["/slides/deck/"] },
+    });
+    expect(plan.pages).not.toContain("/slides/deck/");
+    expect(plan.pages).toHaveLength(SAMPLE.length + CAP_REST);
+  });
+
   it("leaves 12 pages or fewer alone", () => {
     const dozen = Array.from({ length: CAP }, (_, i) =>
       page(`/q/${i}/`, [HELPER]),
@@ -238,6 +271,32 @@ describe("isRelevant", () => {
         .map((f) => `${p.path} imports ${f}`),
     );
     expect(rejected).toEqual([]);
+  });
+});
+
+describe("the deck routes in the graph", () => {
+  it("are pages, each reaching its own deck's files", () => {
+    const root = fileURLToPath(new URL("../../../../", import.meta.url));
+    const pages = buildPages(root, {
+      "apps/dox/src/pages/slides/[slug]/index.astro": [
+        "/slides/give-me-temporal/",
+      ],
+    });
+    const deck = pages.find((p) => p.path === "/slides/give-me-temporal/");
+    expect(deck?.file).toBe("apps/dox/src/pages/slides/[slug]/index.astro");
+    expect(deck?.closure).toContain(
+      "apps/dox/src/slides/give-me-temporal/content.ts",
+    );
+    expect(deck?.closure).toContain(
+      "apps/dox/src/components/slides/slides.css",
+    );
+  });
+
+  it("are left out without their paths, as any dynamic route is", () => {
+    const root = fileURLToPath(new URL("../../../../", import.meta.url));
+    expect(
+      buildPages(root).some((p) => p.path.startsWith("/slides/give-me")),
+    ).toBe(false);
   });
 });
 

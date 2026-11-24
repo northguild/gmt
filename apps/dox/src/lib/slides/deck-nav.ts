@@ -75,13 +75,6 @@ export function mountDeckNav(o: {
   const markLayout = (): void => {
     root.dataset.shownLayout = parts[deck.state.slide]?.el.dataset.layout ?? "";
   };
-  /** The page follows the state: the builds, the address, the stage, the presenter. */
-  const follow = (): void => {
-    showBuilds();
-    writeHash();
-    o.follow();
-  };
-
   const visual = createDeckTransition({
     doc,
     signal,
@@ -89,6 +82,16 @@ export function mountDeckNav(o: {
       win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
     covered: o.covered,
   });
+
+  /**
+   * The page follows the state: the builds and the address at once, the stage and the presenter
+   * once a slide change's new picture is up (`afterSwap`), so the flight starts on smooth frames.
+   */
+  const follow = (): void => {
+    showBuilds();
+    writeHash();
+    visual.afterSwap(o.follow);
+  };
 
   const carousel = wireCarousel(o.stage, {
     signal,

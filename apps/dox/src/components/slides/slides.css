@@ -212,22 +212,36 @@ html[data-deck] .gmt-deck-slides {
   inset: 0;
   box-sizing: border-box;
   padding-block: var(--gmt-deck-pad-block);
-  padding-inline: var(--gmt-deck-pad-inline);
+  padding-inline: var(--gmt-deck-pad-start) var(--gmt-deck-pad-inline);
   border: 0;
   overflow: hidden;
-  font-size: max(0.75rem, 2.6cqi);
+  font-size: max(0.75rem, 2.1cqi);
   line-height: 1.4;
   opacity: 0;
   visibility: hidden;
   transition:
     opacity var(--gmt-duration-med) var(--gmt-enter-easing),
-    visibility 0s linear var(--gmt-duration-med);
+    visibility 0s linear var(--gmt-duration-med),
+    content-visibility 0s linear var(--gmt-duration-med) allow-discrete;
 }
 
 :is(html[data-deck], [data-slide-stage]) .gmt-slide[data-shown] {
   opacity: 1;
   visibility: visible;
   transition-delay: 0s;
+}
+
+/*
+ * A slide that is not shown skips its style and layout. The stage renders every slide, so a
+ * change that restyles the whole page (a view transition starting is one) otherwise restyles
+ * about 2,800 elements: some 40 ms on a laptop, a dropped frame on every slide change. The
+ * leaving slide keeps its content until its fade ends, as it keeps its visibility. Print shows
+ * every slide, so this is for the screen only.
+ */
+@media screen {
+  html[data-deck="stage"] .gmt-slide:not([data-shown]) {
+    content-visibility: hidden;
+  }
 }
 
 /*
@@ -276,17 +290,17 @@ html[data-deck="wait"] .gmt-slide ~ .gmt-slide {
 }
 
 :is(html[data-deck], [data-slide-stage]) .gmt-slide-body {
-  font-size: max(0.8rem, 2.1cqi);
+  font-size: max(0.8rem, 1.7cqi);
 }
 
 :is(html[data-deck], [data-slide-stage])
   .gmt-slide[data-layout="title"]
   .gmt-slide-body {
-  font-size: max(1rem, 2.6cqi);
+  font-size: max(1rem, 2.2cqi);
 }
 
 :is(html[data-deck], [data-slide-stage]) .gmt-slide-title {
-  font-size: max(1.25rem, 3.6cqi);
+  font-size: max(1.25rem, 2.8cqi);
   line-height: 1.15;
   margin-block-end: var(--gmt-deck-space-2xl);
 }
@@ -298,7 +312,7 @@ html[data-deck="wait"] .gmt-slide ~ .gmt-slide {
 }
 
 :is(html[data-deck], [data-slide-stage]) .gmt-slide-title[data-langs] {
-  font-size: max(1.25rem, 3.2cqi);
+  font-size: max(1.25rem, 2.6cqi);
 }
 
 /* Chinese comes from a system face, not the display face; its light weight matches the display
@@ -315,7 +329,7 @@ html[data-deck="wait"] .gmt-slide ~ .gmt-slide {
 :is(html[data-deck], [data-slide-stage])
   .gmt-slide[data-layout="title"]
   .gmt-slide-title {
-  font-size: max(1.5rem, 7cqi);
+  font-size: max(1.5rem, 5.5cqi);
 }
 
 :is(html[data-deck], [data-slide-stage]) [data-notes] {
@@ -422,6 +436,8 @@ html[data-deck="stage"] .gmt-deck-guide[hidden] {
   inline-size: max-content;
   padding: var(--gmt-deck-space-sm) var(--gmt-deck-space-md);
   border: 1px solid var(--guide-line);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
   background: var(--gmt-surface);
   color: var(--gmt-ice);
   font-size: var(--gmt-deck-text-sm);
@@ -888,10 +904,10 @@ html[data-deck] .gmt-deck-blank {
 }
 
 /* A full slide takes the whole page: the Earth, or the clock in its place, fades out while it
-   shows, and the sky stays. */
+   shows, and the sky stays. Its end side mirrors the start side, so the margins match. */
 :is(html[data-deck] .gmt-deck, [data-slide-stage])
   .gmt-slide[data-layout="full"] {
-  padding-inline-end: var(--gmt-deck-pad-inline);
+  padding-inline-end: var(--gmt-deck-pad-start);
 }
 
 html[data-deck]

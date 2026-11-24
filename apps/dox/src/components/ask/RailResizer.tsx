@@ -18,6 +18,7 @@ import {
   useState,
   type RefObject,
 } from "react";
+import { drawnScale } from "~/lib/drawn-scale";
 import styles from "./RailResizer.module.css";
 import {
   clampRailWidth,
@@ -52,14 +53,6 @@ function storeWidth(width: number | undefined): void {
  * splitter must carry its value from the first render, and the measured one
  * replaces this as soon as the page mounts. */
 const SERVER_VALUE = { min: 352, now: 352, max: 704 };
-
-/** How much a transform scales `el` as drawn (a slide's fit box): 1 where nothing scales it. The
- * layout width is rounded to a pixel, so a drawn ratio within 1% of 1 is no scaling. */
-const drawnScale = (el: HTMLElement) => {
-  const ratio =
-    el.offsetWidth > 0 ? el.getBoundingClientRect().width / el.offsetWidth : 1;
-  return Math.abs(ratio - 1) < 0.01 ? 1 : ratio;
-};
 
 interface Measured {
   width: number;

@@ -98,6 +98,6 @@
   .gmt-slide[data-layout="moment"]
   .gmt-slide-title {
   margin-block: 0 var(--gmt-deck-space-md);
-  font-size: max(1.2rem, 2.4cqi);
+  font-size: max(1.2rem, 2.1cqi);
   line-height: 1.1;
 }

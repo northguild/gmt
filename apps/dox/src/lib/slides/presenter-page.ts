@@ -173,6 +173,7 @@ export function createSlideView(
       });
   };
   let shownSlide = -1;
+  let nextKey = "";
   return ({ slide, build, blanked }) => {
     const part = parts[slide];
     if (!part) return;
@@ -191,15 +192,21 @@ export function createSlideView(
         );
       }
     }
-    const next = nextState(parts, deck, slide, build);
-    nextLabel.textContent = next.label;
-    if (next.part) place(nextStage, slidePreview(next.part, next.build));
-    else {
-      stacks.get(nextStage)?.abort();
-      const end = nextStage.ownerDocument.createElement("p");
-      end.setAttribute("data-plate", "");
-      end.textContent = "No slide after this one";
-      nextStage.replaceChildren(end);
+    // The next preview is a fresh clone, so it is rebuilt only when the slide or build moves: a
+    // render for the blank or demo state alone keeps it.
+    const key = `${slide}/${build}`;
+    if (key !== nextKey) {
+      nextKey = key;
+      const next = nextState(parts, deck, slide, build);
+      nextLabel.textContent = next.label;
+      if (next.part) place(nextStage, slidePreview(next.part, next.build));
+      else {
+        stacks.get(nextStage)?.abort();
+        const end = nextStage.ownerDocument.createElement("p");
+        end.setAttribute("data-plate", "");
+        end.textContent = "No slide after this one";
+        nextStage.replaceChildren(end);
+      }
     }
     position.textContent =
       `Slide ${slide + 1} of ${parts.length}: ${part.title}` +

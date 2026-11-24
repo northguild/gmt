@@ -20,10 +20,17 @@
 .frame {
   --gmt-fit-w: 1280px;
   --gmt-fit-h: calc(var(--gmt-fit-w) * 0.74 * 9 / 16);
-}
-
-.frame {
   --gmt-hive-cover-licence: 0px;
+  /* The frame is opaque, so a glass blur inside it blurs a flat fill and shows nothing, but it is
+     redrawn on every frame of the camera's flight past it: the composer's alone broke
+     `frame-budget` at 1280x720. The token swap is the one `gmt-a11y.css` makes for reduced
+     transparency. */
+  --gmt-glass-blur: none;
+  --gmt-glass-blur-saturate: none;
+  --gmt-glass-blur-half: none;
+  --gmt-glass-blur-heavy: none;
+  --gmt-glass-blur-dim: none;
+  --gmt-header-blur: none;
 
   container: deck-dox / inline-size;
   box-sizing: border-box;

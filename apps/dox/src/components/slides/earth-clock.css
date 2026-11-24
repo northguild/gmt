@@ -177,23 +177,25 @@
   visibility: hidden;
 }
 
-.gmt-earth-clock [data-shards],
-.gmt-earth-clock [data-shard] {
+.gmt-earth-clock [data-shards] {
   position: absolute;
   inset: 0;
 }
 
+/* A shard's box is its cell's box, and its copy of the dial is placed inside it at the dial's
+   size (`clock-shatter.ts`): wider than the shard, so the site's cap on an `svg`'s size is lifted. */
 .gmt-earth-clock [data-shard] {
+  position: absolute;
+  overflow: clip;
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
 
 .gmt-earth-clock [data-shard] > svg {
   position: absolute;
-  inset: 0;
   display: block;
-  inline-size: 100%;
-  block-size: 100%;
+  max-inline-size: none;
+  max-block-size: none;
   overflow: visible;
 }
 

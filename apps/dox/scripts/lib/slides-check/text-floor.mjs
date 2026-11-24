@@ -8,8 +8,9 @@
  *  - Scale: the same text is the same share at both stages, within 2%; if not, it is set in `px` or
  *    `rem` somewhere.
  *  - Safe edges (1920 only): each text leaf of the slide, and each text leaf, control and named
- *    picture of the space layer, lies at least SAFE_TITLE of the stage's height from its top and bottom and of its width from its sides, so a
- *    TV that crops 5% loses nothing the room reads.
+ *    picture of the space layer, lies at least SAFE_TITLE of the stage's height from its top and
+ *    bottom, so a TV that crops 5% loses nothing the room reads. The sides may reach SAFE_ACTION,
+ *    the most a TV crops: the owner traded the last 1.5% of each side for width (DOX-G15).
  *  - Guide (1920 only, once, on the first slide): `G` shows the safe-area guide with its two
  *    rectangles at 3.5% and 5% of the stage and moves nothing; `G` again hides it.
  *
@@ -275,11 +276,13 @@ export async function checkTextFloor(env) {
       at("safe-guide", `the safe-area guide: ${problem}`, "text › guide");
     for (const [key, a] of small) {
       for (const [edge, share] of Object.entries(a.edges ?? {})) {
-        if (share < SAFE_TITLE - SAFE_SLACK)
+        const line =
+          edge === "left" || edge === "right" ? SAFE_ACTION : SAFE_TITLE;
+        if (share < line - SAFE_SLACK)
           once(
             "safe-edge",
             a,
-            `(build ${a.build}) is ${(share * 100).toFixed(1)}% from the ${edge} edge, inside the ${SAFE_TITLE * 100}% a TV may crop`,
+            `(build ${a.build}) is ${(share * 100).toFixed(1)}% from the ${edge} edge, inside the ${line * 100}% a TV may crop`,
           );
       }
       if (a.space) continue;

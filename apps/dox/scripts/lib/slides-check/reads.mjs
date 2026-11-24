@@ -15,10 +15,12 @@ export const findingAt =
 
 /**
  * Whether `el` draws: no ancestor up to `slide` is `display: none`, `visibility: hidden` or fully
- * transparent, and it has a box. It runs in the page, so a check passes `String(visible)` in and rebuilds
+ * transparent, none that clips holds it wholly outside its box, and it has a box. It runs in the page, so a check passes `String(visible)` in and rebuilds
  * it there with `new Function(`return (${source})`)()`.
  */
 export const visible = (el, slide) => {
+  if (el.getClientRects().length === 0) return false;
+  const box = el.getBoundingClientRect();
   for (let e = el; e && e !== slide.parentElement; e = e.parentElement) {
     const cs = getComputedStyle(e);
     if (
@@ -27,8 +29,22 @@ export const visible = (el, slide) => {
       cs.opacity === "0"
     )
       return false;
+    // Wholly outside an ancestor that clips: a stack's piece slid up past its top edge.
+    if (
+      e !== el &&
+      (cs.overflowX !== "visible" || cs.overflowY !== "visible")
+    ) {
+      const clip = e.getBoundingClientRect();
+      if (
+        box.bottom <= clip.top ||
+        box.top >= clip.bottom ||
+        box.right <= clip.left ||
+        box.left >= clip.right
+      )
+        return false;
+    }
   }
-  return el.getClientRects().length > 0;
+  return true;
 };
 
 /** Waits out the slide fade, so a read sees the settled stage. */

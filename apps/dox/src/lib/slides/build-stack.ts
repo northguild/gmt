@@ -10,6 +10,7 @@
  * shift is read from those marks on every `gmt-deck-state`, and again whenever the column or the
  * slide changes size (a window resize, a late font).
  */
+import { drawnScale } from "~/lib/drawn-scale";
 import { onDeckState } from "./deck-state";
 
 /** The room under the stack's top edge: down to the slide's padding at its foot. */
@@ -20,10 +21,7 @@ function room(stack: HTMLElement, win: Window): number {
   const box = slide.getBoundingClientRect();
   // The boxes are drawn pixels and the pieces' offsets are layout pixels; a scaled stage (a phone,
   // `slides-phone.css`) makes them differ, so the room is turned back into layout pixels.
-  const scale =
-    slide.offsetHeight > 0 && box.height > 0
-      ? box.height / slide.offsetHeight
-      : 1;
+  const scale = drawnScale(slide, "block");
   return (
     (box.bottom - stack.getBoundingClientRect().top) / scale -
     (Number.isFinite(foot) ? foot : 0)

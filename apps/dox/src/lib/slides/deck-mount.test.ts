@@ -445,15 +445,19 @@ describe("mountDeck", () => {
     /** The browser's view transition, held until the test lets the update run. */
     let updates: (() => void)[];
     let types: string[][];
+    /** Each transition's `ready`, settled when the test says its new picture is up. */
+    let readies: (() => void)[];
 
     beforeEach(() => {
       updates = [];
       types = [];
+      readies = [];
       (document as { startViewTransition?: unknown }).startViewTransition =
         vi.fn((o: { update: () => void; types: string[] }) => {
           updates.push(o.update);
           types.push(o.types);
           return {
+            ready: new Promise<void>((resolve) => readies.push(resolve)),
             finished: new Promise<void>(() => {}),
             skipTransition: vi.fn(),
           };
@@ -484,10 +488,18 @@ describe("mountDeck", () => {
       updates[0]();
       expect(live()).toBe("Slide 2 of 3: Second");
       expect(window.location.hash).toBe("#second");
-      expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
-        hop: true,
-        at: { slide: 1, build: 0 },
-      });
+      // The camera waits for the new picture, so the flight never starts on the swap's slow frames.
+      expect(space.goTo).not.toHaveBeenCalledWith(
+        "Asia/Tehran",
+        expect.anything(),
+      );
+      readies[0]();
+      await vi.waitFor(() =>
+        expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
+          hop: true,
+          at: { slide: 1, build: 0 },
+        }),
+      );
     });
 
     it("plays a step back as a back transition", async () => {

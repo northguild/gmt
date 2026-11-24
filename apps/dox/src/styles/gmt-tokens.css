@@ -386,8 +386,8 @@
      `data-fine-print` where it is rendered. The text-floor gate holds both numbers. */
   --gmt-deck-text-sm: max(0.75rem, 1.25cqi);
   --gmt-deck-text-fine: max(0.75rem, 1cqi);
-  --gmt-deck-text-md: max(0.75rem, 1.4cqi);
-  --gmt-deck-text-lg: max(0.75rem, 1.6cqi);
+  --gmt-deck-text-md: max(0.75rem, 1.3cqi);
+  --gmt-deck-text-lg: max(0.75rem, 1.4cqi);
 
   /* Gaps, padding and margins inside a slide, smallest to largest. */
   --gmt-deck-space-2xs: 0.2cqi;
@@ -402,7 +402,11 @@
      its clock. */
   --gmt-deck-pad-block: 5cqi;
   --gmt-deck-pad-inline: 6cqi;
-  --gmt-deck-clock-room: 36cqi;
+  --gmt-deck-clock-room: 35cqi;
+
+  /* The start side sits on the action-safe line (3.5% of the stage), the most a TV crops, so the
+     text column gets the empty margin back. A full slide's end side mirrors it. */
+  --gmt-deck-pad-start: 3.5cqi;
 
   /* What a TV may crop (EBU R95): the guide draws these two insets, and the text-floor gate holds
      the text to the title-safe one (5% of each dimension). */

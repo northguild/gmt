@@ -69,6 +69,17 @@ export function showText(el: HTMLElement, text: string): void {
   });
 }
 
+/**
+ * What the roll spins through on the way to `end`: a blank flap (`[data-blank]`, padding before a
+ * shorter value) spins a digit like the others and lands empty, so the whole row rolls.
+ */
+function spinning(el: HTMLElement, end: string): string {
+  const tiles = el.querySelectorAll<HTMLElement>("[data-tile]");
+  return [...end]
+    .map((ch, i) => (tiles[i]?.hasAttribute("data-blank") ? "0" : ch))
+    .join("");
+}
+
 /** Rolls `el`'s digits until they read `end` (tile by tile when it has tiles), then calls `done`. */
 export function rollText(o: {
   el: HTMLElement;
@@ -83,11 +94,12 @@ export function rollText(o: {
     done();
     return () => {};
   }
+  const spin = spinning(o.el, o.end);
   return play(
     o.win,
     ROLL_MS,
     (t) => {
-      showText(o.el, rolled(o.end, t));
+      showText(o.el, t >= 1 ? o.end : rolled(spin, t));
     },
     () => {
       showText(o.el, o.end);

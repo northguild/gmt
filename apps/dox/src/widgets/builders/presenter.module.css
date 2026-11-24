@@ -16,13 +16,14 @@
     "check";
 
   /* One screen: the two previews and the notes above, the clock and the readiness list across the
-     bottom. The notes and the list scroll inside their panels, the page never does. */
+     bottom. The notes and the list scroll inside their panels, the page never does. The notes keep
+     a floor of six lines, so a short window cannot squeeze them to nothing. */
   @media (width >= 64rem) {
     box-sizing: border-box;
     block-size: calc(100dvh - var(--sl-nav-height));
     grid-template:
       "current next" auto
-      "current notes" minmax(0, 1fr)
+      "current notes" minmax(6lh, 1fr)
       "bar check" auto
       / minmax(0, 3fr) minmax(0, 2fr);
   }
@@ -187,6 +188,14 @@
 
 .upNext {
   grid-area: next;
+
+  /* Side by side, the next slide is a glance, held to about a quarter of the window's height, so
+     the notes under it keep their lines on a laptop. */
+  @media (width >= 64rem) {
+    & > .frame {
+      max-inline-size: calc(27dvh * 16 / 9);
+    }
+  }
 }
 
 .position {
@@ -265,8 +274,10 @@
 .status {
   margin-block: var(--gmt-space-3) 0;
 
-  /* Three lines, held: a message that wraps would grow the bar and move the panels above it. */
-  block-size: 4.5em;
+  /* Three lines, held: a message that wraps would grow the bar and move the panels above it. The
+     box is three of its own lines, whatever line height Starlight gives the page. */
+  block-size: 3lh;
+  line-height: 1.5;
   overflow-y: auto;
   font-size: var(--gmt-text-sm);
   color: var(--gmt-ice);

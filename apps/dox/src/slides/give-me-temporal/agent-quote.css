@@ -14,7 +14,7 @@
   max-inline-size: 100%;
   margin: 0;
   padding: var(--gmt-deck-space-md) var(--gmt-deck-space-lg);
-  font-size: max(0.75rem, 1.7cqi);
+  font-size: max(0.75rem, 1.45cqi);
   line-height: 1.3;
 }
 

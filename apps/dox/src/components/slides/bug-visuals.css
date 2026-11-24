@@ -305,6 +305,11 @@
   font-size: var(--gmt-deck-text-md);
 }
 
+/* Its inline code is a step smaller again, but never under the room floor. */
+.gmt-run-note code {
+  font-size: max(var(--gmt-deck-text-sm), 0.9em);
+}
+
 /* The cursor shows on the line that is typing, and nowhere once the run is through. */
 .gmt-run-cursor {
   display: inline-block;

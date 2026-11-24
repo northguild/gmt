@@ -180,6 +180,17 @@ describe("createSlideView", () => {
     expect(reached(els.stage)).toEqual(["true", "true", "true", "false"]);
   });
 
+  it("keeps the next preview when only the blank state changes", () => {
+    const { els, show } = view();
+    show({ slide: 1, build: 1, blanked: false });
+    // oxlint-disable-next-line testing-library/no-node-access, dox-test/no-class-query -- the preview is aria-hidden: no role reaches it
+    const before = els.nextStage.firstElementChild;
+    show({ slide: 1, build: 1, blanked: true });
+    // oxlint-disable-next-line testing-library/no-node-access, dox-test/no-class-query -- the preview is aria-hidden: no role reaches it
+    expect(els.nextStage.firstElementChild).toBe(before);
+    expect(els.position).toHaveTextContent("screen blanked");
+  });
+
   it("shows the next slide from the last build", () => {
     const { els, show } = view();
     show({ slide: 1, build: 4, blanked: false });

@@ -37,6 +37,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { shardOf, stdoutDrained } from "./gates/contract.mjs";
 import { buildPages } from "./gates/graph.mjs";
+import { allDeckRoutes } from "./lib/deck-folders.mjs";
 import {
   GATES,
   inTier,
@@ -412,9 +413,25 @@ if (!opts.noBuild && (!opts.plan || needsBuild)) {
   };
 }
 
+/** The pages the cap kept for a gate it would have left with none, for the plan line. */
+function capKept(plan) {
+  const kept = Object.values(plan.reasons).filter((r) =>
+    r.some((x) => x.startsWith("cap: kept for ")),
+  ).length;
+  return kept > 0 ? `, plus ${plural(kept, "page")} a gate needs` : "";
+}
+
 // --- selection ------------------------------------------------------------------------------
 
-const allPages = buildPages(ROOT);
+// The deck routes are dynamic (`[slug]`): the graph is told the paths they render, so a change to
+// a deck selects its page and `slides-check` runs on it.
+const decks = allDeckRoutes();
+const allPages = buildPages(ROOT, {
+  "apps/dox/src/pages/slides/[slug]/index.astro": decks,
+  "apps/dox/src/pages/slides/[slug]/presenter.astro": decks.map(
+    (d) => `${d}presenter/`,
+  ),
+});
 const union = new Set();
 for (const g of requestedGates) for (const p of listPages(g)) union.add(p);
 
@@ -436,6 +453,11 @@ if (opts.pages) {
     pages: allPages,
     sample: SAMPLE,
     gateScripts: { ...scriptIndex(), ...inputIndex() },
+    gatePages: Object.fromEntries(
+      requestedGates
+        .filter((g) => g.pages !== "dist")
+        .map((g) => [g.id, listPages(g)]),
+    ),
     all: opts.all,
   });
 }
@@ -530,7 +552,7 @@ if (opts.plan) {
       `gates plan (against ${against} @ ${againstSha}): ${plural(changed.length, "changed file")}, ` +
         `${plural(plan.pages.length, "page")} selected` +
         (plan.capped
-          ? `, capped from ${plan.capped.from} to ${plan.capped.to} (sample plus 6)`
+          ? `, capped from ${plan.capped.from} to ${plan.capped.to} (sample plus 6${capKept(plan)})`
           : ""),
     );
     for (const p of plan.pages) console.log(`  ${p}  ${plan.reasons[p][0]}`);

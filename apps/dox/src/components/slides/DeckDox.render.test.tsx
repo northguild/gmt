@@ -95,6 +95,7 @@ function route(chat: typeof fetch, brains?: BrainsInfo) {
 function mount(mode: DeckDoxMode = "audience") {
   const view = render(
     <main data-deck-root>
+      <div data-testid="space" data-flight="rest" />
       <section data-slide id="thanks">
         <DeckDox
           mode={mode}
@@ -217,6 +218,38 @@ describe("DeckDox on a slide", () => {
     act(() => sendDeckState(deck, "thanks", 0));
     act(() => sendDeckState(deck, "next", 0));
     await waitFor(() => expect(aborted).toBe(true));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Is 2100 a leap year?"),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("aborts at once on leaving, and clears the chat only once the camera rests", async () => {
+    let aborted = false;
+    vi.stubGlobal(
+      "fetch",
+      route(async (_input, init) => {
+        init?.signal?.addEventListener("abort", () => (aborted = true));
+        return stalling()(_input, init);
+      }),
+    );
+    mount();
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox"), "Is 2100 a leap year?{Enter}");
+    await waitFor(() => expect(chatCalls).toHaveLength(1));
+    const space = screen.getByTestId("space");
+    const deck = screen.getByRole("main");
+    act(() => sendDeckState(deck, "thanks", 0));
+    space.dataset["flight"] = "moving";
+    act(() => sendDeckState(deck, "next", 0));
+    await waitFor(() => expect(aborted).toBe(true));
+    // The flight is on: the old chat stays until it lands, so its remount takes no flight frame.
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.getByText("Is 2100 a leap year?")).toBeInTheDocument();
+    act(() => {
+      space.dataset["flight"] = "rest";
+    });
     await waitFor(() =>
       expect(
         screen.queryByText("Is 2100 a leap year?"),

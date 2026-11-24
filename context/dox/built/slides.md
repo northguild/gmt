@@ -64,7 +64,8 @@ never a second live demo. Transitions are off inside `[data-slide-stage]`. The p
 `aria-hidden` and `inert`; the position line names the slide.
 
 **Next shows exactly what one press of Next shows:** the same slide at the next build while builds
-remain, else the next slide at build 0, else a plate saying "End of the deck". The presenter fits
+remain, else the next slide at build 0, else a plate saying "No slide after this one" under the
+label "End of the deck". The presenter fits
 1440x900 and 1280x800 with no page scroll: the page title band is hidden by `html[data-presenter]`
 and the Starlight header stays.
 
@@ -85,10 +86,11 @@ every stage size. It carries `data-fine-print`: tool internals are held to 1.0cq
 ### Title-safe edges and the guide
 
 A TV may crop 5% of each dimension (EBU R95). Every text leaf on the stage, and every visible
-label of the space layer, sits at least 5% of the stage's height from the top and bottom and 5% of
-its width from the sides. `--gmt-deck-safe-action` (3.5%) and `--gmt-deck-safe-title` (5%) in
+label of the space layer, sits at least 5% of the stage's height from the top and bottom, and at
+least the action-safe 3.5% of its width from the sides: `--gmt-deck-pad-start` is 3.5cqi and a full
+slide's end side mirrors it, so the text gets that margin back (DOX-G15). `--gmt-deck-safe-action` (3.5%) and `--gmt-deck-safe-title` (5%) in
 `gmt-tokens.css` are the only place the two insets are written; the fix for a slide that crosses
-one is in the shared padding (`--gmt-deck-pad-block`, `--gmt-deck-pad-inline`) or the slide's own
+one is in the shared padding (`--gmt-deck-pad-block`, `--gmt-deck-pad-inline`, `--gmt-deck-pad-start`) or the slide's own
 layout, never a per-slide offset in shared code. The title-safe band holds text and controls (a
 button, a link, a named picture); a decorative border, such as the `DeckDox` frame's, may run into
 the action-safe band (3.5%) and the gate does not hold it.
@@ -141,5 +143,22 @@ Before the talk, at the venue:
   the `:is()` prefix.
 - `cqb` in a preview resolves only because the fit box is a `size` container.
 - Never add `[data-slide-stage]` to the presenter's hidden source.
+- A slide that is not shown has `content-visibility: hidden` (screen only, after its fade). The stage
+  renders every slide, and without it each view transition restyled the whole stage, about 40 ms a
+  slide change, which broke `frame-budget`. Code that measures inside a hidden slide forces its
+  layout, so measure the shown slide.
+- Nothing that moves or lays out may start on a slide change's first frames. Capturing and first
+  painting the arriving slide are the slowest frames of a change. The camera therefore starts only
+  once the view transition's new picture is up (`afterSwap` in `deck-transition.ts`). A Dox chat
+  on the slide just left remounts only once the camera rests (`whenStageRests` in `deck-state.ts`).
+  Started any earlier, either one broke `frame-budget` at 1280x720.
+- No glass blur inside the `DeckDox` frame. The frame is opaque, so a blur there shows nothing, but
+  it is redrawn on every frame of a flight past it: the composer's broke `frame-budget` at 1280x720.
+  `deck-dox.module.css` sets the `--gmt-glass-blur*` tokens to `none`, as reduced transparency does.
+- A clock shard (`clock-shatter.ts`) keeps only the dial parts that reach its cell. Twenty whole
+  copies of the dial were 6,000 elements, styled twice as the clock broke, 30 ms a frame at
+  1280x720, over `frame-budget`. The pruned copies style in about 11 ms. A copy is wider than its
+  shard, so `earth-clock.css` lifts the site's `max-inline-size` on it; without that the copies
+  shrink to their shards and the dial vanishes at the break.
 - Headless Chromium may refuse fullscreen and the Wake Lock API. Tests stub both; the gate checks
   the guide on a windowed stage.

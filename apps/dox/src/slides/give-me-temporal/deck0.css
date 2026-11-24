@@ -58,6 +58,10 @@
   /* Where `paneLayout` puts the panes: their top, and their bottom less the slide's own padding. */
   --gmt-wall-panes-top: 12cqi;
   --gmt-wall-panes-clear: 25.4cqi;
+
+  /* The wall keeps the frame `paneLayout` draws in: from 6 in to 64 across. */
+  --gmt-deck-pad-start: var(--gmt-deck-pad-inline);
+  --gmt-deck-clock-room: 36cqi;
 }
 
 :is(html[data-deck], [data-slide-stage]) .gmt-wall-figures {
@@ -132,7 +136,7 @@
 :is(html[data-deck], [data-slide-stage])
   .gmt-slide[data-layout="wall"]
   .gmt-slide-title {
-  font-size: max(1.25rem, 3.1cqi);
+  font-size: max(1.25rem, 2.6cqi);
 }
 
 /* The slide that hangs the wall keeps its text under the grid of panes, which ends 36.4 down. */
@@ -168,7 +172,7 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
 }
 
 :is(html[data-deck], [data-slide-stage]) .gmt-lead {
-  font-size: max(0.8rem, 1.7cqi);
+  font-size: max(0.8rem, 1.45cqi);
   margin: 0;
 }
 
@@ -177,7 +181,7 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
 :is(html[data-deck], [data-slide-stage]) .gmt-why {
   margin-block: var(--gmt-deck-space-lg) 0;
   padding-inline-start: 1.4em;
-  font-size: max(0.8rem, 1.85cqi);
+  font-size: max(0.8rem, 1.55cqi);
 
   & li + li {
     margin-block-start: var(--gmt-deck-space-md);
@@ -197,7 +201,7 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
 
 .gmt-familiar-job {
   margin: 0;
-  font-size: max(0.875rem, 1.6cqi);
+  font-size: max(0.875rem, 1.4cqi);
   color: var(--gmt-ice-bright);
 }
 
@@ -218,7 +222,7 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
 :is(html[data-deck], [data-slide-stage])
   .gmt-slide[data-layout="familiar"]
   .gmt-slide-title {
-  font-size: max(1.25rem, 3.1cqi);
+  font-size: max(1.25rem, 2.6cqi);
   margin-block-end: var(--gmt-deck-space-lg);
 }
 
@@ -236,6 +240,11 @@ html[data-deck] .gmt-deck-space > canvas[data-wall-canvas] {
 .gmt-familiar-shapes code {
   padding-block: 0;
   font-size: max(0.75rem, 0.9em);
+}
+
+/* On the stage the code keeps the room floor, which 0.9em of the body size would drop under. */
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar-shapes code {
+  font-size: max(var(--gmt-deck-text-sm), 0.9em);
 }
 
 /* The GMT call and its value share one row, so three pairs fit one slide. */
