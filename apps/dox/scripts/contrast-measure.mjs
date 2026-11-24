@@ -436,11 +436,15 @@ function collect() {
     "input:disabled:not([type=range]), select:disabled, textarea:disabled",
   )) {
     if (hiddenChain(field) || tiny(field)) continue;
-    // A switch's native input is drawn at opacity 0 over its track; the track beside it is the
-    // edge a reader sees, so that is what is measured.
+    // A switchField's native input is drawn at opacity 0 over its track (the aria-hidden span
+    // after it); the track is the edge a reader sees, so that is what is measured. Any other
+    // transparent field is measured on itself.
+    const track = field.nextElementSibling;
     const e =
-      opacityOf(field) === 0 && field.nextElementSibling
-        ? field.nextElementSibling
+      field.matches('input[role="switch"]') &&
+      opacityOf(field) === 0 &&
+      track?.matches('[aria-hidden="true"]')
+        ? track
         : field;
     const b = e.getBoundingClientRect();
     if (b.width < 2) continue;

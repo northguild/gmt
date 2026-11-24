@@ -272,11 +272,15 @@ async function checkForcedColors(page) {
         if (!el.checkVisibility({ checkVisibilityCSS: true })) continue;
         const r = el.getBoundingClientRect();
         if (r.width <= 2 || r.height <= 2) continue;
-        // A switch's input is transparent over its track: the track is what the reader sees,
-        // so its edge, and its outline when the input has focus, are the control's.
+        // A switchField's input is transparent over its track (the aria-hidden span after it):
+        // the track is what the reader sees, so its edge, and its outline when the input has
+        // focus, are the control's. Any other transparent control is judged on itself.
+        const track = el.nextElementSibling;
         const seen =
-          getComputedStyle(el).opacity === "0" && el.nextElementSibling
-            ? el.nextElementSibling
+          el.matches('input[role="switch"]') &&
+          getComputedStyle(el).opacity === "0" &&
+          track?.matches('[aria-hidden="true"]')
+            ? track
             : el;
         const c = getComputedStyle(seen);
         const border = ["Top", "Right", "Bottom", "Left"].some(

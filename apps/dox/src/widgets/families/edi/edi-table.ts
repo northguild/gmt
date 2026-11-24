@@ -42,21 +42,24 @@ export function memberTable(o: {
   /** Prefix for each row's cell id, such as `member`; the cell is `member-<key>`. */
   prefix: string;
   rows: readonly MemberRowSpec[];
-  /** True when a value can run to a second line in a narrow column: each cell then keeps both. */
+  /**
+   * True when a value can run to a second line in a narrow column: the table takes a fixed layout
+   * with a 34% name column, and each value cell keeps both lines and is a drawn part for
+   * readout-still. Without it the table is laid out as before.
+   */
   wraps?: boolean;
 }): SafeHtml {
   return table({
     caption: o.caption,
     rowHeader: "name",
-    layout: "fixed",
-    widths: ["34%", null],
+    ...(o.wraps ? { layout: "fixed" as const, widths: ["34%", null] } : {}),
     columns: [
       { key: "name", header: "Member", align: "start", numeric: false },
       { key: "value", header: "Value", align: "start", numeric: false },
     ],
     rows: o.rows.map((r) => ({
       name: r.label,
-      value: html`<span class="${styles.member}" ${gateAttr("drawn")} ${o.wraps ? html`data-wraps` : ""} id="${o.id(`${o.prefix}-${r.key}`)}" data-state="none">${NO_MEMBER}</span>`,
+      value: html`<span class="${styles.member}" ${o.wraps ? html`${gateAttr("drawn")} data-wraps` : ""} id="${o.id(`${o.prefix}-${r.key}`)}" data-state="none">${NO_MEMBER}</span>`,
     })),
   });
 }

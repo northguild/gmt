@@ -28,6 +28,21 @@ describe("codeString", () => {
     expect(fx.host).toHaveTextContent('"from 2026-01-01 to 2026-02-01"');
   });
 
+  it("breaks a UUID after each hyphen", () => {
+    const fx = renderHtml(codeString("017F22E2-79B0-7CC3-98C4-DC0C0C07398F"));
+    expect(fx.host.querySelectorAll("wbr")).toHaveLength(4);
+    expect(fx.host).toHaveTextContent('"017F22E2-79B0-7CC3-98C4-DC0C0C07398F"');
+  });
+
+  it.each(["2024-03", "--03-15", "2024-W11-3", "2024-075", "2024-03-15"])(
+    "keeps the date %s whole",
+    (date) => {
+      const fx = renderHtml(codeString(date));
+      expect(fx.host.querySelectorAll("wbr")).toHaveLength(0);
+      expect(fx.host).toHaveTextContent(`"${date}"`);
+    },
+  );
+
   it("escapes a string that holds markup", () => {
     const fx = renderHtml(codeString("<b>"));
     expect(fx.host.querySelector("b")).toBeNull();
