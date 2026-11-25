@@ -18,8 +18,13 @@ import { DAY_MS, J2000_JD, subsolarPoint, UNIX_EPOCH_JD } from "./globe/sun";
 
 const RAD = Math.PI / 180;
 
-/** The reference box star dots are sized against: a star's dot scales by the hero's fit to it. */
-export const BOX = { width: 2400, height: 1500 };
+/**
+ * A star's dot scales with the Earth's radius on screen, the camera's own scale, and never with
+ * the hero's box: a stacked phone's hero is as tall as the whole page. `DOT_SCALE` is the scale
+ * at `DOT_RADIUS`, the disc of the locked 1440 x 900 landing (374.3 px, measured in the page).
+ */
+const DOT_RADIUS = 374;
+export const DOT_SCALE = 0.6;
 
 /**
  * Where the view's centre sits in the hero, as a fraction of its width and height, when the globe
@@ -283,7 +288,7 @@ export function starViewMatrix(
  * star's dot.
  */
 export interface SkyLens extends Lens {
-  /** The scale of a star's dot: the hero's fit to `BOX`, times the zoom. */
+  /** The scale of a star's dot: the Earth's radius, zoom included, against `DOT_RADIUS`. */
   dots: number;
 }
 
@@ -296,14 +301,14 @@ export function skyLens(
   width: number,
   height: number,
   centre: { x: number; y: number; radius?: number } | null,
-  zoom: number,
 ): SkyLens {
   const at = centre ?? { x: SKY_ANCHOR.x * width, y: SKY_ANCHOR.y * height };
+  const radius = at.radius ?? NO_GLOBE_RADIUS * Math.min(width, height);
   return {
     centreX: at.x,
     centreY: at.y,
-    radius: at.radius ?? NO_GLOBE_RADIUS * Math.min(width, height),
-    dots: Math.max(width / BOX.width, height / BOX.height) * zoom,
+    radius,
+    dots: (DOT_SCALE * radius) / DOT_RADIUS,
   };
 }
 

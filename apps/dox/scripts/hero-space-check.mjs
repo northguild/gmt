@@ -39,8 +39,9 @@
  *   the buttons and the pager never move; the arrows are 24 px targets named after the page they
  *   open, and the one with nowhere to go is hidden and out of the tab order; a link into a later
  *   page opens it and leaving it clears the address; a hash that is not valid percent-encoding
- *   still starts the landing; narrower or portrait, the carousel pages and the wheel scrolls the
- *   page; without scripts, or with the module blocked, every page reads in order;
+ *   still starts the landing; narrower or portrait there is no carousel, every page reads in
+ *   order and the wheel scrolls the page; without scripts, or with the module blocked, every
+ *   page reads in order;
  * - the carousel's motion: five quick turns in both themes keep one running animation per page,
  *   a median frame of 17.5 ms and none over 34 ms, and under reduced motion only `opacity`
  *   animates; axe finds nothing on any page, in either theme.
@@ -60,6 +61,8 @@ import { PNG } from "pngjs";
 import { blockOffSite, colorAlpha } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { isLocked, LOCKED_QUERY } from "./lib/home-locked.mjs";
+import { activeProblem, listProblems } from "./lib/zone-list-rows.mjs";
 import { gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "hero-space";
@@ -481,12 +484,14 @@ async function checkDrawer(browser, size) {
     size,
   );
 
+  // Locked, a drag opens the slide-over; stacked, only the magnifier opens the sheet.
+  const locked = await isLocked(page);
   await dragOnEarth(page);
   check(
-    await regionOpen(page),
-    "drawer-no-open",
+    (await regionOpen(page)) === locked,
+    locked ? "drawer-no-open" : "sheet-opened-by-drag",
     t,
-    "a drag did not open it",
+    locked ? "a drag did not open it" : "a drag opened the sheet",
     size,
   );
   const inDrawer = await page.evaluate(
@@ -500,6 +505,10 @@ async function checkDrawer(browser, size) {
     "a drag moved focus into the drawer",
     size,
   );
+  if (!locked) {
+    await magnifier.click();
+    await page.waitForTimeout(400);
+  }
   const opened = await onPage(page, await hitBox(page));
   check(
     ["x", "y", "width", "height"].every(
@@ -511,7 +520,7 @@ async function checkDrawer(browser, size) {
     size,
   );
 
-  await checkPlacement(page, size, t);
+  await checkPlacement(page, size, t, locked);
 
   /* A list that lost its height bound once froze the page, so the list must fit the drawer and
      the page must answer straight away. */
@@ -535,17 +544,6 @@ async function checkDrawer(browser, size) {
     "the page did not answer within 1s after the drawer opened",
     size,
   );
-
-  if (size.width < 800) {
-    const region = await onPage(page, await page.locator(REGION).boundingBox());
-    check(
-      region.y >= before.y + before.height,
-      "sheet-over-disc",
-      t,
-      `the sheet's top ${r1(region.y)} is above the disc's bottom ${r1(before.y + before.height)}`,
-      size,
-    );
-  }
 
   await page.getByRole("button", { name: "Close zone list" }).click();
   await page.waitForTimeout(400);
@@ -595,33 +593,38 @@ async function checkDrawer(browser, size) {
   measured++;
 }
 
-/** The drawer inside the hero: 16 px in from the top and bottom of the hero's content box (below
-    the header, which the hero runs under), or the sheet in the bay. */
-async function checkPlacement(page, size, t) {
+/** Locked, the drawer sits inside the hero: 16 px in from the top and bottom of the hero's content
+    box (below the header, which the hero runs under). Stacked, it is a sheet on the viewport's
+    bottom edge, 16 px in from both sides and at most 30rem tall (globe-phone.module.css). */
+async function checkPlacement(page, size, t, locked) {
+  const region = await page.locator(REGION).boundingBox();
+  const gap = 16;
+  if (!locked) {
+    const { x, y, width, height } = region;
+    return check(
+      Math.abs(y + height - size.height) <= 1 &&
+        height <= 481 &&
+        y >= gap - 1 &&
+        Math.abs(x - gap) <= 1 &&
+        Math.abs(x + width - (size.width - gap)) <= 1,
+      "drawer-placement",
+      t,
+      `the sheet is ${r1(x)} to ${r1(x + width)} by ${r1(y)} to ${r1(y + height)}; it should be 16 px in from both sides, end on the viewport's bottom ${size.height} and be at most 480 px tall`,
+      size,
+    );
+  }
   const box = await page.locator(HERO).boundingBox();
   const padTop = await page
     .locator(HERO)
     .evaluate((el) => Number.parseFloat(getComputedStyle(el).paddingTop));
   const hero = { ...box, y: box.y + padTop, height: box.height - padTop };
-  const region = await page.locator(REGION).boundingBox();
-  const gap = 16;
-  if (size.width >= 1280) {
-    check(
-      Math.abs(region.y - (hero.y + gap)) <= 1,
-      "drawer-placement",
-      t,
-      `the drawer's top ${r1(region.y)} is not 16 px below the hero's top ${r1(hero.y)}`,
-      size,
-    );
-  } else {
-    check(
-      region.y >= hero.y,
-      "drawer-placement",
-      t,
-      `the sheet's top ${r1(region.y)} is above the hero's top ${r1(hero.y)}`,
-      size,
-    );
-  }
+  check(
+    Math.abs(region.y - (hero.y + gap)) <= 1,
+    "drawer-placement",
+    t,
+    `the drawer's top ${r1(region.y)} is not 16 px below the hero's top ${r1(hero.y)}`,
+    size,
+  );
   check(
     Math.abs(region.y + region.height - (hero.y + hero.height - gap)) <= 1,
     "drawer-placement",
@@ -629,16 +632,6 @@ async function checkPlacement(page, size, t) {
     `the drawer's bottom ${r1(region.y + region.height)} is not 16 px above the hero's bottom ${r1(hero.y + hero.height)}`,
     size,
   );
-  if (size.width < 1280) {
-    check(
-      Math.abs(region.x - gap) <= 1 &&
-        Math.abs(region.x + region.width - (size.width - gap)) <= 1,
-      "drawer-placement",
-      t,
-      `the sheet spans ${r1(region.x)} to ${r1(region.x + region.width)}, not 16 px in from both sides`,
-      size,
-    );
-  }
 }
 
 /** Escape, as the combobox pattern and the disclosure pattern together decide it. */
@@ -833,13 +826,15 @@ async function checkClose(browser) {
     await page.waitForTimeout(1200);
     const close = await page.locator(CLOSE).boundingBox();
     const region = await page.locator(REGION).boundingBox();
-    const lap = close.y + close.height - region.y;
+    /* Stacked, the close is a 44 px square 8 px inside the sheet's top end corner
+       (globe-phone.module.css), not a tab on its edge. */
+    const top = close.y - region.y;
+    const end = region.x + region.width - (close.x + close.width);
     check(
-      Math.abs(lap - 1) <= 0.5 &&
-        Math.abs(centre(close).x - centre(region).x) <= 1,
+      Math.abs(top - 8) <= 1 && Math.abs(end - 8) <= 1,
       "close-misplaced",
       t,
-      `it laps the sheet's top edge by ${r1(lap)} px, not 1, or is off its centre`,
+      `it sits ${r1(top)} px below the sheet's top and ${r1(end)} px in from its end, not 8 and 8`,
       NARROW,
     );
     await context.close();
@@ -1048,9 +1043,14 @@ async function checkZoomFills(browser) {
     });
     for (let i = 0; i < 8; i++) await page.locator(ZOOM_IN).click();
     await page.waitForTimeout(1500);
+    /* Stacked, the landing's pages read on below the Earth inside the hero, so the Earth's area
+       is the stage: the zoomed Earth fills that, not the whole hero. */
     const result = await page.evaluate(
-      ({ hero, copy, layer }) => {
+      ({ hero, copy, layer, stage, query }) => {
         const heroBox = document.querySelector(hero).getBoundingClientRect();
+        const area = matchMedia(query).matches
+          ? heroBox
+          : document.querySelector(stage).getBoundingClientRect();
         const canvas = document.querySelector(`${layer} > canvas`);
         const box = canvas.getBoundingClientRect();
         const cr = document.querySelector(copy).getBoundingClientRect();
@@ -1081,13 +1081,13 @@ async function checkZoomFills(browser) {
         };
         // The night side is the theme's own translucent wash, so "bare" is no paint at all.
         const inset = 3;
-        for (let x = heroBox.left + inset; x < heroBox.right; x += 40) {
-          probe(x, heroBox.top + inset);
-          probe(x, heroBox.bottom - inset);
+        for (let x = area.left + inset; x < area.right; x += 40) {
+          probe(x, area.top + inset);
+          probe(x, area.bottom - inset);
         }
-        for (let y = heroBox.top + inset; y < heroBox.bottom; y += 40) {
-          probe(heroBox.left + inset, y);
-          probe(heroBox.right - inset, y);
+        for (let y = area.top + inset; y < area.bottom; y += 40) {
+          probe(area.left + inset, y);
+          probe(area.right - inset, y);
         }
         return {
           hero: [heroBox.left, heroBox.top, heroBox.width, heroBox.height],
@@ -1095,7 +1095,13 @@ async function checkZoomFills(browser) {
           holes: holes.slice(0, 4),
         };
       },
-      { hero: HERO, copy: COPY, layer: LAYER },
+      {
+        hero: HERO,
+        copy: COPY,
+        layer: LAYER,
+        stage: STAGE,
+        query: LOCKED_QUERY,
+      },
     );
     const t = "hero › globe at maximum zoom";
     const translucent = await page.evaluate(() =>
@@ -1124,7 +1130,7 @@ async function checkZoomFills(browser) {
       result.holes.length === 0,
       "zoom-not-filling",
       t,
-      `the Earth leaves the hero's edge bare (${result.holes.join("; ")})`,
+      `the Earth leaves its area's edge bare (${result.holes.join("; ")})`,
       size,
     );
     await context.close();
@@ -1405,8 +1411,6 @@ async function checkInteraction(browser) {
 // --- the zone list ---------------------------------------------------------
 
 const ZONE_TOOL = "/tools/zoned-earth/";
-/** The row gap the virtualizer lays between rows (`ROW_GAP` in `zone-clock-list.ts`). */
-const ROW_GAP = 4;
 const nextFrames = (page) =>
   page.evaluate(
     () =>
@@ -1445,52 +1449,6 @@ function listSnapshot(page) {
   });
 }
 
-/** What is wrong with the rows now showing: overlaps, holes, an unfilled viewport. Empty when sound. */
-function listProblems(snap) {
-  const problems = [];
-  const { rows, panel } = snap;
-  if (rows.length === 0 && snap.count > 0) return ["no row is mounted"];
-  for (let i = 1; i < rows.length; i++) {
-    const a = rows[i - 1];
-    const b = rows[i];
-    if (b.index !== a.index + 1) {
-      problems.push(
-        `rows ${a.index} and ${b.index} are mounted with a row missing between`,
-      );
-      continue;
-    }
-    const gap = b.top - a.bottom;
-    if (gap < -0.5)
-      problems.push(`rows ${a.index} and ${b.index} overlap by ${r1(-gap)} px`);
-    if (gap > ROW_GAP + 1.5)
-      problems.push(
-        `a ${r1(gap)} px gap between rows ${a.index} and ${b.index}`,
-      );
-  }
-  const shown = rows.filter(
-    (row) => row.bottom > panel.top && row.top < panel.bottom,
-  );
-  if (shown.length === 0) {
-    problems.push("no row is inside the list's box");
-  } else {
-    // The box's edge may sit in the gap between two rows, so an edge shortfall up to one gap is
-    // fine; a hole is a row that should show and is not mounted.
-    const edge = ROW_GAP + 1;
-    if (snap.scrollTop > 1 && shown[0].top > panel.top + edge)
-      problems.push(
-        `the list starts ${r1(shown[0].top - panel.top)} px below its top with rows above it`,
-      );
-    if (
-      snap.scrollTop < snap.max - 1 &&
-      shown.at(-1).bottom < panel.bottom - edge
-    )
-      problems.push(
-        `the list ends ${r1(panel.bottom - shown.at(-1).bottom)} px above its bottom with rows below it`,
-      );
-  }
-  return problems;
-}
-
 /**
  * Scroll the list and let it settle: rows are measured as they mount, so the scroll height
  * grows while a reader scrolls. "end" keeps pressing on the end until the height holds still,
@@ -1526,15 +1484,6 @@ const scrollList = async (page, to) => {
     if (settled) return;
   }
 };
-
-/** The option the list says is active, when it is mounted and inside the list's box. */
-function activeProblem(snap) {
-  const row = snap.rows.find((r) => r.id === snap.active);
-  if (!row) return `the active option ${snap.active} is not a mounted row`;
-  if (row.top < snap.panel.top - 1.5 || row.bottom > snap.panel.bottom + 1.5)
-    return `the active row ${row.index} (${r1(row.top)} to ${r1(row.bottom)}) is outside the list ${r1(snap.panel.top)} to ${r1(snap.panel.bottom)}`;
-  return null;
-}
 
 async function checkZoneList(browser, { label, size, route, drawer }) {
   const t = `zone list › ${label}`;
@@ -3867,8 +3816,11 @@ async function checkTouch(browser) {
     NARROW,
   );
 
-  // A swipe that starts on the copy, off the Earth, scrolls the page.
-  const copy = await page.locator(COPY).boundingBox();
+  /* A swipe that starts on the copy, off the Earth, scrolls the page. Stacked the copy column has
+     no box of its own (`display: contents`), so the swipe starts on the intro above the Earth. */
+  const copy =
+    (await page.locator(COPY).boundingBox()) ??
+    (await page.locator(`${COPY} > .gmt-herostage-intro`).boundingBox());
   const from = {
     x: copy.x + 30,
     y: Math.min(copy.y + copy.height - 10, NARROW.height - 120),
@@ -4314,13 +4266,17 @@ async function checkPassThrough(browser) {
     if (found.onDisc.length > 0) {
       // The point nearest the copy: the one an oversized box would have covered.
       const [x, y] = found.onDisc.reduce((a, b) => (b[0] < a[0] ? b : a));
+      /* Locked, a drag on the Earth opens the drawer; stacked it opens nothing, so the proof is
+         the view it turned. */
+      const locked = await isLocked(page);
+      const { ra } = await skyReading(page);
       await page.mouse.move(x, y);
       await page.mouse.down();
       await page.mouse.move(x + 120, y + 10, { steps: 12 });
       await page.mouse.up();
       await page.waitForTimeout(600);
       check(
-        await regionOpen(page),
+        locked ? await regionOpen(page) : (await skyReading(page)).ra !== ra,
         "copy-box-drag",
         t,
         `a drag that starts beside the text, over the Earth (${Math.round(x)}, ${Math.round(y)}), did nothing`,
@@ -4723,16 +4679,26 @@ async function checkCarousel(browser) {
     measured++;
   }
 
-  // Narrower or portrait: the carousel still pages, the page scrolls and the wheel scrolls it.
+  /* Narrower or portrait there is no carousel (gmt-home-stacked.css): no mark, every page reads
+     in order and none is hidden or inert, the pager is not shown, and the wheel scrolls the page. */
   for (const size of STACKED_SIZES) {
     const t = "carousel, stacked";
     const { page, context } = await open(browser, size);
     const s = await carouselState(page);
+    const inert = await page.evaluate(
+      (pages) =>
+        [...document.querySelectorAll(pages)].filter((el) => el.inert).length,
+      PAGES,
+    );
+    const pager = await page.locator(NEXT).isVisible();
     check(
-      s.mark === "on",
+      s.mark === null &&
+        !pager &&
+        s.visible.length === s.names.length &&
+        !inert,
       "carousel-stacked-mark",
       t,
-      `data-home-carousel is ${s.mark}`,
+      `the mark is ${s.mark}, the pager ${pager ? "shows" : "is hidden"}, ${s.visible.length} of ${s.names.length} pages are visible and ${inert} inert; with no carousel every page reads`,
       size,
     );
     check(
@@ -4751,19 +4717,10 @@ async function checkCarousel(browser) {
     await page.waitForTimeout(600);
     const w = await carouselState(page);
     check(
-      w.scrollY > 0 && w.shown.join() === s.names[0],
+      w.scrollY > 0 && w.visible.length === s.names.length,
       "carousel-stacked-wheel",
       t,
-      `the wheel scrolled the page to ${w.scrollY} and left [${w.shown}] shown; it should scroll and not turn`,
-      size,
-    );
-    await page.locator(NEXT).click();
-    const n = await settledState(page);
-    check(
-      n.shown.join() === s.names[1],
-      "carousel-stacked-next",
-      t,
-      `the next arrow left [${n.shown}] shown, not ${s.names[1]}`,
+      `the wheel scrolled the page to ${w.scrollY} and left [${w.visible}] visible; it should scroll and hide nothing`,
       size,
     );
     await context.close();

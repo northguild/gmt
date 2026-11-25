@@ -65,6 +65,7 @@ import { enter, holdEntrance } from "./enter";
 import { withBase } from "./site";
 import { chooseZone } from "./zone-action";
 import { createSlicer, yieldToMain } from "./yield-to-main";
+import { placeTooltip } from "./globe-card";
 import { lockRings } from "./globe-lock";
 
 export interface GlobeHost {
@@ -158,6 +159,11 @@ export interface GlobeParts {
    * no limit. Read on every frame; a pin at or beyond it is hidden.
    */
   tooltipLimit?: () => number | null;
+  /**
+   * The band, in host pixels, the tooltip card keeps to, or null for the page: it flips below its
+   * pin rather than rise past `top`, and hides rather than reach past `bottom`. Read on every frame.
+   */
+  tooltipBand?: () => { top: number; bottom: number | null } | null;
   /** The opt-in engine options a host that frames its own globe passes through. */
   engine?: Pick<
     GlobeOptions,
@@ -169,43 +175,6 @@ export interface GlobeParts {
     | "pauseWhile"
     | "entrance"
   >;
-}
-
-/** Where the hover card goes, and whether its pin is out of sight behind chrome. */
-export interface TooltipPlacement {
-  /** The card's centre, in host pixels. */
-  x: number;
-  /** True when the pin is at or past `limit`, so the card has nothing to point at. */
-  occluded: boolean;
-}
-
-/**
- * Centre the hover card on its pin, kept inside the host and short of `limit`.
- *
- * Pure so the clamp is tested without a globe. Without a `limit` this is the
- * plain clamp: the card's edges stay `pad` inside the host. With one, the
- * card's right edge also stays at or short of it, and a pin at or past it is
- * `occluded`.
- */
-export function placeTooltip({
-  x,
-  width,
-  cardWidth,
-  pad,
-  limit,
-}: {
-  x: number;
-  width: number;
-  cardWidth: number;
-  pad: number;
-  limit: number | null;
-}): TooltipPlacement {
-  const upper = Math.min(width - pad, limit ?? Infinity) - cardWidth / 2;
-  const lower = cardWidth / 2 + pad;
-  return {
-    x: Math.min(Math.max(x, lower), upper),
-    occluded: limit !== null && x >= limit,
-  };
 }
 
 /**
@@ -664,24 +633,28 @@ export async function initGlobe(
       return;
     }
     tooltip.style.opacity = "1";
-    // Clamp inside the stage, and flip below the point near the top edge.
-    const { x, occluded } = placeTooltip({
+    /* In the top layer the card is placed in page pixels, from the frame it is drawn over, so it
+       scrolls with the page by itself: a card moved by script on every scroll would count as a
+       layout shift. */
+    const frame = topLayer ? tooltipFrame() : { left: 0, top: 0 };
+    // Clamp inside the stage, and flip below the point near the top bound.
+    const band = parts.tooltipBand?.() ?? null;
+    const { x, y, below, occluded } = placeTooltip({
       x: at.x,
+      y: at.y,
+      top: band?.top ?? -frame.top,
+      bottom: band?.bottom ?? null,
       width: host.clientWidth,
       // The box's own width, not `offsetWidth`, which rounds: a card clear to the pixel stays clear.
       cardWidth: tooltip.getBoundingClientRect().width,
+      cardHeight: tooltip.offsetHeight,
       pad: 8,
       limit: tooltipLimit(),
     });
     tooltip.toggleAttribute("data-occluded", occluded);
-    /* In the top layer the card is placed in page pixels, from the frame it is drawn over, so it
-       scrolls with the page by itself: a card moved by script on every scroll would count as a
-       layout shift. It flips only where it would leave the top of the page. */
-    const frame = topLayer ? tooltipFrame() : { left: 0, top: 0 };
-    const flip = frame.top + at.y - tooltip.offsetHeight - 16 < 0;
-    tooltip.toggleAttribute("data-below", flip);
+    tooltip.toggleAttribute("data-below", below);
     tooltip.style.left = `${frame.left + x}px`;
-    tooltip.style.top = `${frame.top + at.y + (flip ? 12 : 0)}px`;
+    tooltip.style.top = `${frame.top + y}px`;
     tooltip.style.removeProperty("visibility");
   }
 

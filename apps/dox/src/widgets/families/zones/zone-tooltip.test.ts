@@ -62,6 +62,32 @@ describe("zoneTooltip", () => {
     await expectNoAxeViolations(r.host);
   });
 
+  it("keeps a long id readable as one name, with the sky chip beside it", async () => {
+    const r = renderHtml(
+      zoneTooltip({
+        zone: "America/Argentina/ComodRivadavia",
+        clock: { ...CLOCK, sky: { label: "Night", icon: '<circle r="4"/>' } },
+      }),
+    );
+    expect(
+      screen.getByText("America/Argentina/ComodRivadavia"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Night")).toBeInTheDocument();
+    await expectNoAxeViolations(r.host);
+  });
+
+  it("reads the day shift and the date as one line", () => {
+    renderHtml(
+      zoneTooltip({
+        zone: "Pacific/Kiritimati",
+        clock: { ...CLOCK, date: "2026-11-25", shift: "Tomorrow" },
+      }),
+    );
+    expect(screen.getByText(/2026-11-25/)).toHaveTextContent(
+      "Tomorrow · 2026-11-25",
+    );
+  });
+
   it("escapes a zone name that carries markup", () => {
     renderHtml(zoneTooltip({ zone: "a<b>c", clock: CLOCK }));
     expect(screen.getByText("a<b>c")).toBeInTheDocument();

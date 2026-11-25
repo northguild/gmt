@@ -101,6 +101,18 @@ describe("drawer", () => {
     expect(screen.getByRole("textbox", { name: "Search" })).toHaveFocus();
   });
 
+  it("moves focus without scrolling the page, on open and on return", () => {
+    const { toggle, handle } = draw();
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    handle.open(screen.getByRole("textbox", { name: "Search", hidden: true }));
+    handle.close();
+    expect(toggle).toHaveFocus();
+    expect(focus).toHaveBeenCalledTimes(2);
+    for (const call of focus.mock.calls)
+      expect(call[0]).toEqual({ preventScroll: true });
+    focus.mockRestore();
+  });
+
   it("puts the close before the region and names what it controls", () => {
     const { handle } = draw();
     handle.open();

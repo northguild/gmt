@@ -114,13 +114,6 @@ const shouldRenderSearch =
       align-items: center;
     }
 
-    /* Below 50rem the settings button is all the group shows; the rest is in the mobile menu. */
-    @media (width < 50rem) {
-      .social-icons > :global(:not([data-settings-control])) {
-        display: none;
-      }
-    }
-
     /* On every page the search box sits at the right, just before the icons, at Starlight's
        22rem cap, as on northguild.dev. The middle column takes the slack, and the box gives
        way first when the bar runs short. */

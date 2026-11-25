@@ -1,0 +1,96 @@
+/* globe-phone: the globe's phone layout, written once for every `Globe space` mount.
+
+   Where the landing is not locked (the negation of `HOME_LOCKED_QUERY`, lib/home-carousel.ts; keep
+   the two equal) the zone drawer is a bottom sheet fixed to the visual viewport. `globe-sheet.ts`
+   writes `--sheet-bottom` (the keyboard's height) on the drawer's wrapper, and both the sheet and
+   its close read it. On a coarse pointer every control of the zoom stack and the sheet is 44px.
+
+   The rules override `.root[data-space] .drawer` and `.drawerClose` in globe.module.css, which
+   weigh (0,3,0): the sheet and its close carry an attribute (`role`, `aria-controls`) to weigh the
+   same, and so they win by coming later: globe-mount.ts imports this module after that one, and
+   the import order must stay. No colour and no bevel size is new: the sheet keeps the drawer's own
+   border, glass and bevel. */
+
+@media not ((width >= 64rem) and (orientation: landscape)) {
+  /* The sheet's height is the same for the sheet and its close, so each declares it. Percentages
+     resolve against the layout viewport, which is what a fixed box is placed in. It never rises
+     past the top of the visual viewport. */
+  [data-space] .sheet[role="region"],
+  [data-space] .sheetClose[aria-controls] {
+    --sheet-lift: var(--sheet-bottom, 0px);
+    --sheet-block: min(
+      60svh,
+      30rem,
+      calc(100% - var(--sheet-lift) - var(--gmt-space-4))
+    );
+  }
+
+  [data-space] .sheet[role="region"] {
+    position: fixed;
+    inset: auto var(--gmt-space-4) var(--sheet-lift);
+    block-size: var(--sheet-block);
+
+    /* The top padding leaves the close its row; the bottom clears the home indicator. */
+    padding-block: calc(2.75rem + var(--gmt-space-2))
+      max(var(--gmt-space-4), env(safe-area-inset-bottom));
+    mask: none;
+  }
+
+  /* Shut, it waits just below its place and comes up; it never slides in from the side. */
+  [data-space] .sheet[inert] {
+    translate: 0 1.5rem;
+  }
+
+  /* The close is a 44px square in the sheet's top corner, not the side tab. It stays turned, so its
+     chevron points down at the way the sheet goes. */
+  [data-space] .sheetClose[aria-controls] {
+    position: fixed;
+    inset: auto calc(var(--gmt-space-4) + var(--gmt-space-2))
+      calc(
+        var(--sheet-lift) + var(--sheet-block) - 2.75rem - var(--gmt-space-2)
+      )
+      auto;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border-inline-end-width: 1px;
+    border-start-end-radius: 5px;
+    border-end-end-radius: 5px;
+
+    --drawer-close-home: 0 0;
+    --drawer-close-away: 0 1rem;
+  }
+
+  /* The Earth's area is the hero's Earth row (gmt-home-stacked.css); nothing reserves room under
+     it. The stage is the viewport less the gutters, so the disc is as wide as the screen allows. */
+  [data-space] .stage[data-gate] {
+    margin-inline: var(--gmt-space-4);
+  }
+
+  /* Touch: 44px targets, the floor being WCAG 2.5.8's 24px. The stack lies in a row along the
+     stage's bottom edge, where the disc is not, so taller buttons do not shrink the Earth. */
+  @media (pointer: coarse) {
+    [data-space] .stack {
+      flex-direction: row;
+      inset-block-end: 0;
+    }
+
+    [data-space] .stack button {
+      inline-size: 2.75rem;
+      block-size: 2.75rem;
+    }
+
+    [data-space] .sheet :is(button, input, [role="option"]) {
+      min-block-size: 2.75rem;
+    }
+
+    [data-space] .sheet button {
+      min-inline-size: 2.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-space] .sheet[inert] {
+      translate: 0 0;
+    }
+  }
+}

@@ -106,8 +106,8 @@ export function wireDrawer(el: HTMLElement, o: DrawerWire): DrawerHandle {
     region.toggleAttribute("inert", !next);
     o.inertWhenOpen?.toggleAttribute("inert", next);
     toggle.setAttribute("aria-expanded", String(next));
-    if (next) focus?.focus();
-    else if (hadFocus && returnFocus) toggle.focus();
+    if (next) focus?.focus({ preventScroll: true });
+    else if (hadFocus && returnFocus) toggle.focus({ preventScroll: true });
     // After the change is committed. Mount never reaches here (the drawer starts closed).
     cue(next ? "open" : "close");
     o.onToggle?.(next);

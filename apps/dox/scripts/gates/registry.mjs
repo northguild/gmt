@@ -106,6 +106,15 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "hero-phone",
+    script: "hero-phone-check.mjs",
+    tier: "pr",
+    browsers: ["chromium", "webkit"],
+    fullBrowsers: null,
+    themes: false,
+    needs: null,
+  },
+  {
     id: "sound-check",
     script: "sound-check.mjs",
     tier: "pr",

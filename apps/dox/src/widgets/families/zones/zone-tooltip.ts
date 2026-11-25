@@ -1,10 +1,10 @@
 /**
- * zoneTooltip: the body of the globe's hover card for one zone: its name, the local time and
- * date (with a day-shift word when the day differs from the viewer's), whether the sun is up,
- * and the offset with the DST wording. A reading that failed shows the signal-lost line, not a
+ * zoneTooltip: the body of the globe's hover card for one zone, in three groups: where (its id,
+ * and whether the sun is up), when (the local time, large, and the date with a day-shift word
+ * when the day differs from the viewer's) and the rule (the offset and the DST wording). A reading that failed shows the signal-lost line, not a
  * blank card. The caller works out every word; this only lays them out.
  */
-import { html, raw, type SafeHtml } from "~/widgets/builders";
+import { html, raw, type HtmlValue, type SafeHtml } from "~/widgets/builders";
 import styles from "./zone-tooltip.module.css";
 
 interface ZoneTooltipClock {
@@ -31,12 +31,24 @@ interface ZoneTooltipOptions {
   clock?: ZoneTooltipClock;
 }
 
+/** The id with a break point after every slash, so a long one wraps at a segment, not mid-word. */
+function breakable(zone: string): HtmlValue {
+  return zone
+    .split("/")
+    .flatMap((part, i) => (i === 0 ? [part] : ["/", raw("<wbr>"), part]));
+}
+
 export function zoneTooltip(o: ZoneTooltipOptions): SafeHtml {
   const c = o.clock;
+  const where = (sky?: SafeHtml) =>
+    html`<span class="${styles.where}"
+      ><span class="${styles.zone}">${breakable(o.zone)}</span>${sky}</span
+    >`;
   if (!c)
     return html`<span class="${styles.root}"
-      ><span class="${styles.zone}">${o.zone}</span
-      ><span class="${styles.lost}">⟨ NO SIGNAL — zone unavailable ⟩</span></span
+      >${where()}<span class="${styles.lost}"
+        >⟨ NO SIGNAL — zone unavailable ⟩</span
+      ></span
     >`;
   const date = c.shift
     ? html`<span class="${styles.shift}">${c.shift}</span> · ${c.date}`
@@ -47,14 +59,14 @@ export function zoneTooltip(o: ZoneTooltipOptions): SafeHtml {
           ${raw(c.sky.icon)}</svg
         ><span>${c.sky.label}</span></span
       >`
-    : html``;
+    : undefined;
   return html`<span class="${styles.root}"
-    ><span class="${styles.zone}">${o.zone}</span
-    ><span class="${styles.time}" data-gate="live">${c.time}</span
-    ><span class="${styles.date}" data-gate="live">${date}</span>${sky}<span
-      class="${styles.meta}"
-      ><span class="${styles.offset}">UTC${c.offset}</span> ·
-      <span class="${c.onDst ? styles.dstOn : styles.dst}">${c.dst}</span></span
+    >${where(sky)}<span class="${styles.when}"
+      ><span class="${styles.time}" data-gate="live">${c.time}</span
+      ><span class="${styles.date}" data-gate="live">${date}</span></span
+    ><span class="${styles.rule}"
+      ><span class="${styles.offset}">UTC${c.offset}</span
+      ><span class="${c.onDst ? styles.dstOn : styles.dst}">${c.dst}</span></span
     ></span
   >`;
 }

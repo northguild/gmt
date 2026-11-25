@@ -1,0 +1,78 @@
+/*
+ * The stacked landing: where the landing is not locked (a phone, a tablet held upright, a narrow
+ * window) there is no carousel. The intro and the pages read in order in the copy column, one
+ * under another, and the page scrolls. The pane look is in gmt-home-panes.css; the column's own
+ * flow (a flex column with a gap) is in HeroGlobe.astro. Nothing here caps a page's height or
+ * hides a page.
+ *
+ * The first screen is the intro, its two buttons and the Earth, as on the other NorthGuild
+ * landings: the buttons follow the tagline. The copy column is `display: contents`, so the intro,
+ * the buttons and the pages are cells of the hero's one-column grid, and the Earth's area
+ * (`Globe space`) is the row under the buttons. The Earth's row is `minmax(18rem, 1fr)`; the
+ * `::after` below spans the first three rows and is as tall as the screen under the header, which
+ * is what makes the `1fr` the screen less the intro and the buttons, however tall the intro wraps,
+ * with nothing measured. The pages start at the fold.
+ *
+ * The query is the negation of `HOME_LOCKED_QUERY` (lib/home-carousel.ts); keep them equal.
+ */
+@media not ((width >= 64rem) and (orientation: landscape)) {
+  /* A jump to a page, or focus on it, never lands its heading under the glass header. */
+  .gmt-herostage-copy > [data-page] {
+    scroll-margin-block-start: calc(var(--sl-nav-height) + var(--gmt-space-4));
+  }
+
+  .gmt-hero-nav .gmt-hero-actions {
+    flex-wrap: wrap;
+  }
+
+  /* No column: its children are the hero's cells. It is safe only because the carousel is not
+     wired here, so the column carries no role, tabindex or aria. */
+  .gmt-herostage-copy {
+    display: contents;
+  }
+
+  .gmt-herostage {
+    grid-template-rows: auto auto minmax(18rem, 1fr);
+    padding-block-end: var(--gmt-space-8);
+  }
+
+  .gmt-herostage::after {
+    content: "";
+    grid-row: 1 / span 3;
+    grid-column: 1;
+    min-block-size: calc(100svh - var(--sl-nav-height));
+    pointer-events: none;
+  }
+
+  /* Each cell takes the column's old gutters and layer. */
+  .gmt-herostage
+    .gmt-herostage-copy
+    > :is(.gmt-herostage-intro, .gmt-hero-nav, [data-page]) {
+    position: relative;
+    z-index: var(--gmt-z-float);
+    grid-column: 1;
+    margin-inline: clamp(1rem, 5vw, 5rem) var(--sl-content-pad-x);
+    min-inline-size: 0;
+  }
+
+  .gmt-herostage-copy > .gmt-herostage-intro {
+    grid-row: 1;
+    margin-block-start: var(--gmt-space-4);
+    pointer-events: none;
+  }
+
+  .gmt-herostage-copy > .gmt-hero-nav {
+    grid-row: 2;
+    margin-block-start: var(--gmt-space-4);
+  }
+
+  /* The Earth's area (`Globe space`) is the third row. */
+  .gmt-herostage > [data-space] {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .gmt-herostage-copy > [data-page]:not(.gmt-herostage-intro) {
+    margin-block-start: var(--gmt-space-6);
+  }
+}

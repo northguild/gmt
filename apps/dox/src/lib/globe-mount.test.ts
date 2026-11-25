@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { renderHtml } from "~/widgets/test-fixture";
 import { installJsdomShims } from "../test/jsdom-shims";
 import { renderGlobeTemplate } from "./globe-mount";
+import { HOME_LOCKED_QUERY } from "./home-carousel";
 
 installJsdomShims();
 
@@ -213,6 +214,20 @@ describe("mountGlobe in space mode", () => {
     screen.getByRole("region", { name: "Zone finder", hidden: true });
   const magnifier = () => screen.getByRole("button", { name: "Find a zone" });
 
+  /* The landing's locked layout (a wide landscape screen) or the stacked one, read live. */
+  function layout(locked: boolean) {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === HOME_LOCKED_QUERY ? locked : false,
+          media: query,
+        }) as MediaQueryList,
+    );
+  }
+
+  /* The tests below run on the landing's locked layout, where a touch of the globe opens the finder. */
+  beforeEach(() => layout(true));
+
   it("keeps the zone finder shut until the globe is worked", async () => {
     await mount({}, { space: true });
     expect(finder()).toHaveAttribute("inert");
@@ -230,6 +245,24 @@ describe("mountGlobe in space mode", () => {
     expect(before).toHaveFocus();
   });
 
+  it("opens from the magnifier without scrolling the page to the search", async () => {
+    await mount({}, { space: true });
+    const user = userEvent.setup();
+    const scrollY = window.scrollY;
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    await user.click(magnifier());
+    const search = screen.getByRole("combobox", { name: "Find a zone" });
+    expect(search).toHaveFocus();
+    const onSearch = focus.mock.contexts.flatMap((target, i) =>
+      target === search ? [focus.mock.calls[i]?.[0]] : [],
+    );
+    expect(onSearch.length).toBeGreaterThan(0);
+    for (const options of onSearch)
+      expect(options).toEqual({ preventScroll: true });
+    expect(window.scrollY).toBe(scrollY);
+    focus.mockRestore();
+  });
+
   it("stays shut after the reader closes it, until the magnifier reopens it", async () => {
     await mount({}, { space: true });
     const user = userEvent.setup();
@@ -242,6 +275,28 @@ describe("mountGlobe in space mode", () => {
     await user.click(magnifier());
     expect(finder()).not.toHaveAttribute("inert");
     expect(screen.getByRole("combobox", { name: "Find a zone" })).toHaveFocus();
+  });
+
+  describe("by layout", () => {
+    it("stacked, a tap that picks a zone leaves the sheet shut; the magnifier opens it", async () => {
+      layout(false);
+      await mount({}, { space: true });
+      interactListener?.("tap");
+      expect(finder()).toHaveAttribute("inert");
+      expect(magnifier()).toHaveAttribute("aria-expanded", "false");
+      interactListener?.();
+      expect(magnifier()).toHaveAttribute("aria-expanded", "false");
+
+      await userEvent.setup().click(magnifier());
+      expect(magnifier()).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("locked, a tap that picks a zone still opens the finder", async () => {
+      layout(true);
+      await mount({}, { space: true });
+      interactListener?.("tap");
+      expect(magnifier()).toHaveAttribute("aria-expanded", "true");
+    });
   });
 
   it("reopens for a tap that picks a zone, with focus on the zone list", async () => {
