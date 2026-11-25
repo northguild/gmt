@@ -10,11 +10,56 @@ import userEvent from "@testing-library/user-event";
 import { setHtml } from "~/widgets/builders";
 import { html } from "~/widgets/builders/html";
 import { installJsdomShims } from "../test/jsdom-shims";
-import { initHomeCarousel } from "./home-carousel";
+import { HOME_LOCKED_QUERY, initHomeCarousel } from "./home-carousel";
 
 installJsdomShims();
 
 let aborter: AbortController;
+
+/** The locked-layout query as a `MediaQueryList` the test flips and whose listeners it counts. */
+interface Screen {
+  set: (locked: boolean) => void;
+  listeners: () => number;
+}
+
+function screenOf(locked: boolean): Screen {
+  let matches = locked;
+  const listeners = new Set<() => void>();
+  const list = {
+    get matches() {
+      return matches;
+    },
+    media: HOME_LOCKED_QUERY,
+    addEventListener: (
+      _type: string,
+      listener: () => void,
+      options?: { signal?: AbortSignal },
+    ) => {
+      listeners.add(listener);
+      options?.signal?.addEventListener("abort", () =>
+        listeners.delete(listener),
+      );
+    },
+    removeEventListener: (_type: string, listener: () => void) =>
+      listeners.delete(listener),
+  };
+  const idle = {
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  };
+  vi.spyOn(window, "matchMedia").mockImplementation(((query: string) =>
+    query === HOME_LOCKED_QUERY
+      ? list
+      : idle) as unknown as typeof window.matchMedia);
+  return {
+    set: (value) => {
+      matches = value;
+      for (const listener of listeners) listener();
+    },
+    listeners: () => listeners.size,
+  };
+}
 
 interface Hero {
   hero: HTMLElement;
@@ -62,11 +107,21 @@ function hero(): Hero {
   };
 }
 
+/** The hero on a locked screen, as `arrival.ts` leaves it: marked `wait`. */
 function start(): Hero {
   const h = hero();
+  screenOf(true);
   document.documentElement.dataset["homeCarousel"] = "wait";
   initHomeCarousel(h.hero, aborter.signal);
   return h;
+}
+
+/** The hero on a stacked screen, which `arrival.ts` leaves unmarked. */
+function startStacked(): Hero & { screen: Screen } {
+  const h = hero();
+  const screen = screenOf(false);
+  initHomeCarousel(h.hero, aborter.signal);
+  return { ...h, screen };
 }
 
 const shown = (el: HTMLElement): boolean => el.hasAttribute("data-shown");
@@ -77,6 +132,7 @@ beforeEach(() => {
 
 afterEach(() => {
   aborter.abort();
+  vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
   delete document.documentElement.dataset["homeCarousel"];
   document.body.replaceChildren();
@@ -169,6 +225,7 @@ describe("initHomeCarousel", () => {
 
   it("clears the wait mark when the hero lacks a part", () => {
     const h = hero();
+    screenOf(true);
     h.next.remove();
     document.documentElement.dataset["homeCarousel"] = "wait";
     initHomeCarousel(h.hero, aborter.signal);
@@ -184,5 +241,85 @@ describe("initHomeCarousel", () => {
     expect(screen.queryAllByRole("tab")).toHaveLength(0);
     expect(h.prev).not.toHaveAttribute("tabindex");
     expect(h.prev).toHaveAccessibleName("Previous page");
+  });
+
+  it("does not wire on a stacked screen: the pages read in order", () => {
+    const h = startStacked();
+    expect(document.documentElement.dataset["homeCarousel"]).toBeUndefined();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    for (const page of [h.intro, h.why, h.more]) {
+      expect(page).not.toHaveAttribute("inert");
+      expect(page).not.toHaveAttribute("aria-hidden");
+      expect(page).not.toHaveAttribute("role");
+    }
+  });
+
+  it("clears the wait mark when the screen is stacked by the time it runs", () => {
+    const h = hero();
+    screenOf(false);
+    document.documentElement.dataset["homeCarousel"] = "wait";
+    initHomeCarousel(h.hero, aborter.signal);
+    expect(document.documentElement.dataset["homeCarousel"]).toBeUndefined();
+  });
+
+  it("takes everything back when the screen becomes stacked, and the keys do nothing", async () => {
+    const user = userEvent.setup();
+    const h = hero();
+    const screenList = screenOf(true);
+    document.documentElement.dataset["homeCarousel"] = "wait";
+    initHomeCarousel(h.hero, aborter.signal);
+    await user.click(h.next);
+    screenList.set(false);
+    expect(document.documentElement.dataset["homeCarousel"]).toBeUndefined();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    for (const page of [h.intro, h.why, h.more]) {
+      expect(page).not.toHaveAttribute("inert");
+      expect(page).not.toHaveAttribute("role");
+      expect(page).not.toHaveAttribute("aria-label");
+      expect(shown(page)).toBe(false);
+    }
+    expect(h.prev).not.toHaveAttribute("tabindex");
+    expect(h.prev).toHaveAccessibleName("Previous page");
+    h.next.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(shown(h.more)).toBe(false);
+  });
+
+  it("wires again when the screen becomes locked, on the page nearest the top", () => {
+    const h = startStacked();
+    const tops = new Map([
+      [h.intro, -500],
+      [h.why, -100],
+      [h.more, 900],
+    ]);
+    for (const [page, top] of tops)
+      page.getBoundingClientRect = () => ({ top }) as DOMRect;
+    h.screen.set(true);
+    expect(document.documentElement.dataset["homeCarousel"]).toBe("on");
+    expect(shown(h.why)).toBe(true);
+    expect(shown(h.intro)).toBe(false);
+  });
+
+  it("leaves no listener on the screen after teardown, wired or stacked", () => {
+    const wired = hero();
+    const first = screenOf(true);
+    document.documentElement.dataset["homeCarousel"] = "wait";
+    const one = new AbortController();
+    initHomeCarousel(wired.hero, one.signal);
+    expect(first.listeners()).toBe(1);
+    one.abort();
+    expect(first.listeners()).toBe(0);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+
+    document.body.replaceChildren();
+    const stacked = hero();
+    const second = screenOf(false);
+    const two = new AbortController();
+    initHomeCarousel(stacked.hero, two.signal);
+    expect(second.listeners()).toBe(1);
+    two.abort();
+    expect(second.listeners()).toBe(0);
   });
 });

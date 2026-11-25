@@ -6,14 +6,16 @@
  * a time. This module wires the kit's carousel (`widgets/builders/carousel.ts`) and adds
  * what is the page's own: the hash, the wheel on a wide screen, and the motion.
  *
- * On a landscape screen 64rem wide and up the page never scrolls: the sky and the Earth fill the
- * viewport, and a page taller than its place scrolls inside it. Elsewhere (narrower, or portrait)
- * the stage stacks and the page scrolls, so the wheel scrolls the page and never steps.
+ * The carousel exists only where the landing is locked (`HOME_LOCKED_QUERY`: a landscape screen
+ * 64rem wide and up), where the page never scrolls, the sky and the Earth fill the viewport and the
+ * wheel steps the pages. Elsewhere there is no carousel: the pages read in order and the page
+ * scrolls (`gmt-home-stacked.css`). Crossing the query wires or unwires the carousel live.
  *
- * `arrival.ts` has already set `data-home-carousel="wait"` before the first paint, so the paged
- * layout is the first layout. This module writes `on`, or removes the mark when it cannot wire.
- * It must stay a deferred module script (no `async`): `arrival.ts` removes a mark still `wait` at
- * `DOMContentLoaded`, which is only safe because every deferred module has run by then.
+ * `arrival.ts` has already set `data-home-carousel="wait"` before the first paint where the landing
+ * is locked, so the paged layout is the first layout. This module writes `on`, or removes the mark
+ * when it cannot wire. It must stay a deferred module script (no `async`): `arrival.ts` removes a
+ * mark still `wait` at `DOMContentLoaded`, which is only safe because every deferred module has
+ * run by then.
  */
 import {
   wireCarousel,
@@ -55,6 +57,10 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
   }
 
   const locked = win.matchMedia?.(HOME_LOCKED_QUERY);
+  if (!locked) {
+    if (root.dataset[MARK] === "wait") delete root.dataset[MARK];
+    return;
+  }
   const reduced = (): boolean => win.matchMedia?.(REDUCED).matches ?? false;
 
   /**
@@ -73,6 +79,16 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
     const target = id === "" ? null : doc.getElementById(id);
     const page = target ? pages.findIndex((p) => p.contains(target)) : -1;
     return { page, target: page === -1 ? null : target };
+  };
+
+  /** The page the reader was at on the stacked layout: the last whose top is in the top quarter. */
+  const nearestTop = (): number => {
+    const line = win.innerHeight / 4;
+    let page = 0;
+    pages.forEach((p, i) => {
+      if (p.getBoundingClientRect().top <= line) page = i;
+    });
+    return page;
   };
 
   const play = (el: HTMLElement, kind: "in" | "out"): void => {
@@ -95,48 +111,6 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
     );
   };
 
-  const first = pageOfHash();
-  const carousel: CarouselHandle = wireCarousel(column, {
-    signal,
-    pages: pages.map((el) => ({ el, label: el.dataset["page"] ?? "" })),
-    prev,
-    next,
-    dots,
-    live,
-    keyArea: column,
-    wheelArea: column,
-    wheel: () => locked?.matches === true,
-    label: "About gmt",
-    idPrefix: "home",
-    start: Math.max(0, first.page),
-    leave: (el, hide) => {
-      if (reduced()) {
-        el.removeAttribute("data-motion");
-        hide();
-        return;
-      }
-      play(el, "out");
-      const running = el.getAnimations?.() ?? [];
-      const done = (): void => {
-        hide();
-        clearMotion(el, "out");
-      };
-      if (running.length === 0) done();
-      else void Promise.allSettled(running.map((a) => a.finished)).then(done);
-    },
-    onSelect: (to, _from, by) => {
-      const el = pages[to];
-      if (by !== "wheel") el.scrollTop = 0;
-      play(el, "in");
-      const running = el.getAnimations?.() ?? [];
-      void Promise.allSettled(running.map((a) => a.finished)).then(() =>
-        clearMotion(el, "in"),
-      );
-      clearHash(to);
-    },
-  });
-  root.dataset[MARK] = "on";
-
   /** Puts `target` at the top of its page, which scrolls inside itself on a wide screen. */
   const reveal = (page: HTMLElement, target: HTMLElement | null): void => {
     if (!target) return;
@@ -145,55 +119,126 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
   };
 
   /**
-   * Drops `load` once the page has frozen in. It waits while the entrance waits; once the entrance
-   * runs (or there is none), it goes when the page's animation ends or is cancelled.
+   * Wires the carousel until `own` aborts (the kit takes back what it wrote, here and in the page's
+   * ARIA). `first` is the load: it honours the hash and settles the entrance. A wire after a
+   * rotation or a resize opens the page the reader was at, with no motion.
    */
-  const settleLoad = (el: HTMLElement): void => {
-    const settle = (): boolean => {
-      if (root.dataset["entrance"] === "wait") return false;
-      const running = el.getAnimations?.() ?? [];
-      void Promise.allSettled(running.map((a) => a.finished)).then(() =>
-        clearMotion(el, "load"),
-      );
-      return true;
+  const wire = (own: AbortSignal, first: boolean): void => {
+    const at = first ? pageOfHash() : { page: nearestTop(), target: null };
+    const carousel: CarouselHandle = wireCarousel(column, {
+      signal: own,
+      pages: pages.map((el) => ({ el, label: el.dataset["page"] ?? "" })),
+      prev,
+      next,
+      dots,
+      live,
+      keyArea: column,
+      wheelArea: column,
+      wheel: () => locked.matches,
+      label: "About gmt",
+      idPrefix: "home",
+      start: Math.max(0, at.page),
+      leave: (el, hide) => {
+        if (reduced()) {
+          el.removeAttribute("data-motion");
+          hide();
+          return;
+        }
+        play(el, "out");
+        const running = el.getAnimations?.() ?? [];
+        const done = (): void => {
+          hide();
+          clearMotion(el, "out");
+        };
+        if (running.length === 0) done();
+        else void Promise.allSettled(running.map((a) => a.finished)).then(done);
+      },
+      onSelect: (to, _from, by) => {
+        const el = pages[to];
+        if (by !== "wheel") el.scrollTop = 0;
+        play(el, "in");
+        const running = el.getAnimations?.() ?? [];
+        void Promise.allSettled(running.map((a) => a.finished)).then(() =>
+          clearMotion(el, "in"),
+        );
+        clearHash(to);
+      },
+    });
+    root.dataset[MARK] = "on";
+    // The scroll reveal hid the groups of panes the reader had not reached; here they are paged.
+    for (const group of column.querySelectorAll("[data-reveal-group]"))
+      group.classList.add("gmt-reveal-in");
+
+    /**
+     * Drops `load` once the page has frozen in. It waits while the entrance waits; once the
+     * entrance runs (or there is none), it goes when the page's animation ends or is cancelled.
+     */
+    const settleLoad = (el: HTMLElement): void => {
+      const settle = (): boolean => {
+        if (root.dataset["entrance"] === "wait") return false;
+        const running = el.getAnimations?.() ?? [];
+        void Promise.allSettled(running.map((a) => a.finished)).then(() =>
+          clearMotion(el, "load"),
+        );
+        return true;
+      };
+      if (settle()) return;
+      const watch = new MutationObserver(() => {
+        if (settle()) watch.disconnect();
+      });
+      watch.observe(root, {
+        attributes: true,
+        attributeFilter: ["data-entrance"],
+      });
+      own.addEventListener("abort", () => watch.disconnect(), { once: true });
     };
-    if (settle()) return;
-    const watch = new MutationObserver(() => {
-      if (settle()) watch.disconnect();
-    });
-    watch.observe(root, {
-      attributes: true,
-      attributeFilter: ["data-entrance"],
-    });
-    signal.addEventListener("abort", () => watch.disconnect(), { once: true });
+
+    // A link to a place on a later page opens that page with the landing: it freezes in with the
+    // entrance, after the first beat.
+    if (first && at.page > 0) {
+      pages[at.page].dataset["motion"] = "load";
+      reveal(pages[at.page], at.target);
+      settleLoad(pages[at.page]);
+    }
+
+    /** Opens what a new hash names. Unknown ids are ignored. */
+    win.addEventListener(
+      "hashchange",
+      () => {
+        const { page, target } = pageOfHash();
+        if (page === -1) return;
+        carousel.select(page, "api");
+        reveal(pages[page], target);
+      },
+      { signal: own },
+    );
+
+    own.addEventListener(
+      "abort",
+      () => {
+        for (const p of pages) p.removeAttribute("data-motion");
+        delete root.dataset[MARK];
+      },
+      { once: true },
+    );
   };
 
-  // A link to a place on a later page opens that page with the landing: it freezes in with the
-  // entrance, after the first beat.
-  if (first.page > 0) {
-    pages[first.page].dataset["motion"] = "load";
-    reveal(pages[first.page], first.target);
-    settleLoad(pages[first.page]);
-  }
+  let wiring: AbortController | null = null;
+  const unwire = (): void => {
+    wiring?.abort();
+    wiring = null;
+  };
+  const sync = (first: boolean): void => {
+    if (!locked.matches) {
+      unwire();
+      if (root.dataset[MARK] === "wait") delete root.dataset[MARK];
+    } else if (!wiring) {
+      wiring = new AbortController();
+      wire(wiring.signal, first);
+    }
+  };
 
-  /** Opens what a new hash names. Unknown ids are ignored. */
-  win.addEventListener(
-    "hashchange",
-    () => {
-      const { page, target } = pageOfHash();
-      if (page === -1) return;
-      carousel.select(page, "api");
-      reveal(pages[page], target);
-    },
-    { signal },
-  );
-
-  signal.addEventListener(
-    "abort",
-    () => {
-      for (const p of pages) p.removeAttribute("data-motion");
-      delete root.dataset[MARK];
-    },
-    { once: true },
-  );
+  locked.addEventListener("change", () => sync(false), { signal });
+  signal.addEventListener("abort", unwire, { once: true });
+  sync(true);
 }
