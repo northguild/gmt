@@ -108,8 +108,22 @@ export function frameStats(deltas) {
   return { count: sorted.length, median, worst: sorted[sorted.length - 1] };
 }
 
-/** What is wrong with a tour's frame times against the budget, or null when nothing is. */
-export function frameVerdict(deltas, budget = FRAME_BUDGET) {
+/** How many times the step that holds a tour's worst frame is flown again before that frame counts. */
+export const REFLIGHTS = 3;
+
+/**
+ * What is wrong with a tour's frame times against the budget, or null when nothing is. The median is
+ * the tour's own. The worst frame is a single `requestAnimationFrame` gap in a long tour, so one pause
+ * on the runner can put it over: when it is, `refly` flies the step it fell in again and resolves to
+ * that flight's frame times, up to `tries` times, and the worst frame counts only if a flight goes over
+ * again. A slow frame that comes back on the same step comes from the deck; one that does not, from
+ * the runner. A flight that draws no frame cannot clear it.
+ */
+export async function frameVerdict(
+  deltas,
+  refly,
+  { budget = FRAME_BUDGET, tries = REFLIGHTS } = {},
+) {
   const stats = frameStats(deltas);
   if (stats.count === 0) return "no frame was drawn while the camera flew";
   const over = [];
@@ -117,10 +131,22 @@ export function frameVerdict(deltas, budget = FRAME_BUDGET) {
     over.push(
       `the median frame took ${stats.median.toFixed(1)} ms, over ${budget.median}`,
     );
-  if (stats.worst > budget.worst)
-    over.push(
-      `the worst frame took ${stats.worst.toFixed(1)} ms, over ${budget.worst}`,
-    );
+  if (stats.worst > budget.worst) {
+    const worst = `the worst frame took ${stats.worst.toFixed(1)} ms, over ${budget.worst}`;
+    for (let flight = 1; flight <= tries; flight += 1) {
+      const again = frameStats(await refly());
+      if (again.count === 0) {
+        over.push(`${worst}, and flying that step again drew no frame`);
+        break;
+      }
+      if (again.worst > budget.worst) {
+        over.push(
+          `${worst}, and ${again.worst.toFixed(1)} ms when that step was flown again (flight ${flight} of ${tries})`,
+        );
+        break;
+      }
+    }
+  }
   return over.length ? over.join("; ") : null;
 }
 

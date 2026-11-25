@@ -139,17 +139,46 @@ describe("frameStats", () => {
 });
 
 describe("frameVerdict", () => {
-  it("passes a smooth tour", () => {
-    expect(frameVerdict([16.7, 16.6, 16.8, 17, 33.9])).toBeNull();
+  /** A refly that resolves to each flight's frame times in turn, and counts the flights. */
+  const flights = (...runs: number[][]) =>
+    vi.fn(async () => runs.shift() ?? []);
+
+  it("passes a smooth tour without flying any step again", async () => {
+    const refly = flights();
+    expect(await frameVerdict([16.7, 16.6, 16.8, 17, 33.9], refly)).toBeNull();
+    expect(refly).not.toHaveBeenCalled();
   });
 
-  it("names the median and the worst frame when they are over", () => {
-    expect(frameVerdict([20, 21, 22])).toMatch(/median frame took 21\.0 ms/);
-    expect(frameVerdict([16, 16, 35])).toMatch(/worst frame took 35\.0 ms/);
+  it("names the median when it is over", async () => {
+    expect(await frameVerdict([20, 21, 22], flights())).toMatch(
+      /median frame took 21\.0 ms/,
+    );
   });
 
-  it("fails a tour with no moving frame", () => {
-    expect(frameVerdict([])).toMatch(/no frame was drawn/);
+  it("clears a worst frame that does not come back in three flights of its step: the runner paused", async () => {
+    const refly = flights([16.7, 33.3], [16.7, 16.7], [16.7, 33.4]);
+    expect(await frameVerdict([16, 16, 50], refly)).toBeNull();
+    expect(refly).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports a worst frame that comes back on its step: the deck is slow", async () => {
+    const refly = flights([16.7, 16.7], [16.7, 50.1], [16.7]);
+    const verdict = await frameVerdict([16, 16, 50], refly);
+    expect(verdict).toMatch(/worst frame took 50\.0 ms, over 34/);
+    expect(verdict).toMatch(
+      /50\.1 ms when that step was flown again \(flight 2 of 3\)/,
+    );
+    expect(refly).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a worst frame whose step draws no frame when flown again", async () => {
+    expect(await frameVerdict([16, 16, 50], flights([]))).toMatch(
+      /flying that step again drew no frame/,
+    );
+  });
+
+  it("fails a tour with no moving frame", async () => {
+    expect(await frameVerdict([], flights())).toMatch(/no frame was drawn/);
   });
 });
 
