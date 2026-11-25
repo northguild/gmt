@@ -21,6 +21,7 @@ import {
   wireCarousel,
   type CarouselHandle,
 } from "../widgets/builders/carousel";
+import { play as onFrames } from "./slides/frames";
 
 const MARK = "homeCarousel";
 const REDUCED = "(prefers-reduced-motion: reduce)";
@@ -101,15 +102,24 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
   /* The page the reader is at, kept as they scroll the stacked layout. It cannot be measured when
      the screen turns locked: by the change event the layout is already the locked one. */
   let readerAt = 0;
-  let pending = 0;
+  let stop: (() => void) | null = null;
+  /** Reads the page on the next frame, once however many scroll events come before it. */
   const track = (): void => {
-    pending = 0;
-    if (!wiring) readerAt = nearestTop();
+    stop ??= onFrames(
+      win,
+      0,
+      (t) => {
+        if (t === 1 && !wiring) readerAt = nearestTop();
+      },
+      () => {
+        stop = null;
+      },
+    );
   };
   win.addEventListener(
     "scroll",
     () => {
-      if (!wiring && !pending) pending = win.requestAnimationFrame(track);
+      if (!wiring) track();
     },
     { passive: true, signal },
   );
@@ -256,7 +266,7 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
       unwire();
       if (root.dataset[MARK] === "wait") delete root.dataset[MARK];
       // The stacked layout lands where it lands: read the page the reader is at from it.
-      if (!pending) pending = win.requestAnimationFrame(track);
+      track();
     } else if (!wiring) {
       wiring = new AbortController();
       wire(wiring.signal, first);
@@ -268,7 +278,7 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
     "abort",
     () => {
       unwire();
-      win.cancelAnimationFrame(pending);
+      stop?.();
     },
     { once: true },
   );
