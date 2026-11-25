@@ -19,6 +19,7 @@ import {
   followGlobe,
   loadClock,
   loadSky,
+  skyInputsOf,
 } from "~/lib/space-sky";
 import { loadDeckGmt } from "./gmt-loader";
 import { rotationFor, zoomFor, type Place, type PlaceContext } from "./places";
@@ -51,23 +52,8 @@ interface BootDeps {
 
 /** Starts the sky, which needs no globe. `null` when the page has no sky to draw. */
 function startSky(d: BootDeps): ReturnType<typeof loadSky> | Promise<null> {
-  const { host } = d;
-  const stars = host.querySelector<HTMLCanvasElement>(
-    '[data-sky-canvas="stars"]',
-  );
-  const band = host.querySelector<HTMLCanvasElement>(
-    '[data-sky-canvas="band"]',
-  );
-  return stars && band && host.dataset["skySrc"]
-    ? loadSky({
-        stars,
-        band,
-        host,
-        src: host.dataset["skySrc"],
-        milkyWay: host.dataset["milkyWay"],
-        signal: d.signal,
-      })
-    : Promise.resolve(null);
+  const inputs = skyInputsOf(d.host, d.host, d.signal);
+  return inputs ? loadSky(inputs) : Promise.resolve(null);
 }
 
 /** The engine, or `null` when neither renderer starts (or the stage was torn down meanwhile). */

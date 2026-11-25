@@ -257,11 +257,8 @@ export function viewMatrix(
 /**
  * `viewMatrix` for a J2000 direction (a star, the Milky Way map), whose axes drift from those of
  * date that the Sun, the Moon and the sidereal time use: IAU 1976 precession (Meeus, Astronomical
- * Algorithms, 2nd ed., eq. 21.2 to 21.4) first, then the view. Precession turns by zeta about the
- * pole, by theta about the new y axis and by z about the pole again; the last turn joins the
- * view's own turn about the pole. Only the angles' first-order terms are kept, zeta = z =
- * 2306.2181" and theta = 2004.3109" a Julian century; the rest add under 2" between 1900 and
- * 2100.
+ * Algorithms, 2nd ed., eq. 21.2 to 21.4) first, then the view. First-order terms only, zeta = z =
+ * 2306.2181" and theta = 2004.3109" a Julian century; the rest add under 2" in 1900 to 2100.
  */
 export function starViewMatrix(
   rotation: readonly [number, number],
@@ -280,6 +277,16 @@ export function starViewMatrix(
       a[row + 2]! * b[column + 6]!
     );
   });
+}
+
+/**
+ * A J2000 direction in the equatorial axes of date, the axes the Sun, the Moon and the sidereal
+ * time use: `starViewMatrix`'s precession, with the view left out.
+ */
+export function precessToDate(unit: Unit, instantMs: number): Vec3 {
+  /* The view turned to zero at this instant leaves the precession alone. */
+  const p = starViewMatrix([siderealDeg(instantMs), 0], instantMs);
+  return [0, 3, 6].map((r) => dot(p.subarray(r, r + 3), unit)) as Vec3;
 }
 
 /**

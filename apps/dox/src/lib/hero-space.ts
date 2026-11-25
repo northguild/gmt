@@ -14,6 +14,7 @@ import {
   drawWithoutGlobe,
   followGlobe as followSky,
   loadSky,
+  skyInputsOf,
 } from "./space-sky";
 import { mountSpaceFx } from "./space-fx";
 import type { GlobeHost } from "./globe";
@@ -93,23 +94,10 @@ export const heroOf = (element: Element): HTMLElement | null =>
 /** Fetches the star list and the Milky Way; the first draw waits for the globe (or for `skyWithoutGlobe`). */
 export function startHeroSky(root: HTMLElement): void {
   if (skies.has(root)) return;
-  const stars = canvasOf(root, "stars");
-  const band = canvasOf(root, "band");
   const host = root.parentElement;
-  const src = root.dataset["src"];
-  if (!stars || !band || !host || !src) return;
   /* The landing's sky lives as long as the page, so its signal is never aborted. */
-  skies.set(
-    root,
-    loadSky({
-      stars,
-      band,
-      host,
-      src,
-      milkyWay: root.dataset["milkyWay"],
-      signal: new AbortController().signal,
-    }),
-  );
+  const inputs = host && skyInputsOf(root, host, new AbortController().signal);
+  if (inputs) skies.set(root, loadSky(inputs));
 }
 
 /** The globe could not mount: draw the sky once at the start rotation, at the anchor. */

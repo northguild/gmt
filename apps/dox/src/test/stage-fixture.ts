@@ -196,7 +196,10 @@ export const themeMock = () => ({
 export const skyCalls = { drawWithout: 0, follow: 0 };
 
 /** The factory for `vi.mock("~/lib/space-sky")`. */
-export const skyMock = () => ({
+export const skyMock = async () => ({
+  ...(await vi.importActual<typeof import("~/lib/space-sky")>(
+    "~/lib/space-sky",
+  )),
   loadClock: async () => ({
     getUnixNow: () => NOW,
     getSystemTimeZone: () => "UTC",

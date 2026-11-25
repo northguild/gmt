@@ -126,6 +126,55 @@ export const MILKY_WAY: DataCredit = {
   ],
 };
 
+/**
+ * The Sun disc behind the night sky's Sun: ESA's Solar Orbiter PHI image, a multinational body's
+ * (CC BY-SA 3.0 IGO). The credit is the one ESA asks for; the change is `sky-sun.json`'s.
+ */
+export const SUN_IMAGERY: DataCredit = {
+  label: "Sun",
+  parts: [
+    {
+      text: "PHI's view of the Sun in visible light",
+      href: "https://www.esa.int/ESA_Multimedia/Images/2024/11/PHI_s_view_of_the_Sun_in_visible_light",
+    },
+    " by ESA & NASA/Solar Orbiter/PHI Team, 22 March 2023, cropped, scaled and reduced to grey (",
+    {
+      text: "CC BY-SA 3.0 IGO",
+      href: "https://creativecommons.org/licenses/by-sa/3.0/igo/",
+    },
+    ").",
+  ],
+};
+
+/**
+ * The Moon map behind the night sky's Moon: NASA's visualisation of LRO LROC data, a national peer
+ * (no international body publishes a global lunar mosaic). NASA's media guidelines ask for the
+ * credit and no implied endorsement; the change is `sky-moon.json`'s.
+ */
+export const MOON_IMAGERY: DataCredit = {
+  label: "Moon",
+  parts: [
+    {
+      text: "NASA's Scientific Visualization Studio, CGI Moon Kit",
+      href: "https://svs.gsfc.nasa.gov/4720",
+    },
+    ", from Lunar Reconnaissance Orbiter LROC data, scaled (",
+    {
+      text: "NASA media guidelines",
+      href: "https://www.nasa.gov/multimedia/guidelines/index.html",
+    },
+    ").",
+  ],
+};
+
+/** The night sky's rows in reading order: the globe's popover, the deck's and the slides' read this list. */
+export const SKY_CREDITS: readonly DataCredit[] = [
+  NIGHT_SKY,
+  MILKY_WAY,
+  SUN_IMAGERY,
+  MOON_IMAGERY,
+];
+
 /** The site's licence note, as the landing popover's last row (everywhere else it is the footer line). */
 export const LICENCE_CREDIT: DataCredit = {
   label: "Licence",

@@ -1,0 +1,32 @@
+{
+  "name": "Sun for the Dox night sky",
+  "source": {
+    "title": "PHI's view of the Sun in visible light",
+    "publisher": "ESA",
+    "page": "https://www.esa.int/ESA_Multimedia/Images/2024/11/PHI_s_view_of_the_Sun_in_visible_light",
+    "url": "https://media.esa.int/legacy/web/images/esa_multimedia/images/2024/11/phi_s_view_of_the_sun_in_visible_light/26451845-1-eng-GB/PHI_s_view_of_the_Sun_in_visible_light.jpg?dl",
+    "bytes": 61247330,
+    "sha256": "697f9bd228092d88956b13f3b2647d8935038701ef2739bf3a7e85308eaaad08"
+  },
+  "credit": "ESA & NASA/Solar Orbiter/PHI Team",
+  "license": "CC-BY-SA-3.0-IGO",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/igo/",
+  "changes": "Reduced from its orange colour table to one grey band (the JPEG's luma), cropped to a square of 1.02 solar radii, scaled to 256 x 256, and the pixels outside the disc set to black. Not turned: solar north is up. The disc was fitted at (4806.2, 4803.4) with a radius of 3973.4 source pixels.",
+  "generator": "apps/dox/scripts/prepare-sky-bodies.mjs",
+  "observed": "2023-03-22",
+  "disc": {
+    "x": 4806.2,
+    "y": 4803.4,
+    "radius": 3973.4,
+    "crop": 1.02,
+    "threshold": 0.1
+  },
+  "map": {
+    "quality": 80,
+    "file": "sky-sun.webp",
+    "width": 256,
+    "height": 256,
+    "bytes": 1970,
+    "sha256": "d9c3d792e6d2ac5013d4d9570acfc733a82641e8ace5933531fd1c09e02c8ef7"
+  }
+}

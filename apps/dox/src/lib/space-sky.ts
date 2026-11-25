@@ -3,14 +3,17 @@
  * deck's stage (`slides/stage.ts`).
  *
  * The sky has no loop of its own. `loadSky` fetches the star list and the Milky Way map and builds
- * the sky; `followGlobe` draws it once from the globe's camera (which marks the host
+ * the sky, then, once the browser is idle, loads the Moon's map and hands the sky its painter; `followGlobe` draws it once from the globe's camera (which marks the host
  * `data-sky="ready"` and so fades the layers in) and then re-draws it on each of the globe's
  * frames; `drawWithoutGlobe` draws it once when no globe will ever mount. Each takes the caller's
  * own elements and signal, so the hero passes a signal it never aborts and the deck aborts its on
  * `destroy()`.
  */
 import { startRotation } from "./globe-zones";
-import { mountSky, type Sky, type SkyMap } from "./sky";
+import { mountSky, type Sky } from "./sky";
+import type { BodyPainters } from "./sky-bodies";
+import type { SkyMap } from "./sky-map";
+import { whenIdle } from "./yield-to-main";
 
 type Clock = {
   getUnixNow: typeof import("@northguild/gmt/unix/get").getUnixNow;
@@ -38,6 +41,9 @@ interface SkyInputs {
   /** The star list (`hero-sky.bin`) and, optionally, the Milky Way map. */
   src: string;
   milkyWay?: string | undefined;
+  /** The Sun's and the Moon's maps; fetched late, after `sky.ready` and an idle wait. */
+  sunMap?: string | undefined;
+  moonMap?: string | undefined;
   signal: AbortSignal;
 }
 
@@ -49,15 +55,19 @@ interface SkyGlobe {
   onFrame(callback: () => void): void;
 }
 
-/** The Milky Way map's pixels, or undefined when it cannot load: the sky then draws the stars alone. */
-async function loadMilkyWay(
+/**
+ * A map image's pixels, or undefined when it cannot load (absent, 404, aborted, undecodable): the
+ * sky then draws without it. The one place an image is decoded to pixels.
+ */
+async function loadSkyMap(
   src: string | undefined,
+  signal: AbortSignal,
 ): Promise<SkyMap | undefined> {
   if (!src) return undefined;
   try {
-    const response = await fetch(src);
+    const response = await fetch(src, { signal });
     if (!response.ok) return undefined;
-    /* The map's bytes are brightness, not colour, so no colour space may change them. */
+    /* The map's bytes are brightness or colour as drawn, so no colour space may change them. */
     const image = await createImageBitmap(await response.blob(), {
       colorSpaceConversion: "none",
     });
@@ -75,6 +85,92 @@ async function loadMilkyWay(
 }
 
 /**
+ * The sky inputs a page declares: `data-sky-src`, `data-milky-way` and `data-moon-map` on
+ * `holder`, and the two canvases inside it. Null when the page has no sky to draw.
+ */
+export function skyInputsOf(
+  holder: HTMLElement,
+  host: HTMLElement,
+  signal: AbortSignal,
+): SkyInputs | null {
+  const canvas = (which: string) =>
+    holder.querySelector<HTMLCanvasElement>(`[data-sky-canvas="${which}"]`);
+  const stars = canvas("stars");
+  const band = canvas("band");
+  const src = holder.dataset["skySrc"];
+  if (!stars || !band || !src) return null;
+  return {
+    stars,
+    band,
+    host,
+    src,
+    milkyWay: holder.dataset["milkyWay"],
+    sunMap: holder.dataset["sunMap"],
+    moonMap: holder.dataset["moonMap"],
+    signal,
+  };
+}
+
+/**
+ * The bodies that take a map: the `SkyInputs` field that names it and the painter its lazy chunk
+ * makes from it. Sun first, as it is drawn first. Each chunk loads with its map, off the first paint.
+ */
+const SKY_BODIES = [
+  {
+    id: "sun",
+    map: "sunMap",
+    make: async (map: SkyMap) =>
+      (await import("./sun-paint")).createSunPainter(map),
+  },
+  {
+    id: "moon",
+    map: "moonMap",
+    make: async (map: SkyMap) =>
+      (await import("./body-paint")).createMoonPainter(map),
+  },
+] as const satisfies readonly {
+  id: keyof BodyPainters;
+  map: "sunMap" | "moonMap";
+  make: (map: SkyMap) => Promise<BodyPainters[keyof BodyPainters]>;
+}[];
+
+/**
+ * Once the first paint is done and the browser idle, loads each body's map and painter chunk and
+ * hands the painters to the sky; a body whose map or chunk fails stays flat and the others are
+ * textured. Nothing is fetched under forced colours (the sky is hidden) or after the caller has gone.
+ */
+async function loadBodyMaps(
+  sky: Sky,
+  stars: HTMLElement,
+  inputs: Pick<SkyInputs, "sunMap" | "moonMap" | "signal">,
+): Promise<void> {
+  const { signal } = inputs;
+  const wanted = SKY_BODIES.filter((body) => inputs[body.map]);
+  if (
+    !wanted.length ||
+    globalThis.matchMedia?.("(forced-colors: active)")?.matches
+  ) {
+    return;
+  }
+  await sky.ready;
+  await whenIdle();
+  if (signal.aborted) return;
+  const made = await Promise.all(
+    wanted.map(async ({ map, make }) => {
+      const loaded = await loadSkyMap(inputs[map]!, signal);
+      return loaded ? make(loaded).catch(() => null) : null;
+    }),
+  );
+  if (signal.aborted) return;
+  const painters: BodyPainters = {};
+  wanted.forEach(({ id }, i) => {
+    if (made[i]) Object.assign(painters, { [id]: made[i] });
+  });
+  stars.dataset["skyMaps"] = made.some(Boolean) ? "ready" : "failed";
+  sky.maps(painters);
+}
+
+/**
  * Fetches the star list and the Milky Way and builds the sky; the first draw waits for the globe
  * (`followGlobe`) or for `drawWithoutGlobe`. Resolves null when the list or the canvas fails: the
  * page does not depend on the sky.
@@ -84,12 +180,12 @@ export async function loadSky(inputs: SkyInputs): Promise<Sky | null> {
   try {
     const [response, map, time] = await Promise.all([
       fetch(src),
-      loadMilkyWay(milkyWay),
+      loadSkyMap(milkyWay, signal),
       loadClock(),
     ]);
     if (!response.ok || signal.aborted) return null;
     const data = await response.arrayBuffer();
-    return mountSky({
+    const sky = mountSky({
       stars,
       band,
       host,
@@ -99,6 +195,9 @@ export async function loadSky(inputs: SkyInputs): Promise<Sky | null> {
       rotation: startRotation(time.getSystemTimeZone()),
       now: time.getUnixNow,
     });
+    stars.dataset["skyMaps"] = "flat";
+    void loadBodyMaps(sky, stars, inputs);
+    return sky;
   } catch {
     return null;
   }

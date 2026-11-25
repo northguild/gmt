@@ -1,5 +1,10 @@
 // @vitest-environment jsdom
-import { drawWithoutGlobe, followGlobe, loadSky } from "./space-sky";
+import {
+  drawWithoutGlobe,
+  followGlobe,
+  loadSky,
+  skyInputsOf,
+} from "./space-sky";
 import type { Sky } from "./sky";
 import { skyHost } from "~/test/sky-host";
 
@@ -11,11 +16,20 @@ const views: {
 }[] = [];
 /** The Milky Way map each mounted sky was given. */
 const maps: unknown[] = [];
+/** What the painters hook was handed each time: the painters that loaded, none for a body that failed. */
+const painters: unknown[] = [];
+vi.mock("./body-paint", () => ({
+  createMoonPainter: (map: unknown) => ({ moonFor: map }),
+}));
+vi.mock("./sun-paint", () => ({
+  createSunPainter: (map: unknown) => ({ sunFor: map }),
+}));
 vi.mock("./sky", () => ({
   mountSky: ({ host, milkyWay }: { host: HTMLElement; milkyWay?: unknown }) => {
     maps.push(milkyWay);
     return {
       ready: Promise.resolve(),
+      maps: (painter: unknown) => painters.push(painter),
       view: (
         rotation: readonly [number, number],
         centre: unknown,
@@ -45,6 +59,7 @@ const inputs = () => ({
 beforeEach(() => {
   views.length = 0;
   maps.length = 0;
+  painters.length = 0;
   controller = new AbortController();
   ({ host, stars, band } = skyHost());
   vi.stubGlobal(
@@ -190,38 +205,38 @@ describe("the sky", () => {
   });
 });
 
+const pixels = { width: 2, height: 1, data: new Uint8ClampedArray(8) };
+
+/** A browser that decodes any map to `pixels`, or fails `failUrl` at `failAt`. */
+function decoder(failAt?: "fetch" | "decode", failUrl = "/milkyway.webp") {
+  const closed = vi.fn();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: !(failAt === "fetch" && url === failUrl),
+      arrayBuffer: async () => new ArrayBuffer(0),
+      blob: async () => new Blob(),
+    })),
+  );
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => {
+      if (failAt === "decode") throw new Error("cannot decode");
+      return { width: 2, height: 1, close: closed };
+    }),
+  );
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    drawImage: () => {},
+    getImageData: () => pixels,
+  } as never);
+  return closed;
+}
+
 describe("the Milky Way", () => {
-  const pixels = { width: 2, height: 1, data: new Uint8ClampedArray(8) };
-
-  /** A browser that decodes the map to `pixels`, or fails at `failAt`. */
-  function decoder(failAt?: "fetch" | "decode") {
-    const closed = vi.fn();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => ({
-        ok: !(failAt === "fetch" && url === "/milkyway.webp"),
-        arrayBuffer: async () => new ArrayBuffer(0),
-        blob: async () => new Blob(),
-      })),
-    );
-    vi.stubGlobal(
-      "createImageBitmap",
-      vi.fn(async () => {
-        if (failAt === "decode") throw new Error("cannot decode");
-        return { width: 2, height: 1, close: closed };
-      }),
-    );
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-      drawImage: () => {},
-      getImageData: () => pixels,
-    } as never);
-    return closed;
-  }
-
   it("is fetched with the stars, decoded to its pixels and handed to the sky", async () => {
     const closed = decoder();
     await loadSky(inputs());
-    expect(fetch).toHaveBeenCalledWith("/milkyway.webp");
+    expect(fetch).toHaveBeenCalledWith("/milkyway.webp", expect.anything());
     expect(maps).toEqual([pixels]);
     expect(closed).toHaveBeenCalled();
   });
@@ -236,4 +251,137 @@ describe("the Milky Way", () => {
       expect(views).toHaveLength(1);
     },
   );
+});
+
+describe("the bodies' maps", () => {
+  const withBodies = () => ({
+    ...inputs(),
+    sunMap: "/sun.webp",
+    moonMap: "/moon.webp",
+  });
+  /** Lets every promise and the stubbed idle callback run. */
+  const settle = () => vi.advanceTimersByTimeAsync(0);
+  const mapFetches = () =>
+    vi
+      .mocked(fetch)
+      .mock.calls.filter(
+        ([url]) => url === "/moon.webp" || url === "/sun.webp",
+      );
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestIdleCallback", (callback: () => void) =>
+      setTimeout(callback, 50),
+    );
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: false,
+      media: query,
+    }));
+  });
+
+  afterEach(() => {
+    controller.abort();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("are fetched only after the sky is built and the browser idle, both in one wait, then handed over as painters", async () => {
+    decoder();
+    await loadSky(withBodies());
+    await vi.advanceTimersByTimeAsync(10);
+    expect(mapFetches()).toHaveLength(0);
+    expect(stars.dataset["skyMaps"]).toBe("flat");
+    await vi.advanceTimersByTimeAsync(50);
+    expect(mapFetches()).toHaveLength(2);
+    expect(painters).toEqual([
+      { sun: { sunFor: pixels }, moon: { moonFor: pixels } },
+    ]);
+    expect(stars.dataset["skyMaps"]).toBe("ready");
+  });
+
+  it("load the one map a page declares and leave the other body flat", async () => {
+    decoder();
+    await loadSky({ ...inputs(), moonMap: "/moon.webp" });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mapFetches()).toHaveLength(1);
+    expect(painters).toEqual([{ moon: { moonFor: pixels } }]);
+  });
+
+  it("are not fetched under forced colours, where the sky is hidden", async () => {
+    decoder();
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(forced-colors: active)",
+    }));
+    await loadSky(withBodies());
+    await settle();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mapFetches()).toHaveLength(0);
+    expect(painters).toEqual([]);
+  });
+
+  it("are not fetched when the caller goes before the idle wait ends", async () => {
+    decoder();
+    await loadSky(withBodies());
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mapFetches()).toHaveLength(0);
+    expect(painters).toEqual([]);
+  });
+
+  it.each([
+    ["/sun.webp", { moon: { moonFor: pixels } }],
+    ["/moon.webp", { sun: { sunFor: pixels } }],
+  ])(
+    "leave the other body textured, and the sky ready, when the map at %s fails",
+    async (failUrl, expected) => {
+      decoder("fetch", failUrl);
+      await loadSky(withBodies());
+      await vi.advanceTimersByTimeAsync(100);
+      expect(painters).toEqual([expected]);
+      expect(stars.dataset["skyMaps"]).toBe("ready");
+    },
+  );
+
+  it("leave both bodies flat, with no throw, and say so, when both maps fail to decode", async () => {
+    decoder("decode");
+    await loadSky(withBodies());
+    await vi.advanceTimersByTimeAsync(100);
+    expect(painters).toEqual([{}]);
+    expect(stars.dataset["skyMaps"]).toBe("failed");
+  });
+
+  it("are never asked for by a page that declares none", async () => {
+    decoder();
+    await loadSky(inputs());
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mapFetches()).toHaveLength(0);
+    expect(painters).toEqual([]);
+  });
+});
+
+describe("a page's sky inputs", () => {
+  it("are read from its attributes, with the canvases inside it", () => {
+    host.dataset["skySrc"] = "/sky.bin";
+    host.dataset["milkyWay"] = "/mw.webp";
+    host.dataset["sunMap"] = "/sun.webp";
+    host.dataset["moonMap"] = "/moon.webp";
+    host.querySelector("canvas")!.dataset["skyCanvas"] = "band";
+    host.querySelectorAll("canvas")[1]!.dataset["skyCanvas"] = "stars";
+    expect(skyInputsOf(host, host, controller.signal)).toEqual({
+      stars: host.querySelectorAll("canvas")[1],
+      band: host.querySelector("canvas"),
+      host,
+      src: "/sky.bin",
+      milkyWay: "/mw.webp",
+      sunMap: "/sun.webp",
+      moonMap: "/moon.webp",
+      signal: controller.signal,
+    });
+  });
+
+  it("are null when the page has no star list or no canvases", () => {
+    expect(skyInputsOf(host, host, controller.signal)).toBeNull();
+    host.dataset["skySrc"] = "/sky.bin";
+    expect(skyInputsOf(host, host, controller.signal)).toBeNull();
+  });
 });

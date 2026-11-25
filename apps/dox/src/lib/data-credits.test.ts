@@ -4,16 +4,21 @@ import { raw } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
 import milkyWay from "../assets/hero-milkyway.json";
 import sky from "../assets/hero-sky.json";
+import moon from "../assets/sky-moon.json";
+import sun from "../assets/sky-sun.json";
 import {
   COASTLINES,
   EARTH_IMAGERY,
   HYG_COMMIT,
   LICENCE_CREDIT,
   MILKY_WAY,
+  MOON_IMAGERY,
   NE_TAG,
   NIGHT_SKY,
   renderDataCreditsHtml,
+  SKY_CREDITS,
   STATE_BOUNDARIES,
+  SUN_IMAGERY,
   TBB_TAG,
   TZ_BOUNDARIES,
 } from "./data-credits";
@@ -137,6 +142,50 @@ describe("the Milky Way credit", () => {
     expect(
       screen.getByRole("link", { name: "CC BY 4.0", hidden: true }),
     ).toHaveAttribute("href", milkyWay.licenseUrl);
+  });
+});
+
+describe("the Sun credit", () => {
+  it("is labelled Sun, credits ESA's image as ESA asks, and says it was changed", () => {
+    show([SUN_IMAGERY], { id: "c", placement: "stack" });
+    expect(text("Sun")).toHaveTextContent(sun.credit);
+    expect(text("Sun")).toHaveTextContent("22 March 2023");
+    expect(text("Sun")).toHaveTextContent("reduced to grey");
+    expect(
+      screen.getByRole("link", {
+        name: "PHI's view of the Sun in visible light",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", sun.source.page);
+    expect(
+      screen.getByRole("link", { name: "CC BY-SA 3.0 IGO", hidden: true }),
+    ).toHaveAttribute("href", sun.licenseUrl);
+  });
+});
+
+describe("the Moon credit", () => {
+  it("is labelled Moon, credits NASA's visualisation as its guidelines ask, and says it was scaled", () => {
+    show([MOON_IMAGERY], { id: "c", placement: "stack" });
+    expect(text("Moon")).toHaveTextContent(moon.credit);
+    expect(text("Moon")).toHaveTextContent("scaled");
+    expect(
+      screen.getByRole("link", {
+        name: "NASA's Scientific Visualization Studio, CGI Moon Kit",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", moon.source.page);
+    expect(
+      screen.getByRole("link", { name: "NASA media guidelines", hidden: true }),
+    ).toHaveAttribute("href", moon.licenseUrl);
+  });
+
+  it("is listed with the stars, the Milky Way and the Sun, in that order", () => {
+    expect(SKY_CREDITS.map((credit) => credit.label)).toEqual([
+      "Stars",
+      "Milky Way",
+      "Sun",
+      "Moon",
+    ]);
   });
 });
 

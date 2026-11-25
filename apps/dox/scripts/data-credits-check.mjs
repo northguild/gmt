@@ -63,6 +63,8 @@ const TARGETS = [
       "Earth imagery",
       "Stars",
       "Milky Way",
+      "Sun",
+      "Moon",
       "Licence",
     ],
   },

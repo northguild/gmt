@@ -22,7 +22,9 @@
  */
 import skyList from "../../assets/hero-sky.bin?url";
 import milkyWay from "../../assets/hero-milkyway.webp?url";
-import { EARTH_IMAGERY, MILKY_WAY, NIGHT_SKY, type DataCredit } from "~/lib/data-credits";
+import moonMap from "../../assets/sky-moon.webp?url";
+import sunMap from "../../assets/sky-sun.webp?url&no-inline"; // a file under 4 kB would inline as a data: URI, which no request can block
+import { EARTH_IMAGERY, SKY_CREDITS, type DataCredit } from "~/lib/data-credits";
 import { KEY_TABLE } from "~/lib/slides/keys";
 import { convertZonedToUtc } from "@northguild/gmt/zoned/convert";
 import { withBase } from "~/lib/site";
@@ -47,7 +49,7 @@ interface Props {
   start?: string | null;
 }
 const { slug, presenter = false, credits = [], start = null } = Astro.props;
-const allCredits = [NIGHT_SKY, MILKY_WAY, EARTH_IMAGERY, ...credits];
+const allCredits = [...SKY_CREDITS, EARTH_IMAGERY, ...credits];
 const earth = withBase("/earth-blue-marble.webp");
 /** The talk's start in UTC, or `undefined` (no attribute) while the deck has no date. */
 const previewAt = start === null ? undefined : convertZonedToUtc(start) || undefined;
@@ -71,6 +73,8 @@ const previewAt = start === null ? undefined : convertZonedToUtc(start) || undef
     data-deck-space
     data-sky-src={skyList}
     data-milky-way={milkyWay}
+    data-sun-map={sunMap}
+    data-moon-map={moonMap}
     data-earth={earth}
   >
     <div class="gmt-sky">

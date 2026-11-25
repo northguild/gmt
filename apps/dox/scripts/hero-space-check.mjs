@@ -173,6 +173,7 @@ async function open(
     context: extra = {},
     fixed = 0,
     init = null,
+    block = null,
   } = {},
 ) {
   const context = await browser.newContext({
@@ -181,6 +182,7 @@ async function open(
     ...extra,
   });
   await blockOffSite(context, base);
+  if (block) await context.route(block, (route) => route.abort());
   if (fixed > 0) await context.clock.setFixedTime(fixed);
   const page = await context.newPage();
   const problems = [];
@@ -2429,6 +2431,10 @@ const SKY_PINS = {
   },
 };
 
+/* The Sun's angular radius, degrees (`SUN_RADIUS` of sky-math.ts), and half the angle the Earth fills (`EARTH_HALF_ANGLE_DEG` of globe/pinhole.ts: the camera sits 6.61 radii out). This script cannot import the TypeScript. */
+const SUN_RADIUS_DEG = 0.267;
+const EARTH_HALF_ANGLE_DEG = (Math.asin(1 / 6.61) * 180) / Math.PI;
+
 /** The pixels of the stars canvas in a square of `half` pixels each way around a point, as [r, g, b, a] lists. */
 const skyPixels = (page, x, y, half) =>
   page.evaluate(
@@ -2450,17 +2456,28 @@ const skyPixels = (page, x, y, half) =>
     [SKY_STARS, x, y, half],
   );
 
-async function pinnedSky(browser, pin) {
+/** The body maps load late, after the first paint and an idle wait: waits until the sky has them (`ready`) or has given up (`failed`). */
+const mapsSettled = (page) =>
+  page.waitForFunction(
+    (sel) => document.querySelector(sel)?.dataset.skyMaps !== "flat",
+    SKY_STARS,
+    { timeout: LOAD_TIMEOUT },
+  );
+
+async function pinnedSky(browser, pin, options = {}) {
   const opened = await open(browser, WIDE, {
     reduce: true,
     fixed: pin.at,
     context: { timezoneId: pin.zone },
+    ...options,
   });
+  await mapsSettled(opened.page);
   const read = await opened.page.evaluate((sel) => {
     const el = document.querySelector(sel);
     const canvas = el.getBoundingClientRect();
     const [sx, sy, mx, my, lit] = el.dataset.skyBodies.split(" ").map(Number);
     return {
+      maps: el.dataset.skyMaps,
       sun: { x: sx, y: sy },
       moon: { x: mx, y: my },
       lit,
@@ -3287,12 +3304,8 @@ async function checkCrossSite(browser) {
   measured++;
 }
 
-/** The Sun and the Moon at pinned instants: the clock is the page's, the phase is the sky's. */
-async function checkSkyBodies(browser) {
-  const t = "hero › sun and moon";
-
-  // A half Moon: about half its disc is lit, and the lit half faces the Sun.
-  const half = await pinnedSky(browser, SKY_PINS.half);
+/** A half Moon: about half its disc is lit, and the lit half faces the Sun. Whether it is the flat disc or the textured one does not matter. */
+async function halfMoonChecks(half, t) {
   check(
     Number(half.view.split(" ")[2]) === SKY_PINS.half.at,
     "sky-bodies",
@@ -3307,11 +3320,15 @@ async function checkSkyBodies(browser) {
       `the pinned half Moon is not on screen (the sky reports ${half.moon.x}, ${half.moon.y}), so its lit side could not be read`,
       WIDE,
     );
-    await half.context.close();
-    measured++;
   } else {
     const disc = await skyPixels(half.page, half.moon.x, half.moon.y, 6);
-    const lit = disc.filter(([r, g, b, a]) => a > 180 && r + g + b > 600);
+    /* Bright is what the eye sees over black (colour times alpha, a textured disc carries its brightness
+       in alpha), measured against the disc's own brightest pixel: a map's dark maria still count as lit
+       and the earthshine side (a twelfth of the lit side's brightness) does not. */
+    const seen = ([r, g, b, a]) => ((r + g + b) * a) / 255;
+    const peak = Math.max(...disc.map(seen));
+    const isLit = (pixel) => seen(pixel) > peak * 0.25;
+    const lit = disc.filter(isLit);
     const body = disc.filter(([, , , a]) => a > 5);
     check(
       Number.isFinite(half.moon.x) &&
@@ -3336,7 +3353,7 @@ async function checkSkyBodies(browser) {
       });
       return { x: n ? x / n : 0, y: n ? y / n : 0 };
     };
-    const brightAt = centroid(([r, g, b, a]) => a > 180 && r + g + b > 600);
+    const brightAt = centroid(isLit);
     const bodyAt = centroid(([, , , a]) => a > 5);
     const mx = brightAt.x - bodyAt.x;
     const my = brightAt.y - bodyAt.y;
@@ -3349,9 +3366,160 @@ async function checkSkyBodies(browser) {
       `the lit side of the Moon points ${r1((Math.acos(Math.max(-1, Math.min(1, along))) * 180) / Math.PI)} degrees off the Sun's direction, limit 60`,
       WIDE,
     );
-    await half.context.close();
-    measured++;
   }
+}
+
+/** The body maps: fetched after the first paint, textured when they load, flat when they do not. */
+async function checkSkyMaps(browser) {
+  const t = "hero › body maps";
+  const MAPS = "**/sky-{moon,sun}*.webp";
+  const reads = (page) =>
+    page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          new PerformanceObserver((list) => {
+            const lcp = list.getEntries().at(-1);
+            const asked = performance
+              .getEntriesByType("resource")
+              .find((entry) => /sky-(moon|sun)/.test(entry.name));
+            resolve({
+              lcp: lcp.startTime,
+              asked: asked ? asked.startTime : null,
+              preloaded: [
+                ...document.querySelectorAll("link[rel=preload]"),
+              ].some((link) => /sky-(moon|sun)/.test(link.href)),
+            });
+          }).observe({ type: "largest-contentful-paint", buffered: true });
+        }),
+    );
+
+  // Late: the request starts after the largest paint, and nothing preloads the map.
+  const late = await open(browser, WIDE, {});
+  await mapsSettled(late.page);
+  const timing = await reads(late.page);
+  check(
+    timing.asked !== null && timing.asked > timing.lcp,
+    "sky-maps-late",
+    t,
+    `a body map was requested at ${timing.asked === null ? "no time" : `${r1(timing.asked)} ms`} and the largest paint came at ${r1(timing.lcp)} ms; the request must start after it`,
+    WIDE,
+  );
+  check(
+    !timing.preloaded,
+    "sky-maps-late",
+    t,
+    "a link[rel=preload] names a body map; it must load late, not with the page",
+    WIDE,
+  );
+  await late.context.close();
+  measured++;
+
+  // Forced colours hide the sky: no request at all.
+  const forced = await open(browser, WIDE, {
+    context: { forcedColors: "active" },
+  });
+  const asked = await forced.page.evaluate(
+    () =>
+      performance
+        .getEntriesByType("resource")
+        .filter((entry) => /sky-(moon|sun)/.test(entry.name)).length,
+  );
+  check(
+    asked === 0,
+    "sky-maps-late",
+    t,
+    `under forced colours a body map was requested ${asked} time(s); it must not be`,
+    WIDE,
+  );
+  await forced.context.close();
+  measured++;
+
+  // The face: textured, the lit Moon has maria and highlands; the flat disc does not.
+  const face = async (pinned) => {
+    if (!Number.isFinite(pinned.moon.x)) return null;
+    const pixels = await skyPixels(
+      pinned.page,
+      pinned.moon.x,
+      pinned.moon.y,
+      12,
+    );
+    const side = Math.sqrt(pixels.length);
+    const radius = Math.sqrt(
+      pixels.filter(([, , , a]) => a > 5).length / Math.PI,
+    );
+    /* What the eye sees over black: the pixel's luminance times its alpha. */
+    const seen = pixels.map(
+      ([r, g, b, a]) => (a / 255) * (0.2126 * r + 0.7152 * g + 0.0722 * b),
+    );
+    const peak = Math.max(...seen);
+    const lit = (x, y) =>
+      x >= 0 &&
+      y >= 0 &&
+      x < side &&
+      y < side &&
+      seen[y * side + x] > peak * 0.25;
+    /* The interior of the lit side: inside the rim, and every neighbour lit too, so neither the limb
+       nor the terminator's step joins the measure. */
+    const values = seen.filter((_, i) => {
+      const x = i % side;
+      const y = Math.floor(i / side);
+      return (
+        Math.hypot(x + 0.5 - side / 2, y + 0.5 - side / 2) < radius * 0.75 &&
+        lit(x, y) &&
+        lit(x - 1, y) &&
+        lit(x + 1, y) &&
+        lit(x, y - 1) &&
+        lit(x, y + 1)
+      );
+    });
+    if (values.length < 8) return null;
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    return Math.sqrt(
+      values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length,
+    );
+  };
+  const textured = await pinnedSky(browser, SKY_PINS.half);
+  const texturedDev = await face(textured);
+  check(
+    textured.maps === "ready" && texturedDev !== null && texturedDev >= 10,
+    "sky-moon-face",
+    t,
+    `the half Moon's lit pixels vary by ${texturedDev === null ? "no reading" : `${r1(texturedDev)}/255`} with the map ${textured.maps}; the textured Moon must vary by at least 10/255`,
+    WIDE,
+  );
+  await textured.context.close();
+  measured++;
+
+  // Failed: the map is blocked; the flat Moon draws, the half-Moon checks pass, nothing logs an error.
+  const flat = await pinnedSky(browser, SKY_PINS.half, { block: MAPS });
+  check(
+    flat.maps === "failed",
+    "sky-maps-fallback",
+    t,
+    `with the body maps blocked the sky reports "${flat.maps}", it must report "failed"`,
+    WIDE,
+  );
+  await halfMoonChecks(flat, t);
+  const flatDev = await face(flat);
+  console.log(
+    `sky-moon-face: textured ${texturedDev === null ? "n/a" : r1(texturedDev)}/255, flat ${flatDev === null ? "n/a" : r1(flatDev)}/255`,
+  );
+  for (const problem of flat.problems)
+    if (!/sky-(moon|sun)|Failed to load resource|ERR_FAILED/.test(problem))
+      fail("sky-maps-fallback", t, problem, WIDE);
+  await flat.context.close();
+  measured++;
+}
+
+/** The Sun and the Moon at pinned instants: the clock is the page's, the phase is the sky's. */
+async function checkSkyBodies(browser) {
+  const t = "hero › sun and moon";
+
+  // A half Moon: about half its disc is lit, and the lit half faces the Sun.
+  const half = await pinnedSky(browser, SKY_PINS.half);
+  await halfMoonChecks(half, t);
+  await half.context.close();
+  measured++;
 
   // The Sun just behind the Earth: its glare spills past the rim on its own side only.
   const rim = await pinnedSky(browser, SKY_PINS.rim);
@@ -3417,6 +3585,49 @@ async function checkSkyBodies(browser) {
       "sky-bodies",
       t,
       `the Sun's core is rgba(${brightest.join(", ")}) at ${r1(clear.sun.x)}, ${r1(clear.sun.y)}; it must be near-white`,
+      WIDE,
+    );
+  }
+  /* The textured Sun is a limb-darkened grey disc: four points at 0.85 radii are at least 8/255
+     below its centre. The flat core is one fill, so the five agree within 2/255. The Sun's radius is
+     the Earth's, scaled by the two angular radii (the sky and the globe share one camera). */
+  if (Number.isFinite(clear.sun.x) && Number.isFinite(clear.sun.y)) {
+    const sunR =
+      (clear.earth.radius * Math.tan((SUN_RADIUS_DEG * Math.PI) / 180)) /
+      Math.tan((EARTH_HALF_ANGLE_DEG * Math.PI) / 180);
+    const grey = async (dx, dy) => {
+      const px = await skyPixels(
+        clear.page,
+        clear.sun.x + dx,
+        clear.sun.y + dy,
+        1,
+      );
+      return (
+        px.reduce(
+          (sum, [r, g, b]) => sum + 0.2126 * r + 0.7152 * g + 0.0722 * b,
+          0,
+        ) / px.length
+      );
+    };
+    const centre = await grey(0, 0);
+    const edge = Math.min(
+      ...(await Promise.all(
+        [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ].map(([x, y]) => grey(x * 0.85 * sunR, y * 0.85 * sunR)),
+      )),
+    );
+    console.log(
+      `sky-sun-face: centre ${r1(centre)}/255, darkest of four at 0.85 radii ${r1(edge)}/255 (radius ${r1(sunR)} px)`,
+    );
+    check(
+      clear.maps === "ready" && centre - edge >= 8,
+      "sky-sun-face",
+      t,
+      `the Sun's face is ${r1(centre - edge)}/255 brighter at its centre than at 0.85 radii with the map ${clear.maps}; the textured Sun must differ by at least 8/255`,
       WIDE,
     );
   }
@@ -4998,6 +5209,7 @@ async function main() {
       ["night sky", () => checkSky(browser)],
       ["one camera", () => checkSkyCamera(browser)],
       ["sun and moon", () => checkSkyBodies(browser)],
+      ["body maps", () => checkSkyMaps(browser)],
       ["sun behind the copy", () => checkSkyCopy(browser)],
       ["sky from black", () => checkSkyReveal(browser)],
       ["entrance", () => checkEntrance(browser)],

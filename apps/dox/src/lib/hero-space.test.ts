@@ -55,7 +55,7 @@ beforeEach(() => {
   hero.dataset["gate"] = "hero-stage";
   skyRoot = document.createElement("div");
   skyRoot.dataset["heroSky"] = "";
-  skyRoot.dataset["src"] = "/sky.bin";
+  skyRoot.dataset["skySrc"] = "/sky.bin";
   skyRoot.dataset["milkyWay"] = "/milkyway.webp";
   for (const which of ["band", "stars", "meteor"]) {
     const canvas = document.createElement("canvas");
