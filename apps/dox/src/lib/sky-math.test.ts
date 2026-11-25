@@ -1,7 +1,6 @@
 import { subsolarPoint } from "./globe/sun";
 import { projectPoint, RIM, toView, type Vec3 } from "./globe/pinhole";
 import {
-  BOX,
   bodyOnScreen,
   MIN_BODY,
   limbOnScreen,
@@ -33,7 +32,7 @@ const SIRIUS = { ra: 6.752481 * 15, dec: -16.716116 };
 /** The hero of the gate: 1440 x 900, the Earth's centre mid-window, radius 409 px. */
 const W = 1440;
 const H = 900;
-const LENS = skyLens(W, H, { x: 720, y: 450, radius: 409 }, 1);
+const LENS = skyLens(W, H, { x: 720, y: 450, radius: 409 });
 
 /** Where a sky position lands for a camera, through the shipped path; null when behind the camera. */
 function starAt(
@@ -153,14 +152,38 @@ describe("starViewMatrix", () => {
 });
 
 describe("skyLens", () => {
-  it("keeps today's star-dot scale: the hero's fit to the reference box, times the zoom", () => {
-    const lens = skyLens(1440, 844, { x: 600, y: 400, radius: 300 }, 2.5);
-    expect(lens.dots).toBe(Math.max(1440 / BOX.width, 844 / BOX.height) * 2.5);
-    expect([lens.centreX, lens.centreY, lens.radius]).toEqual([600, 400, 300]);
+  it("keeps today's dot scale at the locked 1440 x 900 landing, whose Earth is 374.3 px", () => {
+    /* The page measures 374.3 px there (data-sky-camera); the box-based scale was 0.6. */
+    const locked = skyLens(1440, 900, { x: 720, y: 450, radius: 374.3 });
+    expect(Math.abs(locked.dots / 0.6 - 1)).toBeLessThan(0.02);
+    expect([locked.centreX, locked.centreY, locked.radius]).toEqual([
+      720, 450, 374.3,
+    ]);
+    /* The radius carries the zoom already: 2.5 times the Earth is 2.5 times the dot. */
+    const zoomed = skyLens(1440, 900, { x: 720, y: 450, radius: 374.3 * 2.5 });
+    expect(zoomed.dots / locked.dots).toBeCloseTo(2.5, 10);
+  });
+
+  it("does not follow the hero's height: a phone's hero is as tall as its page", () => {
+    /* iPhone 15 (393 wide), the Earth's disc 361 px across, in a hero 3,868 px tall or 700. */
+    const tall = skyLens(393, 3868, { x: 196, y: 400, radius: 171 });
+    const short = skyLens(393, 700, { x: 196, y: 400, radius: 171 });
+    expect(tall.dots).toBe(short.dots);
+    expect(tall.dots).toBeLessThan(0.3);
+  });
+
+  it("shrinks the dots on every phone profile and at 320 wide, under the locked landing's", () => {
+    const locked = skyLens(1440, 900, { x: 720, y: 450, radius: 374.3 }).dots;
+    for (const width of [320, 375, 393, 402, 440]) {
+      /* frameSpace's disc on a phone: the viewport less the 16 px gutters, 0.9 of it as the radius. */
+      const radius = ((width - 32) / 2) * 0.9;
+      const { dots } = skyLens(width, 4000, { x: width / 2, y: 400, radius });
+      expect(dots).toBeLessThan(locked * 0.5);
+    }
   });
 
   it("without a globe sits at the anchor with 0.45 of the short side as the Earth", () => {
-    const lens = skyLens(1440, 900, null, 1);
+    const lens = skyLens(1440, 900, null);
     expect([lens.centreX, lens.centreY, lens.radius]).toEqual([576, 540, 405]);
   });
 });
@@ -190,7 +213,7 @@ describe("skyToScreen", () => {
         star,
         rotation,
         MEEUS_12A,
-        skyLens(W, H, { x: 720, y: 450, radius: 818 }, 2),
+        skyLens(W, H, { x: 720, y: 450, radius: 818 }),
       );
       expect(one === null).toBe(two === null);
       if (!one || !two) continue;
@@ -204,7 +227,7 @@ describe("skyToScreen", () => {
   it("keeps Betelgeuse, Rigel and Sirius on screen when Orion is behind the Earth", () => {
     const rotation: [number, number] = [siderealDeg(MEEUS_12A) + 180 - 85, -3];
     /* Orion spans 25 degrees: at the gate's 409 px Earth the far stars are past the corner, so a smaller Earth shows all three. */
-    const small = skyLens(W, H, { x: 720, y: 450, radius: 200 }, 1);
+    const small = skyLens(W, H, { x: 720, y: 450, radius: 200 });
     for (const star of [BETELGEUSE, RIGEL, SIRIUS]) {
       const at = starAt(star, rotation, MEEUS_12A, small)!;
       expect(at.x).toBeGreaterThan(0);
@@ -375,7 +398,7 @@ describe("the Sun lies on every lit city's line to it: drawn at 9.5, 20 and 30 d
       p[0]! * q[0]! + p[1]! * q[1]! + p[2]! * q[2]!;
     const cosAngle = dot(sunUnit, centre);
     if (cosAngle < 0) return null;
-    const scale = BOX.width / 2 / (2 * Math.tan(35 * RAD));
+    const scale = 2400 / 2 / (2 * Math.tan(35 * RAD));
     const k = scale * (2 / (1 + cosAngle)) * 0.6 * zoom;
     return {
       x: LENS.centreX - k * dot(sunUnit, east),
@@ -428,7 +451,7 @@ describe("the Sun lies on every lit city's line to it: drawn at 9.5, 20 and 30 d
         centred.push({
           theta,
           zoom,
-          lens: skyLens(W, H, { x: 720, y: 450, radius: 409 * zoom }, zoom),
+          lens: skyLens(W, H, { x: 720, y: 450, radius: 409 * zoom }),
           ...camera(theta, azimuth),
         });
 
@@ -449,7 +472,7 @@ describe("the Sun lies on every lit city's line to it: drawn at 9.5, 20 and 30 d
         const radius = hero.rest * hero.zoom;
         const offset = { x: 0, y: 0 };
         skyToScreen(
-          skyLens(hero.width, hero.height, { x: 0, y: 0, radius }, hero.zoom),
+          skyLens(hero.width, hero.height, { x: 0, y: 0, radius }),
           view.m,
           sunUnit,
           offset,
@@ -460,12 +483,11 @@ describe("the Sun lies on every lit city's line to it: drawn at 9.5, 20 and 30 d
           hero.width - inside,
           Math.max(inside, (hero.width - offset.x) / 2),
         );
-        const lens = skyLens(
-          hero.width,
-          hero.height,
-          { x, y: hero.height / 2, radius },
-          hero.zoom,
-        );
+        const lens = skyLens(hero.width, hero.height, {
+          x,
+          y: hero.height / 2,
+          radius,
+        });
         const sun = bodyOnScreen(
           lens,
           view.m,
@@ -879,7 +901,7 @@ describe("the Moon from the camera", () => {
   it.each([1, 5])(
     "points the bright limb at the drawn Sun on screen, at zoom %i, behind the Earth included",
     (zoom) => {
-      const lens = skyLens(W, H, { x: 720, y: 450, radius: 409 * zoom }, zoom);
+      const lens = skyLens(W, H, { x: 720, y: 450, radius: 409 * zoom });
       const drawn: string[] = [];
       for (const row of HORIZONS) {
         const m = viewMatrix(over(row), row.t);
