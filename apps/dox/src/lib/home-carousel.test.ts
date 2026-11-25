@@ -363,6 +363,48 @@ describe("initHomeCarousel", () => {
       expect(shown(h.more)).toBe(true);
       expect(shown(h.why)).toBe(false);
     });
+
+    it("counts the last page as reached at the end of the document, though its top is low", () => {
+      const h = startStacked();
+      /* A tall portrait tablet at the bottom of the page: `more` is too short for its top to
+         reach the quarter at 341.5, and the document ends first. */
+      vi.spyOn(window, "innerHeight", "get").mockReturnValue(1366);
+      vi.spyOn(window, "scrollY", "get").mockReturnValue(1986);
+      vi.spyOn(document.documentElement, "scrollHeight", "get").mockReturnValue(
+        3352,
+      );
+      place(
+        new Map([
+          [h.intro, -1915],
+          [h.why, -3],
+          [h.more, 798],
+        ]),
+      );
+      scroll();
+      h.screen.set(true);
+      expect(shown(h.more)).toBe(true);
+      expect(shown(h.why)).toBe(false);
+    });
+
+    it("keeps the page at the line one pixel short of the end", () => {
+      const h = startStacked();
+      vi.spyOn(window, "innerHeight", "get").mockReturnValue(1366);
+      vi.spyOn(window, "scrollY", "get").mockReturnValue(1984);
+      vi.spyOn(document.documentElement, "scrollHeight", "get").mockReturnValue(
+        3352,
+      );
+      place(
+        new Map([
+          [h.intro, -1915],
+          [h.why, -3],
+          [h.more, 798],
+        ]),
+      );
+      scroll();
+      h.screen.set(true);
+      expect(shown(h.why)).toBe(true);
+      expect(shown(h.more)).toBe(false);
+    });
   });
 
   it("leaves no listener on the screen after teardown, wired or stacked", () => {

@@ -86,15 +86,20 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
    * The page the reader is at on the stacked layout: the last whose top is in the top quarter, or
    * at the line a jump to it stops at, whichever is lower. That line is the root's scroll padding
    * (the header) and the page's scroll margin; on a landscape phone it is below the quarter.
+   * At the end of a scrolled document the last pages may be too short to reach that line, so
+   * there a page counts once its top is on screen.
    */
   const nearestTop = (): number => {
     const px = (value: string): number => parseFloat(value) || 0;
     const padding = px(win.getComputedStyle(root).scrollPaddingBlockStart);
+    const end =
+      win.scrollY > 0 && win.scrollY + win.innerHeight >= root.scrollHeight - 1;
     let page = 0;
     pages.forEach((p, i) => {
+      const top = p.getBoundingClientRect().top;
       const margin = px(win.getComputedStyle(p).scrollMarginBlockStart);
       const line = Math.max(win.innerHeight / 4, padding + margin);
-      if (p.getBoundingClientRect().top <= line + 0.5) page = i;
+      if (top <= line + 0.5 || (end && top < win.innerHeight)) page = i;
     });
     return page;
   };
