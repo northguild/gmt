@@ -88,7 +88,7 @@ beforeEach(() => {
   setHtml(
     root,
     html`
-      <section data-slide>
+      <section data-slide id="kinds">
         <div data-stack>
           <div data-stack-track>
             <pre></pre>
@@ -125,6 +125,19 @@ describe("a stack of builds on a slide", () => {
     step(0);
     expect(shifted()).toBe(false);
     expect(gone()).toEqual([false, false, false]);
+  });
+
+  it("reads nothing for a state on another slide", () => {
+    step(2);
+    const slide = pick(root, "[data-slide]")!;
+    let reads = 0;
+    slide.getBoundingClientRect = () => {
+      reads += 1;
+      return { top: -100, bottom: 400 } as DOMRect;
+    };
+    sendDeckState(root, "day-off", 3);
+    expect(reads).toBe(0);
+    expect(shifted()).toBe(true);
   });
 
   it("stops following the deck once its signal aborts", () => {
