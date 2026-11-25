@@ -140,6 +140,7 @@ afterEach(() => {
   abort.abort();
   layer.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("a wall at rest", () => {
@@ -232,7 +233,19 @@ describe("a wall with cards", () => {
     }
   });
 
-  it("follows its cards when they move, as after a zoom", () => {
+  it("follows its cards when they change size, as after a zoom", () => {
+    /* The cards' observer is the signal a zoom gives; jsdom has none, so a stand-in calls back. */
+    const observed: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private readonly cb: () => void) {}
+        observe() {
+          observed.push(this.cb);
+        }
+        disconnect() {}
+      },
+    );
     const panes = cards(40, 90);
     const wall = mountOver(panes);
     wall.show(1);
@@ -242,12 +255,30 @@ describe("a wall with cards", () => {
       box.w = 400;
       box.h = 250;
     }
+    for (const call of observed) call();
     wall.setDepth(0.9);
     wall.paneCentres().forEach((centre, i) => {
       expect(centre[0]).toBeCloseTo(centresOf(panes)[i]![0]!, 6);
       expect(centre[1]).toBeCloseTo(centresOf(panes)[i]![1]!, 6);
     });
     expect(wall.paneWidth()).toBeCloseTo(400, 6);
+  });
+
+  it("reads no box on the page when only the depth changes, as on every frame of a flight", () => {
+    const panes = cards(40, 90);
+    const wall = mountOver(panes);
+    wall.show(1);
+    const reads = [layer, ...panes.map(({ card }) => card)].map((el) =>
+      vi.spyOn(el, "getBoundingClientRect"),
+    );
+    const draws = fake.draw.mock.calls.length;
+    for (const depth of [0.95, 0.9, 0.85]) wall.setDepth(depth);
+    expect(fake.draw.mock.calls).toHaveLength(draws + 3);
+    for (const read of reads) expect(read).not.toHaveBeenCalled();
+    wall.paneCentres().forEach((centre, i) => {
+      expect(centre[0]).toBeCloseTo(centresOf(panes)[i]![0]!, 6);
+      expect(centre[1]).toBeCloseTo(centresOf(panes)[i]![1]!, 6);
+    });
   });
 
   it("says when it is drawn whole, and not while it breaks", () => {

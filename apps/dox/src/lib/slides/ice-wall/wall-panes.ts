@@ -43,8 +43,11 @@ interface WallPanes {
   readonly cards: readonly HTMLElement[];
   /** Measures the layer and puts each pane where it hangs at `depth`; returns the layer's size. */
   layout(depth: number): { width: number; height: number };
-  /** Puts each pane where it hangs at `depth`, without measuring the layer again. */
-  place(depth: number): void;
+  /**
+   * Puts each pane where it hangs at `depth`, without measuring the layer again. The cards are
+   * measured again too unless `measured` is `false`, when the boxes from the last measure stand.
+   */
+  place(depth: number, measured?: boolean): void;
   /** The point of each pane nearest the screen's centre, in pane units: where the camera hits. */
   readonly impacts: readonly Point[];
   computeImpacts(): void;
@@ -101,17 +104,26 @@ export function createWallPanes(d: PanesDeps): WallPanes {
     return boxes.every((b) => b.w > 0 && b.h > 0) ? boxes : null;
   };
 
+  /* The boxes from the last measure. A depth change alone moves nothing on the page, and it comes
+     on every frame of a flight, where reading a box would force a style and layout pass. */
+  let boxes: ReturnType<typeof cardBoxes> = null;
+  let box: ReturnType<typeof stageBox> = { x: 0, y: 0, w: 0 };
+  const measure = (): void => {
+    boxes = cardBoxes();
+    if (!boxes) box = stageBox();
+  };
+
   /**
    * Puts each pane's rectangle where it hangs, measured from the lens centre at the wall's depth:
    * over its card when the panes have cards, so it lands on the card's box on screen, and on the
    * stage grid otherwise.
    */
-  const place = (depth: number): void => {
+  const place = (depth: number, measured = true): void => {
+    if (measured) measure();
     const { centre } = d.engine.getView();
-    const boxes = cardBoxes();
     if (boxes) {
       models.forEach((m, i) => {
-        const b = boxes[i]!;
+        const b = boxes![i]!;
         m.rect = {
           x: (b.x - centre.x) * depth,
           y: (b.y - centre.y) * depth,
@@ -121,7 +133,6 @@ export function createWallPanes(d: PanesDeps): WallPanes {
       });
       return;
     }
-    const box = stageBox();
     const rects = paneLayout(
       models.length,
       box.w,
