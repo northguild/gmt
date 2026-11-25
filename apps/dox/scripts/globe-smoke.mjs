@@ -163,8 +163,8 @@ function zoomLabel(presses) {
   return `${Number(zoom.toFixed(2))}×`;
 }
 
-/** The Earth imagery, which only the WebGPU renderer fetches, under the site base (`globe.ts` wraps it in `withBase`). */
-const IMAGERY_PATH = "/gmt/earth-blue-marble.webp";
+/** The Earth imagery, which only the WebGPU renderer fetches, at its hashed `/gmt/_astro/` URL (`globe.ts` imports it with `?url`). */
+const IMAGERY_PATH = /^\/gmt\/_astro\/earth-blue-marble\.[\w-]+\.webp$/;
 
 /** A reference page, which must load no globe code and no image. */
 const REFERENCE_ROUTE = "/reference/zoned/calculate/addZoned/";
@@ -356,15 +356,18 @@ async function open(
   page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
   page.on("request", (request) => {
     requests.push(request.url());
-    if (new URL(request.url()).pathname === IMAGERY_PATH) imagery.requests++;
+    if (IMAGERY_PATH.test(new URL(request.url()).pathname)) imagery.requests++;
   });
   page.on("response", (response) => {
-    if (new URL(response.url()).pathname === IMAGERY_PATH) {
+    if (IMAGERY_PATH.test(new URL(response.url()).pathname)) {
       imagery.statuses.push(response.status());
     }
   });
   if (withholdImagery) {
-    await page.route(`**${IMAGERY_PATH}`, (request) => request.abort());
+    await page.route(
+      (url) => IMAGERY_PATH.test(url.pathname),
+      (request) => request.abort(),
+    );
   }
   /* `dist/` is served without the Worker. A deck's Dox slides read Dox's counts on load: they get
      a day with no brains and no questions asked, not a 404 the console would report. */
@@ -999,7 +1002,7 @@ async function main() {
     });
     page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
     page.on("request", (request) => {
-      if (new URL(request.url()).pathname === IMAGERY_PATH) imageryRequests++;
+      if (IMAGERY_PATH.test(new URL(request.url()).pathname)) imageryRequests++;
     });
     /* Hiding `navigator.gpu` rather than adding a product flag: this is exactly
        what a browser without WebGPU looks like, and it keeps the test out of the

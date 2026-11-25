@@ -13,7 +13,7 @@ import {
   MOROCCO_STOPPED,
 } from "./morocco-clock-change";
 import regionZones from "./morocco-region-zones.json";
-import { withBase } from "./site";
+import boundariesUrl from "../assets/timezone-boundaries-morocco.json?url";
 import { MAP_WIDTH } from "./zone-map";
 import type { BoundaryCollection, ZoneMapConfig } from "./zone-map";
 
@@ -115,7 +115,7 @@ export function releaseOf(id: string): string | null {
 export const MOROCCO_MAP: ZoneMapConfig = {
   idPrefix: "morocco",
   height: MAP_HEIGHT,
-  boundariesUrl: withBase("/timezone-boundaries-morocco.json"),
+  boundariesUrl: boundariesUrl,
   projection: moroccoProjection,
   stopped: MOROCCO_STOPPED,
   classText: moroccoClassText,

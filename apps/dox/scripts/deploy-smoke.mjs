@@ -219,6 +219,53 @@ async function crawlRows() {
   return rows;
 }
 
+/**
+ * The hashed URL a deployed page requests for a data file (`/gmt/_astro/<name>.<hash>.<ext>`). The
+ * build writes it into the script that reads the file, so this walks the page's scripts and the
+ * chunks they import, and answers with the first URL whose name matches. Used by every row that
+ * checks a data file, so the lookup lives once. `undefined` when no script names it.
+ */
+async function hashedAsset(pagePath, name, ext) {
+  const page = await send("GET", `${ND}${pagePath}`);
+  const wanted = new RegExp(
+    `/gmt/_astro/${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.[\\w-]+\\.${ext}`,
+  );
+  const seen = new Set();
+  const queue = [
+    ...page.body.matchAll(/["'](\/gmt\/_astro\/[^"']+\.js)["']/g),
+  ].map((m) => m[1]);
+  while (queue.length > 0 && seen.size < 80) {
+    const path = queue.shift();
+    if (seen.has(path)) continue;
+    seen.add(path);
+    const { body } = await send("GET", `${ND}${path}`);
+    const hit = wanted.exec(body)?.[0];
+    if (hit) return hit;
+    for (const m of body.matchAll(/["']\.\/([^"']+\.js)["']/g))
+      queue.push(`${path.slice(0, path.lastIndexOf("/") + 1)}${m[1]}`);
+  }
+  return undefined;
+}
+
+/** A row for a data file a tool page loads: found by `hashedAsset`, then checked by `check`. */
+async function dataFileRow(label, pagePath, name, ext, check) {
+  const found = await hashedAsset(pagePath, name, ext);
+  return {
+    label,
+    url: found ? `${ND}${found}` : `${ND}${pagePath}`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: (response) =>
+          found === undefined
+            ? `${pagePath} requests no /gmt/_astro/${name}.*.${ext}`
+            : check(response),
+      },
+    ],
+  };
+}
+
 async function buildRows() {
   const rows = [];
   const add = (r) => rows.push(r);
@@ -654,25 +701,23 @@ async function buildRows() {
     url: `${ND}/gmt/check/morocco-2026-clock-change/`,
     steps: [{ status: 200, type: "text/html" }],
   });
-  add({
-    label: "morocco boundary file",
-    url: `${ND}/gmt/timezone-boundaries-morocco.json`,
-    steps: [
-      {
-        status: 200,
-        type: "json",
-        check: ({ body }) => {
-          try {
-            return JSON.parse(body).license === "ODbL-1.0"
-              ? undefined
-              : "license is not ODbL-1.0";
-          } catch {
-            return "body is not JSON";
-          }
-        },
+  rows.push(
+    await dataFileRow(
+      "morocco boundary file",
+      "/gmt/check/morocco-2026-clock-change/",
+      "timezone-boundaries-morocco",
+      "json",
+      ({ body }) => {
+        try {
+          return JSON.parse(body).license === "ODbL-1.0"
+            ? undefined
+            : "license is not ODbL-1.0";
+        } catch {
+          return "body is not JSON";
+        }
       },
-    ],
-  });
+    ),
+  );
   // The US rows make two calls to the `sunshine-protection-act:` bucket per run (the GET and the
   // HEAD), under its 20 a minute. The PUT answers 405 before the bucket counts it. The answer has
   // one row per zone of `us-region-zones.json`, in that file's order; the offsets follow the
@@ -760,46 +805,41 @@ async function buildRows() {
     url: `${ND}/gmt/check/us-sunshine-protection-act/`,
     steps: [{ status: 200, type: "text/html" }],
   });
-  add({
-    label: "us zone boundary file",
-    url: `${ND}/gmt/timezone-boundaries-us.json`,
-    steps: [
-      {
-        status: 200,
-        type: "json",
-        check: ({ body }) => {
-          try {
-            return JSON.parse(body).license === "ODbL-1.0"
-              ? undefined
-              : "license is not ODbL-1.0";
-          } catch {
-            return "body is not JSON";
-          }
-        },
+  const US_PAGE = "/gmt/check/us-sunshine-protection-act/";
+  rows.push(
+    await dataFileRow(
+      "us zone boundary file",
+      US_PAGE,
+      "timezone-boundaries-us",
+      "json",
+      ({ body }) => {
+        try {
+          return JSON.parse(body).license === "ODbL-1.0"
+            ? undefined
+            : "license is not ODbL-1.0";
+        } catch {
+          return "body is not JSON";
+        }
       },
-    ],
-  });
-  add({
-    label: "us state boundary file",
-    url: `${ND}/gmt/state-boundaries-us.json`,
-    steps: [
-      {
-        status: 200,
-        type: "json",
-        check: ({ body }) => {
-          let parsed;
-          try {
-            parsed = JSON.parse(body);
-          } catch {
-            return "body is not JSON";
-          }
-          // The 50 states, DC and five territories, keyed by postal code.
-          const n = parsed.features?.length;
-          return n === 56 ? undefined : `${n} state shapes, not 56`;
-        },
+    ),
+    await dataFileRow(
+      "us state boundary file",
+      US_PAGE,
+      "state-boundaries-us",
+      "json",
+      ({ body }) => {
+        let parsed;
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          return "body is not JSON";
+        }
+        // The 50 states, DC and five territories, keyed by postal code.
+        const n = parsed.features?.length;
+        return n === 56 ? undefined : `${n} state shapes, not 56`;
       },
-    ],
-  });
+    ),
+  );
   add({
     label: "25",
     url: `${ND}/gmtx`,

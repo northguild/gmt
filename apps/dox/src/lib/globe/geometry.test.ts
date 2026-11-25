@@ -1,6 +1,6 @@
 /**
  * Geometry preparation, exercised against the data the site actually ships —
- * `world-atlas/land-110m` and `public/timezone-boundaries-globe.json` — not
+ * `world-atlas/land-110m` and `src/assets/timezone-boundaries-globe.json` — not
  * against invented shapes. Every awkward case here is a real feature: Antarctica
  * winds the south pole without reaching it, Eurasia crosses the antimeridian
  * twice, and `Antarctica/McMurdo` has a 310° edge along the −86° parallel that
@@ -35,7 +35,10 @@ interface TzFeature {
 }
 
 const TZ: { features: TzFeature[] } = JSON.parse(
-  readFileSync(path.join(DOX, "public/timezone-boundaries-globe.json"), "utf8"),
+  readFileSync(
+    path.join(DOX, "src/assets/timezone-boundaries-globe.json"),
+    "utf8",
+  ),
 );
 
 function zone(tzid: string): TzFeature {

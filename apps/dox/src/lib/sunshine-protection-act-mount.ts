@@ -52,6 +52,8 @@ import {
   type FeatureMapHandle,
 } from "./feature-map";
 import { GMT_MODULES } from "./gmt-modules";
+import stateBoundariesUrl from "../assets/state-boundaries-us.json?url";
+import zoneBoundariesUrl from "../assets/timezone-boundaries-us.json?url";
 import { withBase } from "./site";
 import {
   geoUsComposite,
@@ -737,7 +739,7 @@ export async function mountSunshineProtectionAct(
     idPrefix: `${idPrefix}-today`,
     frames: framesOf("today"),
     labelAt: labelAtFor("today"),
-    boundariesUrl: withBase("/timezone-boundaries-us.json"),
+    boundariesUrl: zoneBoundariesUrl,
     featureKey: "tzid",
     classOf: (id) => todayKind(rows.get(id)),
     nameOf: (id) => cityOf(id),
@@ -773,8 +775,8 @@ export async function mountSunshineProtectionAct(
     idPrefix: `${idPrefix}-proposals`,
     frames: framesOf("proposals"),
     labelAt: labelAtFor("proposals"),
-    boundariesUrl: withBase("/state-boundaries-us.json"),
-    overlayUrl: withBase("/timezone-boundaries-us.json"),
+    boundariesUrl: stateBoundariesUrl,
+    overlayUrl: zoneBoundariesUrl,
     // The Navajo Nation keeps daylight time: the Denver zone, clipped to Arizona, in gold.
     hatch: { feature: "America/Denver", within: "AZ" },
     featureKey: "postal",

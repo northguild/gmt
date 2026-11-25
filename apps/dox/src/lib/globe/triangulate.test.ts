@@ -30,7 +30,10 @@ interface TzFeature {
 }
 
 const TZ: { features: TzFeature[] } = JSON.parse(
-  readFileSync(path.join(DOX, "public/timezone-boundaries-globe.json"), "utf8"),
+  readFileSync(
+    path.join(DOX, "src/assets/timezone-boundaries-globe.json"),
+    "utf8",
+  ),
 );
 
 function polygonsOf(feature: TzFeature): PolygonRings[] {

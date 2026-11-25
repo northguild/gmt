@@ -15,7 +15,7 @@ import {
 
 const boundaries = JSON.parse(
   readFileSync(
-    new URL("../../public/state-boundaries-us.json", import.meta.url),
+    new URL("../assets/state-boundaries-us.json", import.meta.url),
     "utf8",
   ),
 ) as { features: { properties: { postal: string } }[] };

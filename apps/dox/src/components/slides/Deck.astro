@@ -27,7 +27,7 @@ import sunMap from "../../assets/sky-sun.webp?url&no-inline"; // a file under 4 
 import { EARTH_IMAGERY, SKY_CREDITS, type DataCredit } from "~/lib/data-credits";
 import { KEY_TABLE } from "~/lib/slides/keys";
 import { convertZonedToUtc } from "@northguild/gmt/zoned/convert";
-import { withBase } from "~/lib/site";
+import earthUrl from "~/assets/earth-blue-marble.webp?url";
 import { deckControls, deckDialogs } from "~/widgets/builders/deck-controls";
 // One place sets the order of the deck's sheets: the generic one first, then what a deck draws.
 import "./deck-panel.css";
@@ -50,7 +50,7 @@ interface Props {
 }
 const { slug, presenter = false, credits = [], start = null } = Astro.props;
 const allCredits = [...SKY_CREDITS, EARTH_IMAGERY, ...credits];
-const earth = withBase("/earth-blue-marble.webp");
+const earth = earthUrl;
 /** The talk's start in UTC, or `undefined` (no attribute) while the deck has no date. */
 const previewAt = start === null ? undefined : convertZonedToUtc(start) || undefined;
 ---

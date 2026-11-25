@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 const publicFile = (name: string): string =>
-  readFileSync(resolve(import.meta.dirname, "../../public", name), "utf8");
+  readFileSync(resolve(import.meta.dirname, "../assets", name), "utf8");
 
 const serving = (): typeof fetch =>
   vi.fn(async (input: RequestInfo | URL) => {

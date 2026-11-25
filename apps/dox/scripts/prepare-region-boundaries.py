@@ -49,8 +49,8 @@ Steps:
        <region boundaries>  (FeatureCollection; the land feature, then one feature per zone, tzid only)
        <region zones>       ({ tzdb, zones: [...] }, sorted; plus `coords: { id: [lon, lat] }`
                              from zone.tab when the region asks for it)
-     Canada: apps/dox/public/timezone-boundaries-canada.json and apps/dox/src/lib/canada-zones.json.
-     Morocco: apps/dox/public/timezone-boundaries-morocco.json and
+     Canada: apps/dox/src/assets/timezone-boundaries-canada.json and apps/dox/src/lib/canada-zones.json.
+     Morocco: apps/dox/src/assets/timezone-boundaries-morocco.json and
      apps/dox/src/lib/morocco-region-zones.json.
 
      United States (CORE-90): a row with no single box. `land_parts` lists one bounding box per
@@ -60,7 +60,7 @@ Steps:
      `keep_order` keeps zone.tab's order, which the Sunshine Protection Act page lists. A `states` key
      writes a second file: the 50 states, DC and five territories from Natural Earth admin-1 and
      admin-0 (public domain), simplified with the row's tolerance, properties `{ postal, name }`.
-     apps/dox/public/timezone-boundaries-us.json, apps/dox/public/state-boundaries-us.json,
+     apps/dox/src/assets/timezone-boundaries-us.json, apps/dox/src/assets/state-boundaries-us.json,
      apps/dox/src/lib/us-state-names.json and apps/dox/src/lib/us-region-zones.json.
 
 The boundary file is a derived database offered to the public, so it carries the ODbL
@@ -109,7 +109,7 @@ REGIONS = {
         "tolerance": 0.08,
         "budget": 400 * 1024,  # compact bytes; oxfmt roughly doubles it, so re-check the formatted file
         "coords": False,
-        "boundaries": REPO_ROOT / "apps/dox/public/timezone-boundaries-canada.json",
+        "boundaries": REPO_ROOT / "apps/dox/src/assets/timezone-boundaries-canada.json",
         "zones": REPO_ROOT / "apps/dox/src/lib/canada-zones.json",
     },
     "morocco": {
@@ -134,7 +134,7 @@ REGIONS = {
         "tolerance": 0.005,
         "budget": 300 * 1024,  # the formatted file must stay under 400 KB (409600 bytes)
         "coords": True,
-        "boundaries": REPO_ROOT / "apps/dox/public/timezone-boundaries-morocco.json",
+        "boundaries": REPO_ROOT / "apps/dox/src/assets/timezone-boundaries-morocco.json",
         "zones": REPO_ROOT / "apps/dox/src/lib/morocco-region-zones.json",
     },
     "us": {
@@ -165,13 +165,13 @@ REGIONS = {
         "coords": True,
         "keep_order": True,
         "undrawn": ["Pacific/Midway", "Pacific/Wake"],
-        "boundaries": REPO_ROOT / "apps/dox/public/timezone-boundaries-us.json",
+        "boundaries": REPO_ROOT / "apps/dox/src/assets/timezone-boundaries-us.json",
         "zones": REPO_ROOT / "apps/dox/src/lib/us-region-zones.json",
         "states": {
             "admin1": "ne_10m_admin_1_states_provinces",  # adm0_a3 == "USA": 50 states + DC
             "admin0": ["PRI", "VIR", "GUM", "MNP", "ASM"],  # ne_10m_admin_0_countries, by adm0_a3
             "key": "postal",  # NE's two-letter code; admin-0 rows get PR, VI, GU, MP, AS
-            "out": REPO_ROOT / "apps/dox/public/state-boundaries-us.json",
+            "out": REPO_ROOT / "apps/dox/src/assets/state-boundaries-us.json",
             "names": REPO_ROOT / "apps/dox/src/lib/us-state-names.json",  # { postal: name }, for the chat
             "count": 56,
         },

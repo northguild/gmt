@@ -62,7 +62,8 @@ import { renderZoneTooltip } from "./zone-readout";
 import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
 import { enter, holdEntrance } from "./enter";
-import { withBase } from "./site";
+import imageryUrl from "../assets/earth-blue-marble.webp?url";
+import boundariesUrl from "../assets/timezone-boundaries-globe.json?url";
 import { chooseZone } from "./zone-action";
 import { createSlicer, yieldToMain } from "./yield-to-main";
 import { placeTooltip } from "./globe-card";
@@ -137,14 +138,14 @@ const SELECTION_RING_WIDTH = 1.5;
 const REGION_STROKE_WIDTH = 1.5;
 
 /** The boundary dataset, fetched after the globe is already interactive. */
-const BOUNDARIES_URL = withBase("/timezone-boundaries-globe.json");
+const BOUNDARIES_URL = boundariesUrl;
 
 /**
  * NASA's Blue Marble, prepared by `scripts/prepare-globe-imagery.py`. Only the
  * WebGPU renderer fetches it, and only while `--gmt-globe-imagery-alpha` is
  * above 0.
  */
-const IMAGERY_URL = withBase("/earth-blue-marble.webp");
+const IMAGERY_URL = imageryUrl;
 
 /** The two elements the template draws inside the stage, which the engine does not own. */
 export interface GlobeParts {
