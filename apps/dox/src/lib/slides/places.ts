@@ -15,7 +15,9 @@
  * overview centres on and a zone's wall time come in as arguments.
  */
 import { COORDINATES_BY_ID } from "~/lib/globe-zones";
-import { siderealDeg, moonRaDec, toUnit } from "~/lib/sky-math";
+import { toUnit } from "~/lib/sky-math";
+import { subBodyPoint } from "~/lib/sky-aim";
+export { EARTH_HALF_ANGLE_DEG } from "~/lib/globe/pinhole";
 
 export type PlacePoint = readonly [lng: number, lat: number];
 
@@ -135,9 +137,6 @@ function planetPins(): PlacePoint[] {
 /** The Moon's view is this far off the line from the Earth's centre to the Moon, degrees. */
 export const MOON_OFFSET_DEG = 15;
 
-/** Half the angle the Earth fills from 6.61 radii, degrees: `asin(1 / 6.61)`. */
-export const EARTH_HALF_ANGLE_DEG = (Math.asin(1 / 6.61) * 180) / Math.PI;
-
 const RAD = Math.PI / 180;
 
 type V3 = [number, number, number];
@@ -156,8 +155,8 @@ function pointOf(v: V3): PlacePoint {
  * The Moon's longitude on the Earth is its right ascension less the sidereal time.
  */
 export function moonCameraPoint(instantMs: number): PlacePoint {
-  const { ra, dec } = moonRaDec(instantMs);
-  const moon = toUnit(ra - siderealDeg(instantMs), dec);
+  const [moonLng, moonLat] = subBodyPoint("moon", instantMs);
+  const moon = toUnit(moonLng, moonLat);
   const anti: V3 = [-moon[0], -moon[1], -moon[2]];
   const [lng, lat] = pointOf(anti);
   const sinLat = Math.sin(lat * RAD);

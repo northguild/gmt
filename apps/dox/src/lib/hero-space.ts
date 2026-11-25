@@ -18,6 +18,7 @@ import {
 } from "./space-sky";
 import { mountSpaceFx } from "./space-fx";
 import type { GlobeHost } from "./globe";
+import type { AimFrame } from "./sky-aim";
 
 /** From the followGlobe call to a sky fully in: the entrance's latest start plus its fade. */
 const SKY_IN_MS = 2900;
@@ -91,6 +92,43 @@ const canvasOf = (root: HTMLElement, which: string): HTMLCanvasElement | null =>
 export const heroOf = (element: Element): HTMLElement | null =>
   element.closest<HTMLElement>('[data-gate="hero-stage"]');
 
+/**
+ * The boxes the meteor and the sky view keep clear of, in viewport pixels: the copy column, an
+ * open zone drawer, and whatever else the caller names (the meteor adds the Earth's stage, the
+ * view the zoom stack).
+ */
+function heroAvoidRects(
+  hero: HTMLElement,
+  ...extra: (Element | null)[]
+): DOMRect[] {
+  const copy = hero.querySelector('[data-gate="hero-copy"]');
+  const drawer = hero.querySelector('[data-drawer][data-open="true"]');
+  return [copy, drawer, ...extra]
+    .filter((el): el is Element => el !== null)
+    .map((el) => el.getBoundingClientRect());
+}
+
+/** `heroAvoidRects` and the hero's size, in the hero's own pixels, for the sky view's aim. */
+export function heroAimFrame(
+  hero: HTMLElement,
+  surface: HTMLElement,
+  ...extra: (Element | null)[]
+): AimFrame {
+  const box = hero.getBoundingClientRect();
+  const at = surface.getBoundingClientRect();
+  return {
+    width: box.width,
+    height: box.height,
+    shift: { x: at.left - box.left, y: at.top - box.top },
+    rects: heroAvoidRects(hero, ...extra).map((r) => ({
+      left: r.left - box.left,
+      top: r.top - box.top,
+      right: r.right - box.left,
+      bottom: r.bottom - box.top,
+    })),
+  };
+}
+
 /** Fetches the star list and the Milky Way; the first draw waits for the globe (or for `skyWithoutGlobe`). */
 export function startHeroSky(root: HTMLElement): void {
   if (skies.has(root)) return;
@@ -139,17 +177,9 @@ export async function followGlobe(
   if (signal.aborted) return;
   const meteor = canvasOf(root, "meteor");
   if (!meteor) return;
-  const copy = hero.querySelector<HTMLElement>('[data-gate="hero-copy"]');
   mountSpaceFx({
     canvas: meteor,
     signal,
-    avoid: () => {
-      const drawer = hero.querySelector<HTMLElement>(
-        '[data-drawer][data-open="true"]',
-      );
-      return [copy, drawer, stage]
-        .filter((el): el is HTMLElement => el !== null)
-        .map((el) => el.getBoundingClientRect());
-    },
+    avoid: () => heroAvoidRects(hero, stage),
   });
 }

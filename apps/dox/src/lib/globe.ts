@@ -29,6 +29,7 @@ import {
   type PreparedPolygon,
 } from "./globe/geometry";
 import type {
+  GlobeEngine,
   GlobeInteraction,
   GlobeMarker,
   GlobeOptions,
@@ -103,6 +104,12 @@ export interface GlobeHost {
   onZoom: (callback: (dir: 1 | -1, closeness: number) => void) => void;
   /** `[λ, φ]` in degrees as the camera has it: it looks at longitude −λ, latitude −φ. */
   getRotation: () => readonly [number, number];
+  /** The camera: its rotation, zoom and focal length (see `GlobeEngine.getView`). */
+  getView: () => ReturnType<GlobeEngine["getView"]>;
+  /** Turn the camera to a rotation, with a timed hop if asked (see `GlobeEngine.flyTo`). */
+  flyTo: GlobeEngine["flyTo"];
+  /** Hold the idle spin off, or release it (see `GlobeEngine.holdAmbient`). */
+  holdAmbient: (hold: boolean) => void;
   /** Where the Earth's centre sits now, in CSS pixels within the globe's host. */
   getCentre: () => { x: number; y: number; radius: number };
   /** Called after every frame the globe draws. Adds to any earlier callback; `destroy` drops them all. */
@@ -861,6 +868,9 @@ export async function initGlobe(
     onZoom: (callback) => engine.onZoom(callback),
     getRotation: () => engine.getRotation(),
     getCentre: () => engine.getCentre(),
+    getView: () => engine.getView(),
+    flyTo: (rotation, options) => engine.flyTo(rotation, options),
+    holdAmbient: (hold) => engine.holdAmbient(hold),
     onFrame: (callback) => {
       frameListeners.push(callback);
     },

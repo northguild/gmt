@@ -1074,6 +1074,15 @@ describe("hop", () => {
     expect(c.needsFrame()).toBe(false);
   });
 
+  it("lands on the zoom set just before it, which is how the sky view picks its lens zoom", () => {
+    const c = make({ zoomRange: [1, 5] });
+    c.setZoom(2, 0);
+    c.flyTo([-100, 0], 0, { durationMs: 1000, dipZoom: 2 });
+    animate(c, 0, 1100);
+    expect(c.zoom).toBeCloseTo(2, 9);
+    expect(c.rotation[0]).toBeCloseTo(-100, 9);
+  });
+
   it("dips lowest at the midpoint and comes back to the goal zoom", () => {
     const c = make({ zoomRange: [0.5, 5] });
     c.setZoom(1, 0);
@@ -1165,5 +1174,51 @@ describe("steer", () => {
     const at = c.rotation[0];
     c.step(400);
     expect(c.rotation[0]).toBeCloseTo(at, 9);
+  });
+});
+
+describe("holdAmbient", () => {
+  it("holds the spin off for twice the idle period", () => {
+    const c = make();
+    c.holdAmbient(true, 0);
+    c.markInteraction(100);
+    expect(c.nextWakeAt()).toBeNull();
+    animate(c, 100, 2 * 2500);
+    expect(c.rotation[0]).toBe(0);
+    expect(c.needsFrame()).toBe(false);
+  });
+
+  it("schedules the spin an idle period after release", () => {
+    const c = make();
+    c.holdAmbient(true, 0);
+    c.holdAmbient(false, 1000);
+    expect(c.nextWakeAt()).toBe(3500);
+    c.step(3600);
+    animate(c, 3600, 1000);
+    expect(c.rotation[0]).not.toBeCloseTo(0, 3);
+  });
+
+  it("eases a running spin down to a stop on its ramp", () => {
+    const c = make();
+    c.markInteraction(0);
+    const end = animate(c, 0, 6000);
+    expect(c.isAmbientOnly()).toBe(true);
+    c.holdAmbient(true, end);
+    animate(c, end, 3000);
+    expect(c.needsFrame()).toBe(false);
+    const at = c.rotation[0];
+    animate(c, end + 3000, 1000);
+    expect(c.rotation[0]).toBe(at);
+  });
+
+  it("never spins with ambient off or reduced motion, released or not", () => {
+    for (const options of [{ ambient: false }, { reducedMotion: () => true }]) {
+      const c = make(options);
+      c.holdAmbient(true, 0);
+      c.holdAmbient(false, 0);
+      expect(c.nextWakeAt()).toBeNull();
+      animate(c, 0, 10_000);
+      expect(c.rotation[0]).toBe(0);
+    }
   });
 });

@@ -172,6 +172,7 @@ async function open(
     reduce = false,
     context: extra = {},
     fixed = 0,
+    install = 0,
     init = null,
     block = null,
   } = {},
@@ -184,6 +185,8 @@ async function open(
   await blockOffSite(context, base);
   if (block) await context.route(block, (route) => route.abort());
   if (fixed > 0) await context.clock.setFixedTime(fixed);
+  /* A clock that runs from the instant, so `runFor` can move it. */
+  if (install > 0) await context.clock.install({ time: install });
   const page = await context.newPage();
   const problems = [];
   page.on("console", (m) => {
@@ -3904,6 +3907,411 @@ async function checkSkyReduced(browser) {
   measured++;
 }
 
+// --- the sky view: View Sun and View Moon ------------------------------------
+
+/* What each button points at. A disc's angular radius, degrees: the Moon's smallest (at apogee, so the clearance below never fails on a larger real disc) and the Sun's, with the glare the Sun's box adds (`SUN_GLARE_RADII` of sky-aim.ts, two radii past the disc). This script cannot import the TypeScript. */
+const SKY_VIEWS = {
+  moon: { label: "View Moon", gate: "sky-view-moon", degrees: 0.245, reach: 1 },
+  sun: {
+    label: "View Sun",
+    gate: "sky-view-sun",
+    degrees: SUN_RADIUS_DEG,
+    reach: 3,
+  },
+};
+const SKY_VIEW_ZONES = ["Europe/Helsinki", "Africa/Nairobi"];
+const VIEW_INSET = 16;
+const MAGNIFIER = "[data-globe-search]";
+
+/** The landing at a pinned instant with the page's clock installed, so `runFor` can move it. */
+async function openSkyView(
+  browser,
+  size,
+  { zone, reduce = false, context } = {},
+) {
+  const opened = await open(browser, size, {
+    reduce,
+    context: { timezoneId: zone, ...context },
+    install: SKY_PINS.half.at,
+  });
+  await mapsSettled(opened.page);
+  return opened;
+}
+
+const skyViewButton = (page, body) => page.locator(gate(SKY_VIEWS[body].gate));
+
+/** Opens the zone drawer with the magnifier, as a reader does. */
+async function openViewDrawer(page) {
+  await page.locator(MAGNIFIER).click();
+  await page
+    .locator(REGION)
+    .waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
+  /* The drawer slides in; the buttons are measured at rest. */
+  await page.waitForTimeout(900);
+}
+
+/** The body's disc in viewport pixels, as the sky drew it, with the radius its box reaches. */
+function skyViewBody(page, body) {
+  const { degrees, reach } = SKY_VIEWS[body];
+  return page.evaluate(
+    ([sel, hit, which, deg, extent, earthHalf]) => {
+      const el = document.querySelector(sel);
+      const canvas = el.getBoundingClientRect();
+      const [sx, sy, mx, my] = el.dataset.skyBodies.split(" ").map(Number);
+      const earth = document.querySelector(hit).getBoundingClientRect();
+      const earthRadius = earth.width / 2;
+      const [x, y] = which === "sun" ? [sx, sy] : [mx, my];
+      const disc =
+        (earthRadius * Math.tan((deg * Math.PI) / 180)) /
+        Math.tan((earthHalf * Math.PI) / 180);
+      return {
+        x: canvas.left + x,
+        y: canvas.top + y,
+        disc,
+        box: disc * extent,
+        earth: {
+          x: earth.left + earth.width / 2,
+          y: earth.top + earth.height / 2,
+          radius: earthRadius,
+        },
+      };
+    },
+    [SKY_STARS, HIT, body, degrees, reach, EARTH_HALF_ANGLE_DEG],
+  );
+}
+
+/** Waits until the body has stopped on screen: two reads 300 ms apart agree within half a pixel. */
+async function skyViewSettled(page, body) {
+  let last = await skyViewBody(page, body);
+  for (let i = 0; i < 40; i++) {
+    await page.waitForTimeout(300);
+    const next = await skyViewBody(page, body);
+    if (Math.hypot(next.x - last.x, next.y - last.y) <= 0.5) return next;
+    last = next;
+  }
+  return last;
+}
+
+/** The boxes a view keeps clear of, in viewport pixels: the copy, the open drawer and the zoom stack. */
+async function skyViewAvoid(page) {
+  /* The copy element's own box, which is what the aim keeps clear of (`heroAvoidRects`). */
+  const own = await page.locator(COPY).boundingBox();
+  const rects = [
+    {
+      left: own.x,
+      top: own.y,
+      right: own.x + own.width,
+      bottom: own.y + own.height,
+    },
+  ];
+  if (await regionOpen(page)) {
+    const drawer = await page.locator(DRAWER).boundingBox();
+    if (drawer)
+      rects.push({
+        left: drawer.x,
+        top: drawer.y,
+        right: drawer.x + drawer.width,
+        bottom: drawer.y + drawer.height,
+      });
+  }
+  const stack = await page.locator(gate("globe-zoom")).boundingBox();
+  if (stack)
+    rects.push({
+      left: stack.x,
+      top: stack.y,
+      right: stack.x + stack.width,
+      bottom: stack.y + stack.height,
+    });
+  return rects;
+}
+
+/** Problems with where the body's box sits: inside the hero by the inset, off the Earth's disc, clear of every rectangle. */
+async function skyViewProblems(page, at) {
+  const hero = await page.locator(HERO).boundingBox();
+  const problems = [];
+  const r = at.box;
+  if (
+    at.x - r < hero.x + VIEW_INSET - 1 ||
+    at.y - r < hero.y + VIEW_INSET - 1 ||
+    at.x + r > hero.x + hero.width - VIEW_INSET + 1 ||
+    at.y + r > hero.y + hero.height - VIEW_INSET + 1
+  )
+    problems.push(
+      `its box (radius ${r1(r)}) at ${r1(at.x)}, ${r1(at.y)} is not ${VIEW_INSET} px inside the hero`,
+    );
+  const off = Math.hypot(at.x - at.earth.x, at.y - at.earth.y);
+  if (off < at.earth.radius + at.disc - 1)
+    problems.push(
+      `its disc is ${r1(off)} px from the Earth's centre, inside the ${r1(at.earth.radius)} px disc`,
+    );
+  const rects = await skyViewAvoid(page);
+  rects.forEach((rect, i) => {
+    const gap = Math.hypot(
+      at.x - Math.max(rect.left, Math.min(at.x, rect.right)),
+      at.y - Math.max(rect.top, Math.min(at.y, rect.bottom)),
+    );
+    if (gap < r - 1)
+      problems.push(
+        `its box reaches ${r1(r - gap)} px into box ${i} of ${rects.length} (copy, drawer, zoom stack)`,
+      );
+  });
+  return problems;
+}
+
+const pressedState = (page) =>
+  page.evaluate(
+    (sels) =>
+      sels.map((sel) =>
+        document.querySelector(sel).getAttribute("aria-pressed"),
+      ),
+    Object.values(SKY_VIEWS).map((v) => `[data-gate~="${v.gate}"]`),
+  );
+
+async function checkSkyView(browser) {
+  const t = "hero › sky view";
+  for (const zone of SKY_VIEW_ZONES) {
+    for (const body of ["moon", "sun"]) {
+      const { page, context, problems } = await openSkyView(browser, WIDE, {
+        zone,
+      });
+      for (const problem of problems) fail("page-error", "page", problem, WIDE);
+      await openViewDrawer(page);
+      await skyViewButton(page, body).click();
+      await page.waitForFunction(
+        ([hero, id]) => document.querySelector(hero)?.dataset.skyView === id,
+        [HERO, body],
+        { timeout: LOAD_TIMEOUT },
+      );
+      const at = await skyViewSettled(page, body);
+      const wrong = await skyViewProblems(page, at);
+      check(
+        wrong.length === 0,
+        "sky-view",
+        t,
+        `${SKY_VIEWS[body].label} in ${zone}: ${wrong.join("; ")}`,
+        WIDE,
+      );
+      await context.close();
+      measured++;
+    }
+  }
+}
+
+async function checkSkyViewHold(browser) {
+  const t = "hero › sky view hold";
+  const { page, context } = await openSkyView(browser, WIDE, {
+    zone: "Africa/Nairobi",
+  });
+  await openViewDrawer(page);
+  await skyViewButton(page, "moon").click();
+  await page.waitForFunction(
+    (hero) => document.querySelector(hero)?.dataset.skyView === "moon",
+    HERO,
+    { timeout: LOAD_TIMEOUT },
+  );
+  const start = await skyViewSettled(page, "moon");
+  await page.clock.runFor(5_000);
+  await page.waitForTimeout(300);
+  const still = await skyViewBody(page, "moon");
+  /* The camera is fixed to the Earth and the sky turns with it: 360 degrees in a sidereal day (86 164 s), so the held Moon drifts by that much, scaled by the lens (focal length from the Earth's disc, and 1 / cos^2 of the Moon's angle off the axis). The ambient spin would turn the globe 0.002 degrees a millisecond (`AMBIENT_DEG_PER_MS`), 10 degrees in 5 s, hundreds of pixels. The limit is the sidereal drift with a quarter over for the lens and the pixel grid, and the re-aim at 8 px must stay beyond it. */
+  const moved = Math.hypot(still.x - start.x, still.y - start.y);
+  const focal =
+    start.earth.radius / Math.tan((EARTH_HALF_ANGLE_DEG * Math.PI) / 180);
+  const offAxis = Math.atan(
+    Math.hypot(start.x - start.earth.x, start.y - start.earth.y) / focal,
+  );
+  const sidereal =
+    (((360 / 86_164) * 5 * Math.PI) / 180) * (focal / Math.cos(offAxis) ** 2);
+  check(
+    moved <= sidereal * 1.25 + 0.5 && sidereal * 1.25 + 0.5 < 8,
+    "sky-view-hold",
+    t,
+    `the Moon moved ${r1(moved)} px in 5 s of a held view, limit ${r1(sidereal * 1.25 + 0.5)} (the sky's own turn is ${r1(sidereal)}): the spin ran`,
+    WIDE,
+  );
+  await page.clock.runFor(600_000);
+  const followed = await skyViewSettled(page, "moon");
+  const wrong = await skyViewProblems(page, followed);
+  check(
+    wrong.length === 0,
+    "sky-view-hold",
+    t,
+    `ten minutes on, the held Moon is not in clear sky: ${wrong.join("; ")}`,
+    WIDE,
+  );
+  await dragOnEarth(page);
+  const released = await pressedState(page);
+  check(
+    released.every((state) => state === "false"),
+    "sky-view-release",
+    t,
+    `after a drag the buttons read aria-pressed ${released.join(", ")}, not false`,
+    WIDE,
+  );
+  /* The Moon may leave the hero after a drag, so stillness is read from the camera the sky draws: its right ascension and declination (`data-sky-view`). The sky's own turn moves the right ascension by 0.0125 degrees in 3 s; the spin by degrees. */
+  const camera = () =>
+    page.evaluate((sel) => {
+      const [ra, dec] = document
+        .querySelector(sel)
+        .dataset.skyView.split(" ")
+        .map(Number);
+      return { ra, dec };
+    }, SKY_STARS);
+  const turn = (a, b) =>
+    Math.hypot(((((b.ra - a.ra) % 360) + 540) % 360) - 180, b.dec - a.dec);
+  await page.waitForTimeout(600);
+  const dragged = await camera();
+  await page.clock.runFor(3_000);
+  await page.waitForTimeout(300);
+  const zoomed = await camera();
+  /* The zoom stack is hidden while the drawer is open (a drag opens it), so the reader closes it first. */
+  if (await regionOpen(page)) await page.locator(CLOSE).click();
+  await page.locator(ZOOM_RESET).click();
+  await page.waitForTimeout(1500);
+  const rested = await camera();
+  const restRadius = (await hitBox(page)).width / 2;
+  /* The aim picks the largest lens zoom that fits, and a small hero fits only rest zoom. Zoomed in, the idle spin stays off; at rest zoom it has come back by now. */
+  const zoomedIn = start.earth.radius > restRadius * 1.02;
+  check(
+    zoomedIn ? turn(dragged, zoomed) < 0.1 : turn(dragged, zoomed) >= 0.1,
+    "sky-view-release",
+    t,
+    zoomedIn
+      ? `zoomed in, the camera turned ${r1(turn(dragged, zoomed) * 100) / 100} degrees in 3 s after the release: the idle spin only runs at rest zoom`
+      : `at rest zoom the camera turned only ${r1(turn(dragged, zoomed) * 100) / 100} degrees in 3 s after the release: the idle spin did not come back`,
+    WIDE,
+  );
+  await page.clock.runFor(3_000);
+  await page.waitForTimeout(300);
+  const spun = await camera();
+  check(
+    turn(rested, spun) >= 0.1,
+    "sky-view-release",
+    t,
+    "after the zoom stack's rest button and 3 s the camera did not turn: the spin did not come back",
+    WIDE,
+  );
+  await context.close();
+  measured++;
+}
+
+async function checkSkyViewStill(browser) {
+  const t = "hero › sky view buttons";
+  const { page, context } = await openSkyView(browser, WIDE, {
+    zone: "Africa/Nairobi",
+  });
+  await openViewDrawer(page);
+  const boxes = () =>
+    Promise.all(
+      Object.keys(SKY_VIEWS).map((b) => skyViewButton(page, b).boundingBox()),
+    );
+  const before = await boxes();
+  await skyViewButton(page, "moon").click();
+  const pressed = await boxes();
+  await skyViewButton(page, "moon").click();
+  const after = await boxes();
+  const worst = (a, b) =>
+    Math.max(
+      ...a.flatMap((box, i) => [
+        Math.abs(box.x - b[i].x),
+        Math.abs(box.y - b[i].y),
+        Math.abs(box.width - b[i].width),
+        Math.abs(box.height - b[i].height),
+      ]),
+    );
+  check(
+    Math.max(worst(before, pressed), worst(before, after)) <= 0.5,
+    "sky-view-still",
+    t,
+    `the buttons moved or resized by ${r1(Math.max(worst(before, pressed), worst(before, after)))} px between unpressed, pressed and released, limit 0.5`,
+    WIDE,
+  );
+  await context.close();
+  measured++;
+}
+
+async function checkSkyViewReduced(browser) {
+  const t = "hero › sky view, reduced motion";
+  const { page, context } = await openSkyView(browser, WIDE, {
+    zone: "Africa/Nairobi",
+    reduce: true,
+  });
+  await openViewDrawer(page);
+  await skyViewButton(page, "moon").click();
+  await page.evaluate(
+    () =>
+      new Promise((done) =>
+        requestAnimationFrame(() => requestAnimationFrame(done)),
+      ),
+  );
+  await page.waitForTimeout(200);
+  const first = await skyViewBody(page, "moon");
+  const later = await skyViewSettled(page, "moon");
+  check(
+    Math.hypot(later.x - first.x, later.y - first.y) <= 1 &&
+      (await skyViewProblems(page, first)).length === 0,
+    "sky-view-reduced",
+    t,
+    `under reduced motion the Moon was ${r1(Math.hypot(later.x - first.x, later.y - first.y))} px from its resting place a few frames after the press: the camera flew`,
+    WIDE,
+  );
+  await context.close();
+  measured++;
+}
+
+async function checkSkyViewPhone(browser) {
+  const t = "hero › sky view, phone";
+  const { page, context } = await openSkyView(browser, NARROW, {
+    zone: "Africa/Nairobi",
+  });
+  await openViewDrawer(page);
+  await skyViewButton(page, "moon").click();
+  await page.waitForFunction(
+    (hero) => document.querySelector(hero)?.dataset.skyView === "moon",
+    HERO,
+    { timeout: LOAD_TIMEOUT },
+  );
+  check(
+    !(await regionOpen(page)),
+    "sky-view-phone",
+    t,
+    "pressing View Moon in the sheet left the sheet open",
+    NARROW,
+  );
+  const at = await skyViewSettled(page, "moon");
+  const wrong = await skyViewProblems(page, at);
+  check(
+    wrong.length === 0,
+    "sky-view-phone",
+    t,
+    `the Moon is not in clear sky: ${wrong.join("; ")}`,
+    NARROW,
+  );
+  await context.close();
+  measured++;
+}
+
+async function checkSkyViewForced(browser) {
+  const t = "hero › sky view, forced colours";
+  const { page, context } = await openSkyView(browser, WIDE, {
+    zone: "Africa/Nairobi",
+    context: { forcedColors: "active" },
+  });
+  await openViewDrawer(page);
+  const shown = await page
+    .locator(gate("sky-view"))
+    .evaluate((el) => getComputedStyle(el).display !== "none");
+  check(
+    !shown,
+    "sky-view-forced",
+    t,
+    "under forced colours the sky is hidden but the Sky view group is still shown",
+    WIDE,
+  );
+  await context.close();
+  measured++;
+}
+
 async function checkReducedMotion(browser) {
   const t = "hero › reduced motion";
   const { page, context } = await open(browser, WIDE, { reduce: true });
@@ -5210,6 +5618,12 @@ async function main() {
       ["one camera", () => checkSkyCamera(browser)],
       ["sun and moon", () => checkSkyBodies(browser)],
       ["body maps", () => checkSkyMaps(browser)],
+      ["sky view", () => checkSkyView(browser)],
+      ["sky view hold", () => checkSkyViewHold(browser)],
+      ["sky view buttons", () => checkSkyViewStill(browser)],
+      ["sky view, reduced motion", () => checkSkyViewReduced(browser)],
+      ["sky view, phone", () => checkSkyViewPhone(browser)],
+      ["sky view, forced colours", () => checkSkyViewForced(browser)],
       ["sun behind the copy", () => checkSkyCopy(browser)],
       ["sky from black", () => checkSkyReveal(browser)],
       ["entrance", () => checkEntrance(browser)],

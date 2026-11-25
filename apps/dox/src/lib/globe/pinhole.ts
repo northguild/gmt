@@ -23,6 +23,8 @@ export const P = 1 + GEOSTATIONARY_ALTITUDE_KM / EARTH_EQUATORIAL_RADIUS_KM;
 export const G = Math.sqrt(P * P - 1);
 /** Camera-frame x of the silhouette; a surface point is on the visible cap when its x exceeds it. */
 export const RIM = 1 / P;
+/** Half the angle the Earth fills from the camera, degrees: `asin(RIM)`. */
+export const EARTH_HALF_ANGLE_DEG = (Math.asin(RIM) * 180) / Math.PI;
 
 const DEG = Math.PI / 180;
 

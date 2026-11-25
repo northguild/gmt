@@ -31,15 +31,18 @@ import { cueOnAppear } from "./sound/appear";
 import { cue } from "./sound/cue";
 import { HOME_LOCKED_QUERY } from "./home-carousel";
 import { watchCover } from "./globe-cover";
-import {
-  ATMOSPHERE,
-  frameBand,
-  SPACE_CLEARANCE,
-  STACK_CLEARANCE,
-} from "./globe-frame";
+import { frameSpace } from "./hero-frame";
 import { cardBand, followViewport } from "./globe-sheet";
 import type { GlobeHost } from "./globe";
-import { followGlobe, heroOf, offerGlobe, skyWithoutGlobe } from "./hero-space";
+import {
+  followGlobe,
+  heroAimFrame,
+  heroOf,
+  offerGlobe,
+  skyWithoutGlobe,
+} from "./hero-space";
+import { loadClock } from "./space-sky";
+import { mountSkyView, renderSkyView, type SkyView } from "./sky-view";
 import {
   EARTH_IMAGERY,
   LICENCE_CREDIT,
@@ -118,6 +121,7 @@ export function renderGlobeTemplate({
       })}
       <div class="${styles.filters}" id="${id("filters")}"></div>
     </div>
+    ${space ? renderSkyView(id("sky-view")) : ""}
     ${listbox({
       id: id("clocks"),
       label: "Pinned zones — select one to focus the globe",
@@ -339,9 +343,12 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
         wiring.signal,
         tooltip.ownerDocument,
       );
+  /* The sky view (landing only) is off whenever the reader works on the globe; `wireSpace` fills this in. */
+  let releaseView = (): void => {};
   host.onSelect((reading) => {
     if (search) search.value = reading?.id ?? "";
     chosen = !seeding && reading !== null;
+    if (chosen) releaseView();
     /* A place the reader chose: a tap on the Earth, a pinned clock, a zone from the search. Its
        Sonar lock sounds as the rings ripple from its pin. */
     if (chosen) host.lockOn(() => cue("locate"));
@@ -366,6 +373,7 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
     button.addEventListener(
       "click",
       () => {
+        releaseView();
         const kind = button.dataset.globeZoom;
         if (kind === "in") host.zoomBy(1.4);
         else if (kind === "out") host.zoomBy(1 / 1.4);
@@ -375,7 +383,8 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
     );
   }
 
-  if (space) wireSpace(globe.el, host, surface, clockPanel, wiring.signal);
+  if (space)
+    releaseView = wireSpace(globe.el, host, surface, clockPanel, wiring.signal);
   /* The landing's night sky shows what is behind the Earth for the globe's camera (a hero without one is skipped). */
   const hero = space ? heroOf(globe.el) : null;
   if (hero) offerGlobe(hero, host);
@@ -404,88 +413,6 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
 };
 
 /**
- * The right edge of the copy's words and buttons: the union of its descendants' boxes. In carousel
- * mode the column holds pages of different widths and only one shows, so the edge is the
- * column's own content box, and the Earth stays where it is as the pages change.
- */
-function copyEnd(copy: HTMLElement): number {
-  if (document.documentElement.dataset["homeCarousel"] !== undefined) {
-    const box = copy.getBoundingClientRect();
-    if (box.width === 0 || box.height === 0) return -Infinity;
-    return (
-      box.right - (parseFloat(getComputedStyle(copy).paddingInlineEnd) || 0)
-    );
-  }
-  let end = -Infinity;
-  for (const el of copy.querySelectorAll("*")) {
-    const r = el.getBoundingClientRect();
-    if (r.width !== 0 && r.height !== 0) end = Math.max(end, r.right);
-  }
-  return end;
-}
-
-/**
- * Where the Earth sits in the hero, in the surface's pixels. Its centre-y is the globe area's
- * middle and its radius fills most of the area's shorter side, leaving the atmosphere clear of
- * the area's edge. The disc shrinks only as far as it must to keep the zoom stack off it, so a
- * narrow hero, where the stack sits against the square's corner, never has the Earth under
- * the buttons. When the hero stacks (narrower than 64rem, or portrait) its centre-x is the area's.
- * Side by side it is the page's centre,
- * or, where the copy reaches too far for that, the nearest x that keeps the atmosphere 16 px
- * clear of the copy's end (never left of the page's centre).
- */
-function frameSpace(
-  stage: HTMLElement,
-  surface: HTMLElement,
-  stack: HTMLElement,
-  copy: HTMLElement | null,
-  wide: boolean,
-  width: number,
-  height: number,
-): { cx: number; cy: number; radius: number } {
-  const box = stage.getBoundingClientRect();
-  const origin = surface.getBoundingClientRect();
-  if (box.width === 0 || box.height === 0)
-    return {
-      cx: width / 2,
-      cy: height / 2,
-      radius: Math.min(width, height) / 2,
-    };
-  const band = frameBand(box, stack, wide);
-  const cy = box.top - origin.top + band.mid;
-  const fit = band.fit;
-  /* The stack's laid-out box in the stage, not where its entrance transform has it now. */
-  const left = box.left - origin.left + stack.offsetLeft;
-  const top = box.top - origin.top + stack.offsetTop;
-  const radiusAt = (cx: number): number => {
-    if (stack.offsetWidth === 0 || stack.offsetHeight === 0) return fit;
-    const nearX = Math.max(left, Math.min(cx, left + stack.offsetWidth));
-    const nearY = Math.max(top, Math.min(cy, top + stack.offsetHeight));
-    const reach = Math.hypot(nearX - cx, nearY - cy) - STACK_CLEARANCE;
-    return Math.max(0, Math.min(fit, reach));
-  };
-  let cx = box.left - origin.left + box.width / 2;
-  if (wide) {
-    const page = document.documentElement.clientWidth / 2 - origin.left;
-    cx = page;
-    if (copy) {
-      const end = copyEnd(copy) - origin.left;
-      if (Number.isFinite(end)) {
-        /* The radius depends on where the centre is (the zoom stack), and the centre on the
-           radius: a few passes settle it, and the last one fixes the centre to the final radius. */
-        let radius = radiusAt(page);
-        for (let pass = 0; pass < 4; pass++) {
-          cx = Math.max(page, end + SPACE_CLEARANCE + ATMOSPHERE * radius);
-          radius = radiusAt(cx);
-        }
-        cx = Math.max(page, end + SPACE_CLEARANCE + ATMOSPHERE * radius);
-      }
-    }
-  }
-  return { cx, cy, radius: radiusAt(cx) };
-}
-
-/**
  * The zone drawer's behaviour. It opens, without moving focus, on the reader's first work on
  * the globe; the magnifier opens it with focus on the search box and closes it again. Once the
  * reader has closed it, a drag or a zoom leaves it shut. A tap that picks a place always opens
@@ -504,12 +431,12 @@ function wireSpace(
   /** The zone list in the drawer. */
   clocks: HTMLElement | null,
   signal: AbortSignal,
-): void {
+): () => void {
   const panel = root.querySelector<HTMLElement>("[data-drawer]");
   const magnifier = root.querySelector<HTMLButtonElement>(
     "[data-globe-search]",
   );
-  if (!panel || !magnifier) return;
+  if (!panel || !magnifier) return () => {};
   followViewport(panel, signal);
   let closedByReader = false;
   const drawerHandle = wireDrawer(panel, {
@@ -536,7 +463,34 @@ function wireSpace(
     },
     { signal },
   );
+  /* The Sky view row: a stacked phone closes its sheet first, so the body shows in the sky bay. */
+  const hero = heroOf(root);
+  let view: SkyView | undefined;
+  if (hero)
+    void loadClock().then(({ getUnixNow }) => {
+      if (signal.aborted) return;
+      view = mountSkyView({
+        engine: host,
+        host: hero,
+        avoid: () =>
+          heroAimFrame(
+            hero,
+            surface,
+            magnifier.closest('[data-gate="globe-zoom"]'),
+          ),
+        now: getUnixNow,
+        reducedMotion: () =>
+          globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ??
+          false,
+        onPress: () => {
+          if (globalThis.matchMedia?.(HOME_LOCKED_QUERY).matches === false)
+            drawerHandle.close();
+        },
+        signal,
+      });
+    });
   host.onInteract((kind) => {
+    view?.release();
     /* Stacked, only the magnifier opens the sheet; a tap still picks its zone and shows the card. */
     if (globalThis.matchMedia?.(HOME_LOCKED_QUERY).matches === false) return;
     /* The tap has already picked its zone, or cleared the choice, by the time this runs. */
@@ -574,4 +528,5 @@ function wireSpace(
     },
     { capture: true, signal },
   );
+  return () => view?.release();
 }
