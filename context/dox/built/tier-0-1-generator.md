@@ -118,9 +118,18 @@ Rules and traps for generated content and the hand-written pages. Index: [index.
 
 ## Landing carousel
 
-- `arrival.ts` sets `data-home-carousel="wait"` before first paint; every paged rule in
-  `gmt-home-carousel.css` keys on that attribute. On a landscape screen at least 64rem wide the
-  landing never scrolls (`HOME_LOCKED_QUERY`).
+- The carousel wires only while `HOME_LOCKED_QUERY` matches (a landscape screen at least 64rem
+  wide), where the landing never scrolls. `arrival.ts` sets `data-home-carousel="wait"` before
+  first paint there and nowhere else; `home-carousel.ts` writes `on` once wired, and every paged
+  rule in `gmt-home-carousel.css` keys on that attribute. On a scrolling page the pager and the
+  bottom-anchored panes would hide each pane's top under the fixed header, so no stacked layout
+  gets one. A resize across the query wires or unwires it, and the pane shown after a wire plays
+  no entrance motion.
+- Stacked (a phone, a tablet held upright, a narrow window), the intro and the pages read in order
+  as bevelled panes and the page scrolls: no pager, no inner scrollers. `gmt-home-stacked.css`
+  holds the stacked grid and the first screen; the pane look lives in `gmt-home-panes.css`, which
+  both layouts share. A jump to a pane clears the header (`scroll-margin-block-start`).
+- Below 50rem the header bar shows only Settings, and its title wrapper never clips; the wordmark and site name keep the 12px floor at 320. The landing's hero row shows "Get started" and "Ask Dox" only, with no Prompt button, no GitHub or Discord link and no `@northguild/gmt` eyebrow; the h1 stays the page's heading.
 - The licence note is the last row of the Earth's data-credits popover on `/`; every other footer
   is a closed `<details class="gmt-licence">`.
 - While a page moves, its backdrop blur is off (`[data-motion]`): blur behind a moving mask drops
