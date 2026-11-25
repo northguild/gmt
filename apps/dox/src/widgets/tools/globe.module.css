@@ -398,8 +398,7 @@
   }
 }
 
-/* When the hero stacks the area fills the hero's second row (HeroGlobe.astro): the frame takes
-   what the bay under it leaves. */
+/* When the hero stacks the area fills the hero's Earth row (gmt-home-stacked.css). */
 .root[data-space] .layout {
   position: relative;
   z-index: var(--gmt-z-float);
@@ -407,12 +406,11 @@
   flex-direction: column;
   min-block-size: 100%;
   align-items: stretch;
-  padding-block-end: var(--bay);
   pointer-events: none;
 
   /* One width for the slide-over, and the room the sheet takes below the Earth. */
   --drawer-size: clamp(18rem, 24vw, 22rem);
-  --bay: var(--gmt-hero-bay, 30rem);
+  --bay: 30rem;
 }
 
 .root[data-space] .frame {
@@ -422,11 +420,10 @@
 
 /* The stage is the Earth's box, never drawn: the zoom stack's corner and the framing's source.
    When the hero stacks (narrower than 64rem, or portrait) it spans the hero's width and the
-   rest of the first screen, so the Earth is as large as that leaves room for and the zoom
-   stack sits at the screen's right edge. It is never shorter than the square it used to be. */
+   rest of the first screen (gmt-home-stacked.css gives the area its row), so the Earth is as large
+   as that leaves room for and the zoom stack sits at the screen's right edge. */
 .root[data-space] .stage {
   inline-size: auto;
-  min-block-size: min(100vw, 44rem, 70dvh);
   max-inline-size: none;
   margin: 0;
   aspect-ratio: auto;
@@ -581,7 +578,6 @@
   /* The area fills the hero's second column; the Earth is framed in it. */
   .root[data-space] .layout {
     block-size: 100%;
-    padding-block-end: 0;
   }
 
   .root[data-space] .frame {

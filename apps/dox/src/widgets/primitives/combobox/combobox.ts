@@ -173,12 +173,13 @@ export class GmtCombobox extends KitElement {
 
   /**
    * Put focus in the input without opening the list; typing or ArrowDown opens it. The current
-   * text is selected, so the first key replaces it rather than extending a zone's name.
+   * text is selected, so the first key replaces it rather than extending a zone's name. The page
+   * never scrolls to it: a field in a fixed sheet is already in view.
    */
   focusInput(): void {
     this.#clearBlur();
     this.#focusOpens = false;
-    this.#input.focus();
+    this.#input.focus({ preventScroll: true });
     this.#input.select();
     this.#focusOpens = true;
   }
