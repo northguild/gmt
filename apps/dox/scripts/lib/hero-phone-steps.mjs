@@ -32,9 +32,18 @@ export function check(ctx, ok, rule, message, target = "page") {
   });
 }
 
+/** The viewer's zone. The globe selects it at load only when it is in the zone list, and a
+    runner's own zone (UTC, say) may not be, so it is pinned: the zone card then shows on every
+    host. */
+export const ZONE = "Africa/Nairobi";
+
 /** Opens `path` under `base` in its own touch context, waits for the entrance and the first sky draw. */
 export async function open(browser, device, viewport, path, base) {
-  const context = await browser.newContext({ ...devices[device], viewport });
+  const context = await browser.newContext({
+    ...devices[device],
+    viewport,
+    timezoneId: ZONE,
+  });
   await context.addInitScript(() => {
     window.__shift = 0;
     try {
@@ -352,32 +361,4 @@ export async function panes(ctx, page) {
   }
   await page.evaluate(() => scrollTo(0, 0));
   await scrolled(page);
-}
-
-export async function card(ctx, page, width) {
-  /* The zone card, when it shows, stays across the screen and inside the Earth's stage: never over
-     the intro and the buttons above it. The stage may run past the fold (320 x 568, a landscape
-     phone), and the card with it, as the zoom row does. */
-  const card = await page.evaluate(() => {
-    const el = document.querySelector(
-      '[data-gate="globe-tooltip"]:not([hidden])',
-    );
-    if (!el) return null;
-    const b = el.getBoundingClientRect();
-    const stage = document
-      .querySelector('[data-gate="globe-stage"]')
-      .getBoundingClientRect();
-    return { l: b.left, t: b.top, r: b.right, b: b.bottom, stage };
-  });
-  if (card)
-    check(
-      ctx,
-      card.l >= -0.5 &&
-        card.r <= width + 0.5 &&
-        card.t >= card.stage.top - 0.5 &&
-        card.b <= card.stage.bottom + 0.5,
-      "card-off-stage",
-      `the zone card spans ${card.l.toFixed(0)},${card.t.toFixed(0)} to ${card.r.toFixed(0)},${card.b.toFixed(0)}; the stage ${card.stage.top.toFixed(0)}..${card.stage.bottom.toFixed(0)} of ${width} wide`,
-      "zone card",
-    );
 }

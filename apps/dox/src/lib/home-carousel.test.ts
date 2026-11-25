@@ -287,19 +287,82 @@ describe("initHomeCarousel", () => {
     expect(shown(h.more)).toBe(false);
   });
 
-  it("wires again when the screen becomes locked, on the page nearest the top", () => {
-    const h = startStacked();
-    const tops = new Map([
-      [h.intro, -500],
-      [h.why, -100],
-      [h.more, 900],
-    ]);
-    for (const [page, top] of tops)
-      page.getBoundingClientRect = () => ({ top }) as DOMRect;
-    h.screen.set(true);
-    expect(document.documentElement.dataset["homeCarousel"]).toBe("on");
-    expect(shown(h.why)).toBe(true);
-    expect(shown(h.intro)).toBe(false);
+  describe("wiring again when the screen becomes locked", () => {
+    /** Places the pages at `tops`. */
+    const place = (tops: Map<HTMLElement, number>): void => {
+      for (const [page, top] of tops)
+        page.getBoundingClientRect = () => ({ top }) as DOMRect;
+    };
+    let frames: FrameRequestCallback[];
+    /** A scroll, then the browser's next frame. */
+    const scroll = (): void => {
+      // oxlint-disable-next-line dox-test/no-dispatch-event -- jsdom has no layout and its scrollTo fires nothing; the event is the input
+      window.dispatchEvent(new Event("scroll"));
+      for (const frame of frames.splice(0)) frame(0);
+    };
+    beforeEach(() => {
+      frames = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((frame) =>
+        frames.push(frame),
+      );
+    });
+
+    it("opens the page the reader scrolled to, though the resize moves every page first", () => {
+      const h = startStacked();
+      place(
+        new Map([
+          [h.intro, -500],
+          [h.why, -100],
+          [h.more, 900],
+        ]),
+      );
+      scroll();
+      // The locked layout is in place before the change event: here it puts `more` at the top.
+      place(
+        new Map([
+          [h.intro, -900],
+          [h.why, -400],
+          [h.more, 0],
+        ]),
+      );
+      h.screen.set(true);
+      expect(document.documentElement.dataset["homeCarousel"]).toBe("on");
+      expect(shown(h.why)).toBe(true);
+      expect(shown(h.more)).toBe(false);
+    });
+
+    it("counts a page as reached where a jump stops, below the top quarter", () => {
+      const h = startStacked();
+      const real = window.getComputedStyle.bind(window);
+      vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+        const style = real(el);
+        if (el === document.documentElement)
+          return {
+            ...style,
+            scrollPaddingBlockStart: "79px",
+          } as CSSStyleDeclaration;
+        return el === h.more
+          ? ({
+              ...style,
+              scrollMarginBlockStart: "71px",
+            } as CSSStyleDeclaration)
+          : style;
+      });
+      /* A jump to `more` on a landscape phone, 390 tall with the quarter at 97.5, stops at the
+         root's 79 px scroll padding (the header) and the page's 71 px scroll margin. */
+      vi.spyOn(window, "innerHeight", "get").mockReturnValue(390);
+      place(
+        new Map([
+          [h.intro, -900],
+          [h.why, -300],
+          [h.more, 150],
+        ]),
+      );
+      scroll();
+      h.screen.set(true);
+      expect(shown(h.more)).toBe(true);
+      expect(shown(h.why)).toBe(false);
+    });
   });
 
   it("leaves no listener on the screen after teardown, wired or stacked", () => {

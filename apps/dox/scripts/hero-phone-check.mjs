@@ -12,17 +12,21 @@
  *   - zone sheet: a tap on the Earth leaves it shut; a touch tap on "Find a zone" leaves `scrollY`
  *     alone and the search field inside the visual viewport; Escape closes it and returns focus to
  *     the button;
- *   - targets: the zoom stack and the sheet's controls are at least 44 x 44 on a coarse pointer;
+ *   - targets: the zoom stack's four buttons and the sheet's buttons, field and option rows are at
+ *     least 44 x 44 on a coarse pointer, and a set that finds none fails;
  *   - stillness: a touch drag on the Earth moves the disc's box by under 0.5 px;
  *   - width: nothing scrolls sideways, before and after the sheet opens;
  *   - layout shift: zero from load to settled (engines that report it: Chromium);
- *   - the zone card, when it shows, lies across the screen and inside the Earth's stage;
+ *   - the zone card (the zone is pinned, so one shows on every host) lies across the screen and
+ *     inside the Earth's stage with its pin at the centre and stepped toward each edge, and above
+ *     the open sheet;
  *   - star dots: the sky's camera radius, which sets the dot scale, is below the 1440 x 900 one.
  * The header holds on `/` and `/guides/` at every profile: the title wrapper is not clipped, the
  * wordmark and name keep the 12 px text floor, below 50rem the bar shows no Dox, GitHub or Discord
  * link, and on `/` the hero shows "Get started" and "Ask Dox" only, with no eyebrow.
  * Beside the phones: at 1440 x 900 the carousel is wired and its pager shown, and a
- * stacked-to-locked resize shows the pane the reader was at with no entrance motion.
+ * stacked-to-locked resize shows the pane the reader was at, and no other, with no entrance motion
+ * in the frames after it.
  *
  * The dev server will not do: its toolbar sits over the zoom row on a short screen.
  *
@@ -33,7 +37,6 @@
 import { launchBrowser } from "./lib/browser-launch.mjs";
 import {
   GATE,
-  card,
   check,
   firstScreen,
   header,
@@ -43,7 +46,7 @@ import {
   tally,
   cameraRadius,
 } from "./lib/hero-phone-steps.mjs";
-import { dots, sheet, stillness } from "./lib/hero-phone-touch.mjs";
+import { card, dots, sheet, stillness } from "./lib/hero-phone-touch.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordMeasured } from "./gates/findings.mjs";
 
@@ -90,8 +93,9 @@ async function phone(browser, [device, width, height], engine, lockedRadius) {
   try {
     await firstScreen(ctx, page, width, height);
     await panes(ctx, page);
-    await card(ctx, page, width);
+    // Before any drag: a script's drag is not input, so the card it moves would count as a shift.
     await dots(ctx, page);
+    await card(ctx, page, width);
     await sheet(ctx, page);
     await page.evaluate(() => scrollTo(0, 0));
     await scrolled(page);
@@ -192,18 +196,41 @@ async function rewire(browser, engine) {
       null,
       { timeout: 30_000 },
     );
-    const moving = await page.evaluate(
-      () =>
-        [...document.querySelectorAll("[data-page]")]
+    /* Over a run of frames, not one read: an entrance that starts a frame after the wire would
+       be missed by a single look. */
+    const after = await page.evaluate(async () => {
+      const panes = [...document.querySelectorAll("[data-page]")];
+      let moving = 0;
+      for (let i = 0; i < 12; i++) {
+        await new Promise((r) => requestAnimationFrame(r));
+        const finite = panes
           .flatMap((p) => p.getAnimations())
-          .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
-          .length,
+          .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity);
+        moving = Math.max(moving, finite.length);
+      }
+      const shown = panes.flatMap((p, i) => {
+        const s = getComputedStyle(p);
+        const off =
+          p.hidden ||
+          p.inert ||
+          s.display === "none" ||
+          s.visibility === "hidden";
+        return off ? [] : [i];
+      });
+      return { moving, shown, want: Math.min(2, panes.length - 1) };
+    });
+    check(
+      ctx,
+      after.shown.length === 1 && after.shown[0] === after.want,
+      "rewire-wrong-pane",
+      `pane(s) ${after.shown.join(", ") || "none"} show after the resize; the reader was at ${after.want}`,
+      "pane",
     );
     check(
       ctx,
-      moving === 0,
+      after.moving === 0,
       "rewire-motion",
-      `${moving} entrance animation(s) play on a pane after the resize`,
+      `${after.moving} entrance animation(s) play on a pane after the resize`,
       "pane",
     );
     tally.measured++;

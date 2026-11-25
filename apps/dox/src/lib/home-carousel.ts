@@ -81,15 +81,38 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
     return { page, target: page === -1 ? null : target };
   };
 
-  /** The page the reader was at on the stacked layout: the last whose top is in the top quarter. */
+  /**
+   * The page the reader is at on the stacked layout: the last whose top is in the top quarter, or
+   * at the line a jump to it stops at, whichever is lower. That line is the root's scroll padding
+   * (the header) and the page's scroll margin; on a landscape phone it is below the quarter.
+   */
   const nearestTop = (): number => {
-    const line = win.innerHeight / 4;
+    const px = (value: string): number => parseFloat(value) || 0;
+    const padding = px(win.getComputedStyle(root).scrollPaddingBlockStart);
     let page = 0;
     pages.forEach((p, i) => {
-      if (p.getBoundingClientRect().top <= line) page = i;
+      const margin = px(win.getComputedStyle(p).scrollMarginBlockStart);
+      const line = Math.max(win.innerHeight / 4, padding + margin);
+      if (p.getBoundingClientRect().top <= line + 0.5) page = i;
     });
     return page;
   };
+
+  /* The page the reader is at, kept as they scroll the stacked layout. It cannot be measured when
+     the screen turns locked: by the change event the layout is already the locked one. */
+  let readerAt = 0;
+  let pending = 0;
+  const track = (): void => {
+    pending = 0;
+    if (!wiring) readerAt = nearestTop();
+  };
+  win.addEventListener(
+    "scroll",
+    () => {
+      if (!wiring && !pending) pending = win.requestAnimationFrame(track);
+    },
+    { passive: true, signal },
+  );
 
   const play = (el: HTMLElement, kind: "in" | "out"): void => {
     el.removeAttribute("data-motion");
@@ -124,7 +147,7 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
    * rotation or a resize opens the page the reader was at, with no motion.
    */
   const wire = (own: AbortSignal, first: boolean): void => {
-    const at = first ? pageOfHash() : { page: nearestTop(), target: null };
+    const at = first ? pageOfHash() : { page: readerAt, target: null };
     const carousel: CarouselHandle = wireCarousel(column, {
       signal: own,
       pages: pages.map((el) => ({ el, label: el.dataset["page"] ?? "" })),
@@ -232,6 +255,8 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
     if (!locked.matches) {
       unwire();
       if (root.dataset[MARK] === "wait") delete root.dataset[MARK];
+      // The stacked layout lands where it lands: read the page the reader is at from it.
+      if (!pending) pending = win.requestAnimationFrame(track);
     } else if (!wiring) {
       wiring = new AbortController();
       wire(wiring.signal, first);
@@ -239,6 +264,13 @@ export function initHomeCarousel(hero: HTMLElement, signal: AbortSignal): void {
   };
 
   locked.addEventListener("change", () => sync(false), { signal });
-  signal.addEventListener("abort", unwire, { once: true });
+  signal.addEventListener(
+    "abort",
+    () => {
+      unwire();
+      win.cancelAnimationFrame(pending);
+    },
+    { once: true },
+  );
   sync(true);
 }
