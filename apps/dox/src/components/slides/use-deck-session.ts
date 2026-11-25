@@ -65,6 +65,10 @@ export function useDeckSession(o: {
     const life = new AbortController();
     /** The new round waiting for the stage to rest, if any. */
     let pending: AbortController | null = null;
+    // One listener for the effect's life, not one each time the slide is left.
+    life.signal.addEventListener("abort", () => pending?.abort(), {
+      once: true,
+    });
     const newRound = (): void => {
       pending?.abort();
       pending = null;
@@ -85,7 +89,6 @@ export function useDeckSession(o: {
       session.abort();
       announceDemo(deck, null);
       pending = new AbortController();
-      life.signal.addEventListener("abort", () => pending?.abort());
       whenStageRests(deck, pending.signal, newRound);
     });
     const leave = (): void => session.abort();

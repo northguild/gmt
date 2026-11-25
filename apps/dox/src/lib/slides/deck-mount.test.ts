@@ -557,35 +557,46 @@ describe("mountDeck", () => {
     it("hops to each slide's place, and to a build's own place once it is reached", async () => {
       const { user } = await start();
       await user.keyboard("{ArrowRight}");
-      expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
-        hop: true,
-        at: { slide: 1, build: 0 },
-      });
+      // A cut's flight waits for the frame that paints it, as a transition's does for its picture.
+      expect(space.goTo).not.toHaveBeenCalledWith(
+        "Asia/Tehran",
+        expect.anything(),
+      );
+      await vi.waitFor(() =>
+        expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
+          hop: true,
+          at: { slide: 1, build: 0 },
+        }),
+      );
       await user.keyboard("{ArrowRight}{ArrowRight}");
-      expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tokyo", {
-        hop: true,
-        at: { slide: 1, build: 2 },
-      });
+      await vi.waitFor(() =>
+        expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tokyo", {
+          hop: true,
+          at: { slide: 1, build: 2 },
+        }),
+      );
     });
 
     it("runs the slide's lapse, then the highest reached build's, and none where a slide names none", async () => {
       const { user } = await start();
       expect(space.lapse).toHaveBeenLastCalledWith(null);
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith("tehran");
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith("tehran");
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith("tokyo");
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith(null);
+      for (const zone of ["tehran", "tehran", "tokyo", null]) {
+        const calls = space.lapse.mock.calls.length;
+        await user.keyboard("{ArrowRight}");
+        await vi.waitFor(() =>
+          expect(space.lapse.mock.calls.length).toBeGreaterThan(calls),
+        );
+        expect(space.lapse).toHaveBeenLastCalledWith(zone);
+      }
     });
 
     it("tells the slides' visuals where the deck is", async () => {
       const { user } = await start();
       const seen = recordDeckStates(deckRoot());
       await user.keyboard("{ArrowRight}{ArrowRight}");
-      expect(seen.at(-1)).toMatchObject({ id: "second", build: 1 });
+      await vi.waitFor(() =>
+        expect(seen.at(-1)).toMatchObject({ id: "second", build: 1 }),
+      );
     });
 
     it("lights the route while the overview is open and drops it on close", async () => {

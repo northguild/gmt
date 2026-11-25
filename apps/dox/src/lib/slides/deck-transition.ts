@@ -19,7 +19,9 @@
  *   a held key does not flicker between a transition and a cut.
  * - `afterSwap` holds work that moves something (the camera's flight) until the new picture is up.
  *   The frames that capture and first paint the arriving slide are the slowest of a change, and a
- *   flight started with them stutters at its start (`frame-budget` in `slides-check`).
+ *   flight started with them stutters at its start (`frame-budget` in `slides-check`). A cut has
+ *   one such frame, the one that first paints what it shows: a build coming in restyles all of
+ *   its content, which no longer hides.
  */
 
 import { afterFrames } from "./frames";
@@ -33,8 +35,8 @@ export interface DeckTransition {
    */
   run(commit: () => void, direction?: DeckDirection): void;
   /**
-   * Runs `fn` once the playing transition's new picture is up (ready, then `SWAP_FRAMES` painted
-   * frames), or at once when none plays. A skipped transition runs it too.
+   * Runs `fn` once the new picture is up: the playing transition's ready, then `SWAP_FRAMES`
+   * painted frames, or `CUT_FRAMES` when none plays. A skipped transition runs it too.
    */
   afterSwap(fn: () => void): void;
 }
@@ -53,6 +55,9 @@ export const BURST_MS = 300;
 
 /** Painted frames after a transition is ready before `afterSwap` runs: the capture's, then the first. */
 const SWAP_FRAMES = 2;
+
+/** Painted frames after a cut before `afterSwap` runs: the one that first paints it. */
+const CUT_FRAMES = 1;
 
 /** The attribute the page's names for the transition hang on; set only while one plays. */
 export const TRANSITION_ATTR = "data-deck-vt";
@@ -148,8 +153,12 @@ export function createDeckTransition(env: DeckTransitionEnv): DeckTransition {
 
   const afterSwap = (fn: () => void): void => {
     const own = active;
-    if (!own || !win) {
+    if (!win) {
       fn();
+      return;
+    }
+    if (!own) {
+      afterFrames(win, CUT_FRAMES, fn, signal);
       return;
     }
     const go = (): void => afterFrames(win, SWAP_FRAMES, fn, signal);

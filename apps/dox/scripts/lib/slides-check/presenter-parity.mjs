@@ -55,7 +55,11 @@ const rectOf = (page, selector) =>
       return { x: r.x, y: r.y, width: r.width, height: r.height };
     });
 
-/** Waits until the shown slide's boxes have not changed for 30 frames: typed and staged text is in. */
+/**
+ * Waits until the shown slide's boxes and their own text have not changed for 30 frames: typed and
+ * staged text is in. The text counts as well as the boxes, since a split-flap tile rolls through
+ * characters in a box that never moves, and a slow runner can otherwise measure it mid-roll.
+ */
 const textStill = (page) =>
   page.waitForFunction(
     () => {
@@ -64,7 +68,11 @@ const textStill = (page) =>
       const sign = [...slide.querySelectorAll("*")]
         .map((e) => {
           const r = e.getBoundingClientRect();
-          return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)},${getComputedStyle(e).opacity}`;
+          const own = [...e.childNodes]
+            .filter((n) => n.nodeType === 3)
+            .map((n) => n.textContent)
+            .join("");
+          return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)},${getComputedStyle(e).opacity},${own}`;
         })
         .join(";");
       window.__still = window.__sign === sign ? (window.__still ?? 0) + 1 : 0;
